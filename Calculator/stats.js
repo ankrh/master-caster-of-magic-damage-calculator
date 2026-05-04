@@ -107,6 +107,7 @@ function deriveUnitStats(input) {
   const misleadEligible = misleadActiveForUnit(abilities, unitTypeVal, version);
   const effectiveAbilities = {
     ...abilities,
+    unitType: unitTypeVal,
     doomGaze: baseDoomGazeWithBlazingEyes,
     innerPower: innerPowerEligible ? abilities.innerPower : false,
     mislead: misleadEligible ? abilities.mislead : false,

@@ -139,6 +139,8 @@ const ENCHANTMENT_DEFS = [
   ]),
   // Enchantments — CoM & CoM2 (added in CoM, kept in CoM2) — visual order: life → death → chaos → nature → sorcery
   ...twoColumnMajor([
+    { key: 'guardian', label: 'Guardian retort', type: 'bool', match: 'Guardian', group: 'Enchantments', subgroup: 'CoM & CoM2', tooltip: '+1 resistance, +10% To Hit, and +10% To Defend.' },
+    { key: 'tactician', label: 'Tactician retort', type: 'bool', match: 'Tactician', group: 'Enchantments', subgroup: 'CoM & CoM2', tooltip: 'Non-hero units gain +1 defense.\nHero units gain +2 defense, +2 resistance, and +2 to all attack strengths.' },
     { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'Applies only to Life fantastic creatures and Caster units.\n+2 melee and +2 ranged attack. Defense bonus = floor(resistance / 3).' },
     { key: 'endurance', label: 'Endurance', type: 'bool', match: 'Endurance', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'CoM 1: +2 defense.\nCoM 2: +floor(4 / figures) HP per figure, minimum +1 HP.' },
     { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature) and gains Death, Cold, Poison, and Illusion Immunity.\nDoubles melee attack against Normal and Hero targets.' },
@@ -1745,6 +1747,67 @@ const PRESETS = {
     a: { atk:1, toHitMod:0, hp:10, unitType: 'normal', abilities: { survivalInstinct: true, chaosChannels: 'defense' } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.400 },
+  },
+
+  // --- Guardian ---
+  guardianToHitCoM: {
+    desc: 'Guardian (CoM): +10% To Hit, so atk 1 at base 30% becomes 40% → 0.4 dmg',
+    version: 'com_6.08',
+    a: { atk:1, toHitMod:0, hp:10, abilities: { guardian: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0.400 },
+  },
+  guardianToDefendCoM2: {
+    desc: 'Guardian (CoM2): defender gets +10% To Defend, so 5 hits vs 1 shield at 40% block → 4.6 dmg',
+    version: 'com2_1.05.11',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:1, toBlkMod:0, hp:10, abilities: { guardian: true } },
+    expected: { dmgToA: 0, dmgToB: 4.600 },
+  },
+  guardianResistanceCoM2: {
+    desc: 'Guardian (CoM2): +1 resistance, so Death Gaze vs res 5 becomes res 6 → 4 dmg',
+    version: 'com2_1.05.11',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:5, hp:10, abilities: { guardian: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+
+  // --- Tactician ---
+  tacticianNormalDefenseCoM: {
+    desc: 'Tactician (CoM): non-hero unit gets +1 defense. 5 hits vs 1 shield at 100% block → 4 dmg',
+    version: 'com_6.08',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { tactician: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  tacticianHeroAttackCoM2: {
+    desc: 'Tactician (CoM2): hero gets +2 melee attack. atk 1 becomes 3 → 3 dmg',
+    version: 'com2_1.05.11',
+    a: { atk:1, toHitMod:70, hp:10, unitType: 'hero', abilities: { tactician: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  tacticianHeroRangedCoM2: {
+    desc: 'Tactician (CoM2): hero gets +2 to ranged attack strength. missile 1 becomes 3 → 3 dmg',
+    version: 'com2_1.05.11',
+    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, unitType: 'hero', abilities: { tactician: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  tacticianHeroDefenseCoM2: {
+    desc: 'Tactician (CoM2): hero gets +2 defense. 5 hits vs 2 shields at 100% block → 3 dmg',
+    version: 'com2_1.05.11',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, unitType: 'hero', abilities: { tactician: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  tacticianHeroResistanceCoM2: {
+    desc: 'Tactician (CoM2): hero gets +2 resistance, so Death Gaze vs res 5 becomes res 7 → 3 dmg',
+    version: 'com2_1.05.11',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:5, hp:10, unitType: 'hero', abilities: { tactician: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
   },
 
   // --- Land Linking ---
@@ -4043,6 +4106,14 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Guardian',
+        keys: [
+          'guardianResistanceCoM2',
+          'guardianToDefendCoM2',
+          'guardianToHitCoM',
+        ],
+      },
+      {
         name: 'Holy Armor',
         keys: [
           'holyArmorLowDefCoM2',
@@ -4131,6 +4202,16 @@ const TEST_TREE = [
         keys: [
           'survivalInstinctFantasticBonusCoM2',
           'survivalInstinctTransformedEligibleCoM2',
+        ],
+      },
+      {
+        name: 'Tactician',
+        keys: [
+          'tacticianHeroAttackCoM2',
+          'tacticianHeroDefenseCoM2',
+          'tacticianHeroRangedCoM2',
+          'tacticianHeroResistanceCoM2',
+          'tacticianNormalDefenseCoM',
         ],
       },
       {

@@ -351,6 +351,27 @@ function getAbilityStatModifiers(abilities, version) {
     toHitMod += 10;
   }
 
+  // Guardian retort: CoM/CoM2 units gain +1 resistance, +10% To Hit,
+  // and +10% To Defend.
+  if (hasAbil(abilities, 'guardian') && isCoMPlus) {
+    resMod += 1;
+    toHitMod += 10;
+    toBlkMod += 10;
+  }
+
+  // Tactician retort: CoM/CoM2 units gain +1 defense. Heroes instead gain
+  // +2 defense, +2 resistance, and +2 to all attack strengths.
+  if (hasAbil(abilities, 'tactician') && isCoMPlus) {
+    if (abilVal(abilities, 'unitType', 'normal') === 'hero') {
+      atkMod += 2;
+      rtbMod += 2;
+      defMod += 2;
+      resMod += 2;
+    } else {
+      defMod += 1;
+    }
+  }
+
   // Land Linking: CoM/CoM2 grants +2 melee, breath, and defense to fantastic units.
   // Breath is handled in stats.js.
   if (hasAbil(abilities, 'landLinking')) {
