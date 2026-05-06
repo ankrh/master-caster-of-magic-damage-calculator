@@ -15,13 +15,12 @@ function deriveUnitStats(input) {
   const destinyActive = destinyActiveForUnit(abilities, version);
   const unitTypeRaw = input.unitType;
   const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
-  const disregardLoadout = !!input.disregardFantasticLoadout && String(unitTypeRaw || '').startsWith('fantastic_');
-  const level = input.level;
-  const effectiveLevel = (destinyActive || disregardLoadout) ? 'normal' : level;
-  const lvl = getLevelBonuses(effectiveLevel, version);
-  const weapon = disregardLoadout ? 'normal' : input.weapon;
+  const loadoutEligible = !String(unitTypeRaw || '').startsWith('fantastic_') && !destinyActive;
+  const level = loadoutEligible ? input.level : 'normal';
+  const lvl = getLevelBonuses(level, version);
+  const weapon = loadoutEligible ? input.weapon : 'normal';
   const wpn = weaponBonus(weapon);
-  const armor = disregardLoadout ? 'normal' : input.armor;
+  const armor = loadoutEligible ? input.armor : 'normal';
 
   const rtbTypeRaw = input.rtbType;
   let rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
@@ -203,7 +202,7 @@ function deriveUnitStats(input) {
     elite: 3,
     ultra_elite: 4,
     champion: 5,
-  })[effectiveLevel] || 0;
+  })[level] || 0;
   const disciplineVal = version.startsWith('com2') ? ((abilities && abilities.discipline) || 'none') : 'none';
   const disciplineActive = disciplineVal === 'overland' || disciplineVal === 'combat';
   const combatDisciplineNegatesFirstStrike = disciplineVal === 'combat' && levelRank >= 3;

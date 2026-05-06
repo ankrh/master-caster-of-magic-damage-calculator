@@ -461,7 +461,6 @@ function readUnitStats(prefix, overrides) {
     prefix,
     version: el('gameVersion').value,
     abilities: readAbilitiesFromDOM(prefix),
-    disregardFantasticLoadout: true,
     level: el(prefix + 'Level').value,
     weapon: el(prefix + 'Weapon').value,
     armor: el(prefix + 'Armor').value,

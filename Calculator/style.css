@@ -972,7 +972,6 @@ select:disabled[data-tooltip] {
   opacity: 1;
 }
 .abil-item.abil-unit-locked {
-  opacity: 0.5;
   pointer-events: none;
 }
 .abil-group-header {
