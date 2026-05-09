@@ -2182,6 +2182,11 @@ function initMeleeMatrixModal() {
   const sortDefenders = document.getElementById('matrixSortDefenders');
   const sortAttackers = document.getElementById('matrixSortAttackers');
   if (!openBtn || !modal || !closeBtn) return;
+  [openBtn, rangedOpenBtn].forEach(btn => {
+    if (!btn) return;
+    btn.style.width = '190px';
+    btn.style.height = '55px';
+  });
   resetMeleeMatrixControls();
 
   let pendingFilterRender = 0;
@@ -2199,8 +2204,6 @@ function initMeleeMatrixModal() {
   const open = (matrixMode) => {
     const btn = matrixMode === 'ranged' && rangedOpenBtn ? rangedOpenBtn : openBtn;
     const originalHtml = btn.innerHTML;
-    btn.style.width = btn.offsetWidth + 'px';
-    btn.style.height = btn.offsetHeight + 'px';
     btn.innerHTML = 'Calculating...';
     btn.disabled = true;
     requestAnimationFrame(() => requestAnimationFrame(async () => {
@@ -2216,8 +2219,6 @@ function initMeleeMatrixModal() {
         console.error('Matrix calculation failed:', err);
       } finally {
         btn.innerHTML = originalHtml;
-        btn.style.width = '';
-        btn.style.height = '';
         btn.disabled = false;
       }
     }));

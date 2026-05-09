@@ -761,7 +761,8 @@ select:disabled[data-tooltip] {
 .matrix-corner-defender {
   position: absolute;
   z-index: 1;
-  font-size: 0.8rem;
+  font-size: 1rem;
+  font-weight: bold;
   line-height: 1;
 }
 .matrix-corner-attacker {
