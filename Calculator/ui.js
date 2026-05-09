@@ -744,6 +744,7 @@ function selectDefaultUnit(prefix, units) {
 
 function resetCalculatorState() {
   document.getElementById('gameVersion').value = DEFAULT_GAME_VERSION;
+  _activeVersion = DEFAULT_GAME_VERSION;
   const units = loadUnitDatabase(DEFAULT_GAME_VERSION);
   populateUnitDropdown('aUnit', units);
   populateUnitDropdown('bUnit', units);

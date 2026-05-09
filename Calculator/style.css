@@ -5,7 +5,7 @@
   --accent: #ff6b81;
   --text: #eee;
   --muted: #999;
-  --two-panel-width: calc(480px * 2 + 1.5rem);
+  --two-panel-width: calc(250px * 2 + 1.5rem);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-color: var(--border) transparent; }
 .tt {
@@ -88,21 +88,23 @@ h1 {
   gap: 1.5rem;
   align-items: flex-start;
   flex-wrap: nowrap;
-  margin-bottom: 1rem;
+  margin: 0 auto 1rem;
+  width: fit-content;
 }
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1.25rem;
-  flex: 1 1 360px;
+  flex: 0 0 auto;
+  width: min-content;
 }
 .results-area {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  flex: 2 2 500px;
-  min-width: 500px;
+  flex: 0 0 auto;
+  width: var(--two-panel-width);
 }
 .results-top {
   display: grid;
@@ -406,7 +408,6 @@ h1 {
   justify-content: center;
   gap: 0.75rem;
   margin: 0.75rem auto 0.5rem;
-  max-width: var(--two-panel-width);
 }
 .matrix-btn {
   padding: 0.45rem 0.8rem;
@@ -428,7 +429,7 @@ h1 {
   border-radius: 8px;
   padding: 0.75rem 1.25rem;
   margin: 0 auto 1rem;
-  max-width: var(--two-panel-width);
+  width: fit-content;
 }
 .combat-enchantments .abil-check {
   font-size: 0.9rem;
@@ -442,7 +443,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 3rem;
   font-size: 0.9rem;
   margin-top: 0.3rem;
 }
@@ -1044,6 +1045,14 @@ select:disabled[data-tooltip] {
 }
 .abil-num-row:has(select) label {
   flex: none;
+}
+.abil-num-row[data-abil-key="discipline"],
+.abil-num-row[data-abil-key="breakthrough"],
+.abil-num-row[data-abil-key="elemArmor"],
+.abil-num-row[data-abil-key="prayer"],
+.abil-num-row[data-abil-key="chaosChannels"] {
+  flex-direction: column;
+  align-items: flex-start;
 }
 .abil-num-row input[type="checkbox"] {
   margin: 0 0.1rem 0 0;
