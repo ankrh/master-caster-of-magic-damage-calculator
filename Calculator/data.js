@@ -166,10 +166,11 @@ const ENCHANTMENT_DEFS = [
 // --- Version -> Unit Data mapping ---
 // MOM_UNITS_DATA and COM2_UNITS_DATA are defined in units.js
 const VERSION_DATA = {
-  'mom_1.31':       MOM_UNITS_DATA,
-  'mom_cp_1.60.00': MOM_UNITS_DATA,
-  'com_6.08':       COM_UNITS_DATA,
-  'com2_1.05.11':   COM2_UNITS_DATA,
+  'mom_1.31':                MOM_UNITS_DATA,
+  'mom_cp_1.60.00':          MOM_UNITS_DATA,
+  'com_6.08':                COM_UNITS_DATA,
+  'com2_1.05.11':            COM2_UNITS_DATA,
+  'com2_warlord_1.5.12.4.1': WARLORD_UNITS_DATA,
 };
 
 // Cross-version unit name aliases (bidirectional, covers MoM/CoM/CoM2 renames)

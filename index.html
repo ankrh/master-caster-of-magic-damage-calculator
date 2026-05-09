@@ -22,6 +22,7 @@
     <option value="mom_cp_1.60.00">MoM CP 1.60</option>
     <option value="com_6.08">CoM 6.08</option>
     <option value="com2_1.05.11">CoM2 1.05.11</option>
+    <option value="com2_warlord_1.5.12.4.1">Warlord 1.5.12.4.1</option>
   </select>
   <button id="swapBtn" class="swap-btn" title="Swap attacker and defender">&#8644; Swap attacker and defender</button>
   <button id="resetBtn" class="reset-btn" type="button" title="Reset calculator to the default state">Reset</button>
@@ -112,7 +113,7 @@
       <input type="number" id="aFigs" min="1" max="9" value="4">
       <span class="mod-val"></span>
 
-      <label for="aAtk" data-tooltip="Melee attack strength — number of dice rolled per figure.">Attack</label>
+      <label for="aAtk" data-tooltip="Melee attack strength — number of dice rolled per figure.">Melee</label>
       <input type="number" id="aAtk" min="0" max="50" value="3">
       <span class="mod-val" id="aAtkMod"></span>
 
@@ -222,7 +223,7 @@
       <input type="number" id="bFigs" min="1" max="9" value="4">
       <span class="mod-val"></span>
 
-      <label for="bAtk" data-tooltip="Melee attack strength — number of dice rolled per figure.">Attack</label>
+      <label for="bAtk" data-tooltip="Melee attack strength — number of dice rolled per figure.">Melee</label>
       <input type="number" id="bAtk" min="0" max="50" value="3">
       <span class="mod-val" id="bAtkMod"></span>
 
@@ -364,6 +365,7 @@
 <!-- Load order: units (data blobs) -> data (constants) -> engine (math) -> combat/stats (logic) -> ui (DOM) -->
 <div id="tt" class="tt"></div>
 <script src="Calculator/units.js"></script>
+<script src="Calculator/units_warlord.js"></script>
 <script src="Calculator/data.js"></script>
 <script src="Calculator/engine.js"></script>
 <script src="Calculator/combat.js"></script>

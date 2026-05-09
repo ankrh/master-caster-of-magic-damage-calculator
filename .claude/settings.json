@@ -5,10 +5,23 @@
       "mcp__playwright__browser_close",
       "mcp__playwright__browser_take_screenshot",
       "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_evaluate",
       "Bash(curl -s -o /dev/null -w * http://localhost:8080*)",
       "Bash(node -c *)",
       "Bash(python nocache_server.py*)",
-      "mcp__playwright__browser_evaluate"
+      "Bash(python tools/nocache_server.py)",
+      "Bash(python tools/nocache_server.py *)",
+      "Bash(ls *)",
+      "Bash(cd *)",
+      "Bash(awk *)",
+      "Bash(grep *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Item *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-Content *)"
     ]
   }
 }
