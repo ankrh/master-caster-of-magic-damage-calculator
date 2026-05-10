@@ -1495,10 +1495,10 @@ function selectedMatrixSettingRows(prefix) {
   });
 }
 
-async function renderMeleeMatrixSnapshot() {
-  const titleEl = document.getElementById('meleeMatrixTitle');
+async function renderMatrixSnapshot() {
+  const titleEl = document.getElementById('matrixTitle');
   const noteEl = document.querySelector('.matrix-modal-note');
-  const versionEl = document.getElementById('meleeMatrixVersion');
+  const versionEl = document.getElementById('matrixVersion');
   const gameVersion = document.getElementById('gameVersion');
   const isRangedMatrix = activeMatrixMode === 'ranged';
   if (titleEl) {
@@ -1523,8 +1523,8 @@ async function renderMeleeMatrixSnapshot() {
     selectedMatrixSettingRows('b').concat(selectedEnchantmentRows('b', defenderEnchantments))
   );
   renderEnchantmentSnapshotList('matrixGlobalOptions', selectedGlobalOptionRows(activeMatrixMode));
-  meleeMatrixCache = await buildMeleeMatrixCache(attackerEnchantments, defenderEnchantments, activeMatrixMode);
-  renderMeleeMatrixTable();
+  matrixCache = await buildMatrixCache(attackerEnchantments, defenderEnchantments, activeMatrixMode);
+  renderMatrixTable();
 }
 
 function selectedUnitLabel(prefix) {
@@ -1566,7 +1566,7 @@ function rangedMatrixDamageValue(result) {
   return result.bRemHP > 0 ? distExpectedValue(result.totalDmgToB) / result.bRemHP : 0;
 }
 
-function formatMeleeMatrixRatioValue(value, matrixMode) {
+function formatMatrixRatioValue(value, matrixMode) {
   if (matrixMode === 'ranged') {
     const percent = value * 100;
     if (percent > 999) return '>999%';
@@ -1764,7 +1764,7 @@ function predefinedMatrixUnitRows(prefix, appliedEnchantments, matrixMode) {
     });
 }
 
-let meleeMatrixCache = null;
+let matrixCache = null;
 let activeMatrixMode = 'melee';
 let matrixWorkerBlobUrl = null;
 
@@ -1892,7 +1892,7 @@ function hasMatrixRangedAttack(info) {
   return info && info.stats && info.stats.rangedType !== 'none' && info.stats.rtb > 0;
 }
 
-async function buildMeleeMatrixCache(attackerEnchantments, defenderEnchantments, matrixMode) {
+async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matrixMode) {
   const version = document.getElementById('gameVersion').value;
   const wallOfFire = document.getElementById('wallOfFire').checked;
   const isRangedMatrix = matrixMode === 'ranged';
@@ -1905,8 +1905,6 @@ async function buildMeleeMatrixCache(attackerEnchantments, defenderEnchantments,
     ? [...allAttackers, selectedAttacker]
     : [...allAttackers];
   const defenders = [...allDefenders, selectedDefender];
-  const selectedAttackerIndex = attackers.length - 1;
-  const selectedDefenderIndex = defenders.length - 1;
 
   const opts = { isRanged: isRangedMatrix, version, wallOfFire };
   const allDefenderStats = defenders.map(d => d.stats);
@@ -1964,15 +1962,13 @@ async function buildMeleeMatrixCache(attackerEnchantments, defenderEnchantments,
   return {
     allAttackerIndexes: allAttackers.map((_, i) => i),
     allDefenderIndexes: allDefenders.map((_, i) => i),
-    selectedAttackerIndex,
-    selectedDefenderIndex,
     rows,
     defenders,
     mode: matrixMode,
   };
 }
 
-function meleeMatrixNameFilterTerms(id) {
+function matrixNameFilterTerms(id) {
   const text = document.getElementById(id)?.value || '';
   return text
     .split(/\r?\n/)
@@ -1992,15 +1988,15 @@ function escHtmlAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function renderMeleeMatrixTable() {
-  const wrap = document.getElementById('meleeMatrixTableWrap');
+function renderMatrixTable() {
+  const wrap = document.getElementById('matrixTableWrap');
   if (!wrap) return;
-  if (!meleeMatrixCache) return;
+  if (!matrixCache) return;
 
-  const { matrixRows, matrixCols } = currentMeleeMatrixView();
+  const { matrixRows, matrixCols } = currentMatrixView();
   if (!matrixRows || !matrixCols) return;
 
-  const isRanged = meleeMatrixCache.mode === 'ranged';
+  const isRanged = matrixCache.mode === 'ranged';
   const cellColorFn = isRanged ? rangedMatrixCellColor : meleeMatrixCellColor;
 
   const parts = [
@@ -2018,7 +2014,7 @@ function renderMeleeMatrixTable() {
     for (const defCol of matrixCols) {
       const ratio = atkRow.cells[defCol.defenderIndex].ratio;
       const color = cellColorFn(ratio);
-      parts.push(`<td style="background-color:${color.background};color:${color.textColor}">${escHtmlAttr(formatMeleeMatrixRatioValue(ratio, meleeMatrixCache.mode))}</td>`);
+      parts.push(`<td style="background-color:${color.background};color:${color.textColor}">${escHtmlAttr(formatMatrixRatioValue(ratio, matrixCache.mode))}</td>`);
     }
     parts.push('</tr>');
   }
@@ -2026,27 +2022,27 @@ function renderMeleeMatrixTable() {
   wrap.innerHTML = parts.join('');
 }
 
-function currentMeleeMatrixView() {
-  if (!meleeMatrixCache) return {};
+function currentMatrixView() {
+  if (!matrixCache) return {};
 
-  const isRangedMatrix = meleeMatrixCache.mode === 'ranged';
+  const isRangedMatrix = matrixCache.mode === 'ranged';
   const sortDefenders = !!document.getElementById('matrixSortDefenders')?.checked;
   const sortAttackers = !!document.getElementById('matrixSortAttackers')?.checked;
-  const attackerFilterTerms = meleeMatrixNameFilterTerms('matrixAttackerNameFilter');
-  const defenderFilterTerms = meleeMatrixNameFilterTerms('matrixDefenderNameFilter');
+  const attackerFilterTerms = matrixNameFilterTerms('matrixAttackerNameFilter');
+  const defenderFilterTerms = matrixNameFilterTerms('matrixDefenderNameFilter');
 
   const attackerIndexes = filterMeleeMatrixIndexes(
-    meleeMatrixCache.allAttackerIndexes,
-    meleeMatrixCache.rows.map(row => row.info),
+    matrixCache.allAttackerIndexes,
+    matrixCache.rows.map(row => row.info),
     attackerFilterTerms
   );
   const defenderIndexes = filterMeleeMatrixIndexes(
-    meleeMatrixCache.allDefenderIndexes,
-    meleeMatrixCache.defenders,
+    matrixCache.allDefenderIndexes,
+    matrixCache.defenders,
     defenderFilterTerms
   );
   const matrixRows = attackerIndexes.map((attackerIndex, viewIndex) => {
-    const cachedRow = meleeMatrixCache.rows[attackerIndex];
+    const cachedRow = matrixCache.rows[attackerIndex];
     return {
       attackerIndex,
       viewIndex,
@@ -2060,7 +2056,7 @@ function currentMeleeMatrixView() {
   const matrixCols = defenderIndexes.map((defenderIndex, viewIndex) => ({
     defenderIndex,
     viewIndex,
-    info: meleeMatrixCache.defenders[defenderIndex],
+    info: matrixCache.defenders[defenderIndex],
     sortKey: isRangedMatrix
       ? rangedMatrixDefenderMeanDamage(matrixRows, defenderIndex)
       : meleeMatrixDefenderSortKey(matrixRows, defenderIndex),
@@ -2080,8 +2076,8 @@ function currentMeleeMatrixView() {
   return { matrixRows, matrixCols };
 }
 
-function buildMeleeMatrixCsv() {
-  const { matrixRows, matrixCols } = currentMeleeMatrixView();
+function buildMatrixCsv() {
+  const { matrixRows, matrixCols } = currentMatrixView();
   if (!matrixRows || !matrixCols) return '';
 
   const lines = [
@@ -2123,9 +2119,9 @@ async function writeTextToClipboard(text) {
   }
 }
 
-async function exportMeleeMatrixCsvToClipboard(button) {
-  if (!meleeMatrixCache) await renderMeleeMatrixSnapshot();
-  const csv = buildMeleeMatrixCsv();
+async function exportMatrixCsvToClipboard(button) {
+  if (!matrixCache) await renderMatrixSnapshot();
+  const csv = buildMatrixCsv();
   if (!csv) return;
 
   const originalText = button ? button.textContent : '';
@@ -2143,7 +2139,7 @@ async function exportMeleeMatrixCsvToClipboard(button) {
   }
 }
 
-async function swapMeleeMatrixSides() {
+async function swapMatrixSides() {
   const attackerFilter = document.getElementById('matrixAttackerNameFilter');
   const defenderFilter = document.getElementById('matrixDefenderNameFilter');
   if (attackerFilter && defenderFilter) {
@@ -2152,7 +2148,7 @@ async function swapMeleeMatrixSides() {
     defenderFilter.value = tmp;
   }
   swapAttackerDefender();
-  await renderMeleeMatrixSnapshot();
+  await renderMatrixSnapshot();
 }
 
 function resetMeleeMatrixControls() {
@@ -2170,11 +2166,11 @@ function resetMeleeMatrixControls() {
   });
 }
 
-function initMeleeMatrixModal() {
+function initMatrixModal() {
   const openBtn = document.getElementById('meleeMatrixBtn');
   const rangedOpenBtn = document.getElementById('rangedMatrixBtn');
-  const modal = document.getElementById('meleeMatrixModal');
-  const closeBtn = document.getElementById('meleeMatrixClose');
+  const modal = document.getElementById('matrixModal');
+  const closeBtn = document.getElementById('matrixClose');
   const exportBtn = document.getElementById('matrixExportCsv');
   const swapSidesBtn = document.getElementById('matrixSwapSides');
   const attackerFilter = document.getElementById('matrixAttackerNameFilter');
@@ -2191,7 +2187,7 @@ function initMeleeMatrixModal() {
 
   let pendingFilterRender = 0;
   const renderOpenMatrixTable = () => {
-    if (modal.classList.contains('is-open')) renderMeleeMatrixTable();
+    if (modal.classList.contains('is-open')) renderMatrixTable();
   };
   const scheduleFilterRender = () => {
     clearTimeout(pendingFilterRender);
@@ -2209,7 +2205,7 @@ function initMeleeMatrixModal() {
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
         activeMatrixMode = matrixMode;
-        await renderMeleeMatrixSnapshot();
+        await renderMatrixSnapshot();
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
         const tip = document.getElementById('tt');
@@ -2234,13 +2230,18 @@ function initMeleeMatrixModal() {
   closeBtn.addEventListener('click', close);
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
-      void exportMeleeMatrixCsvToClipboard(exportBtn);
+      void exportMatrixCsvToClipboard(exportBtn);
     });
   }
   if (swapSidesBtn) {
-    swapSidesBtn.addEventListener('click', () => {
-      swapMeleeMatrixSides();
-      swapSidesBtn.focus();
+    swapSidesBtn.addEventListener('click', async () => {
+      swapSidesBtn.disabled = true;
+      try {
+        await swapMatrixSides();
+      } finally {
+        swapSidesBtn.disabled = false;
+        swapSidesBtn.focus();
+      }
     });
   }
   [sortDefenders, sortAttackers].forEach(el => {
@@ -2270,7 +2271,7 @@ function initMeleeMatrixModal() {
 // Build ability UI
 buildAbilitiesUI('a');
 buildAbilitiesUI('b');
-initMeleeMatrixModal();
+initMatrixModal();
 
 // Unit type change -> update level availability
 ['a', 'b'].forEach(prefix => {
