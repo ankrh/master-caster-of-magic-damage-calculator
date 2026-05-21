@@ -2408,7 +2408,7 @@
     "figures": 6,
     "hp": 2,
     "melee": 5,
-    "defense": 3,
+    "defense": 2,
     "resist": 5,
     "ranged": 4,
     "ranged_type": "Missile",
@@ -2416,7 +2416,8 @@
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
-      "Water Walking"
+      "Water Walking",
+      "Large Shield"
     ],
     "category": "Lizardman",
     "moves": 3,
@@ -6564,14 +6565,14 @@
     "id": 311,
     "name": "Jungle Stalkers",
     "race": "Rakhshasa",
-    "figures": 4,
+    "figures": 2,
     "hp": 1,
     "melee": 1,
-    "defense": 3,
+    "defense": 4,
     "resist": 4,
-    "ranged": 2,
+    "ranged": 4,
     "ranged_type": "Missile",
-    "ammo": 8,
+    "ammo": 4,
     "abilities": [
       "Stealth",
       "Forester",
@@ -6580,8 +6581,8 @@
     ],
     "category": "Rakhshasa",
     "moves": 3,
-    "cost": 70,
-    "upkeep": 1
+    "cost": 60,
+    "upkeep": 2
   },
   "312": {
     "id": 312,
