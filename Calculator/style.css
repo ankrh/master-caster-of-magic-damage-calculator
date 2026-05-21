@@ -410,18 +410,24 @@ h1 {
   margin: 0.75rem auto 0.5rem;
 }
 .matrix-btn {
-  padding: 0.45rem 0.8rem;
-  border: 1px solid var(--border);
+  padding: 0.6rem 2rem;
+  min-width: 320px;
+  border: 1px solid #d4a93a;
   border-radius: 4px;
   background: var(--panel);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
+  box-shadow: 0 0 8px rgba(255, 196, 64, 0.55), 0 0 18px rgba(255, 196, 64, 0.25);
+  transition: box-shadow 0.18s, border-color 0.18s, color 0.18s;
 }
 .matrix-btn:hover,
 .matrix-btn:focus-visible {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: #ffd76a;
+  color: #ffe9a8;
+  box-shadow: 0 0 12px rgba(255, 215, 106, 0.85), 0 0 28px rgba(255, 196, 64, 0.5);
 }
 .combat-enchantments {
   background: var(--panel);
