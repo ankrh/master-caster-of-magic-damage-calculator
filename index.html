@@ -334,26 +334,38 @@
     </div>
     <div class="modal-body">
       <div class="matrix-enchantment-summary">
+        <button id="matrixSwapSides" class="matrix-swap-btn" type="button">Swap attacker/defender</button>
         <section class="matrix-enchantment-box">
           <h3>Attacker settings</h3>
-          <ul id="matrixAttackerSettings" class="matrix-enchantment-list"></ul>
+          <div class="matrix-prop-combobox unit-combobox">
+            <input type="text" id="matrixAPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off">
+            <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixAPropList"></div>
+          </div>
+          <ul id="matrixAttackerSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
         </section>
         <section class="matrix-enchantment-box">
           <h3>Defender settings</h3>
-          <ul id="matrixDefenderSettings" class="matrix-enchantment-list"></ul>
+          <div class="matrix-prop-combobox unit-combobox">
+            <input type="text" id="matrixBPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off">
+            <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixBPropList"></div>
+          </div>
+          <ul id="matrixDefenderSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
         </section>
         <section class="matrix-enchantment-box">
           <h3>Global settings</h3>
-          <ul id="matrixGlobalOptions" class="matrix-enchantment-list"></ul>
+          <div class="matrix-prop-combobox unit-combobox">
+            <input type="text" id="matrixGlobalPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off">
+            <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixGlobalPropList"></div>
+          </div>
+          <ul id="matrixGlobalOptions" class="matrix-enchantment-list matrix-prop-list"></ul>
         </section>
-        <button id="matrixSwapSides" class="matrix-swap-btn" type="button">Swap attacker/defender</button>
         <section class="matrix-name-filter-box" aria-label="Melee matrix name filters">
           <label for="matrixAttackerNameFilter">Attacker name matches</label>
           <textarea id="matrixAttackerNameFilter" rows="4" spellcheck="false"></textarea>
           <label for="matrixDefenderNameFilter">Defender name matches</label>
           <textarea id="matrixDefenderNameFilter" rows="4" spellcheck="false"></textarea>
           <div class="matrix-filter-actions">
-            <div class="matrix-filter-help">(e.g., &quot;Life&quot;, &quot;Halberdiers&quot;, &quot;Klackon&quot;)</div>
+            <div class="matrix-filter-help">(e.g., &quot;Life&quot;, &quot;Fantastic&quot;, &quot;Normal&quot;,<br>&quot;Halberdiers&quot;, &quot;Klackon&quot;)</div>
           </div>
         </section>
       </div>

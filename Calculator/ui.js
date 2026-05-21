@@ -286,6 +286,7 @@ function populateUnitDropdown(selectId, units) {
     'Barbarian', 'Gnoll', 'Halfling', 'High Elf', 'High Men', 'Klackon',
     'Lizardman', 'Nomad', 'Orc',
     'Beastmen', 'Dark Elf', 'Draconian', 'Dwarven', 'Troll',
+    'Xuanyuan', 'Rakhshasa', 'Hawkmen', 'Goblin',
   ];
   const categoryOrder = [
     'Heroes',
@@ -678,6 +679,20 @@ function updateCustomLevelState(prefix) {
 // --- Swap ---
 
 const DEFAULT_GAME_VERSION = 'com2_1.05.11';
+const GAME_VERSION_STORAGE_KEY = 'gameVersion_v1';
+
+function loadPersistedGameVersion() {
+  try {
+    const saved = localStorage.getItem(GAME_VERSION_STORAGE_KEY);
+    if (!saved) return null;
+    const sel = document.getElementById('gameVersion');
+    if (!sel) return null;
+    const valid = Array.from(sel.options).some(opt => opt.value === saved);
+    return valid ? saved : null;
+  } catch (err) {
+    return null;
+  }
+}
 const DEFAULT_UNITS = {
   a: 'Hell Hounds',
   b: 'War Bears',
@@ -743,9 +758,11 @@ function selectDefaultUnit(prefix, units) {
 }
 
 function resetCalculatorState() {
-  document.getElementById('gameVersion').value = DEFAULT_GAME_VERSION;
-  _activeVersion = DEFAULT_GAME_VERSION;
-  const units = loadUnitDatabase(DEFAULT_GAME_VERSION);
+  const persisted = loadPersistedGameVersion();
+  const initialVersion = persisted || DEFAULT_GAME_VERSION;
+  document.getElementById('gameVersion').value = initialVersion;
+  _activeVersion = initialVersion;
+  const units = loadUnitDatabase(initialVersion);
   populateUnitDropdown('aUnit', units);
   populateUnitDropdown('bUnit', units);
   resetGlobalOptions();
@@ -841,6 +858,7 @@ function findMatchingUnit(units, oldUnit) {
 
 function onVersionChange() {
   const version = document.getElementById('gameVersion').value;
+  try { localStorage.setItem(GAME_VERSION_STORAGE_KEY, version); } catch (err) { /* ignore */ }
   const aUnitSel = document.getElementById('aUnit');
   const bUnitSel = document.getElementById('bUnit');
   const oldAId = aUnitSel.value;
@@ -1404,94 +1422,435 @@ function toggleAllAbilities() {
   updateAbilityVisibility();
 }
 
-function selectedEnchantmentRows(prefix, selectedOverride) {
-  const rows = [];
-  for (const abil of abilityUiDefs()) {
-    if (abil.source !== 'enchantment') continue;
-    const id = abilityControlId(prefix, abil);
-    const label = abilityDisplayLabel(abil);
-    const val = selectedOverride ? selectedOverride[abil.calcKey || abil.key] : getAbilityControlValue(prefix, abil);
-    if (val === undefined) continue;
+// --- Matrix property state ---
+// Editable lists shown in the matrix view's Attacker, Defender, and Global boxes.
+// Each list owns its own state independent of the main calculator panels.
 
-    if (abil.type === 'bool') {
-      if (val) rows.push(label);
-    } else if (abil.type === 'select') {
-      const el = document.getElementById(id);
-      const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : (el ? el.options[0].value : 'none');
-      if (val !== defaultValue) {
-        const option = abil.options ? abil.options.find(([value]) => value === val) : null;
-        rows.push(`${label}: ${option ? option[1] : (el ? el.selectedOptions[0].textContent : val)}`);
-      }
-    } else if (abil.type === 'numcheck') {
-      if (val != null) rows.push(`${label}: ${val}`);
-    } else if (abil.type === 'num') {
-      if (parseInt(val, 10) !== 0) rows.push(`${label}: ${val}`);
-    }
+const MATRIX_LEVEL_OPTIONS  = [['normal','Normal'],['regular','Regular'],['veteran','Veteran'],['elite','Elite'],['ultra_elite','Ultra Elite'],['champion','Champion']];
+const MATRIX_WEAPON_OPTIONS = [['normal','Normal'],['magic','Magic'],['mithril','Mithril'],['adamantium','Adamantium']];
+const MATRIX_ARMOR_OPTIONS  = [['normal','Normal'],['orihalcon','Orihalcon']];
+
+const MATRIX_GLOBAL_DEFS = [
+  { key: 'trueLight',   label: 'True Light',    type: 'bool' },
+  { key: 'darkness',    label: 'Darkness',      type: 'bool' },
+  { key: 'wallOfFire',  label: 'Wall of Fire',  type: 'bool' },
+  { key: 'warpReality', label: 'Warp Reality',  type: 'bool' },
+  { key: 'chaosSurge',  label: 'Chaos Surge enchantments', type: 'num', min: 0, max: 99 },
+  { key: 'cityWalls',   label: 'City walls', type: 'select',
+    options: [['none','None'],['1','+1 def'],['3','+3 def']] },
+  { key: 'nodeAura',    label: 'Node aura',  type: 'select',
+    options: [['none','None'],['chaos','Chaos'],['nature','Nature'],['sorcery','Sorcery']] },
+  { key: 'rangedDist',  label: 'Ranged distance', type: 'num', min: 1, max: 99,
+    rangedOnly: true, requiredInRanged: true },
+];
+
+let matrixPropertyState = { a: [], b: [], global: [], _seeded: false };
+const MATRIX_STATE_KEY = 'matrixPropertyState_v1';
+
+function loadMatrixPropertyStateFromStorage() {
+  try {
+    const raw = localStorage.getItem(MATRIX_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return {
+      a: Array.isArray(parsed.a) ? parsed.a : [],
+      b: Array.isArray(parsed.b) ? parsed.b : [],
+      global: Array.isArray(parsed.global) ? parsed.global : [],
+      _seeded: true,
+    };
+  } catch (err) {
+    return null;
   }
-  return rows;
 }
 
-function renderEnchantmentSnapshotList(listId, rows) {
+function saveMatrixPropertyState() {
+  try {
+    localStorage.setItem(MATRIX_STATE_KEY, JSON.stringify({
+      a: matrixPropertyState.a,
+      b: matrixPropertyState.b,
+      global: matrixPropertyState.global,
+      _seeded: true,
+    }));
+  } catch (err) {
+    // Storage may be full or disabled; ignore.
+  }
+}
+
+// Returns the descriptor for a property key in a given box.
+// Box-side descriptors: 'level', 'weapon', 'armor' (synthetic) or any
+// enchantment whose uiKey matches.
+function matrixPropertyDef(box, key) {
+  if (box === 'global') {
+    return MATRIX_GLOBAL_DEFS.find(d => d.key === key) || null;
+  }
+  if (key === 'level')  return { key: 'level',  label: 'Unit level',  type: 'select', options: MATRIX_LEVEL_OPTIONS };
+  if (key === 'weapon') return { key: 'weapon', label: 'Weapon type', type: 'select', options: MATRIX_WEAPON_OPTIONS };
+  if (key === 'armor')  return { key: 'armor',  label: 'Armor type',  type: 'select', options: MATRIX_ARMOR_OPTIONS };
+  const abil = abilityUiDefs().find(a => a.source === 'enchantment' && a.uiKey === key);
+  if (!abil) return null;
+  return {
+    key: abil.uiKey,
+    label: abilityDisplayLabel(abil),
+    type: abil.type,
+    options: abil.options,
+    abil,
+  };
+}
+
+// All selectable properties for a given box (used by the search dropdown).
+function matrixPropertyCandidates(box) {
+  if (box === 'global') {
+    const isRanged = activeMatrixMode === 'ranged';
+    return MATRIX_GLOBAL_DEFS
+      .filter(d => !d.rangedOnly || isRanged)
+      .map(d => ({ key: d.key, label: d.label }));
+  }
+  const list = [
+    { key: 'level',  label: 'Unit level' },
+    { key: 'weapon', label: 'Weapon type' },
+    { key: 'armor',  label: 'Armor type' },
+  ];
+  for (const abil of abilityUiDefs()) {
+    if (abil.source !== 'enchantment') continue;
+    list.push({ key: abil.uiKey, label: abilityDisplayLabel(abil) });
+  }
+  return list;
+}
+
+function matrixDefaultValueForType(def) {
+  if (def.type === 'bool') return true;
+  if (def.type === 'select') {
+    const opts = def.options || [];
+    return opts.length > 1 ? opts[1][0] : (opts[0] ? opts[0][0] : null);
+  }
+  if (def.type === 'numcheck') return 1;
+  if (def.type === 'num') {
+    if (def.key === 'rangedDist') return 1;
+    return 1;
+  }
+  return null;
+}
+
+function seedMatrixPropertyStateFromDOM() {
+  const rows = { a: [], b: [], global: [] };
+  for (const prefix of ['a', 'b']) {
+    const levelEl  = document.getElementById(prefix + 'Level');
+    const weaponEl = document.getElementById(prefix + 'Weapon');
+    const armorEl  = document.getElementById(prefix + 'Armor');
+    if (levelEl  && levelEl.value  !== 'normal') rows[prefix].push({ key: 'level',  enabled: true, value: levelEl.value });
+    if (weaponEl && weaponEl.value !== 'normal') rows[prefix].push({ key: 'weapon', enabled: true, value: weaponEl.value });
+    if (armorEl  && armorEl.value  !== 'normal') rows[prefix].push({ key: 'armor',  enabled: true, value: armorEl.value });
+    for (const abil of abilityUiDefs()) {
+      if (abil.source !== 'enchantment') continue;
+      const val = getAbilityControlValue(prefix, abil);
+      if (val === undefined) continue;
+      if (!abilityValueIsActive(abil, val)) continue;
+      rows[prefix].push({ key: abil.uiKey, enabled: true, value: val });
+    }
+  }
+  for (const def of MATRIX_GLOBAL_DEFS) {
+    const el = document.getElementById(def.key);
+    if (!el) continue;
+    if (def.type === 'bool') {
+      if (el.checked) rows.global.push({ key: def.key, enabled: true, value: true });
+    } else if (def.type === 'select') {
+      if (el.value && el.value !== 'none') rows.global.push({ key: def.key, enabled: true, value: el.value });
+    } else if (def.type === 'num') {
+      const n = parseInt(el.value, 10) || 0;
+      const seedDefault = def.key === 'rangedDist' ? 1 : 0;
+      if (n !== seedDefault) rows.global.push({ key: def.key, enabled: true, value: n });
+    }
+  }
+  matrixPropertyState = { ...rows, _seeded: true };
+  saveMatrixPropertyState();
+}
+
+function ensureMatrixPropertyStateLoaded() {
+  if (matrixPropertyState._seeded) return;
+  const loaded = loadMatrixPropertyStateFromStorage();
+  if (loaded) {
+    matrixPropertyState = loaded;
+  } else {
+    seedMatrixPropertyStateFromDOM();
+  }
+}
+
+// Find a row in the given box by key.
+function matrixPropertyRow(box, key) {
+  return (matrixPropertyState[box] || []).find(r => r.key === key) || null;
+}
+
+// Read the effective value of a per-side level/weapon/armor.
+function matrixSideSetting(prefix, key) {
+  const row = matrixPropertyRow(prefix, key);
+  if (!row || !row.enabled) return 'normal';
+  return row.value || 'normal';
+}
+
+// Read the effective value of a global property.
+function matrixGlobalValue(key) {
+  const def = MATRIX_GLOBAL_DEFS.find(d => d.key === key);
+  const row = matrixPropertyRow('global', key);
+  if (!row || !row.enabled) {
+    if (!def) return null;
+    if (def.type === 'bool') return false;
+    if (def.type === 'select') return (def.options && def.options[0] ? def.options[0][0] : 'none');
+    if (def.key === 'rangedDist') return 1;
+    return 0;
+  }
+  return row.value;
+}
+
+// Build the same shape as activeNonInnateUnitEnchantments, but driven by matrix state.
+function matrixAppliedEnchantments(prefix) {
+  const result = {};
+  for (const abil of abilityUiDefs()) {
+    if (abil.source !== 'enchantment') continue;
+    const row = matrixPropertyRow(prefix, abil.uiKey);
+    const calcKey = abil.calcKey || abil.key;
+    if (!row || !row.enabled) continue;
+    if (abil.type === 'bool' && row.value) {
+      result[calcKey] = true;
+    } else if (abil.type === 'select') {
+      const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
+      if (row.value !== defaultValue) result[calcKey] = row.value;
+    } else if (abil.type === 'numcheck' && row.value != null) {
+      result[calcKey] = row.value;
+    } else if (abil.type === 'num' && row.value !== 0) {
+      result[calcKey] = row.value;
+    }
+  }
+  return result;
+}
+
+// True if the matrix state has the named enchantment row active for the given side.
+function matrixHasActiveEnchantment(prefix, enchKey) {
+  // enchKey here is the enchantment's `key` (not uiKey).
+  const abil = abilityUiDefs().find(a => a.source === 'enchantment' && a.key === enchKey);
+  if (!abil) return false;
+  const row = matrixPropertyRow(prefix, abil.uiKey);
+  if (!row || !row.enabled) return false;
+  if (abil.type === 'bool') return !!row.value;
+  if (abil.type === 'select') {
+    const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
+    return row.value !== defaultValue;
+  }
+  if (abil.type === 'numcheck') return row.value != null;
+  return (row.value || 0) !== 0;
+}
+
+function ensureRequiredMatrixRows(box) {
+  if (box !== 'global') return;
+  if (activeMatrixMode !== 'ranged') return;
+  const arr = matrixPropertyState.global;
+  for (const def of MATRIX_GLOBAL_DEFS) {
+    if (!def.requiredInRanged) continue;
+    if (!arr.some(r => r.key === def.key)) {
+      arr.push({ key: def.key, enabled: true, value: matrixDefaultValueForType(def) });
+    }
+  }
+}
+
+function isMatrixRowRequired(box, def) {
+  return box === 'global' && def.requiredInRanged && activeMatrixMode === 'ranged';
+}
+
+// Render the editable list for one box.
+function renderMatrixPropList(box) {
+  ensureRequiredMatrixRows(box);
+  const listId = box === 'a' ? 'matrixAttackerSettings'
+              : box === 'b' ? 'matrixDefenderSettings'
+              : 'matrixGlobalOptions';
   const list = document.getElementById(listId);
   if (!list) return;
   list.textContent = '';
-  const entries = rows.length ? rows : ['None'];
-  for (const text of entries) {
-    const item = document.createElement('li');
-    item.textContent = text;
-    if (!rows.length) item.className = 'empty';
-    list.appendChild(item);
+  const rows = (matrixPropertyState[box] || []).filter(row => {
+    const def = matrixPropertyDef(box, row.key);
+    if (!def) return false;
+    if (box === 'global' && def.rangedOnly && activeMatrixMode !== 'ranged') return false;
+    return true;
+  });
+  if (!rows.length) {
+    const empty = document.createElement('li');
+    empty.className = 'empty';
+    empty.textContent = 'None';
+    list.appendChild(empty);
+    return;
+  }
+  for (const row of rows) {
+    const def = matrixPropertyDef(box, row.key);
+    if (!def) continue;
+    const required = isMatrixRowRequired(box, def);
+    if (required) row.enabled = true;
+    const li = document.createElement('li');
+    li.className = 'matrix-prop-row';
+
+    if (!required) {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!row.enabled;
+      cb.addEventListener('change', () => {
+        row.enabled = cb.checked;
+        labelSpan.classList.toggle('disabled', !row.enabled);
+        saveMatrixPropertyState();
+        void renderMatrixSnapshot();
+      });
+      li.appendChild(cb);
+    }
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'matrix-prop-label';
+    labelSpan.textContent = def.label;
+    if (!row.enabled) labelSpan.classList.add('disabled');
+    li.appendChild(labelSpan);
+
+    if (def.type === 'select') {
+      const sel = document.createElement('select');
+      for (const [val, lbl] of def.options || []) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = lbl;
+        if (val === row.value) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.addEventListener('change', () => {
+        row.value = sel.value;
+        saveMatrixPropertyState();
+        void renderMatrixSnapshot();
+      });
+      li.appendChild(sel);
+    } else if (def.type === 'num' || def.type === 'numcheck') {
+      const num = document.createElement('input');
+      num.type = 'number';
+      num.value = row.value != null ? row.value : 0;
+      if (def.min != null) num.min = def.min;
+      if (def.max != null) num.max = def.max;
+      const commit = () => {
+        const parsed = parseInt(num.value, 10);
+        row.value = Number.isFinite(parsed) ? parsed : 0;
+        saveMatrixPropertyState();
+        void renderMatrixSnapshot();
+      };
+      num.addEventListener('change', commit);
+      li.appendChild(num);
+    }
+
+    if (!required) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'matrix-prop-del';
+      del.title = 'Remove';
+      del.textContent = '×';
+      del.addEventListener('click', () => {
+        const arr = matrixPropertyState[box];
+        const idx = arr.indexOf(row);
+        if (idx >= 0) arr.splice(idx, 1);
+        saveMatrixPropertyState();
+        renderMatrixPropList(box);
+        void renderMatrixSnapshot();
+      });
+      li.appendChild(del);
+    }
+
+    list.appendChild(li);
   }
 }
 
-function selectedGlobalOptionRows(matrixMode) {
-  const rows = [];
-  if (matrixMode === 'ranged') {
-    const rangedDist = document.getElementById('rangedDist');
-    rows.push(`Attack mode: Ranged${rangedDist ? `, distance ${rangedDist.value || 1}` : ''}`);
-  }
-  const checkboxOptions = [
-    ['trueLight', 'True Light'],
-    ['darkness', 'Darkness'],
-    ['wallOfFire', 'Wall of Fire'],
-    ['warpReality', 'Warp Reality'],
-  ];
-  for (const [id, label] of checkboxOptions) {
-    const el = document.getElementById(id);
-    if (el && el.checked) rows.push(label);
-  }
-
-  const chaosSurge = document.getElementById('chaosSurge');
-  if (chaosSurge && parseInt(chaosSurge.value, 10) !== 0) {
-    rows.push(`Chaos Surge enchantments: ${chaosSurge.value}`);
-  }
-
-  const cityWalls = document.getElementById('cityWalls');
-  if (cityWalls && cityWalls.value !== 'none') {
-    rows.push(`City walls: ${cityWalls.selectedOptions[0].textContent}`);
-  }
-
-  const nodeAura = document.getElementById('nodeAura');
-  if (nodeAura && nodeAura.value !== 'none') {
-    rows.push(`Node aura: ${nodeAura.selectedOptions[0].textContent}`);
-  }
-
-  return rows;
+function renderAllMatrixPropLists() {
+  renderMatrixPropList('a');
+  renderMatrixPropList('b');
+  renderMatrixPropList('global');
 }
 
-function selectedMatrixSettingRows(prefix) {
-  const rowDefs = [
-    [prefix + 'Level', 'Unit level'],
-    [prefix + 'Weapon', 'Weapon type'],
-    [prefix + 'Armor', 'Armor type'],
-  ];
-  return rowDefs.flatMap(([id, label]) => {
-    const control = document.getElementById(id);
-    if (!control || control.value === 'normal') return [];
-    const value = control && control.selectedOptions && control.selectedOptions[0]
-      ? control.selectedOptions[0].textContent
-      : '';
-    return value ? [`${label}: ${value}`] : [];
+function addMatrixProperty(box, key) {
+  const def = matrixPropertyDef(box, key);
+  if (!def) return;
+  const arr = matrixPropertyState[box];
+  if (arr.some(r => r.key === key)) return;
+  arr.push({ key, enabled: true, value: matrixDefaultValueForType(def) });
+  saveMatrixPropertyState();
+  renderMatrixPropList(box);
+  void renderMatrixSnapshot();
+}
+
+function initMatrixPropCombobox(box) {
+  const searchId = box === 'a' ? 'matrixAPropSearch'
+                : box === 'b' ? 'matrixBPropSearch'
+                : 'matrixGlobalPropSearch';
+  const listId = box === 'a' ? 'matrixAPropList'
+              : box === 'b' ? 'matrixBPropList'
+              : 'matrixGlobalPropList';
+  const searchEl = document.getElementById(searchId);
+  const listEl = document.getElementById(listId);
+  if (!searchEl || !listEl) return;
+  let activeIndex = -1;
+
+  function availableOptions(query) {
+    const taken = new Set((matrixPropertyState[box] || []).map(r => r.key));
+    const q = query.trim().toLowerCase();
+    return matrixPropertyCandidates(box)
+      .filter(c => !taken.has(c.key))
+      .filter(c => !q || c.label.toLowerCase().includes(q));
+  }
+
+  function render(query) {
+    listEl.innerHTML = '';
+    activeIndex = -1;
+    const matches = availableOptions(query);
+    if (!matches.length) { listEl.style.display = 'none'; return; }
+    for (const c of matches) {
+      const item = document.createElement('div');
+      item.className = 'unit-dropdown-item';
+      item.textContent = c.label;
+      item.dataset.key = c.key;
+      item.addEventListener('mousedown', e => {
+        e.preventDefault();
+        commit(c.key);
+      });
+      listEl.appendChild(item);
+    }
+    listEl.style.display = 'block';
+  }
+
+  function commit(key) {
+    addMatrixProperty(box, key);
+    searchEl.value = '';
+    listEl.style.display = 'none';
+    activeIndex = -1;
+  }
+
+  function updateActive() {
+    const items = [...listEl.querySelectorAll('.unit-dropdown-item')];
+    items.forEach((item, i) => item.classList.toggle('unit-dropdown-active', i === activeIndex));
+    if (activeIndex >= 0 && items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  searchEl.addEventListener('focus', () => render(searchEl.value));
+  searchEl.addEventListener('input', () => render(searchEl.value));
+  searchEl.addEventListener('blur', () => {
+    setTimeout(() => { listEl.style.display = 'none'; activeIndex = -1; }, 150);
+  });
+  searchEl.addEventListener('keydown', e => {
+    const items = [...listEl.querySelectorAll('.unit-dropdown-item')];
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      updateActive();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, -1);
+      updateActive();
+    } else if (e.key === 'Enter') {
+      const target = activeIndex >= 0 ? items[activeIndex] : items[0];
+      if (target) {
+        commit(target.dataset.key);
+        searchEl.blur();
+      }
+    } else if (e.key === 'Escape') {
+      listEl.style.display = 'none';
+      searchEl.blur();
+    }
   });
 }
 
@@ -1512,20 +1871,26 @@ async function renderMatrixSnapshot() {
   if (versionEl && gameVersion) {
     versionEl.textContent = `Game version: ${gameVersion.selectedOptions[0].textContent}`;
   }
-  const attackerEnchantments = activeNonInnateUnitEnchantments('a');
-  const defenderEnchantments = activeNonInnateUnitEnchantments('b');
-  renderEnchantmentSnapshotList(
-    'matrixAttackerSettings',
-    selectedMatrixSettingRows('a').concat(selectedEnchantmentRows('a', attackerEnchantments))
-  );
-  renderEnchantmentSnapshotList(
-    'matrixDefenderSettings',
-    selectedMatrixSettingRows('b').concat(selectedEnchantmentRows('b', defenderEnchantments))
-  );
-  renderEnchantmentSnapshotList('matrixGlobalOptions', selectedGlobalOptionRows(activeMatrixMode));
-  matrixCache = await buildMatrixCache(attackerEnchantments, defenderEnchantments, activeMatrixMode);
-  renderMatrixTable();
+  ensureMatrixPropertyStateLoaded();
+  renderAllMatrixPropLists();
+  const attackerEnchantments = matrixAppliedEnchantments('a');
+  const defenderEnchantments = matrixAppliedEnchantments('b');
+  const wrap = document.getElementById('matrixTableWrap');
+  matrixLoadingCount += 1;
+  if (wrap) wrap.classList.add('is-loading');
+  try {
+    matrixCache = await buildMatrixCache(attackerEnchantments, defenderEnchantments, activeMatrixMode);
+    renderMatrixTable();
+  } finally {
+    matrixLoadingCount -= 1;
+    if (wrap && matrixLoadingCount <= 0) {
+      matrixLoadingCount = 0;
+      wrap.classList.remove('is-loading');
+    }
+  }
 }
+
+let matrixLoadingCount = 0;
 
 function selectedUnitLabel(prefix) {
   const searchEl = document.getElementById(prefix + 'UnitSearch');
@@ -1663,31 +2028,12 @@ function matrixRealmClassForUnitType(unitType) {
   return ['life', 'death', 'chaos', 'nature', 'sorcery', 'arcane'].includes(realm) ? `realm-${realm}` : '';
 }
 
-function activeNonInnateUnitEnchantments(prefix) {
-  const result = {};
-  for (const abil of abilityUiDefs()) {
-    if (abil.source !== 'enchantment') continue;
-    const val = getAbilityControlValue(prefix, abil);
-    const calcKey = abil.calcKey || abil.key;
-    if (abil.type === 'bool' && val) {
-      result[calcKey] = true;
-    } else if (abil.type === 'select') {
-      const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
-      if (val !== defaultValue) result[calcKey] = val;
-    } else if (abil.type === 'numcheck' && val != null) {
-      result[calcKey] = val;
-    } else if (abil.type === 'num' && val !== 0) {
-      result[calcKey] = val;
-    }
-  }
-  return result;
-}
-
 function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
   const version = document.getElementById('gameVersion').value;
   const unitType = predefinedUnitType(unit);
-  const level = document.getElementById(prefix + 'Level').value;
-  const weapon = document.getElementById(prefix + 'Weapon').value;
+  const level  = matrixSideSetting(prefix, 'level');
+  const weapon = matrixSideSetting(prefix, 'weapon');
+  const armor  = matrixSideSetting(prefix, 'armor');
   const abilities = { ...parseAbilitiesFromUnit(unit), ...appliedEnchantments };
   const enemyPrefix = prefix === 'a' ? 'b' : 'a';
   const rangedMatrixAttacker = matrixMode === 'ranged' && prefix === 'a';
@@ -1697,7 +2043,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     abilities,
     level,
     weapon,
-    armor: document.getElementById(prefix + 'Armor').value,
+    armor,
     rtbType: predefinedUnitRtbType(unit),
     unitType,
     chaosChannels: abilities.chaosChannels || 'none',
@@ -1711,15 +2057,15 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     toHitMod: unit.to_hit || 0,
     toHitRtbMod: 0,
     toBlkMod: document.getElementById(prefix + 'ToBlkMod').value,
-    cityWalls: document.getElementById('cityWalls').value,
-    nodeAura: document.getElementById('nodeAura').value,
-    trueLight: !!document.getElementById('trueLight').checked,
-    darkness: !!document.getElementById('darkness').checked,
-    enemyEternalNight: !!document.getElementById(enemyPrefix + 'Abil_eternalNight').checked,
-    chaosSurge: document.getElementById('chaosSurge').value,
+    cityWalls: matrixGlobalValue('cityWalls'),
+    nodeAura: matrixGlobalValue('nodeAura'),
+    trueLight: !!matrixGlobalValue('trueLight'),
+    darkness: !!matrixGlobalValue('darkness'),
+    enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
+    chaosSurge: matrixGlobalValue('chaosSurge'),
     rangedCheck: rangedMatrixAttacker,
-    rangedDist: rangedMatrixAttacker ? document.getElementById('rangedDist').value : 1,
-    warpReality: !!document.getElementById('warpReality').checked,
+    rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
+    warpReality: !!matrixGlobalValue('warpReality'),
     generic: unit.category === 'Generic',
   });
 }
@@ -1732,15 +2078,73 @@ function buildMatrixAttackerStats(unit, appliedEnchantments, matrixMode) {
   return buildMatrixUnitStats('a', unit, appliedEnchantments, matrixMode);
 }
 
+// Read stats for the user-customized custom unit row in the matrix.
+// Innate abilities and base numeric stats come from the main panel; level,
+// weapon, armor, enchantments, and global options come from matrix state.
+function readMatrixCustomUnitStats(prefix, matrixMode) {
+  const el = id => document.getElementById(id);
+  const enemyPrefix = prefix === 'a' ? 'b' : 'a';
+  const rangedMatrixAttacker = matrixMode === 'ranged' && prefix === 'a';
+
+  // Start with innate (source='ability') values from the DOM.
+  const abilities = {};
+  for (const abil of abilityUiDefs()) {
+    if (abil.source === 'enchantment') continue;
+    const val = getAbilityControlValue(prefix, abil);
+    if (val === undefined) continue;
+    const calcKey = abil.calcKey || abil.key;
+    abilities[calcKey] = mergedAbilityValue(abil, abilities[calcKey], val);
+  }
+  // Merge matrix-state enchantments on top.
+  const stateEnch = matrixAppliedEnchantments(prefix);
+  for (const k of Object.keys(stateEnch)) {
+    abilities[k] = stateEnch[k];
+  }
+
+  return deriveUnitStats({
+    prefix,
+    version: el('gameVersion').value,
+    abilities,
+    level: matrixSideSetting(prefix, 'level'),
+    weapon: matrixSideSetting(prefix, 'weapon'),
+    armor: matrixSideSetting(prefix, 'armor'),
+    rtbType: el(prefix + 'RtbType').value,
+    unitType: el(prefix + 'Abil_unitType').value,
+    chaosChannels: abilities.chaosChannels || 'none',
+    figs: el(prefix + 'Figs').value,
+    atk: el(prefix + 'Atk').value,
+    rtb: el(prefix + 'Rtb').value,
+    def: el(prefix + 'Def').value,
+    res: el(prefix + 'Res').value,
+    hp: el(prefix + 'HP').value,
+    dmg: el(prefix + 'Dmg').value,
+    toHitMod: el(prefix + 'ToHitMod').value,
+    toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
+    toBlkMod: el(prefix + 'ToBlkMod').value,
+    cityWalls: matrixGlobalValue('cityWalls'),
+    nodeAura: matrixGlobalValue('nodeAura'),
+    trueLight: !!matrixGlobalValue('trueLight'),
+    darkness: !!matrixGlobalValue('darkness'),
+    enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
+    chaosSurge: matrixGlobalValue('chaosSurge'),
+    rangedCheck: rangedMatrixAttacker,
+    rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
+    warpReality: !!matrixGlobalValue('warpReality'),
+    generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
+  });
+}
+
 function selectedMatrixUnitRow(prefix, matrixMode) {
-  const stats = readUnitStats(prefix, matrixMode === 'ranged' && prefix === 'a'
-    ? { rangedCheck: true, rangedDist: document.getElementById('rangedDist').value }
-    : null);
+  const stats = readMatrixCustomUnitStats(prefix, matrixMode);
   const label = selectedUnitLabel(prefix);
+  const classTag = stats.unitType === 'hero' ? 'Hero'
+                 : String(stats.unitType || '').startsWith('fantastic_') ? 'Fantastic'
+                 : 'Normal';
   return {
     label,
-    matchText: label,
+    matchText: [label, classTag].filter(Boolean).join(' '),
     realmClass: matrixRealmClassForUnitType(stats.unitType),
+    unitId: null,
     stats,
   };
 }
@@ -1753,10 +2157,14 @@ function predefinedMatrixUnitRows(prefix, appliedEnchantments, matrixMode) {
     .filter(Boolean)
     .map(unit => {
       const unitType = predefinedUnitType(unit);
+      const classTag = unitType === 'hero' ? 'Hero'
+                     : unitType.startsWith('fantastic_') ? 'Fantastic'
+                     : 'Normal';
       return {
         label: unit.name,
-        matchText: [unit.name, unit.category, unit.race].filter(Boolean).join(' '),
+        matchText: [unit.name, unit.category, unit.race, classTag].filter(Boolean).join(' '),
         realmClass: matrixRealmClassForUnitType(unitType),
+        unitId: String(unit.id),
         stats: prefix === 'a'
           ? buildMatrixAttackerStats(unit, appliedEnchantments, matrixMode)
           : buildMatrixDefenderStats(unit, appliedEnchantments, matrixMode),
@@ -1767,6 +2175,7 @@ function predefinedMatrixUnitRows(prefix, appliedEnchantments, matrixMode) {
 let matrixCache = null;
 let activeMatrixMode = 'melee';
 let matrixWorkerBlobUrl = null;
+let closeMatrixModal = null;
 
 const MATRIX_WORKER_HANDLER = `
 function distExpectedValue(dist) {
@@ -1879,7 +2288,7 @@ function compareMeleeMatrixSortKeys(a, b) {
 }
 
 function numericMeleeMatrixCsvValue(ratio) {
-  if (Number.isFinite(ratio)) return String(Number(ratio.toPrecision(15)));
+  if (Number.isFinite(ratio)) return ratio.toPrecision(3);
   return '1e99';
 }
 
@@ -1894,7 +2303,7 @@ function hasMatrixRangedAttack(info) {
 
 async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matrixMode) {
   const version = document.getElementById('gameVersion').value;
-  const wallOfFire = document.getElementById('wallOfFire').checked;
+  const wallOfFire = !!matrixGlobalValue('wallOfFire');
   const isRangedMatrix = matrixMode === 'ranged';
   const allAttackers = predefinedMatrixUnitRows('a', attackerEnchantments, matrixMode)
     .filter(info => !isRangedMatrix || hasMatrixRangedAttack(info));
@@ -2014,12 +2423,76 @@ function renderMatrixTable() {
     for (const defCol of matrixCols) {
       const ratio = atkRow.cells[defCol.defenderIndex].ratio;
       const color = cellColorFn(ratio);
-      parts.push(`<td style="background-color:${color.background};color:${color.textColor}">${escHtmlAttr(formatMatrixRatioValue(ratio, matrixCache.mode))}</td>`);
+      parts.push(`<td class="matrix-cell" data-atk-idx="${atkRow.attackerIndex}" data-def-idx="${defCol.defenderIndex}" style="background-color:${color.background};color:${color.textColor}">${escHtmlAttr(formatMatrixRatioValue(ratio, matrixCache.mode))}</td>`);
     }
     parts.push('</tr>');
   }
   parts.push('</tbody></table>');
   wrap.innerHTML = parts.join('');
+
+  const tableEl = wrap.querySelector('.matrix-table');
+  if (tableEl) {
+    tableEl.addEventListener('click', e => {
+      const cell = e.target.closest('td.matrix-cell');
+      if (!cell) return;
+      const atkIdx = parseInt(cell.dataset.atkIdx, 10);
+      const defIdx = parseInt(cell.dataset.defIdx, 10);
+      if (Number.isNaN(atkIdx) || Number.isNaN(defIdx)) return;
+      applyMatrixCellToMain(atkIdx, defIdx);
+    });
+  }
+}
+
+function applyMatrixCellToMain(attackerIndex, defenderIndex) {
+  if (!matrixCache) return;
+  const attackerInfo = matrixCache.rows[attackerIndex]?.info;
+  const defenderInfo = matrixCache.defenders[defenderIndex];
+  if (!attackerInfo || !defenderInfo) return;
+
+  const matrixMode = matrixCache.mode;
+
+  for (const [prefix, info] of [['a', attackerInfo], ['b', defenderInfo]]) {
+    if (info.unitId != null) {
+      const hiddenEl = document.getElementById(prefix + 'Unit');
+      hiddenEl.value = info.unitId;
+      syncUnitDisplay(prefix);
+      updateUnitLock(prefix);
+    }
+    const level  = matrixSideSetting(prefix, 'level');
+    const weapon = matrixSideSetting(prefix, 'weapon');
+    const armor  = matrixSideSetting(prefix, 'armor');
+    const levelEl  = document.getElementById(prefix + 'Level');
+    const weaponEl = document.getElementById(prefix + 'Weapon');
+    const armorEl  = document.getElementById(prefix + 'Armor');
+    if (levelEl  && !levelEl.disabled)  levelEl.value  = level;
+    if (weaponEl) weaponEl.value = weapon;
+    if (armorEl)  armorEl.value  = armor;
+    if (unitBaseStats[prefix]) applyLevelBonuses(prefix);
+
+    clearAbilities(prefix, 'enchantment');
+    applyAbilities(prefix, matrixAppliedEnchantments(prefix), 'enchantment');
+  }
+
+  const isRanged = matrixMode === 'ranged';
+  const rangedCheckEl = document.getElementById('rangedCheck');
+  if (rangedCheckEl) rangedCheckEl.checked = isRanged;
+  const rangedDistEl = document.getElementById('rangedDist');
+  if (rangedDistEl) rangedDistEl.value = isRanged ? matrixGlobalValue('rangedDist') : 1;
+
+  document.getElementById('cityWalls').value  = matrixGlobalValue('cityWalls')  || 'none';
+  document.getElementById('nodeAura').value   = matrixGlobalValue('nodeAura')   || 'none';
+  document.getElementById('trueLight').checked   = !!matrixGlobalValue('trueLight');
+  document.getElementById('darkness').checked    = !!matrixGlobalValue('darkness');
+  document.getElementById('wallOfFire').checked  = !!matrixGlobalValue('wallOfFire');
+  document.getElementById('warpReality').checked = !!matrixGlobalValue('warpReality');
+  document.getElementById('chaosSurge').value    = matrixGlobalValue('chaosSurge') || 0;
+
+  refreshAbilityFieldVisibility();
+  updateTypeVisibility();
+  updateAbilityVisibility();
+  recalculate();
+
+  if (typeof closeMatrixModal === 'function') closeMatrixModal();
 }
 
 function currentMatrixView() {
@@ -2146,17 +2619,51 @@ async function swapMatrixSides() {
     const tmp = attackerFilter.value;
     attackerFilter.value = defenderFilter.value;
     defenderFilter.value = tmp;
+    saveMatrixFilters();
   }
   swapAttackerDefender();
+  const tmpRows = matrixPropertyState.a;
+  matrixPropertyState.a = matrixPropertyState.b;
+  matrixPropertyState.b = tmpRows;
+  saveMatrixPropertyState();
   await renderMatrixSnapshot();
 }
 
+const MATRIX_FILTER_STORAGE_KEY = 'matrixNameFilters_v1';
+
+function loadPersistedMatrixFilters() {
+  try {
+    const raw = localStorage.getItem(MATRIX_FILTER_STORAGE_KEY);
+    if (!raw) return { attacker: '', defender: '' };
+    const parsed = JSON.parse(raw);
+    return {
+      attacker: typeof parsed.attacker === 'string' ? parsed.attacker : '',
+      defender: typeof parsed.defender === 'string' ? parsed.defender : '',
+    };
+  } catch (err) {
+    return { attacker: '', defender: '' };
+  }
+}
+
+function saveMatrixFilters() {
+  const attackerEl = document.getElementById('matrixAttackerNameFilter');
+  const defenderEl = document.getElementById('matrixDefenderNameFilter');
+  try {
+    localStorage.setItem(MATRIX_FILTER_STORAGE_KEY, JSON.stringify({
+      attacker: attackerEl ? attackerEl.value : '',
+      defender: defenderEl ? defenderEl.value : '',
+    }));
+  } catch (err) { /* ignore */ }
+}
+
 function resetMeleeMatrixControls() {
+  const persisted = loadPersistedMatrixFilters();
+  const initial = { matrixAttackerNameFilter: persisted.attacker, matrixDefenderNameFilter: persisted.defender };
   ['matrixAttackerNameFilter', 'matrixDefenderNameFilter'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.value = '';
-    el.defaultValue = '';
+    el.value = initial[id];
+    el.defaultValue = initial[id];
   });
   ['matrixSortDefenders', 'matrixSortAttackers'].forEach(id => {
     const el = document.getElementById(id);
@@ -2224,6 +2731,7 @@ function initMatrixModal() {
     modal.setAttribute('aria-hidden', 'true');
     (activeMatrixMode === 'ranged' && rangedOpenBtn ? rangedOpenBtn : openBtn).focus();
   };
+  closeMatrixModal = close;
 
   openBtn.addEventListener('click', () => open('melee'));
   if (rangedOpenBtn) rangedOpenBtn.addEventListener('click', () => open('ranged'));
@@ -2250,7 +2758,7 @@ function initMatrixModal() {
   });
   [attackerFilter, defenderFilter].forEach(el => {
     if (!el) return;
-    el.addEventListener('input', scheduleFilterRender);
+    el.addEventListener('input', () => { saveMatrixFilters(); scheduleFilterRender(); });
   });
   modal.addEventListener('click', e => {
     if (e.target === modal) close();
@@ -2272,6 +2780,9 @@ function initMatrixModal() {
 buildAbilitiesUI('a');
 buildAbilitiesUI('b');
 initMatrixModal();
+initMatrixPropCombobox('a');
+initMatrixPropCombobox('b');
+initMatrixPropCombobox('global');
 
 // Unit type change -> update level availability
 ['a', 'b'].forEach(prefix => {
@@ -2286,7 +2797,17 @@ initMatrixModal();
 
 document.getElementById('gameVersion').addEventListener('change', onVersionChange);
 document.getElementById('swapBtn').addEventListener('click', swapAttackerDefender);
-document.getElementById('resetBtn').addEventListener('click', resetCalculatorState);
+document.getElementById('resetBtn').addEventListener('click', () => {
+  try {
+    localStorage.removeItem(GAME_VERSION_STORAGE_KEY);
+    localStorage.removeItem(MATRIX_FILTER_STORAGE_KEY);
+  } catch (err) { /* ignore */ }
+  const attackerFilter = document.getElementById('matrixAttackerNameFilter');
+  const defenderFilter = document.getElementById('matrixDefenderNameFilter');
+  if (attackerFilter) attackerFilter.value = '';
+  if (defenderFilter) defenderFilter.value = '';
+  resetCalculatorState();
+});
 document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
   btn.addEventListener('click', toggleAllAbilities);
 });
