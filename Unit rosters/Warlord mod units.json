@@ -83,7 +83,8 @@
       "Healer",
       "Purify",
       "Spellcaster=Healingx1",
-      "Pathfinding"
+      "Pathfinding",
+      "Clergy"
     ],
     "category": "Heroes",
     "moves": 3,
@@ -251,7 +252,8 @@
       "Negate First Strike",
       "Healer",
       "Purify",
-      "Spellcaster=Healingx2"
+      "Spellcaster=Healingx2",
+      "Clergy"
     ],
     "category": "Heroes",
     "moves": 3,
@@ -588,7 +590,8 @@
       "Hero",
       "Healer",
       "Purify",
-      "Spellcaster=Healingx3"
+      "Spellcaster=Healingx3",
+      "Clergy"
     ],
     "category": "Heroes",
     "moves": 3,
@@ -763,7 +766,8 @@
     "defense": 4,
     "resist": 6,
     "abilities": [
-      "Sailing"
+      "Sailing",
+      "Mechanical"
     ],
     "category": "General",
     "moves": 3,
@@ -783,7 +787,8 @@
     "ranged_type": "Missile",
     "ammo": 8,
     "abilities": [
-      "Sailing"
+      "Sailing",
+      "Mechanical"
     ],
     "category": "General",
     "moves": 4,
@@ -804,7 +809,8 @@
     "ammo": 15,
     "abilities": [
       "Long Range",
-      "Wall Crusher"
+      "Wall Crusher",
+      "Mechanical"
     ],
     "category": "General",
     "moves": 1,
@@ -825,7 +831,8 @@
     "ammo": 10,
     "abilities": [
       "Sailing",
-      "Long Range"
+      "Long Range",
+      "Mechanical"
     ],
     "category": "General",
     "moves": 4,
@@ -845,7 +852,8 @@
     "ranged_type": "Missile",
     "ammo": 6,
     "abilities": [
-      "Sailing"
+      "Sailing",
+      "Mechanical"
     ],
     "category": "General",
     "moves": 4,
@@ -932,7 +940,8 @@
       "Healer",
       "Purify",
       "Spellcaster=Healingx1",
-      "Pathfinding"
+      "Pathfinding",
+      "Clergy"
     ],
     "category": "Barbarian",
     "moves": 3,
@@ -951,7 +960,8 @@
     "thrown_breath": 2,
     "thrown_breath_type": "thrown",
     "abilities": [
-      "Pathfinding"
+      "Pathfinding",
+      "Rage"
     ],
     "category": "Barbarian",
     "moves": 3,
@@ -1041,7 +1051,8 @@
     "abilities": [
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Beastmen",
     "moves": 2,
@@ -1241,7 +1252,8 @@
       "Healer",
       "Purify",
       "Spellcaster=Healingx2",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Clergy"
     ],
     "category": "Dark Elf",
     "moves": 2,
@@ -1434,7 +1446,8 @@
       "Healer",
       "Purify",
       "Holy Bonus=1",
-      "Spellcaster=Healingx2"
+      "Spellcaster=Healingx2",
+      "Clergy"
     ],
     "category": "Draconian",
     "moves": 2,
@@ -1518,7 +1531,8 @@
     "abilities": [
       "Flight",
       "Sailing",
-      "Wall Crusher"
+      "Wall Crusher",
+      "Mechanical"
     ],
     "category": "Draconian",
     "moves": 4,
@@ -1618,7 +1632,8 @@
       "Poison Immunity",
       "Mountainwalk",
       "Long Range",
-      "Wall Crusher"
+      "Wall Crusher",
+      "Mechanical"
     ],
     "category": "Dwarf",
     "moves": 1,
@@ -1641,7 +1656,8 @@
       "Fire Immunity",
       "Cold Immunity",
       "Wall Crusher",
-      "Stoning Immunity"
+      "Stoning Immunity",
+      "Mechanical"
     ],
     "category": "Dwarf",
     "moves": 4,
@@ -1848,7 +1864,8 @@
       "Healer",
       "Purify",
       "Lucky",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Halfling",
     "moves": 3,
@@ -2138,7 +2155,8 @@
     "abilities": [
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "High Men",
     "moves": 2,
@@ -2440,7 +2458,8 @@
       "Water Walking",
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Lizardman",
     "moves": 3,
@@ -2544,7 +2563,8 @@
       "Healer",
       "Purify",
       "Spellcaster=Healingx2",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Clergy"
     ],
     "category": "Nomad",
     "moves": 2,
@@ -2782,7 +2802,8 @@
     "abilities": [
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Orc",
     "moves": 3,
@@ -2935,7 +2956,8 @@
       "Healer",
       "Purify",
       "Regeneration=2",
-      "Spellcaster=Spell#280x1"
+      "Spellcaster=Spell#280x1",
+      "Clergy"
     ],
     "category": "Troll",
     "moves": 3,
@@ -3110,10 +3132,10 @@
       "Flight",
       "Fantastic",
       "Cause Fear",
-      "Stoning Gaze=-4",
       "Poison Touch=4",
+      "Doom Gaze=4",
       "Death Gaze=-4",
-      "Doom Gaze=4"
+      "Stoning Gaze=-4"
     ],
     "category": "Chaos Creatures",
     "moves": 2,
@@ -3323,7 +3345,8 @@
       "Cold Immunity",
       "Weapon Immunity",
       "Forester",
-      "Fantastic"
+      "Fantastic",
+      "Rage"
     ],
     "category": "Death Creatures",
     "moves": 3,
@@ -3746,8 +3769,8 @@
     "resist": 9,
     "abilities": [
       "Fantastic",
-      "Stoning Gaze=-3",
-      "Caster=40"
+      "Caster=40",
+      "Stoning Gaze=-3"
     ],
     "category": "Nature Creatures",
     "moves": 3,
@@ -3790,8 +3813,8 @@
       "Regeneration=3",
       "Fantastic",
       "Cause Fear",
-      "Stoning Gaze=-4",
-      "Supernatural"
+      "Supernatural",
+      "Stoning Gaze=-4"
     ],
     "category": "Nature Creatures",
     "moves": 3,
@@ -4104,7 +4127,8 @@
       "Mountainwalk",
       "Wall Crusher",
       "Large Shield",
-      "Lightning Resist"
+      "Lightning Resist",
+      "Mechanical"
     ],
     "category": "Dwarf",
     "moves": 2,
@@ -4129,7 +4153,8 @@
       "Healer",
       "Purify",
       "Poison Touch=2",
-      "Spellcaster=Spell#162x2"
+      "Spellcaster=Spell#162x2",
+      "GnollWitchdoctors"
     ],
     "category": "Gnoll",
     "moves": 3,
@@ -4276,7 +4301,8 @@
     "abilities": [
       "Quick Casting",
       "Spellcaster=Spell#283x1",
-      "Pathfinding"
+      "Pathfinding",
+      "GnollHunters"
     ],
     "category": "Gnoll",
     "moves": 3,
@@ -4418,7 +4444,8 @@
     "abilities": [
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Dark Elf",
     "moves": 3,
@@ -4439,7 +4466,8 @@
     "ammo": 10,
     "abilities": [
       "Armor Piercing",
-      "Long Range"
+      "Long Range",
+      "Mechanical"
     ],
     "category": "Special",
     "moves": 1,
@@ -4663,7 +4691,8 @@
       "Healer",
       "Purify",
       "Spellcaster=Healingx2",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Clergy"
     ],
     "category": "Beastmen",
     "moves": 2,
@@ -4687,7 +4716,8 @@
       "Purify",
       "Exorcise=1",
       "Spellcaster=Spell#240x2",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Clergy"
     ],
     "category": "High Men",
     "moves": 2,
@@ -4712,7 +4742,8 @@
       "Flight",
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Draconian",
     "moves": 2,
@@ -4734,7 +4765,8 @@
     "abilities": [
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Nomad",
     "moves": 2,
@@ -5094,8 +5126,8 @@
     "resist": 9,
     "abilities": [
       "Flight",
-      "Stoning Gaze=-1",
-      "Poison Touch=1"
+      "Poison Touch=1",
+      "Stoning Gaze=-1"
     ],
     "category": "Beastmen",
     "moves": 4,
@@ -5231,7 +5263,8 @@
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
-      "Sailing"
+      "Sailing",
+      "Mechanical"
     ],
     "category": "Barbarian",
     "moves": 5,
@@ -5253,7 +5286,8 @@
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
-      "Sailing"
+      "Sailing",
+      "Mechanical"
     ],
     "category": "Special",
     "moves": 4,
@@ -5285,14 +5319,14 @@
       "Fantastic",
       "Cause Fear",
       "Immolation",
-      "Stoning Gaze=-4",
       "Stoning Immunity",
       "Lightning Resist",
       "Supernatural",
       "Poison Touch=4",
       "Spellcaster=Spell#109x2",
+      "Doom Gaze=4",
       "Death Gaze=-4",
-      "Doom Gaze=4"
+      "Stoning Gaze=-4"
     ],
     "category": "Chaos Creatures",
     "moves": 6,
@@ -5326,7 +5360,6 @@
       "Fantastic",
       "Cause Fear",
       "Immolation",
-      "Stoning Gaze=-6",
       "Stoning Immunity",
       "Lightning Resist",
       "Supernatural",
@@ -5334,8 +5367,9 @@
       "Caster=250",
       "Poison Touch=10",
       "Spellcaster=Spell#117x1",
+      "Doom Gaze=6",
       "Death Gaze=-6",
-      "Doom Gaze=6"
+      "Stoning Gaze=-6"
     ],
     "category": "Chaos Creatures",
     "moves": 6,
@@ -5367,7 +5401,6 @@
       "Quick Casting",
       "Fantastic",
       "Cause Fear",
-      "Stoning Gaze=-4",
       "Stoning Immunity",
       "Lightning Resist",
       "Supernatural",
@@ -5376,6 +5409,7 @@
       "Poison Touch=20",
       "Spellcaster=Spell#33x1",
       "Resistance to All=3",
+      "Stoning Gaze=-4",
       "Pathfinding"
     ],
     "category": "Nature Creatures",
@@ -5409,8 +5443,6 @@
       "Quick Casting",
       "Fantastic",
       "Cause Fear",
-      "Stoning Gaze=-4",
-      "Stoning Touch=-6",
       "Stoning Immunity",
       "Lightning Resist",
       "Supernatural",
@@ -5419,6 +5451,8 @@
       "Poison Touch=30",
       "Spellcaster=Spell#33x1",
       "Resistance to All=4",
+      "Stoning Gaze=-4",
+      "Stoning Touch=-6",
       "Pathfinding"
     ],
     "category": "Nature Creatures",
@@ -5524,7 +5558,8 @@
       "Healer",
       "Purify",
       "Spellcaster=Healingx2",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Clergy"
     ],
     "category": "Lizardman",
     "moves": 2,
@@ -5708,9 +5743,9 @@
       "Hero",
       "Stealth",
       "Lucky",
-      "Stoning Touch=-1",
       "DarkForce",
-      "Spellcaster=Spell#94x3"
+      "Spellcaster=Spell#94x3",
+      "Stoning Touch=-1"
     ],
     "category": "Heroes",
     "moves": 3,
@@ -5785,7 +5820,8 @@
       "Purify",
       "Holy Bonus=2",
       "Exorcise=-3",
-      "Spellcaster=Spell#240x9"
+      "Spellcaster=Spell#240x9",
+      "Clergy"
     ],
     "category": "Heroes",
     "moves": 3,
@@ -6271,7 +6307,8 @@
     "abilities": [
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Xuanyuan",
     "moves": 3,
@@ -6291,7 +6328,8 @@
     "abilities": [
       "Healer",
       "Purify",
-      "Spellcaster=Healingx2"
+      "Spellcaster=Healingx2",
+      "Clergy"
     ],
     "category": "Xuanyuan",
     "moves": 3,
@@ -6384,7 +6422,8 @@
       "Armor Piercing",
       "Flight",
       "Sailing",
-      "Amplifier"
+      "Amplifier",
+      "Mechanical"
     ],
     "category": "Hawkmen",
     "moves": 1,
@@ -6406,7 +6445,8 @@
     "thrown_breath": 6,
     "thrown_breath_type": "fire",
     "abilities": [
-      "Sailing"
+      "Sailing",
+      "Mechanical"
     ],
     "category": "Xuanyuan",
     "moves": 3,
@@ -6461,7 +6501,8 @@
     "ammo": 10,
     "abilities": [
       "Armor Piercing",
-      "Long Range"
+      "Long Range",
+      "Mechanical"
     ],
     "category": "Xuanyuan",
     "moves": 3,
@@ -6600,7 +6641,8 @@
       "Forester",
       "Healer",
       "Purify",
-      "Spellcaster=Healingx1"
+      "Spellcaster=Healingx1",
+      "Clergy"
     ],
     "category": "Rakhshasa",
     "moves": 3,
@@ -6625,7 +6667,8 @@
       "Purify",
       "Blood Sucker",
       "Spellcaster=Healingx2",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Clergy"
     ],
     "category": "Rakhshasa",
     "moves": 3,
@@ -6842,7 +6885,8 @@
       "Supernatural",
       "Exorcise=-1",
       "Spellcaster=Healingx4",
-      "Resistance to All=3"
+      "Resistance to All=3",
+      "Clergy"
     ],
     "category": "Hawkmen",
     "moves": 3,
@@ -6887,7 +6931,8 @@
       "Caster=20",
       "Poison Touch=3",
       "Spellcaster=Spell#172x1",
-      "Death Gaze=-2"
+      "Death Gaze=-2",
+      "Stoning Touch=0"
     ],
     "category": "Hawkmen",
     "moves": 3,
@@ -7070,7 +7115,8 @@
       "Healer",
       "Purify",
       "Spellcaster=Healingx1",
-      "Pathfinding"
+      "Pathfinding",
+      "Clergy"
     ],
     "category": "Nomad",
     "moves": 5,
@@ -7340,7 +7386,8 @@
       "Death Immunity",
       "Cause Fear",
       "DarkForce",
-      "Poison Touch=5"
+      "Poison Touch=5",
+      "Death Touch=-1"
     ],
     "category": "Goblin",
     "moves": 2,
@@ -7362,7 +7409,8 @@
       "Armor Piercing",
       "Large Shield",
       "Cause Fear",
-      "Spellcaster=Spell#294x1"
+      "Spellcaster=Spell#294x1",
+      "Mechanical"
     ],
     "category": "Goblin",
     "moves": 5,
@@ -7384,7 +7432,8 @@
     "abilities": [
       "First Strike",
       "Armor Piercing",
-      "Flight"
+      "Flight",
+      "Mechanical"
     ],
     "category": "Goblin",
     "moves": 4,
@@ -7406,7 +7455,8 @@
     "ammo": 8,
     "abilities": [
       "Sailing",
-      "Spellcaster=Spell#294x1"
+      "Spellcaster=Spell#294x1",
+      "Mechanical"
     ],
     "category": "Goblin",
     "moves": 3,
@@ -7444,7 +7494,9 @@
     "abilities": [
       "Wall Crusher",
       "Fantastic",
-      "Spellcaster=Spell#341x1"
+      "Spellcaster=Spell#341x1",
+      "Mechanical",
+      "DestroyMechanical"
     ],
     "category": "Arcane Creatures",
     "moves": 2,

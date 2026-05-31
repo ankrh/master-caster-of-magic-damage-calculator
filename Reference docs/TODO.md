@@ -6,8 +6,6 @@
 
 - **Draconian Resistance discrepancy**: Game data (UNITS.INI / HTML) shows Draconian common units have Resistance 1 higher than the manual states (Spearmen 4 vs 3, Swordsmen 5 vs 4, Halberdiers 6 vs 5, Magicians 9 vs 8). This likely means Draconians have an undocumented +1 Resistance racial modifier not listed in the manual.
 
-- **UNITS.INI validity** The data on settlers in the UNITS.INI file has no lucky settlers, but they exist in game in CoM2. Are we sure that the UNITS.INI from the CoM2 folder actually describes CoM2 units?
-
 - Warp reality wiki says to hit can be reduced to 0%, but the to hit wiki page says we can't go below 10%
 
 - Does the chaos spawn poison touch trigger on doom gaze, melee attack or on both?

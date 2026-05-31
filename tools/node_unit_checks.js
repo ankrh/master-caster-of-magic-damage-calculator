@@ -1,3 +1,11 @@
+// Scope: asserts on deriveUnitStats and engine/combat HELPERS in isolation
+// (stat derivation, buildToBlockContext, phase builders). Run: node tools/node_unit_checks.js
+//
+// This is NOT a way to evaluate PRESETS. Never reconstruct the applyPreset →
+// readUnitStats → resolveCombat path here or in any Node script — that skips the
+// DOM/calcKey layer and yields false failures. Evaluate PRESETS only via runTests()
+// in the browser (see CLAUDE.md → Testing with Playwright).
+
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -10,6 +18,7 @@ function loadCalculatorContext() {
   vm.createContext(context);
   [
     'Calculator/units.js',
+    'Calculator/units_warlord.js',
     'Calculator/data.js',
     'Calculator/engine.js',
     'Calculator/combat.js',

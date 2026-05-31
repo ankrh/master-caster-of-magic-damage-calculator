@@ -6,12 +6,13 @@
 const ENCHANTMENT_TYPE_SUFFIXES = {
   flameBlade: 'N,H',
   metalFires: 'N,H',
-  chaosChannels: 'N,H',
+  ccDefense: 'N,H',
+  ccFireBreath: 'N,H',
+  ccFlight: 'N,H',
   blackChannels: 'N,H',
   holyArmor: 'N,H',
   holyWeapon: 'N,H',
   eldritchWeapon: 'N,H',
-  shatter: 'N,H',
   mislead: 'N,H',
   discipline: 'N',
   destiny: 'N',
@@ -20,7 +21,6 @@ const ENCHANTMENT_TYPE_SUFFIXES = {
   blazingEyes: 'F',
 };
 
-const FULL_ROW_ABILITY_KEYS = new Set(['chaosChannels']);
 const SHARED_ABILITY_KEYS = new Set(
   ABILITY_DEFS
     .map(abil => abil.key)
@@ -102,15 +102,14 @@ function buildAbilitiesUI(prefix) {
         container.appendChild(subheader);
       }
     }
-    const isFullRow = FULL_ROW_ABILITY_KEYS.has(abil.key);
-    if (!gridDiv && !isFullRow) {
+    if (!gridDiv) {
       gridDiv = document.createElement('div');
       gridDiv.className = 'abil-grid ' + currentGroupClass;
       gridDiv.dataset.abilGroup = currentGroup;
       if (currentSubgroup) gridDiv.dataset.abilSubgroup = currentSubgroup;
       container.appendChild(gridDiv);
     }
-    const itemParent = isFullRow ? container : gridDiv;
+    const itemParent = gridDiv;
     const id = abilityControlId(prefix, abil);
     const realmCls = abil.realm ? 'realm-' + abil.realm : '';
     const displayLabel = abilityDisplayLabel(abil);
@@ -134,7 +133,6 @@ function buildAbilitiesUI(prefix) {
       if (currentSubgroup) lbl.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) lbl.dataset.tooltip = abil.tooltip;
       lbl.innerHTML = `<input type="checkbox" id="${id}"> ${labelHtml}`;
-      if (isFullRow) lbl.classList.add('abil-full-row');
       itemParent.appendChild(lbl);
     } else if (abil.type === 'select') {
       const row = document.createElement('div');
@@ -148,7 +146,6 @@ function buildAbilitiesUI(prefix) {
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       const opts = abil.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
       row.innerHTML = `<label for="${id}">${labelHtml}</label><select id="${id}">${opts}</select>`;
-      if (isFullRow) row.classList.add('abil-full-row');
       itemParent.appendChild(row);
     } else if (abil.type === 'numcheck') {
       const row = document.createElement('div');
@@ -160,7 +157,6 @@ function buildAbilitiesUI(prefix) {
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       row.innerHTML = `<input type="checkbox" id="${id}_on"><label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
-      if (isFullRow) row.classList.add('abil-full-row');
       itemParent.appendChild(row);
     } else {
       const row = document.createElement('div');
@@ -172,7 +168,6 @@ function buildAbilitiesUI(prefix) {
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       row.innerHTML = `<label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
-      if (isFullRow) row.classList.add('abil-full-row');
       itemParent.appendChild(row);
     }
   }
@@ -240,7 +235,7 @@ function getAbilityControlValue(prefix, abil) {
 function applyAbilities(prefix, abilValues, sourceFilter) {
   for (const abil of abilityUiDefs()) {
     if (sourceFilter && abil.source !== sourceFilter) continue;
-    const val = abilValues[abil.calcKey || abil.key];
+    const val = abilValues[abil.key];
     setAbilityControlValue(prefix, abil, val);
   }
 }
@@ -455,7 +450,6 @@ function readAbilitiesFromDOM(prefix) {
 function readUnitStats(prefix, overrides) {
   const el = id => document.getElementById(id);
   const enemyPrefix = prefix === 'a' ? 'b' : 'a';
-  const chaosChannelsEl = el(prefix + 'Abil_chaosChannels');
   const enemyEternalNightEl = el(enemyPrefix + 'Abil_eternalNight');
   const overrideValues = overrides || {};
   return deriveUnitStats({
@@ -467,7 +461,6 @@ function readUnitStats(prefix, overrides) {
     armor: el(prefix + 'Armor').value,
     rtbType: el(prefix + 'RtbType').value,
     unitType: el(prefix + 'Abil_unitType').value,
-    chaosChannels: chaosChannelsEl ? chaosChannelsEl.value : 'none',
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
@@ -480,6 +473,7 @@ function readUnitStats(prefix, overrides) {
     toBlkMod: el(prefix + 'ToBlkMod').value,
     cityWalls: el('cityWalls').value,
     nodeAura: el('nodeAura').value,
+    wallOfFire: !!el('wallOfFire').checked,
     trueLight: !!el('trueLight').checked,
     darkness: !!el('darkness').checked,
     enemyEternalNight: !!(enemyEternalNightEl && enemyEternalNightEl.checked),
@@ -1072,11 +1066,11 @@ function renderLifeStealSummary(result) {
 
   let html = '';
   if (aLS >= 0.001) {
-    html += `<span>Attacker life steal damage: <strong>${aLS.toFixed(3)}</strong></span>`;
+    html += `<span>Attacker self-heal (life steal / bloodsucker): <strong>${aLS.toFixed(3)}</strong></span>`;
   }
   if (bLS >= 0.001) {
     if (html) html += ' &nbsp;|&nbsp; ';
-    html += `<span>Defender life steal damage: <strong>${bLS.toFixed(3)}</strong></span>`;
+    html += `<span>Defender self-heal (life steal / bloodsucker): <strong>${bLS.toFixed(3)}</strong></span>`;
   }
   el.style.display = '';
   el.innerHTML = html;
@@ -1152,12 +1146,14 @@ function updateTypeVisibility() {
   // Version restrictions on enchantments.
   const isCoMorCoM2 = version === 'com_6.08' || version.startsWith('com2_');
   const isCoM2 = version.startsWith('com2_');
+  const isWarlord = version.startsWith('com2_warlord_');
 
   function subgroupAllowed(subgroup) {
     const sg = (subgroup || '').replace(/^_/, '');
     if (sg === 'MoM only') return isMoM;
-    if (sg === 'CoM & CoM2') return isCoMorCoM2;
-    if (sg === 'CoM2 only') return isCoM2;
+    if (sg === 'CoM, CoM2 & Warlord') return isCoMorCoM2;
+    if (sg === 'CoM2 & Warlord') return isCoM2;
+    if (sg === 'Warlord only') return isWarlord;
     return true;
   }
 
@@ -1176,7 +1172,9 @@ function updateTypeVisibility() {
       if (abil.source !== 'enchantment') continue;
       const el = document.getElementById(abilityControlId(prefix, abil));
       if (!el) continue;
-      applyDisabled(el, !subgroupAllowed(abil.subgroup));
+      const subgroupOk = subgroupAllowed(abil.subgroup);
+      const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
+      applyDisabled(el, !(subgroupOk || overrideOk));
     }
   }
 
@@ -2046,7 +2044,6 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     armor,
     rtbType: predefinedUnitRtbType(unit),
     unitType,
-    chaosChannels: abilities.chaosChannels || 'none',
     figs: unit.figures || 1,
     atk: unit.melee,
     rtb: predefinedUnitRtb(unit),
@@ -2059,6 +2056,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     toBlkMod: document.getElementById(prefix + 'ToBlkMod').value,
     cityWalls: matrixGlobalValue('cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),
+    wallOfFire: !!matrixGlobalValue('wallOfFire'),
     trueLight: !!matrixGlobalValue('trueLight'),
     darkness: !!matrixGlobalValue('darkness'),
     enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
@@ -2110,7 +2108,6 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     armor: matrixSideSetting(prefix, 'armor'),
     rtbType: el(prefix + 'RtbType').value,
     unitType: el(prefix + 'Abil_unitType').value,
-    chaosChannels: abilities.chaosChannels || 'none',
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
@@ -2123,6 +2120,7 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     toBlkMod: el(prefix + 'ToBlkMod').value,
     cityWalls: matrixGlobalValue('cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),
+    wallOfFire: !!matrixGlobalValue('wallOfFire'),
     trueLight: !!matrixGlobalValue('trueLight'),
     darkness: !!matrixGlobalValue('darkness'),
     enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
@@ -2850,9 +2848,10 @@ document.querySelectorAll('.abil-item').forEach(item => {
   });
 });
 
-// Generate preset buttons as a collapsible tree
+// Generate preset buttons as a flat, filterable list
 (function buildPresetButtons() {
   const container = document.getElementById('presetButtons');
+  const searchEl = document.getElementById('presetSearch');
 
   function makeButton(name) {
     const preset = PRESETS[name];
@@ -2869,31 +2868,86 @@ document.querySelectorAll('.abil-item').forEach(item => {
     return btn;
   }
 
+  // Map ability key -> human label, for active-ability matching.
+  const abilityLabelByKey = {};
+  for (const def of ABILITY_DEFS) abilityLabelByKey[def.key] = def.label;
+
+  // Friendly tokens to append to the haystack for a given version id.
+  function versionTokens(v) {
+    if (!v) return '';
+    const tokens = [v];
+    if (v.startsWith('mom_')) tokens.push('mom');
+    if (v.startsWith('com_')) tokens.push('com', 'com1');
+    if (v.startsWith('com2_warlord_')) tokens.push('com2', 'warlord');
+    else if (v.startsWith('com2_')) tokens.push('com2');
+    if (v.startsWith('mom_cp_')) tokens.push('cp', 'community patch');
+    return tokens.join(' ');
+  }
+
+  function activeAbilityLabels(abil) {
+    if (!abil || typeof abil !== 'object') return '';
+    const out = [];
+    for (const k of Object.keys(abil)) {
+      const v = abil[k];
+      if (!v || v === 'none') continue;
+      const label = abilityLabelByKey[k];
+      if (label) out.push(label);
+    }
+    return out.join(' ');
+  }
+
+  function combatStateTokens(preset) {
+    const out = [];
+    if (preset.rangedCheck) out.push('ranged');
+    if (preset.cityWalls && preset.cityWalls !== 'none') {
+      out.push('city walls', preset.cityWalls);
+    }
+    if (preset.nodeAura && preset.nodeAura !== 'none') {
+      out.push('node aura', preset.nodeAura);
+    }
+    if (preset.trueLight) out.push('true light');
+    if (preset.darkness) out.push('darkness');
+    return out.join(' ');
+  }
+
+  // Flat index of every preset reachable from TEST_TREE.
+  const presetIndex = [];
+
   for (const group of TEST_TREE) {
-    const groupDetails = document.createElement('details');
-    groupDetails.className = 'preset-group';
-    groupDetails.open = true;
-    const groupSummary = document.createElement('summary');
-    groupSummary.textContent = group.name;
-    groupDetails.appendChild(groupSummary);
-
     for (const sub of group.subs) {
-      const subDetails = document.createElement('details');
-      subDetails.className = 'preset-subgroup';
-      subDetails.open = false;
-      const subSummary = document.createElement('summary');
-      subSummary.textContent = sub.name;
-      subDetails.appendChild(subSummary);
-
       for (const key of sub.keys) {
         if (group.version) PRESET_VERSIONS[key] = group.version;
+        const preset = PRESETS[key];
+        if (!preset) continue;
         const btn = makeButton(key);
-        if (btn) subDetails.appendChild(btn);
+        if (!btn) continue;
+        const resolvedVersion = preset.version || PRESET_VERSIONS[key] || '';
+        const haystack = [
+          key,
+          preset.desc || '',
+          group.name,
+          sub.name,
+          versionTokens(resolvedVersion),
+          activeAbilityLabels(preset.a && preset.a.abilities),
+          activeAbilityLabels(preset.b && preset.b.abilities),
+          combatStateTokens(preset),
+        ].join(' ').toLowerCase();
+        container.appendChild(btn);
+        presetIndex.push({ key, button: btn, haystack });
       }
-      groupDetails.appendChild(subDetails);
     }
-    container.appendChild(groupDetails);
   }
+
+  function applyFilter() {
+    const q = searchEl.value.toLowerCase();
+    const tokens = q.split(',').map(t => t.trim()).filter(Boolean);
+    for (const { button, haystack } of presetIndex) {
+      const visible = tokens.every(t => haystack.includes(t));
+      button.style.display = visible ? '' : 'none';
+    }
+  }
+
+  if (searchEl) searchEl.addEventListener('input', applyFilter);
 })();
 
 // Initial load
@@ -2927,12 +2981,13 @@ resetCalculatorState();
 
     // Disabled or pointer-locked form controls may not become the event target.
     // Fall back to geometry so their tooltips still work while they remain locked.
+    // Only accept a candidate if nothing else (an overlay, drawer, etc.) is covering it.
     const tooltipEls = Array.from(document.querySelectorAll('[data-tooltip]'));
     for (let i = tooltipEls.length - 1; i >= 0; i--) {
       const candidate = tooltipEls[i];
       const rect = candidate.getBoundingClientRect();
       if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-        return candidate;
+        if (!direct || direct === candidate || candidate.contains(direct)) return candidate;
       }
     }
     return null;

@@ -32,6 +32,7 @@
 <div class="presets-drawer" id="presetsDrawer">
   <div class="presets-inner">
     <h2>Test Cases</h2>
+    <input type="text" id="presetSearch" class="preset-search" placeholder="Filter (comma-separated terms)" autocomplete="off">
     <div id="presetButtons"></div>
   </div>
   <button class="presets-toggle" id="presetsToggle" title="Toggle test cases panel" aria-expanded="false">Test Cases</button>
@@ -46,7 +47,7 @@
 </div>
 <div class="combat-enchantments">
   <div class="enchant-row">
-    <label class="check-label" data-tooltip="MoM 1.31 &amp; 1.60 only. Life fantastic units get +1 mel/rng/def/res; Death units get &#8722;1.">
+    <label class="check-label" data-tooltip="MoM 1.31 &amp; 1.60 and Warlord (removed in CoM 1 &amp; 2).&#10;Life units get +1 mel/rng/def/res; Death units get &#8722;1.&#10;Warlord: illusion attacks get &#8722;10% To Hit (all units).">
       <input type="checkbox" id="trueLight"> <span class="realm-life">True Light (F)</span>
     </label>
     <label class="check-label" data-tooltip="Death fantastic units get +1 mel/rng/def/res; Life units get &#8722;1.">
@@ -163,7 +164,7 @@
       <input type="number" id="aDmg" min="0" max="999" value="0">
       <span class="mod-val"></span>
 
-      <label for="aLevel" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit">Level</label>
+      <label for="aLevel" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit&#10;&#10;Warlord:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +2 thr, +3 def, +1 hp, +5% hit&#10;Champion:    +4 atk/rng, +3 res, +2 thr, +5 def, +1 hp, +10% hit">Level</label>
       <select id="aLevel" disabled>
         <option value="normal" selected>Normal</option>
         <option value="regular">Regular</option>
@@ -273,7 +274,7 @@
       <input type="number" id="bDmg" min="0" max="999" value="0">
       <span class="mod-val"></span>
 
-      <label for="bLevel" data-tooltip="Disregarded for fantastic units in the main calculator; used as the matrix setting.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit">Level</label>
+      <label for="bLevel" data-tooltip="Disregarded for fantastic units in the main calculator; used as the matrix setting.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit&#10;&#10;Warlord:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +2 thr, +3 def, +1 hp, +5% hit&#10;Champion:    +4 atk/rng, +3 res, +2 thr, +5 def, +1 hp, +10% hit">Level</label>
       <select id="bLevel" disabled>
         <option value="normal" selected>Normal</option>
         <option value="regular">Regular</option>

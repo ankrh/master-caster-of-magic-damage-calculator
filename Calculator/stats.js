@@ -18,7 +18,23 @@ function deriveUnitStats(input) {
   const loadoutEligible = !String(unitTypeRaw || '').startsWith('fantastic_') && !destinyActive;
   const level = loadoutEligible ? input.level : 'normal';
   const lvl = getLevelBonuses(level, version);
-  const weapon = loadoutEligible ? input.weapon : 'normal';
+  // Warlord: Rebuild makes the unit Mechanical; Artificer retort then grants
+  // Magic Weapons (+10% To Hit, bypass Weapon Immunity) to that unit.
+  const isWarlordForArtificer = version === 'com2_warlord_1.5.12.5';
+  const effectiveMechanical = !!abilities.mechanical
+    || (isWarlordForArtificer && !!abilities.rebuild);
+  const artificerMagicWeapon = isWarlordForArtificer
+    && !!abilities.artificer && effectiveMechanical;
+  // Altar of the Moon (Warlord, Gnoll building): trained units gain Rage and Poison
+  // Immunity; ranged units also gain +2 Ranged Attack. The granted abilities are folded
+  // into effectiveAbilities below; the ranged bonus is added to the rtb total.
+  const altarOfTheMoon = isWarlordForArtificer && !!abilities.altarOfTheMoon;
+  // Unit-specific Altar of the Moon grants: Hunters gain Poison 2; Witchdoctors gain
+  // Life Steal -1 which replaces their Poison. Applied via effectiveAbilities below.
+  const altarHunter = altarOfTheMoon && !!abilities.gnollHunters;
+  const altarWitchdoctor = altarOfTheMoon && !!abilities.gnollWitchdoctors;
+  const weaponInput = loadoutEligible ? input.weapon : 'normal';
+  const weapon = (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
   const wpn = weaponBonus(weapon);
   const armor = loadoutEligible ? input.armor : 'normal';
 
@@ -34,7 +50,7 @@ function deriveUnitStats(input) {
   // Fire Breath is not rolled for units that already have a ranged or breath attack.
   // If the unit has Thrown, Fire Breath replaces it.
   // CoM2 exception: Fire Breath can also replace Gaze and Lightning Breath.
-  const ccVal = input.chaosChannels || 'none';
+  const ccFireBreathAbil = !!abilities.ccFireBreath;
   const hasGazeAttack = (abilities.gazeRanged || 0) > 0
     || abilities.stoningGaze != null
     || abilities.deathGaze != null
@@ -42,10 +58,33 @@ function deriveUnitStats(input) {
   const ccCanOverwriteSpecial = version.startsWith('com2')
     && (thrownType === 'lightning' || hasGazeAttack);
   const ccFireBreathStrength = version.startsWith('com') ? 4 : 2;
-  const ccFireBreathActive = ccVal === 'fireBreath' && rangedType === 'none'
-    && (thrownType === 'none' || thrownType === 'thrown' || ccCanOverwriteSpecial);
+  // Warlord: Chaos Channels Fire Breath stacks additively with an existing fire breath.
+  // Other versions: replaces the existing fire breath with the CC fire breath strength.
+  const ccFireBreathStacksWarlord = version.startsWith('com2_warlord')
+    && ccFireBreathAbil && rangedType === 'none' && thrownType === 'fire';
+  const ccFireBreathActive = ccFireBreathAbil && rangedType === 'none'
+    && (thrownType === 'none' || thrownType === 'thrown' || thrownType === 'fire' || ccCanOverwriteSpecial)
+    && !ccFireBreathStacksWarlord;
   if (ccFireBreathActive) {
     thrownType = 'fire';
+  }
+
+  // Lightning Blade (Warlord): the Altar of Storm grants its units a witch blade that blasts
+  // lightning in combat. If the unit has an innate Thrown attack, its type simply becomes
+  // Lightning Breath at the same strength. A unit with no Thrown and no Lightning Breath gains
+  // a strength-1 Lightning Breath. The Lightning Breath is innate and gains veterancy level
+  // bonuses. (Chaos Channels Fire Breath above takes precedence, so a unit already converted
+  // to fire is left as fire.)
+  const lightningBladeAbil = version.startsWith('com2_warlord') && !!abilities.lightningBlade;
+  // Strength-1 grant case: applies only when the unit has no ranged/thrown/breath attack at
+  // all (i.e. melee-only). Existing ranged/fire-breath attacks are left intact rather than
+  // being overwritten — the single-rtb model cannot hold both.
+  const lightningBladeGrantsBreath = lightningBladeAbil
+    && rangedType === 'none' && thrownType === 'none';
+  if (lightningBladeAbil && thrownType === 'thrown') {
+    thrownType = 'lightning';
+  } else if (lightningBladeGrantsBreath) {
+    thrownType = 'lightning';
   }
 
   // Base values from inputs
@@ -55,9 +94,13 @@ function deriveUnitStats(input) {
   const inputBaseDef = Math.max(0, parseInt(input.def) || 0);
   const inputBaseRes = Math.max(0, parseInt(input.res) || 0);
   const inputBaseHP  = Math.max(1, parseInt(input.hp) || 1);
-  const calcBaseAtk = destinyActive ? inputBaseAtk * 2 : inputBaseAtk;
+  let calcBaseAtk = destinyActive ? inputBaseAtk * 2 : inputBaseAtk;
   let calcBaseRtb = destinyActive ? inputBaseRtb * 2 : inputBaseRtb;
   if (ccFireBreathActive) calcBaseRtb = ccFireBreathStrength;
+  else if (ccFireBreathStacksWarlord) calcBaseRtb += ccFireBreathStrength;
+  // Lightning Blade's strength-1 grant (melee-only units). The Thrown→Lightning conversion
+  // keeps the unit's existing Thrown strength, so it needs no adjustment here.
+  if (lightningBladeGrantsBreath) calcBaseRtb = 1;
   const calcBaseDef = destinyActive ? inputBaseDef + 4 : inputBaseDef;
   const calcBaseRes = destinyActive ? inputBaseRes + 4 : inputBaseRes;
   const calcBaseHP  = destinyActive ? inputBaseHP * 2 : inputBaseHP;
@@ -90,6 +133,16 @@ function deriveUnitStats(input) {
     calcBaseRtb = convertedStrength;
   }
 
+  // Warlord Vampirism: all thrown and breath attacks transfer to melee. Melee gains
+  // (thrown/breath strength − 1) and the thrown/breath strength drops to 1 (the residual
+  // attack still hits flyers and still triggers Blood Sucker on its own phase). Strength is
+  // conserved. Applies only to thrown/breath (thrownType), not magical/missile ranged.
+  const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
+  if (vampirismActive && thrownType !== 'none' && calcBaseRtb > 0) {
+    calcBaseAtk += Math.max(0, calcBaseRtb - 1);
+    calcBaseRtb = 1;
+  }
+
   const rangedGetsWpn = (rangedType === 'missile' || rangedType === 'boulder');
   const thrownGetsWpn = (thrownType === 'thrown');
 
@@ -106,7 +159,11 @@ function deriveUnitStats(input) {
   const misleadEligible = misleadActiveForUnit(abilities, unitTypeVal, version);
   const effectiveAbilities = {
     ...abilities,
+    ...(altarOfTheMoon ? { rage: true, poisonImmunity: true } : {}),
+    ...(altarHunter ? { poison: 2 } : {}),
+    ...(altarWitchdoctor ? { lifeSteal: -1, poison: 0 } : {}),
     unitType: unitTypeVal,
+    mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeWithBlazingEyes,
     innerPower: innerPowerEligible ? abilities.innerPower : false,
     mislead: misleadEligible ? abilities.mislead : false,
@@ -117,7 +174,7 @@ function deriveUnitStats(input) {
   };
   const abilMods = getAbilityStatModifiers(effectiveAbilities, version);
   const nodeAuraVal = input.nodeAura;
-  const unitRealm = unitTypeVal.startsWith('fantastic_') ? unitTypeVal.slice('fantastic_'.length) : null;
+  const unitRealm = realmOfUnitType(unitTypeVal);
   const nodeAuraActive = unitRealm !== null && nodeAuraVal !== 'none' && unitRealm === nodeAuraVal;
   const nodeBonus = nodeAuraActive ? 2 : 0;
   const chaosSurgeCount = unitRealm === 'chaos'
@@ -140,14 +197,21 @@ function deriveUnitStats(input) {
   const legacyLightDarkVal = input.enchLightDark || 'none';
   const isCoMVersion = version.startsWith('com');
   const isCoM2Version = version.startsWith('com2');
+  const isWarlord = version.startsWith('com2_warlord');
   const ownEternalNight = !!(abilities && abilities.eternalNight) || !!input.eternalNight;
   const enemyEternalNight = !!input.enemyEternalNight;
   const hasAnyEternalNight = ownEternalNight || enemyEternalNight;
   const hasDarkness = !!input.darkness || legacyLightDarkVal === 'darkness' || hasAnyEternalNight;
-  const hasTrueLight = (!!input.trueLight || legacyLightDarkVal === 'trueLight') && !isCoMVersion;
+  // True Light was removed in CoM 1 & 2, but Warlord re-introduces it as a Life
+  // common combat enchantment — so enable it for MoM (non-CoM) and Warlord only.
+  const hasTrueLight = (!!input.trueLight || legacyLightDarkVal === 'trueLight') && (!isCoMVersion || isWarlord);
   const darknessAtkDefMagnitude = hasDarkness ? (hasAnyEternalNight && isCoM2Version ? 2 : 1) : 0;
   const darknessResMagnitude = hasDarkness ? 1 : 0;
   const eternalNightEnemyResPenalty = enemyEternalNight && isCoMVersion && unitRealm !== 'death' ? -1 : 0;
+  // Warlord Eternal Night: enemy non-Death units "lose 2 range" (poor sight) — treated
+  // as firing from 2 tiles further than the actual distance. Applied below in the
+  // distance penalty calculation; only affects missile/boulder (no other range falloff).
+  const warlordEternalNightDistPenalty = enemyEternalNight && isWarlord && unitRealm !== 'death' ? 2 : 0;
   let darkLightAtkBonus = 0;
   let darkLightDefBonus = 0;
   let darkLightResBonus = eternalNightEnemyResPenalty;
@@ -218,7 +282,46 @@ function deriveUnitStats(input) {
   const orihalconRtbMod = orihalconActive
     && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
 
-  const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + nodeBonus + darkLightAtkBonus + chaosSurgeMeleeBonus) : 0;
+  // Wall of Fire (Warlord): the defending side's enchantment grants +1 to all
+  // defending normal-unit non-magic attacks, mirroring the original game's Metal
+  // Fires. Applies only to the defender (prefix 'b'), only to normal units, and
+  // only to melee/missile/thrown (not boulder, magic ranged, or breath), matching
+  // the Metal Fires coverage. Like Metal Fires it also upgrades a normal weapon to
+  // magic (bypasses Weapon Immunity) — applied to effectiveWeapon below.
+  const wofDefenderBonusActive = isWarlord && !!input.wallOfFire
+    && prefix === 'b' && isNormalUnitType(unitTypeVal);
+  const wofDefenderAtkMod = wofDefenderBonusActive ? 1 : 0;
+  const wofDefenderRtbMod = wofDefenderBonusActive
+    && (rangedType === 'missile' || thrownType === 'thrown') ? 1 : 0;
+
+  // Metal Fires / Flame Blade: +1/+2 to missile and thrown rtb only (not boulder, magic).
+  // Warlord Flame Blade (per in-game helptext): +2 to missile and thrown, +1 to fire breath
+  // (no boulder bonus — that belongs to Fiery Fury).
+  // Warlord Fiery Fury: +2 to missile, boulder, and thrown for regular units only;
+  // bonuses (except boulder) do not stack with Flame Blade.
+  // Flame Blade also upgrades the unit's normal weapon to magic (bypasses Weapon Immunity);
+  // Fiery Fury does the same for regular units.
+  const isWarlordFB = abilities.flameBlade && isWarlord;
+  const fbAtkBonus = abilities.flameBlade ? 2 : (abilities.metalFires ? 1 : 0);
+  const isFantasticBase = (unitTypeRaw || '').startsWith('fantastic_');
+  const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
+  let fbRtbMod = 0;
+  if (isWarlordFB) {
+    if (rangedType === 'missile' || thrownType === 'thrown') fbRtbMod = 2;
+    else if (thrownType === 'fire') fbRtbMod = 1;
+  } else if (fbAtkBonus > 0 && (rangedType === 'missile' || thrownType === 'thrown')) {
+    fbRtbMod = fbAtkBonus;
+  }
+  if (ffRegularBonus) {
+    let ffRtb = 0;
+    if (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ffRtb = 2;
+    fbRtbMod = Math.max(fbRtbMod, ffRtb);
+  }
+  // Fiery Fury melee +3 for regular units; non-cumulative with Flame Blade (combat.js
+  // already adds +3 melee for flameBlade in CoM/Warlord via getAbilityStatModifiers).
+  const ffMeleeBonus = ffRegularBonus && !abilities.flameBlade ? 3 : 0;
+
+  const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + wofDefenderAtkMod + nodeBonus + darkLightAtkBonus + chaosSurgeMeleeBonus + ffMeleeBonus) : 0;
   const defBase = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + nodeBonus + darkLightDefBonus);
   // Holy Armor: MoM: +2 defense. CoM/CoM2: +2 defense if def ≤ 5; +10% To Block if def > 5.
   const holyArmorActive = !!(abilities && abilities.holyArmor);
@@ -226,17 +329,16 @@ function deriveUnitStats(input) {
   const holyArmorDefBonus = holyArmorActive && !holyArmorHighDef ? 2 : 0;
   const holyArmorToBlkBonus = holyArmorHighDef ? 10 : 0;
   const def = defBase + holyArmorDefBonus;
-  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus);
+  // Altar of the Moon: trained units gain +1 Resistance (all units, not just ranged).
+  const altarOfTheMoonResMod = altarOfTheMoon ? 1 : 0;
+  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus);
   const hp  = Math.max(1, calcBaseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod);
 
-  // Metal Fires / Flame Blade: +1/+2 to missile and thrown rtb only (not boulder, magic).
-  // Also upgrades normal weapon to magic for Weapon Immunity purposes.
-  const fbAtkBonus = abilities.flameBlade ? 2 : (abilities.metalFires ? 1 : 0);
-  const fbRtbMod = fbAtkBonus > 0 && (rangedType === 'missile' || thrownType === 'thrown') ? fbAtkBonus : 0;
-
-  // Blazing March: +3 to missile only (not boulder, magic ranged, thrown, or breath).
+  // Blazing March: +3 to missile only (not boulder, magic ranged, or breath).
+  // Warlord also boosts thrown.
   const blazingMarchActive = !!(abilities && abilities.blazingMarch);
-  const blazingMarchRtbMod = blazingMarchActive && rangedType === 'missile' ? 3 : 0;
+  const blazingMarchBoostsThrown = version.startsWith('com2_warlord') && thrownType === 'thrown';
+  const blazingMarchRtbMod = blazingMarchActive && (rangedType === 'missile' || blazingMarchBoostsThrown) ? 3 : 0;
 
   // Chaos Surge: affects Chaos creatures only.
   // MoM: +2 to all attack strengths, but multiple copies do not stack; Chaos Channels'
@@ -266,6 +368,12 @@ function deriveUnitStats(input) {
     && (rangedType === 'missile' || rangedType === 'boulder'
       || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
 
+  // Altar of the Moon: +2 to ranged attack strength (missile/boulder/magic ranged only;
+  // thrown and breath are not affected), matching the "ranged units" wording.
+  const altarOfTheMoonRtbMod = altarOfTheMoon
+    && (rangedType === 'missile' || rangedType === 'boulder'
+      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
+
   // CoM/CoM2 Land Linking boosts melee and breath only.
   const landLinkingBreathRtbMod = landLinkingEligible && version.startsWith('com')
     && (thrownType === 'fire' || thrownType === 'lightning') ? 2 : 0;
@@ -273,13 +381,16 @@ function deriveUnitStats(input) {
   // Giant Strength: +1 thrown only (not missile/boulder/magic ranged, not breath).
   const gsRtbMod = (abilities.giantStrength && thrownType === 'thrown') ? 1 : 0;
 
-  // Weakness: -2 (MoM) or -3 (CoM/CoM2) to missile ranged and thrown.
+  // Weakness: -2 (MoM) or -3 (CoM/CoM2/Warlord) to missile ranged and thrown.
   // In MoM 1.31, thrown is bugged and NOT reduced (fixed in 1.60+).
+  // Warlord: also reduces breath attacks (fire/lightning).
   const weaknessActive = !!(abilities && abilities.weakness);
   const weaknessPenalty = weaknessActive ? (version.startsWith('com') ? 3 : 2) : 0;
   const weaknessRtbMod = weaknessActive
     ? (rangedType === 'missile' ? -weaknessPenalty
-      : (thrownType !== 'none' && version !== 'mom_1.31' ? -weaknessPenalty : 0))
+      : (thrownType === 'thrown' && version !== 'mom_1.31' ? -weaknessPenalty
+      : ((thrownType === 'fire' || thrownType === 'lightning') && version.startsWith('com2_warlord') ? -weaknessPenalty
+      : 0)))
     : 0;
 
   // Holy Weapon: +10% To Hit on melee, missile, and boulder attacks. Also applies to thrown
@@ -297,10 +408,15 @@ function deriveUnitStats(input) {
     && version.startsWith('com')
     && !!(abilities && (abilities.wraithForm || abilities.rulerOfUnderworld));
   const eldritchActive = !!(abilities && abilities.eldritchWeapon);
+  // Warlord Wall of Fire's defender bonus mirrors Metal Fires, which also upgrades
+  // the unit's weapon to magic (bypasses Weapon Immunity) for its non-magic attacks.
+  const weaponUpgradedByWoF = wofDefenderBonusActive && weapon === 'normal';
   const effectiveWeapon = (fbAtkBonus > 0 && weapon === 'normal') ? 'magic'
+    : (ffRegularBonus && weapon === 'normal') ? 'magic'
     : (weaponUpgradedByHW ? 'magic'
     : (wraithFormBypassesWI ? 'magic'
-    : ((eldritchActive && weapon === 'normal') ? 'magic' : weapon)));
+    : (weaponUpgradedByWoF ? 'magic'
+    : ((eldritchActive && weapon === 'normal') ? 'magic' : weapon))));
 
   // Ranged/Thrown/Breath strength
   let rtbLvl = 0, rtbWpn = 0;
@@ -311,7 +427,7 @@ function deriveUnitStats(input) {
     rtbLvl = lvl.thrown;
     rtbWpn = (calcBaseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
   }
-  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + blazingMarchRtbMod + chaosSurgeRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + landLinkingBreathRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + nodeBonus + darkLightAtkBonus) : 0;
+  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + wofDefenderRtbMod + blazingMarchRtbMod + chaosSurgeRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + altarOfTheMoonRtbMod + landLinkingBreathRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + nodeBonus + darkLightAtkBonus) : 0;
 
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
@@ -344,7 +460,7 @@ function deriveUnitStats(input) {
   // Distance penalty (attacker ranged only)
   let rtbDistPenalty = 0;
   if (prefix === 'a' && (rangedType === 'missile' || rangedType === 'boulder') && input.rangedCheck) {
-    const dist = Math.max(1, parseInt(input.rangedDist) || 1);
+    const dist = Math.max(1, parseInt(input.rangedDist) || 1) + warlordEternalNightDistPenalty;
     rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange), version);
   }
 
@@ -363,6 +479,13 @@ function deriveUnitStats(input) {
     toHitMelee      = Math.max(0.1, toHitMelee - 0.2);
     toHitRtb        = Math.max(0.1, toHitRtb - 0.2);
     toHitImmolation = Math.max(0.1, toHitImmolation - 0.2);
+  }
+
+  // Warlord True Light: illusion attacks suffer -10% To Hit, for all units
+  // regardless of realm (this clause is Warlord-only; not present in MoM).
+  if (isWarlord && hasTrueLight && !!(abilities && abilities.illusion)) {
+    toHitMelee = Math.max(0.1, toHitMelee - 0.1);
+    toHitRtb   = Math.max(0.1, toHitRtb - 0.1);
   }
 
   let displayToHitMelee = toHitMelee;
@@ -384,13 +507,27 @@ function deriveUnitStats(input) {
     }
   }
 
-  // Berserk: doubles melee attack (applied last, after all other bonuses), sets defense
-  // to 0 absolutely (no other bonus can raise it while Berserk is active).
+  // Berserk: behavior differs by version.
+  // MoM/CoM/CoM2: doubles melee attack (applied last, after all other bonuses) and
+  // sets defense to 0 absolutely (no other bonus can raise it while Berserk is active).
+  // Warlord: Berserk was removed as a wizard spell and reworked into a Troll
+  // Medicineman-cast unit buff: +15% To Hit, +1 combat movement (irrelevant here),
+  // and -10% To Block. The classic atk-doubling and def-zeroing do not apply.
   const berserkActive = !!(abilities && abilities.berserk);
-  let finalAtk = berserkActive ? atk * 2 : atk;
-  let finalDef = berserkActive ? 0 : def;
+  const warlordBerserk = berserkActive && isWarlord;
+  const classicBerserk = berserkActive && !isWarlord;
+  let finalAtk = classicBerserk ? atk * 2 : atk;
+  let finalDef = classicBerserk ? 0 : def;
   let finalRtb = rtb;
   let finalRes = res;
+  if (warlordBerserk) {
+    toHitMelee = Math.min(1.0, toHitMelee + 0.15);
+    toHitRtb = Math.min(1.0, toHitRtb + 0.15);
+    displayToHitMelee = Math.min(1.0, displayToHitMelee + 0.15);
+    displayToHitRtb = Math.min(1.0, displayToHitRtb + 0.15);
+    toBlock = Math.max(0.0, toBlock - 0.10);
+    displayToBlock = Math.max(0.0, displayToBlock - 0.10);
+  }
 
   // Warp Creature effects (applied after all other bonuses per MoM wiki).
   // Warp Attack: halves melee (all versions) and all ranged/thrown (CoM/CoM2 only).
@@ -407,6 +544,17 @@ function deriveUnitStats(input) {
   if (abilities && abilities.warpResist) {
     finalRes = 0;
   }
+
+  // Shatter: reduces all attack strengths (melee and ranged/thrown/breath) to 1 for
+  // eligible units. CoM2: normal units and heroes only. Warlord: any unit.
+  if (abilities && abilities.shatter) {
+    const shatterEligible = isWarlord || isNormalUnitType(unitTypeVal) || unitTypeVal === 'hero';
+    if (shatterEligible) {
+      if (finalAtk > 0) finalAtk = 1;
+      if (finalRtb > 0) finalRtb = 1;
+    }
+  }
+
   const displayDef = (vertigoActive && !isCoMVer) ? Math.max(0, finalDef - 1) : finalDef;
 
   const toHitMeleeHasModifiers = anyNonZero([
@@ -454,7 +602,7 @@ function deriveUnitStats(input) {
     toBlockHasModifiers,
     // Effective values (for calculation)
     figs: baseFigs,
-    atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!input.generic,
+    atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!input.generic,
     dmg: Math.max(0, parseInt(input.dmg) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,

@@ -1,27 +1,17 @@
 {
-  "permissions": {
-    "allow": [
-      "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_close",
-      "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_evaluate",
-      "Bash(curl -s -o /dev/null -w * http://localhost:8080*)",
-      "Bash(node -c *)",
-      "Bash(python nocache_server.py*)",
-      "Bash(python tools/nocache_server.py)",
-      "Bash(python tools/nocache_server.py *)",
-      "Bash(ls *)",
-      "Bash(cd *)",
-      "Bash(awk *)",
-      "Bash(grep *)",
-      "Bash(head *)",
-      "Bash(tail *)",
-      "Bash(wc *)",
-      "PowerShell(Get-ChildItem *)",
-      "PowerShell(Get-Item *)",
-      "PowerShell(Test-Path *)",
-      "PowerShell(Get-Content *)"
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$cutoff = (Get-Date).AddHours(-1); $dir = '.playwright-mcp'; if (Test-Path $dir) { Get-ChildItem $dir | Where-Object { $_.LastWriteTime -lt $cutoff } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }",
+            "shell": "powershell",
+            "async": true,
+            "statusMessage": "Cleaning up .playwright-mcp..."
+          }
+        ]
+      }
     ]
   }
 }

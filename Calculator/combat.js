@@ -33,6 +33,7 @@ function weaponBonus(type) {
 // Level bonuses vary by game version
 function getLevelBonuses(level, version) {
   const isMoM = version.startsWith('mom_');
+  const isWarlord = version.startsWith('com2_warlord');
   if (isMoM) {
     switch (level) {
       case 'regular':    return { atk: 1, ranged: 1, thrown: 1, def: 0, res: 1, hp: 0, toHit: 0 };
@@ -40,6 +41,21 @@ function getLevelBonuses(level, version) {
       case 'elite':      return { atk: 2, ranged: 2, thrown: 2, def: 1, res: 3, hp: 1, toHit: 10 };
       case 'ultra_elite':return { atk: 2, ranged: 2, thrown: 2, def: 2, res: 4, hp: 1, toHit: 20 };
       case 'champion':   return { atk: 3, ranged: 3, thrown: 3, def: 2, res: 5, hp: 2, toHit: 30 };
+      default:           return { atk: 0, ranged: 0, thrown: 0, def: 0, res: 0, hp: 0, toHit: 0 };
+    }
+  } else if (isWarlord) {
+    // Warlord differs from CoM2 only at Ultra Elite and Champion (regular/veteran/elite
+    // match CoM2). See "Reference docs/Warlord mechanic changes.md":
+    //   Ultra Elite: +5% to-hit, +1 attack, +1 thrown/breath, +1 armor (vs Elite)
+    //   Champion:    +5% to-hit, +1 attack, +2 armor, +1 resistance (vs Ultra Elite)
+    // "attack" raises both melee and ranged (lockstep, as in CoM2). The +1 mp/level
+    // gains don't affect damage. Champion does NOT gain the +1 hp that CoM2 grants.
+    switch (level) {
+      case 'regular':    return { atk: 1, ranged: 1, thrown: 0, def: 0, res: 1, hp: 0, toHit: 0 };
+      case 'veteran':    return { atk: 2, ranged: 2, thrown: 1, def: 1, res: 1, hp: 0, toHit: 0 };
+      case 'elite':      return { atk: 2, ranged: 2, thrown: 1, def: 2, res: 2, hp: 1, toHit: 0 };
+      case 'ultra_elite':return { atk: 3, ranged: 3, thrown: 2, def: 3, res: 2, hp: 1, toHit: 5 };
+      case 'champion':   return { atk: 4, ranged: 4, thrown: 2, def: 5, res: 3, hp: 1, toHit: 10 };
       default:           return { atk: 0, ranged: 0, thrown: 0, def: 0, res: 0, hp: 0, toHit: 0 };
     }
   } else {
@@ -86,7 +102,7 @@ function blazingEyesDoomGazeForUnit(abilities, unitType, version) {
 
 function misleadActiveForUnit(abilities, unitType, version) {
   if (!version || !version.startsWith('com2_') || !hasAbil(abilities, 'mislead')) return false;
-  return unitType === 'normal' || unitType === 'hero';
+  return isNormalUnitType(unitType) || unitType === 'hero';
 }
 
 function destinyActiveForUnit(abilities, version) {
@@ -95,22 +111,67 @@ function destinyActiveForUnit(abilities, version) {
 
 function determineEffectiveUnitType(baseUnitType, abilities, version) {
   let unitType = baseUnitType || 'normal';
-  const ccVal = abilVal(abilities, 'chaosChannels', 'none');
+  const ccDefense = !!abilVal(abilities, 'ccDefense', false);
+  const ccFireBreath = !!abilVal(abilities, 'ccFireBreath', false);
+  const ccFlight = !!abilVal(abilities, 'ccFlight', false);
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
+  const isWarlord = version && version.startsWith('com2_warlord');
   const destinyActive = destinyActiveForUnit(abilities, version);
 
   // Reported CoM2 combat recalculation order: last applicable type rewrite wins.
-  if (ccVal === 'fireBreath') unitType = 'fantastic_chaos';
+  if (ccFireBreath) unitType = 'fantastic_chaos';
   if (destinyActive) unitType = 'fantastic_life';
-  if (ccVal === 'flight') unitType = 'fantastic_chaos';
-  if (ccVal === 'defense') unitType = 'fantastic_chaos';
-  if (hasAbil(abilities, 'bloodLust')) unitType = 'fantastic_death';
+  if (ccFlight) unitType = 'fantastic_chaos';
+  if (ccDefense) unitType = 'fantastic_chaos';
+  // Warlord: Bloodlust no longer turns the unit undead, so it stays its original type.
+  if (hasAbil(abilities, 'bloodLust') && !isWarlord) unitType = 'fantastic_death';
   if (hasAbil(abilities, 'blackChannels')) unitType = 'fantastic_death';
   if (hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated')) unitType = 'fantastic_death';
   if (hasAbil(abilities, 'mysticSurge')) unitType = 'fantastic_unaligned';
   if (isCoMPlus && hasAbil(abilities, 'raiseDead')) unitType = 'fantastic_unaligned';
 
+  // Fiery Fury (Warlord): if cast on a fantastic creature, turns it into a Chaos
+  // creature unless it is undead or enchanted with Apotheosis/Sanctify. (Regular
+  // units instead get stat bonuses — handled in stats.js.)
+  if (isWarlord && hasAbil(abilities, 'fieryFury')
+      && (unitType || '').startsWith('fantastic_')
+      && unitType !== 'fantastic_death'
+      && !hasAbil(abilities, 'sanctify')
+      && !hasAbil(abilities, 'apotheosis')) {
+    unitType = 'fantastic_chaos';
+  }
+
+  // Sanctify (Warlord): during combat a sanctified unit becomes a Life-realm unit.
+  // A 'cleric' (clergy) unit turns into a Life *fantastic* creature; any other
+  // normal unit becomes a Life-realm *non-fantastic* unit. Both gain +1 from True
+  // Light / -1 from Darkness; the fantastic form additionally counts as fantastic
+  // for fantastic-gated effects (Weapon Immunity targeting, Dispel Evil, etc.).
+  // (The cleric spellcasting-skill bonus is not modelled — unit casting is out of
+  // scope for the damage calculator.)
+  if (isWarlord && hasAbil(abilities, 'sanctify')) {
+    if (hasAbil(abilities, 'clergy')) unitType = 'fantastic_life';
+    else if (unitType === 'normal') unitType = 'normal_life';
+  }
+
   return unitType;
+}
+
+// The realm a unit belongs to, derived from its (possibly rewritten) unitType.
+// Both fantastic_<realm> and normal_<realm> (e.g. the Warlord-only 'normal_life'
+// produced by Sanctify) carry a realm; plain 'normal' and 'hero' have none.
+function realmOfUnitType(unitType) {
+  const us = String(unitType || '');
+  if (us.startsWith('fantastic_')) return us.slice('fantastic_'.length);
+  if (us.startsWith('normal_')) return us.slice('normal_'.length);
+  return null;
+}
+
+// True for non-fantastic, non-hero units — plain 'normal' and any realm-tagged
+// normal unit such as 'normal_life'. These share normal-unit behaviour for
+// Weapon Immunity, Blood Lust targeting, Mislead, etc.
+function isNormalUnitType(unitType) {
+  const us = String(unitType || '');
+  return us === 'normal' || us.startsWith('normal_');
 }
 
 function supernaturalMinDamageForHits(hits, version) {
@@ -201,18 +262,27 @@ function getAbilityStatModifiers(abilities, version) {
     resMod += 1;
   }
 
-  // Prayer / High Prayer: combat enchantments (not cumulative — High Prayer supersedes Prayer).
+  // Prayer / High Prayer: combat enchantments.
   // Prayer: +10% To Hit (all attacks except immolation/spells), +10% To Block, +1 Resistance.
   // High Prayer: +2 Melee Atk, +2 Defense, +3 Resistance, +10% To Hit, +10% To Block.
+  // CoM2 and earlier: High Prayer supersedes Prayer (not cumulative).
+  // Warlord: They stack, but To Hit and To Block do not stack — Prayer's contribution
+  // when stacked is only +1 Melee Atk, +1 Defense, +1 Resistance.
   // The v1.31 enemy melee To Hit malus (-10%) is applied in resolveCombat.
-  const prayerVal = abilVal(abilities, 'prayer', 'none');
-  if (prayerVal === 'highPrayer') {
+  const hasPrayer = hasAbil(abilities, 'prayer');
+  const hasHighPrayer = hasAbil(abilities, 'highPrayer');
+  if (hasHighPrayer) {
     atkMod += 2;
     defMod += 2;
     resMod += 3;
     toHitMod += 10;
     toBlkMod += 10;
-  } else if (prayerVal === 'prayer') {
+    if (hasPrayer && version && version.startsWith('com2_warlord')) {
+      atkMod += 1;
+      defMod += 1;
+      resMod += 1;
+    }
+  } else if (hasPrayer) {
     resMod += 1;
     toHitMod += 10;
     toBlkMod += 10;
@@ -268,10 +338,11 @@ function getAbilityStatModifiers(abilities, version) {
     resMod += 3;
   }
 
-  // Metal Fires / Flame Blade: +1 / +2 melee attack. Flame Blade supersedes Metal Fires.
-  // Missile/thrown bonus and weapon upgrade are handled in ui.js (type-conditional).
+  // Metal Fires / Flame Blade: +1 / +2 (MoM) or +3 (CoM/CoM2/Warlord) melee attack.
+  // Flame Blade supersedes Metal Fires.
+  // Missile/thrown/breath bonus and weapon upgrade are handled in stats.js (type-conditional).
   if (hasAbil(abilities, 'flameBlade')) {
-    atkMod += 2;
+    atkMod += version && version.startsWith('com') ? 3 : 2;
   } else if (hasAbil(abilities, 'metalFires')) {
     atkMod += 1;
   }
@@ -302,9 +373,8 @@ function getAbilityStatModifiers(abilities, version) {
 
   // Chaos Channels (Demon-Skin Armor): +6 Defense in MoM 1.31 (bug: applied twice in combat),
   // +3 Defense in MoM 1.40+/CP 1.60/CoM/CoM2 (Insecticide fix).
-  // Fire Breath option is handled in ui.js (modifies thrownType/rtb).
-  const ccVal = abilVal(abilities, 'chaosChannels', 'none');
-  if (ccVal === 'defense') {
+  // Fire Breath option is handled in stats.js (modifies thrownType/rtb).
+  if (abilVal(abilities, 'ccDefense', false)) {
     defMod += (version === 'mom_1.31') ? 6 : 3;
   }
 
@@ -359,17 +429,32 @@ function getAbilityStatModifiers(abilities, version) {
     toBlkMod += 10;
   }
 
-  // Tactician retort: CoM/CoM2 units gain +1 defense. Heroes instead gain
-  // +2 defense, +2 resistance, and +2 to all attack strengths.
+  // Tactician retort:
+  // CoM/CoM2: non-hero units gain +1 defense; heroes gain +2 defense, +2 resistance,
+  //           and +2 to all attack strengths.
+  // Warlord:  all units gain +1 defense (no hero distinction).
+  //           Teleporting units also gain First Strike; Non-Corporeal units gain
+  //           Negate First Strike — those ability grants are applied in normalizeCombatUnit.
   if (hasAbil(abilities, 'tactician') && isCoMPlus) {
-    if (abilVal(abilities, 'unitType', 'normal') === 'hero') {
+    const isWarlord = version && version.startsWith('com2_warlord');
+    if (isWarlord || abilVal(abilities, 'unitType', 'normal') !== 'hero') {
+      defMod += 1;
+    } else {
       atkMod += 2;
       rtbMod += 2;
       defMod += 2;
       resMod += 2;
-    } else {
-      defMod += 1;
     }
+  }
+
+  // Favored Terrain (Warlord): a unit fighting on its favored combat tile gains
+  // +5% To Hit and +1 defense. With the Tactician retort the terrain bonus is
+  // doubled (and Tactician also grants First Strike + Negate First Strike — see
+  // applyTacticianWarlordEffects).
+  if (hasAbil(abilities, 'favoredTerrain') && version && version.startsWith('com2_warlord')) {
+    const mult = hasAbil(abilities, 'tactician') ? 2 : 1;
+    toHitMod += 5 * mult;
+    defMod += 1 * mult;
   }
 
   // Land Linking: CoM/CoM2 grants +2 melee, breath, and defense to fantastic units.
@@ -384,6 +469,37 @@ function getAbilityStatModifiers(abilities, version) {
   if (hasAbil(abilities, 'mysticSurge')) {
     defMod += 2;
     resMod -= 2;
+  }
+
+  // Artificer retort (Warlord): mechanical units gain +1 melee, +1 ranged,
+  // +1 armor, +1 resistance. Magic Weapons component handled in stats.js.
+  // Rebuild's mechanical conversion is propagated via effectiveAbilities in stats.js.
+  const isWarlord = version && version.startsWith('com2_warlord');
+  if (isWarlord && hasAbil(abilities, 'artificer') && hasAbil(abilities, 'mechanical')) {
+    atkMod += 1;
+    rtbMod += 1;
+    defMod += 1;
+    resMod += 1;
+  }
+
+  // Mechanical Expert (Warlord): an Engineer/Combat Engineer in the stack carries this
+  // perk, granting mechanical units +20% To Hit and +10% To Defend.
+  if (isWarlord && hasAbil(abilities, 'mechanicalExpert') && hasAbil(abilities, 'mechanical')) {
+    toHitMod += 20;
+    toBlkMod += 10;
+  }
+
+  // Rebuild (Warlord): +2 melee and +2 armor. Mechanical flag, Death/Illusion
+  // Immunity, and Armor Piercing are granted in normalizeCombatUnit.
+  if (isWarlord && hasAbil(abilities, 'rebuild')) {
+    atkMod += 2;
+    defMod += 2;
+  }
+
+  // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.
+  if (isWarlord && hasAbil(abilities, 'malnourished')) {
+    atkMod -= 1;
+    defMod -= 2;
   }
 
   return { atkMod, defMod, resMod, hpMod, toHitMod, toBlkMod, rtbMod };
@@ -413,6 +529,21 @@ function stoningFailProb(defRes, defAbilities, modifier, version) {
   const isCoM = version && version.startsWith('com');
   const immuneBonus = (hasAbil(defAbilities, 'stoningImmunity') || hasAbil(defAbilities, 'magicImmunity')) ? (isCoM ? 100 : 50) : 0;
   const effectiveRes = defRes + modifier + immuneBonus;
+  if (effectiveRes >= 10) return 0;
+  return Math.max(0, (10 - effectiveRes) / 10);
+}
+
+// --- Death Touch ---
+// Same kill-roll mechanics as Stoning Touch, but with the Death-realm immunity model:
+// Death Immunity or Magic Immunity grant +50/+100 res (MoM/CoM), Righteousness +30.
+// Each attacking figure makes one resistance roll on the target; a failed roll kills
+// one defender figure.
+function deathTouchFailProb(defRes, defAbilities, modifier, version) {
+  const isCoM = version && version.startsWith('com');
+  let bonus = 0;
+  if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) bonus = isCoM ? 100 : 50;
+  else if (hasAbil(defAbilities, 'righteousness')) bonus = 30;
+  const effectiveRes = defRes + modifier + bonus;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
 }
@@ -504,6 +635,7 @@ function appendBreakdownTouchLabels(label, params) {
   const {
     poisonTouch = false,
     stoningTouch = false,
+    deathTouch = false,
     dispelEvil = false,
     lifeSteal = false,
     immolation = false,
@@ -511,6 +643,7 @@ function appendBreakdownTouchLabels(label, params) {
   let out = label;
   if (poisonTouch) out += ' + Poison Touch';
   if (stoningTouch) out += ' + Stoning Touch';
+  if (deathTouch) out += ' + Death Touch';
   if (dispelEvil) out += ' + Dispel Evil';
   if (lifeSteal) out += ' + Life Steal';
   if (immolation) out += ' + Immolation';
@@ -523,6 +656,8 @@ function thrownPhaseLabel(params) {
     hasted,
     poisonTouch,
     stoningTouch,
+    deathTouch,
+    dispelEvil,
     lifeSteal,
     immolation,
   } = params;
@@ -530,7 +665,7 @@ function thrownPhaseLabel(params) {
             : thrownType === 'fire' ? 'Fire Breath'
             : 'Lightning Breath';
   if (hasted) label = 'Hasted ' + label;
-  return appendBreakdownTouchLabels(label, { poisonTouch, stoningTouch, lifeSteal, immolation });
+  return appendBreakdownTouchLabels(label, { poisonTouch, stoningTouch, deathTouch, dispelEvil, lifeSteal, immolation });
 }
 
 function gazePhaseLabel(side, params) {
@@ -540,12 +675,16 @@ function gazePhaseLabel(side, params) {
     doomGaze,
     poisonTouch,
     stoningTouch,
+    deathTouch,
+    dispelEvil,
     lifeSteal,
     immolation,
   } = params;
   return appendBreakdownTouchLabels(side + ' ' + gazeLabel(stoningGaze, deathGaze, doomGaze), {
     poisonTouch,
     stoningTouch,
+    deathTouch,
+    dispelEvil,
     lifeSteal,
     immolation,
   });
@@ -597,12 +736,15 @@ function touchAttackFires(effectiveAtk, baseAtk, version) {
 }
 
 // Check whether a gaze attack fires for a given unit.
-// Stoning/Death Gaze are attached to either the hidden gaze ranged component or a
-// Doom Gaze — the gaze fires if at least one of these is present.
-// v1.31 bug: requires non-zero effective strength after modifiers.
-// Patched versions (CP 1.60+): gaze always fires if the unit has the ability.
-function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, version) {
+// Stoning/Death Gaze are attached to the hidden gaze ranged component (or, for Chaos Spawn,
+// the Doom Gaze) and fire only while that hidden attack strength is > 0. In MoM (1.31 and
+// 1.60) the hidden attack must be present; in later versions (CoM+) gaze always fires.
+// Same effective-vs-base split as touch delivery: MoM 1.31 uses *effective* hidden strength
+// (the v1.31 bug suppresses gaze when reduced to 0); MoM 1.60 uses *base* hidden strength
+// (so reducing the effective value to 0, e.g. via Black Prayer, no longer disables the gaze).
+function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, version) {
   if (version === 'mom_1.31') return effectiveGazeRanged > 0 || effectiveDoomGaze > 0;
+  if (version === 'mom_cp_1.60.00') return (baseGazeRanged || 0) > 0 || (baseDoomGaze || 0) > 0;
   return true;
 }
 
@@ -611,9 +753,27 @@ function hasWeaponImmunityEffect(abilities) {
       || hasAbil(abilities, 'wraithForm') || hasAbil(abilities, 'rulerOfUnderworld');
 }
 
+// Wraith Form and Ruler of Underworld both grant Non-Corporeal in addition to Weapon Immunity.
+function hasNonCorporealEffect(abilities) {
+  return hasAbil(abilities, 'nonCorporeal')
+      || hasAbil(abilities, 'wraithForm')
+      || hasAbil(abilities, 'rulerOfUnderworld');
+}
+
+// --- Rage (Warlord) ---
+// +1 melee (and +1 ranged, if the unit has a ranged attack) per figure the unit has lost.
+// "Figures lost" = original figures − figures currently alive, so it folds in BOTH
+// pre-combat casualties (from the Damage field) and casualties taken earlier in this
+// combat — the alive count passed in already reflects cumulative in-combat damage.
+// Only boosts an attack that already exists (base strength > 0); never creates one.
+function applyRage(baseAtk, unit, aliveNow) {
+  if (baseAtk <= 0 || !hasAbil(unit.abilities, 'rage')) return baseAtk;
+  return baseAtk + Math.max(0, unit.figs - aliveNow);
+}
+
 // --- Weapon Immunity ---
 // Applies Weapon Immunity defense boost after armor piercing.
-// MoM: defense raised to minimum 10.  CoM/CoM2: +8 defense.
+// MoM: defense raised to minimum 10.  CoM/CoM2: +8 defense.  Warlord: +10 defense.
 // Triggers only against Normal units with normal (non-magical) weapons.
 // Phase applicability varies by version:
 //   Melee: always applies.
@@ -627,8 +787,11 @@ function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, versio
   // weapons, but still only against normal-unit attacks.
   const weaponBypasses = atkWeapon !== 'normal' && !hasAbil(defAbilities, 'rulerOfUnderworld');
   if (weaponBypasses) return baseDef;
-  if (atkUnitType !== 'normal') return baseDef;
+  if (!isNormalUnitType(atkUnitType)) return baseDef;
   if (version === 'mom_1.31' && atkGeneric) return baseDef;
+  if (version && version.startsWith('com2_warlord')) {
+    return baseDef + 10;
+  }
   if (version && version.startsWith('com')) {
     return baseDef + 8;
   }
@@ -687,16 +850,28 @@ function immolationBlocksRanged(version) {
 // --- Wall of Fire ---
 // Wall of Fire: town enchantment. Inflicts a Ranged Magical Immolation Damage
 // attack on every attacker figure that melees a unit inside the town.
-// Strength 5 in MoM; strength 10 in CoM/CoM2.
+// Strength 5 in MoM; strength 10 in CoM/CoM2; strength 12 in Warlord.
 // Fires once per combat, at Step 3 in the melee sequence: AFTER thrown/breath
 // and gaze phases, BEFORE the melee damage + counter-attack.
 // Targets only the attacker (A) - the unit passing through the wall.
 // Does not fire in ranged combat (attacker shoots from outside the wall).
 // Magic Immunity raises defense to 50 (MoM) / 100 (CoM/CoM2). Fire Immunity and
 // Righteousness also raise defense to 50/100. Large Shield and AP apply.
+// Warlord: hits a single figure at strength 12 instead of every figure at 10.
 function wallOfFireStr(version) {
+  if (version && version.startsWith('com2_warlord')) return 12;
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
   return 5;
+}
+
+// Wall of Fire To Hit: standard 30% spell To Hit, except Warlord raises it to 60%.
+function wallOfFireToHit(version) {
+  return (version && version.startsWith('com2_warlord')) ? 0.6 : 0.3;
+}
+
+// Warlord: Wall of Fire strikes a single attacker figure rather than all of them.
+function wallOfFireSingleFigure(version) {
+  return !!(version && version.startsWith('com2_warlord'));
 }
 
 // --- Cause Fear ---
@@ -781,6 +956,7 @@ function calcFearBugDist(atkFigs, defFigs, pFear) {
 // `atkFigs`. Each touch is active iff its trigger params are set:
 //   poisonStr > 0 && poisonFail > 0  → Poison Touch
 //   stoningFail > 0                   → Stoning Touch (kills figures, damage = targetHP)
+//   deathTouchFail > 0                → Death Touch   (kills figures, damage = targetHP)
 //   dispelEvilFail > 0                → Dispel Evil   (kills figures, damage = targetHP)
 //   lifeStealMod != null              → Life Steal    (uses lifeStealRes)
 //   immDist truthy                    → Immolation    (caller pre-computes the area dist)
@@ -791,12 +967,39 @@ function calcFearBugDist(atkFigs, defFigs, pFear) {
 function convolveTouchAttacks(dist, cap, atkFigs, p) {
   let lifeStealEV = 0;
   let lifeStealDist = null;
-  if (atkFigs <= 0) return { dist, lifeStealEV, lifeStealDist };
+  let bloodsuckerHealEV = 0;
+  if (atkFigs <= 0) return { dist, lifeStealEV, lifeStealDist, bloodsuckerHealEV };
+  // Bloodsucker (Warlord): fires once per phase if the base attack dealt ≥1 damage
+  // through armor. The input `dist` here is the post-armor base attack damage (touch
+  // attacks haven't been folded in yet), so dist[0] correctly reflects "armor blocked
+  // everything". On trigger: +2 damage to target, attacker heals by the same amount.
+  // The +2 is capped at the target's remaining HP for the phase, and the heal is
+  // capped to the actual extra damage dealt (you can't drain more than you removed),
+  // so a +2 clipped to +1 by overkill also heals only 1. Folded into lifeStealEV in
+  // the return since both abilities are attacker self-heal — exposed separately as
+  // bloodsuckerHealEV so haste self-convolution callers can double it.
+  if (p.bloodsucker && dist && dist.length > 0) {
+    const pTrigger = 1 - (dist[0] || 0);
+    if (pTrigger > 1e-15) {
+      const shifted = new Array(cap + 1).fill(0);
+      shifted[0] = dist[0] || 0;
+      for (let d = 1; d < dist.length; d++) {
+        if (dist[d] < 1e-15) continue;
+        const actualBS = Math.max(0, Math.min(2, cap - d));
+        shifted[d + actualBS] += dist[d];
+        bloodsuckerHealEV += dist[d] * actualBS;
+      }
+      dist = shifted;
+    }
+  }
   if (p.poisonStr > 0 && p.poisonFail > 0) {
     dist = convolveDists(dist, calcResistDmgDist(atkFigs * p.poisonStr, p.poisonFail, cap), cap);
   }
   if (p.stoningFail > 0) {
     dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.stoningFail, p.targetHP, cap), cap);
+  }
+  if (p.deathTouchFail > 0) {
+    dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.deathTouchFail, p.targetHP, cap), cap);
   }
   if (p.dispelEvilFail > 0) {
     dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.dispelEvilFail, p.targetHP, cap), cap);
@@ -809,7 +1012,7 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
   if (p.immDist) {
     dist = convolveDists(dist, p.immDist, cap);
   }
-  return { dist, lifeStealEV, lifeStealDist };
+  return { dist, lifeStealEV: lifeStealEV + bloodsuckerHealEV, lifeStealDist, bloodsuckerHealEV };
 }
 
 // Compute melee + touch-attack damage distribution, weighted over possible
@@ -820,6 +1023,7 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
                             def, toBlock, targetHP, remHP,
                             poisonStr, poisonFail,
                             stoningFail,
+                            deathTouchFail,
                             dispelEvilFail,
                             lifeStealMod, lifeStealRes,
                             immolationDist, defInvulnBonus,
@@ -831,6 +1035,7 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
     def, toBlock, targetHP, remHP,
     poisonStr, poisonFail,
     stoningFail,
+    deathTouchFail,
     dispelEvilFail,
     lifeStealMod, lifeStealRes,
     immolationDist, defInvulnBonus,
@@ -844,21 +1049,24 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
                                def, toBlock, targetHP, remHP,
                                poisonStr, poisonFail,
                                stoningFail,
+                               deathTouchFail,
                                dispelEvilFail,
                                lifeStealMod, lifeStealRes,
                                immolationDist, defInvulnBonus,
                                blurChance, blurBuggy,
                                doubleStrike, defTopFigHP,
-                               minDamageFromHits) {
+                               minDamageFromHits,
+                               bloodsucker) {
   if (remHP <= 0 || maxFigs <= 0) return { damageDist: [1], lifeStealEV: 0 };
   const result = new Array(remHP + 1).fill(0);
   let lifeStealEV = 0;
   const lo = fearDist ? 0 : maxFigs;
   const touchSpec = {
     poisonStr, poisonFail,
-    stoningFail, dispelEvilFail, targetHP,
+    stoningFail, deathTouchFail, dispelEvilFail, targetHP,
     lifeStealMod, lifeStealRes,
     immDist: immolationDist,
+    bloodsucker,
   };
   for (let k = lo; k <= maxFigs; k++) {
     const pK = fearDist ? fearDist[k] : 1;
@@ -877,6 +1085,8 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
     if (doubleStrike && k > 0 && atk > 0) {
       dist = convolveDists(dist, dist, remHP);
       if (lifeStealMod !== null) lifeStealEV += pK * expectedDamage(calcLifeStealDmgDist(k, lifeStealRes, lifeStealMod, remHP));
+      // Bloodsucker fires once per strike; haste's second strike is a second trigger check.
+      if (bloodsucker) lifeStealEV += pK * tOut.bloodsuckerHealEV;
     }
     for (let d = 0; d < dist.length; d++) result[d] += pK * dist[d];
   }
@@ -935,19 +1145,22 @@ function buildFearPhaseDists(aFigs, bFigs, bPFear, aPFear, aFearedByB, aFearBug,
 // Returns effective Blur chance (0–1) for attacks against a unit.
 // defAbilities: defender's abilities; atkAbilities: attacker's abilities.
 // CoM/CoM2: Blur rate 20%, Invisibility also grants 20%; combined cap is 30%.
+// Warlord: same as CoM2 but combined cap is 40%.
 // MoM: Blur rate 10%.
 // v1.31 bug: Illusion Immunity checked on defender instead of attacker.
 // Fixed (1.51+/CoM/CoM2): Illusion Immunity checked on attacker.
 function getBlurChance(defAbilities, atkAbilities, version) {
   const isCoM = version && version.startsWith('com');
+  const isWarlord = version && version.startsWith('com2_warlord');
   const hasBlur = !!(defAbilities && defAbilities.blur);
   const hasInvis = !!(defAbilities && defAbilities.invisibility);
   const invisGivesBlur = isCoM;
   const blurRate = isCoM ? 0.2 : 0.1;
+  const stackedChance = isWarlord ? 0.4 : 0.3;
 
   let blurChance = 0;
   if (hasBlur && invisGivesBlur && hasInvis) {
-    blurChance = 0.3;
+    blurChance = stackedChance;
   } else if (hasBlur) {
     blurChance = blurRate;
   } else if (invisGivesBlur && hasInvis) {
@@ -1004,16 +1217,98 @@ function applyBlackChannelsEffects(unit) {
   });
 }
 
-// Blood Lust grants the undead state; final unit type is resolved by determineEffectiveUnitType().
-function applyBloodLustEffects(unit) {
+// Warlord Rebuild (Arcane unit enchantment): unit becomes Mechanical and gains
+// Death Immunity, Illusion Immunity, and Armor Piercing. Stat bonuses are
+// applied in getAbilityStatModifiers.
+function applyRebuildEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'rebuild')) return unit;
+  return Object.assign({}, unit, {
+    abilities: Object.assign({}, unit.abilities, {
+      mechanical: true,
+      deathImmunity: true,
+      illusionImmunity: true,
+      armorPiercing: true,
+    }),
+  });
+}
+
+// Warlord Tactician retort: teleporting units gain First Strike;
+// non-corporeal units (including via Wraith Form / Ruler of Underworld) gain Negate First Strike;
+// units on their favored terrain gain both First Strike and Negate First Strike.
+function applyTacticianWarlordEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'tactician')) return unit;
+  const extra = {};
+  if (hasAbil(unit.abilities, 'teleporting')) extra.firstStrike = true;
+  if (hasNonCorporealEffect(unit.abilities)) extra.negateFirstStrike = true;
+  // A unit on its favored terrain gains both First Strike and Negate First Strike.
+  if (hasAbil(unit.abilities, 'favoredTerrain')) {
+    extra.firstStrike = true;
+    extra.negateFirstStrike = true;
+  }
+  if (Object.keys(extra).length === 0) return unit;
+  return Object.assign({}, unit, {
+    abilities: Object.assign({}, unit.abilities, extra),
+  });
+}
+
+// Warlord Fiery Fury (Chaos unit enchantment): when cast on a fantastic creature,
+// grants First Strike. (Regular units instead get stat bonuses — handled in stats.js.
+// The realm conversion to Chaos is handled in determineEffectiveUnitType.)
+function applyFieryFuryEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord')) return unit;
+  if (!hasAbil(unit.abilities, 'fieryFury')) return unit;
+  if (!(unit.unitType || '').startsWith('fantastic_')) return unit;
+  return Object.assign({}, unit, {
+    abilities: Object.assign({}, unit.abilities, { firstStrike: true }),
+  });
+}
+
+// Warlord Zeal (Life unit enchantment, cast only by Inquisitors/Grand Inquisitor):
+// grants First Strike and Negate First Strike. Applied before Temporal Twist so
+// Temporal Twist can strip the granted flags.
+function applyZealEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'zeal')) return unit;
+  return Object.assign({}, unit, {
+    abilities: Object.assign({}, unit.abilities, { firstStrike: true, negateFirstStrike: true }),
+  });
+}
+
+// Warlord Temporal Twist (enemy combat global enchantment): strips First Strike,
+// Negate First Strike, and Teleporting from the affected unit. Applied after the
+// Tactician retort so that Tactician-granted First Strike / Negate First Strike
+// are removed too.
+function applyTemporalTwistEffects(unit) {
+  if (!hasAbil(unit.abilities, 'temporalTwist')) return unit;
+  const stripped = Object.assign({}, unit.abilities);
+  delete stripped.firstStrike;
+  delete stripped.negateFirstStrike;
+  delete stripped.teleporting;
+  return Object.assign({}, unit, { abilities: stripped });
+}
+
+// CoM/CoM2: Blood Lust grants the undead state; final unit type is resolved by
+// determineEffectiveUnitType(). Warlord: Bloodlust no longer turns the unit undead
+// (only doubled melee vs normals/heroes is retained), so this becomes a no-op.
+function applyBloodLustEffects(unit, version) {
   if (!hasAbil(unit.abilities, 'bloodLust')) return unit;
+  if (version && version.startsWith('com2_warlord')) return unit;
   return Object.assign({}, unit, {
     abilities: Object.assign({}, unit.abilities, { undead: true }),
   });
 }
 
+// Warlord Vampirism (Death very rare unit enchantment): unit becomes undead and gains
+// Blood Sucker. Immunities follow from the granted `undead` flag via applyUndeadImmunities.
+// The thrown/breath -> melee strength transfer is applied in deriveUnitStats (stats.js).
+function applyVampirismEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'vampirism')) return unit;
+  return Object.assign({}, unit, {
+    abilities: Object.assign({}, unit.abilities, { undead: true, bloodSucker: true }),
+  });
+}
+
 function bloodLustMeleeAttack(atkUnit, defUnit) {
-  const targetIsNormal = defUnit && (defUnit.unitType === 'normal' || defUnit.unitType === 'hero');
+  const targetIsNormal = defUnit && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero');
   if (!targetIsNormal || !hasAbil(atkUnit.abilities, 'bloodLust')) return atkUnit.atk;
   return atkUnit.atk * 2;
 }
@@ -1039,9 +1334,10 @@ function elemResistBonus(unit, version) {
 function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const isCoM = version && version.startsWith('com');
 
-  // Bless (defense half) — version-sensitive scope (no melee bonus in CoM/CoM2).
+  // Bless (defense half) — version-sensitive scope (no melee bonus in CoM/CoM2/Warlord).
   const tBless = hasAbil(target.abilities, 'bless');
-  const blessBonus = isCoM ? 5 : 3;
+  const isWarlord = version && version.startsWith('com2_warlord');
+  const blessBonus = isWarlord ? 7 : (isCoM ? 5 : 3);
   const aIsDC = attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos';
   const aThrownDC = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning'
                   || (attacker.thrownType === 'thrown' && aIsDC);
@@ -1094,9 +1390,13 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
     ? halve(defLS + blessThrown + elemThrown) : (defLS + blessThrown + elemThrown);
 
   // Weapon Immunity. Blazing March upgrades melee + missile attacks to magical weapons in CoM/CoM2.
+  // Warlord also upgrades thrown attacks.
   const aBlazingMarch = hasAbil(attacker.abilities, 'blazingMarch');
+  const isWarlordVersion = version && version.startsWith('com2_warlord');
   const meleeWeaponWI = (aBlazingMarch && attacker.weapon === 'normal') ? 'magic' : attacker.weapon;
   const rangedWeaponWI = (aBlazingMarch && attacker.rangedType === 'missile' && attacker.weapon === 'normal')
+    ? 'magic' : attacker.weapon;
+  const thrownWeaponWI = (aBlazingMarch && isWarlordVersion && attacker.thrownType === 'thrown' && attacker.weapon === 'normal')
     ? 'magic' : attacker.weapon;
 
   let vsMelee = weaponImmunityDef(defAPMelee, target.abilities, meleeWeaponWI, attacker.unitType, version, attacker.generic);
@@ -1115,13 +1415,13 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   // Thrown: WI eligible except v1.31 bug. Breath (fire/lightning) is magical, never triggers WI.
   const thrownWI = attacker.thrownType === 'thrown' && version !== 'mom_1.31';
   let vsThrown = thrownWI
-    ? weaponImmunityDef(defAPThrown, target.abilities, attacker.weapon, attacker.unitType, version, attacker.generic)
+    ? weaponImmunityDef(defAPThrown, target.abilities, thrownWeaponWI, attacker.unitType, version, attacker.generic)
     : defAPThrown;
 
   // Missile Immunity (vs missile only). v1.31 bug: WI overwrites MI when both apply.
   const isMissile = attacker.rangedType === 'missile';
   const wiTriggeredOnMissile = isMissile && hasAbil(target.abilities, 'weaponImmunity')
-    && rangedWeaponWI === 'normal' && attacker.unitType === 'normal';
+    && rangedWeaponWI === 'normal' && isNormalUnitType(attacker.unitType);
   if (isMissile && !(version === 'mom_1.31' && wiTriggeredOnMissile)) {
     vsRanged = missileImmunityDef(vsRanged, target.abilities, version);
   }
@@ -1240,7 +1540,9 @@ function applyDamagePhase(joint, phase, pendingFear, units, targetTotalRemHP) {
       const cap = targetTotalRemHP - targetCum;
       if (cap <= 0) {
         // Target already maxed out; no further damage possible.
+        // Fold into marginal[0] so it stays a proper PMF summing to 1.
         newJoint[cumA][cumB] += p;
+        marginal[0] += p;
         continue;
       }
       const out = phase.compute(sourceAlive, targetAlive, cap, fearDist);
@@ -1339,7 +1641,10 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
           fsMarginal[Math.min(fsDmg, ctx.bRemHP)] += p * pFs;
           postFsJoint[cumA][newCumB] += p * pFs;
           if (capA <= 0 || bAliveAfterFS <= 0) {
+            // Counter doesn't fire — fold this mass into the counter marginal at
+            // damage=0 so it stays a proper PMF summing to 1.
             newJoint[cumA][newCumB] += p * pFs;
+            counterMarginal[0] += p * pFs;
             continue;
           }
           const counterOut = computes.counter(bAliveAfterFS, aAliveL, capA);
@@ -1546,6 +1851,8 @@ function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning
     poisonFail:     poisonStr > 0 ? poisonFailProb(other.res, other.abilities, ver) : 0,
     stoningFail:    (fires && abilDefined(self.abilities, 'stoningTouch'))
                       ? stoningFailProb(otherResStoning, other.abilities, self.abilities.stoningTouch, ver) : 0,
+    deathTouchFail: (fires && abilDefined(self.abilities, 'deathTouch'))
+                      ? deathTouchFailProb(otherResDeath, other.abilities, self.abilities.deathTouch, ver) : 0,
     dispelEvilFail: (fires && hasAbil(self.abilities, 'dispelEvil'))
                       ? dispelEvilFailProb(otherResM, other.abilities, other.unitType, ver) : 0,
     lifeStealMod:   (fires && abilDefined(self.abilities, 'lifeSteal'))
@@ -1555,19 +1862,25 @@ function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning
 
 // Touch-attack parameters for `self` firing alongside its gaze phase against `other`.
 // Returns raw probs plus `*With` booleans gated on the gaze actually being active.
-function gazeTouchParams(self, other, otherResDeath, otherResStoning, gazeActive, selfSleep, ver) {
+function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, gazeActive, selfSleep, ver) {
   const poisonStr  = abilVal(self.abilities, 'poison', 0);
   const poisonFail = poisonStr > 0 ? poisonFailProb(other.res, other.abilities, ver) : 0;
   const stoningFail = abilDefined(self.abilities, 'stoningTouch')
     ? stoningFailProb(otherResStoning, other.abilities, self.abilities.stoningTouch, ver) : 0;
+  const deathTouchFail = abilDefined(self.abilities, 'deathTouch')
+    ? deathTouchFailProb(otherResDeath, other.abilities, self.abilities.deathTouch, ver) : 0;
+  const dispelEvilFail = hasAbil(self.abilities, 'dispelEvil')
+    ? dispelEvilFailProb(otherResM, other.abilities, other.unitType, ver) : 0;
   const lifeStealMod = abilDefined(self.abilities, 'lifeSteal')
     ? lifeStealEffective(otherResDeath, other.abilities, self.abilities.lifeSteal, ver) : null;
   const active = !selfSleep && gazeActive;
   return {
-    poisonStr, poisonFail, stoningFail, lifeStealMod,
-    poisonWith:    active && poisonFail > 0,
-    stoningWith:   active && stoningFail > 0,
-    lifeStealWith: active && lifeStealMod !== null,
+    poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, lifeStealMod,
+    poisonWith:     active && poisonFail > 0,
+    stoningWith:    active && stoningFail > 0,
+    deathTouchWith: active && deathTouchFail > 0,
+    dispelEvilWith: active && dispelEvilFail > 0,
+    lifeStealWith:  active && lifeStealMod !== null,
   };
 }
 
@@ -1580,10 +1893,16 @@ function gazeKillProbs(self, selfStoningActive, selfDeathActive, other, otherRes
 }
 
 function normalizeCombatUnit(unit, version) {
-  let normalized = applyBloodLustEffects(unit);
+  let normalized = applyBloodLustEffects(unit, version);
+  normalized = applyVampirismEffects(normalized, version);
   normalized = applyUndeadImmunities(normalized, version);
   normalized = applyAnimatedEffects(normalized, version);
   normalized = applyBlackChannelsEffects(normalized);
+  normalized = applyRebuildEffects(normalized, version);
+  normalized = applyTacticianWarlordEffects(normalized, version);
+  normalized = applyZealEffects(normalized, version);
+  normalized = applyFieryFuryEffects(normalized, version);
+  normalized = applyTemporalTwistEffects(normalized);
   return Object.assign({}, normalized, {
     unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version),
   });
@@ -1600,12 +1919,10 @@ function applyPairToHitModifiers(a, b, version) {
       b = Object.assign({}, b, { toHitMelee: Math.max(0.1, b.toHitMelee - 0.1) });
     }
 
-    const aPrayer = abilVal(a.abilities, 'prayer', 'none');
-    const bPrayer = abilVal(b.abilities, 'prayer', 'none');
-    if (aPrayer === 'prayer' || aPrayer === 'highPrayer') {
+    if (hasAbil(a.abilities, 'prayer') || hasAbil(a.abilities, 'highPrayer')) {
       b = Object.assign({}, b, { toHitMelee: Math.max(0.1, b.toHitMelee - 0.1) });
     }
-    if (bPrayer === 'prayer' || bPrayer === 'highPrayer') {
+    if (hasAbil(b.abilities, 'prayer') || hasAbil(b.abilities, 'highPrayer')) {
       a = Object.assign({}, a, { toHitMelee: Math.max(0.1, a.toHitMelee - 0.1) });
     }
   }
@@ -1668,7 +1985,8 @@ function buildResistanceContext(a, b, version, isCoM) {
   // effects (Cause Fear, Life Steal, Death Gaze). The defense half is computed elsewhere.
   const bBless = hasAbil(b.abilities, 'bless');
   const aBless = hasAbil(a.abilities, 'bless');
-  const blessBonus = isCoM ? 5 : 3;
+  const isWarlord = version && version.startsWith('com2_warlord');
+  const blessBonus = isWarlord ? 4 : (isCoM ? 5 : 3);
 
   // Resist Magic: +5 resistance vs all magical/special effects except Poison.
   const bResM = b.res + (hasAbil(b.abilities, 'resistMagic') ? 5 : 0);
@@ -1737,6 +2055,7 @@ function buildWallOfFirePhase(active, params) {
   const {
     wofStr,
     wofToHit,
+    wofSingleFigure,
     aDefForImm,
     aToBlock,
     aHP,
@@ -1744,6 +2063,7 @@ function buildWallOfFirePhase(active, params) {
   } = params;
 
   // Wall of Fire: area damage to A using A's defense profile vs immolation. Touch-free.
+  // Warlord strikes a single figure; all other versions hit every alive figure.
   return {
     kind: 'damage',
     source: 'a',
@@ -1751,8 +2071,9 @@ function buildWallOfFirePhase(active, params) {
     consumesFear: false,
     compute: (_sAlive, tAlive, cap) => {
       if (tAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+      const targetFigs = wofSingleFigure ? 1 : tAlive;
       return {
-        dist: calcAreaDamageDist(tAlive, wofStr, wofToHit, aDefForImm, aToBlock, aHP, cap, aInvulnBonus, null),
+        dist: calcAreaDamageDist(targetFigs, wofStr, wofToHit, aDefForImm, aToBlock, aHP, cap, aInvulnBonus, null),
         lifeStealEV: 0,
       };
     },
@@ -1781,6 +2102,8 @@ function buildThrownPhase(active, params) {
     aPoisonStrT,
     aPoisonFailT,
     aStoningFailT,
+    aDeathTouchFailT,
+    aDispelEvilFailT,
     aLifeStealModT,
     bResDeath,
     aHaste,
@@ -1802,9 +2125,13 @@ function buildThrownPhase(active, params) {
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: aPoisonStrT, poisonFail: aPoisonFailT,
-        stoningFail: aStoningFailT, targetHP: b.hp,
+        stoningFail: aStoningFailT,
+        deathTouchFail: aDeathTouchFailT,
+        dispelEvilFail: aDispelEvilFailT,
+        targetHP: b.hp,
         lifeStealMod: aLifeStealModT, lifeStealRes: bResDeath,
         immDist: aImmTDist,
+        bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
       });
       dist = t.dist;
       let lifeStealEV = t.lifeStealEV;
@@ -1812,9 +2139,25 @@ function buildThrownPhase(active, params) {
         dist = convolveDists(dist, dist, cap);
         lifeStealEV *= 2;
       }
+      // (Bloodsucker heal is already inside t.lifeStealEV; haste doubles it via *= 2 above.)
       return { dist, lifeStealEV };
     },
   };
+}
+
+// Destroy Mechanical (Warlord, Clockwork Tinmen): melee attack instantly
+// destroys a Mechanical defender. Gated on attacker having a usable melee
+// strike (atk > 0; sAlive > 0 is checked by callers).
+function destroyMechanicalApplies(attacker, defender, atk) {
+  return atk > 0
+    && hasAbil(attacker.abilities, 'destroyMechanical')
+    && hasAbil(defender.abilities, 'mechanical');
+}
+
+function deterministicKillDist(cap) {
+  const d = new Array(cap + 1).fill(0);
+  d[cap] = 1;
+  return d;
 }
 
 function buildMeleePhase(params) {
@@ -1837,6 +2180,7 @@ function buildMeleePhase(params) {
     aPoisonStrM,
     aPoisonFailM,
     aStoningFailM,
+    aDeathTouchFailM,
     aDispelEvilFailM,
     aLifeStealModM,
     bResDeath,
@@ -1853,16 +2197,19 @@ function buildMeleePhase(params) {
     consumesFear: false,
     compute: (sAlive, tAlive, cap) => {
       if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+      if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
+        return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+      }
       const aImmMDist = (aImmWithMelee && tAlive > 0)
         ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
         : null;
       const fearD = aFearForCell(sAlive, tAlive);
-      const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
+      const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
         bDefVsA, bToBlockVsAMelee, b.hp, cap,
-        aPoisonStrM, aPoisonFailM, aStoningFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+        aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
         aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, aHaste,
         isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-        aMinDamageFromHits);
+        aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
       return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
     },
   };
@@ -1888,6 +2235,7 @@ function buildCounterPhase(params) {
     bPoisonStrM,
     bPoisonFailM,
     bStoningFailM,
+    bDeathTouchFailM,
     bDispelEvilFailM,
     bLifeStealModM,
     aResDeath,
@@ -1904,16 +2252,19 @@ function buildCounterPhase(params) {
     consumesFear: false,
     compute: (sAlive, tAlive, cap) => {
       if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+      if (destroyMechanicalApplies(b, a, bBlackSleep ? 0 : bMeleeAtkVsA)) {
+        return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+      }
       const bImmMDist = (bImmWithMelee && tAlive > 0)
         ? calcAreaDamageDist(tAlive, immStr, b.toHitImmolation, aDefForImm, aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits)
         : null;
       const fearD = bFearForCell(sAlive);
-      const o = calcMeleeTouchOutcome(fearD, sAlive, bDoomsA, bBlackSleep ? 0 : bMeleeAtkVsA, bToHitMeleeVert,
+      const o = calcMeleeTouchOutcome(fearD, sAlive, bDoomsA, bBlackSleep ? 0 : applyRage(bMeleeAtkVsA, b, sAlive), bToHitMeleeVert,
         aDefVsB, aToBlockVsBMelee, a.hp, cap,
-        bPoisonStrM, bPoisonFailM, bStoningFailM, bDispelEvilFailM, bLifeStealModM, aResDeath,
+        bPoisonStrM, bPoisonFailM, bStoningFailM, bDeathTouchFailM, bDispelEvilFailM, bLifeStealModM, aResDeath,
         bImmMDist, aInvulnBonus, aBlurChance, blurBuggy, bCounterHaste,
         isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined,
-        bMinDamageFromHits);
+        bMinDamageFromHits, hasAbil(b.abilities, 'bloodSucker'));
       return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
     },
   };
@@ -1941,6 +2292,7 @@ function buildFirstStrikeComputes(params) {
     aPoisonStrM,
     aPoisonFailM,
     aStoningFailM,
+    aDeathTouchFailM,
     aDispelEvilFailM,
     aLifeStealModM,
     bResDeath,
@@ -1953,16 +2305,19 @@ function buildFirstStrikeComputes(params) {
   // and no doubleStrike. Used for both no-Haste FS and FS+Haste FS strike.
   const fsStrikeCompute = (sAlive, tAlive, cap) => {
     if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+    if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
+      return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+    }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
       ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
       : null;
     const fearD = aFearedByB ? calcFearDist(sAlive, aPFear) : null;
-    const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
+    const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-      aMinDamageFromHits);
+      aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
     return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
   };
 
@@ -1970,16 +2325,19 @@ function buildFirstStrikeComputes(params) {
   // but doubleStrike=false (this IS the 2nd of the two Hasted strikes).
   const secondStrikeCompute = (sAlive, tAlive, cap) => {
     if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+    if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
+      return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+    }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
       ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
       : null;
     const fearD = aFearForCell(sAlive, tAlive);
-    const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
+    const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-      aMinDamageFromHits);
+      aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
     return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
   };
 
@@ -1987,15 +2345,18 @@ function buildFirstStrikeComputes(params) {
   // FS+Haste shares one fear roll across FS and 2nd strike (rules-faithful k_a coupling).
   const aStrikeNoFear = (sAlive, tAlive, cap) => {
     if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+    if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
+      return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+    }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
       ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
       : null;
-    const o = calcMeleeTouchOutcome(null /* fearDist */, sAlive, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
+    const o = calcMeleeTouchOutcome(null /* fearDist */, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-      aMinDamageFromHits);
+      aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
     return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
   };
 
@@ -2026,6 +2387,10 @@ function buildAttackerGazePhase(active, params) {
     aPoisonFailG,
     aStoningWithGaze,
     aStoningFailG,
+    aDeathTouchWithGaze,
+    aDeathTouchFailG,
+    aDispelEvilWithGaze,
+    aDispelEvilFailG,
     aLifeStealWithGaze,
     aLifeStealModG,
     bResDeath,
@@ -2046,9 +2411,13 @@ function buildAttackerGazePhase(active, params) {
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: aPoisonWithGaze ? aPoisonStrG_raw : 0, poisonFail: aPoisonFailG,
-        stoningFail: aStoningWithGaze ? aStoningFailG : 0, targetHP: b.hp,
+        stoningFail: aStoningWithGaze ? aStoningFailG : 0,
+        deathTouchFail: aDeathTouchWithGaze ? aDeathTouchFailG : 0,
+        dispelEvilFail: aDispelEvilWithGaze ? aDispelEvilFailG : 0,
+        targetHP: b.hp,
         lifeStealMod: aLifeStealWithGaze ? aLifeStealModG : null, lifeStealRes: bResDeath,
         immDist: aImmGDist,
+        bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
       });
       return { dist: t.dist, lifeStealEV: t.lifeStealEV };
     },
@@ -2079,6 +2448,10 @@ function buildDefenderGazePhase(active, params) {
     bPoisonFailG,
     bStoningWithGaze,
     bStoningFailG,
+    bDeathTouchWithGaze,
+    bDeathTouchFailG,
+    bDispelEvilWithGaze,
+    bDispelEvilFailG,
     bLifeStealWithGaze,
     bLifeStealModG,
     aResDeath,
@@ -2099,9 +2472,13 @@ function buildDefenderGazePhase(active, params) {
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: bPoisonWithGaze ? bPoisonStrG_raw : 0, poisonFail: bPoisonFailG,
-        stoningFail: bStoningWithGaze ? bStoningFailG : 0, targetHP: a.hp,
+        stoningFail: bStoningWithGaze ? bStoningFailG : 0,
+        deathTouchFail: bDeathTouchWithGaze ? bDeathTouchFailG : 0,
+        dispelEvilFail: bDispelEvilWithGaze ? bDispelEvilFailG : 0,
+        targetHP: a.hp,
         lifeStealMod: bLifeStealWithGaze ? bLifeStealModG : null, lifeStealRes: aResDeath,
         immDist: bImmGDist,
+        bloodsucker: hasAbil(b.abilities, 'bloodSucker'),
       });
       return { dist: t.dist, lifeStealEV: t.lifeStealEV };
     },
@@ -2247,10 +2624,18 @@ function resolveCombat(a, b, opts) {
   const simultaneousFearLabel = hasDefenderFear && bFearedByA ? 'Cause Fear'
     : bFearedByA ? 'Attacker Cause Fear' : 'Defender Cause Fear';
 
-  // Determine if attacker has thrown/breath (melee only).
-  // Requires a melee attack (atk > 0) — a unit that cannot engage in melee cannot throw or breathe.
+  // Determine if attacker has thrown/breath (melee only). Two version-sensitive conditions:
+  //  (1) Melee must enable the non-ranged sequence — same rule as touch delivery
+  //      (touchAttackFires): MoM 1.31 needs *effective* melee > 0 (the v1.31 bug suppresses
+  //      delivery at 0 effective strength); every other version needs *base* melee > 0 (so
+  //      Weakness reducing effective melee to 0 does not suppress the breath/thrown phase).
+  //  (2) The breath/thrown attack must exist: MoM 1.31 needs *effective* strength > 0; every
+  //      other version accepts *base OR effective* > 0 (so a granted breath with base 0 fires,
+  //      and a breath reduced to 0 effective but with base > 0 still fires).
   // Black Sleep also prevents all outgoing attacks.
-  const hasThrown = !isRanged && a.thrownType !== 'none' && a.rtb > 0 && a.atk > 0 && !aBlackSleep;
+  const breathExists = ver === 'mom_1.31' ? a.rtb > 0 : (a.baseRtb > 0 || a.rtb > 0);
+  const hasThrown = !isRanged && a.thrownType !== 'none' && breathExists
+    && touchAttackFires(a.atk, a.baseAtk, ver) && !aBlackSleep;
 
   // Defense profiles: defender's effective defense vs each attack type from the opponent.
   const {
@@ -2286,8 +2671,10 @@ function resolveCombat(a, b, opts) {
   // Uses the same defense chain as immolation against A, and the same immunities.
   const wallOfFireActive = !!opts.wallOfFire && !isRanged;
   const wofStr = wallOfFireActive ? wallOfFireStr(ver) : 0;
-  // Wall of Fire is cast at 30% base To Hit (standard spell To Hit, like immolation).
-  const wofToHit = 0.3;
+  // Wall of Fire is cast at 30% base To Hit (standard spell To Hit, like immolation);
+  // Warlord raises this to 60% but limits the strike to a single attacker figure.
+  const wofToHit = wallOfFireToHit(ver);
+  const wofSingleFigure = wallOfFireSingleFigure(ver);
 
   // --- New phase pipeline (under construction) ---
   // Replaces the thrown+melee and melee-only branches with a single joint-state engine.
@@ -2295,8 +2682,8 @@ function resolveCombat(a, b, opts) {
   // Gaze-active flags (used both by gate and by phase compute below).
   const aGazeDoomStrP = (a.effectiveDoomGaze || 0) > 0 ? a.effectiveDoomGaze : 0;
   const bGazeDoomStrP = (b.effectiveDoomGaze || 0) > 0 ? b.effectiveDoomGaze : 0;
-  const gazeFiresAP = gazeAttackFires(a.effectiveGazeRanged, aGazeDoomStrP, opts.version);
-  const gazeFiresBP = gazeAttackFires(b.effectiveGazeRanged, bGazeDoomStrP, opts.version);
+  const gazeFiresAP = gazeAttackFires(a.effectiveGazeRanged, aGazeDoomStrP, a.baseGazeRanged, a.baseDoomGaze, opts.version);
+  const gazeFiresBP = gazeAttackFires(b.effectiveGazeRanged, bGazeDoomStrP, b.baseGazeRanged, b.baseDoomGaze, opts.version);
   const aStoningGazeActiveP = abilDefined(a.abilities, 'stoningGaze') && gazeFiresAP;
   const bStoningGazeActiveP = abilDefined(b.abilities, 'stoningGaze') && gazeFiresBP;
   const aDeathGazeActiveP = abilDefined(a.abilities, 'deathGaze') && gazeFiresAP;
@@ -2325,9 +2712,9 @@ function resolveCombat(a, b, opts) {
     }
 
     // Touch attack params: melee-phase activation only (gaze/thrown to be added later).
-    const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, dispelEvilFail: aDispelEvilFailM, lifeStealMod: aLifeStealModM }
+    const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, lifeStealMod: aLifeStealModM }
       = meleeTouchParams(a, b, bResM, bResDeath, bResStoning, opts.version);
-    const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, dispelEvilFail: bDispelEvilFailM, lifeStealMod: bLifeStealModM }
+    const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, deathTouchFail: bDeathTouchFailM, dispelEvilFail: bDispelEvilFailM, lifeStealMod: bLifeStealModM }
       = meleeTouchParams(b, a, aResM, aResDeath, aResStoning, opts.version);
 
     // Touch attack params: thrown-phase activation (for thrown/breath).
@@ -2336,16 +2723,20 @@ function resolveCombat(a, b, opts) {
     const aPoisonFailT = aPoisonStrT > 0 ? poisonFailProb(b.res, b.abilities, opts.version) : 0;
     const aStoningOnT = aTouchWithThrown && abilDefined(a.abilities, 'stoningTouch');
     const aStoningFailT = aStoningOnT ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version) : 0;
+    const aDeathTouchOnT = aTouchWithThrown && abilDefined(a.abilities, 'deathTouch');
+    const aDeathTouchFailT = aDeathTouchOnT ? deathTouchFailProb(bResDeath, b.abilities, a.abilities.deathTouch, opts.version) : 0;
+    const aDispelEvilOnT = aTouchWithThrown && hasAbil(a.abilities, 'dispelEvil');
+    const aDispelEvilFailT = aDispelEvilOnT ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
     const aLifeStealOnT = aTouchWithThrown && abilDefined(a.abilities, 'lifeSteal');
     const aLifeStealModT = aLifeStealOnT ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
 
     // Gaze-phase touch activation (touches fire alongside gaze regardless of melee atk).
-    const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, lifeStealMod: aLifeStealModG,
-            poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, lifeStealWith: aLifeStealWithGaze }
-      = gazeTouchParams(a, b, bResDeath, bResStoning, aGazeActiveP, aBlackSleep, opts.version);
-    const { poisonStr: bPoisonStrG_raw, poisonFail: bPoisonFailG, stoningFail: bStoningFailG, lifeStealMod: bLifeStealModG,
-            poisonWith: bPoisonWithGaze, stoningWith: bStoningWithGaze, lifeStealWith: bLifeStealWithGaze }
-      = gazeTouchParams(b, a, aResDeath, aResStoning, bGazeActiveP, bBlackSleep, opts.version);
+    const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, lifeStealMod: aLifeStealModG,
+            poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, lifeStealWith: aLifeStealWithGaze }
+      = gazeTouchParams(a, b, bResM, bResDeath, bResStoning, aGazeActiveP, aBlackSleep, opts.version);
+    const { poisonStr: bPoisonStrG_raw, poisonFail: bPoisonFailG, stoningFail: bStoningFailG, deathTouchFail: bDeathTouchFailG, dispelEvilFail: bDispelEvilFailG, lifeStealMod: bLifeStealModG,
+            poisonWith: bPoisonWithGaze, stoningWith: bStoningWithGaze, deathTouchWith: bDeathTouchWithGaze, dispelEvilWith: bDispelEvilWithGaze, lifeStealWith: bLifeStealWithGaze }
+      = gazeTouchParams(b, a, aResM, aResDeath, aResStoning, bGazeActiveP, bBlackSleep, opts.version);
 
     // Gaze kill-roll probabilities (needed by buildGazeDist).
     const { stoningFail: aStoningGazeFailP, deathFail: aDeathGazeFailP }
@@ -2420,6 +2811,7 @@ function resolveCombat(a, b, opts) {
       aPoisonStrM,
       aPoisonFailM,
       aStoningFailM,
+      aDeathTouchFailM,
       aDispelEvilFailM,
       aLifeStealModM,
       bResDeath,
@@ -2447,6 +2839,7 @@ function resolveCombat(a, b, opts) {
       bPoisonStrM,
       bPoisonFailM,
       bStoningFailM,
+      bDeathTouchFailM,
       bDispelEvilFailM,
       bLifeStealModM,
       aResDeath,
@@ -2458,6 +2851,7 @@ function resolveCombat(a, b, opts) {
     const wofPhase = buildWallOfFirePhase(wallOfFireActive, {
       wofStr,
       wofToHit,
+      wofSingleFigure,
       aDefForImm,
       aToBlock: a.toBlock,
       aHP: a.hp,
@@ -2486,6 +2880,10 @@ function resolveCombat(a, b, opts) {
       aPoisonFailG,
       aStoningWithGaze,
       aStoningFailG,
+      aDeathTouchWithGaze,
+      aDeathTouchFailG,
+      aDispelEvilWithGaze,
+      aDispelEvilFailG,
       aLifeStealWithGaze,
       aLifeStealModG,
       bResDeath,
@@ -2513,6 +2911,10 @@ function resolveCombat(a, b, opts) {
       bPoisonFailG,
       bStoningWithGaze,
       bStoningFailG,
+      bDeathTouchWithGaze,
+      bDeathTouchFailG,
+      bDispelEvilWithGaze,
+      bDispelEvilFailG,
       bLifeStealWithGaze,
       bLifeStealModG,
       aResDeath,
@@ -2539,6 +2941,8 @@ function resolveCombat(a, b, opts) {
       aPoisonStrT,
       aPoisonFailT,
       aStoningFailT,
+      aDeathTouchFailT,
+      aDispelEvilFailT,
       aLifeStealModT,
       bResDeath,
       aHaste,
@@ -2561,6 +2965,8 @@ function resolveCombat(a, b, opts) {
         hasted: aHaste && a.rtb > 0,
         poisonTouch: aPoisonFailT > 0,
         stoningTouch: aStoningFailT > 0,
+        deathTouch: aDeathTouchFailT > 0,
+        dispelEvil: aDispelEvilFailT > 0,
         lifeSteal: aLifeStealModT !== null,
         immolation: aImmWithThrown,
       });
@@ -2581,6 +2987,8 @@ function resolveCombat(a, b, opts) {
         doomGaze: aGazeDoomStrP > 0,
         poisonTouch: aPoisonWithGaze,
         stoningTouch: aStoningWithGaze,
+        deathTouch: aDeathTouchWithGaze,
+        dispelEvil: aDispelEvilWithGaze,
         lifeSteal: aLifeStealWithGaze,
         immolation: aImmWithGaze,
       });
@@ -2602,6 +3010,8 @@ function resolveCombat(a, b, opts) {
         doomGaze: bGazeDoomStrP > 0,
         poisonTouch: bPoisonWithGaze,
         stoningTouch: bStoningWithGaze,
+        deathTouch: bDeathTouchWithGaze,
+        dispelEvil: bDispelEvilWithGaze,
         lifeSteal: bLifeStealWithGaze,
         immolation: bImmWithGaze,
       });
@@ -2672,6 +3082,7 @@ function resolveCombat(a, b, opts) {
         aPoisonStrM,
         aPoisonFailM,
         aStoningFailM,
+        aDeathTouchFailM,
         aDispelEvilFailM,
         aLifeStealModM,
         bResDeath,
@@ -2705,6 +3116,7 @@ function resolveCombat(a, b, opts) {
       const fsLabel = firstStrikeBreakdownLabel({
         poisonTouch: aPoisonFailM > 0,
         stoningTouch: aStoningFailM > 0,
+        deathTouch: aDeathTouchFailM > 0,
         dispelEvil: aDispelEvilFailM > 0,
         lifeSteal: aLifeStealModM !== null,
         immolation: aImmWithMelee,
@@ -2730,6 +3142,7 @@ function resolveCombat(a, b, opts) {
         const label = secondStrikeCounterBreakdownLabel({
           poisonTouch: aPoisonFailM > 0 || bPoisonFailM > 0,
           stoningTouch: aStoningFailM > 0 || bStoningFailM > 0,
+          deathTouch: aDeathTouchFailM > 0 || bDeathTouchFailM > 0,
           dispelEvil: aDispelEvilFailM > 0 || bDispelEvilFailM > 0,
           lifeSteal: aLifeStealModM !== null || bLifeStealModM !== null,
           immolation: aImmWithMelee || bImmWithMelee,
@@ -2744,6 +3157,7 @@ function resolveCombat(a, b, opts) {
           counterHasted: bCounterHaste,
           poisonTouch: bPoisonFailM > 0,
           stoningTouch: bStoningFailM > 0,
+          deathTouch: bDeathTouchFailM > 0,
           dispelEvil: bDispelEvilFailM > 0,
           lifeSteal: bLifeStealModM !== null,
           immolation: bImmWithMelee,
@@ -2779,6 +3193,8 @@ function resolveCombat(a, b, opts) {
           counterHasted: bCounterHaste,
           poisonTouch: aPoisonStrM > 0 || bPoisonStrM > 0,
           stoningTouch: aStoningFailM > 0 || bStoningFailM > 0,
+          deathTouch: aDeathTouchFailM > 0 || bDeathTouchFailM > 0,
+          dispelEvil: aDispelEvilFailM > 0 || bDispelEvilFailM > 0,
           lifeSteal: aLifeStealModM !== null || bLifeStealModM !== null,
           immolation: aImmWithMelee || bImmWithMelee,
         });
@@ -2815,18 +3231,28 @@ function resolveCombat(a, b, opts) {
         bRemHP, bHP: bTotalHP, bAlive,
       };
     }
+    // Rage: +1 ranged per figure lost (ranged combat has no counter-attack, so only
+    // pre-combat casualties contribute — aAlive is constant through the volley).
+    const aRtbRanged = applyRage(a.rtb, a, aAlive);
     let dmgToB = aAlive > 0 && bRemHP > 0 && a.rtb > 0 && !aBlackSleep
-      ? (aDoomsB ? calcDoomDist(aAlive, a.rtb, bRemHP)
-                 : calcTotalDamageDist(aAlive, a.rtb, aToHitRtbVert, bDefVsARanged, bToBlockVsARangedEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
+      ? (aDoomsB ? calcDoomDist(aAlive, aRtbRanged, bRemHP)
+                 : calcTotalDamageDist(aAlive, aRtbRanged, aToHitRtbVert, bDefVsARanged, bToBlockVsARangedEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
                      isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined, aMinDamageFromHits))
       : [1];
 
-    // Touch attacks accompanying ranged: Poison, Stoning, Life Steal, Immolation (MoM only).
+    // Touch attacks accompanying ranged: Poison, Stoning, Death Touch, Dispel Evil,
+    // Life Steal, Immolation (MoM only). Warlord removes Stoning Touch and Death Touch
+    // from ranged (physical and magical) per the Warlord manual.
     const rangedTouchFires = touchAttackFires(a.rtb, a.baseRtb, opts.version);
+    const warlordRangedTouchBlocked = ver && ver.startsWith('com2_warlord');
     const aPoisonStrR = rangedTouchFires ? abilVal(a.abilities, 'poison', 0) : 0;
     const aPoisonFailR = aPoisonStrR > 0 ? poisonFailProb(b.res, b.abilities, opts.version) : 0;
-    const aStoningFailR = (rangedTouchFires && abilDefined(a.abilities, 'stoningTouch'))
+    const aStoningFailR = (rangedTouchFires && !warlordRangedTouchBlocked && abilDefined(a.abilities, 'stoningTouch'))
       ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version) : 0;
+    const aDeathTouchFailR = (rangedTouchFires && !warlordRangedTouchBlocked && abilDefined(a.abilities, 'deathTouch'))
+      ? deathTouchFailProb(bResDeath, b.abilities, a.abilities.deathTouch, opts.version) : 0;
+    const aDispelEvilFailR = (rangedTouchFires && hasAbil(a.abilities, 'dispelEvil'))
+      ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
     const aLifeStealModR = (rangedTouchFires && abilDefined(a.abilities, 'lifeSteal'))
       ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
     const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
@@ -2835,9 +3261,13 @@ function resolveCombat(a, b, opts) {
       : null;
     const tR = convolveTouchAttacks(dmgToB, bRemHP, aAlive, {
       poisonStr: aPoisonStrR, poisonFail: aPoisonFailR,
-      stoningFail: aStoningFailR, targetHP: b.hp,
+      stoningFail: aStoningFailR,
+      deathTouchFail: aDeathTouchFailR,
+      dispelEvilFail: aDispelEvilFailR,
+      targetHP: b.hp,
       lifeStealMod: aLifeStealModR, lifeStealRes: bResDeath,
       immDist: aImmDistR,
+      bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
     });
     dmgToB = tR.dist;
     let aLifeStealDistR = tR.lifeStealDist;

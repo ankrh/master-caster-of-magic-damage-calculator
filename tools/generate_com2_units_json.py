@@ -237,7 +237,7 @@ def ini_unit_to_record(u):
         'Fantastic', 'Noncorporeal', 'BloodSucker', 'HealingAura', 'LargeShield',
         'CreateOutpost', 'Lucky', 'Fear', 'Immolation', 'Meld', 'PlaneShifting',
         'StoningGaze', 'StoningTouch', 'StoningImmunity',
-        'CounterImmunity', 'LightningResist', 'Supernatural', 'Doom',
+        'CounterImmunity', 'LightningResist', 'Supernatural', 'Doom', 'Teleporting',
     ]:
         val = u.get(ab, '').strip()
         if val.lower() == 'yes':

@@ -74,6 +74,7 @@ ABILITY_NAME_MAP = {
     'PlaneShifting':     'Plane Shifting',
     'StoningGaze':       'Stoning Gaze',
     'StoningTouch':      'Stoning Touch',
+    'DeathTouch':        'Death Touch',
     'StoningImmunity':   'Stoning Immunity',
     'CounterImmunity':   'Counter Immunity',
     'LightningResist':   'Lightning Resist',
@@ -227,7 +228,7 @@ def ini_unit_to_record(u):
         'Regeneration', 'HolyBonus', 'Illusion', 'QuickCasting',
         'Fantastic', 'Noncorporeal', 'BloodSucker', 'HealingAura', 'LargeShield',
         'CreateOutpost', 'Lucky', 'Fear', 'Immolation', 'Meld', 'PlaneShifting',
-        'StoningGaze', 'StoningTouch', 'StoningImmunity',
+        'StoningImmunity',
         'CounterImmunity', 'LightningResist', 'Supernatural', 'Doom',
         # Warlord-specific abilities
         'Amplifier', 'CreateUndead', 'DarkForce', 'Egoism', 'Exorcise',
@@ -259,15 +260,49 @@ def ini_unit_to_record(u):
     if val and val != '0':
         abilities.append('ResistanceToAll' if val.lower() == 'yes' else f'ResistanceToAll={val}')
 
-    for ab in ['DeathGaze', 'DoomGaze']:
+    # DoomGaze's value is attack strength (0 = no effect), so gate on nonzero.
+    val = u.get('DoomGaze', '').strip()
+    if val and val != '0':
+        abilities.append(f'DoomGaze={val}')
+
+    # Death/Stoning Touch/Gaze values are resistance modifiers, not strengths: the
+    # defender resists at (resistance + value) or dies, so 0 is a meaningful value
+    # (resist at base resistance). Gate on presence, not nonzero — a unit with e.g.
+    # StoningTouch=0 has a real ability that must not be dropped.
+    for ab in ['DeathGaze', 'DeathTouch', 'StoningGaze', 'StoningTouch']:
         val = u.get(ab, '').strip()
-        if val and val != '0':
+        if val != '':
             abilities.append(f'{ab}={val}')
 
     if 'Forester' in abilities and 'Mountainwalk' in abilities:
         abilities.remove('Forester')
         abilities.remove('Mountainwalk')
         abilities.append('Pathfinding')
+
+    # Custom17: Rage (Warlord) — +1 Melee (and +1 Ranged, if applicable) per figure lost in combat
+    if u.get('Custom17', '').strip() == '1':
+        abilities.append('Rage')
+
+    # Custom19: 1 = Mechanical, 2 = Clergy (Warlord unit type tags)
+    custom19 = u.get('Custom19', '').strip()
+    if custom19 == '1':
+        abilities.append('Mechanical')
+    elif custom19 == '2':
+        abilities.append('Clergy')
+
+    # Clockwork Tinmen: scripted passive on their attack that permanently
+    # destroys any Mechanical opponent in a single hit (DESC.INI spell 340).
+    if u.get('Name', '').strip() == 'Clockwork Tinmen':
+        abilities.append('DestroyMechanical')
+
+    # Gnoll Hunters / Witchdoctors: name-based tags (no INI flag) so the Altar of the
+    # Moon enchantment can grant Poison 2 (Hunters) or Life Steal -1 replacing Poison
+    # (Witchdoctors) in the calculator.
+    if race_int == 5:
+        if u.get('Name', '').strip() == 'Hunters':
+            abilities.append('GnollHunters')
+        elif u.get('Name', '').strip() == 'Witchdoctors':
+            abilities.append('GnollWitchdoctors')
 
     def _rename(ab):
         if '=' in ab:
