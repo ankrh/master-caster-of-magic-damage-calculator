@@ -255,6 +255,10 @@ function clearAbilities(prefix, sourceFilter) {
 
 const unitDatabases = {};
 const unitBaseStats = {};
+// Intrinsic identity (race + display name) of the selected roster unit per side. Used by
+// the engine to gate race-exclusive building enchantments. Populated when a roster unit is
+// applied and cleared for custom units, which therefore receive no building buffs.
+const unitIdentity = {};
 let _activeVersion = null;
 
 function loadUnitDatabase(version) {
@@ -451,11 +455,14 @@ function readUnitStats(prefix, overrides) {
   const el = id => document.getElementById(id);
   const enemyPrefix = prefix === 'a' ? 'b' : 'a';
   const enemyEternalNightEl = el(enemyPrefix + 'Abil_eternalNight');
+  const enemyEyeOfHeavenEl = el(enemyPrefix + 'Abil_eyeOfHeaven');
   const overrideValues = overrides || {};
   return deriveUnitStats({
     prefix,
     version: el('gameVersion').value,
     abilities: readAbilitiesFromDOM(prefix),
+    race: (unitIdentity[prefix] || {}).race,
+    name: (unitIdentity[prefix] || {}).name,
     level: el(prefix + 'Level').value,
     weapon: el(prefix + 'Weapon').value,
     armor: el(prefix + 'Armor').value,
@@ -477,10 +484,12 @@ function readUnitStats(prefix, overrides) {
     trueLight: !!el('trueLight').checked,
     darkness: !!el('darkness').checked,
     enemyEternalNight: !!(enemyEternalNightEl && enemyEternalNightEl.checked),
+    enemyEyeOfHeaven: !!(enemyEyeOfHeavenEl && enemyEyeOfHeavenEl.checked),
     chaosSurge: el('chaosSurge').value,
     rangedCheck: overrideValues.rangedCheck !== undefined ? overrideValues.rangedCheck : !!el('rangedCheck').checked,
     rangedDist: overrideValues.rangedDist !== undefined ? overrideValues.rangedDist : el('rangedDist').value,
     warpReality: !!el('warpReality').checked,
+    hurricane: !!el('hurricane').checked,
     generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
   });
 }
@@ -560,6 +569,7 @@ function applyUnit(prefix, unitIndex) {
     toHitMod: unit.to_hit || 0,
     generic: unit.category === 'Generic',
   };
+  unitIdentity[prefix] = { race: unit.race, name: unit.name };
 
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
   document.getElementById(prefix + 'ToHitRtbMod').value = 0;
@@ -646,6 +656,7 @@ function updateUnitLock(prefix) {
     weaponSel.classList.toggle('weapon-locked', isHero && !isZombies);
   } else {
     delete unitBaseStats[prefix];
+    delete unitIdentity[prefix];
     weaponSel.classList.remove('weapon-locked');
     // Clear unit-innate locks when switching to custom
     const abilContCustom = document.getElementById(prefix + 'Abilities');
@@ -713,6 +724,7 @@ function resetUnitFields(prefix) {
   document.getElementById(prefix + 'Abil_unitType').value = s.unitType;
   clearAbilities(prefix);
   delete unitBaseStats[prefix];
+  delete unitIdentity[prefix];
 
   const abilCont = document.getElementById(prefix + 'Abilities');
   abilCont.querySelectorAll('.abil-unit-locked').forEach(item => {
@@ -732,6 +744,7 @@ function resetGlobalOptions() {
   document.getElementById('chaosSurge').value = 0;
   document.getElementById('wallOfFire').checked = false;
   document.getElementById('warpReality').checked = false;
+  document.getElementById('hurricane').checked = false;
 }
 
 function resetAbilityPanelVisibility() {
@@ -824,6 +837,10 @@ function swapAttackerDefender() {
   tmp = unitBaseStats['a'];
   unitBaseStats['a'] = unitBaseStats['b'];
   unitBaseStats['b'] = tmp;
+
+  tmp = unitIdentity['a'];
+  unitIdentity['a'] = unitIdentity['b'];
+  unitIdentity['b'] = tmp;
 
   syncUnitDisplay('a');
   syncUnitDisplay('b');
@@ -1154,6 +1171,7 @@ function updateTypeVisibility() {
     if (sg === 'CoM, CoM2 & Warlord') return isCoMorCoM2;
     if (sg === 'CoM2 & Warlord') return isCoM2;
     if (sg === 'Warlord only') return isWarlord;
+    if (sg === 'Warlord') return isWarlord;
     return true;
   }
 
@@ -1169,13 +1187,33 @@ function updateTypeVisibility() {
     // Unit type restrictions are informational only. Keep controls usable so users can model
     // transformed or otherwise exceptional states manually.
     for (const abil of abilityUiDefs()) {
-      if (abil.source !== 'enchantment') continue;
+      // Gate enchantments and the Warlord-mod-only ability tags by game version;
+      // other ability tags are never version-restricted.
+      const isWarlordTag = abil.source === 'ability' && abil.subgroup === 'Warlord';
+      if (abil.source !== 'enchantment' && !isWarlordTag) continue;
       const el = document.getElementById(abilityControlId(prefix, abil));
       if (!el) continue;
       const subgroupOk = subgroupAllowed(abil.subgroup);
       const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
       applyDisabled(el, !(subgroupOk || overrideOk));
     }
+  }
+
+  // Version restrictions on global combat enchantments. Disable (and clear) toggles
+  // whose effect does not exist in the selected version, so they can't be set to a
+  // no-op state. True Light: MoM & Warlord only (removed in CoM 1 & 2).
+  // Hurricane: Warlord only.
+  const globalVersionGate = {
+    trueLight: isMoM || isWarlord,
+    hurricane: isWarlord,
+  };
+  for (const [id, allowed] of Object.entries(globalVersionGate)) {
+    const gEl = document.getElementById(id);
+    if (!gEl) continue;
+    if (!allowed) gEl.checked = false;
+    gEl.disabled = !allowed;
+    const gLabel = gEl.closest('.check-label');
+    if (gLabel) gLabel.classList.toggle('disabled-field', !allowed);
   }
 
   const aStats = readUnitStats('a');
@@ -1276,6 +1314,10 @@ function applyPreset(name) {
   }
   updateUnitLock('a');
   updateUnitLock('b');
+  // Synthetic custom test units can declare an intrinsic race/name to exercise race-gated
+  // building enchantments (roster-selected presets already got their identity from applyUnit).
+  if (preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = { race: preset.a.race, name: preset.a.name };
+  if (preset.b && (preset.b.race || preset.b.name)) unitIdentity['b'] = { race: preset.b.race, name: preset.b.name };
   if (preset.a && preset.a.level) document.getElementById('aLevel').value = preset.a.level;
   if (preset.a && preset.a.weapon) document.getElementById('aWeapon').value = preset.a.weapon;
   if (preset.b && preset.b.level) document.getElementById('bLevel').value = preset.b.level;
@@ -1295,6 +1337,7 @@ function applyPreset(name) {
   document.getElementById('chaosSurge').value = preset.chaosSurge || 0;
   document.getElementById('wallOfFire').checked = preset.wallOfFire || false;
   document.getElementById('warpReality').checked = preset.warpReality || false;
+  document.getElementById('hurricane').checked = preset.hurricane || false;
   refreshAbilityFieldVisibility();
   recalculate();
 }
@@ -1433,6 +1476,7 @@ const MATRIX_GLOBAL_DEFS = [
   { key: 'darkness',    label: 'Darkness',      type: 'bool' },
   { key: 'wallOfFire',  label: 'Wall of Fire',  type: 'bool' },
   { key: 'warpReality', label: 'Warp Reality',  type: 'bool' },
+  { key: 'hurricane',   label: 'Hurricane',     type: 'bool' },
   { key: 'chaosSurge',  label: 'Chaos Surge enchantments', type: 'num', min: 0, max: 99 },
   { key: 'cityWalls',   label: 'City walls', type: 'select',
     options: [['none','None'],['1','+1 def'],['3','+3 def']] },
@@ -2039,6 +2083,8 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     prefix,
     version,
     abilities,
+    race: unit.race,
+    name: unit.name,
     level,
     weapon,
     armor,
@@ -2060,10 +2106,12 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     trueLight: !!matrixGlobalValue('trueLight'),
     darkness: !!matrixGlobalValue('darkness'),
     enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
+    enemyEyeOfHeaven: matrixHasActiveEnchantment(enemyPrefix, 'eyeOfHeaven'),
     chaosSurge: matrixGlobalValue('chaosSurge'),
     rangedCheck: rangedMatrixAttacker,
     rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
     warpReality: !!matrixGlobalValue('warpReality'),
+    hurricane: !!matrixGlobalValue('hurricane'),
     generic: unit.category === 'Generic',
   });
 }
@@ -2103,6 +2151,8 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     prefix,
     version: el('gameVersion').value,
     abilities,
+    race: (unitIdentity[prefix] || {}).race,
+    name: (unitIdentity[prefix] || {}).name,
     level: matrixSideSetting(prefix, 'level'),
     weapon: matrixSideSetting(prefix, 'weapon'),
     armor: matrixSideSetting(prefix, 'armor'),
@@ -2124,10 +2174,12 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     trueLight: !!matrixGlobalValue('trueLight'),
     darkness: !!matrixGlobalValue('darkness'),
     enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
+    enemyEyeOfHeaven: matrixHasActiveEnchantment(enemyPrefix, 'eyeOfHeaven'),
     chaosSurge: matrixGlobalValue('chaosSurge'),
     rangedCheck: rangedMatrixAttacker,
     rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
     warpReality: !!matrixGlobalValue('warpReality'),
+    hurricane: !!matrixGlobalValue('hurricane'),
     generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
   });
 }
@@ -2483,6 +2535,7 @@ function applyMatrixCellToMain(attackerIndex, defenderIndex) {
   document.getElementById('darkness').checked    = !!matrixGlobalValue('darkness');
   document.getElementById('wallOfFire').checked  = !!matrixGlobalValue('wallOfFire');
   document.getElementById('warpReality').checked = !!matrixGlobalValue('warpReality');
+  document.getElementById('hurricane').checked   = !!matrixGlobalValue('hurricane');
   document.getElementById('chaosSurge').value    = matrixGlobalValue('chaosSurge') || 0;
 
   refreshAbilityFieldVisibility();

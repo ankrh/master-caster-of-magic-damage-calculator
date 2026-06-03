@@ -61,19 +61,14 @@ const ABILITY_DEFS = [
   // Keep labels column-major alphabetical: the UI grid flows row-first.
   ...twoColumnMajor([
     { key: 'armorPiercing', label: 'Armor Piercing', type: 'bool', match: 'ArmorPiercing', group: 'Abilities', subgroup: '_', tooltip: "Halves defender's defense." },
-    { key: 'bloodSucker', label: 'Blood Sucker', type: 'bool', match: 'BloodSucker', group: 'Abilities', subgroup: '_', tooltip: 'Warlord: On each attack phase that deals ≥1 damage through armor:\n+2 damage to target, +2 HP heal to attacker.\nMax 1 trigger per phase regardless of attacker figure count.\nFires on melee, thrown, breath, ranged, magical ranged, and gaze phases.\nHaste: doubles (two strikes = two trigger checks).' },
     { key: 'caster', label: 'Caster', type: 'bool', match: 'Caster', group: 'Abilities', subgroup: '_', tooltip: "MoM 1.31 & 1.60: Haste does not double this unit's magical ranged attack.\nCoM 1 & 2: Qualifies unit for Supreme Light bonuses." },
     { key: 'fear', label: 'Cause Fear', type: 'bool', match: 'CauseFear', group: 'Abilities', subgroup: '_', tooltip: 'For each opponent figure: Resist or freeze for the melee exchange.\nMoM 1.31 & 1.60: No resistance modifier.\nCoM 1 & 2: Modifier −3.\nImmune: Death, Magic, Righteousness.\nMoM 1.31 bug 1: Defender\'s Cause Fear never fires — only the attacker\'s does.\nMoM 1.31 bug 2: Each of the defender\'s failed rolls also fears one attacker\nfigure (self-fear), bypassing immunity.' },
-    { key: 'clergy', label: 'Clergy', type: 'bool', match: 'Clergy', group: 'Abilities', subgroup: '_', tooltip: 'Warlord unit tag.' },
     { key: 'coldImmunity', label: 'Cold Immunity', type: 'bool', match: 'ColdImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to cold damage attacks.' },
     { key: 'deathImmunity', label: 'Death Immunity', type: 'bool', match: 'DeathImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Death Gaze, Death Touch, Life Stealing, and Cause Fear.' },
-    { key: 'destroyMechanical', label: 'Destroy Mechanical', type: 'bool', match: 'DestroyMechanical', group: 'Abilities', subgroup: '_', tooltip: 'Warlord (Clockwork Tinmen): on a melee attack, instantly destroys a Mechanical defender.\nApplies on counter-attack as well.' },
     { key: 'dispelEvil', label: 'Dispel Evil', type: 'bool', match: 'DispelEvil', group: 'Abilities', subgroup: '_', tooltip: 'Chaos/Death unit: For each attacker figure: Defender resist at −4 or die.\nUndead unit: For each attacker figure: Defender resist at −9 or die.\nImmune: Magic, all other unit types.' },
     { key: 'doom', label: 'Doom Damage', type: 'bool', match: 'Doom', group: 'Abilities', subgroup: '_', tooltip: 'All attacks skip to-hit and defense rolls; attack strength = exact damage dealt.' },
     { key: 'fireImmunity', label: 'Fire Immunity', type: 'bool', match: 'FireImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Fire Breath, Immolation, and Wall of Fire.\nCoM 2: Also qualifies unit for Inner Power bonuses.' },
     { key: 'firstStrike', label: 'First Strike', type: 'bool', match: 'FirstStrike', group: 'Abilities', subgroup: '_', tooltip: 'Attacker delivers melee and touch attacks before the defender retaliates (not when counter-attacking).\nCoM 1: Only triggers if ≤ 24 damage is needed to kill the top figure.\nImmune: Negate First Strike' },
-    { key: 'gnollHunters', label: 'G. Hunters', type: 'bool', match: 'GnollHunters', group: 'Abilities', subgroup: '_', tooltip: 'Gnoll Hunters unit tag.\nAt an Altar of the Moon: gains Poison 2.' },
-    { key: 'gnollWitchdoctors', label: 'G. Witchdoctors', type: 'bool', match: 'GnollWitchdoctors', group: 'Abilities', subgroup: '_', tooltip: 'Gnoll Witchdoctors unit tag.\nAt an Altar of the Moon: gains Life Steal −1, replacing Poison.' },
     { key: 'illusion', label: 'Illusion', type: 'bool', match: 'Illusion', group: 'Abilities', subgroup: '_', tooltip: "Defender's defense = 0, overriding all immunities.\nImmune: Illusion, True Sight." },
     { key: 'illusionImmunity', label: 'Illusion Immunity', type: 'bool', match: 'IllusionImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immune to Illusion and Invisibility.\nMoM 1.31 bug: Illusion Immunity is checked on the defender instead of the attacker for Blur.' },
     { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Abilities', subgroup: '_', tooltip: 'Fire area attack hitting all opponent figures each melee combat phase.\nMoM 1.31: Strength 4. Bug: Also fires alongside ranged attacks.\nMoM 1.60: Strength 4.\nCoM 1 & 2: Strength 10.\nImmune: Fire Immunity, Magic Immunity, Righteousness.' },
@@ -83,17 +78,24 @@ const ABILITY_DEFS = [
     { key: 'longRange', label: 'Long Range', type: 'bool', match: 'LongRange', group: 'Abilities', subgroup: '_', tooltip: 'Missile and boulder ranged distance penalty capped at −10% instead of −30%.' },
     { key: 'lucky', label: 'Lucky', type: 'bool', match: 'Lucky', group: 'Abilities', subgroup: '_', tooltip: '+10% To Hit, +10% To Block, +1 Resistance.\nMoM 1.31: Also opponent −10% To Hit (melee, ranged, and breath).' },
     { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nDeath Touch, Life Steal, Cause Fear, Stoning, and Dispel Evil.\nMoM only: Also protects against Fire Breath and Lightning Breath.' },
-    { key: 'mechanical', label: 'Mechanical', type: 'bool', match: 'Mechanical', group: 'Abilities', subgroup: '_', tooltip: 'Warlord unit tag.' },
     { key: 'missileImmunity', label: 'Missile Immunity', type: 'bool', match: 'MissileImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to ranged missile attacks.' },
     { key: 'negateFirstStrike', label: 'Negate First Strike', type: 'bool', match: 'NegateFirstStrike', group: 'Abilities', subgroup: '_', tooltip: "Negates the opponent's First Strike." },
     { key: 'nonCorporeal', label: 'Non-Corporeal', type: 'bool', match: 'Non-Corporeal', group: 'Abilities', subgroup: '_', tooltip: 'Unit moves through terrain and walls freely.\nNot turned to undead by undead-creating damage.\nWarlord: Tactician retort grants this unit Negate First Strike.' },
     { key: 'poisonImmunity', label: 'Poison Immunity', type: 'bool', match: 'PoisonImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Poison Touch.' },
-    { key: 'rage', label: 'Rage', type: 'bool', match: 'Rage', group: 'Abilities', subgroup: '_', tooltip: 'Warlord: +1 melee per figure lost during combat.\n+1 ranged per figure lost, if the unit has a ranged attack.' },
     { key: 'stoningImmunity', label: 'Stoning Immunity', type: 'bool', match: 'StoningImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Stoning Gaze and Stoning Touch.' },
     { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Attacker's hits always deal at least a minimum damage, regardless of the defender's blocks.\nMoM 1.31 & 1.60: No effect.\nCoM 1: Min = (hits − 5) / 2.\nCoM 2: Min = hits / 3." },
-    { key: 'teleporting', label: 'Teleporting', type: 'bool', match: 'Teleporting', group: 'Abilities', subgroup: '_', tooltip: 'Warlord: Tactician retort grants this unit First Strike. Stripped by Temporal Twist.' },
     { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Abilities', subgroup: '_', tooltip: 'Unit becomes a fantastic death creature. Grants Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.' },
     { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense against non-magical attacks from normal units.\nMoM 1.31: Defense = 10. Bug: Thrown attacks bypass this.\nMoM 1.60: Defense = 10.\nCoM 1 & 2: Defense +8.\nWarlord: Defense +10.' },
+  ]),
+  // Warlord-mod-only unit tags, shown under a 'Warlord' subheader.
+  // Keep labels column-major alphabetical: the UI grid flows row-first.
+  ...twoColumnMajor([
+    { key: 'bloodSucker', label: 'Blood Sucker', type: 'bool', match: 'BloodSucker', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Warlord: On each attack phase that deals ≥1 damage through armor:\n+2 damage to target, +2 HP heal to attacker.\nMax 1 trigger per phase regardless of attacker figure count.\nFires on melee, thrown, breath, ranged, magical ranged, and gaze phases.\nHaste: doubles (two strikes = two trigger checks).' },
+    { key: 'clergy', label: 'Clergy', type: 'bool', match: 'Clergy', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Warlord unit tag.' },
+    { key: 'destroyMechanical', label: 'Destroy Mechanical', type: 'bool', match: 'DestroyMechanical', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Warlord (Clockwork Tinmen): on a melee attack, instantly destroys a Mechanical defender.\nApplies on counter-attack as well.' },
+    { key: 'mechanical', label: 'Mechanical', type: 'bool', match: 'Mechanical', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Warlord unit tag.' },
+    { key: 'rage', label: 'Rage', type: 'bool', match: 'Rage', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Warlord: +1 melee per figure lost during combat.\n+1 ranged per figure lost, if the unit has a ranged attack.' },
+    { key: 'teleporting', label: 'Teleporting', type: 'bool', match: 'Teleporting', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Warlord: Tactician retort grants this unit First Strike. Stripped by Temporal Twist.' },
   ]),
 ];
 
@@ -143,7 +145,7 @@ const ENCHANTMENT_DEFS = [
   // Enchantments — MoM only (removed in CoM) — visual order: life → death → chaos → nature
   ...twoColumnMajor([
     { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Enchantments', subgroup: 'MoM only', realm: 'life', tooltip: 'Immunity to Cause Fear, Life Steal, Death Gaze, Death Touch, Chaos-realm magic ranged attacks,\nFire Breath, Lightning Breath, Immolation, and Wall of Fire.' },
-    { key: 'berserk', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', alsoVersions: ['com2_warlord'], tooltip: 'MoM/CoM/CoM2: Melee attack doubled and defense set to 0,\napplied after all other bonuses.\nWarlord: Troll Medicineman buff — +15% To Hit, −10% To Block\n(no attack doubling, no defense override).' },
+    { key: 'berserk', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Death combat enchantment.\nMelee attack doubled and defense set to 0,\napplied after all other bonuses.\nRemoved in CoM/CoM2 (replaced by Blood Lust).' },
     { key: 'blackChannels', label: 'Black Channels', type: 'bool', match: 'BlackChannels', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: '+2 melee, +1 to all ranged/thrown/breath/gaze, +1 defense, +1 resistance, +1 HP per figure.\nUnit permanently becomes a fantastic Death creature with Cold, Illusion, Poison, and Death Immunity.' },
     { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: '+1 melee, +1 missile and +1 thrown. Attacks bypass Weapon Immunity.\nSuperseded by Flame Blade — does not stack.' },
     { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: "Opponent's To Block reduced by 10% against this unit's melee, missile,\nand thrown attacks. Attacks bypass Weapon Immunity." },
@@ -175,20 +177,49 @@ const ENCHANTMENT_DEFS = [
     { key: 'reinforceMagic', label: 'Reinforce Magic', type: 'bool', match: 'ReinforceMagic', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'sorcery', tooltip: '+2 resistance.\nIf the unit has a magical ranged attack, it gains +2 strength.' },
   ]),
   // Enchantments — Warlord only
+  { key: 'lavaSmelter', label: 'Lava Smelter', type: 'select', options: [['none','Basic'],['weaponImmunity','Weapon Imm.'],['missileImmunity','Missile Imm.'],['resistElem','Resist Elem.'],['elementalArmor','Elem. Armor'],['flameBlade','Flame Blade']], match: 'LavaSmelter', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Dwarf building: a nearby mineral combo grants one permanent ability.\nApplies only to Dwarf-race units.\nMithril + Adamantium: Weapon Immunity.\nMithril + Crysx: Missile Immunity.\nMithril + Orihalcon: Resist Elements.\nAdamantium + Orihalcon: Elemental Armor.\nAdamantium + Crysx: Flame Blade.\nThe mineral upgrade Mithril → Adamantium → Orihalcon is not modeled here,\nchoose manually in the weapon and armor type dropdown.' },
+  { key: 'pillarOfFaithRes', label: 'Pillar of Faith: +Res', type: 'num', match: 'PillarOfFaithRes', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Rare city enchantment.\nUnits trained in the city gain +1 Resistance per Religious Building (capped at +8).\nEnter the number of Religious Buildings.' },
   ...twoColumnMajor([
-    { key: 'altarOfTheMoon', label: 'Altar of the Moon', type: 'bool', match: 'AltarOfTheMoon', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Gnoll building: units trained here gain Rage, Poison Immunity, and +1 Resistance.\nRanged units gain +2 Ranged Attack.' },
+    { key: 'altarOfTheMoon', label: 'Altar of the Moon', type: 'bool', match: 'AltarOfTheMoon', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Gnoll building: applies only to Gnoll-race units; heroes are excluded.\nThey gain Rage, Poison Immunity, and +1 Resistance.\nRanged units gain +2 Ranged Attack.\nGnoll Hunters also gain Poison 2; Gnoll Witchdoctors gain Life Steal −1 replacing Poison.' },
+    { key: 'altarOfTheSun', label: 'Altar of the Sun (+fig)', type: 'bool', match: 'AltarOfTheSun', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Hawkmen units gain +1 Figure, except for Holy Mother and heroes.\nThe defending-city High Prayer buff is not included.' },
     { key: 'artificer', label: 'Artificer retort', type: 'bool', match: 'Artificer', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Mechanical units gain +1 melee, +1 ranged, +1 armor, +1 resistance, and Magic Weapons.\nMagic Weapons grant +10% To Hit and bypass Weapon Immunity.' },
+    { key: 'dragonMound', label: 'Dragon Mound', type: 'bool', match: 'DragonMound', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Draconian building: applies only to Draconian units; heroes are excluded.\nThey gain +1 Armor, and +2 Fire Breath if they have a Fire Breath attack.' },
     { key: 'favoredTerrain', label: 'Favored Terrain', type: 'bool', match: 'FavoredTerrain', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Unit fights on its favored combat tile.\nForester → woodland; Mountaineer → rough/rocky; Amphibious → swamp/snowy; Pathfinding → woodland or rough/rocky.\n+5% To Hit and +1 defense.\nTactician retort: bonus doubled, plus First Strike and Negate First Strike.' },
     { key: 'fortification', calcKey: 'largeShield', label: 'Fortification', type: 'bool', match: 'Fortification', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'City building: all defending units inside city walls gain Large Shield.\n+3 defense vs ranged, thrown, and breath attacks.' },
     { key: 'hillfort', calcKey: 'missileImmunity', label: 'Hillfort', type: 'bool', match: 'Hillfort', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'City building (select races): all defending units inside city walls gain Missile Immunity.\nRaises defense to 50 vs missile attacks.' },
     { key: 'lightningBlade', label: 'Lightning Blade', type: 'bool', match: 'LightningBlade', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Barbarian building (Altar of Storm): units gain a witch blade that blasts lightning.\nThrown attacks become Lightning Breath at the same strength.\nUnits with no ranged or breath attack gain a strength-1 Lightning Breath.\nLightning Breath is Armor Piercing, negated by Lightning Resist.' },
+    { key: 'ludusAgoge', label: 'Ludus Agoge', type: 'bool', match: 'LudusAgoge', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Orc building: applies only to Orc-race units; Legionaries and heroes are excluded.\nThey gain +1 Attack, +1 Resistance, and +1 HP.\nLegionaries gain +1 Movement instead, which is not modelled.' },
     { key: 'malnourished', label: 'Malnourished', type: 'bool', match: 'Malnourished', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Unit was recruited while its city was under a Drought curse.\nPermanent debuff: −1 melee attack, −2 armor.' },
     { key: 'mechanicalExpert', label: 'Mechanical Expert', type: 'bool', match: 'MechanicalExpert', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Engineer/Combat Engineer perk: buffs Mechanical units in the stack.\nMechanical units gain +20% To Hit and +10% To Defend.' },
+    { key: 'militaryWorkshop', label: 'Military Workshop', type: 'bool', match: 'MilitaryWorkshop', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'XuanYuan building: any normal unit trained, garrisoned, or fighting from the city is upgraded (heroes and fantastic creatures excluded).\nPhysical ranged or thrown attack: gains Armor Piercing.\nDoom attack instead: +2 ranged/thrown strength (Armor Piercing is wasted on Doom).\nFire Breath: +4 strength.\nSmall physical ranged (sling/arrow/bullet) upgrades to heavy (boulder/gunpowder), bypassing Missile Immunity.\n+1 Poison (grants Poison 1 if it has none).' },
+    { key: 'motherFungus', label: 'Mother Fungus', type: 'bool', match: 'MotherFungus', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Goblin building: applies only to Goblin-race units; heroes are excluded.\nThey gain +2 Attack, +10% To Defend, and +1 Poison (grants Poison 1 if it has none).\nThe ×2 Spellcharge bonus is not modelled.' },
+    { key: 'poolOfRepentance', label: 'Pool of Repentance', type: 'bool', match: 'PoolOfRepentance', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Rakhshasa building: applies only to Rakhshasa-race units; heroes are excluded.\nThey gain +1 Armor and +1 Resistance.' },
+    { key: 'sanctaBasilica', label: 'Sancta Basilica', type: 'bool', match: 'SanctaBasilica', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'High Men building: applies only to High Men-race units; heroes are excluded.\nAll trained units gain +3 Resistance.\nClergy (unit tag), Crusaders, and Paladins also gain Sanctify.\nCrusaders also gain Lucky; Paladins also gain Magic Immunity.\nThe improved Exorcise (Clergy) and the defending-city True Light are not modelled.' },
     { key: 'rebuild', label: 'Rebuild', type: 'bool', match: 'Rebuild', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Unit becomes Mechanical.\n+2 melee, +2 armor.\nGrants Death Immunity, Illusion Immunity, and Armor Piercing.' },
+    { key: 'spiritLink', label: 'Spirit Link', type: 'bool', match: 'SpiritLink', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Conjurer signature unit enchantment.\n+2 Resistance.\nFantastic creature: stays non-fantastic but keeps fantastic-only bonuses (Node Aura, Darkness/True Light, Land Linking, Survival Instinct, Supreme Light).\nNo longer counts as fantastic for being targeted: immune to Dispel Evil, no enemy Bless bonus vs its attacks, and its physical attacks are stopped by enemy Weapon Immunity.' },
+    { key: 'luckyStar', label: 'Lucky Star', type: 'bool', match: 'LuckyStar', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Astrologer retort exclusive combat enchantment.\nGrants Lucky for the battle.\n+10% To Hit, +10% To Block, +1 Resistance.' },
+    { key: 'rally', label: 'Rally', type: 'bool', match: 'Rally', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Charismatic retort exclusive combat enchantment.\nAll friendly units gain +2 Resistance until the end of combat.' },
+    { key: 'nausea', label: 'Nausea', type: 'bool', match: 'Nausea', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Conjuring Pact (Conjurer retort exclusive) cast on a non-fantastic unit.\n−10% To Hit.\n−10% To Defend.\nOnly the normal-unit debuff is modelled (fantastic-creature taming is out of scope).' },
+    { key: 'disheartenProphecy', label: 'Dishearten Prophesy', type: 'bool', match: 'DisheartenProphecy', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Astrologer retort exclusive city curse.\nGarrison units defending the cursed city suffer −2 Resistance in combat.\nThe +4 city unrest is outside this calculator.' },
+    { key: 'divineProtection', label: 'Divine Protection', type: 'bool', match: 'DivineProtection', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Grants Lucky and Death Immunity.\n+10% To Hit, +10% To Block, +1 Resistance.\nImmune: Death Gaze, Death Touch, Life Stealing, Cause Fear.' },
+    { key: 'eyeOfHeaven', label: 'Eye of Heaven', type: 'bool', match: 'EyeOfHeaven', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Life rare combat enchantment.\nGrants True Sight (Illusion Immunity) to this unit.\nThe opposing unit loses all gaze attacks (Doom Gaze, Death Gaze, Stoning Gaze, hidden gaze).' },
     { key: 'sanctify', label: 'Sanctify', type: 'bool', match: 'Sanctify', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Unit becomes a Life-realm non-fantastic unit\nClergy units become Life-realm fantastic creatures.' },
     { key: 'zeal', label: 'Zeal', type: 'bool', match: 'Zeal', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Grants First Strike and Negate First Strike.\nStripped by Temporal Twist.' },
+    { key: 'hierophany', label: 'Hierophany', type: 'bool', match: 'Hierophany', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Uncommon combat curse.\nHalves the Defense of the cursed unit (rounded down).\nStrips all immunities, Lightning Resist, and Negate First Strike.\nAlso strips mobility perks (not modelled here).\nCannot be blocked by Resist Magic or Magic Immunity.' },
+    { key: 'pillarOfFaithLucky', label: 'Pillar of Faith: Lucky', type: 'bool', match: 'PillarOfFaithLucky', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Rare city enchantment.\nEach unit trained in the city has a 20% chance to gain Lucky.\nLucky: +10% To Hit, +10% To Block, +1 Resistance.\nToggle on to model a unit that rolled the Lucky grant.' },
+    { key: 'shadowStrike', label: 'Shadow Strike', type: 'bool', match: 'ShadowStrike', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord Death Uncommon unit enchantment.\nAdds a Thrown attack at 1/3 of melee strength (rounded down).\nUnits with an existing Thrown attack gain 1/3 of melee as added Thrown.\nThrown is a separate pre-melee phase, so Poison, Life Steal, and Blood Sucker fire on both thrown and melee.' },
+    { key: 'revenant', label: 'Revenant', type: 'bool', match: 'Revenant', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord Death Uncommon unit enchantment.\nUnit becomes undead: grants Death, Cold, Poison, and Illusion Immunity.\nGrants melee Death Touch 0: for each attacker figure, defender resists or one figure dies.\nWarlord: Death Touch does not fire on ranged attacks.\nAlso grants Regeneration.' },
     { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Unit becomes undead and gains Blood Sucker.\nThrown and breath attacks transfer to melee: melee gains (strength − 1),\nthe thrown/breath strength drops to 1.' },
+    { key: 'soulFlay', label: 'Soul Flay', type: 'bool', match: 'SoulFlay', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord Death Rare irresistible combat curse (normal units and heroes only).\nPenalty scales with experience level: −1 melee, −2 armor, −2 resistance per level.\nRecruit: −1 melee, −2 armor, −2 resistance.\nElite: −4 melee, −8 armor, −8 resistance.\nNo effect on fantastic creatures.' },
+    { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord combat debuff.\nApplied to defending garrison units by the Pestilence city curse.\nSpread to enemies by Goblin Poxbearer units.\n−3 Attack, −3 Defense, −2 Resistance for the rest of combat.\nAffects all units (no fantastic exclusion).' },
+    { key: 'berserkWarlord', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Troll Medicineman buff (secret concoction).\n+15% To Hit, −10% To Block.\nNo attack doubling and no defense override.' },
+    { key: 'blazeOfGlory', label: 'Blaze of Glory', type: 'bool', match: 'BlazeOfGlory', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Common unit enchantment (non-heroes only).\nGains Melee equal to its Armor.\nRanged attack becomes a Thrown attack of the same strength.\nGrants Armor Piercing.\nLoses First Strike and all base Armor (enchantment Armor remains).' },
     { key: 'fieryFury', label: 'Fiery Fury', type: 'bool', match: 'FieryFury', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Common unit enchantment.\nRegular units: +3 melee, +2 missile/thrown/boulder, bypasses Weapon Immunity.\nFantastic creatures: gain First Strike; turn into Chaos creatures unless undead or Sanctified.\nStacks with Flame Blade — shared bonuses do not double; the only added bonus is +2 boulder.' },
+    { key: 'insulation', label: 'Insulation', type: 'bool', match: 'Insulation', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Uncommon unit enchantment.\nGrants Fire Immunity, Cold Immunity, and Lightning Resist.\nImmune: Fire Breath, Immolation, Wall of Fire, cold attacks.\nNegates the Armor Piercing component of incoming Lightning Breath.' },
+    { key: 'beatOfSwiftness', label: 'Beat of Swiftness', type: 'bool', match: 'BeatOfSwiftness', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Rare combat enchantment.\nFriendly units lose 10% of their Armor (final defense × 0.9, rounded down).' },
+    { key: 'rust', label: 'Rust', type: 'bool', match: 'Rust', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Common combat curse.\nMagic and orihalcon weapons permanently stripped (unit reverts to regular weapons).\n−3 melee attack.\nThrown attacks eliminated for the rest of combat.\nLarge Shield eliminated for the rest of combat.' },
+    { key: 'colossalStrength', label: 'Colossal Strength', type: 'bool', match: 'ColossalStrength', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: '+1 plus 40% of base melee strength (rounded down).\nSame bonus to physical ranged and thrown attacks.\nBreath and magic ranged are not affected.' },
+    { key: 'venom', label: 'Venom', type: 'bool', match: 'Venom', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: '+1 Poison (grants Poison 1 if the unit has none).\nGrants Poison Immunity.' },
     { key: 'planewalking', calcKey: 'teleporting', label: 'Planewalking', type: 'bool', match: 'Planewalking', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Grants teleport.' },
     { key: 'temporalTwist', label: 'Temporal Twist', type: 'bool', match: 'TemporalTwist', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Strips First Strike, Negate First Strike, and Teleporting from this unit.' },
   ]),
@@ -1179,10 +1210,18 @@ const PRESETS = {
   },
 
   // --- Warlord Berserk: +15% To Hit, -10% To Block, no atk doubling, no def-zero ---
+  // --- Beat of Swiftness (Warlord) ---
+  beatOfSwiftnessArmorPenaltyWarlord: {
+    desc: 'Beat of Swiftness: def 10 → floor(10×0.9)=9. atk 10 @100% hit, 100% block → 10−9=1 dmg (without it: 10−10=0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10 },
+    b: { def:10, toBlkMod:70, hp:20, abilities: { beatOfSwiftness: true } },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
   berserkWarlordPlus15ToHit: {
     desc: 'Warlord Berserk grants +15% To Hit, no atk doubling: 4 atk @ 30%+15%=45% vs def=0 → E[dmg]=1.8',
     version: 'com2_warlord_1.5.12.5',
-    a: { atk:4, hp:10, abilities: { berserk: true } },
+    a: { atk:4, hp:10, abilities: { berserkWarlord: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 1.800 },
   },
@@ -1190,7 +1229,23 @@ const PRESETS = {
     desc: 'Warlord Berserk on defender: -10% To Block, def NOT zeroed. 1 atk @100% hit; def=1 @ 100%-10%=90% block → E[dmg]=0.1',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:1, toHitMod:70, hp:10 },
-    b: { def:1, toBlkMod:70, hp:20, abilities: { berserk: true } },
+    b: { def:1, toBlkMod:70, hp:20, abilities: { berserkWarlord: true } },
+    expected: { dmgToA: 0, dmgToB: 0.100 },
+  },
+
+  // --- Conjuring Pact nausea (Warlord) ---
+  nauseaMinus10ToHit: {
+    desc: 'Nausea on attacker: -10% To Hit. atk=10 @ 100%-10%=90% hit vs def=0 → E[dmg]=9.0 (without it: 10.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10, abilities: { nausea: true } },
+    b: { def:0, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 9.000 },
+  },
+  nauseaMinus10ToDefend: {
+    desc: 'Nausea on defender: -10% To Defend. atk=1 @100% hit; def=1 @ 100%-10%=90% block → E[dmg]=0.1 (without it: 0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10 },
+    b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true } },
     expected: { dmgToA: 0, dmgToB: 0.100 },
   },
 
@@ -1335,6 +1390,165 @@ const PRESETS = {
     a: { atk:2, rtbType:'thrown', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { vampirism: true } },
     b: { def:2, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  // --- Revenant (Warlord enchantment: grants undead + melee Death Touch 0) ---
+  revenantGrantsDeathTouchWarlord: {
+    desc: 'Revenant grants Death Touch 0: atk 1 (100% blocked by def 1) + granted Death Touch 0 vs Res 5 — pFail (10−5)/10 = 0.5, E[dmg] = 0.5 × 10 = 5.0. Without Revenant it would be 0.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { revenant: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  revenantGrantsUndeadImmunityWarlord: {
+    desc: 'Revenant makes defender undead → Death Touch immune. Atk 1 (100% blocked by def 1) + attacker Death Touch -3 vs Res 5 → 0 (immune). Without undead it would be (10−5−3)/10 × 10 = 2.0.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: -3 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { revenant: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  shadowStrikeGrantsThrownWarlord: {
+    desc: 'Shadow Strike (Warlord): melee-only unit gains a thrown attack at 1/3 of melee. Melee 9 → thrown floor(9/3)=3. Both 100% hit vs def 0 → 9 + 3 = 12.0 (without Shadow Strike, melee 9 only → 9.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:9, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { shadowStrike: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 12.000 },
+  },
+  shadowStrikeBoostsExistingThrownWarlord: {
+    desc: 'Shadow Strike (Warlord): a unit with existing thrown gains 1/3 of melee as added thrown. Melee 9, thrown 4 → thrown 4+floor(9/3)=7. Both 100% hit vs def 0 → 9 + 7 = 16.0 (without Shadow Strike, 9 + 4 = 13.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:9, rtbType:'thrown', rtb:4, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { shadowStrike: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 16.000 },
+  },
+  shadowStrikeDoublePoisonWarlord: {
+    desc: 'Shadow Strike (Warlord): the granted thrown is a separate phase, so Poison fires on both thrown and melee. Melee 9 grants thrown 3, both 100% hit vs def 0 → 12 physical; Poison 3 vs res 5 (CoM2 fail = (11−5)/10 = 0.6) → 1.8 per phase × 2 = 3.6, total 15.6 (without Shadow Strike, melee 9 + single poison 1.8 = 10.8)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:9, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { shadowStrike: true, poison: 3 } },
+    b: { def:0, toBlkMod:70, res:5, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 15.600 },
+  },
+
+  // --- Soul Flay (Warlord Death curse: −1 melee / −2 armor / −2 resistance per experience level; Recruit counts as level 1) ---
+  soulFlayMeleeRecruitWarlord: {
+    desc: 'Soul Flay (Warlord) on a Recruit (normal level = level 1): melee 5 − 1 = 4, 100% hit vs def 0 → 4.0 (without Soul Flay it would be 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, hp:10, abilities: { soulFlay: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  soulFlayMeleeScalesEliteWarlord: {
+    desc: 'Soul Flay (Warlord) scales with level: Elite (level 4) melee 10 + 2 (Elite level bonus) − 4 = 8, 100% hit vs def 0 → 8.0 (a flat −1 penalty would give 11.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, level:'elite', toHitMod:70, hp:10, abilities: { soulFlay: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  soulFlayArmorRecruitWarlord: {
+    desc: 'Soul Flay (Warlord) on a Recruit defender: armor 2 − 2 = 0, so atk 2 (100% hit/block) passes a defenseless target → 2.0 (without Soul Flay, def 2 blocks all → 0.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:2, toHitMod:70, hp:10 },
+    b: { def:2, toBlkMod:70, hp:10, abilities: { soulFlay: true } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  soulFlayResistanceRecruitWarlord: {
+    desc: 'Soul Flay (Warlord) on a Recruit defender: resistance 5 − 2 = 3. Death Touch 0 vs res 3 → pFail (10−3)/10 = 0.7 × 10 hp = 7.0. Melee atk 1 fully blocked by armor 3−2=1. (Without Soul Flay, res 5 → pFail 0.5 → 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
+    b: { def:3, toBlkMod:70, res:5, hp:10, abilities: { soulFlay: true } },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+
+  // --- Plague (Warlord combat debuff: flat −3 melee / −3 armor / −2 resistance) ---
+  plagueMeleeWarlord: {
+    desc: 'Plague (Warlord) on the attacker: melee 8 − 3 = 5, 100% hit vs def 0 → 5.0 (without Plague it would be 8.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:8, toHitMod:70, hp:10, abilities: { plague: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  plagueArmorWarlord: {
+    desc: 'Plague (Warlord) on the defender: armor 3 − 3 = 0, so atk 3 (100% hit/block) passes a defenseless target → 3.0 (without Plague, def 3 blocks all → 0.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:3, toHitMod:70, hp:10 },
+    b: { def:3, toBlkMod:70, hp:10, abilities: { plague: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  plagueResistanceWarlord: {
+    desc: 'Plague (Warlord) on the defender: resistance 5 − 2 = 3. Death Touch 0 vs res 3 → pFail (10−3)/10 = 0.7 × 10 hp = 7.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Plague, res 5 → pFail 0.5 → 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
+    b: { def:4, toBlkMod:70, res:5, hp:10, abilities: { plague: true } },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+
+  // --- Hierophany (Warlord Life curse: halves Defense, strips all immunities / Lightning Resist / Negate First Strike) ---
+  hierophanyHalvesDefenseWarlord: {
+    desc: 'Hierophany (Warlord) halves the cursed unit\'s Defense: def 8 → 4. atk 8 (100% hit/block): 8 − 4 = 4.0 (without Hierophany, def 8 blocks all → 0.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:8, toHitMod:70, hp:10 },
+    b: { def:8, toBlkMod:70, hp:20, abilities: { hierophany: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  hierophanyStripsWeaponImmunityWarlord: {
+    desc: 'Hierophany (Warlord) strips Weapon Immunity from the cursed unit: a normal melee attacker is no longer blocked. atk 8 (100% hit/block) vs def 0 → 8.0 (with Weapon Immunity intact, Warlord raises def to 10 → 0.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:8, toHitMod:70, hp:10, unitType:'normal', weapon:'normal' },
+    b: { def:0, toBlkMod:70, hp:20, unitType:'normal', abilities: { weaponImmunity: true, hierophany: true } },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  hierophanyStripsMagicImmunityWarlord: {
+    desc: 'Hierophany (Warlord) strips Magic Immunity: sorcery magic ranged is no longer blocked. rtb 3 (100% hit/block) vs def 0 → 3.0 (with Magic Immunity intact, def is raised to 50 → 0.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'magic_s', rtb:3, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true, hierophany: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+
+  // --- Pillar of Faith (Warlord Life city enchantment: 20% Lucky grant, +1 Resistance per Religious Building) ---
+  pillarOfFaithLuckyResistanceWarlord: {
+    desc: 'Pillar of Faith Lucky grants +1 Resistance: Poison 4 (CoM −1) vs res 5+1=6 → pFail (11−6)/10=0.5, E[dmg]=2.0 (without Lucky, res 5 → pFail 0.6 → 2.4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { pillarOfFaithLucky: true } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  pillarOfFaithResistanceWarlord: {
+    desc: 'Pillar of Faith grants +1 Resistance per Religious Building: 3 buildings → +3 res. Poison 4 (CoM −1) vs res 5+3=8 → pFail (11−8)/10=0.3, E[dmg]=1.2 (without the bonus, res 5 → 2.4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { pillarOfFaithRes: 3 } },
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
+  pillarOfFaithResistanceCapWarlord: {
+    desc: 'Pillar of Faith Resistance caps at +8: 12 buildings → +8 res (not +12). Poison 10 (CoM −1) vs res 0+8=8 → pFail (11−8)/10=0.3 × 10 = 3.0 (uncapped +12 would give res 12 → immune → 0.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 10 } },
+    b: { def:1, toBlkMod:70, res:0, hp:20, abilities: { pillarOfFaithRes: 12 } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+
+  // --- Blaze of Glory (Warlord Chaos enchantment: Armor→Melee, Ranged→Thrown, +Armor Piercing, −First Strike, −base Armor) ---
+  blazeOfGloryArmorToMeleeWarlord: {
+    desc: 'Blaze of Glory: Melee gains the unit\'s full Armor. Melee 2, Armor 6 → melee 2+6=8, 100% hit vs def 0 → 8.0. (Without Blaze, melee 2 → 2.0.)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:2, def:6, toHitMod:70, hp:10, abilities: { blazeOfGlory: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  blazeOfGloryArmorPiercingWarlord: {
+    desc: 'Blaze of Glory grants Armor Piercing. Attacker base armor 0 (melee stays 4), AP halves defender def 4 → 2, 100% hit/block → 4−2 = 2.0. (Without the granted AP, 4−4 = 0.)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, def:0, toHitMod:70, hp:10, abilities: { blazeOfGlory: true } },
+    b: { def:4, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  blazeOfGloryRangedToThrownWarlord: {
+    desc: 'Blaze of Glory turns the Ranged attack into a Thrown attack of the same strength, so it fires in the melee engagement. Melee 1, missile 6 (rangedCheck off → missile would not fire) → thrown 6 + melee 1 = 7.0. (Without Blaze, only melee 1 fires → 1.0.)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, def:0, rtbType:'missile', rtb:6, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { blazeOfGlory: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
   },
 
   // --- Black Channels ---
@@ -1679,6 +1893,20 @@ const PRESETS = {
     desc: 'True Sight grants Illusion Immunity: 5 atk 100% hit vs def 6 + True Sight 100% block → def stays 6, 0 dmg (would be 5 if True Sight didn\'t grant immunity)',
     a: { atk:5, toHitMod:70, hp:10, abilities: { illusion: true } },
     b: { def:6, toBlkMod:70, hp:10, abilities: { trueSight: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  eyeOfHeavenNegatesIllusion: {
+    desc: 'Eye of Heaven grants Illusion Immunity to its own unit: 5 atk 100% hit vs def 6 + Eye of Heaven 100% block → def stays 6, 0 dmg (would be 5 if illusion still ignored armor)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, hp:10, abilities: { illusion: true } },
+    b: { def:6, toBlkMod:70, hp:10, abilities: { eyeOfHeaven: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  eyeOfHeavenDisablesEnemyGaze: {
+    desc: 'Eye of Heaven on the defender strips the attacker\'s gaze: Doom Gaze 5 disabled → 0 dmg (would be 5 without Eye of Heaven)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:0, hp:10, abilities: { doomGaze: 5 } },
+    b: { def:0, hp:10, abilities: { eyeOfHeaven: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   illusionCityWalls: {
@@ -2415,7 +2643,7 @@ const PRESETS = {
   altarOfTheMoonRangedWarlord: {
     desc: 'Altar of the Moon (Warlord): ranged unit gains +2 Ranged Attack. rtb 1+2=3, 100% hit vs def 0 → 3 dmg (single full-health fig → Rage adds 0)',
     version: 'com2_warlord_1.5.12.5',
-    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { altarOfTheMoon: true } },
+    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, race:'Gnoll', abilities: { altarOfTheMoon: true } },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -2423,7 +2651,7 @@ const PRESETS = {
   altarOfTheMoonRageWarlord: {
     desc: 'Altar of the Moon (Warlord): grants Rage. 6-fig unit at 3 dmg (hp 1) → 3 figs alive, 3 lost → +3 melee. atk 1+3=4, 3 figs × 4 at 100% hit vs def 0 → 12 dmg',
     version: 'com2_warlord_1.5.12.5',
-    a: { figs:6, atk:1, toHitMod:70, hp:1, dmg:3, abilities: { altarOfTheMoon: true } },
+    a: { figs:6, atk:1, toHitMod:70, hp:1, dmg:3, race:'Gnoll', abilities: { altarOfTheMoon: true } },
     b: { atk:0, def:0, hp:30 },
     expected: { dmgToA: 0, dmgToB: 12.000 },
   },
@@ -2431,29 +2659,152 @@ const PRESETS = {
     desc: 'Altar of the Moon (Warlord): grants Poison Immunity. Defender immune → poison 4 negated; melee atk 1 vs def 1 at 100% block → 0 dmg (without Altar, poison would deal ~2.4)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
-    b: { atk:0, def:1, toBlkMod:70, res:5, hp:10, abilities: { altarOfTheMoon: true } },
+    b: { atk:0, def:1, toBlkMod:70, res:5, hp:10, race:'Gnoll', abilities: { altarOfTheMoon: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   altarOfTheMoonResistanceWarlord: {
     desc: 'Altar of the Moon (Warlord): +1 Resistance. Defender res 4 +1 = 5; incoming Life Steal −3 → effective res 2 → E = sum(1..8)/10 = 3.6 (without the +1, res 4 → eff 1 → 4.5)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:1, toHitMod:70, hp:10, abilities: { lifeSteal: -3 } },
-    b: { atk:0, def:1, toBlkMod:70, res:4, hp:30, abilities: { altarOfTheMoon: true } },
+    b: { atk:0, def:1, toBlkMod:70, res:4, hp:30, race:'Gnoll', abilities: { altarOfTheMoon: true } },
     expected: { dmgToA: 0, dmgToB: 3.600 },
+  },
+  altarOfTheMoonNonGnollWarlord: {
+    desc: 'Altar of the Moon (Warlord): a non-Gnoll unit gets no bonus. Ranged rtb 1 (100% hit) vs def 0 → 1 dmg (a Gnoll would gain +2 Ranged → 3)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { altarOfTheMoon: true } },
+    b: { atk:0, def:0, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   altarOfTheMoonHunterPoisonWarlord: {
     desc: 'Altar of the Moon (Warlord): G. Hunters gain Poison 2. Melee atk 1 vs def 1 at 100% block → 0; Poison 2 (1 fig) vs res 5 (CoM2 −1 → eff 4, pFail 0.6) → E = 2 × 0.6 = 1.2 (without the Hunters tag, Altar grants no Poison → 0)',
     version: 'com2_warlord_1.5.12.5',
-    a: { atk:1, toHitMod:70, hp:10, abilities: { gnollHunters: true, altarOfTheMoon: true } },
+    a: { atk:1, toHitMod:70, hp:10, race:'Gnoll', name:'Gnoll Hunters', abilities: { altarOfTheMoon: true } },
     b: { atk:0, def:1, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.200 },
   },
   altarOfTheMoonWitchdoctorLifeStealWarlord: {
     desc: 'Altar of the Moon (Warlord): G. Witchdoctors gain Life Steal −1 replacing Poison. Base Poison 2 is removed; melee atk 1 vs def 1 at 100% block → 0; Life Steal −1 vs res 5 (eff 4) → E = sum(1..6)/10 = 2.1 (without the interaction, base Poison 2 would deal 1.2 instead)',
     version: 'com2_warlord_1.5.12.5',
-    a: { atk:1, toHitMod:70, hp:10, abilities: { gnollWitchdoctors: true, altarOfTheMoon: true, poison: 2 } },
+    a: { atk:1, toHitMod:70, hp:10, race:'Gnoll', name:'Witchdoctors', abilities: { altarOfTheMoon: true, poison: 2 } },
     b: { atk:0, def:1, toBlkMod:70, res:5, hp:20 },
     expected: { dmgToA: 0, dmgToB: 2.100 },
+  },
+
+  // --- Altar of the Sun ---
+  altarOfTheSunFigureWarlord: {
+    desc: 'Altar of the Sun (Warlord): a Hawkman gains +1 Figure. 2-fig attacker → 3 figs; atk 2 × 3 figs at 100% hit vs def 0 → 6 dmg (without the Altar, 2 figs → 4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:2, atk:2, toHitMod:70, hp:5, race:'Hawkmen', abilities: { altarOfTheSun: true } },
+    b: { atk:0, def:0, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  altarOfTheSunNonHawkmanWarlord: {
+    desc: 'Altar of the Sun (Warlord): no Hawkman tag → no figure bonus. 2-fig attacker stays at 2 figs; atk 2 × 2 figs at 100% hit vs def 0 → 4 dmg (a Hawkman would get 6)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:2, atk:2, toHitMod:70, hp:5, abilities: { altarOfTheSun: true } },
+    b: { atk:0, def:0, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  altarOfTheSunHeroExcludedWarlord: {
+    desc: 'Altar of the Sun (Warlord): a Hawkman hero is excluded → no figure bonus. 1-fig attacker stays at 1 fig; atk 2 × 1 fig at 100% hit vs def 0 → 2 dmg (a non-hero Hawkman would gain +1 Figure → 4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:2, toHitMod:70, hp:5, unitType:'hero', race:'Hawkmen', abilities: { altarOfTheSun: true } },
+    b: { atk:0, def:0, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+
+  // --- Dragon Mound ---
+  dragonMoundFireBreathWarlord: {
+    desc: 'Dragon Mound (Warlord): a Draconian unit with Fire Breath gains +2. Melee 1 vs def 1 (100% block) → 0; breath 2+2=4 (100% hit) vs def 1 (100% block) → 4−1 = 3 (without Dragon Mound, breath 2 → 2−1 = 1)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:1, toHitMod:70, rtbType:'fire', rtb:2, toHitRtbMod:70, hp:10, race:'Draconian', abilities: { dragonMound: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  dragonMoundArmorWarlord: {
+    desc: 'Dragon Mound (Warlord): a Draconian unit gains +1 Armor. atk 5 (100% hit) vs def 0 + Dragon Mound → 1 shield at 100% block → 4 dmg (without Dragon Mound, def 0 → 5)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, race:'Draconian', abilities: { dragonMound: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  dragonMoundHeroExcludedWarlord: {
+    desc: 'Dragon Mound (Warlord): a Draconian hero is excluded — no +1 Armor. atk 5 (100% hit) vs def 0 → 5 dmg (a non-hero Draconian would gain +1 Armor → 1 shield at 100% block → 4 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, unitType:'hero', race:'Draconian', abilities: { dragonMound: true } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  dragonMoundNonDraconianWarlord: {
+    desc: 'Dragon Mound (Warlord): no Draconian tag → no bonus. Breath 2 (100% hit) vs def 0 → 2; melee 1 vs def 0 → 1; total 3 (a Draconian would get +2 breath and +1 armor → breath 4, but here def 0 means armor is moot; the point is breath stays 2)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:1, toHitMod:70, rtbType:'fire', rtb:2, toHitRtbMod:70, hp:10, abilities: { dragonMound: true } },
+    b: { atk:0, def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  dragonMoundThrownNotBoostedWarlord: {
+    desc: 'Dragon Mound (Warlord): the +2 applies to Fire Breath only, not Thrown. Melee 1 vs def 1 (100% block) → 0; thrown 2 (unboosted, 100% hit) vs def 1 (100% block) → 2−1 = 1 (if the bonus wrongly hit thrown, 2+2=4 → 3)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:1, toHitMod:70, rtbType:'thrown', rtb:2, toHitRtbMod:70, hp:10, race:'Draconian', abilities: { dragonMound: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+
+  // --- Lava Smelter ---
+  // Dwarf-race building. A selected mineral combo grants one permanent ability to Dwarf units.
+  lavaSmelterWeaponImmunityWarlord: {
+    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Weapon Immunity. Normal melee atk 10 (100% hit) vs def 0 → WI +10 = 10, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'weaponImmunity' } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  lavaSmelterMissileImmunityWarlord: {
+    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Missile Immunity. Missile rtb 10 (100% hit) vs def 0 → MI raises def to 100, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'missile', rtb:10, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'missileImmunity' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  lavaSmelterResistElemWarlord: {
+    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Resist Elements. Chaos magic ranged rtb 6 (100% hit) vs def 0 → +4 = 4, 100% block → 2 dmg (without the grant, def 0 → 6 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'magic_c', rtb:6, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'resistElem' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  lavaSmelterElementalArmorWarlord: {
+    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Elemental Armor. Chaos magic ranged rtb 10 (100% hit) vs def 0 → +12 = 12, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'magic_c', rtb:10, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'elementalArmor' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  lavaSmelterFlameBladeWarlord: {
+    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Flame Blade. Melee 1+3 = 4, weapon upgraded to magic so it bypasses the target Weapon Immunity → def 0, 100% block of 0 shields → 4 dmg (without the grant, melee 1 vs WI def 10 → 0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'flameBlade' } },
+    b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  lavaSmelterNonDwarfNoGrantWarlord: {
+    desc: 'Lava Smelter (Warlord): a non-Dwarf unit with the selector set gets no grant. Normal melee atk 10 (100% hit) vs def 0 → 10 dmg (a Dwarf would gain Weapon Immunity → 0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { lavaSmelter: 'weaponImmunity' } },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
+  lavaSmelterHeroExcludedWarlord: {
+    desc: 'Lava Smelter (Warlord): a Dwarf hero is excluded and gets no grant. Normal melee atk 10 (100% hit) vs def 0 → 10 dmg (a non-hero Dwarf would gain Weapon Immunity → 0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, unitType:'hero', race:'Dwarf', abilities: { lavaSmelter: 'weaponImmunity' } },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
   },
 
   // --- Lightning Blade ---
@@ -2470,6 +2821,251 @@ const PRESETS = {
     a: { atk:2, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { lightningBlade: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+
+  // --- Ludus Agoge ---
+  // Orc-race building. Trained Orc units gain +1 Attack, +1 Resistance, +1 HP.
+  // Legionaries gain +1 Movement instead (not modelled) and heroes are excluded.
+  ludusAgogeAttackWarlord: {
+    desc: 'Ludus Agoge (Warlord): an Orc unit gains +1 Attack. Melee 4+1 = 5 (100% hit) vs def 1 (100% block) → 5−1 = 4 (without the grant, melee 4 → 3)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, toHitMod:70, hp:10, race:'Orc', abilities: { ludusAgoge: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  ludusAgogeResistanceWarlord: {
+    desc: 'Ludus Agoge (Warlord): an Orc unit gains +1 Resistance. Death Gaze vs res 9+1 = 10 → P(die) = 0 → 0 dmg (without the grant, res 9 → P = 0.1 × 10 HP = 1.0 dmg). The resistance grant is isolated here: at P = 0 no figure dies, so the +1 HP grant cannot affect the result',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:9, hp:10, race:'Orc', abilities: { ludusAgoge: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  ludusAgogeHpWarlord: {
+    desc: 'Ludus Agoge (Warlord): an Orc unit gains +1 HP. Melee 10 (100% hit) vs def 0 → 10 raw, capped at the defender total HP 5+1 = 6 → 6 dmg (without the grant, HP 5 caps it at 5)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:30 },
+    b: { atk:0, def:0, toBlkMod:70, hp:5, race:'Orc', abilities: { ludusAgoge: true } },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  ludusAgogeNonOrcWarlord: {
+    desc: 'Ludus Agoge (Warlord): a non-Orc unit gets no bonus. Melee 4 (100% hit) vs def 1 (100% block) → 3 (an Orc would gain +1 Attack → 4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, toHitMod:70, hp:10, abilities: { ludusAgoge: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  ludusAgogeLegionaryExcludedWarlord: {
+    desc: 'Ludus Agoge (Warlord): a Legionary gains +1 Movement instead (not modelled), so no stat bonus. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a non-Legionary Orc would gain +1 Attack → 4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, toHitMod:70, hp:10, race:'Orc', name:'Orc Legionary', abilities: { ludusAgoge: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  ludusAgogeHeroExcludedWarlord: {
+    desc: 'Ludus Agoge (Warlord): an Orc hero is excluded — no bonus. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a non-hero Orc would gain +1 Attack → 4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, toHitMod:70, unitType:'hero', hp:10, race:'Orc', abilities: { ludusAgoge: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+
+  // --- Mother Fungus ---
+  // Goblin building. Trained Goblin units gain +2 Attack, +10% To Defend, and Poison 1
+  // (heroes excluded; the ×2 Spellcharge bonus is not modelled). Attack and To-Defend cases
+  // give the defender Poison Immunity so the always-on Poison 1 grant does not contaminate the
+  // effect under test.
+  motherFungusAttackWarlord: {
+    desc: 'Mother Fungus (Warlord): a Goblin unit gains +2 Attack. Melee 4+2 = 6 (100% hit) vs def 1 (100% block) → 6−1 = 5 (without the grant, melee 4 → 3). Defender is Poison-Immune to isolate from the +1 Poison grant',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, toHitMod:70, hp:10, race:'Goblin', abilities: { motherFungus: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30, abilities: { poisonImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  motherFungusToDefendWarlord: {
+    desc: 'Mother Fungus (Warlord): a Goblin unit gains +10% To Defend. Boulder 10 (100% hit) vs a Goblin defender, def 5, base 30%+10% = 40% block → 10 − 5×0.4 = 8.0 (without the grant, 30% block → 10 − 5×0.3 = 8.5). Ranged so no melee counter; the defender Attack/Poison grants only affect the (absent) counterattack',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'boulder', rtb:10, toHitRtbMod:70, hp:20 },
+    b: { atk:0, def:5, toBlkMod:0, res:20, hp:20, race:'Goblin', abilities: { motherFungus: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  motherFungusPoisonWarlord: {
+    desc: 'Mother Fungus (Warlord): a melee-only Goblin unit with no poison gains Poison 1. Melee 1+2 = 3 (100% hit) vs def 3 (100% block) → 0 physical, but Poison 1 lands (res 1, CoM2 fail = (11−1)/10 = 1.0) → 1.0 poison damage (without the grant, melee 1 vs def 3 → 0 physical and no poison → 0). The +2 Attack is fully absorbed by the 100%-block def 3 so only the poison grant surfaces',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, race:'Goblin', abilities: { motherFungus: true } },
+    b: { atk:0, def:3, toBlkMod:70, res:1, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  motherFungusNonGoblinWarlord: {
+    desc: 'Mother Fungus (Warlord): a non-Goblin unit gets no bonus. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a Goblin would gain +2 Attack → 5). No poison grant applies, so the defender needs no Poison Immunity',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, toHitMod:70, hp:10, abilities: { motherFungus: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  motherFungusHeroExcludedWarlord: {
+    desc: 'Mother Fungus (Warlord): a Goblin hero is excluded — no Attack and no Poison grant. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a non-hero Goblin would deal 5 plus poison). No Poison Immunity on the defender, so an erroneous poison grant would also surface',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:4, toHitMod:70, unitType:'hero', hp:10, race:'Goblin', abilities: { motherFungus: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+
+  // --- Pool of Repentance ---
+  // Rakhshasa building. Units trained here gain +1 Armor and +1 Resistance. Race-gated to
+  // Rakhshasa; heroes excluded.
+  poolOfRepentanceArmorWarlord: {
+    desc: 'Pool of Repentance (Warlord): a Rakhshasa unit gains +1 Armor. atk 5 (100% hit) vs def 0 + Pool → 1 shield at 100% block → 4 dmg (without the grant, def 0 → 5)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, race:'Rakhshasa', abilities: { poolOfRepentance: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  poolOfRepentanceResistanceWarlord: {
+    desc: 'Pool of Repentance (Warlord): a Rakhshasa unit gains +1 Resistance. Death Gaze vs res 9+1 = 10 → P(die) = 0 → 0 dmg (without the grant, res 9 → P = 0.1 × 10 HP = 1.0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:9, hp:10, race:'Rakhshasa', abilities: { poolOfRepentance: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  poolOfRepentanceNonRakhshasaWarlord: {
+    desc: 'Pool of Repentance (Warlord): a non-Rakhshasa unit gets no bonus. atk 5 (100% hit) vs def 0 → 5 dmg (a Rakhshasa would gain +1 Armor → 1 shield at 100% block → 4 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { poolOfRepentance: true } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  poolOfRepentanceHeroExcludedWarlord: {
+    desc: 'Pool of Repentance (Warlord): a Rakhshasa hero is excluded — no +1 Armor. atk 5 (100% hit) vs def 0 → 5 dmg (a non-hero Rakhshasa would gain +1 Armor → 4 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, unitType:'hero', race:'Rakhshasa', abilities: { poolOfRepentance: true } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
+  // --- Sancta Basilica ---
+  // High Men building. Every High Men unit trained gains +3 Resistance. Clergy (unit tag),
+  // Crusaders, and Paladins (by name) also gain Sanctify; Crusaders also gain Lucky; Paladins
+  // also gain Magic Immunity. Improved Exorcise and the defending-city True Light are not modelled.
+  // Race-gated to High Men; heroes excluded.
+  sanctaBasilicaResistanceWarlord: {
+    desc: 'Sancta Basilica (Warlord): a plain High Men unit gains +3 Resistance. Death Gaze vs res 7+3 = 10 → P(die) = 0 → 0 dmg (without the grant, res 7 → P = 0.3 × 10 HP = 3.0 dmg). No name/Clergy match, so no Sanctify/Lucky/Magic Immunity contaminates the Death Gaze',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:7, hp:10, race:'High Men', abilities: { sanctaBasilica: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  sanctaBasilicaCrusaderLuckyWarlord: {
+    desc: 'Sancta Basilica (Warlord): a High Men Crusader gains Lucky (+10% To Block). Boulder 10 (100% hit) vs def 5, base 30%+10% = 40% block → 10 − 5×0.4 = 8.0 (without Lucky, 30% block → 8.5). Ranged so no melee counter',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'boulder', rtb:10, toHitRtbMod:70, hp:20 },
+    b: { atk:0, def:5, toBlkMod:0, hp:20, race:'High Men', name:'Crusaders', abilities: { sanctaBasilica: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  sanctaBasilicaPaladinMagicImmunityWarlord: {
+    desc: 'Sancta Basilica (Warlord): a High Men Paladin gains Magic Immunity, which blocks Death Gaze entirely → 0 dmg (without the grant, res 1+3 = 4 → P = 0.6 × 10 HP = 6.0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:1, hp:10, race:'High Men', name:'Paladins', abilities: { sanctaBasilica: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  sanctaBasilicaClergySanctifyWarlord: {
+    desc: 'Sancta Basilica (Warlord): a High Men Clergy attacker gains Sanctify and becomes Life FANTASTIC, so the defender\'s Weapon Immunity does not apply (attacker not normal). atk 6 (100% hit) vs def 2 (100% block) → 6−2 = 4 (without Sanctify the attacker stays normal, Weapon Immunity adds +10 def → 12 → 0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:6, hp:10, toHitMod:70, weapon:'normal', unitType:'normal', race:'High Men', name:'High Men Monks', abilities: { sanctaBasilica: true, clergy: true } },
+    b: { figs:1, atk:0, def:2, hp:10, toBlkMod:70, unitType:'normal', abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  sanctaBasilicaNonHighMenWarlord: {
+    desc: 'Sancta Basilica (Warlord): a non-High Men unit gets no bonus. Death Gaze vs res 7 → P = 0.3 × 10 HP = 3.0 dmg (a High Men unit would gain +3 Resistance → res 10 → 0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:7, hp:10, abilities: { sanctaBasilica: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  sanctaBasilicaHeroExcludedWarlord: {
+    desc: 'Sancta Basilica (Warlord): a High Men hero is excluded — no +3 Resistance. Death Gaze vs res 7 → P = 0.3 × 10 HP = 3.0 dmg (a non-hero High Men unit would reach res 10 → 0 dmg)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:7, hp:10, unitType:'hero', race:'High Men', abilities: { sanctaBasilica: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+
+  // --- Military Workshop ---
+  // XuanYuan building. Upgrades any normal unit (heroes/fantastic excluded), not race-gated.
+  // Physical ranged/thrown → Armor Piercing (or +2 strength if Doom); Fire Breath +4; small
+  // physical projectiles → heavy (boulder, bypassing Missile Immunity); +1 Poison.
+  // The non-poison cases give the defender Poison Immunity so the always-on +1 Poison grant
+  // does not contaminate the effect under test.
+  militaryWorkshopArmorPiercingWarlord: {
+    desc: 'Military Workshop (Warlord): a physical-ranged unit gains Armor Piercing. Boulder 10 (100% hit) vs def 8 (100% block) → AP halves def to 4 → 10−4 = 6 (without the grant, def 8 → 2). Defender is Poison-Immune to isolate from the +1 Poison grant',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'boulder', rtb:10, toHitRtbMod:70, hp:20, abilities: { militaryWorkshop: true } },
+    b: { atk:0, def:8, toBlkMod:70, hp:20, abilities: { poisonImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  militaryWorkshopDoomGetsStrengthNotAPWarlord: {
+    desc: 'Military Workshop (Warlord): a Doom-attack unit gets +2 strength instead of Armor Piercing (Doom already ignores armor). Boulder Doom 5+2 = 7 → exact 7 damage, def 8 ignored (without the grant, exact 5). Defender Poison-Immune',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'boulder', rtb:5, toHitRtbMod:70, hp:20, abilities: { doom: true, militaryWorkshop: true } },
+    b: { atk:0, def:8, toBlkMod:70, hp:20, abilities: { poisonImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  militaryWorkshopFireBreathWarlord: {
+    desc: 'Military Workshop (Warlord): a Fire Breath unit gains +4 breath strength. Fire breath 6+4 = 10 (100% hit) vs def 3 (100% block) → 10−3 = 7 (without the grant, 6 → 3). Defender Poison-Immune to isolate the breath bonus',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, rtbType:'fire', rtb:6, toHitRtbMod:70, hp:20, abilities: { militaryWorkshop: true } },
+    b: { atk:0, def:3, toBlkMod:70, hp:20, abilities: { poisonImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  militaryWorkshopProjectileUpgradeWarlord: {
+    desc: 'Military Workshop (Warlord): a small physical (missile) projectile upgrades to heavy (boulder), bypassing Missile Immunity. Missile 10 vs a Missile-Immune defender → without the grant, def raised to 100 → all blocked → 0. With the grant the boulder ignores Missile Immunity → def 0 → 10 damage. Defender also Poison-Immune',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'missile', rtb:10, toHitRtbMod:70, hp:20, abilities: { militaryWorkshop: true } },
+    b: { atk:0, def:0, toBlkMod:70, hp:20, abilities: { missileImmunity: true, poisonImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
+  militaryWorkshopPoisonWarlord: {
+    desc: 'Military Workshop (Warlord): a melee-only unit (no ranged/thrown, so no Armor Piercing) gains Poison 1. Melee 1 (100% hit) vs def 1 (100% block) → 0 physical, but Poison 1 lands (res 1, CoM2 fail = (11−1)/10 = 1.0) → 1.0 poison damage (without the grant, no poison → 0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { militaryWorkshop: true } },
+    b: { atk:0, def:1, toBlkMod:70, res:1, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  militaryWorkshopHeroExcludedWarlord: {
+    desc: 'Military Workshop (Warlord): a hero is excluded — no Armor Piercing and no +1 Poison. Boulder 10 (100% hit) vs def 8 (100% block) → 10−8 = 2 (a normal unit would deal 6 plus poison). No Poison Immunity on the defender, so an erroneous poison grant would also surface',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'boulder', rtb:10, toHitRtbMod:70, unitType:'hero', hp:20, abilities: { militaryWorkshop: true } },
+    b: { atk:0, def:8, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+
+  // --- Venom (Warlord enchantment) ---
+  venomGrantsPoisonWarlord: {
+    desc: 'Venom (Warlord): a unit with no poison gains Poison 1. Melee 1 (100% hit) vs def 1 (100% block) → 0 physical, but Poison 1 lands (res 1, CoM2 fail = (11−1)/10 = 1.0) → 1.0 poison damage (without the grant, no poison → 0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { venom: true } },
+    b: { atk:0, def:1, toBlkMod:70, res:1, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  venomBoostsExistingPoisonWarlord: {
+    desc: 'Venom (Warlord): +1 Poison boosts an existing attack. Poison 2 → 3 vs res 5 (CoM2 fail = (11−5)/10 = 0.6) → 3 × 0.6 = 1.8 poison. Melee 1 vs def 1 (100% block) → 0 physical (without the grant, Poison 2 → 1.2)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { venom: true, poison: 2 } },
+    b: { atk:0, def:1, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.800 },
+  },
+  venomGrantsPoisonImmunityWarlord: {
+    desc: 'Venom (Warlord): grants Poison Immunity. A Venom defender is immune → attacker Poison 4 negated → 0; melee 1 vs def 1 (100% block) → 0 (without immunity, Poison 4 vs res 5 → 4 × 0.6 = 2.4)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
+    b: { atk:0, def:1, toBlkMod:70, res:5, hp:10, abilities: { venom: true } },
+    expected: { dmgToA: 0, dmgToB: 0.000 },
   },
 
   // --- Artificer ---
@@ -2569,6 +3165,128 @@ const PRESETS = {
     b: { def:3, toBlkMod:70, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  colossalStrengthMeleeWarlord: {
+    desc: 'Colossal Strength (Warlord): +1 + 40% of base melee. Base atk 10 → +1+floor(0.4×10)=+5 → 15. 1 fig, 100% hit, def 2 fully blocks 2 → E[dmg] = 13 (without Colossal Strength, 10 − 2 = 8)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10, abilities: { colossalStrength: true } },
+    b: { def:2, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 13 },
+  },
+  colossalStrengthPhysicalRangedWarlord: {
+    desc: 'Colossal Strength (Warlord): physical ranged gains +1 + 40% of base. Base missile 10 → 15. 100% hit, def 2 blocks 2 → E[dmg] = 13 (without Colossal Strength, 10 − 2 = 8)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'missile', rtb:10, toHitRtbMod:70, hp:10, abilities: { colossalStrength: true } },
+    b: { def:2, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 13 },
+  },
+  colossalStrengthThrownWarlord: {
+    desc: 'Colossal Strength (Warlord): thrown gains +1 + 40% of base. Base thrown 10 → 15. 100% hit, def 2 blocks 2 → E[dmg] = 13 (without Colossal Strength, 10 − 2 = 8)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, rtbType:'thrown', rtb:10, toHitRtbMod:70, hp:10, abilities: { colossalStrength: true } },
+    b: { def:2, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 13 },
+  },
+  colossalStrengthMagicRangedNoBonusWarlord: {
+    desc: 'Colossal Strength (Warlord): magic ranged is not physical ranged, so it gets no bonus. Base magic 10, 100% hit, def 2 blocks 2 → E[dmg] = 8 (unchanged by Colossal Strength)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'magic_n', rtb:10, toHitRtbMod:70, hp:10, abilities: { colossalStrength: true } },
+    b: { def:2, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 8 },
+  },
+  rustMeleePenaltyWarlord: {
+    desc: 'Rust (Warlord): −3 melee attack. Base atk 10 → 7, 1 fig, 100% hit, def 0 → E[dmg] = 7 (without Rust, 10)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10, abilities: { rust: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 7 },
+  },
+  rustStripsMagicWeaponWarlord: {
+    desc: 'Rust (Warlord): strips magic weapon → reverts to regular, so Weapon Immunity is no longer bypassed. Magic atk 10 vs WI (def 0→10), with Rust melee 10−3=7 fully blocked → E[dmg] = 0 (without Rust, magic bypasses WI → 10)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10, weapon: 'magic', abilities: { rust: true } },
+    b: { def:0, toBlkMod:70, hp:20, abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  rustEliminatesThrownWarlord: {
+    desc: 'Rust (Warlord): thrown attack eliminated. Thrown 10 (no melee), 100% hit, def 0 → with Rust no thrown phase → E[dmg] = 0 (without Rust, thrown lands → 10)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:0, rtbType:'thrown', rtb:10, toHitRtbMod:70, hp:10, abilities: { rust: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  rustEliminatesLargeShieldWarlord: {
+    desc: 'Rust (Warlord): Large Shield eliminated on the cursed defender. Missile 10 vs def 0; Large Shield would add +2 vs ranged → with Rust shield gone, def 0 → E[dmg] = 10 (without Rust, def 2 → 8)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'missile', rtb:10, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:20, abilities: { rust: true, largeShield: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 10 },
+  },
+  divineProtectionLuckyToHitWarlord: {
+    desc: 'Divine Protection (Warlord): grants Lucky. 1 atk, base 30% + Lucky +10% = 40% hit vs 0 def → E[dmg] = 0.4 (without Divine Protection, 30% → 0.3)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, hp:10, abilities: { divineProtection: true } },
+    b: { def:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0.4 },
+  },
+  divineProtectionLuckyResistanceWarlord: {
+    desc: 'Divine Protection (Warlord): grants Lucky +1 Resistance. Poison 6 vs base res 5 + Lucky +1 = res 6, CoM −1 poison penalty → effective 5, pFail 50%, E[dmg] = 3.0 (without grant, res 5 −1 = 4 → pFail 60% → 3.6)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 6 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { divineProtection: true } },
+    expected: { dmgToA: 0, dmgToB: 3.0 },
+  },
+  divineProtectionDeathImmunityWarlord: {
+    desc: 'Divine Protection (Warlord): grants Death Immunity. Death Gaze vs res 5 + Death Immunity → fully blocked, 0 dmg (without grant, res 5 → P(die) 0.3 × 10 HP = 3.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:5, hp:10, abilities: { divineProtection: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  luckyStarToHitWarlord: {
+    desc: 'Lucky Star (Warlord): grants Lucky. 1 atk, base 30% + Lucky +10% = 40% hit vs 0 def → E[dmg] = 0.4 (without Lucky Star, 30% → 0.3)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, hp:10, abilities: { luckyStar: true } },
+    b: { def:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0.4 },
+  },
+  luckyStarResistanceWarlord: {
+    desc: 'Lucky Star (Warlord): grants Lucky +1 Resistance. Poison 6 vs base res 5 + Lucky +1 = res 6, CoM −1 poison penalty → effective 5, pFail 50%, E[dmg] = 3.0 (without grant, res 5 −1 = 4 → pFail 60% → 3.6)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 6 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { luckyStar: true } },
+    expected: { dmgToA: 0, dmgToB: 3.0 },
+  },
+  rallyResistanceWarlord: {
+    desc: 'Rally (Warlord): grants +2 Resistance. Poison 7 vs base res 5 + Rally +2 = res 7, CoM −1 poison penalty → effective 6, pFail 40%, E[dmg] = 2.8 (without Rally, res 5 −1 = 4 → pFail 60% → 4.2)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 7 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { rally: true } },
+    expected: { dmgToA: 0, dmgToB: 2.8 },
+  },
+  disheartenProphecyResistanceWarlord: {
+    desc: 'Dishearten Prophesy (Warlord): garrison suffers −2 Resistance. Poison 7 vs base res 7 − Dishearten 2 = res 5, CoM −1 poison penalty → effective 4, pFail 60%, E[dmg] = 4.2 (without Dishearten, res 7 −1 = 6 → pFail 40% → 2.8)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 7 } },
+    b: { def:1, toBlkMod:70, res:7, hp:10, abilities: { disheartenProphecy: true } },
+    expected: { dmgToA: 0, dmgToB: 4.2 },
+  },
+  insulationFireImmunityWarlord: {
+    desc: 'Insulation (Warlord): grants Fire Immunity. Fire Breath 5 (100% hit) vs Insulation def → blocked (FI def 50); melee 5 (100% hit) vs def 2 → 3 dmg (without Insulation, breath 5 vs def 2 = 3 + melee 3 = 6)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
+    b: { atk:0, def:2, toBlkMod:70, hp:10, abilities: { insulation: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  insulationLightningResistWarlord: {
+    desc: 'Insulation (Warlord): grants Lightning Resist, cancelling Lightning Breath AP. Breath 2 (100% hit) vs def 2 (100% block) → AP cancelled, 2−2 = 0 (without Insulation, lightning is AP → def 2 halved to 1, 2−1 = 1)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, rtbType:'lightning', rtb:2, toHitRtbMod:70, hp:10 },
+    b: { atk:0, def:2, toBlkMod:70, hp:10, abilities: { insulation: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
   },
   rebuildDeathImmunityWarlord: {
     desc: 'Rebuild (Warlord): grants Death Immunity. Death Gaze vs res 5 + Death Immunity → fully blocked, 0 dmg',
@@ -3230,6 +3948,44 @@ const PRESETS = {
     a: { atk:4, toHitMod:70, hp:10, abilities: { fieryFury: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+
+  // --- Spirit Link (Warlord, Conjurer signature) ---
+  spiritLinkDispelEvilImmuneWarlord: {
+    desc: 'Spirit Link: spirit-linked fantastic_death is no longer fantastic for targeting, so Dispel Evil cannot affect it — only physical 1 atk lands → 1.0 (vs 10.0 without Spirit Link)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { dispelEvil: true } },
+    b: { figs:2, def:0, res:5, hp:10, unitType: 'fantastic_death', abilities: { spiritLink: true } },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  spiritLinkWeaponImmunityBlockedWarlord: {
+    desc: 'Spirit Link: spirit-linked fantastic_chaos attacker counts as non-fantastic, so Weapon Immunity now stops its normal weapon. atk 10 vs def 0+10 WI → 0 (vs 10.0 without Spirit Link)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:10, toHitMod:70, hp:10, unitType: 'fantastic_chaos', abilities: { spiritLink: true } },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 0.000 },
+  },
+  spiritLinkBlessNoBonusWarlord: {
+    desc: "Spirit Link: spirit-linked fantastic_chaos missile attacker grants the enemy no anti-Chaos Bless bonus. missile 10 vs def 0 → 10.0 (vs 3.0 with Bless's +7)",
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'missile', rtb:10, toHitRtbMod:70, hp:10, unitType: 'fantastic_chaos', abilities: { spiritLink: true } },
+    b: { def:0, toBlkMod:70, res:5, hp:10, abilities: { bless: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
+  spiritLinkResistanceWarlord: {
+    desc: 'Spirit Link: +2 Resistance. Stoning Gaze −3 vs Res 5+2=7 → effRes 4, pFail 0.6 → stoning 6.0 + physical → less than the 8.06 without Spirit Link',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    b: { res:5, hp:10, unitType: 'fantastic_nature', abilities: { spiritLink: true } },
+    expected: { dmgToA: 0, dmgToB: 6.120 },
+  },
+  spiritLinkGrantsLevelBonusWarlord: {
+    desc: 'Spirit Link lets a fantastic creature earn levels: an Elite fantastic_nature attacker gains the Warlord Elite +2 melee. atk 1+2=3, 100% hit vs def 0 → 3.0 (vs 1.0 without Spirit Link, where the level dropdown is ignored for fantastic units)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, level:'elite', unitType: 'fantastic_nature', abilities: { spiritLink: true } },
+    b: { def:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
   },
 
   // --- Chaos Channels ---
@@ -3931,6 +4687,33 @@ const PRESETS = {
     rangedCheck: true, rangedDist: 1,
     warpReality: true,
     expected: { dmgToA: 0, dmgToB: 0.100 },
+  },
+
+  hurricaneRanged: {
+    desc: 'Hurricane: missile 1 atk gets -20% to hit (30%→10%) vs 0 def → 0.1 dmg',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    hurricane: true,
+    expected: { dmgToA: 0, dmgToB: 0.100 },
+  },
+  hurricaneBreath: {
+    desc: 'Hurricane: fire breath 1 atk gets -30% to hit (30%→10%, floored) vs 0 def → 0.1 dmg. Without Hurricane breath would hit at 30% → 0.3, so the breath-specific penalty is exercised.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, rtbType:'fire', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: false,
+    hurricane: true,
+    expected: { dmgToA: 0, dmgToB: 0.400 },
+  },
+  hurricaneMeleeUnaffected: {
+    desc: 'Hurricane does not touch melee: 1 atk stays at 30% to hit vs 0 def → 0.3 dmg',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, hp:10 },
+    b: { hp:10 },
+    hurricane: true,
+    expected: { dmgToA: 0, dmgToB: 0.300 },
   },
 
   destinyOverridesCCFireBreathCoM2: {
@@ -5083,6 +5866,7 @@ const TEST_TREE = [
       { name: 'Holy Armor', keys: ['holyArmorDef', 'holyArmorVsRanged', 'holyArmorStacksWithStoneSkin'] },
       { name: 'Holy Bonus', keys: ['holyBonusMeleeAtk', 'holyBonusDef', 'holyBonusRes', 'holyBonusRangedMoM'] },
       { name: 'Holy Weapon', keys: ['holyWeaponMelee', 'holyWeaponMissile', 'holyWeaponBoulder', 'holyWeaponNotMagicRanged', 'holyWeaponNotFireBreath', 'holyWeaponBypassesWI'] },
+      { name: 'Hurricane', keys: ['hurricaneRanged', 'hurricaneBreath', 'hurricaneMeleeUnaffected'] },
       { name: 'Illusion', keys: ['illusionMelee', 'illusionRanged', 'illusionThrown', 'illusionCounter', 'illusionImmunityNegates', 'illusionCityWalls', 'illusionOverridesWeaponImmunity'] },
       { name: 'Immolation', keys: ['immolationMelee', 'immolationAreaMultiFig', 'immolationNoOverflow', 'immolationMagicImmunity', 'immolationRighteousness', 'immolationFireImmunity', 'immolationBothSides', 'immolationRangedMoM', 'immolationWithThrown', 'immolationAtkZeroNoFire'] },
       { name: 'Invisibility', keys: ['invisibilityMelee', 'invisibilityRangedBlocked', 'invisibilityRangedIllusionImmune', 'invisibilityCounter', 'invisibilityIllusionImmuneNoPenalty', 'invisibilityDoomIgnores'] },
@@ -5145,8 +5929,17 @@ const TEST_TREE = [
           'altarOfTheMoonRageWarlord',
           'altarOfTheMoonPoisonImmunityWarlord',
           'altarOfTheMoonResistanceWarlord',
+          'altarOfTheMoonNonGnollWarlord',
           'altarOfTheMoonHunterPoisonWarlord',
           'altarOfTheMoonWitchdoctorLifeStealWarlord',
+        ],
+      },
+      {
+        name: 'Altar of the Sun',
+        keys: [
+          'altarOfTheSunFigureWarlord',
+          'altarOfTheSunNonHawkmanWarlord',
+          'altarOfTheSunHeroExcludedWarlord',
         ],
       },
       {
@@ -5171,10 +5964,31 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Beat of Swiftness (Warlord)',
+        keys: [
+          'beatOfSwiftnessArmorPenaltyWarlord',
+        ],
+      },
+      {
         name: 'Berserk (Warlord)',
         keys: [
           'berserkWarlordPlus15ToHit',
           'berserkWarlordMinus10ToBlock',
+        ],
+      },
+      {
+        name: 'Conjuring Pact nausea (Warlord)',
+        keys: [
+          'nauseaMinus10ToHit',
+          'nauseaMinus10ToDefend',
+        ],
+      },
+      {
+        name: 'Blaze of Glory (Warlord)',
+        keys: [
+          'blazeOfGloryArmorToMeleeWarlord',
+          'blazeOfGloryArmorPiercingWarlord',
+          'blazeOfGloryRangedToThrownWarlord',
         ],
       },
       {
@@ -5256,6 +6070,15 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Colossal Strength',
+        keys: [
+          'colossalStrengthMeleeWarlord',
+          'colossalStrengthPhysicalRangedWarlord',
+          'colossalStrengthThrownWarlord',
+          'colossalStrengthMagicRangedNoBonusWarlord',
+        ],
+      },
+      {
         name: 'Destiny',
         keys: [
           'destinyDefenseAndHealthCoM2',
@@ -5286,6 +6109,30 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Dishearten Prophesy',
+        keys: [
+          'disheartenProphecyResistanceWarlord',
+        ],
+      },
+      {
+        name: 'Divine Protection',
+        keys: [
+          'divineProtectionLuckyToHitWarlord',
+          'divineProtectionLuckyResistanceWarlord',
+          'divineProtectionDeathImmunityWarlord',
+        ],
+      },
+      {
+        name: 'Dragon Mound',
+        keys: [
+          'dragonMoundFireBreathWarlord',
+          'dragonMoundArmorWarlord',
+          'dragonMoundNonDraconianWarlord',
+          'dragonMoundHeroExcludedWarlord',
+          'dragonMoundThrownNotBoostedWarlord',
+        ],
+      },
+      {
         name: 'Endurance',
         keys: [
           'enduranceDefenseCoM',
@@ -5303,6 +6150,13 @@ const TEST_TREE = [
           'eternalNightEnemyPoorSightWarlord',
           'eternalNightDeathUnitNoPoorSightWarlord',
           'eternalNightThrownUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Eye of Heaven',
+        keys: [
+          'eyeOfHeavenNegatesIllusion',
+          'eyeOfHeavenDisablesEnemyGaze',
         ],
       },
       {
@@ -5343,6 +6197,14 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Hierophany',
+        keys: [
+          'hierophanyHalvesDefenseWarlord',
+          'hierophanyStripsWeaponImmunityWarlord',
+          'hierophanyStripsMagicImmunityWarlord',
+        ],
+      },
+      {
         name: 'Hillfort',
         keys: [
           'hillfortMissileWarlord',
@@ -5366,6 +6228,13 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Insulation',
+        keys: [
+          'insulationFireImmunityWarlord',
+          'insulationLightningResistWarlord',
+        ],
+      },
+      {
         name: 'Land Linking',
         keys: [
           'landLinkingFantasticBreathCoM2',
@@ -5375,10 +6244,40 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Lava Smelter',
+        keys: [
+          'lavaSmelterWeaponImmunityWarlord',
+          'lavaSmelterMissileImmunityWarlord',
+          'lavaSmelterResistElemWarlord',
+          'lavaSmelterElementalArmorWarlord',
+          'lavaSmelterFlameBladeWarlord',
+          'lavaSmelterNonDwarfNoGrantWarlord',
+          'lavaSmelterHeroExcludedWarlord',
+        ],
+      },
+      {
         name: 'Lightning Blade',
         keys: [
           'lightningBladeConvertsThrownWarlord',
           'lightningBladeGrantsBreathWarlord',
+        ],
+      },
+      {
+        name: 'Lucky Star',
+        keys: [
+          'luckyStarToHitWarlord',
+          'luckyStarResistanceWarlord',
+        ],
+      },
+      {
+        name: 'Ludus Agoge',
+        keys: [
+          'ludusAgogeAttackWarlord',
+          'ludusAgogeResistanceWarlord',
+          'ludusAgogeHpWarlord',
+          'ludusAgogeNonOrcWarlord',
+          'ludusAgogeLegionaryExcludedWarlord',
+          'ludusAgogeHeroExcludedWarlord',
         ],
       },
       {
@@ -5395,6 +6294,27 @@ const TEST_TREE = [
           'mechanicalExpertToDefendWarlord',
           'mechanicalExpertNoBonusForNonMechanicalWarlord',
           'mechanicalExpertRebuildMakesMechanicalWarlord',
+        ],
+      },
+      {
+        name: 'Military Workshop',
+        keys: [
+          'militaryWorkshopArmorPiercingWarlord',
+          'militaryWorkshopDoomGetsStrengthNotAPWarlord',
+          'militaryWorkshopFireBreathWarlord',
+          'militaryWorkshopProjectileUpgradeWarlord',
+          'militaryWorkshopPoisonWarlord',
+          'militaryWorkshopHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Mother Fungus',
+        keys: [
+          'motherFungusAttackWarlord',
+          'motherFungusToDefendWarlord',
+          'motherFungusPoisonWarlord',
+          'motherFungusNonGoblinWarlord',
+          'motherFungusHeroExcludedWarlord',
         ],
       },
       {
@@ -5425,9 +6345,34 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Pillar of Faith',
+        keys: [
+          'pillarOfFaithLuckyResistanceWarlord',
+          'pillarOfFaithResistanceWarlord',
+          'pillarOfFaithResistanceCapWarlord',
+        ],
+      },
+      {
+        name: 'Plague',
+        keys: [
+          'plagueMeleeWarlord',
+          'plagueArmorWarlord',
+          'plagueResistanceWarlord',
+        ],
+      },
+      {
         name: 'Planewalking',
         keys: [
           'planewalkingTacticianFirstStrikeWarlord',
+        ],
+      },
+      {
+        name: 'Pool of Repentance',
+        keys: [
+          'poolOfRepentanceArmorWarlord',
+          'poolOfRepentanceResistanceWarlord',
+          'poolOfRepentanceNonRakhshasaWarlord',
+          'poolOfRepentanceHeroExcludedWarlord',
         ],
       },
       {
@@ -5447,6 +6392,12 @@ const TEST_TREE = [
           'rageMeleePreCombatLossWarlord',
           'rageRangedPreCombatLossWarlord',
           'rageDynamicCounterFirstStrikeWarlord',
+        ],
+      },
+      {
+        name: 'Rally',
+        keys: [
+          'rallyResistanceWarlord',
         ],
       },
       {
@@ -5470,10 +6421,64 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Revenant',
+        keys: [
+          'revenantGrantsDeathTouchWarlord',
+          'revenantGrantsUndeadImmunityWarlord',
+        ],
+      },
+      {
         name: 'Ruler of Underworld',
         keys: [
           'rulerOfUnderworldBypassesWICoM2',
           'rulerOfUnderworldPreservesMagicWICoM2',
+        ],
+      },
+      {
+        name: 'Rust (Warlord)',
+        keys: [
+          'rustMeleePenaltyWarlord',
+          'rustStripsMagicWeaponWarlord',
+          'rustEliminatesThrownWarlord',
+          'rustEliminatesLargeShieldWarlord',
+        ],
+      },
+      {
+        name: 'Sancta Basilica',
+        keys: [
+          'sanctaBasilicaResistanceWarlord',
+          'sanctaBasilicaCrusaderLuckyWarlord',
+          'sanctaBasilicaPaladinMagicImmunityWarlord',
+          'sanctaBasilicaClergySanctifyWarlord',
+          'sanctaBasilicaNonHighMenWarlord',
+          'sanctaBasilicaHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Shadow Strike',
+        keys: [
+          'shadowStrikeGrantsThrownWarlord',
+          'shadowStrikeBoostsExistingThrownWarlord',
+          'shadowStrikeDoublePoisonWarlord',
+        ],
+      },
+      {
+        name: 'Soul Flay',
+        keys: [
+          'soulFlayMeleeRecruitWarlord',
+          'soulFlayMeleeScalesEliteWarlord',
+          'soulFlayArmorRecruitWarlord',
+          'soulFlayResistanceRecruitWarlord',
+        ],
+      },
+      {
+        name: 'Spirit Link',
+        keys: [
+          'spiritLinkDispelEvilImmuneWarlord',
+          'spiritLinkWeaponImmunityBlockedWarlord',
+          'spiritLinkBlessNoBonusWarlord',
+          'spiritLinkResistanceWarlord',
+          'spiritLinkGrantsLevelBonusWarlord',
         ],
       },
       {
@@ -5539,6 +6544,14 @@ const TEST_TREE = [
           'vampirismGrantsBloodSuckerWarlord',
           'vampirismGrantsUndeadImmunityWarlord',
           'vampirismThrownToMeleeTransferWarlord',
+        ],
+      },
+      {
+        name: 'Venom',
+        keys: [
+          'venomGrantsPoisonWarlord',
+          'venomBoostsExistingPoisonWarlord',
+          'venomGrantsPoisonImmunityWarlord',
         ],
       },
       {

@@ -394,6 +394,12 @@ function getAbilityStatModifiers(abilities, version) {
     atkMod -= isCoM ? 3 : 2;
   }
 
+  // Rust (Warlord): -3 melee attack. Weapon stripping, thrown removal, and Large Shield
+  // removal are handled in stats.js.
+  if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'rust')) {
+    atkMod -= 3;
+  }
+
   // Mind Storm: MoM: -5 melee, -5 all ranged/thrown/breath, -5 defense, -5 resistance.
   // CoM2: -3 melee, -5 all ranged/thrown, -5 defense, -5 resistance.
   if (hasAbil(abilities, 'mindStorm')) {
@@ -502,6 +508,27 @@ function getAbilityStatModifiers(abilities, version) {
     defMod -= 2;
   }
 
+  // Spirit Link (Warlord, Conjurer signature): +2 Resistance. The non-fantastic
+  // targeting status (Dispel Evil immunity, no enemy Bless bonus, Weapon Immunity
+  // now stops its attacks) is handled at the target-gating sites; fantastic-only
+  // bonuses are retained because the unit keeps its fantastic_<realm> type.
+  if (isWarlord && hasAbil(abilities, 'spiritLink')) {
+    resMod += 2;
+  }
+
+  // Rally (Warlord, Charismatic retort exclusive combat enchantment): all friendly
+  // units gain +2 Resistance until the end of combat.
+  if (isWarlord && hasAbil(abilities, 'rally')) {
+    resMod += 2;
+  }
+
+  // Dishearten Prophesy (Warlord, Astrologer retort exclusive city curse): garrison
+  // units defending the cursed city suffer -2 Resistance in combat. Only the
+  // resistance debuff is modeled (the +4 city unrest is outside this calculator).
+  if (isWarlord && hasAbil(abilities, 'disheartenProphecy')) {
+    resMod -= 2;
+  }
+
   return { atkMod, defMod, resMod, hpMod, toHitMod, toBlkMod, rtbMod };
 }
 
@@ -554,6 +581,9 @@ function deathTouchFailProb(defRes, defAbilities, modifier, version) {
 // fantastic_chaos (penalty -4). Other unit types are immune.
 // Magic Immunity grants +50/+100 resistance. Other unit types are completely immune.
 function dispelEvilFailProb(defRes, defAbilities, defUnitType, version) {
+  // Spirit Link: the unit no longer counts as a fantastic creature for being
+  // targeted, so this fantastic-only attack cannot affect it.
+  if (hasAbil(defAbilities, 'spiritLink')) return 0;
   let penalty;
   const isUndeadTarget = defUnitType === 'fantastic_death' && (hasAbil(defAbilities, 'undead') || hasAbil(defAbilities, 'animated'));
   if (isUndeadTarget) {
@@ -1307,8 +1337,26 @@ function applyVampirismEffects(unit, version) {
   });
 }
 
+// Warlord Revenant (Death uncommon unit enchantment): unit permanently becomes
+// undead for the battle and gains melee Death Touch 0. Immunities follow from the
+// granted `undead` flag via applyUndeadImmunities. Death Touch fires per attacking
+// figure on melee (and is blocked on ranged attacks by the Warlord touch-dispatch
+// rule). Regeneration has no bearing on single-combat damage.
+function applyRevenantEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'revenant')) return unit;
+  const extra = { undead: true };
+  // Don't override an existing (stronger) Death Touch the unit already carries.
+  if (!abilDefined(unit.abilities, 'deathTouch')) extra.deathTouch = 0;
+  return Object.assign({}, unit, {
+    abilities: Object.assign({}, unit.abilities, extra),
+  });
+}
+
 function bloodLustMeleeAttack(atkUnit, defUnit) {
-  const targetIsNormal = defUnit && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero');
+  // Spirit Link makes the target count as a non-fantastic unit for being targeted,
+  // so Blood Lust's "double melee vs Normal/Hero" applies to it as well.
+  const targetIsNormal = defUnit && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero'
+    || hasAbil(defUnit.abilities, 'spiritLink'));
   if (!targetIsNormal || !hasAbil(atkUnit.abilities, 'bloodLust')) return atkUnit.atk;
   return atkUnit.atk * 2;
 }
@@ -1338,7 +1386,10 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const tBless = hasAbil(target.abilities, 'bless');
   const isWarlord = version && version.startsWith('com2_warlord');
   const blessBonus = isWarlord ? 7 : (isCoM ? 5 : 3);
-  const aIsDC = attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos';
+  // Spirit Link strips the attacker's fantastic targeting status: enemy Bless gains
+  // no bonus against it, so it is treated as a non-Death/Chaos-fantastic attacker.
+  const aSpiritLink = hasAbil(attacker.abilities, 'spiritLink');
+  const aIsDC = !aSpiritLink && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
   const aThrownDC = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning'
                   || (attacker.thrownType === 'thrown' && aIsDC);
   const aRangedDC = attacker.rangedType === 'magic_c'
@@ -1399,7 +1450,11 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const thrownWeaponWI = (aBlazingMarch && isWarlordVersion && attacker.thrownType === 'thrown' && attacker.weapon === 'normal')
     ? 'magic' : attacker.weapon;
 
-  let vsMelee = weaponImmunityDef(defAPMelee, target.abilities, meleeWeaponWI, attacker.unitType, version, attacker.generic);
+  // Spirit Link: the attacker no longer counts as fantastic for Weapon Immunity, so
+  // its physical (non-magical) attacks are stopped by WI like a normal unit's. Gaze
+  // stays magical regardless, so it keeps using the real fantastic type below.
+  const atkWIType = aSpiritLink ? 'normal' : attacker.unitType;
+  let vsMelee = weaponImmunityDef(defAPMelee, target.abilities, meleeWeaponWI, atkWIType, version, attacker.generic);
   // Gaze: hidden ranged component — gaze attackers are always fantastic so WI never triggers,
   // but Magic Immunity applies (it's a magical ranged attack).
   let vsGaze = magicImmunityDef(
@@ -1409,19 +1464,19 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   // Ranged: WI applies to physical ranged (missile/boulder); magic ranged is already magical.
   const isPhysRanged = attacker.rangedType === 'missile' || attacker.rangedType === 'boulder';
   let vsRanged = isPhysRanged
-    ? weaponImmunityDef(defAPRanged, target.abilities, rangedWeaponWI, attacker.unitType, version, attacker.generic)
+    ? weaponImmunityDef(defAPRanged, target.abilities, rangedWeaponWI, atkWIType, version, attacker.generic)
     : defAPRanged;
 
   // Thrown: WI eligible except v1.31 bug. Breath (fire/lightning) is magical, never triggers WI.
   const thrownWI = attacker.thrownType === 'thrown' && version !== 'mom_1.31';
   let vsThrown = thrownWI
-    ? weaponImmunityDef(defAPThrown, target.abilities, thrownWeaponWI, attacker.unitType, version, attacker.generic)
+    ? weaponImmunityDef(defAPThrown, target.abilities, thrownWeaponWI, atkWIType, version, attacker.generic)
     : defAPThrown;
 
   // Missile Immunity (vs missile only). v1.31 bug: WI overwrites MI when both apply.
   const isMissile = attacker.rangedType === 'missile';
   const wiTriggeredOnMissile = isMissile && hasAbil(target.abilities, 'weaponImmunity')
-    && rangedWeaponWI === 'normal' && isNormalUnitType(attacker.unitType);
+    && rangedWeaponWI === 'normal' && isNormalUnitType(atkWIType);
   if (isMissile && !(version === 'mom_1.31' && wiTriggeredOnMissile)) {
     vsRanged = missileImmunityDef(vsRanged, target.abilities, version);
   }
@@ -1895,6 +1950,7 @@ function gazeKillProbs(self, selfStoningActive, selfDeathActive, other, otherRes
 function normalizeCombatUnit(unit, version) {
   let normalized = applyBloodLustEffects(unit, version);
   normalized = applyVampirismEffects(normalized, version);
+  normalized = applyRevenantEffects(normalized, version);
   normalized = applyUndeadImmunities(normalized, version);
   normalized = applyAnimatedEffects(normalized, version);
   normalized = applyBlackChannelsEffects(normalized);

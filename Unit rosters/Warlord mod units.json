@@ -4153,8 +4153,7 @@
       "Healer",
       "Purify",
       "Poison Touch=2",
-      "Spellcaster=Spell#162x2",
-      "GnollWitchdoctors"
+      "Spellcaster=Spell#162x2"
     ],
     "category": "Gnoll",
     "moves": 3,
@@ -4301,8 +4300,7 @@
     "abilities": [
       "Quick Casting",
       "Spellcaster=Spell#283x1",
-      "Pathfinding",
-      "GnollHunters"
+      "Pathfinding"
     ],
     "category": "Gnoll",
     "moves": 3,

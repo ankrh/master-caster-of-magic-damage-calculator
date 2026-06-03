@@ -1,6 +1,90 @@
 // --- Unit Stat Derivation ---
 // Depends on data.js and combat.js helper functions. No DOM dependencies.
 
+// Lava Smelter (Warlord, Dwarf-race building): a selected mineral combo grants one
+// permanent ability to Dwarf-race units (heroes excluded). Returns the ability set with the grant merged
+// in (a new object), or the original set unchanged when it does not apply. Merging up-front
+// — rather than into effectiveAbilities — lets the Flame Blade grant reach the weapon-upgrade
+// and stat-bonus logic, which read the raw ability set. The Wall-of-Fire siege effect is not
+// modelled here (it has its own global toggle).
+function applyLavaSmelterGrant(abilities, version, unitType, race) {
+  if (!version || !version.startsWith('com2_warlord') || race !== 'Dwarf' || unitType === 'hero') return abilities;
+  switch (abilities.lavaSmelter || 'none') {
+    case 'weaponImmunity':  return { ...abilities, weaponImmunity: true };
+    case 'missileImmunity': return { ...abilities, missileImmunity: true };
+    case 'flameBlade':      return { ...abilities, flameBlade: true };
+    case 'resistElem':
+    case 'elementalArmor': {
+      // Both the manual Elements selector and this grant share the elemArmor key; keep the
+      // stronger of the two so the smelter never downgrades an explicit Elemental Armor.
+      const rank = { none: 0, resistElements: 1, elementalArmor: 2 };
+      const grant = abilities.lavaSmelter === 'elementalArmor' ? 'elementalArmor' : 'resistElements';
+      const current = abilities.elemArmor || 'none';
+      return { ...abilities, elemArmor: (rank[current] || 0) >= rank[grant] ? current : grant };
+    }
+    default: return abilities;
+  }
+}
+
+// Sancta Basilica (Warlord, High Men building): every High Men unit trained here gains +3
+// Resistance (added in deriveUnitStats). Clergy (matched by the Clergy unit tag), Crusaders,
+// and Paladins (matched by name) additionally receive Sanctify; Crusaders also gain Lucky and
+// Paladins also gain Magic Immunity. Those three grants are folded in here so every downstream
+// read sees them — Sanctify drives the Life-realm unit-type conversion, Lucky feeds the ability
+// stat modifiers, and Magic Immunity feeds the combat immunity checks. The improved Exorcise
+// grant (Clergy) and the True Light city enchantment (defending) are not modelled. Gated on the
+// High Men race; heroes gain nothing.
+function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
+  if (!version || !version.startsWith('com2_warlord') || !abilities.sanctaBasilica
+      || race !== 'High Men' || unitType === 'hero') return abilities;
+  const isCrusader = (name || '').endsWith('Crusaders');
+  const isPaladin = (name || '').endsWith('Paladins');
+  const isClergy = !!abilities.clergy;
+  if (!isCrusader && !isPaladin && !isClergy) return abilities;
+  return {
+    ...abilities,
+    sanctify: true,
+    ...(isCrusader ? { lucky: true } : {}),
+    ...(isPaladin ? { magicImmunity: true } : {}),
+  };
+}
+
+// Divine Protection (Warlord, Life unit enchantment): grants Lucky and Death Immunity.
+// Folded into effective abilities here so every downstream read sees them — Lucky feeds the
+// ability stat modifiers (+10% To Hit, +10% To Block, +1 Resistance) and Death Immunity feeds
+// the combat immunity checks (Death Gaze/Touch, Life Stealing, Cause Fear).
+function applyDivineProtectionGrant(abilities, version) {
+  if (!version || !version.startsWith('com2_warlord') || !abilities.divineProtection) return abilities;
+  return { ...abilities, lucky: true, deathImmunity: true };
+}
+
+// Lucky Star (Warlord, Arcane combat enchantment, Astrologer retort exclusive): grants Lucky to
+// the target unit for the battle. Folded into effective abilities here so the Lucky stat modifiers
+// (+10% To Hit, +10% To Block, +1 Resistance) feed every downstream read.
+function applyLuckyStarGrant(abilities, version) {
+  if (!version || !version.startsWith('com2_warlord') || !abilities.luckyStar) return abilities;
+  return { ...abilities, lucky: true };
+}
+
+// Pillar of Faith (Warlord, Life rare city enchantment): units trained in the city have a
+// 20% chance to gain Lucky. The calculator models the landed outcome, so the pillarOfFaithLucky
+// toggle folds Lucky in directly (its +10% To Hit / +10% To Block / +1 Resistance flow through
+// the ability stat modifiers). The separate +Resistance per Religious Building is applied to
+// res in deriveUnitStats.
+function applyPillarOfFaithGrant(abilities, version) {
+  if (!version || !version.startsWith('com2_warlord') || !abilities.pillarOfFaithLucky) return abilities;
+  return { ...abilities, lucky: true };
+}
+
+// Insulation (Warlord, Chaos unit enchantment): grants Fire Immunity, Cold Immunity, and
+// Lightning Resist. Folded into effective abilities here so the combat immunity checks
+// (fire breath/immolation/wall of fire defense, cold attacks, and the lightning AP negation)
+// all see them.
+function applyInsulationGrant(abilities, version) {
+  if (!version || !version.startsWith('com2_warlord') || !abilities.insulation) return abilities;
+  return { ...abilities, fireImmunity: true, coldImmunity: true, lightningResist: true };
+}
+
 // Derive all effective stats for a unit from raw UI state.
 // Pure stat logic: no DOM reads or rendering side effects.
 function deriveUnitStats(input) {
@@ -11,12 +95,34 @@ function deriveUnitStats(input) {
   const prefix = input.prefix;
   const version = input.version;
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
-  const abilities = input.abilities || {};
+  // Lava Smelter folds its granted ability in here so every downstream read sees it.
+  // Race-exclusive building enchantments gate on the unit's intrinsic race/name, supplied
+  // by the caller from the selected roster unit. Custom (hand-entered) units carry neither,
+  // so building buffs are inert on them. The display name may be race-prefixed for some
+  // units and not others, so name exceptions match with endsWith (always gated by race).
+  const unitRace = input.race || '';
+  const unitName = input.name || '';
+  const abilities = applyInsulationGrant(
+    applyPillarOfFaithGrant(
+    applyLuckyStarGrant(
+    applyDivineProtectionGrant(
+      applySanctaBasilicaGrant(
+        applyLavaSmelterGrant(input.abilities || {}, version, input.unitType, unitRace),
+        version, input.unitType, unitRace, unitName),
+      version),
+    version),
+    version),
+    version);
   const destinyActive = destinyActiveForUnit(abilities, version);
   const unitTypeRaw = input.unitType;
   const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
   const loadoutEligible = !String(unitTypeRaw || '').startsWith('fantastic_') && !destinyActive;
-  const level = loadoutEligible ? input.level : 'normal';
+  // Spirit Link (Warlord): grants a fantastic creature sentience so it can earn
+  // experience levels. It does NOT grant weapon/armor loadout, so only level
+  // eligibility is widened — weapon and armor below stay gated on loadoutEligible.
+  const levelEligible = loadoutEligible
+    || (version.startsWith('com2_warlord') && !!abilities.spiritLink && !destinyActive);
+  const level = levelEligible ? input.level : 'normal';
   const lvl = getLevelBonuses(level, version);
   // Warlord: Rebuild makes the unit Mechanical; Artificer retort then grants
   // Magic Weapons (+10% To Hit, bypass Weapon Immunity) to that unit.
@@ -25,22 +131,84 @@ function deriveUnitStats(input) {
     || (isWarlordForArtificer && !!abilities.rebuild);
   const artificerMagicWeapon = isWarlordForArtificer
     && !!abilities.artificer && effectiveMechanical;
-  // Altar of the Moon (Warlord, Gnoll building): trained units gain Rage and Poison
-  // Immunity; ranged units also gain +2 Ranged Attack. The granted abilities are folded
-  // into effectiveAbilities below; the ranged bonus is added to the rtb total.
-  const altarOfTheMoon = isWarlordForArtificer && !!abilities.altarOfTheMoon;
-  // Unit-specific Altar of the Moon grants: Hunters gain Poison 2; Witchdoctors gain
-  // Life Steal -1 which replaces their Poison. Applied via effectiveAbilities below.
-  const altarHunter = altarOfTheMoon && !!abilities.gnollHunters;
-  const altarWitchdoctor = altarOfTheMoon && !!abilities.gnollWitchdoctors;
+  // Altar of the Moon (Warlord, Gnoll building): Gnoll units trained here gain Rage and
+  // Poison Immunity; ranged units also gain +2 Ranged Attack. The granted abilities are
+  // folded into effectiveAbilities below; the ranged bonus is added to the rtb total.
+  // Gated on the Gnoll race — non-Gnoll units and heroes gain nothing.
+  const altarOfTheMoon = isWarlordForArtificer && !!abilities.altarOfTheMoon
+    && unitRace === 'Gnoll' && unitTypeRaw !== 'hero';
+  // Unit-specific Altar of the Moon grants: Gnoll Hunters gain Poison 2; Gnoll
+  // Witchdoctors gain Life Steal -1 which replaces their Poison. Applied via effectiveAbilities below.
+  const altarHunter = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Hunters');
+  const altarWitchdoctor = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Witchdoctors');
+  // Altar of the Sun (Warlord, Hawkmen building): Hawkmen units trained here gain +1
+  // Figure. Gated on the Hawkmen race — Holy Mother and heroes are excluded and gain nothing.
+  // Only the figure bonus is modelled; the defending-city High Prayer buff is not.
+  const altarOfTheSun = isWarlordForArtificer
+    && !!abilities.altarOfTheSun && unitRace === 'Hawkmen' && !unitName.endsWith('Holy Mother') && unitTypeRaw !== 'hero';
+  // Dragon Mound (Warlord, Draconian building): Draconian units trained here gain +1 Armor
+  // (folded into def below) and, for units that already have a Fire Breath attack, +2 Fire
+  // Breath. Like the Military Workshop breath bonus, it boosts an existing fire breath rather
+  // than granting one to melee-only units. Gated on the Draconian race — non-Draconian
+  // units and heroes gain nothing, matching the in-game race-exclusive building.
+  const dragonMound = isWarlordForArtificer
+    && !!abilities.dragonMound && unitRace === 'Draconian' && unitTypeRaw !== 'hero';
+  // Ludus Agoge (Warlord, Orc building): Orc units trained here gain +1 Attack (melee, folded
+  // into atk below), +1 Resistance, and +1 HP. Legionary units gain +1 Movement instead — not
+  // modelled here — so they receive no stat bonus. Gated on the Orc race — non-Orc units,
+  // Legionaries, and heroes gain nothing, matching the in-game race-exclusive building.
+  const ludusAgoge = isWarlordForArtificer
+    && !!abilities.ludusAgoge && unitRace === 'Orc' && !unitName.endsWith('Legionary') && unitTypeRaw !== 'hero';
+  // Mother Fungus (Warlord, Goblin building): Goblin units trained here gain +2 Attack (melee,
+  // folded into atk below), +10% To Defend (folded into toBlock below), and Poison 1 (boosts an
+  // existing poison attack, or grants Poison 1 if it has none). The ×2 Spellcharge bonus is not
+  // modelled. Gated on the Goblin race — non-Goblin units and heroes gain nothing, matching the
+  // in-game race-exclusive building.
+  const motherFungus = isWarlordForArtificer
+    && !!abilities.motherFungus && unitRace === 'Goblin' && unitTypeRaw !== 'hero';
+  // Pool of Repentance (Warlord, Rakhshasa building): Rakhshasa units trained here gain +1 Armor
+  // (folded into defBase below) and +1 Resistance (folded into res below). Gated on the Rakhshasa
+  // race — non-Rakhshasa units and heroes gain nothing, matching the in-game race-exclusive building.
+  const poolOfRepentance = isWarlordForArtificer
+    && !!abilities.poolOfRepentance && unitRace === 'Rakhshasa' && unitTypeRaw !== 'hero';
+  // Sancta Basilica (Warlord, High Men building): +3 Resistance for every High Men unit trained
+  // here (folded into res below). The unit-specific Sanctify / Lucky / Magic Immunity grants are
+  // applied earlier via applySanctaBasilicaGrant. Gated on the High Men race; heroes gain nothing.
+  const sanctaBasilica = isWarlordForArtificer
+    && !!abilities.sanctaBasilica && unitRace === 'High Men' && unitTypeRaw !== 'hero';
+  // Rust (Warlord Chaos common combat curse): permanently strips magic/orihalcon weapons
+  // (the unit reverts to regular weapons), −3 melee attack (applied in combat.js), and
+  // eliminates thrown attacks and Large Shield for the rest of combat (below).
+  const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust);
   const weaponInput = loadoutEligible ? input.weapon : 'normal';
-  const weapon = (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
+  const weaponPreRust = (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
+  const weapon = rustActive ? 'normal' : weaponPreRust;
   const wpn = weaponBonus(weapon);
   const armor = loadoutEligible ? input.armor : 'normal';
 
   const rtbTypeRaw = input.rtbType;
   let rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
   let thrownType = THROWN_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
+  // Rust eliminates thrown attacks (only the 'thrown' type — not fire/lightning breath).
+  if (rustActive && thrownType === 'thrown') thrownType = 'none';
+
+  // Military Workshop (Warlord, XuanYuan building): upgrades any normal unit trained,
+  // garrisoned in, or fighting from the city — not race-gated, per the "any defending units
+  // of the city" + "base normal units" changelog wording. Heroes and fantastic creatures are
+  // excluded. Combat-relevant effects, reconciled to the latest patch (1.5.12.5):
+  //   - Small Physical Ranged (missile) projectiles upgrade to Heavy Physical Ranged (boulder,
+  //     gunpowder), bypassing Missile Immunity — applied here so all downstream logic treats
+  //     the attack as a boulder (original 1.5.4.1 effect, still in the helptext).
+  //   - Physical ranged or thrown attack gains Armor Piercing, unless the unit has a Doom
+  //     attack — Armor Piercing is wasted on Doom (it already ignores armor), so it gets +2
+  //     ranged/thrown strength instead (patch 1.5.9.5). Folded in below.
+  //   - Fire Breath attack: +4 strength (patch 1.5.7.4, up from the original +2).
+  //   - +1 Poison: boosts an existing poison attack, or grants Poison 1 if it has none.
+  const militaryWorkshop = version.startsWith('com2_warlord')
+    && !!abilities.militaryWorkshop && isNormalUnitType(unitTypeVal);
+  if (militaryWorkshop && rangedType === 'missile') {
+    rangedType = 'boulder';
+  }
 
   const baseDoomGazeWithBlazingEyes = blazingEyesDoomGazeForUnit(abilities, unitTypeVal, version);
 
@@ -143,6 +311,69 @@ function deriveUnitStats(input) {
     calcBaseRtb = 1;
   }
 
+  // Warlord Shadow Strike: adds a Thrown attack at 1/3 of base melee strength (rounded down).
+  // A unit that already has a Thrown attack instead gains 1/3 of base melee as additional
+  // Thrown strength. Calculated from the base attack value, mirroring Colossal Strength's
+  // "resolve at the end of unit calculation" convention. Because Thrown is a separate pre-melee
+  // phase, per-hit riders (Poison, Life Steal, Blood Sucker) fire on both the thrown and the
+  // melee phase — that double trigger falls out naturally from the granted thrown phase.
+  // The single-rtb model can't hold a second attack, so units that already carry a missile,
+  // magic ranged, or breath attack keep that attack and gain no thrown here.
+  const shadowStrikeActive = !!(abilities && abilities.shadowStrike) && version.startsWith('com2_warlord');
+  const shadowStrikeBonus = shadowStrikeActive ? Math.floor(calcBaseAtk / 3) : 0;
+  // Strength of a freshly granted thrown (melee-only unit). Folded into the reported baseRtb so
+  // touch dispatch (touchAttackFires checks baseRtb > 0) treats the granted thrown as a real
+  // base thrown and fires Poison / Life Steal / Blood Sucker on its phase. The boost-existing
+  // case needs no such bump — that unit already has baseRtb > 0.
+  let shadowStrikeGrantedBaseRtb = 0;
+  if (shadowStrikeBonus > 0) {
+    if (thrownType === 'thrown') {
+      calcBaseRtb += shadowStrikeBonus;
+    } else if (thrownType === 'none' && rangedType === 'none') {
+      thrownType = 'thrown';
+      calcBaseRtb = shadowStrikeBonus;
+      shadowStrikeGrantedBaseRtb = shadowStrikeBonus;
+    }
+  }
+
+  // Warlord Blaze of Glory: the unit's Ranged attack (missile/boulder/magic) becomes a Thrown
+  // attack of the same strength (it loses the Ranged attack and Ammo, neither of which the model
+  // tracks separately). Breath and existing thrown attacks are not "Ranged" and are untouched.
+  // The Armor→Melee transfer, Armor Piercing grant, and First Strike loss are handled below.
+  const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory) && version.startsWith('com2_warlord');
+  if (blazeOfGloryActive && calcBaseRtb > 0
+    && (rangedType === 'missile' || rangedType === 'boulder'
+      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s')) {
+    rangedType = 'none';
+    thrownType = 'thrown';
+  }
+
+  // Military Workshop derived bonuses (see the gate above). Evaluated here, after the
+  // ranged/thrown type conversions (Chaos Channels, Focus Magic, Vampirism), so they read the
+  // final attack type — e.g. a missile converted to magic by Focus Magic no longer qualifies
+  // as physical ranged. The missile→boulder projectile upgrade was already applied above.
+  const militaryWorkshopHasRangedOrThrown = militaryWorkshop && calcBaseRtb > 0
+    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown');
+  // Doom attack: Armor Piercing is wasted (Doom ignores armor), so grant +2 strength instead.
+  const militaryWorkshopGrantsAP = militaryWorkshopHasRangedOrThrown
+    && !abilities.doom && !abilities.armorPiercing;
+  const militaryWorkshopRtbMod = militaryWorkshopHasRangedOrThrown && !!abilities.doom ? 2 : 0;
+  // Fire Breath: +4 strength.
+  const militaryWorkshopFireBreathRtbMod = militaryWorkshop && calcBaseRtb > 0 && thrownType === 'fire' ? 4 : 0;
+  // +1 Poison, applied on top of any existing poison (including the Gnoll Altar grants below).
+  const militaryWorkshopBasePoison = altarHunter ? 2 : (altarWitchdoctor ? 0 : (abilities.poison || 0));
+
+  // Warlord Venom enchantment: +1 Poison (boosting any existing/granted poison, or granting
+  // Poison 1 if the unit has none) plus Poison Immunity. The base it boosts mirrors the final
+  // poison precedence of the spreads below (last-wins: motherFungus > militaryWorkshop > altars).
+  const venom = version.startsWith('com2_warlord') && !!(abilities && abilities.venom);
+  const venomBasePoison =
+      motherFungus ? (abilities.poison || 0) + 1
+    : militaryWorkshop ? militaryWorkshopBasePoison + 1
+    : altarWitchdoctor ? 0
+    : altarHunter ? 2
+    : (abilities.poison || 0);
+
   const rangedGetsWpn = (rangedType === 'missile' || rangedType === 'boulder');
   const thrownGetsWpn = (thrownType === 'thrown');
 
@@ -162,6 +393,12 @@ function deriveUnitStats(input) {
     ...(altarOfTheMoon ? { rage: true, poisonImmunity: true } : {}),
     ...(altarHunter ? { poison: 2 } : {}),
     ...(altarWitchdoctor ? { lifeSteal: -1, poison: 0 } : {}),
+    ...(militaryWorkshopGrantsAP ? { armorPiercing: true } : {}),
+    ...(blazeOfGloryActive ? { armorPiercing: true, firstStrike: false } : {}),
+    ...(militaryWorkshop ? { poison: militaryWorkshopBasePoison + 1 } : {}),
+    ...(motherFungus ? { poison: (abilities.poison || 0) + 1 } : {}),
+    ...(venom ? { poison: venomBasePoison + 1, poisonImmunity: true } : {}),
+    ...((abilities && abilities.eyeOfHeaven) ? { illusionImmunity: true } : {}),
     unitType: unitTypeVal,
     mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeWithBlazingEyes,
@@ -201,6 +438,8 @@ function deriveUnitStats(input) {
   const ownEternalNight = !!(abilities && abilities.eternalNight) || !!input.eternalNight;
   const enemyEternalNight = !!input.enemyEternalNight;
   const hasAnyEternalNight = ownEternalNight || enemyEternalNight;
+  // Enemy Eye of Heaven strips this unit's gaze attacks (the opponent gains True Sight).
+  const enemyEyeOfHeaven = !!input.enemyEyeOfHeaven;
   const hasDarkness = !!input.darkness || legacyLightDarkVal === 'darkness' || hasAnyEternalNight;
   // True Light was removed in CoM 1 & 2, but Warlord re-introduces it as a Life
   // common combat enchantment — so enable it for MoM (non-CoM) and Warlord only.
@@ -276,6 +515,27 @@ function deriveUnitStats(input) {
   const disciplineRtbMod = disciplineActive && levelRank >= 2
     && (rangedType === 'missile' || rangedType === 'boulder') ? 1 : 0;
 
+  // Soul Flay (Warlord, Death rare combat curse): irresistible curse on normal units
+  // or heroes. Penalises stats by −1 melee, −2 armor and −2 resistance per experience
+  // level of the target. Experience level counts Recruit (the calculator's "normal") as
+  // level 1, so the multiplier is levelRank + 1: Recruit −1/−2/−2, Elite −4/−8/−8.
+  // Fantastic creatures are not valid targets and take no penalty.
+  const soulFlayActive = version.startsWith('com2_warlord')
+    && !!(abilities && abilities.soulFlay)
+    && !String(unitTypeRaw || '').startsWith('fantastic_');
+  const soulFlayLevels = soulFlayActive ? levelRank + 1 : 0;
+  const soulFlayAtkMod = -1 * soulFlayLevels;
+  const soulFlayDefMod = -2 * soulFlayLevels;
+  const soulFlayResMod = -2 * soulFlayLevels;
+
+  // Plague (Warlord combat debuff): inflicted by the Pestilence city curse on defending
+  // garrison units and spread by Goblin Poxbearer units. Flat −3 attack, −3 defense and
+  // −2 resistance for the rest of combat, on any affected unit (no fantastic exclusion).
+  const plagueActive = version.startsWith('com2_warlord') && !!(abilities && abilities.plague);
+  const plagueAtkMod = plagueActive ? -3 : 0;
+  const plagueDefMod = plagueActive ? -3 : 0;
+  const plagueResMod = plagueActive ? -2 : 0;
+
   // Orihalcon: +1 resistance, +2 magical ranged attack (CoM2 only).
   const orihalconActive = armor === 'orihalcon';
   const orihalconResMod = orihalconActive ? 1 : 0;
@@ -321,18 +581,50 @@ function deriveUnitStats(input) {
   // already adds +3 melee for flameBlade in CoM/Warlord via getAbilityStatModifiers).
   const ffMeleeBonus = ffRegularBonus && !abilities.flameBlade ? 3 : 0;
 
-  const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + wofDefenderAtkMod + nodeBonus + darkLightAtkBonus + chaosSurgeMeleeBonus + ffMeleeBonus) : 0;
-  const defBase = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + nodeBonus + darkLightDefBonus);
+  const ludusAgogeAtkMod = ludusAgoge ? 1 : 0;
+  const motherFungusAtkMod = motherFungus ? 2 : 0;
+  // Warlord Colossal Strength: +1 + 40% (rounded down) of base Melee, Physical Ranged, and
+  // Thrown attack strength. Calculated from base attack values; resolves at the end of unit
+  // calculation. Melee bonus below; the Physical-Ranged/Thrown bonus is applied to rtb.
+  // Breath and magic ranged are not "physical ranged" and do not qualify.
+  const colossalStrength = isWarlord && !!(abilities && abilities.colossalStrength);
+  const colossalMeleeMod = colossalStrength && calcBaseAtk > 0 ? 1 + Math.floor(0.4 * calcBaseAtk) : 0;
+  const colossalRtbApplies = colossalStrength && calcBaseRtb > 0
+    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown');
+  const colossalRtbMod = colossalRtbApplies ? 1 + Math.floor(0.4 * calcBaseRtb) : 0;
+  const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + wofDefenderAtkMod + ludusAgogeAtkMod + motherFungusAtkMod + colossalMeleeMod + nodeBonus + darkLightAtkBonus + chaosSurgeMeleeBonus + ffMeleeBonus + soulFlayAtkMod + plagueAtkMod) : 0;
+  const dragonMoundDefMod = dragonMound ? 1 : 0;
+  const poolOfRepentanceDefMod = poolOfRepentance ? 1 : 0;
+  const defBase = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + dragonMoundDefMod + poolOfRepentanceDefMod + nodeBonus + darkLightDefBonus + soulFlayDefMod + plagueDefMod);
   // Holy Armor: MoM: +2 defense. CoM/CoM2: +2 defense if def ≤ 5; +10% To Block if def > 5.
   const holyArmorActive = !!(abilities && abilities.holyArmor);
   const holyArmorHighDef = holyArmorActive && isCoMVersion && defBase > 5;
   const holyArmorDefBonus = holyArmorActive && !holyArmorHighDef ? 2 : 0;
   const holyArmorToBlkBonus = holyArmorHighDef ? 10 : 0;
   const def = defBase + holyArmorDefBonus;
+  // Blaze of Glory: Melee gains the unit's full current Armor, and the unit loses all of its
+  // base Armor — only Armor granted by other enchantments remains. Sum the enchantment-derived
+  // defense contributions to find the surviving Armor; the rest (base + level + weapon + city
+  // walls) is what transfers away. The melee gain is folded into finalAtk below so it behaves
+  // like normal melee under Haste/Shatter/Warp.
+  const blazeEnchantArmor = blazeOfGloryActive
+    ? Math.max(0, abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod
+        + dragonMoundDefMod + poolOfRepentanceDefMod + nodeBonus + darkLightDefBonus + holyArmorDefBonus)
+    : 0;
+  const blazeMeleeBonus = blazeOfGloryActive ? def : 0;
   // Altar of the Moon: trained units gain +1 Resistance (all units, not just ranged).
   const altarOfTheMoonResMod = altarOfTheMoon ? 1 : 0;
-  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus);
-  const hp  = Math.max(1, calcBaseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod);
+  const ludusAgogeResMod = ludusAgoge ? 1 : 0;
+  const poolOfRepentanceResMod = poolOfRepentance ? 1 : 0;
+  const sanctaBasilicaResMod = sanctaBasilica ? 3 : 0;
+  // Pillar of Faith (Warlord, Life rare city enchantment): +1 Resistance per Religious Building
+  // in the training city, capped at +8. The numeric input holds the building count.
+  const pillarOfFaithResMod = isWarlord
+    ? Math.min(8, Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0))
+    : 0;
+  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus + soulFlayResMod + plagueResMod);
+  const ludusAgogeHpMod = ludusAgoge ? 1 : 0;
+  const hp  = Math.max(1, calcBaseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod + ludusAgogeHpMod);
 
   // Blazing March: +3 to missile only (not boulder, magic ranged, or breath).
   // Warlord also boosts thrown.
@@ -377,6 +669,9 @@ function deriveUnitStats(input) {
   // CoM/CoM2 Land Linking boosts melee and breath only.
   const landLinkingBreathRtbMod = landLinkingEligible && version.startsWith('com')
     && (thrownType === 'fire' || thrownType === 'lightning') ? 2 : 0;
+
+  // Dragon Mound (Warlord): +2 to an existing fire breath attack.
+  const dragonMoundRtbMod = dragonMound && thrownType === 'fire' ? 2 : 0;
 
   // Giant Strength: +1 thrown only (not missile/boulder/magic ranged, not breath).
   const gsRtbMod = (abilities.giantStrength && thrownType === 'thrown') ? 1 : 0;
@@ -427,20 +722,21 @@ function deriveUnitStats(input) {
     rtbLvl = lvl.thrown;
     rtbWpn = (calcBaseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
   }
-  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + wofDefenderRtbMod + blazingMarchRtbMod + chaosSurgeRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + altarOfTheMoonRtbMod + landLinkingBreathRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + nodeBonus + darkLightAtkBonus) : 0;
+  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + wofDefenderRtbMod + blazingMarchRtbMod + chaosSurgeRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + altarOfTheMoonRtbMod + landLinkingBreathRtbMod + dragonMoundRtbMod + militaryWorkshopRtbMod + militaryWorkshopFireBreathRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + colossalRtbMod + nodeBonus + darkLightAtkBonus) : 0;
 
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
   // gaze attack does not fire.
   const gazeOverwrittenByCC = ccFireBreathActive && ccCanOverwriteSpecial && hasGazeAttack;
-  const baseGazeRanged = gazeOverwrittenByCC ? 0 : ((abilities && abilities.gazeRanged) || 0);
+  const gazeDisabled = gazeOverwrittenByCC || enemyEyeOfHeaven;
+  const baseGazeRanged = gazeDisabled ? 0 : ((abilities && abilities.gazeRanged) || 0);
   const effectiveGazeRanged = baseGazeRanged > 0
     ? Math.max(0, baseGazeRanged + lvl.ranged + abilMods.rtbMod + nodeBonus + darkLightAtkBonus)
     : 0;
 
   // Doom Gaze: delivers exact doom damage. Affected by node aura, darkness/light,
   // and ability modifiers (e.g. Black Prayer), but NOT level or weapon bonuses.
-  const baseDoomGaze = gazeOverwrittenByCC ? 0 : (effectiveAbilities.doomGaze || 0);
+  const baseDoomGaze = gazeDisabled ? 0 : (effectiveAbilities.doomGaze || 0);
   const chaosSurgeDoomGazeMod = version.startsWith('mom') ? chaosSurgeRtbBonus : 0;
   const effectiveDoomGaze = baseDoomGaze > 0
     ? Math.max(0, baseDoomGaze + abilMods.rtbMod + (focusMagicBuffsExisting && isCoM2 ? 3 : 0) + nodeBonus + darkLightAtkBonus + chaosSurgeDoomGazeMod)
@@ -449,9 +745,33 @@ function deriveUnitStats(input) {
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...effectiveAbilities, negateFirstStrike: true }
     : effectiveAbilities;
-  const combatAbilities = gazeOverwrittenByCC
+  let combatAbilities = gazeDisabled
     ? { ...combatAbilitiesBase, gazeRanged: 0, stoningGaze: null, deathGaze: null, doomGaze: 0 }
     : combatAbilitiesBase;
+  // Rust eliminates Large Shield for the rest of combat.
+  if (rustActive && combatAbilities.largeShield) {
+    combatAbilities = { ...combatAbilities, largeShield: false };
+  }
+  // Hierophany (Warlord Life uncommon combat curse): the landed curse strips the target's
+  // immunities, Lightning Resist, and Negate First Strike (mobility perks are not combat-
+  // damage-relevant here). The half-Defense penalty is applied to finalDef below. The
+  // calculator models only the landed outcome, so the strip is unconditional when active.
+  if (isWarlord && combatAbilities.hierophany) {
+    combatAbilities = {
+      ...combatAbilities,
+      weaponImmunity: false,
+      missileImmunity: false,
+      magicImmunity: false,
+      deathImmunity: false,
+      fireImmunity: false,
+      coldImmunity: false,
+      illusionImmunity: false,
+      poisonImmunity: false,
+      stoningImmunity: false,
+      lightningResist: false,
+      negateFirstStrike: false,
+    };
+  }
 
   // To Hit percentage bonuses
   const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod + hwMeleeToHit;
@@ -467,7 +787,8 @@ function deriveUnitStats(input) {
   // Pre-clamped To Hit/Block values for combat (decimals 0.1-1.0)
   let toHitMelee = clampPct(30, baseToHitMod + meleeToHitBonus);
   let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty + abilMods.toHitMod + hwRtbToHit);
-  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus);
+  const motherFungusToBlkBonus = motherFungus ? 10 : 0;
+  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus + motherFungusToBlkBonus);
   // Immolation To Hit: always base 30%, ignoring all modifiers (it's a spell attack)
   let toHitImmolation = 0.3;
 
@@ -479,6 +800,16 @@ function deriveUnitStats(input) {
     toHitMelee      = Math.max(0.1, toHitMelee - 0.2);
     toHitRtb        = Math.max(0.1, toHitRtb - 0.2);
     toHitImmolation = Math.max(0.1, toHitImmolation - 0.2);
+  }
+
+  // Hurricane (Warlord Nature rare, global): tropical storm affecting both sides.
+  // -20% To Hit for ranged/thrown attacks, -30% To Hit for breath attacks.
+  // Breath is identified by thrownType fire/lightning; that is the only case toHitRtb
+  // represents a breath attack (ranged attacks are never breath). Melee is unaffected.
+  const hurricaneActive = !!input.hurricane;
+  const hurricaneRtbPenalty = (thrownType === 'fire' || thrownType === 'lightning') ? 0.3 : 0.2;
+  if (hurricaneActive) {
+    toHitRtb = Math.max(0.1, toHitRtb - hurricaneRtbPenalty);
   }
 
   // Warlord True Light: illusion attacks suffer -10% To Hit, for all units
@@ -507,17 +838,17 @@ function deriveUnitStats(input) {
     }
   }
 
-  // Berserk: behavior differs by version.
-  // MoM/CoM/CoM2: doubles melee attack (applied last, after all other bonuses) and
-  // sets defense to 0 absolutely (no other bonus can raise it while Berserk is active).
-  // Warlord: Berserk was removed as a wizard spell and reworked into a Troll
-  // Medicineman-cast unit buff: +15% To Hit, +1 combat movement (irrelevant here),
-  // and -10% To Block. The classic atk-doubling and def-zeroing do not apply.
-  const berserkActive = !!(abilities && abilities.berserk);
-  const warlordBerserk = berserkActive && isWarlord;
-  const classicBerserk = berserkActive && !isWarlord;
-  let finalAtk = classicBerserk ? atk * 2 : atk;
-  let finalDef = classicBerserk ? 0 : def;
+  // Berserk: two distinct mechanics, modelled as separate abilities.
+  // 'berserk' (MoM Death spell, UI-gated to MoM versions): doubles melee attack
+  // (applied last, after all other bonuses) and sets defense to 0 absolutely (no
+  // other bonus can raise it while Berserk is active). Removed in CoM/CoM2.
+  // 'berserkWarlord' (Warlord Troll Medicineman buff, UI-gated to Warlord): +15% To
+  // Hit, +1 combat movement (irrelevant here), and -10% To Block. No atk-doubling
+  // and no def-zeroing.
+  const classicBerserk = !!(abilities && abilities.berserk) && version.startsWith('mom');
+  const warlordBerserk = !!(abilities && abilities.berserkWarlord) && isWarlord;
+  let finalAtk = (classicBerserk ? atk * 2 : atk) + blazeMeleeBonus;
+  let finalDef = blazeOfGloryActive ? blazeEnchantArmor : (classicBerserk ? 0 : def);
   let finalRtb = rtb;
   let finalRes = res;
   if (warlordBerserk) {
@@ -527,6 +858,19 @@ function deriveUnitStats(input) {
     displayToHitRtb = Math.min(1.0, displayToHitRtb + 0.15);
     toBlock = Math.max(0.0, toBlock - 0.10);
     displayToBlock = Math.max(0.0, displayToBlock - 0.10);
+  }
+
+  // Conjuring Pact nausea (Warlord Conjurer retort): a non-fantastic unit struck by
+  // Conjuring Pact suffers -10% To Hit and -10% To Defend for the rest of combat.
+  // Only the normal-unit debuff is modelled here (the fantastic-creature taming
+  // branch is out of scope), so gate to Warlord and to normal units.
+  if (isWarlord && abilities && abilities.nausea && isNormalUnitType(unitTypeVal)) {
+    toHitMelee = Math.max(0.1, toHitMelee - 0.1);
+    toHitRtb = Math.max(0.1, toHitRtb - 0.1);
+    displayToHitMelee = Math.max(0.1, displayToHitMelee - 0.1);
+    displayToHitRtb = Math.max(0.1, displayToHitRtb - 0.1);
+    toBlock = Math.max(0.0, toBlock - 0.1);
+    displayToBlock = Math.max(0.0, displayToBlock - 0.1);
   }
 
   // Warp Creature effects (applied after all other bonuses per MoM wiki).
@@ -543,6 +887,20 @@ function deriveUnitStats(input) {
   }
   if (abilities && abilities.warpResist) {
     finalRes = 0;
+  }
+
+  // Beat of Swiftness (Warlord Chaos rare combat enchantment): friendly units lose
+  // 10% of their Armor as a penalty for the movement boost. Only the armor part is
+  // modelled (combat movement is out of scope for the calculator).
+  if (abilities && abilities.beatOfSwiftness) {
+    finalDef = Math.floor(finalDef * 0.9);
+  }
+
+  // Hierophany (Warlord Life uncommon combat curse): the landed curse removes half the
+  // target's Defense (its immunities, Lightning Resist, and Negate First Strike are stripped
+  // from combatAbilities above).
+  if (isWarlord && abilities && abilities.hierophany) {
+    finalDef = Math.floor(finalDef * 0.5);
   }
 
   // Shatter: reduces all attack strengths (melee and ranged/thrown/breath) to 1 for
@@ -575,21 +933,23 @@ function deriveUnitStats(input) {
     hwRtbToHit,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
     vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
+    hurricaneActive ? -(hurricaneRtbPenalty * 100) : 0,
   ]);
   const toBlockHasModifiers = anyNonZero([
     baseToBlkMod,
     abilMods.toBlkMod,
     holyArmorToBlkBonus,
+    motherFungusToBlkBonus,
     (vertigoActive && version.startsWith('com')) ? -10 : 0,
   ]);
 
   return {
     // Base values (for display)
-    baseAtk: inputBaseAtk, baseRtb: inputBaseRtb, baseDef: inputBaseDef, baseRes: inputBaseRes, baseHP: inputBaseHP,
+    baseAtk: inputBaseAtk, baseRtb: inputBaseRtb + shadowStrikeGrantedBaseRtb, baseDef: inputBaseDef, baseRes: inputBaseRes, baseHP: inputBaseHP,
     baseToHitMod, baseToHitRtbMod, baseToBlkMod,
     // Bonus breakdown (for display)
     atkBonus: finalAtk - inputBaseAtk,
-    rtbBonus: finalRtb - inputBaseRtb,
+    rtbBonus: finalRtb - inputBaseRtb - shadowStrikeGrantedBaseRtb,
     defBonus: displayDef - inputBaseDef,
     resBonus: finalRes - inputBaseRes,
     hpBonus: hp - inputBaseHP,
@@ -601,7 +961,7 @@ function deriveUnitStats(input) {
     toHitRtbHasModifiers,
     toBlockHasModifiers,
     // Effective values (for calculation)
-    figs: baseFigs,
+    figs: baseFigs + (altarOfTheSun ? 1 : 0),
     atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!input.generic,
     dmg: Math.max(0, parseInt(input.dmg) || 0),
     rangedType, thrownType,

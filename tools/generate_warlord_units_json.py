@@ -295,14 +295,9 @@ def ini_unit_to_record(u):
     if u.get('Name', '').strip() == 'Clockwork Tinmen':
         abilities.append('DestroyMechanical')
 
-    # Gnoll Hunters / Witchdoctors: name-based tags (no INI flag) so the Altar of the
-    # Moon enchantment can grant Poison 2 (Hunters) or Life Steal -1 replacing Poison
-    # (Witchdoctors) in the calculator.
-    if race_int == 5:
-        if u.get('Name', '').strip() == 'Hunters':
-            abilities.append('GnollHunters')
-        elif u.get('Name', '').strip() == 'Witchdoctors':
-            abilities.append('GnollWitchdoctors')
+    # Race-exclusive building enchantments (Dragon Mound, Lava Smelter, Altar of the
+    # Sun, Altar of the Moon, Ludus Agoge) gate on the unit's intrinsic race/name in the
+    # calculator engine — no identity ability tags are emitted here. See deriveUnitStats.
 
     def _rename(ab):
         if '=' in ab:

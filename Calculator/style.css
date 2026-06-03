@@ -1146,6 +1146,16 @@ select:disabled[data-tooltip] {
   flex-direction: column;
   align-items: flex-start;
 }
+/* Lava Smelter and the Pillar of Faith resistance input are lone leading rows in their
+   subgroup; span the full row so the checkbox grid below them stays column-aligned. */
+.abil-num-row[data-abil-key="lavaSmelter"],
+.abil-num-row[data-abil-key="pillarOfFaithRes"] {
+  grid-column: 1 / -1;
+}
+/* Keep the label from stretching so the number input sits next to it, not pushed right. */
+.abil-num-row[data-abil-key="pillarOfFaithRes"] label {
+  flex: none;
+}
 .abil-num-row input[type="checkbox"] {
   margin: 0 0.1rem 0 0;
   cursor: pointer;
