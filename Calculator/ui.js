@@ -3,24 +3,6 @@
 
 // --- Abilities UI ---
 
-const ENCHANTMENT_TYPE_SUFFIXES = {
-  flameBlade: 'N,H',
-  metalFires: 'N,H',
-  ccDefense: 'N,H',
-  ccFireBreath: 'N,H',
-  ccFlight: 'N,H',
-  blackChannels: 'N,H',
-  holyArmor: 'N,H',
-  holyWeapon: 'N,H',
-  eldritchWeapon: 'N,H',
-  mislead: 'N,H',
-  discipline: 'N',
-  destiny: 'N',
-  landLinking: 'F',
-  survivalInstinct: 'F',
-  blazingEyes: 'F',
-};
-
 const SHARED_ABILITY_KEYS = new Set(
   ABILITY_DEFS
     .map(abil => abil.key)
@@ -68,13 +50,17 @@ function mergedAbilityValue(abil, currentValue, nextValue) {
 }
 
 function abilityDisplayLabel(abil) {
-  const suffix = ENCHANTMENT_TYPE_SUFFIXES[abil.key];
-  return suffix ? `${abil.label} (${suffix})` : abil.label;
+  return abil.label;
 }
 
 function buildAbilitiesUI(prefix) {
   const container = document.getElementById(prefix + 'Abilities');
   let gridDiv = null;
+  // Enchantments render in two stacked blocks: a single-column block for selects/number
+  // inputs, then a two-column block for the bool checkboxes (realm-ordered).
+  let enchSelectRowDiv = null;
+  let enchControlsDiv = null;
+  let enchBoolsDiv = null;
   let currentGroup = '';
   let currentGroupClass = '';
   let currentSubgroup = '';
@@ -84,32 +70,69 @@ function buildAbilitiesUI(prefix) {
       currentGroupClass = 'group-' + currentGroup.toLowerCase().replace(/[^a-z]+/g, '-');
       currentSubgroup = '';
       gridDiv = null;
+      enchSelectRowDiv = null;
+      enchControlsDiv = null;
+      enchBoolsDiv = null;
       const header = document.createElement('div');
       header.className = 'abil-group-header';
       header.dataset.abilGroup = currentGroup;
       header.textContent = currentGroup;
       container.appendChild(header);
+      if (currentGroup === 'Enchantments') {
+        // Checkbox block first (two columns), then the controls below it: a three-column row for
+        // the Elements/Discipline/Breakthrough dropdowns, then the remaining controls.
+        enchBoolsDiv = document.createElement('div');
+        enchBoolsDiv.className = 'abil-grid ' + currentGroupClass + ' ench-bools';
+        enchBoolsDiv.dataset.abilGroup = currentGroup;
+        container.appendChild(enchBoolsDiv);
+        enchSelectRowDiv = document.createElement('div');
+        enchSelectRowDiv.className = 'abil-grid ' + currentGroupClass + ' ench-select-row';
+        enchSelectRowDiv.dataset.abilGroup = currentGroup;
+        container.appendChild(enchSelectRowDiv);
+        enchControlsDiv = document.createElement('div');
+        enchControlsDiv.className = 'abil-grid ' + currentGroupClass + ' ench-controls';
+        enchControlsDiv.dataset.abilGroup = currentGroup;
+        container.appendChild(enchControlsDiv);
+      }
     }
     if (abil.subgroup && abil.subgroup !== currentSubgroup) {
       currentSubgroup = abil.subgroup;
-      gridDiv = null;
-      if (!abil.subgroup.startsWith('_')) {
-        const subheader = document.createElement('div');
-        subheader.className = 'abil-subgroup-header';
-        subheader.dataset.abilGroup = currentGroup;
-        subheader.dataset.abilSubgroup = currentSubgroup;
-        subheader.textContent = currentSubgroup;
-        container.appendChild(subheader);
+      // Enchantments render as one flat list: the subgroup is retained on each item (it still
+      // drives version gating via subgroupAllowed), but we don't split into separate grids or
+      // emit "All versions / Warlord only / ..." subgroup headers.
+      if (currentGroup !== 'Enchantments') {
+        gridDiv = null;
+        if (!abil.subgroup.startsWith('_')) {
+          const subheader = document.createElement('div');
+          subheader.className = 'abil-subgroup-header';
+          subheader.dataset.abilGroup = currentGroup;
+          subheader.dataset.abilSubgroup = currentSubgroup;
+          subheader.textContent = currentSubgroup;
+          container.appendChild(subheader);
+        }
       }
     }
-    if (!gridDiv) {
+    if (!gridDiv && currentGroup !== 'Enchantments') {
       gridDiv = document.createElement('div');
       gridDiv.className = 'abil-grid ' + currentGroupClass;
       gridDiv.dataset.abilGroup = currentGroup;
       if (currentSubgroup) gridDiv.dataset.abilSubgroup = currentSubgroup;
       container.appendChild(gridDiv);
     }
-    const itemParent = gridDiv;
+    // Most selects/number inputs live in the single-column controls block, but a few simple
+    // numeric enchantments read better inline with the checkbox grid (they get realm-sorted
+    // alongside it like any other entry).
+    const inGridNumKeys = new Set(['resistanceToAll', 'holyBonus', 'pillarOfFaithRes']);
+    const selectRowKeys = new Set(['elemArmor', 'discipline', 'breakthrough']);
+    const inBoolGrid = abil.type === 'bool' || inGridNumKeys.has(abil.key);
+    let itemParent;
+    if (currentGroup === 'Enchantments') {
+      itemParent = selectRowKeys.has(abil.key) ? enchSelectRowDiv
+        : inBoolGrid ? enchBoolsDiv
+        : enchControlsDiv;
+    } else {
+      itemParent = gridDiv;
+    }
     const id = abilityControlId(prefix, abil);
     const realmCls = abil.realm ? 'realm-' + abil.realm : '';
     const displayLabel = abilityDisplayLabel(abil);
@@ -131,6 +154,7 @@ function buildAbilitiesUI(prefix) {
       lbl.dataset.abilSource = abil.source || '';
       lbl.dataset.abilGroup = currentGroup;
       if (currentSubgroup) lbl.dataset.abilSubgroup = currentSubgroup;
+      if (abil.realm) lbl.dataset.realm = abil.realm;
       if (abil.tooltip) lbl.dataset.tooltip = abil.tooltip;
       lbl.innerHTML = `<input type="checkbox" id="${id}"> ${labelHtml}`;
       itemParent.appendChild(lbl);
@@ -166,10 +190,22 @@ function buildAbilitiesUI(prefix) {
       row.dataset.abilSource = abil.source || '';
       row.dataset.abilGroup = currentGroup;
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
+      if (abil.realm) row.dataset.realm = abil.realm;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       row.innerHTML = `<label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
       itemParent.appendChild(row);
     }
+  }
+
+  // The enchantment grid items come from several version subgroups. Sort the merged list so it
+  // reads primarily by realm (non-realm → arcane → life → death → chaos → nature → sorcery) and
+  // alphabetically by label within each realm.
+  if (enchBoolsDiv) {
+    const REALM_RANK = { '': 0, arcane: 1, life: 2, death: 3, chaos: 4, nature: 5, sorcery: 6 };
+    [...enchBoolsDiv.children]
+      .map(el => [el, REALM_RANK[el.dataset.realm || ''] ?? 0, el.textContent.trim().toLowerCase()])
+      .sort((a, b) => a[1] - b[1] || a[2].localeCompare(b[2]))
+      .forEach(([el]) => enchBoolsDiv.appendChild(el));
   }
 }
 
@@ -916,7 +952,8 @@ function onVersionChange() {
     }
   }
 
-  updateTypeVisibility();
+  refreshAbilityFieldVisibility();
+  renderAllMatrixPropLists();
   recalculate();
 }
 
@@ -1143,6 +1180,24 @@ function calculate() { recalculate(); }
 
 // --- Visibility ---
 
+// True if an ability/enchantment whose def carries `subgroup` is available in the
+// given game-version string. Shared by the main panels and the matrix candidate list
+// so both gate enchantments identically.
+function subgroupAllowedForVersion(subgroup, version) {
+  const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
+  const isCoMorCoM2 = version === 'com_6.08' || version.startsWith('com2_');
+  const isCoM2 = version.startsWith('com2_');
+  const isWarlord = version.startsWith('com2_warlord_');
+  const sg = (subgroup || '').replace(/^_/, '');
+  if (sg === 'MoM only') return isMoM;
+  if (sg === 'CoM, CoM2 & Warlord') return isCoMorCoM2;
+  if (sg === 'CoM2 & Warlord') return isCoM2;
+  if (sg === 'Warlord only') return isWarlord;
+  if (sg === 'Warlord') return isWarlord;
+  if (sg === 'Renamed in Warlord') return isWarlord;
+  return true;
+}
+
 function updateTypeVisibility() {
   ['aRtbType', 'bRtbType'].forEach(id => {
     const sel = document.getElementById(id);
@@ -1163,19 +1218,9 @@ function updateTypeVisibility() {
   });
 
   // Version restrictions on enchantments.
-  const isCoMorCoM2 = version === 'com_6.08' || version.startsWith('com2_');
-  const isCoM2 = version.startsWith('com2_');
   const isWarlord = version.startsWith('com2_warlord_');
-
   function subgroupAllowed(subgroup) {
-    const sg = (subgroup || '').replace(/^_/, '');
-    if (sg === 'MoM only') return isMoM;
-    if (sg === 'CoM, CoM2 & Warlord') return isCoMorCoM2;
-    if (sg === 'CoM2 & Warlord') return isCoM2;
-    if (sg === 'Warlord only') return isWarlord;
-    if (sg === 'Warlord') return isWarlord;
-    if (sg === 'Renamed in Warlord') return isWarlord;
-    return true;
+    return subgroupAllowedForVersion(subgroup, version);
   }
 
   function applyDisabled(el, disabled) {
@@ -1419,6 +1464,14 @@ function isAbilityActive(item) {
   return false;
 }
 
+// An item is disabled when its primary control carries the disabled attribute. For every
+// item type the first control in DOM order (bool checkbox, numcheck on-checkbox, select, or
+// number input) is the one we set, and numcheck pairs are disabled in lockstep.
+function isAbilityDisabled(item) {
+  const ctrl = item.querySelector('input, select');
+  return !!(ctrl && ctrl.disabled);
+}
+
 // Update which abilities are shown based on active state.
 // Hides inactive items, group headers, and empty grid containers when in hide-inactive mode.
 function updateAbilityVisibility() {
@@ -1430,13 +1483,14 @@ function updateAbilityVisibility() {
     const items = section.querySelectorAll('.abil-item');
 
     items.forEach(item => {
-      if (!hiding) {
-        item.classList.remove('abil-hidden');
-      } else {
-        const active = isAbilityActive(item);
-        const focused = item.contains(document.activeElement);
-        item.classList.toggle('abil-hidden', !active && !focused);
-      }
+      const active = isAbilityActive(item);
+      const focused = item.contains(document.activeElement);
+      // Disabled controls (version-gated, or a locked roster unit's innate abilities) are
+      // hidden unless they are active — so we only ever show the abilities a unit actually
+      // has, never the greyed-out remainder. This applies regardless of hide-inactive mode.
+      const hideDisabled = isAbilityDisabled(item) && !active;
+      const hideInactive = hiding && !active && !focused;
+      item.classList.toggle('abil-hidden', hideDisabled || hideInactive);
     });
 
     // Hide subgroup headers when all their children are hidden
@@ -1447,7 +1501,7 @@ function updateAbilityVisibility() {
         `.abil-item[data-abil-group="${group}"][data-abil-subgroup="${subgroup}"]`
       );
       const anyVisible = [...subgroupItems].some(item => !item.classList.contains('abil-hidden'));
-      header.classList.toggle('abil-hidden', hiding && !anyVisible);
+      header.classList.toggle('abil-hidden', !anyVisible);
     });
 
     // Hide group headers and grid containers when all their children are hidden
@@ -1455,7 +1509,7 @@ function updateAbilityVisibility() {
       const group = header.dataset.abilGroup;
       const groupItems = section.querySelectorAll(`.abil-item[data-abil-group="${group}"]`);
       const anyVisible = [...groupItems].some(item => !item.classList.contains('abil-hidden'));
-      header.classList.toggle('abil-hidden', hiding && !anyVisible);
+      header.classList.toggle('abil-hidden', !anyVisible);
     });
 
     // Hide empty grid containers
@@ -1465,7 +1519,7 @@ function updateAbilityVisibility() {
       items.forEach(item => {
         if (!item.classList.contains('abil-hidden')) anyVisible = true;
       });
-      grid.classList.toggle('abil-hidden', hiding && !anyVisible);
+      grid.classList.toggle('abil-hidden', !anyVisible);
     });
 
     const hasVisibleAbility = [...content.querySelectorAll('.abil-item')]
@@ -1576,8 +1630,10 @@ function matrixPropertyCandidates(box) {
     { key: 'weapon', label: 'Weapon type' },
     { key: 'armor',  label: 'Armor type' },
   ];
+  const version = document.getElementById('gameVersion').value;
   for (const abil of abilityUiDefs()) {
     if (abil.source !== 'enchantment') continue;
+    if (!subgroupAllowedForVersion(abil.subgroup, version)) continue;
     list.push({ key: abil.uiKey, label: abilityDisplayLabel(abil) });
   }
   return list;
@@ -1670,8 +1726,10 @@ function matrixGlobalValue(key) {
 // Build the same shape as activeNonInnateUnitEnchantments, but driven by matrix state.
 function matrixAppliedEnchantments(prefix) {
   const result = {};
+  const version = document.getElementById('gameVersion').value;
   for (const abil of abilityUiDefs()) {
     if (abil.source !== 'enchantment') continue;
+    if (!subgroupAllowedForVersion(abil.subgroup, version)) continue;
     const row = matrixPropertyRow(prefix, abil.uiKey);
     const calcKey = abil.calcKey || abil.key;
     if (!row || !row.enabled) continue;
@@ -1730,10 +1788,12 @@ function renderMatrixPropList(box) {
   const list = document.getElementById(listId);
   if (!list) return;
   list.textContent = '';
+  const version = document.getElementById('gameVersion').value;
   const rows = (matrixPropertyState[box] || []).filter(row => {
     const def = matrixPropertyDef(box, row.key);
     if (!def) return false;
     if (box === 'global' && def.rangedOnly && activeMatrixMode !== 'ranged') return false;
+    if (def.abil && !subgroupAllowedForVersion(def.abil.subgroup, version)) return false;
     return true;
   });
   if (!rows.length) {
@@ -2890,12 +2950,12 @@ document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
 });
 document.getElementById('aUnit').addEventListener('change', () => {
   updateUnitLock('a');
-  updateTypeVisibility();
+  refreshAbilityFieldVisibility();
   recalculate();
 });
 document.getElementById('bUnit').addEventListener('change', () => {
   updateUnitLock('b');
-  updateTypeVisibility();
+  refreshAbilityFieldVisibility();
   recalculate();
 });
 initUnitCombobox('a');
@@ -3066,7 +3126,11 @@ resetCalculatorState();
       const candidate = tooltipEls[i];
       const rect = candidate.getBoundingClientRect();
       if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-        if (!direct || direct === candidate || candidate.contains(direct)) return candidate;
+        // Accept when nothing is on top, or the resolved element is the candidate itself, a
+        // descendant of it, or an ancestor of it. The ancestor case covers pointer-events:none
+        // items (e.g. a locked unit's innate abilities), where elementFromPoint falls through
+        // to the enclosing grid.
+        if (!direct || direct === candidate || candidate.contains(direct) || direct.contains(candidate)) return candidate;
       }
     }
     return null;

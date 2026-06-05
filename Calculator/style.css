@@ -1092,6 +1092,45 @@ select:disabled[data-tooltip] {
   gap: 0.2rem 0.5rem;
   margin-bottom: 0.4rem;
 }
+/* The Elements / Discipline / Breakthrough dropdowns sit together in a three-column row
+   (each stacks its label above the select via the per-key rules below). */
+.abil-grid.group-enchantments.ench-select-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.2rem 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.abil-grid.group-enchantments.ench-select-row .abil-num-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.abil-grid.group-enchantments.ench-select-row select {
+  width: 100%;
+  min-width: 0;
+}
+/* Remaining enchantment controls (Lava Smelter, Power minerals, Survival Instinct) stack as a
+   single full-width column; the bool checkboxes follow as a two-column list. */
+.abil-grid.group-enchantments.ench-controls {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.abil-grid.group-enchantments.ench-controls .abil-item {
+  margin: 0.15rem 0;
+}
+/* CSS multi-column (instead of a grid) keeps the realm-ordered reading order intact even
+   when individual checkboxes are hidden by version gating or the hide-inactive toggle —
+   hidden items simply drop out and the rest reflow down the columns. */
+.abil-grid.group-enchantments.ench-bools {
+  display: block;
+  column-count: 2;
+  column-gap: 0.5rem;
+}
+.abil-grid.group-enchantments.ench-bools .abil-item {
+  break-inside: avoid;
+  margin: 0.1rem 0;
+}
 .abil-check {
   display: flex;
   align-items: center;

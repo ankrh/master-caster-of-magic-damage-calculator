@@ -13,8 +13,14 @@ Read the relevant doc before implementing a new mechanic. Use exact probability 
 ## Unit data source (under `Unit rosters/`)
 `UNITS.INI` is the original data source for CoM2 and Warlord units: `CoM2 unit data/UNITS.INI` and `Warlord mod unit data/UNITS.INI`. The in-app `units.js` / `units_warlord.js` are generated from these — treat the `.ini` files as authoritative when a unit's stats or abilities are in question.
 
-## ABILITY_DEFS ordering (`data.js`)
-The per-unit enchantments panel is a 2-column CSS grid with row-first flow, so `ABILITY_DEFS` order maps to columns interleaved L/R. Within each subgroup, order entries column-major so each column reads top-to-bottom by realm: **non-realm → arcane → life → death → chaos → nature → sorcery**. Select inputs (Prayer, Chaos Channels, etc.) sit at the top of the subgroup; checkboxes fill the rest. When adding/removing an entry, recount and reorder neighbours to keep both columns aligned.
+## ABILITY_DEFS / ENCHANTMENT_DEFS ordering (`data.js`)
+**Abilities group** (`ABILITY_DEFS`): a 2-column CSS grid with row-first flow, so order maps to columns interleaved L/R. Entries are wrapped in `twoColumnMajor([...])` and authored column-major so each column reads top-to-bottom by realm: **non-realm → arcane → life → death → chaos → nature → sorcery**. When adding/removing an entry, recount and reorder neighbours to keep both columns aligned.
+
+**Enchantments group** (`ENCHANTMENT_DEFS`): rendered as two stacked blocks with no subgroup headers (`subgroup` is retained only for version gating via `subgroupAllowed`):
+- **Controls block** (`.ench-controls`, single full-width column): all `select` and `num`/`numcheck` enchantments, in def order.
+- **Checkbox block** (`.ench-bools`, two-column CSS multi-column): all `bool` enchantments. `buildAbilitiesUI` **sorts these at render time by realm** (non-realm → arcane → life → death → chaos → nature → sorcery, stable within a realm) using each item's `dataset.realm`, so the merged list reads by realm regardless of which version subgroups are present, and reflows correctly when items are hidden.
+
+So for enchantments, def order within a subgroup doesn't drive the checkbox layout (the realm sort does) — entries are wrapped in `realmLinear([...])` (identity passthrough) rather than `twoColumnMajor`. Set each entry's `realm` correctly; that, not its position, determines where it lands.
 
 ## Tooltips (`ABILITY_DEFS` / `ENCHANTMENT_DEFS` in `data.js`)
 Tooltip strings render with `\n` as line breaks — break clauses onto their own lines instead of writing one long run-on sentence. Match the existing style: short labelled lines (e.g. `"MoM 1.31: ..."`, `"Immune: ..."`), one fact per line.
