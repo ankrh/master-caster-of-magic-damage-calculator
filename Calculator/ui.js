@@ -1174,6 +1174,7 @@ function updateTypeVisibility() {
     if (sg === 'CoM2 & Warlord') return isCoM2;
     if (sg === 'Warlord only') return isWarlord;
     if (sg === 'Warlord') return isWarlord;
+    if (sg === 'Renamed in Warlord') return isWarlord;
     return true;
   }
 
@@ -1186,18 +1187,35 @@ function updateTypeVisibility() {
   }
 
   for (const prefix of ['a', 'b']) {
-    // Unit type restrictions are informational only. Keep controls usable so users can model
-    // transformed or otherwise exceptional states manually.
+    // A roster (non-custom) unit locks its panel: its innate ability controls become
+    // read-only. We disable them so they get the same native disabled styling as the
+    // version-gated controls below — but unlike version gating we must NOT clear their
+    // value, since those checkboxes carry the unit's innate abilities for the calculation.
+    const panelLocked = document.getElementById(prefix + 'Abilities').classList.contains('locked');
     for (const abil of abilityUiDefs()) {
-      // Gate enchantments and the Warlord-mod-only ability tags by game version;
-      // other ability tags are never version-restricted.
-      const isWarlordTag = abil.source === 'ability' && abil.subgroup === 'Warlord';
-      if (abil.source !== 'enchantment' && !isWarlordTag) continue;
       const el = document.getElementById(abilityControlId(prefix, abil));
       if (!el) continue;
+      // Enchantments and the Warlord-mod-only ability tags are gated by game version;
+      // other ability tags are never version-restricted.
+      const isWarlordTag = abil.source === 'ability' && abil.subgroup === 'Warlord';
+      const versionGateable = abil.source === 'enchantment' || isWarlordTag;
       const subgroupOk = subgroupAllowed(abil.subgroup);
       const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
-      applyDisabled(el, !(subgroupOk || overrideOk));
+      const exceptOk = !(abil.exceptVersions || []).some(v => version.startsWith(v));
+      const versionGated = versionGateable && !((subgroupOk || overrideOk) && exceptOk);
+      if (versionGated) {
+        // Effect cannot exist in this version: disable and clear the value.
+        applyDisabled(el, true);
+      } else if (abil.source === 'ability') {
+        // Innate ability of a roster unit: lock (value preserved). Enchantments stay
+        // editable on roster units, so they are intentionally not locked here.
+        el.disabled = panelLocked;
+      } else {
+        el.disabled = false;
+      }
+      // Keep a numcheck's on/off checkbox in lockstep with its number input (value preserved).
+      const onChk = document.getElementById(abilityControlId(prefix, abil) + '_on');
+      if (onChk) onChk.disabled = el.disabled;
     }
   }
 

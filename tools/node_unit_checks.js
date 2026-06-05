@@ -108,6 +108,39 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(destiny.unitType, 'fantastic_life', 'Destiny changes unit type to fantastic Life');
   assertEqual(destiny.abilities.supernatural, true, 'Destiny grants Supernatural for combat');
 
+  // Nature Link (Warlord rename of Land Linking) maps to the landLinking calcKey.
+  // Fantastic units get the Land Linking melee/def bonus AND the Warlord +1 resistance.
+  const natureLinkFantastic = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.5',
+    abilities: { landLinking: true },
+    unitType: 'fantastic_nature',
+    atk: 1, def: 1, res: 1,
+  }));
+  assertEqual(natureLinkFantastic.atk, 3, 'Nature Link gives fantastic units +2 melee');
+  assertEqual(natureLinkFantastic.def, 3, 'Nature Link gives fantastic units +2 defense');
+  assertEqual(natureLinkFantastic.res, 2, 'Nature Link gives fantastic units +1 resistance (Warlord)');
+
+  // Normal units get only the +1 resistance, not the fantastic-only melee/def bonus.
+  const natureLinkNormal = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.5',
+    abilities: { landLinking: true },
+    unitType: 'normal',
+    atk: 1, def: 1, res: 1,
+  }));
+  assertEqual(natureLinkNormal.atk, 1, 'Nature Link gives normal units no melee bonus');
+  assertEqual(natureLinkNormal.def, 1, 'Nature Link gives normal units no defense bonus');
+  assertEqual(natureLinkNormal.res, 2, 'Nature Link gives normal units +1 resistance (Warlord)');
+
+  // CoM2 Land Linking grants no resistance bonus, even on fantastic units.
+  const landLinkingCoM2 = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    abilities: { landLinking: true },
+    unitType: 'fantastic_nature',
+    atk: 1, def: 1, res: 1,
+  }));
+  assertEqual(landLinkingCoM2.atk, 3, 'Land Linking (CoM2) gives fantastic units +2 melee');
+  assertEqual(landLinkingCoM2.res, 1, 'Land Linking (CoM2) grants no resistance bonus');
+
   const innerPower = ctx.deriveUnitStats(baseUnitInput({
     abilities: { innerPower: true, fireImmunity: true },
     rtbType: 'fire',

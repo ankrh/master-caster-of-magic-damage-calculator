@@ -590,6 +590,9 @@ function deriveUnitStats(input) {
   const naturalSelectionCoalMod = isWarlord && !!(abilities && abilities.coal) ? 1 : 0;
   const naturalSelectionIronMod = isWarlord && !!(abilities && abilities.iron) ? 1 : 0;
   const naturalSelectionNightshadeMod = isWarlord && !!(abilities && abilities.nightshade) ? 1 : 0;
+  // Nature Link (Warlord rename of Land Linking): grants +1 resistance to any unit
+  // (normal or fantastic). The fantastic-only +2 melee/def/breath is handled with Land Linking.
+  const natureLinkResMod = isWarlord && !!(abilities && abilities.landLinking) ? 1 : 0;
   const naturalSelectionPowerMineralsMod = isWarlord
     ? Math.max(0, parseInt(abilities.powerMinerals) || 0)
     : 0;
@@ -691,7 +694,7 @@ function deriveUnitStats(input) {
   const pillarOfFaithResMod = isWarlord
     ? Math.min(8, Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0))
     : 0;
-  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus + soulFlayResMod + plagueResMod + goblinPoxResMod + greatUnbindingResMod + naturalSelectionNightshadeMod + naturalSelectionPowerMineralsMod);
+  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus + soulFlayResMod + plagueResMod + goblinPoxResMod + greatUnbindingResMod + naturalSelectionNightshadeMod + naturalSelectionPowerMineralsMod + natureLinkResMod);
   const ludusAgogeHpMod = ludusAgoge ? 1 : 0;
   const hp  = Math.max(1, calcBaseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod + ludusAgogeHpMod);
 

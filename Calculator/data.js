@@ -163,19 +163,27 @@ const ENCHANTMENT_DEFS = [
     { key: 'mysticSurge', label: 'Mystic Surge', type: 'bool', match: 'MysticSurge', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: "+2 defense, −2 resistance. Opponent's To Block reduced by 10%.\nUnit becomes an unaligned fantastic creature.\nSelect granted additional random enchants manually." },
     { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: 'CoM, CoM2: +3 melee and +3 missile attack.\nWarlord: also +3 thrown attack.\nAffected attacks bypass Weapon Immunity.' },
     { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'nature', tooltip: 'Fantastic creatures gain +1 defense, +2 resistance, +10% To Hit.' },
-    { key: 'landLinking', label: 'Land Linking', type: 'bool', match: 'LandLinking', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'nature', tooltip: 'Fantastic units gain +2 defense, +2 melee, and +2 breath attack.' },
+    { key: 'landLinking', label: 'Land Linking', type: 'bool', match: 'LandLinking', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'nature', tooltip: 'Fantastic units gain +2 defense, +2 melee, and +2 breath attack.\nWarlord: renamed Nature Link (separate entry).' },
     { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'sorcery', tooltip: 'Magical ranged or breath attack present: +3 strength.\nThrown or missile attack present: Converted into a Sorcery magical ranged attack at strength at least 3.\nCoM 2 only — Doom Gaze present: +3 doom damage.\nOtherwise: Gains a strength-3 Sorcery magical ranged attack.' },
   ]),
   // Enchantments — CoM2 & Warlord — select first, then bools interleaved for life → death → chaos → sorcery
   { key: 'discipline', label: 'Discipline', type: 'select', options: [['none','None'],['overland','Overland'],['combat','Combat']], match: 'Discipline', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'life', tooltip: 'Normal: +1 defense.\nRegular: +2 defense.\nVeteran or higher: +2 defense, +1 melee, +1 missile/boulder.\nAlso, if unit is at least Elite and enchantment was cast in combat: Gain Negate First Strike.' },
   { key: 'breakthrough', label: 'Breakthrough', type: 'select', options: [['none','None'],['melee','+1mel'],['meleeDef','+1mel/+1def']], match: 'Breakthrough', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'chaos', tooltip: 'Permanent normal unit: +1 melee.\nNon-corporeal or temporary: +1 melee and +1 defense.' },
   ...twoColumnMajor([
-    { key: 'destiny', label: 'Destiny', type: 'bool', match: 'Destiny', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'life', tooltip: 'Unit is stripped of experience and becomes a fantastic Life creature.\nDoubles base melee attack, ranged attack, and HP. +4 defense, +4 resistance.\nGrants Supernatural.' },
+    { key: 'destiny', label: 'Destiny', type: 'bool', match: 'Destiny', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'life', tooltip: 'Unit is stripped of experience and becomes a fantastic Life creature.\nDoubles base melee attack, ranged attack, and HP. +4 defense, +4 resistance.\nGrants Supernatural.\nWarlord: renamed Apotheosis (separate entry).' },
     { key: 'rulerOfUnderworld', label: 'Ruler of Underworld', type: 'bool', match: 'RulerOfUnderworld', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'death', tooltip: 'Unit gains Wraith Form (Weapon Immunity + Non-Corporeal + bypass enemy Weapon Immunity).\nAdditionally, enemy magical/mithril/adamantium weapons do not bypass Weapon Immunity.' },
-    { key: 'mislead', label: 'Mislead/Misfortune', type: 'bool', match: 'Mislead', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'death', tooltip: '−1 melee attack, −1 ranged attack, −1 defense, −1 resistance.' },
+    { key: 'mislead', label: 'Mislead/Misfortune', type: 'bool', match: 'Mislead', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'death', tooltip: '−1 melee attack, −1 ranged attack, −1 defense, −1 resistance.\nWarlord: renamed Liability (separate entry).' },
     { key: 'innerPower', label: 'Inner Power', type: 'bool', match: 'InnerPower', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'chaos', tooltip: 'Applies only to units with Fire Immunity or Lightning Resist.\n+3 to all attack strengths (melee, all ranged, thrown, breath). +2 defense, +2 resistance.' },
-    { key: 'blazingEyes', label: 'Blazing Eyes', type: 'bool', match: 'BlazingEyes', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'chaos', tooltip: 'Applies only to fantastic Chaos creatures.\nGains Doom Gaze 3; if the unit already has Doom Gaze, its strength increases by 1.' },
+    { key: 'blazingEyes', label: 'Blazing Eyes', type: 'bool', match: 'BlazingEyes', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'chaos', tooltip: 'Applies only to fantastic Chaos creatures.\nGains Doom Gaze 3; if the unit already has Doom Gaze, its strength increases by 1.\nWarlord: renamed Chaos Embrace (separate entry).' },
     { key: 'reinforceMagic', label: 'Reinforce Magic', type: 'bool', match: 'ReinforceMagic', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'sorcery', tooltip: '+2 resistance.\nIf the unit has a magical ranged attack, it gains +2 strength.' },
+  ]),
+  // Enchantments — Renamed in Warlord (CoM2 spells given new names in the Warlord mod;
+  // the matching CoM2-named entries above are disabled when the Warlord version is selected).
+  ...twoColumnMajor([
+    { key: 'apotheosis', calcKey: 'destiny', label: 'Apotheosis', type: 'bool', match: 'Apotheosis', group: 'Enchantments', subgroup: 'Renamed in Warlord', realm: 'life', tooltip: 'Warlord rename of Destiny.\nUnit is stripped of experience and becomes a fantastic Life creature.\nDoubles base melee attack, ranged attack, and HP. +4 defense, +4 resistance.\nGrants Supernatural.\nAlso removes No Healing and Undead status (not modelled here).' },
+    { key: 'liability', calcKey: 'mislead', label: 'Liability', type: 'bool', match: 'Liability', group: 'Enchantments', subgroup: 'Renamed in Warlord', realm: 'death', tooltip: 'Warlord rename of Misfortune.\n−1 melee attack, −1 ranged attack, −1 defense, −1 resistance.' },
+    { key: 'chaosEmbrace', calcKey: 'blazingEyes', label: 'Chaos Embrace', type: 'bool', match: 'ChaosEmbrace', group: 'Enchantments', subgroup: 'Renamed in Warlord', realm: 'chaos', tooltip: 'Warlord rename of Blazing Eyes.\nApplies only to fantastic Chaos creatures.\nGains Doom Gaze 3; if the unit already has Doom Gaze, its strength increases by 1.' },
+    { key: 'natureLink', calcKey: 'landLinking', label: 'Nature Link', type: 'bool', match: 'NatureLink', group: 'Enchantments', subgroup: 'Renamed in Warlord', realm: 'nature', tooltip: 'Warlord rename of Land Linking.\nFantastic units gain +2 defense, +2 melee, and +2 breath attack.\nAll units (normal or fantastic) gain +1 resistance.' },
   ]),
   // Enchantments — Warlord only
   { key: 'lavaSmelter', label: 'Lava Smelter', type: 'select', options: [['none','Basic'],['weaponImmunity','Weapon Imm.'],['missileImmunity','Missile Imm.'],['resistElem','Resist Elem.'],['elementalArmor','Elem. Armor'],['flameBlade','Flame Blade']], match: 'LavaSmelter', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Dwarf building: a nearby mineral combo grants one permanent ability.\nApplies only to Dwarf-race units.\nMithril + Adamantium: Weapon Immunity.\nMithril + Crysx: Missile Immunity.\nMithril + Orihalcon: Resist Elements.\nAdamantium + Orihalcon: Elemental Armor.\nAdamantium + Crysx: Flame Blade.\nThe mineral upgrade Mithril → Adamantium → Orihalcon is not modeled here,\nchoose manually in the weapon and armor type dropdown.' },
@@ -3622,6 +3630,22 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
 
+  // --- Nature Link (Warlord rename of Land Linking) ---
+  natureLinkFantasticMeleeWarlord: {
+    desc: 'Nature Link (Warlord): fantastic creature still gets the Land Linking +2 melee. atk 1 to 3, 100% hit vs 0 def gives 3 dmg',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, unitType: 'fantastic_nature', abilities: { natureLink: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  natureLinkNormalResistanceWarlord: {
+    desc: 'Nature Link (Warlord): normal unit gains only +1 resistance (Land Linking gives normal units nothing). Death Gaze 0 vs res 5 to 6 drops P(die) from 0.5 to 0.4, so 10 HP yields 4.0 dmg',
+    version: 'com2_warlord_1.5.12.5',
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:5, hp:10, abilities: { natureLink: true } },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+
   // --- Endurance ---
   enduranceDefenseCoM: {
     desc: 'Endurance (CoM): defender gains +2 defense, so 5 atk at 100% hit vs 2 def blocks 0.6 on average → 4.4 dmg',
@@ -6641,6 +6665,13 @@ const TEST_TREE = [
           'naturalSelectionWildGameWarlord',
           'naturalSelectionNightshadeWarlord',
           'naturalSelectionPowerMineralsWarlord',
+        ],
+      },
+      {
+        name: 'Nature Link',
+        keys: [
+          'natureLinkFantasticMeleeWarlord',
+          'natureLinkNormalResistanceWarlord',
         ],
       },
       {

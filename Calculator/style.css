@@ -1053,18 +1053,15 @@ select:disabled[data-tooltip] {
   border-color: var(--accent);
   color: var(--text);
 }
-.abilities-content.locked .group-abilities input,
-.abilities-content.locked .group-abilities select,
-.abilities-content.locked .group-abilities label {
-  opacity: 0.5;
+/* Dim the whole item (label + checkbox square together) so locked rows fade
+   exactly like version-disabled rows. Opacity on the container avoids the
+   double-opacity that a separate label + input dim would produce. */
+.abilities-content.locked .group-abilities .abil-item {
+  opacity: 0.35;
 }
 .abilities-content.locked .group-abilities input,
 .abilities-content.locked .group-abilities select {
   pointer-events: none;
-}
-/* Prevent double-opacity on checkboxes already inside a label with 0.5 opacity */
-.abilities-content.locked .group-abilities label input {
-  opacity: 1;
 }
 .abil-item.abil-unit-locked {
   pointer-events: none;
@@ -1108,7 +1105,8 @@ select:disabled[data-tooltip] {
   cursor: pointer;
 }
 .abil-check:has(input:disabled),
-.abil-num-row:has(select:disabled) {
+.abil-num-row:has(select:disabled),
+.abil-num-row:has(input:disabled) {
   opacity: 0.35;
 }
 .abil-num-row {
