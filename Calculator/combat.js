@@ -394,8 +394,8 @@ function getAbilityStatModifiers(abilities, version) {
     atkMod -= isCoM ? 3 : 2;
   }
 
-  // Rust (Warlord): -3 melee attack. Weapon stripping, thrown removal, and Large Shield
-  // removal are handled in stats.js.
+  // Rust (Warlord): -3 melee attack. The matching -3 to physical ranged (missile/boulder),
+  // weapon stripping, thrown removal, and Large Shield removal are handled in stats.js.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'rust')) {
     atkMod -= 3;
   }
@@ -575,29 +575,56 @@ function deathTouchFailProb(defRes, defAbilities, modifier, version) {
   return Math.max(0, (10 - effectiveRes) / 10);
 }
 
+// --- Dispel Evil / Exorcise (shared) ---
+// Both are resist-or-banish effects that kill one fantastic figure per attacking
+// figure on a failed resist roll, with no defense roll. They share this core: a
+// positive `penalty` is the total Resistance reduction on the target. Magic Immunity
+// grants +50/+100 effective resistance; a final effective Resistance >= 10 is immune.
+// The realm-targeting and penalty values differ per effect (see callers below).
+function fantasticResistKillFailProb(defRes, defAbilities, penalty, version) {
+  const isCoM = version && version.startsWith('com');
+  const immuneBonus = hasAbil(defAbilities, 'magicImmunity') ? (isCoM ? 100 : 50) : 0;
+  const effectiveRes = defRes - penalty + immuneBonus;
+  if (effectiveRes >= 10) return 0;
+  return Math.min(1, Math.max(0, (10 - effectiveRes) / 10));
+}
+
+// True for a *created* undead target (Undead/Animate Dead/Revenant), which both
+// Dispel Evil and Exorcise hit with an extra penalty — base Death creatures do not
+// get this bonus penalty, matching the original MoM Dispel Evil behaviour.
+function isCreatedUndeadTarget(defUnitType, defAbilities) {
+  return defUnitType === 'fantastic_death'
+    && (hasAbil(defAbilities, 'undead') || hasAbil(defAbilities, 'animated'));
+}
+
 // --- Dispel Evil ---
-// Touch attack that kills one figure per attacking figure on a failed resist roll.
-// Only affects: fantastic_death (including undead/animated units, penalty -9),
-// fantastic_chaos (penalty -4). Other unit types are immune.
-// Magic Immunity grants +50/+100 resistance. Other unit types are completely immune.
+// Touch attack. Only affects fantastic_death (created-undead penalty -9, else -4) and
+// fantastic_chaos (penalty -4). Other unit types are immune. Spirit Link strips the
+// target's fantastic status, so it cannot be affected.
 function dispelEvilFailProb(defRes, defAbilities, defUnitType, version) {
-  // Spirit Link: the unit no longer counts as a fantastic creature for being
-  // targeted, so this fantastic-only attack cannot affect it.
   if (hasAbil(defAbilities, 'spiritLink')) return 0;
   let penalty;
-  const isUndeadTarget = defUnitType === 'fantastic_death' && (hasAbil(defAbilities, 'undead') || hasAbil(defAbilities, 'animated'));
-  if (isUndeadTarget) {
+  if (isCreatedUndeadTarget(defUnitType, defAbilities)) {
     penalty = 9;
   } else if (defUnitType === 'fantastic_death' || defUnitType === 'fantastic_chaos') {
     penalty = 4;
   } else {
     return 0;
   }
-  const isCoM = version && version.startsWith('com');
-  const immuneBonus = hasAbil(defAbilities, 'magicImmunity') ? (isCoM ? 100 : 50) : 0;
-  const effectiveRes = defRes - penalty + immuneBonus;
-  if (effectiveRes >= 10) return 0;
-  return Math.min(1, Math.max(0, (10 - effectiveRes) / 10));
+  return fantasticResistKillFailProb(defRes, defAbilities, penalty, version);
+}
+
+// --- Exorcise (CoM-era successor to Dispel Evil) ---
+// Same resist-or-banish mechanic as Dispel Evil, but since CoM it affects fantastic
+// creatures of ANY realm (not just Death/Chaos), and uses the ability's own strength
+// as the base penalty. `modifier` is the Exorcise strength (e.g. -1 → -1 penalty).
+// Created-undead targets suffer an additional -3 (vs Dispel Evil's additional -5).
+// Spirit Link strips the target's fantastic status, so it cannot be exorcised.
+function exorciseFailProb(defRes, defAbilities, defUnitType, modifier, version) {
+  if (hasAbil(defAbilities, 'spiritLink')) return 0;
+  if (!String(defUnitType || '').startsWith('fantastic_')) return 0;
+  const penalty = -modifier + (isCreatedUndeadTarget(defUnitType, defAbilities) ? 3 : 0);
+  return fantasticResistKillFailProb(defRes, defAbilities, penalty, version);
 }
 
 // --- Death Gaze ---
@@ -667,6 +694,7 @@ function appendBreakdownTouchLabels(label, params) {
     stoningTouch = false,
     deathTouch = false,
     dispelEvil = false,
+    exorcise = false,
     lifeSteal = false,
     immolation = false,
   } = params;
@@ -675,6 +703,7 @@ function appendBreakdownTouchLabels(label, params) {
   if (stoningTouch) out += ' + Stoning Touch';
   if (deathTouch) out += ' + Death Touch';
   if (dispelEvil) out += ' + Dispel Evil';
+  if (exorcise) out += ' + Exorcise';
   if (lifeSteal) out += ' + Life Steal';
   if (immolation) out += ' + Immolation';
   return out;
@@ -688,6 +717,7 @@ function thrownPhaseLabel(params) {
     stoningTouch,
     deathTouch,
     dispelEvil,
+    exorcise,
     lifeSteal,
     immolation,
   } = params;
@@ -695,7 +725,7 @@ function thrownPhaseLabel(params) {
             : thrownType === 'fire' ? 'Fire Breath'
             : 'Lightning Breath';
   if (hasted) label = 'Hasted ' + label;
-  return appendBreakdownTouchLabels(label, { poisonTouch, stoningTouch, deathTouch, dispelEvil, lifeSteal, immolation });
+  return appendBreakdownTouchLabels(label, { poisonTouch, stoningTouch, deathTouch, dispelEvil, exorcise, lifeSteal, immolation });
 }
 
 function gazePhaseLabel(side, params) {
@@ -707,6 +737,7 @@ function gazePhaseLabel(side, params) {
     stoningTouch,
     deathTouch,
     dispelEvil,
+    exorcise,
     lifeSteal,
     immolation,
   } = params;
@@ -715,6 +746,7 @@ function gazePhaseLabel(side, params) {
     stoningTouch,
     deathTouch,
     dispelEvil,
+    exorcise,
     lifeSteal,
     immolation,
   });
@@ -988,6 +1020,7 @@ function calcFearBugDist(atkFigs, defFigs, pFear) {
 //   stoningFail > 0                   → Stoning Touch (kills figures, damage = targetHP)
 //   deathTouchFail > 0                → Death Touch   (kills figures, damage = targetHP)
 //   dispelEvilFail > 0                → Dispel Evil   (kills figures, damage = targetHP)
+//   exorciseFail > 0                  → Exorcise      (kills figures, damage = targetHP)
 //   lifeStealMod != null              → Life Steal    (uses lifeStealRes)
 //   immDist truthy                    → Immolation    (caller pre-computes the area dist)
 // Returns { dist, lifeStealEV, lifeStealDist }. lifeStealDist is the standalone life-steal
@@ -1034,6 +1067,9 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
   if (p.dispelEvilFail > 0) {
     dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.dispelEvilFail, p.targetHP, cap), cap);
   }
+  if (p.exorciseFail > 0) {
+    dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.exorciseFail, p.targetHP, cap), cap);
+  }
   if (p.lifeStealMod != null) {
     lifeStealDist = calcLifeStealDmgDist(atkFigs, p.lifeStealRes, p.lifeStealMod, cap);
     dist = convolveDists(dist, lifeStealDist, cap);
@@ -1055,6 +1091,7 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
                             stoningFail,
                             deathTouchFail,
                             dispelEvilFail,
+                            exorciseFail,
                             lifeStealMod, lifeStealRes,
                             immolationDist, defInvulnBonus,
                             blurChance, blurBuggy,
@@ -1067,6 +1104,7 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
     stoningFail,
     deathTouchFail,
     dispelEvilFail,
+    exorciseFail,
     lifeStealMod, lifeStealRes,
     immolationDist, defInvulnBonus,
     blurChance, blurBuggy,
@@ -1081,6 +1119,7 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
                                stoningFail,
                                deathTouchFail,
                                dispelEvilFail,
+                               exorciseFail,
                                lifeStealMod, lifeStealRes,
                                immolationDist, defInvulnBonus,
                                blurChance, blurBuggy,
@@ -1093,7 +1132,7 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
   const lo = fearDist ? 0 : maxFigs;
   const touchSpec = {
     poisonStr, poisonFail,
-    stoningFail, deathTouchFail, dispelEvilFail, targetHP,
+    stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, targetHP,
     lifeStealMod, lifeStealRes,
     immDist: immolationDist,
     bloodsucker,
@@ -1349,6 +1388,30 @@ function applyRevenantEffects(unit, version) {
   if (!abilDefined(unit.abilities, 'deathTouch')) extra.deathTouch = 0;
   return Object.assign({}, unit, {
     abilities: Object.assign({}, unit.abilities, extra),
+  });
+}
+
+// Warlord Angelic Guardians (Life rare global enchantment): in combat, grants or
+// improves Exorcise Touch on friendly units. Only realm-less units (normal/hero) and
+// Life-realm units (Life creatures and Sanctified units) are buffed — fantastic
+// creatures of any other realm receive nothing. The tier depends on the realm:
+//   - already has Exorcise: extra -3 (life) / -2 (regular) save penalty
+//   - no Exorcise: gains it at -1 (life) / -0 (regular)
+// Run after the effective unit type is finalized, so Sanctify's life-realm rewrite is
+// already reflected. The extra -3 vs created-undead defenders lives in exorciseFailProb.
+function applyAngelicGuardiansEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'angelicGuardians')) return unit;
+  const realm = realmOfUnitType(unit.unitType);
+  if (realm !== null && realm !== 'life') return unit;
+  const isLife = realm === 'life';
+  let val;
+  if (abilDefined(unit.abilities, 'exorcise')) {
+    val = abilVal(unit.abilities, 'exorcise', 0) + (isLife ? -3 : -2);
+  } else {
+    val = isLife ? -1 : 0;
+  }
+  return Object.assign({}, unit, {
+    abilities: Object.assign({}, unit.abilities, { exorcise: val }),
   });
 }
 
@@ -1910,6 +1973,8 @@ function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning
                       ? deathTouchFailProb(otherResDeath, other.abilities, self.abilities.deathTouch, ver) : 0,
     dispelEvilFail: (fires && hasAbil(self.abilities, 'dispelEvil'))
                       ? dispelEvilFailProb(otherResM, other.abilities, other.unitType, ver) : 0,
+    exorciseFail:   (fires && abilDefined(self.abilities, 'exorcise'))
+                      ? exorciseFailProb(otherResM, other.abilities, other.unitType, self.abilities.exorcise, ver) : 0,
     lifeStealMod:   (fires && abilDefined(self.abilities, 'lifeSteal'))
                       ? lifeStealEffective(otherResDeath, other.abilities, self.abilities.lifeSteal, ver) : null,
   };
@@ -1926,15 +1991,18 @@ function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning,
     ? deathTouchFailProb(otherResDeath, other.abilities, self.abilities.deathTouch, ver) : 0;
   const dispelEvilFail = hasAbil(self.abilities, 'dispelEvil')
     ? dispelEvilFailProb(otherResM, other.abilities, other.unitType, ver) : 0;
+  const exorciseFail = abilDefined(self.abilities, 'exorcise')
+    ? exorciseFailProb(otherResM, other.abilities, other.unitType, self.abilities.exorcise, ver) : 0;
   const lifeStealMod = abilDefined(self.abilities, 'lifeSteal')
     ? lifeStealEffective(otherResDeath, other.abilities, self.abilities.lifeSteal, ver) : null;
   const active = !selfSleep && gazeActive;
   return {
-    poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, lifeStealMod,
+    poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, lifeStealMod,
     poisonWith:     active && poisonFail > 0,
     stoningWith:    active && stoningFail > 0,
     deathTouchWith: active && deathTouchFail > 0,
     dispelEvilWith: active && dispelEvilFail > 0,
+    exorciseWith:   active && exorciseFail > 0,
     lifeStealWith:  active && lifeStealMod !== null,
   };
 }
@@ -1959,9 +2027,11 @@ function normalizeCombatUnit(unit, version) {
   normalized = applyZealEffects(normalized, version);
   normalized = applyFieryFuryEffects(normalized, version);
   normalized = applyTemporalTwistEffects(normalized);
-  return Object.assign({}, normalized, {
+  const withType = Object.assign({}, normalized, {
     unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version),
   });
+  // Angelic Guardians grants/improves Exorcise based on the finalized realm.
+  return applyAngelicGuardiansEffects(withType, version);
 }
 
 function applyPairToHitModifiers(a, b, version) {
@@ -2160,6 +2230,7 @@ function buildThrownPhase(active, params) {
     aStoningFailT,
     aDeathTouchFailT,
     aDispelEvilFailT,
+    aExorciseFailT,
     aLifeStealModT,
     bResDeath,
     aHaste,
@@ -2184,6 +2255,7 @@ function buildThrownPhase(active, params) {
         stoningFail: aStoningFailT,
         deathTouchFail: aDeathTouchFailT,
         dispelEvilFail: aDispelEvilFailT,
+        exorciseFail: aExorciseFailT,
         targetHP: b.hp,
         lifeStealMod: aLifeStealModT, lifeStealRes: bResDeath,
         immDist: aImmTDist,
@@ -2238,6 +2310,7 @@ function buildMeleePhase(params) {
     aStoningFailM,
     aDeathTouchFailM,
     aDispelEvilFailM,
+    aExorciseFailM,
     aLifeStealModM,
     bResDeath,
     bBlurChance,
@@ -2262,7 +2335,7 @@ function buildMeleePhase(params) {
       const fearD = aFearForCell(sAlive, tAlive);
       const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
         bDefVsA, bToBlockVsAMelee, b.hp, cap,
-        aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+        aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aLifeStealModM, bResDeath,
         aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, aHaste,
         isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
         aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
@@ -2293,6 +2366,7 @@ function buildCounterPhase(params) {
     bStoningFailM,
     bDeathTouchFailM,
     bDispelEvilFailM,
+    bExorciseFailM,
     bLifeStealModM,
     aResDeath,
     aBlurChance,
@@ -2317,7 +2391,7 @@ function buildCounterPhase(params) {
       const fearD = bFearForCell(sAlive);
       const o = calcMeleeTouchOutcome(fearD, sAlive, bDoomsA, bBlackSleep ? 0 : applyRage(bMeleeAtkVsA, b, sAlive), bToHitMeleeVert,
         aDefVsB, aToBlockVsBMelee, a.hp, cap,
-        bPoisonStrM, bPoisonFailM, bStoningFailM, bDeathTouchFailM, bDispelEvilFailM, bLifeStealModM, aResDeath,
+        bPoisonStrM, bPoisonFailM, bStoningFailM, bDeathTouchFailM, bDispelEvilFailM, bExorciseFailM, bLifeStealModM, aResDeath,
         bImmMDist, aInvulnBonus, aBlurChance, blurBuggy, bCounterHaste,
         isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined,
         bMinDamageFromHits, hasAbil(b.abilities, 'bloodSucker'));
@@ -2350,6 +2424,7 @@ function buildFirstStrikeComputes(params) {
     aStoningFailM,
     aDeathTouchFailM,
     aDispelEvilFailM,
+    aExorciseFailM,
     aLifeStealModM,
     bResDeath,
     bBlurChance,
@@ -2370,7 +2445,7 @@ function buildFirstStrikeComputes(params) {
     const fearD = aFearedByB ? calcFearDist(sAlive, aPFear) : null;
     const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
       aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
@@ -2390,7 +2465,7 @@ function buildFirstStrikeComputes(params) {
     const fearD = aFearForCell(sAlive, tAlive);
     const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
       aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
@@ -2409,7 +2484,7 @@ function buildFirstStrikeComputes(params) {
       : null;
     const o = calcMeleeTouchOutcome(null /* fearDist */, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aLifeStealModM, bResDeath,
+      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
       aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
@@ -2447,6 +2522,8 @@ function buildAttackerGazePhase(active, params) {
     aDeathTouchFailG,
     aDispelEvilWithGaze,
     aDispelEvilFailG,
+    aExorciseWithGaze,
+    aExorciseFailG,
     aLifeStealWithGaze,
     aLifeStealModG,
     bResDeath,
@@ -2470,6 +2547,7 @@ function buildAttackerGazePhase(active, params) {
         stoningFail: aStoningWithGaze ? aStoningFailG : 0,
         deathTouchFail: aDeathTouchWithGaze ? aDeathTouchFailG : 0,
         dispelEvilFail: aDispelEvilWithGaze ? aDispelEvilFailG : 0,
+        exorciseFail: aExorciseWithGaze ? aExorciseFailG : 0,
         targetHP: b.hp,
         lifeStealMod: aLifeStealWithGaze ? aLifeStealModG : null, lifeStealRes: bResDeath,
         immDist: aImmGDist,
@@ -2508,6 +2586,8 @@ function buildDefenderGazePhase(active, params) {
     bDeathTouchFailG,
     bDispelEvilWithGaze,
     bDispelEvilFailG,
+    bExorciseWithGaze,
+    bExorciseFailG,
     bLifeStealWithGaze,
     bLifeStealModG,
     aResDeath,
@@ -2531,6 +2611,7 @@ function buildDefenderGazePhase(active, params) {
         stoningFail: bStoningWithGaze ? bStoningFailG : 0,
         deathTouchFail: bDeathTouchWithGaze ? bDeathTouchFailG : 0,
         dispelEvilFail: bDispelEvilWithGaze ? bDispelEvilFailG : 0,
+        exorciseFail: bExorciseWithGaze ? bExorciseFailG : 0,
         targetHP: a.hp,
         lifeStealMod: bLifeStealWithGaze ? bLifeStealModG : null, lifeStealRes: aResDeath,
         immDist: bImmGDist,
@@ -2768,9 +2849,9 @@ function resolveCombat(a, b, opts) {
     }
 
     // Touch attack params: melee-phase activation only (gaze/thrown to be added later).
-    const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, lifeStealMod: aLifeStealModM }
+    const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, exorciseFail: aExorciseFailM, lifeStealMod: aLifeStealModM }
       = meleeTouchParams(a, b, bResM, bResDeath, bResStoning, opts.version);
-    const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, deathTouchFail: bDeathTouchFailM, dispelEvilFail: bDispelEvilFailM, lifeStealMod: bLifeStealModM }
+    const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, deathTouchFail: bDeathTouchFailM, dispelEvilFail: bDispelEvilFailM, exorciseFail: bExorciseFailM, lifeStealMod: bLifeStealModM }
       = meleeTouchParams(b, a, aResM, aResDeath, aResStoning, opts.version);
 
     // Touch attack params: thrown-phase activation (for thrown/breath).
@@ -2783,15 +2864,17 @@ function resolveCombat(a, b, opts) {
     const aDeathTouchFailT = aDeathTouchOnT ? deathTouchFailProb(bResDeath, b.abilities, a.abilities.deathTouch, opts.version) : 0;
     const aDispelEvilOnT = aTouchWithThrown && hasAbil(a.abilities, 'dispelEvil');
     const aDispelEvilFailT = aDispelEvilOnT ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
+    const aExorciseOnT = aTouchWithThrown && abilDefined(a.abilities, 'exorcise');
+    const aExorciseFailT = aExorciseOnT ? exorciseFailProb(bResM, b.abilities, b.unitType, a.abilities.exorcise, opts.version) : 0;
     const aLifeStealOnT = aTouchWithThrown && abilDefined(a.abilities, 'lifeSteal');
     const aLifeStealModT = aLifeStealOnT ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
 
     // Gaze-phase touch activation (touches fire alongside gaze regardless of melee atk).
-    const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, lifeStealMod: aLifeStealModG,
-            poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, lifeStealWith: aLifeStealWithGaze }
+    const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, exorciseFail: aExorciseFailG, lifeStealMod: aLifeStealModG,
+            poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, exorciseWith: aExorciseWithGaze, lifeStealWith: aLifeStealWithGaze }
       = gazeTouchParams(a, b, bResM, bResDeath, bResStoning, aGazeActiveP, aBlackSleep, opts.version);
-    const { poisonStr: bPoisonStrG_raw, poisonFail: bPoisonFailG, stoningFail: bStoningFailG, deathTouchFail: bDeathTouchFailG, dispelEvilFail: bDispelEvilFailG, lifeStealMod: bLifeStealModG,
-            poisonWith: bPoisonWithGaze, stoningWith: bStoningWithGaze, deathTouchWith: bDeathTouchWithGaze, dispelEvilWith: bDispelEvilWithGaze, lifeStealWith: bLifeStealWithGaze }
+    const { poisonStr: bPoisonStrG_raw, poisonFail: bPoisonFailG, stoningFail: bStoningFailG, deathTouchFail: bDeathTouchFailG, dispelEvilFail: bDispelEvilFailG, exorciseFail: bExorciseFailG, lifeStealMod: bLifeStealModG,
+            poisonWith: bPoisonWithGaze, stoningWith: bStoningWithGaze, deathTouchWith: bDeathTouchWithGaze, dispelEvilWith: bDispelEvilWithGaze, exorciseWith: bExorciseWithGaze, lifeStealWith: bLifeStealWithGaze }
       = gazeTouchParams(b, a, aResM, aResDeath, aResStoning, bGazeActiveP, bBlackSleep, opts.version);
 
     // Gaze kill-roll probabilities (needed by buildGazeDist).
@@ -2869,6 +2952,7 @@ function resolveCombat(a, b, opts) {
       aStoningFailM,
       aDeathTouchFailM,
       aDispelEvilFailM,
+      aExorciseFailM,
       aLifeStealModM,
       bResDeath,
       bBlurChance,
@@ -2897,6 +2981,7 @@ function resolveCombat(a, b, opts) {
       bStoningFailM,
       bDeathTouchFailM,
       bDispelEvilFailM,
+      bExorciseFailM,
       bLifeStealModM,
       aResDeath,
       aBlurChance,
@@ -2940,6 +3025,8 @@ function resolveCombat(a, b, opts) {
       aDeathTouchFailG,
       aDispelEvilWithGaze,
       aDispelEvilFailG,
+      aExorciseWithGaze,
+      aExorciseFailG,
       aLifeStealWithGaze,
       aLifeStealModG,
       bResDeath,
@@ -2971,6 +3058,8 @@ function resolveCombat(a, b, opts) {
       bDeathTouchFailG,
       bDispelEvilWithGaze,
       bDispelEvilFailG,
+      bExorciseWithGaze,
+      bExorciseFailG,
       bLifeStealWithGaze,
       bLifeStealModG,
       aResDeath,
@@ -2999,6 +3088,7 @@ function resolveCombat(a, b, opts) {
       aStoningFailT,
       aDeathTouchFailT,
       aDispelEvilFailT,
+      aExorciseFailT,
       aLifeStealModT,
       bResDeath,
       aHaste,
@@ -3023,6 +3113,7 @@ function resolveCombat(a, b, opts) {
         stoningTouch: aStoningFailT > 0,
         deathTouch: aDeathTouchFailT > 0,
         dispelEvil: aDispelEvilFailT > 0,
+        exorcise: aExorciseFailT > 0,
         lifeSteal: aLifeStealModT !== null,
         immolation: aImmWithThrown,
       });
@@ -3045,6 +3136,7 @@ function resolveCombat(a, b, opts) {
         stoningTouch: aStoningWithGaze,
         deathTouch: aDeathTouchWithGaze,
         dispelEvil: aDispelEvilWithGaze,
+        exorcise: aExorciseWithGaze,
         lifeSteal: aLifeStealWithGaze,
         immolation: aImmWithGaze,
       });
@@ -3068,6 +3160,7 @@ function resolveCombat(a, b, opts) {
         stoningTouch: bStoningWithGaze,
         deathTouch: bDeathTouchWithGaze,
         dispelEvil: bDispelEvilWithGaze,
+        exorcise: bExorciseWithGaze,
         lifeSteal: bLifeStealWithGaze,
         immolation: bImmWithGaze,
       });
@@ -3140,6 +3233,7 @@ function resolveCombat(a, b, opts) {
         aStoningFailM,
         aDeathTouchFailM,
         aDispelEvilFailM,
+        aExorciseFailM,
         aLifeStealModM,
         bResDeath,
         bBlurChance,
@@ -3174,6 +3268,7 @@ function resolveCombat(a, b, opts) {
         stoningTouch: aStoningFailM > 0,
         deathTouch: aDeathTouchFailM > 0,
         dispelEvil: aDispelEvilFailM > 0,
+        exorcise: aExorciseFailM > 0,
         lifeSteal: aLifeStealModM !== null,
         immolation: aImmWithMelee,
       });
@@ -3200,6 +3295,7 @@ function resolveCombat(a, b, opts) {
           stoningTouch: aStoningFailM > 0 || bStoningFailM > 0,
           deathTouch: aDeathTouchFailM > 0 || bDeathTouchFailM > 0,
           dispelEvil: aDispelEvilFailM > 0 || bDispelEvilFailM > 0,
+          exorcise: aExorciseFailM > 0 || bExorciseFailM > 0,
           lifeSteal: aLifeStealModM !== null || bLifeStealModM !== null,
           immolation: aImmWithMelee || bImmWithMelee,
           counterHasted: bCounterHaste,
@@ -3215,6 +3311,7 @@ function resolveCombat(a, b, opts) {
           stoningTouch: bStoningFailM > 0,
           deathTouch: bDeathTouchFailM > 0,
           dispelEvil: bDispelEvilFailM > 0,
+          exorcise: bExorciseFailM > 0,
           lifeSteal: bLifeStealModM !== null,
           immolation: bImmWithMelee,
         });
@@ -3251,6 +3348,7 @@ function resolveCombat(a, b, opts) {
           stoningTouch: aStoningFailM > 0 || bStoningFailM > 0,
           deathTouch: aDeathTouchFailM > 0 || bDeathTouchFailM > 0,
           dispelEvil: aDispelEvilFailM > 0 || bDispelEvilFailM > 0,
+          exorcise: aExorciseFailM > 0 || bExorciseFailM > 0,
           lifeSteal: aLifeStealModM !== null || bLifeStealModM !== null,
           immolation: aImmWithMelee || bImmWithMelee,
         });
@@ -3309,6 +3407,8 @@ function resolveCombat(a, b, opts) {
       ? deathTouchFailProb(bResDeath, b.abilities, a.abilities.deathTouch, opts.version) : 0;
     const aDispelEvilFailR = (rangedTouchFires && hasAbil(a.abilities, 'dispelEvil'))
       ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
+    const aExorciseFailR = (rangedTouchFires && abilDefined(a.abilities, 'exorcise'))
+      ? exorciseFailProb(bResM, b.abilities, b.unitType, a.abilities.exorcise, opts.version) : 0;
     const aLifeStealModR = (rangedTouchFires && abilDefined(a.abilities, 'lifeSteal'))
       ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
     const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
@@ -3320,6 +3420,7 @@ function resolveCombat(a, b, opts) {
       stoningFail: aStoningFailR,
       deathTouchFail: aDeathTouchFailR,
       dispelEvilFail: aDispelEvilFailR,
+      exorciseFail: aExorciseFailR,
       targetHP: b.hp,
       lifeStealMod: aLifeStealModR, lifeStealRes: bResDeath,
       immDist: aImmDistR,

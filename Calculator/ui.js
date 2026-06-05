@@ -490,6 +490,7 @@ function readUnitStats(prefix, overrides) {
     rangedDist: overrideValues.rangedDist !== undefined ? overrideValues.rangedDist : el('rangedDist').value,
     warpReality: !!el('warpReality').checked,
     hurricane: !!el('hurricane').checked,
+    poxHost: !!el('poxHost').checked,
     generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
   });
 }
@@ -745,6 +746,7 @@ function resetGlobalOptions() {
   document.getElementById('wallOfFire').checked = false;
   document.getElementById('warpReality').checked = false;
   document.getElementById('hurricane').checked = false;
+  document.getElementById('poxHost').checked = false;
 }
 
 function resetAbilityPanelVisibility() {
@@ -1202,10 +1204,11 @@ function updateTypeVisibility() {
   // Version restrictions on global combat enchantments. Disable (and clear) toggles
   // whose effect does not exist in the selected version, so they can't be set to a
   // no-op state. True Light: MoM & Warlord only (removed in CoM 1 & 2).
-  // Hurricane: Warlord only.
+  // Hurricane: Warlord only. Pox host: Warlord only.
   const globalVersionGate = {
     trueLight: isMoM || isWarlord,
     hurricane: isWarlord,
+    poxHost: isWarlord,
   };
   for (const [id, allowed] of Object.entries(globalVersionGate)) {
     const gEl = document.getElementById(id);
@@ -1338,6 +1341,7 @@ function applyPreset(name) {
   document.getElementById('wallOfFire').checked = preset.wallOfFire || false;
   document.getElementById('warpReality').checked = preset.warpReality || false;
   document.getElementById('hurricane').checked = preset.hurricane || false;
+  document.getElementById('poxHost').checked = preset.poxHost || false;
   refreshAbilityFieldVisibility();
   recalculate();
 }
@@ -1477,6 +1481,7 @@ const MATRIX_GLOBAL_DEFS = [
   { key: 'wallOfFire',  label: 'Wall of Fire',  type: 'bool' },
   { key: 'warpReality', label: 'Warp Reality',  type: 'bool' },
   { key: 'hurricane',   label: 'Hurricane',     type: 'bool' },
+  { key: 'poxHost',     label: 'Pox host present', type: 'bool' },
   { key: 'chaosSurge',  label: 'Chaos Surge enchantments', type: 'num', min: 0, max: 99 },
   { key: 'cityWalls',   label: 'City walls', type: 'select',
     options: [['none','None'],['1','+1 def'],['3','+3 def']] },
@@ -2112,6 +2117,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
     warpReality: !!matrixGlobalValue('warpReality'),
     hurricane: !!matrixGlobalValue('hurricane'),
+    poxHost: !!matrixGlobalValue('poxHost'),
     generic: unit.category === 'Generic',
   });
 }
@@ -2180,6 +2186,7 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
     warpReality: !!matrixGlobalValue('warpReality'),
     hurricane: !!matrixGlobalValue('hurricane'),
+    poxHost: !!matrixGlobalValue('poxHost'),
     generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
   });
 }
@@ -2536,6 +2543,7 @@ function applyMatrixCellToMain(attackerIndex, defenderIndex) {
   document.getElementById('wallOfFire').checked  = !!matrixGlobalValue('wallOfFire');
   document.getElementById('warpReality').checked = !!matrixGlobalValue('warpReality');
   document.getElementById('hurricane').checked   = !!matrixGlobalValue('hurricane');
+  document.getElementById('poxHost').checked     = !!matrixGlobalValue('poxHost');
   document.getElementById('chaosSurge').value    = matrixGlobalValue('chaosSurge') || 0;
 
   refreshAbilityFieldVisibility();

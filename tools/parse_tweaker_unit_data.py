@@ -189,6 +189,11 @@ def process_unit_file(input_file: Path) -> dict:
     """Process a single unit data file and return parsed units."""
     units = {}
     unit_id = 1
+    # In CoM the Dispel Evil spell/ability was renamed to Exorcise (save -1, hits any
+    # fantastic creature; created-undead suffer an additional -3). The CoM 6.08 tweaker
+    # export still uses the legacy MoM label, so translate it here. MoM files keep
+    # "Dispel Evil" untouched.
+    is_com = 'CoM' in input_file.name
 
     with open(input_file, 'r', encoding='utf-8') as f:
         # Read TSV file, skipping the header row
@@ -310,6 +315,10 @@ def process_unit_file(input_file: Path) -> dict:
                 unit['category'] = 'Heroes'
                 if 'Hero' not in final_abilities:
                     final_abilities.insert(0, 'Hero')
+
+            if is_com:
+                final_abilities = ['Exorcise=-1' if a == 'Dispel Evil' else a
+                                   for a in final_abilities]
 
             if final_abilities:
                 unit['abilities'] = final_abilities

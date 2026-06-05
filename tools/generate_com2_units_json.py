@@ -236,7 +236,7 @@ def ini_unit_to_record(u):
         'Regeneration', 'HolyBonus', 'Illusion', 'QuickCasting',
         'Fantastic', 'Noncorporeal', 'BloodSucker', 'HealingAura', 'LargeShield',
         'CreateOutpost', 'Lucky', 'Fear', 'Immolation', 'Meld', 'PlaneShifting',
-        'StoningGaze', 'StoningTouch', 'StoningImmunity',
+        'StoningGaze', 'StoningTouch', 'StoningImmunity', 'Exorcise',
         'CounterImmunity', 'LightningResist', 'Supernatural', 'Doom', 'Teleporting',
     ]:
         val = u.get(ab, '').strip()

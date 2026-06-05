@@ -46,7 +46,7 @@ function twoColumnMajor(items) {
 }
 
 const ABILITY_DEFS = [
-  // Abilities — gaze (left col) | touch (right col); 10 items fill 5 rows row-first.
+  // Abilities — gaze (left col) | touch (right col); the Exorcise touch is appended last.
   { key: 'stoningGaze', label: 'Stoning Gaze', type: 'numcheck', match: 'StoningGaze', group: 'Abilities', tooltip: 'For each defender figure: Defender resist at −X or die.\nImmune: Stoning, Magic.' },
   { key: 'stoningTouch', label: 'Stoning Touch', type: 'numcheck', match: 'StoningTouch', group: 'Abilities', tooltip: 'For each attacker figure: Defender resist at −X or die.\nWarlord: Does not fire on ranged or magical ranged attacks.\nImmune: Stoning, Magic.' },
   { key: 'deathGaze', label: 'Death Gaze', type: 'numcheck', match: 'DeathGaze', group: 'Abilities', tooltip: 'For each defender figure: Defender resist at −X or die.\nImmune: Death, Magic, Righteousness.' },
@@ -57,6 +57,7 @@ const ABILITY_DEFS = [
   { key: 'poison', label: 'Poison Touch', type: 'num', match: 'PoisonTouch', group: 'Abilities', tooltip: 'X times per attacker figure: Defender resist or take 1 dmg.\nMoM 1.31 & 1.60: No modifier.\nCoM 1 & 2: Modifier −1.\nImmune: Poison.' },
   { key: 'holyBonus', label: 'Holy bonus', type: 'num', match: 'HolyBonus', group: 'Abilities', tooltip: '+X to melee attack, defense, and resistance.\nCoM 1 & 2: Also +X to ranged/thrown/breath attack.' },
   { key: 'resistanceToAll', label: 'Res. to all', type: 'num', match: 'ResistanceToAll', group: 'Abilities', tooltip: '+X to resistance.' },
+  { key: 'exorcise', label: 'Exorcise', type: 'numcheck', match: 'Exorcise', group: 'Abilities', tooltip: 'Fantastic targets only (the CoM successor to Dispel Evil).\nFor each attacker figure: Defender resist at −X or be banished.\nCreated-undead defenders suffer an additional −3.\nFires on melee, thrown, and ranged attacks.\nImmune: Magic, non-fantastic units.' },
   // Bool abilities in a headerless grid; '_' prefix suppresses the subgroup header.
   // Keep labels column-major alphabetical: the UI grid flows row-first.
   ...twoColumnMajor([
@@ -77,7 +78,7 @@ const ABILITY_DEFS = [
     { key: 'lightningResist', label: 'Lightning Resist', type: 'bool', match: 'LightningResist', group: 'Abilities', subgroup: '_', tooltip: 'Negates the Armor Piercing component of incoming Lightning Breath.\nCoM 2: Also qualifies unit for Inner Power bonuses.' },
     { key: 'longRange', label: 'Long Range', type: 'bool', match: 'LongRange', group: 'Abilities', subgroup: '_', tooltip: 'Missile and boulder ranged distance penalty capped at −10% instead of −30%.' },
     { key: 'lucky', label: 'Lucky', type: 'bool', match: 'Lucky', group: 'Abilities', subgroup: '_', tooltip: '+10% To Hit, +10% To Block, +1 Resistance.\nMoM 1.31: Also opponent −10% To Hit (melee, ranged, and breath).' },
-    { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nDeath Touch, Life Steal, Cause Fear, Stoning, and Dispel Evil.\nMoM only: Also protects against Fire Breath and Lightning Breath.' },
+    { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nDeath Touch, Life Steal, Cause Fear, Stoning, Dispel Evil, and Exorcise.\nMoM only: Also protects against Fire Breath and Lightning Breath.' },
     { key: 'missileImmunity', label: 'Missile Immunity', type: 'bool', match: 'MissileImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to ranged missile attacks.' },
     { key: 'negateFirstStrike', label: 'Negate First Strike', type: 'bool', match: 'NegateFirstStrike', group: 'Abilities', subgroup: '_', tooltip: "Negates the opponent's First Strike." },
     { key: 'nonCorporeal', label: 'Non-Corporeal', type: 'bool', match: 'Non-Corporeal', group: 'Abilities', subgroup: '_', tooltip: 'Unit moves through terrain and walls freely.\nNot turned to undead by undead-creating damage.\nWarlord: Tactician retort grants this unit Negate First Strike.' },
@@ -134,10 +135,10 @@ const ENCHANTMENT_DEFS = [
     { key: 'warpResist', label: 'Warp: Resist', type: 'bool', match: 'WarpResist', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Resistance set to 0.' },
     { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions bools', realm: 'nature', tooltip: '+5 defense. Supersedes Stone Skin.' },
     { key: 'invisibility', label: 'Invisibility', type: 'bool', match: 'Invisibility', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Grants Invisible.' },
-    { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nDeath Touch, Life Steal, Cause Fear, Stoning, and Dispel Evil.\nMoM only: Also protects against Fire Breath and Lightning Breath.' },
+    { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nDeath Touch, Life Steal, Cause Fear, Stoning, Dispel Evil, and Exorcise.\nMoM only: Also protects against Fire Breath and Lightning Breath.' },
     { key: 'guardianWind', calcKey: 'missileImmunity', label: 'Guardian Wind', type: 'bool', match: 'MissileImmunity', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Grants missile immunity.' },
     { key: 'blur', label: 'Blur', type: 'bool', match: 'Blur', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Each incoming hit has a chance to be negated before defense rolls.\nDoes not apply to Doom damage or to spell damage (Immolation, Wall of Fire, etc.).\nMoM 1.31 & 1.60: 10% per hit.\nMoM 1.31 bugs: Each successful negation skips the next roll, capping protection at 50%.\nThe unit\'s own Illusion Immunity disables their Blur, while the opponent\'s immunity is ignored.\nMoM 1.60, CoM 1 & 2: Opponent Illusion Immunity negates Blur.\nCoM 1 & 2: 20% per hit. Stacks with Invisibility to 30%.\nWarlord: 20% per hit. Stacks with Invisibility to 40%.' },
-    { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: '+5 resistance vs. Cause Fear, Death Gaze, Life Steal, Stoning Gaze,\nStoning Touch, and Dispel Evil. Does not affect Poison Touch.' },
+    { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: '+5 resistance vs. Cause Fear, Death Gaze, Life Steal, Stoning Gaze,\nStoning Touch, Dispel Evil, and Exorcise. Does not affect Poison Touch.' },
     { key: 'haste', label: 'Haste', type: 'bool', match: 'Haste', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Melee, thrown, breath, ranged attacks, and counter-attacks are performed twice.\nMoM 1.31 & 1.60: Magic ranged attacks are not performed twice for Caster units (mana-pool casting).\nCoM 1 & 2: Hasted defenders do not counter-attack twice.' },
     { key: 'vertigo', label: 'Vertigo', type: 'bool', match: 'Vertigo', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'To Hit, To Block and defense penalties. Affects melee, all ranged types, thrown, and breath.\nMoM 1.31 & 1.60: −20% To Hit; −1 Defense.\nCoM 1: −30% To Hit; −10% To Block.\nCoM 2: −25% To Hit; −7% To Block.' },
     { key: 'mindStorm', label: 'Mind Storm', type: 'bool', match: 'MindStorm', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'MoM 1.31 & 1.60: −5 melee, ranged, thrown, breath, defense and resistance.\nCoM 1 & 2: −3 melee, −5 ranged, thrown, breath, defense, resistance.' },
@@ -179,14 +180,16 @@ const ENCHANTMENT_DEFS = [
   // Enchantments — Warlord only
   { key: 'lavaSmelter', label: 'Lava Smelter', type: 'select', options: [['none','Basic'],['weaponImmunity','Weapon Imm.'],['missileImmunity','Missile Imm.'],['resistElem','Resist Elem.'],['elementalArmor','Elem. Armor'],['flameBlade','Flame Blade']], match: 'LavaSmelter', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Dwarf building: a nearby mineral combo grants one permanent ability.\nApplies only to Dwarf-race units.\nMithril + Adamantium: Weapon Immunity.\nMithril + Crysx: Missile Immunity.\nMithril + Orihalcon: Resist Elements.\nAdamantium + Orihalcon: Elemental Armor.\nAdamantium + Crysx: Flame Blade.\nThe mineral upgrade Mithril → Adamantium → Orihalcon is not modeled here,\nchoose manually in the weapon and armor type dropdown.' },
   { key: 'pillarOfFaithRes', label: 'Pillar of Faith: +Res', type: 'num', match: 'PillarOfFaithRes', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Rare city enchantment.\nUnits trained in the city gain +1 Resistance per Religious Building (capped at +8).\nEnter the number of Religious Buildings.' },
+  { key: 'powerMinerals', label: 'Natural Selection: Power minerals', type: 'num', match: 'PowerMinerals', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Natural Selection (Warlord Nature common global).\nUnit trained near power-mineral resources.\n+N Resistance.\nEnter the Resistance bonus directly.' },
+  { key: 'survivalInstinctToBlock', label: 'Survival Instinct: +To Block%', type: 'num', match: 'SurvivalInstinctToBlock', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Survival Instinct (Warlord Nature very rare global).\nNewly trained normal units gain +3% to +7% To Defend from gold-producing resources near the city.\nApplies to normal units only.\nEnter the To Block bonus percentage directly.' },
   ...twoColumnMajor([
     { key: 'altarOfTheMoon', label: 'Altar of the Moon', type: 'bool', match: 'AltarOfTheMoon', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Gnoll building: applies only to Gnoll-race units; heroes are excluded.\nThey gain Rage, Poison Immunity, and +1 Resistance.\nRanged units gain +2 Ranged Attack.\nGnoll Hunters also gain Poison 2; Gnoll Witchdoctors gain Life Steal −1 replacing Poison.' },
-    { key: 'altarOfTheSun', label: 'Altar of the Sun (+fig)', type: 'bool', match: 'AltarOfTheSun', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Hawkmen units gain +1 Figure, except for Holy Mother and heroes.\nThe defending-city High Prayer buff is not included.' },
+    { key: 'altarOfTheSun', label: 'Altar of the Sun (+fig)', type: 'bool', match: 'AltarOfTheSun', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Hawkmen units gain +1 Figure, except heroes.\nHoly Mother gains +1 Melee instead of the figure.\nThe defending-city High Prayer buff is not included.' },
     { key: 'artificer', label: 'Artificer retort', type: 'bool', match: 'Artificer', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Mechanical units gain +1 melee, +1 ranged, +1 armor, +1 resistance, and Magic Weapons.\nMagic Weapons grant +10% To Hit and bypass Weapon Immunity.' },
     { key: 'dragonMound', label: 'Dragon Mound', type: 'bool', match: 'DragonMound', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Draconian building: applies only to Draconian units; heroes are excluded.\nThey gain +1 Armor, and +2 Fire Breath if they have a Fire Breath attack.' },
     { key: 'favoredTerrain', label: 'Favored Terrain', type: 'bool', match: 'FavoredTerrain', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Unit fights on its favored combat tile.\nForester → woodland; Mountaineer → rough/rocky; Amphibious → swamp/snowy; Pathfinding → woodland or rough/rocky.\n+5% To Hit and +1 defense.\nTactician retort: bonus doubled, plus First Strike and Negate First Strike.' },
-    { key: 'fortification', calcKey: 'largeShield', label: 'Fortification', type: 'bool', match: 'Fortification', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'City building: all defending units inside city walls gain Large Shield.\n+3 defense vs ranged, thrown, and breath attacks.' },
-    { key: 'hillfort', calcKey: 'missileImmunity', label: 'Hillfort', type: 'bool', match: 'Hillfort', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'City building (select races): all defending units inside city walls gain Missile Immunity.\nRaises defense to 50 vs missile attacks.' },
+    { key: 'fortification', label: 'Fortification', type: 'bool', match: 'Fortification', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'City building: all defending units inside city walls gain Large Shield.\n+3 defense vs ranged, thrown, and breath attacks.\nIf the unit already has Large Shield, it gains Missile Immunity instead.' },
+    { key: 'hillfort', calcKey: 'missileImmunity', label: 'Hillfort', type: 'bool', match: 'Hillfort', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'City building (select races): all defending units inside city walls gain Missile Immunity.' },
     { key: 'lightningBlade', label: 'Lightning Blade', type: 'bool', match: 'LightningBlade', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Barbarian building (Altar of Storm): units gain a witch blade that blasts lightning.\nThrown attacks become Lightning Breath at the same strength.\nUnits with no ranged or breath attack gain a strength-1 Lightning Breath.\nLightning Breath is Armor Piercing, negated by Lightning Resist.' },
     { key: 'ludusAgoge', label: 'Ludus Agoge', type: 'bool', match: 'LudusAgoge', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Orc building: applies only to Orc-race units; Legionaries and heroes are excluded.\nThey gain +1 Attack, +1 Resistance, and +1 HP.\nLegionaries gain +1 Movement instead, which is not modelled.' },
     { key: 'malnourished', label: 'Malnourished', type: 'bool', match: 'Malnourished', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Unit was recruited while its city was under a Drought curse.\nPermanent debuff: −1 melee attack, −2 armor.' },
@@ -202,26 +205,33 @@ const ENCHANTMENT_DEFS = [
     { key: 'nausea', label: 'Nausea', type: 'bool', match: 'Nausea', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Conjuring Pact (Conjurer retort exclusive) cast on a non-fantastic unit.\n−10% To Hit.\n−10% To Defend.\nOnly the normal-unit debuff is modelled (fantastic-creature taming is out of scope).' },
     { key: 'disheartenProphecy', label: 'Dishearten Prophesy', type: 'bool', match: 'DisheartenProphecy', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Astrologer retort exclusive city curse.\nGarrison units defending the cursed city suffer −2 Resistance in combat.\nThe +4 city unrest is outside this calculator.' },
     { key: 'divineProtection', label: 'Divine Protection', type: 'bool', match: 'DivineProtection', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Grants Lucky and Death Immunity.\n+10% To Hit, +10% To Block, +1 Resistance.\nImmune: Death Gaze, Death Touch, Life Stealing, Cause Fear.' },
+    { key: 'angelicGuardians', label: 'Angelic Guardians', type: 'bool', match: 'AngelicGuardians', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Rare global enchantment.\nGrants or improves Exorcise on this unit (fantastic targets only).\nOnly buffs realm-less units (normal/hero) and Life/Sanctified units.\nLife/Sanctified unit: Exorcise −1, or −3 stronger if it already has Exorcise.\nNormal/hero unit: Exorcise −0, or −2 stronger if it already has Exorcise.\nFantastic creatures of other realms are not buffed.\nCreated-undead defenders suffer an additional −3.' },
     { key: 'eyeOfHeaven', label: 'Eye of Heaven', type: 'bool', match: 'EyeOfHeaven', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Life rare combat enchantment.\nGrants True Sight (Illusion Immunity) to this unit.\nThe opposing unit loses all gaze attacks (Doom Gaze, Death Gaze, Stoning Gaze, hidden gaze).' },
     { key: 'sanctify', label: 'Sanctify', type: 'bool', match: 'Sanctify', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Unit becomes a Life-realm non-fantastic unit\nClergy units become Life-realm fantastic creatures.' },
     { key: 'zeal', label: 'Zeal', type: 'bool', match: 'Zeal', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Grants First Strike and Negate First Strike.\nStripped by Temporal Twist.' },
     { key: 'hierophany', label: 'Hierophany', type: 'bool', match: 'Hierophany', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Uncommon combat curse.\nHalves the Defense of the cursed unit (rounded down).\nStrips all immunities, Lightning Resist, and Negate First Strike.\nAlso strips mobility perks (not modelled here).\nCannot be blocked by Resist Magic or Magic Immunity.' },
     { key: 'pillarOfFaithLucky', label: 'Pillar of Faith: Lucky', type: 'bool', match: 'PillarOfFaithLucky', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Rare city enchantment.\nEach unit trained in the city has a 20% chance to gain Lucky.\nLucky: +10% To Hit, +10% To Block, +1 Resistance.\nToggle on to model a unit that rolled the Lucky grant.' },
-    { key: 'shadowStrike', label: 'Shadow Strike', type: 'bool', match: 'ShadowStrike', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord Death Uncommon unit enchantment.\nAdds a Thrown attack at 1/3 of melee strength (rounded down).\nUnits with an existing Thrown attack gain 1/3 of melee as added Thrown.\nThrown is a separate pre-melee phase, so Poison, Life Steal, and Blood Sucker fire on both thrown and melee.' },
+    { key: 'shadowStrike', label: 'Shadow Strike', type: 'bool', match: 'ShadowStrike', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord Death Uncommon unit enchantment.\nAdds a Thrown attack at 1 + 1/3 of melee strength (rounded down).\nUnits with an existing Thrown attack gain 1 + 1/3 of melee as added Thrown.\nThrown is a separate pre-melee phase, so Poison, Life Steal, and Blood Sucker fire on both thrown and melee.' },
     { key: 'revenant', label: 'Revenant', type: 'bool', match: 'Revenant', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord Death Uncommon unit enchantment.\nUnit becomes undead: grants Death, Cold, Poison, and Illusion Immunity.\nGrants melee Death Touch 0: for each attacker figure, defender resists or one figure dies.\nWarlord: Death Touch does not fire on ranged attacks.\nAlso grants Regeneration.' },
     { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Unit becomes undead and gains Blood Sucker.\nThrown and breath attacks transfer to melee: melee gains (strength − 1),\nthe thrown/breath strength drops to 1.' },
     { key: 'soulFlay', label: 'Soul Flay', type: 'bool', match: 'SoulFlay', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord Death Rare irresistible combat curse (normal units and heroes only).\nPenalty scales with experience level: −1 melee, −2 armor, −2 resistance per level.\nRecruit: −1 melee, −2 armor, −2 resistance.\nElite: −4 melee, −8 armor, −8 resistance.\nNo effect on fantastic creatures.' },
-    { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord combat debuff.\nApplied to defending garrison units by the Pestilence city curse.\nSpread to enemies by Goblin Poxbearer units.\n−3 Attack, −3 Defense, −2 Resistance for the rest of combat.\nAffects all units (no fantastic exclusion).' },
+    { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Warlord combat curse.\nApplied to defending garrison units by the Pestilence city curse,\nby the Plague Lord unit ability, and by the Plague Lord artifact power.\n−3 Attack, −3 Defense, −6 Resistance, −10% To Hit for the rest of combat.\nAffects all units (no fantastic exclusion).' },
     { key: 'berserkWarlord', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Troll Medicineman buff (secret concoction).\n+15% To Hit, −10% To Block.\nNo attack doubling and no defense override.' },
     { key: 'blazeOfGlory', label: 'Blaze of Glory', type: 'bool', match: 'BlazeOfGlory', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Common unit enchantment (non-heroes only).\nGains Melee equal to its Armor.\nRanged attack becomes a Thrown attack of the same strength.\nGrants Armor Piercing.\nLoses First Strike and all base Armor (enchantment Armor remains).' },
     { key: 'fieryFury', label: 'Fiery Fury', type: 'bool', match: 'FieryFury', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Common unit enchantment.\nRegular units: +3 melee, +2 missile/thrown/boulder, bypasses Weapon Immunity.\nFantastic creatures: gain First Strike; turn into Chaos creatures unless undead or Sanctified.\nStacks with Flame Blade — shared bonuses do not double; the only added bonus is +2 boulder.' },
     { key: 'insulation', label: 'Insulation', type: 'bool', match: 'Insulation', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Uncommon unit enchantment.\nGrants Fire Immunity, Cold Immunity, and Lightning Resist.\nImmune: Fire Breath, Immolation, Wall of Fire, cold attacks.\nNegates the Armor Piercing component of incoming Lightning Breath.' },
     { key: 'beatOfSwiftness', label: 'Beat of Swiftness', type: 'bool', match: 'BeatOfSwiftness', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Rare combat enchantment.\nFriendly units lose 10% of their Armor (final defense × 0.9, rounded down).' },
-    { key: 'rust', label: 'Rust', type: 'bool', match: 'Rust', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Common combat curse.\nMagic and orihalcon weapons permanently stripped (unit reverts to regular weapons).\n−3 melee attack.\nThrown attacks eliminated for the rest of combat.\nLarge Shield eliminated for the rest of combat.' },
+    { key: 'rust', label: 'Rust', type: 'bool', match: 'Rust', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Warlord Chaos Common combat curse.\nMagic and orihalcon weapons permanently stripped (unit reverts to regular weapons).\n−3 melee and physical ranged (missile/boulder) attack.\nThrown attacks eliminated for the rest of combat.\nLarge Shield eliminated for the rest of combat.' },
+    { key: 'wallOfFireBoost', label: 'Wall of Fire: garrison boost', type: 'bool', match: 'WallOfFireBoost', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Wall of Fire (Warlord Chaos Common city enchantment) garrison buff.\nDefending regular units gain +1 melee, +1 physical ranged (missile/boulder), and +1 thrown attack.\nThose attacks bypass Weapon Immunity.\nApplies to normal units only.\nThe fire-line damage to attackers crossing the wall is the separate global Wall of Fire toggle.' },
     { key: 'colossalStrength', label: 'Colossal Strength', type: 'bool', match: 'ColossalStrength', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: '+1 plus 40% of base melee strength (rounded down).\nSame bonus to physical ranged and thrown attacks.\nBreath and magic ranged are not affected.' },
     { key: 'venom', label: 'Venom', type: 'bool', match: 'Venom', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: '+1 Poison (grants Poison 1 if the unit has none).\nGrants Poison Immunity.' },
+    { key: 'coal', label: 'Natural Selection: Coal', type: 'bool', match: 'NaturalSelectionCoal', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Natural Selection (Warlord Nature common global).\nUnit trained near coal.\n+1 melee attack.' },
+    { key: 'iron', label: 'Natural Selection: Iron', type: 'bool', match: 'NaturalSelectionIron', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Natural Selection (Warlord Nature common global).\nUnit trained near iron.\n+1 armor.' },
+    { key: 'wildGame', label: 'Natural Selection: Wild game', type: 'bool', match: 'NaturalSelectionWildGame', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Natural Selection (Warlord Nature common global).\nUnit trained near wild game.\n+1 ranged attack (missile, boulder, thrown).\nGrants Forester.' },
+    { key: 'nightshade', label: 'Natural Selection: Nightshade', type: 'bool', match: 'NaturalSelectionNightshade', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Natural Selection (Warlord Nature common global).\nUnit trained near nightshade.\n+1 Resistance.' },
     { key: 'planewalking', calcKey: 'teleporting', label: 'Planewalking', type: 'bool', match: 'Planewalking', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Grants teleport.' },
     { key: 'temporalTwist', label: 'Temporal Twist', type: 'bool', match: 'TemporalTwist', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Strips First Strike, Negate First Strike, and Teleporting from this unit.' },
+    { key: 'greatUnbinding', label: 'Great Unbinding', type: 'bool', match: 'GreatUnbinding', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Warlord Sorcery Very Rare global enchantment.\nDebuffs opponent fantastic creatures for the rest of battle.\n−20% To Hit.\n−20% To Defend.\n−2 Resistance.\nNo effect on non-fantastic units.\nThe Confusion half of the spell is not modelled here.' },
   ]),
 ];
 
@@ -1129,15 +1139,23 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 3.200 },
   },
   eternalNightEnemyPoorSightWarlord: {
-    desc: 'Eternal Night (Warlord): enemy non-Death unit loses 2 range ("poor sight"). Missile at dist 2 treated as dist 4 → -10% To Hit (CoM2 penalty starts at 4). rtb 4 × 90% = 3.6 dmg',
+    desc: 'Eternal Night (Warlord): enemy non-Death unit gets -2 ranged attack strength ("poor vision"). Missile rtb 4 - 2 = 2 at 100% hit vs def 0 = 2 dmg',
     version: 'com2_warlord_1.5.12.5',
     a: { toHitRtbMod:70, rtbType:'missile', rtb:4, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
-    expected: { dmgToA: 0, dmgToB: 3.600 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  eternalNightMagicRangedWarlord: {
+    desc: 'Eternal Night (Warlord): -2 ranged penalty also applies to magic ranged. Chaos magic ranged rtb 4 - 2 = 2 at 100% hit vs def 0 = 2 dmg',
+    version: 'com2_warlord_1.5.12.5',
+    a: { toHitRtbMod:70, rtbType:'magic_c', rtb:4, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
+    rangedCheck: true, rangedDist: 2,
+    expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   eternalNightDeathUnitNoPoorSightWarlord: {
-    desc: 'Eternal Night (Warlord): Death-realm unit is NOT affected by poor-sight penalty. Missile at dist 2, no extra distance, rtb 4 + doubled Darkness +2 = 6 × 100% hit vs def 0 = 6 dmg',
+    desc: 'Eternal Night (Warlord): Death-realm unit is NOT affected by the -2 ranged penalty. Missile rtb 4 + doubled Darkness +2 = 6 × 100% hit vs def 0 = 6 dmg',
     version: 'com2_warlord_1.5.12.5',
     a: { toHitRtbMod:70, rtbType:'missile', rtb:4, hp:10, unitType:'fantastic_death' },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
@@ -1145,7 +1163,7 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   eternalNightThrownUnaffectedWarlord: {
-    desc: 'Eternal Night (Warlord): poor-sight range penalty does not apply to thrown. Melee 1 + thrown 3 at 100% hit vs def 0 = 4 dmg',
+    desc: 'Eternal Night (Warlord): -2 ranged penalty does not apply to thrown. Melee 1 + thrown 3 at 100% hit vs def 0 = 4 dmg',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
@@ -1406,26 +1424,77 @@ const PRESETS = {
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { revenant: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
+  // --- Exorcise (Warlord touch: resist-or-banish vs fantastic units) ---
+  exorciseFantasticWarlord: {
+    desc: 'Exorcise -3 vs fantastic Res 5: atk 1 (100% blocked by def 1) + Exorcise touch, effRes 5-3=2 → pFail 0.8 × 10 hp = 8.0. Non-fantastic defender would be immune (0).',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { exorcise: -3 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  exorciseNonFantasticImmuneWarlord: {
+    desc: 'Exorcise only affects fantastic units: same Exorcise -3 vs a NORMAL defender → 0. (As fantastic it would be 8.0.)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { exorcise: -3 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  exorciseUndeadExtraPenaltyWarlord: {
+    desc: 'Exorcise (like Dispel Evil) hits created-undead with an additional -3: Exorcise 0 vs an undead (fantastic_death) defender Res 5 → effRes 5-3=2 → pFail 0.8 × 10 = 8.0. A non-undead fantastic defender would be effRes 5 → 0.5 × 10 = 5.0.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { exorcise: 0 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { undead: true } },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  // --- Angelic Guardians (Warlord global: grants/improves Exorcise on friendly units) ---
+  angelicGuardiansGrantsExorciseRegularWarlord: {
+    desc: 'Angelic Guardians on a regular unit grants Exorcise -0: vs fantastic Res 5, effRes 5 → pFail 0.5 × 10 = 5.0. Without the enchantment it would be 0.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { angelicGuardians: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  angelicGuardiansLifeTierWarlord: {
+    desc: 'Angelic Guardians on a Sanctified (life-realm) unit grants Exorcise -1: vs fantastic Res 5, effRes 4 → pFail 0.6 × 10 = 6.0. A regular unit would only get -0 → 5.0.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { angelicGuardians: true, sanctify: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  angelicGuardiansImprovesExistingExorciseWarlord: {
+    desc: 'Angelic Guardians on a regular unit that already has Exorcise -1 adds -2 → -3: vs fantastic Res 5, effRes 2 → pFail 0.8 × 10 = 8.0. Without the enchantment, Exorcise -1 → effRes 4 → 0.6 × 10 = 6.0.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { angelicGuardians: true, exorcise: -1 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  angelicGuardiansFantasticChaosNotBuffedWarlord: {
+    desc: 'Angelic Guardians does not buff non-Life fantastic creatures: a fantastic Chaos attacker gains no Exorcise → 0 (atk 1 fully blocked). A realm-less/Life unit would have gained Exorcise -0 → 5.0.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { angelicGuardians: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
   shadowStrikeGrantsThrownWarlord: {
-    desc: 'Shadow Strike (Warlord): melee-only unit gains a thrown attack at 1/3 of melee. Melee 9 → thrown floor(9/3)=3. Both 100% hit vs def 0 → 9 + 3 = 12.0 (without Shadow Strike, melee 9 only → 9.0)',
+    desc: 'Shadow Strike (Warlord): melee-only unit gains a thrown attack at 1 + 1/3 of melee. Melee 9 → thrown 1+floor(9/3)=4. Both 100% hit vs def 0 → 9 + 4 = 13.0 (without Shadow Strike, melee 9 only → 9.0)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:9, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { shadowStrike: true } },
     b: { def:0, toBlkMod:70, hp:20 },
-    expected: { dmgToA: 0, dmgToB: 12.000 },
+    expected: { dmgToA: 0, dmgToB: 13.000 },
   },
   shadowStrikeBoostsExistingThrownWarlord: {
-    desc: 'Shadow Strike (Warlord): a unit with existing thrown gains 1/3 of melee as added thrown. Melee 9, thrown 4 → thrown 4+floor(9/3)=7. Both 100% hit vs def 0 → 9 + 7 = 16.0 (without Shadow Strike, 9 + 4 = 13.0)',
+    desc: 'Shadow Strike (Warlord): a unit with existing thrown gains 1 + 1/3 of melee as added thrown. Melee 9, thrown 4 → thrown 4+1+floor(9/3)=8. Both 100% hit vs def 0 → 9 + 8 = 17.0 (without Shadow Strike, 9 + 4 = 13.0)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:9, rtbType:'thrown', rtb:4, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { shadowStrike: true } },
     b: { def:0, toBlkMod:70, hp:20 },
-    expected: { dmgToA: 0, dmgToB: 16.000 },
+    expected: { dmgToA: 0, dmgToB: 17.000 },
   },
   shadowStrikeDoublePoisonWarlord: {
-    desc: 'Shadow Strike (Warlord): the granted thrown is a separate phase, so Poison fires on both thrown and melee. Melee 9 grants thrown 3, both 100% hit vs def 0 → 12 physical; Poison 3 vs res 5 (CoM2 fail = (11−5)/10 = 0.6) → 1.8 per phase × 2 = 3.6, total 15.6 (without Shadow Strike, melee 9 + single poison 1.8 = 10.8)',
+    desc: 'Shadow Strike (Warlord): the granted thrown is a separate phase, so Poison fires on both thrown and melee. Melee 9 grants thrown 4, both 100% hit vs def 0 → 13 physical; Poison 3 vs res 5 (CoM2 fail = (11−5)/10 = 0.6) → 1.8 per phase × 2 = 3.6, total 16.6 (without Shadow Strike, melee 9 + single poison 1.8 = 10.8)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:9, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { shadowStrike: true, poison: 3 } },
     b: { def:0, toBlkMod:70, res:5, hp:30 },
-    expected: { dmgToA: 0, dmgToB: 15.600 },
+    expected: { dmgToA: 0, dmgToB: 16.600 },
   },
 
   // --- Soul Flay (Warlord Death curse: −1 melee / −2 armor / −2 resistance per experience level; Recruit counts as level 1) ---
@@ -1458,13 +1527,13 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
 
-  // --- Plague (Warlord combat debuff: flat −3 melee / −3 armor / −2 resistance) ---
+  // --- Plague (Warlord combat curse: −3 melee / −3 armor / −6 resistance / −10% To Hit) ---
   plagueMeleeWarlord: {
-    desc: 'Plague (Warlord) on the attacker: melee 8 − 3 = 5, 100% hit vs def 0 → 5.0 (without Plague it would be 8.0)',
+    desc: 'Plague (Warlord) on the attacker: melee 8 − 3 = 5, 100% base hit − 10% Plague = 90% vs def 0 → 5 × 0.9 = 4.5 (without Plague it would be 8.0)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:8, toHitMod:70, hp:10, abilities: { plague: true } },
     b: { def:0, toBlkMod:70, hp:20 },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 4.500 },
   },
   plagueArmorWarlord: {
     desc: 'Plague (Warlord) on the defender: armor 3 − 3 = 0, so atk 3 (100% hit/block) passes a defenseless target → 3.0 (without Plague, def 3 blocks all → 0.0)',
@@ -1474,10 +1543,145 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   plagueResistanceWarlord: {
-    desc: 'Plague (Warlord) on the defender: resistance 5 − 2 = 3. Death Touch 0 vs res 3 → pFail (10−3)/10 = 0.7 × 10 hp = 7.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Plague, res 5 → pFail 0.5 → 5.0)',
+    desc: 'Plague (Warlord) on the defender: resistance 8 − 6 = 2. Death Touch 0 vs res 2 → pFail (10−2)/10 = 0.8 × 10 hp = 8.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Plague, res 8 → pFail 0.2 → 2.0)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
-    b: { def:4, toBlkMod:70, res:5, hp:10, abilities: { plague: true } },
+    b: { def:4, toBlkMod:70, res:8, hp:10, abilities: { plague: true } },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  plagueToHitWarlord: {
+    desc: 'Plague (Warlord) −10% To Hit: melee 13 − 3 = 10, 100% base hit − 10% = 90% vs def 0 → 10 × 0.9 = 9.0 (without Plague, 13 × 100% = 13.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:13, toHitMod:70, hp:10, abilities: { plague: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 9.000 },
+  },
+
+  // --- Pox Host / Goblin Pox (Warlord global combat debuff, race-dependent) ---
+  // Non-Goblin: −3 melee / −3 armor / −3 resistance, no To Hit. Goblin: −1 melee / −1 armor.
+  goblinPoxNonGoblinMeleeWarlord: {
+    desc: 'Pox Host (Warlord) on a non-Goblin attacker: melee 8 − 3 = 5, 100% hit vs def 0 → 5.0 (no To Hit penalty, unlike Plague). Without Pox Host it would be 8.0',
+    version: 'com2_warlord_1.5.12.5',
+    poxHost: true,
+    a: { atk:8, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  goblinPoxNonGoblinArmorWarlord: {
+    desc: 'Pox Host (Warlord) on a non-Goblin defender: armor 3 − 3 = 0, so missile 3 (100% hit/block) passes a defenseless target → 3.0 (without Pox Host, def 3 blocks all → 0.0). Uses a ranged attacker since Pox Host reduces only melee, leaving the attack strength intact.',
+    version: 'com2_warlord_1.5.12.5',
+    poxHost: true,
+    a: { atk:0, rtbType:'missile', rtb:3, toHitRtbMod:70, hp:10 },
+    b: { def:3, toBlkMod:70, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  goblinPoxNonGoblinResistanceWarlord: {
+    desc: 'Pox Host (Warlord) on a non-Goblin defender: resistance 5 − 3 = 2. Death Touch 0 vs res 2 → pFail (10−2)/10 = 0.8 × 10 hp = 8.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Pox Host, res 5 → pFail 0.5 → 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    poxHost: true,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
+    b: { def:4, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  goblinPoxGoblinMilderWarlord: {
+    desc: 'Pox Host (Warlord) on a GOBLIN attacker: only −1 melee (not −3). melee 8 − 1 = 7, 100% hit vs def 0 → 7.0 (without Pox Host, 8.0; if it wrongly used the non-Goblin −3 it would be 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    poxHost: true,
+    a: { atk:8, toHitMod:70, hp:10, race: 'Goblin' },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  goblinPoxGoblinResistanceUnaffectedWarlord: {
+    desc: 'Pox Host (Warlord) on a GOBLIN defender: resistance is NOT reduced (Goblins take only −1 melee / −1 armor). Death Touch 0 vs res 5 → pFail 0.5 × 10 = 5.0. Melee atk 1 fully blocked by armor 4−1=3. (A non-Goblin would be res 2 → 8.0)',
+    version: 'com2_warlord_1.5.12.5',
+    poxHost: true,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
+    b: { def:4, toBlkMod:70, res:5, hp:10, race: 'Goblin' },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
+  // --- Great Unbinding (Warlord Sorcery global: −20% To Hit / −20% To Defend / −2 Resistance on opponent fantastic creatures) ---
+  greatUnbindingToHitWarlord: {
+    desc: 'Great Unbinding (Warlord) on a fantastic attacker: To Hit 100% − 20% = 80%. melee 10 (1 fig) vs def 0 → 10 × 0.8 = 8.0 (without Great Unbinding, 100% → 10.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:10, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { greatUnbinding: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  greatUnbindingToBlockWarlord: {
+    desc: 'Great Unbinding (Warlord) on a fantastic defender: To Block 100% − 20% = 80%. atk 10 (100% hit) vs def 10 blocking at 80% → ~2 leak through (without Great Unbinding, def 10 at 100% blocks all → 0.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:10, toHitMod:70, hp:20 },
+    b: { def:10, toBlkMod:70, hp:20, unitType:'fantastic_chaos', abilities: { greatUnbinding: true } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  greatUnbindingResistanceWarlord: {
+    desc: 'Great Unbinding (Warlord) on a fantastic defender: resistance 5 − 2 = 3. Death Touch 0 vs res 3 → pFail (10−3)/10 = 0.7 × 10 hp = 7.0 (without Great Unbinding, res 5 → 0.5 → 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
+    b: { def:4, toBlkMod:70, res:5, hp:10, unitType:'fantastic_chaos', abilities: { greatUnbinding: true } },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  greatUnbindingNonFantasticUnaffectedWarlord: {
+    desc: 'Great Unbinding (Warlord) on a non-fantastic attacker: no effect. melee 10 (1 fig, 100% hit) vs def 0 → 10.0 (the fantastic-only gating means a normal unit keeps full To Hit)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:10, toHitMod:70, hp:10, unitType:'normal', abilities: { greatUnbinding: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
+
+  // --- Natural Selection (Warlord Nature global: recruitment bonuses from city resources) ---
+  naturalSelectionCoalWarlord: {
+    desc: 'Natural Selection Coal (Warlord): +1 melee. melee 5 + 1 = 6 (1 fig, 100% hit) vs def 0 → 6.0 (without Coal → 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:5, toHitMod:70, hp:10, abilities: { coal: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  naturalSelectionIronWarlord: {
+    desc: 'Natural Selection Iron (Warlord): +1 armor on defender. armor 4 + 1 = 5 (100% block) fully blocks atk 5 → 0.0 (without Iron, def 4 lets 1 leak → 1.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:5, toHitMod:70, hp:20 },
+    b: { def:4, toBlkMod:70, hp:20, abilities: { iron: true } },
+    expected: { dmgToA: 0, dmgToB: 0.000 },
+  },
+  naturalSelectionWildGameWarlord: {
+    desc: 'Natural Selection Wild game (Warlord): +1 ranged attack. missile 5 + 1 = 6 (1 fig, 100% hit) vs def 0 → 6.0 (without Wild game → 5.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { wildGame: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  naturalSelectionNightshadeWarlord: {
+    desc: 'Natural Selection Nightshade (Warlord): +1 Resistance on defender. res 4 + 1 = 5. Death Touch 0 vs res 5 → pFail (10−5)/10 = 0.5 × 10 hp = 5.0 (without Nightshade, res 4 → 0.6 → 6.0). Melee atk 1 fully blocked by armor 4.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
+    b: { def:4, toBlkMod:70, res:4, hp:10, abilities: { nightshade: true } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  naturalSelectionPowerMineralsWarlord: {
+    desc: 'Natural Selection Power minerals (Warlord): +N Resistance directly; 2 → +2. res 3 + 2 = 5. Death Touch 0 vs res 5 → 0.5 × 10 hp = 5.0 (without Power minerals, res 3 → 0.7 → 7.0). Melee atk 1 fully blocked by armor 4.',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
+    b: { def:4, toBlkMod:70, res:3, hp:10, abilities: { powerMinerals: 2 } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
+  // --- Survival Instinct +To Block (Warlord recruitment bonus: +N% To Defend on normal units) ---
+  survivalInstinctToBlockNormalWarlord: {
+    desc: 'Survival Instinct +To Block (Warlord) on a normal defender: +40% raises To Block from 30% base to 70%. atk 10 (100% hit, 1 fig) vs def 10 → 10 × (1 − 0.70) = 3.0 (without the bonus, 30% block → 7.0)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:10, toHitMod:70, hp:20 },
+    b: { def:10, hp:20, unitType:'normal', abilities: { survivalInstinctToBlock: 40 } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  survivalInstinctToBlockFantasticUnaffectedWarlord: {
+    desc: 'Survival Instinct +To Block (Warlord): no effect on fantastic creatures (normal-unit recruitment bonus). def 10 at 30% base block: atk 10 (100% hit) → 10 × 0.70 = 7.0 (same as without the bonus)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:10, toHitMod:70, hp:20 },
+    b: { def:10, hp:20, unitType:'fantastic_chaos', abilities: { survivalInstinctToBlock: 40 } },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
 
@@ -2543,6 +2747,15 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0 },
   },
 
+  fortificationLargeShieldUpgradeWarlord: {
+    desc: 'Fortification on a unit that already has Large Shield grants Missile Immunity instead: missile 12 (100% hit) vs def raised to 100 → 0 (would be 12−5=7 with only Large Shield)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { rtbType: 'missile', rtb: 12, toHitRtbMod: 70, hp: 10 },
+    b: { def: 2, toBlkMod: 70, hp: 20, abilities: { largeShield: true, fortification: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+
   // --- Hillfort ---
   hillfortMissileWarlord: {
     desc: 'Hillfort Missile Immunity (Warlord): missile 3 (100% hit) vs def 2 raised to 50 → 0',
@@ -2706,6 +2919,13 @@ const PRESETS = {
     a: { figs:2, atk:2, toHitMod:70, hp:5, abilities: { altarOfTheSun: true } },
     b: { atk:0, def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  altarOfTheSunHolyMotherMeleeWarlord: {
+    desc: 'Altar of the Sun (Warlord): Holy Mother gains +1 Melee instead of a figure. 1-fig attacker stays at 1 fig; atk 2+1 × 1 fig at 100% hit vs def 0 → 3 dmg (without the Altar, atk 2 → 2)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { figs:1, atk:2, toHitMod:70, hp:5, race:'Hawkmen', name:'Holy Mother', abilities: { altarOfTheSun: true } },
+    b: { atk:0, def:0, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   altarOfTheSunHeroExcludedWarlord: {
     desc: 'Altar of the Sun (Warlord): a Hawkman hero is excluded → no figure bonus. 1-fig attacker stays at 1 fig; atk 2 × 1 fig at 100% hit vs def 0 → 2 dmg (a non-hero Hawkman would gain +1 Figure → 4)',
@@ -3201,6 +3421,22 @@ const PRESETS = {
     version: 'com2_warlord_1.5.12.5',
     a: { atk:10, toHitMod:70, hp:10, abilities: { rust: true } },
     b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 7 },
+  },
+  rustPhysicalRangedPenaltyWarlord: {
+    desc: 'Rust (Warlord): −3 to physical ranged (missile). Missile 10 → 7, 100% hit, def 0 → E[dmg] = 7 (without Rust, 10)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:0, rtbType:'missile', rtb:10, toHitRtbMod:70, hp:10, abilities: { rust: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 7 },
+  },
+  rustBoulderRangedPenaltyWarlord: {
+    desc: 'Rust (Warlord): −3 to physical ranged (boulder). Boulder 10 → 7, 100% hit, def 0 → E[dmg] = 7 (without Rust, 10)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:0, rtbType:'boulder', rtb:10, toHitRtbMod:70, hp:10, abilities: { rust: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7 },
   },
   rustStripsMagicWeaponWarlord: {
@@ -4577,20 +4813,43 @@ const PRESETS = {
     expected: { dmgToA: 7.200, dmgToB: 4.000 },
   },
   wallOfFireWarlordDefenderMetalFires: {
-    desc: 'Wall of Fire Warlord grants defender +1 non-magic attack (Metal Fires): B melee counter 5→6 vs 0 def; WoF 7.2 + counter 6 = 13.2 to A',
+    desc: 'Wall of Fire garrison boost grants defender +1 non-magic attack (Metal Fires): B melee counter 5→6 vs 0 def; WoF fire 7.2 + counter 6 = 13.2 to A',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:1, toHitMod:70, def:0, hp:100 },
-    b: { atk:5, toHitMod:70, def:0, hp:10 },
+    b: { atk:5, toHitMod:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
     wallOfFire: true,
     expected: { dmgToA: 13.200, dmgToB: 1.000 },
   },
   wallOfFireWarlordDefenderMagicWeapon: {
-    desc: 'Wall of Fire Warlord grants defender magic weapons (Metal Fires): B counter (atk 5+1) bypasses A Weapon Immunity (def 0+10 → 0). WoF 7.2 + counter 6 = 13.2 to A (0 without bypass)',
+    desc: 'Wall of Fire garrison boost grants defender magic weapons (Metal Fires): B counter (atk 5+1) bypasses A Weapon Immunity (def 0+10 → 0). WoF fire 7.2 + counter 6 = 13.2 to A (0 without bypass)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:1, toHitMod:70, def:0, toBlkMod:70, hp:100, abilities: { weaponImmunity: true } },
-    b: { atk:5, toHitMod:70, def:0, hp:10 },
+    b: { atk:5, toHitMod:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
     wallOfFire: true,
     expected: { dmgToA: 13.200, dmgToB: 1.000 },
+  },
+  wallOfFireWarlordBoostOnAttacker: {
+    desc: 'Garrison boost is per-unit and side-independent: boost on attacker A (no fire line). A melee 5→6 vs B def 0 → 6.0 to B (5.0 without the boost)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:5, toHitMod:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
+    b: { atk:0, toBlkMod:70, def:0, hp:20 },
+    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+  },
+  wallOfFireWarlordBoostBoulder: {
+    desc: 'Garrison boost now covers boulder physical ranged: A boulder 5→6 @100% vs B def 0 → 6.0 to B (5.0 without boulder coverage)',
+    version: 'com2_warlord_1.5.12.5',
+    rangedCheck: true, rangedDist: 1,
+    a: { rtbType:'boulder', rtb:5, toHitRtbMod:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
+    b: { atk:0, toBlkMod:70, def:0, hp:20 },
+    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+  },
+  wallOfFireWarlordFireLineNoBoost: {
+    desc: 'Split: fire-line global alone does NOT grant the garrison boost. B has no boost → counter stays 5; WoF fire 7.2 + counter 5 = 12.2 to A (13.2 if the fire line still boosted)',
+    version: 'com2_warlord_1.5.12.5',
+    a: { atk:1, toHitMod:70, def:0, hp:100 },
+    b: { atk:5, toHitMod:70, def:0, hp:10 },
+    wallOfFire: true,
+    expected: { dmgToA: 12.200, dmgToB: 1.000 },
   },
   // --- Magic Immunity vs Breath (version difference) ---
   magicImmunityFireBreathMoM: {
@@ -5939,7 +6198,17 @@ const TEST_TREE = [
         keys: [
           'altarOfTheSunFigureWarlord',
           'altarOfTheSunNonHawkmanWarlord',
+          'altarOfTheSunHolyMotherMeleeWarlord',
           'altarOfTheSunHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Angelic Guardians',
+        keys: [
+          'angelicGuardiansGrantsExorciseRegularWarlord',
+          'angelicGuardiansLifeTierWarlord',
+          'angelicGuardiansImprovesExistingExorciseWarlord',
+          'angelicGuardiansFantasticChaosNotBuffedWarlord',
         ],
       },
       {
@@ -6148,6 +6417,7 @@ const TEST_TREE = [
           'eternalNightEnemyLifeResistanceCoM2',
           'eternalNightEnemyResistanceCoM',
           'eternalNightEnemyPoorSightWarlord',
+          'eternalNightMagicRangedWarlord',
           'eternalNightDeathUnitNoPoorSightWarlord',
           'eternalNightThrownUnaffectedWarlord',
         ],
@@ -6157,6 +6427,14 @@ const TEST_TREE = [
         keys: [
           'eyeOfHeavenNegatesIllusion',
           'eyeOfHeavenDisablesEnemyGaze',
+        ],
+      },
+      {
+        name: 'Exorcise',
+        keys: [
+          'exorciseFantasticWarlord',
+          'exorciseNonFantasticImmuneWarlord',
+          'exorciseUndeadExtraPenaltyWarlord',
         ],
       },
       {
@@ -6186,6 +6464,26 @@ const TEST_TREE = [
         keys: [
           'fortificationRangedWarlord',
           'fortificationBreathWarlord',
+          'fortificationLargeShieldUpgradeWarlord',
+        ],
+      },
+      {
+        name: 'Goblin Pox',
+        keys: [
+          'goblinPoxNonGoblinMeleeWarlord',
+          'goblinPoxNonGoblinArmorWarlord',
+          'goblinPoxNonGoblinResistanceWarlord',
+          'goblinPoxGoblinMilderWarlord',
+          'goblinPoxGoblinResistanceUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Great Unbinding',
+        keys: [
+          'greatUnbindingToHitWarlord',
+          'greatUnbindingToBlockWarlord',
+          'greatUnbindingResistanceWarlord',
+          'greatUnbindingNonFantasticUnaffectedWarlord',
         ],
       },
       {
@@ -6336,6 +6634,16 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Natural Selection',
+        keys: [
+          'naturalSelectionCoalWarlord',
+          'naturalSelectionIronWarlord',
+          'naturalSelectionWildGameWarlord',
+          'naturalSelectionNightshadeWarlord',
+          'naturalSelectionPowerMineralsWarlord',
+        ],
+      },
+      {
         name: 'Orihalcon',
         keys: [
           'orihalconMagicRangedBonusCoM2',
@@ -6358,6 +6666,7 @@ const TEST_TREE = [
           'plagueMeleeWarlord',
           'plagueArmorWarlord',
           'plagueResistanceWarlord',
+          'plagueToHitWarlord',
         ],
       },
       {
@@ -6438,6 +6747,8 @@ const TEST_TREE = [
         name: 'Rust (Warlord)',
         keys: [
           'rustMeleePenaltyWarlord',
+          'rustPhysicalRangedPenaltyWarlord',
+          'rustBoulderRangedPenaltyWarlord',
           'rustStripsMagicWeaponWarlord',
           'rustEliminatesThrownWarlord',
           'rustEliminatesLargeShieldWarlord',
@@ -6502,6 +6813,8 @@ const TEST_TREE = [
         keys: [
           'survivalInstinctFantasticBonusCoM2',
           'survivalInstinctTransformedEligibleCoM2',
+          'survivalInstinctToBlockNormalWarlord',
+          'survivalInstinctToBlockFantasticUnaffectedWarlord',
         ],
       },
       {
@@ -6560,6 +6873,9 @@ const TEST_TREE = [
           'wallOfFireWarlordSingleFigure',
           'wallOfFireWarlordDefenderMetalFires',
           'wallOfFireWarlordDefenderMagicWeapon',
+          'wallOfFireWarlordBoostOnAttacker',
+          'wallOfFireWarlordBoostBoulder',
+          'wallOfFireWarlordFireLineNoBoost',
         ],
       },
       {

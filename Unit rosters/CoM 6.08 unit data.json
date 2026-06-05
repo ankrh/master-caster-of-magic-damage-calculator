@@ -3305,7 +3305,7 @@
       "Caster 40 MP",
       "Holy Bonus=1",
       "Fantastic",
-      "Dispel Evil"
+      "Exorcise=-1"
     ],
     "cost": 360,
     "upkeep": 8

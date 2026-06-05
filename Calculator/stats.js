@@ -76,6 +76,18 @@ function applyPillarOfFaithGrant(abilities, version) {
   return { ...abilities, lucky: true };
 }
 
+// Fortification (Warlord, city building): all defending units inside the city walls gain a
+// Large Shield effect. If the unit already has Large Shield, it receives Missile Immunity
+// instead (helptext: "If the friendly unit already has Large Shield ability, the unit receives
+// Missile Immunity bonus instead"). Folded in here so the largeShield/missileImmunity defense
+// bonuses flow through every downstream combat read.
+function applyFortificationGrant(abilities, version) {
+  if (!version || !version.startsWith('com2_warlord') || !abilities.fortification) return abilities;
+  return abilities.largeShield
+    ? { ...abilities, missileImmunity: true }
+    : { ...abilities, largeShield: true };
+}
+
 // Insulation (Warlord, Chaos unit enchantment): grants Fire Immunity, Cold Immunity, and
 // Lightning Resist. Folded into effective abilities here so the combat immunity checks
 // (fire breath/immolation/wall of fire defense, cold attacks, and the lightning AP negation)
@@ -102,7 +114,8 @@ function deriveUnitStats(input) {
   // units and not others, so name exceptions match with endsWith (always gated by race).
   const unitRace = input.race || '';
   const unitName = input.name || '';
-  const abilities = applyInsulationGrant(
+  const abilities = applyFortificationGrant(
+    applyInsulationGrant(
     applyPillarOfFaithGrant(
     applyLuckyStarGrant(
     applyDivineProtectionGrant(
@@ -110,6 +123,7 @@ function deriveUnitStats(input) {
         applyLavaSmelterGrant(input.abilities || {}, version, input.unitType, unitRace),
         version, input.unitType, unitRace, unitName),
       version),
+    version),
     version),
     version),
     version);
@@ -142,10 +156,13 @@ function deriveUnitStats(input) {
   const altarHunter = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Hunters');
   const altarWitchdoctor = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Witchdoctors');
   // Altar of the Sun (Warlord, Hawkmen building): Hawkmen units trained here gain +1
-  // Figure. Gated on the Hawkmen race — Holy Mother and heroes are excluded and gain nothing.
-  // Only the figure bonus is modelled; the defending-city High Prayer buff is not.
-  const altarOfTheSun = isWarlordForArtificer
-    && !!abilities.altarOfTheSun && unitRace === 'Hawkmen' && !unitName.endsWith('Holy Mother') && unitTypeRaw !== 'hero';
+  // Figure, except Holy Mother who gains +1 Melee instead. Gated on the Hawkmen race —
+  // heroes are excluded and gain nothing. Only these unit bonuses are modelled; the
+  // defending-city High Prayer buff is not.
+  const altarOfTheSunEligible = isWarlordForArtificer
+    && !!abilities.altarOfTheSun && unitRace === 'Hawkmen' && unitTypeRaw !== 'hero';
+  const altarOfTheSunHolyMother = altarOfTheSunEligible && unitName.endsWith('Holy Mother');
+  const altarOfTheSun = altarOfTheSunEligible && !unitName.endsWith('Holy Mother');
   // Dragon Mound (Warlord, Draconian building): Draconian units trained here gain +1 Armor
   // (folded into def below) and, for units that already have a Fire Breath attack, +2 Fire
   // Breath. Like the Military Workshop breath bonus, it boosts an existing fire breath rather
@@ -311,16 +328,17 @@ function deriveUnitStats(input) {
     calcBaseRtb = 1;
   }
 
-  // Warlord Shadow Strike: adds a Thrown attack at 1/3 of base melee strength (rounded down).
-  // A unit that already has a Thrown attack instead gains 1/3 of base melee as additional
+  // Warlord Shadow Strike: adds a Thrown attack at 1 + 1/3 of base melee strength (rounded down).
+  // A unit that already has a Thrown attack instead gains 1 + 1/3 of base melee as additional
   // Thrown strength. Calculated from the base attack value, mirroring Colossal Strength's
-  // "resolve at the end of unit calculation" convention. Because Thrown is a separate pre-melee
+  // "1 + fraction, resolve at the end of unit calculation" convention — the leading +1 keeps a
+  // low-melee unit from being granted a strength-0 thrown. Because Thrown is a separate pre-melee
   // phase, per-hit riders (Poison, Life Steal, Blood Sucker) fire on both the thrown and the
   // melee phase — that double trigger falls out naturally from the granted thrown phase.
   // The single-rtb model can't hold a second attack, so units that already carry a missile,
   // magic ranged, or breath attack keep that attack and gain no thrown here.
   const shadowStrikeActive = !!(abilities && abilities.shadowStrike) && version.startsWith('com2_warlord');
-  const shadowStrikeBonus = shadowStrikeActive ? Math.floor(calcBaseAtk / 3) : 0;
+  const shadowStrikeBonus = shadowStrikeActive && calcBaseAtk > 0 ? 1 + Math.floor(calcBaseAtk / 3) : 0;
   // Strength of a freshly granted thrown (melee-only unit). Folded into the reported baseRtb so
   // touch dispatch (touchAttackFires checks baseRtb > 0) treats the granted thrown as a real
   // base thrown and fires Poison / Life Steal / Blood Sucker on its phase. The boost-existing
@@ -447,10 +465,13 @@ function deriveUnitStats(input) {
   const darknessAtkDefMagnitude = hasDarkness ? (hasAnyEternalNight && isCoM2Version ? 2 : 1) : 0;
   const darknessResMagnitude = hasDarkness ? 1 : 0;
   const eternalNightEnemyResPenalty = enemyEternalNight && isCoMVersion && unitRealm !== 'death' ? -1 : 0;
-  // Warlord Eternal Night: enemy non-Death units "lose 2 range" (poor sight) — treated
-  // as firing from 2 tiles further than the actual distance. Applied below in the
-  // distance penalty calculation; only affects missile/boulder (no other range falloff).
-  const warlordEternalNightDistPenalty = enemyEternalNight && isWarlord && unitRealm !== 'death' ? 2 : 0;
+  // Warlord Eternal Night ("Poor Vision"): enemy non-Death units suffer -2 to ranged
+  // attack strength (missile/boulder and magic ranged). Thrown and breath are
+  // short-range and not affected. (Per helptext: "-2 Ranged Attack power".)
+  const warlordEternalNightActive = enemyEternalNight && isWarlord && unitRealm !== 'death';
+  const eternalNightRtbMod = warlordEternalNightActive
+    && (rangedType === 'missile' || rangedType === 'boulder'
+      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? -2 : 0;
   let darkLightAtkBonus = 0;
   let darkLightDefBonus = 0;
   let darkLightResBonus = eternalNightEnemyResPenalty;
@@ -528,13 +549,58 @@ function deriveUnitStats(input) {
   const soulFlayDefMod = -2 * soulFlayLevels;
   const soulFlayResMod = -2 * soulFlayLevels;
 
-  // Plague (Warlord combat debuff): inflicted by the Pestilence city curse on defending
-  // garrison units and spread by Goblin Poxbearer units. Flat −3 attack, −3 defense and
-  // −2 resistance for the rest of combat, on any affected unit (no fantastic exclusion).
+  // Plague (Warlord combat curse): inflicted by the Pestilence city curse on defending
+  // garrison units, by the Plague Lord unit ability, and by the Plague Lord artifact power.
+  // −3 attack, −3 armor, −6 resistance and −10% To-Hit for the rest of combat, on any
+  // affected unit (no fantastic exclusion). The To-Hit penalty is applied below.
   const plagueActive = version.startsWith('com2_warlord') && !!(abilities && abilities.plague);
   const plagueAtkMod = plagueActive ? -3 : 0;
   const plagueDefMod = plagueActive ? -3 : 0;
-  const plagueResMod = plagueActive ? -2 : 0;
+  const plagueResMod = plagueActive ? -6 : 0;
+
+  // Pox Host (Warlord global combat debuff): a Goblin Poxbearer unit present on the
+  // battlefield spreads Goblin Pox to every unit, with the effect varying by race.
+  // Goblin units suffer −1 attack, −1 armor; non-Goblin units suffer −3 attack, −3 armor,
+  // −3 resistance. No To-Hit penalty, unlike Plague. Read from the global toggle; the
+  // unit's race (empty on custom units) determines which branch applies.
+  const poxHostActive = version.startsWith('com2_warlord') && !!input.poxHost;
+  const poxHostIsGoblin = unitRace === 'Goblin';
+  const goblinPoxAtkMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
+  const goblinPoxDefMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
+  const goblinPoxResMod = poxHostActive ? (poxHostIsGoblin ? 0 : -3) : 0;
+
+  // Great Unbinding (Warlord Sorcery very rare global): debuffs opponent fantastic
+  // creatures in combat with −20% To-Hit, −20% To-Defend and −2 Resistance for the
+  // rest of battle. Only fantastic creatures are affected (the Confusion half of the
+  // spell is not modelled here). The To-Hit/To-Defend penalties are applied in the
+  // toHit/toBlock section below; here we handle the −2 Resistance.
+  const greatUnbindingActive = version.startsWith('com2_warlord')
+    && !!(abilities && abilities.greatUnbinding)
+    && String(unitTypeRaw || '').startsWith('fantastic_');
+  const greatUnbindingResMod = greatUnbindingActive ? -2 : 0;
+
+  // Natural Selection (Warlord Nature common global): units trained in a city gain
+  // bonuses from resources in the city's surroundings. Each resource is an independent
+  // toggle on the trained unit:
+  //   Coal → +1 melee; Iron → +1 armor; Wild game → +1 ranged attack (+ Forester);
+  //   Nightshade → +1 resistance; Power minerals → +N resistance (the numeric input
+  //   holds the resistance bonus directly).
+  // Forester is a terrain/movement perk with no combat effect, so only the +1 ranged
+  // attack from Wild game is reflected in the stats.
+  const naturalSelectionCoalMod = isWarlord && !!(abilities && abilities.coal) ? 1 : 0;
+  const naturalSelectionIronMod = isWarlord && !!(abilities && abilities.iron) ? 1 : 0;
+  const naturalSelectionNightshadeMod = isWarlord && !!(abilities && abilities.nightshade) ? 1 : 0;
+  const naturalSelectionPowerMineralsMod = isWarlord
+    ? Math.max(0, parseInt(abilities.powerMinerals) || 0)
+    : 0;
+
+  // Survival Instinct (Warlord addition): newly trained normal units gain a small
+  // +3% to +7% To-Defend from gold-producing resources in the city's surroundings.
+  // The numeric input holds that To-Defend percentage; applied to normal units only
+  // (the fantastic-creature buff is the separate survivalInstinct checkbox).
+  const survivalInstinctToBlkBonus = isWarlord && isNormalUnitType(unitTypeVal)
+    ? Math.max(0, parseInt(abilities.survivalInstinctToBlock) || 0)
+    : 0;
 
   // Orihalcon: +1 resistance, +2 magical ranged attack (CoM2 only).
   const orihalconActive = armor === 'orihalcon';
@@ -542,17 +608,19 @@ function deriveUnitStats(input) {
   const orihalconRtbMod = orihalconActive
     && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
 
-  // Wall of Fire (Warlord): the defending side's enchantment grants +1 to all
+  // Wall of Fire garrison boost (Warlord): the city enchantment grants +1 to all
   // defending normal-unit non-magic attacks, mirroring the original game's Metal
-  // Fires. Applies only to the defender (prefix 'b'), only to normal units, and
-  // only to melee/missile/thrown (not boulder, magic ranged, or breath), matching
-  // the Metal Fires coverage. Like Metal Fires it also upgrades a normal weapon to
-  // magic (bypasses Weapon Immunity) — applied to effectiveWeapon below.
-  const wofDefenderBonusActive = isWarlord && !!input.wallOfFire
-    && prefix === 'b' && isNormalUnitType(unitTypeVal);
+  // Fires. Modelled as a per-unit enchantment so it can apply to whichever side is
+  // the garrison; gated to normal units only. Covers melee, physical ranged
+  // (missile/boulder), and thrown — but not magic ranged or breath. Like Metal Fires
+  // it also upgrades a normal weapon to magic (bypasses Weapon Immunity) — applied to
+  // effectiveWeapon below. (The fire-line damage to attackers crossing the wall is the
+  // separate global Wall of Fire toggle, handled in combat.js.)
+  const wofDefenderBonusActive = isWarlord && !!(abilities && abilities.wallOfFireBoost)
+    && isNormalUnitType(unitTypeVal);
   const wofDefenderAtkMod = wofDefenderBonusActive ? 1 : 0;
   const wofDefenderRtbMod = wofDefenderBonusActive
-    && (rangedType === 'missile' || thrownType === 'thrown') ? 1 : 0;
+    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ? 1 : 0;
 
   // Metal Fires / Flame Blade: +1/+2 to missile and thrown rtb only (not boulder, magic).
   // Warlord Flame Blade (per in-game helptext): +2 to missile and thrown, +1 to fire breath
@@ -583,6 +651,7 @@ function deriveUnitStats(input) {
 
   const ludusAgogeAtkMod = ludusAgoge ? 1 : 0;
   const motherFungusAtkMod = motherFungus ? 2 : 0;
+  const altarOfTheSunMeleeMod = altarOfTheSunHolyMother ? 1 : 0;
   // Warlord Colossal Strength: +1 + 40% (rounded down) of base Melee, Physical Ranged, and
   // Thrown attack strength. Calculated from base attack values; resolves at the end of unit
   // calculation. Melee bonus below; the Physical-Ranged/Thrown bonus is applied to rtb.
@@ -592,10 +661,10 @@ function deriveUnitStats(input) {
   const colossalRtbApplies = colossalStrength && calcBaseRtb > 0
     && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown');
   const colossalRtbMod = colossalRtbApplies ? 1 + Math.floor(0.4 * calcBaseRtb) : 0;
-  const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + wofDefenderAtkMod + ludusAgogeAtkMod + motherFungusAtkMod + colossalMeleeMod + nodeBonus + darkLightAtkBonus + chaosSurgeMeleeBonus + ffMeleeBonus + soulFlayAtkMod + plagueAtkMod) : 0;
+  const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + wofDefenderAtkMod + ludusAgogeAtkMod + motherFungusAtkMod + altarOfTheSunMeleeMod + colossalMeleeMod + nodeBonus + darkLightAtkBonus + chaosSurgeMeleeBonus + ffMeleeBonus + soulFlayAtkMod + plagueAtkMod + goblinPoxAtkMod + naturalSelectionCoalMod) : 0;
   const dragonMoundDefMod = dragonMound ? 1 : 0;
   const poolOfRepentanceDefMod = poolOfRepentance ? 1 : 0;
-  const defBase = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + dragonMoundDefMod + poolOfRepentanceDefMod + nodeBonus + darkLightDefBonus + soulFlayDefMod + plagueDefMod);
+  const defBase = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + dragonMoundDefMod + poolOfRepentanceDefMod + nodeBonus + darkLightDefBonus + soulFlayDefMod + plagueDefMod + goblinPoxDefMod + naturalSelectionIronMod);
   // Holy Armor: MoM: +2 defense. CoM/CoM2: +2 defense if def ≤ 5; +10% To Block if def > 5.
   const holyArmorActive = !!(abilities && abilities.holyArmor);
   const holyArmorHighDef = holyArmorActive && isCoMVersion && defBase > 5;
@@ -622,7 +691,7 @@ function deriveUnitStats(input) {
   const pillarOfFaithResMod = isWarlord
     ? Math.min(8, Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0))
     : 0;
-  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus + soulFlayResMod + plagueResMod);
+  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus + soulFlayResMod + plagueResMod + goblinPoxResMod + greatUnbindingResMod + naturalSelectionNightshadeMod + naturalSelectionPowerMineralsMod);
   const ludusAgogeHpMod = ludusAgoge ? 1 : 0;
   const hp  = Math.max(1, calcBaseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod + ludusAgogeHpMod);
 
@@ -631,6 +700,11 @@ function deriveUnitStats(input) {
   const blazingMarchActive = !!(abilities && abilities.blazingMarch);
   const blazingMarchBoostsThrown = version.startsWith('com2_warlord') && thrownType === 'thrown';
   const blazingMarchRtbMod = blazingMarchActive && (rangedType === 'missile' || blazingMarchBoostsThrown) ? 3 : 0;
+
+  // Natural Selection — Wild game: +1 ranged attack on physical ranged (missile/boulder)
+  // and thrown attacks. Magic ranged and breath are not "ranged attacks" for this bonus.
+  const naturalSelectionWildGameRtbMod = isWarlord && !!(abilities && abilities.wildGame)
+    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ? 1 : 0;
 
   // Chaos Surge: affects Chaos creatures only.
   // MoM: +2 to all attack strengths, but multiple copies do not stack; Chaos Channels'
@@ -688,6 +762,11 @@ function deriveUnitStats(input) {
       : 0)))
     : 0;
 
+  // Rust (Warlord Chaos common combat curse): -3 to Physical Ranged Attack (missile/boulder),
+  // mirroring the -3 melee penalty applied in combat.js. Magic ranged, fire/lightning breath,
+  // and thrown are excluded (thrown is eliminated entirely above).
+  const rustRtbMod = (rustActive && (rangedType === 'missile' || rangedType === 'boulder')) ? -3 : 0;
+
   // Holy Weapon: +10% To Hit on melee, missile, and boulder attacks. Also applies to thrown
   // in all versions except MoM 1.31 (bug). Does NOT affect magic ranged, fire/lightning
   // breath, or gaze attacks. Also upgrades normal weapon to magic (bypasses Weapon Immunity).
@@ -722,7 +801,7 @@ function deriveUnitStats(input) {
     rtbLvl = lvl.thrown;
     rtbWpn = (calcBaseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
   }
-  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + wofDefenderRtbMod + blazingMarchRtbMod + chaosSurgeRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + altarOfTheMoonRtbMod + landLinkingBreathRtbMod + dragonMoundRtbMod + militaryWorkshopRtbMod + militaryWorkshopFireBreathRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + colossalRtbMod + nodeBonus + darkLightAtkBonus) : 0;
+  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + wofDefenderRtbMod + blazingMarchRtbMod + naturalSelectionWildGameRtbMod + chaosSurgeRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + altarOfTheMoonRtbMod + landLinkingBreathRtbMod + dragonMoundRtbMod + militaryWorkshopRtbMod + militaryWorkshopFireBreathRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + rustRtbMod + colossalRtbMod + eternalNightRtbMod + nodeBonus + darkLightAtkBonus) : 0;
 
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
@@ -780,7 +859,7 @@ function deriveUnitStats(input) {
   // Distance penalty (attacker ranged only)
   let rtbDistPenalty = 0;
   if (prefix === 'a' && (rangedType === 'missile' || rangedType === 'boulder') && input.rangedCheck) {
-    const dist = Math.max(1, parseInt(input.rangedDist) || 1) + warlordEternalNightDistPenalty;
+    const dist = Math.max(1, parseInt(input.rangedDist) || 1);
     rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange), version);
   }
 
@@ -788,7 +867,7 @@ function deriveUnitStats(input) {
   let toHitMelee = clampPct(30, baseToHitMod + meleeToHitBonus);
   let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty + abilMods.toHitMod + hwRtbToHit);
   const motherFungusToBlkBonus = motherFungus ? 10 : 0;
-  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus + motherFungusToBlkBonus);
+  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus + motherFungusToBlkBonus + survivalInstinctToBlkBonus);
   // Immolation To Hit: always base 30%, ignoring all modifiers (it's a spell attack)
   let toHitImmolation = 0.3;
 
@@ -873,6 +952,27 @@ function deriveUnitStats(input) {
     displayToBlock = Math.max(0.0, displayToBlock - 0.1);
   }
 
+  // Plague (Warlord combat curse): −10% To-Hit on the cursed unit (the −3/−3/−6 stat
+  // penalties are folded into atk/def/res above). Goblin Pox carries no To-Hit penalty.
+  if (plagueActive) {
+    toHitMelee = Math.max(0.1, toHitMelee - 0.1);
+    toHitRtb = Math.max(0.1, toHitRtb - 0.1);
+    displayToHitMelee = Math.max(0.1, displayToHitMelee - 0.1);
+    displayToHitRtb = Math.max(0.1, displayToHitRtb - 0.1);
+  }
+
+  // Great Unbinding (Warlord Sorcery very rare global): −20% To-Hit and −20% To-Defend
+  // on opponent fantastic creatures for the rest of battle (the −2 Resistance is folded
+  // into res above). Only fantastic creatures are affected.
+  if (greatUnbindingActive) {
+    toHitMelee = Math.max(0.1, toHitMelee - 0.2);
+    toHitRtb = Math.max(0.1, toHitRtb - 0.2);
+    displayToHitMelee = Math.max(0.1, displayToHitMelee - 0.2);
+    displayToHitRtb = Math.max(0.1, displayToHitRtb - 0.2);
+    toBlock = Math.max(0.0, toBlock - 0.2);
+    displayToBlock = Math.max(0.0, displayToBlock - 0.2);
+  }
+
   // Warp Creature effects (applied after all other bonuses per MoM wiki).
   // Warp Attack: halves melee (all versions) and all ranged/thrown (CoM/CoM2 only).
   // Warp Defense: halves defense (MoM) or reduces to one-third (CoM/CoM2).
@@ -923,6 +1023,7 @@ function deriveUnitStats(input) {
     hwMeleeToHit,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
     vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
+    plagueActive ? -10 : 0,
   ]);
   const toHitRtbHasModifiers = anyNonZero([
     baseToHitRtbMod,
@@ -934,6 +1035,7 @@ function deriveUnitStats(input) {
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
     vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
     hurricaneActive ? -(hurricaneRtbPenalty * 100) : 0,
+    plagueActive ? -10 : 0,
   ]);
   const toBlockHasModifiers = anyNonZero([
     baseToBlkMod,

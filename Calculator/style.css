@@ -1149,11 +1149,15 @@ select:disabled[data-tooltip] {
 /* Lava Smelter and the Pillar of Faith resistance input are lone leading rows in their
    subgroup; span the full row so the checkbox grid below them stays column-aligned. */
 .abil-num-row[data-abil-key="lavaSmelter"],
-.abil-num-row[data-abil-key="pillarOfFaithRes"] {
+.abil-num-row[data-abil-key="pillarOfFaithRes"],
+.abil-num-row[data-abil-key="powerMinerals"],
+.abil-num-row[data-abil-key="survivalInstinctToBlock"] {
   grid-column: 1 / -1;
 }
 /* Keep the label from stretching so the number input sits next to it, not pushed right. */
-.abil-num-row[data-abil-key="pillarOfFaithRes"] label {
+.abil-num-row[data-abil-key="pillarOfFaithRes"] label,
+.abil-num-row[data-abil-key="powerMinerals"] label,
+.abil-num-row[data-abil-key="survivalInstinctToBlock"] label {
   flex: none;
 }
 .abil-num-row input[type="checkbox"] {
