@@ -47,24 +47,24 @@
 </div>
 <div class="combat-enchantments">
   <div class="enchant-row">
-    <label class="check-label" data-tooltip="MoM 1.31 &amp; 1.60 and Warlord (removed in CoM 1 &amp; 2).&#10;Life units get +1 mel/rng/def/res; Death units get &#8722;1.&#10;Warlord: illusion attacks get &#8722;10% To Hit (all units).">
+    <label class="check-label" data-tooltip="Versions: MoM 1.31 &amp; 1.60, Warlord (removed in CoM 1 &amp; 2).&#10;Life units: +1 to all attack strengths, defense, and resistance.&#10;Death units: &#8722;1 to all attack strengths, defense, and resistance.&#10;Warlord: illusion attacks suffer &#8722;10% To Hit (all units).">
       <input type="checkbox" id="trueLight"> <span class="realm-life">True Light</span>
     </label>
-    <label class="check-label" data-tooltip="Death fantastic units get +1 mel/rng/def/res; Life units get &#8722;1.">
+    <label class="check-label" data-tooltip="Death units: +1 to all attack strengths, defense, and resistance.&#10;Life units: &#8722;1 to all attack strengths, defense, and resistance.">
       <input type="checkbox" id="darkness"> <span class="realm-death">Darkness</span>
     </label>
-    <label class="check-label" data-tooltip="Area fire attack on all attacker figures, firing before the melee phase.&#10;MoM 1.31 &amp; 1.60: Strength 5.&#10;CoM 1 &amp; 2: Strength 10.&#10;Immune: Fire Immunity, Magic Immunity, Righteousness.">
+    <label class="check-label" data-tooltip="Defender-side fire attack on the attacker, before the melee phase.&#10;Only in melee combat (not ranged).&#10;Magical fire. Opponents with Fire Immunity, Magic Immunity, or&#10;Righteousness are unaffected.&#10;MoM 1.31 &amp; 1.60: strength 5, 30% To Hit, hits every figure.&#10;CoM 1 &amp; 2: strength 10, 30% To Hit, hits every figure.&#10;Warlord: strength 12, 60% To Hit, hits a single figure.">
       <input type="checkbox" id="wallOfFire"> <span class="realm-chaos">Wall of Fire</span>
     </label>
-    <label class="check-label" data-tooltip="All non-Chaos units get &#8722;20% To Hit.">
+    <label class="check-label" data-tooltip="Non-Chaos units: &#8722;20% To Hit (melee, ranged, thrown, breath).&#10;Chaos units (including via Chaos Channels) are unaffected.">
       <input type="checkbox" id="warpReality"> <span class="realm-chaos">Warp Reality</span>
     </label>
-    <label class="check-label" data-tooltip="Warlord: tropical storm affecting both sides.&#10;&#8722;20% To Hit for ranged and thrown attacks.&#10;&#8722;30% To Hit for breath attacks.">
+    <label class="check-label" data-tooltip="Versions: Warlord&#10;Affects both sides.&#10;&#8722;20% To Hit for ranged and thrown attacks.&#10;&#8722;30% To Hit for breath attacks.&#10;Melee is unaffected.&#10;Not modeled: prevents flying; extra copies stack at half strength.">
       <input type="checkbox" id="hurricane"> <span class="realm-nature">Hurricane</span>
     </label>
     <span class="field-group">
-      <label for="chaosSurge" data-tooltip="MoM: Chaos creatures gain +2 to attack strengths, non-stacking.&#10;CoM/CoM2: Chaos creatures gain +3 melee, +2 ranged/breath, and +2 resistance.&#10;First enchantment gives the full bonus.&#10;Each additional enchantment adds half as much to those bonuses."><span class="realm-chaos">Chaos Surge enchantments</span>:</label>
-      <input type="number" id="chaosSurge" min="0" max="99" value="0" data-tooltip="MoM: Chaos creatures gain +2 to attack strengths, non-stacking.&#10;CoM/CoM2: Chaos creatures gain +3 melee, +2 ranged/breath, and +2 resistance.&#10;First copy gives the full bonus.&#10;Each additional copy adds +1 to those bonuses.">
+      <label for="chaosSurge" data-tooltip="Affects Chaos creatures only.&#10;MoM: +2 to all attack strengths; multiple copies do not stack.&#10;Excludes a Chaos Channels-granted fire breath.&#10;CoM 1 &amp; 2 &amp; Warlord: +3 melee, +2 ranged, +2 breath, +2 resistance.&#10;First copy gives the full bonus; each additional copy adds +1."><span class="realm-chaos">Chaos Surge enchantments</span>:</label>
+      <input type="number" id="chaosSurge" min="0" max="99" value="0" data-tooltip="Affects Chaos creatures only.&#10;MoM: +2 to all attack strengths; multiple copies do not stack.&#10;Excludes a Chaos Channels-granted fire breath.&#10;CoM 1 &amp; 2 &amp; Warlord: +3 melee, +2 ranged, +2 breath, +2 resistance.&#10;First copy gives the full bonus; each additional copy adds +1.">
     </span>
   </div>
   <div class="enchant-row" style="justify-content: center; gap: 1.5rem;">
@@ -83,7 +83,7 @@
         <option value="3">+3 def</option>
       </select>
     </span>
-    <label class="abil-check" data-tooltip="Matching fantastic units get +2 melee, ranged, thrown, breath, gaze, defense, and resistance.">Node aura:
+    <label class="abil-check" data-tooltip="Fantastic units of the node's realm:&#10;+2 to all attack strengths, defense, and resistance.">Node aura:
       <select id="nodeAura" class="enchant-row-select">
         <option value="none" selected>None</option>
         <option value="chaos">Chaos</option>
@@ -91,7 +91,7 @@
         <option value="sorcery">Sorcery</option>
       </select>
     </label>
-    <label class="check-label" data-tooltip="Warlord: a Goblin Poxbearer unit on the battlefield spreads Goblin Pox to all units.&#10;Goblin units: &#8722;1 Attack, &#8722;1 Armor.&#10;Non-Goblin units: &#8722;3 Attack, &#8722;3 Armor, &#8722;3 Resistance.">
+    <label class="check-label" data-tooltip="Versions: Warlord&#10;A Goblin Poxbearer on the battlefield spreads Goblin Pox to all units.&#10;Goblin units: &#8722;1 melee, &#8722;1 armor, &#8722;1 resistance.&#10;Non-Goblin units: &#8722;3 melee, &#8722;3 armor, &#8722;3 resistance.">
       <input type="checkbox" id="poxHost"> Pox host present
     </label>
   </div>

@@ -49,6 +49,44 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
   };
 }
 
+// Magic Immunity hard-blocks a set of magic-based curses: the immunity grants such
+// overwhelming effective resistance/defense that these curses simply never take hold,
+// so the calculator strips them here before any downstream read (display stats,
+// effectiveAbilities, and the combatAbilities passed to resolveCombat all derive from
+// this object). Mind Storm and Vertigo are additionally blocked by Illusion Immunity,
+// including the Illusion Immunity granted by Eye of Heaven.
+// Curses that bypass Magic Immunity per the source are NOT gated: Black Prayer (on the
+// MoM bypass list), Hierophany ("Cannot be blocked by … Magic Immunity"), and Eternal
+// Night's Darkness malus (Darkness is on the MoM bypass list).
+// Mislead/Liability are deliberately absent: the spell's resist roll and Death/Illusion
+// "no effect" clause gate only the single targeted unit, but the Misfortune/Jinx debuff
+// then spreads to every normal unit in the army with no per-unit immunity check — so a
+// unit suffering the debuff is not protected by any immunity.
+const MAGIC_IMMUNITY_GATED_CURSES = [
+  'weakness', 'blackSleep', 'shatter', 'vertigo',
+  'warpAttack', 'warpDefense', 'warpResist', 'nausea', 'temporalTwist', 'mindStorm',
+];
+const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
+function applyMagicImmunityCurseGating(abilities) {
+  const magicImmune = !!abilities.magicImmunity;
+  const illusionImmune = !!(abilities.illusionImmunity || abilities.eyeOfHeaven);
+  const illusionHasCurse = illusionImmune
+    && ILLUSION_IMMUNITY_GATED_CURSES.some(k => abilities[k]);
+  if (!magicImmune && !illusionHasCurse) return abilities;
+  const gated = { ...abilities };
+  if (magicImmune) {
+    for (const key of MAGIC_IMMUNITY_GATED_CURSES) {
+      if (gated[key]) delete gated[key];
+    }
+  }
+  if (illusionImmune) {
+    for (const key of ILLUSION_IMMUNITY_GATED_CURSES) {
+      if (gated[key]) delete gated[key];
+    }
+  }
+  return gated;
+}
+
 // Divine Protection (Warlord, Life unit enchantment): grants Lucky and Death Immunity.
 // Folded into effective abilities here so every downstream read sees them — Lucky feeds the
 // ability stat modifiers (+10% To Hit, +10% To Block, +1 Resistance) and Death Immunity feeds
@@ -114,7 +152,8 @@ function deriveUnitStats(input) {
   // units and not others, so name exceptions match with endsWith (always gated by race).
   const unitRace = input.race || '';
   const unitName = input.name || '';
-  const abilities = applyFortificationGrant(
+  const abilities = applyMagicImmunityCurseGating(
+    applyFortificationGrant(
     applyInsulationGrant(
     applyPillarOfFaithGrant(
     applyLuckyStarGrant(
@@ -126,7 +165,7 @@ function deriveUnitStats(input) {
     version),
     version),
     version),
-    version);
+    version));
   const destinyActive = destinyActiveForUnit(abilities, version);
   const unitTypeRaw = input.unitType;
   const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
@@ -196,7 +235,9 @@ function deriveUnitStats(input) {
   // Rust (Warlord Chaos common combat curse): permanently strips magic/orihalcon weapons
   // (the unit reverts to regular weapons), −3 melee attack (applied in combat.js), and
   // eliminates thrown attacks and Large Shield for the rest of combat (below).
-  const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust);
+  // Rust targets an enemy regular (non-fantastic) unit; fantastic creatures are immune.
+  const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust)
+    && !String(unitTypeRaw || '').startsWith('fantastic_');
   const weaponInput = loadoutEligible ? input.weapon : 'normal';
   const weaponPreRust = (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
   const weapon = rustActive ? 'normal' : weaponPreRust;
@@ -260,7 +301,8 @@ function deriveUnitStats(input) {
   // a strength-1 Lightning Breath. The Lightning Breath is innate and gains veterancy level
   // bonuses. (Chaos Channels Fire Breath above takes precedence, so a unit already converted
   // to fire is left as fire.)
-  const lightningBladeAbil = version.startsWith('com2_warlord') && !!abilities.lightningBlade;
+  const lightningBladeAbil = version.startsWith('com2_warlord') && !!abilities.lightningBlade
+    && isNormalUnitType(unitTypeVal);
   // Strength-1 grant case: applies only when the unit has no ranged/thrown/breath attack at
   // all (i.e. melee-only). Existing ranged/fire-breath attacks are left intact rather than
   // being overwritten — the single-rtb model cannot hold both.
@@ -295,9 +337,10 @@ function deriveUnitStats(input) {
 
   // Focus Magic: CoM/CoM2-only. In CoM2, magical ranged, doom gaze, and breath get +3.
   // In CoM, doom gaze is not mentioned, so only magical ranged and breath are boosted.
-  // Otherwise, thrown/missile (CoM2) or thrown/non-magical ranged (CoM) is converted
+  // Otherwise, a thrown or physical ranged (missile/boulder) attack is converted
   // into Sorcery magical ranged, with a minimum strength of 3. If nothing qualifies,
-  // the unit gains strength-3 Sorcery magical ranged.
+  // the unit gains strength-3 Sorcery magical ranged. (All versions convert boulder:
+  // CoM1 lists "missile", Warlord lists "Physical Ranged" — boulder is physical ranged.)
   const isCoM2 = version.startsWith('com2');
   const focusMagicActive = !!(abilities && abilities.focusMagic) && version.startsWith('com');
   const hasMagicRangedForFocus = calcBaseRtb > 0
@@ -309,9 +352,7 @@ function deriveUnitStats(input) {
   if (focusMagicActive && !focusMagicBuffsExisting) {
     const canConvertThrown = calcBaseRtb > 0 && thrownType === 'thrown';
     const canConvertRanged = calcBaseRtb > 0
-      && (isCoM2
-        ? rangedType === 'missile'
-        : (rangedType === 'missile' || rangedType === 'boulder'));
+      && (rangedType === 'missile' || rangedType === 'boulder');
     const convertedStrength = (canConvertThrown || canConvertRanged) ? Math.max(calcBaseRtb, 3) : 3;
     rangedType = 'magic_s';
     thrownType = 'none';
@@ -358,7 +399,9 @@ function deriveUnitStats(input) {
   // attack of the same strength (it loses the Ranged attack and Ammo, neither of which the model
   // tracks separately). Breath and existing thrown attacks are not "Ranged" and are untouched.
   // The Armor→Melee transfer, Armor Piercing grant, and First Strike loss are handled below.
-  const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory) && version.startsWith('com2_warlord');
+  // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
+  const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
+    && version.startsWith('com2_warlord') && unitTypeRaw !== 'hero';
   if (blazeOfGloryActive && calcBaseRtb > 0
     && (rangedType === 'missile' || rangedType === 'boulder'
       || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s')) {
@@ -416,6 +459,9 @@ function deriveUnitStats(input) {
     ...(militaryWorkshop ? { poison: militaryWorkshopBasePoison + 1 } : {}),
     ...(motherFungus ? { poison: (abilities.poison || 0) + 1 } : {}),
     ...(venom ? { poison: venomBasePoison + 1, poisonImmunity: true } : {}),
+    // Rust on a fantastic creature is inert: drop it so the -3 melee in combat.js (which
+    // can't see unit type) and any downstream reads treat the unit as un-rusted.
+    ...((abilities && abilities.rust && !rustActive) ? { rust: false } : {}),
     ...((abilities && abilities.eyeOfHeaven) ? { illusionImmunity: true } : {}),
     unitType: unitTypeVal,
     mechanical: effectiveMechanical,
@@ -436,7 +482,7 @@ function deriveUnitStats(input) {
     ? Math.max(0, parseInt(input.chaosSurge) || 0)
     : 0;
   const chaosSurgeMeleeBonus = chaosSurgeCount > 0
-    ? (version.startsWith('mom') ? 2 : 3 + Math.floor(1.5 * (chaosSurgeCount - 1)))
+    ? (version.startsWith('mom') ? 2 : 3 + (chaosSurgeCount - 1))
     : 0;
   const chaosSurgeRtbBonus = chaosSurgeCount > 0
     ? (version.startsWith('mom') ? 2 : 1 + chaosSurgeCount)
@@ -497,13 +543,15 @@ function deriveUnitStats(input) {
 
   // Effective values (level + weapon + ability + node aura + darkness/light modifiers)
   // Lionheart: version-dependent HP bonus (+3 in MoM; floor(8/figs) in CoM/CoM2).
-  // RTB bonus (+3) applies only to non-magical ranged (missile/boulder) and thrown.
+  // RTB bonus (+3) applies to non-magical ranged (missile/boulder) in all versions.
+  // Thrown gets the bonus only in MoM; CoM/CoM2/Warlord drop the thrown bonus.
   const lionheartActive = !!(abilities && abilities.lionheart);
   const lionheartHpMod = lionheartActive
     ? (version.startsWith('mom') ? 3 : Math.floor(8 / baseFigs))
     : 0;
   const lionheartRtbMod = lionheartActive
-    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ? 3 : 0;
+    && (rangedType === 'missile' || rangedType === 'boulder'
+        || (thrownType === 'thrown' && version.startsWith('mom'))) ? 3 : 0;
   // Endurance: CoM gives +2 defense; CoM2 instead gives +4 total HP split evenly
   // between figures, with a minimum of +1 HP per figure.
   const enduranceActive = !!(abilities && abilities.endurance);
@@ -560,14 +608,17 @@ function deriveUnitStats(input) {
 
   // Pox Host (Warlord global combat debuff): a Goblin Poxbearer unit present on the
   // battlefield spreads Goblin Pox to every unit, with the effect varying by race.
-  // Goblin units suffer −1 attack, −1 armor; non-Goblin units suffer −3 attack, −3 armor,
-  // −3 resistance. No To-Hit penalty, unlike Plague. Read from the global toggle; the
-  // unit's race (empty on custom units) determines which branch applies.
+  // Goblin units suffer −1 attack, −1 armor, −1 resistance; non-Goblin units suffer −3
+  // attack, −3 armor, −3 resistance. No To-Hit penalty, unlike Plague. Per the Warlord
+  // manual (Poxbearers unit and Pox Host perk), which gives explicit numbers for all
+  // three stats; the helptext omits the −1 Goblin resistance and lists only −1 non-Goblin
+  // resistance — a source disagreement resolved in favour of the manual. Read from the
+  // global toggle; the unit's race (empty on custom units) determines which branch applies.
   const poxHostActive = version.startsWith('com2_warlord') && !!input.poxHost;
   const poxHostIsGoblin = unitRace === 'Goblin';
   const goblinPoxAtkMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
   const goblinPoxDefMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
-  const goblinPoxResMod = poxHostActive ? (poxHostIsGoblin ? 0 : -3) : 0;
+  const goblinPoxResMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
 
   // Great Unbinding (Warlord Sorcery very rare global): debuffs opponent fantastic
   // creatures in combat with −20% To-Hit, −20% To-Defend and −2 Resistance for the
@@ -593,7 +644,7 @@ function deriveUnitStats(input) {
   // Nature Link (Warlord rename of Land Linking): grants +1 resistance to any unit
   // (normal or fantastic). The fantastic-only +2 melee/def/breath is handled with Land Linking.
   const natureLinkResMod = isWarlord && !!(abilities && abilities.landLinking) ? 1 : 0;
-  const naturalSelectionPowerMineralsMod = isWarlord
+  const naturalSelectionPowerMineralsMod = isWarlord && isNormalUnitType(unitTypeVal)
     ? Math.max(0, parseInt(abilities.powerMinerals) || 0)
     : 0;
 
@@ -640,8 +691,14 @@ function deriveUnitStats(input) {
   if (isWarlordFB) {
     if (rangedType === 'missile' || thrownType === 'thrown') fbRtbMod = 2;
     else if (thrownType === 'fire') fbRtbMod = 1;
-  } else if (fbAtkBonus > 0 && (rangedType === 'missile' || thrownType === 'thrown')) {
-    fbRtbMod = fbAtkBonus;
+  } else if (fbAtkBonus > 0) {
+    // MoM Flame Blade / Metal Fires boost missile and thrown; CoM Flame Blade
+    // boosts missile only (the CoM helptext drops the thrown bonus — Warlord, handled
+    // above, re-adds it). Metal Fires is MoM-only so the CoM gate only affects Flame Blade.
+    const fbThrownEligible = !(abilities.flameBlade && isCoMVersion);
+    if (rangedType === 'missile' || (fbThrownEligible && thrownType === 'thrown')) {
+      fbRtbMod = fbAtkBonus;
+    }
   }
   if (ffRegularBonus) {
     let ffRtb = 0;
@@ -691,7 +748,7 @@ function deriveUnitStats(input) {
   const sanctaBasilicaResMod = sanctaBasilica ? 3 : 0;
   // Pillar of Faith (Warlord, Life rare city enchantment): +1 Resistance per Religious Building
   // in the training city, capped at +8. The numeric input holds the building count.
-  const pillarOfFaithResMod = isWarlord
+  const pillarOfFaithResMod = isWarlord && isNormalUnitType(unitTypeVal)
     ? Math.min(8, Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0))
     : 0;
   const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus + soulFlayResMod + plagueResMod + goblinPoxResMod + greatUnbindingResMod + naturalSelectionNightshadeMod + naturalSelectionPowerMineralsMod + natureLinkResMod);
@@ -705,9 +762,10 @@ function deriveUnitStats(input) {
   const blazingMarchRtbMod = blazingMarchActive && (rangedType === 'missile' || blazingMarchBoostsThrown) ? 3 : 0;
 
   // Natural Selection — Wild game: +1 ranged attack on physical ranged (missile/boulder)
-  // and thrown attacks. Magic ranged and breath are not "ranged attacks" for this bonus.
+  // and magic ranged. Thrown and breath are not "ranged attacks" for this bonus.
   const naturalSelectionWildGameRtbMod = isWarlord && !!(abilities && abilities.wildGame)
-    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ? 1 : 0;
+    && (rangedType === 'missile' || rangedType === 'boulder'
+      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 1 : 0;
 
   // Chaos Surge: affects Chaos creatures only.
   // MoM: +2 to all attack strengths, but multiple copies do not stack; Chaos Channels'

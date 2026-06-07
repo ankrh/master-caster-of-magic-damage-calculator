@@ -1,0 +1,3379 @@
+#Difficulty Beginner
+BEGINNER DIFFICULTY
+This difficulty level is recommended for first time players. Opponents receive a resource penalty and play significantly worse than usual. It's recommended to use this together with the Easy Lairs, Targeting Aid, and Leave Me Alone score modifiers for an even more beginner friendly experience.
+#Difficulty Easy
+EASY DIFFICULTY
+Opponents receive a resource penalty and play worse than usual. Using the Easy Lairs, Targeting Aid, and Leave Me Alone score modifiers is recommended to further reduce difficulty if necessary.
+#Difficulty Normal
+NORMAL DIFFICULTY
+Opponents suffer from some restrictions on what strategies they are allowed to use and receive neither a bonus nor a penalty to resources.
+#Difficulty Fair
+FAIR (Hard) DIFFICULTY
+Opponents play to their full potential but get no resource advantages. Not recommended for new Caster of Magic players!
+#Difficulty Advanced
+ADVANCED DIFFICULTY
+Opponents get a small resource advantage on top of playing to their full potential. Recommended for veteran Caster of Magic players.
+#Difficulty Expert
+EXPERT DIFFICULTY
+Opponents get a medium resource advantage on top of playing to their full potential. Recommended for veteran Caster of Magic players.
+#Difficulty Master
+MASTER DIFFICULTY
+Opponents get a significant resource advantage on top of playing to their full potential. Recommended for hardcore Caster of Magic players only.
+#Difficulty Lunatic
+LUNATIC DIFFICULTY
+For an extreme challenge. 
+#Difficulty Phantasm
+PHANTASM DIFFICULTY
+Use at your own risk. Losing is almost guaranteed. You have been warned!
+#Landsize Minimal
+MINIMAL LAND
+Number of land tiles is 30% of normal.
+#Landsize Tiny
+TINY LAND
+Number of land tiles is 50% of normal.
+#Landsize Small
+SMALL LAND
+Number of land tiles is 70% of normal.
+#Landsize Normal
+NORMAL LAND
+Number of land tiles is the default, determined by the number of players on each plane.
+Changing this setting can severely alter game balance in favor of different kinds of strategies, so use it at your own risk.
+#Landsize Large
+LARGE LAND
+Number of land tiles is 133% of normal.
+#Landsize Huge
+HUGE LAND
+Number of land tiles is 166% of normal.
+#Landsize Maximal
+MAXIMAL LAND
+Number of land tiles is 200% of normal.
+#Landsize Random
+RANDOM
+Any amount of land between 30 and 200% will be chosen randomly, with the more extreme values having the lowest chance.
+#Continentsize Islands
+ISLANDS
+Many smaller areas of land are created with lots of ocean separating them.
+#Continentsize Small
+SMALL CONTINENTS
+Most continents are smaller than average but too large to be called islands.
+#Continentsize Average
+AVERAGE CONTINENTS
+Continents are medium sized.
+#Continentsize Large
+LARGE CONTINENTS
+Continents are larger than usual.
+#Continentsize Mixed
+MIXED CONTINENTS
+Continent sizes very from the smallest to the largest.
+#Continentsize Random
+RANDOM
+One of the other options will be chosen randomly.
+#Realm Nature
+NATURE REALM
+Nature spells control the raw forces of earth and water, as well as fertility and growth. Nature books shift the wizard's alignment towards good.
+#Realm Sorcery
+SORCERY REALM
+Sorcery spells focus on elemental forces of air and illusion. Sorcery also has a number of meta-magic spells that resist and control other wizard's spells. Sorcery books have no effect on a wizard's alignment.
+#Realm Chaos
+CHAOS REALM
+Chaos spells deal primarily with corruption and destruction, calling upon the elemental forces of change. Chaos books shift the wizard's alignment towards evil.
+#Realm Death
+DEATH REALM
+Death spells provide the summoning and controlling of the dead and the forces of darkness. Death magic has powerful enchantments that strike disease and misfortune upon their enemies. Death books shift the wizard's alignment towards evil.
+#Realm Life
+LIFE REALM
+Life spells focus on healing, protections and inspirational enchantments. Life books shift the wizard's alignment towards Good.
+#Retort Alchemy
+ALCHEMY
+Allows the wizard to change gold into mana and mana into gold in a 1 to 1 ratio, instead of losing 50% in the exchange process and all units built in non-Barbarian cities receive magic weapons. Using one's own weapon is an important part of Barbarian culture, and they are extremely skilled at doing so, receiving the +10% to hit magical weapons would otherwise provide.
+#Retort Warlord
+WARLORD
+Increases the level of all non-summoned units under the wizard's control by one level. In addition, warlord allows your units to achieve ultra elite status which is otherwise unattainable. Warlord costs 2 picks, and is mutually exclusive with Tactician.
+#Retort Channeler
+CHANNELER
+Allows the wizard to cast spells in combat without range penalties, and even while banished, the range penalty is reduced to half. Books the wizard starts the game with have a higher than normal chance to contain combat exclusive spells. In addition, a channeler only pays one half the normal spell maintenance. Channeler costs 2 picks.
+#Retort Archmage
+ARCHMAGE
+Increases SP produced to improve Casting Skill by 50%, including the amount the wizard already has at the beginning of the game. Mutually exclusive with Spellweaver.
+#Retort Artificer
+ARTIFICER
+Reduces the cost of making magical items by 50%, and casting other Arcane spells by 25%. Artificers also begin the game with the Enchant Item spell and the spell Create Artifact will show up as the first researchable rare for them.
+#Retort Conjurer
+CONJURER
+Reduces the casting and research costs of all summoning spells by 25% and also reduces the maintenance costs of fantastic creatures by 25%.
+#Retort Sage Master
+SAGE MASTER
+Increases the speed of the wizard's spell research in all six realms by 25% from all sources, and grants an additional 15 RP each turn.
+#Retort Myrran
+MYRRAN
+Wizard begins the game in a city on Myrror instead of Arcanus. The Myrran wizard starts with an unusual race: beastmen, dark elves, draconians, dwarves, and trolls.
+#Retort Guardian
+GUARDIAN
+The wizard's towns emit an aura that raises morale, inspiring all troops to have +10% to hit, +10% to defend, and +1 resistance when defending the wizard's settlements. Furthermore, this increased morale allows more efficient use of natural resources, raising the maximal population in cities that are of the wizard's home race by 6. Guardian costs 2 picks.
+#Retort Famous
+FAMOUS
+Wizard begins the game with 30 fame. 
+If enough gold is available, a hero is guaranteed to appear for hire in January, an item merchant appears in July and mercenaries always show up in April and October starting in 1502. 
+Heroes and mercenaries offering to join will be at a higher level than usual, but do not cost additional gold to hire based on their level.
+#Retort Runemaster
+RUNEMASTER
+Runemasters are especially effective at using enchantments and Arcane magics. Their dispel type spells are 100% more effective, they research Arcane spells 100% faster, all their spells have a 150% bonus to their resistance against dispelling, and their spellbooks have an increased chance of containing overland global enchantments instead of other types of spells. Runemaster costs 2 picks.
+#Retort Charismatic
+CHARISMATIC
+Possesses an unnatural presence that dramatically improves his dealings with others. The charismatic wizard pays half for hiring heroes, mercenaries, and purchasing magical items. In addition, all diplomatic penalties from negative actions are halved and good diplomatic effects are doubled. Treaty offers proposed by Charismatic wizards are significantly more likely to get accepted.
+#Retort Specialist
+SPECIALIST
+Reduces the casting and research cost of spells in the wizard's primary realm by 12% and those spells are 50% harder to dispel. A wizard's primary realm is the realm the wizard owns the highest number of books of at the start of the game. In case of a tie, you can select a realm at the beginning of the game. For AI players or if the retort was obtained during the game, the primary realm is the one that appears first on this list : Nature, Sorcery, Chaos, Life, Death.
+#Retort Tactician
+TACTICIAN
+All units controlled by the wizard gain +1 defense during combat. Heroes gain +2 to their defense, resistance and all attack strengths instead. Tactician is mutually exclusive with Warlord.
+#Retort Omniscient
+OMNISCIENT
+The wizard can improve the performace of their cities, utilising the resonance of their magic. Each of the wizard's cities gain the following benefits for each book owned :
+LIFE : +16% gold for the first book, and 3.5% for each other.
+SORCERY : +16% research for the first book and 3.5% for each other.
+NATURE : +2 maximal population for the first book and an additional 0.25 for each other.
+CHAOS : +16% power for the first book and an additional 3.5% for others, not including the Fortress.
+DEATH : +16% Production for the first book and an additional 3.5% for all others.
+#Retort Cult Leader
+CULT LEADER
+Increases the power generated by religious buildings by 75% and unrest reduction by 50%, rounded down for both. Religious Buildings include the Shrine, Parthenon, Cathedral, and Oracle.
+#Retort Astrologer
+ASTROLOGER
+The wizard predicts and manipulates destiny by reading stars - Each node controlled by the wizard produces an additional 2 power for each year elapsed since the start of the game. Furthermore, they can find the moment when node power is the weakest, making their spells immune to the countering effect of nodes.
+#Retort Spellweaver
+SPELLWEAVER
+Reduces the cost of all non-summoning, non-item creation overland spells cast by the wizard by 33%. This retort is mutually exclusive with Archmage and costs 2 picks.
+#Race Barbarian
+BARBARIAN
+Barbarians grow fast, and cannot build libraries, miner's guilds, cathedrals and advanced buildings. Barbarian units use thrown weaponry, have an increased chance to hit, and have pathfinding but 1 lower resistance.
+Racial unrest for Barbarian leaders : BE+1, DE+3, DR+3, DW+1, HA+1, HE+2, HM+3, KL+1, NO+1, T+2.
+#Race Beastmen
+BEASTMEN
+Beastmen cities receive 1/2 power/population and their military units have 1 more health and attack. Beastmen can build most buildings.
+Racial unrest for Beastmen leaders : HM+3, BE+0, All others +1.
+#Race Dark Elf
+DARK ELF
+Dark elf grow slowly, have +2 resistance, generate 1 power per population, and their military units all have ranged magical attacks. Dark elves can build everything except Maritime Guilds.
+Racial unrest for Dark Elf leaders : BA+3, DW+3, GN+3, HE+2, HM+2, KL+1, LI+2, O+1, T+3.
+#Race Draconian
+DRACONIAN
+Draconian cities receive 1/2 power/population, and their military units can fly, have +1 defense, resistance and can breath fire.
+Racial unrest for Draconian leaders : DW+3, GN+3, HM+3, KL+4, LI-1, NO+1, O+1, T+3.
+#Race Dwarf
+DWARF
+Dwarves double mineral bonuses and pay 50% more taxes. Their units have +2 resistance, and 1 additional health. Dwarves can't build Stables, Colosseum, Magic Markets, Sage's Guilds, Amplifying Towers, Merchant's Guilds, Banks, Monuments, and their population grows very slowly. Dwarven workers produce 50% faster.
+Racial unrest for Dwarf leaders : DE+3, DR+3, HE+3, HM+1, KL+1, O+4, T+1.
+#Race Gnoll
+GNOLL
+Gnolls are physically stronger, having +2 attack per unit and +1 movement. They cannot build advanced buildings, and Magic Markets.
+Racial unrest for Gnoll leaders : DE+3, DR+3, DW+2, HA+1, HE+2, HM+4, KL+1, NO+2, O+1, T+1.
+#Race Halfling
+HALFLING
+Halflings can build all non-military buildings except Monuments but their military is limited. Halflings are open-minded and curious, producing 1 research per population. Halfling units, albeit weak, are lucky, which makes them harder to kill. Halfling farmers always produce food as though an Animist's Guild was already present.
+Racial unrest for Halfling leaders : BA+1, GN+1, LI+1, T+1.
+#Race High Elf
+HIGH ELF
+High elf cities grow very slowly, but generate 0.5 power/population. They have forester, +10% to hit, and can build everything except Maritime Guilds and Colosseums. High Elf units also have 1 higher resistance than usual.
+Racial unrest for High Elf leaders : BA+3, DE+2, DW+3, GN+3, HM+2, LI+1, O+4, T+3.
+#Race High Men
+HIGH MEN
+High men are a versatile race good at everything. They are masters of architecture, paying 15% less for producing buildings, but their units have -2 magic resistance.
+Racial unrest for High Men leaders : BA+1, BE+2, DE+2, DR+3, GN+2, HE+1, HM+1, KL+4, LI+3, NO+2, O+3, T+4.
+#Race Klackon
+KLACKON
+Klackons grow the fastest, and their military units have an extra 2 defense. Klackons cannot build Mechanicians Guilds, Shrines, War Colleges, Fantastic Stables, Maritime Guilds, Banks and Merchant's Guilds. Klackon Workers produce 50% faster.
+Racial unrest for Klackon leaders : BE+3, DE+4, DR+4, HA+3, HE+3, HM+4, KL-4, NO+3, all others+2.
+#Race Lizardmen
+LIZARDMEN
+Lizardmen units can move in water, and have +1 health but -1 Resistance. Lizardmen cannot build advanced buildings, War Colleges, and Miner's Guilds. Lizardmen settlers move twice as fast as other races.
+Racial unrest for Lizardmen leaders : BE+1, DE+3, DW+1, GN+1, HE+3, HM+4, KL+1, LI-1, NO+2, O+1.
+#Race Nomad
+NOMAD
+Nomad cities receive a +50% trade bonus that is treated as a road gold bonus, and cannot build Granaries. Nomad units have +3 resistance. Basic nomad units are equipped with a bow.
+Racial unrest for Nomad leaders : HA+0, HM+3, KL+3, NO+0, All others +1.
+#Race Orc
+ORC
+Orcs can build every building, and have a high population growth. They are average at everything, with no specific advantages or disadvantages worth mentioning, but their units are cheaper to maintain than usual.
+Racial unrest for Orc leaders : DE+3, DR+1, DW+3, HE+4, HM+3, KL+1.
+#Race Troll
+TROLL
+Troll units can regenerate, have higher attack strength and health, but fewer figures and are more expensive. Trolls can build everything except advanced buildings and Sage's Guilds.
+Racial unrest for Troll leaders : BE+2, DE+3, DR+3, DW+1, HE+3, HM+4, KL+1, NO+3.
+#Patrolbutton
+PATROL
+Sets the selected units to Patrol state. The units will not move and won't ask for orders for the rest of the game, unless you manually cancel this order.
+#Waitbutton
+WAIT
+Skip issuing orders for this stack until all others are processed.
+#Donebutton
+DONE
+The selected units will do nothing else for the turn, their remaining movement gets set to zero.
+#Spell Earth to Mud
+EARTH TO MUD
+Nature Common - Instant Combat
+Target: 7 x 7 area
+Casting Cost: 20 mana
+Upkeep: none
+Turns a 7 x 7 area into thick, sticking mud for the duration of a battle. Mud costs a unit (enemy or friendly) 6 movement points to enter. Flying and non-corporeal units are unaffected.
+#Spell RESIST ELEMENTS
+RESIST ELEMENTS
+Nature Common - Unit Enchantment
+Target: friendly unit
+Casting Cost: 5/25 mana
+Upkeep: 0 mana/turn
+Gives a target unit +4 defense against spells, breath and magical ranged attacks, and +4 resistance against nature magic.
+#Spell NATURE'S EYE
+NATURE'S EYE
+Nature Common - City Enchantment
+Target: city
+Casting Cost: 40 mana
+Upkeep: none
+Increases the targeted city's scouting radius to 5 cells, and raises city research by 4.
+#Spell WILD BOARS
+*Units\u152x3_1.png
+WILD BOARS
+Nature Common - Combat Summoning
+Target: combat tile
+Casting Cost: 15 mana
+Summons three large boars during combat. 
+Boars return to the wilderness immediately after the battle.
+#Spell WEB
+WEB
+Nature Common - Unit Enchantment
+Target: enemy unit
+Casting Cost: 10 mana
+Upkeep: none
+Casts a sticky, 12 hit point web over a target unit. Creatures cannot move until they destroy the web with melee attacks. Web remnants prevent flying units from flying for the rest of the battle.
+#Spell WAR BEARS
+*Units\u179x3_1.png
+WAR BEARS
+Nature Common - Summoning
+Target: n/a
+Casting Cost: 55 mana
+Upkeep: 1 mana/turn
+Summons a group of ferocious bears.
+#Spell FAIRY DUST
+FAIRY DUST
+Nature Common - Instant Combat
+Target: enemy unit
+Casting Cost: 12 mana
+Hits all figures in the targeted unit with a strength 7 armor piercing cold attack.
+#Spell WATER WALKING
+WATER WALKING
+Nature Common - Unit Enchantment
+Target: friendly unit
+Casting Cost: 20 mana
+Upkeep: 0 mana/turn
+Endows a unit with the ability to walk on water at a speed of 1 movement/tile.
+#Spell SPRITES
+*Units\u180x3_1.png
+SPRITES
+Nature Common - Summoning
+Target: n/a
+Casting Cost:  80 mana
+Upkeep: 2 mana/turn
+Summons sprites. Sprites are small, flying forest creatures that can hurl tiny magic attacks over long distances.
+#Spell EARTH LORE
+EARTH LORE
+Nature Common - Instant
+Target: map window
+Casting Cost: 10 mana
+Fully reveals terrain, terrain specials, cities and guardians of nodes, lairs and towers in the targeted area.
+#Spell CRACKS CALL
+CRACKS CALL
+Nature Uncommon - Instant Combat
+Target: combat tile
+Casting Cost: 25 mana
+Rends the earth. Any non-flying, corporeal creature standing over the newly created fissure has a 25% chance of falling inside, becoming irrecoverably destroyed unless their base type is a hero or fantastic unit in which case they take 21 irrecoverable damage instead. If there is a wall on the tile, it is destroyed.
+Units affected by this spell become Buried for the rest of the combat : they are unable to move or attack, take irrecoverable damage from all attacks and are irrecoverably destroyed when their side does not win the battle.
+#Spell CONSTRUCT CATAPULT
+*Units\u37x3_1.png
+CONSTRUCT CATAPULT
+Nature Uncommon - Combat Summoning
+Target: combat tile
+Casting Cost: 30 mana
+Causes nearby trees and other vegetation to grow suddenly, and form a Catapult. Catapults throw large boulders at their targets, causing significant damage, but are weak and defenseless against incoming attacks. Catapults summoned in combat are Nature creatures.
+#Spell ICE BOLT
+ICE BOLT
+Nature Uncommon - Instant Combat
+Target: enemy unit
+Casting Cost: 25  mana
+Showers a target unit with shards of ice, which counts as a strength 34 magical cold attack.
+The affected unit becomes Frozen, cannot fly, move or attack for a turn, unless they are immune to cold, affected by immolation, or are non-corporeal.
+#Spell GIANT SPIDERS
+*Units\u183x3_1.png
+GIANT SPIDERS
+Nature Uncommon - Summoning
+Target: n/a
+Casting Cost: 90 mana
+Upkeep: 2 mana/turn
+Summons 4 giant, poisonous, web-casting spiders. Giant spiders move very quickly on the battlefield.
+#Spell CHANGE TERRAIN
+CHANGE TERRAIN
+Nature Uncommon - Instant Overland
+Target: map square
+Casting Cost: 28 mana
+Alters a target map square,changing deserts, forests, hills and swamps to grasslands; grasslands to forests; volcanoes to mountains; and mountains to hills. Other types of terrain are not a valid target.
+#Spell LAND LINKING
+LAND LINKING
+Nature Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 50 mana
+Upkeep: 1 mana/turn
+Links the senses of the enchanted unit with nature, allowing them to move at 1 tile per movement point on any terrain. If the unit is fantastic, the increased connection with this plane of existence increases their defense, melee and breath attacks by +2.
+#Spell COCKATRICES
+*Units\u181x3_1.png
+COCKATRICES
+Nature Uncommon - Summoning
+Target: n/a
+Casting Cost: 150 mana
+Upkeep: 4 mana/turn
+Summons a group of cockatrices. The deceptively soft, feathered touch of the cockatrice is capable of turning even the hardiest creatures to stone.
+#Spell TRANSMUTE
+TRANSMUTE
+Nature Uncommon - Instant Overland
+Target: map special
+Casting Cost: 60 mana
+Transforms ores. Silver to Mithril, Mithril to Quork crystals, Quork Crystals to Iron, and Iron to Silver. 
+Also changes Gold to Adamantium, Adamantium to Crysx crystals, Crysx crystals to Coal and finally, Coal to Gold.
+Other types of minerals or terrain specials cannot be changed by this spell.
+#Spell NATURE'S CURES
+NATURE'S CURES
+Nature Uncommon - Instant Overland
+Target: map square
+Casting Cost: 50 mana
+Completely heals all units that are stacked in a target land square.
+#Spell GREAT LIZARD
+*Units\u182x3_1.png
+GREAT LIZARD
+Nature Uncommon - Summoning
+Target: n/a
+Casting Cost: 200 mana
+Upkeep: 5 mana/turn
+Summons a powerful giant lizard that can regenerate.
+#Spell ELEMENTAL ARMOR
+ELEMENTAL ARMOR
+Nature Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 18/ 90 mana
+Upkeep: 1 mana/turn
+Improves a target unit's defenses (shields) against all spells, magical ranged and breath attacks by 12.
+#Spell PETRIFY
+PETRIFY
+Nature Rare - Instant Combat
+Target: enemy unit
+Casting Cost: 20 mana
+Attempts to turn an entire enemy unit into stone. Every figure that fails to resist at -3 is irrecoverably destroyed.
+#Spell STONE GIANT
+*Units\u184x3_1.png
+STONE GIANT
+Nature Rare - Summoning
+Target: n/a
+Casting Cost: 275 mana
+Upkeep: 5 mana/turn
+Summons an enormous, wall-crushing stone giant. The massive stone giant is impervious to stoning attacks and can hurl huge boulders at its enemies.
+#Spell IRON SKIN
+IRON SKIN
+Nature Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 24/120 mana
+Upkeep: 3 mana/turn
+Fuses iron with a target unit's skin, making it able to withstand most attacks (adds 5 to defense).
+#Spell BLIZZARD
+BLIZZARD
+Nature Rare - Instant Overland
+Target: map square
+Casting Cost: 120 mana
+Causes the skies above a target map square to rain down a torrent of icy hail. All units occupying that area are struck with a strength 14 armor piercing magic cold attack.
+#Spell EARTHQUAKE
+EARTHQUAKE
+Nature Rare - Instant Overland
+Target: city
+Casting Cost: 150 mana
+Causes a violent earthquake to shake a target city. All buildings have a 40% chance of being destroyed. All non- flying, corporeal creatures have a  4% chance of dying. Earthquakes target the ground deep under a city, ignoring all protective spells, however, they have no effect on flying cities. 
+#Spell GORGONS
+*Units\u186x3_1.png
+GORGONS
+Nature Rare - Summoning
+Target: n/a
+Casting Cost: 360 mana
+Upkeep: 8 mana/turn
+Summons gorgons. These monstrosities, just as their mythological namesakes, are so ugly and frightening to behold that enemies who mistakenly peek in their direction are turned to stone.
+#Spell SURVIVAL INSTINCT
+SURVIVAL INSTINCT
+Nature Rare - Global Enchantment
+Casting Cost: 600 mana
+Upkeep: 15 mana
+All fantastic creatures owned by the casting wizard gain +1 defense, +2 resistance, and +10% To Hit.
+#Spell GAIA'S BLESSING
+GAIA'S BLESSING
+Nature Rare - City Enchantment
+Target: city
+Casting Cost: 100 mana
+Upkeep: 3 mana/turn
+Unrest is reduced by 2. Forests around the city have a tripled production bonus.
+Every turn there is a 25% chance for each Corrupted tile to return to normal, and each Volcano tile to turn into a Forest.
+In addition, every turn there is a 10% chance for each Desert tile to turn into Grasslands, and for each Swamp to turn into Forest.
+#Spell EARTH ELEMENTAL
+*Units\u187x3_1.png
+EARTH ELEMENTAL
+Nature Rare - Combat Summoning
+Target: n/a
+Casting Cost: 50 mana
+Upkeep: none
+Summons an earth elemental during combat. The wall-crushing earth elemental disappears when the battle is over.
+#Spell REGENERATION
+REGENERATION
+Nature Very Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 32/160 mana
+Upkeep: 5  mana/turn
+Target unit can regenerate during combat (2 hit point/ turn) and afterwards (immediate return to full health). If the unit dies in combat, it returns in full health if its side won. However, even this spell cannot return a creature that has been banished or unsummoned, petrified, swallowed by a fissure, drown, disintegrated, annihilated, or otherwise irrecoverably destroyed.
+#Spell BEHEMOTH
+*Units\u188x3_1.png
+BEHEMOTH
+Nature Very Rare - Summoning
+Target: n/a
+Casting Cost: 480 mana
+Upkeep: 12 mana/turn
+Summons a fierce behemoth. A behemoth is one of the strongest creatures that can be summoned to Arcanus and Myrror, having extreme defense, and the ability to cast Nature spells for 40 mp.
+#Spell ENTANGLE
+ENTANGLE
+Nature Very Rare - Combat Enchantment
+Target: n/a
+Casting Cost: 50 mana
+Upkeep: none
+Causes all corporeal enemy creatures to have their movement speed reduced by 2 in combat. If a creature's movement points are zero, it cannot attack or move, but it can still strike back if attacked.
+#Spell PLANETARY MASTERY
+PLANETARY MASTERY
+Nature Very Rare - Global Enchantment
+Target: map
+Casting Cost: 1000 mana
+Upkeep: 20 mana/turn
+All nodes owned by the wizard produce an additional 15 power. Every time the wizard casts a spell with BASE cost 370 or higher, an Earthquake hits the target city of their choice.
+#Spell CALL LIGHTNING
+CALL LIGHTNING
+Nature Very Rare - Combat
+Target: n/a
+Casting Cost: 60 mana
+Upkeep: none
+Calls a powerful electrical storm from which deadly lightning bolts issue. Three to five lightning bolts of strength 10 strike random enemy units at the beginning of their turn until the end of combat.
+#Spell COLOSSUS
+*Units\u185x3_1.png
+COLOSSUS
+Nature Very Rare - Summoning
+Target: n/a
+Casting Cost: 450 mana
+Upkeep: 12 mana/turn
+Summons an awe-inspiring colossus. A colossus is a rock- wielding fighting machine immune to all known forms of poison and petrification.
+#Spell EARTH GATE
+EARTH GATE
+Nature Very Rare - City Enchantment
+Target: city
+Casting Cost: 125 mana
+Upkeep: 1 mana/turn
+Creates a teleporting device within a target city. Friendly units can teleport between any two of the casting wizard's cities equipped with earth gates on the same plane.
+#Spell HERB MASTERY
+HERB MASTERY
+Nature Very Rare - Global Enchantment
+Casting Cost: 1000 mana
+Upkeep: 12 mana/turn
+Completely heals all of a wizard's damaged units every game turn and after every battle. Additionally, all units regain 2 health per turn during combat. Unlike regeneration, the unit does not get healed if it dies during the battle, but units that cannot be healed otherwise still benefit.
+#Spell GREAT WYRM
+*Units\u189x3_1.png
+GREAT WYRM
+Nature Very Rare - Summoning
+Target: n/a
+Casting Cost: 500 mana
+Upkeep: 15 mana/turn
+Summons a gigantic, poisonous, tunneling land wyrm. For all its bulk a great wyrm, with its ability to tunnel underground, is frighteningly fast on the battlefield.
+#Spell FAIRY RING
+FAIRY RING
+Nature Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1200 mana
+Upkeep: 40 mana/turn
+Whenever another wizard casts a spell costing 301 or higher, a random fantastic creature the enchantment's owner can summon appears at their summoning circle. Higher overland casting skill increases the chance for better creatures to appear.
+#Spell RESIST MAGIC
+RESIST MAGIC
+Sorcery Common - Unit Enchantment
+Target: friendly unit
+Casting Cost: 8/40 mana
+Upkeep: 0 mana/turn
+Adds 5 to all resistance rolls versus magic.
+#Spell AETHER SPARKS
+AETHER SPARKS
+Sorcery Common - Instant Combat
+Target: enemy unit
+Casting Cost: 12 mana
+Does a strength 20 magical attack to the targeted unit. If that unit has a magical ranged attack, it loses half of its ammo. If it has a spellcasting ability, it loses half of its mana.
+#Spell FLOATING ISLAND
+*Units\u190x3_1.png
+FLOATING ISLAND
+Sorcery Common - Summoning
+Target: map square
+Casting Cost: 45 mana
+Upkeep: 1 mana/turn
+Summons an apparently solid cloud to any visible ocean map square of a wizard's choice. This thick body of vapors can carry up to eight units across water and moves at a speed of three map squares/turn, but cannot move on the turn it was summoned.
+#Spell GUARDIAN WIND
+GUARDIAN WIND
+Sorcery Common - Unit Enchantment
+Target: friendly unit
+Casting Cost: 6/30 mana
+Upkeep: 1 mana/turn
+Surrounds the unit with a magically protective wall of air, making the unit almost totally immune to arrow and sling attacks.
+#Spell PHANTOM WARRIORS
+*Units\u192x3_1.png
+PHANTOM WARRIORS
+Sorcery Common - Combat Summoning
+Target: Combat Tile
+Casting Cost: 14 mana
+Upkeep: none
+Summons a group of illusory phantom warriors and binds them to the will of the wizard. The phantoms attack with illusory weapons that completely ignore the effects of armor. When combat ends, the phantom warriors disappear.
+#Spell CONFUSION
+CONFUSION
+Sorcery Common - Unit Enchantment
+Target: enemy unit
+Casting Cost: 18 mana
+Upkeep: none
+Attempts to disorient a target unit. A confused unit does not recover (unless dispelled), and will desert once combat ends. Regeneration cannot prevent this effect. The unit has one chance to resist the spell, at a -2 penalty.
+At the beginning of each turn, the effects of this spell will be determined randomly from this list: 1) unit stands in place, 2) unit moves randomly, 3) unit is controlled by you, and 4) no effect.
+#Spell FOCUS MAGIC
+FOCUS MAGIC
+Sorcery Common - Unit Enchantment
+Target: one friendly unit
+Casting Cost: 80 mana
+Upkeep: 2 mana
+Improves the ability of the unit to wield magic.
+-Improves the casting capacity of spellcasters by 15 mp.
+-If the unit has a magical ranged, doom gaze, or breath attack, it gains +3 strength. 
+-If the unit does not, then its existing thrown or missile attack is changed to an equally powerful magical ranged attack. 
+-If there is no attack to convert, or it is weaker than strength 3, the unit will gain a strength 3 ranged magical attack.
+#Spell BLUR
+BLUR
+Sorcery Common - Combat Enchantment
+Target: n/a
+Casting Cost: 25 mana
+Blurs the outline of all friendly units making them more difficult to hit. There is a 20% chance that each point of damage done to the target unit will miss unless the attacker has Illusions Immunity.
+#Spell NAGAS
+*Units\u197x3_1.png
+NAGAS
+Sorcery Common - Summoning
+Target: n/a
+Casting Cost: 73 mana
+Upkeep: 2 mana/turn
+Summons three trident-wielding nagas. These swimming creatures attack their foes with poisoned weapons in combat.
+#Spell PSIONIC BLAST
+PSIONIC BLAST
+Sorcery Common - Instant Combat
+Target: enemy unit
+Casting Cost: 20 mana
+Targets a unit with an intensely damaging stream of mental energy, which counts as a strength 18 illusion attack.
+#Spell COUNTER MAGIC
+COUNTER MAGIC
+Sorcery Uncommon - Combat Enchantment
+Target: n/a
+Casting Cost: 50 mana
+Creates a reserve of counter magic power which resists all spells cast by an opponent wizard. The reserve starts at 70 strength and each countered spell reduces the strength of the reserve by 10. Success chance of opposing spells equals their cost divided by the mana in the counter reserve*100%. Spells more expensive than the counter reserve will never get countered. This spell cannot counter spells cast by a wizard who knows the Spell of Mastery.
+#Spell DISPELLING WAVE
+DISPELLING WAVE
+Sorcery Uncommon - Instant
+Target: map square
+Casting Cost: 25-125
+Attempts to remove all beneficial enemy unit enchantments from the targeted overland map square, or during combat from all enemies. When used this way, it can even remove negative spells on your units. Each 2 mana spent on the spell equals the effectiveness of a strength 1 Dispel Magic, rounded up.
+#Spell VERTIGO
+VERTIGO
+Sorcery Uncommon - Unit Enchantment
+Target: enemy unit
+Casting Cost: 10 mana
+If a targeted unit fails to resist at -4, it gets -25% to hit and -7% to defend chance.
+#Spell SPELL LOCK
+SPELL LOCK
+Sorcery Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 100 mana
+Upkeep: 1 mana/turn
+Prevents a target unit's positive enchantments from being dispelled. If the target unit is a summoned creature, spell lock also protects the bonds that tie it to the controlling wizard. Spell lock must be dispelled (resistance of 150) before any further positive enchantments can be removed from the creature or unit.
+#Spell WATER ELEMENTAL
+*Units\u158x3_1.png
+WATER ELEMENTAL
+Sorcery Uncommon - Summoning
+Target: n/a
+Casting Cost: 150 mana
+Upkeep: 3 mana/turn
+Summons a water elemental. Water elementals shoot magical water at their enemies and can obviously move through ocean or other forms of water terrain easily.
+#Spell FLIGHT
+FLIGHT
+Sorcery Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 22/ 110 mana
+Upkeep: 2 mana/turn
+Bestows the power of flight upon a target unit. The unit has a minimum movement of 3 and a scouting range of 2.
+#Spell AETHER BINDING
+AETHER BINDING
+Sorcery Uncommon - Global Enchantment
+Target: n/a
+Casting Cost: 400 mana
+Upkeep: 20 mana/turn
+Warps the fabric of AEther to be less resistant to the wizard's spellcasting attempts. Generate SP equal to the months elapsed since the beginning of the game. All Dispel Magic, Dispelling Wave, Disenchant Area and Disjuction spells cast by the wizard are twice as effective.
+#Spell SPELL BLAST
+SPELL BLAST
+Sorcery Rare - Instant
+Target: opponent wizard
+Casting Cost: 50+ mana
+Attempts to counter an enemy wizard's spell as it is being cast. When spell blast takes effect, a wizard must expend as much of his or her own magic power (from mana reserves) as the enemy wizard has spent on the opposing spell to blast that spell out of existence. If a wizard does not have enough mana to match his target, spell blast fails.
+#Spell AURA OF MAJESTY
+AURA OF MAJESTY
+Sorcery Uncommon - Global Enchantment
+Target: yourself
+Casting Cost: 200 mana
+Upkeep: 12 mana/turn
+Hoodwinks all enemy wizards into liking the casting wizard. Each turn the spell is in effect, relations are shifted by +1 diplomatic point on a scale of -100 to +100 for each 30 point the relation is below X, rounded up, where 
+X = 45 - 3* Number of wizards in the game. Spells cast by the wizard that target terrain outside cities have no diplomatic penalty.
+#Spell PHANTOM BEAST
+*Units\u191x3_1.png
+PHANTOM BEAST
+Sorcery Uncommon - Combat Summoning
+Target: Combat Tile
+Casting Cost: 35 mana
+Summons an illusory phantom beast. The phantom beast is immune to all forms of death magic and disappears when combat ends.
+#Spell URANUS' BLESSING
+URANUS' BLESSING
+Sorcery Rare - City Enchantment
+Target: friendly city
+Casting Cost: 180 mana
+Upkeep: 5 mana
+Any Magic Markets or Wizard's Guild in the city produces an additional 11 power. 
+Any Amplifying Tower produces an additional 4 skill. 
+#Spell INVISIBILITY
+INVISIBILITY
+Sorcery Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 30/150 mana
+Upkeep: 6 mana/turn
+Renders the unit invisible to all units, except those Immune to Illusion and those that have True Sight. In combat, the unit becomes visible when adjacent to an enemy unit, but there is still a 20% chance for each hit to miss the target, as if Blur was in effect and cannot be attacked at range. If Blur is also in effect, the cumulative chance becomes 30%.
+#Spell WIND WALKING
+WIND WALKING
+Sorcery Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 200 mana
+Upkeep: 7 mana/turn
+Allows the enchanted unit and all units in its stack to fly on the overland map and participate in naval combat. The minimal overland movement speed of the unit becomes 6. Carried units cannot drop below 0.5 movement points unless the windwalker runs out of movement points.
+#Spell BANISH
+BANISH
+Sorcery Rare - Instant Combat
+Target: enemy fantastic unit
+Casting Cost: 35 mana
+Destroys the magical bond that keeps a fantastic unit with its controlling magician. Each figure within the unit must resist at -4 or be returned whence they were summoned. This counts as irrecoverable damage.
+#Spell STORM GIANT
+*Units\u193x3_1.png
+STORM GIANT
+Sorcery Rare - Summoning
+Target: n/a
+Casting Cost: 330 mana
+Upkeep: 5 mana/turn
+Summons a lightning bolt-wielding storm giant. Storm giants not only hurl vicious lightning bolts over long distances, they also use lightning bolts when fighting hand-to-hand with their enemies, and can control winds to deflect normal missiles.
+#Spell AIR ELEMENTAL
+*Units\u194x3_1.png
+AIR ELEMENTAL
+Sorcery Rare - Combat Summoning
+Target: Combat Tile
+Casting Cost: 50 mana
+Summons an invisible, flying air elemental during battle. The creature disappears when combat ends. Air elementals are non-corporeal, fast creatures that are very hard to defend against or damage with nonmagical weapons.
+#Spell MIND STORM
+MIND STORM
+Sorcery Rare - Unit Enchantment
+Target: enemy unit
+Casting Cost: 35 mana
+Causes intense mental anguish to the creature(s) in a target enemy unit. Unable to concentrate, the creatures automatically (with no chance to resist) lose 5 to all of their thrown and ranged attack strengths, defense and resistance, and 3 of their melee attack. This spell does not effect units that have Immunity to Illusions.
+#Spell STASIS
+STASIS
+Sorcery Rare - Unit Enchantment
+Target: one map square or one combat unit
+Casting Cost: 25/125 mana
+Upkeep: none
+Paralyzes all enemy units in a target map square for a minimum of one turn. After the first turn a unit passes in stasis, it has one opportunity per turn to free itself by successfully resisting (at a penalty of 5 to resistance) the stasis field.
+When cast during battle, one target unit cannot act for the remainder of combat if it fails to resist at -5.
+#Spell MAGIC IMMUNITY
+MAGIC IMMUNITY
+Sorcery Very Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 36/180 mana
+Upkeep: 10 mana/turn
+Makes a target unit completely immune to all magic spells and spell-like effects. It also gives the unit immunity to gaze attacks. Finally, the unit is almost completely immune to all magical ranged attacks.
+#Spell FLYING FORTRESS
+FLYING FORTRESS
+Sorcery Rare - Enchantment
+Target: friendly city
+Casting Cost: 200 mana
+Upkeep: 3 mana/turn
+Allows the target city, and all units defending it to fly. Only flying, non-corporeal and teleporting units may enter the city tiles during combat. The spell "Earthquake" has no effect on the city.
+#Spell DJINN
+*Units\u195x3_1.png
+DJINN
+Sorcery Very Rare - Summoning
+Target: n/a
+Casting Cost: 375 mana
+Upkeep: 9 mana/turn
+Summons a djinn. This powerful, flying being can hurl ranged magic attacks at its opponents and is capable of casting up to 35 spell points of sorcery magic during every combat.
+#Spell SPELL WARD
+SPELL WARD
+Sorcery Very Rare - City Enchantment
+Target: friendly city
+Casting Cost: 150 mana
+Upkeep: 1 mana/turn
+Counters all spells of the chosen realm in combat within the city not cast by a wizard who researched Spell of Mastery. Counters city curses of the chosen realm, but does not remove them from the city if they are already present. Fantastic creatures of the chosen realm suffer a -20% To Hit penalty, -3 defense penalty, and -3 resistance penalty while fighting in the city.
+#Spell CREATURE BINDING
+CREATURE BINDING
+Sorcery Very Rare - Unit Enchantment
+Target: enemy fantastic unit
+Casting Cost: 50 mana
+Attempts to alter the allegiance of a fantastic (i.e., summoned) creature. If a target creature fails to resist the spell (at a penalty of 4 to its resistance), it is bound to fight for the casting wizard until the end of combat. The bound creature disappears after combat ends. This spell cannot be dispelled, and affects creatures with immunity to illusions.
+#Spell MASS INVISIBILITY
+MASS INVISIBILITY
+Sorcery Very Rare - Combat Enchantment
+Casting Cost: 80 mana
+Makes all friendly units invisible to their opponents.  In combat, the unit becomes visible when adjacent to an enemy unit, but there is still a 20% chance for each hit to miss the target, as if Blur was in effect. If Blur is also in effect, the cumulative chance becomes 30%.
+#Spell GREAT UNSUMMONING
+GREAT UNSUMMONING
+Sorcery Very Rare - Instant
+Target: n/a
+Casting Cost: 700 mana
+Upkeep: none
+Tries to banish all enemy fantastic creatures from both Arcanus and Myrror! Creatures suffer a penalty of 3 to their resistance when attempting to oppose this spell an failure causes the entire unit to irrecoverably disappear.
+#Spell SPELL BINDING
+SPELL BINDING
+Sorcery Very Rare - Instant
+Target: Global Enchantment known by any other Wizard
+Casting Cost: 1200 mana
+Upkeep: none
+Duplicate a global enchantment known by any other wizard by storing a copy of its essence. The stored spell can then be cast any number of times as though it was your own researched spell. Spell Binding has a cooldown period of 1 year after it was succesfully cast, and no more than 5 spells can be stored this way.
+#Spell HASTE
+HASTE
+Sorcery Very Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 50 mana
+Upkeep: none
+Doubles the movement (speed) and number of attacks (both melee and ranged) of a target unit.
+#Spell SKY DRAKE
+*Units\u196x3_1.png
+SKY DRAKE
+Sorcery Very Rare - Summoning
+Target: n/a
+Casting Cost: 500 mana
+Upkeep: 15 mana/turn
+Summons a fierce, lightning-breathing wind dragon from the realm of air. The powerful sky drake is immune to magic and illusions. Its lightning breath can easily vaporize most opponents.
+#Spell POWER LINK
+POWER LINK
+Sorcery Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1200 mana
+Upkeep: 100 mana/turn
+Whenever another player casts an overland spell, the smaller of 500-x or 4x power is stored in Power Link, where x is the base cost of that spell. At most 7500 power can be stored and each turn, one third of the stored power is extracted as power income. Power Link has no effect during Time Stop.
+#Spell TIME STOP
+TIME STOP
+Sorcery Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 2000 mana
+Upkeep: Special
+Stops the passage of time for all enemy wizards and their troops and spells. Only the casting wizard may move units. No income or production is generated and no maintenance has to be paid except for this spell. The maintenance of Time Stop increases by 30 mana for each turn in effect. Conquering a town is a major event that attempts to set history in motion, increasing the maintenance by 150. No gold can be looted from cities while time is stopped.
+#Spell ANIMATE AMMO
+ANIMATE AMMO
+Chaos Common - Combat Instant
+Target: ranged normal enemy unit
+Casting Cost: 5 mana
+Causes the ammunition of the targeted unit to be possessed by the powers of Chaos, making it refuse to hit your units.
+Such ammo becomes unusable, thus the targeted unit loses its ability to attack at range.
+Each ammo endowed with chaotic power this way increases the caster's ability to use magic in the battle by one for that combat.
+This spell can only target units whose base type is a non-hero normal unit.
+#Spell DISRUPT
+DISRUPT
+Chaos Common - Combat Instant
+Target: one wall section
+Casting Cost:  5 mana
+Destroys one section of stone wall, clearing a way for troops to pass through.
+#Spell BREAKTHROUGH
+BREAKTHROUGH
+Chaos Common - Combat Enchantment
+Target: n/a
+Casting Cost: 9 mana
+Brings forth the powers of Chaos to enable the caster's units to break through obstacles more effectively!
+-Permanent (base type) normal units gain Wall Crusher and +1 melee attack
+-Non-Corporeal units gain +1 melee attack and defense
+-Temporary units gain +1 melee attack and defense
+(all units except combat summoned units are permanent units)
+#Spell FIRE BOLT
+FIRE BOLT
+Chaos Common - Combat Instant
+Target: enemy unit
+Casting Cost: 10 mana
+Shoots a bolt of intense flames at one figure in a target unit, striking as a strength 24 magical fire attack.
+#Spell HELL HOUNDS
+*Units\u155x3_1.png
+HELL HOUNDS
+Chaos Common - Summoning
+Target: n/a
+Casting Cost: 40 mana
+Upkeep: 1 mana/turn
+Summons and binds a wild pack of fire-breathing hell hounds to the will of the wizard.
+#Spell CORRUPTION
+CORRUPTION
+Chaos Common - Instant
+Target: map square
+Casting Cost: 40 mana
+Upkeep: none
+Desecrates the target land square. Corrupted lands produce no food or minerals, and can only be restored to production by the prayers of clerics or shamans.
+#Spell FLAME BLADE
+FLAME BLADE
+Chaos Common - Unit Enchantment
+Target: one normal unit
+Casting Cost: 10/50 mana
+Upkeep: 1 mana/turn
+Causes the weapons of a target unit to burst into flames, increasing the strength of melee attacks by 3 and missile attacks by 2. Flame Blades also allow units to hit creatures which have weapon immunity. Units whose original unit type is a normal unit are a valid target, even if they have been converted to fantastic by another spell.
+#Spell WALL OF FIRE
+WALL OF FIRE
+Chaos Common - City Enchantment
+Target: friendly city
+Casting Cost: 20/60 mana
+Upkeep: 0 mana/turn
+Encircles a city with a protective wall of flames. Each enemy non-flying figure moving or attacking through the wall suffers a strength 10 magical fire attack.
+#Spell SHATTER
+SHATTER
+Chaos Common - Unit Enchantment
+Target: enemy normal unit
+Casting Cost:  8 mana
+A target unit must resist by a -2 penalty to ignore Shatter's effects; if it is unsuccessful, all of the unit's attack strengths are reduced to 1.
+#Spell WARP CREATURE
+WARP CREATURE
+Chaos Common - Unit Enchantment
+Target: enemy unit
+Casting Cost: 10 mana
+Attempts to mutate all creatures within a target unit. Target creatures suffer a penalty of 5 to their resistance when trying to withstand being warped. Mutated creatures lose half their attack strength, or two-thirds of their defense, or all their resistance at random. If one or more effects are already in effect, those won't be selected again.
+#Spell FIRE ELEMENTAL
+*Units\u153x3_1.png
+FIRE ELEMENTAL
+Chaos Common - Combat Summoning
+Target: Combat Tile
+Casting Cost: 14 mana
+Summons a fire elemental to do battle for the wizard. Fire elementals have weapon immunity and fire immunity. Once combat ends, the fire elemental returns to the plane of chaos.
+#Spell LIGHTNING BOLT
+LIGHTNING BOLT
+Chaos Uncommon - Instant Combat
+Target: enemy unit
+Casting Cost: 25 mana
+Shoots a bolt of intense electricity at the target unit, striking as a strength 36 armor-piercing magical attack.
+#Spell FIRE GIANT
+*Units\u157x3_1.png
+FIRE GIANT
+Chaos Uncommon - Summoning
+Target: n/a
+Casting Cost: 110 mana
+Upkeep: 3 mana/turn
+Summons a fire giant and binds it to the will of the wizard. Fire giants have fire immunity and can destroy walls. They can throw a huge flaming ball of fire at an enemy once per combat.
+#Spell CHAOS CHANNELS
+CHAOS CHANNELS
+Chaos Uncommon - Permanent Unit Enchantment
+Target: friendly normal unit
+Casting Cost: 50 mana
+Upkeep: none
+Transforms the target into a creature of chaos, but it can still gain experience like a normal unit. Target unit receives one of following mutations: demon-skin armor (+3 defense), demon wings (2 speed flight), or fire-breathing (4 strength fiery breath). Once affected by this spell, the creature can never be Chaos Channeled again.
+#Spell MYSTIC SURGE
+MYSTIC SURGE
+Chaos Uncommon - Unit Enchantment
+Target: one unit in combat
+Casting Cost: 25 mana
+Links the unit to the source of all magic power, raising their movement by 3, defense by 2, and making their attacks harder to defend against (-10% chance of enemy shields working). The unit gains random enchantments, becomes fantastic (no realm), cannot be healed and loses 2 resistance during this combat, and is reduced to 1 remaining hit point after the combat ends.
+#Spell GARGOYLES
+*Units\u156x3_1.png
+GARGOYLES
+Chaos Uncommon - Summoning
+Target: n/a
+Casting Cost: 100 mana
+Upkeep: 1 mana/turn
+Summons flying gargoyles. Gargoyles are extremely difficult to damage, as one might expect flying chunks of masonry to be, and exhibit immunity to stoning and poison attacks.
+#Spell FIREBALL
+FIREBALL
+Chaos Uncommon - Instant Combat
+Target: enemy unit
+Casting Cost: 15 mana
+Hurls a flying ball of exploding flames at a target unit, striking each figure in the unit with a strength 12 magical fire attack.
+#Spell FIRE STORM
+FIRE STORM
+Chaos Rare - Instant
+Target: map square
+Casting Cost: 180 mana
+Rains fiery balls of flaming stone down on an entire map square, striking all figures in each unit within the area with a strength 12 magical fire attack.
+#Spell RAISE VOLCANO
+RAISE VOLCANO
+Chaos Uncommon - Instant
+Target: map square
+Casting Cost: 50 mana
+Raises a volcano, destroying any food and minerals provided by a target map square (rivers and nodes may not be targeted). The volcano provides 3 magic power each turn to the caster. If this spell is cast on a city, each building has a 5 % chance of collapsing. The volcano has a 20% chance to create a new mineral vein.  Volcanoes provide 7% production as though they were regular mountains to the owner's cities only.  
+#Spell IMMOLATION
+IMMOLATION
+Chaos Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 12/60 mana
+Upkeep: 2 mana/turn
+Surrounds the target unit with a fiery aura that inflicts a strength 10 magical fire attack on all enemies engaging the immolating unit in melee combat. The unit becomes immune to Cold in addition.
+#Spell CHIMERAS
+*Units\u160x3_1.png
+CHIMERAS
+Chaos Uncommon - Summoning
+Target: n/a
+Casting Cost: 180 mana
+Upkeep: 4 mana/turn
+Summons a horrific flying, fire breathing, three-headed chimera.
+#Spell WARP LIGHTNING
+WARP LIGHTNING
+Chaos Rare - Instant Combat
+Target: enemy unit
+Casting Cost: 30 mana
+Sends a chain of lightning bolts ripping through a target unit. The first bolt of lightning has a strength of 12, the second a strength of 11,and so on until the last bolt delivers a 1 strength attack or the unit is destroyed. All the lightning attacks are armor piercing.
+#Spell BLAZING MARCH
+BLAZING MARCH
+Chaos Rare - Combat Enchantment
+Target: n/a
+Casting Cost: 50 mana
+Bestows powerful flaming weapons on all units in combat, increasing their melee and missile attack strength by 3 and endowing them with magical weapons. This spell is cumulative with Flame Blade.
+#Spell CHAOS SPAWN
+*Units\u159x3_1.png
+CHAOS SPAWN
+Chaos Rare - Summoning
+Target: n/a
+Casting Cost: 303 mana
+Upkeep: 8 mana/turn
+Summons a chaos spawn and binds it to the will of the wizard. Chaos spawn cause fear in melee, are poisonous, and have Doom, Death and Stoning Gaze attacks.
+#Spell DOOM BOLT
+DOOM BOLT
+Chaos Rare - Instant Combat
+Target: enemy unit
+Casting Cost: 45 mana
+Calls forth the awesome power of chaos to strike the target enemy unit for 12 points of damage, regardless of the unit's defenses.
+#Spell MAGIC VORTEX
+MAGIC VORTEX
+Chaos Rare - Combat Summoning
+Target: Combat tile
+Casting Cost: 50 mana
+Vortex moves 3 squares randomly and one controlled by the caster. Any unit in the path of the vortex take 7 hits regardless of defense. In addition, each time the vortex moves, adjacent units will be struck by lightning bolts of strength 8. A magic vortex does terrible damage to a city that it moves through.
+#Spell EFREET
+*Units\u162x3_1.png
+EFREET
+Chaos Rare - Summoning
+Target: n/a
+Casting Cost: 333 mana
+Upkeep: 9 mana/turn
+Summons a fire bolt-throwing, flying efreet and binds it to the will of the wizard. Efreeti are immune to magical fire and have the ability to cast 40 points of Chaos spells each combat.
+#Spell DOOM BAT
+*Units\u161x3_1.png
+DOOM BAT
+Chaos Rare - Summoning
+Target: n/a
+Casting Cost: 320 mana
+Upkeep: 7 mana/turn
+Summons a doom bat and binds it to the will of the wizard. The doom bat has a fearsome fiery aura which strikes all units it engages with a 10 strength fireball. Doom Bats are the fastest known fantastic creatures, moving 6 tiles a turn, and they attack with unavoidable ultrasonic damage.
+#Spell DOOM MASTERY
+DOOM MASTERY
+Chaos Rare - Global Enchantment
+Target: n/a
+Casting Cost: 666 mana
+Upkeep: 18 mana /turn
+All newly created normal units controlled by the casting wizard are mutated by the effects of chaos, the same as if Chaos Channels had been cast on them.
+#Spell FLAME STRIKE
+FLAME STRIKE
+Chaos Rare - Instant Combat
+Target: n/a
+Casting Cost: 60 mana
+Strikes all enemy units with a 32 strength magical fire attack. 
+#Spell CHAOS RIFT
+CHAOS RIFT
+Chaos Rare - City Enchantment
+Target: enemy city
+Casting Cost: 200 mana
+Upkeep: 5 mana/turn
+Opens a great magical vortex over an enemy city. Each turn, units inside the city sustain five strength 11 Lightning Bolt attacks, and there is a 5% chance for each building to be destroyed.
+#Spell HYDRA
+*Units\u163x3_1.png
+HYDRA
+Chaos Very Rare - Summoning
+Target: n/a
+Casting Cost: 480 mana
+Upkeep: 11 mana/turn
+Summons a nine-headed hydra. Each fire-breathing head on this monstrous creature can regenerate during and after combat.
+#Spell DISINTEGRATE
+DISINTEGRATE
+Chaos Very Rare - Instant Combat
+Target: enemy unit
+Casting Cost: 50 mana
+If the target has a resistance of less than 10 it is instantly and irrevocably destroyed. There is no method to restore a unit that has been disintegrated.
+#Spell METEOR STORM
+METEOR STORM
+Chaos Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 800 mana
+Upkeep: 10 mana/turn
+Rains down fiery hail upon both planes, striking all enemy figures outside cities with a strength 6 magical fire attack. Buildings within cities may also be destroyed (1% chance each turn a building is destroyed). Additionally, non-fortress outposts will be abandoned. The casting wizard is immune to all these effects.
+#Spell DOOMSDAY
+DOOMSDAY
+Chaos Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1000 mana
+Upkeep: 20 mana/turn
+Once this enchantment has been cast, the entire world begins to slowly be corrupted. Each turn many map squares are withered as per the spell Corruption. The caster's cities and surrounding areas are not affected of course. This spell is perceived as a sign of the end of the world by people, causing major unrest worldwide. Cities exceeding their maximal population will shrink at an additional -200 people/turn.
+The number of tiles corrupted is 2 plus one more for each 10 tiles of average map width. All enemy cities suffer +5 unrest.
+#Spell APOCALYPSE
+APOCALYPSE
+Chaos Very Rare - Instant Combat
+Target: n/a
+Casting Cost: 65 mana
+Strikes every enemy unit with a random effect from the following list: Exaltation, Chaos Channels, Warp Creature at a -15 resistence penalty, Doom Bolt, Warp Lightning, Flame Strike, Confusion that cannot be resisted or Disintegrate at a -3 resistance penalty.
+#Spell CHAOS SURGE
+CHAOS SURGE
+Chaos Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1000 mana
+Upkeep: 30 mana/turn
+All creatures of chaos have 3 added to their melee, 2 to missile, breath, magical ranged attacks and resistance. Multiple Chaos Surges are cumulative but effect of the second and later copy are reduced to a +1 bonus.
+#Spell WARP REALITY
+WARP REALITY
+Chaos Very Rare - Combat Enchantment
+Target: n/a
+Casting Cost: 75 mana
+Warps the fabric of reality and alters the laws of physics. All non-chaos units, enemy or friendly, have a 20% lower chance to hit.
+#Spell GREAT DRAKE
+*Units\u164x3_1.png
+GREAT DRAKE
+Chaos Very Rare - Creature Summoning
+Target: n/a
+Casting Cost: 500 mana
+Upkeep: 15 mana/turn
+Summons an avenging fire-breathing dragon from the depths of chaos. The flames spewing from a great drake's jaws are so hot that weak opponents may be incinerated before ever getting a chance to fight back.
+#Spell CALL THE VOID
+CALL THE VOID
+Chaos Very Rare - Instant
+Target: enemy city
+Casting Cost: 500 mana
+Upkeep: none
+Every building in the target city has a 66% chance to be destroyed, and each unit inside the city takes 12 points of damage regardless of defense. The amount of pure chaos being released also corrupts the surrounding area, and the explosion kills 66% of the population. Non-fortress outposts hit by the spell are abandoned the next turn.
+#Spell ARMAGEDDON
+ARMAGEDDON
+Chaos Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1250 mana
+Upkeep: 40 mana/turn
+Begins to destroy the entire world, as volcano after volcano rises, ravaging the lands of both worlds. Like Raise Volcano, the casting wizard gains 3 points of power from each new volcano created. The number of volcanoes raised is 2 plus one more for each 10 tiles of average map width. All enemy cities suffer +2 unrest for the first copy of this spell and +1 afterwards.
+#Spell BLESS
+BLESS
+Life Common - Unit Enchantment
+Target: friendly unit
+Casting Cost: 7/35 mana
+Upkeep: 0 mana/turn
+Adds 5 to the target unit's defense and resistance against all Chaos or Death realm spells, breath, gaze or touch attacks.
+#Spell STAR FIRES
+STAR FIRES
+Life Common - Instant Combat
+Target: enemy fantastic unit
+Casting Cost: 12 mana
+Causes a holy blaze of burning light from the stars (strength 23 magic attack) to fall upon a target fantastic unit.
+#Spell ENDURANCE
+ENDURANCE
+Life Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 60 mana
+Upkeep: 2 mana/turn
+Increases the target unit's movement speed by one, and their health by 4 divided evenly between each figure, but at least 1 per figure.
+#Spell HOLY WEAPON
+HOLY WEAPON
+Life Common - Unit Enchantment
+Target: friendly normal unit
+Casting Cost: 8/40 mana
+Upkeep: 0 mana/turn
+Blesses the target's weapons, allowing them to hit creatures which are immune to non-magical attacks and giving a +10 % to-hit bonus in combat. Units whose original unit type is a normal unit are a valid target, even if they have been converted to fantastic by another spell.
+#Spell HEALING
+HEALING
+Life Common - Instant Combat
+Target: friendly unit
+Casting Cost: 15 mana
+Heals up to 5 hits of damage taken by the target unit.
+#Spell HOLY ARMOR
+HOLY ARMOR
+Life Common - Unit Enchantment
+Target: friendly normal unit
+Casting Cost: 50 mana
+Upkeep: 0 mana/turn
+The enchanted unit receives a +10% To Defend bonus. However, units that have 5 or lower defense, receive 2 defense instead.
+#Spell JUST CAUSE
+JUST CAUSE
+Life Common - Global Enchantment
+Target: n/a
+Casting Cost: 150 mana
+Upkeep: 3 mana/turn
+Increases the fame of the casting wizard by 10 in addition to any other bonuses as long as the spell is in effect. Reduces unrest in all of the caster's cities by one.
+#Spell HEAVENLY LIGHT
+HEAVENLY LIGHT
+Life Common - City Enchantment
+Target: friendly city
+Casting Cost: 60 mana
+Upkeep: 1 mana
+Basks the entire city in rays of holy light, increasing the attack, defense, and resistance of all units defending it by 1, and they gain magical weapons as if they were equipped by an Alchemist. The enchanted city produces an additional 3 power as though this enchantment was a religious building.
+#Spell GUARDIAN SPIRIT
+*Units\u176x3_1.png
+GUARDIAN SPIRIT
+Life Common - Summoning
+Target: n/a
+Casting Cost: 60 mana
+Upkeep: 1 mana/turn
+Guardian Spirits can meld with magic nodes, and nodes melded by them provide the same benefit as Heavenly Light - the node produces an additional 3 power, and all units defending the node get an additional melee attack, defense and resistance. The spirit also boosts the Resistance of all friendly units in combat by one.
+#Spell HEROISM
+HEROISM
+Life Common - Unit Enchantment
+Target: friendly normal unit
+Casting Cost: 15/75 mana
+Upkeep: 1 mana/turn
+An entire unit becomes elite. This spell is automatically dispelled when the unit becomes elite naturally. Units whose original unit type is a normal unit are a valid target, even if they have been converted to fantastic by another spell.
+#Spell TRUE SIGHT
+TRUE SIGHT
+Life Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 15/75 mana
+Upkeep: 0 mana/turn
+Endows a target unit with the gift of Immunity to Illusions and allows the unit to see through Wall of Darkness.
+#Spell STREAM OF LIFE
+STREAM OF LIFE
+Life Uncommon - City Enchantment
+Target: friendly city
+Casting Cost: 120 mana
+Upkeep: 4 mana/turn
+Turns an ordinary friendly city into a fertile utopia. Population growth rates double and all units in the city heal completely at the end of every game turn. The citizens are so pleased that unrest gets reduced by 3.
+#Spell RESURRECTION
+RESURRECTION
+Life Uncommon - Instant
+Target: one dead hero
+Casting Cost: 325 mana
+Upkeep: none
+Resurrects a hero from the dead, regardless of the length of time he or she has been dead. The hero reappears at the wizard's summoning circle and is fully healed. If six other heroes have already been hired the spell fails.
+#Spell EXORCISE
+EXORCISE
+Life Uncommon - Instant Combat
+Target: one fantastic unit
+Casting Cost: 20 mana
+Upkeep: none
+Each figure in the targeted fantastic unit must resist at -1 or be irrecoverably destroyed by the holy fires. Created undead units suffer an additional -3 penalty.
+#Spell DIVINE ORDER
+DIVINE ORDER
+Life Rare - Global Enchantment
+Target: n/a
+Casting Cost: 250 mana
+Upkeep:10 mana/turn
+A holy ritual that spreads the will of the gods over the land.
+- Unit and City Enchantments are 25% cheaper to cast.
+- Other enchantments cost 10% less.
+- Summoning creatures costs 10% more.
+- Combat spells cost 20% more to cast.
+The second and later copy of the spell cast by other wizards is multiplicative but has halved effect.
+#Spell UNICORNS
+*Units\u175x3_1.png
+UNICORNS
+Life Uncommon - Summoning
+Target: n/a
+Casting Cost: 200 mana
+Upkeep: 4 mana/turn
+Calls a herd of magic unicorns. These lovely creatures can teleport to any location on the battlefield and help their allies to resist spells, raising their magic resistance by 2!
+#Spell RAISE DEAD
+RAISE DEAD
+Life Uncommon - Instant Combat
+Target: one dead normal unit
+Casting Cost: 40 mana
+Raises a fallen unit from the dead in combat. The unit returns with half its normal health. All enchantments cast on the unit are lost. The spell does not work on fantastic creatures. The revived unit cannot be healed or raised again, and counts as a fantastic unit until the end of the combat.
+#Spell SANCTIFY
+SANCTIFY
+Life Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 50 mana
+Upkeep: 1 MP
+The targeted unit is overwhelmed by religious feelings and desires to serve a greater power. The unit costs no gold to maintain and produces 3 power.
+#Spell ALTAR OF PEACE
+ALTAR OF PEACE
+Life Uncommon - City Enchantment
+Target: friendly city
+Casting Cost: 100 mana
+Upkeep: 4 mana/turn
+Generates research equal to 12+0.3*(average relation with all other contacted wizards), but no more than 24 and no less than zero. Relation is measured on a scale of -100 (Hate) to +100 (Harmony)
+#Spell PRAYER
+PRAYER
+Life Uncommon - Combat Enchantment
+Target: n/a
+Casting Cost: 40 mana
+Adds 1 to the resistance, and 10% to hit and to defend chance of all friendly units in the current battle.
+#Spell LIONHEART
+LIONHEART
+Life Rare - Unit Enchantment
+Target: friendly unit
+Casting Cost: 36/180 mana
+Upkeep: 3 mana/turn
+Adds 3 to the target unit's melee and missile attack strength and resistance. Adds +8 health total to the unit divided evenly between figures. For example a 4 figure unit will gain 2 health per figure, but a hero would gain a full 8 health.
+#Spell INCARNATION
+*Units\u34x3_1.png
+INCARNATION
+Life Rare - Hero Summoning
+Target: n/a
+Casting Cost: 700 mana
+Upkeep: 12 mana/turn
+Summons The Chosen to aid your cause.
+When The Chosen is killed or disbanded, casting the spell again allows The Chosen to retain all previously collected experience.
+The Chosen can always be resummoned, even if The Chosen died to irrecoverable damage.
+#Spell INVULNERABILITY
+INVULNERABILITY
+Life Rare - Unit Enchantment
+Target: one friendly unit
+Casting Cost: 30/150 mana
+Maintenance: 5 mana/turn
+Target unit gains Weapon Immunity, and the first two hits sustained by the unit from any attack are ignored.
+#Spell INSPIRATIONS
+INSPIRATIONS
+Life Rare - City Enchantment
+Target: friendly city
+Casting Cost: 150 mana
+Upkeep: 4 mana/turn
+Instills a sense of greater purpose into the local citizenry; that city's production rate rises by 100%.
+#Spell PROSPERITY
+PROSPERITY
+Life Rare - City Enchantment
+Target: friendly city
+Casting Cost: 120 mana
+Upkeep: 2 mana/turn
+Increases the gold obtained from the target city by 77% as long as the enchantment is in effect.
+#Spell ALTAR OF BATTLE
+ALTAR OF BATTLE
+Life Rare - City Enchantment
+Target: friendly city
+Casting Cost: 300 mana
+Upkeep: 5 mana/turn
+All units built in the target city are Elite.
+#Spell ANGEL
+*Units\u177x3_1.png
+ANGEL
+Life Rare - Summoning
+Casting Cost: 310 mana
+Upkeep: 8 mana/turn
+Summons an angel. Angels enhance the fighting ability of friendly units and their touch Exorcises. Angels can cast Life spells for 24 mp every battle.
+#Spell EXALTATION
+EXALTATION
+Life Rare - Instant Combat
+Target: friendly unit
+Casting Cost: 30 mana
+The target is granted 8 additional hit points. If the unit already took damage, these hit points cancel out damage first. Granted hit points are divided evenly rounded down between figures.
+#Spell MASS HEALING
+MASS HEALING
+Life Rare - Instant Combat
+Target: n/a
+Casting Cost: 35 mana
+Heals all friendly units for 5 hit points (or less, if a unit has sustained fewer than 5 hit points of damage).
+#Spell HOLY WORD
+HOLY WORD
+Life Rare - Instant Combat
+Target: n/a
+Casting Cost: 60 mana
+Attempts to banish outright all fantastic and/or undead creatures. Each figure within each enemy unit must resist this holy utterance separately at a penalty of -2 resistance, or -5 if they were undead. Failure to save causes the figure to be destroyed irrecoverably.
+#Spell HIGH PRAYER
+HIGH PRAYER
+Life Very Rare - Combat Enchantment
+Target: n/a
+Casting Cost: 70 mana
+Calls upon the forces of holiness and light to make all friendly units fight and defend exceptionally well; attack and defense both increase by 2, resistance by 3 and there is a +10% chance to hit and to defend bonus. Not cumulative with Prayer! 
+#Spell SUPREME LIGHT
+SUPREME LIGHT
+Life Very Rare - Combat Enchantment
+Casting Cost: 70 mana
+Links all friendly magic users and life creatures in combat with the divine power of the heavens, granting them +2 melee and ranged attack, defense equal to one third of their current resistance, rounded down, and these units will regenerate at the end of combat.
+#Spell CALL TO ARMS
+*Units\u113x3_1.png
+CALL TO ARMS
+Life Very Rare - Combat Summoning
+Target: 1 combat tile
+Casting Cost: 70 mana
+Calls forth divine spirits to take over the local civilian population, allowing them to participate in the battle as Paladins.  Paladins created this way are Life creatures.
+#Spell HOLY ARMS
+HOLY ARMS
+Life Rare - Global Enchantment
+Target: n/a
+Casting Cost: 600 mana
+Upkeep: 10 mana/turn
+All your normal units are blessed with Holy Weapon in battle, receiving a +10% to hit bonus and gaining the ability to strike creatures immune to non-magical attacks. 
+#Spell CONSECRATION
+CONSECRATION
+Life Very Rare - City Enchantment
+Target: friendly city
+Casting Cost: 200 mana
+Upkeep: 2 mana/turn
+Dispels all negative enchantments on a city and protects the city from further chaos and death spells. All corrupted map squares around the city are purified at the end of turn.
+#Spell LIFE FORCE
+LIFE FORCE
+Life Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 900 mana
+Upkeep: 40 mana/turn
+All population in all of the caster's cities generate one power per turn to the caster of this enchantment. This effect is cumulative with racial power generation.
+#Spell ENLIGHTENMENT
+ENLIGHTENMENT
+Life Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 900 mana
+Upkeep: 30 mana/turn
+All population in all of the caster's cities produce 2 research point on top of the amount generated in the appropriate buildings like libraries. All heroes owned by the caster gain 10 experience each turn instead of the usual 1.
+#Spell CRUSADE
+CRUSADE
+Life Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1200 mana
+Upkeep: 20 mana/turn
+Inspires all of a wizard's normal units so that their levels all raise by one (recruit become regulars, regulars become veterans, etc) and raises the highest possible level attainable for nonhero normal units by one.
+#Spell ARCH ANGEL
+*Units\u178x3_1.png
+ARCHANGEL
+Life Very Rare - Summoning
+Target: n/a
+Casting Cost: 600 mana
+Upkeep: 18 mana/turn
+Summons an Archangel. Archangels are immune to illusions, inspire friendly units to fight better than normal and can cast up to 29 mana in life magic spells every battle as well as generate 12 power to their owner outside of battle.
+#Spell CHARM OF LIFE
+CHARM OF LIFE
+Life Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1500 mana
+Upkeep: 30 mana/turn
+Adds 25% of total hit points (with a minimum of one hit point added) to the hit points of each of a wizard's creatures. Yes, that means every individual figure in every single unit!
+#Spell SKELETONS
+*Units\u165x3_1.png
+SKELETONS
+Death Common - Summoning
+Target: n/a
+Casting Cost: 25 mana
+Upkeep: 0 mana/turn
+Summons a group of 7 skeletons and binds them to the will of the wizard. Skeletons have missile immunity and cannot heal naturally.
+#Spell WEAKNESS
+WEAKNESS
+Death Common - Unit Enchantment
+Target: enemy unit
+Casting Cost: 7 mana
+Saps the strength from a target unit's creatures, who suffer a penalty of 3 to their melee, thrown and ranged attack strengths, unless the unit resists the spell at a -7 penalty. Death Immunity has no effect on this spell.
+#Spell ZOMBIES
+*Units\u174x3_1.png
+ZOMBIES
+Death Common - Combat Summoning
+Target: Combat tile
+Casting Cost: 20 mana
+Raises a unit of zombies that fight for the caster for one battle. Enemies slain mainly by zombies return from death to serve the caster as undead. Zombies move extremely slowly on the battlefield and have a -10% penalty to their chance to defend against attacks.
+#Spell CLOAK OF FEAR
+CLOAK OF FEAR
+Death Common - Unit Enchantment
+Target: friendly unit
+Casting Cost: 12/60 mana
+Upkeep: 1 mana/turn
+Surrounds the target unit with a fear- inspiring aura. Any time enemy units attempt to engage in melee combat with the cloaked unit they must first try to overcome their fright at a resistance penalty of -3 or they cannot attack or counterattack. Note : thrown, breath and gaze attacks are not melee attacks.
+#Spell BLACK SLEEP
+BLACK SLEEP
+Death Common - Combat Unit Enchantment
+Target: enemy unit
+Casting Cost: 15 mana
+If the target unit fails to resist at -2, all creatures within are thrust into a deep sleep. The unit is unable to take any actions and any attacks on the unit automatically do maximum damage. This spell damages nerves, so when killed, the target won't be possible to raise as undead.
+#Spell GHOULS
+*Units\u166x3_1.png
+GHOULS
+Death Common - Summoning
+Target: n/a
+Casting Cost: 88 mana
+Upkeep: 1 mana/turn
+Summons a pack of ghouls and binds them to the will of the wizard. Any units slain mostly by the ghouls arise after the battle to serve the wizard in his undead army.
+#Spell LIFE DRAIN
+LIFE DRAIN
+Death Common - Instant Combat
+Target: enemy unit
+Casting Cost: 10 mana
+Drains life from a target unit. When cast by a unit, the drained health is transferred to that unit. Units destroyed mostly by Life Drain returns as undead under the caster's control. Deals as much damage as the amount the target fails the resistance roll by, at a -5 penalty.
+#Spell WRAITH FORM
+WRAITH FORM
+Death Common - Unit Enchantment
+Target: friendly unit
+Casting Cost: 11 / 55 mana
+Upkeep:2 mana/turn
+Target unit becomes non-corporeal. Non- corporeal units gain weapon immunity and the ability to move across any terrain at a cost of 1 movement point. Additionally the unit can hit units with Weapon Immunity as though it had magical weapons.
+#Spell DARKNESS
+DARKNESS
+Death Common - Combat Enchantment
+Target: n/a
+Casting Cost: 20 mana
+Drapes a shroud of darkness over the entire battlefield inspiring creatures of death who gain one point each in all attack strengths, defense and resistance. Creatures of life, on the other hand, are dispirited and lose one point each in attack strength, defense and resistance.
+#Spell MANA LEAK
+MANA LEAK
+Death Uncommon - Combat Enchantment
+Target: none
+Casting Cost: 20 mana
+All enemy spell casters are drained 5 mana each combat turn. This includes the opponent wizard you are currently battling. Additionally, all units with magical ranged attacks lose one spell shot each turn.
+#Spell DRAIN POWER
+DRAIN POWER
+Death Rare - Instant
+Target: enemy wizard
+Casting Cost: 100 mana
+Drains 180 mana plus 3% of the target's mana reserves. Drained mana is transferred to the caster's skill pool.
+#Spell POSSESSION
+POSSESSION
+Death Uncommon - Combat Unit Enchantment
+Target: enemy normal unit
+Casting Cost: 35 mana
+Attempts to change the allegiance of a normal enemy unit to that of the casting wizard. If the target unit becomes possessed, it fights for the casting wizard until combat ends. Fantastic creatures and heroes may not be possessed, and the unit can resist the attempt, albeit at a -3 penalty to their resistance. This enchantment cannot be dispelled and the unit irrecoverably dies after combat.
+#Spell LYCANTHROPY
+*Units\u168x3_1.png
+LYCANTHROPY
+Death Uncommon - Unit Transformation
+Target: friendly normal unit
+Casting Cost: 105 mana
+Upkeep: 2 mana/turn
+'Curses' a normal unit with the effects of lycanthropy, changing them into werewolves with the ability to regenerate and weapon immunity. Enchantments on the unit which are invalid for fantastic units will be lost, other enchantments are unaffected.
+#Spell BLACK PRAYER
+BLACK PRAYER
+Death Uncommon - Combat Enchantment
+Target: n/a
+Casting Cost: 35 mana
+The attack strength and defense of all enemy units is reduced by 1 and their resistance is reduced by 2.
+#Spell SYPHON LIFE
+SYPHON LIFE
+Death Uncommon - Combat Instant
+Target: enemy unit
+Casting Cost: 30 mana
+Syphons life from a target unit. When cast by a unit, the drained health is transferred to that unit. Units destroyed mostly by Syphon Life return as undead under the caster's control.Deals as much damage as the amount the target fails the resistance roll by, at a -11 penalty. A stronger version of Life Drain.
+#Spell NIGHT STALKER
+*Units\u167x3_1.png
+NIGHT STALKER
+Death Uncommon - Summoning
+Target: n/a
+Casting Cost: 225 mana
+Upkeep: 1 mana/turn
+Summons a night stalker and binds it to the will of the wizard. Night Stalkers are invisible, immune to weapons, and have the dreaded death gaze.
+#Spell REAPER SLASH
+REAPER SLASH
+Death Uncommon - Instant Combat
+Target: enemy unit
+Casting Cost: 32 mana
+Hits the targeted unit with a strength 42 magical attack that causes poison damage but is not resistance based. Defense can block the damage instead, as usual.
+#Spell WALL OF DARKNESS
+WALL OF DARKNESS
+Death Uncommon - City Enchantment
+Target: friendly city
+Casting Cost:30/90 mana
+Upkeep: 1 mana / turn
+No unit outside a Wall of Darkness may attack a unit inside with a ranged attack, unless the attacker has illusions immunity.
+#Spell BLOOD LUST
+BLOOD LUST
+Death Uncommon - Unit Enchantment
+Target: friendly unit
+Casting Cost: 50
+Upkeep: none
+The target unit turns into undead and has double melee attack power against normal units. It gains all traits of Undead creatures : Does not heal naturally, cannot gain experience, is immune to Death, Illusions, and Cold.
+#Spell SHADOW DEMONS
+*Units\u171x3_1.png
+SHADOW DEMONS
+Death Uncommon - Summoning
+Target: n/a
+Casting Cost: 175 mana
+Upkeep: 4 mana/turn
+Summons a group of 4 shadow demons and binds them to the will of the wizard. Shadow demons can plane shift and regenerate.
+#Spell TERROR
+TERROR
+Death Rare - Combat Enchantment
+Target: n/a
+Casting Cost: 40 mana
+Casts a pall of fear on all enemy units. During every combat turn, each enemy unit must attempt (at a -3 resist penalty) to overcome the terror that grips it, or cower in fear. When a unit is cowering it cannot attack; however, the unit can still counterattack when it is defending against melee attacks initiated by the enemy. Even if the unit manages to attack, it'll have a -10% To Hit penalty for all attacks.
+#Spell GATE OF HADES
+GATE OF HADES
+Death Rare - Combat Enchantment
+Target: n/a
+Casting Cost: 40 mana
+Opens the gate to the afterlife which attempts to take the souls from all enemy units. Each enemy figure must resist at -1 or take 1 irrecoverable damage. This effect is unaffected by Death Immunity.
+#Spell EVIL PRESENCE
+EVIL PRESENCE
+Death Rare - City Enchantment
+Target: enemy city
+Casting Cost: 180 mana
+Upkeep: 3 mana/turn
+A demonic presence enters the target city, causing all unrest removal effects from shrines, parthenons, oracles and cathedrals to disappear. Furthermore, Barracks, War Colleges and Alchemist's Guilds have no effect on units produced there.
+#Spell WRAITHS
+*Units\u170x3_1.png
+WRAITHS
+Death Rare - Summoning
+Target: n/a
+Casting Cost: 350 mana
+Upkeep: 5 mana/turn
+Summons a group of 4 wraiths and binds them to the will of the wizard. Wraiths are non-corporeal and have a -3 resistance life-stealing attack.
+#Spell CLOUD OF SHADOW
+CLOUD OF SHADOW
+Death Rare - City Enchantment
+Target: friendly city
+Casting Cost: 200 mana
+Upkeep: 4 mana/turn
+Summons a great cloud of shadow which surrounds the city as long as the enchantment is in effect. All combats taking place at the city are treated as though a Darkness, Terror, Black Prayer, and Mana Leak spell was in effect on the city's owner's side.
+#Spell WARP NODE
+WARP NODE
+Death Rare - Node Enchantment
+Target: melded magic node
+Casting Cost:120 mana
+Upkeep: none
+Manipulate the spirit chanelling the power of the targeted node to transfer power to the casting wizard. 50% of the node's power production is transferred to the caster of Warp Node, the owner of the node only receives the other 50%. Additional node power generated by spells and retorts cannot be stolen.
+#Spell WAVE OF DESPAIR
+WAVE OF DESPAIR
+Death Rare - Instant
+Target: all enemies
+Casting Cost: 72 mana
+Calls forth powerful negative energy that freezes all enemy units. Does a magical attack which deals irrecoverable cold damage to each unit where the attack strength is 255 divided by 2 plus the number of units affected, then reduced by 10 plus that unit's resistance. The spell doesn't affect units immune to cold or magic. The spell ignores defense. The spell is unaffected by all casting cost modifiers.
+#Spell ZOMBIE MASTERY
+ZOMBIE MASTERY
+Death Rare - Global Enchantment
+Target: n/a
+Casting Cost: 800 mana
+Upkeep: 25 mana/turn
+All non fantasic, non-hero base type units falling in battle become zombies at the end of the battle under the control of the casting wizard if that wizard is victorious. Units slain mostly by zombies return under the caster's control as Undead. Zombies cannot heal naturally.
+#Spell DROUGHT
+DROUGHT
+Death Rare - City Enchantment
+Target: enemy city
+Casting Cost: 150 mana
+Upkeep: 2 mana/turn
+Reduces the maximal population of the cursed city by 6, and eliminates all percentage based production bonus completely. If the city exceeds the maximal population, it will shrink at a rate of an additional -120 people per turn and racial growth rates are negated. When cast on a neutral city, units defending it will desert.
+#Spell DARK RITUAL
+DARK RITUAL
+Death Rare - City Enchantment
+Target: friendly city
+Casting Cost: 150 mana
+Upkeep: 0 mana/turn
+The unholy rituals in the city triple the power generated by religious buildings, but increase unrest by 1.
+#Spell SUMMON DEMON
+*Units\u169x3_1.png
+SUMMON DEMON
+Death Very Rare - Summoning
+Casting cost : 41/123 mana
+Upkeep : 3 when summoned overland.
+Summons a Demon. Unlike all other summoning spells, this demon can be contracted either for one battle, or permanently if cast overland. Demons can cast Death spells for 40 mana, and have Weapon Immunity, Missile Immunity,  Death, and Illusion Immunity and can fly.
+#Spell ANNIHILATE
+ANNIHILATE
+Death Very Rare - Instant Combat
+Target: enemy unit
+Casting Cost: 41 mana
+Each figure in one unit must save at -7 or dies irrecoverably. This spell works on units with Death Immunity. However, fantastic units only suffer a -5 penalty to save.
+#Spell DEATH KNIGHTS
+*Units\u172x3_1.png
+DEATH KNIGHTS
+Death Very Rare - Summoning
+Target: n/a
+Casting Cost: 420 mana
+Upkeep: 8 mana / turn
+Summons a group of 4 death knights and binds them to the will of the wizard. Death knights attack with +3 to-hit, armor piercing and first strike. They also have a -5 resistance life-stealing attack.
+#Spell MASSACRE
+MASSACRE
+Death Very Rare - Instant Combat
+Target: n/a
+Casting Cost: 60 mana
+All figures in each enemy unit must resist at - 2 or be struck dead where they stand.
+#Spell ANIMATE DEAD
+ANIMATE DEAD
+Death Very Rare - Instant Combat
+Target: one dead unit
+Casting Cost: 50 mana
+Upkeep: Special
+Raises one slain enemy (not protected by magic immunity) or ally unit from the dead and places it under your control. The creature becomes undead, gains +1 to their attack, defense, 10% bonus to hit, and gains weapon immunity. Animated enemy units return to death after the battle is over. Already undead units may not be animated again.
+#Spell PESTILENCE
+PESTILENCE
+Death Very Rare - City Enchantment
+Target: enemy city
+Casting Cost: 250 mana
+Upkeep: 5 mana/turn
+Spreads a deadly plague throughout the affected city killing one population each turn if the current population exceeds a 1-10 roll, and unrest is increased by 2.
+#Spell ETERNAL NIGHT
+ETERNAL NIGHT
+Death Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 800 mana
+Upkeep: 15 mana/turn
+Covers the world in a blanket of darkness. All combats are assumed to be covered by the spell of Darkness, and this Darkness grants twice the normal amount of bonus attack and defense.
+All non-death units controlled by other wizards lose 1 resistance.
+#Spell EVIL OMENS
+EVIL OMENS
+Death Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1250 mana
+Upkeep: 25 mana/turn
+All spells cast by other wizards cost 50% more mana than usual. Multiple copies of this spell are not cumulative!
+#Spell FINAL WAVE
+FINAL WAVE
+Death Very Rare - Instant
+Target: n/a
+Casting Cost: 1000 mana
+All enemy normal units on both planes must resist or be slain.
+#Spell DEMON LORD
+*Units\u173x3_1.png
+DEMON LORD
+Death Very Rare - Summoning
+Target: n/a
+Casting Cost: 666 mana
+Upkeep: 18 mana/turn
+Summons a Demon Lord and binds it to the will of the wizard. Demon Lords can summon up to 3 lesser demons per combat, have many immunities, and have a -2 resistance life-stealing attack both in melee and at range. Demon Lords generate 12 power by their presence.
+#Spell MAGIC SPIRIT
+*Units\u154x3_1.png
+MAGIC SPIRIT
+Arcane - Creature Summoning
+Target: n/a
+Casting Cost: 30 mana
+Upkeep: 1 mana/turn
+Summons a magic spirit which can meld with magical nodes and direct the node's power to the controlling wizard.
+#Spell DISPEL MAGIC
+DISPEL MAGIC
+Arcane - Instant Combat
+Target: single unit
+Casting Cost: 10-50 mana
+Attempts to destroy all enemy enchantments on a unit. The chance for success is equal to the mana spent on this spell divided by the sum of the costs for this spell and the target enchantment.
+#Spell SUMMONING CIRCLE
+SUMMONING CIRCLE
+Arcane - Instant
+Target: friendly city
+Casting Cost: none
+Upkeep: none
+Moves your summoning circle to another city. All creatures summoned by spells will appear in this new city.
+#Spell HEROIC HEART
+HEROIC HEART
+Arcane - Instant Combat
+Target: friendly hero
+Casting Cost: 18 mana
+Encourages a hero to endure pain and survive for the cause of the casting wizard. Recovers 3 damage.
+#Spell DISENCHANT AREA
+DISENCHANT AREA
+Arcane - Instant Overland
+Target: map square
+Casting Cost: 50+ mana
+Attempts to dispel all enemy curses in the targeted map square. The chance of successfully dispelling an enchantment is calculated as in Dispel Magic.
+#Spell DETECT MAGIC
+DETECT MAGIC
+Arcane - Global Enchantment
+Target: n/a
+Casting Cost: 200 mana
+Upkeep: 3 mana / turn
+The current spell being cast by all wizards that you are in contact with will be displayed on the Wizards Screen at the top of each wizard's gem.
+#Spell ENCHANT ITEM
+ENCHANT ITEM
+Arcane -Permanent Item Enchantment
+Target: n/a
+Casting Cost: special
+Upkeep: none
+Creates a lesser magical item for use by your heroes. 
+#Spell SUMMON HERO
+SUMMON HERO
+Arcane - Special
+Target: n/a
+Casting Cost: 240 mana
+Summons a lesser hero to lead your army. The hero will not require any initial gold to join, but still requires normal maintenance. This spell will fail if you already control six heroes.
+#Spell PLANE SHIFT
+PLANE SHIFT
+Arcane - Instant Overland
+Target: friendly stack
+Casting Cost: 120 mana
+The targeted stack of units is moved to the other Plane. The spell fails if the tile on the opposite side is blocked by units, lairs, cities, or oceans.
+#Spell DISJUNCTION
+DISJUNCTION
+Arcane - Instant
+Target: enemy Global Enchantment
+Casting Cost: 375+ mana
+Attempts to dispel one enemy global enchantment. The chance of successfully dispelling this enchantment is calculated differently from Dispel Magic : Chance of success equals the power of Disjunction divided by the cost of the targeted spell times 1.5, meaning that spending 150% of the targeted spell's cost equals a 100% chance of success.
+#Spell CREATE ARTIFACT
+CREATE ARTIFACT
+Arcane - Permanent Item Enchantment
+Target: n/a
+Casting Cost: special
+Upkeep: none
+Creates a magical artifact for use by your heroes. Any powers may be used. 
+#Spell SUMMON CHAMPION
+SUMMON CHAMPION
+Arcane - Special
+Target: n/a
+Casting Cost: 600 mana
+Summons a greater hero to lead your army. The hero will not require any initial gold to join, but still requires normal maintenance. This spell will fail if you already control six heroes.
+#Spell SPELL OF MASTERY
+SPELL OF MASTERY
+Arcane - Global Enchantment
+Target: n/a
+Casting Cost: varies
+Caster obtains total control of all magic in both planes. Enemy wizards lose their ability to cast any spells and all summoned creatures come under your control. Successfully casting the Spell of Mastery ends the game in a glorious victory for the caster. Furthermore, your spells cannot be countered after you researched Spell of Mastery, including the Spell of Mastery itself.
+Casting cost depends on the size of the plane that is larger.
+#Spell SPELL OF RETURN
+SPELL OF RETURN
+Arcane - Special City Spell
+Target: n/a
+Casting Cost: 1000
+Allows the player to create a new fortress in a city after being banished.
+This spell can't be cast manually, and is the only overland spell you can cast while banished.
+Casting combat spells while banished is possible, but has a 4x cost range penalty.
+The casting cost of Spell of Return is unaffected by any cost modifiers.
+While banished, the dispel resistance of city enchantments not cast on your own cities is halved.
+#Spell TREE OF KNOWLEDGE
+TREE OF KNOWLEDGE
+Arcane - Instant
+Casting Cost: 108
+All of the casters cities gain the ability to build Armorer's Guilds, Fantastic Stables, and Linking Towers, assuming the city is of a race capable of building these buildings. Once cast, the effect is permanent, and cannot be cancelled in any way.
+#GAME
+GAME
+The game button brings up the game options screen, which can be used to load and save games, change settings, and surrender to return to the main menu.
+#OVERLANDSPELLS
+SPELLS
+The spells button opens your spell book, which lists only those spells which can be cast overland.
+#ARMIES
+ARMIES
+The army list button brings up a complete list of all armies under your control. You can equip your heroes, manage your artifacts, and units may also be dismissed from this screen.
+#MAGIC
+MAGIC
+The magic button brings you to the magic income screen where sources of magic power are detailed and you can distribute your power between research, mana crystal production, and improving casting skill.
+#OVERLANDCITIES
+CITIES
+Shows a list of the wizard's cities and income of various resources in each city.
+#OVERLANDINFO
+INFO
+The Info button opens a menu listing the avaiable advisors in your empire.
+#PLANE
+PLANE
+The Plane button changes your map view to the other plane. Please note that the two planes can be a different size so the same objects might have a different distance between them after changing planes.
+#OVERLANDWIZARDS
+WIZARDS
+The Wizards button opens the Wizards screen where you can see all other wizards you have contacted, request an audience with them, and see all global enchantments.
+#OTHERBUTTON
+SPECIAL ACTION
+The "other action" button allows your units to use their special ability.
+-Spirits can meld with nodes to draw magical power from them
+-Settlers can found new outposts
+-Shamans and Priests can Purify corrupted land
+-Engineers can build roads
+#NEXTTURN
+NEXT MONTH BUTTON
+Clicking this button ends your turn and allows other players to move.
+You pay any maintenance costs when clicking the button, but the costs will be covered entirely by income received if possible.
+Any remaining income will be added to your treasury after all other players also end their turn.
+#MINIMAP
+MINIMAP
+The reduced map displays the entire plane in a reduced form. Clicking will change your current view. The white box corresponds to your normal viewing window.
+#GOLD
+TOTAL GOLD
+This is the total amount of gold in your treasury.
+#MANA
+TOTAL MANA CRYSTALS
+This is the total number of mana crystals in your reserve that you can draw from to cast spells.
+#GOLDINCOME
+GOLD INCOME
+The amount of gold you gain or lose each turn from taxes, maintenance, etc.
+#FOODINCOME
+FOOD INCOME
+The amout of excess or missing food produced to feed your troops and citizens. 
+If negative, units will starve to death or desert your army. 
+If positive, each 2 excess food is sold for 1 gold which is added to your gold income.
+#MANAINCOME
+MANA INCOME
+The amount of mana crystals obtained from power, minus the amount spent on spell and creature maintenance.
+#OVERLANDMOVES
+COLLECTIVE MOVEMENT
+The total amount and type of movement available for the selected units when moved together as a group.
+Please note that all moving units in the group will use the displayed movement type, even if they have a different movement type available, and will spend movement points according to that movement type. This can result in the unit moving slower or faster than it would be able to when moving alone.
+#ARMYUPKEEP
+TOTAL ARMY UPKEEP
+This is the total that you are spending on food, gold, and mana each turn to support your armies.
+#ANVIL
+ANVIL
+Allows you to destroy unwanted magical items, gaining half the original cost of the item back in mana crystals.
+#ALCHEMYBUTTON
+ALCHEMY
+The Alchemy button allows you to convert gold to mana crystals or the other way around.
+#SORT
+SORT
+The Sort button allows cycling through sorting the displayed city data based on each column.
+The selected column to sort by is displayed in a different color.
+#MSPOWERINCOME
+POWER INCOME
+This area shows all sources that produce magic power, RP, or SP.
+The total magic power income can be distributed between producing MP, SP, and RP using the wands below.
+#MSRESWAND
+RESEARCH WAND
+This wand determines how much of your total power income is spent on producing research.
+If the wand is full, all the power is spent on researching spells. If the wand is empty, no RP is produced.
+Clicking on the tip of the wand can lock the wand preventing the amount to change.
+#MSMANAWAND
+MANA WAND
+This wand determines how much of your total power income is converted to mana crystals.
+If the wand is full, all the power is distilled into raw mana crystals. If the wand is empty, no MP is produced.
+Clicking on the tip of the wand can lock the wand preventing the amount to change.
+#MSSKILLWAND
+SKILL WAND
+This wand determines how much of your total power income is used to improve your spellcasting ability.
+If the wand is full, all the power is transferred to your skill pool. If the wand is empty, no SP is produced.
+Clicking on the tip of the wand can lock the wand preventing the amount to change.
+#MSMANA
+MANA SPENDING
+This area shows all recurring mana costs to maintain spells and creatures, and the remaining mana income.
+#MSSKILL
+CASTING SKILL
+This area shows how much casting skill is improved each turn, and how much total casting skill is available in each overland turn, or combat.
+All SP produced is stored in the Skill Pool permanently. Your casting skill is the square root of all SP in the Skill Pool.
+Combat and Overland Casting skill are usually the same, but buildings can contribute to increasing only one or the other.
+Hero skill is skill contributed by Caster heroes stationed in your fortress that will be used to progress your overland spell at the end of your turn. It is 1/5th of the total Caster ability those heroes have.
+#MSRES
+SPELL RESEARCH
+This area shows the spell currently being researched, and the amount of turns left until completion.
+#WRELATION
+RELATION, TREATIES
+This area shows all of the wizard's treaties with other wizards, and your relations with them.
+Relation levels range from Hate (-100), then Troubled, Tense, Restless, Unease, Neutral, Relaxed, Calm, Peaceful, Friendly, and end with Harmony (+100).
+Treaties can be War, Wizard's Pact, Alliance.
+A Wizard's Pact is an agreement where you agree not to enter withing 2 tiles of any of that player's cities, and in exchange they cannot attack you or use hostile spells against your empire.
+An Alliance is an agreement of mutual military aid, and allows you to enter their territory at any time you want.
+#CITYPEOPLE
+CITIZENS
+This area shows the city population. Each icon represents 1000 people.
+Citizens are displayed in the order of Mandatory Farmers, Additional Farmers, Workers, and Rebels.
+Farmers produce 4 food and 0.5 production each. Mandatory Farmers are farmers in charge of producing food required by the citizens and cannot be changed to other jobs.
+Workers produce 2 production. Rebels produce nothing and pay no taxes.
+#CITYRES
+CITY RESOURCES
+This area details the resources produced by this city. Each large icon represents an amount of 10 resources produced.
+Food resources display the amount of food consumed by the town first, then the excess that can be used to feed your armies. Missing food is displayed as grey icons and causes population to shrink.
+Gold resources show gold spent on building maintenance first, and extra gold you can use freely afterwards. Missing gold is displayed as grey icons, but will be paid from your overall empire income or treasury. Building maintenance is always paid first, and when gold is insufficient, troops will be disbanded to raise the balance above zero.
+#CITYPRODUCING
+CURRENT PRODUCTION
+This area shows what is currently produced in the city, the total production cost, the current progress, and the turns remaining until completion.
+#CITYRALLY
+RALLY BUTTON
+The rally button allows you to order all troops produced in the city to go to a selected location.
+#CITYRAZE
+RAZE BUTTON
+The raze button allows you to destroy this city.
+Razing duration is proportional to the number of buildings and city population, and earns gold equal to one third of the production cost of the buildings being sold.
+Up to 4 buildings and 2500 people can be "removed" each turn.
+#CITYBUY
+BUY BUTTON
+Allows spending gold to instantly complete the current production. Cost is 2 gold for each point of production still missing.
+#CITYCHANGE
+CHANGE BUTTON
+Opens the production screen where you can select what buildings and units to produce and assign them into a production queue.
+#SPELLBOOKS
+SPELL BOOKS
+The spell books in the various realms represent the rank of spells the wizard can understand, and the amount of spells he'll research. One book only allows learning common spells, 2 allows uncommon, 3 rares,and 4 even very rare spells. However, wizards are able to research one and only one spell that is one rank higher than what they can normally comprehend. A wizard with more than 8 books in one realm casts spells of that realm at a 5% discount for each additional book, and researches spells 8% faster for each additional book. Read the manual for more detailed information.
+#FAME
+FAME
+Fame increases the chance of mercenaries and merchants showing up, increases the chance of higher tier heroes appearing for hire, and reduces the gold maintenance of your army by one for each point.
+#MRELATION
+RELATION
+Relation levels range from Hate (-100), then Troubled, Tense, Restless, Unease, Neutral, Relaxed, Calm, Peaceful, Friendly, and end with Harmony (+100).
+#TREATY NONE
+NO TREATY
+You haven't formed any agreement with this wizard.
+Unless they are Lawful or Peaceful, they might decide to attack you or cast hostile spells against you to "test the waters" even without formally declaring war.
+#TREATY WIZARD'S PACT
+WIZARD'S PACT
+You agreed not to send any military troops within a range of two tiles of this wizard's city.
+In exchange, this wizard will not attack your units, will not cast any hostile spells against you, and relations improve over time as long as the treaty stays in effect.
+They might also cancel any hostile spells they have already cast on your cities over time.
+If you break this rule on three consecutive turns, the treaty becomes void, but otherwise it doesn't expire unless formally cancelled by one of the players involved.
+#TREATY ALLIANCE
+ALLIANCE
+You agreed to aid each other in need by providing military support.
+You can send troops into this wizard's territory without a penalty, and relations improve at a fast rate.
+This wizard will accept any requests to declare war on other wizards you are already at war with, but might ask you to declare war on their enemies as well. 
+#TREATY WAR
+WAR
+You are at war with this wizard. They'll actively attack your troops and cast hostile spells against you.
+#PERSONALITY MANIACAL
+MANIACAL
+Maniacal wizards are afraid of everyone, reducing positive diplomatic effects by 25% and increasing negative ones by 50%. There is absolutely no positive effect from this personality on diplomacy, and they are the most fond of casting overland spells that bring harm to others.
+#PERSONALITY RUTHLESS
+RUTHLESS
+Ruthless wizards are hard to deal with, but not entirely impossible, adding only +10 points to each diplomatic decision. These wizards don't care much about dispelling city curses or defending their empire, but enjoy bringing harm to others.
+#PERSONALITY AGGRESSIVE
+AGGRESSIVE
+Aggressive wizards are more likely to go to war than peaceful or lawful wizards, but less likely than chaotic, maniacal or ruthless ones. You can still reason with them through diplomacy and treaties, adding a mediocre +20 points to their diplomatic decisions.
+#PERSONALITY CHAOTIC
+CHAOTIC
+Chaotic wizards are totally unpredictable. One turn the chaotic may be peaceful and non-violent, while the next the wizard will go to war over any little excuse. Unlike other personalities, Chaotic wizards have a random diplomacy modifier that is re-rolled every turn in the range of +1 to +50.
+#PERSONALITY LAWFUL
+LAWFUL
+Lawful wizards will never attack without a formal declaration of war unless being attacked first. Negative diplomatic actions, however, have double effectiveness against them. Any diplomatic decision they make is affected by a +40 modifier, making it much more likely for the wizard to be understanding of the good intentions of others. These wizards don't tolerate city curses and will dispel them as soon as possible.
+#PERSONALITY PEACEFUL
+PEACEFUL
+Peaceful wizards are eager to maintain peaceful relations, and will never attack you without a war declaration unless you attacked first. Diplomatic decisions made by this wizard suffer from a +65 positive modifier, making it quite easy to manipulate such wizards in your favor, although this modifier has a reversed effect when a negative action is requested from them, like breaking their treaties.
+#OBJECTIVE PRAGMATIST
+PRAGMATIST
+The pragmatist seeks a balance between military buildup, expansion, and spell research.
+#OBJECTIVE MILITARIST
+MILITARIST
+The militarist seeks to build great and powerful armies. The wizard will build and maintain large and powerful armies, and is likely to declare war on wizards weaker than themselves without provocation. Their preferred types of spells are summoning and unit enchantments. Militarist wizards might declare war on players with weak armies, seeing those players unfit for ruling an empire.
+#OBJECTIVE THEURGIST
+THEURGIST
+The theurgist will focus resources on their spell research. They prefer casting global and city enchantments more often than others wizards.
+#OBJECTIVE PERFECTIONIST
+PERFECTIONIST
+The perfectionist wishes to develop and maintain huge prosperous cities. The wizard will concentrate on creating new buildings and city improvements. The perfectionist prefers casting city and unit enchantments most, and doesn't tolerate curses affecting their cities.
+#OBJECTIVE EXPANSIONIST
+EXPANSIONIST
+The expansionist is primarily interested in expanding controlled territory. The wizard is more interested in building naval buldings, and is likely to declare war on weaker wizards without a provocation. Their preferred types of spells are summoning, and they equally dislike casting curses on enemy cities and wasting resouces on dispelling city curses from their own, preferring to conquer instead.
+#OBJECTIVE NARCISSIST
+NARCISSIST
+A narcissist wizard wants to be the center of attention at all times. They prefer to pour resources into boosting their own casting skill, and dislike employing heroes, creating artifacts, or training the levels of their normal soldiers. Narcissist wizards like showing off their power by casting curses on others, and put effort into dispelling such curses from their own empire as well.
+#HISTORIAN
+HISTORIAN
+The historian graph shows the total power of each wizard's empire. Click the button in the top left corner to cycle between statistics.
+Overall : A sum of Army, Power Income, and Population.
+Army : The total strength of the wizard's armies, including both normal units and summoned creatures.
+Power Income : The amount of raw magical power the wizard obtains each turn.
+Spell Power : The amount of casting skill and research progress the wizard has.
+Population : The total population from all cities in the wizard's empire.
+#UNITBUILD
+UNITS / BUILDINGS
+Toggle between the list of available units and buildings on the left side.
+#LASTFIRST
+LAST / FIRST BUTTON
+Toggle between adding new items to the end of the queue or the beginning.
+Please note that adding anything to the beginning of the queue that has a requirement already in the queue is not possible.
+#HOUSINGTRADE
+HOUSING/TRADE/REPEAT
+This buttons toggles between the three possible options the town can produce when it's not building a unit or building. These options will always appear at the end of the queue.
+Trade Good produces 1 gold for each 2 production hammers.
+Housing increases population growth according to the following formula :
+(170*(Max Pop+Racial Growth/10 - 8) / 13) * (1.3-0.1*Population) but a minimum of 40.
+Any citizens set to be a non-mandatory farmer, or any rebels reduce this amount proportionally.
+Repeat keeps readding the last item to the queue if it was a unit.
+#CLEAR
+CLEAR BUTTON
+Removes everything from the building queue on the right side.
+#UVMELEE
+MELEE ATTACK
+Each icon represents a chance to deal 1 point of damage in melee combat. A gold icon represents a bonus due to spells or special abilities. A darkened icon represents a minus. The chance to hit is displayed in the upper right corner.
+Blue swords represent a magical weapon. White swords represent Mithril weapons. Purple swords represent Adamantium weapons.
+#UVRANGED
+RANGED ATTACK
+Each icon represents a chance to deal 1 point of damage by a ranged attack.  A gold icon represents a bonus due to spells or special abilities. A darkened icon represents a minus. The chance to hit is displayed in the upper right corner, but is further penalized by 10% if the target is at least 4 tiles away, and another 3% for each tile beyond that unless the ranged attack is magical, or performed by a hero.
+#UVARMOR
+ARMOR
+Armor, also referred as Defense icons each represent a chance to reduce incoming damage by 1 point. A gold icon represents a bonus due to spells or special abilities. A darkened icon represents a minus. The chance To Defend is displayed in the upper right corner.
+#UVRESIST
+RESISTANCE
+Each icon represents a resistance value of one. A gold icon represents a bonus due to spells or special abilities. A darkened icon represents a minus. Each point of resistance represents a 10% chance to avoid being affected by a hostile spell effect or poison. Resistance does not reduce the damage taken from magical sources.
+#UVHITS
+HEALTH
+Each icon represents one hit point. A gold icon represents a bonus due to spells or special abilities. A darkened icon represents damage already taken.
+If the unit suffers irrecoverable damage, that damage can't be healed until the end of combat, and when at least half the damage on the unit was irrecoverable when it died, it cannot be raised from dead by any spell or ability.
+#UVHITCHANCE
+CHANCE TO HIT, TO DEFEND
+This is the percentage chance of each point of attack, ranged, thrown, breath, or defense resulting in 1 damage dealt or blocked.
+To Hit represents the chance that applies to all attacks not otherwise mentioned, while To Range, To Melee, To Thrown, or To Breath represents the hit chance for that specific type of attack only.
+Please note that the chance To Defend affects the first 15 defense rolls a figure makes only, the 16th defense icon and beyond always have a 30% chance of blocking damage.
+#UA LARGE SHIELD
+*ux15.png
+LARGE SHIELD
+Large shields add +3 to the unit's defense against all ranged attacks and spells.
+#UA PLANE SHIFTING
+*ux5.png
+PLANE SHIFTING
+Once the other plane has been discovered by researching the Plane Shift spell, or at least one Tower of Wizardry becoming activated, this unit can instantly shift between the planes at no movement cost.
+#UA WALL CRUSHER
+*ux16.png
+WALL CRUSHER
+Wall crusher allows the unit to destroy any section of wall they move through or attack into.
+#UA HEALER
+*ux17.png
+HEALER
+Healers will heal 20% of the damage that all units stacked with the healer have sustained at the start of each overland turn.
+#UA CREATE OUTPOST
+*ux18.png
+CREATE OUTPOST
+Create outpost is reserved for settlers and allows them to build an outpost. The square must be at least four squares from any city. Forming the outpost reverts the settlers into a simple swordsmen. Cities cannot be built on the North and South Poles.
+#UA INVISIBLE
+*ux19.png
+INVISIBLE
+Invisibility makes the unit impossible to target with ranged attacks, the unit becomes visible when adjacent to an enemy unit, but there is still a 20% chance for each hit to miss the target, as if Blur was in effect. If Blur is also in effect, the cumulative chance becomes 30%.
+#UA CREATE UNDEAD
+*ux20.png
+CREATE UNDEAD
+Create undead allows the unit to create new undead of the same type from any units that it has eliminated in combat. This cannot be used on heroes. If the unit is immune to Death or Magic, the ability will have no effect. Units that are raised as undead cannot regenerate, but are killed if you lose the battle and can't retain control of them. Units affected by Black Sleep cannot be raised as undead.
+#UA LONG RANGE
+*ux126.png
+LONG RANGE
+Long range limits range penalties for missile attacks to a maximum of -10% hit chance.
+#UA QUICK CASTING
+*ux22.png
+QUICK CASTING
+When the unit casts a spell, it uses up only 2 movement points instead of all of them.
+#UA MELD
+MELD WITH NODE
+Meld with nodes allows spirits to merge with a magical node and begin channeling the power of the node to you. The process of melding destroys the spirit.
+When a Guardian Spirit melds a node, the node produces an additional +3 power and all of the owner's units defending the node receive the benefit of a Heavenly Light spell.
+#UA NONCORPOREAL
+*ux23.png
+NON-CORPOREAL
+Non-corporeal allows the unit to pass through any land square at a cost of 1 movement point, and allows it to move through walls unimpeded. Non-Corporeal units don't turn to undead from undead creating damage.
+#UA WIND WALKING
+*ux24.png
+WIND WALKING
+Allows the unit and all units in its stack to fly on the overland map and participate in naval combat. The minimal overland movement speed of the unit becomes 3. Carried units cannot drop below 0.5 movement points unless the windwalker runs out of movement points.
+#UA REGENERATION
+*ux25.png
+REGENERATION
+Regeneration allows the unit to heal a set amount of hit points per combat turn, and be completely healed at the end of a combat. If the unit was destroyed but its side was victorious, the unit will come back to life, completely healed. Units killed by irrecoverable or undead creating damage cannot regenerate.
+#UA PURIFY
+*ux26.png
+PURIFY
+Purify allows a unit to clean corruption from a square.
+#UA NEGATE FIRST STRIKE
+*ux47.png
+NEGATE FIRST STRIKE
+Negate first strike allows the unit to nullify the first strike ability of attackers. This special ability has no effect on thrown, breath, or gaze attacks.
+#UA LUCKY
+*ux124.png
+LUCKY
+Lucky adds a 10% chance To Hit, To Defend, and +1 Resistance.
+#UA MISFORTUNE
+*ux164.png
+MISFORTUNE
+Enchanted unit brings bad luck to its allies. All normal units on their side loses 1 attack, defense and resistance. Multiple instances of Misfortune are not cumulative.
+#UA POISON IMMUNITY
+*ux6.png
+POISON IMMUNITY
+Poison immunity makes the unit immune to all forms of poison attacks.
+#UA FIRE IMMUNITY
+*ux7.png
+FIRE IMMUNITY
+Fire immunity makes units immune to fire attacks. (Magical ranged attacks are not Fire attacks, regardless of the animation.)
+#UA STONING IMMUNITY
+*ux8.png
+STONING IMMUNITY
+Stoning immunity makes the unit immune to all forms of stoning.
+#UA WEAPON IMMUNITY
+*ux9.png
+WEAPON IMMUNITY
+Weapon immunity makes the unit nearly impervious to attacks from non-hero normal units that do not have mithril, adamantium, magical, holy, or flaming weapons, increasing the unit's defense by +8 against those attacks. Weapon immunity does not protect against fantastic creatures, heroes and spells.
+#UA MISSILE IMMUNITY
+*ux10.png
+MISSILE IMMUNITY
+Missiles immunity makes the unit immune to sling and bow ranged attacks.
+#UA ILLUSION IMMUNITY
+*ux11.png
+ILLUSION IMMUNITY
+Illusion immunity negates the illusionary bonus of illusionary attacks and prevents Confusion, Vertigo and Mind Storm. In addition, invisible units are revealed, and this unit can use ranged attacks to attack them, as well as use ranged attacks through Wall of Darkness.
+#UA COLD IMMUNITY
+*ux12.png
+COLD IMMUNITY
+Cold immunity makes the unit impervious to cold spells.
+#UA MAGIC IMMUNITY
+*ux13.png
+MAGIC IMMUNITY
+Magic immunity makes a unit immune to all forms of magic including ranged magical attacks and all spell effects, regardless of realm.
+#UA DEATH IMMUNITY
+*ux48.png
+DEATH IMMUNITY
+Death immunity makes the unit immune to most spells in the Death realm.
+#UA SUMMONDEMON
+*ux136.png
+SUMMON DEMON
+Summons Lesser Demons in battle. Unlike the Summon Demon spell, these demons do not have the ability to cast spells.
+#UA IMMOLATION
+*ux33.png
+IMMOLATION
+This unit is surrounded by a burning, fiery aura that inflicts a strength 10 magic attack on all enemies engaged in melee combat with the target unit. This magic attack is in addition to the unit's normal attacks. Immolation also burns away webs on the unit at a faster than normal rate. 
+#UA FEAR
+*ux129.png
+FEAR
+Each individual enemy figure engaging this unit in melee must resist at -3 or stand frozen in terror, unable to attack, even if swung upon. Note : thrown, breath and gaze attacks are not melee attacks.
+#UA RESISTANCE TO ALL
+*ux34.png
+RESISTANCE TO ALL
+Resistance to all increases the resistance of all friendly units on the same overland tile by the listed bonus level. The bonus is not cumulative with other unit that have the same ability - the highest bonus will be used only.
+#UA HOLY BONUS
+*ux35.png
+HOLY BONUS
+Holy bonus increases the melee and ranged attack strength, defense, and resistance of all friendly units on the same overland tile by the bonus level of the holy bonus. The bonus is not cumulative, if multiple units have this ability, only the highest will apply.
+#UA ARMOR PIERCING
+*ux29.png
+ARMOR PIERCING
+Armor piercing allows attacks from this unit to ignore half of the defending unit's armor. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA FIRST STRIKE
+*ux30.png
+FIRST STRIKE
+First strike allows the unit to deal its damage before hand-to- hand attacks, but after breath, thrown, and gaze attacks when the unit is attacking.
+#UA POISON
+*ux31.png
+POISON
+Poison attacks force the attacked unit to resist for each level of the poison or suffer one hit for each failure. These resistance rolls always have a -1 save modifier.
+#UA LIFE STEAL
+*ux32.png
+LIFE STEAL
+Life stealing attacks forces the attack target to make a resistance roll for each attacking figure. For each point the resistance is failed, the defending unit loses one hit, while the attacker gains one. Units killed mainly by life steal return as undead under the control of their destroyer. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA DOOM
+*ux137.png
+DOOM
+The unit always deals exactly 1 damage for each 2 attack strength, ignoring all defensive effects or hit chances. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA DESTRUCTION
+*ux113.png
+DESTRUCTION
+Ability that causes attacked units to make a resistance roll or be disintegrated. Affects the entire unit. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA ILLUSION
+*ux36.png
+ILLUSION
+Illusionary attack allows the attacking unit to ignore the defender's armor entirely. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA STONING TOUCH
+*ux28.png
+STONING TOUCH
+Stoning touch makes the attacked figure resist or be turned to stone for each attacking figure. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA DEATH TOUCH
+*ux138.png
+DEATH TOUCH
+Death touch makes the attacked figure resist or be killed instantly for each attacking figure. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA EXORCISE
+*ux130.png
+EXORCISE
+Exorcise makes the attacked fantastic unit figure resist or be banished from existence for each attacking figure. If this ability is granted by a weapon, it only applies to attacks performed by that type of weapon.
+#UA CHAOS ARMOR
+*ux59.png
+CHAOS CHANNEL
+The unit is transformed to a chaos creature with demon skin, gaining +3 armor.
+This effect cannot be dispelled.
+#UA CHAOS FLIGHT
+*ux60.png
+CHAOS CHANNEL
+The unit is transformed to a chaos creature with demon wings, gaining flight and a minimal movement speed of 2.
+This effect cannot be dispelled.
+#UA CHAOS BREATH
+*ux61.png
+CHAOS CHANNEL
+The unit is transformed to a chaos creature with the ability to breath fire.
+This effect cannot be dispelled.
+#UA THROWN
+*ux127.png
+THROWN
+Thrown weapons allows an attacking unit to hurl its thrown weapons before engaging in hand-to-hand. The Thrown attack is executed before melee attacks and only for the attacker.
+#UA FIRE BREATH
+*ux135.png
+FIRE BREATH
+Fire breath allows an attacking unit to breath a fiery blast before engaging in hand-to-hand. The Breath attack is executed before melee attacks and only for the attacker.
+#UA LIGHTNING BREATH
+*ux134.png
+LIGHTNING BREATH
+Lightning breath allows an attacking unit to breathe an armor piercing blast of lightning before entering hand-to-hand. The Breath attack is executed before melee attacks and only for the attacker.
+#UA STONING GAZE
+*ux27.png
+STONING GAZE
+Stoning gaze makes all enemy figures resist or be stoned before engaging in hand-to-hand combat.
+#UA DOOM GAZE
+*ux131.png
+DOOM GAZE
+Doom gaze makes the enemy automatically take damage with no attack or defense rolls before melee, thrown or breath attacks.
+#UA DEATH GAZE
+*ux132.png
+DEATH GAZE
+Death gaze makes all enemy units resist or die instantly. The gaze takes effect before actual melee is entered.
+#UA GUARDIAN WIND
+*ux115.png
+GUARDIAN WIND
+Unit enchantment that grants Missile Immunity to the unit.
+#UA BLOOD LUST
+*ux125.png
+BLOOD LUST
+Enchanted unit has doubled melee attack power against normal units, and becomes undead.
+#UA ANIMATED
+*ux64.png
+ANIMATED
+Creature is now a vile undead being with +1 melee, ranged, thrown, breath attacks, defense, +10% chance to hit, and Weapon Immunity. Unit also gains all abilities related to being undead : They cannot heal, are fantastic, and belong to the Death Realm, are immune to Illusions, Death, and Cold.
+#UA WRAITH FORM
+*ux65.png
+WRAITH FORM
+Unit has weapon immunity and a non-corporeal form. In addition, the unit has the ability to hit units with Weapon Immunity as though it was a fantastic creature.
+#UA SREGENERATION
+*ux66.png
+REGENERATION
+Enchanted unit gains Regeneration 2.
+#UA LAND LINKING
+*ux67.png
+LAND LINK
+Endows the target unit (and any units currently stacked with that unit) with the ability to travel over all land terrain as if they were travelling on roads.
+If the unit is fantasitc, it also gains +2 armor, melee and breath attack strength.
+#UA WATER WALKING
+*ux68.png
+WATER WALKING
+Endows the unit with the ability to walk on water.
+#UA ELEMENTAL ARMOR
+*ux144.png
+ELEMENTAL ARMOR
+Improves a unit's defenses (shields) against all spells, magical ranged attacks and breath attacks by 12.
+#UA RESIST ELEMENTS
+*ux145.png
+RESIST ELEMENTS
+Instills in target unit an increased resistance (+4) to the elemental magic of nature and grants improved defense (+4) against all spells, magical ranged attacks and breath attacks.
+#UA FOCUS MAGIC
+*ux71.png
+FOCUS MAGIC
+Improves the ability of the unit to wield magic.
+-Improves the casting capacity of spellcasters by 15 mp.
+-If the unit has a magical ranged, doom gaze or breath attack, it gains +3 strength. 
+-If the unit does not, then its existing thrown or missile attack is changed to an equally powerful magical ranged attack. 
+-If there is no attack to convert, or it is weaker than strength 3, the unit will gain a strength 3 ranged magical attack.
+#UA IRON SKIN
+*ux72.png
+IRON SKIN
+Fuses iron with the unit's skin, making it able to withstand most attacks (adds 5 to defense).
+#UA ENDURANCE
+*ux73.png
+ENDURANCE
+Increases the target unit's movement speed by one, their hit points by 4 divided evenly between each figure, but at least 1 per figure.
+#UA SPELL LOCK
+*ux116.png
+SPELL LOCK
+As long as the Spell Lock is in effect, no friendly enchantment on the unit may be dispelled and if the unit is fantastic, it cannot be banished from existence by spells and effects such as Exorcise, Banish, or the Great Unsummoning. The Spell Lock resists being dispelled as if it had a strength of 150.
+#UA FLIGHT
+*ux77.png
+FLIGHT
+Bestows the power of flight upon the unit and increases its movement speed to a minimum of 3.
+#UA RESIST MAGIC
+*ux146.png
+RESIST MAGIC
+Endows the unit with a tremendously improved resistance (+5 crosses) against all magical effects!
+#UA FLAME BLADE
+*ux80.png
+FLAME BLADE
+Adds +3 attack strength to melee and 2 to missile attacks. Flaming weapons can hit creatures with Weapon Immunity.
+#UA MYSTIC SURGE
+*ux81.png
+MYSTIC SURGE
+This unit gains +3 movement, shields have 10% lower chance to block its damage, gains +2 defense, but loses 2 resistance, is fantastic (not belonging to any realm) and cannot be healed during this battle. At end of battle, the unit is reduced to 1 hit point. This enchantment can't be dispelled.
+#UA TRUE SIGHT
+*ux82.png
+TRUE SIGHT
+The unit does not suffer from the ignores-armor effect of illusionary attacks, always succeeds resistance rolls for Sorcery spells, and can see invisible units and through Walls of Darkness.
+#UA HOLY WEAPON
+*ux83.png
+HOLY WEAPON
+Blesses the unit's weapons, allowing them to hit creatures which are immune to non-magical attacks and giving a +10% to-hit bonus in combat.
+#UA HEROISM
+*ux84.png
+HEROISM
+The entire unit becomes elite. This spell will automatically be dispelled when the unit becomes elite naturally.
+#UA BLESS
+*ux85.png
+BLESS
+Adds +5 to the unit's defense and resistance against all death or chaos related spells, breath, gaze or touch attacks.
+#UA LIONHEART
+*ux86.png
+LIONHEART
+Adds + 3 to the unit's melee and missile attack strength, and resistance.  Adds +8 health total to the unit divided evenly between figures. For example a 4 figure unit will gain 2 health per figure, but a hero would gain a full 8 health.
+#UA ORIHALCON
+*ux161.png
+ORIHALCON
+The unit wears armor decorated by orihalcon crystals, which makes them more resistant to spells (+1 resistance). Furthermore, if the unit can use magical ranged attacks, the orihalcon amplifies the strength of those by +2.
+#UA SANCTIFY
+*ux88.png
+SANCTIFIED
+This unit produces 3 power and requires no gold to maintain.
+#UA HOLY ARMOR
+*ux89.png
+HOLY ARMOR
+The enchanted unit has a +10% higher chance To Defend. However, units that have 5 or lower defense, receive +2 defense instead.
+#UA INVULNERABILITY
+*ux143.png
+INVULNERABILITY
+The unit gains Weapon Immunity, and the first two hits sustained by the unit from any attack are ignored.
+#UA VERTIGO
+*ux98.png
+VERTIGO
+This unit has 25% reduced chance To Hit and 7% reduced chance To Defend. Please note that neither chance can drop below 10%.
+#UA CONFUSION
+*ux108.png
+CONFUSION
+At the beginning of each turn, the effects of this spell will be determined randomly from this list: 1) unit stands confused, 2) unit moves randomly, 3) unit is controlled by opponent, and 4) no effect. When the combat ends, the unit, if still alive, will desert the owner's army and cannot regenerate.
+#UA MIND STORM
+*ux110.png
+MIND STORM
+All creatures within the unit lose -5 of their ranged attacks, thrown, defense and resistance as well as 3 of their melee attack strength.
+#UA SHATTER
+*ux92.png
+SHATTER
+All attack strengths are reduced to 1.
+#UA WEAKNESS
+*ux93.png
+WEAKNESS
+Saps the strength out of a target unit's creatures, who suffer a penalty of 3 to their melee, thrown and ranged attack strengths.
+#UA BLACK SLEEP
+*ux111.png
+BLACK SLEEP
+Affected unit sleeps through the remainder of combat, providing a defenseless target for enemies. If attacked by an enemy unit while in this condition, a sleeping unit takes the full force of the attack in damage, and cannot be raised as an undead.
+#UA WARP WEAPON
+*ux119.png
+WARP CREATURE
+Reduces the attack strength of the unit by half for all attack types.
+#UA WARP ARMOR
+*ux120.png
+WARP CREATURE
+Reduces the defense strength of the unit to one third.
+#UA WARP RESIST
+*ux121.png
+WARP CREATURE
+Reduces the magical resistance of the unit to zero.
+#UA HASTE
+*ux74.png
+HASTE
+Doubles the unit's movement and number of attacks in combat.
+#UA WEB
+*ux96.png
+WEB
+Web entangles an enemy unit in a web which traps the unit where it stands until it destroys the web, and prevents flight even afterwards.
+#UA CREATURE BINDING
+*ux97.png
+CREATURE BINDING
+Affected creature is bound to fight for the casting wizard until the end of combat. The bound creature disappears after combat ends. This spell cannot be dispelled.
+#UA POSSESSION
+*ux95.png
+POSSESSION
+Possessed unit fights for the casting wizard until combat ends, then desert and disappear permanently. Fantastic creatures and heroes may not be possessed. This spell cannot be dispelled!
+#UA LEADERSHIP
+*ux43.png
+LEADERSHIP
+Leadership increases the melee attack strength of all normal units on the same map tile by one per 3 levels of the hero, and the missile ranged attack by one per 6 levels. Super leadership (*) increases this bonus by 50%.
+#UA LEGENDARY
+*ux44.png
+LEGENDARY
+Legendary represents the hero's reputation and increases the frequency and strength of mercenaries approaching the wizard for hire, as well as decreases the initial hiring cost. The hero adds +5 fame per level of the hero directly to the controlling wizard's fame total. Super legendary (*) increases this bonus by 50%.
+#UA BLADEMASTER
+*ux46.png
+BLADEMASTER
+Blademaster increases the hero's chance to hit by 3.33% per level of experience. Super blademaster (*) increases this bonus by 50%.
+#UA ARMSMASTER
+*ux45.png
+ARMSMASTER
+Armsmaster adds 2 experience to all normal units stacked with the hero at the end of each turn, per level of experience. Super Armsmaster (*) increases this bonus by 50%. 
+Multiple sources of Armasmaster are not cumulative and heroes can gain at most 2 experience this way each turn.
+#UA CONSTITUTION
+*ux49.png
+CONSTITUTION
+Constitution increases the hero's health beyond human norms, adding the +1/level to the hero's health. Super constitution (*) increases this bonus by 50%.
+#UA MIGHT
+*ux50.png
+MIGHT
+Might increases the hero's hand-to-hand attack by +1 per level of experience. Super might (*) increases this bonus by 50%.
+#UA ARCANE POWER
+*ux51.png
+ARCANE POWER
+Arcane power increases the hero's magical ranged attack by +1 per level of experience. Super arcane power (*) increases this bonus by 50%.
+#UA POWERSHOT
+*ux175.png
+POWERSHOT
+Powershot increases the hero's missile ranged attack by +1 per level of experience. Super powershot (*) increases this bonus by 50%.
+#UA SAGE
+*ux58.png
+SAGE
+Sage heroes contribute 10 spell research points per level of experience each turn to the controlling wizards research total. Super sage ability (*) increases this bonus by 50%.
+#UA PRAYERMASTER
+*ux54.png
+PRAYERMASTER
+Prayermaster adds 1 per 2 levels of experience to all resistance rolls for all units on the same map tile. Super prayermaster (*) increases this bonus by 50%.
+#UA CHARMED
+*ux56.png
+CHARMED
+Charmed heroes never fail a resistance roll.
+#UA NOBLE
+*ux57.png
+NOBLE
+Noble heroes do not cost money but instead contribute 20 gold to your cause each turn.
+#UA UNITLEVEL
+UNITLEVEL
+Level 1 : Recruit.
+Level 2 (30 ep) Regular. Attack, Ranged, Resistance +1.
+Level 3 (80 ep) Veteran. Attack, Ranged, Defense, Special attack +1.
+Level 4 (180 ep) Elite. Resistance, Defense, Health +1.
+----------------
+Level 5 : Ultra Elite. Attack, Ranged, Defense +1.
+Level 6 : Champion. Health +1, To Hit +10%.
+#UA HEROLEVEL
+HEROLEVEL
+Level 1 : Hero.
+Level 2 (30 ep) Myrmidon. Attack, Ranged, Health, Resistance +1
+Level 3 (80 ep) Captain. Attack, Health , Defense +1
+Level 4 (180 ep) Commander. Attack, Ranged, Health, Resistance +1
+Level 5 (300 ep) Champion. Attack, Health +1, To Hit +10%.
+Level 6 (550 ep) Lord. Attack, Ranged, Health, Resistance +1
+Level 7 (900 ep) Grand Lord. Attack, Health , Defense +1
+Level 8 (1400 ep) Super Hero. Attack, Ranged, Health, Resistance +1
+Level 9 (2000 ep) Demigod. Attack, Health +1, To Hit +10%.
+#UA AMMO
+*ux133.png
+AMMO
+The amount of times remaining the unit can launch a ranged attack this battle. Ammo is refilled after each battle.
+#UA ROAD BUILDING
+*ux37.png
+ROAD BUILDING
+Construction allows units to build roads.
+#UA SCOUTING
+*ux38.png
+SCOUTING
+Scouting increases the range a unit can see on the overland map to the scouting level.
+#UA MERGING
+*ux147.png
+MERGING
+The unit has the ability to merge with the earth, pass through it, and reform itself at its destination, moving to any tile in combat for 1 movement point. The unit is unaffected by Crack's Call.
+#UA TELEPORTING
+*ux1.png
+TELEPORTING
+Teleporting allows a unit to move anywhere on the combat map for a cost of 1 movement point.
+#UA PATHFINDING
+*ux21.png
+PATHFINDING
+Pathfinding allows the unit and all stacked with it to move across any land square at the cost of 1 movement point, and allows the unit to move on any land square in combat for 1 movement point as well.
+#UA MOUNTAINEER
+*ux3.png
+MOUNTAINEER
+Mountaineer allows all units stacked to cross mountains and hills at a cost of one movement point per square.
+In combat, it allows the unit to move through rocky terrain at a cost of 1 movement point.
+#UA FORESTER
+*ux2.png
+FORESTER
+Forester allows all units stacked to pass through forest tiles at a cost of one movement point per square.
+In combat, it allows the unit to move through forest terrain at a cost of 1 movement point.
+#UA SUMMONDEMON
+*ux136.png
+SUMMONDEMON
+This unit can summon lesser demons in battle, as if it was casting the Summon Demon spell, however lesser demons will not have the ability to cast spells.
+#UA UNDEAD
+*ux117.png
+UNDEAD
+Undead creatures never heal normally, or through most Life realm spells, but gain all the immunities of Death creatures : Cold, Death and Illusion Immunity.
+#UA STASIS OVERLAND
+*ux90.png
+STASIS OVERLAND
+This unit skips the next overland turn. As long as it fails to resist at -5, the effect carries over to the next month.
+#UA STASIS COMBAT
+*ux90.png
+STASIS COMBAT
+This unit cannot act. (It can still counterattack when attacked.)
+#UA CASTER
+*ux52.png
+CASTER
+Caster allows the unit to cast spells like a wizard in combat, without cost of mana points drawn from the wizard's mana reserve. Furthermore, any hero with Caster ability ending the turn in the wizard's fortress will contribute 1/5 of their casting ability to progress the wizard's overland spell. Spells cast by units are not affected by effects which modify casting costs for wizards, such as retorts or conjunctions.
+#UA NECROMANCY
+*ux158.png
+NECROMANCY
+After battle, raise fallen friendly units as undead. Up to a total cost of 140 per hero level will be raised.
+#UA ITEM SLOT
+ITEM SLOT
+An empty slot that can be used to equip an item to this hero.
+A Sword slot allows equipping a sword, mace, or axe.
+A Bow slot allows equipping a bow, sword, mace, or axe.
+A Staff slot allows equipping a staff or wand.
+A Sword/Staff slow allows equipping any weapon except bows.
+A Shield slot allows equipping a Shield, Chain Mail or Plate Mail.
+A Ring slot allows equipping any accessory : Gloves, Orbs, Helmets, Amulets, etc.
+#COMBATSPELL
+SPELL BUTTON
+The Spell button opens your spellbook and allows you or your selected unit to cast a spell. You can only cast one spell during each combat turn. Your units can cast additional spells, but casting a spell will end the turn for the casting unit.
+#COMBATWAIT
+WAIT BUTTON
+The Wait button selects the next unit without passing the turn for the currently selected one.
+#COMBATDONE
+DONE BUTTON
+The Done button orders the selected unit to end their turn without further action.
+#COMBATINFO
+INFO BUTTON
+The Info button displays information about global abilities or spell effects affecting the current battle.
+#COMBATFLEE
+FLEE BUTTON
+The Flee button orders all of your units to retreat.
+Each unit compares their movement speed with the fastest enemy unit.
+If they are at least 2 slower, they are killed while fleeing.
+If they are slower or equal speed, they have a 50% chance to die.
+If they are faster than the enemy, they have (1+speed difference)/(2+speed difference) chance to survive.
+When the Flee button turns green, fleeing is guaranteed to be successful with no units dying.
+#COMBATAUTO
+AUTO BUTTON
+Order your General-In-Chief to take command of the battle. You can allow him to do so for one turn, or for the duration of the entire combat. In either case, you can take back command by clicking anywhere or pressing the Esc or A hotkeys.
+#COMBATSKILL
+COMBAT SKILL
+This the amount of casting capacity you have left for the current battle. It refills between each battle.
+#COMBATMANA
+MANA
+The amount of mana crystals in your mana reserves.
+#COMBATRANGE
+RANGE PENALTY
+Range is a multiplier that effects the mana cost of a spell. The farther away the combat is from your Fortress, the greater the multiplier. 
+While banished, you can still cast spells, but the range penalty to do so is 4.
+#NODE AURA
+NODE AURA
+All units of the node's realm receive +2 attack strengths, defense and resistance.
+#COUNTER OTHER REALMS
+COUNTER OTHER REALMS
+All spells that are from a different realm than the node have (base casting cost/60) chance to succeed, otherwise they are countered by the node.
+#UA AGILITY
+*ux140.png
+AGILITY
+Increases the defense of the unit by +1 per level of experience. Super Agility (*) increases this bonus by +50%.
+#CONTINUE
+CONTINUE
+Loads the latest autosave file on the disk.
+#WINLOSE
+WIN / LOSE BUTTON
+Pressing this buttons allows you to surrender and proceed to the scoring screen, then return to the main menu.
+However, when you are already the dominating force in both worlds, the button will change into a "Win" button, allowing you to win the game by all other players surrendering instead.
+#MAGICPOWERSETTING
+MAGIC POWER
+Each node produces 8 times this amount of power, plus this amount of power for each tile of influence.
+#CLIMATE
+CLIMATE
+Select the dominating force of weather in the game worlds.
+Fair - default, balanced
+Frozen - More tundra tiles, that can reach much further towards the equator.
+Volcanic - More hills, mountains, and volcano tiles can appear naturally which are otherwise not generated outside of spell effects.
+Dry - More deserts, fewer rivers and swamps.
+Wet - More Swamps and Rivers, fewer Deserts.
+#MINERALS
+MINERALS
+Poor lands contain less mineral veins which are generally of a lower quality. Arcanus doesn't contain Mithril.
+Fair lands contain an average amount of minerals of any kind. Arcanus can have Mithril but cannot have Adamantium.
+Rich lands contain more mineral veins which are generally of a higher quality. Arcanus can contain Adamnatium.
+#SET SOUND
+SOUND
+Enables sound effects
+#SET MUSIC
+MUSIC
+Enables background music
+#SET COMBAT ANIMATIONS
+COMBAT ANIMATIONS
+Enables combat attack and movement animations. When disabled, animations are played very quickly. Can be toggled with the Q button during combat.
+#SET MORE RANDOM ITEMS
+MORE RANDOM ITEMS
+When this option is enabled, each generated item has a 50% chance to be a predefined item if that is possible, and 50% chance to be random generated. If this option is off, items will always be predefined, unless no unused predefined item exists in the appropriate cost range.
+#SET REQUEUE ALL
+REQUEUE ALL
+When enabled, any building destroyed in your cities will be automatically added to the front of the building queue. 
+#SET REBUILD PROMPT
+REBUILD PROMPT
+When enabled, the game will always bring you to the city screen at the start of your turn in cities where any building was destroyed.
+#SET RANDOM EVENTS
+RANDOM EVENTS
+When enabled, random events can occur.
+#SET SHOW ENEMY MOVES
+SHOW ENEMY MOVES
+When enabled, the overland map view will focus on enemy and neutral players moving units. Friendly player moves are never shown this way. (Alliance, Wizards's Pact)
+#SET SPELL ANIMATIONS
+SPELL ANIMATIONS
+When disabled, overland spell animations will not be shown.
+#SET SORT BY REALM
+SORT BY REALM
+When enabled, your spellbook will be sorted by spell realm and rarity. When disabled, the spells are sorted by their spell type : Summoning, Special, Combat, Unit Enchantment, City Enchantment, Global Enchantment.
+#SET BACKUP SAVES
+BACKUP SAVES
+When enabled, each turn, a numbered save file is created for that turn in addition to the normal autosave file which is replaced after each turn.
+#SET SHOW NEUTRAL NODE AURAS
+NEUTRAL NODE AURAS
+If enabled, nodes not belonging to any wizard show their influence area using the neutral flag color.
+#SET ANTI-ALIASING
+ANTI-ALIASING
+If enabled, the game fonts will use Anit-aliasing where applicable. Otherwise, fonts will be always displayed without anti-aliasing.
+#SET SHOW ENEMY SPELLS
+SHOW ENEMY SPELLS
+If enabled, enemy overland spells you can see will display their animation. If disabled, those spells will not be shown.
+#OPT AUTOMATIC COMBAT
+AUTOMATIC COMBAT
+Score modifier : 1x
+All combat results are determinated by the same calculation process the AI uses to resolve their battles against other AI players or neutral targets. As the result is calculated using complex formulas, it will be usually accurate but might be slightly different from the outcome when playing the same battle manually.
+Enabling this option can help finishing large scale games against many opponents faster, but you lose your chance to use combat spells or take advantage of several unit special abilities.
+#OPT AGAINST THE WORLDS
+AGAINST THE WORLDS
+Score modifier : 2x
+All other wizards are in a permanent alliance and at war with you. Diplomacy is disabled.
+Mutually Exclusive with Sandbox Mode and disables No Trading.
+#OPT WORLD EQUALIZER
+WORLD EQUALIZER
+Score modifier : 0.5x
+Players are divided evenly between the two planes, instead of the player's starting plane generating more and the other plane fewer opponents.
+Mutually exclusive with Race to the Unknown and I Am The Boss, Inverted Worlds.
+#OPT INVERTED WORLDS
+INVERTED WORLDS
+Score modifier : 0.4x
+Inverts the number of wizards between the two planes - the player's starting plane will have fewer wizards while the other plane has more.
+Mutually exclusive with Race to the Unknown, World Equalizer and I Am The Boss.
+#OPT RACE TO THE UNKNOWN
+RACE TO THE UNKNOWN
+Score modifier : 0.75x
+All players start on the same plane as you. Towers have halved monster budgets. Plane Shift appears for research as if it was an Uncommon spell and has halved casting and research cost. Opponents will prioritize breaking towers and researching Plane Shift higher than usual.
+Mutually exclusive with World Equalizer, Inverted Worlds and I Am The Boss.
+#OPT EASY LAIRS
+EASY LAIRS
+Score modifier : 0.9x
+Lair monster and treasure budgets are halved and monsters with a cost of 300 or higher are never included. Available high quality treasure is reduced.
+#OPT DUMB NEUTRALS
+DUMB NEUTRALS
+Score modifier : 0.85x
+Neutral armies are never allowed to use stalling strategies. 
+When "Automatic Combat" is also enabled, neutral units lose flying and invisibility for battle result calculations.
+#OPT MONSTERS GONE WILD
+MONSTERS GONE WILD
+Score modifier : 1.3x
+The overall strength of all rampaging monster groups is 50% stronger, however the maximal strength of each individual monster in the stack remains unchanged.
+Neutral cities will send larger raider armies than usual.
+#OPT TARGETING AID
+TARGETING AID
+Score modifier : 0.94x
+During combat, attempting to cast a single target spell on an enemy unit that is unaffected by that spell due to immunity or other abilities will display a warning message and the spell will not be cast, allowing the player to reconsider.
+If the option is not enabled, casting spells on targets immune to the spell is possible, but it'll have no effect.
+Please note that enemies might still be unaffected by a spell if their Defense or Resistance is high enough to block the entire effect, but there will be no warning given for this case.
+#OPT STANDARDIZED
+STANDARDIZED
+Score modifier : 0.9x
+Enemy wizards cannot be custom and have to use the default book and retort picks.
+Mandatory on Easy difficulty.
+#OPT PLANE OF WATER
+PLANE OF WATER
+Score modifier : 1.15x
+Land to sea ratio is 1 to 9 instead of the normal 1 to 5. Mutually exclusive with Plane of Earth.
+#UA LIGHTNING RESISTANCE
+*ux163.png
+LIGHTNING RESISTANCE
+Lightning attacks lose the armor piercing property when affecting this unit.
+#B BARRACKS
+BARRACKS
+Maintenance: none
+Barracks allow a city to train and organize regular military units. All newly created units start with +1 level.
+#B COLOSSEUM
+*Building4_0.png
+COLOSSEUM
+Maintenance: none
+A colosseum provides entertainment to locals and travellers. Reduces unrest by 1 and increases fame by 5.
+#B FIGHTER'S GUILD
+*Building5_0.png
+FIGHTER'S GUILD
+Maintenance: 4 gold/turn
+A fighter's guild teaches troops basic fighting techniques, enabling better military units to be produced.
+#B ARMORER'S GUILD
+*Building6_0.png
+ARMORER'S GUILD
+Maintenance: 6 gold/turn
+An armorer's guild provides troops with training in fighting techniques and basic battle tactics, allowing for even more advanced units to be built.
+#B WAR COLLEGE
+*Building7_0.png
+WAR COLLEGE
+Maintenance: 2 gold/turn
+A war college serves as a center for the teaching of battle strategy and tactics, as well as advanced fighting techniques. All new troops start as veterans.
+#B SMITHY
+*Building8_0.png
+SMITHY
+Maintenance: None
+A smithy can develop and produce quality weaponry and tools. Generates 2 production, required to produce units better than spearmen, and each new outpost starts with one already built.
+#B STABLES
+*Building9_0.png
+STABLES
+Maintenance: 2 gold/turn
+Stables serve as a place for the breeding of mounts used by mounted troops. Increases production by 2.
+#B ANIMIST'S GUILD
+*Building10_0.png
+ANIMIST'S GUILD
+Maintenance: 3 gold/turn
+The animist's guild increases each farmer's food harvest by 2 and increases the healing rate of units inside the city by 66%.
+#B FANTASTIC STABLE
+*Building11_0.png
+FANTASTIC STABLE
+Maintenance: 5 gold/turn
+A city's fantastic stable will house and care for magical beasts.
+#B SHIP YARD
+*Building12_0.png
+SHIP YARD
+Maintenance: 1 gold/turn
+A ship yard brings together skilled craftsmen to build small or medium sized boats.
+#B MAGIC MARKET
+*Building13_0.png
+MAGIC MARKET
+Maintenance: 2 gold/turn
+A Magic Market houses novice mages who sell various arts of witchcraft. Produces 6 power.
+#B MARITIME GUILD
+*Building14_0.png
+MARITIME GUILD
+Maintenance: 5 gold/turn
+A maritime guild allows the creation of large ships by training, organizing, and supporting experienced ship builders.
+#B SAWMILL
+*Building15_0.png
+SAWMILL
+Maintenance: 4 gold/turn
+A sawmill will increase production without requiring manpower. Raises production by +6.
+#B LIBRARY
+*Building16_0.png
+LIBRARY
+Maintenance: 1 gold/turn
+A library acts as a storehouse for knowledge and scholarship. It adds +6 spell research points.
+#B SAGE'S GUILD
+*Building17_0.png
+SAGE'S GUILD
+Maintenance: 4 gold/turn
+A sage's guild is dedicated to the advanced study of magic. It adds +12 spell research points.
+#B ORACLE
+*Building18_0.png
+ORACLE
+Maintenance: 3 gold/turn
+An Oracle provides the city with magical guidance, detecting all enemies within 4 squares of the city and reducing unrest by 3.
+#B ALCHEMIST'S GUILD
+*Building19_0.png
+ALCHEMIST'S GUILD
+Maintenance: 3 gold/turn
+The alchemists' guild equips all new troops with magical weapons that have +10% chance to hit. It also enables the use of Mithril, Adamantium and Orihalcon on troops produced. Magical weapons have no effect on magical ranged attacks as those are already magical. Each Nightshade will counter or dispel hostile spells targeting the city at a strength of 100, and will improve the effect of Cathedrals.
+#B UNIVERSITY
+*Building20_0.png
+UNIVERSITY
+Maintenance: 3 gold/turn
+A university serves as a stronghold for education and scholarship. It adds +6 spell research points.
+#B WIZARD'S GUILD
+*Building21_0.png
+WIZARD'S GUILD
+Maintenance: 5 gold/turn
+A wizard's guild acts as a center for the study and practice of magic. It adds +3 spell research points and +10 power every turn.
+#B SHRINE
+*Building22_0.png
+SHRINE
+Maintenance: 1 gold/turn
+A shrine provides the people of the city with a center for spiritual comfort. It adds +2 power and reduces the unrest level by 1.
+#B AMPLIFYING TOWER
+*Building23_0.png
+AMPLIFYING TOWER
+Maintenance: 12 gold/turn
+This building increases the owner's overland casting skill by +7.
+#B PARTHENON
+*Building24_0.png
+PARTHENON
+Maintenance: 2 gold/turn
+A parthenon is a centralized locale for the study of religion. It adds +4 power and reduces the unrest by 1.
+#B CATHEDRAL
+*Building25_0.png
+CATHEDRAL
+Maintenance: 2 gold/turn
+A cathedral provides the city with a cultural and religious center. It adds +6 power and reduces the unrest level by 1. For each active Nightshade, an additional 3 power is generated and 1 unrest is reduced.
+#B MARKETPLACE
+*Building26_0.png
+MARKETPLACE
+Maintenance: none
+A marketplace produces 8 additional gold per turn.
+#B BANK
+*Building27_0.png
+BANK
+Maintenance: 2 gold/turn
+A bank increases the total gold production of the city by +30%.
+#B MERCHANT'S GUILD
+*Building28_0.png
+MERCHANT'S GUILD
+Maintenance: 3 gold/turn
+A merchant's guild increases the total gold production of a city by  +40%.
+#B GRANARY
+*Building29_0.png
+GRANARY
+Maintenance: 2 gold/turn
+A granary serves as a storehouse for the city's food surplus. It adds +4 food and raises maximal population by 5. (Each 2 maximal population adds +10 population growth!) 
+#B FARMER'S MARKET
+*Building30_0.png
+FARMER'S MARKET
+Maintenance: 3 gold/turn
+A farmer's market acts as a centralized location for the buying and selling of the city's food surplus. It adds +6 food and +50 people per turn.
+#B FORESTER'S GUILD
+*Building31_0.png
+FORESTER'S GUILD
+Maintenance: 1 gold/turn
+A forester's guild trains experienced hunters and lumberjacks, increasing the food harvest by +6 and production by +10%.
+#B BUILDER'S HALL
+*Building32_0.png
+BUILDER'S HALL
+Maintenance: none
+The builder's hall is a center of free masons, allows the construction of advanced buildings.
+#B MECHANICIAN GUILD
+*Building33_0.png
+MECHANICIAN'S GUILD
+Maintenance: 3 gold/turn
+A mechanician's guild teaches advanced engineering techniques, increasing the production points of a city by +35%.
+#B MINER'S GUILD
+*Building34_0.png
+MINER'S GUILD
+Maintenance: 2 gold/turn
+The miner's guild trains workers in the intricacies of mining. It increases any special mineral bonuses by +50% and production by +25%.
+#B CITY WALLS
+CITY WALLS
+Maintenance: 1 gold/turn
+Surrounds the city with a high brick wall with towers that extend the detection range out to 3 squares, and adds 3 defense to units behind the walls when they are attacked by a unit from the outside. If the wall segment is destroyed, this bonus is reduced to 1 defense.
+#B MONUMENT
+*Building35_0.png
+MONUMENT
+Maintenance: 1 gold/turn
+A Monument of Magic is used to perform rituals that help channeling magic power to distant lands.
+Your combat casting skill increases as though your skill pool had an additional 180 SP in it while the Monument stands.
+#B LINKING TOWERS
+*Building36_0.png
+LINKING TOWERS
+Maintenance: 5 gold/turn
+A Linking Tower connects your cities with leylines, chanelling power to distant lands.
+Your combat casting skill increases as though your skill pool had an additional 1200 SP in it while the Linking Tower stands.
+#FORTRESS
+FORTRESS
+A wizard's fortress is their base of operations. If it's lost, the wizard gets banished and must cast the Spell of Return or loses the game. 
+The fortress conducts raw magical energy, casting a (18+Skill/8)/2 strength lighting bolt on the enemy for the first (3+Skill/20) turns of combat. Both of these are scaled by the Difficulty setting for AI players. The strength of the bolts can't be higher than 60. 
+The fortress also produces 10 power and an additional 1.5 for each book owned in realms the wizard has at least 4 books in, rounded down.
+#SORCERY CONJUNCTION
+SORCERY CONJUNCTION
+The rising triad of blue stars come together, reducing the cost of Sorcery and Global Enchantment spells by 33%. All spells have double the normal resistance to being dispelled. SP generated from power is doubled.
+#CHAOS CONJUNCTION
+CHAOS CONJUNCTION
+The rising triad of red stars come together, reducing the cost of Chaos, Combat and Special spells by 33%. All single target combat attack spells are 33% more powerful.  Research generated from power is doubled.
+#NATURE CONJUNCTION
+NATURE CONJUNCTION
+The rising triad of green stars come together, reducing the cost of Nature and Summoning spells by 33%. All Fanatastic creatures gain +2 Attack, Defense and Resistance. Mana generated from power is doubled.
+#AETHER FLUX
+AETHER FLUX
+The fabric of magic is overflowing with power. All spells cost 50% less to cast except the Spell of Mastery.
+#GOOD MOON
+GOOD MOON
+The power of light is peaking! Life and Unit Enchantment spells cost 33% less to cast. Citizens are overwhelmed by generosity, increasing city gold revenues by 50%. All normal units gain +1 Attack, Defense and Movement.
+#BAD MOON
+BAD MOON
+The power of darkness is peaking! Death and City Enchantment spells cost 33% less to cast. Citizens are pushed to the limit by greed, increasing city production by 50%. All normal units lose 3 resistance in combat.
+#UA CAPACITY
+*ux139.png
+CAPACITY
+This unit gets an additional ammo for each 2 experience levels. Super Capacity (*) increases this bonus by 50%.
+#UA AETHER MASTER
+*ux63.png
+AETHER MASTER
+The hero warps the fabric of AEther to be less resistant to the controlling wizard's spellcasting attempts. Produces 8 SP per experience level each turn. Super AEther Master (*) increases this bonus by 50%.
+#UA GUIDING BEACON
+*ux87.png
+GUIDING BEACON
+The hero supports the ranged attacks of friendly units on the same map tile, increasing the ranged attack strength of units by 1 per 3 levels of experience. Super Guiding Beacon (*) increases this effect by 50%.
+#UA SOUL LINKER
+*ux141.png
+SOUL LINKER
+The hero has an extraordinary talent of commanding fantastic creatures, boosting their To Hit and To Defend chances by 2.5% for each experience levels. Super Soul Linker (*) increases this effect by 50%.
+#UA RITUAL MASTER
+*ux52.png
+RITUAL MASTER
+The hero regularly performs rituals for their master, generating raw magical power equal to her experience level times 6 every turn. Super Ritual Master (*) increases this effect by 50%.
+#UA BATTLEMAGE
+*ux109.png
+BATTLEMAGE
+The hero is able to tap the forces of physical combat, and convert some of the energy into magic. The hero gains MP equal to the experience level every time they performs a melee attack or counterattack. The MP gained this way cannot exceed the maximum MP capacity of the hero. Super Battlemage (*) increases this effect by 50%.
+#UA SUPPLY COMMANDER
+*ux112.png
+SUPPLY COMMANDER
+The hero organizes and maintains a military grade supply network, boosting the total ammo of all troops in combat by 2 where they are present. Multiples of this ability are not cumulative, but the bonus is added on top of any bonus received from Capacity.
+#UA DIVINE BARRIER
+*ux14.png
+DIVINE BARRIER
+The hero casts and maintains a protective forcefield that softens enemy blows hitting friendly soldiers. All friendly units gain +1 defense per 3 expereience levels. Super Divine Barrier (*) increases this bonus by 50%.
+#UA LOGISTICS
+*ux118.png
+LOGISTICS
+The hero has an above average understanding of battlefield terrain and effective ways of moving across them. Each friendly unit in combat gains an additional +0.5 movement per two experience levels. Super Logistics (*) increases this bonus by 50%.
+#UA PRIMAL FORCE
+*ux157.png
+PRIMAL FORCE
+This unit produces 12 power each turn for the controlling wizard!
+#UA SUPERNATURAL
+*ux142.png
+SUPERNATURAL
+Attacks from figures of this unit surpass the laws of physics. Damage dealt by any attack from this unit cannot be reduced below one third of the original amount by armor and spell effects. This creature can't be raised as an undead by wizards who have below 200 base casting skill, not counting any contributed by city buildings.
+#UA TRANSPORT
+*ux155.png
+TRANSPORT
+All non-transport units stacked with this unit move without consuming movement points, and can move even if they don't have any.
+A unit cannot be transported by new transport during the same turn it was already transported by another.
+#UA HEADS
+*ux156.png
+HEADS
+This unit has multiple heads. Each head acts as if it was a separate figure.
+#UA PANDORA
+*ux159.png
+PANDORA'S BOX
+At the start of each player's combat turn, this unit has a 50% chance to summon a random fantastic creature. Available budget depends on hero level, and refills after each battle.
+#UA WALL BONUS
+*ux160.png
+WALL BONUS
+This unit is currently protected by a city wall, receiving an additional +3 Defense when attacked by any units from the outside of the wall.
+#SPELL ABUNDANCE
+ABUNDANCE
+Nature Rare - City Enchantment
+Target: friendly city
+Casting Cost: 150 mana
+Upkeep: 2 mana/turn
+Increases the maximal population of the target city by 7, but to a minimum of 18.
+Overfarming penalty is eliminated.
+#Spell PHILOSOPHER'S STONE
+PHILOSOPHER'S STONE
+Sorcery Uncommon - City Enchantment
+Target: friendly city
+Casting Cost: 100 mana
+Upkeep: 2 mana
+All units built in enchanted city have magical weapons. 
+Combat in this city starts as though the wizard had a strength 70 Counter Magic in effect.
+Any Monument or Linking Tower in the city is 50% more effective.
+#Spell DARKEST HOUR
+DARKEST HOUR
+Death Very Rare - Global Enchantment
+Target: n/a
+Casting Cost: 1200 mana
+Upkeep: 40 mana/turn
+Religious buildings controlled by all other wizards produce halved power. 
+Research buildings controlled by all other wizards produce halved research.
+The casting wizard's city enchantment spells are 100% harder to dispel.
+#IP INSULATION
+INSULATION
+Surrounds the target unit with a thin layer of vacuum that protects from electric and fire attacks. 
+The equipped unit gains Fire Immunity and Lightning Resistance.
+#Spell CLAIRVOYANCE
+CLAIRVOYANCE
+Nature Very Rare - Global Enchantment
+Target: map
+Casting Cost: 600 mana
+Upkeep: 15 mana/turn
+The wizard can see all lands, units, even the garrisons of nodes, lairs and towers, including invisible units! 
+The wizard's spells are not affected by the countering effect of nodes and all of their units gain Forester.
+#Spell Discipline
+DISCIPLINE
+Life Common - Unit Enchantment
+Target: friendly non-hero normal unit
+Casting Cost: 8/40 mana
+Upkeep: 1 mana/turn
+Fills the target unit with a holy purpose, making them receive additional benefits from military training.
+Enchanted unit gains +1 defense.
+If enchanted unit is at least Regular, it gains another +1 defense.
+If enchanted unit is at least Veteran, it gains +1 attack and ranged (excluding magical ranged attacks).
+If enchanted unit is at least Elite and this enchantment wasn't cast in combat, it gains +1 movement, if it was cast in combat, it gains Negate First Strike.
+#Spell Wind Mastery
+WIND MASTERY
+Sorcery Very Rare - Global Enchantment
+Casting Cost : 900 mana
+Upkeep : 30 mana/turn
+All of the casting wizard's armies gain Flying movement, and +1 movement speed.
+When this enchantment is dispelled, the wizard's units will not drown and remain able to hover slightly above the water surface until they reach land.
+#Spell Call the Wild
+CALL THE WILD
+Nature Rare - Global Enchantment
+Casting Cost : 900 mana
+Upkeep : 30 mana/turn
+The wizard manipulates wild monsters through their natural instincts to force them to avoid his territory.
+Rampaging monsters will never target the caster's cities and will avoid their units.
+Whenever the wizard's armies attack a Lair, Node or Tower, each monster has a 25% chance of not participating in the battle. 
+Any node not owned by the casting wizard has a 5% chance to generate a rampaging monster stack each turn. 
+#Spell Reinforce Magic
+REINFORCE MAGIC
+Sorcery Rare - Global Enchantment
+Casting Cost : 500 mana
+Upkeep : 25 mana/turn
+All of the casting wizard's units gain +2 resistance, and they also gain +2 magical ranged attack strength, if they have a magical ranged attack.
+#Spell Ruler of Underworld
+RULER OF UNDERWORLD
+Death Very Rare - Global Enchantment
+Casting Cost : 1300 mana
+Upkeep : 50 mana/turn
+All of the casting wizard's units become powerful ghostly beings impossible to hurt by weapons, and even weapons normally able to do so lose this ability.
+All of the wizard's units have Wraith Form during battle. Magical, Mithril or Adamantium weapons of enemy units do not bypass weapon immunity while this spell is in effect. 
+#Spell Roots of Genesis
+ROOTS OF GENESIS
+Nature Very Rare - Global Enchantment
+Casting Cost : 1200 mana
+Upkeep : 30 mana/turn
+Awaken the forces of Nature, causing tiles everywhere on the map to turn into Forests. The number of tiles converted is 2 plus one more for each 10 tiles of average map width.
+The casting wizard gains 1 magic power for each Forest tile in the world.
+Tundra tiles, Grasslands in the caster's territory and volcanoes created by the caster are unaffected.
+#Spell Blazing Eyes
+BLAZING EYES
+Chaos Very Rare - Global Enchantment
+Casting Cost : 900 mana
+Upkeep : 20 mana/turn
+All Chaos creatures gain Doom Gaze 3. If they already had Doom Gaze, its strength increases by one.
+#Spell Inner Power
+INNER POWER
+Chaos Rare - Global Enchantment
+Casting Cost : 390 mana
+Upkeep : 12 mana/turn
+All of the casting wizard's units which have Fire Immunity or Lightning Resistance gain +3 to all their attack strengths, +2 defense and +2 resistance.
+#Spell Destiny
+DESTINY
+Life Very Rare - Permanent Unit Enchantment
+Target: friendly (base type) non-hero normal unit
+Casting Cost: 360 mana
+Upkeep: 10 mana/turn
+Enchanted normal unit becomes a Supernatural Life creature permanently, with doubled base melee and ranged attack strength, health, +4 defense and resistance.
+The change to the unit's type also changes the unit's base type, so other buffs not valid for normal units cannot target it, and it loses any levels or experience.
+This enchantment cannot be dispelled.
+#Spell Mislead
+MISLEAD
+Death Common - Combat Unit Curse
+Target : enemy normal unit
+Casting Cost : 13 mana
+Target normal unit must resist, or gains Misfortune. All normal units fighting in the same army as that unit lose 1 melee and ranged attack, defense and resistance (not cumulative and can't be dispelled). The target suffers a -1 save penalty when attempting to resist this spell for each two fantastic creatures on the casting wizard's side. This spell has no effect on units immune to Death or Illusions.
+#Spell Vampire
+*Units\u199x3_1.png
+VAMPIRE
+Death Rare - Summoning
+Casting Cost : 395 mana
+Upkeep : 10 mana/turn
+Summons a Vampire. Vampires are powerful creatures that suck blood from their enemies and regenerate, making them almost entirely impossible to kill in melee combat.
+#Spell Phoenix
+*Units\u200x3_1.png
+PHOENIX
+Life Very Rare - Summoning
+Casting Cost : 450 mana
+Upkeep : 12 mana/turn
+Summons the immortal Phoenix. The presence of a Phoenix heals your normal units in battle for up to 10 damage.
+#Spell Disillusionise
+DISILLUSONISE
+Sorcery Rare - Instant
+Target: enemy city
+Casting Cost: 50-250 mana
+Attempts to remove all beneficial city enchantments from the targeted enemy city.
+#Spell Ruler of Heaven
+RULER OF HEAVEN
+Life Very Rare - Global Enchantment
+Casting Cost : 1000 mana
+Upkeep : 25 mana/turn
+The casting wizard's enchantments are 100% harder to dispel and their religious buildings produce an additional 2 power.
+#Spell Fate Mastery
+FATE MASTERY
+Chaos Uncommon - Global Enchantment
+Casting Cost : 250 mana
+Upkeep : 12 mana/turn
+The casting wizard causes the heavens to rain down flames on their opponents during combat.
+During each battle, three fire bolts will hit enemy units between turns 1 and 7 randomly. (Strength 24 fire attack)
+Furthermore, when the wizard casts a spell that requires a saving roll, the target must roll twice to successfully resist the spell. (this does not affect life stealing effects.)
+#Spell Chain Lightning
+CHAIN LIGHTNING
+Chaos Very Rare - Instant Combat
+Casting Cost : 65 mana
+Target : enemy unit
+The targeted unit and the two closest enemy units in addition are struck with a strength 40 lightning attack.
+#UA HOVERING
+HOVERING
+Remains of a dispelled global enchantment, this unit can hover over the water surface until is enters a land tile.
+#IP SPELLCHARGE
+SPELL CHARGES
+This option allows you to store combat spells in weapons, allowing the hero equipped by the item to cast the stored spell a selected number of times each combat.
+#IP Spell Skill
+SPELL SKILL
+This item power increases the spellcasting capacity (MP) of the equipped hero. It does not enables spellcasting on heroes that do not already have the ability to cast spells.
+#IP Spell Save
+SPELL SAVE
+This item power increases the resistance penalty inflicted by spells cast by the hero wielding the item. It has no effects on special attacks that might require resistance rolls, it only affects spells.
+#IP Flaming
+FLAMING
+Flaming items are more powerful, raising all relevant attack strengths by an additional 3.
+#IP Shadow
+SHADOW
+Shadow grants a weapon the ability to damage opponents by cutting through their shadows.
+"Thrown" equal to half the base attack strength of the unit is gained.
+#IP EXORCIST
+EXORCIST
+Exorcist makes the attacked fantastic unit figure resist or be banished from existence for each attacking figure, as well as grants Bless : an additional 5 resistance against Chaos or Death realm spells, breath, gaze or touch attacks.
+#IP DIVINE PROTECTION
+DIVINE PROTECTION
+The wielder of the item becomes Lucky and gains Death Immunity.
+#OPT PLANE OF EARTH
+PLANE OF EARTH
+Score modifier : 0.8x
+Land to sea ratio is 1 to 3 instead of the normal 1 to 5. Mutually exclusive with Plane of Water.
+#OPT LEAVE ME ALONE
+LEAVE ME ALONE
+Score modifier : 0.7x
+AI wizards will consider land tiles in an area of 6 around the human player's settlements as unavailable for building cities.
+#OPT SANDBOX MODE
+SANDBOX MODE
+Score Modifier : 0.5x
+AI wizards will never turn hostile towards the human player and will never declare war, unless it's the result of a warning or a response to being attacked by the player.
+Mutually exclusive with Against the Worlds.
+#OPT ORDER PLEASE
+ORDER PLEASE
+Score Modifier : 1x
+AI wizards cannot be Chaotic.
+#OPT SMART FAMILIAR
+SMART FAMILIAR
+Score Modifier : 0.92x
+When approaching a lair, node or tower, your familiar will predict battle results for you.
+#OPT NO TRADING
+NO TRADING
+Score Modifier : 1.25x
+Neither the AI nor the human player is allowed to trade spells.
+#UA DESTINY
+*ux165.png
+DESTINY
+This unit has been blessed by the heavens.
+It was transformed into a Supernatural Life creature permanently, with doubled base melee and ranged attack strength, health, +4 defense and resistance.
+This effect cannot be dispelled.
+#UA HEALING AURA
+*ux166.png
+HEALING AURA
+This unit heals up to 10 damage on friendly (base type) normal units at the end of each combat turn. The healed damage is selected randomly between all possible targets.
+#UA BLOODSUCKER
+*ux167.png
+BLOODSUCKER
+Whenever this unit successfully deals damage to an enemy, it deals an additional 3 damage and recovers 3 health.
+#SET LOCK WINDOW SIZE
+LOCK WINDOW SIZE
+If enabled, the game window cannot be resized.
+Game window size is saved into the file Window.Ini. Delete the file to restore the default size. Edit the file to manually set the desired window size in pixels.
+#SET LEGACY TILESET
+LEGACY TILESET
+When enabled, the game will use the original Master of Magic tileset for overland tiles.
+When disabled, overland tiles will use the new, procedurally generated art.
+Please be aware the original game did not contain art for some possible River Mouth/Shore configurations. These tiles will be handled by procedurally generating the missing part of the river on top of the original Shore tile of the matching shape.
+It's possible to enable using the original River Mouth tiles where available through modding.ini.
+#SET LEGACY SELECTION
+LEGACY SELECTION
+If enabled, clicking a unit in the overland selection window the first time unselects all units and selects that one unit only.
+If disabled, clicking a unit the first time behaves normally (inverts the selection).
+Please note that the selection can be inverted for the entire stack by the SHIFT hotkey.
+#UA DISCIPLINE COMBAT
+*ux169.png
+DISCIPLINE
+Enchanted unit gains +1 defense.
+If enchanted unit is at least Regular, it gains another +1 defense.
+If enchanted unit is at least Veteran, it gains +1 attack and ranged (excluding magical ranged attacks).
+If enchanted unit is at least Elite, it gains Negate First Strike.
+#UA DISCIPLINE OL
+*ux169.png
+DISCIPLINE
+Enchanted unit gains +1 defense.
+If enchanted unit is at least Regular, it gains another +1 defense.
+If enchanted unit is at least Veteran, it gains +1 attack and ranged (excluding magical ranged attacks).
+If enchanted unit is at least Elite it gains +1 movement.
+#SET REMOVE TREES
+REMOVE TREES
+If enabled, the combat map will not render trees except one per tile. 
+Press T during combat to enable this feature until the end of battle only.
+#SET SHOW GRID
+SHOW GRID
+If enabled, both the combat and overland map will show a grid. Can be toggled by perssing the R button.
+#UA BURIED
+*ux171.png
+BURIED
+This unit fell into a crack and cannot attack or move but can still counterattack.
+At the end of combat, if their side wins the battle, the effect disappears, otherwise the unit will be destroyed.
+#SET COMBAT SHADOW
+COMBAT SHADOW
+When disabled, combat shadows will not be rendered
+#SET MOVE TOGETHER
+MOVE TOGETHER
+When enabled, units with movement left will not be prompted for moving if they already moved this turn and ended that movement with at least one unit in their stack running out of moves.
+#IP RECHARGE
+RECHARGE
+The equipped unit starts the combat with +4 ammo.
+#IP EGOISM
+EGOISM
+The unit wielding this item becomes extremely aware of their own importance, and will maximize their effort in improving themselves.
+Doubles EXP gained from all sources.
+#IP DARK FORCE
+DARK FORCE
+The forces of darkness empower the unit at the beginning of each combat, restoring their health to the maximal amount and granting a +10% chance to hit and defend. The evil force stains the body of the wielder, dealing one point of irrecoverable damage to the unit at the beginning of their combat turn.
+#IP AMPLIFIER
+AMPLIFIER
+All friendly spells deal or heal 1 more damage if they successfully deal any damage. Multiple copies of the ability are not cumulative. The spell doesn't need to be cast by the unit wielding this item but the unit has to be present in the battle where the spell takes effect.
+#IP STEALTH
+STEALTH
+Equipped hero gains Stealth, making them impossible to see, hear, or otherwise detect outside combat.
+-The hero does not trigger Wizard's Pact violations.
+-The hero can accurately scout the contents of Lairs, Nodes, or other encounter zones, including the type and exact quantity of all defenders.
+-The hero is not shown on the overland map, as if it was invisible. (Note : this does not affect the AI)
+#UA STEALTH
+*ux19.png
+STEALTH
+-This unit does not trigger Wizard's Pact violations.
+-This unit can accurately scout the contents of Lairs, Nodes, or other encounter zones, including the type and exact quantity of all defenders.
+-This unit is not shown on the overland map, as if it was invisible. (Note : this does not affect the AI)
+#UA AMPLIFIER
+*ux52.png
+AMPLIFIER
+All friendly spells deal or heal 1 more damage if they successfully deal any damage. Multiple copies of the ability are not cumulative. The spell doesn't need to be cast by the unit wielding this item but the unit has to be present in the battle where the spell takes effect.
+#UA EGOISM
+*ux173.png
+EGOISM
+The unit is extremely aware of their own importance, and will maximize their effort in improving themselves.
+Doubles EXP gained from all sources.
+#UA DARK FORCE
+*ux172.png
+DARK FORCE
+The forces of darkness empower the unit at the beginning of each combat, restoring their health to the maximal amount and granting a +10% chance to hit and defend. The evil force stains the body of the wielder, dealing one point of irrecoverable damage to the unit at the beginning of their combat turn.
+#SET INVERT MOUSE BUTTONS
+INVERT MOUSE BUTTONS
+Swaps the effect of left and right clicks on the mouse globally.
+These are the defaults, when this option is turned off :
+Left - Action : Move unit, Activate buttons, etc.
+Right - Information : Select unit, Scroll map, View unit, Help
+For more detailed settings, please use Keys.INI.
+#UA HEALING IMMUNITY
+*ux174.png
+HEALING IMMUNITY
+This unit was recently affected by Raise Dead or Mystic Surge, converting it into an unaligned fantastic unit that cannot be healed temporarily.
+The unit returns to its normal state after combat.
+#UA NO HEALING
+*ux174.png
+NO HEALING
+Zombies, Skeletons and Undead units cannot heal naturally and cannot be healed by Life magic spells.
+#IT SWORD
+SWORDS
+Swords are versatile weapons that are well suited for both defense and offense and conduct magic effectively.
+Touch abilities, attack strength and hit bonus enchanted into swords affect melee attacks only.
+There is no inherent bonus ability to this item type.
+#IT MACE
+MACES
+Maces are versatile weapons that have better magic resistance than swords but are less suitable for defense.
+Touch abilities, attack strength and hit bonus enchanted into maces affect melee attacks only.
+There is no inherent bonus ability to this item type.
+#IT AXE
+AXES
+Axes are weapons specialized for offense.
+Touch abilities, attack strength and hit bonus enchanted into axes affect melee attacks only.
+Any bonus attack strength enchanted into an Axe will increase the wielder's Thrown attack strength by the same amount.
+#IT BOW
+BOWS
+Ranged weapons that shoot arrows at the target.
+Touch abilities, attack strength and hit bonus enchanted into bows affect ranged attacks only.
+There is no inherent bonus ability to this item type.
+#IT WAND
+WANDS
+Ranged weapons with less offensive and defensive power than Staves but higher accuracy.
+Touch abilities, attack strength and hit bonus enchanted into wands affect ranged attacks only.
+There is no inherent bonus ability to this item type.
+#IT STAFF
+STAVES
+Ranged weapons with high offensive and defensive power but poor accuracy.
+Touch abilities, attack strength and hit bonus enchanted into staves affect ranged attacks only.
+There is no inherent bonus ability to this item type.
+#IT SHIELD
+SHIELDS
+Shields offer protections from attacks and magic spells effectively.
+Equipping a Shield grants the Large Shield ability, which adds +3 defense against ranged attacks.
+#IT CHAIN
+CHAIM MAILS
+Chain Mails offer less protection than Plate Mails but are easier to enchant.
+Equipping a Chain Mail grants an additional +1 Defense on top of any Defense enchantment included in the item.
+#IT PLATE
+PLATE MAILS
+Plate Mails offer the highest protection from damage possible, but due to their large size and weight, they are very difficult to create.
+Plate Mails have a very high, 300 base cost of enchanting.
+Equipping a Plate Mail grants an additional +2 Defense on top of any Defense enchantment included in the item.
+#IT OTHER
+ACCESSORIES
+Accessories are versatile magical items that can contain most kind of enchantments.
+There is no inherent bonus ability to this item type.
+#OPT NO OVERLAP
+NO OVERLAP
+Score modifier : 0.7x
+All cities have to be built at least 5 tiles apart instead of 4.
+#SET 30 FPS MODE
+30 FPS MODE
+Reduces the frame rate to 30 FPS.
+When unchecked, the game runs at 60 FPS.
+#SET SHOW FOG OF WAR
+SHOW FOG OF WAR
+When enabled, tiles outside the vision range of your units and cities appears slightly darker.
+#SET RANDOM BGM
+RANDOM BGM
+By default, the background music track played depends on the game state - winning, neutral, and losing.
+If this option is enabled, a different track is played each turn.
+#SET UNIT COUNTER
+UNIT COUNTER
+If enabled, the number of units is shown on top of stacks on the overland map.
+#OPT CONTINENTAL LORD
+CONTINENTAL LORD
+Score modifier : 0.85x
+When enabled, your starting location will be on the largest continent on your plane.
+#OPT TREE MASTERY
+TREE MASTERY
+Score modifier : 1.0x
+When enabled, all players start the game with Tree of Knowledge already researched and cast, allowing the construction of Armorer's Guilds, Fantastic Stables, and Linking Towers.
+#OPT UNDEVELOPED START
+UNDEVELOPED START
+Score modifier : 1.0x
+All players start the game with halved casting skill and power generated from their fortress city. The fortress cities have 1000 less population and players aren't given any Settler units at the beginning.
+Enabling this option will delay various ingame features that depend on turn count by 20, such as the appearance of rampaging monsters or amount of power generated by Astrologer.
+#OPT DISCONNECTED
+DISCONNECTED
+Score modifier : 0.95x
+Reduces the number of Towers of Wizardry that connect the two planes to 40% the normal amount but a minimum of 2.
+#OPT EVERYTHING NICE
+EVERYTHING NICE
+Score modifier : 0.75x
+Land and City destruction spells are banned. No player can obtain any of the following spells :
+Corruption, Raise Volcano, Evil Presence, Warp Node, Planetary Mastery, Doomsday, Armageddon, Meteor Storm, Drought, Pestilence, Call the Void, Chaos Rift, Earthquake
+Please be aware that even if you previously selected to start the game with any of these spells, you will not get them. 
+#OPT I AM THE BOSS
+I AM THE BOSS
+Score modifier : 0.3x
+The player starts alone on their plane. All other wizards start on the other plane.
+Opponents will prioritize breaking towers and researching Plane Shift higher than usual.
+Mutually exclusive with the other options that change wizard distribution between planes.
+#INFO SURVEYOR
+SURVEYOR
+This advisor will show terrain quality for settling cities, description of terrain tiles, monsters in scouted lairs, nodes and towers.
+#INFO CARTOGRAPHER
+CARTOGRAPHER
+This advisor will show you the known map of both worlds.
+#INFO APPRENTICE
+APPRENTICE
+This advisor will allow you to browse your known spells, see research options available and change the ongoing research to another spell. When you change your active research, any progress made on the previous spell will be locked to that spell, and you can continue from there once you return to researching it.
+#INFO HISTORIAN
+HISTORIAN
+This advisor shows the overall empire strength, army stength, spell power, power income, and empire population of all known wizards, including you.
+#INFO SPY MASTER
+SPY MASTER
+This advisor shows the history of relationship between all known wizards.
+#INFO CHANCELLOR
+CHANCELLOR
+This advisor will show you the previous monthly report.
+#INFO TAX COLLECTOR
+TAX COLLECTOR
+This advisor allows you to change your tax rates.
+#INFO GRAND VIZIER
+GRAND VIZIER
+The Grand Vizier can be ordered to manage the production of buildings in your cities.
+#INFO MIRROR
+MIRROR
+You can see your selected books and retorts here.
+#INFO GEOMANCER
+GEOMANCER
+This advisor shows special terrain information, such as the owner of volcano tiles or the amount of power generated by each node, as well as the combat casting cost multipler based on the distance from your fortress.
+#INFO FAMILIAR
+FAMILIAR
+Your Familiar can show you the hidden truth about the world. This shows the settings you have selected at the beginnig of the game, such as map size or number of opponents.
+#UA SHARPSHOOTING
+*ux126.png
+SHARPSHOOTING
+Hero units are not affected by range penalties when using ranged attacks.
+#OPT TREASURE IMPACT
+TREASURE IMPACT
+Score modifier : 0.75x
+High quality treasure available in lairs, nodes and towers is drastically increased.
+AI players will prioritize hunting for treasure higher and will customize their wizards to prepare for it.
+#OPT CORRUPT LEADERS
+CORRUPT LEADERS
+Score modifier : 0.94x
+Offering tribute to enemy wizards outside war has the same effect as an ongoing Peace Treaty - the wizard can't perform hostile actions and can't declare war.
+Duration depends on the amount of gold or spell rarity and multiple offers have a cumulative effect.
+Please be aware that hostile actions you take against the wizard can decrease the duration of the Peace Treaty effect the same way as it does for a normal Peace Treaty.
+This modifier has no effect on opponents you are already at war with.
+#OPT MINOR PARANOIA
+MINOR PARANOIA
+Score modifier : 1.15x
+AI Wizards generated can't be Peaceful and there is a -12 modifier in the generic war declaration formula against the human player.
+Mutually Exclusive with Major Hostility and Against the Worlds.
+#OPT MAJOR HOSTILITY
+MAJOR HOSTILITY
+Score modifier : 1.3x
+AI Wizards generated can't be Peaceful or Lawful and there is a -24 modifier in the generic war declaration formula against the human player.
+Mutually Exclusive with Minor Paranoia and Against the Worlds.
+#OPT FINAL WAR
+FINAL WAR
+Score modifier : 1.4x
+When a domination rate of 75% of higher is reached, all wizards declare war on the human player and ally with each other.
+Mutually Exclusive with Against the Worlds.
+#UA FROZEN
+*ux176.png
+FROZEN
+This unit is frozen solid and cannot act for a turn.
+Units with Cold Immunity, Immolation or Non-Corporeal cannot be frozen.
+#UA COUNTER IMMUNITY
+*ux177.png
+COUNTER IMMUNITY
+Spells cast by this unit cannot be countered.

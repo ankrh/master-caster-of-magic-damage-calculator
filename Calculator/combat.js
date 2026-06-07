@@ -1252,9 +1252,16 @@ function applyUndeadImmunities(unit, version) {
   if (!hasAbil(unit.abilities, 'undead') && !hasAbil(unit.abilities, 'animated')) return unit;
   const extra = { deathImmunity: true };
   if (version !== 'mom_1.31') {
-    extra.poisonImmunity = true;
     extra.illusionImmunity = true;
     extra.coldImmunity = true;
+  }
+  // Poison Immunity from the Undead status: MoM (post-1.31) grants it (base design,
+  // restored by the post-1.31 fix). CoM removed it in v5.45 as a balance change
+  // ("undead gain Death, Cold and Illusion immunity, but not Poison"), and CoM2 and
+  // Warlord inherit the removal. So the undead *status* grants Poison only in MoM;
+  // units that carry Poison Immunity as an explicit unit ability keep it regardless.
+  if (version && version.startsWith('mom') && version !== 'mom_1.31') {
+    extra.poisonImmunity = true;
   }
   return Object.assign({}, unit, {
     abilities: Object.assign({}, unit.abilities, extra),
@@ -2015,6 +2022,22 @@ function gazeKillProbs(self, selfStoningActive, selfDeathActive, other, otherRes
   };
 }
 
+// Doom UA: a unit with the intrinsic Doom ability deals exactly 1 damage per 2 points
+// of attack strength (rounded down), so its melee and ranged/thrown/breath strengths are
+// halved up front (they are then delivered as exact Doom damage downstream). This applies
+// in every version: in MoM the only unit-level Doom attack is the hero "Chaos" weapon,
+// which likewise halves the attack strength (rounded down). Gaze (Doom Gaze) carries its
+// own explicit strength and is unaffected. Black Sleep's damage→Doom conversion uses the
+// attacker's full strength and is handled separately — a Black-Slept unit's attacker has
+// no Doom UA, so its strengths are not halved here.
+function applyDoomUAHalving(unit, version) {
+  if (!hasAbil(unit.abilities, 'doom')) return unit;
+  return Object.assign({}, unit, {
+    atk: Math.floor((unit.atk || 0) / 2),
+    rtb: Math.floor((unit.rtb || 0) / 2),
+  });
+}
+
 function normalizeCombatUnit(unit, version) {
   let normalized = applyBloodLustEffects(unit, version);
   normalized = applyVampirismEffects(normalized, version);
@@ -2027,6 +2050,7 @@ function normalizeCombatUnit(unit, version) {
   normalized = applyZealEffects(normalized, version);
   normalized = applyFieryFuryEffects(normalized, version);
   normalized = applyTemporalTwistEffects(normalized);
+  normalized = applyDoomUAHalving(normalized, version);
   const withType = Object.assign({}, normalized, {
     unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version),
   });

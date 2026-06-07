@@ -123,7 +123,7 @@ function buildAbilitiesUI(prefix) {
     // numeric enchantments read better inline with the checkbox grid (they get realm-sorted
     // alongside it like any other entry).
     const inGridNumKeys = new Set(['resistanceToAll', 'holyBonus', 'pillarOfFaithRes']);
-    const selectRowKeys = new Set(['elemArmor', 'discipline', 'breakthrough']);
+    const selectRowKeys = new Set(['elemArmor', 'discipline', 'disciplineWarlord', 'breakthrough']);
     const inBoolGrid = abil.type === 'bool' || inGridNumKeys.has(abil.key);
     let itemParent;
     if (currentGroup === 'Enchantments') {

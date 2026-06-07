@@ -3,10 +3,17 @@
 ## Reference docs (under `Reference docs/`)
 - `MoM source - Fandom site/` — base MoM rules (abilities, damage types, immunities).
 - `CoM spells.md`, `CoM2 spells.md` — CoM/CoM2 spell mechanics.
-- `CoM2 spells helptext.txt` — exact in-game text for CoM2 spells and abilities; authoritative for CoM2 behavior.
+- `CoM2 spells helptext.txt` / `CoM2 helptext.TXT` — exact in-game text for CoM2 spells and abilities. (The two files are byte-identical.)
+- `CoM2 manual.txt` — CoM2 manual: spell/ability/mechanic descriptions.
+- `CoM helptext (parsed).txt` — exact in-game help text for CoM (1) spells and abilities, extracted from `CoM helptext.LBX` via `tools/parse_lbx_helptext.py`.
+- `CoM manual.txt` — CoM (1) manual: spell/ability/mechanic descriptions.
 - `Warlord manual.txt` — Warlord mod (built on CoM2) spell/ability/retort behavior.
 - `Warlord mechanic changes.md` — curated diff of Warlord vs CoM2. Check first for Warlord-specific work.
-- `Warlord helptext.TXT` — exact in-game text for Warlord enchantments and spell effects; consult when Warlord spell/enchantment behavior is unclear.
+- `Warlord helptext.TXT` — exact in-game text for Warlord enchantments and spell effects.
+
+**Helptext and manual are equally authoritative — read both, never one without the other.** For any version (CoM, CoM2, Warlord), the in-game helptext and that version's manual are co-equal sources; neither overrides the other. When verifying a mechanic, consult *both* the helptext and the manual for that version before drawing a conclusion. If they disagree (e.g. one lists an immunity the other omits), treat it as a discrepancy to surface and resolve with the user — do not silently pick one as "more correct."
+- `Tooltip style guide.md` — standard structure and token vocabulary for `tooltip:` strings; follow when writing or editing tooltips.
+- `Tooltip rewrite plan.md` — chunked plan + starter prompts for the ongoing pass that re-verifies and rewrites every tooltip against the implementation.
 
 Read the relevant doc before implementing a new mechanic. Use exact probability distributions (binomial math), never Monte Carlo.
 

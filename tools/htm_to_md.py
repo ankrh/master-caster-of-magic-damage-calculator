@@ -12,7 +12,7 @@ Usage:
     python htm_to_md.py --force                   # re-convert even if .md already exists
 """
 
-DEFAULT_DIR = r"C:\CoM2-damage-calculator\Manuals\MoM source - Fandom site\saved pages"
+DEFAULT_DIR = r"C:\CoM2-damage-calculator\Reference docs\MoM source - Fandom site\saved pages"
 
 import sys
 import os
