@@ -359,13 +359,16 @@ function deriveUnitStats(input) {
     calcBaseRtb = convertedStrength;
   }
 
-  // Warlord Vampirism: all thrown and breath attacks transfer to melee. Melee gains
-  // (thrown/breath strength − 1) and the thrown/breath strength drops to 1 (the residual
-  // attack still hits flyers and still triggers Blood Sucker on its own phase). Strength is
-  // conserved. Applies only to thrown/breath (thrownType), not magical/missile ranged.
+  // Warlord Vampirism: half of the thrown/breath strength transfers to melee (rounded
+  // down), and the thrown/breath strength drops to no more than 1 (the residual attack
+  // still hits flyers and still triggers Blood Sucker on its own phase). Per the in-game
+  // helptext ("Half of its Thrown and Breath Attacks strength is transferred to melee");
+  // the Warlord manual instead transfers all (melee += strength − 1) — a source
+  // disagreement resolved in favour of the helptext. Applies only to thrown/breath
+  // (thrownType), not magical/missile ranged.
   const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
   if (vampirismActive && thrownType !== 'none' && calcBaseRtb > 0) {
-    calcBaseAtk += Math.max(0, calcBaseRtb - 1);
+    calcBaseAtk += Math.floor(calcBaseRtb / 2);
     calcBaseRtb = 1;
   }
 
@@ -608,17 +611,17 @@ function deriveUnitStats(input) {
 
   // Pox Host (Warlord global combat debuff): a Goblin Poxbearer unit present on the
   // battlefield spreads Goblin Pox to every unit, with the effect varying by race.
-  // Goblin units suffer −1 attack, −1 armor, −1 resistance; non-Goblin units suffer −3
-  // attack, −3 armor, −3 resistance. No To-Hit penalty, unlike Plague. Per the Warlord
-  // manual (Poxbearers unit and Pox Host perk), which gives explicit numbers for all
-  // three stats; the helptext omits the −1 Goblin resistance and lists only −1 non-Goblin
-  // resistance — a source disagreement resolved in favour of the manual. Read from the
-  // global toggle; the unit's race (empty on custom units) determines which branch applies.
+  // Goblin units suffer −1 attack, −1 armor (no resistance penalty); non-Goblin units
+  // suffer −3 attack, −3 armor, −1 resistance. No To-Hit penalty, unlike Plague. Per the
+  // in-game helptext (GOBLIN POX spell and POX HOST UA), which lists no Goblin resistance
+  // penalty and only −1 resistance for non-Goblins; the Warlord manual instead gives
+  // −1/−3 resistance — a source disagreement resolved in favour of the helptext. Read from
+  // the global toggle; the unit's race (empty on custom units) determines which branch applies.
   const poxHostActive = version.startsWith('com2_warlord') && !!input.poxHost;
   const poxHostIsGoblin = unitRace === 'Goblin';
   const goblinPoxAtkMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
   const goblinPoxDefMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
-  const goblinPoxResMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
+  const goblinPoxResMod = poxHostActive ? (poxHostIsGoblin ? 0 : -1) : 0;
 
   // Great Unbinding (Warlord Sorcery very rare global): debuffs opponent fantastic
   // creatures in combat with −20% To-Hit, −20% To-Defend and −2 Resistance for the

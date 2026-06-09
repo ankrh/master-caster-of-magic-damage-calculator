@@ -230,7 +230,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'pillarOfFaithLucky', label: 'Pillar of Faith: Lucky', type: 'bool', match: 'PillarOfFaithLucky', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nGrants Lucky: +10% To Hit, +10% To Block, +1 Resistance.' },
     { key: 'shadowStrike', label: 'Shadow Strike', type: 'bool', match: 'ShadowStrike', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nAdds a Thrown attack at 1 + 1/3 of melee (rounded down).\nA unit with an existing Thrown attack adds that to its Thrown.' },
     { key: 'revenant', label: 'Revenant', type: 'bool', match: 'Revenant', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead: grants Death, Cold, Poison, and Illusion\nImmunity.\nGrants melee Death Touch 0: per attacker figure, defender\nresists or one figure dies.\nDeath Touch does not fire on ranged attacks.\nNot modeled: Regeneration.' },
-    { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead and gains Blood Sucker.\nThrown and breath attacks transfer to melee: melee gains\n(strength − 1), the thrown/breath strength drops to 1.' },
+    { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead and gains Blood Sucker.\nThrown and breath attacks transfer to melee: melee gains\nhalf the strength (rounded down), the thrown/breath strength drops to 1.' },
     { key: 'soulFlay', label: 'Soul Flay', type: 'bool', match: 'SoulFlay', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures.\nPer experience level: −1 melee, −2 armor, −2 resistance.\nRecruit: −1 / −2 / −2. Elite: −4 / −8 / −8.' },
     { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\n−3 melee, −3 armor, −6 Resistance, −10% To Hit.' },
     { key: 'berserkWarlord', label: 'Berserk (Warlord)', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\n+15% To Hit.\n−10% To Block.\nNot modeled: combat movement.' },
@@ -1502,11 +1502,11 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   vampirismThrownToMeleeTransferWarlord: {
-    desc: 'Vampirism thrown→melee transfer: thrown 5, melee 2 vs def 2 (100% hit/block). Melee becomes 2+(5−1)=6 → 4 through +2 BS = 6; thrown drops to 1 → 0 through, no BS. Total 6.0. Without transfer: thrown 5→3 +2 BS = 5, melee 2→0 = 5.0.',
+    desc: 'Vampirism thrown→melee transfer (half, per helptext): thrown 5, melee 2 vs def 2 (100% hit/block). Melee becomes 2+floor(5/2)=4 → 2 through +2 BS = 4; thrown drops to 1 → 0 through, no BS. Total 4.0. Without transfer: thrown 5→3 +2 BS = 5, melee 2→0 = 5.0. (Manual "all" transfer would give melee 6 → 6.0.)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:2, rtbType:'thrown', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { vampirism: true } },
     b: { def:2, toBlkMod:70, hp:30 },
-    expected: { dmgToA: 0, dmgToB: 6.000 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   // --- Revenant (Warlord enchantment: grants undead + melee Death Touch 0) ---
   revenantGrantsDeathTouchWarlord: {
@@ -1657,7 +1657,7 @@ const PRESETS = {
   },
 
   // --- Pox Host / Goblin Pox (Warlord global combat debuff, race-dependent) ---
-  // Non-Goblin: −3 melee / −3 armor / −3 resistance, no To Hit. Goblin: −1 melee / −1 armor / −1 resistance.
+  // Non-Goblin: −3 melee / −3 armor / −1 resistance, no To Hit. Goblin: −1 melee / −1 armor (no resistance penalty). Per helptext.
   goblinPoxNonGoblinMeleeWarlord: {
     desc: 'Pox Host (Warlord) on a non-Goblin attacker: melee 8 − 3 = 5, 100% hit vs def 0 → 5.0 (no To Hit penalty, unlike Plague). Without Pox Host it would be 8.0',
     version: 'com2_warlord_1.5.12.5',
@@ -1676,12 +1676,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   goblinPoxNonGoblinResistanceWarlord: {
-    desc: 'Pox Host (Warlord) on a non-Goblin defender: resistance 5 − 3 = 2. Death Touch 0 vs res 2 → pFail (10−2)/10 = 0.8 × 10 hp = 8.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Pox Host, res 5 → pFail 0.5 → 5.0)',
+    desc: 'Pox Host (Warlord) on a non-Goblin defender: resistance 5 − 1 = 4 (helptext: non-Goblins take −1 resistance). Death Touch 0 vs res 4 → pFail (10−4)/10 = 0.6 × 10 hp = 6.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Pox Host, res 5 → pFail 0.5 → 5.0; the manual −3 would give res 2 → 8.0)',
     version: 'com2_warlord_1.5.12.5',
     poxHost: true,
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
     b: { def:4, toBlkMod:70, res:5, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 8.000 },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   goblinPoxGoblinMilderWarlord: {
     desc: 'Pox Host (Warlord) on a GOBLIN attacker: only −1 melee (not −3). melee 8 − 1 = 7, 100% hit vs def 0 → 7.0 (without Pox Host, 8.0; if it wrongly used the non-Goblin −3 it would be 5.0)',
@@ -1692,12 +1692,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   goblinPoxGoblinResistanceWarlord: {
-    desc: 'Pox Host (Warlord) on a GOBLIN defender: resistance 5 − 1 = 4 (Goblins take −1 melee / −1 armor / −1 resistance per the manual). Death Touch 0 vs res 4 → pFail (10−4)/10 = 0.6 × 10 = 6.0. Melee atk 1 fully blocked by armor 4−1=3. (Without Pox Host, res 5 → 5.0; a non-Goblin would be res 2 → 8.0)',
+    desc: 'Pox Host (Warlord) on a GOBLIN defender: resistance is NOT penalized (helptext: Goblins take only −1 melee / −1 armor). res stays 5 → Death Touch 0 vs res 5 → pFail (10−5)/10 = 0.5 × 10 = 5.0. Melee atk 1 fully blocked by armor 4−1=3. (If the Goblin branch wrongly applied a −1 resistance, res 4 → 6.0; a non-Goblin −1 also → res 4 → 6.0)',
     version: 'com2_warlord_1.5.12.5',
     poxHost: true,
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: 0 } },
     b: { def:4, toBlkMod:70, res:5, hp:10, race: 'Goblin' },
-    expected: { dmgToA: 0, dmgToB: 6.000 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
   },
 
   // --- Great Unbinding (Warlord Sorcery global: −20% To Hit / −20% To Defend / −2 Resistance on opponent fantastic creatures) ---
