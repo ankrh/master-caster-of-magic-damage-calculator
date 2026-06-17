@@ -230,7 +230,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'pillarOfFaithLucky', label: 'Pillar of Faith: Lucky', type: 'bool', match: 'PillarOfFaithLucky', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nGrants Lucky: +10% To Hit, +10% To Block, +1 Resistance.' },
     { key: 'shadowStrike', label: 'Shadow Strike', type: 'bool', match: 'ShadowStrike', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nAdds a Thrown attack at 1 + 1/3 of melee (rounded down).\nA unit with an existing Thrown attack adds that to its Thrown.' },
     { key: 'revenant', label: 'Revenant', type: 'bool', match: 'Revenant', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead: grants Death, Cold, Poison, and Illusion\nImmunity.\nGrants melee Death Touch 0: per attacker figure, defender\nresists or one figure dies.\nDeath Touch does not fire on ranged attacks.\nNot modeled: Regeneration.' },
-    { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead and gains Blood Sucker.\nThrown and breath attacks transfer to melee: melee gains\nhalf the strength (rounded down), the thrown/breath strength drops to 1.' },
+    { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead and gains Blood Sucker.\nThrown and breath attacks transfer to melee: melee gains\n(strength − 1), the thrown/breath strength drops to 1.' },
     { key: 'soulFlay', label: 'Soul Flay', type: 'bool', match: 'SoulFlay', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures.\nPer experience level: −1 melee, −2 armor, −2 resistance.\nRecruit: −1 / −2 / −2. Elite: −4 / −8 / −8.' },
     { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\n−3 melee, −3 armor, −6 Resistance, −10% To Hit.' },
     { key: 'berserkWarlord', label: 'Berserk (Warlord)', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\n+15% To Hit.\n−10% To Block.\nNot modeled: combat movement.' },
@@ -1502,11 +1502,11 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   vampirismThrownToMeleeTransferWarlord: {
-    desc: 'Vampirism thrown→melee transfer (half, per helptext): thrown 5, melee 2 vs def 2 (100% hit/block). Melee becomes 2+floor(5/2)=4 → 2 through +2 BS = 4; thrown drops to 1 → 0 through, no BS. Total 4.0. Without transfer: thrown 5→3 +2 BS = 5, melee 2→0 = 5.0. (Manual "all" transfer would give melee 6 → 6.0.)',
+    desc: 'Vampirism thrown→melee transfer (all, per manual): thrown 5, melee 2 vs def 2 (100% hit/block). Melee becomes 2+(5−1)=6 → 4 through +2 BS = 6; thrown drops to 1 → 0 through, no BS. Total 6.0. Without transfer: thrown 5→3 +2 BS = 5, melee 2→0 = 5.0. (Helptext "half" transfer would give melee 4 → 4.0.)',
     version: 'com2_warlord_1.5.12.5',
     a: { atk:2, rtbType:'thrown', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { vampirism: true } },
     b: { def:2, toBlkMod:70, hp:30 },
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   // --- Revenant (Warlord enchantment: grants undead + melee Death Touch 0) ---
   revenantGrantsDeathTouchWarlord: {

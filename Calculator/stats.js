@@ -359,16 +359,16 @@ function deriveUnitStats(input) {
     calcBaseRtb = convertedStrength;
   }
 
-  // Warlord Vampirism: half of the thrown/breath strength transfers to melee (rounded
-  // down), and the thrown/breath strength drops to no more than 1 (the residual attack
-  // still hits flyers and still triggers Blood Sucker on its own phase). Per the in-game
-  // helptext ("Half of its Thrown and Breath Attacks strength is transferred to melee");
-  // the Warlord manual instead transfers all (melee += strength − 1) — a source
-  // disagreement resolved in favour of the helptext. Applies only to thrown/breath
-  // (thrownType), not magical/missile ranged.
+  // Warlord Vampirism: all thrown and breath attacks transfer to melee. Melee gains
+  // (thrown/breath strength − 1) and the thrown/breath strength drops to 1 (the residual
+  // attack still hits flyers and still triggers Blood Sucker on its own phase). Strength is
+  // conserved. Per the Warlord manual (melee += strength − 1); the in-game helptext instead
+  // transfers half ("Half of its Thrown and Breath Attacks strength is transferred to
+  // melee") — a source disagreement the developer resolved in favour of the manual. Applies
+  // only to thrown/breath (thrownType), not magical/missile ranged.
   const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
   if (vampirismActive && thrownType !== 'none' && calcBaseRtb > 0) {
-    calcBaseAtk += Math.floor(calcBaseRtb / 2);
+    calcBaseAtk += Math.max(0, calcBaseRtb - 1);
     calcBaseRtb = 1;
   }
 
