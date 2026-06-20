@@ -790,7 +790,7 @@ function resetAbilityPanelVisibility() {
     section.classList.add('hide-inactive');
   });
   document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
-    btn.textContent = 'Show all abilities';
+    btn.textContent = 'Show all';
   });
 }
 
@@ -1535,7 +1535,7 @@ function toggleAllAbilities() {
   const isCurrentlyHiding = sections[0] && sections[0].classList.contains('hide-inactive');
 
   sections.forEach(s => s.classList.toggle('hide-inactive', !isCurrentlyHiding));
-  btns.forEach(b => b.textContent = isCurrentlyHiding ? 'Hide inactive' : 'Show all abilities');
+  btns.forEach(b => b.textContent = isCurrentlyHiding ? 'Hide inactive' : 'Show all');
   updateAbilityVisibility();
 }
 

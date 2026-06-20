@@ -1494,7 +1494,7 @@
     "melee": 6,
     "moves": 1,
     "abilities": [
-      "First Strike"
+      "Negate First Strike"
     ],
     "cost": 40,
     "upkeep": 1
@@ -1907,7 +1907,7 @@
     "melee": 5,
     "moves": 1,
     "abilities": [
-      "First Strike",
+      "Negate First Strike",
       "Armor Piercing"
     ],
     "cost": 80,
@@ -2052,7 +2052,7 @@
     "melee": 4,
     "moves": 1,
     "abilities": [
-      "First Strike"
+      "Negate First Strike"
     ],
     "cost": 40,
     "upkeep": 1
@@ -2230,7 +2230,7 @@
     "melee": 5,
     "moves": 1,
     "abilities": [
-      "First Strike",
+      "Negate First Strike",
       "Armor Piercing"
     ],
     "cost": 80,
@@ -2471,7 +2471,7 @@
     "moves": 1,
     "abilities": [
       "Regeneration=1",
-      "First Strike"
+      "Negate First Strike"
     ],
     "cost": 120,
     "upkeep": 3
@@ -2609,7 +2609,8 @@
     "ranged_type": "Boulder",
     "abilities": [
       "Fantastic",
-      "Wall Crusher"
+      "Wall Crusher",
+      "Fire Immunity"
     ],
     "cost": 150,
     "upkeep": 3
@@ -2627,6 +2628,7 @@
     "moves": 1,
     "abilities": [
       "Fantastic",
+      "Fire Immunity",
       "Stoning Immunity",
       "Poison Immunity"
     ],
@@ -2714,7 +2716,8 @@
     "abilities": [
       "Flight",
       "Caster 20 MP",
-      "Fantastic"
+      "Fantastic",
+      "Fire Immunity"
     ],
     "cost": 550,
     "upkeep": 15
@@ -2776,6 +2779,8 @@
     "abilities": [
       "Fantastic",
       "Missile Immunity",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity"
     ],
@@ -2797,6 +2802,8 @@
     "abilities": [
       "Fantastic",
       "Create Undead",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
       "Poison Touch=1"
@@ -2819,6 +2826,8 @@
     "abilities": [
       "Fantastic",
       "Invisibility",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
       "Death Gaze=-2",
@@ -2843,6 +2852,8 @@
       "Weapon Immunity",
       "Fantastic",
       "Regeneration=1",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity"
     ],
@@ -2866,6 +2877,8 @@
       "Flight",
       "Fantastic",
       "Missile Immunity",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity"
     ],
@@ -2889,6 +2902,8 @@
       "Flight",
       "Fantastic",
       "Non Corporeal",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
       "Life Steal=-3"
@@ -2918,6 +2933,8 @@
       "Plane Shift",
       "Non Corporeal",
       "Regeneration=1",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity"
     ],
@@ -2940,6 +2957,8 @@
       "Weapon Immunity",
       "Flight",
       "Fantastic",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
       "Armor Piercing",
@@ -2970,6 +2989,8 @@
       "Summon Demons Spell",
       "Cause Fear",
       "Fantastic",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
       "Life Steal=-5"
@@ -2991,6 +3012,8 @@
     "moves": 1,
     "abilities": [
       "Fantastic",
+      "Illusion Immunity",
+      "Cold Immunity",
       "Death Immunity",
       "Poison Immunity"
     ],
@@ -3052,6 +3075,7 @@
       "Flight",
       "Holy Bonus=1",
       "Fantastic",
+      "Illusion Immunity",
       "Dispel Evil"
     ],
     "cost": 550,
@@ -3073,7 +3097,8 @@
       "Flight",
       "Caster 40 MP",
       "Holy Bonus=2",
-      "Fantastic"
+      "Fantastic",
+      "Illusion Immunity"
     ],
     "cost": 950,
     "upkeep": 20
@@ -3456,6 +3481,7 @@
     "abilities": [
       "Flight",
       "Fantastic",
+      "Illusion Immunity",
       "Magic Immunity"
     ],
     "cost": 1000,

@@ -55,8 +55,22 @@ def parse_ranged_type(ranged_type_str: str) -> dict:
 
     return result
 
+# Exact mapping of Immunities-column tokens to canonical ability names.
+# Matched exactly (not by substring): every distinct token in the source must
+# appear here, or it will be reported as unmatched.
+IMMUNITY_MAP = {
+    'Missiles Imm':  'Missile Immunity',
+    'Magic Imm':     'Magic Immunity',
+    'Death Imm':     'Death Immunity',
+    'Poison Imm':    'Poison Immunity',
+    'Stoning Imm':   'Stoning Immunity',
+    'Fire Imm':      'Fire Immunity',
+    'Cold Imm':      'Cold Immunity',
+    'Illusions Imm': 'Illusion Immunity',
+}
+
 def parse_immunities(immunities_str: str) -> list:
-    """Parse immunities string into list of ability names."""
+    """Parse immunities string into list of ability names (exact match)."""
     result = []
 
     if not immunities_str or immunities_str.strip() == '':
@@ -65,18 +79,8 @@ def parse_immunities(immunities_str: str) -> list:
     immunities = [x.strip() for x in immunities_str.split(',') if x.strip()]
 
     for immunity in immunities:
-        if 'Missiles' in immunity:
-            result.append('Missile Immunity')
-        elif 'Magic' in immunity:
-            result.append('Magic Immunity')
-        elif 'Death' in immunity:
-            result.append('Death Immunity')
-        elif 'Poison' in immunity:
-            result.append('Poison Immunity')
-        elif 'Stoning' in immunity:
-            result.append('Stoning Immunity')
-        elif 'Weapon' in immunity:
-            result.append('Weapon Immunity')
+        if immunity in IMMUNITY_MAP:
+            result.append(IMMUNITY_MAP[immunity])
 
     return result
 
@@ -102,12 +106,22 @@ TOKEN_RENAMES = {
     'Fire Ball Spell': 'Fireball Spell',
     'Summon Demons 1': 'Summon Demons Spell',
     'Weapon Imm': 'Weapon Immunity',
+    'Automatic Damage': 'Doom',
 }
 
 TOKEN_DISCARD = {
     'Standard',
     'Summon Demons 2',
     'Simultaneous Damage COMBAT',
+}
+
+# Relevant tokens that are intentionally passed through verbatim (no rename
+# needed). Listed here so they count as "matched" and stay out of the
+# unmatched-token report.
+EXPLICIT_KEEP = {
+    'Caster 20 MP', 'Caster 40 MP', 'Doombolt Spell', 'Healing Spell',
+    'Immolation', 'Lucky', 'Web Spell',          # Attributes column
+    'Armor Piercing', 'First Strike', 'Illusionary attack', 'Dispel Evil',  # Attacks column
 }
 
 def parse_attributes(attributes_str: str) -> list:
@@ -118,50 +132,37 @@ def parse_attributes(attributes_str: str) -> list:
     attributes = [x.strip() for x in attributes_str.split(',') if x.strip()]
     return attributes
 
+# Exact mapping of Abilities-column tokens to canonical ability names.
+# Most map to themselves; a couple are renamed (e.g. Summoned Unit -> Fantastic).
+# Tokens NOT listed here are passed through verbatim AND surfaced in the
+# unmatched-token report (see KNOWN_SOURCE_TOKENS).
+ABILITY_MAP = {
+    'Healer':              'Healer',
+    'Purify':              'Purify',
+    'Invisibility':        'Invisibility',
+    'Wind Walking':        'Wind Walking',
+    'Large Shield':        'Large Shield',
+    'Long Range':          'Long Range',
+    'Meld With Node':      'Meld With Node',
+    'Non Corporeal':       'Non Corporeal',
+    'Plane Shift':         'Plane Shift',
+    'Create Outpost':      'Create Outpost',
+    'Create Undead':       'Create Undead',
+    'Wall Crusher':        'Wall Crusher',
+    'Regeneration':        'Regeneration',
+    'Negate First Strike': 'Negate First Strike',
+    'Summoned Unit':       'Fantastic',
+}
+
 def parse_abilities(abilities_str: str) -> list:
-    """Parse abilities string into list of ability names."""
+    """Parse abilities string into list of ability names (exact match)."""
     if not abilities_str or abilities_str.strip() == '':
         return []
 
     abilities = [x.strip() for x in abilities_str.split(',') if x.strip()]
 
-    # Normalize ability names
-    normalized = []
-    for ability in abilities:
-        if 'Healer' in ability:
-            normalized.append('Healer')
-        elif 'Purify' in ability:
-            normalized.append('Purify')
-        elif 'Invisibility' in ability:
-            normalized.append('Invisibility')
-        elif 'Wind Walking' in ability:
-            normalized.append('Wind Walking')
-        elif 'Illusionary' in ability:
-            normalized.append('Illusion')
-        elif 'Life Stealing' in ability:
-            normalized.append('Life Steal')
-        elif 'Armor Piercing' in ability:
-            normalized.append('Armor Piercing')
-        elif 'First Strike' in ability:
-            normalized.append('First Strike')
-        elif 'Flying' in ability or 'Flyer' in ability:
-            normalized.append('Flight')
-        elif 'Large Shield' in ability:
-            normalized.append('Large Shield')
-        elif 'Negate First Strike' in ability:
-            normalized.append('Negate First Strike')
-        elif 'Create Outpost' in ability:
-            normalized.append('Create Outpost')
-        elif 'Wall Crusher' in ability:
-            normalized.append('Wall Crusher')
-        elif 'Fire Ball Spell' in ability:
-            normalized.append('Fireball Spell')
-        elif 'Cause Fear' in ability:
-            normalized.append('Cause Fear')
-        elif 'Summoned Unit' in ability:
-            normalized.append('Fantastic')
-        else:
-            normalized.append(ability)
+    # Normalize ability names by exact lookup; unknown tokens pass through verbatim.
+    normalized = [ABILITY_MAP.get(ability, ability) for ability in abilities]
 
     # Remove duplicates while preserving order
     seen = set()
@@ -172,6 +173,29 @@ def parse_abilities(abilities_str: str) -> list:
             result.append(ability)
 
     return result
+
+
+# Every source token recognized by some filter. A token from the Immunities /
+# Attributes / Abilities / Attacks columns that is NOT in this set is reported
+# as unmatched so the roster data can be audited (the report should contain only
+# combat-irrelevant tags).
+KNOWN_SOURCE_TOKENS = (
+    set(IMMUNITY_MAP)
+    | set(ABILITY_MAP)
+    | set(TOKEN_RENAMES)
+    | set(TOKEN_DISCARD)
+    | set(NUMERIC_ABILITIES)
+    | EXPLICIT_KEEP
+)
+
+
+def collect_unmatched(row, counter):
+    """Record raw Immunities/Attributes/Abilities/Attacks tokens that no filter recognizes."""
+    for col in ('Immunities', 'Attributes', 'Abilities', 'Attacks'):
+        for token in (row.get(col, '') or '').split(','):
+            token = token.strip()
+            if token and token not in KNOWN_SOURCE_TOKENS:
+                counter[token] += 1
 
 
 def parse_int(val, default=0):
@@ -185,9 +209,14 @@ def parse_int(val, default=0):
     except ValueError:
         return default
 
-def process_unit_file(input_file: Path) -> dict:
-    """Process a single unit data file and return parsed units."""
+def process_unit_file(input_file: Path):
+    """Process a single unit data file.
+
+    Returns (units, unmatched) where unmatched is a Counter of raw source tokens
+    that matched no filter.
+    """
     units = {}
+    unmatched = Counter()
     unit_id = 1
     # In CoM the Dispel Evil spell/ability was renamed to Exorcise (save -1, hits any
     # fantastic creature; created-undead suffer an additional -3). The CoM 6.08 tweaker
@@ -203,6 +232,8 @@ def process_unit_file(input_file: Path) -> dict:
             # Skip empty rows
             if not any(row.values()):
                 continue
+
+            collect_unmatched(row, unmatched)
 
             unit = {
                 'id': unit_id,
@@ -285,7 +316,7 @@ def process_unit_file(input_file: Path) -> dict:
                 token = TOKEN_RENAMES.get(token, token)
 
                 # Multiple Gaze expands into three separate gaze abilities
-                if 'Multiple Gaze' in token:
+                if token == 'Multiple Gaze':
                     val = gaze_poison_val
                     for gaze_name, sign in [('Doom Gaze', 1), ('Death Gaze', -1), ('Stoning Gaze', -1)]:
                         entry = f'{gaze_name}={sign * (val if val is not None else 1)}'
@@ -295,11 +326,7 @@ def process_unit_file(input_file: Path) -> dict:
                     continue
 
                 # Find if this token matches a numeric ability
-                matched_key = None
-                for key in NUMERIC_ABILITIES:
-                    if key in token:
-                        matched_key = key
-                        break
+                matched_key = token if token in NUMERIC_ABILITIES else None
 
                 if matched_key is not None:
                     canonical = NUMERIC_ABILITIES[matched_key]
@@ -351,7 +378,7 @@ def process_unit_file(input_file: Path) -> dict:
         if name_counts[unit['name']] > 1:
             unit['name'] = f"{unit['race']} {unit['name']}"
 
-    return units
+    return units, unmatched
 
 def get_output_filename(input_file: Path) -> str:
     """Generate output filename based on input filename."""
@@ -377,7 +404,7 @@ def main():
         print(f"Processing {input_file}...")
 
         try:
-            units = process_unit_file(input_file)
+            units, unmatched = process_unit_file(input_file)
 
             output_file = Path(get_output_filename(input_file))
 
@@ -386,6 +413,13 @@ def main():
 
             print(f"  OK: Parsed {len(units)} units")
             print(f"  OK: Output written to {output_file}")
+            if unmatched:
+                print(f"  Unmatched source tags ({len(unmatched)}) "
+                      f"— verify these are all combat-irrelevant:")
+                for token, count in sorted(unmatched.items()):
+                    print(f"      {count:3}x  {token!r}")
+            else:
+                print("  No unmatched source tags.")
         except Exception as e:
             print(f"  ERROR: processing {input_file}: {e}")
             continue
