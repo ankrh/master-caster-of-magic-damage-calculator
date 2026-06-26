@@ -202,9 +202,15 @@ function buildAbilitiesUI(prefix) {
   // alphabetically by label within each realm.
   if (enchBoolsDiv) {
     const REALM_RANK = { '': 0, arcane: 1, life: 2, death: 3, chaos: 4, nature: 5, sorcery: 6 };
+    // Within the non-realm group, keep the "Received" number controls above the retort
+    // checkboxes (num rows sort before checkboxes); other realms keep plain alpha order.
     [...enchBoolsDiv.children]
-      .map(el => [el, REALM_RANK[el.dataset.realm || ''] ?? 0, el.textContent.trim().toLowerCase()])
-      .sort((a, b) => a[1] - b[1] || a[2].localeCompare(b[2]))
+      .map(el => {
+        const rank = REALM_RANK[el.dataset.realm || ''] ?? 0;
+        const subRank = rank === 0 && !el.classList.contains('abil-num-row') ? 1 : 0;
+        return [el, rank, subRank, el.textContent.trim().toLowerCase()];
+      })
+      .sort((a, b) => a[1] - b[1] || a[2] - b[2] || a[3].localeCompare(b[3]))
       .forEach(([el]) => enchBoolsDiv.appendChild(el));
   }
 }
