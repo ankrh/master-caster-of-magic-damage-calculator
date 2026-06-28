@@ -349,6 +349,14 @@ const PRESETS = {
     rangedCheck: true, rangedDist: 3,
     expected: { dmgToA: 0, dmgToB: 0.900 },
   },
+  distPenaltyMoM12: {
+    desc: 'MoM 1.60: range 12 → −40% penalty → 60% effective (uncapped per-3-tile penalty)',
+    version: 'mom_cp_1.60.00',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 12,
+    expected: { dmgToA: 0, dmgToB: 0.600 },
+  },
   distPenaltyCoM3: {
     desc: 'CoM 6.08: range 3 → no penalty (threshold is 4 tiles) → 100% effective',
     version: 'com_6.08',
@@ -356,6 +364,14 @@ const PRESETS = {
     b: { hp:10 },
     rangedCheck: true, rangedDist: 3,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  distPenaltyCoM12: {
+    desc: 'CoM 6.08: range 12 → −30% penalty → 70% effective (per-4-tile penalty)',
+    version: 'com_6.08',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 12,
+    expected: { dmgToA: 0, dmgToB: 0.700 },
   },
   distPenaltyCoM6: {
     desc: 'CoM 6.08: range 6 → −10% (4–7 tile tier) → 90% effective',
@@ -372,6 +388,22 @@ const PRESETS = {
     b: { hp:10 },
     rangedCheck: true, rangedDist: 6,
     expected: { dmgToA: 0, dmgToB: 0.840 },
+  },
+  distPenaltyCoM16: {
+    desc: 'CoM 6.08: range 16 → −40% penalty → 60% effective (uncapped per-4-tile penalty)',
+    version: 'com_6.08',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 16,
+    expected: { dmgToA: 0, dmgToB: 0.600 },
+  },
+  distPenaltyCoM2_16: {
+    desc: 'CoM2 1.05.11: range 16 → −10% − 3%×(16−4) = −46% → 54% effective',
+    version: 'com2_1.05.11',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 16,
+    expected: { dmgToA: 0, dmgToB: 0.540 },
   },
 
   thrownBasic: {
@@ -718,10 +750,10 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 10 },
   },
   doomGazeChaosSpawn: {
-    desc: 'Chaos Spawn gaze suite: Doom 4 + Stoning -4 + Death -4 vs 4 figs, 5 hp, Res 12 — doom exact 4, stoning/death each 20% kill per figure.',
+    desc: 'Chaos Spawn gaze suite: Doom 4 + Stoning -4 + Death -4 vs 4 figs, 5 hp, Res 12 — doom exact 4; stoning/death each 20% per figure, combined into one joint kill roll (a figure dies once if it fails either), so pKill = 1 - 0.8*0.8 = 0.36.',
     a: { hp:10, abilities: { doomGaze: 4, stoningGaze: -4, deathGaze: -4 } },
     b: { figs:4, res:12, hp:5 },
-    expected: { dmgToA: 0, dmgToB: 11.716 },
+    expected: { dmgToA: 0, dmgToB: 11.133 },
   },
   lifeStealBasic: {
     desc: 'Life Steal: 1 atk (100% blocked) + Life Steal -3 vs Res 5 — effective res 2, E[dmg] = sum(1..8)/10 = 3.6',
@@ -4789,7 +4821,7 @@ const PRESETS = {
     version: 'mom_cp_1.60.00',
     aUnitName: 'Chaos Spawn',
     bUnitName: 'Unicorns',
-    expected: { dmgToA: 0.051, dmgToB: 23.814 },
+    expected: { dmgToA: 0.26, dmgToB: 23.129 },
   },
 
   // --- Immolation ---
@@ -4835,6 +4867,13 @@ const PRESETS = {
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:10, abilities: { fireImmunity: true } },
     expected: { dmgToB: 1.000 },
+  },
+  immolationArmorPiercingIgnored: {
+    desc: 'Armor Piercing does NOT halve immolation defense: LS gives imm def 2 (not 1). '
+        + 'Melee 1@100% (melee def 0) + imm(4)@30% vs def 2 (LS), 100% block → 1 + 0.0918 = 1.0918',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true, armorPiercing: true } },
+    b: { def:0, toBlkMod:70, hp:20, abilities: { largeShield: true } },
+    expected: { dmgToB: 1.0918 },
   },
   immolationBothSides: {
     desc: 'Both have immolation: A(1fig 1atk) + imm@30% vs B(4fig 1atk 0def 2HP) + imm@30%',
@@ -6300,7 +6339,7 @@ const TEST_TREE = [
       { name: 'Holy Weapon', keys: ['holyWeaponMelee', 'holyWeaponMissile', 'holyWeaponBoulder', 'holyWeaponNotMagicRanged', 'holyWeaponNotFireBreath', 'holyWeaponBypassesWI'] },
       { name: 'Hurricane', keys: ['hurricaneRanged', 'hurricaneBreath', 'hurricaneMeleeUnaffected'] },
       { name: 'Illusion', keys: ['illusionMelee', 'illusionRanged', 'illusionThrown', 'illusionCounter', 'illusionImmunityNegates', 'illusionCityWalls', 'illusionOverridesWeaponImmunity'] },
-      { name: 'Immolation', keys: ['immolationMelee', 'immolationAreaMultiFig', 'immolationNoOverflow', 'immolationMagicImmunity', 'immolationRighteousness', 'immolationFireImmunity', 'immolationBothSides', 'immolationRangedMoM', 'immolationWithThrown', 'immolationAtkZeroNoFire'] },
+      { name: 'Immolation', keys: ['immolationMelee', 'immolationAreaMultiFig', 'immolationNoOverflow', 'immolationMagicImmunity', 'immolationRighteousness', 'immolationFireImmunity', 'immolationArmorPiercingIgnored', 'immolationBothSides', 'immolationRangedMoM', 'immolationWithThrown', 'immolationAtkZeroNoFire'] },
       { name: 'Invisibility', keys: ['invisibilityMelee', 'invisibilityRangedBlocked', 'invisibilityRangedIllusionImmune', 'invisibilityCounter', 'invisibilityIllusionImmuneNoPenalty', 'invisibilityDoomIgnores'] },
       { name: 'Invulnerability', keys: ['invulnerabilityMelee', 'invulnerabilityFloorsAtZero', 'invulnerabilityGrantsWeaponImmunity', 'invulnerabilityRanged', 'invulnerabilityImmolation', 'invulnerabilityNotDoom', 'invulnerabilityMultiFigOverflow'] },
       { name: 'Large Shield', keys: ['largeShieldRangedMissile', 'largeShieldMeleeNoEffect', 'largeShieldThrown', 'largeShieldArmorPiercing', 'largeShieldFireBreath'] },
@@ -7117,7 +7156,7 @@ const TEST_TREE = [
       { name: 'Missile Immunity', keys: ['missileImmunityWIOverwrite131', 'missileImmunityWIOverwriteFixed'] },
       { name: 'Prayer', keys: ['prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyRemovedPatched', 'prayerHpStackPairCoM2', 'prayerHpStackPairWarlord'] },
       { name: 'Raise Dead', keys: ['raiseDeadDoesNotOverrideUndeadMoM', 'raiseDeadOverridesUndeadCoM2'] },
-      { name: 'Ranged Distance Penalty', keys: ['distPenaltyMoM3', 'distPenaltyCoM3', 'distPenaltyCoM6', 'distPenaltyCoM2_6'] },
+      { name: 'Ranged Distance Penalty', keys: ['distPenaltyMoM3', 'distPenaltyCoM3', 'distPenaltyMoM12', 'distPenaltyCoM12', 'distPenaltyCoM6', 'distPenaltyCoM2_6', 'distPenaltyCoM16', 'distPenaltyCoM2_16'] },
       { name: 'Supernatural', keys: ['supernaturalFormulaCoM', 'supernaturalFormulaCoM2'] },
       { name: 'Tactician', keys: ['tacticianHeroDefenseCoM2', 'tacticianHeroDefenseWarlord'] },
       { name: 'Undead', keys: ['undeadBypassesWeaponImmunity', 'undeadTriggersBless', 'undeadDeathImmunity131', 'undeadPoisonImmunityPatched', 'undeadIllusionImmunityPatched', 'undeadPoisonNotImmune131', 'undeadNoPoisonImmunityCoM2', 'undeadIllusionNotImmune131'] },

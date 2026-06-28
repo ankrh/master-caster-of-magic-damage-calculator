@@ -139,7 +139,7 @@ async function cdpEvaluate(wsUrl, expression) {
       settled = true;
       ws.close();
       reject(new Error('Timed out waiting for CDP result'));
-    }, 10000);
+    }, 30000);
 
     function fail(err) {
       if (settled) return;

@@ -211,17 +211,26 @@ function areaPerFigureDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, m
 // Compute area damage distribution: each of `targetFigs` figures independently
 // takes damage from an attack of strength `atkStr`. No overflow between figures.
 // Used for Immolation, Fireball, and other area-damage effects.
-function calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap, invulnBonus, minDamageFromHits) {
+// topFigHP (optional): remaining HP of the wounded top figure. When supplied and
+// less than `hp`, exactly one figure is capped at topFigHP (it cannot take more
+// than its current HP) and the remaining targetFigs-1 figures are capped at full hp.
+function calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap, invulnBonus, minDamageFromHits, topFigHP) {
   if (targetFigs <= 0 || atkStr <= 0) return [1];
   const single = areaPerFigureDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, minDamageFromHits);
-  let result = [1];
+  // Number of full-HP figures: all but the wounded top one when topFigHP applies.
+  const useTopCap = typeof topFigHP === 'number' && topFigHP < hp;
+  let result = useTopCap
+    ? areaPerFigureDmgDist(atkStr, toHit, defStr, toBlock, topFigHP, invulnBonus, minDamageFromHits)
+    : [1];
   let base = single;
-  let n = targetFigs;
+  let n = useTopCap ? targetFigs - 1 : targetFigs;
   while (n > 0) {
     if (n & 1) result = convolveDists(result, base, cap);
     n >>= 1;
     if (n > 0) base = convolveDists(base, base, cap);
   }
+  // When useTopCap and targetFigs===1, the loop body never runs; cap `result` at `cap`.
+  if (useTopCap && result.length > cap + 1) result = result.slice(0, cap + 1);
   return result;
 }
 

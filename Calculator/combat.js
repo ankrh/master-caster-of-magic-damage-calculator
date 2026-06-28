@@ -194,8 +194,8 @@ function supernaturalMinDamageFn(abilities, version) {
 
 // Compute ranged distance penalty for missile/boulder attacks.
 // Returns a negative percentage modifier or 0.
-// MoM: tiered at 3/6/9 tiles (-10/-20/-30%).
-// CoM: tiered at 4/8/12 tiles (-10/-20/-30%).
+// MoM: -10% per full 3 tiles.
+// CoM: -10% per full 4 tiles.
 // CoM2: -10% at 4 tiles, then -3% per additional tile.
 // Long Range caps the penalty at -10% in all versions.
 function distancePenalty(distance, rangedType, longRange, version) {
@@ -204,13 +204,9 @@ function distancePenalty(distance, rangedType, longRange, version) {
   if (version && version.startsWith('com2')) {
     if (distance >= 4) penalty = -10 - 3 * (distance - 4);
   } else if (version && version.startsWith('com')) {
-    if (distance >= 12) penalty = -30;
-    else if (distance >= 8) penalty = -20;
-    else if (distance >= 4) penalty = -10;
+    penalty = -10 * Math.floor(distance / 4);
   } else {
-    if (distance >= 9) penalty = -30;
-    else if (distance >= 6) penalty = -20;
-    else if (distance >= 3) penalty = -10;
+    penalty = -10 * Math.floor(distance / 3);
   }
   if (longRange && penalty < -10) penalty = -10;
   return penalty;
@@ -660,11 +656,13 @@ function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail, doo
     doomDist[Math.min(doomStr, defRemHP)] = 1;
     dist = convolveDists(dist, doomDist, defRemHP);
   }
-  if (stoningFail > 0) {
-    dist = convolveDists(dist, calcFigureKillDmgDist(defAlive, stoningFail, def.hp, defRemHP), defRemHP);
-  }
-  if (deathFail > 0) {
-    dist = convolveDists(dist, calcFigureKillDmgDist(defAlive, deathFail, def.hp, defRemHP), defRemHP);
+  // Stoning- and death-gaze kill rolls. A figure dies if it fails *either* roll,
+  // and can only die once, so the two are combined into a single joint per-figure
+  // kill probability rather than convolved independently (which would double-count
+  // a figure that fails both — only Chaos Spawn carries both gazes at once).
+  if (stoningFail > 0 || deathFail > 0) {
+    const jointFail = 1 - (1 - stoningFail) * (1 - deathFail);
+    dist = convolveDists(dist, calcFigureKillDmgDist(defAlive, jointFail, def.hp, defRemHP), defRemHP);
   }
   return dist;
 }
@@ -1506,7 +1504,9 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const defAPMelee   = aArmorPiercing ? halve(defBase + blessMelee)             : (defBase + blessMelee);
   const defAPRanged  = aArmorPiercing ? halve(defLS + blessRanged + elemRanged) : (defLS + blessRanged + elemRanged);
   const defAPGaze    = aArmorPiercing ? halve(defLS + blessGaze + elemGaze)     : (defLS + blessGaze + elemGaze);
-  const defAPImm     = aArmorPiercing ? halve(defLSNoVert + blessImm + elemImm) : (defLSNoVert + blessImm + elemImm);
+  // Immolation Damage is never affected by Armor Piercing (matches MoM and the
+  // ADC reference): AP attaches only to the unit's melee/ranged/thrown attacks.
+  const defImm       = defLSNoVert + blessImm + elemImm;
   const defAPThrown  = (aArmorPiercing || lightningAP)
     ? halve(defLS + blessThrown + elemThrown) : (defLS + blessThrown + elemThrown);
 
@@ -1571,10 +1571,10 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
     vsThrown = magicImmunityDef(vsThrown, target.abilities, version);
   }
 
-  // Immolation defense chain: AP-applied base → Magic Immunity → Fire Immunity → Righteousness.
+  // Immolation defense chain: base (no AP) → Magic Immunity → Fire Immunity → Righteousness.
   let vsImmolation = righteousnessDef(
     fireImmunityDef(
-      magicImmunityDef(defAPImm, target.abilities, version),
+      magicImmunityDef(defImm, target.abilities, version),
       target.abilities, version),
     target.abilities, version);
 
@@ -2223,7 +2223,7 @@ function buildWallOfFirePhase(active, params) {
       if (tAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
       const targetFigs = wofSingleFigure ? 1 : tAlive;
       return {
-        dist: calcAreaDamageDist(targetFigs, wofStr, wofToHit, aDefForImm, aToBlock, aHP, cap, aInvulnBonus, null),
+        dist: calcAreaDamageDist(targetFigs, wofStr, wofToHit, aDefForImm, aToBlock, aHP, cap, aInvulnBonus, null, woundedTopFigHP(cap, aHP)),
         lifeStealEV: 0,
       };
     },
@@ -2272,7 +2272,7 @@ function buildThrownPhase(active, params) {
                 : calcTotalDamageDist(sAlive, a.rtb, aToHitRtbVert, bDefForThrown, bToBlockVsAThrEW, b.hp, cap, bInvulnBonus, bBlurChance, blurBuggy,
                     isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, aMinDamageFromHits);
       const aImmTDist = (aImmWithThrown && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
+        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: aPoisonStrT, poisonFail: aPoisonFailT,
@@ -2354,7 +2354,7 @@ function buildMeleePhase(params) {
         return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
       }
       const aImmMDist = (aImmWithMelee && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
+        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
         : null;
       const fearD = aFearForCell(sAlive, tAlive);
       const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
@@ -2410,7 +2410,7 @@ function buildCounterPhase(params) {
         return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
       }
       const bImmMDist = (bImmWithMelee && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, b.toHitImmolation, aDefForImm, aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits)
+        ? calcAreaDamageDist(tAlive, immStr, b.toHitImmolation, aDefForImm, aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits, woundedTopFigHP(cap, a.hp))
         : null;
       const fearD = bFearForCell(sAlive);
       const o = calcMeleeTouchOutcome(fearD, sAlive, bDoomsA, bBlackSleep ? 0 : applyRage(bMeleeAtkVsA, b, sAlive), bToHitMeleeVert,
@@ -2464,7 +2464,7 @@ function buildFirstStrikeComputes(params) {
       return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
     }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
-      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
+      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
       : null;
     const fearD = aFearedByB ? calcFearDist(sAlive, aPFear) : null;
     const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
@@ -2484,7 +2484,7 @@ function buildFirstStrikeComputes(params) {
       return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
     }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
-      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
+      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
       : null;
     const fearD = aFearForCell(sAlive, tAlive);
     const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
@@ -2504,7 +2504,7 @@ function buildFirstStrikeComputes(params) {
       return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
     }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
-      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
+      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
       : null;
     const o = calcMeleeTouchOutcome(null /* fearDist */, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
@@ -2564,7 +2564,7 @@ function buildAttackerGazePhase(active, params) {
       let dist = buildGazeDist(a, b, tAlive, cap, aStoningGazeFailP, aDeathGazeFailP, aGazeDoomStrP, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
         isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, bBlackSleep, bToBlockVsAAll, aMinDamageFromHits);
       const aImmGDist = (aImmWithGaze && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits)
+        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: aPoisonWithGaze ? aPoisonStrG_raw : 0, poisonFail: aPoisonFailG,
@@ -2628,7 +2628,7 @@ function buildDefenderGazePhase(active, params) {
       let dist = buildGazeDist(b, a, tAlive, cap, bStoningGazeFailP, bDeathGazeFailP, bGazeDoomStrP, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy,
         isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined, aBlackSleep, aToBlockVsBAll, bMinDamageFromHits);
       const bImmGDist = (bImmWithGaze && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, b.toHitImmolation, aDefForImm, aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits)
+        ? calcAreaDamageDist(tAlive, immStr, b.toHitImmolation, aDefForImm, aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits, woundedTopFigHP(cap, a.hp))
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: bPoisonWithGaze ? bPoisonStrG_raw : 0, poisonFail: bPoisonFailG,
@@ -3437,7 +3437,7 @@ function resolveCombat(a, b, opts) {
       ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
     const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
     const aImmDistR = (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0)
-      ? calcAreaDamageDist(bAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits)
+      ? calcAreaDamageDist(bAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(bRemHP, b.hp))
       : null;
     const tR = convolveTouchAttacks(dmgToB, bRemHP, aAlive, {
       poisonStr: aPoisonStrR, poisonFail: aPoisonFailR,
