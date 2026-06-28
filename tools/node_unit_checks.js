@@ -17,7 +17,9 @@ function loadCalculatorContext() {
   const context = { console };
   vm.createContext(context);
   [
-    'Calculator/units.js',
+    'Calculator/units_mom.js',
+    'Calculator/units_com.js',
+    'Calculator/units_com2.js',
     'Calculator/units_warlord.js',
     'Calculator/data.js',
     'Calculator/engine.js',

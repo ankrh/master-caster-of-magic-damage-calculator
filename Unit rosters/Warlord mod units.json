@@ -8,6 +8,7 @@
     "melee": 6,
     "defense": 6,
     "resist": 10,
+    "to_hit": 10,
     "ranged": 6,
     "ranged_type": "Boulder",
     "ammo": 8,
@@ -32,6 +33,7 @@
     "melee": 7,
     "defense": 5,
     "resist": 6,
+    "to_hit": 20,
     "thrown_breath": 5,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -53,6 +55,7 @@
     "melee": 1,
     "defense": 4,
     "resist": 7,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(S)",
     "ammo": 4,
@@ -73,6 +76,7 @@
     "melee": 8,
     "defense": 4,
     "resist": 8,
+    "to_hit": 10,
     "ranged": 7,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -100,6 +104,7 @@
     "melee": 7,
     "defense": 5,
     "resist": 6,
+    "to_hit": 10,
     "ranged": 7,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -121,6 +126,7 @@
     "melee": 8,
     "defense": 5,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Holy Bonus=1"
@@ -139,6 +145,7 @@
     "melee": 8,
     "defense": 6,
     "resist": 7,
+    "to_hit": 10,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -160,6 +167,7 @@
     "melee": 3,
     "defense": 6,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(N)",
     "ammo": 6,
@@ -181,6 +189,7 @@
     "melee": 4,
     "defense": 5,
     "resist": 6,
+    "to_hit": 15,
     "ranged": 9,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -204,6 +213,7 @@
     "melee": 9,
     "defense": 4,
     "resist": 5,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Stealth",
@@ -223,6 +233,7 @@
     "melee": 1,
     "defense": 5,
     "resist": 6,
+    "to_hit": 20,
     "ranged": 7,
     "ranged_type": "Magic(N)",
     "ammo": 4,
@@ -247,6 +258,7 @@
     "defense": 5,
     "resist": 8,
     "to_block": 40,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Negate First Strike",
@@ -269,6 +281,7 @@
     "melee": 8,
     "defense": 4,
     "resist": 7,
+    "to_hit": 10,
     "ranged": 6,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -289,6 +302,7 @@
     "melee": 1,
     "defense": 5,
     "resist": 10,
+    "to_hit": 10,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -310,6 +324,7 @@
     "melee": 10,
     "defense": 4,
     "resist": 8,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "First Strike",
@@ -331,6 +346,7 @@
     "melee": 1,
     "defense": 5,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(S)",
     "ammo": 6,
@@ -353,6 +369,7 @@
     "melee": 6,
     "defense": 5,
     "resist": 7,
+    "to_hit": 20,
     "ranged": 7,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -378,6 +395,7 @@
     "melee": 10,
     "defense": 5,
     "resist": 8,
+    "to_hit": 20,
     "thrown_breath": 7,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -399,6 +417,7 @@
     "melee": 1,
     "defense": 5,
     "resist": 6,
+    "to_hit": 10,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -420,6 +439,7 @@
     "melee": 9,
     "defense": 7,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(C)",
     "ammo": 4,
@@ -441,6 +461,7 @@
     "melee": 10,
     "defense": 6,
     "resist": 8,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Stealth",
@@ -461,6 +482,7 @@
     "melee": 11,
     "defense": 6,
     "resist": 6,
+    "to_hit": 10,
     "abilities": [
       "Hero"
     ],
@@ -478,6 +500,7 @@
     "melee": 10,
     "defense": 5,
     "resist": 6,
+    "to_hit": 20,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -499,6 +522,7 @@
     "melee": 1,
     "defense": 5,
     "resist": 10,
+    "to_hit": 10,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -521,6 +545,7 @@
     "melee": 9,
     "defense": 6,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 7,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -542,6 +567,7 @@
     "melee": 1,
     "defense": 6,
     "resist": 8,
+    "to_hit": 10,
     "ranged": 7,
     "ranged_type": "Magic(S)",
     "ammo": 6,
@@ -565,6 +591,7 @@
     "melee": 11,
     "defense": 8,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Negate First Strike"
@@ -583,6 +610,7 @@
     "melee": 2,
     "defense": 7,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 9,
     "ranged_type": "Magic(N)",
     "ammo": 9,
@@ -607,6 +635,7 @@
     "melee": 11,
     "defense": 7,
     "resist": 11,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "First Strike",
@@ -633,6 +662,7 @@
     "melee": 12,
     "defense": 9,
     "resist": 10,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "First Strike",
@@ -659,6 +689,7 @@
     "melee": 4,
     "defense": 8,
     "resist": 10,
+    "to_hit": 20,
     "ranged": 8,
     "ranged_type": "Magic(N)",
     "ammo": 8,
@@ -680,6 +711,7 @@
     "melee": 12,
     "defense": 7,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "First Strike",
@@ -700,6 +732,7 @@
     "melee": 1,
     "defense": 7,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -724,6 +757,7 @@
     "melee": 12,
     "defense": 7,
     "resist": 7,
+    "to_hit": 10,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -746,6 +780,7 @@
     "melee": 12,
     "defense": 8,
     "resist": 12,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Negate First Strike",
@@ -804,6 +839,7 @@
     "melee": 0,
     "defense": 4,
     "resist": 7,
+    "to_hit": 20,
     "ranged": 10,
     "ranged_type": "Boulder",
     "ammo": 15,
@@ -869,6 +905,7 @@
     "melee": 4,
     "defense": 4,
     "resist": 4,
+    "to_hit": 10,
     "thrown_breath": 2,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -889,6 +926,7 @@
     "melee": 1,
     "defense": 2,
     "resist": 4,
+    "to_hit": 15,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -911,6 +949,7 @@
     "melee": 5,
     "defense": 2,
     "resist": 4,
+    "to_hit": 10,
     "thrown_breath": 3,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -931,6 +970,7 @@
     "melee": 2,
     "defense": 3,
     "resist": 6,
+    "to_hit": 10,
     "ranged": 3,
     "ranged_type": "Magic(N)",
     "ammo": 4,
@@ -957,6 +997,7 @@
     "melee": 6,
     "defense": 4,
     "resist": 4,
+    "to_hit": 10,
     "thrown_breath": 2,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1028,6 +1069,7 @@
     "melee": 2,
     "defense": 2,
     "resist": 4,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -1126,6 +1168,7 @@
     "melee": 9,
     "defense": 5,
     "resist": 8,
+    "to_hit": 10,
     "thrown_breath": 2,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1148,6 +1191,7 @@
     "defense": 4,
     "resist": 8,
     "to_block": 40,
+    "to_hit": 10,
     "abilities": [
       "Large Shield"
     ],
@@ -1331,6 +1375,7 @@
     "melee": 6,
     "defense": 6,
     "resist": 12,
+    "to_hit": 10,
     "ranged": 6,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -1414,6 +1459,7 @@
     "melee": 1,
     "defense": 3,
     "resist": 5,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 4,
@@ -1505,6 +1551,7 @@
     "melee": 10,
     "defense": 6,
     "resist": 8,
+    "to_hit": 10,
     "thrown_breath": 7,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1625,6 +1672,7 @@
     "melee": 0,
     "defense": 5,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 16,
     "ranged_type": "Boulder",
     "ammo": 10,
@@ -1650,6 +1698,7 @@
     "defense": 7,
     "resist": 15,
     "to_block": 40,
+    "to_hit": 10,
     "abilities": [
       "Death Immunity",
       "Poison Immunity",
@@ -1673,6 +1722,7 @@
     "melee": 2,
     "defense": 2,
     "resist": 3,
+    "to_hit": 10,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1762,6 +1812,7 @@
     "melee": 6,
     "defense": 6,
     "resist": 7,
+    "to_hit": 20,
     "thrown_breath": 5,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1881,6 +1932,7 @@
     "melee": 3,
     "defense": 4,
     "resist": 6,
+    "to_hit": 10,
     "thrown_breath": 5,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1922,6 +1974,7 @@
     "melee": 2,
     "defense": 2,
     "resist": 4,
+    "to_hit": 10,
     "abilities": [
       "Negate First Strike",
       "Forester"
@@ -1940,6 +1993,7 @@
     "melee": 4,
     "defense": 4,
     "resist": 5,
+    "to_hit": 10,
     "abilities": [
       "Forester",
       "Large Shield"
@@ -1958,6 +2012,7 @@
     "melee": 5,
     "defense": 4,
     "resist": 5,
+    "to_hit": 10,
     "abilities": [
       "Negate First Strike",
       "Forester"
@@ -1976,6 +2031,7 @@
     "melee": 5,
     "defense": 2,
     "resist": 5,
+    "to_hit": 10,
     "abilities": [
       "First Strike",
       "Forester"
@@ -1994,6 +2050,7 @@
     "melee": 1,
     "defense": 3,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 7,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -2019,6 +2076,7 @@
     "melee": 1,
     "defense": 2,
     "resist": 5,
+    "to_hit": 10,
     "ranged": 4,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -2040,6 +2098,7 @@
     "melee": 6,
     "defense": 6,
     "resist": 10,
+    "to_hit": 20,
     "abilities": [
       "First Strike",
       "Armor Piercing",
@@ -2060,6 +2119,7 @@
     "melee": 7,
     "defense": 5,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -2115,6 +2175,7 @@
     "melee": 1,
     "defense": 2,
     "resist": 3,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -2663,6 +2724,7 @@
     "melee": 6,
     "defense": 3,
     "resist": 7,
+    "to_hit": 10,
     "ranged": 7,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -2688,6 +2750,7 @@
     "melee": 9,
     "defense": 6,
     "resist": 9,
+    "to_hit": 10,
     "abilities": [
       "First Strike",
       "Armor Piercing",
@@ -2762,6 +2825,7 @@
     "melee": 1,
     "defense": 2,
     "resist": 4,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -2858,6 +2922,7 @@
     "melee": 12,
     "defense": 7,
     "resist": 9,
+    "to_hit": 10,
     "abilities": [
       "First Strike",
       "Cold Immunity",
@@ -2877,6 +2942,7 @@
     "melee": 7,
     "defense": 5,
     "resist": 9,
+    "to_hit": 20,
     "abilities": [
       "Flight",
       "Poison Touch=7"
@@ -2973,6 +3039,7 @@
     "melee": 6,
     "defense": 5,
     "resist": 5,
+    "to_hit": 10,
     "abilities": [
       "Forester",
       "Fantastic"
@@ -2991,6 +3058,7 @@
     "melee": 2,
     "defense": 5,
     "resist": 4,
+    "to_hit": 10,
     "thrown_breath": 14,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -3038,6 +3106,7 @@
     "melee": 6,
     "defense": 2,
     "resist": 5,
+    "to_hit": 10,
     "thrown_breath": 6,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -3058,6 +3127,7 @@
     "melee": 5,
     "defense": 9,
     "resist": 9,
+    "to_hit": 10,
     "abilities": [
       "Poison Immunity",
       "Flight",
@@ -3078,6 +3148,7 @@
     "melee": 18,
     "defense": 6,
     "resist": 7,
+    "to_hit": 10,
     "ranged": 13,
     "ranged_type": "Magic(C)",
     "ammo": 4,
@@ -3102,6 +3173,7 @@
     "melee": 15,
     "defense": 7,
     "resist": 7,
+    "to_hit": 10,
     "ranged": 10,
     "ranged_type": "Magic(S)",
     "ammo": 4,
@@ -3151,6 +3223,7 @@
     "melee": 10,
     "defense": 5,
     "resist": 8,
+    "to_hit": 10,
     "thrown_breath": 6,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -3172,6 +3245,7 @@
     "melee": 16,
     "defense": 7,
     "resist": 10,
+    "to_hit": 20,
     "abilities": [
       "Negate First Strike",
       "Flight",
@@ -3193,6 +3267,7 @@
     "melee": 15,
     "defense": 7,
     "resist": 9,
+    "to_hit": 20,
     "ranged": 18,
     "ranged_type": "Magic(C)",
     "ammo": 8,
@@ -3217,6 +3292,7 @@
     "melee": 9,
     "defense": 4,
     "resist": 12,
+    "to_hit": 10,
     "thrown_breath": 6,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -3242,6 +3318,7 @@
     "melee": 35,
     "defense": 11,
     "resist": 15,
+    "to_hit": 30,
     "thrown_breath": 35,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -3267,6 +3344,7 @@
     "melee": 3,
     "defense": 4,
     "resist": 3,
+    "to_hit": 10,
     "abilities": [
       "Missile Immunity",
       "Illusion Immunity",
@@ -3290,6 +3368,7 @@
     "melee": 5,
     "defense": 3,
     "resist": 6,
+    "to_hit": 10,
     "ranged": 4,
     "ranged_type": "Magic(C)",
     "ammo": 4,
@@ -3315,6 +3394,7 @@
     "melee": 7,
     "defense": 5,
     "resist": 8,
+    "to_hit": 10,
     "abilities": [
       "Illusion Immunity",
       "Death Immunity",
@@ -3340,6 +3420,7 @@
     "melee": 5,
     "defense": 3,
     "resist": 5,
+    "to_hit": 20,
     "abilities": [
       "Death Immunity",
       "Cold Immunity",
@@ -3362,6 +3443,7 @@
     "melee": 16,
     "defense": 6,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "Missile Immunity",
       "Illusion Immunity",
@@ -3386,6 +3468,7 @@
     "melee": 8,
     "defense": 6,
     "resist": 8,
+    "to_hit": 20,
     "abilities": [
       "Illusion Immunity",
       "Death Immunity",
@@ -3411,6 +3494,7 @@
     "melee": 5,
     "defense": 4,
     "resist": 6,
+    "to_hit": 20,
     "ranged": 5,
     "ranged_type": "Magic(C)",
     "ammo": 8,
@@ -3440,6 +3524,7 @@
     "melee": 12,
     "defense": 9,
     "resist": 10,
+    "to_hit": 30,
     "abilities": [
       "First Strike",
       "Negate First Strike",
@@ -3470,6 +3555,7 @@
     "melee": 25,
     "defense": 8,
     "resist": 13,
+    "to_hit": 30,
     "ranged": 20,
     "ranged_type": "Magic(C)",
     "ammo": 8,
@@ -3500,6 +3586,7 @@
     "melee": 5,
     "defense": 3,
     "resist": 3,
+    "to_hit": 10,
     "abilities": [
       "Illusion Immunity",
       "Death Immunity",
@@ -3522,6 +3609,7 @@
     "melee": 6,
     "defense": 4,
     "resist": 7,
+    "to_hit": 20,
     "abilities": [
       "Poison Immunity",
       "Forester",
@@ -3544,6 +3632,7 @@
     "melee": 7,
     "defense": 5,
     "resist": 10,
+    "to_hit": 30,
     "abilities": [
       "Poison Immunity",
       "Healer",
@@ -3566,6 +3655,7 @@
     "melee": 18,
     "defense": 9,
     "resist": 11,
+    "to_hit": 20,
     "abilities": [
       "Illusion Immunity",
       "Flight",
@@ -3588,6 +3678,7 @@
     "melee": 21,
     "defense": 12,
     "resist": 18,
+    "to_hit": 40,
     "abilities": [
       "Negate First Strike",
       "Illusion Immunity",
@@ -3614,6 +3705,7 @@
     "melee": 9,
     "defense": 5,
     "resist": 6,
+    "to_hit": 10,
     "abilities": [
       "Forester",
       "Fantastic"
@@ -3632,6 +3724,7 @@
     "melee": 2,
     "defense": 2,
     "resist": 8,
+    "to_hit": 10,
     "ranged": 4,
     "ranged_type": "Magic(N)",
     "ammo": 4,
@@ -3654,6 +3747,7 @@
     "melee": 4,
     "defense": 5,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "Flight",
       "Fantastic",
@@ -3673,6 +3767,7 @@
     "melee": 18,
     "defense": 7,
     "resist": 7,
+    "to_hit": 20,
     "abilities": [
       "Stealth",
       "Water Walking",
@@ -3694,6 +3789,7 @@
     "melee": 6,
     "defense": 5,
     "resist": 9,
+    "to_hit": 10,
     "abilities": [
       "Fantastic",
       "Counter Immunity",
@@ -3714,6 +3810,7 @@
     "melee": 20,
     "defense": 12,
     "resist": 10,
+    "to_hit": 20,
     "ranged": 20,
     "ranged_type": "Missile",
     "ammo": 3,
@@ -3739,6 +3836,7 @@
     "defense": 12,
     "resist": 15,
     "to_block": 40,
+    "to_hit": 30,
     "ranged": 25,
     "ranged_type": "Missile",
     "ammo": 3,
@@ -3767,6 +3865,7 @@
     "melee": 13,
     "defense": 7,
     "resist": 9,
+    "to_hit": 20,
     "abilities": [
       "Fantastic",
       "Caster=40",
@@ -3786,6 +3885,7 @@
     "melee": 25,
     "defense": 4,
     "resist": 8,
+    "to_hit": 10,
     "abilities": [
       "Poison Immunity",
       "Wall Crusher",
@@ -3806,6 +3906,7 @@
     "melee": 25,
     "defense": 15,
     "resist": 13,
+    "to_hit": 20,
     "abilities": [
       "Armor Piercing",
       "Water Walking",
@@ -3830,6 +3931,7 @@
     "melee": 36,
     "defense": 8,
     "resist": 14,
+    "to_hit": 30,
     "abilities": [
       "Negate First Strike",
       "Armor Piercing",
@@ -3853,6 +3955,7 @@
     "melee": 18,
     "defense": 0,
     "resist": 6,
+    "to_hit": 10,
     "abilities": [
       "Death Immunity",
       "Poison Immunity",
@@ -3899,6 +4002,7 @@
     "melee": 18,
     "defense": 7,
     "resist": 9,
+    "to_hit": 20,
     "ranged": 18,
     "ranged_type": "Magic(C)",
     "ammo": 5,
@@ -3924,6 +4028,7 @@
     "melee": 15,
     "defense": 7,
     "resist": 9,
+    "to_hit": 10,
     "abilities": [
       "Armor Piercing",
       "Poison Immunity",
@@ -3949,6 +4054,7 @@
     "melee": 18,
     "defense": 8,
     "resist": 12,
+    "to_hit": 30,
     "ranged": 15,
     "ranged_type": "Magic(S)",
     "ammo": 8,
@@ -3974,6 +4080,7 @@
     "melee": 28,
     "defense": 10,
     "resist": 14,
+    "to_hit": 30,
     "thrown_breath": 21,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -3999,6 +4106,7 @@
     "melee": 4,
     "defense": 4,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "First Strike",
       "Water Walking",
@@ -4019,6 +4127,7 @@
     "melee": 1,
     "defense": 2,
     "resist": 4,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -4039,6 +4148,7 @@
     "melee": 13,
     "defense": 11,
     "resist": 9,
+    "to_hit": 36,
     "abilities": [
       "Negate First Strike",
       "Illusion Immunity",
@@ -4067,6 +4177,7 @@
     "melee": 20,
     "defense": 7,
     "resist": 12,
+    "to_hit": 20,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -4115,6 +4226,7 @@
     "melee": 2,
     "defense": 9,
     "resist": 12,
+    "to_hit": 30,
     "ranged": 12,
     "ranged_type": "Boulder",
     "ammo": 8,
@@ -4248,6 +4360,7 @@
     "melee": 14,
     "defense": 6,
     "resist": 7,
+    "to_hit": 10,
     "thrown_breath": 7,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -4272,6 +4385,7 @@
     "melee": 1,
     "defense": 2,
     "resist": 3,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -4292,6 +4406,7 @@
     "melee": 3,
     "defense": 3,
     "resist": 4,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -4316,6 +4431,7 @@
     "melee": 11,
     "defense": 9,
     "resist": 16,
+    "to_hit": 40,
     "abilities": [
       "First Strike",
       "Negate First Strike",
@@ -4381,6 +4497,7 @@
     "melee": 7,
     "defense": 4,
     "resist": 6,
+    "to_hit": 10,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -4401,6 +4518,7 @@
     "melee": 7,
     "defense": 4,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "First Strike",
       "Forester"
@@ -4459,6 +4577,7 @@
     "melee": 0,
     "defense": 4,
     "resist": 7,
+    "to_hit": 20,
     "ranged": 8,
     "ranged_type": "Missile",
     "ammo": 10,
@@ -4591,6 +4710,7 @@
     "melee": 5,
     "defense": 5,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "Forester",
       "Large Shield"
@@ -4845,6 +4965,7 @@
     "melee": 2,
     "defense": 3,
     "resist": 6,
+    "to_hit": 10,
     "ranged": 4,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -4926,6 +5047,7 @@
     "melee": 2,
     "defense": 3,
     "resist": 5,
+    "to_hit": 5,
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -4947,6 +5069,7 @@
     "melee": 1,
     "defense": 3,
     "resist": 7,
+    "to_hit": 5,
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -4969,6 +5092,7 @@
     "melee": 1,
     "defense": 3,
     "resist": 4,
+    "to_hit": 5,
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -4990,6 +5114,7 @@
     "melee": 1,
     "defense": 3,
     "resist": 5,
+    "to_hit": 5,
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -5122,6 +5247,7 @@
     "melee": 9,
     "defense": 7,
     "resist": 9,
+    "to_hit": 20,
     "abilities": [
       "Flight",
       "Poison Touch=1",
@@ -5141,6 +5267,7 @@
     "melee": 11,
     "defense": 5,
     "resist": 9,
+    "to_hit": 20,
     "ranged": 13,
     "ranged_type": "Magic(S)",
     "ammo": 5,
@@ -5188,6 +5315,7 @@
     "melee": 18,
     "defense": 5,
     "resist": 8,
+    "to_hit": 10,
     "ranged": 15,
     "ranged_type": "Boulder",
     "ammo": 10,
@@ -5255,6 +5383,7 @@
     "melee": 16,
     "defense": 5,
     "resist": 7,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Missile",
     "ammo": 4,
@@ -5301,6 +5430,7 @@
     "melee": 10,
     "defense": 10,
     "resist": 16,
+    "to_hit": 30,
     "ranged": 6,
     "ranged_type": "Magic(C)",
     "ammo": 4,
@@ -5340,6 +5470,7 @@
     "melee": 17,
     "defense": 11,
     "resist": 17,
+    "to_hit": 30,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 8,
@@ -5384,6 +5515,7 @@
     "defense": 14,
     "resist": 14,
     "to_block": 40,
+    "to_hit": 30,
     "ranged": 20,
     "ranged_type": "Missile",
     "ammo": 4,
@@ -5425,6 +5557,7 @@
     "defense": 15,
     "resist": 15,
     "to_block": 40,
+    "to_hit": 30,
     "ranged": 25,
     "ranged_type": "Missile",
     "ammo": 4,
@@ -5467,6 +5600,7 @@
     "melee": 25,
     "defense": 10,
     "resist": 18,
+    "to_hit": 30,
     "thrown_breath": 15,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -5504,6 +5638,7 @@
     "melee": 28,
     "defense": 10,
     "resist": 20,
+    "to_hit": 30,
     "ranged": 18,
     "ranged_type": "Magic(C)",
     "ammo": 5,
@@ -5590,6 +5725,7 @@
     "melee": 1,
     "defense": 1,
     "resist": 5,
+    "to_hit": 10,
     "ranged": 1,
     "ranged_type": "Missile",
     "ammo": 4,
@@ -5647,6 +5783,7 @@
     "melee": 12,
     "defense": 8,
     "resist": 9,
+    "to_hit": 20,
     "abilities": [
       "First Strike",
       "Flight",
@@ -5669,6 +5806,7 @@
     "melee": 10,
     "defense": 9,
     "resist": 7,
+    "to_hit": 10,
     "abilities": [
       "Illusion Immunity",
       "Death Immunity",
@@ -5692,6 +5830,7 @@
     "melee": 24,
     "defense": 10,
     "resist": 12,
+    "to_hit": 20,
     "thrown_breath": 12,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -5713,6 +5852,7 @@
     "melee": 9,
     "defense": 7,
     "resist": 6,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Cause Fear",
@@ -5734,6 +5874,7 @@
     "melee": 7,
     "defense": 6,
     "resist": 6,
+    "to_hit": 10,
     "ranged": 4,
     "ranged_type": "Missile",
     "ammo": 6,
@@ -5759,6 +5900,7 @@
     "melee": 6,
     "defense": 6,
     "resist": 12,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -5784,6 +5926,7 @@
     "melee": 8,
     "defense": 6,
     "resist": 10,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Armor Piercing",
@@ -5806,6 +5949,7 @@
     "melee": 2,
     "defense": 7,
     "resist": 10,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(N)",
     "ammo": 9,
@@ -5835,6 +5979,7 @@
     "melee": 1,
     "defense": 7,
     "resist": 10,
+    "to_hit": 10,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -5865,6 +6010,7 @@
     "melee": 9,
     "defense": 6,
     "resist": 8,
+    "to_hit": 10,
     "ranged": 10,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -5892,6 +6038,7 @@
     "melee": 15,
     "defense": 10,
     "resist": 10,
+    "to_hit": 20,
     "thrown_breath": 25,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -5915,6 +6062,7 @@
     "melee": 12,
     "defense": 6,
     "resist": 8,
+    "to_hit": 10,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -5940,6 +6088,7 @@
     "defense": 9,
     "resist": 12,
     "to_block": 40,
+    "to_hit": 10,
     "thrown_breath": 8,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -5965,6 +6114,7 @@
     "defense": 12,
     "resist": 18,
     "to_block": 40,
+    "to_hit": 40,
     "ranged": 20,
     "ranged_type": "Magic(C)",
     "ammo": 8,
@@ -6007,6 +6157,7 @@
     "melee": 12,
     "defense": 7,
     "resist": 9,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "First Strike",
@@ -6031,6 +6182,7 @@
     "melee": 2,
     "defense": 6,
     "resist": 10,
+    "to_hit": 10,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -6057,6 +6209,7 @@
     "melee": 1,
     "defense": 7,
     "resist": 9,
+    "to_hit": 10,
     "ranged": 10,
     "ranged_type": "Magic(C)",
     "ammo": 6,
@@ -6090,6 +6243,7 @@
     "defense": 12,
     "resist": 18,
     "to_block": 50,
+    "to_hit": 40,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -6200,6 +6354,7 @@
     "melee": 8,
     "defense": 9,
     "resist": 8,
+    "to_hit": 10,
     "thrown_breath": 12,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -6238,6 +6393,7 @@
     "melee": 1,
     "defense": 1,
     "resist": 4,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -6255,6 +6411,7 @@
     "melee": 1,
     "defense": 2,
     "resist": 5,
+    "to_hit": 5,
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -6276,6 +6433,7 @@
     "melee": 1,
     "defense": 4,
     "resist": 7,
+    "to_hit": 5,
     "ranged": 9,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -6388,6 +6546,7 @@
     "defense": 2,
     "resist": 10,
     "to_block": 40,
+    "to_hit": 10,
     "abilities": [
       "Missile Immunity",
       "Fire Immunity",
@@ -6411,6 +6570,7 @@
     "melee": 1,
     "defense": 3,
     "resist": 7,
+    "to_hit": 20,
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 10,
@@ -6494,6 +6654,7 @@
     "melee": 0,
     "defense": 3,
     "resist": 7,
+    "to_hit": 20,
     "ranged": 7,
     "ranged_type": "Missile",
     "ammo": 10,
@@ -6727,6 +6888,7 @@
     "melee": 11,
     "defense": 10,
     "resist": 8,
+    "to_hit": 10,
     "abilities": [
       "Negate First Strike",
       "Forester",
@@ -6946,6 +7108,7 @@
     "melee": 5,
     "defense": 3,
     "resist": 6,
+    "to_hit": 10,
     "abilities": [
       "First Strike",
       "Cold Immunity",
@@ -6966,6 +7129,7 @@
     "melee": 18,
     "defense": 10,
     "resist": 12,
+    "to_hit": 20,
     "thrown_breath": 10,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -6995,6 +7159,7 @@
     "melee": 12,
     "defense": 7,
     "resist": 9,
+    "to_hit": 20,
     "ranged": 18,
     "ranged_type": "Magic(C)",
     "ammo": 5,
@@ -7027,6 +7192,7 @@
     "melee": 28,
     "defense": 10,
     "resist": 12,
+    "to_hit": 10,
     "thrown_breath": 21,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -7049,6 +7215,7 @@
     "melee": 4,
     "defense": 6,
     "resist": 8,
+    "to_hit": 10,
     "ranged": 8,
     "ranged_type": "Magic(C)",
     "ammo": 4,
@@ -7082,6 +7249,7 @@
     "melee": 36,
     "defense": 8,
     "resist": 14,
+    "to_hit": 30,
     "abilities": [
       "Negate First Strike",
       "Stealth",
@@ -7169,6 +7337,7 @@
     "defense": 2,
     "resist": 4,
     "to_block": 20,
+    "to_hit": 5,
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -7335,6 +7504,7 @@
     "defense": 3,
     "resist": 5,
     "to_block": 20,
+    "to_hit": 5,
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 8,
@@ -7470,6 +7640,7 @@
     "melee": 5,
     "defense": 5,
     "resist": 10,
+    "to_hit": 10,
     "abilities": [
       "Hero",
       "Stealth",
@@ -7489,6 +7660,7 @@
     "melee": 7,
     "defense": 7,
     "resist": 10,
+    "to_hit": 10,
     "abilities": [
       "Wall Crusher",
       "Fantastic",

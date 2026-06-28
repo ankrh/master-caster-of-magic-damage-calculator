@@ -202,6 +202,13 @@ def ini_unit_to_record(u):
     if to_defend != 30:
         record['to_block'] = to_defend
 
+    # Innate To Hit bonus. The INI stores the absolute To Hit chance (default 30%);
+    # the app schema stores the modifier above the 30% base, matching the MoM/CoM
+    # convention (e.g. Hit=40 -> to_hit 10 = +10%).
+    to_hit = int(u.get('Hit', 30)) - 30
+    if to_hit != 0:
+        record['to_hit'] = to_hit
+
     if u.get('Ranged') and int(u['Ranged']) > 0:
         rt = int(u.get('RangedType', 20))
         record['ranged']      = int(u['Ranged'])

@@ -615,7 +615,7 @@ function applyUnit(prefix, unitIndex) {
   unitIdentity[prefix] = { race: unit.race, name: unit.name };
 
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
-  document.getElementById(prefix + 'ToHitRtbMod').value = 0;
+  document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
   document.getElementById(prefix + 'ToBlkMod').value = 0;
   document.getElementById(prefix + 'Dmg').value = 0;
 
@@ -2187,7 +2187,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     hp: unit.hp,
     dmg: 0,
     toHitMod: unit.to_hit || 0,
-    toHitRtbMod: 0,
+    toHitRtbMod: unit.to_hit || 0,
     toBlkMod: document.getElementById(prefix + 'ToBlkMod').value,
     cityWalls: matrixGlobalValue('cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),

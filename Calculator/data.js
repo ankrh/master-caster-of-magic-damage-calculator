@@ -253,7 +253,8 @@ const ENCHANTMENT_DEFS = [
 ];
 
 // --- Version -> Unit Data mapping ---
-// MOM_UNITS_DATA and COM2_UNITS_DATA are defined in units.js
+// Each *_UNITS_DATA const is defined in its own units_<version>.js file
+// (units_mom.js, units_com.js, units_com2.js, units_warlord.js).
 const VERSION_DATA = {
   'mom_1.31':                MOM_UNITS_DATA,
   'mom_cp_1.60.00':          MOM_UNITS_DATA,
@@ -4762,7 +4763,7 @@ const PRESETS = {
     bUnitName: 'Orc Spearmen',
     rangedCheck: true,
     rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 2.887 },
+    expected: { dmgToA: 0, dmgToB: 3.929 },
   },
   predefWarBearsVsDwarvenHalberdiers: {
     desc: 'War Bears vs Dwarven Halberdiers: Nature fantastic vs tough normal infantry',
@@ -4774,7 +4775,7 @@ const PRESETS = {
     desc: 'Great Drake vs Hydra: fantastic vs fantastic, breath and multi-attack',
     aUnitName: 'Great Drake',
     bUnitName: 'Hydra',
-    expected: { dmgToA: 4.117, dmgToB: 23.234 },
+    expected: { dmgToA: 3.726, dmgToB: 31.170 },
   },
   predefDeathKnightsVsPaladins: {
     desc: 'Death Knights vs Ultra Elite Paladins: Death fantastic (life steal) vs strong normal unit',

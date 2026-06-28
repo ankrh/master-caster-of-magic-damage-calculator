@@ -18,7 +18,7 @@
 Read the relevant doc before implementing a new mechanic. Use exact probability distributions (binomial math), never Monte Carlo.
 
 ## Unit data source (under `Unit rosters/`)
-`UNITS.INI` is the original data source for CoM2 and Warlord units: `CoM2 unit data/UNITS.INI` and `Warlord mod unit data/UNITS.INI`. The in-app `units.js` / `units_warlord.js` are generated from these — treat the `.ini` files as authoritative when a unit's stats or abilities are in question.
+`UNITS.INI` is the original data source for CoM2 and Warlord units: `CoM2 unit data/UNITS.INI` and `Warlord mod unit data/UNITS.INI`. The in-app `units_com2.js` / `units_warlord.js` are generated from these by `tools/generate_com2_units_json.py` and `tools/generate_warlord_units_json.py` — treat the `.ini` files as authoritative when a unit's stats or abilities are in question. The MoM/CoM datasets (`units_mom.js`, `units_com.js`) are generated from the `.txt` rosters by `tools/parse_tweaker_unit_data.py`. Each version's data lives in its own `Calculator/units_<version>.js` file.
 
 ## ABILITY_DEFS / ENCHANTMENT_DEFS ordering (`data.js`)
 **Abilities group** (`ABILITY_DEFS`): a 2-column CSS grid with row-first flow, so order maps to columns interleaved L/R. Entries are wrapped in `twoColumnMajor([...])` and authored column-major so each column reads top-to-bottom by realm: **non-realm → arcane → life → death → chaos → nature → sorcery**. When adding/removing an entry, recount and reorder neighbours to keep both columns aligned.
@@ -58,7 +58,7 @@ python tools/nocache_server.py        # run_in_background
 
 If you do get stuck on cached JS, force-reload via indirect eval:
 ```js
-const scripts = ['Calculator/units.js', 'Calculator/units_warlord.js', 'Calculator/data.js', 'Calculator/engine.js', 'Calculator/combat.js', 'Calculator/stats.js', 'Calculator/ui.js'];
+const scripts = ['Calculator/units_mom.js', 'Calculator/units_com.js', 'Calculator/units_com2.js', 'Calculator/units_warlord.js', 'Calculator/data.js', 'Calculator/engine.js', 'Calculator/combat.js', 'Calculator/stats.js', 'Calculator/ui.js'];
 scripts.reduce((chain, s) =>
   chain.then(() => fetch('/' + s, {cache: 'no-store'}).then(r => r.text()).then(c => (0,eval)(c))),
   Promise.resolve()

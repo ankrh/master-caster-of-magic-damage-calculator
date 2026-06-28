@@ -386,8 +386,20 @@ def get_output_filename(input_file: Path) -> str:
     base_name = input_file.stem
     return f"{base_name}.json"
 
+# Source files whose parsed data is also emitted as a JS const consumed by the
+# calculator (Calculator/<file>). Maps input filename -> (js filename, const name).
+# MoM 1.60 has no entry: the app uses the MoM 1.31 dataset for both MoM versions.
+JS_OUTPUTS = {
+    'MoM 1.31 unit data.txt': ('units_mom.js', 'MOM_UNITS_DATA'),
+    'CoM 6.08 unit data.txt': ('units_com.js', 'COM_UNITS_DATA'),
+}
+
+
 def main():
     current_dir = Path('.')
+    # Calculator dir resolved from this script's location so JS output lands
+    # correctly regardless of the working directory.
+    calculator_dir = Path(__file__).resolve().parent.parent / 'Calculator'
 
     # Find all unit data txt files
     input_files = [
@@ -413,6 +425,16 @@ def main():
 
             print(f"  OK: Parsed {len(units)} units")
             print(f"  OK: Output written to {output_file}")
+
+            js_target = JS_OUTPUTS.get(input_file.name)
+            if js_target:
+                js_name, const_name = js_target
+                js_path = calculator_dir / js_name
+                with open(js_path, 'w', encoding='utf-8') as f:
+                    f.write(f'const {const_name} = ')
+                    json.dump(units, f, ensure_ascii=False)
+                    f.write(';\n')
+                print(f"  OK: JS written to {js_path}")
             if unmatched:
                 print(f"  Unmatched source tags ({len(unmatched)}) "
                       f"— verify these are all combat-irrelevant:")

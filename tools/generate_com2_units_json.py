@@ -207,6 +207,13 @@ def ini_unit_to_record(u):
     if to_defend != 30:
         record['to_block'] = to_defend
 
+    # Innate To Hit bonus. The INI stores the absolute To Hit chance (default 30%);
+    # the app schema stores the modifier above the 30% base, matching the MoM/CoM
+    # convention (e.g. Hit=40 -> to_hit 10 = +10%).
+    to_hit = int(u.get('Hit', 30)) - 30
+    if to_hit != 0:
+        record['to_hit'] = to_hit
+
     # Ranged attack
     if u.get('Ranged') and int(u['Ranged']) > 0:
         rt = int(u.get('RangedType', 20))
@@ -303,8 +310,13 @@ def ini_unit_to_record(u):
 
 
 def main():
+    import os
     ini_path = 'CoM2 unit data/UNITS.INI'
     out_path = 'CoM2 units.json'
+    # JS output resolved from this script's location so it lands correctly
+    # regardless of the working directory.
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    js_out_path = os.path.join(repo_root, 'Calculator', 'units_com2.js')
 
     SPECIAL_UNIT_NAMES = {'Floating Island'}
 
@@ -331,6 +343,13 @@ def main():
         json.dump(output, f, indent=2, ensure_ascii=False)
 
     print(f"Wrote {len(records)} units to {out_path}")
+
+    # Also emit JS-loadable version consumed by the calculator
+    with open(js_out_path, 'w', encoding='utf-8') as f:
+        f.write('const COM2_UNITS_DATA = ')
+        json.dump(output, f, ensure_ascii=False)
+        f.write(';\n')
+    print(f"Wrote {js_out_path}")
 
     # Summary by category
     from collections import Counter
