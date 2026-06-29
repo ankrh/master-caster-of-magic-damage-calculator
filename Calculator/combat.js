@@ -1514,7 +1514,11 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   // Warlord also upgrades thrown attacks.
   const aBlazingMarch = hasAbil(attacker.abilities, 'blazingMarch');
   const isWarlordVersion = version && version.startsWith('com2_warlord');
-  const meleeWeaponWI = (aBlazingMarch && attacker.weapon === 'normal') ? 'magic' : attacker.weapon;
+  // Eldritch Weapon upgrades a normal weapon to magic for Weapon Immunity purposes,
+  // but ONLY for the melee attack (MoM Eldritch Weapon page). Its ranged/thrown attacks
+  // stay non-magical, so WI still applies to them (handled below via attacker.weapon).
+  const aEldritchMelee = hasAbil(attacker.abilities, 'eldritchWeapon');
+  const meleeWeaponWI = ((aBlazingMarch || aEldritchMelee) && attacker.weapon === 'normal') ? 'magic' : attacker.weapon;
   const rangedWeaponWI = (aBlazingMarch && attacker.rangedType === 'missile' && attacker.weapon === 'normal')
     ? 'magic' : attacker.weapon;
   const thrownWeaponWI = (aBlazingMarch && isWarlordVersion && attacker.thrownType === 'thrown' && attacker.weapon === 'normal')
@@ -1578,7 +1582,8 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
       target.abilities, version),
     target.abilities, version);
 
-  // Illusion: sets defense to city walls bonus only on every phase. Negated by Illusion Immunity.
+  // Illusion: sets conventional attack defense to city walls bonus only. Negated by Illusion Immunity.
+  // It does not alter immolation/area-fire defense, which is not Illusion Damage.
   const aIllusion = hasAbil(attacker.abilities, 'illusion');
   const tIllusionImmune = hasAbil(target.abilities, 'illusionImmunity');
   if (aIllusion && !tIllusionImmune) {
@@ -1587,7 +1592,6 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
     vsRanged = cw;
     vsThrown = cw;
     vsGaze = cw;
-    vsImmolation = cw;
   }
 
   return { vsMelee, vsRanged, vsThrown, vsGaze, vsImmolation };

@@ -845,16 +845,20 @@ function deriveUnitStats(input) {
   const wraithFormBypassesWI = weapon === 'normal'
     && version.startsWith('com')
     && !!(abilities && (abilities.wraithForm || abilities.rulerOfUnderworld));
-  const eldritchActive = !!(abilities && abilities.eldritchWeapon);
   // Warlord Wall of Fire's defender bonus mirrors Metal Fires, which also upgrades
   // the unit's weapon to magic (bypasses Weapon Immunity) for its non-magic attacks.
   const weaponUpgradedByWoF = wofDefenderBonusActive && weapon === 'normal';
+  // Note: Eldritch Weapon also upgrades a normal weapon to magic, but ONLY for the
+  // melee attack (per the MoM Eldritch Weapon page). It is therefore NOT folded into
+  // this global weapon type — it is applied to the melee Weapon-Immunity check only
+  // (see meleeWeaponWI in combat.js). Its ranged/thrown attacks stay non-magical, so
+  // Weapon Immunity still raises the target's defense against them.
   const effectiveWeapon = (fbAtkBonus > 0 && weapon === 'normal') ? 'magic'
     : (ffRegularBonus && weapon === 'normal') ? 'magic'
     : (weaponUpgradedByHW ? 'magic'
     : (wraithFormBypassesWI ? 'magic'
     : (weaponUpgradedByWoF ? 'magic'
-    : ((eldritchActive && weapon === 'normal') ? 'magic' : weapon))));
+    : weapon)));
 
   // Ranged/Thrown/Breath strength
   let rtbLvl = 0, rtbWpn = 0;

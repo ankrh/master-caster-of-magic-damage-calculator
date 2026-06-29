@@ -156,7 +156,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'berserk', label: 'Berserk (MoM)', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Versions: MoM 1.31 & 1.60\nDoubles melee attack, applied after all other bonuses.\nSets defense to 0; no other bonus can raise it.' },
     { key: 'blackChannels', label: 'Black Channels', type: 'bool', match: 'BlackChannels', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Versions: MoM 1.31 & 1.60\n+2 melee, +1 ranged/thrown/breath/gaze, +1 defense,\n+1 resistance, +1 HP per figure.\nUnit becomes a fantastic Death creature.\nGrants Cold, Illusion, Poison, and Death Immunity.' },
     { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: 'Versions: MoM 1.31 & 1.60\n+1 melee, +1 missile, +1 thrown.\nUpgrades normal weapons to magic (bypasses Weapon Immunity).\nDoes not stack with Flame Blade.' },
-    { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: "Versions: MoM 1.31 & 1.60\nTarget's To Block reduced by 10% against this unit's melee,\nmissile, and thrown attacks.\nUpgrades normal weapons to magic (bypasses Weapon Immunity)." },
+    { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: "Versions: MoM 1.31 & 1.60\nTarget's To Block reduced by 10% against this unit's melee,\nmissile, and thrown attacks.\nUpgrades a normal melee weapon to magic (melee bypasses Weapon\nImmunity); ranged/thrown attacks stay non-magical." },
     { key: 'giantStrength', label: 'Giant Strength', type: 'bool', match: 'GiantStrength', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: 'Versions: MoM 1.31 & 1.60\n+1 melee and +1 thrown.' },
     { key: 'stoneSkin', label: 'Stone Skin', type: 'bool', match: 'StoneSkin', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: 'Versions: MoM 1.31 & 1.60\n+1 defense.\nDoes not stack with Iron Skin.' },
   ]),
@@ -2279,6 +2279,12 @@ const PRESETS = {
     a: { atk:5, toHitMod:70, hp:10, abilities: { illusion: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  illusionDoesNotOverrideImmolationDefense: {
+    desc: 'Illusion does not affect Immolation defense: melee ignores def for 1 dmg, but Immolation 4 vs def 4 at 100% block is fully blocked',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { illusion: true, immolation: true } },
+    b: { def:4, toBlkMod:70, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
   },
 
   // --- Invisibility ---
@@ -5476,6 +5482,19 @@ const PRESETS = {
     version: 'mom_1.31',
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
+  eldritchWeaponRangedKeepsWI: {
+    // Eldritch's magic-weapon upgrade is melee-only (MoM Eldritch Weapon page), so a bow
+    // attack does NOT bypass Weapon Immunity: defense is raised 5→10. The -10% To Block
+    // still applies (30%→20%). 5 hits vs 10 shields @20% block → E[dmg]≈3.007.
+    // If Eldritch wrongly upgraded the ranged weapon (the old bug), WI would be bypassed
+    // (def stays 5) and E[dmg] would be 4.000 instead.
+    desc: 'Eldritch Weapon ranged does NOT bypass WI: def 5→10 (WI applies) + toBlock 20% → E[dmg]≈3.007',
+    a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { eldritchWeapon: true } },
+    b: { def:5, hp:10, abilities: { weaponImmunity: true } },
+    version: 'mom_1.31',
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.007 },
+  },
 
   // --- Giant Strength ---
   giantStrengthMelee: {
@@ -6325,7 +6344,7 @@ const TEST_TREE = [
       { name: 'Doom damage', keys: ['doomDamageMelee', 'doomDamageMultiFig', 'doomDamageRanged', 'doomDamageThrownAffected', 'doomDamageCounter'] },
       { name: 'Doom gaze', keys: ['doomGazeBasic', 'doomGazeMagicImmunity', 'doomGazeKill', 'doomGazeChaosSpawn'] },
       { name: 'Elemental Armor / Resist Elements', keys: ['elemArmorMagicCRanged', 'elemArmorMagicNRanged', 'elemArmorNotVsMagicS', 'elemArmorNotMelee', 'elemArmorFireBreath', 'elemArmorLightningBreath', 'resistElementsMagicC', 'resistElementsNotVsMagicSMoM', 'resistElementsFireBreathMoM', 'elemArmorNotCumulative'] },
-      { name: 'Eldritch Weapon', keys: ['eldritchWeaponMelee', 'eldritchWeaponRangedMissile', 'eldritchWeaponWeaponUpgrade'] },
+      { name: 'Eldritch Weapon', keys: ['eldritchWeaponMelee', 'eldritchWeaponRangedMissile', 'eldritchWeaponWeaponUpgrade', 'eldritchWeaponRangedKeepsWI'] },
       { name: 'Eternal Night', keys: ['eternalNightDarknessMoM', 'eternalNightNoEnemyResistanceMoM'] },
       { name: 'Fiery Fury', keys: ['fieryFuryMeleeWarlord', 'fieryFuryMissileWarlord', 'fieryFuryBoulderWarlord', 'fieryFuryThrownWarlord', 'fieryFuryNoBreathBonusWarlord', 'fieryFuryFantasticNoStatBonus', 'fieryFuryFantasticFirstStrike', 'fieryFuryFantasticChaosConversion', 'fieryFuryUndeadNoChaosConversion', 'fieryFuryFlameBladeNoStack', 'fieryFuryWeaponImmunityBypass'] },
       { name: 'Fire Immunity', keys: ['fireImmunityFireBreath', 'fireImmunityNotMelee', 'fireImmunityNotThrown', 'fireImmunityNotMissile', 'fireImmunityAfterArmorPiercing', 'fireImmunityIllusionOverrides'] },
@@ -6338,7 +6357,7 @@ const TEST_TREE = [
       { name: 'Holy Bonus', keys: ['holyBonusMeleeAtk', 'holyBonusDef', 'holyBonusRes', 'holyBonusRangedMoM'] },
       { name: 'Holy Weapon', keys: ['holyWeaponMelee', 'holyWeaponMissile', 'holyWeaponBoulder', 'holyWeaponNotMagicRanged', 'holyWeaponNotFireBreath', 'holyWeaponBypassesWI'] },
       { name: 'Hurricane', keys: ['hurricaneRanged', 'hurricaneBreath', 'hurricaneMeleeUnaffected'] },
-      { name: 'Illusion', keys: ['illusionMelee', 'illusionRanged', 'illusionThrown', 'illusionCounter', 'illusionImmunityNegates', 'illusionCityWalls', 'illusionOverridesWeaponImmunity'] },
+      { name: 'Illusion', keys: ['illusionMelee', 'illusionRanged', 'illusionThrown', 'illusionCounter', 'illusionImmunityNegates', 'illusionCityWalls', 'illusionOverridesWeaponImmunity', 'illusionDoesNotOverrideImmolationDefense'] },
       { name: 'Immolation', keys: ['immolationMelee', 'immolationAreaMultiFig', 'immolationNoOverflow', 'immolationMagicImmunity', 'immolationRighteousness', 'immolationFireImmunity', 'immolationArmorPiercingIgnored', 'immolationBothSides', 'immolationRangedMoM', 'immolationWithThrown', 'immolationAtkZeroNoFire'] },
       { name: 'Invisibility', keys: ['invisibilityMelee', 'invisibilityRangedBlocked', 'invisibilityRangedIllusionImmune', 'invisibilityCounter', 'invisibilityIllusionImmuneNoPenalty', 'invisibilityDoomIgnores'] },
       { name: 'Invulnerability', keys: ['invulnerabilityMelee', 'invulnerabilityFloorsAtZero', 'invulnerabilityGrantsWeaponImmunity', 'invulnerabilityRanged', 'invulnerabilityImmolation', 'invulnerabilityNotDoom', 'invulnerabilityMultiFigOverflow'] },
