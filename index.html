@@ -26,6 +26,7 @@
   </select>
   <button id="swapBtn" class="swap-btn" title="Swap attacker and defender">&#8644; Swap attacker and defender</button>
   <button id="resetBtn" class="reset-btn" type="button" title="Reset calculator to the default state">Reset</button>
+  <button id="copyLinkBtn" class="copy-link-btn" type="button" title="Copy a shareable link to the current calculator state">&#128279; Copy link</button>
   <a href="https://github.com/ankrh/Master-Caster-of-Magic-Damage-Calculator/issues" target="_blank" rel="noopener" class="feedback-link">Report a bug / Request a feature</a>
 </div>
 
@@ -40,7 +41,7 @@
 <div class="presets-overlay" id="presetsOverlay"></div>
 
 <div class="page-layout">
-<div class="main-content">
+<div class="main-content" id="calcMain">
 <div class="matrix-actions">
   <button id="meleeMatrixBtn" class="matrix-btn" type="button" title="Open melee matrix calculator">Calculate melee matrix</button>
   <button id="rangedMatrixBtn" class="matrix-btn" type="button" title="Open ranged matrix calculator">Calculate ranged matrix</button>
@@ -391,6 +392,7 @@
 <script src="Calculator/engine.js"></script>
 <script src="Calculator/combat.js"></script>
 <script src="Calculator/stats.js"></script>
+<script src="Calculator/lz-string.min.js"></script>
 <script src="Calculator/ui.js"></script>
 </body>
 </html>

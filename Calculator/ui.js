@@ -302,6 +302,10 @@ const unitBaseStats = {};
 // applied and cleared for custom units, which therefore receive no building buffs.
 const unitIdentity = {};
 let _activeVersion = null;
+// True while applyState() is rewriting controls, so the recalc-triggered save hook
+// (Task B) doesn't persist a half-applied blob. Declared here in Task A because
+// applyState() needs it; Task B's save logic reads it.
+let _restoring = false;
 
 function loadUnitDatabase(version) {
   if (unitDatabases[version]) return unitDatabases[version];
@@ -726,7 +730,7 @@ function updateCustomLevelState(prefix) {
 
 // --- Swap ---
 
-const DEFAULT_GAME_VERSION = 'com2_1.05.11';
+const DEFAULT_GAME_VERSION = 'mom_1.31';
 const GAME_VERSION_STORAGE_KEY = 'gameVersion_v1';
 
 function loadPersistedGameVersion() {
@@ -808,9 +812,10 @@ function selectDefaultUnit(prefix, units) {
   updateUnitLock(prefix);
 }
 
-function resetCalculatorState() {
-  const persisted = loadPersistedGameVersion();
-  const initialVersion = persisted || DEFAULT_GAME_VERSION;
+function resetCalculatorState(version) {
+  // Explicit version is used by getDefaultIds to snapshot a specific version's defaults; the
+  // no-arg call (init, Reset button) keeps the original persisted-or-default behavior.
+  const initialVersion = version || loadPersistedGameVersion() || DEFAULT_GAME_VERSION;
   document.getElementById('gameVersion').value = initialVersion;
   _activeVersion = initialVersion;
   const units = loadUnitDatabase(initialVersion);
@@ -824,6 +829,7 @@ function resetCalculatorState() {
   selectDefaultUnit('b', units);
   updateTypeVisibility();
   updateAbilityVisibility();
+  updateGlobalEnchantmentVisibility(initialVersion);
   recalculate();
 }
 
@@ -913,7 +919,8 @@ function findMatchingUnit(units, oldUnit) {
 
 function onVersionChange() {
   const version = document.getElementById('gameVersion').value;
-  try { localStorage.setItem(GAME_VERSION_STORAGE_KEY, version); } catch (err) { /* ignore */ }
+  // Version is persisted as part of the full page-state blob (pageState_v1) via the
+  // recalculate save hook; no separate gameVersion_v1 write here.
   const aUnitSel = document.getElementById('aUnit');
   const bUnitSel = document.getElementById('bUnit');
   const oldAId = aUnitSel.value;
@@ -959,6 +966,7 @@ function onVersionChange() {
   }
 
   refreshAbilityFieldVisibility();
+  updateGlobalEnchantmentVisibility(version);
   renderAllMatrixPropLists();
   recalculate();
 }
@@ -1179,6 +1187,10 @@ function recalculate() {
   renderDistPanel(document.getElementById('distB'), 'Mean damage to defender', result.totalDmgToB, result.bHP, result.bAlive,
     { showSkulls: true, firstFigRem: bFirstFigRem });
   renderLifeStealSummary(result);
+
+  // Persist the live page state, unless we're mid-restore (applyState calls recalculate
+  // once at the end; saving a half-applied blob would be wrong).
+  if (!_restoring) scheduleSaveState();
 }
 
 // Backward-compatible alias
@@ -1202,6 +1214,35 @@ function subgroupAllowedForVersion(subgroup, version) {
   if (sg === 'Warlord') return isWarlord;
   if (sg === 'Renamed in Warlord') return isWarlord;
   return true;
+}
+
+// Global-enchantment controls in the .combat-enchantments frame are hardcoded HTML (not
+// driven by ABILITY_DEFS), so they need their own version gating. Each entry maps a control
+// element id to the versions in which it's valid. Controls not listed here are valid in every
+// version. When a control is hidden it's also reset (unchecked) so a hidden enchantment can't
+// silently keep affecting the calculation.
+function globalEnchantmentAllowedForVersion(elementId, version) {
+  const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
+  const isWarlord = version.startsWith('com2_warlord_');
+  switch (elementId) {
+    case 'trueLight': return isMoM || isWarlord; // removed in CoM 1 & 2
+    case 'hurricane': return isWarlord;
+    case 'poxHost':   return isWarlord;
+    default:          return true;
+  }
+}
+
+// Show/hide (and reset when hidden) the version-restricted controls in the global-enchantment
+// frame. Safe to call repeatedly; invoked on version change, reset, and state restore.
+function updateGlobalEnchantmentVisibility(version) {
+  for (const id of ['trueLight', 'hurricane', 'poxHost']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const wrapper = el.closest('.check-label') || el;
+    const allowed = globalEnchantmentAllowedForVersion(id, version);
+    wrapper.classList.toggle('version-hidden', !allowed);
+    if (!allowed && el.checked) el.checked = false;
+  }
 }
 
 function updateTypeVisibility() {
@@ -1413,6 +1454,236 @@ function applyPreset(name) {
   document.getElementById('poxHost').checked = preset.poxHost || false;
   refreshAbilityFieldVisibility();
   recalculate();
+}
+
+// --- Full page-state persistence (collect / apply) ---
+
+// Ids that look like state but aren't: combobox search fields and the preset filter
+// (transient UI), plus any matrix* id (defensive — those live outside #calcMain anyway).
+const STATE_EXCLUDE = new Set(['aUnitSearch', 'bUnitSearch', 'presetSearch']);
+
+// Snapshot every calculator control as a full id->value map (the lossless representation).
+// gameVersion lives in .version-bar, outside #calcMain, so it's appended explicitly.
+// collectState() derives a smaller default-diffed blob from this for storage/sharing.
+function collectFullState() {
+  const ids = {};
+  const els = Array.from(document.querySelectorAll('#calcMain input, #calcMain select'));
+  const gv = document.getElementById('gameVersion');
+  if (gv) els.push(gv);
+  for (const el of els) {
+    const id = el.id;
+    if (!id || STATE_EXCLUDE.has(id) || id.startsWith('matrix')) continue;
+    ids[id] = (el.type === 'checkbox') ? el.checked : el.value;
+  }
+  const ident = prefix => unitIdentity[prefix]
+    ? { race: unitIdentity[prefix].race, name: unitIdentity[prefix].name } : null;
+  return {
+    v: 1,
+    ids,
+    identity: { a: ident('a'), b: ident('b') },
+    generic: {
+      a: !!(unitBaseStats['a'] && unitBaseStats['a'].generic),
+      b: !!(unitBaseStats['b'] && unitBaseStats['b'].generic),
+    },
+  };
+}
+
+// Apply a full id->value map. Order is load-bearing (same lesson as applyPreset): version
+// first (repopulates dropdowns + ability panels), then JS-side identity, then every control
+// value (skip-missing for forward-compat), then visibility.
+function applyFullState(blob) {
+  if (!blob || blob.v !== 1) return;
+  _restoring = true;
+  try {
+    const versionSel = document.getElementById('gameVersion');
+    if (versionSel && blob.ids && typeof blob.ids.gameVersion === 'string') {
+      if (versionSel.value !== blob.ids.gameVersion) {
+        versionSel.value = blob.ids.gameVersion;
+      }
+      onVersionChange();
+    }
+    for (const prefix of ['a', 'b']) {
+      const id = blob.identity && blob.identity[prefix];
+      if (id) unitIdentity[prefix] = { race: id.race, name: id.name };
+      else delete unitIdentity[prefix];
+      const wantGeneric = !!(blob.generic && blob.generic[prefix]);
+      unitBaseStats[prefix] = { ...(unitBaseStats[prefix] || {}), generic: wantGeneric };
+    }
+    if (blob.ids) {
+      for (const [id, val] of Object.entries(blob.ids)) {
+        if (id === 'gameVersion') continue; // already applied above
+        const el = document.getElementById(id);
+        if (!el) continue; // forward-compat: ignore ids this build no longer has
+        if (el.type === 'checkbox') el.checked = !!val;
+        else el.value = val;
+      }
+    }
+    // Reflect aUnit/bUnit selections in the combobox search fields without re-running
+    // applyUnit/updateUnitLock (either would overwrite the restored, possibly
+    // hand-edited, fields via applyUnit).
+    syncUnitDisplay('a');
+    syncUnitDisplay('b');
+    refreshAbilityFieldVisibility();
+    updateTypeVisibility();
+    updateAbilityVisibility();
+    updateGlobalEnchantmentVisibility(versionSel ? versionSel.value : document.getElementById('gameVersion').value);
+  } finally {
+    _restoring = false;
+  }
+  recalculate();
+}
+
+// Per-version cache of the default id->value map (what a fresh load of that version yields).
+// Computed lazily by snapshotting the live state, resetting to the version's defaults,
+// capturing them, then restoring — so it never disturbs what the user sees. The dance runs
+// at most once per version; thereafter it's a map lookup. Underpins the default-diff in
+// collectState/applyState. Reset to defaults is version-correct (per-version controls and
+// default units differ), so the diff is always lossless.
+const _defaultIdsCache = {};
+function getDefaultIds(version) {
+  if (_defaultIdsCache[version]) return _defaultIdsCache[version];
+  const prevRestoring = _restoring;
+  _restoring = true;                 // suppress the recalc save hook during the dance
+  const saved = collectFullState();  // exact live state, restored below
+  try {
+    resetCalculatorState(version);   // mutate the DOM to this version's clean defaults
+    _defaultIdsCache[version] = collectFullState().ids;
+  } finally {
+    applyFullState(saved);           // put the user's state back, untouched
+    _restoring = prevRestoring;
+  }
+  return _defaultIdsCache[version];
+}
+
+// Public snapshot for storage/sharing: a default-diffed blob. Only ids differing from the
+// current version's defaults are kept (gameVersion always kept, so applyState knows which
+// default set to expand against). This shrinks the ~400-control map to the handful the user
+// actually changed — small enough that the compressed share URL stays short.
+function collectState() {
+  const full = collectFullState();
+  const defaults = getDefaultIds(full.ids.gameVersion);
+  const ids = {};
+  for (const [id, val] of Object.entries(full.ids)) {
+    if (id === 'gameVersion' || defaults[id] !== val) ids[id] = val;
+  }
+  return { v: full.v, ids, identity: full.identity, generic: full.generic };
+}
+
+// Restore a blob from collectState(): re-expand the default-diff against the blob version's
+// defaults, then apply the full map. Tolerant of full (undiffed) blobs too — legacy
+// localStorage and older share links merge cleanly since their ids already cover everything.
+function applyState(blob) {
+  if (!blob || blob.v !== 1) return;
+  const version = (blob.ids && typeof blob.ids.gameVersion === 'string')
+    ? blob.ids.gameVersion : (loadPersistedGameVersion() || DEFAULT_GAME_VERSION);
+  const merged = { ...getDefaultIds(version), ...(blob.ids || {}), gameVersion: version };
+  applyFullState({ v: 1, ids: merged, identity: blob.identity, generic: blob.generic });
+}
+
+// localStorage key for the persisted page-state blob. Supersedes the legacy gameVersion_v1
+// (version now travels inside the blob); gameVersion_v1 is read only for a one-time seed.
+const PAGE_STATE_KEY = 'pageState_v1';
+let _saveTimer = null;
+
+// LZ-string (URL-safe variant) for the share-link payload and the localStorage blob. The
+// default-diffed JSON is small and very repetitive, so it compresses to a fraction of its
+// size; the encoded form is safe in both a URL fragment and localStorage.
+function lzEncode(str) { return LZString.compressToEncodedURIComponent(str); }
+function lzDecode(s) { return LZString.decompressFromEncodedURIComponent(s); }
+
+// Debounced persist of the current page state. Coalesces rapid edits (~250ms) into one
+// write; wrapped in try/catch so a full/disabled storage never breaks recalc.
+function scheduleSaveState() {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    _saveTimer = null;
+    try {
+      localStorage.setItem(PAGE_STATE_KEY, lzEncode(JSON.stringify(collectState())));
+    } catch (err) { /* ignore quota/availability errors */ }
+  }, 250);
+}
+
+// Read the persisted page-state blob, or null if absent/corrupt. Accepts both the compressed
+// form and a legacy plain-JSON blob (which starts with '{') from before compression landed.
+function readLocalState() {
+  try {
+    const raw = localStorage.getItem(PAGE_STATE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw.charAt(0) === '{' ? raw : lzDecode(raw));
+  } catch (err) {
+    return null;
+  }
+}
+
+// Parse a shared-state blob out of the URL hash (#s=<lz>), or null if absent/bad. lzDecode
+// returns null on garbage, so JSON.parse(null) -> null and we fall through cleanly.
+function parseHashState() {
+  try {
+    const m = /^#s=(.+)$/.exec(location.hash);
+    if (!m) return null;
+    const blob = JSON.parse(lzDecode(m[1]));
+    return (blob && blob.v === 1) ? blob : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Remove the #s=... hash silently (no reload, no history entry; replaceState fires no
+// hashchange) after a one-shot import, so subsequent edits save to the recipient's own
+// localStorage rather than the shared link.
+function stripHash() {
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
+// True when the URL fragment is one of our share links (#s=...), valid or not. Foreign
+// fragments (e.g. a future in-page #anchor) don't match, so we never touch them.
+function isShareHash() {
+  return /^#s=/.test(location.hash);
+}
+
+// Apply a state blob during init/import, recovering instead of crashing the page. applyState
+// ends in recalculate(); a blob that is well-formed (passes the v===1 guard) but carries a
+// value this build can't compute — corrupt storage, a <select> option removed in a later
+// version, a hand-crafted link — would throw there, leaving the page half-initialised. Worse,
+// a bad localStorage blob would re-throw on every reload. On failure we log, fall back to
+// clean defaults (resetCalculatorState recalculates), and return false so the caller can
+// discard the offending source.
+function tryApplyState(blob) {
+  try {
+    applyState(blob);
+    return true;
+  } catch (err) {
+    console.error('Failed to apply persisted/shared state; falling back to defaults.', err);
+    resetCalculatorState();
+    return false;
+  }
+}
+
+// Consume a share-link hash if present: a valid blob is imported and the hash stripped; a
+// malformed #s=... is our own broken link, so strip it too (leaving foreign fragments).
+// Returns true iff a valid state was imported (false on a blob that failed to apply, so the
+// caller falls back to the recipient's own localStorage). Shared by the init path and the
+// live hashchange handler so both stay in step.
+function importHashState() {
+  const fromUrl = parseHashState();
+  if (fromUrl) {
+    stripHash();                 // one-shot import: drop the hash even if applying it fails
+    return tryApplyState(fromUrl);
+  }
+  if (isShareHash()) stripHash();
+  return false;
+}
+
+// Single init funnel. Tasks B and C plug their sources into the two hook lines so neither
+// has to edit the init path directly.
+function initStateFromSources() {
+  resetCalculatorState();                 // baseline defaults (existing behavior)
+  if (importHashState()) return;
+  const fromLs  = readLocalState();
+  if (fromLs && !tryApplyState(fromLs)) {
+    // A persisted blob that throws would re-crash on every reload; discard it.
+    try { localStorage.removeItem(PAGE_STATE_KEY); } catch (e) {}
+  }
 }
 
 // --- Test Runner ---
@@ -2942,6 +3213,7 @@ document.getElementById('gameVersion').addEventListener('change', onVersionChang
 document.getElementById('swapBtn').addEventListener('click', swapAttackerDefender);
 document.getElementById('resetBtn').addEventListener('click', () => {
   try {
+    localStorage.removeItem(PAGE_STATE_KEY);
     localStorage.removeItem(GAME_VERSION_STORAGE_KEY);
     localStorage.removeItem(MATRIX_FILTER_STORAGE_KEY);
   } catch (err) { /* ignore */ }
@@ -2951,6 +3223,48 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   if (defenderFilter) defenderFilter.value = '';
   resetCalculatorState();
 });
+document.getElementById('copyLinkBtn').addEventListener('click', () => {
+  const btn = document.getElementById('copyLinkBtn');
+  // Build the share URL as a string and copy that — we deliberately don't touch
+  // location.hash. Leaving our own address bar clean avoids a reload reverting to this
+  // snapshot (the URL would otherwise win over the user's later localStorage edits) and
+  // keeps the copy action from racing the hashchange importer below.
+  // Derive the base from location.href (minus any existing hash) rather than
+  // origin + pathname: under file:// the origin is the literal string "null", which
+  // would yield a broken "null/C:/...#s=..." link. href is correct for both http:// and
+  // file://. Note: a file:// link only reopens on a machine with the same local path.
+  const base = location.href.replace(/#.*$/, '');
+  const url = base + '#s=' + lzEncode(JSON.stringify(collectState()));
+  const original = btn.textContent;
+  const flash = msg => {
+    btn.textContent = msg;
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  };
+  // Fallback for non-secure contexts (e.g. file://) where navigator.clipboard is absent.
+  const fallbackCopy = () => {
+    const ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => flash('Copied to clipboard!'))
+      .catch(() => flash(fallbackCopy() ? 'Copied to clipboard!' : 'Copy failed'));
+  } else {
+    flash(fallbackCopy() ? 'Copied to clipboard!' : 'Copy failed');
+  }
+});
+// A #s= link pasted into an already-open tab is a same-document navigation: the browser
+// doesn't reload, so init never re-runs. Apply it live here instead. The copy button never
+// writes location.hash, so every hashchange here is a genuine incoming navigation.
+window.addEventListener('hashchange', importHashState);
 document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
   btn.addEventListener('click', toggleAllAbilities);
 });
@@ -3096,7 +3410,7 @@ document.querySelectorAll('.abil-item').forEach(item => {
 })();
 
 // Initial load
-resetCalculatorState();
+initStateFromSources();
 
 // --- Cursor-following tooltip ---
 (function initTooltip() {

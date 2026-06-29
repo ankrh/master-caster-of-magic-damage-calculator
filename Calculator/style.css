@@ -64,7 +64,8 @@ h1 {
   font-size: 0.9rem;
 }
 .swap-btn,
-.reset-btn {
+.reset-btn,
+.copy-link-btn {
   padding: 0.35rem 0.65rem;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -74,7 +75,8 @@ h1 {
   cursor: pointer;
 }
 .swap-btn:hover,
-.reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.reset-btn:hover,
+.copy-link-btn:hover { border-color: var(--accent); color: var(--accent); }
 .subtitle {
   text-align: center;
   color: var(--muted);
@@ -1036,6 +1038,10 @@ select:disabled[data-tooltip] {
 .abil-group-header.abil-hidden,
 .abil-subgroup-header.abil-hidden,
 .abil-grid.abil-hidden {
+  display: none;
+}
+/* Version-restricted controls in the global-enchantment frame (.combat-enchantments). */
+.combat-enchantments .version-hidden {
   display: none;
 }
 /* Toggle button styling */
