@@ -297,16 +297,20 @@ async function main() {
         return { rangedDisabled, rangedTooltip, armorDisabled, armorTooltip, chaosTooltip };
       })()`,
       'matrix-live-filter': `(async () => {
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const rowCount = () => document.querySelectorAll('#matrixTableWrap tbody tr').length;
         document.getElementById('meleeMatrixBtn').click();
-        const allRows = document.querySelectorAll('#meleeMatrixTableWrap tbody tr').length;
+        // The matrix builds asynchronously in workers; wait for the table to appear.
+        for (let i = 0; i < 100 && rowCount() === 0; i++) await sleep(200);
+        const allRows = rowCount();
         const applyButtonMissing = !document.getElementById('matrixApplyNameFilters');
         const filter = document.getElementById('matrixAttackerNameFilter');
         filter.value = 'Life';
         filter.dispatchEvent(new Event('input', { bubbles: true }));
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        const filteredRows = document.querySelectorAll('#meleeMatrixTableWrap tbody tr').length;
-        const firstHeader = document.querySelector('#meleeMatrixTableWrap tbody th')?.textContent || '';
-        document.getElementById('meleeMatrixClose').click();
+        await sleep(400); // filter rerender is debounced (150ms)
+        const filteredRows = rowCount();
+        const firstHeader = document.querySelector('#matrixTableWrap tbody th')?.textContent || '';
+        document.getElementById('matrixClose').click();
         return { allRows, filteredRows, firstHeader, applyButtonMissing };
       })()`,
       'matrix-reset-controls': `(() => {

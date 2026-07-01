@@ -186,18 +186,20 @@ h1 {
   pointer-events: none;
 }
 .panel-fields.locked input[id$="Dmg"],
-.panel-fields.locked select[id$="Weapon"],
-.panel-fields.locked select[id$="Level"],
-.panel-fields.locked select[id$="Armor"] {
+.panel-fields.locked select[id$="Weapon"]:not(:disabled),
+.panel-fields.locked select[id$="Level"]:not(:disabled),
+.panel-fields.locked select[id$="Armor"]:not(:disabled) {
   opacity: 1;
   pointer-events: auto;
 }
-.panel-fields select[id$="Weapon"].weapon-locked {
+/* Loadout selects the engine disregards (see updateLoadoutLocks) grey out uniformly. */
+.panel-fields select:disabled {
   opacity: 0.5;
   pointer-events: none;
 }
-.panel-fields select[id$="Level"]:disabled {
-  opacity: 0.5;
+/* Controls that don't exist in the selected game version (e.g. armor in MoM). */
+.panel-fields .version-hidden {
+  display: none;
 }
 .panel-fields {
   display: grid;

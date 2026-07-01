@@ -1083,34 +1083,6 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
 // unfeared figure counts (Cause Fear).
 // fearDist: array where fearDist[k] = P(k figures attack), or null if no fear active.
 // blurChance/blurBuggy: Blur pre-defense hit negation (0 = no blur; not applied to doom attacks).
-function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
-                            def, toBlock, targetHP, remHP,
-                            poisonStr, poisonFail,
-                            stoningFail,
-                            deathTouchFail,
-                            dispelEvilFail,
-                            exorciseFail,
-                            lifeStealMod, lifeStealRes,
-                            immolationDist, defInvulnBonus,
-                            blurChance, blurBuggy,
-                            doubleStrike, defTopFigHP,
-                            minDamageFromHits) {
-  return calcMeleeTouchOutcome(
-    fearDist, maxFigs, isDoom, atk, toHit,
-    def, toBlock, targetHP, remHP,
-    poisonStr, poisonFail,
-    stoningFail,
-    deathTouchFail,
-    dispelEvilFail,
-    exorciseFail,
-    lifeStealMod, lifeStealRes,
-    immolationDist, defInvulnBonus,
-    blurChance, blurBuggy,
-    doubleStrike, defTopFigHP,
-    minDamageFromHits
-  ).damageDist;
-}
-
 function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
                                def, toBlock, targetHP, remHP,
                                poisonStr, poisonFail,
@@ -1971,16 +1943,21 @@ function marginalB(joint) {
   return out;
 }
 
-// Touch-attack parameters for `self` striking `other` in melee.
-function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, ver) {
-  const fires = touchAttackFires(self.atk, self.baseAtk, ver);
+// Touch-attack parameters for `self` striking `other`. Shared by every delivery
+// phase (melee, thrown, ranged, gaze) — the caller supplies the phase-specific
+// gates:
+//   fires:             whether touch attacks deliver at all this phase
+//                      (per-phase touchAttackFires / Black Sleep / gaze-active rule)
+//   blockStoningDeath: Warlord removes Stoning Touch and Death Touch from ranged
+//                      attacks (physical and magical) per the Warlord manual
+function touchParams(self, other, otherResM, otherResDeath, otherResStoning, ver, fires, blockStoningDeath = false) {
   const poisonStr = fires ? abilVal(self.abilities, 'poison', 0) : 0;
   return {
     poisonStr,
     poisonFail:     poisonStr > 0 ? poisonFailProb(other.res, other.abilities, ver) : 0,
-    stoningFail:    (fires && abilDefined(self.abilities, 'stoningTouch'))
+    stoningFail:    (fires && !blockStoningDeath && abilDefined(self.abilities, 'stoningTouch'))
                       ? stoningFailProb(otherResStoning, other.abilities, self.abilities.stoningTouch, ver) : 0,
-    deathTouchFail: (fires && abilDefined(self.abilities, 'deathTouch'))
+    deathTouchFail: (fires && !blockStoningDeath && abilDefined(self.abilities, 'deathTouch'))
                       ? deathTouchFailProb(otherResDeath, other.abilities, self.abilities.deathTouch, ver) : 0,
     dispelEvilFail: (fires && hasAbil(self.abilities, 'dispelEvil'))
                       ? dispelEvilFailProb(otherResM, other.abilities, other.unitType, ver) : 0,
@@ -1991,21 +1968,17 @@ function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning
   };
 }
 
+// Touch-attack parameters for `self` striking `other` in melee.
+function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, ver) {
+  return touchParams(self, other, otherResM, otherResDeath, otherResStoning, ver,
+    touchAttackFires(self.atk, self.baseAtk, ver));
+}
+
 // Touch-attack parameters for `self` firing alongside its gaze phase against `other`.
 // Returns raw probs plus `*With` booleans gated on the gaze actually being active.
 function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, gazeActive, selfSleep, ver) {
-  const poisonStr  = abilVal(self.abilities, 'poison', 0);
-  const poisonFail = poisonStr > 0 ? poisonFailProb(other.res, other.abilities, ver) : 0;
-  const stoningFail = abilDefined(self.abilities, 'stoningTouch')
-    ? stoningFailProb(otherResStoning, other.abilities, self.abilities.stoningTouch, ver) : 0;
-  const deathTouchFail = abilDefined(self.abilities, 'deathTouch')
-    ? deathTouchFailProb(otherResDeath, other.abilities, self.abilities.deathTouch, ver) : 0;
-  const dispelEvilFail = hasAbil(self.abilities, 'dispelEvil')
-    ? dispelEvilFailProb(otherResM, other.abilities, other.unitType, ver) : 0;
-  const exorciseFail = abilDefined(self.abilities, 'exorcise')
-    ? exorciseFailProb(otherResM, other.abilities, other.unitType, self.abilities.exorcise, ver) : 0;
-  const lifeStealMod = abilDefined(self.abilities, 'lifeSteal')
-    ? lifeStealEffective(otherResDeath, other.abilities, self.abilities.lifeSteal, ver) : null;
+  const { poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, lifeStealMod }
+    = touchParams(self, other, otherResM, otherResDeath, otherResStoning, ver, true);
   const active = !selfSleep && gazeActive;
   return {
     poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, lifeStealMod,
@@ -2460,9 +2433,11 @@ function buildFirstStrikeComputes(params) {
     isCoM2,
   } = params;
 
-  // FS strike compute: like meleePhase but fear is aFearedByB only (no aFearBug)
-  // and no doubleStrike. Used for both no-Haste FS and FS+Haste FS strike.
-  const fsStrikeCompute = (sAlive, tAlive, cap) => {
+  // All three FS-block strike computes are the same single A→B melee strike
+  // (no doubleStrike — the FS block sequences strikes itself); they differ only
+  // in which fear distribution applies. `fearFor` maps (sAlive, tAlive) to the
+  // fear PMF over A's unfeared count, or null for no fear.
+  const makeAStrike = (fearFor) => (sAlive, tAlive, cap) => {
     if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
     if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
       return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
@@ -2470,8 +2445,7 @@ function buildFirstStrikeComputes(params) {
     const aImmMDist = (aImmWithMelee && tAlive > 0)
       ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
       : null;
-    const fearD = aFearedByB ? calcFearDist(sAlive, aPFear) : null;
-    const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
+    const o = calcMeleeTouchOutcome(fearFor(sAlive, tAlive), sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
       aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
@@ -2480,46 +2454,16 @@ function buildFirstStrikeComputes(params) {
     return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
   };
 
-  // Hasted 2nd strike compute: full A-side fear (aFearForCell, includes aFearBug),
-  // but doubleStrike=false (this IS the 2nd of the two Hasted strikes).
-  const secondStrikeCompute = (sAlive, tAlive, cap) => {
-    if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
-    if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
-      return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
-    }
-    const aImmMDist = (aImmWithMelee && tAlive > 0)
-      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
-      : null;
-    const fearD = aFearForCell(sAlive, tAlive);
-    const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
-      bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aLifeStealModM, bResDeath,
-      aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
-      isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-      aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
-    return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
+  return {
+    // FS strike: fear is aFearedByB only (no aFearBug — that fires after FS).
+    // Used for both no-Haste FS and FS+Haste FS strike.
+    fsStrikeCompute: makeAStrike((sAlive) => aFearedByB ? calcFearDist(sAlive, aPFear) : null),
+    // Hasted 2nd strike: full A-side fear (aFearForCell, includes aFearBug).
+    secondStrikeCompute: makeAStrike((sAlive, tAlive) => aFearForCell(sAlive, tAlive)),
+    // No-fear strike: caller passes in k_a as sAlive (fear pre-sampled). Used when
+    // FS+Haste shares one fear roll across FS and 2nd strike (rules-faithful k_a coupling).
+    aStrikeNoFear: makeAStrike(() => null),
   };
-
-  // No-fear strike: caller passes in k_a as sAlive (fear pre-sampled). Used when
-  // FS+Haste shares one fear roll across FS and 2nd strike (rules-faithful k_a coupling).
-  const aStrikeNoFear = (sAlive, tAlive, cap) => {
-    if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
-    if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
-      return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
-    }
-    const aImmMDist = (aImmWithMelee && tAlive > 0)
-      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
-      : null;
-    const o = calcMeleeTouchOutcome(null /* fearDist */, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
-      bDefVsA, bToBlockVsAMelee, b.hp, cap,
-      aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aLifeStealModM, bResDeath,
-      aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
-      isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-      aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
-    return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
-  };
-
-  return { fsStrikeCompute, secondStrikeCompute, aStrikeNoFear };
 }
 
 function buildAttackerGazePhase(active, params) {
@@ -2841,9 +2785,9 @@ function resolveCombat(a, b, opts) {
   const wofToHit = wallOfFireToHit(ver);
   const wofSingleFigure = wallOfFireSingleFigure(ver);
 
-  // --- New phase pipeline (under construction) ---
-  // Replaces the thrown+melee and melee-only branches with a single joint-state engine.
-  // Gating widens as we add phases.
+  // --- Melee phase pipeline ---
+  // All non-ranged combat runs through a single joint-state engine:
+  // thrown → attacker gaze → defender gaze → Wall of Fire → fear → melee/counter.
   // Gaze-active flags (used both by gate and by phase compute below).
   const aGazeDoomStrP = (a.effectiveDoomGaze || 0) > 0 ? a.effectiveDoomGaze : 0;
   const bGazeDoomStrP = (b.effectiveDoomGaze || 0) > 0 ? b.effectiveDoomGaze : 0;
@@ -2857,9 +2801,7 @@ function resolveCombat(a, b, opts) {
   const bGazeRangedActiveP = (b.effectiveGazeRanged || 0) > 0;
   const aGazeActiveP = !aBlackSleep && (aStoningGazeActiveP || aDeathGazeActiveP || aGazeDoomStrP > 0 || aGazeRangedActiveP);
   const bGazeActiveP = !bBlackSleep && (bStoningGazeActiveP || bDeathGazeActiveP || bGazeDoomStrP > 0 || bGazeRangedActiveP);
-  const pipelineEligible = !isRanged;
-
-  if (pipelineEligible) {
+  if (!isRanged) {
     // Guard: can A initiate melee combat at all?
     // MoM 1.31: requires effective atk > 0, effective rtb > 0, or an active gaze.
     // Other versions: uses base (pre-modifier) atk/rtb values; gaze fires regardless of effective value.
@@ -2876,7 +2818,7 @@ function resolveCombat(a, b, opts) {
       };
     }
 
-    // Touch attack params: melee-phase activation only (gaze/thrown to be added later).
+    // Touch attack params: melee-phase activation.
     const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, exorciseFail: aExorciseFailM, lifeStealMod: aLifeStealModM }
       = meleeTouchParams(a, b, bResM, bResDeath, bResStoning, opts.version);
     const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, deathTouchFail: bDeathTouchFailM, dispelEvilFail: bDispelEvilFailM, exorciseFail: bExorciseFailM, lifeStealMod: bLifeStealModM }
@@ -2884,18 +2826,11 @@ function resolveCombat(a, b, opts) {
 
     // Touch attack params: thrown-phase activation (for thrown/breath).
     const aTouchWithThrown = !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
-    const aPoisonStrT = aTouchWithThrown ? abilVal(a.abilities, 'poison', 0) : 0;
-    const aPoisonFailT = aPoisonStrT > 0 ? poisonFailProb(b.res, b.abilities, opts.version) : 0;
-    const aStoningOnT = aTouchWithThrown && abilDefined(a.abilities, 'stoningTouch');
-    const aStoningFailT = aStoningOnT ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version) : 0;
-    const aDeathTouchOnT = aTouchWithThrown && abilDefined(a.abilities, 'deathTouch');
-    const aDeathTouchFailT = aDeathTouchOnT ? deathTouchFailProb(bResDeath, b.abilities, a.abilities.deathTouch, opts.version) : 0;
-    const aDispelEvilOnT = aTouchWithThrown && hasAbil(a.abilities, 'dispelEvil');
-    const aDispelEvilFailT = aDispelEvilOnT ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
-    const aExorciseOnT = aTouchWithThrown && abilDefined(a.abilities, 'exorcise');
-    const aExorciseFailT = aExorciseOnT ? exorciseFailProb(bResM, b.abilities, b.unitType, a.abilities.exorcise, opts.version) : 0;
+    const { poisonStr: aPoisonStrT, poisonFail: aPoisonFailT, stoningFail: aStoningFailT, deathTouchFail: aDeathTouchFailT, dispelEvilFail: aDispelEvilFailT, exorciseFail: aExorciseFailT, lifeStealMod: aLifeStealModT }
+      = touchParams(a, b, bResM, bResDeath, bResStoning, opts.version, aTouchWithThrown);
+    // Whether Life Steal is carried on the thrown phase, for the display-dist count
+    // (aLifeStealModT is null both when absent and when the target is immune).
     const aLifeStealOnT = aTouchWithThrown && abilDefined(a.abilities, 'lifeSteal');
-    const aLifeStealModT = aLifeStealOnT ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
 
     // Gaze-phase touch activation (touches fire alongside gaze regardless of melee atk).
     const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, exorciseFail: aExorciseFailG, lifeStealMod: aLifeStealModG,
@@ -3427,18 +3362,8 @@ function resolveCombat(a, b, opts) {
     // from ranged (physical and magical) per the Warlord manual.
     const rangedTouchFires = touchAttackFires(a.rtb, a.baseRtb, opts.version);
     const warlordRangedTouchBlocked = ver && ver.startsWith('com2_warlord');
-    const aPoisonStrR = rangedTouchFires ? abilVal(a.abilities, 'poison', 0) : 0;
-    const aPoisonFailR = aPoisonStrR > 0 ? poisonFailProb(b.res, b.abilities, opts.version) : 0;
-    const aStoningFailR = (rangedTouchFires && !warlordRangedTouchBlocked && abilDefined(a.abilities, 'stoningTouch'))
-      ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version) : 0;
-    const aDeathTouchFailR = (rangedTouchFires && !warlordRangedTouchBlocked && abilDefined(a.abilities, 'deathTouch'))
-      ? deathTouchFailProb(bResDeath, b.abilities, a.abilities.deathTouch, opts.version) : 0;
-    const aDispelEvilFailR = (rangedTouchFires && hasAbil(a.abilities, 'dispelEvil'))
-      ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
-    const aExorciseFailR = (rangedTouchFires && abilDefined(a.abilities, 'exorcise'))
-      ? exorciseFailProb(bResM, b.abilities, b.unitType, a.abilities.exorcise, opts.version) : 0;
-    const aLifeStealModR = (rangedTouchFires && abilDefined(a.abilities, 'lifeSteal'))
-      ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
+    const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, lifeStealMod: aLifeStealModR }
+      = touchParams(a, b, bResM, bResDeath, bResStoning, opts.version, rangedTouchFires, warlordRangedTouchBlocked);
     const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
     const aImmDistR = (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0)
       ? calcAreaDamageDist(bAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(bRemHP, b.hp))

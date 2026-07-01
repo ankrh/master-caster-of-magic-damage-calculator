@@ -586,11 +586,12 @@ function updateModifiedDisplay(prefix, stats) {
 
 // --- Level Bonuses ---
 
+// Reset the stat fields to the roster unit's base values; the level bonuses themselves
+// are applied later by deriveUnitStats. Guarded on base.atk because a custom unit's
+// record may hold only the `generic` flag (see applyFullState), not base stats.
 function applyLevelBonuses(prefix) {
   const base = unitBaseStats[prefix];
-  if (!base) return;
-  const version = document.getElementById('gameVersion').value;
-  const b = getLevelBonuses(document.getElementById(prefix + 'Level').value, version);
+  if (!base || base.atk === undefined) return;
   document.getElementById(prefix + 'Atk').value = base.atk;
   document.getElementById(prefix + 'Rtb').value = base.rtb;
   document.getElementById(prefix + 'Def').value = base.def;
@@ -601,66 +602,28 @@ function applyLevelBonuses(prefix) {
 
 // --- Unit Application ---
 
-function applyUnit(prefix, unitIndex) {
-  const version = document.getElementById('gameVersion').value;
-  const units = unitDatabases[version] || [];
-  const unit = units.find(u => u.id === unitIndex);
-  if (!unit) return;
-
-  const unitRtb = (unit.ranged && parseInt(unit.ranged) > 0) ? parseInt(unit.ranged)
-                : (unit.breath && parseInt(unit.breath) > 0) ? parseInt(unit.breath)
-                : (unit.thrown_breath && parseInt(unit.thrown_breath) > 0) ? parseInt(unit.thrown_breath) : 0;
+// JS-side records for a roster unit (base stats + intrinsic identity). Shared by
+// applyUnit and updateUnitLock's value-preserving restore path.
+function setRosterUnitRecords(prefix, unit) {
   unitBaseStats[prefix] = {
     atk: unit.melee, def: unit.defense, res: unit.resist, hp: unit.hp,
-    rtb: unitRtb,
+    rtb: predefinedUnitRtb(unit),
     toHitMod: unit.to_hit || 0,
     generic: unit.category === 'Generic',
   };
   unitIdentity[prefix] = { race: unit.race, name: unit.name };
+}
 
-  document.getElementById(prefix + 'Figs').value = unit.figures || 1;
-  document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
-  document.getElementById(prefix + 'ToBlkMod').value = 0;
-  document.getElementById(prefix + 'Dmg').value = 0;
-
-  const rawRtb = (unit.ranged_type && unit.ranged_type !== 'none') ? unit.ranged_type
-               : (unit.thrown_breath_type && unit.thrown_breath_type !== 'none') ? unit.thrown_breath_type
-               : 'none';
-  const rtbType = RANGED_TYPE_NORMALIZE[rawRtb] || rawRtb;
-  document.getElementById(prefix + 'RtbType').value = rtbType;
-
-  const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
-  if (unitTypeSel) {
-    const cat = unit.category || '';
-    const hasFantasticAbility = (unit.abilities || []).some(a => a === 'Fantastic' || a === 'Fantastic=1');
-    const isFantastic = cat.endsWith(' Creatures') || hasFantasticAbility;
-    if (cat === 'Heroes') {
-      unitTypeSel.value = 'hero';
-    } else if (isFantastic) {
-      const realmMap = { 'Nature': 'nature', 'Sorcery': 'sorcery', 'Chaos': 'chaos',
-                         'Life': 'life', 'Death': 'death', 'Arcane': 'arcane',
-                         'Nature Creatures': 'nature', 'Sorcery Creatures': 'sorcery', 'Chaos Creatures': 'chaos',
-                         'Life Creatures': 'life', 'Death Creatures': 'death', 'Arcane Creatures': 'arcane' };
-      const realm = realmMap[cat] || 'arcane';
-      unitTypeSel.value = 'fantastic_' + realm;
-    } else {
-      unitTypeSel.value = 'normal';
-    }
-  }
-
-  // Clear any previous unit-innate locks before re-applying
+function clearUnitInnateLocks(prefix) {
   const abilCont = document.getElementById(prefix + 'Abilities');
   abilCont.querySelectorAll('.abil-unit-locked').forEach(item => {
     item.classList.remove('abil-unit-locked');
     item.querySelectorAll('input, select').forEach(inp => { inp.disabled = false; });
   });
+}
 
-  const abilValues = parseAbilitiesFromUnit(unit);
-  clearAbilities(prefix, 'ability');
-  applyAbilities(prefix, abilValues, 'ability');
-  applyLevelBonuses(prefix);
-
-  // Mark active unit-ability items that are innate to this predefined unit.
+// Mark active unit-ability items that are innate to a predefined unit.
+function markUnitInnateLocks(prefix, abilValues) {
   for (const abil of abilityUiDefs()) {
     if (abil.source !== 'ability') continue;
     const val = abilValues[abil.key];
@@ -671,11 +634,39 @@ function applyUnit(prefix, unitIndex) {
     if (!item) continue;
     item.classList.add('abil-unit-locked');
   }
+}
+
+function applyUnit(prefix, unitIndex) {
+  const version = document.getElementById('gameVersion').value;
+  const units = unitDatabases[version] || [];
+  const unit = units.find(u => u.id === unitIndex);
+  if (!unit) return;
+
+  setRosterUnitRecords(prefix, unit);
+
+  document.getElementById(prefix + 'Figs').value = unit.figures || 1;
+  document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
+  document.getElementById(prefix + 'ToBlkMod').value = 0;
+  document.getElementById(prefix + 'Dmg').value = 0;
+  document.getElementById(prefix + 'RtbType').value = predefinedUnitRtbType(unit);
+
+  const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
+  if (unitTypeSel) unitTypeSel.value = predefinedUnitType(unit);
+
+  clearUnitInnateLocks(prefix);
+  const abilValues = parseAbilitiesFromUnit(unit);
+  clearAbilities(prefix, 'ability');
+  applyAbilities(prefix, abilValues, 'ability');
+  applyLevelBonuses(prefix);
+  markUnitInnateLocks(prefix, abilValues);
 
   refreshAbilityFieldVisibility();
 }
 
-function updateUnitLock(prefix) {
+// applyValues=false is the state-restore path: rebuild the JS-side unit records and all
+// lock styling for the current selection WITHOUT writing any field values, which on
+// restore may be hand-edited (applyUnit/applyLevelBonuses would clobber them).
+function updateUnitLock(prefix, applyValues = true) {
   const sel = document.getElementById(prefix + 'Unit');
   const fields = sel.closest('.panel').querySelector('.panel-fields');
   const abilContent = document.getElementById(prefix + 'Abilities');
@@ -686,46 +677,42 @@ function updateUnitLock(prefix) {
   const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
   if (unitTypeSel) unitTypeSel.disabled = !isCustom;
 
-  const levelSel = document.getElementById(prefix + 'Level');
-  const weaponSel = document.getElementById(prefix + 'Weapon');
   if (!isCustom) {
     const version = document.getElementById('gameVersion').value;
     const units = unitDatabases[version] || [];
     const unit = units.find(u => u.id === parseInt(sel.value));
-    const isHero = unit && unit.category === 'Heroes';
-    const isZombies = unit && unit.name === 'Zombies';
-    if (isHero) {
-      levelSel.value = 'normal';
-      if (!isZombies) weaponSel.value = 'normal';
+    if (applyValues) {
+      const locks = loadoutLockState(prefix);
+      if (locks.level) document.getElementById(prefix + 'Level').value = 'normal';
+      if (locks.weapon) document.getElementById(prefix + 'Weapon').value = 'normal';
+      applyUnit(prefix, parseInt(sel.value));
+    } else if (unit) {
+      setRosterUnitRecords(prefix, unit);
+      clearUnitInnateLocks(prefix);
+      markUnitInnateLocks(prefix, parseAbilitiesFromUnit(unit));
     }
-    applyUnit(prefix, parseInt(sel.value));
-    levelSel.disabled = isHero;
-    weaponSel.classList.toggle('weapon-locked', isHero && !isZombies);
   } else {
-    delete unitBaseStats[prefix];
-    delete unitIdentity[prefix];
-    weaponSel.classList.remove('weapon-locked');
-    // Clear unit-innate locks when switching to custom
-    const abilContCustom = document.getElementById(prefix + 'Abilities');
-    abilContCustom.querySelectorAll('.abil-unit-locked').forEach(item => {
-      item.classList.remove('abil-unit-locked');
-      item.querySelectorAll('input, select').forEach(inp => { inp.disabled = false; });
-    });
+    if (applyValues) {
+      delete unitBaseStats[prefix];
+      delete unitIdentity[prefix];
+    }
+    // On restore, keep the identity/generic records applyFullState installed from the
+    // blob (synthetic test units rely on them).
+    clearUnitInnateLocks(prefix);
     updateCustomLevelState(prefix);
   }
+  updateLoadoutLocks(prefix);
 }
 
+// Selection-time value resets for a custom unit whose type disallows a loadout
+// (values a preset sets afterwards are re-applied by applyPreset, so they survive).
 function updateCustomLevelState(prefix) {
   const sel = document.getElementById(prefix + 'Unit');
   if (sel.value !== 'custom') return;
-  const levelSel = document.getElementById(prefix + 'Level');
-  const weaponSel = document.getElementById(prefix + 'Weapon');
-  const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
-  const isHero = unitTypeSel && unitTypeSel.value === 'hero';
-  levelSel.disabled = isHero;
-  if (isHero) levelSel.value = 'normal';
-  weaponSel.classList.toggle('weapon-locked', isHero);
-  if (isHero) weaponSel.value = 'normal';
+  const locks = loadoutLockState(prefix);
+  if (locks.level) document.getElementById(prefix + 'Level').value = 'normal';
+  if (locks.weapon) document.getElementById(prefix + 'Weapon').value = 'normal';
+  updateLoadoutLocks(prefix);
 }
 
 // --- Swap ---
@@ -773,11 +760,7 @@ function resetUnitFields(prefix) {
   delete unitBaseStats[prefix];
   delete unitIdentity[prefix];
 
-  const abilCont = document.getElementById(prefix + 'Abilities');
-  abilCont.querySelectorAll('.abil-unit-locked').forEach(item => {
-    item.classList.remove('abil-unit-locked');
-    item.querySelectorAll('input, select').forEach(inp => { inp.disabled = false; });
-  });
+  clearUnitInnateLocks(prefix);
   updateUnitLock(prefix);
 }
 
@@ -1114,19 +1097,12 @@ function renderLifeStealSummary(result) {
   const el = document.getElementById('lifeStealSummary');
   if (!el) return;
 
-  function expectedValue(dist) {
-    if (!dist) return 0;
-    let ev = 0;
-    for (let d = 0; d < dist.length; d++) ev += d * dist[d];
-    return ev;
-  }
-
   const aLS = (result.aLifeStealExpected != null)
     ? result.aLifeStealExpected
-    : (result.aLifeStealDist ? expectedValue(result.aLifeStealDist) : 0);
+    : distExpectedValue(result.aLifeStealDist);
   const bLS = (result.bLifeStealExpected != null)
     ? result.bLifeStealExpected
-    : (result.bLifeStealDist ? expectedValue(result.bLifeStealDist) : 0);
+    : distExpectedValue(result.bLifeStealDist);
 
   if (aLS < 0.001 && bLS < 0.001) {
     el.style.display = 'none';
@@ -1245,6 +1221,57 @@ function updateGlobalEnchantmentVisibility(version) {
   }
 }
 
+// Which of the level/weapon/armor selects the engine disregards for the current unit
+// (see deriveUnitStats): fantastic units lock all three — except Zombies' weapons and,
+// in Warlord, level while Spirit Link is active — heroes lock level+weapon, and armor
+// additionally doesn't exist in MoM versions.
+function loadoutLockState(prefix) {
+  const version = document.getElementById('gameVersion').value;
+  const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
+  const unitSel = document.getElementById(prefix + 'Unit');
+  let isHero, isFantastic, isZombies = false;
+  if (unitSel.value === 'custom') {
+    const unitType = document.getElementById(prefix + 'Abil_unitType').value;
+    isHero = unitType === 'hero';
+    isFantastic = String(unitType).startsWith('fantastic_');
+  } else {
+    const unit = (unitDatabases[version] || []).find(u => u.id === parseInt(unitSel.value));
+    isHero = !!unit && unit.category === 'Heroes';
+    isFantastic = !!unit && predefinedUnitType(unit).startsWith('fantastic_');
+    isZombies = !!unit && unit.name === 'Zombies';
+  }
+  const spiritLinkEl = document.getElementById(prefix + 'Abil_spiritLink');
+  const spiritLink = version.startsWith('com2_warlord') && !!(spiritLinkEl && spiritLinkEl.checked);
+  return {
+    level: isHero || (isFantastic && !spiritLink),
+    weapon: (isHero || isFantastic) && !isZombies,
+    armor: isHero || isFantastic || isMoM,
+    isMoM,
+  };
+}
+
+// Single owner of the disabled + greyed-label styling for the three loadout selects,
+// so all three rows grey out consistently. Values are deliberately NOT reset here
+// (selection-time resets live in updateUnitLock / updateCustomLevelState) so state
+// restores and presets never get clobbered — except MoM armor, where the control
+// doesn't exist and a leftover orihalcon value would still reach the engine.
+function updateLoadoutLocks(prefix) {
+  const locks = loadoutLockState(prefix);
+  for (const [field, locked] of [['Level', locks.level], ['Weapon', locks.weapon], ['Armor', locks.armor]]) {
+    const sel = document.getElementById(prefix + field);
+    const label = document.querySelector(`label[for="${prefix + field}"]`);
+    sel.disabled = locked;
+    if (label) label.classList.toggle('disabled-field', locked);
+  }
+  // Armor quality doesn't exist in MoM: hide the row entirely (and reset the value so
+  // a leftover orihalcon never reaches the engine).
+  const armorSel = document.getElementById(prefix + 'Armor');
+  const armorLabel = document.querySelector(`label[for="${prefix}Armor"]`);
+  armorSel.classList.toggle('version-hidden', locks.isMoM);
+  if (armorLabel) armorLabel.classList.toggle('version-hidden', locks.isMoM);
+  if (locks.isMoM) armorSel.value = 'normal';
+}
+
 function updateTypeVisibility() {
   ['aRtbType', 'bRtbType'].forEach(id => {
     const sel = document.getElementById(id);
@@ -1252,20 +1279,11 @@ function updateTypeVisibility() {
     if (input) input.classList.toggle('disabled-field', sel.value === 'none');
   });
 
-  // Armor type is CoM/CoM2-only; grey it out for MoM versions.
   const version = document.getElementById('gameVersion').value;
-  const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
-  ['aArmor', 'bArmor'].forEach(id => {
-    const el = document.getElementById(id);
-    const label = document.querySelector(`label[for="${id}"]`);
-    el.classList.toggle('disabled-field', isMoM);
-    if (label) label.classList.toggle('disabled-field', isMoM);
-    el.disabled = isMoM;
-    if (isMoM) el.value = 'normal';
-  });
+  updateLoadoutLocks('a');
+  updateLoadoutLocks('b');
 
   // Version restrictions on enchantments.
-  const isWarlord = version.startsWith('com2_warlord_');
   function subgroupAllowed(subgroup) {
     return subgroupAllowedForVersion(subgroup, version);
   }
@@ -1313,16 +1331,11 @@ function updateTypeVisibility() {
 
   // Version restrictions on global combat enchantments. Disable (and clear) toggles
   // whose effect does not exist in the selected version, so they can't be set to a
-  // no-op state. True Light: MoM & Warlord only (removed in CoM 1 & 2).
-  // Hurricane: Warlord only. Pox host: Warlord only.
-  const globalVersionGate = {
-    trueLight: isMoM || isWarlord,
-    hurricane: isWarlord,
-    poxHost: isWarlord,
-  };
-  for (const [id, allowed] of Object.entries(globalVersionGate)) {
+  // no-op state. The allowed-versions rules live in globalEnchantmentAllowedForVersion.
+  for (const id of ['trueLight', 'hurricane', 'poxHost']) {
     const gEl = document.getElementById(id);
     if (!gEl) continue;
+    const allowed = globalEnchantmentAllowedForVersion(id, version);
     if (!allowed) gEl.checked = false;
     gEl.disabled = !allowed;
     const gLabel = gEl.closest('.check-label');
@@ -1341,17 +1354,6 @@ function updateTypeVisibility() {
   document.getElementById('rangedDistLabel').classList.remove('disabled-field');
   rangedDist.classList.remove('disabled-field');
   rangedDist.disabled = false;
-
-  for (const prefix of ['a', 'b']) {
-    const armorSel = document.getElementById(prefix + 'Armor');
-    if (!armorSel) continue;
-    if (isMoM) {
-      armorSel.value = 'normal';
-      armorSel.disabled = true;
-    } else {
-      armorSel.disabled = false;
-    }
-  }
 }
 
 function refreshAbilityFieldVisibility() {
@@ -1493,6 +1495,7 @@ function collectFullState() {
 // value (skip-missing for forward-compat), then visibility.
 function applyFullState(blob) {
   if (!blob || blob.v !== 1) return;
+  const prevRestoring = _restoring; // preserve an outer guard (getDefaultIds' dance)
   _restoring = true;
   try {
     const versionSel = document.getElementById('gameVersion');
@@ -1518,17 +1521,18 @@ function applyFullState(blob) {
         else el.value = val;
       }
     }
-    // Reflect aUnit/bUnit selections in the combobox search fields without re-running
-    // applyUnit/updateUnitLock (either would overwrite the restored, possibly
-    // hand-edited, fields via applyUnit).
+    // Reflect aUnit/bUnit selections in the combobox search fields, then rebuild the
+    // JS-side unit records (unitBaseStats) and lock styling for the restored selection
+    // via the value-preserving path — a plain updateUnitLock would re-run applyUnit and
+    // overwrite the restored, possibly hand-edited, fields.
     syncUnitDisplay('a');
     syncUnitDisplay('b');
+    updateUnitLock('a', false);
+    updateUnitLock('b', false);
     refreshAbilityFieldVisibility();
-    updateTypeVisibility();
-    updateAbilityVisibility();
     updateGlobalEnchantmentVisibility(versionSel ? versionSel.value : document.getElementById('gameVersion').value);
   } finally {
-    _restoring = false;
+    _restoring = prevRestoring;
   }
   recalculate();
 }
@@ -1902,12 +1906,13 @@ function matrixPropertyCandidates(box) {
       .filter(d => !d.rangedOnly || isRanged)
       .map(d => ({ key: d.key, label: d.label }));
   }
+  const version = document.getElementById('gameVersion').value;
   const list = [
     { key: 'level',  label: 'Unit level' },
     { key: 'weapon', label: 'Weapon type' },
-    { key: 'armor',  label: 'Armor type' },
   ];
-  const version = document.getElementById('gameVersion').value;
+  // Armor quality doesn't exist in MoM (see armorExists in deriveUnitStats).
+  if (!version.startsWith('mom_')) list.push({ key: 'armor', label: 'Armor type' });
   for (const abil of abilityUiDefs()) {
     if (abil.source !== 'enchantment') continue;
     if (!subgroupAllowedForVersion(abil.subgroup, version)) continue;
@@ -2071,6 +2076,7 @@ function renderMatrixPropList(box) {
     if (!def) return false;
     if (box === 'global' && def.rangedOnly && activeMatrixMode !== 'ranged') return false;
     if (def.abil && !subgroupAllowedForVersion(def.abil.subgroup, version)) return false;
+    if (row.key === 'armor' && version.startsWith('mom_')) return false; // no armor in MoM
     return true;
   });
   if (!rows.length) {
@@ -2305,32 +2311,6 @@ function distExpectedValue(dist) {
   let ev = 0;
   for (let d = 0; d < dist.length; d++) ev += d * dist[d];
   return ev;
-}
-
-function formatMeleeMatrixRatio(result) {
-  const pctToDefender = result.bRemHP > 0 ? distExpectedValue(result.totalDmgToB) / result.bRemHP : 0;
-  const pctToAttacker = result.aRemHP > 0 ? distExpectedValue(result.totalDmgToA) / result.aRemHP : 0;
-
-  if (pctToAttacker <= 1e-12) {
-    if (pctToDefender <= 1e-12) return '0.00';
-    return '∞';
-  }
-  return (pctToDefender / pctToAttacker).toFixed(2);
-}
-
-function meleeMatrixRatioValue(result) {
-  const pctToDefender = result.bRemHP > 0 ? distExpectedValue(result.totalDmgToB) / result.bRemHP : 0;
-  const pctToAttacker = result.aRemHP > 0 ? distExpectedValue(result.totalDmgToA) / result.aRemHP : 0;
-
-  if (pctToAttacker <= 1e-12) {
-    if (pctToDefender <= 1e-12) return 0;
-    return Infinity;
-  }
-  return pctToDefender / pctToAttacker;
-}
-
-function rangedMatrixDamageValue(result) {
-  return result.bRemHP > 0 ? distExpectedValue(result.totalDmgToB) / result.bRemHP : 0;
 }
 
 function formatMatrixRatioValue(value, matrixMode) {
@@ -2613,45 +2593,6 @@ self.onmessage = function(e) {
 };
 `;
 
-function meleeMatrixFractionalWinCount(values) {
-  if (values.length === 1) return values[0];
-
-  let greaterCount = 0;
-  let highestBelow = -Infinity;
-  let lowestAbove = Infinity;
-  let hasExactTie = false;
-
-  for (const value of values) {
-    if (value > 1) {
-      greaterCount += 1;
-      lowestAbove = Math.min(lowestAbove, value);
-    } else if (value < 1) {
-      highestBelow = Math.max(highestBelow, value);
-    } else {
-      hasExactTie = true;
-    }
-  }
-
-  if (greaterCount === values.length) return values.length;
-  if (greaterCount === 0 || hasExactTie || highestBelow === -Infinity || lowestAbove === Infinity) {
-    return greaterCount;
-  }
-
-  const thresholdFraction = (1 - highestBelow) / (lowestAbove - highestBelow);
-  return greaterCount + (1 - thresholdFraction);
-}
-
-function meleeMatrixAttackerWinCount(cells, defenderIndexes) {
-  return meleeMatrixFractionalWinCount(defenderIndexes.map(defenderIndex => cells[defenderIndex].ratio));
-}
-
-function meleeMatrixDefenderWinCount(rows, defenderIndex) {
-  return meleeMatrixFractionalWinCount(rows.map(row => {
-    const attackerRatio = row.cells[defenderIndex].ratio;
-    return attackerRatio > 0 ? 1 / attackerRatio : Infinity;
-  }));
-}
-
 function cappedLog10Ratio(value) {
   if (value <= 0) return -2;
   if (!Number.isFinite(value)) return 2;
@@ -2730,6 +2671,18 @@ async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matr
   const opts = { isRanged: isRangedMatrix, version, wallOfFire };
   const allDefenderStats = defenders.map(d => d.stats);
   const rowRatios = new Array(attackers.length);
+
+  // No attackers (e.g. a ranged matrix where nothing has a ranged attack): with zero
+  // workers the completion promise below would never settle, hanging the modal.
+  if (!attackers.length) {
+    return {
+      allAttackerIndexes: [],
+      allDefenderIndexes: allDefenders.map((_, i) => i),
+      rows: [],
+      defenders,
+      mode: matrixMode,
+    };
+  }
 
   if (!matrixWorkerBlobUrl) {
     const scriptAbsUrl = (name) =>
@@ -3283,15 +3236,24 @@ initUnitCombobox('b');
 
 document.getElementById('aLevel').addEventListener('change', () => {
   applyLevelBonuses('a');
+  refreshAbilityFieldVisibility();
   recalculate();
 });
 document.getElementById('bLevel').addEventListener('change', () => {
   applyLevelBonuses('b');
+  refreshAbilityFieldVisibility();
   recalculate();
 });
 
-// Global input/change handler for all fields
+// Global input/change handler for all fields. Controls with dedicated handlers above
+// (which already end in a recalc) and the transient search boxes are excluded so a
+// single interaction doesn't recalculate twice (or at all, for the search filters).
+const GLOBAL_RECALC_EXCLUDE = new Set([
+  'gameVersion', 'aUnit', 'bUnit', 'aLevel', 'bLevel',
+  'presetSearch', 'aUnitSearch', 'bUnitSearch',
+]);
 document.querySelectorAll('input, select').forEach(el => {
+  if (GLOBAL_RECALC_EXCLUDE.has(el.id) || el.id.startsWith('matrix')) return;
   el.addEventListener('input', () => { updateTypeVisibility(); updateAbilityVisibility(); recalculate(); });
   el.addEventListener('change', () => { updateTypeVisibility(); updateAbilityVisibility(); recalculate(); });
 });

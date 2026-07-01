@@ -238,11 +238,18 @@ function deriveUnitStats(input) {
   // Rust targets an enemy regular (non-fantastic) unit; fantastic creatures are immune.
   const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust)
     && !String(unitTypeRaw || '').startsWith('fantastic_');
-  const weaponInput = loadoutEligible ? input.weapon : 'normal';
+  // Zombies are the one fantastic unit affected by weapon quality: a unit raised as
+  // Zombies keeps its magic/mithril/adamantium weapons (a known game quirk), so weapon
+  // eligibility gets a Zombies exception while armor and level stay fantastic-gated.
+  const weaponEligible = loadoutEligible || unitName === 'Zombies';
+  const weaponInput = weaponEligible ? input.weapon : 'normal';
   const weaponPreRust = (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
   const weapon = rustActive ? 'normal' : weaponPreRust;
   const wpn = weaponBonus(weapon);
-  const armor = loadoutEligible ? input.armor : 'normal';
+  // Armor quality: CoM/CoM2/Warlord only (doesn't exist in MoM), and unlike
+  // weapons, heroes get none either.
+  const armorExists = !version.startsWith('mom_');
+  const armor = (armorExists && loadoutEligible && unitTypeRaw !== 'hero') ? input.armor : 'normal';
 
   const rtbTypeRaw = input.rtbType;
   let rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
