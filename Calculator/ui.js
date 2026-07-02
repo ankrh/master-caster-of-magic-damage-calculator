@@ -2084,6 +2084,7 @@ function renderMatrixPropList(box) {
     empty.className = 'empty';
     empty.textContent = 'None';
     list.appendChild(empty);
+    updateMatrixDrawerBadges();
     return;
   }
   for (const row of rows) {
@@ -2162,6 +2163,33 @@ function renderMatrixPropList(box) {
     }
 
     list.appendChild(li);
+  }
+  updateMatrixDrawerBadges();
+}
+
+// Live badge counts on the two matrix drawer tabs.
+// Settings: total property rows across the three lists. Filters: how many of
+// the two name textareas are non-empty (0-2).
+function updateMatrixDrawerBadges() {
+  const settingsBadge = document.getElementById('matrixSettingsBadge');
+  if (settingsBadge) {
+    const n = ['matrixAttackerSettings', 'matrixDefenderSettings', 'matrixGlobalOptions']
+      .reduce((sum, id) => {
+        const ul = document.getElementById(id);
+        return sum + (ul ? ul.querySelectorAll('li.matrix-prop-row').length : 0);
+      }, 0);
+    settingsBadge.textContent = String(n);
+    settingsBadge.classList.toggle('zero', n === 0);
+  }
+  const filtersBadge = document.getElementById('matrixFiltersBadge');
+  if (filtersBadge) {
+    const n = ['matrixAttackerNameFilter', 'matrixDefenderNameFilter']
+      .reduce((sum, id) => {
+        const el = document.getElementById(id);
+        return sum + (el && el.value.trim() ? 1 : 0);
+      }, 0);
+    filtersBadge.textContent = String(n);
+    filtersBadge.classList.toggle('zero', n === 0);
   }
 }
 
@@ -2993,7 +3021,81 @@ async function swapMatrixSides() {
   matrixPropertyState.a = matrixPropertyState.b;
   matrixPropertyState.b = tmpRows;
   saveMatrixPropertyState();
+  updateMatrixDrawerBadges();
   await renderMatrixSnapshot();
+}
+
+// Wire the two left-edge matrix drawers: opening one closes the other; the
+// overlay or a tab closes. Mirrors the presets drawer interaction pattern.
+function initMatrixDrawers() {
+  const overlay = document.getElementById('matrixDrawerOverlay');
+  const drawers = [
+    { drawer: document.getElementById('matrixSettingsDrawer'), toggle: document.getElementById('matrixSettingsToggle') },
+    { drawer: document.getElementById('matrixFiltersDrawer'), toggle: document.getElementById('matrixFiltersToggle') },
+  ].filter(d => d.drawer && d.toggle);
+  if (!drawers.length || !overlay) return;
+
+  function closeAll() {
+    drawers.forEach(d => {
+      d.drawer.classList.remove('open');
+      d.toggle.setAttribute('aria-expanded', 'false');
+    });
+    overlay.classList.remove('active');
+  }
+  function openOne(target) {
+    drawers.forEach(d => {
+      const isTarget = d === target;
+      d.drawer.classList.toggle('open', isTarget);
+      d.toggle.setAttribute('aria-expanded', isTarget ? 'true' : 'false');
+    });
+    overlay.classList.add('active');
+  }
+  drawers.forEach(d => {
+    d.toggle.addEventListener('click', () => {
+      if (d.drawer.classList.contains('open')) closeAll();
+      else openOne(d);
+    });
+  });
+  overlay.addEventListener('click', closeAll);
+}
+
+// Scroll gestures that start on the matrix's sticky header cells (top row or
+// name column) move the modal's page scroller vertically instead of the table,
+// so the header/footer content stays reachable when the matrix fills the
+// screen. Horizontal deltas still pan the table. Listeners are delegated on
+// the wrap since the table is re-rendered on every snapshot.
+function initMatrixHeaderScrollRouting() {
+  const wrap = document.getElementById('matrixTableWrap');
+  const scroller = document.querySelector('#matrixModal .modal-scroll');
+  if (!wrap || !scroller) return;
+  const onHeader = target =>
+    target instanceof Element && !!target.closest('.matrix-table thead th, .matrix-table tbody th');
+
+  wrap.addEventListener('wheel', e => {
+    if (!onHeader(e.target)) return;
+    e.preventDefault();
+    scroller.scrollTop += e.deltaY;
+    wrap.scrollLeft += e.deltaX;
+  }, { passive: false });
+
+  // Touch drags: header cells have touch-action:none, so native panning never
+  // starts there and these handlers own the gesture.
+  let lastTouch = null;
+  wrap.addEventListener('touchstart', e => {
+    lastTouch = (e.touches.length === 1 && onHeader(e.target))
+      ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      : null;
+  }, { passive: true });
+  wrap.addEventListener('touchmove', e => {
+    if (!lastTouch || e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    scroller.scrollTop += lastTouch.y - t.clientY;
+    wrap.scrollLeft += lastTouch.x - t.clientX;
+    lastTouch = { x: t.clientX, y: t.clientY };
+  }, { passive: false });
+  wrap.addEventListener('touchend', () => { lastTouch = null; });
+  wrap.addEventListener('touchcancel', () => { lastTouch = null; });
 }
 
 const MATRIX_FILTER_STORAGE_KEY = 'matrixNameFilters_v1';
@@ -3052,11 +3154,6 @@ function initMatrixModal() {
   const sortDefenders = document.getElementById('matrixSortDefenders');
   const sortAttackers = document.getElementById('matrixSortAttackers');
   if (!openBtn || !modal || !closeBtn) return;
-  [openBtn, rangedOpenBtn].forEach(btn => {
-    if (!btn) return;
-    btn.style.width = '190px';
-    btn.style.height = '55px';
-  });
   resetMeleeMatrixControls();
 
   let pendingFilterRender = 0;
@@ -3080,6 +3177,7 @@ function initMatrixModal() {
       try {
         activeMatrixMode = matrixMode;
         await renderMatrixSnapshot();
+        updateMatrixDrawerBadges();
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
         const tip = document.getElementById('tt');
@@ -3125,8 +3223,10 @@ function initMatrixModal() {
   });
   [attackerFilter, defenderFilter].forEach(el => {
     if (!el) return;
-    el.addEventListener('input', () => { saveMatrixFilters(); scheduleFilterRender(); });
+    el.addEventListener('input', () => { saveMatrixFilters(); updateMatrixDrawerBadges(); scheduleFilterRender(); });
   });
+  initMatrixDrawers();
+  initMatrixHeaderScrollRouting();
   modal.addEventListener('click', e => {
     if (e.target === modal) close();
   });
@@ -3432,7 +3532,13 @@ initStateFromSources();
     return false;
   }
 
+  // Touch devices emit emulated mouse events after a tap; ignore mouse-driven
+  // tooltip tracking briefly after any touch so long-press (below) owns the
+  // tooltip there while real mice keep hover behavior on hybrid devices.
+  let lastTouchAt = 0;
+
   document.addEventListener('mousemove', e => {
+    if (Date.now() - lastTouchAt < 800) return;
     if (isComboboxOpen(e.clientX, e.clientY)) { tip.style.display = 'none'; return; }
     const el = tooltipElementAtPoint(e.clientX, e.clientY);
     const text = el && el.dataset && el.dataset.tooltip;
@@ -3451,6 +3557,53 @@ initStateFromSources();
     }
   });
   document.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+
+  // Touch: long-press (500ms, without moving) on a tooltip-bearing control
+  // shows its tooltip anchored to the control; a plain tap keeps its normal
+  // meaning (toggle/focus) and dismisses any visible tooltip, as does scrolling.
+  function showTipForElement(el) {
+    tip.textContent = el.dataset.tooltip;
+    tip.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    let x = Math.min(r.left, window.innerWidth - tip.offsetWidth - 6);
+    let y = r.bottom + 8;
+    if (y + tip.offsetHeight > window.innerHeight) y = Math.max(6, r.top - tip.offsetHeight - 8);
+    tip.style.left = Math.max(6, x) + 'px';
+    tip.style.top = y + 'px';
+  }
+
+  let pressTimer = null;
+  let pressShown = false;
+  document.addEventListener('touchstart', e => {
+    lastTouchAt = Date.now();
+    clearTimeout(pressTimer);
+    pressShown = false;
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (isComboboxOpen(t.clientX, t.clientY)) { tip.style.display = 'none'; return; }
+    const el = tooltipElementAtPoint(t.clientX, t.clientY);
+    if (el) {
+      pressTimer = setTimeout(() => { pressShown = true; showTipForElement(el); }, 500);
+    } else {
+      tip.style.display = 'none';
+    }
+  }, { passive: true });
+  document.addEventListener('touchmove', () => {
+    lastTouchAt = Date.now();
+    clearTimeout(pressTimer);
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    lastTouchAt = Date.now();
+    clearTimeout(pressTimer);
+    // After a long-press, suppress the synthetic click so the control isn't
+    // toggled, and leave the tooltip up until the next tap or scroll.
+    if (pressShown && e.cancelable) e.preventDefault();
+    else if (!pressShown) tip.style.display = 'none';
+  }, { passive: false });
+  document.addEventListener('touchcancel', () => { clearTimeout(pressTimer); }, { passive: true });
+  document.addEventListener('scroll', () => {
+    if (Date.now() - lastTouchAt < 1500) tip.style.display = 'none';
+  }, true);
 })();
 
 // --- Presets Drawer ---

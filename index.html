@@ -33,7 +33,7 @@
 <div class="presets-drawer" id="presetsDrawer">
   <div class="presets-inner">
     <h2>Test Cases</h2>
-    <input type="text" id="presetSearch" class="preset-search" placeholder="Filter (comma-separated terms)" autocomplete="off">
+    <input type="text" id="presetSearch" class="preset-search" placeholder="Filter (comma-separated terms)" autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
     <div id="presetButtons"></div>
   </div>
   <button class="presets-toggle" id="presetsToggle" title="Toggle test cases panel" aria-expanded="false">Test Cases</button>
@@ -102,7 +102,7 @@
   <div class="panel" id="panelA">
     <div class="panel-header">
       <h2>Attacker</h2>
-      <div class="unit-combobox"><input type="text" id="aUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="aUnitList"></div><input type="hidden" id="aUnit" value="custom"></div>
+      <div class="unit-combobox"><input type="text" id="aUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off"><div class="unit-dropdown-list" id="aUnitList"></div><input type="hidden" id="aUnit" value="custom"></div>
     </div>
     <div class="panel-fields">
       <label for="aAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
@@ -212,7 +212,7 @@
   <div class="panel" id="panelB">
     <div class="panel-header">
       <h2>Defender</h2>
-      <div class="unit-combobox"><input type="text" id="bUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="bUnitList"></div><input type="hidden" id="bUnit" value="custom"></div>
+      <div class="unit-combobox"><input type="text" id="bUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off"><div class="unit-dropdown-list" id="bUnitList"></div><input type="hidden" id="bUnit" value="custom"></div>
     </div>
     <div class="panel-fields">
       <label for="bAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
@@ -319,6 +319,7 @@
 
 <div id="matrixModal" class="modal-overlay" aria-hidden="true">
   <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="matrixTitle">
+    <div class="modal-scroll">
     <div class="modal-header">
       <div class="modal-title-block">
         <h2 id="matrixTitle">Melee Matrix</h2>
@@ -338,15 +339,21 @@
           Sort attackers
         </label>
       </div>
-      <button id="matrixClose" class="modal-close" type="button" aria-label="Close matrix">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="matrix-enchantment-summary">
+      <div id="matrixTableWrap" class="matrix-table-wrap"></div>
+    </div>
+    </div><!-- /modal-scroll -->
+
+    <button id="matrixClose" class="modal-close" type="button" aria-label="Close matrix">&times;</button>
+
+    <div class="matrix-drawer" id="matrixSettingsDrawer">
+      <div class="matrix-drawer-inner">
         <button id="matrixSwapSides" class="matrix-swap-btn" type="button">Swap attacker/defender</button>
         <section class="matrix-enchantment-box">
           <h3>Attacker settings</h3>
           <div class="matrix-prop-combobox unit-combobox">
-            <input type="text" id="matrixAPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off">
+            <input type="text" id="matrixAPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
             <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixAPropList"></div>
           </div>
           <ul id="matrixAttackerSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
@@ -354,7 +361,7 @@
         <section class="matrix-enchantment-box">
           <h3>Defender settings</h3>
           <div class="matrix-prop-combobox unit-combobox">
-            <input type="text" id="matrixBPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off">
+            <input type="text" id="matrixBPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
             <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixBPropList"></div>
           </div>
           <ul id="matrixDefenderSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
@@ -362,23 +369,31 @@
         <section class="matrix-enchantment-box">
           <h3>Global settings</h3>
           <div class="matrix-prop-combobox unit-combobox">
-            <input type="text" id="matrixGlobalPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off">
+            <input type="text" id="matrixGlobalPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
             <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixGlobalPropList"></div>
           </div>
           <ul id="matrixGlobalOptions" class="matrix-enchantment-list matrix-prop-list"></ul>
         </section>
-        <section class="matrix-name-filter-box" aria-label="Melee matrix name filters">
+      </div>
+      <button class="matrix-drawer-toggle" id="matrixSettingsToggle" type="button" aria-expanded="false" title="Toggle matrix settings">Settings<span class="matrix-drawer-badge zero" id="matrixSettingsBadge">0</span></button>
+    </div>
+
+    <div class="matrix-drawer" id="matrixFiltersDrawer">
+      <div class="matrix-drawer-inner">
+        <section class="matrix-name-filter-box" aria-label="Matrix name filters">
           <label for="matrixAttackerNameFilter">Attacker name matches</label>
-          <textarea id="matrixAttackerNameFilter" rows="4" spellcheck="false"></textarea>
+          <textarea id="matrixAttackerNameFilter" rows="4" spellcheck="false" enterkeyhint="enter" autocapitalize="off" autocorrect="off"></textarea>
           <label for="matrixDefenderNameFilter">Defender name matches</label>
-          <textarea id="matrixDefenderNameFilter" rows="4" spellcheck="false"></textarea>
+          <textarea id="matrixDefenderNameFilter" rows="4" spellcheck="false" enterkeyhint="enter" autocapitalize="off" autocorrect="off"></textarea>
           <div class="matrix-filter-actions">
             <div class="matrix-filter-help">(e.g., &quot;Life&quot;, &quot;Fantastic&quot;, &quot;Normal&quot;,<br>&quot;Halberdiers&quot;, &quot;Klackon&quot;)</div>
           </div>
         </section>
       </div>
-      <div id="matrixTableWrap" class="matrix-table-wrap"></div>
+      <button class="matrix-drawer-toggle" id="matrixFiltersToggle" type="button" aria-expanded="false" title="Toggle matrix filters">Filters<span class="matrix-drawer-badge zero" id="matrixFiltersBadge">0</span></button>
     </div>
+
+    <div class="matrix-overlay" id="matrixDrawerOverlay"></div>
   </div>
 </div>
 

@@ -1,0 +1,25 @@
+{
+  "name": "com2-damage-calculator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ankrh/Master-Caster-of-Magic-Damage-Calculator.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ankrh/Master-Caster-of-Magic-Damage-Calculator/issues"
+  },
+  "homepage": "https://github.com/ankrh/Master-Caster-of-Magic-Damage-Calculator#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  },
+  "private": true
+}

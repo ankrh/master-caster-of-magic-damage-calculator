@@ -283,6 +283,7 @@ h1 {
   padding: 1rem;
   width: 200px;
   max-height: 75vh;
+  max-height: 75dvh;
   overflow-y: auto;
 }
 .presets-toggle {
@@ -432,6 +433,7 @@ h1 {
 .matrix-btn {
   padding: 0.6rem 2rem;
   min-width: 320px;
+  height: 55px;
   border: 1px solid #d4a93a;
   border-radius: 4px;
   background: var(--panel);
@@ -513,10 +515,14 @@ select:disabled[data-tooltip] {
   display: flex;
 }
 .modal-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: calc(100vw - 1rem);
+  /* dvh where supported: mobile browsers' collapsing URL bar makes 100vh
+     taller than the visible screen, clipping the modal bottom. */
   height: calc(100vh - 1rem);
+  height: calc(100dvh - 1rem);
   overflow: hidden;
   overscroll-behavior: contain;
   background: var(--panel);
@@ -524,12 +530,29 @@ select:disabled[data-tooltip] {
   border-radius: 8px;
   box-shadow: 0 18px 48px rgba(0,0,0,0.45);
 }
+/* Vertical scroller that encompasses the header, so scrolling hides it and
+   the matrix gets the full modal height. Its scrollbar is hidden; the table
+   below keeps its own visible scrollbars. */
+.modal-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.modal-scroll::-webkit-scrollbar { display: none; }
 .modal-header {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1rem;
+  padding-left: 2.6rem;
+  padding-right: 3.25rem;
   border-bottom: 1px solid var(--border);
 }
 .modal-header h2 {
@@ -589,6 +612,10 @@ select:disabled[data-tooltip] {
   white-space: nowrap;
 }
 .modal-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  z-index: 330;
   width: 2rem;
   height: 2rem;
   border: 1px solid var(--border);
@@ -606,46 +633,111 @@ select:disabled[data-tooltip] {
 }
 .modal-body {
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
+  height: 100%;
   align-items: stretch;
-  gap: 1rem;
   overflow: hidden;
-  min-height: 18rem;
   padding: 1rem;
 }
-.matrix-enchantment-summary {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  gap: 1rem;
-  width: max-content;
-  max-width: min(24rem, 34vw);
-  min-height: 0;
-  padding-right: 0.75rem;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-color: #7f8fd9 rgba(255,255,255,0.12);
-  scrollbar-width: thin;
-}
-.matrix-enchantment-summary::-webkit-scrollbar,
 .matrix-table-wrap::-webkit-scrollbar {
   width: 12px;
   height: 12px;
 }
-.matrix-enchantment-summary::-webkit-scrollbar-track,
 .matrix-table-wrap::-webkit-scrollbar-track {
   background: rgba(255,255,255,0.12);
   border-radius: 6px;
 }
-.matrix-enchantment-summary::-webkit-scrollbar-thumb,
 .matrix-table-wrap::-webkit-scrollbar-thumb {
   background: #7f8fd9;
   border: 2px solid var(--bg);
   border-radius: 6px;
 }
-.matrix-enchantment-summary::-webkit-scrollbar-thumb:hover,
 .matrix-table-wrap::-webkit-scrollbar-thumb:hover {
   background: #9aa8f0;
+}
+/* --- Matrix drawers (Settings / Filters) --- */
+.matrix-drawer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  z-index: 320;
+}
+.matrix-drawer.open {
+  transform: translateX(0);
+}
+.matrix-drawer-inner {
+  box-sizing: border-box;
+  height: 100%;
+  width: max-content;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  border-radius: 0 8px 8px 0;
+  box-shadow: 6px 0 18px rgba(0,0,0,0.35);
+  padding: 1rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #7f8fd9 rgba(255,255,255,0.12);
+  scrollbar-width: thin;
+}
+.matrix-drawer-toggle {
+  position: absolute;
+  left: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  padding: 0.6rem 0.3rem;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.matrix-drawer-toggle:hover {
+  background: var(--border);
+}
+#matrixSettingsDrawer .matrix-drawer-toggle { top: 0.85rem; }
+#matrixFiltersDrawer .matrix-drawer-toggle { top: 7.5rem; }
+.matrix-drawer-badge {
+  writing-mode: horizontal-tb;
+  min-width: 1.15rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--accent, #2a75ff);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2rem;
+  text-align: center;
+}
+.matrix-drawer-badge.zero {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.matrix-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 310;
+  background: rgba(0,0,0,0.28);
+}
+.matrix-overlay.active {
+  display: block;
 }
 .matrix-enchantment-box {
   width: max-content;
@@ -816,6 +908,9 @@ select:disabled[data-tooltip] {
   background: var(--bg);
   color: var(--text);
   font-weight: 600;
+  /* Touch drags on header cells are routed to the page scroller by
+     initMatrixHeaderScrollRouting; suppress native panning there. */
+  touch-action: none;
 }
 .matrix-table thead th {
   position: sticky;
@@ -893,11 +988,6 @@ select:disabled[data-tooltip] {
 .matrix-table td.matrix-cell:hover {
   outline: 2px solid var(--accent, #1d2438);
   outline-offset: -2px;
-}
-@media (max-width: 820px) {
-  .matrix-enchantment-summary {
-    max-width: min(16rem, 40vw);
-  }
 }
 .modal-placeholder {
   color: var(--muted);
@@ -1241,6 +1331,160 @@ select:disabled[data-tooltip] {
 .matrix-table thead th:has(.realm-sorcery) { box-shadow: inset 0 6px 0 dodgerblue, inset 0 -6px 0 dodgerblue; }
 .matrix-table thead th:has(.realm-chaos)   { box-shadow: inset 0 6px 0 #ff7a1a, inset 0 -6px 0 #ff7a1a; }
 .matrix-table thead th:has(.realm-arcane)  { box-shadow: inset 0 6px 0 #e6c020, inset 0 -6px 0 #e6c020; }
+
+/* ============================================================
+   Responsive layout (main calculator only; matrix modal excluded)
+   Desktop (>=1411px) is untouched — all rules live in max-width blocks.
+   ============================================================ */
+
+/* --- Tablet: attacker + defender side by side, results full-width below --- */
+@media (max-width: 1410px) {
+  .four-col-row {
+    width: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #panelA { order: 1; }
+  #panelB { order: 2; }
+  .results-area {
+    order: 3;
+    flex-basis: 100%;
+    width: 100%;
+    max-width: var(--two-panel-width);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .combat-enchantments {
+    width: auto;
+    max-width: 100%;
+  }
+  .enchant-row {
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+  }
+}
+
+/* --- Phone: single-column stack (attacker -> results -> defender) --- */
+@media (max-width: 700px) {
+  body { padding: 0.5rem; }
+  .page-layout { padding: 0 0.5rem; }
+
+  /* Keep the title clear of the fixed Test Cases tab at the left edge. */
+  h1 { padding: 0 1.75rem; }
+
+  /* Stack the three columns: attacker -> defender -> results. */
+  .four-col-row {
+    gap: 0.75rem;
+  }
+  #panelA,
+  #panelB,
+  .results-area {
+    flex-basis: 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+  #panelA { order: 1; }
+  #panelB { order: 2; }
+  .results-area { order: 3; }
+  .panel {
+    width: 100%;
+    padding: 0.85rem;
+  }
+
+  /* Distribution panels stack (distA above distB). */
+  .results-top {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .breakdown-phase-panels {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  /* Shrink the stat grid so a panel fits a 360px viewport. */
+  .panel-fields {
+    grid-template-columns: auto 1fr 54px auto;
+    column-gap: 0.35rem;
+  }
+  .panel-fields label { font-size: 0.85rem; }
+  .unit-combobox { max-width: 140px; }
+
+  /* Touch targets: modest height bump (~34px) at phone size. */
+  .panel-fields input,
+  .panel-fields select,
+  .common-fields input,
+  .common-fields select,
+  .version-bar select,
+  .enchant-row select,
+  .enchant-row input[type="number"] {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .swap-btn,
+  .reset-btn,
+  .copy-link-btn,
+  .toggle-abil-btn {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  /* Version bar wraps gracefully. */
+  .version-bar {
+    flex-wrap: wrap;
+  }
+  .feedback-link { margin-left: 0; }
+
+  /* Matrix buttons stack full-width. */
+  .matrix-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .matrix-btn {
+    min-width: 0;
+    width: 100%;
+    height: auto;
+    min-height: 55px;
+    font-size: 1rem;
+    padding: 0.6rem 1rem;
+  }
+
+  /* Enchantment rows center and wrap tightly. */
+  .enchant-row {
+    justify-content: center;
+    gap: 0.6rem 1rem;
+  }
+  .combat-enchantments {
+    padding: 0.75rem;
+  }
+
+  /* Presets drawer widens for touch. */
+  .presets-drawer,
+  .presets-inner {
+    width: min(80vw, 320px);
+  }
+
+  /* >=16px text in focusable fields, or iOS Safari zooms the page on focus.
+     !important is deliberate: this is a device-wide floor that must beat any
+     component's class-level font-size, present or future. */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch devices: tooltips are shown via long-press (see initTooltips), so
+   suppress the OS long-press callout/selection on tooltip-bearing controls,
+   and let the tooltip wrap instead of overflowing narrow screens. */
+@media (hover: none) {
+  [data-tooltip], [data-tooltip] * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .tt {
+    max-width: min(92vw, 34rem);
+    white-space: pre-wrap;
+  }
+}
 
 /* Panel background by effective unit realm */
 .panel.panel-realm-life     { background: #4f4f4f; --field-bg: color-mix(in srgb, #4f4f4f 65%, black); }

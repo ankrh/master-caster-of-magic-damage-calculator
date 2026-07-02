@@ -1,5 +1,5 @@
 """Simple HTTP server with no-cache headers for development."""
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 class NoCacheHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -7,4 +7,6 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
 if __name__ == '__main__':
-    HTTPServer(('', 8080), NoCacheHandler).serve_forever()
+    # Threaded: the matrix modal spawns many web workers that importScripts
+    # engine.js/combat.js in parallel; a single-threaded server can stall them.
+    ThreadingHTTPServer(('', 8080), NoCacheHandler).serve_forever()

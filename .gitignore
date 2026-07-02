@@ -7,3 +7,8 @@ CoM1 or MoM material/Master of Magic Official Release/
 
 # Playwright MCP logs
 .playwright-mcp/
+
+# Playwright UI tests
+node_modules/
+test-results/
+playwright-report/
