@@ -1,5 +1,6 @@
-// UI tests for the matrix modal's two left-edge drawers (Settings / Filters),
-// their live active-count badges, and the scroll-away header.
+// UI tests for the matrix modal's combined Settings & Filters side panel:
+// its push layout (opening shrinks the matrix), the responsive/persisted
+// open state, the live active-count badge, and the scroll-away header.
 const { test, expect } = require('@playwright/test');
 const { openCalculator, expectNoConsoleErrors } = require('./helpers');
 
@@ -9,81 +10,87 @@ async function openMeleeMatrix(page) {
   await page.waitForSelector('#matrixTableWrap table');
 }
 
-test('drawers start closed and the table spans (nearly) the full modal width', async ({ page }) => {
-  const errors = await openCalculator(page);
-  await openMeleeMatrix(page);
-
-  const settingsOpen = await page.locator('#matrixSettingsDrawer').evaluate(el => el.classList.contains('open'));
-  const filtersOpen = await page.locator('#matrixFiltersDrawer').evaluate(el => el.classList.contains('open'));
-  expect(settingsOpen).toBe(false);
-  expect(filtersOpen).toBe(false);
-
-  const ratio = await page.evaluate(() => {
+// Ratio of the matrix table wrap width to the whole modal panel width.
+function wrapRatio(page) {
+  return page.evaluate(() => {
     const panel = document.querySelector('.modal-panel').getBoundingClientRect().width;
     const wrap = document.getElementById('matrixTableWrap').getBoundingClientRect().width;
     return wrap / panel;
   });
-  expect(ratio).toBeGreaterThan(0.9);
+}
+
+test('panel defaults open on a wide viewport and pushes the matrix', async ({ page }) => {
+  const errors = await openCalculator(page); // default viewport 1280 wide (>= 1000)
+  await openMeleeMatrix(page);
+
+  await expect(page.locator('#matrixSidePanel')).toHaveClass(/open/);
+  // Pushed: the panel occupies real width, so the table is well short of full.
+  expect(await wrapRatio(page)).toBeLessThan(0.9);
 
   expectNoConsoleErrors(errors);
 });
 
-test('Settings badge tracks property add/remove', async ({ page }) => {
+test('narrow viewport defaults the panel closed and the table spans the width', async ({ page }) => {
+  await page.setViewportSize({ width: 720, height: 900 });
   const errors = await openCalculator(page);
   await openMeleeMatrix(page);
 
-  await page.click('#matrixSettingsToggle');
-  await expect(page.locator('#matrixSettingsDrawer')).toHaveClass(/open/);
+  await expect(page.locator('#matrixSidePanel')).not.toHaveClass(/open/);
+  expect(await wrapRatio(page)).toBeGreaterThan(0.9);
 
-  const badge = page.locator('#matrixSettingsBadge');
-  const before = parseInt(await badge.textContent(), 10);
+  expectNoConsoleErrors(errors);
+});
 
-  // Open the attacker dropdown and grab the first candidate's label.
+test('toggling collapses/expands the panel, reclaims width, and persists state', async ({ page }) => {
+  const errors = await openCalculator(page);
+  await openMeleeMatrix(page);
+
+  const panel = page.locator('#matrixSidePanel');
+  await expect(panel).toHaveClass(/open/); // wide default
+
+  // Collapse: table reclaims (nearly) the full width and the choice is stored.
+  // Poll because the width change is a CSS transition (~0.22s).
+  await page.click('#matrixSideToggle');
+  await expect(panel).not.toHaveClass(/open/);
+  await expect.poll(() => wrapRatio(page)).toBeGreaterThan(0.9);
+  expect(await page.evaluate(() => localStorage.getItem('matrixSidePanelOpen_v1'))).toBe('0');
+
+  // Expand again: matrix is pushed once more and the stored flag flips.
+  await page.click('#matrixSideToggle');
+  await expect(panel).toHaveClass(/open/);
+  await expect.poll(() => wrapRatio(page)).toBeLessThan(0.9);
+  expect(await page.evaluate(() => localStorage.getItem('matrixSidePanelOpen_v1'))).toBe('1');
+
+  expectNoConsoleErrors(errors);
+});
+
+test('combined badge tracks both settings and filters', async ({ page }) => {
+  const errors = await openCalculator(page);
+  await openMeleeMatrix(page);
+  await expect(page.locator('#matrixSidePanel')).toHaveClass(/open/);
+
+  const badge = page.locator('#matrixSideBadge');
+  await expect(badge).toHaveText('0');
+
+  // Add an attacker property via its dropdown.
   await page.locator('#matrixAPropSearch').click();
   const firstItem = page.locator('#matrixAPropList .unit-dropdown-item').first();
   await expect(firstItem).toBeVisible();
   const label = (await firstItem.textContent()).trim();
   await firstItem.click();
-
-  await expect(badge).toHaveText(String(before + 1));
-
-  // Remove the row we just added via its delete button.
-  const row = page.locator('#matrixAttackerSettings li.matrix-prop-row', { hasText: label });
-  await row.locator('.matrix-prop-del').click();
-  await expect(badge).toHaveText(String(before));
-
-  expectNoConsoleErrors(errors);
-});
-
-test('Filters badge tracks non-empty textareas', async ({ page }) => {
-  const errors = await openCalculator(page);
-  await openMeleeMatrix(page);
-
-  await page.click('#matrixFiltersToggle');
-  await expect(page.locator('#matrixFiltersDrawer')).toHaveClass(/open/);
-
-  const badge = page.locator('#matrixFiltersBadge');
-  await expect(badge).toHaveText('0');
-
-  await page.fill('#matrixAttackerNameFilter', 'Life');
   await expect(badge).toHaveText('1');
 
+  // A non-empty name filter counts too.
+  await page.fill('#matrixAttackerNameFilter', 'Life');
+  await expect(badge).toHaveText('2');
+
   await page.fill('#matrixAttackerNameFilter', '');
+  await expect(badge).toHaveText('1');
+
+  // Remove the property row we added.
+  const row = page.locator('#matrixAttackerSettings li.matrix-prop-row', { hasText: label });
+  await row.locator('.matrix-prop-del').click();
   await expect(badge).toHaveText('0');
-
-  expectNoConsoleErrors(errors);
-});
-
-test('opening one drawer closes the other', async ({ page }) => {
-  const errors = await openCalculator(page);
-  await openMeleeMatrix(page);
-
-  await page.click('#matrixSettingsToggle');
-  await expect(page.locator('#matrixSettingsDrawer')).toHaveClass(/open/);
-
-  await page.click('#matrixFiltersToggle');
-  await expect(page.locator('#matrixFiltersDrawer')).toHaveClass(/open/);
-  await expect(page.locator('#matrixSettingsDrawer')).not.toHaveClass(/open/);
 
   expectNoConsoleErrors(errors);
 });

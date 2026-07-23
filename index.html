@@ -319,81 +319,79 @@
 
 <div id="matrixModal" class="modal-overlay" aria-hidden="true">
   <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="matrixTitle">
-    <div class="modal-scroll">
-    <div class="modal-header">
-      <div class="modal-title-block">
-        <h2 id="matrixTitle">Melee Matrix</h2>
-        <div id="matrixVersion" class="modal-version"></div>
+
+    <div class="matrix-side" id="matrixSidePanel">
+      <div class="matrix-side-clip">
+        <div class="matrix-side-inner">
+          <button id="matrixSwapSides" class="matrix-swap-btn" type="button">Swap attacker/defender</button>
+          <section class="matrix-enchantment-box">
+            <h3>Attacker settings</h3>
+            <div class="matrix-prop-combobox unit-combobox">
+              <input type="text" id="matrixAPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
+              <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixAPropList"></div>
+            </div>
+            <ul id="matrixAttackerSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
+          </section>
+          <section class="matrix-enchantment-box">
+            <h3>Defender settings</h3>
+            <div class="matrix-prop-combobox unit-combobox">
+              <input type="text" id="matrixBPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
+              <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixBPropList"></div>
+            </div>
+            <ul id="matrixDefenderSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
+          </section>
+          <section class="matrix-enchantment-box">
+            <h3>Global settings</h3>
+            <div class="matrix-prop-combobox unit-combobox">
+              <input type="text" id="matrixGlobalPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
+              <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixGlobalPropList"></div>
+            </div>
+            <ul id="matrixGlobalOptions" class="matrix-enchantment-list matrix-prop-list"></ul>
+          </section>
+          <section class="matrix-name-filter-box" aria-label="Matrix name filters">
+            <h3>Name filters</h3>
+            <label for="matrixAttackerNameFilter">Attacker name matches</label>
+            <textarea id="matrixAttackerNameFilter" rows="4" cols="1" spellcheck="false" enterkeyhint="enter" autocapitalize="off" autocorrect="off"></textarea>
+            <label for="matrixDefenderNameFilter">Defender name matches</label>
+            <textarea id="matrixDefenderNameFilter" rows="4" cols="1" spellcheck="false" enterkeyhint="enter" autocapitalize="off" autocorrect="off"></textarea>
+            <div class="matrix-filter-actions">
+              <div class="matrix-filter-help">(e.g., &quot;Life&quot;, &quot;Fantastic&quot;, &quot;Normal&quot;,<br>&quot;Halberdiers&quot;, &quot;Klackon&quot;)</div>
+            </div>
+          </section>
+        </div>
       </div>
-      <div class="matrix-modal-action">
-        <div class="matrix-modal-note">Value shown is the % HP damage done to the defender divided by % HP damage done to the attacker.</div>
-        <button id="matrixExportCsv" class="matrix-export-btn" type="button">Export csv to clipboard</button>
-      </div>
-      <div class="matrix-modal-options" aria-label="Melee matrix display options">
-        <label class="check-label" for="matrixSortDefenders">
-          <input type="checkbox" id="matrixSortDefenders" checked>
-          Sort defenders
-        </label>
-        <label class="check-label" for="matrixSortAttackers">
-          <input type="checkbox" id="matrixSortAttackers" checked>
-          Sort attackers
-        </label>
-      </div>
+      <button class="matrix-side-toggle" id="matrixSideToggle" type="button" aria-expanded="false" aria-controls="matrixSidePanel" title="Toggle matrix settings &amp; filters">Settings &amp; filters<span class="matrix-drawer-badge zero" id="matrixSideBadge">0</span></button>
     </div>
-    <div class="modal-body">
-      <div id="matrixTableWrap" class="matrix-table-wrap"></div>
-    </div>
-    </div><!-- /modal-scroll -->
+
+    <div class="matrix-main">
+      <div class="modal-scroll">
+      <div class="modal-header">
+        <div class="modal-title-block">
+          <h2 id="matrixTitle">Melee Matrix</h2>
+          <div id="matrixVersion" class="modal-version"></div>
+        </div>
+        <div class="matrix-modal-action">
+          <div class="matrix-modal-note">Value shown is the % HP damage done to the defender divided by % HP damage done to the attacker.</div>
+          <button id="matrixExportCsv" class="matrix-export-btn" type="button">Export csv to clipboard</button>
+        </div>
+        <div class="matrix-modal-options" aria-label="Melee matrix display options">
+          <label class="check-label" for="matrixSortDefenders">
+            <input type="checkbox" id="matrixSortDefenders" checked>
+            Sort defenders
+          </label>
+          <label class="check-label" for="matrixSortAttackers">
+            <input type="checkbox" id="matrixSortAttackers" checked>
+            Sort attackers
+          </label>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div id="matrixTableWrap" class="matrix-table-wrap"></div>
+      </div>
+      </div><!-- /modal-scroll -->
+    </div><!-- /matrix-main -->
 
     <button id="matrixClose" class="modal-close" type="button" aria-label="Close matrix">&times;</button>
-
-    <div class="matrix-drawer" id="matrixSettingsDrawer">
-      <div class="matrix-drawer-inner">
-        <button id="matrixSwapSides" class="matrix-swap-btn" type="button">Swap attacker/defender</button>
-        <section class="matrix-enchantment-box">
-          <h3>Attacker settings</h3>
-          <div class="matrix-prop-combobox unit-combobox">
-            <input type="text" id="matrixAPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
-            <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixAPropList"></div>
-          </div>
-          <ul id="matrixAttackerSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
-        </section>
-        <section class="matrix-enchantment-box">
-          <h3>Defender settings</h3>
-          <div class="matrix-prop-combobox unit-combobox">
-            <input type="text" id="matrixBPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
-            <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixBPropList"></div>
-          </div>
-          <ul id="matrixDefenderSettings" class="matrix-enchantment-list matrix-prop-list"></ul>
-        </section>
-        <section class="matrix-enchantment-box">
-          <h3>Global settings</h3>
-          <div class="matrix-prop-combobox unit-combobox">
-            <input type="text" id="matrixGlobalPropSearch" class="unit-search" placeholder="Add property..." autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off">
-            <div class="unit-dropdown-list matrix-prop-dropdown" id="matrixGlobalPropList"></div>
-          </div>
-          <ul id="matrixGlobalOptions" class="matrix-enchantment-list matrix-prop-list"></ul>
-        </section>
-      </div>
-      <button class="matrix-drawer-toggle" id="matrixSettingsToggle" type="button" aria-expanded="false" title="Toggle matrix settings">Settings<span class="matrix-drawer-badge zero" id="matrixSettingsBadge">0</span></button>
-    </div>
-
-    <div class="matrix-drawer" id="matrixFiltersDrawer">
-      <div class="matrix-drawer-inner">
-        <section class="matrix-name-filter-box" aria-label="Matrix name filters">
-          <label for="matrixAttackerNameFilter">Attacker name matches</label>
-          <textarea id="matrixAttackerNameFilter" rows="4" spellcheck="false" enterkeyhint="enter" autocapitalize="off" autocorrect="off"></textarea>
-          <label for="matrixDefenderNameFilter">Defender name matches</label>
-          <textarea id="matrixDefenderNameFilter" rows="4" spellcheck="false" enterkeyhint="enter" autocapitalize="off" autocorrect="off"></textarea>
-          <div class="matrix-filter-actions">
-            <div class="matrix-filter-help">(e.g., &quot;Life&quot;, &quot;Fantastic&quot;, &quot;Normal&quot;,<br>&quot;Halberdiers&quot;, &quot;Klackon&quot;)</div>
-          </div>
-        </section>
-      </div>
-      <button class="matrix-drawer-toggle" id="matrixFiltersToggle" type="button" aria-expanded="false" title="Toggle matrix filters">Filters<span class="matrix-drawer-badge zero" id="matrixFiltersBadge">0</span></button>
-    </div>
-
-    <div class="matrix-overlay" id="matrixDrawerOverlay"></div>
   </div>
 </div>
 

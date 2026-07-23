@@ -517,7 +517,7 @@ select:disabled[data-tooltip] {
 .modal-panel {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   width: calc(100vw - 1rem);
   /* dvh where supported: mobile browsers' collapsing URL bar makes 100vh
      taller than the visible screen, clipping the modal bottom. */
@@ -655,40 +655,59 @@ select:disabled[data-tooltip] {
 .matrix-table-wrap::-webkit-scrollbar-thumb:hover {
   background: #9aa8f0;
 }
-/* --- Matrix drawers (Settings / Filters) --- */
-.matrix-drawer {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  transform: translateX(-100%);
-  transition: transform 0.22s ease;
+/* --- Matrix side panel (combined Settings + Filters) --- */
+/* Push layout: the panel is a real flex item beside the matrix, so opening it
+   shrinks the matrix instead of covering it. The panel is content-sized — its
+   width is defined by the settings frames inside — and open/close animates the
+   grid column from 0fr to 1fr (which resolves to that content width). The
+   toggle tab lives outside the clipped area so it stays visible when collapsed. */
+.matrix-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Reserve room for the collapsed toggle tab so it never covers the matrix. */
+  margin-left: 1.75rem;
+}
+.matrix-side {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 0fr;
+  transition: grid-template-columns 0.22s ease;
+  max-width: 85vw;
   z-index: 320;
 }
-.matrix-drawer.open {
-  transform: translateX(0);
+.matrix-side.open {
+  grid-template-columns: 1fr;
 }
-.matrix-drawer-inner {
+.matrix-side-clip {
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.matrix-side-inner {
   box-sizing: border-box;
   height: 100%;
   width: max-content;
-  max-width: 90vw;
+  max-width: 85vw;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   background: var(--panel);
   border-right: 1px solid var(--border);
-  border-radius: 0 8px 8px 0;
-  box-shadow: 6px 0 18px rgba(0,0,0,0.35);
   padding: 1rem;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-color: #7f8fd9 rgba(255,255,255,0.12);
   scrollbar-width: thin;
 }
-.matrix-drawer-toggle {
+.matrix-side-toggle {
   position: absolute;
   left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -698,7 +717,7 @@ select:disabled[data-tooltip] {
   border: 1px solid var(--border);
   border-left: none;
   border-radius: 0 6px 6px 0;
-  padding: 0.6rem 0.3rem;
+  padding: 0.7rem 0.3rem;
   cursor: pointer;
   color: var(--text);
   font-size: 0.78rem;
@@ -707,11 +726,9 @@ select:disabled[data-tooltip] {
   white-space: nowrap;
   transition: background 0.15s;
 }
-.matrix-drawer-toggle:hover {
+.matrix-side-toggle:hover {
   background: var(--border);
 }
-#matrixSettingsDrawer .matrix-drawer-toggle { top: 0.85rem; }
-#matrixFiltersDrawer .matrix-drawer-toggle { top: 7.5rem; }
 .matrix-drawer-badge {
   writing-mode: horizontal-tb;
   min-width: 1.15rem;
@@ -729,18 +746,11 @@ select:disabled[data-tooltip] {
   color: var(--muted);
   border: 1px solid var(--border);
 }
-.matrix-overlay {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 310;
-  background: rgba(0,0,0,0.28);
-}
-.matrix-overlay.active {
-  display: block;
-}
 .matrix-enchantment-box {
-  width: max-content;
+  /* Fill the panel width so all settings frames align; the widest frame's
+     content defines that width (see .matrix-side-inner width: max-content). */
+  width: auto;
+  min-width: 0;
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -844,7 +854,10 @@ select:disabled[data-tooltip] {
 }
 .matrix-name-filter-box {
   display: flex;
-  width: min(100%, 20rem);
+  /* Fill whatever width the settings frames establish, without forcing the
+     panel wider (see the textarea min-width:0 rule below). */
+  width: auto;
+  min-width: 0;
   flex-direction: column;
   gap: 0.45rem;
   border: 1px solid var(--border);
@@ -869,6 +882,9 @@ select:disabled[data-tooltip] {
 }
 .matrix-name-filter-box textarea {
   width: 100%;
+  /* Don't let the textarea's default intrinsic width force the panel wider —
+     it fills whatever width the settings frames define instead. */
+  min-width: 0;
   min-height: 4.8rem;
   resize: vertical;
   border: 1px solid var(--border);

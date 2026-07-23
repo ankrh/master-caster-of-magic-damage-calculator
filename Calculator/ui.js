@@ -2167,30 +2167,25 @@ function renderMatrixPropList(box) {
   updateMatrixDrawerBadges();
 }
 
-// Live badge counts on the two matrix drawer tabs.
-// Settings: total property rows across the three lists. Filters: how many of
-// the two name textareas are non-empty (0-2).
+// Live active-count badge on the combined Settings & Filters panel tab.
+// Counts property rows across the three settings lists plus each non-empty name
+// filter textarea (0-2).
 function updateMatrixDrawerBadges() {
-  const settingsBadge = document.getElementById('matrixSettingsBadge');
-  if (settingsBadge) {
-    const n = ['matrixAttackerSettings', 'matrixDefenderSettings', 'matrixGlobalOptions']
-      .reduce((sum, id) => {
-        const ul = document.getElementById(id);
-        return sum + (ul ? ul.querySelectorAll('li.matrix-prop-row').length : 0);
-      }, 0);
-    settingsBadge.textContent = String(n);
-    settingsBadge.classList.toggle('zero', n === 0);
-  }
-  const filtersBadge = document.getElementById('matrixFiltersBadge');
-  if (filtersBadge) {
-    const n = ['matrixAttackerNameFilter', 'matrixDefenderNameFilter']
-      .reduce((sum, id) => {
-        const el = document.getElementById(id);
-        return sum + (el && el.value.trim() ? 1 : 0);
-      }, 0);
-    filtersBadge.textContent = String(n);
-    filtersBadge.classList.toggle('zero', n === 0);
-  }
+  const badge = document.getElementById('matrixSideBadge');
+  if (!badge) return;
+  const settings = ['matrixAttackerSettings', 'matrixDefenderSettings', 'matrixGlobalOptions']
+    .reduce((sum, id) => {
+      const ul = document.getElementById(id);
+      return sum + (ul ? ul.querySelectorAll('li.matrix-prop-row').length : 0);
+    }, 0);
+  const filters = ['matrixAttackerNameFilter', 'matrixDefenderNameFilter']
+    .reduce((sum, id) => {
+      const el = document.getElementById(id);
+      return sum + (el && el.value.trim() ? 1 : 0);
+    }, 0);
+  const n = settings + filters;
+  badge.textContent = String(n);
+  badge.classList.toggle('zero', n === 0);
 }
 
 function renderAllMatrixPropLists() {
@@ -3025,38 +3020,38 @@ async function swapMatrixSides() {
   await renderMatrixSnapshot();
 }
 
-// Wire the two left-edge matrix drawers: opening one closes the other; the
-// overlay or a tab closes. Mirrors the presets drawer interaction pattern.
-function initMatrixDrawers() {
-  const overlay = document.getElementById('matrixDrawerOverlay');
-  const drawers = [
-    { drawer: document.getElementById('matrixSettingsDrawer'), toggle: document.getElementById('matrixSettingsToggle') },
-    { drawer: document.getElementById('matrixFiltersDrawer'), toggle: document.getElementById('matrixFiltersToggle') },
-  ].filter(d => d.drawer && d.toggle);
-  if (!drawers.length || !overlay) return;
+// localStorage key remembering whether the combined Settings & Filters panel
+// was last left open. First visit falls back to a screen-size default.
+const MATRIX_SIDE_OPEN_KEY = 'matrixSidePanelOpen_v1';
 
-  function closeAll() {
-    drawers.forEach(d => {
-      d.drawer.classList.remove('open');
-      d.toggle.setAttribute('aria-expanded', 'false');
-    });
-    overlay.classList.remove('active');
-  }
-  function openOne(target) {
-    drawers.forEach(d => {
-      const isTarget = d === target;
-      d.drawer.classList.toggle('open', isTarget);
-      d.toggle.setAttribute('aria-expanded', isTarget ? 'true' : 'false');
-    });
-    overlay.classList.add('active');
-  }
-  drawers.forEach(d => {
-    d.toggle.addEventListener('click', () => {
-      if (d.drawer.classList.contains('open')) closeAll();
-      else openOne(d);
-    });
-  });
-  overlay.addEventListener('click', closeAll);
+function matrixSideDefaultOpen() {
+  try {
+    const raw = localStorage.getItem(MATRIX_SIDE_OPEN_KEY);
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+  } catch (e) { /* storage disabled */ }
+  // Wide screens have room to keep the panel open beside the matrix.
+  return window.innerWidth >= 1000;
+}
+
+// Wire the combined left-edge Settings & Filters panel. It pushes the matrix
+// (a real flex item) rather than overlaying it, and its open/closed state
+// persists across sessions.
+function initMatrixSidePanel() {
+  const panel = document.getElementById('matrixSidePanel');
+  const toggle = document.getElementById('matrixSideToggle');
+  if (!panel || !toggle) return;
+
+  const setOpen = (open, persist) => {
+    panel.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (persist) {
+      try { localStorage.setItem(MATRIX_SIDE_OPEN_KEY, open ? '1' : '0'); } catch (e) { /* ignore */ }
+    }
+  };
+
+  setOpen(matrixSideDefaultOpen(), false);
+  toggle.addEventListener('click', () => setOpen(!panel.classList.contains('open'), true));
 }
 
 // Scroll gestures that start on the matrix's sticky header cells (top row or
@@ -3225,7 +3220,7 @@ function initMatrixModal() {
     if (!el) return;
     el.addEventListener('input', () => { saveMatrixFilters(); updateMatrixDrawerBadges(); scheduleFilterRender(); });
   });
-  initMatrixDrawers();
+  initMatrixSidePanel();
   initMatrixHeaderScrollRouting();
   modal.addEventListener('click', e => {
     if (e.target === modal) close();
