@@ -2,6 +2,10 @@
 *.htm
 *_files/
 
+# ...except the manual exports' images, which hold tables that exist nowhere else
+!CoM1manual_files/
+!CoM2manual_files/
+
 # Official MoM game files
 CoM1 or MoM material/Master of Magic Official Release/
 
@@ -12,3 +16,7 @@ CoM1 or MoM material/Master of Magic Official Release/
 node_modules/
 test-results/
 playwright-report/
+
+# Python bytecode
+__pycache__/
+*.pyc
