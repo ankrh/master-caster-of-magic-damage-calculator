@@ -2,14 +2,15 @@
 
 Two deliverables, each with its own spec and its own working conventions:
 
-| Directory | Deliverable | Spec | Conventions |
-|---|---|---|---|
-| `Calculator/` | Damage calculator (live) | `Calculator/SPEC.md` | `Calculator/CLAUDE.md` |
-| `Manual/` | Interactive CoM2 manual (not yet built) | `Manual/SPEC.md` | — |
+| Directory | Deliverable | Spec | Conventions | Plan |
+|---|---|---|---|---|
+| `Calculator/` | Damage calculator (live) | `Calculator/SPEC.md` | `Calculator/CLAUDE.md` | — |
+| `Manual/` | Interactive CoM2 manual (in progress) | `Manual/SPEC.md` | — | `Manual/PLAN.md` |
 
-Specs hold *behaviour*; CLAUDE.md files hold *working conventions*. Read the relevant
-spec before changing behaviour, and update it in the same change. This file holds only
-what applies across both deliverables.
+Specs hold *behaviour*; CLAUDE.md files hold *working conventions*; `Manual/PLAN.md`
+holds *project state* — stages, status, and the rules for autonomous runs. Read the
+relevant spec before changing behaviour, and update it in the same change. This file
+holds only what applies across both deliverables.
 
 ## Reference docs (under `Reference docs/`)
 - `MoM source - Fandom site/` — base MoM rules (abilities, damage types, immunities).

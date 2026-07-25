@@ -1,7 +1,8 @@
 # Interactive CoM2 Manual — Specification
 
 A browsable, cross-linked, filterable rendering of the Caster of Magic for Windows
-manual. Status: **not yet built.** This spec is the agreed target.
+manual. This spec is the agreed target; build stages and current status are in
+[PLAN.md](./PLAN.md).
 
 ## Purpose
 
