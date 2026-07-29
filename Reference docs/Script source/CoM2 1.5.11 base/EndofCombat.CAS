@@ -1,0 +1,8 @@
+: INPUT - Endtype -	1 means a tie
+		2 means someone won the battle
+		3 means retreating exhausted
+		4 means fleeing
+	Winner - The wizard ID for the player who won the battle
+	Loser  - Same for the loser.
+  OUTPUT - None
+		:

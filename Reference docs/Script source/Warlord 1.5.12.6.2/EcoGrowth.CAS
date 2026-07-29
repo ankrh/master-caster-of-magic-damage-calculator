@@ -1,0 +1,629 @@
+: INPUT - CityID, thecity being calculated 
+		  Food, the food production of the city
+		  MaxPop, the maximal population of the city
+		  Racial, the racial growth modifier for the current city (see races.ini), or the outpost growth percentage modifier for outposts.
+		  HOUSING, 1 if the city is currently producing housing, 0 otherwise
+		  WORKERS, number of workers+mandatory farmers in the city, used for housing.
+		  UNREST, number of rebels in the city
+  OUTPUT - RESULT = the calculated growth
+ :
+
+POP=POPUNITS(CityID);
+W=CITYOWNER(CityID);
+RESULT=0;
+SHRINKRED=0;
+
+SANRED=0;
+IF (SPELLSTATE(W,STSanitationReform)=2) THEN { SANRED=SANRED+25; }
+
+HERBRED=0;
+IF HASGLOBAL(W,GEHerbMastery) THEN { HERBRED=HERBRED+50; }
+
+: record food generate from the city :
+SETCITYDATA(CityID,CDFOOD,FOOD)
+
+: reset city in focus counter :
+IF CITYOWNER(CityID)=0 THEN {
+ MASTERVARSET CityInFocus = -1;
+}
+
+: Checking City Overland Coordinates and Planes, if one city is found to have unupdated records, recheck entire map if necessary :
+IF (GETCITYDATA(CITYID,CDCOLP)>0) THEN { GOTO "HAVECITYCOOD"; }
+
+: Recording city coordination value :
+: Forced updating :
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+
+: City on tile found, update necessary records :
+  IF (CU>0) THEN {
+   IF ((GETCITYDATA(CU,CDCOLP))<1) THEN {
+    SETCITYDATA(CU,CDCOLX,X);
+    SETCITYDATA(CU,CDCOLY,Y);
+    SETCITYDATA(CU,CDCOLP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVECITYCOOD!
+
+
+IF (CITYENCHANT(CITYID,CENecropolis)<0) THEN { GOTO "NOTNECROPOLIS"; }
+
+ RESULT=0;
+ ADDRESLINE "Necropolis", RESULT;
+
+ IF HOUSING>0 THEN {
+  RESULT=RESULT+88;
+  ADDRESLINE "Necropolis Housing", 88;
+ }
+
+ HALT;
+
+!NOTNECROPOLIS!
+
+AS=1;
+IF RETORT(W,Procurator) THEN { AS=3; }
+
+
+: Growth of city :
+
+IF POP<1 THEN { GOTO "OUTPOST"; }
+
+
+:Base population in case of enough food :
+
+ IF FOOD>=(2*POP) THEN { GOTO "ENOUGHFOOD"; }
+
+: Shrinking due to low food :
+  RESULT=25*(FOOD-(2*POP));
+  ADDRESLINE "Famine", RESULT;
+  GOTO "ENDOFFOODBUILDINGS";
+
+!ENOUGHFOOD!
+
+:Enough Food:
+  RESULT=((MAXPOP-POP)*5)+RACIAL;
+  ADDRESLINE "Natural", (MAXPOP-POP)*5;
+  ADDRESLINE "Race", RACIAL;
+
+
+: Growth from Farmer Market :
+
+  IF ISBUILT(CityID,BFarmerMarket) THEN {
+   RESULT=RESULT+40;
+   ADDRESLINE "Farmer's Market", 40;
+  }
+
+
+: Growth from Tree of Life :
+
+  IF ISBUILT(CityID,BTreeOfLife) THEN {
+   RESULT=RESULT+100;
+   ADDRESLINE "Tree of Life", 100;
+  }
+
+
+: Growth from Altar of the Sun :
+
+  IF ISBUILT(CityID,BAltarOfTheSun) THEN {
+   RESULT=RESULT+100;
+   ADDRESLINE "Altar of the Sun", 100;
+  }
+
+: Growth from Sanitation Reform :
+
+  IF (SANRED>0) THEN {
+   RESULT=RESULT+40;
+   ADDRESLINE "Sanitation Reform", 40;
+  }
+
+
+: Growth from Nursing and Surgery :
+
+  IF (SPELLSTATE(W,STNursingAndSurgery)=2) THEN {
+   HOSPITAL=%I(RESULT/5);
+   RESULT=RESULT+HOSPITAL;
+   ADDRESLINE "Hospital", HOSPITAL;
+  }
+
+
+: Growth from Herb Mastery :
+
+  IF HasGlobal(W,GEHerbMastery) THEN {
+   HERB=(%I(ABS(RESULT/3)))
+   RESULT=RESULT+HERB;
+   ADDRESLINE "Herb Mastery, Nutrition", HERB;
+  }
+
+
+: Growth from Stream of Life, x2 growth :
+
+  IF CITYENCHANT(CityID,CEStreamofLife)>-1 THEN {
+   ADDRESLINE "Stream of Life",RESULT;
+   RESULT=RESULT*2;
+  }
+
+
+: Growth from Bountiful Festivity, +10 growth for surplus food :
+
+  IF CITYENCHANT(CityID,CEBountifulFestivity)>-1 THEN {
+   SURPLUS=FOOD-(2*POP);
+
+   ADDRESLINE "Bountiful Festivity",10*SURPLUS;
+   RESULT=RESULT+(10*SURPLUS);
+  }
+
+
+: Growth from Population Boom event :
+
+  IF (EVENTTURN(EvPopBoom)>0) %AND (EVENTVAL(EvPopBoom)=CityID) THEN {
+   ADDRESLINE "Population Boom", RESULT;
+   RESULT=RESULT*2;
+  }
+
+: Growth from Housing :
+
+  IF HOUSING=0 THEN { GOTO "NOTHOUSING"; }
+
+   J=170*((MAXPOP+(RACIAL/10))-8)/13;
+   J=J*(1.3-(0.1*POP));
+   IF J<40 then {J=40;}
+   J=%I(J*(WORKERS/POP));
+   IF (J>0) THEN {
+    ADDRESLINE "Housing",J;
+    RESULT=RESULT+J;
+   }
+
+!NOTHOUSING!
+
+: Neutral faction growth modification :
+
+  IF W=NeutralPlayerID THEN {
+   RESULT=%I(RESULT/2);
+   IF POP>=2*(1+Difficulty()) THEN { RESULT=0; }
+  }
+
+!ENDOFFOODBUILDINGS!
+
+: Pestilence curse penalty :
+
+ IF CITYENCHANT(CityID,CEPestilence)>-1 THEN { 
+  RESULT=RESULT-(1000+(POP*100));
+  ADDRESLINE "Pestilence", (-1000-(POP*100));
+ }
+
+
+: Reduce population above Max Pop under city/global curses :
+
+ IF POP<MAXPOP THEN { GOTO "LESSTHANMAXPOP"; }
+
+  IF CITYENCHANT(CityID,CEDrought)>-1 THEN {
+   ADDRESLINE "Drought",-120-(RACIAL*(FOOD>=(2*POP)));
+   RESULT=(RESULT-120)-(RACIAL*(FOOD>=(2*POP)));
+  }
+
+  J=0;
+  NOFDOOMS=DOOMSDAYCOUNT;
+  IF HASGLOBAL(W,GEDoomsday) THEN { NOFDOOMS=NOFDOOMS-1; }
+  J=J+(200*NOFDOOMS);
+
+  IF (J>0) THEN {
+   ADDRESLINE "Doomsday",0-J;
+   Result=Result-J;
+  }
+
+!LESSTHANMAXPOP!
+
+: New effect of Academy, reduce population shrinkage by half :
+
+ IF ISBUILT(CityID,BAcademy) %AND (Result<0) THEN {
+  ACADEMY=(%I(ABS(RESULT/2)));
+  ADDRESLINE "Academy, Medicine",ACADEMY;
+  Result=Result+ACADEMY;
+ }
+
+: New effect of Herb Mastery, reduce population shrinkage by half :
+
+ IF (RESULT>=0) THEN { GOTO "ENDOFSETTLEMENT"; }
+
+  IF SANRED>0 THEN {
+   SHRINKRED=(%I(ABS(RESULT*SANRED/100)));
+   ADDRESLINE "Sanitation Reform, Quarentine",SHRINKRED;
+   Result=Result+SHRINKRED;
+  }
+
+  IF HERBRED>0 THEN {
+   SHRINKRED=(%I(ABS(RESULT*HERBRED/100)));
+   ADDRESLINE "Herb Mastery, Medicine",SHRINKRED;
+   Result=Result+SHRINKRED;
+  }
+
+GOTO "ENDOFSETTLEMENT";
+
+!OUTPOST!
+
+
+:Growth of OUTPOST :
+
+ BASE=(MAXPOP+10)*2;
+ RATE=100;
+ IF (W<>0) THEN { RATE=RATE+(10*(DIFFICULTY()-3)); }
+ RATE=RATE+RACIAL;
+ RESULT=%I((BASE*RATE)/100);
+ IF (SANRED>0) THEN { RESULT=RESULT+40; }
+ IF (SPELLSTATE(W,STNursingAndSurgery)=2) THEN { RESULT=RESULT+40; }
+ IF CITYENCHANT(CityID,CEStreamofLife)>-1 THEN { RESULT=RESULT*2; }
+ IF CITYENCHANT(CityID,CEGaiasBlessing)>-1 THEN { RESULT=RESULT+40; }
+ IF CITYENCHANT(CityID,CEAbundance)>-1 THEN { RESULT=RESULT+40; }
+ IF (W<>0) %AND (RESULT<30) THEN { RESULT=30; }
+ FOR I=1 to 12;
+  J=OREINRANGE(cityID,I);
+  RESULT=RESULT+((5*J)/2);
+  IF I=OreCoal THEN { RESULT=RESULT+((7*J)/2); }
+  IF I=OreIron THEN { RESULT=RESULT+((7*J)/2); }
+ NEXT;
+
+ SHRINK=0;
+
+ IF (SCORINGOPTION(SDesolatedOutpost)=0) THEN { GOTO "NODESOLATEDOUTPOST"; }
+
+  WATERTERRAIN=TERRAININRANGE(CityID,LTOCean)+TERRAININRANGE(CityID,LTShore)+TERRAININRANGE(CityID,LTLake)+TERRAININRANGE(CityID,LTRiverMouth);
+  RIVERTERRAIN=TERRAININRANGE(CityID,LTRiver)+TERRAININRANGE(CityID,LTRiverStart);
+  PLAINTERRAIN=TERRAININRANGE(CityID,LTGrassland);
+  DESERTTERRAIN=TERRAININRANGE(CityID,LTDesert);
+  SWAMPTERRAIN=TERRAININRANGE(CityID,LTSwamp);
+  TUNDRATERRAIN=TERRAININRANGE(CityID,LTTundra);
+  WOODTERRAIN=TERRAININRANGE(CityID,LTForest);
+  HILLTERRAIN=TERRAININRANGE(CityID,LTHill);
+  MOUNTTERRAIN=TERRAININRANGE(CityID,LTMountain);
+  VOLCANOTERRAIN=TERRAININRANGE(CityID,LTVolcano);
+
+  CITYTERRAIN=GETTERRAIN(GETCITYDATA(CityID,CDCOLX),GETCITYDATA(CityID,CDCOLY),GETCITYDATA(CityID,CDCOLP));
+
+  : Racial city tile growth modifier :
+  IF (CITYTERRAIN=LTGrassland) THEN {
+   IF (CITYRACE(CityID)=RCBeastmen)
+    %OR (CITYRACE(CityID)=RCGnoll)
+    %OR (CITYRACE(CityID)=RCBarbarian)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+   THEN { RESULT=RESULT+20; }
+   IF (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCNomad)
+   THEN { RESULT=RESULT+40; }
+  }
+
+  IF (CITYTERRAIN=LTHill) THEN {
+   IF (CITYRACE(CityID)=RCOrc)
+   THEN { RESULT=RESULT+10; }
+   IF (CITYRACE(CityID)=RCKlackon)
+    %OR (CITYRACE(CityID)=RCHawkmen)
+    %OR (CITYRACE(CityID)=RCHalfling)
+   THEN { RESULT=RESULT+20; }
+   IF (CITYRACE(CityID)=RCDwarf)
+   THEN { RESULT=RESULT+40; }
+  }
+
+  IF (CITYTERRAIN=LTMountain) THEN {
+   IF (CITYRACE(CityID)=RCLizard)
+    %OR (CITYRACE(CityID)=RCDarkElf)
+    %OR (CITYRACE(CityID)=RCHighElf)
+   THEN { RESULT=RESULT-80; }
+   IF (CITYRACE(CityID)=RCBeastmen)
+    %OR (CITYRACE(CityID)=RCGnoll)
+    %OR (CITYRACE(CityID)=RCRakhshasa)
+    %OR (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCNomad)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+   THEN { RESULT=RESULT-40; }
+   IF (CITYRACE(CityID)=RCBarbarian)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCOrc)
+    %OR (CITYRACE(CityID)=RCTroll)
+   THEN { RESULT=RESULT-20; }
+   IF (CITYRACE(CityID)=RCDraconian)
+   THEN { RESULT=RESULT+10; }
+   IF (CITYRACE(CityID)=RCDwarf)
+   THEN { RESULT=RESULT+20; }
+   IF (CITYRACE(CityID)=RCHawkmen)
+   THEN { RESULT=RESULT+40; }
+  }
+
+  IF (CITYTERRAIN=LTVolcano) THEN {
+   IF (CITYRACE(CityID)=RCBeastmen)
+    %OR (CITYRACE(CityID)=RCGnoll)
+    %OR (CITYRACE(CityID)=RCDarkElf)
+    %OR (CITYRACE(CityID)=RCHighElf)
+    %OR (CITYRACE(CityID)=RCRakhshasa)
+    %OR (CITYRACE(CityID)=RCHawkmen)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCNomad)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+    %OR (CITYRACE(CityID)=RCOrc)
+   THEN { RESULT=RESULT-80; }
+   IF (CITYRACE(CityID)=RCBarbarian)
+    %OR (CITYRACE(CityID)=RCTroll)
+   THEN { RESULT=RESULT-40; }
+   IF (CITYRACE(CityID)=RCDraconian)
+   THEN { RESULT=RESULT+20; }
+  }
+
+  IF (CITYTERRAIN=LTDesert) THEN {
+   IF (CITYRACE(CityID)=RCLizard)
+    %OR (CITYRACE(CityID)=RCDarkElf)
+    %OR (CITYRACE(CityID)=RCHighElf)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+   THEN { RESULT=RESULT-40; }
+   IF (CITYRACE(CityID)=RCBarbarian)
+    %OR (CITYRACE(CityID)=RCTroll)
+   THEN { RESULT=RESULT-20; }
+   IF (CITYRACE(CityID)=RCGnoll)
+    %OR (CITYRACE(CityID)=RCRakhshasa)
+   THEN { RESULT=RESULT-10; }
+   IF (CITYRACE(CityID)=RCBeastmen)
+    %OR (CITYRACE(CityID)=RCOrc)
+   THEN { RESULT=RESULT+10; }
+   IF (CITYRACE(CityID)=RCNomad)
+   THEN { RESULT=RESULT+20; }
+  }
+
+  IF (CITYTERRAIN=LTSwamp) THEN {
+   IF (CITYRACE(CityID)=RCDwarf)
+    %OR (CITYRACE(CityID)=RCHawkmen)
+    %OR (CITYRACE(CityID)=RCNomad)
+   THEN { RESULT=RESULT-60; }
+   IF (CITYRACE(CityID)=RCDraconian)
+    %OR (CITYRACE(CityID)=RCKlackon)
+    %OR (CITYRACE(CityID)=RCHighElf)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+   THEN { RESULT=RESULT-40; }
+   IF (CITYRACE(CityID)=RCBeastmen)
+    %OR (CITYRACE(CityID)=RCDarkElf)
+    %OR (CITYRACE(CityID)=RCBarbarian)
+   THEN { RESULT=RESULT-20; }
+   IF (CITYRACE(CityID)=RCRakhshasa)
+   THEN { RESULT=RESULT-10; }
+   IF (CITYRACE(CityID)=RCGnoll)
+    %OR (CITYRACE(CityID)=RCGoblin)
+   THEN { RESULT=RESULT+10; }
+   IF (CITYRACE(CityID)=RCLizard)
+   THEN { RESULT=RESULT+20; }
+  }
+
+  IF (CITYTERRAIN=LTTundra) THEN {
+   IF (CITYRACE(CityID)=RCDraconian)
+    %OR (CITYRACE(CityID)=RCLizard)
+    %OR (CITYRACE(CityID)=RCKlackon)
+   THEN { RESULT=RESULT-60; }
+   IF (CITYRACE(CityID)=RCGnoll)
+    %OR (CITYRACE(CityID)=RCDarkElf)
+    %OR (CITYRACE(CityID)=RCDwarf)
+    %OR (CITYRACE(CityID)=RCHawkmen)
+    %OR (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+   THEN { RESULT=RESULT-40; }
+   IF (CITYRACE(CityID)=RCHighElf)
+    %OR (CITYRACE(CityID)=RCRakhshasa)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCNomad)
+   THEN { RESULT=RESULT-20; }
+   IF (CITYRACE(CityID)=RCBarbarian)
+   THEN { RESULT=RESULT-10; }
+   IF (CITYRACE(CityID)=RCTroll)
+   THEN { RESULT=RESULT+20; }
+  }
+
+  IF (CITYTERRAIN=LTRiver) %OR (CITYTERRAIN=LTRiverStart) THEN {
+   IF (CITYRACE(CityID)=RCKlackon)
+    %OR (CITYRACE(CityID)=RCHawkmen)
+   THEN { RESULT=RESULT-20; }
+   IF (CITYRACE(CityID)=RCBarbarian)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCNomad)
+   THEN { RESULT=RESULT+20; }
+   IF (CITYRACE(CityID)=RCLizard)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+   THEN { RESULT=RESULT+40; }
+  }
+
+  IF (CITYTERRAIN=LTForest) THEN {
+   IF (CITYRACE(CityID)=RCDwarf)
+   THEN { RESULT=RESULT-40; }
+   IF (CITYRACE(CityID)=RCOrc)
+   THEN { RESULT=RESULT-20; }
+   IF (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCNomad)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+   THEN { RESULT=RESULT-10; }
+   IF (CITYRACE(CityID)=RCDarkElf)
+    %OR (CITYRACE(CityID)=RCHighElf)
+    %OR (CITYRACE(CityID)=RCRakhshasa)
+   THEN { RESULT=RESULT+40; }
+  }
+
+  : Terrain in range shrinkage modifier :
+  TLPOSMOD=0;
+  TLNEGMOD=0;
+
+  IF (CITYRACE(CityID)=RCBeastmen) THEN {
+   TLPOSMOD=TLPOSMOD+(PLAINTERRAIN*1)+(DESERTTERRAIN/2);
+   TLNEGMOD=TLNEGMOD+(SWAMPTERRAIN*1)+(MOUNTTERRAIN*1)+(VOLCANOTERRAIN*4);
+  }
+  IF (CITYRACE(CityID)=RCGnoll) THEN {
+   TLPOSMOD=TLPOSMOD+(PLAINTERRAIN*1)+(SWAMPTERRAIN/2);
+   TLNEGMOD=TLNEGMOD+(DESERTTERRAIN/2)+(TUNDRATERRAIN*2)+(MOUNTTERRAIN*1)+(VOLCANOTERRAIN*4);
+  }
+
+  IF (CITYRACE(CityID)=RCDraconian) THEN {
+   TLPOSMOD=TLPOSMOD+(MOUNTTERRAIN/2)+(VOLCANOTERRAIN*1);
+   TLNEGMOD=TLNEGMOD+(SWAMPTERRAIN*2)+(TUNDRATERRAIN*3);
+  }
+  IF (CITYRACE(CityID)=RCLizard) THEN {
+   TLPOSMOD=TLPOSMOD+(SWAMPTERRAIN*1)+(RIVERTERRAIN*2)+(WATERTERRAIN/2);
+   TLNEGMOD=TLNEGMOD+(DESERTTERRAIN*2)+(TUNDRATERRAIN*3)+(MOUNTTERRAIN*2)+(VOLCANOTERRAIN*4);
+  }
+  IF (CITYRACE(CityID)=RCKlackon) THEN {
+   TLPOSMOD=TLPOSMOD+(HILLTERRAIN*1);
+   TLNEGMOD=TLNEGMOD+(RIVERTERRAIN*1)+(SWAMPTERRAIN*2)+(TUNDRATERRAIN*3);
+  SHRINK=SHRINK; }
+
+  IF (CITYRACE(CityID)=RCDarkElf) THEN {
+   TLPOSMOD=TLPOSMOD+(WOODTERRAIN*2);
+   TLNEGMOD=TLNEGMOD+(DESERTTERRAIN*2)+(SWAMPTERRAIN*1)+(TUNDRATERRAIN*2)+(MOUNTTERRAIN*2)+(VOLCANOTERRAIN*4);
+  }
+  IF (CITYRACE(CityID)=RCHighElf) THEN {
+   TLPOSMOD=TLPOSMOD+(WOODTERRAIN*2);
+   TLNEGMOD=TLNEGMOD+(DESERTTERRAIN*2)+(SWAMPTERRAIN*2)+(TUNDRATERRAIN*1)+(MOUNTTERRAIN*2)+(VOLCANOTERRAIN*4);
+  }
+  IF (CITYRACE(CityID)=RCRakhshasa) THEN {
+   TLPOSMOD=TLPOSMOD+(WOODTERRAIN*2);
+   TLNEGMOD=TLNEGMOD+(WATERTERRAIN*1)+(DESERTTERRAIN/2)+(SWAMPTERRAIN/2)+(TUNDRATERRAIN*1)+(MOUNTTERRAIN*1)+(VOLCANOTERRAIN*4);
+  }
+
+  IF (CITYRACE(CityID)=RCDwarf) THEN {
+   TLPOSMOD=TLPOSMOD+(HILLTERRAIN*2)+(MOUNTTERRAIN*1);
+   TLNEGMOD=TLNEGMOD+(SWAMPTERRAIN*3)+(WOODTERRAIN*2)+(TUNDRATERRAIN*2);
+  }
+  IF (CITYRACE(CityID)=RCHawkmen) THEN {
+   TLPOSMOD=TLPOSMOD+(HILLTERRAIN*1)+(MOUNTTERRAIN*2);
+   TLNEGMOD=TLNEGMOD+(RIVERTERRAIN*1)+(SWAMPTERRAIN*3)+(TUNDRATERRAIN*2)+(VOLCANOTERRAIN*4);
+  }
+
+  IF (CITYRACE(CityID)=RCBarbarian) THEN {
+   TLPOSMOD=TLPOSMOD+(PLAINTERRAIN*1)+(RIVERTERRAIN*1)+(WATERTERRAIN/2);
+   TLNEGMOD=TLNEGMOD+(DESERTTERRAIN*1)+(SWAMPTERRAIN*1)+(TUNDRATERRAIN/2)+(MOUNTTERRAIN/2)+(VOLCANOTERRAIN*2);
+  }
+  IF (CITYRACE(CityID)=RCHalfling) THEN {
+   TLPOSMOD=TLPOSMOD+(PLAINTERRAIN*1)+(RIVERTERRAIN*1)+(HILLTERRAIN*1);
+   TLNEGMOD=TLNEGMOD+(DESERTTERRAIN*2)+(SWAMPTERRAIN*2)+(TUNDRATERRAIN*1)+(MOUNTTERRAIN/2)+(VOLCANOTERRAIN*4);
+  }
+  IF (CITYRACE(CityID)=RCHighMen) THEN {
+   TLPOSMOD=TLPOSMOD+(PLAINTERRAIN*2)+(RIVERTERRAIN*1);
+   TLNEGMOD=TLNEGMOD+(WOODTERRAIN/2)+(DESERTTERRAIN*2)+(SWAMPTERRAIN*2)+(TUNDRATERRAIN*2)+(MOUNTTERRAIN*1)+(VOLCANOTERRAIN*4);
+  }
+  IF (CITYRACE(CityID)=RCNomad) THEN {
+   TLPOSMOD=TLPOSMOD+(PLAINTERRAIN*2)+(RIVERTERRAIN*1)+(DESERTTERRAIN*1);
+   TLNEGMOD=TLNEGMOD+(WOODTERRAIN/2)+(SWAMPTERRAIN*3)+(TUNDRATERRAIN*1)+(MOUNTTERRAIN*1)+(VOLCANOTERRAIN*4);
+  }
+  IF (CITYRACE(CityID)=RCXuanyuan) THEN {
+   TLPOSMOD=TLPOSMOD+(PLAINTERRAIN*1)+(RIVERTERRAIN*2);
+   TLNEGMOD=TLNEGMOD+(WOODTERRAIN/2)+(DESERTTERRAIN*2)+(SWAMPTERRAIN*2)+(TUNDRATERRAIN*2)+(MOUNTTERRAIN*1)+(VOLCANOTERRAIN*4);
+  }
+
+  IF (CITYRACE(CityID)=RCOrc) THEN {
+   TLPOSMOD=TLPOSMOD+(HILLTERRAIN/2)+(DESERTTERRAIN/2);
+   TLNEGMOD=TLNEGMOD+(WOODTERRAIN*1)+(MOUNTTERRAIN/2)+(VOLCANOTERRAIN*2);
+  }
+  IF (CITYRACE(CityID)=RCTroll) THEN {
+   TLPOSMOD=TLPOSMOD+(TUNDRATERRAIN*1);
+   TLNEGMOD=TLNEGMOD+(DESERTTERRAIN*1)+(MOUNTTERRAIN*1)+(VOLCANOTERRAIN*2);
+  }
+  IF (CITYRACE(CityID)=RCGoblin) THEN {
+   TLPOSMOD=TLPOSMOD+(SWAMPTERRAIN/2);
+   TLNEGMOD=TLNEGMOD;
+  }
+
+  SHRINK=SHRINK+(TLNEGMOD-TLPOSMOD);
+
+ !NODESOLATEDOUTPOST!
+
+ RESULT=%I(RESULT);
+ ODD=RND(100);
+
+ IF CITYENCHANT(CityID,CEEvilPresence)>-1 THEN { SHRINK=SHRINK+7; }
+ IF CITYENCHANT(CityID,CEDrought)>-1 THEN { SHRINK=SHRINK+15; }
+ IF CITYENCHANT(CityID,CEPestilence)>-1 THEN { SHRINK=SHRINK+100; }
+ IF CITYENCHANT(CityID,CEChaosRift)>-1 THEN { SHRINK=SHRINK+12; }
+ IF (12-MAXPOP)>0 THEN { SHRINK=SHRINK+(12-MAXPOP); }
+ IF ISFORTRESS(CityID) THEN { SHRINK=0; }
+ IF (ODD<SHRINK) THEN { RESULT=RESULT-( 120 + %I( (RATE*SHRINK)/(ODD+1) ) ); } ELSE { IF (SHRINK<0) THEN { RESULT=RESULT-SHRINK; } }
+
+
+: New global enchantment "Spirit of Community" double outpost growth :
+
+ IF HASGLOBAL(W,GESpiritOfCommunity) %AND RESULT>0 THEN { Result=Result+Result; }
+
+
+: New effect of Herb Mastery, reduce population shrinkage by half :
+
+ IF (RESULT>=0) THEN { GOTO "ENDOFSETTLEMENT"; }
+
+  SHRINKRED=(%I(ABS(RESULT*(SANRED+HERBRED)/100)));
+  RESULT=RESULT+SHRINKRED;
+
+!ENDOFSETTLEMENT!
+
+: Growth from Administrative Skill :
+
+IF BOOKS(W,Nature)<1 THEN { GOTO "ENDOFADMIN"; }
+ J=0
+ IF HOUSING=1 THEN {
+  J=J+170*((MAXPOP+(RACIAL/10))-8)/13;
+  J=J*(1.3-(0.1*POP));
+  IF J<40 then {J=40;}
+  J=%I(J*(WORKERS/POP));
+  IF (J<0) THEN { J=0; }
+ }
+ OMNINATURE=(%I(ABS(((RESULT-J) * (((BOOKS(W,Nature)-1)*AS)+(4*AS))) /100)));
+ IF OMNINATURE<(%I(((BOOKS(W,Nature)-1)*AS)+(4*AS))) THEN {
+  OMNINATURE=%I(((BOOKS(W,Nature)-1)*AS)+(4*AS));
+ }
+ RESULT=RESULT+OMNINATURE;
+ ADDRESLINE "Administrative Skill", OMNINATURE;
+
+!ENDOFADMIN!
+
+: Boss wizard role growth bonus :
+
+IF (DIFFICULTY()<DiffFair)
+ %OR (SCORINGOPTION(SEqualizer)>0)
+ %OR (SCORINGOPTION(SLoner)>0)
+ %OR (SCORINGOPTION(SInvertedStart)>0)
+THEN {
+ GOTO "NOBOSSBONUS";
+}
+
+ IF (RETORT(0,Myrran)=0) THEN {
+  IF (RETORT(W,Myrran))
+   %AND ( (CITYRACE(CityID)=RCBeastmen)
+    %OR (CITYRACE(CityID)=RCDarkElf)
+    %OR (CITYRACE(CityID)=RCDraconian)
+    %OR (CITYRACE(CityID)=RCDwarf)
+    %OR (CITYRACE(CityID)=RCTroll)
+    %OR (CITYRACE(CityID)=RCXuanyuan)
+    %OR (CITYRACE(CityID)=RCRakhshasa)
+    %OR (CITYRACE(CityID)=RCGoblin) )
+  THEN {
+   RESULT=RESULT+(10*(DIFFICULTY()));
+  }
+ } ELSE {
+  IF (RETORT(W,Myrran)=0)
+   %AND ( (CITYRACE(CityID)=RCBarbarian)
+    %OR (CITYRACE(CityID)=RCGnoll)
+    %OR (CITYRACE(CityID)=RCHalfling)
+    %OR (CITYRACE(CityID)=RCHighElf)
+    %OR (CITYRACE(CityID)=RCHighMen)
+    %OR (CITYRACE(CityID)=RCKlackon)
+    %OR (CITYRACE(CityID)=RCLizard)
+    %OR (CITYRACE(CityID)=RCNomad)
+    %OR (CITYRACE(CityID)=RCOrc)
+    %OR (CITYRACE(CityID)=RCHawkmen) )
+  THEN {
+   RESULT=RESULT+(5*(DIFFICULTY()));
+  }
+ }
+
+!NOBOSSBONUS!

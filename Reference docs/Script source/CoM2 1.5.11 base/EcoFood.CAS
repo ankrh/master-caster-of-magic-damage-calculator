@@ -1,0 +1,44 @@
+: INPUT - CityID , the ID of the city being processed.
+		  FARMERS, the total amount of farmers in the city.
+		  MAXPOP, the maximal population of the city.
+  Output - None. 
+  Use the AddResLine command to add produced gold to the total and as an individual line in the detailed view on the UI.
+:
+
+FOOD=FARMERS*4;
+
+ADDRESLINE "Farmers", FOOD;
+
+RACE=CITYRACE(CityID);
+
+IF RACE=RCHalfling THEN {
+FOOD=FOOD+(2*FARMERS);
+ADDRESLINE "Halfling Farmers",2*FARMERS;
+} ELSE {
+IF ISBUILT(CityID,BAnimistGuild) THEN {
+FOOD=FOOD+(2*FARMERS);
+ADDRESLINE "Animist's Guild",2*FARMERS;
+}
+}
+
+IF CITYENCHANT(CityID,CEAbundance)<0 THEN {
+IF FOOD>(2*MAXPOP) THEN {
+OF=FOOD;
+FOOD=(2*MAXPOP)+(%I((FOOD-(2*MAXPOP))/2));
+ADDRESLINE "Overfarming",FOOD-OF;
+}
+}
+
+IF ISBUILT(CityID,BForesterGuild) THEN {
+ADDRESLINE "Forester's Guild", 6;
+}
+
+IF ISBUILT(CityID,BGranary) THEN {
+ADDRESLINE "Granary", 4;
+}
+
+IF ISBUILT(CityID,BFarmerMarket) THEN {
+ADDRESLINE "Farmer's Market", 6;
+}
+
+ADDRESLINE "Wild Game", 2*OREINRANGE(CITYID,OreWildGame);

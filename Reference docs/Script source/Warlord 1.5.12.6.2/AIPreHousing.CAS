@@ -1,0 +1,42 @@
+: INPUT - C - the city being evaluated
+  OUTPUT - CHOSEN - Set to the building ID the AI wants to buy before starting to build Housing.
+:
+CHOSEN=0;
+W=CITYOWNER(C);
+RACE=CITYRACE(C);
+
+IF GOLD(W)>=180 THEN {
+ IF (ISBUILT(C,BMarketplace)=0) THEN {
+  CHOSEN=BMarketplace;
+  HALT;
+ }
+}
+
+: for higher difficulty :
+IF (Difficulty()<DiffMaster) THEN { GOTO "NOTMASTER"; }
+
+ IF ISBUILT(C,BMarketplace)
+  %AND (ISBUILT(C,BMagicMarket)=0)
+  %AND (RACE<>RCDwarf)
+  %AND (GOLD(W)>=200)
+ THEN {
+  CHOSEN=BMagicMarket;
+  HALT;
+ }
+ IF (ISBUILT(C,BStables)=0)
+  %AND (RACE<>RCDwarf)
+  %AND (GOLD(W)>=240)
+ THEN {
+  CHOSEN=BStables;
+  HALT;
+ }
+ IF (ISBUILT(C,BArmory)=0)
+  %AND (GOLD(W)>=300)
+ THEN {
+  CHOSEN=BArmory;
+  HALT;
+ }
+
+!NOTMASTER!
+
+HALT;

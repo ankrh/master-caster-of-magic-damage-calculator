@@ -1,0 +1,12 @@
+:
+INPUT - W - The wizard who is casting the spell
+        STR - The base strength of dispel
+OUTPUT - STR - The final dispel strength of the spell
+:
+
+BASE=STR;
+
+IF (W<>NeutralPlayerID) THEN {
+IF RETORT(W,Runemaster) THEN { STR=STR+BASE; }
+IF HASGLOBAL(W,GEAetherBinding) THEN { STR=STR+BASE; }
+}

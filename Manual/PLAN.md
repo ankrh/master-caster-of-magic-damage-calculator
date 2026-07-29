@@ -3,7 +3,7 @@
 Project state: what is done, what is next, and the rules for autonomous runs.
 Behaviour is in [SPEC.md](./SPEC.md) — this file never restates it.
 
-**Status: Stage 0 complete** (commit `537b044`). `--verify` is green.
+**Status: Stage 1 complete.** `--verify` is green.
 
 ## Stages
 
@@ -13,21 +13,28 @@ stage's own assertions added to `EXPECTED`.
 ### Stage 0 — contract ✅ done
 
 Parser skeleton, run-based tokenizer, `--census` / `--verify` / `--emit`.
-Confirmed: 17 chapters, 14 races, 234 spells, 272 style-detected entries.
 Deterministic JSON emit. Built by hand deliberately — the agent whose work it
 grades must not also define it.
 
-### Stage 1 — full extraction
+### Stage 1 — full extraction ✅ done
 
-Every chapter's entities extracted, with per-chapter entry rules (SPEC.md,
-*Entry detection is per-chapter* — this is the part that will bite).
+Every chapter's entities extracted, with per-chapter entry rules. All counts in
+SPEC.md's entity model are asserted, alongside structural and referential-integrity
+assertions; the unclaimed-text report is empty and emit is byte-identical across runs.
 
-Done when:
-- Retorts, Buildings, Hero Abilities, Hero Types, Common Units and racial units
-  all extract, each with a count assertion in `EXPECTED`.
-- The item-power count is resolved (37 vs 38) and asserted.
-- The unclaimed-text report is empty.
-- Structured fields per SPEC.md's entity model are populated.
+The item-power count resolved to **38**. The 38th, `Lightning`, is a heading that
+starts *mid-paragraph*, which no lead-run classifier can see — see SPEC.md,
+*Headings that start mid-paragraph*. Two hierarchy overrides were also needed
+(Heroes, Item Powers), both recorded in SPEC.md.
+
+Summoned creatures were not in the original entity model and were added here: 48
+fantastic units, extracted from their summoning spells' effect text.
+
+Extraction surfaced four places where the manual contradicts itself or writes in
+shorthand; all are resolved and logged rather than silently repaired — see SPEC.md,
+*Discrepancies report*. Two facts the manual never states (the `*` Super marker, and what
+`Ship Wringhts Guild` refers to) came from the maintainer and are recorded under
+*Knowledge that is not in the manual*.
 
 ### Stage 2 — tables and verification
 
@@ -36,6 +43,8 @@ Done when:
   labels in a separate pass, and mark the result machine-transcribed.
 - Build the helptext / `UNITS.INI` join as a *verification* pass and emit
   `Manual/DISCREPANCIES.md`. Never let a discrepancy change what is presented.
+- Seed that report with the manual-vs-itself conflicts Stage 1 found and resolved
+  — they are listed in SPEC.md, *Discrepancies report*.
 
 ### Stage 3 — the page
 

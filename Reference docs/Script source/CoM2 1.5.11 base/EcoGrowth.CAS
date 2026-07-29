@@ -1,0 +1,102 @@
+: INPUT - CityID, thecity being calculated 
+		  Food, the food production of the city
+		  MaxPop, the maximal population of the city
+		  Racial, the racial growth modifier for the current city (see races.ini), or the outpost growth percentage modifier for outposts.
+		  HOUSING, 1 if the city is currently producing housing, 0 otherwise
+		  WORKERS, number of workers+mandatory farmers in the city, used for housing.
+		  UNREST, number of rebels in the city
+  OUTPUT - RESULT = the calculated growth
+ :
+
+POP=POPUNITS(CityID);
+W=CITYOWNER(CityID);
+RESULT=0;
+
+IF POP>=1 THEN {
+:CITY:
+If FOOD>=(2*POP) THEN {
+:Enough Food:
+RESULT=((MAXPOP-POP)*5)+RACIAL;
+ADDRESLINE "Natural", (MAXPOP-POP)*5;
+ADDRESLINE "Race", RACIAL;
+IF ISBUILT(CityID,BFarmerMarket) THEN {
+RESULT=RESULT+50;
+ADDRESLINE "Farmer's Market", 50;
+}
+IF CITYENCHANT(CityID,CEStreamofLife)>-1 THEN {
+ADDRESLINE "Stream of Life",RESULT;
+RESULT=RESULT*2;
+}
+IF (EVENTTURN(EvPopBoom)>0) %AND (EVENTVAL(EvPopBoom)=CityID) THEN {
+ADDRESLINE "Population Boom", RESULT;
+RESULT=RESULT*2;
+}
+: Test enchantment Tower of Opression 
+IF CITYENCHANT(CITYID,28)>-1 THEN {
+ADDRESLINE "Tower of Oppression", 0-(%I (RESULT/2));
+RESULT=%I (RESULT/2);
+}
+:
+
+IF HOUSING=1 THEN {
+J=170*((MAXPOP+(RACIAL/10))-8)/13;
+J=J*(1.3-(0.1*POP));
+If J<40 then {J=40;}
+J=%I(J*(WORKERS/POP));
+IF (J>0) THEN {
+ADDRESLINE "Housing",J;
+RESULT=RESULT+J;
+}
+}
+IF W=NeutralPlayerID THEN {
+RESULT=%I(RESULT/2);
+IF POP>=2*(1+Difficulty()) THEN { RESULT=0; }
+}
+} ELSE {
+:Shrinking due to low food:
+RESULT=25*(FOOD-(2*POP));
+ADDRESLINE "Low Food", RESULT;
+}
+IF POP>=MAXPOP THEN {
+IF CITYENCHANT(CityID,CEDrought)>-1 THEN {
+ADDRESLINE "Drought",-120-(RACIAL*(FOOD>=(2*POP)));
+RESULT=(RESULT-120)-(RACIAL*(FOOD>=(2*POP)));
+}
+J=0;
+FOR I=0 TO NOFWIZARDS();
+IF (I<>W) %AND (HASGLOBAL(I,GEDoomsday)) THEN {
+J=J+200;
+}
+NEXT;
+If (J>0) THEN {
+ADDRESLINE "Doomsday",0-J;
+Result=Result-J;
+}
+}
+} ELSE {
+:OUTPOST:
+BASE=(MAXPOP+10)*2;
+RATE=100;
+IF (W<>0) THEN { RATE=RATE+(10*(DIFFICULTY()-4)); }
+RATE=RATE+RACIAL;
+RESULT=%I((BASE*RATE)/100);
+If CITYENCHANT(CityID,CEStreamofLife)>-1 THEN {RESULT=RESULT*2;}
+If CITYENCHANT(CityID,CEGaiasBlessing)>-1 THEN {RESULT=RESULT+40;}
+If CITYENCHANT(CityID,CEAbundance)>-1 THEN {RESULT=RESULT+40;}
+IF (W<>0) %AND (RESULT<30) THEN {RESULT=30;}
+FOR I=1 to 12;
+J=OREINRANGE(cityID,I);
+RESULT=RESULT+((5*J)/2);
+IF I=OreCoal THEN { RESULT=RESULT+((7*J)/2); }
+IF I=OreIron THEN { RESULT=RESULT+((7*J)/2); }
+NEXT;
+RESULT=%I(RESULT);
+SHRINK=0;
+IF CITYENCHANT(CityID,CEEvilPresence)>-1 THEN { SHRINK=SHRINK+7; }
+IF CITYENCHANT(CityID,CEPestilence)>-1 THEN { SHRINK=SHRINK+25; }
+IF CITYENCHANT(CityID,CEDrought)>-1 THEN { SHRINK=SHRINK+15; }
+IF CITYENCHANT(CityID,CEChaosRift)>-1 THEN { SHRINK=SHRINK+12; }
+If (12-MAXPOP)>0 THEN { SHRINK=(SHRINK+12)-MAXPOP; }
+IF ISFORTRESS(CityID) THEN { SHRINK=0; }
+IF RND(100)<SHRINK THEN { RESULT=RESULT-240; }
+}

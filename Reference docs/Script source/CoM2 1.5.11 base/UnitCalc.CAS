@@ -1,0 +1,16 @@
+HALT;
+
+if (GetEnchantmentFlag(U,EncStoneSkin,0)>0) THEN {
+SETSTAT U,SDefense,0,(GetStat(U,SDefense,0)+1);
+SETSTAT U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1);
+}
+
+NIB=GetHeAb(U,25);
+IF NIB>0 THEN {
+SETSTAT U,SToDefend,0,(GetStat(U,SToDefend,0)+5);
+}
+
+:
+INPUT - U, the unit being calculated.
+OUTPUT - None, set unit current stats using the SetStat command.
+:

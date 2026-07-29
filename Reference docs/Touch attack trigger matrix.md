@@ -2,7 +2,8 @@
 
 Which per-hit / touch effects fire on which attack phase, per game version.
 
-Sources: `CoM2 manual.txt`, `CoM2 spells helptext.txt`, `Warlord manual.txt`
+Sources: `CoM2 manual.txt`, `CoM2 helptext.TXT`,
+`Warlord manual v1.5.12.5 (superseded, formatting-lossy).txt`
 (Venom @ 2326, Shadow Strike @ 3046, Cockatrices @ 2338, Focus Magic @ 2492,
 Revenant @ 3060, Rakhshasa @ 1260, Vampirism @ 3113).
 
@@ -66,12 +67,18 @@ Source notes for CoM2:
 - Hero-item touch effects (Bow/Wand/Staff) are an exception — those are
   explicitly "ranged only" per the helptext at lines 3231-3241 — but the
   calculator does not model item-granted touches.
-- Dispel Evil is a special case in the MoM Fandom write-up
-  ([Dispel Evil (Ability).md:29](MoM source - Fandom site/Dispel Evil (Ability).md#L29)),
-  which describes it as "Melee Touch Attack" that does not fire on thrown,
-  breath, gaze, or first-strike. CoM2 inherits this in principle, but the only
-  unit with Dispel Evil (the Angel) has no thrown/breath/ranged/gaze attack,
-  so the distinction never comes up in practice in CoM2.
+- Dispel Evil has **no melee-only restriction in any version.** The MoM Fandom
+  write-up ([Dispel Evil (Ability).md:29](MoM source - Fandom site/Dispel Evil (Ability).md#L29))
+  calls it a "Melee Touch Attack", but MoM 1.31's own code contradicts this: the
+  dispatch at `0x99F72` in `WIZARDS.EXE` has no `attack_mode` gate (see
+  `MoM binary analysis.md`). CoM renamed the ability **Exorcise**, and CoM,
+  CoM2 and Warlord helptext all describe it as a plain per-figure touch with no
+  phase restriction.
+- The one real restriction, present in CoM/CoM2/Warlord helptext: "If this ability
+  is granted by a weapon, it only applies to attacks performed by that type of
+  weapon." That is the hero-item case, which this calculator does not model.
+- CoM changed the target class as well: MoM 1.31 requires the defender's race to be
+  Chaos (0x12) or Death (0x14), whereas CoM onward targets **fantastic units**.
 
 ## Current calculator implementation (`combat.js`)
 
@@ -83,7 +90,7 @@ CoM2 and Warlord:
 | Poison        | ✓ | ✓ | ✓ | ✓ |
 | Stoning Touch | ✓ | ✓ | ✓ | ✓ |
 | Life Steal    | ✓ | ✓ | ✓ | ✓ |
-| Dispel Evil   | ✓ | ✗ | ✗ | ✗ |
+| Dispel Evil   | ✓ | ✓ | ✓ | ✓ |
 | Bloodsucker   | — not modeled — |
 | Death Touch   | — not modeled as a distinct effect — |
 
@@ -92,4 +99,7 @@ CoM2 and Warlord:
 1. **Warlord ranged**: calculator fires Stoning Touch on ranged; Warlord manual explicitly removed this (Focus Magic + Cockatrices combo deliberately eliminated). Confirmed divergence.
 2. **Bloodsucker**: not implemented at all (Rakhshasa racial / Vampire Lord / Vampirism enchantment, Warlord-only). Needs +2 damage / +2 heal per attack phase with damage, capped at 1 trigger per phase regardless of attacker figure count.
 3. **Death Touch**: no distinct ability key — currently subsumed into Life Steal / Stoning Touch handling.
-4. **Dispel Evil on non-melee phases**: calculator restricts Dispel Evil to melee, which matches the strict MoM Fandom definition. CoM2's "all phases" rule for touch attacks would arguably extend Dispel Evil to all phases too, but the only CoM2 unit with Dispel Evil (Angel) has no non-melee attacks, so this is academic.
+4. ~~**Dispel Evil on non-melee phases**~~ — resolved, no divergence. The calculator fires it on
+   all phases (`touchParams` in `combat.js` computes `dispelEvilFail` identically for melee,
+   thrown, ranged and gaze), which is correct for every version. The earlier entry here was
+   based on the MoM Fandom "Melee Touch Attack" wording, now disproven against the binary.

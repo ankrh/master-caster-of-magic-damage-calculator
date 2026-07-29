@@ -1,0 +1,672 @@
+: INPUT - CityID , the ID of the city being processed.
+  Output - None. 
+  Use the AddResLine command to add produced power to the total and as an individual line in the detailed view on the UI.
+:
+
+IF CITYOWNER(CityID)=0 THEN {
+ MASTERVARSET CityInFocus = -1;
+}
+
+RELPOW=0; ORE=0;
+
+W=CITYOWNER(CityID);
+
+POP=POPUNITS(CityID);
+RACE=CITYRACE(CityID);
+FARMERS=GETCITYDATA(CITYID,CDFARMER);
+WORKERS=GETCITYDATA(CITYID,CDWORKER);
+MAXPOP=GETCITYDATA(CITYID,CDMAXPOP);
+REBELS=POP-(FARMERS+WORKERS);
+
+MERIT=0;
+IF (SPELLSTATE(W,STMeritBureaucracy)=2) THEN { MERIT=20; }
+RADIO=0;
+IF (SPELLSTATE(W,STRadio)=2) THEN { RADIO=10; }
+
+MISSION=0;
+
+IF (SPELLSTATE(W,SGospelOfEvangelism)<>2) %OR (ISFORTRESS(CityID)=0) THEN { GOTO "NOMISSION"; }
+
+ FOR C=1 TO MAXCITY();
+
+  IF (CITYENCHANT(C,CEGospelOfEvangelism)=W) THEN { MISSION=MISSION+1; }
+
+ NEXT C;
+
+!NOMISSION!
+
+AS=1;
+FACTOR=1;
+IF RETORT(W,Procurator) THEN { 
+ AS=3;
+ FACTOR=FACTOR*3/4;
+}
+
+: Checking City Overland Coordinates and Planes, if one city is found to have unupdated records, recheck entire map if necessary :
+IF (GETCITYDATA(CITYID,CDCOLP)>0) THEN { GOTO "HAVECITYCOOD"; }
+
+: Recording city coordination value :
+: Forced updating :
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+
+: City on tile found, update necessary records :
+  IF (CU>0) THEN {
+   IF ((GETCITYDATA(CU,CDCOLP))<1) THEN {
+    SETCITYDATA(CU,CDCOLX,X);
+    SETCITYDATA(CU,CDCOLY,Y);
+    SETCITYDATA(CU,CDCOLP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVECITYCOOD!
+
+
+: Check Fortress and City Coordination :
+IF (W=NeutralPlayerID) THEN { GOTO "NOCORRUPTION"; }
+
+: Corruption :
+
+: Check Wizard if they has already registered his address :
+
+IF ((Banished(W))=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=2)
+THEN { GOTO "HAVEFORTRESSORBANISH"; }
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+  I=CITYOWNER(CU);
+  IF (CU>0) THEN {
+   IF ((ISFORTRESS(CU))>0) THEN {
+    SETWIZARDDATA(I,WDFortressX,X);
+    SETWIZARDDATA(I,WDFortressY,Y);
+    SETWIZARDDATA(I,WDFortressP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVEFORTRESSORBANISH!
+
+ IF (GETWIZARDDATA(W,WDFortressP)<>(GETCITYDATA(CITYID,CDCOLP)) THEN { GOTO "DIFFERENTPLANE"; }
+
+  DISTANCEX = ABS( GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  IF ( DISTANCEX > ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) ) ) THEN {
+   DISTANCEX = ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  }
+  DISTANCEY = ABS( GETWIZARDDATA(W,WDFortressY) - GETCITYDATA(CITYID,CDCOLY) );
+  DISTANCEZ= SQRT((DISTANCEX*DISTANCEX)+(DISTANCEY*DISTANCEY));
+  CORRUPTION = %I(ABS(DISTANCEZ))-MERIT;
+  IF CORRUPTION < 0 THEN { CORRUPTION=0; }
+  IF CORRUPTION > (30-RADIO) THEN { CORRUPTION=30-RADIO; }
+  GOTO "NOCORRUPTION";
+
+!DIFFERENTPLANE!
+
+ CORRUPTION = 30-RADIO;
+
+!NOCORRUPTION!
+
+: Ruler of Heaven is there or not :
+IF HASGLOBAL(W,GERulerOfHeaven) THEN { RUHPOW=2; } ELSE { RUHPOW=0; };
+
+: Global enchantment counting :
+NOFDARKEST=DARKESTHOURCOUNT;
+NOFDIVORDER=DIVINEORDERCOUNT;
+
+ IF HASGLOBAL(W,GEDarkestHour) THEN { NOFDARKEST=NOFDARKEST-1; }
+ IF HASGLOBAL(W,GEDivineOrder) THEN { NOFDIVORDER=NOFDIVORDER-1; }
+
+: Power gain from population :
+
+IF race=RCDarkElf then {
+ AddResLine "Dark Elves", POP;
+}
+
+IF race=RCHighElf then {
+ AddResLine "High Elves", %I(POP/2);
+}
+
+IF race=RCBeastmen then {
+ AddResLine "Beastmen", %I(POP/2);
+}
+
+IF race=RCDraconian then {
+ AddResLine "Draconians", %I(POP/2);
+}
+
+IF race=RCRakhshasa then {
+ AddResLine "Rakhshasas", %I(POP/2);
+}
+
+IF race=RCHawkmen then {
+ AddResLine "Hawkmen", %I(POP/2);
+}
+
+IF HasGlobal(W,GELifeForce) THEN {
+ AddResLine "Life Force", POP;
+}
+
+: Power generate by ore :
+
+IF CITYENCHANT(CityID,CENatureEye)>-1 THEN {
+ ADDRESLINE "Natural NightShade", (2*OREINRANGE(CITYID,OreNightshade));
+}
+
+I=%I((OREINRANGE(CITYID,OreMithril))/2);
+ADDRESLINE "Mithril",I;
+ORE=ORE+I;
+
+I=OREINRANGE(CITYID,OreAdamantium);
+ADDRESLINE "Adamantium",I;
+ORE=ORE+I;
+
+I=%I((3*OREINRANGE(CITYID,OreOrihalcon))/2);
+ADDRESLINE "Orihalcon",I;
+ORE=ORE+I;
+
+I=%I((5*OREINRANGE(CITYID,OreQuork))/2);
+ADDRESLINE "Quork",I;
+ORE=ORE+I;
+
+I=5*(OREINRANGE(CITYID,OreCrysx));
+ADDRESLINE "Crysx",I;
+ORE=ORE+I;
+
+IF (SPELLSTATE(W,STMagitekMaterialScience)=2) THEN {
+ AddResLine "Magitek Science", ORE;
+ ORE=2*ORE;
+}
+
+IF HasGlobal(W,GESeismicMastery) THEN {
+ AddResLine "Planetary Mastery", ORE;
+ ORE=2*ORE;
+}
+
+IF ISBUILT(CityID,BMinerGuild) THEN {
+ IF (SPELLSTATE(W,STExplosive)=2) THEN {
+  AddResLine "Miner's Guild, with Explosive", ORE;
+ } ELSE {
+  AddResLine "Miner's Guild", %I(ORE/2);
+ }
+}
+
+IF race=RCDwarf then {
+ AddResLine "Dwarven Miners", ORE;
+}
+
+
+: Power from non-religious buildings/sources :
+
+IF (ISBUILT(CityID,BMagicMarket)=0) THEN { GOTO "NOMAGICMARKET"; }
+
+ IF (NOFDIVORDER<1) %OR HASGLOBAL(W,GEDivineOrder) THEN { ADDRESLINE "Magic Market", 4; } ELSE {
+  IF BOOKS(W,Life)>0 THEN {  
+   IF (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Death)))-(BOOKS(W,Life)))>0 THEN { ADDRESLINE "Magic Market", 2; }
+  }
+ }
+
+!NOMAGICMARKET!
+
+IF ISBUILT(CityID,BWizardsGuild) THEN {
+ ADDRESLINE "Wizard's Guild", 12;
+}
+
+IF ISBUILT(CityID,BLavaSmelter) THEN {
+ ADDRESLINE "Lava Smelter", 15;
+}
+
+IF (SPELLSTATE(W,STMagitekPowerEngine)=2) THEN {
+ POWERGEN=%I(GETCITYDATA(CityID,CDPROD)/15);
+ ADDRESLINE "Power Generator", POWERGEN;
+}
+
+
+IF CITYENCHANT(CityID,CEUranusBless)<0 THEN { GOTO "NOURANUSBLESSING"; }
+
+ RESB=0;
+
+ IF (GETCITYDATA(CityID,CDRES)<>0) THEN {
+  RESB=GETCITYDATA(CityID,CDRES);
+  GOTO "ALREADYHASCDRES";
+ }
+
+ PRINT=0;
+ IF (SPELLSTATE(W,STPrintingPress)=2) THEN { PRINT=2; }
+
+ IF ISBUILT(CityID,BLibrary) THEN { RESB=RESB+4+PRINT; }
+ IF ISBUILT(CityID,BAlchemistguild) THEN { RESB=RESB+2+PRINT; }
+ IF ISBUILT(CityID,BUniversity) THEN { RESB=RESB+6+PRINT; }
+ IF ISBUILT(CityID,BSagesGuild) THEN { RESB=RESB+12+PRINT; }
+ IF ISBUILT(CityID,BWizardsGuild) THEN { RESB=RESB+2+PRINT; }
+ IF ISBUILT(CityID,BAgoge) THEN { RESB=RESB+15+PRINT; }
+ IF ISBUILT(CityID,BAcademy) THEN { RESB=RESB+MAXPOP+PRINT; }
+ IF RETORT(W,SageMaster) THEN {
+  IF (SPELLSTATE(W,SEducationReform)=2)
+   %AND ISBUILT(CITYID,BWizardsGuild)
+  THEN {
+   RESB=RESB+2;
+  }
+  IF (ISFORTRESS(CityID)>0)
+   %AND (HASGLOBAL(W,GEArcaneConference))
+  THEN {
+
+   NUMLIBRARY=0;
+   NUMUNIVERSITY=0;
+   NUMSAGEGUILD=0;
+   ARCANECON=0;
+
+   FOR I=1 TO NOFWIZARDS()+1;
+
+    NUMLIBRARY=NUMLIBRARY+BUILDINGSOWNED(I,BLibrary,0);
+    NUMUNIVERSITY=NUMUNIVERSITY+BUILDINGSOWNED(I,BUniversity,0);
+    NUMSAGEGUILD=NUMSAGEGUILD+BUILDINGSOWNED(I,BSagesGuild,0);
+
+   NEXT I;
+
+   ARCANECON=(1*NUMLIBRARY)+(2*NUMUNIVERSITY)+(3*NUMSAGEGUILD);
+
+   RESB=RESB+ARCANECON;
+  }
+ }
+ IF (NOFDARKEST>0) THEN { RESB=%I((RESB+1)/2); }
+ IF RACE=RCHalfling THEN { RESB=RESB+POPUNITS(CityID); }
+ IF CITYENCHANT(CityID,CENatureEye)>-1 THEN { RESB=RESB+4; }
+ IF HASGLOBAL(W,GEEnlightenment) THEN { RESB=RESB+POPUNITS(CityID); }
+ IF (CITYENCHANT(CityID,CEAltarOfPeace)<0) THEN { GOTO "NOALTAROFPEACE"; }
+  J=0;K=0;
+  FOR I=0 TO Nofwizards();
+  IF (I<>W) %AND (CONTACT(I,W)) %AND ( DEFEATED(I) = 0 ) THEN { K=K+1; J=J+RELATION(W,I); }
+  NEXT;
+  J=J*32; IF K>0 THEN { J=%I (J/K); }
+  J=(%I (J/100))+12;
+  IF J<12 THEN { J=0; }
+  IF J>32 THEN { J=32; }
+  RESB=RESB+J;
+!NOALTAROFPEACE!
+
+ IF (SPELLSTATE(W,STScientificProcess)=2) THEN { RESB=%I((RESB*5)/4)
+
+ IF (CITYENCHANT(CityID,CEInquisition)<0) THEN { GOTO "NOINQUISITION"; }
+  : Calculate religious power :
+  INQPOW=0;
+  IF CITYENCHANT(CityID,CEHeavenlyLight)>-1 THEN {
+   INQPOW=INQPOW+(3+RUHPOW);
+  }
+  IF ISBUILT(CityID,BShrine) THEN {
+   INQPOW=INQPOW+(2+RUHPOW);
+  }
+  IF ISBUILT(CityID,BParthenon) THEN {
+   INQPOW=INQPOW+(4+RUHPOW);
+  }
+  IF ISBUILT(CityID,BWitchesConvent) THEN {
+   INQPOW=INQPOW+(4+RUHPOW);
+  }
+  IF HASGLOBAL(W,GEKingOfUnderworld) %AND ISBUILT(CityID,BOracle) THEN {
+   INQPOW=INQPOW+(4+RUHPOW);
+  }
+  IF ISBUILT(CityID,BCathedral) THEN {
+   INQPOW=INQPOW+(6+RUHPOW);
+  }
+
+  IF (ISBUILT(CityID,BTemple)=0) THEN { GOTO "NOTEMPLEURANUS"; }
+
+   WGE=%I((2*OREINRANGE(CITYID,OreWildgame)));
+   NSE=%I((2*OREINRANGE(CITYID,OreNightshade)));
+   OHE=%I((2*OREINRANGE(CITYID,OreOrihalcon)));
+   IF (ISBUILT(CityID,BAlchemistGuild)=0) THEN { NSE=0; OHE=0; }
+   INQPOW=INQPOW+((4+NSE+WGE+OHE)+RUHPOW);
+
+!NOTEMPLEURANUS!
+
+  IF ISBUILT(CityID,BAltarOfStorm) THEN {
+   INQPOW=INQPOW+(8+RUHPOW);
+  }
+  IF ISBUILT(CityID,BAltarOfTheSun) THEN {
+   INQPOW=INQPOW+(8+RUHPOW);
+  }
+  IF ISBUILT(CityID,BAltarOfTheMoon) THEN {
+   INQPOW=INQPOW+(8+RUHPOW);
+  }
+  IF ISBUILT(CityID,BBasilica) THEN {
+   INQPOW=INQPOW+(MAXPOP+RUHPOW);
+  }
+  IF CITYENCHANT(CityID,CEDarkRituals)>-1 THEN {
+   DR=8+%I(INQPOW);
+   INQPOW=INQPOW+DR;
+  }
+  IF (ISFORTRESS(CityID)>0) THEN {
+   INQPOW=INQPOW+MISSION;
+  }
+  IF EVENTTURN(EvGoodMoon)=0 THEN { GOTO "INQNOGOODMOON"; }
+   IF BOOKS(W,Life)>BOOKS(W,Death) THEN {
+    INQPOW=INQPOW+%I(INQPOW/2);
+   }
+   IF BOOKS(W,Death)>BOOKS(W,Life) THEN {
+    INQPOW=INQPOW-(%I(INQPOW/3));
+   }
+!INQNOGOODMOON!
+  IF EVENTTURN(EvBadMoon)=0 THEN { GOTO "INQNOBADMOON"; }
+   IF BOOKS(W,Death)>BOOKS(W,Life) THEN {
+    INQPOW=INQPOW+%I(INQPOW/2);
+   }
+   IF BOOKS(W,Life)>BOOKS(W,Death) THEN {
+    INQPOW=INQPOW-(%I(INQPOW/3));
+   }
+!INQNOBADMOON!
+  IF RETORT(W,CultLeader) THEN {
+   INQPOW=INQPOW+INQPOW;
+  }
+  : Effect of Inquisition, -3 research for each religious power more than 6 :
+  BOOKBURN=3*(INQPOW-6);
+  IF BOOKBURN<0 THEN { BOOKBURN=0; }
+  RESB=RESB-BOOKBURN
+!NOINQUISITION!
+
+ IF RETORT(W,Procurator) %AND (BOOKS(W,Sorcery)>0) THEN {
+  PP=((BOOKS(W,Sorcery)-1)*AS)+(4*AS);
+  RESB=RESB+%I((RESB * PP) /100);
+ }
+
+ IF (RESB>0) %AND (W<NeutralPlayerID) THEN {
+
+  IF Banished(W) THEN {
+   RESB=RESB-(%I((RESB*5*FACTOR)/10));
+  }
+  IF ((Banished(W))=0) %AND ((ISFORTRESS(CityID))=0) THEN {
+   RESB=RESB-(%I((RESB*CORRUPTION*FACTOR)/100));
+  }
+
+ }
+
+: difficulty bonus/penalty :
+ IF (W=0) THEN {
+  IF (DIFFICULTY()=DiffMaster) THEN {
+   RESB=RESB-(%I(RESB/10));
+  }
+  IF (DIFFICULTY()=DiffLunatic) THEN {
+   RESB=RESB-(%I(RESB/5));
+  }
+  IF (DIFFICULTY()=DiffPhantasm) THEN {
+   RESB=RESB-(%I(RESB/4));
+  }
+ }
+
+ SETCITYDATA(CityID,CDRES,RESB)
+
+!ALREADYHASCDRES!
+
+ADDRESLINE "Uranus' Blessing", 0+RESB;
+
+!NOURANUSBLESSING!
+
+IF CITYENCHANT(CityID,CEChaosBless)<0 THEN { GOTO "NOCHAOSBLESSING"; }
+
+MOUNTAINS=TERRAININRANGE(CITYID,LTMountain)/2;
+VOLCANOS=TERRAININRANGE(CITYID,LTVolcano)/2;
+
+CB=%I(MOUNTAINS+(3*VOLCANOS));
+
+IF (CB>0) THEN {
+ ADDRESLINE "Chaos' Blessing", CB;
+}
+
+!NOCHAOSBLESSING!
+
+IF (HASGLOBAL(W,GEPowerLink)=0) THEN { GOTO "NOPOWERLINK"; }
+ PL=0
+ IF CITYENCHANT(CityID,CEWallofFire)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEDarkRituals)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEUranusBless)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CECloudofShadow)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEFlyingFortress)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CENatureWard)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CESorceryWard)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEChaosWard)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CELifeWard)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEDeathWard)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CENatureEye)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEEarthGate)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEStreamofLife)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEGaiasBlessing)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEInspirations)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEProsperity)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEAltarofPeace)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEHeavenlyLight)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEConsecration)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEWallofDarkness)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEAltarofBattle)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEAbundance)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEMagicPerimeter)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEChaosBless)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CESorcererStone)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEWallOfStone)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEMarkOfConqueror)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEAstralGate)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEBountifulFestivity)>-1 THEN { PL=PL+10; }
+ IF CITYENCHANT(CityID,CEClockworkFactory)>-1 THEN { PL=PL+10; }
+ ADDRESLINE "Power Link", PL; 
+
+!NOPOWERLINK!
+
+
+: Power of Religious Sources :
+
+IF CITYENCHANT(CityID,CEHeavenlyLight)>-1 THEN {
+ ADDRESLINE "Heavenly Light", 3+RUHPOW;
+ RELPOW=RELPOW+(3+RUHPOW);
+}
+
+IF ISBUILT(CityID,BShrine) THEN {
+ ADDRESLINE "Shrine", 2+RUHPOW;
+ RELPOW=RELPOW+(2+RUHPOW);
+}
+
+IF ISBUILT(CityID,BParthenon) THEN {
+ ADDRESLINE "Monastery", 4+RUHPOW;
+ RELPOW=RELPOW+(4+RUHPOW);
+}
+
+IF ISBUILT(CityID,BWitchesConvent) THEN {
+ ADDRESLINE "Witches' Convent", 4+RUHPOW;
+ RELPOW=RELPOW+(4+RUHPOW);
+}
+
+IF HASGLOBAL(W,GEKingOfUnderworld) %AND ISBUILT(CityID,BOracle) THEN {
+ ADDRESLINE "Oracle", 4+RUHPOW;
+ RELPOW=RELPOW+(4+RUHPOW);
+}
+
+IF ISBUILT(CityID,BCathedral) THEN {
+ ADDRESLINE "Cathedral", 6+RUHPOW;
+ RELPOW=RELPOW+(6+RUHPOW);
+}
+
+IF (ISBUILT(CityID,BTemple)=0) THEN { GOTO "NOTEMPLE"; }
+ WGE=%I((2*OREINRANGE(CITYID,OreWildgame)));
+ NSE=%I((2*OREINRANGE(CITYID,OreNightshade)));
+ OHE=%I((2*OREINRANGE(CITYID,OreOrihalcon)));
+ IF (ISBUILT(CityID,BAlchemistGuild)=0) THEN { NSE=0; OHE=0; }
+ ADDRESLINE "Temple", (4+NSE+WGE+OHE)+RUHPOW;
+ RELPOW=RELPOW+((4+NSE+WGE+OHE)+RUHPOW);
+!NOTEMPLE!
+
+IF ISBUILT(CityID,BAltarOfStorm) THEN {
+ ADDRESLINE "Altar of Storm", 8+RUHPOW;
+ RELPOW=RELPOW+(8+RUHPOW);
+}
+
+IF ISBUILT(CityID,BAltarOfTheSun) THEN {
+ ADDRESLINE "Altar of the Sun", 8+RUHPOW;
+ RELPOW=RELPOW+(8+RUHPOW);
+}
+
+IF ISBUILT(CityID,BAltarOfTheMoon) THEN {
+ ADDRESLINE "Altar of the Moon", 8+RUHPOW;
+ RELPOW=RELPOW+(8+RUHPOW);
+}
+
+IF ISBUILT(CityID,BBasilica) THEN {
+ ADDRESLINE "Sancta Basilica", MAXPOP+RUHPOW;
+ RELPOW=RELPOW+(MAXPOP+RUHPOW);
+}
+
+IF CITYENCHANT(CityID,CEDarkRituals)>-1 THEN {
+ I=8+%I(RELPOW);
+ ADDRESLINE "Dark Rituals", I;
+ RELPOW=RELPOW+I;
+}
+
+IF (ISFORTRESS(CityID)>0) THEN {
+ AddResLine "Cult Leader's Missonary", MISSION;
+ RELPOW=RELPOW+MISSION;
+}
+
+IF EVENTTURN(EvGoodMoon)=0 THEN { GOTO "NOGOODMOON"; }
+ IF BOOKS(W,Life)>BOOKS(W,Death) THEN {
+  ADDRESLINE "Good Moon", %I(RELPOW/2);
+  RELPOW=RELPOW+%I(RELPOW/2);
+ }
+ IF BOOKS(W,Death)>BOOKS(W,Life) THEN {
+  ADDRESLINE "Good Moon", 0-(%I(RELPOW/3));
+  RELPOW=RELPOW-(%I(RELPOW/3));
+ }
+!NOGOODMOON!
+
+IF EVENTTURN(EvBadMoon)=0 THEN { GOTO "NOBADMOON"; }
+ IF BOOKS(W,Death)>BOOKS(W,Life) THEN {
+  ADDRESLINE "Bad Moon", %I(RELPOW/2);
+  RELPOW=RELPOW+%I(RELPOW/2);
+ }
+ IF BOOKS(W,Life)>BOOKS(W,Death) THEN {
+  ADDRESLINE "Bad Moon", 0-(%I(RELPOW/3));
+  RELPOW=RELPOW-(%I(RELPOW/3));
+ }
+!NOBADMOON!
+
+: New effect of Blazing Eye/Chaos Embrace give 2 power (religious) for each rebel pop (excluded Inquisition)  :
+
+IF HASGLOBAL(W,GEBlazingEyes) THEN {
+ CHAOSPOW=0;
+ INQUISITION=0;
+ IF (CITYENCHANT(CityID,CEInquisition)>-1) THEN {
+  IF RETORT(W,CultLeader) THEN {
+   INQUISITION = 2 + %I(((2*RELPOW)-6)/2);
+  } ELSE {
+   INQUISITION = 2 + %I(((RELPOW)-6)/2);
+  }
+  IF INQUISITION<2 THEN { INQUISITION=2; }
+ }
+ CHAOSPOW=CHAOSEMBRACECOUNT*(REBELS-INQUISITION);
+ IF CHAOSPOW>0 THEN {
+  ADDRESLINE "Chaos Embrace", CHAOSPOW;
+  RELPOW=RELPOW+CHAOSPOW;
+ }
+}
+
+IF RETORT(W,CultLeader) THEN {
+ AddResLine "Cult Leader", RELPOW;
+ RELPOW=RELPOW+RELPOW;
+}
+
+SETCITYDATA(CityID,CDRELPOW,RELPOW)
+
+
+: Darkest Hour curse's penalty :
+IF (HASGLOBAL(W,GEDarkestHour)) THEN { GOTO "ENDOFDH"; }
+
+ DH=0;
+
+ IF (NOFDARKEST>0) THEN {
+  J=%I((RELPOW+1)/2);
+  DH=DH+J;
+  RELPOW=RELPOW-J;
+ }
+
+ IF (DH>0) THEN {
+  ADDRESLINE "Darkest Hour",0-DH;
+ }
+
+!ENDOFDH!
+
+IF (CITYENCHANT(CityID,CEGospelOfEvangelism)>-1) THEN {
+ GOSPEL=GETCITYDATA(CITYID,CDUNREST);
+ ADDRESLINE "Gospel of Evangelism",0-GOSPEL;
+}
+
+: Power sources from the Master Wizard :
+
+IF (ISFORTRESS(CityID)=0) THEN { GOTO "NOTFORTRESS"; }
+ J=0;
+ K=0;
+ TB=(BOOKS(W,1))+(BOOKS(W,2))+(BOOKS(W,3))+(BOOKS(W,4))+(BOOKS(W,5))
+ IF TB>=1 THEN { J=J+TB; }
+ IF TB>=6 THEN { K=K+(TB-6); }
+ K=%I((K*K)/4);
+ J=9+J+K;
+ IF SCORINGOPTION(SUndevelopedStart) THEN { J=%I(J/2); }
+ ADDRESLINE "Fortress",J;
+
+!NOTFORTRESS!
+
+: Power from Administrative Skill :
+
+IF (BOOKS(W,Chaos)>0) THEN {
+ PP=((BOOKS(W,Chaos)-1)*AS)+(4*AS);
+ ADDRESLINE "Administrative Skill", %I((SUMRESLINES() * PP) /100)
+}
+
+: difficulty bonus :
+IF (W>0) %OR (ISFORTRESS(CityID)=0) THEN { GOTO "NODIFFBONUS"; }
+
+ IF (DIFFICULTY()=DiffBeginner) THEN {
+  ADDRESLINE "Beginner Power Bonus",50;
+ }
+ IF (DIFFICULTY()=DiffEasy) THEN {
+  ADDRESLINE "Easy Power Bonus",25;
+ }
+
+!NODIFFBONUS!
+
+: new city enchantment "Aether Sink" reduce power output of city by half :
+IF (CITYENCHANT(CityID,CEAetherSink)=-1) THEN { GOTO "NOASINK"; }
+
+ ASINK=%I((SUMRESLINES()-RELPOW)/2);
+ IF ASINK<5 THEN { ASINK=5; }
+ ADDRESLINE "Aether Sink", 0-ASINK;
+
+!NOASINK!
+
+IF ((SUMRESLINES())<1) %OR (W=NeutralPlayerID) THEN { GOTO "END"; }
+
+: Corruption :
+
+IF (SCORINGOPTION(SPleasantville)>0) THEN { GOTO "CORRUPTIONEND"; }
+
+: Corruption for display :
+  DISPLAYCORRUPTION=%I(CORRUPTION*FACTOR);
+  DISPLAYCBANISH=%I(50*FACTOR);
+
+ IF Banished(W) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCBANISH)+"%", 0-(%I(((SUMRESLINES())*5*FACTOR)/10));
+ }
+ IF ((Banished(W))=0) %AND ((ISFORTRESS(CityID))=0) %AND ((HASGLOBAL(W,GEPowerLink))=0) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCORRUPTION)+"%", 0-(%I(((SUMRESLINES())*CORRUPTION*FACTOR)/100));
+ }
+
+!CORRUPTIONEND!
+
+!END!

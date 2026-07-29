@@ -8,9 +8,9 @@
 //     in a version where it exists, then switching to a version where it's
 //     hidden, must yield the same result as never enabling it.
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
+const { openCalculator, expectNoConsoleErrors, setValue, gameVersions } = require('./helpers');
 
-const VERSIONS = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.5'];
+const VERSIONS = gameVersions();
 
 // A default roster unit locks its panel (all its ability controls become
 // disabled), which would confound version gating. Switch both sides to custom.
@@ -100,6 +100,70 @@ test('a hidden ability does not leak into the result', async ({ page }) => {
   await configure();
   const leaked = await meanB();
   expect(leaked).toEqual(off);
+
+  expectNoConsoleErrors(errors);
+});
+
+test('reform controls stay editable and affect predefined Warlord units', async ({ page }) => {
+  const errors = await openCalculator(page);
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.6.2');
+
+  await page.evaluate(() => {
+    const catapult = (unitDatabases[V_WARLORD] || []).find(u => u.name === 'Catapult');
+    if (!catapult) throw new Error('Warlord Catapult not found');
+    const select = document.getElementById('aUnit');
+    select.value = String(catapult.id);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  const causalControls = [
+    'armorcladReform',
+    'energyBeamWeapons',
+    'explosive',
+    'heatPowerEngine',
+    'magitekEngineering',
+    'militaryWorkshop',
+    'outlanderWizard',
+    'pneumaReactor',
+    'psychoConverter',
+    'rocketry',
+    'temporalEngineering',
+  ];
+  for (const key of causalControls) {
+    const control = page.locator(`#aAbil_${key}`);
+    await expect(control).toBeEnabled();
+    expect(await control.evaluate(el => el.closest('.abil-item').dataset.abilSource))
+      .toBe('enchantment');
+  }
+
+  const armorclad = page.locator('#aAbil_armorcladReform');
+  const before = await page.evaluate(() => readUnitStats('a').def);
+  await setValue(page, 'aAbil_outlanderWizard', true);
+  await setValue(page, 'aAbil_armorcladReform', true);
+  const after = await page.evaluate(() => readUnitStats('a').def);
+  expect(after - before).toBe(6);
+
+  // Derived labels are calculated internally, not exposed as competing UI state.
+  const derivedStates = [
+    'armorclad',
+    'battleArmor',
+    'blackpowder',
+    'bombsGrenades',
+    'energyCannon',
+    'energyWeaponry',
+    'pneumaField',
+    'powerEngine',
+    'psychoForce',
+    'temporalGravityDrive',
+    'upgradedExplosive',
+    'outlanderBallisticsTraining',
+    'outlanderRadio',
+    'outlanderXenopsychology',
+    'outlanderXenoveterinary',
+  ];
+  for (const key of derivedStates) {
+    await expect(page.locator(`#aAbil_${key}`)).toHaveCount(0);
+  }
 
   expectNoConsoleErrors(errors);
 });

@@ -113,7 +113,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // Nature Link (Warlord rename of Land Linking) maps to the landLinking calcKey.
   // Fantastic units get the Land Linking melee/def bonus AND the Warlord +1 resistance.
   const natureLinkFantastic = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.5',
+    version: 'com2_warlord_1.5.12.6.2',
     abilities: { landLinking: true },
     unitType: 'fantastic_nature',
     atk: 1, def: 1, res: 1,
@@ -124,7 +124,7 @@ function runDeriveUnitStatsChecks(ctx) {
 
   // Normal units get only the +1 resistance, not the fantastic-only melee/def bonus.
   const natureLinkNormal = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.5',
+    version: 'com2_warlord_1.5.12.6.2',
     abilities: { landLinking: true },
     unitType: 'normal',
     atk: 1, def: 1, res: 1,
@@ -142,6 +142,89 @@ function runDeriveUnitStatsChecks(ctx) {
   }));
   assertEqual(landLinkingCoM2.atk, 3, 'Land Linking (CoM2) gives fantastic units +2 melee');
   assertEqual(landLinkingCoM2.res, 1, 'Land Linking (CoM2) grants no resistance bonus');
+
+  const luckyStar = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { luckyStar: true },
+    rtbType: 'missile',
+    atk: 2, rtb: 2, def: 2, res: 2,
+  }));
+  assertEqual(luckyStar.atk, 3, 'Lucky Star aura gives every friendly unit +1 melee');
+  assertEqual(luckyStar.rtb, 3, 'Lucky Star aura gives every friendly unit +1 ranged');
+  assertEqual(luckyStar.def, 3, 'Lucky Star aura gives every friendly unit +1 armor');
+  assertEqual(luckyStar.res, 3, 'Lucky Star aura gives +1 resistance and no Lucky resistance');
+  assertClose(luckyStar.toHitMelee, 0.3, 'Lucky Star aura does not grant Lucky To-Hit');
+  assertClose(luckyStar.toBlock, 0.3, 'Lucky Star aura does not grant Lucky To-Block');
+
+  // Only the enchanted unit gains Lucky, expressed with the ordinary `lucky` control.
+  const luckyStarTarget = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { luckyStar: true, lucky: true },
+    atk: 2, def: 2, res: 2,
+  }));
+  assertEqual(luckyStarTarget.res, 4, 'Enchanted unit gets the aura resistance plus Lucky resistance');
+  assertClose(luckyStarTarget.toHitMelee, 0.4, 'Enchanted unit gets Lucky To-Hit');
+  assertClose(luckyStarTarget.toBlock, 0.4, 'Enchanted unit gets Lucky To-Block');
+
+  const trueSight = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { trueSight: true },
+    rtbType: 'magic_s',
+    rtb: 1,
+  }));
+  assertEqual(trueSight.abilities.illusionImmunity, true, 'True Sight grants Illusion Immunity');
+  assertClose(trueSight.toHitMelee, 0.3, 'True Sight does not boost melee To-Hit');
+  assertClose(trueSight.toHitRtb, 0.35, 'True Sight gives +5% ranged To-Hit in Warlord');
+
+  const eyeOfHeavenTrueSight = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { eyeOfHeaven: true },
+    rtbType: 'fire',
+    rtb: 1,
+  }));
+  assertClose(eyeOfHeavenTrueSight.toHitRtb, 0.35, 'Eye of Heaven grants the True Sight To-Hit bonus');
+
+  const academyMagicRanged = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { alumniOfAcademy: true },
+    race: 'Halfling',
+    name: 'Halfling Shamans',
+    rtbType: 'magic_n',
+    rtb: 3,
+    figs: 6,
+  }));
+  assertEqual(academyMagicRanged.figs, 8, 'Academy gives a Halfling magical-ranged unit +2 figures');
+
+  const academyMechanical = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { alumniOfAcademy: true, mechanical: true },
+    race: 'Halfling',
+    name: 'Mechanical Shamans',
+    rtbType: 'magic_n',
+    rtb: 3,
+    figs: 6,
+  }));
+  assertEqual(academyMechanical.figs, 6, 'Academy excludes Mechanical magical-ranged units');
+
+  const academyRocs = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { alumniOfAcademy: true },
+    race: 'Halfling',
+    name: 'Halfling Rocs',
+    figs: 2,
+  }));
+  assertEqual(academyRocs.figs, 4, 'Academy gives Halfling Rocs +2 figures');
+
+  const academyOtherRace = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { alumniOfAcademy: true },
+    race: 'High Men',
+    name: 'High Men Magicians',
+    rtbType: 'magic_c',
+    rtb: 3,
+    figs: 4,
+  }));
+  assertEqual(academyOtherRace.figs, 4, 'Academy is inert outside the Halfling race');
 
   const innerPower = ctx.deriveUnitStats(baseUnitInput({
     abilities: { innerPower: true, fireImmunity: true },
@@ -163,7 +246,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(ineligibleInnerPower.abilities.innerPower, false, 'Inner Power is disabled for ineligible units');
 
   const holyWeaponThrown = ctx.deriveUnitStats(baseUnitInput({
-    version: 'mom_1.60',
+    version: 'mom_cp_1.60.00',
     abilities: { holyWeapon: true },
     rtbType: 'thrown',
     rtb: 2,
@@ -186,7 +269,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(darknessDeath.res, 6, 'Darkness gives Death units +1 resistance');
 
   const trueLightDeath = ctx.deriveUnitStats(baseUnitInput({
-    version: 'mom_1.60',
+    version: 'mom_cp_1.60.00',
     unitType: 'fantastic_death',
     atk: 4,
     rtbType: 'missile',
@@ -201,7 +284,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(trueLightDeath.res, 4, 'True Light gives Death units -1 resistance in MoM');
 
   const bothLightDark = ctx.deriveUnitStats(baseUnitInput({
-    version: 'mom_1.60',
+    version: 'mom_cp_1.60.00',
     unitType: 'fantastic_death',
     atk: 4,
     rtbType: 'missile',
@@ -217,7 +300,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(bothLightDark.res, 5, 'True Light and Darkness cancel Death resistance modifiers');
 
   const eternalNightDeathMoM = ctx.deriveUnitStats(baseUnitInput({
-    version: 'mom_1.60',
+    version: 'mom_cp_1.60.00',
     unitType: 'fantastic_death',
     atk: 4,
     rtbType: 'missile',
@@ -232,7 +315,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(eternalNightDeathMoM.res, 6, 'Eternal Night uses normal Darkness resistance in MoM');
 
   const enemyEternalNightNormalMoM = ctx.deriveUnitStats(baseUnitInput({
-    version: 'mom_1.60',
+    version: 'mom_cp_1.60.00',
     unitType: 'normal',
     res: 5,
     enemyEternalNight: true,
@@ -322,6 +405,331 @@ function runToBlockChecks(ctx) {
   assertClose(result.aToBlockVsBMelee, 0.15, 'Opponent Eldritch Weapon lowers attacker melee block');
 }
 
+function runDerivationStageChecks(ctx) {
+  const version = 'com2_warlord_1.5.12.6.2';
+
+  const intrinsicLucky = ctx.getAbilityStatModifiers(
+    { lucky: true, luckyPhaseA: true },
+    version,
+  );
+  assertEqual(intrinsicLucky.base.resMod, 0, 'Intrinsic Lucky is not baked into the base stage');
+  assertEqual(intrinsicLucky.a.resMod, 1, 'Intrinsic Lucky is applied in encounter phase a');
+
+  const grantedLucky = ctx.getAbilityStatModifiers(
+    { lucky: true, luckyPhaseBase: true, luckyPhaseA: true },
+    version,
+  );
+  assertEqual(grantedLucky.base.resMod, 1, 'Creation-time Lucky grant uses the base stage');
+  assertEqual(grantedLucky.a.resMod, 0, 'Creation-time Lucky grant is not counted again in phase a');
+
+  const artificer = ctx.getAbilityStatModifiers(
+    { artificer: true, mechanical: true },
+    version,
+  );
+  assertEqual(artificer.base.atkMod, 1, 'Artificer ABase melee write uses the base stage');
+  assertEqual(artificer.a.atkMod, 0, 'Artificer ABase melee write is absent from phase a');
+  // +2, not the +1 the in-game helptext states — CreateUnit.CAS:43 matches manual changelog
+  // 1.4.22, which restored the +2 that 1.4.17 had cut. See Source discrepancies.md §6.
+  assertEqual(artificer.base.resMod, 2, 'Artificer grants +2 resistance, per the script');
+  assertEqual(artificer.base.defMod, 1, 'Artificer grants +1 armor');
+  assertEqual(artificer.base.rtbMod, 1, 'Artificer grants +1 ranged');
+
+  const guardian = ctx.getAbilityStatModifiers({ guardian: true }, version);
+  assertEqual(guardian.base.resMod, 0, 'Guardian is not baked into the base stage');
+  assertEqual(guardian.a.resMod, 1, 'Guardian is recomputed in encounter phase a');
+
+  const rebuiltNormal = ctx.getAbilityStatModifiers(
+    { rebuild: true, unitType: 'normal' },
+    version,
+  );
+  assertEqual(rebuiltNormal.base.atkMod, 2, 'Non-hero Rebuild ABase write uses the base stage');
+  assertEqual(rebuiltNormal.b.atkMod, 0, 'Non-hero Rebuild does not use UnitCalcPre phase b');
+
+  const rebuiltHero = ctx.getAbilityStatModifiers(
+    { rebuild: true, unitType: 'hero' },
+    version,
+  );
+  assertEqual(rebuiltHero.base.atkMod, 0, 'Hero Rebuild is not baked into the base stage');
+  assertEqual(rebuiltHero.b.atkMod, 2, 'Hero Rebuild is reapplied in UnitCalcPre phase b');
+
+  const mixed = ctx.getAbilityStatModifiers({
+    artificer: true,
+    mechanical: true,
+    holyBonus: 2,
+    prayer: true,
+    rust: true,
+    favoredTerrain: true,
+  }, version);
+  for (const key of ['atkMod', 'defMod', 'resMod', 'hpMod', 'toHitMod', 'toBlkMod', 'rtbMod']) {
+    const staged = mixed.base[key] + mixed.a[key] + mixed.b[key] + mixed.c[key] + mixed.d[key];
+    assertEqual(mixed[key], staged, `Flat ${key} equals base+a+b+c+d`);
+  }
+}
+
+function runWarlordUnitAbilityChecks(ctx) {
+  const version = 'com2_warlord_1.5.12.6.2';
+  const warlordUnit = (overrides = {}) => baseUnitInput({
+    version,
+    ...overrides,
+    abilities: { outlanderWizard: true, ...(overrides.abilities || {}) },
+  });
+
+  const sapiensCount = vm.runInContext(
+    "Object.values(WARLORD_UNITS_DATA).filter(u => (u.abilities || []).includes('Sapiens')).length",
+    ctx,
+  );
+  assertEqual(sapiensCount, 31, 'Warlord roster generator emits all 31 Sapiens units');
+  // v1.5.12.6.2 added Custom13=14 to Wraiths [170] and Shadow Demons [171], closing the
+  // changelog-vs-roster conflict in Source discrepancies.md §5.
+  const lateSapiens = vm.runInContext(
+    "['Wraiths', 'Shadow Demons'].every(n => Object.values(WARLORD_UNITS_DATA).filter(u => u.name === n).some(u => (u.abilities || []).includes('Sapiens')))",
+    ctx,
+  );
+  assertEqual(lateSapiens, true, 'Wraiths and Shadow Demons are tagged Sapiens');
+
+  const armorclad = ctx.deriveUnitStats(warlordUnit({
+    def: 1,
+    abilities: { armorcladReform: true, mechanical: true },
+  }));
+  assertEqual(armorclad.def, 7, 'Armorclad permanently grants +6 Armor');
+
+  const battleArmor = ctx.deriveUnitStats(warlordUnit({
+    def: 1,
+    abilities: { armorcladReform: true },
+  }));
+  assertEqual(battleArmor.def, 4, 'Battle Armor grants +3 Armor in combat');
+
+  const noOutlanderArmorclad = ctx.deriveUnitStats(baseUnitInput({
+    version,
+    def: 1,
+    abilities: { mechanical: true, armorcladReform: true },
+  }));
+  assertEqual(noOutlanderArmorclad.def, 1, 'Outlander reforms are inert without an Outlander wizard owner');
+
+  const sapiensReforms = ctx.deriveUnitStats(warlordUnit({
+    unitType: 'fantastic_nature',
+    res: 1,
+    hp: 4,
+    rtbType: 'missile',
+    rtb: 1,
+    abilities: {
+      sapiens: true,
+      xenopsychology: true,
+      radio: true,
+      ballisticsTraining: true,
+      xenoveterinary: true,
+    },
+  }));
+  assertEqual(sapiensReforms.res, 3, 'Sapiens summons receive Xenopsychology and Radio resistance');
+  assertEqual(sapiensReforms.hp, 5, 'Xenoveterinary adds 25% HP to fantastic Sapiens summons');
+  assertClose(sapiensReforms.toHitMelee, 0.5, 'Radio and Xenoveterinary each add 10% To-Hit');
+  assertClose(sapiensReforms.toHitRtb, 0.7, 'Ballistics Training adds 20% Ranged To-Hit for Sapiens summons');
+
+  const magitekScience = ctx.deriveUnitStats(warlordUnit({
+    abilities: { mechanical: true, armorcladReform: true, magitekScience: true },
+  }));
+  assertEqual(magitekScience.abilities.resistMagic, true, 'Magitek Science grants Resist Magic to Armorclad units');
+
+  const militaryDrilling = ctx.deriveUnitStats(warlordUnit({
+    level: 'regular',
+    def: 1,
+    abilities: { militaryDrilling: true },
+  }));
+  assertEqual(militaryDrilling.abilities.discipline, 'overland', 'Military Drilling gives new non-fantastic units permanent Discipline');
+  assertEqual(militaryDrilling.def, 3, 'Military Drilling Discipline applies its Regular +2 Armor bonus');
+
+  const staleDerivedInputs = ctx.deriveUnitStats(warlordUnit({
+    def: 1,
+    rtbType: 'missile',
+    rtb: 3,
+    abilities: {
+      mechanical: true,
+      armorclad: true,
+      battleArmor: true,
+      blackpowder: true,
+      energyCannon: true,
+      energyWeaponry: true,
+      pneumaField: true,
+      powerEngine: true,
+      psychoForce: true,
+    },
+  }));
+  assertEqual(staleDerivedInputs.def, 1, 'Derived Armorclad/Battle Armor inputs are ignored');
+  assertEqual(staleDerivedInputs.rangedType, 'missile', 'Derived Blackpowder/Energy Cannon inputs are ignored');
+  assertEqual(staleDerivedInputs.abilities.powerEngine || false, false, 'Derived Power Engine input is ignored');
+  assertEqual(staleDerivedInputs.abilities.lifeSteal == null, true, 'Derived Pneuma Field input is ignored');
+
+  const blackpowderMissile = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'missile',
+    rtb: 3,
+    abilities: { rocketry: true },
+  }));
+  assertEqual(blackpowderMissile.rangedType, 'boulder', 'Blackpowder converts missile to heavy projectile');
+  assertEqual(blackpowderMissile.rtb, 3, 'Blackpowder AP grant does not also add ranged strength');
+  assertEqual(blackpowderMissile.abilities.armorPiercing, true, 'Blackpowder grants Armor Piercing');
+  assertEqual(blackpowderMissile.abilities.poison, 1, 'Blackpowder grants Poison 1');
+
+  const blackpowderThrownAP = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'thrown',
+    rtb: 3,
+    abilities: { rocketry: true, armorPiercing: true },
+  }));
+  assertEqual(blackpowderThrownAP.rtb, 7, 'Blackpowder gives existing-AP Thrown +4 strength');
+
+  const blackpowderFire = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'fire',
+    rtb: 3,
+    abilities: { rocketry: true },
+  }));
+  assertEqual(blackpowderFire.rtb, 7, 'Blackpowder gives Fire Breath +4 strength');
+
+  const bombs = ctx.deriveUnitStats(warlordUnit({
+    figs: 4,
+    rtbType: 'none',
+    rtb: 0,
+    abilities: { explosive: true },
+  }));
+  assertEqual(bombs.thrownType, 'thrown', 'Bombs&Grenades grants a Thrown attack');
+  assertEqual(bombs.rtb, 6, 'Bombs&Grenades uses floor(8 - max figures / 2)');
+  assertEqual(bombs.abilities.wallCrusher, true, 'Bombs&Grenades grants Wall Crusher');
+
+  const bombsAdditive = ctx.deriveUnitStats(warlordUnit({
+    figs: 4,
+    rtbType: 'thrown',
+    rtb: 2,
+    abilities: { explosive: true },
+  }));
+  assertEqual(bombsAdditive.rtb, 8, 'Bombs&Grenades adds to existing Thrown');
+
+  const upgradedRanged = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'missile',
+    rtb: 3,
+    abilities: { rocketry: true, explosive: true },
+  }));
+  assertEqual(upgradedRanged.rtb, 5, 'Upgraded Explosive gives ranged +2');
+
+  const upgradedFire = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'fire',
+    rtb: 3,
+    abilities: { rocketry: true, explosive: true },
+  }));
+  assertEqual(upgradedFire.rtb, 14, 'Explosive doubles Blackpowder-upgraded Fire Breath');
+
+  const temporalDrive = ctx.deriveUnitStats(warlordUnit({
+    def: 4,
+    res: 4,
+    abilities: {
+      mechanical: true,
+      sailing: true,
+      heatPowerEngine: true,
+      temporalEngineering: true,
+      mindStorm: true,
+    },
+  }));
+  assertEqual(temporalDrive.abilities.illusionImmunity, true, 'Temporal-Gravity Drive grants Illusion Immunity');
+  assertEqual(temporalDrive.def, 4, 'Temporal-Gravity Drive immunity gates Mind Storm defense penalty');
+  assertEqual(temporalDrive.res, 4, 'Temporal-Gravity Drive immunity gates Mind Storm resistance penalty');
+
+  const energyCannon = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'missile',
+    rtb: 5,
+    abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
+  }));
+  assertEqual(energyCannon.rangedType, 'beam', 'Energy Cannon converts ranged projectile to Beam');
+  assertEqual(energyCannon.rtb, 7, 'Energy Cannon adds floor(50% base ranged strength)');
+  assertEqual(energyCannon.abilities.destruction, -2, 'Energy Cannon derives Destruction from 30% ranged To-Hit');
+
+  const upgradedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'missile',
+    rtb: 5,
+    abilities: {
+      heatPowerEngine: true,
+      energyBeamWeapons: true,
+      rocketry: true,
+      armorPiercing: true,
+      artificer: true,
+      mechanical: true,
+    },
+  }));
+  assertEqual(
+    upgradedEnergyCannon.rtb,
+    12,
+    'Energy Cannon scales earlier permanent Artificer and Blackpowder writes: (5+1+2)+floor(8/2)',
+  );
+
+  const psychoForce = ctx.deriveUnitStats(warlordUnit({
+    level: 'champion',
+    res: 4,
+    abilities: { psychoConverter: true },
+  }));
+  assertEqual(psychoForce.res, 7, 'Psycho Force reads current Resistance after level bonus');
+  assertClose(psychoForce.toHitMelee, 0.57, 'Psycho Force adds floor(7 * 5 / 2)=17% To-Hit');
+  assertClose(psychoForce.toBlock, 0.47, 'Psycho Force adds floor(7 * 5 / 2)=17% To-Defend');
+
+  const pneumaField = ctx.deriveUnitStats(warlordUnit({
+    res: 5,
+    abilities: { pneumaReactor: true },
+  }));
+  assertEqual(pneumaField.abilities.lifeSteal, -2, 'Pneuma Field grants Life Steal from current Resistance');
+
+  const pneumaStacks = ctx.deriveUnitStats(warlordUnit({
+    res: 5,
+    abilities: { pneumaReactor: true, lifeSteal: -3 },
+  }));
+  assertEqual(pneumaStacks.abilities.lifeSteal, -5, 'Pneuma Field stacks with existing negative Life Steal');
+
+  const powerEngine = ctx.deriveUnitStats(warlordUnit({
+    abilities: { mechanical: true, heatPowerEngine: true },
+  }));
+  assertEqual(powerEngine.abilities.powerEngine, true, 'Heat Power Engine derives the Power Engine unit state');
+
+  const magitekEngine = ctx.deriveUnitStats(warlordUnit({
+    abilities: { mechanical: true, heatPowerEngine: true, magitekEngineering: true },
+  }));
+  assertClose(magitekEngine.toBlock, 0.5, 'Magitek Engineering gives Power Engine units +20% To-Defend');
+  assertEqual(magitekEngine.abilities.largeShield, true, 'Magitek Engineering gives Power Engine units Large Shield');
+
+  const temporalEngine = ctx.deriveUnitStats(warlordUnit({
+    abilities: { mechanical: true, heatPowerEngine: true, temporalEngineering: true },
+  }));
+  assertEqual(temporalEngine.abilities.haste, true, 'Temporal Engineering gives Power Engine units Haste');
+
+  const ineligibleRocketry = ctx.deriveUnitStats(warlordUnit({
+    atk: 3,
+    abilities: { rocketry: true },
+  }));
+  assertEqual(ineligibleRocketry.abilities.poison || 0, 0, 'Rocketry does not grant Blackpowder to a melee-only unit');
+
+  const uphillBattle = ctx.deriveUnitStats(warlordUnit({
+    res: 5,
+    abilities: { uphillBattle: true },
+  }));
+  assertClose(uphillBattle.toHitMelee, 0.4, 'Uphill Battle gives an AI unit +10% To-Hit');
+  assertClose(uphillBattle.toBlock, 0.4, 'Uphill Battle gives an AI unit +10% To-Defend');
+  assertEqual(uphillBattle.res, 6, 'Uphill Battle gives an AI unit +1 Resistance');
+
+  const godsPlayDices = ctx.deriveUnitStats(warlordUnit({
+    res: 5,
+    abilities: { godsPlayDices: -2 },
+  }));
+  assertEqual(godsPlayDices.res, 3, 'Gods Play Dices applies the fixed per-unit Resistance roll');
+
+  const godsPlayDicesClamped = ctx.deriveUnitStats(warlordUnit({
+    res: 5,
+    abilities: { godsPlayDices: 9 },
+  }));
+  assertEqual(godsPlayDicesClamped.res, 7, 'Gods Play Dices clamps its Resistance roll to +2');
+
+  const scoringOptionsInertOutsideWarlord = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    res: 5,
+    abilities: { uphillBattle: true, godsPlayDices: 2 },
+  }));
+  assertClose(scoringOptionsInertOutsideWarlord.toHitMelee, 0.3, 'Warlord scoring To-Hit is inert outside Warlord');
+  assertClose(scoringOptionsInertOutsideWarlord.toBlock, 0.3, 'Warlord scoring To-Defend is inert outside Warlord');
+  assertEqual(scoringOptionsInertOutsideWarlord.res, 5, 'Warlord scoring Resistance is inert outside Warlord');
+}
+
 function runPhaseChecks(ctx) {
   assertEqual(ctx.buildWallOfFirePhase(false, {}), null, 'Inactive Wall of Fire phase is null');
   const wallOfFire = ctx.buildWallOfFirePhase(true, {
@@ -399,6 +807,8 @@ function runPhaseChecks(ctx) {
 function main() {
   const ctx = loadCalculatorContext();
   runDeriveUnitStatsChecks(ctx);
+  runDerivationStageChecks(ctx);
+  runWarlordUnitAbilityChecks(ctx);
   runToBlockChecks(ctx);
   runPhaseChecks(ctx);
   console.log(JSON.stringify({ allPassed: true, total: assertionCount, failures: [] }));

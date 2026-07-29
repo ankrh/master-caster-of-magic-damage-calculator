@@ -1,0 +1,249 @@
+: INPUT C - The city being processed 
+		AIOwncities - how many cities are owned by the owner of this city.
+		ISBESTRACE - 1 if the current city is the best race the AI has access to, and the only such city, 0 otherwise.
+		SETTLERWANTED - 0 when the AI is not allowed to build a settler in this town for reasons not covered in the script, 1 otherwise
+		SHIPYARDWANTED - 1 if the AI has no way to cross the sea and needs to be forced to build their first naval building, 0 otherwise. The first tier naval access building must be in the slot of Ship Yard for this to function correctly.
+		SETTLERCONT - Number of settlers owned on the same continent as the city.
+		SETTLERPLANE - Same for the entire plane. Both of these values include settlers currently being produced in the AI's other cities.
+		AIEnemyCities - Number of cities on the AI's continent owned by other players
+ OUTPUT - SETTLERWANTED - 0 if the AI shouldn't build a settler. 1 if they are allowed to.
+		CHOSEN - The ID of the building the AI should build, 
+		or zero if no mandatory building was chosen in which case...
+		BBUILDING - Set to 1 if you want the AI to build a building, and 0 to build a unit.
+		if building was chosen building priority scripts will be run to pick one of the buildings.
+		units have no script and rely on the priority value in units.ini and some simple hardcoded rules for now.
+:
+
+CHOSEN=0; BBUILDING=1;
+
+W=CITYOWNER(C);
+POP=POPUNITS(C);
+RACE=CITYRACE(C);
+GARR=GARRISON(C);
+HAVEIRON=OREINRANGE(C,OreIron);
+HAVECOAL=OREINRANGE(C,OreCoal);
+HAVEMITHRIL=OREINRANGE(C,OreMithril);
+HAVEADAMANT=OREINRANGE(C,OreAdamantium);
+HAVEORIHALCON=OREINRANGE(C,OreOrihalcon);
+MAGICIANSAVAILABLE=1;
+IF (RACE=RCBarbarian) %OR (RACE=RCDwarf) %OR (RACE=RCGnoll)
+%OR (RACE=RCKlackon) %OR (RACE=RCLizard) THEN {MAGICIANSAVAILABLE=0; }
+
+: Decide if we need more settlers :
+IF SETTLERWANTED=1 THEN {
+IF ((ISFORTRESS(C)) %AND (OVERLANDTURN()<=60) %AND (AIOWNCITIES>=4))
+%OR (POP<3) THEN { SETTLERWANTED=0; }
+ELSE {
+I=1;
+IF LANDSIZE()>LandTiny THEN {
+I=2;
+If (LANDSIZE()>LandSmall) %AND (DIFFICULTY()>=DiffMaster) 
+%AND (%N(SCORINGOPTION(SEqualizer)))
+%AND (%N(SCORINGOPTION(SLoner)))
+%AND (%N(SCORINGOPTION(SInvertedStart)))
+%AND ((RETORT(W,Myrran)) %XOR (RETORT(0,Myrran))) %AND (OVERLANDTURN()<100)
+THEN { I=4; }
+}
+If (SETTLERCONT<I) %AND (SETTLERPLANE<(I+2)) THEN { SETTLERWANTED=1; }
+ELSE { SETTLERWANTED=0; }
+IF (DIFFICULTY()=DiffBeginner) %AND (OVERLANDTURN()<=100) THEN { SETTLERWANTED=0; }
+IF (DIFFICULTY()=DiffEasy) %AND (OVERLANDTURN()<=60) THEN { SETTLERWANTED=0; }
+IF (DIFFICULTY()<=DiffNormal) %AND (RND(2)=1) THEN { SETTLERWANTED=0; }
+
+}}
+
+
+: Mandatory buildings to build before anything else :
+IF %N(ISBUILT(C,BSawmill)) THEN {
+CHOSEN=BSawmill;
+HALT;
+}
+IF %N(ISBUILT(C,BSmithy)) THEN {
+CHOSEN=BSmithy;
+HALT;
+}
+If SHIPYARDWANTED=1 THEN {
+CHOSEN=BShipYard;
+HALT;
+} 
+
+IF (SETTLERPLANE>=2) THEN {
+IF GARR<4 THEN { SETTLERWANTED=0; }
+: Marketplace for low gold :
+IF (GOLD(W)<250) %AND (%N(ISBUILT(C,BMarketplace))) THEN {
+		CHOSEN=BMarketplace;
+		HALT;		
+		}
+: Monument to prepare for human invasion :
+IF %N(ISBUILT(C,BMonument)) %AND (Difficulty()>=DiffFair) THEN { 
+	IF (CONTACT(W,0)) %AND (TREATY(W,0)<>TSPact) %AND (TREATY(W,0)<>TSAlliance)
+%AND (RACE<>RCDwarf) %AND (RACE<>RCHalfling) THEN {
+		CHOSEN=BMonument;
+		HALT;		
+		}}
+}
+
+: Forced early military buildings for each race :
+TU=OVERLANDTURN();
+IF (TU>80) THEN { TU=80; }
+I=(POPULATION(C)/100)+((DIFFICULTY()*4)-8)+TU;
+
+IF ((DIFFICULTY()>DiffNormal) %OR ((DIFFICULTY()=DiffNormal) %AND (RND(3)=1))) 
+%AND ((ISFORTRESS(C) %OR (RND(5)=1))) %AND (GARR>=4) THEN {
+
+IF RACE=RCGnoll THEN {
+IF %N(ISBUILT(C,BStables)) THEN {
+CHOSEN=BStables;
+HALT;
+}
+}
+
+IF (RACE=RCBarbarian) %OR (RACE=RCKlackon) %OR (RACE=RCHalfling) %OR (RACE=RCLizard)
+THEN {
+IF (I>55) %AND (%N(ISBUILT(C,BFighterGuild))) THEN {
+CHOSEN=BFighterGuild;
+HALT;
+}
+}
+
+IF (RACE=RCBeastmen) %OR (RACE=RCHighElf) %OR (RACE=RCOrc)
+THEN {
+IF (I>125) %AND (%N(ISBUILT(C,BFighterGuild))) THEN {
+CHOSEN=BFighterGuild;
+HALT;
+}
+}
+
+IF (RACE=RCDwarf) THEN {
+IF %N(ISBUILT(C,BBuilderHall)) THEN {
+CHOSEN=BBuilderHall;
+HALT;
+}
+IF %N(ISBUILT(C,BUniversity)) THEN {
+CHOSEN=BUniversity;
+HALT;
+}
+}
+
+IF (RACE=RCHighMen)
+THEN {
+IF (I>65) %AND (%N(ISBUILT(C,BMagicMarket))) THEN {
+CHOSEN=BMagicMarket;
+HALT;
+}
+IF (I>145) %AND (%N(ISBUILT(C,BWizardsGuild))) THEN {
+CHOSEN=BWizardsGuild;
+HALT;
+}
+}
+
+IF (RACE=RCNomad) %OR (RACE=RCDarkElf)
+THEN {
+IF %N(ISBUILT(C,BStables)) THEN {
+CHOSEN=BStables;
+HALT;
+}
+IF (I>125) %AND (%N(ISBUILT(C,BFighterGuild))) THEN {
+CHOSEN=BFighterGuild;
+HALT;
+}
+}
+
+IF (RACE=RCTroll)
+THEN {
+IF (I>75) %AND (%N(ISBUILT(C,BFighterGuild))) THEN {
+CHOSEN=BFighterGuild;
+HALT;
+}
+}
+
+IF (RACE=RCDraconian)
+THEN {
+J=55; IF %N(RETORT(0,Myrran)) THEN {J=125;}
+IF (I>J) %AND (%N(ISBUILT(C,BFighterGuild))) THEN {
+CHOSEN=BFighterGuild;
+HALT;
+}
+}
+
+}
+
+: City Wall for Fortress :
+
+IF ISFORTRESS(C) THEN {
+IF DIFFICULTY()>=DiffExpert THEN {
+IF %N(ISBUILT(C,BCityWalls)) THEN {
+IF OVERLANDTURN()>=40 THEN {
+CHOSEN=BCityWalls;
+HALT;
+}}}}
+ 
+: Decision for producing a unit or a building :
+
+UPRIO=0;
+
+IF CITYENCHANT(C,CEAltarOfBattle)>-1 THEN { UPRIO=UPRIO+6; }
+ELSE { IF CITYENCHANT(C,CEEvilPresence)=-1 THEN {
+IF ISBUILT(C,BWarCollege) THEN { UPRIO=UPRIO+4; }
+ELSE { IF ISBUILT(C,BBarracks) THEN { UPRIO=UPRIO+1; }
+}}}
+
+If ISBUILT(C,BStables) THEN {
+UPRIO=UPRIO+1;
+IF (RACE=RCGnoll) %OR (RACE=RCNomad) THEN { UPRIO=UPRIO+4; }
+}
+
+IF ISBUILT(C,BFighterGuild) THEN {
+UPRIO=UPRIO+4;
+IF RACE=RCGnoll THEN { UPRIO=UPRIO+5; }
+IF RACE=RCBarbarian THEN { UPRIO=UPRIO+8; }
+}
+
+IF ISBUILT(C,BArmorerGuild) THEN {
+UPRIO=UPRIO+6;
+}
+IF ISBUILT(C,BFantasticStables) THEN {
+UPRIO=UPRIO+6;
+}
+
+IF DIFFICULTY()>=DiffFair THEN {
+IF (CITYENCHANT(C,CEEvilPresence)=-1) %AND ISBUILT(C,BAlchemistGuild)) THEN
+	{
+	UPRIO=UPRIO+3;
+	IF HaveAdamant>0 THEN {UPRIO=UPRIO*2 ;}
+	ELSE { IF HaveMithril>0 THEN {UPRIO=%I(UPRIO*1.5);}}
+	If HaveOrihalcon>0 THEN {
+	UPRIO=UPRIO+3;
+	If (MagiciansAvailable>0) %AND (ISBUILT(C,BWizardsGuild)) THEN { UPRIO=UPRIO+7; }
+	}
+	}
+	If (MagiciansAvailable>0) %AND (ISBUILT(C,BWizardsGuild)) THEN { UPRIO=UPRIO+4; }
+	I=(HaveIron+2*HaveCoal); If I>6 THEN {I=6;}
+	UPRIO=UPRIO+I;
+	If AIEnemyCities>=AIOwncities THEN { UPRIO=UPRIO*2;}
+}
+
+IF PERSONALITY(W)=Militarist THEN {UPRIO=UPRIO+4;}
+IF OBJECTIVE(W)=Perfectionist THEN {UPRIO=UPRIO-3;}
+
+IF UPRIO<0 THEN {UPRIO=0; }
+UPRIO=UPRIO+7;
+
+IF DIFFICULTY()<=DiffNormal THEN { UPRIO=UPRIO-1; }
+IF DIFFICULTY()<=DiffEasy THEN { UPRIO=UPRIO-2; }
+
+BBUILDING=((RND(UPRIO)+1)<=GARRISON(C));
+
+IF DIFFICULTY()>=DiffFair THEN {
+if (AIenemycities>=AIowncities*2) %and (ISBUILT(C,BFighterGuild)) THEN {
+IF (Race<>RCBarbarian) %AND (%N(ISBUILT(C,BAlchemistGuild))) %AND (ISBUILT(C,BLibrary)) THEN {
+CHOSEN=BAlchemistGuild;
+HALT;
+}
+BBUILDING=0;
+IF (Race<>RCBarbarian) %AND (%N(ISBUILT(C,BAlchemistGuild))) THEN { BBUILDING=1; }
+}
+}
+
+IF GARR<4 THEN { BBUILDING=0; }
+ 

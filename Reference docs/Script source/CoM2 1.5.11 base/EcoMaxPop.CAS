@@ -1,0 +1,31 @@
+: INPUT - CityID - the city being calculated
+		  TERRAINMP - base Maximal Population from terrain in 1/4 units of maxpop.
+  OUTPUT - MP - the calcualted Maximal Population.
+:
+
+MP=TERRAINMP;
+
+W=CITYOWNER(CityID);
+
+IF RETORT(W,Omniscient) THEN {
+IF BOOKS(W,Nature)>0 THEN {
+MP=MP+(7+BOOKS(W,Nature));
+}
+}
+
+IF RETORT(W,Guardian) THEN {
+IF CITYRACE(CityID)=HOMERACE(W) THEN { MP=MP+24; }
+}
+
+MP=%I(MP/4);
+
+If ISBUILT(CityID,BGranary) THEN { MP=MP+5; }
+IF CITYENCHANT(CityID,CEDrought)>-1 THEN { MP=MP-6; }
+
+IF CITYENCHANT(CityID,CEAbundance)>-1 THEN {
+MP=MP+7;
+IF MP<18 THEN { MP=18; }
+}
+}
+
+  

@@ -1,0 +1,325 @@
+: INPUT - CityID , the ID of the city being processed.
+		  FARMERS, the total amount of farmers in the city.
+		  MAXPOP, the maximal population of the city.
+  Output - None. 
+  Use the AddResLine command to add produced gold to the total and as an individual line in the detailed view on the UI.
+:
+
+IF CITYOWNER(CityID)=0 THEN {
+ MASTERVARSET CityInFocus = CITYID;
+}
+
+SETCITYDATA(CityID,CDFARMER,FARMERS)
+
+W=CITYOWNER(CityID);
+RACE=CITYRACE(CityID);
+NECROPOLIS=0;
+
+MERIT=0;
+IF (SPELLSTATE(W,STMeritBureaucracy)=2) THEN { MERIT=20; }
+RADIO=0;
+IF (SPELLSTATE(W,STRadio)=2) THEN { RADIO=10; }
+
+AS=1;
+FACTOR=1;
+IF RETORT(W,Procurator) THEN { 
+ AS=3;
+ FACTOR=FACTOR*3/4;
+}
+
+: Checking City Overland Coordinates and Planes, if one city is found to have unupdated records, recheck entire map if necessary :
+IF (GETCITYDATA(CITYID,CDCOLP)>0) THEN { GOTO "HAVECITYCOOD"; }
+
+: Recording city coordination value :
+: Forced updating :
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+
+: City on tile found, update necessary records :
+  IF (CU>0) THEN {
+   IF ((GETCITYDATA(CU,CDCOLP))<1) THEN {
+    SETCITYDATA(CU,CDCOLX,X);
+    SETCITYDATA(CU,CDCOLY,Y);
+    SETCITYDATA(CU,CDCOLP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVECITYCOOD!
+
+
+: Check Fortress and City Coordination :
+IF (W=NeutralPlayerID) THEN { GOTO "NOCORRUPTION"; }
+
+: Corruption :
+
+: Check Wizard if they has already registered his address :
+
+IF ((Banished(W))=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=2)
+THEN { GOTO "HAVEFORTRESSORBANISH"; }
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+  I=CITYOWNER(CU);
+  IF (CU>0) THEN {
+   IF ((ISFORTRESS(CU))>0) THEN {
+    SETWIZARDDATA(I,WDFortressX,X);
+    SETWIZARDDATA(I,WDFortressY,Y);
+    SETWIZARDDATA(I,WDFortressP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVEFORTRESSORBANISH!
+
+ IF (GETWIZARDDATA(W,WDFortressP)<>(GETCITYDATA(CITYID,CDCOLP)) THEN { GOTO "DIFFERENTPLANE"; }
+
+  DISTANCEX = ABS( GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  IF ( DISTANCEX > ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) ) ) THEN {
+   DISTANCEX = ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  }
+  DISTANCEY = ABS( GETWIZARDDATA(W,WDFortressY) - GETCITYDATA(CITYID,CDCOLY) );
+  DISTANCEZ= SQRT((DISTANCEX*DISTANCEX)+(DISTANCEY*DISTANCEY));
+  CORRUPTION = %I(ABS(DISTANCEZ))-MERIT;
+  IF CORRUPTION < 0 THEN { CORRUPTION=0; }
+  IF CORRUPTION > (30-RADIO) THEN { CORRUPTION=30-RADIO; }
+  GOTO "NOCORRUPTION";
+
+!DIFFERENTPLANE!
+
+ CORRUPTION = 30-RADIO;
+
+!NOCORRUPTION!
+
+
+: Food from farmers :
+
+CROPRO=0;
+IF (SPELLSTATE(W,STCropRotation)=2) THEN { CROPRO=1; }
+FOOD=FARMERS*(4+CROPRO);
+
+IF FARMERS>0 THEN {
+ ADDRESLINE "Farmers", FOOD;
+}
+
+IF RACE=RCHalfling THEN {
+ FOOD=FOOD+(2*FARMERS);
+ ADDRESLINE "Halfling Farmers",2*FARMERS;
+}
+
+IF RACE=RCXuanyuan THEN {
+ FOOD=FOOD+(FARMERS);
+ ADDRESLINE "Xuanyuan Farmers",FARMERS;
+}
+
+IF RACE=RCNomad THEN {
+ PASTURE=%I((TERRAININRANGE(CityID,LTGrassland)+((TERRAININRANGE(CityID,LTDesert)+TERRAININRANGE(CityID,LTTundra))/2));
+ FOOD=FOOD+PASTURE;
+ ADDRESLINE "Nomad Herds",PASTURE;
+}
+
+: Food from Animist Guild :
+
+IF ISBUILT(CityID,BAnimistGuild) THEN {
+ FOOD=FOOD+(2*FARMERS);
+ ADDRESLINE "Animist's Guild",2*FARMERS;
+}
+
+
+: Overfarming penalty :
+OF=%I((FOOD/2)-(MAXPOP));
+
+IF (CITYENCHANT(CityID,CEAbundance)>-1) THEN { GOTO "NOTOVERFARMING"; }
+
+ IF FOOD>(2*MAXPOP) THEN {
+  FOOD=FOOD-OF;
+  ADDRESLINE "Overfarming Penalty",0-OF;
+ }
+
+!NOTOVERFARMING!
+
+IF (CROPRO>0) %AND (OF>1) THEN {
+ CR=%I(OF/2);
+ FOOD=FOOD+CR;
+ ADDRESLINE "Crop Rotation",CR;
+}
+
+IF (SPELLSTATE(W,STFertilizer)=2) THEN {
+ FERTILIZER=%I(FOOD/2);
+ FOOD=FOOD+FERTILIZER;
+ ADDRESLINE "Fertilizer",FERTILIZER;
+}
+
+IF (CITYENCHANT(CityID,CENecropolis)>-1)
+ THEN {
+ NECROPOLIS=2*(POPUNITS(CityID));
+ FOOD=FOOD+NECROPOLIS;
+ ADDRESLINE "Necropolis Folks Return Food",NECROPOLIS;
+}
+
+: Food from resource :
+
+IF OREINRANGE(CITYID,OreWildGame)>0 THEN {
+ FOOD=FOOD+2*OREINRANGE(CITYID,OreWildGame);
+ ADDRESLINE "Wild Game", 2*OREINRANGE(CITYID,OreWildGame);
+}
+
+
+: Drought curse :
+
+IF CITYENCHANT(CityID,CEDrought)>-1 THEN {
+ FDDROUGHT=FOOD;
+ FOOD=%I(3*(FOOD/4));
+ ADDRESLINE "Drought",FOOD-FDDROUGHT;
+}
+
+
+: Food from buildings :
+
+IF ISBUILT(CityID,BDock) THEN {
+ FISH=%I(((TERRAININRANGE(CITYID,LTOCean))+(TERRAININRANGE(CITYID,LTShore))/2)+(TERRAININRANGE(CITYID,LTRiverMouth));
+ FOOD=FOOD+FISH;
+ ADDRESLINE "Dock", FISH;
+}
+
+IF (ISBUILT(CityID,BForesterGuild)=0) THEN { GOTO "NOFORESTERGUILD"; }
+
+ FOOD=FOOD+4+OREINRANGE(CITYID,OreWildGame);
+ IF (OREINRANGE(CITYID,OreWildGame)>0) THEN {
+  ADDRESLINE "Forester's Guild with Wild Game", 4+OREINRANGE(CITYID,OreWildGame);
+ } ELSE { ADDRESLINE "Forester's Guild", 4; }
+
+!NOFORESTERGUILD!
+
+IF ISBUILT(CityID,BGranary) THEN {
+ FOOD=FOOD+4;
+ ADDRESLINE "Granary", 4;
+}
+
+: Food from Tree of Life :
+
+IF ISBUILT(CityID,BTreeOfLife) THEN {
+ FOOD=FOOD+MAXPOP;
+ ADDRESLINE "Tree of Life", MAXPOP;
+}
+
+
+IF (ISBUILT(CityID,BIdolOfHeavenlyBull)=0) THEN { GOTO "NOBULLIDOL"; }
+
+ IF ISBUILT(CityID,BAnimistGuild) THEN {
+  FOOD=FOOD+(2*(POPUNITS(CITYID)-FARMERS));
+  ADDRESLINE "Idol of Heavenly Bull (with Animist's Guild)", 2*(POPUNITS(CITYID)-FARMERS);
+ } ELSE {
+  FOOD=FOOD+(POPUNITS(CITYID)-FARMERS);
+  ADDRESLINE "Idol of Heavenly Bull", POPUNITS(CITYID)-FARMERS;
+ }
+
+!NOBULLIDOL!
+
+IF (ICEAGECOUNT=0) %OR ( HASGLOBAL(W,GEIceAge) > 0 ) THEN { GOTO "NOTICEAGE"; }
+
+ ICEAGE=%R(FOOD*(10+(2*(TERRAININRANGE(CITYID,LTTundra))))/100);
+ FOOD=FOOD-ICEAGE;
+ ADDRESLINE "Ice Age", 0-ICEAGE;
+
+!NOTICEAGE!
+
+IF (DIFFICULTY()>3) %AND (W>0) THEN {
+ FOOD=FOOD+(4*((DIFFICULTY())-3));
+ ADDRESLINE "AI Difficulty Bonus", 4*((DIFFICULTY())-3);
+}
+
+FOODEXPORT=SUMRESLINES()-(2*POPUNITS(CityID));
+
+IF (ISBUILT(CityID,BBrewery)=0) THEN { GOTO "NOBREWERY"; }
+
+ BREWERY=%I(POPUNITS(CityID)/2);
+ IF ISBUILT(CityID,BDock) THEN {
+  BREWERY=%I((3*POPUNITS(CityID))/4);
+  ADDRESLINE "Brewery with Export", 0-BREWERY;
+ } ELSE {
+  ADDRESLINE "Brewery", 0-BREWERY;
+ }
+ FOODEXPORT=FOODEXPORT-BREWERY;
+
+!NOBREWERY!
+
+IF (FOODEXPORT<1) %OR (W=NeutralPlayerID) THEN { GOTO "END"; }
+
+: Corruption :
+
+IF (SCORINGOPTION(SPleasantville)>0) THEN { GOTO "CORRUPTIONEND"; }
+
+ : Siege mechanic :
+ SiEGE=0;
+ CITYP=GETCITYDATA(CITYID,CDCOLP);
+
+ FOR Y=( GETCITYDATA(CITYID,CDCOLY) - 1 ) TO ( GETCITYDATA(CITYID,CDCOLY) + 1 );
+ FOR X=( GETCITYDATA(CITYID,CDCOLX) - 1 ) TO ( GETCITYDATA(CITYID,CDCOLX) + 1 );
+
+  IF (X=GETCITYDATA(CITYID,CDCOLX))
+   %AND (Y=GETCITYDATA(CITYID,CDCOLY))
+  THEN { GOTO "NOTENEMYARMY" }
+
+  ARMYOWNER=GETSTAT(UNITONTILE(CITYP,X,Y,1),SOwner,1);
+
+   IF (NOFUNITSONTILE(CITYP,X,Y)=0) THEN { GOTO "NOTENEMYARMY" }
+
+    IF (ARMYOWNER=W) THEN { GOTO "NOTENEMYARMY" }
+
+     IF ( ARMYOWNER < NeutralPlayerID )
+      %AND ( TREATY(W,ARMYOWNER) < 3 )
+     THEN { GOTO "NOTENEMYARMY" }
+
+      SIEGE=SIEGE+1;
+
+  !NOTENEMYARMY!
+
+ NEXT X;
+ NEXT Y;
+
+ SIEGEPERCENT=%I(100*SIEGE/8);
+
+ ADDRESLINE "Siege Penalty "+STRS(SIEGEPERCENT)+"%", NECROPOLIS-%I(SIEGEPERCENT*(SUMRESLINES()-NECROPOLIS)/100);
+
+: Corruption for display :
+  DISPLAYCORRUPTION=%I(CORRUPTION*FACTOR);
+  DISPLAYCBANISH=%I(50*FACTOR);
+
+ IF Banished(W) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCBANISH)+"%", 0-(%I((FOODEXPORT*5*FACTOR)/10));
+ }
+ IF ((Banished(W))=0) %AND ((ISFORTRESS(CityID))=0) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCORRUPTION)+"%", 0-(%I((FOODEXPORT*CORRUPTION*FACTOR)/100));
+ }
+
+!CORRUPTIONEND!
+
+: difficulty bonus/penalty :
+IF (W>0) THEN { GOTO "END" }
+
+ IF (DIFFICULTY()=DiffMaster) THEN {
+  ADDRESLINE "Master Food Penalty",0-(%I((SUMRESLINES())/10));
+ }
+ IF (DIFFICULTY()=DiffLunatic) THEN {
+  ADDRESLINE "Lunatic Food Penalty",0-(%I((SUMRESLINES())/5));
+ }
+ IF (DIFFICULTY()=DiffPhantasm) THEN {
+  ADDRESLINE "Phantasm Food Penalty",0-(%I((SUMRESLINES())/4));
+ }
+
+!END!

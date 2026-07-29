@@ -22,7 +22,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
 const targetPath = '/index.html';
@@ -91,8 +91,17 @@ function launchChrome(targetUrl, debugPort, userDataDir) {
   return child;
 }
 
-async function waitForTarget(targetUrl, debugPort, chrome, timeoutMs = 15000) {
+// Wait for a target that has actually *committed* the app document.
+//
+// `/json` publishes a target as soon as it exists, reporting the URL Chrome was asked to
+// load — while the document is still the initial `about:blank`. That placeholder already
+// has `readyState === 'complete'`, so cdpEvaluate's load guard would return instantly and
+// every `getElementById` would come back null. Matching on the reported URL alone is
+// therefore not enough; the target is only accepted once the page itself agrees it has
+// left `about:blank`.
+async function waitForTarget(targetUrl, debugPort, chrome, timeoutMs = 30000) {
   const start = Date.now();
+  let lastHref = null;
   while (Date.now() - start < timeoutMs) {
     if (chrome.exitCode != null) {
       const stderrText = (chrome.stderrLog || []).join('').trim();
@@ -103,11 +112,30 @@ async function waitForTarget(targetUrl, debugPort, chrome, timeoutMs = 15000) {
       const pages = await res.json();
       const page = pages.find(p => p.webSocketDebuggerUrl &&
         (p.url === targetUrl || p.url.startsWith(targetUrl) || p.url.includes(targetPath)));
-      if (page && page.webSocketDebuggerUrl) return page.webSocketDebuggerUrl;
-    } catch (_) { /* not ready yet */ }
+      if (page && page.webSocketDebuggerUrl) {
+        // A probe, not the real evaluation: if the navigation commits mid-probe the
+        // execution context is destroyed and this throws, which the retry absorbs.
+        lastHref = await cdpEvaluate(page.webSocketDebuggerUrl, '(() => location.href)()');
+        if (lastHref && lastHref !== 'about:blank') return page.webSocketDebuggerUrl;
+      }
+    } catch (_) { /* not ready yet, or context replaced mid-probe */ }
     await sleep(250);
   }
-  throw new Error(`Timed out waiting for Chrome debugger target on port ${debugPort}.`);
+  throw new Error(`Timed out waiting for Chrome to commit ${targetUrl} on debug port ${debugPort}`
+    + `${lastHref ? ` (last document seen was ${lastHref})` : ''}.`);
+}
+
+// SIGKILL reaches only the launcher process on Windows: the browser and renderer processes
+// survive, keep the profile directory locked so the cleanup below fails, and stay busy long
+// enough to make the *next* run lose the navigation race above.
+function killChrome(chrome) {
+  if (process.platform === 'win32' && chrome.pid) {
+    try {
+      execFileSync('taskkill', ['/F', '/T', '/PID', String(chrome.pid)], { stdio: 'ignore' });
+      return;
+    } catch (_) { /* already gone, or taskkill unavailable — fall through */ }
+  }
+  chrome.kill('SIGKILL');
 }
 
 // Evaluate an expression in the page, waiting for load first. A fresh socket per call,
@@ -194,7 +222,9 @@ const MAIN_HARNESS = `(() => {
   const get = id => { const el = document.getElementById(id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : undefined; };
   const dist = () => (document.querySelector('#distA .dist-header')?.textContent || '') + '||' + (document.querySelector('#distB .dist-header')?.textContent || '');
   const clone = b => JSON.parse(JSON.stringify(b));
-  const VERSIONS = ['mom_1.31', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.5'];
+  // Read the versions off the live dropdown rather than restating them: a hardcoded copy
+  // silently under-tests when a version is added, and this harness runs in the page anyway.
+  const VERSIONS = Array.from(document.getElementById('gameVersion').options).map(o => o.value);
   const setupCustom = side => {
     // Reset to a custom unit first: a roster selection left over from a prior block would
     // make onVersionChange -> updateUnitLock -> applyUnit re-apply the roster stats during
@@ -329,7 +359,7 @@ const MAIN_HARNESS = `(() => {
 
     // Default-diff makes a full-featured share payload small (was ~13 KB uncompressed/undiffed).
     {
-      set('gameVersion', 'com2_warlord_1.5.12.5'); onVersionChange();
+      set('gameVersion', 'com2_warlord_1.5.12.6.2'); onVersionChange();
       setupCustom('a'); setupCustom('b');
       set('aAbil_armorPiercing', true); set('cityWalls', '3'); set('nodeAura', 'nature');
       recalculate();
@@ -364,7 +394,7 @@ const BUILD_SHARE = `(() => {
   const set = (id, val) => { const el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = !!val; else el.value = val; };
   const dist = () => (document.querySelector('#distA .dist-header')?.textContent || '') + '||' + (document.querySelector('#distB .dist-header')?.textContent || '');
   localStorage.clear();
-  set('gameVersion', 'com2_warlord_1.5.12.5'); onVersionChange();
+  set('gameVersion', 'com2_warlord_1.5.12.6.2'); onVersionChange();
   for (const s of ['a', 'b']) { set(s + 'Figs', 4); set(s + 'Atk', 11); set(s + 'Def', 2); set(s + 'Res', 9); set(s + 'HP', 8); set(s + 'ToHitMod', 70); set(s + 'ToBlkMod', 70); }
   set('aAbil_armorPiercing', true); set('cityWalls', '3'); set('nodeAura', 'nature');
   recalculate();
@@ -413,7 +443,7 @@ async function main() {
     const shared = await cdpEvaluate(wsUrl, READ_AFTER_SHARE);
     record('URL share: identical damage', shared.dist === expectedDist, { expectedDist, got: shared.dist });
     record('URL share: hash stripped after import', shared.hash === '', { hash: shared.hash });
-    record('URL share: version applied', shared.version === 'com2_warlord_1.5.12.5', { version: shared.version });
+    record('URL share: version applied', shared.version === 'com2_warlord_1.5.12.6.2', { version: shared.version });
     record('URL share: fields applied', shared.aFigs === '4', { aFigs: shared.aFigs });
 
     // 3) Precedence: edit + reload restores the edited localStorage state, not the shared link.
@@ -501,8 +531,11 @@ async function main() {
     await cdpEvaluate(wsUrl, `(() => { localStorage.clear(); return true; })()`);
   } finally {
     server.close();
-    chrome.kill('SIGKILL');
-    try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch (_) {}
+    killChrome(chrome);
+    // Handles on the profile dir can outlive the kill by a moment.
+    for (let i = 0; i < 10; i++) {
+      try { fs.rmSync(userDataDir, { recursive: true, force: true }); break; } catch (_) { await sleep(200); }
+    }
   }
 
   const failed = checks.filter(c => !c.ok);

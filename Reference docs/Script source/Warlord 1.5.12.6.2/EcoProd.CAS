@@ -1,0 +1,388 @@
+: INPUT CityID, the city being processed
+		WORKERS, the number of workers in the city
+		FARMERS, the number of farmers in the city
+		PRODPER, the amount of percentage production bonus from terrain
+  Output - None. 
+  Use the AddResLine command to add production to the total and as an individual line in the detailed view on the UI.
+:
+
+IF CITYOWNER(CityID)=0 THEN {
+ MASTERVARSET CityInFocus = -1;
+}
+
+SETCITYDATA(CityID,CDWORKER,WORKERS)
+
+W=CITYOWNER(CITYID);
+MAXPOP=GETCITYDATA(CITYID,CDMAXPOP);
+TER=0;
+
+LOGISTIC=0;
+OWNCOAL=0;
+IF (SPELLSTATE(W,STStrategicLogistic)<>2) THEN { GOTO "NOLOGISTIC"; }
+ LOGISTIC=1;
+
+ FOR I=1 TO MAXCITY();
+
+  IF (CITYOWNER(I)<>W) THEN { GOTO "NOTLINK"; }
+
+   OWNCOAL=OWNCOAL+OREINRANGE(I,OreCoal);
+
+  !NOTLINK!
+
+ NEXT I;
+
+!NOLOGISTIC!
+
+MERIT=0;
+IF (SPELLSTATE(W,STMeritBureaucracy)=2) THEN { MERIT=20; }
+RADIO=0;
+IF (SPELLSTATE(W,STRadio)=2) THEN { RADIO=10; }
+ENGINE=0;
+IF (SPELLSTATE(W,STHeatPowerEngine)=2) THEN {
+ ENGINE=ENGINE+6;
+ IF (OREINRANGE(CITYID,OreCoal)>0)
+  %OR ( (LOGISTIC>0) %AND (OWNCOAL>0)
+ THEN {
+  ENGINE=ENGINE+3;
+ }
+}
+
+AS=1;
+FACTOR=1;
+IF RETORT(W,Procurator) THEN { 
+ AS=3;
+ FACTOR=FACTOR*3/4;
+}
+
+: Checking City Overland Coordinates and Planes, if one city is found to have unupdated records, recheck entire map if necessary :
+IF (GETCITYDATA(CITYID,CDCOLP)>0) THEN { GOTO "HAVECITYCOOD"; }
+
+: Recording city coordination value :
+: Forced updating :
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+
+: City on tile found, update necessary records :
+  IF (CU>0) THEN {
+   IF ((GETCITYDATA(CU,CDCOLP))<1) THEN {
+    SETCITYDATA(CU,CDCOLX,X);
+    SETCITYDATA(CU,CDCOLY,Y);
+    SETCITYDATA(CU,CDCOLP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVECITYCOOD!
+
+
+: Check Fortress and City Coordination :
+IF (W=NeutralPlayerID) THEN { GOTO "NOCORRUPTION"; }
+
+: Corruption :
+
+: Check Wizard if they has already registered his address :
+
+IF ((Banished(W))=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=2)
+THEN { GOTO "HAVEFORTRESSORBANISH"; }
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+  I=CITYOWNER(CU);
+  IF (CU>0) THEN {
+   IF ((ISFORTRESS(CU))>0) THEN {
+    SETWIZARDDATA(I,WDFortressX,X);
+    SETWIZARDDATA(I,WDFortressY,Y);
+    SETWIZARDDATA(I,WDFortressP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVEFORTRESSORBANISH!
+
+ IF (GETWIZARDDATA(W,WDFortressP)<>(GETCITYDATA(CITYID,CDCOLP)) THEN { GOTO "DIFFERENTPLANE"; }
+
+  DISTANCEX = ABS( GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  IF ( DISTANCEX > ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) ) ) THEN {
+   DISTANCEX = ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  }
+  DISTANCEY = ABS( GETWIZARDDATA(W,WDFortressY) - GETCITYDATA(CITYID,CDCOLY) );
+  DISTANCEZ= SQRT((DISTANCEX*DISTANCEX)+(DISTANCEY*DISTANCEY));
+  CORRUPTION = %I(ABS(DISTANCEZ))-MERIT;
+  IF CORRUPTION < 0 THEN { CORRUPTION=0; }
+  IF CORRUPTION > (30-RADIO) THEN { CORRUPTION=30-RADIO; }
+  GOTO "NOCORRUPTION";
+
+!DIFFERENTPLANE!
+
+ CORRUPTION = 30-RADIO;
+
+!NOCORRUPTION!
+
+
+: Base production from population :
+
+ADDRESLINE "Workers", (2*WORKERS);
+
+RACE=CITYRACE(CITYID);
+IF RACE=RCDwarf THEN {
+ ADDRESLINE "Dwarven Workers", WORKERS;
+}
+IF RACE=RCKlackon THEN {
+ ADDRESLINE "Klackon Workers", WORKERS;
+}
+
+I=%I((FARMERS+1)/2);
+ADDRESLINE "Farmers",I;
+FRN=0+(((FARMERS+1)/2)-(%I((FARMERS+1)/2)));
+
+
+: Base production from buildings depend on population :
+
+THRN=0
+IF ISBUILT(CITYID,BBuilderHall) THEN {
+ ADDRESLINE "Town Hall", %I((WORKERS+1)/2)+ENGINE;
+ THRN=0+(((WORKERS+1)/2)-(%I((WORKERS+1)/2)));
+}
+
+MRN=0
+IF ISBUILT(CITYID,BSawmill) THEN {
+ ADDRESLINE "Mill",1+(%I((FARMERS)/2))+ENGINE;
+ MRN=0+(((FARMERS)/2)-(%I((FARMERS)/2)));
+}
+
+: new setting for Mechanician's Guild, lose percent base production and gain +1.5 production per worker :
+MGRN=0
+IF ISBUILT(CITYID,BMechaGuild) THEN {
+ ADDRESLINE "Mechanician's Guild", %I((3*(WORKERS/2))+1)+ENGINE;
+ MGRN=0+(((3*(WORKERS/2))+1)-(%I((3*(WORKERS/2))+1)));
+}
+
+: new building Pool of Repentance, give production 1 per farmer for Rakhshasa :
+
+IF ISBUILT(CITYID,BPoolOfRepentance) THEN {
+ ADDRESLINE "Pool of Repentance", FARMERS+ENGINE;
+}
+
+: Base production from buildings with fix production value :
+
+IF ISBUILT(CITYID,BSmithy) THEN {
+ ADDRESLINE "Smithy",3+ENGINE;
+}
+
+IF ISBUILT(CITYID,BStables) THEN {
+ ADDRESLINE "Stables",4+ENGINE;
+}
+
+: New global enchantment, Spirit of Community give flat +6 production to all cities :
+
+IF HASGLOBAL(W,GESpiritOfCommunity) THEN {
+ ADDRESLINE "Spirit of Community",4;
+}
+
+: Clockwork Factory give flat +50 production :
+IF (CITYENCHANT(CityID,CEClockworkFactory)>-1) THEN {
+ ADDRESLINE "Clockwork Factory",50;
+}
+
+: new effect of Altar of Peace/Duality, generates production based on how bad relation is :
+IF (CITYENCHANT(CityID,CEAltarOfPeace)<0) THEN { GOTO "NOALTAROFPEACE"; }
+
+ J=0;K=0;
+
+ FOR I=0 TO Nofwizards();
+ IF (I<>W) %AND (CONTACT(I,W)) %AND ( DEFEATED(I) = 0 ) THEN { K=K+1; J=J+RELATION(W,I); }
+ NEXT;
+
+ J=J*1; IF K>0 THEN { J=%I (J/K);}
+ J=6-(%I (J/10));
+ IF J<6 THEN { J=0; }
+ IF J>16 THEN { J=16; }
+ ADDRESLINE "Altar of Duality", J;
+
+!NOALTAROFPEACE!
+
+REMNANT= FRN + THRN + MRN + MGRN;
+BASEPROD= SUMRESLINES();
+
+
+: All percentage production under mercy of Drought curse :
+
+IF (CITYENCHANT(CityID,CENecropolis)<0) %AND (CITYENCHANT(CITYID,CEDrought)>-1) THEN { GOTO "HASDROUGHT"; }
+
+ PPTOTAL=PRODPER*2;
+
+: Percentage production from buildings :
+
+ IF ISBUILT(CITYID,BForesterGuild) THEN {
+  ADDRESLINE "Forester's Guild",%I((BASEPROD * 10) /100);
+  PPTOTAL=PPTOTAL + 20;
+ }
+
+ IF ISBUILT(CITYID,BMinerGuild) THEN {
+  IF (SPELLSTATE(W,STExplosive)=2) THEN {
+   ADDRESLINE "Miner's Guild, with Explosive",%I((BASEPROD * 50) /100);
+   PPTOTAL=PPTOTAL + 100;
+  } ELSE {
+   ADDRESLINE "Miner's Guild",%I((BASEPROD * 25) /100);
+   PPTOTAL=PPTOTAL + 50;
+  }
+ }
+
+ IF HASGLOBAL(W,GEBloodAndIron)
+  %AND ( (RACE=HOMERACE(W)) %OR (CITYENCHANT(CITYID,CEChaosBless)>-1) )
+ THEN {
+  ADDRESLINE "Blood and Iron",%I((BASEPROD * 30) /100);
+  PPTOTAL=PPTOTAL + 60;
+ }
+
+
+: Percentage production from Inspiration :
+
+ IF CITYENCHANT(CITYID,CEInspirations)>-1 THEN {
+  ADDRESLINE "Inspiratons", BASEPROD;
+  PPTOTAL=PPTOTAL + 200;
+ }
+
+ IF (SPELLSTATE(W,STIndustrialization)=2) THEN {
+  INDUSTRY=0;
+  IF ISBUILT(CITYID,BMarketplace) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BBank) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BMerchantGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BFarmerMarket) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BDock) THEN { INDUSTRY=INDUSTRY+5; }
+
+  IF ISBUILT(CITYID,BShipyard) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BSmithy) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BFighterGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BArmorerGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BAnimistGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BSawmill) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BMaritimeGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BSagesGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BAlchemistguild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BWizardsGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BForesterGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BMechaGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BMinerGuild) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BBrewery) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BLavaSmelter) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BCaravanserai) THEN { INDUSTRY=INDUSTRY+5; }
+  IF ISBUILT(CITYID,BMilitaryWorkshop) THEN { INDUSTRY=INDUSTRY+5; }
+
+  ADDRESLINE "Industry"+STRS(INDUSTRY)+"%", %I((BASEPROD * INDUSTRY) /100);
+  PPTOTAL=PPTOTAL + (2*INDUSTRY);
+ }
+
+: Percentage production from Administrative Skill :
+ IF BOOKS(W,Life)>0 THEN {
+  PP=((BOOKS(W,Life)-1)*AS)+(4*AS);
+  ADDRESLINE "Administrative Skill", %I((BASEPROD * PP) /100);
+  PPTOTAL=PPTOTAL + PP;
+ }
+
+: Percentage production from terrain :
+: Dump anything lost by fractions rounded down into the terrain modifier. :
+ TER=(%I((( BASEPROD + REMNANT )*(PPTOTAL+200))/200))-SUMRESLINES();
+
+ ADDRESLINE "Terrain"+STRS(PRODPER)+"%", TER;
+
+
+: End of Drought-influenced production here :
+!HASDROUGHT!
+
+IF ((SUMRESLINES())<1) %OR (W=NeutralPlayerID) THEN { GOTO "END"; }
+
+ : Siege mechanic :
+ SiEGE=0;
+ CITYP=GETCITYDATA(CITYID,CDCOLP);
+
+ FOR Y=( GETCITYDATA(CITYID,CDCOLY) - 1 ) TO ( GETCITYDATA(CITYID,CDCOLY) + 1 );
+ FOR X=( GETCITYDATA(CITYID,CDCOLX) - 1 ) TO ( GETCITYDATA(CITYID,CDCOLX) + 1 );
+
+  IF (X=GETCITYDATA(CITYID,CDCOLX))
+   %AND (Y=GETCITYDATA(CITYID,CDCOLY))
+  THEN { GOTO "NOTENEMYARMY" }
+
+  ARMYOWNER=GETSTAT(UNITONTILE(CITYP,X,Y,1),SOwner,1);
+
+   IF (NOFUNITSONTILE(CITYP,X,Y)=0) THEN { GOTO "NOTENEMYARMY" }
+
+    IF (ARMYOWNER=W) THEN { GOTO "NOTENEMYARMY" }
+
+     IF ( ARMYOWNER < NeutralPlayerID )
+      %AND ( TREATY(W,ARMYOWNER) < 3 )
+     THEN { GOTO "NOTENEMYARMY" }
+
+      SIEGE=SIEGE+1;
+
+  !NOTENEMYARMY!
+
+ NEXT X;
+ NEXT Y;
+
+ SIEGEPERCENT=%I(100*SIEGE/8);
+
+ ADDRESLINE "Siege Penalty "+STRS(SIEGEPERCENT)+"%", 0-%I(SIEGEPERCENT*TER/100);
+
+: Corruption :
+
+IF (SCORINGOPTION(SPleasantville)>0) THEN { GOTO "CORRUPTIONEND"; }
+
+: Corruption for display :
+  DISPLAYCORRUPTION=%I(CORRUPTION*FACTOR);
+  DISPLAYCBANISH=%I(50*FACTOR);
+
+ IF Banished(W) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCBANISH)+"%", 0-(%I(((SUMRESLINES())*5*FACTOR)/10));
+ }
+ IF ((Banished(W))=0) %AND ((ISFORTRESS(CityID))=0) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCORRUPTION)+"%", 0-(%I(((SUMRESLINES())*CORRUPTION*FACTOR)/100));
+ }
+
+!CORRUPTIONEND!
+
+
+: difficulty bonus/penalty :
+IF (W>0) THEN { GOTO "END" }
+
+ IF (DIFFICULTY()=DiffBeginner) THEN {
+  ADDRESLINE "Beginner Production Bonus",10;
+ }
+ IF (DIFFICULTY()=DiffEasy) THEN {
+  ADDRESLINE "Easy Production Bonus",5;
+ }
+ IF (DIFFICULTY()=DiffMaster) THEN {
+  ADDRESLINE "Master Production Penalty",0-(%I((SUMRESLINES())/10));
+ }
+ IF (DIFFICULTY()=DiffLunatic) THEN {
+  ADDRESLINE "Lunatic Production Penalty",0-(%I((SUMRESLINES())/5));
+ }
+ IF (DIFFICULTY()=DiffPhantasm) THEN {
+  ADDRESLINE "Phantasm Production Penalty",0-(%I((SUMRESLINES())/4));
+ }
+
+!END!
+
+SUMPROD=0;
+SUMPROD=SUMPROD+SUMRESLINES();
+
+SETCITYDATA(CityID,CDPROD,SUMPROD);
+
+IF (SPELLSTATE(W,STMagitekPowerEngine)=2) THEN {
+ POWERGEN=%I(SUMPROD/5);
+ ADDRESLINE "Power Generator", 0-POWERGEN;
+}

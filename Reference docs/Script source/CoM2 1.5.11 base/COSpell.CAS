@@ -1,0 +1,14 @@
+: INPUT - SP - The spell being cast.
+	CASTER - The caster of the spell.
+		0 or higher means a wizard is casting.
+		-1 or lower means a unit is casting. Unit ID equals (-Caster).
+		-999999 or lower means the unit's item is casting. Unit ID equals -(Caster+999999).
+	MAINCASTER - The wizard casting the spell or owning the unit who casts the spell.
+	SpellTargetCity,SpellTargetPlane,SpellTargetX,SpellTargetY,
+	SpellTargetUnit,SpellTargetPlayer - The target of the spell. Only the variable(s) applicable for the spell's targeting type are set.
+  OUTPUT - None
+  
+  Please note that existing spell effects are hardcoded. To change them, create a duplicate of the spell and code the new effect in this script.
+  
+  :
+  

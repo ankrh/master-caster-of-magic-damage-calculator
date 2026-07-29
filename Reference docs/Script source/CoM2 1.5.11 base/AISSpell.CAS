@@ -1,0 +1,237 @@
+:While this script is running, the variable, W, contains the wizard ID for the active AI player.
+
+=============
+COMMON SPELLS
+=============
+:
+IF Books(W,Nature)<4 THEN { ADDAISPELL(W,SGHOULS); }
+AddAISpell(W,SWraithForm);
+AddAISpell(W,SBlackSleep);
+AddAISpell(W,SZombies);
+if books(W,Nature)<4 then { AddAISpell(W,SDarkness); }
+if books(W,Nature)>=4 then { AddAISpell(W,SMislead); }
+if %N WasSSpicked(w,SGhouls) then { AddAISPell(W,SSprites); }
+if SCORINGOPTION(STreasureImpact) then { AddAISPell(W,SSprites); }
+if %N WasSSpicked(w,SWraithForm) then { AddAISPell(W,SWaterWalking); }
+AddAISpell(W,SWarBears);
+AddAISpell(W,SWeb);
+if (books(W,Sorcery)>=5) %OR (books(W,Chaos)>=5) then { AddAISpell(W,SNaturesEye); };
+AddAISpell(W,SWildBoars);
+AddAISpell(W,SEarthToMud);
+AddAISpell(W,SFairyDust);
+AddAISpell(W,SFireBolt);
+if %N WasSSpicked(W,SFireBolt) then { AddAISPell(W,SLifeDrain); };
+AddAISpell(W,SWeakness);
+AddAISpell(W,SWallofFire);
+if (%N WasSSpicked(w,SWarBears)) %AND (%N WasSSpicked(w,SGhouls))
+   THEN { AddAISpell(W,SHellHounds); };
+if %N WasSSpicked(w,SZombies) then { AddAISPell(W,SFireElemental); };
+if (%N (Personality(W)=Peaceful)) %and (%N (Personality(W)=Lawful)) then { AddAISpell(W,SCorruption); };
+AddAISpell(W,SConfusion);
+if (%N WasSSpicked(w,SBlackSleep)) %AND ( %N WasSSpicked(w,SConfusion)) 
+     THEN { AddAISpell(w,SShatter); };
+AddAISpell(W,SWarpWood);
+AddAISpell(W,SFlameBlade);
+AddAISpell(W,SWarpCreature);
+if (%N WasSSpicked(w,SWaterWalking)) %AND (%N WasSSpicked(w,SWraithForm)) THEN { AddAISpell(W,SFloatingIsland); };
+if %N WasSSpicked(w,SSprites) then { AddAISpell(W,SNagas); };
+AddAISpell(W,SFocusMagic);
+if %N WasSSpicked(w,SFireBolt) then { AddAISPell(W,SPsionicBlast); };
+AddAISpell(W,SResistMagic);
+if %N WasSSpicked(w,SWarpWood) then { AddAISPell(W,SGuardianWind); };
+AddAISpell(W,SPhantomWarriors);
+AddAISpell(W,SBlur);
+AddAISpell(W,SHeroism);
+if WasSSpicked(w,SSprites) %OR WasSSpicked(w,SNagas) %OR WasSSpicked(w,SHellHounds) %OR WasSSpicked(w,SGhouls) then { AddAISpell(W,SJustCause); };
+AddAISpell(W,SHeavenlyLight);
+AddAISpell(W,SHealing);
+AddAISpell(W,SDiscipline);
+AddAISpell(W,SHolyArmor);
+:
+--------------
+ UNCOMMONS
+--------------
+:
+if BOOKS(W,Death)>=8 then { AddAISpell(W,SLycanthropy); AddAISpell(W,SBloodLust); };
+AddAISpell(W,SBlackPrayer);
+AddAISpell(W,SShadowDemons);
+if WasSSpicked(W,SFocusMagic) then { AddAISPell(W,SCockatrices); };
+if (RETORT(W,Warlord) %OR RETORT(W,Myrran)) %AND (%N (RETORT(W,Alchemy) %OR (MINERALS()=MineralRich))) 
+    THEN { AddAISpell(W,STransmute); };
+if (%N WasSSpicked(w,SCockatrices)) %AND
+(%N Retort(W,Myrran) %and (%N Retort(0,Myrran))) then { AddAISPell(W,SGiantSpiders); };
+if books(W,Nature)<8 then {
+  if (Books(W,Chaos)<2) %AND (Books(W,Death)<2) then { AddAISpell(W,SCracksCall); };
+  if %N WasSSpicked(w,SShadowDemons) then { AddAISPell(W,SGreatLizard); };
+  };
+AddAISpell(W,SLandLinking);
+AddAISpell(W,SChangeTerrain);
+if books(W,Sorcery)>=8 then {
+	if %N (personality(W)=Chaotic) then { AddAISpell(W,SAuraofMajesty); };
+	AddAISpell(W,SAEtherBinding);
+	};
+if (Books(W,Nature)+Books(W,Life))>=5 then { AddAISpell(W,SSpellLock); };
+if Personality(W)=Lawful then { AddAISpell(W,SAuraofMajesty); };
+if %N (Personality(W)=Chaotic) then { AddAISpell(W,SAEtherBinding); };
+AddAISpell(W,SDispellingWave);
+if Books(W,Chaos)>=7 then { AddAISPell(W,SGargoyles); };
+if (Books(W,Death)+Books(W,Sorcery))>=4 then { AddAISpell(W,SFateMastery); };
+if (Climate()=CliFrozen) then { AddAISpell(W,SRaiseVolcano); };
+AddAISpell(W,SLightningBolt);
+if (Objective(W)=Militarist) %OR (Objective(W)=Expansionist) then { AddAISpell(W,SFateMastery); };
+AddAISpell(W,SChaosChannels);
+if Books(W,Life)>=8 then {
+	AddAISpell(W,SStreamofLife);
+	if %N (personality(W)=chaotic) then { AddAISpell(W,SAltarOfPeace); };
+	};
+if Retort(W,Myrran)=Retort(0,Myrran) then { AddAISpell(W,SPrayer); };
+If Books(W,Nature)>=3 then { AddAISpell(W,SStreamofLife); };
+If ((Personality(W)=Lawful) %or (Personality(W)=Peaceful) %or (Books(W,Chaos)>=4)
+%or (Retort(W,Charismatic))) %AND (%N (Personality(W)=Chaotic)) then { AddAISpell(W,SAltarOfPeace); }
+
+if (%N WasSSpicked(w,SGiantSpiders)) %AND (%N WasSSpicked(w,SLycanthropy)) %AND
+   (%N WasSSpicked(w,SCockatrices)) %AND (%N WasSSpicked(w,SShadowDemons)) %AND
+   (%N WasSSpicked(w,SGargoyles)) %AND (%N WasSSpicked(w,SGreatLizard)) %AND
+   (Books(W,Life)<=6) then { AddAISpell(W,SUnicorns); };
+
+AddAISpell(W,SEndurance);
+AddAISpell(W,SStreamofLife);
+AddAISpell(W,SResurrection);
+
+:
+------------------
+ RARES EARLY
+------------------
+:
+if books(W,Nature)>=10 then {
+	if Personality(W)=Maniacal then { AddAISpell(W,SEarthquake); };
+	if Personality(W)=Peaceful then {
+                             AddAISpell(W,SAbundance);
+                             AddAISpell(W,SGaiaBlessing);
+                             };
+	if Retort(W,Conjurer) then { AddAISpell(W,SSurvivalInstinct); };
+	if (Objective(W)=Narcissist) %or (Retort(W,Channeler)) then { AddAISpell(W,SPetrify); };
+	if RND(2)=1 then { AddAISpell(W,SStoneGiant) } else { AddAISpell(W,SGorgons); };
+	AddAISpell(W,SSurvivalInstinct);
+};
+
+if books(W,Sorcery)>=10 then {
+	if (Personality(W)=Peaceful) %or (Personality(W)=Maniacal) then { AddAISpell(W,SFlyingFortress); };
+	if Objective(W)=Narcissist then { AddAISpell(W,SUranusBlessing); };
+	AddAISpell(W,SStormGiant);
+	ROLL=RND(3);
+	if ROLL=1 then { AddAISpell(W,SInvisibility); };
+	else { if ROLL=2 then { AddAISpell(W,SBanish); }; }
+	else { AddAISpell(W,SUranusBlessing); };
+	};
+
+if books(W,Chaos)>=10 then {
+	if (Personality(W)=Maniacal) %or (Personality(W)=Ruthless) then {
+		if RND(2)=1 then { AddAISpell(W,SFireStorm) } else { AddAISPell(W,SChaosRift); };
+	};
+AddAISpell(W,SDoomMastery);
+AddAISpell(W,SFlameStrike);
+};
+
+if Books(W,Life)>=10 then {
+if (Personality(W)=Peaceful) %or (Personality(W)=Lawful) %or (Objective(W)=Perfectionist) then {
+	AddAISPell(W,SDivineOrder);
+	AddAISPell(W,SInspirations);
+	} else {
+	AddAISpell(W,SAngel);
+	AddAISpell(W,SInspirations);
+	}
+};
+
+if Books(W,Death)>=10 then {
+	If personality(W)=Maniacal then {
+		AddAISpell(W,SEvilPresence);
+		AddAISpell(W,SDrought);
+		};
+	If personality(W)=Ruthless then {
+		AddAISpell(W,SDrought);
+		};
+AddAISpell(W,SWaveofDespair);
+if RND(2)=1 then { AddAISpell(W,SWraiths) } else { AddAISpell(W,SVampire); }
+};
+:
+-----------------
+	RARES
+-----------------
+:
+if (Books(W,Chaos)+Books(W,Nature)+Books(W,Death))>=9 then { AddAISpell(W,SSurvivalInstinct); };
+AddAISpell(W,SGorgons);
+if books(W,Life)>=3 then { AddAISpell(W,SAbundance); };
+AddAISpell(W,SEarthElemental);
+if WasSSpicked(w,SSurvivalInstinct) then { AddAISPell(W,SDoomMastery); };
+if Books(W,Life)>=5 then { AddAISpell(W,SDoomMastery); };
+AddAISpell(W,SFlameStrike);
+if WasSSpicked(w,SResistMagic) then { AddAISPell(W,SEfreet); };
+AddAISpell(W,SDoomBolt);
+If Books(W,Death)>=4 then { AddAISpell(W,SMindStorm); };
+If Books(W,Chaos)>=7 then { AddAISpell(W,SMindStorm); };
+if Retort(W,Conjurer) then {
+  AddAISpell(W,SAirElemental);
+  AddAISpell(W,SStormGiant);
+  };
+AddAISpell(W,SInvisibility);
+AddAISpell(W,SStormGiant);
+AddAISpell(W,SInvulnerability);
+AddAISpell(W,SHolyArms);
+If (Personality(W)=Maniacal) %or (Personality(W)=Ruthless) then { AddAISpell(W,SDrought); };
+If WasSSpicked(w,SfocusMagic) %or Retort(W,Conjurer) then { AddAISPell(W,SWraiths); };
+If Retort(W,CultLeader) then { AddAISpell(W,SDarkritual); };
+AddAISpell(W,SWaveOfDespair);
+AddAISpell(W,STerror);
+:
+//-----------------------------------------------------------------
+// VERY RARES
+//-----------------------------------------------------------------
+:
+AddAISpell(W,SCallLightning);
+ROLL=RND(3);
+If ROLL=1 THEN { AddAISpell(W,SGreatWyrm); } ELSE {
+IF ROLL=2 THEN { AddAiSpell(W,SColossus); } ELSE { AddAiSpell(W,SBehemoth); }
+}
+AddAISpell(W,SEntangle);
+
+if Retort(W,Alchemy) then { AddAISpell(W,STimeStop); };
+if Books(W,Life)>=3 then { AddAISpell(W,SMagicImmunity); };
+if Books(W,Nature)>=4 then { AddAISpell(W,SMagicImmunity); };
+if Retort(W,Runemaster) %or Retort(W,SageMaster) then { AddAISpell(W,SSpellWard); };
+if Books(W,Sorcery)<=8 then {
+	if RND(2)=1 THEN { AddAISpell(W,SSkyDrake); }
+	ELSE { AddAISpell(W,SDjinn); }
+	};
+AddAISpell(W,SSpellBinding);
+AddAISpell(W,SSpellWard);
+AddAISpell(W,STimeStop);
+
+if WasSSPicked(w, SMindStorm) then { AddAISpell(W,SDisintegrate); };
+if WasSSPicked(w, SDoomMastery) then { AddAISpell(W,SChaosSurge); };
+AddAISpell(W,SArmageddon);
+if books(W,Chaos)<=9 then {
+	if RND(2)=1 THEN { AddAISpell(W,SApocalypse); }
+	ELSE { AddAISpell(W,SChainLightning); }
+} else {
+AddAISpell(W,SChaosSurge);
+AddAISpell(W,SWarpReality);
+}
+AddAISpell(W,SGreatDrake);
+
+if Retort(W,SageMaster) then { AddAISpell(W,SEnlightenment); };
+AddAISpell(W,SArchangel);
+if Retort(W,Conjurer) then { AddAISpell(W,SCalltoArms); };
+if Retort(W,CultLeader) then { AddAISpell(W,SRulerofHeaven); };
+if Books(W,Life)>=10 then {
+	AddAISpell(W,SCharmofLife);
+	AddAISpell(W,SCrusade);
+	};
+AddAISpell(W,SHighPrayer);
+
+if WasSSPicked(w, SMindStorm) then { AddAISpell(W,SAnnihilate); };
+If (Personality(W)=Maniacal) %or (Personality(W)=Ruthless) then { AddAISpell(W,SPestilence); };
+IF RND(2)=1 THEN { AddAISpell(W,SDemonLord); }
+	ELSE { AddAISpell(W,SDeathKnights); }
+AddAISpell(W,SMassacre);
+AddAISpell(W,SEternalNight);

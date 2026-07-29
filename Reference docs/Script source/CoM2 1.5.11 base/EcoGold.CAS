@@ -1,0 +1,89 @@
+: Input CITYID = the city being calculated.
+		ROADBONUS = Total road bonus percentage
+		TERRAINGOLD = Total gold gained from terrain
+		BASEGOLD = Base gold from taxes. Equals the tax rate percentage from the tax table multiplied by the total nonrebel population.
+  Output - None. 
+  Use the AddResLine command to add produced gold to the total and as an individual line in the detailed view on the UI.
+		:
+
+TRADE=0;
+BASEORE=0;
+RACE=CITYRACE(CITYID);
+IF RACE=RCNomad THEN { TRADE=50; }
+TRADE=TRADE+ROADBONUS+TERRAINGOLD;
+
+W=CITYOWNER(CityID);
+
+POP=POPUNITS(CITYID);
+IF TRADE>3*POP THEN { TRADE=3*POP; }
+
+if RACE=RCDwarf THEN { BASEGOLD=BASEGOLD + (%I(BASEGOLD/2)); }
+
+ADDRESLINE "Taxes",BASEGOLD;
+
+If ISBUILT(CITYID,BMarketplace) THEN {
+ADDRESLINE "Marketplace",8;
+:if HASGLOBAL(W,40) THEN { ADDRESLINE "Market Mastery",8 }:
+}
+
+I=2*OREINRANGE(cityID,OreSilver);
+ADDRESLINE "Silver Ore", I
+BASEORE=BASEORE+I;
+
+I=4*OREINRANGE(cityID,OreGold);
+ADDRESLINE "Gold Ore", I
+BASEORE=BASEORE+I;
+
+I=6*OREINRANGE(cityID,OreGems);
+ADDRESLINE "Gems", I
+BASEORE=BASEORE+I;
+
+IF ISBUILT(CITYID,BMinerGuild) THEN {
+I=%I(BASEORE/2);
+ADDRESLINE "Miner's Guild", I;
+}
+
+if RACE=RCDwarf THEN { 
+ADDRESLINE "Dwarven Miners", BASEORE;
+}
+
+BASEGOLD=SUMRESLINES()
+
+PGTOTAL= TRADE*2;
+
+if ISBUILT(CITYID,BBank) THEN {
+ADDRESLINE "Bank", %I((BASEGOLD * 30) /100)
+PGTOTAL=PGTOTAL + 60;
+}
+
+IF (EVENTTURN(EvGoodMoon)>0) THEN {
+ADDRESLINE "Good Moon", %I((BASEGOLD * 50) /100)
+PGTOTAL=PGTOTAL + 100;
+}
+
+if ISBUILT(CITYID,BMerchantGuild) THEN {
+ADDRESLINE "Merchant's Guild", %I((BASEGOLD * 40) /100)
+PGTOTAL=PGTOTAL + 80;
+}
+
+IF CITYENCHANT(CityID,CEProsperity)>-1 THEN {
+ADDRESLINE "Prosperity", %I((BASEGOLD * 77) /100)
+PGTOTAL=PGTOTAL + 154;
+}
+
+IF RETORT(W,Omniscient) THEN {
+ IF BOOKS(W,Life)>0 THEN {
+ GP=((BOOKS(W,Life)-1)*7)+32;
+ ADDRESLINE "Omniscient", %I((BASEGOLD * GP) /200)
+ PGTOTAL=PGTOTAL + GP;
+ }
+}
+
+: Dump anything lost by fractions rounded down into the trade modifier. :
+TRAD=(%I((BASEGOLD*(PGTOTAL+200))/200))-SUMRESLINES();
+
+ADDRESLINE "Trade Bonus "+STRS(TRADE)+"%", TRAD;
+
+
+
+

@@ -1,0 +1,23 @@
+: Calculate the casting skill for a wizard.
+INPUT W = the wizard to calculate
+OUTPUT BASE = Base skill, COMBAT = combat skill, OVERLAND = Overland skill 
+
+Avoid changing the way base skill is calculated at this time.
+In the current version, the fractional skill gain shown on the Magic subscreen,
+as well as the starting SP of each player assumes the Base Skill formula is Skill=Sqrt(SP)
+:
+
+SP=GETSP(W);
+BASE=SQRT(SP);
+
+SP=SP+(180*BUILDINGSOWNED(W,BMonument,0));
+SP=SP+(90*BUILDINGSOWNED(W,BMonument,CEPhilStone));
+SP=SP+(1200*BUILDINGSOWNED(W,BLinkingTower,0));
+SP=SP+(600*BUILDINGSOWNED(W,BLinkingTower,CEPhilStone));
+
+COMBAT=SQRT(SP);
+
+OVERLAND=BASE;
+OVERLAND=OVERLAND+(7*BUILDINGSOWNED(W,BAmplifyingTower,0));
+OVERLAND=OVERLAND+(4*BUILDINGSOWNED(W,BAmplifyingTower,CEUranusBless));
+

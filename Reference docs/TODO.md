@@ -1,4 +1,17 @@
-# TODO
+# TODO — open mechanic questions
+
+The questions themselves live here. **Tracking lives in `Calculator/BACKLOG.md`**, §6 and §7,
+which give each one an ID (Q1–Q13, X1–X6), a status, and links to any verification-queue entry
+that would answer it. Add a question here first, then a row there.
+
+## Resolved
+
+- **Does "ranged" include thrown and breath (MoM 1.31 to-hit)?** No. Thrown and breath use only
+  the base `tohit` (innate + experience level + hero abilities); neither `melee_tohit` nor
+  `ranged_tohit` reaches them, so item and weapon-quality to-hit bonuses do not apply. Resolved
+  from `WIZARDS.EXE` — see `MoM binary analysis.md`. This also resolves a **prose-vs-prose
+  conflict**: `MoM source - Fandom site/To Hit.md` is correct; `Thrown Attack.md:56` (Axe to-hit
+  improves thrown accuracy) is wrong. To-hit only — an axe's *attack strength* does reach thrown.
 
 ## Open Questions
 
@@ -14,6 +27,8 @@
 
 - CoM high prayer description says +3 attack but MoM and CoM2 have +2 attack, and CoM manual says "didn't change it"... Assuming it's +2 in all versions.
 
+- **Supreme Light's `defense += resistance/3` reads a live resistance in CoM 1** (`0x90A46`), i.e. one that Warp Resist has already zeroed and Darkness has already adjusted, but that the Tactician retort has not yet raised. The calculator computes it from a base-ish resistance instead, so a Warp-Resisted or Darkness-affected unit gets the wrong armor bonus. Not applied — it needs a decision on how far to model "reads the value at its own point" for a term that is not itself a scaling effect.
+
 - Manuals say that wraiths have life steal -4 but it seems to be -3
 
 - With blazing eyes, can a unit have doom gaze at the same time as ranged attacks?
@@ -22,7 +37,8 @@ does destiny remove the buff from magical/mithril/adamantium weapons?
 
 does animate dead give +ranged attack?
 
-does "ranged" typically include thrown and breath?
+does "ranged" typically include thrown and breath? (answered for MoM 1.31 to-hit — see Resolved
+above; still open for other versions and for non-to-hit effects)
 
 land linking
 
@@ -33,7 +49,7 @@ Questions for the experts:
 
 - Chaos Spawn has both a melee attack and doom gaze attack. Is poison touch attached to only one of those, and if so, which? Or is it attached to both so poison activates twice in each attack sequence?
 
-- When I look at the MoM and CoM1 data using MoMTweaker, it seems like gaze attack type and values are stored in the same field as ranged, thrown and breath. Is this a fundamental property of how the game engine treats gaze, specifically, that gaze could never occur alongside ranged, thrown, or breath? If so, it might make sense for me to merge gaze into the ranged/thrown/breath field in my calculator as well.
+- ~~When I look at the MoM and CoM1 data using MoMTweaker, it seems like gaze attack type and values are stored in the same field as ranged, thrown and breath. Is this a fundamental property of how the game engine treats gaze...~~ **Answered from the binary** — yes, one slot: strength `.ranged` (+0x01), type `.ranged_type` (+0x02), so gaze can never co-exist with ranged/thrown/breath. See `MoM binary analysis.md`, *Gaze attacks*. The Blazing Eyes / CoM2 half below is still open, since CoM2 is a different engine.
 
 - Related to the above: With blazing eyes, can a unit have doom gaze at the same time as ranged attacks?
 

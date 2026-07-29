@@ -1,0 +1,14 @@
+:
+Output 
+RAREALLOWED = 1 if rare spells can be found, 0 otherwise.
+VERYRAREALLOWED = 1 if very rare spells can be found
+:
+
+RAREALLOWED=1;
+VERYRAREALLOWED=1;
+
+K=16;
+if DIFFICULTY()>=DiffExpert then { k=k-(Difficulty()-4); }
+
+if OVERLANDTURN()<(K*12) THEN {VERYRAREALLOWED=0; }
+if OVERLANDTURN()<((K*12)-72) THEN {RAREALLOWED=0; }

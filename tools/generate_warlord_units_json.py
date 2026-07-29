@@ -7,13 +7,13 @@ Fields match the MoM/CoM1/CoM2 JSON schema:
   thrown_breath, thrown_breath_type (omitted when absent)
   abilities                         (omitted when empty)
 
-Run from the "Unit rosters" directory:
-  python ../tools/generate_warlord_units_json.py
+Run from any working directory:
+  python tools/generate_warlord_units_json.py
 """
 
 import json
-import os
 import re
+from pathlib import Path
 
 RACE_NAMES = {
     0: 'Barbarian', 1: 'Beastmen', 2: 'Dark Elf', 3: 'Draconian', 4: 'Dwarf',
@@ -39,7 +39,7 @@ RANGED_TYPE_MAP = {
     37: 'Magic(N)',  # nature — sprite shimmer
     38: 'Magic(N)',  # nature — green bolt
     39: 'Magic(C)',  # chaos (misc)
-    40: 'Magic(N)',  # nature (misc)
+    40: 'Beam',      # Warlord beam energy
 }
 
 REALM_NAMES = {
@@ -247,10 +247,18 @@ def ini_unit_to_record(u):
         elif val and val != '0':
             abilities.append(f'{ab}={val}')
 
-    for ab in ['Caster', 'Poison', 'Destruction']:
+    for ab in ['Caster', 'Poison']:
         val = u.get(ab, '').strip()
         if val and val != '0':
             abilities.append(f'{ab}={val}')
+
+    # Destruction's value is a resistance modifier (negative = penalty), not a strength,
+    # so 0 is meaningful — an unmodified resistance roll — where Caster=0/Poison=0 above
+    # mean the ability is absent. The rosters ship the Magician with Destruction=0, which
+    # a `!= '0'` guard would silently drop.
+    val = u.get('Destruction', '').strip()
+    if val:
+        abilities.append(f'Destruction={val}')
 
     spell_id = u.get('Spellability', '').strip()
     if spell_id and spell_id != '0':
@@ -290,6 +298,11 @@ def ini_unit_to_record(u):
     if u.get('Custom17', '').strip() == '1':
         abilities.append('Rage')
 
+    # Custom13=14: Sapiens. This is a permanent roster tag used by Outlander
+    # reforms to admit selected fantastic creatures through the regular-unit gate.
+    if u.get('Custom13', '').strip() == '14':
+        abilities.append('Sapiens')
+
     # Custom19: 1 = Mechanical, 2 = Clergy (Warlord unit type tags)
     custom19 = u.get('Custom19', '').strip()
     if custom19 == '1':
@@ -328,12 +341,13 @@ def ini_unit_to_record(u):
 
 
 def main():
-    # Resolve paths relative to the repo root (parent of the tools/ dir holding this script),
-    # so the script works from any cwd.
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ini_path = os.path.join(repo_root, 'Unit rosters', 'Warlord mod unit data', 'UNITS.INI')
-    out_path = os.path.join(repo_root, 'Unit rosters', 'Warlord mod units.json')
-    js_out_path = os.path.join(repo_root, 'Calculator', 'units_warlord.js')
+    # Resolve every path from the script location so input and both generated
+    # outputs are independent of the caller's working directory.
+    repo_root = Path(__file__).resolve().parent.parent
+    roster_dir = repo_root / 'Unit rosters'
+    ini_path = roster_dir / 'Warlord mod unit data' / 'UNITS.INI'
+    out_path = roster_dir / 'Warlord mod units.json'
+    js_out_path = repo_root / 'Calculator' / 'units_warlord.js'
 
     SPECIAL_UNIT_NAMES = {'Floating Island'}
 

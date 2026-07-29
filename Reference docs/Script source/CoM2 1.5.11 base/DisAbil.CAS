@@ -1,0 +1,19 @@
+:
+INPUT - U = the unit whose abilities are being listed
+
+OUTPUT - None. Use the ADDABILITYLINE command to display abilities.
+:
+
+IF ISHERO(U) %AND (GETSTAT(U,SRangedType,1)>=20) %AND (GETSTAT(U,SRangedType,1)<30)
+THEN { AddAbilityLine 0,126,"Sharpshooting","Sharpshooting";
+}
+
+IF GETSTAT(U,SCreatePower,1)=12 THEN {
+ AddAbilityLine 0,157,"Primal Force","Primal Force";
+}
+
+HALT;
+
+:IF (GetCombatEnchantmentFlag(U,EncStoneSkin,0)>0) %OR
+(GetOLEnchantmentFlag(U,EncStoneSkin,0)>0)
+THEN { AddAbilityLine 0,72,"Stone Skin","Stone Skin"; }:

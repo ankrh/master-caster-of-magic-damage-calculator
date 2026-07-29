@@ -1,0 +1,8 @@
+: INPUT - SP - The spell being cast.
+	W - The player casting the spell.
+	SpellTargetCity,SpellTargetPlane,SpellTargetX,SpellTargetY,
+	SpellTargetUnit,SpellTargetPlayer - The target of the spell. Only the variable(s) applicable for the spell's targeting type are set.
+  OUTPUT - None 
+  Please note that existing spell effects are hardcoded. To change them, create a duplicate of the spell and code the new effect in this script.
+  :
+  

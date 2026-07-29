@@ -1,0 +1,28 @@
+:
+INPUT - W - The wizard who is casting the spell
+        SP - The spell being dispelled
+        REALM - The ream of the spell being cast
+        PRIMARY - The primary realm of the wizard.
+        GROUP - The spellgroup of the spell that determines the type of effects.
+        CATEGORY - The displayed category of the spell in the spellbook.
+OUTPUT - DR - The multiplier of the dispel resistance (in percentages)
+:
+
+DR=100;
+
+IF W<>NeutralPlayerID THEN {
+
+IF (Retort(W,Specialist)) %AND (PRIMARY=REALM) THEN { DR=DR+50; };
+IF Retort(W,Runemaster) THEN { DR=DR+150; };
+IF (HasGlobal(W,GEDarkestHour)) %AND ((GROUP=SGCityBuff) %OR (GROUP=SGCityCurse))
+THEN { DR=DR+100; }
+IF HasGLobal(W,GERulerofHeaven) THEN { DR=DR+100; }
+IF Banished(W) %AND (GROUP=SGCityCurse) THEN { DR=%I(DR/2); }
+
+IF (EVENTTURN(EvSorceryC)>0) THEN { DR=DR+100; }
+
+: Spell Lock has a cost of 100 but a base resistance of 150. :
+IF (SP=SSpellLock) Then { DR=DR+%I(DR/2); }
+
+
+}

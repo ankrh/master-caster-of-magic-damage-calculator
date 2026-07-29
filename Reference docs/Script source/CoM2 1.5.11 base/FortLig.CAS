@@ -1,0 +1,18 @@
+: INPUT - W, the defending wizard whose lightning is hitting
+		  S, the casting skill of the wizard.
+ OUTPUT - STR, the strength of the lightning bolt to cast.
+		  LTURNS, the amount of turns while the lightning appears
+: 
+STR= 18+ (S/8);
+IF W<>0 THEN { 
+IF Difficulty()=DiffBeginner THEN { STR=%I(STR/3); };
+IF Difficulty()=DiffEasy THEN { STR=%I(STR/2); };
+IF Difficulty()>=DiffAdvanced THEN { STR=%I((STR*3)/2);  };
+IF Difficulty()>=DiffMaster THEN { STR=STR*2;  };
+ }
+STR=STR/2;
+IF STR>60 THEN { STR=60; }
+STR=%I(STR);
+LTURNS = %I(3 + (S/20));
+: NOTE, this is also multipled by the amount defined in DIFFICULTY.INI :
+

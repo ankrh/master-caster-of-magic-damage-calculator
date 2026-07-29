@@ -1,0 +1,32 @@
+: INPUT C - The city that produced the unit
+		U - The unit being produced.
+  OUTPUT - None, set unit stats as desired. :
+
+W=CITYOWNER(C);
+RACE=CITYRACE(C);
+IF RETORT(W,ALCHEMY) THEN {
+IF RACE<>RCBarbarian THEN {
+SETENCHANTMENTFLAG U,EncMagic,ABase,1;
+}
+}
+
+IF (CITYENCHANT(C,CEPhilStone)>-1)
+ %OR ((CITYENCHANT(C,CEEvilPresence)=-1) %AND (ISBUILT(C,BAlchemistGuild))) THEN {
+SETENCHANTMENTFLAG U,EncMagic,ABase,1; 
+IF OREINRANGE(C,OreMithril)>0 THEN { SETENCHANTMENTFLAG U,EncMithril,ABase,1; }
+IF OREINRANGE(C,OreAdamantium)>0 THEN { SETENCHANTMENTFLAG U,EncAdamant,ABase,1; }
+IF OREINRANGE(C,OreOrihalcon)>0 THEN { SETENCHANTMENTFLAG U,EncOrihalcon,ABase,1; }
+ }
+
+IF HASGLOBAL(W,GEDoomMastery) THEN { APPLYCHAOSCHANNEL U;}
+
+IF CITYENCHANT(C,CEEvilPresence)=-1 THEN {
+IF CITYENCHANT(C,CEAltarofBattle)>-1 THEN {
+SETSTAT U,ALevel,ABase,4;
+} ELSE { 
+IF ISBUILT(C,BWarCollege) THEN { SETSTAT U,ALevel,ABase,3; }
+ ELSE {
+IF ISBUILT(C,BBarracks) THEN { SETSTAT U,ALevel,ABase,2; }
+}
+}
+}

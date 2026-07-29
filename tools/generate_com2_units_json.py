@@ -6,10 +6,14 @@ Fields match the MoM/CoM1 JSON schema:
   ranged, ranged_type, ammo         (omitted when absent)
   thrown_breath, thrown_breath_type (omitted when absent)
   abilities                         (omitted when empty)
+
+Run from any working directory:
+  python tools/generate_com2_units_json.py
 """
 
 import json
 import re
+from pathlib import Path
 
 RACE_NAMES = {
     0: 'Barbarian', 1: 'Beastmen', 2: 'Dark Elf', 3: 'Draconian', 4: 'Dwarf',
@@ -252,10 +256,18 @@ def ini_unit_to_record(u):
         elif val and val != '0':
             abilities.append(f'{ab}={val}')
 
-    for ab in ['Caster', 'Poison', 'Destruction']:
+    for ab in ['Caster', 'Poison']:
         val = u.get(ab, '').strip()
         if val and val != '0':
             abilities.append(f'{ab}={val}')
+
+    # Destruction's value is a resistance modifier (negative = penalty), not a strength,
+    # so 0 is meaningful — an unmodified resistance roll — where Caster=0/Poison=0 above
+    # mean the ability is absent. The rosters ship the Magician with Destruction=0, which
+    # a `!= '0'` guard would silently drop.
+    val = u.get('Destruction', '').strip()
+    if val:
+        abilities.append(f'Destruction={val}')
 
     # Spell ability: resolve ID to name
     spell_id = u.get('Spellability', '').strip()
@@ -310,13 +322,13 @@ def ini_unit_to_record(u):
 
 
 def main():
-    import os
-    ini_path = 'CoM2 unit data/UNITS.INI'
-    out_path = 'CoM2 units.json'
-    # JS output resolved from this script's location so it lands correctly
-    # regardless of the working directory.
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    js_out_path = os.path.join(repo_root, 'Calculator', 'units_com2.js')
+    # Resolve every path from the script location so input and both generated
+    # outputs are independent of the caller's working directory.
+    repo_root = Path(__file__).resolve().parent.parent
+    roster_dir = repo_root / 'Unit rosters'
+    ini_path = roster_dir / 'CoM2 unit data' / 'UNITS.INI'
+    out_path = roster_dir / 'CoM2 units.json'
+    js_out_path = repo_root / 'Calculator' / 'units_com2.js'
 
     SPECIAL_UNIT_NAMES = {'Floating Island'}
 

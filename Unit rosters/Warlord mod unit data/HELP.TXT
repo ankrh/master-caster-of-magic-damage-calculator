@@ -213,7 +213,7 @@ The wizard is a master craftsman who is an expert in magical engineering.
 - Reduces the cost of making items/artifacts by 50%.
 - Starts the game with the "Enchant Item" spell already researched.
 - The "Create Artifact" spell will be the first researchable Rare level spell.
-- All mechanical units trained by the wizard gain +1 Melee/Range Attack, +1 Armor, +1 Resistance, +1 Movement Point, and magic weapons.
+- All mechanical units trained by the wizard gain +1 Melee/Range Attack, +1 Armor, +2 Resistance, +1 Movement Point, and magic weapons.
 #Retort Conjurer
 *ux53.png
  CONJURER
@@ -516,7 +516,7 @@ GAME
 The game button and the hotkey "G" bring up the game options screen. This screen allows you to load and save games, change settings, and surrender to return to the main menu.
 #OVERLANDSPELLS
 SPELLS
-The spells button and the hotkey "S" open your spell book, which lists only the spells that can be cast overland.
+The spells button and the hotkey "S" open your spellbook, which lists only the spells that can be cast overland.
 #ARMIES
 ARMIES
 The army list button and the hotkey "A" bring up a complete list of all armies under your control. From this screen, you can equip your heroes, manage your artifacts, and dismiss units.
@@ -658,7 +658,7 @@ CHANGE BUTTON
 Opens the production screen where you can select which buildings and units to produce and assign them to a production queue.
 #SPELLBOOKS
 SPELL BOOKS
-The spell books in the various realms represent the rank of spells the wizard can understand and the number of spells they can research:
+The spellbooks in the various realms represent the rank of spells the wizard can understand and the number of spells they can research:
 - 1 book allows learning common spells.
 - 2 books allow learning uncommon spells.
 - 3 books allow learning rare spells.
@@ -819,7 +819,7 @@ The Sorcery Node harbors an anomalous phenomenon known as Phantasmal Terrain. Th
 Regardless of its current form, the entire area feels as if it lies deep beneath an abyssal sea—distorted, weightless, and haunted by unseen forces.
 #COMBATSPELL
 SPELL BUTTON
-The Spell button opens your spell book and allows you or your selected unit to cast a spell. You can only cast one spell during each combat turn. Your units can cast additional spells, but casting a spell will end the turn for the casting unit.
+The Spell button opens your spellbook and allows you or your selected unit to cast a spell. You can only cast one spell during each combat turn. Your units can cast additional spells, but casting a spell will end the turn for the casting unit.
 #COMBATWAIT
 WAIT BUTTON
 The Wait button selects the next unit without passing the turn for the currently selected one.
@@ -1158,11 +1158,13 @@ Reduces the number of Towers of Wizardry that connect the two planes to 40% of t
 #OPT EVERYTHING NICE
 EVERYTHING NICE
 Score Modifier: 0.90x
-Land and city destruction spells are banned. No player can obtain any of the following spells:
-Nature Realm: Earthquake, Planetary Mastery
-Chaos Realm: Corruption, Raise Volcano, Chaos Rift, Call the Void, Doomsday, Armageddon, Meteor Storm
+Land destruction and city curse spells are banned. No player can obtain any of the following spells:
+Nature Realm: Blizzard, Earthquake, Planetary Mastery, Ice Age
+Sorcery Realm: AEther Sink, Disillusionise
+Chaos Realm: Corruption, Raise Volcano, Fire Storm, Chaos Rift, Call the Void, Doomsday, Armageddon, Meteor Storm
+Life Realm: Inquisition
 Death Realm: Warp Node, Evil Presence, Drought, Pestilence
-Please note that even if you selected to start the game with any of these spells, you will not have access to them.
+Please note that even if you select to start the game with any of these spells, you will not have access to them. If any spells on this list appear in spellbook, they will be removed and not gain substitute replacement. This rule does not apply to retort-based spells.
 #OPT I AM THE BOSS
 I AM THE BOSS
 Score Modifier: 0.30x
@@ -1199,7 +1201,8 @@ This option is mutually exclusive with the "Against the Worlds".
 #OPT BOOK COLLECTORS
 BOOK COLLECTORS
 Score Modifier: 0.75x
-Each time a wizard is banished or defeated, there is a chance that one of their spell books will become the winner's possession. If wizard's fortress is their last city, gaining of a book is guerenteed. The acquired book has all the benefits of a normal spell book but does not contain new researchable spells. The wizard who loses the book does not lose any spells.
+Each time a wizard is banished or defeated, there is a chance that one of their spellbooks will become the winner's possession. If wizard's fortress is their last city, gaining a book is guaranteed. The acquired book has all the benefits of a normal spellbook including researchable spells which are taken from spellbooks of the wizard who loses the book. If the spell has not appeared on research page and has not already been researched, the wizard who loses the book will also lose that spell from spellbook.
+If all spells of original owners are already available in spellbook, random spell of that realm will be random to fill quota.
 #OPT UNSTOPPABLE STAMPEDE
 UNSTOPPABLE STAMPEDE
 Score Modifier: 1.25x
@@ -1426,6 +1429,49 @@ Play by old Warlord mod's rule before version 1.5.10 with each wizard get 1 rese
 MORE THAN RETORT
 Score Modifier: 1.00x
 Each retort accompanies with unique researchable spells and reforms.
+#OPT NO SECRET IN MASTERY
+NO SECRET IN MASTERY
+Score Modifier: 1.00x
+Spell of Mastery is disable.
+#OPT WIZARD OF OZ
+WIZARD OF OZ
+Score Modifier: 1.20x
+The human player is an Outlander from the world beyond mistaken by the locals as a powerful master wizard.
+Human players start as Outlander with following characteristics.
+- Starts with no book and no magic spell but retained all picked retorts and spells gain from retort.
+- Starts with Tree of Knowledge have already been researched.
+- Start with 1 Overland Casting Skill and 0 Combat Casting Skill. Base casting skill is only available after gaining a spellbook and grows at half rate of normal.
+- Gains access to researchable exclusive to the Outlander.
+- Requires 4 Spell Books to able to research Spell of Mastery.
+#OPT AMONG US...
+AMONG US...
+Score Modifier: 1.20x
+There is chance that some master wizards are mysterious outlandish identities with strange tricks.
+At least one AI wizard is designated as an Outlander with following characteristics.
+- Starts with no book and no magic spell but retained all picked retorts and spells gain from retort.
+- Starts with Tree of Knowledge have already been researched.
+- Start with 1 Overland Casting Skill and 0 Combat Casting Skill. Base casting skill is only available after gaining a spellbook and grows at half rate of normal.
+- Gains access to researchable exclusive to the Outlander.
+- Requires 4 Spell Books to able to research Spell of Mastery.
+#OPT DESOLATED OUTPOST
+DESOLATED OUTPOST
+Score Modifier: 1.00x
+Outpost growth of each race is depending on their favorable/unfavorable terrains surrounding the outpost.
+#OPT RETURN OF THE MASTER
+RETURN OF THE MASTER
+Score Modifier: 0.50x
+The human player is an ancient master who has just returned from long slumber. Although most of the treasures were robbed while they are absent and skills seem rusty after long sleep in bad posture, time to teach those upstarts some lessons!
+The human player starts with all spells in their spellbook according to random rules except Spell of Mastery have already been researched.
+#OPT THE LORD OF THE MAGICS
+THE LORD OF THE MAGICS
+Score Modifier: 2.00x
+The Ancient tyrant lord of Magics has returned and thrown the world into calamity for all magical practitioners...
+One of AI opponent starts with 4 books in each magic realms (20 in total) and have all spells in each realm researched except Spell of Mastery.
+The Ancient tyrant lord of Magics could not be the same wizard as the Outlander except when the playthrough has only 1 starting opponent.
+#OPT ACCELERATED RACE
+THE ACCELERATED RACE
+Score Modifier: 1.20x
+Rare and Very Rare spells are available as rewards from lair for the start of the game.
 #FORTRESS
 *Fortress_0.png
  FORTRESS
@@ -1712,7 +1758,7 @@ A Witches' Convent provides magical protection to the community, generating +4 R
  ACADEMY
 Maintenance: 10 gold/turn
 Halfling race's unique building.
-The Academy is a school dedicated to the study, discussion, and application of advanced knowledge for the public good. It provides research based on the maximum population size, reduces the population decrease rate by half, increases the figures of Magister units by 50%, and lowers the cost of ship and siege units by 25%.
+The Academy is a school dedicated to the study, discussion, and application of advanced knowledge for the public good. It provides research based on the maximum population size, reduces the population decrease rate by half, increases the figure of Magical Range unit or Fantastic Stable unit by +2, and lowers the cost of ship and siege units by 25%.
 The Academy must be built on a hill or mountain.
 #B MILITARY WORKSHOP
 *Building54_0.png
@@ -2223,7 +2269,7 @@ The security and assurance offered by the casting wizard's ever-foreseeing eyes 
 Nature Very Rare - Global Enchantment
 Casting Cost: 1200+ mana
 Upkeep: 30 mana/turn
-Unleashes Nature’s power, gradually transforming all land tiles into Forests. The number of tiles converted is 2 + ((Arcanus map width + Myrror map width) / 20). The casting wizard gains 1 Magic Power per Forest tile in the world. Tundra, rivers, grasslands within the caster’s territory, and Volcanoes created by the caster remain unchanged
+Unleashes Nature's power, gradually transforming all land tiles into Forests. The number of tiles converted is 2 + ((Arcanus map width + Myrror map width) / 20). The casting wizard gains 1 Magic Power per Forest tile in the world. Tundra, rivers, grasslands within the caster's territory, and Volcanoes created by the caster remain unchanged
 Forest tiles have a 0.5% chance to spawn Wild Games, while river tiles have a 0.5% chance to spawn Nightshade, provided they are near a city owned by a wizard who casts Roots of Genesis and lack existing special resources.
 #Spell RESIST MAGIC
 *ux146.png
@@ -2334,7 +2380,7 @@ Sorcery Uncommon - Instant
 Target: combat/map square
 Casting Cost: 25-125 mana
 Attempts to remove all beneficial enemy unit enchantments from the targeted overland map square, or during combat from all enemies. When used this way, it can even remove negative spells from your units. Every 2 mana spent on the spell equals the effectiveness of a strength 1 Dispel Magic, rounded up.
-Enemy wizards can only cast this spell within their current scouting range.
+Enemy wizards can only cast this spell Overland within their explored area.
 #Spell SPELL LOCK
 *ux116.png
  SPELL LOCK
@@ -2490,7 +2536,7 @@ Sorcery Rare - Instant Overland
 Target: enemy city
 Casting Cost: 50-250 mana
 The spell attempts to remove all beneficial city enchantments from the targeted enemy city.
-Enemy wizards can only cast this spell if the city is within their current scouting range.
+Enemy wizards can only cast this spell on the city within their explored area.
 #Spell KRAKEN
 *Units\u271x3_1.png
  KRAKEN
@@ -2507,7 +2553,7 @@ Target: enemy city
 Casting Cost: 100 mana
 Upkeep: 2 mana/turn
 Opens a great magical void that drains half of the Non-Religious Magical Power generated under an enemy city, or at least 5 Power, whichever is higher. If the city loses more Power than it can generate, the excess is deducted from the wizard's global pool. Additionally, the operations of Monuments, Linking Towers, and Amplifying Towers are disrupted, causing them to generate only half of their base Skill value.
-Enemy wizards can only cast this spell if the city is within their current scouting range.
+Enemy wizards can only cast this spell on the city within their explored area.
 #Spell PLANEWALKING
 *ux309.png
  PLANEWALKING
@@ -2635,9 +2681,9 @@ Sorcery Very Rare - Global Enchantment
 Casting Cost: 1200+ mana
 Upkeep: 50 mana/turn
 The wizard manipulates the web of laylines:
-- Cities owned by the casting wizard no longer lose power due to corruption and gain 5 power for each beneficial city enchantment on the city.
+- Cities owned by the casting wizard no longer lose power due to corruption and gain 10 power for each beneficial city enchantment on the city.
 - The casting wizard gains the full strength of the base combat casting skills for each Monument and Linking Tower not owned by them.
-- The casting wizard gains 2 overland casting skills for each Amplifying Tower not owned by them.
+- Each Amplifying Towers lose 3 overland casting skill output and those missing overland casting skill transfer to the casting wizard.
 - All dispel-type spells are 100% more effective.
 #Spell RUNE FORMATION ARRAY
 *CInfo24.png
@@ -2694,8 +2740,8 @@ Target: map square
 Casting Cost: 30 mana
 Desecrates the target land square. Corrupted lands produce no food or minerals and can only be restored through prayers from Clerics or Shamans.
 Corrupted map square has 3% chance each turn to decay; from forest becomes swamp, hill becomes mountain, and grassland becomes desert.
-In combat, sandy, swampy, and gravel area of corrupted land is magically toxic. At the end of turn, non-Cleric unit exposes to it have to resist at penalty -1 or suffers 1 magical poison damage for each of its surviving figure.
-Enemy wizards can only cast this spell within their current scouting range.
+In combat, sandy, swampy, and gravel area of corrupted land is magically toxic. At the end of turn, non-Cleric unit exposes to it have to resist at penalty -1 or suffers 1 magical poison damage. Chaos, Nature, and Sorcery nodes are excluded from this effect but disable Fairy Maze and Phantasmal Terrain instead. 
+Enemy wizards can only cast this spell on the area around cities within their explored area.
 #Spell FIERY FURY
 *ux231.png
  FIERY FURY
@@ -2810,9 +2856,9 @@ Target: non-rivers/node land map square
 Casting Cost: 50 mana
 Raises a volcano, destroying any food and minerals provided by the target map square. The volcano provides 3 Magic Power each turn to the caster. If cast on a city, each building has a 5% chance of collapsing.
 The volcano raised by this spell owns by the caster with only the owner's city able to utilized its 7% terrain production bonus. For each volcano raises by the spell, there is a 10% chance to create a new mineral vein, if volcano raises within vicinity of caster's city then chance for new mineral vein increases to 40%.
-Enemy wizards can only cast this spell within their current scouting range.
+Enemy wizards can only cast this spell on the area around cities within their explored area.
 #Spell IMMOLATION
-*ux33.png
+*ux114.png
  IMMOLATION
 Chaos Uncommon - Unit Enchantment
 Target: friendly unit
@@ -3686,7 +3732,7 @@ Target: enemy city
 Casting Cost: 200 mana
 Upkeep: 3 mana/turn
 A demonic presence enters the target city, nullifying all unrest removal effects from shrines, monasteries, oracles, and cathedrals. Barracks, War Colleges, and Alchemist's Guilds have no effect on units produced there. All positive effects from city and global enchantments upon training units in the city are nullified.
-Enemy wizards can only cast this spell if the city is within their current scouting range.
+Enemy wizards can only cast this spell on the city within their explored area.
 #Spell WRAITHS
 *Units\u170x3_1.png
  WRAITHS
@@ -3718,7 +3764,7 @@ Target: enemy city
 Casting Cost: 200 mana
 Upkeep: 3 mana/turn
 Reduces the maximum population of the cursed city by 6 and eliminates all percentage-based production bonuses. Food production in the city is reduced by 25%. If the city exceeds the Maximum Population, racial growth rates are negated and it will shrink by 120 people per turn. If cast on a neutral city, the defending units will desert.
-Enemy wizards can only cast this spell if the city is within their current scouting range.
+Enemy wizards can only cast this spell on the city within their explored area.
 #Spell DARK RITUAL
 *DarkRitual_2.png
  DARK RITUAL
@@ -3837,7 +3883,7 @@ Target: enemy city
 Casting Cost: 250 mana
 Upkeep: 5 mana/turn
 Spreads a deadly plague in the affected city, +2 Unrest penalty, and reducing population at a rate of 1000 + (population/10) each turn and killing an additional person if the current population exceeds a 1-10 roll. In combat, all garrison units suffer from the plague, with -3 Attack, -3 Armor, -6 Resistance, and -10% To-Hit.
-Enemy wizards can only cast this spell if the city is within their current scouting range.
+Enemy wizards can only cast this spell on the city within their explored area.
 #Spell ETERNAL NIGHT
 *CInfo22.png
  ETERNAL NIGHT
@@ -4239,7 +4285,7 @@ Level 3: Adamantium -> +Orihalcon
 *res10.png
  EDUCATION REFORM
 Arcane Uncommon - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Sage Master's signature reform.
 Education institutions under this reform are both self-sustained and academic excellence.
 Universities, Sage's Guilds, and Wizard's Guilds in the wizard's cities generate gold equal to their upkeep.
@@ -4256,35 +4302,35 @@ The Sage Master hoodwinks all arcane enthusiaists to participate in network of r
 *naturebook1.png
  GAIA MASTERY
 Nature Legendary - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Nature Specialist's signature reform.
 The Specialist has attained mastery of the realm of Nature, -50% casting cost of Nature spell, +100% resistance for Nature enchantment. Nature creature controlled by the wizard get +10% To-Hit/To-Defend, +2 Resistance in Combat.
 #Spell AETHER MASTERY
 *sorcerybook1.png
  AETHER MASTERY
 Sorcery Legendary - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Sorcery Specialist's signature reform.
 The Specialist has attained mastery of the realm of Sorcery, -50% casting cost of Sorcery spell, +100% resistance for Sorcery enchantment. Sorcery creature controlled by the wizard get +10% To-Hit/To-Defend, +2 Resistance in Combat.
 #Spell CHAOS MASTERY
 *chaosbook1.png
  CHAOS MASTERY
 Chaos Legendary - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Chaos Specialist's signature reform.
 The Specialist has attained mastery of the realm of Chaos, -50% casting cost of Chaos spell, +100% resistance for Chaos enchantment. Chaos creature controlled by the wizard get +10% To-Hit/To-Defend, +2 Resistance in Combat.
 #Spell LIFE MASTERY
 *lifebook1.png
  LIFE MASTERY
 Life Legendary - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Life Specialist's signature reform.
 The Specialist has attained mastery of the realm of Life, -50% casting cost of Life spell, +100% resistance for Life enchantment. Life creature controlled by the wizard get +10% To-Hit/To-Defend, +2 Resistance in Combat.
 #Spell DEATH MASTERY
 *deathbook1.png
  DEATH MASTERY
 Death Legendary - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Death Specialist's signature reform.
 The Specialist has attained mastery of the realm of Death, -50% casting cost of Death spell, +100% resistance for Death enchantment. Death creature controlled by the wizard get +10% To-Hit/To-Defend, +2 Resistance in Combat.
 #Spell WALL OF STONE
@@ -4343,26 +4389,26 @@ Target: Summoning Circle
 Casting Cost: 100 mana
 Channeler's signature spell.
 Crafting Marionette avatar of the wizard to remote control bind to the channeler's will. Marionette is function as a hero with Stealth and Amplifier ability as well as other aspects based on channeler who create her.
-This spell could could not be cast when Marionette is still active under the Channeler.
+This spell could not be cast when Marionette is still active under the Channeler or has Heroes more than 5.
 #Spell MARIONETTE ASCENSION
 *HERO47.png
  MARIONETTE ASCENSION
 Arcane Rare - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Channeler's signature reform.
 Marionette ability developed further and becomes like off-shoot child bind to the channeler. By have their own will subservient to the channeler, the Marionette developed more ability of their own.
 #Spell LORD LIBERATOR
 *Event17.png
  LORD LIBERATOR
-Arcane Rare - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Arcane Uncommon - Reform
+Effect trigger upon finish research
 Guardian's signature reform.
-In combat, if the Guardian attack city with the same race as their home race, opponent units suffer -1 Attack/Armor/Resistance.
+In combat, if the Guardian attack city with the same race as their home race or have already own a city of that race, opponent units suffer -1 Attack/Armor/Resistance.
 #Spell LORD PROTECTOR
 *Shield7.png
  LORD PROTECTOR
 Arcane Very Rare - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Guardian's signature reform.
 In all combat that occur on opponent's turn, Guardian retort's siege defend bonus extend to all home race units regardless location of combat.
 #Spell TOWN PORTAL
@@ -4378,7 +4424,7 @@ Creates a teleportation device within a target city. Friendly units can teleport
 *ux349.png
  ARCHMAGE'S TUTITION
 Arcane Uncommon - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Archmage's signature reform.
 If magic user unit is training from the Archmage's fortress city, the unit recieved train and guidance from the Archmage themselves.
 The unit with casting skill, get casting skill +15.
@@ -4388,7 +4434,7 @@ The unit with magic ranged attack, get ammo +2.
 *ux350.png
  ARCHMAGE'S GUIDANCE
 Arcane Very Rare - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Archmage's signature reform.
 All heroes under the Archmage wizard get casting skill +40 no matter that hero is originally capable or not.
 #Spell BOUNTIFUL FESTIVITY
@@ -4458,9 +4504,10 @@ Send clockwork gremlins to sabotage target unit with strength 10 non-magical att
  LUCKY STAR
 Arcane Rare - Combat Unit Enchantment
 Target: friendly unit
-Casting Cost: 15 mana
+Casting Cost: 35 mana
 Astrologer's signature spell.
-Enchants the unit to become unusually Lucky until the end of combat.
+Enchanting the unit to become unusually Lucky until the end of combat. All friendly units in combat get +1 Attack/Armor/Resistance as long as Lucky Star enchantment still presence in combat.
+Effect of multiple copies of Lucky Star enchantments are not stacked.
 #Spell DISHEARTEN PROPHESY
 *ux213.png
  DISHEARTEN PROPHESY
@@ -4478,7 +4525,7 @@ Target: enemy unit
 Casting Cost: 40 mana
 Conjurer's signature spell.
 Through indirect magical mean, target unit must resist or the Conjurer would penetrate their will. If the unit is Fantastic creature, it would fall under the Conjurer's influence and fight for the Conjurer from next turn onward. If the unit is regular unit, it would suffer -10% To-Hit and To-Defend instead.
-If the enchanted Fantastic creature is Base Fantastic and survives til the end of combat, the Conjurer could research how to summon them if the Conjurer has spellbook of the same realm as the creature twice amount of the learning requirement.
+If the enchanted Fantastic creature is Base Fantastic and survives until the end of combat, the Conjurer will learn how to summon them if the Conjurer has spellbook of the same realm as the creature twice amount of spell tier requirement.
 #Spell SPIRIT LINK
 *ux353.png
  SPIRIT LINK
@@ -4517,9 +4564,10 @@ This spell is considered indirect magic combined with mundane ability, it could 
 *ux357.png
  TATTOO MAGIC
 Arcane Rare - Reform
-Casting Cost: 0 mana, Effect trigger upon researched
+Effect trigger upon finish research
 Enchanter's signature reform.
-All newly trained unit that has unit enchantment upon created will gain permanent version instead of removable version.
+Overland cast of common level unit enchantment grant the enchanted unit with permanent version of enchantment instead of removable version.
+All newly trained units that have unit enchantment upon created will gain permanent version instead of removable version.
 #Spell DOMAIN OF ENCHANTER
 *ux356.png
  DOMAIN OF ENCHANTER
@@ -4664,6 +4712,285 @@ This message is removed at the end of human player's turn.
 The wizard has become target of cult's "Divine Judgement"!
 All units of the wizard on both planes must resist at a -1 penalty or receive magical damage equal to their base HP. The damage is ignored Armor and Resistance of the unit but could be reduced by enchantment that reduced damage received directly.
 This message is removed at the end of human player's turn.
+#Spell CROP ROTATION
+*food1.png
+ CROP ROTATION
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform.
+Study and introduce crop rotation and mixed farming systems to increase crop yield and reduce waste of land and effort.
+- Each farmer unit generates +1 Food.
+- The City generates food equal to 50% of city's theoretical Overfarming penalty.
+#Spell FERTILIZER
+*food10.png
+ FERTILIZER
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Crop Rotation and Sanitation Reform to access this reform.
+Study and introduce mineral and organic supplements for plant and food crops for farmers to increase food yield.
+- The City generates food equal to 50% of food output after Overfarming penalty.
+#Spell CONCRETE CONSTRUCTION
+*Mace4.png
+ CONCRETE CONSTRUCTION
+Arcane Common - Reform
+Effect trigger upon finish research
+Outlander's signature reform.
+Introduce technology of cement and concrete construction to the subjects for faster and cheaper construction.
+- Building cost -20% from base cost.
+#Spell STANDARDIZATION
+*ux393.png
+ STANDARDIZATION
+Arcane Common - Reform
+Effect trigger upon finish research
+Outlander's signature reform.
+Set standard for law, measurement, and currency across the empire. This would encourage better craftmanship and ease of commercial activity.
+- Building cost -10% from base cost.
+- Unit training cost -10% from base cost.
+- Increase Gold bonus from trade by 10%.
+#Spell ADVANCED MINING
+*Building34_0.png
+ ADVANCED MINING
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Explosive and Sanitation Reform to access this reform.
+Introduce more advanced mining and processing of non-magical minerals common in the Outlander's home world.
+- Gold and Production bonus from non-magical mineral resources increase by 100%.
+#Spell INDUSTRIALIZATION
+*Building54_0.png
+ INDUSTRIALIZATION
+Arcane Very Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Heat Power Engine and Advanced Mining to access this reform.
+Reform production line, production process, supply chain, and modular organization. This is for more efficient production and more prosperous economy.
+- The city gets +5% Production for each Marketplaces, Bank, Guilds, and Production buildings.
+#Spell PRINTING PRESS
+*ux394.png
+ PRINTING PRESS
+Arcane Common - Reform
+Effect trigger upon finish research
+Outlander's signature reform.
+Introduce printing technology to make books cheap, ideas spread, and literacy prospers.
+- All buildings that generate Research generate +2 Research points.
+#Spell BUREAUCRATIC REFORM
+*ux395.png
+ BUREAUCRATIC REFORM
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Standardization and Printing Press to access this reform.
+Establish meritocratic system, clerical training, double-entry bookkeeping, as well as censorate to investigate corruption for both local and central administration.
+- Reduces city's corruption penalty by 20%. This reduction occurs before corruption cap is applied.
+#Spell XENOPSYCHOLOGY
+*ux382.png
+ XENOPSYCHOLOGY
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Conscription and Sanitation Reform to access this reform.
+Studies of culture and psychology of races of the Twin Planes and integrate this to knowledge they brought from their own home world to influence their subjects more effectively.
+- Each Non-Religious Unrest reduction building reduces unrest by +3.
+- In combat, all regular units and Sapiens summons own by the Outlander gain +1 Resistance.
+#Spell SCIENTIFIC PROCESS
+*ux396.png
+ SCIENTIFIC PROCESS
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Ballistic Training, Nursing and Surgery, and Xenopsychology to access this reform.
+Introducing scientific process as light of reason...but somehow also make those magicians get some interesting ideas.
+- The City generates +25% of total Research point.
+#Spell RADIO
+*ux383.png
+ RADIO
+Arcane Very Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Scientific Process and Industrialization to access this reform.
+Introduces mass-produced telecommunication devices that could contact land far away. Smaller ones are portable, larger ones could contact people from another plane!
+- Reduces corruption cap to 20%.
+- All cities get +20% Gold from Trade bonus.
+- In combat, all regular units and Sapiens summons under the Outlander's control gain +10% To-Hit, +10% To-Defend, +1 Resistance.
+#Spell CORPERATE CHARTER
+*ux397.png
+ CORPERATE CHARTER
+Arcane Very Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Xenopsychology and Strategic Logistic to access this reform.
+Introduces concept of trade company and stock exchange to greatly expand scope of commerce.
+- All cities get +0.5% Trade bonus for each Marketplace own by the Outlander.
+- All cities get +1.0% Trade bonus for each Bank own by the Outlander.
+- All cities get +1.5% Trade bonus for each Merchant's Guild own by the Outlander.
+#Spell SANITATION REFORM
+*ux381.png
+ SANITATION REFORM
+Arcane Common - Reform
+Effect trigger upon finish research
+Outlander's signature reform.
+Develop better practice on sanitation, healthcare, and disease prevention by adopting germ theory and good sanitation practices.
+- Population growth of city or outpost +40.
+- Reduces population loss in cities or outposts by 25%.
+#Spell HOSPITAL & SURGERY
+*ux400.png
+ HOSPITAL & SURGERY
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Sanitation Reform and Printing Press to access this reform.
+Introduce concepts and technologies for advanced Nursing, Surgery, battlefield medicine that could be done by magically inept people.
+- Population growth of city or outpost +40.
+- All regular units gain Healer perk.
+#Spell STRATEGIC LOGISTIC
+*ux398.png
+ STRATEGIC LOGISTIC
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Bureaucracy Reform and Advanced Mining to access this reform.
+Develop logistic network and supply chain system for strategic resources to able to access at any corner of their empire.
+- The city could train units as if have Iron, Coal, Mithril, Adamantium, Orihalcon, Quork, or Crysx in vicinity at half resource unit as long as the Outlander hold city with these resources. This effect does not cover city enchantment and global enchantment.
+#Spell UPGRADE & RETRAIN
+*ux399.png
+ UPGRADE & RETRAIN
+Arcane Very Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Strategic Logistic and Industrialization to access this reform.
+Develop system for update armaments and training with the finest available.
+- Old units will receive viable permanent unit upgrade available by accessable technology at the end of turn.
+- This reform allows implement upgrade from spell Archmage's Tutition, and Mariner Mastery, as well as upgrade from buildings Lava Smelter, Baray, and Caravanserai.
+- If the unit does not have racial upgrade, this reform allows implementation of an upgrade from Altar of Storm, or Academy.
+#Spell HEAT POWER ENGINE
+*ux377.png
+ HEAT POWER ENGINE
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Strategic Logistic and Scientific Process to access this reform.
+Develop mass-producible, high efficiency heat-based power engine based on technology of their home world.
+- All base production buildings in the city generate +6 production and +3 more production if the city has access to Coal. 
+- All newly trained mechanical units coming with Power Engine permanent unit enchantment (+1 Movement speed).
+#Spell EXPLOSIVE
+*ux375.png
+ EXPLOSIVE
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Fertilizer and Concrete Construction to access this reform.
+Develop powerful portable explosive devices with local materials. This could lead to many utilities such as warfare and mining.
+- Double Miner's Guild's output.
+- In combat, Melee or Flying Regular units or Mechanical units or Sapiens summons gain Wall Crusher, and Thrown ability at strength equal to 8-(maximum figures/2) round down.
+- In combat, all Blackpowder units get +2 Range Attack strength and strength of Fire Breath is doubled.
+#Spell BALLISTICS TRAINING
+*ux384.png
+ BALLISTICS TRAINING
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Bureaucracy Reform and Military Drilling to access this reform.
+Adapt science of ballistics and projectiles to the environmental condition of the Twin Planes to increase fighting capability of local combatants.
+- In combat, all Regular units and Sapiens summons get +20% Range/Breath/Thrown To-Hit.
+#Spell CONSCRIPTION
+*ux265.png
+ CONSCRIPTION
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform.
+Introduce conscription reform to prepare for escalating threat on the Twin Planes.
+- Unit training cost -20% from base cost.
+#Spell MILITARY DRILLING
+*ux385.png
+ MILITARY DRILLING
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Conscription and Standardization to access this reform.
+Improve drilling, discipline, and technical knowledge of of combatants serve under the Outlander.
+- All newly trained Regular units gain Discipline permanent unit enchantment.
+- Mechanical units gain +3 Health each turn if unit's Health is lower than 50%.
+#Spell ROCKETRY
+*ux252.png
+ ROCKETRY
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Explosive and Scientific Process to access this reform.
+Develop rocket-based weaponry and create improved incendiary weapons for replacing outdated range weapons.
+- All newly trained Regular units with Physical Ranged Attack or Thrown or Fire Breath gain Blackpowder weapon upgrade.
+#Spell ARMORCLAD
+*ux380.png
+ ARMORCLAD
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Military Drilling and Advanced Mining to access this reform.
+Improve armor hull for ships and mechanical units and in-combat battle armor for infantry.
+- All newly trained Regular mechanical units gain Armorclad permanent unit enchantment (+6 Armor).
+- In combat, all Regular non-Mechanical units gain Battle Armor perk (+3 Armor).
+#Spell MAGICAL PHYSICS
+*ux386.png
+ MAGICAL PHYSICS
+Arcane Common - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must have at least 1 spellbook of any realm to access this reform.
+Integrate natural rules of physics with reality-manipulating magic to make attack spells more powerful.
+- Fire, Lightning, Cold, Poison, Non-Magical direct damage spell deals Non-Magical damage of the same element at 50% strength on their primary target.
+#Spell TECHNO-GEOMANCY
+*Building23_0.png
+ TECHNO-GEOMANCY
+Arcane Uncommon - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Magical Physics to access this reform.
+Integrate science and technology to improve exploitation and manipulation of magical lay line.
+- Double casting skill output from Monument, Linking Tower, Amplifying Tower.
+#Spell MAGITEK SCIENCE
+*ux387.png
+ MAGITEK SCIENCE
+Arcane Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Scientific Process and Techno-Geomancy to access this reform.
+Develop integrate understanding of magic with science of material world and reason. This leads to newly found practical advancement of fundamental and nature of magic and integration of magical properties with material science.
+- +100% resource output for Mithril, Adamantium, Quork, Crysx, and Orihalcon.
+- Unit with Armorclad or Battle Armor gains Resist Magic unit enchantment.
+#Spell MAGITEK ENGINEERING
+*ux378.png
+ MAGITEK ENGINEERING
+Arcane Very Rare - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Magitek Science and Heat Power Engine to access this reform.
+Develop synthetic technology using both science and magic that was not possible in Outlander's home world. This advancement leads to magic power generator, magitek engine, and magitek energy shield...etc.
+- City under the Outlander's control convert 20% of Production output to generate additional power at ratio 3:1.
+- In combat, unit with Power Engine upgrade get additional +2 Movement Speed, +20% To-Defend, and Large Shield.
+#Spell XENOVETERINARY
+*ux388.png
+ XENOVETERINARY
+Nature Legendary - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Magitek Science and have 2 Nature books or more to access this reform.
+Using knowledge on Nature magic to improve understanding on biology of monsters, the Outlander develops science of Xenoveterinary to enhance control and performance with drugs and technology.
+- In combat, fantastic creatures get +10% To-Hit, +25% Health (but not lower than +1).
+- All fantastic creatures could access to Armorclad upgrade if Obsolescence Rearmament has been researched.
+#Spell TEMPORAL ENGINEERING
+*ux389.png
+ TEMPORAL ENGINEERING
+Sorcery Legendary - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Magitek Engineering and have 2 Sorcery books or more to access this reform.
+Using knowledge on Sorcery magic to circumvent technical difficulties, the Outlander develops mechanical manipulation of time and space. This leads to breakthroughs in flying vessels and battlefield detection.
+- All units with Power Engine upgrade gains Haste.
+- All sailing movement units with Power Engine upgrade gains Flying, Illusion Immunity, and units transport by them gain Stealth.
+#Spell ENERGY BEAM WEAPONS
+*ux390.png
+ ENERGY BEAM WEAPONS
+Chaos Legendary - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Magitek Engineering and have 2 Chaos books or more to access this reform.
+Using knowledge on Chaos magic to circumvent technical difficulties, the Outlander develops mass-producible energy beam weapons for Melee and Ranged combat.
+- Convert projectile of all ranged units with Power Engine upgrade to beam energy, gains +50% Ranged Attack strength and deals Doom damage and triggers Destruction with save penalty -1 for each 15% of Ranged To-Hit.
+- In combat, all regular/Armorclad units' Melee Attack deals Doom damage.
+#Spell PSYCHO CONVERTER
+*ux391.png
+ PSYCHO CONVERTER
+Life Legendary - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Magitek Engineering, Armorclad, and have 2 Life books or more to access this reform.
+Using their new understanding on conversion of faith and will into magical power, the Outlander develops mass-producible psycho converter, convert force of will into fighting power, enhance combat capability greatly.
+- In combat, all regular/Armorclad units gain To-Hit and To-Defend percent equal to half of Resistance multiplies with unit Level, round down.
+#Spell PNEUMA REACTOR
+*ux392.png
+ PNEUMA REACTOR
+Death Legendary - Reform
+Effect trigger upon finish research
+Outlander's signature reform, must research Magitek Engineering, Armorclad, and have 2 Death books or more to access this reform.
+Using their new understanding on soul, and life force draining, the Outlander develops mass-producible pneuma reactor, using principle of Death magic to drain souls and life force of enemies, enhances combat capability greatly.
+- All Undead units gain permanent Bloodlust at the end of Overland turn.
+- In combat, all regular/Armorclad units gain Life Steal with strength equal to half of base Resistance.
 #UA LARGE SHIELD
 *ux15.png
  LARGE SHIELD
@@ -4688,6 +5015,10 @@ Create Outpost is reserved for settlers and allows them to build an outpost. The
 *ux19.png
  INVISIBLE
 Invisibility makes the unit impossible to target with ranged attacks. The unit becomes visible when adjacent to an enemy unit, but there is still a 20% chance for each hit to miss the target, as if Blur was in effect. If Blur is also in effect, the cumulative chance becomes 40%.
+#UA PERMA INVISIBILITY
+*ux407.png
+ INVISIBILITY
+Unnatural imbued of Invisibility makes the unit impossible to target with ranged attacks. The unit becomes visible when adjacent to an enemy unit, but there is still a 20% chance for each hit to miss the target, as if Blur was in effect. If Blur is also in effect, the cumulative chance becomes 40%.
 #UA CREATE UNDEAD
 *ux20.png
  CREATE UNDEAD
@@ -4765,6 +5096,11 @@ COLD IMMUNITY
  MAGIC IMMUNITY
 Magic Immunity makes a unit immune to all forms of magic, including ranged magical attacks and all spell effects, regardless of realm.
 Although Magic Immunity prevents the unit from effect of Illuion or Doom type direct attack spells, it does not protect the unit from Doom or Illusion type damage from Magical Ranged Attacks from other units. It also does not prevent damage from Poison attack attached to Magical Ranged Attacks.
+#UA PERMA MAGIC IMMUNITY
+*ux408.png
+ MAGIC IMMUNITY
+Unnatural Imbued of Magic Immunity makes a unit immune to all forms of magic, including ranged magical attacks and all spell effects, regardless of realm.
+Although Magic Immunity prevents the unit from effect of Illuion or Doom type direct attack spells, it does not protect the unit from Doom or Illusion type damage from Magical Ranged Attacks from other units. It also does not prevent damage from Poison attack attached to Magical Ranged Attacks.
 #UA DEATH IMMUNITY
 *ux48.png
  DEATH IMMUNITY
@@ -4777,10 +5113,18 @@ Summons Lesser Demons in battle. Unlike the Summon Demon spell, these demons do 
 *ux33.png
  IMMOLATION
 This unit is surrounded by a burning, fiery aura that prevent unit from being Frozen, and inflicts a strength 10 Magic Fire attack on all enemies engaged in Melee combat with the target unit. This Magic attack is in addition to the unit's normal attacks. Immolation also burns away Webs on the unit at a faster than normal rate.
+#UA PERMA IMMOLATION
+*ux406.png
+ IMMOLATION
+Unnatural imbued of a burning, fiery aura that prevent unit from being Frozen, and inflicts a strength 10 Magic Fire attack on all enemies engaged in Melee combat with the target unit. This Magic attack is in addition to the unit's normal attacks. Immolation also burns away Webs on the unit at a faster than normal rate. The unit also gains Cold Immunity.
 #UA FEAR
 *ux129.png
  FEAR
 Each individual enemy figure engaging this unit in melee must resist at -3 or stand frozen in terror, unable to attack, even if swung upon. Note: Thrown, Breath, and Gaze attacks are not Melee attacks.
+#UA PERMA CLOAK OF FEAR
+*ux405.png
+ CLOAK OF FEAR
+Unnatural imbued of a fear-inspiring aura. Enemy units attempting to engage in Melee combat with the cloaked unit must overcome their fright at a Resistance penalty of -3, otherwise they cannot attack or counterattack. Thrown, Breath, and Gaze Attacks are not considered Melee Attacks.
 #UA RESISTANCE TO ALL
 *ux34.png
  RESISTANCE TO ALL
@@ -4896,9 +5240,9 @@ The creature is now a vile Undead being with +1 Melee, Ranged, Thrown, Breath At
  WRAITH FORM
 The unit has Weapon Immunity and a non-corporeal form. In addition, the unit has the ability to hit units with Weapon Immunity as though it was a Fantastic creature.
 #UA PERMA WRAITH FORM
-*ux23.png
+*ux409.png
  WRAITH FORM
-The unit has Weapon Immunity and a non-corporeal form. In addition, the unit has the ability to hit units with Weapon Immunity as though it was a Fantastic creature.
+Unnatural imbued of Weapon Immunity and a non-corporeal form. In addition, the unit has the ability to hit units with Weapon Immunity as though it was a Fantastic creature.
 #UA SREGENERATION
 *ux66.png
  REGENERATION
@@ -4953,7 +5297,12 @@ Endows the unit with a tremendously improved Resistance (+5 crosses) against all
 *ux80.png
  FLAME BLADE
 Adds +3 Melee Attack strength, +2 Missile-type Ranged and Thrown Attacks, and fire breath +1. Flaming weapons can hit creatures with Weapon Immunity.
-The bonus, except for Fire Breath, is not cumulative with Fiery Fury.
+The bonus, except for Fire Breath, is not cumulative with Fiery Blade or Fiery Fury.
+#UA FIERY BLADE
+*ux315.png
+ FIERY BLADE
+Adds +3 Melee Attack strength, +2 Missile-type Ranged and Thrown Attacks. Flaming weapons can hit creatures with Weapon Immunity.
+The bonus, except for Fire Breath, is not cumulative with Flame Blade.
 #UA MYSTIC SURGE
 *ux81.png
  MYSTIC SURGE
@@ -4962,7 +5311,7 @@ This enchantment can't be dispelled but fade away on its own along with most of 
 #UA TRUE SIGHT
 *ux82.png
  TRUE SIGHT
-The unit does not suffer from the ignores-armor effect of illusionary attacks, always succeeds resistance rolls for Sorcery spells, and can see invisible units and through Walls of Darkness.
+The unit does not suffer from the ignores-armor effect of illusionary attacks, always succeeds resistance rolls for Sorcery spells, and can see invisible units and through Walls of Darkness. In combat, the unit gains +5% to Range To-Hit.
 #UA HOLY WEAPON
 *ux83.png
  HOLY WEAPON
@@ -4988,7 +5337,7 @@ The unit wears armor decorated with Orihalcon crystals, which makes them more re
 *ux88.png
  SANCTIFIED
 This unit produces 3 Power and requires no Gold to maintain. In combat, the enchanted unit becomes a Life creature (but not a Fantastic creature unless it was already a Fantastic creature) as long as this enchantment is still in effect on the unit.
-If the unit is a Cleric, it gains 2 Casting Skills for each of its own base Resistance points, becomes a Fantastic creature, and can cast all Life realm spells.
+If the unit is a Cleric, it gains 2 Casting Skills for each of its own base Resistance points, becomes a Fantastic creature, and can cast all Life realm spells if the unit is not a Hero unit.
 #UA HOLY ARMOR
 *ux89.png
 HOLY ARMOR
@@ -5583,7 +5932,7 @@ This unit is an experienced long-distance traveler skilled in logistics. The uni
 #UA BLACKPOWDER WEAPON
 *ux252.png
  BLACKPOWDER WEAPON
-This unit’s blackpowder-enhanced armaments grant the following:
+This unit's blackpowder-enhanced armaments grant the following:
 - +1 Poison attack for units with Physical Ranged, Thrown, or Fire Breath attacks.
 - +2 Ranged attack for ranged units has Armor Piercing or Doom attack.
 - Armor Piercing for ranged unit without Armor Piercing or Doom attack.
@@ -5641,7 +5990,11 @@ These Trolls have earned the honor of being among the Frost Club and gain the fo
 #UA ALUMNI OF ACADEMY
 *ux277.png
  ALUMNI OF ACADEMY
-Graduated from Halfling's Academy, the good educational environment has created many alumni. Halfling magical ranged units receive 50% more figures than normal.
+Graduated from Halfling's Academy, the good educational environment has created many alumni. Unit with Magical Range Attack or produced from Fantastic Stable receive +2 more figures.
+#UA SAPIENS
+*ux374.png
+ SAPIENS
+This summon creature is could of communicate in speech and capable learning how to use complex tools and artifacts of non-magical origin.
 #UA ABILITY RECHARGE
 *ux53.png
  ABILITY RECHARGE
@@ -5745,6 +6098,63 @@ The Earth Elemental that fused with trees has ability to bind adjacent surroundi
 *ux344.png
  GIGANTIC SUBMERGER
 This creature has gigantic submerging body below the surface and could not lift above ground or gain Flying ability. If it receives flying ability, it will replace by strength 1 Thrown attack instead.
+#UA BOMBS&GRENADES
+*ux375.png
+ BOMBS&GRENADES
+With introduction of more powerful non-magical explosive, grenades and bombs become standard issue weapons for soldiers of the Outlander.
+The unit gains Wall Crusher, and Thrown strength equal to 8-(maximum figures/2) round down.
+#UA UPGRADED EXPLOSIVE
+*ux376.png
+ UPGRADED EXPLOSIVE
+With introduction of more powerful non-magical explosive, rockets used by soldiers of the Outlander are using ammunition with new type of explosive.
+The ranged unit gains +2 Ranged Attack strength and double strength of base Fire Breath strength.
+#UA POWER ENGINE
+*ux377.png
+ POWER ENGINE
+This mechanical unit is equipped with heat power engine built from technology of the Outlander's home world.
+The unit gains +1 Movement Speed.
+#UA MAGITEK ENGINE
+*ux378.png
+ MAGITEK ENGINE
+This mechanical unit is equipped with innovative Magitek engine build from technology from the Outlander's home world integrates with magical power of the Twin Planes.
+The unit gains +1 Overland Movement Speed and +3 Combat Movement Speed.
+Magitek engine is also able to generate protective energy field cover the unit in combat. The unit gains +20% To-Defend, and Large Shield perk.
+#UA TEMPORAL-GRAVITY DRIVE
+*ux389.png
+ TEMPORAL-GRAVITY DRIVE
+This mechanical vessel is equipped with temporal-gravity drive, The vessel gains Flying, Illusion Immunity, and unit that transported by it is concealed (gains stealth).
+Sailing units and Gigantic Submerger units could not be concealed (stealth) as transport by this unit.
+#UA BATTLE ARMOR
+*ux379.png
+ BATTLE ARMOR
+This unit is equipped with battle armor with design based on technology of the Outlander's homeworld. But due to lack of technology to create cybernetic exoskeleton and giga capacity power source, they are too heavy to wear outside combat.
+The unit gains +3 Armor in combat.
+#UA ARMORCLAD
+*ux380.png
+ ARMORCLAD
+This mechanical unit's hull is built with metal and cover with protective armor layer.
+The unit gains +6 Armor.
+#UA ENERGY WEAPONRY
+*ux390.png
+ ENERGY WEAPONRY
+This unit is equipped with energy beam weaponry for close range combat.
+In combat, this unit's Melee Attack deals Doom damage.
+#UA ENERGY CANNON
+*ux401.png
+ ENERGY CANNON
+This unit is equipped with energy beam cannon for long range attacks.
+Equipped Power Engine unit gains beam energy projectile with Ranged Attack strength increases by 50% and deal Doom damage.
+In combat, the unit's Range Attack destroys target irrecoverably with saving roll additional penalty -1 for each 15% of Ranged To-Hit.
+#UA PSYCHO FORCE
+*ux391.png
+ PSYCHO FORCE
+This unit is equipped with psycho converter that could convert force of will to physical ability.
+In combat, this unit gains To-Hit and To-Defend percent equal to half of Resistance multiplies with unit Level, round down.
+#UA PNEUMA FIELD
+*ux392.png
+ PNEUMA FIELD
+This unit is equipped with pneuma reactor that could drain life force from opponent and turn into power for the user.
+In combat, this unit gains Life Steal with strength equal to half of base Resistance.
 #COMBAT NIGHTSHADE
 *ux322.png
  NIGHTSHADE FIELD
@@ -5918,7 +6328,7 @@ This creature has already been enchanted with overwhelming power from a single r
 #UA ARTIFICER UPGRADE
 *ux230.png
  ARTIFICER UPGRADE
-Mechanical units produced by the wizard's city gain +1 Melee/Range Attack, +1 Armor, +1 Resistance, +1 Movement Point, and magic weapons.
+Mechanical units produced by the wizard's city gain +1 Melee/Range Attack, +1 Armor, +2 Resistance, +1 Movement Point, and magic weapons.
 #UA MAGICAL WEAPON
 *ux286.png
  MAGICAL WEAPON
@@ -8015,7 +8425,7 @@ The goblins require suitable environment such as river, or mountain for spores t
 #UA Goblin Poxbearers
 *Units\u358x3_1.png
  GOBLIN POXBEARERS
-The Goblin Poxbearers ward is a special Goblin specialist unit. Goblins, though unfamiliar with sanitation, enjoy playing “doctor and patient” and are particularly fascinated by the role of nurses. The Poxbearers emerged from their chaotic attempts to imitate illness and "cure" each other, with goblins competing to be the “sickest” for attention. Eventually, they discovered that their self-induced illnesses, manageable for them, were devastating to other races, a fact they quickly weaponized.
+The Goblin Poxbearers ward is a special Goblin specialist unit. Goblins, though unfamiliar with sanitation, enjoy playing "doctor and patient" and are particularly fascinated by the role of nurses. The Poxbearers emerged from their chaotic attempts to imitate illness and "cure" each other, with goblins competing to be the "sickest" for attention. Eventually, they discovered that their self-induced illnesses, manageable for them, were devastating to other races, a fact they quickly weaponized.
 The goblins require suitable environment such as swamp, or Sorcery Node for spores to develop into Poxbearers.
 #UA Doom Wheels
 *Units\u359x3_1.png
@@ -8126,7 +8536,7 @@ The Conjurer could study how to summon Killer Wasps with Conjuring Pact if has a
 #UA Lesser Gaia Lord
 *Units\u260x3_1.png
  LESSER GAIA LORD
-The Lesser Gaia Lord is a legendary Nature realm Fantastic creature. Gaia, the collective will of Nature, is often seen as a single entity, but in reality, it is fragmented due to failed attempts at spells of mastery across both realms. These fragmented aspects occasionally manifest as powerful offshoot beings called 'Gaia Lords.' Known as the daughters of Gaia, these beings possess immense supernatural power and can wield Nature’s energy at will.
+The Lesser Gaia Lord is a legendary Nature realm Fantastic creature. Gaia, the collective will of Nature, is often seen as a single entity, but in reality, it is fragmented due to failed attempts at spells of mastery across both realms. These fragmented aspects occasionally manifest as powerful offshoot beings called 'Gaia Lords.' Known as the daughters of Gaia, these beings possess immense supernatural power and can wield Nature's energy at will.
  
 The Conjurer could study how to summon Lesser Gaia Lord with Conjuring Pact if has at least 10 Nature Books.
 #UA Great Gaia Lord
@@ -8316,7 +8726,7 @@ The Conjurer could study how to summon Great Chaos Lord with Conjuring Pact if h
 #UA Fire Drake
 *Units\u329x3_1.png
  FIRE DRAKE
-The Fire Drake is a rare Chaos realm Fantastic creature. Fire Drakes, cousins of the massive Great Drakes, migrated to the mortal planes of Arcanus and Myrror long ago. They originate from the realm of fire, escaping just as it was engulfed by Chaos. While they retain many of their original traits, such as breathing fire and casting fireballs, they no longer possess the inherent resistance to fire or lightning. Unlike their Great Drake relatives, Fire Drakes are not surrounded by impenetrable flames.
+The Fire Drake is a rare Chaos realm Fantastic creature. Fire Drakes, cousins of the massive Great Drakes, migrated to the mortal planes of Arcanus and Myrror long ago. They originate from the realm of fire, escaping just as it was engulfed by Chaos. While they retain many of their original traits, such as breathing fire, casting Fireballs, and Fire Immunity. Unlike their Great Drake relatives, Fire Drakes are not surrounded by impenetrable flames.
  
 The Conjurer could study how to summon Fire Drake with Conjuring Pact if has at least 6 Chaos Books.
 #UA Unicorn

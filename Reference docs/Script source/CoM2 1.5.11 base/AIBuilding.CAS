@@ -1,0 +1,234 @@
+: INPUT C - The city being processed 
+		J - The building being processed
+		AIOwncities - how many cities are owned by the owner of this city.
+		AIEnemyCities - Number of cities on the AI's continent owned by other players
+		OWNSHIPS - Number of transport type units owned by the AI.
+		CUNREST - The total unrest in the city (number of rebels)
+		OVERLANDSKILL - The total overland skill the wizard has
+ OUTPUT - PRIO - The calculated priority of the building. Highest will be built. Return -100 if the building is not allowed to be built at all.
+:
+
+PRIO=0;
+W=CITYOWNER(C);
+RACE=CITYRACE(C);
+HAVEMITHRIL=OREINRANGE(C,OreMithril);
+HAVEADAMANT=OREINRANGE(C,OreAdamantium);
+HAVEORIHALCON=OREINRANGE(C,OreOrihalcon);
+HAVEIRON=OREINRANGE(C,OreIron);
+HAVECOAL=OREINRANGE(C,OreCoal);
+MAGICIANSAVAILABLE=1;
+IF (RACE=RCBarbarian) %OR (RACE=RCDwarf) %OR (RACE=RCGnoll)
+%OR (RACE=RCKlackon) %OR (RACE=RCLizard) THEN {MAGICIANSAVAILABLE=0; }
+
+if (j=BWarCollege) %OR (j=BBarracks) then {
+Call "MilitaryPrio";
+Call "EXPPrio";
+if CITYENCHANT(c,CEEvilPresence)>-1 then { Prio=PRIO-15; }
+}
+
+if (j=BOracle) %and (CITYENCHANT(c,CEEvilPresence)=-1) then { Call "UnrestPrio"; }
+
+if (j=BColosseum) then {
+Call "EconomyPrio";
+Call "UnrestPrio";
+if Objective(W)=Narcissist then { PRIO=PRIO-4; }
+}
+
+if (j=BMaritimeGuild) %OR (J=BStables) %OR (J=BFantasticStables)
+%OR (J=BArmorerGuild) %OR (J=BFighterGuild) THEN { Call "MilitaryPrio"; }
+
+if ((j=BFantasticStables) %OR (j=BMaritimeGuild))
+	%AND (Objective(W)=Expansionist) then { PRIO=PRIO+6; }
+
+IF (J=BForesterGuild) %OR (j=BAnimistGuild) %OR
+ (J=BFarmerMarket) %OR (j=BGranary) THEN { CALL "FoodPrio"; }
+
+if (j=BGranary) %and (Difficulty()>=DiffExpert) then { PRIO=PRIO+20; }
+if (j=BForesterGuild) %and (race=RCHighElf) then { CALL "MilitaryPrio";}
+
+if (j=BShipYard) then {
+  if (OVERLANDTURN()<20) then { PRIO=-100; HALT; }
+  if Objective(W)=Expansionist then {PRIO=PRIO+6; }
+  if (SpellState(W,SFloatingIsland)<>SSKnown) %and (ownships=0) then {
+  Prio=(Prio+29)-(4*Landsize());
+  }
+  if ISBUILT(C,BBuilderHall) then { CALL "EconomyPrio"; }
+}
+
+if (j=BMagicMarket) then {
+PRIO=PRIO+27;
+CALL "PowerPrio";
+}
+if (j=BLibrary) then {
+PRIO=PRIO+20;
+CALL "ResearchPrio";
+if (HaveMithril+HaveAdamant+HaveOrihalcon)>0 then {
+  PRIO=PRIO+30;
+  CALL "MilitaryPrio";
+  }
+}
+
+if (j=BSagesGuild) then { CALL "ResearchPrio"; }
+
+if (j=BAlchemistguild) then {
+CALL "MilitaryPrio";
+if (HaveMithril+HaveAdamant+HaveOrihalcon)>0 then { PRIO=PRIO+30; }
+else { if Retort(W,Alchemy) then { PRIO=PRIO-5; }}
+CALL "Amplifier";
+}
+
+if (j=BUniversity) then {
+CALL "ResearchPrio";
+if (RACE<>RCKlackon) %AND (RACE<>RCDraconian) THEN { CALL "ProductionPrio"; }
+}
+
+if (j=BWizardsguild) then {
+if CITYENCHANT(C,CEUranusBless)>-1) then { Prio=Prio+3; }
+CALL "ResearchPrio";
+CALL "PowerPrio";
+if MAGICIANSAVAILABLE then { CALL "MilitaryPrio"; }
+}
+
+if  (j=BCathedral) %OR (J=BParthenon) %OR (J=BShrine) THEN {
+IF CITYENCHANT(C,CEEvilPresence)>-1 THEN { PRIO=PRIO-10; }
+CALL "UnrestPrio";
+CALL "PowerPrio";
+CALL "ReligionPrio";
+}
+
+if j=BAmplifyingTower then {
+if OVERLANDTURN()<(84-(7*Difficulty())) then {PRIO=-100; HALT; }
+if OVERLANDTURN()<(150-(10*Difficulty())) then {PRIO=PRIO-(14-Difficulty()-(%I(OVERLANDTURN()/10))); }
+CALL "Research2Prio";
+CALL "Amplifier";
+}
+
+if j=BMonument then {
+if CONTACT(W,0) %AND (TREATY(W,0)<>TSPact) %AND (TREATY(W,0)<> TSAlliance) THEN
+{ PRIO=PRIO+20; }
+CALL "SkillPrio";
+}
+
+if j=BLinkingTower then {
+CALL "SkillPrio";
+}
+
+if j=BMarketplace then { PRIO=PRIO+20; }
+if (j=BMarketplace) %OR (J=BBank) %OR (J=BMerchantguild) THEN { CALL "EconomyPrio"; }
+
+if j=BBuilderHall then { PRIO=PRIO+10; }
+if (j=BMinerGuild) %or (j=BMechaGuild) then { CALL "ProductionPrio"; }
+if (j=BCityWalls) then {
+CALL "MilitaryPrio";
+if AIowncities<=AIenemycities then {PRIO=PRIO+25; }
+}
+
+HALT;
+
+: End of main script, functions below :
+
+!MilitaryPrio!
+Prio=Prio+2;
+if Objective(W)=Militarist then { Prio:=Prio+4;}
+if Objective(W)=Expansionist then { Prio:=Prio+2;}
+if HaveAdamant>0 then { prio=prio+7 } else { if HaveMithril>0 then {prio=prio+3; }; }
+if HaveOrihalcon>0 then { PRIO=PRIO+1; }
+if AIenemycities>=AIOwncities then {
+PRIO=PRIO+7;
+if AIenemycities>=2*AIOwncities then { Prio=Prio+100; }
+}
+if ScoringOption(STreeMastery) %and ISFortress(c) then { Prio=Prio+20;}
+RETURN;
+
+!EconomyPrio!
+if Objective(W)=Perfectionist then { Prio=Prio+3; }
+if Objective(W)=Militarist then { Prio=Prio+1; }
+if Population(C)>=15000 then { Prio=Prio+3; }
+if Gold(W)<500 then { prio=prio+6; }
+if Gold(W)<100 then { prio=prio+14; }
+RETURN;
+
+!EXPPrio!
+if CITYENCHANT(C,CEAltarOfBattle)>-1 then { 
+PRIO=0;
+if (j=BWarCollege) THEN { PRIO=-100; HALT; }
+}
+if Objective(W)=Perfectionist then { Prio=Prio+3; }
+if Objective(W)=Militarist then { Prio=Prio+3; }
+if Objective(W)=Narcissist then { Prio=Prio-5; }
+RETURN;
+
+!FoodPrio!
+if Population(C)<=3999 then { Prio=Prio+2; }
+if (CITYENCHANT(C,CEDrought)>-1) %AND (Difficulty()>=DiffLunatic) then { Prio=Prio+20; }
+if Objective(W)=Pragmatist then { Prio=Prio+2; }
+if Objective(W)=Perfectionist then { Prio=Prio+3; }
+RETURN;
+
+!Research2Prio!
+if RESEARCHING(W)<>0 then {
+if Retort(W,SageMaster) then { Prio=Prio+3; }
+if Objective(W)=Theurgist then { Prio=Prio+4; }
+}
+RETURN;
+
+!ResearchPrio!
+if RESEARCHING(W)<>0 then {
+if AIStrategy(W,PDSResearchNeeded) then {PRIO=PRIO+4;}
+if AISTRATEGY(W,PDSSomSerious)>0 then {PRIO=PRIO+20;}
+CALL "Research2Prio";
+}
+RETURN;
+
+!SkillPrio!
+if Retort(W,SageMaster) then { Prio=Prio-3; }
+if Objective(W)=Theurgist then { Prio=Prio-4; }
+if Objective(W)=Militarist then { Prio=Prio+4; }
+if Objective(W)=Expansionist then { Prio=Prio+2; }
+if Treaty(W,0)=TSWar then { Prio=Prio+3; }
+if (%N Contact(W,0)) then { Prio=Prio-3; }
+if Treaty(W,0)=TSPact then { Prio=Prio-3; }
+if Treaty(W,0)=TSAlliance then { Prio=Prio-7; }
+if AISTRATEGY(W,PDSSomSerious)>0 then { Prio=Prio-20; }
+if Retort(W,Channeler) then { prio=Prio+5; }
+if Retort(W,Archmage) then { prio=Prio-2; }
+if Objective(W)=Narcissist then { Prio=Prio+5; }
+if CityEnchant(c,CEPhilStone)>-1 then { Prio=Prio+3; }
+RETURN;
+
+!PowerPrio!
+Prio=Prio+2;
+if Objective(W)=Theurgist then { Prio=Prio+1; }
+if Objective(W)=Narcissist then { Prio=Prio+1; }
+if Researching(W)=SSpellofMastery then { Prio=Prio+3; }
+if Retort(W,Archmage) then { prio=Prio+1; }
+if AISTRATEGY(W,PDSCriticalLowMana)>0 %and (Difficulty()>=DiffFair) then { Prio=Prio+20; }
+RETURN;
+
+!ProductionPrio!
+if (HaveAdamant+HaveMithril+HaveOrihalcon+HaveIron+HaveCoal)>0 then { Prio=Prio+3; }
+Prio=Prio+(Difficulty()-4);
+if Objective(W)=Perfectionist then { Prio=Prio+7; }
+if Race=RCDwarf then { Prio=Prio+7; }
+if CityEnchant(C,CEChaosRift)>-1 then { Prio=Prio+10; }
+RETURN;
+
+!UnrestPrio!
+Prio=Prio+CUnrest;
+RETURN;
+
+!ReligionPrio!
+if Retort(W,CultLeader) then { Prio=Prio+4; }
+if CityEnchant(c,CEDarkRituals)>0 then { Prio=Prio+4; }
+if HASGlobal(W,GERulerofHeaven) then { PRIO=PRIO+2; }
+RETURN;
+
+!Amplifier!
+if CITYENCHANT(C,CEUranusBless)>-1 then { Prio=Prio+3;}
+if HASGLOBAL(W,GEAEtherBinding) then { Prio=Prio+3; }
+if Retort(W,SpellWeaver) then { prio=Prio+5; }
+if OVERLANDSKILL<(OVERLANDTURN()-30) then { Prio=Prio+7; }
+if Difficulty()>=DiffExpert then { Prio=Prio+3; }
+if Retort(W,Archmage) then { prio=Prio-2; }
+if Objective(W)=Narcissist then { Prio=Prio+4; }
+RETURN;

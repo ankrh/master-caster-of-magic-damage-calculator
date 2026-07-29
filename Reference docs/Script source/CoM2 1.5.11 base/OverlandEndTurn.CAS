@@ -1,0 +1,4 @@
+: 
+INPUT - W, the player whose turn just ended.
+	This script is called before any other end-of turn effects (such as drowning or clearing dead units) is processed.
+:

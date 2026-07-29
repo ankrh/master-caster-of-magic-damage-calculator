@@ -1,0 +1,227 @@
+: INPUTS
+W - The AI wizard's ID who is making the research decision
+SPE - The spell being evaluated
+CAT - The research category of the evaluated spell
+PRIO - The base research prority of the spell (set this in SPELLS.INI)
+OUTPUT - PRIO should contain the calculated adjusted research priority.
+The spell with the lowest calculated priority will be chosen for research.
+:
+
+: Tree of Knowledge is delayed for races that have no armorer's guild tier unit :
+if (SPE=STreeofKnowledge) %AND
+((HOMERACE(W)=RCHalfling) %OR (HOMERACE(W)=RCBarbarian)) THEN { prio=prio+580; }
+
+: Summoning Spell duplictes should be be researched later.
+Knowing any of
+Lycanthropy,War Bears,Sprites,Giant Spiders,Nagas,Hell Hounds,Gargoyles,Guardian Spirit,Unicorns,Skeletons,Ghouls
+prevents researching any other, except Gargoyles and Giant Spiders which are low cost and worth the early research anyway.
+:
+if (CAT=13) %AND (%N(SPE=SGargoyles)) %AND (%N(SPE=SGiantSpiders))
+%AND ((SPELLSTATE(W,SLycanthropy)=SSKnown) %OR HASSPELLCAT(W,13)) THEN { PRIO=PRIO+400; }
+
+: If we don't have a water movement enabler yet, make that top priority :
+
+IF ((SPE=SWaterWalking) %OR (SPE=SWraithForm) %OR (SPE=SFloatingIsland))
+%AND (%N(SPELLSTATE(W,SWaterWalking)=SSKnown))
+%AND (%N(SPELLSTATE(W,SWraithForm)=SSKnown))
+%AND (%N(SPELLSTATE(W,SFloatingIsland)=SSKnown)) THEN { PRIO=PRIO-500; }
+
+: Weak combat direct damage +400 if weak or strong combat direct damage spell already known :
+: Includes Fairy Dust	Ice Bolt	Fire Bolt	Fireball	Life Drain :
+IF (CAT=2) %AND (HASSPELLCAT(W,9) %OR HasSpellCat(w,2)) THEN { PRIO=PRIO+400; }
+
+: Weak combat unit curse +200 if another weak combat unit curse already known 
+  Includes Black Sleep	Vertigo	Shatter	Warp Creature	Weakness :
+if (CAT=3) %AND HasSpellCat(w,3) then { Prio=Prio+200; }
+
+: Weak combat summon +400 if another weak combat summon already known
+  Includes Wild Boars	Construct Catapult	Phantom Warriors	Fire Elemental	Summon Zombie :
+if (CAT=16) %AND HasSpellCat(w,16) then { Prio=Prio+400; }
+: Prefer Land Linking if Spiders are known already :
+if (Spe=SLandLinking) %and (SpellState(W,SGiantSpiders)=SSKnown) then { Prio=Prio-100; }
+
+: Lycanthropy, Giant Spiders, Gargoyles, the three early uncommon summons. Prioritizing them high is less important past turn 75 or if one of them is already researched :
+IF ((SPE=SLycanthropy) %OR (SPE=SGiantSpiders) %OR (SPE=SGargoyles))
+%AND ((SPELLSTATE(W,SLycanthropy)=SSKnown)
+%OR (SPELLSTATE(W,SGiantSpiders)=SSKnown)
+%OR (SPELLSTATE(W,SGargoyles)=SSKnown)
+%OR (OVERLANDTURN()>=75) THEN { PRIO=PRIO+150; }
+
+: We don't want Corruption if we have Raise Volcano :
+if (Spe=SCorruption) %and (SpellState(W,SRaiseVolcano)=SSKnown) then { Prio=Prio+800; }
+
+: Warp Wood is no longer redundant with Guardian Wind since it has been upgraded to Animate Ammo
+so this rule is now unnecessary
+if (Spe=SWarpWood) %and (SpellsState(W,SGuardianWind)=SSKnown) then Prio=Prio+800;
+:
+
+: Barbarians want Philosopher's Stone earlier for magic weapons :
+if (spe=SPhilStone) %and (HOMERACE(W)=RCBarbarian) then { Prio=550; }
+
+: Narcissist wizards prefer improving casting skill :
+if Objective(W)=Narcissist then {
+if (spe=SAEtherBinding) then { Prio=492; }
+if (spe=SUranusBlessing) then { Prio=630; }
+if (spe=SPhilstone) then { Prio=493; }
+}
+
+: Darkness +900 if no Ghouls, Werewolves, Shadow Demons known :
+if (Spe=SDarkness) 
+%AND (%N(SpellState(W,SGhouls)=SSKnown))
+%AND (%N(SpellState(W,SLycanthropy)=SSKnown))
+%AND (%N(SpellState(W,SShadowDemons)=SSKnown))
+ then { Prio=Prio+900; }
+ 
+: Uncommon or better, high quality combat damage spells.
+Covers spell categories 9, 24, 59, 70, 12. 
+We can afford prioritizing these lower if we don't expect a war with the human player.
+While these spells are still decent in automatic combat between AIs, they have much less relevance there.
+:
+
+if (CAT=9) %OR (CAT=24) %OR (CAT=59) %OR (CAT=70) %OR (CAT=12) THEN {
+IF CONTACT(W,0) THEN { PRIO=PRIO+400; }
+if HOSTILITY(W,0)=HosNone THEN { PRIO=PRIO+100; }
+}
+
+: We don't want Sanctify if we're at war with the human player. 
+Unlike AI players, the human is likely to succeed at war and kill the buffed units
+and either way the AI should focus on spells with better military value. :
+if (SPE=SSanctify) %AND (Treaty(W,0)=TSWar) then { Prio=2000; }
+
+: Power Link, avoid in the early game if possible :
+if (spe=SPowerLink) %and ((OVERLANDTURN()<170) %and (DIFFICULTY()<DiffPhantasm)) THEN { Prio=2100; }
+
+: Divine Order delay if at least three Chaos or Death books :
+if (spe=SDivineOrder) %and ((Books(W,Chaos)>=3) %or (Books(W,Death)>=3)) then { Prio=1980; }
+
+: 
+  Group 25, average uncommon summons
+  Cockatrices	Fire Giant	Night Stalker	Summon Hero
+  Group 32, good uncommon/weak rare summons 
+  Great Lizard	Chimeras	Chaos Spawn	Shadow Demons
+:
+if (CAT=25) %AND (HasSpellCat(w,25) %or HasSpellCat(w,32)) then { Prio=Prio+200; }
+if (CAT=32) %AND HasSpellCat(w,32) then { Prio=Prio+200; }
+if (CAT=32) %AND (HasSpellCat(w,74) %or HasSpellCat(w,78) %or HasSpellCat(w,56)) then { Prio=Prio+350; }
+  
+: Cockatrices set to 145 if Focus Magic is known :
+if (spe=SCockatrices) %AND (SpellState(W,SFocusmagic)=SSKnown) then { Prio=145; }
+
+: Blood Lust set to 21 if Werewolves known :
+if (spe=SBloodLust) %AND (SpellState(W,SLycanthropy)=SSKnown) then { Prio=21; }
+
+: 
+True Sight +500 if human player has no Sorcery books 
+Possibly obsolete? 
+Illusion Immunity now helps in automatic combat to attack invisible enemies
+but isn't relevant for melee units. It isn't required for spell damage either.
+So probably not obsolete, and still not worth researching vs other AI players.
+:
+if (spe=STrueSight) %and (Books(0,Sorcery)=0) then { Prio=Prio+500; }
+
+: Spells to counter Life Realm :
+if (books(0,Life)>=4) then {
+if (spe=SDispellingWave) then { Prio=121; }
+if (spe=SAEtherBinding) then { Prio=75; }
+if (spe=SCracksCall)  then { Prio=121; }
+if (spe=SBloodLust) then { Prio=75; }
+}
+
+: Spells to counter Death Realm :
+if Books(0,Death)>=4 THEN {
+if (spe=SWeakness)  then { Prio=67; }
+if (spe=SExorcise)  then { Prio=121; }
+if (spe=SHolyWord)  then { Prio=562; }
+if (spe=SCockatrices)  then { Prio=121; }
+if (spe=SPetrify)  then { Prio=562; }
+if (spe=SShadowDemons)  then { Prio=121; }
+if (spe=SGateOfHades)  then { Prio=562; }
+}
+
+: 
+Strong summoning spells category (56)
+Includes Gorgons	Storm Giant	Efreet	Wraiths	Doom Bat Stone Giant Angel
+:
+if (CAT=56) %AND
+ (HasSpellCat(w,74) %or HasSpellCat(w,78) %or HasSpellCat(w,56)) then { Prio=Prio+400; }
+: 
+Very rare summoned creatures
+:
+if ((CAT=74) %or (CAT=78)) %AND
+ (HasSpellCat(w,74) %or HasSpellCat(w,78)) then { PRIO=PRIO+500; }
+ 
+: Prefer Sky Drake if Life books (good buff target) 
+  Prefer Djinn if Chaos or Death books (stalls for combat spellcasting) :
+if spe=SSkyDrake then { Prio=Prio-2*Books(W,Life); }
+if spe=SDjinn then { Prio=Prio-2*Books(w,Chaos)-2*Books(W,Death); }
+ 
+: Artificer :
+if (spe=SCreateArtifact) %AND Retort(W,Artificer) then { Prio=970; }
+ 
+: Plane Shift 
+  Note - Decided not to prioritize in reaction to broken towers,
+  and not prioritize breaking towers in reaction to learning plane shift. 
+  In general the AI breaking the plane barrier early in game modes where it's not desired
+  is bad and should be avoided. :
+if (spe=SPlaneShift) then {
+if (SCORINGOPTION(SRaceToUnknown)) %OR (SCORINGOPTION(SLoner) %OR SCORINGOPTION(SInvertedStart)) then { Prio=611; } else { 
+if SpellState(0,SPlaneShift)=SSKnown then { Prio=1118; } else {
+if OverlandTurn()<160 then { Prio=9999; }
+}
+}
+}
+ 
+: Inner Power :
+if (spe=SInnerPower) %and ((OWNEDFIREIMMUNITY(W)+OWNEDLIGHTNINGRESIST(W))>=18) then { Prio=684; }
+
+: This can counter Armageddon somewhat :
+if (spe=SRootsofGenesis) then {
+for i=0 to NofWizards();
+ if (%N DEFEATED(I)) %and (SpellState(I,SArmageddon)=SSKnown) then { Prio=1162; }
+next; 
+}
+
+: This counters Doom Mastery :
+if (spe=SGreatUnsummoning) then {
+for i=0 to NofWizards();
+ if HasGlobal(I,GEDoomMastery) then { Prio=1590; }
+next;
+}
+
+: Magic Immunity is slightly lower priority if not at war but not by much :
+if (spe=SMagicImmunity) %and (%N (Treaty(W,0)=TSWar)) then { Prio=1645; }
+: But much higher priority during Divine Order due to reduced cost :
+if (spe=SMagicImmunity) then {
+for i=0 to NofWizards();
+if Hasglobal(I,GEDivineOrder) then { Prio=1335; }
+next;
+}
+
+: Spell Combos :
+if (spe=SDisintegrate) %and (Spellstate(W,SMindStorm)=SSKnown) then { Prio=1602; }
+if (spe=SAnnihilate) %and (Spellstate(W,SMindStorm)=SSKnown) then { Prio=1603; }
+if (spe=SMagicImmunity) %and (Spellstate(W,SMagicVortex)=SSKnown) then { Prio=1330; }
+if (spe=SRulerofHeaven) %and (Spellstate(W,SDarkRitual)=SSKnown) then { Prio=1136; }
+
+: We want to prioritize Chaos Surge high if we have a lot more Chaos units than our enemies :
+if (spe=SChaosSurge) %and (CHAOSSURGEVALUE(w)>=200) then { Prio=1322; }
+: And the same is true for Warp Reality :
+if (spe=SWarpReality) %and (CHAOSSURGEVALUE(w)>=200) 
+%and ((Personality(W)=Peaceful) %OR (Personality(W)=Lawful)) then { Prio=1323; }
+
+: This spell is useless outside of a war with the human because Weapon Immunity doesn't apply in automatic combat : 
+if (spe=SKingoftheUnderworld) %and (Treaty(W,0)=TSWar) then { Prio=1695; }
+: On the other hand, slowing their research can be pushed behind military relevant spells :
+if (spe=SDarkestHour) %and (Treaty(W,0)=TSWar) then { Prio=1696; }
+: We also want to avoid this if we're already behind in research, then it's too late to prioritize :
+if (spe=SDarkestHour) %and (AIStrategy(W,PDSResearchNeeded)) then { Prio=1798; }
+
+: Lawful and Peaceful wizards don't want curses :
+if ((CAT=14) %OR (CAT=52 ) %OR (CAT=57)
+%OR (CAT=79) %OR (CAT=41) %OR (CAT=34) %OR (CAT=28))
+%AND ((Personality(W)=Peaceful) %OR (PErsonality(W)=Lawful)) THEN { Prio=Prio+300; }
+: But Maniacal and Ruthless want them earlier :
+if (cat=52) %AND ((Personality(W)=Maniacal) %OR (Personality(W)=Ruthless)) then { Prio=1035; }
+: And this helps targeting those curses at cities
+as well as fits the image of a paranoid wizard to have a desire to see everything on the map :
+if (spe=SClairvoyance) %and (Personality(W)=Maniacal) then { prio=1355; }

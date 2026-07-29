@@ -1,0 +1,9 @@
+: INPUT - STR - The strength of Dispel Magic or other Dispel type spell
+	RES - The dispel resistance of the target
+  OUTPUT - ROLL - 1 if dispelled, 0 otherwise 
+  The AI will not be aware of changes and will calculate the required mana for a successful disjunction using the original formula, so changing this file is not recommended.
+  :
+
+ROLL=0;
+RES=RES*1.5;
+IF ((RND(%I(RES)))<STR) THEN { ROLL=1; }

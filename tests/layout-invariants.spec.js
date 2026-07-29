@@ -4,9 +4,9 @@
 // using each item's dataset.realm, for every game version and reflowing when
 // version-hidden items drop out.
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
+const { openCalculator, expectNoConsoleErrors, setValue, gameVersions } = require('./helpers');
 
-const VERSIONS = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.5'];
+const VERSIONS = gameVersions();
 const REALM_RANK = { '': 0, arcane: 1, life: 2, death: 3, chaos: 4, nature: 5, sorcery: 6 };
 
 for (const version of VERSIONS) {

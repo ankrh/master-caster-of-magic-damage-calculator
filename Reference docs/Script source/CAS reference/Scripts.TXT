@@ -1,0 +1,774 @@
+Basic Information
+=================
+Script files are used to modify game code as part of modding.
+It's mostly necessary to use them to change AI features or add new effects, such as new spells or buildings.
+
+Script files use the extension ".CAS" for Caster Script.
+Comments in the file must be enclosed between two : characters.
+For example,
+code here:this is a comment: but this is code.
+Labels, used for function calls and jumps are enclosed between two ! characters.
+!thisisalabel!
+
+Each command/statement is separated by the ; character. They are required even if a new line is started.
+
+Statement 1;
+Statement 2;Statement 3;
+
+Blocks of code used by looping or conditional statements are enclosed within {} characters.
+
+Variables
+=========
+
+Numerical variables contain rational numbers. They are stored internally in a format of "A/B" which offers more accuracy than generic "real" numbers but less range. There is no separate real or integer variable. Numerical variables use no special suffix.
+String variables use a suffix of $ and can be at most 255 characters long.
+Variable names can only contain the characters A-Z and the numbers 0-9.
+
+Variables can also be an array. Array variables are indexed using [].
+For example
+MARTIX[3,4] would be the 3rd row, 4th column. 
+Array variables can be either numeric or string variables.
+Variable names can be up to 30 characters long.
+New variables can be used without declaring them. 
+However, array variables have to be declared using the appropriate statement(s), see the keywords/commands section.
+When running a script is interrupted to run another script,
+any attempt to write into variables beloning to the parent script will create a new variable within the child script that has the same name.
+However, reading the parent variable is possible, if a child variable of the same name was never created.
+
+Expressions
+===========
+
+Expressions can use the following operands between variables and constants :
++/*-() : The usual
+%R : Round the operand (3.75->4)
+%I : Take the integer part of the operand (3.75 ->3)
+%F : Take the fractional part of the operand (3.75->0.75)
+"" : Marks a string constant
+%N : Logical Not (Input must be 0 or 1. Output will be the other.)
+%OR : Logical Or (Input must be 0 or 1. Output wil be 1 if either is 1)
+%XOR : Logical Xor (Input must be 0 or 1. Output will be 1 if exactly one of the inputs is 1.)
+%AND : Logical And (Input must be 0 or 1. Output will be 1 if both inputs are 1)
+=,<,>,<=,>= : Results in 1 if true, 0 if false, otherwise works as they teach in math class.
+<> : is equivalent to "not equal" or %N(A=B)
+
+Operator priority doesn't exist. Processing is from the left to right but does use recursion.
+Always use () when in doubt to be on the safe side.
+
+Base unit vs Current Unit
+=========================
+Functions that read or write unit data can usually apply to either the base or the current unit.
+The base unit is the unit without any "continuous" effects applied from spells or other effects.
+The current unit is what the unit is, after applying those effects.
+For example if you want the unit to get an enchantment permanently, or gain +1 attack permanently,
+you change the base unit.
+If you want to implement a spell or building that adds +2 attack to the unit while the effect applies
+to the unit, you add the 2 attack to the current unit. Changes done to the current unit outside of the script
+that calculates their stats and applies these effects to the unit does nothing.
+
+Function keywords
+=================
+These are keywords you can use inside expressions to get a return value from them.
+
+Example : I=RND(100)+SGN(J);
+
+RND(X)
+
+Returns a random number between 0 and X-1.
+
+SGN(X)
+
+Returns 0 if X is 0, 1 if X>0 and -1 if X<0.
+
+ABS(X)
+
+Returns X if X>=0 and -X if X<0.
+
+EXPON(X,I)
+
+Returns X^I where I must be a positive integer.
+
+STRS(X)
+
+Returns a string value of the X numerical variable.
+
+VAL(S$)
+
+Returns the numeric value of the S string variable.
+
+IREADS(filename, block, key)
+
+Reads a string value from an INI file.
+
+IREADN(filename, block, key)
+
+Reads a numerical value from an INI file.
+Please be aware that you cannot use this to modify the contents of the game's default INI files, as the number will be saved in the a/b format. In general, making scripts write or read default INI files is a bad idea. Make your own INI files for this purpose.
+
+BOOKS(W,R)
+
+Reads the number of books wizard W has in realm R.
+
+WASSSPICKED(W,S)
+
+Returns 1 if the spell S was picked as a starting spell for the wizard W and 0 otherwise.
+
+PERSONALITY(W)
+
+Returns the personality for wizard W. You can find the personality type constants in the master script file.
+
+OBJECTIVE(W)
+
+Returns the objective for wizard W. You can find the objective type constants in the master script file.
+
+RETORT(W,R)
+
+Returns 1 if wizard W has Retort R, 0 otherwise.
+
+MINERALS()
+
+Returns the Minerals setting for the current game.
+
+CLIMATE()
+
+Returns the Climate setting for the current game.
+
+HASSPELLCAT(W,C)
+
+Returns 1 if wizard W has at least one spell researched from category C.
+
+HOMERACE(W)
+
+Returns the home race of wizard W.
+
+SPELLSTATE(W,S)
+
+Returns the state of spell S for wizard W.
+
+0 - Unavailable
+1 - Available later
+2 - Already researched
+3 - On the research pages
+
+OVERLANDTURN()
+
+Returns the current adjusted turn count.
+It's the same as the base turn count, except when the Undeveloped Start
+option is selected, it is reduced by 20 to adjust game pacing to the different starting conditions.
+
+BASETURN()
+
+Returns the base turn count
+
+CONTACT(W1,W2)
+
+Returns 1 if the two specified wizards had diplomatic contact before. Returns 0 if the two wizards don't know about each other's existence yet.
+
+HOSTILITY(W1,W2)
+
+Returns the level of Hostility the first wizard employs towards the second.
+See the diplomacy chapter in documentation for a description of hostility levels.
+
+RELATION(W1,W2)
+Returns the visible relation between the two wizards.
+
+HREL(W1,W2)
+Returns the hidden relation modifier between the two wizards.
+
+TREATY(W1,W2)
+
+Returns the current treaty status between two players.
+
+0 - None
+1 - Pact
+2 - Alliance
+3 - War
+
+DIFFICULTY()
+
+Returns the difficulty level of the current game
+
+LANDSIZE()
+
+Returns the land size setting level
+
+SCORINGOPTION(O)
+
+Returns 1 if the scoring option was picked for the current game, 0 otherwise.
+
+OWNEDLIGHTNINGRESIST(W)
+
+Returns the number of units wizard W owns that have Lightning Resistance
+
+OWNEDFIREIMMUNITY(W)
+
+Returns the number of units wizard W owns that have Fire Immunity
+
+NOFWIZARDS()
+
+Number of wizards in the current active game, not including the human player.
+This always equals the last valid wizard ID in the game.
+The human player is always wizard 0.
+
+DEFEATED(W)
+
+Returns 1 if the wizard was already eliminated from the game, 0 otherwise.
+
+BANISHED(W)
+
+Returns 1 if the wizard is currently banished, 0 otherwise.
+
+HASGLOBAL(W,G)
+
+Returns 1 if wizard W has global enchantment G in effect.
+
+CHAOSSURGEVALUE(W)
+
+Calculates how beneficial it is to use Chaos Surge for wizard W.
+
+1 is added for each own chaos unit or each chaos unit owned by an ally.
+1 is subtracted for each non-neutral, non-allied, non-owned chaos unit.
+
+AISTRATEGY(W,SFLAG)
+
+Returns the current state of the selected strategy flag for AI wizard W. (1 = true, 0 = false)
+
+1 - "Need more research"
+This flag is enabled if the AI knows less than 80% as good spells as the human player,
+where "as good" is defined as the sum of the trade value of the three spells with the highest trade value.
+
+2 - "Need more skill"
+This flag is enabled when the AI has less than (40+10*Difficulty) casting skill, 
+or less than (1+0.1*Difficulty) times the casting skill of the human player.
+For example at Fair (2), the AI would enable this below 60 skill or below 1.2 times the human player's skill.
+
+4 - "Very need troops"
+This flag is enabled if the AI has fewer than 3 cities, or the human player has at least twice the total army strenth compared to the AI on the historian charts.
+
+8 - "Need troops"
+This flag is enabled if the AI has fewer than (2*Landsize) cities, 
+or the human player has between 1x and 2x the total army strenth compared to the AI on the historian charts.
+
+16 - "SoMSerious"
+This flag is enabled if the AI decided to pursue a Spell of Mastery victory and is currently researching the spell.
+
+32 - "Critical Low Mana"
+This flag is enabled when the AI has less than 8 times their casting skill as MP available past the adjusted turn count of 80.
+
+SELECTBASEDON(A,N)
+
+Returns a randomly chosen value between 1 and N where the probability of each result is proportional to the amount in that position in array A.
+Example : 
+N=3, A = (4,2,7)
+
+Result will be 1 at a 4/13 chance, 2 at a 2/13 chance and 3 at a 7/13 chance.
+If the array contains non-integer values, they will be rounded.
+
+GETSTAT(U,S,B [,F])
+
+Returns 1 if the unit U has the ability S, or 0 otherwise for binary abilties,
+and the value of stat S otherwise.
+If B=0, it checks the current stats and abilities, if B=1 it checks the base unit.
+The ID number for each stat and ability is declared as a constant in MASTER.CAS.
+
+When reading an attack flag, a fourth parameter is required to determine if it's a global, melee, or ranged attack flag.
+1 - Global, 2 - Melee, 3 - Ranged attack flag.
+
+ISHERO(U)
+
+Returns 1 if the unit U is a Hero Unit.
+
+FANTASTIC(U)
+
+Returns 1 if the unit U is currently a fantastic unit.
+
+BASEFANTASTIC(U)
+
+Returns 1 if the unit U is a fantastic unit in its base unit data (before applying continuous effects such as buffs or curses)
+
+GETSP(W)
+
+Returns the total SP in wizard W's SP pool
+
+SQRT(X)
+
+Returns the square root of X. Only works on integer input and returns an integer output, rounded down.
+
+BUILDINGSOWNED(W,B,SP)
+
+Returns the number of B buildings wizard W has in cities under their control when CE=0,
+otherwise, it only counts buildings where city enchantment CE is also in effect.
+
+ISBUILT(C,B)
+
+Returns 1 if city C has the building B built, 0 otherwise.
+
+CITYENCHANT(C,CE)
+
+Returns the player ID who has city enchantment CE in effect on city C, or -1 if no player has cast that spell on that city.
+(0 is the human player, opponents are 1 to the maximal enemy count)
+
+POPULATION(C)
+
+Returns the total population of the city C
+
+POPUNITS(C)
+
+Returns the total population of the city C in units of 1000 people rounded down.
+
+CITYOWNER(C)
+
+Returns the owner's player ID of city C.
+
+OREINRANGE(C,O)
+
+Returns the number of ore O that appears in range of city C
+
+TERRAININRANGE(C,T)
+
+Returns the number of tiles T that appears in range of city C
+
+GARRISON(C)
+
+Returns the number of units garrisoning city C
+
+CITYRACE(C)
+
+Returns the race of city C
+
+SUMRESLINES()
+
+Returns the current total resources calculated through the ADDRESLINE command.
+
+ISFORTRESS(C)
+
+Returns 1 if city C is a wizard's fortress, 0 otherwise.
+
+EVENTTURN(E)
+
+Returns the number of turns event E has been active for, or 0 if the event is not active currently.
+
+EVENTVAL(E)
+
+Returns the event parameter (city affected) where applicable.
+
+GOLD(W)
+
+Returns the amount of gold in wizard W's treasury
+
+MANA(W)
+
+Returns the amount of mana crystals in wizard W's treasury
+
+RESEARCHING(W)
+
+Returns the ID of the spell Wizard W is currently researching.
+
+CASTING(W)
+
+Returns the ID of the spell Wizard W is currently casting.
+
+RANDOMARCANUSRACE(N)
+RANDOMMYRRANRACE(N)
+Returns a random Arcanus or Myrror race. If N=1 then the race must be one playable by neutrals, otherwise
+it must be a race playable by human/AI players in races.ini.
+
+GETCOMBATENCHANTMENTFLAG(U,F,B)
+GETOLENCHANTMENTFLAG(U,F,B)
+GETENCHANTMENTFLAG(U,F,B)
+
+Returns 1 if the unit U has the combat, overload, or generic enchantment flag F set.
+If B is 1, it gets the flag from the base unit, otherwise, the current unit.
+
+GETITEMPOWER(U,I)
+
+Returns the number of items that have item power I equipped on the unit U.
+If the unit is not a hero, this always returns 0.
+
+HASCOMBATGLOBAL(W,CGE,I)
+
+Returns 0 if wizard W is not paticipating in the current battle or the game is not in combat state.
+Otherwise returns the status of wizard W's combat global enchantment when I=1 and their current opponent's when I=2.
+A return value of 0 means the enchantment is not in effect. A higher value means the spell is in effect.
+
+ISCOMBAT
+
+Returns 1 during combat, 0 otherwise.
+
+GETTERRAIN(X,Y,T)
+
+X, Y coordinates. Invalid coordinates will cause a crash.
+T - type of data to read. Valid values are :
+0 : combat terrain
+1 : arcanus terrain
+2 : myrror terrain
+3 : Arcanus ore
+4 : Myrror ore
+5 : Arcanus Corruption flag
+6 : Myrror Corruption flag
+7 : Arcanus Volcano owner (determines the player who gains power from the tile.)
+8 : Myrror Volcano owner 
+100-104 : Arcanus custom data (byte)
+110-114 : Myrror custom data (byte)
+
+CITYONTILE(U)
+CITYONTILE(P,X,Y)
+
+Returns the ID of the city on a specific map tile.
+When there is one parameter, it's treated as a unit ID and the unit's location is checked.
+Otherwise three parameters are explected, the plane, x and y coordinate.
+
+NODEONTILE(U)
+NODEONTILE(P,X,Y)
+
+Returns the ID of the node on a specific map tile.
+When there is one parameter, it's treated as a unit ID and the unit's location is checked.
+Otherwise three parameters are explected, the plane, x and y coordinate.
+
+PLANESIZEX(P)
+
+Returns the X size of the plane P.
+
+PLANESIZEY(P)
+
+Returns the Y size of the plane P.
+
+ALIVE(U)
+
+Returns 1 if unit U is still alive. 0 if the unit is dead. 
+Dead units can exist or cleared from the memory outside combat by the system.
+It's recommended to
+-Always check if the unit you're processing is alive if it affects more than the unit itself.
+-Never add effects that do something to dead units outside combat.
+
+MAXUNIT()
+
+Returns the highest existing unit ID. The unit data does include dead units so you MUST check
+for living status when processing units one at a time in a loop.
+
+MAXCITY()
+
+Returns the highest existing city ID. The city data does include abandoned cities scheduled to
+be removed from the map at a later time. These have a population of zero.
+
+ATTACKER()
+
+The player ID of the attacker in the current combat. Returns -1 when not in combat.
+
+DEFENDER()
+
+The player ID of the defender in the current combat. Returns -1 when not in combat.
+
+HASTREE(W)
+
+Returns 1 if wizard W has Tree of Knowledge cast, and 0 otherwise.
+
+INCOMBAT(U)
+
+Returns 1 if unit U is in the current battle, 0 otherwise. Always returns 0 when used outside combat.
+
+COMBATP(), COMBATX(), COMBATY()
+
+Returns the combat location, or 0 when called when there is no ongoing combat.
+
+GETDAMAGE(U,T)
+
+Returns the amount of damage currently on unit U.
+T determines the type of damage :
+
+0 - total damage
+1 - irrecoverable damage only
+2 - undead damage only
+3 - normal damage only
+
+GETHEAB(U,S)
+
+If unit U is a hero and has skill S, it returns the amount of bonus granted by the hero ability, calculated from the unit's level and the ability type (normal or super).
+Otherwise, it returns 0.
+
+GETDIPVAR(W1,W2,T)
+
+Returns diplomacy data for W1 in relation to W2. T selectes the type of data to read :
+
+1 - Relation
+2 - Treaty Status
+3 - Hostility
+4 - Peace Interest
+5 - Trade Interest
+6 - Treaty Interest
+7 - Hidden Relation
+
+PORTRAIT(W)
+
+Returns the portrait ID for a wizard.
+
+WIZNAME(W)
+
+Returns the wizard name as a string.
+
+NOFUNITSONTILE(P,X,Y)
+
+Returns how many units are on the specified overland map tile.
+
+UNITONTILE(P,X,Y,N)
+
+Returns the Nth unit on the specified overland map tile.
+
+Keywords/Commands
+=================
+
+FOR num.variable=value1 TO value2 STEP value3
+or
+FOR num.variable=value1 TO value2
+
+Set the variable to value1. When a NEXT keyword is reached, add value3 to the variable.
+If it is less or equal to value2, jump back to the next character after the FOR statement.
+For loops will always get executed at least once, even if value1 is higher than value2.
+STEP is optional and defaults to 1.
+
+NEXT
+or
+NEXT variable
+Jump back to the last executed FOR statement or the one matching the variable name. If it isn't the last one, all FOR loops started after that one are cancelled.
+
+
+LOOP{
+or 
+LOOP boolean expression {
+
+Start a loop. if there is an expression specified, it has to be true to enter the loop, otherwise processing jumps to end of the block, marked by } ENDLP.
+Using {} is mandatory even if there is only one statement inside the loop.
+
+} ENDLP
+or 
+} ENDLP boolean expression
+End a loop. If the condition is true, processing continues normally.
+If the condition is false or no condition was specified, processing returns to the { after the previous LOOP keyword.
+
+IF boolean expresson THEN { code }
+IF boolean expresson THEN { code } ELSE { code }
+
+Execute the code after THEN if the expression is true.
+Execute the code after ELSE otherwise, or do nothing if it's not present.
+
+CALL string
+
+Jump to the label that matches the string and store the current position.
+You can only jump to labels declared in the same .CAS file. Jumping/Calling between different script files is not supported.
+You use this to call a subroutine. Functions are not directly supported, to return a value from a subroutine call, you must set it to a global variable.
+
+GOTO string
+
+Jump to the label that matches the string.
+You can only jump to labels declared in the same .CAS file. Jumping/Calling between different script files is not supported.
+Jumping into/out of FOR or LOOP loops is not recommended and might lead to crashes on some scripts. Jumping out of an IF-THEN-ELSE should be safe however.
+
+RETURN
+Jump back to the last stored processing position from an executed CALL statement.
+Local variables created inside this subroutine will be deleted.
+
+LOCAL
+Declare a local variable for use within a subroutine. Variables used without declaration will always be global to the script but will still be removed after the script terminates.
+
+DIMNUM variable name[size1,size2,size3,...]
+
+Declare a numerical array variable.
+
+DIMSTR variable name[size1,size2,size3,...]
+
+Declare a string array variable.
+
+IWRITE filename, block, key, expression
+
+Save the value of the expression to an INI file entry.
+Filename should not contain the ".INI" extension.
+
+ADDAISPELL(W,S)
+
+Attempts to add an AI starting/guaranteed spell pick. Has no effect if the AI has already used up the picks, so no check for picks being available is needed or possible. Disabled or banned spells also get ignored automatically, picks can't be spent on them.
+So simply add all spells in the preferred order and don't worry about those details. 
+This command is useless outside of the AI Starting Spell Selection script.
+
+SETPERSONALITY W,P
+SETOBJECTIVE W,O
+
+Sets the personality or objective of a wizard to the specified value.
+
+DEALCOMBATDAMAGE U,D1,D2,D2
+
+Deals combat damage to unit U. Damage total amount is D1+D2+D3.
+D1 is the amount of normal damage, D2 is undead damage, and D3 is irrecoverable damage.
+
+SETCOMBATENCHANTMENTFLAG U,F,B,X
+SETOLENCHANTMENTFLAG U,F,B,X
+SETENCHANTMENTFLAG U,F,B,X
+
+Sets or clears a unit enchantment flag on unit U.
+F is the flag to set or clear.
+If X is 0, it clears the flag otherwise it sets the flag.
+If B is 1, it sets the flag on the base unit, otherwise it sets it on the current unit.
+Please note that executing this will NOT trigger unit stat recalculation,
+so executing it outside scripts where enabling enchantments
+is expected (such as spell effect scripts) is not recommended.
+The first version sets the combat version of the enchantment that expires after combat.
+The second sets the overland version.
+The third sets the effect without it counting as an enchantment. (artifact effects, magic weapons, etc)
+
+SETRETORT W,R,S
+
+Sets the retort R on Wizard W to enabled if S=1, disabled otherwise.
+
+SETBOOK W,R,N
+
+Sets Wizard W to have N books in the R realm. 
+Please be aware that setting books directly will not generate new researchable spells.
+This command should generally be avoided outside wizard generation in "AIcustomwizard.CAS".
+
+ADDRESLINE TEXT,AMOUNT
+
+Can only be used in the economy scipts that calculate city gold, production, power and research.
+Adds a line to the detailed resource view containing the text and amount produced,
+and adds the amount to the total output.
+
+DEBUGLOG TEXT
+
+Prints TEXT to the debug log file log.txt when debug mode is enabled.
+
+SETSTAT U,S,B,V (,F)
+Sets unit U to have stat S equal to value V.
+(V=1 means the unit has, 0 means the unit does not have the ability for binary abilities)
+When B=0 this sets the current stat, when B=1, this sets the base stat.
+
+When setting an attack flag, a fifth parameter is required to determine if it's a global, melee, or ranged attack flag.
+1 - Global, 2 - Melee, 3 - Ranged attack flag.
+
+APPLYCHAOSCHANNEL U
+Applies the effect of the Chaos Channels spell to the unit U.
+
+HALT
+
+Ends the execution of script. 
+If an output variable or effect is expected, use HALT only after the variable is set or the effect is compelted.
+
+SETCITYDATA C,V,N
+
+Sets a custom city variable on city C, in the Vth slot, to the value N.
+Valid variable slots are 1-100 and the variables can only contain integer values.
+
+SETWIZARDDATA C,V,N
+
+Sets a custom wizard variable on wizard W, in the Vth slot, to the value N.
+Valid variable slots are 1-100 and the variables can only contain integer values.
+
+ADDABILITYLINE D,I,H,N
+
+Can only be used in DisAbil.CAS.
+Adds an ability line to the list of abilities to display on a unit.
+D is the display enchantment ID. 
+This should be the negative value of the enchantment ID 
+for overland unit enchantments that can be cancelled by the owner.
+In all other cases, use D=0.
+I is the icon's ID number to display. (data\ux000.png files)
+H is the help entry name to display. If the starting # is ommitted, "#UA " is used as a default prefix.
+N is the name to display for the ability, effect, or enchantment.
+
+SETTERRAIN X,Y,T,V
+
+X, Y coordinates. Invalid coordinates will cause a crash.
+
+T - type of data to set. Valid values are :
+0 : combat terrain
+1 : arcanus terrain
+2 : myrror terrain
+3 : Arcanus ore
+4 : Myrror ore
+5 : Arcanus Corruption flag
+6 : Myrror Corruption flag
+7 : Arcanus Volcano owner (determines the player who gains power from the tile.)
+8 : Myrror Volcano owner 
+100-104 : Arcanus custom data (byte)
+110-114 : Myrror custom data (byte)
+
+V : The value to set the data to.
+
+SETHEAB W,H,A,V
+
+Sets the hero ability A of hero H for wizard W to the value V.
+
+0 : Ability not available
+1 : Normal ability
+2 : Super ability
+
+GAINEXP U,AMOUNT
+
+Unit U gains AMOUNT Experience. 
+This is subject to normal game rules, such as AI experience modifiers or displaying a hero level up window for the player if necessary.
+
+SETBUILDINGSTATE C,B,S
+
+Sets the state of building B in City C to S status
+(Built = 1, Replaced = 2, Destroyed = -1, Not Built = 0, To be destroyed = 3)
+
+SETCITYENCHANTOWNER C,CE,W
+
+Sets the owner of CE city enchantment on city C to be wizard W. Use W=-1 as "not cast" state.
+
+SETCOMBATGLOBAL W,CGE,I,X
+
+If wizard W participated in the battle, sets their global enchantment status to X if I=1, or their opponent's global enchantment if I=2.
+
+SETGLOBAL W,G,STATE
+
+Sets global enchantment G for wizard W to be active if STATE is 1, inactive if STATE is 0.
+
+OVERLANDHEAL U,N
+
+Heals unit U by N hp on the overland map. This ignores all healing restrictions and ignores damage types like all other forms of overland healing.
+
+COMBATHEAL U,N,OH,REG
+
+Heals unit U by N hp during combat. If OH=1 then overhealing is allowed (excess healing will be converted to the hpbonus stat),  and if REG=1 then this counts as a Regeneration ability which will ignore the "cannot heal naturally" restrictions but will still obey irrecoverable damage.
+
+GETNODEDATA N,OW[,TY,WA,GU]
+
+Returns data about Node N into the other variables.
+OW is set to the owner of the node.
+TY is set to the type of the node.
+WA is set to a player ID if the node was warped, -1 otherwise.
+GU is set to 1 if a guardian spirit was used, 0 otherwise
+If there are fewer parameters, data is filled into the included variables in that order.
+
+MASTERVARSET Variable=Value
+
+Sets a global value declared in Master.CAS to a value.
+Setting a variable that wasn't already created in Master.CAS is not supported and might cause crashes. Always create your global variables in Master.CAS first.
+
+SETDIPVAR W1,W2,T,V
+
+Set diplomacy data for W1 in relation to W2. T selectes the type of data to read :
+
+1 - Relation
+2 - Treaty Status (0 - None, 1 - Pact, 2 - Alliance, 3 - War)
+3 - Hostility (0 - None, 1 - Annoyed, 2 - Hostile, 3 - Warlike, 4 - Jihad)
+4 - Peace Interest
+5 - Trade Interest
+6 - Treaty Interest
+7 - Hidden Relation
+
+Value is set to V.
+In case of symmetric values, it also sets the same data for W2,W1.
+Any caps on values are applied automatically (such as max relation = 100)
+
+SETSPELLDATA W,S,STATE
+
+Changes the state of spell S for wizard W.
+
+0 - Unavailable
+1 - Available later
+2 - Already researched
+3 - On the research pages
+
+Changing the state of a spell being researched or cast by a wizard will have untested consquences, 
+therefore it's not recommended to use this on spells with a state of "2" or "3" during an ongoing game.
+
+(most likely the spell will finish casting or researching as normal, but the research lists might not get updated, 
+the AI might not select a different spell to research, etc )

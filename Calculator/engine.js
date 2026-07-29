@@ -19,7 +19,7 @@ function binomialPMF(n, p) {
 
 // Compute distribution of surviving hits after Blur filtering.
 // h: number of initial hits; blurChance: probability each hit is negated (0.1 or 0.2).
-// buggy (v1.31): on success, skip next roll — max 50% blocked regardless of luck.
+// buggy (v1.31): on success, skip next roll — at most ceil(h / 2) hits are blocked.
 // Returns array where dist[s] = P(exactly s hits survive).
 function blurSurvivingDist(h, blurChance, buggy) {
   if (!blurChance || h === 0) {
@@ -299,5 +299,20 @@ function calcFigureKillDmgDist(numRolls, pFail, defHP, cap) {
     const dmg = Math.min(k * defHP, cap);
     dist[dmg] += pmf[k];
   }
+  return dist;
+}
+
+// Compute whole-unit kill damage distribution (for Destruction).
+// A single resistance roll is made for the attack, not one per attacking figure, and a
+// failed roll disintegrates the entire target unit — so the damage is the target's whole
+// remaining HP rather than one figure's HP. Contrast calcFigureKillDmgDist above.
+// pFail: probability of failing the roll (0 to 1)
+// cap: target's remaining HP (the damage dealt when the roll fails)
+function calcUnitKillDmgDist(pFail, cap) {
+  if (pFail <= 0 || cap <= 0) return [1];
+  const p = Math.min(pFail, 1);
+  const dist = new Array(cap + 1).fill(0);
+  dist[0] = 1 - p;
+  dist[cap] = p;
   return dist;
 }

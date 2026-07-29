@@ -1,0 +1,131 @@
+: INPUT - CityID , the ID of the city being processed.
+  Output - None. 
+  Use the AddResLine command to add produced power to the total and as an individual line in the detailed view on the UI.
+:
+
+RELPOW=0; ORE=0;
+
+W=CITYOWNER(CityID);
+IF HASGLOBAL(W,GERulerOfHeaven) THEN { RUH=2; } ELSE { RUH=0; };
+
+IF CITYENCHANT(CityID,CEHeavenlyLight)>-1 THEN {
+ADDRESLINE "Heavenly Light", 3+RUH;
+RELPOW=RELPOW+(3+RUH);
+}
+
+If ISBUILT(CityID,BShrine) THEN {
+ADDRESLINE "Shrine", 2+RUH;
+RELPOW=RELPOW+(2+RUH);
+}
+
+If ISBUILT(CityID,BParthenon) THEN {
+ADDRESLINE "Parthenon", 4+RUH;
+RELPOW=RELPOW+(4+RUH);
+}
+
+
+If ISBUILT(CityID,BCathedral) THEN {
+NSE=%I((3*OREINRANGE(CITYID,OreNightshade))/2);
+IF (%N(ISBUILT(CityID,BAlchemistGuild))) THEN { NSE=0; }
+ADDRESLINE "Cathedral", (6+NSE)+RUH;
+RELPOW=RELPOW+((6+NSE)+RUH);
+}
+
+If ISBUILT(CityID,BMagicMarket) THEN {
+I=6; If CITYENCHANT(CityID,CEUranusBless)>-1 THEN { I=I+11; }
+ADDRESLINE "Magic Market", I;
+:if HASGLOBAL(W,40) THEN { ADDRESLINE "Market Mastery",8 }:
+}
+
+If ISBUILT(CityID,BWizardsGuild) THEN {
+I=10; If CITYENCHANT(CityID,CEUranusBless)>-1 THEN { I=I+11; }
+ADDRESLINE "Wizard's Guild", I;
+}
+
+I=%I((OREINRANGE(CITYID,OreMithril))/2);
+ADDRESLINE "Mithril",I;
+ORE=ORE+I;
+
+I=OREINRANGE(CITYID,OreAdamantium);
+ADDRESLINE "Adamantium",I;
+ORE=ORE+I;
+
+I=%I((3*OREINRANGE(CITYID,OreOrihalcon))/2);
+ADDRESLINE "Orihalcon",I;
+ORE=ORE+I;
+
+I=%I((5*OREINRANGE(CITYID,OreQuork))/2);
+ADDRESLINE "Quork",I;
+ORE=ORE+I;
+
+I=5*(OREINRANGE(CITYID,OreCrysx));
+ADDRESLINE "Crysx",I;
+ORE=ORE+I;
+
+POP=POPUNITS(CityID);
+RACE=CITYRACE(CityID);
+
+if race=RCDarkElf then {
+AddResLine "Dark Elves", POP;
+}
+
+if race=RCHighElf then {
+AddResLine "High Elves", %I(POP/2);
+}
+
+if race=RCBeastmen then {
+AddResLine "Beastmen", %I(POP/2);
+}
+
+if race=RCDraconian then {
+AddResLine "Draconian", %I(POP/2);
+}
+
+IF HasGlobal(W,GELifeForce) THEN {
+AddResLine "Life Force", POP;
+}
+
+If ISBUILT(CityID,BMinerGuild) THEN {
+AddResLine "Miner's Guild", %I(ORE/2);
+}
+
+if race=RCDwarf then {
+AddResLine "Dwarven Miners", ORE;
+}
+
+IF RETORT(W,CultLeader) THEN {
+I=%I((RELPOW*75)/100);
+AddResLine "Cult Leader", I;
+RELPOW=RELPOW+I;
+}
+
+DH=0;
+FOR I=0 TO NofWizards();
+IF (I<>W) %AND (HASGLOBAL(I,GEDarkestHour)) THEN {
+J=%I((RELPOW+1)/2);
+DH=DH+J;
+RELPOW=RELPOW-J;
+}
+NEXT;
+ADDRESLINE "Darkest Hour",0-DH;
+
+IF CITYENCHANT(CityID,CEDarkRituals)>-1 THEN {
+ADDRESLINE "Dark Rituals", RELPOW*2;
+}
+
+IF RETORT(W,Omniscient) THEN {
+ IF BOOKS(W,Chaos)>0 THEN {
+ PP=((BOOKS(W,Chaos)-1)*7)+32;
+ ADDRESLINE "Omniscient", %I((SUMRESLINES() * PP) /200)
+ }
+}
+
+IF ISFORTRESS(CityID) THEN {
+J=0;
+FOR I=1 to 5;
+IF BOOKS(W,I)>=4 THEN {J=J+BOOKS(W,I); }
+NEXT;
+J=(%I(J*1.5))+10;
+IF SCORINGOPTION(SUndevelopedStart) THEN {J=%I(J/2); }
+ADDRESLINE "Fortress",J;
+}

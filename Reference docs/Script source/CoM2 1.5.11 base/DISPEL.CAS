@@ -1,0 +1,7 @@
+: INPUT - STR - The strength of Dispel Magic or other Dispel type spell
+	RES - The dispel resistance of the target
+  OUTPUT - ROLL - 1 if dispelled, 0 otherwise 
+  Note - The AI will not be aware of the changes but as it does not rely on specific goals to pick the amount of mana spent on these spells, this should not affect its performance unless the new formula is vastly different :
+
+ROLL=0;
+IF ((RND(STR+RES))<STR) THEN { ROLL=1; }

@@ -1,0 +1,70 @@
+: INPUT - CityID , the ID of the city being processed.
+  Output - None. 
+  Use the AddResLine command to add produced research to the total and as an individual line in the detailed view on the UI.
+:
+
+RACE=CITYRACE(CityID);
+W=CITYOWNER(CityID);
+
+RESB=0;
+
+If ISBUILT(CityID,BLibrary) THEN {
+ADDRESLINE "Library",6;
+RESB=RESB+6;
+}
+
+If ISBUILT(CityID,BUniversity) THEN {
+ADDRESLINE "University",6;
+RESB=RESB+6;
+}
+
+If ISBUILT(CityID,BSagesGuild) THEN {
+ADDRESLINE "Sage's Guild",12;
+RESB=RESB+12;
+}
+
+If ISBUILT(CityID,BWizardsGuild) THEN {
+ADDRESLINE "Wizard's Guild",3;
+RESB=RESB+3;
+}
+
+DH=0;
+FOR I=0 TO NofWizards();
+IF (I<>W) %AND (HASGLOBAL(I,GEDarkestHour)) THEN {
+J=%I((RESB+1)/2);
+DH=DH+J;
+RESB=RESB-J;
+}
+NEXT;
+ADDRESLINE "Darkest Hour",0-DH;
+
+if RACE=RCHalfling THEN {
+ADDRESLINE "Halflings", POPUNITS(CityID);
+}
+
+IF CITYENCHANT(CityID,CENatureEye)>-1 THEN {
+ADDRESLINE "Nature's Eye",4;
+}
+
+IF HASGLOBAL(W,GEEnlightenment) THEN {
+ADDRESLINE "Enlightenment", 2*POPUNITS(CityID);
+}
+
+IF CITYENCHANT(CityID,CEAltarOfPeace)>-1 THEN {
+J=0;K=0;
+FOR I=0 TO Nofwizards();
+IF (I<>W) %AND (CONTACT(I,W)) %AND (%N(DEFEATED(I)) THEN { K=K+1; J=J+RELATION(W,I); }
+NEXT;
+J=J*3; IF K>0 THEN { J=%I (J/K);}
+J=(%I (J/10))+12;
+IF J<0 THEN {J=0;}
+IF J>24 THEN {J=24;}
+ADDRESLINE "Altar of Peace", J;
+}
+
+IF RETORT(W,Omniscient) THEN {
+ IF BOOKS(W,Sorcery)>0 THEN {
+ PP=((BOOKS(W,Sorcery)-1)*7)+32;
+ ADDRESLINE "Omniscient", %I((SUMRESLINES() * PP) /200)
+ }
+}

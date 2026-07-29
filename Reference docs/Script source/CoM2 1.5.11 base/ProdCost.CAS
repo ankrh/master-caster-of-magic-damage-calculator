@@ -1,0 +1,19 @@
+:
+            INPUT - C - The id of the city where production happens
+		B - The id of the building being produced or the id of the unit type being produced+1000
+	  OUTPUT - CR - The cost reduction in percentage 
+	  :
+	  
+CR=0;
+RACE=CITYRACE(C);
+
+IF B<1000 THEN {
+IF RACE=RCHighMen then { CR=15; }
+} ELSE {
+CR=CR+(5*OREINRANGE(C,OreIron));
+CR=CR+(10*OREINRANGE(C,OreCoal));
+IF ISBUILT(C,BMinerGuild) THEN { CR=%I(CR*1.5); }
+IF RACE=RCDwarf THEN { CR=CR*2; }
+}
+
+IF CR>50 THEN { CR=50; }

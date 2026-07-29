@@ -271,7 +271,8 @@
     "ammo": 6,
     "abilities": [
       "Hero",
-      "Missile Immunity"
+      "Missile Immunity",
+      "Destruction=0"
     ],
     "category": "Heroes",
     "moves": 3,

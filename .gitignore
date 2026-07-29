@@ -20,3 +20,7 @@ playwright-report/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Raw game/mod install archives — extracted content lives in
+# Reference docs/Script source/ and Unit rosters/
+Raw install files/

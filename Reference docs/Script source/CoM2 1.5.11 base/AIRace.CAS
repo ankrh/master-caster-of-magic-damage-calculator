@@ -1,0 +1,28 @@
+: This script picks the starting city race for AI players.
+Input, W is thw wizard making the choice.
+Output, RACE must contain the selected race. :
+
+LOOP {
+B=1;
+If RETORT(W,MYRRAN) THEN { RACE=RANDOMMYRRANRACE(0); }
+ELSE {
+IF RETORT(W,CULTLEADER) THEN {
+ROLL=RND(6);
+IF ROLL=0 THEN { RACE=RCOrc; }
+IF ROLL=1 THEN { RACE=RCHalfling; }
+IF ROLL=2 THEN { RACE=RCHighElf; }
+IF ROLL=3 THEN { RACE=RCHighMen; }
+IF ROLL=4 THEN { RACE=RCLizard; }
+IF ROLL=5 THEN { RACE=RCNomad; }
+} ELSE {
+RACE=RANDOMARCANUSRACE(0); }
+}
+IF ((RACE=RCBarbarian) %OR (RACE=RCGnoll))
+%AND ((PERSONALITY(W)=PEACEFUL) %OR (PERSONALITY(W)=LAWFUL)) THEN { B=0; }
+if (RACE=RCHalfling) THEN {
+B=0;
+if (PERSONALITY(W)=PEACEFUL) THEN {B=1;}
+if ((PERSONALITY(W)=LAWFUL) %OR (RETORT(W,Charismatic)))
+ %AND ((%N(OBJECTIVE(W)=MILITARIST)) %AND (%N(OBJECTIVE(W)=EXPANSIONIST))) THEN { B=1; }
+};
+} ENDLP (B=1);

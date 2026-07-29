@@ -15,7 +15,6 @@
     "abilities": [
       "Hero",
       "Mountainwalk",
-      "Long Range",
       "Wall Crusher",
       "Spellcaster=Spell#260x1"
     ],
@@ -308,7 +307,8 @@
     "ammo": 6,
     "abilities": [
       "Hero",
-      "Missile Immunity"
+      "Missile Immunity",
+      "Destruction=0"
     ],
     "category": "Heroes",
     "moves": 3,
@@ -3132,7 +3132,8 @@
       "Poison Immunity",
       "Flight",
       "Fantastic",
-      "Stoning Immunity"
+      "Stoning Immunity",
+      "Sapiens"
     ],
     "category": "Chaos Creatures",
     "moves": 3,
@@ -3157,7 +3158,8 @@
       "Mountainwalk",
       "Wall Crusher",
       "Fantastic",
-      "Large Shield"
+      "Large Shield",
+      "Sapiens"
     ],
     "category": "Chaos Creatures",
     "moves": 3,
@@ -3276,7 +3278,8 @@
       "Flight",
       "Fantastic",
       "Immolation",
-      "Caster=39"
+      "Caster=39",
+      "Sapiens"
     ],
     "category": "Chaos Creatures",
     "moves": 4,
@@ -3352,7 +3355,8 @@
       "Poison Immunity",
       "Cold Immunity",
       "Fantastic",
-      "No Healing"
+      "No Healing",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 2,
@@ -3378,7 +3382,8 @@
       "Poison Immunity",
       "Cold Immunity",
       "Fantastic",
-      "Create Undead"
+      "Create Undead",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 2,
@@ -3404,7 +3409,8 @@
       "Stealth",
       "Invisibility",
       "Fantastic",
-      "Death Gaze=-3"
+      "Death Gaze=-3",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 3,
@@ -3427,7 +3433,8 @@
       "Weapon Immunity",
       "Forester",
       "Fantastic",
-      "Rage"
+      "Rage",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 3,
@@ -3452,7 +3459,8 @@
       "Flight",
       "Fantastic",
       "Create Undead",
-      "Caster=40"
+      "Caster=40",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 2,
@@ -3478,7 +3486,8 @@
       "Flight",
       "Fantastic",
       "Non-Corporeal",
-      "Life Steal=-3"
+      "Life Steal=-3",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 5,
@@ -3508,7 +3517,8 @@
       "Regeneration=2",
       "Fantastic",
       "Non-Corporeal",
-      "Plane Shifting"
+      "Plane Shifting",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 2,
@@ -3539,7 +3549,8 @@
       "Non-Corporeal",
       "Supernatural",
       "Spellcaster=Spell#164x1",
-      "Life Steal=-5"
+      "Life Steal=-5",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 5,
@@ -3570,7 +3581,8 @@
       "Cause Fear",
       "Supernatural",
       "Spellcaster=Summon Demonx3",
-      "Life Steal=-2"
+      "Life Steal=-2",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 4,
@@ -3593,7 +3605,8 @@
       "Cold Immunity",
       "Fantastic",
       "Create Undead",
-      "No Healing"
+      "No Healing",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 2,
@@ -3662,7 +3675,8 @@
       "Holy Bonus=1",
       "Fantastic",
       "Exorcise=-1",
-      "Caster=24"
+      "Caster=24",
+      "Sapiens"
     ],
     "category": "Life Creatures",
     "moves": 5,
@@ -3689,7 +3703,8 @@
       "Supernatural",
       "Exorcise=-1",
       "Caster=29",
-      "Spellcaster=Spell#239x1"
+      "Spellcaster=Spell#239x1",
+      "Sapiens"
     ],
     "category": "Life Creatures",
     "moves": 4,
@@ -3731,7 +3746,8 @@
     "abilities": [
       "Flight",
       "Forester",
-      "Fantastic"
+      "Fantastic",
+      "Sapiens"
     ],
     "category": "Nature Creatures",
     "moves": 2,
@@ -3819,7 +3835,8 @@
       "Mountainwalk",
       "Wall Crusher",
       "Fantastic",
-      "Stoning Immunity"
+      "Stoning Immunity",
+      "Sapiens"
     ],
     "category": "Nature Creatures",
     "moves": 3,
@@ -3849,7 +3866,8 @@
       "Stoning Immunity",
       "Lightning Resist",
       "Supernatural",
-      "Pathfinding"
+      "Pathfinding",
+      "Sapiens"
     ],
     "category": "Nature Creatures",
     "moves": 4,
@@ -3869,7 +3887,8 @@
     "abilities": [
       "Fantastic",
       "Caster=40",
-      "Stoning Gaze=-3"
+      "Stoning Gaze=-3",
+      "Sapiens"
     ],
     "category": "Nature Creatures",
     "moves": 3,
@@ -4012,7 +4031,8 @@
       "Mountainwalk",
       "Wall Crusher",
       "Fantastic",
-      "Lightning Resist"
+      "Lightning Resist",
+      "Sapiens"
     ],
     "category": "Sorcery Creatures",
     "moves": 3,
@@ -4064,7 +4084,8 @@
       "Fantastic",
       "Supernatural",
       "Teleporting",
-      "Caster=40"
+      "Caster=40",
+      "Sapiens"
     ],
     "category": "Sorcery Creatures",
     "moves": 4,
@@ -4111,7 +4132,8 @@
       "First Strike",
       "Water Walking",
       "Fantastic",
-      "Poison Touch=3"
+      "Poison Touch=3",
+      "Sapiens"
     ],
     "category": "Sorcery Creatures",
     "moves": 3,
@@ -4161,7 +4183,8 @@
       "Blood Sucker",
       "Create Undead",
       "Spellcaster=Spell#175x1",
-      "Life Steal=-2"
+      "Life Steal=-2",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 4,
@@ -4442,7 +4465,8 @@
       "Fantastic",
       "Large Shield",
       "Supernatural",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Sapiens"
     ],
     "category": "Life Creatures",
     "moves": 4,
@@ -5278,7 +5302,8 @@
       "Illusion",
       "Fantastic",
       "Lucky",
-      "Lightning Resist"
+      "Lightning Resist",
+      "Sapiens"
     ],
     "category": "Sorcery Creatures",
     "moves": 3,
@@ -5329,7 +5354,8 @@
       "Long Range",
       "Wall Crusher",
       "Fantastic",
-      "Non-Corporeal"
+      "Non-Corporeal",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 4,
@@ -5790,7 +5816,8 @@
       "Fantastic",
       "Teleporting",
       "Spellcaster=Spell#148x2",
-      "Resistance to All=2"
+      "Resistance to All=2",
+      "Sapiens"
     ],
     "category": "Life Creatures",
     "moves": 4,
@@ -6141,7 +6168,8 @@
       "Create Undead",
       "Caster=128",
       "Spellcaster=Summon Demonx3",
-      "Life Steal=-10"
+      "Life Steal=-10",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 5,
@@ -6268,7 +6296,8 @@
       "Teleporting",
       "Caster=255",
       "Spellcaster=Spell#148x9",
-      "Resistance to All=5"
+      "Resistance to All=5",
+      "Sapiens"
     ],
     "category": "Life Creatures",
     "moves": 5,
@@ -7233,7 +7262,8 @@
       "Caster=25",
       "Spellcaster=Spell#163x2",
       "Life Steal=-3",
-      "Resistance to All=1"
+      "Resistance to All=1",
+      "Sapiens"
     ],
     "category": "Death Creatures",
     "moves": 3,
@@ -7662,9 +7692,13 @@
     "resist": 10,
     "to_hit": 10,
     "abilities": [
+      "Illusion Immunity",
+      "Death Immunity",
+      "Poison Immunity",
       "Wall Crusher",
       "Fantastic",
       "Spellcaster=Spell#341x1",
+      "Sapiens",
       "Mechanical",
       "DestroyMechanical"
     ],

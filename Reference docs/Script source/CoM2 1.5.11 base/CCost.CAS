@@ -1,0 +1,109 @@
+:
+INPUT - W - The wizard who is casting the spell
+        SP - The spell being cast
+        REALM - The ream of the spell being cast
+        PRIMARY - The primary realm of the wizard.
+        GROUP - The spellgroup of the spell that deremines the type of effects.
+        CATEGORY - The displayed category of the spell in the spellbook.
+OUTPUT - CM - The multiplier of the casing cost.       
+:
+
+CM=1;
+
+: Retorts and Books - Wizard specific cost modifiers are not valid for the neutral player! :
+
+:
+DEBUGLOG "Input data"
+DEBUGLOG STRS(W);
+DEBUGLOG STRS(SP);
+DEBUGLOG STRS(REALM);
+DEBUGLOG STRS(GROUP);
+DEBUGLOG STRS(CATEGORY); :
+
+IF (W<>NeutralPlayerID) THEN {
+
+BK=BOOKS(W,REALM);
+IF (REALM<>ARCANE) %AND (BK>8) THEN {
+CM=CM*(1-((5*(BK-8))/100));
+}
+
+If (PRIMARY=REALM) %AND (RETORT(W,SPECIALIST)) THEN {
+CM=CM*0.88;
+}
+
+If (RETORT(W,ARTIFICER)) THEN {
+IF (REALM=ARCANE) THEN {CM=0.75;};
+IF (GROUP=SGItemCreation) THEN {CM=0.5;};
+}
+
+If (GROUP=SGSummon) %AND (RETORT(W,CONJURER)) THEN {
+CM=CM*0.75;
+}
+
+If (RETORT(W,SPELLWEAVER)) %AND
+(%N ISCOMBAT()) 
+%AND (SP<>SEnchantItem)
+%AND (SP<>SSummonHero)
+%AND (SP<>SCreateArtifact)
+%AND (SP<>SSummonchampion)
+%AND (GROUP<>SGSummon)
+THEN {
+CM=CM*0.66;
+}
+}
+
+: Evil Omens :
+J=0;
+FOR I=0 TO NOFWIZARDS();
+IF (I<>W) %AND (HASGLOBAL(I,GEEvilOmens)) THEN { j=1;}
+NEXT I;
+IF J>0 THEN {
+CM=CM*1.5;
+}
+
+: Events :
+IF (EVENTTURN(EvFlux)>0) %AND (SP<>SSpellofMastery) THEN {
+CM=CM*0.5;
+}
+
+IF (EVENTTURN(EvGoodMoon)>0) %AND ((CATEGORY=4) %OR (REALM=4)) THEN {
+CM=CM*0.67; :Life or Unit Spell:
+}
+
+IF (EVENTTURN(EvBadMoon)>0) %AND ((CATEGORY=3) %OR (REALM=5)) THEN {
+CM=CM*0.67; :Death or City Spell:
+}
+
+IF (EVENTTURN(EvSorceryC)>0) %AND ((CATEGORY=2) %OR (REALM=2)) THEN {
+CM=CM*0.67; :Sorcery or Enchantment Spell:
+}
+
+IF (EVENTTURN(EvChaosC)>0) %AND ((CATEGORY=5) %OR (REALM=3) %OR (CATEGORY=0)) THEN {
+CM=CM*0.67; :Chaos, Special or Combat Spell:
+}
+
+IF (EVENTTURN(EvNatureC)>0) %AND ((CATEGORY=1) %OR (REALM=1)) THEN {
+CM=CM*0.67; :Nature or Summoning Spell:
+}
+
+
+: Divine Order :
+DIMNUM DOMOD[6];
+DOMOD[1]=0;
+DOMOD[2]=10;
+DOMOD[3]=-10;
+DOMOD[4]=-25;
+DOMOD[5]=-25;
+DOMOD[6]=20;
+
+J=0;
+FOR I=0 TO NOFWIZARDS();
+If HASGLOBAL(I,GEDivineOrder) THEN {
+CM=(CM*(100+(DOMOD[CATEGORY+1]/(1+J))))/100;
+J=1;
+}
+NEXT I;
+
+: Wave of Despair is unaffected by all cost modifiers :
+if SP=SWaveofDespair then { CM=1; };
+

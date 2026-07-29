@@ -1,0 +1,3 @@
+: Input - LOADED=0 if the script is triggered by starting a new game, 1 if by loading a save file :
+: Output - None :
+

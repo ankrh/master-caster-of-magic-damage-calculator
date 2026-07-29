@@ -6,9 +6,9 @@
 // This is a SMOKE test — it does not assert specific stat values for every
 // unit; correctness of the numbers is the PRESETS suite's job.
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
+const { openCalculator, expectNoConsoleErrors, setValue, gameVersions } = require('./helpers');
 
-const VERSIONS = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.5'];
+const VERSIONS = gameVersions();
 
 for (const version of VERSIONS) {
   test(`every roster unit selects cleanly (${version})`, async ({ page }) => {

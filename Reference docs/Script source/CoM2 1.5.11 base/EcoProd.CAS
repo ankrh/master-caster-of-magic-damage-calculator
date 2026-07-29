@@ -1,0 +1,86 @@
+: INPUT CityID, the city being processed
+		WORKERS, the number of workers in the city
+		FARMERS, the number of farmers in the city
+		PRODPER, the amount of percentage production bonus from terrain
+  Output - None. 
+  Use the AddResLine command to add production to the total and as an individual line in the detailed view on the UI.
+		:
+ADDRESLINE "Workers", (2*WORKERS);
+
+RACE=CITYRACE(CITYID);
+IF RACE=RCDwarf THEN {
+ADDRESLINE "Dwarven Workers", WORKERS;
+}
+IF RACE=RCKlackon THEN {
+ADDRESLINE "Klackon Workers", WORKERS;
+}
+
+I=%I((FARMERS+1)/2);
+ADDRESLINE "Farmers",I;
+
+If ISBUILT(CITYID,BSawmill) THEN {
+ADDRESLINE "Sawmill",6;
+}
+
+If ISBUILT(CITYID,BSmithy) THEN {
+ADDRESLINE "Smithy",2;
+}
+
+If ISBUILT(CITYID,BStables) THEN {
+ADDRESLINE "Stables",2;
+}
+
+BASEPROD=SUMRESLINES();
+
+IF CITYENCHANT(CITYID,CEDrought)=-1 THEN {
+
+PPTOTAL=PRODPER*2;
+
+W=CITYOWNER(CITYID);
+
+IF RETORT(W,Omniscient) THEN {
+ IF BOOKS(W,Death)>0 THEN {
+ PP=((BOOKS(W,Death)-1)*7)+32;
+ ADDRESLINE "Omniscient", %I((BASEPROD * PP) /200);
+ PPTOTAL=PPTOTAL + PP;
+ }
+}
+
+If ISBUILT(CITYID,BForesterGuild) THEN {
+ADDRESLINE "Forester's Guild",%I((BASEPROD * 10) /100);
+PPTOTAL=PPTOTAL + 20;
+}
+
+IF (EVENTTURN(EvBadMoon)>0) THEN {
+ADDRESLINE "Bad Moon",%I((BASEPROD * 50) /100);
+PPTOTAL=PPTOTAL + 100;
+}
+
+
+If ISBUILT(CITYID,BMinerGuild) THEN {
+ADDRESLINE "Miner's Guild",%I((BASEPROD * 25) /100);
+PPTOTAL=PPTOTAL + 50;
+}
+
+If ISBUILT(CITYID,BMechaGuild) THEN {
+ADDRESLINE "Mechanician's Guild",%I((BASEPROD * 35) /100);
+PPTOTAL=PPTOTAL + 70;
+}
+
+IF CITYENCHANT(CITYID,CEInspirations)>-1 THEN {
+ADDRESLINE "Inspiratons", BASEPROD;
+PPTOTAL=PPTOTAL + 200;
+}
+
+: Test enchantment Tower of Opression 
+IF CITYENCHANT(CITYID,28)>-1 THEN {
+ADDRESLINE "Tower of Oppression", %I (BASEPROD/2);
+PPTOTAL=PPTOTAL + 100;
+}
+:
+
+: Dump anything lost by fractions rounded down into the terrain modifier. :
+TER=(%I((BASEPROD*(PPTOTAL+200))/200))-SUMRESLINES();
+
+ADDRESLINE "Terrain", TER;
+}

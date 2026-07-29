@@ -1,0 +1,12 @@
+
+:
+INPUT - U, the unit being calculated.
+OUTPUT - None, set unit current stats using the SetStat command.
+:
+
+:
+IF GETITEMPOWER(U,74)>0 THEN {
+SETENCHANTMENTFLAG U,EncIronSkin,0,1
+}
+:
+HALT

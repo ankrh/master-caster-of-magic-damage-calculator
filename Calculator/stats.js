@@ -1,18 +1,34 @@
 // --- Unit Stat Derivation ---
 // Depends on data.js and combat.js helper functions. No DOM dependencies.
 
-// Lava Smelter (Warlord, Dwarf-race building): a selected mineral combo grants one
-// permanent ability to Dwarf-race units (heroes excluded). Returns the ability set with the grant merged
+// Total a per-stat derivation split. With no keys, sums the base stage and all
+// encounter phases — the value the rest of the calculator uses. With keys, sums only
+// those stages, which is how an effect that *scales* a stat reads the subtotal it sees at
+// its own point in the pipeline (e.g. sumPhases(hpPhases, 'base', 'a') for
+// Xenoveterinary). See SPEC.md, Stat derivation contract.
+//
+// `warpLate` is the tail of phase c that CoM 1's stat recompute writes after the Warp
+// Creature block; it is empty in every other version. PRE_WARP_PHASES is what Warp
+// reduces, and is the same "name the subtotal you read" idiom the scaling effects use.
+const DERIVATION_PHASES = ['base', 'a', 'b', 'c', 'd', 'warpLate'];
+const PRE_WARP_PHASES = ['base', 'a', 'b', 'c', 'd'];
+function sumPhases(phases, ...keys) {
+  return (keys.length ? keys : DERIVATION_PHASES).reduce((total, key) => total + phases[key], 0);
+}
+
+// Lava Smelter (Warlord): the selector records one permanent mineral-pair grant already
+// carried by the unit. New Dwarf units receive it when trained; Upgrade & Retrain can apply
+// it later to any existing non-fantastic unit. Returns the ability set with the grant merged
 // in (a new object), or the original set unchanged when it does not apply. Merging up-front
 // — rather than into effectiveAbilities — lets the Flame Blade grant reach the weapon-upgrade
 // and stat-bonus logic, which read the raw ability set. The Wall-of-Fire siege effect is not
 // modelled here (it has its own global toggle).
-function applyLavaSmelterGrant(abilities, version, unitType, race) {
-  if (!version || !version.startsWith('com2_warlord') || race !== 'Dwarf' || unitType === 'hero') return abilities;
+function applyLavaSmelterGrant(abilities, version, unitType) {
+  if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;
   switch (abilities.lavaSmelter || 'none') {
     case 'weaponImmunity':  return { ...abilities, weaponImmunity: true };
     case 'missileImmunity': return { ...abilities, missileImmunity: true };
-    case 'flameBlade':      return { ...abilities, flameBlade: true };
+    case 'flameBlade':      return { ...abilities, fieryBlade: true };
     case 'resistElem':
     case 'elementalArmor': {
       // Both the manual Elements selector and this grant share the elemArmor key; keep the
@@ -44,7 +60,7 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
   return {
     ...abilities,
     sanctify: true,
-    ...(isCrusader ? { lucky: true } : {}),
+    ...(isCrusader ? { lucky: true, luckyPhaseBase: true } : {}),
     ...(isPaladin ? { magicImmunity: true } : {}),
   };
 }
@@ -69,7 +85,7 @@ const MAGIC_IMMUNITY_GATED_CURSES = [
 const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 function applyMagicImmunityCurseGating(abilities) {
   const magicImmune = !!abilities.magicImmunity;
-  const illusionImmune = !!(abilities.illusionImmunity || abilities.eyeOfHeaven);
+  const illusionImmune = !!(abilities.illusionImmunity || abilities.trueSight || abilities.eyeOfHeaven);
   const illusionHasCurse = illusionImmune
     && ILLUSION_IMMUNITY_GATED_CURSES.some(k => abilities[k]);
   if (!magicImmune && !illusionHasCurse) return abilities;
@@ -91,17 +107,25 @@ function applyMagicImmunityCurseGating(abilities) {
 // Folded into effective abilities here so every downstream read sees them — Lucky feeds the
 // ability stat modifiers (+10% To Hit, +10% To Block, +1 Resistance) and Death Immunity feeds
 // the combat immunity checks (Death Gaze/Touch, Life Stealing, Cause Fear).
-function applyDivineProtectionGrant(abilities, version) {
-  if (!version || !version.startsWith('com2_warlord') || !abilities.divineProtection) return abilities;
-  return { ...abilities, lucky: true, deathImmunity: true };
+// Lucky reaches a unit from five sources that fall in different derivation stages
+// (SPEC.md, Stat derivation contract). Its stat bonus does not stack, so it is
+// counted once, in the earliest stage that grants it — getAbilityStatModifiers reads
+// these markers to decide which. They record the provenance that would otherwise be
+// lost when everything collapses to `lucky`.
+//   base — Pillar of Faith (CreateUnit.CAS:591, a 20% chance rolled at creation)
+//     and Sancta Basilica's Crusader grant. Both are in the unit before the encounter
+//     pipeline starts.
+//   phase a — the unit's own intrinsic Lucky ability.
+//   phase b — Lucky Star (UnitCalcPre.CAS:1146-1149 for the target, :1611-1623 for
+//     other friendly units) and Divine Protection (UnitCalcPre.CAS:881).
+// No source is phase c or d.
+function markIntrinsicLucky(abilities) {
+  return abilities && abilities.lucky ? { ...abilities, luckyPhaseA: true } : abilities;
 }
 
-// Lucky Star (Warlord, Arcane combat enchantment, Astrologer retort exclusive): grants Lucky to
-// the target unit for the battle. Folded into effective abilities here so the Lucky stat modifiers
-// (+10% To Hit, +10% To Block, +1 Resistance) feed every downstream read.
-function applyLuckyStarGrant(abilities, version) {
-  if (!version || !version.startsWith('com2_warlord') || !abilities.luckyStar) return abilities;
-  return { ...abilities, lucky: true };
+function applyDivineProtectionGrant(abilities, version) {
+  if (!version || !version.startsWith('com2_warlord') || !abilities.divineProtection) return abilities;
+  return { ...abilities, lucky: true, luckyPhaseB: true, deathImmunity: true };
 }
 
 // Pillar of Faith (Warlord, Life rare city enchantment): units trained in the city have a
@@ -111,7 +135,7 @@ function applyLuckyStarGrant(abilities, version) {
 // res in deriveUnitStats.
 function applyPillarOfFaithGrant(abilities, version) {
   if (!version || !version.startsWith('com2_warlord') || !abilities.pillarOfFaithLucky) return abilities;
-  return { ...abilities, lucky: true };
+  return { ...abilities, lucky: true, luckyPhaseBase: true };
 }
 
 // Fortification (Warlord, city building): all defending units inside the city walls gain a
@@ -135,6 +159,107 @@ function applyInsulationGrant(abilities, version) {
   return { ...abilities, fireImmunity: true, coldImmunity: true, lightningResist: true };
 }
 
+// Outlander controls expose the researched reform/building conditions, not their
+// derived labels. Fold permanent unit upgrades and combat-only labels in before
+// curse gating so downstream mechanics see a single calculated state.
+const DERIVED_OUTLANDER_STATE_KEYS = [
+  'armorclad',
+  'battleArmor',
+  'blackpowder',
+  'bombsGrenades',
+  'energyCannon',
+  'energyWeaponry',
+  'magitekEngine',
+  'pneumaField',
+  'powerEngine',
+  'psychoForce',
+  'temporalGravityDrive',
+  'upgradedExplosive',
+  'outlanderBallisticsTraining',
+  'outlanderRadio',
+  'outlanderXenopsychology',
+  'outlanderXenoveterinary',
+];
+
+function applyOutlanderReformGrants(abilities, version, baseUnitType) {
+  if (!version || !version.startsWith('com2_warlord')) return abilities;
+
+  // These names are outputs, never accepted inputs. Besides keeping the UI to one
+  // source of truth, stripping them here prevents stale saved state or a caller from
+  // bypassing the reform/building prerequisites.
+  const fundamentalAbilities = { ...abilities };
+  for (const key of DERIVED_OUTLANDER_STATE_KEYS) delete fundamentalAbilities[key];
+
+  const baseFantastic = String(baseUnitType || '').startsWith('fantastic_');
+  const outlanderWizard = !!fundamentalAbilities.outlanderWizard;
+  // All reform spell states are owned by Outlander wizards. Keep their raw controls in
+  // the UI state, but remove them from the effective unit state when the owner is not
+  // an Outlander so no downstream branch can accidentally consume one ungated.
+  if (!outlanderWizard) {
+    for (const key of [
+      'armorcladReform', 'ballisticsTraining', 'energyBeamWeapons', 'explosive',
+      'heatPowerEngine', 'magitekEngineering', 'magitekScience', 'militaryDrilling',
+      'pneumaReactor', 'psychoConverter', 'radio', 'rocketry', 'temporalEngineering',
+      'xenopsychology', 'xenoveterinary',
+    ]) delete fundamentalAbilities[key];
+  }
+  // Rebuild permanently writes Mechanical for non-heroes. Its hero branch is
+  // encounter-only and cannot receive overland Power Engine/Armorclad upgrades.
+  const permanentMechanical = !!fundamentalAbilities.mechanical
+    || (!!fundamentalAbilities.rebuild && baseUnitType !== 'hero');
+  const armorclad = outlanderWizard && !!fundamentalAbilities.armorcladReform && permanentMechanical;
+  const battleArmor = outlanderWizard && !!fundamentalAbilities.armorcladReform
+    && !baseFantastic && !permanentMechanical;
+  const powerEngine = outlanderWizard && !!fundamentalAbilities.heatPowerEngine && permanentMechanical;
+  // UnitCalc.CAS evaluates left-to-right: non-fantastic non-mechanical units,
+  // heroes, and Armorclad mechanical units pass; fantastic units do not.
+  const outlanderSoldier = outlanderWizard && !baseFantastic && (!permanentMechanical || armorclad);
+  const firstFourEligible = outlanderWizard && (!baseFantastic || !!fundamentalAbilities.sapiens);
+  const temporalDrive = powerEngine && !!fundamentalAbilities.temporalEngineering;
+  const temporalGravityDrive = temporalDrive && !!fundamentalAbilities.sailing;
+  const magitekEngine = powerEngine && !!fundamentalAbilities.magitekEngineering;
+  const militaryDrilling = outlanderWizard && !baseFantastic && !!fundamentalAbilities.militaryDrilling;
+
+  return {
+    ...fundamentalAbilities,
+    ...(armorclad ? { armorclad: true } : {}),
+    ...(battleArmor ? { battleArmor: true } : {}),
+    ...(powerEngine ? { powerEngine: true } : {}),
+    ...(magitekEngine ? { magitekEngine: true, largeShield: true } : {}),
+    ...(temporalDrive ? { haste: true } : {}),
+    ...(temporalGravityDrive
+      ? { temporalGravityDrive: true, flying: true, illusionImmunity: true }
+      : {}),
+    ...(outlanderSoldier && fundamentalAbilities.energyBeamWeapons
+      ? { energyWeaponry: true }
+      : {}),
+    ...(outlanderSoldier && fundamentalAbilities.psychoConverter
+      ? { psychoForce: true }
+      : {}),
+    ...(outlanderSoldier && fundamentalAbilities.pneumaReactor
+      ? { pneumaField: true }
+      : {}),
+    ...(firstFourEligible && fundamentalAbilities.ballisticsTraining
+      ? { outlanderBallisticsTraining: true }
+      : {}),
+    ...(firstFourEligible && fundamentalAbilities.xenopsychology
+      ? { outlanderXenopsychology: true }
+      : {}),
+    ...(firstFourEligible && fundamentalAbilities.radio
+      ? { outlanderRadio: true }
+      : {}),
+    ...(outlanderWizard && baseFantastic && fundamentalAbilities.xenoveterinary
+      ? { outlanderXenoveterinary: true }
+      : {}),
+    ...(outlanderWizard && fundamentalAbilities.magitekScience && (armorclad || battleArmor)
+      ? { resistMagic: true }
+      : {}),
+    ...(militaryDrilling
+      ? { discipline: fundamentalAbilities.discipline === 'combat' ? 'combat' : 'overland' }
+      : {}),
+  };
+}
+
 // Derive all effective stats for a unit from raw UI state.
 // Pure stat logic: no DOM reads or rendering side effects.
 function deriveUnitStats(input) {
@@ -153,19 +278,19 @@ function deriveUnitStats(input) {
   const unitRace = input.race || '';
   const unitName = input.name || '';
   const abilities = applyMagicImmunityCurseGating(
+    applyOutlanderReformGrants(
     applyFortificationGrant(
     applyInsulationGrant(
     applyPillarOfFaithGrant(
-    applyLuckyStarGrant(
     applyDivineProtectionGrant(
       applySanctaBasilicaGrant(
-        applyLavaSmelterGrant(input.abilities || {}, version, input.unitType, unitRace),
+        applyLavaSmelterGrant(markIntrinsicLucky(input.abilities || {}), version, input.unitType),
         version, input.unitType, unitRace, unitName),
       version),
     version),
     version),
     version),
-    version));
+    version, input.unitType));
   const destinyActive = destinyActiveForUnit(abilities, version);
   const unitTypeRaw = input.unitType;
   const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
@@ -179,16 +304,16 @@ function deriveUnitStats(input) {
   const lvl = getLevelBonuses(level, version);
   // Warlord: Rebuild makes the unit Mechanical; Artificer retort then grants
   // Magic Weapons (+10% To Hit, bypass Weapon Immunity) to that unit.
-  const isWarlordForArtificer = version === 'com2_warlord_1.5.12.5';
+  const isWarlord = version.startsWith('com2_warlord');
   const effectiveMechanical = !!abilities.mechanical
-    || (isWarlordForArtificer && !!abilities.rebuild);
-  const artificerMagicWeapon = isWarlordForArtificer
+    || (isWarlord && !!abilities.rebuild);
+  const artificerMagicWeapon = isWarlord
     && !!abilities.artificer && effectiveMechanical;
   // Altar of the Moon (Warlord, Gnoll building): Gnoll units trained here gain Rage and
   // Poison Immunity; ranged units also gain +2 Ranged Attack. The granted abilities are
   // folded into effectiveAbilities below; the ranged bonus is added to the rtb total.
   // Gated on the Gnoll race — non-Gnoll units and heroes gain nothing.
-  const altarOfTheMoon = isWarlordForArtificer && !!abilities.altarOfTheMoon
+  const altarOfTheMoon = isWarlord && !!abilities.altarOfTheMoon
     && unitRace === 'Gnoll' && unitTypeRaw !== 'hero';
   // Unit-specific Altar of the Moon grants: Gnoll Hunters gain Poison 2; Gnoll
   // Witchdoctors gain Life Steal -1 which replaces their Poison. Applied via effectiveAbilities below.
@@ -198,7 +323,7 @@ function deriveUnitStats(input) {
   // Figure, except Holy Mother who gains +1 Melee instead. Gated on the Hawkmen race —
   // heroes are excluded and gain nothing. Only these unit bonuses are modelled; the
   // defending-city High Prayer buff is not.
-  const altarOfTheSunEligible = isWarlordForArtificer
+  const altarOfTheSunEligible = isWarlord
     && !!abilities.altarOfTheSun && unitRace === 'Hawkmen' && unitTypeRaw !== 'hero';
   const altarOfTheSunHolyMother = altarOfTheSunEligible && unitName.endsWith('Holy Mother');
   const altarOfTheSun = altarOfTheSunEligible && !unitName.endsWith('Holy Mother');
@@ -207,30 +332,30 @@ function deriveUnitStats(input) {
   // Breath. Like the Military Workshop breath bonus, it boosts an existing fire breath rather
   // than granting one to melee-only units. Gated on the Draconian race — non-Draconian
   // units and heroes gain nothing, matching the in-game race-exclusive building.
-  const dragonMound = isWarlordForArtificer
+  const dragonMound = isWarlord
     && !!abilities.dragonMound && unitRace === 'Draconian' && unitTypeRaw !== 'hero';
   // Ludus Agoge (Warlord, Orc building): Orc units trained here gain +1 Attack (melee, folded
   // into atk below), +1 Resistance, and +1 HP. Legionary units gain +1 Movement instead — not
   // modelled here — so they receive no stat bonus. Gated on the Orc race — non-Orc units,
   // Legionaries, and heroes gain nothing, matching the in-game race-exclusive building.
-  const ludusAgoge = isWarlordForArtificer
+  const ludusAgoge = isWarlord
     && !!abilities.ludusAgoge && unitRace === 'Orc' && !unitName.endsWith('Legionary') && unitTypeRaw !== 'hero';
   // Mother Fungus (Warlord, Goblin building): Goblin units trained here gain +2 Attack (melee,
   // folded into atk below), +10% To Defend (folded into toBlock below), and Poison 1 (boosts an
   // existing poison attack, or grants Poison 1 if it has none). The ×2 Spellcharge bonus is not
   // modelled. Gated on the Goblin race — non-Goblin units and heroes gain nothing, matching the
   // in-game race-exclusive building.
-  const motherFungus = isWarlordForArtificer
+  const motherFungus = isWarlord
     && !!abilities.motherFungus && unitRace === 'Goblin' && unitTypeRaw !== 'hero';
   // Pool of Repentance (Warlord, Rakhshasa building): Rakhshasa units trained here gain +1 Armor
   // (folded into defBase below) and +1 Resistance (folded into res below). Gated on the Rakhshasa
   // race — non-Rakhshasa units and heroes gain nothing, matching the in-game race-exclusive building.
-  const poolOfRepentance = isWarlordForArtificer
+  const poolOfRepentance = isWarlord
     && !!abilities.poolOfRepentance && unitRace === 'Rakhshasa' && unitTypeRaw !== 'hero';
   // Sancta Basilica (Warlord, High Men building): +3 Resistance for every High Men unit trained
   // here (folded into res below). The unit-specific Sanctify / Lucky / Magic Immunity grants are
   // applied earlier via applySanctaBasilicaGrant. Gated on the High Men race; heroes gain nothing.
-  const sanctaBasilica = isWarlordForArtificer
+  const sanctaBasilica = isWarlord
     && !!abilities.sanctaBasilica && unitRace === 'High Men' && unitTypeRaw !== 'hero';
   // Rust (Warlord Chaos common combat curse): permanently strips magic/orihalcon weapons
   // (the unit reverts to regular weapons), −3 melee attack (applied in combat.js), and
@@ -260,7 +385,8 @@ function deriveUnitStats(input) {
   // Military Workshop (Warlord, XuanYuan building): upgrades any normal unit trained,
   // garrisoned in, or fighting from the city — not race-gated, per the "any defending units
   // of the city" + "base normal units" changelog wording. Heroes and fantastic creatures are
-  // excluded. Combat-relevant effects, reconciled to the latest patch (1.5.12.5):
+  // excluded. Rocketry is an alternative source of the same Blackpowder upgrade.
+  // Combat-relevant effects, checked against the 1.5.12.6 scripts:
   //   - Small Physical Ranged (missile) projectiles upgrade to Heavy Physical Ranged (boulder,
   //     gunpowder), bypassing Missile Immunity — applied here so all downstream logic treats
   //     the attack as a boulder (original 1.5.4.1 effect, still in the helptext).
@@ -269,17 +395,39 @@ function deriveUnitStats(input) {
   //     ranged/thrown strength instead (patch 1.5.9.5). Folded in below.
   //   - Fire Breath attack: +4 strength (patch 1.5.7.4, up from the original +2).
   //   - +1 Poison: boosts an existing poison attack, or grants Poison 1 if it has none.
-  const militaryWorkshop = version.startsWith('com2_warlord')
-    && !!abilities.militaryWorkshop && isNormalUnitType(unitTypeVal);
-  if (militaryWorkshop && rangedType === 'missile') {
+  // Military Workshop and Rocketry are alternative causes of the same permanent
+  // Blackpowder upgrade. The source scripts grant it only to normal units that
+  // actually have physical ranged, Thrown, or Fire Breath.
+  const blackpowderSource = isWarlord
+    && (!!abilities.militaryWorkshop || !!abilities.rocketry);
+  const blackpowderEligibleAttack = (parseInt(input.rtb) || 0) > 0
+    && (rangedType === 'missile' || rangedType === 'boulder'
+      || thrownType === 'thrown' || thrownType === 'fire');
+  const blackpowder = blackpowderSource
+    && isNormalUnitType(unitTypeVal) && blackpowderEligibleAttack;
+  if (blackpowder && rangedType === 'missile') {
     rangedType = 'boulder';
+  }
+  const blackpowderPhysicalRanged = blackpowder
+    && (rangedType === 'missile' || rangedType === 'boulder');
+
+  // Bombs&Grenades can coexist with another ranged/breath attack in the game.
+  // The calculator's single RTB slot represents it directly when that slot is
+  // empty, and adds it normally when the selected attack is already Thrown.
+  const explosiveEligible = isWarlord && !!abilities.explosive
+    && (!String(unitTypeRaw || '').startsWith('fantastic_') || !!abilities.sapiens);
+  const bombsGrenades = explosiveEligible
+    && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
+  if (bombsGrenades && rangedType === 'none' && thrownType === 'none') {
+    thrownType = 'thrown';
   }
 
   const baseDoomGazeWithBlazingEyes = blazingEyesDoomGazeForUnit(abilities, unitTypeVal, version);
 
   // Chaos Channels (Fire Breath option): version-sensitive strength.
-  // MoM: strength 2.
-  // CoM/CoM2: strength 4.
+  // MoM: strength 2. (WIZARDS.EXE 0x8F728 in both MoM builds, alongside ranged_type = 101.)
+  // CoM/CoM2: strength 4. (CoM 1 confirmed at 0x8F47C; CoM2 and Warlord are a different
+  // engine and still rest on prose — see the queue's D12.)
   // Fire Breath is not rolled for units that already have a ranged or breath attack.
   // If the unit has Thrown, Fire Breath replaces it.
   // CoM2 exception: Fire Breath can also replace Gaze and Lightning Breath.
@@ -328,6 +476,15 @@ function deriveUnitStats(input) {
   const inputBaseDef = Math.max(0, parseInt(input.def) || 0);
   const inputBaseRes = Math.max(0, parseInt(input.res) || 0);
   const inputBaseHP  = Math.max(1, parseInt(input.hp) || 1);
+  // Alumni of Academy is a permanent +2-figure write made when a unit is trained.
+  // Academy is Halfling-only, so the UI condition is race-gated. The script admits
+  // Halfling Rocs (type 221, their Fantastic Stable unit) unconditionally; its other
+  // branch requires an innate magical ranged attack and rejects Mechanical units.
+  const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
+    && unitRace === 'Halfling' && unitTypeRaw !== 'hero'
+    && (unitName.endsWith('Rocs')
+      || (!abilities.mechanical && inputBaseRtb > 0
+        && (rtbTypeRaw === 'magic_c' || rtbTypeRaw === 'magic_n' || rtbTypeRaw === 'magic_s')));
   let calcBaseAtk = destinyActive ? inputBaseAtk * 2 : inputBaseAtk;
   let calcBaseRtb = destinyActive ? inputBaseRtb * 2 : inputBaseRtb;
   if (ccFireBreathActive) calcBaseRtb = ccFireBreathStrength;
@@ -335,6 +492,15 @@ function deriveUnitStats(input) {
   // Lightning Blade's strength-1 grant (melee-only units). The Thrown→Lightning conversion
   // keeps the unit's existing Thrown strength, so it needs no adjustment here.
   if (lightningBladeGrantsBreath) calcBaseRtb = 1;
+  // Energy Cannon is a permanent overland conversion to projectile type Beam
+  // with ranged Doom damage. Its +50% write is added to the base phase below,
+  // after the earlier permanent ranged writes it reads have been assembled.
+  const energyCannon = isWarlord && !!abilities.energyBeamWeapons
+    && !!abilities.powerEngine
+    && rangedType !== 'none' && calcBaseRtb > 0;
+  if (energyCannon) {
+    rangedType = 'beam';
+  }
   const calcBaseDef = destinyActive ? inputBaseDef + 4 : inputBaseDef;
   const calcBaseRes = destinyActive ? inputBaseRes + 4 : inputBaseRes;
   const calcBaseHP  = destinyActive ? inputBaseHP * 2 : inputBaseHP;
@@ -349,9 +515,13 @@ function deriveUnitStats(input) {
   // the unit gains strength-3 Sorcery magical ranged. (All versions convert boulder:
   // CoM1 lists "missile", Warlord lists "Physical Ranged" — boulder is physical ranged.)
   const isCoM2 = version.startsWith('com2');
+  // CoM 1 (the DOS build). Kept distinct from `isCoM2` wherever a mechanic is settled for
+  // one engine and open for the other — see the Warp Creature block and the gaze ladder.
+  const isCoM1 = version.startsWith('com_');
   const focusMagicActive = !!(abilities && abilities.focusMagic) && version.startsWith('com');
   const hasMagicRangedForFocus = calcBaseRtb > 0
-    && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s');
+    && (rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam');
   const hasBreathForFocus = calcBaseRtb > 0 && (thrownType === 'fire' || thrownType === 'lightning');
   const hasDoomGazeForFocus = isCoM2 && baseDoomGazeWithBlazingEyes > 0;
   const focusMagicBuffsExisting = focusMagicActive
@@ -414,25 +584,30 @@ function deriveUnitStats(input) {
     && version.startsWith('com2_warlord') && unitTypeRaw !== 'hero';
   if (blazeOfGloryActive && calcBaseRtb > 0
     && (rangedType === 'missile' || rangedType === 'boulder'
-      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s')) {
+      || rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam')) {
     rangedType = 'none';
     thrownType = 'thrown';
   }
 
-  // Military Workshop derived bonuses (see the gate above). Evaluated here, after the
+  // Blackpowder-derived bonuses (see the Military Workshop / Rocketry gate above).
+  // Evaluated here, after the
   // ranged/thrown type conversions (Chaos Channels, Focus Magic, Vampirism), so they read the
   // final attack type — e.g. a missile converted to magic by Focus Magic no longer qualifies
   // as physical ranged. The missile→boulder projectile upgrade was already applied above.
-  const militaryWorkshopHasRangedOrThrown = militaryWorkshop && calcBaseRtb > 0
-    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown');
-  // Doom attack: Armor Piercing is wasted (Doom ignores armor), so grant +2 strength instead.
-  const militaryWorkshopGrantsAP = militaryWorkshopHasRangedOrThrown
+  const blackpowderHasRangedOrThrown = blackpowder && calcBaseRtb > 0
+    && (blackpowderPhysicalRanged || thrownType === 'thrown');
+  // Doom attack: Armor Piercing is wasted (Doom ignores armor), so grant strength instead.
+  const blackpowderGrantsAP = blackpowderHasRangedOrThrown
     && !abilities.doom && !abilities.armorPiercing;
-  const militaryWorkshopRtbMod = militaryWorkshopHasRangedOrThrown && !!abilities.doom ? 2 : 0;
+  const blackpowderRtbMod = blackpowderHasRangedOrThrown
+    && (!!abilities.doom || !!abilities.armorPiercing)
+    ? (thrownType === 'thrown' ? 4 : 2)
+    : 0;
   // Fire Breath: +4 strength.
-  const militaryWorkshopFireBreathRtbMod = militaryWorkshop && calcBaseRtb > 0 && thrownType === 'fire' ? 4 : 0;
+  const blackpowderFireBreathRtbMod = blackpowder && calcBaseRtb > 0 && thrownType === 'fire' ? 4 : 0;
   // +1 Poison, applied on top of any existing poison (including the Gnoll Altar grants below).
-  const militaryWorkshopBasePoison = altarHunter ? 2 : (altarWitchdoctor ? 0 : (abilities.poison || 0));
+  const blackpowderBasePoison = altarHunter ? 2 : (altarWitchdoctor ? 0 : (abilities.poison || 0));
 
   // Warlord Venom enchantment: +1 Poison (boosting any existing/granted poison, or granting
   // Poison 1 if the unit has none) plus Poison Immunity. The base it boosts mirrors the final
@@ -440,7 +615,7 @@ function deriveUnitStats(input) {
   const venom = version.startsWith('com2_warlord') && !!(abilities && abilities.venom);
   const venomBasePoison =
       motherFungus ? (abilities.poison || 0) + 1
-    : militaryWorkshop ? militaryWorkshopBasePoison + 1
+    : blackpowder ? blackpowderBasePoison + 1
     : altarWitchdoctor ? 0
     : altarHunter ? 2
     : (abilities.poison || 0);
@@ -464,15 +639,18 @@ function deriveUnitStats(input) {
     ...(altarOfTheMoon ? { rage: true, poisonImmunity: true } : {}),
     ...(altarHunter ? { poison: 2 } : {}),
     ...(altarWitchdoctor ? { lifeSteal: -1, poison: 0 } : {}),
-    ...(militaryWorkshopGrantsAP ? { armorPiercing: true } : {}),
+    ...(blackpowderGrantsAP ? { armorPiercing: true } : {}),
     ...(blazeOfGloryActive ? { armorPiercing: true, firstStrike: false } : {}),
-    ...(militaryWorkshop ? { poison: militaryWorkshopBasePoison + 1 } : {}),
+    ...(blackpowder ? { poison: blackpowderBasePoison + 1 } : {}),
+    ...(blackpowder ? { blackpowder: true } : {}),
+    ...(bombsGrenades ? { wallCrusher: true } : {}),
+    ...(energyCannon ? { energyCannon: true } : {}),
     ...(motherFungus ? { poison: (abilities.poison || 0) + 1 } : {}),
     ...(venom ? { poison: venomBasePoison + 1, poisonImmunity: true } : {}),
     // Rust on a fantastic creature is inert: drop it so the -3 melee in combat.js (which
     // can't see unit type) and any downstream reads treat the unit as un-rusted.
     ...((abilities && abilities.rust && !rustActive) ? { rust: false } : {}),
-    ...((abilities && abilities.eyeOfHeaven) ? { illusionImmunity: true } : {}),
+    ...((abilities && (abilities.trueSight || abilities.eyeOfHeaven)) ? { illusionImmunity: true } : {}),
     unitType: unitTypeVal,
     mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeWithBlazingEyes,
@@ -507,8 +685,6 @@ function deriveUnitStats(input) {
   // Eternal Night also gives enemy non-Death units -1 resistance in CoM/CoM2.
   const legacyLightDarkVal = input.enchLightDark || 'none';
   const isCoMVersion = version.startsWith('com');
-  const isCoM2Version = version.startsWith('com2');
-  const isWarlord = version.startsWith('com2_warlord');
   const ownEternalNight = !!(abilities && abilities.eternalNight) || !!input.eternalNight;
   const enemyEternalNight = !!input.enemyEternalNight;
   const hasAnyEternalNight = ownEternalNight || enemyEternalNight;
@@ -518,7 +694,7 @@ function deriveUnitStats(input) {
   // True Light was removed in CoM 1 & 2, but Warlord re-introduces it as a Life
   // common combat enchantment — so enable it for MoM (non-CoM) and Warlord only.
   const hasTrueLight = (!!input.trueLight || legacyLightDarkVal === 'trueLight') && (!isCoMVersion || isWarlord);
-  const darknessAtkDefMagnitude = hasDarkness ? (hasAnyEternalNight && isCoM2Version ? 2 : 1) : 0;
+  const darknessAtkDefMagnitude = hasDarkness ? (hasAnyEternalNight && isCoM2 ? 2 : 1) : 0;
   const darknessResMagnitude = hasDarkness ? 1 : 0;
   const eternalNightEnemyResPenalty = enemyEternalNight && isCoMVersion && unitRealm !== 'death' ? -1 : 0;
   // Warlord Eternal Night ("Poor Vision"): enemy non-Death units suffer -2 to ranged
@@ -527,7 +703,15 @@ function deriveUnitStats(input) {
   const warlordEternalNightActive = enemyEternalNight && isWarlord && unitRealm !== 'death';
   const eternalNightRtbMod = warlordEternalNightActive
     && (rangedType === 'missile' || rangedType === 'boulder'
-      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? -2 : 0;
+      || rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam') ? -2 : 0;
+  // CoM 1's recompute writes Darkness (0x9084C-0x90989), Supreme Light (0x90992-0x90A53),
+  // the Tactician retort (0x90AB4-0x90AF6) and Eternal Night's non-Death resistance penalty
+  // (0x90B31) *after* its Warp Creature block at 0x9074C, so Warp does not reduce them.
+  // These route a term to the correct side of that boundary; every other version has no
+  // boundary to be on the wrong side of, and keeps the term in its normal phase.
+  const preWarpTerm = (v) => (isCoM1 ? 0 : v);
+  const postWarpTerm = (v) => (isCoM1 ? v : 0);
   let darkLightAtkBonus = 0;
   let darkLightDefBonus = 0;
   let darkLightResBonus = eternalNightEnemyResPenalty;
@@ -670,7 +854,8 @@ function deriveUnitStats(input) {
   const orihalconActive = armor === 'orihalcon';
   const orihalconResMod = orihalconActive ? 1 : 0;
   const orihalconRtbMod = orihalconActive
-    && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
+    && (rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
 
   // Wall of Fire garrison boost (Warlord): the city enchantment grants +1 to all
   // defending normal-unit non-magic attacks, mirroring the original game's Metal
@@ -687,25 +872,28 @@ function deriveUnitStats(input) {
     && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ? 1 : 0;
 
   // Metal Fires / Flame Blade: +1/+2 to missile and thrown rtb only (not boulder, magic).
-  // Warlord Flame Blade (per in-game helptext): +2 to missile and thrown, +1 to fire breath
-  // (no boulder bonus — that belongs to Fiery Fury).
+  // Warlord Flame Blade / Fiery Blade (per in-game helptext): +2 to missile and thrown.
+  // Only the combat-cast Flame Blade adds +1 fire breath; neither boosts boulder.
   // Warlord Fiery Fury: +2 to missile, boulder, and thrown for regular units only;
   // bonuses (except boulder) do not stack with Flame Blade.
-  // Flame Blade also upgrades the unit's normal weapon to magic (bypasses Weapon Immunity);
+  // Flame Blade / Fiery Blade also upgrade the unit's normal weapon to magic (bypasses Weapon Immunity);
   // Fiery Fury does the same for regular units.
-  const isWarlordFB = abilities.flameBlade && isWarlord;
-  const fbAtkBonus = abilities.flameBlade ? 2 : (abilities.metalFires ? 1 : 0);
+  const warlordCombatFlameBlade = isWarlord && !!abilities.flameBladeWarlord;
+  const warlordFieryBlade = isWarlord && !!abilities.fieryBlade;
+  const hasWarlordBlade = warlordCombatFlameBlade || warlordFieryBlade;
+  const nonWarlordFlameBlade = !!abilities.flameBlade && !isWarlord;
+  const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : (abilities.metalFires ? 1 : 0);
   const isFantasticBase = (unitTypeRaw || '').startsWith('fantastic_');
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
   let fbRtbMod = 0;
-  if (isWarlordFB) {
+  if (hasWarlordBlade) {
     if (rangedType === 'missile' || thrownType === 'thrown') fbRtbMod = 2;
-    else if (thrownType === 'fire') fbRtbMod = 1;
+    else if (warlordCombatFlameBlade && thrownType === 'fire') fbRtbMod = 1;
   } else if (fbAtkBonus > 0) {
     // MoM Flame Blade / Metal Fires boost missile and thrown; CoM Flame Blade
     // boosts missile only (the CoM helptext drops the thrown bonus — Warlord, handled
     // above, re-adds it). Metal Fires is MoM-only so the CoM gate only affects Flame Blade.
-    const fbThrownEligible = !(abilities.flameBlade && isCoMVersion);
+    const fbThrownEligible = !(nonWarlordFlameBlade && isCoMVersion);
     if (rangedType === 'missile' || (fbThrownEligible && thrownType === 'thrown')) {
       fbRtbMod = fbAtkBonus;
     }
@@ -715,31 +903,86 @@ function deriveUnitStats(input) {
     if (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ffRtb = 2;
     fbRtbMod = Math.max(fbRtbMod, ffRtb);
   }
-  // Fiery Fury melee +3 for regular units; non-cumulative with Flame Blade (combat.js
-  // already adds +3 melee for flameBlade in CoM/Warlord via getAbilityStatModifiers).
-  const ffMeleeBonus = ffRegularBonus && !abilities.flameBlade ? 3 : 0;
+  // Fiery Fury melee +3 for regular units; non-cumulative with Flame Blade / Fiery Blade
+  // (combat.js already adds +3 melee for a Warlord blade effect).
+  const ffMeleeBonus = ffRegularBonus && !hasWarlordBlade ? 3 : 0;
 
   const ludusAgogeAtkMod = ludusAgoge ? 1 : 0;
   const motherFungusAtkMod = motherFungus ? 2 : 0;
   const altarOfTheSunMeleeMod = altarOfTheSunHolyMother ? 1 : 0;
-  // Warlord Colossal Strength: +1 + 40% (rounded down) of base Melee, Physical Ranged, and
-  // Thrown attack strength. Calculated from base attack values; resolves at the end of unit
-  // calculation. Melee bonus below; the Physical-Ranged/Thrown bonus is applied to rtb.
-  // Breath and magic ranged are not "physical ranged" and do not qualify.
+  // Warlord Colossal Strength: +1 + 40% (rounded down) of Melee, Physical Ranged, and
+  // Thrown attack strength. Breath and magic ranged are not "physical ranged" and do not
+  // qualify.
+  //
+  // UnitCalc.CAS:1227-1243 computes `1 + %I(GetStat(U,SAttack,0)*4/10)` from the attack as
+  // it stands in phase d — not from the base — so the bonus scales everything phases a-c
+  // applied, plus the phase-d terms that precede it in the file: Rust (:500-512), Focus
+  // Magic (:83, :515) and Weakness's breath penalty (:317-323). Those are every phase-d
+  // term the calculator models, so the input is the whole a+b+c+d subtotal excluding this
+  // bonus itself. The mods are therefore computed after the phase objects, below.
+  const bombsGrenadesRtbMod = bombsGrenades && thrownType === 'thrown'
+    ? Math.max(0, Math.floor(8 - baseFigs / 2))
+    : 0;
   const colossalStrength = isWarlord && !!(abilities && abilities.colossalStrength);
-  const colossalMeleeMod = colossalStrength && calcBaseAtk > 0 ? 1 + Math.floor(0.4 * calcBaseAtk) : 0;
-  const colossalRtbApplies = colossalStrength && calcBaseRtb > 0
+  const colossalRtbApplies = colossalStrength && (calcBaseRtb > 0 || bombsGrenadesRtbMod > 0)
     && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown');
-  const colossalRtbMod = colossalRtbApplies ? 1 + Math.floor(0.4 * calcBaseRtb) : 0;
-  const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + wofDefenderAtkMod + ludusAgogeAtkMod + motherFungusAtkMod + altarOfTheSunMeleeMod + colossalMeleeMod + nodeBonus + darkLightAtkBonus + chaosSurgeMeleeBonus + ffMeleeBonus + soulFlayAtkMod + plagueAtkMod + goblinPoxAtkMod + naturalSelectionCoalMod) : 0;
+  // Stats are never negative in the engine, so a subtotal driven below zero scales as zero.
+  const colossalScaled = (subtotal) => 1 + Math.floor(0.4 * Math.max(0, subtotal));
+  // ---------------------------------------------------------------------------
+  // Stat totals are split across a base stage followed by the engine's four
+  // encounter-time stat-derivation phases (see SPEC.md, *Stat derivation contract*).
+  // `sumPhases(<stat>Phases)` always equals the old single sum, so the split changes no
+  // result on its own.
+  //
+  //   base  raw base stats plus anything a script wrote permanently into ABase before combat
+  //         (CreateUnit.CAS, OverlandEndTurn.CAS, OLSpell.CAS)
+  //   a  precalc, in the binary
+  //   b  precalc, in UnitCalcPre.CAS
+  //   c  magic calc, in the binary
+  //   d  magic calc, in UnitCalc.CAS
+  //
+  // b runs *before* c. Which script file implements an effect decides its phase;
+  // game-fiction wording does not. Only the binary phases (a, c) rest on judgment,
+  // since there is nothing to grep — a for base stats and intrinsic abilities,
+  // c for spells, curses, enchantments and node auras. Base CoM2 and MoM have no
+  // b or d at all.
+  //
+  // `abilMods.base/a/b/c/d` are the same split applied to the ability modifiers by
+  // getAbilityStatModifiers(); `abilMods.<stat>Mod` remains their sum.
+  // ---------------------------------------------------------------------------
+  const atkPhases = {
+    base: calcBaseAtk + abilMods.base.atkMod + ludusAgogeAtkMod + motherFungusAtkMod + altarOfTheSunMeleeMod + naturalSelectionCoalMod,
+    a: lvl.atk + wpn.atk + abilMods.a.atkMod,
+    b: abilMods.b.atkMod + ffMeleeBonus + wofDefenderAtkMod + soulFlayAtkMod + plagueAtkMod + goblinPoxAtkMod + preWarpTerm(darkLightAtkBonus),
+    c: abilMods.c.atkMod + disciplineAtkMod + nodeBonus + chaosSurgeMeleeBonus,
+    d: abilMods.d.atkMod,
+    warpLate: abilMods.warpLate.atkMod + postWarpTerm(darkLightAtkBonus),
+  };
+  const colossalMeleeMod = colossalStrength && calcBaseAtk > 0 ? colossalScaled(sumPhases(atkPhases)) : 0;
+  atkPhases.d += colossalMeleeMod;
+  // atk/def/res/rtb are the subtotal *Warp Creature sees*, i.e. everything but the
+  // `warpLate` tail. Outside CoM 1 that tail is empty and these are the finished stats;
+  // for CoM 1 the tail is added back after the Warp and Shatter steps below, in the order
+  // the recompute writes them.
+  const atk = calcBaseAtk > 0 ? Math.max(0, sumPhases(atkPhases, ...PRE_WARP_PHASES)) : 0;
   const dragonMoundDefMod = dragonMound ? 1 : 0;
   const poolOfRepentanceDefMod = poolOfRepentance ? 1 : 0;
-  const defBase = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + dragonMoundDefMod + poolOfRepentanceDefMod + nodeBonus + darkLightDefBonus + soulFlayDefMod + plagueDefMod + goblinPoxDefMod + naturalSelectionIronMod);
+  const defPhases = {
+    base: calcBaseDef + abilMods.base.defMod + dragonMoundDefMod + poolOfRepentanceDefMod + naturalSelectionIronMod,
+    a: lvl.def + wpn.def + cityWallBonus + abilMods.a.defMod,
+    b: abilMods.b.defMod + soulFlayDefMod + plagueDefMod + goblinPoxDefMod + preWarpTerm(darkLightDefBonus),
+    c: abilMods.c.defMod + enduranceDefMod + disciplineDefMod + preWarpTerm(supremeLightDefMod) + nodeBonus,
+    d: abilMods.d.defMod,
+    warpLate: abilMods.warpLate.defMod + postWarpTerm(darkLightDefBonus) + postWarpTerm(supremeLightDefMod),
+  };
+  const defBase = Math.max(0, sumPhases(defPhases, ...PRE_WARP_PHASES));
   // Holy Armor: MoM: +2 defense. CoM/CoM2: +2 defense if def ≤ 5; +10% To Block if def > 5.
   const holyArmorActive = !!(abilities && abilities.holyArmor);
   const holyArmorHighDef = holyArmorActive && isCoMVersion && defBase > 5;
   const holyArmorDefBonus = holyArmorActive && !holyArmorHighDef ? 2 : 0;
   const holyArmorToBlkBonus = holyArmorHighDef ? 10 : 0;
+  // holyArmorDefBonus is phase c, but it is applied after defBase because its own
+  // threshold reads defBase (CoM/CoM2 switch to a To Block bonus above 5 armor).
   const def = defBase + holyArmorDefBonus;
   // Blaze of Glory: Melee gains the unit's full current Armor, and the unit loses all of its
   // base Armor — only Armor granted by other enchantments remains. Sum the enchantment-derived
@@ -761,9 +1004,55 @@ function deriveUnitStats(input) {
   const pillarOfFaithResMod = isWarlord && isNormalUnitType(unitTypeVal)
     ? Math.min(8, Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0))
     : 0;
-  const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + nodeBonus + darkLightResBonus + chaosSurgeResBonus + soulFlayResMod + plagueResMod + goblinPoxResMod + greatUnbindingResMod + naturalSelectionNightshadeMod + naturalSelectionPowerMineralsMod + natureLinkResMod);
+  // Warlord scoring options run in UnitCalcPre.CAS (phase b). Uphill Battle is
+  // represented per unit so the caller can mark whichever side is AI-controlled.
+  // Gods Play Dices records the already-rolled combat modifier rather than rolling
+  // or mixing it into the damage distribution.
+  const uphillBattleActive = isWarlord && !!(abilities && abilities.uphillBattle);
+  const godsPlayDicesResMod = isWarlord
+    ? Math.max(-2, Math.min(2, parseInt(abilities.godsPlayDices) || 0))
+    : 0;
+  const resPhases = {
+    base: calcBaseRes + abilMods.base.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + naturalSelectionNightshadeMod + naturalSelectionPowerMineralsMod,
+    a: lvl.res + abilMods.a.resMod,
+    b: abilMods.b.resMod + soulFlayResMod + plagueResMod + goblinPoxResMod + greatUnbindingResMod + natureLinkResMod + preWarpTerm(darkLightResBonus)
+      + (uphillBattleActive ? 1 : 0) + godsPlayDicesResMod
+      + (abilities.outlanderXenopsychology ? 1 : 0) + (abilities.outlanderRadio ? 1 : 0),
+    c: abilMods.c.resMod + nodeBonus + chaosSurgeResBonus,
+    d: abilMods.d.resMod,
+    warpLate: abilMods.warpLate.resMod + postWarpTerm(darkLightResBonus),
+  };
+  const res = Math.max(0, sumPhases(resPhases, ...PRE_WARP_PHASES));
+  // Psycho Force and Pneuma Field run in UnitCalc.CAS after the other stat
+  // phases and read current Resistance (index 0), not the roster base.
+  // Warp Resist has already set that current value to 0 at this point.
+  const outlanderCurrentRes = abilities && abilities.warpResist ? 0 : res;
+  const psychoForcePct = isWarlord && abilities && abilities.psychoForce
+    ? Math.floor(outlanderCurrentRes * levelRank / 2)
+    : 0;
+  const pneumaFieldActive = isWarlord && abilities && abilities.pneumaField;
+  const existingLifeSteal = effectiveAbilities.lifeSteal;
+  const pneumaLifeSteal = pneumaFieldActive
+    ? ((existingLifeSteal != null && existingLifeSteal <= 0)
+      ? existingLifeSteal - Math.floor(outlanderCurrentRes / 2)
+      : -Math.floor(outlanderCurrentRes / 2))
+    : existingLifeSteal;
   const ludusAgogeHpMod = ludusAgoge ? 1 : 0;
-  const hp  = Math.max(1, calcBaseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod + ludusAgogeHpMod);
+  // Xenoveterinary (+25% HP, UnitCalcPre.CAS:1038-1049) is phase b and reads SHP at that
+  // point, so it must scale sumPhases(hpPhases, 'base', 'a') and not compound
+  // Lionheart / Endurance / Charm of Life, which are phase c.
+  const hpPhases = {
+    base: calcBaseHP + abilMods.base.hpMod + ludusAgogeHpMod,
+    a: lvl.hp + abilMods.a.hpMod,
+    b: abilMods.b.hpMod,
+    c: abilMods.c.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod,
+    d: abilMods.d.hpMod,
+    warpLate: 0,  // Warp Creature does not touch HP; present so sumPhases stays total.
+  };
+  if (abilities.outlanderXenoveterinary) {
+    hpPhases.b += Math.max(1, Math.floor(Math.max(0, sumPhases(hpPhases, 'base', 'a')) / 4));
+  }
+  const hp  = Math.max(1, sumPhases(hpPhases));
 
   // Blazing March: +3 to missile only (not boulder, magic ranged, or breath).
   // Warlord also boosts thrown.
@@ -775,41 +1064,52 @@ function deriveUnitStats(input) {
   // and magic ranged. Thrown and breath are not "ranged attacks" for this bonus.
   const naturalSelectionWildGameRtbMod = isWarlord && !!(abilities && abilities.wildGame)
     && (rangedType === 'missile' || rangedType === 'boulder'
-      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 1 : 0;
+      || rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam') ? 1 : 0;
 
   // Chaos Surge: affects Chaos creatures only.
-  // MoM: +2 to all attack strengths, but multiple copies do not stack; Chaos Channels'
-  // granted Fire Breath is excluded. CoM/CoM2: +2 ranged/breath, no thrown bonus.
-  const chaosSurgeBoostsRtb = version.startsWith('mom')
-    ? (rangedType !== 'none' || (thrownType !== 'none' && !ccFireBreathActive))
-    : (rangedType !== 'none' || thrownType === 'fire' || thrownType === 'lightning');
+  // MoM and CoM 1 both write the shared ranged slot unconditionally on attack type, so
+  // the bonus reaches missile, boulder, magic ranged, thrown, breath and gaze alike.
+  // Chaos Channels' granted Fire Breath is excluded in MoM only: the constructor runs
+  // Chaos Surge *before* BU_Apply_Specials, whose CC block then assigns ranged = 2 over
+  // the top. CoM 1 swapped that call order, so there the CC breath keeps the bonus.
+  // CoM2/Warlord are a separate engine and keep the narrower helptext scope.
+  const chaosSurgeBoostsRtb = isCoM2
+    ? (rangedType !== 'none' || thrownType === 'fire' || thrownType === 'lightning')
+    : (rangedType !== 'none'
+      || (thrownType !== 'none' && !(ccFireBreathActive && version.startsWith('mom'))));
   const chaosSurgeRtbMod = chaosSurgeRtbBonus > 0 && chaosSurgeBoostsRtb ? chaosSurgeRtbBonus : 0;
 
   const focusMagicRtbMod = focusMagicBuffsExisting
-    && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s'
+    && (rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam'
       || thrownType === 'fire' || thrownType === 'lightning') ? 3 : 0;
 
   // Reinforce Magic: +2 to magical ranged attack strength only.
   const reinforceMagicRtbMod = (abilities && abilities.reinforceMagic)
-    && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
+    && (rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
 
   // Mislead/Misfortune: -1 ranged attack only (not thrown or breath) per source helptext.
   // Eligibility (normal/hero) is handled via effectiveAbilities.mislead.
   const misleadRtbMod = (effectiveAbilities && effectiveAbilities.mislead)
     && (rangedType === 'missile' || rangedType === 'boulder'
-      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? -1 : 0;
+      || rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam') ? -1 : 0;
 
   // Supreme Light: +2 to ranged attack strength (missile/boulder/magic ranged).
   // Source manuals say "+2 melee and ranged attack" — thrown and breath are not affected.
   const supremeLightRtbMod = supremeLightEligible
     && (rangedType === 'missile' || rangedType === 'boulder'
-      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
+      || rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
 
   // Altar of the Moon: +2 to ranged attack strength (missile/boulder/magic ranged only;
   // thrown and breath are not affected), matching the "ranged units" wording.
   const altarOfTheMoonRtbMod = altarOfTheMoon
     && (rangedType === 'missile' || rangedType === 'boulder'
-      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
+      || rangedType === 'magic_c' || rangedType === 'magic_n'
+      || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
 
   // CoM/CoM2 Land Linking boosts melee and breath only.
   const landLinkingBreathRtbMod = landLinkingEligible && version.startsWith('com')
@@ -821,17 +1121,34 @@ function deriveUnitStats(input) {
   // Giant Strength: +1 thrown only (not missile/boulder/magic ranged, not breath).
   const gsRtbMod = (abilities.giantStrength && thrownType === 'thrown') ? 1 : 0;
 
-  // Weakness: -2 (MoM) or -3 (CoM/CoM2/Warlord) to missile ranged and thrown.
-  // In MoM 1.31, thrown is bugged and NOT reduced (fixed in 1.60+).
-  // Warlord: also reduces breath attacks (fire/lightning).
+  // Weakness: -2 (MoM) or -3 (CoM/CoM2/Warlord) to ranged and thrown.
+  // Which ranged types are hit differs by engine (WIZARDS.EXE 0x908FC / 0x9067F):
+  //   MoM  — missile only (`ranged_type / 10 == 2`, i.e. Bow/Sling). Boulder and magic
+  //          ranged are exempt, matching the Fandom page's "Other types of Ranged Attacks
+  //          are not affected".
+  //   CoM+ — every conventional ranged type (`ranged_type / 10 <= 3`: missile, boulder,
+  //          magic), matching "melee, thrown and ranged attack strengths" in the CoM 1
+  //          and CoM2 helptext.
+  // Thrown is a separate test in both engines (`ranged_type == 100`); in MoM 1.31 that
+  // test is written `ranged_type / 10 == 100`, which no int8 can satisfy, so thrown is
+  // never reduced there. CP 1.60 nops the divide and the penalty starts applying.
+  // Breath and gaze (`ranged_type >= 101`) are exempt in every binary; Warlord adds the
+  // breath penalty on top in UnitCalc.CAS:309-315.
+  // The three branches are mutually exclusive and fall in different phases: ranged and
+  // thrown are binary (phase c), while the Warlord breath penalty is phase d. They are
+  // kept as separate terms so each lands in the right accumulator; weaknessRtbMod
+  // remains their sum for callers that want the total.
   const weaknessActive = !!(abilities && abilities.weakness);
-  const weaknessPenalty = weaknessActive ? (version.startsWith('com') ? 3 : 2) : 0;
-  const weaknessRtbMod = weaknessActive
-    ? (rangedType === 'missile' ? -weaknessPenalty
-      : (thrownType === 'thrown' && version !== 'mom_1.31' ? -weaknessPenalty
-      : ((thrownType === 'fire' || thrownType === 'lightning') && version.startsWith('com2_warlord') ? -weaknessPenalty
-      : 0)))
+  const weaknessPenalty = weaknessActive ? (isCoMVersion ? 3 : 2) : 0;
+  const weaknessHitsRanged = isCoMVersion ? rangedType !== 'none' : rangedType === 'missile';
+  const weaknessRtbModBinary = weaknessActive
+    ? (weaknessHitsRanged ? -weaknessPenalty
+      : (thrownType === 'thrown' && version !== 'mom_1.31' ? -weaknessPenalty : 0))
     : 0;
+  const weaknessRtbModCas = weaknessActive && weaknessRtbModBinary === 0
+    && (thrownType === 'fire' || thrownType === 'lightning') && version.startsWith('com2_warlord')
+    ? -weaknessPenalty : 0;
+  const weaknessRtbMod = weaknessRtbModBinary + weaknessRtbModCas;
 
   // Rust (Warlord Chaos common combat curse): -3 to Physical Ranged Attack (missile/boulder),
   // mirroring the -3 melee penalty applied in combat.js. Magic ranged, fire/lightning breath,
@@ -876,29 +1193,98 @@ function deriveUnitStats(input) {
     rtbLvl = lvl.thrown;
     rtbWpn = (calcBaseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
   }
-  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + wofDefenderRtbMod + blazingMarchRtbMod + naturalSelectionWildGameRtbMod + chaosSurgeRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + altarOfTheMoonRtbMod + landLinkingBreathRtbMod + dragonMoundRtbMod + militaryWorkshopRtbMod + militaryWorkshopFireBreathRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + rustRtbMod + colossalRtbMod + eternalNightRtbMod + nodeBonus + darkLightAtkBonus) : 0;
+  // rtb carries ranged, thrown AND breath (distinguished by rangedType/thrownType), so
+  // its phase subtotals are also what Explosive's fire-breath doubling would scale —
+  // that effect has no stat of its own.
+  //
+  // fbRtbMod is the one term that cannot be attributed cleanly: it merges Flame Blade /
+  // Metal Fires (binary, phase c) with Warlord's Fiery Fury (UnitCalcPre.CAS:832-846,
+  // phase b) through a non-additive Math.max, so the two cannot be separated without
+  // restructuring how they supersede each other. It is booked to c, the dominant source.
+  const upgradedExplosive = explosiveEligible && blackpowder;
+  const upgradedExplosiveRangedMod = upgradedExplosive && rangedType !== 'none' ? 2 : 0;
+  // CreateUnit.CAS applies Energy Cannon after Artificer, Blackpowder,
+  // Altar of the Moon, and Natural Selection. The +50% therefore reads those
+  // permanent ranged writes, but not later equipment or combat modifiers.
+  const energyCannonInput = calcBaseRtb + abilMods.base.rtbMod
+    + altarOfTheMoonRtbMod + blackpowderRtbMod + naturalSelectionWildGameRtbMod;
+  const energyCannonRtbMod = energyCannon
+    ? Math.floor(Math.max(0, energyCannonInput) / 2)
+    : 0;
+  const rtbPhases = {
+    base: calcBaseRtb + abilMods.base.rtbMod + altarOfTheMoonRtbMod + dragonMoundRtbMod
+      + blackpowderRtbMod + blackpowderFireBreathRtbMod + orihalconRtbMod
+      + naturalSelectionWildGameRtbMod + energyCannonRtbMod,
+    a: rtbLvl + rtbWpn + abilMods.a.rtbMod,
+    b: abilMods.b.rtbMod + wofDefenderRtbMod + eternalNightRtbMod + preWarpTerm(darkLightAtkBonus)
+      + bombsGrenadesRtbMod + upgradedExplosiveRangedMod,
+    c: abilMods.c.rtbMod + disciplineRtbMod + fbRtbMod + blazingMarchRtbMod + chaosSurgeRtbMod + reinforceMagicRtbMod + misleadRtbMod + preWarpTerm(supremeLightRtbMod) + landLinkingBreathRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbModBinary + nodeBonus,
+    d: abilMods.d.rtbMod + focusMagicRtbMod + weaknessRtbModCas + rustRtbMod,
+    warpLate: abilMods.warpLate.rtbMod + postWarpTerm(darkLightAtkBonus) + postWarpTerm(supremeLightRtbMod),
+  };
+  // UnitCalcPre.CAS:1074-1078 doubles the Fire Breath value as it stands in
+  // the early pass, so it includes base/a and earlier phase-b additions.
+  if (upgradedExplosive && thrownType === 'fire') {
+    rtbPhases.b += Math.max(0, sumPhases(rtbPhases, 'base', 'a', 'b'));
+  }
+  const colossalRtbMod = colossalRtbApplies ? colossalScaled(sumPhases(rtbPhases)) : 0;
+  rtbPhases.d += colossalRtbMod;
+  const rtbStatActive = calcBaseRtb > 0 || bombsGrenadesRtbMod > 0;
+  const rtb = rtbStatActive
+    ? Math.max(0, sumPhases(rtbPhases, ...PRE_WARP_PHASES))
+    : 0;
 
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
   // gaze attack does not fire.
   const gazeOverwrittenByCC = ccFireBreathActive && ccCanOverwriteSpecial && hasGazeAttack;
   const gazeDisabled = gazeOverwrittenByCC || enemyEyeOfHeaven;
-  const baseGazeRanged = gazeDisabled ? 0 : ((abilities && abilities.gazeRanged) || 0);
-  const effectiveGazeRanged = baseGazeRanged > 0
-    ? Math.max(0, baseGazeRanged + lvl.ranged + abilMods.rtbMod + nodeBonus + darkLightAtkBonus)
+  // A gaze's strength lives in the same `.ranged` slot Chaos Surge writes, so MoM and
+  // CoM 1 boost both gaze forms. CoM2/Warlord (separate engine) are left unchanged.
+  const chaosSurgeGazeMod = isCoM2 ? 0 : chaosSurgeRtbBonus;
+  // Level bonus to a gaze's strength, from the same shared `.ranged` slot. MoM's level
+  // routine (0x8F881-0x8FB3E) has no `ranged_type` gate at all, so both gaze forms take
+  // the full ranged ladder. CoM 1 replaced it with a table loop whose `.ranged` step is
+  // skipped for `ranged_type >= 100` — thrown, breath and every gaze — on all rows but
+  // Veteran (0x8FA9A-0x8FAAB); that is exactly the ladder's `thrown` column. CoM2 and
+  // Warlord read Levelbonus.INI and are unverified — queue item D21.
+  const gazeLvlMod = version.startsWith('mom') ? lvl.ranged
+    : isCoM1 ? lvl.thrown
+    : lvl.ranged;
+  const doomGazeLvlMod = version.startsWith('mom') ? lvl.ranged
+    : isCoM1 ? lvl.thrown
     : 0;
+  // CoM 1's Warp Attack halves the `.ranged` slot with no `ranged_type` test at all
+  // (0x90764-0x90772), so it reaches a gaze's strength exactly as it reaches conventional
+  // ranged, thrown and breath. Darkness lands after the halving, as it does for the ranged
+  // stat below. MoM's Warp Attack touches melee only; CoM2 and Warlord are unverified —
+  // queue item D21.
+  const gazeWarpHalves = isCoM1 && !!(abilities && abilities.warpAttack);
+  // Same three steps as the ranged stat, in the same order: build the subtotal Warp sees,
+  // reduce it, then add the post-Warp tail. A gaze is not built from a phase object, so it
+  // reads abilMods.preWarp rather than the flat total.
+  function gazeStrength(baseStrength, ownMods) {
+    if (baseStrength <= 0) return 0;
+    const preWarp = Math.max(0, baseStrength + ownMods + abilMods.preWarp.rtbMod
+      + nodeBonus + preWarpTerm(darkLightAtkBonus) + chaosSurgeGazeMod);
+    const reduced = gazeWarpHalves ? Math.floor(preWarp / 2) : preWarp;
+    return Math.max(0, reduced + abilMods.warpLate.rtbMod + postWarpTerm(darkLightAtkBonus));
+  }
+  const baseGazeRanged = gazeDisabled ? 0 : ((abilities && abilities.gazeRanged) || 0);
+  const effectiveGazeRanged = gazeStrength(baseGazeRanged, gazeLvlMod);
 
   // Doom Gaze: delivers exact doom damage. Affected by node aura, darkness/light,
-  // and ability modifiers (e.g. Black Prayer), but NOT level or weapon bonuses.
+  // and ability modifiers (e.g. Black Prayer), but NOT weapon bonuses.
   const baseDoomGaze = gazeDisabled ? 0 : (effectiveAbilities.doomGaze || 0);
-  const chaosSurgeDoomGazeMod = version.startsWith('mom') ? chaosSurgeRtbBonus : 0;
-  const effectiveDoomGaze = baseDoomGaze > 0
-    ? Math.max(0, baseDoomGaze + abilMods.rtbMod + (focusMagicBuffsExisting && isCoM2 ? 3 : 0) + nodeBonus + darkLightAtkBonus + chaosSurgeDoomGazeMod)
-    : 0;
+  const effectiveDoomGaze = gazeStrength(baseDoomGaze,
+    doomGazeLvlMod + (focusMagicBuffsExisting && isCoM2 ? 3 : 0));
 
-  const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
-    ? { ...effectiveAbilities, negateFirstStrike: true }
+  const pneumaAbilities = pneumaFieldActive
+    ? { ...effectiveAbilities, lifeSteal: pneumaLifeSteal }
     : effectiveAbilities;
+  const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
+    ? { ...pneumaAbilities, negateFirstStrike: true }
+    : pneumaAbilities;
   let combatAbilities = gazeDisabled
     ? { ...combatAbilitiesBase, gazeRanged: 0, stoningGaze: null, deathGaze: null, doomGaze: 0 }
     : combatAbilitiesBase;
@@ -906,6 +1292,7 @@ function deriveUnitStats(input) {
   if (rustActive && combatAbilities.largeShield) {
     combatAbilities = { ...combatAbilities, largeShield: false };
   }
+
   // Hierophany (Warlord Life uncommon combat curse): the landed curse strips the target's
   // immunities, Lightning Resist, and Negate First Strike (mobility perks are not combat-
   // damage-relevant here). The half-Defense penalty is applied to finalDef below. The
@@ -928,21 +1315,54 @@ function deriveUnitStats(input) {
   }
 
   // To Hit percentage bonuses
-  const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod + hwMeleeToHit;
+  const outlanderToHitBonus = (abilities.outlanderXenoveterinary ? 10 : 0)
+    + (abilities.outlanderRadio ? 10 : 0);
+  const outlanderRtbToHitBonus = (abilities.outlanderBallisticsTraining ? 20 : 0);
+  const outlanderToDefendBonus = abilities.outlanderRadio ? 10 : 0;
+  const uphillBattlePct = uphillBattleActive ? 10 : 0;
+  // True Sight writes +5 to the shared ranged/thrown/breath To-Hit stat in
+  // UnitCalc.CAS:325-328. Eye of Heaven grants True Sight in UnitCalcPre.CAS:1839-1842.
+  const trueSightRtbToHitBonus = isWarlord
+    && !!(abilities.trueSight || abilities.eyeOfHeaven) ? 5 : 0;
+  const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod + hwMeleeToHit
+    + psychoForcePct + outlanderToHitBonus + uphillBattlePct;
   const rtbToHitWpn = rangedGetsWpn ? wpn.toHit : 0;
 
   // Distance penalty (attacker ranged only)
   let rtbDistPenalty = 0;
   if (prefix === 'a' && (rangedType === 'missile' || rangedType === 'boulder') && input.rangedCheck) {
     const dist = Math.max(1, parseInt(input.rangedDist) || 1);
-    rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange), version);
+    rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange), version,
+      unitTypeRaw === 'hero');
   }
 
   // Pre-clamped To Hit/Block values for combat (decimals 0.1-1.0)
   let toHitMelee = clampPct(30, baseToHitMod + meleeToHitBonus);
-  let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty + abilMods.toHitMod + hwRtbToHit);
+  let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty
+    + abilMods.toHitMod + hwRtbToHit + psychoForcePct + outlanderToHitBonus + outlanderRtbToHitBonus
+    + uphillBattlePct + trueSightRtbToHitBonus);
   const motherFungusToBlkBonus = motherFungus ? 10 : 0;
-  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus + motherFungusToBlkBonus + survivalInstinctToBlkBonus);
+  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus
+    + motherFungusToBlkBonus + survivalInstinctToBlkBonus + psychoForcePct + outlanderToDefendBonus
+    + uphillBattlePct);
+  if (energyCannon) {
+    // UnitCalc.CAS:1435-1443 reads the unit's To-Hit + Ranged To-Hit
+    // stats, capped at 100. Attack-distance and battlefield penalties are
+    // applied later and do not change the permanent Destruction modifier.
+    const energyCannonToHit = clampPct(
+      30,
+      baseToHitRtbMod + lvl.toHit + rtbToHitWpn
+        + abilMods.toHitMod + hwRtbToHit + psychoForcePct
+        + outlanderToHitBonus + outlanderRtbToHitBonus + uphillBattlePct
+        + trueSightRtbToHitBonus,
+    );
+    const destructionPenalty = Math.floor((energyCannonToHit * 100) / 15);
+    const currentDestruction = combatAbilities.destruction;
+    const energyDestruction = currentDestruction != null && currentDestruction <= 0
+      ? currentDestruction - destructionPenalty
+      : -destructionPenalty;
+    combatAbilities = { ...combatAbilities, destruction: energyDestruction };
+  }
   // Immolation To Hit: always base 30%, ignoring all modifiers (it's a spell attack)
   let toHitImmolation = 0.3;
 
@@ -978,18 +1398,19 @@ function deriveUnitStats(input) {
   let displayToBlock = toBlock;
 
   // Vertigo: reflect the displayed penalty in the red To Hit / To Block numbers.
-  // MoM: -20% To Hit, -1 Defense. CoM/CoM2: -30% To Hit, -1 To Block.
+  // MoM:  -20% To Hit, -1 Defense (the defense die penalty is applied at `displayDef`).
+  // CoM 1: -30% To Hit, -10% To Block.
+  // CoM2/Warlord: -25% To Hit, -7% To Block — the compiled block reads -25/-7
+  // (`Reference docs/CoM2 binary analysis.md`), not CoM 1's -30/-10.
+  // These magnitudes mirror `buildVertigoContext` in combat.js; keep the two in step.
   const vertigoActive = !!(abilities && abilities.vertigo)
     && !(abilities && (abilities.illusionImmunity || abilities.magicImmunity));
+  const vertigoHitPenalty = isCoM2 ? 0.25 : (isCoMVersion ? 0.3 : 0.2);
+  const vertigoBlockPenalty = isCoM2 ? 0.07 : (isCoMVersion ? 0.1 : 0);
   if (vertigoActive) {
-    if (version.startsWith('com')) {
-      displayToHitMelee = Math.max(0.1, displayToHitMelee - 0.3);
-      displayToHitRtb = Math.max(0.1, displayToHitRtb - 0.3);
-      displayToBlock = Math.max(0.0, displayToBlock - 0.1);
-    } else {
-      displayToHitMelee = Math.max(0.1, displayToHitMelee - 0.2);
-      displayToHitRtb = Math.max(0.1, displayToHitRtb - 0.2);
-    }
+    displayToHitMelee = Math.max(0.1, displayToHitMelee - vertigoHitPenalty);
+    displayToHitRtb = Math.max(0.1, displayToHitRtb - vertigoHitPenalty);
+    displayToBlock = Math.max(0.0, displayToBlock - vertigoBlockPenalty);
   }
 
   // Berserk: two distinct mechanics, modelled as separate abilities.
@@ -1048,17 +1469,28 @@ function deriveUnitStats(input) {
     displayToBlock = Math.max(0.0, displayToBlock - 0.2);
   }
 
-  // Warp Creature effects (applied after all other bonuses per MoM wiki).
+  // Warp Creature effects.
   // Warp Attack: halves melee (all versions) and all ranged/thrown (CoM/CoM2 only).
   // Warp Defense: halves defense (MoM) or reduces to one-third (CoM/CoM2).
   // Warp Resist: sets resistance to 0; Resist Magic +5 still applies in combat.js.
-  const isCoMVer = version.startsWith('com');
+  //
+  // Where Warp sits in the sequence is version-specific. MoM's recompute runs it last
+  // (0x90A63 melee, 0x90AA9 defence) with nothing but Shatter after it. CoM 1 moved the
+  // whole block early, to 0x9074C-0x907AA, and keeps writing stats after it: Darkness
+  // (0x9084C-0x90989), Supreme Light (0x90992-0x90A53), the Tactician retort
+  // (0x90AB4-0x90AF6) and Eternal Night's non-Death resistance penalty (0x90B31). Those
+  // terms are booked to each stat's `warpLate` bucket, which is why finalAtk and friends
+  // arrive here holding exactly the subtotal Warp reduces; the tail is added below.
+  // Prayer and High Prayer are *not* among them: both engines put them at 0x9028x-0x9039A,
+  // ahead of even CoM 1's early Warp. CoM2 and Warlord are a different engine and nothing
+  // has been read from Caster.exe about their ordering; their `warpLate` is empty and they
+  // keep MoM's shape until D21 in the binary verification queue settles it.
   if (abilities && abilities.warpAttack) {
     finalAtk = Math.floor(finalAtk / 2);
-    if (isCoMVer) finalRtb = Math.floor(finalRtb / 2);
+    if (isCoMVersion) finalRtb = Math.floor(finalRtb / 2);
   }
   if (abilities && abilities.warpDefense) {
-    finalDef = Math.floor(finalDef / (isCoMVer ? 3 : 2));
+    finalDef = Math.floor(finalDef / (isCoMVersion ? 3 : 2));
   }
   if (abilities && abilities.warpResist) {
     finalRes = 0;
@@ -1088,7 +1520,18 @@ function deriveUnitStats(input) {
     }
   }
 
-  const displayDef = (vertigoActive && !isCoMVer) ? Math.max(0, finalDef - 1) : finalDef;
+  // The post-Warp tail of CoM 1's recompute, empty in every other version. It lands here,
+  // after Shatter, because the recompute writes Shatter at 0x907DC — ahead of Darkness,
+  // Supreme Light and Tactician. Each stat's gate matches the one its phase sum uses, so an
+  // inactive stat cannot be resurrected by its tail. The recompute clamps melee, ranged and
+  // defence to >= 0 only at its very end (0x90B41-0x90B75); resistance has no clamp there,
+  // but the calculator keeps its own non-negative convention for resistance rolls.
+  if (calcBaseAtk > 0) finalAtk = Math.max(0, finalAtk + atkPhases.warpLate);
+  if (rtbStatActive) finalRtb = Math.max(0, finalRtb + rtbPhases.warpLate);
+  finalDef = Math.max(0, finalDef + defPhases.warpLate);
+  finalRes = Math.max(0, finalRes + resPhases.warpLate);
+
+  const displayDef = (vertigoActive && !isCoMVersion) ? Math.max(0, finalDef - 1) : finalDef;
 
   const toHitMeleeHasModifiers = anyNonZero([
     baseToHitMod,
@@ -1096,8 +1539,10 @@ function deriveUnitStats(input) {
     wpn.toHit,
     abilMods.toHitMod,
     hwMeleeToHit,
+    psychoForcePct,
+    uphillBattlePct,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
-    vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
+    vertigoActive ? -Math.round(vertigoHitPenalty * 100) : 0,
     plagueActive ? -10 : 0,
   ]);
   const toHitRtbHasModifiers = anyNonZero([
@@ -1107,8 +1552,11 @@ function deriveUnitStats(input) {
     rtbDistPenalty,
     abilMods.toHitMod,
     hwRtbToHit,
+    psychoForcePct,
+    uphillBattlePct,
+    trueSightRtbToHitBonus,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
-    vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
+    vertigoActive ? -Math.round(vertigoHitPenalty * 100) : 0,
     hurricaneActive ? -(hurricaneRtbPenalty * 100) : 0,
     plagueActive ? -10 : 0,
   ]);
@@ -1117,7 +1565,9 @@ function deriveUnitStats(input) {
     abilMods.toBlkMod,
     holyArmorToBlkBonus,
     motherFungusToBlkBonus,
-    (vertigoActive && version.startsWith('com')) ? -10 : 0,
+    psychoForcePct,
+    uphillBattlePct,
+    vertigoActive ? -Math.round(vertigoBlockPenalty * 100) : 0,
   ]);
 
   return {
@@ -1138,7 +1588,7 @@ function deriveUnitStats(input) {
     toHitRtbHasModifiers,
     toBlockHasModifiers,
     // Effective values (for calculation)
-    figs: baseFigs + (altarOfTheSun ? 1 : 0),
+    figs: baseFigs + (altarOfTheSun ? 1 : 0) + (alumniOfAcademy ? 2 : 0),
     atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!input.generic,
     dmg: Math.max(0, parseInt(input.dmg) || 0),
     rangedType, thrownType,

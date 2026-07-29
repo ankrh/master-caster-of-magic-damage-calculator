@@ -1,0 +1,5 @@
+: Input - Activeplayer - the player ID of the player whose turn is starting.
+			the other player can be calculated as Attacker()+Defender()-Activeplayer.
+  Output - None
+			:
+			

@@ -1,0 +1,62 @@
+: INPUT - U = UnitID 
+  OUTPUT - None, set the desired stats and abilities in the script :
+
+RACE=GETSTAT(U,SRace,ABase);
+IF RACE=RCTroll THEN {
+SETSTAT U,SHP,ABase,40;
+SETSTAT U,ARegeneration,ABase,1;
+}
+IF RACE=RCDwarf THEN {
+SETSTAT U,SHP,ABase,30;
+SETSTAT U,AMountaineer,ABase,1;
+RE=GETSTAT(U,SResist,ABase);
+SETSTAT U,SResist,ABase,RE+2;
+}
+IF RACE=RCHighElf THEN {
+SETSTAT U,AForester,ABase,1;
+RE=GETSTAT(U,SResist,ABase);
+SETSTAT U,SResist,ABase,RE+1;
+}
+IF RACE=RCGnoll THEN {
+SETSTAT U,SAttack,ABase,2;
+}
+IF RACE=RCLizard THEN {
+SETSTAT U,SHP,ABase,20;
+SETSTAT U,AWaterWalking,ABase,1;
+SETSTAT U,SOLMaxMoves,ABase,4;
+SETSTAT U,SOLMovesLeft,ABase,4;
+SETSTAT U,SCombatMaxMoves,ABase,4;
+SETSTAT U,SCombatMovesLeft,ABase,4;
+RE=GETSTAT(U,SResist,ABase);
+SETSTAT U,SResist,ABase,RE-1;
+}
+IF RACE=RCDraconian THEN {
+SETSTAT U,AFlying,ABase,1;
+DE=GETSTAT(U,SDefense,ABase);
+SETSTAT U,SDefense,ABase,DE+1;
+RE=GETSTAT(U,SResist,ABase);
+SETSTAT U,SResist,ABase,RE+1;
+}
+IF RACE=RCHalfling THEN {
+SETSTAT U,ALucky,ABase,1;
+}
+IF RACE=RCBeastmen THEN {
+SETSTAT U,SHP,ABase,20;
+SETSTAT U,SAttack,ABase,1;
+}
+IF RACE=RCKlackon THEN {
+DE=GETSTAT(U,SDefense,ABase);
+SETSTAT U,SDefense,ABase,DE+2;
+}
+IF RACE=RCDarkElf THEN {
+RE=GETSTAT(U,SResist,ABase);
+SETSTAT U,SResist,ABase,RE+2;
+}
+IF RACE=RCNomad THEN {
+RE=GETSTAT(U,SResist,ABase);
+SETSTAT U,SResist,ABase,RE+3;
+}
+IF RACE=RCHighMen THEN {
+RE=GETSTAT(U,SResist,ABase);
+SETSTAT U,SResist,ABase,RE-2;
+}

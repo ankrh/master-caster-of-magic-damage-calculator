@@ -1,0 +1,3854 @@
+:
+INPUT - U = the unit whose abilities are being listed
+
+OUTPUT - None. Use the ADDABILITYLINE command to display abilities.
+:
+
+W=GETSTAT(U,SOwner,1);
+A=ATTACKER();
+D=DEFENDER();
+CBX=(GetStat(U,SCoX,1));
+CBY=(GetStat(U,SCoY,1));
+OVERX=COMBATX();
+OVERY=COMBATY();
+PLANE=COMBATP();
+CHARGEOL=GETSTAT(U,SSpellCharges,0);
+CHARGE=GETSTAT(U,SChargesLeft,0);
+RECHARGETURN=GETSTAT(U,SSpellRecharge,0);
+RECHARGECOUNTER=GETSTAT(U,SRechargeCounter,0);
+MAXFIG=(GETSTAT(U,SFigures,0));
+CURRENTFIG=MAXFIG-%I( (GETDAMAGE(U,0))/(GETSTAT(U,SHP,0)) );
+C=CITYONTILE(U);
+CF=CityInFocus;
+
+:IF (GetCombatEnchantmentFlag(U,EncStoneSkin,0)>0) %OR
+(GetOLEnchantmentFlag(U,EncStoneSkin,0)>0)
+THEN { AddAbilityLine 0,72,"Stone Skin","Stone Skin"; }
+HALT;:
+
+IF (GETENCHANTMENTFLAG(U,EncWaterWalking,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncWaterWalking,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncWaterWalking,1)=0)
+THEN {
+ AddAbilityLine 0,403,"Water Walking","Water Walking";
+}
+
+IF ( (GETENCHANTMENTFLAG(U,EncIronSkin,0)>0) %OR (GETITEMPOWER(U,83)>0) )
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncIronSkin,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncIronSkin,1)=0)
+THEN {
+ AddAbilityLine 0,72,"Iron Skin","Iron Skin";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncGuardianWind,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncGuardianWind,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncGuardianWind,1)=0)
+THEN {
+ AddAbilityLine 0,404,"Guardian Wind","Guardian Wind";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncInvisibility,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncInvisibility,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncInvisibility,1)=0)
+ %AND (GETITEMPOWER(U,65)=0)
+THEN {
+ AddAbilityLine 0,407,"#Perma Invisibility","Invisibility";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncMagicImmunity,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncMagicImmunity,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncMagicImmunity,1)=0)
+THEN {
+ AddAbilityLine 0,408,"#Perma Magic Immunity","Magic Immunity";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN {
+ IF (GETCOMBATENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN {
+  AddAbilityLine 0,80,"Flame Blade","Flame Blade";
+ } ELSE {
+  AddAbilityLine 0,315,"Fiery Blade","Fiery Blade";
+ }
+}
+
+IF (GETENCHANTMENTFLAG(U,EncImmolation,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncImmolation,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncImmolation,1)=0)
+ %AND (GETITEMPOWER(U,68)=0)
+THEN {
+ AddAbilityLine 0,406,"Perma Immolation","Immolation";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncHolyWeapon,1)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncHolyWeapon,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncHolyWeapon,1)=0)
+THEN {
+ AddAbilityLine 0,270,"Holy Weapon","Holy Weapon";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncHeroism,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncHeroism,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncHeroism,1)=0)
+THEN {
+ AddAbilityLine 0,402,"Heroism","Heroism";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncSanctify,1)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncSanctify,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncSanctify,1)=0)
+THEN {
+ AddAbilityLine 0,272,"Sanctify","Sanctify";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncTrueSight,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncTrueSight,1)=0)
+ %AND (GETITEMPOWER(U,50)=0)
+THEN {
+ AddAbilityLine 0,82,"True Sight","True Sight";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncEndurance,1)>0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncEndurance,1)=0)
+THEN {
+ AddAbilityLine 0,271,"Endurance","Endurance";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncInvulnerability,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncInvulnerability,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncInvulnerability,1)=0)
+ %AND (GETITEMPOWER(U,53)=0)
+THEN {
+ AddAbilityLine 0,143,"Invulnerability","Invulnerability";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncWraithForm,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncWraithForm,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncWraithForm,1)=0)
+ %AND (GETITEMPOWER(U,45)=0)
+THEN {
+ AddAbilityLine 0,409,"Perma Wraith Form","Wraith Form";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncCloakofFear,0)>0)
+ %AND (GETCOMBATENCHANTMENTFLAG(U,EncCloakofFear,1)=0)
+ %AND (GETOLENCHANTMENTFLAG(U,EncCloakofFear,1)=0)
+ %AND (GETITEMPOWER(U,42)=0)
+THEN {
+ AddAbilityLine 0,405,"#Perma Cloak of Fear","Cloak of Fear";
+}
+
+IF (GETSTAT(U,SSpellAbility,0)=5)
+THEN {
+ s$="";
+ IF INCOMBAT(U) THEN {
+  S$=S$+" x"+STRS(CHARGE);
+ } ELSE {
+  S$=S$+" x"+STRS(CHARGEOL);
+ }
+ AddAbilityLine 0,53,"#Spell Web","Web"+S$); 
+}
+
+IF (GETSTAT(U,SSpellAbility,0)=96)
+THEN {
+ s$="";
+ IF INCOMBAT(U) THEN {
+  S$=S$+" x"+STRS(CHARGE);
+ } ELSE {
+  S$=S$+" x"+STRS(CHARGEOL);
+ }
+ AddAbilityLine 0,53,"#Spell Fireball","Fireball"+S$); 
+}
+
+IF (GETSTAT(U,SSpellAbility,0)=104)
+THEN {
+ s$="";
+ IF INCOMBAT(U) THEN {
+  S$=S$+" x"+STRS(CHARGE);
+ } ELSE {
+  S$=S$+" x"+STRS(CHARGEOL);
+ }
+ AddAbilityLine 0,53,"#Spell Doom Bolt","Doom Bolt"+S$); 
+}
+
+IF (GETSTAT(U,SSpellAbility,0)=125)
+THEN {
+ s$="";
+ IF INCOMBAT(U) THEN {
+  S$=S$+" x"+STRS(CHARGE);
+ } ELSE {
+  S$=S$+" x"+STRS(CHARGEOL);
+ }
+ AddAbilityLine 0,53,"#Spell Healing","Healing"+S$); 
+}
+
+IF (GETSTAT(U,SSpellAbility,0)=191)
+THEN {
+ s$="";
+ IF INCOMBAT(U) THEN {
+  S$=S$+" x"+STRS(CHARGE);
+ } ELSE {
+  S$=S$+" x"+STRS(CHARGEOL);
+ }
+ IF (GETSTAT(U,STypeID,1)=173) THEN {
+  AddAbilityLine 0,53,"#Spell Demon","Lesser Demon"+S$);
+ } ELSE {
+  AddAbilityLine 0,53,"#Spell Demon","Demon"+S$);
+ }
+}
+
+IF (RECHARGETURN>0) THEN {
+ IF ( INCOMBAT(U) ) THEN {
+  AddAbilityLine 0,53,"Ability Recharge","Recharge: "+STRS(RECHARGECOUNTER)+" Turns";
+ } ELSE {
+  AddAbilityLine 0,53,"Ability Recharge","Recharge: "+STRS(RECHARGETURN)+" Turns";
+ }
+}
+
+IF (CURRENTFIG>0) THEN {
+ S$="";
+ S$=S$+STRS(MAXFIG);
+ IF (CURRENTFIG=1) THEN {
+  AddAbilityLine 0,257,"Figure","Figure: 1/"+S$; }
+ IF (CURRENTFIG=2) THEN {
+  AddAbilityLine 0,258,"Figure","Figure: 2/"+S$; }
+ IF (CURRENTFIG=3) THEN {
+  AddAbilityLine 0,259,"Figure","Figure: 3/"+S$; }
+ IF (CURRENTFIG=4) THEN {
+  AddAbilityLine 0,260,"Figure","Figure: 4/"+S$; }
+ IF (CURRENTFIG=5) THEN {
+  AddAbilityLine 0,261,"Figure","Figure: 5/"+S$; }
+ IF (CURRENTFIG=6) THEN {
+  AddAbilityLine 0,262,"Figure","Figure: 6/"+S$; }
+ IF (CURRENTFIG=7) THEN {
+  AddAbilityLine 0,263,"Figure","Figure: 7/"+S$; }
+ IF (CURRENTFIG=8) THEN {
+  AddAbilityLine 0,264,"Figure","Figure: 8/"+S$; }
+ IF (CURRENTFIG=9) THEN {
+  AddAbilityLine 0,265,"Figure","Figure: 9/"+S$; }
+}
+
+IF ISHERO(U) %AND (GETSTAT(U,SRangedType,1)>=20) %AND (GETSTAT(U,SRangedType,1)<30)
+THEN { AddAbilityLine 0,126,"Sharpshooting","Sharpshooting";
+}
+
+IF (GetStat(U,STypeID,1)=284) THEN {
+ AddAbilityLine 0,338,"Planar Guide","Planar Guide";
+}
+
+IF (GetStat(U,SRage,1)>0) THEN {
+ AddAbilityLine 0,273,"Rage","Rage";
+}
+
+IF (ISHERO(U)>0) %AND (HASGLOBAL(W,GEJustCause)>0) THEN {
+ AddAbilityLine 0,312,"Champion of Justice","Champion of Justice";
+}
+
+IF GETSTAT(U,SCreatePower,1)=12 THEN {
+ AddAbilityLine 0,157,"Primal Force","Primal Force";
+}
+
+IF GETSTAT(U,SCreatePower,1)=24 THEN {
+ AddAbilityLine 0,157,"Primal Lord","Primal Lord";
+}
+
+IF (GETSTAT(U,SHunter,0)>0) THEN {
+AddAbilityLine 0,214,"Hunter","Hunter"; }
+
+IF (GETSTAT(U,SGiantStrength,0)>0) THEN {
+AddAbilityLine 0,178,"Giant Strength","Giant Strength"; }
+
+IF (GETSTAT(U,SToughSkin,0)>0) THEN {
+AddAbilityLine 0,179,"Tough Skin","Tough Skin"; }
+
+IF (GETSTAT(U,SNaturalResist,0)>0) THEN {
+ NS=(GETSTAT(U,SNaturalResist,1))
+ s$="";
+ S$=S$+" "+STRS(NS);
+ AddAbilityLine 0,180,"Natural Resistance","Natural Resistance"+S$;
+}
+
+IF (GETSTAT(U,SImmunized,0)>0) THEN {
+ OREPOWER=(GETSTAT(U,SImmunized,1))
+ s$="";
+ S$=S$+" "+STRS(OREPOWER);
+ AddAbilityLine 0,181,"Immunized Magic","Immunized Magic"+S$);
+}
+
+IF (GETSTAT(U,SGuiled,0)>0) THEN {
+ OREGUILED=(GETSTAT(U,SGuiled,1))
+ s$="";
+ S$=S$+" +"+STRS(OREGUILED)+"%";
+ AddAbilityLine 0,182,"Guiled","Guiled"+S$);
+}
+
+IF (GETSTAT(U,SMalnourished,0)>0) THEN {
+AddAbilityLine 0,184,"Malnourished","Malnourished"; }
+
+IF (GetEnchantmentFlag(U,EncVampirism,0)>0) THEN {
+AddAbilityLine 0,185,"Vampirism","Vampirism"; }
+
+IF (GetEnchantmentFlag(U,EncHierophany,0)>0) THEN {
+AddAbilityLine 0,186,"Hierophany","Hierophany"; }
+
+IF (GETITEMPOWER(U,78)>0)
+ %OR (GETENCHANTMENTFLAG(U,EncZeal,0)>0)
+THEN {
+ IF (GetCombatEnchantmentFlag(U,EncZeal,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncZeal,1)>0)
+ THEN {
+  AddAbilityLine -73,187,"Zeal","Zeal";
+ } ELSE {
+  AddAbilityLine 0,187,"Zeal","Zeal";
+ }
+}
+
+IF (GetCombatEnchantmentFlag(U,EncVenom,0)>0) %OR (GetOLEnchantmentFlag(U,EncVenom,0)>0) THEN {
+AddAbilityLine -74,188,"Venom","Venom"; }
+
+IF (GETITEMPOWER(U,83)>0)
+ %OR (GETENCHANTMENTFLAG(U,EncColossalStrength,0)>0)
+THEN {
+ IF (GetCombatEnchantmentFlag(U,EncColossalStrength,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncColossalStrength,1)>0)
+ THEN {
+  AddAbilityLine -75,189,"Colossal Strength","Colossal Strength";
+ } ELSE {
+  AddAbilityLine 0,189,"Colossal Strength","Colossal Strength";
+ }
+}
+
+IF (GETITEMPOWER(U,37)>0)
+ %OR (GETENCHANTMENTFLAG(U,EncInsulation,0)>0)
+THEN {
+ IF (GetCombatEnchantmentFlag(U,EncInsulation,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncInsulation,1)>0)
+ THEN {
+  AddAbilityLine -76,190,"Insulation","Insulation";
+ } ELSE {
+  AddAbilityLine 0,190,"Insulation","Insulation";
+ }
+}
+
+IF (GetEnchantmentFlag(U,EncBlazeOfGlory,0)>0) THEN {
+AddAbilityLine 0,191,"Blaze of Glory","Blaze of Glory"; }
+
+IF (GETENCHANTMENTFLAG(U,EncShadowStrike,0)>0) THEN {
+ IF (GetCombatEnchantmentFlag(U,EncShadowStrike,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncShadowStrike,1)>0)
+ THEN {
+  AddAbilityLine -78,192,"Shadow Strike","Shadow Strike";
+ } ELSE {
+  AddAbilityLine 0,192,"Shadow Strike","Shadow Strike";
+ }
+}
+
+IF (GetEnchantmentFlag(U,EncRevenant,0)>0) THEN {
+AddAbilityLine 0,193,"Revenant","Revenant"; }
+
+IF (GETSTAT(U,SMariner,0)=1) THEN {
+AddAbilityLine 0,194,"Mariner","Mariner"; }
+
+IF GETSTAT(U,SCreatePower,1)=7 THEN {
+ AddAbilityLine 0,215,"Natural Force","Natural Force";
+}
+
+IF (GETSTAT(U,SMariner,0)>1) THEN {
+AddAbilityLine 0,216,"Echo of the Deep","Echo of the Deep"; }
+
+IF ISHERO(U)
+ %AND (GetEnchantmentFlag(U,EncTransmuteEquipment,1)>0)
+THEN {
+AddAbilityLine 0,217,"Body Augmented","Body Augmented"; }
+
+IF (GetEnchantmentFlag(U,EncSoulFlay,0)>0) THEN {
+AddAbilityLine 0,219,"Soul Flay","Soul Flay"; }
+
+IF (GETSTAT(U,SLordOfStorm,0)>0) THEN {
+AddAbilityLine 0,220,"Lord of Storm","Lord of Storm"; }
+
+IF (GetEnchantmentFlag(U,EncRust,0)>0) THEN {
+AddAbilityLine 0,221,"Rust","Rust"; }
+
+IF (GETENCHANTMENTFLAG(U,EncFrenzy,0)>0) THEN {
+ IF (GetCombatEnchantmentFlag(U,EncFrenzy,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncFrenzy,1)>0)
+ THEN {
+  AddAbilityLine -71,125,"BLOOD LUST","Bloodlust";
+ } ELSE {
+  AddAbilityLine 0,125,"BLOOD LUST","Bloodlust";
+ }
+}
+
+IF (GETITEMPOWER(U,52)>0)
+ %OR (GetEnchantmentFlag(U,EncDivineProtection,0)>0)
+THEN {
+ IF (GetCombatEnchantmentFlag(U,EncDivineProtection,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncDivineProtection,1)>0)
+ THEN {
+  AddAbilityLine -86,222,"Divine Protection","Divine Protection";
+ } ELSE {
+  AddAbilityLine 0,222,"Divine Protection","Divine Protection";
+ }
+}
+
+IF (GETSTAT(U,SPowerOfFaith,0)>0) THEN {
+ FAITH=GETSTAT(U,SPowerOfFaith,0);
+ s$="";
+ S$=S$+" "+STRS(FAITH);
+AddAbilityLine 0,223,"Power of Faith","Power of Faith"+S$); }
+
+IF (GETSTAT(U,AWaterwalking,0)>0) THEN {
+AddAbilityLine 0,224,"Amphibious","Amphibious"; }
+
+IF GETENCHANTMENTFLAG(U,EncBerserk,0)>0) THEN {
+ IF (GetCombatEnchantmentFlag(U,EncBerserk,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncBerserk,1)>0)
+ THEN {
+  AddAbilityLine -85,227,"Berserk","Berserk";
+ } ELSE {
+  AddAbilityLine 0,227,"Berserk","Berserk";
+ }
+}
+
+IF (GETSTAT(U,AStealth,0)>0)
+ %OR (GETSTAT(U,STypeID,1)=43)
+ %OR (GETSTAT(U,STypeID,1)=44)
+ %OR (GETSTAT(U,STypeID,1)=50)
+ %OR (GETSTAT(U,STypeID,1)=52)
+ %OR (GETSTAT(U,STypeID,1)=53)
+ %OR (GETSTAT(U,STypeID,1)=61)
+ %OR (GETSTAT(U,STypeID,1)=70)
+ %OR (GETSTAT(U,STypeID,1)=73)
+ %OR (GETSTAT(U,STypeID,1)=78)
+ %OR (GETSTAT(U,STypeID,1)=92)
+ %OR (GETSTAT(U,STypeID,1)=100)
+ %OR (GETSTAT(U,STypeID,1)=108)
+ %OR (GETSTAT(U,STypeID,1)=110)
+ %OR (GETSTAT(U,STypeID,1)=117)
+ %OR (GETSTAT(U,STypeID,1)=124)
+ %OR (GETSTAT(U,STypeID,1)=125)
+ %OR (GETSTAT(U,STypeID,1)=130)
+ %OR (GETSTAT(U,STypeID,1)=142)
+ %OR (GETSTAT(U,STypeID,1)=144)
+ %OR (GETSTAT(U,STypeID,1)=150)
+ %OR (GETSTAT(U,STypeID,1)=151)
+ %OR (GETSTAT(U,STypeID,1)=190)
+ %OR (GETSTAT(U,STypeID,1)=217)
+ %OR (GETSTAT(U,STypeID,1)=230)
+ %OR (GETSTAT(U,STypeID,1)=232)
+ %OR (GETSTAT(U,STypeID,1)=233)
+ %OR (GETSTAT(U,STypeID,1)=264)
+ %OR (GETSTAT(U,STypeID,1)=265)
+ %OR (GETSTAT(U,STypeID,1)=266)
+ %OR (GETSTAT(U,STypeID,1)=267)
+ %OR (GETSTAT(U,STypeID,1)=268)
+ %OR (GETSTAT(U,STypeID,1)=292)
+ %OR (GETSTAT(U,STypeID,1)=296)
+ %OR (GETSTAT(U,STypeID,1)=297)
+ %OR (GETSTAT(U,STypeID,1)=312)
+ %OR (GETSTAT(U,STypeID,1)=313)
+ %OR (GETSTAT(U,STypeID,1)=323)
+ %OR (GETSTAT(U,STypeID,1)=332)
+ %OR (GETSTAT(U,STypeID,1)=333)
+ %OR (GETSTAT(U,STypeID,1)=334)
+ %OR (GETSTAT(U,STypeID,1)=335)
+ %OR (GETSTAT(U,STypeID,1)=336)
+ %OR (GETSTAT(U,STypeID,1)=337)
+ %OR (GETSTAT(U,STypeID,1)=338)
+ %OR (GETSTAT(U,STypeID,1)=339)
+ %OR (GETSTAT(U,STypeID,1)=340)
+ %OR (GETSTAT(U,STypeID,1)=341)
+ %OR (GETSTAT(U,STypeID,1)=342)
+ %OR (GETSTAT(U,STypeID,1)=343)
+ %OR (GETSTAT(U,STypeID,1)=344)
+ %OR (GETSTAT(U,STypeID,1)=345)
+ THEN {
+AddAbilityLine 0,228,"Pact Exemption","Pact Exemption"; }
+
+IF (GETSTAT(U,SCustomAttribute,1)=1) THEN {
+AddAbilityLine 0,230,"Mechanical","Mechanical"; }
+
+IF (GetStat(U,STypeID,1)=356) THEN {
+AddAbilityLine 0,281,"Night Vision","Night Vision"; }
+
+IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)>0) THEN {
+ IF (GetCombatEnchantmentFlag(U,EncFieryFury,1)>0)
+  %OR (GetOLEnchantmentFlag(U,EncFieryFury,1)>0)
+ THEN {
+  AddAbilityLine -84,231,"Fiery Fury","Fiery Fury";
+ } ELSE {
+  AddAbilityLine 0,231,"Fiery Fury","Fiery Fury";
+ }
+}
+
+IF (GETSTAT(U,SCustomAttribute,1)=2) THEN {
+AddAbilityLine 0,232,"Cleric","Cleric"; }
+
+IF (GETSTAT(U,SMMastery,1)>0) THEN {
+AddAbilityLine 0,194,"Master Seaman","Master Seaman"; }
+
+IF (GETENCHANTMENTFLAG(U,EncWindWalking,0)>0) THEN {
+AddAbilityLine 0,24,"Highwind Walking","Highwind Walking"; }
+
+IF (GETITEMPOWER(U,81)>0) THEN {
+AddAbilityLine 0,116,"Binding","Binding"; }
+
+IF (GETITEMPOWER(U,82)>0) THEN {
+AddAbilityLine 0,165,"The Chosen","The Chosen"; }
+
+IF (GETITEMPOWER(U,84)>0) THEN {
+AddAbilityLine 0,235,"Chaos Conduit","Chaos Conduit"; }
+
+IF (GETITEMPOWER(U,85)>0) THEN {
+AddAbilityLine 0,113,"Plague Lord","Plague Lord"; }
+
+IF (GETITEMPOWER(U,86)>0) THEN {
+AddAbilityLine 0,235,"Eye of Storm","Eye of Storm"; }
+
+IF (GETSTAT(U,SSpellAbility,0)=283)
+ %OR (GETSTAT(U,STypeID,1)=8)
+ %OR (GETSTAT(U,STypeID,1)=16)
+ %OR (GETSTAT(U,STypeID,1)=135)
+ %OR (GETSTAT(U,STypeID,1)=210)
+THEN {
+AddAbilityLine 0,214,"Trap Immunity","Trap Immunity"; }
+
+IF (GETSTAT(U,SCaravanLogistic,0)>0) THEN {
+AddAbilityLine 0,249,"Caravan Logistic","Caravan Logistic"; }
+
+IF (GETSTAT(U,SBlackpowderUpgrade,1)>0) THEN {
+AddAbilityLine 0,252,"Blackpowder Weapon","Blackpowder Weapon"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=1 ) THEN {
+AddAbilityLine 0,251,"Lightning Blade","Lightning Blade"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=2 ) THEN {
+AddAbilityLine 0,253,"Bless of the Heavenly Bull","Bless of the Heavenly Bull"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=3 ) THEN {
+AddAbilityLine 0,254,"Absolution of Repentance","Absolution of Repentance"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=4 ) THEN {
+AddAbilityLine 0,255,"Dragon Communion","Dragon Communion"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=5 ) THEN {
+AddAbilityLine 0,256,"Bless of the ToM","Bless of the Tree of Magic"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=6 ) THEN {
+AddAbilityLine 0,266,"High Orc","High Orc"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=7 ) THEN {
+AddAbilityLine 0,267,"Flock in the Sky","Flock in the Sky"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=8 ) THEN {
+AddAbilityLine 0,268,"Witch Boon","Witch Boon"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=9 ) THEN {
+AddAbilityLine 0,269,"Frost Club Member","Frost Club Member"; }
+
+IF ( GETSTAT(U,SMultiLabel,1)=10 ) THEN {
+ AddAbilityLine 0,274,"Sainthood","Sainthood";
+}
+
+IF ( GETSTAT(U,SMultiLabel,1)=11 ) THEN {
+ AddAbilityLine 0,275,"Defender of the Faith","Defender of the Faith";
+}
+
+IF ( GETSTAT(U,SMultiLabel,1)=12 ) THEN {
+ AddAbilityLine 0,278,"Children of the Mother","Children of the Mother";
+}
+
+IF ( GETSTAT(U,SMultiLabel,1)=13 ) THEN {
+ AddAbilityLine 0,277,"Alumni of Academy","Alumni of Academy";
+}
+
+IF ( GETSTAT(U,SMultiLabel,1)=14 ) THEN {
+ AddAbilityLine 0,374,"Sapiens","Sapiens";
+}
+
+IF (GETSTAT(U,STypeID,1)=350)) THEN {
+
+  GOBLIN=0;
+
+  FOR N=1 TO NOFUNITSONTILE(combatP(),combatX(),combatY());
+
+   UOT=UNITONTILE(combatP(),combatX(),combatY(),N);
+
+   IF (GETSTAT(UOT,SOwner,0)<>W) THEN { GOTO "NOTCOUNTGOBLIN"; }
+
+    : Counting Goblins :
+    IF (GETSTAT(UOT,SRace,1)<>RCGoblin) THEN { GOTO "NOTCOUNTGOBLIN"; }
+
+     GOBLIN=GOBLIN+3;
+
+   !NOTCOUNTGOBLIN!
+
+  NEXT N;
+
+  IF (GOBLIN>20) THEN { GOBLIN=20; }
+
+ s$="";
+ S$=S$+"+"+STRS(GOBLIN)+"%";
+
+ AddAbilityLine 0,279,"Goblin Horde","Goblin Horde"+S$);
+
+}
+
+IF (GETSTAT(U,STypeID,1)=52)
+ %OR (GETSTAT(U,STypeID,1)=78)
+ %OR (GETSTAT(U,STypeID,1)=110)
+ %OR (GETSTAT(U,STypeID,1)=117)
+ %OR (GETSTAT(U,STypeID,1)=144)
+ %OR (GETSTAT(U,STypeID,1)=292)
+ %OR (GETSTAT(U,STypeID,1)=357)
+THEN {
+ AddAbilityLine 0,280,"Mechanical Expert","Mechanical Expert";
+}
+
+IF (GETSTAT(U,STypeID,1)=357) %OR (GETSTAT(U,STypeID,1)=363) THEN {
+ AddAbilityLine 0,282,"Junk Repair","Junk Repair";
+}
+
+IF (GETSTAT(U,STypeID,1)=358) THEN {
+ AddAbilityLine 0,308,"Pox Host","Pox Host";
+}
+
+IF (GETSTAT(U,STypeID,1)=361) %AND (GETSTAT(U,AFlying,0)=0) THEN {
+ AddAbilityLine 0,283,"Submerge","Submerge";
+}
+
+IF (GETSTAT(U,SRangedType,0)=14) THEN {
+ AddAbilityLine 0,316,"Torpedo Missile","Torpedo Missile";
+}
+
+IF (GETSTAT(U,STypeID,0)=362) THEN {
+ IF RETORT(W,Channeler) THEN {
+  AddAbilityLine 0,345,"Channeler's Puppet","Channeler's Puppet";
+ } ELSE {
+  AddAbilityLine 0,369,"Strayed Puppet","Strayed Puppet";
+ }
+ IF (SPELLSTATE(W,SMarionetteAscension)=2) THEN {
+  AddAbilityLine 0,346,"Ascended Puppet","Ascended Puppet";
+ }
+}
+
+IF (GETENCHANTMENTFLAG(U,EncRebuild,1)>0) THEN {
+ AddAbilityLine 0,347,"Artificial Augmentation","Artificial Augmentation";
+}
+
+IF (GETSTAT(U,SCustomTutition,0)>0) THEN {
+ AddAbilityLine 0,349,"Archmage's Teaching","Archmage's Teaching";
+}
+
+IF (ISHERO(U)>0) %AND (SPELLSTATE(W,SArchmagesMentorship)=2) THEN {
+ AddAbilityLine 0,350,"Archmage's Disciple","Archmage's Disciple";
+}
+
+IF (GETCOMBATENCHANTMENTFLAG(U,EncLuckyStar,1)>0) THEN {
+ AddAbilityLine 0,351,"Lucky Star","Lucky Star";
+}
+
+IF (GETCOMBATENCHANTMENTFLAG(U,EncConjuringPact,1)>0) THEN {
+ AddAbilityLine 0,352,"Conjuring Pact","Conjuring Pact";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncSpiritLink,1)>0) THEN {
+ AddAbilityLine 0,353,"Spirit Link","Spirit Link";
+}
+
+IF (GETCOMBATENCHANTMENTFLAG(U,EncPowerOfRealm,1)>0) THEN {
+ AddAbilityLine 0,368,"Power Overwhelming","Power Overwhelming";
+}
+
+IF (GETCOMBATENCHANTMENTFLAG(U,EncFairyMaze,1)>0) THEN {
+ AddAbilityLine 0,340,"Fairy Maze","Fairy Maze";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncTrapped,1)>0) THEN {
+ s$="";
+ IF (GETSTAT(U,SEnabler,1)<2) THEN {
+  S$=S$+"+"+STRS(GETSTAT(U,SEnabler,1))+"Turn";
+ } ELSE {
+  S$=S$+"+"+STRS(GETSTAT(U,SEnabler,1))+"Turns";
+ }
+
+ AddAbilityLine 0,247,"Trapped","Trapped"+S$);
+}
+
+IF (GETENCHANTMENTFLAG(U,EncPlanewalking,0)>0) THEN {
+ AddAbilityLine 0,309,"Planewalking","Planewalking";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncPlaneCarry,0)>0) THEN {
+ AddAbilityLine 0,309,"Transient Shifter","Transient Shifter";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncTacticalRetreat,0)>0) THEN {
+ AddAbilityLine 0,311,"Tactical Retreat","Tactical Retreat";
+}
+
+IF (GETSTAT(U,STypeID,1)=158) %OR (GETSTAT(U,STypeID,1)=285) THEN {
+ AddAbilityLine 0,318,"Strength of Water","Strength of Water";
+}
+
+IF (GETSTAT(U,SCustomAttribute,1)=3) THEN {
+ AddAbilityLine 0,321,"Tangling Roots","Tangling Roots";
+}
+
+IF (GetStat(U,STypeID,1)=189)
+ %OR (GetStat(U,STypeID,1)=260)
+ %OR (GetStat(U,STypeID,1)=261)
+ %OR (GetStat(U,STypeID,1)=331)
+THEN {
+ AddAbilityLine 0,344,"Gigantic Submerger","Gigantic Submerger";
+}
+
+IF (SPELLSTATE(W,STExplosive)=2) THEN {
+ IF (BASEFANTASTIC(U)=0)
+  %OR (GETSTAT(U,SMultiLabel,1)=14)
+ THEN {
+  AddAbilityLine 0,375,"Bombs&Grenades","Bombs&Grenades";
+ }
+ IF (GETSTAT(U,SBlackpowderUpgrade,1)>0) THEN {
+  AddAbilityLine 0,376,"Upgraded Explosive","Upgraded Explosive";
+ }
+}
+
+IF (GETENCHANTMENTFLAG(U,EncPowerEngine,0)>0) THEN {
+ IF (SPELLSTATE(W,STMagitekPowerEngine)=2) THEN {
+  AddAbilityLine 0,378,"Magitek Engine","Magitek Engine";
+ } ELSE {
+  AddAbilityLine 0,377,"Power Engine","Power Engine";
+ }
+ IF (SPELLSTATE(W,STMagitekAntiGravityDrive)=2)
+  %AND (GETSTAT(U,ASailing,1)>0)
+  %AND (GETSTAT(U,AFlying,1)>0)
+  %AND (GETENCHANTMENTFLAG(U,EncHaste,1)>0)
+ THEN {
+  AddAbilityLine 0,389,"Temporal-Gravity Drive","Temporal-Gravity Drive";
+ }
+ IF (SPELLSTATE(W,STMagitekBeamWeapon)=2)
+  %AND (GETSTAT(U,SRangedType,1)=40)
+ THEN {
+  AddAbilityLine 0,401,"Energy Cannon","Energy Cannon";
+ }
+}
+
+IF (SPELLSTATE(W,STArmorClad)=2)
+ %AND (GetStat(U,SCustomAttribute,1)<>1)
+ %AND (BASEFANTASTIC(U)=0)
+THEN { 
+ AddAbilityLine 0,379,"Battle Armor","Battle Armor";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)>0) THEN {
+ AddAbilityLine 0,380,"Armorclad","Armorclad";
+}
+
+IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)>0)
+ %OR (GetStat(U,SCustomAttribute,1)<>1) %AND (BASEFANTASTIC(U)=0)
+THEN {
+ IF (SPELLSTATE(W,STMagitekBeamWeapon)=2) THEN {
+  AddAbilityLine 0,390,"Energy Weaponry","Energy Weaponry";
+ }
+ IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=2) THEN {
+  AddAbilityLine 0,391,"Psycho Force","Psycho Force";
+ }
+ IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {
+  AddAbilityLine 0,392,"Pneuma Field","Pneuma Field";
+ }
+}
+
+IF (INCOMBAT(U)>0) THEN { GOTO "COMBATONLY"; }
+
+IF ( U <= MAXUNIT() ) THEN { GOTO "NOTRECRUITMENTSCREEN"; }
+
+ IF (GETSTAT(U,STypeID,1)<>362) THEN { GOTO "NOTHIRINGWANDERER"; }
+  IF (RETORT(W,Channeler)>0) THEN { GOTO "NOTHIRINGWANDERER"; }
+
+   AddAbilityLine 0,217,"Body Augmented","+ Body Augmented";
+   AddAbilityLine 0,347,"Artificial Augmentation","+ Artificial Augmentation";
+   AddAbilityLine 0,116,"Spell Lock","+ Spell Lock";
+   AddAbilityLine 0,52,"Ritual Master","Ritual Master*";
+   AddAbilityLine 0,56,"Charmed","Charmed";
+   AddAbilityLine 0,58,"Sage","Sage*";
+   AddAbilityLine 0,335,"Mechanical Master","Mechanical Master*";
+   AddAbilityLine 0,371,"Arcane Ward","Arcane Ward*";
+
+ !NOTHIRINGWANDERER!
+
+IF (ISHERO(U)=1) THEN { GOTO "NOTRECRUITMENTSCREEN" }
+
+: Dummy display of ability for recruitment screen :
+
+ IF (GETSTAT(U,STypeID,1)=81) %AND (GETENCHANTMENTFLAG(U,EncResistElements,0)=0) THEN {
+  AddAbilityLine 0,145,"Resist Elements","Resist Elements";
+ }
+ IF (GetStat(U,STypeID,1)=212) %AND (GetStat(U,SCaravanLogistic,1)=0) THEN {
+  AddAbilityLine 0,249,"Caravan Logistic","Caravan Logistic";
+ }
+ IF (GetStat(U,STypeID,1)=323) %AND (GETENCHANTMENTFLAG(U,EncWindWalking,1)=0) THEN {
+  AddAbilityLine 0,24,"Highwind Walking","Highwind Walking";
+ }
+ IF (GetStat(U,STypeID,1)=360) %AND (GETENCHANTMENTFLAG(U,EncGuardianWind,1)=0)THEN {
+  AddAbilityLine 0,115,"Guardian Wind","Guardian Wind";
+ }
+ IF (GetStat(U,STypeID,1)=361) %AND (GETENCHANTMENTFLAG(U,EncInvisibility,1)=0)THEN {
+  AddAbilityLine 0,19,"Invisible","Invisible";
+ }
+
+IF (CF<1)
+ %OR (GETENCHANTMENTFLAG(U,EncMagic,1)>0)
+ %OR ( (GETSTAT(U,SRace,1)<>CITYRACE(CF)) %AND (GETSTAT(U,SRace,1)<>RCGeneric) )
+ %OR (GETSTAT(U,ALevel,1)<>1)
+ THEN { GOTO "NOTRECRUITMENTSCREEN" }
+
+ LOGISTIC=0;
+ OWNMITHRIL=0;
+ OWNADAMANTIUM=0;
+ OWNORIHALCON=0;
+ OWNCRYSX=0;
+ IF (SPELLSTATE(W,STStrategicLogistic)<>2) THEN { GOTO "NOLOGISTIC"; }
+  LOGISTIC=1;
+
+  FOR I=1 TO MAXCITY();
+
+   IF (CITYOWNER(I)<>W) THEN { GOTO "NOTLINK"; }
+
+    OWNMITHRIL=OWNMITHRIL+OREINRANGE(I,OreMithril);
+    OWNADAMANTIUM=OWNADAMANTIUM+OREINRANGE(I,OreAdamantium);
+    OWNORIHALCON=OWNORIHALCON+OREINRANGE(I,OreOrihalcon);
+    OWNCRYSX=OWNCRYSX+OREINRANGE(I,OreCrysx);
+
+   !NOTLINK!
+
+  NEXT I;
+
+ !NOLOGISTIC!
+
+: Artificer retort upgrade :
+ IF RETORT(W,Artificer) %AND (GetStat(U,SCustomAttribute,1)=1) THEN {
+  AddAbilityLine 0,230,"Artificer Upgrade","+ Artificer Upgrade";
+ }
+
+: magical weapon upgrade :
+ IF ( RETORT(W,Alchemist) %AND (CITYRACE(CF)<>RCBarbarian) )
+  %OR ( (RETORT(W,Artificer)) %AND (GetStat(U,SCustomAttribute,1)=1) )
+  %OR (CITYENCHANT(CF,CEMagicPerimeter)>-1)
+  %OR ( (CITYENCHANT(CF,CEEvilPresence)=-1) %AND ( (ISBUILT(CF,BAlchemistGuild)) %OR (CITYENCHANT(CF,CESorcererStone)>-1) ) )
+ THEN {
+  AddAbilityLine 0,286,"Magical Weapon","+ Magical Weapon";
+ }
+
+ IF (CITYENCHANT(CF,CEEvilPresence)=-1)
+  %AND ( (CITYENCHANT(CF,CESorcererStone)>-1) %OR (ISBUILT(CF,BAlchemistGuild)) )
+ THEN {
+  ORELEVEL=0;
+  IF ( (OREINRANGE(CF,OreMithril)>0) %OR ( (LOGISTIC>0) %AND (OWNMITHRIL>0) ) THEN { ORELEVEL=1; }
+  IF ( (OREINRANGE(CF,OreAdamantium)>0) %OR ( (LOGISTIC>0) %AND (OWNADAMANTIUM>0) ) THEN { ORELEVEL=2; }
+  IF (ISBUILT(CF,BLavaSmelter)) THEN { ORELEVEL=ORELEVEL+1; }
+  IF (ISBUILT(CF,BAlchemistGuild)) %AND (CITYENCHANT(CF,CESorcererStone)>-1) THEN { ORELEVEL=ORELEVEL+1; }
+
+  IF (ORELEVEL=1) THEN { AddAbilityLine 0,287,"Mithril Upgrade","+ Mithril Upgrade"; }
+  IF (ORELEVEL>1) THEN { AddAbilityLine 0,288,"Adamantium Upgrade","+ Adamantium Upgrade"; }
+  IF (ORELEVEL>2)
+   %OR (OREINRANGE(CF,OreOrihalcon)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNORIHALCON>0) )
+  THEN { AddAbilityLine 0,161,"Orihalcon","+ Orihalcon"; }
+ }
+
+: Convert generic units to racial units :
+ IF (GETSTAT(U,SRace,1)=RCGeneric) %AND (GETSTAT(U,STypeID,1)<>44) THEN {
+  IF (CITYRACE(CF)=RCBarbarian) THEN {
+   AddAbilityLine 0,290,"Generic Barbarian","+ Barbarian Specialization";
+  }
+  IF (CITYRACE(CF)=RCBeastmen) THEN {
+   AddAbilityLine 0,291,"Generic Beastman","+ Beastman Specialization";
+  }
+  IF (CITYRACE(CF)=RCDarkElf) THEN {
+   IF (GETSTAT(U,STypeID,1)=37) THEN {
+    AddAbilityLine 0,292,"Generic Dark Elf Catapult","+ Dark Elf Specialization";
+   } ELSE {
+    AddAbilityLine 0,292,"Generic Dark Elf","+ Dark Elf Specialization";
+   }
+  }
+  IF (CITYRACE(CF)=RCDraconian) THEN {
+   AddAbilityLine 0,293,"Generic Draconian","+ Draconian Specialization";
+  }
+  IF (CITYRACE(CF)=RCDwarf) THEN {
+   AddAbilityLine 0,294,"Generic Dwarf","+ Dwarf Specialization";
+  }
+  IF (CITYRACE(CF)=RCGnoll) THEN {
+   AddAbilityLine 0,295,"Generic Gnoll","+ Gnoll Specialization";
+  }
+  IF (CITYRACE(CF)=RCHalfling) THEN {
+   AddAbilityLine 0,296,"Generic Halfling","+ Halfling Specialization";
+  }
+  IF (CITYRACE(CF)=RCHighElf) THEN {
+   AddAbilityLine 0,297,"Generic High Elf","+ High Elf Specialization";
+  }
+  IF (CITYRACE(CF)=RCHighMen) THEN {
+   AddAbilityLine 0,298,"Generic High Man","+ High Man Specialization";
+  }
+  IF (CITYRACE(CF)=RCKlackon) THEN {
+   AddAbilityLine 0,299,"Generic Klackon","+ Klackon Specialization";
+  }
+  IF (CITYRACE(CF)=RCLizard) THEN {
+   AddAbilityLine 0,300,"Generic Lizardman","+ Lizardman Specialization";
+  }
+  IF (CITYRACE(CF)=RCNomad) THEN {
+   AddAbilityLine 0,301,"Generic Nomad","+ Nomad Specialization";
+  }
+  IF (CITYRACE(CF)=RCOrc) THEN {
+   IF (GETSTAT(U,STypeID,1)=37) %OR (GETSTAT(U,STypeID,1)=218) THEN {
+    AddAbilityLine 0,302,"Generic Orc War Machine","+ Orc Specialization";
+   } ELSE {
+    AddAbilityLine 0,302,"Generic Orc Ship","+ Orc Specialization";
+   }
+  }
+  IF (CITYRACE(CF)=RCTroll) THEN {
+   AddAbilityLine 0,303,"Generic Troll","+ Troll Specialization";
+  }
+  IF (CITYRACE(CF)=RCXuanyuan) THEN {
+   AddAbilityLine 0,304,"Generic Xuanyuan","+ Xuanyuan Specialization";
+  }
+  IF (CITYRACE(CF)=RCRakhshasa) THEN {
+   AddAbilityLine 0,305,"Generic Rakhshasa","+ Rakhshasa Specialization";
+  }
+  IF (CITYRACE(CF)=RCHawkmen) THEN {
+   AddAbilityLine 0,306,"Generic Hawkman","+ Hawkman Specialization";
+  }
+  IF (CITYRACE(CF)=RCGoblin) THEN {
+   AddAbilityLine 0,307,"Generic Goblin","+ Goblin Specialization";
+  }
+ }
+
+ IF (ISBUILT(CF,BAcademy)>0) THEN {
+  IF (GetStat(U,STypeID,1)=35)
+   %OR (GetStat(U,STypeID,1)=36)
+   %OR (GetStat(U,STypeID,1)=37)
+   %OR (GetStat(U,STypeID,1)=38)
+   %OR (GetStat(U,STypeID,1)=218)
+   %OR (GetStat(U,STypeID,1)=257)
+  THEN {
+   AddAbilityLine 0,160,"B ACADEMY","-25% Production Cost";
+  }
+ }
+  
+: Evil Presence disable positive given to unit upon creation :
+IF CITYENCHANT(CF,CEEvilPresence)>-1 THEN { GOTO "HASEVILPRESENCE"; }
+
+ IF (ISBUILT(CF,BAcademy)>0) THEN {
+  IF (GetStat(U,STypeID,1)=91)
+   %OR (GetStat(U,STypeID,1)=92)
+   %OR (GetStat(U,STypeID,1)=236)
+  THEN {
+   AddAbilityLine 0,277,"Alumni of Academy","+ Alumni of Academy";
+  }
+ }
+ 
+: new effect of Lava Smelter add effect of weapon and armor based on ore :
+ IF (ISBUILT(CF,BLavaSmelter)>0) THEN {
+
+  ACCESSMITHRIL=0;
+  IF (OREINRANGE(C,OreMithril)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNMITHRIL>0) )
+  THEN { ACCESSMITHRIL=1; }
+  ACCESSADAMANTIUM=0;
+  IF (OREINRANGE(C,OreAdamantium)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNADAMANTIUM>0) )
+  THEN { ACCESSADAMANTIUM=1; }
+  ACCESSORIHALCON=0;
+  IF (OREINRANGE(C,OreOrihalcon)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNORIHALCON>0) )
+  THEN { ACCESSORIHALCON=1; }
+  ACCESSCRYSX=0;
+  IF (OREINRANGE(C,OreCrysx)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNCRYSX>0) )
+  THEN { ACCESSCRYSX=1; }
+
+  IF (ACCESSMITHRIL>0) %AND (ACCESSADAMANTIUM>0) THEN {
+   AddAbilityLine 0,9,"Weapon Immunity","+ Weapon Immunity";
+  }
+  IF (ACCESSMITHRIL>0) %AND (ACCESSCRYSX>0) THEN {
+   AddAbilityLine 0,10,"Missile Immunity","+ Missile Immunity";
+  }
+  IF (ACCESSMITHRIL>0) %AND (ACCESSORIHALCON>0) THEN {
+   AddAbilityLine 0,145,"Resist Elements","+ Resist Elements";
+  }
+  IF (ACCESSADAMANTIUM>0) %AND (ACCESSORIHALCON>0) THEN {
+   AddAbilityLine 0,144,"Elemental Armor","+ Elemental Armor";
+  }
+  IF (ACCESSADAMANTIUM>0) %AND (ACCESSCRYSX>0) THEN {
+   AddAbilityLine 0,315,"Flame Blade","+ Flame Blade";
+  }
+
+ }
+
+: New effect of Archmage on fortress :
+ IF (RETORT(W,Archmage)>0)
+  %AND (ISFORTRESS(C)>0)
+  %AND (SPELLSTATE(W,SArchmagesTutition)=2)
+ THEN {
+  AddAbilityLine 0,349,"Archmage's Teaching","+ Archmage's Teaching";
+ }
+
+: new effect of Caravanserai, non-sailing units gains +2 overland movement bonus permanently :
+ IF (ISBUILT(CF,BCaravanserai)>0) %AND (GetStat(U,ASailing,1)=0) THEN {
+  AddAbilityLine 0,249,"Caravan Logistic","+ Caravan Logistic";
+ }
+
+: new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :
+ IF (ISBUILT(CF,BAltarOfStorm)>0) THEN {
+  AddAbilityLine 0,251,"Lightning Blade","+ Lightning Blade";
+ }
+
+: new effect of Altar of the Sun :
+ IF (ISBUILT(CF,BAltarOfTheSun)>0) THEN {
+  AddAbilityLine 0,267,"Flock of the Sky","+ Flock of the Sky";
+ }
+
+: new effect of Altar of the Moon :
+ IF (ISBUILT(CF,BAltarOfTheMoon)>0) THEN {
+  AddAbilityLine 0,268,"Witch Boon","+ Witch Boon";
+ }
+
+: new effect of Agoge :
+ IF (ISBUILT(CF,BAgoge)>0) THEN {
+  AddAbilityLine 0,266,"High Orc","+ High Orc";
+ }
+
+: new effect of Frost Club :
+ IF (ISBUILT(CF,BFrostClub)>0) THEN {
+  AddAbilityLine 0,269,"Frost Club Member","+ Frost Club Member";
+ }
+
+: new effect of Sancta Basilica :
+ IF (ISBUILT(CF,BBasilica)>0) THEN {
+  IF (GetStat(U,SCustomAttribute,1)=2)
+   %OR (GetStat(U,STypeID,1)=111)
+   %OR (GetStat(U,STypeID,1)=113)
+  THEN {
+   AddAbilityLine 0,274,"Sainthood","+ Sainthood";
+  } ELSE {
+   AddAbilityLine 0,275,"Defender of the Faith","+ Defender of the Faith";
+  }
+ }
+
+: new effect of Military Workshop :
+ IF (ISBUILT(CF,BMilitaryWorkshop)>0) %OR (SPELLSTATE(W,STRocketry)=2) THEN {
+  IF (GetStat(U,SRanged,1)>0) %OR (GetStat(U,SThrown,1)>0) %OR (GetStat(U,SFireBreath,1)>0) THEN {
+   AddAbilityLine 0,252,"Blackpowder Weapon","+ Blackpowder Weapon";
+  }
+ }
+
+: new effect of Idol of Heavenly Bull :
+ IF (ISBUILT(CF,BIdolOfHeavenlyBull)>0) THEN {
+  AddAbilityLine 0,253,"Bless of Heavenly Bull","+ Bless of Heavenly Bull";
+ }
+
+: new effect of Pool of Repentance :
+ IF (ISBUILT(CF,BPoolOfRepentance)>0) THEN {
+  AddAbilityLine 0,254,"Absolution of Repentance","+ Absolution of Repentance";
+ }
+
+: new effect of Dragon Mound :
+ IF (ISBUILT(CF,BDragonMound)>0) THEN {
+  AddAbilityLine 0,255,"Dragon Communion","+ Dragon Communion";
+ }
+
+: new effect of Mother Fungus :
+ IF (ISBUILT(CF,BMotherFungus)>0) THEN {
+  AddAbilityLine 0,278,"Children of the Mother","+ Children of the Mother";
+ }
+
+: new effect of Baray :
+ IF (ISBUILT(CF,BBaray)>0) THEN {
+  IF ( GETSTAT(U,SMariner,1)=0 ) THEN {
+   AddAbilityLine 0,194,"Mariner","+ Mariner";
+  }
+ }
+
+: New effect of Survival Instinct, unit gains to-defend through ore :
+ IF HASGLOBAL(W,GESurvivalInstinct) THEN {
+  OREGUILED=%I(((7*OREINRANGE(CF,OreGems))/2)+((5*OREINRANGE(CF,OreGold))/2)+((3*OREINRANGE(CF,OreSilver))/2))
+  s$="";
+  S$=S$+" +"+STRS(OREGUILED)+"%";
+  AddAbilityLine 0,182,"Guiled","+ Guiled"+S$); }
+ }
+
+: New global enchantment "Natural Selection", unit gain stats based on resouce in vincinity :
+ IF (HASGLOBAL(W,GENaturalSelection)>0) THEN {
+  OREPOWER=%I(((1*(OREINRANGE(CF,OreMithril))/2)+(2*(OREINRANGE(CF,OreAdamantium))/2)+(3*(OREINRANGE(CF,OreOrihalcon))/2)+(5*(OREINRANGE(CF,OreQuork))/2)+(10*(OREINRANGE(CF,OreCrysx))/2))/10)
+  IF OREPOWER>0 THEN {
+   s$="";
+   S$=S$+" "+STRS(OREPOWER);
+   AddAbilityLine 0,181,"Immunized Magic","+ Immunized Magic"+S$);
+  }
+  IF (OREINRANGE(CF,OreNightshade))>0 THEN {
+   NS=(1*(OREINRANGE(CF,OreNightshade))
+   s$="";
+   S$=S$+" "+STRS(NS);
+   AddAbilityLine 0,180,"Natural Resistance","+ Natural Resistance"+S$;
+  }
+  IF ( OREINRANGE(CF,OreWildgame) > 0 ) %AND ( (GETSTAT(U,SRanged,1)) > 0 ) THEN {
+   AddAbilityLine 0,214,"Hunter","+ Hunter";
+  }
+  IF ( OREINRANGE(CF,OreWildgame) > 0 ) %AND ( (GETSTAT(U,AForester,1)) = 0 ) THEN { 
+   AddAbilityLine 0,2,"Forester","+ Forester";
+  }
+  IF OREINRANGE(CF,OreCoal)>0 THEN { 
+   AddAbilityLine 0,178,"Giant Strength","+ Giant Strength";
+  }
+  IF OREINRANGE(CF,OreIron)>0 THEN { 
+   AddAbilityLine 0,179,"Tough Skin","+ Tough Skin";
+  }
+ }
+
+: Mariner Mastery bonus is removable by end turn script if global enchantment is removed :
+: all units originally have have sail movement :
+ IF HASGLOBAL(W,GEMarinerMastery) %AND (GetStat(U,ASailing,1)>0) THEN {
+  AddAbilityLine 0,194,"Master Seaman","+ Master Seaman";
+ }
+
+: Effect of Pillar of Faith, unit has chance 20% to get lucky upon unit creation :
+ IF (CITYENCHANT(CF,CEPillarOfFaith)>-1) THEN {
+  FAITH=0
+  IF CITYENCHANT(CF,CEHeavenlyLight)>-1 THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BShrine) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BParthenon) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BWitchesConvent) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BCathedral) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BTemple) THEN { FAITH=FAITH+1; }
+  IF HASGLOBAL(W,GEKingOfUnderworld) %AND ISBUILT(CF,BOracle) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BAltarOfStorm) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BAltarOfTheSun) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BAltarOfTheMoon) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(CF,BBasilica) THEN { FAITH=FAITH+1; }
+  s$="";
+  S$=S$+" "+STRS(FAITH);
+  AddAbilityLine 0,223,"Power of Faith","+ Power of Faith"+S$);
+  AddAbilityLine 0,124,"Lucky","+ Lucky Chance 20%";
+ }
+
+: new effect of Tree of Magic :
+ IF (ISBUILT(CF,BTreeOfMagic)>0) THEN {
+  AddAbilityLine 0,256,"Bless of the ToM","+ Bless of the Tree of Magic";
+ }
+
+: New effect of Nature Embrace, Animist's Guild enchant unit with Resist Elements (not permanent) :
+ IF HASGLOBAL(W,GECallTheWild) %AND ISBUILT(CF,BAnimistGuild) THEN {
+  AddAbilityLine 0,69,"Resist Elements","+ Resist Elements";
+ }
+
+: New effect of Enlightenment, give enchanted Discipline, permanent enchant is not possible for some reason :
+ IF HASGLOBAL(W,GEEnlightenment) THEN { 
+  AddAbilityLine 0,169,"Discipline OL","+ Discipline";
+ }
+
+: New effect of Consecration, Temple/Cathedral enchant unit with Bless (not permanent) :
+ IF (CITYENCHANT(CF,CEConsecration)>-1)
+  %AND ( (ISBUILT(CF,BCathedral)) %OR (ISBUILT(CF,BTemple)) )
+  THEN {
+  AddAbilityLine 0,85,"Bless","+ Bless";
+ }
+
+: New effect of Crusade allow city with armorer guild + cathedral/temple to give permanent holy armor enchantment) :
+ IF HASGLOBAL(W,GECrusade) %AND ISBUILT(CF,BArmorerGuild)
+  %AND ( (ISBUILT(CF,BCathedral)) %OR (ISBUILT(CF,BTemple)) )
+  THEN {
+  AddAbilityLine 0,89,"Holy Armor","+ Holy Armor";
+ }
+
+: Effect of Chaos' Blessing and/or Doom Mastery :
+ IF (CITYENCHANT(CF,CEChaosBless)>-1) %AND (HASGLOBAL(W,GEDoomMastery)) THEN { 
+  AddAbilityLine 0,285,"Full Chaos Channel","+ Full Chaos Channel";
+ } ELSE {
+  IF (CITYENCHANT(CF,CEChaosBless)>-1) %OR (HASGLOBAL(W,GEDoomMastery)) THEN {
+   AddAbilityLine 0,285,"Chaos Channel","+ Chaos Channel";
+  }
+ }
+
+: outlander's mechanical upgrade :
+ IF (GetStat(U,SCustomAttribute,1)=1) THEN {
+
+  : effect of Heat Power Engine, give power engine to mechanical unit :
+  IF (SPELLSTATE(W,STHeatPowerEngine)=2) THEN { 
+   IF (SPELLSTATE(W,STMagitekPowerEngine)=2) THEN {
+    AddAbilityLine 0,378,"Magitek Engine","+ Magitek Engine";
+   } ELSE {
+    AddAbilityLine 0,377,"Power Engine","+ Power Engine";
+   }
+   IF (SPELLSTATE(W,STMagitekAntiGravityDrive)=2)
+    %AND (GETSTAT(U,ASailing,1)>0)
+   THEN {
+    AddAbilityLine 0,389,"Anti-Gravity Drive","+ Anti-Gravity Drive";
+   }
+  }
+
+  : effect of Armorclad, give armorclad unit enchantment :
+  IF (SPELLSTATE(W,STArmorClad)=2) THEN {
+   AddAbilityLine 0,380,"Armorclad","+ Armorclad";
+   IF (SPELLSTATE(W,STMagitekMaterialScience)=2) THEN {
+    AddAbilityLine 0,146,"RESIST MAGIC","+ RESIST MAGIC";
+   }
+  }
+
+ }
+
+: == Unit bonus as unit's veterancy == :
+ : Altar of Battle/War College/Barracks's unit veterancy :
+ IF (RETORT(W,Warlord)>0) %AND (HASGLOBAL(W,GECrusade)) THEN {
+  IF CITYENCHANT(CF,CEAltarofBattle)>-1 THEN {
+   AddAbilityLine 0,104,"Unitlevel","+ Champion Level (180 EXP)";
+  } ELSE { 
+   IF ISBUILT(CF,BWarCollege) THEN {
+    AddAbilityLine 0,103,"Unitlevel","+ Ultra Elite Level (80 EXP)";
+   } ELSE {
+    IF ISBUILT(CF,BBarracks) THEN {
+     AddAbilityLine 0,102,"Unitlevel","+ Elite Level (30 EXP)";
+    } ELSE {
+     AddAbilityLine 0,101,"Unitlevel","+ Veteran Level (0 EXP)";
+    }
+   }
+  }
+ } ELSE {
+  IF (RETORT(W,Warlord)>0) %OR (HASGLOBAL(W,GECrusade)) THEN {
+   IF CITYENCHANT(CF,CEAltarofBattle)>-1 THEN {
+    AddAbilityLine 0,103,"Unitlevel","+ Ultra Elite Level (180 EXP)";
+   } ELSE { 
+    IF ISBUILT(CF,BWarCollege) THEN {
+     AddAbilityLine 0,102,"Unitlevel","+ Elite Level (80 EXP)";
+    } ELSE {
+     IF ISBUILT(CF,BBarracks) THEN {
+      AddAbilityLine 0,101,"Unitlevel","+ Veteran Level (30 EXP)";
+     } ELSE {
+      AddAbilityLine 0,100,"Unitlevel","+ Regular Level (0 EXP)";
+     }
+    }
+   }
+  } ELSE {
+   IF CITYENCHANT(CF,CEAltarofBattle)>-1 THEN {
+    AddAbilityLine 0,102,"Unitlevel","+ Elite Level (180 EXP)";
+   } ELSE { 
+    IF ISBUILT(CF,BWarCollege) THEN {
+     AddAbilityLine 0,101,"Unitlevel","+ Veteran Level (80 EXP)";
+    } ELSE {
+     IF ISBUILT(CF,BBarracks) THEN {
+      AddAbilityLine 0,100,"Unitlevel","+ Regular Level (30 EXP)";
+     } ELSE {
+      AddAbilityLine 0,99,"Unitlevel","+ Recruit Level (0 EXP)";
+     }
+    }
+   }
+  }
+ }
+
+: end of Unit bonus given to unit :
+!HASEVILPRESENCE!
+
+: == Unit penalty given to unit permanently == :
+: New effect of Drought, impaired newly trained units' attack and defense  :
+IF ( GETCITYDATA(CF,CDFOOD) < 2*(POPUNITS(CF)) ) THEN {
+ AddAbilityLine 0,184,"Malnourished","+ Malnourished";
+}
+
+: == Unit penalties as unit's enchantment == :
+: New effect of Chaos Rift, curse unit with warp creature effects :
+IF CITYENCHANT(CF,CEChaosRift)>-1 THEN { 
+ AddAbilityLine 0,289,"Warp Creature","+ Warp Creature";
+}
+
+: == Unit from Necropolis becomes undead == :
+IF (CITYENCHANT(CF,CENecropolis)>-1) THEN {
+ AddAbilityLine 0,289,"Undead","+ Undead";
+ AddAbilityLine 0,23,"Wraith Form","+ Wraith Form";
+}
+
+!NOTRECRUITMENTSCREEN!
+
+
+IF (INCOMBAT(U)=0) THEN { GOTO "NOTCOMBAT"; }
+
+!COMBATONLY!
+
+ IF (ETERNALNIGHTCOUNT>0)
+  %AND (HASGLOBAL(W,GEEternalNight)=0)
+  %AND (GetStat(U,STypeID,1)<>356)
+  %AND (GetStat(U,SRace,0)<>20)
+  %AND (GetEnchantmentFlag(U,EncUndead,0)=0)
+ THEN {
+  AddAbilityLine 0,183,"Poor Vision","Poor Vision";
+ }
+
+ IF ((GETTERRAIN((GetStat(U,SCoX,1)),(GetStat(U,SCoY,1)),0))=CTSea) THEN {
+  IF (GETSTAT(U,ASailing,0)=0)
+   %AND (GETSTAT(U,AWaterwalking,0)=0)
+   %AND (GETSTAT(U,AFlying,0)=0)
+   %AND (GETSTAT(U,ANoncorporeal,0)=0)
+  THEN {
+   ROOTSTRANDING=0;
+
+   FOR TU=1 TO MAXUNIT();
+
+    TCBX=(GetStat(TU,SCoX,1));
+    TCBY=(GetStat(TU,SCoY,1));
+
+    IF (ROOTSTRANDING=1) THEN { GOTO "ALREADYBINDSTRANDED"; }
+
+     IF ( INCOMBAT(TU) = 0 ) THEN { GOTO "NOTANGLINGBINDSTRANDED"; }
+
+      IF (GetStat(TU,SOwner,0)=GetStat(U,SOwner,0)) THEN { GOTO "NOTANGLINGBINDSTRANDED"; }
+
+      IF (GETSTAT(TU,SCustomAttribute,1)<>3) THEN { GOTO "NOTANGLINGBINDSTRANDED"; }
+
+       IF (TCBX>CBX-2) %AND (TCBX<CBX+2)
+        %AND (TCBY>CBY-2) %AND (TCBY<CBY+2)
+       THEN {
+        ROOTSTRANDING=1;
+       }
+
+    !NOTANGLINGBINDSTRANDED!
+
+    !ALREADYBINDSTRANDED!
+
+   NEXT TU;
+
+   IF (ROOTSTRANDING=1) THEN {
+    AddAbilityLine 0,320,"Roots Stranding","Roots Stranding";
+   } ELSE {
+    AddAbilityLine 0,226,"Stranded","Stranded";
+   }
+  }
+ } ELSE {
+  IF (GETSTAT(U,ASailing,0)>0)
+   %AND (GETSTAT(U,AFlying,0)=0)
+   %AND (GETSTAT(U,ANoncorporeal,0)=0)
+  THEN {
+   ROOTSTRANDING=0;
+
+   FOR TU=1 TO MAXUNIT();
+
+    TCBX=(GetStat(TU,SCoX,1));
+    TCBY=(GetStat(TU,SCoY,1));
+
+    IF (ROOTSTRANDING=1) THEN { GOTO "ALREADYBINDGROUNDED"; }
+
+     IF ( INCOMBAT(TU) = 0 ) THEN { GOTO "NOTANGLINGBINDGROUNDED"; }
+
+      IF (GetStat(TU,SOwner,0)=GetStat(U,SOwner,0)) THEN { GOTO "NOTANGLINGBINDGROUNDED"; }
+
+      IF (GETSTAT(TU,SCustomAttribute,1)<>3) THEN { GOTO "NOTANGLINGBINDGROUNDED"; }
+
+       IF (TCBX>CBX-2) %AND (TCBX<CBX+2)
+        %AND (TCBY>CBY-2) %AND (TCBY<CBY+2)
+       THEN {
+        ROOTSTRANDING=1;
+       }
+
+    !NOTANGLINGBINDGROUNDED!
+
+    !ALREADYBINDGROUNDED!
+
+   NEXT TU;
+
+   IF (ROOTSTRANDING=1) THEN {
+    AddAbilityLine 0,320,"Roots Stranding","Roots Stranding";
+   } ELSE {
+    AddAbilityLine 0,225,"Grounded","Grounded";
+   }
+  }
+ }
+
+ IF (GetEnchantmentFlag(U,EncInCombat,0)=0) THEN {
+  AddAbilityLine 0,284,"Reinforcement Unit","Reinforcement Unit";
+ }
+
+ IF (GetCombatEnchantmentFlag(U,EncDICE1,0)>0) THEN {
+  AddAbilityLine 0,53,"GODS PLAY DICES","FATE-1";
+ }
+
+ IF (GetCombatEnchantmentFlag(U,EncDICE2,0)>0) THEN {
+  AddAbilityLine 0,53,"GODS PLAY DICES","FATE-2";
+ }
+
+ IF (GetCombatEnchantmentFlag(U,EncDICE3,0)>0) THEN {
+  AddAbilityLine 0,53,"GODS PLAY DICES","FATE+1";
+ }
+
+ IF (GetCombatEnchantmentFlag(U,EncDICE4,0)>0) THEN {
+  AddAbilityLine 0,53,"GODS PLAY DICES","FATE+2";
+ }
+
+
+ IF ( (RETORT(W,Tactician)>0) %OR ( (SCORINGOPTION(SKhanTheConqueror)=1) %AND ( (W>(NOFWIZARDS()))=1) ) )
+  %AND ( ( (GETSTAT(U,AForester,0)>0) %AND ( (GETTERRAIN(CBX,CBY,0)=CTForest) %OR (GETTERRAIN(CBX,CBY,0)=CTPine) ) )
+   %OR ( (GETSTAT(U,AMountaineer,0)>0) %AND ( (GETTERRAIN(CBX,CBY,0)=CTRock2) %OR (GETTERRAIN(CBX,CBY,0)=CTMountain) ) )
+   %OR ( (GETSTAT(U,AWaterwalking,0)>0) %AND ( (GETTERRAIN(CBX,CBY,0)=CTIce) %OR (GETTERRAIN(CBX,CBY,0)=CTSwamp) ) ) ) )
+ THEN {
+  AddAbilityLine 0,246,"Tactical Advantage","Tactical Advantage";
+ } ELSE {
+  IF ( (RETORT(W,Tactician)=0) %OR ( (SCORINGOPTION(SKhanTheConqueror)=0) %AND ( (W>(NOFWIZARDS()))=1) ) )
+   %AND ( ( (GETSTAT(U,AForester,0)>0) %AND ( (GETTERRAIN(CBX,CBY,0)=CTForest) %OR (GETTERRAIN(CBX,CBY,0)=CTPine) ) )
+    %OR ( (GETSTAT(U,AMountaineer,0)>0) %AND ( (GETTERRAIN(CBX,CBY,0)=CTRock2) %OR (GETTERRAIN(CBX,CBY,0)=CTMountain) ) )
+    %OR ( (GETSTAT(U,AWaterwalking,0)>0) %AND ( (GETTERRAIN(CBX,CBY,0)=CTIce) %OR (GETTERRAIN(CBX,CBY,0)=CTSwamp) ) ) ) )
+  THEN {
+   AddAbilityLine 0,246,"Terrain Advantage","Terrain Advantage";
+  }
+ }
+
+!NOTCOMBAT!
+
+: After this point, call halt after show description :
+: Heroes :
+
+IF (ISHERO(U)=0) THEN { GOTO "NOTHERO"; }
+
+ IF (GETSTAT(U,STypeID,1)=0) THEN {
+  AddAbilityLine 0,244,"The Master Engineer","The Master Engineer";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=1) THEN {
+  AddAbilityLine 0,244,"The Berserker","The Berserker";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=2) THEN {
+  AddAbilityLine 0,244,"The Sage","The Sage";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=3) THEN {
+  AddAbilityLine 0,244,"The Dervish","The Dervish";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=4) THEN {
+  AddAbilityLine 0,244,"The Beastmaster","The Beastmaster";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=5) THEN {
+  AddAbilityLine 0,244,"The Bard","The Bard";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=6) THEN {
+  AddAbilityLine 0,244,"The Centurion","The Centurion";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=7) THEN {
+  AddAbilityLine 0,244,"The Healer","The Healer";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=8) THEN {
+  AddAbilityLine 0,244,"The Huntress","The Huntress";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=9) THEN {
+  AddAbilityLine 0,244,"The Thief","The Thief";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=10) THEN {
+  AddAbilityLine 0,244,"The Druid","The Druid";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=11) THEN {
+  AddAbilityLine 0,244,"The War Monk","The War Monk";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=12) THEN {
+  AddAbilityLine 0,244,"The Warrior Mage","The Warrior Mage";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=13) THEN {
+  AddAbilityLine 0,244,"The Magician","The Magician";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=14) THEN {
+  AddAbilityLine 0,244,"The Assassin","The Assassin";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=15) THEN {
+  AddAbilityLine 0,244,"The Wind Mage","The Wind Mage";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=16) THEN {
+  AddAbilityLine 0,244,"The Ranger","The Ranger";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=17) THEN {
+  AddAbilityLine 0,244,"The Draconian","The Draconian";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=18) THEN {
+  AddAbilityLine 0,244,"The Witch","The Witch";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=19) THEN {
+  AddAbilityLine 0,244,"The Bronze Sentinel","The Bronze Sentinel";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=20) THEN {
+  AddAbilityLine 0,244,"The Ninja","The Ninja";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=21) THEN {
+  AddAbilityLine 0,244,"The Rogue","The Rogue";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=22) THEN {
+  AddAbilityLine 0,244,"The Amazon","The Amazon";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=23) THEN {
+  AddAbilityLine 0,244,"The Warlock","The Warlock";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=24) THEN {
+  AddAbilityLine 0,244,"The Unknown","The Unknown";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=25) THEN {
+  AddAbilityLine 0,244,"The Illusionist","The Illusionist";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=26) THEN {
+  AddAbilityLine 0,244,"The Swordsman","The Swordsman";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=27) THEN {
+  AddAbilityLine 0,244,"The Priestess","The Priestess";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=28) THEN {
+  AddAbilityLine 0,244,"The Paladin","The Paladin";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=29) THEN {
+  AddAbilityLine 0,244,"The Black Knight","The Black Knight";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=30) THEN {
+  AddAbilityLine 0,244,"The Arcane Archer","The Arcane Archer";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=31) THEN {
+  AddAbilityLine 0,244,"The Knight","The Knight";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=32) THEN {
+  AddAbilityLine 0,244,"The Necromancer","The Necromancer";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=33) THEN {
+  AddAbilityLine 0,244,"The Everchosen","The Everchosen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=34) THEN {
+  AddAbilityLine 0,244,"The Avatar","The Avatar";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=272) THEN {
+  AddAbilityLine 0,244,"The Warmaster","The Warmaster";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=273) THEN {
+  AddAbilityLine 0,244,"The Gambler","The Gambler";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=274) THEN {
+  AddAbilityLine 0,244,"The Dreamwalker","The Dreamwalker";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=275) THEN {
+  AddAbilityLine 0,244,"The Steelbreaker","The Steelbreaker";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=276) THEN {
+  AddAbilityLine 0,244,"The Grand Inquisitor","The Grand Inquisitor";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=277) THEN {
+  AddAbilityLine 0,244,"The Crone","The Crone";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=278) THEN {
+  AddAbilityLine 0,244,"The Sagittarius","The Sagittarius";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=280) THEN {
+  AddAbilityLine 0,244,"The Swarm Queen","The Swarm Queen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=281) THEN {
+  AddAbilityLine 0,244,"The Sea Lord","The Sea Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=283) THEN {
+  AddAbilityLine 0,244,"The War Chief","The War Chief";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=284) THEN {
+  AddAbilityLine 0,244,"The Planewalker","The Planewalker";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=285) THEN {
+  AddAbilityLine 0,244,"The Elementalist","The Elementalist";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=362) THEN {
+  IF RETORT(W,Channeler) THEN {
+   AddAbilityLine 0,244,"The Wanderer","The Wanderer";
+  } ELSE {
+   AddAbilityLine 0,244,"The Strayed Wanderer","The Wanderer";
+  }
+  HALT;
+ }
+
+ GOTO "ENDOFDISABIL"
+
+!NOTHERO!
+
+: Generic :
+
+IF (GETSTAT(U,STypeID,1)<>35) THEN { GOTO "NOTTRIREME"; }
+
+ IF (GETSTAT(U,SRace,1)=RCBarbarian) THEN {
+  AddAbilityLine 0,244,"Barbarian Trireme","Barbarian Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCBeastmen) THEN {
+  AddAbilityLine 0,244,"Beastman Trireme","Beastman Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDarkElf) THEN {
+  AddAbilityLine 0,244,"Dark Elf Trireme","Dark Elf Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDraconian) THEN {
+  AddAbilityLine 0,244,"Draconian Trireme","Draconian Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDwarf) THEN {
+  AddAbilityLine 0,244,"Dwarf Trireme","Dwarf Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGnoll) THEN {
+  AddAbilityLine 0,244,"Gnoll Trireme","Gnoll Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHalfling) THEN {
+  AddAbilityLine 0,244,"Halfling Trireme","Halfling Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighElf) THEN {
+  AddAbilityLine 0,244,"High Elf Trireme","High Elf Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighMen) THEN {
+  AddAbilityLine 0,244,"High Man Trireme","High Man Trireme";
+   HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCKlackon) THEN {
+  AddAbilityLine 0,244,"Klackon Trireme","Klackon Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCLizard) THEN {
+  AddAbilityLine 0,244,"Lizardman Trireme","Lizardman Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCNomad) THEN {
+  AddAbilityLine 0,244,"Nomad Trireme","Nomad Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCOrc) THEN {
+  AddAbilityLine 0,244,"Orc Trireme","Orc Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCTroll) THEN {
+  AddAbilityLine 0,244,"Troll Trireme","Troll Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCXuanyuan) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Trireme","Xuanyuan Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCRakhshasa) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Trireme","Rakhshasa Trireme";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGoblin) THEN {
+  AddAbilityLine 0,244,"Goblin Triremes","Goblin Triremes";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGeneric) THEN {
+  AddAbilityLine 0,244,"Trireme","Trireme";
+  HALT;
+ }
+
+!NOTTRIREME!
+
+IF (GETSTAT(U,STypeID,1)<>36) THEN { GOTO "NOTGALLEY"; }
+
+ IF (GETSTAT(U,SRace,1)=RCBarbarian) THEN {
+  AddAbilityLine 0,244,"Barbarian Galley","Barbarian Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCBeastmen) THEN {
+  AddAbilityLine 0,244,"Beastman Galley","Beastman Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDarkElf) THEN {
+  AddAbilityLine 0,244,"Dark Elf Galley","Dark Elf Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDraconian) THEN {
+  AddAbilityLine 0,244,"Draconian Galley","Draconian Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDwarf) THEN {
+  AddAbilityLine 0,244,"Dwarf Galley","Dwarf Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGnoll) THEN {
+  AddAbilityLine 0,244,"Gnoll Galley","Gnoll Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHalfling) THEN {
+  AddAbilityLine 0,244,"Halfling Galley","Halfling Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighElf) THEN {
+  AddAbilityLine 0,244,"High Elf Galley","High Elf Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighMen) THEN {
+  AddAbilityLine 0,244,"High Man Galley","High Man Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCKlackon) THEN {
+  AddAbilityLine 0,244,"Klackon Galley","Klackon Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCNomad) THEN {
+  AddAbilityLine 0,244,"Nomad Galley","Nomad Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCOrc) THEN {
+  AddAbilityLine 0,244,"Orc Galley","Orc Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCTroll) THEN {
+  AddAbilityLine 0,244,"Troll Galley","Troll Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCXuanyuan) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Galley","Xuanyuan Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCRakhshasa) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Galley","Rakhshasa Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGoblin) THEN {
+  AddAbilityLine 0,244,"Goblin Galleys","Goblin Galleys";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGeneric) THEN {
+  AddAbilityLine 0,244,"Galley","Galley";
+  HALT;
+ }
+
+ HALT;
+
+!NOTGALLEY!
+
+IF (GETSTAT(U,STypeID,1)<>257) THEN { GOTO "NOTFIREGALLEY"; }
+
+ IF (GETSTAT(U,SRace,1)=RCBeastmen) THEN {
+  AddAbilityLine 0,244,"Beastman Fire Galley","Beastman Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDarkElf) THEN {
+  AddAbilityLine 0,244,"Dark Elf Fire Galley","Dark Elf Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDraconian) THEN {
+  AddAbilityLine 0,244,"Draconian Fire Galley","Draconian Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDwarf) THEN {
+  AddAbilityLine 0,244,"Dwarf Fire Galley","Dwarf Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHalfling) THEN {
+  AddAbilityLine 0,244,"Halfling Fire Galley","Halfling Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighElf) THEN {
+  AddAbilityLine 0,244,"High Elf Fire Galley","High Elf Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighMen) THEN {
+  AddAbilityLine 0,244,"High Man Fire Galley","High Man Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCKlackon) THEN {
+  AddAbilityLine 0,244,"Klackon Fire Galley","Klackon Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCNomad) THEN {
+  AddAbilityLine 0,244,"Nomad Fire Galley","Nomad Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCOrc) THEN {
+  AddAbilityLine 0,244,"Orc Fire Galley","Orc Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCXuanyuan) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Fire Galley","Xuanyuan Fire Galley";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGoblin) THEN {
+  AddAbilityLine 0,244,"Goblin Fire Galleys","Goblin Fire Galleys";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGeneric) THEN {
+  AddAbilityLine 0,244,"Fire Galley","Fire Galley";
+  HALT;
+ }
+
+ HALT;
+
+!NOTFIREGALLEY!
+
+IF (GETSTAT(U,STypeID,1)<>38) THEN { GOTO "NOTWARSHIP"; }
+
+ IF (GETSTAT(U,SRace,1)=RCBarbarian) THEN {
+  AddAbilityLine 0,244,"Barbarian Warship","Barbarian Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDraconian) THEN {
+  AddAbilityLine 0,244,"Draconian Warship","Draconian Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDwarf) THEN {
+  AddAbilityLine 0,244,"Dwarf Warship","Dwarf Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHalfling) THEN {
+  AddAbilityLine 0,244,"Halfling Warship","Halfling Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighMen) THEN {
+  AddAbilityLine 0,244,"High Man Warship","High Man Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCKlackon) THEN {
+  AddAbilityLine 0,244,"Klackon Warship","Klackon Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCNomad) THEN {
+  AddAbilityLine 0,244,"Nomad Warship","Nomad Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCOrc) THEN {
+  AddAbilityLine 0,244,"Orc Warship","Orc Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCXuanyuan) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Warship","Xuanyuan Warship";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGeneric) THEN {
+  AddAbilityLine 0,244,"Warship","Warship";
+  HALT;
+ }
+
+ HALT;
+
+!NOTWARSHIP!
+
+IF (GETSTAT(U,STypeID,1)<>37) THEN { GOTO "NOTCATAPULT"; }
+
+ IF (GETSTAT(U,SRace,1)=RCBeastmen) THEN {
+  AddAbilityLine 0,244,"Beastman Catapult","Beastman Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDarkElf) THEN {
+  AddAbilityLine 0,244,"Dark Elf Catapult","Dark Elf Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDraconian) THEN {
+  AddAbilityLine 0,244,"Draconian Catapult","Draconian Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDwarf) THEN {
+  AddAbilityLine 0,244,"Dwarf Catapult","Dwarf Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHalfling) THEN {
+  AddAbilityLine 0,244,"Halfling Catapult","Halfling Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighElf) THEN {
+  AddAbilityLine 0,244,"High Elf Catapult","High Elf Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighMen) THEN {
+  AddAbilityLine 0,244,"High Man Catapult","High Man Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCKlackon) THEN {
+  AddAbilityLine 0,244,"Klackon Catapult","Klackon Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCNomad) THEN {
+  AddAbilityLine 0,244,"Nomad Catapult","Nomad Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCOrc) THEN {
+  AddAbilityLine 0,244,"Orc Catapult","Orc Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCXuanyuan) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Catapult","Xuanyuan Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHawkmen) THEN {
+  AddAbilityLine 0,244,"Hawkman Catapult","Hawkman Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGoblin) THEN {
+  AddAbilityLine 0,244,"Goblin Catapults","Goblin Catapults";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGeneric) THEN {
+  AddAbilityLine 0,244,"Catapult","Catapult";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCArcane) THEN {
+  AddAbilityLine 0,244,"Catapult","Catapult";
+  HALT;
+ }
+
+ HALT;
+
+!NOTCATAPULT!
+
+IF (GETSTAT(U,STypeID,1)<>218) THEN { GOTO "NOTBALLISTA"; }
+
+ IF (GETSTAT(U,SRace,1)=RCBeastmen) THEN {
+  AddAbilityLine 0,244,"Beastman Ballista","Beastman Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDarkElf) THEN {
+  AddAbilityLine 0,244,"Dark Elf Ballista","Dark Elf Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDraconian) THEN {
+  AddAbilityLine 0,244,"Draconian Ballista","Draconian Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDwarf) THEN {
+  AddAbilityLine 0,244,"Dwarf Ballista","Dwarf Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHalfling) THEN {
+  AddAbilityLine 0,244,"Halfling Ballista","Halfling Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighElf) THEN {
+  AddAbilityLine 0,244,"High Elf Ballista","High Elf Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighMen) THEN {
+  AddAbilityLine 0,244,"High Man Ballista","High Man Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCKlackon) THEN {
+  AddAbilityLine 0,244,"Klackon Ballista","Klackon Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCNomad) THEN {
+  AddAbilityLine 0,244,"Nomad Ballista","Nomad Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCOrc) THEN {
+  AddAbilityLine 0,244,"Orc Ballista","Orc Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCXuanyuan) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Ballista","Xuanyuan Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHawkmen) THEN {
+  AddAbilityLine 0,244,"Hawkman Ballista","Hawkman Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGoblin) THEN {
+  AddAbilityLine 0,244,"Goblin Ballistas","Goblin Ballistas";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGeneric) THEN {
+  AddAbilityLine 0,244,"Ballista","Ballista";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCArcane) THEN {
+  AddAbilityLine 0,244,"Ballista","Ballista";
+  HALT;
+ }
+
+ HALT;
+
+!NOTBALLISTA!
+
+IF (GETSTAT(U,STypeID,1)<>44) THEN { GOTO "NOTSETTLER"; }
+
+ IF (GETSTAT(U,SRace,1)=RCBarbarian) THEN {
+  AddAbilityLine 0,244,"Barbarian Settlers","Barbarian Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCBeastmen) THEN {
+  AddAbilityLine 0,244,"Beastman Settlers","Beastman Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDarkElf) THEN {
+  AddAbilityLine 0,244,"Dark Elf Settlers","Dark Elf Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDraconian) THEN {
+  AddAbilityLine 0,244,"Draconian Settlers","Draconian Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCDwarf) THEN {
+  AddAbilityLine 0,244,"Dwarf Settlers","Dwarf Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGnoll) THEN {
+  AddAbilityLine 0,244,"Gnoll Settlers","Gnoll Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHalfling) THEN {
+  AddAbilityLine 0,244,"Halfling Settlers","Halfling Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighElf) THEN {
+  AddAbilityLine 0,244,"High Elf Settlers","High Elf Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHighMen) THEN {
+  AddAbilityLine 0,244,"High Man Settlers","High Man Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCKlackon) THEN {
+  AddAbilityLine 0,244,"Klackon Settlers","Klackon Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCLizard) THEN {
+  AddAbilityLine 0,244,"Lizardman Settlers","Lizardman Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCNomad) THEN {
+  AddAbilityLine 0,244,"Nomad Settlers","Nomad Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCOrc) THEN {
+  AddAbilityLine 0,244,"Orc Settlers","Orc Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCTroll) THEN {
+  AddAbilityLine 0,244,"Troll Settlers","Troll Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCXuanyuan) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Settlers","Xuanyuan Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCRakhshasa) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Settlers","Rakhshasa Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCHawkmen) THEN {
+  AddAbilityLine 0,244,"Hawkman Settlers","Hawkman Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGoblin) THEN {
+  AddAbilityLine 0,244,"Goblin Settlers","Goblin Settlers";
+  HALT;
+ }
+ IF (GETSTAT(U,SRace,1)=RCGeneric) THEN {
+  AddAbilityLine 0,244,"Settlers","Generic Settlers";
+  HALT;
+ }
+
+ HALT;
+
+!NOTSETTLER!
+
+ IF (GetStat(U,STypeID,1)=333) THEN {
+  AddAbilityLine 0,244,"Refugees","Barbarian Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=53) THEN {
+  AddAbilityLine 0,244,"Refugees","Beastman Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=334) THEN {
+  AddAbilityLine 0,244,"Refugees","Dark Elf Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=73) THEN {
+  AddAbilityLine 0,244,"Refugees","Draconian Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=335) THEN {
+  AddAbilityLine 0,244,"Refugees","Dwarf Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=336) THEN {
+  AddAbilityLine 0,244,"Refugees","Gnoll Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=337) THEN {
+  AddAbilityLine 0,244,"Refugees","Halfling Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=100) THEN {
+  AddAbilityLine 0,244,"Refugees","High Elf Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=338) THEN {
+  AddAbilityLine 0,244,"Refugees","High Man Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=339) THEN {
+  AddAbilityLine 0,244,"Refugees","Klackon Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=125) THEN {
+  AddAbilityLine 0,244,"Refugees","Lizardman Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=340) THEN {
+  AddAbilityLine 0,244,"Refugees","Nomad Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=341) THEN {
+  AddAbilityLine 0,244,"Refugees","Orc Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=151) THEN {
+  AddAbilityLine 0,244,"Refugees","Troll Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=342) THEN {
+  AddAbilityLine 0,244,"Refugees","Xuanyuan Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=343) THEN {
+  AddAbilityLine 0,244,"Refugees","Rakhshasa Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=344) THEN {
+  AddAbilityLine 0,244,"Refugees","Hawkman Refugees";
+  HALT;
+ }
+ IF (GetStat(U,STypeID,1)=345) THEN {
+  AddAbilityLine 0,244,"Refugees","Goblin Refugees";
+  HALT;
+ }
+
+: Unique Barbarian units :
+
+IF (GETSTAT(U,SRace,1)<>RCBarbarian) THEN { GOTO "NOTBARBARIAN"; }
+
+ IF (GETSTAT(U,STypeID,1)=82) THEN {
+  AddAbilityLine 0,244,"Barbarian Spearmen","Barbarian Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=40) THEN {
+  AddAbilityLine 0,244,"Barbarian Swordsmen","Barbarian Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=41) THEN {
+  AddAbilityLine 0,244,"Barbarian Bowmen","Barbarian Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=42) THEN {
+  AddAbilityLine 0,244,"Barbarian Cavalry","Barbarian Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=214) THEN {
+  AddAbilityLine 0,244,"Barbarian Heavy Cavalry","Barbarian Heavy Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=43) THEN {
+  AddAbilityLine 0,244,"Barbarian Shamans","Barbarian Shamans";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=45) THEN {
+  AddAbilityLine 0,244,"Barbarian Berserkers","Barbarian Berserkers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=87) THEN {
+  AddAbilityLine 0,244,"Barbarian Gladiators","Barbarian Gladiators";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=93) THEN {
+  AddAbilityLine 0,244,"Barbarian Spellserkers","Barbarian Spellserkers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=256) THEN {
+  AddAbilityLine 0,244,"Barbarian Longships","Barbarian Longships";
+  HALT;
+ }
+
+ HALT;
+
+!NOTBARBARIAN!
+
+: Unique Beastman units :
+
+IF (GETSTAT(U,SRace,1)<>RCBeastmen) THEN { GOTO "NOTBEASTMAN"; }
+
+ IF (GETSTAT(U,STypeID,1)=46) THEN {
+  AddAbilityLine 0,244,"Beastman Spearmen","Beastman Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=48) THEN {
+  AddAbilityLine 0,244,"Beastman Halberdiers","Beastman Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=47) THEN {
+  AddAbilityLine 0,244,"Beastman Swordsmen","Beastman Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=223) THEN {
+  AddAbilityLine 0,244,"Beastman Shieldbearers","Beastman Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=49) THEN {
+  AddAbilityLine 0,244,"Beastman Bowmen","Beastman Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=241) THEN {
+  AddAbilityLine 0,244,"Beastman Crossbowmen","Beastman Crossbowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=50) THEN {
+  AddAbilityLine 0,244,"Beastman Monks","Beastman Monks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=230) THEN {
+  AddAbilityLine 0,244,"Beastman Priests","Beastman Priests";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=51) THEN {
+  AddAbilityLine 0,244,"Beastman Disciples","Beastman Disciples";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=234) THEN {
+  AddAbilityLine 0,244,"Beastman Magisters","Beastman Magisters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=52) THEN {
+  AddAbilityLine 0,244,"Beastman Engineers","Beastman Engineers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=54) THEN {
+  AddAbilityLine 0,244,"Beastman Centaurs","Beastman Centaurs";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=56) THEN {
+  AddAbilityLine 0,244,"Beastman Minotaurs","Beastman Minotaurs";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=250) THEN {
+  AddAbilityLine 0,244,"Beastman Gugalannas","Beastman Gugalannas";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=254) THEN {
+  AddAbilityLine 0,244,"Beastman Chironean Guards","Beastman Chironean Guards";
+  HALT;
+ }
+
+ HALT;
+
+!NOTBEASTMAN!
+
+: Unique Dark Elf units :
+
+IF (GETSTAT(U,SRace,1)<>RCDarkElf) THEN { GOTO "NOTDARKELF"; }
+
+ IF (GETSTAT(U,STypeID,1)=57) THEN {
+  AddAbilityLine 0,244,"Dark Elf Spearmen","Dark Elf Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=59) THEN {
+  AddAbilityLine 0,244,"Dark Elf Halberdiers","Dark Elf Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=58) THEN {
+  AddAbilityLine 0,244,"Dark Elf Swordsmen","Dark Elf Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=60) THEN {
+  AddAbilityLine 0,244,"Dark Elf Cavalry","Dark Elf Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=217) THEN {
+  AddAbilityLine 0,244,"Dark Elf Shamans","Dark Elf Shamans";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=61) THEN {
+  AddAbilityLine 0,244,"Dark Elf Priests","Dark Elf Priests";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=265) THEN {
+  AddAbilityLine 0,244,"Dark Elf Pioneers","Dark Elf Pioneers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=62) THEN {
+  AddAbilityLine 0,244,"Dark Elf Adepts","Dark Elf Adepts";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=63) THEN {
+  AddAbilityLine 0,244,"Dark Elf Nightblades","Dark Elf Nightblades";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=64) THEN {
+  AddAbilityLine 0,244,"Dark Elf Warlocks","Dark Elf Warlocks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=65) THEN {
+  AddAbilityLine 0,244,"Dark Elf Nightmares","Dark Elf Nightmares";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=249) THEN {
+  AddAbilityLine 0,244,"Dark Elf Magic Knights","Dark Elf Magic Knights";
+  HALT;
+ }
+
+ HALT;
+
+!NOTDARKELF!
+
+: Unique Draconian units :
+
+IF (GETSTAT(U,SRace,1)<>RCDraconian) THEN { GOTO "NOTDRACONIAN"; }
+
+ IF (GETSTAT(U,STypeID,1)=66) THEN {
+  AddAbilityLine 0,244,"Draconian Spearmen","Draconian Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=68) THEN {
+  AddAbilityLine 0,244,"Draconian Halberdiers","Draconian Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=67) THEN {
+  AddAbilityLine 0,244,"Draconian Swordsmen","Draconian Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=224) THEN {
+  AddAbilityLine 0,244,"Draconian Shieldbearers","Draconian Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=69) THEN {
+  AddAbilityLine 0,244,"Draconian Bowmen","Draconian Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=232) THEN {
+  AddAbilityLine 0,244,"Draconian Monks","Draconian Monks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=235) THEN {
+  AddAbilityLine 0,244,"Draconian Disciples","Draconian Disciples";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=71) THEN {
+  AddAbilityLine 0,244,"Draconian Magisters","Draconian Magisters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=70) THEN {
+  AddAbilityLine 0,244,"Draconian Saints","Draconian Saints";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=74) THEN {
+  AddAbilityLine 0,244,"Draconian Doom Drakes","Draconian Doom Drakes";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=75) THEN {
+  AddAbilityLine 0,244,"Draconian Air Ship","Draconian Air Ship";
+  HALT;
+ }
+
+ HALT;
+
+!NOTDRACONIAN!
+
+: Unique Dwarf units :
+
+IF (GETSTAT(U,SRace,1)<>RCDwarf) THEN { GOTO "NOTDWARF"; }
+
+ IF (GETSTAT(U,STypeID,1)=77) THEN {
+  AddAbilityLine 0,244,"Dwarf Halberdiers","Dwarf Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=76) THEN {
+  AddAbilityLine 0,244,"Dwarf Swordsmen","Dwarf Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=242) THEN {
+  AddAbilityLine 0,244,"Dwarf Crossbowmen","Dwarf Crossbowmen";
+  HALT;
+ }
+
+IF (GETSTAT(U,STypeID,1)=78) THEN {
+ AddAbilityLine 0,244,"Dwarf Combat Engineers","Dwarf Combat Engineers";
+  HALT;
+}
+
+IF (GETSTAT(U,STypeID,1)=79) THEN {
+ AddAbilityLine 0,244,"Dwarf Hammerhands","Dwarf Hammerhands";
+  HALT;
+}
+
+IF (GETSTAT(U,STypeID,1)=80) THEN {
+ AddAbilityLine 0,244,"Dwarf Steam Cannon","Dwarf Steam Cannon";
+  HALT;
+}
+
+IF (GETSTAT(U,STypeID,1)=81) THEN {
+ AddAbilityLine 0,244,"Dwarf Golem","Dwarf Golem";
+  HALT;
+}
+
+IF (GETSTAT(U,STypeID,1)=202) THEN {
+ AddAbilityLine 0,244,"Dwarf Steam Tank","Dwarf Steam Tank";
+  HALT;
+}
+
+IF (GETSTAT(U,STypeID,1)=245) THEN {
+ AddAbilityLine 0,244,"Dwarf Huskarls","Dwarf Huskarls";
+  HALT;
+}
+
+IF (GETSTAT(U,STypeID,1)=246) THEN {
+ AddAbilityLine 0,244,"Dwarf Arquebusiers","Dwarf Arquebusiers";
+  HALT;
+}
+
+IF (GETSTAT(U,STypeID,1)=247) THEN {
+ AddAbilityLine 0,244,"Dwarf Musketeers","Dwarf Musketeers";
+  HALT;
+}
+
+ HALT;
+
+!NOTDWARF!
+
+: Unique Gnoll units :
+
+IF (GETSTAT(U,SRace,1)<>RCGnoll) THEN { GOTO "NOTGNOLL"; }
+
+ IF (GETSTAT(U,STypeID,1)=83) THEN {
+  AddAbilityLine 0,244,"Gnoll Spearmen","Gnoll Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=85) THEN {
+  AddAbilityLine 0,244,"Gnoll Halberdiers","Gnoll Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=84) THEN {
+  AddAbilityLine 0,244,"Gnoll Swordsmen","Gnoll Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=86) THEN {
+  AddAbilityLine 0,244,"Gnoll Jackal Riders","Gnoll Jackal Riders";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=88) THEN {
+  AddAbilityLine 0,244,"Gnoll Wolf Riders","Gnoll Wolf Riders";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=203) THEN {
+  AddAbilityLine 0,244,"Gnoll Witchdoctors","Gnoll Witchdoctors";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=210) THEN {
+  AddAbilityLine 0,244,"Gnoll Hunters","Gnoll Hunters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=222) THEN {
+  AddAbilityLine 0,244,"Gnoll Marauders","Gnoll Marauders";
+  HALT;
+ }
+
+ HALT;
+
+!NOTGNOLL!
+
+: Unique Halfling units :
+
+IF (GETSTAT(U,SRace,1)<>RCHalfling) THEN { GOTO "NOTHALFLING"; }
+
+ IF (GETSTAT(U,STypeID,1)=89) THEN {
+  AddAbilityLine 0,244,"Halfling Spearmen","Halfling Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=90) THEN {
+  AddAbilityLine 0,244,"Halfling Swordsmen","Halfling Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=198) THEN {
+  AddAbilityLine 0,244,"Halfling Bowmen","Halfling Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=92) THEN {
+  AddAbilityLine 0,244,"Halfling Shamans","Halfling Shamans";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=236) THEN {
+  AddAbilityLine 0,244,"Halfling Disciples","Halfling Disciples";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=91) THEN {
+  AddAbilityLine 0,244,"Halfling Magisters","Halfling Magisters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=267) THEN {
+  AddAbilityLine 0,244,"Halfling Pioneers","Halfling Pioneers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=94) THEN {
+  AddAbilityLine 0,244,"Halfling Slingers","Halfling Slingers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=206) THEN {
+  AddAbilityLine 0,244,"Halfling Scouts","Halfling Scouts";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=221) THEN {
+  AddAbilityLine 0,244,"Halfling Rocs","Halfling Rocs";
+  HALT;
+ }
+
+ HALT;
+
+!NOTHALFLING!
+
+: Unique High Elf units :
+
+IF (GETSTAT(U,SRace,1)<>RCHighElf) THEN { GOTO "NOTHIGHELF"; }
+
+ IF (GETSTAT(U,STypeID,1)=95) THEN {
+  AddAbilityLine 0,244,"High Elf Spearmen","High Elf Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=97) THEN {
+  AddAbilityLine 0,244,"High Elf Halberdiers","High Elf Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=96) THEN {
+  AddAbilityLine 0,244,"High Elf Swordsmen","High Elf Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=225) THEN {
+  AddAbilityLine 0,244,"High Elf Shieldbearers","High Elf Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=98) THEN {
+  AddAbilityLine 0,244,"High Elf Cavalry","High Elf Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=215) THEN {
+  AddAbilityLine 0,244,"High Elf Heavy Cavalry","High Elf Heavy Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=237) THEN {
+  AddAbilityLine 0,244,"High Elf Disciples","High Elf Disciples";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=266) THEN {
+  AddAbilityLine 0,244,"High Elf Pioneers","High Elf Pioneers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=99) THEN {
+  AddAbilityLine 0,244,"High Elf Druids","High Elf Druids";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=101) THEN {
+  AddAbilityLine 0,244,"High Elf Longbowmen","High Elf Longbowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=102) THEN {
+  AddAbilityLine 0,244,"High Elf Elven Lords","High Elf Elven Lords";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=103) THEN {
+  AddAbilityLine 0,244,"High Elf Pegasus Riders","High Elf Pegasus Riders";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=135) THEN {
+  AddAbilityLine 0,244,"High Elf Rangers","High Elf Rangers";
+  HALT;
+ }
+
+ HALT;
+
+!NOTHIGHELF!
+
+: Unique High Man units :
+
+IF (GETSTAT(U,SRace,1)<>RCHighMen) THEN { GOTO "NOTHIGHMAN"; }
+
+ IF (GETSTAT(U,STypeID,1)=104) THEN {
+  AddAbilityLine 0,244,"High Man Spearmen","High Man Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=105) THEN {
+  AddAbilityLine 0,244,"High Man Swordsmen","High Man Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=106) THEN {
+  AddAbilityLine 0,244,"High Man Bowmen","High Man Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=243) THEN {
+  AddAbilityLine 0,244,"High Man Crossbowmen","High Man Crossbowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=107) THEN {
+  AddAbilityLine 0,244,"High Man Cavalry","High Man Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=108) THEN {
+  AddAbilityLine 0,244,"High Man Monks","High Man Monks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=238) THEN {
+  AddAbilityLine 0,244,"High Man Disciples","High Man Disciples";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=109) THEN {
+  AddAbilityLine 0,244,"High Man Magisters","High Man Magisters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=110) THEN {
+  AddAbilityLine 0,244,"High Man Engineers","High Man Engineers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=111) THEN {
+  AddAbilityLine 0,244,"High Man Crusaders","High Man Crusaders";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=112) THEN {
+  AddAbilityLine 0,244,"High Man Pikemen","High Man Pikemen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=113) THEN {
+  AddAbilityLine 0,244,"High Man Paladins","High Man Paladins";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=118) THEN {
+  AddAbilityLine 0,244,"High Man Knights","High Man Knights";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=212) THEN {
+  AddAbilityLine 0,244,"High Man Squires","High Man Squires";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=231) THEN {
+  AddAbilityLine 0,244,"High Man Inquisitors","High Man Inquisitors";
+  HALT;
+ }
+
+ HALT;
+
+!NOTHIGHMAN!
+
+: Unique Klackon units :
+
+IF (GETSTAT(U,SRace,1)<>RCKlackon) THEN { GOTO "NOTKLACKON"; }
+
+ IF (GETSTAT(U,STypeID,1)=114) THEN {
+  AddAbilityLine 0,244,"Klackon Spearmen","Klackon Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=116) THEN {
+  AddAbilityLine 0,244,"Klackon Halberdiers","Klackon Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=115) THEN {
+  AddAbilityLine 0,244,"Klackon Swordsmen","Klackon Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=117) THEN {
+  AddAbilityLine 0,244,"Klackon Engineers","Klackon Engineers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=119) THEN {
+  AddAbilityLine 0,244,"Klackon Stag Beetle","Klackon Stag Beetle";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=204) THEN {
+  AddAbilityLine 0,244,"Klackon Antlions","Klackon Antlions";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=205) THEN {
+  AddAbilityLine 0,244,"Klackon Maiden Queens","Klackon Maiden Queens";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=220) THEN {
+  AddAbilityLine 0,244,"Klackon Mantises","Klackon Mantises";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=255) THEN {
+  AddAbilityLine 0,244,"Klackon Stingers","Klackon Stingers";
+  HALT;
+ }
+
+ HALT;
+
+!NOTKLACKON!
+
+: Unique Lizardman units :
+
+IF (GETSTAT(U,SRace,1)<>RCLizard) THEN { GOTO "NOTLIZARDMAN"; }
+
+ IF (GETSTAT(U,STypeID,1)=120) THEN {
+  AddAbilityLine 0,244,"Lizardman Spearmen","Lizardman Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=121) THEN {
+  AddAbilityLine 0,244,"Lizardman Swordsmen","Lizardman Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=226) THEN {
+  AddAbilityLine 0,244,"Lizardman Shieldbearers","Lizardman Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=209) THEN {
+  AddAbilityLine 0,244,"Lizardman Bowmen","Lizardman Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=124) THEN {
+  AddAbilityLine 0,244,"Lizardman Shamans","Lizardman Shamans";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=264) THEN {
+  AddAbilityLine 0,244,"Lizardman Priests","Lizardman Priests";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=39) THEN {
+  AddAbilityLine 0,244,"Lizardman Carrack","Lizardman Carrack";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=122) THEN {
+  AddAbilityLine 0,244,"Lizardman Marines","Lizardman Marines";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=123) THEN {
+  AddAbilityLine 0,244,"Lizardman Javelineers","Lizardman Javelineers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=126) THEN {
+  AddAbilityLine 0,244,"Lizardman Dragon Turtle","Lizardman Dragon Turtle";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=207) THEN {
+  AddAbilityLine 0,244,"Lizardman Sea Hags","Lizardman Sea Hags";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=219) THEN {
+  AddAbilityLine 0,244,"Lizardman Reptile Riders","Lizardman Reptile Riders";
+  HALT;
+ }
+
+ HALT;
+
+!NOTLIZARDMAN!
+
+: Unique Nomad units :
+
+IF (GETSTAT(U,SRace,1)<>RCNomad) THEN { GOTO "NOTNOMAD"; }
+
+ IF (GETSTAT(U,STypeID,1)=127) THEN {
+  AddAbilityLine 0,244,"Nomad Spearmen","Nomad Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=128) THEN {
+  AddAbilityLine 0,244,"Nomad Swordsmen","Nomad Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=227) THEN {
+  AddAbilityLine 0,244,"Nomad Shieldbearers","Nomad Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=233) THEN {
+  AddAbilityLine 0,244,"Nomad Monks","Nomad Monks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=130) THEN {
+  AddAbilityLine 0,244,"Nomad Priests","Nomad Priests";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=239) THEN {
+  AddAbilityLine 0,244,"Nomad Disciples","Nomad Disciples";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=131) THEN {
+  AddAbilityLine 0,244,"Nomad Magisters","Nomad Magisters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=268) THEN {
+  AddAbilityLine 0,244,"Nomad Pioneers","Nomad Pioneers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=133) THEN {
+  AddAbilityLine 0,244,"Nomad Horsebowmen","Nomad Horsebowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=134) THEN {
+  AddAbilityLine 0,244,"Nomad Kardakes","Nomad Kardakes";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=136) THEN {
+  AddAbilityLine 0,244,"Nomad Griffin Riders","Nomad Griffin Riders";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=201) THEN {
+  AddAbilityLine 0,244,"Nomad Cataphracts","Nomad Cataphracts";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=213) THEN {
+  AddAbilityLine 0,244,"Nomad Sipahis","Nomad Sipahis";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=332) THEN {
+  AddAbilityLine 0,244,"Nomad Dervishes","Nomad Dervishes";
+  HALT;
+ }
+
+ HALT;
+
+!NOTNOMAD!
+
+: Unique Orc units :
+
+IF (GETSTAT(U,SRace,1)<>RCOrc) THEN { GOTO "NOTORC"; }
+
+ IF (GETSTAT(U,STypeID,1)=137) THEN {
+  AddAbilityLine 0,244,"Orc Spearmen","Orc Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=138) THEN {
+  AddAbilityLine 0,244,"Orc Swordsmen","Orc Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=228) THEN {
+  AddAbilityLine 0,244,"Orc Shieldbearers","Orc Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=140) THEN {
+  AddAbilityLine 0,244,"Orc Bowmen","Orc Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=244) THEN {
+  AddAbilityLine 0,244,"Orc Crossbowmen","Orc Crossbowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=141) THEN {
+  AddAbilityLine 0,244,"Orc Cavalry","Orc Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=216) THEN {
+  AddAbilityLine 0,244,"Orc Heavy Cavalry","Orc Heavy Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=142) THEN {
+  AddAbilityLine 0,244,"Orc Shamans","Orc Shamans";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=240) THEN {
+  AddAbilityLine 0,244,"Orc Disciples","Orc Disciples";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=143) THEN {
+  AddAbilityLine 0,244,"Orc Magisters","Orc Magisters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=144) THEN {
+  AddAbilityLine 0,244,"Orc Engineers","Orc Engineers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=72) THEN {
+  AddAbilityLine 0,244,"Orc Hoplites","Orc Hoplites";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=139) THEN {
+  AddAbilityLine 0,244,"Orc Legionary","Orc Legionary";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=146) THEN {
+  AddAbilityLine 0,244,"Orc Wyvern Riders","Orc Wyvern Riders";
+  HALT;
+ }
+
+ HALT;
+
+!NOTORC!
+
+: Unique Troll units :
+
+IF (GETSTAT(U,SRace,1)<>RCTroll) THEN { GOTO "NOTTROLL"; }
+
+ IF (GETSTAT(U,STypeID,1)=147) THEN {
+  AddAbilityLine 0,244,"Troll Spearmen","Troll Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=149) THEN {
+  AddAbilityLine 0,244,"Troll Halberdiers","Troll Halberdiers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=148) THEN {
+  AddAbilityLine 0,244,"Troll Swordsmen","Troll Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=229) THEN {
+  AddAbilityLine 0,244,"Troll Shieldbearers","Troll Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=129) THEN {
+  AddAbilityLine 0,244,"Troll Chieftains","Troll Chieftains";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=132) THEN {
+  AddAbilityLine 0,244,"Troll War Trolls","Troll War Trolls";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=145) THEN {
+  AddAbilityLine 0,244,"Troll War Mammoths","Troll War Mammoths";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=150) THEN {
+  AddAbilityLine 0,244,"Troll Medicinemans","Troll Medicinemans";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=248) THEN {
+  AddAbilityLine 0,244,"Troll Rock Throwers","Troll Rock Throwers";
+  HALT;
+ }
+
+ HALT;
+
+!NOTTROLL!
+
+: Unique Xuanyuan units :
+
+IF (GETSTAT(U,SRace,1)<>RCXuanyuan) THEN { GOTO "NOTXUANYUAN"; }
+
+ IF (GETSTAT(U,STypeID,1)=289) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Swordsmen","Xuanyuan Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=290) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Shieldbearers","Xuanyuan Shieldbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=293) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Bowmen","Xuanyuan Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=294) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Crossbowmen","Xuanyuan Crossbowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=303) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Cavalry","Xuanyuan Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=304) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Heavy Cavalry","Xuanyuan Heavy Cavalry";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=296) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Shamans","Xuanyuan Shamans";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=292) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Engineers","Xuanyuan Engineers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=287) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Conscripts","Xuanyuan Conscripts";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=288) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Firelancers","Xuanyuan Firelancers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=291) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Dragon Guards","Xuanyuan Dragon Guards";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=295) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Autocrossbowmen","Xuanyuan Autocrossbowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=297) THEN {
+  AddAbilityLine 0,244,"Xuanyuan War Monks","Xuanyuan War Monks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=298) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Alchemists","Xuanyuan Alchemists";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=299) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Elixir Alchemists","Xuanyuan Elixir Alchemists";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=300) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Immortals","Xuanyuan Immortals";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=302) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Dragon Ship","Xuanyuan Dragon Ship";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=305) THEN {
+  AddAbilityLine 0,244,"Xuanyuan War Wagons","Xuanyuan War Wagons";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=306) THEN {
+  AddAbilityLine 0,244,"Xuanyuan Dragon Horses","Xuanyuan Dragon Horses";
+  HALT;
+ }
+
+ HALT;
+
+!NOTXUANYUAN!
+
+: Unique Rakhshasa units :
+
+IF (GETSTAT(U,SRace,1)<>RCRakhshasa) THEN { GOTO "NOTRAKHSHASA"; }
+
+ IF (GETSTAT(U,STypeID,1)=307) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Spearmen","Rakhshasa Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=309) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Swordsmen","Rakhshasa Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=312) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Monks","Rakhshasa Monks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=55) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Manticores","Rakhshasa Manticores";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=308) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Wildhunters","Rakhshasa Wildhunters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=310) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Jaguar Warriors","Rakhshasa Jaguar Warriors";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=311) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Jungle Stalkers","Rakhshasa Jungle Stalkers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=313) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Blood Priests","Rakhshasa Blood Priests";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=314) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Weretiger Mages","Rakhshasa Weretiger Mages";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=315) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Rishi","Rakhshasa Rishi";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=316) THEN {
+  AddAbilityLine 0,244,"Rakhshasa Ogre Lords","Rakhshasa Ogre Lords";
+  HALT;
+ }
+
+ HALT;
+
+!NOTRAKHSHASA!
+
+: Unique Hawkman units :
+
+IF (GETSTAT(U,SRace,1)<>RCHawkmen) THEN { GOTO "NOTHAWKMAN"; }
+
+ IF (GETSTAT(U,STypeID,1)=317) THEN {
+  AddAbilityLine 0,244,"Hawkman Spearmen","Hawkman Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=319) THEN {
+  AddAbilityLine 0,244,"Hawkman Swordsmen","Hawkman Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=301) THEN {
+  AddAbilityLine 0,244,"Hawkman Sky Lantern","Hawkman Sky Lantern";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=318) THEN {
+  AddAbilityLine 0,244,"Hawkman Eagle Warriors","Hawkman Eagle Warriors";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=320) THEN {
+  AddAbilityLine 0,244,"Hawkman Tomahawks","Hawkman Tomahawks";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=321) THEN {
+  AddAbilityLine 0,244,"Hawkman Huichilobos","Hawkman Huichilobos";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=322) THEN {
+  AddAbilityLine 0,244,"Hawkman Harpies","Hawkman Harpies";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=323) THEN {
+  AddAbilityLine 0,244,"Hawkman Holy Mother","Hawkman Holy Mother";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=324) THEN {
+  AddAbilityLine 0,244,"Hawkman Enchantresses","Hawkman Enchantresses";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=325) THEN {
+  AddAbilityLine 0,244,"Hawkman Sirens","Hawkman Sirens";
+  HALT;
+ }
+
+ HALT;
+
+!NOTHAWKMAN!
+
+: Unique Goblin units :
+
+IF (GETSTAT(U,SRace,1)<>RCGoblin) THEN { GOTO "NOTGOBLIN"; }
+
+ IF (GETSTAT(U,STypeID,1)=346) THEN {
+  AddAbilityLine 0,244,"Goblin Spearmen","Goblin Spearmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=347) THEN {
+  AddAbilityLine 0,244,"Goblin Swordsmen","Goblin Swordsmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=348) THEN {
+  AddAbilityLine 0,244,"Goblin Bowmen","Goblin Bowmen";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=349) THEN {
+  AddAbilityLine 0,244,"Hobgoblins","Hobgoblins";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=350) THEN {
+  AddAbilityLine 0,244,"Goblin Warbosses","Goblin Warbosses";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=351) THEN {
+  AddAbilityLine 0,244,"Goblin Spider Riders","Goblin Spider Riders";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=352) THEN {
+  AddAbilityLine 0,244,"Goblin Tricksters","Goblin Tricksters";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=353) THEN {
+  AddAbilityLine 0,244,"Goblin Rabblerousers","Goblin Rabblerousers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=354) THEN {
+  AddAbilityLine 0,244,"Goblin Hexers","Goblin Hexers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=355) THEN {
+  AddAbilityLine 0,244,"Goblin Arsonists","Goblin Arsonists";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=356) THEN {
+  AddAbilityLine 0,244,"Night Goblins","Night Goblins";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=357) THEN {
+  AddAbilityLine 0,244,"Goblin Mechaniacs","Goblin Mechaniacs";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=358) THEN {
+  AddAbilityLine 0,244,"Goblin Poxbearers","Goblin Poxbearers";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=359) THEN {
+  AddAbilityLine 0,244,"Doom Wheels","Doom Wheels";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=360) THEN {
+  AddAbilityLine 0,244,"Goblin Gliders","Goblin Gliders";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=361) THEN {
+  AddAbilityLine 0,244,"Midget Submarines","Midget Submarines";
+  HALT;
+ }
+
+ HALT;
+
+!NOTGOBLIN!
+
+: Unique Arcane realm units :
+
+IF (GETSTAT(U,SRace,1)<>RCArcane) THEN { GOTO "NOTARCANECREATURE"; }
+
+ IF (GETSTAT(U,STypeID,1)=154) THEN {
+  AddAbilityLine 0,244,"Magic Spirit","Magic Spirit";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=363) THEN {
+  AddAbilityLine 0,244,"Clockwork Tinmen","Clockwork Tinmen";
+  HALT;
+ }
+
+ HALT;
+
+!NOTARCANECREATURE!
+
+: Unique Nature realm units :
+
+IF (GETSTAT(U,SRace,1)<>RCNature) THEN { GOTO "NOTNATURECREATURE"; }
+
+ IF (GETSTAT(U,STypeID,1)=152) THEN {
+  AddAbilityLine 0,244,"Boar","Boar";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=158) THEN {
+  AddAbilityLine 0,244,"Water Elemental","Water Elemental";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=179) THEN {
+  AddAbilityLine 0,244,"War Bears","War Bears";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=180) THEN {
+  AddAbilityLine 0,244,"Sprites","Sprites";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=181) THEN {
+  AddAbilityLine 0,244,"Cockatrices","Cockatrices";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=182) THEN {
+  AddAbilityLine 0,244,"Great Lizard","Great Lizard";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=183) THEN {
+  AddAbilityLine 0,244,"Giant Spider","Giant Spider";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=184) THEN {
+  AddAbilityLine 0,244,"Stone Giant","Stone Giant";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=185) THEN {
+  AddAbilityLine 0,244,"Colossus","Colossus";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=186) THEN {
+  AddAbilityLine 0,244,"Gorgon","Gorgon";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=187) THEN {
+  AddAbilityLine 0,244,"Earth Elemental","Earth Elemental";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=188) THEN {
+  AddAbilityLine 0,244,"Behemoth","Behemoth";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=189) THEN {
+  AddAbilityLine 0,244,"Great Wyrm","Great Wyrm";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=252) THEN {
+  AddAbilityLine 0,244,"Killer Wasp","Killer Wasp";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=260) THEN {
+  AddAbilityLine 0,244,"Lesser Gaia Lord","Lesser Gaia Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=261) THEN {
+  AddAbilityLine 0,244,"Great Gaia Lord","Great Gaia Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=270) THEN {
+  AddAbilityLine 0,244,"Sacred Ancient","Sacred Ancient";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=279) THEN {
+  AddAbilityLine 0,244,"Thunderbird","Thunderbird";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=326) THEN {
+  AddAbilityLine 0,244,"Warg","Warg";
+  HALT;
+ }
+
+ HALT;
+
+!NOTNATURECREATURE!
+
+: Unique Sorcery realm units :
+
+IF (GETSTAT(U,SRace,1)<>RCSorcery) THEN { GOTO "NOTSORCERYCREATURE"; }
+
+ IF (GETSTAT(U,STypeID,1)=190) THEN {
+  AddAbilityLine 0,244,"Floating Island","Floating Island";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=191) THEN {
+  AddAbilityLine 0,244,"Phantom Beast","Phantom Beast";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=192) THEN {
+  AddAbilityLine 0,244,"Phantom Warrior","Phantom Warrior";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=193) THEN {
+  AddAbilityLine 0,244,"Storm Giant","Storm Giant";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=194) THEN {
+  AddAbilityLine 0,244,"Air Elemental","Air Elemental";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=195) THEN {
+  AddAbilityLine 0,244,"Djinn","Djinn";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=196) THEN {
+  AddAbilityLine 0,244,"Sky Drake","Sky Drake";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=197) THEN {
+  AddAbilityLine 0,244,"Naga","Naga";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=208) THEN {
+  AddAbilityLine 0,244,"Coatl","Coatl";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=251) THEN {
+  AddAbilityLine 0,244,"Cloud Giant","Cloud Giant";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=262) THEN {
+  AddAbilityLine 0,244,"Lesser Aether Lord","Lesser Aether Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=263) THEN {
+  AddAbilityLine 0,244,"Great Aether Lord","Great Aether Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=271) THEN {
+  AddAbilityLine 0,244,"Kraken","Kraken";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=328) THEN {
+  AddAbilityLine 0,244,"Cloud Elephant","Cloud Elephant";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=331) THEN {
+  AddAbilityLine 0,244,"Sea Serpent","Sea Serpent";
+  HALT;
+ }
+
+ HALT;
+
+!NOTSORCERYCREATURE!
+
+: Unique Chaos realm units :
+
+IF (GETSTAT(U,SRace,1)<>RCChaos) THEN { GOTO "NOTCHAOSCREATURE"; }
+
+ IF (GETSTAT(U,STypeID,1)=153) THEN {
+  AddAbilityLine 0,244,"Fire Elemental","Fire Elemental";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=155) THEN {
+  AddAbilityLine 0,244,"Hell Hound","Hell Hound";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=156) THEN {
+  AddAbilityLine 0,244,"Gargoyle","Gargoyle";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=157) THEN {
+  AddAbilityLine 0,244,"Fire Giant","Fire Giant";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=159) THEN {
+  AddAbilityLine 0,244,"Chaos Spawn","Chaos Spawn";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=160) THEN {
+  AddAbilityLine 0,244,"Chimera","Chimera";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=161) THEN {
+  AddAbilityLine 0,244,"Doom Bat","Doom Bat";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=162) THEN {
+  AddAbilityLine 0,244,"Efreet","Efreet";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=163) THEN {
+  AddAbilityLine 0,244,"Hydra","Hydra";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=164) THEN {
+  AddAbilityLine 0,244,"Great Drake","Great Drake";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=258) THEN {
+  AddAbilityLine 0,244,"Lesser Chaos Lord","Lesser Chaos Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=259) THEN {
+  AddAbilityLine 0,244,"Great Chaos Lord","Great Chaos Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=329) THEN {
+  AddAbilityLine 0,244,"Fire Drake","Fire Drake";
+  HALT;
+ }
+
+ HALT;
+
+!NOTCHAOSCREATURE!
+
+: Unique Life realm units :
+
+IF (GETSTAT(U,SRace,1)<>RCLife) THEN { GOTO "NOTLIFECREATURE"; }
+
+ IF (GETSTAT(U,STypeID,1)=175) THEN {
+  AddAbilityLine 0,244,"Unicorn","Unicorn";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=176) THEN {
+  AddAbilityLine 0,244,"Guardian Spirit","Guardian Spirit";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=177) THEN {
+  AddAbilityLine 0,244,"Angel","Angel";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=178) THEN {
+  AddAbilityLine 0,244,"Arch Angel","Arch Angel";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=200) THEN {
+  AddAbilityLine 0,244,"Phoenix","Phoenix";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=211) THEN {
+  AddAbilityLine 0,244,"Ethereal Knight","Ethereal Knight";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=269) THEN {
+  AddAbilityLine 0,244,"Valkyrie","Valkyrie";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=286) THEN {
+  AddAbilityLine 0,244,"Seraph","Seraph";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=327) THEN {
+  AddAbilityLine 0,244,"Simurgh","Simurgh";
+  HALT;
+ }
+
+ HALT;
+
+!NOTLIFECREATURE!
+
+: Unique Death realm units :
+
+IF (GETSTAT(U,SRace,1)<>RCDeath) THEN { GOTO "NOTDEATHCREATURE"; }
+
+ IF (GETSTAT(U,STypeID,1)=165) THEN {
+  AddAbilityLine 0,244,"Skeleton","Skeleton";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=166) THEN {
+  AddAbilityLine 0,244,"Ghoul","Ghoul";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=167) THEN {
+  AddAbilityLine 0,244,"Night Stalker","Night Stalker";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=168) THEN {
+  AddAbilityLine 0,244,"Werewolf","Werewolf";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=169) THEN {
+  AddAbilityLine 0,244,"Demon","Demon";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=170) THEN {
+  AddAbilityLine 0,244,"Wraith","Wraith";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=171) THEN {
+  AddAbilityLine 0,244,"Shadow Demon","Shadow Demon";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=172) THEN {
+  AddAbilityLine 0,244,"Death Knight","Death Knight";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=173) THEN {
+  AddAbilityLine 0,244,"Demon Lord","Demon Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=174) THEN {
+  AddAbilityLine 0,244,"Zombie","Zombie";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=199) THEN {
+  AddAbilityLine 0,244,"Vampire Lord","Vampire Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=253) THEN {
+  AddAbilityLine 0,244,"Ghost Ship","Ghost Ship";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=282) THEN {
+  AddAbilityLine 0,244,"Arch Demon Lord","Arch Demon Lord";
+  HALT;
+ }
+
+ IF (GETSTAT(U,STypeID,1)=330) THEN {
+  AddAbilityLine 0,244,"Arch Lich","Arch Lich";
+  HALT;
+ }
+
+ HALT;
+
+!NOTDEATHCREATURE!
+
+!ENDOFDISABIL!
+
+HALT;

@@ -46,6 +46,7 @@ function mergedAbilityValue(abil, currentValue, nextValue) {
     return nextValue !== defaultValue ? nextValue : (currentValue === undefined ? defaultValue : currentValue);
   }
   if (abil.type === 'numcheck') return nextValue != null ? nextValue : (currentValue === undefined ? null : currentValue);
+  if (abil.signed) return nextValue || 0;
   return Math.max(currentValue === undefined ? 0 : currentValue, nextValue || 0);
 }
 
@@ -180,7 +181,9 @@ function buildAbilitiesUI(prefix) {
       row.dataset.abilGroup = currentGroup;
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
-      row.innerHTML = `<input type="checkbox" id="${id}_on"><label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
+      const min = abil.min != null ? abil.min : -50;
+      const max = abil.max != null ? abil.max : 50;
+      row.innerHTML = `<input type="checkbox" id="${id}_on"><label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="${min}" max="${max}" step="1">`;
       itemParent.appendChild(row);
     } else {
       const row = document.createElement('div');
@@ -192,7 +195,9 @@ function buildAbilitiesUI(prefix) {
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.realm) row.dataset.realm = abil.realm;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
-      row.innerHTML = `<label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
+      const min = abil.min != null ? abil.min : -50;
+      const max = abil.max != null ? abil.max : 50;
+      row.innerHTML = `<label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="${min}" max="${max}" step="1">`;
       itemParent.appendChild(row);
     }
   }
@@ -720,14 +725,29 @@ function updateCustomLevelState(prefix) {
 const DEFAULT_GAME_VERSION = 'mom_1.31';
 const GAME_VERSION_STORAGE_KEY = 'gameVersion_v1';
 
+// Version ids that have been renamed. Saved state and shared links outlive a rename, and an
+// unknown id fails silently rather than loudly — loadUnitDatabase() returns [] for one, so the
+// symptom is an empty unit dropdown. Map retired ids forward instead.
+// Only one Warlord build is supported at a time, so every retired Warlord id resolves to the
+// current one rather than restoring old behaviour.
+const RENAMED_GAME_VERSIONS = {
+  'com2_warlord_1.5.12.5': 'com2_warlord_1.5.12.6.2',
+  'com2_warlord_1.5.12.6': 'com2_warlord_1.5.12.6.2',
+};
+
+// Map a version id from persisted or shared state onto one this build actually offers.
+// Returns null when it cannot, so callers apply their own fallback.
+function normalizeGameVersion(version) {
+  if (typeof version !== 'string' || !version) return null;
+  const mapped = RENAMED_GAME_VERSIONS[version] || version;
+  const sel = document.getElementById('gameVersion');
+  if (!sel) return null;
+  return Array.from(sel.options).some(opt => opt.value === mapped) ? mapped : null;
+}
+
 function loadPersistedGameVersion() {
   try {
-    const saved = localStorage.getItem(GAME_VERSION_STORAGE_KEY);
-    if (!saved) return null;
-    const sel = document.getElementById('gameVersion');
-    if (!sel) return null;
-    const valid = Array.from(sel.options).some(opt => opt.value === saved);
-    return valid ? saved : null;
+    return normalizeGameVersion(localStorage.getItem(GAME_VERSION_STORAGE_KEY));
   } catch (err) {
     return null;
   }
@@ -1429,6 +1449,21 @@ function applyPreset(name) {
   }
   updateUnitLock('a');
   updateUnitLock('b');
+  // Roster selection restores intrinsic abilities and clears the panel, but a
+  // preset may intentionally combine that predefined unit with user-selectable
+  // enchantment/building/reform conditions. Reapply only the enchantment-source
+  // values; intrinsic ability controls remain roster-owned and locked.
+  function applyPresetEnchantments(prefix, config) {
+    const values = config && config.abilities;
+    if (!values) return;
+    for (const abil of abilityUiDefs()) {
+      if (abil.source !== 'enchantment'
+          || !Object.prototype.hasOwnProperty.call(values, abil.key)) continue;
+      setAbilityControlValue(prefix, abil, values[abil.key]);
+    }
+  }
+  if (preset.aUnitName) applyPresetEnchantments('a', preset.a);
+  if (preset.bUnitName) applyPresetEnchantments('b', preset.b);
   // Synthetic custom test units can declare an intrinsic race/name to exercise race-gated
   // building enchantments (roster-selected presets already got their identity from applyUnit).
   if (preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = { race: preset.a.race, name: preset.a.name };
@@ -1499,9 +1534,10 @@ function applyFullState(blob) {
   _restoring = true;
   try {
     const versionSel = document.getElementById('gameVersion');
-    if (versionSel && blob.ids && typeof blob.ids.gameVersion === 'string') {
-      if (versionSel.value !== blob.ids.gameVersion) {
-        versionSel.value = blob.ids.gameVersion;
+    const blobVersion = blob.ids && normalizeGameVersion(blob.ids.gameVersion);
+    if (versionSel && blobVersion) {
+      if (versionSel.value !== blobVersion) {
+        versionSel.value = blobVersion;
       }
       onVersionChange();
     }
@@ -1578,8 +1614,8 @@ function collectState() {
 // localStorage and older share links merge cleanly since their ids already cover everything.
 function applyState(blob) {
   if (!blob || blob.v !== 1) return;
-  const version = (blob.ids && typeof blob.ids.gameVersion === 'string')
-    ? blob.ids.gameVersion : (loadPersistedGameVersion() || DEFAULT_GAME_VERSION);
+  const version = (blob.ids && normalizeGameVersion(blob.ids.gameVersion))
+    || loadPersistedGameVersion() || DEFAULT_GAME_VERSION;
   const merged = { ...getDefaultIds(version), ...(blob.ids || {}), gameVersion: version };
   applyFullState({ v: 1, ids: merged, identity: blob.identity, generic: blob.generic });
 }
@@ -3623,4 +3659,3 @@ initStateFromSources();
   });
   overlay.addEventListener('click', close);
 })();
-

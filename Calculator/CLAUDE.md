@@ -20,12 +20,17 @@ Tooltip strings render with `\n` as line breaks — break clauses onto their own
 
 Don't add hedges like "informational only" or "no effect in this calculator"; if a bool exists, assume its mechanics are either implemented or about to be.
 
-Supporting docs:
-- `Reference docs/Tooltip style guide.md` — standard structure and token vocabulary for `tooltip:` strings; follow when writing or editing tooltips.
-- `Reference docs/Tooltip rewrite plan.md` — chunked plan + starter prompts for the ongoing pass that re-verifies and rewrites every tooltip against the implementation.
+`Reference docs/Tooltip style guide.md` holds the standard structure and token vocabulary for `tooltip:` strings — follow it when writing or editing tooltips.
 
 ## Test cases (`PRESETS` + `TEST_TREE` in `data.js`)
 A preset must be wired into `TEST_TREE` to appear in the UI sidebar. Ability-named subgroups (e.g. "Haste", "Wall of Fire") stay in alphabetical order within their parent group.
+
+**A preset's version comes from its own `version:` field or from its `TEST_TREE` group's**, via
+`PRESET_VERSIONS` — and "Version differences tests" declares no group version. A preset reachable
+only from that group and carrying no `version:` field therefore selects *whatever version the
+previous preset left in the dropdown*, and will appear to pass or fail at random depending on
+sibling order. Presets that also appear in a versioned group are immune, which is why this stays
+hidden. **Always give a version-differences preset an explicit `version:`.**
 
 Two groups have stricter rules:
 - **"Artificial MoM 1.31 tests"** — every key must resolve to `version: 'mom_1.31'`.

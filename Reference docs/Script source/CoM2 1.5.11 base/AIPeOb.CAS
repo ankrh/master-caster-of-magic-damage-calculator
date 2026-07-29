@@ -1,0 +1,151 @@
+: 
+This script selects AI personality and objective
+INPUT - W contains the wizard to process.
+OUTPUT - None, Personality and Objective should be set via the script directly.
+:
+
+DIMNUM PEWE[6];
+DIMNUM OBWE[6];
+
+: Personality per spellbook :
+
+      Pewe[Maniacal]=
+      (1*Books(W,Nature))+
+      (2*Books(W,Death))+
+      (1*Books(W,Chaos))+
+      (2*Books(W,Sorcery))+
+      (1*Books(W,Life));
+
+      Pewe[Ruthless]=
+      (1*Books(W,Nature))+
+      (2*Books(W,Death))+
+      (2*Books(W,Chaos))+
+      (0*Books(W,Sorcery))+
+      (0*Books(W,Life));
+
+      Pewe[Aggressive]=
+      (1*Books(W,Nature))+
+      (1*Books(W,Death))+
+      (2*Books(W,Chaos))+
+      (2*Books(W,Sorcery))+
+      (1*Books(W,Life));
+
+      Pewe[Chaotic]=
+      (2*Books(W,Nature))+
+      (1*Books(W,Death))+
+      (2*Books(W,Chaos))+
+      (0*Books(W,Sorcery))+
+      (1*Books(W,Life));
+
+      Pewe[Lawful]=
+      (2*Books(W,Nature))+
+      (1*Books(W,Death))+
+      (0*Books(W,Chaos))+
+      (2*Books(W,Sorcery))+
+      (2*Books(W,Life));
+
+      Pewe[Peaceful]=
+      (1*Books(W,Nature))+
+      (1*Books(W,Death))+
+      (1*Books(W,Chaos))+
+      (2*Books(W,Sorcery))+
+      (2*Books(W,Life));
+
+: Objective per spellbook :
+
+      Obwe[Pragmatist]=
+      (1*Books(W,Nature))+
+      (3*Books(W,Sorcery))+
+      (0*Books(W,Chaos))+
+      (1*Books(W,Life))+
+      (2*Books(W,Death));
+
+      Obwe[Militarist]=
+      (1*Books(W,Nature))+
+      (0*Books(W,Sorcery))+
+      (1*Books(W,Chaos))+
+      (2*Books(W,Life))+
+      (2*Books(W,Death));
+
+      Obwe[Theurgist]=
+      (1*Books(W,Nature))+
+      (3*Books(W,Sorcery))+
+      (1*Books(W,Chaos))+
+      (1*Books(W,Life))+
+      (0*Books(W,Death));
+
+      Obwe[Perfectionist]=
+      (2*Books(W,Nature))+
+      (1*Books(W,Sorcery))+
+      (0*Books(W,Chaos))+
+      (2*Books(W,Life))+
+      (1*Books(W,Death));
+
+      Obwe[Expansionist]=
+      (2*Books(W,Nature))+
+      (0*Books(W,Sorcery))+
+      (1*Books(W,Chaos))+
+      (1*Books(W,Life))+
+      (2*Books(W,Death));
+
+      Obwe[Narcissist]=
+      (1*Books(W,Nature))+
+      (1*Books(W,Sorcery))+
+      (2*Books(W,Chaos))+
+      (0*Books(W,Life))+
+      (2*Books(W,Death));
+
+: Effect of retorts :
+
+if Retort(W,Warlord) THEN { obwe[Militarist]=obwe[Militarist]+10; }
+if Retort(W,Channeler) THEN {
+      pewe[Ruthless]=pewe[Ruthless]+5;
+      obwe[narcissist]=obwe[narcissist]+10;
+	  }
+if Retort(W,SageMaster) THEN {
+      obwe[Theurgist]=obwe[theurgist]+10;
+      pewe[peaceful]=pewe[peaceful]+5;
+	  if (obwe[narcissist]<5) THEN {obwe[narcissist]=0; }
+		ELSE { obwe[narcissist]=obwe[narcissist]-5; }
+	  }
+if Retort(W,Guardian) THEN {
+      pewe[peaceful]=pewe[peaceful]+5;
+      pewe[perfectionist]=pewe[perfectionist]+10;
+	}		
+if Retort(W,Tactician) THEN {
+      obwe[Militarist]=obwe[Militarist]+5;
+      obwe[Expansionist]=obwe[Expansionist]+5;
+      }
+if RETORT(W,CultLeader) THEN {
+      obwe[theurgist]=obwe[theurgist]+5;
+      obwe[narcissist]=obwe[narcissist]+10;
+      pewe[lawful]=pewe[lawful]+10;
+      }
+if retort(W,Conjurer) THEN {
+      obwe[pragmatist]=obwe[Pragmatist]+10;
+      pewe[Aggressive]=pewe[Aggressive]+10;
+      obwe[narcissist]=obwe[narcissist]+10;
+      }
+if retort(W,Alchemy) THEN {
+      obwe[pragmatist]=obwe[pragmatist]+5;
+      obwe[perfectionist]=obwe[perfectionist]+10;
+      }
+if retort(W,Astrologer) THEN {
+      pewe[lawful]=pewe[lawful]+10;
+	  if (obwe[narcissist]<5) THEN {obwe[narcissist]=0; }
+		ELSE { obwe[narcissist]=obwe[narcissist]-5; }
+      }
+if retort(W,Specialist) THEN {
+      obwe[narcissist]=obwe[narcissist]+5;
+      }
+
+if SCORINGOPTION(SOrderPlease) then { Pewe[Chaotic]=0; }
+if SCORINGOPTION(SParanoia) then { Pewe[Peaceful]=0; }
+if SCORINGOPTION(SHostility) then { Pewe[Peaceful]=0; Pewe[Lawful]=0;}
+
+If difficulty()<=DiffEasy then { Pewe[Chaotic]=0; PEWE[Ruthless]=0; Obwe[Militarist]=0;}
+If difficulty()<=DiffNormal then { Pewe[Maniacal]=0; Obwe[Militarist]=%I(Obwe[Militarist]/2);}
+
+SetPersonality W, SelectBasedOn(pewe,6); 
+SetObjective W, SelectBasedOn(obwe,6); 
+

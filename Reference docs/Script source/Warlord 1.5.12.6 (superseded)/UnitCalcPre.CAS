@@ -1,0 +1,1904 @@
+
+:
+INPUT - U, the unit being calculated.
+OUTPUT - None, set unit current stats using the SetStat command.
+:
+
+:Detect owner:
+W=(GetStat(U,SOwner,0));
+:Detect cityID :
+C=(CITYONTILE(U));
+:unit location:
+P=GetStat(U,SPlane,1);
+OX=GetStat(U,SOLX,1);
+OY=GetStat(U,SOLY,1);
+OLT=GETTERRAIN(OX,OY,P);
+NMAX=NOFUNITSONTILE(P,OX,OY);
+:Detect overland combat stack and terrain :
+LT=GETTERRAIN(combatX(),combatY(),combatP());
+NMAXCOMBAT=NOFUNITSONTILE(combatP(),combatX(),combatY());
+
+
+: Effect trigger during both combat and overland :
+
+: Dummy Armor is meant to be circumventing hardcoded part of Holy Armor and allow permanent placement :
+IF GETENCHANTMENTFLAG(U,EncDummyArmor,1) THEN { SETOLENCHANTMENTFLAG(U,EncHolyArmor,0,1); }
+
+: Effect of Sentience, allow unit to get bonus and penalty of fantastic and non-fantastic :
+IF (GetEnchantmentFlag(U,EncSpiritLink,1)=0) THEN { GOTO "NOSPIRITLINK"; }
+
+ SETSTAT(U,AFantastic,0,1);
+
+ : prevent recasting of permanent unit enchantment and disable all attempt of dispel in combat :
+ IF INCOMBAT(U)
+  %OR ( OVERLANDACTIVEPLAYER <> W )
+ THEN {
+  SETOLENCHANTMENTFLAG(U,EncSpiritLink,1,0);
+ } ELSE {
+  SETOLENCHANTMENTFLAG(U,EncSpiritLink,1,1);
+ }
+
+!NOSPIRITLINK!
+
+: prevent recasting of permanent unit enchantment and disable all attempt of dispel in combat :
+IF (GetEnchantmentFlag(U,EncTransmuteEquipment,1)=0) THEN { GOTO "NOTRANSMUTEEQUIP"; }
+
+ IF INCOMBAT(U)
+  %OR ( OVERLANDACTIVEPLAYER <> W )
+ THEN {
+  SETOLENCHANTMENTFLAG(U,EncTransmuteEquipment,1,0);
+ } ELSE {
+  SETOLENCHANTMENTFLAG(U,EncTransmuteEquipment,1,1);
+ }
+
+!NOTRANSMUTEEQUIP!
+
+IF (GetEnchantmentFlag(U,EncRebuild,1)=0) THEN { GOTO "NOREBUILD"; }
+
+ IF INCOMBAT(U)
+  %OR ( OVERLANDACTIVEPLAYER <> W )
+ THEN {
+  SETOLENCHANTMENTFLAG(U,EncRebuild,1,0);
+ } ELSE {
+  SETOLENCHANTMENTFLAG(U,EncRebuild,1,1);
+ }
+
+!NOREBUILD!
+
+IF (GetEnchantmentFlag(U,EncVampirism,1)=0) THEN { GOTO "NOVAMPIRISM"; }
+
+ IF INCOMBAT(U)
+  %OR ( OVERLANDACTIVEPLAYER <> W )
+ THEN {
+  SETOLENCHANTMENTFLAG(U,EncVampirism,1,0);
+ } ELSE {
+  SETOLENCHANTMENTFLAG(U,EncVampirism,1,1);
+ }
+
+!NOVAMPIRISM!
+
+: Hero only part :
+IF ( ISHERO(U) = 0 ) THEN { GOTO "NOTHERO"; }
+
+: Marionette ability :
+ IF (GETSTAT(U,SHeroID,1)<>48) THEN { GOTO "NOTMARIONETTE"; }
+
+  IF (RETORT(W,Channeler)=0) THEN { GOTO "STRAYEDMARIONETTE"; }
+
+   MATK=%I(GETWIZARDDATA(W,WDBaseSkill))/30;
+   MDEF=%I(GETWIZARDDATA(W,WDBaseSkill))/50;
+   MCAST=%I(GETWIZARDDATA(W,WDBaseSkill))/5;
+   PRIMARY=PRIMARYREALM(W);
+   SCHARGE=1+%I(BOOKS(W,PRIMARY)/2);
+
+   SETSTAT(U,AFantastic,0,1);
+   SETSTAT(U,SAttack,0,GETSTAT(U,SAttack,0)+MATK);
+   SETSTAT(U,SAttackBonus,0,GETSTAT(U,SAttackBonus,0)+MATK);
+   SETSTAT(U,SRanged,0,GETSTAT(U,SRanged,0)+MATK);
+   SETSTAT(U,SRangedBuff,0,GETSTAT(U,SRangedBuff,0)+MATK);
+   SETSTAT(U,SDefense,0,GETSTAT(U,SDefense,0)+MDEF);
+   SETSTAT(U,SDefenseBuff,0,GETSTAT(U,SDefenseBuff,0)+MDEF);
+
+   IF (PRIMARY<>1) THEN { GOTO "NOTNATUREMARIONETTESPELL" }
+
+    SETSTAT(U,SRangedType,0,37);
+    IF (SPELLSTATE(W,SMarionetteAscension)=2) THEN {
+     IF RETORT(W,Conjurer) THEN {
+      SETSTAT(U,SSpellAbility,1,SWaterElemental);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     } ELSE {
+      SETSTAT(U,SSpellAbility,1,SIceBolt);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     }
+    } ELSE {
+     SETSTAT(U,SSpellAbility,1,SWeb);
+     GOTO "ENDOFMARIONETTESPELLSELECT";
+    }
+
+   !NOTNATUREMARIONETTESPELL!
+
+   IF (PRIMARY<>2) THEN { GOTO "NOTSORCERYMARIONETTESPELL" }
+
+    SETSTAT(U,SRangedType,0,34);
+    IF (SPELLSTATE(W,SMarionetteAscension)=2) THEN {
+     IF RETORT(W,Conjurer) THEN {
+      SETSTAT(U,SSpellAbility,1,SPhantomBeast);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     } ELSE {
+      SETSTAT(U,SSpellAbility,1,SPsionicBlast);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     }
+    } ELSE {
+     SETSTAT(U,SSpellAbility,1,SAEtherSparks);
+     GOTO "ENDOFMARIONETTESPELLSELECT";
+    }
+
+   !NOTSORCERYMARIONETTESPELL!
+
+   IF (PRIMARY<>3) THEN { GOTO "NOTCHAOSMARIONETTESPELL" }
+
+    SETSTAT(U,SRangedType,0,31);
+    IF (SPELLSTATE(W,SMarionetteAscension)=2) THEN {
+     IF RETORT(W,Conjurer) THEN {
+      SETSTAT(U,SSpellAbility,1,SFireElemental);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     } ELSE {
+      SETSTAT(U,SSpellAbility,1,SLightningBolt);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     }
+    } ELSE {
+     SETSTAT(U,SSpellAbility,1,SFireBolt);
+     GOTO "ENDOFMARIONETTESPELLSELECT";
+    }
+
+   !NOTCHAOSMARIONETTESPELL!
+
+   IF (PRIMARY<>4) THEN { GOTO "NOTLIFEMARIONETTESPELL" }
+
+    SETSTAT(U,SRangedType,0,35);
+    IF (SPELLSTATE(W,SMarionetteAscension)=2) THEN {
+     IF RETORT(W,Conjurer) THEN {
+      SETSTAT(U,SSpellAbility,1,SUnicorns);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     } ELSE {
+      SETSTAT(U,SSpellAbility,1,SExaltation);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     }
+    } ELSE {
+     SETSTAT(U,SSpellAbility,1,SHealing);
+     GOTO "ENDOFMARIONETTESPELLSELECT";
+    }
+
+   !NOTLIFEMARIONETTESPELL!
+
+   IF (PRIMARY<>5) THEN { GOTO "NOTDEATHMARIONETTESPELL" }
+
+    SETSTAT(U,SRangedType,0,33);
+    IF (SPELLSTATE(W,SMarionetteAscension)=2) THEN {
+     IF RETORT(W,Conjurer) THEN {
+      SETSTAT(U,SSpellAbility,1,SWerewolves);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     } ELSE {
+      SETSTAT(U,SSpellAbility,1,SSyphonLife);
+      GOTO "ENDOFMARIONETTESPELLSELECT";
+     }
+    } ELSE {
+     SETSTAT(U,SSpellAbility,1,SLifeDrain);
+     GOTO "ENDOFMARIONETTESPELLSELECT";
+    }
+
+   !NOTDEATHMARIONETTESPELL!
+
+   !ENDOFMARIONETTESPELLSELECT!
+
+   IF (BOOKS(W,Nature)>1) THEN {
+    SETSTAT(U,AForester,0,1);
+    SETSTAT(U,AMountaineer,0,1);
+   }
+
+   IF (BOOKS(W,Nature)>2) THEN {
+    SETSTAT(U,APoisonImmunity,0,1);
+   }
+
+   IF (BOOKS(W,Nature)>4) THEN {
+    SETSTAT(U,AStoningImmunity,0,1);
+   }
+
+   IF (BOOKS(W,Sorcery)>1) THEN {
+    SETSTAT(U,ALargeShield,0,1);
+   }
+
+   IF (BOOKS(W,Sorcery)>2) THEN {
+    SETSTAT(U,AMissileImmunity,0,1);
+   }
+
+   IF (BOOKS(W,Sorcery)>4) THEN {
+    SETENCHANTMENTFLAG(U,EncResistMagic,1,1);
+   }
+
+   IF (BOOKS(W,Chaos)>1) THEN {
+    SETSTAT(U,AFirstStrike,0,1);
+   }
+
+   IF (BOOKS(W,Chaos)>2) THEN {
+    SETSTAT(U,AFireImmunity,0,1);
+   }
+
+   IF (BOOKS(W,Chaos)>4) THEN {
+    SETSTAT(U,ALightningResistance,0,1);
+   }
+
+   IF (BOOKS(W,Life)>1) THEN {
+    SETSTAT(U,AHealer,0,1);
+   }
+
+   IF (BOOKS(W,Life)>2) THEN {
+    SETSTAT(U,AIllusionImmunity,0,1);
+   }
+
+   IF (BOOKS(W,Life)>4) THEN {
+    SETSTAT(U,ALucky,0,1);
+   }
+
+   IF (BOOKS(W,Death)>1) THEN {
+    SETSTAT(U,AColdImmunity,0,1);
+   }
+
+   IF (BOOKS(W,Death)>2) THEN {
+    SETSTAT(U,ADeathImmunity,0,1);
+   }
+
+   IF (BOOKS(W,Death)>4) THEN {
+    SETSTAT(U,AWeaponImmunity,0,1);
+   }
+
+   IF (SPELLSTATE(W,SMarionetteAscension)<>2) THEN { GOTO "NOTMARIONETTEASCENSION"; }
+
+    SETHEAB(W,48,HAArcanePower,2);
+
+    IF ( (SCHARGE-1)<1 ) THEN { SCHARGE=1; } ELSE { SCHARGE=%I(BOOKS(W,PRIMARY)/2); }
+
+    IF (PRIMARY=1) THEN {
+     SETSTAT(U,AFPoison,0,10,1);
+     SETSTAT(U,AFStoningTouch,0,-2,1);
+    }
+    IF (PRIMARY=2) THEN {
+     SETSTAT(U,ACounterImmunity,0,1);
+     SETSTAT(U,AFIllusion,0,1,1);
+    }
+    IF (PRIMARY=3) THEN {
+     SETSTAT(U,AWallCrusher,0,1);
+     SETSTAT(U,AFArmorPiercing,0,1,1);
+     SETSTAT(U,SRangedType,0,30);
+    }
+    IF (PRIMARY=4) THEN {
+     SETSTAT(U,AFExorcise,0,-4,1);
+     SETENCHANTMENTFLAG(U,EncBless,1,1);
+    }
+    IF (PRIMARY=5) THEN {
+     SETSTAT(U,ABloodsucker,0,1);
+     SETSTAT(U,ACreateUndead,0,1);
+    }
+
+    IF (BOOKS(W,Nature)>4) THEN {
+     SETSTAT(U,SRegeneration,0,GETSTAT(U,SRegeneration,0)+2);
+    }
+
+    IF (BOOKS(W,Sorcery)>4) THEN {
+     SETENCHANTMENTFLAG(U,EncInvisibility,1,1);
+    }
+
+    IF (BOOKS(W,Chaos)>4) THEN {
+     SETSTAT(U,AFDestruction,0,0,1);
+    }
+
+    IF (BOOKS(W,Life)>4) THEN {
+     SETSTAT(U,AHealingAura,0,1);
+    }
+
+    IF (BOOKS(W,Death)>4) THEN {
+     SETSTAT(U,AFLifeSteal,0,-1,1);
+    }
+
+    IF RETORT(W,Alchemist) THEN {
+     SETHEAB(W,48,HAAEtherMaster,2);
+    }
+    IF RETORT(W,SageMaster) THEN {
+     SETHEAB(W,48,HASage,2);
+    }
+    IF RETORT(W,Specialist) THEN {
+     IF (PRIMARY=1) THEN { SETHEAB(W,48,HAChosenOfGaia,2); }
+     IF (PRIMARY=2) THEN { SETHEAB(W,48,HAChosenOfAEther,2); }
+     IF (PRIMARY=3) THEN { SETHEAB(W,48,HAChosenOfChaos,2); }
+     IF (PRIMARY=4) THEN { SETHEAB(W,48,HAChosenOfLife,2); }
+     IF (PRIMARY=5) THEN { SETHEAB(W,48,HAChosenOfDeath,2); }
+    }
+    IF RETORT(W,Warlord) THEN {
+     SETHEAB(W,48,HALeadership,2);
+    }
+    IF RETORT(W,Myrran) THEN {
+     SETSTAT(U,APlaneShifting,0,1);
+    }
+    IF RETORT(W,Tactician) THEN {
+     SETHEAB(W,48,HAIrresistibleCharge,2);
+    }
+    IF RETORT(W,Guardian) THEN {
+     SETHEAB(W,48,HADivineBarrier,2);
+    }
+    IF RETORT(W,Procurator) THEN {
+     SETHEAB(W,48,HALogistics,2);
+    }
+    IF RETORT(W,Archmage) THEN {
+     SETSTAT(U,SMaxMP,0,GETSTAT(U,SMaxMP,0)+MCAST);
+    }
+    IF RETORT(W,Benefactor) THEN {
+     SETHEAB(W,48,HANoble,1);
+     SETHEAB(W,48,HASupplycommander,1);
+    }
+    IF RETORT(W,CultLeader) THEN {
+     SETHEAB(W,48,HAPrayermaster,2);
+    }
+    IF RETORT(W,Artificer) THEN {
+     SETHEAB(W,48,HAMechanicalMaster,2);
+    }
+    IF RETORT(W,Astrologer) THEN {
+     SETHEAB(W,48,HARitualMaster,2);
+    }
+    IF RETORT(W,Conjurer) THEN {
+     SETHEAB(W,48,HASoulLinker,2);
+    }
+    IF RETORT(W,Charismatic) THEN {
+     SETHEAB(W,48,HACharmed,1);
+     SETHEAB(W,48,HALucky,1);
+    }
+    IF RETORT(W,Enchanter) THEN {
+     SETOLENCHANTMENTFLAG(U,EncSpellLock,1,1);
+    }
+
+   !NOTMARIONETTEASCENSION!
+
+   SETSTAT(U,SSpellCharges,1,SCHARGE);
+
+   GOTO "NOTMARIONETTE";
+
+  !STRAYEDMARIONETTE!
+
+   : strayed marionette made by past channeler could be summoned by summon champion :
+
+   IF (GETOLENCHANTMENTFLAG(U,EncSpellLock,1)>0) THEN { GOTO "NOLONGERSTRAYEDMARIONETTE"; }
+
+    IF (GETENCHANTMENTFLAG(U,EncTransmuteEquipment,1)=0) THEN {
+     SETENCHANTMENTFLAG(U,EncTransmuteEquipment,1,1);
+    }
+    IF (GETENCHANTMENTFLAG(U,EncRebuild,1)=0) THEN {
+     SETENCHANTMENTFLAG(U,EncRebuild,1,1);
+    }
+    IF (GETHEAB(U,HASage)=0) THEN {
+     SETHEAB(W,48,HASage,2);
+    }
+    IF (GETHEAB(U,HAMechanicalMaster)=0) THEN {
+     SETHEAB(W,48,HAMechanicalMaster,2);
+    }
+    IF (GETHEAB(U,HARitualMaster)=0) THEN {
+     SETHEAB(W,48,HARitualMaster,2);
+    }
+    IF (GETHEAB(U,HACharmed)=0) THEN {
+     SETHEAB(W,48,HACharmed,1);
+    }
+    IF (GETHEAB(U,HAArcaneWard)=0) THEN {
+     SETHEAB(W,48,HAArcaneWard,2);
+    }
+
+   !NOLONGERSTRAYEDMARIONETTE!
+
+   SETOLENCHANTMENTFLAG(U,EncSpellLock,1,1);
+
+ !NOTMARIONETTE!
+
+: New hero abilities involved permanent unit enchantment put it here :
+ IF (GETHEAB(U,HARighteousWard)=0) THEN { GOTO "NOTRIGHTEOUSWARD"; }
+
+  IF (GETHEAB(U,HARighteousWard)>2)
+   %AND (GETENCHANTMENTFLAG(U,EncBless,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncBless,1,1);
+  }
+  IF (GETHEAB(U,HARighteousWard)>4)
+   %AND (GETENCHANTMENTFLAG(U,EncDummyArmor,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncDummyArmor,1,1);
+  }
+  IF (GETHEAB(U,HARighteousWard)>6)
+   %AND (GETENCHANTMENTFLAG(U,EncDivineProtection,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncDivineProtection,1,1);
+  }
+  : Exorcise effect is in unitcalc :
+  : Only available for Super Righteous Ward :
+  IF (GETHEAB(U,HARighteousWard)>9) THEN {
+   SETSTAT(U,SRace,0,RCLife);
+   SETSTAT(U,AFireImmunity,0,1);
+   IF (GETENCHANTMENTFLAG(U,EncTrueSight,1)=0) THEN {
+    SETENCHANTMENTFLAG(U,EncTrueSight,1,1);
+   }
+  }
+  IF (GETHEAB(U,HARighteousWard)>11)
+   %AND (GETENCHANTMENTFLAG(U,EncInvulnerability,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncInvulnerability,1,1);
+  }
+  IF (GETHEAB(U,HARighteousWard)>12)
+   %AND (GETENCHANTMENTFLAG(U,EncMagicImmunity,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncMagicImmunity,1,1);
+  }
+
+ !NOTRIGHTEOUSWARD!
+
+ IF (GETHEAB(U,HAArcaneWard)=0) THEN { GOTO "NOTARCANEWARD"; }
+
+  IF (GETHEAB(U,HAArcaneWard)>2)
+   %AND (GETENCHANTMENTFLAG(U,EncResistMagic,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncResistMagic,1,1);
+  }
+  IF (GETHEAB(U,HAArcaneWard)>4)
+   %AND (GETENCHANTMENTFLAG(U,EncResistElements,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncResistElements,1,1);
+  }
+  IF (GETHEAB(U,HAArcaneWard)>6)
+   %AND (GETENCHANTMENTFLAG(U,EncElementalArmor,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncElementalArmor,1,1);
+  }
+  IF (GETHEAB(U,HAArcaneWard)>8)
+   %AND (GETENCHANTMENTFLAG(U,EncIronSkin,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncIronSkin,1,1);
+  }
+  : Only available for Super Arcane Ward :
+  IF (GETHEAB(U,HAArcaneWard)>9)
+   %AND (GETENCHANTMENTFLAG(U,EncInsulation,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncInsulation,1,1);
+  }
+  IF (GETHEAB(U,HAArcaneWard)>11)
+   %AND (GETENCHANTMENTFLAG(U,EncInvisibility,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncInvisibility,1,1);
+  }
+  IF (GETHEAB(U,HAArcaneWard)>12)
+   %AND (GETENCHANTMENTFLAG(U,EncMagicImmunity,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncMagicImmunity,1,1);
+  }
+
+ !NOTARCANEWARD!
+
+ IF (GETHEAB(U,HAChaosBoon)=0) THEN { GOTO "NOTCHAOSBOON"; }
+
+  IF (GETHEAB(U,HAChaosBoon)>1)
+   %AND (GETENCHANTMENTFLAG(U,EncFieryFury,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncFieryFury,1,1);
+  }
+  IF (GETHEAB(U,HAChaosBoon)>2)
+   %AND (GETENCHANTMENTFLAG(U,EncImmolation,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncImmolation,1,1);
+  }
+  IF (GETHEAB(U,HAChaosBoon)>3)
+   %AND (GETENCHANTMENTFLAG(U,EncBerserk,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncBerserk,1,1);
+  }
+  IF (GETHEAB(U,HAChaosBoon)>4)
+   %AND (GETENCHANTMENTFLAG(U,EncSpiritLink,1)=0)
+  THEN {
+   SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+2));
+   SETENCHANTMENTFLAG(U,EncSpiritLink,1,1);
+  }
+  IF (GETHEAB(U,HAChaosBoon)>5)
+   %AND (GETENCHANTMENTFLAG(U,EncCCBreath,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncCCBreath,1,1);
+  }
+  IF (GETHEAB(U,HAChaosBoon)>6)
+   %AND (GETENCHANTMENTFLAG(U,EncCCArmor,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncCCArmor,1,1);
+  }
+  IF (GETHEAB(U,HAChaosBoon)>7)
+   %AND (GETENCHANTMENTFLAG(U,EncCCFlight,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncCCFlight,1,1);
+  }
+  IF (GETHEAB(U,HAChaosBoon)>8)
+   %AND (GETENCHANTMENTFLAG(U,EncInsulation,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncInsulation,1,1);
+  }
+
+ !NOTCHAOSBOON!
+
+ IF (GETHEAB(U,HADeathAscension)=0) THEN { GOTO "NOTDEATHLORD"; }
+
+  SETSTAT(U,SRace,0,RCDeath);
+  IF (GETHEAB(U,HADeathAscension)>1) THEN {
+   SETSTAT(U,ABloodsucker,0,1);
+   SETSTAT(U,APoisonImmunity,0,1);
+  }
+  IF (GETHEAB(U,HADeathAscension)>2) THEN {
+   SETSTAT(U,ADeathImmunity,0,1);
+   IF (GETENCHANTMENTFLAG(U,EncCloakofFear,1)=0) THEN {
+    SETENCHANTMENTFLAG(U,EncCloakofFear,1,1);
+   }
+  }
+  IF (GETHEAB(U,HADeathAscension)>3)
+   %AND (GETENCHANTMENTFLAG(U,EncSpiritLink,1)=0)
+  THEN {
+   SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+2));
+   SETENCHANTMENTFLAG(U,EncSpiritLink,1,1);
+  }
+  IF (GETHEAB(U,HADeathAscension)>4) THEN {
+   SETSTAT(U,AIllusionImmunity,0,1);
+   IF (GETENCHANTMENTFLAG(U,EncWraithForm,1)=0) THEN {
+    SETENCHANTMENTFLAG(U,EncWraithForm,1,1);
+   }
+  }
+  IF (GETHEAB(U,HADeathAscension)>5)
+   %AND (GETENCHANTMENTFLAG(U,EncShadowStrike,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncShadowStrike,1,1);
+  }
+  IF (GETHEAB(U,HADeathAscension)>6)
+   %AND (GETENCHANTMENTFLAG(U,EncFrenzy,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncFrenzy,1,1);
+  }
+  IF (GETHEAB(U,HADeathAscension)>7)
+   %AND (GETENCHANTMENTFLAG(U,EncRevenant,1)=0)
+  THEN {
+   SETENCHANTMENTFLAG(U,EncRevenant,1,1);
+  }
+  IF (GETHEAB(U,HADeathAscension)>8) THEN {
+   SETSTAT(U,ACreateUndead,0,1);
+  }
+
+ !NOTDEATHLORD!
+
+: old item power get upgrade :
+ IF (GETITEMPOWER(U,37)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncInsulation,0,1);
+  SETSTAT(U,AColdImmunity,0,1);
+ }
+
+ IF (GETITEMPOWER(U,50)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncTrueSight,0,1);
+ }
+
+ IF (GETITEMPOWER(U,52)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncDivineProtection,0,1);
+ }
+
+ IF (GETITEMPOWER(U,55)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncLandLink,0,1);
+ }
+
+ IF (GETITEMPOWER(U,63)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncFlight,0,1);
+ }
+
+
+: Put new item's power here :
+ IF (GETITEMPOWER(U,74)>0) THEN {
+  SETSTAT(U,SHP,0,(GetStat(U,SHP,0)+4));
+  SETSTAT(U,SHPBuff,0,(GetStat(U,SHPBuff,0)+4));
+ }
+
+ IF (GETITEMPOWER(U,75)>0) THEN {
+  SETSTAT(U,SHP,0,(GetStat(U,SHP,0)+5));
+  SETSTAT(U,SHPBuff,0,(GetStat(U,SHPBuff,0)+5));
+ }
+
+ IF (GETITEMPOWER(U,76)>0) THEN {
+  SETSTAT(U,SHP,0,(GetStat(U,SHP,0)+6));
+  SETSTAT(U,SHPBuff,0,(GetStat(U,SHPBuff,0)+6));
+ }
+
+ IF (GETITEMPOWER(U,77)=0) THEN { GOTO "NOMYSTICPOWER"; }
+
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+3));
+  SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+3));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+2));
+  SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+2));
+  SETSTAT(U,SHP,0,(GetStat(U,SHP,0)+8));
+  SETSTAT(U,SHPBuff,0,(GetStat(U,SHPBuff,0)+8));
+
+ !NOMYSTICPOWER!
+
+ IF (GETITEMPOWER(U,78)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncZeal,0,1);
+  SETSTAT(U,AFirstStrike,0,1);
+  SETSTAT(U,ANegateFirstStrike,0,1);
+ }
+
+ IF (GETITEMPOWER(U,79)>0) THEN {
+  SETSTAT(U,AHealingAura,0,1);
+ }
+
+: new slot for modification of original Vampiric weapon power from life steal -2 to -5 :
+ IF (GETITEMPOWER(U,80)=0) THEN { GOTO "NOVAMPIRICWEAPON"; }
+
+  SETSTAT(U,ACreateUndead,0,1);
+  IF ((GetStat(U,AFLifeSteal,0,2))=100)
+  THEN {
+   SETSTAT(U,AFLifeSteal,0,(0-5),2);
+  } ELSE {
+   SETSTAT(U,AFLifeSteal,0,(GetStat(U,AFLifeSteal,0,2)-5),2);
+  }
+
+ !NOVAMPIRICWEAPON!
+
+ IF (GETITEMPOWER(U,81)>0) THEN {
+  SETOLENCHANTMENTFLAG(U,EncSpellLock,1,1);
+ }
+
+ IF (GETITEMPOWER(U,82)=0) THEN { GOTO "NOSACRED"; }
+
+  SETSTAT(U,SAttack,0,( (GetStat(U,SAttack,0))+(GetStat(U,SAttack,1)) );
+  SETSTAT(U,SRanged,0,( (GetStat(U,SRanged,0))+(GetStat(U,SRanged,1)) );
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+4));
+  SETSTAT(U,SResist,0,(GetStat(U,SDefense,0)+4));
+  SETSTAT(U,SHP,0,( (GetStat(U,SHP,0))+(GetStat(U,SHP,1)) );
+  SETSTAT(U,SRace,0,RCLife);
+
+ !NOSACRED!
+
+ IF (GETITEMPOWER(U,83)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncColossalStrength,0,1);
+  SETENCHANTMENTFLAG(U,EncIronSkin,0,1);
+ }
+
+ IF (GETITEMPOWER(U,84)>0) THEN {
+  SETSTAT(U,SRace,0,RCChaos);
+ }
+
+ : Hero augmentation effect of transmute equipment spell :
+ IF (GetEnchantmentFlag(U,EncTransmuteEquipment,1)=0) THEN { GOTO "NOHEROAUGMENT"; }
+
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));
+  SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+2));
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+2));
+  SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+2));
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));
+  SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+2));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+  SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+
+ !NOHEROAUGMENT!
+
+ : Hero augmentation effect of Rebuild spell :
+ IF (GetEnchantmentFlag(U,EncRebuild,1)=0) THEN { GOTO "NOHEROREBUILD"; }
+
+  SETSTAT(U,SCustomAttribute,0,1);
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+2));
+  SETSTAT(U,AFArmorPiercing,0,1,1);
+  SETSTAT(U,AIllusionImmunity,0,1);
+  SETSTAT(U,ADeathImmunity,0,1);
+
+ !NOHEROREBUILD!
+
+ : new effect of Benefactor/Famous retort, give heroes +2 attacks, +1 armor, +1 resist :
+ IF (RETORT(W,Benefactor)=0) THEN { GOTO "NOTBENEFACTOR"; }
+
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));
+  SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+2));
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+1));
+  SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+  SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));
+  SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+2));
+
+ !NOTBENEFACTOR!
+
+ : new effect of Doom Mastery, hero who get enchanted by chaos channel get all 3 effect permanently :
+ IF (HASGLOBAL(W,GEDoomMastery)=0) THEN { GOTO "NODOOMASTERY"; }
+
+  IF ( (GETENCHANTMENTFLAG(U,EncCCBreath,0)>0) %OR (GETENCHANTMENTFLAG(U,EncCCFlight,0)>0) %OR (GETENCHANTMENTFLAG(U,EncCCArmor,0)>0) )
+   %AND ( (GETENCHANTMENTFLAG(U,EncCCFlight,0)=0) %OR (GETENCHANTMENTFLAG(U,EncCCArmor,0)=0) )
+  THEN {
+   SETENCHANTMENTFLAG(U,EncCCBreath,1,1);
+   SETENCHANTMENTFLAG(U,EncCCArmor,1,1);
+   SETENCHANTMENTFLAG(U,EncCCFlight,1,1);
+  }
+
+ !NODOOMASTERY!
+
+ : New effect of Just Cause on hero :
+ IF (HASGLOBAL(W,GEJustCause)=0) THEN { GOTO "HERONOJUSTCAUSE"; }
+ 
+  SETSTAT( U,SAttack,0,( (GETSTAT(U,SAttack,0)) + 1 ) )
+  SETSTAT( U,SAttackBonus,0,( (GETSTAT(U,SAttackBonus,0)) + 1 ) )
+  SETSTAT( U,SDefense,0,( (GETSTAT(U,SDefense,0)) + 1 ) )
+  SETSTAT( U,SDefenseBuff,0,( (GETSTAT(U,SDefenseBuff,0)) + 1 ) )
+  SETSTAT( U,SResist,0,( (GETSTAT(U,SResist,0)) + 1 ) )
+  SETSTAT( U,SResistBuff,0,( (GETSTAT(U,SResistBuff,0)) + 1 ) )
+  IF (GETSTAT(U,SRanged,0)>0) THEN {
+   SETSTAT( U,SRanged,0,( (GETSTAT(U,SRanged,0)) + 1 ) )
+   SETSTAT( U,SRangedBuff,0,( (GETSTAT(U,SRangedBuff,0)) + 1 ) )
+  }
+
+ !HERONOJUSTCAUSE!
+
+: Planewalker hero granted plane travel enchantment on the stack :
+ IF (GetStat(U,STypeID,1)<>284) THEN { GOTO "NOTPLANEWALKERHERO"; }
+  IF ( OVERLANDACTIVEPLAYER <> W ) THEN { GOTO "NOTPLANEWALKERHERO"; }
+   IF ( INCOMBAT(U) > 0 ) THEN { GOTO "NOTPLANEWALKERHERO"; }
+
+    FOR N=1 TO NMAX;
+
+     IF (GetStat(UNITONTILE(P,OX,OY,N),APlaneShifting,1)=0)
+      %AND (GETENCHANTMENTFLAG(UNITONTILE(P,OX,OY,N),EncPlanewalking,0)=0)
+      %AND (GETENCHANTMENTFLAG(UNITONTILE(P,OX,OY,N),EncPlaneCarry,0)=0)
+     THEN {
+      SETENCHANTMENTFLAG(UNITONTILE(P,OX,OY,N),EncPlaneCarry,1,1);
+      SETSTAT(U,APlaneShifting,0,1);
+     }
+
+    NEXT N;
+
+ !NOTPLANEWALKERHERO!
+
+ : Hero effect that only trigger in combat :
+ IF ( INCOMBAT(U) = 0 ) THEN { GOTO "HERONOTINCOMBAT"; }
+
+ : remove old bonus for tactician :
+  IF (RETORT(W,Tactician)=0) THEN { GOTO "NOTTACTICIANHERO"; }
+
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-2));
+   SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)-2));
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-2));
+   SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)-2));
+   SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)-1));
+   SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)-1));
+   SETSTAT(U,SResist,0,(GetStat(U,SResist,0)-2));
+   SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)-2));
+
+!NOTTACTICIANHERO!
+
+ : Item power grant combat enchantment :
+  IF (GETITEMPOWER(U,84)=0) THEN { GOTO "NOCHAOSCONDUIT"; }
+
+   IF HASCOMBATGLOBAL(W,CGBreakthrough,1)
+    %AND HASCOMBATGLOBAL(W,CGBlazingMarch,1)
+    %AND HASCOMBATGLOBAL(W,CGBeatOfSwiftness,1)
+   THEN { GOTO "NOCHAOSCONDUIT"; }
+
+   SETCOMBATGLOBAL( W,CGBreakthrough,1,1 );
+   SETCOMBATGLOBAL( W,CGBlazingMarch,1,1 );
+   SETCOMBATGLOBAL( W,CGBeatOfSwiftness,1,1 );
+
+  !NOCHAOSCONDUIT!
+
+  IF (GETITEMPOWER(U,85)>0)
+   %AND (HASCOMBATGLOBAL(W,CGPLAGUE,2)=0)
+  THEN {
+   SETCOMBATGLOBAL( W,CGPLAGUE,2,1 );
+  }
+
+  IF GETITEMPOWER(U,86)=0 THEN { GOTO "NOEYEOFSTORM"; }
+
+   SETSTAT(U,SLordOfStorm,0,1);
+   SETSTAT(U,AColdImmunity,0,1);
+
+   FOR CU=1 TO MAXUNIT();
+
+   IF ( INCOMBAT(CU) = 0 ) THEN { GOTO "NOTWITHSTORM"; }
+
+    IF (GETSTAT(CU,SOwner,0)=W)
+     %AND (GETITEMPOWER(CU,86)=0)
+     %AND (GETENCHANTMENTFLAG(CU,EncEyeOfStorm,0)=0)
+    THEN {
+     SETCOMBATENCHANTMENTFLAG(CU,EncEyeOfStorm,1,1);
+     SETSTAT(CU,SLordOfStorm,0,1);
+     SETSTAT(CU,AColdImmunity,0,1);
+    }
+
+   !NOTWITHSTORM!
+
+   NEXT;
+
+   IF HASCOMBATGLOBAL(W,CGHurricane,1)
+    %AND HASCOMBATGLOBAL(W,CGCallLightning,1)
+    %AND HASCOMBATGLOBAL(W,CGFreezingRain,1)
+   THEN { GOTO "NOEYEOFSTORM"; }
+
+    SETCOMBATGLOBAL( W,CGHurricane,1,1 );
+    SETCOMBATGLOBAL( W,CGCallLightning,1,1 );
+    SETCOMBATGLOBAL( W,CGFreezingRain,1,1 );
+
+!NOEYEOFSTORM!
+
+!HERONOTINCOMBAT!
+
+: End of Hero only's part :
+!NOTHERO!
+
+: now Flame Blade become Fiery Fury and using different enchantment ID :
+IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO "NOFIERYFURY"; }
+
+: summon creature become chaos creature and gains first strike and fire breath :
+ IF (BASEFANTASTIC(U)) THEN { 
+  SETSTAT(U,AFirstStrike,0,1);
+  SETSTAT(U,SRace,0,RCChaos);
+ } ELSE {
+ : normal unit gains flame blade :
+  SETENCHANTMENTFLAG(U,EncFlameBlade,0,1);
+  IF (GetStat(U,SRangedType,0)>9) %AND (GetStat(U,SRangedType,0)<20) THEN { 
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));
+   SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+2));
+  }
+ }
+
+!NOFIERYFURY!
+
+: enchantment effects below need to put here due to effect either combo with other spell or involve another enchantment :
+: New unit enchantment "Insulation", gain fire immunity, cold immunity, and lightning resistance :
+IF (GetEnchantmentFlag(U,EncInsulation,0)>0) %AND (GETITEMPOWER(U,37)=0) THEN {
+ SETSTAT(U,AFireImmunity,0,1);
+ SETSTAT(U,ALightningResistance,0,1);
+ SETSTAT(U,AColdImmunity,0,1);
+}
+
+: Forced all discipline to have overland version of bonus :
+IF (GetEnchantmentFlag(U,EncDiscipline,0)>0) THEN {
+ SETOLENCHANTMENTFLAG(U,EncDisciplineOld,0,1);
+}
+
+: Effect of score option "Khan the Conqueror", Emulates Warlord retort for neutral normal units :
+IF (SCORINGOPTION(SKhanTheConqueror)=0) THEN { GOTO "NOKHAN"; }
+
+ IF (W=NeutralPlayerID)
+  %AND (BASEFANTASTIC(U)=0)
+ THEN {
+  SETSTAT(U,ALevel,0,(GETSTAT(U,ALevel,0)+1); 
+ }
+
+!NOKHAN!
+
+: new unit enchantment "Divine Protection" :
+IF (GETENCHANTMENTFLAG(U,EncDivineProtection,0)=0) THEN { GOTO "NODIVINEPROTECT"; }
+
+ IF (GETITEMPOWER(U,52)>0) THEN {
+  SETENCHANTMENTFLAG(U,EncDivineProtection,0,1);
+  GOTO "NODIVINEPROTECT";
+ } ELSE {
+  SETSTAT(U,ADeathImmunity,0,1);
+  IF GETSTAT(U,ALucky,0)=0) THEN { SETSTAT(U,ALucky,0,1); }
+ }
+
+!NODIVINEPROTECT!
+
+: Effect that modify Attack/Armor/Resistance in flat number move here to not in conflict with Warp Creature :
+
+: LAND LINKING gain +1 resistance and becomes NATURE LINK :
+IF (GetEnchantmentFlag(U,EncLandLink,0)=0) %AND (GETITEMPOWER(U,55)=0) THEN { GOTO "NOTNATURELINK"; }
+
+ SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+ SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+
+!NOTNATURELINK!
+
+: global enchantment part start here :
+
+IF (HASGLOBAL(W,GEZombieMastery)=0) THEN { GOTO "NOZOMBIEMASTERY"; }
+ IF (GetEnchantmentFlag(U,EncUndead,0)=0) %AND (GetStat(U,STypeID,1)<>174) THEN { GOTO "NOZOMBIEMASTERY"; }
+
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));
+  SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+  SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+  SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+  SETSTAT(U,SOLMaxMoves,0,(GetStat(U,SOLMaxMoves,0)+2));
+  SETSTAT(U,SOLMovesLeft,0,(GetStat(U,SOLMovesLeft,0)+2));
+  SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+2));
+  SETSTAT(U,SCombatMovesLeft,0,(GetStat(U,SCombatMovesLeft,0)+2));
+
+!NOZOMBIEMASTERY!
+
+: Outlander Reforms' Effects both overland and combat :
+IF (GETWIZARDDATA(W,WDMuggleWizard)<1) THEN { GOTO "NOOUTLANDER"; }
+
+ IF (SPELLSTATE(W,STMagitekAntiGravityDrive)<>2) THEN { GOTO "NOTEMPORALDRIVE"; }
+  IF (NMAX<2) THEN { GOTO "NOTEMPORALDRIVE"; }
+   IF INCOMBAT(U) THEN { GOTO "NOTEMPORALDRIVE"; }
+
+    IF (GetStat(U,STypeID,1)=35)
+     %OR (GetStat(U,STypeID,1)=36)
+     %OR (GetStat(U,STypeID,1)=38)
+     %OR (GetStat(U,STypeID,1)=39)
+     %OR (GetStat(U,STypeID,1)=190)
+     %OR (GetStat(U,STypeID,1)=256)
+     %OR (GetStat(U,STypeID,1)=257)
+     %OR (GetStat(U,STypeID,1)=302)
+     %OR (GetStat(U,STypeID,1)=189)
+     %OR (GetStat(U,STypeID,1)=260)
+     %OR (GetStat(U,STypeID,1)=261)
+     %OR (GetStat(U,STypeID,1)=331)
+     %OR (GetStat(U,ASailing,1)>0)
+     %OR (GetStat(U,AStealth,0)>0)
+    THEN { GOTO "NOTEMPORALDRIVE"; }
+
+     TDTRANSPORT=0;
+
+     FOR N=1 TO NMAX;
+
+      IF (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>35)
+       %AND (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>36)
+       %AND (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>38)
+       %AND (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>39)
+       %AND (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>190)
+       %AND (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>256)
+       %AND (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>257)
+       %AND (GetStat(UNITONTILE(P,OX,OY,N),STypeID,1)<>302)
+      THEN { GOTO "NOTTRANSPORT"; }
+
+       IF (GetStat(UNITONTILE(P,OX,OY,N),SOwner,1)=W)
+        %AND (GetStat(UNITONTILE(P,OX,OY,N),AIllusionImmunity,1)>0)
+        %AND (GETENCHANTMENTFLAG(UNITONTILE(P,OX,OY,N),EncPowerEngine,1)>0)
+        %AND (GETENCHANTMENTFLAG(UNITONTILE(P,OX,OY,N),EncHaste,1)>0)
+       THEN {
+        TDTRANSPORT=TDTRANSPORT+1;
+       }
+
+      !NOTTRANSPORT!
+
+     NEXT N;
+
+     IF (TDTRANSPORT>0) THEN { SETSTAT(U,AStealth,0,1); }
+
+
+ !NOTEMPORALDRIVE!
+
+ IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDER"; }
+
+  IF (SPELLSTATE(W,STNursingAndSurgery)=2)
+   %AND (GetStat(U,AHealer,0)=0)
+  THEN {
+   SETSTAT(U,AHealer,0,1);
+  }
+
+!NOOUTLANDER!
+
+
+IF (INCOMBAT(U)=0) THEN {GOTO "NOTCOMBAT";}
+
+ : Effect below suppose to trigger only during Combat :
+ A=ATTACKER();
+ D=DEFENDER();
+ OPPONENT=( ATTACKER() + DEFENDER() ) - W;
+ CBX=(GetStat(U,SCoX,1));
+ CBY=(GetStat(U,SCoY,1));
+ OVERX=COMBATX();
+ OVERY=COMBATY();
+ PLANE=COMBATP();
+ :Detect combat terrain :
+ CT=GETTERRAIN(CBX,CBY,0);
+
+ :COUNT UNIT STACK:
+ HEROINCOMBAT=0;
+ ELEMENTALMASTERBONUS=0;
+ IRRESISTIBLECHARGE=0;
+ LUCKYSTAR=0;
+
+ FOR N=1 TO NMAXCOMBAT;
+
+  UOT=UNITONTILE(combatP(),combatX(),combatY(),N);
+
+  IF ( ALIVE(UOT) = 0 ) THEN { GOTO "COMRADENOTSURVIVE"; }
+
+   IF (GETSTAT(UOT,SOwner,0)<>W) THEN { GOTO "NOTOURGUY"; }
+
+    IF ( ISHERO(UOT) = 0 ) THEN { GOTO "NOTOURHERO"; }
+
+     HEROINCOMBAT=HEROINCOMBAT+1;
+
+     IF (GETHEAB(UOT,HAElementalMaster)>ELEMENTALMASTERBONUS) THEN {
+      ELEMENTALMASTERBONUS = GETHEAB(UOT,HAElementalMaster);
+     }
+     IF ( ((GETHEAB(UOT,HAIrresistibleCharge))/(GETSTAT(UOT,ALevel,1))) > IRRESISTIBLECHARGE ) THEN {
+      IRRESISTIBLECHARGE = ((GETHEAB(UOT,HAIrresistibleCharge))/(GETSTAT(UOT,ALevel,1)));
+     }
+
+    !NOTOURHERO!
+
+    IF (GETENCHANTMENTFLAG(U,EncLuckyStar,0)>0) THEN { LUCKYSTAR=LUCKYSTAR+1; }
+
+   !NOTOURGUY!
+
+  !COMRADENOTSURVIVE!
+
+ NEXT N;
+
+ : Theorectical Level of unit :
+ THEORECTICALLEVEL=((GetStat(U,ALevel,0)));
+
+ IF (GETENCHANTMENTFLAG(U,EncHeroism,0)>0) %AND (THEORECTICALLEVEL<4) THEN { THEORECTICALLEVEL=4; }
+ IF (RETORT(W,Warlord)>0) THEN { THEORECTICALLEVEL=THEORECTICALLEVEL+1; }
+ IF (HASGLOBAL(W,GECrusade)>0) THEN { THEORECTICALLEVEL=THEORECTICALLEVEL+1; }
+
+ : Outlander Reforms' Effects in combat part that trigger before magic :
+ IF (GETWIZARDDATA(W,WDMuggleWizard)<1) THEN { GOTO "NOTCOMBATOUTLANDER"; }
+
+  IF (SPELLSTATE(W,STMagitekXenoveterinary)<>2) THEN { GOTO "NOXENOVET"; }
+
+   IF FANTASTIC(U) THEN {
+    XENOVETHP = %I(GETSTAT(U,SHP,0)/4);
+
+    IF ( XENOVETHP < 1 ) THEN { XENOVETHP=1; }
+    SETSTAT(U,SHP,0, ( GETSTAT(U,SHP,0) + XENOVETHP ) );
+    SETSTAT(U,SHPBuff,0, ( GETSTAT(U,SHPBuff,0) + XENOVETHP ) );
+    SETSTAT(U,SToHit,0, ( GetStat(U,SToHit,0) + 10 ) );
+   }
+
+  !NOXENOVET!
+
+  IF (GETENCHANTMENTFLAG(U,EncPowerEngine,0)=0)
+   %OR (SPELLSTATE(W,STMagitekPowerEngine)<>2)
+  THEN { GOTO "NOMAGITEKENGINE"; }
+
+   SETSTAT(U,SOLMaxMoves,0,(GetStat(U,SOLMaxMoves,0)+4));
+   SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+4));
+   SETSTAT(U,SToDefend,0,(GetStat(U,SToDefend,0)+20));
+   SETSTAT(U,ALargeShield,0,1);
+
+  !NOMAGITEKENGINE!
+
+  IF (BASEFANTASTIC(U)>0)
+   %AND (GETSTAT(U,SMultiLabel,1)<>14)
+  THEN { GOTO "NOTSAPIENS"; }
+
+   IF (SPELLSTATE(W,STExplosive)<>2) THEN { GOTO "NOEXPLOSIVE"; }
+
+    IF (GETSTAT(U,SAttack,1)>0)
+     %OR (GETSTAT(U,AFlying,1)>0)
+    THEN {
+     SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );
+     SETSTAT(U,AWallCrusher,0,1);
+    }
+    IF (GETSTAT(U,SBlackpowderUpgrade,1)>0) THEN {
+     SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));
+     SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+2));
+     SETSTAT( U,SFireBreath,0,( 2*GETSTAT(U,SFireBreath,0) ) );
+    }
+
+   !NOEXPLOSIVE!
+
+   IF (SPELLSTATE(W,STBallisticsTraining)<>2) THEN { GOTO "NOBALLISTICS"; }
+
+    SETSTAT( U,SToRanged,0,(GetStat(U,SToRanged,0)+20) );
+    SETSTAT( U,SToBreath,0,(GetStat(U,SToBreath,0)+20) );
+    SETSTAT( U,SToThrown,0,(GetStat(U,SToThrown,0)+20) );
+
+   !NOBALLISTICS!
+
+   IF (SPELLSTATE(W,STXenopsychology)=2) THEN {
+    SETSTAT(U,SResist,0,(GETSTAT(U,SResist,0)+1);
+    SETSTAT(U,SResistBuff,0,(GETSTAT(U,SResistBuff,0)+1);
+   }
+
+   IF (SPELLSTATE(W,STRadio)=2) THEN {
+    SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)+10) );
+    SETSTAT( U,SToDefend,0,(GetStat(U,SToDefend,0)+10) );
+    SETSTAT(U,SResist,0,(GETSTAT(U,SResist,0)+1);
+    SETSTAT(U,SResistBuff,0,(GETSTAT(U,SResistBuff,0)+1);
+   }
+
+  !NOTSAPIENS!
+
+  IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOTCOMBATOUTLANDER"; }
+
+   IF (SPELLSTATE(W,STArmorClad)<>2) THEN { GOTO "NOARMORCLAD"; }
+
+    IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0)
+     %AND (GetStat(U,SCustomAttribute,1)<>1)
+     %AND (BASEFANTASTIC(U)=0)
+    THEN {
+     SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+3));
+     SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+3));
+    }
+
+   !NOARMORCLAD!
+
+ !NOTCOMBATOUTLANDER!
+
+ : Effect of Conjuring Pact, apply creature binding on the enchanted unit :
+ IF (GETCOMBATENCHANTMENTFLAG(U,EncConjuringPact,1)=0) THEN { GOTO "NOCONJURERINGPACT"; }
+
+  IF FANTASTIC(U) THEN {
+   SETCOMBATENCHANTMENTFLAG(U,EncCreatureBinding,1,1);
+  } ELSE {
+   SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)-10) );
+   SETSTAT( U,SToDefend,0,(GetStat(U,SToDefend,0)-10) );
+  }
+
+ !NOCONJURERINGPACT!
+
+ : Effect of score option "Uphill Battle", all units that not own by human player gains +10% To-Hit, +10% To-Defend, +1 Resistance in Combat :
+ IF (SCORINGOPTION(SUphillBattle)=0) THEN { GOTO "NOTUPHILL"; }
+
+  IF ( (A=0) %OR (D=0) )
+   %AND (GetStat(U,SOwner,0)>0)
+  THEN {
+   SETSTAT(U,SToHit,0,(GETSTAT(U,SToHit,0)+10);
+   SETSTAT(U,SToDefend,0,(GETSTAT(U,SToDefend,0)+10);
+   SETSTAT(U,SResist,0,(GETSTAT(U,SResist,0)+1);
+   SETSTAT(U,SResistBuff,0,(GETSTAT(U,SResistBuff,0)+1);
+  }
+
+ !NOTUPHILL!
+
+ : Effect of Lucky Star, gains Lucky :
+ IF GETENCHANTMENTFLAG(U,EncLuckyStar,0) THEN {
+  SETSTAT(U,ALucky,0,1);
+ }
+
+ : Effect of Fiery Fury conjunct with Darkness :
+ IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO "NOFIERYDARKNESS"; }
+  IF (GetStat(U,SRace,1)<>RCDeath) THEN { GOTO "NOFIERYDARKNESS"; }
+
+   IF (ETERNALNIGHTCOUNT=0) THEN { GOTO "NOFIERYETERNALNIGHT"; }
+    SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));
+    SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+2));
+    SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));
+    SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+2));
+    SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+2));
+    SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+2));
+    SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+2));
+    SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+2));
+    GOTO "NOFIERYDARKNESS";
+
+   !NOFIERYETERNALNIGHT!
+
+   IF ((HASCOMBATGLOBAL(W,CGDarkness,1))=0)
+    %AND ((HASCOMBATGLOBAL(W,CGDarkness,2))=0)
+   THEN { GOTO "NOFIERYDARKNESS"; }
+
+    SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));
+    SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+    SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+    SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+    SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+1));
+    SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1));
+    SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+    SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+
+ !NOFIERYDARKNESS!
+
+ : new effect of Doom Mastery, under this GE, one warp creature get all 3 :
+ IF (HASGLOBAL(OPPONENT,GEDoomMastery)=0) THEN { GOTO "NOCHAOSEMBRACE"; }
+
+  IF ( (GetEnchantmentFlag(U,EncWarpAttack,0)
+   %OR (GetEnchantmentFlag(U,EncWarpDefense,0)
+   %OR (GetEnchantmentFlag(U,EncWarpResist,0) )
+  THEN {
+   SETCOMBATENCHANTMENTFLAG(U,EncWarpAttack,0,1);
+   SETCOMBATENCHANTMENTFLAG(U,EncWarpDefense,0,1);
+   SETCOMBATENCHANTMENTFLAG(U,EncWarpResist,0,1);
+  }
+
+ !NOCHAOSEMBRACE!
+
+ IF (HASGLOBAL(OPPONENT,GEDomainOfEnchanter)=0) THEN { GOTO "NODOMAINOFENCHANTER"; }
+
+  IF GETCOMBATENCHANTMENTFLAG(U,EncWarpAttack,0) THEN {
+   SETENCHANTMENTFLAG(U,EncWarpAttack,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncWarpDefense,0) THEN {
+   SETENCHANTMENTFLAG(U,EncWarpDefense,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncWarpResist,0) THEN {
+   SETENCHANTMENTFLAG(U,EncWarpResist,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncStasisCombat,0) THEN {
+   SETENCHANTMENTFLAG(U,EncStasisCombat,1,1);
+   SETENCHANTMENTFLAG(U,EncStasisOverland,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncShatter,0) THEN {
+   SETENCHANTMENTFLAG(U,EncShatter,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncConfusion,0) THEN {
+   SETENCHANTMENTFLAG(U,EncConfusion,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncWeakness,0) THEN {
+   SETENCHANTMENTFLAG(U,EncWeakness,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncMindStorm,0) THEN {
+   SETENCHANTMENTFLAG(U,EncMindStorm,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncWeb,0) THEN {
+   SETENCHANTMENTFLAG(U,EncWeb,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncVertigo,0) THEN {
+   SETENCHANTMENTFLAG(U,EncVertigo,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncBlackSleep,0) THEN {
+   SETENCHANTMENTFLAG(U,EncBlackSleep,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncHierophany,0) THEN {
+   SETENCHANTMENTFLAG(U,EncHierophany,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncSoulFlay,0) THEN {
+   SETENCHANTMENTFLAG(U,EncSoulFlay,1,1);
+  }
+  IF GETCOMBATENCHANTMENTFLAG(U,EncRust,0) THEN {
+   SETENCHANTMENTFLAG(U,EncRust,1,1);
+  }
+
+ !NODOMAINOFENCHANTER!
+
+ : New effects of Sanctify :
+ IF (GetEnchantmentFlag(U,EncSanctify,0)=0) THEN { GOTO "NOTSANCTIFY"; }
+ 
+  : Sanctify give turn unit into life creature :
+  SETSTAT(U,SRace,0,RCLife);
+  : Sanctify give non-hero clergy unit becomes fantastic :
+  IF (GETSTAT(U,SCustomAttribute,1)=2) %AND ( ISHERO(U) = 0 ) THEN { SETSTAT(U,AFantastic,0,1); }
+
+ !NOTSANCTIFY!
+
+ : if Kraken/Nagas/Marines arrive at overland sea tile :
+
+ : Mariner enchantment is now using by Marines and Sea Hags and given by script :
+ IF (GETSTAT(U,SMariner,0)=0) THEN { GOTO "NOTMARINER"; }
+
+  IF (GETSTAT(U,SMariner,0)=1)
+   %AND (GETTERRAIN(1,11,0)=CTSea)
+  THEN {
+   SETSTAT(U,AFireImmunity,0,1);
+   SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+4));
+   SETSTAT(U,SCombatMovesLeft,0,(GetStat(U,SCombatMovesLeft,0)+4));
+   GOTO "NOTMARINER";
+  }
+ : Echo of the Deep is using by Kraken, trigger on sea tile or inside sorcery node :
+  IF (GETSTAT(U,SMariner,0)>1)
+   %AND ( (GETTERRAIN(1,12,0)=CTSea) %OR (GETTERRAIN(COMBATX(),COMBATY(),COMBATP())=LTSorceryNode) )
+  THEN {
+   SETENCHANTMENTFLAG(U,EncInvisibility,0,1);
+   SETSTAT(U,SToDefend,0,((GetStat(U,SToDefend,0))+10));
+   SETSTAT(U,AFireImmunity,0,1);
+   SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+4));
+   SETSTAT(U,SCombatMovesLeft,0,(GetStat(U,SCombatMovesLeft,0)+4));
+  }
+
+ !NOTMARINER!
+
+ : Midget Submarine's Fire Immunity and Lightning Resist will be put on UnitCalcPre :
+ IF (GetStat(U,STypeID,1)<>361) THEN { GOTO "NOTCOMBATSUBMARINE"; }
+
+  IF (GETTERRAIN(1,11,0)=CTSea)
+   %OR (GetStat(U,ANoncorporeal,0)>0)
+   %OR (GETENCHANTMENTFLAG(U,EncWraithForm,0)>0)
+   %OR (HASGLOBAL(W,GEKingOfUnderworld)>0)
+  THEN {
+   SETSTAT(U,AFireImmunity,0,1);
+   SETSTAT(U,ALightningResistance,0,1);
+   SETSTAT(U,AWeaponImmunity,0,1);
+   SETSTAT(U,AMissileImmunity,0,1);
+   SETENCHANTMENTFLAG(U,EncInvisibility,0,1);
+  }
+
+ !NOTCOMBATSUBMARINE!
+
+: New unit curse "Soul Flay", unit get -(1+X) attack, -(1+X) defense, and -(2+2X) resistance per level of EXP, change it to per turn when possible :
+ IF (GetEnchantmentFlag(U,EncSoulFlay,0)=0) THEN { GOTO "NOSOULFLAY"; }
+
+  FLAY=THEORECTICALLEVEL;
+
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-FLAY));
+  SETSTAT(U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+FLAY));
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-FLAY));
+  SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+FLAY));
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)-(2*FLAY)));
+  SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+(2*FLAY)));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)-(2*FLAY)));
+  SETSTAT(U,SResistPenalty,0,(GetStat(U,SResistPenalty,0)+(2*FLAY)));
+
+ !NOSOULFLAY!
+
+: New effect of global enchantment "Blood and Iron", all normal unit of wizard's home race or normal unit with chaos channeled get bonus while normal units of other races without chaos channel suffer penalty. :
+ IF (HASGLOBAL(W,GEBloodAndIron)=0) %OR (BASEFANTASTIC(U)>0) THEN { GOTO "NOBLOODANDIRON"; }
+
+  IF ((GETSTAT(U,SRace,0))=HOMERACE(W))
+   %OR ( (GETENCHANTMENTFLAG(U,EncCCBreath,0)>0) %OR (GETENCHANTMENTFLAG(U,EncCCFlight,0)>0) %OR (GETENCHANTMENTFLAG(U,EncCCArmor,0)>0) )
+  THEN {
+   SETSTAT(U,SToHit,0,(GetStat(U,SToHit,0)+10));
+   SETSTAT(U,SToDefend,0,(GetStat(U,SToDefend,0)+10));
+   SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+   SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+  } ELSE {
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-1));
+   SETSTAT(U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+1));
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-1));
+   SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+1));
+   SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)-1));
+   SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+1));
+   SETSTAT(U,SResist,0,(GetStat(U,SResist,0)-1));
+   SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+1));
+  }
+
+ !NOBLOODANDIRON!
+
+ : now Eternal night implement poor vision curse directly on non-death creature and would be removed with when nolonger have eternal night :
+ IF (ETERNALNIGHTCOUNT=0) THEN { GOTO "NOETERNALNIGHT"; }
+
+  IF (HASGLOBAL(W,GEEternalNight)=0)
+   %AND (GetStat(U,STypeID,1)<>356)
+   %AND (GetStat(U,SRace,0)<>RCDeath)
+   %AND (GetEnchantmentFlag(U,EncUndead,0)=0)
+  THEN {
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-2));
+   SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+2));
+  }
+
+ !NOETERNALNIGHT!
+
+: New global enchantment, "Great Unbinding", All opponent fantastic creatures suffer -20% To-Hit, -20% To-Defend, -2 Resistance :
+ IF (HASGLOBAL(W,GEGreatUnbinding)) %OR (GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0) THEN { GOTO "NOTUNBINDING"; }
+ 
+  IF (HASGLOBAL(OPPONENT,GEGreatUnbinding)=0) THEN { GOTO "NOTUNBINDING"; }
+
+   IF FANTASTIC(U)
+    %OR (GETENCHANTMENTFLAG(U,EncUndead,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncCCBreath,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncCCFlight,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncCCArmor,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncNecromancy,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncRevenant,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncVampirism,0)>0)
+   THEN {
+    SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0)-20);
+    SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0)-20);
+    SETSTAT(U,SResist,0,GETSTAT(U,SResist,0)-2);
+    SETSTAT(U,SResistPenalty,0,GETSTAT(U,SResistPenalty,0)+2);
+   }
+
+ !NOTUNBINDING!
+
+: new hero ability that effect on other units start here :
+ IF (HEROINCOMBAT=0) THEN { GOTO "NOHEROCOMBAT"; }
+
+  IF (ELEMENTALMASTERBONUS=0) THEN { GOTO "NOTELEMENTAL"; }
+
+   IF (GetStat(U,STypeID,0)<>153)
+    %AND (GetStat(U,STypeID,0)<>158)
+    %AND (GetStat(U,STypeID,0)<>187)
+    %AND (GetStat(U,STypeID,0)<>194)
+   THEN {
+    GOTO "NOTELEMENTAL";
+   }
+
+    SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0) + %I(ELEMENTALMASTERBONUS*2) );
+    SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0) + %I(ELEMENTALMASTERBONUS*2) );
+    SETSTAT(U,SResist,0,GETSTAT(U,SResist,0) + %I(ELEMENTALMASTERBONUS/2) );
+    SETSTAT(U,SResistBuff,0,GETSTAT(U,SResistBuff,0) + %I(ELEMENTALMASTERBONUS/2) );
+    SETSTAT(U,SHP,0,GETSTAT(U,SHP,0) + %I(ELEMENTALMASTERBONUS/2) );
+    SETSTAT(U,SHPBuff,0,GETSTAT(U,SHPBuff,0) + %I(ELEMENTALMASTERBONUS/2) );
+
+  !NOTELEMENTAL!
+
+  IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOTREGULARUNIT"; }
+
+   : new effect of Just Cause on regular units, gain +1 Attack/Armor/Resistance in combat while hero standing on the battlefield :
+   IF (HASGLOBAL(W,GEJustCause)=0) THEN { GOTO "NOJUSTCAUSE"; }
+
+    IF (ISHERO(U)>0) THEN { GOTO "NOJUSTCAUSE"; }
+
+     SETSTAT( U,SAttack,0,( (GETSTAT(U,SAttack,0)) + 1 ) )
+     SETSTAT( U,SAttackBonus,0,( (GETSTAT(U,SAttackBonus,0)) + 1 ) )
+     SETSTAT( U,SDefense,0,( (GETSTAT(U,SDefense,0)) + 1 ) )
+     SETSTAT( U,SDefenseBuff,0,( (GETSTAT(U,SDefenseBuff,0)) + 1 ) )
+     SETSTAT( U,SResist,0,( (GETSTAT(U,SResist,0)) + 1 ) )
+     SETSTAT( U,SResistBuff,0,( (GETSTAT(U,SResistBuff,0)) + 1 ) )
+     IF (GETSTAT(U,SRanged,0)>0) THEN {
+      SETSTAT( U,SRanged,0,( (GETSTAT(U,SRanged,0)) + 1 ) )
+      SETSTAT( U,SRangedBuff,0,( (GETSTAT(U,SRangedBuff,0)) + 1 ) )
+     }
+
+   !NOJUSTCAUSE!
+
+   IF ( (W=A) %AND (COMBATACTIVESIDE=1) ) %OR ( (W=D) %AND (COMBATACTIVESIDE=2) ) THEN { GOTO "NOTREGULARACTIVETURN"; }
+
+     IF (IRRESISTIBLECHARGE=0) THEN { GOTO "NOIRRESISTIBLECHARGEHERO"; }
+
+      IF (TACTICALCOMBAT>0) THEN {
+       SETSTAT(U,SAttack,0,GETSTAT(U,SAttack,0) + %I( ( IRRESISTIBLECHARGE * ( (GETSTAT(U,SCombatMaxMoves,0)) - (GETSTAT(U,SCombatMovesLeft,0)) ) )/2 ) );
+       SETSTAT(U,SAttackBonus,0,GETSTAT(U,SAttackBonus,0) + %I( ( IRRESISTIBLECHARGE * ( (GETSTAT(U,SCombatMaxMoves,0)) - (GETSTAT(U,SCombatMovesLeft,0)) ) )/2 ) );
+      } ELSE {
+       SETSTAT(U,SAttack,0,GETSTAT(U,SAttack,0) + %I( ( IRRESISTIBLECHARGE * (GETSTAT(U,SCombatMaxMoves,0)) )/2 ) );
+       SETSTAT(U,SAttackBonus,0,GETSTAT(U,SAttackBonus,0) + %I( ( IRRESISTIBLECHARGE * (GETSTAT(U,SCombatMaxMoves,0)) )/2 ) );
+      }
+
+     !NOIRRESISTIBLECHARGEHERO!
+
+   !NOTREGULARACTIVETURN!
+
+  !NOTREGULARUNIT!
+
+  IF (ISHERO(U)=0) THEN { GOTO "NOTCOMBATHERO"; }
+
+   : New effect; "Rampage" +1 melee/ranged/resistance and +0.5 armor (round down) for each 3 damage taken and reduce to 2 damage taken if level is super :
+   IF (GETHEAB(U,HARampage)=0) THEN { GOTO "NORAMPAGE"; }
+
+    HFACTOR=THEORECTICALLEVEL;
+    HFACTOR=5 - ( (GETHEAB(U,HARampage))/(HFACTOR) );
+    IF (HFACTOR<2) THEN { HFACTOR=2; }
+
+    HRAGE=%I( (GETDAMAGE(U,0))/HFACTOR );
+
+    IF (HRAGE<1) THEN { GOTO "NORAMPAGE"; }
+
+     SETSTAT( U,SAttack,0,(GetStat(U,SAttack,0))+HRAGE );
+     SETSTAT( U,SAttackBonus,0,(GetStat(U,SAttackBonus,0))+HRAGE );
+     SETSTAT( U,SRanged,0,(GetStat(U,SRanged,0))+HRAGE );
+     SETSTAT( U,SRangedBuff,0,(GetStat(U,SRangedBuff,0))+HRAGE );
+     SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+HRAGE ));
+     SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+HRAGE ));
+     IF ( HFACTOR > 2 ) THEN { GOTO "NORAMPAGE"; }
+      SETSTAT( U,SDefense,0,(GetStat(U,SDefense,0))+%I(HRAGE/2) );
+      SETSTAT( U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0))+%I(HRAGE/2) );
+      IF ( (2*(GETDAMAGE(U,0))) < (GETSTAT(U,SHP,0)) ) THEN { GOTO "NORAMPAGE"; }
+       SETSTAT(U,SMultiLabel,0,1);
+       SETSTAT( U,SLightningBreath,0,(GetStat(U,SLightningBreath,0))+(GetStat(U,SThrown,0))+1 );
+       SETSTAT( U,SThrown,0,0 );
+
+   !NORAMPAGE!
+
+  !NOTCOMBATHERO!
+
+ !NOHEROCOMBAT!
+
+ : New effect; "Rage" +1 melee/ranged for each fallen figure :
+ IF (GetStat(U,SRage,1)=0) THEN { GOTO "NORAGE"; }
+
+  CASUALTY=%I( (GETDAMAGE(U,0))/(GETSTAT(U,SHP,0)) );
+
+  IF (CASUALTY<1) THEN { GOTO "NORAGE"; }
+
+   SETSTAT( U,SAttack,0,(GetStat(U,SAttack,0))+CASUALTY );
+   SETSTAT( U,SAttackBonus,0,(GetStat(U,SAttackBonus,0))+CASUALTY );
+   IF (GetStat(U,SRanged,0)>0) THEN {
+    SETSTAT( U,SRanged,0,(GetStat(U,SRanged,0))+CASUALTY );
+    SETSTAT( U,SRangedBuff,0,(GetStat(U,SRangedBuff,0))+CASUALTY );
+   }
+
+ !NORAGE!
+
+ : combat enchantment part start here :
+
+ : Extended effect of combat enchantment "Prayer" in case exist along with "High Prayer" :
+ IF (HASCOMBATGLOBAL(W,CGPrayer,1)=0) %OR (HASCOMBATGLOBAL(W,CGHighPrayer,1)=0) THEN { GOTO "NOPRAYER"; }
+
+  SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));
+  SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+  SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+1));
+  SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+  SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+
+ !NOPRAYER!
+
+ : New combat enchantment "Rousing Speech", all friendly units get +2 resistance :
+ IF (HASCOMBATGLOBAL(W,CGRally,1)=0) THEN { GOTO "NOUPLIFTSPEECH"; }
+
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+2));
+  SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+2));
+
+ !NOUPLIFTSPEECH!
+
+ : New combat enchantment "True Light", life creature get +1 attack/defense/resist, death creature and undead get -1 attack/defense/resist, unit with illusion attack get -10% to-hit :
+ IF ((HASCOMBATGLOBAL(W,CGTrueLight,1))=0)
+  %AND ((HASCOMBATGLOBAL(W,CGTrueLight,2))=0)
+ THEN { GOTO "NOTRUELIGHT"; }
+
+  IF ( (GetStat(U,SRace,0)=RCDeath)
+   %OR (GetEnchantmentFlag(U,EncUndead,0)>0) )
+  THEN {
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-1));
+   SETSTAT(U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+1));
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-1));
+   SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+1));
+   SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)-1));
+   SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+1));
+   SETSTAT(U,SResist,0,(GetStat(U,SResist,0)-1));
+   SETSTAT(U,SResistPenalty,0,(GetStat(U,SResistPenalty,0)+1));
+  }
+  IF (GetStat(U,SRace,0)=RCLife)
+  THEN {
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));
+   SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+   SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+   SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+1));
+   SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1));
+   SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+   SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+  }
+  IF ((HASCOMBATGLOBAL(W,CGTrueLight,2))>0) %AND ( (GetStat(U,AFIllusion,0,1)>0) %OR (GetStat(U,AFIllusion,0,2)>0) %OR (GetStat(U,AFIllusion,0,3)>0) ) THEN {
+   SETSTAT(U,SToHit,0,(GetStat(U,SToHit,0)-10));
+  }
+
+ !NOTRUELIGHT!
+
+ IF (HASCOMBATGLOBAL(W,CGPlague,1)=0) THEN { GOTO "NOPLAGUE"; }
+
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-3));
+  SETSTAT(U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+3));
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-3));
+  SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+3));
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)-3));
+  SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+3));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)-6));
+  SETSTAT(U,SResistPenalty,0,(GetStat(U,SResistPenalty,0)+6));
+  SETSTAT(U,SToHit,0,(GetStat(U,SToHit,0)-10));
+
+ !NOPLAGUE!
+
+ IF (HASCOMBATGLOBAL(W,CGGoblinPox,1)=0) %AND (HASCOMBATGLOBAL(W,CGGoblinPox,2)=0) THEN { GOTO "NOGOBLINPOX"; }
+
+  IF (GETSTAT(U,SRace,1)=RCGoblin) ) THEN {
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-1));
+   SETSTAT(U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+1));
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-1));
+   SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+1));
+   SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)-1));
+   SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+1));
+  } ELSE {
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-3));
+   SETSTAT(U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+3));
+   SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-3));
+   SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+3));
+   SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)-3));
+   SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+3));
+   SETSTAT(U,SResist,0,(GetStat(U,SResist,0)-1));
+   SETSTAT(U,SResistPenalty,0,(GetStat(U,SResistPenalty,0)+1));
+  }
+
+ !NOGOBLINPOX!
+
+ : Specialist's Mastery bonus :
+ IF (Retort(W,Specialist)=0) THEN { GOTO "NOTSPECIALIST"; }
+
+  IF ( (SPELLSTATE(W,SGaiaMastery)=2) %AND (GETSTAT(U,SRace,0)=RCNature) )
+   %OR ( (SPELLSTATE(W,SAEtherMastery)=2) %AND (GETSTAT(U,SRace,0)=RCSorcery) )
+   %OR ( (SPELLSTATE(W,SLifeMastery)=2) %AND ( (GETSTAT(U,SRace,0)=RCLife) %OR ( (GetEnchantmentFlag(U,EncSanctify,0)>0) %AND (GETSTAT(U,SCustomAttribute,1)=2) ) ) )
+   %OR ( (SPELLSTATE(W,SChaosMastery)=2) %AND ( (GETSTAT(U,SRace,0)=RCChaos) %OR (GetEnchantmentFlag(U,EncCCBreath,0)>0) %OR (GetEnchantmentFlag(U,EncCCFlight,0)>0) %OR (GetEnchantmentFlag(U,EncCCArmor,0)>0) %OR ( (GetEnchantmentFlag(U,EncFieryFury,0)>0) %AND FANTASTIC(U) ) ) )
+   %OR ( (SPELLSTATE(W,SDeathMastery)=2) %AND ( (GETSTAT(U,SRace,0)=RCDeath) %OR (GetEnchantmentFlag(U,EncUndead,0)>0) %OR (GetEnchantmentFlag(U,EncRevenant,0)>0) %OR (GetEnchantmentFlag(U,EncVampirism,0)>0) ) )
+  THEN {
+   SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)+10) );
+   SETSTAT( U,SToDefend,0,(GetStat(U,SToDefend,0)+10) );
+   SETSTAT( U,SResist,0,(GetStat(U,SResist,0)+2) );
+   SETSTAT( U,SResistBuff,0,(GetStat(U,SResistBuff,0)+2) );
+  }
+
+ !NOTSPECIALIST!
+
+ : Guardian's Lord Protector bonus :
+ IF (Retort(W,Guardian)=0) THEN { GOTO "NOTGUARDIAN"; }
+
+  IF (SPELLSTATE(W,SLordProtector)<>2)
+   %OR ( OVERLANDACTIVEPLAYER = W )
+  THEN { GOTO "NOTGUARDIAN"; }
+
+   IF ( (C=0) %OR ( (C>0) %AND ( CITYRACE(C) <> HOMERACE(W) ) )
+    %AND ( GETSTAT(U,SRace,1) = HOMERACE(W) )
+   THEN {
+    SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)+10) );
+    SETSTAT( U,SToDefend,0,(GetStat(U,SToDefend,0)+10) );
+    SETSTAT( U,SResist,0,(GetStat(U,SResist,0)+1) );
+    SETSTAT( U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1) );
+   }
+
+ !NOTGUARDIAN!
+
+ : Effect of Lucky Star on other friendly units :
+ IF (LUCKYSTAR=0) THEN { GOTO "NOLUCKYSTAR"; }
+
+  SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));
+  SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+  SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+  SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+1));
+  SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1));
+  SETSTAT(U,SResist,0,(GetStat(U,SResist,0)+1));
+  SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));
+
+ !NOLUCKYSTAR!
+
+ IF (C<1) THEN { GOTO "NOTCITY"; }
+
+  IF (W=A) THEN { GOTO "NOTDEFENDER"; }
+
+   : New effect of Dishearten Prophacy, city defender suffer -2 Resistance :
+   IF (CITYENCHANT(C,CEDisheartenProphesy)>0) THEN {
+    SETSTAT(U,SResist,0, GETSTAT(U,SResist,0) - 2 );
+    SETSTAT(U,SResistPenalty,0, GETSTAT(U,SResistPenalty,0) + 2 );
+   }
+
+   : New effect of Wall of Fire, get old metal fire effect for defender, effect not stack with flame blade :
+   IF (CITYENCHANT(C,CEWallofFire)<0) THEN { GOTO "NOWALLOFFIRE"; } 
+
+    IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOWALLOFFIRE"; }
+
+     SETENCHANTMENTFLAG(U,EncMagic,0,1);
+     SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));
+     SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+     IF (GetStat(U,SRangedType,0)>0) %AND (GetStat(U,SRangedType,0)<30) THEN {
+      SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+      SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+     }
+     IF GETSTAT(U,SThrown,0)>0 THEN {
+      SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+1));
+     }
+
+   !NOWALLOFFIRE!
+
+   : Effect of Gospel of Evangelism, -2% To-Hit and 0.4 Resistance for each unrest pop in the city. :
+   IF (CITYENCHANT(C,CEGospelOfEvangelism)<>A) THEN { GOTO "NOTGOSPEL"; }
+
+    GOSPELHIT=2*(GETCITYDATA(C,CDUNREST));
+    GOSPELRESIST=%I(0.4*(GETCITYDATA(C,CDUNREST)));
+
+    SETSTAT(U,SToHit,0, GETSTAT(U,SToHit,0) - GOSPELHIT );
+    SETSTAT(U,SResist,0, GETSTAT(U,SResist,0) - GOSPELRESIST );
+    SETSTAT(U,SResistPenalty,0, GETSTAT(U,SResistPenalty,0) + GOSPELRESIST );
+
+   !NOTGOSPEL!
+
+   : Debuff from Attacker's Lord Liberator :
+   IF (SPELLSTATE(A,SLordLiberator)<>2) THEN { GOTO "NOLIBERATOR"; }
+
+    GUARDIANSUBJECT=0;
+
+    FOR CITY=1 TO MAXCITY();
+
+     IF (CITYOWNER(CITY)=A) %AND ( CITYRACE(CITY) = CITYRACE(C) ) THEN { GUARDIANSUBJECT=GUARDIANSUBJECT+1; }
+
+    NEXT CITY;
+
+    IF ( CITYRACE(C) <> HOMERACE(A) ) %AND (GUARDIANSUBJECT=0) THEN { GOTO "NOLIBERATOR"; }
+
+     SETSTAT( U,SAttack,0,(GetStat(U,SAttack,0)-1) );
+     SETSTAT( U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+1) );
+     SETSTAT( U,SRanged,0,(GetStat(U,SRanged,0)-1) );
+     SETSTAT( U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+1) );
+     SETSTAT( U,SDefense,0,(GetStat(U,SDefense,0)-1) );
+     SETSTAT( U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+1) );
+     SETSTAT( U,SResist,0,(GetStat(U,SResist,0)-1) );
+     SETSTAT( U,SResistPenalty,0,(GetStat(U,SResistPenalty,0)+1) );
+
+   !NOLIBERATOR!
+
+  !NOTDEFENDER!
+
+ !NOTCITY!
+
+ : bonus below only for for tactical combat :
+ IF (TACTICALCOMBAT=0) THEN { GOTO "NOTTACTICALCOMBAT"; }
+
+  : Effect of score option "Gods Play Dices" :
+  IF (SCORINGOPTION(SGodsPlayDices)=0) THEN { GOTO "GODNOTPLAYDICE"; }
+
+   IF (GetCombatEnchantmentFlag(U,EncDICE1,0)>0) THEN {
+    SETSTAT(U,SResist,0,(GETSTAT(U,SResist,0)-1);
+    SETSTAT(U,SResistPenalty,0,(GETSTAT(U,SResistPenalty,0)+1);
+   }
+   IF (GetCombatEnchantmentFlag(U,EncDICE2,0)>0) THEN {
+    SETSTAT(U,SResist,0,(GETSTAT(U,SResist,0)-2);
+    SETSTAT(U,SResistPenalty,0,(GETSTAT(U,SResistPenalty,0)+2);
+   }
+   IF (GetCombatEnchantmentFlag(U,EncDICE3,0)>0) THEN {
+    SETSTAT(U,SResist,0,(GETSTAT(U,SResist,0)+1);
+    SETSTAT(U,SResistBuff,0,(GETSTAT(U,SResistBuff,0)+1);
+   }
+   IF (GetCombatEnchantmentFlag(U,EncDICE4,0)>0) THEN {
+    SETSTAT(U,SResist,0,(GETSTAT(U,SResist,0)+2);
+    SETSTAT(U,SResistBuff,0,(GETSTAT(U,SResistBuff,0)+2);
+   }
+
+  !GODNOTPLAYDICE!
+
+  : Water Elemental and elementalist hero get buff on wet or water tile :
+  IF (GETSTAT(U,STypeID,1)<>158) %AND (GETSTAT(U,STypeID,1)<>285) THEN { GOTO "NOTWATERELEMENTALTACTIC"; }
+
+   IF (CT=CTIce)
+    %OR (CT=CTSwamp)
+    %OR (CT=CTFloating)
+   THEN {
+    SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));
+    SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+    SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+    SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+    GOTO "NOTWATERELEMENTALTACTIC";
+   }
+
+   IF (CT<>CTSea) THEN { GOTO "NOTWATERELEMENTALTACTIC"; }
+
+    SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));
+    SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+2));
+    SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));
+    SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+2));
+    SETSTAT(U,SThrown,0, (GetStat(U,SThrown,0)+%I(GetStat(U,SRanged,0)/2) ));
+
+  !NOTWATERELEMENTALTACTIC!
+
+  : new effect of Inner Power, all units gain mountaineer in combat :
+  IF (HASGLOBAL(W,GEInnerPower)=0) THEN { GOTO "NOINNERPOWER"; }
+
+   IF (GetStat(U,AMountaineer,0)=0) THEN {
+    SETSTAT(U,AMountaineer,0,1);
+   }
+
+  !NOINNERPOWER!
+
+  : Effect of Eye of Storm on Other Units :
+  IF (GETENCHANTMENTFLAG(U,EncEyeOfStorm,1)>0) THEN {
+   SETSTAT(U,SLordOfStorm,0,1);
+   SETSTAT(U,AColdImmunity,0,1);
+  }
+
+  : New unit enchantment "Revenant", gain death touch 0 (melee only), regeneration 1, and permanently become undead :
+  IF (GetEnchantmentFlag(U,EncRevenant,0)=0) THEN { GOTO "NOTREVENANT"; }
+
+   SETSTAT(U,AFDeathTouch,0,100,1);
+   SETSTAT(U,AFDeathTouch,0,100,3);
+   SETSTAT(U,AFDeathTouch,0,0,2);
+   IF ((GetStat(U,SRegeneration,0))>-1) THEN { SETSTAT(U,SRegeneration,0,(GetStat(U,SRegeneration,0)+1)); }
+   IF ((GetStat(U,SRegeneration,0))<=-1) THEN { SETSTAT(U,SRegeneration,0,1); }
+
+  !NOTREVENANT!
+
+  : Mariner Mastery bonus from waterwalking or swimming in combat get +1 movement :
+  IF (HASGLOBAL(W,GEMarinerMastery)=0) THEN { GOTO "NOMARINERMASTERY"; }
+
+   IF ( (GetStat(U,AWaterwalking,1)>0) %OR (GETENCHANTMENTFLAG(U,EncWaterWalking,0)>0) )
+    %AND (GETTERRAIN(1,11,0)=CTSea)
+   THEN {
+    SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+2));
+    SETSTAT(U,SCombatMovesLeft,0,(GetStat(U,SCombatMovesLeft,0)+2));
+   }
+
+  !NOMARINERMASTERY!
+
+  GOTO "ENDOFCOMBAT";
+
+ !NOTTACTICALCOMBAT!
+
+  : Water Elemental and elementalist hero get buff on wet or water terrain in strategic combat :
+  IF (GETSTAT(U,STypeID,1)<>158) %AND (GETSTAT(U,STypeID,1)<>285) THEN { GOTO "NOTWATERELEMENTALAUTO"; }
+
+   IF (LT=LTSwamp)
+    %OR (LT=LTTundra)
+    %OR (LT=LTRiver)
+    %OR (LT=LTSorceryNode)
+    %OR (LT=LTRiverStart)
+   THEN {
+    SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));
+    SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+    SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+1));
+    SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+1));
+    GOTO "NOTWATERELEMENTALAUTO";
+   }
+
+   IF (LT>3) THEN { GOTO "NOTWATERELEMENTALAUTO"; }
+
+    SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));
+    SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+2));
+    SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));
+    SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+2));
+    SETSTAT(U,SThrown,0, (GetStat(U,SThrown,0)+%I(GetStat(U,SRanged,0)/2) ));
+
+  !NOTWATERELEMENTALAUTO!
+
+  IF ( (RETORT(W,Tactician)>0) %OR ( (SCORINGOPTION(SKhanTheConqueror)=1) %AND (W=NeutralPlayerID) ) THEN {
+   SETSTAT(U,AFirstStrike,0,1);
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));
+   SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+1));
+   SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+1));
+   SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1));
+  }
+
+  : Check if strategic combat is siege or not :
+  IF (C<1) THEN { GOTO "ENDOFCOMBAT"; }
+
+   : bonus for fortification in strategic combat :
+   IF (ISBUILT(C,BMoats)) %AND (W=D) THEN {
+    SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+4));
+    SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+4));
+    IF (GETSTAT(U,ALargeShield,0)>0) THEN { SETSTAT(U,AMissileImmunity,0,1); } ELSE { SETSTAT(U,ALargeShield,0,1); }
+   }
+
+  : bonus for hillfort in strategic combat :
+   IF (ISBUILT(C,BHillfort)) %AND (W=D) THEN {
+    SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+3));
+    SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+3));
+    SETSTAT(U,AMissileImmunity,0,1);
+   }
+
+
+: End of Combat Part :
+!ENDOFCOMBAT!
+
+  : New combat enchantment "Eye of Heaven", all friendly units gain True Sight while enemy lose all gaze ability :
+  IF (HASCOMBATGLOBAL(W,CGEyeOfHeaven,1)>0) THEN {
+   SETENCHANTMENTFLAG(U,EncTrueSight,0,1);
+  }
+
+HALT;
+
+: Below is only trigger outside combat :
+
+!NOTCOMBAT!
+
+: Remove strategic recall flag for Strategic Recall :
+IF (GETOLENCHANTMENTFLAG(U,EncStrategicRecall,1)>0) THEN {
+ SETOLENCHANTMENTFLAG(U,EncStrategicRecall,1,0);
+}
+
+: Plane carry is only planewalk for 1 turn :
+IF (GETENCHANTMENTFLAG(U,EncPlaneCarry,1)=0) THEN { GOTO "NOTPLANECARRY"; }
+
+ SETSTAT(U,APlaneShifting,0,1);
+
+ IF ( OVERLANDACTIVEPLAYER = W ) THEN { GOTO "NOTPLANECARRY"; }
+
+  SETENCHANTMENTFLAG(U,EncPlaneCarry,1,0);
+  SETSTAT(U,APlaneShifting,0,0);
+
+!NOTPLANECARRY!
+
+: Content below only occur in their owner's turn :
+IF ( OVERLANDACTIVEPLAYER <> W ) THEN { HALT; }
+
+ : Fix Holy Mother in case she does not get Highwind walking, such as mercenary :
+ IF (GetStat(U,STypeID,1)<>323) THEN { GOTO "NOTHOLYMOTHER"; }
+
+  IF (GETENCHANTMENTFLAG(U,EncWindWalking,1)=0) THEN {
+   SETENCHANTMENTFLAG(U,EncWindWalking,1,1);
+   SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+6));
+  }
+  HALT;
+
+ !NOTHOLYMOTHER!
+
+ : Fix Squires in case she does not get Caravan Logistic, such as mercenary :
+ IF (GetStat(U,STypeID,1)<>212) THEN { GOTO "NOTSQUIRE"; }
+
+  IF (GetStat(U,SCaravanLogistic,1)=0) THEN {
+   SETSTAT(U,SCaravanLogistic,1,1)
+   SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+4));
+   SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+4));
+  }
+  HALT;
+
+ !NOTSQUIRE!
+
+ : Fix Glider in case she does not get guardian wind, such as mercenary  :
+ IF (GetStat(U,STypeID,1)<>360) THEN { GOTO "NOTGLIDER"; }
+
+  IF (GETENCHANTMENTFLAG(U,EncGuardianWind,1)=0)THEN {
+   SETENCHANTMENTFLAG(U,EncGuardianWind,1,1)
+  }
+  HALT;
+
+ !NOTGLIDER!
+
+
+HALT;

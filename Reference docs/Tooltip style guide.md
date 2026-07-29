@@ -25,7 +25,7 @@ Not modeled: <types of effects>
 
 **Completeness across versions.** Once `Versions:` (or the absence of it) establishes which games contain the mechanic, the tooltip must make the mechanic's behavior clear in *every* one of those versions. If versions share behavior, a single unlabelled effect line covers them; if any version differs, it needs its own line. Do not leave a version it applies to unaddressed — e.g. naming the MoM and CoM modifiers of an effect but not the Warlord one would be a gap if Warlord has that effect. If the behavior in some version is unclear or undocumented, ask the user before writing or recommending the tooltip — do not guess or silently omit it.
 
-**Warlord is a separate version token.** It is *not* covered by `CoM 1 & 2`, even though the Warlord mod is built on CoM2. Every tooltip for a mechanic that exists in Warlord must address Warlord explicitly — use `CoM 1 & 2 & Warlord:` when the value is shared (verify against `Warlord helptext.TXT` / `Warlord manual.txt` first), or a separate `Warlord:` line when it differs. If Warlord behavior is unverified, flag it rather than folding it into the CoM2 line.
+**Warlord is a separate version token.** It is *not* covered by `CoM 1 & 2`, even though the Warlord mod is built on CoM2. Every tooltip for a mechanic that exists in Warlord must address Warlord explicitly — use `CoM 1 & 2 & Warlord:` when the value is shared (verify against `Unit rosters/Warlord mod unit data/HELP.TXT` / `Warlord manual v1.5.12.6.html`, and against `Reference docs/Script source/Warlord 1.5.12.6.2/` where the mechanic is scripted), or a separate `Warlord:` line when it differs. If Warlord behavior is unverified, flag it rather than folding it into the CoM2 line.
 
 ## Fixed token vocabulary
 

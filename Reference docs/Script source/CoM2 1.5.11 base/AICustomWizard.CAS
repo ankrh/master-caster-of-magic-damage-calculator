@@ -1,0 +1,51 @@
+:
+ INPUT
+ W = The ID of the wizard that was rolled
+ TEMPLATE = The template identifier of the wizard that was rolled
+ OUTPUT
+ 
+ REROLL - If set to 1, the wizard is discarded and a new one will be generated. Otherwise the wizard is accepted.
+ 
+ Use this script to manipulate the probability of generating various AI opponents.
+ 
+ Some examples below
+ 
+ IF RETORT(W,WARLORD) THEN { REROLL=1; }
+ Will result in the game never generating a Warlord opponent.
+ 
+ IF (RETORT(W,ALCHEMY)) %AND (RANDOM(100)>=50) THEN { REROLL=1; }
+ Will result in generating wizards with Alchemy half as often.
+ 
+ By accessing wizard data below W you can even restrict what the current wizard is
+ allowed to roll based on what other wizards are already generated for the game.
+ 
+ Please keep in mind that a very high chance of rerolling can result in wizard generation 
+ taking a large amount of time to execute. 
+ So please avoid defining rules that only allow like 1 out of a million generated wizard to be accepted.
+ 
+ Additionally, you can overwrite the already generated data by setting the books and retorts directly, 
+ using the Setretort and Setbook commands instead of rerolling. You can use that to completely
+ override the default way of generating wizards based on templates. 
+ However in that case you MUST handle every book and retort in this script, except the MYRRAN retort,
+ which shouldn't be changed otherwise the condition to have the intended amount of Myrran wizards
+ will not be fulfilled and the game will be stuck in an endless loop.
+ 
+ Wizard templates are the following 
+ 1 - Mono Nature
+ 2 - Mono Sorcery
+ 3 - Mono Chaos
+ 4 - Mono Life
+ 5 - Mono Death
+ 6 - Nature/Sorcery
+ 7 - Nature/Chaos
+ 8 - Nature/Life
+ 9 - Nature/Death
+ 10 - Sorcery/Chaos
+ 11 - Sorcery/Life
+ 12 - Sorcery/Death
+ 13 - Chaos/Life
+ 14 - Chaos/Death
+ 15 - Life/Death
+ :
+
+REROLL=0;

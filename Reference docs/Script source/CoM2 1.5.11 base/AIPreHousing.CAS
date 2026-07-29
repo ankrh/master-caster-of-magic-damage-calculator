@@ -1,0 +1,11 @@
+: INPUT - C - the city being evaluated
+  OUTPUT - CHOSEN - Set to the building ID the AI wants to buy before starting to build Housing.
+:
+CHOSEN=0;
+W=CITYOWNER(C);
+RACE=CITYRACE(C);
+IF GOLD(W)>=180 THEN {
+IF %N(ISBUILT(C,BMarketplace)) THEN { CHOSEN=BMarketplace; HALT; }
+IF (%N(ISBUILT(C,BMagicMarket))) %AND (RACE<>RCDwarf) %AND (RACE<>RCGnoll)
+%AND (Difficulty()>=DiffExpert) THEN { CHOSEN=BMagicMarket; HALT; }
+}
