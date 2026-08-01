@@ -25,7 +25,7 @@ file shows.
 | 1 | Explosive / Bombs&Grenades — Thrown strength | helptext `#UA BOMBS&GRENADES` | **closed in v1.5.12.6.2** (helptext corrected) |
 | 2 | Explosive — grants Wall Crusher | manual *and* helptext both silent | **closed in v1.5.12.6.2** (helptext corrected) |
 | 3 | Xenopsychology / Radio — scope | manual *and* helptext both understate | **closed in v1.5.12.6.2** (helptext corrected) |
-| 4 | Magitek Engine — movement | helptext `#UA MAGITEK ENGINE` | open |
+| 4 | Magitek Engine — movement | helptext `#UA MAGITEK ENGINE` | resolved (script) |
 | 5 | Wraiths — Sapiens | manual changelog | **closed in v1.5.12.6.2** (roster corrected) |
 | 6 | Artificer retort — Resistance grant | helptext (stale by two revisions) | **closed in v1.5.12.6.2** (helptext corrected) |
 | 7 | Flame Blade — boulder and thrown bonuses | manual's boulder wording | resolved (script/config) |
@@ -33,6 +33,8 @@ file shows.
 | 9 | Pneuma Reactor — permanent Undead Bloodlust | executable branch was reversed and misplaced | **closed in v1.5.12.6.2** (script fixed) |
 | 10 | Lucky Star — friendly-unit aura | executable used the wrong loop variable | **closed in v1.5.12.6.2** (script fixed) |
 | 11 | Alumni of Academy — Mechanical exclusion | helptext omits the restriction | resolved (script) |
+| 12 | Magitek Science — Battle Armor eligibility | manual and helptext include Battle Armor | resolved (script) |
+| 13 | Blaze of Glory — enchantment Armor survival | helptext says non-base Armor remains | resolved (script) |
 
 Six entries were closed by the **v1.5.12.6.2 hotfix**, which the maintainer released in response
 to this register. The calculator needed no correction for §1, §2, §3, §6 or §9 — it had followed
@@ -122,6 +124,10 @@ movement stats at `CreateUnit.CAS:680,682`. So the reform gives **+2 overland / 
 
 The `#UA MAGITEK ENGINE` figures match neither the script nor the reform's own helptext entry.
 
+**Resolved in favour of the script:** Magitek Engineering adds +2 overland and +2 combat
+movement to a Power Engine unit, plus +20% To-Defend and Large Shield. Movement is outside the
+calculator's one-round damage model; its two combat-stat effects were already modelled.
+
 **Separately:** no `EncMagitekEngine` identifier exists — `MASTER.CAS` contains only `ST*` reform
 IDs for Magitek, no `Enc*`. The effect is keyed entirely on `EncPowerEngine`, so "Magitek Engine"
 is a helptext entry for an ability that is not a distinct enchantment in the code.
@@ -174,7 +180,7 @@ is at index 1 (`ABase`), so it is baked into the unit's base permanently rather 
 `CreateUnit.CAS:38` is the mod's only Artificer stat grant and no other `SCustomAttribute=1`
 gate adjusts resistance, so nothing compensates elsewhere.
 
-**Calculator:** applied. [combat.js](../Calculator/combat.js) `getAbilityStatModifiers` grants
+**Calculator:** applied. [combat.js](../Calculator/combat.js) `getAbilityStatSteps` grants
 +2, the `artificer` tooltip notes the divergence from the in-game helptext, and both
 `artificerMechanicalResistanceWarlord` and a `node_unit_checks.js` assertion pin the value.
 
@@ -328,11 +334,52 @@ units. The calculator uses that predicate for all three reform controls.
   `ISHERO()` in five other places, so omitting it here looks deliberate — but if "regular units"
   is meant to exclude heroes, the code is wrong. Needs the maintainer.
 
-## Not yet checked against the script
+## 12. Magitek Science — Battle Armor does not receive Resist Magic
 
-Recorded so the gap is not mistaken for a clean bill of health: Magitek Science,
-Xenoveterinary, and Corruption radiation. Tracked as S1 in `Calculator/BACKLOG.md`; what each is
-currently believed to do is in the calculator itself, not in a doc.
+- **Manual** p75 and **helptext** `#Spell MAGITEK SCIENCE`: Armorclad *or Battle Armor* units
+  gain Resist Magic.
+- **Script, newly created Armorclad:** `CreateUnit.CAS:700-706` writes `EncArmorClad`, +6
+  Defense, and then `EncResistMagic` when Magitek Science is researched.
+- **Script, existing Armorclad:** `OverlandEndTurn.CAS:436-442` requires `EncArmorClad` before
+  writing `EncResistMagic`.
+- **Script, Battle Armor:** `UnitCalcPre.CAS:1104-1116` grants only +3 Defense. It neither
+  checks Magitek Science nor writes Resist Magic, and these are the only script occurrences
+  that implement the unit-side Magitek Science grant.
+
+**Resolved in favour of the script:** only Armorclad gains Resist Magic. The calculator
+previously followed the prose and granted it to Battle Armor too; that gate and its tooltip
+have been corrected.
+
+## 13. Blaze of Glory — all current Armor is transferred
+
+- **Helptext** `#Spell BLAZE OF GLORY` says the unit loses all *base* Armor.
+- **Helptext** `#UA BLAZE OF GLORY` is more explicit: Armor from other enchantments remains.
+- **Script** `UnitCalc.CAS:1493-1497` stores current Defense as `BLAZEMELEE`, adds that value
+  to melee, then subtracts the same value from Defense. The result at that point is zero
+  regardless of where the Armor came from.
+
+**Resolved in favour of the script:** Blaze of Glory transfers all current Armor, including
+enchantment-granted Armor, and then sets Defense to zero. Later region-`e` effects still run
+and may add Defense afterward. The calculator's surviving-Armor reconstruction was removed
+under **F8**.
+
+## Script checks with no calculator discrepancy
+
+**Xenoveterinary.** `UnitCalcPre.CAS:1038-1049` gates on the Outlander owner and researched
+reform, then gives a currently Fantastic unit +10% To-Hit and
+`max(1, floor(current HP / 4))` HP. The read occurs at the head of the Outlander phase-b
+block. This matches the calculator's magnitude, rounding, and sequence position, and its gate
+for every unit state the calculator currently represents. One adjacent gap surfaced:
+`UnitCalcPre.CAS:82-115` makes the Marionette hero Fantastic in the Channeler branch before
+Xenoveterinary runs. The calculator represents neither that hero-specific branch nor its
+Channeler inputs, so the interaction is tracked separately as **F9**.
+
+**Corruption radiation.** `CombatEndTurn.CAS:518-542` runs once per combat end turn on a
+corrupted rock, desert, or swamp tile, but not on a node. Poison Immunity, Magic Immunity,
+and the Clergy custom attribute are exempt. Otherwise the unit takes exactly 1 damage when
+its Resistance is no greater than a 1–10 roll. This agrees with the manual changelog's
+one-damage and node-exclusion claims. It is an end-turn event, so it is outside the
+calculator's one-round attack-phase scope and has no calculator control to correct.
 
 True Sight was checked without finding a discrepancy: helptext `#Spell TRUE SIGHT`, manual
 p86, and `UnitCalc.CAS:325-328` all grant +5% ranged To-Hit. Eye of Heaven's True Sight grant

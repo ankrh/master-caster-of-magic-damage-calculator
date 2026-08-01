@@ -24,3 +24,8 @@ __pycache__/
 # Raw game/mod install archives — extracted content lives in
 # Reference docs/Script source/ and Unit rosters/
 Raw install files/
+
+# Cross-agent channels — local scratch, see CLAUDE.md § Two agents
+.codex-review.md
+.claude-review.md
+.derivations/

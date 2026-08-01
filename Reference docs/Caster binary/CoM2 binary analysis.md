@@ -1,6 +1,6 @@
 # CoM2 / Warlord binary analysis
 
-Ground truth for the *modern* engine, the way `MoM binary analysis.md` is for the DOS builds.
+Ground truth for the *modern* engine, the way `../MoM binary analysis.md` is for the DOS builds.
 Warlord ships no executable of its own — it is a script-and-data mod over CoM2's `Caster.exe`,
 so this file covers both, and a finding here applies to Warlord unless a Warlord script
 overrides it. Where the binary and the `.CAS` scripts both speak, the binary is the
@@ -9,14 +9,9 @@ mechanics they do not share.
 
 ## The binary
 
-| Field | Value |
-|---|---|
-| Path | `C:\Program Files (x86)\Steam\steamapps\common\Master of Magic Classic\Master of Magic Caster Windows\Caster.exe` |
-| md5 | `540c22dbd701fb2caa95bd3ecccd9447` |
-| Size | 10,584,041 |
-| Format | PE32, i386, image base `0x400000`, Delphi (Embarcadero) |
-
-Verify the hash before trusting any address below.
+`README.md` in this directory is the single home for the executable's path, md5, size and
+format. Verify that hash before trusting any address below — every address here is a virtual
+address in that exact build.
 
 ## Method
 
@@ -87,7 +82,7 @@ gazes pass *different* `figs`:
 
 So a five-figure Great Chaos Lord deals its Doom Gaze damage once, not five times. **This is a
 genuine engine difference from MoM**, where the equivalent automatic-damage path sits inside the
-per-attacker-figure loop and therefore does scale (`MoM binary analysis.md`, *Gaze attacks*). It
+per-attacker-figure loop and therefore does scale (`../MoM binary analysis.md`, *Gaze attacks*). It
 has no roster consequence in MoM, whose only Doom Gaze unit has one figure.
 
 Each gaze phase is additionally wrapped in a caller-side loop that runs `j` times, where `j` is
@@ -293,14 +288,24 @@ The enchantment merger operates on the copied current record:
 
 ```
 EnchantmentFlags[j] :=
-    EnchantmentFlags[j]
-    or OverlandEnchantmentFlags[j]
-    or CombatEnchantmentFlags[j]
-    or ItemEnchantmentFlags[j];
+    EnchantmentFlags[j]                 ; 0x599BA3, +0x508
+    or ItemEnchantmentFlags[j]          ; 0x599BBF, +0x634
+    or CombatEnchantmentFlags[j]        ; 0x599BDB, +0x5D0
+    or OverlandEnchantmentFlags[j];     ; 0x599BF7, +0x56C
 ```
 
+The term order is the executable's own, and the chain short-circuits on the first set flag.
+
+**The merge is self-inclusive, and there is no fifth array.** Destination and first source are
+both record `+0x508` — `BaseUnitEnchantment`'s layer in `BaseUnits`, `HasUnitEnchantment`'s
+aggregate in `Units`. It is one array whose meaning changes with the copy above, so the copied
+base layer *is* the aggregate's seed. Modelling `base` as a separate source alongside the other
+three both invents storage and makes the `EncMagic` clear look like dead code.
+
 `EncMagic` is cleared in the first term before this merger because region `c` rebuilds the
-derived magical-weapon marker. The source-layer flags themselves are not cleared.
+derived magical-weapon marker (for base heroes, at `0x59ACAF`). The clear is therefore
+load-bearing: a unit keeps `EncMagic` only if an item, combat or overland source supplies it, or
+if `c` re-derives it. The source-layer flags themselves are not cleared.
 
 The Confusion values 1–4 can be named from their consumers: 1 sets combat moves to zero and
 attacks-done to 2 (`stand confused`); 2 changes controller and restores combat movement; 3 calls
@@ -326,7 +331,7 @@ Four calculator-facing results follow directly:
   separate eligibility question; if the flag is present, recalculation adds four.
 - **The same block confirms the type rewrite the calculator already performs.** `EncCCBreath`
   sets `race := RCChaos` *and* `Fantastic`, which is exactly `determineEffectiveUnitType`'s
-  `ccFireBreath → 'fantastic_chaos'` (`Calculator/combat.js:122`) — previously carried on a
+  `ccFireBreath → 'fantastic_chaos'` (`determineEffectiveUnitType`) — previously carried on a
   "reported recalculation order" comment with no source. It covers **only** the Breath variant:
   `EncCCFlight` (34) and `EncCCArmor` (35) are handled in region `c`, at +0x5A34/+0xB3A4 and
   +0x5BA7, so the calculator's other two `→ fantastic_chaos` rewrites are still unsourced. The
@@ -482,7 +487,7 @@ above; it does not see later structure-relative operands after a unit-record poi
 computed.
 
 The record base is **`0x6426898`**, established by matching the `unitT` layout in
-`Script source/CAS reference/Typedec.pas` (a `str30` name padded to `0x20`, then 4-byte
+`../Script source/CAS reference/Typedec.pas` (a `str30` name padded to `0x20`, then 4-byte
 integers). Three facts confirm the model rather than merely fitting it: laying out `unitT` under
 Delphi's default alignment gives exactly 1,924 bytes = `0x1E1` × 4, the stride the code uses;
 `BaseUnits` and `Units` are `0x4965100` apart, which is exactly 40000 × 1924, matching
@@ -501,6 +506,15 @@ is declared. Every field identity below follows from `disp - 0x6426898`:
 
 `0x6426DA0` (= record +0x508) is the `EnchantmentFlags` byte array used below. The four penalty
 display words are +0x6C4 melee, +0x6C6 defense, +0x6C8 resistance, +0x6CA ranged.
+
+**`unitT.savemodifier` has no located consumer.** `Typedec.pas:181` declares it as a plain
+`integer` on the unit record, but it has **no `UNITS.INI` key** in either the CoM2 or the Warlord
+roster, **no stat ID in `MASTER.CAS`** (so no script can read or write it), and no reference in
+any `.CAS` file in either script set. Searched 2026-07-31. Treat it as unused until something
+contradicts this; it is deliberately excluded from the calculator's CoM2 card field set
+(`Calculator/BACKLOG.md`, R4). Note this is a negative result about *reachability from the data
+and script layers* — the compiled engine could still read it through the computed-pointer layer
+that the direct-displacement scans do not see.
 
 #### The Warp blocks (resolved 2026-07-28)
 
@@ -541,10 +555,10 @@ And **Shatter opens by reading the melee penalty word and adding current melee**
 reconstructing the pre-Warp value — which only makes sense if Warp has already run, independently
 corroborating the ordering established from the enchantment table.
 
-**All three Warps match `Calculator/stats.js:1488-1497` exactly for CoM2/Warlord**: melee `/2`
+**All three Warps match the calculator's Warp steps exactly for CoM2/Warlord**: melee `/2`
 plus `rtb /2` (the calculator's `rtb` carries ranged, thrown and breath in one slot), defense
 `/3`, resistance `= 0`, gaze untouched. The magnitudes need no change. **The position does** —
-see the ordering consequence recorded in `MoM CoM binary verification queue.md`.
+see the ordering consequence recorded in `../MoM CoM binary verification queue.md`.
 
 Two practical notes for anyone extending this. **2,634 of the routine's 2,740 direct calls are
 Delphi `@System@@BoundErr` / `@System@@IntOver` range-check stubs** — only ~106 are real, so the
@@ -907,6 +921,14 @@ of `-0x194`. Their region-`c` tests decode as follows:
 | +0x0B1DA | 2 | Entangle | Corporeal enemies lose `EntangleMovePenalty` half-moves (4 = 2 movement), clamped at zero |
 | +0x0C3D2 | 13 | Terror | Affected enemies lose `TerrorHitchancePenalty` To Hit (10) |
 
+**Do not merge Darkness, True Light and Eternal Night.** Darkness is the compiled region-`c`
+block above; the Eternal Night check at `+0x089A8/+0x0A8A2` supplies its enhanced magnitude and
+the enemy non-Death Resistance penalty before that block. Warlord's True Light is instead its
+own `UnitCalcPre.CAS:1507-1540` block, after the Prayer/Rally extensions and before Plague.
+CoM 1's separate Eternal Night penalty is later still, after Tactician at `0x90B31` (see
+*Warp Creature runs early*). They are distinct sequence events even where their additive totals
+usually commute.
+
 The owner-validity and location checks immediately before +0x0B092 resolve the small wizard
 record displacement `+0x23` as Retort 8, Guardian. When defending one of the wizard's
 settlements, it gives +10 To Hit, +10 To Block and +1 Resistance.
@@ -1046,7 +1068,7 @@ This places **Holy Bonus, Resistance to All, Prayermaster, Guiding Beacon, Divin
 Linker, Supply Commander, Logistics, Leadership and Misfortune after `UnitCalc`**, not in `a` or
 `c`. The CoM2 manual's changelog independently confirms the important part of this order:
 "Supreme Light effect is now applied last, after Resistance To All, Holy Bonus, and
-Prayermaster" (`CoM2 manual.txt:5545`).
+Prayermaster" (`../CoM2 manual.txt:5545`).
 
 The earlier direct-displacement scan missed this whole table because at `0x5A6A0D` the routine
 forms
@@ -1176,8 +1198,8 @@ block.
 
 Two consequences for the calculator, and they are not the same one:
 
-- **They must not be folded into a phase bucket.** A bucket is a per-unit additive accumulator
-  feeding the displayed stat block, and these are neither per-unit nor additive nor displayed.
+- **They do not belong in the derivation sequence.** That sequence is per unit and feeds the
+  displayed stat block; these are neither per-unit nor displayed.
 - **They are still an ordered sequence of transforms, and should be modelled as one.** Both
   routines are decoded in execution order below, and `EffectiveDefense` in particular
   short-circuits, adds, halves the accumulated sum, replaces it outright and then adds again on
@@ -1219,6 +1241,16 @@ Resist Elements is Nature-only on this side, which matches `CoM2 helptext.TXT:22
 | 8 | `0x596730`–`0x596813` | six immunity tests, each an **assignment** | `Result := 100` |
 | 9 | `0x59681A` | not `ismagic` and `weaponimmunity` (+0xC9) | `+= WeaponImmunityDefenseBonus` (8) |
 
+**City Walls is `extradef`, not a RecalculateUnits write.** `@Combat@ApplyAttack` starts its
+local extra-defense value at zero (`0x5B27A9`), then requires a wall, the defender inside it, and
+the attacker outside it (`0x5B27AC`–`0x5B27D3`). It loads `CityWallDefBonus` at `0x5B2837`
+(shipped `MODDING.INI`: 3), replaces it with `CityWallBrokenDefBonus` when `GetWallState` returns
+2 at `0x5B2841` (shipped value: 1), and passes that value to `EffectiveDefense` at `0x5B28EF`–
+`0x5B292A`. Thus walls are inside Armor Piercing's later halving and are discarded by Illusion or
+an immunity assignment; they never affect displayed Defense, Warp, Holy Armor, or Blaze of Glory.
+`@Spells@DamageSpell` passes zero for the same argument (`0x5C139A`), so spell damage does not
+receive the walls bonus.
+
 Step 8's six tests, in order: `Fireimmunity` (+0xC1) against a fire *spell* (spell record +0x56);
 `Fireimmunity` against `isfire`; `coldimmunity` (+0xC5) against a cold spell (+0x57);
 `poisonimmunity` (+0xC8) against a poison spell (+0x55); `magicimmunity` (+0xC6) against
@@ -1228,7 +1260,7 @@ Three ordering consequences the calculator has to match:
 
 - **Armour piercing halves the sum, not the base.** Step 7 follows steps 3–6, so Large Shield,
   Resist Elements, Elemental Armor and Bless are all inside the halving.
-  `Calculator/combat.js:1745-1752` already does this.
+  `computeDefenseProfile` already does this.
 - **The immunity assignments discard everything before them**, including the halving. An
   immunity is worth exactly 100 defense, never 100 plus the accumulated bonuses.
 - **Weapon Immunity is added after those assignments**, so it stacks on top of a 100 rather than
@@ -1307,12 +1339,92 @@ Four things follow that a stat-sheet reading would miss:
 
 **This resolves a manual/helptext conflict, in the helptext's favour.** `CoM2 helptext.TXT:2378`
 and Warlord's `HELP.TXT:5460` both say "Charmed heroes never fail a resistance roll";
-`CoM2 manual.txt:1409` says "Hero has 50 resistance against all magical effects". The compiled
+`../CoM2 manual.txt:1409` says "Hero has 50 resistance against all magical effects". The compiled
 behaviour is the helptext's — a flat override to 100 on rolls only, with no 50 anywhere in the
 block. The manual is wrong for this engine.
 
-The calculator does not model Charmed at all (no occurrence in `Calculator/`), so this is a gap
-rather than a defect.
+The calculator now models this as the second step of its effective-resistance sequence
+(`EFFECTIVE_RESISTANCE_STEPS`), gated on a resistance roll and a hero carrying Charmed. The
+assignment precedes Magic Immunity and the three conditional additions, matching this routine.
+
+### Calculator sequential-transform audit (2026-07-30)
+
+This section compares every calculator-relevant write identified above with the ordered lists in
+`Calculator/stats.js` and `Calculator/combat.js`. It is a **calculator audit**, not new binary
+research: the engine positions and effects remain owned by the per-region sections above. The
+audit reached the end of this document, including both resolution-time sequences.
+
+The broad spine is represented correctly:
+
+```
+base -> a -> b -> c -> d -> e
+                         clamp -> aura pass -> Supreme Light
+
+GetEffectiveResistance / EffectiveDefense: separate per-attack scratch sequences after e
+```
+
+The three Warps followed by Shatter, Tactician after them, Colossal Strength before the
+post-magic Outlander effects, Blaze of Glory -> Beat of Swiftness -> Hierophany, and the two
+resolution-time routines all occupy the right relative positions. The remaining claim in
+`Calculator/SPEC.md` that every stat write is represented by one ordered step is not yet true.
+
+#### Confirmed list omissions and wrong positions
+
+| Effect | Engine position/effect | Calculator state on 2026-07-30 | Consequence |
+|---|---|---|---|
+| Destiny, Chaos Channels Breath, Focus Magic conversion, Vampirism, Shadow Strike | `a`/`c`/`d`, at the exact sites above | Strength and type are still mutated in the pre-sequence `calcBase*` chain | The sequence cannot reproduce which transformations see Warp, Colossal Strength or Destiny; tracked together under F12 because the single `rtb` projection is the common blocker |
+| Upgraded Explosive | `UnitCalcPre.CAS:1066-1078`, before Ballistics, Xenopsychology, Radio and every later combat-global/city block in `b` | `upgradedExplosive:fireBreath` is the last `b` step | Later Fire Breath additions such as True Light and Lucky Star can be doubled although the script adds them after the doubling |
+| Misfortune (the landed result exposed as Mislead) | Aura type 10 in `e`, after `UnitCalc` and the initial clamps | `mislead`/`mislead:ranged` are in `c`, before Holy Armor, Warp and all of `d` | Warp can reduce its penalty, and Blaze of Glory can consume its Defense penalty; neither happens in the engine |
+| Holy Armor | `c` +0x07407, after the earlier unit-enchantment blocks but before the global-enchantment and combat-global blocks | Inserted after the whole `abilByPhase.c` spread | Its `Defense > 5` read incorrectly sees later effects including High Prayer, Survival Instinct, Inner Power, Black Prayer and Mind Storm |
+| Charm of Life | `c` +0x08AE5; add 25% of the HP current there, minimum 1 | Its magnitude is precomputed from `calcBaseHP`; its step precedes the separate Endurance and Lionheart HP writes | It fails to scale level/item/Endurance/Lionheart HP already present at the binary site |
+| Warlord Vampirism | `d` `UnitCalc.CAS:1245-1258`, after Colossal Strength: add integer part of `(Thrown/2) + ((Fire Breath + Lightning Breath)/2)`, then reduce each present source channel to 1 | Runs before the sequence and uses `source strength - 1` | Both position and magnitude disagree with the executable script |
+| Warlord combat-cast Flame Blade's Fire Breath point | `d` `UnitCalc.CAS:330-333`, before Colossal Strength | Folded into the region-`c` Flame Blade secondary-attack term | Warp can halve the point even though Warlord adds it after Warp |
+
+The `abilByPhase.b`, `.c` and `.d` spreads also do not preserve the mapped source order in
+general. Most displaced neighbours are additive and commute today, but the list is not
+isomorphic to `UnitCalcPre.CAS`, the region-`c` address map or `UnitCalc.CAS`, and the scaling
+cases above prove that this is not only a trace-display concern. Rust is one concrete atomicity
+violation: its melee and ranged writes are emitted by separate steps with other work allowed
+between them, although `UnitCalc.CAS:492-504` is one effect block.
+
+#### To-Hit/To-Block writes remain outside the derivation sequence
+
+The record already carries `toHit` and `toBlk`, but a second calculation after `runStatSteps`
+still combines level, weapon, Holy Weapon, Ballistics, Xenoveterinary, Radio, True Sight,
+Hurricane, Vertigo, Plague, Great Unbinding and other modifiers. Region `e` therefore cannot
+perform its real two-stage normalization over the same ordered record: common To Hit must be
+clamped first, then each common-plus-channel sum. This is the broader structural cause behind
+backlog F5, not only a final `clampPct` formula.
+
+#### Attack-channel overreach
+
+`Caster.exe` has separate conventional ranged, Thrown, Fire Breath, Lightning Breath and gaze
+fields. The calculator's shared `rtb` projection still makes some represented effects reach
+channels their engine write does not:
+
+- Mind Storm has no Fire- or Lightning-Breath write in CoM2 or Warlord.
+- Tactician's hero block writes conventional ranged, not Thrown, Breath or gaze.
+- Warlord True Light writes melee and conventional ranged, not every secondary attack or gaze.
+- The native node aura writes positive melee/ranged/Thrown/breath fields, not Doom Gaze.
+- The Warlord combat-cast Flame Blade point is Fire Breath only and belongs in `d`, as above.
+
+These are output defects, not merely missing trace detail. They are another reason F12's wider
+engine-shaped attack record is prerequisite work.
+
+#### Calculator-relevant effects with no transform/control
+
+The audit also found binary/script effects capable of changing this calculator's damage output
+but absent from its transform inventory: Dark Force; Guardian Spirit/Heavenly Light; Bad Moon;
+Good Moon; Nature Conjunction; Spell Ward; and the Guiding Beacon, Prayermaster, Divine Barrier,
+Soul Linker and Leadership auras. Golem Resist Elements and the Chosen's Fantastic rule were
+already tracked as F3/F4. Item-loop Attack, Defense, Resistance, HP and To-Hit powers are likewise
+not represented as distinct transforms; the UI exposes only its coarser weapon/armor loadout.
+
+Effects which only change movement, ammo, healing, regeneration, overland state, ownership or
+display labels do not need a damage-stat transform unless their flag is consumed by an
+in-scope attack rule. Haste, immunities and gaze dispatch can therefore remain in combat
+resolution or normalization when they make no stat write; this audit does not require every
+named block in the phase index to become a derivation step.
 
 ## Useful entry points
 

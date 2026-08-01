@@ -5,7 +5,7 @@ run the same executable, so the tables are frequently the only thing that distin
 and where a table states a value, it *is* the implementation: the engine reads these files at
 load time rather than compiling the numbers in.
 
-This is the third evidence home for the modern engine, alongside `CoM2 binary analysis.md`
+This is the third evidence home for the modern engine, alongside `Caster binary/CoM2 binary analysis.md`
 (`Caster.exe`) and `Source discrepancies.md` (Warlord's `.CAS` scripts). Tracking for everything
 here lives in `Calculator/BACKLOG.md`.
 
@@ -16,7 +16,7 @@ script *adding* an effect the table does not describe.
 
 ## The tables
 
-Under `Reference docs/Script source/CoM2 1.5.11 base/` and `.../Warlord 1.5.12.6.2/`.
+Under `Reference docs/Script source/CoM2 1.05.11 base/` and `.../Warlord 1.5.12.6.2/`.
 
 | File | Owns |
 |---|---|

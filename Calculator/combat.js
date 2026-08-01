@@ -229,16 +229,15 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 }
 
 // --- Ability Stat Modifiers ---
-// Apply ability/enchantment effects that modify base stats.
-// Called after level/weapon bonuses are computed.
+// One ability or enchantment that modifies a stat is one step, declared at the position its
+// engine region gives it. Nothing is summed here: `deriveUnitStats` splices these into the
+// single stat sequence (SPEC.md, *Stat derivation contract*), so an ordering finding lands as a
+// step move rather than as a re-bucketing.
+//
 // `abilities` is a map of ability key -> value (bool true/false, or number).
 // `version` is the game version string (e.g. 'mom_1.31', 'com_6.08', 'com2_1.05.11').
 //
-// Returns { atkMod, ..., rtbMod, base, a, b, c, d, warpLate }: the flat fields are the sum across
-// the base stage and all four encounter phases (so callers that want the total need no
-// change), and base/a/b/c/d are the same seven accumulators attributed to the
-// derivation stage that applies them — see
-// SPEC.md, *Stat derivation contract*. In execution order:
+// Phase is evidence, not decoration — which region of the engine makes the write:
 //   base  raw unit stats plus permanent ABase writes before combat
 //   a  precalc, in the binary          — not inspectable; inferred from semantics
 //   b  precalc, in UnitCalcPre.CAS     — verifiable by grep
@@ -251,40 +250,88 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // The script file *is* the phase — game-fiction wording ("combat enchantment", "trained
 // in the city") does not decide it. Each non-obvious attribution below cites the
 // file:line in Reference docs/Script source/Warlord 1.5.12.6.2/ that justifies it.
-function zeroStatMods() {
-  return { atkMod: 0, defMod: 0, resMod: 0, hpMod: 0, toHitMod: 0, toBlkMod: 0, rtbMod: 0 };
-}
+//
+// An effect an engine orders differently is emitted as **two version-exclusive steps** rather
+// than one step carrying a version predicate, so the divergence is a position in the list
+// instead of a condition inside a step: `supremeLight` / `supremeLight:coM1`, `holyBonus` /
+// `holyBonus:aura`. A step carrying `afterWarp` runs in the part of region `c` that follows
+// the engine's Warp Creature block (SPEC.md, *Warp Creature ordering*).
 
-function sumStatMods(sets) {
-  const total = zeroStatMods();
-  for (const set of sets) {
-    for (const key of Object.keys(total)) total[key] += set[key];
+// `delta` names the stats the effect writes, using the record's own field names, plus two
+// that stand for how the engine reaches the secondary-attack slot:
+//   rtb     the shared `.ranged` slot of the DOS engines — ranged, Thrown, Breath and both
+//           gaze strengths alike, which is why one write reaches all of them
+//   ranged  the `unitT.ranged` field of `Caster.exe`, which is *only* the conventional ranged
+//           attack: Thrown, Fire Breath, Lightning Breath and the gazes are separate fields
+//           there, so a bonus written to `ranged` never reaches them
+//
+// A bonus never conjures a slot the unit does not have, so a write is skipped when
+// `ctx.slots` says the slot is dead. That is also the aura pass's own gate — "add … to
+// melee/ranged when the corresponding base attack exists". Blaze of Glory's armor-to-melee
+// transfer is the deliberate exception: it is not a bonus, and it is not built here.
+const ABILITY_STEP_RTB_FIELDS = ['rtb', 'gaze', 'doomGaze'];
+function abilityStatStep(id, phase, delta, extra) {
+  const fields = Object.keys(delta);
+  const writes = [];
+  for (const field of fields) {
+    if (field === 'rtb') writes.push(...ABILITY_STEP_RTB_FIELDS);
+    else if (field === 'ranged') writes.push('rtb');
+    else writes.push(field);
   }
-  return total;
+  return statStep({
+    id, phase, writes, delta, ...(extra || {}),
+    apply: (u, ctx) => {
+      const slots = (ctx && ctx.slots) || null;
+      for (const field of fields) {
+        const value = delta[field];
+        if (field === 'atk') {
+          if (!slots || slots.melee) u.atk += value;
+        } else if (field === 'rtb') {
+          if (!slots || slots.rtb) u.rtb += value;
+          if (!slots || slots.gaze) u.gaze += value;
+          if (!slots || slots.doomGaze) u.doomGaze += value;
+        } else if (field === 'ranged') {
+          if (!slots || slots.ranged) u.rtb += value;
+        } else {
+          u[field] += value;
+        }
+      }
+    },
+  });
 }
 
-function getAbilityStatModifiers(abilities, version) {
-  const base = zeroStatMods(), a = zeroStatMods(), b = zeroStatMods(), c = zeroStatMods(), d = zeroStatMods();
-  // `warpLate` is the tail of phase c that CoM 1's stat recompute writes *after* the Warp
-  // Creature block. A modifier is written into exactly one bucket, so nothing is ever added
-  // and then taken back out; which bucket it lands in is what encodes the ordering.
-  // Empty in every other version, where the same modifiers keep their normal phase.
-  // See SPEC.md, *Warp Creature ordering*.
-  const warpLate = zeroStatMods();
+function getAbilityStatSteps(abilities, version) {
+  const steps = [];
+  const emit = (id, phase, delta, extra) => { steps.push(abilityStatStep(id, phase, delta, extra)); };
+  // A position *within* region c, not a region of its own: every engine writes some of `c`
+  // after its Warp Creature block, and which effects those are is the version divergence.
+  // CoM 1 moved Warp to the front (0x907AA), so its Darkness, Supreme Light and Tactician all
+  // land here; CoM2/Warlord run Warp late (+0x0BA3C) with only Tactician (+0x0C890) after it.
+  const afterWarp = { afterWarp: true };
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
   const isCoM1 = !!(version && version.startsWith('com_'));
 
   // Holy Bonus: +X to melee attack, defense, resistance.
-  // CoM v6.05+ and CoM2: also +X to ranged/thrown/breath attack.
-  // Phase a: an intrinsic unit ability, with no CAS implementation in either calc file.
+  // CoM v6.05+ and CoM2: also +X to ranged attack.
+  //
+  // CoM2/Warlord run it as **aura type 1 in region `e`**, after `d` and after the Warps — not
+  // in `a`, where the pre-map judgment put it (queue D23; CoM2 analysis, *The aura pass*).
+  // The aura table merges sources by maximum rather than summing them, which the calculator's
+  // single numeric input already expresses. Two consequences of the aura block's own wording,
+  // "add the aura value to defense and resistance, and to melee/ranged when the corresponding
+  // base attack exists": the melee/ranged writes are gated on the base attack existing, which
+  // is the slot gate every ability step applies; and it reaches the **ranged** field only, so
+  // a Thrown or Breath attack takes no bonus — `ctx.slots.rangedIsConventional`.
+  //
+  // MoM and CoM 1 keep phase a: intrinsic unit ability, no CAS implementation, and no aura
+  // pass in either DOS recompute.
   const hb = abilVal(abilities, 'holyBonus', 0);
   if (hb > 0) {
-    a.atkMod += hb;
-    a.defMod += hb;
-    a.resMod += hb;
-    if (isCoMPlus) {
-      a.rtbMod += hb;
-    }
+    const isCoM2 = version && version.startsWith('com2_');
+    if (isCoM2) emit('holyBonus:aura', 'e', { atk: hb, def: hb, res: hb, ranged: hb });
+    else emit('holyBonus', 'a', isCoMPlus
+      ? { atk: hb, def: hb, res: hb, rtb: hb }
+      : { atk: hb, def: hb, res: hb });
   }
 
   // Animate Dead's Animated buff in CoM/CoM2: +1 attack, +1 defense, +10% To Hit,
@@ -292,16 +339,19 @@ function getAbilityStatModifiers(abilities, version) {
   // Weapon Immunity is added in combat flow; the stat bonuses are applied here.
   // Phase c: a spell effect with no CAS implementation.
   if (hasAbil(abilities, 'animated') && isCoMPlus) {
-    c.atkMod += 1;
-    c.defMod += 1;
-    c.toHitMod += 10;
-    c.rtbMod += 1;
+    emit('animated', 'c', { atk: 1, def: 1, rtb: 1, toHit: 10 });
   }
 
-  // Resistance to All: +X to resistance. Phase a — intrinsic unit ability, no CAS.
+  // Resistance to All: +X to resistance.
+  // CoM2/Warlord feed it into **aura type 3 in region `e`** — the Prayermaster aura — so it
+  // runs after `d` and after the Warps, and competes with Prayermaster by maximum rather than
+  // stacking with it (queue D23). The calculator carries no Prayermaster control, so only the
+  // position is observable today. MoM and CoM 1 keep phase a: intrinsic ability, no CAS, no
+  // aura pass.
   const rta = abilVal(abilities, 'resistanceToAll', 0);
   if (rta > 0) {
-    a.resMod += rta;
+    if (version && version.startsWith('com2_')) emit('resistanceToAll:aura', 'e', { res: rta });
+    else emit('resistanceToAll', 'a', { res: rta });
   }
 
   // Lucky: +10% To Hit, +10% To Block, +1 Resistance.
@@ -310,13 +360,14 @@ function getAbilityStatModifiers(abilities, version) {
   // is counted once, in the earliest phase that grants it — resolved from the markers
   // set in stats.js rather than by name. An unmarked `lucky` is the unit's own intrinsic
   // ability, which is phase a.
+  // The unit's own intrinsic Lucky is `+0x044C7`, in region c — the pre-map judgment put it in
+  // a. Nothing between the two regions reads Resistance, To Hit or To Defend, so the move is
+  // faithful without being observable.
   if (hasAbil(abilities, 'lucky')) {
     const luckyPhase = hasAbil(abilities, 'luckyPhaseBase')
-      ? base
-      : ((!hasAbil(abilities, 'luckyPhaseA') && hasAbil(abilities, 'luckyPhaseB')) ? b : a);
-    luckyPhase.toHitMod += 10;
-    luckyPhase.toBlkMod += 10;
-    luckyPhase.resMod += 1;
+      ? 'base'
+      : ((!hasAbil(abilities, 'luckyPhaseA') && hasAbil(abilities, 'luckyPhaseB')) ? 'b' : 'c');
+    emit('lucky', luckyPhase, { res: 1, toHit: 10, toBlk: 10 });
   }
 
   // Lucky Star's aura: while any friendly unit in the combat carries the enchantment, every
@@ -326,10 +377,7 @@ function getAbilityStatModifiers(abilities, version) {
   // reaches only the enchanted unit, so it is the plain `lucky` control, not this one.
   // The loop-variable bug that confined the aura to the enchanted unit was fixed in 1.5.12.6.2.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'luckyStar')) {
-    b.atkMod += 1;
-    b.rtbMod += 1;
-    b.defMod += 1;
-    b.resMod += 1;
+    emit('luckyStar', 'b', { atk: 1, def: 1, res: 1, rtb: 1 });
   }
 
   // Prayer / High Prayer: combat enchantments.
@@ -344,40 +392,29 @@ function getAbilityStatModifiers(abilities, version) {
   // MoM (0x9025C-0x9039D) and CoM 1 (0x9028x-0x9039A) implement both prayers identically,
   // including High Prayer's `jmp` past the Prayer block that makes them non-cumulative,
   // and neither writes `.ranged`. Both blocks sit *before* CoM 1's Warp Creature at
-  // 0x9074C, so they take no part in the `warpLate` ordering.
+  // 0x9074C, so they take no part in the post-Warp ordering.
   const hasPrayer = hasAbil(abilities, 'prayer');
   const hasHighPrayer = hasAbil(abilities, 'highPrayer');
   if (hasHighPrayer) {
-    c.atkMod += 2;
-    c.defMod += 2;
-    c.resMod += 3;
-    c.toHitMod += 10;
-    c.toBlkMod += 10;
+    emit('highPrayer', 'c', { atk: 2, def: 2, res: 3, toHit: 10, toBlk: 10 });
     if (hasPrayer && version && version.startsWith('com2_warlord')) {
-      b.atkMod += 1;
-      b.defMod += 1;
-      b.resMod += 1;
+      emit('prayer:warlordStack', 'b', { atk: 1, def: 1, res: 1 });
     }
   } else if (hasPrayer) {
-    c.resMod += 1;
-    c.toHitMod += 10;
-    c.toBlkMod += 10;
+    emit('prayer', 'c', { res: 1, toHit: 10, toBlk: 10 });
   }
 
   // Black Prayer (debuff): -1 all conventional attack strengths, -1 Defense, -2 Resistance.
   // Phase c — curse with no CAS implementation.
   if (hasAbil(abilities, 'blackPrayer')) {
-    c.atkMod -= 1;
-    c.rtbMod -= 1;
-    c.defMod -= 1;
-    c.resMod -= 2;
+    emit('blackPrayer', 'c', { atk: -1, def: -1, res: -2, rtb: -1 });
   }
 
   // Reinforce Magic: CoM2 global enchantment. All units gain +2 resistance.
   // The +2 magical ranged attack strength bonus is type-conditional and handled in stats.js.
   // Phase c — global enchantment with no CAS implementation.
   if (hasAbil(abilities, 'reinforceMagic') && version && version.startsWith('com2_')) {
-    c.resMod += 2;
+    emit('reinforceMagic', 'c', { res: 2 });
   }
 
   // Inner Power: CoM2 global enchantment. Units with Fire Immunity or Lightning Resist
@@ -386,10 +423,7 @@ function getAbilityStatModifiers(abilities, version) {
   // affecting other units.
   // Phase c: UnitCalcPre.CAS:1743-1749 grants only Mountaineer — the stat bonuses are binary.
   if (hasAbil(abilities, 'innerPower')) {
-    c.atkMod += 3;
-    c.rtbMod += 3;
-    c.defMod += 2;
-    c.resMod += 2;
+    emit('innerPower', 'c', { atk: 3, def: 2, res: 2, rtb: 3 });
   }
 
   // Mislead applies Misfortune in CoM2. The checkbox represents the current unit being
@@ -398,9 +432,7 @@ function getAbilityStatModifiers(abilities, version) {
   // thrown or breath) per the source helptext, so stats.js applies it as misleadRtbMod.
   // Phase c — curse with no CAS implementation.
   if (hasAbil(abilities, 'mislead')) {
-    c.atkMod -= 1;
-    c.defMod -= 1;
-    c.resMod -= 1;
+    emit('mislead', 'c', { atk: -1, def: -1, res: -1 });
   }
 
   // Stone Skin / Iron Skin: +1 / +5 Defense. Iron Skin supersedes Stone Skin.
@@ -408,20 +440,19 @@ function getAbilityStatModifiers(abilities, version) {
   // the file's `Example - ... End of Example` header comment; UnitCalcPre.CAS:456/661 only
   // set the Iron Skin flag. Neither applies a stat.
   if (hasAbil(abilities, 'ironSkin')) {
-    c.defMod += 5;
+    emit('ironSkin', 'c', { def: 5 });
   } else if (hasAbil(abilities, 'stoneSkin')) {
-    c.defMod += 1;
+    emit('stoneSkin', 'c', { def: 1 });
   }
 
   // Holy Armor: handled in stats.js (version- and stat-conditional).
 
-  // Lionheart: +3 Melee Attack (only if base > 0 — stats.js zeroes melee when calcBaseAtk is 0),
+  // Lionheart: +3 Melee Attack (only if base > 0 — the melee slot gate discards it otherwise),
   // +3 Resistance. RTB bonus (non-magic ranged/thrown only) and HP bonus
-  // (version/figs-dependent) are in stats.js.
+  // (version/figs-dependent) are the `lionheart:rangedHp` step in stats.js.
   // Phase c — spell with no CAS implementation.
   if (hasAbil(abilities, 'lionheart')) {
-    c.atkMod += 3;
-    c.resMod += 3;
+    emit('lionheart', 'c', { atk: 3, res: 3 });
   }
 
   // Metal Fires / Flame Blade: +1 / +2 (MoM) or +3 (CoM/CoM2/Warlord) melee attack.
@@ -434,9 +465,9 @@ function getAbilityStatModifiers(abilities, version) {
   const warlordBlade = version && version.startsWith('com2_warlord')
     && (hasAbil(abilities, 'flameBladeWarlord') || hasAbil(abilities, 'fieryBlade'));
   if (hasAbil(abilities, 'flameBlade') || warlordBlade) {
-    c.atkMod += version && version.startsWith('com') ? 3 : 2;
+    emit('flameBlade', 'c', { atk: version && version.startsWith('com') ? 3 : 2 });
   } else if (hasAbil(abilities, 'metalFires')) {
-    c.atkMod += 1;
+    emit('metalFires', 'c', { atk: 1 });
   }
 
   // Blazing March: CoM/CoM2 combat enchantment. +3 melee attack to all units.
@@ -445,7 +476,7 @@ function getAbilityStatModifiers(abilities, version) {
   // MissileRangedBonus=3, BreathBonus=0 both versions, ThrownBonus 0 (CoM2) / 3 (Warlord).
   // Phase c — no CAS implementation.
   if (hasAbil(abilities, 'blazingMarch')) {
-    c.atkMod += 3;
+    emit('blazingMarch', 'c', { atk: 3 });
   }
 
   // Breakthrough: CoM2 combat enchantment resolved via the UI selector.
@@ -456,18 +487,18 @@ function getAbilityStatModifiers(abilities, version) {
     : 'none';
   // Phase c: UnitCalcPre.CAS:776-782 only grants the CGBreakthrough combat global via the
   // Chaos Conduit item power — the stat effect itself is binary.
-  if (breakthroughVal === 'melee' || breakthroughVal === 'meleeDef') {
-    c.atkMod += 1;
-  }
   if (breakthroughVal === 'meleeDef') {
-    c.defMod += 1;
+    emit('breakthrough', 'c', { atk: 1, def: 1 });
+  } else if (breakthroughVal === 'melee') {
+    emit('breakthrough', 'c', { atk: 1 });
   }
 
-  // Giant Strength: +1 melee attack. +1 thrown bonus handled in stats.js (thrown only, not missile).
+  // Giant Strength: +1 melee attack. +1 thrown bonus is `giantStrength:thrown` in stats.js
+  // (thrown only, not missile).
   // Phase c — spell with no CAS implementation. (CreateUnit.CAS:552-554's SGiantStrength is
   // the Natural Selection coal-ore grant, a different effect, handled in stats.js.)
   if (hasAbil(abilities, 'giantStrength')) {
-    c.atkMod += 1;
+    emit('giantStrength', 'c', { atk: 1 });
   }
 
   // Chaos Channels (Demon-Skin Armor): +6 Defense in MoM 1.31 (bug: applied twice in combat),
@@ -480,75 +511,61 @@ function getAbilityStatModifiers(abilities, version) {
   // Fire Breath option is handled in stats.js (modifies thrownType/rtb).
   // Phase c: UnitCalcPre.CAS's EncCCArmor references only set or test the flag.
   if (abilVal(abilities, 'ccDefense', false)) {
-    c.defMod += (version === 'mom_1.31') ? 6 : 3;
+    emit('chaosChannels:armor', 'c', { def: (version === 'mom_1.31') ? 6 : 3 });
   }
 
-  // Black Channels: +2 melee attack (stats.js zeroes melee when calcBaseAtk is 0),
+  // Black Channels: +2 melee attack (discarded by the melee slot gate when the unit has none),
   // +1 all ranged/thrown/breath/gaze,
   // +1 defense, +1 resistance, +1 HP per figure. Death realm; MoM only.
   // Phase c — MoM-only enchantment, so there is no CAS to consult.
   if (hasAbil(abilities, 'blackChannels')) {
-    c.atkMod += 2;
-    c.rtbMod += 1;
-    c.defMod += 1;
-    c.resMod += 1;
-    c.hpMod += 1;
+    emit('blackChannels', 'c', { atk: 2, def: 1, res: 1, hp: 1, rtb: 1 });
   }
 
-  // Weakness: -2 (MoM) or -3 (CoM/CoM2) melee attack. RTB penalty is type-specific, applied in stats.js.
+  // Weakness: -2 (MoM) or -3 (CoM/CoM2) melee attack. RTB penalty is type-specific — the
+  // `weakness:ranged` and `weakness:breath` steps in stats.js.
   // Phase c for the melee penalty — Warlord's UnitCalc.CAS:309-315 adds only the -3 to
   // fire/lightning breath (phase d, applied in stats.js).
   if (hasAbil(abilities, 'weakness')) {
-    const isCoM = version && version.startsWith('com');
-    c.atkMod -= isCoM ? 3 : 2;
+    emit('weakness', 'c', { atk: version && version.startsWith('com') ? -3 : -2 });
   }
 
   // Rust (Warlord): -3 melee attack. The matching -3 to physical ranged (missile/boulder),
   // weapon stripping, thrown removal, and Large Shield removal are handled in stats.js.
   // Phase d — UnitCalc.CAS:492-504.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'rust')) {
-    d.atkMod -= 3;
+    emit('rust', 'd', { atk: -3 });
   }
 
   // Mind Storm: MoM: -5 melee, -5 all ranged/thrown/breath, -5 defense, -5 resistance.
   // CoM2: -3 melee, -5 all ranged/thrown, -5 defense, -5 resistance.
   // Phase c: UnitCalcPre.CAS:1221-1223 only mirrors the combat flag to overland.
   if (hasAbil(abilities, 'mindStorm')) {
-    const isCoM = version && version.startsWith('com');
-    c.atkMod -= isCoM ? 3 : 5;
-    c.rtbMod -= 5;
-    c.defMod -= 5;
-    c.resMod -= 5;
+    emit('mindStorm', 'c', {
+      atk: version && version.startsWith('com') ? -3 : -5,
+      def: -5, res: -5, rtb: -5,
+    });
   }
 
-  // Supreme Light: CoM/CoM2 combat enchantment. Applies only to Life creatures and
-  // Caster units; the defense-from-resistance component is handled in stats.js because
-  // it depends on the effective resistance after other modifiers are applied.
-  // The +2 ranged-attack bonus is type-conditional (ranged only — not thrown/breath)
-  // and handled in stats.js.
-  // Phase c — no CAS implementation (UnitCalc.CAS:1467-1468 clears a regen flag only).
-  // CoM 1 writes Supreme Light at 0x90992-0x90A53, after Warp Creature.
-  if (hasAbil(abilities, 'supremeLight')) {
-    (isCoM1 ? warpLate : c).atkMod += 2;
-  }
+  // Supreme Light is not built here. The engine writes its three stats as one block whose
+  // defence component is a live read of Resistance, so it is one step in stats.js —
+  // `supremeLight` in region `e` for CoM2/Warlord, `supremeLight:coM1` after CoM 1's Warp.
 
   // Survival Instinct: CoM/CoM2 global enchantment. Applies only to fantastic creatures;
   // eligibility is resolved by survivalInstinctActiveForUnit using the effective combat unit type.
   // Phase c — no CAS implementation in either calc file.
   if (hasAbil(abilities, 'survivalInstinct')) {
-    c.defMod += 1;
-    c.resMod += 2;
-    c.toHitMod += 10;
+    emit('survivalInstinct', 'c', { def: 1, res: 2, toHit: 10 });
   }
 
   // Guardian retort: CoM/CoM2 units gain +1 resistance, +10% To Hit,
   // and +10% To Defend.
-  // Phase a: UnitCalcPre.CAS:326-328 grants only a hero ability to Marionettes, so the
-  // retort's own stat bonuses are binary and precede any spell.
+  // Region c at +0x0B092 ("Guardian retort while defending a settlement"), not the a the
+  // pre-map judgment gave it. UnitCalcPre.CAS:326-328 grants only a hero ability to
+  // Marionettes, so Warlord adds nothing and inherits the position. Nothing between a and c
+  // reads Resistance, To Hit or To Defend, so this is faithful without being observable.
   if (hasAbil(abilities, 'guardian') && isCoMPlus) {
-    a.resMod += 1;
-    a.toHitMod += 10;
-    a.toBlkMod += 10;
+    emit('guardian', 'c', { res: 1, toHit: 10, toBlk: 10 });
   }
 
   // Tactician retort:
@@ -561,31 +578,26 @@ function getAbilityStatModifiers(abilities, version) {
   // Warlord reaches its flat +1 by *subtracting* from the binary's hero grant rather than
   // replacing it: UnitCalcPre.CAS:759-771 takes back -2 atk, -2 ranged, -1 defense and
   // -2 resistance from heroes in combat, which is exactly the CoM2 hero bonus less one
-  // point of defense. So the hero case is phase a plus a phase b clawback, and the
-  // non-hero case is phase a alone. Net values are unchanged either way.
+  // point of defense. So the hero case is the binary's grant plus a phase-b clawback. Net
+  // values are unchanged either way, but the clawback runs in `b`, *before* the grant it
+  // takes back — the one place in the sequence where a step's input is written after it.
+  // That falls out of the engine's own split across two files and is left as it is.
   //
-  // CoM 1 implements the whole retort at 0x90AB4-0x90AF6 — guarded on the retort byte
-  // `[player*0x4C8 - 0x60CF]` and, for the hero half, on `_UNITS[].Hero_Slot >= 0` — and
-  // that is *after* the Warp Creature block, hence the `warpLate` entries. The write is
-  // also inside the recompute rather than the precalc, which argues its phase is c rather
-  // than a; left as a because re-attributing it would change what Upgraded Explosive's
-  // fire-breath doubling reads, and nothing has been read from Warlord to justify that.
+  // Both engines write it in the recompute, not the precalc, and both write it late:
+  // CoM2/Warlord at +0x0C890, after Warp and Shatter and just before the `UnitCalc` hook;
+  // CoM 1 at 0x90AB4-0x90AF6 — guarded on the retort byte `[player*0x4C8 - 0x60CF]` and, for
+  // the hero half, on `_UNITS[].Hero_Slot >= 0` — after its own early Warp block. So it is
+  // region c in both, and after the Warps in both (queue D25).
   if (hasAbil(abilities, 'tactician') && isCoMPlus) {
     const isWarlord = version && version.startsWith('com2_warlord');
-    const tact = isCoM1 ? warpLate : a;
+    const id = isCoM1 ? 'tactician:coM1' : 'tactician';
     if (abilVal(abilities, 'unitType', 'normal') === 'hero') {
-      tact.atkMod += 2;
-      tact.rtbMod += 2;
-      tact.defMod += 2;
-      tact.resMod += 2;
+      emit(id, 'c', { atk: 2, def: 2, res: 2, rtb: 2 }, afterWarp);
       if (isWarlord) {
-        b.atkMod -= 2;
-        b.rtbMod -= 2;
-        b.defMod -= 1;
-        b.resMod -= 2;
+        emit('tactician:warlordClawback', 'b', { atk: -2, def: -1, res: -2, rtb: -2 });
       }
     } else {
-      tact.defMod += 1;
+      emit(id, 'c', { def: 1 }, afterWarp);
     }
   }
 
@@ -596,8 +608,7 @@ function getAbilityStatModifiers(abilities, version) {
   // Phase d — UnitCalc.CAS:629-671, with the doubled branch at :646-658.
   if (hasAbil(abilities, 'favoredTerrain') && version && version.startsWith('com2_warlord')) {
     const mult = hasAbil(abilities, 'tactician') ? 2 : 1;
-    d.toHitMod += 5 * mult;
-    d.defMod += 1 * mult;
+    emit('favoredTerrain', 'd', { def: 1 * mult, toHit: 5 * mult });
   }
 
   // Land Linking: CoM/CoM2 grants +2 melee, breath, and defense to fantastic units.
@@ -605,8 +616,7 @@ function getAbilityStatModifiers(abilities, version) {
   // Phase c: UnitCalcPre.CAS:889 is the separate Nature Link upgrade (+1 resistance),
   // not this bonus.
   if (hasAbil(abilities, 'landLinking')) {
-    c.atkMod += 2;
-    c.defMod += 2;
+    emit('landLinking', 'c', { atk: 2, def: 2 });
   }
 
   // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is in
@@ -614,8 +624,7 @@ function getAbilityStatModifiers(abilities, version) {
   // (MODDING.INI MysticSurgeToDefPenalty=10, both versions).
   // Phase c — SpellMysticSurge.CAS sets enchantment flags only; no stat application.
   if (hasAbil(abilities, 'mysticSurge')) {
-    c.defMod += 2;
-    c.resMod -= 2;
+    emit('mysticSurge', 'c', { def: 2, res: -2 });
   }
 
   // Artificer retort (Warlord): mechanical units gain +1 melee, +1 ranged,
@@ -631,34 +640,30 @@ function getAbilityStatModifiers(abilities, version) {
   // Armorclad is a permanent mechanical hull upgrade. CreateUnit.CAS:702-703
   // and OverlandEndTurn.CAS:405-406/428-429 write +6 Defense to ABase.
   if (isWarlord && hasAbil(abilities, 'armorclad')) {
-    base.defMod += 6;
+    emit('armorclad', 'base', { def: 6 });
   }
 
   // Battle Armor is the in-combat regular non-mechanical branch of the
   // Armorclad reform. UnitCalcPre.CAS:1106-1113 applies +3 Defense.
   if (isWarlord && hasAbil(abilities, 'battleArmor')) {
-    b.defMod += 3;
+    emit('battleArmor', 'b', { def: 3 });
   }
 
   // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units.
   // The reform grant helper has already derived `magitekEngine` and Large Shield.
   if (isWarlord && hasAbil(abilities, 'magitekEngine')) {
-    b.toBlkMod += 20;
+    emit('magitekEngine', 'b', { toBlk: 20 });
   }
 
   if (isWarlord && hasAbil(abilities, 'artificer') && hasAbil(abilities, 'mechanical')) {
-    base.atkMod += 1;
-    base.rtbMod += 1;
-    base.defMod += 1;
-    base.resMod += 2;
+    emit('artificer', 'base', { atk: 1, def: 1, res: 2, rtb: 1 });
   }
 
   // Mechanical Expert (Warlord): an Engineer/Combat Engineer in the stack carries this
   // perk, granting mechanical units +20% To Hit and +10% To Defend.
   // Phase d — UnitCalc.CAS:275-309.
   if (isWarlord && hasAbil(abilities, 'mechanicalExpert') && hasAbil(abilities, 'mechanical')) {
-    d.toHitMod += 20;
-    d.toBlkMod += 10;
+    emit('mechanicalExpert', 'd', { toHit: 20, toBlk: 10 });
   }
 
   // Rebuild (Warlord): +2 melee and +2 armor. Mechanical flag, Death/Illusion
@@ -668,16 +673,14 @@ function getAbilityStatModifiers(abilities, version) {
   // (ABase) when the spell is cast, so it is baked into the base stage.
   // Heroes: UnitCalcPre.CAS:682-691 re-applies them at index 0 on every recalc — phase b.
   if (isWarlord && hasAbil(abilities, 'rebuild')) {
-    const rebuildPhase = abilVal(abilities, 'unitType', 'normal') === 'hero' ? b : base;
-    rebuildPhase.atkMod += 2;
-    rebuildPhase.defMod += 2;
+    emit('rebuild', abilVal(abilities, 'unitType', 'normal') === 'hero' ? 'b' : 'base',
+      { atk: 2, def: 2 });
   }
 
   // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.
   // Base stage: CreateUnit.CAS:614-618 writes both at index 1 (ABase).
   if (isWarlord && hasAbil(abilities, 'malnourished')) {
-    base.atkMod -= 1;
-    base.defMod -= 2;
+    emit('malnourished', 'base', { atk: -1, def: -2 });
   }
 
   // Spirit Link (Warlord, Conjurer signature): +2 Resistance. The non-fantastic
@@ -687,14 +690,14 @@ function getAbilityStatModifiers(abilities, version) {
   // Phase c: every CAS reference to EncSpiritLink sets or tests the fantastic flag
   // (UnitCalcPre.CAS:28-41, UnitCalc.CAS:1306); the +2 Resistance is binary.
   if (isWarlord && hasAbil(abilities, 'spiritLink')) {
-    c.resMod += 2;
+    emit('spiritLink', 'c', { res: 2 });
   }
 
   // Rally (Warlord, Charismatic retort exclusive combat enchantment): all friendly
   // units gain +2 Resistance until the end of combat.
   // Phase b — UnitCalcPre.CAS:1499-1504 (labelled "Rousing Speech" in the script).
   if (isWarlord && hasAbil(abilities, 'rally')) {
-    b.resMod += 2;
+    emit('rally', 'b', { res: 2 });
   }
 
   // Dishearten Prophesy (Warlord, Astrologer retort exclusive city curse): garrison
@@ -702,16 +705,10 @@ function getAbilityStatModifiers(abilities, version) {
   // resistance debuff is modeled (the +4 city unrest is outside this calculator).
   // Phase b — UnitCalcPre.CAS:1630-1633.
   if (isWarlord && hasAbil(abilities, 'disheartenProphecy')) {
-    b.resMod -= 2;
+    emit('disheartenProphecy', 'b', { res: -2 });
   }
 
-  // `preWarp` is the same five buckets without `warpLate`, for callers that build a stat
-  // outside the phase objects and still need the subtotal Warp reduces (the gaze strengths).
-  return {
-    ...sumStatMods([base, a, b, c, d, warpLate]),
-    base, a, b, c, d, warpLate,
-    preWarp: sumStatMods([base, a, b, c, d]),
-  };
+  return steps;
 }
 
 // --- Poison Touch ---
@@ -1534,7 +1531,7 @@ function applyBlackChannelsEffects(unit) {
 
 // Warlord Rebuild (Arcane unit enchantment): unit becomes Mechanical and gains
 // Death Immunity, Illusion Immunity, and Armor Piercing. Stat bonuses are
-// applied in getAbilityStatModifiers.
+// applied by getAbilityStatSteps.
 function applyRebuildEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'rebuild')) return unit;
   return Object.assign({}, unit, {
@@ -1670,6 +1667,128 @@ function bloodLustMeleeAttack(atkUnit, defUnit) {
   return atkUnit.atk * 2;
 }
 
+// --- Resolution-time stat sequences (Caster.exe: CoM2 and Warlord) ---
+// These use the same step type and runner as derivation, but on a scratch copy which
+// is discarded after one incoming attack. They therefore never change the displayed
+// stat block. Order follows @Units@GetEffectiveResistance and
+// @Units@EffectiveDefense; see CoM2 binary analysis, "Resolution-time modifiers".
+function resolutionStep(id, writes, apply, when) {
+  return statStep({
+    id,
+    phase: 'resolution',
+    writes,
+    apply,
+    ...(when ? { when } : {}),
+  });
+}
+
+const EFFECTIVE_RESISTANCE_STEPS = [
+  resolutionStep('effectiveResistance:base', ['effectiveResistance'],
+    u => { u.effectiveResistance = u.res; }),
+  resolutionStep('effectiveResistance:charmed', ['effectiveResistance'],
+    u => { u.effectiveResistance = 100; },
+    (u, ctx) => ctx.isRoll && u.unitType === 'hero' && hasAbil(u.abilities, 'charmed')),
+  resolutionStep('effectiveResistance:magicImmunity', ['effectiveResistance'],
+    u => { u.effectiveResistance = 100; },
+    (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'magicImmunity')),
+  resolutionStep('effectiveResistance:resistElements', ['effectiveResistance'],
+    u => { u.effectiveResistance += 4; },
+    (u, ctx) => ctx.realm === 'nature' && abilVal(u.abilities, 'elemArmor', 'none') === 'resistElements'),
+  resolutionStep('effectiveResistance:bless', ['effectiveResistance'],
+    (u, ctx) => { u.effectiveResistance += ctx.blessBonus; },
+    (u, ctx) => (ctx.realm === 'chaos' || ctx.realm === 'death') && hasAbil(u.abilities, 'bless')),
+  resolutionStep('effectiveResistance:resistMagic', ['effectiveResistance'],
+    u => { u.effectiveResistance += 5; },
+    (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'resistMagic')),
+];
+
+// `realm` is null for a realm-less roll (Poison), otherwise one of nature,
+// sorcery, chaos, life, death. `isRoll` is false only for callers asking for a
+// non-roll resistance value; all combat riders in this calculator pass true.
+function effectiveResistance(target, version, realm, isRoll = true, trace = null) {
+  const scratch = { ...target };
+  const context = {
+    version,
+    realm,
+    isRoll,
+    blessBonus: version && version.startsWith('com2_warlord') ? 4 : 5,
+    ...(trace ? { trace } : {}),
+  };
+  runStatSteps(EFFECTIVE_RESISTANCE_STEPS, scratch, context);
+  return scratch.effectiveResistance;
+}
+
+const EFFECTIVE_DEFENSE_STEPS = [
+  resolutionStep('effectiveDefense:base', ['effectiveDefense'],
+    (u, ctx) => { u.effectiveDefense = Math.max(0, u.def - ctx.vertigoDefPenalty) + ctx.extraDefense; }),
+  resolutionStep('effectiveDefense:illusion', ['effectiveDefense'],
+    u => { u.effectiveDefense = 0; return HALT; },
+    (u, ctx) => ctx.illusion && !hasAbil(u.abilities, 'illusionImmunity')),
+  resolutionStep('effectiveDefense:largeShield', ['effectiveDefense'],
+    u => { u.effectiveDefense += 3; },
+    (u, ctx) => ctx.isRanged && hasAbil(u.abilities, 'largeShield')),
+  resolutionStep('effectiveDefense:resistElements', ['effectiveDefense'],
+    u => { u.effectiveDefense += 4; },
+    (u, ctx) => ctx.elementalEligible
+      && abilVal(u.abilities, 'elemArmor', 'none') === 'resistElements'),
+  resolutionStep('effectiveDefense:elementalArmor', ['effectiveDefense'],
+    u => { u.effectiveDefense += 12; },
+    (u, ctx) => ctx.elementalEligible
+      && abilVal(u.abilities, 'elemArmor', 'none') === 'elementalArmor'),
+  resolutionStep('effectiveDefense:bless', ['effectiveDefense'],
+    (u, ctx) => { u.effectiveDefense += ctx.blessBonus; },
+    (u, ctx) => ctx.blessEligible && hasAbil(u.abilities, 'bless')),
+  resolutionStep('effectiveDefense:armorPiercing', ['effectiveDefense'],
+    u => { u.effectiveDefense = Math.floor(u.effectiveDefense / 2); },
+    (u, ctx) => ctx.armorPiercing
+      && !(ctx.isLightning && hasAbil(u.abilities, 'lightningResist'))),
+  resolutionStep('effectiveDefense:immunities', ['effectiveDefense'],
+    (u, ctx) => {
+      // The six Caster.exe tests are assignments in this order. Righteousness is
+      // retained in the same replacement step while queue D1/D3's remaining
+      // classification question is open; it preserves the calculator's established
+      // behaviour without inventing a second ordering mechanism.
+      if (hasAbil(u.abilities, 'fireImmunity') && ctx.fireSpell) u.effectiveDefense = 100;
+      if (hasAbil(u.abilities, 'fireImmunity') && ctx.isFire) u.effectiveDefense = 100;
+      if (hasAbil(u.abilities, 'coldImmunity') && ctx.coldSpell) u.effectiveDefense = 100;
+      if (hasAbil(u.abilities, 'poisonImmunity') && ctx.poisonSpell) u.effectiveDefense = 100;
+      if (hasAbil(u.abilities, 'magicImmunity') && ctx.magicImmunityEligible) u.effectiveDefense = 100;
+      if (hasAbil(u.abilities, 'missileImmunity') && ctx.isMissile) u.effectiveDefense = 100;
+      if (hasAbil(u.abilities, 'righteousness') && ctx.righteousnessEligible) u.effectiveDefense = 100;
+    }),
+  resolutionStep('effectiveDefense:weaponImmunity', ['effectiveDefense'],
+    (u, ctx) => { u.effectiveDefense += ctx.weaponImmunityBonus; },
+    (u, ctx) => ctx.weaponImmunityEligible),
+];
+
+function effectiveDefense(target, version, attack, trace = null) {
+  const scratch = { ...target };
+  const context = {
+    version,
+    vertigoDefPenalty: attack.vertigoDefPenalty || 0,
+    extraDefense: attack.extraDefense || 0,
+    illusion: !!attack.illusion,
+    isRanged: !!attack.isRanged,
+    elementalEligible: !!attack.elementalEligible,
+    blessEligible: !!attack.blessEligible,
+    blessBonus: version && version.startsWith('com2_warlord') ? 7 : 5,
+    armorPiercing: !!attack.armorPiercing,
+    isLightning: !!attack.isLightning,
+    fireSpell: !!attack.fireSpell,
+    isFire: !!attack.isFire,
+    coldSpell: !!attack.coldSpell,
+    poisonSpell: !!attack.poisonSpell,
+    magicImmunityEligible: !!attack.magicImmunityEligible,
+    isMissile: !!attack.isMissile,
+    righteousnessEligible: !!attack.righteousnessEligible,
+    weaponImmunityEligible: !!attack.weaponImmunityEligible,
+    weaponImmunityBonus: version && version.startsWith('com2_warlord') ? 10 : 8,
+    ...(trace ? { trace } : {}),
+  };
+  runStatSteps(EFFECTIVE_DEFENSE_STEPS, scratch, context);
+  return scratch.effectiveDefense;
+}
+
 // --- Resistance/Defense bonuses from Elemental Armor / Resist Elements ---
 // Bonus amounts to a unit's resistance vs Stoning. CoM RE +4 (Nature only); MoM both grant bonus.
 function elemResistBonus(unit, version) {
@@ -1677,6 +1796,118 @@ function elemResistBonus(unit, version) {
   const isCoM = version && version.startsWith('com');
   if (isCoM) return elemVal === 'resistElements' ? 4 : 0;
   return elemVal === 'elementalArmor' ? 10 : elemVal === 'resistElements' ? 3 : 0;
+}
+
+function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType) {
+  const aArmorPiercing = hasAbil(attacker.abilities, 'armorPiercing');
+  const aIllusion = hasAbil(attacker.abilities, 'illusion');
+
+  // Attack-side Weapon Immunity flags. These retain the existing eligibility
+  // classification while D2 remains open; the sequence establishes only that the
+  // resulting bonus is the final step.
+  const wi = weapon => {
+    const atkWIType = hasAbil(attacker.abilities, 'spiritLink') ? 'normal' : attacker.unitType;
+    return weaponImmunityApplies(
+      target.abilities, weapon, atkWIType, version, attacker.generic);
+  };
+
+  let attack;
+  if (attackType === 'melee') {
+    const upgradedWeapon = (hasAbil(attacker.abilities, 'blazingMarch')
+      || hasAbil(attacker.abilities, 'eldritchWeapon')) && attacker.weapon === 'normal'
+      ? 'magic' : attacker.weapon;
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      armorPiercing: aArmorPiercing,
+      weaponImmunityEligible: wi(upgradedWeapon),
+    };
+  } else if (attackType === 'ranged') {
+    const aSpiritLink = hasAbil(attacker.abilities, 'spiritLink');
+    const aIsDC = !aSpiritLink
+      && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
+    const aRangedDC = attacker.rangedType === 'magic_c'
+      || ((attacker.rangedType === 'missile' || attacker.rangedType === 'boulder') && aIsDC);
+    const aRangedElem = attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
+      || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam';
+    const upgradedWeapon = hasAbil(attacker.abilities, 'blazingMarch')
+      && attacker.rangedType === 'missile' && attacker.weapon === 'normal'
+      ? 'magic' : attacker.weapon;
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      isRanged: true,
+      elementalEligible: aRangedElem,
+      blessEligible: aRangedDC,
+      armorPiercing: aArmorPiercing,
+      magicImmunityEligible: aRangedElem,
+      isMissile: attacker.rangedType === 'missile',
+      righteousnessEligible: attacker.rangedType === 'magic_c',
+      weaponImmunityEligible: (attacker.rangedType === 'missile'
+        || attacker.rangedType === 'boulder') && wi(upgradedWeapon),
+    };
+  } else if (attackType === 'thrown') {
+    const aSpiritLink = hasAbil(attacker.abilities, 'spiritLink');
+    const aIsDC = !aSpiritLink
+      && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
+    const aThrownDC = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning'
+      || (attacker.thrownType === 'thrown' && aIsDC);
+    const aThrownElem = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning';
+    const upgradedWeapon = hasAbil(attacker.abilities, 'blazingMarch')
+      && version && version.startsWith('com2_warlord')
+      && attacker.thrownType === 'thrown' && attacker.weapon === 'normal'
+      ? 'magic' : attacker.weapon;
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      isRanged: true,
+      elementalEligible: aThrownElem,
+      blessEligible: aThrownDC,
+      armorPiercing: aArmorPiercing || attacker.thrownType === 'lightning',
+      isLightning: attacker.thrownType === 'lightning',
+      isFire: attacker.thrownType === 'fire',
+      righteousnessEligible: attacker.thrownType === 'fire'
+        || attacker.thrownType === 'lightning',
+      weaponImmunityEligible: attacker.thrownType === 'thrown' && wi(upgradedWeapon),
+    };
+  } else if (attackType === 'gaze') {
+    const aGazeRealm = gazeRealm(attacker.abilities);
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      isRanged: true,
+      blessEligible: aGazeRealm === 'chaos' || aGazeRealm === 'death',
+      armorPiercing: aArmorPiercing,
+      magicImmunityEligible: true,
+    };
+  } else if (attackType === 'immolation') {
+    attack = {
+      vertigoDefPenalty,
+      isRanged: true,
+      blessEligible: true,
+      isFire: true,
+      magicImmunityEligible: true,
+      righteousnessEligible: true,
+    };
+  } else {
+    throw new Error(`Unknown Caster.exe defense attack type: ${attackType}`);
+  }
+  // Combat@ApplyAttack supplies City Walls as EffectiveDefense's `extradef`: +3 intact, +1
+  // damaged, only for attacks crossing into the walls. The UI's City Walls control already
+  // expresses that contextual value for the defending unit. DamageSpell passes 0 instead, so
+  // Immolation does not receive it.
+  if (attackType !== 'immolation') attack.extraDefense = target.cityWallBonus || 0;
+  return effectiveDefense(target, version, attack);
+}
+
+function computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalty) {
+  return {
+    vsMelee: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'melee'),
+    vsRanged: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'ranged'),
+    vsThrown: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'thrown'),
+    vsGaze: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'gaze'),
+    vsImmolation: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'immolation'),
+  };
 }
 
 // --- Defense Profile ---
@@ -1690,6 +1921,9 @@ function elemResistBonus(unit, version) {
 // Returns: { vsMelee, vsRanged, vsThrown, vsGaze, vsImmolation }
 function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const isCoM = version && version.startsWith('com');
+  if (version && version.startsWith('com2')) {
+    return computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalty);
+  }
 
   // Bless (defense half) — version-sensitive scope (no melee bonus in CoM/CoM2/Warlord).
   const tBless = hasAbil(target.abilities, 'bless');
@@ -2256,11 +2490,11 @@ function marginalB(joint) {
 //                      (per-phase touchAttackFires / Black Sleep / gaze-active rule)
 //   blockStoningDeath: Warlord removes Stoning Touch and Death Touch from ranged
 //                      attacks (physical and magical) per the Warlord manual
-function touchParams(self, other, otherResM, otherResDeath, otherResStoning, ver, fires, blockStoningDeath = false) {
+function touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver, fires, blockStoningDeath = false) {
   const poisonStr = fires ? abilVal(self.abilities, 'poison', 0) : 0;
   return {
     poisonStr,
-    poisonFail:     poisonStr > 0 ? poisonFailProb(other.res, other.abilities, ver) : 0,
+    poisonFail:     poisonStr > 0 ? poisonFailProb(otherResPoison, other.abilities, ver) : 0,
     stoningFail:    (fires && !blockStoningDeath && abilDefined(self.abilities, 'stoningTouch'))
                       ? stoningFailProb(otherResStoning, other.abilities, self.abilities.stoningTouch) : 0,
     deathTouchFail: (fires && !blockStoningDeath && abilDefined(self.abilities, 'deathTouch'))
@@ -2284,16 +2518,16 @@ function touchParams(self, other, otherResM, otherResDeath, otherResStoning, ver
 }
 
 // Touch-attack parameters for `self` striking `other` in melee.
-function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, ver) {
-  return touchParams(self, other, otherResM, otherResDeath, otherResStoning, ver,
+function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver) {
+  return touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver,
     touchAttackFires(self.atk, self.baseAtk, ver));
 }
 
 // Touch-attack parameters for `self` firing alongside its gaze phase against `other`.
 // Returns raw probs plus `*With` booleans gated on the gaze actually being active.
-function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, gazeActive, selfSleep, ver) {
+function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, gazeActive, selfSleep, ver) {
   const { poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, destructionFail, lifeStealMod }
-    = touchParams(self, other, otherResM, otherResDeath, otherResStoning, ver, true);
+    = touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver, true);
   const active = !selfSleep && gazeActive;
   return {
     poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, destructionFail, lifeStealMod,
@@ -2424,16 +2658,49 @@ function remainingUnitState(unit) {
 }
 
 function buildResistanceContext(a, b, version, isCoM) {
+  if (version && version.startsWith('com2')) {
+    const needsAgainst = source => ({
+      magic: hasAbil(source.abilities, 'dispelEvil') || abilDefined(source.abilities, 'exorcise'),
+      death: hasAbil(source.abilities, 'fear')
+        || abilDefined(source.abilities, 'deathTouch')
+        || abilDefined(source.abilities, 'deathGaze')
+        || abilDefined(source.abilities, 'destruction')
+        || abilDefined(source.abilities, 'lifeSteal'),
+      stoning: abilDefined(source.abilities, 'stoningTouch')
+        || abilDefined(source.abilities, 'stoningGaze'),
+      poison: (abilVal(source.abilities, 'poison', 0) || 0) > 0,
+    });
+    const aNeeds = needsAgainst(b);
+    const bNeeds = needsAgainst(a);
+    const resistance = (target, realm, needed) => needed
+      ? effectiveResistance(target, version, realm)
+      : target.res;
+    return {
+      bResM: resistance(b, 'life', bNeeds.magic),
+      aResM: resistance(a, 'life', aNeeds.magic),
+      bResDeath: resistance(b, 'death', bNeeds.death),
+      aResDeath: resistance(a, 'death', aNeeds.death),
+      bResStoning: resistance(b, 'nature', bNeeds.stoning),
+      aResStoning: resistance(a, 'nature', aNeeds.stoning),
+      bResPoison: resistance(b, null, bNeeds.poison),
+      aResPoison: resistance(a, null, aNeeds.poison),
+    };
+  }
+
   // Bless (resistance half): +3 resistance (MoM) or +5 (CoM/CoM2) vs Death-realm resistable
   // effects (Cause Fear, Life Steal, Death Gaze). The defense half is computed elsewhere.
   const bBless = hasAbil(b.abilities, 'bless');
   const aBless = hasAbil(a.abilities, 'bless');
   const isWarlord = version && version.startsWith('com2_warlord');
   const blessBonus = isWarlord ? 4 : (isCoM ? 5 : 3);
+  const charmedBonus = unit => unit.unitType === 'hero'
+    && hasAbil(unit.abilities, 'charmed') ? 30 : 0;
+  const bBaseRes = b.res + charmedBonus(b);
+  const aBaseRes = a.res + charmedBonus(a);
 
   // Resist Magic: +5 resistance vs all magical/special effects except Poison.
-  const bResM = b.res + (hasAbil(b.abilities, 'resistMagic') ? 5 : 0);
-  const aResM = a.res + (hasAbil(a.abilities, 'resistMagic') ? 5 : 0);
+  const bResM = bBaseRes + (hasAbil(b.abilities, 'resistMagic') ? 5 : 0);
+  const aResM = aBaseRes + (hasAbil(a.abilities, 'resistMagic') ? 5 : 0);
   const bResDeath = bResM + (bBless ? blessBonus : 0);
   const aResDeath = aResM + (aBless ? blessBonus : 0);
 
@@ -2447,12 +2714,38 @@ function buildResistanceContext(a, b, version, isCoM) {
     aResDeath,
     bResStoning: bResM + elemResistBonus(b, version),
     aResStoning: aResM + elemResistBonus(a, version),
+    bResPoison: bBaseRes,
+    aResPoison: aBaseRes,
   };
 }
 
-function buildDefenseContext(a, b, version, aVertigoDefPenalty, bVertigoDefPenalty) {
+function buildDefenseContext(a, b, version, aVertigoDefPenalty, bVertigoDefPenalty, needed = null) {
   // Aggregates Vertigo def penalty, Large Shield, Bless (defense half), Elemental Armor,
   // Armor Piercing, Weapon/Missile/Magic/Fire Immunity, Righteousness, and Illusion.
+  if (version && version.startsWith('com2') && needed) {
+    const defense = (target, attacker, penalty, type, active) => active
+      ? computeCasterDefenseForAttack(target, attacker, version, penalty, type)
+      : 0;
+    const bDefVsA = defense(b, a, bVertigoDefPenalty, 'melee', needed.melee);
+    const bDefVsARanged = defense(b, a, bVertigoDefPenalty, 'ranged', needed.ranged);
+    const bDefForThrown = defense(b, a, bVertigoDefPenalty, 'thrown', needed.thrown);
+    const bDefForGaze = defense(b, a, bVertigoDefPenalty, 'gaze', needed.aGaze);
+    const bDefForImm = defense(b, a, bVertigoDefPenalty, 'immolation', needed.aImmolation);
+    const aDefVsB = defense(a, b, aVertigoDefPenalty, 'melee', needed.counter);
+    const aDefForGaze = defense(a, b, aVertigoDefPenalty, 'gaze', needed.bGaze);
+    const aDefForImm = defense(a, b, aVertigoDefPenalty, 'immolation', needed.bImmolation);
+    return {
+      bDefVsA,
+      bDefVsARanged,
+      bDefForThrown,
+      bDefForGaze,
+      bDefForImm,
+      aDefVsB,
+      aDefForGaze,
+      aDefForImm,
+    };
+  }
+
   const bDefProfile = computeDefenseProfile(b, a, version, bVertigoDefPenalty);
   const aDefProfile = computeDefenseProfile(a, b, version, aVertigoDefPenalty);
   return {
@@ -3042,6 +3335,8 @@ function resolveCombat(a, b, opts) {
     aResDeath,
     bResStoning,
     aResStoning,
+    bResPoison,
+    aResPoison,
   } = buildResistanceContext(a, b, ver, isCoM);
 
   // Cause Fear: reduces opponent's effective melee + touch-attack figures.
@@ -3075,18 +3370,6 @@ function resolveCombat(a, b, opts) {
   const breathExists = ver === 'mom_1.31' ? a.rtb > 0 : (a.baseRtb > 0 || a.rtb > 0);
   const hasThrown = !isRanged && a.thrownType !== 'none' && breathExists
     && touchAttackFires(a.atk, a.baseAtk, ver) && !aBlackSleep;
-
-  // Defense profiles: defender's effective defense vs each attack type from the opponent.
-  const {
-    bDefVsA,
-    bDefVsARanged,
-    bDefForThrown,
-    bDefForGaze,
-    bDefForImm,
-    aDefVsB,
-    aDefForGaze,
-    aDefForImm,
-  } = buildDefenseContext(a, b, ver, aVertigoDefPenalty, bVertigoDefPenalty);
 
   const {
     aToBlockConventional,
@@ -3132,6 +3415,30 @@ function resolveCombat(a, b, opts) {
   const bGazeRangedActiveP = (b.effectiveGazeRanged || 0) > 0;
   const aGazeActiveP = !aBlackSleep && (aStoningGazeActiveP || aDeathGazeActiveP || aGazeDoomStrP > 0 || aGazeRangedActiveP);
   const bGazeActiveP = !bBlackSleep && (bStoningGazeActiveP || bDeathGazeActiveP || bGazeDoomStrP > 0 || bGazeRangedActiveP);
+
+  // Caster.exe evaluates EffectiveDefense for the incoming attack only. The DOS
+  // path keeps its existing aggregate profile, while CoM2/Warlord skip sequences
+  // for attack types which cannot fire in this exchange.
+  const {
+    bDefVsA,
+    bDefVsARanged,
+    bDefForThrown,
+    bDefForGaze,
+    bDefForImm,
+    aDefVsB,
+    aDefForGaze,
+    aDefForImm,
+  } = buildDefenseContext(a, b, ver, aVertigoDefPenalty, bVertigoDefPenalty, {
+    melee: !isRanged,
+    ranged: isRanged,
+    thrown: hasThrown,
+    counter: !isRanged,
+    aGaze: !isRanged && aGazeActiveP,
+    bGaze: !isRanged && bGazeActiveP,
+    aImmolation: !isRanged && aHasImm,
+    bImmolation: wallOfFireActive || (!isRanged && bHasImm),
+  });
+
   if (!isRanged) {
     // Guard: can A initiate melee combat at all?
     // MoM 1.31: requires effective atk > 0, effective rtb > 0, or an active gaze.
@@ -3151,14 +3458,14 @@ function resolveCombat(a, b, opts) {
 
     // Touch attack params: melee-phase activation.
     const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, exorciseFail: aExorciseFailM, destructionFail: aDestructionFailM, lifeStealMod: aLifeStealModM }
-      = meleeTouchParams(a, b, bResM, bResDeath, bResStoning, opts.version);
+      = meleeTouchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version);
     const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, deathTouchFail: bDeathTouchFailM, dispelEvilFail: bDispelEvilFailM, exorciseFail: bExorciseFailM, destructionFail: bDestructionFailM, lifeStealMod: bLifeStealModM }
-      = meleeTouchParams(b, a, aResM, aResDeath, aResStoning, opts.version);
+      = meleeTouchParams(b, a, aResM, aResDeath, aResStoning, aResPoison, opts.version);
 
     // Touch attack params: thrown-phase activation (for thrown/breath).
     const aTouchWithThrown = !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
     const { poisonStr: aPoisonStrT, poisonFail: aPoisonFailT, stoningFail: aStoningFailT, deathTouchFail: aDeathTouchFailT, dispelEvilFail: aDispelEvilFailT, exorciseFail: aExorciseFailT, destructionFail: aDestructionFailT, lifeStealMod: aLifeStealModT }
-      = touchParams(a, b, bResM, bResDeath, bResStoning, opts.version, aTouchWithThrown);
+      = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version, aTouchWithThrown);
     // Whether Life Steal is carried on the thrown phase, for the display-dist count
     // (aLifeStealModT is null both when absent and when the target is immune).
     const aLifeStealOnT = aTouchWithThrown && abilDefined(a.abilities, 'lifeSteal');
@@ -3166,10 +3473,10 @@ function resolveCombat(a, b, opts) {
     // Gaze-phase touch activation (touches fire alongside gaze regardless of melee atk).
     const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, exorciseFail: aExorciseFailG, destructionFail: aDestructionFailG, lifeStealMod: aLifeStealModG,
             poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, exorciseWith: aExorciseWithGaze, destructionWith: aDestructionWithGaze, lifeStealWith: aLifeStealWithGaze }
-      = gazeTouchParams(a, b, bResM, bResDeath, bResStoning, aGazeActiveP, aBlackSleep, opts.version);
+      = gazeTouchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, aGazeActiveP, aBlackSleep, opts.version);
     const { poisonStr: bPoisonStrG_raw, poisonFail: bPoisonFailG, stoningFail: bStoningFailG, deathTouchFail: bDeathTouchFailG, dispelEvilFail: bDispelEvilFailG, exorciseFail: bExorciseFailG, destructionFail: bDestructionFailG, lifeStealMod: bLifeStealModG,
             poisonWith: bPoisonWithGaze, stoningWith: bStoningWithGaze, deathTouchWith: bDeathTouchWithGaze, dispelEvilWith: bDispelEvilWithGaze, exorciseWith: bExorciseWithGaze, destructionWith: bDestructionWithGaze, lifeStealWith: bLifeStealWithGaze }
-      = gazeTouchParams(b, a, aResM, aResDeath, aResStoning, bGazeActiveP, bBlackSleep, opts.version);
+      = gazeTouchParams(b, a, aResM, aResDeath, aResStoning, aResPoison, bGazeActiveP, bBlackSleep, opts.version);
 
     // Gaze kill-roll probabilities (needed by buildGazeDist).
     const { stoningFail: aStoningGazeFailP, deathFail: aDeathGazeFailP }
@@ -3711,7 +4018,7 @@ function resolveCombat(a, b, opts) {
     const rangedTouchFires = touchAttackFires(a.rtb, a.baseRtb, opts.version);
     const warlordRangedTouchBlocked = ver && ver.startsWith('com2_warlord');
     const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, destructionFail: aDestructionFailR, lifeStealMod: aLifeStealModR }
-      = touchParams(a, b, bResM, bResDeath, bResStoning, opts.version, rangedTouchFires, warlordRangedTouchBlocked);
+      = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version, rangedTouchFires, warlordRangedTouchBlocked);
     const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
     const aImmDistR = (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0)
       ? calcAreaDamageDist(bAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(bRemHP, b.hp))

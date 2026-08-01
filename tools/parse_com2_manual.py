@@ -1330,7 +1330,7 @@ def extract_all(annotated) -> tuple[dict, set]:
 
 
 def build(annotated) -> dict:
-    doc = {"version": "com2_1.5.11"}
+    doc = {"version": "com2_1.05.11"}
     tree = build_tree(annotated)
     entities, _ = extract_all(annotated)
     doc["chapters"] = tree["chapters"]

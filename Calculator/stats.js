@@ -1,21 +1,6 @@
 // --- Unit Stat Derivation ---
 // Depends on data.js and combat.js helper functions. No DOM dependencies.
 
-// Total a per-stat derivation split. With no keys, sums the base stage and all
-// encounter phases — the value the rest of the calculator uses. With keys, sums only
-// those stages, which is how an effect that *scales* a stat reads the subtotal it sees at
-// its own point in the pipeline (e.g. sumPhases(hpPhases, 'base', 'a') for
-// Xenoveterinary). See SPEC.md, Stat derivation contract.
-//
-// `warpLate` is the tail of phase c that CoM 1's stat recompute writes after the Warp
-// Creature block; it is empty in every other version. PRE_WARP_PHASES is what Warp
-// reduces, and is the same "name the subtotal you read" idiom the scaling effects use.
-const DERIVATION_PHASES = ['base', 'a', 'b', 'c', 'd', 'warpLate'];
-const PRE_WARP_PHASES = ['base', 'a', 'b', 'c', 'd'];
-function sumPhases(phases, ...keys) {
-  return (keys.length ? keys : DERIVATION_PHASES).reduce((total, key) => total + phases[key], 0);
-}
-
 // Lava Smelter (Warlord): the selector records one permanent mineral-pair grant already
 // carried by the unit. New Dwarf units receive it when trained; Upgrade & Retrain can apply
 // it later to any existing non-fantastic unit. Returns the ability set with the grant merged
@@ -109,7 +94,7 @@ function applyMagicImmunityCurseGating(abilities) {
 // the combat immunity checks (Death Gaze/Touch, Life Stealing, Cause Fear).
 // Lucky reaches a unit from five sources that fall in different derivation stages
 // (SPEC.md, Stat derivation contract). Its stat bonus does not stack, so it is
-// counted once, in the earliest stage that grants it — getAbilityStatModifiers reads
+// counted once, in the earliest stage that grants it — getAbilityStatSteps reads
 // these markers to decide which. They record the provenance that would otherwise be
 // lost when everything collapses to `lucky`.
 //   base — Pillar of Faith (CreateUnit.CAS:591, a 20% chance rolled at creation)
@@ -251,7 +236,10 @@ function applyOutlanderReformGrants(abilities, version, baseUnitType) {
     ...(outlanderWizard && baseFantastic && fundamentalAbilities.xenoveterinary
       ? { outlanderXenoveterinary: true }
       : {}),
-    ...(outlanderWizard && fundamentalAbilities.magitekScience && (armorclad || battleArmor)
+    // Despite both prose sources naming Battle Armor, the executing scripts grant Resist
+    // Magic only alongside the permanent EncArmorClad flag (CreateUnit.CAS:704-705 and
+    // OverlandEndTurn.CAS:436-442). The transient +3 Battle Armor branch has no such grant.
+    ...(outlanderWizard && fundamentalAbilities.magitekScience && armorclad
       ? { resistMagic: true }
       : {}),
     ...(militaryDrilling
@@ -661,7 +649,16 @@ function deriveUnitStats(input) {
     survivalInstinct: survivalInstinctEligible ? abilities.survivalInstinct : false,
     landLinking: landLinkingEligible ? abilities.landLinking : false,
   };
-  const abilMods = getAbilityStatModifiers(effectiveAbilities, version);
+  // One step per ability or enchantment that writes a stat, at the position its engine region
+  // gives it (combat.js, getAbilityStatSteps). Partitioned by phase in one pass so each group
+  // can be spliced into the sequence below where that region runs.
+  const abilSteps = getAbilityStatSteps(effectiveAbilities, version);
+  // `cAfterWarp` is a second splice point inside region c, for the effects the engine writes
+  // after its Warp Creature block — Tactician in every CoM engine, plus Supreme Light in CoM 1.
+  const abilByPhase = { base: [], a: [], b: [], c: [], cAfterWarp: [], d: [], e: [] };
+  for (const step of abilSteps) {
+    abilByPhase[step.afterWarp ? 'cAfterWarp' : step.phase].push(step);
+  }
   const nodeAuraVal = input.nodeAura;
   const unitRealm = realmOfUnitType(unitTypeVal);
   const nodeAuraActive = unitRealm !== null && nodeAuraVal !== 'none' && unitRealm === nodeAuraVal;
@@ -705,34 +702,25 @@ function deriveUnitStats(input) {
     && (rangedType === 'missile' || rangedType === 'boulder'
       || rangedType === 'magic_c' || rangedType === 'magic_n'
       || rangedType === 'magic_s' || rangedType === 'beam') ? -2 : 0;
-  // CoM 1's recompute writes Darkness (0x9084C-0x90989), Supreme Light (0x90992-0x90A53),
-  // the Tactician retort (0x90AB4-0x90AF6) and Eternal Night's non-Death resistance penalty
-  // (0x90B31) *after* its Warp Creature block at 0x9074C, so Warp does not reduce them.
-  // These route a term to the correct side of that boundary; every other version has no
-  // boundary to be on the wrong side of, and keeps the term in its normal phase.
-  const preWarpTerm = (v) => (isCoM1 ? 0 : v);
-  const postWarpTerm = (v) => (isCoM1 ? v : 0);
-  let darkLightAtkBonus = 0;
-  let darkLightDefBonus = 0;
-  let darkLightResBonus = eternalNightEnemyResPenalty;
+  let darknessAtkBonus = 0;
+  let darknessDefBonus = 0;
+  let darknessResBonus = 0;
   if (unitRealm === 'death') {
-    darkLightAtkBonus += darknessAtkDefMagnitude;
-    darkLightDefBonus += darknessAtkDefMagnitude;
-    darkLightResBonus += darknessResMagnitude;
-    if (hasTrueLight) {
-      darkLightAtkBonus -= 1;
-      darkLightDefBonus -= 1;
-      darkLightResBonus -= 1;
-    }
+    darknessAtkBonus += darknessAtkDefMagnitude;
+    darknessDefBonus += darknessAtkDefMagnitude;
+    darknessResBonus += darknessResMagnitude;
   } else if (unitRealm === 'life') {
-    darkLightAtkBonus -= darknessAtkDefMagnitude;
-    darkLightDefBonus -= darknessAtkDefMagnitude;
-    darkLightResBonus -= darknessResMagnitude;
-    if (hasTrueLight) {
-      darkLightAtkBonus += 1;
-      darkLightDefBonus += 1;
-      darkLightResBonus += 1;
-    }
+    darknessAtkBonus -= darknessAtkDefMagnitude;
+    darknessDefBonus -= darknessAtkDefMagnitude;
+    darknessResBonus -= darknessResMagnitude;
+  }
+  let trueLightAtkBonus = 0;
+  let trueLightDefBonus = 0;
+  let trueLightResBonus = 0;
+  if (unitRealm === 'death') {
+    trueLightAtkBonus = -1; trueLightDefBonus = -1; trueLightResBonus = -1;
+  } else if (unitRealm === 'life') {
+    trueLightAtkBonus = 1; trueLightDefBonus = 1; trueLightResBonus = 1;
   }
 
   // Effective values (level + weapon + ability + node aura + darkness/light modifiers)
@@ -757,9 +745,6 @@ function deriveUnitStats(input) {
   // Charm of Life: +1 HP per figure if base HP ≤ 7, else +25% (floor) of base HP.
   const charmOfLifeHpMod = (abilities && abilities.charmOfLife)
     ? (calcBaseHP >= 8 ? Math.floor(calcBaseHP * 0.25) : 1)
-    : 0;
-  const supremeLightDefMod = supremeLightEligible
-    ? Math.floor(Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + nodeBonus + darkLightResBonus) / 3)
     : 0;
   const levelRank = ({
     normal: 0,
@@ -885,24 +870,30 @@ function deriveUnitStats(input) {
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : (abilities.metalFires ? 1 : 0);
   const isFantasticBase = (unitTypeRaw || '').startsWith('fantastic_');
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
-  let fbRtbMod = 0;
+  // M4, resolved at R1 stage 9. The two sources fall in different regions — Fiery Fury in
+  // `b` (UnitCalcPre.CAS:832-846), the blades in `c` — and do not stack, which the bucket
+  // model could only express as a single `Math.max` booked whole to `c`. Two steps carry it
+  // now: Fiery Fury writes its own bonus in `b`, and the blade step in `c` adds only the
+  // excess, so the total is still the maximum of the two while each lands in its own region.
+  // The split changes no number: the one later step that scales `rtb` inside a region,
+  // Upgraded Explosive's fire-breath doubling at the end of `b`, is gated on Fire Breath,
+  // which Fiery Fury's bonus never covers.
+  let fbBladeRtb = 0;
   if (hasWarlordBlade) {
-    if (rangedType === 'missile' || thrownType === 'thrown') fbRtbMod = 2;
-    else if (warlordCombatFlameBlade && thrownType === 'fire') fbRtbMod = 1;
+    if (rangedType === 'missile' || thrownType === 'thrown') fbBladeRtb = 2;
+    else if (warlordCombatFlameBlade && thrownType === 'fire') fbBladeRtb = 1;
   } else if (fbAtkBonus > 0) {
     // MoM Flame Blade / Metal Fires boost missile and thrown; CoM Flame Blade
     // boosts missile only (the CoM helptext drops the thrown bonus — Warlord, handled
     // above, re-adds it). Metal Fires is MoM-only so the CoM gate only affects Flame Blade.
     const fbThrownEligible = !(nonWarlordFlameBlade && isCoMVersion);
     if (rangedType === 'missile' || (fbThrownEligible && thrownType === 'thrown')) {
-      fbRtbMod = fbAtkBonus;
+      fbBladeRtb = fbAtkBonus;
     }
   }
-  if (ffRegularBonus) {
-    let ffRtb = 0;
-    if (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ffRtb = 2;
-    fbRtbMod = Math.max(fbRtbMod, ffRtb);
-  }
+  const ffRtbMod = ffRegularBonus
+    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ? 2 : 0;
+  const fbRtbMod = Math.max(0, fbBladeRtb - ffRtbMod);
   // Fiery Fury melee +3 for regular units; non-cumulative with Flame Blade / Fiery Blade
   // (combat.js already adds +3 melee for a Warlord blade effect).
   const ffMeleeBonus = ffRegularBonus && !hasWarlordBlade ? 3 : 0;
@@ -918,8 +909,8 @@ function deriveUnitStats(input) {
   // it stands in phase d — not from the base — so the bonus scales everything phases a-c
   // applied, plus the phase-d terms that precede it in the file: Rust (:500-512), Focus
   // Magic (:83, :515) and Weakness's breath penalty (:317-323). Those are every phase-d
-  // term the calculator models, so the input is the whole a+b+c+d subtotal excluding this
-  // bonus itself. The mods are therefore computed after the phase objects, below.
+  // term the calculator models. As a step it simply reads `u.atk` / `u.rtb` at the end of
+  // region `d`, which is that subtotal by construction.
   const bombsGrenadesRtbMod = bombsGrenades && thrownType === 'thrown'
     ? Math.max(0, Math.floor(8 - baseFigs / 2))
     : 0;
@@ -928,72 +919,9 @@ function deriveUnitStats(input) {
     && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown');
   // Stats are never negative in the engine, so a subtotal driven below zero scales as zero.
   const colossalScaled = (subtotal) => 1 + Math.floor(0.4 * Math.max(0, subtotal));
-  // ---------------------------------------------------------------------------
-  // Stat totals are split across a base stage followed by the engine's four
-  // encounter-time stat-derivation phases (see SPEC.md, *Stat derivation contract*).
-  // `sumPhases(<stat>Phases)` always equals the old single sum, so the split changes no
-  // result on its own.
-  //
-  //   base  raw base stats plus anything a script wrote permanently into ABase before combat
-  //         (CreateUnit.CAS, OverlandEndTurn.CAS, OLSpell.CAS)
-  //   a  precalc, in the binary
-  //   b  precalc, in UnitCalcPre.CAS
-  //   c  magic calc, in the binary
-  //   d  magic calc, in UnitCalc.CAS
-  //
-  // b runs *before* c. Which script file implements an effect decides its phase;
-  // game-fiction wording does not. Only the binary phases (a, c) rest on judgment,
-  // since there is nothing to grep — a for base stats and intrinsic abilities,
-  // c for spells, curses, enchantments and node auras. Base CoM2 and MoM have no
-  // b or d at all.
-  //
-  // `abilMods.base/a/b/c/d` are the same split applied to the ability modifiers by
-  // getAbilityStatModifiers(); `abilMods.<stat>Mod` remains their sum.
-  // ---------------------------------------------------------------------------
-  const atkPhases = {
-    base: calcBaseAtk + abilMods.base.atkMod + ludusAgogeAtkMod + motherFungusAtkMod + altarOfTheSunMeleeMod + naturalSelectionCoalMod,
-    a: lvl.atk + wpn.atk + abilMods.a.atkMod,
-    b: abilMods.b.atkMod + ffMeleeBonus + wofDefenderAtkMod + soulFlayAtkMod + plagueAtkMod + goblinPoxAtkMod + preWarpTerm(darkLightAtkBonus),
-    c: abilMods.c.atkMod + disciplineAtkMod + nodeBonus + chaosSurgeMeleeBonus,
-    d: abilMods.d.atkMod,
-    warpLate: abilMods.warpLate.atkMod + postWarpTerm(darkLightAtkBonus),
-  };
-  const colossalMeleeMod = colossalStrength && calcBaseAtk > 0 ? colossalScaled(sumPhases(atkPhases)) : 0;
-  atkPhases.d += colossalMeleeMod;
-  // atk/def/res/rtb are the subtotal *Warp Creature sees*, i.e. everything but the
-  // `warpLate` tail. Outside CoM 1 that tail is empty and these are the finished stats;
-  // for CoM 1 the tail is added back after the Warp and Shatter steps below, in the order
-  // the recompute writes them.
-  const atk = calcBaseAtk > 0 ? Math.max(0, sumPhases(atkPhases, ...PRE_WARP_PHASES)) : 0;
   const dragonMoundDefMod = dragonMound ? 1 : 0;
   const poolOfRepentanceDefMod = poolOfRepentance ? 1 : 0;
-  const defPhases = {
-    base: calcBaseDef + abilMods.base.defMod + dragonMoundDefMod + poolOfRepentanceDefMod + naturalSelectionIronMod,
-    a: lvl.def + wpn.def + cityWallBonus + abilMods.a.defMod,
-    b: abilMods.b.defMod + soulFlayDefMod + plagueDefMod + goblinPoxDefMod + preWarpTerm(darkLightDefBonus),
-    c: abilMods.c.defMod + enduranceDefMod + disciplineDefMod + preWarpTerm(supremeLightDefMod) + nodeBonus,
-    d: abilMods.d.defMod,
-    warpLate: abilMods.warpLate.defMod + postWarpTerm(darkLightDefBonus) + postWarpTerm(supremeLightDefMod),
-  };
-  const defBase = Math.max(0, sumPhases(defPhases, ...PRE_WARP_PHASES));
-  // Holy Armor: MoM: +2 defense. CoM/CoM2: +2 defense if def ≤ 5; +10% To Block if def > 5.
   const holyArmorActive = !!(abilities && abilities.holyArmor);
-  const holyArmorHighDef = holyArmorActive && isCoMVersion && defBase > 5;
-  const holyArmorDefBonus = holyArmorActive && !holyArmorHighDef ? 2 : 0;
-  const holyArmorToBlkBonus = holyArmorHighDef ? 10 : 0;
-  // holyArmorDefBonus is phase c, but it is applied after defBase because its own
-  // threshold reads defBase (CoM/CoM2 switch to a To Block bonus above 5 armor).
-  const def = defBase + holyArmorDefBonus;
-  // Blaze of Glory: Melee gains the unit's full current Armor, and the unit loses all of its
-  // base Armor — only Armor granted by other enchantments remains. Sum the enchantment-derived
-  // defense contributions to find the surviving Armor; the rest (base + level + weapon + city
-  // walls) is what transfers away. The melee gain is folded into finalAtk below so it behaves
-  // like normal melee under Haste/Shatter/Warp.
-  const blazeEnchantArmor = blazeOfGloryActive
-    ? Math.max(0, abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod
-        + dragonMoundDefMod + poolOfRepentanceDefMod + nodeBonus + darkLightDefBonus + holyArmorDefBonus)
-    : 0;
-  const blazeMeleeBonus = blazeOfGloryActive ? def : 0;
   // Altar of the Moon: trained units gain +1 Resistance (all units, not just ranged).
   const altarOfTheMoonResMod = altarOfTheMoon ? 1 : 0;
   const ludusAgogeResMod = ludusAgoge ? 1 : 0;
@@ -1012,47 +940,23 @@ function deriveUnitStats(input) {
   const godsPlayDicesResMod = isWarlord
     ? Math.max(-2, Math.min(2, parseInt(abilities.godsPlayDices) || 0))
     : 0;
-  const resPhases = {
-    base: calcBaseRes + abilMods.base.resMod + altarOfTheMoonResMod + ludusAgogeResMod + poolOfRepentanceResMod + sanctaBasilicaResMod + pillarOfFaithResMod + orihalconResMod + naturalSelectionNightshadeMod + naturalSelectionPowerMineralsMod,
-    a: lvl.res + abilMods.a.resMod,
-    b: abilMods.b.resMod + soulFlayResMod + plagueResMod + goblinPoxResMod + greatUnbindingResMod + natureLinkResMod + preWarpTerm(darkLightResBonus)
-      + (uphillBattleActive ? 1 : 0) + godsPlayDicesResMod
-      + (abilities.outlanderXenopsychology ? 1 : 0) + (abilities.outlanderRadio ? 1 : 0),
-    c: abilMods.c.resMod + nodeBonus + chaosSurgeResBonus,
-    d: abilMods.d.resMod,
-    warpLate: abilMods.warpLate.resMod + postWarpTerm(darkLightResBonus),
-  };
-  const res = Math.max(0, sumPhases(resPhases, ...PRE_WARP_PHASES));
-  // Psycho Force and Pneuma Field run in UnitCalc.CAS after the other stat
-  // phases and read current Resistance (index 0), not the roster base.
-  // Warp Resist has already set that current value to 0 at this point.
-  const outlanderCurrentRes = abilities && abilities.warpResist ? 0 : res;
-  const psychoForcePct = isWarlord && abilities && abilities.psychoForce
-    ? Math.floor(outlanderCurrentRes * levelRank / 2)
-    : 0;
-  const pneumaFieldActive = isWarlord && abilities && abilities.pneumaField;
-  const existingLifeSteal = effectiveAbilities.lifeSteal;
-  const pneumaLifeSteal = pneumaFieldActive
-    ? ((existingLifeSteal != null && existingLifeSteal <= 0)
-      ? existingLifeSteal - Math.floor(outlanderCurrentRes / 2)
-      : -Math.floor(outlanderCurrentRes / 2))
-    : existingLifeSteal;
+  // Berserk: two distinct mechanics, modelled as separate abilities.
+  // 'berserk' (MoM Death spell, UI-gated to MoM versions): doubles melee attack
+  // (applied last, after all other bonuses) and sets defense to 0 absolutely (no
+  // other bonus can raise it while Berserk is active). Removed in CoM/CoM2.
+  // 'berserkWarlord' (Warlord Troll Medicineman buff, UI-gated to Warlord): +15% To
+  // Hit, +1 combat movement (irrelevant here), and -10% To Block. No atk-doubling
+  // and no def-zeroing.
+  const classicBerserk = !!(abilities && abilities.berserk) && version.startsWith('mom');
+  const warlordBerserk = !!(abilities && abilities.berserkWarlord) && isWarlord;
+  // A unit whose base melee strength is 0 has no melee attack at all, so melee bonuses are
+  // discarded rather than conjuring one. Blaze of Glory is the exception the model has to
+  // allow for: its armor-to-melee transfer lands even on such a unit. The ranged slot has
+  // the same gate, widened by Bombs&Grenades, which grants a thrown attack outright.
+  const hasMeleeAttack = calcBaseAtk > 0;
+  const rtbStatActive = calcBaseRtb > 0 || bombsGrenadesRtbMod > 0;
+
   const ludusAgogeHpMod = ludusAgoge ? 1 : 0;
-  // Xenoveterinary (+25% HP, UnitCalcPre.CAS:1038-1049) is phase b and reads SHP at that
-  // point, so it must scale sumPhases(hpPhases, 'base', 'a') and not compound
-  // Lionheart / Endurance / Charm of Life, which are phase c.
-  const hpPhases = {
-    base: calcBaseHP + abilMods.base.hpMod + ludusAgogeHpMod,
-    a: lvl.hp + abilMods.a.hpMod,
-    b: abilMods.b.hpMod,
-    c: abilMods.c.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod,
-    d: abilMods.d.hpMod,
-    warpLate: 0,  // Warp Creature does not touch HP; present so sumPhases stays total.
-  };
-  if (abilities.outlanderXenoveterinary) {
-    hpPhases.b += Math.max(1, Math.floor(Math.max(0, sumPhases(hpPhases, 'base', 'a')) / 4));
-  }
-  const hp  = Math.max(1, sumPhases(hpPhases));
 
   // Blazing March: +3 to missile only (not boulder, magic ranged, or breath).
   // Warlord also boosts thrown.
@@ -1193,47 +1097,13 @@ function deriveUnitStats(input) {
     rtbLvl = lvl.thrown;
     rtbWpn = (calcBaseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
   }
-  // rtb carries ranged, thrown AND breath (distinguished by rangedType/thrownType), so
-  // its phase subtotals are also what Explosive's fire-breath doubling would scale —
-  // that effect has no stat of its own.
-  //
-  // fbRtbMod is the one term that cannot be attributed cleanly: it merges Flame Blade /
-  // Metal Fires (binary, phase c) with Warlord's Fiery Fury (UnitCalcPre.CAS:832-846,
-  // phase b) through a non-additive Math.max, so the two cannot be separated without
-  // restructuring how they supersede each other. It is booked to c, the dominant source.
+  // rtb carries ranged, thrown AND breath (distinguished by rangedType/thrownType), so it is
+  // also what Explosive's fire-breath doubling scales — that effect has no stat of its own.
   const upgradedExplosive = explosiveEligible && blackpowder;
   const upgradedExplosiveRangedMod = upgradedExplosive && rangedType !== 'none' ? 2 : 0;
   // CreateUnit.CAS applies Energy Cannon after Artificer, Blackpowder,
   // Altar of the Moon, and Natural Selection. The +50% therefore reads those
   // permanent ranged writes, but not later equipment or combat modifiers.
-  const energyCannonInput = calcBaseRtb + abilMods.base.rtbMod
-    + altarOfTheMoonRtbMod + blackpowderRtbMod + naturalSelectionWildGameRtbMod;
-  const energyCannonRtbMod = energyCannon
-    ? Math.floor(Math.max(0, energyCannonInput) / 2)
-    : 0;
-  const rtbPhases = {
-    base: calcBaseRtb + abilMods.base.rtbMod + altarOfTheMoonRtbMod + dragonMoundRtbMod
-      + blackpowderRtbMod + blackpowderFireBreathRtbMod + orihalconRtbMod
-      + naturalSelectionWildGameRtbMod + energyCannonRtbMod,
-    a: rtbLvl + rtbWpn + abilMods.a.rtbMod,
-    b: abilMods.b.rtbMod + wofDefenderRtbMod + eternalNightRtbMod + preWarpTerm(darkLightAtkBonus)
-      + bombsGrenadesRtbMod + upgradedExplosiveRangedMod,
-    c: abilMods.c.rtbMod + disciplineRtbMod + fbRtbMod + blazingMarchRtbMod + chaosSurgeRtbMod + reinforceMagicRtbMod + misleadRtbMod + preWarpTerm(supremeLightRtbMod) + landLinkingBreathRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbModBinary + nodeBonus,
-    d: abilMods.d.rtbMod + focusMagicRtbMod + weaknessRtbModCas + rustRtbMod,
-    warpLate: abilMods.warpLate.rtbMod + postWarpTerm(darkLightAtkBonus) + postWarpTerm(supremeLightRtbMod),
-  };
-  // UnitCalcPre.CAS:1074-1078 doubles the Fire Breath value as it stands in
-  // the early pass, so it includes base/a and earlier phase-b additions.
-  if (upgradedExplosive && thrownType === 'fire') {
-    rtbPhases.b += Math.max(0, sumPhases(rtbPhases, 'base', 'a', 'b'));
-  }
-  const colossalRtbMod = colossalRtbApplies ? colossalScaled(sumPhases(rtbPhases)) : 0;
-  rtbPhases.d += colossalRtbMod;
-  const rtbStatActive = calcBaseRtb > 0 || bombsGrenadesRtbMod > 0;
-  const rtb = rtbStatActive
-    ? Math.max(0, sumPhases(rtbPhases, ...PRE_WARP_PHASES))
-    : 0;
-
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
   // gaze attack does not fire.
@@ -1260,27 +1130,448 @@ function deriveUnitStats(input) {
   // stat below. MoM's Warp Attack touches melee only; CoM2 and Warlord are unverified —
   // queue item D21.
   const gazeWarpHalves = isCoM1 && !!(abilities && abilities.warpAttack);
-  // Same three steps as the ranged stat, in the same order: build the subtotal Warp sees,
-  // reduce it, then add the post-Warp tail. A gaze is not built from a phase object, so it
-  // reads abilMods.preWarp rather than the flat total.
-  function gazeStrength(baseStrength, ownMods) {
-    if (baseStrength <= 0) return 0;
-    const preWarp = Math.max(0, baseStrength + ownMods + abilMods.preWarp.rtbMod
-      + nodeBonus + preWarpTerm(darkLightAtkBonus) + chaosSurgeGazeMod);
-    const reduced = gazeWarpHalves ? Math.floor(preWarp / 2) : preWarp;
-    return Math.max(0, reduced + abilMods.warpLate.rtbMod + postWarpTerm(darkLightAtkBonus));
-  }
+  // The two gaze strengths live in the same `.ranged` slot as `rtb`, so they are fields of
+  // the same record and are written by the same steps — with the narrower set of modifiers
+  // a gaze takes: the ability lump, node aura, Darkness/True Light, Chaos Surge and their
+  // own level ladder, but no weapon, no per-attack-type ranged bonus, and no Shatter.
   const baseGazeRanged = gazeDisabled ? 0 : ((abilities && abilities.gazeRanged) || 0);
-  const effectiveGazeRanged = gazeStrength(baseGazeRanged, gazeLvlMod);
-
-  // Doom Gaze: delivers exact doom damage. Affected by node aura, darkness/light,
-  // and ability modifiers (e.g. Black Prayer), but NOT weapon bonuses.
+  // Doom Gaze delivers exact doom damage. Same modifier set, plus Focus Magic in CoM2.
   const baseDoomGaze = gazeDisabled ? 0 : (effectiveAbilities.doomGaze || 0);
-  const effectiveDoomGaze = gazeStrength(baseDoomGaze,
-    doomGazeLvlMod + (focusMagicBuffsExisting && isCoM2 ? 3 : 0));
+  const focusMagicDoomGazeMod = focusMagicBuffsExisting && isCoM2 ? 3 : 0;
 
+  // Psycho Force and Pneuma Field are the two Magitek effects that read Resistance rather than
+  // writing it. Both are region `d` — UnitCalc.CAS:1413-1417 and :1419-1425 — so their gates are
+  // resolved here and the reads happen at that position in the sequence below.
+  const psychoForceActive = isWarlord && !!(abilities && abilities.psychoForce);
+  const pneumaFieldActive = isWarlord && !!(abilities && abilities.pneumaField);
+  const existingLifeSteal = effectiveAbilities.lifeSteal;
+
+  // --- The stat sequence (R1) ---
+  // One phase-tagged list over one mutable record — `res`, `def`, `atk`, `rtb`, `hp` and the
+  // two gaze strengths, which share the engine's `.ranged` slot with `rtb`. Not a list per
+  // stat: an effect the engine makes as a single write to several stats — Darkness, Blaze of
+  // Glory, Warp — is one step here too, instead of being shredded across five places and
+  // reassembled by a comment. See SPEC.md, *Stat derivation contract*, and BACKLOG.md,
+  // Appendix A.
+  //
+  // List order *is* execution order. Phase is the evidence for a step's position: which
+  // region of the engine makes that write (steps.js, STEP_PHASES).
+  //
+  // Positions come from the region maps in *CoM2 analysis*, *Unit stat recalculation* and
+  // *Resolution-time modifiers*, and from *MoM analysis*, *Warp Creature runs early*, for the
+  // two DOS engines. Where the engines order an effect differently it appears twice, as
+  // version-exclusive steps — that keeps both the runner and the list trivial and makes the
+  // divergence visible instead of hidden in a condition. A step whose position is deduced
+  // rather than read is marked `provisional`, and says from what.
+  //
+  // Within a region, order only has consequences where a step *reads* — the scaling effects
+  // (Xenoveterinary, Upgraded Explosive, Colossal Strength, Energy Cannon, Blaze of Glory,
+  // Supreme Light) and the Warps. Those are placed exactly; purely additive neighbours are in
+  // the order their evidence lists them.
+  const statSteps = [
+    // --- base: raw stats, and writes made permanently before the encounter ---
+    statStep({ id: 'stat:base', phase: 'base',
+      writes: ['res', 'def', 'atk', 'rtb', 'hp', 'gaze', 'doomGaze'],
+      apply: u => {
+        u.res = calcBaseRes; u.def = calcBaseDef; u.atk = calcBaseAtk; u.rtb = calcBaseRtb;
+        u.hp = calcBaseHP; u.gaze = baseGazeRanged; u.doomGaze = baseDoomGaze;
+      } }),
+    ...abilByPhase.base,
+    statStep({ id: 'altarOfTheMoon', phase: 'base', writes: ['res', 'rtb'],
+      apply: u => { u.res += altarOfTheMoonResMod; u.rtb += altarOfTheMoonRtbMod; } }),
+    statStep({ id: 'militaryWorkshop', phase: 'base', writes: ['rtb'],
+      apply: u => { u.rtb += blackpowderRtbMod + blackpowderFireBreathRtbMod; } }),
+    statStep({ id: 'naturalSelection:wildGame', phase: 'base', writes: ['rtb'],
+      apply: u => { u.rtb += naturalSelectionWildGameRtbMod; } }),
+    // Energy Cannon's +50% is a permanent overland write that CreateUnit.CAS makes after
+    // Artificer, Blackpowder, Altar of the Moon and Natural Selection — so it reads exactly
+    // the ranged strength standing at this point, and nothing written later.
+    statStep({ id: 'energyCannon', phase: 'base', writes: ['rtb'],
+      when: () => energyCannon,
+      apply: u => { u.rtb += Math.floor(Math.max(0, u.rtb) / 2); } }),
+    statStep({ id: 'ludusAgoge', phase: 'base', writes: ['res', 'atk', 'hp'],
+      apply: u => {
+        u.res += ludusAgogeResMod; u.atk += ludusAgogeAtkMod; u.hp += ludusAgogeHpMod;
+      } }),
+    statStep({ id: 'motherFungus', phase: 'base', writes: ['atk'],
+      apply: u => { u.atk += motherFungusAtkMod; } }),
+    statStep({ id: 'altarOfTheSun:holyMother', phase: 'base', writes: ['atk'],
+      apply: u => { u.atk += altarOfTheSunMeleeMod; } }),
+    statStep({ id: 'naturalSelection:coal', phase: 'base', writes: ['atk'],
+      apply: u => { u.atk += naturalSelectionCoalMod; } }),
+    statStep({ id: 'poolOfRepentance', phase: 'base', writes: ['res', 'def'],
+      apply: u => { u.res += poolOfRepentanceResMod; u.def += poolOfRepentanceDefMod; } }),
+    statStep({ id: 'sanctaBasilica', phase: 'base', writes: ['res'],
+      apply: u => { u.res += sanctaBasilicaResMod; } }),
+    statStep({ id: 'pillarOfFaith', phase: 'base', writes: ['res'],
+      apply: u => { u.res += pillarOfFaithResMod; } }),
+    statStep({ id: 'orihalcon', phase: 'base', writes: ['res', 'rtb'],
+      apply: u => { u.res += orihalconResMod; u.rtb += orihalconRtbMod; } }),
+    statStep({ id: 'naturalSelection:nightshade', phase: 'base', writes: ['res'],
+      apply: u => { u.res += naturalSelectionNightshadeMod; } }),
+    statStep({ id: 'naturalSelection:powerMinerals', phase: 'base', writes: ['res'],
+      apply: u => { u.res += naturalSelectionPowerMineralsMod; } }),
+    statStep({ id: 'dragonMound', phase: 'base', writes: ['def', 'rtb'],
+      apply: u => { u.def += dragonMoundDefMod; u.rtb += dragonMoundRtbMod; } }),
+    statStep({ id: 'naturalSelection:iron', phase: 'base', writes: ['def'],
+      apply: u => { u.def += naturalSelectionIronMod; } }),
+    // --- a: precalc, in the binary ---
+    // Region `a` writes nine unit fields against region `c`'s 492, and the ones it writes are
+    // flags rather than stats. City Walls is not here: ApplyAttack passes it as EffectiveDefense's
+    // per-attack `extradef` argument after the finished region-e record is read.
+    ...abilByPhase.a,
+    // --- b: precalc, in UnitCalcPre.CAS (Warlord only) ---
+    // Xenoveterinary's +25% (minimum +1) reads SHP at the head of the early pass
+    // (UnitCalcPre.CAS:1038-1049), so it precedes every other phase-b HP write and does not
+    // compound Lionheart, Endurance or Charm of Life, which are `c`.
+    statStep({ id: 'outlanderXenoveterinary', phase: 'b', writes: ['hp'],
+      when: () => !!abilities.outlanderXenoveterinary,
+      apply: u => { u.hp += Math.max(1, Math.floor(Math.max(0, u.hp) / 4)); } }),
+    ...abilByPhase.b,
+    // Fiery Fury: melee at UnitCalcPre.CAS:832-846, and the ranged half of what the bucket
+    // model merged into one `Math.max` term — see the M4 note at `fbBladeRtb`.
+    statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', 'rtb'],
+      apply: u => { u.atk += ffMeleeBonus; u.rtb += ffRtbMod; } }),
+    statStep({ id: 'wallOfFire:garrison', phase: 'b', writes: ['atk', 'rtb'],
+      apply: u => { u.atk += wofDefenderAtkMod; u.rtb += wofDefenderRtbMod; } }),
+    statStep({ id: 'eternalNight:poorVision', phase: 'b', writes: ['rtb'],
+      apply: u => { u.rtb += eternalNightRtbMod; } }),
+    statStep({ id: 'bombsGrenades', phase: 'b', writes: ['rtb'],
+      apply: u => { u.rtb += bombsGrenadesRtbMod; } }),
+    statStep({ id: 'upgradedExplosive:ranged', phase: 'b', writes: ['rtb'],
+      apply: u => { u.rtb += upgradedExplosiveRangedMod; } }),
+    statStep({ id: 'soulFlay', phase: 'b', writes: ['res', 'def', 'atk'],
+      apply: u => {
+        u.res += soulFlayResMod; u.def += soulFlayDefMod; u.atk += soulFlayAtkMod;
+      } }),
+    statStep({ id: 'plague', phase: 'b', writes: ['res', 'def', 'atk'],
+      apply: u => { u.res += plagueResMod; u.def += plagueDefMod; u.atk += plagueAtkMod; } }),
+    statStep({ id: 'goblinPox', phase: 'b', writes: ['res', 'def', 'atk'],
+      apply: u => {
+        u.res += goblinPoxResMod; u.def += goblinPoxDefMod; u.atk += goblinPoxAtkMod;
+      } }),
+    statStep({ id: 'greatUnbinding', phase: 'b', writes: ['res'],
+      apply: u => { u.res += greatUnbindingResMod; } }),
+    statStep({ id: 'natureLink', phase: 'b', writes: ['res'],
+      apply: u => { u.res += natureLinkResMod; } }),
+    // Warlord True Light is its own UnitCalcPre.CAS block (:1507-1540), after Rally and before
+    // Plague. It must not be merged with the binary's Darkness block or Eternal Night's later
+    // resistance write. MoM's True Light has no intervening phase, so this early placement is
+    // equivalent there.
+    statStep({ id: 'trueLight', phase: 'b',
+      writes: ['res', 'def', 'atk', 'rtb', 'gaze', 'doomGaze'],
+      when: () => hasTrueLight,
+      apply: u => {
+        u.res += trueLightResBonus; u.def += trueLightDefBonus;
+        u.atk += trueLightAtkBonus; u.rtb += trueLightAtkBonus;
+        u.gaze += trueLightAtkBonus; u.doomGaze += trueLightAtkBonus;
+      } }),
+    statStep({ id: 'uphillBattle', phase: 'b', writes: ['res'],
+      when: () => uphillBattleActive, apply: u => { u.res += 1; } }),
+    // Xenopsychology and Radio are +1 Resistance each; the rest of what they grant is To Hit
+    // and To Defend, which are not in the sequence yet.
+    statStep({ id: 'godsPlayDices', phase: 'b', writes: ['res'],
+      apply: u => { u.res += godsPlayDicesResMod; } }),
+    statStep({ id: 'outlanderXenopsychology', phase: 'b', writes: ['res'],
+      when: () => !!abilities.outlanderXenopsychology, apply: u => { u.res += 1; } }),
+    statStep({ id: 'outlanderRadio', phase: 'b', writes: ['res'],
+      when: () => !!abilities.outlanderRadio, apply: u => { u.res += 1; } }),
+    // Upgraded Explosive doubles the Fire Breath as it stands in the early pass
+    // (UnitCalcPre.CAS:1074-1078), so it is the last step of the region.
+    statStep({ id: 'upgradedExplosive:fireBreath', phase: 'b', writes: ['rtb'],
+      when: () => upgradedExplosive && thrownType === 'fire',
+      apply: u => { u.rtb += Math.max(0, u.rtb); } }),
+    // --- c: magic calc, in the binary ---
+    // The level ladder is `@Units@ApplyLevelBonus` at +0x00D16, near the head of the region and
+    // right after Destiny's permanent transformation — direct execution-order evidence, which
+    // is what queue D25 was waiting for. The hero ladder is `@Units@ApplyHeroBonus` at
+    // +0x0139A, the same region. MoM and CoM 1 apply theirs from the battle-unit constructor
+    // instead, but `b` and `d` are empty for them, so nothing sits between `a` and `c` there
+    // and the position is unobservable: one step serves every version.
+    statStep({ id: 'level', phase: 'c',
+      writes: ['res', 'def', 'atk', 'rtb', 'hp', 'gaze', 'doomGaze'],
+      apply: u => {
+        u.res += lvl.res; u.def += lvl.def; u.atk += lvl.atk; u.rtb += rtbLvl; u.hp += lvl.hp;
+        u.gaze += gazeLvlMod; u.doomGaze += doomGazeLvlMod;
+      } }),
+    // Focus Magic is +0x00D3F, immediately after the level ladder — so in the binary it is
+    // written *before* the Warps and takes the reduction. Warlord moves it into `UnitCalc.CAS`
+    // and therefore after them; that is the `focusMagic:warlord` twin in `d`. CoM 1's position
+    // is not read directly, but the complete list of what its recompute writes after Warp
+    // (MoM analysis, *Warp Creature runs early*) does not contain it, so it is pre-Warp there
+    // too.
+    statStep({ id: 'focusMagic', phase: 'c', writes: ['rtb', 'doomGaze'],
+      when: () => !isWarlord,
+      apply: u => { u.rtb += focusMagicRtbMod; u.doomGaze += focusMagicDoomGazeMod; } }),
+    // Weapon material is `@Units@ApplyMagicWeapons` at +0x04B90, after the equipment loop —
+    // also D25, also region c.
+    statStep({ id: 'weapon', phase: 'c', writes: ['def', 'atk', 'rtb'],
+      apply: u => { u.def += wpn.def; u.atk += wpn.atk; u.rtb += rtbWpn; } }),
+    ...abilByPhase.c,
+    statStep({ id: 'charmOfLife', phase: 'c', writes: ['hp'],
+      apply: u => { u.hp += charmOfLifeHpMod; } }),
+    statStep({ id: 'endurance', phase: 'c', writes: ['def', 'hp'],
+      apply: u => { u.def += enduranceDefMod; u.hp += enduranceHpMod; } }),
+    statStep({ id: 'discipline', phase: 'c', writes: ['def', 'atk', 'rtb'],
+      apply: u => {
+        u.def += disciplineDefMod; u.atk += disciplineAtkMod; u.rtb += disciplineRtbMod;
+      } }),
+    // Each of these carries the type-conditional half of an effect whose flat half is an
+    // ability step above — hence the `:<what it writes>` suffix on the shared name.
+    statStep({ id: 'flameBlade:ranged', phase: 'c', writes: ['rtb'],
+      apply: u => { u.rtb += fbRtbMod; } }),
+    statStep({ id: 'blazingMarch:ranged', phase: 'c', writes: ['rtb'],
+      apply: u => { u.rtb += blazingMarchRtbMod; } }),
+    statStep({ id: 'reinforceMagic:ranged', phase: 'c', writes: ['rtb'],
+      apply: u => { u.rtb += reinforceMagicRtbMod; } }),
+    statStep({ id: 'mislead:ranged', phase: 'c', writes: ['rtb'],
+      apply: u => { u.rtb += misleadRtbMod; } }),
+    statStep({ id: 'landLinking:breath', phase: 'c', writes: ['rtb'],
+      apply: u => { u.rtb += landLinkingBreathRtbMod; } }),
+    statStep({ id: 'giantStrength:thrown', phase: 'c', writes: ['rtb'],
+      apply: u => { u.rtb += gsRtbMod; } }),
+    statStep({ id: 'lionheart:rangedHp', phase: 'c', writes: ['rtb', 'hp'],
+      apply: u => { u.rtb += lionheartRtbMod; u.hp += lionheartHpMod; } }),
+    statStep({ id: 'weakness:ranged', phase: 'c', writes: ['rtb'],
+      apply: u => { u.rtb += weaknessRtbModBinary; } }),
+    // Holy Armor writes defence *or* To Block: MoM always +2 defence, CoM/CoM2 +2 defence at
+    // 5 armor or less and +10% To Block above it. The threshold reads the defence standing at
+    // this position — under the buckets that needed a named subtotal (`defBase`); here it is
+    // just the field's current value. +0x07407, so it is ahead of the node aura and of every
+    // curse, and its threshold does not see them.
+    statStep({ id: 'holyArmor', phase: 'c',
+      writes: ['def', 'toBlk'],
+      when: () => holyArmorActive,
+      apply: u => {
+        if (isCoMVersion && u.def > 5) u.toBlk += 10;
+        else u.def += 2;
+      } }),
+    statStep({ id: 'nodeAura', phase: 'c',
+      writes: ['res', 'def', 'atk', 'rtb', 'gaze', 'doomGaze'],
+      apply: u => {
+        u.res += nodeBonus; u.def += nodeBonus; u.atk += nodeBonus; u.rtb += nodeBonus;
+        u.gaze += nodeBonus; u.doomGaze += nodeBonus;
+      } }),
+    statStep({ id: 'chaosSurge', phase: 'c',
+      writes: ['res', 'atk', 'rtb', 'gaze', 'doomGaze'],
+      apply: u => {
+        u.res += chaosSurgeResBonus; u.atk += chaosSurgeMeleeBonus; u.rtb += chaosSurgeRtbMod;
+        u.gaze += chaosSurgeGazeMod; u.doomGaze += chaosSurgeGazeMod;
+      } }),
+    // Berserk doubles melee and sets defence to 0 absolutely. MoM-only, and MoM's recompute
+    // has not been decoded here, so the position is deduced: last thing before the Warps,
+    // which is where the pre-R1 model effectively had it.
+    statStep({ id: 'berserk', phase: 'c', writes: ['def', 'atk'], provisional: true,
+      when: () => classicBerserk, apply: u => { u.def = 0; u.atk *= 2; } }),
+
+    // CoM2/Warlord's Eternal Night resistance write (+0x089A8/+0x0A8A2) precedes the
+    // compiled Darkness block (+0x0A8DA/+0x0A90F). Both are before the Warps. CoM 1 instead
+    // writes its Eternal Night penalty after Tactician, below.
+    statStep({ id: 'eternalNight:enemyResistance', phase: 'c', writes: ['res'],
+      when: () => !isCoM1 && eternalNightEnemyResPenalty !== 0,
+      apply: u => { u.res += eternalNightEnemyResPenalty; } }),
+    statStep({ id: 'darkness', phase: 'c',
+      writes: ['res', 'def', 'atk', 'rtb', 'gaze', 'doomGaze'],
+      when: () => !isCoM1 && hasDarkness,
+      apply: u => {
+        u.res += darknessResBonus; u.def += darknessDefBonus;
+        u.atk += darknessAtkBonus; u.rtb += darknessAtkBonus;
+        u.gaze += darknessAtkBonus; u.doomGaze += darknessAtkBonus;
+      } }),
+
+    // --- The Warp Creature block, and Shatter immediately after it ---
+    // D22. Every engine runs these inside the recompute, in the order Attack → Defense →
+    // Resist → Shatter, and every engine keeps writing stats afterwards — so what an engine
+    // writes *after* them is the whole of the divergence, and one position serves all three:
+    //   MoM 1.31 / CP 1.60  0x90A63-0x90AC9, then Shatter, then the terminal clamp
+    //   CoM 1               0x9074C-0x90795, then Shatter 0x907DC, then Darkness, Supreme
+    //                       Light, Tactician and Eternal Night — the `afterWarp` splice below
+    //   CoM2 / Warlord      +0x0BA3C-+0x0BDF7, then Shatter +0x0BF62, then Tactician
+    //                       +0x0C890, then the whole of `d` and the whole of `e`
+    // Nothing between the previous step and here is one of CoM 1's post-Warp writes, which is
+    // what lets its early Warp and MoM's late one share a position.
+    statStep({ id: 'warpAttack', phase: 'c',
+      writes: ['atk', 'rtb', 'gaze', 'doomGaze'],
+      when: () => !!(abilities && abilities.warpAttack),
+      apply: u => {
+        u.atk = Math.floor(u.atk / 2);
+        if (isCoMVersion) u.rtb = Math.floor(u.rtb / 2);
+        // gazeWarpHalves: CoM 1 only — 0x90764-0x90772 has no ranged_type test, so the
+        // halving reaches a gaze. MoM's Warp Attack touches melee only, and CoM2's leaves
+        // the gaze fields alone (they are separate fields in `Caster.exe`).
+        if (gazeWarpHalves) {
+          u.gaze = Math.floor(u.gaze / 2);
+          u.doomGaze = Math.floor(u.doomGaze / 2);
+        }
+      } }),
+    statStep({ id: 'warpDefense', phase: 'c', writes: ['def'],
+      when: () => !!(abilities && abilities.warpDefense),
+      apply: u => { u.def = Math.floor(u.def / (isCoMVersion ? 3 : 2)); } }),
+    statStep({ id: 'warpResist', phase: 'c', writes: ['res'],
+      when: () => !!(abilities && abilities.warpResist), apply: u => { u.res = 0; } }),
+    // Shatter reduces every attack strength to 1. CoM2: normal units and heroes only;
+    // Warlord: any unit.
+    statStep({ id: 'shatter', phase: 'c', writes: ['atk', 'rtb'],
+      when: () => !!(abilities && abilities.shatter)
+        && (isWarlord || isNormalUnitType(unitTypeVal) || unitTypeVal === 'hero'),
+      apply: u => { if (u.atk > 0) u.atk = 1; if (u.rtb > 0) u.rtb = 1; } }),
+
+    // --- c, after the Warp block ---
+    // CoM 1 only: Darkness at 0x9084C, then Supreme Light at 0x90992. Both land at full value
+    // on the reduced stat. Eternal Night is deliberately not folded in: it is after Tactician.
+    statStep({ id: 'darkness:coM1', phase: 'c',
+      writes: ['res', 'def', 'atk', 'rtb', 'gaze', 'doomGaze'],
+      when: () => isCoM1 && hasDarkness,
+      apply: u => {
+        u.res += darknessResBonus;
+        u.def += darknessDefBonus;
+        if (hasMeleeAttack) u.atk += darknessAtkBonus;
+        if (rtbStatActive) u.rtb += darknessAtkBonus;
+        if (baseGazeRanged > 0) u.gaze += darknessAtkBonus;
+        if (baseDoomGaze > 0) u.doomGaze += darknessAtkBonus;
+      } }),
+    // Q7, closed: `defense += resistance / 3` is a **live** read of the record, taken where the
+    // engine takes it — after Warp Resist and Darkness, before Tactician (0x90992-0x90A53).
+    statStep({ id: 'supremeLight:coM1', phase: 'c', writes: ['def', 'atk', 'rtb'],
+      when: () => isCoM1 && supremeLightEligible,
+      apply: u => {
+        u.def += Math.floor(Math.max(0, u.res) / 3);
+        if (hasMeleeAttack) u.atk += 2;
+        if (rtbStatActive) u.rtb += supremeLightRtbMod;
+      } }),
+    // Tactician, for every CoM engine: CoM 1 at 0x90AB4, CoM2/Warlord at +0x0C890.
+    ...abilByPhase.cAfterWarp,
+    // CoM 1's Eternal Night resistance penalty is the final stat write before the terminal
+    // clamp (0x90B31): after Darkness, Supreme Light's live read, and Tactician.
+    statStep({ id: 'eternalNight:enemyResistance:coM1', phase: 'c', writes: ['res'],
+      when: () => isCoM1 && eternalNightEnemyResPenalty !== 0,
+      apply: u => { u.res += eternalNightEnemyResPenalty; } }),
+    // --- d: magic calc, in UnitCalc.CAS (Warlord only) ---
+    ...abilByPhase.d,
+    statStep({ id: 'weakness:breath', phase: 'd', writes: ['rtb'],
+      apply: u => { u.rtb += weaknessRtbModCas; } }),
+    statStep({ id: 'rust:ranged', phase: 'd', writes: ['rtb'],
+      apply: u => { u.rtb += rustRtbMod; } }),
+    // Warlord re-implements Focus Magic in `UnitCalc.CAS:83,515`, which puts it *after* the
+    // Warps rather than before them — the divergence its twin above records.
+    statStep({ id: 'focusMagic:warlord', phase: 'd', writes: ['rtb', 'doomGaze'],
+      when: () => isWarlord,
+      apply: u => { u.rtb += focusMagicRtbMod; u.doomGaze += focusMagicDoomGazeMod; } }),
+    // Colossal Strength scales the attack as it stands at its own position in `d`
+    // (UnitCalc.CAS:1227-1243 reads GetStat there), so everything before it in the file
+    // scales and everything after does not. Under the buckets its input was a named subtotal;
+    // here it is just `u.atk`.
+    statStep({ id: 'colossalStrength', phase: 'd', writes: ['atk', 'rtb'],
+      when: () => colossalStrength,
+      apply: u => {
+        if (hasMeleeAttack) u.atk += colossalScaled(u.atk);
+        if (colossalRtbApplies) u.rtb += colossalScaled(u.rtb);
+      } }),
+    // Psycho Force (UnitCalc.CAS:1413-1417) and Pneuma Field (:1419-1425) both *read*
+    // `GETSTAT(U,SResist,0)` — the Resistance standing at their own position in `d`. That is
+    // before region `e`, so neither sees the aura pass: a Holy Bonus or Resistance to All aura
+    // raises Resistance afterwards and must not feed either effect. Reading the finished record
+    // instead — which is what the pre-step code did — over-applied both whenever an aura was
+    // present. `%I` is the integer part, so the division truncates toward zero rather than
+    // flooring, which is visible only when a curse has driven Resistance negative.
+    statStep({ id: 'psychoForce', phase: 'd', writes: ['toHit', 'toBlk'],
+      when: () => psychoForceActive,
+      apply: u => {
+        const psyche = Math.trunc(u.res * levelRank / 2);
+        u.toHit += psyche;
+        u.toBlk += psyche;
+      } }),
+    statStep({ id: 'pneumaField', phase: 'd', writes: ['lifeSteal'],
+      when: () => pneumaFieldActive,
+      apply: u => {
+        const drain = Math.trunc(u.res / 2);
+        u.lifeSteal = (u.lifeSteal != null && u.lifeSteal <= 0) ? u.lifeSteal - drain : -drain;
+      } }),
+    // The three effects that close `UnitCalc.CAS`, in its own line order: Blaze of Glory
+    // (:1490), Beat of Swiftness (:1509), Hierophany (:1555). All three follow Colossal
+    // Strength, and — now that the Warps are in `c` — all three follow those too.
+    //
+    // Blaze of Glory reads the unit's current Armor, adds that whole value to melee, then
+    // subtracts the same value from Defense. The result at this position is exactly zero,
+    // including Armor granted by enchantments; later region-e auras can still add Defense.
+    statStep({ id: 'blazeOfGlory', phase: 'd', writes: ['def', 'atk'],
+      when: () => blazeOfGloryActive,
+      apply: u => {
+        u.atk += u.def;
+        u.def = 0;
+      } }),
+    statStep({ id: 'beatOfSwiftness', phase: 'd', writes: ['def'],
+      when: () => !!(abilities && abilities.beatOfSwiftness),
+      apply: u => { u.def = Math.floor(u.def * 0.9); } }),
+    statStep({ id: 'hierophany', phase: 'd', writes: ['def'],
+      when: () => isWarlord && !!(abilities && abilities.hierophany),
+      apply: u => { u.def = Math.floor(u.def * 0.5); } }),
+    // --- e: the binary's post-hook tail ---
+    // The engine clamps here and nowhere else (+0x0CCBC), after `d` and *before* the aura pass
+    // and Supreme Light — so those two are not clamped afterwards, and nothing in them can
+    // drive a stat negative. It clamps Defense, melee, ranged, Thrown and both breaths to at
+    // least 0; it does not clamp Resistance, and neither does MoM's terminal clamp at
+    // 0x90B41-0x90B75. The calculator keeps its own non-negative Resistance convention for the
+    // resistance rolls, and its own floor of 1 HP.
+    //
+    // The slot zeroing is the calculator's, not the engine's: a unit with no base melee attack
+    // has none, so bonuses that landed on the empty slot are discarded rather than conjuring
+    // one. Blaze of Glory is the exception — its armor-to-melee transfer *does* give a
+    // melee-less unit a melee attack, so it widens the slot rather than being discarded by it.
+    statStep({ id: 'clamp', phase: 'e',
+      writes: ['res', 'def', 'atk', 'rtb', 'hp', 'gaze', 'doomGaze'],
+      apply: u => {
+        u.res = Math.max(0, u.res);
+        u.def = Math.max(0, u.def);
+        u.atk = (hasMeleeAttack || blazeOfGloryActive) ? Math.max(0, u.atk) : 0;
+        u.rtb = rtbStatActive ? Math.max(0, u.rtb) : 0;
+        u.hp = Math.max(1, u.hp);
+        u.gaze = baseGazeRanged > 0 ? Math.max(0, u.gaze) : 0;
+        u.doomGaze = baseDoomGaze > 0 ? Math.max(0, u.doomGaze) : 0;
+      } }),
+    // The aura pass: Holy Bonus (type 1) and Resistance to All (type 3), which are the two
+    // aura sources the calculator carries. D23.
+    ...abilByPhase.e,
+    // Q7, closed: Supreme Light is the last stat write the recompute makes, and its defence
+    // component is a **live** read of Resistance — after Warp Resist, after `d`, and after the
+    // aura pass, which is why the CoM2 manual's changelog says it is "applied last, after
+    // Resistance To All, Holy Bonus, and Prayermaster". The melee and ranged additions are
+    // each gated on that base attack existing (D24; CoM2 analysis, *Supreme Light*).
+    statStep({ id: 'supremeLight', phase: 'e', writes: ['def', 'atk', 'rtb'],
+      when: () => !isCoM1 && supremeLightEligible,
+      apply: u => {
+        u.def += Math.floor(Math.max(0, u.res) / 3);
+        if (hasMeleeAttack) u.atk += 2;
+        if (rtbStatActive) u.rtb += supremeLightRtbMod;
+      } }),
+  ];
+  // `slots` says which attack slots the unit actually has. A bonus does not conjure one, so
+  // an ability step skips a write to a dead slot — which is also the aura pass's own gate,
+  // "when the corresponding base attack exists".
+  //
+  // `rtb` is the DOS engines' shared `.ranged` slot; `ranged` is `Caster.exe`'s narrower
+  // `unitT.ranged` field, which excludes Thrown, both breaths and the two gazes.
+  //
+  // `lifeSteal` is on the record because Pneuma Field's `SETSTAT(U,AFLifeSteal,…)` is a write to
+  // a unit field at a position, like any other. It is seeded from the effective ability set —
+  // the Gnoll Witchdoctor altar grant included — since that is the value standing at region `d`.
+  const statUnit = runStatSteps(statSteps,
+    { res: 0, def: 0, atk: 0, rtb: 0, hp: 0, gaze: 0, doomGaze: 0,
+      toHit: 0, toBlk: 0, lifeSteal: existingLifeSteal },
+    { version,
+      slots: {
+        melee: hasMeleeAttack, rtb: rtbStatActive,
+        ranged: rtbStatActive && rangedType !== 'none',
+        gaze: baseGazeRanged > 0, doomGaze: baseDoomGaze > 0,
+      } });
+  const hp = statUnit.hp;
+  const effectiveGazeRanged = statUnit.gaze;
+  const effectiveDoomGaze = statUnit.doomGaze;
+  // Psycho Force and Pneuma Field are steps in `d` (see the sequence above), so their reads of
+  // Resistance happen where the engine takes them. Warp Resist having zeroed Resistance is
+  // supplied by construction, since `warpResist` is a step in `c`.
   const pneumaAbilities = pneumaFieldActive
-    ? { ...effectiveAbilities, lifeSteal: pneumaLifeSteal }
+    ? { ...effectiveAbilities, lifeSteal: statUnit.lifeSteal }
     : effectiveAbilities;
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...pneumaAbilities, negateFirstStrike: true }
@@ -1324,8 +1615,8 @@ function deriveUnitStats(input) {
   // UnitCalc.CAS:325-328. Eye of Heaven grants True Sight in UnitCalcPre.CAS:1839-1842.
   const trueSightRtbToHitBonus = isWarlord
     && !!(abilities.trueSight || abilities.eyeOfHeaven) ? 5 : 0;
-  const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod + hwMeleeToHit
-    + psychoForcePct + outlanderToHitBonus + uphillBattlePct;
+  const meleeToHitBonus = lvl.toHit + wpn.toHit + statUnit.toHit + hwMeleeToHit
+    + outlanderToHitBonus + uphillBattlePct;
   const rtbToHitWpn = rangedGetsWpn ? wpn.toHit : 0;
 
   // Distance penalty (attacker ranged only)
@@ -1339,11 +1630,11 @@ function deriveUnitStats(input) {
   // Pre-clamped To Hit/Block values for combat (decimals 0.1-1.0)
   let toHitMelee = clampPct(30, baseToHitMod + meleeToHitBonus);
   let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty
-    + abilMods.toHitMod + hwRtbToHit + psychoForcePct + outlanderToHitBonus + outlanderRtbToHitBonus
+    + statUnit.toHit + hwRtbToHit + outlanderToHitBonus + outlanderRtbToHitBonus
     + uphillBattlePct + trueSightRtbToHitBonus);
   const motherFungusToBlkBonus = motherFungus ? 10 : 0;
-  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus
-    + motherFungusToBlkBonus + survivalInstinctToBlkBonus + psychoForcePct + outlanderToDefendBonus
+  let toBlock = clampPct(30, baseToBlkMod + statUnit.toBlk
+    + motherFungusToBlkBonus + survivalInstinctToBlkBonus + outlanderToDefendBonus
     + uphillBattlePct);
   if (energyCannon) {
     // UnitCalc.CAS:1435-1443 reads the unit's To-Hit + Ranged To-Hit
@@ -1352,7 +1643,7 @@ function deriveUnitStats(input) {
     const energyCannonToHit = clampPct(
       30,
       baseToHitRtbMod + lvl.toHit + rtbToHitWpn
-        + abilMods.toHitMod + hwRtbToHit + psychoForcePct
+        + statUnit.toHit + hwRtbToHit
         + outlanderToHitBonus + outlanderRtbToHitBonus + uphillBattlePct
         + trueSightRtbToHitBonus,
     );
@@ -1401,7 +1692,7 @@ function deriveUnitStats(input) {
   // MoM:  -20% To Hit, -1 Defense (the defense die penalty is applied at `displayDef`).
   // CoM 1: -30% To Hit, -10% To Block.
   // CoM2/Warlord: -25% To Hit, -7% To Block — the compiled block reads -25/-7
-  // (`Reference docs/CoM2 binary analysis.md`), not CoM 1's -30/-10.
+  // (`Reference docs/Caster binary/CoM2 binary analysis.md`), not CoM 1's -30/-10.
   // These magnitudes mirror `buildVertigoContext` in combat.js; keep the two in step.
   const vertigoActive = !!(abilities && abilities.vertigo)
     && !(abilities && (abilities.illusionImmunity || abilities.magicImmunity));
@@ -1413,19 +1704,12 @@ function deriveUnitStats(input) {
     displayToBlock = Math.max(0.0, displayToBlock - vertigoBlockPenalty);
   }
 
-  // Berserk: two distinct mechanics, modelled as separate abilities.
-  // 'berserk' (MoM Death spell, UI-gated to MoM versions): doubles melee attack
-  // (applied last, after all other bonuses) and sets defense to 0 absolutely (no
-  // other bonus can raise it while Berserk is active). Removed in CoM/CoM2.
-  // 'berserkWarlord' (Warlord Troll Medicineman buff, UI-gated to Warlord): +15% To
-  // Hit, +1 combat movement (irrelevant here), and -10% To Block. No atk-doubling
-  // and no def-zeroing.
-  const classicBerserk = !!(abilities && abilities.berserk) && version.startsWith('mom');
-  const warlordBerserk = !!(abilities && abilities.berserkWarlord) && isWarlord;
-  let finalAtk = (classicBerserk ? atk * 2 : atk) + blazeMeleeBonus;
-  let finalDef = blazeOfGloryActive ? blazeEnchantArmor : (classicBerserk ? 0 : def);
-  let finalRtb = rtb;
-  let finalRes = res;
+  // Every stat total is the step sequence's output; what remains here is the To Hit /
+  // To Block work, which is not part of the sequence yet.
+  const finalAtk = statUnit.atk;
+  const finalDef = statUnit.def;
+  const finalRtb = statUnit.rtb;
+  const finalRes = statUnit.res;
   if (warlordBerserk) {
     toHitMelee = Math.min(1.0, toHitMelee + 0.15);
     toHitRtb = Math.min(1.0, toHitRtb + 0.15);
@@ -1469,77 +1753,14 @@ function deriveUnitStats(input) {
     displayToBlock = Math.max(0.0, displayToBlock - 0.2);
   }
 
-  // Warp Creature effects.
-  // Warp Attack: halves melee (all versions) and all ranged/thrown (CoM/CoM2 only).
-  // Warp Defense: halves defense (MoM) or reduces to one-third (CoM/CoM2).
-  // Warp Resist: sets resistance to 0; Resist Magic +5 still applies in combat.js.
-  //
-  // Where Warp sits in the sequence is version-specific. MoM's recompute runs it last
-  // (0x90A63 melee, 0x90AA9 defence) with nothing but Shatter after it. CoM 1 moved the
-  // whole block early, to 0x9074C-0x907AA, and keeps writing stats after it: Darkness
-  // (0x9084C-0x90989), Supreme Light (0x90992-0x90A53), the Tactician retort
-  // (0x90AB4-0x90AF6) and Eternal Night's non-Death resistance penalty (0x90B31). Those
-  // terms are booked to each stat's `warpLate` bucket, which is why finalAtk and friends
-  // arrive here holding exactly the subtotal Warp reduces; the tail is added below.
-  // Prayer and High Prayer are *not* among them: both engines put them at 0x9028x-0x9039A,
-  // ahead of even CoM 1's early Warp. CoM2 and Warlord are a different engine and nothing
-  // has been read from Caster.exe about their ordering; their `warpLate` is empty and they
-  // keep MoM's shape until D21 in the binary verification queue settles it.
-  if (abilities && abilities.warpAttack) {
-    finalAtk = Math.floor(finalAtk / 2);
-    if (isCoMVersion) finalRtb = Math.floor(finalRtb / 2);
-  }
-  if (abilities && abilities.warpDefense) {
-    finalDef = Math.floor(finalDef / (isCoMVersion ? 3 : 2));
-  }
-  if (abilities && abilities.warpResist) {
-    finalRes = 0;
-  }
-
-  // Beat of Swiftness (Warlord Chaos rare combat enchantment): friendly units lose
-  // 10% of their Armor as a penalty for the movement boost. Only the armor part is
-  // modelled (combat movement is out of scope for the calculator).
-  if (abilities && abilities.beatOfSwiftness) {
-    finalDef = Math.floor(finalDef * 0.9);
-  }
-
-  // Hierophany (Warlord Life uncommon combat curse): the landed curse removes half the
-  // target's Defense (its immunities, Lightning Resist, and Negate First Strike are stripped
-  // from combatAbilities above).
-  if (isWarlord && abilities && abilities.hierophany) {
-    finalDef = Math.floor(finalDef * 0.5);
-  }
-
-  // Shatter: reduces all attack strengths (melee and ranged/thrown/breath) to 1 for
-  // eligible units. CoM2: normal units and heroes only. Warlord: any unit.
-  if (abilities && abilities.shatter) {
-    const shatterEligible = isWarlord || isNormalUnitType(unitTypeVal) || unitTypeVal === 'hero';
-    if (shatterEligible) {
-      if (finalAtk > 0) finalAtk = 1;
-      if (finalRtb > 0) finalRtb = 1;
-    }
-  }
-
-  // The post-Warp tail of CoM 1's recompute, empty in every other version. It lands here,
-  // after Shatter, because the recompute writes Shatter at 0x907DC — ahead of Darkness,
-  // Supreme Light and Tactician. Each stat's gate matches the one its phase sum uses, so an
-  // inactive stat cannot be resurrected by its tail. The recompute clamps melee, ranged and
-  // defence to >= 0 only at its very end (0x90B41-0x90B75); resistance has no clamp there,
-  // but the calculator keeps its own non-negative convention for resistance rolls.
-  if (calcBaseAtk > 0) finalAtk = Math.max(0, finalAtk + atkPhases.warpLate);
-  if (rtbStatActive) finalRtb = Math.max(0, finalRtb + rtbPhases.warpLate);
-  finalDef = Math.max(0, finalDef + defPhases.warpLate);
-  finalRes = Math.max(0, finalRes + resPhases.warpLate);
-
   const displayDef = (vertigoActive && !isCoMVersion) ? Math.max(0, finalDef - 1) : finalDef;
 
   const toHitMeleeHasModifiers = anyNonZero([
     baseToHitMod,
     lvl.toHit,
     wpn.toHit,
-    abilMods.toHitMod,
+    statUnit.toHit,
     hwMeleeToHit,
-    psychoForcePct,
     uphillBattlePct,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
     vertigoActive ? -Math.round(vertigoHitPenalty * 100) : 0,
@@ -1550,9 +1771,8 @@ function deriveUnitStats(input) {
     lvl.toHit,
     rtbToHitWpn,
     rtbDistPenalty,
-    abilMods.toHitMod,
+    statUnit.toHit,
     hwRtbToHit,
-    psychoForcePct,
     uphillBattlePct,
     trueSightRtbToHitBonus,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
@@ -1562,10 +1782,8 @@ function deriveUnitStats(input) {
   ]);
   const toBlockHasModifiers = anyNonZero([
     baseToBlkMod,
-    abilMods.toBlkMod,
-    holyArmorToBlkBonus,
+    statUnit.toBlk,
     motherFungusToBlkBonus,
-    psychoForcePct,
     uphillBattlePct,
     vertigoActive ? -Math.round(vertigoBlockPenalty * 100) : 0,
   ]);

@@ -214,20 +214,24 @@ Order is load-bearing:
 4. Loadout and experience eligibility are decided — fantastic creatures get neither by
    default; Warlord's Spirit Link widens *level* eligibility only, never loadout.
 5. Stat modifiers, level bonuses, weapon/armour bonuses apply.
-6. Modifiers apply in a **base stage** followed by **four encounter phases**.
-   The encounter phases mirror the engine's two stat-calculation hooks and the fact that
-   each runs code in two places:
+6. Every stat modification is a **step** in one ordered sequence over one mutable unit
+   record. A step names the stats it writes and may read any stat's *current* value; list
+   order is execution order. Additive, scaling, replacing and short-circuiting effects are
+   all the same shape, because the engine makes them all the same way — a write to a field
+   at a point in a sequence. The machinery is `Calculator/steps.js`; the sequence itself is
+   built in `deriveUnitStats`.
 
-   | Phase | Where it runs | How a modifier is assigned to it |
+   Each step carries a **phase**: which region of the engine makes that write. A sequence
+   must be authored in non-decreasing phase order (checked under the debug switch).
+
+   | Phase | Where it runs | How a step is assigned to it |
    |---|---|---|
    | **base** | raw unit stats and permanent writes before combat | verifiable: roster data, creation, overland, or cast handler |
    | **a** | precalc, in the binary | not inspectable — inferred |
    | **b** | precalc, in `UnitCalcPre.CAS` | verifiable: grep the file |
    | **c** | magic calc, in the binary | not inspectable — inferred |
    | **d** | magic calc, in `UnitCalc.CAS` | verifiable: grep the file |
-
-   Plus one tail bucket, **`warpLate`** — the part of `c` that CoM 1's recompute writes after
-   Warp Creature. See *Warp Creature ordering* below; empty in every other version.
+   | **e** | the binary's post-hook tail: the clamps, the aura pass, Supreme Light | decoded block by block |
 
    The hooks are declared in `MODDING.INI [Scripts]`: `UnitRecalculateEarly=UnitCalcPre`,
    `UnitRecalculate=UnitCalc`, `UnitRecalculateEnabled=1`. Base CoM2 sets that last flag to
@@ -237,75 +241,173 @@ Order is load-bearing:
    The consequence that is easy to get wrong: **b runs before c**. A Warlord CAS effect in
    the early pass lands *before* base-game spells, not after.
 
+   Every phase is an engine region — there is no scaffolding left. **Region `a` is effectively
+   empty**: it writes nine unit fields against `c`'s 492, and the ones it writes are flags, not
+   stats. Everything the pre-map model had booked there has since been located in `c`.
+
 **Which script file implements an effect decides its phase.** Game-fiction wording ("combat
 enchantment", "trained in the city") does not. A modifier is classified by, in order:
 
-1. Grep the identifier across `Reference docs/Script source/Warlord 1.5.12.6.2/*.CAS`.
-2. In `UnitCalcPre.CAS` → **b**; in `UnitCalc.CAS` → **d**. (`DisAbil.CAS`, `DisInfo.CAS`,
-   `AIRes.CAS` and `EnterGame.CAS` are display and AI only — ignore them.)
+1. Read it out of the region maps in `Reference docs/Caster binary/CoM2 binary
+   analysis.md`, *Unit stat recalculation*, which decode `a`, `c` and `e` block by block with
+   addresses.
+2. Grep the identifier across `Reference docs/Script source/Warlord 1.5.12.6.2/*.CAS`. In
+   `UnitCalcPre.CAS` → **b**; in `UnitCalc.CAS` → **d**, at that file's line order.
+   (`DisAbil.CAS`, `DisInfo.CAS`, `AIRes.CAS` and `EnterGame.CAS` are display and AI only.)
 3. A raw unit stat, or a value written permanently into the unit's base before the pipeline
    runs — `CreateUnit.CAS`, `OverlandEndTurn.CAS`, or a cast handler writing index 1 (`ABase`)
    in `OLSpell.CAS` — → **base**.
-4. No CAS implementation → binary: intrinsic ability or retort → **a**; spell, curse,
-   enchantment or node aura → **c**.
+4. Neither map nor script names it → deduce, and mark the step `provisional`, saying from what.
 
-Only step 4 is judgment; steps 1–3 are checkable, which is the point. `holyBonus`,
-`resistanceToAll`, the Guardian retort and Tactician's binary grant rest on step 4 alone and
-should be treated as provisional.
+Steps 1–3 are checkable, which is the point; only step 4 is judgment, and it is now the
+exception. MoM's `berserk` is the sole remaining provisional placement. City Walls was once
+provisionally in `a`, but `ApplyAttack` proves it is the resolution routine's `extradef` input.
 
-Every stat total in `deriveUnitStats` is built as a `{ base, a, b, c, d, warpLate }` object
-rather than one flat sum — `atk`, `def`, `res`, `hp`, `rtb` — and `sumPhases()` re-adds them.
-(`warpLate` is the tail of `c` described under *Warp Creature ordering* below; it is empty in
-every version but CoM 1.) The `base`
-bucket contains the raw base plus additive writes that were baked into `ABase`; phase `a`
-contains encounter-time binary precalculation such as level and weapon bonuses, city walls,
-intrinsic abilities, Guardian, and Tactician. The split is arithmetically inert on its own;
-its purpose is to give effects that *scale* a stat a defined input, namely the subtotal visible
-at their own point in the pipeline. `getAbilityStatModifiers()` returns the same split as
-`abilMods.base/a/b/c/d`, with `abilMods.<stat>Mod` as their sum.
+**One sequence, one record — not a list per stat.** The record holds `res`, `def`, `atk`,
+`rtb`, `hp` and the two gaze strengths, which share the engine's `.ranged` slot with `rtb`, plus
+`toHit`, `toBlk` and `lifeSteal` — every unit field a step writes.
+An effect the engine makes as one write to several stats is one step here too: Darkness writes
+four, Blaze of Glory reads current Armor and writes both melee and Armor, the aura pass writes
+whatever it touches. Shredding such a finding across five per-stat lists on the way in — and
+leaving the fact that it was one atomic write to survive only as a comment — is what this
+model exists to stop. The binary yields orderings as *effects in address order, each writing
+several stats*; the list is isomorphic to that.
 
-Effects that scale rather than add, and the subtotal each must read:
+**There is no subtotal-read mechanism, and none is needed.** A step reads whatever field it
+needs at its own position — `u.res`, not a named subtotal — exactly as the engine does. The
+effects that scale rather than add reduce to a plain field read once they stand in the right
+place:
 
-- **Xenoveterinary**, +25% HP (minimum +1) — phase b (`UnitCalcPre.CAS:1038-1049`), so it
-  reads `base+a` and does not compound Lionheart, Endurance or Charm of Life, which are c.
-- **Colossal Strength**, +1 + 40% of melee / physical ranged / thrown — phase d
-  (`UnitCalc.CAS:1227-1243`) and it reads `GetStat` there, so it scales base+a+b+c plus the
-  phase-d terms that precede it in that file (Rust, Focus Magic, Weakness's breath penalty).
-- **Upgraded Explosive's fire-breath doubling** — phase b (`UnitCalcPre.CAS:1074-1078`);
-  it doubles the `base+a` subtotal plus earlier phase-b additions.
-- **Psycho Force** and **Pneuma Field** read *current* resistance and are meant to see every
-  earlier modifier, so they must not be hoisted earlier.
+- **Xenoveterinary**, +25% HP (minimum +1) — `UnitCalcPre.CAS:1038-1049`, the head of region
+  `b`, so it precedes every other phase-b HP write and does not compound the level ladder,
+  Lionheart, Endurance or Charm of Life, which are all `c`.
+- **Colossal Strength**, +1 + 40% of melee / physical ranged / thrown — `UnitCalc.CAS:1227-1243`
+  reads `GetStat` in region `d`, so everything earlier in that file scales and nothing later does.
+- **Upgraded Explosive's fire-breath doubling** — `UnitCalcPre.CAS:1074-1078` doubles the
+  value standing at the end of region `b`, so it is the last step of that region.
+- **Holy Armor's `> 5` threshold** (+0x07407) and **Blaze of Glory's armor transfer**
+  (`UnitCalc.CAS:1490`) read the defence standing at their own position.
+- **Supreme Light's `defense += resistance / 3`** reads the live record in region `e`, after
+  the aura pass — the cross-stat read that was Q7.
+- **Psycho Force** (`UnitCalc.CAS:1413-1417`) and **Pneuma Field** (`:1419-1425`) read the
+  resistance standing at their own position in region `d`, which is *before* the aura pass — so a
+  Holy Bonus or Resistance to All aura raises resistance afterwards and feeds neither. Pneuma
+  Field's `AFLifeSteal` write is why `lifeSteal` is a field of the record.
+
+`getAbilityStatSteps()` emits one step per ability or enchantment that writes a stat, and
+`deriveUnitStats` splices those into the sequence region by region. Nothing is bucketed or
+summed on the way in, so an ordering finding lands as a step move. An ability whose flat half
+sits there and whose attack-type-conditional half sits in `deriveUnitStats` appears as two
+steps sharing a name — `lionheart` and `lionheart:rangedHp`, `weakness` and `weakness:ranged`.
+
+A bonus never conjures an attack slot the unit does not have, so an ability step skips a write
+to a dead slot — which is also the aura pass's own gate, "add the aura value to defense and
+resistance, and to melee/ranged **when the corresponding base attack exists**". **Blaze of
+Glory's armor-to-melee transfer is the deliberate exception**: it lands on a unit with no melee
+attack, so it is not built as an ability step, and it widens the slot for the final clamp.
+
+Two engines reach the secondary-attack slot differently, so a step's delta names which:
+
+- **`rtb`** — the DOS engines' shared `.ranged` slot. One write reaches conventional ranged,
+  Thrown, Breath and both gaze strengths alike; that sharing is why CoM 1's Warp Attack halves
+  a gaze, and why Chaos Surge reaches everything.
+- **`ranged`** — `Caster.exe`'s `unitT.ranged`, which is *only* the conventional ranged attack.
+  Thrown, Fire Breath, Lightning Breath and the gazes are separate fields there, so a CoM2
+  bonus written to `ranged` never reaches them. The Holy Bonus aura is the case that matters.
+
+No hand-built stat sum survives. Blaze of Glory was the last one: in region `d` it reads
+current Defense, adds that whole value to melee, and sets Defense to zero. Region-`e` effects
+such as the aura pass still run afterward and may add Defense on top of that zero.
+
+### Resolution-time sequences
+
+CoM2 and Warlord run two further ordered transforms for each incoming attack. They use the
+same step type and runner as derivation, but operate on a scratch copy of the finished unit
+record and discard it afterwards. They therefore cannot change the displayed Defense or
+Resistance, or leak a modifier into a later attack.
+
+`GetEffectiveResistance` is keyed by the attack's realm and runs in this order:
+
+1. copy the finished Resistance;
+2. on a resistance roll, set it to 100 for a Charmed hero;
+3. set it to 100 for Magic Immunity when the attack has a realm;
+4. add Resist Elements against Nature (+4);
+5. add Bless against Chaos or Death (+5 CoM2 / +4 Warlord);
+6. add Resist Magic against any realm (+5).
+
+The assignments deliberately precede the additions. A Charmed or Magic-Immune unit can
+therefore finish above 100; Charmed also reaches realm-less rolls such as Poison, while Magic
+Immunity and the three realm bonuses do not. Charmed is roll-only and never changes the
+displayed stat.
+
+The DOS engines retain their additive resistance path: in MoM 1.31, CP 1.60, and CoM 1,
+Charmed adds 30 to a hero's Resistance for rolls, including realm-less Poison.
+
+`EffectiveDefense` is keyed by the incoming attack flags and runs in this order:
+
+1. copy finished Defense plus attack-specific extra Defense (including City Walls: +3 intact,
+   +1 damaged, for an outside attack against a defender inside the walls);
+2. an unresisted Illusion sets Defense to zero and halts immediately;
+3. add Large Shield;
+4. add Resist Elements;
+5. add Elemental Armor;
+6. add Bless;
+7. halve the accumulated value for Armor Piercing (unless Lightning Resist cancels a
+   Lightning attack's piercing);
+8. Fire, Cold, Poison, Magic and Missile Immunity assignments replace the accumulated value
+   with 100;
+9. add Weapon Immunity (+8 CoM2 / +10 Warlord).
+
+Consequently Armor Piercing includes steps 3–6 in the halving, an immunity discards that
+halved total, and Weapon Immunity can stack on top of an immunity's 100. Illusion's early
+return prevents every later bonus and immunity from applying. Righteousness remains in step
+8's replacement slot for compatibility while its CoM2/Warlord classification is still open
+under D1/D3.
 
 ### Warp Creature ordering
 
-Warp Creature reduces rather than adds, so unlike an additive modifier its *position* in the
-sequence is observable — and the engines disagree about it. MoM applies it last, after every
-other write. **CoM 1 applies it near the front of its recompute** and keeps writing stats
-afterwards: Darkness, Supreme Light, the Tactician retort and Eternal Night's non-Death
-resistance penalty all land at full value on top of the reduced stat. Prayer and High Prayer
-are *not* among them — both engines run those ahead of even CoM 1's early Warp.
+Warp Creature reduces rather than adds, so unlike an additive modifier its *position* is
+observable — and it is the sharpest divergence between the engines. Every one of them runs the
+block inside its stat recompute, in the order Attack → Defense → Resist, with Shatter
+immediately after; what differs is **what each engine still writes afterwards**:
 
-Phase `c` is one bucket and cannot express "early in c" versus "late in c", so it carries a
-tail: **`warpLate`**, the sixth key in `DERIVATION_PHASES`. A modifier is written into exactly
-one bucket — `getAbilityStatModifiers` picks `warpLate` instead of its normal phase when the
-version is CoM 1 — so nothing is ever added and then subtracted back out; which bucket a term
-lands in *is* the ordering. `sumPhases()` with no keys still totals the finished stat;
-`sumPhases(phases, ...PRE_WARP_PHASES)` names the subtotal Warp reduces, the same idiom the
-scaling effects above use. Outside CoM 1 `warpLate` is empty and the totals are unchanged.
+| Engine | Address | Written after it, at full value |
+|---|---|---|
+| MoM 1.31 / CP 1.60 | `0x90A63`–`0x90AC9` | Shatter, then the terminal clamp — nothing else |
+| CoM 1 | `0x9074C`–`0x90795` | Shatter `0x907DC`, Darkness, Supreme Light, the Tactician retort, Eternal Night |
+| CoM2 / Warlord | `+0x0BA3C`–`+0x0BDF7` | Shatter `+0x0BF62`, Tactician `+0x0C890`, then the whole of `d` and the whole of `e` |
 
-`deriveUnitStats` therefore ends in an explicit sequence, in recompute order: the pre-Warp
-subtotal (times Berserk, plus Blaze of Glory) → Warp → Beat of Swiftness and Hierophany →
-Shatter's cap → the `warpLate` tail → clamp to ≥ 0. Shatter precedes the tail because CoM 1
-writes it at `0x907DC`, ahead of Darkness, Supreme Light and Tactician, so a Shattered CoM 1
-unit under Supreme Light attacks at 3, not 1.
+So one position in the sequence serves all three — the end of region `c` — and the divergence
+is expressed by which steps carry `afterWarp`, the marker for the part of `c` that follows the
+block. Nothing else lies between, which is what lets CoM 1's early Warp and MoM's late one
+share a position.
 
-CoM2 and Warlord are a different engine and nothing has been read from `Caster.exe` about their
-ordering, so they inherit MoM's shape rather than CoM 1's. Same for the two other consequences
-of CoM 1's early Warp: that it halves a gaze's strength (the gaze shares the `.ranged` slot and
-CoM 1's halving has no attack-type test), and that CoM 1's level ladder gives every
-`ranged_type >= 100` attack — thrown, breath and both gaze forms — only the Veteran step, which
-is the ladder's `thrown` column. MoM's level routine has no such gate, so both gaze forms take
-its full `ranged` column there. See `Reference docs/MoM CoM binary verification queue.md`, D21.
+An effect an engine orders differently is modelled as **two version-exclusive steps** rather
+than one step with a version predicate, which keeps the divergence visible in the list instead
+of hidden inside a condition. Darkness has a pre-Warp CoM2/Warlord step and a post-Warp CoM 1
+step; Warlord True Light is its own `UnitCalcPre.CAS` step; and Eternal Night's CoM 1 Resistance
+penalty is a third, later write after Tactician. Supreme Light, the Tactician retort, and Focus
+Magic likewise have version-specific positions. The binary runs Focus Magic at `+0x00D3F`, near
+the head of `c` and therefore *before* Warp, while Warlord re-implements it in
+`UnitCalc.CAS:515` and therefore after. CoM 1's Focus Magic position is deduced rather than
+read: the list of what its recompute writes after Warp is exhaustive and does not contain it.
+
+Shatter precedes CoM 1's post-Warp writes, so a Shattered CoM 1 unit under Supreme Light
+attacks at 3, not 1.
+
+**CoM2 and Warlord reach CoM 1's outcome by the opposite route.** CoM 1 moves Warp early;
+CoM2 moves Supreme Light and the native aura pass late, into region `e`. The consequence is the
+same — those effects land at full value on a reduced stat — but the mechanism is not, and the
+things carried past the reduction differ: CoM2 carries the whole of `UnitCalc.CAS` past it,
+including Colossal Strength, Blaze of Glory and Hierophany.
+
+Two further consequences of CoM 1's early Warp are CoM 1's alone: it halves a gaze's strength
+(the gaze shares the `.ranged` slot there and CoM 1's halving has no attack-type test, while
+CoM2's Warp Attack leaves the separate gaze fields untouched), and CoM 1's level ladder gives
+every `ranged_type >= 100` attack — thrown, breath and both gaze forms — only the Veteran step,
+which is the ladder's `thrown` column. MoM's level routine has no such gate, so both gaze forms
+take its full `ranged` column there. CoM2's gaze ladder is still unread — see
+`Reference docs/MoM CoM binary verification queue.md`, D21.
 
 Warlord scoring options that affect a unit are represented as per-unit encounter inputs:
 
@@ -316,8 +418,8 @@ Warlord scoring options that affect a unit are represented as per-unit encounter
   calculation and is applied in phase b; it is not folded into the damage distribution.
 
 Note that `rtb` carries ranged, thrown **and** breath, distinguished by `rangedType`/`thrownType`.
-Breath has no stat of its own, so Explosive's fire-breath doubling must operate on the `rtb`
-phase subtotals gated on the attack type.
+Breath has no stat of its own, so Explosive's fire-breath doubling reads the `rtb` field gated
+on the attack type.
 
 Lucky is the one modifier resolved per-unit rather than by name: it reaches a unit from five
 sources across base, a and b, and does not stack, so it is counted once in the **earliest**
@@ -393,7 +495,9 @@ inert unless that side also has the **Outlander wizard** owner condition.
   +1 Resistance; and +20% Ranged, Breath and Thrown To-Hit. These are phase-b combat effects.
 - **Xenoveterinary:** fantastic units gain +10% To-Hit and +25% HP (minimum +1). Its HP
   increase is phase b and reads the base+a HP subtotal.
-- **Magitek Science:** derived Armorclad and Battle Armor units gain Resist Magic.
+- **Magitek Science:** derived Armorclad units gain Resist Magic. Both prose sources also
+  name Battle Armor, but the executing scripts grant it only alongside the permanent
+  `EncArmorClad` flag; the transient Battle Armor branch receives no grant.
 - **Military Drilling:** newly trained non-fantastic units have permanent overland
   Discipline; the calculator represents that landed permanent state. Its Mechanical
   below-half-HP healing clause is out of scope.
@@ -482,7 +586,7 @@ in `tests/` asserts them:
 
 ## Known modelling limitations
 
-Tracked as M1–M6 in [BACKLOG.md](./BACKLOG.md), §5, which records for each whether it is accepted
+Tracked as M1–M8 in [BACKLOG.md](./BACKLOG.md), §5, which records for each whether it is accepted
 or deferred work. The descriptions below are the canonical ones.
 
 - Life Steal's *displayed* distribution is an approximation (phase count × single-firing
@@ -491,14 +595,26 @@ or deferred work. The descriptions below are the canonical ones.
 - Destruction is currently modelled only for CoM2/Warlord. The MoM/CP/CoM1 touch dispatcher also
   identifies Destruction as a Chaos effect; in MoM/CP, Elemental Armor and Resist Elements
   therefore protect against it. That older-engine Destruction path is not yet implemented.
-- **One phase term is not cleanly attributable: `fbRtbMod`.** It merges Flame Blade / Metal
-  Fires (binary, phase c), Warlord's permanent Fiery Blade (also binary, phase c), and
-  Warlord's Fiery Fury (`UnitCalcPre.CAS:832-846`, phase b) through a non-additive `Math.max`,
-  since their shared ranged bonuses supersede rather than sum. It is booked wholly to c, its
-  dominant source. Separating them means restructuring how they supersede.
 - The calculator has one ranged/thrown/breath slot. Bombs&Grenades can add to an existing
   Thrown attack, but cannot simultaneously display its granted Thrown attack alongside an
-  independent ranged or breath attack on the same unit.
+  independent ranged or breath attack on the same unit. Faithful for MoM and CoM 1, which share
+  one `.ranged` field, but wrong for `Caster.exe`, which holds four separate channels — 29 Warlord
+  roster units carry more than one and lose an attack on load. Being replaced by BACKLOG item R3.
 - The Lava Smelter control records one mineral-pair grant at a time. The Warlord scripts
   evaluate all five mineral pairs independently, so a unit can carry several simultaneous
   grants when three or more qualifying minerals are available.
+- **Ammunition is not modelled.** Every engine carries a per-unit shot count — MoM's `ammo`
+  (battle-unit `+0x03`, the roster's `Shots` column: 8 for archers, 10 for the Catapult) and
+  CoM2's `maxammo`/`ammo` (`SMaxAmmo`=55, `SAmmo`=56, `UNITS.INI` key `Ammo`) — and the
+  calculator ignores both. A ranged attacker is treated as able to fire in every ranged
+  exchange the scenario specifies. Deliberate: the calculator resolves a single engagement
+  rather than a multi-turn battle, so a shot budget has nothing to deplete. It is therefore
+  omitted from the unit card in every version. The consequence to be aware of is that a
+  many-round ranged scenario can overstate an ammo-limited unit's output.
+- **Regeneration is not modelled.** Both engines define it per unit — MoM as an `Abilities` flag
+  (`0x2000`), CoM2 as a magnitude (`regeneration`, `SRegeneration`=41, `−1` = absent, roster
+  values up to 7) — and all four rosters carry the token, but no ability definition matches it,
+  so it is dropped at load. Deliberate, for the same reason as ammunition: it is between-turn
+  healing, and the calculator resolves a single engagement. Omitted from the unit card in every
+  version. The consequence to be aware of is that a regenerating unit's survivability across a
+  long battle is not represented.

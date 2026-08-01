@@ -1732,23 +1732,30 @@ function runTests(tolerance) {
   tolerance = tolerance || 0.002;
   const results = [];
   let allPassed = true;
-  for (const [name, preset] of Object.entries(PRESETS)) {
-    if (!preset.expected) continue;
-    applyPreset(name);
-    const panels = document.querySelectorAll('.dist-header .avg');
-    const dmgToA = parseFloat(panels[0].textContent);
-    const dmgToB = parseFloat(panels[1].textContent);
-    const expA = preset.expected.dmgToA;
-    const expB = preset.expected.dmgToB;
-    const errA = expA != null ? Math.abs(dmgToA - expA) : 0;
-    const errB = expB != null ? Math.abs(dmgToB - expB) : 0;
-    const pass = errA < tolerance && errB < tolerance;
-    if (!pass) allPassed = false;
-    results.push({
-      name, pass,
-      dmgToA, expectedA: expA, errA: +errA.toFixed(4),
-      dmgToB, expectedB: expB, errB: +errB.toFixed(4),
-    });
+  // Run the whole suite with the step runner's write check on: a step that writes a stat
+  // it did not declare is a migration bug the damage numbers may not reveal (steps.js).
+  setStatStepDebug(true);
+  try {
+    for (const [name, preset] of Object.entries(PRESETS)) {
+      if (!preset.expected) continue;
+      applyPreset(name);
+      const panels = document.querySelectorAll('.dist-header .avg');
+      const dmgToA = parseFloat(panels[0].textContent);
+      const dmgToB = parseFloat(panels[1].textContent);
+      const expA = preset.expected.dmgToA;
+      const expB = preset.expected.dmgToB;
+      const errA = expA != null ? Math.abs(dmgToA - expA) : 0;
+      const errB = expB != null ? Math.abs(dmgToB - expB) : 0;
+      const pass = errA < tolerance && errB < tolerance;
+      if (!pass) allPassed = false;
+      results.push({
+        name, pass,
+        dmgToA, expectedA: expA, errA: +errA.toFixed(4),
+        dmgToB, expectedB: expB, errB: +errB.toFixed(4),
+      });
+    }
+  } finally {
+    setStatStepDebug(false);
   }
   const failures = results.filter(r => !r.pass);
   if (allPassed) {
@@ -2747,8 +2754,9 @@ async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matr
     const scriptAbsUrl = (name) =>
       [...document.querySelectorAll('script[src]')].find(s => s.src.endsWith(name))?.src;
     const engineUrl = scriptAbsUrl('engine.js');
+    const stepsUrl = scriptAbsUrl('steps.js');
     const combatUrl = scriptAbsUrl('combat.js');
-    const src = `importScripts(${JSON.stringify(engineUrl)}, ${JSON.stringify(combatUrl)});\n${MATRIX_WORKER_HANDLER}`;
+    const src = `importScripts(${JSON.stringify(engineUrl)}, ${JSON.stringify(stepsUrl)}, ${JSON.stringify(combatUrl)});\n${MATRIX_WORKER_HANDLER}`;
     matrixWorkerBlobUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
   }
 

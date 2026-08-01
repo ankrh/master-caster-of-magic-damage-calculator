@@ -15,3 +15,13 @@ Instructions are split by directory and are **not** all loaded automatically —
 - `Manual/SPEC.md` + `Manual/PLAN.md` — the interactive CoM2 manual (spec, then stages/status).
 
 When editing text that contains non-ASCII characters such as `→`, prefer `apply_patch` over PowerShell write/replace commands because `apply_patch` has preserved UTF-8 correctly in this repo.
+
+## Cross-agent channels
+
+This repo runs two agents. You are **Codex**; Claude works the same tree. The protocol —
+channels, review-entry format, the no-peek rule for derivation mode, and how disagreements are
+recorded — is in `CLAUDE.md` § *Two agents*. Read it before writing a review or a derivation.
+
+Your write channel is `.codex-review.md`. Never write to `.claude-review.md` or to Claude's
+files under `.derivations/`, and never read a `.derivations/*.claude.md` file while your own
+derivation of that item is unfinished.

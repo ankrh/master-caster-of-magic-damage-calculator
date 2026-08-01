@@ -13,7 +13,9 @@ home file wins.
 |---|---|---|
 | **queue** | `Reference docs/MoM CoM binary verification queue.md` | claims resting on prose or inference, per engine (A–C = DOS builds, D = CoM2/Warlord) |
 | **MoM analysis** | `Reference docs/MoM binary analysis.md` | findings read out of `WIZARDS.EXE` |
-| **CoM2 analysis** | `Reference docs/CoM2 binary analysis.md` | findings read out of `Caster.exe` |
+| **CoM2 analysis** | `Reference docs/Caster binary/CoM2 binary analysis.md` | findings read out of `Caster.exe` |
+| **Caster reconstruction** | `Reference docs/Caster binary/` | the `.pas` files there: address-backed Pascal-like reconstruction of the unit-enchantment/ability and combat-damage flows in `Caster.exe`. Its `README.md` owns the binary's path, md5 and size |
+| **DOS reconstruction** | `Reference docs/DOS reconstructed/` | address-backed C++ reconstruction of the same flows in MoM 1.31, MoM CP 1.60 and CoM 1 |
 | **CoM2 tables** | `Reference docs/CoM2 data tables.md` | findings read out of CoM2's and Warlord's `.INI` tables |
 | **TODO** | `Reference docs/TODO.md` | open mechanic questions, prose-vs-prose conflicts |
 | **discrepancies** | `Reference docs/Source discrepancies.md` | Warlord script-vs-prose conflicts |
@@ -30,20 +32,21 @@ home file wins.
 ## 1. Priority order
 
 This section is the single home for prioritisation across all outstanding work — the queue no
-longer carries its own suggested orders. Items 1 and 2 need no binary read at all: the evidence
-they consume is already written down.
+longer carries its own suggested orders.
 
 | # | Item | Why here |
 |---|---|---|
-| **1** | **R1.1–R1.10 — build the transform sequence** | **Nothing is in front of it.** R1's stage 0 is complete (see §2) and so is the `@Units@RecalculateUnits` sweep it was meant to precede, so the ordering evidence is already in hand and cannot be recorded until the sequence exists. Five confirmed defects (D22–D26) plus Q7 and M4 are blocked on it outright. |
-| 2 | **S1, S2** | Warlord mechanics never checked against the script that owns them. Cheap, and independent of R1. |
-| 3 | **A31** | The cheapest item left in section A; MoM's six increment sites are all that remain. |
-| 4 | **F7, Q14** | Both deferred by decision on 2026-07-29, and both cheap to resume: F7 is a known-wrong formula with the right one already in hand; Q14 needs only a semantics read. |
-| 5 | **D1, D3, D4, D7** | The resistance and defence routines are now decoded in execution order (**CoM2 analysis**, *Resolution-time modifiers*), so these are reads of an existing table rather than of the binary. D1 is already part-settled there. |
-| 6 | **D8** | Its write sits in an enchantment-ID-keyed recompute that has to be located first. |
-| 7 | **B4, B7, B9** | Foundational damage and rider behaviour on the DOS side. |
-| 8 | **D2, D18** | Structural rather than numeric; each changes more than one number. |
-| 9 | **F3–F6** | Fixes and audits that need their own read or trace. F6 now has table evidence to start from. |
+| **1** | **R5** | Reconstruct the relevant `Caster.exe` source flow. Its TD32 procedure/local names make this the highest-leverage way to preserve binary understanding for future agents; completion requires Codex and Claude to derive the flow independently — derivation mode, `CLAUDE.md` § *Two agents*. |
+| **2** | **R6** | Reconstruct the equivalent flows in MoM 1.31, MoM CP 1.60 and CoM 1. This is larger and less symbol-rich than R5, so it is split by build and subsystem; each split is likewise derived independently by both agents. |
+| **3** | **R3** | The engine-shaped attack record. It is a *data-correctness* item, not a modelling-purity one: 29 Warlord roster units lose a whole attack today. It also unblocks F12 and is a precondition for F17, F18 and F20. |
+| **4** | **R4** | The engine-shaped unit card, right after R3 because it touches the same call sites. Widened 2026-07-31 from gaze representation alone to the whole per-version card field set; the MoM set is settled there, the CoM2 set waits on R3. No known wrong number — the goal is that the inputs, field names and encodings match each engine's own, so findings land without translation. Bears on D21 and Q9; carries M7. |
+| 5 | **A31** | The cheapest item left in section A; MoM's six increment sites are all that remain. |
+| 6 | **F7, Q14** | Both deferred by decision on 2026-07-29, and both cheap to resume: F7 is a known-wrong formula with the right one already in hand; Q14 needs only a semantics read. |
+| 7 | **D1, D3, D4, D7** | The resistance and defence routines are now decoded in execution order (**CoM2 analysis**, *Resolution-time modifiers*), so these are reads of an existing table rather than of the binary. D1 is already part-settled there. |
+| 8 | **D8** | Its write sits in an enchantment-ID-keyed recompute that has to be located first. |
+| 9 | **B4, B7, B9** | Foundational damage and rider behaviour on the DOS side. |
+| 10 | **D2, D18** | Structural rather than numeric; each changes more than one number. |
+| 11 | **F3–F6, F12–F21** | Confirmed calculator defects and the transform-completeness audit. R3 unlocks several of F13–F20; F6 still needs its eligibility trace. **F21 does not belong to that dependency chain** — it is a small, self-contained roster-loading fix that can be taken at any time. |
 | — | Everything else | Opportunistically, as the owning routine comes open. |
 
 *(The **data-table sweep**, formerly item 1, was completed on 2026-07-29. It closed D13, D15 and
@@ -67,22 +70,59 @@ blocked by it.
 
 ## 2. R1 — restructure stat derivation into a sequence of transforms
 
-**Status: stage 0 complete, design settled, ready to build. Cost: large.** The full rationale,
-staging and the seven settled design decisions are in
-[Appendix A](#appendix-a--r1-staging-plan) — that appendix is this item's only home.
+**Status: complete (2026-07-29).** The step sequence is the calculator's only stat-derivation
+mechanism, every step stands where the region maps put it, and `tail` and `warpLate` — the two
+scaffolding phases — are gone. The rationale, staging and the seven settled design decisions
+are in [Appendix A](#appendix-a--r1-staging-plan); that appendix is this item's only home.
+
+Closed with it: **D22, D23, D24, D25, Q7 and M4.** Stages 11 and 12 — the two *resolution*
+sequences — were always a separate axis and are now the register's item R2, below.
 
 | ID | Stage | Status |
 |---|---|---|
-| ~~R1.0a~~ | ~~Locate the two CAS hook call sites~~ | **done** — exactly two, `0x59A027` and `0x5A65D7`, and no other routine in the binary runs a per-unit stat script. The design risk it guarded against is retired. |
-| ~~R1.0b~~ | ~~Sample one slice to check step granularity~~ | **done, and exceeded** — regions `a`, `c` and `e` are decoded block by block, not sampled |
-| ~~R1.0c~~ | ~~Warlord `UnitCalc.CAS` / `UnitCalcPre.CAS` line-order sweep~~ | **done 2026-07-28** — both scripts mapped to top-level source order, md5-pinned |
-| R1.1–R1.10 | Machinery → equivalence harness → migrate `res`, `def`, `atk`, `rtb`, `hp` → delete buckets → convert `getAbilityStatModifiers` → encode the mapped sequence | **not started — priority 1** |
+| ~~R1.0a–R1.0c~~ | ~~Stage 0: hook sites, granularity, Warlord line-order sweep~~ | **done** |
+| ~~R1.1–R1.2~~ | ~~Machinery, equivalence harness, benchmark~~ | **done** — `Calculator/steps.js`; `tools/bench_derive_unit_stats.js` |
+| ~~R1.3–R1.7~~ | ~~Migrate `res`, `def`, `atk`, `rtb`, `hp` and the two gaze strengths~~ | **done** |
+| ~~R1.8~~ | ~~Delete the buckets, the harness; rewrite SPEC~~ | **done** |
+| ~~R1.9~~ | ~~Convert `getAbilityStatModifiers` to emit steps~~ | **done** — `getAbilityStatSteps`; **M4 closed** |
+| ~~R1.10~~ | ~~Encode the mapped sequence~~ | **done** — see the table below |
 
-All three stage-0 rows were closed by **CoM2 analysis**, *Unit stat recalculation* (2026-07-28)
-and *Resolution-time modifiers* (2026-07-29), which also completed the `@Units@RecalculateUnits`
-effect-order sweep that Appendix A originally deferred until after stage 10. **The evidence is
-ahead of the code**, and has been since 2026-07-28: R1 is not waiting on research, the research
-is waiting on R1.
+### What stage 10 moved
+
+Every row is a position read out of the region maps, not a magnitude. Nothing here changes what
+a modifier is worth; it changes what has already happened when the modifier lands.
+
+| Step | Was | Now | Observable consequence |
+|---|---|---|---|
+| the three **Warps** and **Shatter** | `tail`, after everything | end of `c` (`+0x0BA3C`–`+0x0BF62`) | **D22.** The whole of `d` and `e` now lands at full value on the reduced stat: Colossal Strength scales the *halved* attack, Tactician and the aura pass are not halved at all |
+| **Holy Bonus** | `a` | `e`, aura type 1 | **D23.** Not halved by Warp; and it writes `Caster.exe`'s narrow `ranged` field, so a Thrown or Breath attack takes none of it |
+| **Resistance to All** | `a` | `e`, aura type 3 | **D23.** Same position change; the max-merge with Prayermaster is unobservable until a Prayermaster control exists |
+| **Supreme Light** | `c` (CoM2) | `e`, after the aura pass | **D24 + Q7.** `defense += resistance / 3` is now a live read, so Warp Resist having zeroed Resistance contributes nothing |
+| **level ladder**, **hero ladder**, **weapon material** | `a` | `c` (`+0x00D16`, `+0x0139A`, `+0x04B90`) | **D25.** Xenoveterinary's +25% HP and Upgraded Explosive's fire-breath doubling, both region `b`, no longer compound them |
+| **Tactician** | `a` | `c`, after Warp (`+0x0C890`) | D25's other half; the retort is not halved |
+| **Focus Magic** | `d` | `c` (`+0x00D3F`) for the binary; `d` for Warlord (`UnitCalc.CAS:515`) | Halved by Warp in CoM 1 and CoM2, not in Warlord |
+| **Holy Armor** | `tail` | `c` (`+0x07407`) | Its "armor above 5" test no longer sees the node aura or any curse |
+| **Blaze of Glory**, **Beat of Swiftness**, **Hierophany** | `tail` | `d` (`UnitCalc.CAS:1490`, `:1509`, `:1556`) | All three follow Colossal Strength and the Warps |
+| **Lucky**, **Guardian retort** | `a` | `c` (`+0x044C7`, `+0x0B092`) | None — nothing between the regions reads Resistance, To Hit or To Defend |
+| **the two clamps** | `tail` + `warpLate` | one, at the head of `e` (`+0x0CCBC`) | The aura pass and Supreme Light are *not* clamped after, which is why they can exceed what a clamp would allow |
+| **Berserk** | `tail` | `c`, before the Warps | None — same relative position, and MoM's recompute is undecoded, so the step stays `provisional` |
+
+**Tests.** Eight new presets in the `Stat derivation order` group, one per finding plus two
+controls; each is built so the *previous* ordering gives a different number, and each names that
+number in its `desc`. 919 presets, 205 Node checks, 32 Playwright — all green.
+
+**One placement is deduced rather than read**, and is marked `provisional` in the list: MoM's
+`berserk` (MoM's recompute is decoded only from Prayer onwards). City Walls was resolved
+2026-07-29 as `EffectiveDefense`'s `extradef` input, not a derivation step. CoM 1's Focus Magic
+position is deduced too, but from an exhaustive
+list — *MoM analysis* gives the complete set of what CoM 1 writes after Warp, and Focus Magic
+is not in it.
+
+**Performance** (`tools/bench_derive_unit_stats.js`, mean over five representative units):
+33.3 µs/call before R1, 42.3 after stages 1–8, 40.8 after stage 9, unchanged by stage 10. The
+harness is noisy on the current machine — repeated runs of the same build span 41–52 µs — so
+treat differences under ~20% as nothing, and note that a function call inside its `vm` context
+costs ~107 ns, which over-weights call count by about two orders of magnitude against a browser.
 
 ### Scope: 6 + 1 axes, one mechanism
 
@@ -118,24 +158,317 @@ would reproduce the very problem R1 exists to end. Today it is a chain of condit
 all. They are gates and events read by `@Spells@DispelMagic`, `@Units@Immobile` and
 `@Combat@Combatend`. Nothing to sequence; they stay where they are.
 
-### Confirmed engine-order defects that R1 must absorb
+### Ordering defects R1 absorbed — all closed 2026-07-29
 
-Five findings where `Caster.exe` is known to disagree with the calculator's ordering. All are
-confirmed, none is fixed, and none can be expressed by the current bucket model — which is why
-they wait for R1 rather than becoming one-off patches. Evidence: **CoM2 analysis**, *Unit stat
-recalculation*; tracked in the **queue** as D22–D26.
+Five findings where `Caster.exe` was known to disagree with the calculator's ordering. Four were
+positions and are now encoded; the fifth was never really an ordering question.
 
-| ID | Finding | Calculator today |
+| ID | Finding | Outcome |
 |---|---|---|
-| D22 | Warp runs mid-region `c` (+0xBA3C); everything after it is added at full value | `stats.js:1488-1497` applies all three Warps to the finished totals, halving everything downstream |
-| D23 | The whole aura pass runs after `d`; sources merge by **maximum, not sum**, and Resistance to All shares aura type 3 with Prayermaster | `combat.js:273-278`, `:295` book `holyBonus` and `resistanceToAll` to phase `a` — the opposite end |
-| D24 | Supreme Light is post-Warp **and** post-aura-pass, reading resistance after the aura pass | `stats.js:714` books it to phase `c`, before Warp, for every version except CoM 1 |
-| D25 | Level, hero and weapon bonuses may be phase `c`, not `a` (needs an execution-order check — so far this is layout only) | `stats.js:956`, `:973`, `:1018` book them to `a`; if wrong, Upgraded Explosive's doubling reads bonuses it should not see |
-| D26 | The Chosen is forced `RCLife` + `Fantastic` by region `c` | tracked as **F4** — it is a wrong output today, not only an ordering question |
+| ~~D22~~ | Warp runs mid-region `c` (+0xBA3C); everything after it is added at full value | **fixed** — the Warps and Shatter are the last steps of `c` |
+| ~~D23~~ | The aura pass runs after `d`; sources merge by maximum, and Resistance to All shares aura type 3 with Prayermaster | **fixed** — both are region-`e` steps. The max-merge has no observable consequence until a Prayermaster control exists, and the single numeric input already expresses "highest source only" |
+| ~~D24~~ | Supreme Light is post-Warp **and** post-aura-pass, reading resistance after the aura pass | **fixed**, and it closed **Q7**: the read is live |
+| ~~D25~~ | Level, hero and weapon bonuses are `c`, not `a` | **fixed.** The execution-order check it was waiting for is in **CoM2 analysis** already: `ApplyLevelBonus` runs between Destiny's transformation and Focus Magic, which is stated there as direct execution-order evidence |
+| D26 | The Chosen is forced `RCLife` + `Fantastic` by region `c` | not an ordering item — tracked as **F4**, a wrong output today |
 
-Also folded into R1: **Q7** (Supreme Light's live-resistance read, fixed by stage 4), **M4**
-(`fbRtbMod` attribution), and the Tactician phase question in **MoM analysis**, *Warp Creature runs
-early* — revisit during stage 9.
+---
+
+## 2b. R2 — the two resolution sequences
+
+**Status: complete (2026-07-29).** Both routines now use the R1 step type and runner on a
+discarded scratch copy, with a `resolution` axis marker rather than a sixth derivation phase.
+`EffectiveDefense` is evaluated only for attack types that can fire in the current exchange;
+`GetEffectiveResistance` is evaluated by realm, including the realm-less Poison path.
+
+| ID | Item | Settles |
+|---|---|---|
+| ~~R2.1~~ | ~~`@Units@EffectiveDefense` — 9 steps keyed by the incoming attack~~ | **done** — Illusion halts at step 2; Armor Piercing halves steps 3–6; immunity replaces at step 8; Weapon Immunity adds after it at step 9 |
+| ~~R2.2~~ | ~~`@Units@GetEffectiveResistance` — 6 steps keyed by realm~~ | **done** — the assignments precede the additions; Charmed is now representable and applies to rolls without changing the displayed stat |
+
+The remaining D1/D3 question about Righteousness and D2's Weapon-Immunity **eligibility**
+question stay open; R2 encodes their current classifications in the established sequence
+positions without claiming those gates are resolved.
+
+**Tests.** Three browser presets cover Charmed against realm-less Poison, Illusion's early
+return with City Walls, and Weapon Immunity stacking after Missile Immunity. Direct Node checks
+also assert the exact trace order, values above 100, `halt`, and scratch-copy non-mutation.
+923 presets, 215 Node checks, 32 Playwright tests — all green.
+
+---
+
+## 2c. R3 — the engine-shaped attack record (four channels)
+
+**Status: open. Priority 3. Cost: large.**
+
+**What to build.** For CoM2 and Warlord, a unit card carries **four separate attack-strength
+inputs** — `ranged` (with its `rangedType`), `thrown`, `fireBreath`, `lightningBreath` — instead of
+today's single `rtb` value plus the derived `rangedType`/`thrownType` pair. All four are fields of
+the record `runStatSteps` mutates, so every engine write lands on the channel it actually writes
+and each is read at its own position. MoM and CoM 1 keep one shared slot: those engines genuinely
+have a single `.ranged` field that ranged, Thrown, both Breaths and the gazes all share
+(`combat.js:263-266`), so the current model is faithful there and must stay.
+
+**Why the engine's shape is four fields.** `MASTER.CAS` gives them as distinct stats — `SAttack`=12,
+`SRanged`=14, `SFireBreath`=36, `SLightningBreath`=37, `SThrown`=40 — and the battle-unit record
+lays them out separately at `+0x20` melee, `+0x24` ranged, `+0x28` ranged type, with thrown and the
+two breaths at `+0x2C`/`+0x30`/`+0x34`. There is exactly one type field in the whole stat table,
+`SRangedType`=27; the calculator's `thrownType` is not engine state at all but a projection of
+*which* of three fields is non-zero onto one slot.
+
+**This is losing data today, before any enchantment.**
+
+| Roster | Units carrying >1 of the four | Notes |
+|---|---|---|
+| CoM2 (201 units) | **0** | the single slot is empirically safe for CoM2 *roster* data |
+| Warlord (364 units) | **29** | one of them, Elementalist, carries two breaths *and* a ranged attack |
+
+Two independent losses in the pipeline:
+
+- `tools/generate_warlord_units_json.py:219-226` is an `elif` chain, so only one of Thrown /
+  FireBreath / LightningBreath survives generation. The Elementalist's `LightningBreath=8` never
+  reaches `units_warlord.js`.
+- `predefinedUnitRtb` (`ui.js:2437`) then prefers `ranged` and discards the surviving
+  thrown/breath entirely — frequently the larger attack: Musketeers keep Ranged 5 and lose Thrown
+  9; Great Aether Lord keeps Ranged 18 and loses LightningBreath 21; Steam Tank keeps Ranged 12 and
+  loses FireBreath 14.
+
+**And derived co-occurrence reaches base CoM2, not just Warlord.** Three engine writes add a
+channel with no exclusivity gate: Chaos Channels fire breath `firebreath += 4` (region `a`,
+`+0x005C8`–`+0x00688`, exact — so a CoM2 Barbarian with `Thrown=5` ends with thrown 5 *and* fire 4,
+and `CCRangedFBAllowed=0` gates *ranged* attacks, not thrown); Shadow Strike
+`SThrown += 1 + %I(SAttack/3)` with no breath test (`UnitCalc.CAS:1265-1266`); and the heavy-unit
+Flying replacement `SThrown += 1` for unit ids 189/260/261/331 (`:1278-1288`), two of which already
+carry `Ranged`. Four further sites show the engine assumes multiplicity throughout: Vampirism sums
+`Thrown/2 + (Fire + Lightning)/2`, Inner Power writes fire and lightning "where each is already
+positive", Darkness adjusts five channels independently, and the region-`e` clamp clamps all five
+separately.
+
+**Scope notes.** The four *type* strings collapse to one (`rangedType`); the ~112
+`rangedType`/`thrownType` reads in `stats.js` and ~55 in `combat.js` become positional reads on the
+record rather than consts computed before the sequence. Reach for the SPEC's *one sequence, one
+record* rule when splitting a write: where the engine writes type and strength in one block —
+Focus Magic's ranged type 34, Energy Cannon's 40 — that stays **one** step.
+
+**Closes M5.** Unblocks **F12** (Destiny's doubling, whose only blocker this is). **F17** and
+**F18** are dependents, and **F20**'s exhaustiveness walk should follow it rather than precede it.
+
+## 2d. R4 — the engine-shaped unit card (gaze representation, and the per-version field sets)
+
+**Status: open. Priority 4. Cost: medium → large (scope widened 2026-07-31).**
+
+**What to revisit.** How a unit is *specified* — the UI inputs, the roster fields and the record
+field names — for **MoM and CoM2 alike**, so the calculator speaks each engine's own language
+rather than a translation of it. The gaze is the sharpest case and the rest of this section is
+written about it; *Per-version card field sets* below generalises it, and is what the card is
+actually built from.
+
+**This is an alignment item, not a defect.** The modelled behaviour is already right and is
+documented in SPEC, *Gaze attacks*: `stoningGaze` and `deathGaze` are `numcheck` **save
+modifiers**, `gazeRanged` is the hidden conventional component, `doomGaze` is doom damage, and SPEC
+already states that the hidden component is MoM-only because CoM2 restructured the gaze into three
+stats with no attack-strength slot. Nothing here claims a wrong number. What differs is the
+*vocabulary*, in ways that make every future gaze finding arrive needing translation first.
+
+**The two engines' own shapes.** MoM packs a gaze into the single `ranged_type`/`ranged` pair it
+shares with ranged, thrown and breath — classifier types 103/104/105 — which is what gives a MoM
+gaze an attack strength at all. `Caster.exe` holds three independent fields instead: `deathgaze`
+`+0x38`, `stoninggaze` `+0x3C`, `doomgaze` `+0x40`, from stats `SDeathGaze`=39,
+`SStoningGaze`=38 and `SDoomGaze`=57 (**CoM2 analysis**, *Gaze attacks (resolved 2026-07-27)*).
+
+**Specific mismatches to settle.** Each is a naming or encoding choice, not a behaviour change.
+The first two were settled on 2026-07-31 by *Per-version card field sets* below; the rest stand:
+
+- ~~**A "Hidden Gaze Attack" input appears on every version's card**~~ **Settled: the control
+  goes.** MoM's gaze strength *is* the shared strength field with the type dropdown set to a
+  gaze, so there is nothing left for a separate input to hold, and CoM2 has no such value at all.
+- ~~**The "no gaze" sentinel differs.**~~ **Settled: the checkbox is the sentinel.** A `numcheck`
+  unchecked expresses the engine's literal `100`; the card keeps the nullable representation and
+  the roster boundary owns the translation, in one place. See *Control types* below for why those
+  effects need a presence control at all — 0 is a legal save modifier.
+- **The record's field names do not match the engine's.** The calculator carries `gaze` and
+  `doomGaze`, where `Caster.exe` carries three fields, none of them called `gaze`. Naming them
+  after the engine's fields removes the standing ambiguity about what `gaze` denotes in a given
+  version.
+- **`ABILITY_STEP_RTB_FIELDS = ['rtb', 'gaze', 'doomGaze']`** (`combat.js:272`) is correct for the
+  DOS engines, whose one `.ranged` field genuinely reaches the gazes, and the narrow `ranged`
+  pseudo-field already exists for `Caster.exe`. Confirm every CoM2-applicable emission uses the
+  narrow field; the specific over-applications already found are **F18**'s, not this item's.
+
+**Expected fallout.** Likely settles the CoM2 half of **Q9** (Doom Gaze alongside a ranged attack —
+separate fields imply yes) and gives **D21**, the level ladder for a gaze, a field to ask the
+question about. Sequence after **R3**: both touch the record's attack channels and the same call
+sites, so one pass is cheaper than two.
+
+### Per-version card field sets
+
+The card's primary section shows **the fields that version's roster can actually define** —
+everything else (level, weapon, damage taken, enchantments) is applied *to* that record and
+belongs below the *Show all* fold. The two engines' rosters differ enough that the card switches
+field set with the version selector rather than sharing one layout.
+
+**MoM / CoM 1 — settled 2026-07-31.** The unit-type table record is exactly `0x24` bytes and is
+exactly `BATTLE_UNIT[0x00..0x23]`, so the set is closed by construction (**MoM analysis**,
+*Known anchors*; record dumps verified against the roster for melee, ranged, ranged type, to-hit,
+defence, resistance, hits, max figures, race, ammo and `Spec_Att_Attrib`).
+
+| Card field | Source | Note |
+|---|---|---|
+| Race (0–14 mortal, 15–20 realm) + hero flag | `+0x0B` + `_UNITS[]` hero slot | MoM has no Fantastic flag; realm numbering matches CoM2's |
+| Max figures | `+0x13` | living figures derive from damage |
+| Melee | `+0x00` | |
+| Ranged/thrown/breath/gaze strength | `+0x01` | one shared slot — faithful here, unlike CoM2 |
+| Ranged/thrown/breath/gaze type | `+0x02` | dropdown; 103/104/105 select the gaze consumers |
+| Base To Hit | `+0x04` | stored in +10-percentage-point steps |
+| Defense | `+0x05` | |
+| Resistance | `+0x06` | |
+| HP per figure | `+0x10` | |
+| Special attribute value | `+0x15` | **one magnitude**, shared by both gazes, Stoning/Death Touch, Life Steal, poison strength, Holy Bonus and Resistance to All; sign is cosmetic (`0:0x2c8` is `abs()`, negated at use) |
+
+Three consequences the card has to carry, not just display:
+- **No base To Block.** The DOS engines have no per-unit block chance; it is zeroed at `0x8EB16`
+  and again at `0x8EE5B`. This is a real MoM/CoM2 asymmetry — see **F21**.
+- **The poison split is a rule.** At `0x8EC27` the engine copies `+0x15` into `Poison_Strength`
+  (+0x42, which has no roster column and is initialised to 0 at `0x8EC11`) and then zeroes
+  `+0x15` **unless `ranged_type == 104`**. A poison unit that is not a Multi Gaze therefore has
+  every other consumer at 0. Chaos Spawn is the only unit in the roster that needs the exemption.
+- **No separate gaze-strength or doom-damage input.** With the type dropdown set to a gaze, the
+  strength field *is* the gaze strength, and for 104 it is also the doom damage. This is what
+  retires `gazeRanged` and `doomGaze` as inputs, and with them the `||` in `gazeAttackFires`.
+
+**Two roster fields are excluded by decision:** ammunition (**M7**) and regeneration (**M8**).
+Both engines define both, and both are between-turn state that a single-engagement resolver has
+nothing to deplete or accrue.
+
+**CoM2 / Warlord — not yet settled.** Four rows differ: `ToDefend` is genuine per-unit data,
+`AttackFlagsT` gives each touch effect its own value, the three gaze stats are independent, and
+**R3**'s four attack channels replace the single slot. Settle it after R3 lands. Three `unitT`
+fields are already excluded: `maxammo`/`ammo` (**M7**), `regeneration` (**M8**) and
+`savemodifier` (**Q15**).
+
+### Where a roster value lives — decided 2026-07-31
+
+**Every value a roster can define belongs in the stat block, in both versions. The abilities grid
+keeps flags only.** Today eleven roster-defined numbers are `num`/`numcheck` controls inside the
+abilities grid — `stoningGaze`, `deathGaze`, `doomGaze`, `stoningTouch`, `deathTouch`,
+`lifeSteal`, `poison`, `destruction`, `exorcise`, `holyBonus`, `resistanceToAll` — which makes a
+unit's definition span two places and hides which numbers a roster can actually set. (A twelfth,
+`gazeRanged`, retires with this item.)
+
+A control moves **whole** — presence and value together. Splitting a `numcheck` into a checkbox
+in the grid and a number in the stat block would put one engine concept in two places, which is
+what this item exists to end.
+
+- **CoM2/Warlord: presence rides on the value, so no companion checkbox is needed.**
+  `AttackFlagsT` does carry a boolean beside each integer (`stoningtouch` + `stoningtouchvalue`,
+  and so on), but the script-visible API treats the value as self-describing — `MASTER.CAS`
+  documents `100` as "ability not enabled" for the whole `AF…` block, and the three gaze stats
+  use the same convention (`100` for stoning/death, `> 0` for Doom). `ResistToAll` and
+  `HolyBonus` are plain `shortint` unit fields with no boolean at all.
+- **MoM keeps flags in the grid, because it has one value and many flags.** The single special
+  attribute value is a stat-block field; which consumers claim it is decided by the
+  `attack_attributes` bits, the `Attribs_2` bits and the ranged-type dropdown — all of which stay
+  where they are. This is unavoidable, not a style difference: the byte is a union.
+
+So the rule is the same in both versions — no roster-defined *number* lives in the abilities grid
+— while the number of stat-block fields differs, eleven against one.
+
+**Control types (decided 2026-07-31): keep the existing split, relocate only.** Whether a value
+needs a presence control is decided by whether **0 is a legal value**, and the rosters settle it:
+
+| Control | CoM2/Warlord fields | Why |
+|---|---|---|
+| `numcheck` — checkbox + number | Stoning Gaze, Death Gaze, Stoning Touch, Death Touch, Life Steal, Exorcise, Destruction | 0 is a legal save modifier. Proof in every engine: MoM's Necromancer carries the Life Steal flag with `Spec_Att_Attrib` = 0; CoM2's Magician ships `Destruction=0`; Warlord's Sirens ship `Stoning Touch=0` |
+| `num` — 0 means absent | Doom Gaze, Poison, Holy Bonus, Resistance to All | Doom Gaze is damage, gated `> 0` rather than `!= 100`; poison is a roll count; the other two are magnitudes |
+
+This is the split `data.js` already has, so no new control kind is introduced.
+
+**It also settles the sentinel question** raised in this item's bullet list above: the checkbox
+*is* the engine's `100`, expressed in the UI. Keep the nullable representation on the card and
+translate to and from `100` at the roster boundary, with the translation in one place.
+
+**MoM's single field takes no checkbox.** Presence is not a property of the value there — it is
+the `attack_attributes` and `Attribs_2` flags, which is exactly how the engine expresses the
+Necromancer's Life Steal at modifier 0.
+
+**One shared key, and it is correct for MoM.** `holyBonus` and `resistanceToAll` each have *two*
+definitions sharing one `calcKey` — the unit's own roster value in `ABILITY_DEFS` and the
+received aura in `ENCHANTMENT_DEFS` (`data.js:67-68`, `:119-120`). `abilityUiDefs` keeps the DOM
+ids apart via `SHARED_ABILITY_KEYS`, and `mergedAbilityValue` then combines them with `Math.max`.
+That looked like a collision to settle; for the DOS engines it is **right**, and the move must
+preserve it rather than split the two controls into independent contributors.
+
+The MoM mechanism is decoded in **MoM analysis**, *Holy Bonus and Resistance to All are
+per-player maxima* (2026-07-31), which is its home; in short, the engine takes the maximum over a
+side's providers into a per-player array and applies the winner once, so `max(own, received)`
+matches for every case constructible on the card. It also means **receiving costs a unit
+nothing** — only *providing* contends for the shared value byte, which is why the two never
+collide on one unit.
+
+**Still open for CoM2/Warlord.** Its equivalent is the aura pass (type 1 Holy Bonus, type 3
+Prayermaster, which Resistance to All feeds), fed by `@Units@BuildAuraTable`, which has not been
+read. Competing sources *within* an aura are already documented as resolving by maximum
+(**CoM2 analysis**, *The aura pass*), so the same answer is likely — but it is not verified, and
+`unitT` carrying `ResistToAll`/`HolyBonus` as unit fields leaves room for the own-value and the
+aura to combine differently there.
+
+---
+
+## 2e. R5 — reconstruct the scoped `Caster.exe` source flow
+
+**Status: open. Priority 1. Cost: large.**
+
+Produce an address-backed, Pascal-like reconstruction intended to imitate the executable's
+control and data flow closely enough that a future agent can understand the relevant mechanics
+without re-deriving each routine from disassembly. This is a reconstruction, not a claim to have
+recovered the original source.
+
+Keep TD32 procedure, parameter and local names as original names. Give inferred structure fields,
+globals and semantic aliases stable names, visibly distinguish those from original symbols, and
+mark reconstructed blocks `exact`, `inferred` or `unresolved`. Preserve virtual-address anchors,
+routine extents, important call targets and the executable hash so every non-obvious statement
+can be checked against the binary. Do not silently simplify odd or apparently buggy control flow.
+The indexed reconstruction lives in **Caster reconstruction**; mechanic-level conclusions remain
+in **CoM2 analysis**.
+
+| ID | Subtask | Status |
+|---|---|---|
+| R5.1 | Reconstruct the unit-enchantment and unit-ability calculation flow, including the relevant portions of `@Units@RecalculateUnits`, its named helpers, and the executable-side boundaries around the two script hooks. | **in progress** — region `a` and both script-hook boundaries reconstructed |
+| R5.2 | Reconstruct combat damage resolution, beginning with `@Combat@ApplyAttack` and following the in-scope attack, defence, resistance, damage and rider routines needed to represent the complete damage flow. | open |
+| R5.G | GPT review of the complete R5 reconstruction, with findings recorded and resolved or explicitly accepted. | blocked on R5.1–R5.2 |
+| R5.C | Claude review of the complete R5 reconstruction, with findings recorded and resolved or explicitly accepted. | blocked on R5.1–R5.2 |
+
+**Completion gate.** R5 may be marked complete only after R5.1 and R5.2 are done and both R5.G
+and R5.C have completed separate review passes. Any material reconstruction change made after a
+review requires that reviewer to re-check the affected portion before the parent can close.
+
+## 2f. R6 — reconstruct the scoped DOS executable source flows
+
+**Status: open. Priority 2. Cost: large.**
+
+Produce address-backed **C++-based** reconstructions intended to imitate the executable control
+and data flow for **MoM 1.31**, **MoM CP 1.60** and **CoM 1**, covering the same two mechanic
+areas as R5. Use C++ syntax and organization consistent with the executable family's Borland C++
+origin; this is reconstructed source, not a claim to recover the original source text. Preserve
+build/hash identity, segment and file-offset anchors, recovered control flow, calls, structure
+offsets and cross-build differences. Clearly distinguish names supported by the binaries from
+names borrowed from ReMoM or assigned during reconstruction, and mark blocks `exact`, `inferred`
+or `unresolved`. The indexed reconstructions live in **DOS reconstruction**; mechanic-level
+findings remain in **MoM analysis**.
+
+| ID | Build and subsystem | Status |
+|---|---|---|
+| R6.1 | MoM 1.31 — unit enchantments and abilities | open |
+| R6.2 | MoM 1.31 — combat damage resolution | open |
+| R6.3 | MoM CP 1.60 — unit enchantments and abilities | open |
+| R6.4 | MoM CP 1.60 — combat damage resolution | open |
+| R6.5 | CoM 1 — unit enchantments and abilities | open |
+| R6.6 | CoM 1 — combat damage resolution | open |
+| R6.G | GPT review of the complete R6 reconstruction, including its cross-build differences, with findings recorded and resolved or explicitly accepted. | blocked on R6.1–R6.6 |
+| R6.C | Claude review of the complete R6 reconstruction, including its cross-build differences, with findings recorded and resolved or explicitly accepted. | blocked on R6.1–R6.6 |
+
+**Completion gate.** R6 may be marked complete only after R6.1–R6.6 are done and both R6.G and
+R6.C have completed separate review passes. Any material reconstruction change made after a
+review requires that reviewer to re-check the affected portion before the parent can close.
 
 ---
 
@@ -151,10 +484,24 @@ IDs are not reused.)*
 | ID | Item | Status | Cost | Evidence |
 |---|---|---|---|---|
 | F3 | **Golem's intrinsic Resist Elements is missing.** The engine writes it before either stat hook, for CoM2 and Warlord alike; neither `UNITS.INI` carries it, so the generated rosters omit it and the defence is never granted. Fix in the generators — see [Appendix B](#f3--golems-intrinsic-resist-elements). | open | small | CoM2 analysis, *Region `a`* |
-| F4 | **The Chosen is Fantastic in the engine, a plain hero in the calculator.** `ui.js:2448` types anything in the Heroes category as `hero`, so Nature Conjunction, Survival Instinct, Land Link's extra package, the Soul Linker aura, and exclusion from Good Moon / Bad Moon / Leadership / Misfortune all resolve the wrong way. Needs a hard-coded unit-type rule, same shape as F3. | open | medium | queue D26; CoM2 analysis, *Unit enchantment effects* |
-| F5 | **Two-stage To Hit clamp may be flattened.** The engine clamps common To Hit to 10–100, *then* adjusts each channel so `common + channel` also lands in 10–100. Clamping a flattened value once is not equivalent. Audit needed — see [Appendix B](#f5--audit-the-two-stage-to-hit-clamp). | open | medium | CoM2 analysis, *Region `e`* |
+| F4 | **The Chosen is Fantastic in the engine, a plain hero in the calculator.** `predefinedUnitType` (`ui.js`) types anything in the Heroes category as `hero`, so Nature Conjunction, Survival Instinct, Land Link's extra package, the Soul Linker aura, and exclusion from Good Moon / Bad Moon / Leadership / Misfortune all resolve the wrong way. Needs a hard-coded unit-type rule, same shape as F3. | open | medium | queue D26; CoM2 analysis, *Unit enchantment effects* |
+| F5 | **To Hit/To Block writes are still flattened outside the transform sequence, including the two-stage clamp.** The engine retains common and attack-specific channels, clamps common To Hit to 10–100, then adjusts each `common + channel` sum. `deriveUnitStats` instead combines level, weapon, Holy Weapon, Ballistics, Radio, True Sight, Hurricane, Vertigo, Plague, Great Unbinding and other writes after `runStatSteps`. See [Appendix B](#f5--audit-the-two-stage-to-hit-clamp). | open | large | CoM2 analysis, *Region `e`* and *Calculator sequential-transform audit* |
 | F6 | **Chaos Channels Fire Breath coexistence is unsettled.** The recalculation arithmetic is `firebreath += 4`, but whether the flag can land on a unit that already has Fire Breath is not established. CoM2 and Warlord are treated differently today, including an artificial CoM2 preset expecting replacement — see [Appendix B](#f6--chaos-channels-fire-breath-coexistence). | open | medium | CoM2 analysis, *Region `a`*; CoM2 tables, *Chaos Channels* |
 | F7 | **Supernatural minimum damage is one too high for a third of hit counts.** `MODDING.INI` gives `SupernaturalStarts=0` / `SupernaturalRatio=34` in both versions — `floor(hits * 34 / 100)`, truncating per the table's own worked example. `combat.js` uses `Math.round(hits / 3)`, which is one too high whenever `hits ≡ 2 (mod 3)`. Affects CoM2 and Warlord. **Deferred by decision 2026-07-29**; revisit later. Fixing it means changing the formula and re-checking every Supernatural preset's expected value. | open, deferred | small | CoM2 tables, *Supernatural minimum damage* |
+| ~~F8~~ | ~~Blaze of Glory kept enchantment-granted Armor instead of zeroing Defense.~~ `UnitCalc.CAS:1493-1497` reads current Defense, adds it to melee, then subtracts the same value from Defense. The step now writes `u.def = 0`; the last hand-built stat sum and its helper are gone. | **closed 2026-07-29** | small | discrepancies, §13 |
+| F9 | **Marionette's Channeler branch is not modelled, including its Xenoveterinary eligibility.** `UnitCalcPre.CAS:82-115` makes hero 48 Fantastic before Xenoveterinary runs, then derives Channeler-skill stat bonuses and a realm-dependent spell package. The calculator has no Marionette/Channeler inputs, so its base-fantastic Xenoveterinary gate cannot express this one live-`FANTASTIC(U)` case. | open | medium | discrepancies, *Script checks with no calculator discrepancy* |
+| ~~F11~~ | ~~Psycho Force and Pneuma Field read Resistance after the region-`e` aura pass.~~ Both are region `d` (`UnitCalc.CAS:1413-1417`, `:1419-1425`) and read `GETSTAT(U,SResist,0)` there, but the calculator read the finished record — so a Holy Bonus or Resistance to All aura, moved to `e` by D23, inflated both. They are now steps in `d`; `lifeSteal` joined the record to carry Pneuma Field's `AFLifeSteal` write, and `%I`'s truncation replaced `Math.floor`. | **closed 2026-07-29** | small | discrepancies; `UnitCalc.CAS:1413-1425` |
+| F12 | **Destiny's doubling precedes every training-time permanent write.** Destiny is a one-shot permanent transformation cast on an already-trained unit, so the engine doubles a base record that *already* holds Artificer, Armorclad, Ludus Agoge, Energy Cannon's `+50%` and the rest of region `base` (`CreateUnit.CAS` index-1 writes). The calculator doubles the roster base *first*, at `stats.js:476-494`, so every additive `base` write escapes the doubling — Artificer +1 ranged on a base-5 unit gives 11 where the engine gives 12, and Energy Cannon gives 15 against the engine's 14. Blocked on **R3**, the record's single `rtb` slot, not on the position — see [Appendix B](#f12--destinys-position-among-the-permanent-writes). | open, blocked on R3 | medium | CoM2 analysis, *Experience, Destiny and the named stat helpers*; `CreateUnit.CAS:695,703` |
+| ~~F10~~ | ~~Darkness, True Light and Eternal Night were merged into one `darkLight` step.~~ Their compiled/script writes have distinct positions; CoM 1 Eternal Night must follow Supreme Light and Tactician. They are now separate atomic spell steps. | **closed 2026-07-29** | small | CoM2 analysis, *Combat globals*; MoM analysis, *Warp Creature runs early* |
+| F13 | **Upgraded Explosive's Fire Breath doubling is at the end of region `b`, but the script runs it at lines 1074–1078.** Ballistics, Xenopsychology, Radio, True Light, Plague, Lucky Star and the city tail all follow it. Move both Explosive writes to their exact early-hook position; add a Fire Breath coexistence test where a later `b` bonus must escape the doubling. | open | small | CoM2 analysis, *Warlord regions `b` and `d`* and *Calculator sequential-transform audit* |
+| F14 | **Misfortune/Mislead is in `c` instead of aura type 10 in `e`.** The engine applies it after `UnitCalc` and the initial clamps. Move its atomic melee/defense/resistance/conventional-ranged penalty to the aura pass, preserving the non-fantastic and base-ranged gates; test it with Warp and Blaze of Glory. | open | small | CoM2 analysis, *The aura pass* and *Calculator sequential-transform audit* |
+| F15 | **Holy Armor's `Defense > 5` read sees later region-`c` effects.** `...abilByPhase.c` currently places High Prayer, Survival Instinct, Inner Power, Black Prayer, Mind Storm and other later blocks before Holy Armor. Rebuild region `c` in address order and add threshold tests where a later +Defense or −Defense effect would switch the branch in the current calculator. | open | medium | CoM2 analysis, *Unit enchantment effects* and *Calculator sequential-transform audit* |
+| F16 | **Charm of Life is computed from base HP rather than live HP at +0x08AE5.** Its step must read current `u.hp` after level, item, Endurance and Lionheart HP writes. Cover at least one case where those earlier additions change the 25% result. | open | small | CoM2 analysis, *Global enchantments and astronomical events* and *Calculator sequential-transform audit* |
+| F17 | **Warlord Vampirism uses the wrong formula as well as the wrong position.** The script, after Colossal Strength, adds `%I(Thrown/2 + (Fire Breath + Lightning Breath)/2)` to melee and then sets every present source channel to 1. The calculator runs pre-sequence and transfers `strength − 1`. Move it under **R3**'s widened record and use the script arithmetic. | open | medium | `UnitCalc.CAS:1245-1258`; CoM2 analysis, *Warlord regions `b` and `d`* and *Calculator sequential-transform audit* |
+| F18 | **The shared `rtb` projection over-applies several effects.** Mind Storm reaches Breath; Tactician reaches Thrown/Breath; Warlord True Light reaches secondary attacks and gazes; node aura reaches Doom Gaze; combat-cast Warlord Flame Blade's Fire Breath point is booked to `c` instead of `d`. Split these writes onto **R3**'s engine-shaped fields and add one channel-exclusion/order test per effect; the Doom Gaze half also touches **R4**. | open | medium | CoM2 analysis, *Calculator-facing discrepancy*, *The aura pass* and *Calculator sequential-transform audit* |
+| F19 | **Several calculator-relevant compiled effects have no transform/control.** Inventory Dark Force, Guardian Spirit/Heavenly Light, Bad Moon, Good Moon, Nature Conjunction, Spell Ward, Guiding Beacon, Prayermaster, Divine Barrier, Soul Linker, Leadership and the item-loop numeric stat/To-Hit powers. Decide UI representation, then add each in its mapped position; movement/ammo/healing-only blocks remain out of scope. | open | large | CoM2 analysis, *Calculator sequential-transform audit* |
+| F20 | **The `b`/`c`/`d` step lists are not source-order exhaustive and atomic.** After F12–F19, walk every represented calculator-relevant effect against the region maps and CAS line order, eliminate broad phase spreads whose emission order disagrees, and keep one engine block as one step (Rust is the current concrete split-block violation). Add a trace-order assertion covering every represented CoM2/Warlord transform. | open | medium | CoM2 analysis, *Phase index*, *Warlord regions `b` and `d`*, *Region `c`* and *Calculator sequential-transform audit* |
+| F21 | **A roster unit's non-default block chance never reaches the card.** Both CoM2 generators emit `to_block` from `UNITS.INI`'s `ToDefend` (`generate_com2_units_json.py:212`, `generate_warlord_units_json.py:203`), but nothing in `Calculator/` reads it — the only consumers are `tools/generate_com2_unit_roster.py` and `tools/generate_mom_com2_unit_comparison.py`. 29 units therefore load at the default 30%: CoM2 Zombies (20), and in Warlord all 15 Goblin units (20), War Monk (Taki), Minotaurs, Golem, Stag Beetle, Dragon Turtle, Colossus, Lesser/Great Gaia Lord, Sea Lord, Arch Demon Lord, Xuanyuan War Monks and Xuanyuan Immortals (40), and Seraph (50). Wire it beside `to_hit` in `applyPredefinedUnit` and `buildMatrixUnitStats`, and settle the encoding in the same change: the schema stores `to_block` as an **absolute** chance where `to_hit` is a **delta above 30**, so the card write needs `to_block − 30` and the two fields should agree on one convention. MoM and CoM 1 are unaffected — the DOS engines have no per-unit block chance at all, the constructor zeroing `toblock` (+0x26) at `0x8EE5B`, which is why their rosters carry no such field. | open | small | generators vs `Calculator/ui.js`; MoM analysis, *Battle-unit constructor* |
 
 ---
 
@@ -219,8 +566,8 @@ reused.)*
 
 | ID | Item | Status | Cost |
 |---|---|---|---|
-| S1 | **Magitek Science, Xenoveterinary and Corruption radiation have never been checked against the script.** Recorded so the gap is not mistaken for a clean bill of health; what each is currently believed to do is in the calculator, not in a doc. | open | free |
-| S2 | **Magitek Engine — movement.** The one still-open entry in **discrepancies** (§4); helptext is the outlier. | open | free |
+| ~~S1~~ | ~~Check Magitek Science, Xenoveterinary and Corruption radiation against the script.~~ Magitek Science exposed a Battle Armor eligibility defect, now fixed; the other two matched or were out of scope. Evidence in **discrepancies** (§12 and *Script checks with no calculator discrepancy*). | **closed 2026-07-29** | free |
+| ~~S2~~ | ~~Magitek Engine — movement.~~ Resolved in favour of the script: +2 overland / +2 combat movement. Movement is out of calculator scope; the combat-stat effects were already correct. Evidence in **discrepancies** (§4). | **closed 2026-07-29** | free |
 
 ---
 
@@ -234,9 +581,11 @@ separate what we have decided to live with from what is deferred work.
 | M1 | Life Steal's *displayed distribution* is an approximation (phase count × single-firing). The displayed expected value is exact. | accepted |
 | M2 | Damage is capped at the target's remaining HP; overkill is not tracked. | accepted |
 | M3 | **Destruction is modelled only for CoM2/Warlord.** The MoM/CP/CoM 1 touch dispatcher also identifies Destruction as a Chaos effect, so Elemental Armor and Resist Elements should protect against it there. That path is unimplemented. | open |
-| M4 | **`fbRtbMod` is not cleanly attributable** — it merges Flame Blade / Metal Fires (phase c), Warlord's Fiery Blade (c) and Fiery Fury (b) through a non-additive `Math.max`, booked wholly to c. Separating them means restructuring how they supersede → **R1**. | open, folded into R1 |
-| M5 | **One ranged/thrown/breath slot.** Bombs&Grenades can add to an existing Thrown attack but cannot display its granted Thrown alongside an independent ranged or breath attack. | open, structural |
+| ~~M4~~ | ~~`fbRtbMod` is not cleanly attributable~~ | **closed 2026-07-29 at R1 stage 9** — two steps, Fiery Fury in `b` and the blades' excess in `c`; no number changed |
+| M5 | **One ranged/thrown/breath slot.** Bombs&Grenades can add to an existing Thrown attack but cannot display its granted Thrown alongside an independent ranged or breath attack. Now owned by **R3**, which replaces the slot with the engine's four channels; 29 Warlord roster units are affected today. | open, structural — **R3** |
 | M6 | **Lava Smelter records one mineral-pair grant at a time.** The scripts evaluate all five pairs independently, so a unit can carry several simultaneous grants. | open |
+| M7 | **Ammunition is not modelled, in any version.** Both engines carry a shot count — MoM `ammo` (+0x03, roster `Shots`: 8 for archers, 10 for the Catapult), CoM2 `maxammo`/`ammo` (`SMaxAmmo`=55/`SAmmo`=56, `UNITS.INI` `Ammo`) — and neither reaches the calculator. Decided 2026-07-31 while settling the engine-shaped card field sets (**R4**): the calculator resolves one engagement, not a multi-turn battle, so a shot budget has nothing to deplete. **Ammo is therefore excluded from the unit card in every version.** Known consequence: a many-round ranged scenario can overstate an ammo-limited unit's output. | accepted |
+| M8 | **Regeneration is not modelled, in any version.** Both engines define it per unit and shape it differently — MoM as an `Abilities` bit (`0x2000`, boolean; all 8 MoM roster units carry `Regeneration=1`), CoM2 as a magnitude (`regeneration : shortint`, `SRegeneration`=41, `−1` = absent, roster values up to 7). All four rosters carry the token, but no `ABILITY_DEFS` entry matches it, so `abilitiesFromTokens` drops it at load. Confirmed intentional 2026-07-31, on the same ground as **M7**: it is between-turn healing and the calculator resolves a single engagement. Excluded from the card in every version. Known consequence: a regenerating unit's survivability across a long battle is not represented. | accepted |
 
 ---
 
@@ -252,13 +601,14 @@ From **TODO**, which stays their home. `asked` = also on the list put to the mai
 | Q4 | Does Chaos Spawn's poison touch trigger on doom gaze, melee, or both (i.e. twice per sequence)? | open, asked | B7, D18 |
 | Q5 | "Weird defense behavior on page 25" — needs the source and page identified before it can be worked. | open, underspecified | — |
 | Q6 | CoM's High Prayer text says +3 attack; MoM and CoM2 say +2, and the CoM manual says it did not change it. Assumed +2 everywhere. | open | — |
-| Q7 | Supreme Light's `defense += resistance/3` reads a **live** resistance in CoM 1 — after Warp Resist and Darkness, before Tactician. The calculator uses a base-ish one. Now positioned by the CoM2 read as well. | open, folded into R1 | D24, R1 stage 4 |
+| ~~Q7~~ | ~~Supreme Light's `defense += resistance/3` reads a **live** resistance~~ | **closed 2026-07-29 at R1 stage 10** — the step reads `u.res` at its own position in each engine | D24 |
 | Q8 | Manuals say Wraiths have Life Steal −4; observed behaviour suggests −3. | open | B3 |
-| Q9 | With Blazing Eyes, can a unit have Doom Gaze *and* ranged attacks at once? Settled for the DOS engine (one shared slot); CoM2 is a different engine. | open, asked | D19 |
+| Q9 | With Blazing Eyes, can a unit have Doom Gaze *and* ranged attacks at once? Settled for the DOS engine (one shared slot); CoM2 is a different engine — and its gaze fields are separate from `ranged` (**CoM2 analysis**, *Gaze attacks*), so **R4** is expected to settle the CoM2 half. | open, asked | D19, R4 |
 | Q10 | Does Destiny remove the buff from magical / mithril / adamantium weapons? | open, asked | D19 |
 | Q11 | Does Animate Dead give +ranged attack? | open | queue C1 |
 | Q12 | Does "ranged" include thrown and breath? Answered for MoM 1.31 to-hit (**no**); open for other versions and for non-to-hit effects. | open, asked | — |
 | Q13 | CoM2 helptext says Land Linking gives +2 breath; the CoM2 and CoM 1 manuals do not mention breath. | open, asked | D12 |
+| Q15 | **Does anything use `unitT.savemodifier`?** Declared at `Typedec.pas:181`, but no `UNITS.INI` key in either roster, no stat ID in `MASTER.CAS`, and no reference in any `.CAS` file in either script set. Recorded as apparently unused and **excluded from R4's CoM2 card field set** on that basis; revisit if a `Caster.exe` read turns up. Negative result about the data and script layers only — a computed-pointer access in the binary would not have shown up. | open | CoM2 analysis, *unitT field identities*; R4 |
 | Q14 | **What does the To Defend cap do?** `MODDING.INI` carries `ToDefendCap=15` and `ToDefendCappedValue=30` in both versions — *"the amount of defense above which To Defend bonus loses effectiveness"* — and the calculator models no such cap anywhere. Most natural reading: defence beyond 15 rolls at a flat 30% rather than the unit's boosted To Block, which would mean units with high defence *and* a To Block bonus are over-modelled today. Reachable, since defence is free-form and several abilities add To Block. **Deferred by decision 2026-07-29.** Settling the semantics needs `Caster.exe` — no other source mentions it. | open, deferred | CoM2 tables, *To Defend cap* |
 
 ---
@@ -286,8 +636,7 @@ commutes. Every non-additive effect therefore needs a second mechanism, and ther
 them today:
 
 - **Written back into a bucket** — when the effect reduces to an additive delta, computed from a
-  named subtotal: Colossal Strength (`atkPhases.d`, `rtbPhases.d`), Xenoveterinary
-  (`hpPhases.b`), Upgraded Explosive's fire-breath doubling (`rtbPhases.b`).
+  named subtotal: Colossal Strength, Xenoveterinary, Upgraded Explosive's fire-breath doubling.
 - **Applied to the finished total in an ad-hoc tail** — Berserk `×2`, Blaze of Glory, the three
   Warps, Beat of Swiftness `×0.9`, Hierophany `×0.5`, Shatter `=1` (melee and rtb).
 
@@ -298,12 +647,12 @@ rewrite, and it does not generalise — a second such finding would need a secon
 A fourth class is not addressed by any of the above: effects that read a **different** stat than
 they write, each currently its own hand-rolled reconstruction.
 
-| Effect | Reads | Writes | Today |
-|---|---|---|---|
-| Supreme Light | live resistance | defence | [`stats.js:762`](./stats.js#L762) rebuilds a partial res sum by hand |
-| Blaze of Glory | current defence | melee, defence | [`stats.js:993-997`](./stats.js#L993-L997) filters defence contributions |
-| Holy Armor | `defBase` | defence *or* To Block | [`stats.js:980-987`](./stats.js#L980-L987) applied after `defBase` |
-| Psycho Force / Pneuma Field | current resistance | damage %, Life Steal | [`stats.js:1030-1040`](./stats.js#L1030-L1040) |
+| Effect | Reads | Writes | Before R1 | After stages 1–8 |
+|---|---|---|---|---|
+| Supreme Light | live resistance | defence | rebuilt a partial res sum by hand | one step in region `e`, reading `u.res` |
+| Blaze of Glory | current defence | melee, defence | filtered defence contributions into a melee bonus | one step in `d`: `u.atk += u.def`, then `u.def = 0` (**F8 closed**) |
+| Holy Armor | `defBase` | defence *or* To Block | applied after a named `defBase` subtotal | one step reading `u.def` at its own position |
+| Psycho Force / Pneuma Field | current resistance | damage %, Life Steal | reconstructed "resistance after Warp Resist" by hand | reads the record after the sequence |
 
 Supreme Light is the clearest failure: the engine reads resistance *after* Warp Resist and
 Darkness and *before* Tactician, and the hand-built sum has to be extended by hand every time a
@@ -339,13 +688,13 @@ All of it in **CoM2 analysis**, *Unit stat recalculation* and *Resolution-time m
 are adjacent with nothing between them — the labels collapse to one sequence. The boundary only
 acquires consequences in CoM2/Warlord, where `b` sits between them and contains transforms
 (Xenoveterinary, Upgraded Explosive's doubling), so an effect misfiled as `a` when it is `c` gets
-wrongly scaled. That is **D25**, still open because it needs an *execution-order* check rather
-than the layout the region map provides.
+wrongly scaled. That was **D25**, closed at stage 10: `ApplyLevelBonus` runs between Destiny's
+transformation and Focus Magic, which is execution order rather than layout.
 
-The design must still let a step position be **provisional and marked as such**, the same
-discipline SPEC.md applies to phase attribution (*Stat derivation contract*, step 4) — MoM and
-CoM 1 are not mapped to this resolution, and D25 is open for CoM2. But provisional is now the
-exception rather than the rule.
+A step position may still be **provisional and marked as such**, the same discipline SPEC.md
+applies to phase attribution (*Stat derivation contract*, step 4) — MoM and CoM 1 are not mapped
+to this resolution. City Walls was subsequently located in `EffectiveDefense`; only MoM's
+`berserk` still rests on that provisional judgment.
 
 **The original sequencing argument is spent.** This appendix used to defer the effect-order sweep
 until after stage 10, reasoning that sweeping first would mean holding N results in a document
@@ -356,7 +705,7 @@ the sequence is the only thing that can absorb what has already been found, so i
 
 ### Staging
 
-Each stage ends with all three suites green: `node tools/node_unit_checks.js` (167),
+Each stage ends with all three suites green: `node tools/node_unit_checks.js` (177),
 in-browser `runTests()` (911), `npx playwright test` (32). See [CLAUDE.md](./CLAUDE.md),
 *Testing with Playwright* — `runTests()` in the browser is the only sanctioned way to evaluate
 presets.
@@ -365,35 +714,45 @@ presets.
 retired: there are exactly two CAS hook call sites and no third, the regions decompose into
 nameable per-effect blocks, and Warlord's `b`/`d` source order is mapped. Build from here.
 
-1. **Machinery alongside the buckets.** Step type, the mutable unit object and its permanent-base
-   companion, the runner, `halt`, and the optional per-step trace. Nothing migrated.
-2. **Equivalence harness.** Compute every stat both ways and throw on mismatch. The 911-preset
-   suite then proves equivalence rather than spot-checking it. Keep this in place through
-   stage 7 and delete it in stage 8. **Benchmark here, not later** — `deriveUnitStats` runs in
-   the matrix worker across many combinations, and a step runner allocates more than flat
-   arithmetic. This is the one risk the harness cannot catch.
-3. **Migrate `res`** — smallest surface, one transform (Warp Resist).
-4. **Migrate `def`** — adds the Holy Armor `> 5` threshold, Beat of Swiftness, Hierophany,
-   `blazeEnchantArmor`, and the first cross-stat read (Supreme Light, now that `res` is a step
-   list and can be read at a labelled position). **Closes Q7.**
-5. **Migrate `atk`** — Berserk, Blaze of Glory, Warp, Shatter, Colossal Strength.
-6. **Migrate `rtb`** — the hardest: Warp, Shatter, Colossal, and Upgraded Explosive's doubling,
-   which reads `base+a+b` and is gated on attack type.
-7. **Migrate `hp`** (Xenoveterinary), then fold in the two **gaze strengths** — they are the same
-   `.ranged` slot as `rtb` and are currently built by hand outside the phase objects.
-8. **Delete** the bucket objects, `warpLate`, `PRE_WARP_PHASES`, `preWarpTerm`/`postWarpTerm`,
-   `abilMods.preWarp`, and the equivalence harness. Rewrite SPEC.md's *Stat derivation contract*
-   and *Warp Creature ordering* around steps.
-9. **Convert `getAbilityStatModifiers`** to emit steps rather than summed buckets. Last, because
-   ~15 call sites read its flat totals, and because that function is where phase attribution
-   lives — it is the payoff, not the enabler. Revisit the Tactician phase and **M4** here.
-10. **Encode the mapped sequence.** Not a re-check of the handful of orderings already tested
+1. **Machinery alongside the buckets.** ✅ Step type, the mutable unit object and its
+   permanent-base companion, the runner, `halt`, and the optional per-step trace. Nothing
+   migrated. *(`ctx.base` is plumbed and tested but unused: the cross-stat reads all turned out
+   to be positional — the field simply is the wanted value where the step sits — so nothing has
+   needed the permanent record yet.)*
+2. **Equivalence harness.** ✅ Compute every stat both ways and throw on mismatch, so the
+   911-preset suite proves equivalence rather than spot-checking it. Deleted in stage 8.
+   Benchmarked here: see the performance note in §2.
+3. **Migrate `res`** ✅ — smallest surface, one transform (Warp Resist).
+4. **Migrate `def`** ✅ — adds the Holy Armor `> 5` threshold, Beat of Swiftness, Hierophany and
+   the surviving-armor sum. *Does not close Q7* — see §2. Supreme Light still reads the
+   hand-built partial resistance sum; it becomes a live read when stage 10 puts it in region `e`.
+5. **Migrate `atk`** ✅ — Berserk, Blaze of Glory, Warp, Shatter, Colossal Strength.
+6. **Migrate `rtb`** ✅ — Warp, Shatter, Colossal, and Upgraded Explosive's doubling.
+7. **Migrate `hp`** ✅ (Xenoveterinary), and the two **gaze strengths**, which are fields of the
+   same record: they share the engine's `.ranged` slot with `rtb`.
+8. **Delete** ✅ the bucket objects, `warpLate`, `PRE_WARP_PHASES`, `preWarpTerm`/`postWarpTerm`,
+   `abilMods.preWarp`, and the equivalence harness; SPEC.md's *Stat derivation contract* and
+   *Warp Creature ordering* rewritten around steps. `getAbilityStatModifiers`'s own `warpLate`
+   accumulator survives — it is the CoM 1 ordering evidence, and stage 9 owns it.
+
+   One reconstruction initially survived: **Blaze of Glory's surviving Armor**. Placing the
+   step at stage 10 exposed that the classification itself was wrong — the script zeroes
+   Defense outright. **F8 closed 2026-07-29** by making that direct write and deleting the
+   final hand-built stat sum.
+9. **Convert `getAbilityStatModifiers`** to emit steps rather than summed buckets. ✅ Done: it is
+   `getAbilityStatSteps`, and the flat-total object is gone — the To Hit / To Block totals are
+   now record fields the steps write. The remaining flat sums were subsequently eliminated:
+   Supreme Light became a live read at stage 10, and Blaze of Glory at F8.
+   **M4 closed here.** The Tactician phase question moved to stage 10 rather than closing, since
+   the CoM2 evidence for it (region `c`, +0x0C890) is a position, which is what stage 10 encodes.
+10. ✅ **Encode the mapped sequence.** Not a re-check of the handful of orderings already tested
     (`warpAttackBeforeSupremeLightCoM`, `warpAttackBeforeTacticianCoM`,
     `warpDefenseBeforeSupremeLightCoM`, `shatterBeforeSupremeLightCoM`,
     `warpDarknessOrderMoM`/`CoM`) — that is the small part. This is where the region maps in
-    **CoM2 analysis** become step positions, which is most of D21–D26's value and the payoff for
-    the whole refactor. Each finding lands as a step move plus a test.
-11. **Resolution sequence — `EffectiveDefense`.** Nine steps, keyed by attack type, replacing the
+    **CoM2 analysis** became step positions — most of D21–D26's value and the payoff for the
+    whole refactor. Each finding landed as a step move plus a preset; §2 has the table of what
+    moved. This is where `tail` and `warpLate` were deleted.
+11. **Resolution sequence — `EffectiveDefense`.** *(Now register item R2, priority 1.)* Nine steps, keyed by attack type, replacing the
     conditional chain in `computeDefenseProfile`. Evaluated per attack rather than eagerly for
     every attack type as today. Settles the shape half of **D1** and folds in **D2**'s Weapon
     Immunity ordering.
@@ -401,8 +760,8 @@ nameable per-effect blocks, and Warlord's `b`/`d` source order is mapped. Build 
     `:= 100` assignments precede all three additions, so a magic-immune unit with Bless or Resist
     Magic finishes *above* 100 — the calculator does not model that today.
 
-Migration stays stat-by-stat despite the single list: steps declare which stats they write, so
-the runner applies step results for migrated stats and buckets for the rest.
+Migration stayed stat-by-stat despite the single list: steps declare which stats they write, so
+the runner applied step results for migrated stats and buckets for the rest.
 
 Stages 11–12 follow the derivation migration rather than interleaving with it, so each half lands
 green on its own. They are a different axis — per *(defender, attacker, attack type)* rather than
@@ -443,7 +802,7 @@ runner and the list trivial, and makes the divergence visible instead of hidden 
 **4. Display stays on finished totals**, with both records available the red number is just
 `final − base`. **The runner keeps an optional per-step trace** — which step wrote which field,
 and by how much. Not needed for the red numbers; wanted for an ordered "what modified this unit"
-breakdown in a tooltip, and it is the natural home for **M4**'s `fbRtbMod` attribution. Fill it
+breakdown in a tooltip. It was the natural home for **M4**'s `fbRtbMod` attribution, which stage 9 instead resolved by splitting the term into two steps. Fill it
 only when asked.
 
 **5. Step order: migrate at today's positions, move them at stage 10.**
@@ -527,10 +886,49 @@ the Melee, Ranged, Thrown and shared Breath channel modifiers so `common + chann
 10–100. A single clamp of a flattened effective value is not generally equivalent: raw common
 0 plus Ranged +20 becomes 30 in the engine, while clamping the sum once gives 20.
 
-Audit `deriveUnitStats` effect by effect to determine whether every attainable CoM2/Warlord
-combination preserves the engine's order. If not, retain common To Hit and attack-specific
-channels separately through final normalization. Cover both lower- and upper-bound cases and
-all four attack channels; Fire and Lightning Breath share the Breath channel.
+The 2026-07-30 sequential-transform audit established that the answer is already **no**:
+`deriveUnitStats` combines most To-Hit/To-Block writes after `runStatSteps`, so their engine
+positions and the first clamp are absent from the record. Extend the record with common To Hit,
+To Block and the Melee/Ranged/Thrown/Breath-specific channels; emit level, item/weapon, Holy
+Weapon, Ballistics, Xenoveterinary, Radio, True Sight, Hurricane, Vertigo, Plague, Great
+Unbinding and every other mapped write at its engine position. Then perform the common clamp and
+four sum clamps at the head of `e`.
+
+Cover lower and upper bounds for all four attack channels, including raw common 0 plus Ranged
++20 becoming 30 rather than 20. Fire and Lightning Breath share the Breath channel. The trace
+must show the pre-clamp common/channel values and both normalization stages.
+
+### F12 — Destiny's position among the permanent writes
+
+The position is settled: Destiny doubles the accumulated region-`base` total, so its step belongs
+at the **end** of `base`, not ahead of it. What blocks the move is the pre-sequence chain in
+`stats.js:476-579`, whose writes a doubling step at the end of `base` would take in — some
+rightly, some not:
+
+| Pre-sequence write | Position | Doubled by Destiny? |
+|---|---|---|
+| Chaos Channels fire breath `+= 4` | `a`, `+0x005C8`–`+0x00688`, exact | **yes** — `a` precedes Destiny at `+0x00A62` |
+| Lightning Blade `= 1` | **not located** in any `.CAS` | unknown |
+| Focus Magic conversion (ranged type 34, strength `max(…, 3)`) | `c` `+0x00D3F`; Warlord `d` `UnitCalc.CAS:515` | no |
+| Vampirism | `d` — `UnitCalc.CAS:1248-1258` | no |
+| Shadow Strike | `d` — `UnitCalc.CAS:1265-1266` | no |
+
+**The real blocker is the record's single `rtb` slot, not the positions.** `rangedType` and
+`thrownType` are not engine state: `MASTER.CAS` gives five separate attack-strength fields
+(`SAttack`=12, `SRanged`=14, `SFireBreath`=36, `SLightningBreath`=37, `SThrown`=40 — record
+offsets `+0x2C`/`+0x30`/`+0x34` for the last three) and exactly one type field,
+`SRangedType`=27. The two type strings are the calculator's projection of which of three fields
+is non-zero onto one slot. Vampirism reads all three separately and writes four fields with no
+type involved; Shadow Strike is `SThrown += 1 + %I(SAttack/3)`. And where a type write does
+exist — Focus Magic's ranged type 34, Energy Cannon's 40 — the engine writes type and strength
+in one block, so splitting them across the sequence boundary is the shredding SPEC's *one
+sequence, one record* rule exists to prevent.
+
+So F12 is sequenced behind **R3**, which widens the record to the engine's own fields. With those,
+Destiny is a one-line end-of-`base` step doubling exactly what *CoM2 analysis* says it doubles, and
+the other four become ordinary atomic steps at their positions; only Lightning Blade still needs
+locating. The Shadow Strike compromise at `stats.js:547` ("the single-rtb model can't hold a second
+attack") dissolves with it.
 
 ### F6 — Chaos Channels Fire Breath coexistence
 

@@ -1,7 +1,7 @@
 # TODO — open mechanic questions
 
 The questions themselves live here. **Tracking lives in `Calculator/BACKLOG.md`**, §6 and §7,
-which give each one an ID (Q1–Q13, X1–X6), a status, and links to any verification-queue entry
+which give each one an ID (Q1–Q15, X1–X6), a status, and links to any verification-queue entry
 that would answer it. Add a question here first, then a row there.
 
 ## Resolved
@@ -14,6 +14,14 @@ that would answer it. Add a question here first, then a row there.
   improves thrown accuracy) is wrong. To-hit only — an axe's *attack strength* does reach thrown.
 
 ## Open Questions
+
+- **Does anything use `unitT.savemodifier`?** `Typedec.pas:181` declares it on the unit record,
+  but it has no `UNITS.INI` key in either roster, no stat ID in `MASTER.CAS`, and no reference in
+  any `.CAS` file in either script set (searched 2026-07-31). Recorded as apparently unused in
+  `Caster binary/CoM2 binary analysis.md`, and excluded from the calculator's CoM2 card field set on that
+  basis. What would settle it: a `Caster.exe` read of record `+?` for this field — which the
+  direct-displacement scans cannot see if the engine reaches it through the computed-pointer
+  layer. Low priority; the cost of being wrong is one missing input, not a wrong number.
 
 - **Troll Shaman/Magician cost and Magician attack discrepancy**: Game data shows Troll Shamans cost 80 (manual: 50), Magicians cost 180 (manual: 120), and Magicians have Melee 4 (manual: 3). The cost increases may reflect the high-HP / Regeneration premium not documented in the manual. The +1 Melee on Magicians is unexplained — verify whether Trolls have an undocumented +1 Melee modifier on top of the +2 already listed, or whether the manual value is simply wrong.
 

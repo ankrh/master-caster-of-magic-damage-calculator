@@ -23,6 +23,7 @@ function loadCalculatorContext() {
     'Calculator/units_warlord.js',
     'Calculator/data.js',
     'Calculator/engine.js',
+    'Calculator/steps.js',
     'Calculator/combat.js',
     'Calculator/stats.js',
   ].forEach(file => {
@@ -30,6 +31,13 @@ function loadCalculatorContext() {
     vm.runInContext(fs.readFileSync(filePath, 'utf8'), context, { filename: file });
   });
   return context;
+}
+
+// `const`/`let` at the top level of a script are global *lexical* bindings, not properties
+// of the context object — later scripts see them, but `ctx.NAME` does not. Reach those
+// (HALT, STEP_PHASES, …) through the context's own evaluator.
+function evalInContext(context, expression) {
+  return vm.runInContext(expression, context);
 }
 
 function assert(condition, message) {
@@ -165,6 +173,46 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(luckyStarTarget.res, 4, 'Enchanted unit gets the aura resistance plus Lucky resistance');
   assertClose(luckyStarTarget.toHitMelee, 0.4, 'Enchanted unit gets Lucky To-Hit');
   assertClose(luckyStarTarget.toBlock, 0.4, 'Enchanted unit gets Lucky To-Block');
+
+  // Psycho Force (UnitCalc.CAS:1413-1417) and Pneuma Field (:1419-1425) read the Resistance
+  // standing at their own position in region `d`. Region `e`'s aura pass raises Resistance
+  // afterwards, so a Holy Bonus aura must not feed either effect. Both are Outlander-soldier
+  // reforms, so the inputs are the wizard retort plus the reform, never the derived label.
+  const psychoForceInput = overrides => baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    level: 'veteran',
+    atk: 1, def: 1, res: 4, hp: 1,
+    ...overrides,
+  });
+  const psychoNoAura = ctx.deriveUnitStats(psychoForceInput({
+    abilities: { outlanderWizard: true, psychoConverter: true },
+  }));
+  const psychoWithAura = ctx.deriveUnitStats(psychoForceInput({
+    abilities: { outlanderWizard: true, psychoConverter: true, holyBonus: 2 },
+  }));
+  // res 4 + Xenopsychology-free base = 5 at region d, veteran rank 2 => trunc(5 * 2 / 2) = 5.
+  assertEqual(psychoNoAura.res, 5, 'Baseline resistance for the Psycho Force reads');
+  assertEqual(psychoWithAura.res, 7, 'The Holy Bonus aura raises the finished resistance to 7');
+  assertClose(psychoNoAura.toBlock, 0.35, 'Psycho Force adds resistance x level / 2 To-Defend');
+  assertClose(psychoWithAura.toBlock, 0.35,
+    'Psycho Force reads resistance at region d, so the region-e aura does not feed it');
+  assertClose(psychoWithAura.toHitMelee, 0.35,
+    'and the same pre-aura value drives its To-Hit half');
+
+  const pneumaNoAura = ctx.deriveUnitStats(psychoForceInput({
+    abilities: { outlanderWizard: true, pneumaReactor: true },
+  }));
+  const pneumaWithAura = ctx.deriveUnitStats(psychoForceInput({
+    abilities: { outlanderWizard: true, pneumaReactor: true, holyBonus: 2 },
+  }));
+  assertEqual(pneumaNoAura.abilities.lifeSteal, -2, 'Pneuma Field drains trunc(resistance / 2)');
+  assertEqual(pneumaWithAura.abilities.lifeSteal, -2,
+    'Pneuma Field reads resistance at region d, so the region-e aura does not deepen the drain');
+  const pneumaWarped = ctx.deriveUnitStats(psychoForceInput({
+    abilities: { outlanderWizard: true, pneumaReactor: true, warpResist: true },
+  }));
+  assertEqual(pneumaWarped.abilities.lifeSteal, 0,
+    'Warp Resist zeroes resistance in region c, so Pneuma Field drains nothing');
 
   const trueSight = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.6.2',
@@ -408,62 +456,91 @@ function runToBlockChecks(ctx) {
 function runDerivationStageChecks(ctx) {
   const version = 'com2_warlord_1.5.12.6.2';
 
-  const intrinsicLucky = ctx.getAbilityStatModifiers(
-    { lucky: true, luckyPhaseA: true },
-    version,
-  );
-  assertEqual(intrinsicLucky.base.resMod, 0, 'Intrinsic Lucky is not baked into the base stage');
-  assertEqual(intrinsicLucky.a.resMod, 1, 'Intrinsic Lucky is applied in encounter phase a');
+  // Phase attribution is a step's declared position, so these assert on the emitted step
+  // rather than on a bucket total. `null` means the effect emitted no step at all.
+  const stepFor = (abilities, id, ver) => {
+    const steps = ctx.getAbilityStatSteps(abilities, ver || version);
+    const matches = steps.filter(step => step.id === id);
+    assert(matches.length <= 1, `getAbilityStatSteps emits at most one '${id}' step`);
+    return matches[0] || null;
+  };
+  const phaseOf = (abilities, id, ver) => {
+    const step = stepFor(abilities, id, ver);
+    return step ? step.phase : null;
+  };
 
-  const grantedLucky = ctx.getAbilityStatModifiers(
-    { lucky: true, luckyPhaseBase: true, luckyPhaseA: true },
-    version,
-  );
-  assertEqual(grantedLucky.base.resMod, 1, 'Creation-time Lucky grant uses the base stage');
-  assertEqual(grantedLucky.a.resMod, 0, 'Creation-time Lucky grant is not counted again in phase a');
+  assertEqual(phaseOf({ lucky: true, luckyPhaseA: true }, 'lucky'), 'c',
+    'Intrinsic Lucky is applied in region c, where +0x044C7 puts it');
+  assertEqual(phaseOf({ lucky: true, luckyPhaseBase: true, luckyPhaseA: true }, 'lucky'), 'base',
+    'Creation-time Lucky grant uses the base stage, and is not counted again later');
+  assertEqual(phaseOf({ lucky: true, luckyPhaseB: true }, 'lucky'), 'b',
+    'Lucky Star / Divine Protection grant Lucky in phase b');
 
-  const artificer = ctx.getAbilityStatModifiers(
-    { artificer: true, mechanical: true },
-    version,
-  );
-  assertEqual(artificer.base.atkMod, 1, 'Artificer ABase melee write uses the base stage');
-  assertEqual(artificer.a.atkMod, 0, 'Artificer ABase melee write is absent from phase a');
+  const artificer = stepFor({ artificer: true, mechanical: true }, 'artificer');
+  assertEqual(artificer.phase, 'base', 'Artificer ABase writes use the base stage');
+  assertEqual(artificer.delta.atk, 1, 'Artificer grants +1 melee');
   // +2, not the +1 the in-game helptext states — CreateUnit.CAS:43 matches manual changelog
   // 1.4.22, which restored the +2 that 1.4.17 had cut. See Source discrepancies.md §6.
-  assertEqual(artificer.base.resMod, 2, 'Artificer grants +2 resistance, per the script');
-  assertEqual(artificer.base.defMod, 1, 'Artificer grants +1 armor');
-  assertEqual(artificer.base.rtbMod, 1, 'Artificer grants +1 ranged');
+  assertEqual(artificer.delta.res, 2, 'Artificer grants +2 resistance, per the script');
+  assertEqual(artificer.delta.def, 1, 'Artificer grants +1 armor');
+  assertEqual(artificer.delta.rtb, 1, 'Artificer grants +1 ranged');
 
-  const guardian = ctx.getAbilityStatModifiers({ guardian: true }, version);
-  assertEqual(guardian.base.resMod, 0, 'Guardian is not baked into the base stage');
-  assertEqual(guardian.a.resMod, 1, 'Guardian is recomputed in encounter phase a');
+  assertEqual(phaseOf({ guardian: true }, 'guardian'), 'c',
+    'The Guardian retort is region c, where +0x0B092 puts it');
+  assertEqual(phaseOf({ rebuild: true, unitType: 'normal' }, 'rebuild'), 'base',
+    'Non-hero Rebuild ABase write uses the base stage');
+  assertEqual(phaseOf({ rebuild: true, unitType: 'hero' }, 'rebuild'), 'b',
+    'Hero Rebuild is reapplied in UnitCalcPre phase b');
 
-  const rebuiltNormal = ctx.getAbilityStatModifiers(
-    { rebuild: true, unitType: 'normal' },
-    version,
-  );
-  assertEqual(rebuiltNormal.base.atkMod, 2, 'Non-hero Rebuild ABase write uses the base stage');
-  assertEqual(rebuiltNormal.b.atkMod, 0, 'Non-hero Rebuild does not use UnitCalcPre phase b');
+  // D23: CoM2/Warlord apply Holy Bonus and Resistance to All as region-`e` stack auras, after
+  // `d` and after the Warps. The DOS engines have no aura pass and keep them in `a`.
+  const holyBonusCoM2 = stepFor({ holyBonus: 3 }, 'holyBonus:aura');
+  assertEqual(holyBonusCoM2.phase, 'e', "CoM2/Warlord run Holy Bonus in region e's aura pass");
+  assertEqual(holyBonusCoM2.delta.ranged, 3,
+    'The Holy Bonus aura writes the narrow ranged field, not the shared rtb slot');
+  assertEqual(holyBonusCoM2.delta.rtb, undefined,
+    'so Thrown, Breath and the gazes take no Holy Bonus in CoM2');
+  assertEqual(phaseOf({ holyBonus: 3 }, 'holyBonus', 'mom_1.31'), 'a',
+    'MoM has no aura pass and keeps Holy Bonus in phase a');
+  assertEqual(stepFor({ holyBonus: 3 }, 'holyBonus', 'com_6.08').delta.rtb, 3,
+    "CoM 1 writes Holy Bonus to the shared `.ranged` slot, so it reaches Thrown and Breath");
+  assertEqual(phaseOf({ resistanceToAll: 2 }, 'resistanceToAll:aura'), 'e',
+    'Resistance to All feeds the region-e Prayermaster aura');
 
-  const rebuiltHero = ctx.getAbilityStatModifiers(
-    { rebuild: true, unitType: 'hero' },
-    version,
-  );
-  assertEqual(rebuiltHero.base.atkMod, 0, 'Hero Rebuild is not baked into the base stage');
-  assertEqual(rebuiltHero.b.atkMod, 2, 'Hero Rebuild is reapplied in UnitCalcPre phase b');
+  // D24/D25: both engines write Supreme Light and Tactician after their Warp block, and each
+  // is emitted as a version-exclusive step rather than as a version predicate.
+  assertEqual(phaseOf({ supremeLight: true }, 'supremeLight'), null,
+    'Supreme Light is one step in stats.js, not an ability step, outside CoM 1');
+  assertEqual(phaseOf({ supremeLight: true }, 'supremeLight:coM1', 'com_6.08'), null,
+    "CoM 1's Supreme Light is likewise one step in stats.js");
+  const tacticianCoM2 = stepFor({ tactician: true }, 'tactician');
+  assertEqual(tacticianCoM2.phase, 'c', 'Tactician is region c (+0x0C890), not a');
+  assertEqual(tacticianCoM2.afterWarp, true, 'and it runs after the Warp block');
+  const tacticianCoM1 = stepFor({ tactician: true }, 'tactician:coM1', 'com_6.08');
+  assertEqual(tacticianCoM1.phase, 'c', "CoM 1's Tactician retort is also region c (0x90AB4)");
+  assertEqual(tacticianCoM1.afterWarp, true, 'and also after Warp Creature');
 
-  const mixed = ctx.getAbilityStatModifiers({
+  const mixedAbilities = {
     artificer: true,
     mechanical: true,
     holyBonus: 2,
     prayer: true,
     rust: true,
     favoredTerrain: true,
-  }, version);
-  for (const key of ['atkMod', 'defMod', 'resMod', 'hpMod', 'toHitMod', 'toBlkMod', 'rtbMod']) {
-    const staged = mixed.base[key] + mixed.a[key] + mixed.b[key] + mixed.c[key] + mixed.d[key];
-    assertEqual(mixed[key], staged, `Flat ${key} equals base+a+b+c+d`);
-  }
+  };
+  const mixed = ctx.getAbilityStatSteps(mixedAbilities, version);
+  const phases = ['base', 'a', 'b', 'c', 'd', 'e'];
+  const byPhase = {};
+  for (const step of mixed) (byPhase[step.phase] = byPhase[step.phase] || []).push(step);
+  assert(Object.keys(byPhase).every(phase => phases.includes(phase)),
+    'Every emitted step carries a known phase');
+  // Emission is in source order, which is *not* phase order — Artificer is `base` and comes
+  // last. Partitioning by phase is therefore the caller's job, not something to be assumed.
+  assertEqual(mixed.map(step => step.id).join(','),
+    'holyBonus:aura,prayer,rust,favoredTerrain,artificer',
+    'Steps are emitted in source order, which the caller partitions by phase');
+  assertEqual(mixed.map(step => step.phase).join(','), 'e,c,d,d,base',
+    'Emission order is not phase order');
 }
 
 function runWarlordUnitAbilityChecks(ctx) {
@@ -499,6 +576,16 @@ function runWarlordUnitAbilityChecks(ctx) {
   }));
   assertEqual(battleArmor.def, 4, 'Battle Armor grants +3 Armor in combat');
 
+  const blazeWithIronSkin = ctx.deriveUnitStats(warlordUnit({
+    atk: 4,
+    def: 5,
+    abilities: { blazeOfGlory: true, ironSkin: true },
+  }));
+  assertEqual(blazeWithIronSkin.atk, 14,
+    'Blaze of Glory transfers current Armor, including Iron Skin, to melee');
+  assertEqual(blazeWithIronSkin.def, 0,
+    'Blaze of Glory zeroes current Armor instead of reconstructing enchantment Armor');
+
   const noOutlanderArmorclad = ctx.deriveUnitStats(baseUnitInput({
     version,
     def: 1,
@@ -529,6 +616,11 @@ function runWarlordUnitAbilityChecks(ctx) {
     abilities: { mechanical: true, armorcladReform: true, magitekScience: true },
   }));
   assertEqual(magitekScience.abilities.resistMagic, true, 'Magitek Science grants Resist Magic to Armorclad units');
+  const magitekScienceBattleArmor = ctx.deriveUnitStats(warlordUnit({
+    abilities: { armorcladReform: true, magitekScience: true },
+  }));
+  assertEqual(!!magitekScienceBattleArmor.abilities.resistMagic, false,
+    'Magitek Science does not grant Resist Magic to Battle Armor units despite the prose claim');
 
   const militaryDrilling = ctx.deriveUnitStats(warlordUnit({
     level: 'regular',
@@ -804,8 +896,213 @@ function runPhaseChecks(ctx) {
   assertEqual(hastedThrownResult.dist[4], 1, 'Hasted thrown self-convolves damage');
 }
 
+// The step runner (Calculator/steps.js) — R1's single stat-derivation mechanism.
+// Asserted directly rather than only through the stats it will carry, because the
+// migration relies on three of its properties: phase order, stable within-phase order,
+// and the write check that catches a step writing a field it did not declare.
+function runStatStepChecks(ctx) {
+  const HALT = evalInContext(ctx, 'HALT');
+  const step = (id, phase, writes, apply, extra) =>
+    ctx.statStep({ id, phase, writes, apply, ...(extra || {}) });
+
+  // A step reads the field's current value at its own position, so a later halving sees
+  // everything the earlier additions wrote — the property the bucket model cannot express.
+  const unit = { res: 2 };
+  ctx.runStatSteps([
+    step('add', 'a', ['res'], u => { u.res += 5; }),
+    step('halve', 'c', ['res'], u => { u.res = Math.floor(u.res / 2); }),
+  ], unit, { version: 'com2_1.05.11' });
+  assertEqual(unit.res, 3, 'A later step reads what earlier steps wrote');
+
+  // List order is execution order; phase only has to be non-decreasing along it.
+  let misordered = null;
+  try {
+    ctx.runStatSteps([
+      step('spell', 'c', ['res'], u => { u.res += 1; }),
+      step('intrinsic', 'a', ['res'], u => { u.res += 1; }),
+    ], { res: 0 }, { validateWrites: true });
+  } catch (err) {
+    misordered = String(err.message);
+  }
+  assert(misordered && misordered.includes('is declared after'),
+    'A sequence authored out of phase order is rejected');
+
+  const skipped = { res: 0 };
+  ctx.runStatSteps([
+    step('inactive', 'a', ['res'], u => { u.res += 1; }, { when: () => false }),
+    step('active', 'a', ['res'], u => { u.res += 2; }, { when: () => true }),
+  ], skipped, {});
+  assertEqual(skipped.res, 2, 'A step whose predicate is false does not run');
+
+  const halted = { res: 0, def: 0 };
+  ctx.runStatSteps([
+    step('bonus', 'a', ['res'], u => { u.res += 1; }),
+    step('illusion', 'a', ['def'], () => HALT),
+    step('unreached', 'a', ['res'], u => { u.res += 100; }),
+  ], halted, {});
+  assertEqual(halted.res, 1, 'HALT stops the sequence');
+
+  const base = Object.freeze({ def: 4 });
+  const reader = { def: 99 };
+  ctx.runStatSteps([
+    step('holyArmor', 'c', ['def'], (u, c) => { u.def = c.base.def + 2; }),
+  ], reader, { base });
+  assertEqual(reader.def, 6, 'A step reads the permanent base record through ctx.base');
+
+  const trace = [];
+  ctx.runStatSteps([
+    step('silent', 'a', ['res'], () => {}),
+    step('warpResist', 'c', ['res'], u => { u.res = 0; }),
+  ], { res: 7 }, { trace });
+  assertEqual(trace.length, 1, 'Only steps that change a field are traced');
+  assertEqual(trace[0].id, 'warpResist', 'Trace names the step');
+  assertEqual(trace[0].changes.res.delta, -7, 'Trace records the delta');
+
+  let undeclared = null;
+  try {
+    ctx.runStatSteps([
+      step('sloppy', 'a', ['res'], u => { u.res += 1; u.def += 1; }),
+    ], { res: 0, def: 0 }, { validateWrites: true });
+  } catch (err) {
+    undeclared = String(err.message);
+  }
+  assert(undeclared && undeclared.includes('undeclared field def'),
+    'validateWrites catches a step writing a field it did not declare');
+
+  let rejected = null;
+  try {
+    ctx.statStep({ id: 'nowhere', phase: 'z', writes: ['res'], apply: () => {} });
+  } catch (err) {
+    rejected = String(err.message);
+  }
+  assert(rejected && rejected.includes('unknown phase'), 'statStep rejects an unknown phase');
+
+  // The sequence is assembled from two places, so a colliding id has to fail rather than
+  // quietly make the trace ambiguous.
+  let collided = null;
+  try {
+    ctx.runStatSteps([
+      step('lionheart', 'c', ['res'], u => { u.res += 1; }),
+      step('lionheart', 'c', ['res'], u => { u.res += 1; }),
+    ], { res: 0 }, { validateWrites: true });
+  } catch (err) {
+    collided = String(err.message);
+  }
+  assert(collided && collided.includes('declared twice'),
+    'A sequence with two steps sharing an id is rejected');
+}
+
+function runResolutionStepChecks(ctx) {
+  const defenseTarget = {
+    def: 4,
+    unitType: 'normal',
+    abilities: {
+      largeShield: true,
+      elemArmor: 'resistElements',
+      bless: true,
+      missileImmunity: true,
+      weaponImmunity: true,
+    },
+  };
+  const defenseTrace = [];
+  const effectiveDef = ctx.effectiveDefense(defenseTarget, 'com2_1.05.11', {
+    isRanged: true,
+    elementalEligible: true,
+    blessEligible: true,
+    armorPiercing: true,
+    isMissile: true,
+    weaponImmunityEligible: true,
+  }, defenseTrace);
+  // (4 base + 3 shield + 4 Resist Elements + 5 Bless) / 2 = 8;
+  // Missile Immunity replaces that with 100, then Weapon Immunity adds 8.
+  assertEqual(effectiveDef, 108,
+    'EffectiveDefense preserves assignment-before-final-Weapon-Immunity ordering');
+  assertEqual(defenseTrace.map(entry => entry.id).join(','),
+    [
+      'effectiveDefense:base',
+      'effectiveDefense:largeShield',
+      'effectiveDefense:resistElements',
+      'effectiveDefense:bless',
+      'effectiveDefense:armorPiercing',
+      'effectiveDefense:immunities',
+      'effectiveDefense:weaponImmunity',
+    ].join(','),
+    'EffectiveDefense trace follows the decoded execution order');
+  assert(!Object.prototype.hasOwnProperty.call(defenseTarget, 'effectiveDefense'),
+    'EffectiveDefense runs on a discarded scratch copy');
+
+  const cityWallTarget = ctx.deriveUnitStats(baseUnitInput({
+    prefix: 'b',
+    version: 'com2_1.05.11',
+    def: 9,
+    cityWalls: '3',
+  }));
+  assertEqual(cityWallTarget.def, 9,
+    'City Walls is not included in the finished CoM2 unit Defense stat');
+  assertEqual(ctx.effectiveDefense(cityWallTarget, 'com2_1.05.11', {
+    extraDefense: cityWallTarget.cityWallBonus,
+    armorPiercing: true,
+  }), 6,
+  'City Walls enters EffectiveDefense before Armor Piercing: floor((9 + 3) / 2)');
+
+  const illusionDef = ctx.effectiveDefense({
+    def: 9,
+    unitType: 'normal',
+    abilities: { missileImmunity: true, weaponImmunity: true },
+  }, 'com2_1.05.11', {
+    illusion: true,
+    isRanged: true,
+    isMissile: true,
+    weaponImmunityEligible: true,
+  });
+  assertEqual(illusionDef, 0,
+    'Illusion halts EffectiveDefense before later immunities and bonuses');
+
+  const resistanceTarget = {
+    res: 3,
+    unitType: 'hero',
+    abilities: {
+      charmed: true,
+      magicImmunity: true,
+      bless: true,
+      resistMagic: true,
+    },
+  };
+  const resistanceTrace = [];
+  const effectiveRes = ctx.effectiveResistance(
+    resistanceTarget, 'com2_1.05.11', 'death', true, resistanceTrace);
+  assertEqual(effectiveRes, 110,
+    'Charmed/Magic Immunity assignments precede Bless and Resist Magic additions');
+  assertEqual(resistanceTrace.map(entry => entry.id).join(','),
+    [
+      'effectiveResistance:base',
+      'effectiveResistance:charmed',
+      'effectiveResistance:bless',
+      'effectiveResistance:resistMagic',
+    ].join(','),
+    'EffectiveResistance trace follows the decoded execution order');
+  assertEqual(resistanceTarget.res, 3,
+    'EffectiveResistance does not write back to displayed Resistance');
+  assertEqual(ctx.effectiveResistance(resistanceTarget, 'com2_1.05.11', null), 100,
+    'Charmed applies to realm-less resistance rolls such as Poison');
+  assertEqual(ctx.effectiveResistance(resistanceTarget, 'com2_1.05.11', null, false), 3,
+    'Charmed is inert when GetEffectiveResistance is not serving a roll');
+
+  const legacyResistance = ctx.buildResistanceContext(
+    { res: 0, unitType: 'normal', abilities: {} },
+    { res: 0, unitType: 'hero', abilities: { charmed: true } },
+    'mom_1.31',
+    false);
+  assertEqual(legacyResistance.bResPoison, 30,
+    'Legacy Charmed adds 30 Resistance to realm-less rolls for heroes');
+}
+
 function main() {
   const ctx = loadCalculatorContext();
+  // Every deriveUnitStats call below runs the step runner's write check (steps.js).
+  ctx.setStatStepDebug(true);
+  runStatStepChecks(ctx);
+  runResolutionStepChecks(ctx);
   runDeriveUnitStatsChecks(ctx);
   runDerivationStageChecks(ctx);
   runWarlordUnitAbilityChecks(ctx);

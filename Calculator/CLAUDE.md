@@ -51,7 +51,7 @@ python tools/nocache_server.py        # run_in_background
 
 If you do get stuck on cached JS, force-reload via indirect eval:
 ```js
-const scripts = ['Calculator/units_mom.js', 'Calculator/units_com.js', 'Calculator/units_com2.js', 'Calculator/units_warlord.js', 'Calculator/data.js', 'Calculator/engine.js', 'Calculator/combat.js', 'Calculator/stats.js', 'Calculator/ui.js'];
+const scripts = ['Calculator/units_mom.js', 'Calculator/units_com.js', 'Calculator/units_com2.js', 'Calculator/units_warlord.js', 'Calculator/data.js', 'Calculator/engine.js', 'Calculator/steps.js', 'Calculator/combat.js', 'Calculator/stats.js', 'Calculator/ui.js'];
 scripts.reduce((chain, s) =>
   chain.then(() => fetch('/' + s, {cache: 'no-store'}).then(r => r.text()).then(c => (0,eval)(c))),
   Promise.resolve()

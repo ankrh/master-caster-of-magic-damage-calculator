@@ -35,7 +35,7 @@ definition behind them. That is intended, not a gap to be filled later from help
 
 **In scope**
 
-- CoM2 (Caster of Magic for Windows **1.5.11**) only.
+- CoM2 (Caster of Magic for Windows **1.05.11**) only.
 - The manual body: chapters *Philosophy* through *Modding*.
 - All three image-only tables, transcribed to data.
 

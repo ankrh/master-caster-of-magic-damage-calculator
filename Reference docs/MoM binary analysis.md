@@ -1086,7 +1086,7 @@ realm `0x13`, or `mana_max != 0` — which is the calculator's "Life creature or
 CoM 1 reads Chaos Surge at `−0x5CAA` (`0x8F0F9`), 0x425 bytes away, while the Guardian retort is
 three bytes later at `−0x60CC` (`0x90589`). The hero test is `_UNITS[].Hero_Slot >= 0`
 (`0x90ACB`, stride 32, `Hero_Slot` at +6 per ReMoM's `MOM_DAT.h`), and the ranged half is gated
-on `ranged_type > −1` (`0x90AE5`). The magnitudes match `getAbilityStatModifiers`'s Tactician
+on `ranged_type > −1` (`0x90AE5`). The magnitudes match `getAbilityStatSteps`'s Tactician
 exactly — non-heroes +1 defence, heroes +2 defence / +2 resistance / +2 to every attack
 strength, the hero's second defence point coming from re-entering the same `inc`.
 
@@ -1106,7 +1106,7 @@ no evidence yet.
 Both builds emit the same thing: Prayer is +1 tohit, +1 toblock, +1 resist; High Prayer is those
 three plus, gated on `melee > 0`, `melee += 2`, `resist += 2`, `defense += 2`. So High Prayer
 totals **+2 melee, +2 defence, +3 resistance, +10% to hit, +10% to block** — exactly what
-`getAbilityStatModifiers` already carries.
+`getAbilityStatSteps` already carries.
 
 Two structural details fall out of the same read. High Prayer's block ends in a `jmp` past
 Prayer's (`0x9032D` in MoM, `0x90304` in CoM 1), which is the mechanism behind
@@ -1374,7 +1374,7 @@ delivered automatically for 104.
 
 Because that assignment sits inside the per-figure loop, **MoM's doom damage scales with the
 attacker's figure count.** No roster consequence — Chaos Spawn, its only Doom Gaze unit, has one
-figure. CoM2 and Warlord deliberately do not scale it; see `CoM2 binary analysis.md`,
+figure. CoM2 and Warlord deliberately do not scale it; see `Caster binary/CoM2 binary analysis.md`,
 *Gaze attacks*.
 
 **Dispatch.** `BU_AttackTarget` fires gaze from two sites — melee rider (`0x99499`,
@@ -1443,6 +1443,36 @@ in the damage pipeline is gaze-specific.
 
 CP 1.60 keeps 1.31's realm gates; its only change here is the documented Righteousness lookup
 replacement at `0x9A6D9`.
+
+### Holy Bonus and Resistance to All are per-player maxima (resolved 2026-07-31)
+
+Both are `Attribs_2` (+0x1A) flags whose **magnitude is the unit's `Spec_Att_Attrib`** (+0x15) —
+`0x80` Holy Bonus, `0x40` Resistance to All. This is where those two abilities read the shared
+value byte; see *Touch-effect immunities* for its other five consumers.
+
+Three stages:
+
+1. **Provider.** The magnitude lives in the provider's own `+0x15`. Roster confirmation: Paladins
+   1, Angel 1, Arch Angel 2 (`0x80`); Unicorns 2, Guardian Spirit 1 (`0x40`) — matching the
+   `Gaze/Poison` column exactly, and none of these units carries any other `+0x15` consumer.
+2. **Aggregation.** A side-wide scan at `0x9A9E0` walks the battle units, taking
+   `di = controller_idx` (+0x35), and for each flag keeps the **maximum** provider value into a
+   per-player word array: `[0xC89E]` Holy Bonus, `[0xC89A]` Resistance to All, indexed
+   `controller_idx * 2`. Neither array is a unit field.
+3. **Consumption.** The stat recompute reads them back — Holy Bonus at `0x900D8`, `0x900F9`,
+   `0x90162`, `0x90185`; Resistance to All at `0x9011C`, `0x9013F` — and adds to the receiving
+   unit's melee, defense and resistance. This is why an exhaustive `+0x15` scan of the recompute
+   (`0x8FF09`–`0x90B8D`) finds nothing: the recompute reads the player array, never the byte.
+
+Two consequences. **The engine maxes over providers and applies the winner once**, so copies do
+not stack — which is what `mergedAbilityValue`'s `max(own, received)` already yields.
+And **receiving costs a unit nothing**: a Death Gaze −2 unit has `+0x15 = 2` and `Attribs_2 = 0`,
+and takes a stackmate's Holy Bonus with no interaction. Only *providing* contends for the byte,
+which is why no unit in the roster both provides one of these and carries a gaze or touch effect.
+
+The `Attribs_2` bitmask decodes cleanly across all 198 unit-type records: `0x01` Healing Spell,
+`0x02` Fire Ball Spell, `0x04` Doombolt Spell, `0x08` Immolation, `0x10` Web Spell, `0x20` Cause
+Fear Spell, `0x40` Resistance to All, `0x80` Holy Bonus. ReMoM leaves this field unnamed.
 
 ### ReMoM discrepancies found
 

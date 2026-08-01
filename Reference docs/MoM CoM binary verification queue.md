@@ -13,7 +13,7 @@ Companion files:
 - `Calculator/BACKLOG.md` — the **work register**: the single list of all outstanding calculator
   work, this file's entries included. Every ID below appears there as a one-line row with status
   and cost. This file holds the reasoning; the register holds the tracking.
-- `MoM binary analysis.md`, `CoM2 binary analysis.md` — method, anchors, and findings *already
+- `MoM binary analysis.md`, `Caster binary/CoM2 binary analysis.md` — method, anchors, and findings *already
   resolved* for each engine. Resolved items are not repeated here.
 - `CoM2 data tables.md` — findings read out of CoM2's and Warlord's `.INI` tables
   (`MODDING.INI`, `Levelbonus.INI`, `SPELLS.INI`, `DESC.INI`). Same role for the tables that the
@@ -38,7 +38,7 @@ These are the highest-value checks: a wrong branch produces a wrong answer for o
 while looking correct in another.
 
 ### A31. Level bonus tables, especially MoM's to-hit ladder
-`combat.js:34-71`. The **CoM column is settled** — it is a 5×7 table at `0x8FACA` and it matches
+`getLevelBonuses` (`combat.js`). The **CoM column is settled** — it is a 5×7 table at `0x8FACA` and it matches
 (`MoM binary analysis.md`, *Level bonuses*). MoM's is an unrolled `if` chain at `0x8F881`–`0x8FB3E`
 whose *shape* was read on the same pass (to-hit increments at the Elite/Ultra-Elite/Champion
 thresholds, resistance at most of them), but its six increment sites were not decoded
@@ -60,7 +60,8 @@ early*), which decoded Shatter's **position** in the recompute but not its conte
   (`0x90B07`). Two of only five changed regions in the whole recompute, so it is a deliberate
   edit, not drift. Nothing is known about what it does.
 - **CoM 1's Shatter block (`0x907DC`–`0x90827`) was read for position only.** The calculator
-  restricts Shatter to normal units and heroes outside Warlord (`stats.js`, `shatterEligible`);
+  restricts Shatter to normal units and heroes outside Warlord (the `shatter` step's predicate
+  in `stats.js`);
   no unit-type test was decoded at that address either way. Note the binary *caps* at 1
   (`cmp …, 1 / jle`) where the calculator *sets* to 1 when above 0 — equivalent for every
   reachable value, but worth keeping in mind if the gate turns out to differ.
@@ -77,7 +78,7 @@ the global-enchantment byte at `[0x9274] + 0x1587 + (realm − 0x10)` traced to 
 ## B. Shared-formula claims — the calculator applies these in every version, but never verified
 
 ### B1. The 10%–100% to-hit clamp
-`combat.js:9-13` (`clampPct`), plus `Math.max(0.1, …)` at every to-hit modifier site.
+`clampPct` (`combat.js`), plus `Math.max(0.1, …)` at every to-hit modifier site.
 `MoM binary analysis.md` established the 10% floor for 1.31 from `CMB_AttackRoll`'s
 `|| die_roll == 10`. Not established: the **100% ceiling**, nor either bound for CP 1.60 and
 CoM 1. `TODO.md` carries the matching open question (Warp Reality's page claims to-hit can reach
@@ -85,7 +86,7 @@ CoM 1. `TODO.md` carries the matching open question (Warp Reality's page claims 
 distinction matters if any effect can push to-hit above 100%.
 
 ### B3. The Life Steal damage curve
-`engine.js:260-286`: one d10 per attacking figure; `roll > effective_res` deals `roll − effective_res`
+`calcLifeStealDmgDist` (`engine.js`): one d10 per attacking figure; `roll > effective_res` deals `roll − effective_res`
 damage, so a negative effective resistance yields more than 10 damage from a single roll. Immunity
 at `effective_res ≥ 10`. The *curve* is settled — `Combat_Resistance_Check` returns exactly
 `roll − effective_res` on a failed save (`MoM binary analysis.md`, *Resistance rolls*). What
@@ -93,17 +94,18 @@ remains is whether Life Steal reads that return value rather than re-rolling, an
 stat in `TODO.md`: "manuals say wraiths have life steal −4 but it seems to be −3".
 
 ### B4. Damage rollover with a fresh defence roll per figure
-`engine.js:80-155`: excess damage past a figure's HP chains to the next figure and the defender
-rolls defence again. Contrast `areaPerFigureDmgDist` (189-209), where area damage does **not**
+`singleAttackDmgDist` (`engine.js`): excess damage past a figure's HP chains to the next figure
+and the defender rolls defence again. Contrast `areaPerFigureDmgDist`, where area damage does **not**
 roll over. Both are foundational to every number the calculator prints and neither is sourced to
 the binary. `BU_ApplyDamage` is the named entry point in ReMoM.
 
 ### B5. Armor Piercing halves defence (floor) and never touches Immolation
-`combat.js:1643-1650`. The floor direction and the Immolation exemption are separate assumptions;
+The `defAP*` values in `computeDefenseProfile` (`combat.js`), gated on `aArmorPiercing`. The floor
+direction and the Immolation exemption are separate assumptions;
 the comment cites "MoM and the ADC reference", i.e. another calculator, not the game.
 
 ### B6. Invulnerability subtracts its bonus on *every* chained defence roll
-`engine.js:91` — `net = max(e − b − inv, 0)` inside the rollover chain, so a multi-figure kill
+`singleAttackDmgDist` (`engine.js`) — `net = max(e − b − inv, 0)` inside the rollover chain, so a multi-figure kill
 applies the reduction repeatedly. Plausible, but it is a modelling choice made in the engine, not
 a documented rule.
 
@@ -116,7 +118,7 @@ phase eligibility. Worth a pass to check the hard-coding agrees with the data-dr
 the actual roster, and it bears directly on `TODO.md`'s open Chaos-Spawn poison-touch question.
 
 ### B9. Dispel Evil penalties −4, and −9 against created undead
-`combat.js:731-742`. `MoM binary analysis.md` confirmed the save is −4 with a further −5 for
+`dispelEvilFailProb` (`combat.js`). `MoM binary analysis.md` confirmed the save is −4 with a further −5 for
 `UM_UNDEAD` in 1.31 — which is where −9 comes from — but the calculator gates that extra penalty
 on *created* undead (Undead/Animate Dead/Revenant status) while the binary tests a **unit-type
 mutation flag**. Those are not obviously the same set. Check whether base Death creatures carry
@@ -130,8 +132,9 @@ Not binary questions; recorded because the first changed behaviour.
 
 1. **`combat.js` `applyAnimatedEffects` compared against a version id that does not exist.**
    `version !== 'mom_1.31' && version !== 'mom_1.60'` — the id is `mom_cp_1.60.00`
-   (`data.js:294`), so `'mom_1.60'` never matched and Animate Dead granted Weapon Immunity under
-   MoM CP 1.60, which the code and the ability's own tooltip (`data.js:133`) both exclude.
+   (`V_MOM_CP` in `data.js`), so `'mom_1.60'` never matched and Animate Dead granted Weapon
+   Immunity under MoM CP 1.60, which the code and the ability's own tooltip (the `animated`
+   entry in `ABILITY_DEFS`) both exclude.
    Rewritten to the positive `startsWith('com_') || startsWith('com2_')` form used by the six
    other `isCoMPlus` sites in the file, so a future MoM id cannot reintroduce it. Weapon Immunity
    from Animate Dead is now CoM 1 / CoM2 / Warlord only.
@@ -158,7 +161,7 @@ question per entry is which source owns it, and they are checked in this order:
 |---|---|---|
 | Warlord `.CAS` scripts | per-unit stat calculation (`UnitCalcPre.CAS`, `UnitCalc.CAS`), display-only ability labels (`DisAbil.CAS`) | Warlord only, and outranks the binary |
 | Data tables | tunable combat constants (`MODDING.INI`), level ladder (`Levelbonus.INI`), per-spell strength / hit chance / area flag (`SPELLS.INI`), unit stats (`UNITS.INI`) | ship with both versions; findings in `CoM2 data tables.md` |
-| `Caster.exe` | everything else: all combat resolution, **and the whole of base CoM2's stat calculation** | `CoM2 binary analysis.md` |
+| `Caster.exe` | everything else: all combat resolution, **and the whole of base CoM2's stat calculation** | `Caster binary/CoM2 binary analysis.md` |
 
 The third row is wide because **vanilla ships `UnitCalc.CAS` as a `HALT;`** — so a Warlord claim
 may be settled by one line of script while the identical CoM2 claim needs the binary. Many
@@ -179,13 +182,13 @@ realm gates, eligibility rules, ability-vs-enchantment questions — which is wh
 express and the binary must answer.
 
 #### D1. Defence-replacing immunities are 100, not 50 — **mostly resolved**
-`combat.js:1051-1084` — `missileImmunityDef`, `fireImmunityDef`, `righteousnessDef`,
+`missileImmunityDef`, `fireImmunityDef`, `righteousnessDef`,
 `magicImmunityDef` all return **100** for `com*`. Sourced solely from CoM 1's one-byte
 `0x32`→`0x64` (`MoM binary analysis.md`, *Defence specials*). The shape matters as much as the
 value: these *replace* the computed defence rather than adding to it.
 
 **`EffectiveDefense` step 8 settles both halves for CoM2/Warlord** — six immunity tests, *each an
-assignment* to 100, discarding everything accumulated before them (`CoM2 binary analysis.md`,
+assignment* to 100, discarding everything accumulated before them (`Caster binary/CoM2 binary analysis.md`,
 *Resolution-time modifiers*). So the value and the replace-not-add shape are confirmed for Fire
 (spell and `isfire`), Cold, Poison, Magic and Missile Immunity.
 
@@ -194,20 +197,20 @@ the same 100-replacement treatment on no CoM2 evidence. Worth settling on the sa
 which also concerns Righteousness.
 
 #### D2. Weapon Immunity eligibility, and the generic bypass — **magnitude resolved**
-`combat.js:997-1050`. The **magnitude is settled**: `MODDING.INI`'s `WeaponImmunityDefenseBonus`
+`weaponImmunityApplies` and `weaponImmunityDef` (`combat.js`). The **magnitude is settled**: `MODDING.INI`'s `WeaponImmunityDefenseBonus`
 is 8 in CoM2 and 10 in Warlord, and the key is framed as a *bonus*, which also confirms the
 additive shape (`CoM2 data tables.md`). Two claims remain: eligibility is by attacker weapon and
 unit type; and `atkGeneric` reproduces MoM's generic-hull bypass in every version. In MoM that
 bypass was a *race-number cutoff* — a 1991 artefact. Whether the modern engine has anything
-equivalent is unestablished. Related: `wraithFormBypassesWI` (`stats.js:1151-1153`) and Animate
-Dead granting Weapon Immunity (`combat.js:1437-1444`), both gated `com*`.
+equivalent is unestablished. Related: `wraithFormBypassesWI` (`stats.js`) and Animate
+Dead granting Weapon Immunity (`applyAnimatedEffects`), both gated `com*`.
 
 #### D3. Cause Fear's −3 save modifier
-`combat.js:1131-1140`. Also asserts Death Immunity is a skip and that Magic Immunity /
+`fearFailProb` (`combat.js`). Also asserts Death Immunity is a skip and that Magic Immunity /
 Righteousness are +30 resistance bonuses rather than skips — the MoM shape, carried over whole.
 
 #### D4. Poison being realm-less — **the −1 save penalty is resolved**
-`combat.js:670-677`. `MODDING.INI`'s `PoisonSavePenalty=-1` in both versions settles the penalty
+`poisonFailProb` (`combat.js`). `MODDING.INI`'s `PoisonSavePenalty=-1` in both versions settles the penalty
 outright (`CoM2 data tables.md`). What remains is the same function's assertion that Poison is
 realm-less, so Magic Immunity does not stop it — a MoM structural fact with no CoM2 evidence and
 no key in the tables.
@@ -221,7 +224,8 @@ whose Illusion Immunity is tested. Neither is expressible as a table key, so thi
 `Caster.exe`.
 
 #### D6. Bless — the attack types the defence half covers. **Magnitudes resolved**
-Defence half `combat.js:1637-1665`, resistance half `combat.js:2367-2378`. `MODDING.INI` confirms
+Defence half in `computeDefenseProfile` (the `bless*` values), resistance half in
+`buildResistanceContext`. `MODDING.INI` confirms
 all four values and the odd split: CoM2 `BlessDefenseBonus=5` / `BlessResistBonus=5`, Warlord
 `7` / `4` (`CoM2 data tables.md`).
 
@@ -233,7 +237,7 @@ attacker's realm) for `com2*` only, on no evidence at all; it was never more tha
 branch spilling over. Establish how `Caster.exe` classifies an attack's realm before trusting it.
 
 #### D7. Elemental Armor / Resist Elements — **magnitudes resolved, realm gate open**
-`elemResistBonus` (`combat.js:1618-1623`) gives `com*` **+4 for Resist Elements and nothing for
+`elemResistBonus` (`combat.js`) gives `com*` **+4 for Resist Elements and nothing for
 Elemental Armor**, inverting MoM's +10/+3.
 
 **Both halves are now confirmed.** CoM 1: the +10 really is dead code there, and Resist Elements
@@ -250,7 +254,8 @@ right for CoM 1 but leaves the MoM Destruction gap recorded under *Known modelli
 in `Calculator/SPEC.md`.
 
 #### D8. Weakness and Mind Storm magnitudes
-`combat.js:459-465` (−3 melee) and `combat.js:474-483` (−3 melee, −5 rtb/def/res). The DOS side of
+The `weakness` and `mindStorm` branches of `getAbilityStatSteps` — −3 melee, and −3 melee
+with −5 rtb/def/res respectively. The DOS side of
 both is settled (`MoM binary analysis.md`, *Combat-effect stat writes*); this is the tail it left
 behind. The CoM 1 values were extended to CoM2 on shared helptext wording alone.
 Warlord's breath half is already script-cited (`UnitCalc.CAS:309-315`); the CoM2 half is not.
@@ -261,14 +266,16 @@ sits in an enchantment-ID-keyed recompute that has to be located first — not a
 `com2*`; the compiled block confirms both magnitudes and the display path that contradicted it
 was corrected on 2026-07-29. Warlord inherits them unchanged — `EncVertigo` appears exactly twice
 in its stat scripts and both are a combat-layer-to-unit-layer flag copy, with no magnitude
-written. See `CoM2 binary analysis.md`, *Calculator-facing discrepancy found during the region-`c`
+written. See `Caster binary/CoM2 binary analysis.md`, *Calculator-facing discrepancy found during the region-`c`
 pass*. IDs are not reused.)*
 
 #### D10. Haste does not double counter-attacks
-`combat.js:2896-2900`. One boolean, large effect, no CoM2-specific evidence.
+`bCounterHaste`, threaded from `resolveCombat` into `buildCounterPhase`. One boolean, large
+effect, no CoM2-specific evidence.
 
 #### D11. Invisibility's −10% to-hit malus is MoM-only
-`combat.js:2284-2300`. The ranged-targeting block is claimed for all versions; only the malus is
+`applyPairToHitModifiers` (`combat.js`). The ranged-targeting block is claimed for all versions;
+only the malus is
 gated off for `com*`.
 
 #### D12. Assorted `com*` stat constants
@@ -277,12 +284,12 @@ Each a single constant with no CoM2-specific branch. Cheap once the owning routi
 | Claim | Site |
 |---|---|
 | ~~Flame Blade +3 (vs +2)~~ | **Resolved** — `MODDING.INI` gives `FlameBladeAttackBonus=3` in both versions, plus `MissileRangedBonus=2` and `ThrownBonus` 0 (CoM2) / 2 (Warlord), matching `stats.js` exactly, CoM2's dropped thrown bonus included (`CoM2 data tables.md`) |
-| Chaos Channels fire breath strength 4 (vs 2) | `stats.js:445` — **CoM 1 half confirmed** at 4 vs MoM's 2 (`MoM binary analysis.md`, *`BU_Apply_Specials` runs twice*); CoM2/Warlord still open |
-| Chaos Surge grants +resistance | `stats.js:679` |
-| Land Linking boosts breath | `stats.js:1097` |
-| Focus Magic exists at all | `stats.js:522` |
+| Chaos Channels fire breath strength 4 (vs 2) | `ccFireBreathStrength` — **CoM 1 half confirmed** at 4 vs MoM's 2 (`MoM binary analysis.md`, *`BU_Apply_Specials` runs twice*); CoM2/Warlord still open |
+| Chaos Surge grants +resistance | `chaosSurgeResBonus` |
+| Land Linking boosts breath | `landLinkingBreathRtbMod` |
+| Focus Magic exists at all | `focusMagicActive` |
 | Warp Creature also halves ranged | `stats.js` Warp block — **CoM 1 half confirmed**, and it halves the shared `.ranged` slot with no type test at all (`MoM binary analysis.md`, *Warp Creature runs early*); CoM2/Warlord open, and the ordering question is D21 |
-| Immolation strength 10 | `combat.js:1087-1091` |
+| Immolation strength 10 | `immolationStr` |
 
 ### D14–D21, D27. CoM2- and Warlord-specific claims
 
@@ -297,7 +304,7 @@ is resolved and the calculator disagrees with it; it is now the **F7** defect in
 `Calculator/BACKLOG.md`. IDs are not reused.)*
 
 #### D14. Ranged distance penalty — **CoM2's formula resolved, hero exemption open**
-`distancePenalty` (`combat.js:207-220`) gives CoM2 a formula shared with no other version: no
+`distancePenalty` (`combat.js`) gives CoM2 a formula shared with no other version: no
 penalty below 4 tiles, then −10% and a further −3% per tile beyond. `MODDING.INI` states it
 directly — `RangedPenaltyStarts=4`, `RangedPenaltyBase=10`, `RangedPenaltyGap=1`,
 `RangedPenaltyGrowth=3`, identical in both versions — so the calculator reproduces the table
@@ -310,26 +317,27 @@ verbatim (`CoM2 data tables.md`). The DOS half is settled separately (`MoM binar
 not simply carry over. Long Range's −10% cap is likewise unstated by any table.
 
 #### D17. Destruction is CoM2-only, and its immunity set
-`destructionFailProb` (`combat.js:773-781`) returns 0 outside `com2_`, skips on Magic Immunity, and
+`destructionFailProb` (`combat.js`) returns 0 outside `com2_`, skips on Magic Immunity, and
 reads the roster's per-unit value as a resistance modifier. The surrounding comment notes the
 roster ships `Destruction=0`, so the modifier path is untested by any actual unit.
 
 #### D18. Which phases touch effects ride
-`combat.js:3612-3620` — Warlord removes Stoning Touch and Death Touch from ranged, cited to the
-manual; `immolationBlocksRanged` (`combat.js:1094-1096`) blocks Immolation from ranged in every
+`touchParams`'s `blockStoningDeath` flag — Warlord removes Stoning Touch and Death Touch from
+ranged, cited to the manual; `immolationBlocksRanged` blocks Immolation from ranged in every
 non-1.31 version. MoM proved this is **data-driven** there (`B7`), and the calculator hard-codes it
 per effect. `@Combat@ApplyAttack` takes the attack type as an explicit argument, so any real phase
 gate is a plain comparison — easier to settle here than it was in MoM. Bears on
 `Touch attack trigger matrix.md`.
 
 #### D19. CoM2-only abilities with no cross-version anchor
-Inner Power, Blazing Eyes, Mislead, Destiny (`combat.js:92-109`), Discipline and Endurance
-(`stats.js:748-767`), and the Eternal Night / Darkness doubling (`stats.js:687-689`). Each exists
+Inner Power, Blazing Eyes, Mislead and Destiny (the `*ActiveForUnit` predicates in `combat.js`),
+Discipline and Endurance (`disciplineDefMod` / `enduranceHpMod` in `stats.js`), and the Eternal
+Night / Darkness doubling (`darknessAtkDefMagnitude`). Each exists
 only in this engine, so nothing in sections A–B constrains them; each needs its own read of the
 helptext, the script, or the binary.
 
 #### D20. Chaos Surge scope in CoM2 and Warlord
-`stats.js:1058-1069`, `1228-1241`. CoM 1 is settled (`MoM binary analysis.md`, *Chaos Surge*): it
+`chaosSurgeMeleeBonus` / `chaosSurgeRtbBonus` / `chaosSurgeGazeMod` (`stats.js`). CoM 1 is settled (`MoM binary analysis.md`, *Chaos Surge*): it
 writes the shared `.ranged` slot unconditionally, so thrown and both gaze forms are boosted, and
 the CC fire breath is boosted too. The calculator now follows that for `com_6.08` while keeping
 the narrower helptext-derived scope — ranged and breath only, no thrown, no gaze — for `com2*`.
@@ -344,19 +352,19 @@ been read from `Caster.exe` about the modern engine. All three are settled for t
 `MoM binary analysis.md` (*Warp Creature runs early*, *Level bonuses*); each has a CoM2/Warlord
 half that is pure inheritance-by-prefix and was deliberately not extended.
 
-1. ~~**Ordering.**~~ **Resolved 2026-07-28** — see `CoM2 binary analysis.md`, *Associating a block
+1. ~~**Ordering.**~~ **Resolved 2026-07-28** — see `Caster binary/CoM2 binary analysis.md`, *Associating a block
    with its enchantment*. CoM2/Warlord run the three Warps late in region `c` (+0x0BA3C /
    +0x0BCDF / +0x0BDF7) with Shatter immediately after (+0x0BF62): **MoM's shape, not CoM 1's**,
    which is what the calculator already assumed for `com2*`. No change needed there.
    Two consequences did fall out, both open and both recorded under *Code inconsistencies* below:
    Supreme Light runs in the post-`d` region `e`, and the phase-`a` attribution of level and
    weapon bonuses looks wrong for this engine.
-2. ~~**Warp Attack reaches a gaze.**~~ **Resolved 2026-07-28** — see `CoM2 binary analysis.md`,
+2. ~~**Warp Attack reaches a gaze.**~~ **Resolved 2026-07-28** — see `Caster binary/CoM2 binary analysis.md`,
    *The Warp blocks*. CoM2/Warlord's Warp Attack writes `attack`, `ranged`, `thrown`,
    `firebreath` and `lightningbreath` and **no gaze field**; a complete census of the block's
    field constants confirms the absence. With *Gaze attacks* already establishing that gazes are
    independent fields sharing no slot with `ranged`, the calculator's
-   `gazeWarpHalves = isCoM1 && ...` (`stats.js:1263`) is correct as written. No change needed.
+   `gazeWarpHalves = isCoM1 && ...` is correct as written. No change needed.
    D20's Chaos Surge scope is still open and no longer coupled to this.
 3. **Level ladder for a gaze.** CoM 1 gives `ranged_type >= 100` only the Veteran step, i.e. the
    `thrown` column. CoM2 and Warlord read `Levelbonus.INI`, which the D13 read confirms has no
@@ -378,53 +386,80 @@ means either a hero-only ladder behind the existing control or a wider change to
 selected. `MODDING.INI` gives `MaxUnitLevel=4`, `MaxHeroLevel=9`, `AbsoluteMaxLevel=9`, so levels
 7–9 are hero-only and levels 5–6 need Warlord/Crusade.
 
-### D22–D26. Open consequences of the 2026-07-28 `Caster.exe` stat-pipeline read — **not fixed**
-All from `CoM2 binary analysis.md`, *Unit stat recalculation*. None is a numeric claim; each
-changes where a modifier sits in the sequence, so all want settling alongside the R1 restructure
-in `Calculator/BACKLOG.md` rather than as one-off patches.
+### D22–D26. Consequences of the 2026-07-28 `Caster.exe` stat-pipeline read
 
-#### D22. Warp is applied too late for CoM2/Warlord
+All from `Caster binary/CoM2 binary analysis.md`, *Unit stat recalculation*. None was a numeric claim; each was
+a position in the sequence, which is why they were settled together with the R1 restructure in
+`Calculator/BACKLOG.md` rather than as one-off patches.
 
-Magnitudes are confirmed correct (`CoM2 binary analysis.md`, *The Warp blocks*), but
-`stats.js:1488-1497` applies all three Warps to the *finished* totals, while the engine runs them
-mid-`c` at +0xBA3C. Everything the engine writes afterwards — the rest of `c` (Web, Frozen, Black
-Sleep), the whole of `d` (Warlord's `UnitCalc.CAS`, including Colossal Strength), the aura pass and
-Supreme Light — is added at full value on top of the reduced stat. In the calculator all of it is
-halved instead. `warpLate` is empty for `com2*`, so there is currently no way to express this.
+**D22–D25 were resolved on 2026-07-29 at R1 stage 10** — each is now a step at the address below,
+with a preset in the calculator's `Stat derivation order` group built so the previous ordering
+gives a different number. `Calculator/BACKLOG.md`, §2 has the table of what moved. D26 was never
+an ordering item and stays open as F4.
 
-#### D23. The whole aura pass runs after `d`
+#### D22. Warp was applied too late for CoM2/Warlord — **resolved**
+
+Magnitudes were already confirmed (`Caster binary/CoM2 binary analysis.md`, *The Warp blocks*); the position was
+not. The engine runs the three Warps mid-`c` at +0x0BA3C–+0x0BDF7 with Shatter immediately after
+at +0x0BF62, and everything it writes afterwards — the rest of `c` (Tactician, Web, Frozen, Black
+Sleep), the whole of `d` (Warlord's `UnitCalc.CAS`, including Colossal Strength, Blaze of Glory
+and Hierophany), the aura pass and Supreme Light — lands at full value on the reduced stat. The
+calculator halved all of it instead, because its Warp steps sat in a post-total scaffolding phase.
+
+One position now serves all three engines, because *what each writes after the block* is the whole
+of the divergence and nothing else lies between: MoM writes only Shatter and its clamp, CoM 1
+writes Darkness, Supreme Light, Tactician and Eternal Night, CoM2/Warlord write Tactician and then
+the whole of `d` and `e`.
+
+#### D23. The whole aura pass runs after `d` — **resolved**
 
 Holy Bonus, Resistance to All, Prayermaster, Guiding Beacon, Divine Barrier, Soul Linker, Supply
 Commander, Logistics, Leadership and Misfortune are applied by region `e`'s second per-unit loop.
-`combat.js:273-278` books `holyBonus` to phase `a` and `combat.js:295` books `resistanceToAll` to
-`a` — the earliest phase for effects that in fact run last. Both are step-4 judgments that SPEC.md
-already marks provisional. Two further mechanics fall out: sources merge by **maximum, not sum**
-(`@Units@AddtoAuraTable`), and Resistance to All shares aura type 3 with Prayermaster so those two
-compete rather than stack.
+The calculator booked `holyBonus` and `resistanceToAll` to phase `a` — the earliest position for
+effects that in fact run last. Both are now region-`e` steps.
 
-#### D24. Supreme Light is post-Warp *and* post-aura-pass in CoM2/Warlord
+Two further mechanics fall out of the aura table. Sources merge by **maximum, not sum**
+(`@Units@AddtoAuraTable`), which the calculator's single numeric input per aura already expresses;
+and Resistance to All shares aura type 3 with Prayermaster, so those two compete rather than
+stack — unobservable until a Prayermaster control exists.
 
-Its block is in region `e` after the aura loop, so after the Warps at +0x0BA3C. `stats.js:714`
-(`preWarpTerm = isCoM1 ? 0 : v`) books it to phase `c`, i.e. *before* Warp, for every version
-except CoM 1. The CoM 1 outcome is right for the wrong engine reason and the CoM2 outcome looks
-wrong outright. Its defense component is `+= floor(resistance / 3)` reading resistance *after*
-the aura pass — the live-resistance cross-stat read recorded as Q7 in `Calculator/BACKLOG.md`, now
-positioned. Independently corroborated by the CoM2 manual changelog (`CoM2 manual.txt:5545`).
+A third fell out while encoding it: aura type 1 adds "to defense and resistance, and to
+melee/**ranged** when the corresponding base attack exists". `unitT` keeps Thrown, Fire Breath,
+Lightning Breath and the gaze strengths in fields separate from `ranged`, so a CoM2 Holy Bonus
+reaches none of them — unlike the DOS engines, where one shared `.ranged` slot carries all of it.
+The calculator now distinguishes the two.
 
-#### D25. Level, hero and weapon bonuses may be phase `c`, not `a`
+#### D24. Supreme Light is post-Warp *and* post-aura-pass in CoM2/Warlord — **resolved**
+
+Its block is in region `e` after the aura loop, so after the Warps at +0x0BA3C. The calculator
+declared it in phase `c`, i.e. *before* Warp, for every version except CoM 1 (which had its own
+step in a post-Warp tail): the CoM 1 outcome was right for the wrong engine reason and the CoM2
+outcome was wrong outright. Independently corroborated by the CoM2 manual changelog
+(`CoM2 manual.txt:5545`).
+
+Its defense component is `+= floor(resistance / 3)` reading resistance *after* the aura pass. That
+is the live cross-stat read recorded as **Q7**, which this closed: the step now reads the record at
+its own position in both engines, so Warp Resist having zeroed Resistance contributes nothing.
+
+#### D25. Level, hero and weapon bonuses are phase `c`, not `a` — **resolved**
 
 `@Units@ApplyLevelBonus` (+0xD16), `@Units@ApplyHeroBonus` (+0x139A) and `@Units@ApplyMagicWeapons`
 (+0x4B90) all sit after the `UnitCalcPre` hook, and region `a` writes only 9 unit fields against
-`c`'s 492. `stats.js:956`, `:973` and `:1018` put `lvl.*` and `wpn.*` in `a`. If they belong in
-`c`, Upgraded Explosive's fire-breath doubling (which reads `base+a+b` of `rtb`) is currently
-doubling bonuses it should not see. **Needs an execution-order check first** — everything so far
-is layout.
+`c`'s 492. This entry previously said an execution-order check was still needed and that the
+evidence was layout only. That was wrong at the time of writing: `Caster binary/CoM2 binary analysis.md` states
+of `ApplyLevelBonus` that it "runs after that transformation and before Focus Magic. This is direct
+execution-order evidence that ordinary level bonuses belong in phase `c`."
+
+The consequence, now fixed: Upgraded Explosive's fire-breath doubling and Xenoveterinary's +25% HP
+are both region `b`, so they were compounding level and weapon bonuses they cannot see. The
+Tactician retort moved with them, to +0x0C890 — which is also *after* the Warp block.
 
 #### D26. The Chosen is Fantastic in the engine, a plain hero in the calculator
 
 Region `c` forces `race := RCLife` and `Fantastic` on the unit type named by `MODDING.INI`'s
-`ChosenUnitID` (`CoM2 binary analysis.md`, *Unit enchantment effects*). `UNITS.INI` carries the
-race but has no Fantastic key, and `ui.js:2448` types anything in the Heroes category as `hero`,
+`ChosenUnitID` (`Caster binary/CoM2 binary analysis.md`, *Unit enchantment effects*). `UNITS.INI` carries the
+race but has no Fantastic key, and `predefinedUnitType` (`ui.js`) types anything in the Heroes
+category as `hero`,
 so every Fantastic-gated modifier downstream — Nature Conjunction, Survival Instinct, Land Link's
 extra package, the Soul Linker aura, and exclusion from Good Moon, Bad Moon, Leadership and
 Misfortune — resolves the wrong way for the Chosen. Fixing it means a hard-coded unit-type rule
@@ -436,11 +471,11 @@ question.
 - **`isCoM2` was defined twice in `deriveUnitStats`.** `isCoM2Version` and its one call site were
   folded into the earlier `isCoM2`.
 - **D9's Vertigo split.** `combat.js` and `stats.js` disagreed for `com2*`. The binary settled it —
-  the compiled block is −25 To Hit / −7 To Block (`CoM2 binary analysis.md`) — so `stats.js` was
+  the compiled block is −25 To Hit / −7 To Block (`Caster binary/CoM2 binary analysis.md`) — so `stats.js` was
   the side that changed. Its display path had applied CoM 1's −30 / −10 to every `com*` version;
   it now derives both magnitudes from the same version ladder `buildVertigoContext` uses, so CoM2
   and Warlord display −25 / −7 while CoM 1 and MoM are unchanged. Verified in the browser across
-  all five versions; all three suites green (167 / 911 / 32).
+  all five versions; all three suites green (911 presets, 32 Playwright).
 
 ### Not carried over from MoM
 The CP 1.60 diff methodology (no same-size sibling binary exists here), the 1.31 Cause Fear

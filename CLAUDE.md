@@ -25,12 +25,14 @@ register. Never let a reference doc grow its own priority list.
   method and code anchors for getting more. Outranks every prose source for MoM 1.31. Its
   *The binaries* section is the single home for the paths and md5s of all three builds
   (MoM 1.31, MoM CP 1.60, CoM 1) — do not restate them elsewhere.
-- `CoM2 binary analysis.md` — the same for the modern engine, `Caster.exe`, which covers **both
-  CoM2 and Warlord** (Warlord ships no executable). It is the single home for that binary's path
-  and md5. Much cheaper to read than the DOS builds: it ships a TD32 debug section with procedure
-  symbols and named locals, so `tools/scan_caster_binary.py` resolves routines by name rather
-  than by hunting struct offsets. Reach for it whenever a CoM2/Warlord mechanic is not settled by
-  the scripts below.
+- `Caster binary/` — everything read out of the modern engine's `Caster.exe`, which covers
+  **both CoM2 and Warlord** (Warlord ships no executable). Its `README.md` is the single home for
+  that binary's path and md5; `CoM2 binary analysis.md` inside it holds the mechanic-level
+  findings and is the CoM2/Warlord counterpart to `MoM binary analysis.md`; the `.pas` files are
+  address-backed reconstructions of the flows themselves. Much cheaper to read than the DOS
+  builds: the binary ships a TD32 debug section with procedure symbols and named locals, so
+  `tools/scan_caster_binary.py` resolves routines by name rather than by hunting struct offsets.
+  Reach for it whenever a CoM2/Warlord mechanic is not settled by the scripts below.
 - `CoM2 data tables.md` — findings read out of the `.INI` tables that ship with CoM2 and Warlord
   (`MODDING.INI`, `Levelbonus.INI`, `SPELLS.INI`, `DESC.INI`). Where a table states a value it
   *is* the implementation, since the engine reads these at load time — so for numeric constants
@@ -74,7 +76,7 @@ describing it.
 - `CAS reference/` — `Scripts.TXT` (CAS language: syntax, `%I` = integer part, `%R` = round),
   `CasApi.pas` (engine function surface), `SharedConstants.pas` (spell/enchantment/realm IDs),
   `Typedec.pas` (save-file structures).
-- `CoM2 1.5.11 base/` — pristine vanilla CoM2 scripts and data tables.
+- `CoM2 1.05.11 base/` — pristine vanilla CoM2 scripts and data tables.
 - `Warlord 1.5.12.6.2/` — the mod's scripts and data tables.
 - `Warlord 1.5.12.6 (superseded)/` — only the five scripts the v1.5.12.6.2 hotfix changed,
   kept as version-comparison evidence. Never a source for current behaviour.
@@ -85,12 +87,12 @@ enchantments) hold the per-unit stat calculation; `DisAbil.CAS` decides which ab
 merely *display*. This is the one exception to the co-equal-sources rule above.
 
 **Base CoM2 formulas are not here.** Vanilla ships its combat scripts as empty stubs
-(`CoM2 1.5.11 base/UnitCalc.CAS` is a `HALT;`) — base mechanics are compiled into `Caster.exe`.
+(`CoM2 1.05.11 base/UnitCalc.CAS` is a `HALT;`) — base mechanics are compiled into `Caster.exe`.
 For CoM2 and MoM, helptext and manual remain co-equal as stated above. What vanilla *does*
 expose as text is the `.INI` data tables shipped alongside these scripts, and they carry far
 more of the engine than their name suggests — see `Reference docs/CoM2 data tables.md`, which is
 their single home. Only when they are silent, read the executable
-(`Reference docs/CoM2 binary analysis.md`).
+(`Reference docs/Caster binary/`).
 
 **`MASTER.CAS` is the only map from stat/ability names to numeric IDs**, so it cannot be
 cross-checked against anything. Trust its `Name=Number` lines; treat its `:comments:` as
@@ -132,3 +134,60 @@ Each version's directory also holds the `HELP.TXT` that shipped with it.
 `Warlord mod unit data/v1.5.12.6 (superseded)/` holds the previous release's `UNITS.INI` and
 `HELP.TXT` — evidence for version comparisons only, never a source for current behaviour. See
 the README in that directory.
+
+## Two agents (Claude and Codex)
+
+Both agents read this file; `AGENTS.md` points Codex here. This section is the single home for
+how they divide and cross-check work.
+
+| Channel | Writer | Reader |
+|---|---|---|
+| `.codex-review.md` | Codex | Claude |
+| `.claude-review.md` | Claude | Codex |
+| `.derivations/<ID>.codex.md` | Codex | — until released |
+| `.derivations/<ID>.claude.md` | Claude | — until released |
+
+**Every file above is single-writer.** Never append to, edit, or reformat the other agent's file.
+There is no shared discussion file: two writers means clobbered edits and no reliable record of
+who claimed what.
+
+### Review mode — one produces, the other critiques
+
+Write review entries to your own channel, each anchored to a **commit SHA or diff range**; an
+entry without one rots as soon as either agent touches the file. The reading agent, for each
+entry, either fixes the issue and *deletes that entry*, or leaves it and adds a reply line
+beneath: `— <agent>, <YYYY-MM-DD>: <reason>`. Never silently drop an entry. Each review run
+overwrites the writer's file from scratch, so anything still present is current.
+
+If a review entry contradicts something decided in conversation, surface the conflict to AKH.
+Neither agent shares the other's session context.
+
+### Derivation mode — both answer the same question cold
+
+Used for binary reads and reconstructions (**BACKLOG** R5, R6), where the value is *independent*
+agreement. Contamination destroys that value: an agent that reads the other's answer first
+anchors to it, and the second read confirms nothing.
+
+1. AKH poses the question as a backlog row giving only the target — file, routine, address.
+2. Each agent writes to its own `.derivations/` file and **must not read the other's**, even if
+   it exists. Do not grep for it, do not open it to "check formatting".
+3. Only once both exist does comparison happen — by AKH, or in a fresh session that was not
+   either author.
+
+### Disagreement
+
+An agent-vs-agent disagreement is **not** a source conflict. It does not belong in
+`Source discrepancies.md` (script vs prose) or `TODO.md` (prose vs prose) — it is an open
+question *about* a source. Record it as a Q row in `Calculator/BACKLOG.md` with both readings
+quoted verbatim and their code sites, and let AKH arbitrate.
+
+**Neither agent concedes to the other.** Deferring to the more confident reading launders a
+guess into a finding, and nothing downstream can detect it later.
+
+### Provenance
+
+When a finding lands in its evidence home, record how it was checked:
+`Verified: Claude 2026-08-01 (0x4a2f10); Codex 2026-08-02, independent.` Distinguish
+*independent* (derivation mode) from *reviewed* (the other agent checked the written finding) —
+they are not equally strong. Cross-checking does not close an item: findings stay `in progress`
+until AKH signs off, per the approval gate in `AGENTS.md`.
