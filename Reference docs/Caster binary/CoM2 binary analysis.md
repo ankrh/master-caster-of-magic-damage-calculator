@@ -36,6 +36,33 @@ Symbols are Delphi-mangled as `@Unit@Routine`.
 Addresses in this file are virtual (`imagebase + section VA + offset`); `syms` prints the file
 offset alongside.
 
+Two further tools make the big recalculation routine readable, where raw `dis` output is not:
+
+```
+caster_record_layout.py                                   # self-test the record layouts
+annotate_caster_disasm.py Caster.exe 0x59A02C 0x200       # annotated disassembly
+```
+
+`caster_record_layout.py` lays out `unitT` and `WizardT` from the declarations in
+`../Script source/CAS reference/Typedec.pas` under Delphi's default alignment, producing an
+offset → field-name map. `annotate_caster_disasm.py` uses it to name every absolute
+displacement — so `[edx + eax*4 + 0x6426dc8]` prints as `U.EnchantmentFlags[40=EncHeroism]` —
+and additionally collapses Delphi's guard calls and the ten-instruction record-addressing idiom
+that precedes nearly every field access. Roughly 15× denser than raw output; `--raw` disables it.
+
+**The `unitT` layout is validated, `WizardT` is not.** `unitT` computes to exactly 1,924 bytes =
+`0x1E1` dwords — the stride the code multiplies by — and reproduces all 39 field offsets read
+directly out of the executable, so unit-record field names may be taken from `Typedec.pas`
+without further checking. `WizardT` does **not** match: everything from `Retorts` onward sits
+**8 bytes later** in the binary than the declaration computes, on three independent anchors
+(`Retorts` ids 6 and 8 at `+0x21`/`+0x23`, `GlobalEnchantments` element-0 at `0x89AF3`). The
+cause is visible in the reference files themselves — `SharedConstants.pas` declares
+`VERSION = '1.05.00'` where the binary is 1.05.11, so the shipped CAS headers are a minor version
+behind — and the extra 8 bytes sit ahead of `Retorts`, most plausibly in
+`Books : array[1..MaxRealm]`. The tool applies the correction as `WIZARD_DRIFT`; **any wizard-record
+offset computed from the shipped declaration without it is wrong by 8.** Unit-record findings are
+unaffected.
+
 ## Verified findings
 
 ### Gaze attacks (resolved 2026-07-27)
@@ -88,11 +115,358 @@ has no roster consequence in MoM, whose only Doom Gaze unit has one figure.
 Each gaze phase is additionally wrapped in a caller-side loop that runs `j` times, where `j` is
 1, or 2 when a unit flag at `+0x517` is set. That flag is not yet identified.
 
-**Not established:** stoning and death gaze pass `LivingFigures(au)`, so `ApplyAttack`'s loop
-runs once per *attacker* figure for them. Whether the resist-or-die roll itself repeats per
-attacker figure is unresolved — with `atk = 0` the kill cannot come from the damage path, and
-the kill logic (`aflags2`, or `@Combat@Dealdamage` at `0x5B41C0`) has not been traced. The
-calculator rolls once per *defender* figure. Do not act on the loop bound alone.
+**The resist-or-die component does not scale with the attacker's figure count.** It resolves
+before the main per-attacker-figure loop begins at `0x5B2994`. Death Gaze snapshots
+`LivingFigures(du)` at `0x5B25AB` and loops exactly that many times at
+`0x5B25C2..0x5B2648`; Stoning Gaze does the same at `0x5B26BF` and
+`0x5B26D6..0x5B275B`. Each positive `ResistanceRoll` result adds one
+`HpPerFigure(du)` to its result bucket (`0x5B2630..0x5B2638` / `0x5B2744..0x5B274C`). The
+caller-supplied `figs` value is not read by either resistance loop, so passing
+`LivingFigures(au)` affects only the separate main-attack portion. The calculator's one roll per
+*defender* figure is therefore exact for CoM2/Warlord.
+
+The kill roll is skipped outright on the calculated defender's matching immunity or Magic
+Immunity: Death at `0x5B2568` / `0x5B259A`, Stoning at `0x5B267C` / `0x5B26AE`.
+
+Verified: Codex 2026-08-02, cold derivation followed by a byte-level self-review and
+user-directed integration. The independent Claude derivation and formal cross-review were not
+available.
+
+### `ApplyAttack` setup and pre-roll flow (R5.2a–b, resolved 2026-08-02)
+
+The durable source-shaped reconstruction is `Combat.ApplyAttack.pas`; encoded branch/call/write
+evidence and completion ledgers are in `Combat.ApplyAttack.R5.2a-b.evidence.md`. These first two
+slices cover `$005B1970..$005B2994`; the completed R5.2c tail is described immediately below.
+
+The attack-type dispatch selects the following calculated-record fields and flags before all
+common processing:
+
+| Attack type | Strength | To Hit | Type-specific flags/classification |
+|---|---|---|---|
+| Ranged | `ranged` | `hitchance + hitchanceranged − RangedPenalty` | `rangedflags`; magical/missile from `rangedtype`; `islightning := armorpiercing or rangedtype=30` |
+| Melee | `attack` | `hitchance + hitchancemelee` | `meleeflags`; Cause Fear can reduce the supplied figure count first |
+| Fire / Lightning Breath | corresponding breath field | `hitchance + hitchancebreath` | general `attackflags`; Lightning forces Armour Piercing; both are magical and breath |
+| Thrown | `thrown` | `hitchance + hitchancethrown` | `meleeflags`; not classified magical, missile or breath |
+| Doom Gaze | `doomgaze` | 100 | general flags plus Doom; `fulldoom` and magical |
+| Death / Stoning Gaze | 0 | common `hitchance` | general flags and magical; the separate resistance loops do the killing |
+
+The bounds test is unsigned (`0x5B1A22..0x5B1A25`), so value 0, values above 8 and signed-negative
+values all reach the invalid setup at `0x5B20B4` and its `Rederror` call.
+
+Four pre-roll mechanics are calculator-relevant:
+
+- **Cause Fear uses a base-record immunity gate.** On melee setup, defender Fear triggers one
+  Death-realm resistance roll at −3 per supplied figure of the attacking/feared unit. A positive result removes that
+  figure from the later attack. The direct immunity test at `0x5B1D1C` reads displacement
+  `0x1AC185F = BaseUnits + 0xC7`, not calculated `Units.deathimmunity`; derived Death Immunity
+  created during recalculation therefore does not take this shortcut. Magic Immunity still makes
+  the roll harmless through `GetEffectiveResistance`.
+- **Blood Lust doubles both melee and Thrown.** `0x5B214E..0x5B21BA` admits attack types 2 and 5,
+  requires `EncBloodLust`, rejects a calculated Fantastic defender, and writes `atk := atk * 2`.
+  The calculator currently doubles melee only; this discrepancy is registered as F22.
+- **Black Sleep has two different sides.** A sleeping attacker has `figs := 0` before dispatch
+  (`0x5B19CA..0x5B19D6`). A sleeping defender instead sets `fulldoom` and the merged Doom flag
+  (`0x5B277F..0x5B2793`) after gaze resolution.
+- **Mystic Surge reduces the defender's To Defend at resolution time.** The merged
+  `AttackFlagsT.mysticsurge` byte subtracts `MysticSurgeToDefPenalty` after Effective Defense
+  (`0x5B2960..0x5B2970`).
+
+The remaining pre-roll work is either already represented elsewhere or outside the calculator's
+one-round state: Blood Lust's target classification uses calculated `Fantastic`; Battlemage adds
+`HeroBonus(level, HABattlemage, ability-level)` to persistent MP on non-simulated melee, Thrown
+or breath attacks and clamps it to calculated max MP (`0x5B21C4..0x5B2440`); counterattacks lose
+five To-Hit points per persistent suppression point (`0x5B2448..0x5B2484`); a non-counter melee
+attack that cannot reach a flying defender exits before Immolation (`0x5B248E..0x5B24D2`); and
+melee Immolation resolves through `DamageSpell` before either gaze resistance loop
+(`0x5B24D8..0x5B2535`).
+
+Verified: Codex 2026-08-02, cold derivation plus byte-level self-review; the three review defects
+were corrected before user-directed integration. No independent Claude derivation was available.
+Claude reviewed the full extent against the binary on 2026-08-03 (R5.C) and found no semantic
+misreading; two documentation defects were fixed — the `Round` banker's-rounding mode (see F7)
+and the missing `counter`/`simul` call-site citation.
+
+### `ApplyAttack` riders, damage loop and result routing (R5.2c, resolved 2026-08-02)
+
+The durable source-shaped reconstruction is the tail of `Combat.ApplyAttack.pas`; its encoded
+branch/call/write evidence and contiguous ledger are in `Combat.ApplyAttack.R5.2c.evidence.md`.
+This slice covers `$005B2994..$005B32BC` and completes the full TD32 extent.
+
+The per-attacker-figure loop first applies six merged `AttackFlagsT` riders in this exact order:
+Exorcise, Stoning Touch, Death Touch, Life Steal, Destruction, Poison. The entry idiom at
+`$005B2994..$005B299D` skips the entire package only for attack types 6–8 — Doom, Death and
+Stoning Gaze. It therefore runs for conventional ranged, melee, both breaths and Thrown; which
+weapon-specific flags reach it was already selected by R5.2a. This closes D18's compiled
+dispatcher half and corrects the prior all-phases assumption: **no touch rider accompanies any
+gaze in `Caster.exe`**.
+
+The individual rider shapes are:
+
+- Exorcise requires a Fantastic defender, is stopped by Magic Immunity or Spell Lock, subtracts
+  3 from its save modifier against Undead, and rolls in the Life realm
+  (`$005B29A3..$005B2AD3`). A failed save adds one defender `HpPerFigure` to result field 0.
+- Stoning Touch is stopped by Magic or Stoning Immunity and rolls in Nature; Death Touch is
+  stopped by Magic or Death Immunity and rolls in Death. Each failed save adds one defender
+  `HpPerFigure`, to result field 0 or 8 respectively (`$005B2ADC..$005B2C64`).
+- Life Steal is stopped by Magic or Death Immunity, rolls in Death, adds the returned magnitude
+  to result field 4, and heals the attacker by that same raw magnitude only outside simulation
+  (`$005B2C6B..$005B2D3D`). The heal happens before target damage is applied or capped; the
+  calculator derives healing from its target-HP-capped damage distribution instead, registered
+  as F28.
+- Destruction is stopped only by Magic Immunity, rolls in Chaos, and on failure **assigns 150**
+  to result field 0 rather than adding it (`$005B2D42..$005B2DC2`). Because this block is inside
+  the attacker-figure loop, it rolls once per attacking figure; the calculator's one-roll phase
+  model is registered as F26.
+- Poison is stopped only by Poison Immunity. It makes `poisonvalue` realm-0 resistance rolls at
+  `PoisonSavePenalty`, adding one ordinary-damage point per failed save
+  (`$005B2DC8..$005B2E6D`). Realm 0 is outside the 1–5 realm constants, so this closes D4: the
+  calculator is right to omit Magic Immunity and realm bonuses from Poison.
+
+The ordinary damage path is also explicit now. Doom damage skips attack and defence rolls:
+full Doom adds `atk`; ordinary Doom adds `DoomDamagePercentage * atk div 100`, using complete
+signed `idiv` arithmetic at `$005B2E83..$005B2E9C`. Otherwise `AttackRoll(atk,tohit)` produces
+`dam3`. Blur is a side-wide combat-global enchantment selected through `CGADEnemy`, while
+Invisibility is the defender unit's field. `CGADEnemy` follows `CombatAttackersTurn`, not
+`Units[du]`: a true turn-state returns `CGDefender` (1), while false returns `CGAttacker` (2).
+The complete helper body and bytes are in `Combat.CallClosureHelpers.pas` and
+`Combat.CallClosureHelpers.R5.2k.evidence.md`. Those sides identify the
+target side for the initiating strike, but `PerformMeleeAttack` swaps `au` and `du` for its
+counterattack at `$005B3BA6..$005B3BAC` without changing the combat-turn role, so the
+counterattack reads its attacker's own side-wide Blur. Each original hit gets one `Random(100)`
+test; the configured Blur, Invisibility or combined percentage removes it before `DefenseRoll`.
+**The immunity gate reads the attacker’s `Units[au].illusionimmunity`** at `$005B2FCF`. This
+closes D5: the calculator's immunity side is correct, but its unit-owned Blur checkbox and
+always-target-side selection cannot represent the engine behavior (registered as F24).
+
+After hit removal, the engine subtracts `DefenseRoll`, subtracts Invulnerability's configured
+flat reduction, clamps at zero, then applies Supernatural minimum damage only when effective
+Defense is below 80. The minimum is
+`Round((dam3 - SupernaturalStarts) * SupernaturalRatio / 100.0)` — `fild` at `$005B2EFF`,
+`fdiv` at `$005B2F05`, and `@System@@ROUND` at `$005B2F0B`. **`@System@@ROUND` is banker's
+rounding — ties to even, not half-up**, so `Math.round` is not a faithful substitute; with the
+shipped `0`/`34` the ties fall exactly at `dam3 ≡ 25 (mod 50)`. The table's old truncation inference
+was wrong: its 7 → 2 example does not distinguish rounding from truncation. F7 remains a real
+calculator discrepancy, but the exact defect is use of `Math.round(hits / 3)` instead of the
+moddable rounded formula, not the formerly claimed one-third-of-counts overestimate.
+
+Damage that crosses a figure boundary is reduced by a fresh `DefenseRoll` and another
+Invulnerability subtraction for each new figure (`$005B309E..$005B3145`). Blur and the
+Supernatural floor are not rerun on spillover. The loop uses the existing top-figure damage,
+then records the current remainder for the next attacking figure.
+
+Finally, Create Undead routes accumulated ordinary damage to result field 4 only when the
+attacker has `createundead` and the defender has neither Magic nor Death Immunity; otherwise it
+uses field 8 (`$005B316A..$005B320C`). If the sum of all three result fields is positive,
+Bloodsucker adds configured damage to field 8 and, outside simulation, passes the separately
+configured healing amount to `Combatheal` with `overheal=False, isregen=True`
+(`$005B3216..$005B3290`). The callee caps that amount to the attacker's recoverable damage; target
+overkill is irrelevant and no remainder becomes bonus HP. This is one post-result trigger per
+`ApplyAttack` call, not one per attacking figure. The calculator currently tests only the
+pre-rider base-damage distribution and instead caps healing to non-overkill target damage; both
+disagree with the engine (registered together as F27).
+
+Verified: Codex 2026-08-02, cold derivation followed by a byte-level self-review and
+user-directed single-agent integration. The independent Claude derivation was unavailable.
+Claude reviewed the full extent against the binary on 2026-08-03 (R5.C) and found no semantic
+misreading; two documentation defects were fixed — the `Round` banker's-rounding mode (see F7)
+and the missing `counter`/`simul` call-site citation.
+
+### Ranged and melee attack dispatch (R5.2d, resolved 2026-08-02)
+
+The durable source-shaped reconstruction is `Combat.PerformAttacks.pas`; encoded branch,
+call and write evidence plus the two contiguous ledgers are in
+`Combat.PerformAttacks.R5.2d.evidence.md`. They cover `@Combat@PerformRangedAttack`
+(`$005B3338..$005B35A2`) and `@Combat@PerformMeleeAttack` (`$005B35A4..$005B3ECB`).
+
+`PerformRangedAttack` first gives the current combat attacker a wall-crushing chance. It then
+sets the repeat count to two exactly when calculated `EnchantmentFlags[15=EncHaste]` is set and
+runs an ammo-gated loop. Each admitted pass recomputes the attacker's living figures, calls
+`ApplyAttack(..., ATRanged, ..., counter=False, simul=False)`, deals all three result buckets,
+adds one suppression to the defender, and spends one base-record ammo. Reaching zero ammo clears
+the calculated `rangedtype`; finalization clears all remaining movement, sets
+`combatattacksdone := 2`, and recalculates units (`$005B33AF..$005B3599`). Ammunition remains a
+deliberate calculator non-goal for its single-exchange model.
+
+The exact melee damage phase order is:
+
+1. Wall of Fire, when the two tile predicates describe a crossing and the attacker is not owned
+   by the combat defender (`$005B35C3..$005B36C7`);
+2. attacker Stoning, Death and Doom Gazes (`$005B377B..$005B3877`);
+3. defender Stoning, Death and Doom Gazes (`$005B3879..$005B3996`);
+4. attacker Lightning Breath, Fire Breath and Thrown (`$005B399B..$005B3A9E`);
+5. First Strike if admitted, then the main/Haste/counter block (`$005B3AA0..$005B3BEE`).
+
+Wall crushing sits after Wall of Fire and before the gazes but is not unit damage. This order
+disagrees with the calculator's Thrown/Breath â†’ gazes â†’ Wall of Fire pipeline; because every
+phase deals damage before the next begins, the difference changes later living-figure counts
+and is registered as F29.
+
+The same Haste flag supplies repeat count two to **all three attacker gaze loops** as well as
+Lightning Breath, Fire Breath and Thrown. Defender retaliation gazes and the counterattack are
+outside those loops and remain single (`$005B3761..$005B3AA0`). This resolves D10: CoM2 and
+Warlord do not Haste the counterattack. It also exposes the calculator's explicit exclusion of
+gazes from Haste, registered as F30.
+
+First Strike requires the attacker flag, absence of defender `negatefirststrike`, and
+`HpPerFigure(du) - TopFigureDamage(du) <= FirstStrikeCap`. The exact INI key is loaded through
+`$00708E58`; both shipped CoM2 and Warlord tables set it to 999, deliberately disabling the old
+24-damage cap. An admitted First Strike is dealt immediately and its local result is zeroed
+(`$005B3AA0..$005B3B46`).
+
+What follows depends on whether that First Strike was admitted. `$005B3B46 EB21 jmp $005B3B69`
+skips the ordinary attacker block at `$005B3B48..$005B3B64`, so the main slot holds a real
+`ApplyAttack` result only when no First Strike was admitted, and a zero placeholder when one was.
+On both paths the optional Haste attacker result and the counterattack result are computed
+**before any slot is dealt**; the tail then deals them main, counter, Haste
+(`$005B3B48..$005B3BEE`). Each attacker result is a separate
+`ApplyAttack` call, and Cause Fear lives inside `ApplyAttack`; the two Hasted melee strikes
+therefore make independent Fear samples. The calculator conditions both strikes on one sampled
+active-figure count, including an explicit First-Strike/Haste coupling path. That discrepancy is
+registered as F31.
+
+Finally, melee increments the base attack count, spends half maximum movement using complete
+signed `div 2`, spends the signed `mod 2` remainder after the first attack, clamps remaining
+movement at zero, adds defender suppression, recalculates units, and refreshes the human-owned
+selected unit's move matrix (`$005B3BF3..$005B3EC6`).
+
+Verified: Codex 2026-08-02, single-agent cold derivation followed by a raw-byte self-review and
+user-directed integration. No Claude derivation was produced. Claude reviewed the full extent
+against the binary on 2026-08-03 (R5.C) and found no semantic misreading: the melee phase order,
+the Haste repeat loops and their exclusion of defender gazes and the counterattack, the First
+Strike gate and its zero placeholder, the counterattack argument swap, and the signed movement
+`div`/`mod` idioms all reproduce. No change was required.
+
+### Attack flags, flying eligibility and wall helpers (R5.2h, resolved 2026-08-02)
+
+The durable source-shaped reconstruction is `Combat.AttackAndWallHelpers.pas`; encoded branch,
+call and write evidence plus ten contiguous ledgers are in
+`Combat.AttackAndWallHelpers.R5.2h.evidence.md`.
+
+`@Combat@mergeflags` merges the five Boolean-only flags first — Doom, Illusion, Supernatural,
+Armor Piercing and Mystic Surge — then the valued riders in the executable's own order: Life
+Steal, Death Touch, Poison, Destruction, Stoning Touch and Exorcise. A new rider copies its
+value. When both sources carry the rider, Life Steal, Death Touch, Destruction, Stoning Touch and
+Exorcise keep `Min(existing, incoming)`, while **Poison adds the two values**
+(`$005B168A..$005B17FA`). This is the exact combination rule behind the merged `AttackFlagsT`
+snapshot consumed by `ApplyAttack`.
+
+`@Units@Ismissileranged` is table-driven. Nonpositive IDs return false; a positive ID reads the
+`IsMissile` byte at `+$0C` of the 16-byte `RangedType.INI` entry through `$0070A144`, subject to
+the compiled 1..100 bound (`$00596440..$0059648C`). The adjacent magical classifier reads
+`+$0D`, confirming the two field identities. Shipped CoM2 marks IDs 20 and 21; Warlord also marks
+22, so no hard-coded bow/sling ID predicate is faithful to both data sets.
+
+`@Units@canattackflier` returns true for positive Thrown, Fire Breath or Lightning Breath;
+Flying; present Stoning or Death Gaze; or nonzero Doom Gaze, in that short-circuit order
+(`$005953D8..$00595544`). Stoning and Death Gaze use 100 as the absent sentinel. It deliberately
+does not test ordinary ranged: `ApplyAttack` calls this helper only from the flying-defender
+melee gate, after ranged has already been dispatched separately.
+
+The wall helpers resolve four separate questions:
+
+- `CrushWall(u)` requires calculated `wallcrusher` and rejects a unit whose calculated owner is
+  the combat defender owner (`$005B32BC..$005B3338`).
+- The unnamed coordinate overload returns true exactly for `x in 6..9` and `y in 10..13`,
+  inclusive; `Insidewalls(u)` passes **base-record** combat coordinates
+  (`$005B3ECC..$005B3F5C`).
+- `HasWallOfFire` and `HasWall` find the city at the combat plane/x/y and test, respectively,
+  `City.Enchantments[CEWallOfFire] >= 0` and `City.Buildings[BCityWalls] >= 1`
+  (`$005B403C..$005B411C`).
+- `GetWallState` maps coordinates to one of twelve combat wall slots through `ctws`, returning
+  zero for no slot. `destroywall` changes only intact state 1 to broken state 2; it leaves every
+  other state unchanged (`$005BB738..$005BB785`, `$005BB7D0..$005BB7FE`).
+
+The CoM2 helptext and manual agree with the externally visible wall results: Wall of Fire fires
+on units moving or attacking through it, and destroyed City Walls reduce the Defense bonus from
++3 to +1. Neither prose source specifies the exact rectangle, record layer, city-array sentinel,
+or state transition, so no prose discrepancy is opened.
+
+Verified: Codex 2026-08-02, single-agent cold derivation followed by a raw-byte self-review and
+user-directed integration. Claude reviewed the full extent against the binary on 2026-08-03;
+Codex then corrected the one semantic-label defect it identified, which spanned three `mergeflags`
+rider labels. The other nine extents required no change.
+
+### Combat wall slot mapping and mutation (R5.2l, resolved 2026-08-02)
+
+The complete source-shaped `@Combat@ctws` and `@Combat@SetWallState` bodies are integrated in
+`Combat.AttackAndWallHelpers.pas`; encoded branch, call, write and checked-index evidence plus
+their two contiguous ledgers are in `Combat.WallStateMapping.R5.2l.evidence.md`.
+
+`ctws` maps exactly the twelve perimeter coordinates of the inclusive `x=6..9`, `y=10..13`
+wall rectangle to slots 1 through 12 and returns zero for every other coordinate
+(`$005BB0D0..$005BB1CC`). The executable order is `(9,13)..(9,10)`, then
+`(8,10)..(6,10)`, then `(6,11)..(6,13)`, then `(7,13)..(8,13)`. The tests are twelve
+independent `if` blocks, although their unique coordinate pairs make the result equivalent to a
+single lookup.
+
+`SetWallState` calls that mapper once and writes its `ws` argument only when the returned slot is
+positive (`$005BB788..$005BB7CE`); it neither validates nor translates the state value. The
+1-based `1..12` range check restores `w` before `[state + w*4 + $44EC]`, so the encoded
+`+$44EC` is lower-bound-biased: physical elements span `+$44F0..+$451C`. `GetWallState`
+uses the identical expression, closing the lookup/write symmetry behind `destroywall`'s state
+1-to-2 transition. This internal mapping does not create a calculator defect or a source
+discrepancy: the calculator accepts the contextual wall bonus directly, and neither prose source
+specifies the slot numbering.
+
+Verified: Codex 2026-08-02, user-directed single-agent cold derivation followed by a distinct
+fresh-byte self-review. The review corrected the array-offset description and removed unsupported
+screen-direction wording; no Claude input was read or used during derivation. Claude reviewed both
+extents against the binary on 2026-08-03 (R5.C) and found no semantic misreading.
+
+### Damage accumulation, healing and death routing (R5.2f, resolved 2026-08-02)
+
+The durable source-shaped reconstruction is `Combat.DamageHandling.pas`; encoded branch,
+call, arithmetic and write evidence plus five contiguous ledgers are in
+`Combat.DamageHandling.R5.2f.evidence.md`. They cover `@Combat@AddDamage`,
+`@Combat@Combatheal`, `@Units@LivingFigures`, `@Units@TopFigureDamage`, and
+`@Combat@Dealdamage`.
+
+The engine maintains three damage categories in both `DamageT` and the persistent base unit:
+irrecoverable, undead, and normal. `AddDamage` adds them independently. `Dealdamage` adds the
+incoming irrecoverable and undead buckets to their dedicated words and adds all three to
+`Totaldamage`; it does not cap those additions to remaining HP. `LivingFigures` then returns
+`figures - Totaldamage div HpPerFigure`, with complete signed `idiv` and no clamp, while
+`DeadFigures` is exactly `BaseUnits[u].figures - LivingFigures(u)`, also without its own clamp,
+and `TopFigureDamage` returns `Totaldamage - DeadFigures * HpPerFigure`
+(`$005964C6..$005964EE`, `$00596501..$00596549`, `$0059658F..$005965BB`). The completed
+callee body is in
+`Combat.CallClosureHelpers.pas`, with byte evidence in
+`Combat.CallClosureHelpers.R5.2k.evidence.md`.
+
+`Combatheal` defines healable damage as `Totaldamage - Irrecoverabledamage`. Unless `overheal`
+is set, the requested amount is capped to that value. Natural healing, regeneration, or
+overheal removes recoverable normal damage first and undead damage second
+(`$005B12A0..$005B13D3`). In overheal mode, any remaining amount becomes
+`amount div LivingFigures` bonus HP per living figure, with the base `bonushp` word capped at
+90. It adds the same per-figure amount to `Totaldamage` for already-dead figures so they stay
+dead. `CanHealNaturally` is true exactly when calculated `nohealing` is false and calculated
+race is not `RCNoHeal` (21); if either condition fails, that dead-figure adjustment is also
+added to irrecoverable damage
+(`$005B13DA..$005B15B1`). This completes the callee-side evidence behind F27 and F28:
+Bloodsucker's configured healing amount and Life Steal's raw roll magnitude are accepted
+independently of target overkill.
+
+Before accumulation, Buried merges all incoming damage into the irrecoverable bucket.
+Confusion, Possession, and Creature Binding do the same only when `CCIrrecoverable > 1`
+(`$005B4271..$005B4334`). The setting name and shipped default 2 are bound by its loader at
+`$00633ED9..$00633EF3`. The TD32-named `overland` argument is not read anywhere in the complete
+`Dealdamage` extent.
+
+Once `Totaldamage >= HpPerFigure * figures`, the base record is marked dead. The largest
+accumulated category then chooses a category flag: irrecoverable wins ties against both other
+categories; otherwise undead wins a tie against normal. A combat-summoned unit subsequently
+also sets `irrecoverable` without clearing `undeaded`, so an undead-dominant combat-summoned
+death can retain both flags (`$005B4488..$005B4548`). Damage is also added to `CAattdamage` or
+`CAdefdamage` when the damaged unit matches the corresponding current combat unit
+(`$005B4416..$005B4486`).
+
+Verified: Codex 2026-08-02, single-agent cold derivation followed by a complete raw-byte
+self-review and user-directed integration. No Claude derivation was produced. Claude reviewed the
+full extent against the binary on 2026-08-03 (R5.C) and found no semantic misreading: the
+`Combatheal(overheal, isregen)` parameter binding that F27/F28 rest on is confirmed from TD32
+rather than inference, and the control-enchantment merge, the `>=` death threshold, the
+category-dominance chain and the calculated-vs-base `figures` split all reproduce. No change was
+required.
 
 ### Unit stat recalculation: two script hooks, and a fifth region after them (2026-07-28)
 
@@ -522,7 +896,7 @@ Each Warp is gated on its own enchantment byte — Attack `0x6426DA6` (6), Defen
 Resist `0x6426DA8` (8), and Shatter follows at `0x6426DAB` (11).
 
 **Warp Attack halves five attack channels, not two.** The per-channel shape is: read the stat,
-compute the loss as `stat - (stat sar 1)`, store the loss to a penalty word, then write the
+compute the loss as `stat - (stat div 2)`, store the loss to a penalty word, then write the
 halved value back through a `lea` + `idiv` + `mov [reg]` sequence.
 
 | Field | Record | Store site | Penalty word |
@@ -536,7 +910,12 @@ halved value back through a `lea` + `idiv` + `mov [reg]` sequence.
 Melee and ranged are read three times each (value, loss, store); thrown and the two breaths once,
 because they get no penalty word. **All five stores were read directly.** Each reloads its
 divisor immediately beforehand (`mov ecx, 2`), so `/2` holds per channel rather than being
-carried over. `lightningbreath`'s store at +0xBCB9 is the block's last stat write before the
+carried over. The *loss* term is divided separately, and compiles to `sar edx,1 / jns / adc edx,0`
+(+0xBA85 melee) — Delphi's signed `div 2` truncating toward zero, **not** a bare arithmetic shift.
+Loss and store therefore agree at every sign, and Warp Attack carries no internal rounding
+inconsistency. Recorded as a negative because the `adc` correction is easy to miss: an earlier pass
+read the `sar` alone and inferred a divergence for negative stats that does not exist.
+*Verified: Claude 2026-08-02 (0x5A53C1, 0x5A5438), from the binary.* `lightningbreath`'s store at +0xBCB9 is the block's last stat write before the
 Warp Defense gate at +0xBCDF, which confirms there is no sixth channel.
 
 **Warp Attack does not reach a gaze.** A complete, uncapped census of every `0x642xxxx` constant
@@ -609,7 +988,7 @@ enchantment's effect):
 | +0x00A62 | Destiny | +0x07021 | Iron Skin |
 | +0x00D3F | Focus Magic | +0x070FF | Land Link |
 | +0x04221 | Hovering | +0x07407 | Holy Armor |
-| +0x049BC | Magic / Mithril / Adamant | +0x0754F | Orihalcon |
+| +0x049BC | *(not an enchantment gate — Heavenly Light tail)* | +0x0754F | Orihalcon |
 | +0x04DA5 | Water Walking, Wind Walking | +0x077F0 | Holy Weapon |
 | +0x04EBA | Invisibility, True Sight | +0x08C0A | Sanctify |
 | +0x04F6E | Invulnerability, Flight | +0x0B42F | **Haste** |
@@ -619,7 +998,7 @@ enchantment's effect):
 | +0x0557A | Discipline | +0x0BA3C | **Warp Attack** |
 | +0x05A34 | CC Flight, CC Armor | +0x0BCDF | **Warp Defense** |
 | +0x05CE0 | Blood Lust | +0x0BDF7 | **Warp Resist** |
-| +0x05EDC | Animated | +0x0BF62 | **Shatter** |
+| +0x05EDC | Animated *(+0x062D4 shared undead block)* | +0x0BF62 | **Shatter** |
 | +0x06497 | Guardian Wind, Magic Immunity | +0x0C2BD | Web |
 | +0x0654B | Flame Blade | +0x0C317 | Frozen |
 | +0x067EB | Immolation, Mystic Surge | +0x0C371 | Black Sleep |
@@ -643,7 +1022,7 @@ The high-level execution spine is:
 | Anchor | Purpose | Confidence |
 |---|---|---|
 | +0x00707 | Run/return from the `UnitCalcPre` script hook | exact |
-| +0x00730 | Heroism and effective-experience normalization | exact |
+| +0x00730 | Heroism and effective-`level` normalization | exact |
 | +0x008FF | Crusade effective-level contribution | exact |
 | +0x00985 | Warlord effective-level contribution | exact |
 | +0x00A62 | Destiny permanent transformation | exact |
@@ -657,8 +1036,7 @@ The high-level execution spine is:
 | +0x043D2–+0x0449D | Rebuild the current aggregate enchantment array after item/global-derived writes | exact |
 | +0x044C7 | Lucky | exact |
 | +0x045C6 | Dark Force combat-stat effect | exact |
-| +0x0464D | Guardian Spirit node-meld / Heavenly Light bonus | high |
-| +0x049BC | Magical, Mithril and Adamantium weapon To-Hit handling | exact |
+| +0x0464D–+0x04B8D | **Heavenly Light** — the Guardian Spirit node-meld and settlement-defence package, including the granted-magical-weapon To-Hit tail formerly listed separately at +0x049BC | exact |
 | +0x04B90 | `@Units@ApplyMagicWeapons` | exact |
 | +0x04BBx–+0x04D7A | Normalize Regeneration contributed by the three non-base enchantment layers | exact |
 | +0x04DA5–+0x077F0 | Unit enchantments and transformations, in the order listed above | exact |
@@ -670,6 +1048,8 @@ The high-level execution spine is:
 | +0x08F3E | Good Moon | exact |
 | +0x09296 | Nature Conjunction | exact |
 | +0x09666 | Strategic-combat normalization | exact behaviour; controlling global's source name unresolved |
+| +0x095EE | **in-combat gate over everything below** — `BaseUnits[i].incombat` false jumps straight to the `UnitCalc` hook | exact |
+| +0x09644 | `ownCG` side index: 1 when the owner is the Defender, else 2; scaled by `$190` into the combat-state record at `0x70969C` | exact |
 | +0x096F4–+0x0A90F | Combat-global enchantments | exact gates |
 | +0x0B092 | Guardian retort while defending a settlement | exact |
 | +0x0B1DA | Entangle | exact |
@@ -689,15 +1069,19 @@ Endurance and Lionheart are configured.
 
 ##### Experience, Destiny and the named stat helpers
 
-Heroism first raises the calculated `experience` byte to 4 when it is 3 or lower. If the
-persistent base experience has already reached 4, the block clears
+**This block works on `level` (`+0x4FD`), not `experience` (`+0x4FE`).** Both fields exist and
+both are live — Destiny below writes `experience` explicitly — so the distinction is real.
+Heroism first raises the calculated `level` byte to 4 when it is 3 or lower. If the persistent
+base `level` has already reached 4, the block clears
 `BaseUnits[i].OverlandEnchantmentFlags[EncHeroism]`; this is the automatic dispelling promised
-by the help text. The no-Heroism path normalizes base-Fantastic units to effective experience
-1. Fantastic units do not then receive Crusade or Warlord additions.
+by the help text. The no-Heroism path normalizes base-Fantastic units to effective level
+1. Fantastic units do not then receive Crusade or Warlord additions, and neither does the
+neutral player (`owner = NeutralplayerID`, 15).
 
 For an eligible normal unit, `GlobalEnchantments[GECrusade]` and `Retorts[Warlord]` each add
-one to the effective experience/level byte. The result is clamped to the configurable maximum
-read through the global at `0x709E64`. The compiled ordering is therefore:
+one to the effective `level` byte. The result is clamped to the configurable maximum
+read through the global at `0x709E64` — a *pointer* to the value, dereferenced twice. The
+compiled ordering is therefore:
 
 ```
 Heroism / Fantastic normalization
@@ -709,23 +1093,29 @@ Heroism / Fantastic normalization
 
 Destiny is not a disposable calculated-stat bonus. Its block writes to `BaseUnits`:
 
-- base `race := RCLife` (19), `Fantastic := true`, and the Supernatural attack marker;
-- base level/experience storage is reset;
-- current melee, ranged, Thrown, Fire Breath, Lightning Breath and HP are doubled;
+- base `race := RCLife` (19), `Fantastic := true`, and `attackflags.supernatural := true`;
+- base storage is reset — `experience := 0` and `level := 1`;
+- six current attack/HP channels are doubled, in this order: melee, ranged, **HP**, Fire Breath,
+  Lightning Breath, **Thrown**;
 - current Defense and Resistance each gain 4.
 
 `ApplyLevelBonus` runs after that transformation and before Focus Magic. This is direct
 execution-order evidence that ordinary level bonuses belong in phase `c`.
 
-Focus Magic then:
+Focus Magic then adds 3 to an existing Doom Gaze, Fire Breath and Lightning Breath — three
+independent `> 0` tests — and runs **one** of four mutually exclusive ranged branches, in this
+compiled order. Every gate reads `BaseUnits[i].ranged`, not the current value, so a ranged
+attack granted earlier in the pipeline does not suppress the conversion:
 
-- adds 3 to an existing Doom Gaze, Fire Breath or Lightning Breath;
-- adds 3 to an existing magical ranged attack;
-- otherwise converts an existing Thrown attack to Sorcery magical ranged, or converts an
-  existing non-magical ranged attack by setting ranged type 34;
-- creates strength-3 Sorcery magical ranged with four maximum shots when there is no suitable
-  attack to convert;
-- adds 15 to `maxmp` when the unit already has a positive casting pool.
+| # | Gate | Effect |
+|---|---|---|
+| 1 | `thrown > 0` and base `ranged = 0` | move Thrown into `ranged` (and `rangedbonus`), zero `thrown`, `rangedtype := 34`, `maxammo := 4` |
+| 2 | base `ranged = 0` | create it: `ranged := 3`, `rangedbonus := 3`, `rangedtype := 34`, `maxammo := 4` |
+| 3 | not `Ismagicalranged(base rangedtype)` | `rangedtype := 34` — **type only, no strength added** |
+| 4 | otherwise (already magical) | `ranged += 3`, `rangedbonus += 3` |
+
+Branch 3 is the one worth noting: converting a non-magical ranged attack grants the magical type
+and **no** +3. Finally, `maxmp += 15` when the unit already has a positive casting pool.
 
 The current-ammunition check is separate: during combat, a unit whose persistent ammunition is
 already exhausted has its current ranged type set to `-1`. After Focus Magic, base heroes get
@@ -738,13 +1128,40 @@ following IDs are recovered directly from the pointer displacements:
 
 | IDs | Compiled effects |
 |---|---|
-| 1–6 | Attack +1…+6; separate melee-weapon and ranged-weapon branches update the matching display bonus |
+| 1–6 | Attack +1…+6, in **both** weapon arms — melee writes `attack`, ranged writes `ranged`, each with its display bonus. In the melee arm an **Axe** (`it = 3`) additionally adds the same amount to Thrown — a rider *inside* the same power test, further gated on `thrown > 0` |
 | 7–12 | Defense +1…+6 |
-| 13–15 | Attack-type To-Hit +10/+20/+30; repeated for the melee and ranged item branches |
-| 16–18 | Overland and combat movement +1/+2/+3 movement points |
+| 13–15 | Attack-type To-Hit +10/+20/+30, in both arms. In the melee arm an **Axe** additionally adds the same to `hitchancethrown` — again a rider *inside* the power test, but with no `thrown > 0` gate, which is the one asymmetry between the two riders |
+| 16–18 | Overland and combat movement +1/+2/+3 movement points (literals 2/4/6 — movement is stored in half-points) |
 | 19–24 | Resistance +1…+6 |
-| 25–28 | Spell skill / maximum MP +5/+10/+15/+20 |
+| 25–28 | Spell skill / maximum MP +5/+10/+15/+20, each **gated on `maxmp > 0`** — no effect on a unit with no casting pool |
 | 33–35 | HP +1/+2/+3 and the corresponding gold-HP display count |
+
+**The two "weapon" arms are compiled range tests on `it`, not an either/or**, and item types 7–10
+run *both*:
+
+| `it` | Item type | Melee arm | Ranged arm |
+|---|---|---|---|
+| 1–3 | Sword, Mace, Axe | ✔ | — |
+| 4–6 | Bow, Wand, Staff | — | ✔ |
+| 7–10 | Shield, Chain Mail, Plate Mail, Trinket | ✔ | ✔ |
+| 11 | Vial | — | — |
+
+So an `IPattack3` Trinket or Shield adds +3 to melee **and** +3 to ranged, where a Bow, Wand or
+Staff adds only to ranged and a Sword, Mace or Axe only to melee. A Vial gets neither.
+
+The melee gate is two tests, and the second is easy to misread. `dec eax; sub eax,3; jb <melee>`
+admits 1–3; the fall-through then runs `add eax,-3; sub eax,4; jae <skip>`, which is the Pascal
+range-check idiom for `7 <= it <= 10` — for `it` 4–6 the running value `it-7` is **negative**, so
+the unsigned `sub` does not borrow and `jae` takes the skip. Reading that `jae` as "skip when
+`it >= 11`" wrongly admits 4–6 to the melee arm. The ranged gate is the single range
+`add eax,-4; sub eax,7; jae <skip>`, i.e. `4 <= it <= 10`.
+*Verified: Claude 2026-08-02 (0x59CA2E–0x59CA3A, 0x59D438–0x59D441), from the binary.*
+
+**69 of the 73 declared `IP*` powers are tested**, at 86 sites; the four never read are
+`IPSave1..IPSave4` (29–32). That is exhaustive for the `cmp byte ptr [item+disp], 0` form over the
+loop body, and a linear decode of the whole routine finds no access at those item offsets — but it
+does not establish that they are dead, since combat resolution is a separate routine and is where
+a save modifier would more naturally be read.
 
 The remaining tested powers are individually named:
 
@@ -776,13 +1193,38 @@ weapon type. This explains the second series of apparently duplicate power tests
 +0x03B2A–+0x040F7. Recharge adds four maximum shots. Egoism and Dark Force set different
 derived bytes: the later +10 To-Hit/+10 To-Block block tests **Dark Force**, not Egoism.
 
+**Two of those names do not match the field they set:** `IPLightning` (39) sets
+`AttackFlagsT.armorpiercing` and `IPPhantasmal` (64) sets `AttackFlagsT.illusion`. Neither writes
+anything lightning- or phantasm-shaped, and `IPLightning` never touches `lightningbreath`. The
+value each flag power writes alongside its boolean is a **save modifier**, and the magnitudes are
+compiled literals: `IPVampiric` lifesteal **−2**, `IPDeath` deathtouch **−3**, `IPStoning`
+stoningtouch **−1**, `IPHolyAvenger` exorcise **−3**, `IPDestruction` destructionvalue **0**
+(written explicitly from a zeroed register). All eight appear in both arms.
+
+Four further per-power details worth having:
+
+- **`IPFlaming` (36) is five channels**, not one: +3 melee unconditionally, then +3 to thrown,
+  ranged, fire breath and lightning breath *where each is already positive*. Thrown gets no
+  display-bonus write; ranged does.
+- **`IPShadow` (46) is the loop's only computed magnitude and its only single-arm power** (melee):
+  `thrown += (base attack + current level − 1) div 2`, truncating toward zero.
+- **`IPPandora` (38) is the only out-of-combat-only power**, and its destination is `BaseUnits`:
+  `PandoraBoxBudget` is a 20-entry table lookup by **current** level through the global at
+  `0x709AA8`.
+- The spell-charge transfer at the end of the shared chain is **not** a power test: it copies
+  `chargeamount` into `maxcharges` and `spellcharge` into `Spellability` whenever
+  `spellcharge > 0`, so the last non-empty slot wins.
+
 ##### Hovering, aggregate flags, node defense and weapon material
 
-Wind Mastery is `GlobalEnchantments[27]`. While present it writes
-`EncHovering` into the persistent overland layer. The Hovering block then checks the unit's
-overland tile:
+Wind Mastery is `GlobalEnchantments[27]`. **The two halves are an if/else, not a sequence**: the
+Wind Mastery arm writes `EncHovering` into the persistent overland layer and then jumps clear of
+the terrain resolution, so while the global is up a hovering unit over land keeps the flag and
+never reaches the branch below. Only when Wind Mastery is absent does the Hovering block test the
+unit's overland tile through `@Map@IsNonlandTile(plane, x, y)`:
 
-- on land, clear persistent/current Hovering;
+- on land, clear Hovering from **all four** arrays — the overland layer and the aggregate, in the
+  persistent record and the calculated one, two of the four writes therefore hitting `BaseUnits`;
 - over water in combat, grant Water Walking;
 - over water outside combat, grant Flying.
 
@@ -801,16 +1243,33 @@ current any[j] :=
 Lucky adds +10 common To Hit, +10 To Block and +1 Resistance. Dark Force adds +10 common To Hit
 and +10 To Block.
 
-The block anchored by `@Map@nodeontile`, `@Combat@Iscombat` and the node owner/melder fields
-implements the Guardian Spirit version of Heavenly Light for units defending a melded node:
-+1 melee, +1 Defense, +1 Resistance and magical weapons. The material block then gives the
-+10 To-Hit weapon benefit to eligible physical melee, ranged and Thrown channels carrying
-`EncMagic`, `EncMithril` or `EncAdamant`; `ApplyMagicWeapons` follows and handles the material's
-strength component.
+**Heavenly Light** occupies +0x0464D–+0x04B8D as a single package, and what was previously listed
+as a separate weapon-material block at +0x049BC is its tail. The gate is: in combat, the unit is
+on the defender side, and *either* there is a settlement on the combat tile with a valid owner
+*or* the tile's node has `guardian` set and is owned by the defender. All five gate exits jump to
++0x04B8D, past the tail, so nothing that fails them reaches it.
+
+The package writes +1 Defense and +1 Resistance unconditionally, +1 melee gated on **base** attack
+`> 0`, +1 **ranged** gated on current `ranged > 0` — each with its display-bonus word — and then
+`EncMagic`. **There is no write to Thrown or either breath**; CoM 1's change log records
+*"Heavenly Light now adds +1 to the unit's ranged/thrown/breath attack as well"*, so either CoM2
+diverged or that change did not carry over.
+
+The tail then supplies the **+10 To-Hit that magical weapons confer**, to melee (gated on base
+attack), non-magical ranged, and Thrown, skipping any unit that would otherwise receive it twice:
+one already carrying base `EncMagic`/`EncMithril`/`EncAdamant` gets it from `ApplyMagicWeapons`
+instead, and Fantastic units and heroes already strike as magical. `@Units@ApplyMagicWeapons`
+follows unconditionally, carries the complementary gate — it runs *only* for units that do hold a
+material — and applies `MagicWeaponBonusHit` (10) to the same three channels plus the material's
+tiered strength and defense component. **So magic, mithril and adamantium give +10 To Hit and
+ordinary weapons do not**; the CoM change log documents the whole package, including the
+Fantastic exclusion as a fix (*"Fixed 5.51 bug : Heavenly Light grants the magic weapon bonus to
+fantastic units"*).
 
 The Regeneration normalization tests `EncRegeneration` separately at offsets corresponding to
 the overland, combat and item/derived layers (+0x582, +0x5E6 and +0x64A within `unitT`) and
-raises the calculated regeneration value to the required minimum.
+raises the calculated regeneration value to that layer's minimum through `@Game@Max`: **2 for the
+overland and combat layers, 1 for the item/derived layer**.
 
 ##### Unit enchantment effects
 
@@ -826,39 +1285,74 @@ The direct enchantment gates above expand to these effects:
 | Flight | Set Flying; overland/combat movement at least 3; scouting at least 2 |
 | Cloak of Fear | Set Fear |
 | Wraith Form | Weapon Immunity, Noncorporeal and magical weapons |
-| Endurance | +1 overland/combat movement and `max(1, EnduranceHpBonus div figures)` HP per figure (4) |
-| Discipline | +1 Defense; another +1 at Regular; +1 melee and non-magical ranged at Veteran; Elite overland casts add 1 movement, while Elite combat casts grant Negate First Strike |
+| Endurance | +1 overland/combat movement; +1 `roadbuilding` when already positive; `max(1, EnduranceHpBonus div figures)` HP per figure (4), written to both `hp` and the gold-HP counter |
+| Discipline | +1 Defense; another +1 at Regular; +1 melee (gated on **base** attack) and non-magical ranged at Veteran. The two Elite tiers are **separate blocks testing their own source layer**, not the aggregate: overland-cast at +0x0589C adds 1 overland **and** 1 combat movement, combat-cast at +0x059AC grants Negate First Strike. A unit holding it from both sources gets both |
 | CC Flight | Flying; Chaos/Fantastic type; overland/combat movement at least 2 |
 | CC Armor | +3 Defense; Chaos/Fantastic type |
-| Blood Lust | Persistently mark the unit Undead and apply the Death/Fantastic/upkeep normalization used by undead units |
-| Animated | Death/Fantastic/Undead; +1 eligible attack strengths and Defense; +10 To Hit; Weapon, Illusion, Death and Cold Immunity; no ordinary upkeep/healing |
+| Blood Lust | Seven writes, the first persistent: base `EncUndead`, then current `EncUndead`, `race := RCDeath`, `Fantastic`, `foodupkeep := 0`, `goldupkeep := 0`, `nohealing`. The immunities come later, from the shared undead block |
+| Animated | Persistent base `EncUndead`, then `race := RCDeath`, `Fantastic`, current `EncUndead`; +1 to five attack channels under **three different predicates** — melee on **base** attack, fire/lightning breath and thrown on their current values, ranged on `rangedtype > 0`; +1 Defense; +10 **common** To Hit; **Weapon Immunity only**. Illusion, Death and Cold Immunity are *not* Animated's — see the shared undead block below |
 | Guardian Wind | Missile Immunity |
 | Magic Immunity | Magic Immunity |
-| Flame Blade | melee +`FlameBladeAttackBonus` (3); Thrown +`FlameBladeThrownBonus` (**0 CoM2 / 2 Warlord**); missile ranged (`@Units@Ismissileranged`) +`FlameBladeMissileRangedBonus` (**2**, not 3); magical weapons |
+| Flame Blade | melee +`FlameBladeAttackBonus` (3), gated on **base** attack; Thrown +`FlameBladeThrownBonus` (**0 CoM2 / 2 Warlord**), gated on **base** thrown and with no display-bonus write; missile ranged (`@Units@Ismissileranged` on the **current** type) +`FlameBladeMissileRangedBonus` (**2**, not 3); magical weapons. With the CoM2 value of 0 the thrown branch executes and adds nothing |
 | Immolation | Immolation and Cold Immunity |
-| Mystic Surge | Magical weapons, +3 movement, +2 Defense, −2 Resistance, no healing, Mystic/Fantastic conversion and its surge-state markers |
-| Lionheart | +3 melee and eligible ranged, +3 Resistance, `max(1, LionheartHpBonus div figures)` HP per figure (8), plus a per-figure `LionheartoldHPBonus` (0) |
+| Mystic Surge | Magical weapons, +3 combat movement, +2 Defense, −2 Resistance (booked to the **penalty** word +0x6C8, not the bonus word), `Displayrace := false`, `attackflags.mysticsurge`, and combat `EncNoHeal`. The Mystic/Fantastic conversion is a **separate shared block** keyed on that combat flag |
+| Lionheart | +3 melee (gated on **base** attack) and non-magical ranged, +3 Resistance, then `LionheartHpBonus div figures` (8, *"divided evenly between figures"*) and a flat `LionheartoldHPBonus` (0, *"to each figure"*). **No `max(1, ..)` floor** — the block contains one call, `Ismagicalranged`, and none to `@Game@Max`; Endurance does floor its equivalent |
 | Iron Skin | +5 Defense |
-| Land Link | Forester and Mountaineer; Fantastic units additionally gain +2 melee, Defense and breath |
+| Land Link | Forester and Mountaineer; if the **current** `Fantastic` is set — so including units converted earlier in region `c` — additionally +2 Defense, +2 melee (gated on **base** attack), and +2 to **both** fire and lightning breath where each is positive |
 | Holy Armor | +10 To Block when Defense is above 5, otherwise +2 Defense |
 | Orihalcon | +1 Resistance and +2 magical ranged |
-| Holy Weapon | +10 To Hit on the applicable melee/ranged/Thrown channels; magical weapons |
+| Holy Weapon | +10 To Hit on melee and Thrown unconditionally, and on ranged only when the attack is **not** already magical; magical weapons |
 | Sanctify | Gold upkeep becomes zero |
 
-Blood Lust and Animated both write the base `EncUndead` flag. Together with Destiny and
-Hovering, these are important exceptions to treating region `c` as a pure recomputation over
-temporary state.
+Blood Lust and Animated both write the base `EncUndead` flag. Together with Destiny, Hovering and
+the item loop's Pandora's Box, these are important exceptions to treating region `c` as a pure
+recomputation over temporary state.
+
+**Two shared normalization blocks follow the enchantments that feed them, and neither is an
+enchantment gate.** The one-row-per-enchantment shape of the table above hides them:
+
+| Offset | Gate | Effect |
+|---|---|---|
+| +0x062D4 | current aggregate `EncUndead` | `race := RCDeath`, `Fantastic`, **Illusion, Death and Cold Immunity**, `foodupkeep := 0`, `goldupkeep := 0`, `createoutpost := false`, `nohealing` |
+| +0x06B24 | current **combat** `EncNoHeal` | `race := RCNoHeal` (21), `Fantastic` |
+
+So a Blood Lust unit picks up the three immunities and loses `createoutpost` even though its own
+block writes none of them, and a unit that is undead from its roster gets the whole normalization
+with no enchantment at all. The same holds for the no-heal conversion, which Mystic Surge reaches
+only by setting the combat flag.
+
+**A standing rule closes the unit-enchantment sequence** at +0x0791B: any unit whose **current**
+`Fantastic` is set gets `EncMagic`. It is not gated on an enchantment, and being a live read it
+picks up every region-`c` conversion, the Chosen rule included. Counting it, this routine has
+seven distinct sources of derived `EncMagic` — Wraith Form, Mystic Surge, Flame Blade, Holy
+Weapon, Heavenly Light, `@Units@ApplyMagicWeapons`, and this.
+
+**Base versus live `Fantastic` is used deliberately, in both directions.** Holy Arms tests the
+**base** flag (+0x07796), so a unit converted earlier in region `c` still counts as "normal" and
+receives Holy Weapon; Land Link three blocks earlier tests the **current** flag (+0x07189) and so
+does see those conversions. A model that collapses the two will get one of them wrong.
 
 **A second hard-coded unit-type rule sits between Blood Lust and Animated.** At +0x05E81 the
 routine compares base `unittype` (`0x1AC1E46` — the same field the region-`a` Golem rule reads
 against `UnitGolem`) with the global at `0x708E0C`, which `@Init@GameInitialize` loads from
 `MODDING.INI`'s `ChosenUnitID` (default 34, the Chosen/Torin). On a match it sets `race := RCLife`
 (19) **and `Fantastic`**. `UNITS.INI` already gives unit 34 `Race=19`, so only the Fantastic flag
-is new information — but it is load-bearing, because every "Fantastic units only" gate downstream
-(Nature Conjunction, Survival Instinct, Land Link's extra package, the Soul Linker aura, and
-exclusion from Good Moon, Bad Moon, Leadership and Misfortune) then applies to the Chosen. A
-roster-only importer will get this wrong; `Calculator/units_com2.js` types the Chosen as a plain
-`hero`.
+is new information — but it is load-bearing. **It is not, however, load-bearing everywhere.** The
+rule writes `Units[i].Fantastic` only; `BaseUnits[i].Fantastic` is untouched, so each downstream
+"Fantastic units only" gate has to be checked individually, and they do not agree:
+
+| Gate | Reads | Chosen affected? |
+|---|---|---|
+| Land Link's extra package (+0x07189) | **live** | yes |
+| Survival Instinct (+0x07D68) | **live** | yes |
+| Nature Conjunction (+0x092CC) | **base** | **no** |
+| Good Moon (+0x08F74) | **base** | **still gains it** |
+| Bad Moon (+0x08E84) | **base** | **still suffers it** |
+
+So the Chosen picks up Land Link and Survival Instinct, is *not* helped by Nature Conjunction, and
+is *not* exempt from either Moon. The Soul Linker, Leadership and Misfortune gates are in region
+`e` and remain unchecked. A roster-only importer will still get this wrong;
+`Calculator/units_com2.js` types the Chosen as a plain `hero`.
 
 ##### Global enchantments and astronomical events
 
@@ -869,16 +1363,16 @@ wizard-record displacement `0x89AF3`. The tests in region `c` therefore resolve 
 |---|---:|---|---|
 | +0x008FF | 18 | Crusade | +1 effective level |
 | +0x041C2, +0x08886 | 27 | Wind Mastery | Hovering persistence; Flying and +1 movement |
-| +0x051F7 | 30 | King of Underworld | Grant Wraith Form during combat |
-| +0x07768 | 20 | Holy Arms | Grant Holy Weapon to normal units |
-| +0x0799E | 11 | Chaos Surge | Chaos-unit attack and Resistance bonuses; later copies add the reduced +1 increment |
+| +0x051F7 | 30 | King of Underworld | Grant Wraith Form during combat — the unit **owner's own** copy. It has a second, opposite role in `@Units@ApplyMagicWeapons` (`0x598E8C`), which scans every **other** player and *suppresses* the derived `EncMagic` grant on a hit. Do not merge the two |
+| +0x07768 | 20 | Holy Arms | Grant Holy Weapon to normal units — "normal" read from the **base** `Fantastic` flag, so region-`c` conversions do not disqualify a unit |
+| +0x0799E | 11 | Chaos Surge | Counts active copies across **all** players into `k`, increments `k` once, then applies it **after** the loop: melee `+k+1` (gated on base attack), ranged `+k` (gated on `rangedtype`), both breaths `+k`, Resistance `+k` ungated. One copy therefore gives +3 melee and +2 elsewhere. No Thrown or Doom Gaze write |
 | +0x07DF1 | 24 | Survival Instinct | Fantastic units: +1 Defense, +2 Resistance, +10 To Hit |
 | +0x08001 | 26 | Clairvoyance | Forester |
 | +0x08112 | 33 | Inner Power | Fire-Immune or Lightning-Resistant units: +3 melee, +3 ranged, Fire Breath and Lightning Breath where each is already positive, +2 Defense, +2 Resistance. No Thrown write |
-| +0x08542 | 32 | Blazing Eyes | Chaos units gain Doom Gaze 3, or +1 to existing Doom Gaze |
+| +0x08542 | 32 | Blazing Eyes | Same per-player scan as Chaos Surge but the effect is applied **inside** the loop, so each copy fires its own test: the first to find a zero Doom Gaze creates it at 3, every later one adds 1 |
 | +0x0866D | 29 | Reinforce Magic | +2 Resistance and +2 magical ranged |
-| +0x089A8, +0x0A8A2 | 1 | Eternal Night | Non-Death Resistance penalty and the enhanced Darkness calculation |
-| +0x08AE5 | 22 | Charm of Life | HP +25%, minimum +1 per figure |
+| +0x089A8, +0x0A8A2 | 1 | Eternal Night | The Resistance penalty is applied **in-loop and per copy**, and skips the caster's own — the gate is `Units[i].owner <> j`, so two *enemy* copies cost 2 Resistance and your own costs nothing. Non-Death units only. The second site sets the Darkness magnitude `k` and, on its own, **triggers** the Darkness block |
+| +0x08AE5 | 22 | Charm of Life | `hp div 4`, floored at 1, added to both `hp` and the gold-HP counter. The read is of the **calculated** `hp`, so it compounds on the item loop's `IPHP1..3`, Destiny's doubling, Endurance and Lionheart — which is the behaviour calculator defect **F16** requires |
 
 Chaos Surge and Blazing Eyes affect creatures of the matching realm rather than merely the
 casting wizard's own units, so their blocks count active copies across wizards. For Chaos
@@ -895,9 +1389,23 @@ shapes:
 
 | Offset | Event | Binary effect |
 |---|---|---|
-| +0x08E1C | Bad Moon | In-combat normal units lose 3 Resistance |
-| +0x08F3E | Good Moon | Normal units gain +1 Defense, +1 positive melee/ranged and +1 movement |
-| +0x09296 | Nature Conjunction | Fantastic units gain +2 Resistance, Defense and positive melee/ranged |
+| +0x08E1C | Bad Moon | In-combat normal units lose 3 Resistance. **The only one of the three with an in-combat gate** |
+| +0x08F3E | Good Moon | Normal units gain +1 Defense, +1 positive melee/ranged and +1 movement. Applies overland too |
+| +0x09296 | Nature Conjunction | Fantastic units gain +2 Resistance, Defense and positive melee/ranged. Applies overland too |
+
+All three read a flag at a fixed displacement in the runtime **data block** rather than a wizard
+record — Nature Conjunction `+0x0AF90AF0`, Good Moon `+0x0AF90B00`, Bad Moon `+0x0AF90B10` —
+consistent with being global to the game rather than owned by a wizard. All three test
+`BaseUnits[i].Fantastic`, and all three test their attack channels on the **current** values where
+most of the ladder tests the base.
+
+**Everything from +0x095EE to the `UnitCalc` hook runs only in combat.** The test at +0x09612
+reads `BaseUnits[i].incombat` and the branch at +0x0961A jumps to +0x0CC92, the hook itself. That
+is 13,726 bytes — 27% of region `c` — behind one conditional: every combat global, the Guardian
+retort, Entangle, Haste, the whole direct-curse tail including the three Warps and Shatter, the
+grounded-state curses, Terror, Spell Ward, the sight flags and Tactician. Region `c` is not a
+uniform ladder; it has a hard two-part split, and the tables below describe only the in-combat
+half.
 
 At +0x09666, strategic combat is queried. Under a separate global mode byte, Flying and
 Invisible are cleared before the combat-global stat blocks. The write behaviour and position
@@ -906,19 +1414,31 @@ are exact; the TD32 source name of that controlling byte remains unresolved.
 ##### Combat globals, movement normalization and the late curse tail
 
 The combat-global records use four-byte elements with an effective element-zero displacement
-of `-0x194`. Their region-`c` tests decode as follows:
+of `-0x194`, indexed by `ownCG` with a `$190` stride; the element id is `(disp + 0x194) div 4`.
+
+**Which side's record each one reads is not uniform, and nothing in the table below implies it:**
+
+| Reads | Combat globals |
+|---|---|
+| the unit's own side | High Prayer, Prayer, Blazing March, Breakthrough, Mass Invisibility |
+| the **opposing** side (`3 - ownCG`) | Black Prayer, Entangle, Terror |
+| **either** side | Warp Reality, Darkness |
+
+So "Enemy" in the Black Prayer row below means the *caster* is the enemy, not the target; and one
+copy of Warp Reality or Darkness affects the whole field regardless of who cast it. Their
+region-`c` tests decode as follows:
 
 | Offset | ID | Combat global | Effect represented here |
 |---|---:|---|---|
 | +0x096F4 | 10 | High Prayer | +2 melee and Defense, +3 Resistance, +10 To Hit and To Block |
 | +0x099C2 | 8 | Prayer | +1 Resistance, +10 To Hit and To Block; skipped when High Prayer applies |
-| +0x09B01 | 6 | Blazing March | Gated on base melee > 0. Five channels, each its own key: melee +`BlazingMarchAttackBonus` (3), Thrown +`BlazingMarchThrownBonus` (**0 CoM2 / 3 Warlord**), Fire and Lightning Breath both +`BlazingMarchBreathBonus` (0), missile ranged (`@Units@Ismissileranged`) +`BlazingMarchMissileRangedBonus` (3); magical weapons |
-| +0x09E6C | 16 | Breakthrough | Three tiers — corporeal permanent, Noncorporeal, combat summon — each +`BreakthroughAttackBonus{,2,3}` melee (1/1/1) and +`BreakthroughDefenseBonus{,2,3}` Defense (0/1/1); the corporeal tier also sets Wall Crusher. `BreakthroughAffectRanged` (1) admits units with a ranged attack |
+| +0x09B01 | 6 | Blazing March | **Only the melee channel is gated on base melee**, not the block — Thrown, both breaths, missile ranged and the magical-weapon grant all fire regardless, so a unit with no melee attack but a bow still benefits. Five channels, four keys: melee +`BlazingMarchAttackBonus` (3), Thrown +`BlazingMarchThrownBonus` (**0 CoM2 / 3 Warlord**), Fire and Lightning Breath both +`BlazingMarchBreathBonus` (0), missile ranged (`@Units@Ismissileranged`) +`BlazingMarchMissileRangedBonus` (3); magical weapons |
+| +0x09E6C | 16 | Breakthrough | Three tiers — corporeal permanent, Noncorporeal, combat summon — which are **sequential `if`s, not alternatives**: a noncorporeal combat summon takes both tiers 2 and 3. Only tier 1 is exclusive, barring combat summons and base-Fantastic units. Each +`BreakthroughAttackBonus{,2,3}` melee (1/1/1) and +`BreakthroughDefenseBonus{,2,3}` Defense (0/1/1); the corporeal tier also sets Wall Crusher. `BreakthroughAffectRanged` (1) admits units with a ranged attack — tier 1's ranged exclusion needs **both** a positive `ranged` and positive `ammo`, and is disarmed entirely while that key is set, so it is dormant in both shipped configurations |
 | +0x0A4DD | 4 | Mass Invisibility | Invisible |
 | +0x0A532, +0x0A567 | 7 | Warp Reality | Non-Chaos units lose 20 To Hit |
-| +0x0A5DB | 15 | Black Prayer | Enemy melee/ranged/Thrown/breath −1, Defense −1, Resistance −2 |
-| +0x0A8DA, +0x0A90F | 11 | Darkness | Life creatures lose 1 from each positive melee, ranged, Thrown, Fire Breath and Lightning Breath, and 1 Defense and Resistance; Death creatures gain the same 1 on all seven; Eternal Night strengthens the Death attack/Defense side |
-| +0x0B1DA | 2 | Entangle | Corporeal enemies lose `EntangleMovePenalty` half-moves (4 = 2 movement), clamped at zero |
+| +0x0A5DB | 15 | Black Prayer | Enemy melee/ranged/Thrown/breath −1, Defense −1, Resistance −2. **All ten writes are ungated** — no `> 0` test precedes any of them, so a unit with no Thrown attack ends at `thrown = -1` |
+| +0x0A8DA, +0x0A90F | 11 | Darkness | Entered on **either** side's copy **or on Eternal Night alone** — the third arm of the entry test is `k = 2`, so Eternal Night runs this block with no Darkness in play. Life creatures lose 1 from each positive melee, ranged, Thrown, Fire Breath, Lightning Breath, Defense and Resistance, in a single pass. Death creatures gain 1 on the same seven, but the five attack channels **and Defense** sit inside a `for j := 1 to k` loop while **Resistance sits outside it** — so under Eternal Night a Death unit gets +2 attack and +2 Defense but still only +1 Resistance. Gating is asymmetric: the Life branch tests all seven stats `> 0`, the Death branch tests only the five attack channels |
+| +0x0B1DA | 2 | Entangle | Corporeal enemies lose `EntangleMovePenalty` half-moves (4 = 2 movement), clamped at zero **inside this block**. The Flight and Chaos Channels Flight minimums that follow at +0x0B2F5 are unconditional and re-impose 6 and 4 half-moves, so a flying unit can get its movement straight back |
 | +0x0C3D2 | 13 | Terror | Affected enemies lose `TerrorHitchancePenalty` To Hit (10) |
 
 **Do not merge Darkness, True Light and Eternal Night.** Darkness is the compiled region-`c`
@@ -931,17 +1451,22 @@ usually commute.
 
 The owner-validity and location checks immediately before +0x0B092 resolve the small wizard
 record displacement `+0x23` as Retort 8, Guardian. When defending one of the wizard's
-settlements, it gives +10 To Hit, +10 To Block and +1 Resistance.
+settlements, it gives +10 To Hit, +10 To Block and +1 Resistance. The retort byte is read from the
+**Defender's** wizard record, after the block has already required the unit to be the defender,
+and the settlement requirement is a separate gate on the combat-city global — so a melded node
+with a Guardian Spirit does *not* trigger it. That is Heavenly Light's job.
 
 After Entangle, movement is clamped non-negative and the minimums required by Flight and
-CC Flight are restored. Haste then doubles combat maximum movement. The direct curse tail is:
+CC Flight are restored. Haste then doubles combat maximum movement — **after** those minimums, so
+a flying unit whose movement Entangle had driven to 0 ends at 12 half-moves, not 0. Applying Haste
+before the minimums gives the wrong answer. The direct curse tail is:
 
 | Offset | Curse/effect | Exact writes |
 |---|---|---|
-| +0x0B4D6 | Vertigo | common To Hit −25; To Block −7 |
+| +0x0B4D6 | Vertigo | common To Hit −25; To Block −7. Both targets are the *common* fields, which have no bonus/penalty display word — so Vertigo writes no display counterpart at all |
 | +0x0B56A | Weakness | melee, ranged and Thrown −3; no breath write |
 | +0x0B727 | Mind Storm | melee −3; ranged and Thrown −5; Defense and Resistance −5; no breath write |
-| +0x0BA3C | Warp Attack | melee `/2`; ranged/Thrown/breath `/2`; gaze fields untouched |
+| +0x0BA3C | Warp Attack | melee `/2`; ranged/Thrown/breath `/2`; gaze fields and `rangedtype` untouched |
 | +0x0BCDF | Warp Defense | Defense `/3` |
 | +0x0BDF7 | Warp Resist | Resistance `:= 0` |
 | +0x0BF62 | Shatter | reconstruct pre-Warp attack values, then set every positive melee/ranged/Thrown/breath strength to 1 |
@@ -949,17 +1474,57 @@ CC Flight are restored. Haste then doubles combat maximum movement. The direct c
 | +0x0C317 | Frozen | Clear Flying |
 | +0x0C371 | Black Sleep | Clear Flying |
 
+**The three Warps ASSIGN their penalty display word; Shatter accumulates into it.** Warp Attack
+(+0x0BAEC melee, +0x0BBCF ranged), Warp Defense (+0x0BD92) and Warp Resist (+0x0BE6B) all store
+with a plain `mov`, having never read the existing value — where every other penalty writer in the
+region read-modify-writes. So a unit hit by Black Prayer, Weakness or Mind Storm **and** a Warp
+loses the accumulated display penalty from the earlier curses; the stat values still stack
+correctly, but the displayed modifier does not. Shatter, by contrast, `movsx`es the existing word
+first (+0x0BF94 melee, +0x0C09D ranged) and adds `stat - 1`, which is why it reconstructs rather
+than clobbers — and its two penalty updates are ungated while its five stat assignments are gated
+on `> 0`.
+
+All three Warps and Shatter compute their loss with the same operation the store uses, so no Warp
+carries a rounding inconsistency — see *The Warp blocks* above for the `sar / jns / adc` idiom that
+makes Warp Attack look otherwise.
+
 The city-enchantment test just before Shatter is Flying Fortress and grants Flying to units
-defending the enchanted city. Terror follows the three grounded-state curses.
+defending the enchanted city — gated on the unit being the **defender**, then on a settlement
+being present, then on the city byte at `+0x0ADADDC4` reading `> -1`. Terror follows the three grounded-state curses.
 
 Spell Ward selects the unit's Fantastic realm through the Nature and Sorcery race values plus
 `IsChaosUnit` / `IsDeathUnit` and the corresponding Life test. If the defending city's chosen
 ward matches, the creature loses 20 To Hit, 3 Defense and 3 Resistance.
 
+The five arms read **consecutive city bytes ordered by realm race value** — `+0x0ADADDC5` Nature,
+`+0xC6` Sorcery, `+0xC7` Chaos, `+0xC8` Life, `+0xC9` Death — i.e. `base + (realm - 16)`. Realm
+membership is decided three different ways in the one chain: `race` equality for Nature, Sorcery
+and Life, but `@Units@IsDeathUnit` and `@Units@IsChaosUnit` for the other two. A unit converted to
+Death or Chaos earlier in region `c` is therefore warded, while one converted to Life is matched
+only if its `race` field says so.
+
 Finally, any unit with Illusion Immunity sets the appropriate attacker-side or defender-side
-sight byte, making detection of Invisible units a side-wide derived property. Retort byte
-`+0x21` is Tactician (ID 6): heroes receive +2 melee, ranged, Defense and Resistance; non-heroes
-receive +1 Defense. The region then sets script variable `U` and calls `UnitCalc`.
+sight byte, making detection of Invisible units a side-wide derived property. Those are the two
+combat-state bytes at `+0x322`/`+0x323` that this routine's own prologue zeroes at `0x599920`, so
+region `c` closes a loop region `a` opened; the defender and attacker tests use *separate* globals
+(`0x70A22C` and `0x7092AC`) and both run.
+
+Retort byte `+0x21` is Tactician (ID 6): heroes receive +2 melee, ranged, Defense and Resistance;
+non-heroes receive +1 Defense. `ishero` is read from the **calculated** record, melee is gated on
+**base** attack and ranged on **current** `ranged`, and **neither Thrown nor either breath is
+written** — which is the binary confirmation of the *Calculator-facing discrepancy* note below
+that the calculator's unified `+2 rtbMod` over-applies. The region then sets script variable `U`
+and calls `UnitCalc`.
+
+##### No single "has a ranged attack" predicate
+
+Blocks that touch the ranged channel do not agree on how to test for one, and each is faithful to
+its own site: `Units[i].ranged > 0` (Inner Power, Heavenly Light, Good Moon, Nature Conjunction,
+Tactician), `rangedtype > 0` (Chaos Surge, Animated), `BaseUnits[i].ranged = 0` (Focus Magic),
+`not Ismagicalranged` (Lionheart, Discipline, Holy Weapon, the non-material To-Hit tail),
+`Ismagicalranged` (Orihalcon, Reinforce Magic) and `Ismissileranged` (Flame Blade, Blazing March).
+Any model that factors these into one helper will be wrong somewhere; the predicate belongs with
+the individual step.
 
 ##### Which To Hit field each block writes
 
@@ -1012,11 +1577,31 @@ The semantic pass is complete enough to assign every large stat-producing branch
 enchantment gate in the address-order table has since been read against its effect block.
 Remaining work is narrower:
 
-- name a few late `unitT` bytes and individual fields inside the item melee/ranged
-  `AttackFlagsT` structures;
-- split the item loop into exact per-weapon-type start/end ranges instead of the parent range;
 - recover the TD32 source name of the strategic-combat mode byte tested after
   `@Preparecombat@IsStrategic`.
+
+The two item-loop residuals are closed. The melee/ranged `AttackFlagsT` fields are named from the
+shipped `Typedec.pas` layout (`doom` +0, `illusion` +1, `supernatural` +2, `armorpiercing` +3,
+`mysticsurge` +4, `lifesteal` +5, `poison` +6, `destruction` +7, `stoningtouch` +8, `deathtouch`
++9, `exorcise` +10, then the six values at +12…+32), and the per-weapon-type ranges are the two
+compiled range tests recorded above — melee +0x03120…+0x03B15, ranged +0x03B27…+0x0413A.
+
+**Everything from +0x00707 to +0x07951 has since been reconstructed statement by statement** in
+`Units.RecalculateUnits.pas`. Its durable `Units.RecalculateUnits.R5.1b.evidence.md` companion
+preserves the contiguous coverage ledger, all six zero counts, every conditional-branch target
+and the complete arithmetic idioms. The findings folded into this file above are the union of the
+Claude and Codex passes. *Verified: Claude 2026-08-01; Codex 2026-08-01, independent from the
+shared thirteen-anchor spine; cross-review and independent address verification completed
+2026-08-02 with no surviving disagreement.*
+
+**Neither derivation wins a disagreement by default.** Independent verification on 2026-08-02
+found five wrong readings in the Claude artifact — three of which had already been folded into
+this file and have since been reverted (the melee arm's item-type range, the Axe
+`hitchancethrown` rider, and Warp Attack's claimed rounding inconsistency). Citing an instruction
+address establishes that the instruction was seen, not that it was read correctly; four of the
+five errors were mis-read branch *targets*, and all five passed the coverage checker cleanly.
+Where this file and the merged reconstruction disagree, **re-read the binary** —
+`tools/annotate_caster_disasm.py` resolves the site in one command.
 
 #### Region `e`, block by block
 
@@ -1043,12 +1628,19 @@ when maximum stats changed.
 `@Units@AddtoAuraTable(uid, at, val, ow)` (`0x5973A4`) gives the table layout and merge rule.
 Each 24-byte record is `{plane, x, y, aura type, value, owner}`. A new source is merged with an
 existing record when tile, owner and type match, and only the higher value is retained. This is
-the implementation of the helptext's non-cumulative / highest-source-only language.
+the implementation of the helptext's non-cumulative / highest-source-only language. The owner
+comparison reads `Units[uid].owner`; the separate `ow` argument is stored only when a new entry
+is appended. New-entry coordinates come from `BaseUnits[uid]`.
 
 `@Units@BuildAuraTable` (`0x5976CC`) adds Holy Bonus, Misfortune and Resistance to All directly
 from unit fields, then reads hero abilities and calls `@Heroes@HeroBonus` for Divine Barrier,
 Guiding Beacon, Soul Linker, Logistics, Prayermaster, Armsmaster and Leadership. Supply Commander
-adds its fixed value 2. The TD32 typed constants name the dispatch values:
+adds its fixed value 2. Holy Bonus and Resist to All are each gated by the calculated field but
+contribute the base-record magnitude. `@Heroes@HeroBonus` (`0x5933E8`) applies either
+`bonusmul * level div bonusdiv` for ability level 1 or
+`bonusmul * 3 * level div (bonusdiv * 2)` for ability level 2, using signed division that
+truncates toward zero. The following aura names are inferred semantic aliases for the exact
+numeric dispatch values:
 
 | Type | Constant | Region-`e` effect |
 |---:|---|---|
@@ -1070,6 +1662,12 @@ Linker, Supply Commander, Logistics, Leadership and Misfortune after `UnitCalc`*
 "Supreme Light effect is now applied last, after Resistance To All, Holy Bonus, and
 Prayermaster" (`../CoM2 manual.txt:5545`).
 
+The three helpers are reconstructed statement by statement in `Units.RecalculateUnits.pas`;
+`Units.RecalculateUnits.R5.1c-c.evidence.md` preserves all 24 semantic conditional targets, 19
+calls, state writes, arithmetic idioms, and three contiguous ledgers. *Derived and byte-audited:
+Codex 2026-08-02 (`0x5973A4`, `0x5976CC`, `0x5933E8`). Completed 2026-08-02 by user direction;
+the independent Claude derivation and formal cross-review were unavailable at completion.*
+
 The earlier direct-displacement scan missed this whole table because at `0x5A6A0D` the routine
 forms
 
@@ -1081,18 +1679,28 @@ once, saves that pointer, and thereafter uses small structure-relative offsets. 
 result above remains exhaustive **for direct operands in the four accessor-visible literal
 windows**; it says nothing about computed-pointer layer accesses or aura-table effects.
 
+The R5.1c-a portion is now reconstructed statement by statement in
+`Units.RecalculateUnits.pas`; `Units.RecalculateUnits.R5.1c-a.evidence.md` preserves its four
+contiguous ledgers, every branch target, the raw jump table, the complete SmallInt and signed-
+division idioms, and the write reconciliation. *Verified: Claude 2026-08-02 and Codex
+2026-08-02, independent; cross-review and merge completed 2026-08-02 with no surviving
+disagreement (`0x5A65DC`, `0x5A6822`, `0x5D8CA0`, `0x5963F4`).*
+
 ##### Supreme Light
 
 The block tests that the unit is in combat and that combat-global enchantment
-`CGSupremeLight` (9) is active for its side. Eligibility is an OR: current or base ranged type
-is magical (`@Units@Ismagicalranged`), the effective realm is Life (`0x13`), or maximum unit MP
+`CGSupremeLight` (9) is active for its side. That member identity is derived, not assumed — see
+`Units.RecalculateUnits.R5.1c-b.evidence.md`, *The Supreme Light gate's combat-global member*,
+which resolves it and the ten other members the reconstruction reads from their displacements.
+Eligibility is an OR: current or base ranged type
+is magical (`@Units@Ismagicalranged`), the effective realm is Life (`RCLife`, `0x13`), or maximum unit MP
 is positive. That exactly implements the helptext's "friendly magic users and life creatures."
 
 For an eligible unit it:
 
 - adds `+2` melee if base melee is positive;
-- adds `+2` ranged if base ranged is positive;
-- adds `floor(current resistance / 3)` defense;
+- adds `+2` ranged if the **current** ranged strength is positive;
+- adds `current resistance div 3` defense, using signed division that truncates toward zero;
 - updates the matching positive-buff display fields; and
 - writes `EncSupremeLightRegen` (54) to the per-unit enchantment array at `+0xDB23`.
 
@@ -1102,7 +1710,9 @@ regeneration marker is only materialised here. Thus Supreme Light runs **after `
 and Shatter, and after the aura pass**. This is the same relative outcome as CoM 1 by the
 opposite route: CoM 1 moves Warp early, while CoM2 moves Supreme Light and the native aura pass
 late. It also corrects the earlier shorthand that called all three writes `+2`: the third stat
-write is defense `+= floor(resistance / 3)`.
+write is defense `+= resistance div 3`. The current/base distinction is also intentional:
+the melee rider tests `BaseUnits.attack`, while the ranged rider tests `Units.ranged`, so a
+ranged attack created earlier in this recalculation can qualify.
 
 ##### Final state reconciliation
 
@@ -1124,31 +1734,27 @@ The remainder is not unidentified padding:
 - `0x6426F42` is current unit MP and `0x6426F40` maximum unit MP; current is capped to maximum.
 - Maximum combat movement is compared with the value saved before recalculation. If it changed,
   remaining combat movement is adjusted by
-  `(new maximum - old maximum) * (2 - action-use byte) / 2`. Ranged attacks set the byte to 2
+  `(new maximum - old maximum) * (2 - combatattacksdone) / 2`. Ranged attacks set the byte to 2
   and melee attacks increment it by 1, so the evident purpose is to avoid refunding movement
   already consumed by the unit's action.
 - The `DebugInvis` block clears the fields returned by the named `UnitInvisible` and
-  `UnitStealth` accessors.
+  `UnitStealth` accessors. This is a debug toggle, not a normal game mechanic:
+  `@Init@ClearGameVariables` clears it and `@Castercore@ToggleDebugInvis` is its writer.
 - Outside combat, if a maximum-HP reduction would make a living unit's total HP non-positive,
-  total damage is capped at `maximum HP - 1` and the overflow is moved into an auxiliary word.
+  total damage is capped at `maximum HP - 1` and the overflow is moved into `Overdamage`.
   When maximum HP later rises, as much of that stored overflow as possible is restored to total
   damage while still leaving at least 1 HP. `StreamOfLife` and the relevant full-heal spell clear
-  both total damage and this word, supporting its identification as deferred damage. This is
+  both `Totaldamage` and `Overdamage`. This is
   overland state preservation, not combat-stat derivation, and is **not relevant to the damage
   calculator**.
 
-**Residual unknowns in `e`.** No major control-flow block remains without a purpose. The open
-details are narrower:
+The R5.1c-b merge closes the remaining semantic and field-name questions in this tail. The
+three secondary strengths at offsets `+0x2C`, `+0x30` and `+0x34` are `SThrown`,
+`SFireBreath` and `SLightningBreath`; their region-`e` blocks only clamp negative values to
+zero. The final calculator clamp is arithmetically equivalent because no later `e` block
+modifies those strengths. The movement byte is the shipped `combatattacksdone` field, and the
+deferred-damage word is the shipped `Overdamage` field.
 
-- the three secondary strengths are assigned: record offsets `+0x2C`, `+0x30` and `+0x34` are
-  `SThrown`, `SFireBreath` and `SLightningBreath`, respectively. Their region-`e`
-  blocks only clamp negative values to zero. This is relevant to the calculator, but its final
-  non-negative attack-strength clamp is arithmetically equivalent because no later `e` block
-  modifies thrown or either breath strength;
-- the action-use byte in the movement reconciliation has no TD32 field name, although its
-  writes after melee and ranged attacks make the 0/1/2 interpretation strong;
-- the deferred-damage word has no TD32 field name, although its arithmetic and its treatment by
-  full heals establish its function; and
 - ~~why Armsmaster is retained as aura type 8~~ **closed 2026-07-28.** The dispatcher is a
   jump table at `0x5A6A33`, 11 entries, reached by `jmp dword ptr [eax*4 + 0x5A6A33]` at
   `+0xD10C` after a `cmp eax, 0xA / ja` bounds check. Entry 8 (`AuraArmsmaster`) holds
@@ -1157,16 +1763,24 @@ details are narrower:
   The other nine entries land at `+0xD13F`, `+0xD2CC`, `+0xD31B`, `+0xD377`, `+0xD3C6`,
   `+0xD405`, `+0xD42E`, `+0xD46A` and `+0xD5B9`, all inside +0xD034–+0xD6B9.
 
+The merged source and `Units.RecalculateUnits.R5.1c-b.evidence.md` cover all six assigned
+extents with contiguous ledgers, 27/27 semantic conditional jumps, 12/12 calls and every state
+write. *Verified: Claude and Codex 2026-08-02, independently derived; Codex reviewed Claude
+against quoted instruction bytes with no actionable finding; reciprocal Claude review was
+unavailable before the user-directed merge. Merged by Codex 2026-08-02 (`0x5A6FDF`,
+`0x5951D4`, `0x595354`, `0x5B9C54`, `0x595DB0`, `0x5FCF7C`).*
+
 **Region `a` has no unidentified block.** Its control changes, type conversions, enchantment
 merger, Golem rule and script handoff are mapped in *Region a, block by block* above.
 
-**Eleven enchantments are not consumed by this stat pipeline**: Stasis (combat and overland),
-Resist Elements, Elemental Armor, Regeneration, Resist Magic, Spell Lock, Bless, Necromancy,
-Buried and No Heal. They are resolved elsewhere — Bless and the resistance enchantments during
-combat rather than during stat recalculation. The earlier list also included Misfortune; that
-was wrong. `@Units@BuildAuraTable` reads `EncMisfortune` (58) and feeds aura type 10 to region
-`e`, so its access is hidden behind the one real helper call that the direct enchantment scan did
-not include.
+**Nine enchantments are not consumed by this stat pipeline**: overland Stasis, Resist Elements,
+Elemental Armor, Regeneration, Resist Magic, Spell Lock, Bless, Necromancy and No Heal. They are
+resolved elsewhere — Bless and the resistance enchantments during combat rather than during
+stat recalculation. Combat Stasis and Buried were previously on this list, but R5.1c-b shows that
+the pipeline calls `@Units@Immobile`, which reads both and suppresses movement reconciliation.
+The earlier list also included Misfortune; that was wrong. `@Units@BuildAuraTable` reads
+`EncMisfortune` (58) and feeds aura type 10 to region `e`, so its access is hidden behind the
+helper call that the direct enchantment scan did not include.
 
 **Not established in region `c`.** All 36 gates in the address-order table have been re-read
 against the binary and each resolves to the named enchantment and effect, but field identities
@@ -1174,10 +1788,11 @@ outside those blocks — chiefly inside the item loop — remain unassigned. The
 order, and while its monotonic sequence reads as a coherent pipeline, each block's complete
 incoming control flow has not been traced. That matters most for
 the claim that level and weapon bonuses land in `c` when `Calculator/stats.js` books them to
-`a`. Region `e` has now been followed through its jump table and major branches; its remaining
-unknowns are the narrower field-name questions listed above.
+`a`. Region `e` and the three aura-table helpers have complete source-shaped coverage. R5.1c-c
+was completed by user direction on 2026-08-02 with the unavailable independent derivation and
+formal cross-review recorded in its provenance.
 
-### Resolution-time modifiers (resolved 2026-07-29)
+### Resolution-time modifiers (R5.2e executable reconstruction integrated 2026-08-02)
 
 Ten enchantments never appear in `@Units@RecalculateUnits`. They are not a sixth phase — they
 are a **different axis**. Phases `a`–`e` run once per unit and produce one stat block; these are
@@ -1189,6 +1804,11 @@ stat-modifying ones:
 |---|---|---|
 | `@Units@GetEffectiveResistance` | `0x595AB8` | `(u, realm, isroll)` |
 | `@Units@EffectiveDefense` | `0x5965C8` | `(u, flags, ismagic, extradef, spellid, ismissile, isbreath, islightning, isfire, isranged, ismagic2)` |
+
+Complete source-shaped bodies are in `Combat.ResolutionHelpers.pas`; branch bytes, loader
+bindings, calls, ledgers and completion counts are in
+`Combat.ResolutionHelpers.R5.2e.evidence.md`. Codex produced the cold derivation and a separate
+raw-byte self-review; the user directed integration while Claude was unavailable.
 
 **Both are strictly after `e`, and neither writes back.** Each forms a pointer to `Units[u]` —
 the *calculated* record, so its starting value is the finished post-`e` stat (`defense` +0x64,
@@ -1236,7 +1856,7 @@ Resist Elements is Nature-only on this side, which matches `CoM2 helptext.TXT:22
 | 3 | `0x596651` | `isranged` and `LargeShield` (+0xD0) | `+= LargeShieldBonus` (3) |
 | 4 | `0x596671` | (`ismagic2` or `isbreath`) and **Resist Elements** | `+= ResistElementsDefenseBonus` (4) |
 | 5 | `0x596696` | (`ismagic2` or `isbreath`) and **Elemental Armor** | `+= ElementalArmorDefenseBonus` (12) |
-| 6 | `0x5966BB` | `ismagic2` and **Bless** and the spell's realm (spell record +0x34) is Chaos or Death | `+= BlessDefenseBonus` (**5 CoM2 / 7 Warlord**) |
+| 6 | `0x5966BB` | `ismagic2`, **Bless**, `spellid > 0`, and the spell's realm (spell record +0x34) is Chaos or Death | `+= BlessDefenseBonus` (**5 CoM2 / 7 Warlord**) |
 | 7 | `0x59670A` | `lightningresist` (+0xDF) and `islightning` cancels the flag first; then armour piercing | `Result := Result div 2` |
 | 8 | `0x596730`–`0x596813` | six immunity tests, each an **assignment** | `Result := 100` |
 | 9 | `0x59681A` | not `ismagic` and `weaponimmunity` (+0xC9) | `+= WeaponImmunityDefenseBonus` (8) |
@@ -1250,6 +1870,11 @@ the attacker outside it (`0x5B27AC`–`0x5B27D3`). It loads `CityWallDefBonus` a
 an immunity assignment; they never affect displayed Defense, Warp, Holy Armor, or Blaze of Glory.
 `@Spells@DamageSpell` passes zero for the same argument (`0x5C139A`), so spell damage does not
 receive the walls bonus.
+
+`ApplyAttack` also pushes zero for **spell ID** at `$005B28ED` before calling
+`EffectiveDefense` at `$005B292A`. The positive-ID gate therefore excludes every unit attack
+handled by `ApplyAttack` from step 6, even when that call sets `ismagic2`. This closes D6 and
+exposes calculator defect F34; a spell caller with a real Chaos/Death spell ID can qualify.
 
 Step 8's six tests, in order: `Fireimmunity` (+0xC1) against a fire *spell* (spell record +0x56);
 `Fireimmunity` against `isfire`; `coldimmunity` (+0xC5) against a cold spell (+0x57);
@@ -1266,6 +1891,191 @@ Three ordering consequences the calculator has to match:
 - **Weapon Immunity is added after those assignments**, so it stacks on top of a 100 rather than
   being overwritten by it.
 - **Illusion short-circuits.** Step 2 returns, so no later bonus or immunity applies.
+
+##### Combat roll and ranged-distance helpers (R5.2e and R5.2k)
+
+R5.2e reconstructed the consumers around those two transforms; R5.2k later closed the small
+predicates and distance formula they call:
+
+| Symbol | Exact behavior |
+|---|---|
+| `@Wizard@HasGlobalEnchantment` `$00590DAC` | Wizard 15 (`NeutralplayerID`) returns true for every global enchantment without indexing the wizard/global arrays. Otherwise return `Wizards[w].GlobalEnchantments[ge]`, with real wizard bounds 0–13 and global-enchantment bounds 1–100. |
+| `@Units@ResistanceRoll` `$00595CEC` | `i := GetEffectiveResistance(u, realm, True) + save`; return `max(Random(10)+1-i, 0)`. With `fate`, a nonnegative wizard, Fate Mastery ID 35 and a zero first result, make exactly one new roll and replace the result. A failed resistance roll is never rerolled. |
+| `@Units@AttackRoll` `$00595E24` | Floor To Hit at 10, then for each attack die count `Random(100) < hit`. There is no upper clamp. |
+| `@Units@DefenseRoll` `$00595E7C` | For each one-based defense die, if its index exceeds `ToDefendCap` and To Defend exceeds `ToDefendCappedValue`, lower To Defend to the capped value before rolling. With shipped 15/30, dice 1–15 use the original chance and dice 16+ use `min(original, 30%)`. This closes Q14 and opens F32. |
+| `@Combat@RangedPenalty` `$005B1800` | Start from `CombatDistanceUnit`. A direct calculated `ishero` test sets distance to zero when shipped `HeroNoRangePenalty=0`; no ability is consulted. Magical ranged has a separate equivalent exemption. At/above the threshold, subtract it and return `(excess div Gap) * Growth + Base`; Long Range zeroes only `excess`, capping an applicable penalty at `Base`. This closes D14 and opens F33. |
+| `@Combat@CombatDistanceUnit` `$005BB234` | Calls `CombatDistance` with all four coordinates from `BaseUnits`, in `(u.x, u.y, u2.x, u2.y)` order. |
+| `@Combat@CombatDistance` `$005BB1CC` | Returns `max(abs(x-x2), abs(y-y2))`, the Chebyshev distance on the combat grid. Both signed subtractions and absolute values retain Delphi overflow checks. |
+
+The R5.2k source-shaped bodies are in
+[`Combat.CallClosureHelpers.pas`](./Combat.CallClosureHelpers.pas), with branch, call,
+arithmetic and coverage proof in
+[`Combat.CallClosureHelpers.R5.2k.evidence.md`](./Combat.CallClosureHelpers.R5.2k.evidence.md).
+They came from a Codex-only cold derivation and separate reverse-order raw-byte self-review;
+the review found no correction, and no Claude input was read or used during derivation. Claude
+reviewed all six extents against the binary on 2026-08-03 (R5.C) and found no semantic
+misreading; its one precision entry, attestation of the literal constants, is applied above.
+
+All configuration aliases above were independently checked against their
+`@Init@GameInitialize` string loaders. In particular, `ToDefendCap` / `ToDefendCappedValue`
+load into pointer globals `$0070A284` / `$007099EC`, and the six ranged-penalty keys load into
+the exact globals dereferenced by `RangedPenalty`.
+
+Verified for R5.2e: Codex 2026-08-02, single-agent cold derivation plus raw-byte self-review,
+under the user's direction; no Claude derivation was available. Claude reviewed all seven extents
+against the binary on 2026-08-03 (R5.C) and found no semantic misreading: the `ToDefendCap`
+write-back, the To Hit floor with no ceiling, the inverted-looking `HeroNoRangePenalty` polarity,
+Long Range's excess-only zeroing, and the Charmed hero-array indexing all reproduce. Two
+documentation defects were fixed — the four undeclared `Enc*` constants (and `HACharmed`) now
+carry values and reading sites, and the Fire/Cold/Poison immunity blocks are recorded as lacking
+Bless's `spellid > 0` guard, inert with shipped spell record 0, which strengthens F34.
+
+##### Direct spell damage and Wall of Fire (R5.2g)
+
+`@Spells@DamageSpell` (`$005C10E8..$005C1954`) is the modern engine's conventional
+direct-damage **record calculator**. `@Spells@ApplyDamageSpell`
+(`$005C1974..$005C1C45`) wraps, adjusts and deals that record.
+`@Spells@FirewallEffect` (`$005C1C48..$005C1CA5`) is the Wall of Fire entry point.
+Complete source-shaped bodies for all three routines are in `Spells.DamageSpells.pas`;
+branch bytes, calls, writes, ledgers and completion counts are in
+`Spells.DamageSpells.R5.2g.evidence.md` and `Spells.ApplyDamageSpell.R5.2j.evidence.md`.
+
+The routine first takes `stroverride` when nonzero, otherwise `SpellTable[sp].Attack`. An active
+**Chaos Conjunction** (runtime-data displacement `$0AF90AE0`) multiplies the strength of exactly
+these eleven IDs by the embedded extended-real `1.34`, then calls Delphi `Trunc`:
+
+```
+Fairy Dust 7       Ice Bolt 13       AEther Sparks 42   Psionic Blast 50
+Fire Bolt 83       Lightning Bolt 91 Fireball 96        Immolation 99
+Doom Bolt 104      Star Fires 122    Reaper Slash 177
+```
+
+The set lookup has an explicit unsigned `sp <= 183` guard. Warp Lightning (101) is not in the
+set; under the same event it instead receives `+2`. Wall of Fire (87) receives neither bonus.
+This is the compiled meaning behind the manual's “33% more damage”: the operand is exactly 1.34
+and the conversion truncates.
+
+The rest of the flow is:
+
+1. Copy Illusion, Doom, Piercing and Lightning from the spell record. Piercing sets Armor
+   Piercing; Lightning then **overwrites** that flag with `not Units[u].lightningresist`, so a
+   Lightning spell carrying both tags loses piercing against Lightning Resist.
+2. Magic Immunity exits immediately with the already-zero `damageT` unless the spell carries
+   `Nonmagic`. This happens before Black Sleep and is stronger than the later defense-100 path.
+3. Choose one attack normally, one per current living target figure for `Area`, or `str` attacks
+   for Warp Lightning. Warp Lightning lowers `str` by one after every iteration, so its rolls use
+   the descending strengths `str, str-1, ... 1`.
+4. Call `EffectiveDefense(u, flags, True, 0, sp, False, False, False, False, True,
+   not Nonmagic)`. Spell damage therefore gets no City Walls extra defense, is marked ranged and
+   magical, and supplies its positive spell ID for realm/tag checks. Cold, Fire, Missile, Poison,
+   Death, Stoning and Corporeal tags then separately replace Defense with 100 against the matching
+   immunity/non-corporeal state. These assignments are redundant for some tags already handled by
+   `EffectiveDefense`, but the order and writes are real.
+5. Black Sleep sets the local Doom flag. Doom skips every attack/defense roll and returns
+   `str * nofattacks`; Magic Immunity's earlier exit still wins. Ordinary iterations roll
+   `AttackRoll(str, hitchance) - DefenseRoll(def, defendchance)`, subtract Invulnerability and
+   clamp at zero.
+6. `Area` caps each iteration at a **full** `HpPerFigure(u)` and adds it to one aggregate total.
+   It reads `TopFigureDamage` earlier but never uses that value in the area branch. A wounded top
+   figure therefore does not lower the first subattack cap; when the aggregate is dealt, the
+   excess effectively reaches later figures.
+7. Non-area damage enters a pre-tested boundary loop at `$005C1850`: while the current remainder
+   plus `TopFigureDamage` exceeds HP per figure, the routine books the current figure's remaining
+   HP, subtracts that amount from the remainder, rolls fresh Defense and Invulnerability against
+   it, clamps it, and repeats through the back edge `$005C1867 -> $005C1785`. The first iteration
+   uses the wounded top figure; `$005C184B` then clears `TopFigureDamage`, so every later iteration
+   books a full figure. When the remainder fits, `$005C186D..$005C188C` adds it and exits the loop.
+8. Route the final total exclusively to `damageT.irrec`, `.undead` or `.normal`, in that priority,
+   from the spell's two category flags.
+
+`FirewallEffect` does nothing when `HasTeleMerge(u)` is true or the calculated unit is Flying.
+R5.2k proves that `HasTeleMerge` is exactly calculated `Units[u].teleporting` or calculated
+`Units[u].merging`, with Teleporting short-circuiting the second read, so either state exits before
+`ApplyDamageSpell`. The calculator's `wallOfFireActive` gate currently tests only the global
+toggle and melee mode and defines no Merging ability; that discrepancy is F40. Otherwise the
+engine calls `ApplyDamageSpell(u, 87, SpellTable[87].Attack)`. CoM2's `Area=True` therefore
+uses step 6 once per living figure. Warlord's deliberate removal of `Area` sends Wall of Fire
+through step 7 instead; it is not a one-figure area roll.
+
+Five calculator mismatches inside the two scoped R5.2g extents are tracked as F35–F39: the
+wounded-top area cap, Warlord Wall of Fire's non-area spill shape, Magic Immunity's direct-spell
+short circuit, Black Sleep's Doom conversion for spell damage, and Chaos Conjunction's
+Immolation scaling. R5.2j subsequently completed the wrapper post-processing described below.
+The additional `HasTeleMerge` caller/callee mismatch is tracked separately as F40.
+No calculator implementation was changed by either derivation or by this reconstruction correction.
+
+Verified: Codex 2026-08-02, cold derivation plus separate raw-byte self-review. The user directed
+single-agent integration. Claude's 2026-08-03 R5.C review initially found no semantic misreading;
+Codex's reciprocal review then found the non-area spill back edge had been cited but flattened.
+Claude re-read the cited bytes and confirmed the repeated loop. Codex corrected the source and
+downstream descriptions, and AKH directed R5.2g and R5.C closed on 2026-08-03. The existing
+whole-routine coverage ledger was accepted unchanged.
+
+##### ApplyDamageSpell post-processing and AmplifiedDamage (R5.2j, R5.2m)
+
+`ApplyDamageSpell(u, sp, ov)` first obtains `dam := DamageSpell(u, sp, ov)`, then calls
+`AmplifiedDamage(u, sp)`. R5.2m reconstructs that predicate at `$005BEB28..$005BEC6F` in
+[`Combat.AmplifiedDamage.pas`](./Combat.AmplifiedDamage.pas), with bytes and ledger in
+[`Combat.AmplifiedDamage.R5.2m.evidence.md`](./Combat.AmplifiedDamage.R5.2m.evidence.md).
+
+`AmplifiedDamage` returns false outside combat. In combat it scans the saved inclusive bound
+`i = 1..Maxunits` and returns true exactly when at least one index satisfies all four tests:
+
+```text
+not BaseUnits[i].dead
+and BaseUnits[i].incombat
+and Units[i].amplifier
+and Units[i].owner <> Units[u].owner
+```
+
+The base/current split is literal: life and combat presence come from `BaseUnits`, while
+Amplifier and both owners come from calculated `Units`. The routine does not stop after a match,
+but its Boolean is never cleared, so multiple copies do not stack. It receives no caster
+argument, and although TD32 names its second argument `sp`, the extent homes that argument and
+never reads it. Thus the executable's damage-side meaning of “friendly spell” is solely that the
+qualifying Amplifier unit's owner differs from the damaged unit's owner; there is no spell-ID
+restriction in this predicate.
+
+When the predicate is true, `ApplyDamageSpell` adds exactly one point to the first positive
+category in this priority: `dam.normal`, then `dam.irrec`, then `dam.undead`. The tests are
+mutually exclusive and a wholly zero record remains zero. The wrapper passes the result to
+`Dealdamage(u, normal, undead, True, irrec)` before any spell-specific state change.
+
+Two spell IDs then have compiled side effects:
+
+- **AEther Sparks (42)** always replaces persistent `BaseUnits[u].mp` with signed `div 2`. It
+  also replaces persistent `ammo` with signed `div 2` when either the base ranged type or the
+  current calculated ranged type is magical. Testing both is the executable form of the fix that
+  lets a spell-granted magical ranged attack qualify.
+- **Ice Bolt (13)** sets persistent combat enchantment 61, Frozen, unless the calculated unit has
+  Cold Immunity, Noncorporeal or Immolation. There is no damage-positive test. The write happens
+  after dealing the spell record, even if that damage has already marked the unit dead.
+
+Finally, when the unit is dead and combat is not active, the wrapper calls
+`UnitDies(u, False, Units[u].owner)`. This is post-resolution world-state cleanup: the dead state
+already exists, and this routine reads nothing afterward. Wall of Fire (87) triggers neither
+spell-specific block; it receives only the general `DamageSpell` → optional amplification →
+`Dealdamage` path.
+
+The shipped CoM2 and Warlord spell tables both bind IDs 13 and 42 to Ice Bolt and AEther Sparks.
+CoM2 help/manual agree on all three Frozen exclusions and on halving magical ammo/mana. Warlord
+help states the same side effects; its manual changes Ice Bolt's strength, hit chance and cost
+without contradicting them. No prose discrepancy was found. Mana, ammunition, Frozen's later-turn
+action denial and off-combat roster cleanup remain outside the calculator's single-engagement
+damage output. Amplifier's direct-damage adjustment is now fully supported by R5.2m evidence;
+its calculator implementation remains part of F36 rather than this reconstruction merge.
+
+Verified: Codex 2026-08-02, cold single-agent derivation plus separate raw-byte self-review. The
+user directed single-agent integration. Claude reviewed the full R5.2j extent against the binary
+on 2026-08-03 (R5.C) and found no semantic misreading. The evidence ledger has seven contiguous rows,
+all six zero counts, 13/13 semantic conditionals, 7/7 calls and 3/3 verifier-classified
+named-field writes accounted for.
+
+Verified for `AmplifiedDamage`: Codex 2026-08-02, cold derivation plus a separate fresh raw-byte
+self-review, under the user's single-agent/no-Claude direction. Claude reviewed the extent against
+the binary on 2026-08-03 (R5.C) and found no semantic misreading. The R5.2m evidence has two
+contiguous ledger rows, all six zero counts, 7/7 semantic conditionals, 1/1 semantic call and
+0/0 verifier-classified named-field writes accounted for.
 
 ##### The other six
 
@@ -1376,6 +2186,15 @@ resolution-time routines all occupy the right relative positions. The remaining 
 | Upgraded Explosive | `UnitCalcPre.CAS:1066-1078`, before Ballistics, Xenopsychology, Radio and every later combat-global/city block in `b` | `upgradedExplosive:fireBreath` is the last `b` step | Later Fire Breath additions such as True Light and Lucky Star can be doubled although the script adds them after the doubling |
 | Misfortune (the landed result exposed as Mislead) | Aura type 10 in `e`, after `UnitCalc` and the initial clamps | `mislead`/`mislead:ranged` are in `c`, before Holy Armor, Warp and all of `d` | Warp can reduce its penalty, and Blaze of Glory can consume its Defense penalty; neither happens in the engine |
 | Holy Armor | `c` +0x07407, after the earlier unit-enchantment blocks but before the global-enchantment and combat-global blocks | Inserted after the whole `abilByPhase.c` spread | Its `Defense > 5` read incorrectly sees later effects including High Prayer, Survival Instinct, Inner Power, Black Prayer and Mind Storm |
+
+**Exact defence writers on each side of Holy Armor's threshold** (the fix criterion for F15). The
+branch at +0x07439 reads live `defense`. Already run: the item loop's `IPDefense1..6`, Plate Mail
+and Chain Mail, Heavenly Light +1, Discipline +1/+2, CC Armor +3, Animated +1, Mystic Surge +2,
+Iron Skin +5, Land Link +2. **Not** yet run: Orihalcon, Holy Weapon, every global enchantment
+(Survival Instinct +1), the node aura +2, Bad/Good Moon, Nature Conjunction +2, every combat
+global (High Prayer +2, Breakthrough, Black Prayer −1), Entangle, and the whole curse tail
+including Warp Defense `div 3`. Any member of the second list placed before Holy Armor flips the
+branch; none of them may be.
 | Charm of Life | `c` +0x08AE5; add 25% of the HP current there, minimum 1 | Its magnitude is precomputed from `calcBaseHP`; its step precedes the separate Endurance and Lionheart HP writes | It fails to scale level/item/Endurance/Lionheart HP already present at the binary site |
 | Warlord Vampirism | `d` `UnitCalc.CAS:1245-1258`, after Colossal Strength: add integer part of `(Thrown/2) + ((Fire Breath + Lightning Breath)/2)`, then reduce each present source channel to 1 | Runs before the sequence and uses `source strength - 1` | Both position and magnitude disagree with the executable script |
 | Warlord combat-cast Flame Blade's Fire Breath point | `d` `UnitCalc.CAS:330-333`, before Colossal Strength | Folded into the region-`c` Flame Blade secondary-attack term | Warp can halve the point even though Warlord adds it after Warp |
@@ -1438,6 +2257,9 @@ named block in the phase index to become a derivation step.
 | `@Units@Ismagicalranged` | `0x5963F4` | used by Leadership and Supreme Light eligibility |
 | `@Units@GetEffectiveResistance` | `0x595AB8` | `(u, realm, isroll)`; Resist Elements, Bless, Resist Magic — after `e`, per attack |
 | `@Units@EffectiveDefense` | `0x5965C8` | `(u, flags, ismagic, extradef, spellid, …)`; Large Shield, Resist Elements, Elemental Armor, Bless, immunities — after `e`, per attack |
+| `@Units@DefenseRoll` | `0x595E7C` | per-defense-die To Block roll; applies `ToDefendCap` / `ToDefendCappedValue` after the cap index |
+| `@Combat@RangedPenalty` | `0x5B1800` | direct hero and magical-ranged exemptions, threshold/gap/growth/base formula, Long Range cap |
+| `@Combat@CombatDistanceUnit` | `0x5BB234` | BaseUnits-coordinate wrapper around `CombatDistance` |
 | `@Scripts@RunScript` | `0x582C14` | `(handle, clearvars)`; 41 call sites engine-wide |
 | `@Init@GameInitialize` | `0x63111C` | sole caller of `@Scripts@Loadscript`; maps INI keys to handles |
 | `@Combat@ApplyAttack` | `0x5B1970` | the attack resolver; named locals make it readable |
@@ -1445,5 +2267,5 @@ named block in the phase index to become a derivation step.
 | `@Combat@PerformRangedAttack` | `0x5B3338` | |
 | `@Combat@Dealdamage` | `0x5B41C0` | applies a resolved damage total |
 | `@Units@LivingFigures` | `0x59648C` | current figure count |
-| `@Units@AttackRoll` | `0x595E24` | |
-| `@Units@ResistanceRoll` | `0x595CEC` | |
+| `@Units@AttackRoll` | `0x595E24` | 10% floor, one `Random(100)` per attack die, no upper clamp |
+| `@Units@ResistanceRoll` | `0x595CEC` | d10 effective-resistance check; optional one-shot Fate Mastery reroll of a successful save |

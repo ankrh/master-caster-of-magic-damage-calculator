@@ -13,6 +13,12 @@ that would answer it. Add a question here first, then a row there.
   conflict**: `MoM source - Fandom site/To Hit.md` is correct; `Thrown Attack.md:56` (Axe to-hit
   improves thrown accuracy) is wrong. To-hit only — an axe's *attack strength* does reach thrown.
 
+- **What does CoM2/Warlord's To Defend cap do?** `@Units@DefenseRoll` proves that defense dice
+  through `ToDefendCap` use the original To Defend chance; later dice lower only an above-cap
+  chance to `ToDefendCappedValue`. With shipped 15/30, dice 1–15 use normal To Block and dice
+  16+ use `min(To Block, 30%)`. Resolved from `Caster.exe` by R5.2e on 2026-08-02; calculator
+  implementation is tracked as F32.
+
 ## Open Questions
 
 - **Does anything use `unitT.savemodifier`?** `Typedec.pas:181` declares it on the unit record,
@@ -28,8 +34,6 @@ that would answer it. Add a question here first, then a row there.
 - **Draconian Resistance discrepancy**: Game data (UNITS.INI / HTML) shows Draconian common units have Resistance 1 higher than the manual states (Spearmen 4 vs 3, Swordsmen 5 vs 4, Halberdiers 6 vs 5, Magicians 9 vs 8). This likely means Draconians have an undocumented +1 Resistance racial modifier not listed in the manual.
 
 - Warp reality wiki says to hit can be reduced to 0%, but the to hit wiki page says we can't go below 10%
-
-- Does the chaos spawn poison touch trigger on doom gaze, melee attack or on both?
 
 - Weird defense behavior on page 25
 
@@ -55,7 +59,11 @@ land linking
 Questions for the experts:
 - I found various discrepancies between the numbers in the CoM2 manual and the UNITS.INI file. Would it be of interest for me to compile a list of these?
 
-- Chaos Spawn has both a melee attack and doom gaze attack. Is poison touch attached to only one of those, and if so, which? Or is it attached to both so poison activates twice in each attack sequence?
+- Chaos Spawn has both a melee attack and doom gaze attack. Is poison touch attached to only one
+  of those, and if so, which? Or is it attached to both so poison activates twice in each attack
+  sequence? **Partly answered 2026-08-02:** CoM2/Warlord `ApplyAttack` skips the complete touch
+  package for all three gaze types at `$005B2994..$005B299D`, so Poison rides melee but not Doom
+  Gaze in the modern engine. The DOS-engine half remains open under B7.
 
 - ~~When I look at the MoM and CoM1 data using MoMTweaker, it seems like gaze attack type and values are stored in the same field as ranged, thrown and breath. Is this a fundamental property of how the game engine treats gaze...~~ **Answered from the binary** — yes, one slot: strength `.ranged` (+0x01), type `.ranged_type` (+0x02), so gaze can never co-exist with ranged/thrown/breath. See `MoM binary analysis.md`, *Gaze attacks*. The Blazing Eyes / CoM2 half below is still open, since CoM2 is a different engine.
 
@@ -74,4 +82,3 @@ Questions for the experts:
 - The CoM2 help text states that Land Linking gives +2 breath, but the CoM2 and CoM1 manuals do not mention a modifier to breath.
 
 - Sky drake has negate first strike in UNITS.INI but not in the manual
-

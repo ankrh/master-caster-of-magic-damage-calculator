@@ -1,105 +1,97 @@
 # Touch-effect trigger matrix — CoM2 vs Warlord
 
-Which per-hit / touch effects fire on which attack phase, per game version.
+Which per-hit/touch effects fire on which attack phase, per game version.
 
-Sources: `CoM2 manual.txt`, `CoM2 helptext.TXT`,
-`Warlord manual v1.5.12.5 (superseded, formatting-lossy).txt`
-(Venom @ 2326, Shadow Strike @ 3046, Cockatrices @ 2338, Focus Magic @ 2492,
-Revenant @ 3060, Rakhshasa @ 1260, Vampirism @ 3113).
+Sources: `CoM2 manual.txt`, `CoM2 helptext.TXT`, current
+`Warlord manual v1.5.12.6.html`, `Unit rosters/Warlord mod unit data/HELP.TXT`, Warlord
+`UnitCalc.CAS:509-520`, and `Caster.exe` `@Combat@ApplyAttack` R5.2c
+(`$005B2994..$005B3295`). The executable covers both CoM2 and Warlord; Warlord's scripts can
+move flags between the global, melee and ranged `AttackFlagsT` records before that common
+dispatcher runs.
 
-Cells are: ✓ = fires, ✗ = does not fire.
+Cells are: ✓ = fires when the selected attack-flags record carries the effect; ✗ = the
+dispatcher excludes it.
 
-## CoM2 (per the manuals)
+## CoM2 (compiled dispatcher)
 
-In CoM2 and earlier, touch attacks are generic per-hit riders and fire on every
-attack phase the unit performs. (Hero-item touch attacks have phase-specific
-rules — bow/wand/staff touches fire on ranged only — but those aren't modeled
-in this calculator.)
-
-| Effect | Melee | Thrown | Breath | Ranged (physical) | Magical Ranged | Gaze |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Poison        | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Stoning Touch | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Death Touch   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Life Steal    | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Dispel Evil   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Bloodsucker   | — n/a in CoM2 — |
-
-## Warlord (per the manuals)
-
-Same as CoM2 except **Stoning Touch and Death Touch no longer fire on any
-ranged attack** (physical or magical). This is the only primary-source-attested
-CoM2→Warlord change to touch-dispatch behavior, per the Cockatrices entry
-(@ 2338) and Focus Magic entry (@ 2496: "Stoning (and death) touch also no
-longer can apply in ranged attacks").
+The six merged riders run for attack types 1–5: conventional ranged, melee, Fire Breath,
+Lightning Breath and Thrown. The gate at `$005B2994..$005B299D` skips the complete package for
+attack types 6–8, so none accompanies Doom, Death or Stoning Gaze. Hero-item touches still reach
+only the weapon record to which they were written.
 
 | Effect | Melee | Thrown | Breath | Ranged (physical) | Magical Ranged | Gaze |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Poison        | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Stoning Touch | ✓ | ✓ | ✓ | **✗** | **✗** | ✓ |
-| Death Touch   | ✓ | ✓ | ✓ | **✗** | **✗** | ✓ |
-| Life Steal    | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Dispel Evil   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Bloodsucker   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Poison | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Stoning Touch | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Death Touch | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Life Steal | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Exorcise | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Destruction | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Bloodsucker | — n/a in base CoM2 — |
 
-**Bloodsucker mechanics** (Rakhshasa intro @ 1261, Manticore @ 1303, patch
-note @ 4956): on each attack that deals damage, target takes **+2 extra
-damage** and attacker **heals 2**. **Max 1 trigger per attack phase regardless
-of attacker figure count.** A unit with both melee and thrown gets two
-separate triggers (one per phase, each capped at 1). Carriers: Rakhshasa
-Wildhunter / Jaguar Warriors / Blood Priests / Weretiger Mages / Rishi /
-Ogre Lord / Manticore, Vampire Lord, and units enchanted with Vampirism.
-Gaze-phase activation is unattested in primary sources but assumed by
-analogy with the other touch effects.
+## Warlord (script plus compiled dispatcher)
 
-Separate Warlord realm-theme change (not a touch-dispatch change):
-**Death realm no longer associated with poison damage** (Warlord manual
-@ 3001, @ 3023, @ 3070). Ghouls lose their poison; Reaper Slash reworked
-from poison to cold. This changes which units carry Poison in the unit data,
-not how Poison fires.
+The common dispatcher has the same no-gaze rule. Warlord's current helptext says Stoning Touch
+and Death Touch do not apply to **Magic Ranged** attacks. The executing Focus Magic block
+implements its case by moving both flags from global/ranged to melee (`UnitCalc.CAS:509-520`).
+The physical-ranged column remains provisional pending D18's complete flag-placement audit; the
+calculator's blanket physical-and-magical block is broader than the current prose and located
+script.
 
-Source notes for CoM2:
-- The CoM2 helptext entries for Poison, Stoning Touch, Death Touch, Life Steal,
-  and the Thrown/Breath phases are delivery-mode agnostic — they describe
-  touches as per-figure resistance rolls without restricting them to melee.
-- The "all phases" reading is also the design intent per the project owner: in
-  CoM2 and earlier, touch attacks are generic per-hit riders.
-- Hero-item touch effects (Bow/Wand/Staff) are an exception — those are
-  explicitly "ranged only" per the helptext at lines 3231-3241 — but the
-  calculator does not model item-granted touches.
-- Dispel Evil has **no melee-only restriction in any version.** The MoM Fandom
-  write-up ([Dispel Evil (Ability).md:29](MoM source - Fandom site/Dispel Evil (Ability).md#L29))
-  calls it a "Melee Touch Attack", but MoM 1.31's own code contradicts this: the
-  dispatch at `0x99F72` in `WIZARDS.EXE` has no `attack_mode` gate (see
-  `MoM binary analysis.md`). CoM renamed the ability **Exorcise**, and CoM,
-  CoM2 and Warlord helptext all describe it as a plain per-figure touch with no
-  phase restriction.
-- The one real restriction, present in CoM/CoM2/Warlord helptext: "If this ability
-  is granted by a weapon, it only applies to attacks performed by that type of
-  weapon." That is the hero-item case, which this calculator does not model.
-- CoM changed the target class as well: MoM 1.31 requires the defender's race to be
-  Chaos (0x12) or Death (0x14), whereas CoM onward targets **fantastic units**.
+| Effect | Melee | Thrown | Breath | Ranged (physical) | Magical Ranged | Gaze |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Poison | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Stoning Touch | ✓ | ✓ | ✓ | ✓* | **✗** | **✗** |
+| Death Touch | ✓ | ✓ | ✓ | ✓* | **✗** | **✗** |
+| Life Steal | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Exorcise | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Destruction | ✓ | ✓ | ✓ | ✓ | ✓ | **✗** |
+| Bloodsucker | ✓† | ✓† | ✓† | ✓† | ✓† | ✓† |
 
-## Current calculator implementation (`combat.js`)
+`*` Pending the remaining D18 record-placement audit.
 
-No version gating exists in the touch dispatch — these fire identically in
-CoM2 and Warlord:
+`†` Bloodsucker is not one of the six touch riders. It triggers after result routing whenever an
+`ApplyAttack` call produced any positive result, so a successful gaze result can trigger it too.
+Warlord's shipped settings add 2 damage and heal 2; the executable loads those as separate
+moddable values. It triggers once per `ApplyAttack` call, not once per attacking figure.
 
-| Effect | Melee | Thrown / Breath | Ranged | Gaze |
-|---|:---:|:---:|:---:|:---:|
-| Poison        | ✓ | ✓ | ✓ | ✓ |
-| Stoning Touch | ✓ | ✓ | ✓ | ✓ |
-| Life Steal    | ✓ | ✓ | ✓ | ✓ |
-| Dispel Evil   | ✓ | ✓ | ✓ | ✓ |
-| Bloodsucker   | — not modeled — |
-| Death Touch   | — not modeled as a distinct effect — |
+## Exact compiled rider order and gates
 
-## Divergences worth investigating
+| Rider | Extent | Immunity / eligibility gate | Result |
+|---|---:|---|---|
+| Exorcise | `$005B29A3..$005B2ADC` | Fantastic; no Magic Immunity or Spell Lock; Undead worsens modifier by 3 | failed Life save adds one `HpPerFigure` to field 0 |
+| Stoning Touch | `$005B2ADC..$005B2BA3` | no Magic or Stoning Immunity | failed Nature save adds one `HpPerFigure` to field 0 |
+| Death Touch | `$005B2BA3..$005B2C6B` | no Magic or Death Immunity | failed Death save adds one `HpPerFigure` to field 8 |
+| Life Steal | `$005B2C6B..$005B2D42` | no Magic or Death Immunity | returned magnitude enters field 4 and heals outside simulation |
+| Destruction | `$005B2D42..$005B2DC8` | no Magic Immunity | failed Chaos save assigns 150 to field 0 |
+| Poison | `$005B2DC8..$005B2E6F` | no Poison Immunity | `poisonvalue` realm-0 saves, one ordinary damage per failure |
 
-1. **Warlord ranged**: calculator fires Stoning Touch on ranged; Warlord manual explicitly removed this (Focus Magic + Cockatrices combo deliberately eliminated). Confirmed divergence.
-2. **Bloodsucker**: not implemented at all (Rakhshasa racial / Vampire Lord / Vampirism enchantment, Warlord-only). Needs +2 damage / +2 heal per attack phase with damage, capped at 1 trigger per phase regardless of attacker figure count.
-3. **Death Touch**: no distinct ability key — currently subsumed into Life Steal / Stoning Touch handling.
-4. ~~**Dispel Evil on non-melee phases**~~ — resolved, no divergence. The calculator fires it on
-   all phases (`touchParams` in `combat.js` computes `dispelEvilFail` identically for melee,
-   thrown, ranged and gaze), which is correct for every version. The earlier entry here was
-   based on the MoM Fandom "Melee Touch Attack" wording, now disproven against the binary.
+All six rows are inside the attacker-figure loop. Destruction therefore makes one whole-unit
+save-or-die roll per attacking figure despite its assignment-style result; this is calculator
+defect F26.
+
+## Current calculator discrepancies
+
+1. **Gazes (F25).** `gazeTouchParams` enables all six riders alongside every active gaze, while
+   the modern engine skips the whole package for attack types 6–8.
+2. **Warlord physical ranged (remaining D18 audit).** `warlordRangedTouchBlocked` blocks Stoning
+   and Death Touch for physical and magical ranged alike. Current helptext names Magic Ranged,
+   and the located Focus Magic script implements that case; finish the record-placement audit
+   before changing this half.
+3. **Bloodsucker trigger and healing (F27).** The engine tests the sum of all result buckets only
+   after ordinary damage, Immolation and every rider have been merged, then passes the configured
+   healing amount independently of target overkill. The calculator tests its pre-rider base
+   distribution and caps healing to the bonus damage that fits inside remaining HP.
+4. **Destruction roll count (F26).** The calculator resolves one roll for the whole phase; the
+   compiled block runs once per attacking figure.
+
+## Source notes
+
+- CoM2 and Warlord helptext describe weapon-granted touches as applying only to attacks performed
+  by that weapon type. That is record placement, not a dispatcher branch.
+- Warlord Missile Immunity help explicitly says it does not stop Poison, Stoning Touch, Death
+  Touch or Life Steal carried by ranged attacks.
+- Dispel Evil is the older name; the modern `AttackFlagsT` member is `exorcise`. The compiled
+  dispatcher gives Exorcise no melee-only restriction, but it does share the no-gaze gate.
+- Immolation is separate from `AttackFlagsT`; R5.2b gates it explicitly on melee at
+  `$005B24D8..$005B2535`.

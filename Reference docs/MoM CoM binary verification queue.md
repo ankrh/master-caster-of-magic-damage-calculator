@@ -175,11 +175,11 @@ result established for CoM 1's DOS binary silently governs CoM2 and Warlord, whi
 different engine. `startsWith('com2')` sites are the *deliberate* CoM2 divergences and appear in
 the next section; anything here has no CoM2-specific branch at all.
 
-**Half of this group is now settled**, mostly from the data tables: D4, D5, D6, D7 and D12's
-Flame Blade row have had their magnitudes confirmed, D9 is closed outright, and D1 and D2 are
-down to one open claim each. What remains is disproportionately *shape* rather than *value* —
-realm gates, eligibility rules, ability-vs-enchantment questions — which is what tables cannot
-express and the binary must answer.
+**More than half of this group is now settled.** D4 and D5 are closed from R5.2c, D10 from
+R5.2d, and D6 and D7 from R5.2e; the data tables confirmed D12's Flame Blade magnitudes; D9 is closed outright; and D1 and D2 are down
+to one open claim each. What remains is disproportionately *shape* rather than *value* — realm
+gates, eligibility rules and record placement — which is what tables cannot express and the
+binary must answer.
 
 #### D1. Defence-replacing immunities are 100, not 50 — **mostly resolved**
 `missileImmunityDef`, `fireImmunityDef`, `righteousnessDef`,
@@ -205,38 +205,52 @@ bypass was a *race-number cutoff* — a 1991 artefact. Whether the modern engine
 equivalent is unestablished. Related: `wraithFormBypassesWI` (`stats.js`) and Animate
 Dead granting Weapon Immunity (`applyAnimatedEffects`), both gated `com*`.
 
-#### D3. Cause Fear's −3 save modifier
-`fearFailProb` (`combat.js`). Also asserts Death Immunity is a skip and that Magic Immunity /
-Righteousness are +30 resistance bonuses rather than skips — the MoM shape, carried over whole.
+#### D3. Cause Fear's −3 save modifier — **Righteousness alone remains**
+`ApplyAttack` passes the literal −3 and Death realm to `ResistanceRoll` at
+`$005B1D67..$005B1D73`, while its direct skip tests base Death Immunity. R5.2e's
+`GetEffectiveResistance` then confirms calculated Magic Immunity assigns effective Resistance
+100 for every nonzero realm; it is not a +30 addition, though both shapes guarantee this d10 save.
+Only Righteousness remains open: it is absent from `GetEffectiveResistance`, so settling D1/D3
+requires determining whether recalculation maps it into another field before this consumer.
 
-#### D4. Poison being realm-less — **the −1 save penalty is resolved**
-`poisonFailProb` (`combat.js`). `MODDING.INI`'s `PoisonSavePenalty=-1` in both versions settles the penalty
-outright (`CoM2 data tables.md`). What remains is the same function's assertion that Poison is
-realm-less, so Magic Immunity does not stop it — a MoM structural fact with no CoM2 evidence and
-no key in the tables.
+#### D4. Poison being realm-less — **resolved 2026-08-02**
+`poisonFailProb` (`combat.js`). `MODDING.INI` supplies `PoisonSavePenalty=-1` in both versions.
+R5.2c closes the shape: `$005B2E46..$005B2E53` passes realm 0 and that configured penalty to
+`ResistanceRoll`, while `$005B2DC8..$005B2E01` gates only on the Poison flag and calculated
+Poison Immunity. Magic Immunity is not directly tested and realm 0 is outside the 1–5 realm
+constants. The calculator's realm-less handling is correct.
 
-#### D5. Blur's *shape* — **all three rates resolved**
+#### D5. Blur's *shape* — **resolved 2026-08-02**
 `getBlurChance` (`combat.js`). `MODDING.INI [Spells]` owns the rates and confirms every one:
 `BlurDamageReduction=20`, `InvisibilitydamageReduction=20`, `BlurInvisibilityTotalReduction=30`
-(40 in Warlord) — see `CoM2 data tables.md`. What is left is exactly the shape: the calculator
-models Blur as a defender **ability** where MoM proved it a side-wide **enchantment**, and flips
-whose Illusion Immunity is tested. Neither is expressible as a table key, so this needs
-`Caster.exe`.
+(40 in Warlord) — see `CoM2 data tables.md`. R5.2c supplies the missing shape. `ApplyAttack`
+calls `CGADEnemy` and reads that side's combat-global Blur slot at `$005B2F26..$005B2F55`;
+Invisibility comes separately from `Units[du]` at `$005B2F7F..$005B2FA8`. The per-hit reduction
+loop at `$005B2FAB..$005B3010` is bypassed by **attacker** Illusion Immunity. The calculator has
+the immunity side and rates right, but its unit-owned Blur control cannot express the side-wide
+global or the helper's exact turn-relative selection. `CGADEnemy` chooses the side opposite the
+side whose combat turn it is: R5.2k's complete helper body reads the same runtime Boolean exposed
+as `CombatAttackersTurn`, returning `CGDefender` (1) when true and `CGAttacker` (2) when false
+(`Caster binary/Combat.CallClosureHelpers.R5.2k.evidence.md`). When `PerformMeleeAttack` swaps the
+units for the counterattack at
+`$005B3BA6..$005B3BAC`, it therefore selects the counterattacker's own side rather than the
+target's. That implementation defect is F24.
 
-#### D6. Bless — the attack types the defence half covers. **Magnitudes resolved**
+#### D6. Bless — **fully resolved 2026-08-02**
 Defence half in `computeDefenseProfile` (the `bless*` values), resistance half in
 `buildResistanceContext`. `MODDING.INI` confirms
 all four values and the odd split: CoM2 `BlessDefenseBonus=5` / `BlessResistBonus=5`, Warlord
 `7` / `4` (`CoM2 data tables.md`).
 
-**Scope is the whole of what remains.** A21 settled CoM 1: its defence half covers breath and
-Chaos/Death gazes only, because the DOS engine derives the attack's realm from `ranged_type`
-alone — missile, boulder and thrown are realm-less — and CoM 1 adds a `ranged_type > 39` test on
-top. The calculator keeps the wide scope (thrown and physical ranged inheriting a Chaos/Death
-attacker's realm) for `com2*` only, on no evidence at all; it was never more than the CoM 1
-branch spilling over. Establish how `Caster.exe` classifies an attack's realm before trusting it.
+R5.2e closes the scope from the consumer itself. The gate at `$005966B8..$00596700` requires
+calculated Bless, `ismagic2`, `spellid > 0`, and a Chaos/Death realm in
+`SpellTable[spellid].Realm`. The previously reconstructed `ApplyAttack` pushes spell ID zero at
+`$005B28ED` and calls `EffectiveDefense` at `$005B292A`, so **no unit attack handled by
+`ApplyAttack` can activate Bless defense** — not magical ranged, thrown, breath, or gaze. A real
+positive-ID Chaos/Death spell can qualify through a spell caller. The calculator's wider unit-
+attack eligibility is the confirmed F34 defect.
 
-#### D7. Elemental Armor / Resist Elements — **magnitudes resolved, realm gate open**
+#### D7. Elemental Armor / Resist Elements — **fully resolved 2026-08-02**
 `elemResistBonus` (`combat.js`) gives `com*` **+4 for Resist Elements and nothing for
 Elemental Armor**, inverting MoM's +10/+3.
 
@@ -247,11 +261,15 @@ naming a resistance bonus for Resist Magic, Resist Elements and Bless — so the
 deliberate. The defence side matches too (`ResistElementsDefenseBonus=4`,
 `ElementalArmorDefenseBonus=12`). See `CoM2 data tables.md`.
 
-**What is still open is the realm gate**, which CoM 1 narrowed to Nature only and which no table
-expresses. The calculator adds this bonus to
-`aResStoning` / `bResStoning` alone, so it already behaves Nature-only everywhere — which is
-right for CoM 1 but leaves the MoM Destruction gap recorded under *Known modelling limitations*
-in `Calculator/SPEC.md`.
+R5.2e supplies both gates. `GetEffectiveResistance` adds Resist Elements only when `realm = 1`
+(Nature) at `$00595C0C..$00595C47`; Elemental Armor never appears in that routine. On defense,
+`EffectiveDefense` adds both Resist Elements and Elemental Armor when `ismagic2 or isbreath` at
+`$0059666E..$005966AE`. The `ApplyAttack` call at `$005B28EF..$005B292A` supplies
+`magicranged` as `ismagic2` and its independently derived breath flag as `isbreath`. Thus the
+resistance half is Nature-only, while the defense half is keyed by attack classification rather
+than a spell-realm comparison. The calculator's Nature resistance gate and modern breath/magical
+ranged defense profiles match the reachable damaging paths; the separate DOS Destruction gap
+remains M3.
 
 #### D8. Weakness and Mind Storm magnitudes
 The `weakness` and `mindStorm` branches of `getAbilityStatSteps` — −3 melee, and −3 melee
@@ -269,9 +287,12 @@ in its stat scripts and both are a combat-layer-to-unit-layer flag copy, with no
 written. See `Caster binary/CoM2 binary analysis.md`, *Calculator-facing discrepancy found during the region-`c`
 pass*. IDs are not reused.)*
 
-#### D10. Haste does not double counter-attacks
-`bCounterHaste`, threaded from `resolveCombat` into `buildCounterPhase`. One boolean, large
-effect, no CoM2-specific evidence.
+#### D10. Haste does not double counter-attacks — **resolved 2026-08-02**
+`PerformMeleeAttack` makes exactly one counter `ApplyAttack` call at `$005B3B93..$005B3BAC`,
+outside the attacker-Haste loops. The calculated Haste flag does repeat the initiating
+attacker's gazes, breaths, Thrown and melee, but never the defender's retaliation gazes or
+counterattack. The no-counter-repeat claim is correct; the calculator's gaze exclusion is the
+separate implementation defect F30.
 
 #### D11. Invisibility's −10% to-hit malus is MoM-only
 `applyPairToHitModifiers` (`combat.js`). The ranged-targeting block is claimed for all versions;
@@ -300,10 +321,11 @@ over" but "is this number right".
 all 70 values for both versions. See `CoM2 data tables.md`, *Level bonuses*. The hero ladder it
 exposed is D27 below. D15, Wall of Fire, is resolved from `SPELLS.INI [87]` — strength 12,
 `HitChance=60`, and the `Area` flag dropped in Warlord alone. D16, Supernatural minimum damage,
-is resolved and the calculator disagrees with it; it is now the **F7** defect in
+is resolved from the table inputs plus R5.2c's executable rounding read; the remaining calculator
+disagreement is the corrected **F7** defect in
 `Calculator/BACKLOG.md`. IDs are not reused.)*
 
-#### D14. Ranged distance penalty — **CoM2's formula resolved, hero exemption open**
+#### D14. Ranged distance penalty — **fully resolved 2026-08-02**
 `distancePenalty` (`combat.js`) gives CoM2 a formula shared with no other version: no
 penalty below 4 tiles, then −10% and a further −3% per tile beyond. `MODDING.INI` states it
 directly — `RangedPenaltyStarts=4`, `RangedPenaltyBase=10`, `RangedPenaltyGap=1`,
@@ -311,23 +333,39 @@ directly — `RangedPenaltyStarts=4`, `RangedPenaltyBase=10`, `RangedPenaltyGap=
 verbatim (`CoM2 data tables.md`). The DOS half is settled separately (`MoM binary analysis.md`,
 *Ranged distance penalty*).
 
-**Open:** whether `Caster.exe` kept CoM 1's hero exemption, which the calculator applies to
-`com_6.08` only. `MODDING.INI`'s `HeroNoRangePenalty` describes the hardcoded effect as
-**Sharpshooting** — an *ability*-gated exemption — which suggests the CoM 1 blanket-hero rule did
-not simply carry over. Long Range's −10% cap is likewise unstated by any table.
+R5.2e proves both remaining shapes. `RangedPenalty` directly tests calculated
+`Units[au].ishero` at `$005B1843`; it does not look up Sharpshooting or any hero ability. When the
+disable-shaped `HeroNoRangePenalty` setting is zero, `$005B1857..$005B1859` sets distance to zero.
+Magical ranged has a separate setting and test. After the threshold subtraction, Long Range sets
+only the excess distance to zero at `$005B18E0..$005B18EC`, so an applicable penalty is capped at
+`RangedPenaltyBase` (10 shipped) rather than removed. The calculator has the formula and Long
+Range shape right but omits the modern hero exemption; that defect is F33. R5.2k also closes the
+callee behind `CombatDistanceUnit`: `CombatDistance` returns
+`max(abs(x-x2), abs(y-y2))`, exact Chebyshev distance
+(`Caster binary/Combat.CallClosureHelpers.R5.2k.evidence.md`).
 
-#### D17. Destruction is CoM2-only, and its immunity set
-`destructionFailProb` (`combat.js`) returns 0 outside `com2_`, skips on Magic Immunity, and
-reads the roster's per-unit value as a resistance modifier. The surrounding comment notes the
-roster ships `Destruction=0`, so the modifier path is untested by any actual unit.
+#### D17. Destruction is CoM2-only, and its immunity set — **modern half resolved**
+`destructionFailProb` (`combat.js`) returns 0 outside `com2_`. R5.2c confirms the modern shape at
+`$005B2D42..$005B2DC2`: the dispatcher skips only calculated Magic Immunity, passes Chaos realm
+and `destructionvalue` to `ResistanceRoll`, and on a positive failure result assigns 150 to result
+field 0. The block is inside the attacker-figure loop, so it rolls once per figure rather than
+once for the phase; the calculator defect is F26. The roster still ships `Destruction=0`, so its
+modifier path has no ordinary unit-data coverage. Only the claim that the effect is absent from
+the three older engines remains for R6.
 
-#### D18. Which phases touch effects ride
-`touchParams`'s `blockStoningDeath` flag — Warlord removes Stoning Touch and Death Touch from
-ranged, cited to the manual; `immolationBlocksRanged` blocks Immolation from ranged in every
-non-1.31 version. MoM proved this is **data-driven** there (`B7`), and the calculator hard-codes it
-per effect. `@Combat@ApplyAttack` takes the attack type as an explicit argument, so any real phase
-gate is a plain comparison — easier to settle here than it was in MoM. Bears on
-`Touch attack trigger matrix.md`.
+#### D18. Which phases touch effects ride — **compiled dispatcher partly resolved**
+R5.2c finds one common gate at `$005B2994..$005B299D`: attack types 6–8 skip the complete
+Exorcise → Stoning Touch → Death Touch → Life Steal → Destruction → Poison package, while types
+1–5 execute it. There is no later attack-type test inside any of those six blocks. Thus no touch
+rider accompanies a gaze in CoM2 or Warlord, and the calculator's `gazeTouchParams` is wrong
+(F25).
+
+What remains is Warlord's flag placement before the dispatcher. Its executing `UnitCalc.CAS`
+lines 509–520 move Stoning and Death Touch from global/ranged flags to melee when Focus Magic
+creates a magical ranged attack, while current Warlord helptext says those two do not apply to
+Magic Ranged attacks. A complete audit must distinguish that script-driven record selection from
+the calculator's blanket `warlordRangedTouchBlocked`, which currently blocks physical ranged as
+well. Evidence and the corrected partial matrix are in `Touch attack trigger matrix.md`.
 
 #### D19. CoM2-only abilities with no cross-version anchor
 Inner Power, Blazing Eyes, Mislead and Destiny (the `*ActiveForUnit` predicates in `combat.js`),

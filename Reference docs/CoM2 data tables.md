@@ -33,8 +33,10 @@ Two conventions worth knowing before reading any value:
 - **An absent key is not a zero.** It means the engine's own default applies, which the table
   does not state. `HitChance` exists 14 times in Warlord's `SPELLS.INI` and *zero* times in
   CoM2's — so CoM2's spell hit chances are all engine defaults and are not settled here.
-- **Percentage keys truncate.** `MODDING.INI`'s own worked example for `SupernaturalRatio`
-  computes `7 * 34% = 2`, i.e. `floor`, matching CAS's `%I` integer-part operator.
+- **A percentage key does not itself determine rounding.** CAS's `%I` operator truncates where
+  a script uses it, but compiled consumers choose their own arithmetic. `MODDING.INI`'s worked
+  `SupernaturalRatio` example (`7 * 34% = 2`) is compatible with both truncation and rounding;
+  R5.2c later found that this particular compiled consumer calls Delphi `Round`.
 
 ---
 
@@ -63,7 +65,7 @@ and Warlord adds to-hit steps at levels 3–4 (+5) and 7–8 (+15) that CoM2 doe
 
 ## Blur and Invisibility
 
-**Settles the rate half of queue D5, both versions.** `MODDING.INI [Spells]`:
+**Initially settled the rate half of queue D5, both versions.** `MODDING.INI [Spells]`:
 
 | Key | CoM2 | Warlord |
 |---|---|---|
@@ -71,12 +73,13 @@ and Warlord adds to-hit steps at levels 3–4 (+5) and 7–8 (+15) that CoM2 doe
 | `InvisibilitydamageReduction` | 20 | 20 |
 | `BlurInvisibilityTotalReduction` | 30 | **40** |
 
-`getBlurChance` (`combat.js`) matches all three. The keys are framed as *damage reduction
-percentages*, which is consistent with the calculator's per-hit nullification model but does not
-prove it.
-
-**Still open in D5:** whether Blur is a defender ability or a side-wide enchantment, and whose
-Illusion Immunity is tested. The table says nothing about either.
+`getBlurChance` (`combat.js`) matches all three. R5.2c subsequently settled the shape from
+`Caster.exe`: Blur is a side-wide combat global selected by `CGADEnemy`, each hit is independently
+removed at the configured percentage before defence, and the attacker's Illusion Immunity
+disables it. `CGADEnemy` selects the side opposite the current combat-turn side, so this is the
+target side for the initiating strike but the counterattacker's own side after
+`PerformMeleeAttack` swaps the units without flipping that turn flag. See `Caster binary/CoM2
+binary analysis.md`, *ApplyAttack riders, damage loop and result routing*.
 
 ## Wall of Fire
 
@@ -102,6 +105,17 @@ So the single-figure rule is a deliberate, isolated removal, not an artefact.
 `SPELLS.INI`, so all CoM2 spell hit chances are engine defaults; the table shows only that
 nothing overrides it.
 
+R5.2g subsequently confirmed the table fields' exact consumers. `FirewallEffect` passes spell
+87's `Attack` to `ApplyDamageSpell`, which calls `DamageSpell`; the latter reads the same record's
+`HitChance` and `Area`. R5.2j subsequently reconstructed `ApplyDamageSpell`'s additional
+post-processing, so R5.2g establishes the base damage-record shape and R5.2j completes the applied
+result. CoM2's `Area=True` makes one independently rolled attack per current
+living figure, each capped at full HP per figure. Warlord's missing `Area` is not implemented as
+a one-figure area attack: it selects the ordinary spill path. That path uses the wounded top
+figure for the first boundary, then full HP for later boundaries, and repeats a fresh Defense and
+Invulnerability reduction at every crossed boundary until the remainder fits. The calculator's
+different Warlord base distribution is tracked as F36.
+
 ## Combat constants confirmed in passing
 
 Each of these matches the calculator exactly, in both versions unless noted, and closes the
@@ -125,10 +139,13 @@ Also matching, though never separately queued: `LargeShieldBonus`=3, `MagicWeapo
 `TerrorHitchancePenalty`=10, `EnduranceHpBonus`=4, and Blazing March's four magnitudes
 (attack 3, missile 3, breath **0**, thrown 0 CoM2 / 3 Warlord).
 
-## Supernatural minimum damage — a disagreement
+`FirstStrikeCap` is 999 in both shipped tables. R5.2d confirms the compiled consumer compares
+the defender's current top-figure remaining HP with that value at `$005B3AF9..$005B3B00`, so
+the old 24-damage cap is disabled by default exactly as the CoM2 manual's change log states.
 
-**Settles queue D16, and the calculator is wrong.** `MODDING.INI [Gameplay]`, identical in both
-versions:
+## Supernatural minimum damage — binary correction
+
+`MODDING.INI [Gameplay]` supplies the same values in both versions:
 
 ```
 SupernaturalStarts=0
@@ -136,21 +153,31 @@ SupernaturalRatio=34
 ; Example : with default settings, 7 damage is converted to (7-0) *34% = 2 minimal damage.
 ```
 
-So the engine computes `floor(hits * 34 / 100)`; the worked example is what establishes
-truncation rather than rounding. `supernaturalMinDamageForHits` (`combat.js`) uses
-`Math.round(hits / 3)`, which is one too high whenever `hits ≡ 2 (mod 3)` — a third of all hit
-counts:
+The table settles the inputs, but its worked example does not settle rounding: both floor and
+nearest-integer rounding turn 2.38 into 2. R5.2c read the compiled consumer at
+`$005B2ED9..$005B2F1E`: it computes
+`Round((hits - SupernaturalStarts) * SupernaturalRatio / 100.0)`, with an explicit `fild`,
+`fdiv`, and `@System@@ROUND` call.
 
-| hits | 2 | 5 | 8 | 11 |
+**The rounding is banker's — ties to even.** `@System@@ROUND` is `fistp` with no control-word
+change, so it uses the FPU default RC=00; the adjacent `Trunc` has to set RC explicitly to
+truncate. With the shipped `0/34` values, ties fall exactly at `hits ≡ 25 (mod 50)`, so
+`hits = 25` gives `8.5 -> 8`, not 9. A half-up `round` is therefore not a faithful substitute.
+
+`supernaturalMinDamageForHits` (`combat.js`) still disagrees because it hard-codes
+`Math.round(hits / 3)` instead of consuming the two moddable values. The former claim that it
+was one too high for every `hits ≡ 2 (mod 3)` was backwards; the first actual divergences are
+underestimates at higher hit counts:
+
+| hits | 28 | 31 | 34 | 37 |
 |---|---|---|---|---|
-| engine | 0 | 1 | 2 | 3 |
-| calculator | 1 | 2 | 3 | 4 |
+| engine | 10 | 11 | 12 | 13 |
+| calculator | 9 | 10 | 11 | 12 |
 
 Not fixed; deferred by decision on 2026-07-29 and tracked as **F7** in `Calculator/BACKLOG.md`.
-The one inference is truncation-vs-rounding, taken from the table's own arithmetic rather than
-from code.
+The exact rounding shape is now executable-backed rather than inferred from table prose.
 
-## To Defend cap — a mechanic in no source and no code
+## To Defend cap — executable consumer resolved
 
 `MODDING.INI [Gameplay]`, identical in both versions:
 
@@ -162,14 +189,16 @@ ToDefendCap=15
 ToDefendCappedValue=30
 ```
 
-The most natural reading is that defence points beyond 15 roll at a flat 30% rather than at the
-unit's boosted To Block, but "loses effectiveness" admits others and nothing here decides between
-them. The calculator models no such cap anywhere, so a unit with defence above 15 *and* a To
-Block bonus is currently over-modelled — and that state is reachable, since defence is free-form
-and several abilities add To Block.
+R5.2e found the exact consumer in `@Units@DefenseRoll`, `$00595E7C..$00595EE9`. Before each
+defense die is rolled, `$00595E9E..$00595EBD` checks whether the one-based die index exceeds
+`ToDefendCap` and whether the current To Defend exceeds `ToDefendCappedValue`. Only then does it
+replace To Defend with the capped value. Thus dice 1–15 use the original chance; dice 16 onward
+use `min(original chance, 30%)`. A chance below 30% is never raised.
 
-Deferred by decision on 2026-07-29; tracked as **Q14** in `Calculator/BACKLOG.md`. Settling the
-semantics needs `Caster.exe`, since no other source mentions the mechanic.
+This closes **Q14** and confirms the calculator mismatch as **F32**: its damage engine currently
+rolls every defense die from a single binomial distribution at the original To Block chance.
+The exact routine, loader bindings, branch bytes and ledger are in
+`Caster binary/Combat.ResolutionHelpers.R5.2e.evidence.md`.
 
 ## Chaos Channels and Fire Breath — bears on F6
 
@@ -187,11 +216,16 @@ is set identically in both versions, which undercuts the calculator treating CoM
 differently here. It also shows this class of eligibility is table-driven, so F6's own answer may
 be a key rather than a code path.
 
-## Ranged penalty — a side-finding for D14
+## Ranged penalty — executable consumer resolved for D14
 
-`HeroNoRangePenalty=0` is documented as disabling *"the hardcoded effect **Sharpshooting** on
-heroes"* — an ability-gated exemption, not a blanket hero one. The calculator applies a blanket
-hero exemption to `com_6.08` alone, so this does not contradict anything today, but it shapes
-D14's remaining half: if CoM2's exemption is ability-gated, the CoM 1 rule did not simply carry
-over or vanish. `MagicNoRangePenalty=0` separately confirms that magic attacks take no distance
-penalty, which the calculator already models by restricting the penalty to missile and boulder.
+The table comment's word **Sharpshooting** is misleading about the compiled gate. R5.2e's
+`@Combat@RangedPenalty`, `$005B1800..$005B1927`, directly tests calculated
+`Units[au].ishero`; there is no ability lookup. Zero is disable-shaped for the penalty: with the
+shipped `HeroNoRangePenalty=0`, every hero has distance set to zero. `MagicNoRangePenalty=0`
+separately does the same for magical ranged attacks.
+
+The routine also confirms the four-key formula and Long Range shape. It subtracts the start
+distance, lets Long Range zero only that excess, then computes
+`(excess div Gap) * Growth + Base`. With shipped values, distance 4 costs 10%, each further tile
+adds 3%, and Long Range caps an applicable penalty at 10%. D14 is closed; the calculator's
+missing CoM2/Warlord hero exemption is **F33**.

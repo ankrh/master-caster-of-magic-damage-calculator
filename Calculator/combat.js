@@ -716,8 +716,8 @@ function getAbilityStatSteps(abilities, version) {
 // MoM: d10, success if roll ≤ Resistance. pFail = max(0, (10 - res) / 10).
 // CoM: universal -1 save modifier → pFail = max(0, (11 - res) / 10).
 // Poison Immunity skips the roll outright rather than granting resistance.
-// Magic Immunity does NOT protect from Poison: the effect is dispatched with realm -1,
-// and the resistance routine gates Magic Immunity's bonus on realm >= 0. The same gate
+// Magic Immunity does NOT protect from Poison: the effect is dispatched with realm 0,
+// and the resistance routine gates Magic Immunity's bonus on realm != 0. The same gate
 // excludes Righteousness, Elemental Armor, Resist Elements, Bless and Resist Magic.
 function poisonFailProb(defRes, defAbilities, version) {
   const isCoM = version && version.startsWith('com');

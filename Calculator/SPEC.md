@@ -93,7 +93,7 @@ the joint so neither observes the other's update.
 distributions, remaining/total HP, live figure counts, Life Steal distributions, and —
 for melee — an ordered `phases` breakdown for display.
 
-**Melee phase order:**
+**Melee phase order (MoM 1.31 / CP 1.60 / CoM 1):**
 
 1. Thrown / breath attack
 2. Attacker gaze
@@ -104,9 +104,22 @@ for melee — an ordered `phases` breakdown for display.
 7. Attacker Cause Fear
 8. Counter-attack, and the main melee exchange
 
-With First Strike + Haste, phases 6–8 collapse into a single coupled block so that both
-of the attacker's strikes share one fear sample per round. Without First Strike, melee
-and counter resolve **simultaneously**.
+Without First Strike, melee and counter resolve **simultaneously**.
+
+**CoM2 / Warlord melee phase order:**
+
+1. Wall of Fire
+2. Attacker Stoning Gaze, Death Gaze, Doom Gaze
+3. Defender Stoning Gaze, Death Gaze, Doom Gaze
+4. Attacker Lightning Breath, Fire Breath, Thrown
+5. First Strike, when admitted
+6. Main melee, Haste melee, and counter-attack
+
+Each phase in steps 1–4 is dealt before the next phase reads living figures. An admitted First
+Strike is also dealt immediately. The main attacker result, optional Haste result and counter
+result are then computed from one pre-damage state before being dealt in main, counter, Haste
+order. Every melee `ApplyAttack` call performs its own Cause Fear rolls, so the two Hasted melee
+strikes use independent fear samples.
 
 **Ranged:** attacker shoots, no counter-attack, no fear phase. An Invisible defender
 cannot be targeted at all unless the attacker has Illusions Immunity.
@@ -114,8 +127,8 @@ cannot be targeted at all unless the attacker has Illusions Immunity.
 **Distance penalty** (missile and boulder only — magical ranged, thrown, breath and gaze
 never pay it). −10% To Hit per full 3 tiles in MoM 1.31 and CP 1.60, per full 4 tiles in
 CoM 1; CoM2 and Warlord instead charge −10% at 4 tiles and −3% per tile beyond. Long Range
-caps an existing penalty at −10% but never creates one. **CoM 1 exempts heroes outright** —
-a hero pays no distance penalty at any range.
+caps an existing penalty at −10% but never creates one. **CoM 1, CoM2 and Warlord exempt heroes
+outright** — the modern engine directly tests the hero flag, not Sharpshooting or another ability.
 
 Vertigo is a direct battle-unit stat debuff. MoM 1.31 and CP 1.60 apply −20% To Hit
 and −1 Defense; CoM 1 applies −30% To Hit and −10% To Block; CoM2 and Warlord apply
@@ -134,19 +147,34 @@ recognises only the Caster 20/40 unit flags, so a hero falls through to the ammu
 branch and has none; CP 1.60 added the missing hero test. This models the common case —
 the same 1.31 gate reads an unrelated battle-unit slot and can flip either way.
 
-Touch attacks, Life Steal and Immolation ride along with whichever phase fires them
-(thrown, gaze, melee, or ranged), gated per version. They scale with the attacker's
-surviving figure count — one roll per figure, each kill costing the target one figure.
-**Destruction (CoM2 and Warlord) is the sole exception:** one roll for the whole attack
-regardless of figure count, and a failed roll destroys the entire target unit.
+In CoM2 and Warlord, Haste also repeats each of the initiating attacker's Stoning, Death and
+Doom Gaze phases. It does not repeat the defender's retaliation gazes.
+
+In CoM2 and Warlord, Blood Lust doubles the selected attack strength for **melee and Thrown**
+attacks against a non-Fantastic defender. It does not double ranged or either Breath attack.
+CoM 1 retains its melee-only rule.
+
+CoM2 and Warlord Cause Fear have a base/current-record distinction. The direct Death-Immunity
+gate reads the feared unit's persistent base record before the −3 Death-realm resistance rolls;
+Death Immunity derived only during stat recalculation (for example from Blood Lust, Animated or
+Rebuild) does not skip those rolls. Intrinsic/base Death Immunity does. Magic Immunity still
+blocks Cause Fear through the resolution-time effective-resistance assignment.
+
+Special riders resolve with whichever phase their version's dispatcher admits. In CoM2 and
+Warlord, Exorcise, Stoning Touch, Death Touch, Life Steal, Destruction and Poison run for
+physical ranged, magical ranged, both Breath attacks, Thrown and melee, but not for any Gaze attack.
+All six sit inside the attacker-figure loop and therefore make one attempt per surviving
+attacker figure. A failed Destruction roll assigns 150 damage and destroys the target unit,
+but Destruction still makes one resistance roll per attacking figure.
 
 An immunity that stops one of these effects **skips its roll outright** — it is not
 modelled as a large resistance bonus, and there is no MoM-vs-CoM magnitude on this side.
-Magic Immunity skips the whole touch/gaze group; each effect additionally skips on its own
-specific immunity (Stoning, Death, Poison). The only genuine resistance *bonuses* here are
-realm-scoped: Righteousness +30 against the Death-realm effects (Death Touch, Death Gaze,
-Life Steal), and none at all against Poison, which is dispatched realm-less and so is
-stopped only by Poison Immunity.
+Magic Immunity skips Exorcise, Stoning Touch, Death Touch, Life Steal and Destruction, but
+not Poison. Exorcise additionally requires a Fantastic target and is skipped by Spell Lock;
+Stoning Touch is skipped by Stoning Immunity; Death Touch and Life Steal are skipped by Death
+Immunity; Poison is skipped only by Poison Immunity. The only genuine resistance *bonuses*
+here are realm-scoped: Righteousness +30 against the Death-realm effects (Death Touch, Death
+Gaze, Life Steal), and none at all against Poison, which is dispatched realm-less.
 
 In the DOS builds, Immolation and Wall of Fire both resolve through the Fireball
 spell-damage path and therefore share its defence specials. Large Shield applies to both:
@@ -154,6 +182,25 @@ spell-damage path and therefore share its defence specials. Large Shield applies
 apply: +10/+3 in the MoM builds and +12/+4 in CoM 1. The modern Caster engine keeps the
 calculator's narrower elemental scope: CoM2 and Warlord apply the +12/+4 defence to
 magical ranged and breath attacks, but not to Immolation or Wall of Fire.
+
+CoM2 and Warlord resolve Immolation and Wall of Fire through `DamageSpell`. Magic Immunity
+short-circuits a magical spell to zero damage before any roll. Black Sleep is checked later and
+turns the spell into Doom damage, bypassing hit, defense and Invulnerability rolls; the earlier
+Magic-Immunity exit still wins. Other matching spell immunities replace Defense with 100 rather
+than exiting.
+
+For an `Area` spell, the engine attacks once per current living target figure and caps each
+subattack at the unit's **full HP per figure**. It deliberately does not use the wounded top
+figure's remaining HP for that cap; all subattacks feed one aggregate damage total. CoM2 Wall of
+Fire and both versions' Immolation use this path. Warlord Wall of Fire has no `Area` flag: it makes
+one ordinary attack and sends its surviving damage through a repeated figure-boundary loop. The
+first boundary uses the wounded top figure's remaining HP; every later boundary uses full HP per
+figure. At each crossed boundary the remainder receives a fresh Defense roll and another
+Invulnerability subtraction, repeating until the remainder fits a figure.
+
+Chaos Conjunction multiplies Immolation's strength by exactly 1.34 and truncates. It does not
+modify Wall of Fire. Warp Lightning instead receives +2 strength and makes a descending series
+of attacks from that strength through 1.
 
 ### Gaze attacks
 
@@ -227,9 +274,9 @@ Order is load-bearing:
    | Phase | Where it runs | How a step is assigned to it |
    |---|---|---|
    | **base** | raw unit stats and permanent writes before combat | verifiable: roster data, creation, overland, or cast handler |
-   | **a** | precalc, in the binary | not inspectable — inferred |
+   | **a** | precalc, in the binary | decoded block by block |
    | **b** | precalc, in `UnitCalcPre.CAS` | verifiable: grep the file |
-   | **c** | magic calc, in the binary | not inspectable — inferred |
+   | **c** | magic calc, in the binary | decoded block by block |
    | **d** | magic calc, in `UnitCalc.CAS` | verifiable: grep the file |
    | **e** | the binary's post-hook tail: the clamps, the aura pass, Supreme Light | decoded block by block |
 
@@ -351,7 +398,8 @@ Charmed adds 30 to a hero's Resistance for rolls, including realm-less Poison.
 3. add Large Shield;
 4. add Resist Elements;
 5. add Elemental Armor;
-6. add Bless;
+6. add Bless only for a positive-ID Chaos- or Death-realm spell; `ApplyAttack` passes spell ID 0,
+   so unit attacks do not receive this defense bonus;
 7. halve the accumulated value for Armor Piercing (unless Lightning Resist cancels a
    Lightning attack's piercing);
 8. Fire, Cold, Poison, Magic and Missile Immunity assignments replace the accumulated value
@@ -363,6 +411,11 @@ halved total, and Weapon Immunity can stack on top of an immunity's 100. Illusio
 return prevents every later bonus and immunity from applying. Righteousness remains in step
 8's replacement slot for compatibility while its CoM2/Warlord classification is still open
 under D1/D3.
+
+The subsequent CoM2/Warlord defense roll changes probability after the fifteenth defense die.
+Dice 1–15 use the unit's ordinary To Block. Dice 16 onward use the lower of that chance and 30%
+(the shipped `ToDefendCap=15` / `ToDefendCappedValue=30` settings). The current calculator does
+not yet split those dice; F32 tracks that implementation gap.
 
 ### Warp Creature ordering
 
@@ -590,8 +643,14 @@ Tracked as M1–M8 in [BACKLOG.md](./BACKLOG.md), §5, which records for each wh
 or deferred work. The descriptions below are the canonical ones.
 
 - Life Steal's *displayed* distribution is an approximation (phase count × single-firing
-  distribution); the displayed **expected value** is exact.
-- Damage is capped at the target's remaining HP; overkill is not tracked.
+  distribution). Its damage expectation is exact within the calculator's capped-damage model,
+  but its displayed self-healing currently undercounts rolls that exceed the target's remaining
+  HP and does not reproduce `Combatheal`'s category order and overheal conversion: the engine
+  feeds the uncapped resistance-roll result into that routine, which heals recoverable normal
+  damage before undead damage and converts any remainder to per-living-figure bonus HP (**F28**).
+- Damage is capped at the target's remaining HP; overkill is not tracked. This accepted damage
+  limitation does not authorize capping healing amounts that the engine passes independently to
+  `Combatheal` (**F27**, **F28**).
 - Destruction is currently modelled only for CoM2/Warlord. The MoM/CP/CoM1 touch dispatcher also
   identifies Destruction as a Chaos effect; in MoM/CP, Elemental Armor and Resist Elements
   therefore protect against it. That older-engine Destruction path is not yet implemented.

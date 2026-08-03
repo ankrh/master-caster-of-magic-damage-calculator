@@ -26,6 +26,7 @@ __pycache__/
 Raw install files/
 
 # Cross-agent channels — local scratch, see CLAUDE.md § Two agents
-.codex-review.md
-.claude-review.md
+# Named for the agent under review, not the author.
+.review-of-claude.md
+.review-of-codex.md
 .derivations/
