@@ -30,7 +30,7 @@ right meaning to it. All five errors found in the R5.1b comparison (2026-08-02)
 passed it cleanly: a mis-read branch target, a rider placed outside the gate
 that encloses it, and an arithmetic idiom read without its correction all cite
 exactly the addresses they should. Zero counts here are necessary, not
-sufficient. See CLAUDE.md, "Derivation completion gate".
+sufficient. See DERIVATION-REVIEW-PROTOCOL.md, "Derivation completion gate".
 
 Requires: pip install capstone
 """
@@ -73,16 +73,21 @@ if EXPLICIT:
         sys.exit(f'no ledger rows inside {LO:06X}..{HI:06X}')
     extents = [(LO, HI, rows)]
 elif rows:
-    # One group per ledger. A new ledger starts when the row number restarts, or
-    # when the next row does not begin where the current one ends. Both signals
-    # are needed: address contiguity alone merges two ledgers that happen to be
-    # adjacent (R5.2a ends exactly where R5.2b begins), and merging them makes
-    # every `Within` in the second ledger resolve against the first one's rows.
-    # Treating the whole min..max span as one extent additionally produced
-    # phantom gaps and dozens of phantom unaccounted addresses.
+    # One group per ledger. A new ledger starts **only** when the row number
+    # restarts, because `Within` cites the ledger's own row numbers and merging
+    # two ledgers makes the second's parents resolve against the first's rows.
+    # That is what distinguishes two adjacent ledgers (R5.2a ends exactly where
+    # R5.2b begins) without needing address contiguity as a signal.
+    #
+    # Address discontinuity must NOT split a ledger. Splitting on it silently
+    # reclassifies a coverage hole as two adjacent extents, each contiguous on
+    # its own, and the run exits clean -- the gap the protocol forbids becomes
+    # invisible. Within one numbering sequence a discontinuity is a gap, and the
+    # contiguity check below reports it. (Found 2026-08-04 while building the
+    # DOS checker, whose fixture with a deliberate hole passed.)
     extents, run = [], [rows[0]]
     for r in rows[1:]:
-        if r[0] == run[-1][1] and r[4] > run[-1][4]:
+        if r[4] > run[-1][4]:
             run.append(r)
         else:
             extents.append((run[0][0], run[-1][1], run))
@@ -201,7 +206,8 @@ def check(LO, HI, rows):
                 f'extent is {LO:06X}..{HI:06X} ***')
       gaps = [(rows[k][1], rows[k + 1][0]) for k in range(len(rows) - 1)
               if rows[k][1] != rows[k + 1][0]]
-      print(f'  contiguous / no gaps      : {"yes" if not gaps else "NO " + str(gaps)}')
+      shown = ', '.join(f'{a:06X}..{b:06X}' for a, b in gaps)
+      print(f'  contiguous / no gaps      : {"yes" if not gaps else "NO  " + shown}')
       nested = sum(1 for r in rows if r[2] is not None)
       print(f'  rows declaring a parent    : {nested}')
       print(f'  declared parent mismatches : {len(bad)}')

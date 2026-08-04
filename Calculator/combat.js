@@ -315,7 +315,7 @@ function getAbilityStatSteps(abilities, version) {
   // CoM v6.05+ and CoM2: also +X to ranged attack.
   //
   // CoM2/Warlord run it as **aura type 1 in region `e`**, after `d` and after the Warps — not
-  // in `a`, where the pre-map judgment put it (queue D23; CoM2 analysis, *The aura pass*).
+  // in `a`, where the pre-map judgment put it (CoM2 analysis, *The aura pass*).
   // The aura table merges sources by maximum rather than summing them, which the calculator's
   // single numeric input already expresses. Two consequences of the aura block's own wording,
   // "add the aura value to defense and resistance, and to melee/ranged when the corresponding
@@ -334,8 +334,8 @@ function getAbilityStatSteps(abilities, version) {
       : { atk: hb, def: hb, res: hb });
   }
 
-  // Animate Dead's Animated buff in CoM/CoM2: +1 attack, +1 defense, +10% To Hit,
-  // weapon immunity. A later CoM2 fix notes the +1 should also apply to thrown/breath.
+  // Animate Dead's Animated buff in CoM/CoM2: +1 to every existing attack channel,
+  // +1 defense, +10% To Hit, and Weapon Immunity (RecalculateUnits $0059F7D8..$0059FBD0).
   // Weapon Immunity is added in combat flow; the stat bonuses are applied here.
   // Phase c: a spell effect with no CAS implementation.
   if (hasAbil(abilities, 'animated') && isCoMPlus) {
@@ -345,7 +345,7 @@ function getAbilityStatSteps(abilities, version) {
   // Resistance to All: +X to resistance.
   // CoM2/Warlord feed it into **aura type 3 in region `e`** — the Prayermaster aura — so it
   // runs after `d` and after the Warps, and competes with Prayermaster by maximum rather than
-  // stacking with it (queue D23). The calculator carries no Prayermaster control, so only the
+  // stacking with it (CoM2 analysis, *The aura pass*). The calculator carries no Prayermaster control, so only the
   // position is observable today. MoM and CoM 1 keep phase a: intrinsic ability, no CAS, no
   // aura pass.
   const rta = abilVal(abilities, 'resistanceToAll', 0);
@@ -587,7 +587,7 @@ function getAbilityStatSteps(abilities, version) {
   // CoM2/Warlord at +0x0C890, after Warp and Shatter and just before the `UnitCalc` hook;
   // CoM 1 at 0x90AB4-0x90AF6 — guarded on the retort byte `[player*0x4C8 - 0x60CF]` and, for
   // the hero half, on `_UNITS[].Hero_Slot >= 0` — after its own early Warp block. So it is
-  // region c in both, and after the Warps in both (queue D25).
+  // region c in both, and after the Warps in both (CoM2 analysis, *Associating a block with its enchantment*).
   if (hasAbil(abilities, 'tactician') && isCoMPlus) {
     const isWarlord = version && version.startsWith('com2_warlord');
     const id = isCoM1 ? 'tactician:coM1' : 'tactician';
@@ -848,6 +848,11 @@ function deathGazeFailProb(defRes, defAbilities, modifier) {
 // byte-identical in CP 1.60 and CoM 1). Because the stoning kill loop fires on 103 or 104
 // and the death loop on 104 or 105, a unit carrying *both* gazes is necessarily type 104 —
 // which is also what gives Doom Gaze its automatic damage.
+//
+// In the DOS versions the flags below are themselves derived from `ranged_type` (see
+// `dosSpecialValues`), so this reads the type through them rather than treating them as
+// independent inputs: stoning-only is 103, death-only 105, both 104. CoM2 and Warlord keep
+// genuinely independent gaze fields, which is why the inference stays flag-shaped here.
 function gazeRealm(atkAbilities) {
   const stoning = abilDefined(atkAbilities, 'stoningGaze');
   const death = abilDefined(atkAbilities, 'deathGaze');
@@ -1446,8 +1451,8 @@ function buildFearPhaseDists(aFigs, bFigs, bPFear, aPFear, aFearedByB, aFearBug,
 // Warlord: same as CoM2 but combined cap is 40%.
 // MoM: Blur rate 10%.
 // The three CoM2/Warlord rates are confirmed by MODDING.INI `[Spells]` — BlurDamageReduction=20,
-// InvisibilitydamageReduction=20, BlurInvisibilityTotalReduction=30 (40 in Warlord). Whether Blur
-// is a defender ability or a side-wide enchantment is not settled by the table — queue D5.
+// InvisibilitydamageReduction=20, BlurInvisibilityTotalReduction=30 (40 in Warlord). R5.2c/k
+// establish that Blur is side-wide and selected through turn-relative `CGADEnemy` (F24).
 // v1.31 bug: Illusion Immunity checked on defender instead of attacker.
 // Fixed (1.51+/CoM/CoM2): Illusion Immunity checked on attacker.
 function getBlurChance(defAbilities, atkAbilities, version) {
@@ -1744,10 +1749,9 @@ const EFFECTIVE_DEFENSE_STEPS = [
       && !(ctx.isLightning && hasAbil(u.abilities, 'lightningResist'))),
   resolutionStep('effectiveDefense:immunities', ['effectiveDefense'],
     (u, ctx) => {
-      // The six Caster.exe tests are assignments in this order. Righteousness is
-      // retained in the same replacement step while queue D1/D3's remaining
-      // classification question is open; it preserves the calculator's established
-      // behaviour without inventing a second ordering mechanism.
+      // The six Caster.exe tests are assignments in this order. Righteousness is MoM-only and
+      // unreachable through the modern version-filtered inputs; its defensive low-level branch
+      // stays in this replacement step without inventing a second ordering mechanism.
       if (hasAbil(u.abilities, 'fireImmunity') && ctx.fireSpell) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'fireImmunity') && ctx.isFire) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'coldImmunity') && ctx.coldSpell) u.effectiveDefense = 100;
@@ -1940,8 +1944,8 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   // are realm-less, so they never inherit a Chaos/Death attacker's realm; only melee
   // (type 0) reads the attacker's race. CoM 1 additionally requires `ranged_type > 39`,
   // which drops melee and every conventional ranged type, leaving breath and gaze.
-  // Caster.exe (CoM2/Warlord) is a separate engine and keeps the wider scope — see
-  // queue item D6.
+  // Caster.exe classifies these flags more widely, but no unit attack can activate modern Bless
+  // defense because ApplyAttack passes spell ID 0; the calculator mismatch is F34.
   const aThrownDC = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning'
                   || (isCaster && attacker.thrownType === 'thrown' && aIsDC);
   const aRangedDC = isCaster
@@ -1979,7 +1983,7 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   // MoM grants the elemental defence bonus against Chaos- and Nature-realm gazes
   // (WIZARDS.EXE 0x9A72D, the same realm pair as on the resistance side). CoM 1 replaced
   // the realm gate with a `ranged_type` range and is not modelled here — no CoM/CoM2/
-  // Warlord unit carries a hidden gaze component. See `Reference docs/TODO.md`.
+  // Warlord unit carries a hidden gaze component. See `CoM2 binary analysis.md`, *Gaze attacks*.
   const elemGaze   = (!isCoM && (aGazeRealm === 'nature' || aGazeRealm === 'chaos'))
     ? elemDefBonus : 0;
   // The DOS spell-damage helper feeds both Immolation and Wall of Fire through the
@@ -2559,9 +2563,17 @@ function applyDoomUAHalving(unit, version) {
   const meleeDoom = allDoom || hasAbil(unit.abilities, 'energyWeaponry');
   const rangedDoom = allDoom || hasAbil(unit.abilities, 'energyCannon');
   if (!meleeDoom && !rangedDoom) return unit;
+  const modernAttacks = unit.modernAttacks && Object.fromEntries(
+    Object.entries(unit.modernAttacks).map(([key, channel]) => [key,
+      channel && (allDoom || (rangedDoom && key === 'ranged'))
+        ? { ...channel, strength: Math.floor((channel.strength || 0) / 2) }
+        : channel,
+    ]),
+  );
   return Object.assign({}, unit, {
     atk: meleeDoom ? Math.floor((unit.atk || 0) / 2) : unit.atk,
     rtb: rangedDoom ? Math.floor((unit.rtb || 0) / 2) : unit.rtb,
+    ...(modernAttacks ? { modernAttacks } : {}),
   });
 }
 
@@ -2717,6 +2729,29 @@ function buildResistanceContext(a, b, version, isCoM) {
     bResPoison: bBaseRes,
     aResPoison: aBaseRes,
   };
+}
+
+// Caster.exe keeps conventional ranged, Thrown, Fire Breath and Lightning Breath in
+// independent fields.  The UI still exposes the legacy RTB projection (R4), but combat
+// must never recover a modern channel from that lossy display value.
+function modernAttackUnit(unit, channel) {
+  if (!channel) return null;
+  const ranged = channel.key === 'ranged';
+  return Object.assign({}, unit, {
+    rtb: channel.strength,
+    baseRtb: channel.baseStrength,
+    toHitRtb: channel.toHit,
+    rangedType: ranged ? channel.type : 'none',
+    thrownType: ranged ? 'none' : channel.type,
+  });
+}
+
+function modernAttackChannels(unit) {
+  if (!unit.modernAttacks) return null;
+  return ['lightningBreath', 'fireBreath', 'thrown'].map(key => {
+    const attack = unit.modernAttacks[key];
+    return attack && attack.strength > 0 ? { key, ...attack } : null;
+  }).filter(Boolean);
 }
 
 function buildDefenseContext(a, b, version, aVertigoDefPenalty, bVertigoDefPenalty, needed = null) {
@@ -3368,8 +3403,10 @@ function resolveCombat(a, b, opts) {
   //      and a breath reduced to 0 effective but with base > 0 still fires).
   // Black Sleep also prevents all outgoing attacks.
   const breathExists = ver === 'mom_1.31' ? a.rtb > 0 : (a.baseRtb > 0 || a.rtb > 0);
-  const hasThrown = !isRanged && a.thrownType !== 'none' && breathExists
+  const legacyThrown = !isRanged && a.thrownType !== 'none' && breathExists
     && touchAttackFires(a.atk, a.baseAtk, ver) && !aBlackSleep;
+  const modernThrown = isCoM2 && !isRanged ? modernAttackChannels(a) : null;
+  const hasThrown = modernThrown ? modernThrown.length > 0 : legacyThrown;
 
   const {
     aToBlockConventional,
@@ -3674,15 +3711,17 @@ function resolveCombat(a, b, opts) {
       aResDeath,
     });
 
-    // Thrown / breath: A→B, fires before melee. Touch attacks fold in. Haste self-convolves.
-    const thrownPhase = buildThrownPhase(hasThrown, {
-      a,
+    // Thrown / breath: A→B, fires before melee.  DOS has one shared slot; Caster.exe
+    // runs each independently-derived channel.  F29 owns their final engine ordering.
+    const buildThrown = (attacker, active, type) => buildThrownPhase(active, {
+      a: attacker,
       b,
       aDoomsB,
       aBlackSleep,
-      aToHitRtbVert,
-      bDefForThrown,
-      bToBlockVsAThrEW,
+      aToHitRtbVert: isCoM2 && hasAbil(attacker.abilities, 'vertigo')
+        ? Math.max(0.1, attacker.toHitRtb - 0.25) : aToHitRtbVert,
+      bDefForThrown: isCoM2 ? computeCasterDefenseForAttack(b, attacker, ver, bVertigoDefPenalty, 'thrown') : bDefForThrown,
+      bToBlockVsAThrEW: isCoM2 ? buildToBlockContext(attacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty).bToBlockVsAThrEW : bToBlockVsAThrEW,
       bInvulnBonus,
       bBlurChance,
       blurBuggy,
@@ -3703,6 +3742,13 @@ function resolveCombat(a, b, opts) {
       bResDeath,
       aHaste,
     });
+    const thrownPhases = modernThrown
+      ? modernThrown.map(channel => ({
+          attacker: modernAttackUnit(a, channel),
+          type: channel.type,
+          phase: buildThrown(modernAttackUnit(a, channel), true, channel.type),
+        }))
+      : [{ attacker: a, type: a.thrownType, phase: buildThrown(a, legacyThrown, a.thrownType) }];
 
     // Run the engine: thrown (if active) → WoF (if active) → simultaneous melee+counter.
     let joint = makeJoint2D(aRemHP, bRemHP);
@@ -3711,14 +3757,15 @@ function resolveCombat(a, b, opts) {
 
     const pendingFear = { aFearDist: null, bFearDist: null };
 
-    if (thrownPhase) {
-      const r = applyDamagePhase(joint, thrownPhase, pendingFear, { a, b }, bRemHP);
+    for (const { attacker: channelAttacker, type: channelType, phase: thrownPhase } of thrownPhases) {
+      if (!thrownPhase) continue;
+      const r = applyDamagePhase(joint, thrownPhase, pendingFear, { a: channelAttacker, b }, bRemHP);
       joint = r.joint;
       lifeStealEV_a += r.lifeStealEV;
       const bMargAtThrown = marginalB(joint);
       const thrownLabel = thrownPhaseLabel({
-        thrownType: a.thrownType,
-        hasted: aHaste && a.rtb > 0,
+        thrownType: channelType,
+        hasted: aHaste && channelAttacker.rtb > 0,
         poisonTouch: aPoisonFailT > 0,
         stoningTouch: aStoningFailT > 0,
         deathTouch: aDeathTouchFailT > 0,
@@ -4003,19 +4050,30 @@ function resolveCombat(a, b, opts) {
         bRemHP, bHP: bTotalHP, bAlive,
       };
     }
+    const rangedChannel = isCoM2 && a.modernAttacks && a.modernAttacks.ranged;
+    const rangedAttacker = rangedChannel ? modernAttackUnit(a, { key: 'ranged', ...rangedChannel }) : a;
+    const rangedDefense = rangedChannel
+      ? computeCasterDefenseForAttack(b, rangedAttacker, ver, bVertigoDefPenalty, 'ranged')
+      : bDefVsARanged;
+    const rangedToBlock = rangedChannel
+      ? buildToBlockContext(rangedAttacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty).bToBlockVsARangedEW
+      : bToBlockVsARangedEW;
+
     // Rage: +1 ranged per figure lost (ranged combat has no counter-attack, so only
     // pre-combat casualties contribute — aAlive is constant through the volley).
-    const aRtbRanged = applyRage(a.rtb, a, aAlive);
-    let dmgToB = aAlive > 0 && bRemHP > 0 && a.rtb > 0 && !aBlackSleep
+    const aRtbRanged = applyRage(rangedAttacker.rtb, rangedAttacker, aAlive);
+    let dmgToB = aAlive > 0 && bRemHP > 0 && rangedAttacker.rtb > 0 && !aBlackSleep
       ? (aRangedDoomsB ? calcDoomDist(aAlive, aRtbRanged, bRemHP)
-                 : calcTotalDamageDist(aAlive, aRtbRanged, aToHitRtbVert, bDefVsARanged, bToBlockVsARangedEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
+                 : calcTotalDamageDist(aAlive, aRtbRanged,
+                     hasAbil(rangedAttacker.abilities, 'vertigo') && isCoM2 ? Math.max(0.1, rangedAttacker.toHitRtb - 0.25) : aToHitRtbVert,
+                     rangedDefense, rangedToBlock, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
                      isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined, aMinDamageFromHits))
       : [1];
 
     // Touch attacks accompanying ranged: Poison, Stoning, Death Touch, Dispel Evil,
     // Life Steal, Immolation (MoM only). Warlord removes Stoning Touch and Death Touch
     // from ranged (physical and magical) per the Warlord manual.
-    const rangedTouchFires = touchAttackFires(a.rtb, a.baseRtb, opts.version);
+    const rangedTouchFires = touchAttackFires(rangedAttacker.rtb, rangedAttacker.baseRtb, opts.version);
     const warlordRangedTouchBlocked = ver && ver.startsWith('com2_warlord');
     const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, destructionFail: aDestructionFailR, lifeStealMod: aLifeStealModR }
       = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version, rangedTouchFires, warlordRangedTouchBlocked);
@@ -4059,7 +4117,7 @@ function resolveCombat(a, b, opts) {
       && (a.rangedType === 'magic_c' || a.rangedType === 'magic_n' || a.rangedType === 'magic_s');
     // Self-convolving captures both the main ranged damage and all touch + immolation
     // effects folded in above.
-    const hasteDoublesRanged = aHaste && a.rtb > 0 && aAlive > 0 && bRemHP > 0
+    const hasteDoublesRanged = aHaste && rangedAttacker.rtb > 0 && aAlive > 0 && bRemHP > 0
       && !momHeroManaRanged;
     if (hasteDoublesRanged) {
       dmgToB = convolveDists(dmgToB, dmgToB, bRemHP);

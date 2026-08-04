@@ -14,10 +14,14 @@ everything outstanding, whatever kind of work it is and wherever its evidence li
 relevant spec before changing behaviour, and update it in the same change. This file
 holds only what applies across both deliverables.
 
-**One rule for the register.** Docs under `Reference docs/` own findings, evidence and open
-questions; `Calculator/BACKLOG.md` owns *tracking* — IDs, status, cost and priority. When you
-open a new question or close one, record it in its evidence home **and** as a row in the
-register. Never let a reference doc grow its own priority list.
+**One rule for the register.** Docs under `Reference docs/` own findings, evidence and immutable
+provenance; `Calculator/BACKLOG.md` is the **only** home for live calculator-work state and concise
+unresolved question statements — IDs, open/done/blocked/ready/pending-review state, review gates,
+cost and priority. Reference docs may record that a derivation or review occurred on a date and
+what it found, but must not mirror the work item's current state, parent blockers or next action.
+Their indexes are navigation aids, never status tables. When evidence opens or resolves a
+question, update its finding home and update the Q/X row in the register.
+`Manual/PLAN.md` remains the separate status authority for the Manual deliverable.
 
 ## Reference docs (under `Reference docs/`)
 - `MoM source - Fandom site/` — base MoM rules (abilities, damage types, immunities).
@@ -27,21 +31,22 @@ register. Never let a reference doc grow its own priority list.
   (MoM 1.31, MoM CP 1.60, CoM 1) — do not restate them elsewhere.
 - `Caster binary/` — everything read out of the modern engine's `Caster.exe`, which covers
   **both CoM2 and Warlord** (Warlord ships no executable). Its `README.md` is the single home for
-  that binary's path and md5; `CoM2 binary analysis.md` inside it holds the mechanic-level
-  findings and is the CoM2/Warlord counterpart to `MoM binary analysis.md`; the `.pas` files are
-  address-backed reconstructions of the flows themselves. Much cheaper to read than the DOS
-  builds: the binary ships a TD32 debug section with procedure symbols and named locals, so
+  that binary's path and md5; `CoM2 binary analysis.md` is the short method and subsystem index.
+  The linked `CoM2 binary - *.md` files own mechanic-level findings for combat flow, resolution
+  helpers, direct spells, damage/healing, unit recalculation, and map/city state. They are the
+  CoM2/Warlord counterpart to `MoM binary analysis.md`; the `.pas` files are address-backed
+  reconstructions of the flows themselves. Much cheaper to read than the DOS builds: the binary
+  ships a TD32 debug section with procedure symbols and named locals, so
   `tools/scan_caster_binary.py` resolves routines by name rather than by hunting struct offsets.
-  Reach for it whenever a CoM2/Warlord mechanic is not settled by the scripts below.
+  Start at the index whenever a CoM2/Warlord mechanic is not settled by the scripts below.
 - `CoM2 data tables.md` — findings read out of the `.INI` tables that ship with CoM2 and Warlord
   (`MODDING.INI`, `Levelbonus.INI`, `SPELLS.INI`, `DESC.INI`). Where a table states a value it
   *is* the implementation, since the engine reads these at load time — so for numeric constants
   check here **before** opening `Caster.exe`. A Warlord `.CAS` script still outranks a table.
-- `MoM CoM binary verification queue.md` — calculator claims that still rest on prose or
-  inference, with the reasoning and code sites for each, split by engine (sections A–C for the
-  DOS builds, D for CoM2/Warlord). Resolved items move to whichever analysis doc owns that
-  engine — one of the two binary-analysis docs, or `CoM2 data tables.md` when a table settled it;
-  every open item is also a row in `Calculator/BACKLOG.md`, §4.
+- `Engine verification evidence.md` — unresolved or partial evidence dossiers for calculator
+  claims that began on prose or inference, split by engine (sections A–C for the DOS builds, D for
+  CoM2/Warlord). Resolved findings move to the owning analysis/table document;
+  `Calculator/BACKLOG.md`, *Engine verification*, is the only authority for whether an item is actionable.
 - `CoM spells.md`, `CoM2 spells.md` — CoM/CoM2 spell mechanics.
 - `CoM2 helptext.TXT` — exact in-game text for CoM2 spells and abilities.
 - `CoM2 manual.txt` — CoM2 manual as plain text.
@@ -64,11 +69,14 @@ mod's unit data, so it lives with the roster rather than here.
 Where sources conflict, record it rather than re-deriving it later:
 - `Source discrepancies.md` — **script vs prose** conflicts. Warlord only, since no other version
   has scripts. The script wins there; see *Game script source* below.
-- `TODO.md` — open mechanic questions, including prose-vs-prose and prose-vs-`UNITS.INI` conflicts
-  in versions that have no script to arbitrate (MoM, CoM, CoM2). Tracked as Q/X rows in
-  `Calculator/BACKLOG.md`, §6–§7.
+- `Calculator/BACKLOG.md`, *Open questions* and *Blocked on people* — unresolved prose-vs-prose and prose-vs-`UNITS.INI`
+  questions for versions with no script arbiter (MoM, CoM, CoM2), plus questions for people.
+  Each Q/X row points directly to any evidence catalogue or analysis that bears on it.
 
 Read the relevant doc before implementing a new mechanic.
+
+Closed calculator work and accepted decisions are summarized in `Calculator/HISTORY.md`. It is
+historical context, not required reading for ordinary tasks and never a live-status authority.
 
 ## Game script source (under `Reference docs/Script source/`)
 The game's and mod's own `.CAS` scripts and data tables — the implementation itself, not prose
@@ -93,6 +101,25 @@ expose as text is the `.INI` data tables shipped alongside these scripts, and th
 more of the engine than their name suggests — see `Reference docs/CoM2 data tables.md`, which is
 their single home. Only when they are silent, read the executable
 (`Reference docs/Caster binary/`).
+
+### CoM2 / Warlord implementation authority
+
+For modern-engine mechanics, the source of truth is deliberately small and is **not** the
+manual or helptext. Start with the routing table in
+`Reference docs/Caster binary/CoM2 binary analysis.md`, *Modern-engine source of truth*:
+
+1. the address-backed reconstruction in `Reference docs/Caster binary/` owns compiled
+   `Caster.exe` control flow and arithmetic;
+2. the shipped Warlord `.CAS` files own Warlord behavior that they execute or overwrite;
+3. `MODDING.INI`, `Levelbonus.INI`, and `SPELLS.INI` own their loaded numeric values;
+   `UNITS.INI` separately owns roster data. `DESC.INI`, manuals, and helptext are prose,
+   not implementation.
+
+These sources compose rather than forming a blanket winner-takes-all hierarchy: compiled code
+often supplies the formula while an INI supplies its constant; a Warlord script can add to or
+overwrite the compiled result after both. The executable reconstruction settles a question only
+when the applicable CAS and runtime-table inputs are silent. Do not infer CoM2 formula behavior
+from vanilla CAS stubs.
 
 **`MASTER.CAS` is the only map from stat/ability names to numeric IDs**, so it cannot be
 cross-checked against anything. Trust its `Name=Number` lines; treat its `:comments:` as
@@ -135,157 +162,7 @@ Each version's directory also holds the `HELP.TXT` that shipped with it.
 `HELP.TXT` — evidence for version comparisons only, never a source for current behaviour. See
 the README in that directory.
 
-## Two agents (Claude and Codex)
+## Optional working protocols
 
-Both agents read this file; `AGENTS.md` points Codex here. This section is the single home for
-how they divide and cross-check work.
-
-| File | Subject | Written by | Owned after writing by |
-|---|---|---|---|
-| `.review-of-claude.md` | Claude's work | Codex | Claude |
-| `.review-of-codex.md` | Codex's work | Claude | Codex |
-| `.derivations/<ID>.claude.md` | — | Claude | Claude |
-| `.derivations/<ID>.codex.md` | — | Codex | Codex |
-
-**Review files are named for the agent under review, not the author**, and have *phased*
-ownership: the reviewer writes the file in one pass, then never touches it again; from that
-moment the agent under review owns it and is the only one who edits it. `.derivations/` files
-are single-writer outright. There is no shared discussion file: two simultaneous writers means
-clobbered edits and no reliable record of who claimed what.
-
-### Derivation mode — both answer the same question cold
-
-Used for binary reads and reconstructions (**BACKLOG** R5, R6), where the value is *independent*
-agreement. Contamination destroys that value: an agent that reads the other's answer first
-anchors to it, and the second read confirms nothing.
-
-**Dual derivation runs only when AKH asks for it.** It costs roughly four to five times a
-single-agent pass, so it is for load-bearing mechanics, not for everything. Anything else is one
-agent deriving plus one review round.
-
-#### The five steps
-
-1. **Scope the item.** Either agent may prepare the top backlog row, naming the target — file,
-   routine, address range — and nothing else. **Size it at roughly 300–1000 instructions**, which
-   is one enchantment block, one named helper, or a comparable unit. R5.1b was ~12,750
-   instructions and that is why it failed: at that size nothing gets re-read. The preparing agent
-   must then stop; **derivation starts in a fresh conversation**, so preparing an item confers no
-   head start.
-2. **Both agents derive**, each to its own `.derivations/` file, and **must not read the other's**,
-   even if it exists. Do not grep for it, do not open it to "check formatting". Shared helper
-   tools under `tools/` may be written and refined freely by either agent — tooling is not an
-   answer.
-3. **Both agents review the other's derivation**, writing to the file named for the *other* agent.
-   When AKH asks for a new review, the reviewer **clears any existing content of that file first**
-   — but only after the precondition in *Closing a review round* below is met.
-4. **Both agents work through the review of their own file.** Fix what you agree with and
-   **delete that entry**. Leave what you dispute, with a reply line beneath:
-   `— <agent>, <YYYY-MM-DD>: <reason>`. Never silently drop an entry. Surface every surviving
-   disagreement to AKH.
-5. **AKH prompts one agent to merge.** See *Merging* below. Once the merged artifact and its
-   supporting documentation are complete, the merger marks the scoped backlog item `done`; no
-   separate AKH sign-off is required.
-
-#### Evidence, not persuasion
-
-This is the rule the whole flow turns on. In the R5.1b comparison every one of five disagreements
-had a fact of the matter decidable by a single disassembly command, and none needed judgement.
-Two agents can agree and both be wrong.
-
-- **A review entry is only actionable if it cites an address and quotes the instruction bytes
-  there.** "I read it differently" is not a review entry.
-- **A disagreement is resolved by both agents re-reading the cited address and quoting what they
-  see.** If the quoted bytes agree, the reading is settled and the losing agent fixes its
-  derivation. That is not conceding — it is being shown the evidence. Only a dispute about the
-  *bytes themselves* goes to AKH.
-- Neither agent concedes to **assertion**; both agents concede to **verified evidence**. Deferring
-  to the more confident reading launders a guess into a finding, and nothing downstream can detect
-  it later.
-
-#### Merging
-
-One review round, then merge — the two derivations are **not** required to agree statement by
-statement first. Merge the *union* of both, and every statement the two still disagree on lands in
-the merged artifact **marked `disputed`**, carrying both readings and the address, and becomes a Q
-row. Do not pick a winner document: neither derivation is reliably a superset of the other, so
-selecting one silently discards the other's correct content.
-
-A merged artifact is allowed to be uncertain in places. That is strictly better than the failure
-it replaces, where a confident wrong reading landed in `CoM2 binary analysis.md` as plain fact.
-
-**The merge closes the scoped derivation item.** After writing the merged artifact, recording any
-surviving disagreements as Q rows, updating its evidence home and supporting documentation, and
-clearing the derivation/review scratch files, mark that backlog item `done`. AKH's merge request
-is the approval to close it; do not leave it `in progress` awaiting a second sign-off.
-
-#### Closing a review round
-
-**Before a review file is cleared, every disagreement still standing in it must already exist as a
-Q row in `Calculator/BACKLOG.md`.** Clearing is otherwise a silent deletion of evidence, and it
-would leave an ephemeral, gitignored file doing the register's job — see *One rule for the
-register* above.
-
-#### If a review entry contradicts conversation
-
-Surface the conflict to AKH. Neither agent shares the other's session context.
-
-#### Derivation completion gate
-
-Reaching the target end address means only that the extent was **surveyed**. It does not mean the
-extent was derived. A derivation is complete only when its artifact provides complete semantic
-instruction coverage of the assigned address range: every semantic conditional branch, loop,
-call, return, branch-affecting read and state write is represented in source-shaped form.
-
-Every address in the assigned extent must belong to exactly one contiguous, non-overlapping
-coverage-ledger row whose disposition is:
-
-- `reconstructed` — represented by the source-shaped body;
-- `compiler-only` — limited to range checks, overflow checks, record-address calculation and
-  routine scaffolding; or
-- `unresolved` — explicitly address-bounded work that remains to be derived.
-
-The first ledger row must start at the assigned start address, the last must end at the assigned
-end address, and there may be no gaps. **Any `unresolved` row keeps the derivation `in progress`.**
-A summary, table, call inventory, execution-order list or named placeholder may accompany the
-reconstruction as an index, but never substitutes for the source-shaped body.
-
-Before claiming a derivation complete, its author must state all five counts explicitly:
-`unresolved ranges: 0`; `synthetic helpers without bodies: 0`; `semantic conditional jumps
-omitted: 0`; `semantic calls omitted: 0`; `state writes omitted: 0`. If the artifact is not
-sufficient for another agent to reproduce every branch and write without reopening the
-disassembly, it is not complete.
-
-**Counting is not reading, and the counts alone are worth little.** All five R5.1b errors passed
-the counts cleanly, because a wrong reading cites exactly the addresses a right one would. Two
-further requirements exist for that reason:
-
-- **Every conditional branch must carry its target address and what lies at it** — not just the
-  address of the test. Four of the five errors were mis-read branch *targets*: a range test
-  decoded as the wrong interval, two riders placed outside the gate enclosing them, and a display
-  write placed outside its `> 0` gate. Citing the test address hides all four; citing the target
-  exposes them.
-- **Arithmetic idioms must be quoted in full, including their corrections.** `sar` followed by
-  `jns / adc reg,0` is Delphi's signed `div`, not an arithmetic shift; reading the `sar` alone and
-  stopping produced a claimed rounding divergence that does not exist.
-
-`tools/verify_derivation.py <Caster.exe> <doc.md>` checks citation coverage, ledger contiguity and
-declared nesting. Read its docstring before trusting a clean run: it verifies that each element is
-*cited*, never that the right meaning was attached to it.
-
-### Disagreement
-
-An agent-vs-agent disagreement is **not** a source conflict. It does not belong in
-`Source discrepancies.md` (script vs prose) or `TODO.md` (prose vs prose) — it is an open
-question *about* a source. Record it as a Q row in `Calculator/BACKLOG.md` with both readings
-quoted verbatim and their code sites, and let AKH arbitrate.
-
-**Neither agent concedes to the other.** Deferring to the more confident reading launders a
-guess into a finding, and nothing downstream can detect it later.
-
-### Provenance
-
-When a finding lands in its evidence home, record how it was checked:
-`Verified: Claude 2026-08-01 (0x4a2f10); Codex 2026-08-02, independent.` Distinguish
-*independent* (derivation mode) from *reviewed* (the other agent checked the written finding) —
-they are not equally strong. Cross-checking alone does not close a derivation item; the completed
-merge does, under the merge gate above.
+For binary derivations or cross-agent reviews only, read
+`DERIVATION-REVIEW-PROTOCOL.md` in full before starting. Do not load it for ordinary work.

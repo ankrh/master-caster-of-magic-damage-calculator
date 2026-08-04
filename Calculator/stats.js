@@ -42,12 +42,13 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
   const isPaladin = (name || '').endsWith('Paladins');
   const isClergy = !!abilities.clergy;
   if (!isCrusader && !isPaladin && !isClergy) return abilities;
-  return {
+  const result = {
     ...abilities,
     sanctify: true,
     ...(isCrusader ? { lucky: true, luckyPhaseBase: true } : {}),
     ...(isPaladin ? { magicImmunity: true } : {}),
   };
+  return result;
 }
 
 // Magic Immunity hard-blocks a set of magic-based curses: the immunity grants such
@@ -109,7 +110,7 @@ function markIntrinsicLucky(abilities) {
 }
 
 function applyDivineProtectionGrant(abilities, version) {
-  if (!version || !version.startsWith('com2_warlord') || !abilities.divineProtection) return abilities;
+  if (!version || !version.startsWith('com2_warlord') || !abilities || !abilities.divineProtection) return abilities;
   return { ...abilities, lucky: true, luckyPhaseB: true, deathImmunity: true };
 }
 
@@ -367,6 +368,7 @@ function deriveUnitStats(input) {
   const rtbTypeRaw = input.rtbType;
   let rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
   let thrownType = THROWN_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
+  const gazeType = GAZE_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
   // Rust eliminates thrown attacks (only the 'thrown' type — not fire/lightning breath).
   if (rustActive && thrownType === 'thrown') thrownType = 'none';
 
@@ -414,27 +416,32 @@ function deriveUnitStats(input) {
 
   // Chaos Channels (Fire Breath option): version-sensitive strength.
   // MoM: strength 2. (WIZARDS.EXE 0x8F728 in both MoM builds, alongside ranged_type = 101.)
-  // CoM/CoM2: strength 4. (CoM 1 confirmed at 0x8F47C; CoM2 and Warlord are a different
-  // engine and still rest on prose — see the queue's D12.)
+  // CoM/CoM2: strength 4. (CoM 1: 0x8F47C; CoM2/Warlord:
+  // RecalculateUnits $00599F3E, `firebreath += 4`.)
   // Fire Breath is not rolled for units that already have a ranged or breath attack.
   // If the unit has Thrown, Fire Breath replaces it.
   // CoM2 exception: Fire Breath can also replace Gaze and Lightning Breath.
   const ccFireBreathAbil = !!abilities.ccFireBreath;
-  const hasGazeAttack = (abilities.gazeRanged || 0) > 0
+  const hasGazeAttack = gazeType !== 'none'
     || abilities.stoningGaze != null
     || abilities.deathGaze != null
     || baseDoomGazeWithBlazingEyes > 0;
-  const ccCanOverwriteSpecial = version.startsWith('com2')
-    && (thrownType === 'lightning' || hasGazeAttack);
+  // Chaos Channels *adds* a Fire Breath; it never removes another attack. `Caster.exe`
+  // $00599EE8-$00599FA8 writes only `firebreath += 4`, `race := RCChaos` and `Fantastic`,
+  // and Warlord's `UnitCalc.CAS:40` touches only `SFireBreath` — neither clears a gaze,
+  // thrown or lightning breath. The CoM2 manual says the same in words: it "can still add
+  // Fire Breath to units that have Thrown, Gaze or Lightning Breath". So the modern engines,
+  // whose attack channels are independent fields, impose no coexistence restriction at all.
+  // The DOS engines keep theirs because one shared `.ranged` slot cannot hold two attacks.
+  const ccIndependentChannels = version.startsWith('com2');
+  // Only the Fire Breath channel takes the grant; without this the shared-slot write would
+  // land in whichever channel is being derived and overwrite it.
+  const ccOwnsThisPass = !input._modernChannelKey || input._modernChannelKey === 'fireBreath';
   const ccFireBreathStrength = version.startsWith('com') ? 4 : 2;
-  // Warlord: Chaos Channels Fire Breath stacks additively with an existing fire breath.
-  // Other versions: replaces the existing fire breath with the CC fire breath strength.
-  const ccFireBreathStacksWarlord = version.startsWith('com2_warlord')
-    && ccFireBreathAbil && rangedType === 'none' && thrownType === 'fire';
   const ccFireBreathActive = ccFireBreathAbil && rangedType === 'none'
-    && (thrownType === 'none' || thrownType === 'thrown' || thrownType === 'fire' || ccCanOverwriteSpecial)
-    && !ccFireBreathStacksWarlord;
-  if (ccFireBreathActive) {
+    && (ccIndependentChannels
+      || thrownType === 'none' || thrownType === 'thrown' || thrownType === 'fire');
+  if (ccFireBreathActive && ccOwnsThisPass) {
     thrownType = 'fire';
   }
 
@@ -475,8 +482,15 @@ function deriveUnitStats(input) {
         && (rtbTypeRaw === 'magic_c' || rtbTypeRaw === 'magic_n' || rtbTypeRaw === 'magic_s')));
   let calcBaseAtk = destinyActive ? inputBaseAtk * 2 : inputBaseAtk;
   let calcBaseRtb = destinyActive ? inputBaseRtb * 2 : inputBaseRtb;
-  if (ccFireBreathActive) calcBaseRtb = ccFireBreathStrength;
-  else if (ccFireBreathStacksWarlord) calcBaseRtb += ccFireBreathStrength;
+  // `Caster.exe` $00599F3E is `add 4 to U.firebreath`, not an assignment, and it is the same
+  // routine for CoM2 and Warlord — there is no version split to model. The DOS engines still
+  // assign, because the value lands in the one shared `.ranged` slot rather than a field of
+  // its own, which is the same reason they exclude ranged units from the mutation.
+  if (ccFireBreathActive && ccOwnsThisPass) {
+    calcBaseRtb = ccIndependentChannels
+      ? calcBaseRtb + ccFireBreathStrength
+      : ccFireBreathStrength;
+  }
   // Lightning Blade's strength-1 grant (melee-only units). The Thrown→Lightning conversion
   // keeps the unit's existing Thrown strength, so it needs no adjustment here.
   if (lightningBladeGrantsBreath) calcBaseRtb = 1;
@@ -1107,8 +1121,9 @@ function deriveUnitStats(input) {
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
   // gaze attack does not fire.
-  const gazeOverwrittenByCC = ccFireBreathActive && ccCanOverwriteSpecial && hasGazeAttack;
-  const gazeDisabled = gazeOverwrittenByCC || enemyEyeOfHeaven;
+  // Eye of Heaven is the only effect that switches a gaze off: `UnitCalc.CAS:1483` zeroes
+  // `SStoningGaze`/`SDeathGaze`/`SDoomGaze` and nothing else in any source does.
+  const gazeDisabled = enemyEyeOfHeaven;
   // A gaze's strength lives in the same `.ranged` slot Chaos Surge writes, so MoM and
   // CoM 1 boost both gaze forms. CoM2/Warlord (separate engine) are left unchanged.
   const chaosSurgeGazeMod = isCoM2 ? 0 : chaosSurgeRtbBonus;
@@ -1117,7 +1132,7 @@ function deriveUnitStats(input) {
   // the full ranged ladder. CoM 1 replaced it with a table loop whose `.ranged` step is
   // skipped for `ranged_type >= 100` — thrown, breath and every gaze — on all rows but
   // Veteran (0x8FA9A-0x8FAAB); that is exactly the ladder's `thrown` column. CoM2 and
-  // Warlord read Levelbonus.INI and are unverified — queue item D21.
+  // Warlord remain unresolved in `Engine verification evidence.md`, D21.
   const gazeLvlMod = version.startsWith('mom') ? lvl.ranged
     : isCoM1 ? lvl.thrown
     : lvl.ranged;
@@ -1127,16 +1142,23 @@ function deriveUnitStats(input) {
   // CoM 1's Warp Attack halves the `.ranged` slot with no `ranged_type` test at all
   // (0x90764-0x90772), so it reaches a gaze's strength exactly as it reaches conventional
   // ranged, thrown and breath. Darkness lands after the halving, as it does for the ranged
-  // stat below. MoM's Warp Attack touches melee only; CoM2 and Warlord are unverified —
-  // queue item D21.
+  // stat below. MoM's Warp Attack touches melee only. CoM2/Warlord's separate gaze fields
+  // are untouched by all three compiled Warp blocks (CoM2 analysis, *The Warp blocks*).
   const gazeWarpHalves = isCoM1 && !!(abilities && abilities.warpAttack);
   // The two gaze strengths live in the same `.ranged` slot as `rtb`, so they are fields of
   // the same record and are written by the same steps — with the narrower set of modifiers
   // a gaze takes: the ability lump, node aura, Darkness/True Light, Chaos Surge and their
   // own level ladder, but no weapon, no per-attack-type ranged bonus, and no Shatter.
-  const baseGazeRanged = gazeDisabled ? 0 : ((abilities && abilities.gazeRanged) || 0);
-  // Doom Gaze delivers exact doom damage. Same modifier set, plus Focus Magic in CoM2.
-  const baseDoomGaze = gazeDisabled ? 0 : (effectiveAbilities.doomGaze || 0);
+  // Type 104 has no conventional component: Automatic Damage assigns `hits = attack_strength`
+  // and jumps past both rolls (0x9A1E6 -> 0x9A204), so the one number is *delivered* rather
+  // than rolled. Only 103 and 105 roll it. Counting both would double the gaze.
+  const dosGazeStrength = !isCoM2 && gazeType !== 'none' && gazeType !== 'gaze_multiple'
+    ? calcBaseRtb : 0;
+  const baseGazeRanged = gazeDisabled ? 0 : dosGazeStrength;
+  // DOS type 104 uses the shared strength as Doom Gaze damage. The modern engines instead
+  // carry an independent Doom Gaze field.
+  const baseDoomGaze = gazeDisabled ? 0
+    : (!isCoM2 && gazeType === 'gaze_multiple' ? calcBaseRtb : (effectiveAbilities.doomGaze || 0));
   const focusMagicDoomGazeMod = focusMagicBuffsExisting && isCoM2 ? 3 : 0;
 
   // Psycho Force and Pneuma Field are the two Magitek effects that read Resistance rather than
@@ -1151,8 +1173,7 @@ function deriveUnitStats(input) {
   // two gaze strengths, which share the engine's `.ranged` slot with `rtb`. Not a list per
   // stat: an effect the engine makes as a single write to several stats — Darkness, Blaze of
   // Glory, Warp — is one step here too, instead of being shredded across five places and
-  // reassembled by a comment. See SPEC.md, *Stat derivation contract*, and BACKLOG.md,
-  // Appendix A.
+  // reassembled by a comment. See SPEC.md, *Stat derivation contract*.
   //
   // List order *is* execution order. Phase is the evidence for a step's position: which
   // region of the engine makes that write (steps.js, STEP_PHASES).
@@ -1284,7 +1305,7 @@ function deriveUnitStats(input) {
     // --- c: magic calc, in the binary ---
     // The level ladder is `@Units@ApplyLevelBonus` at +0x00D16, near the head of the region and
     // right after Destiny's permanent transformation — direct execution-order evidence, which
-    // is what queue D25 was waiting for. The hero ladder is `@Units@ApplyHeroBonus` at
+    // settled the former D25 ordering question. The hero ladder is `@Units@ApplyHeroBonus` at
     // +0x0139A, the same region. MoM and CoM 1 apply theirs from the battle-unit constructor
     // instead, but `b` and `d` are empty for them, so nothing sits between `a` and `c` there
     // and the position is unobservable: one step serves every version.
@@ -1576,9 +1597,12 @@ function deriveUnitStats(input) {
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...pneumaAbilities, negateFirstStrike: true }
     : pneumaAbilities;
-  let combatAbilities = gazeDisabled
-    ? { ...combatAbilitiesBase, gazeRanged: 0, stoningGaze: null, deathGaze: null, doomGaze: 0 }
+  const shapedGazeAbilities = !isCoM2 && baseDoomGaze > 0
+    ? { ...combatAbilitiesBase, doomGaze: effectiveDoomGaze }
     : combatAbilitiesBase;
+  let combatAbilities = gazeDisabled
+    ? { ...shapedGazeAbilities, stoningGaze: null, deathGaze: null, doomGaze: 0 }
+    : shapedGazeAbilities;
   // Rust eliminates Large Shield for the rest of combat.
   if (rustActive && combatAbilities.largeShield) {
     combatAbilities = { ...combatAbilities, largeShield: false };
@@ -1788,7 +1812,7 @@ function deriveUnitStats(input) {
     vertigoActive ? -Math.round(vertigoBlockPenalty * 100) : 0,
   ]);
 
-  return {
+  const result = {
     // Base values (for display)
     baseAtk: inputBaseAtk, baseRtb: inputBaseRtb + shadowStrikeGrantedBaseRtb, baseDef: inputBaseDef, baseRes: inputBaseRes, baseHP: inputBaseHP,
     baseToHitMod, baseToHitRtbMod, baseToBlkMod,
@@ -1823,5 +1847,67 @@ function deriveUnitStats(input) {
     // Abilities (for combat flow modifiers)
     abilities: combatAbilities,
   };
-}
 
+  // Modern units have four independent attack fields. Derive each one through the
+  // existing ordered sequence in isolation: this preserves every transform's position
+  // while the legacy RTB value remains only a pre-R4 card projection.
+  // `_modernChannelPass` prevents those child derivations from recursing again.
+  if (version.startsWith('com2') && input.modernAttacks && !input._modernChannelPass) {
+    const channels = {};
+    const modernInputs = { ...input.modernAttacks };
+    const hasModernAttack = Object.values(modernInputs)
+      .some(attack => attack && attack.strength > 0);
+    // These effects can create a field from an otherwise attack-less unit.  Seed that
+    // field so its normal source-ordered derivation performs the grant; every other
+    // absent field stays absent.
+    if (abilities.shadowStrike && !modernInputs.thrown) {
+      modernInputs.thrown = { strength: 0, type: 'thrown' };
+    }
+    if (bombsGrenades && !hasModernAttack && !modernInputs.thrown) {
+      modernInputs.thrown = { strength: 0, type: 'thrown' };
+    }
+    if (focusMagicActive && !hasModernAttack && !modernInputs.ranged) {
+      modernInputs.ranged = { strength: 0, type: 'none' };
+    }
+    // Unconditional: the grant is `firebreath += 4` whatever else the unit carries, so the
+    // channel must exist even beside a gaze, a lightning breath or a thrown attack.
+    if (ccFireBreathActive && !modernInputs.fireBreath) {
+      modernInputs.fireBreath = { strength: 0, type: 'none' };
+    }
+    if (lightningBladeGrantsBreath && !hasModernAttack && !modernInputs.lightningBreath) {
+      modernInputs.lightningBreath = { strength: 0, type: 'none' };
+    }
+    for (const [key, attack] of Object.entries(modernInputs)) {
+      const seeded = (key === 'ranged' && focusMagicActive)
+        || (key === 'fireBreath' && ccFireBreathActive)
+        || (key === 'lightningBreath' && lightningBladeGrantsBreath);
+      if (!attack || (attack.strength <= 0 && key !== 'thrown' && !seeded)) continue;
+      const child = deriveUnitStats({
+        ...input,
+        modernAttacks: null,
+        _modernChannelPass: true,
+        _modernChannelKey: key,
+        rtb: attack.strength,
+        rtbType: attack.type,
+      });
+      if (child.rtb <= 0) continue;
+      const outputKey = child.rangedType !== 'none' ? 'ranged'
+        : child.thrownType === 'thrown' ? 'thrown'
+        : child.thrownType === 'fire' ? 'fireBreath'
+        : child.thrownType === 'lightning' ? 'lightningBreath'
+        : null;
+      // Rust can eliminate an existing Thrown field.  A channel with no resolved
+      // attack type must not survive merely because it still has a positive stat value.
+      if (!outputKey) continue;
+      channels[outputKey] = {
+        baseStrength: attack.strength,
+        strength: child.rtb,
+        type: child.rangedType !== 'none' ? child.rangedType : child.thrownType,
+        toHit: child.toHitRtb,
+      };
+    }
+    result.modernAttacks = channels;
+  }
+
+  return result;
+}

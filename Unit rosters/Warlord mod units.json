@@ -33,6 +33,7 @@
     "defense": 5,
     "resist": 6,
     "to_hit": 20,
+    "thrown": 5,
     "thrown_breath": 5,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -79,6 +80,7 @@
     "ranged": 7,
     "ranged_type": "Missile",
     "ammo": 8,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -145,6 +147,7 @@
     "defense": 6,
     "resist": 7,
     "to_hit": 10,
+    "thrown": 4,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -396,6 +399,7 @@
     "defense": 5,
     "resist": 8,
     "to_hit": 20,
+    "fire_breath": 7,
     "thrown_breath": 7,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -501,6 +505,7 @@
     "defense": 5,
     "resist": 6,
     "to_hit": 20,
+    "thrown": 4,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -906,6 +911,7 @@
     "defense": 4,
     "resist": 4,
     "to_hit": 10,
+    "thrown": 2,
     "thrown_breath": 2,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -930,6 +936,7 @@
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -950,6 +957,7 @@
     "defense": 2,
     "resist": 4,
     "to_hit": 10,
+    "thrown": 3,
     "thrown_breath": 3,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -974,6 +982,7 @@
     "ranged": 3,
     "ranged_type": "Magic(N)",
     "ammo": 4,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -998,6 +1007,7 @@
     "defense": 4,
     "resist": 4,
     "to_hit": 10,
+    "thrown": 2,
     "thrown_breath": 2,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1169,6 +1179,7 @@
     "defense": 5,
     "resist": 8,
     "to_hit": 10,
+    "thrown": 2,
     "thrown_breath": 2,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1399,6 +1410,7 @@
     "melee": 2,
     "defense": 3,
     "resist": 4,
+    "fire_breath": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1419,6 +1431,7 @@
     "melee": 4,
     "defense": 5,
     "resist": 5,
+    "fire_breath": 2,
     "thrown_breath": 2,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1439,6 +1452,7 @@
     "melee": 5,
     "defense": 5,
     "resist": 5,
+    "fire_breath": 2,
     "thrown_breath": 2,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1463,6 +1477,7 @@
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 4,
+    "fire_breath": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1485,6 +1500,7 @@
     "ranged": 5,
     "ranged_type": "Magic(N)",
     "ammo": 4,
+    "fire_breath": 2,
     "thrown_breath": 2,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1512,6 +1528,7 @@
     "ranged": 7,
     "ranged_type": "Magic(C)",
     "ammo": 6,
+    "fire_breath": 2,
     "thrown_breath": 2,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1552,6 +1569,7 @@
     "defense": 6,
     "resist": 8,
     "to_hit": 10,
+    "fire_breath": 7,
     "thrown_breath": 7,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -1723,6 +1741,7 @@
     "defense": 2,
     "resist": 3,
     "to_hit": 10,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1813,6 +1832,7 @@
     "defense": 6,
     "resist": 7,
     "to_hit": 20,
+    "thrown": 5,
     "thrown_breath": 5,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -1933,6 +1953,7 @@
     "defense": 4,
     "resist": 6,
     "to_hit": 10,
+    "thrown": 5,
     "thrown_breath": 5,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -2418,6 +2439,7 @@
     "defense": 6,
     "resist": 8,
     "to_block": 40,
+    "fire_breath": 8,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "category": "Klackon",
@@ -2492,6 +2514,7 @@
     "ranged": 4,
     "ranged_type": "Missile",
     "ammo": 6,
+    "thrown": 4,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -2537,6 +2560,7 @@
     "defense": 9,
     "resist": 12,
     "to_block": 40,
+    "lightning_breath": 8,
     "thrown_breath": 8,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -2662,6 +2686,7 @@
     "melee": 11,
     "defense": 4,
     "resist": 8,
+    "thrown": 3,
     "thrown_breath": 3,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -2684,6 +2709,7 @@
     "ranged": 4,
     "ranged_type": "Missile",
     "ammo": 6,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -2804,6 +2830,7 @@
     "melee": 7,
     "defense": 5,
     "resist": 7,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -3059,6 +3086,7 @@
     "defense": 5,
     "resist": 4,
     "to_hit": 10,
+    "fire_breath": 14,
     "thrown_breath": 14,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -3107,6 +3135,7 @@
     "defense": 2,
     "resist": 5,
     "to_hit": 10,
+    "fire_breath": 6,
     "thrown_breath": 6,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -3226,6 +3255,7 @@
     "defense": 5,
     "resist": 8,
     "to_hit": 10,
+    "fire_breath": 6,
     "thrown_breath": 6,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -3296,6 +3326,7 @@
     "defense": 4,
     "resist": 12,
     "to_hit": 10,
+    "lightning_breath": 6,
     "thrown_breath": 6,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -3322,6 +3353,7 @@
     "defense": 11,
     "resist": 15,
     "to_hit": 30,
+    "fire_breath": 35,
     "thrown_breath": 35,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -4102,6 +4134,7 @@
     "defense": 10,
     "resist": 14,
     "to_hit": 30,
+    "lightning_breath": 21,
     "thrown_breath": 21,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -4201,6 +4234,7 @@
     "defense": 7,
     "resist": 12,
     "to_hit": 20,
+    "fire_breath": 8,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -4230,6 +4264,7 @@
     "ranged": 6,
     "ranged_type": "Missile",
     "ammo": 4,
+    "thrown": 4,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -4253,6 +4288,7 @@
     "ranged": 12,
     "ranged_type": "Boulder",
     "ammo": 8,
+    "fire_breath": 14,
     "thrown_breath": 14,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -4384,6 +4420,7 @@
     "defense": 6,
     "resist": 7,
     "to_hit": 10,
+    "lightning_breath": 7,
     "thrown_breath": 7,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -4433,6 +4470,7 @@
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 8,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -4502,6 +4540,7 @@
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 4,
+    "thrown": 3,
     "thrown_breath": 3,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -4522,6 +4561,7 @@
     "defense": 4,
     "resist": 6,
     "to_hit": 10,
+    "thrown": 4,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -4714,6 +4754,7 @@
     "melee": 5,
     "defense": 6,
     "resist": 7,
+    "fire_breath": 3,
     "thrown_breath": 3,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -4878,6 +4919,7 @@
     "ranged": 3,
     "ranged_type": "Magic(N)",
     "ammo": 4,
+    "fire_breath": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -4948,6 +4990,7 @@
     "ranged": 4,
     "ranged_type": "Magic(C)",
     "ammo": 6,
+    "fire_breath": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -5182,6 +5225,7 @@
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 4,
+    "thrown": 5,
     "thrown_breath": 5,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -5206,6 +5250,7 @@
     "ranged": 5,
     "ranged_type": "Missile",
     "ammo": 4,
+    "thrown": 9,
     "thrown_breath": 9,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -5230,6 +5275,7 @@
     "ranged": 3,
     "ranged_type": "Boulder",
     "ammo": 8,
+    "thrown": 3,
     "thrown_breath": 3,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -5413,6 +5459,7 @@
     "ranged": 8,
     "ranged_type": "Missile",
     "ammo": 4,
+    "thrown": 4,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -5436,6 +5483,7 @@
     "ranged": 11,
     "ranged_type": "Missile",
     "ammo": 4,
+    "fire_breath": 8,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -5460,6 +5508,7 @@
     "ranged": 6,
     "ranged_type": "Magic(C)",
     "ammo": 4,
+    "fire_breath": 9,
     "thrown_breath": 9,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -5500,6 +5549,7 @@
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 8,
+    "fire_breath": 15,
     "thrown_breath": 15,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -5627,6 +5677,7 @@
     "defense": 10,
     "resist": 18,
     "to_hit": 30,
+    "lightning_breath": 15,
     "thrown_breath": 15,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -5668,6 +5719,7 @@
     "ranged": 18,
     "ranged_type": "Magic(C)",
     "ammo": 5,
+    "lightning_breath": 21,
     "thrown_breath": 21,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -5858,6 +5910,7 @@
     "defense": 10,
     "resist": 12,
     "to_hit": 20,
+    "thrown": 12,
     "thrown_breath": 12,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -6041,6 +6094,7 @@
     "ranged": 10,
     "ranged_type": "Missile",
     "ammo": 8,
+    "thrown": 10,
     "thrown_breath": 10,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -6066,6 +6120,7 @@
     "defense": 10,
     "resist": 10,
     "to_hit": 20,
+    "lightning_breath": 25,
     "thrown_breath": 25,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -6090,6 +6145,7 @@
     "defense": 6,
     "resist": 8,
     "to_hit": 10,
+    "fire_breath": 8,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -6116,6 +6172,7 @@
     "resist": 12,
     "to_block": 40,
     "to_hit": 10,
+    "lightning_breath": 8,
     "thrown_breath": 8,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -6241,6 +6298,8 @@
     "ranged": 10,
     "ranged_type": "Magic(C)",
     "ammo": 6,
+    "fire_breath": 14,
+    "lightning_breath": 8,
     "thrown_breath": 14,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -6272,6 +6331,7 @@
     "resist": 18,
     "to_block": 50,
     "to_hit": 40,
+    "fire_breath": 8,
     "thrown_breath": 8,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -6384,6 +6444,7 @@
     "defense": 9,
     "resist": 8,
     "to_hit": 10,
+    "fire_breath": 12,
     "thrown_breath": 12,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -6466,6 +6527,7 @@
     "ranged": 9,
     "ranged_type": "Missile",
     "ammo": 8,
+    "thrown": 10,
     "thrown_breath": 10,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -6603,6 +6665,7 @@
     "ranged": 9,
     "ranged_type": "Magic(C)",
     "ammo": 10,
+    "thrown": 9,
     "thrown_breath": 9,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -6629,6 +6692,7 @@
     "ranged": 8,
     "ranged_type": "Magic(C)",
     "ammo": 10,
+    "fire_breath": 6,
     "thrown_breath": 6,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -7014,6 +7078,7 @@
     "melee": 8,
     "defense": 5,
     "resist": 8,
+    "thrown": 3,
     "thrown_breath": 3,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -7042,6 +7107,7 @@
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 3,
+    "thrown": 4,
     "thrown_breath": 4,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -7159,6 +7225,7 @@
     "defense": 10,
     "resist": 12,
     "to_hit": 20,
+    "lightning_breath": 10,
     "thrown_breath": 10,
     "thrown_breath_type": "lightning",
     "abilities": [
@@ -7222,6 +7289,7 @@
     "defense": 10,
     "resist": 12,
     "to_hit": 10,
+    "fire_breath": 21,
     "thrown_breath": 21,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -7305,6 +7373,7 @@
     "ranged": 3,
     "ranged_type": "Missile",
     "ammo": 6,
+    "thrown": 1,
     "thrown_breath": 1,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -7442,6 +7511,7 @@
     "defense": 7,
     "resist": 7,
     "to_block": 20,
+    "thrown": 3,
     "thrown_breath": 3,
     "thrown_breath_type": "thrown",
     "abilities": [
@@ -7514,6 +7584,7 @@
     "defense": 3,
     "resist": 5,
     "to_block": 20,
+    "fire_breath": 5,
     "thrown_breath": 5,
     "thrown_breath_type": "fire",
     "abilities": [
@@ -7625,6 +7696,7 @@
     "defense": 1,
     "resist": 7,
     "to_block": 20,
+    "thrown": 7,
     "thrown_breath": 7,
     "thrown_breath_type": "thrown",
     "abilities": [

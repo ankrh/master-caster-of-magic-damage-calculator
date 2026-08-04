@@ -6,8 +6,8 @@ No Claude derivation or review was read or produced during the 2026-08-02 deriva
 2026-08-03 review initially found no semantic misreading. Codex's reciprocal review then found
 that `$005C1867 jl $005C1785` had been cited but flattened into a one-shot branch. Claude re-read
 the cited bytes and confirmed the correct pre-tested `while`, which appears below. Codex applied
-the correction, and AKH directed R5.2g and R5.C closed on 2026-08-03. The whole-routine coverage
-ledger was accepted unchanged because it has no internal boundary at this block.
+the correction on 2026-08-03, and AKH accepted the whole-routine coverage ledger unchanged
+because it has no internal boundary at this block.
 
 The names in `SpellTableT` and `damageT` come from the shipped CAS
 `Typedec.pas`. `inferred_ChaosConjunction_State` is a semantic name for the

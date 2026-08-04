@@ -5,10 +5,10 @@ This durable companion supports the canonical source body in
 `$0059A02C..$005A65B2`. It was promoted from the corrected Codex derivation
 after the Claude/Codex review round closed with no surviving disagreements.
 Claude's additional mechanic-level explanations are merged into
-`CoM2 binary analysis.md`.
+`CoM2 binary - unit recalculation.md`.
 
 Provenance: Claude 2026-08-01; Codex 2026-08-01, independent from the shared
-thirteen-anchor spine documented in `Calculator/BACKLOG.md`; cross-review and
+thirteen-anchor spine already present in the reconstruction placeholder; cross-review and
 independent address verification completed 2026-08-02.
 
 ## Branch-target and arithmetic evidence

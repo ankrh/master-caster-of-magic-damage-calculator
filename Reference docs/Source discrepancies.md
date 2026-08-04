@@ -5,9 +5,10 @@ conflict can be judged without re-deriving it.
 
 **Scope is Warlord only.** A three-way comparison is impossible for MoM, CoM and CoM2, because
 those versions ship their combat scripts as empty stubs and resolve mechanics inside
-`Caster.exe` (see the root `CLAUDE.md`). Two-way conflicts in those versions, and open mechanic
-questions generally, belong in [TODO.md](./TODO.md) — this file is specifically the register of
-*script-vs-prose* conflicts.
+`Caster.exe` (see the root `CLAUDE.md`). Two-way conflicts in those versions and unresolved
+mechanic questions are tracked as Q/X rows in `Calculator/BACKLOG.md`, *Open questions* and
+*Blocked on people*; this file is
+specifically the evidence register for *script-vs-prose* conflicts.
 
 Sources cited:
 - **Manual** — `Warlord manual v1.5.12.6.html`, by PDF-page anchor; verify visual details
@@ -36,7 +37,10 @@ file shows.
 | 12 | Magitek Science — Battle Armor eligibility | manual and helptext include Battle Armor | resolved (script) |
 | 13 | Blaze of Glory — enchantment Armor survival | helptext says non-base Armor remains | resolved (script) |
 
-Six entries were closed by the **v1.5.12.6.2 hotfix**, which the maintainer released in response
+The table's `Status` column records the durable **source-resolution outcome**, not project work
+state. Any calculator or documentation follow-up is tracked only in `Calculator/BACKLOG.md`.
+
+Seven entries were closed by the **v1.5.12.6.2 hotfix**, which the maintainer released in response
 to this register. The calculator needed no correction for §1, §2, §3, §6 or §9 — it had followed
 the script throughout, and the prose caught up. §5 and §10 did change behaviour. Each entry below
 keeps its original evidence and records the fix at the end; the pre-hotfix files are in

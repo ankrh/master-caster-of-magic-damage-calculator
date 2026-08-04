@@ -99,6 +99,38 @@ function baseUnitInput(overrides = {}) {
 }
 
 function runDeriveUnitStatsChecks(ctx) {
+  const modernChannels = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    rtbType: 'missile',
+    rtb: 7,
+    modernAttacks: {
+      ranged: { strength: 7, type: 'missile' },
+      thrown: { strength: 3, type: 'thrown' },
+      fireBreath: { strength: 5, type: 'fire' },
+      lightningBreath: { strength: 4, type: 'lightning' },
+    },
+  }));
+  assertEqual(modernChannels.rtb, 7, 'The legacy RTB projection remains unchanged during R3.2');
+  assertEqual(modernChannels.modernAttacks.ranged.strength, 7, 'Modern Ranged is derived independently');
+  assertEqual(modernChannels.modernAttacks.thrown.strength, 3, 'Modern Thrown is derived independently');
+  assertEqual(modernChannels.modernAttacks.fireBreath.strength, 5, 'Modern Fire Breath is derived independently');
+  assertEqual(modernChannels.modernAttacks.lightningBreath.strength, 4, 'Modern Lightning Breath is derived independently');
+
+  const modernBlackpowder = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { outlanderWizard: true, rocketry: true, armorPiercing: true },
+    rtbType: 'missile',
+    rtb: 5,
+    modernAttacks: {
+      ranged: { strength: 5, type: 'missile' },
+      thrown: { strength: 2, type: 'thrown' },
+    },
+  }));
+  assertEqual(modernBlackpowder.modernAttacks.ranged.type, 'boulder',
+    'Blackpowder transforms the modern Ranged channel without consuming Thrown');
+  assertEqual(modernBlackpowder.modernAttacks.thrown.strength, 6,
+    'Blackpowder independently transforms the modern Thrown channel');
+
   const destiny = ctx.deriveUnitStats(baseUnitInput({
     abilities: { destiny: true },
     level: 'champion',
@@ -823,6 +855,64 @@ function runWarlordUnitAbilityChecks(ctx) {
 }
 
 function runPhaseChecks(ctx) {
+  // R3.3: Caster.exe's independent attack fields must survive the legacy card's single
+  // RTB projection. Three deterministic coexisting channels produce three separate attacks.
+  const modernChannels = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', atk: 1, rtb: 0, rtbType: 'none', def: 0, hp: 10,
+    toHitRtbMod: 70,
+    modernAttacks: {
+      thrown: { strength: 1, type: 'thrown' },
+      fireBreath: { strength: 1, type: 'fire' },
+      lightningBreath: { strength: 1, type: 'lightning' },
+    },
+  }));
+  const channelTarget = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', atk: 1, rtb: 0, rtbType: 'none', def: 0, hp: 10,
+  }));
+  const channelCombat = ctx.resolveCombat(modernChannels, channelTarget,
+    { version: 'com2_1.05.11', isRanged: false, wallOfFire: false });
+  assertClose(channelCombat.totalDmgToB[3], 0.7,
+    'Modern Thrown, Fire Breath, and Lightning Breath coexist instead of using the RTB projection');
+  assertEqual(channelCombat.phases.filter(p => /Breath|Thrown/.test(p.label)).length, 3,
+    'Modern coexistence produces one phase per independent channel');
+
+  // R3.4: cover the complete modern roster boundary, not just a hand-authored fixture.
+  // Every source channel must make it through derivation; every non-ranged channel must
+  // surface as a melee phase, and a conventional ranged channel must remain selectable.
+  const typeMap = { Missile: 'missile', Boulder: 'boulder', 'Magic(C)': 'magic_c', 'Magic(N)': 'magic_n', 'Magic(S)': 'magic_s' };
+  const warlordRoster = Object.values(evalInContext(ctx, 'WARLORD_UNITS_DATA'));
+  const multiChannelRoster = warlordRoster.filter(unit =>
+    ['ranged', 'thrown', 'fire_breath', 'lightning_breath'].filter(key => Number(unit[key]) > 0).length > 1);
+  assertEqual(multiChannelRoster.length, 29, 'Warlord roster contains the expected multi-channel units');
+  for (const unit of multiChannelRoster) {
+    const records = {
+      ranged: unit.ranged ? { strength: unit.ranged, type: typeMap[unit.ranged_type] } : null,
+      thrown: unit.thrown ? { strength: unit.thrown, type: 'thrown' } : null,
+      fireBreath: unit.fire_breath ? { strength: unit.fire_breath, type: 'fire' } : null,
+      lightningBreath: unit.lightning_breath ? { strength: unit.lightning_breath, type: 'lightning' } : null,
+    };
+    const projection = records.ranged || records.thrown || records.fireBreath || records.lightningBreath;
+    const attacker = ctx.deriveUnitStats(baseUnitInput({
+      version: 'com2_warlord_1.5.12.6.2', figs: unit.figures, atk: unit.melee,
+      rtb: projection.strength, rtbType: projection.type, def: unit.defense,
+      res: unit.resist, hp: unit.hp, toHitRtbMod: 70, modernAttacks: records,
+    }));
+    const expectedKeys = Object.keys(records).filter(key => records[key]);
+    assertEqual(Object.keys(attacker.modernAttacks).length, expectedKeys.length,
+      `${unit.name} retains every source attack channel during derivation`);
+    const melee = ctx.resolveCombat(attacker, channelTarget,
+      { version: 'com2_warlord_1.5.12.6.2', isRanged: false, wallOfFire: false });
+    const expectedMeleeChannels = expectedKeys.filter(key => key !== 'ranged').length;
+    assertEqual((melee.phases || []).filter(p => /Breath|Thrown/.test(p.label)).length, expectedMeleeChannels,
+      `${unit.name} resolves every non-ranged channel`);
+    if (records.ranged) {
+      const ranged = ctx.resolveCombat(attacker, channelTarget,
+        { version: 'com2_warlord_1.5.12.6.2', isRanged: true, wallOfFire: false });
+      assert(ranged.totalDmgToB.some((p, damage) => damage > 0 && p > 1e-15),
+        `${unit.name} resolves its independent conventional ranged channel`);
+    }
+  }
+
   assertEqual(ctx.buildWallOfFirePhase(false, {}), null, 'Inactive Wall of Fire phase is null');
   const wallOfFire = ctx.buildWallOfFirePhase(true, {
     wofStr: 1,

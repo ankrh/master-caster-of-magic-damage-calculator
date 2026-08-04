@@ -19,8 +19,8 @@ test('share link restores the full calculator state', async ({ page, context }) 
   await setValue(page, 'bDef', '7');
   await setValue(page, 'aAbil_firstStrike', true);
   // rangedCheck is only enabled when the attacker has a ranged attack.
-  await setValue(page, 'aRtbType', 'missile');
-  await setValue(page, 'aRtb', '4');
+  await setValue(page, 'aModernRangedType', 'missile');
+  await setValue(page, 'aModernRanged', '4');
   await setValue(page, 'rangedCheck', true);
 
   const state = await page.evaluate(() => collectState());

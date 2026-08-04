@@ -229,7 +229,7 @@ combat-turn flag. Consequently the initiating strike reads the target side's Blu
 counterattack reads the counterattacker's own side-wide Blur.
 
 This is a targeted caller trace used only to establish `ApplyAttack`'s side selection. It does
-not reconstruct or close the still-open R5.2d `PerformMeleeAttack` extent.
+not reconstruct the separately scoped R5.2d `PerformMeleeAttack` extent.
 
 ## Byte-level self-review
 

@@ -207,7 +207,8 @@ of attacks from that strength through 1.
 A gaze is one attack with two independently-bounded parts, and a **single** strength/type
 slot in the unit data:
 
-- The **hidden component** — a conventional attack at the unit's Gaze Ranged strength,
+- The **hidden component** — a conventional attack at the DOS unit's shared secondary-attack
+  strength, with the shared type set to Stoning, Multiple, or Death Gaze,
   taking the normal to-hit, defence and blur rolls. It is rolled **once per attacking
   figure**.
 - The **kill rolls** — stoning and/or death, one resistance roll per **defending** figure,
@@ -460,7 +461,7 @@ CoM2's Warp Attack leaves the separate gaze fields untouched), and CoM 1's level
 every `ranged_type >= 100` attack — thrown, breath and both gaze forms — only the Veteran step,
 which is the ladder's `thrown` column. MoM's level routine has no such gate, so both gaze forms
 take its full `ranged` column there. CoM2's gaze ladder is still unread — see
-`Reference docs/MoM CoM binary verification queue.md`, D21.
+`Reference docs/Engine verification evidence.md`, D21.
 
 Warlord scoring options that affect a unit are represented as per-unit encounter inputs:
 
@@ -470,9 +471,28 @@ Warlord scoring options that affect a unit are represented as per-unit encounter
   rolled at combat start, clamped to an integer from −2 to +2. It is fixed for the combat
   calculation and is applied in phase b; it is not folded into the damage distribution.
 
-Note that `rtb` carries ranged, thrown **and** breath, distinguished by `rangedType`/`thrownType`.
-Breath has no stat of its own, so Explosive's fire-breath doubling reads the `rtb` field gated
-on the attack type.
+The DOS unit card retains its shared `rtb` slot, whose type selector includes conventional ranged,
+Thrown, Breath, and the three gaze types. There is no separate hidden-gaze input: for a gaze, this
+shared value is the conventional gaze strength, and Multiple Gaze also uses it as Doom Gaze damage.
+CoM2 and Warlord instead expose and carry independent Ranged, Thrown, Fire Breath, and Lightning
+Breath records. The modern resolver consumes those named records, so coexisting roster attacks
+are neither projected into one card field nor discarded. Modern cards also expose roster-bound
+gaze and touch save modifiers and their To Defend value, each an independent field.
+
+The DOS card instead presents the record's single `Spec_Att_Attrib` byte as one **Special value**
+input beneath the shared slot, with a checkbox per consumer: Stoning Touch, Death Touch, Life
+Steal, Poison Touch, Holy bonus, and Res. to all. Ticking a consumer gives it that one magnitude —
+negated for the save-modifier riders, positive for Poison Touch's repeat count and for the two
+bonuses — so the contention the record imposes is visible rather than hidden behind independent
+fields. The gazes read the same byte but are selected by the slot's type rather than by a flag, so
+they have no control of their own: type 103 makes it a stoning save, 105 a death save, and 104
+both at the same modifier. Selecting a non-gaze type removes the gaze outright. Type 104 has no
+conventional component — its Automatic Damage delivers the strength rather than rolling it, so the
+strength is the Doom damage and is not also rolled as a hidden attack. Holy bonus and Res. to all here are the value this unit *provides*; the
+received side stays an enchantment input and the two max together. Dispel Evil and Destruction
+dispatch with the touch riders but take literal modifiers (−4 and 0) rather than the byte, so they
+stay ordinary ability rows rather than joining the card block. Exorcise is their CoM-onward
+counterpart and is hidden in the MoM versions, which have Dispel Evil instead.
 
 Lucky is the one modifier resolved per-unit rather than by name: it reaches a unit from five
 sources across base, a and b, and does not stack, so it is counted once in the **earliest**
@@ -594,6 +614,24 @@ mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
 - **Matrix mode** computes attacker-vs-whole-roster ratios in Web Workers. The worker
   must produce results identical to the main-thread `resolveCombat` — it calls the same
   function, and any divergence is a bug.
+- Each panel is split into two titled sections. **Base stats and abilities** holds the
+  editable stat fields and the unit's abilities. **Enchantments and conditions** holds the
+  level, weapon and armour selects and damage already taken, followed by the enchantments.
+  The dividing rule is whether the value is roster-owned or chosen per battle — which is
+  also exactly the set that stays editable when a predefined unit locks the stat fields.
+- The stat fields hold **pre-level** values. Experience level is applied downstream as an
+  ordinary transform step, so no code path may write a level bonus into a card field.
+  Effective values appear only in the modifier column.
+- Each section heading carries its own **Show all / Hide inactive** toggle, independent of
+  the other section's and of the other panel's — four states in all, each defaulting to
+  hiding.
+  - A section heading always renders, including when the section has nothing on screen —
+    otherwise a roster unit with no abilities would offer no way to reveal them.
+  - **Show all** on Abilities reveals a predefined unit's greyed-out, roster-locked
+    abilities as well as its merely inactive ones.
+  - An effect the selected version cannot have is never revealed by either toggle. Version
+    gating and roster locking both disable the control, so they are distinguished
+    explicitly rather than by disabled state.
 - Every ability and enchantment control carries a tooltip describing its modelled effect.
 - Selecting a predefined unit locks roster-owned Abilities but not Enchantments. External
   reform, research, building, and spell conditions must therefore be placed under
@@ -639,8 +677,9 @@ in `tests/` asserts them:
 
 ## Known modelling limitations
 
-Tracked as M1–M8 in [BACKLOG.md](./BACKLOG.md), §5, which records for each whether it is accepted
-or deferred work. The descriptions below are the canonical ones.
+The descriptions below are canonical. Accepted decisions are summarized in
+[HISTORY.md](./HISTORY.md); only limitations with planned implementation work appear in
+[BACKLOG.md](./BACKLOG.md), *Modelling work*.
 
 - Life Steal's *displayed* distribution is an approximation (phase count × single-firing
   distribution). Its damage expectation is exact within the calculator's capped-damage model,
@@ -654,11 +693,6 @@ or deferred work. The descriptions below are the canonical ones.
 - Destruction is currently modelled only for CoM2/Warlord. The MoM/CP/CoM1 touch dispatcher also
   identifies Destruction as a Chaos effect; in MoM/CP, Elemental Armor and Resist Elements
   therefore protect against it. That older-engine Destruction path is not yet implemented.
-- The calculator has one ranged/thrown/breath slot. Bombs&Grenades can add to an existing
-  Thrown attack, but cannot simultaneously display its granted Thrown attack alongside an
-  independent ranged or breath attack on the same unit. Faithful for MoM and CoM 1, which share
-  one `.ranged` field, but wrong for `Caster.exe`, which holds four separate channels — 29 Warlord
-  roster units carry more than one and lose an attack on load. Being replaced by BACKLOG item R3.
 - The Lava Smelter control records one mineral-pair grant at a time. The Warlord scripts
   evaluate all five mineral pairs independently, so a unit can carry several simultaneous
   grants when three or more qualifying minerals are available.

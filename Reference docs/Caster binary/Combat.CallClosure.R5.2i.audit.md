@@ -1,9 +1,9 @@
 # R5.2i call-closure audit
 
 R5.2a–R5.2h deliberately reconstructed named target extents rather than recursively following
-every call. This audit closes that scope boundary. It classifies every semantic callee named by
-the seven byte-backed call inventories and opens address-bounded derivation rows for every
-calculator-relevant target that does not yet have a complete source-shaped reconstruction.
+every call. This audit documents that scope boundary: it classifies every semantic callee named
+by the seven byte-backed call inventories and identifies the address-bounded derivation scope for
+every calculator-relevant target that lacked a source-shaped reconstruction at audit time.
 
 This document is a **scope audit, not a derivation**. A classification below does not claim the
 body of a newly scoped routine has been reconstructed.
@@ -11,7 +11,7 @@ body of a newly scoped routine has been reconstructed.
 ## Inputs and accounting
 
 The pinned executable's MD5 was rechecked as `540c22dbd701fb2caa95bd3ecccd9447` before resolving
-the target symbols and extents. The call-site evidence comes from these completed artifacts:
+the target symbols and extents. The call-site evidence comes from these byte-backed artifacts:
 
 | Tag | R5.2 source | Semantic call sites |
 |---|---|---:|
@@ -89,7 +89,7 @@ closure and are scoped below.
 
 | Callee and extent | Direct-call evidence | Why it remains in the damage closure | New row |
 |---|---|---|---|
-| `@Spells@ApplyDamageSpell`, `$005C1974..$005C1C45` | G, call `$005C1C9D` | Wraps `DamageSpell`, modifies the returned record, deals it, and performs spell-specific unit-state post-processing. R5.2g expressly left this post-processing open. | R5.2j |
+| `@Spells@ApplyDamageSpell`, `$005C1974..$005C1C45` | G, call `$005C1C9D` | Wraps `DamageSpell`, modifies the returned record, deals it, and performs spell-specific unit-state post-processing. R5.2g expressly excluded this post-processing from its target extent. | R5.2j |
 | `@Wizard@HasGlobalEnchantment`, `$00590DAC..$00590E07` | E, call `$00595D5F` | Supplies the Fate Mastery predicate inside `ResistanceRoll`; its result can cause the second resistance roll. | R5.2k — [complete evidence](./Combat.CallClosureHelpers.R5.2k.evidence.md) |
 | `@Units@HasTeleMerge`, `$005952DC..$00595352` | G, call `$005C1C52` | Gates Wall of Fire damage before `ApplyDamageSpell`. | R5.2k — [complete evidence](./Combat.CallClosureHelpers.R5.2k.evidence.md) |
 | `@Units@DeadFigures`, `$005964F8..$00596553` | F, call `$0059658F` | Feeds `TopFigureDamage`, hence the wounded-figure spill and cap logic. | R5.2k — [complete evidence](./Combat.CallClosureHelpers.R5.2k.evidence.md) |
@@ -102,37 +102,35 @@ closure and are scoped below.
 The exclusive end addresses above come from the pinned build's TD32 procedure lengths. Alignment
 bytes between adjacent TD32 extents are excluded, matching the existing R5 convention.
 
-R5.2k subsequently completed all six predicate/formula rows in
+R5.2k subsequently reconstructed all six predicate/formula rows in
 [`Combat.CallClosureHelpers.pas`](./Combat.CallClosureHelpers.pas), with durable proof in
 [`Combat.CallClosureHelpers.R5.2k.evidence.md`](./Combat.CallClosureHelpers.R5.2k.evidence.md).
 Its six contiguous ledgers account for 7/7 semantic conditionals, 1/1 semantic call and 0/0
 verifier-classified writes; a separate reverse-order raw-byte self-review found no correction,
 and no Claude derivation, review, or output was read or used.
 
-R5.2l subsequently completed both wall-state rows in
+R5.2l subsequently reconstructed both wall-state rows in
 [`Combat.AttackAndWallHelpers.pas`](./Combat.AttackAndWallHelpers.pas). Their new call closure is
 self-contained: `ctws` has no semantic callee, and `SetWallState` calls only that reconstructed
 mapper plus a compiler-only range-error helper.
 
-## Closure result
+## Audit result
 
-R5.2i is complete: every semantic callee in R5.2a–R5.2h has one classification and all nine
-calculator-relevant gaps have target-only, address-bounded derivation rows. This closes the scope
-audit only. At audit completion, R5.2 remained in progress until R5.2j–R5.2l were derived, their
-own semantic callees classified, and the ordinary R5 review gates satisfied.
+Every semantic callee in R5.2a–R5.2h has one classification, and all nine calculator-relevant
+gaps received target-only, address-bounded derivation assignments. Current work state and review
+gates live only in `Calculator/BACKLOG.md`.
 
 Verified: Codex 2026-08-02, scope audit over the seven completed byte-backed call inventories;
 target identities and exclusive extents rechecked against the pinned executable's TD32 symbols.
 
-### Subsequent closure extension
+### Subsequent scope extension
 
-R5.2j later completed `ApplyDamageSpell` and classified all seven of its semantic calls. Four
+R5.2j later reconstructed `ApplyDamageSpell` and classified all seven of its semantic calls. Four
 targets were already reconstructed, `UnitDies` is post-resolution world-state cleanup on a unit
 already marked dead, and `@Combat@AmplifiedDamage` is calculator-relevant because its Boolean
 result controls a one-point damage-record adjustment. That helper was scoped target-only as
 R5.2m, `$005BEB28..$005BEC6F`, and is now reconstructed in
 [`Combat.AmplifiedDamage.pas`](./Combat.AmplifiedDamage.pas), with durable proof in
 [`Combat.AmplifiedDamage.R5.2m.evidence.md`](./Combat.AmplifiedDamage.R5.2m.evidence.md).
-All rows opened by this audit and its R5.2j extension are now complete. The aggregate R5.2 row
-is closed in `Calculator/BACKLOG.md`; parent R5 remains open on its two complete-reconstruction
-review rows.
+Every derivation assignment created by this audit and its R5.2j extension has a durable source
+artifact and evidence companion indexed in this directory's README.

@@ -31,8 +31,8 @@ test('page state survives a reload via localStorage', async ({ browser }) => {
   await setValue(page, 'aAtk', '11');
   await setValue(page, 'bDef', '6');
   await setValue(page, 'aAbil_firstStrike', true);
-  await setValue(page, 'aRtbType', 'missile');
-  await setValue(page, 'aRtb', '5');
+  await setValue(page, 'aModernRangedType', 'missile');
+  await setValue(page, 'aModernRanged', '5');
   await setValue(page, 'rangedCheck', true);
 
   const state = await page.evaluate(() => collectState());

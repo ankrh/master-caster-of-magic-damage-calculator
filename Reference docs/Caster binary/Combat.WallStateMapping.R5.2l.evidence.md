@@ -61,8 +61,8 @@ translate the state value; `destroywall`, not this routine, supplies the establi
 broken transition value 2 after first requiring current state 1. `GetWallState` uses the same map
 and array expression, so lookup and mutation are symmetric.
 
-No new semantic callee remains open: `ctws` has none, `SetWallState` calls the reconstructed
-`ctws`, and its sole other call is the compiler's range-error helper. The exact mapping also
+The semantic call closure is self-contained: `ctws` has none, `SetWallState` calls the
+reconstructed `ctws`, and its sole other call is the compiler's range-error helper. The exact mapping also
 introduces no calculator defect or source conflict. The calculator accepts the contextual wall
 bonus directly and does not model combat coordinates; the helptext and manual do not specify
 the internal coordinate-to-slot numbering.

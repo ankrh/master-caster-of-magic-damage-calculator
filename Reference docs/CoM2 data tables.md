@@ -5,9 +5,11 @@ run the same executable, so the tables are frequently the only thing that distin
 and where a table states a value, it *is* the implementation: the engine reads these files at
 load time rather than compiling the numbers in.
 
-This is the third evidence home for the modern engine, alongside `Caster binary/CoM2 binary analysis.md`
-(`Caster.exe`) and `Source discrepancies.md` (Warlord's `.CAS` scripts). Tracking for everything
-here lives in `Calculator/BACKLOG.md`.
+This is the runtime-values evidence home for the modern engine, alongside the compiled
+reconstruction indexed by `Caster binary/CoM2 binary analysis.md` and the executing Warlord
+scripts in `Script source/Warlord 1.5.12.6.2/`. The modern-engine source-of-truth routing table
+lives in that binary-analysis index. Tracking for everything here lives in
+`Calculator/BACKLOG.md`.
 
 **Precedence.** For Warlord, a `.CAS` script still outranks a table — a script runs after the
 table is read and can overwrite the result. Nothing here has been found in that position, but the
@@ -42,7 +44,7 @@ Two conventions worth knowing before reading any value:
 
 ## Level bonuses
 
-**Settles queue D13 outright, both versions.** `Levelbonus.INI` `[Normal]`, diffed against
+**Settles verification item D13 outright, both versions.** `Levelbonus.INI` `[Normal]`, diffed against
 `getLevelBonuses` (`combat.js`): **all 70 values match**, for CoM2 and Warlord alike, including
 the Warlord divergences the function's comment enumerates by hand.
 
@@ -65,7 +67,7 @@ and Warlord adds to-hit steps at levels 3–4 (+5) and 7–8 (+15) that CoM2 doe
 
 ## Blur and Invisibility
 
-**Initially settled the rate half of queue D5, both versions.** `MODDING.INI [Spells]`:
+**Initially settled the rate half of verification item D5, both versions.** `MODDING.INI [Spells]`:
 
 | Key | CoM2 | Warlord |
 |---|---|---|
@@ -83,7 +85,7 @@ binary analysis.md`, *ApplyAttack riders, damage loop and result routing*.
 
 ## Wall of Fire
 
-**Settles queue D15 outright — all three Warlord claims.** Not in `MODDING.INI`, which has no
+**Settles verification item D15 outright — all three Warlord claims.** Not in `MODDING.INI`, which has no
 Wall of Fire key at all; `SPELLS.INI [87]` owns it:
 
 | Key | CoM2 | Warlord |
@@ -119,9 +121,9 @@ different Warlord base distribution is tracked as F36.
 ## Combat constants confirmed in passing
 
 Each of these matches the calculator exactly, in both versions unless noted, and closes the
-named queue entry or the named half of it.
+named verification item or the named half of it.
 
-| Queue | Key(s), `MODDING.INI` | CoM2 / Warlord |
+| ID | Key(s) / source | CoM2 / Warlord |
 |---|---|---|
 | **D4** | `PoisonSavePenalty` | −1 / −1 — Poison's save penalty confirmed |
 | **D6** | `BlessDefenseBonus`, `BlessResistBonus` | 5 / 5 · **7 / 4** — both magnitudes and the 7-vs-4 split |
@@ -129,6 +131,7 @@ named queue entry or the named half of it.
 | **D7** | `ResistElementsDefenseBonus`=4, `ElementalArmorDefenseBonus`=12 | matches `computeDefenseProfile` |
 | **D2** | `WeaponImmunityDefenseBonus` | 8 / **10** — magnitude *and* the additive shape |
 | **D12** | `FlameBladeAttackBonus` / `ThrownBonus` / `MissileRangedBonus` | 3/0/2 · 3/2/2 — including CoM2's dropped thrown bonus |
+| **D12** | `SPELLS.INI [99] Attack` | 10 / 10 — Immolation strength |
 | **D14** | `RangedPenaltyStarts`=4, `Base`=10, `Gap`=1, `Growth`=3 | `-10 - 3*(d-4)` is the table verbatim |
 
 The D7 row turns on an absence, so to be explicit: the table names a resistance bonus for Resist

@@ -6,7 +6,7 @@
 // a slowdown, so it is measured here instead. Take a reading before a migration stage and
 // after it; the number to watch is ns/call, not the absolute total.
 //
-// Performance is not a gate on R1 (BACKLOG.md, Appendix A, design decision 6) — this
+// Performance was not a gate on R1 (Calculator/HISTORY.md) — this
 // reports, it does not judge.
 
 const fs = require('fs');

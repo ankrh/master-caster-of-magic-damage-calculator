@@ -13,8 +13,7 @@
   records. Claude's 2026-08-03 R5.C review cleared all three extents, but Codex's
   reciprocal review found that DamageSpell's non-area spill back edge had been
   flattened into a one-shot branch. Claude confirmed the repeated loop from the
-  cited bytes, Codex corrected it below, and AKH directed R5.2g and R5.C closed
-  on 2026-08-03.
+  cited bytes, and Codex integrated the correction below on 2026-08-03.
 ==============================================================================}
 
 unit Spells_DamageSpells_Reconstructed;

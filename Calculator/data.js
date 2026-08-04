@@ -30,10 +30,13 @@ const RANGED_TYPE_NORMALIZE = {
   'Missile': 'missile', 'Boulder': 'boulder',
   'Magic(C)': 'magic_c', 'Magic(N)': 'magic_n', 'Magic(S)': 'magic_s',
   'Beam': 'beam',
+  'Gaze(Stoning)': 'gaze_stoning', 'Gaze(Multiple)': 'gaze_multiple',
+  'Gaze(Death)': 'gaze_death',
 };
 
 const RANGED_TYPES = ['missile', 'boulder', 'magic_c', 'magic_n', 'magic_s', 'beam'];
 const THROWN_TYPES = ['thrown', 'fire', 'lightning'];
+const GAZE_TYPES = ['gaze_stoning', 'gaze_multiple', 'gaze_death'];
 
 // --- Ability Definitions ---
 // Each ability: { key, label, type: 'bool'|'num'|'select', match, group }
@@ -62,12 +65,16 @@ const ABILITY_DEFS = [
   { key: 'deathTouch', label: 'Death Touch', type: 'numcheck', match: 'DeathTouch', group: 'Abilities', tooltip: 'Opponents with Death Immunity, Magic Immunity, or\nRighteousness are unaffected.\nFor each attacker figure: Defender resist at −X or die.\nFires on melee, thrown, breath, ranged, and gaze attacks.\nWarlord: Does not fire on ranged attacks.' },
   { key: 'doomGaze', label: 'Doom Gaze', type: 'num', match: 'DoomGaze', group: 'Abilities', tooltip: 'Deals X damage, ignoring to-hit and defense rolls.\nFires before the melee exchange, on both attack and defense.' },
   { key: 'lifeSteal', label: 'Life Steal', type: 'numcheck', match: 'LifeSteal', group: 'Abilities', tooltip: 'Opponents with Death Immunity, Magic Immunity, or\nRighteousness are unaffected.\nFor each attacker figure: Defender resist; damage dealt =\nroll − (resistance − X). Attacker heals the same amount.\nFires on melee, thrown, breath, ranged, and gaze attacks.' },
-  { key: 'gazeRanged', label: 'Hidden Gaze Attack', type: 'num', match: 'GazeRanged', group: 'Abilities', tooltip: 'Magical short-ranged attack that gaze effects are attached to.' },
   { key: 'poison', label: 'Poison Touch', type: 'num', match: 'PoisonTouch', group: 'Abilities', tooltip: 'Opponents with Poison Immunity are unaffected.\nX times per attacker figure: Defender resist or take 1 damage.\nFires on melee, thrown, breath, ranged, and gaze attacks.\nMoM 1.31 & 1.60: No save modifier.\nCoM 1 & 2 & Warlord: Save modifier −1.' },
   { key: 'holyBonus', label: 'Holy bonus', type: 'num', match: 'HolyBonus', group: 'Abilities', tooltip: '+X to melee attack, defense, and resistance.\nCoM 1 & 2 & Warlord: Also +X to ranged, thrown, and breath attack.' },
-  { key: 'resistanceToAll', label: 'Res. to all', type: 'num', match: 'ResistanceToAll', group: 'Abilities', tooltip: '+X to resistance.' },
-  { key: 'exorcise', label: 'Exorcise', type: 'numcheck', match: 'Exorcise', group: 'Abilities', tooltip: 'Versions: CoM 1 & 2, Warlord\nFantastic targets only.\nOpponents with Magic Immunity are unaffected.\nFor each attacker figure: Defender resist at −X or be banished.\nUndead defenders get an additional −3 resistance modifier.\nFires on melee, thrown, breath, ranged, and gaze attacks.' },
-  { key: 'destruction', label: 'Destruction', type: 'numcheck', match: 'Destruction', group: 'Abilities', tooltip: 'Versions: CoM 2, Warlord\nCounts as a Chaos-realm attack, so Bless adds its resistance bonus.\nOpponents with Magic Immunity are unaffected.\nOnce per attack: Defender resist at −X or the whole unit is destroyed.\nOne roll for the attack, not one per attacker figure.\nFires on melee, thrown, breath, ranged, and gaze attacks.' },
+  // `match` is the roster token with spaces stripped and case untouched, so the interior
+  // "to" stays lowercase — the rosters name this "Resistance to All".
+  { key: 'resistanceToAll', label: 'Res. to all', type: 'num', match: 'ResistancetoAll', group: 'Abilities', tooltip: '+X to resistance.' },
+  { key: 'exorcise', label: 'Exorcise', type: 'numcheck', match: 'Exorcise', group: 'Abilities', subgroup: '_CoM, CoM2 & Warlord', tooltip: 'Versions: CoM 1 & 2, Warlord\nFantastic targets only.\nOpponents with Magic Immunity are unaffected.\nFor each attacker figure: Defender resist at −X or be banished.\nUndead defenders get an additional −3 resistance modifier.\nFires on melee, thrown, breath, ranged, and gaze attacks.' },
+  // Explicit subgroup, not inherited: defs without one fall under the previous def's header,
+  // and Exorcise immediately above is CoM-onward. Destruction exists in all three DOS builds
+  // too (0x9A19E, modifier 0), so it must not be gated with it.
+  { key: 'destruction', label: 'Destruction', type: 'numcheck', match: 'Destruction', group: 'Abilities', subgroup: '_', tooltip: 'Versions: CoM 2, Warlord\nCounts as a Chaos-realm attack, so Bless adds its resistance bonus.\nOpponents with Magic Immunity are unaffected.\nOnce per attack: Defender resist at −X or the whole unit is destroyed.\nOne roll for the attack, not one per attacker figure.\nFires on melee, thrown, breath, ranged, and gaze attacks.' },
   // Bool abilities in a headerless grid; '_' prefix suppresses the subgroup header.
   // Keep labels column-major alphabetical: the UI grid flows row-first.
   ...twoColumnMajor([
@@ -116,7 +123,7 @@ const ABILITY_DEFS = [
 
 const ENCHANTMENT_DEFS = [
   // All versions: Received bonuses on top, then Elements, then Chaos Channels.
-  { key: 'resistanceToAll', label: 'Received res. to all', type: 'num', match: 'ResistanceToAll', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X resistance.' },
+  { key: 'resistanceToAll', label: 'Received res. to all', type: 'num', match: 'ResistancetoAll', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X resistance.' },
   { key: 'holyBonus', label: 'Received holy bonus', type: 'num', match: 'HolyBonus', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X melee attack, defense, and resistance.\nCoM 1 & 2 & Warlord: Also +X ranged, thrown, and breath attack.' },
   { key: 'elemArmor', label: 'Elements', type: 'select', options: [['none','None'],['resistElements','Resist Elem.'],['elementalArmor','Elem. Armor']], group: 'Enchantments', subgroup: 'All versions', realm: 'nature', tooltip: 'Resist Elements:\nDefense bonus vs magical ranged and breath attacks; resistance\nbonus vs Stoning Touch and Stoning Gaze.\nMoM 1.31 & 1.60: +3. Defense applies to Chaos/Nature magical\nranged, breath, Immolation, and Wall of Fire.\nCoM 1: +4 defense vs all magical ranged, breath, Immolation,\nand Wall of Fire.\nCoM 2 & Warlord: +4 defense vs all magical ranged and breath.\nElemental Armor:\nMoM 1.31 & 1.60: +10 defense vs Chaos/Nature magical ranged,\nbreath, Immolation, and Wall of Fire; +10 resistance vs Stoning\nTouch and Stoning Gaze.\nCoM 1: +12 defense vs all magical ranged, breath, Immolation,\nand Wall of Fire.\nCoM 2 & Warlord: +12 defense vs all magical ranged and breath.' },
   ...realmLinear([
@@ -139,7 +146,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Grants Weapon Immunity and Non-Corporeal.\nCoM 1 & 2 & Warlord: Attacks bypass enemy Weapon Immunity.' },
     { key: 'eternalNight', label: 'Eternal Night', type: 'bool', match: 'EternalNight', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Side owns the global enchantment.\nMoM 1.31/1.60 and CoM 1: All combats are under Darkness at normal strength.\nCoM 2 & Warlord: Darkness grants twice the normal attack and defense modifier.\nCoM 1 & 2 & Warlord: Enemy non-Death units lose 1 resistance.\nWarlord: Enemy non-Death units also suffer −2 ranged attack strength\n(missile, boulder, and magic ranged; thrown and breath unaffected).' },
     { key: 'ccDefense', label: 'CC: +Defense', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\n+3 defense.\nMoM 1.31 bug: Defense applied twice in combat (net +6).' },
-    { key: 'ccFireBreath', label: 'CC: +Fire Breath', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nGrants a fire breath attack, replacing an existing thrown attack.\nMoM 1.31 & 1.60: Strength 2.\nCoM 1 & 2: Strength 4; replaces an existing fire breath.\nCoM 2: May also replace a lightning breath or gaze attack.\nWarlord: Strength 4; stacks additively with existing fire breath.' },
+    { key: 'ccFireBreath', label: 'CC: +Fire Breath', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nGrants a fire breath attack.\nNever granted to a unit with a ranged attack.\nMoM 1.31 & 1.60: Strength 2; replaces an existing thrown attack.\nCoM 1: Strength 4; replaces an existing thrown attack.\nCoM 2 & Warlord: Strength 4; added to an existing fire breath.\nCoexists with thrown, lightning breath and gaze.' },
     { key: 'ccFlight', label: 'CC: +Flight', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nNot modeled: flight (movement and targeting).' },
     { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Fire area attack each melee phase, hitting all opponent figures.\nOpponents with Fire Immunity, Magic Immunity, or Righteousness\nare unaffected.\nMoM 1.31 & 1.60: Strength 4.\nMoM 1.31 bug: Also fires alongside ranged attacks.\nCoM 1 & 2 & Warlord: Strength 10.\nNot modeled: web burning, freeze prevention.' },
     { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions bools', exceptVersions: ['com2_warlord_'], realm: 'chaos', tooltip: 'Bypasses Weapon Immunity.\nMoM 1.31 & 1.60: +2 melee, thrown and missile attack.\nCoM 1 & 2: +3 melee and +2 missile.' },
@@ -737,115 +744,119 @@ const PRESETS = {
   },
   stoningGazeBasic: {
     desc: 'Stoning Gaze: Gaze -3 + 1 ranged vs 1 fig Res 5, 10 hp — stoning 8.0 + physical 0.06 = 8.06',
-    a: { hp:10, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.060 },
   },
   stoningGazeMultiFig: {
     desc: 'Stoning Gaze Multi-fig: Gaze -1 + 1 ranged vs 4 figs Res 5, 5hp — stoning 12.0 + physical ~0.26',
-    a: { hp:10, abilities: { stoningGaze: -1, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -1 } },
     b: { figs:4, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 12.261 },
   },
   stoningGazeBilateral: {
     desc: 'Bilateral Gaze: both -3 + 1 ranged, Res 5 — A gaze 8.06; B gaze (if B survives) 1.612',
-    a: { hp:10, res:5, abilities: { stoningGaze: -3, gazeRanged: 1 } },
-    b: { hp:10, res:5, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, res:5, abilities: { stoningGaze: -3 } },
+    b: { rtbType:'gaze_stoning', rtb:1, hp:10, res:5, abilities: { stoningGaze: -3 } },
     expected: { dmgToA: 1.612, dmgToB: 8.060 },
   },
   stoningGazeImmunity: {
     desc: 'Stoning Gaze vs Stoning Immunity — stoning blocked, but physical 1 ranged still hits (0.3)',
-    a: { hp:10, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
   stoningGazeMagicImmunity: {
     desc: 'Magic Immunity vs stoning gaze: MI blocks physical gaze (def 50) AND skips the stoning roll → 0 dmg',
-    a: { hp:10, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   deathGazeBasic: {
     desc: 'Death Gaze: Gaze -3 + 1 ranged vs 1 fig Res 5, 10 hp — death 8.0 + physical 0.06 = 8.06',
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.060 },
   },
   deathGazeMultiFig: {
     desc: 'Death Gaze Multi-fig: Gaze -1 + 1 ranged vs 4 figs Res 5, 5hp — death 12.0 + physical ~0.26',
-    a: { hp:10, abilities: { deathGaze: -1, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -1 } },
     b: { figs:4, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 12.261 },
   },
   deathGazeDeathImmunity: {
     desc: 'Death Gaze vs Death Immunity — death blocked, but physical 1 ranged still hits (0.3)',
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { deathImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
   deathGazeMagicImmunity: {
     desc: 'Magic Immunity blocks Death Gaze kill AND physical gaze ranged (def set to 50) — 0 dmg',
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   deathGazeStoningImmunityNotBlocked: {
     desc: 'Stoning Immunity does NOT block Death Gaze — full effect (8.0 + 0.06)',
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 8.060 },
   },
   deathGazeHighRes: {
     desc: 'Death Gaze vs High Res: Death Gaze -3 vs Res 13 (effective 10) — kill blocked, physical 0.3 (unreduced)',
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:13, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
   combinedStoningDeathGaze: {
-    desc: 'Chaos-Spawn-style combined gaze: Stoning -3 + Death -3 + 1 ranged vs Res 5, 10 hp — each kill roll 80% fail, physical 0.06. 1−(1−0.8)(1−0.8)=0.96 chance of 10 dmg, else physical only.',
-    a: { hp:10, abilities: { stoningGaze: -3, deathGaze: -3, gazeRanged: 1 } },
+    desc: 'Chaos-Spawn-style combined gaze: type 104, strength 1, special value 3 vs Res 5, 10 hp — each kill roll 80% fail, so 1−(1−0.8)(1−0.8)=0.96 chance of 10 dmg. Type 104 delivers its strength as doom damage rather than rolling it, so the other 4% takes exactly 1: 0.96×10 + 0.04×1 = 9.64.',
+    a: { rtbType:'gaze_multiple', rtb:1, hp:10, abilities: { stoningGaze: -3, deathGaze: -3 } },
     b: { res:5, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 9.612 },
+    expected: { dmgToA: 0, dmgToB: 9.640 },
   },
   hiddenGazePerAttackerFigure: {
     desc: 'The hidden gaze component is rolled once per ATTACKING figure (it sits inside BU_ProcessAttack\'s per-figure loop): 4 figs × 3 str × 100% hit vs Defense 0 = 12. Would be 3 if it fired only once.',
-    a: { figs:4, atk:0, hp:10, toHitRtbMod:70, abilities: { gazeRanged: 3 } },
-    b: { atk:0, def:0, hp:20 },
+    a: { rtbType:'gaze_stoning', rtb:3, figs:4, atk:0, hp:10, toHitRtbMod:70, abilities: {  } },
+    b: { atk:0, def:0, hp:20, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 12 },
   },
   hiddenGazeStoningKillsPerDefenderFigure: {
     desc: 'The kill rolls, by contrast, are once per DEFENDING figure and resolve once per attack regardless of attacker figures. 2 attacker figs vs 4 defender figs × 5 hp; Stoning −5 vs Res 5 → effRes 0, every figure dies = 20 (the physical 2 is absorbed by the cap). Scaling kills by the attacker instead would kill only 2 figures → 12.',
-    a: { figs:2, atk:0, hp:10, toHitRtbMod:70, abilities: { stoningGaze: -5, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, figs:2, atk:0, hp:10, toHitRtbMod:70, abilities: { stoningGaze: -5 } },
     b: { figs:4, atk:0, def:0, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 20 },
   },
   hiddenGazeIgnoresWeaponImmunity: {
     desc: 'Weapon Immunity can never apply to a gaze — the immunity-mask builder admits bit 0x100 only for ranged_type/10 < 3, and gaze is 103-105. Normal-unit attacker with a normal weapon vs Weapon Immunity: still the full 5, not the Defense-10 floor.',
-    a: { atk:0, hp:10, toHitRtbMod:70, unitType:'normal', abilities: { gazeRanged: 5 } },
-    b: { atk:0, def:0, hp:20, unitType:'normal', abilities: { weaponImmunity: true } },
+    a: { rtbType:'gaze_stoning', rtb:5, atk:0, hp:10, toHitRtbMod:70, unitType:'normal', abilities: {  } },
+    b: { atk:0, def:0, hp:20, unitType:'normal', abilities: { stoningImmunity: true, weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 5 },
   },
+  // Doom Gaze is ranged_type 104, whose damage is the shared strength slot, and 104 runs the
+  // stoning and death kill loops as well. Res 10 makes every kill save succeed (effective
+  // res >= 10 is a certain pass), which isolates the doom damage; doomGazeChaosSpawn below is
+  // the paired test of the kill rolls themselves.
   doomGazeBasic: {
-    desc: 'Doom Gaze 4 vs 10 hp — exact 4 damage, no rolls, no defense.',
-    a: { hp:10, abilities: { doomGaze: 4 } },
+    desc: 'Doom Gaze 4 vs 10 hp — exact 4 damage, no rolls, no defense. Res 10 suppresses 104\'s kill rolls so only the doom damage lands.',
+    a: { rtbType:'gaze_multiple', rtb:4, hp:10 },
     b: { def:10, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 4 },
   },
   doomGazeMagicImmunity: {
     desc: 'Doom Gaze 4 vs Magic Immune 10 hp — doom gaze ignores Magic Immunity, exact 4 damage.',
-    a: { hp:10, abilities: { doomGaze: 4 } },
+    a: { rtbType:'gaze_multiple', rtb:4, hp:10 },
     b: { def:10, res:10, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 4 },
   },
   doomGazeKill: {
     desc: 'Doom Gaze 12 vs 10 hp — exact 10 damage (capped at total HP), kills the unit.',
-    a: { hp:10, abilities: { doomGaze: 12 } },
+    a: { rtbType:'gaze_multiple', rtb:12, hp:10 },
     b: { def:10, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 10 },
   },
   doomGazeChaosSpawn: {
-    desc: 'Chaos Spawn gaze suite: Doom 4 + Stoning -4 + Death -4 vs 4 figs, 5 hp, Res 12 — doom exact 4; stoning/death each 20% per figure, combined into one joint kill roll (a figure dies once if it fails either), so pKill = 1 - 0.8*0.8 = 0.36.',
-    a: { hp:10, abilities: { doomGaze: 4, stoningGaze: -4, deathGaze: -4 } },
+    desc: 'Chaos Spawn gaze suite: type 104 with strength 4 and special value 4 — doom exact 4; stoning/death each 20% per figure at the shared -4, combined into one joint kill roll (a figure dies once if it fails either), so pKill = 1 - 0.8*0.8 = 0.36.',
+    a: { rtbType:'gaze_multiple', rtb:4, hp:10, abilities: { stoningGaze: -4, deathGaze: -4 } },
     b: { figs:4, res:12, hp:5 },
     expected: { dmgToA: 0, dmgToB: 11.133 },
   },
@@ -1040,7 +1051,7 @@ const PRESETS = {
   },
   hasteGazeNotDoubled: {
     desc: 'Haste does NOT double gaze: expected damage matches stoningGazeBasic (8.06)',
-    a: { hp:10, abilities: { haste: true, stoningGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { haste: true, stoningGaze: -3 } },
     b: { res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.060 },
   },
@@ -1067,32 +1078,32 @@ const PRESETS = {
   hasteComplexThrownDefenderGaze: {
     desc: 'Haste FS+Thrown vs Hasted Gaze: WoF, Imm, Fear, Poison (MoM 1.31)',
     version: V_MOM_131,
-    a: { atk:1, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { haste:true, firstStrike:true, immolation:true, fear:true, poison:1 } },
-    b: { atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { gazeRanged:1, haste:true, immolation:true, fear:true, poison:1 } },
+    a: { atk:1, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { stoningImmunity: true, haste:true, firstStrike:true, immolation:true, fear:true, poison:1 } },
+    b: { rtbType:'gaze_stoning', rtb:1, atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { haste:true, immolation:true, fear:true, poison:1 } },
     wallOfFire: true,
     expected: { dmgToA: 6.900, dmgToB: 9.450 },
   },
   hasteComplexThrownDefenderGaze160: {
     desc: 'Haste FS+Thrown vs Hasted Gaze: WoF, Imm, Fear, Poison (MoM 1.60)',
     version: V_MOM_CP,
-    a: { atk:1, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { haste:true, firstStrike:true, immolation:true, fear:true, poison:1 } },
-    b: { atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { gazeRanged:1, haste:true, immolation:true, fear:true, poison:1 } },
+    a: { atk:1, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { stoningImmunity: true, haste:true, firstStrike:true, immolation:true, fear:true, poison:1 } },
+    b: { rtbType:'gaze_stoning', rtb:1, atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { haste:true, immolation:true, fear:true, poison:1 } },
     wallOfFire: true,
     expected: { dmgToA: 6.900, dmgToB: 8.100 },
   },
   hasteComplexBilateralGaze: {
     desc: 'Haste FS+Gaze vs Hasted Gaze: WoF, Imm, Fear, Poison (MoM 1.31)',
     version: V_MOM_131,
-    a: { atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { haste:true, firstStrike:true, gazeRanged:1, immolation:true, fear:true, poison:1 } },
-    b: { atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { gazeRanged:1, haste:true, immolation:true, fear:true, poison:1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { stoningImmunity: true, haste:true, firstStrike:true, immolation:true, fear:true, poison:1 } },
+    b: { rtbType:'gaze_stoning', rtb:1, atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { stoningImmunity: true, haste:true, immolation:true, fear:true, poison:1 } },
     wallOfFire: true,
     expected: { dmgToA: 6.900, dmgToB: 6.750 },
   },
   hasteComplexBilateralGaze160: {
     desc: 'Haste FS+Gaze vs Hasted Gaze: WoF, Imm, Fear, Poison (MoM 1.60)',
     version: V_MOM_CP,
-    a: { atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { haste:true, firstStrike:true, gazeRanged:1, immolation:true, fear:true, poison:1 } },
-    b: { atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { gazeRanged:1, haste:true, immolation:true, fear:true, poison:1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { stoningImmunity: true, haste:true, firstStrike:true, immolation:true, fear:true, poison:1 } },
+    b: { rtbType:'gaze_stoning', rtb:1, atk:1, toHitMod:70, toHitRtbMod:70, def:0, res:5, hp:20, abilities: { stoningImmunity: true, haste:true, immolation:true, fear:true, poison:1 } },
     wallOfFire: true,
     expected: { dmgToA: 6.900, dmgToB: 5.400 },
   },
@@ -1185,10 +1196,10 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   chaosSurgeDoomGazeMoM: {
-    desc: 'Chaos Surge (MoM): Chaos Spawn-style Doom Gaze gains +2. doom gaze 4 -> 6',
+    desc: 'Chaos Surge (MoM): Chaos Spawn-style Doom Gaze gains +2. doom gaze 4 -> 6. Res 10 suppresses 104\'s kill rolls.',
     version: V_MOM_131,
-    a: { hp:10, unitType:'fantastic_chaos', abilities: { doomGaze:4 } },
-    b: { hp:10 },
+    a: { rtbType:'gaze_multiple', rtb:4, hp:10, unitType:'fantastic_chaos' },
+    b: { hp:10, res:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
@@ -1241,10 +1252,10 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   chaosSurgeDoomGazeCoM: {
-    desc: 'Chaos Surge (CoM 1): Doom Gaze shares the ranged slot and is boosted. doom gaze 4 -> 6',
+    desc: 'Chaos Surge (CoM 1): Doom Gaze shares the ranged slot and is boosted. doom gaze 4 -> 6. Res 10 suppresses 104\'s kill rolls.',
     version: V_COM,
-    a: { hp:10, unitType:'fantastic_chaos', abilities: { doomGaze:4 } },
-    b: { hp:10 },
+    a: { rtbType:'gaze_multiple', rtb:4, hp:10, unitType:'fantastic_chaos' },
+    b: { hp:10, res:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
@@ -4809,11 +4820,15 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 10.000 },
   },
   spiritLinkResistanceWarlord: {
-    desc: 'Spirit Link: +2 Resistance. Stoning Gaze −3 vs Res 5+2=7 → effRes 4, pFail 0.6 → stoning 6.0 + physical → less than the 8.06 without Spirit Link',
+    // F44 re-derivation: Spirit Link gives Res 5+2=7, Stoning Gaze −3 → effRes 4, pFail 0.6.
+    // One defending figure at 10 HP → 6.000. The earlier 6.120 added a 0.12 physical component,
+    // but SPEC (*Gaze attacks*) has that hidden component as MoM-only: CoM2 and Warlord carry
+    // gazes as save-modifier stats with no attack-strength slot, so there is nothing to roll.
+    desc: 'Spirit Link: +2 Resistance. Stoning Gaze −3 vs Res 5+2=7 → effRes 4, pFail 0.6 → 6.0 damage; Warlord has no hidden gaze component',
     version: V_WARLORD,
-    a: { hp:10, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    a: { hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10, unitType: 'fantastic_nature', abilities: { spiritLink: true } },
-    expected: { dmgToA: 0, dmgToB: 6.120 },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   spiritLinkGrantsLevelBonusWarlord: {
     desc: 'Spirit Link lets a fantastic creature earn levels: an Elite fantastic_nature attacker gains the Warlord Elite +2 melee. atk 1+2=3, 100% hit vs def 0 → 3.0 (vs 1.0 without Spirit Link, where the level dropdown is ignored for fantastic units)',
@@ -4859,18 +4874,26 @@ const PRESETS = {
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
-  ccFireBreathReplacesLightningCoM2: {
-    desc: 'Chaos Channels in CoM2 can overwrite Lightning Breath with Fire Breath: lightning 5 becomes fire 4, so melee 1 + breath 4 = 5',
+  ccFireBreathCoexistsWithLightningCoM2: {
+    // F44: this asserted 5.000 on the assumption that CC overwrites the lightning breath. No
+    // source supports that. `Caster.exe` $00599EE8 does `firebreath += 4` and writes no other
+    // attack field, and the CoM2 manual says CC "can still add Fire Breath to units that have
+    // Thrown, Gaze or Lightning Breath". CoM2's channels are independent, so both fire.
+    desc: 'Chaos Channels in CoM2 adds Fire Breath alongside an existing Lightning Breath: melee 1 + lightning 5 + fire 4 = 10',
     version: V_COM2,
     a: { atk:1, toHitMod:70, rtbType:'lightning', rtb:5, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
   },
-  ccFireBreathReplacesGazeCoM2: {
-    desc: 'Chaos Channels in CoM2 can overwrite Gaze with Fire Breath: hidden gaze 3 is removed and replaced by fire breath 4, so melee 1 + breath 4 = 5',
+  ccFireBreathCoexistsWithGazeCoM2: {
+    // F44's replacement for `ccFireBreathReplacesGazeCoM2`, which asserted that the gaze
+    // suppressed the breath. Nothing supports that; the fabricated overwrite is gone. Defender
+    // Resistance 20 against a −3 gaze puts the kill roll out of reach, so this isolates the
+    // grant: melee 1 + fire breath 4 = 5.000, where the old suppression gave melee 1 alone.
+    desc: 'Chaos Channels in CoM2 adds Fire Breath to a unit that already has a Stoning Gaze: melee 1 + breath 4 = 5 (1 if the gaze wrongly suppresses the grant)',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, rtbType:'none', rtb:0, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true, gazeRanged: 3, stoningGaze: 0 } },
-    b: { hp:10 },
+    a: { atk:1, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true, stoningGaze: -3 } },
+    b: { res:20, hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   ccFireBreathVsFireImmunity: {
@@ -4892,15 +4915,19 @@ const PRESETS = {
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
-  ccFireBreathStacksWithExistingCoM2: {
-    desc: 'CC Fire Breath vs existing fire breath (CoM2): CC replaces existing breath strength. melee 1 + fire breath 4 = 5 dmg',
+  // This pair is kept although both sides now agree: CoM2 was modelled as replacing an
+  // existing fire breath and Warlord as stacking, but `Caster.exe` $00599F3E is one `add`
+  // routine serving both, so the split was invented. Keeping the pair locks the agreement —
+  // a regression that re-splits them fails exactly one side.
+  ccFireBreathAddsToExistingCoM2: {
+    desc: 'CC Fire Breath vs existing fire breath (CoM2): adds. melee 1 + fire breath (3+4) = 8 dmg',
     version: V_COM2,
     a: { atk:1, toHitMod:70, rtbType:'fire', rtb:3, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
-  ccFireBreathStacksWithExistingWarlord: {
-    desc: 'CC Fire Breath vs existing fire breath (Warlord): stacks additively. melee 1 + fire breath (3+4) = 8 dmg',
+  ccFireBreathAddsToExistingWarlord: {
+    desc: 'CC Fire Breath vs existing fire breath (Warlord): adds, identically to CoM2. melee 1 + fire breath (3+4) = 8 dmg',
     version: V_WARLORD,
     a: { atk:1, toHitMod:70, rtbType:'fire', rtb:3, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
@@ -5153,10 +5180,10 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 9.983 },
   },
   blurGazeRanged131: {
-    desc: 'Blur applies to hidden gaze ranged component (v1.31 buggy 10%): gazeRanged=10 100% hit → E[dmg]≈9.083',
+    desc: 'Blur applies to hidden gaze ranged component (v1.31 buggy 10%): shared gaze strength 10 100% hit → E[dmg]≈9.083',
     version: V_MOM_131,
-    a: { toHitRtbMod:70, hp:10, abilities: { gazeRanged: 10 } },
-    b: { def:0, hp:100, abilities: { blur: true } },
+    a: { rtbType:'gaze_stoning', rtb:10, toHitRtbMod:70, hp:10, abilities: {  } },
+    b: { def:0, hp:100, abilities: { stoningImmunity: true, blur: true } },
     expected: { dmgToA: 0, dmgToB: 9.083 },
   },
 
@@ -5236,7 +5263,31 @@ const PRESETS = {
     version: V_MOM_CP,
     aUnitName: 'Chaos Spawn',
     bUnitName: 'Unicorns',
-    expected: { dmgToA: 0.26, dmgToB: 23.129 },
+    // F45: the Unicorns' Resistance to All never matched its def, so this preset was scored
+    // with 0 instead of +2 despite naming the ability. At resistance 9 rather than 7, against
+    // the gaze's −4, the destroyed share falls from 68.6% to 31.6% and the surviving figures
+    // retaliate. Unticking the Res. to all consumer still reproduces the old 0.260 / 23.129.
+    expected: { dmgToA: 0.929, dmgToB: 20.805 },
+  },
+
+  // F47: roster-wiring coverage. These assert that the roster's Illusion token reaches the
+  // ability, which F46 showed nothing else tested — the mechanic itself already worked, so a
+  // custom-stat preset would pass with the token broken. Only dmgToB is asserted: Illusion
+  // zeroes the defender's defense, so every landed hit lands in full and the mean is exactly
+  // figures x melee x to-hit, independent of the defender's stats. Retaliation is not part of
+  // the mechanic and is deliberately left unasserted.
+  predefPhantomWarriorsVsPaladins: {
+    desc: 'Phantom Warriors vs Paladins (MoM 1.31): roster Illusion zeroes defense → 6 figs x 3 melee x 30% = 5.400 (1.129 if the roster token fails to match)',
+    aUnitName: 'Phantom Warriors',
+    bUnitName: 'Paladins',
+    expected: { dmgToB: 5.400 },
+  },
+  predefPhantomWarriorsVsGreatDrakeCoM: {
+    desc: 'Phantom Warriors vs Great Drake (CoM): roster Illusion zeroes defense 11 → 7 figs x 3 melee x 30% = 6.300 (0.321 if the roster token fails to match)',
+    version: V_COM,
+    aUnitName: 'Phantom Warriors',
+    bUnitName: 'Great Drake',
+    expected: { dmgToB: 6.300 },
   },
 
   // --- Immolation ---
@@ -5497,22 +5548,22 @@ const PRESETS = {
   },
   wallOfFireAfterGazeCounter: {
     desc: 'WoF sequence: B gaze 3 overflow kills 1 of 2 A figs (2hp each), WoF targets 1 survivor (1hp) → 3.832 to A, 0.168 to B',
-    a: { figs:2, atk:1, toHitMod:70, def:0, hp:2 },
-    b: { atk:0, def:0, hp:20, toHitRtbMod:70, abilities: { gazeRanged: 3 } },
+    a: { figs:2, atk:1, toHitMod:70, def:0, hp:2, abilities: { stoningImmunity: true } },
+    b: { rtbType:'gaze_stoning', rtb:3, atk:0, def:0, hp:20, toHitRtbMod:70, abilities: {  } },
     wallOfFire: true,
     expected: { dmgToA: 3.832, dmgToB: 0.168 },
   },
   wallOfFireAfterThrownAndGaze: {
     desc: 'WoF sequence: thrown (2×1=2 to B), B gaze overflow (3 kills 1 A fig), WoF on 1 survivor, melee → 3.832 to A, 2.168 to B',
-    a: { figs:2, atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:2 },
-    b: { atk:0, def:0, hp:20, toHitRtbMod:70, abilities: { gazeRanged: 3 } },
+    a: { figs:2, atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:2, abilities: { stoningImmunity: true } },
+    b: { rtbType:'gaze_stoning', rtb:3, atk:0, def:0, hp:20, toHitRtbMod:70, abilities: {  } },
     wallOfFire: true,
     expected: { dmgToA: 3.832, dmgToB: 2.168 },
   },
   wallOfFireBilateralGaze: {
     desc: 'WoF with bilateral gaze: A gaze (2 to B) → B gaze (2 to A) → WoF (1.5 to A) → melee 1 + counter 1',
-    a: { atk:1, toHitMod:70, def:0, hp:10, toHitRtbMod:70, abilities: { gazeRanged: 2 } },
-    b: { atk:1, toHitMod:70, def:0, hp:10, toHitRtbMod:70, abilities: { gazeRanged: 2 } },
+    a: { rtbType:'gaze_stoning', rtb:2, atk:1, toHitMod:70, def:0, hp:10, toHitRtbMod:70, abilities: { stoningImmunity: true } },
+    b: { rtbType:'gaze_stoning', rtb:2, atk:1, toHitMod:70, def:0, hp:10, toHitRtbMod:70, abilities: { stoningImmunity: true } },
     wallOfFire: true,
     expected: { dmgToA: 4.500, dmgToB: 3.000 },
   },
@@ -5741,7 +5792,7 @@ const PRESETS = {
   },
   blessDeathGaze: {
     desc: 'Bless vs Death Gaze −3 (hidden ranged 1 so gaze fires in v1.31): +3 res → effRes=5+3−3=5, fail=0.5 → 5.0 death. Bless also grants +3 def against the gaze itself, since a Death Gaze is Death-realm regardless of the attacker\'s unit type, so the hidden 1 adds 0.5×0.3×0.7³=0.051',
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
     expected: { dmgToA: 0, dmgToB: 5.051 },
   },
@@ -5772,7 +5823,7 @@ const PRESETS = {
   blessResistBonusMoM: {
     desc: 'MoM Bless vs Death Gaze −3: +3 res → effRes=5+3−3=5, pFail=0.5 → 5.0 death; +3 def vs the Death-realm gaze → physical 0.5×0.3×0.7³=0.051 = 5.051',
     version: V_MOM_131,
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
     expected: { dmgToA: 0, dmgToB: 5.051 },
   },
@@ -6214,13 +6265,13 @@ const PRESETS = {
   },
   righteousnessDeathGaze: {
     desc: 'Righteousness vs Death Gaze −3: kill roll blocked by +30 res, AND the hidden physical component blocked too — Righteousness sets defence 50 against a Chaos/Death-realm gaze in MoM. Total 0 (would be ~8 without it)',
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { righteousness: true } },
     expected: { dmgToA: 0, dmgToB: 0.000 },
   },
   righteousnessStoningGazeNotBlocked: {
     desc: 'Righteousness does NOT block Stoning Gaze (Nature realm): same behavior as baseline',
-    a: { hp:10, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10, abilities: { righteousness: true } },
     expected: { dmgToA: 0, dmgToB: 8.060 },
   },
@@ -6246,9 +6297,9 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 9.000 },
   },
   blackSleepIncomingGazeRanged: {
-    desc: 'Black Sleep: hidden gaze ranged uses doom-style exact damage against sleeping targets, so gazeRanged 1 always deals 1',
-    a: { hp:10, abilities: { gazeRanged: 1 } },
-    b: { def:9, hp:10, abilities: { blackSleep: true } },
+    desc: 'Black Sleep: hidden gaze ranged uses doom-style exact damage against sleeping targets, so shared gaze strength 1 always deals 1',
+    a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: {  } },
+    b: { def:9, hp:10, abilities: { stoningImmunity: true, blackSleep: true } },
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   blackSleepCannotAttack: {
@@ -6335,8 +6386,8 @@ const PRESETS = {
   warpAttackHalvesGazeCoM: {
     desc: 'CoM 1 Warp Attack halves the shared .ranged slot with no ranged_type test (0x90764), so a hidden gaze of 5 fires at floor(5/2)=2.',
     version: V_COM,
-    a: { atk:0, hp:10, toHitRtbMod:70, unitType:'normal', abilities: { gazeRanged: 5, warpAttack: true } },
-    b: { atk:0, def:0, hp:20 },
+    a: { rtbType:'gaze_stoning', rtb:5, atk:0, hp:10, toHitRtbMod:70, unitType:'normal', abilities: { warpAttack: true } },
+    b: { atk:0, def:0, hp:20, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 2 },
   },
   warpAttackBeforeTacticianCoM: {
@@ -6372,28 +6423,28 @@ const PRESETS = {
   gazeLevelLadderMoM: {
     desc: 'MoM\'s level routine has no ranged_type gate, so a Champion gaze takes the full ranged ladder: 5+3=8.',
     version: V_MOM_131,
-    a: { atk:0, hp:10, toHitRtbMod:70, level:'champion', abilities: { gazeRanged: 5 } },
-    b: { atk:0, def:0, hp:20 },
+    a: { rtbType:'gaze_stoning', rtb:5, atk:0, hp:10, toHitRtbMod:70, level:'champion', abilities: {  } },
+    b: { atk:0, def:0, hp:20, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 8 },
   },
   gazeLevelLadderCoM: {
     desc: 'CoM 1 skips the .ranged level step for ranged_type >= 100 on every row but Veteran (0x8FA9A), so a Champion gaze gains only +1: 5+1=6.',
     version: V_COM,
-    a: { atk:0, hp:10, toHitRtbMod:70, level:'champion', abilities: { gazeRanged: 5 } },
-    b: { atk:0, def:0, hp:20 },
+    a: { rtbType:'gaze_stoning', rtb:5, atk:0, hp:10, toHitRtbMod:70, level:'champion', abilities: {  } },
+    b: { atk:0, def:0, hp:20, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 6 },
   },
   doomGazeLevelLadderMoM: {
     desc: 'Doom Gaze strength is the same .ranged slot, so MoM\'s Champion ladder reaches it too: 4+3=7.',
     version: V_MOM_131,
-    a: { hp:10, level:'champion', abilities: { doomGaze: 4 } },
+    a: { rtbType:'gaze_multiple', rtb:4, hp:10, level:'champion' },
     b: { def:10, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 7 },
   },
   doomGazeLevelLadderCoM: {
     desc: 'CoM 1 gives the same Doom Gaze only the Veteran step: 4+1=5.',
     version: V_COM,
-    a: { hp:10, level:'champion', abilities: { doomGaze: 4 } },
+    a: { rtbType:'gaze_multiple', rtb:4, hp:10, level:'champion' },
     b: { def:10, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 5 },
   },
@@ -6637,7 +6688,7 @@ const PRESETS = {
   undeadDeathImmunity131: {
     desc: 'Undead grants Death Immunity (v1.31): Death Gaze blocked, only physical gaze hits (0.3)',
     version: V_MOM_131,
-    a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
+    a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { undead: true } },
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
@@ -7200,6 +7251,13 @@ const TEST_TREE = [
           'predefChaosSpawnVsUnicorns',
         ],
       },
+      {
+        name: 'Roster ability wiring',
+        keys: [
+          'predefPhantomWarriorsVsPaladins',
+          'predefPhantomWarriorsVsGreatDrakeCoM',
+        ],
+      },
     ],
   },
   {
@@ -7394,7 +7452,7 @@ const TEST_TREE = [
       {
         name: 'Chaos Channels (Warlord)',
         keys: [
-          'ccFireBreathStacksWithExistingWarlord',
+          'ccFireBreathAddsToExistingWarlord',
         ],
       },
       {
@@ -8088,7 +8146,7 @@ const TEST_TREE = [
       { name: 'Bless', keys: ['blessMeleeFromDeath', 'blessMeleeFromDeathCoM2', 'blessMeleeFromChaos', 'blessMeleeFromChaosCoM2', 'blessBreathBonusMoM', 'blessBreathBonusCoM', 'blessBreathBonusCoM2', 'blessBreathBonusWarlord', 'blessFireBreathDefMoM', 'blessFireBreathDefCoM', 'blessResistBonusMoM', 'blessResistBonusCoM2', 'blessResistBonusWarlord'] },
       { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM2', 'blurPlusInvisCoM2v2', 'blurPlusInvisWarlord'] },
       { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderPenaltyCoM2', 'fearDefenderFixedFirstStrike'] },
-      { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathCoM', 'ccFireBreathReplacesLightningCoM2', 'ccFireBreathReplacesGazeCoM2', 'ccFireBreathStacksWithExistingCoM2', 'ccFireBreathStacksWithExistingWarlord'] },
+      { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathCoM', 'ccFireBreathCoexistsWithLightningCoM2', 'ccFireBreathCoexistsWithGazeCoM2', 'ccFireBreathAddsToExistingCoM2', 'ccFireBreathAddsToExistingWarlord'] },
       { name: 'Chaos Surge', keys: ['chaosSurgeThrownCoM', 'chaosSurgeThrownCoM2', 'chaosSurgeDoomGazeCoM', 'chaosSurgeDoomGazeCoM2', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsBreathCoM'] },
       { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
       { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },

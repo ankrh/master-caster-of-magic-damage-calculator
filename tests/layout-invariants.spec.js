@@ -17,8 +17,9 @@ for (const version of VERSIONS) {
     // Show all so version-hidden items are the only ones excluded, then read
     // the realm rank of each visible checkbox item in DOM order.
     const ranks = await page.evaluate((rank) => {
-      const btn = document.querySelector('.toggle-abil-btn');
-      if (document.querySelector('.abilities-section').classList.contains('hide-inactive')) btn.click();
+      document.querySelectorAll('#aAbilities .toggle-abil-btn').forEach(btn => {
+        if (btn.textContent === 'Show all') btn.click();
+      });
       const block = document.querySelector('#aAbilities .ench-bools');
       if (!block) return null;
       return [...block.querySelectorAll('.abil-item')]

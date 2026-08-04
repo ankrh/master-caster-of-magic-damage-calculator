@@ -2,8 +2,8 @@
 //
 // (1) For each game version, the set of ability/enchantment items the UI hides
 //     (in "show all" mode, so hide-inactive doesn't muddy it) must equal exactly
-//     the set the defs' version gating disables. Gating is recomputed in-page
-//     from ABILITY_DEFS/ENCHANTMENT_DEFS using the same fields the app uses.
+//     the set the defs' version gating disables, asked of the app's own
+//     `abilityVersionGated` so the rule is not restated here.
 // (2) A hidden ability must not leak into the calculation: enabling an ability
 //     in a version where it exists, then switching to a version where it's
 //     hidden, must yield the same result as never enabling it.
@@ -30,11 +30,12 @@ for (const version of VERSIONS) {
     await setValue(page, 'gameVersion', version);
     await selectCustom(page);
 
-    // Show all inactive items so visibility is driven only by version gating,
-    // not by the hide-inactive default.
+    // Show all inactive items in every group so visibility is driven only by version
+    // gating, not by each group's hide-inactive default.
     await page.evaluate(() => {
-      const btn = document.querySelector('.toggle-abil-btn');
-      if (document.querySelector('.abilities-section').classList.contains('hide-inactive')) btn.click();
+      document.querySelectorAll('#aAbilities .toggle-abil-btn').forEach(btn => {
+        if (btn.textContent === 'Show all') btn.click();
+      });
     });
 
     const diff = await page.evaluate(() => {
@@ -46,13 +47,8 @@ for (const version of VERSIONS) {
         if (!el) continue;
         const item = el.closest('.abil-item');
         if (!item) continue;
-        // Reproduce ui.js version-gating (updateAbilityVisibility path).
-        const isWarlordTag = abil.source === 'ability' && abil.subgroup === 'Warlord';
-        const versionGateable = abil.source === 'enchantment' || isWarlordTag;
-        const subgroupOk = subgroupAllowedForVersion(abil.subgroup, version);
-        const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
-        const exceptOk = !(abil.exceptVersions || []).some(v => version.startsWith(v));
-        const versionGated = versionGateable && !((subgroupOk || overrideOk) && exceptOk);
+        // Ask the app's own rule rather than restating it; a copy here would drift.
+        const versionGated = abilityVersionGated(abil, version);
         const hidden = item.classList.contains('abil-hidden');
         // In show-all mode a fresh page has no active/locked items, so the only
         // reason to hide is version gating.
@@ -100,6 +96,33 @@ test('a hidden ability does not leak into the result', async ({ page }) => {
   await configure();
   const leaked = await meanB();
   expect(leaked).toEqual(off);
+
+  expectNoConsoleErrors(errors);
+});
+
+test('gaze inputs follow the selected engine record shape', async ({ page }) => {
+  const errors = await openCalculator(page);
+
+  // The synthetic cross-version control is gone entirely. DOS exposes gaze types in
+  // the shared secondary-attack selector and binds roster strength into that slot.
+  await expect(page.locator('#aAbil_gazeRanged')).toHaveCount(0);
+  await setValue(page, 'gameVersion', 'mom_1.31');
+  await page.evaluate(() => {
+    const gorgons = (unitDatabases[V_MOM_131] || []).find(u => u.name === 'Gorgons');
+    if (!gorgons) throw new Error('MoM Gorgons not found');
+    const select = document.getElementById('aUnit');
+    select.value = String(gorgons.id);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect(page.locator('#aRtbType')).toHaveValue('gaze_stoning');
+  await expect(page.locator('#aRtb')).toHaveValue('1');
+  await expect(page.locator('#aRtbType')).toBeVisible();
+  await expect(page.locator('#aModern_stoningGaze')).toBeHidden();
+
+  // Modern engines hide the DOS union and expose the independent gaze field instead.
+  await setValue(page, 'gameVersion', 'com2_1.05.11');
+  await expect(page.locator('#aRtbType')).toBeHidden();
+  await expect(page.locator('#aModern_stoningGaze')).toBeVisible();
 
   expectNoConsoleErrors(errors);
 });

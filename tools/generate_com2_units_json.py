@@ -3,8 +3,9 @@ Generate a JSON file of CoM2 units from UNITS.INI.
 
 Fields match the MoM/CoM1 JSON schema:
   id, name, race, category, figures, hp, melee, defense, resist, moves, cost, upkeep
-  ranged, ranged_type, ammo         (omitted when absent)
-  thrown_breath, thrown_breath_type (omitted when absent)
+  ranged, ranged_type, ammo         (legacy projection; omitted when absent)
+  thrown_breath, thrown_breath_type (legacy projection; omitted when absent)
+  thrown, fire_breath, lightning_breath (modern independent channels; omitted when absent)
   abilities                         (omitted when empty)
 
 Run from any working directory:
@@ -218,14 +219,24 @@ def ini_unit_to_record(u):
     if to_hit != 0:
         record['to_hit'] = to_hit
 
-    # Ranged attack
+    # Caster.exe stores four independently usable attack channels. Keep the existing
+    # fields for the current UI/resolver, but emit the three channels that its former
+    # thrown_breath projection could erase so the next migration can be lossless.
     if u.get('Ranged') and int(u['Ranged']) > 0:
         rt = int(u.get('RangedType', 20))
         record['ranged']      = int(u['Ranged'])
         record['ranged_type'] = RANGED_TYPE_MAP.get(rt, 'Missile')
         record['ammo']        = int(u.get('Ammo', 0))
 
-    # Breath / thrown attack
+    for ini_key, output_key in [
+        ('Thrown', 'thrown'),
+        ('FireBreath', 'fire_breath'),
+        ('LightningBreath', 'lightning_breath'),
+    ]:
+        if u.get(ini_key) and int(u[ini_key]) > 0:
+            record[output_key] = int(u[ini_key])
+
+    # Compatibility projection for the pre-R3.2 single special-attack slot.
     if u.get('Thrown') and int(u['Thrown']) > 0:
         record['thrown_breath']      = int(u['Thrown'])
         record['thrown_breath_type'] = 'thrown'
@@ -321,6 +332,34 @@ def ini_unit_to_record(u):
     return record
 
 
+def verify_attack_channel_coverage(raw_units, records):
+    """Fail generation if a positive UNITS.INI attack channel was lost or changed."""
+    records_by_id = {record['id']: record for record in records}
+    channels = {
+        'Ranged': 'ranged',
+        'Thrown': 'thrown',
+        'FireBreath': 'fire_breath',
+        'LightningBreath': 'lightning_breath',
+    }
+    for unit in raw_units:
+        record = records_by_id.get(unit['index'])
+        if record is None:
+            continue
+        for ini_key, output_key in channels.items():
+            source_value = int(unit.get(ini_key, 0) or 0)
+            output_value = record.get(output_key)
+            if source_value > 0 and output_value != source_value:
+                raise ValueError(
+                    f"Unit {unit['index']} {unit.get('Name', '')!r}: "
+                    f"{ini_key}={source_value} did not reach {output_key}"
+                )
+            if source_value <= 0 and output_value is not None:
+                raise ValueError(
+                    f"Unit {unit['index']} {unit.get('Name', '')!r}: "
+                    f"unexpected {output_key}={output_value} without {ini_key}"
+                )
+
+
 def main():
     # Resolve every path from the script location so input and both generated
     # outputs are independent of the caller's working directory.
@@ -336,6 +375,7 @@ def main():
     records = [ini_unit_to_record(u) for u in raw_units
                if u.get('CreateOutpost', '').lower() != 'yes'
                and u.get('Name') not in SPECIAL_UNIT_NAMES]
+    verify_attack_channel_coverage(raw_units, records)
 
     # Force race prefix for non-hero units that share a name with another race's unit
     from collections import Counter

@@ -271,9 +271,10 @@
     "hp": 6,
     "melee": 3,
     "moves": 2,
+    "spec_att_attrib": 5,
     "abilities": [
       "Hero",
-      "Poison Touch=5"
+      "Poison Touch"
     ],
     "cost": 150,
     "upkeep": 3
@@ -487,7 +488,7 @@
     "abilities": [
       "Hero",
       "Missile Immunity",
-      "Illusionary attack"
+      "Illusion"
     ],
     "cost": 500,
     "upkeep": 10
@@ -621,10 +622,11 @@
     "ranged": 7,
     "moves": 2,
     "ranged_type": "Magic(C)",
+    "spec_att_attrib": 0,
     "abilities": [
       "Hero",
       "Missile Immunity",
-      "Life Steal=1"
+      "Life Steal"
     ],
     "cost": 500,
     "upkeep": 10
@@ -996,9 +998,10 @@
     "hp": 7,
     "melee": 5,
     "moves": 2,
+    "spec_att_attrib": 6,
     "abilities": [
       "Flight",
-      "Poison Touch=6"
+      "Poison Touch"
     ],
     "cost": 160,
     "upkeep": 4
@@ -1127,9 +1130,10 @@
     "hp": 1,
     "melee": 4,
     "moves": 1,
+    "spec_att_attrib": 1,
     "abilities": [
       "Invisibility",
-      "Poison Touch=1"
+      "Poison Touch"
     ],
     "cost": 120,
     "upkeep": 3
@@ -1924,8 +1928,9 @@
     "hp": 4,
     "melee": 6,
     "moves": 2,
+    "spec_att_attrib": 1,
     "abilities": [
-      "Holy Bonus=1",
+      "Holy Bonus",
       "Magic Immunity",
       "Armor Piercing",
       "First Strike"
@@ -2417,9 +2422,10 @@
     "hp": 10,
     "melee": 5,
     "moves": 3,
+    "spec_att_attrib": 6,
     "abilities": [
       "Flight",
-      "Poison Touch=6"
+      "Poison Touch"
     ],
     "cost": 200,
     "upkeep": 4
@@ -2435,8 +2441,9 @@
     "hp": 4,
     "melee": 3,
     "moves": 1,
+    "spec_att_attrib": 0,
     "abilities": [
-      "Regeneration=1"
+      "Regeneration"
     ],
     "cost": 30
   },
@@ -2451,9 +2458,10 @@
     "hp": 4,
     "melee": 5,
     "moves": 1,
+    "spec_att_attrib": 0,
     "abilities": [
       "Large Shield",
-      "Regeneration=1"
+      "Regeneration"
     ],
     "cost": 60,
     "upkeep": 2
@@ -2469,8 +2477,9 @@
     "hp": 4,
     "melee": 6,
     "moves": 1,
+    "spec_att_attrib": 0,
     "abilities": [
-      "Regeneration=1",
+      "Regeneration",
       "Negate First Strike"
     ],
     "cost": 120,
@@ -2490,9 +2499,10 @@
     "moves": 1,
     "ammo": 4,
     "ranged_type": "Magic(N)",
+    "spec_att_attrib": 0,
     "abilities": [
       "Healer",
-      "Regeneration=1",
+      "Regeneration",
       "Purify"
     ],
     "cost": 180,
@@ -2509,8 +2519,9 @@
     "hp": 5,
     "melee": 8,
     "moves": 2,
+    "spec_att_attrib": 0,
     "abilities": [
-      "Regeneration=1"
+      "Regeneration"
     ],
     "cost": 160,
     "upkeep": 4
@@ -2645,15 +2656,15 @@
     "resist": 10,
     "hp": 15,
     "melee": 1,
+    "ranged": 4,
     "moves": 1,
+    "ranged_type": "Gaze(Multiple)",
+    "spec_att_attrib": 4,
     "abilities": [
       "Flight",
       "Cause Fear",
       "Fantastic",
-      "Doom Gaze=4",
-      "Death Gaze=-4",
-      "Stoning Gaze=-4",
-      "Poison Touch=4"
+      "Poison Touch"
     ],
     "cost": 400,
     "upkeep": 12
@@ -2736,9 +2747,10 @@
     "moves": 1,
     "thrown_breath_type": "fire",
     "thrown_breath": 5,
+    "spec_att_attrib": 0,
     "abilities": [
       "Fantastic",
-      "Regeneration=1"
+      "Regeneration"
     ],
     "cost": 650,
     "upkeep": 14
@@ -2799,6 +2811,7 @@
     "melee": 4,
     "to_hit": 10,
     "moves": 1,
+    "spec_att_attrib": 1,
     "abilities": [
       "Fantastic",
       "Create Undead",
@@ -2806,7 +2819,7 @@
       "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
-      "Poison Touch=1"
+      "Poison Touch"
     ],
     "cost": 80,
     "upkeep": 1
@@ -2821,17 +2834,18 @@
     "resist": 8,
     "hp": 10,
     "melee": 7,
+    "ranged": 1,
     "to_hit": 10,
     "moves": 2,
+    "ranged_type": "Gaze(Death)",
+    "spec_att_attrib": 2,
     "abilities": [
       "Fantastic",
       "Invisibility",
       "Illusion Immunity",
       "Cold Immunity",
       "Death Immunity",
-      "Poison Immunity",
-      "Death Gaze=-2",
-      "Gaze Ranged=1"
+      "Poison Immunity"
     ],
     "cost": 250,
     "upkeep": 1
@@ -2848,10 +2862,11 @@
     "melee": 5,
     "to_hit": 10,
     "moves": 2,
+    "spec_att_attrib": 0,
     "abilities": [
       "Weapon Immunity",
       "Fantastic",
-      "Regeneration=1",
+      "Regeneration",
       "Illusion Immunity",
       "Cold Immunity",
       "Death Immunity",
@@ -2897,6 +2912,7 @@
     "melee": 7,
     "to_hit": 20,
     "moves": 2,
+    "spec_att_attrib": 3,
     "abilities": [
       "Weapon Immunity",
       "Flight",
@@ -2906,7 +2922,7 @@
       "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
-      "Life Steal=-3"
+      "Life Steal"
     ],
     "cost": 500,
     "upkeep": 5
@@ -2926,13 +2942,14 @@
     "moves": 1,
     "ammo": 8,
     "ranged_type": "Magic(C)",
+    "spec_att_attrib": 0,
     "abilities": [
       "Weapon Immunity",
       "Flight",
       "Fantastic",
       "Plane Shift",
       "Non Corporeal",
-      "Regeneration=1",
+      "Regeneration",
       "Illusion Immunity",
       "Cold Immunity",
       "Death Immunity",
@@ -2953,6 +2970,7 @@
     "melee": 9,
     "to_hit": 30,
     "moves": 3,
+    "spec_att_attrib": 4,
     "abilities": [
       "Weapon Immunity",
       "Flight",
@@ -2963,7 +2981,7 @@
       "Poison Immunity",
       "Armor Piercing",
       "First Strike",
-      "Life Steal=-4"
+      "Life Steal"
     ],
     "cost": 600,
     "upkeep": 8
@@ -2983,6 +3001,7 @@
     "moves": 2,
     "ammo": 8,
     "ranged_type": "Magic(C)",
+    "spec_att_attrib": 5,
     "abilities": [
       "Weapon Immunity",
       "Flight",
@@ -2993,7 +3012,7 @@
       "Cold Immunity",
       "Death Immunity",
       "Poison Immunity",
-      "Life Steal=-5"
+      "Life Steal"
     ],
     "cost": 900,
     "upkeep": 15
@@ -3031,8 +3050,9 @@
     "melee": 5,
     "to_hit": 20,
     "moves": 2,
+    "spec_att_attrib": 2,
     "abilities": [
-      "Resistance to All=2",
+      "Resistance to All",
       "Fantastic",
       "Poison Immunity"
     ],
@@ -3050,8 +3070,9 @@
     "hp": 10,
     "melee": 10,
     "moves": 1,
+    "spec_att_attrib": 1,
     "abilities": [
-      "Resistance to All=1",
+      "Resistance to All",
       "Fantastic",
       "Meld With Node",
       "Non Corporeal"
@@ -3071,9 +3092,10 @@
     "melee": 13,
     "to_hit": 20,
     "moves": 3,
+    "spec_att_attrib": 1,
     "abilities": [
       "Flight",
-      "Holy Bonus=1",
+      "Holy Bonus",
       "Fantastic",
       "Illusion Immunity",
       "Dispel Evil"
@@ -3093,10 +3115,11 @@
     "melee": 15,
     "to_hit": 30,
     "moves": 4,
+    "spec_att_attrib": 2,
     "abilities": [
       "Flight",
       "Caster 40 MP",
-      "Holy Bonus=2",
+      "Holy Bonus",
       "Fantastic",
       "Illusion Immunity"
     ],
@@ -3154,10 +3177,11 @@
     "melee": 4,
     "to_hit": 10,
     "moves": 2,
+    "spec_att_attrib": 3,
     "abilities": [
       "Flight",
       "Fantastic",
-      "Stoning Touch=-3"
+      "Stoning Touch"
     ],
     "cost": 275,
     "upkeep": 8
@@ -3172,12 +3196,13 @@
     "resist": 7,
     "hp": 30,
     "melee": 15,
+    "ranged": 1,
     "to_hit": 10,
     "moves": 2,
+    "ranged_type": "Gaze(Stoning)",
+    "spec_att_attrib": 1,
     "abilities": [
-      "Fantastic",
-      "Stoning Gaze=-1",
-      "Gaze Ranged=1"
+      "Fantastic"
     ],
     "cost": 325,
     "upkeep": 7
@@ -3194,10 +3219,11 @@
     "melee": 4,
     "to_hit": 10,
     "moves": 2,
+    "spec_att_attrib": 4,
     "abilities": [
       "Web Spell",
       "Fantastic",
-      "Poison Touch=4"
+      "Poison Touch"
     ],
     "cost": 200,
     "upkeep": 4
@@ -3261,13 +3287,14 @@
     "resist": 9,
     "hp": 9,
     "melee": 8,
+    "ranged": 1,
     "to_hit": 20,
     "moves": 2,
+    "ranged_type": "Gaze(Stoning)",
+    "spec_att_attrib": 2,
     "abilities": [
       "Flight",
-      "Fantastic",
-      "Stoning Gaze=-2",
-      "Gaze Ranged=1"
+      "Fantastic"
     ],
     "cost": 599,
     "upkeep": 15
@@ -3323,9 +3350,10 @@
     "melee": 25,
     "to_hit": 30,
     "moves": 3,
+    "spec_att_attrib": 15,
     "abilities": [
       "Fantastic",
-      "Poison Touch=15"
+      "Poison Touch"
     ],
     "cost": 1000,
     "upkeep": 20
@@ -3368,7 +3396,7 @@
       "Stoning Immunity",
       "Death Immunity",
       "Poison Immunity",
-      "Illusionary attack"
+      "Illusion"
     ],
     "cost": 225,
     "upkeep": 4
@@ -3390,7 +3418,7 @@
       "Stoning Immunity",
       "Death Immunity",
       "Poison Immunity",
-      "Illusionary attack"
+      "Illusion"
     ],
     "cost": 20,
     "upkeep": 2
@@ -3499,10 +3527,11 @@
     "melee": 4,
     "to_hit": 10,
     "moves": 1,
+    "spec_att_attrib": 4,
     "abilities": [
       "Fantastic",
       "First Strike",
-      "Poison Touch=4"
+      "Poison Touch"
     ],
     "cost": 120,
     "upkeep": 2

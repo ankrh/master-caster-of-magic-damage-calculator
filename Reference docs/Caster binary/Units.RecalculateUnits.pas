@@ -540,7 +540,7 @@ begin
       Complete R5.1b reconstruction, merged 2026-08-02 from the independent
       Claude and Codex derivations after both review files were processed.
       Provenance: Claude 2026-08-01; Codex 2026-08-01, independent from the
-      shared thirteen-anchor spine documented in Calculator/BACKLOG.md.
+      shared thirteen-anchor spine already present in this reconstruction placeholder.
 
       The source below uses U = Units[i], B = BaseUnits[i], and item for the
       current BaseUnits[i].equip[j] pointer. These are readability aliases in

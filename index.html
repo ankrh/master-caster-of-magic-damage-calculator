@@ -107,6 +107,7 @@
       <h2>Attacker</h2>
       <div class="unit-combobox"><input type="text" id="aUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off"><div class="unit-dropdown-list" id="aUnitList"></div><input type="hidden" id="aUnit" value="custom"></div>
     </div>
+    <div class="panel-section-header">Base stats and abilities</div>
     <div class="panel-fields">
       <label for="aAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
       <select id="aAbil_unitType">
@@ -128,8 +129,8 @@
       <input type="number" id="aAtk" min="0" max="50" value="3">
       <span class="mod-val" id="aAtkMod"></span>
 
-      <label for="aRtbType" data-tooltip="Ranged, thrown or breath attack type and strength.">Rng/Thr/Breath</label>
-      <select class="mid" id="aRtbType">
+      <label class="dos-special-attack" for="aRtbType" data-tooltip="The DOS engines store ranged, thrown, breath, and gaze strength in one shared special-value field.">Rng/Thr/Breath/Gaze</label>
+      <select class="mid dos-special-attack" id="aRtbType">
         <option value="none" selected>None</option>
         <option value="missile">Missile</option>
         <option value="boulder">Boulder</option>
@@ -140,9 +141,29 @@
         <option value="thrown">Thrown</option>
         <option value="fire">Fire</option>
         <option value="lightning">Lightning</option>
+        <option value="gaze_stoning">Stoning Gaze</option>
+        <option value="gaze_multiple">Multiple Gaze</option>
+        <option value="gaze_death">Death Gaze</option>
       </select>
-      <input type="number" id="aRtb" min="0" max="50" value="0">
-      <span class="mod-val" id="aRtbMod"></span>
+      <input class="dos-special-attack" type="number" id="aRtb" min="0" max="50" value="0">
+      <span class="mod-val dos-special-attack" id="aRtbMod"></span>
+
+      <label class="modern-attack version-hidden" for="aModernRangedType" data-tooltip="CoM2 &amp; Warlord: independent conventional ranged channel.&#10;Choose its projectile type and enter strength (dice per figure).&#10;It can coexist with Thrown and both Breath channels.&#10;Only this channel can initiate ranged combat.">Ranged</label>
+      <select class="mid modern-attack version-hidden" id="aModernRangedType">
+        <option value="none" selected>None</option>
+        <option value="missile">Missile</option><option value="boulder">Boulder</option>
+        <option value="magic_c">Magic (C)</option><option value="magic_n">Magic (N)</option>
+        <option value="magic_s">Magic (S)</option><option value="beam">Beam</option>
+      </select>
+      <input class="modern-attack version-hidden" type="number" id="aModernRanged" min="0" max="50" value="0">
+      <span class="mod-val modern-attack version-hidden"></span>
+
+      <label class="modern-attack version-hidden" for="aModernThrown" data-tooltip="CoM2 &amp; Warlord: independent Thrown channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement before melee attacks.&#10;Can coexist with Ranged and both Breath channels.">Thrown</label>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernThrown" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <label class="modern-attack version-hidden" for="aModernFireBreath" data-tooltip="CoM2 &amp; Warlord: independent Fire Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Fire attack.&#10;Can coexist with Ranged, Thrown, and Lightning Breath.">Fire Breath</label>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernFireBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <label class="modern-attack version-hidden" for="aModernLightningBreath" data-tooltip="CoM2 &amp; Warlord: independent Lightning Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Lightning attack.&#10;Can coexist with Ranged, Thrown, and Fire Breath.">Lightning Breath</label>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
 
       <label for="aToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
       <span class="prefix">30% +</span>
@@ -171,36 +192,37 @@
       <input type="number" id="aHP" min="1" max="99" value="1">
       <span class="mod-val" id="aHPMod"></span>
 
-      <label for="aDmg" data-tooltip="Damage already taken.">Damage Taken</label>
-      <input type="number" id="aDmg" min="0" max="999" value="0">
-      <span class="mod-val"></span>
-
-      <label for="aLevel" data-tooltip="Disregarded for fantastic units (unless Spirit Link, Warlord) and heroes.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit&#10;&#10;Warlord:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +2 thr, +3 def, +1 hp, +5% hit&#10;Champion:    +4 atk/rng, +3 res, +2 thr, +5 def, +1 hp, +10% hit">Level</label>
-      <select id="aLevel" disabled>
-        <option value="normal" selected>Normal</option>
-        <option value="regular">Regular</option>
-        <option value="veteran">Veteran</option>
-        <option value="elite">Elite</option>
-        <option value="ultra_elite">Ultra Elite</option>
-        <option value="champion">Champion</option>
-      </select>
-
-      <label for="aWeapon" data-tooltip="Disregarded for fantastic units (except Zombies) and heroes.&#10;&#10;Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
-      <select id="aWeapon">
-        <option value="normal" selected>Normal</option>
-        <option value="magic">Magic</option>
-        <option value="mithril">Mithril</option>
-        <option value="adamantium">Adamantium</option>
-      </select>
-
-      <label for="aArmor" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
-      <select id="aArmor">
-        <option value="normal" selected>Normal</option>
-        <option value="orihalcon">Orihalcon</option>
-      </select>
     </div>
-    <div class="abilities-section hide-inactive">
-      <button class="toggle-abil-btn" title="Show/hide inactive abilities and enchantments">Show all</button>
+    <div class="abilities-section hide-inactive-abilities hide-inactive-enchantments">
+      <div class="panel-fields loadout-fields">
+        <label for="aLevel" data-tooltip="Disregarded for fantastic units (unless Spirit Link, Warlord) and heroes.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit&#10;&#10;Warlord:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +2 thr, +3 def, +1 hp, +5% hit&#10;Champion:    +4 atk/rng, +3 res, +2 thr, +5 def, +1 hp, +10% hit">Level</label>
+        <select id="aLevel" disabled>
+          <option value="normal" selected>Normal</option>
+          <option value="regular">Regular</option>
+          <option value="veteran">Veteran</option>
+          <option value="elite">Elite</option>
+          <option value="ultra_elite">Ultra Elite</option>
+          <option value="champion">Champion</option>
+        </select>
+
+        <label for="aWeapon" data-tooltip="Disregarded for fantastic units (except Zombies) and heroes.&#10;&#10;Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
+        <select id="aWeapon">
+          <option value="normal" selected>Normal</option>
+          <option value="magic">Magic</option>
+          <option value="mithril">Mithril</option>
+          <option value="adamantium">Adamantium</option>
+        </select>
+
+        <label for="aArmor" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
+        <select id="aArmor">
+          <option value="normal" selected>Normal</option>
+          <option value="orihalcon">Orihalcon</option>
+        </select>
+
+        <label for="aDmg" data-tooltip="Damage already taken.">Damage Taken</label>
+        <input type="number" id="aDmg" min="0" max="999" value="0">
+        <span class="mod-val"></span>
+      </div>
       <div class="abilities-content" id="aAbilities"></div>
     </div>
   </div>
@@ -218,6 +240,7 @@
       <h2>Defender</h2>
       <div class="unit-combobox"><input type="text" id="bUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off" enterkeyhint="search" autocapitalize="off" autocorrect="off"><div class="unit-dropdown-list" id="bUnitList"></div><input type="hidden" id="bUnit" value="custom"></div>
     </div>
+    <div class="panel-section-header">Base stats and abilities</div>
     <div class="panel-fields">
       <label for="bAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
       <select id="bAbil_unitType">
@@ -239,8 +262,8 @@
       <input type="number" id="bAtk" min="0" max="50" value="3">
       <span class="mod-val" id="bAtkMod"></span>
 
-      <label for="bRtbType" data-tooltip="Ranged, thrown or breath attack type and strength.">Rng/Thr/Breath</label>
-      <select class="mid" id="bRtbType">
+      <label class="dos-special-attack" for="bRtbType" data-tooltip="The DOS engines store ranged, thrown, breath, and gaze strength in one shared special-value field.">Rng/Thr/Breath/Gaze</label>
+      <select class="mid dos-special-attack" id="bRtbType">
         <option value="none" selected>None</option>
         <option value="missile">Missile</option>
         <option value="boulder">Boulder</option>
@@ -251,9 +274,29 @@
         <option value="thrown">Thrown</option>
         <option value="fire">Fire</option>
         <option value="lightning">Lightning</option>
+        <option value="gaze_stoning">Stoning Gaze</option>
+        <option value="gaze_multiple">Multiple Gaze</option>
+        <option value="gaze_death">Death Gaze</option>
       </select>
-      <input type="number" id="bRtb" min="0" max="50" value="0">
-      <span class="mod-val" id="bRtbMod"></span>
+      <input class="dos-special-attack" type="number" id="bRtb" min="0" max="50" value="0">
+      <span class="mod-val dos-special-attack" id="bRtbMod"></span>
+
+      <label class="modern-attack version-hidden" for="bModernRangedType" data-tooltip="CoM2 &amp; Warlord: independent conventional ranged channel.&#10;Choose its projectile type and enter strength (dice per figure).&#10;It can coexist with Thrown and both Breath channels.&#10;Only this channel can initiate ranged combat.">Ranged</label>
+      <select class="mid modern-attack version-hidden" id="bModernRangedType">
+        <option value="none" selected>None</option>
+        <option value="missile">Missile</option><option value="boulder">Boulder</option>
+        <option value="magic_c">Magic (C)</option><option value="magic_n">Magic (N)</option>
+        <option value="magic_s">Magic (S)</option><option value="beam">Beam</option>
+      </select>
+      <input class="modern-attack version-hidden" type="number" id="bModernRanged" min="0" max="50" value="0">
+      <span class="mod-val modern-attack version-hidden"></span>
+
+      <label class="modern-attack version-hidden" for="bModernThrown" data-tooltip="CoM2 &amp; Warlord: independent Thrown channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement before melee attacks.&#10;Can coexist with Ranged and both Breath channels.">Thrown</label>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernThrown" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <label class="modern-attack version-hidden" for="bModernFireBreath" data-tooltip="CoM2 &amp; Warlord: independent Fire Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Fire attack.&#10;Can coexist with Ranged, Thrown, and Lightning Breath.">Fire Breath</label>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernFireBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <label class="modern-attack version-hidden" for="bModernLightningBreath" data-tooltip="CoM2 &amp; Warlord: independent Lightning Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Lightning attack.&#10;Can coexist with Ranged, Thrown, and Fire Breath.">Lightning Breath</label>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
 
       <label for="bToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
       <span class="prefix">30% +</span>
@@ -282,36 +325,37 @@
       <input type="number" id="bHP" min="1" max="99" value="1">
       <span class="mod-val" id="bHPMod"></span>
 
-      <label for="bDmg" data-tooltip="Damage already taken.">Damage Taken</label>
-      <input type="number" id="bDmg" min="0" max="999" value="0">
-      <span class="mod-val"></span>
-
-      <label for="bLevel" data-tooltip="Disregarded for fantastic units (unless Spirit Link, Warlord) and heroes.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit&#10;&#10;Warlord:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +2 thr, +3 def, +1 hp, +5% hit&#10;Champion:    +4 atk/rng, +3 res, +2 thr, +5 def, +1 hp, +10% hit">Level</label>
-      <select id="bLevel" disabled>
-        <option value="normal" selected>Normal</option>
-        <option value="regular">Regular</option>
-        <option value="veteran">Veteran</option>
-        <option value="elite">Elite</option>
-        <option value="ultra_elite">Ultra Elite</option>
-        <option value="champion">Champion</option>
-      </select>
-
-      <label for="bWeapon" data-tooltip="Disregarded for fantastic units (except Zombies) and heroes.&#10;&#10;Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
-      <select id="bWeapon">
-        <option value="normal" selected>Normal</option>
-        <option value="magic">Magic</option>
-        <option value="mithril">Mithril</option>
-        <option value="adamantium">Adamantium</option>
-      </select>
-
-      <label for="bArmor" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
-      <select id="bArmor">
-        <option value="normal" selected>Normal</option>
-        <option value="orihalcon">Orihalcon</option>
-      </select>
     </div>
-    <div class="abilities-section hide-inactive">
-      <button class="toggle-abil-btn" title="Show/hide inactive abilities and enchantments">Show all</button>
+    <div class="abilities-section hide-inactive-abilities hide-inactive-enchantments">
+      <div class="panel-fields loadout-fields">
+        <label for="bLevel" data-tooltip="Disregarded for fantastic units (unless Spirit Link, Warlord) and heroes.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit&#10;&#10;Warlord:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +2 thr, +3 def, +1 hp, +5% hit&#10;Champion:    +4 atk/rng, +3 res, +2 thr, +5 def, +1 hp, +10% hit">Level</label>
+        <select id="bLevel" disabled>
+          <option value="normal" selected>Normal</option>
+          <option value="regular">Regular</option>
+          <option value="veteran">Veteran</option>
+          <option value="elite">Elite</option>
+          <option value="ultra_elite">Ultra Elite</option>
+          <option value="champion">Champion</option>
+        </select>
+
+        <label for="bWeapon" data-tooltip="Disregarded for fantastic units (except Zombies) and heroes.&#10;&#10;Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
+        <select id="bWeapon">
+          <option value="normal" selected>Normal</option>
+          <option value="magic">Magic</option>
+          <option value="mithril">Mithril</option>
+          <option value="adamantium">Adamantium</option>
+        </select>
+
+        <label for="bArmor" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
+        <select id="bArmor">
+          <option value="normal" selected>Normal</option>
+          <option value="orihalcon">Orihalcon</option>
+        </select>
+
+        <label for="bDmg" data-tooltip="Damage already taken.">Damage Taken</label>
+        <input type="number" id="bDmg" min="0" max="999" value="0">
+        <span class="mod-val"></span>
+      </div>
       <div class="abilities-content" id="bAbilities"></div>
     </div>
   </div>

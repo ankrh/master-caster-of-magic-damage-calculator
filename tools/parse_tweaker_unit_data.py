@@ -8,7 +8,7 @@ from collections import Counter
 from pathlib import Path
 
 def parse_ranged_type(ranged_type_str: str) -> dict:
-    """Parse ranged type string into ranged_type, breath fields, or gaze ability name."""
+    """Parse the DOS shared ranged/throw/breath/gaze type."""
     result = {}
 
     if not ranged_type_str or ranged_type_str.strip() == '':
@@ -16,18 +16,20 @@ def parse_ranged_type(ranged_type_str: str) -> dict:
 
     ranged_type_str = ranged_type_str.strip()
 
-    # Gaze attacks — not a real ranged attack; value comes from Gaze/Poison column
+    # Gaze attacks — not a real ranged attack. The type alone selects which gaze loops run
+    # (103 stoning, 105 death, 104 both), and the strength/`Spec_Att_Attrib` pair supplies
+    # their magnitudes, so no ability token is emitted for them.
     if 'Death Gaze' in ranged_type_str:
-        result['gaze_ability'] = 'Death Gaze'
+        result['ranged_type'] = 'Gaze(Death)'
+        result['is_gaze'] = True
         return result
     elif 'Stoning Gaze' in ranged_type_str:
-        result['gaze_ability'] = 'Stoning Gaze'
+        result['ranged_type'] = 'Gaze(Stoning)'
+        result['is_gaze'] = True
         return result
-    elif 'Doom Gaze' in ranged_type_str:
-        result['gaze_ability'] = 'Doom Gaze'
-        return result
-    elif 'Multiple Gaze' in ranged_type_str:
-        result['gaze_ability'] = 'Multiple Gaze'
+    elif 'Doom Gaze' in ranged_type_str or 'Multiple Gaze' in ranged_type_str:
+        result['ranged_type'] = 'Gaze(Multiple)'
+        result['is_gaze'] = True
         return result
 
     # Breath attack types (no magic school prefix)
@@ -84,18 +86,29 @@ def parse_immunities(immunities_str: str) -> list:
 
     return result
 
-# Abilities that take their numeric value from the Gaze/Poison column.
-# These are emitted as 'AbilityName=<raw gaze_poison value>' in the final list.
-# 'Multiple Gaze' is handled separately — it expands into three gaze abilities.
+# Consumers of the Gaze/Poison column, which is the DOS record's single `Spec_Att_Attrib`
+# byte (+0x15). Every entry below reads that same byte, so a unit can carry at most one
+# magnitude however many of these it has — Chaos Spawn, the only roster unit with two, is
+# why its stoning and death modifiers are always equal.
+#
+# They are emitted as **bare flag tokens**. The magnitude is written once, to
+# `spec_att_attrib`, and each consumer's gate is the flag's presence; emitting the value per
+# effect would restate the byte and let the copies disagree. The column is only a
+# *presentation* of the byte — the Tweaker pre-negates it for the save-modifier consumers
+# and leaves the count/magnitude consumers positive — which is why `spec_att_attrib` stores
+# the unsigned magnitude and each consumer applies its own sign.
+#
+# A blank column with the token present means the flag is set and the byte is 0 — Spearmen
+# carry `Regeneration` with no value. It does not mean 1.
+#
+# The gazes are absent deliberately: `ranged_type` selects them (103/104/105) and the shared
+# strength slot carries Doom's damage, so they need no token at all.
 NUMERIC_ABILITIES = {
     'Poison attack':       'Poison Touch',
     'Life Stealing':       'Life Steal',
     'Stoning Touch':       'Stoning Touch',
     'Holy Bonus':          'Holy Bonus',
     'Resistance to All':   'Resistance to All',
-    'Death Gaze':          'Death Gaze',
-    'Stoning Gaze':        'Stoning Gaze',
-    'Doom Gaze':           'Doom Gaze',
     'Regeneration':        'Regeneration',
 }
 
@@ -107,6 +120,9 @@ TOKEN_RENAMES = {
     'Summon Demons 1': 'Summon Demons Spell',
     'Weapon Imm': 'Weapon Immunity',
     'Automatic Damage': 'Doom',
+    # The DOS source spells this out; the modern rosters and the ability def both call it
+    # `Illusion`. Kept verbatim it matched nothing, so the Phantoms lost the ability.
+    'Illusionary attack': 'Illusion',
 }
 
 TOKEN_DISCARD = {
@@ -121,7 +137,7 @@ TOKEN_DISCARD = {
 EXPLICIT_KEEP = {
     'Caster 20 MP', 'Caster 40 MP', 'Doombolt Spell', 'Healing Spell',
     'Immolation', 'Lucky', 'Web Spell',          # Attributes column
-    'Armor Piercing', 'First Strike', 'Illusionary attack', 'Dispel Evil',  # Attacks column
+    'Armor Piercing', 'First Strike', 'Dispel Evil',  # Attacks column
 }
 
 def parse_attributes(attributes_str: str) -> list:
@@ -253,12 +269,11 @@ def process_unit_file(input_file: Path):
 
             # Parse ranged/breath type
             ranged_info = parse_ranged_type(row.get('RangedType', ''))
-            gaze_token = None
-            gaze_ranged_val = 0
-            if 'gaze_ability' in ranged_info:
-                # Gaze attacks are abilities, not ranged attacks; save hidden ranged value
-                gaze_token = ranged_info['gaze_ability']
-                gaze_ranged_val = unit.pop('ranged', 0)
+            is_gaze = ranged_info.get('is_gaze', False)
+            if is_gaze:
+                # The shared DOS strength/type pair on the roster record is the whole gaze:
+                # the type selects the loops and the strength carries Doom's damage.
+                unit['ranged_type'] = ranged_info['ranged_type']
             elif 'ranged_type' in ranged_info:
                 if ranged_info['ranged_type'] == 'thrown':
                     unit['thrown_breath_type'] = 'thrown'
@@ -287,12 +302,6 @@ def process_unit_file(input_file: Path):
             abilities = parse_abilities(row.get('Abilities', ''))
             immunities = parse_immunities(row.get('Immunities', ''))
             attacks_raw = [x.strip() for x in row.get('Attacks', '').split(',') if x.strip()]
-            if gaze_token:
-                attacks_raw = [gaze_token] + attacks_raw
-                # Hidden gaze ranged attack (physical damage component of the gaze)
-                # Not for Doom Gaze or Multiple Gaze (which includes Doom Gaze)
-                if gaze_ranged_val > 0 and gaze_token not in ('Doom Gaze', 'Multiple Gaze'):
-                    attacks_raw.append(f'Gaze Ranged={gaze_ranged_val}')
 
             # Read the raw Gaze/Poison value (used only when a numeric ability is found)
             gaze_poison_str = row.get('Gaze/Poison', '').strip()
@@ -309,34 +318,31 @@ def process_unit_file(input_file: Path):
 
             final_abilities = []
             seen = set()
+            has_byte_consumer = is_gaze
             for token in all_tokens:
                 if token in TOKEN_DISCARD:
                     continue
 
                 token = TOKEN_RENAMES.get(token, token)
 
-                # Multiple Gaze expands into three separate gaze abilities
-                if token == 'Multiple Gaze':
-                    val = gaze_poison_val
-                    for gaze_name, sign in [('Doom Gaze', 1), ('Death Gaze', -1), ('Stoning Gaze', -1)]:
-                        entry = f'{gaze_name}={sign * (val if val is not None else 1)}'
-                        if entry not in seen:
-                            seen.add(entry)
-                            final_abilities.append(entry)
-                    continue
-
-                # Find if this token matches a numeric ability
-                matched_key = token if token in NUMERIC_ABILITIES else None
-
-                if matched_key is not None:
-                    canonical = NUMERIC_ABILITIES[matched_key]
-                    entry = f'{canonical}={gaze_poison_val if gaze_poison_val is not None else 1}'
+                # Byte consumers are emitted as bare flags: the magnitude lives once in
+                # `spec_att_attrib` and the calculator's DOS card reads it from there.
+                if token in NUMERIC_ABILITIES:
+                    has_byte_consumer = True
+                    entry = NUMERIC_ABILITIES[token]
                 else:
                     entry = token
 
                 if entry not in seen:
                     seen.add(entry)
                     final_abilities.append(entry)
+
+            # The record's own `Spec_Att_Attrib` byte, unsigned. Emitted whenever any consumer
+            # is present, including at magnitude 0, since flag-set-at-0 and flag-absent are
+            # different states. Consumers negate it themselves where they need a modifier.
+            # Gazes count: they carry no flag, but the byte is still their save modifier.
+            if has_byte_consumer:
+                unit['spec_att_attrib'] = abs(gaze_poison_val) if gaze_poison_val is not None else 0
 
             if parse_int(row.get('Nr', '-1')) <= 34:
                 unit['category'] = 'Heroes'

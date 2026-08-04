@@ -54,6 +54,27 @@ function abilityDisplayLabel(abil) {
   return abil.label;
 }
 
+// Card sections are titled by what the engine lets you change, not by def group. The
+// `group` string stays the internal key (dataset.abilGroup drives version gating and
+// group hiding); only the visible heading differs. "Enchantments" also heads the level,
+// weapon and armor selects, which is why its heading names conditions too.
+const ABIL_GROUP_HEADINGS = {
+  Enchantments: 'Enchantments and conditions',
+};
+
+// The def groups that get their own show-all toggle.
+const ABIL_TOGGLE_GROUPS = ['Abilities', 'Enchantments'];
+
+// Each group hides its inactive items independently, tracked by a class on the section so
+// both panels stay in step. Version-gated items are never revealed by either toggle.
+function groupHidingClass(group) {
+  return 'hide-inactive-' + group.toLowerCase().replace(/[^a-z]+/g, '-');
+}
+
+function isGroupHiding(section, group) {
+  return section.classList.contains(groupHidingClass(group));
+}
+
 function buildAbilitiesUI(prefix) {
   const container = document.getElementById(prefix + 'Abilities');
   let gridDiv = null;
@@ -77,9 +98,24 @@ function buildAbilitiesUI(prefix) {
       const header = document.createElement('div');
       header.className = 'abil-group-header';
       header.dataset.abilGroup = currentGroup;
-      header.textContent = currentGroup;
+      // The heading carries the group's own show-all toggle, so it must render even when the
+      // group has nothing visible — otherwise a roster unit with no abilities would offer no
+      // way to reveal its greyed-out remainder.
+      const title = document.createElement('span');
+      title.textContent = ABIL_GROUP_HEADINGS[currentGroup] || currentGroup;
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'toggle-abil-btn';
+      toggle.dataset.abilGroup = currentGroup;
+      toggle.title = 'Show/hide inactive ' + (ABIL_GROUP_HEADINGS[currentGroup] || currentGroup).toLowerCase();
+      header.append(title, toggle);
       container.appendChild(header);
       if (currentGroup === 'Enchantments') {
+        // Level/weapon/armor are selectable pre-combat conditions, not roster-locked base
+        // stats, so they belong under this heading rather than above the ability list.
+        const section = container.closest('.abilities-section');
+        const loadout = section && section.querySelector('.loadout-fields');
+        if (loadout) container.appendChild(loadout);
         // Checkbox block first (two columns), then the controls below it: a three-column row for
         // the Elements/Discipline/Breakthrough dropdowns, then the remaining controls.
         enchBoolsDiv = document.createElement('div');
@@ -511,7 +547,7 @@ function readUnitStats(prefix, overrides) {
   return deriveUnitStats({
     prefix,
     version: el('gameVersion').value,
-    abilities: readAbilitiesFromDOM(prefix),
+    abilities: { ...readAbilitiesFromDOM(prefix), ...modernSpecialValues(prefix), ...dosSpecialValues(prefix) },
     race: (unitIdentity[prefix] || {}).race,
     name: (unitIdentity[prefix] || {}).name,
     level: el(prefix + 'Level').value,
@@ -522,6 +558,7 @@ function readUnitStats(prefix, overrides) {
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
+    modernAttacks: modernCardAttacks(prefix),
     def: el(prefix + 'Def').value,
     res: el(prefix + 'Res').value,
     hp: el(prefix + 'HP').value,
@@ -545,6 +582,316 @@ function readUnitStats(prefix, overrides) {
     generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
   });
 }
+
+const MODERN_SPECIAL_FIELDS = [
+  ['stoningGaze', 'Stoning Gaze'], ['deathGaze', 'Death Gaze'], ['doomGaze', 'Doom Gaze'],
+  ['stoningTouch', 'Stoning Touch'], ['deathTouch', 'Death Touch'], ['lifeSteal', 'Life Steal'],
+  ['poison', 'Poison Touch'], ['exorcise', 'Exorcise'], ['destruction', 'Destruction'],
+];
+
+function modernSpecialDef(key) {
+  return ABILITY_DEFS.find(a => a.key === key);
+}
+
+// null (absent) and 0 (present, save modifier −0) are different states for the numcheck
+// entries — the engine tests `!= null` — so an unchecked box must read back as null, not 0.
+function modernSpecialValues(prefix) {
+  if (!document.getElementById('gameVersion').value.startsWith('com2')) return {};
+  return Object.fromEntries(MODERN_SPECIAL_FIELDS.map(([key]) => {
+    const chk = document.getElementById(prefix + 'Modern_' + key + '_on');
+    if (chk && !chk.checked) return [key, null];
+    return [key, parseInt(document.getElementById(prefix + 'Modern_' + key).value, 10) || 0];
+  }));
+}
+
+// The ability control stays the stored state (unit rosters, presets and state restore all
+// write it), so the two copies mirror each other in both directions.
+function syncModernSpecialCard(prefix) {
+  for (const [key] of MODERN_SPECIAL_FIELDS) {
+    const source = document.getElementById(prefix + 'Abil_' + key);
+    const target = document.getElementById(prefix + 'Modern_' + key);
+    if (source && target) target.value = source.value || 0;
+    const sourceChk = document.getElementById(prefix + 'Abil_' + key + '_on');
+    const targetChk = document.getElementById(prefix + 'Modern_' + key + '_on');
+    if (sourceChk && targetChk) targetChk.checked = sourceChk.checked;
+  }
+}
+
+// In CoM2 & Warlord these nine values get their own two-column block on the stat card, so the
+// ability-section rows would be a second control for the same number: hide them there. The
+// ability controls stay in the DOM and keep holding the state — the card mirrors them.
+// `abil-duplicate` is deliberately not `abil-hidden`, which updateAbilityVisibility owns.
+function updateModernSpecialDuplicates(modern) {
+  const keys = new Set(MODERN_SPECIAL_FIELDS.map(([key]) => key));
+  document.querySelectorAll('.abil-item').forEach(item => {
+    if (keys.has(item.dataset.abilKey)) item.classList.toggle('abil-duplicate', modern);
+  });
+}
+
+function syncModernSpecialAbility(prefix, key) {
+  const card = document.getElementById(prefix + 'Modern_' + key);
+  const abil = document.getElementById(prefix + 'Abil_' + key);
+  if (card && abil) abil.value = card.value;
+  const cardChk = document.getElementById(prefix + 'Modern_' + key + '_on');
+  const abilChk = document.getElementById(prefix + 'Abil_' + key + '_on');
+  if (cardChk && abilChk) abilChk.checked = cardChk.checked;
+}
+
+function buildModernSpecialCard(prefix) {
+  const fields = document.querySelector('#panel' + (prefix === 'a' ? 'A' : 'B') + ' .panel-fields');
+  // Two label+input pairs per row (four grid columns) — nine gaze/touch/special values would
+  // otherwise cost nine full-width rows in the stat grid.
+  const grid = document.createElement('div');
+  grid.className = 'modern-special-grid modern-special version-hidden';
+  fields.append(grid);
+  for (const [key, label] of MODERN_SPECIAL_FIELDS) {
+    const id = prefix + 'Modern_' + key;
+    const def = modernSpecialDef(key);
+    // Column 1 of each pair: the on/off checkbox (numcheck entries only) beside the label,
+    // matching the ability row this replaces.
+    const cell = document.createElement('span');
+    cell.className = 'modern-special-label';
+    if (def && def.tooltip) cell.dataset.tooltip = def.tooltip;
+    if (def && def.type === 'numcheck') {
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.id = id + '_on';
+      chk.addEventListener('change', () => syncModernSpecialAbility(prefix, key));
+      cell.appendChild(chk);
+    }
+    const lbl = document.createElement('label');
+    lbl.htmlFor = id;
+    lbl.textContent = label;
+    cell.appendChild(lbl);
+    const input = document.createElement('input');
+    input.id = id;
+    input.type = 'number'; input.min = '-50'; input.max = '50'; input.value = '0';
+    if (def && def.tooltip) input.dataset.tooltip = def.tooltip;
+    input.addEventListener('input', () => syncModernSpecialAbility(prefix, key));
+    input.addEventListener('change', () => syncModernSpecialAbility(prefix, key));
+    grid.append(cell, input);
+    const source = document.getElementById(prefix + 'Abil_' + key);
+    if (source) source.addEventListener('input', () => syncModernSpecialCard(prefix));
+    if (source) source.addEventListener('change', () => syncModernSpecialCard(prefix));
+    const sourceChk = document.getElementById(prefix + 'Abil_' + key + '_on');
+    if (sourceChk) sourceChk.addEventListener('change', () => syncModernSpecialCard(prefix));
+  }
+}
+// --- DOS shared special-value block ---
+
+// The DOS record carries one `Spec_Att_Attrib` byte (+0x15) and every consumer below reads
+// it: the touch riders as a save modifier (the code negates it at the read site), Poison
+// Touch as a repeat count, Holy Bonus and Resistance to All as a magnitude. So the block is
+// one number plus flags, not a number each. The third element is the sign the consumer's
+// existing ability control expects, which is how the rosters have always stored it.
+//
+// The gazes read the same byte but are selected by `ranged_type` (103/104/105), not by a
+// flag, so they get no control here — the shared strength/type slot above already selects
+// them. Holy Bonus and Resistance to All are this unit's *provided* value; the received
+// side stays in the enchantment section and the two max together in `mergedAbilityValue`.
+const DOS_SPECIAL_CONSUMERS = [
+  ['stoningTouch', 'Stoning Touch', -1],
+  ['deathTouch', 'Death Touch', -1],
+  ['lifeSteal', 'Life Steal', -1],
+  ['poison', 'Poison Touch', 1],
+  ['holyBonus', 'Holy bonus', 1],
+  ['resistanceToAll', 'Res. to all', 1],
+];
+
+// Dispel Evil and Destruction dispatch alongside the touch riders but their modifiers are
+// literals in the DOS code — -4 and 0 — so they never read the byte. They therefore stay
+// ordinary ability rows rather than joining the card block, which is reserved for the byte's
+// consumers.
+
+// Consumers the shared slot's type selects rather than a flag, so they get no DOS control.
+const DOS_GAZE_KEYS = ['stoningGaze', 'deathGaze', 'doomGaze'];
+
+function dosSpecialDef(key) {
+  return ABILITY_DEFS.find(a => a.key === key);
+}
+
+function dosSpecialIsActive(version) {
+  return !version.startsWith('com2');
+}
+
+// Card -> ability controls. Each ticked consumer takes the shared magnitude with its own
+// sign; an unticked one reverts to the def's absent value, which for a numcheck is null
+// rather than 0 because the engine distinguishes the two.
+function syncDosSpecialAbilities(prefix) {
+  const magEl = document.getElementById(prefix + 'DosSpecial');
+  if (!magEl) return;
+  const magnitude = Math.abs(parseInt(magEl.value, 10) || 0);
+  for (const [key, , sign] of DOS_SPECIAL_CONSUMERS) {
+    const def = dosSpecialDef(key);
+    const chk = document.getElementById(prefix + 'DosFlag_' + key);
+    if (!def || !chk) continue;
+    setAbilityControlValue(prefix, def,
+      chk.checked ? sign * magnitude : (def.type === 'numcheck' ? null : 0));
+  }
+}
+
+// Ability controls -> card, for presets and state restore, which describe the DOS special
+// values by ability key and so are the only remaining places a magnitude has to be recovered
+// from them. `byte` is the roster path: the record states `Spec_Att_Attrib` directly, so the
+// flags come from the tokens but the magnitude never does.
+function syncDosSpecialCard(prefix, byte) {
+  const magEl = document.getElementById(prefix + 'DosSpecial');
+  if (!magEl) return;
+  let magnitude = byte == null ? null : Math.abs(byte);
+  for (const [key] of DOS_SPECIAL_CONSUMERS) {
+    const def = dosSpecialDef(key);
+    const chk = document.getElementById(prefix + 'DosFlag_' + key);
+    if (!def || !chk) continue;
+    const val = getAbilityControlValue(prefix, def);
+    const active = abilityValueIsActive(def, val);
+    chk.checked = active;
+    if (active && magnitude === null) magnitude = Math.abs(val || 0);
+  }
+  // The gazes carry no flag but do carry the byte, so a gaze-only unit — Basilisk, and every
+  // gaze preset — must still seed the magnitude from them.
+  if (magnitude === null) {
+    for (const key of DOS_GAZE_KEYS) {
+      const def = dosSpecialDef(key);
+      if (!def) continue;
+      const val = getAbilityControlValue(prefix, def);
+      if (abilityValueIsActive(def, val)) { magnitude = Math.abs(val || 0); break; }
+    }
+  }
+  // Nothing sourced it: reset rather than keep the previous unit's byte. Leaving it would let
+  // one roster pick or preset leak a save modifier into the next.
+  magEl.value = magnitude === null ? 0 : magnitude;
+}
+
+// Highest value the enchantment section supplies for a calc key. Holy Bonus and Resistance to
+// All are the two that matter: the block above is what this unit *provides*, this is what it
+// *receives*, and the engine takes the winner once rather than stacking them.
+function dosReceivedValue(prefix, calcKey) {
+  let out;
+  for (const def of abilityUiDefs()) {
+    if (def.source !== 'enchantment' || def.calcKey !== calcKey) continue;
+    out = mergedAbilityValue(def, out, getAbilityControlValue(prefix, def));
+  }
+  return out;
+}
+
+// The DOS read side. Consumer values are derived from the one byte and its flags rather than
+// from the per-effect ability controls, so the record's contention holds however the state was
+// reached — roster, preset, share link or hand edit. The DOS rosters no longer carry a
+// per-effect magnitude at all; the ability controls survive only as the presets' and share
+// links' way of naming these values, and the card overwrites them on load.
+// `withReceived` is false on the matrix path, where the received side comes from matrix state
+// and is overlaid after this, not from the enchantment controls.
+function dosSpecialValues(prefix, withReceived = true) {
+  if (!dosSpecialIsActive(document.getElementById('gameVersion').value)) return {};
+  const magEl = document.getElementById(prefix + 'DosSpecial');
+  if (!magEl) return {};
+  const magnitude = Math.abs(parseInt(magEl.value, 10) || 0);
+  const out = {};
+  for (const [key, , sign] of DOS_SPECIAL_CONSUMERS) {
+    const def = dosSpecialDef(key);
+    const chk = document.getElementById(prefix + 'DosFlag_' + key);
+    if (!def || !chk) continue;
+    const calcKey = def.calcKey || def.key;
+    if (def.type === 'numcheck') {
+      out[calcKey] = chk.checked ? sign * magnitude : null;
+    } else {
+      // Numeric consumers max against whatever the enchantment section grants.
+      out[calcKey] = mergedAbilityValue(def,
+        withReceived ? dosReceivedValue(prefix, calcKey) : undefined,
+        chk.checked ? sign * magnitude : 0);
+    }
+  }
+  // The gazes read the same byte, but the shared slot's type selects them rather than a flag:
+  // 103 runs the stoning kill loop, 105 the death loop, and 104 runs both — which is why a
+  // unit with two gazes is necessarily 104, and why the two share one modifier. Selecting a
+  // non-gaze type therefore removes the gaze outright; the record cannot hold both.
+  const gazeType = (document.getElementById(prefix + 'RtbType') || {}).value;
+  const stoning = gazeType === 'gaze_stoning' || gazeType === 'gaze_multiple';
+  const death = gazeType === 'gaze_death' || gazeType === 'gaze_multiple';
+  out.stoningGaze = stoning ? -magnitude : null;
+  out.deathGaze = death ? -magnitude : null;
+  // Doom damage is the shared *strength* slot, not the byte — `deriveUnitStats` reads it from
+  // there for type 104 — so the ability value contributes nothing in the DOS versions.
+  out.doomGaze = 0;
+  // Dispel Evil and Destruction are deliberately absent: their modifiers are literals, so they
+  // stay ordinary ability rows and `readAbilitiesFromDOM` supplies them.
+  return out;
+}
+
+// Mirror of updateModernSpecialDuplicates: in the DOS versions these values are on the card,
+// so their ability rows would be a second control for the same state.
+function updateDosSpecialDuplicates(dos) {
+  const keys = new Set(DOS_SPECIAL_CONSUMERS.map(([key]) => key));
+  // The gazes have no control at all in the DOS versions: the slot's type selects them and
+  // the special value is their modifier, so an editable row would be a third source.
+  for (const key of DOS_GAZE_KEYS) keys.add(key);
+  document.querySelectorAll('.abil-item').forEach(item => {
+    if (keys.has(item.dataset.abilKey)) item.classList.toggle('abil-duplicate-dos', dos);
+  });
+}
+
+function buildDosSpecialCard(prefix) {
+  const fields = document.querySelector('#panel' + (prefix === 'a' ? 'A' : 'B') + ' .panel-fields');
+  const grid = document.createElement('div');
+  grid.className = 'dos-special-grid dos-special-attack';
+  // Directly under the shared strength/type slot, because the magnitude is that attack's
+  // parameter as much as the touch riders' — placing it at the end of the card would hide
+  // the connection the record makes.
+  const anchor = document.getElementById(prefix + 'RtbMod');
+  fields.insertBefore(grid, anchor ? anchor.nextSibling : null);
+
+  const magTip = 'The DOS record\'s single special-value byte.\n'
+    + 'Every ticked effect below reads this same number, as do the gazes.\n'
+    + 'Touch riders take it as a save modifier, Poison Touch as a repeat count,\n'
+    + 'Holy bonus and Res. to all as a magnitude.';
+  const magLabelCell = document.createElement('span');
+  magLabelCell.className = 'dos-special-label dos-special-magnitude';
+  magLabelCell.dataset.tooltip = magTip;
+  const magLabel = document.createElement('label');
+  magLabel.htmlFor = prefix + 'DosSpecial';
+  magLabel.textContent = 'Special value';
+  magLabelCell.appendChild(magLabel);
+  const magInput = document.createElement('input');
+  magInput.id = prefix + 'DosSpecial';
+  magInput.type = 'number'; magInput.min = '0'; magInput.max = '50'; magInput.value = '0';
+  magInput.className = 'dos-special-magnitude';
+  magInput.dataset.tooltip = magTip;
+  magInput.addEventListener('input', () => syncDosSpecialAbilities(prefix));
+  magInput.addEventListener('change', () => syncDosSpecialAbilities(prefix));
+  grid.append(magLabelCell, magInput);
+
+  for (const [key, label] of DOS_SPECIAL_CONSUMERS) {
+    grid.append(buildDosFlagCell(prefix, key, label));
+  }
+
+  for (const [key] of DOS_SPECIAL_CONSUMERS) {
+    const def = dosSpecialDef(key);
+    if (!def) continue;
+    const id = abilityControlId(prefix, def);
+    for (const el of [document.getElementById(id), document.getElementById(id + '_on')]) {
+      if (!el) continue;
+      el.addEventListener('input', () => syncDosSpecialCard(prefix));
+      el.addEventListener('change', () => syncDosSpecialCard(prefix));
+    }
+  }
+}
+
+function buildDosFlagCell(prefix, key, label) {
+  const def = dosSpecialDef(key);
+  const cell = document.createElement('span');
+  cell.className = 'dos-special-label';
+  if (def && def.tooltip) cell.dataset.tooltip = def.tooltip;
+  const chk = document.createElement('input');
+  chk.type = 'checkbox';
+  chk.id = prefix + 'DosFlag_' + key;
+  chk.addEventListener('change', () => syncDosSpecialAbilities(prefix));
+  const lbl = document.createElement('label');
+  lbl.htmlFor = chk.id;
+  lbl.textContent = label;
+  cell.append(chk, lbl);
+  return cell;
+}
+
 // --- Modified Display ---
 
 // Show modified (final) stat values next to base stat fields.
@@ -591,10 +938,11 @@ function updateModifiedDisplay(prefix, stats) {
 
 // --- Level Bonuses ---
 
-// Reset the stat fields to the roster unit's base values; the level bonuses themselves
-// are applied later by deriveUnitStats. Guarded on base.atk because a custom unit's
-// record may hold only the `generic` flag (see applyFullState), not base stats.
-function applyLevelBonuses(prefix) {
+// Reset the stat fields to the roster unit's base values. Nothing here applies a level
+// bonus: the card holds pre-level stats, and the level ladder is an ordinary transform
+// step in deriveUnitStats (`stats.js`, statStep 'level'). Guarded on base.atk because a
+// custom unit's record may hold only the `generic` flag (see applyFullState), not base stats.
+function resetCardToRosterBase(prefix) {
   const base = unitBaseStats[prefix];
   if (!base || base.atk === undefined) return;
   document.getElementById(prefix + 'Atk').value = base.atk;
@@ -603,6 +951,7 @@ function applyLevelBonuses(prefix) {
   document.getElementById(prefix + 'Res').value = base.res;
   document.getElementById(prefix + 'HP').value = base.hp;
   document.getElementById(prefix + 'ToHitMod').value = base.toHitMod;
+  applyModernAttackFields(prefix, base.modernAttacks);
 }
 
 // --- Unit Application ---
@@ -613,10 +962,45 @@ function setRosterUnitRecords(prefix, unit) {
   unitBaseStats[prefix] = {
     atk: unit.melee, def: unit.defense, res: unit.resist, hp: unit.hp,
     rtb: predefinedUnitRtb(unit),
+    modernAttacks: predefinedModernAttacks(unit),
     toHitMod: unit.to_hit || 0,
     generic: unit.category === 'Generic',
   };
   unitIdentity[prefix] = { race: unit.race, name: unit.name };
+}
+
+// CoM2/Warlord keep four conventional attack channels.  The card owns the editable
+// boundary: a roster selection writes its source values here, while a custom modern
+// unit reads the same named fields.  The old RTB pair remains exclusively for the
+// DOS engines' shared special-value field.
+function modernCardAttacks(prefix) {
+  const version = document.getElementById('gameVersion').value;
+  if (!version.startsWith('com2')) return null;
+  const number = suffix => Math.max(0, parseInt(document.getElementById(prefix + suffix).value, 10) || 0);
+  const ranged = number('ModernRanged');
+  const thrown = number('ModernThrown');
+  const fireBreath = number('ModernFireBreath');
+  const lightningBreath = number('ModernLightningBreath');
+  return {
+    ranged: ranged ? { strength: ranged, type: document.getElementById(prefix + 'ModernRangedType').value } : null,
+    thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
+    fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
+    lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,
+  };
+}
+
+function applyModernAttackFields(prefix, attacks) {
+  const channels = attacks || {};
+  const set = (suffix, channel) => {
+    const el = document.getElementById(prefix + suffix);
+    if (el) el.value = channel && channel.strength || 0;
+  };
+  set('ModernRanged', channels.ranged);
+  set('ModernThrown', channels.thrown);
+  set('ModernFireBreath', channels.fireBreath);
+  set('ModernLightningBreath', channels.lightningBreath);
+  const type = document.getElementById(prefix + 'ModernRangedType');
+  if (type) type.value = channels.ranged ? channels.ranged.type : 'none';
 }
 
 function clearUnitInnateLocks(prefix) {
@@ -651,9 +1035,12 @@ function applyUnit(prefix, unitIndex) {
 
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
   document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
-  document.getElementById(prefix + 'ToBlkMod').value = 0;
+  // Modern rosters store an absolute To Defend chance; the card stores the
+  // calculator's modifier above its 30% base.
+  document.getElementById(prefix + 'ToBlkMod').value = (unit.to_block == null ? 30 : unit.to_block) - 30;
   document.getElementById(prefix + 'Dmg').value = 0;
   document.getElementById(prefix + 'RtbType').value = predefinedUnitRtbType(unit);
+  applyModernAttackFields(prefix, unitBaseStats[prefix].modernAttacks);
 
   const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
   if (unitTypeSel) unitTypeSel.value = predefinedUnitType(unit);
@@ -662,7 +1049,13 @@ function applyUnit(prefix, unitIndex) {
   const abilValues = parseAbilitiesFromUnit(unit);
   clearAbilities(prefix, 'ability');
   applyAbilities(prefix, abilValues, 'ability');
-  applyLevelBonuses(prefix);
+  syncModernSpecialCard(prefix);
+  // The DOS rosters carry bare consumer flags plus the one `spec_att_attrib` byte, so the
+  // card takes its magnitude from the record and then writes it back over the ability rows,
+  // which parsed the flag-only tokens as 0/1.
+  syncDosSpecialCard(prefix, unit.spec_att_attrib);
+  if (dosSpecialIsActive(version)) syncDosSpecialAbilities(prefix);
+  resetCardToRosterBase(prefix);
   markUnitInnateLocks(prefix, abilValues);
 
   refreshAbilityFieldVisibility();
@@ -670,7 +1063,7 @@ function applyUnit(prefix, unitIndex) {
 
 // applyValues=false is the state-restore path: rebuild the JS-side unit records and all
 // lock styling for the current selection WITHOUT writing any field values, which on
-// restore may be hand-edited (applyUnit/applyLevelBonuses would clobber them).
+// restore may be hand-edited (applyUnit/resetCardToRosterBase would clobber them).
 function updateUnitLock(prefix, applyValues = true) {
   const sel = document.getElementById(prefix + 'Unit');
   const fields = sel.closest('.panel').querySelector('.panel-fields');
@@ -765,6 +1158,7 @@ function resetUnitFields(prefix) {
   document.getElementById(prefix + 'Atk').value = s.atk;
   document.getElementById(prefix + 'RtbType').value = s.rtbType;
   document.getElementById(prefix + 'Rtb').value = s.rtb;
+  applyModernAttackFields(prefix, null);
   document.getElementById(prefix + 'Def').value = s.def;
   document.getElementById(prefix + 'Res').value = s.res;
   document.getElementById(prefix + 'ToHitMod').value = s.toHitMod;
@@ -800,11 +1194,9 @@ function resetGlobalOptions() {
 
 function resetAbilityPanelVisibility() {
   document.querySelectorAll('.abilities-section').forEach(section => {
-    section.classList.add('hide-inactive');
+    ABIL_TOGGLE_GROUPS.forEach(group => section.classList.add(groupHidingClass(group)));
   });
-  document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
-    btn.textContent = 'Show all';
-  });
+  updateAbilityVisibility();
 }
 
 function selectDefaultUnit(prefix, units) {
@@ -843,7 +1235,7 @@ function swapAttackerDefender() {
   aUnitSel.value = bUnitSel.value;
   bUnitSel.value = tmp;
 
-  const simpleFields = ['Figs', 'Atk', 'RtbType', 'Rtb', 'ToHitMod', 'ToHitRtbMod', 'ToBlkMod', 'Def', 'Res', 'HP', 'Dmg', 'Level', 'Weapon', 'Armor'];
+  const simpleFields = ['Figs', 'Atk', 'RtbType', 'Rtb', 'ModernRangedType', 'ModernRanged', 'ModernThrown', 'ModernFireBreath', 'ModernLightningBreath', 'ToHitMod', 'ToHitRtbMod', 'ToBlkMod', 'Def', 'Res', 'HP', 'Dmg', 'Level', 'Weapon', 'Armor'];
   for (const f of simpleFields) {
     const aEl = document.getElementById('a' + f);
     const bEl = document.getElementById('b' + f);
@@ -969,6 +1361,10 @@ function onVersionChange() {
   }
 
   refreshAbilityFieldVisibility();
+  // Re-seed the DOS block from the ability state this switch produced. It belongs here rather
+  // than in updateTypeVisibility, which runs on every input — re-deriving the magnitude on each
+  // keystroke would overwrite whatever was just typed into it.
+  if (!version.startsWith('com2')) { syncDosSpecialCard('a'); syncDosSpecialCard('b'); }
   updateGlobalEnchantmentVisibility(version);
   renderAllMatrixPropLists();
   recalculate();
@@ -1168,7 +1564,10 @@ function recalculate() {
   updateModifiedDisplay('a', a);
   updateModifiedDisplay('b', b);
 
-  const isRanged = document.getElementById('rangedCheck').checked && a.rangedType !== 'none' && a.rtb > 0;
+  const hasRangedAttack = a.modernAttacks
+    ? !!(a.modernAttacks.ranged && a.modernAttacks.ranged.strength > 0)
+    : a.rangedType !== 'none' && a.rtb > 0;
+  const isRanged = document.getElementById('rangedCheck').checked && hasRangedAttack;
   const version = document.getElementById('gameVersion').value;
   const wallOfFire = document.getElementById('wallOfFire').checked;
 
@@ -1210,6 +1609,18 @@ function subgroupAllowedForVersion(subgroup, version) {
   if (sg === 'Warlord') return isWarlord;
   if (sg === 'Renamed in Warlord') return isWarlord;
   return true;
+}
+
+// The single home for "does this def exist in this version". Both enchantments and ability tags
+// are gated by their subgroup; a def with no subgroup, or a `_`-prefixed presentational one,
+// resolves to "allowed everywhere", so only the few that name a version set are restricted.
+// `updateTypeVisibility` applies this and tests/version-gating.spec.js asserts against it —
+// re-deriving the rule in either place would let the two drift.
+function abilityVersionGated(abil, version) {
+  const subgroupOk = subgroupAllowedForVersion(abil.subgroup, version);
+  const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
+  const exceptOk = !(abil.exceptVersions || []).some(v => version.startsWith(v));
+  return !((subgroupOk || overrideOk) && exceptOk);
 }
 
 // Global-enchantment controls in the .combat-enchantments frame are hardcoded HTML (not
@@ -1300,6 +1711,12 @@ function updateTypeVisibility() {
   });
 
   const version = document.getElementById('gameVersion').value;
+  const modern = version.startsWith('com2');
+  document.querySelectorAll('.dos-special-attack').forEach(el => el.classList.toggle('version-hidden', modern));
+  document.querySelectorAll('.modern-attack').forEach(el => el.classList.toggle('version-hidden', !modern));
+  document.querySelectorAll('.modern-special').forEach(el => el.classList.toggle('version-hidden', !modern));
+  updateModernSpecialDuplicates(modern);
+  updateDosSpecialDuplicates(!modern);
   updateLoadoutLocks('a');
   updateLoadoutLocks('b');
 
@@ -1325,14 +1742,12 @@ function updateTypeVisibility() {
     for (const abil of abilityUiDefs()) {
       const el = document.getElementById(abilityControlId(prefix, abil));
       if (!el) continue;
-      // Enchantments and the Warlord-mod-only ability tags are gated by game version;
-      // other ability tags are never version-restricted.
-      const isWarlordTag = abil.source === 'ability' && abil.subgroup === 'Warlord';
-      const versionGateable = abil.source === 'enchantment' || isWarlordTag;
-      const subgroupOk = subgroupAllowed(abil.subgroup);
-      const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
-      const exceptOk = !(abil.exceptVersions || []).some(v => version.startsWith(v));
-      const versionGated = versionGateable && !((subgroupOk || overrideOk) && exceptOk);
+      const versionGated = abilityVersionGated(abil, version);
+      // Recorded on the item because updateAbilityVisibility must tell "impossible in this
+      // version" (never shown) apart from "locked by a roster unit" (shown when the group's
+      // toggle is on) — both of which merely set the control's disabled attribute.
+      const gatedItem = el.closest('.abil-item');
+      if (gatedItem) gatedItem.classList.toggle('abil-version-gated', versionGated);
       if (versionGated) {
         // Effect cannot exist in this version: disable and clear the value.
         applyDisabled(el, true);
@@ -1363,7 +1778,9 @@ function updateTypeVisibility() {
   }
 
   const aStats = readUnitStats('a');
-  const hasRanged = aStats.rangedType !== 'none' && aStats.rtb > 0;
+  const hasRanged = aStats.modernAttacks
+    ? !!(aStats.modernAttacks.ranged && aStats.modernAttacks.ranged.strength > 0)
+    : aStats.rangedType !== 'none' && aStats.rtb > 0;
   const rangedCheckLabel = document.getElementById('rangedCheckLabel');
   const rangedCheck = document.getElementById('rangedCheck');
   const rangedDist = document.getElementById('rangedDist');
@@ -1404,6 +1821,21 @@ function applyPreset(name) {
     document.getElementById(prefix + 'Atk').value = s.atk;
     document.getElementById(prefix + 'RtbType').value = s.rtbType;
     document.getElementById(prefix + 'Rtb').value = s.rtb;
+    // Older presets use the DOS-shaped `rtb` pair.  Translate that fixture format into
+    // the modern card's named ranged channel when a CoM2/Warlord custom unit is applied;
+    // ordinary UI reads never consult the hidden DOS controls in modern versions.
+    if (document.getElementById('gameVersion').value.startsWith('com2')) {
+      applyModernAttackFields(prefix, null);
+      if (s.rtb > 0 && RANGED_TYPES.includes(s.rtbType)) {
+        applyModernAttackFields(prefix, { ranged: { strength: s.rtb, type: s.rtbType } });
+      } else if (s.rtb > 0 && s.rtbType === 'thrown') {
+        applyModernAttackFields(prefix, { thrown: { strength: s.rtb, type: 'thrown' } });
+      } else if (s.rtb > 0 && s.rtbType === 'fire') {
+        applyModernAttackFields(prefix, { fireBreath: { strength: s.rtb, type: 'fire' } });
+      } else if (s.rtb > 0 && s.rtbType === 'lightning') {
+        applyModernAttackFields(prefix, { lightningBreath: { strength: s.rtb, type: 'lightning' } });
+      }
+    }
     document.getElementById(prefix + 'Def').value = s.def;
     document.getElementById(prefix + 'Res').value = s.res;
     document.getElementById(prefix + 'ToHitMod').value = s.toHitMod;
@@ -1417,6 +1849,11 @@ function applyPreset(name) {
     document.getElementById(prefix + 'Abil_unitType').value = s.unitType;
     clearAbilities(prefix);
     applyAbilities(prefix, s.abilities);
+    // Special values are card-owned in every version. Presets still describe them by
+    // ability key, so mirror the just-applied fixture values before the calculation
+    // reads the card.
+    syncModernSpecialCard(prefix);
+    syncDosSpecialCard(prefix);
     refreshAbilityFieldVisibility();
   }
   const activeVersion = document.getElementById('gameVersion').value;
@@ -1798,23 +2235,27 @@ function isAbilityDisabled(item) {
 
 // Update which abilities are shown based on active state.
 // Hides inactive items, group headers, and empty grid containers when in hide-inactive mode.
+// An item is on screen only if neither hiding rule applies: abil-hidden (inactive/disabled,
+// owned by updateAbilityVisibility) or abil-duplicate (shown on the stat card instead).
+function isAbilityItemVisible(item) {
+  return !item.classList.contains('abil-hidden') && !item.classList.contains('abil-duplicate');
+}
+
 function updateAbilityVisibility() {
   for (const prefix of ['a', 'b']) {
     const section = document.getElementById(prefix + 'Abilities').closest('.abilities-section');
     if (!section) continue;
-    const content = document.getElementById(prefix + 'Abilities');
-    const hiding = section.classList.contains('hide-inactive');
     const items = section.querySelectorAll('.abil-item');
 
     items.forEach(item => {
       const active = isAbilityActive(item);
       const focused = item.contains(document.activeElement);
-      // Disabled controls (version-gated, or a locked roster unit's innate abilities) are
-      // hidden unless they are active — so we only ever show the abilities a unit actually
-      // has, never the greyed-out remainder. This applies regardless of hide-inactive mode.
-      const hideDisabled = isAbilityDisabled(item) && !active;
-      const hideInactive = hiding && !active && !focused;
-      item.classList.toggle('abil-hidden', hideDisabled || hideInactive);
+      // An effect the selected version cannot have is never shown; neither toggle reveals it.
+      // Everything else follows its own group's toggle, so "show all" on Abilities reveals a
+      // roster unit's greyed-out, locked remainder as well as its inactive ones.
+      const gated = item.classList.contains('abil-version-gated');
+      const hiding = isGroupHiding(section, item.dataset.abilGroup || '');
+      item.classList.toggle('abil-hidden', gated || (hiding && !active && !focused));
     });
 
     // Hide subgroup headers when all their children are hidden
@@ -1824,16 +2265,16 @@ function updateAbilityVisibility() {
       const subgroupItems = section.querySelectorAll(
         `.abil-item[data-abil-group="${group}"][data-abil-subgroup="${subgroup}"]`
       );
-      const anyVisible = [...subgroupItems].some(item => !item.classList.contains('abil-hidden'));
+      const anyVisible = [...subgroupItems].some(isAbilityItemVisible);
       header.classList.toggle('abil-hidden', !anyVisible);
     });
 
-    // Hide group headers and grid containers when all their children are hidden
+    // Group headers always render: each carries its group's toggle, and its label text is
+    // how the card's two sections are named. An empty group looks no different.
     section.querySelectorAll('.abil-group-header').forEach(header => {
-      const group = header.dataset.abilGroup;
-      const groupItems = section.querySelectorAll(`.abil-item[data-abil-group="${group}"]`);
-      const anyVisible = [...groupItems].some(item => !item.classList.contains('abil-hidden'));
-      header.classList.toggle('abil-hidden', !anyVisible);
+      header.classList.remove('abil-hidden');
+      const btn = header.querySelector('.toggle-abil-btn');
+      if (btn) btn.textContent = isGroupHiding(section, header.dataset.abilGroup) ? 'Show all' : 'Hide inactive';
     });
 
     // Hide empty grid containers
@@ -1841,25 +2282,19 @@ function updateAbilityVisibility() {
       const items = grid.querySelectorAll('.abil-item');
       let anyVisible = false;
       items.forEach(item => {
-        if (!item.classList.contains('abil-hidden')) anyVisible = true;
+        if (isAbilityItemVisible(item)) anyVisible = true;
       });
       grid.classList.toggle('abil-hidden', !anyVisible);
     });
 
-    const hasVisibleAbility = [...content.querySelectorAll('.abil-item')]
-      .some(item => !item.classList.contains('abil-hidden'));
-    section.classList.toggle('abilities-empty', hiding && !hasVisibleAbility);
   }
 }
 
-// Toggle show/hide all abilities for both panels
-function toggleAllAbilities() {
-  const sections = document.querySelectorAll('.abilities-section');
-  const btns = document.querySelectorAll('.toggle-abil-btn');
-  const isCurrentlyHiding = sections[0] && sections[0].classList.contains('hide-inactive');
-
-  sections.forEach(s => s.classList.toggle('hide-inactive', !isCurrentlyHiding));
-  btns.forEach(b => b.textContent = isCurrentlyHiding ? 'Hide inactive' : 'Show all');
+// Toggle one group's inactive items, in one panel. Each panel keeps its own state per
+// group, so the attacker and defender cards can be expanded independently.
+function toggleGroupInactive(group, section) {
+  if (!section || !group) return;
+  section.classList.toggle(groupHidingClass(group));
   updateAbilityVisibility();
 }
 
@@ -2447,6 +2882,24 @@ function predefinedUnitRtbType(unit) {
   return RANGED_TYPE_NORMALIZE[rawRtb] || rawRtb;
 }
 
+// Caster.exe keeps these attacks in separate fields. The visible card still uses its
+// legacy RTB projection until R4.1, but carry the lossless records through state now so
+// derivation and the later resolver never need to recover a discarded attack.
+function predefinedModernAttacks(unit) {
+  const parse = value => Math.max(0, parseInt(value, 10) || 0);
+  const ranged = parse(unit.ranged);
+  const thrown = parse(unit.thrown);
+  const fireBreath = parse(unit.fire_breath);
+  const lightningBreath = parse(unit.lightning_breath);
+  if (!ranged && !thrown && !fireBreath && !lightningBreath) return null;
+  return {
+    ranged: ranged ? { strength: ranged, type: predefinedUnitRtbType({ ranged_type: unit.ranged_type }) } : null,
+    thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
+    fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
+    lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,
+  };
+}
+
 function predefinedUnitType(unit) {
   const cat = unit.category || '';
   const hasFantasticAbility = (unit.abilities || []).some(a => a === 'Fantastic' || a === 'Fantastic=1');
@@ -2499,6 +2952,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     figs: unit.figures || 1,
     atk: unit.melee,
     rtb: predefinedUnitRtb(unit),
+    modernAttacks: predefinedModernAttacks(unit),
     def: unit.defense,
     res: unit.resist,
     hp: unit.hp,
@@ -2548,6 +3002,8 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     const calcKey = abil.calcKey || abil.key;
     abilities[calcKey] = mergedAbilityValue(abil, abilities[calcKey], val);
   }
+  // The DOS block replaces the ability-row values for its consumers, same as on the main path.
+  Object.assign(abilities, dosSpecialValues(prefix, false));
   // Merge matrix-state enchantments on top.
   const stateEnch = matrixAppliedEnchantments(prefix);
   for (const k of Object.keys(stateEnch)) {
@@ -2568,6 +3024,7 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
+    modernAttacks: modernCardAttacks(prefix),
     def: el(prefix + 'Def').value,
     res: el(prefix + 'Res').value,
     hp: el(prefix + 'HP').value,
@@ -2717,7 +3174,10 @@ function csvEscape(value) {
 }
 
 function hasMatrixRangedAttack(info) {
-  return info && info.stats && info.stats.rangedType !== 'none' && info.stats.rtb > 0;
+  if (!info || !info.stats) return false;
+  return info.stats.modernAttacks
+    ? !!(info.stats.modernAttacks.ranged && info.stats.modernAttacks.ranged.strength > 0)
+    : info.stats.rangedType !== 'none' && info.stats.rtb > 0;
 }
 
 async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matrixMode) {
@@ -2899,7 +3359,7 @@ function applyMatrixCellToMain(attackerIndex, defenderIndex) {
     if (levelEl  && !levelEl.disabled)  levelEl.value  = level;
     if (weaponEl) weaponEl.value = weapon;
     if (armorEl)  armorEl.value  = armor;
-    if (unitBaseStats[prefix]) applyLevelBonuses(prefix);
+    if (unitBaseStats[prefix]) resetCardToRosterBase(prefix);
 
     clearAbilities(prefix, 'enchantment');
     applyAbilities(prefix, matrixAppliedEnchantments(prefix), 'enchantment');
@@ -3285,6 +3745,10 @@ function initMatrixModal() {
 // Build ability UI
 buildAbilitiesUI('a');
 buildAbilitiesUI('b');
+buildModernSpecialCard('a');
+buildModernSpecialCard('b');
+buildDosSpecialCard('a');
+buildDosSpecialCard('b');
 initMatrixModal();
 initMatrixPropCombobox('a');
 initMatrixPropCombobox('b');
@@ -3357,8 +3821,10 @@ document.getElementById('copyLinkBtn').addEventListener('click', () => {
 // doesn't reload, so init never re-runs. Apply it live here instead. The copy button never
 // writes location.hash, so every hashchange here is a genuine incoming navigation.
 window.addEventListener('hashchange', importHashState);
-document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
-  btn.addEventListener('click', toggleAllAbilities);
+// Delegated: the group toggles are built by buildAbilitiesUI, after this runs.
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.toggle-abil-btn');
+  if (btn) toggleGroupInactive(btn.dataset.abilGroup, btn.closest('.abilities-section'));
 });
 document.getElementById('aUnit').addEventListener('change', () => {
   updateUnitLock('a');
@@ -3374,12 +3840,12 @@ initUnitCombobox('a');
 initUnitCombobox('b');
 
 document.getElementById('aLevel').addEventListener('change', () => {
-  applyLevelBonuses('a');
+  resetCardToRosterBase('a');
   refreshAbilityFieldVisibility();
   recalculate();
 });
 document.getElementById('bLevel').addEventListener('change', () => {
-  applyLevelBonuses('b');
+  resetCardToRosterBase('b');
   refreshAbilityFieldVisibility();
   recalculate();
 });

@@ -185,13 +185,6 @@ h1 {
   opacity: 0.5;
   pointer-events: none;
 }
-.panel-fields.locked input[id$="Dmg"],
-.panel-fields.locked select[id$="Weapon"]:not(:disabled),
-.panel-fields.locked select[id$="Level"]:not(:disabled),
-.panel-fields.locked select[id$="Armor"]:not(:disabled) {
-  opacity: 1;
-  pointer-events: auto;
-}
 /* Loadout selects the engine disregards (see updateLoadoutLocks) grey out uniformly. */
 .panel-fields select:disabled {
   opacity: 0.5;
@@ -235,6 +228,92 @@ h1 {
 .panel-fields > select.mid {
   grid-column: 2;
   text-align: left;
+}
+/* Gaze/touch/special values (CoM2 & Warlord): two label+input pairs per row, spanning the
+   whole stat grid. */
+.modern-special-grid {
+  grid-column: 1 / 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  row-gap: 0.5rem;
+  column-gap: 0.4rem;
+}
+/* Column 1 of each pair: on/off checkbox (numcheck entries only) beside the label. */
+.modern-special-grid .modern-special-label {
+  grid-column: auto;   /* override .panel-fields label's hard column 1 */
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.modern-special-grid label {
+  grid-column: auto;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.modern-special-grid input[type="number"] {
+  min-width: 0;
+  width: 100%;
+}
+.modern-special-grid input[type="checkbox"] {
+  flex: none;
+  padding: 0;
+}
+/* The DOS shared special-value block: one magnitude plus its consumer flags, laid out as
+   two label+control pairs per row like the modern grid above. */
+.dos-special-grid {
+  grid-column: 1 / 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  row-gap: 0.5rem;
+  column-gap: 0.4rem;
+}
+.dos-special-grid .dos-special-label {
+  grid-column: auto;   /* override .panel-fields label's hard column 1 */
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.dos-special-grid label {
+  grid-column: auto;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.dos-special-grid input[type="number"] {
+  min-width: 0;
+  width: 100%;
+}
+.dos-special-grid input[type="checkbox"] {
+  flex: none;
+  padding: 0;
+}
+/* The magnitude leads the block in the first pair; the flags flow on from it. */
+.dos-special-grid .dos-special-magnitude {
+  grid-column: 1;
+}
+.dos-special-grid input.dos-special-magnitude {
+  grid-column: 2;
+}
+/* Card section heading. Matches .abil-group-header, which heads the lower section. */
+.panel-section-header {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 0.25rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.4);
+}
+/* The three loadout selects are moved under the Enchantments heading at build time
+   (buildAbilitiesUI) but reuse the stat grid. */
+.loadout-fields {
+  width: 100%;
+  margin-bottom: 0.5rem;
 }
 /* "30 +" prefix text in col 2, right-aligned */
 .prefix {
@@ -1138,10 +1217,13 @@ select:disabled[data-tooltip] {
   padding-top: 0.5rem;
   width: 100%;
 }
-.abilities-section.abilities-empty .abilities-content {
+/* Hidden ability items, group headers, and grid containers */
+/* Gaze/touch values that the CoM2 & Warlord stat card already shows (see
+   updateModernSpecialDuplicates). Separate from abil-hidden, which updateAbilityVisibility owns. */
+.abil-item.abil-duplicate,
+.abil-item.abil-duplicate-dos {
   display: none;
 }
-/* Hidden ability items, group headers, and grid containers */
 .abil-item.abil-hidden,
 .abil-group-header.abil-hidden,
 .abil-subgroup-header.abil-hidden,
@@ -1152,14 +1234,16 @@ select:disabled[data-tooltip] {
 .combat-enchantments .version-hidden {
   display: none;
 }
-/* Toggle button styling */
+/* Per-group show-all toggle, seated at the right end of its group heading. */
 .toggle-abil-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.1rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--field-bg, var(--bg));
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: 0.65rem;
+  text-transform: none;
+  letter-spacing: 0;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -1181,6 +1265,10 @@ select:disabled[data-tooltip] {
   pointer-events: none;
 }
 .abil-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1438,10 +1526,15 @@ select:disabled[data-tooltip] {
   }
   .swap-btn,
   .reset-btn,
-  .copy-link-btn,
-  .toggle-abil-btn {
+  .copy-link-btn {
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
+  }
+  /* Smaller bump than the standalone buttons: this one sits inside a group heading,
+     so full touch padding would make the heading dominate the panel. */
+  .toggle-abil-btn {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
   }
 
   /* Version bar wraps gracefully. */

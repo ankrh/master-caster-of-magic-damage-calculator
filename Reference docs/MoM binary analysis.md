@@ -227,7 +227,7 @@ scan finds exactly one read of `+0x24` (`0x99C21`) and one of `+0x25` (`0x99B82`
 
 ### Ranged distance penalty (resolved 2026-07-27)
 
-Closes queue item **A24**. The whole mechanism is `0x99B97`–`0x99BDF`, at the same addresses
+This closes former verification item **A24**. The whole mechanism is `0x99B97`–`0x99BDF`, at the same addresses
 in all three builds:
 
 ```
@@ -264,7 +264,7 @@ its `attack_strength = 0`, which is inert: anything in the ranged phase already 
 
 ### Holy Weapon, and the to-hit normalisation that carries it to thrown (resolved 2026-07-27)
 
-Closes queue item **A26**. Holy Weapon is unit-enchantment mask `0x00800000`, and its block is
+This closes former verification item **A26**. Holy Weapon is unit-enchantment mask `0x00800000`, and its block is
 version-identical in substance (`0x8F1C0` in 1.31, `0x8F1C5` in CP 1.60, `0x8F192` in CoM 1):
 
 ```
@@ -561,7 +561,7 @@ Resist Elements are +10 / +3 on theirs.
 | realm gate on both | Chaos **or** Nature | **Nature only** — the `je` acting on the Chaos test is nopped at `0x990DC` |
 | `UE_BLESS` | +3, realm Chaos or Death | **+5**, same realms (`0x9912A`) |
 
-Righteousness (+30) and Resist Magic (+5) are unchanged. This settles queue item **D7**'s CoM 1
+Righteousness (+30) and Resist Magic (+5) are unchanged. This settles verification item **D7**'s CoM 1
 half: `elemResistBonus`'s CoM branch — +4 for Resist Elements, nothing for Elemental Armor — is
 right, and the inversion against MoM is real rather than a transcription error. Note the realm
 narrowing that comes with it: CoM 1's Resist Elements no longer answers Chaos-realm effects at
@@ -589,7 +589,7 @@ The Fandom `Righteousness.md` states both halves correctly — "either Defense *
 of **+30 Resistance**" — which is the clearest prose confirmation that the two numbers belong to
 two different mechanisms.
 
-Also read off this function, for whoever gets to those queue entries: Elemental Armor **+10** /
+Also read off this function: Elemental Armor **+10** /
 Resist Elements **+3** on defence in MoM (`0x9A750`, `0x9A766`), against realm Chaos or Nature
 and non-melee only; CoM 1 raises them to **+12** / **+4** and drops the `else`, so both can
 apply. CoM 1 also replaces the Weapon Immunity floor with `add si, 8` at `0x9A780` — the
@@ -598,7 +598,7 @@ two `Immunity_Type` assignments at `0x9A663`–`0x9A68F`, which is the mechanism
 
 ### Large Shield and elemental defence against spell damage (resolved 2026-07-27)
 
-Closes queue item **A22**. The bounded
+This closes former verification item **A22**. The bounded
 `Apply_Battle_Unit_Damage_From_Spell` routine is `0x87036`–`0x87388` in all three builds. At
 `0x871AA`–`0x871C0` it passes the spell's realm and attributes to
 `Battle_Unit_Defense_Special`, together with a hard-coded ranged type:
@@ -621,7 +621,7 @@ it now includes CoM 1 while leaving the separate CoM2/Warlord engine unchanged.
 
 ### Magic Immunity against breath (resolved 2026-07-27)
 
-Closes queue item **A23**. In MoM 1.31 and CP 1.60, the direct Magic Immunity test at
+This closes former verification item **A23**. In MoM 1.31 and CP 1.60, the direct Magic Immunity test at
 `0x9A69E` requires a non-negative realm and a non-zero ranged type. The attack classifier maps
 Fire Breath (101) and Lightning Breath (102) to Chaos, so both reach the assignment at
 `0x9A78D` and replace defence with **50**.
@@ -634,7 +634,7 @@ from these DOS binaries.
 
 ### Bless — magnitudes, and what "Chaos/Death attack" actually means (resolved 2026-07-27)
 
-Closes queue item **A21**. Both halves read `UE_BLESS` (low-word bit `0x200`) and both gate on
+This closes former verification item **A21**. Both halves read `UE_BLESS` (low-word bit `0x200`) and both gate on
 realm ∈ {Chaos (2), Death (4)} in every build:
 
 | Half | Site | 1.31 / CP 1.60 | CoM 1 |
@@ -715,8 +715,8 @@ modifier push reuses `ax = 0xFFFF` left over from the realm push. Confirms the c
 CoM-only poison penalty.
 
 Also read off these blocks: **Life Steal consumes `Combat_Resistance_Check`'s return value**
-(stored `0x9A17F`, accumulated `0x9A185`) rather than re-rolling — which closes the open half of
-the queue's B3. And CoM 1's Destruction adds a flat **100** to the kill accumulator
+(stored `0x9A17F`, accumulated `0x9A185`) rather than re-rolling — which closes verification item
+B3. And CoM 1's Destruction adds a flat **100** to the kill accumulator
 (`0x9A1E1`, `mov al,0x64`) where 1.31 adds the defender's per-figure `hits`.
 
 ### Weapon Immunity: eligibility, ordering, and magnitude (resolved 2026-07-27)
@@ -885,8 +885,8 @@ property, not to a stored base value.
 
 ### Combat-effect stat writes (resolved 2026-07-26)
 
-Closes queue item **A25** (Weakness) and the Mind Storm half of **A27**. Whether the modern
-engine matches CoM 1 here is a separate, still-open question — queue item **D8**.
+This closes former verification item **A25** (Weakness) and the Mind Storm half of **A27**. The
+modern D8 half was subsequently resolved by the complete `Caster.exe` stat-pipeline reconstruction.
 
 The battle-unit stat recompute at `0x8FF09`–`0x90B8D` applies `Combat_Effects` (+0x22) by
 writing **directly into the stat fields**, which is why the gate above reads debuffed values.
@@ -998,7 +998,7 @@ it. See *Chaos Surge* below for what that changes.
 
 ### Berserk (resolved 2026-07-28)
 
-Closes queue item **A29**. Unit enchantment `0x00000004` — named from the binary's own table, not
+This closes former verification item **A29**. Unit enchantment `0x00000004` — named from the binary's own table, not
 inferred. The block is the **last** one in `BU_Apply_Specials`, `0x8F832`–`0x8F87D`:
 
 ```
@@ -1033,7 +1033,7 @@ that without heavy hero stacking.
 
 ### Warp Creature runs early in CoM 1's recompute (resolved 2026-07-28)
 
-Closes queue item **A30**. The magnitudes were never in doubt; the *ordering* was, and the two
+This closes former verification item **A30**. The magnitudes were never in doubt; the *ordering* was, and the two
 DOS engines disagree about it.
 
 **MoM 1.31 applies Warp last**, at `0x90A2E`–`0x90A63` (melee `sar`), `0x90AA9` (defence) and
@@ -1118,7 +1118,7 @@ the ordering above.
 
 ### Level bonuses: CoM 1 rewrote the routine as a table, with a special-attack gate (resolved 2026-07-28)
 
-Partially closes queue item **A31** — the CoM column and the shape of MoM's; MoM's magnitudes
+Partially resolves verification item **A31** — the CoM column and the shape of MoM's; MoM's magnitudes
 still want an exhaustive read of all six increment sites.
 
 **MoM 1.31 is an unrolled `if` chain** (`0x8F881`–`0x8FB3E`): `cmp si,N / jle` per threshold,
@@ -1155,7 +1155,7 @@ breath but not to either gaze form.
 
 ### Lionheart (resolved 2026-07-28)
 
-Closes queue item **A28**. Unit enchantment `0x04000000`, in `BU_Apply_Specials` at `0x8F740`
+This closes former verification item **A28**. Unit enchantment `0x04000000`, in `BU_Apply_Specials` at `0x8F740`
 (1.31, CP 1.60) and `0x8F660` (CoM 1):
 
 ```
@@ -1187,7 +1187,7 @@ ah,ah` keeps it, so the CoM 1 result floors. All of this matches the Fandom `Lio
 
 ### Chaos Surge (resolved 2026-07-28)
 
-Closes queue item **A27**. Not in `BU_Apply_Specials` at all — it is in the **battle-unit
+This closes former verification item **A27**. Not in `BU_Apply_Specials` at all — it is in the **battle-unit
 constructor**, so it applies exactly once per unit. MoM 1.31, `0x8F113`–`0x8F18F`:
 
 ```
@@ -1364,7 +1364,7 @@ assembly.
 
 ### Gaze attacks: one slot, two figure bounds, and a realm (resolved 2026-07-27)
 
-**One data slot, settling queue item B8.** A gaze's strength is `.ranged` (+0x01) and its type is
+**One data slot, settling former verification item B8.** A gaze's strength is `.ranged` (+0x01) and its type is
 `.ranged_type` (+0x02) — the same two fields ranged, thrown and breath use. There is no second
 slot, so a unit can never carry a gaze *and* a conventional ranged attack. `ranged_type == 104`
 ORs Automatic Damage into `attack_attributes` at `0x99B55`, and that flag makes the per-figure
@@ -1374,8 +1374,8 @@ delivered automatically for 104.
 
 Because that assignment sits inside the per-figure loop, **MoM's doom damage scales with the
 attacker's figure count.** No roster consequence — Chaos Spawn, its only Doom Gaze unit, has one
-figure. CoM2 and Warlord deliberately do not scale it; see `Caster binary/CoM2 binary analysis.md`,
-*Gaze attacks*.
+figure. CoM2 and Warlord deliberately do not scale it; see
+`Caster binary/CoM2 binary - combat flow.md`, *Gaze attacks*.
 
 **Dispatch.** `BU_AttackTarget` fires gaze from two sites — melee rider (`0x99499`,
 `ranged_type >= 100`) and defender retaliation (`0x9958D`, `ranged_type >= 103`). Both push

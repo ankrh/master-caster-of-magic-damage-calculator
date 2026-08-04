@@ -7,6 +7,8 @@ this directory.
 ## ABILITY_DEFS / ENCHANTMENT_DEFS ordering (`data.js`)
 **Abilities group** (`ABILITY_DEFS`): a 2-column CSS grid with row-first flow, so order maps to columns interleaved L/R. Entries are wrapped in `twoColumnMajor([...])` and authored column-major so each column reads top-to-bottom by realm: **non-realm → arcane → life → death → chaos → nature → sorcery**. When adding/removing an entry, recount and reorder neighbours to keep both columns aligned.
 
+The nine gaze/touch/special entries in `MODERN_SPECIAL_FIELDS` (`ui.js`) render **twice**: as ability rows, and — in CoM2 and Warlord only — as a two-column block on the stat card (`buildModernSpecialCard`). The ability control holds the state and the two mirror each other; `updateModernSpecialDuplicates` hides the ability row wherever the card is shown. A card copy must reproduce its def's `numcheck` checkbox, because `null` (absent) and `0` (present, save modifier −0) are different states to the engine.
+
 **Enchantments group** (`ENCHANTMENT_DEFS`): rendered as two stacked blocks with no subgroup headers (`subgroup` is retained only for version gating via `subgroupAllowed`):
 - **Controls block** (`.ench-controls`, single full-width column): all `select` and `num`/`numcheck` enchantments, in def order.
 - **Checkbox block** (`.ench-bools`, two-column CSS multi-column): all `bool` enchantments. `buildAbilitiesUI` **sorts these at render time by realm** (non-realm → arcane → life → death → chaos → nature → sorcery, stable within a realm) using each item's `dataset.realm`, so the merged list reads by realm regardless of which version subgroups are present, and reflows correctly when items are hidden.

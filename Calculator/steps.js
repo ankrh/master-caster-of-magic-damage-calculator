@@ -1,7 +1,7 @@
 // --- Stat transform steps (R1) ---
 // The single mechanism for stat derivation: a phase-tagged sequence of steps over a
-// mutable unit record. See Calculator/BACKLOG.md, Appendix A, and SPEC.md,
-// *Stat derivation contract*.
+// mutable unit record. See SPEC.md, *Stat derivation contract*; completion history is in
+// Calculator/HISTORY.md.
 //
 // One step is one engine write, made at the position the engine makes it. Additive,
 // scaling, replacing and short-circuiting effects are all the same shape, because the
