@@ -1125,10 +1125,10 @@ function deriveUnitStats(input) {
   // `SStoningGaze`/`SDeathGaze`/`SDoomGaze` and nothing else in any source does.
   const gazeDisabled = enemyEyeOfHeaven;
   // A gaze's strength lives in the same `.ranged` slot Chaos Surge writes, so MoM and
-  // CoM 1 boost both gaze forms. CoM2/Warlord (separate engine) are left unchanged.
+  // CoM 1 boost all three DOS gaze types. CoM2/Warlord (separate engine) are left unchanged.
   const chaosSurgeGazeMod = isCoM2 ? 0 : chaosSurgeRtbBonus;
   // Level bonus to a gaze's strength, from the same shared `.ranged` slot. MoM's level
-  // routine (0x8F881-0x8FB3E) has no `ranged_type` gate at all, so both gaze forms take
+  // routine (0x8F881-0x8FB3E) has no `ranged_type` gate at all, so all DOS gaze types take
   // the full ranged ladder. CoM 1 replaced it with a table loop whose `.ranged` step is
   // skipped for `ranged_type >= 100` — thrown, breath and every gaze — on all rows but
   // Veteran (0x8FA9A-0x8FAAB); that is exactly the ladder's `thrown` column. CoM2 and

@@ -45,8 +45,9 @@ def parse(path):
 
 
 def main():
+    # The .LBX is not in the repo -- pass a path to the one beside a game install.
     src = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REFDIR, 'CoM helptext.LBX')
-    dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REFDIR, 'CoM helptext (parsed).txt')
+    dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REFDIR, 'CoM helptext.txt')
     entries = parse(src)
     with open(dst, 'w', encoding='utf-8') as f:
         for title, body in entries:

@@ -33,9 +33,9 @@ agent deriving plus one review round.
    is one enchantment block, one named helper, or a comparable unit. The preparing agent must then
    stop; **derivation starts in a fresh conversation**, so preparing an item confers no head start.
 2. **Both agents derive**, each to its own `.derivations/` file, and **must not read the other's**,
-   even if it exists. Do not grep for it, do not open it to "check formatting". Shared helper
-   tools under `tools/` may be written and refined freely by either agent — tooling is not an
-   answer.
+   even if it exists. Do not grep for it, do not open it to "check formatting". A derivation
+   carries evidence only — see *Findings are a merge product* below. Shared helper tools under
+   `tools/` may be written and refined freely by either agent — tooling is not an answer.
 3. **Both agents review the other's derivation**, writing to the file named for the *other* agent.
    When AKH asks for a new review, the reviewer **clears any existing content of that file first**
    — but only after the precondition in *Closing a review round* below is met.
@@ -46,6 +46,29 @@ agent deriving plus one review round.
 5. **AKH prompts one agent to merge.** See *Merging* below. Once the merged artifact and its
    supporting documentation are complete, the merger marks the scoped backlog item `done`; no
    separate AKH sign-off is required.
+
+### Findings are a merge product
+
+A derivation artifact carries **evidence, not conclusions**: the source-shaped body with its
+address annotations, the coverage ledgers, the branch and write inventories, the counts, and the
+factual notes needed to read them — an idiom the disassembler renders misleadingly, a field name
+and where it came from, a sentinel value and the sites that write it. Every one of those is
+checkable against the binary.
+
+It does **not** carry a findings section: no named conclusion about what a mechanic is, no
+correction to another document, no proposed Q row, no recommendation. Those are written **once, by
+the merger**, from the union of the two reconstructions.
+
+The reason is the one that keeps the two derivations apart in the first place. A finding is an
+*interpretation* of a reconstruction, and interpretation is exactly what a second independent
+reconstruction exists to test. Writing it at derivation time costs three ways: it is the most
+persuasive part of the file, so it anchors the reviewer hardest; both agents pay for the same
+prose, and only one version survives; and it produces a doc-facing claim that has never been
+cross-checked, which is the failure this mode exists to prevent.
+
+**Nothing is lost by deferring.** An observation made while deriving belongs in the artifact as an
+annotation at the site it came from, where the next reader meets it with the code in front of
+them. What waits for the merge is the *claim*, not the evidence for it.
 
 ### Evidence, not persuasion
 
@@ -68,6 +91,11 @@ statement first. Merge the *union* of both, and every statement the two still di
 the merged artifact **marked `disputed`**, carrying both readings and the address, and becomes a Q
 row. Do not pick a winner document: neither derivation is reliably a superset of the other, so
 selecting one silently discards the other's correct content.
+
+**The merger writes the findings** — not by copying either agent's, because neither has any. Each
+finding cites the addresses it rests on and is drawn from the merged reconstruction, so it is
+stated once and rests on two independent reads. A reading the two still disagree about is a
+`disputed` statement and a Q row, never a finding.
 
 A merged artifact is allowed to be uncertain in places; do not turn an unresolved reading into a
 plain finding.
@@ -112,7 +140,8 @@ coverage-ledger row whose disposition is:
 The first ledger row must start at the assigned start address, the last must end at the assigned
 end address, and there may be no gaps. **Any `unresolved` row keeps the derivation `in progress`.**
 A summary, table, call inventory, execution-order list or named placeholder may accompany the
-reconstruction as an index, but never substitutes for the source-shaped body.
+reconstruction as an index, but never substitutes for the source-shaped body. The gate measures
+coverage only — it neither requires nor admits a findings section.
 
 Before claiming a derivation complete, its author must state all five counts explicitly:
 `unresolved ranges: 0`; `synthetic helpers without bodies: 0`; `semantic conditional jumps
@@ -146,6 +175,12 @@ and let AKH arbitrate.
 
 **Neither agent concedes to the other.** Deferring to the more confident reading launders a
 guess into a finding, and nothing downstream can detect it later.
+
+Two kinds of Q row come out of this flow and they are written at different times. An
+**agent-vs-agent disagreement** is recorded as soon as it survives a review round, because
+*Closing a review round* above will not let the review file be cleared until it exists. A
+**question about the mechanic** — something neither agent can settle from the binary, an engine
+behaviour that contradicts its own helptext — is a finding like any other and waits for the merge.
 
 ## Provenance
 

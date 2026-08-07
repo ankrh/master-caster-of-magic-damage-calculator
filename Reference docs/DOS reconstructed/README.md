@@ -21,14 +21,50 @@ vocabulary matches.
 | `unitcalc.c` | Battle-unit constructor, stat recompute, `BU_Apply_Specials`, their callees |
 | `combat.c` | `BU_AttackTarget`, `BU_ProcessAttack`, resolution helpers |
 | `<ID>.evidence.md` | One item's coverage ledgers, counts, findings and any `disputed` rows |
+| `R6.version-differences.md` | Merged three-build difference index and overlay-aware call closure |
 
 The `.c` files are shared across items and grow as items land. Reconstruction bodies go in the
 `.c`; ledgers and prose go in the evidence markdown.
 
+## Symbolic constants, with raw values retained
+
+The reconstructed expression must use a field-specific symbolic name for every categorical value:
+bit flags and masks, enum-like IDs, sentinels, record offsets and fixed global addresses. Do not
+leave an unexplained literal such as `0x4000`, `0x14`, `100` or `-1` in executable C merely because
+the disassembly used that immediate. The same number can mean unrelated things in different fields,
+so names must carry the field or type vocabulary (`USA_IMMUNITY_DEATH`, `ATT_ELDRITCH_WEAPON`,
+`rt_Death`, `RAT_THROWN`), not just restate the number (`FLAG_4000`).
+
+Keep the binary evidence visible at the definition site: each symbol is defined from the exact raw
+hexadecimal or decimal value found in the executable. At a compound-mask write, retain the aggregate
+raw mask in the address comment when it helps direct comparison with the instruction. For example:
+
+```c
+#define USA_IMMUNITY_ILLUSION  0x0008
+#define USA_IMMUNITY_COLD      0x0010
+#define USA_IMMUNITY_DEATH     0x0040
+#define USA_IMMUNITY_POISON    0x0080
+
+bu->Attribs_1 |= USA_IMMUNITY_DEATH | USA_IMMUNITY_POISON
+               | USA_IMMUNITY_COLD | USA_IMMUNITY_ILLUSION;
+                                      /* raw mask 0x00D8; 160:0x8F828 */
+```
+
+When builds repurpose the same bit, define semantic aliases with the same raw value and use the
+alias appropriate to that build's branch. When a value's meaning is not established, use an
+explicit field-scoped `UNKNOWN_<value>` symbol and leave it unresolved; never manufacture a
+semantic name. Literal arithmetic quantities such as `+2 defense`, loop bounds derived directly
+from data, and the mandatory binary-address annotations are not magic-number violations, although
+their purpose must still be apparent locally.
+
+During derivation and reciprocal review, expand each symbolic expression and confirm that it equals
+the instruction's immediate operand. The merged source must contain the definitions it relies on;
+an absent external header is not an acceptable hidden source of meaning.
+
 ## One source, three builds
 
 **Do not write three near-identical files.** All three builds are reconstructed into one body with
-explicit version branching, because the version differences *are* the deliverable for A31, A32,
+explicit version branching, because the version differences *are* the deliverable for A32,
 A33, B1 and C1 — a shared body puts each difference at its exact site instead of hiding it in a
 diff someone has to think to run.
 
@@ -51,8 +87,12 @@ fixed order `131 / 160 / com1`:
   1.31's addresses. CoM 1 is rebased, so it is nearly always a distinct number.
 - `—` — the build does not execute this statement.
 
-Because CoM 1's addresses are distinct numbers, one shared citation set stays unambiguous across
-builds; the checker relies on that.
+**Do not rely on CoM 1's addresses being distinct.** They usually are, because CoM 1 is rebased —
+but not always: in `BU_Apply_Specials` CoM 1's copy occupies 1.31's exact `0x8F310`–`0x8F881`.
+Where the two overlap, the checker's single citation set means a 1.31 citation silently satisfies
+the `com1` run, and a whole-document pass proves nothing about CoM 1. Until `--build` scoping
+exists (**R6.4**), check a build by extracting that build's section from the rest of the document
+and running the checker on the extract.
 
 **Do not assume a lineage ordering.** Write explicit build tests (`BUILD == CP160 || BUILD == COM1`)
 rather than `BUILD >= CP160`. CoM 1 is built on the same 1991 executable but whether it carries
@@ -72,7 +112,14 @@ build key so the three can sit in one table:
 
 Build keys are `mom131`, `mom160`, `com1`. Dispositions and the no-gaps rule are the protocol's.
 `Within` cites the ledger's **own** row numbers, so numbering restarts at 0 for each build — and
-the checker splits ledgers on that restart alone.
+the checker splits ledgers on that restart alone. It is verification metadata for an enclosing
+conditional **skip edge**, not a claim that the named row is the child's unique control-flow
+parent or dominates every entry. For a child `[lo, hi)`, `verify_dos_derivation.py` finds earlier
+conditional jumps whose source is below `lo` and whose taken target is at or beyond `hi`, maps
+their sources to ledger rows, and requires `Within` to name the greatest such row number (or `—`
+when none exists). An out-of-line island or callable helper can therefore have `Within N` even
+when another jump or call enters it. Put those alternate entries in the row title or an adjacent
+byte-backed note; do not change `Within` to express exclusive CFG ownership.
 
 Check once per build. While deriving, everything is in one `.derivations/<ID>.<agent>.md`; once
 merged, the ledgers are in the evidence markdown and the annotations are in the `.c`, so pass

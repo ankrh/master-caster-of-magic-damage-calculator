@@ -1,0 +1,2819 @@
+/* DOS combat dispatch reconstructed from the three WIZARDS.EXE builds.
+ *
+ * Landed so far: R6.2a BU_AttackTarget, R6.2b/R6.2c BU_ProcessAttack, R6.2d's
+ * shared combat-resolution helpers, R6.2e's defense-special and Wall of Fire helpers, and
+ * R6.2f's spell-damage/application closure.
+ *
+ * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
+ * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
+ * R6.2a.evidence.md through R6.2f.evidence.md. The overlay-entry names below are ReMoM
+ * attributions: the VROOMM
+ * targets cannot be mapped back to file offsets from the executable images.
+ */
+
+#include "MOM_DAT.h"
+
+#define NUM_DAMAGE_TYPES            3
+#define ST_FALSE                    0
+#define ST_TRUE                     1
+#define ST_UNDEFINED               (-1)
+#define BUS_ACTIVE                  0
+#define BUS_DEAD                    4
+#define BUS_DRAINED                 5
+#define BUS_GONE                    6
+#define CONFUSION_SWITCHED_SIDES    2
+
+#define DMG_REGULAR                 0
+#define DMG_UNDEATH                 1
+#define DMG_IRREVERSIBLE            2
+#define BU_DAMAGE_CEILING           200
+#define UNIT_WP_GONE                9
+
+#define am_Melee                    0
+#define am_ThrownOrBreath           1
+#define am_Ranged                   2
+#define BU_PA_OWN_ATTACK            0
+#define BU_PA_COUNTERATTACK         1
+
+#define RAT_CLASS(value)            ((value) / 10)
+#define RAT_CLASS_MAGIC             3
+#define RAT_MAGIC_FIRST             30
+#define RAT_MAGIC_LAST_EXCL         40
+#define RAT_NONE                    0
+#define RAT_ROCK                    10
+#define RAT_CANNON                  11
+#define RAT_BOW                     20
+#define RAT_SLING                   21
+#define RAT_UNKNOWN                 22
+#define RAT_LIGHTNING               30
+#define RAT_FIREBALL                31
+#define RAT_SORCERY                 32
+#define RAT_DEATH_BOLT              33
+#define RAT_ICE_BOLT                34
+#define RAT_PRIEST_SHAMAN           35
+#define RAT_DROW                    36
+#define RAT_SPRITE                  37
+#define RAT_NATURE_BOLT             38
+#define RAT_THROWN                  100
+#define RAT_FIRE_BREATH             101
+#define RAT_LIGHTNING_BREATH        102
+#define RAT_STONING_GAZE            103
+#define RAT_MULTIPLE_GAZE           104
+#define RAT_DEATH_GAZE              105
+
+#define BUE_BLACK_SLEEP             0x0040
+#define BUE_HASTE                   0x0800
+#define ATT_ARMOR_PIERCING          0x0001
+#define ATT_FIRST_STRIKE            0x0002
+#define ATT_DOOM_DAMAGE             0x0010
+#define ATT_AUTOMATIC_DAMAGE        ATT_DOOM_DAMAGE
+#define ATT_POISON                  0x0004
+#define ATT_LIFE_STEAL              0x0008
+#define ATT_DESTRUCTION             0x0020
+#define ATT_ILLUSIONARY             0x0040
+#define ATT_STONING_TOUCH           0x0080
+#define ATT_DEATH_TOUCH             0x0200
+#define ATT_DISPEL_EVIL             0x0800
+#define ATT_ELDRITCH_WEAPON         0x4000
+#define ATT_DAMAGE_LIMIT            0x2000
+#define ATT_AREA                    0x1000
+#define ATT_WARP_LIGHTNING          0x8000
+#define USA_IMMUNITY_STONING        0x0002
+#define USA_IMMUNITY_FIRE           0x0001
+#define USA_IMMUNITY_MISSILES       0x0004
+#define USA_IMMUNITY_ILLUSION       0x0008
+#define USA_IMMUNITY_MAGIC          0x0020
+#define USA_IMMUNITY_DEATH          0x0040
+#define USA_IMMUNITY_POISON         0x0080
+#define USA_IMMUNITY_WEAPON         0x0100
+#define USA_CREATE_UNDEAD_BLOCK_131 USA_IMMUNITY_MAGIC       /* raw 0x0020 */
+#define USA_CREATE_UNDEAD_BLOCK_LATER (USA_IMMUNITY_MAGIC | USA_IMMUNITY_DEATH) /* raw 0x0060 */
+#define USA2_IMMOLATION             0x08
+#define USA2_CAUSE_FEAR             0x20
+#define UA_INVISIBILITY             0x0040
+#define UA_LARGE_SHIELD             0x0002
+#define UA_CREATE_UNDEAD            0x0080
+#define UA_LONG_RANGE               0x0100
+#define UA_NEGATE_FIRST_STRIKE      0x8000
+#define USA_CASTER_20               0x2000
+#define USA_CASTER_40               0x4000
+#define USA_CASTER_MASK             (USA_CASTER_20 | USA_CASTER_40) /* raw 0x6000 */
+
+#define RANGED_ATTACK_REFUSED       (-5)
+#define MOM_HASTE_MANA_FLOOR        6
+#define MOM_HASTE_MANA_COST         3
+#define COM1_HASTE_MANA_FLOOR       10 /* unreachable arm */
+#define COM1_HASTE_MANA_COST        5  /* unreachable arm */
+#define COM1_FIRST_STRIKE_HP_CEILING 25
+#define UE_BERSERK                  0x00000004UL
+#define UE_CLOAK_OF_FEAR            0x00000008UL
+#define UE_RESIST_ELEMENTS          0x00000200UL
+#define UE_ELEMENTAL_ARMOR          0x00000400UL
+#define UE_INVISIBILITY             0x00008000UL
+#define UE_SPELL_LOCK               0x00004000UL
+#define UE_RESIST_MAGIC             0x00040000UL
+#define UE_BLESS                    0x02000000UL
+#define UE_TRUE_SIGHT               0x00400000UL
+#define UE_RIGHTEOUSNESS            0x40000000UL
+#define UE_INVULNERABILITY          0x80000000UL
+#define MV_FLYING                   0x0008
+#define MV_TELEPORT                 0x0010
+#define MV_MERGING                  0x0080
+#define RACE_FIRST_FANTASTIC        0x0F
+#define RACE_REALM_BIAS             0x10
+#define RACE_CHAOS                  0x12
+#define RACE_DEATH                  0x14
+#define HERO_SLOT_NONE              (-1)
+#define SPELL_FIREBALL              0x60
+#define SPELL_EARTH_ELEMENTAL       30
+#define SPELL_PHANTOM_WARRIORS      45
+#define SPELL_PHANTOM_BEAST         60
+#define SPELL_AIR_ELEMENTAL         66
+#define SPELL_FIRE_ELEMENTAL        90
+#define UNIT_TYPE_DEMON             0xA9
+#define SPELL_DAMAGE_RANGED_TYPE_MOM  0x26
+#define SPELL_DAMAGE_RANGED_TYPE_COM1 0x27
+#define INVULNERABILITY_DAMAGE_REDUCTION 2
+#define CHECK_RANGED_VISIBLE        0
+#define CHECK_RANGED_INVISIBLE      1
+#define CHECK_RANGED_DARKNESS       2
+#define COM1_DEAD_SPELL_07          7
+#define MOM_IMMOLATION_STRENGTH     4
+#define COM1_IMMOLATION_STRENGTH    10
+#define MOM_RANGED_DISTANCE_DIVISOR 3
+#define COM1_RANGED_DISTANCE_DIVISOR 4
+#define LONG_RANGE_DISTANCE_PENALTY 1
+#define HSA_CHARMED                 0x10000000UL
+#define D10_SIDES                   10
+#define ROLL_TARGET_BASE            8
+#define COM1_TOBLOCK_DIE_LIMIT      15
+#define COM1_DESTRUCTION_FLOOR_GATE 80
+#define COM1_HERO_BYTE_0B_FACTOR_2  0x02
+#define COM1_HERO_BYTE_0B_FACTOR_3  0x04
+
+#define BLUR_ATTKR                  0x1C
+#define BLUR_DFNDR                  0x1D
+#define COM1_INVISIBILITY_CHANCE    20
+#define COM1_BLUR_CHANCE            20
+#define COM1_STACKED_BLUR_CHANCE    30
+#define COM1_DESTRUCTION_DAMAGE     100
+#define COM1_ATTACK_MARKER_FULL     0x0001
+#define WALL_PATCH_X_FIRST          6
+#define WALL_PATCH_X_LAST           7
+#define WALL_PATCH_Y_FIRST          11
+#define WALL_PATCH_Y_LAST           12
+
+#define DEF_SPECIAL_NONE                0
+#define DEF_SPECIAL_WEAPON_IMMUNITY     1
+#define DEF_SPECIAL_FULL                2
+#define MOM_DEFENSE_SPECIAL_VALUE       50
+#define COM1_DEFENSE_SPECIAL_VALUE      100
+#define MOM_WEAPON_IMMUNITY_FLOOR       10
+#define COM1_WEAPON_IMMUNITY_BONUS      8
+#define MOM_LARGE_SHIELD_DEFENSE        2
+#define COM1_LARGE_SHIELD_DEFENSE       3
+#define MOM_BLESS_DEFENSE               3
+#define COM1_BLESS_DEFENSE              5
+#define MOM_ELEMENTAL_ARMOR_DEFENSE     10
+#define COM1_ELEMENTAL_ARMOR_DEFENSE    12
+#define MOM_RESIST_ELEMENTS_DEFENSE     3
+#define COM1_RESIST_ELEMENTS_DEFENSE    4
+#define CITY_WALL_BOX_CGX_FIRST         5
+#define CITY_WALL_BOX_CGX_LAST          8
+#define CITY_WALL_BOX_CGY_FIRST         10
+#define CITY_WALL_BOX_CGY_LAST          13
+#define MOM_WALL_OF_FIRE_STRENGTH       0
+#define COM1_WALL_OF_FIRE_STRENGTH      10
+#define NUM_NODES                       30
+#define NF_GUARDIAN                     0x02
+#define CITY_ENCHANT_HEAVENLY_LIGHT     0x15
+
+/* ReMoM e_SPELL_BOOK_REALM encoding (MOM_DAT.h:729). */
+#define sbr_NONE                    (-1)
+#define sbr_Nature                  0
+#define sbr_Sorcery                 1
+#define sbr_Chaos                   2
+#define sbr_Life                    3
+#define sbr_Death                   4
+#define sbr_Arcane                  5
+#define sbr_NATURE                  sbr_Nature
+#define sbr_CHAOS                   sbr_Chaos
+#define sbr_LIFE                    sbr_Life
+#define sbr_DEATH                   sbr_Death
+
+/* Exact targets 0388:0043 and 03E0:0043; semantic names attributed by ReMoM. */
+extern int16_t __far overlay_0388_0043(int16_t attacker, int16_t defender);
+extern void __far overlay_0388_0039(int16_t spell_id, int16_t target_battle_unit_idx,
+                                    int16_t damage_types[NUM_DAMAGE_TYPES],
+                                    int16_t strength_override);
+extern void __far overlay_0388_003E(int16_t battle_unit_idx,
+                                    int16_t damage_types[NUM_DAMAGE_TYPES]);
+extern void __far overlay_03E0_0043(int16_t attacker);
+extern int16_t __far Battle_Unit_Attack_Immunities(int16_t battle_unit_idx,
+                                                   int16_t attack_mode);
+extern int16_t __far Battle_Unit_Attack_Magic_Realm(int16_t ranged_type_key,
+                                                    int16_t battle_unit_idx);
+extern int16_t __far Battle_Unit_Has_Ranged_Attack(int16_t battle_unit_idx);
+extern int16_t __far Range_To_Battle_Unit(int16_t attacker_battle_unit_idx,
+                                         int16_t defender_battle_unit_idx);
+extern int16_t __far Combat_Resistance_Check(struct s_BATTLE_UNIT target,
+                                             int16_t resist_modifier, int16_t realm);
+extern int16_t __far Combat_Effective_Resistance(struct s_BATTLE_UNIT target,
+                                                  int16_t realm);
+extern int16_t __far BU_CauseFear(int16_t source_battle_unit_idx,
+                                  int16_t target_battle_unit_idx);
+extern int16_t __far overlay_03E0_0052(int16_t battle_unit_idx);
+extern int16_t __far overlay_03E0_0057(int16_t cgx, int16_t cgy);
+extern void __far overlay_0370_002A(int16_t battle_unit_idx, int16_t amount, int16_t mode);
+extern int16_t __far Random(int16_t faces);
+extern int16_t __far CMB_AttackRoll(int16_t strength, int16_t to_hit);
+extern int16_t __far CMB_DefenseRoll(int16_t defense, int16_t to_block);
+extern int16_t __far Battle_Unit_Defense_Special(int16_t defender_battle_unit_idx,
+                                                 int16_t attack_ranged_type,
+                                                 int16_t attack_immunities,
+                                                 int16_t attack_flags,
+                                                 int16_t attack_magic_realm);
+extern int16_t __far Eliminated_Opponent(void);
+extern int16_t __far Battle_Unit_Is_Summoned_Creature(int16_t battle_unit_idx);
+extern void __far overlay_0348_003E(void);
+#if BUILD == COM1
+extern void __far overlay_03D0_004D(int16_t unknown_c520);
+extern int16_t UNKNOWN_C520;          /* unresolved absolute word DS:0xC520 */
+#endif
+extern struct s_BATTLEFIELD __far *battlefield;
+extern struct s_SPELL_DATA __far *_SPELL_DATA;
+extern int8_t __far *combat_enchantments;
+extern int16_t _combat_defender_player;
+extern int16_t _combat_attacker_player;
+extern int16_t _combat_total_unit_count; /* absolute word [0xC588] in all builds */
+extern int16_t _combat_winner;           /* absolute word [0xC972] */
+#if BUILD == COM1
+extern struct s_NODE __far *_NODES;
+extern int8_t OVL_Action_Plane;
+extern int8_t OVL_Action_YPos;
+extern int8_t OVL_Action_XPos;
+#endif
+#if BUILD == COM1
+/* Near call sharing BU_ProcessAttack's frame. */
+extern void com1_frame_helper_9AC1B(void);
+extern void com1_frame_helper_9984B(void);
+extern void com1_frame_helper_9985B(void);
+extern void com1_apply_toblock_cap(void);
+static struct s_BATTLE_UNIT __far *com1_load_battle_unit_address(int16_t index);
+extern void __far overlay_03A0_003E(struct s_BATTLE_UNIT __far *bu);
+extern void __far overlay_03A0_0052(struct s_BATTLE_UNIT __far *bu);
+#endif
+
+/* R6.2d shared resolution helpers. */
+
+int16_t __far CMB_AttackRoll(int16_t attack_strength, int16_t to_hit)
+{
+    int16_t successes = 0;            /* 131:0x98F68  160:=  com1:= */
+    int16_t roll_index = 0;           /* 131:0x98F6A  160:=  com1:= */
+
+    while (roll_index < attack_strength) {
+                                       /* initial jump 131:0x98F6C  160:=  com1:=;
+                                          JL ->0x98F6E at 131:0x98F91  160:=  com1:= */
+        int16_t die_roll = Random(D10_SIDES);
+                                       /* call 00B0:00D8 at 131:0x98F72  160:=  com1:=;
+                                          store at 131:0x98F78  160:=  com1:= */
+        if (die_roll >= ROLL_TARGET_BASE - to_hit
+                                       /* JLE ->0x98F8C, bytes 7E 06, at
+                                          131:0x98F84  160:=  com1:= */
+            || die_roll == D10_SIDES) /* JNE ->0x98F8D, bytes 75 01, at
+                                          131:0x98F8A  160:=  com1:= */
+            ++successes;             /* 131:0x98F8C  160:=  com1:= */
+        ++roll_index;                /* 131:0x98F8D  160:=  com1:= */
+    }
+    return successes;                /* 131:0x98F93  160:=  com1:= */
+}
+
+int16_t __far CMB_DefenseRoll(int16_t defense, int16_t to_block)
+{
+    int16_t blocks = 0;               /* 131:0x98FA2  160:=  com1:= */
+    int16_t die_index = 0;            /* 131:0x98FA4  160:=  com1:= */
+
+    while (die_index < defense) {
+                                       /* initial jump 131:0x98FA6  160:=  com1:=;
+                                          JL ->0x98FA8 at 131:0x98FC1  160:=  com1:= */
+        int16_t die_roll = Random(D10_SIDES);
+                                       /* call 00B0:00D8 at 131:0x98FAC  160:=  com1:= */
+        int16_t threshold = ROLL_TARGET_BASE; /* 131:0x98FB2  160:=  com1:= */
+#if BUILD == COM1
+        com1_apply_toblock_cap();     /* CALL ->0x9A8CA at com1:0x98FB5; shares this frame */
+#else
+        threshold -= to_block;        /* bytes 2B 56 08 at 131:0x98FB5  160:=  com1:â€” */
+#endif
+        if (die_roll >= threshold)    /* JL ->0x98FBD, bytes 7C 01, at
+                                          131:0x98FBA  160:=  com1:= */
+            ++blocks;                /* 131:0x98FBC  160:=  com1:= */
+        ++die_index;                 /* 131:0x98FBD  160:=  com1:= */
+    }
+    return blocks;                   /* 131:0x98FC3  160:=  com1:= */
+}
+
+#if BUILD == COM1
+/* Near callee sharing CMB_DefenseRoll's SI, DX, BP frame and arguments. */
+void __near com1_apply_toblock_cap(void)
+{
+    if (die_index < COM1_TOBLOCK_DIE_LIMIT)
+                                       /* CMP SI,0x0F; JGE ->0x9A8D2, bytes 7D 03,
+                                          at com1:0x9A8CA..0x9A8CD */
+        threshold -= to_block;        /* SUB DX,[BP+8] at com1:0x9A8CF */
+    return;                            /* RET at com1:0x9A8D2 */
+}
+#endif
+
+int16_t __far Combat_Resistance_Check(struct s_BATTLE_UNIT target,
+                                      int16_t resistance_modifier,
+                                      int16_t magic_realm)
+{
+    int16_t resistance = Combat_Effective_Resistance(target, magic_realm);
+                                       /* by-value copy call 0000:0787 at 131:0x98FDB  160:=  com1:=;
+                                          near CALL ->0x9900D at 131:0x98FE2  160:=  com1:= */
+    resistance += resistance_modifier; /* 131:0x98FE8  160:=  com1:= */
+    int16_t roll = Random(D10_SIDES);   /* call 00B0:00D8 at 131:0x98FF1  160:=  com1:= */
+    if (roll > resistance)             /* JLE ->0x99005, bytes 7E 08, at
+                                          131:0x98FFB  160:=  com1:= */
+        return roll - resistance;      /* 131:0x98FFD..0x99001  160:=  com1:= */
+    /* 131:0x99003  160:=  com1:= is unreachable EB 04 ->0x99009. */
+    return 0;                          /* 131:0x99005  160:=  com1:= */
+}
+
+int16_t __far Combat_Effective_Resistance(struct s_BATTLE_UNIT target,
+                                           int16_t magic_realm)
+{
+    uint32_t enchantments =
+          _UNITS[target.unit_idx].enchantments
+                                       /* 131:0x99015..0x99026  160:=  com1:= */
+        | target.item_enchantments     /* 131:0x99030..0x99033  160:=  com1:= */
+        | target.enchantments;         /* 131:0x9902A..0x99039  160:=  com1:= */
+    int16_t resistance = (int8_t)target.resist;
+                                       /* MOV/CBW at 131:0x9903C..0x99040  160:=  com1:= */
+    int16_t unit_idx = target.unit_idx; /* 131:0x99042  160:=  com1:= */
+
+    if ((int8_t)_UNITS[unit_idx].Hero_Slot > ST_UNDEFINED
+                                       /* JLE ->0x990A9, bytes 7E 4D, at
+                                          131:0x9905A  160:=  com1:= */
+        && (_HEROES2[(int8_t)_UNITS[unit_idx].owner_idx]
+                       ->heroes[(uint8_t)_UNITS[unit_idx].type].abilities & HSA_CHARMED)) {
+                                       /* owner CBW at 131:0x9906D  160:=  com1:=;
+                                          type zero-extension at 131:0x9908A  160:=  com1:=;
+                                          JE ->0x990A9 at 131:0x990A4  160:=  com1:= */
+        resistance += 30;             /* 131:0x990A6  160:=  com1:= */
+    }
+
+    if ((target.Attribs_1 & USA_IMMUNITY_MAGIC) && magic_realm >= sbr_Nature)
+                                       /* JE ->0x990B9 at 131:0x990AE  160:=  com1:=;
+                                          JL ->0x990B9 at 131:0x990B4  160:=  com1:= */
+        resistance += 30;             /* 131:0x990B6  160:=  com1:= */
+
+    if ((enchantments & UE_RIGHTEOUSNESS)
+                                       /* JE ->0x990D8 at 131:0x990C7  160:=  com1:= */
+        && (magic_realm == sbr_Chaos || magic_realm == sbr_Death))
+                                       /* JE ->0x990D5 at 131:0x990CD  160:=  com1:=;
+                                          JNE ->0x990D8 at 131:0x990D3  160:=  com1:= */
+        resistance += 30;             /* 131:0x990D5  160:=  com1:= */
+
+#if BUILD == COM1
+    if (magic_realm == sbr_Nature) {
+                                       /* Chaos arm nopped at com1:0x990DC;
+                                          JNE ->0x9910E at com1:0x990E2 */
+        (void)(enchantments & UE_ELEMENTAL_ARMOR);
+                                       /* unconditional EB 05 ->0x990FA at com1:0x990F3;
+                                          unreachable ADD DI,10 at com1:0x990F5 */
+        if (enchantments & UE_RESIST_ELEMENTS)
+                                       /* JE ->0x9910E at com1:0x99109 */
+            resistance += 4;          /* com1:0x9910B */
+    }
+#else
+    if (magic_realm == sbr_Chaos || magic_realm == sbr_Nature) {
+                                       /* 131:0x990D8..0x990E2  160:=  com1:â€” */
+        if (enchantments & UE_ELEMENTAL_ARMOR)
+                                       /* JE ->0x990FA at 131:0x990F3  160:=  com1:â€” */
+            resistance += 10;         /* 131:0x990F5  160:=  com1:â€” */
+        else if (enchantments & UE_RESIST_ELEMENTS)
+                                       /* JE ->0x9910E at 131:0x99109  160:=  com1:â€” */
+            resistance += 3;          /* 131:0x9910B  160:=  com1:â€” */
+    }
+#endif
+
+    if ((enchantments & UE_BLESS)
+                                       /* JE ->0x9912D at 131:0x9911C  160:=  com1:= */
+        && (magic_realm == sbr_Chaos || magic_realm == sbr_Death)) {
+                                       /* JE ->0x9912A at 131:0x99122  160:=  com1:=;
+                                          JNE ->0x9912D at 131:0x99128  160:=  com1:= */
+#if BUILD == COM1
+        resistance += 5;              /* com1:0x9912A */
+#else
+        resistance += 3;              /* 131:0x9912A  160:=  com1:â€” */
+#endif
+    }
+    if ((enchantments & UE_RESIST_MAGIC) && magic_realm >= sbr_Nature)
+                                       /* JE ->0x99146 at 131:0x9913B  160:=  com1:=;
+                                          JL ->0x99146 at 131:0x99141  160:=  com1:= */
+        resistance += 5;              /* 131:0x99143  160:=  com1:= */
+    return resistance;                /* 131:0x99146  160:=  com1:= */
+}
+
+int16_t __far Battle_Unit_Attack_Immunities(int16_t battle_unit_idx,
+                                             int16_t attack_mode)
+{
+    int16_t mask = 0;                 /* 131:0x99157  160:=  com1:= */
+    int8_t ranged_type = (int8_t)_battle_units[battle_unit_idx].ranged_type;
+
+    if (_battle_units[battle_unit_idx].attack_attributes & ATT_ILLUSIONARY)
+                                       /* JLE ->0x99175 at 131:0x9916C  160:=  com1:= */
+        mask |= USA_IMMUNITY_ILLUSION; /* 131:0x9916E  160:=  com1:= */
+
+    if (attack_mode > am_Melee) {     /* JG ->0x9917E at 131:0x99179  160:=  com1:= */
+        if (_battle_units[battle_unit_idx].ranged_attack_attributes & ATT_ILLUSIONARY)
+                                       /* JLE ->0x9919A at 131:0x99191  160:=  com1:= */
+            mask |= USA_IMMUNITY_ILLUSION; /* 131:0x99193  160:=  com1:= */
+        if (RAT_CLASS(ranged_type) == RAT_CLASS_MISSILE)
+                                       /* signed IDIV 10; JNE ->0x991BE at
+                                          131:0x9919A..0x991B5  160:=  com1:= */
+            mask |= USA_IMMUNITY_MISSILES; /* 131:0x991B7  160:=  com1:= */
+        if (ranged_type == RAT_FIRE_BREATH)
+                                       /* JNE ->0x991D9 at 131:0x991D0  160:=  com1:= */
+            mask |= USA_IMMUNITY_FIRE; /* 131:0x991D2  160:=  com1:= */
+        if (RAT_CLASS(ranged_type) == RAT_CLASS_MAGIC)
+                                       /* signed IDIV 10; JNE ->0x991FD at
+                                          131:0x991D9..0x991F4  160:=  com1:= */
+            mask |= USA_IMMUNITY_MAGIC; /* 131:0x991F6  160:=  com1:= */
+
+        if (RAT_CLASS(ranged_type) < RAT_CLASS_MAGIC
+                                       /* JL ->0x99237 at 131:0x99218  160:=  com1:= */
+#if BUILD == MOM131
+            || RAT_CLASS(ranged_type) == RAT_THROWN)
+                                       /* second signed IDIV 10; JNE ->0x99252 at
+                                          131:0x99235  160:â€”  com1:â€” */
+#else
+            || ranged_type == RAT_THROWN)
+                                       /* six NOPs replace IDIV at 160:0x9922C  com1:=;
+                                          JNE ->0x99252 at 160:0x99235  com1:0x99235 */
+#endif
+        {
+            if (_battle_units[battle_unit_idx].Weapon_Plus1 == 0)
+                                       /* JNE ->0x99252 at 131:0x99249  160:=  com1:= */
+                mask |= USA_IMMUNITY_WEAPON; /* 131:0x9924B  160:=  com1:= */
+        }
+    } else {
+        if (_battle_units[battle_unit_idx].Weapon_Plus1 == 0)
+                                       /* JNE ->0x9926F at 131:0x99266  160:=  com1:= */
+            mask |= USA_IMMUNITY_WEAPON; /* 131:0x99268  160:=  com1:= */
+        if (_battle_units[battle_unit_idx].melee_attack_attributes & ATT_ILLUSIONARY)
+                                       /* JLE ->0x9928B at 131:0x99282  160:=  com1:= */
+            mask |= USA_IMMUNITY_ILLUSION; /* 131:0x99284  160:=  com1:= */
+    }
+    return mask;                     /* 131:0x9928B  160:=  com1:= */
+}
+
+int16_t __far Battle_Unit_Attack_Magic_Realm(int16_t ranged_type_key,
+                                              int16_t battle_unit_idx)
+{
+    int16_t magic_realm = sbr_NONE;   /* 131:0x9A7A9  160:=  com1:= */
+
+    /* Borland's 21-entry value-table search is at 131:0x9A7B2..0x9A7C5 160:= com1:=:
+       JE ->0x9A7C8 at 0x9A7BE (74 08), LOOP ->0x9A7B8 at 0x9A7C3 (E2 F3), then
+       indirect JMP cs:[bx+0x2A] at 0x9A7C8. The value and target tables are
+       0x9A857..0x9A8AA, outside this code extent. */
+    switch (ranged_type_key) {
+    case RAT_NONE:
+        if ((int8_t)_battle_units[battle_unit_idx].race < RACE_FIRST_FANTASTIC)
+                                       /* JGE ->0x9A7E5 at 131:0x9A7DE  160:=  com1:= */
+            magic_realm = sbr_NONE;   /* 131:0x9A7E0  160:=  com1:= */
+        else if ((int8_t)_battle_units[battle_unit_idx].race == RACE_FIRST_FANTASTIC)
+                                       /* JNE ->0x9A7FE at 131:0x9A7F7  160:=  com1:= */
+            magic_realm = sbr_Arcane; /* 131:0x9A7F9  160:=  com1:= */
+        else
+            magic_realm = (int8_t)_battle_units[battle_unit_idx].race - RACE_REALM_BIAS;
+                                       /* 131:0x9A7FE..0x9A813  160:=  com1:= */
+        break;
+    case RAT_ROCK:
+    case RAT_CANNON:
+    case RAT_BOW:
+    case RAT_SLING:
+    case RAT_UNKNOWN:
+    case RAT_THROWN:
+        magic_realm = sbr_NONE;       /* stubs 131:0x9A817..0x9A822,0x9A839  160:=  com1:= */
+        break;
+    case RAT_LIGHTNING:
+    case RAT_FIREBALL:
+    case RAT_DEATH_BOLT:
+    case RAT_DROW:
+    case RAT_FIRE_BREATH:
+    case RAT_LIGHTNING_BREATH:
+    case RAT_MULTIPLE_GAZE:
+        magic_realm = sbr_Chaos;      /* stubs/arm 131:0x9A824..0x9A826,0x9A82D,0x9A833,
+                                         0x9A83B..0x9A83D,0x9A843  160:=  com1:= */
+        break;
+    case RAT_SORCERY:
+        magic_realm = sbr_Sorcery;    /* 131:0x9A828  160:=  com1:= */
+        break;
+    case RAT_ICE_BOLT:
+#if BUILD == COM1
+        magic_realm = sbr_Sorcery;    /* EB F7 ->0x9A828, changed byte at com1:0x9A830 */
+#else
+        magic_realm = sbr_Nature;     /* EB 0E ->0x9A83F at 131:0x9A82F  160:=  com1:â€” */
+#endif
+        break;
+    case RAT_PRIEST_SHAMAN:
+    case RAT_SPRITE:
+    case RAT_NATURE_BOLT:
+    case RAT_STONING_GAZE:
+        magic_realm = sbr_Nature;     /* stubs/arm 131:0x9A831,0x9A835..0x9A83F  160:=  com1:= */
+        break;
+    case RAT_DEATH_GAZE:
+        magic_realm = sbr_Death;      /* 131:0x9A848  160:=  com1:= */
+        break;
+    }
+    return magic_realm;               /* 131:0x9A84D  160:=  com1:= */
+}
+
+int16_t __far Range_To_Battle_Unit(int16_t first_idx, int16_t second_idx)
+{
+    int16_t dx = abs(_battle_units[first_idx].cgx - _battle_units[second_idx].cgx);
+                                       /* call 0000:02C8 at 131:0x9B53F  160:=  com1:= */
+    int16_t dy = abs(_battle_units[first_idx].cgy - _battle_units[second_idx].cgy);
+                                       /* call 0000:02C8 at 131:0x9B56D  160:=  com1:= */
+    if (dx > dy)                      /* JLE ->0x9B585 at 131:0x9B57C  160:=  com1:= */
+        return dx;                    /* 131:0x9B57E  160:=  com1:= */
+    /* 131:0x9B583 160:= com1:= is unreachable EB 05 ->0x9B58A. */
+    return dy;                        /* 131:0x9B585  160:=  com1:= */
+}
+
+int16_t __far Battle_Unit_Has_Ranged_Attack(int16_t battle_unit_idx)
+{
+    int16_t result = ST_FALSE;        /* 131:0x9BB0A  160:=  com1:= */
+    if ((int8_t)_battle_units[battle_unit_idx].ranged_type > RAT_NONE
+                                       /* JLE ->0x9BB37 at 131:0x9BB1E  160:=  com1:= */
+        && (int8_t)_battle_units[battle_unit_idx].ranged_type < RAT_THROWN) {
+                                       /* JGE ->0x9BB37 at 131:0x9BB32  160:=  com1:= */
+        result = ST_TRUE;             /* 131:0x9BB34  160:=  com1:= */
+    }
+    return result;                    /* 131:0x9BB37  160:=  com1:= */
+}
+
+int16_t __far BU_CauseFear(int16_t fear_source_idx, int16_t target_idx)
+{
+    int16_t failed_figures = 0;       /* 131:0x9BB4C  160:=  com1:= */
+    struct s_BATTLE_UNIT __far *source = &_battle_units[fear_source_idx];
+    struct s_BATTLE_UNIT __far *target = &_battle_units[target_idx];
+
+    if (!((source->Attribs_2 & USA2_CAUSE_FEAR)
+                                       /* JNE ->0x9BBD0 at 131:0x9BB63  160:=  com1:= */
+          || (source->enchantments & UE_CLOAK_OF_FEAR)
+                                       /* JNE ->0x9BBD0 at 131:0x9BB82  160:=  com1:= */
+          || (source->item_enchantments & UE_CLOAK_OF_FEAR)
+                                       /* JNE ->0x9BBD0 at 131:0x9BBA1  160:=  com1:= */
+          || (_UNITS[source->unit_idx].enchantments & UE_CLOAK_OF_FEAR)))
+                                       /* JE ->0x9BC35 at 131:0x9BBCE  160:=  com1:= */
+        return failed_figures;
+    if (target->Attribs_1 & USA_IMMUNITY_DEATH)
+                                       /* JNE ->0x9BC35 at 131:0x9BBE3  160:=  com1:= */
+        return failed_figures;
+
+    int16_t figure = 0;               /* 131:0x9BBE5  160:=  com1:= */
+    while (figure < (int8_t)target->Cur_Figures) {
+                                       /* JG ->0x9BBEC at 131:0x9BC33  160:=  com1:= */
+#if BUILD == COM1
+        if (Combat_Resistance_Check(*target, -3, sbr_Death) > 0)
+                                       /* PUSH -3 at com1:0x9BBF0; copy call com1:0x9BC08;
+                                          resistance call com1:0x9BC0E; JLE ->0x9BC1B at 0x9BC16 */
+#else
+        if (Combat_Resistance_Check(*target, 0, sbr_Death) > 0)
+                                       /* PUSH 0 at 131:0x9BBF0  160:=  com1:â€”;
+                                          copy call 131:0x9BC08  160:=  com1:â€”;
+                                          resistance call 131:0x9BC0E  160:=  com1:â€”;
+                                          JLE ->0x9BC1B at 131:0x9BC16  160:=  com1:â€” */
+#endif
+            ++failed_figures;         /* 131:0x9BC18  160:=  com1:= */
+        ++figure;                     /* 131:0x9BC1B  160:=  com1:= */
+    }
+    return failed_figures;            /* 131:0x9BC35  160:=  com1:= */
+}
+
+/* R6.2e defense-special and Wall of Fire helpers. */
+
+int16_t __far Battle_Unit_Defense_Special(int16_t defender_battle_unit_idx,
+                                          int16_t attack_ranged_type,
+                                          int16_t attack_immunities,
+                                          int16_t attack_flags,
+                                          int16_t attack_magic_realm)
+{
+    struct s_BATTLE_UNIT __far *bu = &_battle_units[defender_battle_unit_idx];
+                                      /* 131:0x9A58F  160:=  com1:= */
+    int16_t defense_special = DEF_SPECIAL_NONE;
+                                      /* write [bp-6]; 131:0x9A592  160:=  com1:= */
+    uint32_t enchantments =
+          _UNITS[bu->unit_idx].enchantments
+                                      /* 131:0x9A597..0x9A5B9  160:=  com1:= */
+        | bu->enchantments            /* half swap 131:0x9A5BA..0x9A5D2  160:=  com1:= */
+        | bu->item_enchantments;      /* half swap 131:0x9A5D3..0x9A5EB  160:=  com1:=;
+                                         stores [bp-2]/[bp-4] at 0x9A5EC/0x9A5EF */
+    int16_t defense = (int8_t)bu->defense;
+                                      /* 131:0x9A5F2..0x9A605  160:=  com1:= */
+
+#if BUILD == COM1
+    /* Pointer reloads at 0x9A606, 0x9A634, 0x9A652 and 0x9A670 are replaced by
+     * NOPs; ES:BX still addresses this battle unit. */
+#endif
+
+    if (attack_immunities & bu->Attribs_1 & USA_IMMUNITY_ILLUSION) {
+                                      /* JE ->0x9A628; 131:0x9A613..0x9A61D  160:=  com1:= */
+        attack_immunities ^= USA_IMMUNITY_ILLUSION;
+                                      /* write [bp+0x0A]; 131:0x9A61F..0x9A625  160:=  com1:= */
+    }
+    if (attack_immunities & USA_IMMUNITY_ILLUSION)
+                                      /* JE ->0x9A634; 131:0x9A628..0x9A62D  160:=  com1:= */
+        return 0;                     /* 131:0x9A62F..0x9A633  160:=  com1:= */
+
+    if ((bu->Abilities & UA_LARGE_SHIELD) > 0
+                                      /* JLE ->0x9A652; 131:0x9A634..0x9A647  160:=  com1:= */
+        && attack_ranged_type != RAT_NONE) {
+                                      /* JE ->0x9A652; 131:0x9A649..0x9A64D  160:=  com1:= */
+#if BUILD == COM1
+        defense += COM1_LARGE_SHIELD_DEFENSE; /* com1:0x9A64F */
+#else
+        defense += MOM_LARGE_SHIELD_DEFENSE;  /* 131:0x9A64F  160:=  com1:— */
+#endif
+    }
+
+#if BUILD == MOM131
+    if ((bu->Attribs_1 & attack_immunities) != 0
+                                      /* JE ->0x9A673; 131:0x9A652..0x9A666 */
+        && attack_ranged_type != RAT_NONE) {
+                                      /* JE ->0x9A673; 131:0x9A668..0x9A66C */
+        defense_special = DEF_SPECIAL_FULL; /* write 131:0x9A66E */
+    }
+    if (attack_immunities & bu->Attribs_1 & USA_IMMUNITY_WEAPON) {
+                                      /* JE ->0x9A691; 131:0x9A673..0x9A68A */
+        defense_special = DEF_SPECIAL_WEAPON_IMMUNITY; /* write 131:0x9A68C */
+    }
+#else
+    if (attack_immunities & bu->Attribs_1 & USA_IMMUNITY_WEAPON) {
+                                      /* JE ->0x9A670; 160:0x9A65F..0x9A669  com1:= */
+        defense_special = DEF_SPECIAL_WEAPON_IMMUNITY;
+                                      /* write 160:0x9A66B  com1:= */
+    }
+    if (((uint8_t)bu->Attribs_1 & (uint8_t)attack_immunities) != 0
+                                      /* byte TEST; JE ->0x9A691;
+                                         160:0x9A67D..0x9A684  com1:= */
+        && attack_ranged_type != RAT_NONE) {
+                                      /* JE ->0x9A691; 160:0x9A686..0x9A68A  com1:= */
+        defense_special = DEF_SPECIAL_FULL; /* write 160:0x9A68C  com1:= */
+    }
+#endif
+
+    if ((bu->Attribs_1 & USA_IMMUNITY_MAGIC)
+                                      /* JE ->0x9A6B7; 131:0x9A691..0x9A6A4
+                                         160:=  com1:0x9A691..0x9A697 */
+        && attack_magic_realm > sbr_NONE
+                                      /* JLE ->0x9A6B7; 131:0x9A6A6..0x9A6AA
+                                         160:=  com1:0x9A699..0x9A69D */
+        && attack_ranged_type != RAT_NONE
+                                      /* JE ->0x9A6B7; 131:0x9A6AC..0x9A6B0
+                                         160:=  com1:0x9A69F..0x9A6A3 */
+#if BUILD == COM1
+        && attack_ranged_type != RAT_LIGHTNING_BREATH
+                                      /* JE ->0x9A6B7; com1:0x9A6A5..0x9A6A9 */
+        && attack_ranged_type != RAT_FIRE_BREATH
+                                      /* JE ->0x9A6B7; com1:0x9A6AB..0x9A6AF */
+#endif
+        )
+        defense_special = DEF_SPECIAL_FULL; /* write 131:0x9A6B2  160:=  com1:= */
+
+    if (attack_magic_realm == sbr_Chaos || attack_magic_realm == sbr_Death) {
+                                      /* JE ->0x9A6C3 / JNE ->0x9A72D;
+                                         131:0x9A6B7..0x9A6C1  160:=  com1:= */
+        if (enchantments & UE_BLESS) {
+                                      /* JE ->0x9A6D6 or 0x9A6DC;
+                                         131:0x9A6C3..0x9A6D1  160:=  com1:= */
+#if BUILD == COM1
+            if (attack_ranged_type > RAT_MAGIC_LAST_EXCL - 1)
+                                      /* JLE ->0x9A6DC; com1:0x9A6D3..0x9A6D7 */
+                defense += COM1_BLESS_DEFENSE; /* com1:0x9A6D9 */
+#else
+            defense += MOM_BLESS_DEFENSE;      /* 131:0x9A6D3  160:= */
+#endif
+        }
+
+#if BUILD == MOM131
+        if ((_UNITS[bu->unit_idx].enchantments & UE_RIGHTEOUSNESS)
+                                      /* JNE ->0x9A722; 131:0x9A6D6..0x9A701 */
+            || (bu->enchantments & UE_RIGHTEOUSNESS)) {
+                                      /* JE ->0x9A72D; 131:0x9A703..0x9A720 */
+            if (attack_ranged_type != RAT_NONE) {
+                                      /* JE ->0x9A72D; 131:0x9A722..0x9A726 */
+                defense_special = DEF_SPECIAL_FULL; /* write 131:0x9A728 */
+            }
+        }
+#elif BUILD == CP160
+        if (enchantments & UE_RIGHTEOUSNESS) {
+                                      /* JE ->0x9A72D / JMP ->0x9A722;
+                                         160:0x9A6D6..0x9A6DE */
+            if (attack_ranged_type != RAT_NONE) {
+                                      /* JE ->0x9A72D; 160:0x9A722..0x9A726 */
+                defense_special = DEF_SPECIAL_FULL; /* write 160:0x9A728 */
+            }
+        }
+        /* 160:0x9A6E0..0x9A721 is an unreachable orphan of the 1.31 block. */
+#else
+        /* com1:0x9A6DC..0x9A732 is an 87-byte NOP field: Righteousness removed. */
+#endif
+    }
+
+#if BUILD == COM1
+    if (attack_ranged_type != RAT_THROWN
+                                      /* JE ->0x9A769; com1:0x9A733..0x9A737 */
+        && attack_ranged_type >= RAT_MAGIC_FIRST) {
+                                      /* JL ->0x9A769; com1:0x9A739..0x9A73D */
+        if (enchantments & UE_ELEMENTAL_ARMOR) {
+                                      /* JE ->0x9A755; com1:0x9A73F..0x9A74E */
+            defense += COM1_ELEMENTAL_ARMOR_DEFENSE; /* com1:0x9A750 */
+        }
+        if (enchantments & UE_RESIST_ELEMENTS) {
+                                      /* JE ->0x9A769; com1:0x9A755..0x9A764 */
+            defense += COM1_RESIST_ELEMENTS_DEFENSE; /* com1:0x9A766 */
+        }
+    }
+#else
+    if ((attack_magic_realm == sbr_Chaos || attack_magic_realm == sbr_Nature)
+                                      /* JE ->0x9A739 / JNE ->0x9A769;
+                                         131:0x9A72D..0x9A737  160:= */
+        && attack_ranged_type != RAT_NONE) {
+                                      /* JE ->0x9A769; 131:0x9A739..0x9A73D  160:= */
+        if (enchantments & UE_ELEMENTAL_ARMOR) {
+                                      /* JE ->0x9A755; 131:0x9A73F..0x9A74E  160:= */
+            defense += MOM_ELEMENTAL_ARMOR_DEFENSE; /* 131:0x9A750  160:= */
+        } else if (enchantments & UE_RESIST_ELEMENTS) {
+                                      /* JMP ->0x9A769 at 0x9A753; JE ->0x9A769
+                                         at 131:0x9A764  160:= */
+            defense += MOM_RESIST_ELEMENTS_DEFENSE; /* 131:0x9A766  160:= */
+        }
+    }
+#endif
+
+    if (attack_flags & ATT_ARMOR_PIERCING) {
+                                      /* JE ->0x9A779; 131:0x9A769..0x9A76E  160:=  com1:= */
+        defense = defense / 2;        /* signed truncation toward zero;
+                                         131:0x9A770..0x9A778  160:=  com1:= */
+    }
+
+    if (defense_special == DEF_SPECIAL_WEAPON_IMMUNITY) {
+                                      /* JNE ->0x9A787; 131:0x9A779..0x9A77D  160:=  com1:= */
+#if BUILD == COM1
+        defense += COM1_WEAPON_IMMUNITY_BONUS;
+                                      /* JMP ->0x9A787; com1:0x9A77F..0x9A783 */
+#else
+        if (defense < MOM_WEAPON_IMMUNITY_FLOOR)
+                                      /* JGE ->0x9A787; 131:0x9A77F..0x9A782  160:= */
+            defense = MOM_WEAPON_IMMUNITY_FLOOR; /* 131:0x9A784  160:= */
+#endif
+    }
+
+    if (defense_special == DEF_SPECIAL_FULL) {
+                                      /* JNE ->0x9A793; 131:0x9A787..0x9A78B  160:=  com1:= */
+#if BUILD == COM1
+        return COM1_DEFENSE_SPECIAL_VALUE; /* com1:0x9A78D */
+#else
+        return MOM_DEFENSE_SPECIAL_VALUE;  /* 131:0x9A78D  160:= */
+#endif
+    }
+    return defense;                  /* 131:0x9A793..0x9A79D  160:=  com1:= */
+}
+
+#if BUILD == COM1
+/* Out-of-line near helper at com1:0x9EDD2..0x9EE20. Its sole caller is
+ * 0x9E96F: E8 60 04; Check_Wall_Of_Fire_Attack jumps over this island. */
+static void __near com1_apply_guardian_node_heavenly_light(void)
+{
+    int16_t node_idx = 0;            /* com1:0x9EDD2 */
+    while (node_idx < NUM_NODES) {
+                                      /* JL ->0x9EDD4; com1:0x9EE1A..0x9EE1E */
+        struct s_NODE __far *node = &_NODES[node_idx];
+                                      /* stride 0x30; com1:0x9EDD4..0x9EDE0 */
+        if ((node->flags & NF_GUARDIAN)
+                                      /* JE ->0x9EE1A; com1:0x9EDE1..0x9EDE6 */
+            && node->owner_idx == (int8_t)_combat_defender_player
+                                      /* JNE ->0x9EE1A; com1:0x9EDE8..0x9EDF0 */
+            && node->wx == OVL_Action_XPos
+                                      /* JNE ->0x9EE1A; com1:0x9EDF2..0x9EDF9 */
+            && node->wy == OVL_Action_YPos
+                                      /* JNE ->0x9EE1A; com1:0x9EDFB..0x9EE03 */
+            && node->wp == OVL_Action_Plane) {
+                                      /* JNE ->0x9EE1A; com1:0x9EE05..0x9EE0D */
+            battlefield->city_enchantments[CITY_ENCHANT_HEAVENLY_LIGHT] =
+                node->owner_idx + 1; /* sole non-frame write, raw +0x1593;
+                                         com1:0x9EE0F..0x9EE19 */
+        }
+        ++node_idx;                  /* com1:0x9EE1A */
+    }
+    return;                          /* near RET com1:0x9EE20 */
+}
+#endif
+
+int16_t __far Battle_Unit_In_City_Wall_Box(int16_t battle_unit_idx)
+{
+    struct s_BATTLE_UNIT __far *bu = &_battle_units[battle_unit_idx];
+                                      /* 131:0x9EFE6..0x9EFF5  160:=  com1:= */
+    if (bu->cgx < CITY_WALL_BOX_CGX_FIRST)
+                                      /* JL ->0x9F040; 131:0x9EFF6..0x9EFFB  160:=  com1:= */
+        return 0;
+    if (bu->cgy < CITY_WALL_BOX_CGY_FIRST)
+                                      /* JL ->0x9F040; 131:0x9EFFD..0x9F00F  160:=  com1:= */
+        return 0;
+    if (bu->cgx > CITY_WALL_BOX_CGX_LAST)
+                                      /* JG ->0x9F040; 131:0x9F011..0x9F023  160:=  com1:= */
+        return 0;
+    if (bu->cgy > CITY_WALL_BOX_CGY_LAST)
+                                      /* JG ->0x9F040; 131:0x9F025..0x9F037  160:=  com1:= */
+        return 0;
+    return 1;                         /* jump remnants 0x9F03E/0x9F042;
+                                         131:0x9F039..0x9F045  160:=  com1:= */
+}
+
+void __far Check_Wall_Of_Fire_Attack(int16_t battle_unit_idx)
+{
+    int16_t damage_types[NUM_DAMAGE_TYPES]; /* deliberately uninitialized; [bp-6] */
+    struct s_BATTLE_UNIT __far *bu;
+
+    if (battlefield->wall_of_fire <= 0)
+                                      /* JG ->0x9EDC3; 131:0x9EDB1..0x9EDBE  160:=  com1:= */
+        return;                       /* JMP ->0x9EE80; 131:0x9EDC0  160:=  com1:= */
+    bu = &_battle_units[battle_unit_idx];
+                                      /* 131:0x9EDC3..0x9EDCF  160:=  com1:= */
+
+#if BUILD == COM1
+    /* com1:0x9EDD0 jumps over the helper and 0x9EE21..0x9EE28 NOP padding. */
+    if ((int8_t)bu->controller_idx == (int8_t)_combat_defender_player)
+                                      /* JE ->0x9EDC0; com1:0x9EE29..0x9EE31 */
+        return;
+    if (bu->Move_Flags & (MV_FLYING | MV_TELEPORT | MV_MERGING))
+                                      /* byte TEST raw 0x98; JNE ->0x9EE80;
+                                         com1:0x9EE33..0x9EE38 */
+        return;
+#else
+    if (bu->Move_Flags & MV_FLYING)
+                                      /* JE ->0x9EDDA; 131:0x9EDD0..0x9EDD5  160:= */
+        return;                       /* JMP ->0x9EE80; 131:0x9EDD7  160:= */
+    if (bu->Move_Flags & MV_TELEPORT)
+                                      /* JE ->0x9EDF1; 131:0x9EDDA..0x9EDEC  160:= */
+        return;                       /* JMP ->0x9EE80; 131:0x9EDEE  160:= */
+    if (bu->Move_Flags & MV_MERGING)
+                                      /* JNE ->0x9EE80; 131:0x9EDF1..0x9EE03  160:= */
+        return;
+    if (Battle_Unit_In_City_Wall_Box(battle_unit_idx) != 0)
+                                      /* CALL ->0x9EFE3 at 0x9EE08; JNE ->0x9EE80
+                                         at 131:0x9EE0E  160:= */
+        return;
+#endif
+
+    if (bu->target_cgx < CITY_WALL_BOX_CGX_FIRST)
+                                      /* JL ->0x9EE80; 131:0x9EE10..0x9EE22
+                                         160:=  com1:0x9EE3A..0x9EE3F */
+        return;
+    if (bu->target_cgx > CITY_WALL_BOX_CGX_LAST)
+                                      /* JG ->0x9EE80; 131:0x9EE24..0x9EE36
+                                         160:=  com1:0x9EE41..0x9EE46 */
+        return;
+    if (bu->target_cgy < CITY_WALL_BOX_CGY_FIRST)
+                                      /* JL ->0x9EE80; 131:0x9EE38..0x9EE4A
+                                         160:=  com1:0x9EE48..0x9EE4D */
+        return;
+    if (bu->target_cgy > CITY_WALL_BOX_CGY_LAST)
+                                      /* JG ->0x9EE80; 131:0x9EE4C..0x9EE5E
+                                         160:=  com1:0x9EE4F..0x9EE54 */
+        return;
+
+#if BUILD == COM1
+    if (Battle_Unit_In_City_Wall_Box(battle_unit_idx) != 0)
+                                      /* CALL ->0x9EFE3 at 0x9EE58; JNE ->0x9EE80
+                                         at com1:0x9EE5E */
+        return;
+#endif
+
+    overlay_0388_0039(SPELL_FIREBALL, battle_unit_idx, damage_types,
+#if BUILD == COM1
+                      COM1_WALL_OF_FIRE_STRENGTH);
+                                      /* push 10 com1:0x9EE60; CALL 0388:0039 at 0x9EE6C */
+#else
+                      MOM_WALL_OF_FIRE_STRENGTH);
+                                      /* push 0 131:0x9EE60; CALL 0388:0039 at 0x9EE6C  160:= */
+#endif
+    overlay_0388_003E(battle_unit_idx, damage_types);
+                                      /* CALL 0388:003E; 131:0x9EE79  160:=  com1:= */
+}
+
+/* R6.2f spell damage and application closure. */
+
+void __far Apply_Battle_Unit_Damage_From_Spell(int16_t spell_idx,
+                                                int16_t battle_unit_idx,
+                                                int16_t damage_types[NUM_DAMAGE_TYPES],
+                                                int16_t attack_strength_override)
+{
+    struct s_BATTLE_UNIT __far *bu = &_battle_units[battle_unit_idx];
+    struct s_SPELL_DATA __far *spell = &_SPELL_DATA[spell_idx];
+    uint32_t enchantments =
+          _UNITS[bu->unit_idx].enchantments
+        | bu->enchantments
+        | bu->item_enchantments;
+                                      /* 131:0x87048..0x870A0  160:=  com1:= */
+    int16_t figures_killed = 0;       /* 131:0x87041  160:=  com1:= */
+    int16_t damage_carry = 0;         /* 131:0x87046  160:=  com1:= */
+    int16_t total_damage = 0;         /* 131:0x870A3  160:=  com1:= */
+    int16_t i;
+
+    for (i = 0; i < NUM_DAMAGE_TYPES; ++i)
+                                      /* JL ->0x870AF at 131:0x870C4  160:=  com1:= */
+        damage_types[i] = 0;          /* 131:0x870B9  160:=  com1:= */
+
+    if ((enchantments & UE_RIGHTEOUSNESS)
+                                      /* JE ->0x87100 at 131:0x870D4  160:=  com1:= */
+        && (spell->magic_realm == sbr_Chaos || spell->magic_realm == sbr_Death))
+                                      /* JE ->0x87115 at 131:0x870E9/0x870FE  160:=  com1:= */
+        return;
+    if (bu->Attribs_1 & USA_IMMUNITY_MAGIC)
+                                      /* JE ->0x8711A at 131:0x87113  160:=  com1:= */
+        return;
+
+    int16_t figure_damage = (int8_t)bu->front_figure_damage;
+                                      /* 131:0x8711A..0x8712C  160:=  com1:= */
+    int16_t attack_flags = spell->Params2_3;
+                                      /* 131:0x8712F..0x87141  160:=  com1:= */
+    int16_t to_block = (int8_t)bu->toblock;
+                                      /* 131:0x87144..0x87156  160:=  com1:= */
+    if (attack_flags & ATT_ELDRITCH_WEAPON)
+                                      /* JE ->0x87163 at 131:0x8715E  160:=  com1:= */
+        --to_block;
+
+    int16_t attack_immunities = (uint8_t)spell->Param1;
+                                      /* 131:0x87163..0x87177  160:=  com1:= */
+    int16_t attack_strength;
+    if (attack_strength_override > 0)
+                                      /* JLE ->0x87185 at 131:0x8717E  160:=  com1:= */
+        attack_strength = attack_strength_override;
+    else
+        attack_strength = (uint8_t)spell->Param0;
+                                      /* 131:0x87185..0x87199  160:=  com1:= */
+
+    int16_t defense = Battle_Unit_Defense_Special(
+        battle_unit_idx,
+#if BUILD == COM1
+        SPELL_DAMAGE_RANGED_TYPE_COM1,
+                                      /* MOV AX,0x27; com1:0x871B6 */
+#else
+        SPELL_DAMAGE_RANGED_TYPE_MOM,
+                                      /* MOV AX,0x26; 131:0x871B6  160:= */
+#endif
+        attack_immunities, attack_flags, (int8_t)spell->magic_realm);
+                                      /* lcall 03D0:0043 at 131:0x871BB  160:=  com1:= */
+
+    int16_t attack_count;
+    if (attack_flags & ATT_AREA) {
+                                      /* JE ->0x871ED at 131:0x871CB  160:=  com1:= */
+        attack_count = (int8_t)bu->Cur_Figures;
+        attack_flags |= ATT_DAMAGE_LIMIT;
+                                      /* OR raw 0x2000 at 131:0x871E2  160:=  com1:= */
+    } else if (attack_flags & ATT_WARP_LIGHTNING) {
+                                      /* JE ->0x871FC at 131:0x871F2  160:=  com1:= */
+        attack_count = attack_strength;
+    } else {
+        attack_count = 1;
+    }
+
+    if (bu->Combat_Effects & BUE_BLACK_SLEEP)
+                                      /* JE ->0x8721F at 131:0x87214  160:=  com1:= */
+        attack_flags |= ATT_AUTOMATIC_DAMAGE;
+                                      /* OR raw 0x10 at 131:0x87216  160:=  com1:= */
+
+    for (i = 0; i < attack_count; ++i) {
+                                      /* JGE ->0x87356 at 131:0x87351  160:=  com1:= */
+        if (attack_flags & ATT_AUTOMATIC_DAMAGE) {
+                                      /* JE ->0x87233 at 131:0x8722C  160:=  com1:= */
+            damage_carry = attack_strength;
+        } else {
+            damage_carry += CMB_AttackRoll(attack_strength, 0);
+                                      /* lcall 03D0:0020 at 131:0x87239  160:=  com1:= */
+            damage_carry -= CMB_DefenseRoll(defense, to_block);
+                                      /* lcall 03D0:0025 at 131:0x87248  160:=  com1:= */
+            if (enchantments & UE_INVULNERABILITY)
+                                      /* JE ->0x87264 at 131:0x8725F  160:=  com1:= */
+                damage_carry -= INVULNERABILITY_DAMAGE_REDUCTION;
+            if (damage_carry < 0)
+                damage_carry = 0;
+        }
+
+        if (i == 0 && figure_damage >= 0) {
+                                      /* 131:0x8726A..0x87274  160:=  com1:= */
+            damage_carry += figure_damage;
+            figure_damage = 0;
+        }
+        if (figure_damage < 0) {
+                                      /* JGE ->0x87299 at 131:0x87282  160:=  com1:= */
+            figure_damage += damage_carry;
+            if (figure_damage > 0) {
+                                      /* JLE ->0x87297 at 131:0x8728B  160:=  com1:= */
+                damage_carry = figure_damage;
+                figure_damage = 0;
+            } else {
+                damage_carry = 0;
+            }
+        }
+
+        if (attack_flags & ATT_DAMAGE_LIMIT) {
+                                      /* JE ->0x872BD at 131:0x8729E  160:=  com1:= */
+            if ((int8_t)bu->hits < damage_carry) {
+                                      /* JGE ->0x872BB at 131:0x872B4  160:=  com1:= */
+                ++figures_killed;
+                damage_carry = 0;
+            }
+        } else {
+            while ((int8_t)bu->hits < damage_carry) {
+                                      /* JL ->0x872BF at 131:0x87313  160:=  com1:= */
+                ++figures_killed;
+                damage_carry -= (int8_t)bu->hits;
+                if (!(attack_flags & ATT_AUTOMATIC_DAMAGE)) {
+                                      /* JNE ->0x872FF at 131:0x872DB  160:=  com1:= */
+                    damage_carry -= CMB_DefenseRoll(defense, to_block);
+                                      /* lcall 03D0:0025 at 131:0x872E3  160:=  com1:= */
+                    if (enchantments & UE_INVULNERABILITY)
+                                      /* JE ->0x872FF at 131:0x872FA  160:=  com1:= */
+                        damage_carry -= INVULNERABILITY_DAMAGE_REDUCTION;
+                }
+            }
+            if (damage_carry < 0)
+                damage_carry = 0;
+        }
+
+        total_damage += damage_carry + (int8_t)bu->hits * figures_killed;
+                                      /* signed IMUL low word; 131:0x8731B..0x87334  160:=  com1:= */
+        damage_carry = 0;
+        figures_killed = 0;
+        if (attack_flags & ATT_WARP_LIGHTNING)
+                                      /* JE ->0x87348 at 131:0x87343  160:=  com1:= */
+            --attack_strength;
+    }
+
+    total_damage -= (int8_t)bu->front_figure_damage;
+                                      /* 131:0x87356..0x8736D  160:=  com1:= */
+    if (total_damage < 0)
+        total_damage = 0;
+    damage_types[DMG_REGULAR] = total_damage;
+                                      /* 131:0x8737B..0x87381  160:=  com1:= */
+}
+
+void __far BU_ApplyDamage(int16_t battle_unit_idx,
+                          int16_t damage_types[NUM_DAMAGE_TYPES])
+{
+    struct s_BATTLE_UNIT __far *bu = &_battle_units[battle_unit_idx];
+    int16_t total = 0;
+    int16_t i;
+    for (i = 0; i < NUM_DAMAGE_TYPES; ++i)
+                                      /* JL ->0x8739D at 131:0x873AF  160:=  com1:= */
+        total += damage_types[i];
+
+    if (total <= 0)
+        return;                       /* JMP ->0x876BA at 131:0x873B7  160:=  com1:= */
+    if ((int8_t)bu->status != BUS_ACTIVE)
+        return;                       /* JMP ->0x876BA at 131:0x873CE  160:=  com1:= */
+
+    for (i = 0; i < NUM_DAMAGE_TYPES; ++i) {
+                                      /* JL ->0x873D5 at 131:0x87447  160:=  com1:= */
+        if ((uint8_t)bu->damage[i] + damage_types[i] > BU_DAMAGE_CEILING)
+                                      /* JLE ->0x87410 at 131:0x873F8  160:=  com1:= */
+            bu->damage[i] = BU_DAMAGE_CEILING;
+                                      /* 26 C6 47 36 C8 at 131:0x87409  160:=  com1:= */
+        else
+            bu->damage[i] += (uint8_t)damage_types[i];
+                                      /* state write at 131:0x8743F  160:=  com1:= */
+    }
+
+    total += (int8_t)bu->front_figure_damage;
+    if (total > 0) {
+                                      /* false jump ->0x87504 at 131:0x87464  160:=  com1:= */
+        int16_t figures_lost = total / (int8_t)bu->hits;
+                                      /* CWD / IDIV at 131:0x8747E  160:=  com1:= */
+        if ((int8_t)bu->Cur_Figures < figures_lost)
+            figures_lost = (int8_t)bu->Cur_Figures;
+        bu->Cur_Figures -= (int8_t)figures_lost;
+                                      /* 131:0x874D3  160:=  com1:= */
+        bu->front_figure_damage = (int8_t)(total % (int8_t)bu->hits);
+                                      /* second CWD / IDIV; state write 131:0x87500  160:=  com1:= */
+    }
+
+    if ((int8_t)bu->Cur_Figures > 0)
+        return;                       /* JMP ->0x876BA at 131:0x87518  160:=  com1:= */
+
+#if BUILD == CP160 || BUILD == COM1
+    /* Eight NOP bytes at 160:0x8751B..0x87522 and com1:0x8751B..0x87522. */
+    bu->status = BUS_DEAD;            /* 26 C6 47 34 04; 160:0x87523  com1:0x87523 */
+#endif
+    bu->Cur_Figures = 0;              /* 131:0x87528  160:=  com1:= */
+    _combat_winner = Eliminated_Opponent();
+                                      /* call 0x88470 and DS:0xC972 store at 131:0x8752E..0x87532
+                                         160:=  com1:= */
+
+#if BUILD == MOM131 || BUILD == CP160
+    if (Battle_Unit_Is_Summoned_Creature(battle_unit_idx) != ST_FALSE)
+                                      /* lcall 03E0:005C; JE ->0x87560 at 131:0x87536..0x8753E
+                                         160:= */
+        _UNITS[bu->unit_idx].wp = UNIT_WP_GONE;
+                                      /* 26 C6 47 02 09 at 131:0x8755B  160:= */
+#else
+    (void)Battle_Unit_Is_Summoned_Creature(battle_unit_idx);
+                                      /* result discarded; com1:0x87536 */
+    overlay_03D0_004D(UNKNOWN_C520);  /* FF 36 20 C5 / 9A 4D 00 D0 03;
+                                         com1:0x8753C..0x87545 */
+    /* Twenty-six NOP bytes at com1:0x87546..0x8755F. */
+#endif
+
+    if ((uint8_t)bu->damage[DMG_IRREVERSIBLE] >= (uint8_t)bu->damage[DMG_UNDEATH]
+                                      /* JB ->0x875C1 at 131:0x87584  160:=  com1:= */
+        && (uint8_t)bu->damage[DMG_IRREVERSIBLE] >= (uint8_t)bu->damage[DMG_REGULAR]) {
+                                      /* JB ->0x875C1 at 131:0x875AA  160:=  com1:= */
+        bu->status = BUS_GONE;        /* 131:0x875B9  160:=  com1:= */
+    } else if ((uint8_t)bu->damage[DMG_UNDEATH] > (uint8_t)bu->damage[DMG_IRREVERSIBLE]
+                                      /* JBE ->0x87657 at 131:0x875E5  160:=  com1:= */
+               && (uint8_t)bu->damage[DMG_UNDEATH] >= (uint8_t)bu->damage[DMG_REGULAR]) {
+                                      /* JB ->0x87657 at 131:0x8760B  160:=  com1:= */
+        if (_UNITS[bu->unit_idx].wp == UNIT_WP_GONE)
+            bu->status = BUS_GONE;    /* 131:0x8763C  160:=  com1:= */
+        else
+            bu->status = BUS_DRAINED; /* 131:0x87650  160:=  com1:= */
+    } else if ((uint8_t)bu->damage[DMG_REGULAR] > (uint8_t)bu->damage[DMG_IRREVERSIBLE]
+                                      /* JBE ->0x876B5 at 131:0x8767B  160:=  com1:= */
+               && (uint8_t)bu->damage[DMG_REGULAR] > (uint8_t)bu->damage[DMG_UNDEATH]) {
+                                      /* JBE ->0x876B5 at 131:0x876A1  160:=  com1:= */
+        bu->status = BUS_DEAD;        /* 131:0x876B0  160:=  com1:= */
+    }
+
+    overlay_0348_003E();             /* 9A 3E 00 48 03; 131:0x876B5  160:=  com1:= */
+}
+
+int16_t __far Check_Attack_Ranged(int16_t attacker_battle_unit_idx,
+                                  int16_t defender_battle_unit_idx)
+{
+    uint32_t defender_enchantments =
+          _battle_units[defender_battle_unit_idx].enchantments
+        | _battle_units[defender_battle_unit_idx].item_enchantments
+        | _UNITS[_battle_units[defender_battle_unit_idx].unit_idx].enchantments;
+                                      /* 131:0x876CE..0x87726  160:=  com1:= */
+    uint32_t attacker_enchantments =
+          _battle_units[attacker_battle_unit_idx].enchantments
+        | _battle_units[attacker_battle_unit_idx].item_enchantments
+        | _UNITS[_battle_units[attacker_battle_unit_idx].unit_idx].enchantments;
+                                      /* 131:0x87729..0x87781  160:=  com1:= */
+    int16_t result = CHECK_RANGED_VISIBLE;
+
+    if ((attacker_enchantments & UE_TRUE_SIGHT)
+                                      /* high-word mask 0x0040; JNE ->0x877AE at
+                                         131:0x87797  160:=  com1:= */
+        || (_battle_units[attacker_battle_unit_idx].Attribs_1 & USA_IMMUNITY_ILLUSION)) {
+                                      /* JE ->0x877B5 at 131:0x877AC  160:=  com1:= */
+        result = CHECK_RANGED_VISIBLE;
+    } else if ((defender_enchantments & UE_INVISIBILITY)
+                                      /* low-word mask 0x8000; JNE ->0x877DB at
+                                         131:0x877C4  160:=  com1:= */
+               || (_battle_units[defender_battle_unit_idx].Abilities & UA_INVISIBILITY)) {
+                                      /* JE ->0x877E0 at 131:0x877D9  160:=  com1:= */
+        result = CHECK_RANGED_INVISIBLE;
+    }
+
+    if (battlefield->wall_of_darkness == ST_TRUE
+                                      /* JNE ->return at 131:0x877EA  160:=  com1:= */
+#if BUILD == MOM131
+        && !(attacker_enchantments & UE_TRUE_SIGHT)
+                                      /* JNE ->0x87818 at 131:0x877FA */
+#else
+        && !(_battle_units[attacker_battle_unit_idx].Attribs_1 & USA_IMMUNITY_ILLUSION)
+                                      /* 75 1C ->0x8781A at 160:0x877FC  com1:0x877FC */
+#endif
+        && overlay_03E0_0052(defender_battle_unit_idx) == ST_TRUE
+                                      /* 9A 52 00 E0 03; 131:0x877FD
+                                         160:0x877FF  com1:0x877FF */
+        && overlay_03E0_0052(attacker_battle_unit_idx) == ST_FALSE) {
+                                      /* 9A 52 00 E0 03; 131:0x87809
+                                         160:0x8780B  com1:0x8780B */
+        result = CHECK_RANGED_DARKNESS;
+    }
+    return result;
+}
+
+int16_t __far Eliminated_Opponent(void)
+{
+    int16_t attacker_side = 0;
+    int16_t defender_side = 0;
+    int16_t i;
+
+    for (i = 0; i < _combat_total_unit_count; ++i) {
+                                      /* JL ->0x8847D at 131:0x884F8  160:=  com1:= */
+        struct s_BATTLE_UNIT __far *bu = &_battle_units[i];
+        if ((int8_t)bu->status != BUS_ACTIVE)
+            continue;                 /* JNE ->0x884F3 at 131:0x8848F  160:=  com1:= */
+        if ((int8_t)bu->controller_idx == _combat_attacker_player) {
+                                      /* JNE ->0x884C3 at 131:0x884A7  160:=  com1:= */
+            if ((uint8_t)bu->Confusion_State == CONFUSION_SWITCHED_SIDES)
+                                      /* JNE ->0x884C0 at 131:0x884BB  160:=  com1:= */
+                ++defender_side;
+            else
+                ++attacker_side;
+        } else if ((int8_t)bu->controller_idx == _combat_defender_player) {
+                                      /* JNE ->0x884F3 at 131:0x884D9  160:=  com1:= */
+            if ((uint8_t)bu->Confusion_State == CONFUSION_SWITCHED_SIDES)
+                                      /* JNE ->0x884F2 at 131:0x884ED  160:=  com1:= */
+                ++attacker_side;
+            else
+                ++defender_side;
+        }
+    }
+
+    if (attacker_side == 0)
+        return _combat_defender_player; /* 131:0x884FC..0x884FE  160:=  com1:= */
+    if (defender_side == 0)
+        return _combat_attacker_player; /* 131:0x88505..0x88507  160:=  com1:= */
+    return ST_UNDEFINED;              /* 131:0x8850C  160:=  com1:= */
+}
+
+int16_t __far Combat_Grid_Cell_Has_City_Wall(int16_t cgx, int16_t cgy)
+{
+    int16_t result = ST_FALSE;
+    if (battlefield->walled == ST_TRUE
+                                      /* JNE ->0x9F0AA at 131:0x9F05D  160:=  com1:= */
+        && cgx >= CITY_WALL_BOX_CGX_FIRST
+                                      /* JL ->0x9F0AA at 131:0x9F062  160:=  com1:= */
+        && cgx <= CITY_WALL_BOX_CGX_LAST
+                                      /* JG ->0x9F0AA at 131:0x9F067  160:=  com1:= */
+        && cgy >= CITY_WALL_BOX_CGY_FIRST
+                                      /* JL ->0x9F0AA at 131:0x9F06C  160:=  com1:= */
+        && cgy <= CITY_WALL_BOX_CGY_LAST
+                                      /* JG ->0x9F0AA at 131:0x9F071  160:=  com1:= */
+        && !((cgx == WALL_PATCH_X_FIRST || cgx == WALL_PATCH_X_LAST)
+                                      /* JE ->0x9F07D / JNE ->0x9F087 at
+                                         131:0x9F076/0x9F07B  160:=  com1:= */
+             && (cgy == WALL_PATCH_Y_FIRST || cgy == WALL_PATCH_Y_LAST))
+                                      /* JE ->0x9F0AA at 131:0x9F080/0x9F085  160:=  com1:= */
+        && battlefield->walls[cgy - CITY_WALL_BOX_CGY_FIRST]
+                             [cgx - CITY_WALL_BOX_CGX_FIRST] == ST_TRUE) {
+                                      /* row stride 8, column stride 2; JNE ->0x9F0AA at
+                                         131:0x9F087..0x9F0A5  160:=  com1:= */
+        result = ST_TRUE;
+    }
+    return result;
+}
+
+int16_t __far Battle_Unit_Is_Summoned_Creature(int16_t battle_unit_idx)
+{
+    int16_t unit_type = (uint8_t)_UNITS[_battle_units[battle_unit_idx].unit_idx].type;
+                                      /* 131:0x9F0B6..0x9F0D8  160:=  com1:= */
+    if (_SPELL_DATA[SPELL_FIRE_ELEMENTAL].unit_type == unit_type
+                                      /* JNE ->0x9F0EA at 131:0x9F0E3  160:=  com1:= */
+        || _SPELL_DATA[SPELL_EARTH_ELEMENTAL].unit_type == unit_type
+                                      /* JNE ->0x9F0F7 at 131:0x9F0F3  160:=  com1:= */
+        || _SPELL_DATA[SPELL_PHANTOM_BEAST].unit_type == unit_type
+                                      /* JNE ->0x9F104 at 131:0x9F100  160:=  com1:= */
+        || _SPELL_DATA[SPELL_PHANTOM_WARRIORS].unit_type == unit_type
+                                      /* JNE ->0x9F111 at 131:0x9F10D  160:=  com1:= */
+        || _SPELL_DATA[SPELL_AIR_ELEMENTAL].unit_type == unit_type
+                                      /* JNE ->0x9F11E at 131:0x9F11A  160:=  com1:= */
+        || unit_type == UNIT_TYPE_DEMON)
+                                      /* JNE ->0x9F126 at 131:0x9F122  160:=  com1:= */
+        return ST_TRUE;
+    return ST_FALSE;
+}
+
+void __far BU_AttackTarget(int16_t attacker_battle_unit_idx,
+                           int16_t defender_battle_unit_idx,
+                           int16_t defender_damage_types[NUM_DAMAGE_TYPES],
+                           int16_t attacker_damage_types[NUM_DAMAGE_TYPES],
+                           int16_t ranged_attack_flag,
+                           int16_t SpFx)
+{
+    int16_t damage_types[NUM_DAMAGE_TYPES];
+    int16_t Target_Damage_Sum;
+    int16_t Figs;
+    int16_t ranged_attack_check;
+    int16_t Feared_Figures = 0;       /* 131:0x9929D  160:0x9929D  com1:0x9929D */
+    int16_t Source_Unit_Damage;
+    int16_t Can_Attack_Again;
+    int16_t itr_damage_types;
+#if BUILD == CP160
+    int16_t Target_Damage_Running;    /* register CX, not a frame slot */
+#endif
+#if BUILD == COM1
+    uint8_t first_strike_taken;
+#endif
+
+    for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+         ++itr_damage_types) {        /* 131:0x992A2  160:0x992A2  com1:0x992A2 */
+        defender_damage_types[itr_damage_types] = 0;
+                                      /* 131:0x992AF  160:0x992AF  com1:0x992AF */
+        attacker_damage_types[itr_damage_types] = 0;
+                                      /* 131:0x992BC  160:0x992BC  com1:0x992BC */
+    }
+    Source_Unit_Damage = 0;           /* 131:0x992C6  160:0x992C6  com1:0x992C6 */
+    ranged_attack_check = overlay_0388_0043(attacker_battle_unit_idx,
+                                             defender_battle_unit_idx);
+                                      /* 131:0x992CF  160:0x992CF  com1:0x992CF */
+
+    if (ranged_attack_flag == ST_TRUE) {
+                                      /* 131:0x992D9  160:0x992D9  com1:0x992D9 */
+#if BUILD == MOM131
+        if ((int8_t)_battle_units[attacker_battle_unit_idx].ranged <= 0
+                                      /* 131:0x992EF  160:—  com1:— */
+#else
+        if ((int8_t)_battle_units[attacker_battle_unit_idx].ranged_type <= 0
+                                      /* 131:—  160:0x992EF  com1:0x992EF */
+#endif
+            || ranged_attack_check != 0) {
+                                      /* 131:0x992F9  160:0x992F9  com1:0x992F9 */
+            for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+                 ++itr_damage_types)  /* 131:0x99473  160:0x99473  com1:0x99473 */
+                defender_damage_types[itr_damage_types] += RANGED_ATTACK_REFUSED;
+                                      /* 131:0x99480  160:0x99480  com1:0x99480 */
+            return;                   /* 131:0x99489  160:0x99489  com1:0x99489 */
+        }
+
+        BU_ProcessAttack(attacker_battle_unit_idx,
+                         (int8_t)_battle_units[attacker_battle_unit_idx].Cur_Figures,
+                         defender_battle_unit_idx, am_Ranged, damage_types,
+                         BU_PA_OWN_ATTACK, SpFx);
+                                      /* 131:0x99329  160:0x99329  com1:0x99329 */
+
+#if BUILD == CP160
+        Target_Damage_Running = 0;    /* CX; 131:—  160:0x99332  com1:— */
+        for (itr_damage_types = NUM_DAMAGE_TYPES - 1; itr_damage_types >= 0;
+             --itr_damage_types) {    /* word offsets 4,2,0; 160:0x9932F..0x99342 */
+            defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:—  160:0x99334  com1:— */
+            Target_Damage_Running += defender_damage_types[itr_damage_types];
+                                      /* 131:—  160:0x9933E  com1:— */
+        }
+        Can_Attack_Again = 0;         /* 131:—  160:0x99357  com1:— */
+#else
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types) {    /* 131:0x9932F  160:—  com1:0x9932F */
+            defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x99347  160:—  com1:0x99347 */
+        }
+#endif
+
+        if (!(_battle_units[attacker_battle_unit_idx].Combat_Effects & BUE_HASTE))
+                                      /* 131:0x9935C  160:0x9935C  com1:0x9935C */
+            return;                   /* 131:0x99364  160:0x99364  com1:0x99364 */
+
+#if BUILD == MOM131
+        Can_Attack_Again = 0;         /* 131:0x99367  160:—  com1:— */
+        /* The preceding loop leaves itr_damage_types == 3; the binary indexes that slot. */
+        if (RAT_CLASS((int8_t)_battle_units[itr_damage_types].ranged_type)
+                == RAT_CLASS_MAGIC    /* 131:0x9936C..0x99387  160:—  com1:— */
+            || (_battle_units[attacker_battle_unit_idx].Attribs_1 & USA_CASTER_MASK)) {
+                                      /* 131:0x99389..0x9939C  160:—  com1:— */
+            if ((uint8_t)_battle_units[attacker_battle_unit_idx].mana
+                    > MOM_HASTE_MANA_FLOOR) {
+                                      /* 131:0x993AB  160:—  com1:— */
+                _battle_units[attacker_battle_unit_idx].mana -= MOM_HASTE_MANA_COST;
+                                      /* 131:0x993BF..0x993D4  160:—  com1:— */
+                Can_Attack_Again = 1; /* 131:0x993D8  160:—  com1:— */
+            }
+        } else if ((int8_t)_battle_units[attacker_battle_unit_idx].ammo > 1) {
+            Can_Attack_Again = 1;     /* 131:0x993F3  160:—  com1:— */
+            --_battle_units[attacker_battle_unit_idx].ammo;
+                                      /* 131:0x99405..0x9941A  160:—  com1:— */
+        }
+#elif BUILD == CP160
+        /* No predecessor reaches this semantic patch block. */
+        if (0) {
+            Target_Damage_Running +=
+                (int8_t)_battle_units[defender_battle_unit_idx].front_figure_damage;
+                                      /* 131:—  160:0x99367..0x9936F  com1:— */
+            if ((int8_t)_battle_units[defender_battle_unit_idx].hits
+                    * (int8_t)_battle_units[defender_battle_unit_idx].Cur_Figures
+                <= Target_Damage_Running)
+                return;               /* 131:—  160:0x99371..0x9937E  com1:— */
+        }
+        if ((uint8_t)_battle_units[attacker_battle_unit_idx].ranged_type
+                >= RAT_MAGIC_FIRST
+            && (uint8_t)_battle_units[attacker_battle_unit_idx].ranged_type
+                < RAT_MAGIC_LAST_EXCL
+            && ((int8_t)_UNITS[_battle_units[attacker_battle_unit_idx].unit_idx].Hero_Slot
+                    >= 0              /* 131:—  160:0x9938C..0x993A1  com1:— */
+                || (_battle_units[attacker_battle_unit_idx].Attribs_1 & USA_CASTER_MASK))) {
+                                      /* 131:—  160:0x99380..0x993A9  com1:— */
+            if ((uint8_t)_battle_units[attacker_battle_unit_idx].mana
+                    >= MOM_HASTE_MANA_FLOOR) {
+                _battle_units[attacker_battle_unit_idx].mana -= MOM_HASTE_MANA_COST;
+                                      /* 131:—  160:0x993BF..0x993D4  com1:— */
+                Can_Attack_Again = 1; /* 131:—  160:0x993D8  com1:— */
+            }
+        } else if ((int8_t)_battle_units[attacker_battle_unit_idx].ammo > 1) {
+            Can_Attack_Again = 1;     /* 131:—  160:0x993F3  com1:— */
+            --_battle_units[attacker_battle_unit_idx].ammo;
+                                      /* 131:—  160:0x99405..0x9941A  com1:— */
+        }
+#elif BUILD == COM1
+        Can_Attack_Again = 0;         /* 131:—  160:—  com1:0x99367 */
+        (void)(RAT_CLASS((int8_t)_battle_units[itr_damage_types].ranged_type)
+               == RAT_CLASS_MAGIC);  /* 131:—  160:—  com1:0x9936C..0x99388 */
+        (void)(_battle_units[attacker_battle_unit_idx].Attribs_1 & USA_CASTER_MASK);
+                                      /* 131:—  160:—  com1:0x99389..0x9939B */
+        goto com1_ammo_path;          /* EB 41; 131:—  160:—  com1:0x9939C */
+        if (0) {
+            if ((uint8_t)_battle_units[attacker_battle_unit_idx].mana
+                    > COM1_HASTE_MANA_FLOOR) {
+                                      /* 131:—  160:—  com1:0x993AB */
+                _battle_units[attacker_battle_unit_idx].mana -= COM1_HASTE_MANA_COST;
+                                      /* 131:—  160:—  com1:0x993BF..0x993D4 */
+                Can_Attack_Again = 1; /* 131:—  160:—  com1:0x993D8 */
+            }
+        }
+com1_ammo_path:
+        if ((int8_t)_battle_units[attacker_battle_unit_idx].ammo > 1) {
+            Can_Attack_Again = 1;     /* 131:—  160:—  com1:0x993F3 */
+            --_battle_units[attacker_battle_unit_idx].ammo;
+                                      /* 131:—  160:—  com1:0x99405..0x9941A */
+        }
+#endif
+
+        if (Can_Attack_Again != 1)    /* 131:0x9941E  160:0x9941E  com1:0x9941E */
+            return;
+        BU_ProcessAttack(attacker_battle_unit_idx,
+                         (int8_t)_battle_units[attacker_battle_unit_idx].Cur_Figures,
+                         defender_battle_unit_idx, am_Ranged, damage_types,
+                         BU_PA_OWN_ATTACK, SpFx);
+                                      /* 131:0x9944B  160:0x9944B  com1:0x9944B */
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types)
+            defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x99455..0x99469  160:0x99455..0x99469
+                                         com1:0x99455..0x99469 */
+        return;
+    }
+
+    if ((int8_t)_battle_units[attacker_battle_unit_idx].ranged_type >= RAT_THROWN) {
+                                      /* 131:0x99499  160:0x99499  com1:0x99499 */
+        BU_ProcessAttack(attacker_battle_unit_idx,
+                         (int8_t)_battle_units[attacker_battle_unit_idx].Cur_Figures,
+                         defender_battle_unit_idx, am_ThrownOrBreath, damage_types,
+                         BU_PA_OWN_ATTACK, SpFx);
+                                      /* 131:0x994CA  160:0x994CA  com1:0x994CA */
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types)
+            defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x994D4..0x994E8  160:0x994D4..0x994E8
+                                         com1:0x994D4..0x994E8 */
+
+        if ((_battle_units[attacker_battle_unit_idx].Combat_Effects & BUE_HASTE)
+            && (int8_t)_battle_units[attacker_battle_unit_idx].ranged_type
+                < RAT_STONING_GAZE) { /* 131:0x994FD..0x99517  160:0x994FD..0x99517
+                                         com1:0x994FD..0x99517 */
+            BU_ProcessAttack(attacker_battle_unit_idx,
+                             (int8_t)_battle_units[attacker_battle_unit_idx].Cur_Figures,
+                             defender_battle_unit_idx, am_ThrownOrBreath, damage_types,
+                             BU_PA_OWN_ATTACK, SpFx);
+                                      /* 131:0x99540  160:0x99540  com1:0x99540 */
+            for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+                 ++itr_damage_types)
+                defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x9954A..0x9955E  160:0x9954A..0x9955E
+                                         com1:0x9954A..0x9955E */
+        }
+    }
+
+    if (!(_battle_units[defender_battle_unit_idx].Combat_Effects & BUE_BLACK_SLEEP)
+        && (int8_t)_battle_units[defender_battle_unit_idx].ranged_type
+            >= RAT_STONING_GAZE) {   /* 131:0x99574..0x99592  160:0x99574..0x99592
+                                         com1:0x99574..0x99592 */
+        Target_Damage_Sum = 0;        /* 131:0x99597  160:0x99597  com1:0x99597 */
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types)
+            Target_Damage_Sum += defender_damage_types[itr_damage_types];
+                                      /* 131:0x995A0..0x995AB  160:0x995A0..0x995AB
+                                         com1:0x995A0..0x995AB */
+        Target_Damage_Sum +=
+            (int8_t)_battle_units[defender_battle_unit_idx].front_figure_damage;
+                                      /* 131:0x995B4..0x995C7  160:0x995B4..0x995C7
+                                         com1:0x995B4..0x995C7 */
+        if (Target_Damage_Sum > 0)
+            Figs = (int8_t)_battle_units[defender_battle_unit_idx].Cur_Figures
+                 - Target_Damage_Sum
+                    / (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* 131:0x995CA..0x99604  160:0x995CA..0x99604
+                                         com1:0x995CA..0x99604 */
+        else
+            Figs = (int8_t)_battle_units[defender_battle_unit_idx].Cur_Figures;
+                                      /* 131:0x99607..0x9961A  160:0x99607..0x9961A
+                                         com1:0x99607..0x9961A */
+
+        BU_ProcessAttack(defender_battle_unit_idx, Figs, attacker_battle_unit_idx,
+                         am_ThrownOrBreath, damage_types, BU_PA_COUNTERATTACK, SpFx);
+                                      /* 131:0x99635  160:0x99635  com1:0x99635 */
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types) {
+            attacker_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x9963F..0x99653  160:0x9963F..0x99653
+                                         com1:0x9963F..0x99653 */
+            Source_Unit_Damage += damage_types[itr_damage_types];
+                                      /* 131:0x99655..0x99660  160:0x99655..0x99660
+                                         com1:0x99655..0x99660 */
+        }
+    }
+
+    if (SpFx != 0)                  /* 131:0x99669  160:0x99669  com1:0x99669 */
+        overlay_03E0_0043(attacker_battle_unit_idx);
+                                      /* 131:0x99670  160:0x99670  com1:0x99670 */
+
+#if BUILD == COM1
+    first_strike_taken = 0;           /* 131:—  160:—  com1:0x99676 */
+#endif
+    if ((int8_t)_battle_units[attacker_battle_unit_idx].status != BUS_ACTIVE)
+                                      /* 131:0x99683  160:0x99683  com1:0x99687 */
+        return;
+
+    if ((_battle_units[attacker_battle_unit_idx].attack_attributes & ATT_FIRST_STRIKE)
+                                      /* 131:0x9969A  160:0x9969A  com1:0x99691 */
+#if BUILD == COM1
+        && (int8_t)((int8_t)_battle_units[defender_battle_unit_idx].hits
+                    - (int8_t)_battle_units[defender_battle_unit_idx].front_figure_damage)
+            < COM1_FIRST_STRIKE_HP_CEILING
+                                      /* 131:—  160:—  com1:0x9969C..0x996B2 */
+#endif
+        && !(_battle_units[defender_battle_unit_idx].Abilities
+             & UA_NEGATE_FIRST_STRIKE)) {
+                                      /* 131:0x996B3  160:0x996B3  com1:0x996B4 */
+#if BUILD == COM1
+        ++first_strike_taken;         /* 131:—  160:—  com1:0x996BC */
+#endif
+        if (SpFx == ST_TRUE) {
+#if BUILD == MOM131
+            Feared_Figures = BU_CauseFear(attacker_battle_unit_idx,
+                                           defender_battle_unit_idx);
+                                      /* 131:0x996CA  160:—  com1:— */
+#else
+            Feared_Figures = BU_CauseFear(defender_battle_unit_idx,
+                                           attacker_battle_unit_idx);
+                                      /* 131:—  160:0x996CA  com1:0x996CA */
+#endif
+        }
+#if BUILD == MOM131
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types)
+            Feared_Figures += attacker_damage_types[itr_damage_types]
+                            / (int8_t)_battle_units[attacker_battle_unit_idx].hits;
+                                      /* 131:0x996D2..0x996FF  160:—  com1:— */
+#else
+        /* The entry jump and back edge are both NOPed, so this body runs once. */
+        Feared_Figures +=
+            (Source_Unit_Damage
+             + (int8_t)_battle_units[attacker_battle_unit_idx].front_figure_damage)
+            / (int8_t)_battle_units[attacker_battle_unit_idx].hits;
+                                      /* 131:—  160:0x996D2..0x99700
+                                         com1:0x996D2..0x99700 */
+#endif
+        BU_ProcessAttack(attacker_battle_unit_idx,
+                         (int8_t)_battle_units[attacker_battle_unit_idx].Cur_Figures
+                            - Feared_Figures,
+                         defender_battle_unit_idx, am_Melee, damage_types,
+                         BU_PA_OWN_ATTACK, SpFx);
+                                      /* 131:0x9972A  160:0x9972A  com1:0x9972A */
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types)
+            defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x99734..0x99748  160:0x99734..0x99748
+                                         com1:0x99734..0x99748 */
+    }
+
+    if (!(_battle_units[defender_battle_unit_idx].Combat_Effects & BUE_BLACK_SLEEP)) {
+                                      /* 131:0x9975E  160:0x9975E  com1:0x9975E */
+        Target_Damage_Sum = 0;        /* 131:0x99769  160:0x99769  com1:0x99769 */
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types)
+            Target_Damage_Sum += defender_damage_types[itr_damage_types];
+                                      /* 131:0x99772..0x9977D  160:0x99772..0x9977D
+                                         com1:0x99772..0x9977D */
+        Target_Damage_Sum +=
+            (int8_t)_battle_units[defender_battle_unit_idx].front_figure_damage;
+                                      /* 131:0x99786..0x99799  160:0x99786..0x99799
+                                         com1:0x99786..0x99799 */
+        if (Target_Damage_Sum > 0)
+            Figs = (int8_t)_battle_units[defender_battle_unit_idx].Cur_Figures
+                 - Target_Damage_Sum
+                    / (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* 131:0x9979C..0x997D4  160:0x9979C..0x997D4
+                                         com1:0x9979C..0x997D4 */
+        else
+            Figs = (int8_t)_battle_units[defender_battle_unit_idx].Cur_Figures;
+                                      /* 131:0x997D9..0x997EC  160:0x997D9..0x997EC
+                                         com1:0x997D9..0x997EC */
+
+        if (SpFx == ST_TRUE)
+            Figs -= BU_CauseFear(attacker_battle_unit_idx, defender_battle_unit_idx);
+                                      /* 131:0x997FB  160:0x997FB  com1:0x997FB */
+        if (Figs > 0) {               /* 131:0x99803  160:0x99803  com1:0x99803 */
+            BU_ProcessAttack(defender_battle_unit_idx, Figs, attacker_battle_unit_idx,
+                             am_Melee, damage_types, BU_PA_COUNTERATTACK, SpFx);
+                                      /* 131:0x99823  160:0x99823  com1:0x99823 */
+            for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+                 ++itr_damage_types)
+                attacker_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x9982D..0x99841  160:0x9982D..0x99841
+                                         com1:0x9982D..0x99841 */
+#if BUILD == MOM131 || BUILD == CP160
+            if (_battle_units[defender_battle_unit_idx].Combat_Effects & BUE_HASTE) {
+                                      /* 131:0x99857  160:0x99857  com1:— */
+                BU_ProcessAttack(defender_battle_unit_idx, Figs,
+                                 attacker_battle_unit_idx, am_Melee, damage_types,
+                                 BU_PA_COUNTERATTACK, SpFx);
+                                      /* 131:0x99876  160:0x99876  com1:— */
+                for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+                     ++itr_damage_types)
+                    attacker_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x99880..0x99894  160:0x99880..0x99894
+                                         com1:— */
+            }
+#else
+            goto com1_ordinary_dispatch; /* 131:—  160:—  com1:0x99849 ->0x998C1 */
+#endif
+        }
+    }
+
+#if BUILD == MOM131 || BUILD == CP160
+    if ((_battle_units[attacker_battle_unit_idx].attack_attributes & ATT_FIRST_STRIKE)
+        && !(_battle_units[defender_battle_unit_idx].Abilities
+             & UA_NEGATE_FIRST_STRIKE))
+        goto attacker_haste_repeat;   /* 131:0x998A9..0x998C7  160:0x998A9..0x998C7
+                                         com1:— */
+#else
+com1_ordinary_dispatch:
+    if (first_strike_taken != 0)
+        goto attacker_haste_repeat;   /* 131:—  160:—  com1:0x998C1..0x998C7 */
+#endif
+
+    if (SpFx == ST_TRUE) {
+#if BUILD == MOM131
+        Feared_Figures = BU_CauseFear(attacker_battle_unit_idx,
+                                       defender_battle_unit_idx);
+                                      /* 131:0x998D6  160:—  com1:— */
+#else
+        Feared_Figures = BU_CauseFear(defender_battle_unit_idx,
+                                       attacker_battle_unit_idx);
+                                      /* 131:—  160:0x998D6  com1:0x998D6 */
+#endif
+    }
+    Source_Unit_Damage +=
+        (int8_t)_battle_units[attacker_battle_unit_idx].front_figure_damage;
+                                      /* 131:0x998DE..0x998F0  160:0x998DE..0x998F0
+                                         com1:0x998DE..0x998F0 */
+    Feared_Figures += Source_Unit_Damage
+                    / (int8_t)_battle_units[attacker_battle_unit_idx].hits;
+                                      /* 131:0x998F3..0x9990D  160:0x998F3..0x9990D
+                                         com1:0x998F3..0x9990D */
+    BU_ProcessAttack(attacker_battle_unit_idx,
+                     (int8_t)_battle_units[attacker_battle_unit_idx].Cur_Figures
+                        - Feared_Figures,
+                     defender_battle_unit_idx, am_Melee, damage_types,
+                     BU_PA_OWN_ATTACK, SpFx);
+                                      /* 131:0x99939  160:0x99939  com1:0x99939 */
+    for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+         ++itr_damage_types)
+        defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x99943..0x99957  160:0x99943..0x99957
+                                         com1:0x99943..0x99957 */
+
+attacker_haste_repeat:
+    if (_battle_units[attacker_battle_unit_idx].Combat_Effects & BUE_HASTE) {
+                                      /* 131:0x9996C  160:0x9996C  com1:0x9996C */
+        BU_ProcessAttack(attacker_battle_unit_idx,
+                         (int8_t)_battle_units[attacker_battle_unit_idx].Cur_Figures
+                            - Feared_Figures,
+                         defender_battle_unit_idx, am_Melee, damage_types,
+                         BU_PA_OWN_ATTACK, SpFx);
+                                      /* 131:0x9999D  160:0x9999D  com1:0x9999D */
+        for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES;
+             ++itr_damage_types)
+            defender_damage_types[itr_damage_types] += damage_types[itr_damage_types];
+                                      /* 131:0x999A7..0x999BB  160:0x999A7..0x999BB
+                                         com1:0x999A7..0x999BB */
+    }
+}                                     /* 131:0x999C3..0x999C8  160:0x999C3..0x999C8
+                                         com1:0x999C3..0x999C8 */
+
+void __far BU_ProcessAttack(int16_t attacker_battle_unit_idx,
+                            int16_t Figs,
+                            int16_t defender_battle_unit_idx,
+                            int16_t attack_mode,
+                            int16_t damage_types[NUM_DAMAGE_TYPES],
+                            int16_t counterattack_flag,
+                            int16_t SpFx)
+{
+    int16_t  itr_damage_types;
+    int16_t  attack_damage;
+    int16_t  distance_penalty;
+    int16_t  attack_ranged_type;
+    int16_t  attack_magic_realm;
+    int16_t  attack_strength;
+    int16_t  attack_flags;
+    int16_t  channel_attack_flags;
+    int16_t  attack_immunities;
+    int16_t  to_hit;
+    int16_t  unused_1c;
+    int16_t  defender_to_block;
+    int16_t  defender_front_damage;
+    int16_t  i;
+    int16_t  blur_i;
+    int16_t  defense_special;
+    int16_t  save_modifier;
+    int16_t  target_damage;
+    int16_t  local_damage[NUM_DAMAGE_TYPES];
+    uint32_t defender_all_enchantments;
+#if BUILD == COM1
+    int16_t  com1_attack_marker;
+    int16_t  com1_attack_floor;
+    int16_t  attacker_bu_offset;         /* bp-0x32; `89 5E CE` stores BX only, so this is a
+                                          * 16-bit offset, not a far pointer — four bytes here
+                                          * would overlap com1_attack_marker at bp-0x30 */
+    struct s_BATTLE_UNIT __far *attacker_bu;  /* not a frame slot; BX paired with the ES that
+                                               * the preceding statement happened to load */
+#endif
+
+    defender_front_damage =
+        (int8_t)_battle_units[defender_battle_unit_idx].front_figure_damage;
+                                      /* 131:0x999E4  160:=  com1:= */
+
+#if BUILD == COM1
+    com1_attack_marker = 0;           /* 131:—  160:—  com1:0x999EC */
+                                      /* com1 0x999F1..0x999F4: four NOPs; com1 also drops the
+                                       * battle-unit address recompute and reuses BX here */
+#endif
+
+    /* One 32-bit set: the persistent unit record's enchantments, the battle unit's own
+     * enchantments, and its item enchantments. The low word is `[bp-0x2C]` and the high word
+     * `[bp-0x2A]`; R6.2c's Invisibility test reads low while Invulnerability reads high. */
+    defender_all_enchantments =
+          _UNITS[_battle_units[defender_battle_unit_idx].unit_idx].enchantments
+                                      /* 131:0x999F9..0x99A0B  160:=  com1:0x999F5..0x99A07 */
+        | _battle_units[defender_battle_unit_idx].enchantments
+                                      /* 131:0x99A1F, 0x99A24  160:=  com1:0x99A1B, 0x99A20 */
+        | _battle_units[defender_battle_unit_idx].item_enchantments;
+                                      /* 131:0x99A39, 0x99A3D  160:=  com1:0x99A35, 0x99A39 */
+                                      /* stores: 131:0x99A41, 0x99A44  com1:0x99A3D, 0x99A40 */
+
+    unused_1c       = 0;              /* 131:0x99A47  160:=  com1:0x99A43 */
+    attack_strength = 0;              /* 131:0x99A4C  160:=  com1:0x99A48 */
+    attack_damage   = 0;              /* 131:0x99A51  160:=  com1:0x99A4D */
+
+#if BUILD == COM1
+    attacker_bu_offset = FP_OFF(&_battle_units[attacker_battle_unit_idx]);
+                                      /* `89 5E CE`; 131:—  160:—  com1:0x99A5F (0x99A62 NOP) */
+#endif
+    to_hit = (int8_t)_battle_units[attacker_battle_unit_idx].tohit;
+                                      /* 131:0x99A63  160:=  com1:= */
+
+    for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES; ++itr_damage_types)
+                                      /* 131:0x99A6B..0x99A87  160:=  com1:= */
+        damage_types[itr_damage_types] = 0;
+                                      /* 131:0x99A7C  160:=  com1:= */
+
+    if (Figs <= 0)                    /* 131:0x99A89  160:=  com1:= */
+        return;                       /* 131:0x99A8F..0x99A91  160:=  com1:= */
+                                      /* `33 C0` at 0x99A8F clears AX on this path alone. The
+                                       * routine yields no value: the other two early exits
+                                       * (`E9 4F 08` at 0x99D2F, `E9 AA 06` at 0x99ED4) and the
+                                       * main fall-through at 0x9A57C all reach the epilogue with
+                                       * AX holding a leftover — at 0x9A576 it is the loop
+                                       * counter `[bp-2]`. No caller reads it; R6.2a's sites
+                                       * clean up with `83 C4 0E` and overwrite SI immediately
+                                       * (0x9932C). The AX clear is left unexplained here. */
+
+    attack_flags = _battle_units[attacker_battle_unit_idx].attack_attributes;
+                                      /* 131:0x99AA1..0x99AA5  160:=  com1:= */
+    defender_to_block = (int8_t)_battle_units[defender_battle_unit_idx].toblock;
+                                      /* 131:0x99AB5..0x99ABA  160:=  com1:= */
+    attack_immunities = Battle_Unit_Attack_Immunities(attacker_battle_unit_idx, attack_mode);
+                                      /* 131:0x99AC2, store 0x99AC7  160:=  com1:= */
+
+    if (attack_mode > am_Melee) {     /* 131:0x99ACA..0x99AD0  160:=  com1:= */
+
+        /* ---- ranged / thrown / breath channel ---- */
+        attack_flags |= _battle_units[attacker_battle_unit_idx].ranged_attack_attributes;
+                                      /* 131:0x99AE3, store 0x99AE7  160:=  com1:= */
+        channel_attack_flags =
+            _battle_units[attacker_battle_unit_idx].ranged_attack_attributes;
+                                      /* 131:0x99AF7, store 0x99AFB  160:=  com1:0x99AEA, 0x99AEE */
+        attack_strength = (int8_t)_battle_units[attacker_battle_unit_idx].ranged;
+                                      /* 131:0x99B0B, store 0x99B10  160:=  com1:0x99AF1, 0x99AF6 */
+        attack_magic_realm =
+            Battle_Unit_Attack_Magic_Realm((int8_t)_battle_units[attacker_battle_unit_idx].ranged_type,
+                      attacker_battle_unit_idx);
+                                      /* 131:0x99B21, call 0x99B29, store 0x99B2E
+                                         160:=  com1:0x99AFA, call 0x99B01, store 0x99B06 */
+        attack_ranged_type = (int8_t)_battle_units[attacker_battle_unit_idx].ranged_type;
+                                      /* 131:0x99B3E, store 0x99B43  160:=  com1:0x99B16, 0x99B1B */
+
+        if (attack_ranged_type == RAT_LIGHTNING_BREATH)
+                                      /* 131:0x99B46  160:=  com1:0x99B1E */
+            attack_flags |= ATT_ARMOR_PIERCING;
+                                      /* 131:0x99B4C..0x99B52  160:=  com1:0x99B24..0x99B2A */
+
+        if (attack_ranged_type == RAT_MULTIPLE_GAZE) {
+                                      /* 131:0x99B55  160:=  com1:0x99B2D */
+            attack_flags |= ATT_DOOM_DAMAGE;
+                                      /* 131:0x99B5B..0x99B61  160:=  com1:0x99B33 */
+#if BUILD == COM1
+            com1_attack_marker |= 1;  /* 131:—  160:—  com1:0x99B37 (0x99B3B NOP) */
+#endif
+        }
+
+#if BUILD == MOM131
+        /* 1.31 keeps the ranged To Hit bonus inside the mode-2 gate. */
+        if (attack_mode == am_Ranged) {
+                                      /* 131:0x99B64..0x99B68  160:—  com1:— */
+            if (Battle_Unit_Has_Ranged_Attack(attacker_battle_unit_idx) == 0) {
+                                      /* 131:0x99B6D, test 0x99B71..0x99B73  160:—  com1:— */
+                attack_strength = 0;  /* 131:0x99BE1  160:—  com1:— */
+            } else {
+                to_hit += (int8_t)_battle_units[attacker_battle_unit_idx].ranged_tohit;
+                                      /* 131:0x99B82..0x99B87  160:—  com1:— */
+#else
+        /* CP 1.60 and CoM 1 hoist the bonus out of the gate, so it applies on mode 1 as well. */
+        to_hit += (int8_t)_battle_units[attacker_battle_unit_idx].ranged_tohit;
+                                      /* 131:—  160:0x99B71..0x99B76  com1:0x99B49..0x99B4E */
+                                      /* com1 0x99B51..0x99B63: nineteen NOPs */
+#if BUILD == COM1
+        if ((int8_t)_UNITS[_battle_units[attacker_battle_unit_idx].unit_idx].Hero_Slot
+                > HERO_SLOT_NONE)     /* 131:—  160:—  com1:0x99B64..0x99B77 */
+            goto ranged_channel_done; /* skips the mode gate and the distance block outright */
+#endif
+        if (attack_mode == am_Ranged) {
+                                      /* 131:—  160:0x99B79..0x99B7D  com1:0x99B79..0x99B7D */
+            if (Battle_Unit_Has_Ranged_Attack(attacker_battle_unit_idx) == 0) {
+                                      /* 131:—  160:0x99B82, test 0x99B86..0x99B88
+                                         com1:0x99B82, test 0x99B86..0x99B88 */
+                attack_strength = 0;  /* 131:—  160:0x99BE1  com1:0x99BE1 */
+            } else {
+#endif
+                if (RAT_CLASS((int8_t)_battle_units[attacker_battle_unit_idx].ranged_type)
+                        != RAT_CLASS_MAGIC) {
+                                      /* 131:0x99B97..0x99BA5  160:=  com1:= */
+#if BUILD == COM1
+                    distance_penalty =
+                        Range_To_Battle_Unit(attacker_battle_unit_idx, defender_battle_unit_idx)
+                        / COM1_RANGED_DISTANCE_DIVISOR;
+                                      /* 131:—  160:—  com1:0x99BAB, 0x99BB0..0x99BB6 */
+#else
+                    distance_penalty =
+                        Range_To_Battle_Unit(attacker_battle_unit_idx, defender_battle_unit_idx)
+                        / MOM_RANGED_DISTANCE_DIVISOR;
+                                      /* 131:0x99BAB, 0x99BB0..0x99BB6  160:=  com1:— */
+#endif
+                    if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_LONG_RANGE)
+                        && distance_penalty > 0)
+                                      /* 131:0x99BC6..0x99BD2  160:=  com1:= */
+                        distance_penalty = LONG_RANGE_DISTANCE_PENALTY;
+                                      /* 131:0x99BD4  160:=  com1:= */
+                    to_hit -= distance_penalty;
+                                      /* 131:0x99BD9..0x99BDC  160:=  com1:= */
+                }
+            }
+        }
+#if BUILD == COM1
+ranged_channel_done:
+#endif
+        ;                             /* joins at 131:0x99BE6  160:=  com1:= */
+
+    } else {
+
+        /* ---- melee channel ---- */
+        attack_flags |= _battle_units[attacker_battle_unit_idx].melee_attack_attributes;
+                                      /* 131:0x99BF9, store 0x99BFD  160:=  com1:= */
+#if BUILD == COM1
+        com1_frame_helper_9AC1B();    /* 131:—  160:—  com1:0x99C00; preserves ES:BX */
+#endif
+        channel_attack_flags =
+            _battle_units[attacker_battle_unit_idx].melee_attack_attributes;
+                                      /* 131:0x99C0D, store 0x99C11  160:=  com1:0x99C03, 0x99C07 */
+
+#if BUILD == MOM131
+        to_hit += (int8_t)_battle_units[attacker_battle_unit_idx].melee_tohit
+                - (int8_t)_battle_units[defender_battle_unit_idx].toblock;
+                                      /* 131:0x99C21..0x99C41  160:—  com1:— */
+#elif BUILD == CP160
+        /* 0x99C3A..0x99C3B is `90 90` where 1.31 has `2B D0`; the defender's To Block is still
+         * loaded at 0x99C34 and then discarded. */
+        to_hit += (int8_t)_battle_units[attacker_battle_unit_idx].melee_tohit;
+                                      /* 131:—  160:0x99C21..0x99C41  com1:— */
+#else
+        to_hit += (int8_t)_battle_units[attacker_battle_unit_idx].melee_tohit;
+                                      /* 131:—  160:—  com1:0x99C0A..0x99C11 */
+#endif
+
+        attack_strength = (int8_t)_battle_units[attacker_battle_unit_idx].melee;
+                                      /* 131:0x99C51, store 0x99C55  160:=  com1:0x99C21, 0x99C25 */
+
+#if BUILD == COM1
+        if (((_battle_units[attacker_battle_unit_idx].enchantments & UE_BERSERK)
+                                      /* 131:—  160:—  com1:0x99C28..0x99C2D */
+             || (_UNITS[_battle_units[attacker_battle_unit_idx].unit_idx].enchantments
+                 & UE_BERSERK))       /* 131:—  160:—  com1:0x99C2F..0x99C41 */
+            && (int8_t)_battle_units[defender_battle_unit_idx].race < RACE_FIRST_FANTASTIC)
+                                      /* 131:—  160:—  com1:0x99C43..0x99C53 */
+            attack_strength <<= 1;    /* 131:—  160:—  com1:0x99C55 */
+#endif
+
+        attack_magic_realm = Battle_Unit_Attack_Magic_Realm(RAT_NONE, attacker_battle_unit_idx);
+                                      /* 131:0x99C5E, store 0x99C63  160:=  com1:= */
+        attack_ranged_type = 0;       /* 131:0x99C66  160:=  com1:= */
+    }
+
+    for (itr_damage_types = 0; itr_damage_types < NUM_DAMAGE_TYPES; ++itr_damage_types)
+                                      /* 131:0x99C6B..0x99C87  160:=  com1:= */
+        local_damage[itr_damage_types] = 0;
+                                      /* 131:0x99C7C  160:=  com1:= */
+
+#if BUILD == MOM131 || BUILD == CP160
+    if (((defender_all_enchantments & UE_INVISIBILITY)
+                                      /* raw mask 0x00008000; 131:0x99C89..0x99C98  160:= */
+         || (_battle_units[defender_battle_unit_idx].Abilities & UA_INVISIBILITY))
+                                      /* 131:0x99CA7..0x99CAD  160:= */
+        && !(_battle_units[attacker_battle_unit_idx].Attribs_1 & USA_IMMUNITY_ILLUSION))
+                                      /* 131:0x99CBC..0x99CC2  160:= */
+        --to_hit;                     /* 131:0x99CC4  160:= */
+#else
+    /* com1 0x99C89..0x99CC6: sixty-two NOPs. The Invisibility To Hit penalty, its two source
+     * tests and the Illusion-immunity exemption are all replaced by padding. The merged
+     * 32-bit `defender_all_enchantments` has no reader in the R6.2b extent; R6.2c later reads
+     * its low word for Invisibility and high word for Invulnerability. */
+#endif
+
+    if (counterattack_flag == BU_PA_COUNTERATTACK)
+                                      /* 131:0x99CC7..0x99CCB  160:=  com1:= */
+        to_hit -= (int8_t)_battle_units[attacker_battle_unit_idx].Suppression / 2;
+                                      /* signed /2 idiom; 131:0x99CDA..0x99CE4  160:=  com1:= */
+
+    /* A non-flying attacker cannot reach a flying defender in melee on its own attack unless it
+     * has a thrown-or-better attack type. */
+    if ((_battle_units[defender_battle_unit_idx].Move_Flags & MV_FLYING)
+                                      /* 131:0x99CF4..0x99CF9  160:=  com1:= */
+        && attack_mode == am_Melee    /* 131:0x99CFB..0x99CFF  160:=  com1:= */
+        && !(_battle_units[attacker_battle_unit_idx].Move_Flags & MV_FLYING)
+                                      /* 131:0x99D0E..0x99D13  160:=  com1:= */
+        && counterattack_flag != BU_PA_COUNTERATTACK
+                                      /* 131:0x99D15..0x99D19  160:=  com1:= */
+        && (int8_t)_battle_units[attacker_battle_unit_idx].ranged_type < RAT_THROWN)
+                                      /* 131:0x99D28..0x99D2D  160:0x99D1B..0x99D20
+                                         com1:0x99D1B..0x99D20 */
+        return;                       /* 131:0x99D2F  160:0x99D22  com1:0x99D22 */
+                                      /* 1.31 recomputes the attacker's record address at
+                                       * 0x99D1B..0x99D27; CP and CoM reuse BX from 0x99D01 */
+
+    if (!(_battle_units[defender_battle_unit_idx].Attribs_1 & USA_IMMUNITY_MAGIC)) {
+                                      /* 131:0x99D3F..0x99D47  160:0x99D32..0x99D3A
+                                         com1:0x99D32..0x99D3A */
+
+#if BUILD == MOM131
+        if (_battle_units[attacker_battle_unit_idx].Attribs_2 & USA2_IMMOLATION) {
+                                      /* 131:0x99D57..0x99D5C  160:—  com1:— */
+            overlay_0388_0039(SPELL_FIREBALL, defender_battle_unit_idx, local_damage,
+                              MOM_IMMOLATION_STRENGTH);
+                                      /* 131:0x99D5E..0x99D70  160:—  com1:— */
+        }
+#elif BUILD == CP160
+        if (attack_mode <= am_Melee)  /* 131:—  160:0x99D3D..0x99D41  com1:— */
+        {                             /* 160:0x99D43..0x99D49: seven NOPs */
+            if (_battle_units[attacker_battle_unit_idx].Attribs_2 & USA2_IMMOLATION) {
+                                      /* 131:—  160:0x99D57..0x99D5C  com1:— */
+                overlay_0388_0039(SPELL_FIREBALL, defender_battle_unit_idx, local_damage,
+                                  MOM_IMMOLATION_STRENGTH);
+                                      /* 131:—  160:0x99D5E..0x99D70  com1:— */
+            }
+        }
+#else
+        /* CoM 1 reaches the attacker's record through the cached offset from 0x99A5F rather than
+         * recomputing it. ES is **not** reloaded here: it still carries the battle-unit segment
+         * that the Magic Immunity test's `les bx,[0x922A]` at 0x99D2C left in place. Every field
+         * read in this block — 0x99D49, 0x99D58 and 0x99D5F — uses that BX. */
+        attacker_bu = MK_FP(FP_SEG(_battle_units), attacker_bu_offset);
+                                      /* `8B 5E CE`; 131:—  160:—  com1:0x99D3D */
+                                      /* `8D 4E D8` at com1:0x99D40 loads CX with &local_damage,
+                                       * which both argument pushes below reuse */
+        if (attack_mode <= am_Melee) {
+                                      /* 131:—  160:—  com1:0x99D43..0x99D47 */
+            if (attacker_bu->Attribs_2 & USA2_IMMOLATION)
+                                      /* `26 F6 47 1A 08`; 131:—  160:—  com1:0x99D49..0x99D4E */
+                overlay_0388_0039(SPELL_FIREBALL, defender_battle_unit_idx, local_damage,
+                                  COM1_IMMOLATION_STRENGTH);
+                                      /* args pushed 131:—  160:—  com1:0x99D50..0x99D56,
+                                         call com1:0x99D6B, cleanup com1:0x99D70 */
+        } else {
+            (void)(attacker_bu->attack_attributes & ATT_DAMAGE_LIMIT);
+                                      /* `26 F6 47 1F 20` on the high byte of +0x1E;
+                                         test com1:0x99D58; the result is discarded because
+                                         0x99D5D is an unconditional jmp to 0x99D73 */
+            if (0) {                  /* unreachable: nothing branches to 0x99D5F */
+                overlay_0388_0039(COM1_DEAD_SPELL_07, defender_battle_unit_idx, local_damage,
+                                  (int8_t)attacker_bu->Cur_Figures + 2);
+                                      /* `26 8A 47 0D` then `04 02`; the spell id is raw 7, not
+                                         SPELL_FIREBALL, and the strength override is the
+                                         attacker's own figure count plus two
+                                         131:—  160:—  com1:0x99D5F..0x99D69 */
+            }
+        }
+#endif
+
+        /* ---- stoning gaze kill rolls ---- */
+        if (attack_ranged_type == RAT_STONING_GAZE
+            || attack_ranged_type == RAT_MULTIPLE_GAZE) {
+                                      /* 131:0x99D73..0x99D7F  160:=  com1:= */
+            if (!(_battle_units[defender_battle_unit_idx].Attribs_1 & USA_IMMUNITY_STONING)) {
+                                      /* 131:0x99D8F..0x99D95  160:=  com1:= */
+                for (itr_damage_types = 0;
+                     itr_damage_types
+                        < (int8_t)_battle_units[defender_battle_unit_idx].Cur_Figures;
+                     ++itr_damage_types) {
+                                      /* 131:0x99D97..0x99D9C, 0x99DF7, 0x99E07..0x99E0F
+                                         160:=  com1:= */
+                    if (Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                  -abs((int8_t)_battle_units[attacker_battle_unit_idx]
+                                           .Spec_Att_Attrib),
+                                  sbr_Nature) > 0)
+                                      /* 131:0x99D9E..0x99DE0  160:=  com1:= */
+                        local_damage[2] +=
+                            (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* 131:0x99DEF..0x99DF4  160:=  com1:= */
+                }
+            }
+        }
+
+        /* ---- death gaze kill rolls ---- */
+        if (attack_ranged_type == RAT_MULTIPLE_GAZE
+            || attack_ranged_type == RAT_DEATH_GAZE) {
+                                      /* 131:0x99E11..0x99E1D  160:=  com1:= */
+            if (!(_battle_units[defender_battle_unit_idx].Attribs_1 & USA_IMMUNITY_DEATH)) {
+                                      /* 131:0x99E2D..0x99E33  160:=  com1:= */
+                for (itr_damage_types = 0;
+                     itr_damage_types
+                        < (int8_t)_battle_units[defender_battle_unit_idx].Cur_Figures;
+                     ++itr_damage_types) {
+                                      /* 131:0x99E35..0x99E3A, 0x99E96, 0x99EA6..0x99EAE
+                                         160:=  com1:= */
+                    if (Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                  -abs((int8_t)_battle_units[attacker_battle_unit_idx]
+                                           .Spec_Att_Attrib),
+                                  sbr_Death) > 0)
+                                      /* 131:0x99E3C..0x99E7F  160:=  com1:= */
+                        local_damage[0] +=
+                            (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* 131:0x99E8E..0x99E93  160:=  com1:= */
+                }
+            }
+        }
+    }
+
+    if (_battle_units[defender_battle_unit_idx].Combat_Effects & BUE_BLACK_SLEEP) {
+                                      /* 131:0x99EBD..0x99EC3  160:=  com1:= */
+        attack_flags |= ATT_DOOM_DAMAGE;
+                                      /* 131:0x99EC5..0x99ECB  160:=  com1:0x99EC5 */
+#if BUILD == COM1
+        com1_attack_marker |= 1;      /* 131:—  160:—  com1:0x99EC9 (0x99ECD NOP) */
+#endif
+    }
+
+#if BUILD == MOM131
+    if (attack_strength <= 0)         /* 131:0x99ECE..0x99ED2  160:—  com1:— */
+        return;                       /* 131:0x99ED4  160:—  com1:— */
+#else
+    (void)(attack_strength > 0);      /* the cmp survives at 0x99ECE; 0x99ED2 is `EB 03`,
+                                       * an unconditional jmp over the abort
+                                       * 131:—  160:0x99ECE..0x99ED2  com1:0x99ECE..0x99ED2 */
+    if (0)
+        return;                       /* unreachable: no branch in [0x999C9,0x9A600) targets
+                                       * 0x99ED4  131:—  160:0x99ED4  com1:0x99ED4 */
+#endif
+
+    /* ---- R6.2c begins at 0x99ED7 ---- */
+defense_special = Battle_Unit_Defense_Special(
+    defender_battle_unit_idx, attack_ranged_type, attack_immunities,
+    attack_flags, attack_magic_realm);
+/* pushes 131:0x99ED7..0x99EE4 160:= com1:=;
+ * E8 9E 06 call 131:0x99EE6 160:= com1:= -> 0x9A587, the defence-special helper;
+ * store 131:0x99EEC 160:= com1:= */
+
+if (attack_flags & ATT_ELDRITCH_WEAPON) {
+    /* F7 46 EC 00 40; JE ->0x99EF9, which begins the city checks:
+       131:0x99EEF 160:= com1:= */
+    --defender_to_block;              /* FF 4E E2; 131:0x99EF6 160:= com1:= */
+}
+
+if (overlay_03E0_0052(defender_battle_unit_idx) == 1
+                                      /* lcall 03E0:0052 at 131:0x99EFA 160:= com1:=;
+                                         JNE ->0x99F52, outer-loop init, at 131:0x99F03 160:= com1:= */
+    && overlay_03E0_0052(attacker_battle_unit_idx) == 0
+                                      /* lcall 03E0:0052 at 131:0x99F06 160:= com1:=;
+                                         JNE ->0x99F52 at 131:0x99F0E 160:= com1:= */
+#if BUILD == MOM131
+    && battlefield->walled != 0) {    /* 83 BF 56 15 00; JE ->0x99F52 at 131:0x99F14..0x99F1A */
+    if (overlay_03E0_0057(
+            _battle_units[defender_battle_unit_idx].cgx,
+            _battle_units[defender_battle_unit_idx].cgy) != 0) {
+                                      /* coordinate pushes 131:0x99F1C..0x99F3A;
+                                         lcall 03E0:0057 at 131:0x99F3E;
+                                         JE ->0x99F4F, the +1 arm, at 131:0x99F47 */
+        defense_special += 3;         /* 83 46 F4 03; 131:0x99F49 */
+    } else {
+        ++defense_special;            /* FF 46 F4; 131:0x99F4F */
+    }
+#else
+    && battlefield->walled == 1) {    /* 83 BF 56 15 01; JNE ->0x99F52:
+                                         131:- 160:0x99F14..0x99F1A com1:= */
+    int16_t wall_x = _battle_units[defender_battle_unit_idx].cgx;
+    int16_t wall_y = _battle_units[defender_battle_unit_idx].cgy;
+                                      /* MOV AX,[+0x46], MOV DX,[+0x44], JMP ->0x99F7C:
+                                         131:- 160:0x99F1C..0x99F31 com1:= */
+    if (((wall_x == WALL_PATCH_X_FIRST || wall_x == WALL_PATCH_X_LAST)
+         && (wall_y == WALL_PATCH_Y_FIRST || wall_y == WALL_PATCH_Y_LAST))
+                                      /* conditional island 131:- 160:0x99F7C..0x99F8E com1:=;
+                                         matching coordinates jump to the +3 arm at 0x99F48 */
+        || overlay_03E0_0057(wall_x, wall_y) != 0) {
+                                      /* pushes/NOPs 131:- 160:0x99F33..0x99F3C com1:=;
+                                         lcall 03E0:0057 at 131:- 160:0x99F3D com1:=;
+                                         JE ->0x99F4E, the +1 arm, at 131:- 160:0x99F46 com1:= */
+        defense_special += 3;         /* 83 46 F4 03; 131:- 160:0x99F48 com1:= */
+    } else {
+        defense_special += 1;         /* 83 46 F4 01; 131:- 160:0x99F4E com1:= */
+    }
+#endif
+}
+
+itr_damage_types = 0;                     /* C7 46 FE 00 00; 131:0x99F52 160:= com1:= */
+goto test_figures;                   /* E9 1C 06 ->0x9A576, outer-loop test;
+                                       131:0x99F57 160:= com1:= */
+
+do {
+    /* The defender Magic-Immunity gate skips all five touch blocks. */
+    if (!(_battle_units[defender_battle_unit_idx].Attribs_1 & USA_IMMUNITY_MAGIC)) {
+                                      /* test at 131:0x99F67 160:= com1:=;
+                                         JE ->0x99F72, Dispel Evil gate, at 131:0x99F6D 160:= com1:=;
+                                         JMP ->0x9A1E6, automatic/rolled damage, at 131:0x99F6F 160:= com1:= */
+
+        if (attack_flags & ATT_DISPEL_EVIL) {
+#if BUILD == MOM131 || BUILD == CP160
+                                      /* test 131:0x99F72 160:= com1:-;
+                                         131 JNE ->0x99F7C (race tests) at 0x99F77;
+                                         160 JNE ->0x99F96 (race tests) at 0x99F77;
+                                         the false arm JMP ->0x9A010 (Stoning Touch) at 0x99F79 */
+            if ((int8_t)_battle_units[defender_battle_unit_idx].race == RACE_CHAOS
+                || (int8_t)_battle_units[defender_battle_unit_idx].race == RACE_DEATH) {
+                                      /* 131:0x99F7C,0x99F8E,0x99FA2 race tests;
+                                         160 race tests 0x99F96..0x99FA2;
+                                         final JNE ->0x9A010 at 0x99FA2 */
+                save_modifier = -4;  /* C7 46 D2 FC FF; 131:0x99FA4 160:= com1:- */
+                if (_UNITS[_battle_units[defender_battle_unit_idx].unit_idx].mutations
+                    & 0x20) {
+                                      /* recompute/read 131:0x99FA9..0x99FC9;
+                                         160 NOPs 0x99FA9..0x99FB5 then read 0x99FB6..0x99FC9;
+                                         JE ->0x99FCF, resistance arguments, at 0x99FC9 */
+                    save_modifier -= 5; /* 83 6E D2 05; 131:0x99FCB 160:= */
+                }
+                if (Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                            save_modifier, sbr_LIFE) > 0) {
+                                      /* copy helper 131:0x99FEB 160:=;
+                                         resistance call 131:0x99FF1 160:=;
+                                         JLE ->0x9A010 at 131:0x99FF9 160:= */
+                    local_damage[2] +=
+                        (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* 01 46 DC; 131:0x9A00D 160:= com1:= */
+                }
+            }
+#else
+                                      /* ATT_DISPEL_EVIL test at com1:0x99F72;
+                                         JNE ->0x99F96 (race tests) at com1:0x99F77;
+                                         false JMP ->0x9A010 at com1:0x99F79 */
+            if ((int8_t)_battle_units[defender_battle_unit_idx].race
+                    >= RACE_FIRST_FANTASTIC
+                || (int8_t)_battle_units[defender_battle_unit_idx].race == RACE_DEATH) {
+                                      /* CMP race,0x0F / JGE ->0x99FA4 at com1:0x99F96..0x99F9B;
+                                         the residual CMP race,0x14 / JNE ->0x9A010 at
+                                         com1:0x99F9D..0x99FA2 is unreachable: this arm is
+                                         reached only for signed race < 0x0F, so it cannot
+                                         equal RACE_DEATH (0x14). It remains rendered because
+                                         both instructions survive in the executable. */
+                save_modifier = -3;  /* C7 46 D2 FD FF; com1:0x99FA4 */
+                if (_UNITS[_battle_units[defender_battle_unit_idx].unit_idx].mutations
+                    & 0x20) {
+                                      /* test com1:0x99FB7; JE ->0x99FC2, Spell Lock test,
+                                         at com1:0x99FBC */
+                    save_modifier -= 3; /* 83 6E D2 03; com1:0x99FBE */
+                }
+                if (!(_UNITS[_battle_units[defender_battle_unit_idx].unit_idx].enchantments
+                      & UE_SPELL_LOCK)) {
+                                      /* F6 47 19 40; JNE ->0x9A010 at com1:0x99FC2..0x99FC7;
+                                         com1:0x99FC9..0x99FCE are six NOPs */
+                    if (Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                                save_modifier, sbr_LIFE) > 0) {
+                                      /* copy helper com1:0x99FEB; resistance call com1:0x99FF1;
+                                         JLE ->0x9A010 at com1:0x99FF9 */
+                        local_damage[2] +=
+                            (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* com1:0x9A00D */
+                    }
+                }
+            }
+#endif
+        }
+
+        if ((attack_flags & ATT_STONING_TOUCH)
+                                      /* JE ->0x9A094, Death Touch, at 131:0x9A010..0x9A015 160:= com1:= */
+            && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                 & USA_IMMUNITY_STONING)) {
+                                      /* JNE ->0x9A094 at 131:0x9A024..0x9A02A 160:= com1:= */
+            save_modifier = -abs((int8_t)_battle_units[attacker_battle_unit_idx]
+                                     .Spec_Att_Attrib);
+                                      /* abs lcall 0000:02C8 at 131:0x9A03F 160:= com1:=;
+                                         NEG/store 131:0x9A045..0x9A047 160:= com1:= */
+            if (channel_attack_flags & ATT_STONING_TOUCH) {
+                                      /* JE ->0x9A054, resistance args, at
+                                         131:0x9A04A..0x9A04F 160:= com1:= */
+                --save_modifier;      /* FF 4E D2; 131:0x9A051 160:= com1:= */
+            }
+            if (Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                        save_modifier, sbr_NATURE) > 0) {
+                                      /* copy helper 131:0x9A06F 160:= com1:=;
+                                         resistance call 131:0x9A075 160:= com1:=;
+                                         JLE ->0x9A094 at 131:0x9A07D 160:= com1:= */
+                local_damage[2] +=
+                    (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* 131:0x9A091 160:= com1:= */
+            }
+        }
+
+        if ((attack_flags & ATT_DEATH_TOUCH)
+                                      /* JNE ->0x9A09E, body, or JMP ->0x9A11D, Life Steal:
+                                         131:0x9A094..0x9A09B 160:= com1:= */
+            && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                 & USA_IMMUNITY_DEATH)) {
+                                      /* JNE ->0x9A11D at 131:0x9A0AB..0x9A0B1 160:= com1:= */
+            save_modifier = -abs((int8_t)_battle_units[attacker_battle_unit_idx]
+                                     .Spec_Att_Attrib);
+                                      /* abs call/store 131:0x9A0C6..0x9A0CE 160:= com1:= */
+            if (channel_attack_flags & ATT_DEATH_TOUCH) {
+                                      /* JE ->0x9A0DC, resistance args, at 131:0x9A0D1..0x9A0D6 160:= com1:= */
+                save_modifier -= 3;  /* 83 6E D2 03; 131:0x9A0D8 160:= com1:= */
+            }
+            if (Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                        save_modifier, sbr_DEATH) > 0) {
+                                      /* copy helper 131:0x9A0F8 160:= com1:=;
+                                         resistance call 131:0x9A0FE 160:= com1:=;
+                                         JLE ->0x9A11D at 131:0x9A106 160:= com1:= */
+                local_damage[0] +=
+                    (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* 01 46 D8; 131:0x9A11A 160:= com1:= */
+            }
+        }
+
+        if ((attack_flags & ATT_LIFE_STEAL)
+                                      /* JE ->0x9A19E, Destruction, at 131:0x9A11D..0x9A122 160:= com1:= */
+            && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                 & USA_IMMUNITY_DEATH)) {
+                                      /* JNE ->0x9A19E at 131:0x9A131..0x9A137 160:= com1:= */
+            save_modifier = -abs((int8_t)_battle_units[attacker_battle_unit_idx]
+                                     .Spec_Att_Attrib);
+                                      /* abs call/NEG at 131:0x9A14C..0x9A154 160:=;
+                                         com1:0x9A14C..0x9A15B keeps AX live and stores no frame copy */
+#if BUILD == COM1
+            if (channel_attack_flags & ATT_ILLUSIONARY) {
+                                      /* F6 46 EA 40; JE ->0x9A15C, argument pushes,
+                                         at com1:0x9A154..0x9A158 */
+                save_modifier -= 2;  /* two DEC AX instructions before the push;
+                                         com1:0x9A15A..0x9A15B. AX, rather than [bp-0x2E],
+                                         carries the adjusted modifier into the call. */
+            }
+#else
+            /* MOV [bp-0x2E],AX at 131:0x9A154 160:=; no extra modifier test. */
+#endif
+            i = Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                        save_modifier, sbr_DEATH);
+                                      /* copy helper 131:0x9A173 160:= com1:=;
+                                         resistance call 131:0x9A179 160:= com1:=;
+                                         store i 131:0x9A17F 160:= com1:= */
+            local_damage[1] += i;    /* 8B 46 FC / 01 46 DA; 131:0x9A182..0x9A185 160:= com1:= */
+            if (SpFx != 0) {         /* JE ->0x9A19E at 131:0x9A188..0x9A18C 160:= com1:= */
+                overlay_0370_002A(attacker_battle_unit_idx, i, 1);
+                                      /* lcall 0370:002A at 131:0x9A196 160:= com1:= */
+            }
+        }
+
+        if (attack_flags & ATT_DESTRUCTION) {
+                                      /* JE ->0x9A1E6, damage generation, at 131:0x9A19E..0x9A1A3 160:= com1:= */
+            if (Combat_Resistance_Check(_battle_units[defender_battle_unit_idx],
+                                        0, sbr_CHAOS) > 0) {
+                                      /* copy helper 131:0x9A1C1 160:= com1:=;
+                                         resistance call 131:0x9A1C7 160:= com1:=;
+                                         JLE ->0x9A1E6 at 131:0x9A1CF 160:= com1:= */
+#if BUILD == COM1
+                local_damage[2] += COM1_DESTRUCTION_DAMAGE;
+                                      /* fifteen NOPs com1:0x9A1D1..0x9A1DF;
+                                         B0 64 / CBW / ADD [bp-0x24],AX at com1:0x9A1E0..0x9A1E3 */
+#else
+                local_damage[2] +=
+                    (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* record read/add 131:0x9A1D1..0x9A1E3 160:= com1:- */
+#endif
+            }
+        }
+    }
+
+    if (attack_flags & ATT_AUTOMATIC_DAMAGE) {
+                                      /* JE ->0x9A207, rolled damage, at 131:0x9A1E6..0x9A1EB 160:= com1:= */
+#if BUILD == COM1
+        if (com1_attack_marker & COM1_ATTACK_MARKER_FULL) {
+                                      /* F7 46 D0 01 00; JNE ->0x9A1FE, full-strength arm,
+                                         at com1:0x9A1ED..0x9A1F2 */
+            attack_damage = attack_strength; /* load com1:0x9A1FE; store com1:0x9A201 */
+        } else {
+            attack_damage = attack_strength / 2;
+                                      /* signed CWD/SUB/SAR correction com1:0x9A1F4..0x9A1FA;
+                                         JMP ->0x9A201, store, at com1:0x9A1FC */
+        }
+#else
+        if (channel_attack_flags & ATT_AUTOMATIC_DAMAGE) {
+                                      /* TEST is followed by JE ->0x9A1FE, the full-strength arm;
+                                         the set-bit fall-through is the half-strength arm:
+                                         131:0x9A1ED..0x9A1F2 160:= */
+            attack_damage = attack_strength / 2;
+                                      /* signed CWD/SUB/SAR correction 131:0x9A1F4..0x9A1FA 160:=;
+                                         JMP ->0x9A201 at 0x9A1FC */
+        } else {
+            attack_damage = attack_strength; /* load 131:0x9A1FE 160:=; store 0x9A201 */
+        }
+#endif
+        goto conventional_damage_ready; /* E9 D1 00 ->0x9A2D8, poison gate;
+                                           131:0x9A204 160:= com1:= */
+    }
+
+#if BUILD == COM1
+    int16_t attack_roll = CMB_AttackRoll(attack_strength, to_hit);
+                                      /* call 0x98F60 at com1:0x9A20E; return remains in AX */
+    com1_frame_helper_9984B();        /* E8 35 F6 ->0x9984B; com1:0x9A213; AX is attack_roll.
+                                       * Real near callee, outside this assigned extent and assigned
+                                       * separately under R6.2d; it shares this frame. Its effect
+                                       * needed here is `attack_damage += attack_roll` at
+                                       * 0x9984B (`01 46 F8`). It then stores
+                                       * `com1_attack_floor = sar16(attack_roll - 5, 1)` through
+                                       * 0x9984E..0x99853 (`2D 05 00 D1 F8 89 46 CC`). */
+
+    /* com1:0x9A256..0x9A261 is an in-extent compiler address helper:
+       AX=index; DX=0x6E; IMUL; LES BX,[0x922A]; ADD BX,AX; RET. It has a complete body here and
+       corresponds to `&_battle_units[index]`, not a synthetic semantic helper. Calls are at
+       com1:0x9A218 (defender SI) and com1:0x9A267 (attacker DI). */
+    struct s_BATTLE_UNIT __far *blur_defender =
+        com1_load_battle_unit_address(defender_battle_unit_idx);
+                                      /* E8 3B 00 ->0x9A256; com1:0x9A218 */
+    int16_t blur_chance = 0;          /* XOR CX,CX; com1:0x9A21B */
+    if ((defender_all_enchantments & UE_INVISIBILITY)
+                                      /* test [bp-0x2C],0x8000; JNE ->0x9A22B (add 20),
+                                         com1:0x9A21D..0x9A222 */
+        || (blur_defender->Abilities & UA_INVISIBILITY)) {
+                                      /* test +0x1C,0x40; JE ->0x9A22E (controller read),
+                                         com1:0x9A224..0x9A229 */
+        blur_chance += COM1_INVISIBILITY_CHANCE;
+                                      /* ADD CX,0x14; com1:0x9A22B */
+    }
+
+    int blur_present;
+    if (blur_defender->controller_idx == _combat_attacker_player) {
+                                      /* JNE ->0x9A246, defender-side Blur lookup,
+                                         com1:0x9A22E..0x9A23B */
+        blur_present = combat_enchantments[BLUR_ATTKR] > 0;
+                                      /* JG ->0x9A24D, combine chance, at com1:0x9A23D..0x9A242;
+                                         otherwise JMP ->0x9A265, attacker pointer, at com1:0x9A244 */
+    } else {
+        blur_present = combat_enchantments[BLUR_DFNDR] > 0;
+                                      /* JLE ->0x9A265 at com1:0x9A246..0x9A24B */
+    }
+    if (blur_present) {
+        if (blur_chance != 0) {       /* JNE ->0x9A262, set 30, at com1:0x9A24D..0x9A24F */
+            blur_chance = COM1_STACKED_BLUR_CHANCE; /* MOV CX,0x1E; com1:0x9A262 */
+        } else {
+            blur_chance += COM1_BLUR_CHANCE;
+                                      /* ADD CX,0x14; com1:0x9A251;
+                                         JMP ->0x9A265 at com1:0x9A254 */
+        }
+    }
+
+    struct s_BATTLE_UNIT __far *blur_attacker =
+        com1_load_battle_unit_address(attacker_battle_unit_idx);
+                                      /* E8 EC FF ->0x9A256; com1:0x9A267 */
+    if (!(blur_attacker->Attribs_1 & USA_IMMUNITY_ILLUSION)
+                                      /* JNE ->0x9A293, padding after Blur, at com1:0x9A26A..0x9A270 */
+        && blur_chance != 0) {        /* JE ->0x9A293 at com1:0x9A272..0x9A274 */
+        int16_t original_hits = attack_damage;
+                                      /* PUSH DI / MOV DI,[bp-8]; com1:0x9A276..0x9A277 */
+        while (original_hits != 0) {  /* OR DI,DI; JE ->0x9A292, restore DI, at com1:0x9A27A..0x9A27C */
+            if (Random(100) <= blur_chance) {
+                                      /* lcall 00B0:00D8 at com1:0x9A282;
+                                         CMP AX,CX / JG ->0x9A28F, counter decrement,
+                                         at com1:0x9A288..0x9A28A */
+                --attack_damage;      /* FF 4E F8; com1:0x9A28C */
+            }
+            --original_hits;          /* DEC DI; com1:0x9A28F;
+                                         JNE ->0x9A27A, loop test, at com1:0x9A290 */
+        }
+                                      /* POP DI com1:0x9A292; NOP padding com1:0x9A293..0x9A2A9 */
+    }
+#else
+    attack_damage += CMB_AttackRoll(attack_strength, to_hit);
+                                      /* call 0x98F60 at 131:0x9A20E 160:=;
+                                         ADD [bp-8],AX 131:0x9A213 160:= */
+    int blur_applies = 0;
+    if ((int8_t)_battle_units[defender_battle_unit_idx].controller_idx
+            == _combat_attacker_player
+                                      /* JNE ->0x9A24E, second side test, at 131:0x9A223..0x9A22C 160:= */
+        && combat_enchantments[BLUR_ATTKR] > 0
+                                      /* JLE ->0x9A24E at 131:0x9A22E..0x9A237 160:= */
+#if BUILD == MOM131
+        && !(_battle_units[defender_battle_unit_idx].Attribs_1
+             & USA_IMMUNITY_ILLUSION)) {
+                                      /* 1.31 uses SI; JE ->0x9A286, Blur loop init,
+                                         at 131:0x9A239..0x9A24C */
+#else
+        && !(_battle_units[attacker_battle_unit_idx].Attribs_1
+             & USA_IMMUNITY_ILLUSION)) {
+                                      /* CP uses DI; JE ->0x9A286 at 160:0x9A239..0x9A24C */
+#endif
+        blur_applies = 1;
+    } else if ((int8_t)_battle_units[defender_battle_unit_idx].controller_idx
+                   == _combat_defender_player
+                                      /* JNE ->0x9A2AA, defense roll, at 131:0x9A25B..0x9A264 160:= */
+               && combat_enchantments[BLUR_DFNDR] > 0
+                                      /* JLE ->0x9A2AA at 131:0x9A266..0x9A26F 160:= */
+#if BUILD == MOM131
+               && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                    & USA_IMMUNITY_ILLUSION)) {
+                                      /* 1.31 uses SI; JNE ->0x9A2AA at 131:0x9A271..0x9A284 */
+#else
+               && !(_battle_units[attacker_battle_unit_idx].Attribs_1
+                    & USA_IMMUNITY_ILLUSION)) {
+                                      /* CP uses DI; JNE ->0x9A2AA at 160:0x9A271..0x9A284 */
+#endif
+        blur_applies = 1;
+    }
+    if (blur_applies) {
+        blur_i = 0;                   /* C7 46 FA 00 00; 131:0x9A286 160:= */
+#if BUILD == MOM131
+        while (blur_i < attack_damage) {
+                                      /* initial JMP ->0x9A2A2 at 131:0x9A28B;
+                                         JL ->0x9A28D, Random call, at 131:0x9A2A8 */
+            if (Random(10) == 10) {   /* lcall 00B0:00D8 at 131:0x9A291;
+                                         JNE ->0x9A29F, increment, at 131:0x9A29A */
+                --attack_damage;      /* FF 4E F8; 131:0x9A29C */
+            }
+            ++blur_i;                 /* FF 46 FA; 131:0x9A29F */
+        }
+#else
+        while (blur_i < attack_damage) {
+                                      /* initial JMP ->0x9A2A2 at 160:0x9A28B;
+                                         JL ->0x9A28D at 160:0x9A2A8 */
+            if (Random(10) == 1) {    /* lcall 00B0:00D8 at 160:0x9A291;
+                                         DEC AX / JNE ->0x9A29F, failure increment,
+                                         at 160:0x9A297..0x9A298 */
+                --attack_damage;      /* FF 4E F8; 160:0x9A29A */
+                continue;             /* EB 03 ->0x9A2A2, loop test; 160:0x9A29D */
+            }
+            ++blur_i;                 /* FF 46 FA; 160:0x9A29F */
+        }
+#endif
+    }
+#endif
+
+    attack_damage -= CMB_DefenseRoll(defense_special, defender_to_block);
+                                      /* call 0x98F9D at 131:0x9A2B1 160:= com1:=;
+                                         SUB [bp-8],AX at 131:0x9A2B6 160:= com1:= */
+    if (defender_all_enchantments & UE_INVULNERABILITY) {
+                                      /* high-word mask sequence 131:0x9A2B9..0x9A2C7 160:=;
+                                         JE ->0x9A2CD, floor test, at 131:0x9A2C7 160:=;
+                                         CoM shortened sequence com1:0x9A2B9..0x9A2BF,
+                                         JE ->0x9A2C5, NOP/helper area, at com1:0x9A2BF */
+        attack_damage -= 2;           /* 83 6E F8 02; 131:0x9A2C9 160:= com1:0x9A2C1 */
+    }
+#if BUILD == COM1
+    /* com1:0x9A2C5..0x9A2C9 are five NOPs. */
+    com1_frame_helper_9985B();        /* E8 8E F5 ->0x9985B; com1:0x9A2CA.
+                                       * Real near callee outside this assigned extent and assigned
+                                       * separately under R6.2d; it shares this frame. If
+                                       * `defense_special < 80`, `attack_flags & ATT_DESTRUCTION`,
+                                       * and `attack_damage < com1_attack_floor`, it overwrites
+                                       * `attack_damage = com1_attack_floor` at 0x99870
+                                       * (`89 46 F8`); all exits join at 0x99873. */
+#endif
+    if (attack_damage < 0) {          /* JGE ->0x9A2D8, poison gate, at 131:0x9A2CD..0x9A2D1 160:= com1:= */
+        attack_damage = 0;            /* C7 46 F8 00 00; 131:0x9A2D3 160:= com1:= */
+    }
+
+conventional_damage_ready:
+    if ((_battle_units[attacker_battle_unit_idx].attack_attributes & ATT_POISON)
+                                      /* JNE ->0x9A2F0, immunity test, at 131:0x9A2D8..0x9A2EB 160:= com1:=;
+                                         false JMP ->0x9A387, rider sum, at 131:0x9A2ED 160:= com1:= */
+        && !(_battle_units[defender_battle_unit_idx].Attribs_1
+             & USA_IMMUNITY_POISON)) {
+                                      /* JE ->0x9A308, poison loop init, at 131:0x9A2F0..0x9A303 160:= com1:=;
+                                         true JMP ->0x9A387 at 131:0x9A305 160:= com1:= */
+        i = 0;                        /* C7 46 FC 00 00; 131:0x9A308 160:= com1:= */
+        goto poison_test;             /* EB 61 ->0x9A370; 131:0x9A30D 160:= com1:= */
+        do {
+#if BUILD == COM1
+            /* AX=-1 is pushed once as realm and, because 0x9A313..0x9A314 are NOPs, again as
+               modifier. Realm and modifier are both -1. */
+            int16_t poison_margin = Combat_Resistance_Check(
+                _battle_units[defender_battle_unit_idx], -1, sbr_NONE);
+                                      /* MOV AX,-1/PUSH at com1:0x9A30F..0x9A312;
+                                         NOP,NOP/PUSH at com1:0x9A313..0x9A315 */
+#else
+            int16_t poison_margin = Combat_Resistance_Check(
+                _battle_units[defender_battle_unit_idx], 0, sbr_NONE);
+                                      /* MOV AX,-1/PUSH, XOR AX,AX/PUSH at
+                                         131:0x9A30F..0x9A315 160:= */
+#endif
+                                      /* copy helper 131:0x9A32B 160:= com1:=;
+                                         resistance call 131:0x9A331 160:= com1:=;
+                                         JLE ->0x9A36D, increment, at 131:0x9A339 160:= com1:= */
+            if (poison_margin > 0) {
+#if BUILD == MOM131
+                if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A36A, regular bucket, at 131:0x9A348..0x9A34E */
+                    && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                         & USA_CREATE_UNDEAD_BLOCK_131)) {
+                                      /* test raw 0x0020; JNE ->0x9A36A at 131:0x9A35D..0x9A363 */
+#else
+                if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A36A at 131:- 160:0x9A348..0x9A34E
+                                         com1:0x9A348..0x9A34E */
+                    && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                         & USA_CREATE_UNDEAD_BLOCK_LATER)) {
+                                      /* raw mask 0x0060; JNE ->0x9A36A at
+                                         131:- 160:0x9A35D..0x9A363 com1:0x9A35D..0x9A363 */
+#endif
+                    ++local_damage[1]; /* FF 46 DA; 131:0x9A365 160:= com1:= */
+                } else {
+                    ++local_damage[0]; /* FF 46 D8; 131:0x9A36A 160:= com1:= */
+                }
+            }
+            ++i;                     /* FF 46 FC; 131:0x9A36D 160:= com1:= */
+poison_test:
+            ;                         /* attacker Poison_Strength read at 131:0x9A370..0x9A381 160:= com1:= */
+        } while ((int8_t)_battle_units[attacker_battle_unit_idx].Poison_Strength > i);
+                                      /* JG ->0x9A30F, poison body, at 131:0x9A385 160:= com1:= */
+    }
+
+    target_damage = 0;               /* C7 46 E0 00 00; 131:0x9A387 160:= com1:= */
+    i = 0;                           /* C7 46 FC 00 00; 131:0x9A38C 160:= com1:= */
+    goto sum_riders_test;             /* EB 12 ->0x9A3A5; 131:0x9A391 160:= com1:= */
+    do {
+        target_damage += local_damage[i];
+                                      /* indexed load/add 131:0x9A393..0x9A39F 160:= com1:= */
+        ++i;                          /* FF 46 FC; 131:0x9A3A2 160:= com1:= */
+sum_riders_test:
+        ;
+    } while (i < NUM_DAMAGE_TYPES);  /* JL ->0x9A393, sum body, at 131:0x9A3A9 160:= com1:= */
+    target_damage += defender_front_damage;
+                                      /* 8B 46 DE / 01 46 E0; 131:0x9A3AB..0x9A3AE 160:= com1:= */
+    goto figure_coverage_test;        /* E9 1A 01 ->0x9A4CE; 131:0x9A3B1 160:= com1:= */
+
+    /* The binary enters this body when defender hits <= attack_damage + target_damage.
+       At 0x9A4E6 it compares hits against that sum; JG exits to 0x9A4ED, while the other arm
+       jumps back here. */
+    do {
+        attack_damage -= (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* SUB [bp-8],AX; 131:0x9A3B4..0x9A3C6 160:= com1:= */
+        if (attack_damage < 0) {      /* JGE ->0x9A43E, whole-figure arm, at 131:0x9A3C9..0x9A3CD 160:= com1:= */
+#if BUILD == MOM131
+            if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A416, regular bucket, at 131:0x9A3DC..0x9A3E2 */
+                && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                     & USA_CREATE_UNDEAD_BLOCK_131)) {
+                                      /* raw 0x0020; JNE ->0x9A416 at 131:0x9A3F1..0x9A3F7 */
+#else
+            if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A416 at 160:0x9A3DC..0x9A3E2
+                                         com1:0x9A3DC..0x9A3E2 */
+                && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                     & USA_CREATE_UNDEAD_BLOCK_LATER)) {
+                                      /* raw 0x0060; JNE ->0x9A416 at 160:0x9A3F1..0x9A3F7
+                                         com1:0x9A3F1..0x9A3F7 */
+#endif
+                damage_types[1] +=
+                    (int8_t)_battle_units[defender_battle_unit_idx].hits + attack_damage;
+                                      /* pointer bucket +2 write 131:0x9A3F9..0x9A411 160:= com1:=;
+                                         JMP ->0x9A430, accounting join, at 131:0x9A414 160:= com1:= */
+            } else {
+                damage_types[0] +=
+                    (int8_t)_battle_units[defender_battle_unit_idx].hits + attack_damage;
+                                      /* pointer bucket +0 write 131:0x9A416..0x9A42E 160:= com1:= */
+            }
+            target_damage += attack_damage; /* 8B 46 F8 / 01 46 E0; 131:0x9A430..0x9A433 160:= com1:= */
+            attack_damage = 0;       /* C7 46 F8 00 00; 131:0x9A436 160:= com1:= */
+            goto figure_coverage_test; /* E9 90 00 ->0x9A4CE; 131:0x9A43B 160:= com1:= */
+        }
+
+#if BUILD == MOM131
+        if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A482 at 131:0x9A44B..0x9A451 */
+            && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                 & USA_CREATE_UNDEAD_BLOCK_131)) {
+                                      /* raw 0x0020; JNE ->0x9A482 at 131:0x9A460..0x9A466 */
+#else
+        if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A482 at 160:0x9A44B..0x9A451
+                                         com1:0x9A44B..0x9A451 */
+            && !(_battle_units[defender_battle_unit_idx].Attribs_1
+                 & USA_CREATE_UNDEAD_BLOCK_LATER)) {
+                                      /* raw 0x0060; JNE ->0x9A482 at 160:0x9A460..0x9A466
+                                         com1:0x9A460..0x9A466 */
+#endif
+            damage_types[1] +=
+                (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* pointer bucket +2 write 131:0x9A468..0x9A47D 160:= com1:=;
+                                         JMP ->0x9A499, defense gate, at 131:0x9A480 160:= com1:= */
+        } else {
+            damage_types[0] +=
+                (int8_t)_battle_units[defender_battle_unit_idx].hits;
+                                      /* pointer bucket +0 write 131:0x9A482..0x9A497 160:= com1:= */
+        }
+
+        if (!(attack_flags & ATT_AUTOMATIC_DAMAGE)) {
+                                      /* JNE ->0x9A4C3, floor test, at 131:0x9A499..0x9A49E 160:= com1:= */
+            attack_damage -= CMB_DefenseRoll(defense_special, defender_to_block);
+                                      /* call 0x98F9D at 131:0x9A4A7 160:= com1:=;
+                                         SUB [bp-8],AX at 131:0x9A4AC 160:= com1:= */
+            if (defender_all_enchantments & UE_INVULNERABILITY) {
+                                      /* high-word test; JE ->0x9A4C3 at 131:0x9A4AF..0x9A4BD 160:= com1:= */
+                attack_damage -= 2;  /* 83 6E F8 02; 131:0x9A4BF 160:= com1:= */
+            }
+        }
+        if (attack_damage < 0) {      /* JGE ->0x9A4CE, coverage test, at 131:0x9A4C3..0x9A4C7 160:= com1:= */
+            attack_damage = 0;       /* C7 46 F8 00 00; 131:0x9A4C9 160:= com1:= */
+        }
+
+figure_coverage_test:
+        ;                             /* compare hits with attack_damage+target_damage
+                                         131:0x9A4CE..0x9A4E6 160:= com1:= */
+    } while ((int8_t)_battle_units[defender_battle_unit_idx].hits
+             <= attack_damage + target_damage);
+                                      /* JG ->0x9A4ED, remaining-damage routing, at 131:0x9A4E8 160:= com1:=;
+                                         otherwise JMP ->0x9A3B4, body, at 131:0x9A4EA 160:= com1:= */
+
+#if BUILD == MOM131
+    if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A522, regular bucket, at 131:0x9A4FA..0x9A500 */
+        && !(_battle_units[defender_battle_unit_idx].Attribs_1
+             & USA_CREATE_UNDEAD_BLOCK_131)) {
+                                      /* raw 0x0020; JNE ->0x9A522 at 131:0x9A50F..0x9A515 */
+#else
+    if ((_battle_units[attacker_battle_unit_idx].Abilities & UA_CREATE_UNDEAD)
+                                      /* JE ->0x9A522 at 160:0x9A4FA..0x9A500
+                                         com1:0x9A4FA..0x9A500 */
+        && !(_battle_units[defender_battle_unit_idx].Attribs_1
+             & USA_CREATE_UNDEAD_BLOCK_LATER)) {
+                                      /* raw 0x0060; JNE ->0x9A522 at 160:0x9A50F..0x9A515
+                                         com1:0x9A50F..0x9A515 */
+#endif
+        damage_types[1] += attack_damage;
+                                      /* pointer bucket +2 write 131:0x9A517..0x9A51D 160:= com1:=;
+                                         JMP ->0x9A52A, running-front update, at 131:0x9A520 160:= com1:= */
+    } else {
+        damage_types[0] += attack_damage;
+                                      /* pointer bucket +0 write 131:0x9A522..0x9A528 160:= com1:= */
+    }
+
+    defender_front_damage = target_damage + attack_damage;
+                                      /* load/add/store 131:0x9A52A..0x9A530 160:= com1:= */
+    attack_damage = 0;               /* C7 46 F8 00 00; 131:0x9A533 160:= com1:= */
+    unused_1c = 0;                   /* C7 46 E4 00 00; 131:0x9A538 160:= com1:= */
+    i = 0;                           /* C7 46 FC 00 00; 131:0x9A53D 160:= com1:= */
+    goto flush_riders_test;           /* EB 29 ->0x9A56D; 131:0x9A542 160:= com1:= */
+    do {
+        damage_types[i] += local_damage[i];
+                                      /* indexed pointer/local loads and pointer write
+                                         131:0x9A544..0x9A55A 160:= com1:= */
+        local_damage[i] = 0;         /* C7 07 00 00; 131:0x9A55C..0x9A566 160:= com1:= */
+        ++i;                          /* FF 46 FC; 131:0x9A56A 160:= com1:= */
+flush_riders_test:
+        ;
+    } while (i < NUM_DAMAGE_TYPES);  /* JL ->0x9A544, flush body, at 131:0x9A571 160:= com1:= */
+
+    ++itr_damage_types;                   /* FF 46 FE; 131:0x9A573 160:= com1:= */
+test_figures:
+    ;
+} while (itr_damage_types < Figs);        /* CMP at 131:0x9A576..0x9A579 160:= com1:=;
+                                       JGE ->0x9A581, epilogue, at 131:0x9A57C 160:= com1:=;
+                                       JMP ->0x99F5A, figure body, at 131:0x9A57E 160:= com1:= */
+
+/* POP DI, POP SI, MOV SP,BP, POP BP, RETF:
+   131:0x9A581..0x9A586 160:= com1:= */
+}
+#if BUILD == COM1
+/* Complete in-extent compiler helper called at 0x9A218 and 0x9A267. */
+static struct s_BATTLE_UNIT __far *com1_load_battle_unit_address(int16_t index)
+{
+    return &_battle_units[index];    /* com1:0x9A256..0x9A261 */
+}
+
+/* Near callee at 0x9AC1B sharing BU_ProcessAttack's BP frame and live ES:BX attacker. */
+void __near com1_frame_helper_9AC1B(void)
+{
+    if (SpFx == 0)                    /* CMP [BP+12],0; JE ->0x9AC8E at
+                                          com1:0x9AC1B..0x9AC1F */
+        return;
+
+    /* PUSH ES; PUSH BX at com1:0x9AC21..0x9AC22 preserve the attacker record. */
+    struct s_UNIT __far *unit = &_UNITS[attacker_bu->unit_idx];
+                                       /* com1:0x9AC23..0x9AC2F */
+    if ((int8_t)unit->Hero_Slot <= ST_UNDEFINED)
+                                       /* JLE ->0x9AC8C at com1:0x9AC37 */
+        goto restore_and_return;
+    if ((int8_t)unit->owner_idx <= ST_UNDEFINED)
+                                       /* JLE ->0x9AC8C at com1:0x9AC3F */
+        goto restore_and_return;
+
+    uint8_t level_plus_one = (uint8_t)unit->Level;
+                                       /* zero-extended into CX at com1:0x9AC41..0x9AC48 */
+    struct s_HERO __far *hero =
+        &_HEROES2[(uint8_t)unit->owner_idx]->heroes[(uint8_t)unit->type];
+                                       /* owner/type indexing at com1:0x9AC43..0x9AC5C */
+    uint8_t flags_0B = *((uint8_t __far *)hero + 0x0B);
+    uint8_t factor = 2;               /* com1:0x9AC5E */
+    if (!(flags_0B & COM1_HERO_BYTE_0B_FACTOR_2))
+                                       /* JNE ->0x9AC70 at com1:0x9AC65 */
+    {
+        if (!(flags_0B & COM1_HERO_BYTE_0B_FACTOR_3))
+                                       /* JE ->0x9AC8C at com1:0x9AC6C */
+            goto restore_and_return;
+        ++factor;                     /* com1:0x9AC6E */
+    }
+
+    /* POP BX; POP ES at com1:0x9AC70..0x9AC71 restore the attacker record. */
+    ++level_plus_one;                 /* INC CL at com1:0x9AC72; wraps modulo 256 */
+    uint16_t product = (uint16_t)((int16_t)(int8_t)factor
+                                * (int16_t)(int8_t)level_plus_one);
+                                       /* signed byte IMUL CL at com1:0x9AC74 */
+    uint8_t mana = (uint8_t)(attacker_bu->mana + (product >> 1));
+                                       /* logical SHR AX,1 at com1:0x9AC76;
+                                          ADD AL,[+40] at com1:0x9AC78 */
+    if (mana > (uint8_t)attacker_bu->mana_max)
+                                       /* JBE ->0x9AC86 at com1:0x9AC80 */
+        mana = (uint8_t)attacker_bu->mana_max; /* com1:0x9AC82 */
+    attacker_bu->mana = mana;         /* non-frame write at com1:0x9AC86 */
+    return;                           /* JMP ->0x9AC8E at com1:0x9AC8A; RET at 0x9AC8E */
+
+restore_and_return:
+    /* POP BX; POP ES at com1:0x9AC8C..0x9AC8D; RET at 0x9AC8E. */
+    return;
+}
+
+/* Two near callees sharing BU_ProcessAttack's frame. */
+void __near com1_frame_helper_9984B(void)
+{
+    attack_damage += attack_roll_ax;  /* ADD [BP-8],AX at com1:0x9984B */
+    attack_roll_ax -= 5;              /* SUB AX,5 at com1:0x9984E */
+    attack_roll_ax = sar16(attack_roll_ax, 1);
+                                       /* bare SAR AX,1 at com1:0x99851 */
+    com1_attack_floor = attack_roll_ax; /* MOV [BP-34],AX at com1:0x99853 */
+    return;                            /* RET at com1:0x99856 */
+}
+
+/* Four NOP bytes at com1:0x99857..0x9985A. */
+
+void __near com1_frame_helper_9985B(void)
+{
+    if (defense_special >= COM1_DESTRUCTION_FLOOR_GATE)
+                                       /* JGE ->0x99873 at com1:0x9985F */
+        return;
+    if (!(attack_flags & ATT_DESTRUCTION))
+                                       /* JE ->0x99873 at com1:0x99866 */
+        return;
+    if (attack_damage >= com1_attack_floor)
+                                       /* JGE ->0x99873 at com1:0x9986E */
+        return;
+    attack_damage = com1_attack_floor; /* com1:0x99870 */
+    return;                            /* RET at com1:0x99873 */
+}
+
+/* Relocated tail entered only by com1:0x9ACFE (E9 73 EB, JMP ->0x99874). */
+void com1_relocated_battle_unit_tail(void)
+{
+    int16_t index = 0;                /* XOR SI,SI at com1:0x99874 */
+    do {
+        struct s_BATTLE_UNIT __far *bu = &_battle_units[index];
+                                       /* com1:0x99876..0x9987F */
+        overlay_03A0_003E(bu);        /* com1:0x9988B */
+        overlay_03A0_0052(bu);        /* com1:0x99892 */
+        ++index;                      /* com1:0x99899 */
+    } while (index < _combat_total_unit_count);
+                                       /* CMP SI,[C588]; JL ->0x99876 at
+                                          com1:0x9989A..0x9989E */
+
+    /* POP DI, POP SI, MOV SP,BP, POP BP, RETF at com1:0x998A0..0x998A5. */
+}
+
+/* Twenty-seven NOP bytes at com1:0x998A6..0x998C0. */
+#endif

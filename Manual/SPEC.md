@@ -69,9 +69,10 @@ definition behind them. That is intended, not a gap to be filled later from help
 | `Calculator/units_com2.js` | Unit stat lines (generated from the authoritative `UNITS.INI`). |
 | `Calculator/` formulas | Mechanics described in prose. |
 
-### Why the HTML, not `CoM2 manual.txt`
+### Why the HTML, not a plain-text export
 
-Three things carry meaning in the HTML and are lost in the plain-text export:
+Three things carry meaning in the HTML and were lost in the `CoM2 manual.txt` export the repo
+used to carry:
 
 - `<strike>` in the Races chapter means *"this race cannot build this."* The `.txt`
   renders it as plain text, which inverts the meaning.

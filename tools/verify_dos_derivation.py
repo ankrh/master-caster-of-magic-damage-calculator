@@ -8,10 +8,10 @@ The 16-bit Borland C++ counterpart of `verify_derivation.py`, which handles only
 the 32-bit Delphi `Caster.exe`. Same contract, three target differences:
 
 * **Addresses are raw file offsets.** `WIZARDS.EXE` is an MZ image with VROOMM
-  overlays and no overlay->file map, so `Reference docs/MoM binary analysis.md`
-  cites file offsets throughout and `scan_mom_binary.py` disassembles at them
-  directly. There is no section table or image base to resolve -- which is why
-  this checker needs no loader at all.
+  overlays. `resolve_dos_overlays.py` can map far operands to those offsets;
+  `Reference docs/MoM binary analysis.md` cites them throughout and
+  `scan_mom_binary.py` disassembles at them directly. The checker receives an
+  already resolved extent, so it still needs no loader.
 * **One artifact, three builds.** An R6 item covers MoM 1.31, MoM CP 1.60 and
   CoM 1 together, and the protocol gives each build its own complete ledger. A
   ledger row therefore carries a build key and `--build` selects one:

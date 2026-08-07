@@ -17,16 +17,6 @@ analysis and the modern analysis index.
 
 ## A. DOS version-branch claims
 
-### A31. MoM level-bonus magnitudes
-
-`getLevelBonuses` (`Calculator/combat.js`). CoM's complete 5×7 table at `0x8FACA` matches the
-calculator. MoM's unrolled chain at `0x8F881`–`0x8FB3E` has the expected shape—To Hit increments
-at the Elite, Ultra-Elite, and Champion thresholds, with resistance and HP changes around the
-same thresholds—but its six increment sites have not been decoded exhaustively. The calculator's
-+10/+20/+30% To Hit ladder, resistance steps up to +5, and HP steps therefore remain unconfirmed.
-
-Evidence: `MoM binary analysis.md`, *Level bonuses*.
-
 ### A32. Shatter in CP 1.60 and CoM 1
 
 - CP 1.60 changes the code immediately after both of 1.31's Shatter writes:
@@ -49,12 +39,16 @@ realm. It indexes a global array with `realm − 0x10` for realms `0x10`–`0x14
 
 ## B. DOS/shared-formula claims
 
-### B1. To-Hit floor and ceiling
+### B1. To-Hit floor and ceiling (resolved 2026-08-07)
 
-`clampPct` and the To-Hit modifier sites in `Calculator/combat.js` model a 10%–100% clamp.
-`CMB_AttackRoll` establishes a natural-10 hit floor for MoM 1.31, but that is not necessarily the
-same operation as clamping the displayed chance. The 100% ceiling is unestablished, as are both
-bounds in CP 1.60 and CoM 1. This is the evidence dossier behind Q3.
+`CMB_AttackRoll` is byte-identical in MoM 1.31, CP 1.60, and CoM 1. For every attack die it tests
+`roll >= 8 - to_hit` (`0x98F7B..0x98F84`) and, if that fails, separately accepts `roll == 10`
+(`0x98F86..0x98F8A`). `Random(10)` returns 1–10. A natural 10 therefore guarantees a 10% floor in
+all three builds, including under Warp Reality; sufficiently high To Hit makes every possible
+roll meet the threshold, establishing the 100% ceiling. The engine implements the lower bound as
+a natural-roll clause rather than by clamping the intermediate percentage, but the calculator's
+10%–100% result boundary is correct. Full reconstruction and review provenance:
+`DOS reconstructed/R6.2d.evidence.md`.
 
 ### B4. Damage rollover
 
@@ -114,16 +108,6 @@ changes. The magnitude and additive position are resolved at 8 for CoM2 and 10 f
 Evidence: `Caster binary/CoM2 binary - resolution helpers.md`, *Resolution-time modifiers*;
 `Caster binary/CoM2 binary - combat flow.md`, *ApplyAttack riders, damage loop and result routing*;
 `CoM2 data tables.md`, *Combat constants*.
-
-### D17. Destruction in the older engines
-
-CoM2/Warlord are settled: Destruction is a Chaos-realm resistance roll, uses the stored modifier,
-is skipped only by Magic Immunity, and assigns 150 damage on failure once per attacking figure.
-Only the claim that the effect is absent from MoM 1.31, CP 1.60, and CoM 1 remains for the R6 DOS
-read.
-
-Evidence: `Caster binary/CoM2 binary - combat flow.md`, *ApplyAttack riders, damage loop and
-result routing*.
 
 ### D18. Warlord touch-flag placement
 

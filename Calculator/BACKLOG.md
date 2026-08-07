@@ -31,61 +31,35 @@ States: `ready`, `open`, `deferred`, `blocked`. Costs: `free`, `small`, `medium`
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **R6.1a** | Reconstruct `BU_Apply_Specials` across all three DOS builds at once. |
-| 2 | **A31** | Decode MoM's six remaining level-bonus increments. |
-| 3 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
-| 4 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
-| 5 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
-| 6 | **F3–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
-| 7 | **R7.3, R7.4** | Finish the tiered modifier display; both wait on Q16. |
+| 1 | **R6.4, R6.5a–d** | Harden the DOS checker and reconstruct the four newly resolved call-closure targets. |
+| 2 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
+| 3 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
+| 4 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
+| 5 | **F3–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
+| 6 | **R7.3, R7.4** | Finish the tiered modifier display; both wait on Q16. |
+| 7 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Structural and reconstruction work
 
 | ID | Task | State | Cost | Evidence / dependency |
 |---|---|---|---|---|
-| R3 | Replace CoM2/Warlord's lossy single-`rtb` resolver projection. Closes after R3.1–R3.4; keep the DOS shared slot unchanged. | done 2026-08-03 | large | CoM2 units, record layout and sequential-transform audit; closes M5 |
-| R3.3 | Make modern combat resolution select and consume the independent channels, including coexistence of attacks; preserve DOS resolution unchanged. | done 2026-08-03 | medium | CoM2 combat flow; F25, F29, and F30 remain separate behavior work |
-| R3.4 | Remove the modern lossy projection, update migration/regression coverage, and verify multi-channel roster units load and resolve without dropping an attack. | done 2026-08-03 | small–medium | closes R3 and M5; unblocks F12, F17, F18, F20, and R4 |
-| R4 | Make the unit card and roster boundary version-shaped. Closes after R4.1–R4.3. | done 2026-08-03 | medium–large | MoM analysis, record anchors; CoM2 units, `unitT` fields; Q15 and D21 remain inputs |
-| R4.1 | Split the card and roster boundary by engine shape: modern named channels versus the DOS shared special-value presentation. | done 2026-08-03 | medium | card fields, roster binding, persistence, and roster smoke coverage; gaze/touch deferred to R4.2 |
-| R4.2 | Add the modern binary-shaped gaze save modifiers, touch values, and To Defend fields with version gating and roster binding. | done 2026-08-03 | medium | modern card fields, roster binding, persistence, and roster smoke coverage; D21 still informs gaze level presentation |
-| R4.3 | Remove the synthetic hidden-gaze input; finalize version gating, presets, and UI regression coverage for the shaped cards. | done 2026-08-03 | small–medium | DOS gazes now use their shared strength/type slot; closes R4 |
-| R6.0 | Make the derivation checker work on the DOS builds. | done 2026-08-04 | medium | `tools/verify_dos_derivation.py`, plus `Reference docs/DOS reconstructed/README.md` for the artifact conventions. No overlay mapping was needed — the DOS docs cite raw file offsets. Verified against `Has_Ranged_Attack` with four fixtures: full citation, none, one withheld, and a ledger hole. Exposed R9 |
-| R6.1a | `BU_Apply_Specials`, `0x8F310`–`0x8F880`. Same entry address in all three builds. | ready | medium | 460 instr, 0 calls, 38 branches |
-| R6.1b | Battle-unit constructor, `0x8EDFD`–`0x8F30F`. | open | medium | 437 instr, 5 calls |
-| R6.1c | Stat recompute, first half of `0x8FF09`–`0x90B8D`. | open | medium | 1059 instr over the whole routine; boundary fixed at scoping |
-| R6.1d | Stat recompute, second half. Carries A31's six level-bonus sites and A33's `0x90A87`. | open | medium | same routine; A31, A33 |
-| R6.1e | Constructor callees `0x8DBD0` and `0x8E668`. | open | medium | ~598 instr; extents provisional |
-| R6.1f | Recompute/constructor callees `0x8F881` and `0x8FB42`, plus the hit-point routine at `0x8E850`. | open | medium | ~605 instr + HP routine; extents provisional |
-| R6.2a | `BU_AttackTarget`, `0x99292`–`0x999C8`. | open | medium | 772 instr, 13 calls |
-| R6.2b | `BU_ProcessAttack`, first half of `0x999C9`–`0x9A586`. | open | medium | 1119 instr over the whole routine; boundary fixed at scoping. CP 1.60 changes only 192 of its 3,006 bytes |
-| R6.2c | `BU_ProcessAttack`, second half. Carries B4's rollover and fresh Defense rolls, and B7's touch dispatch. | open | medium | same routine; B4, B7 |
-| R6.2d | `BU_ProcessAttack` small helpers `0x98F60`, `0x98F9D`, `0x98FCB`, `0x99150`, `0x9A79E`, `0x9BB3E`, plus `Distance` and `Has_Ranged_Attack`. | open | medium | ~471 instr; extents provisional |
-| R6.2e | `0x9A587` and `Check_Wall_Of_Fire_Attack` (ends `retf` at `0x9EE84`). | open | medium | ~195 instr + wall check; start address unlocated |
-| R6.3 | Cross-build consistency pass: reconcile the per-item diff tables into one version-difference index, and confirm no first- or second-level callee was left unlocated. | blocked on R6.1a–R6.2e | medium | the one thing not checkable per item |
-| R9 | Fix the Delphi checker's gap-hiding bug and re-check R5. A ledger now splits on row-number restart only, so an address discontinuity inside one ledger is reported as the gap it is instead of being reclassified as two adjacent extents. **All 19 R5 artifacts re-checked clean** — 894 conditional jumps, 224 calls and 910 named-field writes accounted, no gaps, no parent mismatches — and the grouping is byte-identical under both rules, so the bug was latent on this corpus and no R5 finding is affected. Regeneration was therefore unnecessary: the ledgers live in the merged evidence docs, and `.derivations/` is ephemeral scratch by design. | done 2026-08-04 | small | `tools/verify_derivation.py:85`. Verified both directions: a fixture with a deleted ledger row is now caught (`5B2DC8..5B2E6F`) where the old rule reported nothing |
+| R6.4 | Scope `verify_dos_derivation.py` citations to the build under check; make `split_dos_derivation.py` match build labels as tokens rather than treating the `all` inside headings such as `Call inventory` as a MoM-build marker; make `named_write` require a memory destination rather than counting `mov reg,mem` loads; and extend `scan_mom_binary.FIELDS` to the displacements the reconstructed routines write. Without build scoping, a 1.31 citation silently satisfies a `com1` run wherever builds share offsets; without the field additions, the checker misses `race`, `Move_Flags`, `Attribs_1`'s high byte, `Attribs_2`, status/damage bytes, `s_UNIT` writes, `+0x3C`/`+0x3D`, and the `Gold_*`/`Grey_*` run. | ready | small | R6.1a/R6.1b/R6.2f evidence, *Counts*; R6.2f reciprocal-review tooling checks. |
+| R6.5a | Reconstruct exported routine `0x7BDA0..0x7BE3B` across all three DOS builds. It is the resolved `0348:003E` target called by `BU_ApplyDamage`; the 155-byte body is byte-identical and makes no calls. | ready | small | DOS version index, *Resolved call closure* |
+| R6.5b | Reconstruct exported Life-Steal-path routine `0x7FCBA..0x7FF43` across all three DOS builds. Its 649-byte bodies differ and call `abs()`, the battle-unit constructor, and stat recompute. | ready | medium | DOS version index, *Resolved call closure* |
+| R6.5c | Reconstruct movement routine `0x98494..0x986BD` across all three DOS builds. MoM 1.31 and CP 1.60 call it through `03C8:0043` and are byte-identical; CoM replaces the call path and has a 17-byte-different homolog. | ready | medium | DOS version index, *Resolved call closure* |
+| R6.5d | Reconstruct exported routine `0x9A8AB..0x9AD04` across all three DOS builds. CoM `BU_ApplyDamage` calls it through `03D0:004D`; it contains the already reconstructed CoM To Block and SpFx helpers and makes no calls. | ready | medium | DOS version index, *Resolved call closure* |
 | R7 | Present unit-card stats as an unmodified base plus tiered modifier values, imitating the game's plain/gold stat display. Closes after R7.1–R7.4. | open | medium | D22; Q16 |
-| R7.1 | Rename `applyLevelBonuses` and its call sites to state what they do — reset the card fields to roster base — and assert no path writes level into the card. | done 2026-08-03 | free–small | renamed `resetCardToRosterBase`; pre-level invariant verified in-browser; SPEC UI contract |
-| R7.2 | Regroup the card into "Base stats and abilities" and "Enchantments and conditions", with Level, Weapon and Armor in the lower group. | done 2026-08-03 | small–medium | `ABIL_GROUP_HEADINGS`, loadout relocated in `buildAbilitiesUI`; SPEC UI contract |
-| R7.3 | Derive the engine's plain-versus-gold display rule and assign every modifier source a tier. | blocked on Q16 | medium | D22; CoM2 units |
+| R7.3 | Derive the engine's plain-versus-gold display rule and assign every modifier source a tier. | blocked on Q16 | medium | D22; CoM2 units; R6.1a evidence, *`Gold_*` / `Grey_*` accumulators* (the DOS engine accumulates the tiers rather than deriving them at draw time) |
 | R7.4 | Replace the single effective-value column with separate silver and gold modifier values, keeping numeric presentation rather than icon pips. | blocked on R7.3 | medium | `ui.js:651`, `stats.js:1798`, `style.css:291`; SPEC UI contract |
-| R8 | Represent the DOS `Spec_Att_Attrib` byte as one shared card value with per-consumer flags, replacing the eleven independent ability numbers. Closes after R8.1–R8.5. | done 2026-08-04 | large | MoM analysis, *Touch-effect immunities* and *Holy Bonus and Resistance to All are per-player maxima*; extends the gaze-only shaping R4.3 stopped at |
-| R8.1 | Emit the DOS record's `spec_att_attrib` byte from the roster generator and drop the fabricated magnitude-1 fallback; regenerate `units_mom.js` and `units_com.js`. | done 2026-08-04 | medium | `tools/parse_tweaker_unit_data.py`; the source has one `Gaze/Poison` column and only Chaos Spawn consumes it twice, so the halt condition could not trigger |
-| R8.2 | Build the DOS card block under the shared strength/type slot — one magnitude input plus the consumer checkboxes — mirroring the ability rows the way `buildModernSpecialCard` does. Dispel Evil and Destruction sit apart at the bottom of the base card, since their modifiers are literals rather than the shared byte. | done 2026-08-04 | medium | `buildDosSpecialCard`; SPEC, DOS card presentation; presentation only — consumer reads still take the per-effect ability values until R8.3 |
-| R8.3 | Gate each DOS consumer's read on its own flag so the shared magnitude reaches only selected consumers, and keep provided-versus-received Holy Bonus / Res. to All maxing where it already happens. Destruction and Dispel Evil are flags only — their modifiers are literals, so they must not read the byte. | done 2026-08-04 | medium | `dosSpecialValues`; MoM analysis, provider/aggregation/consumption stages and touch-effect table |
-| R8.4 | Derive DOS gaze realm and Doom Gaze strength from `ranged_type` rather than from ability flags, and retire the DOS gaze ability controls. | done 2026-08-04 | small–medium | `dosSpecialValues`, `stats.js` gaze strength; MoM analysis, realm classifier. Fixed a type-104 double-count introduced by R4.3 and re-shaped 22 gaze presets to representable units |
-| R8.5 | Retire the per-effect `Name=value` ability entries from the DOS rosters now that every consumer reads `spec_att_attrib`, then re-run the preset suite. | done 2026-08-04 | small–medium | consumers now emit bare flag tokens and gaze tokens are gone entirely; `applyUnit` seeds the card magnitude from the record rather than from ability values. 927/927 presets pass; exposed F45 |
-
-R8 left modern untouched: `Caster.exe` carries independent fields, which is why Warlord's Chaos
-Spawn drops Stoning Gaze while keeping Death Gaze.
 
 **Every R6 item covers all three DOS builds at once**, not one build each. The builds are one
 lineage — 1.31, the community patch, then CoM 1 on top — so homologous code is read once and
 diffed rather than derived three times and reconciled afterwards. The version differences *are*
-the deliverable for A31, A32, A33, B1 and C1, and `MoM binary analysis.md` already records its
-findings that way. Size each item against 1.31 as the primary and derive CP 1.60 and CoM 1 as
-diffs against it; where a build diverges structurally, that region becomes its own item rather
-than bloating a joint one. CoM 1's table-rewritten level-bonus routine is the known case.
+the deliverable for A32, B1 and C1, and `MoM binary analysis.md` already records its
+findings that way. Read each item with 1.31 as the primary and CP 1.60 and CoM 1 as diffs against
+it — but establish each build's *extent* separately, per the next paragraph. Where a build
+diverges structurally, that region becomes its own item rather than bloating a joint one. CoM 1's
+table-rewritten level-bonus routine is the known case.
 
 **Artifacts are C, not Pascal.** `WIZARDS.EXE` is Borland C++ 1991 (see `tools/scan_mom_binary.py`),
 where `Caster.exe` is Delphi — so `Reference docs/DOS reconstructed/` holds `.c` files, and the
@@ -93,20 +67,32 @@ where `Caster.exe` is Delphi — so `Reference docs/DOS reconstructed/` holds `.
 `MOM_DAT.h` struct names keeps the two directly comparable, which matters because ReMoM is the
 orientation source we most need to check against.
 
-Instruction counts above are measured, not estimated (`capstone`, 16-bit). The located core is
-~4,119 instructions per build and the eleven first-level callees add ~1,790; second-level
-callees are not yet enumerated, so the surface will grow. Every call target found so far is
-near/direct, so the call graph is statically walkable. Extents marked *provisional* were sized by
-scanning to the first `retf` and must be confirmed when the item is scoped.
+**Sizing an item by its 1.31 extent understates the two later builds.** R6.1a found that CP 1.60
+and CoM 1 both replace this routine's epilogue with a jump to a tail relocated into space freed
+inside the *constructor's* address range, and that each build's only `retf` lives there. Nothing
+says that is the only such relocation, so scope every remaining R6 item by decoding each build to
+its own `retf` rather than assuming 1.31's extent, and expect an item's ranges to interleave with
+a neighbour's.
+
+Instruction counts above are measured, not estimated (`capstone`, 16-bit). The originally located
+core was ~4,119 instructions per build and the eleven first-level callees added ~1,790. R6.3 has
+now enumerated the complete first-/second-level call surface with zero unresolved targets; the
+four newly bounded code callees are R6.5a–d. Every call is direct, so the graph remains statically
+walkable. Extents marked *provisional* were sized by scanning to the first `retf` and must be
+confirmed when the item is scoped.
 
 **R6 runs in dual-derivation mode throughout** — AKH's standing instruction, 2026-08-04, on the
 grounds that the work is too difficult to trust a single pass. Both agents derive every item
 independently before any review; see `DERIVATION-REVIEW-PROTOCOL.md`. Review is per item, as that
 protocol's merge gate describes; there is no end-of-R6 review gate, which would have put the first
-feedback after six large reconstructions.
+feedback after six large reconstructions. R6.3 received both independent derivations, but AKH
+explicitly waived its reciprocal-review round and directed the immediate merge; the durable index
+and `HISTORY.md` record that exception.
 
-R6 closes after R6.1a–R6.2e and R6.3. A material post-review change requires the affected
-reviewer to re-check it.
+The originally assigned R6 constructor/recompute/combat surface closed with R6.3. R6.4 is checker
+hardening and R6.5a–d are separately scoped routines exposed by the completed overlay-aware call
+audit; neither was silently absorbed into R6.3. A material post-review change to R6.1a–R6.2f
+requires the affected reviewer to re-check it.
 
 ## Confirmed and suspected defects
 
@@ -118,13 +104,13 @@ reviewer to re-check it.
 | F6 | Trace Chaos Channels Fire Breath eligibility/coexistence, then make CoM2/Warlord representation and arithmetic match the reachable engine state. F48 settled the modern half — CC adds, never removes, and CoM2 and Warlord behave identically — so what remains is DOS: MoM leaves a gaze *and* a breath both firing from the one shared slot at the overwritten strength (2+2+1 = 5 where the slot holds one attack). | open | medium | CoM2 units, region `a`; CoM2 tables, Chaos Channels; `stats.js:436-441` |
 | F7 | Replace `Math.round(hits/3)` with the moddable Supernatural formula using Delphi banker's rounding; update affected presets. | deferred | small | CoM2 combat, ApplyAttack; CoM2 tables, Supernatural minimum damage |
 | F9 | Model Marionette's Channeler transformation, bonuses, spell package, and live-Fantastic Xenoveterinary eligibility. | open | medium | discrepancies, script checks without a calculator discrepancy |
-| F12 | After R3, move Destiny to the end of permanent `base` writes and make later channel transformations ordinary ordered steps, including Focus Magic conversion and Shadow Strike's creation/boost of Thrown. | blocked on R3 | medium | CoM2 units, Destiny; `CreateUnit.CAS:695,703`; current preset regressions |
+| F12 | Move Destiny to the end of permanent `base` writes and make later channel transformations ordinary ordered steps, including Focus Magic conversion and Shadow Strike's creation/boost of Thrown. | open | medium | CoM2 units, Destiny; `CreateUnit.CAS:695,703`; current preset regressions |
 | F13 | Move Upgraded Explosive's Fire Breath doubling to its early `UnitCalcPre` position and test a later bonus escaping it. | open | small | CoM2 units, Warlord region `b` |
 | F14 | Move Misfortune/Mislead to aura type 10 in region `e`, preserving eligibility gates. | open | small | CoM2 units, aura pass |
 | F15 | Put Holy Armor at its exact region-`c` position so its `Defense > 5` test cannot see later effects. | open | medium | CoM2 units, unit-enchantment effects |
 | F16 | Compute Charm of Life from live HP at its engine position after earlier HP writers. | open | small | CoM2 units, global enchantments/events |
-| F17 | After R3, implement Warlord Vampirism's script formula and source-channel resets at its region-`d` position. | blocked on R3 | medium | `UnitCalc.CAS:1245-1258`; CoM2 units |
-| F18 | After R3, split Mind Storm, Tactician, True Light, node aura, and combat Flame Blade writes onto their actual channels/positions. | blocked on R3 | medium | CoM2 units, calculator-facing discrepancies and aura pass |
+| F17 | Implement Warlord Vampirism's script formula and source-channel resets at its region-`d` position. | open | medium | `UnitCalc.CAS:1245-1258`; CoM2 units |
+| F18 | Split Mind Storm, Tactician, True Light, node aura, and combat Flame Blade writes onto their actual channels/positions. | open | medium | CoM2 units, calculator-facing discrepancies and aura pass |
 | F19 | Add controls/transforms for the calculator-relevant compiled effects identified as absent by the sequential-transform audit, including Lightning Blade's created Breath and Military Workshop/Rocketry channel behavior. | open | large | CoM2 units, sequential-transform audit; current preset regressions |
 | F20 | After F12–F19, make the represented `b`/`c`/`d` step lists source-order exhaustive and atomic; add a complete trace-order assertion. | blocked on F12–F19 | medium | CoM2 units, phase and region maps |
 | F21 | Load modern roster `to_block` into the card with one consistent absolute/delta encoding; add non-default controls. | open | small | generators vs `ui.js`; MoM analysis, constructor |
@@ -147,14 +133,14 @@ reviewer to re-check it.
 | F38 | Apply modern Black Sleep's Doom conversion to DamageSpell-shaped Immolation/Wall of Fire after the immunity exit. | open | small | CoM2 spells, DamageSpell |
 | F39 | Add Chaos Conjunction combat state and apply `Trunc(str × 1.34)` to modern Immolation only. | open | medium | CoM2 spells, direct spell damage |
 | F40 | Exclude calculated Teleporting/Merging attackers from modern Wall of Fire and expose Merging in the roster/card. | open | small | CoM2 spells; R5.2g/k evidence |
-| F41 | Add the modern nine-step hero level ladder and decide how the current six-entry level control exposes it. | open | medium | CoM2 tables, level bonuses |
+| F41 | Add engine-specific hero progression: the DOS eight-threshold ladders and template-ability formulas (including CoM's Blademaster divisors, mana table and Lucky rewrite), plus the modern nine-step hero table. Decide how the current six-entry level control exposes them. | open | large | R6.1f evidence, hero ladders and abilities; CoM2 tables, level bonuses; `combat.js:39-74` |
 | F42 | Stop a Level change from overwriting hand-edited stats on a custom unit: `resetCardToRosterBase` fires on every Level change and rewrites the card from a stale roster record even when the unit selector is "custom" and the fields are unlocked. | open | small | found during R7.1; `ui.js` Level change handlers and `unitBaseStats` lifetime |
 | F43 | Decide whether Dispel Evil should also be gated. Exorcise is now hidden in the MoM versions and Destruction is explicitly ungated, but Dispel Evil still shows everywhere: MoM's roster names it, CoM 1's roster names Exorcise instead, yet the `0x800` flag and its literal −4 are byte-identical at `0x99F72` in both — so it may be live in CoM 1 with no roster user. | open | small | MoM analysis, touch-effect table and *Dispel Evil*; `data.js:71,72` |
-| F48 | Remove the fabricated CoM2 Chaos Channels overwrite. No source has CC removing any attack: `Caster.exe` `$00599EE8`–`$00599FA8` writes only `firebreath += 4`, `race := RCChaos` and `Fantastic`; Warlord's `UnitCalc.CAS:40` touches only `SFireBreath`; the CoM2 manual says CC "can still **add** Fire Breath to units that have Thrown, Gaze or Lightning Breath"; `MODDING.INI`'s `CCRangedFBAllowed` is worded "can add" and gates **ranged** only. Deleted `ccCanOverwriteSpecial`/`gazeOverwrittenByCC`, gave the grant its own channel so it stops overwriting whichever channel is being derived, and corrected the tooltip. Also removed the invented CoM2-replaces / Warlord-stacks split: `$00599F3E` is one `add` routine serving both, so `ccFireBreathStacksWarlord` is gone and both versions add. | done 2026-08-04 | small | `stats.js:429-448,480,1112,1859`; `data.js:149`. Overwriting and assignment are DOS shared-slot artifacts, so the DOS gates are unchanged |
-| F45 | Fix the `Resistance to All` roster token, which had never matched its ability def in any version: normalization strips spaces without folding case, so the roster's token became `ResistancetoAll` while `match` was `ResistanceToAll`. Corrected both defs to the exact normalized token rather than folding case, which would have been a blanket rule for a single token. | done 2026-08-04 | small | `data.js:70,126`. An exhaustive sweep of all four rosters against every def confirms no case-only mismatch remains. Exposed F46 and corrected `predefChaosSpawnVsUnicorns` |
-| F46 | Give the DOS rosters' `Illusionary attack` token a match, which it had never had — the modern generators emit `Illusion` but the DOS generator kept the source spelling, so MoM and CoM Phantom Warriors, Phantom Beast and the Illusionist silently lacked the ability. Renamed to `Illusion` in `TOKEN_RENAMES` and dropped from `EXPLICIT_KEEP`, which had been suppressing it from the generator's own unmatched-token report. | done 2026-08-04 | small | `tools/parse_tweaker_unit_data.py`. No preset expectation moved because **no preset exercises these six units** — verified manually instead: MoM 1.31 Phantom Warriors vs Paladins goes 1.129 → 5.400. See F47 |
-| F47 | Add roster-wiring coverage for the DOS Illusion units, which nothing tested — the mechanic worked and only the roster token was broken, so a custom-stat preset would have passed either way. Added `predefPhantomWarriorsVsPaladins` (MoM 1.31) and `predefPhantomWarriorsVsGreatDrakeCoM` under a new *Roster ability wiring* subgroup. The feared calculator-derived expectation did not materialise: Illusion zeroes the defender's defense, so the mean is exactly figures x melee x to-hit — 6x3x0.30 = 5.400 and 7x3x0.30 = 6.300 — independent of defender stats. | done 2026-08-04 | small | reinjecting the F46 bug fails both, and only both, at the predicted 1.129 and 0.321 |
-| F44 | Re-verify the two modern-gaze preset expectations R4.3/R4.2 moved without a recorded reason. **`spiritLinkResistanceWarlord` 6.120 → 6.000 was correct**: effRes 5+2−3 = 4, pFail 0.6, one 10 HP figure → 6.000, and the old 6.120's extra 0.12 was a hidden gaze component SPEC scopes to MoM only. Derivation now recorded in the preset; the vestigial DOS `rtbType`/`rtb` were dropped. **`ccFireBreathReplacesGazeCoM2` 5.000 → 1.000 was not** — but neither was the 5.000: both encoded a CC-overwrites-gaze rule that no source supports (F48). Replaced by `ccFireBreathCoexistsWithGazeCoM2` at 5.000 = melee 1 + breath 4 with the gaze intact, and `ccFireBreathReplacesLightningCoM2` re-derived to `ccFireBreathCoexistsWithLightningCoM2` at 10.000 = melee 1 + lightning 5 + fire 4. | done 2026-08-04 | small | SPEC, *Gaze attacks*; F48's source stack |
+| F49 | Add a CoM 1 Heavenly Light active-effect control and transform for defending units: +1 positive melee/ranged, +1 Defense and Resistance, conditional weapon To Hit, and minimum magic-weapon quality. Add focused tests and state that the user enables it only for a defender in city combat. | open | small | R6.1c evidence, *The CoM 1 city-defense bytes are Guardian and Heavenly Light*; currently absent from `data.js` and `combat.js` |
+| F50 | Add CoM 1 side-maximum controls/transforms for Guiding Beacon, Divine Barrier and Soul Linker. Preserve the ranged-type/Fantastic gates and Soul Linker's `ceil(v/2)` To Hit versus `floor(v/2)` To Block split. | open | medium | R6.1d evidence, *CoM 1's relocated tail consumes three side-wide hero maxima*; absent from `data.js`/stat steps |
+| F51 | Add a CoM 1 Realm Ward city-enchantment input and transform: a matching Nature/Sorcery/Chaos/Life/Death Fantastic unit loses 20% To Hit, 3 Defense and 3 Resistance. | open | small | R6.1d evidence, *CoM 1 Realm Wards use −2/−3/−3*; absent from `data.js`/stat steps; Q19 |
+| F52 | Split CoM 1 Supreme Light eligibility from the modern helper and reproduce its five binary paths (live magical ranged, Life race, mana, persistent Focus Magic, or base magical ranged), unconditional +2 melee, positive-ranged gate, and signed live-Resistance division. | open | medium | R6.1d evidence, *CoM 1 Supreme Light has five eligibility paths*; `combat.js:78-82`, `stats.js:1018-1023,1454-1462` |
+| F53 | Use signed truncate-toward-zero division for CoM 1 Warped Defense instead of `Math.floor`; negative pre-Warp Defense can receive later Supreme Light/Tactician writes before the terminal clamp. | open | small | R6.1d evidence, *Warp Creature and Shatter expose both arithmetic and ordering differences*; `stats.js:1428-1431` |
 
 ## Engine verification
 
@@ -162,10 +148,7 @@ Detailed dossiers live in **verification evidence**. This table states only the 
 
 | ID | Upcoming verification | Cost |
 |---|---|---|
-| A31 | Decode MoM's six level-bonus increment sites. | small |
-| A32 | Decode CP 1.60's two post-Shatter edits and CoM 1's Shatter eligibility gate. | small |
-| A33 | Identify the CoM 1 per-realm global debuff at `0x90A87`. | medium |
-| B1 | Establish the To-Hit ceiling and non-1.31 floor behavior. | small |
+| A32 | Locate and decode the CoM 1 Shatter effect-setter eligibility gate. R6.1d settled the recompute (it tests only `BUE_SHATTER`) and CP 1.60's two accumulator fixes. | small |
 | B4 | Verify per-figure damage rollover and fresh Defense rolls. | medium |
 | B5 | Verify Armor Piercing rounding and its Immolation exclusion. | small |
 | B6 | Verify repeated Invulnerability subtraction across rollover. | small |
@@ -191,15 +174,20 @@ Accepted limitations remain in `SPEC.md`; only planned changes appear here.
 |---|---|---|---|
 | Q1 | Resolve Troll Shaman/Magician roster values versus the manual, including the possible Troll +1 melee rule. | open | roster/manual conflict |
 | Q2 | Confirm the apparent Draconian common-unit +1 Resistance racial modifier. | open | roster/manual conflict |
-| Q3 | Decide whether Warp Reality can reach 0% To Hit and whether the answer varies by version. | open, asked | B1 |
 | Q4 | Settle DOS Chaos Spawn poison-touch delivery; modern gazes are already excluded. | open, partial | B7, D18, F25 |
 | Q5 | Identify the source and page behind “weird defense behavior on page 25.” | blocked on missing source | — |
 | Q6 | Resolve CoM High Prayer's +3-attack text versus the +2 used elsewhere. | open | prose conflict |
 | Q8 | Determine whether Wraiths use Life Steal −4 or −3. | open | observation/manual conflict |
-| Q11 | Verify whether DOS Animate Dead grants +ranged; modern Animated does. | open, partial | C1; CoM2 units |
 | Q12 | Determine when “ranged” includes missile, boulder, magical, Thrown, breath, or gaze across versions/effects. | open, asked | — |
 | Q15 | Check whether compiled code ever consumes `unitT.savemodifier`. | open | CoM2 units, `unitT` fields; R4 |
-| Q16 | Determine what makes CoM2 draw a stat bonus as a plain icon rather than a gold one, and classify every modifier source. | open, partial | D22; R7.3 |
+| Q16 | Determine what makes CoM2 draw a stat bonus as a plain icon rather than a gold one, and classify every modifier source. | open, partial | D22; R7.3; R6.1a evidence, *`Gold_*` / `Grey_*` accumulators* |
+| Q17 | Resolve CoM 1 FocusMagic's `ammo > 0` gate against helptext that promises the ranged attack unconditionally; the answer also decides whether the signed `base_rt` fallback is reachable in play. | open | R6.1a evidence, *Open questions* |
+| Q18 | Determine what CoM 1's Holy Arms unit-type ceiling of `0x97` selects, given that the helptext says "normal unit" but the ceiling appears to admit four fantastic summons. | open | R6.1a evidence, *Open questions* |
+| Q19 | Resolve CoM 1 Realm Ward helptext's −2 To Hit/−4 Defense/−4 Resistance against the executed `0x90A87..0x90A9B` writes of −2/−3/−3. | open | R6.1d evidence, *CoM 1 Realm Wards use −2/−3/−3* |
+| Q20 | Identify the CoM 1 `Move_Flags 0x0100` bit set by Supreme Light and verify whether its read path implements the helptext's post-combat regeneration. | open | R6.1d evidence, *CoM 1 Supreme Light has five eligibility paths* |
+| Q21 | Resolve CoM 1 helptext's retained Endurance/Giant Strength powers against the manual's Teleportation/Inner Fire/Divine Protection replacements; the executed binary effects match the manual's replacement package. | open | prose conflict; R6.1e evidence, *Later builds turn the item block into a patch surface* |
+| Q23 | Resolve CoM Logistics scaling: shipped helptext says +0.5 movement per two experience levels, while the manual says +0.5 per level. `Battle_Unit_Moves2` consumes the per-controller maximum at `DS:0x3AC8` but does not calculate it. | open | R6.1g evidence, *CoM `Battle_Unit_Moves2`*; prose conflict |
+| Q25 | Resolve the R6.1h shared-source rendering disagreement at `0x8E5C6: 25 00 01`. Claude: the statement-level `#if` is “a naming branch only” and may use `IP_COM1_DIVINE_PROTECTION` versus `IP_POWER_DRAIN`. Codex: a statement-level `#if` “visually asserts a source/control-flow divergence” absent from the identical bytes, so one statement plus a build-selected alias is preferable. The merged C uses the alias form and the mechanic is undisputed. | open | R6.1h evidence, *Disputed source representation* |
 
 ## Blocked on people
 

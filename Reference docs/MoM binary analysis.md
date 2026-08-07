@@ -35,9 +35,13 @@ they drift from 1.31's addresses:
 CoM2 and Warlord are a different engine entirely (`Caster.exe`) and none of this applies to them.
 
 Borland C++ 1991 with VROOMM overlays (`INT 3Fh` thunks). Not packed. 218 KB load module,
-772 KB of overlay data after it. There is no symbol table and no overlay→file-offset map —
-ReMoM's `WZD o###p##` tags are overlay/proc identifiers with no published mapping, and its
-`doc/__TODO-ProjectOverview.md` table lists *Combat.c line ranges*, not file offsets.
+772 KB of overlay data after it. There is no symbol table. The executable's `FBOV` record,
+segment table, resident stub descriptors and five-byte `CD 3F` thunks do provide a complete
+overlay→file-offset map; `tools/resolve_dos_overlays.py` decodes it, and
+`Reference docs/DOS reconstructed/R6.version-differences.md`, *VROOMM overlay resolution*, owns
+the byte-chain evidence and validation. ReMoM's `WZD o###p##` tags remain overlay/proc identifiers
+with no published mapping to these raw offsets, and its `doc/__TODO-ProjectOverview.md` table lists
+*Combat.c line ranges*, not file offsets.
 
 ## Method
 
@@ -53,6 +57,15 @@ scan_mom_binary.py dis  WIZARDS.EXE 0x99A63 0xD0     # disassemble (capstone, 16
 bases Borland uses for struct pointers — then clusters co-occurrences. Requiring two or three
 fields within one window cuts hundreds of hits to a handful. Field offsets come from ReMoM's
 `MoX/src/MOM_DAT.h`; the tool carries a copy of the common ones.
+
+For a known far-call operand, resolve the VROOMM target directly:
+
+```
+resolve_dos_overlays.py WIZARDS.EXE 0x3d0 0x43   # -> file 0x9A587
+```
+
+`tools/audit_dos_call_closure.py` combines that resolver with the assigned R6 extents to enumerate
+near and far calls through the second level.
 
 Disassembly starting mid-instruction produces a line or two of garbage before resyncing —
 start a little early and ignore the first lines. **Bound the function before making any claim
@@ -163,18 +176,23 @@ ReMoM's `MoM/src/UNITTYPE.h`, confirmed by the branches that consume them:
 | Array index idiom | `mov ax,<idx> / mov dx,0x6E / imul dx / les bx,[0x922a] / add bx,ax` |
 | `BU_ProcessAttack` | `0x999C9`–`0x9A586` (prologue to `retf`) |
 | `BU_AttackTarget` (its caller) | `0x99292`–`0x999C8` |
-| Battle-unit stat recompute (far `BATTLE_UNIT*` in `[bp+6]`) | `0x8FF09`–`0x90B8D` |
-| `BU_Apply_Specials(bu*, enchantments u32, mutations u8)` | `0x8F310`–`0x8F880` — same entry in all three builds |
-| Battle-unit constructor (its other caller) | `0x8EDFD`–`0x8F30F` |
-| `Distance(bu_a, bu_b)` — Chebyshev, over `+0x44`/`+0x46` | `0x9B50C`–`0x9B58F` |
-| `Has_Ranged_Attack(bu_idx)` — `0 < ranged_type < 100` | `0x9BB03`–`0x9BB3D` |
+| Battle-unit stat recompute (far `BATTLE_UNIT*` in `[bp+6]`) | `0x8FF09`–`0x90B8D`; fully reconstructed in `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1c.evidence.md` and `R6.1d.evidence.md`. CoM 1 additionally executes a same-frame relocated block at `0x90B8E`–`0x90BFF`, returning to `0x905BB` |
+| `BU_Apply_Specials(bu*, enchantments u32, mutations u8)` | `0x8F310`–`0x8F880` — same entry in all three builds, but **1.31 alone ends there**. CP 1.60 and CoM 1 replace the epilogue with a `jmp` at `0x8F87E` to a relocated tail carrying that build's only `retf`: `0x8F197`–`0x8F26E` (CP 1.60) and `0x8F15C`–`0x8F233` (CoM 1). Full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1a.evidence.md` |
+| Battle-unit constructor (its other caller) | `0x8EDFD`–`0x8F30F`; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1b.evidence.md` |
+| Constructor hero-item callee | `0x8DBD0`–`0x8E038` in all three builds; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1e.evidence.md` |
+| Item-power helper | `0x8E039`–`0x8E4C3` in all three builds; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1g.evidence.md` |
+| Item attack-special helper | `0x8E4C4`–`0x8E667` in all three builds; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1h.evidence.md` |
+| Constructor hit-point callee | `0x8E668`–`0x8E84F` in MoM 1.31/CP 1.60 and `0x8E668`–`0x8E7A9` in CoM 1; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1e.evidence.md` |
+| Recompute hit-point callee | `0x8E850`–`0x8EAB8` in all three builds; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1g.evidence.md` |
+| CoM 1 `Battle_Unit_Moves2` | `0x9F12D`–`0x9F2D3`, with private near helpers through `0x9F2F0`; called through far `0x03E0:0x003E` at `0x90BE9`. Full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1g.evidence.md` |
+| `Distance(bu_a, bu_b)` — Chebyshev, over `+0x44`/`+0x46` | `0x9B50C`–`0x9B58F`; reconstructed in `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.2d.evidence.md` |
+| `Has_Ranged_Attack(bu_idx)` — `0 < ranged_type < 100` | `0x9BB03`–`0x9BB3D`; reconstructed in `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.2d.evidence.md` |
 | `Check_Wall_Of_Fire_Attack` | ends `retf` at `0x9EE84` |
 | `Target_Unit_Value` (AI estimator, *not* a combat path) | `0x9B590`–`0x9BB02` |
 | Weapon-quality stat block | `0x8F060`–`0x8F0FF` |
 | Name→mask tables | `0x2D0B0` (`attack_attributes`), `0x2D020` (`Attribs_1`), `0x2CFA8` (`Abilities`), `0x2D13E` (unit enchantments), `0x2D27E` (`Combat_Effects`); data base `0x294A0` |
 | Unit-type table | `0x2963E` (dseg `0x19E`), stride `0x24`, indexed by `_UNITS[].+0x05`; record +0 melee, +1 ranged, +2 `ranged_type`, +3 ammo |
-| Hit-point routine (returns per-figure `hits`, stored at `0x90B84`) | `0x8E850`, called from the recompute at `0x90B7C` |
-| Player record stride / global-enchantment bytes | stride `0x4C8`; Chaos Surge at `[0xA356]`, Holy Arms at `[0xA35F]` for player 0 |
+| Player record stride / global-enchantment bytes | stride `0x4C8`; Chaos Surge at `[0xA356]`, Holy Arms at `[0xA35F]`, CoM 1 Survival Instinct at `[0xA363]` for player 0 |
 
 The unit-type table's base and first four columns are confirmed by decoding all 35 hero records
 and matching them row-for-row against `Calculator/units_mom.js` (roster id = record index + 1).
@@ -183,6 +201,170 @@ any offset — so read stats from it, not flags.
 
 ## Verified findings
 
+### Combat-resolution helper closure (resolved 2026-08-07)
+
+R6.2d reconstructed twelve helper extents in all three builds. The shared C is in
+`DOS reconstructed/combat.c`; complete inventories, ledgers, counts, merged findings, and
+dual-review provenance are in `DOS reconstructed/R6.2d.evidence.md`.
+
+The closure confirms that the natural-10 To Hit floor exists in all three builds, CoM applies To
+Block only to the first fifteen defense dice, CP/CoM repair 1.31's unreachable Thrown Weapon
+Immunity arm, and CoM reclassifies Ice Bolt from Nature to Sorcery. It also bounds CoM's two
+damage-floor helpers, its bottom-tested relocated battle-unit tail, and the `SpFx`-gated hero-mana
+helper at `0x9AC1B..0x9AC8E`. No agent disagreement survived review.
+
+### Battle-unit constructor across the DOS builds (resolved 2026-08-05)
+
+R6.1b reconstructed the constructor instruction by instruction in all three builds; the shared C
+is in `DOS reconstructed/unitcalc.c` and its complete ledgers, counts, findings and dual-review
+provenance are in `DOS reconstructed/R6.1b.evidence.md`.
+
+The constructor confirms and extends the findings below:
+
+- CoM 1 initializes Zombies with `toblock = -1`, grants Golems Resist Elements, and changes a
+  Catapult with `wp == 9` to mutation quality 1 (`0x8EE28`–`0x8EEAF`). The Catapult's fresh
+  quality read sees the new value, while `BU_Apply_Specials` receives the older snapshot.
+- CoM 1's near helper at `0x8F379` reads raw table bytes `B1 18 3E 0E C3 23`, overriding
+  `mana_max` to 24 for Angel, 14 for Apprentices, and 35 for Djinn.
+- The CoM-only player byte at `DS:0xA363` is Survival Instinct: for the controller's fantastic
+  units it grants +1 Defense, +2 Resistance and +1 To Hit (`0x8F277`–`0x8F29E`), exactly matching
+  both `CoM helptext.txt:194` and `CoM1manual.HTML:6803`–`:6814`.
+- CP 1.60 jumps over 1.31's Flight movement floor; CoM 1 removes the floor and has no
+  `movement_points` write in this constructor at all.
+- All three builds clear accumulator bytes through `Grey_Resist` (`+0x6C`) but deliberately skip
+  `Grey_Hits` (`+0x6D`). Only CP 1.60 and CoM 1 later copy the hit-point routine's `DL` result to
+  `Gold_Hits`.
+
+### Constructor hero-item and hit-point callees (resolved 2026-08-06)
+
+R6.1e reconstructed both constructor callees instruction by instruction in all three builds. The
+shared C is in `DOS reconstructed/unitcalc.c`; complete ledgers, counts, findings and dual-review
+provenance are in `DOS reconstructed/R6.1e.evidence.md`.
+
+- CoM 1 reuses the old Endurance, Giant Strength and Power Drain item bits for the powers its
+  manual calls Teleportation, Inner Fire and Divine Protection. The executed writes match the
+  manual's replacement effects: Teleportation adds the teleport movement bit; Inner Fire grants
+  Fire and Cold immunity plus Immolation; Divine Protection grants Death immunity plus Lucky.
+  Shipped helptext instead retains the old names and descriptions, so the prose conflict remains
+  open as Q21.
+- CoM 1 NOP-fills both blocks that formerly added Giant Strength's +1 melee attack (and the
+  ranged twin). No write in this item's assigned extent implements the manual's promised Inner
+  Fire +1 attack. R6.1g subsequently proved that the adjacent item-power helper at `0x8E039`
+  never tests Inner Fire's raw `0x08000000` bit either, closing Q22 as a negative binary finding.
+- Item attack bonuses are type-gated. Sword, Mace, Axe and Misc items can add melee. Bow items
+  require missile ranged in both MoM builds; CoM 1 widens that signed ranged-class test to every
+  class `<= 3`. Staff and Wand still require magical ranged, Axe requires raw Thrown, and Misc
+  admits every ranged type.
+- CP 1.60 and CoM 1 return a second hit value in `DX`; the constructor stores its low byte in
+  `Gold_Hits`. Their routine also scans equipped items for Lion Heart and applies the Black
+  Channels/Lion Heart hit floor, while CoM 1 delegates the per-figure base to its live
+  eight-divided-by-figures helper.
+- CoM 1 replaces the MoM hero/nonhero level ladders with its own increment tables. Charm of Life
+  still contributes one hit before the terminal floor, but unlike MoM 1.31 it can reduce an
+  already-negative intermediate value because CoM 1 omits the positive-value gate. A CP 1.60
+  table-shaped block after the routine's return is unreachable residue; CoM 1 makes its homolog
+  live.
+
+### Item powers, recompute hit points, and CoM movement (resolved 2026-08-06)
+
+R6.1g reconstructed the item-power helper and recompute hit-point routine in all three builds,
+plus CoM 1's far `Battle_Unit_Moves2` target and both private near helpers. The shared C is in
+`DOS reconstructed/unitcalc.c`; complete ledgers, inventories, counts, findings and dual-review
+provenance are in `DOS reconstructed/R6.1g.evidence.md`.
+
+- The item helper tests twenty power masks. CoM 1 turns Path Finding into Land Link, repurposes
+  old Magic Immunity as a movement flag, and turns old Righteousness into Shadow's conditional
+  Thrown attack. Holy Avenger uniquely tests `0x00200000` but grants Bless `0x02000000`.
+- The helper never tests Inner Fire's raw `0x08000000` bit. Combined with R6.1e's NOP-filled old
+  Giant Strength attack blocks, the complete hero-item path contains no +1 attack implementation.
+- Recomputed hits merge persistent, runtime and item enchantments. 1.31 alone keeps Crusade's
+  extra non-Fantastic level. CP removes Black Channels' Gold-Hits increment; CoM removes the
+  whole Black Channels block and changes Lion Heart from flat +3 to unsigned
+  `8 / Max_Figures`, retaining CP's runtime-only Gold-Hits gate.
+- CoM `Battle_Unit_Moves2` uses signed base `Move_Halves` but unsigned unit-type/controller
+  indices. It combines Mystic Surge, hero items, Logistics, Flight, Chaos Channels wings,
+  Endurance, Haste and Entangle, then reconciles current movement through a cached prior maximum
+  stored in the otherwise skipped `Grey_Hits` byte.
+- The routine identifies `DS:0x3AC8` as the consumed per-controller Logistics maximum, but does
+  not expose the level-to-table scaling. CoM helptext says +0.5 movement per two levels while the
+  manual says +0.5 per level; that prose discrepancy remains Q23.
+
+### Item attack-special helper (resolved 2026-08-07)
+
+R6.1h reconstructed `BU_Apply_Item_Attack_Specials` over `[0x8E4C4,0x8E668)` in all three
+builds. The shared C is in `DOS reconstructed/unitcalc.c`; complete ledgers, branch/write
+inventories, counts, merge findings and dual-derivation provenance are in
+`DOS reconstructed/R6.1h.evidence.md`.
+
+- All three builds execute the same 420 bytes at the same offsets. The helper maps nine item
+  powers to attack-attribute flags: Vampiric→Life Steal, Lightning→Armor Piercing,
+  Destruction→Destruction, Chaos→Automatic Damage, Death→Death Touch, raw `0x01000000`→Power
+  Drain, Holy Avenger→Dispel Evil, Phantasmal→Illusionary, and Stoning→Stoning Touch
+  (`0x8E4E6`–`0x8E65D`).
+- Its callers select melee attack attributes at `0x8DE54` and ranged attack attributes at
+  `0x8E004`; the helper writes the selected word once at `0x8E662` and touches no other state.
+- CoM 1 repurposes item-power input `0x01000000` as Divine Protection in the preceding item
+  application path, but this byte-identical helper still turns that raw input into attack flag
+  `0x0400`, named Power Drain by the executable's table. A qualifying Divine Protection item
+  therefore retains the old attack-special side effect in addition to its CoM defensive effects.
+
+Verified: Claude 2026-08-07; Codex 2026-08-07, independent. The only surviving review
+disagreement is how to render the build-specific input name in shared C; Q25 records it and does
+not affect the byte or mechanic findings.
+
+### Battle-unit stat recompute, first half (resolved 2026-08-06)
+
+R6.1c reconstructed `0x8FF09`–`0x90634` in MoM 1.31/CP 1.60 and `0x8FF09`–`0x9064A`
+in CoM 1 instruction by instruction. The shared C is in `DOS reconstructed/unitcalc.c`; complete
+ledgers, counts, findings and dual-review provenance are in `DOS reconstructed/R6.1c.evidence.md`.
+
+- MoM 1.31 and CP 1.60 are byte-identical throughout this half. Node aura grants +2 to the four
+  combat stats for the matching Fantastic realm; its melee write is ungated while ranged requires
+  a positive stat. Leadership reaches only non-Fantastic units, and its ranged value is the signed
+  side-wide maximum divided by two (`0x8FF20`–`0x900C5`).
+- Holy Bonus reaches melee and Defense in both MoM builds; CoM 1 additionally applies it to
+  positive ranged attack (`0x900E8`–`0x900F7`). Resistance to All is a side-wide Resistance add.
+  Both are consumed from the per-player maxima already identified at `[0xC89E]` and `[0xC89A]`.
+- High Prayer supersedes rather than stacks with Prayer. The binary gives +2 melee, +2 Defense,
+  +3 Resistance, +10% To Hit and +10% To Block; it never writes ranged attack
+  (`0x9024E`–`0x903A1`).
+- CoM 1 replaces MoM's early True Light/Darkness region with event and enchantment blocks. Three
+  patched branches make Metal Fires ignore its old Fantastic and Flame Blade exclusions while
+  excluding Thrown from its ranged +3 (`0x903C4`–`0x90490`). The same region carries Mass
+  Invisibility, Warp Reality, Black Prayer and an unidentified `Move_Flags & 0x0400` To-Hit rider.
+- CoM 1 wizard byte `+0x6A` is Guardian after the retort-block renumbering: in city combat it adds
+  +1 To Hit, To Block and Resistance to defenders (`0x90589`–`0x905B4`). Battlefield raw
+  `+0x1593` is Heavenly Light and grants its defender stat/weapon package
+  (`0x905BB`–`0x9064A`).
+- `0x905B8` leaves the first-half extent for the R6.1d same-frame relocated block at
+  `0x90B8E`–`0x90BFF`; `0x90BFD` returns to the live Heavenly Light block at `0x905BB`.
+
+### Battle-unit stat recompute, second half (resolved 2026-08-06)
+
+R6.1d reconstructed `0x90635`–`0x90B8D` in MoM 1.31/CP 1.60, `0x9064B`–`0x90B8D`
+in CoM 1, and CoM 1's same-frame tail `0x90B8E`–`0x90BFF`. The shared C is in
+`DOS reconstructed/unitcalc.c`; complete ledgers, counts, findings and dual-review provenance
+are in `DOS reconstructed/R6.1d.evidence.md`.
+
+- CP 1.60 fixes Weakness's dead Thrown arm and Shatter's two `Grey_*` accounting writes. Its
+  candidate player-byte `+0x6A` bonus block remains unreachable behind unconditional jumps.
+- MoM 1.31's unknown `Combat_Effects 0x0400` block subtracts To Hit and Resistance but credits
+  `Gold_Resist`, not `Grey_Resist` (`0x90860`–`0x90894`).
+- MoM Warp Creature halves melee and Defense; CoM 1 also halves the shared ranged slot and
+  divides Defense by three. CoM 1 performs Shatter, Darkness, Supreme Light, Tactician and
+  Eternal Night after those reductions, so each later write lands at full value.
+- CoM 1 Supreme Light has five eligibility paths: live magical ranged, Life race, mana,
+  persistent Focus Magic, or magical base ranged. It adds melee unconditionally, gates only its
+  ranged write on a positive stat, reads live signed `Resistance / 3`, and sets unidentified
+  `Move_Flags 0x0100` (`0x90992`–`0x90A5B`).
+- CoM 1 Realm Wards execute −2 To Hit, −3 Defense and −3 Resistance, conflicting with shipped
+  helptext's −2/−4/−4. Tactician then grants +1 Defense to all controlled units and a total
+  +2 Defense plus +2 melee/ranged/Resistance to heroes (`0x90A5C`–`0x90AFF`).
+- The constructor-called near helper at `0x90B11` applies one cumulative Eternal Night
+  Resistance penalty per other owner. Its loop is bottom-tested.
+- The relocated tail consumes Guiding Beacon, Divine Barrier and Soul Linker side maxima before
+  Heavenly Light, then calls still-unidentified far routine `0x03E0:0x003E` (`0x90B8E`–`0x90BFF`).
+
 ### To-hit assembly (resolved 2026-07-26)
 
 `BU_ProcessAttack` builds `attack_tohit` in local `[bp-0x1a]`:
@@ -190,7 +372,9 @@ any offset — so read stats from it, not flags.
 ```
 0x99A63  attack_tohit = tohit                    ; innate + experience level + hero abilities
 0x99ACA  cmp attack_mode,0 ; jg → ranged path, else → melee path
-MELEE  0x99C3F  attack_tohit += (melee_tohit - defender.toblock)
+MELEE  0x99C3F  attack_tohit += (melee_tohit - defender.toblock) ; 1.31
+       0x99C3F  attack_tohit += melee_tohit                       ; CP 1.60
+       0x99C11  attack_tohit += melee_tohit                       ; CoM 1
 RANGED 0x99B64  cmp attack_mode,2 ; jne → skip to 0x99BE6
        0x99B82  attack_tohit += ranged_tohit
        0x99BDC  attack_tohit -= Range_Penalty
@@ -265,7 +449,12 @@ its `attack_strength = 0`, which is inert: anything in the ranged phase already 
 ### Holy Weapon, and the to-hit normalisation that carries it to thrown (resolved 2026-07-27)
 
 This closes former verification item **A26**. Holy Weapon is unit-enchantment mask `0x00800000`, and its block is
-version-identical in substance (`0x8F1C0` in 1.31, `0x8F1C5` in CP 1.60, `0x8F192` in CoM 1):
+version-identical in substance (`0x8F1C0` in 1.31, `0x8F1C5` in CP 1.60, `0x8F192` in CoM 1) —
+but **not in which routine it sits, and therefore not in how often it runs**. In 1.31 it is inlined
+in the battle-unit constructor, reading that frame's locals, and runs once per unit. CP 1.60 and
+CoM 1 moved it into `BU_Apply_Specials`, which has two callers, so it runs at construction *and*
+at every stat recompute; the Holy Arms grant and the to-hit normalisation below moved with it. See
+`DOS reconstructed/R6.1a.evidence.md`, *CP 1.60 and CoM 1 moved Holy Weapon out of the constructor*.
 
 ```
 if (!(enchantments & HOLY_WEAPON)) skip
@@ -317,6 +506,20 @@ even when a ranged attack would normally have been rejected before reaching it.
 CP 1.60 is byte-identical through the whole `0x99C89`–`0x99CC4` block. CoM 1 replaces
 `0x99C89`–`0x99CC6` with 62 `nop` bytes and resumes at the unchanged counter-attack Suppression
 code at `0x99CC7`. Therefore MoM 1.31 and CP 1.60 impose the −10% penalty, while CoM 1 does not.
+
+### `BU_ProcessAttack` first-half control gates (resolved 2026-08-07)
+
+The merged three-build reconstruction closes `[0x999C9,0x99ED7)`. A counterattack subtracts
+signed `Suppression / 2` from To Hit at `0x99CC7`–`0x99CE4`, with the compiler's signed division
+idiom truncating toward zero. The subsequent flying gate rejects a nonflying unit's own melee
+attack against a flying defender unless the attacker is itself flying, the call is a
+counterattack, or `ranged_type >= 100` (`0x99CE7`–`0x99D2F`; compact end `0x99D22` in CP/CoM).
+
+At the extent's end, MoM 1.31 returns when `attack_strength <= 0`: `7F 03` at `0x99ED2` branches
+over the abort only for a positive strength. CP 1.60 and CoM 1 patch those bytes to `EB 03`, so
+the comparison survives but execution always continues into the second half. Complete ledgers,
+calls, writes, arithmetic bytes, and the CoM unreachable spell-7 arm are in
+`DOS reconstructed/R6.2b.evidence.md`.
 
 ### Cause Fear direction and resistance modifier (resolved 2026-07-26)
 
@@ -497,12 +700,33 @@ already loaded for the Haste test), requires 30–39, and then applies the same
 uses `cmp mana,6 / jb`, so 6 mana is sufficient; the extra shot still subtracts 3. **Heroes
 repeat in CP 1.60 and not in 1.31** — that is the whole of the version difference.
 
+The CP replacement also changes the first-shot result transfer to a downward loop with a
+register-only running total. An apparent defender-alive loop immediately afterward,
+`0x99367`–`0x9937F`, is unreachable: the Haste edge at `0x99362` jumps to `0x99380`, while the
+no-Haste path at `0x99364` jumps out of the ranged branch. It is preserved in the reconstruction
+as dead binary behavior, not treated as a live extra-shot gate.
+
 **CoM 1 deleted the mana-pool ranged attack outright.** In the repeat it nops 1.31's
 conditional branch at `0x99387` and makes `0x9939C` an unconditional jump to the ammo path,
 leaving the mana block unreachable. More than that, it replaces the entire first-shot mana
 routine — `0x9AFDA`–`0x9B0ED`, 276 bytes of `nop` — and falls straight through to the ammo
 decrement. So in CoM 1 a magical ranged attack is an ordinary ammunition attack and Haste
 doubles it like any other, with no hero or Caster special case anywhere.
+
+The dead CoM repeat-mana arm is still informative as patch residue: it compares unsigned mana
+against 10 and would subtract 5. The reachable arm always uses ammunition. Independently, a
+refused ranged attack does not merely return empty output: `0x99473`–`0x99487` adds `-5` to each
+of the three defender damage buckets in every build.
+
+The same reconstruction settled two figure-count details. MoM 1.31's first-strike path sums three
+separately truncated damage-category quotients and omits attacker front-figure damage; CP 1.60 and
+CoM 1 replace that loop with one quotient over the accumulated damage plus front damage
+(`0x996D2`–`0x9972A`). Later attacker melee calls do not incorporate the defender's newly produced
+melee-counter buckets when choosing their figure count, preserving simultaneous/frozen attacker
+figures within this routine. The full three-build body, ledgers, branch/call/write inventories, and
+review provenance are in `DOS reconstructed/combat.c` and `DOS reconstructed/R6.2a.evidence.md`.
+Verified independently by Claude and Codex on 2026-08-06; merged after reciprocal review on
+2026-08-07, with no surviving disagreement.
 
 ### Resistance rolls and effective resistance (resolved 2026-07-26)
 
@@ -575,7 +799,7 @@ mechanism, and it does not share anything with `Combat_Effective_Resistance` abo
 resistance bonuses are additive, this one **replaces** the computed defence outright.
 
 ```
-0x9A769  attack_attributes & 1 (Armor Piercing) → si = si / 2   ; cdq/sub/sar, floor
+0x9A769  attack_attributes & 1 (Armor Piercing) → si = si / 2   ; cwd/sub/sar, signed truncation toward zero
 0x9A779  Immunity_Type == 1 && si < 10 → si = 10                ; Weapon Immunity floor
 0x9A787  Immunity_Type == 2 → return 50                         ; mov ax,0x32 at 0x9A78D
 0x9A793  return si
@@ -595,6 +819,17 @@ and non-melee only; CoM 1 raises them to **+12** / **+4** and drops the `else`, 
 apply. CoM 1 also replaces the Weapon Immunity floor with `add si, 8` at `0x9A780` — the
 calculator's CoM `baseDef + 8`. CP 1.60's only change in the function is a *reordering* of the
 two `Immunity_Type` assignments at `0x9A663`–`0x9A68F`, which is the mechanism behind A9.
+
+The completed R6.2e derivation supplies the bounded control-flow details. Illusionary defense
+returns zero unless the defender's Illusions Immunity first clears the attack's Illusionary bit
+(`0x9A613`–`0x9A633`). The accumulated enchantment mask includes the permanent unit, live battle
+unit, and item enchantments, but MoM 1.31's Righteousness arm separately checks only permanent
+and live sources. CP tests the combined mask, so item-granted Righteousness starts counting there;
+CoM replaces the entire Righteousness arm with 87 NOPs (`0x9A6DC`–`0x9A732`). Both Bless and
+Righteousness remain inside the Chaos/Death realm gate. Armor Piercing runs after the additive
+bonuses and uses signed division by two, truncating toward zero (`0x9A770`–`0x9A778`). Verified:
+Claude 2026-08-07; Codex 2026-08-07, independent. Full evidence:
+`DOS reconstructed/R6.2e.evidence.md`.
 
 ### Large Shield and elemental defence against spell damage (resolved 2026-07-27)
 
@@ -719,6 +954,15 @@ Also read off these blocks: **Life Steal consumes `Combat_Resistance_Check`'s re
 B3. And CoM 1's Destruction adds a flat **100** to the kill accumulator
 (`0x9A1E1`, `mov al,0x64`) where 1.31 adds the defender's per-figure `hits`.
 
+The completed R6.2c dual derivation adds the version details around those blocks. MoM's Dispel
+Evil accepts Chaos/Death races with modifiers −4 and another −5 for Undead; CoM 1 accepts every
+signed race at or above `0x0F`, uses −3/−3, exempts Spell Lock, and retains a dead `race == 0x14`
+compare (`0x99F96`–`0x99FC8`). Stoning and Death channel flags add −1 and −3 respectively.
+CoM 1's Life Steal channel correction tests raw attack bit `0x0040` (Illusionary), not Life
+Steal, and subtracts two in live AX (`0x9A154`–`0x9A15B`). Destruction is inside the
+per-attacking-figure loop in every build (`0x9A19E`–`0x9A1E5`). Verified: Claude 2026-08-07;
+Codex 2026-08-07, independent. Full evidence: `DOS reconstructed/R6.2c.evidence.md`.
+
 ### Weapon Immunity: eligibility, ordering, and magnitude (resolved 2026-07-27)
 
 Two functions decide it. The **immunity-mask builder** at `0x99150`–`0x99291` (prologue to
@@ -734,7 +978,7 @@ The Weapon Immunity bit (`0x100`) enters the mask only when `Weapon_Plus1` (+0x2
 | ranged (`0x9921A`) | `ranged_type / 10 < 3` **\|\|** `ranged_type / 10 == 100` |
 
 The second disjunct is unsatisfiable for an `int8` — the same divide bug as Weakness. **CP 1.60
-and CoM 1 both nop the identical six bytes** `bb0a0099f7fb` (`mov bx,10 / cdq / idiv bx`) at
+and CoM 1 both nop the identical six bytes** `bb0a0099f7fb` (`mov bx,10 / cwd / idiv bx`) at
 `0x9922C`, turning it into `ranged_type == 100`. That is the whole of the documented "1.31
 thrown ignores Weapon Immunity" bug, and its fix.
 
@@ -955,10 +1199,45 @@ Fireball's `attributes` word is `0x1000` = `Att_AREAFLAG` in all three, which ma
 `attack_count = defender.Cur_Figures` — the attack lands on every figure. The Immolation *spell*
 record is a unit enchantment (`type` 1) and its own strength byte is unused by combat.
 
-`Check_Wall_Of_Fire_Attack` itself is byte-identical between 1.31 and CP 1.60. Its guards are
-`target_cgx` ∈ [5,8] (`0x9EE1D`, `0x9EE31`), `target_cgy` ∈ [10,13] (`0x9EE45`, `0x9EE59`) and a
-`Move_Flags` test, then the damage call at `0x9EE6C` and `BU_ApplyDamage` at `0x9EE79`. CoM 1
-widens the `Move_Flags` mask from `0x80` to `0x98` and adds a `controller_idx` test at `0x9EE29`.
+`Check_Wall_Of_Fire_Attack` itself is byte-identical between 1.31 and CP 1.60. It first requires
+`battlefield.wall_of_fire > 0`, then skips Flying, Teleporting, and Merging units. Damage occurs
+only when the unit's current square is outside and its destination is inside the inclusive
+`cgx 5..8`, `cgy 10..13` city-wall box; the byte-identical helper at
+`[0x9EFE3,0x9F046)` performs the current-square test. CoM folds the movement tests into raw mask
+`0x98`, skips defender-controlled units, and performs the destination test before the same
+current-square helper. The local three-word damage array is not initialized before the Fireball
+helper fills it. The spell call remains at `0x9EE6C`, followed by `BU_ApplyDamage` at `0x9EE79`.
+
+CoM also hides a separately called near helper in the wall routine's jumped-over bytes
+`[0x9EDD2,0x9EE21)`. It scans 30 `s_NODE` records and, when a Guardian node belongs to the combat
+defender and matches the current overland action coordinates, writes `owner_idx + 1` to
+`battlefield.city_enchantments[Heavenly Light]` at raw `+0x1593`. Its sole direct predecessor is
+`0x9E96F`; the wall routine jumps over it at `0x9EDD0`. Verified: Claude 2026-08-07; Codex
+2026-08-07, independent. Full evidence: `DOS reconstructed/R6.2e.evidence.md`.
+
+### Spell damage application, death classification and ranged visibility (resolved 2026-08-07)
+
+The completed R6.2f closure confirms the full path behind the Fireball-derived effects above.
+`Apply_Battle_Unit_Damage_From_Spell` returns before rolling against Magic Immunity, or against
+Righteousness when the spell realm is Chaos/Death (`0x870C6..0x87117`). Area spells attack once per
+current figure with Damage Limit, Warp Lightning attacks once per starting strength while reducing
+strength each pass, and Black Sleep converts the spell to automatic damage
+(`0x871C6..0x8721C`, `0x8733E..0x87345`). Invulnerability subtracts two after each defense roll.
+
+`BU_ApplyDamage` returns before all state changes when the input-bucket sum is nonpositive or the
+unit is not Active (`0x873B1..0x873CE`), caps each persistent damage bucket at 200, and uses signed
+division for figures lost and the front-figure remainder (`0x873D1..0x87500`). Its terminal status
+priority is irreversible (wins ties), then undeath (strictly above irreversible, at least regular),
+then regular (strictly above both), at `0x87560..0x876B0`. MoM 1.31 and CP 1.60 additionally mark
+recognized combat summons with persistent `wp = 9`; CoM 1 discards that predicate result and calls
+an unresolved helper with `[0xC520]` instead (`0x87536..0x8755F`).
+
+`Check_Attack_Ranged` combines permanent, live battle and item enchantments for both combatants.
+The Wall of Darkness exemption checks True Sight in 1.31 but byte-wide Illusions Immunity in CP
+1.60 and CoM 1 (`0x877EC..0x877FC`). The same closure establishes Confusion-aware side counting in
+`Eliminated_Opponent`, the walled-city cell predicate's excluded inner two-by-two, and the exact
+combat-summon type list. Verified: Claude 2026-08-07, independent; Codex 2026-08-07, independent.
+Full evidence: `DOS reconstructed/R6.2f.evidence.md`.
 
 ### `BU_Apply_Specials` runs twice, and only 1.31 lets mutations apply twice (resolved 2026-07-27)
 
@@ -989,7 +1268,9 @@ The sibling mutations read off the same block. Demon Wings (`0x08`) sets `Move_F
 breath (`0x10`) sets `ranged_type = 0x65` (101) with `ranged = 2` in both MoM builds (`0x8F728`)
 but **`ranged = 4` in CoM 1** (`0x8F47C`). All three also set `race = 0x12`.
 
-Holy Armor (`UE_HOLY_ARMOR`, `0x8F7F0`) is `+2` defence, and Iron Skin `+5` (CoM 1 `0x8F72B`).
+Holy Armor (`UE_HOLY_ARMOR`, `0x8F7F0`) is `+2` defence in both MoM builds, and Iron Skin `+5`
+(CoM 1 `0x8F72B`). **CoM 1 made Holy Armor conditional**: at `0x8F7C1` it is `+2` defence only when
+the *running* `defense` is `<= 5`, and `+1 toblock` otherwise.
 
 **CoM 1 swapped the constructor's call order**, and that has consequences beyond this section.
 The constructor calls `BU_Apply_Specials` at `0x8F2A2` in both MoM builds and at `0x8F0E8` in
@@ -1023,9 +1304,13 @@ The wiki's "no effect can raise its Defense above 0" is true of the *stat* only.
 `Battle_Unit_Defense_Special` starts from the clamped 0 and still layers its own per-attack terms
 on top, so a Berserk unit with Large Shield defends at 2 and one with Magic Immunity at 50.
 
-**CoM 1 removed Berserk outright**: no melee `shl al,1`, no `and dx,4 / and ax,0` enchantment
-test, and no immediate write to `.defense` anywhere in `0x80000`–`0xA0000`. CP 1.60 keeps 1.31's
-behaviour verbatim (the block is relocated, ending `jmp 0x8F197`, and stores `-20` at `0x8F876`).
+**CoM 1 moved the live melee doubling into `BU_ProcessAttack`; it did not remove Berserk.** Its
+stat construction/recompute code has no counterpart to MoM's doubling-and-Defense-zero block,
+but combat resolution tests both the battle-unit and persistent-unit Berserk bits at
+`0x99C28`–`0x99C41` and doubles the loaded melee strength at `0x99C55` when the defender's race
+is below 15. Thus CoM's Berserk doubling is target-dependent and excludes Fantastic defenders;
+it also does not force the displayed Defense to zero. CP 1.60 keeps 1.31's construction behavior
+verbatim (the block is relocated, ending `jmp 0x8F197`, and stores `-20` at `0x8F876`).
 
 Marginal: `shl al,1` is a byte operation and the later clamp is signed, so a melee strength of 64
 or more would double into a negative byte and be clamped to **0**. Nothing in the roster reaches
@@ -1116,43 +1401,87 @@ prayer boosts ranged, thrown, breath or gaze in either DOS engine.
 Both blocks sit ahead of even CoM 1's early Warp Creature (`0x9074C`), so they take no part in
 the ordering above.
 
-### Level bonuses: CoM 1 rewrote the routine as a table, with a special-attack gate (resolved 2026-07-28)
+### Level bonuses and hero-template abilities (resolved 2026-08-06)
 
-Partially resolves verification item **A31** — the CoM column and the shape of MoM's; MoM's magnitudes
-still want an exhaustive read of all six increment sites.
+This closes former verification item **A31**. R6.1f exhaustively reconstructed both contiguous
+far routines in all three builds: `BU_Apply_Level_Bonus` at `0x8F881..0x8FB42` and
+`BU_Apply_Hero_Abilities` at `0x8FB42..0x8FF09`. MoM 1.31 and CP 1.60 are byte-identical
+throughout. The merged source is in `DOS reconstructed/unitcalc.c`; complete ledgers and review
+provenance are in `R6.1f.evidence.md`.
 
-**MoM 1.31 is an unrolled `if` chain** (`0x8F881`–`0x8FB3E`): `cmp si,N / jle` per threshold,
-then a run of `inc byte es:[bx+field]`. Increments to `.melee` and `.ranged` are guarded on the
-stat being `> 0` and on nothing else — **the routine contains no `ranged_type` reference at
-all** (verified over the whole range). Thrown, breath and both gaze forms therefore take the
-same ladder as a conventional ranged attack.
+**Heroism changes stored state only in CoM 1.** MoM floors the routine-local level at three after
+testing Heroism on both the unit and battle-unit records (`0x8F89C..0x8F8D7`). CoM's floor is
+`3 + Warlord + Crusade` for unsigned unit types below `0x97`; it writes the result back to
+`_UNITS[].Level` at `0x8F8EE`. The player record base `DS:0x9ECA` resolves
+`DS:0x9F2F` as Warlord at retort offset `+0x65`, and `DS:0xA35D` as
+`Globals[0x11]`, Crusade. Without Heroism, types at or above `0x97` are persistently reset to
+zero; lower types skip the write.
 
-**CoM 1 replaced it with a loop over a 5×7 table** at `0x8FACA`, one row per level step, one
-byte per `BATTLE_UNIT` field 0–6:
+**The complete MoM normal ladder** is the five-step unrolled chain at
+`0x8FA80..0x8FB3E`. Melee and ranged increments are gated only on the current strength being
+positive; there is no `ranged_type` test:
 
-```
-row 0  Regular      [1,1,0,0,0,0,1]   melee+1 ranged+1 resist+1
-row 1  Veteran      [1,1,0,0,0,1,0]   melee+1 ranged+1 defence+1
-row 2  Elite        [0,0,0,0,0,1,1]   defence+1 resist+1
-row 3  Ultra Elite  [1,1,0,0,0,1,0]   melee+1 ranged+1 defence+1
-row 4  Champion     [0,0,0,0,1,0,0]   tohit+1   (= +10%)
-```
+| Step | Increment |
+|---:|---|
+| 0 | melee, ranged, Resistance |
+| 1 | Defense, Resistance |
+| 2 | melee, ranged, Resistance, To Hit |
+| 3 | Defense, Resistance, To Hit |
+| 4 | melee, ranged, Resistance, To Hit |
 
-Cumulative, this reproduces `getLevelBonuses`'s CoM column exactly, which is what validates the
-decode. Columns 2 and 3 (`ranged_type`, `ammo`) are zero throughout, so the loop never writes
-them.
+**CoM 1 replaces that chain with a 5×7 table** at `0x8FACA..0x8FAED`, indexed as battle-unit
+byte fields 0–6:
 
-The gate is at `0x8FA9A`–`0x8FAAB`, and it is the part with consequences:
+| Step | Raw row | Increment |
+|---:|---|---|
+| 0 | `01 01 00 00 00 00 01` | melee, ranged, Resistance |
+| 1 | `01 01 00 00 00 01 00` | melee, ranged, Defense |
+| 2 | `00 00 00 00 00 01 01` | Defense, Resistance |
+| 3 | `01 01 00 00 00 01 00` | melee, ranged, Defense |
+| 4 | `00 00 00 00 01 00 00` | To Hit |
 
-```
-if (field == 1 /* .ranged */ && ranged_type >= 100 && row != 1) skip
-```
+The gate at `0x8FA9A..0x8FAA9` skips the ranged column when
+`ranged_type >= 100 && step != 1`. Thrown (100), Fire Breath (101), Lightning Breath (102),
+Stoning Gaze (103), Multiple Gaze (104), and Death Gaze (105) therefore gain one point, at step 1
+only. The loop has no local upper-bound test against its five rows: it tests only
+`step < level`. Columns 2 and 3 are zero throughout, so its computed write can never alter
+`ranged_type` or ammo.
 
-So **every special attack — thrown (100), breath (101–102) and all three gazes (103–105) —
-gains attack strength only at the Veteran step**, +1 total across the whole ladder. That is
-precisely the calculator's separate `thrown` column, which until now was applied to thrown and
-breath but not to either gaze form.
+**Heroes use a separate eight-threshold ladder.** CoM keeps the threshold count but substitutes
+the following writes; melee/ranged increments remain positive-strength-gated:
 
+| Step | MoM 1.31 / CP 1.60 | CoM 1 |
+|---:|---|---|
+| 0 | melee, ranged, Defense, Resistance | melee, ranged, Resistance |
+| 1 | melee, ranged, Resistance, To Hit | melee, Defense |
+| 2 | melee, ranged, Defense, Resistance | melee, ranged, Resistance |
+| 3 | melee, ranged, Resistance | melee, To Hit |
+| 4 | melee, ranged, Defense, Resistance, To Hit | melee, ranged, Resistance |
+| 5 | melee, ranged, Resistance | melee, Defense |
+| 6 | melee, ranged, Defense, Resistance | melee, ranged, Resistance |
+| 7 | melee, ranged, Resistance, To Hit | melee, To Hit |
+
+The adjacent hero-template helper supplies exact formulas:
+
+| Ability | Effect |
+|---|---|
+| Noble or owner's Famous retort | upkeep = 0 |
+| Agility / Super Agility | Defense += unsigned-byte `Level+1` / signed `((Level+1)*3)/2` |
+| Blademaster | MoM/CP signed `(Level+1)/2`; CoM unsigned full-AX `(Level+1)/3` |
+| Super Blademaster | signed `((Level+1)*3)/4`; CoM changes divisor 4 to 6 |
+| Might / Super Might | melee += unsigned-byte `Level+1` / signed `((Level+1)*3)/2` |
+| Arcane Power / Super Arcane Power | the same unsigned/signed formulas to ranged, gated on signed `ranged_type/10 == 3` |
+
+CoM Blademaster's `div cl` consumes the full 16-bit AX. A Level below −1 therefore produces an
+AL quotient overflow and a divide-error interrupt rather than a wrapped byte result.
+
+**Casting Skill and Lucky are also rewritten.** Positive Casting Skill gives MoM/CP
+`(skill+1)*(level+1)*5/2`, with signed truncation toward zero. CoM gives
+`skill*(level+2) + table[type]`, using the 35-byte table embedded at
+`0x8FB0A..0x8FB2D`. The load is word-sized at a byte index, but only AL is stored, so the
+effective addend is one byte. MoM template Lucky directly adds one To Hit, To Block, Resistance
+and Gold Resistance. CoM instead idempotently sets `USA_LUCKY`; because its constructor calls
+the hero helper before the generic Lucky block, those four increments occur there exactly once.
 ### Lionheart (resolved 2026-07-28)
 
 This closes former verification item **A28**. Unit enchantment `0x04000000`, in `BU_Apply_Specials` at `0x8F740`
@@ -1260,9 +1589,14 @@ Two consequences of the gate being on *race*:
   Poison.
 - Any natural Death-race battle unit picks up the same bits in MoM regardless of how it got there.
 
-CoM 1's Animate Dead is visible next door: `0x8F491`, `test dx,4`, writes `UM_UNDEAD` into the
-persistent `_UNITS[].mutations` (`0x8F4AC`) and ORs `0x20` into `cl` so the undead block runs in the
-same pass.
+CoM 1's undead *conversion* is visible next door: `0x8F491`, `test dx,4`, writes `UM_UNDEAD` into
+the persistent `_UNITS[].mutations` (`0x8F4AC`) and ORs `0x20` into `cl` so the undead block runs
+in the same pass. **That block is Blood Lust, not Animate Dead** — CoM 1's own name→mask table at
+`0x2D13E` calls `0x00000004` "BloodL." and `0x00000010` "Animated", and `CoM helptext.txt:1247`
+gives Blood Lust as "the target unit turns into undead and has double melee attack power against
+normal units". The Animate Dead *spell* (`:1357`) grants the `0x10` Animated enchantment, whose
+block is at `0x8F4D0`. Nine CoM 1 slots are renamed in total; see
+`DOS reconstructed/R6.1a.evidence.md`, *CoM 1 renamed nine enchantment slots*.
 
 ### CP 1.60 and CoM 1 removed the melee to-hit penalty from defender To Block
 
@@ -1358,6 +1692,10 @@ So CoM 1's rate is 20%, Invisibility alone grants the same 20%, the two together
 The calculator matches all of this: `getBlurChance` (`combat.js`) and `blurSurvivingDist`
 (`engine.js`, whose DP is exactly the 1.31 loop's distribution). Its one simplification is
 modelling Blur as a defender ability rather than a side-wide enchantment.
+
+The entire block and its surrounding attack/defence ordering were independently reconstructed
+and cross-reviewed in R6.2c. Verified: Claude 2026-08-07; Codex 2026-08-07, independent. Full
+evidence: `DOS reconstructed/R6.2c.evidence.md`.
 
 ReMoM renders this block correctly, including both `BUG:` annotations — unlike its to-hit
 assembly.

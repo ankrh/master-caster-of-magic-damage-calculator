@@ -335,8 +335,9 @@ place:
   value standing at the end of region `b`, so it is the last step of that region.
 - **Holy Armor's `> 5` threshold** (+0x07407) and **Blaze of Glory's armor transfer**
   (`UnitCalc.CAS:1490`) read the defence standing at their own position.
-- **Supreme Light's `defense += resistance / 3`** reads the live record in region `e`, after
-  the aura pass — the cross-stat read that was Q7.
+- **Supreme Light's `defense += resistance / 3`** reads the live record at its own engine
+  position — after Warp and Darkness in CoM 1, and in region `e` after the aura pass in
+  CoM2/Warlord. CoM 1 uses signed truncate-toward-zero division; the cross-stat read was Q7.
 - **Psycho Force** (`UnitCalc.CAS:1413-1417`) and **Pneuma Field** (`:1419-1425`) read the
   resistance standing at their own position in region `d`, which is *before* the aura pass — so a
   Holy Bonus or Resistance to All aura raises resistance afterwards and feeds neither. Pneuma
@@ -348,11 +349,13 @@ summed on the way in, so an ordering finding lands as a step move. An ability wh
 sits there and whose attack-type-conditional half sits in `deriveUnitStats` appears as two
 steps sharing a name — `lionheart` and `lionheart:rangedHp`, `weakness` and `weakness:ranged`.
 
-A bonus never conjures an attack slot the unit does not have, so an ability step skips a write
+A bonus normally never conjures an attack slot the unit does not have, so an ability step skips a write
 to a dead slot — which is also the aura pass's own gate, "add the aura value to defense and
 resistance, and to melee/ranged **when the corresponding base attack exists**". **Blaze of
 Glory's armor-to-melee transfer is the deliberate exception**: it lands on a unit with no melee
 attack, so it is not built as an ability step, and it widens the slot for the final clamp.
+CoM 1 Supreme Light is another source-backed exception: its `+2 melee` store is unconditional,
+while only its shared-ranged write tests that the current value is positive (`0x90A29..0x90A46`).
 
 Two engines reach the secondary-attack slot differently, so a step's delta names which:
 
@@ -427,7 +430,7 @@ immediately after; what differs is **what each engine still writes afterwards**:
 
 | Engine | Address | Written after it, at full value |
 |---|---|---|
-| MoM 1.31 / CP 1.60 | `0x90A63`–`0x90AC9` | Shatter, then the terminal clamp — nothing else |
+| MoM 1.31 / CP 1.60 | `0x90A23`–`0x90ACE` | Shatter, then the terminal clamp — nothing else |
 | CoM 1 | `0x9074C`–`0x90795` | Shatter `0x907DC`, Darkness, Supreme Light, the Tactician retort, Eternal Night |
 | CoM2 / Warlord | `+0x0BA3C`–`+0x0BDF7` | Shatter `+0x0BF62`, Tactician `+0x0C890`, then the whole of `d` and the whole of `e` |
 
@@ -458,10 +461,33 @@ including Colossal Strength, Blaze of Glory and Hierophany.
 Two further consequences of CoM 1's early Warp are CoM 1's alone: it halves a gaze's strength
 (the gaze shares the `.ranged` slot there and CoM 1's halving has no attack-type test, while
 CoM2's Warp Attack leaves the separate gaze fields untouched), and CoM 1's level ladder gives
-every `ranged_type >= 100` attack — thrown, breath and both gaze forms — only the Veteran step,
-which is the ladder's `thrown` column. MoM's level routine has no such gate, so both gaze forms
-take its full `ranged` column there. CoM2's gaze ladder is still unread — see
-`Reference docs/Engine verification evidence.md`, D21.
+every `ranged_type >= 100` attack — Thrown, both Breaths and all three gaze types — only its
+step-1 ranged increment, which is the calculator ladder's `thrown` column. MoM's level routine
+has no such gate, so those attacks take its full `ranged` column. CoM2's gaze ladder is still
+unread — see `Reference docs/Engine verification evidence.md`, D21.
+
+The DOS arithmetic is signed at these sites. CoM 1 Warped Attack uses an arithmetic byte shift,
+so negative melee/shared-ranged values round downward; Warped Defense instead uses signed `/3`
+and truncates toward zero (`0x90749..0x90795`). This distinction is observable because CoM 1
+still writes Darkness, Supreme Light and Tactician before the terminal clamp. F53 tracks the
+calculator's current `Math.floor` mismatch.
+
+### CoM 1 late battlefield and side modifiers
+
+CoM 1 Supreme Light's side and active-status gates are followed by five alternative unit gates:
+live magical ranged type, Life race, nonzero mana, persistent Focus Magic, or a magical base
+ranged type. It then adds 2 melee unconditionally, adds 2 shared ranged only when positive, and
+adds signed live `Resistance / 3` to Defense. The current shared eligibility helper is narrower;
+F52 owns the correction. Its additional `Move_Flags 0x0100` write remains unidentified under Q20.
+
+Realm Wards map city-enchantment slots 9–13 to Nature/Sorcery/Chaos/Life/Death and subtract
+20% To Hit, 3 Defense and 3 Resistance from a matching Fantastic unit. Q19 records the shipped
+helptext's conflicting −4/−4 claim, while F51 owns the missing calculator control.
+
+The relocated pre-Heavenly-Light tail consumes three per-side hero maxima. Guiding Beacon adds
+to positive conventional ranged (`0 < ranged_type < 100`), Divine Barrier adds Defense without a
+unit gate, and Soul Linker gives Fantastic units `ceil(v/2)` To Hit and `floor(v/2)` To Block.
+F50 tracks their controls and ordered transforms.
 
 Warlord scoring options that affect a unit are represented as per-unit encounter inputs:
 
@@ -693,6 +719,11 @@ The descriptions below are canonical. Accepted decisions are summarized in
 - Destruction is currently modelled only for CoM2/Warlord. The MoM/CP/CoM1 touch dispatcher also
   identifies Destruction as a Chaos effect; in MoM/CP, Elemental Armor and Resist Elements
   therefore protect against it. That older-engine Destruction path is not yet implemented.
+- Heroes currently use the same five-rank level table and controls as normal units. The DOS
+  binaries instead execute an eight-threshold hero ladder, with a different CoM 1 write pattern,
+  and then apply level-scaled Agility, Blademaster, Might, Arcane Power, Casting Skill and Lucky
+  template abilities. The modern engine has its own nine-step hero table. These hero-specific
+  ladders and template abilities are not yet represented (**F41**).
 - The Lava Smelter control records one mineral-pair grant at a time. The Warlord scripts
   evaluate all five mineral pairs independently, so a unit can carry several simultaneous
   grants when three or more qualifying minerals are available.

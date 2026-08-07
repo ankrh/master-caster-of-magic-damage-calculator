@@ -1,9 +1,10 @@
 """Locate and disassemble MoM 1.31 code by BATTLE_UNIT field access.
 
-WIZARDS.EXE is Borland C++ 1991 with VROOMM overlays; there is no symbol table and
-no overlay->file-offset map. The way in is that struct field offsets are stable and
-rare: find instructions that touch a known displacement, cluster co-occurrences, then
-disassemble. Field offsets come from ReMoM's `MoX/src/MOM_DAT.h` (see
+WIZARDS.EXE is Borland C++ 1991 with VROOMM overlays and no symbol table. For code
+whose call operand is not yet known, the way in is that struct field offsets are
+stable and rare: find instructions that touch a known displacement, cluster
+co-occurrences, then disassemble. `resolve_dos_overlays.py` handles known far-call
+operands. Field offsets come from ReMoM's `MoX/src/MOM_DAT.h` (see
 `Reference docs/MoM binary analysis.md`).
 
 Usage:
@@ -70,6 +71,28 @@ def find(data, disps, window=500):
         print(f"  0x{min(flat):06X}-0x{max(flat):06X}  anchor@{hex(a)}  {detail}")
 
 
+def mnemonic_16(insn):
+    """Return the correct 16-bit mnemonic for Capstone's 0x98/0x99 misrendering.
+
+    Capstone 5 reports both the default-size and operand-size-prefixed forms as
+    ``cwde``/``cdq`` in 16-bit mode. Bare 98/99 are ``cbw``/``cwd``; a 66 prefix
+    selects the 32-bit ``cwde``/``cdq`` forms.
+    """
+    # Only the one-byte opcodes 98/99 are affected. Guard on Capstone's own
+    # mnemonic first: without it, any instruction whose *last* byte happens to
+    # be 0x98/0x99 -- an immediate, a displacement -- gets renamed. CoM 1's
+    # `26 F6 47 16 98` (`test byte ptr es:[bx+0x16], 0x98`) at 0x9EE33 is the
+    # case that exposed this.
+    if insn.mnemonic not in ('cwde', 'cdq'):
+        return insn.mnemonic
+    raw = bytes(insn.bytes)
+    if raw and raw[-1] == 0x98:
+        return 'cwde' if 0x66 in raw[:-1] else 'cbw'
+    if raw and raw[-1] == 0x99:
+        return 'cdq' if 0x66 in raw[:-1] else 'cwd'
+    return insn.mnemonic
+
+
 def dis(data, start, length):
     from capstone import CS_ARCH_X86, CS_MODE_16, Cs
     md = Cs(CS_ARCH_X86, CS_MODE_16)
@@ -79,7 +102,8 @@ def dis(data, start, length):
             for disp, name in FIELDS.items():
                 if f'+ 0x{disp:x}]' in op or f'+ {disp}]' in op:
                     note = f'   ; .{name}'
-        print(f"{insn.address:06X}  {insn.bytes.hex():<14} {insn.mnemonic:<7} {op}{note}")
+        mnemonic = mnemonic_16(insn)
+        print(f"{insn.address:06X}  {insn.bytes.hex():<14} {mnemonic:<7} {op}{note}")
 
 
 def main():
