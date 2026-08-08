@@ -2463,13 +2463,20 @@ function readLocalState() {
   return null;
 }
 
-// Parse a shared-state blob out of the URL hash (#s=<lz>), or null if absent/bad. lzDecode
-// returns null on garbage, so JSON.parse(null) -> null and we fall through cleanly.
+// Parse a shared-state blob out of the URL hash (#s=<payload>), or null if absent/bad.
+// Current links use URL-safe LZ tokens. Pre-compression v1 links carried either literal JSON or
+// encodeURIComponent(JSON), so decode the fragment once and recognize that legacy spelling
+// before attempting LZ expansion. A malformed percent escape or invalid LZ/JSON stays a clean
+// null so importHashState can strip the bad link and fall back to recipient localStorage.
 function parseHashState() {
   try {
     const m = /^#s=(.+)$/.exec(location.hash);
     if (!m) return null;
-    const blob = JSON.parse(lzDecode(m[1]));
+    let payload = m[1];
+    try { payload = decodeURIComponent(payload); } catch (err) { /* try the raw spelling */ }
+    const json = payload.trimStart().startsWith('{') ? payload : lzDecode(payload);
+    if (!json) return null;
+    const blob = JSON.parse(json);
     return (blob && [1, PAGE_STATE_VERSION].includes(blob.v)) ? blob : null;
   } catch (err) {
     return null;

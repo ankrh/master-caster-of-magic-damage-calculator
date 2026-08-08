@@ -554,6 +554,45 @@ async function main() {
     }))()`);
     record('resilience: bad URL recovers + falls back to localStorage', recUrl.alive && recUrl.hash === '' && recUrl.aFigs === '8', recUrl);
 
+    // 5c) A pre-compression share link can carry full v1 JSON rather than an LZ token. It must
+    // still outrank a valid recipient state; this is intentionally end-to-end through location,
+    // parseHashState, applyState, and the one-shot hash stripping path.
+    const legacyPlainShare = await cdpEvaluate(wsUrl, `(() => {
+      const recipient = collectState();
+      recipient.ids.aFigs = '8';
+      resetCalculatorState('mom_1.31');
+      const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
+      set('aUnit', 'custom'); updateUnitLock('a');
+      set('aHP', 37); recalculate();
+      const legacy = collectFullState();
+      legacy.v = 1;
+      for (const prefix of ['a', 'b']) {
+        const controls = readIdentityControls(prefix);
+        legacy.ids[prefix + 'BaseHero'] = controls.isHero;
+        legacy.ids[prefix + 'BaseFantastic'] = controls.baseFantastic;
+        legacy.ids[prefix + 'BaseRace'] = controls.baseRace;
+        legacy.ids[prefix + 'SpecialUnit'] = controls.specialUnit;
+        legacy.ids[prefix + 'Abil_unitType'] = legacyUnitTypeFromIdentity(controls);
+        legacy.identity[prefix] = { race: controls.baseRace, name: 'Legacy plain share ' + prefix };
+      }
+      localStorage.clear();
+      localStorage.setItem('pageState_v2', JSON.stringify(recipient));
+      return encodeURIComponent(JSON.stringify(legacy));
+    })()`);
+    await cdpNavigate(wsUrl, `${targetUrl}#s=${legacyPlainShare}`);
+    const legacyShared = await cdpEvaluate(wsUrl, `(() => ({
+      alive: !!(document.querySelector('#distA .dist-header')?.textContent || '').trim(),
+      hash: location.hash,
+      version: document.getElementById('gameVersion').value,
+      aHP: document.getElementById('aHP').value,
+      aFigs: document.getElementById('aFigs').value,
+    }))()`);
+    record('backward-compat: legacy full plain-JSON share wins over recipient localStorage',
+      legacyShared.alive && legacyShared.version === 'mom_1.31'
+        && legacyShared.aHP === '37' && legacyShared.aFigs !== '8', legacyShared);
+    record('backward-compat: legacy full plain-JSON share hash stripped',
+      legacyShared.hash === '', legacyShared);
+
     // 6) Backward-compat: a legacy full, uncompressed plain-JSON blob (the pre-diff/pre-lz
     // format existing users still have in localStorage) must still load.
     await cdpEvaluate(wsUrl, `(() => {
