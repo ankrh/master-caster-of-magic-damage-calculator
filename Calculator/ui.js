@@ -986,7 +986,7 @@ function customBaseRaceForUnitType(unitType) {
 }
 
 const SPECIAL_UNIT_DEFS = [
-  { key: 'golem', label: 'Golem', versions: ['com2_'] },
+  { key: 'golem', label: 'Golem', versions: ['com_', 'com2_'] },
   { key: 'chosen', label: 'Chosen / Avatar', versions: ['com2_'] },
   { key: 'zombies', label: 'Zombies', versions: ['com_6.08'] },
   { key: 'catapult', label: 'Catapult', versions: ['com_6.08'] },
@@ -1001,7 +1001,7 @@ function specialUnitAllowed(version, key) {
 function specialUnitForRoster(version, unit) {
   if (!unit) return 'none';
   const templateId = Number.isInteger(unit.templateId) ? unit.templateId : null;
-  if (version.startsWith('com2_')) {
+  if (version.startsWith('com2_') || version === 'com_6.08') {
     if (templateId === 81) return 'golem';
     if (templateId === 34) return 'chosen';
   }
@@ -1110,7 +1110,8 @@ function populateSpecialUnitOptions(prefix, version, preferred) {
   select.value = specialUnitAllowed(version, current) ? current : 'none';
 }
 
-// Golem's compiled identity supplies Resist Elements at its normal enchantment point. The
+// Golem's compiled identity supplies Resist Elements at its normal enchantment point in CoM1,
+// CoM2, and Warlord. The
 // selector owns the derived value, so the user sees the effect in the existing Elements row
 // and cannot accidentally edit it while Golem is selected.
 function updateSpecialUnitDerivedEffects(prefix) {
@@ -1120,7 +1121,7 @@ function updateSpecialUnitDerivedEffects(prefix) {
   if (!select || !elem) return;
   const preGolem = document.getElementById(prefix + 'IdentityPreGolemElemArmor');
   const item = elem.closest('.abil-item');
-  const isGolem = version.startsWith('com2_') && select.value === 'golem';
+  const isGolem = (version.startsWith('com2_') || version === 'com_6.08') && select.value === 'golem';
   const stored = unitIdentity[prefix] || (unitIdentity[prefix] = {});
   if (isGolem) {
     if (!stored._preGolemElemArmor) {

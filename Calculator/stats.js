@@ -26,6 +26,7 @@ function specialUnitForRosterIdentity(version, unit) {
     if (templateId === 34) return 'chosen';
   }
   if (version === 'com_6.08') {
+    if (templateId === 81) return 'golem';
     if (templateId === 174) return 'zombies';
     if (templateId === 37) return 'catapult';
   }
@@ -138,19 +139,23 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
       || (isCoM1 && identity.specialUnit === 'catapult')));
   const isCoM1SummonBranch = isCoM1 && combatSummonedValue
     && [28, 54, 113].includes(identity.templateId);
-  const isCallToArmsPaladins = !!(abilities && abilities.callToArmsPaladins)
-    || !!(combatSummonedValue && /\bPaladins\b/i.test(meta.name || ''));
+  // Call to Arms is a spell-result conversion, not a display-name conversion. The executable
+  // reads the summoned Paladin template (STypeID 113) at the point it assigns the live realm;
+  // keep the template ID as source metadata and require both encounter conditions here.
+  const isCallToArmsPaladins = !!(isModern && combatSummonedValue
+    && abilities && abilities.callToArmsPaladins
+    && identity.templateId === 113);
 
   const identitySteps = [
     statStep({ id: 'identity:zombies', phase: 'base', writes: ['fantastic'],
       when: () => isCoM1 && identity.specialUnit === 'zombies',
       apply: u => { u.fantastic = true; } }),
-    statStep({ id: 'identity:chosen', phase: 'a', writes: ['fantastic'],
-      when: () => isModern && identity.specialUnit === 'chosen',
-      apply: u => { u.fantastic = true; } }),
     statStep({ id: 'identity:combatSummoned', phase: 'a', writes: ['fantastic'],
       when: () => isModern && combatSummonedValue,
       apply: u => { u.fantastic = true; } }),
+    statStep({ id: 'identity:chosen', phase: 'a', writes: ['race', 'fantastic'],
+      when: () => isModern && identity.specialUnit === 'chosen',
+      apply: u => { u.race = 'Life'; u.fantastic = true; } }),
     statStep({ id: 'identity:constructCatapult', phase: isCoM1 ? 'base' : 'a', writes: ['race', 'fantastic'],
       when: () => isConstructCatapult && (isModern || isCoM1),
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
@@ -435,7 +440,7 @@ function deriveUnitStats(input) {
   const suppliedAbilities = { ...(input.abilities || {}) };
   // Golem's constructor write is intrinsic and must survive direct calculator/Matrix calls,
   // even when the DOM-derived Elements control is not present in the caller's ability map.
-  if (version.startsWith('com2_') && identity.specialUnit === 'golem') {
+  if ((version.startsWith('com2_') || isCoM1) && identity.specialUnit === 'golem') {
     suppliedAbilities.elemArmor = 'resistElements';
   }
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
@@ -862,7 +867,10 @@ function deriveUnitStats(input) {
   // One step per ability or enchantment that writes a stat, at the position its engine region
   // gives it (combat.js, getAbilityStatSteps). Partitioned by phase in one pass so each group
   // can be spliced into the sequence below where that region runs.
-  const abilSteps = getAbilityStatSteps(effectiveAbilities, version);
+  const abilSteps = getAbilityStatSteps(effectiveAbilities, version, {
+    baseFantastic: identity.baseFantastic,
+    combatSummoned: !!effectiveAbilities.combatSummoned,
+  });
   // `cAfterWarp` is a second splice point inside region c, for the effects the engine writes
   // after its Warp Creature block — Tactician in every CoM engine, plus Supreme Light in CoM 1.
   const abilByPhase = { base: [], a: [], b: [], c: [], cAfterWarp: [], d: [], e: [] };
@@ -1397,7 +1405,9 @@ function deriveUnitStats(input) {
     // effect is attributed to To Block rather than to the Special unit control.
     statStep({ id: 'identity:zombies:toBlock', phase: 'base', writes: ['toBlk'],
       when: () => isCoM1 && identity.specialUnit === 'zombies',
-      apply: u => { u.toBlk -= 1; } }),
+      // The DOS constructor stores a signed D10 threshold step. The calculator's accumulator
+      // is percentage points, so one engine step is ten percentage points.
+      apply: u => { u.toBlk -= 10; } }),
     ...abilByPhase.base,
     statStep({ id: 'altarOfTheMoon', phase: 'base', writes: ['res', 'rtb'],
       apply: u => { u.res += altarOfTheMoonResMod; u.rtb += altarOfTheMoonRtbMod; } }),
@@ -1777,7 +1787,11 @@ function deriveUnitStats(input) {
   // `lifeSteal` is on the record because Pneuma Field's `SETSTAT(U,AFLifeSteal,…)` is a write to
   // a unit field at a position, like any other. It is seeded from the effective ability set —
   // the Gnoll Witchdoctor altar grant included — since that is the value standing at region `d`.
-  const statTrace = [];
+  // Identity writes are calculated unit-stat outputs, not UI-control writes. Seed the ordered
+  // stat trace with those applied live-field changes so the affected race/fantastic outputs have
+  // one trace alongside the numeric stat sequence; no-op identity steps were already omitted by
+  // runStatSteps.
+  const statTrace = [...identityConversion.trace];
   const statUnit = runStatSteps(statSteps,
     { res: 0, def: 0, atk: 0, rtb: 0, hp: 0, gaze: 0, doomGaze: 0,
       toHit: 0, toBlk: 0, lifeSteal: existingLifeSteal },

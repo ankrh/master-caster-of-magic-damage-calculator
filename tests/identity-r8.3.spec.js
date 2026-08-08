@@ -23,7 +23,7 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
     const derive = (input) => deriveUnitStats(input);
     const chosen = derive(simple('com2_1.05.11', createUnitIdentity({
       version: 'com2_1.05.11', templateId: 34, heroTypeId: 35,
-      isHero: true, baseRace: 'Life', baseFantastic: false, specialUnit: 'chosen',
+      isHero: true, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen',
     })));
     const summoned = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
       isHero: false, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'none',
@@ -32,14 +32,28 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
       version: 'com2_1.05.11', templateId: 37, isHero: false,
       baseRace: 'Special', baseFantastic: false, specialUnit: 'none',
     }), { combatSummoned: true }, { rtb: 9, rtbType: 'boulder' }));
-    const paladins = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
+    const paladins = derive(simple('com2_1.05.11', createUnitIdentity({
+      version: 'com2_1.05.11', templateId: 113, isHero: false,
+      baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
+    }), { combatSummoned: true, callToArmsPaladins: true }, { name: 'unrelated label' }));
+    const wrongTemplate = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
       isHero: false, baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
-    }), { callToArmsPaladins: true }, { name: 'Paladins' }));
-    return { chosen, summoned, construct, paladins };
+    }), { combatSummoned: true, callToArmsPaladins: true }, { name: 'Paladins' }));
+    const normalBreakthrough = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
+      isHero: false, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'none',
+    }), { breakthrough: 'meleeDef' }));
+    const fantasticBreakthrough = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
+      isHero: false, baseRace: 'Chaos', baseFantastic: true, specialUnit: 'none',
+    }), { breakthrough: 'meleeDef' }));
+    const incorporealBreakthrough = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
+      isHero: false, baseRace: 'Sorcery', baseFantastic: true, specialUnit: 'none',
+    }), { breakthrough: 'melee', nonCorporeal: true }));
+    return { chosen, summoned, construct, paladins, wrongTemplate,
+      normalBreakthrough, fantasticBreakthrough, incorporealBreakthrough };
   });
 
   expect(report.chosen.identity).toMatchObject({
-    baseRace: 'Life', baseFantastic: false, race: 'Life', fantastic: true,
+    baseRace: 'Dwarf', baseFantastic: false, race: 'Life', fantastic: true,
     isHero: true, specialUnit: 'chosen',
   });
   expect(report.chosen.unitType).toBe('fantastic_life');
@@ -61,6 +75,12 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
   expect(report.paladins.identity).toMatchObject({
     baseRace: 'High Men', baseFantastic: false, race: 'Life', fantastic: true,
   });
+  expect(report.wrongTemplate.identity.race).toBe('High Men');
+  expect(report.wrongTemplate.identity.fantastic).toBe(true); // Combat Summoned is independent
+  expect(report.wrongTemplate.identityTrace.map(step => step.id)).not.toContain('identity:callToArmsPaladins');
+  expect(report.normalBreakthrough.statTrace.map(step => step.id)).toContain('breakthrough:normal');
+  expect(report.fantasticBreakthrough.statTrace.map(step => step.id)).not.toContain('breakthrough:normal');
+  expect(report.incorporealBreakthrough.statTrace.map(step => step.id)).toContain('breakthrough:noncorporeal');
   expectNoConsoleErrors(errors);
 });
 
@@ -96,13 +116,17 @@ test('R8.3 applies CoM1 Zombies and Construct Catapult writes only on valid path
     const unrelated = derive(createCustomUnitIdentity('com_6.08', {
       isHero: false, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'none',
     }), { combatSummoned: true });
-    return { zombies, ordinary, construct, centaurs, paladins, unrelated };
+    const golem = derive(createUnitIdentity({
+      version: 'com_6.08', templateId: 81, isHero: false,
+      baseRace: 'Dwarven', baseFantastic: false, specialUnit: 'golem',
+    }));
+    return { zombies, ordinary, construct, centaurs, paladins, unrelated, golem };
   });
 
-  expect(report.zombies.toBlock).toBeCloseTo(0.29);
+  expect(report.zombies.toBlock).toBeCloseTo(0.20);
   expect(report.zombies.statTrace).toContainEqual(expect.objectContaining({
     id: 'identity:zombies:toBlock', phase: 'base',
-    changes: { toBlk: { from: 0, to: -1, delta: -1 } },
+    changes: { toBlk: { from: 0, to: -10, delta: -10 } },
   }));
   expect(report.zombies.identityTrace.map(step => step.id)).not.toContain('identity:zombies');
 
@@ -117,6 +141,7 @@ test('R8.3 applies CoM1 Zombies and Construct Catapult writes only on valid path
   expect(report.construct.identityTrace.map(step => step.id)).not.toContain('identity:combatSummoned');
   expect(report.centaurs.identity).toMatchObject({ race: 'Nature', fantastic: true });
   expect(report.paladins.identity).toMatchObject({ race: 'Life', fantastic: true });
+  expect(report.golem.abilities.elemArmor).toBe('resistElements');
 
   expect(report.unrelated.identity.fantastic).toBe(false);
   expect(report.unrelated.identityTrace).toEqual([]);

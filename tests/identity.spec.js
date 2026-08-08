@@ -147,7 +147,7 @@ test('special-unit options are gated by engine version and derived Golem effects
   });
 
   expect(report.modern).toEqual(['none', 'golem', 'chosen']);
-  expect(report.com).toEqual(['none', 'zombies', 'catapult']);
+  expect(report.com).toEqual(['none', 'golem', 'zombies', 'catapult']);
   expect(report.mom).toEqual(['none']);
   expect(report.chosen).toBe('chosen');
   expect(report.zombies).toBe('zombies');

@@ -300,7 +300,7 @@ function abilityStatStep(id, phase, delta, extra) {
   });
 }
 
-function getAbilityStatSteps(abilities, version) {
+function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const steps = [];
   const emit = (id, phase, delta, extra) => { steps.push(abilityStatStep(id, phase, delta, extra)); };
   // A position *within* region c, not a region of its own: every engine writes some of `c`
@@ -487,10 +487,17 @@ function getAbilityStatSteps(abilities, version) {
     : 'none';
   // Phase c: UnitCalcPre.CAS:776-782 only grants the CGBreakthrough combat global via the
   // Chaos Conduit item power — the stat effect itself is binary.
-  if (breakthroughVal === 'meleeDef') {
-    emit('breakthrough', 'c', { atk: 1, def: 1 });
-  } else if (breakthroughVal === 'melee') {
-    emit('breakthrough', 'c', { atk: 1 });
+  if (breakthroughVal !== 'none') {
+    const baseFantastic = identityPredicates.baseFantastic != null
+      ? !!identityPredicates.baseFantastic : !!abilities.baseFantastic;
+    const combatSummoned = identityPredicates.combatSummoned != null
+      ? !!identityPredicates.combatSummoned : !!abilities.combatSummoned;
+    const nonCorporeal = !!abilities.nonCorporeal;
+    // The executable derives three independent packages from direct predicates. The normal
+    // package excludes base-Fantastic and combat-summoned units; the other two may stack.
+    if (!combatSummoned && !baseFantastic) emit('breakthrough:normal', 'c', { atk: 1, def: 1 });
+    if (nonCorporeal) emit('breakthrough:noncorporeal', 'c', { atk: 1, def: 1 });
+    if (combatSummoned) emit('breakthrough:combatSummoned', 'c', { atk: 1, def: 1 });
   }
 
   // Giant Strength: +1 melee attack. +1 thrown bonus is `giantStrength:thrown` in stats.js

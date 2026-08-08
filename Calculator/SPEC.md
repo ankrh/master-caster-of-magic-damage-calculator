@@ -255,15 +255,20 @@ Each unit carries a version-scoped source identity (`templateId`, `heroTypeId`) 
 its editable base identity (`isHero`, `baseRace`, `baseFantastic`). Predefined roster units retain
 their source IDs; custom units use null IDs. Every derivation creates a fresh calculated identity
 whose live `race` and `fantastic` values start from the corresponding base fields. Template-based
-states such as Chosen or Golem are predicates derived when needed, never persisted booleans.
+states such as Chosen or Golem are predicates derived when needed, never persisted booleans. The
+CoM1 Golem constructor path is retained alongside the modern path and grants `Resist Elements`.
 The calculation then applies a version-scoped identity sequence to the fresh live fields: modern
-Chosen/Avatar and Combat Summoned units become live Fantastic, Construct Catapult becomes live
-Nature + Fantastic, and Warlord Spirit Link can later clear only the live Fantastic predicate while
+Chosen/Avatar writes live Life + Fantastic, Combat Summoned units become live Fantastic, Construct
+Catapult becomes live Nature + Fantastic, and Warlord Spirit Link can later clear only the live
+Fantastic predicate while
 retaining the base predicate and fantastic-only grants. CoM 1 retains its constructor branch for
 Catapult, Centaurs and Paladins; Construct Catapult also receives Magic Weapons, and Zombies start
 with `To Block = -1` (a ten-percentage-point penalty). Call to Arms Paladins use live Life where
-that spell-specific condition is selected. These writes are version/template gated and no-op
-identity writes are omitted from the calculated-stat trace.
+that spell-specific condition is selected only for the retained Paladins template (113) and a
+Combat Summoned unit; display names are not engine predicates. These writes are version/template
+gated and no-op identity writes are omitted from the calculated-stat trace. Identity changes are
+seeded into the same ordered trace as the affected calculated outputs, while the source and base
+identity fields remain controls/metadata.
 The card exposes `Hero`, `Fantastic`, and `Base race / realm` as independent editable custom-unit
 controls; no combined user-facing `unitType` control is authoritative. The legacy compact token
 remains only as an internal compatibility projection for existing preset callers. The
