@@ -31,12 +31,12 @@ States: `ready`, `open`, `deferred`, `blocked`. Costs: `free`, `small`, `medium`
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
-| 2 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
-| 3 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
-| 4 | **F3–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
-| 5 | **R7.3, R7.4** | Add binary-order modifier traces to the existing single-value display. |
-| 6 | **R8.1–R8.4** | Separate roster identity, editable base identity and calculated live identity on the unit cards. |
+| 1 | **R8.1–R8.4** | Separate roster identity, editable base identity and calculated live identity on the unit cards. |
+| 2 | **R7.3, R7.4** | Add binary-order modifier traces to the existing single-value display. |
+| 3 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
+| 4 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
+| 5 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
+| 6 | **F3–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
 | 7 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Structural and reconstruction work
