@@ -299,7 +299,7 @@ const MAIN_HARNESS = `(() => {
       const after = dist();
       const ok = after === before && get('aHP') === '999' && get('aUnit') === String(unit.id)
         && get('aFigs') === rosterFigs && idCaptured
-        && unitIdentity['a'] && unitIdentity['a'].race === unit.race && unitIdentity['a'].name === unit.name;
+        && unitIdentity['a'] && unitIdentity['a'].baseRace === unit.race && unitIdentity['a'].name === unit.name;
       log('roster-unit manual edit survives', ok, { unit: unit.name, restoredHP: get('aHP') });
     }
 
@@ -307,7 +307,7 @@ const MAIN_HARNESS = `(() => {
     {
       set('gameVersion', 'com2_1.05.11'); onVersionChange();
       setupCustom('a'); setupCustom('b');
-      unitIdentity['a'] = { race: 'Halfling', name: 'Test Bowmen' };
+      unitIdentity['a'] = { baseRace: 'Halfling', name: 'Test Bowmen' };
       set('aAbil_militaryWorkshop', true);
       recalculate();
       const blob = clone(collectState());
@@ -315,7 +315,7 @@ const MAIN_HARNESS = `(() => {
       resetCalculatorState(); recalculate();
       delete unitIdentity['a'];
       applyState(clone(blob));
-      const restored = unitIdentity['a'] && unitIdentity['a'].race === 'Halfling' && unitIdentity['a'].name === 'Test Bowmen';
+      const restored = unitIdentity['a'] && unitIdentity['a'].baseRace === 'Halfling' && unitIdentity['a'].name === 'Test Bowmen';
       log('race-gated identity restored', captured && restored, { restored: unitIdentity['a'] });
     }
 

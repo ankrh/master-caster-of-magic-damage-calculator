@@ -251,6 +251,11 @@ Immunity remains in force. CP 1.60 and later leave Missile Immunity dominant.
 ## Stat derivation contract
 
 `deriveUnitStats(input)` is the single place raw inputs become effective combat stats.
+Each unit carries a version-scoped source identity (`templateId`, `heroTypeId`) separately from
+its editable base identity (`isHero`, `baseRace`, `baseFantastic`). Predefined roster units retain
+their source IDs; custom units use null IDs. Every derivation creates a fresh calculated identity
+whose live `race` and `fantastic` values start from the corresponding base fields. Template-based
+states such as Chosen or Golem are predicates derived when needed, never persisted booleans.
 Order is load-bearing:
 
 1. Ability grants from buildings/enchantments fold in first, so every later read sees

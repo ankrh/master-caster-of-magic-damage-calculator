@@ -338,9 +338,10 @@ function clearAbilities(prefix, sourceFilter) {
 
 const unitDatabases = {};
 const unitBaseStats = {};
-// Intrinsic identity (race + display name) of the selected roster unit per side. Used by
-// the engine to gate race-exclusive building enchantments. Populated when a roster unit is
-// applied and cleared for custom units, which therefore receive no building buffs.
+// Base identity of the selected unit per side. Predefined records include their active
+// version-scoped source IDs; custom records are materialized at each derivation with null IDs.
+// Display name remains alongside the identity because a few existing Warlord building gates
+// still use it pending the template-based R8.3 conversion.
 const unitIdentity = {};
 let _activeVersion = null;
 // True while applyState() is rewriting controls, so the recalc-triggered save hook
@@ -544,17 +545,19 @@ function readUnitStats(prefix, overrides) {
   const enemyEternalNightEl = el(enemyPrefix + 'Abil_eternalNight');
   const enemyEyeOfHeavenEl = el(enemyPrefix + 'Abil_eyeOfHeaven');
   const overrideValues = overrides || {};
+  const unitType = el(prefix + 'Abil_unitType').value;
+  const identity = unitIdentityForDerivation(prefix, el('gameVersion').value, unitType);
   return deriveUnitStats({
     prefix,
     version: el('gameVersion').value,
     abilities: { ...readAbilitiesFromDOM(prefix), ...modernSpecialValues(prefix), ...dosSpecialValues(prefix) },
-    race: (unitIdentity[prefix] || {}).race,
+    identity,
     name: (unitIdentity[prefix] || {}).name,
     level: el(prefix + 'Level').value,
     weapon: el(prefix + 'Weapon').value,
     armor: el(prefix + 'Armor').value,
     rtbType: el(prefix + 'RtbType').value,
-    unitType: el(prefix + 'Abil_unitType').value,
+    unitType,
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
@@ -958,7 +961,7 @@ function resetCardToRosterBase(prefix) {
 
 // JS-side records for a roster unit (base stats + intrinsic identity). Shared by
 // applyUnit and updateUnitLock's value-preserving restore path.
-function setRosterUnitRecords(prefix, unit) {
+function setRosterUnitRecords(prefix, unit, version) {
   unitBaseStats[prefix] = {
     atk: unit.melee, def: unit.defense, res: unit.resist, hp: unit.hp,
     rtb: predefinedUnitRtb(unit),
@@ -966,7 +969,36 @@ function setRosterUnitRecords(prefix, unit) {
     toHitMod: unit.to_hit || 0,
     generic: unit.category === 'Generic',
   };
-  unitIdentity[prefix] = { race: unit.race, name: unit.name };
+  unitIdentity[prefix] = { ...createRosterUnitIdentity(version, unit), name: unit.name };
+}
+
+function customBaseRaceForUnitType(unitType) {
+  const match = /^fantastic_(life|death|chaos|nature|sorcery|arcane)$/.exec(unitType || '');
+  return match ? match[1][0].toUpperCase() + match[1].slice(1) : '';
+}
+
+function unitIdentityForDerivation(prefix, version, unitType) {
+  const stored = unitIdentity[prefix] || {};
+  if (Number.isInteger(stored.templateId)) {
+    return createUnitIdentity({ ...stored, version });
+  }
+  return createCustomUnitIdentity(version, {
+    isHero: unitType === 'hero',
+    baseRace: stored.baseRace || stored.race || customBaseRaceForUnitType(unitType),
+    baseFantastic: String(unitType || '').startsWith('fantastic_'),
+  });
+}
+
+function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdentity) {
+  const stored = preserveEditableIdentity ? (unitIdentity[prefix] || {}) : {};
+  unitIdentity[prefix] = {
+    ...createCustomUnitIdentity(version, {
+      isHero: unitType === 'hero',
+      baseRace: stored.baseRace || stored.race || customBaseRaceForUnitType(unitType),
+      baseFantastic: String(unitType || '').startsWith('fantastic_'),
+    }),
+    ...(stored.name ? { name: stored.name } : {}),
+  };
 }
 
 // CoM2/Warlord keep four conventional attack channels.  The card owns the editable
@@ -1031,7 +1063,7 @@ function applyUnit(prefix, unitIndex) {
   const unit = units.find(u => u.id === unitIndex);
   if (!unit) return;
 
-  setRosterUnitRecords(prefix, unit);
+  setRosterUnitRecords(prefix, unit, version);
 
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
   document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
@@ -1069,6 +1101,7 @@ function updateUnitLock(prefix, applyValues = true) {
   const fields = sel.closest('.panel').querySelector('.panel-fields');
   const abilContent = document.getElementById(prefix + 'Abilities');
   const isCustom = sel.value === 'custom';
+  const version = document.getElementById('gameVersion').value;
   fields.classList.toggle('locked', !isCustom);
   abilContent.classList.toggle('locked', !isCustom);
 
@@ -1076,7 +1109,6 @@ function updateUnitLock(prefix, applyValues = true) {
   if (unitTypeSel) unitTypeSel.disabled = !isCustom;
 
   if (!isCustom) {
-    const version = document.getElementById('gameVersion').value;
     const units = unitDatabases[version] || [];
     const unit = units.find(u => u.id === parseInt(sel.value));
     if (applyValues) {
@@ -1085,17 +1117,17 @@ function updateUnitLock(prefix, applyValues = true) {
       if (locks.weapon) document.getElementById(prefix + 'Weapon').value = 'normal';
       applyUnit(prefix, parseInt(sel.value));
     } else if (unit) {
-      setRosterUnitRecords(prefix, unit);
+      setRosterUnitRecords(prefix, unit, version);
       clearUnitInnateLocks(prefix);
       markUnitInnateLocks(prefix, parseAbilitiesFromUnit(unit));
     }
   } else {
     if (applyValues) {
       delete unitBaseStats[prefix];
-      delete unitIdentity[prefix];
     }
     // On restore, keep the identity/generic records applyFullState installed from the
     // blob (synthetic test units rely on them).
+    setCustomUnitIdentity(prefix, version, unitTypeSel && unitTypeSel.value, !applyValues);
     clearUnitInnateLocks(prefix);
     updateCustomLevelState(prefix);
   }
@@ -1903,8 +1935,25 @@ function applyPreset(name) {
   if (preset.bUnitName) applyPresetEnchantments('b', preset.b);
   // Synthetic custom test units can declare an intrinsic race/name to exercise race-gated
   // building enchantments (roster-selected presets already got their identity from applyUnit).
-  if (preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = { race: preset.a.race, name: preset.a.name };
-  if (preset.b && (preset.b.race || preset.b.name)) unitIdentity['b'] = { race: preset.b.race, name: preset.b.name };
+  const presetVersion = document.getElementById('gameVersion').value;
+  const aPresetType = document.getElementById('aAbil_unitType').value;
+  const bPresetType = document.getElementById('bAbil_unitType').value;
+  if (preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = {
+    ...createCustomUnitIdentity(presetVersion, {
+      isHero: aPresetType === 'hero',
+      baseRace: preset.a.race || customBaseRaceForUnitType(aPresetType),
+      baseFantastic: String(aPresetType).startsWith('fantastic_'),
+    }),
+    name: preset.a.name,
+  };
+  if (preset.b && (preset.b.race || preset.b.name)) unitIdentity['b'] = {
+    ...createCustomUnitIdentity(presetVersion, {
+      isHero: bPresetType === 'hero',
+      baseRace: preset.b.race || customBaseRaceForUnitType(bPresetType),
+      baseFantastic: String(bPresetType).startsWith('fantastic_'),
+    }),
+    name: preset.b.name,
+  };
   if (preset.a && preset.a.level) document.getElementById('aLevel').value = preset.a.level;
   if (preset.a && preset.a.weapon) document.getElementById('aWeapon').value = preset.a.weapon;
   if (preset.b && preset.b.level) document.getElementById('bLevel').value = preset.b.level;
@@ -1950,7 +1999,10 @@ function collectFullState() {
     ids[id] = (el.type === 'checkbox') ? el.checked : el.value;
   }
   const ident = prefix => unitIdentity[prefix]
-    ? { race: unitIdentity[prefix].race, name: unitIdentity[prefix].name } : null;
+    // Persistence migration is R8.4. Continue writing the v1 race/name shape while the
+    // richer source identity is rebuilt from the selected roster on restore.
+    ? { race: unitIdentity[prefix].baseRace || unitIdentity[prefix].race,
+        name: unitIdentity[prefix].name } : null;
   return {
     v: 1,
     ids,
@@ -1980,7 +2032,7 @@ function applyFullState(blob) {
     }
     for (const prefix of ['a', 'b']) {
       const id = blob.identity && blob.identity[prefix];
-      if (id) unitIdentity[prefix] = { race: id.race, name: id.name };
+      if (id) unitIdentity[prefix] = { baseRace: id.race, name: id.name };
       else delete unitIdentity[prefix];
       const wantGeneric = !!(blob.generic && blob.generic[prefix]);
       unitBaseStats[prefix] = { ...(unitBaseStats[prefix] || {}), generic: wantGeneric };
@@ -2901,11 +2953,8 @@ function predefinedModernAttacks(unit) {
 }
 
 function predefinedUnitType(unit) {
-  const cat = unit.category || '';
-  const hasFantasticAbility = (unit.abilities || []).some(a => a === 'Fantastic' || a === 'Fantastic=1');
-  const isFantastic = cat.endsWith(' Creatures') || hasFantasticAbility;
-  if (cat === 'Heroes') return 'hero';
-  if (!isFantastic) return 'normal';
+  if (unit.isHero) return 'hero';
+  if (!unit.baseFantastic) return 'normal';
 
   const realmMap = {
     'Nature': 'nature',
@@ -2921,7 +2970,7 @@ function predefinedUnitType(unit) {
     'Death Creatures': 'death',
     'Arcane Creatures': 'arcane',
   };
-  return 'fantastic_' + (realmMap[cat] || 'arcane');
+  return 'fantastic_' + (realmMap[unit.baseRace] || 'arcane');
 }
 
 function matrixRealmClassForUnitType(unitType) {
@@ -2942,7 +2991,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     prefix,
     version,
     abilities,
-    race: unit.race,
+    identity: createRosterUnitIdentity(version, unit),
     name: unit.name,
     level,
     weapon,
@@ -3010,17 +3059,19 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     abilities[k] = stateEnch[k];
   }
 
+  const version = el('gameVersion').value;
+  const unitType = el(prefix + 'Abil_unitType').value;
   return deriveUnitStats({
     prefix,
-    version: el('gameVersion').value,
+    version,
     abilities,
-    race: (unitIdentity[prefix] || {}).race,
+    identity: unitIdentityForDerivation(prefix, version, unitType),
     name: (unitIdentity[prefix] || {}).name,
     level: matrixSideSetting(prefix, 'level'),
     weapon: matrixSideSetting(prefix, 'weapon'),
     armor: matrixSideSetting(prefix, 'armor'),
     rtbType: el(prefix + 'RtbType').value,
-    unitType: el(prefix + 'Abil_unitType').value,
+    unitType,
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,

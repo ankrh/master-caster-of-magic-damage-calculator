@@ -3,6 +3,7 @@ Generate a JSON file of CoM2 units from UNITS.INI.
 
 Fields match the MoM/CoM1 JSON schema:
   id, name, race, category, figures, hp, melee, defense, resist, moves, cost, upkeep
+  templateId, heroTypeId, isHero, baseRace, baseFantastic
   ranged, ranged_type, ammo         (legacy projection; omitted when absent)
   thrown_breath, thrown_breath_type (legacy projection; omitted when absent)
   thrown, fire_breath, lightning_breath (modern independent channels; omitted when absent)
@@ -196,10 +197,19 @@ def ini_unit_to_record(u):
 
     # Shared stat fields (matching MoM/CoM1 JSON schema)
     race_int = int(u.get('Race', 0))
+    base_race = RACE_NAMES.get(race_int, str(race_int))
+    hero_type_id = int(u['HeroType']) if u.get('HeroType') else None
     record = {
         'id':      idx,
+        # Roster identity is version-scoped by the selected dataset. Keep the source
+        # template and hero IDs separate from the picker ID and editable identity.
+        'templateId': idx,
+        'heroTypeId': hero_type_id,
+        'isHero': hero_type_id is not None,
+        'baseRace': base_race,
+        'baseFantastic': u.get('Fantastic', '').strip().lower() == 'yes',
         'name':    get_display_name(u),
-        'race':    RACE_NAMES.get(race_int, str(race_int)),
+        'race':    base_race,
         'figures': int(u.get('Figures', 1)),
         'hp':      int(u.get('HP', 1)),
         'melee':   int(u.get('Attack', 0)),
@@ -360,6 +370,29 @@ def verify_attack_channel_coverage(raw_units, records):
                 )
 
 
+def verify_identity_coverage(raw_units, records):
+    """Fail generation if source roster identity was inferred, lost, or changed."""
+    records_by_template = {record['templateId']: record for record in records}
+    for unit in raw_units:
+        record = records_by_template.get(unit['index'])
+        if record is None:
+            continue
+        race_int = int(unit.get('Race', 0))
+        expected = {
+            'templateId': unit['index'],
+            'heroTypeId': int(unit['HeroType']) if unit.get('HeroType') else None,
+            'isHero': bool(unit.get('HeroType')),
+            'baseRace': RACE_NAMES.get(race_int, str(race_int)),
+            'baseFantastic': unit.get('Fantastic', '').strip().lower() == 'yes',
+        }
+        for field, source_value in expected.items():
+            if record.get(field) != source_value:
+                raise ValueError(
+                    f"Unit {unit['index']} {unit.get('Name', '')!r}: "
+                    f"{field}={record.get(field)!r}, expected {source_value!r}"
+                )
+
+
 def main():
     # Resolve every path from the script location so input and both generated
     # outputs are independent of the caller's working directory.
@@ -376,6 +409,7 @@ def main():
                if u.get('CreateOutpost', '').lower() != 'yes'
                and u.get('Name') not in SPECIAL_UNIT_NAMES]
     verify_attack_channel_coverage(raw_units, records)
+    verify_identity_coverage(raw_units, records)
 
     # Force race prefix for non-hero units that share a name with another race's unit
     from collections import Counter

@@ -251,11 +251,30 @@ def process_unit_file(input_file: Path):
 
             collect_unmatched(row, unmatched)
 
+            # Nr is the source `_UNITS[]` template index. Picker ids are intentionally
+            # independent because excluded rows (Settlers) make the generated sequence
+            # diverge from that index. In the DOS roster the first 35 templates are the
+            # persistent hero slots, so their source index is also the Hero_Slot value.
+            template_id = parse_int(row.get('Nr', ''), -1)
+            if template_id < 0:
+                raise ValueError(f"Unit {row.get('UnitName', '')!r} has no valid Nr template id")
+            is_hero = template_id <= 34
+            base_race = row.get('Race', '').strip()
+            source_abilities = [
+                token.strip() for token in (row.get('Abilities', '') or '').split(',')
+                if token.strip()
+            ]
+
             unit = {
                 'id': unit_id,
+                'templateId': template_id,
+                'heroTypeId': template_id if is_hero else None,
+                'isHero': is_hero,
+                'baseRace': base_race,
+                'baseFantastic': 'Summoned Unit' in source_abilities,
                 'name': row.get('UnitName', '').strip(),
-                'race': row.get('Race', '').strip(),
-                'category': row.get('Race', '').strip(),
+                'race': base_race,
+                'category': base_race,
 'figures': parse_int(row.get('Fig', '1'), 1),
                 'defense': parse_int(row.get('Df', '0')),
                 'resist': parse_int(row.get('Re', '0')),
@@ -344,7 +363,7 @@ def process_unit_file(input_file: Path):
             if has_byte_consumer:
                 unit['spec_att_attrib'] = abs(gaze_poison_val) if gaze_poison_val is not None else 0
 
-            if parse_int(row.get('Nr', '-1')) <= 34:
+            if is_hero:
                 unit['category'] = 'Heroes'
                 if 'Hero' not in final_abilities:
                     final_abilities.insert(0, 'Hero')
@@ -375,6 +394,19 @@ def process_unit_file(input_file: Path):
 
             # Only add if unit has a name and is not a Settlers unit
             if unit['name'] and unit['name'] != 'Settlers':
+                expected_identity = {
+                    'templateId': template_id,
+                    'heroTypeId': template_id if is_hero else None,
+                    'isHero': is_hero,
+                    'baseRace': base_race,
+                    'baseFantastic': 'Summoned Unit' in source_abilities,
+                }
+                for field, source_value in expected_identity.items():
+                    if unit.get(field) != source_value:
+                        raise ValueError(
+                            f"Unit {template_id} {unit['name']!r}: {field}="
+                            f"{unit.get(field)!r}, expected {source_value!r}"
+                        )
                 units[str(unit_id)] = unit
                 unit_id += 1
 

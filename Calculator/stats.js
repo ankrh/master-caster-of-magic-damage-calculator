@@ -1,6 +1,73 @@
 // --- Unit Stat Derivation ---
 // Depends on data.js and combat.js helper functions. No DOM dependencies.
 
+// Unit identity has three independent layers. The selected version scopes source
+// template/hero ids; the base fields are editable identity; race/fantastic are fresh live
+// calculation fields. R8.1 only initializes the live fields -- ordered conversions belong
+// to R8.3. Keeping construction here makes every caller, including Matrix and Node checks,
+// enter derivation through the same model.
+function createUnitIdentity(values = {}) {
+  const integerOrNull = value => Number.isInteger(value) ? value : null;
+  return {
+    version: typeof values.version === 'string' && values.version ? values.version : null,
+    templateId: integerOrNull(values.templateId),
+    heroTypeId: integerOrNull(values.heroTypeId),
+    isHero: !!values.isHero,
+    baseRace: typeof values.baseRace === 'string' ? values.baseRace : '',
+    baseFantastic: !!values.baseFantastic,
+  };
+}
+
+function createRosterUnitIdentity(version, unit) {
+  return createUnitIdentity({
+    version,
+    templateId: unit && unit.templateId,
+    heroTypeId: unit && unit.heroTypeId,
+    isHero: !!(unit && unit.isHero),
+    baseRace: unit && unit.baseRace,
+    baseFantastic: !!(unit && unit.baseFantastic),
+  });
+}
+
+function createCustomUnitIdentity(version, values = {}) {
+  return createUnitIdentity({
+    version,
+    // A custom unit can reproduce a special template through R8.2's future selector,
+    // but it never acquires a source roster/template or hero-type id.
+    templateId: null,
+    heroTypeId: null,
+    isHero: values.isHero,
+    baseRace: values.baseRace,
+    baseFantastic: values.baseFantastic,
+  });
+}
+
+function legacyBaseRace(input) {
+  if (typeof input.race === 'string' && input.race) return input.race;
+  const match = /^fantastic_(life|death|chaos|nature|sorcery|arcane)$/.exec(input.unitType || '');
+  return match ? match[1][0].toUpperCase() + match[1].slice(1) : '';
+}
+
+function initializeUnitIdentity(input) {
+  const supplied = input.identity;
+  const base = supplied
+    ? createUnitIdentity({ ...supplied, version: input.version || supplied.version })
+    : createCustomUnitIdentity(input.version, {
+        // Legacy unitType remains the UI input until R8.2/R8.4. It is translated only at
+        // this boundary; the resulting identity still stores all three base fields apart.
+        isHero: input.unitType === 'hero',
+        baseRace: legacyBaseRace(input),
+        baseFantastic: String(input.unitType || '').startsWith('fantastic_'),
+      });
+  return {
+    ...base,
+    // These are deliberately copied values, not aliases to a base sub-record. Each
+    // deriveUnitStats invocation receives a new mutable calculated identity.
+    race: base.baseRace,
+    fantastic: base.baseFantastic,
+  };
+}
+
 // Lava Smelter (Warlord): the selector records one permanent mineral-pair grant already
 // carried by the unit. New Dwarf units receive it when trained; Upgrade & Retrain can apply
 // it later to any existing non-fantastic unit. Returns the ability set with the grant merged
@@ -258,13 +325,14 @@ function deriveUnitStats(input) {
 
   const prefix = input.prefix;
   const version = input.version;
+  const identity = initializeUnitIdentity(input);
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
   // Lava Smelter folds its granted ability in here so every downstream read sees it.
   // Race-exclusive building enchantments gate on the unit's intrinsic race/name, supplied
   // by the caller from the selected roster unit. Custom (hand-entered) units carry neither,
   // so building buffs are inert on them. The display name may be race-prefixed for some
   // units and not others, so name exceptions match with endsWith (always gated by race).
-  const unitRace = input.race || '';
+  const unitRace = identity.race;
   const unitName = input.name || '';
   const abilities = applyMagicImmunityCurseGating(
     applyOutlanderReformGrants(
@@ -1832,6 +1900,7 @@ function deriveUnitStats(input) {
     // Effective values (for calculation)
     figs: baseFigs + (altarOfTheSun ? 1 : 0) + (alumniOfAcademy ? 2 : 0),
     atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!input.generic,
+    identity,
     dmg: Math.max(0, parseInt(input.dmg) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,

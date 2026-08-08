@@ -22,9 +22,12 @@ for (const version of VERSIONS) {
     const report = await page.evaluate(() => {
       const list = (typeof unitComboboxData !== 'undefined' && unitComboboxData['a']) || [];
       const hidden = document.getElementById('aUnit');
+      const db = unitDatabases[document.getElementById('gameVersion').value] || [];
       const num = v => v !== '' && v != null && Number.isFinite(Number(v));
       const bad = [];
+      const identityBad = [];
       for (const u of list) {
+        const source = db.find(unit => String(unit.id) === u.id);
         hidden.value = u.id;
         hidden.dispatchEvent(new Event('change'));
         const figs = document.getElementById('aFigs').value;
@@ -36,12 +39,37 @@ for (const version of VERSIONS) {
               && Number(figs) >= 1 && Number(hp) >= 1)) {
           bad.push({ id: u.id, name: u.name, figs, hp, atk, def, res });
         }
+        const identity = readUnitStats('a').identity;
+        if (!(identity.version === document.getElementById('gameVersion').value
+              && source
+              && identity.templateId === source.templateId
+              && identity.heroTypeId === source.heroTypeId
+              && identity.isHero === source.isHero
+              && identity.baseRace === source.baseRace
+              && identity.baseFantastic === source.baseFantastic
+              && identity.race === source.baseRace
+              && identity.fantastic === source.baseFantastic
+              && !Object.prototype.hasOwnProperty.call(identity, 'chosen')
+              && !Object.prototype.hasOwnProperty.call(identity, 'golem'))) {
+          identityBad.push({ id: u.id, name: u.name, source, identity });
+        }
       }
-      return { count: list.length, bad };
+      hidden.value = 'custom';
+      hidden.dispatchEvent(new Event('change'));
+      document.getElementById('aAbil_unitType').value = 'hero';
+      const customIdentity = readUnitStats('a').identity;
+      return { count: list.length, bad, identityBad, customIdentity,
+        storedCustomIdentity: unitIdentity['a'] };
     });
 
     expect(report.count, 'the picker should have units for this version').toBeGreaterThan(0);
     expect(report.bad, 'every unit yields numeric core stats').toEqual([]);
+    expect(report.identityBad, 'every predefined unit carries source/base/live identity').toEqual([]);
+    expect(report.customIdentity.templateId, 'custom template ID').toBeNull();
+    expect(report.customIdentity.heroTypeId, 'custom hero-type ID').toBeNull();
+    expect(report.customIdentity.isHero, 'custom Hero remains independent of null IDs').toBe(true);
+    expect(report.storedCustomIdentity.templateId, 'stored custom template ID').toBeNull();
+    expect(report.storedCustomIdentity.heroTypeId, 'stored custom hero-type ID').toBeNull();
 
     // Spot-checks: for a few units that have a melee value (so applyLevelBonuses
     // writes the stat fields), the DOM must match the data-table record.

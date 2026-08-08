@@ -98,6 +98,76 @@ function baseUnitInput(overrides = {}) {
   };
 }
 
+function runIdentityChecks(ctx) {
+  const rosterSets = [
+    ['mom_1.31', evalInContext(ctx, 'MOM_UNITS_DATA')],
+    ['com_6.08', evalInContext(ctx, 'COM_UNITS_DATA')],
+    ['com2_1.05.11', evalInContext(ctx, 'COM2_UNITS_DATA')],
+    ['com2_warlord_1.5.12.6.2', evalInContext(ctx, 'WARLORD_UNITS_DATA')],
+  ];
+  for (const [version, data] of rosterSets) {
+    for (const unit of Object.values(data)) {
+      const label = `${version} template ${unit.templateId} (${unit.name})`;
+      assert(Number.isInteger(unit.templateId), `${label}: generator preserves integer templateId`);
+      assertEqual(unit.isHero, unit.category === 'Heroes', `${label}: isHero is source-independent of race/fantastic`);
+      assertEqual(unit.heroTypeId === null, !unit.isHero, `${label}: only heroes carry heroTypeId`);
+      assertEqual(unit.baseRace, unit.race, `${label}: baseRace faithfully carries source race`);
+      const fantasticToken = (unit.abilities || []).some(a => a === 'Fantastic' || a === 'Fantastic=1');
+      assertEqual(unit.baseFantastic, fantasticToken, `${label}: baseFantastic faithfully carries source bit`);
+      assert(!Object.prototype.hasOwnProperty.call(unit, 'chosen'), `${label}: chosen is not persisted`);
+      assert(!Object.prototype.hasOwnProperty.call(unit, 'golem'), `${label}: golem is not persisted`);
+
+      const rosterIdentity = ctx.createRosterUnitIdentity(version, unit);
+      assertEqual(rosterIdentity.version, version, `${label}: templateId is scoped by active version`);
+      assertEqual(rosterIdentity.templateId, unit.templateId, `${label}: identity keeps templateId`);
+      assertEqual(rosterIdentity.heroTypeId, unit.heroTypeId, `${label}: identity keeps heroTypeId`);
+    }
+  }
+
+  const momData = evalInContext(ctx, 'MOM_UNITS_DATA');
+  const momDwarf = Object.values(momData).find(unit => unit.templateId === 0);
+  const momIdentity = ctx.createRosterUnitIdentity('mom_1.31', momDwarf);
+  const cpIdentity = ctx.createRosterUnitIdentity('mom_cp_1.60.00', momDwarf);
+  assertEqual(momIdentity.templateId, cpIdentity.templateId,
+    'The shared MoM roster preserves the same source template ID');
+  assert(momIdentity.version !== cpIdentity.version,
+    'The shared MoM source template is scoped independently to each active version');
+
+  const customBaseIdentity = ctx.createCustomUnitIdentity('com2_1.05.11', {
+    isHero: true,
+    baseRace: 'Life',
+    baseFantastic: false,
+  });
+  assertEqual(customBaseIdentity.templateId, null, 'Custom identity has null templateId');
+  assertEqual(customBaseIdentity.heroTypeId, null, 'Custom identity has null heroTypeId even for a hero');
+  assertEqual(customBaseIdentity.isHero, true, 'Custom identity stores Hero independently');
+  assertEqual(customBaseIdentity.baseRace, 'Life', 'Custom identity stores base race independently');
+  assertEqual(customBaseIdentity.baseFantastic, false, 'Custom identity stores base Fantastic independently');
+
+  const customInput = baseUnitInput({
+    version: 'com2_1.05.11',
+    unitType: 'hero',
+    identity: customBaseIdentity,
+  });
+  const first = ctx.deriveUnitStats(customInput);
+  assertEqual(first.identity.race, 'Life', 'Derivation initializes live race from baseRace');
+  assertEqual(first.identity.fantastic, false, 'Derivation initializes live Fantastic from baseFantastic');
+  assertEqual(first.identity.isHero, true, 'Derivation retains independent Hero identity');
+  assert(!Object.prototype.hasOwnProperty.call(first.identity, 'chosen'), 'Calculated identity does not persist chosen');
+  assert(!Object.prototype.hasOwnProperty.call(first.identity, 'golem'), 'Calculated identity does not persist golem');
+  assert(!Object.prototype.hasOwnProperty.call(customBaseIdentity, 'race'),
+    'Base identity is not mutated with calculated race');
+  assert(!Object.prototype.hasOwnProperty.call(customBaseIdentity, 'fantastic'),
+    'Base identity is not mutated with calculated Fantastic');
+
+  first.identity.race = 'Chaos';
+  first.identity.fantastic = true;
+  const second = ctx.deriveUnitStats(customInput);
+  assert(first.identity !== second.identity, 'Every deriveUnitStats invocation owns a separate calculated identity record');
+  assertEqual(second.identity.race, 'Life', 'A later derivation resets live race from baseRace');
+  assertEqual(second.identity.fantastic, false, 'A later derivation resets live Fantastic from baseFantastic');
+}
+
 function runDeriveUnitStatsChecks(ctx) {
   const modernChannels = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.6.2',
@@ -1193,6 +1263,7 @@ function main() {
   ctx.setStatStepDebug(true);
   runStatStepChecks(ctx);
   runResolutionStepChecks(ctx);
+  runIdentityChecks(ctx);
   runDeriveUnitStatsChecks(ctx);
   runDerivationStageChecks(ctx);
   runWarlordUnitAbilityChecks(ctx);
