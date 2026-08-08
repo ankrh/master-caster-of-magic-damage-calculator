@@ -5,6 +5,25 @@ Closed work, accepted modelling decisions, and notable verification results remo
 engine behavior. The linked specification, binary analyses, data-table findings, discrepancy
 catalogue, reconstructions, and evidence files own the underlying results.
 
+## 2026-08-08 — R8.1 internal unit identity records
+
+R8.1 is complete. The calculator now keeps a version-scoped roster identity (`templateId` and
+`heroTypeId`), independent source fields (`isHero`, `baseRace`, `baseFantastic`), and fresh live
+`race`/`fantastic` values for every derivation. Custom records keep both source IDs null, while
+Chosen/Golem-style derived predicates remain computed rather than stored. Modern, DOS, and
+Warlord roster generators now carry and verify the source identity fields; the UI, matrix path,
+and all roster selections preserve them. Until R8.4, persistence deliberately remains at the
+legacy v1 `{race, name}` boundary, with the richer identity reconstructed from version and
+selection state.
+
+The work followed the dual-implementation protocol with GPT-5.6 Luna Max and GPT-5.6 Sol High:
+both initial implementations were committed, reciprocally reviewed, revised, and integrated.
+Verification passed 9,474 Node identity/derivation assertions, 929 browser presets, and 35/35
+Playwright tests. The standalone state harness passed 33/36 checks; its three existing resilience
+fixture checks still fail because the malformed `cityWalls` precondition no longer crashes, so
+the related recovery assertions cannot run. This is outside R8.1 and the normal persistence and
+share-link Playwright tests pass.
+
 ## 2026-08-08 — R7 display goal simplified
 
 R7 no longer imitates the games' plain/gold or grey/gold stat tiers. The calculator keeps one

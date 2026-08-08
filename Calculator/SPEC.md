@@ -256,6 +256,8 @@ its editable base identity (`isHero`, `baseRace`, `baseFantastic`). Predefined r
 their source IDs; custom units use null IDs. Every derivation creates a fresh calculated identity
 whose live `race` and `fantastic` values start from the corresponding base fields. Template-based
 states such as Chosen or Golem are predicates derived when needed, never persisted booleans.
+Until R8.2 replaces the combined custom control, a custom `fantastic_<realm>` selection supplies
+that realm as the independent base race; R8.2 owns exposing the base fields directly.
 Order is load-bearing:
 
 1. Ability grants from buildings/enchantments fold in first, so every later read sees
@@ -692,6 +694,9 @@ lives in [CLAUDE.md](./CLAUDE.md).
 
 - Full page state is snapshotted as an id→value map plus unit identity, diffed against
   defaults, LZ-string compressed, and stored in `localStorage`.
+- During R8.1 the persisted identity remains the legacy v1 `{race, name}` shape; the richer
+  source/base/calculated identity is an internal boundary and is reconstructed on restore.
+  Identity-schema migration belongs to R8.4.
 - A share link carries the same blob in the URL fragment (`#s=…`) and takes precedence
   over `localStorage` on load.
 - Restoring must be order-safe: version first (which repopulates rosters and ability
