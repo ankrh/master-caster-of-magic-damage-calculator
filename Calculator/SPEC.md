@@ -264,8 +264,9 @@ Fantastic predicate while
 retaining the base predicate and fantastic-only grants. CoM 1 retains its constructor branch for
 Catapult, Centaurs and Paladins; Construct Catapult also receives Magic Weapons, and Zombies start
 with `To Block = -1` (a ten-percentage-point penalty). Call to Arms Paladins use live Life where
-that spell-specific condition is selected only for the retained Paladins template (113) and a
-Combat Summoned unit; display names are not engine predicates. These writes are version/template
+that spell-specific condition is selected only for the retained Paladins template (113); the
+explicit spell-result control is independent from generic Combat Summoned and display names are
+not engine predicates. These writes are version/template
 gated and no-op identity writes are omitted from the calculated-stat trace. Identity changes are
 seeded into the same ordered trace as the affected calculated outputs, while the source and base
 identity fields remain controls/metadata.
@@ -276,7 +277,10 @@ version-gated `Special unit` selector exposes named exceptions (`Other / no exce
 `Chosen / Avatar`, `Zombies`, and `Catapult` where the selected engine has that path) without
 exposing numeric template or hero IDs. Predefined roster units populate and lock all identity
 controls. A named special-unit effect is shown at its ordinary point of use: for example, a
-selected modern Golem owns a locked `Resist Elements` Elements value.
+selected Golem owns a locked `Resist Elements` Elements value.
+Breakthrough is enabled by its combat-global control, but its normal, Combat Summoned, and
+Non-Corporeal packages are derived from the direct calculated predicates; exceptional package
+labels cannot override those gates.
 Order is load-bearing:
 
 1. Ability grants from buildings/enchantments fold in first, so every later read sees
