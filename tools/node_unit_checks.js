@@ -1218,6 +1218,7 @@ function runStatStepChecks(ctx) {
   ], { res: 7 }, { trace });
   assertEqual(trace.length, 1, 'Only steps that change a field are traced');
   assertEqual(trace[0].id, 'warpResist', 'Trace names the step');
+  assertEqual(trace[0].source.id, 'warpResist', 'Trace identifies the transform source');
   assertEqual(trace[0].changes.res.delta, -7, 'Trace records the delta');
 
   let undeclared = null;
@@ -1252,6 +1253,87 @@ function runStatStepChecks(ctx) {
   }
   assert(collided && collided.includes('declared twice'),
     'A sequence with two steps sharing an id is rejected');
+}
+
+function runModifierTraceChecks(ctx) {
+  const traced = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.6.2', {
+      baseRace: 'High Men', specialUnit: 'chosen',
+    }),
+    atk: 5,
+    rtb: 4,
+    rtbType: 'missile',
+    def: 6,
+    res: 8,
+    hp: 7,
+    level: 'elite',
+    weapon: 'mithril',
+    toHitMod: 5,
+    abilities: { lucky: true, highPrayer: true, warpAttack: true, vertigo: true },
+    modernAttacks: {
+      ranged: { strength: 4, type: 'missile' },
+      thrown: { strength: 3, type: 'thrown' },
+      fireBreath: { strength: 2, type: 'fire' },
+      lightningBreath: { strength: 1, type: 'lightning' },
+    },
+  }));
+
+  for (const [name, trace] of Object.entries(traced.modifierTraces)) {
+    if (name === 'modernAttacks') continue;
+    assert(trace && Array.isArray(trace.entries), `${name} exposes a projected modifier trace`);
+    let running = trace.base;
+    for (const entry of trace.entries) {
+      assert(entry.source && typeof entry.source.id === 'string' && entry.source.id.length > 0,
+        `${name} trace entry identifies its source`);
+      assertEqual(entry.from, running, `${name} trace carries a continuous running before value`);
+      running = entry.to;
+    }
+    assertEqual(running, trace.result, `${name} trace finishes at its displayed result`);
+  }
+
+  const meleeSources = traced.modifierTraces.melee.entries.map(entry => entry.source.id);
+  assert(meleeSources.indexOf('level') < meleeSources.indexOf('weapon'),
+    'Melee trace keeps level before weapon execution order');
+  assert(meleeSources.indexOf('weapon') < meleeSources.indexOf('highPrayer'),
+    'Melee trace keeps weapon before the later High Prayer write');
+  assert(meleeSources.indexOf('highPrayer') < meleeSources.indexOf('warpAttack'),
+    'Melee trace keeps High Prayer before Warp Attack');
+
+  const chanceSources = traced.modifierTraces.toHitMelee.entries.map(entry => entry.source.id);
+  assertEqual(chanceSources[0], 'baseToHitMelee',
+    'To Hit trace starts with the editable base modifier when it is active');
+  assert(chanceSources.indexOf('level') < chanceSources.indexOf('weapon'),
+    'To Hit trace keeps level before weapon');
+  assert(chanceSources.indexOf('weapon') < chanceSources.indexOf('lucky'),
+    'To Hit trace keeps weapon before Lucky in this engine sequence');
+  assert(chanceSources.indexOf('highPrayer') < chanceSources.indexOf('vertigo'),
+    'Displayed To Hit trace keeps recalculation writes before resolution-time Vertigo');
+
+  assertEqual(traced.modifierTraces.fantastic.entries[0].source.id, 'identity:chosen',
+    'Boolean identity trace attributes the live Fantastic write');
+  assertEqual(traced.modifierTraces.race.entries[0].source.id, 'identity:chosen',
+    'Identity trace attributes the live race write');
+
+  for (const key of ['ranged', 'thrown', 'fireBreath', 'lightningBreath']) {
+    const channel = traced.modernAttacks[key];
+    assert(channel && channel.modifierTrace,
+      `Modern ${key} keeps its independent strength trace`);
+    assertEqual(channel.modifierTrace.base, channel.baseStrength,
+      `Modern ${key} trace starts at that channel's own editable base`);
+    assertEqual(channel.modifierTrace.result, channel.strength,
+      `Modern ${key} trace finishes at that channel's own result`);
+  }
+
+  const inert = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    atk: 4,
+    abilities: { highPrayer: false, warpAttack: false, holyBonus: 0 },
+  }));
+  const inertSources = inert.modifierTraces.melee.entries.map(entry => entry.source.id);
+  assert(!inertSources.includes('highPrayer') && !inertSources.includes('warpAttack')
+      && !inertSources.includes('holyBonus'),
+    'Inactive and zero-valued inputs are omitted instead of producing no-op trace entries');
 }
 
 function runResolutionStepChecks(ctx) {
@@ -1364,6 +1446,7 @@ function main() {
   // Every deriveUnitStats call below runs the step runner's write check (steps.js).
   ctx.setStatStepDebug(true);
   runStatStepChecks(ctx);
+  runModifierTraceChecks(ctx);
   runResolutionStepChecks(ctx);
   runIdentityChecks(ctx);
   runDeriveUnitStatsChecks(ctx);

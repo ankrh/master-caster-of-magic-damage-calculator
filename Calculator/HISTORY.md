@@ -1,5 +1,23 @@
 # Calculator work history
 
+## 2026-08-08 -- R7.3 ordered calculated-stat traces
+
+R7.3 is complete. The shared stat-step runner now records an explicit source plus execution
+position on every applied write, and `deriveUnitStats` projects that atomic event stream into
+continuous `{base, entries, result}` chains for each calculated output. Each entry carries the
+running value before and after its source's write; inactive predicates, invalid selections and
+no-op writes remain absent. The projections cover melee, the DOS shared attack slot, Defense,
+Resistance, hits, figures, gaze damage, displayed To Hit and To Block, and live race/Fantastic
+identity. Percentage outputs execute through the same source-ordered percentage-point path that
+supplies their final values, including later battlefield and Vertigo display transforms.
+
+Modern Ranged, Thrown, Fire Breath and Lightning Breath child derivations now retain their own
+strength and To Hit traces instead of discarding them when the channels are reassembled. Focused
+Node and browser coverage checks source attribution, running-value continuity, representative
+binary/CAS order, identity writes, channel independence, and omission of inactive, invalid and
+zero-valued inputs. R7.4 is ready to present these chains through the existing hover/touch
+interaction; R7.3 deliberately adds no tooltip presentation of its own.
+
 ## 2026-08-08 -- R8.4 stateful identity boundaries
 
 R8 is complete. Persistence and share links now write the v2 source/base identity schema while

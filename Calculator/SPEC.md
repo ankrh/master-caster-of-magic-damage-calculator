@@ -687,6 +687,14 @@ mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
   UI grouping or effect name. It must be emitted from the same ordered transform path that computes
   the value rather than reconstructed independently after calculation. The existing touch-device
   tooltip interaction exposes the same information where hover is unavailable.
+  `deriveUnitStats` exposes that path as `modifierTraces`: one projection per calculated output
+  with `{base, entries, result}`, where every entry carries its source, phase and running
+  `{from, to}` values. Percentage traces use displayed percentage points. Race and Fantastic use
+  their editable base identity and calculated live identity; modern Ranged, Thrown, Fire Breath
+  and Lightning Breath each retain their own strength projection. Inactive predicates, invalid
+  selections and writes which leave the output unchanged produce no entry. The shared atomic
+  `statTrace` remains available so one engine write which affects several outputs is still one
+  event rather than duplicated computation.
 - Each section heading carries its own **Show all / Hide inactive** toggle, independent of
   the other section's and of the other panel's — four states in all, each defaulting to
   hiding.

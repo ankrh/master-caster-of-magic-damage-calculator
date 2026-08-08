@@ -433,10 +433,6 @@ function applyOutlanderReformGrants(abilities, version, baseUnitType, isHero = f
 // Derive all effective stats for a unit from raw UI state.
 // Pure stat logic: no DOM reads or rendering side effects.
 function deriveUnitStats(input) {
-  function anyNonZero(values) {
-    return values.some(v => Math.abs(v || 0) > 1e-9);
-  }
-
   const prefix = input.prefix;
   const version = input.version;
   const identity = initializeUnitIdentity(input);
@@ -2004,38 +2000,193 @@ function deriveUnitStats(input) {
 
   const displayDef = (vertigoActive && !isCoMVersion) ? Math.max(0, finalDef - 1) : finalDef;
 
-  const toHitMeleeHasModifiers = anyNonZero([
-    baseToHitMod,
-    lvl.toHit,
-    wpn.toHit,
-    statUnit.toHit,
-    hwMeleeToHit,
-    uphillBattlePct,
-    (warpRealityActive && !unitIsChaos) ? -20 : 0,
-    vertigoActive ? -Math.round(vertigoHitPenalty * 100) : 0,
-    plagueActive ? -10 : 0,
-  ]);
-  const toHitRtbHasModifiers = anyNonZero([
-    baseToHitRtbMod,
-    lvl.toHit,
-    rtbToHitWpn,
-    rtbDistPenalty,
-    statUnit.toHit,
-    hwRtbToHit,
-    uphillBattlePct,
-    trueSightRtbToHitBonus,
-    (warpRealityActive && !unitIsChaos) ? -20 : 0,
-    vertigoActive ? -Math.round(vertigoHitPenalty * 100) : 0,
-    hurricaneActive ? -(hurricaneRtbPenalty * 100) : 0,
-    plagueActive ? -10 : 0,
-  ]);
-  const toBlockHasModifiers = anyNonZero([
-    baseToBlkMod,
-    statUnit.toBlk,
-    motherFungusToBlkBonus,
-    uphillBattlePct,
-    vertigoActive ? -Math.round(vertigoBlockPenalty * 100) : 0,
-  ]);
+  // R7.3 chance trace.  Strength/identity fields already execute in `statSteps`; To Hit and
+  // To Block historically combined their inputs below that sequence.  Run the same inputs
+  // through an ordered percentage-point record as the authoritative final projection so
+  // every displayed write has a source and a running before/after value.  Common writes are
+  // lifted directly from `statTrace`, preserving their binary/CAS positions.
+  const chanceTrace = [];
+  const chanceFields = {
+    melee: ['toHitMelee', 'displayToHitMelee'],
+    rtb: ['toHitRtb', 'displayToHitRtb'],
+    block: ['toBlock', 'displayToBlock'],
+  };
+  const chanceContributions = [];
+  let chanceSerial = 0;
+  const statOrderById = new Map(statSteps.map((step, order) => [step.id, order]));
+  const orderOf = (id, fallback) => statOrderById.has(id) ? statOrderById.get(id) : fallback;
+  function addChanceContribution(id, source, phase, order, deltas) {
+    if (!Object.values(deltas).some(value => value !== 0)) return;
+    chanceContributions.push({ id, source, phase, order, deltas, serial: chanceSerial++ });
+  }
+  function addChanceDelta(id, source, phase, order, fields, value) {
+    const deltas = {};
+    for (const field of fields) deltas[field] = value;
+    addChanceContribution(id, source, phase, order, deltas);
+  }
+
+  addChanceDelta('chance:baseMelee', { id: 'baseToHitMelee', label: 'Base melee To Hit' },
+    'base', -30, chanceFields.melee, baseToHitMod);
+  addChanceDelta('chance:baseRtb', { id: 'baseToHitRtb', label: 'Base ranged/Thrown/Breath To Hit' },
+    'base', -29, chanceFields.rtb, baseToHitRtbMod);
+  addChanceDelta('chance:baseBlock', { id: 'baseToBlock', label: 'Base To Block' },
+    'base', -28, chanceFields.block, baseToBlkMod);
+  for (const event of statTrace) {
+    const deltas = {};
+    if (event.changes.toHit) {
+      for (const field of [...chanceFields.melee, ...chanceFields.rtb]) {
+        deltas[field] = event.changes.toHit.delta;
+      }
+    }
+    if (event.changes.toBlk) {
+      for (const field of chanceFields.block) deltas[field] = event.changes.toBlk.delta;
+    }
+    addChanceContribution(`chance:${event.id}`, event.source, event.phase, event.order, deltas);
+  }
+  addChanceDelta('chance:outlanderXenoveterinary',
+    { id: 'outlanderXenoveterinary', label: 'Xenoveterinary' }, 'b',
+    orderOf('outlanderXenoveterinary', 0) + 0.1,
+    [...chanceFields.melee, ...chanceFields.rtb], abilities.outlanderXenoveterinary ? 10 : 0);
+  addChanceDelta('chance:uphillBattle', { id: 'uphillBattle', label: 'Uphill Battle' }, 'b',
+    orderOf('uphillBattle', 900) + 0.1,
+    [...chanceFields.melee, ...chanceFields.rtb, ...chanceFields.block], uphillBattlePct);
+  addChanceDelta('chance:outlanderRadio:hit', { id: 'outlanderRadio', label: 'Radio' }, 'b',
+    orderOf('outlanderRadio', 920) + 0.1,
+    [...chanceFields.melee, ...chanceFields.rtb], abilities.outlanderRadio ? 10 : 0);
+  addChanceDelta('chance:outlanderRadio:block', { id: 'outlanderRadio', label: 'Radio' }, 'b',
+    orderOf('outlanderRadio', 920) + 0.2, chanceFields.block, outlanderToDefendBonus);
+  addChanceDelta('chance:outlanderBallisticsTraining',
+    { id: 'outlanderBallisticsTraining', label: 'Ballistics Training' }, 'b',
+    orderOf('outlanderRadio', 920) + 0.3, chanceFields.rtb, outlanderRtbToHitBonus);
+  addChanceDelta('chance:level', { id: 'level', label: 'Experience level' }, 'c',
+    orderOf('level', 0) + 0.1, [...chanceFields.melee, ...chanceFields.rtb], lvl.toHit);
+  addChanceDelta('chance:weapon:melee', { id: 'weapon', label: 'Weapon material' }, 'c',
+    orderOf('weapon', 10) + 0.1, chanceFields.melee, wpn.toHit);
+  addChanceDelta('chance:weapon:rtb', { id: 'weapon', label: 'Weapon material' }, 'c',
+    orderOf('weapon', 10) + 0.2, chanceFields.rtb, rtbToHitWpn);
+  addChanceDelta('chance:holyWeapon:melee', { id: 'holyWeapon', label: 'Holy Weapon' }, 'c',
+    orderOf('weapon', 10) + 0.3, chanceFields.melee, hwMeleeToHit);
+  addChanceDelta('chance:holyWeapon:rtb', { id: 'holyWeapon', label: 'Holy Weapon' }, 'c',
+    orderOf('weapon', 10) + 0.4, chanceFields.rtb, hwRtbToHit);
+  addChanceDelta('chance:motherFungus', { id: 'motherFungus', label: 'Mother Fungus' }, 'base',
+    orderOf('motherFungus', 10) + 0.1, chanceFields.block, motherFungusToBlkBonus);
+  addChanceDelta('chance:survivalInstinctToBlock',
+    { id: 'survivalInstinctToBlock', label: 'Survival Instinct' }, 'c',
+    orderOf('survivalInstinct', 100) + 0.1, chanceFields.block, survivalInstinctToBlkBonus);
+  addChanceDelta('chance:trueSight:ranged', { id: 'trueSight', label: 'True Sight' }, 'd',
+    -10, chanceFields.rtb, trueSightRtbToHitBonus);
+  addChanceDelta('chance:distancePenalty', { id: 'distancePenalty', label: 'Range distance' },
+    'resolution', -100, chanceFields.rtb, rtbDistPenalty);
+
+  chanceContributions.sort((left, right) =>
+    STEP_PHASE_RANK[left.phase] - STEP_PHASE_RANK[right.phase]
+      || left.order - right.order || left.serial - right.serial);
+  const chanceSteps = chanceContributions.map(item => statStep({
+    id: item.id, sourceId: item.source.id, sourceLabel: item.source.label,
+    phase: item.phase, writes: Object.keys(item.deltas),
+    apply: u => {
+      for (const [field, value] of Object.entries(item.deltas)) u[field] += value;
+    },
+  }));
+  const allChanceFields = Object.values(chanceFields).flat();
+  const allHitFields = [...chanceFields.melee, ...chanceFields.rtb];
+  chanceSteps.push(
+    statStep({ id: 'chance:clamp', sourceId: 'statClamp', sourceLabel: 'Stat clamp',
+      phase: 'resolution', writes: allChanceFields, apply: u => {
+        for (const field of allHitFields) u[field] = Math.max(10, Math.min(100, u[field]));
+        for (const field of chanceFields.block) u[field] = Math.max(0, Math.min(100, u[field]));
+      } }),
+    statStep({ id: 'chance:warpReality', sourceId: 'warpReality', sourceLabel: 'Warp Reality',
+      phase: 'resolution', writes: allHitFields, when: () => warpRealityActive && !unitIsChaos,
+      apply: u => { for (const field of allHitFields) u[field] = Math.max(10, u[field] - 20); } }),
+    statStep({ id: 'chance:hurricane', sourceId: 'hurricane', sourceLabel: 'Hurricane',
+      phase: 'resolution', writes: chanceFields.rtb, when: () => hurricaneActive,
+      apply: u => {
+        for (const field of chanceFields.rtb) u[field] = Math.max(10, u[field] - hurricaneRtbPenalty * 100);
+      } }),
+    statStep({ id: 'chance:trueLightIllusion', sourceId: 'trueLight', sourceLabel: 'True Light',
+      phase: 'resolution', writes: allHitFields,
+      when: () => isWarlord && hasTrueLight && !!abilities.illusion,
+      apply: u => { for (const field of allHitFields) u[field] = Math.max(10, u[field] - 10); } }),
+    statStep({ id: 'chance:vertigo', sourceId: 'vertigo', sourceLabel: 'Vertigo',
+      phase: 'resolution', writes: ['displayToHitMelee', 'displayToHitRtb', 'displayToBlock'],
+      when: () => vertigoActive, apply: u => {
+        u.displayToHitMelee = Math.max(10, u.displayToHitMelee - vertigoHitPenalty * 100);
+        u.displayToHitRtb = Math.max(10, u.displayToHitRtb - vertigoHitPenalty * 100);
+        u.displayToBlock = Math.max(0, u.displayToBlock - vertigoBlockPenalty * 100);
+      } }),
+    statStep({ id: 'chance:berserkWarlord', sourceId: 'berserkWarlord', sourceLabel: 'Berserk',
+      phase: 'resolution', writes: allChanceFields, when: () => warlordBerserk, apply: u => {
+        for (const field of allHitFields) u[field] = Math.min(100, u[field] + 15);
+        for (const field of chanceFields.block) u[field] = Math.max(0, u[field] - 10);
+      } }),
+    statStep({ id: 'chance:nausea', sourceId: 'nausea', sourceLabel: 'Conjuring Pact nausea',
+      phase: 'resolution', writes: allChanceFields,
+      when: () => isWarlord && !!abilities.nausea && isNormalUnitType(unitTypeVal), apply: u => {
+        for (const field of allHitFields) u[field] = Math.max(10, u[field] - 10);
+        for (const field of chanceFields.block) u[field] = Math.max(0, u[field] - 10);
+      } }),
+    statStep({ id: 'chance:plague', sourceId: 'plague', sourceLabel: 'Plague',
+      phase: 'resolution', writes: allHitFields, when: () => plagueActive,
+      apply: u => { for (const field of allHitFields) u[field] = Math.max(10, u[field] - 10); } }),
+    statStep({ id: 'chance:greatUnbinding', sourceId: 'greatUnbinding', sourceLabel: 'Great Unbinding',
+      phase: 'resolution', writes: allChanceFields, when: () => greatUnbindingActive, apply: u => {
+        for (const field of allHitFields) u[field] = Math.max(10, u[field] - 20);
+        for (const field of chanceFields.block) u[field] = Math.max(0, u[field] - 20);
+      } }),
+  );
+  const chanceUnit = runStatSteps(chanceSteps, {
+    toHitMelee: 30, toHitRtb: 30, toBlock: 30,
+    displayToHitMelee: 30, displayToHitRtb: 30, displayToBlock: 30,
+  }, { version, trace: chanceTrace });
+  // These assignments make the traced execution path authoritative.  Focused tests assert
+  // parity with the existing formulas across the full preset suite.
+  toHitMelee = chanceUnit.toHitMelee / 100;
+  toHitRtb = chanceUnit.toHitRtb / 100;
+  toBlock = chanceUnit.toBlock / 100;
+  displayToHitMelee = chanceUnit.displayToHitMelee / 100;
+  displayToHitRtb = chanceUnit.displayToHitRtb / 100;
+  displayToBlock = chanceUnit.displayToBlock / 100;
+
+  const figureTrace = [];
+  const figureUnit = runStatSteps([
+    statStep({ id: 'altarOfTheSun:figures', sourceId: 'altarOfTheSun',
+      sourceLabel: 'Altar of the Sun', phase: 'base', writes: ['figs'],
+      when: () => altarOfTheSun, apply: u => { u.figs += 1; } }),
+    statStep({ id: 'alumniOfAcademy:figures', sourceId: 'alumniOfAcademy',
+      sourceLabel: 'Academy', phase: 'base', writes: ['figs'],
+      when: () => alumniOfAcademy, apply: u => { u.figs += 2; } }),
+  ], { figs: baseFigs }, { version, trace: figureTrace });
+
+  const modifierTraces = {
+    figures: projectStatTrace(figureTrace, 'figs', baseFigs, figureUnit.figs),
+    melee: projectStatTrace(statTrace, 'atk', inputBaseAtk, finalAtk),
+    sharedAttack: projectStatTrace(statTrace, 'rtb',
+      inputBaseRtb + shadowStrikeGrantedBaseRtb, finalRtb),
+    defense: projectStatTrace(statTrace, 'def', inputBaseDef, displayDef),
+    resistance: projectStatTrace(statTrace, 'res', inputBaseRes, finalRes),
+    hits: projectStatTrace(statTrace, 'hp', inputBaseHP, hp),
+    gaze: projectStatTrace(statTrace, 'gaze', baseGazeRanged, effectiveGazeRanged),
+    doomGaze: projectStatTrace(statTrace, 'doomGaze', baseDoomGaze, effectiveDoomGaze),
+    toHitMelee: projectStatTrace(chanceTrace, 'displayToHitMelee', 30,
+      chanceUnit.displayToHitMelee, { unit: 'percent' }),
+    toHitRanged: projectStatTrace(chanceTrace, 'displayToHitRtb', 30,
+      chanceUnit.displayToHitRtb, { unit: 'percent' }),
+    toBlock: projectStatTrace(chanceTrace, 'displayToBlock', 30,
+      chanceUnit.displayToBlock, { unit: 'percent' }),
+    race: projectStatTrace(identityConversion.trace, 'race', identity.baseRace, identity.race),
+    fantastic: projectStatTrace(identityConversion.trace, 'fantastic',
+      identity.baseFantastic, identity.fantastic),
+    modernAttacks: {},
+  };
+  appendProjectedTraceEntry(modifierTraces.defense, {
+    id: 'displayDefense:vertigo', sourceId: 'vertigo', sourceLabel: 'Vertigo',
+    phase: 'resolution', order: 0,
+  }, finalDef, displayDef);
+
+  const toHitMeleeHasModifiers = modifierTraces.toHitMelee.entries.length > 0;
+  const toHitRtbHasModifiers = modifierTraces.toHitRanged.entries.length > 0;
+  const toBlockHasModifiers = modifierTraces.toBlock.entries.length > 0;
 
   const result = {
     // Base values (for display)
@@ -2055,11 +2206,12 @@ function deriveUnitStats(input) {
     toHitRtbHasModifiers,
     toBlockHasModifiers,
     // Effective values (for calculation)
-    figs: baseFigs + (altarOfTheSun ? 1 : 0) + (alumniOfAcademy ? 2 : 0),
+    figs: figureUnit.figs,
     atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, isHero, generic: !!input.generic,
     identity,
     identityTrace: identityConversion.trace,
     statTrace,
+    modifierTraces,
     dmg: Math.max(0, parseInt(input.dmg) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,
@@ -2132,7 +2284,10 @@ function deriveUnitStats(input) {
         strength: child.rtb,
         type: child.rangedType !== 'none' ? child.rangedType : child.thrownType,
         toHit: child.toHitRtb,
+        modifierTrace: child.modifierTraces.sharedAttack,
+        toHitTrace: child.modifierTraces.toHitRanged,
       };
+      result.modifierTraces.modernAttacks[outputKey] = child.modifierTraces.sharedAttack;
     }
     result.modernAttacks = channels;
   }

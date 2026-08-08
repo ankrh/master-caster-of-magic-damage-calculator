@@ -48,6 +48,8 @@ function statStepDebugEnabled() { return statStepDebug; }
 //               or resolution axis makes this write
 //   writes      the fields the step may write. The trace and the write check read it,
 //               so it has to be complete.
+//   sourceId / sourceLabel  optional presentation identity for the write's game source;
+//               sourceId defaults to the stable step id, so every applied entry is named
 //   when(unit, ctx)   optional predicate; a step that never fires costs one call
 //   apply(unit, ctx)  mutates `unit`; return HALT to stop the sequence
 //   provisional true when the position is not established from the engine but deduced
@@ -110,12 +112,13 @@ function runStatSteps(steps, unit, ctx) {
   const trace = context.trace;
   const validate = context.validateWrites || statStepDebug;
   if (validate) assertStatStepOrder(steps);
-  for (const step of steps) {
+  for (let order = 0; order < steps.length; order++) {
+    const step = steps[order];
     if (step.when && !step.when(unit, context)) continue;
     const before = (trace || validate) ? { ...unit } : null;
     const result = step.apply(unit, context);
     if (validate) assertStepWrites(step, before, unit);
-    if (trace) recordStepTrace(trace, step, before, unit);
+    if (trace) recordStepTrace(trace, step, before, unit, order);
     if (result === HALT) break;
   }
   return unit;
@@ -135,7 +138,15 @@ function assertStepWrites(step, before, unit) {
 // One entry per step that changed something, in execution order. Not needed for the red
 // display numbers — those are `final - base` — but it is what an ordered "what modified
 // this unit" breakdown would read, and where M4's fbRtbMod attribution belongs.
-function recordStepTrace(trace, step, before, unit) {
+function traceSourceForStep(step) {
+  const id = step.sourceId || step.id;
+  return {
+    id,
+    label: step.sourceLabel || id,
+  };
+}
+
+function recordStepTrace(trace, step, before, unit, order) {
   const changes = {};
   let changed = false;
   for (const field of step.writes) {
@@ -147,5 +158,70 @@ function recordStepTrace(trace, step, before, unit) {
       ? { from, to, delta: to - from }
       : { from, to };
   }
-  if (changed) trace.push({ id: step.id, phase: step.phase, changes });
+  if (changed) trace.push({
+    id: step.id,
+    source: traceSourceForStep(step),
+    phase: step.phase,
+    order,
+    changes,
+  });
+}
+
+// Project the shared ordered event log onto one calculated output.  R7.3 deliberately
+// keeps the event log atomic (one engine write can touch several fields), while this
+// projection is what a stat's final-value output consumes.  The projection carries its
+// editable base and displayed result separately so R7.4 can render those as the first and
+// last lines without inventing either value from deltas.
+//
+// `stat:base` seeds the mutable record from zero.  That seed is not itself a modifier when
+// it equals the editable base, so it is omitted.  If permanent construction has already
+// changed the value, the entry is retained but its `from` is normalized to the editable
+// base; the chain therefore always has a continuous running value.
+function projectStatTrace(trace, field, base, result, options = {}) {
+  const entries = [];
+  let running = base;
+  const ignoredIds = new Set(options.ignoreIds || []);
+
+  for (const event of trace || []) {
+    if (ignoredIds.has(event.id) || !event.changes
+        || !Object.prototype.hasOwnProperty.call(event.changes, field)) continue;
+    const change = event.changes[field];
+    const from = event.id === 'stat:base' ? running : change.from;
+    const to = change.to;
+    if (from === to) continue;
+    entries.push({
+      id: event.id,
+      source: event.source || { id: event.id, label: event.id },
+      phase: event.phase,
+      order: event.order,
+      from,
+      to,
+    });
+    running = to;
+  }
+
+  return {
+    field,
+    ...(options.unit ? { unit: options.unit } : {}),
+    base,
+    entries,
+    result,
+  };
+}
+
+// Append a transform which is applied after the main derivation record (for example the
+// displayed Vertigo defense penalty).  No-op transforms stay absent, exactly like
+// `recordStepTrace` entries.
+function appendProjectedTraceEntry(projected, step, from, to) {
+  if (!projected || from === to) return projected;
+  projected.entries.push({
+    id: step.id,
+    source: traceSourceForStep(step),
+    phase: step.phase,
+    order: step.order,
+    from,
+    to,
+  });
+  projected.result = to;
+  return projected;
 }
