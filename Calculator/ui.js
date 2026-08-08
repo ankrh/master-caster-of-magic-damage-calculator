@@ -899,6 +899,11 @@ function buildDosFlagCell(prefix, key, label) {
 
 // --- Modified Display ---
 
+// The tooltip controller is initialized after the first calculation. Until then this is a no-op;
+// afterwards it keeps a tooltip already open on a calculated output synchronized with that
+// output's dynamic trace.
+let refreshVisibleTooltipForElement = () => {};
+
 // Show one final calculated value next to each editable base stat. R7.3's projection is
 // authoritative for both the displayed result and its explanation: the UI only formats the
 // existing ordered chain and never rebuilds modifier mechanics from controls.
@@ -948,6 +953,7 @@ function updateModifiedDisplay(prefix, stats) {
       delete el.dataset.tooltip;
       el.classList.remove('visible');
     }
+    refreshVisibleTooltipForElement(el);
   }
 
   showTrace(prefix + 'FantasticMod', traces.fantastic);
@@ -4380,6 +4386,7 @@ initStateFromSources();
 // --- Cursor-following tooltip ---
 (function initTooltip() {
   const tip = document.getElementById('tt');
+  let activeTooltip = null;
 
   // Propagate data-tooltip from each label to the input/select siblings that follow it
   // in the same panel-fields grid, until the next label resets the current tooltip.
@@ -4440,39 +4447,67 @@ initStateFromSources();
   // tooltip there while real mice keep hover behavior on hybrid devices.
   let lastTouchAt = 0;
 
-  document.addEventListener('mousemove', e => {
-    if (Date.now() - lastTouchAt < 800) return;
-    if (isComboboxOpen(e.clientX, e.clientY)) { tip.style.display = 'none'; return; }
-    const el = tooltipElementAtPoint(e.clientX, e.clientY);
-    const text = el && el.dataset && el.dataset.tooltip;
-    if (text) {
-      tip.textContent = text;
-      tip.style.display = 'block';
-      const offX = 14, offY = 14;
-      let x = e.clientX + offX;
-      let y = e.clientY + offY;
-      if (x + tip.offsetWidth > window.innerWidth)  x = e.clientX - tip.offsetWidth - 6;
-      if (y + tip.offsetHeight > window.innerHeight) y = e.clientY - tip.offsetHeight - 6;
-      tip.style.left = x + 'px';
-      tip.style.top  = y + 'px';
-    } else {
-      tip.style.display = 'none';
-    }
-  });
-  document.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  function hideTooltip() {
+    tip.style.display = 'none';
+    activeTooltip = null;
+  }
 
-  // Touch: long-press (500ms, without moving) on a tooltip-bearing control
-  // shows its tooltip anchored to the control; a plain tap keeps its normal
-  // meaning (toggle/focus) and dismisses any visible tooltip, as does scrolling.
-  function showTipForElement(el) {
-    tip.textContent = el.dataset.tooltip;
-    tip.style.display = 'block';
+  function positionTooltipAtPointer(x, y) {
+    const offX = 14, offY = 14;
+    let left = x + offX;
+    let top = y + offY;
+    if (left + tip.offsetWidth > window.innerWidth) left = x - tip.offsetWidth - 6;
+    if (top + tip.offsetHeight > window.innerHeight) top = y - tip.offsetHeight - 6;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+
+  function positionTooltipAtElement(el) {
     const r = el.getBoundingClientRect();
     let x = Math.min(r.left, window.innerWidth - tip.offsetWidth - 6);
     let y = r.bottom + 8;
     if (y + tip.offsetHeight > window.innerHeight) y = Math.max(6, r.top - tip.offsetHeight - 8);
     tip.style.left = Math.max(6, x) + 'px';
     tip.style.top = y + 'px';
+  }
+
+  function renderActiveTooltip() {
+    const el = activeTooltip && activeTooltip.el;
+    const text = el && el.dataset && el.dataset.tooltip;
+    if (!text) { hideTooltip(); return; }
+    tip.textContent = text;
+    tip.style.display = 'block';
+    if (activeTooltip.mode === 'pointer') {
+      positionTooltipAtPointer(activeTooltip.x, activeTooltip.y);
+    } else {
+      positionTooltipAtElement(el);
+    }
+  }
+
+  refreshVisibleTooltipForElement = el => {
+    if (activeTooltip && activeTooltip.el === el) renderActiveTooltip();
+  };
+
+  document.addEventListener('mousemove', e => {
+    if (Date.now() - lastTouchAt < 800) return;
+    if (isComboboxOpen(e.clientX, e.clientY)) { hideTooltip(); return; }
+    const el = tooltipElementAtPoint(e.clientX, e.clientY);
+    const text = el && el.dataset && el.dataset.tooltip;
+    if (text) {
+      activeTooltip = { el, mode: 'pointer', x: e.clientX, y: e.clientY };
+      renderActiveTooltip();
+    } else {
+      hideTooltip();
+    }
+  });
+  document.addEventListener('mouseleave', hideTooltip);
+
+  // Touch: long-press (500ms, without moving) on a tooltip-bearing control
+  // shows its tooltip anchored to the control; a plain tap keeps its normal
+  // meaning (toggle/focus) and dismisses any visible tooltip, as does scrolling.
+  function showTipForElement(el) {
+    activeTooltip = { el, mode: 'element' };
+    renderActiveTooltip();
   }
 
   let pressTimer = null;
@@ -4483,12 +4518,12 @@ initStateFromSources();
     pressShown = false;
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
-    if (isComboboxOpen(t.clientX, t.clientY)) { tip.style.display = 'none'; return; }
+    if (isComboboxOpen(t.clientX, t.clientY)) { hideTooltip(); return; }
     const el = tooltipElementAtPoint(t.clientX, t.clientY);
     if (el) {
       pressTimer = setTimeout(() => { pressShown = true; showTipForElement(el); }, 500);
     } else {
-      tip.style.display = 'none';
+      hideTooltip();
     }
   }, { passive: true });
   document.addEventListener('touchmove', () => {
@@ -4501,11 +4536,11 @@ initStateFromSources();
     // After a long-press, suppress the synthetic click so the control isn't
     // toggled, and leave the tooltip up until the next tap or scroll.
     if (pressShown && e.cancelable) e.preventDefault();
-    else if (!pressShown) tip.style.display = 'none';
+    else if (!pressShown) hideTooltip();
   }, { passive: false });
   document.addEventListener('touchcancel', () => { clearTimeout(pressTimer); }, { passive: true });
   document.addEventListener('scroll', () => {
-    if (Date.now() - lastTouchAt < 1500) tip.style.display = 'none';
+    if (Date.now() - lastTouchAt < 1500) hideTooltip();
   }, true);
 })();
 

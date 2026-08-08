@@ -188,6 +188,20 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
   await page.locator('#bAtkMod').hover();
   await expect(page.locator('#tt')).toHaveText(defenderTrace);
 
+  // Recalculation can occur while the pointer remains stationary (keyboard changes, restore,
+  // presets). Keep the already-visible tooltip synchronized, then hide it when its last trace is
+  // removed; requiring another mousemove would expose stale mechanics.
+  await setValue(page, 'bLevel', 'elite');
+  const updatedDefenderTrace = await page.locator('#bAtkMod').getAttribute('data-tooltip');
+  expect(updatedDefenderTrace).toContain('Level (phase c)');
+  await expect(page.locator('#tt')).toHaveText(updatedDefenderTrace);
+  await setValue(page, 'bLevel', 'normal');
+  await setValue(page, 'bWeapon', 'normal');
+  await setValue(page, 'bAbil_highPrayer', false);
+  await expect(page.locator('#bAtkMod')).toBeHidden();
+  await expect(page.locator('#bAtkMod')).not.toHaveAttribute('data-tooltip', /.+/);
+  await expect(page.locator('#tt')).toBeHidden();
+
   // No applied trace means no output and no tooltip. Existing explanatory tooltips on
   // editable controls remain ordinary model descriptions, never modifier chains.
   await expect(page.locator('#bHPMod')).toHaveText('');
