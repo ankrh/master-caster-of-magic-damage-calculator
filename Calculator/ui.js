@@ -190,6 +190,7 @@ function buildAbilitiesUI(prefix) {
       lbl.dataset.calcKey = abil.calcKey || abil.key;
       lbl.dataset.abilSource = abil.source || '';
       lbl.dataset.abilGroup = currentGroup;
+      if (abil.alwaysVisible) lbl.dataset.alwaysVisible = 'true';
       if (currentSubgroup) lbl.dataset.abilSubgroup = currentSubgroup;
       if (abil.realm) lbl.dataset.realm = abil.realm;
       if (abil.tooltip) lbl.dataset.tooltip = abil.tooltip;
@@ -202,6 +203,7 @@ function buildAbilitiesUI(prefix) {
       row.dataset.calcKey = abil.calcKey || abil.key;
       row.dataset.abilSource = abil.source || '';
       row.dataset.abilGroup = currentGroup;
+      if (abil.alwaysVisible) row.dataset.alwaysVisible = 'true';
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       row.dataset.abilDefault = abil.options[0][0];
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
@@ -215,6 +217,7 @@ function buildAbilitiesUI(prefix) {
       row.dataset.calcKey = abil.calcKey || abil.key;
       row.dataset.abilSource = abil.source || '';
       row.dataset.abilGroup = currentGroup;
+      if (abil.alwaysVisible) row.dataset.alwaysVisible = 'true';
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       const min = abil.min != null ? abil.min : -50;
@@ -228,6 +231,7 @@ function buildAbilitiesUI(prefix) {
       row.dataset.calcKey = abil.calcKey || abil.key;
       row.dataset.abilSource = abil.source || '';
       row.dataset.abilGroup = currentGroup;
+      if (abil.alwaysVisible) row.dataset.alwaysVisible = 'true';
       if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.realm) row.dataset.realm = abil.realm;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
@@ -2505,12 +2509,13 @@ function updateAbilityVisibility() {
     items.forEach(item => {
       const active = isAbilityActive(item);
       const focused = item.contains(document.activeElement);
+      const alwaysVisible = item.dataset.alwaysVisible === 'true';
       // An effect the selected version cannot have is never shown; neither toggle reveals it.
       // Everything else follows its own group's toggle, so "show all" on Abilities reveals a
       // roster unit's greyed-out, locked remainder as well as its inactive ones.
       const gated = item.classList.contains('abil-version-gated');
       const hiding = isGroupHiding(section, item.dataset.abilGroup || '');
-      item.classList.toggle('abil-hidden', gated || (hiding && !active && !focused));
+      item.classList.toggle('abil-hidden', gated || (hiding && !active && !focused && !alwaysVisible));
     });
 
     // Hide subgroup headers when all their children are hidden

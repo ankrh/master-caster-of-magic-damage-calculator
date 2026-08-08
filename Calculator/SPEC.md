@@ -256,6 +256,14 @@ its editable base identity (`isHero`, `baseRace`, `baseFantastic`). Predefined r
 their source IDs; custom units use null IDs. Every derivation creates a fresh calculated identity
 whose live `race` and `fantastic` values start from the corresponding base fields. Template-based
 states such as Chosen or Golem are predicates derived when needed, never persisted booleans.
+The calculation then applies a version-scoped identity sequence to the fresh live fields: modern
+Chosen/Avatar and Combat Summoned units become live Fantastic, Construct Catapult becomes live
+Nature + Fantastic, and Warlord Spirit Link can later clear only the live Fantastic predicate while
+retaining the base predicate and fantastic-only grants. CoM 1 retains its constructor branch for
+Catapult, Centaurs and Paladins; Construct Catapult also receives Magic Weapons, and Zombies start
+with `To Block = -1` (a ten-percentage-point penalty). Call to Arms Paladins use live Life where
+that spell-specific condition is selected. These writes are version/template gated and no-op
+identity writes are omitted from the calculated-stat trace.
 The card exposes `Hero`, `Fantastic`, and `Base race / realm` as independent editable custom-unit
 controls; no combined user-facing `unitType` control is authoritative. The legacy compact token
 remains only as an internal compatibility projection for existing preset callers. The
@@ -270,8 +278,9 @@ Order is load-bearing:
    them (Lava Smelter, Sancta Basilica, Divine Protection, Lucky Star, Pillar of Faith,
    Fortification, Insulation).
 2. Magic-Immunity and Illusion-Immunity curse gating is applied.
-3. Effective unit type is resolved (Chaos Channels, Black Channels, Undead conversions
-   can change a unit's realm, which in turn gates other effects).
+3. The ordered identity/CAS conversions are applied to live race and Fantastic fields. The
+   compact `unitType` value is projected from those live fields only after the sequence, so
+   base and live predicates remain available to later gates.
 4. Loadout and experience eligibility are decided — fantastic creatures get neither by
    default; Warlord's Spirit Link widens *level* eligibility only, never loadout.
 5. Stat modifiers, level bonuses, weapon/armour bonuses apply.

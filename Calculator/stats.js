@@ -96,6 +96,80 @@ function initializeUnitIdentity(input) {
   };
 }
 
+function legacyUnitTypeFromLiveIdentity(identity) {
+  if (!identity || !identity.fantastic) return identity && identity.isHero ? 'hero' : 'normal';
+  const realm = {
+    Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
+    Sorcery: 'sorcery', Arcane: 'arcane',
+  }[identity.race] || 'arcane';
+  return 'fantastic_' + realm;
+}
+
+function applyLiveUnitType(identity, unitType) {
+  const value = unitType || 'normal';
+  const fantastic = value.startsWith('fantastic_');
+  const realm = value.startsWith('fantastic_')
+    ? value.slice('fantastic_'.length)
+    : value.startsWith('normal_') ? value.slice('normal_'.length) : null;
+  const race = {
+    life: 'Life', death: 'Death', chaos: 'Chaos', nature: 'Nature',
+    sorcery: 'Sorcery', arcane: 'Arcane',
+  }[realm];
+  // `fantastic_arcane` is also the compact compatibility projection for an unaligned
+  // custom/special identity. Do not overwrite an otherwise meaningful source race such
+  // as Generic, or an intentionally blank custom race, with that fallback label.
+  if (race && (realm !== 'arcane' || identity.race === 'Arcane')) identity.race = race;
+  identity.fantastic = fantastic;
+}
+
+// Identity conversions are deliberately kept separate from the compact unitType compatibility
+// token. The source identity and editable base predicates remain intact; this sequence mutates
+// only the fresh live fields used by later stat gates. The template/name checks here correspond
+// to execution-time reads in the modern/DOS constructors and are not persisted UI state.
+function applyOrderedIdentityConversions(identity, abilities, version, meta = {}) {
+  const live = { ...identity, race: identity.baseRace, fantastic: identity.baseFantastic };
+  const trace = [];
+  const isCoM1 = version === 'com_6.08';
+  const isModern = version && version.startsWith('com2_');
+  const combatSummonedValue = !!(abilities && abilities.combatSummoned);
+  const isConstructCatapult = !!(combatSummonedValue
+    && !meta.isHero
+    && ((isModern && identity.templateId === 37)
+      || (isCoM1 && identity.specialUnit === 'catapult')));
+  const isCoM1SummonBranch = isCoM1 && combatSummonedValue
+    && [28, 54, 113].includes(identity.templateId);
+  const isCallToArmsPaladins = !!(abilities && abilities.callToArmsPaladins)
+    || !!(combatSummonedValue && /\bPaladins\b/i.test(meta.name || ''));
+
+  const identitySteps = [
+    statStep({ id: 'identity:zombies', phase: 'base', writes: ['fantastic'],
+      when: () => isCoM1 && identity.specialUnit === 'zombies',
+      apply: u => { u.fantastic = true; } }),
+    statStep({ id: 'identity:chosen', phase: 'a', writes: ['fantastic'],
+      when: () => isModern && identity.specialUnit === 'chosen',
+      apply: u => { u.fantastic = true; } }),
+    statStep({ id: 'identity:combatSummoned', phase: 'a', writes: ['fantastic'],
+      when: () => isModern && combatSummonedValue,
+      apply: u => { u.fantastic = true; } }),
+    statStep({ id: 'identity:constructCatapult', phase: isCoM1 ? 'base' : 'a', writes: ['race', 'fantastic'],
+      when: () => isConstructCatapult && (isModern || isCoM1),
+      apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
+    statStep({ id: 'identity:com1SummonBranch', phase: 'base', writes: ['race', 'fantastic'],
+      when: () => isCoM1SummonBranch,
+      apply: u => { u.race = identity.templateId === 54 ? 'Nature' : 'Life'; u.fantastic = true; } }),
+    statStep({ id: 'identity:callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
+      when: () => isModern && isCallToArmsPaladins,
+      apply: u => { u.race = 'Life'; u.fantastic = true; } }),
+    statStep({ id: 'identity:legacyConversions', phase: 'a', writes: ['race', 'fantastic'],
+      apply: u => applyLiveUnitType(u, determineEffectiveUnitType(legacyUnitTypeFromLiveIdentity(u), abilities, version)) }),
+    statStep({ id: 'identity:spiritLink', phase: 'd', writes: ['fantastic'],
+      when: () => !!(version && version.startsWith('com2_warlord')) && !!(abilities && abilities.spiritLink),
+      apply: u => { u.fantastic = false; } }),
+  ];
+  runStatSteps(identitySteps, live, { version, base: identity, trace });
+  return { identity: live, trace, isConstructCatapult };
+}
+
 // Lava Smelter (Warlord): the selector records one permanent mineral-pair grant already
 // carried by the unit. New Dwarf units receive it when trained; Upgrade & Retrain can apply
 // it later to any existing non-fantastic unit. Returns the ability set with the grant merged
@@ -357,6 +431,13 @@ function deriveUnitStats(input) {
   const baseUnitType = legacyUnitTypeFromIdentity(identity);
   const isHero = !!identity.isHero;
   const isFantasticBase = !!identity.baseFantastic;
+  const isCoM1 = version === 'com_6.08';
+  const suppliedAbilities = { ...(input.abilities || {}) };
+  // Golem's constructor write is intrinsic and must survive direct calculator/Matrix calls,
+  // even when the DOM-derived Elements control is not present in the caller's ability map.
+  if (version.startsWith('com2_') && identity.specialUnit === 'golem') {
+    suppliedAbilities.elemArmor = 'resistElements';
+  }
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
   // Lava Smelter folds its granted ability in here so every downstream read sees it.
   // Race-exclusive building enchantments gate on the unit's intrinsic race/name, supplied
@@ -372,7 +453,7 @@ function deriveUnitStats(input) {
     applyPillarOfFaithGrant(
     applyDivineProtectionGrant(
       applySanctaBasilicaGrant(
-        applyLavaSmelterGrant(markIntrinsicLucky(input.abilities || {}), version, baseUnitType),
+        applyLavaSmelterGrant(markIntrinsicLucky(suppliedAbilities), version, baseUnitType),
         version, isHero ? 'hero' : baseUnitType, unitRace, unitName),
       version),
     version),
@@ -380,8 +461,14 @@ function deriveUnitStats(input) {
     version),
     version, baseUnitType, isHero));
   const destinyActive = destinyActiveForUnit(abilities, version);
-  const unitTypeRaw = baseUnitType;
-  const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
+  const identityConversion = applyOrderedIdentityConversions(identity, abilities, version, {
+    isHero,
+    name: unitName,
+  });
+  Object.assign(identity, identityConversion.identity);
+  const unitTypeRaw = legacyUnitTypeFromLiveIdentity(identity);
+  const unitTypeVal = unitTypeRaw;
+  const isFantasticLive = !!identity.fantastic;
   const loadoutEligible = !isFantasticBase && !destinyActive;
   // Spirit Link (Warlord): grants a fantastic creature sentience so it can earn
   // experience levels. It does NOT grant weapon/armor loadout, so only level
@@ -450,13 +537,20 @@ function deriveUnitStats(input) {
   // eliminates thrown attacks and Large Shield for the rest of combat (below).
   // Rust targets an enemy regular (non-fantastic) unit; fantastic creatures are immune.
   const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust)
-    && !isFantasticBase;
+    && !isFantasticLive;
   // Zombies are the one fantastic unit affected by weapon quality: a unit raised as
   // Zombies keeps its magic/mithril/adamantium weapons (a known game quirk), so weapon
   // eligibility gets a Zombies exception while armor and level stay fantastic-gated.
   const weaponEligible = loadoutEligible || identity.specialUnit === 'zombies' || unitName === 'Zombies';
-  const weaponInput = weaponEligible ? input.weapon : 'normal';
-  const weaponPreRust = (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
+  // CoM1's Catapult constructor writes weapon quality 9 only for the combat-summoned
+  // Construct Catapult path. That is a direct Magic Weapons write: it gives the Boulder
+  // channel +10% To Hit and lets it bypass Weapon Immunity, while an ordinary Catapult
+  // remains a normal, non-fantastic siege unit.
+  const constructCatapult = isCoM1 && identity.specialUnit === 'catapult'
+    && !!abilities.combatSummoned;
+  const weaponInput = constructCatapult ? 'normal' : (weaponEligible ? input.weapon : 'normal');
+  const weaponPreRust = constructCatapult ? 'magic'
+    : (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
   const weapon = rustActive ? 'normal' : weaponPreRust;
   const wpn = weaponBonus(weapon);
   // Armor quality: CoM/CoM2/Warlord only (doesn't exist in MoM), and unlike
@@ -504,7 +598,7 @@ function deriveUnitStats(input) {
   // The calculator's single RTB slot represents it directly when that slot is
   // empty, and adds it normally when the selected attack is already Thrown.
   const explosiveEligible = isWarlord && !!abilities.explosive
-    && (!isFantasticBase || !!abilities.sapiens);
+    && (!isFantasticLive || !!abilities.sapiens);
   const bombsGrenades = explosiveEligible
     && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
   if (bombsGrenades && rangedType === 'none' && thrownType === 'none') {
@@ -618,7 +712,6 @@ function deriveUnitStats(input) {
   const isCoM2 = version.startsWith('com2');
   // CoM 1 (the DOS build). Kept distinct from `isCoM2` wherever a mechanic is settled for
   // one engine and open for the other — see the Warp Creature block and the gaze ladder.
-  const isCoM1 = version.startsWith('com_');
   const focusMagicActive = !!(abilities && abilities.focusMagic) && version.startsWith('com');
   const hasMagicRangedForFocus = calcBaseRtb > 0
     && (rangedType === 'magic_c' || rangedType === 'magic_n'
@@ -753,6 +846,10 @@ function deriveUnitStats(input) {
     ...((abilities && abilities.rust && !rustActive) ? { rust: false } : {}),
     ...((abilities && (abilities.trueSight || abilities.eyeOfHeaven)) ? { illusionImmunity: true } : {}),
     unitType: unitTypeVal,
+    baseRace: identity.baseRace,
+    baseFantastic: identity.baseFantastic,
+    liveRace: identity.race,
+    liveFantastic: identity.fantastic,
     mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeWithBlazingEyes,
     innerPower: innerPowerEligible ? abilities.innerPower : false,
@@ -981,7 +1078,7 @@ function deriveUnitStats(input) {
   const hasWarlordBlade = warlordCombatFlameBlade || warlordFieryBlade;
   const nonWarlordFlameBlade = !!abilities.flameBlade && !isWarlord;
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : (abilities.metalFires ? 1 : 0);
-  const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
+  const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticLive;
   // M4, resolved at R1 stage 9. The two sources fall in different regions — Fiery Fury in
   // `b` (UnitCalcPre.CAS:832-846), the blades in `c` — and do not stack, which the bucket
   // model could only express as a single `Math.max` booked whole to `c`. Two steps carry it
@@ -1295,6 +1392,12 @@ function deriveUnitStats(input) {
         u.res = calcBaseRes; u.def = calcBaseDef; u.atk = calcBaseAtk; u.rtb = calcBaseRtb;
         u.hp = calcBaseHP; u.gaze = baseGazeRanged; u.doomGaze = baseDoomGaze;
       } }),
+    // CoM1's Zombies constructor starts the live To Block field at -1. This is an
+    // identity-sourced write, but it belongs on the calculated stat sequence so its
+    // effect is attributed to To Block rather than to the Special unit control.
+    statStep({ id: 'identity:zombies:toBlock', phase: 'base', writes: ['toBlk'],
+      when: () => isCoM1 && identity.specialUnit === 'zombies',
+      apply: u => { u.toBlk -= 1; } }),
     ...abilByPhase.base,
     statStep({ id: 'altarOfTheMoon', phase: 'base', writes: ['res', 'rtb'],
       apply: u => { u.res += altarOfTheMoonResMod; u.rtb += altarOfTheMoonRtbMod; } }),
@@ -1674,10 +1777,12 @@ function deriveUnitStats(input) {
   // `lifeSteal` is on the record because Pneuma Field's `SETSTAT(U,AFLifeSteal,…)` is a write to
   // a unit field at a position, like any other. It is seeded from the effective ability set —
   // the Gnoll Witchdoctor altar grant included — since that is the value standing at region `d`.
+  const statTrace = [];
   const statUnit = runStatSteps(statSteps,
     { res: 0, def: 0, atk: 0, rtb: 0, hp: 0, gaze: 0, doomGaze: 0,
       toHit: 0, toBlk: 0, lifeSteal: existingLifeSteal },
     { version,
+      trace: statTrace,
       slots: {
         melee: hasMeleeAttack, rtb: rtbStatActive,
         ranged: rtbStatActive && rangedType !== 'none',
@@ -1931,6 +2036,8 @@ function deriveUnitStats(input) {
     figs: baseFigs + (altarOfTheSun ? 1 : 0) + (alumniOfAcademy ? 2 : 0),
     atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, isHero, generic: !!input.generic,
     identity,
+    identityTrace: identityConversion.trace,
+    statTrace,
     dmg: Math.max(0, parseInt(input.dmg) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,

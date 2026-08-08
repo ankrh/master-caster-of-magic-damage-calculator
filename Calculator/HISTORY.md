@@ -1,5 +1,20 @@
 # Calculator work history
 
+## 2026-08-08 -- R8.3 ordered live identity and encounter conversions
+
+R8.3 now keeps source/template identity, editable base predicates, and calculated live race and
+Fantastic state separate through the full derivation path. Modern Chosen/Avatar, Combat Summoned,
+Construct Catapult, and Call to Arms Paladins follow version/template-scoped live conversions;
+Warlord Spirit Link clears only the live Fantastic predicate after preserving its fantastic-only
+bonuses. CoM1 retains the Catapult/Centaur/Paladin summon branch, gives Construct Catapult Nature
+and Magic Weapons, and starts Zombies at To Block -1. The Construct Catapult weapon write reaches
+the Boulder channel as +10% To Hit and Weapon Immunity bypass. Combat Summoned is an independent,
+always-visible encounter condition and invalid or no-op identity writes are omitted from traces.
+
+Focused identity coverage covers modern live-Fantastic conversion, direct Breakthrough inputs,
+spell-specific realms, CoM1 constructor writes, the historical Centaur branch, and the all-version
+encounter control.
+
 ## 2026-08-08 -- R8.2 independent identity controls
 
 R8.2 is complete. The unit cards now expose independent Hero, Fantastic, and Base race/realm

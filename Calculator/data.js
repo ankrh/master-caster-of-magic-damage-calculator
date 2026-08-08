@@ -123,6 +123,10 @@ const ABILITY_DEFS = [
 
 const ENCHANTMENT_DEFS = [
   // All versions: Received bonuses on top, then Elements, then Chaos Channels.
+  { key: 'combatSummoned', label: 'Combat Summoned', type: 'bool', alwaysVisible: true, group: 'Enchantments', subgroup: '_All versions bools',
+    tooltip: 'Encounter condition: the unit was summoned during combat.\nModern CoM2/Warlord: the live unit is Fantastic.\nCoM1: inert except for the version-specific Construct Catapult path.' },
+  { key: 'callToArmsPaladins', label: 'Call to Arms: Paladins', type: 'bool', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'life',
+    tooltip: 'Spell-specific encounter condition. Paladins summoned by Call to Arms use the live Life realm.' },
   { key: 'resistanceToAll', label: 'Received res. to all', type: 'num', match: 'ResistancetoAll', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X resistance.' },
   { key: 'holyBonus', label: 'Received holy bonus', type: 'num', match: 'HolyBonus', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X melee attack, defense, and resistance.\nCoM 1 & 2 & Warlord: Also +X ranged, thrown, and breath attack.' },
   { key: 'elemArmor', label: 'Elements', type: 'select', options: [['none','None'],['resistElements','Resist Elem.'],['elementalArmor','Elem. Armor']], group: 'Enchantments', subgroup: 'All versions', realm: 'nature', tooltip: 'Resist Elements:\nDefense bonus vs magical ranged and breath attacks; resistance\nbonus vs Stoning Touch and Stoning Gaze.\nMoM 1.31 & 1.60: +3. Defense applies to Chaos/Nature magical\nranged, breath, Immolation, and Wall of Fire.\nCoM 1: +4 defense vs all magical ranged, breath, Immolation,\nand Wall of Fire.\nCoM 2 & Warlord: +4 defense vs all magical ranged and breath.\nElemental Armor:\nMoM 1.31 & 1.60: +10 defense vs Chaos/Nature magical ranged,\nbreath, Immolation, and Wall of Fire; +10 resistance vs Stoning\nTouch and Stoning Gaze.\nCoM 1: +12 defense vs all magical ranged, breath, Immolation,\nand Wall of Fire.\nCoM 2 & Warlord: +12 defense vs all magical ranged and breath.' },
