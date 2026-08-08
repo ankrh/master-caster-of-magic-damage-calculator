@@ -1,5 +1,21 @@
 # Calculator work history
 
+## 2026-08-09 -- R9 enforceable stat-formula provenance
+
+R9 audited every source-authored stat modification in the calculator, including ordered
+`deriveUnitStats` writes, ability-emitted transforms, direct helper formulas, dynamic chance
+projection and resolution-time effective-stat transforms. Adjacent structured provenance now
+covers 172 formula IDs: 83 cite exact implementation ranges (and runtime-table assignments where
+loaded constants are used), while 89 are explicitly `UNVERIFIED` rather than presented as
+established behavior. R9-G1 retains those reconstruction gaps as live work.
+
+The durable `npm run provenance` audit mechanically discovers formula constructors and explicit
+direct-formula declarations, checks comment adjacency and uniqueness, resolves every cited path
+and narrow range, content-checks implementation gates/arithmetic and table assignments, reconciles
+the live gap count, and requires every Calculator JavaScript file to be formula-bearing, generated,
+or explicitly excluded. Focused tooling checks exercise discovery and the repository audit. R9
+changed provenance and enforcement only; calculator behavior is unchanged.
+
 ## 2026-08-08 -- R7.4 calculated-output modifier tooltips
 
 R7 is complete. The unit cards retain one final modified-value column beside each editable base

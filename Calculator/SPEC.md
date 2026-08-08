@@ -662,6 +662,21 @@ A version's roster is authoritative only as a faithful derivation of its source 
 `Unit rosters/`; the in-app `units_<version>.js` files are build products. Generator
 mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
 
+Every source-authored game formula that derives, writes, replaces, scales, clamps, or gates a
+unit/combat stat has an adjacent `PROVENANCE[id]` comment. `VERIFIED` comments name the applicable
+versions and cite an exact, narrow line range in the DOS C reconstruction, Caster Pascal
+reconstruction, or current Warlord CAS that contains both the eligibility gate and arithmetic.
+Loaded constants additionally cite their `TABLE=` assignment. If no matching implementation has
+been reconstructed, the comment says `UNVERIFIED` and records the live gap and strongest pointer;
+such a formula is implemented behavior, not an established source claim.
+
+`npm run provenance` enforces unique adjacency, source existence and range bounds, implementation
+content, runtime-table assignments, the live backlog gap count, and complete classification of
+every JavaScript file under `Calculator/`. The audited formula files are `stats.js` and
+`combat.js`. Generated `units_*.js` rosters, generic probability math and the generic step runner,
+matrix orchestration, UI/data declarations and formatting, and the vendored compression library
+are deliberately classified as non-formula sources.
+
 ## UI contract
 
 - Two symmetric panels (attacker `a`, defender `b`) with identical stat and ability

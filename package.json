@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "provenance": "node tools/provenance_audit.js && node tools/provenance_audit_tests.js"
   },
   "repository": {
     "type": "git",

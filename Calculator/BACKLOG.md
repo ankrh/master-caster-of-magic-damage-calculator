@@ -31,18 +31,16 @@ States: `ready`, `open`, `deferred`, `blocked`. Costs: `free`, `small`, `medium`
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **R9** | Tie every calculator stat-modification formula directly to the exact implementation-source line that establishes it. |
-| 2 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
-| 3 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
-| 4 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
-| 5 | **F5–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
-| 6 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
+| 1 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
+| 2 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
+| 3 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
+| 4 | **F5–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
+| 5 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Structural and reconstruction work
 
 | ID | Task | State | Cost | Evidence / dependency |
 |---|---|---|---|---|
-| R9 | Add an adjacent source-code provenance comment to every game-derived stat-modification formula in `Calculator/`. For every applicable version, the comment must cite the exact line or narrow range in the strongest implementation source—the DOS C reconstruction, Caster Pascal reconstruction, or current Warlord CAS—that contains the same eligibility gate and arithmetic; when a runtime table supplies a constant, cite that table line as well. Calculator code, tests, specs, backlog/history, manuals, helptext and analysis prose are not substitutes for the implementation citation. If no matching implementation line has been reconstructed, label the formula `UNVERIFIED` and record the evidence gap instead of presenting it as established behavior. | ready | large | `CLAUDE.md` source-of-truth rules; `Reference docs/DOS reconstructed/`; `Reference docs/Caster binary/`; current Warlord CAS; all game-derived stat writes in `Calculator/` |
 | R8 | Replace the card's mutually exclusive `unitType` value with a faithful, low-clutter identity model: roster/template identity remains internal, the card exposes independent base Hero, Fantastic and Race/realm fields, and calculation owns separate mutable live Race/realm and Fantastic state. A compact Special unit selector explains template-ID exceptions without exposing raw IDs. Closes after R8.1–R8.4 and resolves F3/F4. | done | large | modern `unitT`; CoM2 units, Golem and Chosen rules; DOS reconstruction R6.1b; Warlord `STypeID` gates |
 | R8.2 | Replace the combined Unit Type control with independent **Hero**, **Fantastic** and **Base race/realm** controls plus a version-gated **Special unit** selector. Predefined rosters populate and lock these fields; Custom makes the base fields and selector editable. Start with **Other / no exception**, **Golem**, **Chosen / Avatar**, **Zombies**, and **Catapult** where applicable. Show each derived effect at its normal point of use (for example locked Resist Elements sourced from Golem), but attach ordered identity traces only to affected calculated unit-stat outputs such as live Fantastic or Race/realm—not to the Special unit, ability, enchantment or condition controls. Do not expose numeric template or hero IDs. | done | medium | `ui.js` `unitType`/`unitIdentity`; UI contract; R8.1 |
 | R8.3 | Execute special-unit and identity conversions in binary/CAS order while retaining both base and live predicates. Cover Golem → Resist Elements; Chosen/Avatar → live Life + Fantastic; CoM 1 Zombies → initial `toblock = -1`; and CoM 1 Construct Catapult → live Fantastic plus Magic Weapons, whose Boulder consequences are +10% To Hit and Weapon Immunity bypass. Add **Combat Summoned** as an always-visible, freely selectable encounter condition rather than folding it into Catapult identity or hiding/disabling it by template; apply only valid per-version/per-template effects and omit invalid/no-op selections from every trace. Preserve the CoM 1 Catapult/Centaur/Paladin Fantastic branch, while noting that current CoM 1 removed Call Centaurs and replaced it with Wild Boars. Cover modern live-Fantastic conversion, direct Breakthrough gating, and spell-specific live realm where required (including Construct Catapult → Nature and Call to Arms Paladins → Life). Audit every calculator-relevant modern/Warlord `unittype`/`STypeID` branch and retain template ID internally wherever the executing rule reads it. Applied identity writes feed the ordered trace on their affected calculated stat outputs only. | done | large | `Units.RecalculateUnits.pas:507,1348,1832,1853`; `UnitCalcPre.CAS`/`UnitCalc.CAS` `STypeID`; R6.1b evidence; `CoM1manual.HTML:22837-22841,33703-33706`; `CoM2 helptext.TXT:290-296` |
@@ -89,6 +87,12 @@ The originally assigned R6 constructor/recompute/combat surface closed with R6.3
 the checker, and R6.5a–d separately reconstructed the routines exposed by the completed
 overlay-aware call audit; none was silently absorbed into R6.3. A material post-review change to
 R6.1a–R6.2f requires the affected reviewer to re-check it.
+
+## Provenance evidence gaps
+
+| ID | Evidence gap | State | Cost | Strongest pointer |
+|---|---|---|---|---|
+| R9-G1 | Reconstruct or locate exact implementation gates and arithmetic for the `89` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | open | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
 
 ## Confirmed and suspected defects
 
