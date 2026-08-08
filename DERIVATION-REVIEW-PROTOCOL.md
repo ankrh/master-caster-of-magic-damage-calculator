@@ -34,8 +34,8 @@ The standard pair is:
 
 | Role | Model and effort |
 |---|---|
-| Main agent, independent implementer and final integrator | GPT-5.6 Luna, Max |
-| Subagent and independent implementer | GPT-5.6 Sol, High |
+| Main agent, independent implementer and final integrator | GPT-5.6 Luna, XHigh |
+| Subagent and independent implementer | GPT-5.6 Sol, Medium |
 
 If either exact model or effort is unavailable, stop and tell AKH; never silently substitute a
 different configuration. A differently configured subagent must receive a self-contained task
