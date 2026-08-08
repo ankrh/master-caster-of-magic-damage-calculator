@@ -166,6 +166,80 @@ function runIdentityChecks(ctx) {
   assert(first.identity !== second.identity, 'Every deriveUnitStats invocation owns a separate calculated identity record');
   assertEqual(second.identity.race, 'Life', 'A later derivation resets live race from baseRace');
   assertEqual(second.identity.fantastic, false, 'A later derivation resets live Fantastic from baseFantastic');
+
+  const chosen = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 34,
+      isHero: true, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen' }),
+  }));
+  assertEqual(chosen.identity.race, 'Life', 'Chosen writes live Life');
+  assertEqual(chosen.identity.fantastic, true, 'Chosen writes live Fantastic');
+  assertEqual(chosen.identityTrace.map(t => t.id).join(','), 'identity:chosen',
+    'Identity writes are exposed on the calculated output trace');
+  assert(chosen.statTrace.some(t => t.id === 'identity:chosen'),
+    'Identity writes are included with affected calculated-stat output trace');
+
+  const summoned = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { combatSummoned: true },
+  }));
+  assertEqual(summoned.identity.fantastic, true, 'Combat Summoned writes live Fantastic');
+
+  const construct = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { combatSummoned: true },
+    identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 37,
+      baseRace: 'Special', baseFantastic: false }),
+  }));
+  assertEqual(construct.identity.race, 'Nature', 'Construct Catapult writes live Nature');
+  assertEqual(construct.identity.fantastic, true, 'Construct Catapult writes live Fantastic');
+
+  const callToArms = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { callToArmsPaladins: true },
+    identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 113,
+      baseRace: 'High Men', baseFantastic: false }),
+  }));
+  assertEqual(callToArms.identity.race, 'Life', 'Call to Arms Paladins writes live Life');
+  assertEqual(callToArms.identity.fantastic, true, 'Call to Arms Paladins writes live Fantastic');
+
+  const invalidCallToArms = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', name: 'Paladins', abilities: { callToArmsPaladins: true },
+    identity: ctx.createCustomUnitIdentity('com2_1.05.11', { baseRace: 'High Men' }),
+  }));
+  assertEqual(invalidCallToArms.identity.race, 'High Men', 'Call to Arms ignores display names');
+  assertEqual(invalidCallToArms.identityTrace.length, 0, 'Invalid Call to Arms is trace-free');
+
+  const zombies = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08',
+    identity: ctx.createCustomUnitIdentity('com_6.08', { specialUnit: 'zombies' }),
+  }));
+  assertClose(zombies.toBlock, 0.2, 'CoM1 Zombies convert toblock=-1 to 20% To Block');
+  assertEqual(zombies.statTrace.find(t => t.id === 'identity:zombies:toBlock').changes.toBlk.delta, -10,
+    'CoM1 Zombies trace the ten-percentage-point engine step');
+
+  const breakthroughNormal = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
+  }));
+  assertEqual(breakthroughNormal.atk, 3, 'Normal Breakthrough derives the melee package');
+  assertEqual(breakthroughNormal.def, 3, 'Normal Breakthrough derives the defense package');
+  const breakthroughChosen = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
+    identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 34,
+      isHero: true, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen' }),
+  }));
+  assert(!breakthroughChosen.statTrace.some(t => t.id === 'breakthrough:normal'),
+    'Live-Fantastic Chosen does not receive the normal Breakthrough package');
+  const breakthroughSummoned = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { breakthrough: 'melee', combatSummoned: true }, atk: 2, def: 2,
+  }));
+  assertEqual(breakthroughSummoned.atk, 3, 'Combat Summoned derives Breakthrough attack');
+  assertEqual(breakthroughSummoned.def, 3, 'Combat Summoned derives Breakthrough defense');
+  const breakthroughNoncorporeal = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { breakthrough: 'melee', nonCorporeal: true }, atk: 2, def: 2,
+    identity: ctx.createCustomUnitIdentity('com2_1.05.11', {
+      baseRace: 'Sorcery', baseFantastic: true,
+    }),
+  }));
+  assertEqual(breakthroughNoncorporeal.atk, 3, 'Non-Corporeal derives Breakthrough attack');
+  assertEqual(breakthroughNoncorporeal.def, 3, 'Non-Corporeal derives Breakthrough defense');
 }
 
 function runDeriveUnitStatsChecks(ctx) {
