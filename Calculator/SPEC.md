@@ -668,9 +668,10 @@ mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
   controls; `#swapBtn` exchanges them.
 - Result panels show, per side, the damage distribution and the chance the unit is
   destroyed; the melee breakdown grid shows one row per phase in resolution order.
-- **Matrix mode** computes attacker-vs-whole-roster ratios in Web Workers. The worker
-  must produce results identical to the main-thread `resolveCombat` — it calls the same
-  function, and any divergence is a bug.
+- **Matrix mode** computes attacker-vs-whole-roster ratios in Web Workers. Custom and roster
+  rows enter the same R8 identity-aware `deriveUnitStats` boundary as the main card. The main
+  thread sends those fully derived, identity-dependent stat records to the workers; workers
+  call the same `resolveCombat`, and any divergence is a bug.
 - Each panel is split into two titled sections. **Base stats and abilities** holds the
   editable stat fields and the unit's abilities. **Enchantments and conditions** holds the
   level, weapon and armour selects and damage already taken, followed by the enchantments.
@@ -700,6 +701,13 @@ mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
 - Selecting a predefined unit locks roster-owned Abilities but not Enchantments. External
   reform, research, building, and spell conditions must therefore be placed under
   Enchantments even when they derive a unit ability during calculation.
+- Swap exchanges every source/base identity field, selected roster, numeric/card field,
+  intrinsic ability and special-unit-derived UI state. It preserves hand-edited values on a
+  predefined selection and is an involution for any predefined/Custom pairing.
+- Presets may supply the R8 base identity as `{isHero, baseRace, baseFantastic, specialUnit}`.
+  Historical preset callers that supply `unitType` are translated once at this boundary. An
+  explicit R8 identity wins over that legacy token, while a predefined roster selection always
+  keeps the roster's own source/base identity.
 
 ### Tooltip content
 
@@ -716,19 +724,26 @@ lives in [CLAUDE.md](./CLAUDE.md).
 
 ## Persistence and sharing
 
-- Full page state is snapshotted as an id→value map plus unit identity, diffed against
-  defaults, LZ-string compressed, and stored in `localStorage`.
-- During R8.1 the persisted identity remains the legacy v1 `{race, name}` shape; the richer
-  source/base/calculated identity is an internal boundary and is reconstructed on restore.
-  R8.2 identity controls are part of that id→value map, so custom Hero/Fantastic/Base race or
-  realm and Special unit selections survive reloads and share links. The separate persisted
-  identity object remains the legacy v1 shape until the R8.4 schema migration; source/template
-  IDs and calculated identity are never serialized there.
+- Full page state uses schema v2: `{v: 2, ids, identity: {a, b}, generic}`. `ids` is the
+  default-diffed id→value control map and carries the selected version and roster selection.
+  Each side's identity record is exactly the editable base boundary
+  `{isHero, baseRace, baseFantastic, specialUnit}`, plus an optional internal display `name`
+  used by existing name-gated fixtures. The hidden compatibility `unitType`, calculated/live
+  `race` and `fantastic`, per-side `version`, `templateId`, and `heroTypeId` are never written.
+- Numeric template and hero-type IDs remain internal. Restore validates the version and roster
+  selection, then reconstructs those IDs and the authoritative base identity from that version's
+  roster. A Custom selection always reconstructs null source IDs and restores its independent
+  v2 base identity. Hand-edited card stats are applied afterwards and are not overwritten by
+  rebuilding roster locks.
+- The compressed v2 blob is stored under `pageState_v2`. The reader also accepts legacy v1
+  compressed/default-diffed blobs and full plain-JSON blobs under `pageState_v1`, including the
+  old `{race, name}` identity and hidden `unitType` boundary.
 - A share link carries the same blob in the URL fragment (`#s=…`) and takes precedence
   over `localStorage` on load.
-- Restoring must be order-safe: version first (which repopulates rosters and ability
-  panels), then identity, then control values, then visibility.
-- A corrupt blob must degrade to a clean default state, never throw on every reload.
+- Restoring is order-safe: version first (which repopulates rosters and ability panels), then
+  roster/source identity, then editable controls, then locking and visibility.
+- A corrupt local blob degrades to clean defaults and is discarded so it cannot throw on every
+  reload. A corrupt share blob is stripped and falls back to the recipient's local state.
 
 ## Invariants
 

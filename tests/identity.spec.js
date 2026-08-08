@@ -85,10 +85,14 @@ test('predefined identity fields lock and custom identity fields derive independ
   expect(report.persisted.ids).toMatchObject({
     aBaseHero: false, aBaseFantastic: true, aBaseRace: 'Chaos', aSpecialUnit: 'none',
   });
-  expect(report.persisted.identity.a).toMatchObject({ race: 'Chaos' });
+  expect(report.persisted.v).toBe(2);
+  expect(report.persisted.identity.a).toEqual({
+    isHero: false, baseRace: 'Chaos', baseFantastic: true, specialUnit: 'none',
+  });
   expect(report.persisted.identity.a).not.toHaveProperty('templateId');
   expect(report.persisted.identity.a).not.toHaveProperty('heroTypeId');
-  expect(report.persisted.identity.a).not.toHaveProperty('baseFantastic');
+  expect(report.persisted.identity.a).not.toHaveProperty('race');
+  expect(report.persisted.identity.a).not.toHaveProperty('fantastic');
   expectNoConsoleErrors(errors);
 });
 

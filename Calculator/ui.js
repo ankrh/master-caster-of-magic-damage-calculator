@@ -550,7 +550,6 @@ function readUnitStats(prefix, overrides) {
   const enemyEyeOfHeavenEl = el(enemyPrefix + 'Abil_eyeOfHeaven');
   const overrideValues = overrides || {};
   const identity = unitIdentityForDerivation(prefix, el('gameVersion').value);
-  const unitType = legacyUnitTypeFromIdentity(identity);
   return deriveUnitStats({
     prefix,
     version: el('gameVersion').value,
@@ -561,7 +560,6 @@ function readUnitStats(prefix, overrides) {
     weapon: el(prefix + 'Weapon').value,
     armor: el(prefix + 'Armor').value,
     rtbType: el(prefix + 'RtbType').value,
-    unitType,
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
@@ -1250,7 +1248,7 @@ function applyUnit(prefix, unitIndex) {
   document.getElementById(prefix + 'RtbType').value = predefinedUnitRtbType(unit);
   applyModernAttackFields(prefix, unitBaseStats[prefix].modernAttacks);
 
-  syncLegacyUnitTypeControl(prefix, predefinedUnitType(unit));
+  syncLegacyUnitTypeControl(prefix, legacyUnitTypeFromIdentity(unitIdentity[prefix]));
 
   clearUnitInnateLocks(prefix);
   const abilValues = parseAbilitiesFromUnit(unit);
@@ -1310,6 +1308,7 @@ function updateUnitLock(prefix, applyValues = true) {
     updateCustomLevelState(prefix);
   }
   updateSpecialUnitDerivedEffects(prefix);
+  syncLegacyUnitTypeControl(prefix);
   updateLoadoutLocks(prefix);
 }
 
@@ -1459,6 +1458,8 @@ function swapAttackerDefender() {
   }
 
   for (const abil of abilityUiDefs()) {
+    // unitType is a derived compatibility projection, not side-owned state.
+    if (abil.key === 'unitType') continue;
     const aEl = document.getElementById(abilityControlId('a', abil));
     const bEl = document.getElementById(abilityControlId('b', abil));
     if (!aEl || !bEl) continue;
@@ -1484,7 +1485,8 @@ function swapAttackerDefender() {
     }
   }
 
-  for (const field of ['BaseHero', 'BaseFantastic', 'BaseRace', 'SpecialUnit', 'Abil_unitType']) {
+  for (const field of ['BaseHero', 'BaseFantastic', 'BaseRace', 'SpecialUnit',
+    'IdentityPreGolemElemArmor']) {
     const aEl = document.getElementById('a' + field);
     const bEl = document.getElementById('b' + field);
     if (!aEl || !bEl) continue;
@@ -1509,8 +1511,16 @@ function swapAttackerDefender() {
 
   syncUnitDisplay('a');
   syncUnitDisplay('b');
-  updateUnitLock('a');
-  updateUnitLock('b');
+  // Rebuild roster source IDs and lock styling without re-applying roster values. A swap
+  // exchanges hand-edited fields too; applying the selection here would clobber them.
+  updateUnitLock('a', false);
+  updateUnitLock('b', false);
+  syncLegacyUnitTypeControl('a');
+  syncLegacyUnitTypeControl('b');
+  syncModernSpecialCard('a');
+  syncModernSpecialCard('b');
+  syncDosSpecialCard('a');
+  syncDosSpecialCard('b');
   updateTypeVisibility();
   updateAbilityVisibility();
   recalculate();
@@ -1534,7 +1544,7 @@ function findMatchingUnit(units, oldUnit) {
 
 function onVersionChange() {
   const version = document.getElementById('gameVersion').value;
-  // Version is persisted as part of the full page-state blob (pageState_v1) via the
+  // Version is persisted as part of the full page-state blob (pageState_v2) via the
   // recalculate save hook; no separate gameVersion_v1 write here.
   const aUnitSel = document.getElementById('aUnit');
   const bUnitSel = document.getElementById('bUnit');
@@ -1888,9 +1898,10 @@ function loadoutLockState(prefix) {
     isZombies = identity.specialUnit === 'zombies';
   } else {
     const unit = (unitDatabases[version] || []).find(u => u.id === parseInt(unitSel.value));
-    isHero = !!unit && unit.category === 'Heroes';
-    isFantastic = !!unit && predefinedUnitType(unit).startsWith('fantastic_');
-    isZombies = !!unit && unit.name === 'Zombies';
+    const identity = createRosterUnitIdentity(version, unit);
+    isHero = identity.isHero;
+    isFantastic = identity.baseFantastic;
+    isZombies = identity.specialUnit === 'zombies';
   }
   const spiritLinkEl = document.getElementById(prefix + 'Abil_spiritLink');
   const spiritLink = version.startsWith('com2_warlord') && !!(spiritLinkEl && spiritLinkEl.checked);
@@ -2042,8 +2053,30 @@ function applyPreset(name) {
   }
   clearAbilities('a');
   clearAbilities('b');
+  // R8 callers describe independent base identity directly. Historical presets remain
+  // compatible through a one-way translation of unitType at this boundary; the compact
+  // token never overwrites an explicit R8 identity.
+  function presetIdentity(s) {
+    if (s.identity && typeof s.identity === 'object') {
+      return {
+        isHero: !!s.identity.isHero,
+        baseFantastic: !!s.identity.baseFantastic,
+        baseRace: typeof s.identity.baseRace === 'string' ? s.identity.baseRace : '',
+        specialUnit: typeof s.identity.specialUnit === 'string' ? s.identity.specialUnit : 'none',
+      };
+    }
+    const legacyType = s.unitType || UNIT_DEFAULTS.unitType;
+    const match = /^fantastic_(life|death|chaos|nature|sorcery|arcane)$/.exec(legacyType);
+    return {
+      isHero: legacyType === 'hero',
+      baseFantastic: !!match,
+      baseRace: s.race || (match ? match[1][0].toUpperCase() + match[1].slice(1) : ''),
+      specialUnit: s.specialUnit || 'none',
+    };
+  }
   function setUnit(prefix, u) {
     const s = { ...UNIT_DEFAULTS, ...u };
+    const identity = presetIdentity(s);
     document.getElementById(prefix + 'Figs').value = s.figs;
     document.getElementById(prefix + 'Atk').value = s.atk;
     document.getElementById(prefix + 'RtbType').value = s.rtbType;
@@ -2073,9 +2106,10 @@ function applyPreset(name) {
     document.getElementById(prefix + 'Weapon').value = s.weapon;
     document.getElementById(prefix + 'Armor').value = s.armor || 'normal';
     document.getElementById(prefix + 'Level').value = s.level;
-    setIdentityControlsFromLegacy(prefix, s.unitType, s.race, s.specialUnit);
-    populateSpecialUnitOptions(prefix, document.getElementById('gameVersion').value, s.specialUnit || 'none');
-    syncLegacyUnitTypeControl(prefix, s.unitType);
+    populateSpecialUnitOptions(prefix, document.getElementById('gameVersion').value,
+      identity.specialUnit);
+    setIdentityControls(prefix, identity);
+    syncLegacyUnitTypeControl(prefix);
     clearAbilities(prefix);
     applyAbilities(prefix, s.abilities);
     // Special values are card-owned in every version. Presets still describe them by
@@ -2130,27 +2164,17 @@ function applyPreset(name) {
   }
   if (preset.aUnitName) applyPresetEnchantments('a', preset.a);
   if (preset.bUnitName) applyPresetEnchantments('b', preset.b);
-  // Synthetic custom test units can declare an intrinsic race/name to exercise race-gated
-  // building enchantments (roster-selected presets already got their identity from applyUnit).
+  // Synthetic custom test units can declare base identity/name to exercise identity-gated
+  // paths (roster-selected presets already got authoritative identity from applyUnit).
   const presetVersion = document.getElementById('gameVersion').value;
-  if (document.getElementById('aUnit').value === 'custom'
-      && preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = {
-    ...createCustomUnitIdentity(presetVersion, {
-      ...readIdentityControls('a'),
-      baseRace: preset.a.race || readIdentityControls('a').baseRace,
-    }),
-    specialUnit: readIdentityControls('a').specialUnit,
-    name: preset.a.name,
-  };
-  if (document.getElementById('bUnit').value === 'custom'
-      && preset.b && (preset.b.race || preset.b.name)) unitIdentity['b'] = {
-    ...createCustomUnitIdentity(presetVersion, {
-      ...readIdentityControls('b'),
-      baseRace: preset.b.race || readIdentityControls('b').baseRace,
-    }),
-    specialUnit: readIdentityControls('b').specialUnit,
-    name: preset.b.name,
-  };
+  for (const [prefix, config] of [['a', preset.a], ['b', preset.b]]) {
+    if (document.getElementById(prefix + 'Unit').value !== 'custom') continue;
+    const controls = readIdentityControls(prefix);
+    unitIdentity[prefix] = {
+      ...createCustomUnitIdentity(presetVersion, controls),
+      ...(config && typeof config.name === 'string' ? { name: config.name } : {}),
+    };
+  }
   if (preset.a && preset.a.level) document.getElementById('aLevel').value = preset.a.level;
   if (preset.a && preset.a.weapon) document.getElementById('aWeapon').value = preset.a.weapon;
   if (preset.b && preset.b.level) document.getElementById('bLevel').value = preset.b.level;
@@ -2180,7 +2204,55 @@ function applyPreset(name) {
 
 // Ids that look like state but aren't: combobox search fields and the preset filter
 // (transient UI), plus any matrix* id (defensive — those live outside #calcMain anyway).
-const STATE_EXCLUDE = new Set(['aUnitSearch', 'bUnitSearch', 'presetSearch']);
+const STATE_EXCLUDE = new Set([
+  'aUnitSearch', 'bUnitSearch', 'presetSearch',
+  // R8 identity is persisted below. The hidden compact token is only a compatibility
+  // projection for old preset callers and legacy v1 restore.
+  'aAbil_unitType', 'bAbil_unitType',
+]);
+
+const PAGE_STATE_VERSION = 2;
+
+function persistedIdentity(prefix) {
+  const controls = readIdentityControls(prefix);
+  const stored = unitIdentity[prefix] || {};
+  return {
+    isHero: controls.isHero,
+    baseRace: controls.baseRace,
+    baseFantastic: controls.baseFantastic,
+    specialUnit: controls.specialUnit,
+    ...(typeof stored.name === 'string' && stored.name ? { name: stored.name } : {}),
+  };
+}
+
+function validatePersistedIdentity(blob) {
+  if (!blob.identity) return;
+  for (const prefix of ['a', 'b']) {
+    const value = blob.identity[prefix];
+    if (value == null) continue;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new TypeError(`Invalid ${prefix} identity record`);
+    }
+    if (blob.v === 1) {
+      if (value.race != null && typeof value.race !== 'string') throw new TypeError('Invalid legacy race');
+      if (value.name != null && typeof value.name !== 'string') throw new TypeError('Invalid legacy name');
+      continue;
+    }
+    if (typeof value.isHero !== 'boolean'
+        || typeof value.baseFantastic !== 'boolean'
+        || typeof value.baseRace !== 'string'
+        || typeof value.specialUnit !== 'string'
+        || (value.name != null && typeof value.name !== 'string')) {
+      throw new TypeError(`Invalid R8 ${prefix} identity record`);
+    }
+    // Calculated/live identity and numeric source IDs never cross the persistence boundary.
+    for (const forbidden of ['race', 'fantastic', 'templateId', 'heroTypeId', 'version']) {
+      if (Object.prototype.hasOwnProperty.call(value, forbidden)) {
+        throw new TypeError(`Persisted identity contains calculated/internal field ${forbidden}`);
+      }
+    }
+  }
+}
 
 // Snapshot every calculator control as a full id->value map (the lossless representation).
 // gameVersion lives in .version-bar, outside #calcMain, so it's appended explicitly.
@@ -2195,15 +2267,10 @@ function collectFullState() {
     if (!id || STATE_EXCLUDE.has(id) || id.startsWith('matrix')) continue;
     ids[id] = (el.type === 'checkbox') ? el.checked : el.value;
   }
-  const ident = prefix => unitIdentity[prefix]
-    // Persistence migration is R8.4. Continue writing the v1 race/name shape while the
-    // richer source identity is rebuilt from the selected roster on restore.
-    ? { race: unitIdentity[prefix].baseRace || unitIdentity[prefix].race,
-        name: unitIdentity[prefix].name } : null;
   return {
-    v: 1,
+    v: PAGE_STATE_VERSION,
     ids,
-    identity: { a: ident('a'), b: ident('b') },
+    identity: { a: persistedIdentity('a'), b: persistedIdentity('b') },
     generic: {
       a: !!(unitBaseStats['a'] && unitBaseStats['a'].generic),
       b: !!(unitBaseStats['b'] && unitBaseStats['b'].generic),
@@ -2215,7 +2282,10 @@ function collectFullState() {
 // first (repopulates dropdowns + ability panels), then JS-side identity, then every control
 // value (skip-missing for forward-compat), then visibility.
 function applyFullState(blob) {
-  if (!blob || blob.v !== 1) return;
+  if (!blob || ![1, PAGE_STATE_VERSION].includes(blob.v)) {
+    throw new TypeError('Unsupported page-state version');
+  }
+  validatePersistedIdentity(blob);
   const prevRestoring = _restoring; // preserve an outer guard (getDefaultIds' dance)
   _restoring = true;
   try {
@@ -2227,32 +2297,57 @@ function applyFullState(blob) {
       }
       onVersionChange();
     }
+    // Restore the version-scoped roster/source selection before any editable controls.
+    // Unknown selections deliberately become Custom rather than leaking a stale source ID.
     for (const prefix of ['a', 'b']) {
-      const id = blob.identity && blob.identity[prefix];
-      if (id) unitIdentity[prefix] = { baseRace: id.race, name: id.name };
-      else delete unitIdentity[prefix];
+      const selection = blob.ids && blob.ids[prefix + 'Unit'];
+      const select = document.getElementById(prefix + 'Unit');
+      const units = unitDatabases[versionSel.value] || [];
+      const selectedUnit = selection !== 'custom'
+        ? units.find(unit => String(unit.id) === String(selection)) : null;
+      select.value = selectedUnit ? String(selectedUnit.id) : 'custom';
+      if (selectedUnit) {
+        setRosterUnitRecords(prefix, selectedUnit, versionSel.value);
+      } else {
+        const savedIdentity = blob.identity && blob.identity[prefix];
+        const legacy = blob.v === 1;
+        unitIdentity[prefix] = {
+          ...createCustomUnitIdentity(versionSel.value, legacy ? {
+            baseRace: savedIdentity && savedIdentity.race,
+          } : (savedIdentity || {})),
+          ...(savedIdentity && typeof savedIdentity.name === 'string'
+            ? { name: savedIdentity.name } : {}),
+        };
+      }
       const wantGeneric = !!(blob.generic && blob.generic[prefix]);
       unitBaseStats[prefix] = { ...(unitBaseStats[prefix] || {}), generic: wantGeneric };
     }
     if (blob.ids) {
       for (const [id, val] of Object.entries(blob.ids)) {
-        if (id === 'gameVersion') continue; // already applied above
+        if (id === 'gameVersion' || id === 'aUnit' || id === 'bUnit') continue;
         const el = document.getElementById(id);
         if (!el) continue; // forward-compat: ignore ids this build no longer has
         if (el.type === 'checkbox') el.checked = !!val;
         else el.value = val;
       }
     }
-    // Older v1 blobs only carried the legacy unitType hidden field. Seed the new editable
-    // identity controls from it before the value-preserving lock pass.
+    // Populate version-valid options and restore Custom base controls. Predefined controls
+    // are reconstructed authoritatively from the selected roster in updateUnitLock below.
     for (const prefix of ['a', 'b']) {
-      const hasIdentityControls = blob.ids && Object.prototype.hasOwnProperty.call(blob.ids, prefix + 'BaseHero');
-      if (!hasIdentityControls) {
+      const isCustom = document.getElementById(prefix + 'Unit').value === 'custom';
+      const savedIdentity = blob.identity && blob.identity[prefix];
+      const preferredSpecial = blob.v === PAGE_STATE_VERSION && savedIdentity
+        ? savedIdentity.specialUnit : document.getElementById(prefix + 'SpecialUnit').value;
+      populateSpecialUnitOptions(prefix, versionSel.value, preferredSpecial);
+      if (isCustom && blob.v === PAGE_STATE_VERSION && savedIdentity) {
+        setIdentityControls(prefix, savedIdentity);
+      } else if (isCustom && !(blob.identityControlsPresent
+          ? blob.identityControlsPresent[prefix]
+          : blob.ids && Object.prototype.hasOwnProperty.call(blob.ids, prefix + 'BaseHero'))) {
         const legacy = document.getElementById(prefix + 'Abil_unitType');
-        const oldIdentity = blob.identity && blob.identity[prefix];
-        setIdentityControlsFromLegacy(prefix, legacy && legacy.value, oldIdentity && oldIdentity.race);
+        setIdentityControlsFromLegacy(prefix, legacy && legacy.value,
+          savedIdentity && savedIdentity.race);
       }
-      populateSpecialUnitOptions(prefix, versionSel ? versionSel.value : document.getElementById('gameVersion').value);
     }
     // Reflect aUnit/bUnit selections in the combobox search fields, then rebuild the
     // JS-side unit records (unitBaseStats) and lock styling for the restored selection
@@ -2310,16 +2405,28 @@ function collectState() {
 // defaults, then apply the full map. Tolerant of full (undiffed) blobs too — legacy
 // localStorage and older share links merge cleanly since their ids already cover everything.
 function applyState(blob) {
-  if (!blob || blob.v !== 1) return;
+  if (!blob || ![1, PAGE_STATE_VERSION].includes(blob.v)) {
+    throw new TypeError('Unsupported page-state version');
+  }
   const version = (blob.ids && normalizeGameVersion(blob.ids.gameVersion))
     || loadPersistedGameVersion() || DEFAULT_GAME_VERSION;
   const merged = { ...getDefaultIds(version), ...(blob.ids || {}), gameVersion: version };
-  applyFullState({ v: 1, ids: merged, identity: blob.identity, generic: blob.generic });
+  applyFullState({
+    v: blob.v,
+    ids: merged,
+    identity: blob.identity,
+    generic: blob.generic,
+    identityControlsPresent: {
+      a: !!(blob.ids && Object.prototype.hasOwnProperty.call(blob.ids, 'aBaseHero')),
+      b: !!(blob.ids && Object.prototype.hasOwnProperty.call(blob.ids, 'bBaseHero')),
+    },
+  });
 }
 
 // localStorage key for the persisted page-state blob. Supersedes the legacy gameVersion_v1
 // (version now travels inside the blob); gameVersion_v1 is read only for a one-time seed.
-const PAGE_STATE_KEY = 'pageState_v1';
+const PAGE_STATE_KEY = 'pageState_v2';
+const LEGACY_PAGE_STATE_KEY = 'pageState_v1';
 let _saveTimer = null;
 
 // LZ-string (URL-safe variant) for the share-link payload and the localStorage blob. The
@@ -2343,13 +2450,17 @@ function scheduleSaveState() {
 // Read the persisted page-state blob, or null if absent/corrupt. Accepts both the compressed
 // form and a legacy plain-JSON blob (which starts with '{') from before compression landed.
 function readLocalState() {
-  try {
-    const raw = localStorage.getItem(PAGE_STATE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw.charAt(0) === '{' ? raw : lzDecode(raw));
-  } catch (err) {
-    return null;
+  for (const key of [PAGE_STATE_KEY, LEGACY_PAGE_STATE_KEY]) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const blob = JSON.parse(raw.charAt(0) === '{' ? raw : lzDecode(raw));
+      if (blob && [1, PAGE_STATE_VERSION].includes(blob.v)) return { blob, key };
+    } catch (err) {
+      // A corrupt current blob must not prevent a valid legacy state from being imported.
+    }
   }
+  return null;
 }
 
 // Parse a shared-state blob out of the URL hash (#s=<lz>), or null if absent/bad. lzDecode
@@ -2359,7 +2470,7 @@ function parseHashState() {
     const m = /^#s=(.+)$/.exec(location.hash);
     if (!m) return null;
     const blob = JSON.parse(lzDecode(m[1]));
-    return (blob && blob.v === 1) ? blob : null;
+    return (blob && [1, PAGE_STATE_VERSION].includes(blob.v)) ? blob : null;
   } catch (err) {
     return null;
   }
@@ -2416,10 +2527,10 @@ function importHashState() {
 function initStateFromSources() {
   resetCalculatorState();                 // baseline defaults (existing behavior)
   if (importHashState()) return;
-  const fromLs  = readLocalState();
-  if (fromLs && !tryApplyState(fromLs)) {
+  const fromLs = readLocalState();
+  if (fromLs && !tryApplyState(fromLs.blob)) {
     // A persisted blob that throws would re-crash on every reload; discard it.
-    try { localStorage.removeItem(PAGE_STATE_KEY); } catch (e) {}
+    try { localStorage.removeItem(fromLs.key); } catch (e) {}
   }
 }
 
@@ -3161,27 +3272,6 @@ function predefinedModernAttacks(unit) {
   };
 }
 
-function predefinedUnitType(unit) {
-  if (unit.isHero) return 'hero';
-  if (!unit.baseFantastic) return 'normal';
-
-  const realmMap = {
-    'Nature': 'nature',
-    'Sorcery': 'sorcery',
-    'Chaos': 'chaos',
-    'Life': 'life',
-    'Death': 'death',
-    'Arcane': 'arcane',
-    'Nature Creatures': 'nature',
-    'Sorcery Creatures': 'sorcery',
-    'Chaos Creatures': 'chaos',
-    'Life Creatures': 'life',
-    'Death Creatures': 'death',
-    'Arcane Creatures': 'arcane',
-  };
-  return 'fantastic_' + (realmMap[unit.baseRace] || 'arcane');
-}
-
 function matrixRealmClassForUnitType(unitType) {
   const realm = String(unitType || '').replace(/^fantastic_/, '');
   return ['life', 'death', 'chaos', 'nature', 'sorcery', 'arcane'].includes(realm) ? `realm-${realm}` : '';
@@ -3189,7 +3279,6 @@ function matrixRealmClassForUnitType(unitType) {
 
 function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
   const version = document.getElementById('gameVersion').value;
-  const unitType = predefinedUnitType(unit);
   const level  = matrixSideSetting(prefix, 'level');
   const weapon = matrixSideSetting(prefix, 'weapon');
   const armor  = matrixSideSetting(prefix, 'armor');
@@ -3206,7 +3295,6 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     weapon,
     armor,
     rtbType: predefinedUnitRtbType(unit),
-    unitType,
     figs: unit.figures || 1,
     atk: unit.melee,
     rtb: predefinedUnitRtb(unit),
@@ -3270,7 +3358,6 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
 
   const version = el('gameVersion').value;
   const identity = unitIdentityForDerivation(prefix, version);
-  const unitType = legacyUnitTypeFromIdentity(identity);
   return deriveUnitStats({
     prefix,
     version,
@@ -3281,7 +3368,6 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     weapon: matrixSideSetting(prefix, 'weapon'),
     armor: matrixSideSetting(prefix, 'armor'),
     rtbType: el(prefix + 'RtbType').value,
-    unitType,
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
@@ -3332,18 +3418,18 @@ function predefinedMatrixUnitRows(prefix, appliedEnchantments, matrixMode) {
     .map(entry => unitsById.get(entry.id))
     .filter(Boolean)
     .map(unit => {
-      const unitType = predefinedUnitType(unit);
-      const classTag = unitType === 'hero' ? 'Hero'
-                     : unitType.startsWith('fantastic_') ? 'Fantastic'
+      const stats = prefix === 'a'
+        ? buildMatrixAttackerStats(unit, appliedEnchantments, matrixMode)
+        : buildMatrixDefenderStats(unit, appliedEnchantments, matrixMode);
+      const classTag = stats.isHero ? 'Hero'
+                     : stats.identity.fantastic ? 'Fantastic'
                      : 'Normal';
       return {
         label: unit.name,
         matchText: [unit.name, unit.category, unit.race, classTag].filter(Boolean).join(' '),
-        realmClass: matrixRealmClassForUnitType(unitType),
+        realmClass: matrixRealmClassForUnitType(stats.unitType),
         unitId: String(unit.id),
-        stats: prefix === 'a'
-          ? buildMatrixAttackerStats(unit, appliedEnchantments, matrixMode)
-          : buildMatrixDefenderStats(unit, appliedEnchantments, matrixMode),
+        stats,
       };
     });
 }
@@ -4038,6 +4124,7 @@ document.getElementById('swapBtn').addEventListener('click', swapAttackerDefende
 document.getElementById('resetBtn').addEventListener('click', () => {
   try {
     localStorage.removeItem(PAGE_STATE_KEY);
+    localStorage.removeItem(LEGACY_PAGE_STATE_KEY);
     localStorage.removeItem(GAME_VERSION_STORAGE_KEY);
     localStorage.removeItem(MATRIX_FILTER_STORAGE_KEY);
   } catch (err) { /* ignore */ }

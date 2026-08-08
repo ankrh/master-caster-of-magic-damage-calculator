@@ -66,7 +66,7 @@ function legacyUnitTypeFromIdentity(identity) {
   if (!identity || !identity.baseFantastic) return identity && identity.isHero ? 'hero' : 'normal';
   const realm = {
     Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
-    Sorcery: 'sorcery', Arcane: 'arcane',
+    Sorcery: 'sorcery', Arcane: 'arcane', 'No Heal': 'unaligned',
   }[identity.baseRace] || 'arcane';
   return 'fantastic_' + realm;
 }
@@ -98,12 +98,14 @@ function initializeUnitIdentity(input) {
 }
 
 function legacyUnitTypeFromLiveIdentity(identity) {
-  if (!identity || !identity.fantastic) return identity && identity.isHero ? 'hero' : 'normal';
+  if (!identity) return 'normal';
+  if (identity.isHero && !identity.fantastic) return 'hero';
   const realm = {
     Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
-    Sorcery: 'sorcery', Arcane: 'arcane',
-  }[identity.race] || 'arcane';
-  return 'fantastic_' + realm;
+    Sorcery: 'sorcery', Arcane: 'arcane', 'No Heal': 'unaligned',
+  }[identity.race];
+  if (!identity.fantastic) return realm ? 'normal_' + realm : 'normal';
+  return 'fantastic_' + (realm || 'arcane');
 }
 
 function applyLiveUnitType(identity, unitType) {
@@ -114,7 +116,7 @@ function applyLiveUnitType(identity, unitType) {
     : value.startsWith('normal_') ? value.slice('normal_'.length) : null;
   const race = {
     life: 'Life', death: 'Death', chaos: 'Chaos', nature: 'Nature',
-    sorcery: 'Sorcery', arcane: 'Arcane',
+    sorcery: 'Sorcery', arcane: 'Arcane', unaligned: 'No Heal',
   }[realm];
   // `fantastic_arcane` is also the compact compatibility projection for an unaligned
   // custom/special identity. Do not overwrite an otherwise meaningful source race such

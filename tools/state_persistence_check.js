@@ -2,13 +2,14 @@
 // feature (see "Reference docs/State persistence and sharing plan.md", Task D).
 //
 // Runs the Task D matrix against a no-cache server in headless Chrome:
-//   - round-trip / perturb-restore across all four versions (mom / com / com2 / warlord)
+//   - round-trip / perturb-restore across all five versions
 //   - abilities of each kind (select / bool / num / numcheck) + full globals
 //   - roster unit with a manual field edit (proves applyState uses syncUnitDisplay, not applyUnit)
-//   - race-gated identity (unitIdentity) restored
+//   - R8 source/base identity restored without persisted source/live IDs
 //   - forward-compat: unknown id ignored, omitted id resolves to the version default
 //   - localStorage read mirrors collectState; lz payload is URL-safe + round-trips; share
-//     payload stays compact (default-diff + lz); legacy full plain-JSON localStorage still loads
+//     payload stays compact (default-diff + lz); legacy compressed/default-diff and full
+//     plain-JSON localStorage still load
 //   - URL: share link -> real reload -> identical damage + hash stripped; edited
 //     localStorage wins on the next reload (precedence); malformed #s= falls back cleanly
 //   - resilience: a well-formed blob carrying an uncomputable value (init guard) recovers to
@@ -235,6 +236,7 @@ const MAIN_HARNESS = `(() => {
   };
 
   try {
+    localStorage.removeItem('pageState_v2');
     localStorage.removeItem('pageState_v1');
 
     // Round-trip no-op + perturb/restore across every version.
@@ -293,13 +295,15 @@ const MAIN_HARNESS = `(() => {
       set('aHP', 999); recalculate();
       const before = dist();
       const blob = clone(collectState());
-      const idCaptured = blob.identity.a && blob.identity.a.race === unit.race;
+      const idCaptured = blob.identity.a && blob.identity.a.baseRace === unit.baseRace
+        && !('templateId' in blob.identity.a) && !('heroTypeId' in blob.identity.a)
+        && !('race' in blob.identity.a) && !('fantastic' in blob.identity.a);
       resetCalculatorState(); recalculate();
       applyState(clone(blob));
       const after = dist();
       const ok = after === before && get('aHP') === '999' && get('aUnit') === String(unit.id)
         && get('aFigs') === rosterFigs && idCaptured
-        && unitIdentity['a'] && unitIdentity['a'].baseRace === unit.race && unitIdentity['a'].name === unit.name;
+        && unitIdentity['a'] && unitIdentity['a'].baseRace === unit.baseRace && unitIdentity['a'].name === unit.name;
       log('roster-unit manual edit survives', ok, { unit: unit.name, restoredHP: get('aHP') });
     }
 
@@ -307,11 +311,12 @@ const MAIN_HARNESS = `(() => {
     {
       set('gameVersion', 'com2_1.05.11'); onVersionChange();
       setupCustom('a'); setupCustom('b');
-      unitIdentity['a'] = { baseRace: 'Halfling', name: 'Test Bowmen' };
+      set('aBaseRace', 'Halfling');
+      unitIdentity['a'] = { ...createCustomUnitIdentity('com2_1.05.11', readIdentityControls('a')), name: 'Test Bowmen' };
       set('aAbil_militaryWorkshop', true);
       recalculate();
       const blob = clone(collectState());
-      const captured = blob.identity && blob.identity.a && blob.identity.a.race === 'Halfling';
+      const captured = blob.identity && blob.identity.a && blob.identity.a.baseRace === 'Halfling';
       resetCalculatorState(); recalculate();
       delete unitIdentity['a'];
       applyState(clone(blob));
@@ -341,10 +346,33 @@ const MAIN_HARNESS = `(() => {
       set('gameVersion', 'com2_1.05.11'); onVersionChange();
       setupCustom('a'); setupCustom('b'); recalculate();
       const snap = collectState();
-      localStorage.setItem('pageState_v1', JSON.stringify(snap));
+      localStorage.setItem('pageState_v2', JSON.stringify(snap));
       const read = readLocalState();
       log('localStorage read mirrors collectState',
-        read && JSON.stringify(read) === JSON.stringify(snap) && read.v === 1, { v: read && read.v });
+        read && read.key === 'pageState_v2' && JSON.stringify(read.blob) === JSON.stringify(snap)
+          && read.blob.v === 2, { v: read && read.blob && read.blob.v });
+    }
+
+    // Legacy v1 compressed/default-diff blobs still import through the old key.
+    {
+      setupCustom('a');
+      set('aBaseFantastic', true); set('aBaseRace', 'Nature'); set('aHP', 17); recalculate();
+      const current = collectState();
+      const legacy = clone(current);
+      legacy.v = 1;
+      legacy.identity.a = { race: 'Nature', name: 'Legacy compressed' };
+      delete legacy.ids.aBaseHero; delete legacy.ids.aBaseFantastic;
+      delete legacy.ids.aBaseRace; delete legacy.ids.aSpecialUnit;
+      legacy.ids.aAbil_unitType = 'fantastic_nature';
+      localStorage.removeItem('pageState_v2');
+      localStorage.setItem('pageState_v1', lzEncode(JSON.stringify(legacy)));
+      resetCalculatorState();
+      const read = readLocalState();
+      applyState(read.blob);
+      log('backward-compat: legacy compressed/default-diff localStorage loads',
+        read.key === 'pageState_v1' && get('aHP') === '17'
+          && readIdentityControls('a').baseRace === 'Nature'
+          && readIdentityControls('a').baseFantastic, { key: read.key, identity: readIdentityControls('a') });
     }
 
     // lz payload is URL-safe + round-trips the blob.
@@ -376,12 +404,13 @@ const MAIN_HARNESS = `(() => {
     // PRESETS regression suite still green (recalc save hook must not perturb results).
     {
       const r = runTests();
-      log('PRESETS suite all-pass', r.allPassed, { total: r.total, failures: r.failures.length });
+      log('PRESETS suite all-pass', r.allPassed, { total: r.total, failures: r.failures });
     }
   } catch (fatal) {
     log('FATAL harness error', false, { message: fatal.message });
   } finally {
     try { resetCalculatorState(); recalculate(); } catch (e) {}
+    localStorage.removeItem('pageState_v2');
     localStorage.removeItem('pageState_v1');
   }
 
@@ -414,7 +443,7 @@ const EDIT_AND_SAVE = `(() => {
   const el = document.getElementById('aFigs'); el.value = '7';
   el.dispatchEvent(new Event('input', { bubbles: true }));
   recalculate();
-  return new Promise(res => setTimeout(() => res({ saved: !!localStorage.getItem('pageState_v1'), aFigs: el.value }), 400));
+  return new Promise(res => setTimeout(() => res({ saved: !!localStorage.getItem('pageState_v2'), aFigs: el.value }), 400));
 })()`;
 
 const READ_FIGS = `(() => ({ aFigs: document.getElementById('aFigs').value, hash: location.hash }))()`;
@@ -458,10 +487,9 @@ async function main() {
     const badHash = await cdpEvaluate(wsUrl, READ_FIGS);
     record('URL bad-hash: clean fallback + strip', badHash.aFigs === '7' && badHash.hash === '', badHash);
 
-    // 5) Resilience: a well-formed v1 blob carrying a JSON value with the wrong type for a
-    // calculated string operation. A Custom Warlord Gnoll with Altar of the Moon reaches the
-    // unit-name suffix gate, so a non-string identity name deterministically throws during
-    // applyState. Such a blob in localStorage would re-crash every reload without the init guard.
+    // 5) Resilience: a well-formed v2 blob carrying a wrong identity-field type is rejected
+    // before calculation. Such a blob in localStorage would re-crash every reload without the
+    // init guard.
     const SETUP_BAD = `(() => {
       const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
       document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.6.2'; onVersionChange();
@@ -472,10 +500,10 @@ async function main() {
       const bad = collectState();
       bad.ids.gameVersion = 'com2_warlord_1.5.12.6.2';
       bad.ids.aUnit = 'custom';
-      bad.ids.aAbil_unitType = 'normal';
       bad.ids.aAbil_altarOfTheMoon = true;
-      bad.identity.a = { race: 'Gnoll', name: { malformed: true } };
-      // precondition: confirm this blob genuinely crashes recalculate() (so the test isn't vacuous)
+      bad.identity.a = { isHero: false, baseRace: 'Gnoll', baseFantastic: false,
+        specialUnit: 'none', name: { malformed: true } };
+      // precondition: confirm this blob is genuinely rejected (so the test isn't vacuous)
       let crashes = false; try { applyState(JSON.parse(JSON.stringify(bad))); } catch (e) { crashes = true; }
       resetCalculatorState();
       return { blob: bad, crashes };
@@ -484,16 +512,16 @@ async function main() {
     // 5a) Bad localStorage blob -> init recovers to defaults + discards the blob (no re-crash loop).
     const { blob: bad, crashes } = await cdpEvaluate(wsUrl, SETUP_BAD);
     record('resilience: crafted blob genuinely crashes recalculate (precondition)', crashes, { crashes });
-    await cdpEvaluate(wsUrl, `(() => { localStorage.setItem('pageState_v1', ${JSON.stringify(JSON.stringify(bad))}); return true; })()`);
+    await cdpEvaluate(wsUrl, `(() => { localStorage.setItem('pageState_v2', ${JSON.stringify(JSON.stringify(bad))}); return true; })()`);
     await cdpNavigate(wsUrl, targetUrl); // init: readLocalState -> tryApplyState throws -> recover + discard
     const recLs = await cdpEvaluate(wsUrl, `(() => {
-      const parsed = readLocalState(); // decodes compressed or legacy-plain; null if absent
+      const parsed = readLocalState(); // {blob,key}, or null if absent
       return {
         alive: !!(document.querySelector('#distA .dist-header')?.textContent || '').trim(),
         version: document.getElementById('gameVersion').value,
         aUnit: document.getElementById('aUnit').value,
         altarOfTheMoon: document.getElementById('aAbil_altarOfTheMoon').checked,
-        badGone: !parsed || parsed.identity?.a?.name?.malformed !== true,
+        badGone: !parsed || parsed.blob?.identity?.a?.name?.malformed !== true,
       };
     })()`);
     record('resilience: bad localStorage recovers to defaults',
@@ -508,14 +536,14 @@ async function main() {
       set('aUnit', 'custom'); updateUnitLock('a'); set('aFigs', 8);
       document.getElementById('aFigs').dispatchEvent(new Event('input', { bubbles: true }));
       const good = collectState();
-      localStorage.setItem('pageState_v1', JSON.stringify(good)); // recipient's own saved state
+      localStorage.setItem('pageState_v2', JSON.stringify(good)); // recipient's own saved state
       const badShare = collectState();
       badShare.ids.gameVersion = 'com2_warlord_1.5.12.6.2';
       badShare.ids.aUnit = 'custom';
       badShare.ids.aFigs = 6;
-      badShare.ids.aAbil_unitType = 'normal';
       badShare.ids.aAbil_altarOfTheMoon = true;
-      badShare.identity.a = { race: 'Gnoll', name: { malformed: true } };
+      badShare.identity.a = { isHero: false, baseRace: 'Gnoll', baseFantastic: false,
+        specialUnit: 'none', name: { malformed: true } };
       return 's=' + lzEncode(JSON.stringify(badShare));
     })()`);
     await cdpNavigate(wsUrl, `${targetUrl}#${frag2}`); // URL wins, but it throws -> fall back to localStorage
@@ -534,7 +562,11 @@ async function main() {
       document.getElementById('gameVersion').value = 'com2_1.05.11'; onVersionChange();
       set('aUnit', 'custom'); updateUnitLock('a'); set('aFigs', 5);
       document.getElementById('aFigs').dispatchEvent(new Event('input', { bubbles: true }));
-      localStorage.setItem('pageState_v1', JSON.stringify(collectFullState())); // legacy full plain JSON
+      const legacy = collectFullState();
+      legacy.v = 1;
+      legacy.identity.a = { race: readIdentityControls('a').baseRace, name: 'Legacy plain' };
+      legacy.identity.b = { race: readIdentityControls('b').baseRace, name: 'Legacy defender' };
+      localStorage.setItem('pageState_v1', JSON.stringify(legacy)); // legacy full plain JSON
       return true;
     })()`);
     await cdpNavigate(wsUrl, targetUrl);

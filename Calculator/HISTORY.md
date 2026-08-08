@@ -1,5 +1,20 @@
 # Calculator work history
 
+## 2026-08-08 -- R8.4 stateful identity boundaries
+
+R8 is complete. Persistence and share links now write the v2 source/base identity schema while
+retaining safe readers for compressed/default-diffed and full plain-JSON v1 states. Roster source
+IDs are reconstructed from version plus selection; Custom identity remains independent; neither
+numeric source IDs nor calculated live identity is serialized. Restore preserves hand-edited
+roster stats, corrupt shares fall back to recipient storage, and corrupt local blobs are discarded.
+
+Swap now exchanges complete identity and special-unit UI state without reapplying roster values.
+Presets accept R8 identity while translating legacy `unitType` callers, and predefined selections
+remain roster-authoritative. Main cards and Matrix rows derive through the same identity boundary;
+an identity-sensitive Worker parity test covers the structured-clone/`resolveCombat` path. Focused
+coverage also exercises locking and Custom editing, version remaps, source/hero IDs, every named
+Special unit, Construct Catapult, and ordered Chosen/Chaos/Death/No-Heal/Life live-realm rewrites.
+
 ## 2026-08-08 -- R8.3 ordered live identity and encounter conversions
 
 R8.3 now keeps source/template identity, editable base predicates, and calculated live race and

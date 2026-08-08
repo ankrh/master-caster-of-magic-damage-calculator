@@ -38,7 +38,7 @@ test('page state survives a reload via localStorage', async ({ browser }) => {
   const state = await page.evaluate(() => collectState());
 
   // Wait for the debounced save (~250ms) to land in localStorage.
-  await page.waitForFunction(() => !!localStorage.getItem('pageState_v1'));
+  await page.waitForFunction(() => !!localStorage.getItem('pageState_v2'));
 
   // Real reload: the persistent opener never installed a localStorage-clearing
   // init script, so the blob is read back on load.

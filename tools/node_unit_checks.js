@@ -179,6 +179,34 @@ function runIdentityChecks(ctx) {
   assert(chosen.statTrace.some(t => t.id === 'identity:chosen'),
     'Identity writes are included with affected calculated-stat output trace');
 
+  const orderedRealmAbilities = [
+    {},
+    { ccDefense: true },
+    { ccDefense: true, undead: true },
+    { ccDefense: true, undead: true, mysticSurge: true },
+    { ccDefense: true, undead: true, mysticSurge: true, sanctify: true, clergy: true },
+  ];
+  const orderedRealmExpected = [
+    ['Life', 'fantastic_life'],
+    ['Chaos', 'fantastic_chaos'],
+    ['Death', 'fantastic_death'],
+    ['No Heal', 'fantastic_unaligned'],
+    ['Life', 'fantastic_life'],
+  ];
+  orderedRealmAbilities.forEach((abilities, index) => {
+    const unit = ctx.deriveUnitStats(baseUnitInput({
+      version: 'com2_warlord_1.5.12.6.2',
+      identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.6.2', {
+        baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen',
+      }),
+      abilities,
+    }));
+    assertEqual(unit.identity.race, orderedRealmExpected[index][0],
+      `Ordered identity override ${index} writes the expected live race`);
+    assertEqual(unit.unitType, orderedRealmExpected[index][1],
+      `Ordered identity override ${index} projects the expected compatibility type`);
+  });
+
   const summoned = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', abilities: { combatSummoned: true },
   }));
