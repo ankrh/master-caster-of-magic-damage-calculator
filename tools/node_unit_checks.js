@@ -1315,6 +1315,40 @@ function runModifierTraceChecks(ctx) {
   assertEqual(traced.modifierTraces.race.entries[0].source.id, 'identity:chosen',
     'Identity trace attributes the live race write');
 
+  const rangedDistanceTraceUnit = ctx.deriveUnitStats(baseUnitInput({
+    prefix: 'a', version: 'com2_1.05.11',
+    rtb: 4, rtbType: 'missile', rangedCheck: true, rangedDist: 4,
+  }));
+  const distanceEntry = rangedDistanceTraceUnit.modifierTraces.toHitRanged.entries
+    .find(t => t.id === 'chance:distancePenalty');
+  assertEqual(distanceEntry.from, 30,
+    'Range trace starts from the current percentage-point value');
+  assertEqual(distanceEntry.to, 20,
+    'CoM2 range four applies a ten-percentage-point trace penalty');
+  assertEqual(rangedDistanceTraceUnit.modifierTraces.toHitRanged.result, 20,
+    'Distance-enabled ranged derivation completes at the displayed percentage');
+
+  const lowBlockZombies = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08', toBlkMod: -20,
+    identity: ctx.createCustomUnitIdentity('com_6.08', { specialUnit: 'zombies' }),
+  }));
+  assertClose(lowBlockZombies.displayToBlock, 0.1,
+    'Negative base To Block plus Zombies retains the production ten-percent floor');
+  assertEqual(lowBlockZombies.modifierTraces.toBlock.result, 10,
+    'To Block trace uses the same initial ten-percent floor');
+  assertEqual(lowBlockZombies.modifierTraces.toBlock.entries.slice(-1)[0].id, 'chance:clamp',
+    'The initial To Block clamp records the floor when it changes the running value');
+
+  const cappedPlague = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2', toHitMod: -20,
+    abilities: { plague: true },
+  }));
+  const cappedSources = cappedPlague.modifierTraces.toHitMelee.entries.map(t => t.id);
+  assert(!cappedSources.includes('chance:plague'),
+    'Active Plague at the To Hit floor is omitted as an actual no-op');
+  assertEqual(cappedPlague.modifierTraces.toHitMelee.result, 10,
+    'Omitting capped Plague preserves the displayed To Hit floor');
+
   const tracedDestiny = ctx.deriveUnitStats(baseUnitInput({
     abilities: { destiny: true },
     level: 'champion',

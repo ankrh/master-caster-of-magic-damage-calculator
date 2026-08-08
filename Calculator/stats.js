@@ -2151,7 +2151,7 @@ function deriveUnitStats(input) {
     statStep({ id: 'chance:clamp', sourceId: 'statClamp', sourceLabel: 'Stat clamp',
       phase: 'resolution', writes: allChanceFields, apply: u => {
         for (const field of allHitFields) u[field] = Math.max(10, Math.min(100, u[field]));
-        for (const field of chanceFields.block) u[field] = Math.max(0, Math.min(100, u[field]));
+        for (const field of chanceFields.block) u[field] = Math.max(10, Math.min(100, u[field]));
       } }),
     statStep({ id: 'chance:warpReality', sourceId: 'warpReality', sourceLabel: 'Warp Reality',
       phase: 'resolution', writes: allHitFields, when: () => warpRealityActive && !unitIsChaos,
