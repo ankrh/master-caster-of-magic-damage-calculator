@@ -184,6 +184,8 @@ ReMoM's `MoM/src/UNITTYPE.h`, confirmed by the branches that consume them:
 | Item attack-special helper | `0x8E4C4`–`0x8E667` in all three builds; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1h.evidence.md` |
 | Constructor hit-point callee | `0x8E668`–`0x8E84F` in MoM 1.31/CP 1.60 and `0x8E668`–`0x8E7A9` in CoM 1; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1e.evidence.md` |
 | Recompute hit-point callee | `0x8E850`–`0x8EAB8` in all three builds; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1g.evidence.md` |
+| `Unit_Moves2` — overland maximum movement | `0x98494`–`0x986BC` in all three builds; MoM/CP call through `0x03C8:0x0043`, while CoM replaces the constructor path. Full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.5c.evidence.md` |
+| `Calc_Battlefield_Bonuses` — side maxima and combat-enchantment import | `0x9A8AB`–`0x9AD03` in all three builds; exported as `03D0:004D`, with CoM jumping to a relocated continuation at `0x99874`. Full reconstruction: `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.5d.evidence.md` |
 | CoM 1 `Battle_Unit_Moves2` | `0x9F12D`–`0x9F2D3`, with private near helpers through `0x9F2F0`; called through far `0x03E0:0x003E` at `0x90BE9`. Full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1g.evidence.md` |
 | `Distance(bu_a, bu_b)` — Chebyshev, over `+0x44`/`+0x46` | `0x9B50C`–`0x9B58F`; reconstructed in `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.2d.evidence.md` |
 | `Has_Ranged_Attack(bu_idx)` — `0 < ranged_type < 100` | `0x9BB03`–`0x9BB3D`; reconstructed in `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.2d.evidence.md` |
@@ -288,6 +290,27 @@ provenance are in `DOS reconstructed/R6.1g.evidence.md`.
 - The routine identifies `DS:0x3AC8` as the consumed per-controller Logistics maximum, but does
   not expose the level-to-table scaling. CoM helptext says +0.5 movement per two levels while the
   manual says +0.5 per level; that prose discrepancy remains Q23.
+
+### Overland `Unit_Moves2` across DOS builds (resolved 2026-08-08)
+
+R6.5c identifies exported `03C8:0043` as the overland `Unit_Moves2` routine at
+`0x98494..0x986BD`. Its 553 bytes are identical in MoM 1.31 and CP 1.60; CoM retains a homolog at
+the same address with exactly 17 differing bytes. The MoM/CP constructor calls it and stores the
+returned movement byte. CoM replaces that constructor path with the R6.1g battle-unit movement
+routine, but does not remove this old body.
+
+The common body scans three hero items, loads signed base `Move_Halves`, combines item powers and
+unit enchantments, applies Flight and Chaos Channels wings floors, adds the raw `0x00002000`
+movement bonus and signed item movement, and then enters a Transport-only Wind Mastery block.
+MoM/CP score every positive Wind Mastery holder relative to the signed unit owner: positive
+balance applies signed low-word `3/2` movement and negative balance applies signed `1/2`, both
+toward zero. CoM changes `0x98669` to an unconditional next-player jump, so its balance remains
+zero; the retained owner/balance writes and patched double/no-op scaling arms are unreachable.
+The routine makes no calls and writes no external state.
+
+Verified: Codex-A 2026-08-08, independent; Codex-B 2026-08-08, independent; followed by
+reciprocal review. Every review entry was resolved from quoted bytes; no disagreement survived.
+Full evidence: `DOS reconstructed/R6.5c.evidence.md`.
 
 ### Item attack-special helper (resolved 2026-08-07)
 
@@ -963,6 +986,26 @@ Steal, and subtracts two in live AX (`0x9A154`–`0x9A15B`). Destruction is insi
 per-attacking-figure loop in every build (`0x9A19E`–`0x9A1E5`). Verified: Claude 2026-08-07;
 Codex 2026-08-07, independent. Full evidence: `DOS reconstructed/R6.2c.evidence.md`.
 
+### Life Steal's healing and temporary-Hits target (resolved 2026-08-08)
+
+The exported `0370:002A` target called at `0x9A196` is `Battle_Unit_Heal`, reconstructed across
+all three builds at `0x7FCBA..0x7FF43`. Life Steal passes the already sampled resistance-failure
+margin and mode 1. Mode 0 caps healing at Regular plus Undeath damage, while nonzero mode permits
+over-heal. The common body reduces Regular then Undeath damage, never reduces Irreversible damage
+on that channel-spill path, restores figures from a negative front-damage remainder, and converts
+a remaining negative over-heal to per-figure `Extra_Hits` (`0x7FCF7..0x7FEE2`). It then calls the
+battle-unit constructor and stat recompute and restores the saved movement byte
+(`0x7FEE2..0x7FF3D`).
+
+CP 1.60 alone reduces the restorable/effective figure maximum by unsigned
+`floor(damage[2] / hits)` and, after adding Extra Hits, adds
+`extra * floor(damage[2] / hits)` back to Irreversible damage with a byte-store cap of 200
+(`0x7FCE0..0x7FCEF`, `0x7FE89..0x7FEC6`). CP and CoM clear the positive post-restoration local's
+low byte before the Extra-Hits test, where 1.31 retains it. CoM uses raw Max Figures, zero-extends
+that divisor, and caps the signed new `Extra_Hits` sum at 90 (`0x7FE52..0x7FE68`,
+`0x7FE89..0x7FECE`). Verified: Codex Agent A 2026-08-08, independent; Codex Agent B 2026-08-08,
+independent; followed by reciprocal review. Full evidence: `DOS reconstructed/R6.5b.evidence.md`.
+
 ### Weapon Immunity: eligibility, ordering, and magnitude (resolved 2026-07-27)
 
 Two functions decide it. The **immunity-mask builder** at `0x99150`–`0x99291` (prologue to
@@ -1230,7 +1273,18 @@ division for figures lost and the front-figure remainder (`0x873D1..0x87500`). I
 priority is irreversible (wins ties), then undeath (strictly above irreversible, at least regular),
 then regular (strictly above both), at `0x87560..0x876B0`. MoM 1.31 and CP 1.60 additionally mark
 recognized combat summons with persistent `wp = 9`; CoM 1 discards that predicate result and calls
-an unresolved helper with `[0xC520]` instead (`0x87536..0x8755F`).
+`Calc_Battlefield_Bonuses` (`03D0:004D`, raw `0x9A8AB`) with the combat-structure word at
+`[0xC520]` instead (`0x87536..0x8755F`). The callee's mode-1 comparison and city-defense branch
+establish the argument's role. Full evidence: `DOS reconstructed/R6.5d.evidence.md`.
+
+After assigning a zero-figure unit's terminal status, the shared `0348:003E` call at `0x876B5`
+refreshes two side-wide Illusion-sight words. Its byte-identical
+`Update_Sees_Illusions` body at `0x7BDA0..0x7BE3B` first clears attacker DS:`0xC420` and
+defender DS:`0xC41E`, then scans active battle units. An active unit sets its controller side's
+word when `Attribs_1 & USA_IMMUNITY_ILLUSION` is nonzero (`0x7BDC0..0x7BE29`). Units belonging
+to neither combat-side controller are ignored. Verified: Codex Agent A 2026-08-07, independent;
+Codex Agent B 2026-08-07, independent; followed by reciprocal review. Full evidence:
+`DOS reconstructed/R6.5a.evidence.md`.
 
 `Check_Attack_Ranged` combines permanent, live battle and item enchantments for both combatants.
 The Wall of Darkness exemption checks True Sight in 1.31 but byte-wide Illusions Immunity in CP
@@ -1801,6 +1855,29 @@ Three stages:
    `0x90162`, `0x90185`; Resistance to All at `0x9011C`, `0x9013F` — and adds to the receiving
    unit's melee, defense and resistance. This is why an exhaustive `+0x15` scan of the recompute
    (`0x8FF09`–`0x90B8D`) finds nothing: the recompute reads the player array, never the byte.
+
+R6.5d now supplies the complete aggregation routine around that middle stage. Before scanning
+units, it imports Cloud of Shadow into defender Darkness in all three builds
+(`0x9A8B3..0x9A8C7`) and imports Heavenly Light into defender True Light only in MoM 1.31 and CP
+1.60 (`0x9A8C8..0x9A8DC`). Its Eternal Night player scan marks attacker Darkness, defender
+Darkness, or both when the holder belongs to neither combat side (`0x9A8DD..0x9A936`).
+
+The same routine aggregates hero Prayer and Leadership. MoM 1.31 treats the four hero bits
+separately with signed `n`, `3n/2`, `n/3`, and `n/2` formulas for `n = Level+1`
+(`0x9AAF6..0x9ACCC`). CP 1.60 explicitly zero-extends Level and combines each two-bit family:
+Prayer alone uses `n`, any other nonzero Prayer mask uses `n+n/2`; Leadership alone uses `n/3`,
+any other nonzero Leadership mask uses logical `n/2` (`0x9AADA..0x9AB5D`). CoM 1 returns to a
+signed Level load, uses low-byte-only shifts for both Prayer formulas, and also maximizes five
+still-unnamed seven-byte groups at dseg `0x3AAC..0x3ACE` (`0x9AABA..0x9ABF8`).
+
+The city-defense prepass also differs. MoM 1.31 adds 3 Defense to defender-controlled units when
+the routine argument is city mode (`0x9A98F..0x9A9CF`). CP and CoM require either `walled` or
+`wall_of_fire` and add 2 (`0x9A98F..0x9A9CF` CP; `0x9A98F..0x9A9CA` CoM). CP/CoM clear two
+prayer-source bytes and mark defender slot 0 or other slot 1 whenever Resistance or Prayer raises
+the shared maximum. The terminal Holy-Bonus fold uses `num_players` in 1.31 but seven fixed slots
+in CP/CoM (`0x9ACD9..0x9ACFC`). Verified: Codex Agent A 2026-08-08, independent; Codex Agent B
+2026-08-08, independent; followed by reciprocal review. Full evidence:
+`DOS reconstructed/R6.5d.evidence.md`.
 
 Two consequences. **The engine maxes over providers and applies the winner once**, so copies do
 not stack — which is what `mergedAbilityValue`'s `max(own, received)` already yields.

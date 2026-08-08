@@ -31,26 +31,26 @@ States: `ready`, `open`, `deferred`, `blocked`. Costs: `free`, `small`, `medium`
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **R6.4, R6.5a–d** | Harden the DOS checker and reconstruct the four newly resolved call-closure targets. |
-| 2 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
-| 3 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
-| 4 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
-| 5 | **F3–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
-| 6 | **R7.3, R7.4** | Finish the tiered modifier display; both wait on Q16. |
+| 1 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
+| 2 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
+| 3 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
+| 4 | **F3–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
+| 5 | **R7.3, R7.4** | Add binary-order modifier traces to the existing single-value display. |
+| 6 | **R8.1–R8.4** | Separate roster identity, editable base identity and calculated live identity on the unit cards. |
 | 7 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Structural and reconstruction work
 
 | ID | Task | State | Cost | Evidence / dependency |
 |---|---|---|---|---|
-| R6.4 | Scope `verify_dos_derivation.py` citations to the build under check; make `split_dos_derivation.py` match build labels as tokens rather than treating the `all` inside headings such as `Call inventory` as a MoM-build marker; make `named_write` require a memory destination rather than counting `mov reg,mem` loads; and extend `scan_mom_binary.FIELDS` to the displacements the reconstructed routines write. Without build scoping, a 1.31 citation silently satisfies a `com1` run wherever builds share offsets; without the field additions, the checker misses `race`, `Move_Flags`, `Attribs_1`'s high byte, `Attribs_2`, status/damage bytes, `s_UNIT` writes, `+0x3C`/`+0x3D`, and the `Gold_*`/`Grey_*` run. | ready | small | R6.1a/R6.1b/R6.2f evidence, *Counts*; R6.2f reciprocal-review tooling checks. |
-| R6.5a | Reconstruct exported routine `0x7BDA0..0x7BE3B` across all three DOS builds. It is the resolved `0348:003E` target called by `BU_ApplyDamage`; the 155-byte body is byte-identical and makes no calls. | ready | small | DOS version index, *Resolved call closure* |
-| R6.5b | Reconstruct exported Life-Steal-path routine `0x7FCBA..0x7FF43` across all three DOS builds. Its 649-byte bodies differ and call `abs()`, the battle-unit constructor, and stat recompute. | ready | medium | DOS version index, *Resolved call closure* |
-| R6.5c | Reconstruct movement routine `0x98494..0x986BD` across all three DOS builds. MoM 1.31 and CP 1.60 call it through `03C8:0043` and are byte-identical; CoM replaces the call path and has a 17-byte-different homolog. | ready | medium | DOS version index, *Resolved call closure* |
-| R6.5d | Reconstruct exported routine `0x9A8AB..0x9AD04` across all three DOS builds. CoM `BU_ApplyDamage` calls it through `03D0:004D`; it contains the already reconstructed CoM To Block and SpFx helpers and makes no calls. | ready | medium | DOS version index, *Resolved call closure* |
-| R7 | Present unit-card stats as an unmodified base plus tiered modifier values, imitating the game's plain/gold stat display. Closes after R7.1–R7.4. | open | medium | D22; Q16 |
-| R7.3 | Derive the engine's plain-versus-gold display rule and assign every modifier source a tier. | blocked on Q16 | medium | D22; CoM2 units; R6.1a evidence, *`Gold_*` / `Grey_*` accumulators* (the DOS engine accumulates the tiers rather than deriving them at draw time) |
-| R7.4 | Replace the single effective-value column with separate silver and gold modifier values, keeping numeric presentation rather than icon pips. | blocked on R7.3 | medium | `ui.js:651`, `stats.js:1798`, `style.css:291`; SPEC UI contract |
+| R7 | Present each unit-card stat as its editable, unmodified base plus one final modified value. Hovering a modified unit-stat output shows every applied transform in the applicable binary's execution order. Traces belong only to calculated stat outputs, including boolean/identity stats such as Fantastic; ability, enchantment and condition controls never receive modifier traces. The calculator deliberately does not reproduce the games' plain/gold or grey/gold display tiers. Closes after R7.1–R7.4. | open | medium | D22; ordered stat-step trace |
+| R7.3 | Complete the ordered trace behind every displayed stat modifier, including To Hit/To Block, boolean/identity stats and each independent modern attack channel. Each applied entry must identify its source and show the running value before and after the transform; order comes from the applicable binary/CAS execution sequence, not UI grouping. Omit inactive, invalid and no-op inputs entirely rather than adding explanatory “did nothing” entries. | open | medium | `steps.js:138`; `stats.js` ordered stat sequence; D22 |
+| R7.4 | Keep the single final-value modifier column and expose R7.3's source-ordered chain only from the affected calculated stat output when it is hovered (and through the existing touch-device tooltip behavior). Do not attach traces to ability, enchantment or condition controls. | blocked on R7.3 | small | `ui.js:899`; `style.css:332`; SPEC UI contract |
+| R8 | Replace the card's mutually exclusive `unitType` value with a faithful, low-clutter identity model: roster/template identity remains internal, the card exposes independent base Hero, Fantastic and Race/realm fields, and calculation owns separate mutable live Race/realm and Fantastic state. A compact Special unit selector explains template-ID exceptions without exposing raw IDs. Closes after R8.1–R8.4 and resolves F3/F4. | open | large | modern `unitT`; CoM2 units, Golem and Chosen rules; DOS reconstruction R6.1b; Warlord `STypeID` gates |
+| R8.1 | Add the internal identity records. Preserve version-scoped `templateId` and `heroTypeId` for predefined units; store `isHero`, `baseRace`, and `baseFantastic` independently; initialize separate calculated `race` and `fantastic` values for each derivation. Custom units have null template/hero IDs. Never persist derived flags such as `chosen` or `golem`; derive them from version plus template ID or the custom Special unit selection. Update all roster generators to carry the source fields faithfully. | open | medium | `Typedec.pas:161`; modern record offsets; DOS `_UNITS[].type`/`Hero_Slot`; roster generators |
+| R8.2 | Replace the combined Unit Type control with independent **Hero**, **Fantastic** and **Base race/realm** controls plus a version-gated **Special unit** selector. Predefined rosters populate and lock these fields; Custom makes the base fields and selector editable. Start with **Other / no exception**, **Golem**, **Chosen / Avatar**, **Zombies**, and **Catapult** where applicable. Show each derived effect at its normal point of use (for example locked Resist Elements sourced from Golem), but attach ordered identity traces only to affected calculated unit-stat outputs such as live Fantastic or Race/realm—not to the Special unit, ability, enchantment or condition controls. Do not expose numeric template or hero IDs. | open | medium | `ui.js` `unitType`/`unitIdentity`; UI contract; R8.1 |
+| R8.3 | Execute special-unit and identity conversions in binary/CAS order while retaining both base and live predicates. Cover Golem → Resist Elements; Chosen/Avatar → live Life + Fantastic; CoM 1 Zombies → initial `toblock = -1`; and CoM 1 Construct Catapult → live Fantastic plus Magic Weapons, whose Boulder consequences are +10% To Hit and Weapon Immunity bypass. Add **Combat Summoned** as an always-visible, freely selectable encounter condition rather than folding it into Catapult identity or hiding/disabling it by template; apply only valid per-version/per-template effects and omit invalid/no-op selections from every trace. Preserve the CoM 1 Catapult/Centaur/Paladin Fantastic branch, while noting that current CoM 1 removed Call Centaurs and replaced it with Wild Boars. Cover modern live-Fantastic conversion, direct Breakthrough gating, and spell-specific live realm where required (including Construct Catapult → Nature and Call to Arms Paladins → Life). Audit every calculator-relevant modern/Warlord `unittype`/`STypeID` branch and retain template ID internally wherever the executing rule reads it. Applied identity writes feed the ordered trace on their affected calculated stat outputs only. | open | large | `Units.RecalculateUnits.pas:507,1348,1832,1853`; `UnitCalcPre.CAS`/`UnitCalc.CAS` `STypeID`; R6.1b evidence; `CoM1manual.HTML:22837-22841,33703-33706`; `CoM2 helptext.TXT:290-296` |
+| R8.4 | Migrate persistence, share links, swap, presets and Matrix workers from `unitType` to the R8 identity model without breaking old saved states. Test predefined locking and Custom editing; version changes; roster/template and hero-type fidelity; base-versus-live Fantastic/race gates; every Special unit option; Construct Catapult with and without Combat Summoned; ordered realm overrides such as Chosen versus Chaos Channels/Undead/No Heal/Sanctify; and main-thread/worker parity. | blocked on R8.1–R8.3 | medium | persistence UI contract; `ui.js`; `combat.js`; worker state; R7 trace |
 
 **Every R6 item covers all three DOS builds at once**, not one build each. The builds are one
 lineage — 1.31, the community patch, then CoM 1 on top — so homologous code is read once and
@@ -77,9 +77,9 @@ a neighbour's.
 Instruction counts above are measured, not estimated (`capstone`, 16-bit). The originally located
 core was ~4,119 instructions per build and the eleven first-level callees added ~1,790. R6.3 has
 now enumerated the complete first-/second-level call surface with zero unresolved targets; the
-four newly bounded code callees are R6.5a–d. Every call is direct, so the graph remains statically
-walkable. Extents marked *provisional* were sized by scanning to the first `retf` and must be
-confirmed when the item is scoped.
+four newly bounded code callees were R6.5a–d; all four have now landed, so the resolved code-call
+closure has no remaining reconstruction follow-up. Every call is direct, so the graph remains
+statically walkable.
 
 **R6 runs in dual-derivation mode throughout** — AKH's standing instruction, 2026-08-04, on the
 grounds that the work is too difficult to trust a single pass. Both agents derive every item
@@ -89,17 +89,17 @@ feedback after six large reconstructions. R6.3 received both independent derivat
 explicitly waived its reciprocal-review round and directed the immediate merge; the durable index
 and `HISTORY.md` record that exception.
 
-The originally assigned R6 constructor/recompute/combat surface closed with R6.3. R6.4 is checker
-hardening and R6.5a–d are separately scoped routines exposed by the completed overlay-aware call
-audit; neither was silently absorbed into R6.3. A material post-review change to R6.1a–R6.2f
-requires the affected reviewer to re-check it.
+The originally assigned R6 constructor/recompute/combat surface closed with R6.3. R6.4 hardened
+the checker, and R6.5a–d separately reconstructed the routines exposed by the completed
+overlay-aware call audit; none was silently absorbed into R6.3. A material post-review change to
+R6.1a–R6.2f requires the affected reviewer to re-check it.
 
 ## Confirmed and suspected defects
 
 | ID | Upcoming task | State | Cost | Evidence |
 |---|---|---|---|---|
-| F3 | Derive Golem's intrinsic Resist Elements in both modern roster generators and add Golem/non-Golem controls. | open | small | CoM2 units, region `a` |
-| F4 | Classify the Chosen as engine-Fantastic for all downstream gates without losing hero behavior. | open | medium | CoM2 units, unit-enchantment effects |
+| F3 | Derive Golem's intrinsic Resist Elements in both modern roster generators and add Golem/non-Golem controls through R8's Special unit identity. | open | small | resolved by R8.1–R8.3; CoM2 units, region `a` |
+| F4 | Classify the Chosen as engine-Fantastic for all downstream gates without losing hero behavior, using R8's independent hero/base/live identity fields. | open | medium | resolved by R8.1–R8.3; CoM2 units, unit-enchantment effects |
 | F5 | Put common and channel To Hit/To Block writes in the transform record and implement the modern two-stage clamp. | open | large | CoM2 units, region `e` and sequential-transform audit |
 | F6 | Trace Chaos Channels Fire Breath eligibility/coexistence, then make CoM2/Warlord representation and arithmetic match the reachable engine state. F48 settled the modern half — CC adds, never removes, and CoM2 and Warlord behave identically — so what remains is DOS: MoM leaves a gaze *and* a breath both firing from the one shared slot at the overwritten strength (2+2+1 = 5 where the slot holds one attack). | open | medium | CoM2 units, region `a`; CoM2 tables, Chaos Channels; `stats.js:436-441` |
 | F7 | Replace `Math.round(hits/3)` with the moddable Supernatural formula using Delphi banker's rounding; update affected presets. | deferred | small | CoM2 combat, ApplyAttack; CoM2 tables, Supernatural minimum damage |
@@ -180,7 +180,6 @@ Accepted limitations remain in `SPEC.md`; only planned changes appear here.
 | Q8 | Determine whether Wraiths use Life Steal −4 or −3. | open | observation/manual conflict |
 | Q12 | Determine when “ranged” includes missile, boulder, magical, Thrown, breath, or gaze across versions/effects. | open, asked | — |
 | Q15 | Check whether compiled code ever consumes `unitT.savemodifier`. | open | CoM2 units, `unitT` fields; R4 |
-| Q16 | Determine what makes CoM2 draw a stat bonus as a plain icon rather than a gold one, and classify every modifier source. | open, partial | D22; R7.3; R6.1a evidence, *`Gold_*` / `Grey_*` accumulators* |
 | Q17 | Resolve CoM 1 FocusMagic's `ammo > 0` gate against helptext that promises the ranged attack unconditionally; the answer also decides whether the signed `base_rt` fallback is reachable in play. | open | R6.1a evidence, *Open questions* |
 | Q18 | Determine what CoM 1's Holy Arms unit-type ceiling of `0x97` selects, given that the helptext says "normal unit" but the ceiling appears to admit four fantastic summons. | open | R6.1a evidence, *Open questions* |
 | Q19 | Resolve CoM 1 Realm Ward helptext's −2 To Hit/−4 Defense/−4 Resistance against the executed `0x90A87..0x90A9B` writes of −2/−3/−3. | open | R6.1d evidence, *CoM 1 Realm Wards use −2/−3/−3* |

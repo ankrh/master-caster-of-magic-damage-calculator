@@ -18,15 +18,28 @@ import sys
 
 # BATTLE_UNIT is 0x6E bytes; the array base pointer lives at [0x922a] in WIZARDS.EXE.
 FIELDS = {
-    0x00: 'melee', 0x01: 'ranged', 0x02: 'ranged_type', 0x04: 'tohit',
-    0x03: 'ammo', 0x05: 'defense', 0x06: 'resist', 0x0D: 'Cur_Figures',
-    0x10: 'hits', 0x15: 'Spec_Att_Attrib',
-    0x18: 'Attribs_1', 0x1C: 'Abilities', 0x1E: 'attack_attributes',
-    0x22: 'Combat_Effects', 0x24: 'melee_tohit', 0x25: 'ranged_tohit', 0x26: 'toblock',
+    0x00: 'melee', 0x01: 'ranged', 0x02: 'ranged_type / s_UNIT.wp',
+    0x03: 'ammo', 0x04: 'tohit', 0x05: 'defense', 0x06: 'resist',
+    0x07: 'movement_points', 0x0B: 'race / s_UNIT.Status',
+    0x0C: 's_UNIT.Level', 0x0D: 'Cur_Figures', 0x10: 'hits',
+    0x15: 'Spec_Att_Attrib', 0x16: 'Move_Flags',
+    0x17: 'Move_Flags high byte / s_UNIT.mutations',
+    0x18: 'Attribs_1', 0x19: 'Attribs_1 high byte', 0x1A: 'Attribs_2',
+    0x1C: 'Abilities', 0x1E: 'attack_attributes', 0x22: 'Combat_Effects',
+    0x24: 'melee_tohit', 0x25: 'ranged_tohit', 0x26: 'toblock',
     0x27: 'Weapon_Plus1', 0x28: 'melee_atk_attrs', 0x2A: 'ranged_atk_attrs',
-    0x30: 'unit_idx', 0x35: 'controller_idx', 0x39: 'front_figure_damage',
-    0x3A: 'enchantments', 0x3E: 'Suppression', 0x3F: 'mana_max',
-    0x40: 'mana', 0x42: 'Poison_Strength',
+    0x2C: 'item_enchantments byte 0', 0x2D: 'item_enchantments byte 1',
+    0x2E: 'item_enchantments byte 2', 0x2F: 'item_enchantments byte 3',
+    0x30: 'unit_idx', 0x34: 'status', 0x35: 'controller_idx',
+    0x36: 'damage[0]', 0x37: 'damage[1]', 0x38: 'damage[2]',
+    0x39: 'front_figure_damage', 0x3A: 'enchantments',
+    0x3C: 'enchantments byte 2', 0x3D: 'enchantments byte 3',
+    0x3E: 'Suppression', 0x3F: 'mana_max', 0x40: 'mana',
+    0x42: 'Poison_Strength',
+    0x64: 'Gold_Melee', 0x65: 'Gold_Ranged', 0x66: 'Gold_Defense',
+    0x67: 'Gold_Resist', 0x68: 'Gold_Hits', 0x69: 'Grey_Melee',
+    0x6A: 'Grey_Ranged', 0x6B: 'Grey_Defense', 0x6C: 'Grey_Resist',
+    0x6D: 'Grey_Hits',
 }
 
 # Byte-operand opcodes with an r/m operand. mod=01 (disp8) with rm>=4 covers the

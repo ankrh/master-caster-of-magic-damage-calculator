@@ -647,7 +647,14 @@ mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
   also exactly the set that stays editable when a predefined unit locks the stat fields.
 - The stat fields hold **pre-level** values. Experience level is applied downstream as an
   ordinary transform step, so no code path may write a level bonus into a card field.
-  Effective values appear only in the modifier column.
+  Effective values appear only in the modifier column. That column shows one final modified
+  number; it does not reproduce the games' plain/gold or grey/gold presentation tiers.
+- Hovering a final modified value shows the complete chain that produced it: the editable base,
+  then every applied transform with its source and running value before and after the write, and
+  finally the displayed result. The chain follows the applicable binary/CAS execution order, not
+  UI grouping or effect name. It must be emitted from the same ordered transform path that computes
+  the value rather than reconstructed independently after calculation. The existing touch-device
+  tooltip interaction exposes the same information where hover is unavailable.
 - Each section heading carries its own **Show all / Hide inactive** toggle, independent of
   the other section's and of the other panel's — four states in all, each defaulting to
   hiding.

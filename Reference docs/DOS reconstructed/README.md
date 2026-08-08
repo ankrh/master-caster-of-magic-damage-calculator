@@ -89,10 +89,9 @@ fixed order `131 / 160 / com1`:
 
 **Do not rely on CoM 1's addresses being distinct.** They usually are, because CoM 1 is rebased —
 but not always: in `BU_Apply_Specials` CoM 1's copy occupies 1.31's exact `0x8F310`–`0x8F881`.
-Where the two overlap, the checker's single citation set means a 1.31 citation silently satisfies
-the `com1` run, and a whole-document pass proves nothing about CoM 1. Until `--build` scoping
-exists (**R6.4**), check a build by extracting that build's section from the rest of the document
-and running the checker on the extract.
+`verify_dos_derivation.py` therefore scopes annotations and inventory rows to the selected build
+before constructing its citation set. `split_dos_derivation.py` exposes the same extractor as a
+CLI when a reviewer wants to inspect the exact per-build citation list.
 
 **Do not assume a lineage ordering.** Write explicit build tests (`BUILD == CP160 || BUILD == COM1`)
 rather than `BUILD >= CP160`. CoM 1 is built on the same 1991 executable but whether it carries

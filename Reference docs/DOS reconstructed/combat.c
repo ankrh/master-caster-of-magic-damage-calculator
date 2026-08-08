@@ -1,12 +1,15 @@
 /* DOS combat dispatch reconstructed from the three WIZARDS.EXE builds.
  *
  * Landed so far: R6.2a BU_AttackTarget, R6.2b/R6.2c BU_ProcessAttack, R6.2d's
- * shared combat-resolution helpers, R6.2e's defense-special and Wall of Fire helpers, and
- * R6.2f's spell-damage/application closure.
+ * shared combat-resolution helpers, R6.2e's defense-special and Wall of Fire helpers,
+ * R6.2f's spell-damage/application closure, R6.5a's side-wide Illusion-sight refresh,
+ * R6.5b's exported battle-unit healing/temporary-Hits routine, and R6.5d's exported
+ * battlefield side-bonus aggregation routine.
  *
  * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
  * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
- * R6.2a.evidence.md through R6.2f.evidence.md. The overlay-entry names below are ReMoM
+ * R6.2a.evidence.md through R6.2f.evidence.md and R6.5a/b/d.evidence.md. The overlay-entry names
+ * below are ReMoM
  * attributions: the VROOMM
  * targets cannot be mapped back to file offsets from the executable images.
  */
@@ -28,6 +31,10 @@
 #define DMG_IRREVERSIBLE            2
 #define BU_DAMAGE_CEILING           200
 #define UNIT_WP_GONE                9
+#define TEMP_HITS_DISABLED          0
+#define WORD_HIGH_BYTE_MASK         0xFF00
+#define CP160_IRREVERSIBLE_DAMAGE_CAP 0x00C8
+#define COM1_EXTRA_HITS_CAP         0x005A
 
 #define am_Melee                    0
 #define am_ThrownOrBreath           1
@@ -144,6 +151,12 @@
 #define COM1_RANGED_DISTANCE_DIVISOR 4
 #define LONG_RANGE_DISTANCE_PENALTY 1
 #define HSA_CHARMED                 0x10000000UL
+#define HSA_LEADERSHIP              0x00000001UL
+#define HSA_LEADERSHIP2             0x00000002UL
+#define HSA_PRAYERMASTER            0x01000000UL
+#define HSA_PRAYERMASTER2           0x02000000UL
+#define HSA_LEADERSHIP_MASK_LO      0x0003
+#define HSA_PRAYERMASTER_MASK_HI    0x0300
 #define D10_SIDES                   10
 #define ROLL_TARGET_BASE            8
 #define COM1_TOBLOCK_DIE_LIMIT      15
@@ -188,6 +201,58 @@
 #define NF_GUARDIAN                     0x02
 #define CITY_ENCHANT_HEAVENLY_LIGHT     0x15
 
+/* R6.5d battlefield aggregation constants and exact DOS data-segment locations. */
+#define COMBAT_STRUCTURE_CITY               0x0001
+#define BATTLEFIELD_BONUS_SLOTS             7
+#define PLAYER_RECORD_BYTES                 0x04C8
+#define DSEG_PLAYER_GLOBALS_0                0xA34C
+#define PLAYER_GLOBAL_ETERNAL_NIGHT          0x00
+#define CITY_ENCHANT_CLOUD_OF_SHADOW         0x06
+#define CE_TRUE_LIGHT_DEFENDER               0x01
+#define CE_DARKNESS_ATTACKER                 0x02
+#define CE_DARKNESS_DEFENDER                 0x03
+#define COMBAT_ENCHANTMENT_FROM_CITY         0x02
+#define COMBAT_ENCHANTMENT_FROM_GLOBAL       0x03
+#define BU_ATTRIBS2_RESIST_ALL               0x40
+#define BU_ATTRIBS2_HOLY_BONUS               0x80
+#define PRAYER_SOURCE_DEFENDER_SLOT          0
+#define PRAYER_SOURCE_OTHER_SLOT             1
+#define COM1_SPFX_GROUP_UNKNOWN_0             0
+#define COM1_SPFX_GROUP_UNKNOWN_1             1
+#define COM1_SPFX_GROUP_UNKNOWN_2             2
+#define COM1_SPFX_GROUP_UNKNOWN_3             3
+#define COM1_SPFX_GROUP_UNKNOWN_4             4
+#define COM1_SPFX_GROUP_BYTES                 7
+#define COM1_SPFX_BLOCK_BYTES                 0x23
+#define COM1_HERO_BYTE_03_UNKNOWN_40          0x40
+#define COM1_HERO_BYTE_04_UNKNOWN_02          0x02
+#define COM1_HERO_BYTE_04_UNKNOWN_10          0x10
+#define COM1_HERO_BYTE_0B_UNKNOWN_08          0x08
+#define COM1_HERO_BYTE_0B_UNKNOWN_10          0x10
+#define COM1_HERO_BYTE_0B_UNKNOWN_20          0x20
+#define COM1_HERO_BYTE_0B_UNKNOWN_40          0x40
+
+#define DSEG_NUM_PLAYERS                      0xBD9C
+#define DSEG_BATTLEFIELD_LEADERSHIP_PTR       0xC896
+#define DSEG_BATTLEFIELD_RESIST_PRAYER_PTR    0xC89A
+#define DSEG_BATTLEFIELD_HOLY_BONUS_PTR       0xC89E
+#define DSEG_PRAYER_SOURCE_FLAGS              0xC7B4
+#define DSEG_COM1_SPFX_MAXIMA                 0x3AAC
+
+#define R6_5D_PLAYER_GLOBAL(player, index) \
+    (*(int8_t *)(DSEG_PLAYER_GLOBALS_0 + (uint16_t)(player) * PLAYER_RECORD_BYTES + (index)))
+#define R6_5D_NUM_PLAYERS (*(int16_t *)DSEG_NUM_PLAYERS)
+#define R6_5D_FAR_ARRAY(type, slot) (*(type __far **)(slot))
+#define battlefield_leadership_max \
+    R6_5D_FAR_ARRAY(int16_t, DSEG_BATTLEFIELD_LEADERSHIP_PTR)
+#define battlefield_resist_prayer_max \
+    R6_5D_FAR_ARRAY(int16_t, DSEG_BATTLEFIELD_RESIST_PRAYER_PTR)
+#define battlefield_holy_bonus_max \
+    R6_5D_FAR_ARRAY(int16_t, DSEG_BATTLEFIELD_HOLY_BONUS_PTR)
+#define prayer_source_flags ((uint8_t *)DSEG_PRAYER_SOURCE_FLAGS)
+#define com1_spfx_max \
+    ((int8_t (*)[BATTLEFIELD_BONUS_SLOTS])DSEG_COM1_SPFX_MAXIMA)
+
 /* ReMoM e_SPELL_BOOK_REALM encoding (MOM_DAT.h:729). */
 #define sbr_NONE                    (-1)
 #define sbr_Nature                  0
@@ -224,7 +289,10 @@ extern int16_t __far BU_CauseFear(int16_t source_battle_unit_idx,
                                   int16_t target_battle_unit_idx);
 extern int16_t __far overlay_03E0_0052(int16_t battle_unit_idx);
 extern int16_t __far overlay_03E0_0057(int16_t cgx, int16_t cgy);
-extern void __far overlay_0370_002A(int16_t battle_unit_idx, int16_t amount, int16_t mode);
+extern void __far Battle_Unit_Heal(int16_t battle_unit_idx, int16_t amount,
+                                   int16_t temp_hits);
+extern void __far BU_Construct(struct s_BATTLE_UNIT __far *bu);
+extern void __far BU_Apply_Battlefield_Effects(struct s_BATTLE_UNIT __far *bu);
 extern int16_t __far Random(int16_t faces);
 extern int16_t __far CMB_AttackRoll(int16_t strength, int16_t to_hit);
 extern int16_t __far CMB_DefenseRoll(int16_t defense, int16_t to_block);
@@ -235,10 +303,10 @@ extern int16_t __far Battle_Unit_Defense_Special(int16_t defender_battle_unit_id
                                                  int16_t attack_magic_realm);
 extern int16_t __far Eliminated_Opponent(void);
 extern int16_t __far Battle_Unit_Is_Summoned_Creature(int16_t battle_unit_idx);
-extern void __far overlay_0348_003E(void);
+extern void __far Update_Sees_Illusions(void);
 #if BUILD == COM1
-extern void __far overlay_03D0_004D(int16_t unknown_c520);
-extern int16_t UNKNOWN_C520;          /* unresolved absolute word DS:0xC520 */
+extern void __far Calc_Battlefield_Bonuses(int16_t combat_structure);
+extern int16_t _combat_structure;     /* absolute word DS:0xC520 */
 #endif
 extern struct s_BATTLEFIELD __far *battlefield;
 extern struct s_SPELL_DATA __far *_SPELL_DATA;
@@ -246,6 +314,8 @@ extern int8_t __far *combat_enchantments;
 extern int16_t _combat_defender_player;
 extern int16_t _combat_attacker_player;
 extern int16_t _combat_total_unit_count; /* absolute word [0xC588] in all builds */
+extern int16_t _defender_sees_illusions; /* absolute word [0xC41E] in all builds */
+extern int16_t _attacker_sees_illusions; /* absolute word [0xC420] in all builds */
 extern int16_t _combat_winner;           /* absolute word [0xC972] */
 #if BUILD == COM1
 extern struct s_NODE __far *_NODES;
@@ -1124,7 +1194,8 @@ void __far BU_ApplyDamage(int16_t battle_unit_idx,
 #else
     (void)Battle_Unit_Is_Summoned_Creature(battle_unit_idx);
                                       /* result discarded; com1:0x87536 */
-    overlay_03D0_004D(UNKNOWN_C520);  /* FF 36 20 C5 / 9A 4D 00 D0 03;
+    Calc_Battlefield_Bonuses(_combat_structure);
+                                      /* FF 36 20 C5 / 9A 4D 00 D0 03;
                                          com1:0x8753C..0x87545 */
     /* Twenty-six NOP bytes at com1:0x87546..0x8755F. */
 #endif
@@ -1149,8 +1220,700 @@ void __far BU_ApplyDamage(int16_t battle_unit_idx,
         bu->status = BUS_DEAD;        /* 131:0x876B0  160:=  com1:= */
     }
 
-    overlay_0348_003E();             /* 9A 3E 00 48 03; 131:0x876B5  160:=  com1:= */
+    Update_Sees_Illusions();         /* 9A 3E 00 48 03; 131:0x876B5  160:=  com1:= */
 }
+
+/* Exported target 0348:003E, reconstructed by R6.5a. */
+void __far Update_Sees_Illusions(void)
+{
+    int16_t battle_unit_idx;
+
+    _attacker_sees_illusions = ST_FALSE;
+                                      /* 131:0x7BDA3  160:=  com1:= */
+    _defender_sees_illusions = ST_FALSE;
+                                      /* 131:0x7BDA9  160:=  com1:= */
+
+    battle_unit_idx = 0;              /* 131:0x7BDAF  160:=  com1:= */
+    while (battle_unit_idx < _combat_total_unit_count) {
+                                      /* initial JMP ->0x7BE30 at 131:0x7BDB1  160:=  com1:=;
+                                         JGE ->0x7BE39 (epilogue) at 131:0x7BE34  160:=  com1:= */
+        struct s_BATTLE_UNIT __far *bu = &_battle_units[battle_unit_idx];
+                                      /* signed index * raw record size 0x006E;
+                                         131:0x7BDB3  160:=  com1:= */
+
+        if ((int8_t)bu->status == BUS_ACTIVE) {
+                                      /* JNE ->0x7BE2F (loop increment) at
+                                         131:0x7BDC0  160:=  com1:= */
+            if ((int8_t)bu->controller_idx == _combat_attacker_player) {
+                                      /* JNE ->0x7BDFC (defender test) at
+                                         131:0x7BDD4  160:=  com1:= */
+                if (bu->Attribs_1 & USA_IMMUNITY_ILLUSION) {
+                                      /* JE ->0x7BDFA (JMP to increment) at
+                                         131:0x7BDEC  160:=  com1:= */
+                    _attacker_sees_illusions = ST_TRUE;
+                                      /* 131:0x7BDF4  160:=  com1:= */
+                }
+                                      /* JMP ->0x7BE2F (loop increment) at
+                                         131:0x7BDFA  160:=  com1:= */
+            } else if ((int8_t)bu->controller_idx == _combat_defender_player) {
+                                      /* JNE ->0x7BE2F (loop increment) at
+                                         131:0x7BE09  160:=  com1:= */
+                if (bu->Attribs_1 & USA_IMMUNITY_ILLUSION) {
+                                      /* JE ->0x7BE2F (loop increment) at
+                                         131:0x7BE21  160:=  com1:= */
+                    _defender_sees_illusions = ST_TRUE;
+                                      /* 131:0x7BE29  160:=  com1:= */
+                }
+            }
+        }
+
+        ++battle_unit_idx;            /* 131:0x7BE2F  160:=  com1:= */
+                                      /* signed JGE ->0x7BE39 (epilogue) at
+                                         131:0x7BE30  160:=  com1:= */
+                                      /* loop-back JMP ->0x7BDB3 at
+                                         131:0x7BE36  160:=  com1:= */
+    }
+}                                     /* POP BP / RETF at 131:0x7BE39  160:=  com1:= */
+
+/* Exported target 0370:002A, reconstructed by R6.5b. */
+void __far Battle_Unit_Heal(int16_t battle_unit_idx, int16_t healing, int16_t temp_hits)
+{
+    int16_t damages[NUM_DAMAGE_TYPES];
+    int16_t saved_movement;
+    int16_t healable_damage;
+    int16_t top_figure_damage;
+    int16_t i;
+    struct s_BATTLE_UNIT __far *bu = &_battle_units[battle_unit_idx];
+                                      /* signed index * raw record size 0x006E;
+                                         131:0x7FCC2  160:=  com1:= */
+
+#if BUILD == CP160
+    healable_damage = (uint8_t)bu->damage[DMG_UNDEATH]
+                    + (uint8_t)bu->damage[DMG_REGULAR];
+                                      /* zero-extended byte sum;
+                                         131:—  160:0x7FCC5..0x7FCE0  com1:— */
+    uint16_t irreversible_div_ax =
+        ((uint8_t)bu->damage[DMG_IRREVERSIBLE] / (uint8_t)bu->hits)
+        | (((uint16_t)((uint8_t)bu->damage[DMG_IRREVERSIBLE]
+                     % (uint8_t)bu->hits)) << 8);
+                                      /* DIV CL: quotient AL, remainder AH, packed word stored;
+                                         131:—  160:0x7FCE0..0x7FCEF  com1:— */
+#else
+    healable_damage = (uint8_t)bu->damage[DMG_UNDEATH]
+                    + (uint8_t)bu->damage[DMG_REGULAR];
+                                      /* zero-extended byte sum;
+                                         131:0x7FCC5..0x7FCF2  160:—  com1:= */
+#endif
+
+    top_figure_damage = 0;            /* 131:0x7FCF2  160:=  com1:= */
+    if (temp_hits == TEMP_HITS_DISABLED) {
+                                      /* JNE ->0x7FD0B, damage snapshot;
+                                         131:0x7FCF7  160:=  com1:= */
+        if (healing > healable_damage) {
+                                      /* JLE ->0x7FD0B, damage snapshot;
+                                         131:0x7FCFD  160:=  com1:= */
+            healing = healable_damage;
+                                      /* 131:0x7FD05  160:=  com1:= */
+        }
+    }
+
+    damages[DMG_REGULAR] = (uint8_t)bu->damage[DMG_REGULAR];
+                                      /* 131:0x7FD0B..0x7FD21  160:=  com1:= */
+    damages[DMG_UNDEATH] = (uint8_t)bu->damage[DMG_UNDEATH];
+                                      /* 131:0x7FD21..0x7FD37  160:=  com1:= */
+    damages[DMG_IRREVERSIBLE] = (uint8_t)bu->damage[DMG_IRREVERSIBLE];
+                                      /* 131:0x7FD37..0x7FD4D  160:=  com1:= */
+    damages[DMG_REGULAR] -= healing; /* 131:0x7FD4D  160:=  com1:= */
+    if (damages[DMG_REGULAR] < 0) {
+                                      /* JGE ->0x7FD6F, write-back loop;
+                                         131:0x7FD53  160:=  com1:= */
+        damages[DMG_UNDEATH] += damages[DMG_REGULAR];
+                                      /* 131:0x7FD59  160:=  com1:= */
+        damages[DMG_REGULAR] = 0;     /* 131:0x7FD5F  160:=  com1:= */
+        if (damages[DMG_UNDEATH] < 0) {
+                                      /* JGE ->0x7FD6F, write-back loop;
+                                         131:0x7FD64  160:=  com1:= */
+            damages[DMG_UNDEATH] = 0;/* 131:0x7FD6A  160:=  com1:= */
+        }
+    }
+
+    for (i = 0; i < NUM_DAMAGE_TYPES; ++i) {
+                                      /* init 131:0x7FD6F  160:=  com1:=;
+                                         test/JL ->0x7FD73 at 131:0x7FD94  160:=  com1:= */
+        bu->damage[i] = (uint8_t)damages[i];
+                                      /* low byte of each 16-bit local, assignment not addition;
+                                         131:0x7FD73..0x7FD93  160:=  com1:= */
+    }
+
+    bu->front_figure_damage =
+        (int8_t)((uint8_t)bu->front_figure_damage - (uint8_t)healing);
+                                      /* byte SUB, byte store, then signed test;
+                                         131:0x7FD99..0x7FDC0  160:=  com1:= */
+    if ((int8_t)bu->front_figure_damage < 0) {
+                                      /* JL ->0x7FDD7, negative handler;
+                                         131:0x7FDC0  160:=  com1:= */
+        top_figure_damage = (int8_t)bu->front_figure_damage;
+                                      /* CBW sign extension;
+                                         131:0x7FDD7..0x7FDEC  160:=  com1:= */
+        bu->front_figure_damage = 0;  /* 131:0x7FDEC..0x7FDFE  160:=  com1:= */
+
+        for (;;) {
+                                      /* entry JMP ->0x7FE26 at 131:0x7FDFE  160:=  com1:=;
+                                         loop JG ->0x7FE00 at 131:0x7FE50  160:=  com1:= */
+            if (top_figure_damage >= 0)
+                                      /* JGE ->0x7FE52, positive-remainder test;
+                                         131:0x7FE26  160:=  com1:= */
+                break;
+
+#if BUILD == CP160
+            if ((int8_t)((uint8_t)bu->Max_Figures
+                        - (uint8_t)irreversible_div_ax)
+                <= (int8_t)bu->Cur_Figures)
+                                      /* byte SUB; signed JG ->0x7FE00 otherwise;
+                                         131:—  160:0x7FE2C..0x7FE52  com1:— */
+                break;
+            /* 160:0x7FE40 EB 0A skips 0x7FE42..0x7FE4B patch residue and lands on
+               the live compare at 0x7FE4C. 131:— 160:0x7FE40..0x7FE4C com1:— */
+#else
+            if ((int8_t)bu->Max_Figures <= (int8_t)bu->Cur_Figures)
+                                      /* signed JG ->0x7FE00 otherwise;
+                                         131:0x7FE2C..0x7FE52  160:—  com1:= */
+                break;
+#endif
+
+            ++bu->Cur_Figures;        /* 131:0x7FE00..0x7FE11  160:=  com1:= */
+            top_figure_damage += (int8_t)bu->hits;
+                                      /* CBW and 16-bit add;
+                                         131:0x7FE11..0x7FE26  160:=  com1:= */
+        }
+
+        if (top_figure_damage > 0) {
+                                      /* JLE ->0x7FE6C, temp-hits gate;
+                                         131:0x7FE52  160:=  com1:= */
+#if BUILD == MOM131
+            bu->front_figure_damage = (int8_t)(uint8_t)top_figure_damage;
+                                      /* 131:0x7FE58..0x7FE6C  160:—  com1:— */
+#else
+            uint8_t saved_remainder = (uint8_t)top_figure_damage;
+                                      /* MOV AL,[BP-2]; 131:—  160:0x7FE58  com1:= */
+            *(uint8_t *)&top_figure_damage = 0;
+                                      /* low-byte clear; 131:—  160:0x7FE5B  com1:= */
+            /* Nine NOP bytes preserve layout at 131:— 160:0x7FE5F..0x7FE68 com1:=. */
+            bu->front_figure_damage = (int8_t)saved_remainder;
+                                      /* delayed AL store; 131:—  160:0x7FE68  com1:= */
+#endif
+        }
+    } else {
+                                      /* JMP ->0x7FE6C, temp-hits gate;
+                                         131:0x7FDD4  160:=  com1:= */
+    }
+
+    if (temp_hits == TEMP_HITS_DISABLED) {
+                                      /* JNE ->0x7FE7D, abs call setup;
+                                         131:0x7FE6C  160:=  com1:= */
+        if (top_figure_damage < 0) {
+                                      /* JGE ->0x7FE7D, abs call setup;
+                                         131:0x7FE72  160:=  com1:= */
+            top_figure_damage = 0;    /* 131:0x7FE78  160:=  com1:= */
+        }
+    }
+    top_figure_damage = abs(top_figure_damage);
+                                      /* lcall 0000:02C8 ->0x02CC8;
+                                         131:0x7FE7D..0x7FE89  160:=  com1:= */
+
+#if BUILD == MOM131
+    if ((int16_t)(int8_t)bu->Max_Figures <= top_figure_damage) {
+                                      /* signed compare; JG ->0x7FEE2;
+                                         131:0x7FE89..0x7FEA0  160:—  com1:— */
+        int16_t extra_per_figure =
+            top_figure_damage / (int16_t)(int8_t)bu->Max_Figures;
+                                      /* CWD / signed IDIV BX;
+                                         131:0x7FEA0..0x7FEC8  160:—  com1:— */
+        bu->Extra_Hits = (uint8_t)(bu->Extra_Hits + extra_per_figure);
+                                      /* byte wrap; 131:0x7FEC8..0x7FEE2  160:—  com1:— */
+    }
+#elif BUILD == CP160
+    uint8_t effective_max =
+        (uint8_t)((uint8_t)bu->Max_Figures - (uint8_t)irreversible_div_ax);
+                                      /* 131:—  160:0x7FE89..0x7FE9D  com1:— */
+    if ((int8_t)effective_max <= (int8_t)(uint8_t)top_figure_damage) {
+                                      /* signed low-byte compare; JG ->0x7FEE2;
+                                         131:—  160:0x7FE9D  com1:— */
+        if (effective_max != 0) {
+                                      /* JE ->0x7FEE2, zero-divisor exit;
+                                         131:—  160:0x7FEA4  com1:— */
+            uint8_t extra_per_figure =
+                (uint16_t)top_figure_damage / effective_max;
+                                      /* unsigned DIV DL, quotient AL;
+                                         131:—  160:0x7FEA8..0x7FEAE  com1:— */
+            bu->Extra_Hits = (uint8_t)(bu->Extra_Hits + extra_per_figure);
+                                      /* byte ADD; 131:—  160:0x7FEAA  com1:— */
+
+            uint16_t irreversible =
+                (uint16_t)extra_per_figure * (uint8_t)irreversible_div_ax
+                + (uint8_t)bu->damage[DMG_IRREVERSIBLE];
+                                      /* unsigned byte MUL, zero-extended old byte, word add;
+                                         131:—  160:0x7FEAE..0x7FEBB  com1:— */
+            if ((int16_t)irreversible > CP160_IRREVERSIBLE_DAMAGE_CAP) {
+                                      /* signed JLE ->0x7FEC2 store;
+                                         131:—  160:0x7FEBB  com1:— */
+                irreversible = (irreversible & WORD_HIGH_BYTE_MASK)
+                               | CP160_IRREVERSIBLE_DAMAGE_CAP;
+                                      /* MOV AL,0xC8 preserves AH;
+                                         131:—  160:0x7FEC0  com1:— */
+            }
+            bu->damage[DMG_IRREVERSIBLE] = (uint8_t)irreversible;
+                                      /* low-byte store; 131:—  160:0x7FEC2  com1:— */
+        }
+    }
+    /* 160:0x7FEC6 EB 1A skips stale 0x7FEC8..0x7FEE1 code ending in the old
+       Extra_Hits store at 0x7FEDE. 131:— 160:0x7FEC6..0x7FEE2 com1:— */
+#else /* COM1 */
+    if ((int16_t)(int8_t)bu->Max_Figures <= top_figure_damage) {
+                                      /* signed threshold; JG ->0x7FEE2;
+                                         131:—  160:—  com1:0x7FE89..0x7FEA0 */
+        int16_t extra_per_figure =
+            top_figure_damage / (int16_t)(uint8_t)bu->Max_Figures;
+                                      /* zero-extended divisor, CWD / signed IDIV CX;
+                                         131:—  160:—  com1:0x7FEA0..0x7FEBB */
+        int16_t new_extra_hits = (int16_t)(int8_t)bu->Extra_Hits + extra_per_figure;
+                                      /* signed old byte plus quotient;
+                                         131:—  160:—  com1:0x7FEBB..0x7FEC2 */
+        if (new_extra_hits >= COM1_EXTRA_HITS_CAP) {
+                                      /* signed JL ->0x7FECA otherwise;
+                                         131:—  160:—  com1:0x7FEC2 */
+            new_extra_hits = COM1_EXTRA_HITS_CAP;
+                                      /* 131:—  160:—  com1:0x7FEC7 */
+        }
+        bu->Extra_Hits = (uint8_t)new_extra_hits;
+                                      /* 131:—  160:—  com1:0x7FECA */
+    }
+    /* Twenty NOP bytes at 131:— 160:— com1:0x7FECE..0x7FEE2. */
+#endif
+
+    saved_movement = (int8_t)bu->movement_points;
+                                      /* 131:0x7FEE2..0x7FEF7  160:=  com1:= */
+    BU_Construct(bu);                /* lcall 03A0:003E ->0x8EDFD;
+                                         131:0x7FEF7..0x7FF10  160:=  com1:= */
+    BU_Apply_Battlefield_Effects(bu);/* lcall 03A0:0052 ->0x8FF09;
+                                         131:0x7FF10..0x7FF29  160:=  com1:= */
+    bu->movement_points = (int8_t)saved_movement;
+                                      /* 131:0x7FF29..0x7FF3D  160:=  com1:= */
+}                                     /* POP DI/SI, frame teardown, RETF;
+                                         131:0x7FF3D..0x7FF43  160:=  com1:= */
+
+/* Exported target 03D0:004D, reconstructed by R6.5d. */
+void __far Calc_Battlefield_Bonuses(int16_t combat_structure)
+{
+    int16_t side;
+    int16_t unit_i;
+    int16_t controller;
+    int16_t leadership_candidate;
+
+    /* 131:0x9A8B3  160:=  com1:= */
+    if (battlefield->city_enchantments[CITY_ENCHANT_CLOUD_OF_SHADOW] > 0) {
+        combat_enchantments[CE_DARKNESS_DEFENDER] = COMBAT_ENCHANTMENT_FROM_CITY;
+                                      /* 131:0x9A8BF  160:=  com1:= */
+    }
+
+#if BUILD == MOM131 || BUILD == CP160
+    if (battlefield->city_enchantments[CITY_ENCHANT_HEAVENLY_LIGHT] > 0) {
+                                      /* 131:0x9A8C8  160:=  com1:— */
+        combat_enchantments[CE_TRUE_LIGHT_DEFENDER] = COMBAT_ENCHANTMENT_FROM_CITY;
+                                      /* 131:0x9A8D4  160:=  com1:— */
+    }
+#else
+    goto com1_after_toblock_helper;   /* primary flow jumps over 0x9A8CA..0x9A8D2;
+                                         131:—  160:—  com1:0x9A8C8 */
+com1_after_toblock_helper:
+    ;                                 /* ten NOP bytes through com1:0x9A8DC */
+#endif
+
+    for (side = 0; side < R6_5D_NUM_PLAYERS; ++side) {
+                                      /* init/test/increment 131:0x9A8DD,0x9A930,0x9A931
+                                         160:=  com1:= */
+        if (R6_5D_PLAYER_GLOBAL(side, PLAYER_GLOBAL_ETERNAL_NIGHT) > 0
+                                      /* 131:0x9A8E1  160:=  com1:= */
+            && combat_enchantments[CE_TRUE_LIGHT_DEFENDER]
+               != COMBAT_ENCHANTMENT_FROM_CITY) {
+                                      /* 131:0x9A8F1  160:=  com1:= */
+            if (side == _combat_attacker_player) {
+                                      /* 131:0x9A8FC  160:=  com1:= */
+                combat_enchantments[CE_DARKNESS_ATTACKER] =
+                    COMBAT_ENCHANTMENT_FROM_GLOBAL;
+                                      /* 131:0x9A902  160:=  com1:= */
+            } else if (side == _combat_defender_player) {
+                                      /* 131:0x9A90D  160:=  com1:= */
+                combat_enchantments[CE_DARKNESS_DEFENDER] =
+                    COMBAT_ENCHANTMENT_FROM_GLOBAL;
+                                      /* 131:0x9A913  160:=  com1:= */
+            } else {
+                combat_enchantments[CE_DARKNESS_DEFENDER] =
+                    COMBAT_ENCHANTMENT_FROM_GLOBAL;
+                                      /* 131:0x9A91E  160:=  com1:= */
+                combat_enchantments[CE_DARKNESS_ATTACKER] =
+                    COMBAT_ENCHANTMENT_FROM_GLOBAL;
+                                      /* 131:0x9A927  160:=  com1:= */
+            }
+        }
+    }
+
+    for (side = 0; side < BATTLEFIELD_BONUS_SLOTS; ++side) {
+                                      /* init/test/increment 131:0x9A937,0x9A968,0x9A969
+                                         160:=  com1:= */
+#if BUILD == COM1
+        uint16_t byte_i;
+        for (byte_i = 0; byte_i < COM1_SPFX_BLOCK_BYTES; ++byte_i)
+            ((uint8_t *)DSEG_COM1_SPFX_MAXIMA)[byte_i] = 0;
+                                      /* MOV CX,0x23; PUSH DS/POP ES; XOR AL,AL;
+                                         MOV DI,0x3AAC; REP STOSB;
+                                         131:—  160:—  com1:0x9A93B..0x9A945 */
+#endif
+        battlefield_holy_bonus_max[side] = 0;
+                                      /* 131:0x9A93B  160:=  com1:0x9A947 */
+        battlefield_resist_prayer_max[side] = 0;
+                                      /* 131:0x9A94A  160:=  com1:0x9A956 */
+        battlefield_leadership_max[side] = 0;
+                                      /* 131:0x9A959  160:=  com1:0x9A95F */
+    }
+
+#if BUILD == CP160 || BUILD == COM1
+    *(uint16_t *)DSEG_PRAYER_SOURCE_FLAGS = 0;
+                                      /* 131:—  160:0x9A96E  com1:= */
+#endif
+
+    for (unit_i = 0; unit_i < _combat_total_unit_count; ++unit_i) {
+                                      /* condition/back edge 131:0x9A96E,0x9ACCF,0x9ACD0
+                                         160:0x9A975,0x9ACCF,0x9ACD0  com1:= */
+        struct s_BATTLE_UNIT __far *bu = &_battle_units[unit_i];
+        leadership_candidate = 0;     /* 131:0x9A973  160:0x9A975  com1:= */
+
+        if ((int8_t)bu->status != BUS_ACTIVE)
+            continue;                 /* 131:0x9A978..0x9A98C  160:=  com1:= */
+
+#if BUILD == MOM131
+        if (combat_structure == COMBAT_STRUCTURE_CITY
+                                      /* 131:0x9A98F  160:—  com1:— */
+            && (int8_t)bu->controller_idx == _combat_defender_player) {
+                                      /* 131:0x9A995  160:—  com1:— */
+            bu->defense = (int8_t)(bu->defense + 3);
+                                      /* byte add/store 131:0x9A9AD..0x9A9CF */
+        }
+#else
+        if (combat_structure == COMBAT_STRUCTURE_CITY
+                                      /* 131:—  160:0x9A98F  com1:= */
+            && (battlefield->walled != 0 || battlefield->wall_of_fire != 0)
+                                      /* 131:—  160:0x9A995  com1:= */
+            && (int8_t)bu->controller_idx == _combat_defender_player) {
+                                      /* 131:—  160:0x9A9AE  com1:= */
+            bu->defense = (int8_t)(bu->defense + 2);
+                                      /* 131:—  160:0x9A9C6  com1:= */
+        }
+#endif
+
+        controller = (int8_t)bu->controller_idx;
+                                      /* 131:0x9A9D3  160:=  com1:0x9A9CB */
+
+        if ((bu->Attribs_2 & BU_ATTRIBS2_HOLY_BONUS) != 0
+                                      /* 131:0x9A9E7  160:=  com1:0x9A9F8 */
+            && (int16_t)(int8_t)bu->Spec_Att_Attrib
+               > battlefield_holy_bonus_max[controller]) {
+            battlefield_holy_bonus_max[controller] =
+                (int8_t)bu->Spec_Att_Attrib;
+                                      /* 131:0x9AA1C  160:=  com1:0x9AA20 */
+        }
+
+        if ((bu->Attribs_2 & BU_ATTRIBS2_RESIST_ALL) != 0
+                                      /* 131:0x9AA3B  160:=  com1:0x9AA3F */
+            && (int16_t)(int8_t)bu->Spec_Att_Attrib
+               > battlefield_resist_prayer_max[controller]) {
+            battlefield_resist_prayer_max[controller] =
+                (int8_t)bu->Spec_Att_Attrib;
+                                      /* 131:0x9AA70  160:=  com1:0x9AA74 */
+#if BUILD == CP160 || BUILD == COM1
+            prayer_source_flags[controller == _combat_defender_player
+                ? PRAYER_SOURCE_DEFENDER_SLOT : PRAYER_SOURCE_OTHER_SLOT] = 1;
+                                      /* 131:—  160:0x9AA73  com1:0x9AA77 */
+#endif
+        }
+
+#if BUILD == CP160 || BUILD == COM1
+        if (0) {
+            int16_t unreachable_ax;
+            battlefield_resist_prayer_max[controller] = unreachable_ax;
+                                      /* retained alternate store skipped by 0x9AA80/0x9AA84;
+                                         131:—  160:0x9AA82..0x9AA8C  com1:0x9AA86..0x9AA90 */
+        }
+#endif
+
+        struct s_UNIT __far *unit = &_UNITS[bu->unit_idx];
+                                      /* 131:0x9AA8F  160:=  com1:0x9AA93 */
+        if ((int8_t)unit->Hero_Slot < 0)
+            continue;                 /* 131:0x9AAAF..0x9AAB1  160:=
+                                         com1:0x9AA95..0x9AA9C */
+
+#if BUILD == COM1
+        int16_t level_plus_one = (int16_t)(int8_t)unit->Level + 1;
+        struct s_HERO __far *hero =
+            &_HEROES2[(int8_t)unit->owner_idx]->heroes[(uint8_t)unit->type];
+                                      /* signed owner saved at com1:0x9A9ED; level/type/table
+                                         setup at com1:0x9AAB9..0x9AAD8 */
+#else
+        struct s_HERO __far *hero =
+            &_HEROES2[controller]->heroes[(uint8_t)unit->type];
+                                      /* 131:0x9AAB4  160:=  com1:— */
+#endif
+
+#if BUILD == MOM131
+        int16_t level_plus_one = (int16_t)(int8_t)unit->Level + 1;
+
+        if ((hero->abilities & HSA_PRAYERMASTER) != 0) {
+                                      /* 131:0x9AAF6  160:—  com1:— */
+            int16_t v = level_plus_one; /* 131:0x9AAF8  160:—  com1:— */
+            if (v > battlefield_resist_prayer_max[controller])
+                                      /* 131:0x9AB1C  160:—  com1:— */
+                battlefield_resist_prayer_max[controller] = v;
+                                      /* 131:0x9AB2E  160:—  com1:— */
+        }
+        if ((hero->abilities & HSA_PRAYERMASTER2) != 0) {
+                                      /* 131:0x9AB70  160:—  com1:— */
+            int16_t v = (int16_t)(level_plus_one * 3) / 2;
+                                      /* CWD/SUB/SAR signed correction;
+                                         131:0x9AB82..0x9ABAD  160:—  com1:— */
+            if (v > battlefield_resist_prayer_max[controller])
+                                      /* 131:0x9ABB0  160:—  com1:— */
+                battlefield_resist_prayer_max[controller] = v;
+                                      /* 131:0x9ABC2  160:—  com1:— */
+        }
+        if ((hero->abilities & HSA_LEADERSHIP) != 0)
+                                      /* 131:0x9AC04  160:—  com1:— */
+            leadership_candidate = level_plus_one / 3;
+                                      /* signed CWD/IDIV 131:0x9AC16  160:—  com1:— */
+        if ((hero->abilities & HSA_LEADERSHIP2) != 0)
+                                      /* 131:0x9AC72  160:—  com1:— */
+            leadership_candidate = level_plus_one / 2;
+                                      /* signed correction 131:0x9AC84  160:—  com1:— */
+
+#elif BUILD == CP160
+        uint16_t level_plus_one = (uint16_t)(uint8_t)unit->Level + 1;
+                                      /* MOV CL,[+0x0C]; XOR CH,CH; INC CX;
+                                         131:—  160:0x9AADA  com1:— */
+        uint16_t prayer_bits = (hero->abilities >> 16)
+                             & HSA_PRAYERMASTER_MASK_HI;
+                                      /* raw mask 0x0300; 131:—  160:0x9AAF0  com1:— */
+        if (prayer_bits != 0) {
+            int16_t v = level_plus_one; /* 131:—  160:0x9AAFB  com1:— */
+            if (prayer_bits != (HSA_PRAYERMASTER >> 16))
+                                      /* XCHG AL,AH; DEC AX; JE;
+                                         131:—  160:0x9AAFD  com1:— */
+                v = (int16_t)(v + ((uint16_t)v >> 1));
+                                      /* 131:—  160:0x9AB02  com1:— */
+            if (v > battlefield_resist_prayer_max[controller]) {
+                                      /* 131:—  160:0x9AB06  com1:— */
+                battlefield_resist_prayer_max[controller] = v;
+                                      /* 131:—  160:0x9AB4D  com1:— */
+                prayer_source_flags[controller == _combat_defender_player
+                    ? PRAYER_SOURCE_DEFENDER_SLOT : PRAYER_SOURCE_OTHER_SLOT] = 1;
+                                      /* 131:—  160:0x9AB50  com1:— */
+            }
+        }
+
+        uint16_t leadership_bits = hero->abilities & HSA_LEADERSHIP_MASK_LO;
+                                      /* raw mask 0x0003; 131:—  160:0x9AB1C  com1:— */
+        if (leadership_bits == 0)
+            continue;                 /* 131:—  160:0x9AB25  com1:— */
+        if (leadership_bits == HSA_LEADERSHIP)
+            leadership_candidate = (int16_t)level_plus_one / 3;
+                                      /* 131:—  160:0x9AB29..0x9AB34  com1:— */
+        else
+            leadership_candidate = (uint16_t)level_plus_one >> 1;
+                                      /* logical SHR; 131:—  160:0x9AB36  com1:— */
+        if (leadership_candidate > battlefield_leadership_max[controller])
+                                      /* 131:—  160:0x9AB38  com1:— */
+            battlefield_leadership_max[controller] = leadership_candidate;
+                                      /* 131:—  160:0x9AB47  com1:— */
+        continue;                     /* 131:—  160:0x9AB4A  com1:— */
+
+#else /* COM1 */
+        if ((hero->abilities & HSA_PRAYERMASTER) != 0) {
+                                      /* 131:—  160:—  com1:0x9AADC */
+            int16_t v = (int16_t)(((uint16_t)level_plus_one & 0xFF00)
+                        | ((uint8_t)level_plus_one >> 1));
+                                      /* INC AX then SHR AL only; 131:—  160:—
+                                         com1:0x9AAE7..0x9AAED */
+            if (v > battlefield_resist_prayer_max[controller]) {
+                                      /* 131:—  160:—  com1:0x9AAF0 */
+                battlefield_resist_prayer_max[controller] = v;
+                                      /* 131:—  160:—  com1:0x9AB02 */
+                prayer_source_flags[controller == _combat_defender_player
+                    ? PRAYER_SOURCE_DEFENDER_SLOT : PRAYER_SOURCE_OTHER_SLOT] = 1;
+                                      /* 131:—  160:—  com1:0x9AB05 */
+            }
+        }
+
+        if (((uint8_t __far *)hero)[3] & COM1_HERO_BYTE_03_UNKNOWN_40) {
+                                      /* 131:—  160:—  com1:0x9AB14 */
+            int8_t v = (int8_t)(level_plus_one / 3);
+                                      /* signed byte IDIV DL; 131:—  160:—  com1:0x9AB1B */
+            if (v > com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_1][controller])
+                                      /* 131:—  160:—  com1:0x9AB22 */
+                com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_1][controller] = v;
+                                      /* 131:—  160:—  com1:0x9AB28 */
+        }
+        if (((uint8_t __far *)hero)[4] & COM1_HERO_BYTE_04_UNKNOWN_02) {
+                                      /* 131:—  160:—  com1:0x9AB2C */
+            int8_t v = (int8_t)(level_plus_one / 2);
+                                      /* signed byte IDIV DL; 131:—  160:—  com1:0x9AB33 */
+            if (v > com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_2][controller])
+                                      /* 131:—  160:—  com1:0x9AB3A */
+                com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_2][controller] = v;
+                                      /* 131:—  160:—  com1:0x9AB40 */
+        }
+        if (((uint8_t __far *)hero)[4] & COM1_HERO_BYTE_04_UNKNOWN_10) {
+                                      /* 131:—  160:—  com1:0x9AB44 */
+            int16_t product = (int16_t)(int8_t)(uint8_t)level_plus_one * 3;
+            int8_t v = (int8_t)(product / 4);
+                                      /* signed byte IMUL then IDIV; 131:—  160:—
+                                         com1:0x9AB4B..0x9AB54 */
+            if (v > com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_2][controller])
+                                      /* 131:—  160:—  com1:0x9AB56 */
+                com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_2][controller] = v;
+                                      /* 131:—  160:—  com1:0x9AB5C */
+        }
+        if (((uint8_t __far *)hero)[0x0B] & COM1_HERO_BYTE_0B_UNKNOWN_08) {
+                                      /* 131:—  160:—  com1:0x9AB60 */
+            if (2 > com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_0][controller])
+                                      /* 131:—  160:—  com1:0x9AB67 */
+                com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_0][controller] = 2;
+                                      /* 131:—  160:—  com1:0x9AB70 */
+        }
+        if (((uint8_t __far *)hero)[0x0B] & COM1_HERO_BYTE_0B_UNKNOWN_10) {
+                                      /* 131:—  160:—  com1:0x9AB74 */
+            int8_t v = (int8_t)(level_plus_one / 3);
+                                      /* 131:—  160:—  com1:0x9AB7B */
+            if (v > com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_3][controller])
+                                      /* 131:—  160:—  com1:0x9AB82 */
+                com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_3][controller] = v;
+                                      /* 131:—  160:—  com1:0x9AB88 */
+        }
+        if (((uint8_t __far *)hero)[0x0B] & COM1_HERO_BYTE_0B_UNKNOWN_20) {
+                                      /* 131:—  160:—  com1:0x9AB8C */
+            int8_t v = (int8_t)(level_plus_one / 2);
+                                      /* 131:—  160:—  com1:0x9AB93 */
+            if (v > com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_3][controller])
+                                      /* 131:—  160:—  com1:0x9AB9A */
+                com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_3][controller] = v;
+                                      /* 131:—  160:—  com1:0x9ABA0 */
+        }
+        if (((uint8_t __far *)hero)[0x0B] & COM1_HERO_BYTE_0B_UNKNOWN_40) {
+                                      /* 131:—  160:—  com1:0x9ABA4 */
+            int8_t v = (int8_t)(level_plus_one / 2);
+                                      /* 131:—  160:—  com1:0x9ABAB */
+            if (v > com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_4][controller])
+                                      /* 131:—  160:—  com1:0x9ABB2 */
+                com1_spfx_max[COM1_SPFX_GROUP_UNKNOWN_4][controller] = v;
+                                      /* 131:—  160:—  com1:0x9ABB8 */
+        }
+
+        if ((hero->abilities & HSA_PRAYERMASTER2) != 0) {
+                                      /* 131:—  160:—  com1:0x9ABC4 */
+            uint8_t half = (uint8_t)level_plus_one >> 1;
+            int16_t v = (int16_t)(((uint16_t)level_plus_one & 0xFF00)
+                        | (uint8_t)(half + (half >> 1)));
+                                      /* AL-only shifts/add preserve AH; 131:—  160:—
+                                         com1:0x9ABD3..0x9ABDC */
+            if (v > battlefield_resist_prayer_max[controller]) {
+                                      /* 131:—  160:—  com1:0x9ABE3 */
+                battlefield_resist_prayer_max[controller] = v;
+                                      /* 131:—  160:—  com1:0x9ABF5 */
+                prayer_source_flags[controller == _combat_defender_player
+                    ? PRAYER_SOURCE_DEFENDER_SLOT : PRAYER_SOURCE_OTHER_SLOT] = 1;
+                                      /* 131:—  160:—  com1:0x9ABF8 */
+            }
+        }
+        if ((hero->abilities & HSA_LEADERSHIP) != 0)
+                                      /* 131:—  160:—  com1:0x9AC05 */
+            leadership_candidate = level_plus_one / 3;
+                                      /* signed CWD/IDIV; 131:—  160:—  com1:0x9AC0C */
+        goto com1_after_spfx_mana_helper;
+                                      /* primary jumps over helper at 0x9AC1B..0x9AC8E;
+                                         131:—  160:—  com1:0x9AC18 */
+com1_after_spfx_mana_helper:
+        if ((hero->abilities & HSA_LEADERSHIP2) != 0)
+                                      /* 131:—  160:—  com1:0x9AC9B */
+            leadership_candidate = level_plus_one / 2;
+                                      /* signed correction; 131:—  160:—  com1:0x9ACA2 */
+#endif
+
+#if BUILD != CP160
+        if (leadership_candidate > battlefield_leadership_max[controller])
+                                      /* 131:0x9ACAD  160:—  com1:= */
+            battlefield_leadership_max[controller] = leadership_candidate;
+                                      /* 131:0x9ACBF  160:—  com1:= */
+#endif
+    }
+
+    for (side = 0;
+#if BUILD == MOM131
+         side < R6_5D_NUM_PLAYERS;
+#else
+         side < BATTLEFIELD_BONUS_SLOTS;
+#endif
+         ++side) {                    /* init/test/increment 131:0x9ACD9,0x9ACF7,0x9ACF8
+                                         160:=  com1:= */
+        battlefield_resist_prayer_max[side] += battlefield_holy_bonus_max[side];
+                                      /* 131:0x9ACDD..0x9ACF4  160:=  com1:= */
+    }
+
+#if BUILD == COM1
+    goto COM1_RELOCATED_BATTLE_UNIT_TAIL_0x99874;
+                                      /* near JMP outside the extent; 131:—  160:—
+                                         com1:0x9ACFE */
+#else
+    return;                           /* far epilogue/RETF 131:0x9ACFE..0x9AD03
+                                         160:=  com1:— */
+#endif
+}
+
+#if BUILD == CP160
+/* No live edge enters 0x9AB5F..0x9ACCF. Entry AX has no predecessor; the retained
+ * body is the superseded MoM hero tail and is represented to preserve semantic bytes. */
+static void r6_5d_cp_unreachable_hero_tail(int16_t unit_i,
+                                           int16_t controller,
+                                           uint16_t entry_ax)
+{
+    struct s_UNIT __far *unit = &_UNITS[_battle_units[unit_i].unit_idx];
+    uint16_t hero_byte_offset = (uint16_t)(entry_ax * 0x000C);
+                                      /* 131:—  160:0x9AB5F  com1:— */
+    struct s_HERO __far *hero = (struct s_HERO __far *)
+        ((uint8_t __far *)_HEROES2[controller] + hero_byte_offset);
+                                      /* 131:—  160:0x9AB64  com1:— */
+    int16_t level_plus_one = (int16_t)(int8_t)unit->Level + 1;
+    int16_t leadership_candidate;
+
+    if ((hero->abilities & HSA_PRAYERMASTER2) != 0) {
+                                      /* 131:—  160:0x9AB70  com1:— */
+        int16_t v = (int16_t)(level_plus_one * 3) / 2;
+                                      /* 131:—  160:0x9AB82  com1:— */
+        if (v > battlefield_resist_prayer_max[controller])
+                                      /* 131:—  160:0x9ABB0  com1:— */
+            battlefield_resist_prayer_max[controller] = v;
+                                      /* 131:—  160:0x9ABC2  com1:— */
+    }
+    if ((hero->abilities & HSA_LEADERSHIP) != 0)
+                                      /* 131:—  160:0x9AC04  com1:— */
+        leadership_candidate = level_plus_one / 3;
+                                      /* 131:—  160:0x9AC16  com1:— */
+    if ((hero->abilities & HSA_LEADERSHIP2) != 0)
+                                      /* 131:—  160:0x9AC72  com1:— */
+        leadership_candidate = level_plus_one / 2;
+                                      /* 131:—  160:0x9AC84  com1:— */
+    if (leadership_candidate > battlefield_leadership_max[controller])
+                                      /* 131:—  160:0x9ACAD  com1:— */
+        battlefield_leadership_max[controller] = leadership_candidate;
+                                      /* 131:—  160:0x9ACBF  com1:— */
+}
+#endif
 
 int16_t __far Check_Attack_Ranged(int16_t attacker_battle_unit_idx,
                                   int16_t defender_battle_unit_idx)
@@ -2298,7 +3061,7 @@ do {
                                          store i 131:0x9A17F 160:= com1:= */
             local_damage[1] += i;    /* 8B 46 FC / 01 46 DA; 131:0x9A182..0x9A185 160:= com1:= */
             if (SpFx != 0) {         /* JE ->0x9A19E at 131:0x9A188..0x9A18C 160:= com1:= */
-                overlay_0370_002A(attacker_battle_unit_idx, i, 1);
+                Battle_Unit_Heal(attacker_battle_unit_idx, i, 1);
                                       /* lcall 0370:002A at 131:0x9A196 160:= com1:= */
             }
         }

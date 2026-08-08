@@ -5,6 +5,112 @@ Closed work, accepted modelling decisions, and notable verification results remo
 engine behavior. The linked specification, binary analyses, data-table findings, discrepancy
 catalogue, reconstructions, and evidence files own the underlying results.
 
+## 2026-08-08 — R7 display goal simplified
+
+R7 no longer imitates the games' plain/gold or grey/gold stat tiers. The calculator keeps one
+numeric final modified value beside each editable base stat because the games' visual distinction
+does not help users understand the calculator result. The remaining R7 work instead exposes the
+ordered stat-transform trace on hover: base value, each source's before/after write in the
+applicable binary or CAS execution order, then the final value. Q16 was removed from the live work
+register because classifying the games' display tiers is no longer a calculator requirement.
+
+## 2026-08-08 — DOS reconstruction R6.5d
+
+Completed the three-build reconstruction of exported overlay target `03D0:004D` at
+`0x9A8AB..0x9AD04`. Codex Agent A and Codex Agent B independently derived the 1,113-byte routine
+and reciprocally reviewed both artifacts. All six byte-backed review entries were resolved and no
+disagreement survived, so no Q row was needed.
+
+The merged `Calc_Battlefield_Bonuses` body is in
+`Reference docs/DOS reconstructed/combat.c`; exact binary identities and extent hashes, external
+helper-entry contracts, arithmetic-width evidence, complete branch/write/call inventories,
+per-build ledgers, findings, counts, and provenance are in `R6.5d.evidence.md`. The routine imports
+combat-side city/global enchantments, computes controller-wide Holy Bonus, Resist/Prayer, and
+Leadership maxima, applies the build-specific city-defense rule, and folds Holy Bonus into the
+shared Resist/Prayer array. CP changes hero arithmetic and retains an unreachable superseded tail;
+CoM adds five field-scoped maxima, two externally entered helper islands, and a relocated exit.
+
+Strict build-scoped verification passes all three pinned binaries: 25 / 33 / 50 conditional
+branches, zero calls, 16 / 21 / 21 recognized named writes, contiguous 7 / 7 / 8-row ledgers, and
+zero unaccounted semantic elements, gaps, or parent mismatches. R6.5a–d now close all four code
+targets exposed by the R6.3 overlay-aware call audit.
+
+## 2026-08-08 — DOS reconstruction R6.5c
+
+Completed the three-build reconstruction of overland movement routine `Unit_Moves2`, exported as
+`03C8:0043` at `0x98494..0x986BD`. Codex-A and Codex-B independently derived the 553-byte routine
+and reciprocally reviewed both artifacts; every byte-backed review entry was resolved and no
+disagreement survived. Strict build-scoped verification passes all three pinned binaries with
+213 / 213 / 220 decoded instructions, 20 / 20 / 19 conditional branches, zero calls, 14
+stack-local memory writes, one far return, contiguous ledgers, and no omitted semantic elements.
+
+The merged `Unit_Moves2` body is in `Reference docs/DOS reconstructed/unitcalc.c`; complete
+branch, read, write, call, arithmetic, entry-routing, and per-build coverage evidence is in
+`R6.5c.evidence.md`. MoM 1.31 and CP 1.60 are byte-identical and use the routine in battle-unit
+construction. CoM retains a 17-byte-different homolog but replaces that constructor path. Its
+unconditional Wind Mastery loop edge keeps the balance at zero, leaving the retained owner/balance
+block and patched double/no-op movement transforms unreachable.
+
+## 2026-08-08 — DOS reconstruction R6.5b
+
+Completed the three-build reconstruction of exported Life-Steal-path routine `0370:002A` at
+`0x7FCBA..0x7FF43`. Two Codex agent instances derived the 649-byte routine independently and
+reciprocally reviewed both artifacts; all six byte-backed review entries were resolved and no
+disagreement survived.
+Strict build-scoped verification passes all three pinned binaries with 12 / 14 / 13 conditional
+branches, three calls per build, 6 / 7 / 6 recognized named writes, four contiguous ledger rows,
+and no omitted semantic elements.
+
+The merged `Battle_Unit_Heal` body is in
+`Reference docs/DOS reconstructed/combat.c`; complete byte-backed branch, read, call, write, and
+arithmetic inventories, per-build ledgers, findings, hashes, counts, and provenance are in
+`R6.5b.evidence.md`. Normal healing is capped to reversible damage only when temporary Hits are
+disabled; the common spill path assigns regular, undeath, and irreversible low bytes before
+restoring figures from excess healing. CP 1.60 additionally converts restored figures' apportioned
+damage into irreversible damage, while CoM 1 preserves the signed raw-Max threshold/divisor split
+and caps Extra Hits at 90. Both later builds clear the saved positive remainder before the shared
+tail, unlike MoM 1.31. The routine preserves movement around battle-unit construction and
+battlefield-effect recomputation.
+
+AKH explicitly requested two Codex agents rather than the protocol's usual Claude–Codex pairing.
+
+## 2026-08-07 — DOS reconstruction R6.5a
+
+Completed the three-build reconstruction of exported target `0348:003E` at
+`0x7BDA0..0x7BE3B`. Two Codex agent instances derived the 155-byte routine independently and
+reciprocally reviewed both artifacts; both reviews were clean and no disagreement survived.
+Strict build-scoped verification passes all three pinned binaries with six conditional branches,
+zero calls, four global writes, contiguous ledgers, and no omitted semantic elements.
+
+The merged `Update_Sees_Illusions` body is in
+`Reference docs/DOS reconstructed/combat.c`; complete byte-backed inventories, per-build ledgers,
+counts, findings, and provenance are in `R6.5a.evidence.md`. The routine clears both side-wide
+Illusion-sight words and sets each side's word when an active unit controlled by that side has
+Illusions Immunity. `BU_ApplyDamage` calls it after assigning a zero-figure unit's terminal status.
+
+AKH explicitly requested two Codex agents rather than the protocol's usual Claude–Codex pairing.
+
+## 2026-08-07 — DOS checker hardening R6.4
+
+Completed R6.4 under the dual-derivation and reciprocal-review protocol. The checker now extracts
+citations for the selected build before testing coverage, so same-offset annotations from MoM
+1.31, CP 1.60 and CoM 1 cannot satisfy one another. The shared extractor recognizes explicit
+version labels before generic `MoM`, treats `all MoM` as the two MoM builds, and no longer mistakes
+the `all` substring inside headings such as `Call inventory` for a build label.
+
+`named_write` now inspects only the destination operand, eliminating the R6.1h load overcount, and
+`scan_mom_binary.FIELDS` covers every battle-unit and persistent-unit displacement written by the
+landed reconstruction, including status/damage bytes and the gold/grey accumulators. Seven focused
+regressions cover citation isolation, label parsing, load/store direction and the complete field
+set. All fourteen R6.1a–h/R6.2a–f artifacts pass against all three pinned binaries: 42/42 runs,
+zero unaccounted jumps, calls, writes, ledger gaps or parent mismatches. The stricter sweep exposed
+and repaired build-local citation metadata in R6.1c/R6.1d; no reconstructed code or mechanic
+finding changed.
+
+Verified: two independent Codex agent instances on 2026-08-07, followed by reciprocal review.
+This did not provide the protocol's specified Claude–Codex cross-model pairing; AKH explicitly
+waived that mismatch and directed R6.4 to be marked done on 2026-08-07. No disagreement survived.
+
 ## 2026-08-07 — DOS reconstruction R6.3
 
 Completed the cross-build reconciliation and first-/second-level call-closure audit for all

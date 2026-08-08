@@ -10,10 +10,9 @@ is usually rebased far enough for that not to bite, but 1.31 and CP 1.60 share
 this executable's addresses everywhere, and CoM 1 overlaps them inside
 `BU_Apply_Specials` and the stat recompute.
 
-`Reference docs/DOS reconstructed/README.md` prescribes the workaround: extract
-the build's own section and check that. This automates it, so a reviewer can
-reproduce the run. **R6.4 supersedes it** by scoping the checker itself; delete
-this once `--build` exists.
+`verify_dos_derivation.py` imports this module's extractor and scopes citations
+before checking them. The CLI remains useful for inspecting or preserving the
+exact citation list used for one build.
 
 What is kept for build K:
 
@@ -43,61 +42,119 @@ extent where the documented unsplit command reports none.
 import re
 import sys
 
-if len(sys.argv) != 4:
-    sys.exit(__doc__.strip().split('\n\n')[1])
-DOC, BUILD, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
-
-KEY = {'mom131': '131', 'mom160': '160', 'com1': 'com1'}.get(BUILD)
-if KEY is None:
-    sys.exit(f'unknown build {BUILD!r}; expected mom131, mom160 or com1')
-
-src = '\n'.join(open(p, encoding='utf-8').read() for p in DOC.split(',')).split('\n')
+BUILD_KEYS = {'mom131': '131', 'mom160': '160', 'com1': 'com1'}
 
 MARK = re.compile(r'\b(131|160|com1):')
 LEDGER = re.compile(r'^\| \d+ \| (\w+) \|')
 TABLE = re.compile(r'^\|.*`0x[0-9A-Fa-f]{4,6}`')
 HEADING = re.compile(r'^#{2,}\s+(.*)')
+ADDRESS = re.compile(r'0x[0-9A-Fa-f]{4,6}')
 
 
-def names_build(text):
-    """True if this prose names the build under check."""
-    if BUILD in ('mom131', 'mom160'):
-        if 'MoM' in text or 'all' in text or BUILD in text:
-            return True
-        return 'CP' in text and BUILD == 'mom160'
-    return 'com1' in text or 'CoM 1' in text or 'CoM' in text
+def _consume(text, pattern, builds, selected):
+    """Consume one label shape so a shorter generic label cannot re-match it."""
+    rx = re.compile(pattern, re.I)
+    if rx.search(text):
+        builds.update(selected)
+        text = rx.sub(' ', text)
+    return text
 
 
-kept, heading = [], ''
-for line in src:
-    h = HEADING.match(line)
-    if h:
-        heading = h.group(1)
-        continue
-    m = LEDGER.match(line)
-    if m:
-        if m.group(1) == BUILD:
+def named_builds(text):
+    """Return build keys explicitly named by a heading or table row."""
+    builds = set()
+    token = r'(?<![A-Za-z0-9_]){}(?![A-Za-z0-9_])'
+
+    # Consume compound and explicit labels before their generic components.
+    text = _consume(text, token.format(r'all\s+MoM'), builds,
+                    {'mom131', 'mom160'})
+    text = _consume(text, token.format(r'MoM\s+CP\s+1\.60'), builds,
+                    {'mom160'})
+    text = _consume(text, token.format(r'CP\s+1\.60'), builds, {'mom160'})
+    text = _consume(text, token.format(r'MoM\s+1\.31'), builds, {'mom131'})
+    text = _consume(text, token.format(r'CoM\s+1'), builds, {'com1'})
+
+    for label, selected in (
+            ('mom131', {'mom131'}), ('mom160', {'mom160'}),
+            ('com1', {'com1'}), ('all', set(BUILD_KEYS)),
+            ('CP', {'mom160'}), ('CoM', {'com1'}),
+            ('MoM', {'mom131', 'mom160'})):
+        text = _consume(text, token.format(re.escape(label)), builds, selected)
+    return builds
+
+
+def extract_build_lines(text, build):
+    """Extract the citation-bearing lines that belong to one DOS build."""
+    key = BUILD_KEYS.get(build)
+    if key is None:
+        raise ValueError(
+            f'unknown build {build!r}; expected mom131, mom160 or com1')
+
+    kept, heading = [], ''
+    for line in text.splitlines():
+        h = HEADING.match(line)
+        if h:
+            heading = h.group(1)
+            continue
+        m = LEDGER.match(line)
+        if m:
+            if m.group(1) == build:
+                kept.append(line)
+            continue
+        if TABLE.match(line) and '---' not in line:
+            # The build may be in the row or, for a per-build table, in its heading.
+            if build in named_builds(line) or build in named_builds(heading):
+                kept.append(line)
+            continue
+        # Several durable inventories are plain code blocks rather than tables.
+        # A build-labelled heading or a leading ``mom131:`` / ``all:`` field is
+        # equally explicit and must remain usable by the integrated verifier.
+        prefix = re.match(r'^\s*([^:]{1,40}):', line)
+        if ADDRESS.search(line) and (
+                build in named_builds(heading)
+                or (prefix and build in named_builds(prefix.group(1)))):
             kept.append(line)
-        continue
-    if TABLE.match(line) and '---' not in line:
-        # The build may be in the row or, for a per-build table, in its heading.
-        if names_build(line) or names_build(heading):
-            kept.append(line)
-        continue
-    if not MARK.search(line):
-        continue
-    parts = re.split(r'\b(131|160|com1):', line)
-    fields = {}
-    for k in range(1, len(parts), 2):
-        fields.setdefault(parts[k], []).append(parts[k + 1])
-    if KEY not in fields:
-        continue
-    text = ' '.join(fields[KEY])
-    if KEY in ('160', 'com1') and re.match(r'^\s*=', text) and '131' in fields:
-        text = ' '.join(fields['131'])
-    addrs = re.findall(r'0x[0-9A-Fa-f]{4,6}', text)
-    if addrs:
-        kept.append('  '.join(addrs))
+            continue
+        if not MARK.search(line):
+            continue
+        parts = re.split(r'\b(131|160|com1):', line)
+        fields = {}
+        for k in range(1, len(parts), 2):
+            fields.setdefault(parts[k], []).append(parts[k + 1])
+        if key not in fields:
+            continue
+        selected_text = ' '.join(fields[key])
+        if key in ('160', 'com1') and re.match(r'^\s*=', selected_text) \
+                and '131' in fields:
+            selected_text = ' '.join(fields['131'])
+        addrs = ADDRESS.findall(selected_text)
+        if addrs:
+            kept.append('  '.join(addrs))
+    return kept
 
-open(OUT, 'w', encoding='utf-8').write('\n'.join(kept) + '\n')
-print(f'{BUILD}: {len(kept)} lines -> {OUT}')
+
+def extract_build_text(text, build):
+    """Return the newline-delimited citation extract used by the verifier."""
+    lines = extract_build_lines(text, build)
+    return '\n'.join(lines) + ('\n' if lines else '')
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if len(argv) != 3:
+        sys.exit(__doc__.strip().split('\n\n')[1])
+    doc, build, out = argv
+    try:
+        src = '\n'.join(
+            open(p, encoding='utf-8').read() for p in doc.split(','))
+        result = extract_build_text(src, build)
+    except ValueError as exc:
+        sys.exit(str(exc))
+    with open(out, 'w', encoding='utf-8') as stream:
+        stream.write(result)
+    print(f'{build}: {len(result.splitlines())} lines -> {out}')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

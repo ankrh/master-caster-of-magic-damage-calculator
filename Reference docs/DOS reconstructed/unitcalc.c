@@ -8,7 +8,8 @@
  *                 R6.1e hero-item application and constructor hit points;
  *                 R6.1f level bonuses and hero-template abilities;
  *                 R6.1g item powers, recompute hit points and CoM movement;
- *                 R6.1h item attack-special helper
+ *                 R6.1h item attack-special helper;
+ *                 R6.5c overland Unit_Moves2
  */
 
 #include "MOM_DAT.h"
@@ -251,6 +252,11 @@
 #define IP_COM1_DIVINE_PROTECTION       IP_POWER_DRAIN    /* raw 0x01000000 */
 #define IP_COM1_INNER_FIRE              IP_GIANT_STRENGTH /* raw 0x08000000 */
 #if BUILD == COM1
+#define IP_MOVEMENT_PLUS_TWO_INPUT       IP_COM1_TELEPORTATION
+#else
+#define IP_MOVEMENT_PLUS_TWO_INPUT       IP_ENDURANCE
+#endif
+#if BUILD == COM1
 #define IP_ATTACK_SPECIAL_POWER_DRAIN_INPUT IP_COM1_DIVINE_PROTECTION
 #else
 #define IP_ATTACK_SPECIAL_POWER_DRAIN_INPUT IP_POWER_DRAIN
@@ -267,6 +273,7 @@
 #define COM1_PLAYER_TACTICIAN_OFF       0x0067
 #define PLAYER_RETORT_UNKNOWN_006A      0x006A /* CP 1.60 dead probe; semantic name unproved */
 #define OE_ETERNAL_NIGHT                0
+#define OE_WIND_MASTERY                 0x04
 #define OE_CRUSADE                      0x11
 #define OE_CHARM_OF_LIFE                0x15
 
@@ -305,6 +312,11 @@
 
 /* MoM 1.31's unindexed Chaos Surge read: player 0's byte, repeated inside the player loop. */
 #define PLAYER0_CHAOS_SURGE_ADDR  0xA356
+
+/* R6.5c Unit_Moves2 address anchors: player stride 0x04C8, owned-hero stride 0x001C. */
+#define UNIT_MOVES2_FIRST_HERO_ITEMS_ADDR   0x9F50
+#define UNIT_MOVES2_FIRST_WIND_MASTERY_ADDR 0xA350
+#define UNIT_MOVES2_NUM_PLAYERS_ADDR        0xBD9C
 
 /* CoM 1 side tables/globals read by Battle_Unit_Moves2. */
 #define COM1_LOGISTICS_MAX_ADDR       0x3AC8
@@ -1353,6 +1365,111 @@ shared_hit_thresholds:
     bu->Gold_Hits += (uint8_t)bu->Extra_Hits;      /* 131:0x8EAA1..0x8EAAE  160:=  com1:= */
     return hits;                                  /* 131:0x8EAAF/0x8EAB1  160:=  com1:= */
 }                                                 /* retf 131:0x8EAB8  160:=  com1:= */
+
+/* ===========================================================================================
+ * Unit_Moves2(unit_idx)                                                               [R6.5c]
+ *
+ * Overland maximum movement in half-points. Exported as 03C8:0043 and byte-identical in MoM
+ * 1.31 and CP 1.60. CoM 1 retains the body at the same file address but replaces the constructor
+ * call with Battle_Unit_Moves2; its 0x98669 unconditional jump makes the retained owner/balance
+ * block and both later movement-scaling arms unreachable. Address anchors above preserve the
+ * body reads at DS:0x9F50, DS:0xA350 and DS:0xBD9C.
+ * =========================================================================================== */
+
+int16_t __far Unit_Moves2(int16_t unit_idx)
+{
+    int16_t item_moves2 = 0;                      /* 131:0x9849C  160:=  com1:= */
+    int16_t item_movement_bit = 0;                /* 131:0x984A1  160:=  com1:= */
+    uint32_t raw_effect_union = 0;                /* 131:0x984A6/0x984AB  160:=  com1:= */
+    int16_t moves2;
+    int16_t item_slot;
+
+    if ((int8_t)_UNITS[unit_idx].Hero_Slot > HERO_SLOT_NONE) {
+                                                  /* 131:0x984BD..0x984C7  160:=  com1:= */
+        int16_t owner = (int8_t)_UNITS[unit_idx].owner_idx;
+        int16_t hero_slot = (int8_t)_UNITS[unit_idx].Hero_Slot;
+
+        /* The executable forms DS:0x9F50 + owner*0x04C8 + hero_slot*0x001C. */
+        for (item_slot = 0; item_slot < 3; item_slot++) {
+            int16_t item = players[owner].Heroes[hero_slot].Items[item_slot];
+                                                  /* 131:0x98505..0x98513  160:=  com1:= */
+            if (item > ITEM_SLOT_EMPTY) {
+                if (_ITEMS[item].Powers & IP_MOVEMENT_PLUS_TWO_INPUT)
+                                                  /* 131:0x9851C..0x98541  160:=  com1:= */
+                    item_movement_bit = 1;        /* 131:0x98542  160:=  com1:= */
+                raw_effect_union |= _ITEMS[item].Powers;
+                                                  /* 131:0x98547..0x98570  160:=  com1:= */
+                item_moves2 += (int8_t)_ITEMS[item].moves2;
+                                                  /* 131:0x98571..0x9858C  160:=  com1:= */
+            }
+        }
+    }
+
+    moves2 = (int8_t)unit_types[(uint8_t)_UNITS[unit_idx].type].Move_Halves;
+                                                  /* 131:0x98598..0x985B8  160:=  com1:= */
+    raw_effect_union |= _UNITS[unit_idx].enchantments;
+                                                  /* 131:0x985B9..0x985D9  160:=  com1:= */
+
+    if (moves2 < 6 && (raw_effect_union & UE_FLIGHT))
+        moves2 = 6;                              /* 131:0x985DA..0x985F1  160:=  com1:= */
+
+    if ((_UNITS[unit_idx].mutations & UM_CHAOS_CHANNELS_WINGS) && moves2 < 4)
+        moves2 = 4;                              /* 131:0x985F2..0x9860D  160:=  com1:= */
+
+    if ((raw_effect_union & UE_ENDURANCE) || item_movement_bit == 1)
+        moves2 += 2;                             /* 131:0x9860E..0x9862D  160:=  com1:= */
+
+    moves2 += item_moves2;                       /* 131:0x9862E  160:=  com1:= */
+
+    if ((int8_t)unit_types[(uint8_t)_UNITS[unit_idx].type].Transport > 0) {
+                                                  /* 131:0x98631..0x98651  160:=  com1:= */
+        int16_t wind_mastery_balance = 0;         /* 131:0x98652  160:=  com1:= */
+        int16_t player_idx;
+
+        for (player_idx = 0; player_idx < num_players; player_idx++) {
+                                                  /* DS:0xA350 + player_idx*0x04C8; count DS:0xBD9C */
+#if BUILD == COM1
+            /* CoM still reads and compares the signed byte, then 0x98669: EB 1E skips the
+               retained owner comparison and balance writes on every iteration. */
+            (void)(players[player_idx].Globals[OE_WIND_MASTERY] > 0);
+            goto wind_mastery_next_player;
+#else
+            if (players[player_idx].Globals[OE_WIND_MASTERY] <= 0)
+                goto wind_mastery_next_player;   /* 131:0x98669 7E1E  160:= */
+#endif
+
+            /* Retained in CoM but unreachable there because of the edge above. */
+            if ((int8_t)_UNITS[unit_idx].owner_idx == player_idx) {
+                wind_mastery_balance++;          /* 131:0x98681  160:=  com1:= */
+                goto wind_mastery_next_player;   /* 131:0x98684 EB03  160:=  com1:= */
+            }
+            wind_mastery_balance--;              /* 131:0x98686  160:=  com1:= */
+
+wind_mastery_next_player:
+            ;
+        }
+
+        if (wind_mastery_balance > 0) {
+#if BUILD == COM1
+            moves2 = (int16_t)(moves2 + moves2); /* com1:0x98696..0x986A3; unreachable */
+#else
+            /* IMUL truncates to the signed low word before the corrected SAR division. */
+            moves2 = (int16_t)((int16_t)(moves2 * 3) / 2);
+                                                  /* 131:0x98696..0x986A3  160:= */
+#endif
+        }
+
+        if (wind_mastery_balance < 0) {
+#if BUILD == COM1
+            moves2 = moves2;                     /* com1:0x986AA..0x986B2; unreachable */
+#else
+            moves2 = (int16_t)(moves2 / 2);      /* 131:0x986AA..0x986B2  160:= */
+#endif
+        }
+    }
+
+    return moves2;                               /* 131:0x986B3..0x986BC  160:=  com1:= */
+}
 
 #if BUILD == COM1
 /* Private register-contract helpers called only by Battle_Unit_Moves2. */

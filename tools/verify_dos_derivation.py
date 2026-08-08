@@ -23,9 +23,11 @@ the 32-bit Delphi `Caster.exe`. Same contract, three target differences:
 * **Named-field writes are BATTLE_UNIT displacements**, taken from
   `scan_mom_binary.FIELDS`, rather than Delphi's absolute record displacements.
 
-Citations are plain `0x` hex, matching the DOS analysis docs. 1.31 and CP 1.60
-share addresses, so a citation may satisfy both; CoM 1 is rebased and its
-addresses are distinct numbers, so the shared citation set stays unambiguous.
+Citations are plain `0x` hex, matching the DOS analysis docs. Before checking,
+the citation-bearing annotations and inventory rows are scoped to the selected
+build with `split_dos_derivation.extract_build_text`. This is required because
+all three builds share some file offsets; another build's same-address citation
+must never satisfy the build under check.
 
 **Known limitation -- read before trusting a clean run.** Like its Delphi
 sibling, this verifies that each semantic element is *cited*, never that the
@@ -40,61 +42,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from capstone import CS_ARCH_X86, CS_MODE_16, Cs            # noqa: E402
 from scan_mom_binary import FIELDS                          # noqa: E402
+from split_dos_derivation import extract_build_text         # noqa: E402
 
-if len(sys.argv) < 4:
-    sys.exit(__doc__.strip().split('\n\n')[1])
-EXE, DOC, BUILD = sys.argv[1], sys.argv[2], sys.argv[3]
-
-DATA = open(EXE, 'rb').read()
-# DOC may be a comma-separated list. During derivation everything lives in one
-# `.derivations/<ID>.<agent>.md`; once merged, the ledgers are in the evidence
-# markdown while the address annotations are in the reconstruction `.c` beside
-# it. Both must be scanned, or the merged artifact would appear to cite nothing.
-_doc = '\n'.join(open(p, encoding='utf-8').read() for p in DOC.split(','))
-
-# Citations: bare 0x hex, 4-6 digits. Ranges written 0x8F310..0x8F880 also
-# contribute their right-hand address, as in the Delphi checker.
-cited = {int(m.group(1), 16)
-         for m in re.finditer(r'0x([0-9A-Fa-f]{4,6})\b', _doc)}
-
-# Coverage ledger, one row per build:
-# | N | build | `0xXXXXX` | `0xXXXXX` | (—|N) | disposition | title |
-rows = [(int(m.group(3), 16), int(m.group(4), 16),
-         None if m.group(5) == '—' else int(m.group(5)), m.group(7),
-         int(m.group(1)))
-        for m in re.finditer(
-            r'^\| (\d+) \| (\w+) \| `0x([0-9A-Fa-f]{4,6})` \| '
-            r'`0x([0-9A-Fa-f]{4,6})` \| (—|\d+) \| ([\w-]+) \| (.+?) \|$',
-            _doc, re.M)
-        if m.group(2) == BUILD]
-
-EXPLICIT = len(sys.argv) >= 6
-if EXPLICIT:
-    LO, HI = int(sys.argv[4], 16), int(sys.argv[5], 16)
-    rows = [r for r in rows if LO <= r[0] and r[1] <= HI]
-    if not rows:
-        sys.exit(f'no {BUILD} ledger rows inside {LO:05X}..{HI:05X}')
-    extents = [(LO, HI, rows)]
-elif rows:
-    # One group per ledger. A new ledger starts **only** when the row number
-    # restarts, because `Within` cites the ledger's own row numbers and merging
-    # two ledgers makes the second's parents resolve against the first's rows.
-    #
-    # Address discontinuity must NOT split a ledger. Splitting on it silently
-    # reclassifies a coverage hole as two adjacent extents, each contiguous on
-    # its own, and the run exits clean -- which is exactly the gap the protocol
-    # forbids. Within one numbering sequence a discontinuity is a gap, and the
-    # contiguity check below reports it.
-    extents, run = [], [rows[0]]
-    for r in rows[1:]:
-        if r[4] > run[-1][4]:
-            run.append(r)
-        else:
-            extents.append((run[0][0], run[-1][1], run))
-            run = [r]
-    extents.append((run[0][0], run[-1][1], run))
-else:
-    sys.exit(f'no {BUILD} coverage ledger found and no extent given')
+EXE = DOC = BUILD = ''
+DATA = b''
+cited = set()
 
 COND = re.compile(r'^j(?!mp$)\w+$')
 # Borland's __far pointers and struct access use these bases; [bp+..] is locals
@@ -118,7 +70,7 @@ def named_write(i):
     if i.mnemonic not in ('mov', 'add', 'sub', 'inc', 'dec', 'or', 'and',
                           'xor', 'imul', 'shl', 'sar'):
         return False
-    dest = i.op_str.split('],')[0] + ']' if '],' in i.op_str else i.op_str
+    dest = i.op_str.split(',', 1)[0].strip()
     if not dest.rstrip().endswith(']'):
         return False          # register destination
     m = FIELD_BASE.search(dest)
@@ -209,12 +161,72 @@ def check(LO, HI, rows):
     return bool(gaps or bad or miss_j or miss_c or miss_w)
 
 
-problems = False
-for _lo, _hi, _rows in extents:
-    problems |= check(_lo, _hi, _rows)
+def main(argv=None):
+    """CLI entry point; kept behind a guard so helpers are regression-testable."""
+    global EXE, DOC, BUILD, DATA, cited
 
-if len(extents) > 1:
-    print(f'{len(extents)} assigned extents checked separately.')
-print('\nNOTE: citation coverage only. A clean run does not mean the derivation '
-      'read those\ninstructions correctly -- see the module docstring.')
-sys.exit(1 if problems else 0)
+    argv = sys.argv[1:] if argv is None else argv
+    if len(argv) < 3:
+        sys.exit(__doc__.strip().split('\n\n')[1])
+    EXE, DOC, BUILD = argv[:3]
+    DATA = open(EXE, 'rb').read()
+
+    # DOC may be a comma-separated list. During derivation everything lives in
+    # one scratch markdown file; once merged, ledgers and address annotations
+    # may be split between evidence markdown and a reconstruction C file.
+    _doc = '\n'.join(open(p, encoding='utf-8').read() for p in DOC.split(','))
+    try:
+        scoped_doc = extract_build_text(_doc, BUILD)
+    except ValueError as exc:
+        sys.exit(str(exc))
+
+    # Ranges contribute both endpoints, as in the Delphi checker, but only
+    # after build scoping has discarded other builds' same-address citations.
+    cited = {int(m.group(1), 16)
+             for m in re.finditer(r'0x([0-9A-Fa-f]{4,6})\b', scoped_doc)}
+
+    # Coverage ledger, one row per build:
+    # | N | build | `0xXXXXX` | `0xXXXXX` | (—|N) | disposition | title |
+    rows = [(int(m.group(3), 16), int(m.group(4), 16),
+             None if m.group(5) == '—' else int(m.group(5)), m.group(7),
+             int(m.group(1)))
+            for m in re.finditer(
+                r'^\| (\d+) \| (\w+) \| `0x([0-9A-Fa-f]{4,6})` \| '
+                r'`0x([0-9A-Fa-f]{4,6})` \| (—|\d+) \| ([\w-]+) \| (.+?) \|$',
+                _doc, re.M)
+            if m.group(2) == BUILD]
+
+    explicit = len(argv) >= 5
+    if explicit:
+        lo, hi = int(argv[3], 16), int(argv[4], 16)
+        rows = [r for r in rows if lo <= r[0] and r[1] <= hi]
+        if not rows:
+            sys.exit(f'no {BUILD} ledger rows inside {lo:05X}..{hi:05X}')
+        extents = [(lo, hi, rows)]
+    elif rows:
+        # Split only when numbering restarts. Address discontinuity inside one
+        # numbering sequence is a coverage gap and must remain visible.
+        extents, run = [], [rows[0]]
+        for row in rows[1:]:
+            if row[4] > run[-1][4]:
+                run.append(row)
+            else:
+                extents.append((run[0][0], run[-1][1], run))
+                run = [row]
+        extents.append((run[0][0], run[-1][1], run))
+    else:
+        sys.exit(f'no {BUILD} coverage ledger found and no extent given')
+
+    problems = False
+    for lo, hi, extent_rows in extents:
+        problems |= check(lo, hi, extent_rows)
+
+    if len(extents) > 1:
+        print(f'{len(extents)} assigned extents checked separately.')
+    print('\nNOTE: citation coverage only. A clean run does not mean the derivation '
+          'read those\ninstructions correctly -- see the module docstring.')
+    return 1 if problems else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
