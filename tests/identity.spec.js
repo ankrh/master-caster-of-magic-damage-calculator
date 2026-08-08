@@ -108,11 +108,26 @@ test('special-unit options are gated by engine version and derived Golem effects
     document.getElementById('gameVersion').value = 'com2_1.05.11';
     onVersionChange();
     const modern = options();
+    choose('none');
+    const elem = document.getElementById('aAbil_elemArmor');
+    elem.value = 'elementalArmor';
+    elem.dispatchEvent(new Event('change'));
     choose('golem');
     const golemElements = {
       value: document.getElementById('aAbil_elemArmor').value,
       locked: document.getElementById('aAbil_elemArmor').disabled,
+      hidden: document.getElementById('aAbil_elemArmor').closest('.abil-item').classList.contains('abil-hidden'),
     };
+    const persistedGolem = collectState();
+    resetCalculatorState('com2_1.05.11');
+    applyState(persistedGolem);
+    choose('none');
+    const persistedReleased = {
+      value: document.getElementById('aAbil_elemArmor').value,
+      locked: document.getElementById('aAbil_elemArmor').disabled,
+    };
+    choose('chosen');
+    const chosen = readUnitStats('a').identity.specialUnit;
     choose('none');
     const releasedElements = {
       value: document.getElementById('aAbil_elemArmor').value,
@@ -121,17 +136,64 @@ test('special-unit options are gated by engine version and derived Golem effects
     document.getElementById('gameVersion').value = 'com_6.08';
     onVersionChange();
     const com = options();
+    choose('zombies');
+    const zombies = readUnitStats('a').identity.specialUnit;
+    choose('catapult');
+    const catapult = readUnitStats('a').identity.specialUnit;
     document.getElementById('gameVersion').value = 'mom_1.31';
     onVersionChange();
     const mom = options();
-    return { modern, com, mom, golemElements, releasedElements };
+    return { modern, com, mom, chosen, zombies, catapult, golemElements, releasedElements, persistedReleased };
   });
 
   expect(report.modern).toEqual(['none', 'golem', 'chosen']);
   expect(report.com).toEqual(['none', 'zombies', 'catapult']);
   expect(report.mom).toEqual(['none']);
-  expect(report.golemElements).toEqual({ value: 'resistElements', locked: true });
-  expect(report.releasedElements).toEqual({ value: 'none', locked: false });
+  expect(report.chosen).toBe('chosen');
+  expect(report.zombies).toBe('zombies');
+  expect(report.catapult).toBe('catapult');
+  expect(report.golemElements).toEqual({ value: 'resistElements', locked: true, hidden: false });
+  expect(report.releasedElements).toEqual({ value: 'elementalArmor', locked: false });
+  expect(report.persistedReleased).toEqual({ value: 'elementalArmor', locked: false });
+  expectNoConsoleErrors(errors);
+});
+
+test('custom identity keeps Hero and Fantastic independent, exposes all base races, and clears race', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const report = await page.evaluate(() => {
+    const set = (id, value) => {
+      const el = document.getElementById(id);
+      if (el.type === 'checkbox') el.checked = !!value;
+      else el.value = value;
+      el.dispatchEvent(new Event('change'));
+    };
+    document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.6.2';
+    onVersionChange();
+    document.getElementById('aUnit').value = 'custom';
+    document.getElementById('aUnit').dispatchEvent(new Event('change'));
+    const races = Array.from(document.getElementById('aBaseRace').options).map(option => option.value);
+    set('aBaseHero', true);
+    set('aBaseFantastic', true);
+    set('aBaseRace', 'Chaos');
+    const combined = {
+      hiddenType: document.getElementById('aAbil_unitType').value,
+      stored: { ...unitIdentity.a },
+      derived: { ...readUnitStats('a').identity },
+      stats: { unitType: readUnitStats('a').unitType, isHero: readUnitStats('a').isHero },
+    };
+    set('aBaseRace', '');
+    return { races, combined, cleared: { stored: { ...unitIdentity.a }, derived: { ...readUnitStats('a').identity } } };
+  });
+
+  for (const race of ['Dark Elf', 'Draconian', 'Generic', 'Hawkmen', 'Special']) {
+    expect(report.races).toContain(race);
+  }
+  expect(report.combined.hiddenType).toBe('fantastic_chaos');
+  expect(report.combined.stored).toMatchObject({ isHero: true, baseFantastic: true, baseRace: 'Chaos' });
+  expect(report.combined.derived).toMatchObject({ isHero: true, baseFantastic: true, baseRace: 'Chaos', race: 'Chaos', fantastic: true });
+  expect(report.combined.stats).toEqual({ unitType: 'fantastic_chaos', isHero: true });
+  expect(report.cleared.stored).toMatchObject({ isHero: true, baseFantastic: true, baseRace: '' });
+  expect(report.cleared.derived).toMatchObject({ isHero: true, baseFantastic: true, baseRace: '', race: '', fantastic: true });
   expectNoConsoleErrors(errors);
 });
 

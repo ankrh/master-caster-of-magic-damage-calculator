@@ -15,7 +15,21 @@ function createUnitIdentity(values = {}) {
     isHero: !!values.isHero,
     baseRace: typeof values.baseRace === 'string' ? values.baseRace : '',
     baseFantastic: !!values.baseFantastic,
+    specialUnit: typeof values.specialUnit === 'string' ? values.specialUnit : 'none',
   };
+}
+
+function specialUnitForRosterIdentity(version, unit) {
+  const templateId = unit && unit.templateId;
+  if (version && version.startsWith('com2_')) {
+    if (templateId === 81) return 'golem';
+    if (templateId === 34) return 'chosen';
+  }
+  if (version === 'com_6.08') {
+    if (templateId === 174) return 'zombies';
+    if (templateId === 37) return 'catapult';
+  }
+  return 'none';
 }
 
 function createRosterUnitIdentity(version, unit) {
@@ -26,6 +40,7 @@ function createRosterUnitIdentity(version, unit) {
     isHero: !!(unit && unit.isHero),
     baseRace: unit && unit.baseRace,
     baseFantastic: !!(unit && unit.baseFantastic),
+    specialUnit: specialUnitForRosterIdentity(version, unit),
   });
 }
 
@@ -39,6 +54,7 @@ function createCustomUnitIdentity(version, values = {}) {
     isHero: values.isHero,
     baseRace: values.baseRace,
     baseFantastic: values.baseFantastic,
+    specialUnit: values.specialUnit,
   });
 }
 
@@ -46,8 +62,7 @@ function createCustomUnitIdentity(version, values = {}) {
 // derived compatibility boundary rather than allowing it to remain the source of identity.
 // A fantastic custom unit with no realm is the unaligned/Arcane case used by the old control.
 function legacyUnitTypeFromIdentity(identity) {
-  if (identity && identity.isHero) return 'hero';
-  if (!identity || !identity.baseFantastic) return 'normal';
+  if (!identity || !identity.baseFantastic) return identity && identity.isHero ? 'hero' : 'normal';
   const realm = {
     Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
     Sorcery: 'sorcery', Arcane: 'arcane',
@@ -247,7 +262,7 @@ const DERIVED_OUTLANDER_STATE_KEYS = [
   'outlanderXenoveterinary',
 ];
 
-function applyOutlanderReformGrants(abilities, version, baseUnitType) {
+function applyOutlanderReformGrants(abilities, version, baseUnitType, isHero = false) {
   if (!version || !version.startsWith('com2_warlord')) return abilities;
 
   // These names are outputs, never accepted inputs. Besides keeping the UI to one
@@ -272,7 +287,7 @@ function applyOutlanderReformGrants(abilities, version, baseUnitType) {
   // Rebuild permanently writes Mechanical for non-heroes. Its hero branch is
   // encounter-only and cannot receive overland Power Engine/Armorclad upgrades.
   const permanentMechanical = !!fundamentalAbilities.mechanical
-    || (!!fundamentalAbilities.rebuild && baseUnitType !== 'hero');
+    || (!!fundamentalAbilities.rebuild && !isHero);
   const armorclad = outlanderWizard && !!fundamentalAbilities.armorcladReform && permanentMechanical;
   const battleArmor = outlanderWizard && !!fundamentalAbilities.armorcladReform
     && !baseFantastic && !permanentMechanical;
@@ -340,6 +355,8 @@ function deriveUnitStats(input) {
   const version = input.version;
   const identity = initializeUnitIdentity(input);
   const baseUnitType = legacyUnitTypeFromIdentity(identity);
+  const isHero = !!identity.isHero;
+  const isFantasticBase = !!identity.baseFantastic;
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
   // Lava Smelter folds its granted ability in here so every downstream read sees it.
   // Race-exclusive building enchantments gate on the unit's intrinsic race/name, supplied
@@ -356,16 +373,16 @@ function deriveUnitStats(input) {
     applyDivineProtectionGrant(
       applySanctaBasilicaGrant(
         applyLavaSmelterGrant(markIntrinsicLucky(input.abilities || {}), version, baseUnitType),
-        version, baseUnitType, unitRace, unitName),
+        version, isHero ? 'hero' : baseUnitType, unitRace, unitName),
       version),
     version),
     version),
     version),
-    version, baseUnitType));
+    version, baseUnitType, isHero));
   const destinyActive = destinyActiveForUnit(abilities, version);
   const unitTypeRaw = baseUnitType;
   const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
-  const loadoutEligible = !String(unitTypeRaw || '').startsWith('fantastic_') && !destinyActive;
+  const loadoutEligible = !isFantasticBase && !destinyActive;
   // Spirit Link (Warlord): grants a fantastic creature sentience so it can earn
   // experience levels. It does NOT grant weapon/armor loadout, so only level
   // eligibility is widened — weapon and armor below stay gated on loadoutEligible.
@@ -385,7 +402,7 @@ function deriveUnitStats(input) {
   // folded into effectiveAbilities below; the ranged bonus is added to the rtb total.
   // Gated on the Gnoll race — non-Gnoll units and heroes gain nothing.
   const altarOfTheMoon = isWarlord && !!abilities.altarOfTheMoon
-    && unitRace === 'Gnoll' && unitTypeRaw !== 'hero';
+    && unitRace === 'Gnoll' && !isHero;
   // Unit-specific Altar of the Moon grants: Gnoll Hunters gain Poison 2; Gnoll
   // Witchdoctors gain Life Steal -1 which replaces their Poison. Applied via effectiveAbilities below.
   const altarHunter = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Hunters');
@@ -395,7 +412,7 @@ function deriveUnitStats(input) {
   // heroes are excluded and gain nothing. Only these unit bonuses are modelled; the
   // defending-city High Prayer buff is not.
   const altarOfTheSunEligible = isWarlord
-    && !!abilities.altarOfTheSun && unitRace === 'Hawkmen' && unitTypeRaw !== 'hero';
+    && !!abilities.altarOfTheSun && unitRace === 'Hawkmen' && !isHero;
   const altarOfTheSunHolyMother = altarOfTheSunEligible && unitName.endsWith('Holy Mother');
   const altarOfTheSun = altarOfTheSunEligible && !unitName.endsWith('Holy Mother');
   // Dragon Mound (Warlord, Draconian building): Draconian units trained here gain +1 Armor
@@ -404,40 +421,40 @@ function deriveUnitStats(input) {
   // than granting one to melee-only units. Gated on the Draconian race — non-Draconian
   // units and heroes gain nothing, matching the in-game race-exclusive building.
   const dragonMound = isWarlord
-    && !!abilities.dragonMound && unitRace === 'Draconian' && unitTypeRaw !== 'hero';
+    && !!abilities.dragonMound && unitRace === 'Draconian' && !isHero;
   // Ludus Agoge (Warlord, Orc building): Orc units trained here gain +1 Attack (melee, folded
   // into atk below), +1 Resistance, and +1 HP. Legionary units gain +1 Movement instead — not
   // modelled here — so they receive no stat bonus. Gated on the Orc race — non-Orc units,
   // Legionaries, and heroes gain nothing, matching the in-game race-exclusive building.
   const ludusAgoge = isWarlord
-    && !!abilities.ludusAgoge && unitRace === 'Orc' && !unitName.endsWith('Legionary') && unitTypeRaw !== 'hero';
+    && !!abilities.ludusAgoge && unitRace === 'Orc' && !unitName.endsWith('Legionary') && !isHero;
   // Mother Fungus (Warlord, Goblin building): Goblin units trained here gain +2 Attack (melee,
   // folded into atk below), +10% To Defend (folded into toBlock below), and Poison 1 (boosts an
   // existing poison attack, or grants Poison 1 if it has none). The ×2 Spellcharge bonus is not
   // modelled. Gated on the Goblin race — non-Goblin units and heroes gain nothing, matching the
   // in-game race-exclusive building.
   const motherFungus = isWarlord
-    && !!abilities.motherFungus && unitRace === 'Goblin' && unitTypeRaw !== 'hero';
+    && !!abilities.motherFungus && unitRace === 'Goblin' && !isHero;
   // Pool of Repentance (Warlord, Rakhshasa building): Rakhshasa units trained here gain +1 Armor
   // (folded into defBase below) and +1 Resistance (folded into res below). Gated on the Rakhshasa
   // race — non-Rakhshasa units and heroes gain nothing, matching the in-game race-exclusive building.
   const poolOfRepentance = isWarlord
-    && !!abilities.poolOfRepentance && unitRace === 'Rakhshasa' && unitTypeRaw !== 'hero';
+    && !!abilities.poolOfRepentance && unitRace === 'Rakhshasa' && !isHero;
   // Sancta Basilica (Warlord, High Men building): +3 Resistance for every High Men unit trained
   // here (folded into res below). The unit-specific Sanctify / Lucky / Magic Immunity grants are
   // applied earlier via applySanctaBasilicaGrant. Gated on the High Men race; heroes gain nothing.
   const sanctaBasilica = isWarlord
-    && !!abilities.sanctaBasilica && unitRace === 'High Men' && unitTypeRaw !== 'hero';
+    && !!abilities.sanctaBasilica && unitRace === 'High Men' && !isHero;
   // Rust (Warlord Chaos common combat curse): permanently strips magic/orihalcon weapons
   // (the unit reverts to regular weapons), −3 melee attack (applied in combat.js), and
   // eliminates thrown attacks and Large Shield for the rest of combat (below).
   // Rust targets an enemy regular (non-fantastic) unit; fantastic creatures are immune.
   const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust)
-    && !String(unitTypeRaw || '').startsWith('fantastic_');
+    && !isFantasticBase;
   // Zombies are the one fantastic unit affected by weapon quality: a unit raised as
   // Zombies keeps its magic/mithril/adamantium weapons (a known game quirk), so weapon
   // eligibility gets a Zombies exception while armor and level stay fantastic-gated.
-  const weaponEligible = loadoutEligible || unitName === 'Zombies';
+  const weaponEligible = loadoutEligible || identity.specialUnit === 'zombies' || unitName === 'Zombies';
   const weaponInput = weaponEligible ? input.weapon : 'normal';
   const weaponPreRust = (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
   const weapon = rustActive ? 'normal' : weaponPreRust;
@@ -445,7 +462,7 @@ function deriveUnitStats(input) {
   // Armor quality: CoM/CoM2/Warlord only (doesn't exist in MoM), and unlike
   // weapons, heroes get none either.
   const armorExists = !version.startsWith('mom_');
-  const armor = (armorExists && loadoutEligible && unitTypeRaw !== 'hero') ? input.armor : 'normal';
+  const armor = (armorExists && loadoutEligible && !isHero) ? input.armor : 'normal';
 
   const rtbTypeRaw = input.rtbType;
   let rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
@@ -487,7 +504,7 @@ function deriveUnitStats(input) {
   // The calculator's single RTB slot represents it directly when that slot is
   // empty, and adds it normally when the selected attack is already Thrown.
   const explosiveEligible = isWarlord && !!abilities.explosive
-    && (!String(unitTypeRaw || '').startsWith('fantastic_') || !!abilities.sapiens);
+    && (!isFantasticBase || !!abilities.sapiens);
   const bombsGrenades = explosiveEligible
     && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
   if (bombsGrenades && rangedType === 'none' && thrownType === 'none') {
@@ -558,7 +575,7 @@ function deriveUnitStats(input) {
   // Halfling Rocs (type 221, their Fantastic Stable unit) unconditionally; its other
   // branch requires an innate magical ranged attack and rejects Mechanical units.
   const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
-    && unitRace === 'Halfling' && unitTypeRaw !== 'hero'
+    && unitRace === 'Halfling' && !isHero
     && (unitName.endsWith('Rocs')
       || (!abilities.mechanical && inputBaseRtb > 0
         && (rtbTypeRaw === 'magic_c' || rtbTypeRaw === 'magic_n' || rtbTypeRaw === 'magic_s')));
@@ -665,7 +682,7 @@ function deriveUnitStats(input) {
   // The Armor→Melee transfer, Armor Piercing grant, and First Strike loss are handled below.
   // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
   const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
-    && version.startsWith('com2_warlord') && unitTypeRaw !== 'hero';
+    && version.startsWith('com2_warlord') && !isHero;
   if (blazeOfGloryActive && calcBaseRtb > 0
     && (rangedType === 'missile' || rangedType === 'boulder'
       || rangedType === 'magic_c' || rangedType === 'magic_n'
@@ -717,7 +734,7 @@ function deriveUnitStats(input) {
   const survivalInstinctEligible = survivalInstinctActiveForUnit(abilities, unitTypeVal, version);
   const landLinkingEligible = landLinkingActiveForUnit(abilities, unitTypeVal, version);
   const innerPowerEligible = innerPowerActiveForUnit(abilities, version);
-  const misleadEligible = misleadActiveForUnit(abilities, unitTypeVal, version);
+  const misleadEligible = isHero || misleadActiveForUnit(abilities, unitTypeVal, version);
   const effectiveAbilities = {
     ...abilities,
     ...(altarOfTheMoon ? { rage: true, poisonImmunity: true } : {}),
@@ -866,7 +883,7 @@ function deriveUnitStats(input) {
   // Fantastic creatures are not valid targets and take no penalty.
   const soulFlayActive = version.startsWith('com2_warlord')
     && !!(abilities && abilities.soulFlay)
-    && !String(unitTypeRaw || '').startsWith('fantastic_');
+    && !isFantasticBase;
   const soulFlayLevels = soulFlayActive ? levelRank + 1 : 0;
   const soulFlayAtkMod = -1 * soulFlayLevels;
   const soulFlayDefMod = -2 * soulFlayLevels;
@@ -902,7 +919,7 @@ function deriveUnitStats(input) {
   // toHit/toBlock section below; here we handle the −2 Resistance.
   const greatUnbindingActive = version.startsWith('com2_warlord')
     && !!(abilities && abilities.greatUnbinding)
-    && String(unitTypeRaw || '').startsWith('fantastic_');
+    && isFantasticBase;
   const greatUnbindingResMod = greatUnbindingActive ? -2 : 0;
 
   // Natural Selection (Warlord Nature common global): units trained in a city gain
@@ -964,7 +981,6 @@ function deriveUnitStats(input) {
   const hasWarlordBlade = warlordCombatFlameBlade || warlordFieryBlade;
   const nonWarlordFlameBlade = !!abilities.flameBlade && !isWarlord;
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : (abilities.metalFires ? 1 : 0);
-  const isFantasticBase = (unitTypeRaw || '').startsWith('fantastic_');
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
   // M4, resolved at R1 stage 9. The two sources fall in different regions — Fiery Fury in
   // `b` (UnitCalcPre.CAS:832-846), the blades in `c` — and do not stack, which the bucket
@@ -1730,7 +1746,7 @@ function deriveUnitStats(input) {
   if (prefix === 'a' && (rangedType === 'missile' || rangedType === 'boulder') && input.rangedCheck) {
     const dist = Math.max(1, parseInt(input.rangedDist) || 1);
     rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange), version,
-      unitTypeRaw === 'hero');
+      isHero);
   }
 
   // Pre-clamped To Hit/Block values for combat (decimals 0.1-1.0)
@@ -1913,7 +1929,7 @@ function deriveUnitStats(input) {
     toBlockHasModifiers,
     // Effective values (for calculation)
     figs: baseFigs + (altarOfTheSun ? 1 : 0) + (alumniOfAcademy ? 2 : 0),
-    atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!input.generic,
+    atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, isHero, generic: !!input.generic,
     identity,
     dmg: Math.max(0, parseInt(input.dmg) || 0),
     rangedType, thrownType,

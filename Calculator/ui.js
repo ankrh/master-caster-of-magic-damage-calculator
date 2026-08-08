@@ -1114,17 +1114,23 @@ function updateSpecialUnitDerivedEffects(prefix) {
   const select = identityControl(prefix, 'SpecialUnit');
   const elem = document.getElementById(prefix + 'Abil_elemArmor');
   if (!select || !elem) return;
+  const preGolem = document.getElementById(prefix + 'IdentityPreGolemElemArmor');
   const item = elem.closest('.abil-item');
   const isGolem = version.startsWith('com2_') && select.value === 'golem';
   const stored = unitIdentity[prefix] || (unitIdentity[prefix] = {});
   if (isGolem) {
-    if (!stored._preGolemElemArmor) stored._preGolemElemArmor = elem.value || 'none';
+    if (!stored._preGolemElemArmor) {
+      stored._preGolemElemArmor = (preGolem && preGolem.value !== '' ? preGolem.value : null)
+        || elem.value || 'none';
+    }
+    if (preGolem) preGolem.value = stored._preGolemElemArmor;
     elem.value = 'resistElements';
     elem.disabled = true;
   } else {
     if (stored._preGolemElemArmor) {
       elem.value = stored._preGolemElemArmor;
       delete stored._preGolemElemArmor;
+      if (preGolem) preGolem.value = '';
     }
     elem.disabled = false;
   }
@@ -1139,8 +1145,9 @@ function unitIdentityForDerivation(prefix, version) {
   const controls = readIdentityControls(prefix);
   return createCustomUnitIdentity(version, {
     isHero: controls.isHero,
-    baseRace: controls.baseRace || stored.baseRace || stored.race,
+    baseRace: controls.baseRace,
     baseFantastic: controls.baseFantastic,
+    specialUnit: controls.specialUnit,
   });
 }
 
@@ -1151,8 +1158,9 @@ function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdenti
   unitIdentity[prefix] = {
     ...createCustomUnitIdentity(version, {
       isHero: controls.isHero,
-      baseRace: controls.baseRace || stored.baseRace || stored.race,
+      baseRace: controls.baseRace,
       baseFantastic: controls.baseFantastic,
+      specialUnit: controls.specialUnit,
     }),
     specialUnit: controls.specialUnit || 'none',
     ...(previous._preGolemElemArmor ? { _preGolemElemArmor: previous._preGolemElemArmor } : {}),
@@ -2006,10 +2014,10 @@ function updateTypeVisibility() {
 }
 
 function refreshAbilityFieldVisibility() {
-  updateTypeVisibility();
-  updateAbilityVisibility();
   updateSpecialUnitDerivedEffects('a');
   updateSpecialUnitDerivedEffects('b');
+  updateTypeVisibility();
+  updateAbilityVisibility();
 }
 
 // --- Presets ---
@@ -4012,6 +4020,7 @@ initMatrixPropCombobox('global');
         setCustomUnitIdentity(prefix, document.getElementById('gameVersion').value, null, true);
       }
       updateSpecialUnitDerivedEffects(prefix);
+      refreshAbilityFieldVisibility();
       updateCustomLevelState(prefix);
       recalculate();
     });

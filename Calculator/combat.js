@@ -1692,7 +1692,7 @@ const EFFECTIVE_RESISTANCE_STEPS = [
     u => { u.effectiveResistance = u.res; }),
   resolutionStep('effectiveResistance:charmed', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
-    (u, ctx) => ctx.isRoll && u.unitType === 'hero' && hasAbil(u.abilities, 'charmed')),
+    (u, ctx) => ctx.isRoll && (u.isHero || u.unitType === 'hero') && hasAbil(u.abilities, 'charmed')),
   resolutionStep('effectiveResistance:magicImmunity', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
     (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'magicImmunity')),
@@ -2705,7 +2705,7 @@ function buildResistanceContext(a, b, version, isCoM) {
   const aBless = hasAbil(a.abilities, 'bless');
   const isWarlord = version && version.startsWith('com2_warlord');
   const blessBonus = isWarlord ? 4 : (isCoM ? 5 : 3);
-  const charmedBonus = unit => unit.unitType === 'hero'
+  const charmedBonus = unit => (unit.isHero || unit.unitType === 'hero')
     && hasAbil(unit.abilities, 'charmed') ? 30 : 0;
   const bBaseRes = b.res + charmedBonus(b);
   const aBaseRes = a.res + charmedBonus(a);
@@ -4113,7 +4113,7 @@ function resolveCombat(a, b, opts) {
     // See `Reference docs/MoM binary analysis.md`, *First Strike's 24-HP cutoff and
     // Haste repeats*.
     const momHeroManaRanged = ver === 'mom_1.31'
-      && a.unitType === 'hero'
+      && (a.isHero || a.unitType === 'hero')
       && (a.rangedType === 'magic_c' || a.rangedType === 'magic_n' || a.rangedType === 'magic_s');
     // Self-convolving captures both the main ranged damage and all touch + immolation
     // effects folded in above.
