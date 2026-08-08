@@ -308,53 +308,77 @@ test('special options and ordered live realm overrides preserve base identity', 
   expectNoConsoleErrors(errors);
 });
 
-test('Matrix worker parity is identity-sensitive and uses fully derived stats', async ({ page }) => {
+test('production Matrix rows and worker match main cards for an identity-sensitive Construct Catapult', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(async () => {
-    const version = 'com2_1.05.11';
-    const unit = (identity, abilities, atk, hp) => deriveUnitStats({
-      prefix: 'a', version, identity, abilities, figs: 1, atk, def: 0, res: 5, hp,
-      rtb: 0, rtbType: 'none', weapon: 'normal', armor: 'normal', level: 'normal',
-      toHitMod: 70, toBlkMod: 0,
-    });
-    const attacker = unit(createCustomUnitIdentity(version, {
-      baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
-    }), { bloodLust: true }, 5, 20);
-    const ordinary = unit(createCustomUnitIdentity(version, {
-      baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
-    }), {}, 1, 100);
-    const chosen = unit(createCustomUnitIdentity(version, {
-      baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
-    }), {}, 1, 100);
-    const opts = { isRanged: false, version, wallOfFire: false };
-    const ratio = defender => {
-      const result = resolveCombat(attacker, defender, opts);
-      const dealt = distExpectedValue(result.totalDmgToB) / result.bRemHP;
-      const taken = distExpectedValue(result.totalDmgToA) / result.aRemHP;
-      if (taken === 0) return dealt > 0 ? Infinity : 1;
-      return dealt / taken;
+    const version = 'com_6.08';
+    document.getElementById('gameVersion').value = version;
+    onVersionChange();
+
+    const attacker = document.getElementById('aUnit');
+    attacker.value = '38'; // CoM 1 roster ID 38 carries source template ID 37.
+    attacker.dispatchEvent(new Event('change'));
+    document.getElementById('aAbil_combatSummoned').checked = true;
+
+    const defenderSelection = document.getElementById('bUnit');
+    defenderSelection.value = 'custom';
+    defenderSelection.dispatchEvent(new Event('change'));
+    setIdentityControls('b', { baseFantastic: true, baseRace: 'Chaos', specialUnit: 'none' });
+    document.getElementById('bHP').value = '20';
+    document.getElementById('bDef').value = '2';
+    document.getElementById('bAbil_weaponImmunity').checked = true;
+
+    matrixPropertyState = {
+      a: [{ key: 'combatSummoned', enabled: true, value: true }],
+      b: [], global: [], _seeded: true,
     };
+    const construct = predefinedMatrixUnitRows('a', matrixAppliedEnchantments('a'), 'ranged')
+      .find(row => row.unitId === '38').stats;
+    const ordinary = predefinedMatrixUnitRows('a', {}, 'ranged')
+      .find(row => row.unitId === '38').stats;
+    const defender = selectedMatrixUnitRow('b', 'ranged').stats;
+    const mainAttacker = readUnitStats('a', { rangedCheck: true, rangedDist: 1 });
+    const mainDefender = readUnitStats('b');
+    const opts = { isRanged: true, version, wallOfFire: false };
+    const ratio = stats => {
+      const result = resolveCombat(stats, defender, opts);
+      return distExpectedValue(result.totalDmgToB) / result.bRemHP;
+    };
+    const mainResult = resolveCombat(mainAttacker, mainDefender, opts);
+    const main = distExpectedValue(mainResult.totalDmgToB) / mainResult.bRemHP;
+    const matrixMain = ratio(construct);
+    const ordinaryMain = ratio(ordinary);
+
     const scriptAbsUrl = name => [...document.querySelectorAll('script[src]')]
       .find(script => script.src.endsWith(name)).src;
-    const source = `importScripts(${JSON.stringify(scriptAbsUrl('engine.js'))}, `
-      + `${JSON.stringify(scriptAbsUrl('steps.js'))}, ${JSON.stringify(scriptAbsUrl('combat.js'))});\n`
-      + MATRIX_WORKER_HANDLER;
-    const worker = new Worker(URL.createObjectURL(new Blob([source], { type: 'text/javascript' })));
-    const workerRatios = await new Promise((resolve, reject) => {
-      worker.onmessage = event => resolve(event.data.ratios);
+    const src = `importScripts(${JSON.stringify(scriptAbsUrl('engine.js'))}, ${JSON.stringify(scriptAbsUrl('steps.js'))}, ${JSON.stringify(scriptAbsUrl('combat.js'))});\n${MATRIX_WORKER_HANDLER}`;
+    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    const workerRatio = await new Promise((resolve, reject) => {
+      const worker = new Worker(url);
+      worker.onmessage = event => { worker.terminate(); resolve(event.data.ratios[0]); };
       worker.onerror = reject;
-      worker.postMessage({ attackerStats: attacker, allDefenderStats: [ordinary, chosen],
-        opts, rowIndex: 0 });
+      worker.postMessage({ attackerStats: construct, allDefenderStats: [defender], opts, rowIndex: 0 });
     });
-    worker.terminate();
+    URL.revokeObjectURL(url);
     return {
-      main: [ratio(ordinary), ratio(chosen)], worker: workerRatios,
-      identities: [ordinary.identity, chosen.identity],
+      main, matrixMain, ordinaryMain, workerRatio,
+      identity: construct.identity,
+      customIdentity: defender.identity,
+      mainIdentity: mainAttacker.identity,
+      mainCustomIdentity: mainDefender.identity,
+      weapon: construct.weapon,
+      trace: construct.identityTrace.map(step => step.id),
     };
   });
-  expect(report.worker).toEqual(report.main);
-  expect(report.main[0]).not.toBe(report.main[1]);
-  expect(report.identities[0]).toMatchObject({ baseFantastic: false, fantastic: false });
-  expect(report.identities[1]).toMatchObject({ baseFantastic: false, fantastic: true, race: 'Life' });
+
+  expect(report.identity).toMatchObject({ race: 'Nature', fantastic: true, baseFantastic: false });
+  expect(report.identity).toEqual(report.mainIdentity);
+  expect(report.customIdentity).toMatchObject({ race: 'Chaos', fantastic: true, baseRace: 'Chaos', baseFantastic: true });
+  expect(report.customIdentity).toEqual(report.mainCustomIdentity);
+  expect(report.weapon).toBe('magic');
+  expect(report.trace).toContain('identity:com1ConstructCatapult');
+  expect(report.matrixMain).toBeCloseTo(report.main, 12);
+  expect(report.main).toBeGreaterThan(report.ordinaryMain);
+  expect(report.workerRatio).toBeCloseTo(report.main, 12);
   expectNoConsoleErrors(errors);
 });
