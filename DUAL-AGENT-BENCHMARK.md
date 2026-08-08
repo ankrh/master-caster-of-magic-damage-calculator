@@ -753,3 +753,171 @@ the initial To Block floor defect that Medium's revision had corrected.
 - Both resolved review artifacts were cleared; no disagreement survived. `git worktree list`
   contains only the primary checkout. The intended branch was clean at integration commit
   `c686e50` before this append-only benchmark entry was written. Nothing was pushed.
+
+## Task R7.4 -- Calculated-stat modifier trace tooltips
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | R7.4 -- expose R7.3's ordered calculated-stat chains through the existing hover/touch tooltip interaction |
+| Date | 2026-08-08 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `edce777b6a0bfa8e7b459eff22ec6a52530aa471` |
+| Integration branch | `codex/R7.3-integration` |
+| Final integration commit | `ab3828e9fdae69847d4c31196689adb1ab446dc0` |
+| Temporary tips | Sol High `ab7cbba0d15b65955a676831a61f5e77fcab1132`; Sol Medium `e7e98b51c5cbe46eebf662a9b7f062593c2d76e7` |
+| Models | Orchestrator GPT-5.6 Sol High; implementer/reviewer A GPT-5.6 Sol High; implementer/reviewer B GPT-5.6 Sol Medium |
+| Ports | Primary 8080; Sol High 8081; Sol Medium 8082; isolated review 8083 |
+| Initial winner | Sol High: its displayed result came directly from the R7.3 projection which also supplied the chain, while Medium retained a separate effective-value display path; Medium supplied the broader dedicated browser suite |
+| Most useful review | Sol High's review of Medium: one P1 stationary-pointer stale-overlay defect, with full-suite, repeated and deterministic reproductions; the same architecture also existed in High and was caught by the integrator |
+| Strongest revised result | Sol High implementation base plus Sol Medium's three-test dedicated tooltip suite |
+| Push | None |
+
+### Subagent timing
+
+Parallel agent spans are reported independently and are not added into an end-to-end duration.
+High's active total uses the figures it reported. Medium did not pause its stopwatch around external
+verification in either implementation or revision, so strict active duration and active total are
+reported as `not recorded`; its measurable fallback wall intervals are retained without relabelling.
+
+| Agent | Stage | Start | End | Measured span | Active / waiting accounting |
+|---|---|---|---|---:|---|
+| Sol High | Initial implementation | `2026-08-08T22:00:53.8565001+02:00` | `2026-08-08T22:14:37.0151064+02:00` | `823.152s` | Agent-reported active `821.523s`; dependency wait `1.629s`; no other waiting |
+| Sol High | Reciprocal review | `2026-08-08T22:16:15.4398385+02:00` | `2026-08-08T22:26:57.3629769+02:00` | `641.923s` | Active review `641.923s`; waiting/blocked `0s` |
+| Sol High | Review-driven revision | `2026-08-08T22:28:43.3802614+02:00` | `2026-08-08T22:34:57.9645032+02:00` | `374.585s` | Active revision `374.585s`; waiting/blocked `0s` |
+| Sol High | Active total | -- | -- | `1838.031s` | Initial active + review + revision; reported waiting `1.629s` |
+| Sol Medium | Initial implementation | `2026-08-08T22:01:18.9869757+02:00` | `2026-08-08T22:11:15.5346324+02:00` | `596.543s` | Strict active `not recorded`; measurable fallback wall interval `596.543s`; waiting/blocked `0s` |
+| Sol Medium | Reciprocal review | `2026-08-08T22:16:19.4230678+02:00` | `2026-08-08T22:17:34.1233636+02:00` | `74.691s` | Active review `74.691s`; waiting/blocked `0s` |
+| Sol Medium | Review-driven revision | `2026-08-08T22:28:30.9071428+02:00` | `2026-08-08T22:32:07.6756942+02:00` | `216.755s` | Strict active `not recorded`; measurable fallback wall interval `216.755s`; waiting/blocked `0s` |
+| Sol Medium | Active total | -- | -- | `not recorded` | Fallback stage spans total `888.0s`, but this is not labelled active time; reported waiting/blocked `0s` |
+
+### Per-agent verification timing
+
+#### Sol High
+
+| Phase | Suite | Result | Start | End | Elapsed |
+|---|---|---:|---|---|---:|
+| Initial | Focused modifier trace/touch Playwright, port 8081 | 7/7 | `2026-08-08T22:12:56.7795462+02:00` | `2026-08-08T22:13:05.3887493+02:00` | `8.604s` |
+| Initial | Node unit checks | 9,679/9,679 | `2026-08-08T22:13:12.0512581+02:00` | `2026-08-08T22:13:12.2483076+02:00` | `0.203s` |
+| Initial | Full Playwright, port 8081 | 53/53 | `2026-08-08T22:13:24.3900206+02:00` | `2026-08-08T22:14:16.7831349+02:00` | `52.395s` |
+| Review | Medium focused Playwright, port 8081 | 5/5 | `2026-08-08T22:18:15.0947931+02:00` | `2026-08-08T22:18:29.1272069+02:00` | `14.036s` |
+| Review | Medium Node unit checks | 9,679/9,679 | `2026-08-08T22:20:39.6675924+02:00` | `2026-08-08T22:20:45.5305977+02:00` | `5.864s` |
+| Review | Medium full Playwright, port 8081 | 1 failed, 53 passed; exposed P1 | `2026-08-08T22:20:52.4165606+02:00` | `2026-08-08T22:21:56.5078966+02:00` | `64.092s` |
+| Review | Medium trace spec repeated 10 times | 1 failed, 19 passed; reproduced P1 | `2026-08-08T22:22:53.6600336+02:00` | `2026-08-08T22:23:26.7150687+02:00` | `33.069s` |
+| Revision | Deterministic stationary-pointer pre-fix probe | reproduced update and removal defect | `2026-08-08T22:29:24.2214546+02:00` | `2026-08-08T22:29:55.0284239+02:00` | `30.805s` |
+| Revision | Focused trace/touch Playwright, port 8081 | 7/7 | `2026-08-08T22:31:46.7929265+02:00` | `2026-08-08T22:32:03.5849410+02:00` | `16.787s` |
+| Revision | Stationary-pointer regression repeated | 10/10 | `2026-08-08T22:32:15.5287087+02:00` | `2026-08-08T22:32:44.3352267+02:00` | `28.801s` |
+| Revision | Node unit checks | 9,679/9,679 | `2026-08-08T22:32:52.0246186+02:00` | `2026-08-08T22:32:56.7061789+02:00` | `4.685s` |
+| Revision | Full Playwright, port 8081 | 53/53 | `2026-08-08T22:33:05.8567473+02:00` | `2026-08-08T22:34:06.1119312+02:00` | `60.260s` |
+
+The fresh High worktree initially lacked dependencies. Its first focused launch failed before
+opening a server; lockfile-pinned `npm ci` was recorded as `1.629s` of external setup waiting.
+
+#### Sol Medium
+
+| Phase | Suite | Result | Start | End | Elapsed |
+|---|---|---:|---|---|---:|
+| Initial | Focused modifier trace/touch Playwright, port 8082 | 5/5 | `2026-08-08T22:08:52.4647414+02:00` | `2026-08-08T22:09:00.7066846+02:00` | `8.237s` |
+| Initial | Strengthened trace spec | 2/2 | `2026-08-08T22:11:01.8233262+02:00` | `2026-08-08T22:11:05.9587160+02:00` | `4.131s` |
+| Initial | Node unit checks | 9,679/9,679 | `2026-08-08T22:09:08.4909248+02:00` | `2026-08-08T22:09:08.6812191+02:00` | `0.199s` |
+| Initial | Full Playwright, port 8082 | 54/54 | `2026-08-08T22:09:20.2401700+02:00` | `2026-08-08T22:10:16.6637800+02:00` | `56.418s` |
+| Review | High focused Playwright, port 8083 | 7/7 | `2026-08-08T22:17:07.3733102+02:00` | `2026-08-08T22:17:17.1998424+02:00` | `9.836s` |
+| Revision | First stationary-pointer focused attempt | 5 passed, 1 fixture failure | `2026-08-08T22:29:36.4102411+02:00` | `2026-08-08T22:29:45.6063192+02:00` | `9.189s` |
+| Revision | Corrected focused trace/touch suite, port 8082 | 6/6 | `2026-08-08T22:30:13.9311105+02:00` | `2026-08-08T22:30:21.9289758+02:00` | `7.995s` |
+| Revision | Node unit checks | 9,679/9,679 | `2026-08-08T22:30:36.2259309+02:00` | `2026-08-08T22:30:36.4274747+02:00` | `0.197s` |
+| Revision | Full Playwright, port 8082 | 55/55 | `2026-08-08T22:30:47.1196874+02:00` | `2026-08-08T22:31:40.8044852+02:00` | `53.691s` |
+
+Medium's first focused launch also failed before a server opened because the new worktree had no
+`node_modules`; dependency installation duration was not recorded by a dedicated stopwatch. Its
+subsequent recorded fixture failures were corrected before the retained passing results.
+
+### Initial comparison
+
+Both initial implementations exposed complete source-ordered chains on calculated final outputs,
+preserved one final-value column, covered pointer hover and touch long-press, formatted percentage,
+identity and modern-channel projections, and closed R7/R7.4 consistently. Both also had the same
+stationary-pointer stale-overlay defect: recalculation changed or removed the output's
+`data-tooltip` while an already-visible `#tt` retained the old chain until another pointer event.
+
+Sol High's initial implementation was stronger overall because `updateModifiedDisplay` used the
+R7.3 projection's `result` as both the displayed final value and the tooltip bookend. Medium kept
+the prior effective-value arguments as the display path and used the projection only for trace
+presentation. Both can produce the same values today, but High more directly satisfies the SPEC's
+requirement that the ordered path be the path which computes the displayed result and reduces
+future divergence risk. High also expanded the established R7.3 browser file and touch suite;
+Medium's separate file supplied broader explicit symmetry, identity/channel formatting and
+negative-control checks. The stale-overlay defect prevents either initial branch from being a
+complete result, but does not erase the stronger computation boundary in High.
+
+### Reciprocal review and dispositions
+
+Sol Medium's review of High returned no findings after diff inspection and an isolated 7/7
+focused run. High appended the required no-finding disposition and made a fresh revision commit.
+The integrator then identified that High's controller had the same stationary-pointer architecture
+as Medium's reviewed branch; High reproduced and fixed it separately as an orchestrator finding.
+
+Sol High's review of Medium produced one P1 finding: a tooltip already visible over a calculated
+output was not synchronized when recalculation changed or removed that output's trace. It supplied
+a full-suite failure, a repeated intermittent reproduction and a deterministic browser probe.
+Medium accepted and fixed the finding, recorded the disposition, and added a deterministic
+add/update/remove regression. No review dispute survived. High's was the more useful reciprocal
+review because it found the only product defect established in review, although its finding also
+revealed a blind spot in High's own initial branch which the integrator closed before selection.
+
+### Integration and final verification
+
+Integration selected High's revised lineage and applied it as:
+
+1. `9992b5b` -- High initial implementation (`11b7b34`);
+2. `854e8d8` -- High stationary-pointer revision (`ab7cbba`);
+3. `ab3828e` -- add Medium's revised dedicated three-test tooltip suite.
+
+No mechanical merge of both branches was performed. High supplied the production implementation,
+including the authoritative projection-to-display path and active tooltip synchronization. Medium
+materially supplied the dedicated symmetry, formatting, control-boundary, deactivation and
+stationary-pointer browser coverage. The revised High implementation was the strongest production
+base; the combined result is stronger than either branch alone because it retains both agents'
+independently authored R7.4 browser checks.
+
+| Final suite | Result | Start | End | Elapsed |
+|---|---:|---|---|---:|
+| Combined focused trace/touch Playwright, port 8080 | 10/10 | `2026-08-08T22:37:26.4887574+02:00` | `2026-08-08T22:37:39.4375663+02:00` | `12.946s` |
+| Node unit checks | 9,679/9,679 | `2026-08-08T22:37:52.1679841+02:00` | `2026-08-08T22:37:52.3805234+02:00` | `0.208s` |
+| Full Playwright, primary port 8080 | 56/56 | `2026-08-08T22:38:09.4214866+02:00` | `2026-08-08T22:39:06.9954073+02:00` | `57.561s` |
+| `git diff --check` | pass | `2026-08-08T22:39:18.9303215+02:00` | `2026-08-08T22:39:19.0150700+02:00` | `0.085s` |
+
+### Orchestrator timing
+
+- First dispatch was recorded at `2026-08-08T22:00:21.3153361+02:00`; second dispatch at
+  `2026-08-08T22:00:46.4954917+02:00`.
+- Reciprocal-review handoff began at `2026-08-08T22:15:46.6233788+02:00`.
+- Revision handoff began at `2026-08-08T22:28:11.0148183+02:00`.
+- Integration began at `2026-08-08T22:36:26.6726754+02:00`.
+- Temporary worktree/branch cleanup completed at `2026-08-08T22:40:09.1595737+02:00`.
+- Measured first-dispatch-through-cleanup wall span: `2387.844s`.
+- Measured integration-through-cleanup wall span: `222.487s`.
+- Exact orchestrator active coordination time and waiting time were not recorded. These wall spans
+  include waits for parallel implementations, reviews, revisions and external verification and
+  must not be interpreted as implementation throughput.
+
+### Server and cleanup evidence
+
+- Sol High initial/revision Playwright server PIDs were not exposed. Port 8081 was free after the
+  initial suite at `2026-08-08T22:14:19+02:00`, after review at `22:25:46`, and after revision at
+  `22:34:24`.
+- Sol Medium initial full-suite Python PID 17508 started at `22:09:21`, exited, and port 8082 was
+  free at `22:10:22`. Its revision PID 8136 started at `22:30:48`, exited, and port 8082 was free
+  at `22:31:47`.
+- Medium's isolated review checkout passed 7/7 on port 8083; the checkout was removed and the port
+  was free at `2026-08-08T22:17:28+02:00`.
+- Primary final Python PID 6272 started at `2026-08-08T22:38:10+02:00`, was observed listening at
+  `22:38:26`, exited, and port 8080 was free when the suite ended at `22:39:06`.
+- Ports 8080, 8081, 8082 and 8083 had no listeners at the final cleanup precheck on
+  `2026-08-08T22:39:53.7360550+02:00`.
+- Temporary worktrees `C:\CoM2-damage-calculator-R7.4-sol-high` and
+  `C:\CoM2-damage-calculator-R7.4-sol-medium` were verified clean at their recorded tips, their
+  absolute targets were resolved and checked, and they were removed. Temporary branches
+  `codex/R7.4-sol-high` and `codex/R7.4-sol-medium` were deleted.
+- Both resolved review artifacts were cleared; no disagreement survived. `git worktree list`
+  contains only the primary checkout at integration commit `ab3828e`. Nothing was pushed.
