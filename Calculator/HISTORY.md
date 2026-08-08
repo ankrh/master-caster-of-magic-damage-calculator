@@ -19,10 +19,19 @@ selection state.
 The work followed the dual-implementation protocol with GPT-5.6 Luna Max and GPT-5.6 Sol High:
 both initial implementations were committed, reciprocally reviewed, revised, and integrated.
 Verification passed 9,474 Node identity/derivation assertions, 929 browser presets, and 35/35
-Playwright tests. The standalone state harness passed 33/36 checks; its three existing resilience
-fixture checks still fail because the malformed `cityWalls` precondition no longer crashes, so
-the related recovery assertions cannot run. This is outside R8.1 and the normal persistence and
-share-link Playwright tests pass.
+Playwright tests. The R8.1 benchmark run recorded the standalone state harness at 33/36 checks;
+its three existing resilience fixture checks failed because the malformed `cityWalls` precondition
+no longer crashed. This was outside R8.1; the normal persistence and share-link Playwright tests
+passed.
+
+## 2026-08-08 — Persistence resilience fixture cleanup
+
+Replaced the three obsolete resilience assertions in `tools/state_persistence_check.js` with a
+deterministic malformed v1 fixture: a Custom Warlord Gnoll carrying a non-string identity name
+through the Altar of the Moon unit-name suffix path. The fixture now genuinely exercises the
+`applyState` failure, localStorage recovery and discard, and bad-share-link fallback without a
+vacuous pass. The standalone state harness now passes 36/36 checks. No calculator implementation
+or persisted-schema behavior changed; the original 33/36 R8.1 measurement remains recorded above.
 
 ## 2026-08-08 — R7 display goal simplified
 

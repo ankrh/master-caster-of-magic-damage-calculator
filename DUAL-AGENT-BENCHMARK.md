@@ -126,9 +126,19 @@ The integration sequence was:
 - JavaScript syntax checks for `Calculator/stats.js` and `Calculator/ui.js`: passed.
 - Python syntax checks for the modified generators: passed.
 - `git diff --check`: passed.
-- Standalone state harness: `33/36` passed. Three existing resilience cases remain tied to a
-  malformed `cityWalls` crash precondition that no longer reproduces; ordinary localStorage,
-  share-link, roster, preset, and Playwright persistence checks passed.
+- Standalone state harness in the original R8.1 run: `33/36` passed. Three existing resilience
+  cases remained tied to a malformed `cityWalls` crash precondition that no longer reproduced;
+  ordinary localStorage, share-link, roster, preset, and Playwright persistence checks passed.
+
+### Post-run fixture maintenance
+
+On 2026-08-08, the three obsolete resilience fixtures in `tools/state_persistence_check.js` were
+replaced with a deterministic malformed v1 state: a Custom Warlord Gnoll whose non-string identity
+name reaches the Altar of the Moon unit-name suffix operation. The corrected fixture exercises the
+real `applyState` failure, localStorage recovery/discard, and bad-share-link fallback, including a
+non-vacuous distinction from the recipient's saved state. The standalone state harness now passes
+`36/36`. The original `33/36` result above is retained as the raw R8.1 benchmark measurement; this
+maintenance changes test setup only and does not change calculator behavior.
 
 ### Cleanup and repository state
 

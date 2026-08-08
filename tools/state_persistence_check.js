@@ -458,15 +458,23 @@ async function main() {
     const badHash = await cdpEvaluate(wsUrl, READ_FIGS);
     record('URL bad-hash: clean fallback + strip', badHash.aFigs === '7' && badHash.hash === '', badHash);
 
-    // 5) Resilience: a well-formed blob (passes v===1) carrying a value this build can't
-    // compute. cityWalls='' -> NaN in binomialPMF -> recalculate() throws. Such a blob in
-    // localStorage would re-crash every reload without the init guard.
+    // 5) Resilience: a well-formed v1 blob carrying a JSON value with the wrong type for a
+    // calculated string operation. A Custom Warlord Gnoll with Altar of the Moon reaches the
+    // unit-name suffix gate, so a non-string identity name deterministically throws during
+    // applyState. Such a blob in localStorage would re-crash every reload without the init guard.
     const SETUP_BAD = `(() => {
       const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
-      document.getElementById('gameVersion').value = 'com2_1.05.11'; onVersionChange();
+      document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.6.2'; onVersionChange();
+      set('aUnit', 'custom'); updateUnitLock('a');
+      set('aAbil_unitType', 'normal'); set('aAbil_altarOfTheMoon', true);
       for (const s of ['a', 'b']) { set(s + 'Unit', 'custom'); updateUnitLock(s); set(s + 'Figs', 6); set(s + 'Atk', 9); set(s + 'Def', 3); set(s + 'Res', 8); set(s + 'HP', 12); set(s + 'ToHitMod', 70); set(s + 'ToBlkMod', 70); }
       recalculate();
-      const bad = collectState(); bad.ids.cityWalls = '';
+      const bad = collectState();
+      bad.ids.gameVersion = 'com2_warlord_1.5.12.6.2';
+      bad.ids.aUnit = 'custom';
+      bad.ids.aAbil_unitType = 'normal';
+      bad.ids.aAbil_altarOfTheMoon = true;
+      bad.identity.a = { race: 'Gnoll', name: { malformed: true } };
       // precondition: confirm this blob genuinely crashes recalculate() (so the test isn't vacuous)
       let crashes = false; try { applyState(JSON.parse(JSON.stringify(bad))); } catch (e) { crashes = true; }
       resetCalculatorState();
@@ -482,11 +490,14 @@ async function main() {
       const parsed = readLocalState(); // decodes compressed or legacy-plain; null if absent
       return {
         alive: !!(document.querySelector('#distA .dist-header')?.textContent || '').trim(),
-        cityWalls: document.getElementById('cityWalls').value,
-        badGone: !parsed || parsed.ids.cityWalls !== '',
+        version: document.getElementById('gameVersion').value,
+        aUnit: document.getElementById('aUnit').value,
+        altarOfTheMoon: document.getElementById('aAbil_altarOfTheMoon').checked,
+        badGone: !parsed || parsed.identity?.a?.name?.malformed !== true,
       };
     })()`);
-    record('resilience: bad localStorage recovers to defaults', recLs.alive && recLs.cityWalls !== '', recLs);
+    record('resilience: bad localStorage recovers to defaults',
+      recLs.alive && recLs.version === 'mom_1.31' && recLs.aUnit !== 'custom' && !recLs.altarOfTheMoon, recLs);
     record('resilience: bad localStorage blob discarded (no re-crash loop)', recLs.badGone, recLs);
 
     // 5b) Bad share link -> recover + fall back to the recipient's own (good) localStorage.
@@ -498,7 +509,13 @@ async function main() {
       document.getElementById('aFigs').dispatchEvent(new Event('input', { bubbles: true }));
       const good = collectState();
       localStorage.setItem('pageState_v1', JSON.stringify(good)); // recipient's own saved state
-      const badShare = collectState(); badShare.ids.cityWalls = '';
+      const badShare = collectState();
+      badShare.ids.gameVersion = 'com2_warlord_1.5.12.6.2';
+      badShare.ids.aUnit = 'custom';
+      badShare.ids.aFigs = 6;
+      badShare.ids.aAbil_unitType = 'normal';
+      badShare.ids.aAbil_altarOfTheMoon = true;
+      badShare.identity.a = { race: 'Gnoll', name: { malformed: true } };
       return 's=' + lzEncode(JSON.stringify(badShare));
     })()`);
     await cdpNavigate(wsUrl, `${targetUrl}#${frag2}`); // URL wins, but it throws -> fall back to localStorage
