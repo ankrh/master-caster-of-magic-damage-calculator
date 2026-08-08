@@ -405,3 +405,180 @@ rows are:
 
 Also record `primary_port`, `sol_high_port`, `sol_medium_port`, each server PID, server start/stop
 times, and the timestamp when each temporary port was confirmed free.
+
+## Task R8.4 -- Identity lifecycle migration
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | R8.4 -- persistence, sharing, swap, presets and Matrix identity migration |
+| Date | 2026-08-08 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `b285e0c70e3407c92ea95e74f3e6ef0579506b66` |
+| Integration branch | `codex/R8.1-integration` |
+| Final integration commit | `349509938ef0dc15fc7d7b84399e2644f9f4f36e` |
+| Temporary tips | Sol High `c7e864b85c3618252fe09cac263395449ede30d9`; Sol Medium `2c7b8736c7febbc3fe0f295ea61558a2308c5017` |
+| Models | Orchestrator GPT-5.6 Sol High; implementer/reviewer A GPT-5.6 Sol High; implementer/reviewer B GPT-5.6 Sol Medium |
+| Ports | Primary 8080; Sol High 8081; Sol Medium 8082; review-only 8083 |
+| Initial winner | Sol High: one compatibility defect versus Medium's functional live-identity defect, production-Matrix coverage gap, and stale queue row |
+| Most useful review | Sol High's review of Medium, because it found the executable No-Heal/unaligned failure plus the Matrix-production-path coverage omission and queue inconsistency; Medium's raw-share finding was also essential |
+| Strongest revised result | Sol High implementation base, combined with Sol Medium's production Matrix parity test |
+| Push | None |
+
+### Subagent timing
+
+All monotonic clocks used `Stopwatch.Frequency = 10,000,000`. A phase span is not relabeled as
+active work when the agent did not pause its stopwatch around subprocesses. Parallel agent spans
+are reported independently and are not added into an end-to-end duration.
+
+| Agent | Stage | Start | End | Measured span | Active / waiting accounting |
+|---|---|---|---|---:|---|
+| Sol High | Initial implementation | `2026-08-08T19:35:00.7050697+02:00` | `2026-08-08T19:56:40.6296705+02:00` | `1299.919422s` | Exact active time not recorded; user/agent/server-slot waiting `0s`; dependency/focused-process waiting incomplete |
+| Sol High | Reciprocal review | `2026-08-08T19:59:05.4479686+02:00` | `2026-08-08T20:05:00.3829378+02:00` | `354.928395s` | Review work excluding measured tests `319.960074s`; measured test waiting `34.968321s`; user/agent/server-slot waiting `0s` |
+| Sol High | Review-driven revision | `2026-08-08T20:06:45.9242671+02:00` | `2026-08-08T20:11:23.2114836+02:00` | `277.275283s` | Exact active time not recorded; final-suite waiting `97.250979s`; focused-harness waiting approximately `21.8s`; user/agent/server-slot waiting `0s` |
+| Sol High | Measured phase-span total | -- | -- | `1932.123100s` | Not an active-runtime total because the initial and revision spans include subprocess waiting |
+| Sol Medium | Initial implementation | `2026-08-08T19:35:13.8085322+02:00` | `2026-08-08T19:50:40.4679549+02:00` | `926.642114s` | Agent-reported active `925.105862s`; `npm ci` waiting `1.536252s` |
+| Sol Medium | Reciprocal review | `2026-08-08T19:59:13.6051644+02:00` | `2026-08-08T20:01:07.2667392+02:00` | `113.667452s` | Active review `113.667452s`; waiting `0s`; no executable suite run |
+| Sol Medium | Review-driven revision | `2026-08-08T20:06:54.3334805+02:00` | `2026-08-08T20:15:05.5845399+02:00` | `491.253129s` | Exact active time not separable from external tests; user/agent/server-slot waiting `0s` |
+| Sol Medium | Measured phase-span total | -- | -- | `1531.562694s` | Not an active-runtime total because the revision span includes subprocess waiting |
+
+### Per-agent verification timing
+
+#### Sol High
+
+| Phase | Suite | Result | Elapsed |
+|---|---|---:|---:|
+| Initial | Node unit checks | 9,504/9,504 | `0.159029s` |
+| Initial | Playwright, port 8081 | 48/48 | `47.325576s` |
+| Initial | State persistence | 37/37 | `26.676294s` |
+| Initial | Browser smoke | pass | `1.992613s` |
+| Initial | `git diff --check` | pass | `0.062828s` |
+| Initial diagnostic | Playwright before Golem hidden-state swap fix | 47/48, expected failed diagnostic | `48.465186s` |
+| Review | Medium Node checks | 9,494/9,494 | `0.161589s` |
+| Review | Medium focused identity Playwright, port 8083 | 11/11 | `8.182983s` |
+| Review | Medium state persistence | 36/36 | `26.623749s` |
+| Revision | Node unit checks | 9,504/9,504 | `0.167743s` |
+| Revision | Playwright, port 8081 | 48/48 | `57.623535s` |
+| Revision | State persistence | 39/39 | `37.384358s` |
+| Revision | Browser smoke | pass | `2.014615s` |
+| Revision | `git diff --check` | pass | `0.060728s` |
+
+#### Sol Medium
+
+| Phase | Suite | Result | Elapsed |
+|---|---|---:|---:|
+| Initial | Node unit checks | 9,494/9,494 | `0.192000s` |
+| Initial | Playwright, port 8082 | 48/48 | `60.423347s` |
+| Initial | State persistence | 36/36 | `30.740127s` |
+| Initial | Browser smoke | pass | `2.060059s` |
+| Initial | `git diff --check` | pass | `0.062404s` |
+| Review | Code-path review of High | one actionable finding; no executable suite | `113.667452s` |
+| Revision | Node unit checks | 9,497/9,497 | `0.267401s` |
+| Revision | Final Playwright, port 8082 | 48/48 | Playwright reported `49.5s`; exact wrapper elapsed not recorded |
+| Revision | State persistence | 36/36 | `26.389578s` |
+| Revision | Browser smoke | pass | `2.018572s` |
+| Revision | `git diff --check` | pass | `0.057532s` |
+
+Medium's revision had two earlier Playwright iterations: the first exposed a fixture confusion
+between roster ID 38 and source template ID 37, and the second green run lost its wrapper timing
+line. The final 48/48 run above followed both. Their exact elapsed times were not retained.
+
+### Initial comparison
+
+Both initial implementations delivered schema-v2 state, legacy compatibility, identity-aware
+swap/presets/version handling, Worker execution, specifications and focused tests. Sol High's
+initial implementation was stronger:
+
+- High preserved explicit `No Heal` / `fantastic_unaligned` live identity and added 10 extra Node
+  assertions; Medium lost that write and returned a Chosen unit to Life.
+- High's initial Playwright run found and fixed the hidden pre-Golem Elements value that must move
+  with swap before committing its 48/48 result.
+- High used a new `pageState_v2` key with fallback to `pageState_v1`, while Medium retained the old
+  key and advanced only the payload version. Both are viable, but High's boundary more clearly
+  separates current and legacy writers and its final harness tests corrupt-current/legacy fallback.
+- High still missed legacy full plain-JSON share fragments, which Medium's review correctly found.
+- Neither initial Matrix parity test fully exercised both production row constructors. High found
+  that omission in Medium's branch; the same weakness survived in High's test and was corrected by
+  the integrator using Medium's revised production-path test.
+
+### Reciprocal review and dispositions
+
+Sol Medium's review of High produced one high-severity finding: `parseHashState()` always used LZ
+decoding and therefore rejected full plain-JSON v1 share fragments. High fixed it with safe single
+URL decoding, raw-JSON recognition, preserved malformed-link fallback, and two end-to-end state
+harness assertions. The revised state harness increased from 37 to 39 checks.
+
+Sol High's review of Medium produced three findings:
+
+1. `fantastic_unaligned` did not map to an explicit live race, erasing Mystic Surge/No-Heal after
+   Chosen/Chaos/Undead ordering. Medium added bidirectional `No Heal` compatibility mapping and
+   ordered Node/browser coverage.
+2. The Worker parity test manually derived its fixtures and bypassed `predefinedMatrixUnitRows()`
+   and `selectedMatrixUnitRow()`. Medium replaced it with a CoM 1 Construct Catapult test that
+   traverses predefined and Custom production row builders, main-card derivation and the real
+   Worker, with a non-vacuous ordinary-versus-Construct damage delta.
+3. The backlog priority table still included completed F3-F4. Medium changed it to F5-F6. High's
+   branch already carried the same queue correction.
+
+All findings were accepted and fixed. No review dispute survived integration.
+
+### Integration and final verification
+
+The primary branch remained at the frozen base until both initial commits existed. Integration
+then selected High's revised lineage and applied it as:
+
+1. `0376d9d` -- High initial implementation (`5ebb064`);
+2. `bd83bd9` -- High raw legacy share revision (`c7e864b`);
+3. `3495099` -- replace the hand-derived parity test with Medium's revised production Matrix test.
+
+No mechanical merge of both branches was performed. No Medium implementation code was imported;
+its material contribution is the stronger production-path test.
+
+| Final suite | Result | Start | End | Elapsed |
+|---|---:|---|---|---:|
+| Focused R8.4 Playwright | 7/7 | `2026-08-08T20:18:56.5375732+02:00` | `2026-08-08T20:19:04.5462401+02:00` | `7.993380s` |
+| Full Playwright, port 8080 | 48/48 | `2026-08-08T20:19:18.0831987+02:00` | `2026-08-08T20:20:07.9178384+02:00` | `49.831503s` |
+| Node unit checks | 9,504/9,504 | `2026-08-08T20:20:24.6089725+02:00` | `2026-08-08T20:20:24.7966246+02:00` | `0.194006s` |
+| State persistence / sharing | 39/39; browser PRESETS all-pass | `2026-08-08T20:21:52.1039073+02:00` | `2026-08-08T20:22:28.9513513+02:00` | `36.843604s` |
+| Browser smoke | pass, `{"text":"50%","visible":true}` | `2026-08-08T20:22:36.0871409+02:00` | `2026-08-08T20:22:38.1795257+02:00` | `2.092158s` |
+| `git diff --check` | pass | `2026-08-08T20:22:48.7420446+02:00` | `2026-08-08T20:22:48.8238925+02:00` | `0.073457s` |
+
+Two earlier final state-harness wrappers completed without returning captured output. The explicit
+third run above is the retained 39/39 result; no result is inferred from the silent wrappers.
+
+### Orchestrator timing
+
+- Coordination clock started at `2026-08-08T19:32:59.6564455+02:00`, monotonic tick
+  `1767336455468`.
+- Integration clock started at `2026-08-08T20:17:59.5391029+02:00`, tick `1794335010025`.
+- Cleanup measurement was taken at `2026-08-08T20:24:27.3778947+02:00`, tick
+  `1798213372741`.
+- Measured coordination wall span: `3087.693443s`.
+- Measured integration-through-cleanup wall span: `387.842105s`.
+- Exact orchestrator active coordination time and total waiting time were not recorded. The wall
+  span includes long waits for independent implementation, review and revision plus external
+  verification and must not be interpreted as active runtime or implementation throughput.
+
+### Server and cleanup evidence
+
+- Sol High initial: Python PID 10680, started `19:54:30`, observed `19:54:42`; exact stop not
+  recorded; port 8081 free at `19:55:17` and finally `19:57:11`.
+- Sol High revision: Python PID 12152, started `20:09:10`, observed `20:09:22`; exact stop not
+  recorded; port 8081 free at `20:10:08` and finally `20:11:30`.
+- Sol Medium initial: server PID 19360, started `19:48:07`, listener observed `19:48:09`, first
+  stop/free observation `19:49:09`, final port-free confirmation `19:50:42`.
+- Sol Medium revision: server PID 17872, observed `20:12:52`; exact stop not recorded; port 8082
+  free at `20:13:45` and finally `20:15:07`.
+- Primary final: Python PID 1800, started `20:19:19`, observed `20:19:35`; exact stop not recorded;
+  PID exited and port 8080 was free at `20:20:16`.
+- Ports 8080, 8081, 8082 and review port 8083 were all confirmed free at
+  `2026-08-08T20:24:27+02:00`.
+- Temporary worktrees `C:\CoM2-damage-calculator-R8.4-sol-high` and
+  `C:\CoM2-damage-calculator-R8.4-sol-medium` were verified clean at their revised tips and removed.
+- Temporary branches `codex/R8.4-sol-high` and `codex/R8.4-sol-medium` were deleted after their
+  exact tips were recorded.
+- Both resolved review artifacts were cleared; no disagreement survived.
+- `git worktree list` contains only the primary checkout. The intended branch was clean at
+  integration commit `3495099` before this append-only benchmark entry was written.
+- Nothing was pushed.
