@@ -56,12 +56,16 @@ for (const version of VERSIONS) {
       }
       hidden.value = 'custom';
       hidden.dispatchEvent(new Event('change'));
-      const type = document.getElementById('aAbil_unitType');
-      type.value = 'fantastic_chaos';
-      type.dispatchEvent(new Event('change'));
+      const fantastic = document.getElementById('aBaseFantastic');
+      const race = document.getElementById('aBaseRace');
+      fantastic.checked = true;
+      fantastic.dispatchEvent(new Event('change'));
+      race.value = 'Chaos';
+      race.dispatchEvent(new Event('change'));
       const fantasticIdentity = { ...unitIdentity['a'] };
-      type.value = 'hero';
-      type.dispatchEvent(new Event('change'));
+      const hero = document.getElementById('aBaseHero');
+      hero.checked = true;
+      hero.dispatchEvent(new Event('change'));
       const customIdentity = readUnitStats('a').identity;
       return { count: list.length, bad, identityBad, customIdentity,
         fantasticIdentity, storedCustomIdentity: unitIdentity['a'] };
@@ -78,7 +82,7 @@ for (const version of VERSIONS) {
     expect(report.storedCustomIdentity.templateId, 'stored custom template ID').toBeNull();
     expect(report.storedCustomIdentity.heroTypeId, 'stored custom hero-type ID').toBeNull();
     expect(report.storedCustomIdentity.isHero, 'stored custom Hero flag is synchronized').toBe(true);
-    expect(report.storedCustomIdentity.baseFantastic, 'stored custom Fantastic flag is synchronized').toBe(false);
+    expect(report.storedCustomIdentity.baseFantastic, 'stored custom Fantastic remains independent').toBe(true);
 
     // Spot-checks: for a few units that have a melee value (so applyLevelBonuses
     // writes the stat fields), the DOM must match the data-table record.

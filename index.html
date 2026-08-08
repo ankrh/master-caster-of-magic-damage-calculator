@@ -109,17 +109,44 @@
     </div>
     <div class="panel-section-header">Base stats and abilities</div>
     <div class="panel-fields">
-      <label for="aAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
-      <select id="aAbil_unitType">
-        <option value="normal">Normal</option>
-        <option value="hero">Hero</option>
-        <option value="fantastic_nature">Fantastic (Nature)</option>
-        <option value="fantastic_sorcery">Fantastic (Sorcery)</option>
-        <option value="fantastic_chaos">Fantastic (Chaos)</option>
-        <option value="fantastic_life">Fantastic (Life)</option>
-        <option value="fantastic_death">Fantastic (Death)</option>
-        <option value="fantastic_arcane">Fantastic (Arcane)</option>
+      <label for="aBaseHero" data-tooltip="Base identity predicate. Heroes remain separate from Fantastic and from the base race/realm.">Hero</label>
+      <input class="identity-checkbox" type="checkbox" id="aBaseHero">
+
+      <label for="aBaseFantastic" data-tooltip="Base identity predicate. This is independent of Hero and of the base race/realm.">Fantastic</label>
+      <input class="identity-checkbox" type="checkbox" id="aBaseFantastic">
+
+      <label for="aBaseRace" data-tooltip="Editable base race or realm used by identity-gated calculations. The live race/realm can still be rewritten by later effects.">Base race / realm</label>
+      <select id="aBaseRace" class="identity-control">
+        <option value="">None / unaligned</option>
+        <option value="Barbarian">Barbarian</option>
+        <option value="Beastmen">Beastmen</option>
+        <option value="Dwarf">Dwarf</option>
+        <option value="Dwarven">Dwarven</option>
+        <option value="Gnoll">Gnoll</option>
+        <option value="Goblin">Goblin</option>
+        <option value="Halfling">Halfling</option>
+        <option value="High Elf">High Elf</option>
+        <option value="High Men">High Men</option>
+        <option value="Klackon">Klackon</option>
+        <option value="Lizardman">Lizardman</option>
+        <option value="Nomad">Nomad</option>
+        <option value="Orc">Orc</option>
+        <option value="Rakhshasa">Rakhshasa</option>
+        <option value="Troll">Troll</option>
+        <option value="Xuanyuan">Xuanyuan</option>
+        <option value="Arcane">Arcane</option>
+        <option value="Chaos">Chaos</option>
+        <option value="Death">Death</option>
+        <option value="Life">Life</option>
+        <option value="Nature">Nature</option>
+        <option value="Sorcery">Sorcery</option>
       </select>
+
+      <label for="aSpecialUnit" data-tooltip="Version-specific template exception. This is a compact named selector; numeric template and hero IDs remain internal.">Special unit</label>
+      <select id="aSpecialUnit" class="identity-control">
+        <option value="none">Other / no exception</option>
+      </select>
+      <input type="hidden" id="aAbil_unitType" value="normal">
 
       <label for="aFigs" data-tooltip="Number of figures in the unit. Each living figure contributes attacks.">Figures</label>
       <input type="number" id="aFigs" min="1" max="9" value="4">
@@ -242,17 +269,44 @@
     </div>
     <div class="panel-section-header">Base stats and abilities</div>
     <div class="panel-fields">
-      <label for="bAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
-      <select id="bAbil_unitType">
-        <option value="normal">Normal</option>
-        <option value="hero">Hero</option>
-        <option value="fantastic_nature">Fantastic (Nature)</option>
-        <option value="fantastic_sorcery">Fantastic (Sorcery)</option>
-        <option value="fantastic_chaos">Fantastic (Chaos)</option>
-        <option value="fantastic_life">Fantastic (Life)</option>
-        <option value="fantastic_death">Fantastic (Death)</option>
-        <option value="fantastic_arcane">Fantastic (Arcane)</option>
+      <label for="bBaseHero" data-tooltip="Base identity predicate. Heroes remain separate from Fantastic and from the base race/realm.">Hero</label>
+      <input class="identity-checkbox" type="checkbox" id="bBaseHero">
+
+      <label for="bBaseFantastic" data-tooltip="Base identity predicate. This is independent of Hero and of the base race/realm.">Fantastic</label>
+      <input class="identity-checkbox" type="checkbox" id="bBaseFantastic">
+
+      <label for="bBaseRace" data-tooltip="Editable base race or realm used by identity-gated calculations. The live race/realm can still be rewritten by later effects.">Base race / realm</label>
+      <select id="bBaseRace" class="identity-control">
+        <option value="">None / unaligned</option>
+        <option value="Barbarian">Barbarian</option>
+        <option value="Beastmen">Beastmen</option>
+        <option value="Dwarf">Dwarf</option>
+        <option value="Dwarven">Dwarven</option>
+        <option value="Gnoll">Gnoll</option>
+        <option value="Goblin">Goblin</option>
+        <option value="Halfling">Halfling</option>
+        <option value="High Elf">High Elf</option>
+        <option value="High Men">High Men</option>
+        <option value="Klackon">Klackon</option>
+        <option value="Lizardman">Lizardman</option>
+        <option value="Nomad">Nomad</option>
+        <option value="Orc">Orc</option>
+        <option value="Rakhshasa">Rakhshasa</option>
+        <option value="Troll">Troll</option>
+        <option value="Xuanyuan">Xuanyuan</option>
+        <option value="Arcane">Arcane</option>
+        <option value="Chaos">Chaos</option>
+        <option value="Death">Death</option>
+        <option value="Life">Life</option>
+        <option value="Nature">Nature</option>
+        <option value="Sorcery">Sorcery</option>
       </select>
+
+      <label for="bSpecialUnit" data-tooltip="Version-specific template exception. This is a compact named selector; numeric template and hero IDs remain internal.">Special unit</label>
+      <select id="bSpecialUnit" class="identity-control">
+        <option value="none">Other / no exception</option>
+      </select>
+      <input type="hidden" id="bAbil_unitType" value="normal">
 
       <label for="bFigs" data-tooltip="Number of figures in the unit. Each living figure contributes attacks.">Figures</label>
       <input type="number" id="bFigs" min="1" max="9" value="4">

@@ -1264,6 +1264,13 @@ select:disabled[data-tooltip] {
 .abil-item.abil-unit-locked {
   pointer-events: none;
 }
+.abil-item.abil-identity-derived {
+  opacity: 0.5;
+}
+.abil-item.abil-identity-derived select,
+.abil-item.abil-identity-derived input {
+  pointer-events: none;
+}
 .abil-group-header {
   display: flex;
   align-items: center;

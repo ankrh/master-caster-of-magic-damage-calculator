@@ -3,9 +3,9 @@
 
 // Unit identity has three independent layers. The selected version scopes source
 // template/hero ids; the base fields are editable identity; race/fantastic are fresh live
-// calculation fields. R8.1 only initializes the live fields -- ordered conversions belong
-// to R8.3. Keeping construction here makes every caller, including Matrix and Node checks,
-// enter derivation through the same model.
+// calculation fields. R8.2 supplies the base fields directly from the UI; ordered conversions
+// belong to R8.3. Keeping construction here makes every caller, including Matrix and Node
+// checks, enter derivation through the same model.
 function createUnitIdentity(values = {}) {
   const integerOrNull = value => Number.isInteger(value) ? value : null;
   return {
@@ -42,6 +42,19 @@ function createCustomUnitIdentity(version, values = {}) {
   });
 }
 
+// The combat code still accepts its historical compact unitType token. Keep that token as a
+// derived compatibility boundary rather than allowing it to remain the source of identity.
+// A fantastic custom unit with no realm is the unaligned/Arcane case used by the old control.
+function legacyUnitTypeFromIdentity(identity) {
+  if (identity && identity.isHero) return 'hero';
+  if (!identity || !identity.baseFantastic) return 'normal';
+  const realm = {
+    Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
+    Sorcery: 'sorcery', Arcane: 'arcane',
+  }[identity.baseRace] || 'arcane';
+  return 'fantastic_' + realm;
+}
+
 function legacyBaseRace(input) {
   if (typeof input.race === 'string' && input.race) return input.race;
   const match = /^fantastic_(life|death|chaos|nature|sorcery|arcane)$/.exec(input.unitType || '');
@@ -53,8 +66,8 @@ function initializeUnitIdentity(input) {
   const base = supplied
     ? createUnitIdentity({ ...supplied, version: input.version || supplied.version })
     : createCustomUnitIdentity(input.version, {
-        // Legacy unitType remains the UI input until R8.2/R8.4. It is translated only at
-        // this boundary; the resulting identity still stores all three base fields apart.
+        // Legacy callers can still provide unitType while the UI migrates to independent
+        // identity controls. It is translated only at this boundary.
         isHero: input.unitType === 'hero',
         baseRace: legacyBaseRace(input),
         baseFantastic: String(input.unitType || '').startsWith('fantastic_'),
@@ -326,6 +339,7 @@ function deriveUnitStats(input) {
   const prefix = input.prefix;
   const version = input.version;
   const identity = initializeUnitIdentity(input);
+  const baseUnitType = legacyUnitTypeFromIdentity(identity);
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
   // Lava Smelter folds its granted ability in here so every downstream read sees it.
   // Race-exclusive building enchantments gate on the unit's intrinsic race/name, supplied
@@ -341,15 +355,15 @@ function deriveUnitStats(input) {
     applyPillarOfFaithGrant(
     applyDivineProtectionGrant(
       applySanctaBasilicaGrant(
-        applyLavaSmelterGrant(markIntrinsicLucky(input.abilities || {}), version, input.unitType),
-        version, input.unitType, unitRace, unitName),
+        applyLavaSmelterGrant(markIntrinsicLucky(input.abilities || {}), version, baseUnitType),
+        version, baseUnitType, unitRace, unitName),
       version),
     version),
     version),
     version),
-    version, input.unitType));
+    version, baseUnitType));
   const destinyActive = destinyActiveForUnit(abilities, version);
-  const unitTypeRaw = input.unitType;
+  const unitTypeRaw = baseUnitType;
   const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
   const loadoutEligible = !String(unitTypeRaw || '').startsWith('fantastic_') && !destinyActive;
   // Spirit Link (Warlord): grants a fantastic creature sentience so it can earn

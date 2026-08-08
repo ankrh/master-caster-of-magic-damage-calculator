@@ -545,8 +545,8 @@ function readUnitStats(prefix, overrides) {
   const enemyEternalNightEl = el(enemyPrefix + 'Abil_eternalNight');
   const enemyEyeOfHeavenEl = el(enemyPrefix + 'Abil_eyeOfHeaven');
   const overrideValues = overrides || {};
-  const unitType = el(prefix + 'Abil_unitType').value;
-  const identity = unitIdentityForDerivation(prefix, el('gameVersion').value, unitType);
+  const identity = unitIdentityForDerivation(prefix, el('gameVersion').value);
+  const unitType = legacyUnitTypeFromIdentity(identity);
   return deriveUnitStats({
     prefix,
     version: el('gameVersion').value,
@@ -969,7 +969,11 @@ function setRosterUnitRecords(prefix, unit, version) {
     toHitMod: unit.to_hit || 0,
     generic: unit.category === 'Generic',
   };
-  unitIdentity[prefix] = { ...createRosterUnitIdentity(version, unit), name: unit.name };
+  unitIdentity[prefix] = {
+    ...createRosterUnitIdentity(version, unit),
+    name: unit.name,
+    specialUnit: specialUnitForRoster(version, unit),
+  };
 }
 
 function customBaseRaceForUnitType(unitType) {
@@ -977,30 +981,185 @@ function customBaseRaceForUnitType(unitType) {
   return match ? match[1][0].toUpperCase() + match[1].slice(1) : '';
 }
 
-function unitIdentityForDerivation(prefix, version, unitType) {
+const SPECIAL_UNIT_DEFS = [
+  { key: 'golem', label: 'Golem', versions: ['com2_'] },
+  { key: 'chosen', label: 'Chosen / Avatar', versions: ['com2_'] },
+  { key: 'zombies', label: 'Zombies', versions: ['com_6.08'] },
+  { key: 'catapult', label: 'Catapult', versions: ['com_6.08'] },
+];
+
+function specialUnitAllowed(version, key) {
+  if (!key || key === 'none') return true;
+  const def = SPECIAL_UNIT_DEFS.find(item => item.key === key);
+  return !!def && def.versions.some(prefix => version.startsWith(prefix));
+}
+
+function specialUnitForRoster(version, unit) {
+  if (!unit) return 'none';
+  const templateId = Number.isInteger(unit.templateId) ? unit.templateId : null;
+  if (version.startsWith('com2_')) {
+    if (templateId === 81) return 'golem';
+    if (templateId === 34) return 'chosen';
+  }
+  if (version === 'com_6.08') {
+    if (templateId === 174) return 'zombies';
+    if (templateId === 37) return 'catapult';
+  }
+  return 'none';
+}
+
+function identityControl(prefix, name) {
+  return document.getElementById(prefix + name);
+}
+
+function readIdentityControls(prefix) {
+  const hero = identityControl(prefix, 'BaseHero');
+  const fantastic = identityControl(prefix, 'BaseFantastic');
+  const race = identityControl(prefix, 'BaseRace');
+  const special = identityControl(prefix, 'SpecialUnit');
+  return {
+    isHero: !!(hero && hero.checked),
+    baseFantastic: !!(fantastic && fantastic.checked),
+    baseRace: race ? race.value : '',
+    specialUnit: special ? special.value : 'none',
+  };
+}
+
+function ensureBaseRaceOption(prefix, value) {
+  const select = identityControl(prefix, 'BaseRace');
+  if (!select || !value || Array.from(select.options).some(opt => opt.value === value)) return;
+  const option = document.createElement('option');
+  option.value = value;
+  option.textContent = value;
+  select.appendChild(option);
+}
+
+function setIdentityControls(prefix, values = {}) {
+  const hero = identityControl(prefix, 'BaseHero');
+  const fantastic = identityControl(prefix, 'BaseFantastic');
+  const race = identityControl(prefix, 'BaseRace');
+  if (hero) hero.checked = !!values.isHero;
+  if (fantastic) fantastic.checked = !!values.baseFantastic;
+  if (race) {
+    ensureBaseRaceOption(prefix, values.baseRace || '');
+    race.value = values.baseRace || '';
+  }
+  const special = identityControl(prefix, 'SpecialUnit');
+  if (special) {
+    const wanted = specialUnitAllowed(document.getElementById('gameVersion').value, values.specialUnit)
+      ? (values.specialUnit || 'none') : 'none';
+    special.value = wanted;
+  }
+}
+
+function setIdentityControlsFromLegacy(prefix, unitType, race, specialUnit) {
+  const match = /^fantastic_(life|death|chaos|nature|sorcery|arcane)$/.exec(unitType || '');
+  setIdentityControls(prefix, {
+    isHero: unitType === 'hero',
+    baseFantastic: !!match,
+    baseRace: race || (match ? match[1][0].toUpperCase() + match[1].slice(1) : ''),
+    specialUnit: specialUnit || 'none',
+  });
+}
+
+function setIdentityControlsFromUnit(prefix, unit, version) {
+  setIdentityControls(prefix, {
+    isHero: !!(unit && unit.isHero),
+    baseFantastic: !!(unit && unit.baseFantastic),
+    baseRace: unit && unit.baseRace,
+    specialUnit: specialUnitForRoster(version, unit),
+  });
+}
+
+function setIdentityControlsDisabled(prefix, disabled) {
+  for (const field of ['BaseHero', 'BaseFantastic', 'BaseRace', 'SpecialUnit']) {
+    const control = identityControl(prefix, field);
+    if (control) control.disabled = !!disabled;
+  }
+}
+
+function unitTypeFromIdentityControls(prefix) {
+  return legacyUnitTypeFromIdentity(readIdentityControls(prefix));
+}
+
+function syncLegacyUnitTypeControl(prefix, unitType) {
+  const legacy = identityControl(prefix, 'Abil_unitType');
+  if (legacy) legacy.value = unitType || unitTypeFromIdentityControls(prefix);
+}
+
+function populateSpecialUnitOptions(prefix, version, preferred) {
+  const select = identityControl(prefix, 'SpecialUnit');
+  if (!select) return;
+  const current = preferred || select.value || 'none';
+  select.innerHTML = '';
+  const other = document.createElement('option');
+  other.value = 'none';
+  other.textContent = 'Other / no exception';
+  select.appendChild(other);
+  for (const def of SPECIAL_UNIT_DEFS) {
+    if (!specialUnitAllowed(version, def.key)) continue;
+    const option = document.createElement('option');
+    option.value = def.key;
+    option.textContent = def.label;
+    select.appendChild(option);
+  }
+  select.value = specialUnitAllowed(version, current) ? current : 'none';
+}
+
+// Golem's compiled identity supplies Resist Elements at its normal enchantment point. The
+// selector owns the derived value, so the user sees the effect in the existing Elements row
+// and cannot accidentally edit it while Golem is selected.
+function updateSpecialUnitDerivedEffects(prefix) {
+  const version = document.getElementById('gameVersion').value;
+  const select = identityControl(prefix, 'SpecialUnit');
+  const elem = document.getElementById(prefix + 'Abil_elemArmor');
+  if (!select || !elem) return;
+  const item = elem.closest('.abil-item');
+  const isGolem = version.startsWith('com2_') && select.value === 'golem';
+  const stored = unitIdentity[prefix] || (unitIdentity[prefix] = {});
+  if (isGolem) {
+    if (!stored._preGolemElemArmor) stored._preGolemElemArmor = elem.value || 'none';
+    elem.value = 'resistElements';
+    elem.disabled = true;
+  } else {
+    if (stored._preGolemElemArmor) {
+      elem.value = stored._preGolemElemArmor;
+      delete stored._preGolemElemArmor;
+    }
+    elem.disabled = false;
+  }
+  if (item) item.classList.toggle('abil-identity-derived', isGolem);
+}
+
+function unitIdentityForDerivation(prefix, version) {
   const stored = unitIdentity[prefix] || {};
   if (Number.isInteger(stored.templateId)) {
     return createUnitIdentity({ ...stored, version });
   }
-  const unitTypeRace = customBaseRaceForUnitType(unitType);
+  const controls = readIdentityControls(prefix);
   return createCustomUnitIdentity(version, {
-    isHero: unitType === 'hero',
-    baseRace: unitTypeRace || stored.baseRace || stored.race,
-    baseFantastic: String(unitType || '').startsWith('fantastic_'),
+    isHero: controls.isHero,
+    baseRace: controls.baseRace || stored.baseRace || stored.race,
+    baseFantastic: controls.baseFantastic,
   });
 }
 
 function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdentity) {
-  const stored = preserveEditableIdentity ? (unitIdentity[prefix] || {}) : {};
-  const unitTypeRace = customBaseRaceForUnitType(unitType);
+  const previous = unitIdentity[prefix] || {};
+  const stored = preserveEditableIdentity ? previous : {};
+  const controls = readIdentityControls(prefix);
   unitIdentity[prefix] = {
     ...createCustomUnitIdentity(version, {
-      isHero: unitType === 'hero',
-      baseRace: unitTypeRace || stored.baseRace || stored.race,
-      baseFantastic: String(unitType || '').startsWith('fantastic_'),
+      isHero: controls.isHero,
+      baseRace: controls.baseRace || stored.baseRace || stored.race,
+      baseFantastic: controls.baseFantastic,
     }),
+    specialUnit: controls.specialUnit || 'none',
+    ...(previous._preGolemElemArmor ? { _preGolemElemArmor: previous._preGolemElemArmor } : {}),
     ...(stored.name ? { name: stored.name } : {}),
   };
+  syncLegacyUnitTypeControl(prefix, unitType || unitTypeFromIdentityControls(prefix));
+  updateSpecialUnitDerivedEffects(prefix);
 }
 
 // CoM2/Warlord keep four conventional attack channels.  The card owns the editable
@@ -1066,6 +1225,8 @@ function applyUnit(prefix, unitIndex) {
   if (!unit) return;
 
   setRosterUnitRecords(prefix, unit, version);
+  setIdentityControlsFromUnit(prefix, unit, version);
+  populateSpecialUnitOptions(prefix, version, specialUnitForRoster(version, unit));
 
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
   document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
@@ -1076,8 +1237,7 @@ function applyUnit(prefix, unitIndex) {
   document.getElementById(prefix + 'RtbType').value = predefinedUnitRtbType(unit);
   applyModernAttackFields(prefix, unitBaseStats[prefix].modernAttacks);
 
-  const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
-  if (unitTypeSel) unitTypeSel.value = predefinedUnitType(unit);
+  syncLegacyUnitTypeControl(prefix, predefinedUnitType(unit));
 
   clearUnitInnateLocks(prefix);
   const abilValues = parseAbilitiesFromUnit(unit);
@@ -1091,6 +1251,7 @@ function applyUnit(prefix, unitIndex) {
   if (dosSpecialIsActive(version)) syncDosSpecialAbilities(prefix);
   resetCardToRosterBase(prefix);
   markUnitInnateLocks(prefix, abilValues);
+  updateSpecialUnitDerivedEffects(prefix);
 
   refreshAbilityFieldVisibility();
 }
@@ -1106,9 +1267,7 @@ function updateUnitLock(prefix, applyValues = true) {
   const version = document.getElementById('gameVersion').value;
   fields.classList.toggle('locked', !isCustom);
   abilContent.classList.toggle('locked', !isCustom);
-
-  const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
-  if (unitTypeSel) unitTypeSel.disabled = !isCustom;
+  setIdentityControlsDisabled(prefix, !isCustom);
 
   if (!isCustom) {
     const units = unitDatabases[version] || [];
@@ -1120,6 +1279,8 @@ function updateUnitLock(prefix, applyValues = true) {
       applyUnit(prefix, parseInt(sel.value));
     } else if (unit) {
       setRosterUnitRecords(prefix, unit, version);
+      setIdentityControlsFromUnit(prefix, unit, version);
+      populateSpecialUnitOptions(prefix, version, specialUnitForRoster(version, unit));
       clearUnitInnateLocks(prefix);
       markUnitInnateLocks(prefix, parseAbilitiesFromUnit(unit));
     }
@@ -1129,10 +1290,13 @@ function updateUnitLock(prefix, applyValues = true) {
     }
     // On restore, keep the identity/generic records applyFullState installed from the
     // blob (synthetic test units rely on them).
-    setCustomUnitIdentity(prefix, version, unitTypeSel && unitTypeSel.value, !applyValues);
+    populateSpecialUnitOptions(prefix, version);
+    const preserveCustomIdentity = !applyValues;
+    setCustomUnitIdentity(prefix, version, null, preserveCustomIdentity);
     clearUnitInnateLocks(prefix);
     updateCustomLevelState(prefix);
   }
+  updateSpecialUnitDerivedEffects(prefix);
   updateLoadoutLocks(prefix);
 }
 
@@ -1203,7 +1367,9 @@ function resetUnitFields(prefix) {
   document.getElementById(prefix + 'Weapon').value = s.weapon;
   document.getElementById(prefix + 'Armor').value = s.armor;
   document.getElementById(prefix + 'Level').value = s.level;
-  document.getElementById(prefix + 'Abil_unitType').value = s.unitType;
+  setIdentityControlsFromLegacy(prefix, s.unitType, '');
+  populateSpecialUnitOptions(prefix, document.getElementById('gameVersion').value, 'none');
+  syncLegacyUnitTypeControl(prefix, s.unitType);
   clearAbilities(prefix);
   delete unitBaseStats[prefix];
   delete unitIdentity[prefix];
@@ -1305,12 +1471,19 @@ function swapAttackerDefender() {
     }
   }
 
-  const aTypeSel = document.getElementById('aAbil_unitType');
-  const bTypeSel = document.getElementById('bAbil_unitType');
-  if (aTypeSel && bTypeSel) {
-    tmp = aTypeSel.value;
-    aTypeSel.value = bTypeSel.value;
-    bTypeSel.value = tmp;
+  for (const field of ['BaseHero', 'BaseFantastic', 'BaseRace', 'SpecialUnit', 'Abil_unitType']) {
+    const aEl = document.getElementById('a' + field);
+    const bEl = document.getElementById('b' + field);
+    if (!aEl || !bEl) continue;
+    if (aEl.type === 'checkbox') {
+      const checked = aEl.checked;
+      aEl.checked = bEl.checked;
+      bEl.checked = checked;
+    } else {
+      tmp = aEl.value;
+      aEl.value = bEl.value;
+      bEl.value = tmp;
+    }
   }
 
   tmp = unitBaseStats['a'];
@@ -1696,9 +1869,10 @@ function loadoutLockState(prefix) {
   const unitSel = document.getElementById(prefix + 'Unit');
   let isHero, isFantastic, isZombies = false;
   if (unitSel.value === 'custom') {
-    const unitType = document.getElementById(prefix + 'Abil_unitType').value;
-    isHero = unitType === 'hero';
-    isFantastic = String(unitType).startsWith('fantastic_');
+    const identity = readIdentityControls(prefix);
+    isHero = identity.isHero;
+    isFantastic = identity.baseFantastic;
+    isZombies = identity.specialUnit === 'zombies';
   } else {
     const unit = (unitDatabases[version] || []).find(u => u.id === parseInt(unitSel.value));
     isHero = !!unit && unit.category === 'Heroes';
@@ -1785,6 +1959,10 @@ function updateTypeVisibility() {
       if (versionGated) {
         // Effect cannot exist in this version: disable and clear the value.
         applyDisabled(el, true);
+      } else if (gatedItem && gatedItem.classList.contains('abil-identity-derived')) {
+        // A named special-unit selector owns this derived value; keep it locked even though
+        // the underlying enchantment exists in the current version.
+        el.disabled = true;
       } else if (abil.source === 'ability') {
         // Innate ability of a roster unit: lock (value preserved). Enchantments stay
         // editable on roster units, so they are intentionally not locked here.
@@ -1830,6 +2008,8 @@ function updateTypeVisibility() {
 function refreshAbilityFieldVisibility() {
   updateTypeVisibility();
   updateAbilityVisibility();
+  updateSpecialUnitDerivedEffects('a');
+  updateSpecialUnitDerivedEffects('b');
 }
 
 // --- Presets ---
@@ -1880,7 +2060,9 @@ function applyPreset(name) {
     document.getElementById(prefix + 'Weapon').value = s.weapon;
     document.getElementById(prefix + 'Armor').value = s.armor || 'normal';
     document.getElementById(prefix + 'Level').value = s.level;
-    document.getElementById(prefix + 'Abil_unitType').value = s.unitType;
+    setIdentityControlsFromLegacy(prefix, s.unitType, s.race, s.specialUnit);
+    populateSpecialUnitOptions(prefix, document.getElementById('gameVersion').value, s.specialUnit || 'none');
+    syncLegacyUnitTypeControl(prefix, s.unitType);
     clearAbilities(prefix);
     applyAbilities(prefix, s.abilities);
     // Special values are card-owned in every version. Presets still describe them by
@@ -1938,24 +2120,22 @@ function applyPreset(name) {
   // Synthetic custom test units can declare an intrinsic race/name to exercise race-gated
   // building enchantments (roster-selected presets already got their identity from applyUnit).
   const presetVersion = document.getElementById('gameVersion').value;
-  const aPresetType = document.getElementById('aAbil_unitType').value;
-  const bPresetType = document.getElementById('bAbil_unitType').value;
   if (document.getElementById('aUnit').value === 'custom'
       && preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = {
     ...createCustomUnitIdentity(presetVersion, {
-      isHero: aPresetType === 'hero',
-      baseRace: preset.a.race || customBaseRaceForUnitType(aPresetType),
-      baseFantastic: String(aPresetType).startsWith('fantastic_'),
+      ...readIdentityControls('a'),
+      baseRace: preset.a.race || readIdentityControls('a').baseRace,
     }),
+    specialUnit: readIdentityControls('a').specialUnit,
     name: preset.a.name,
   };
   if (document.getElementById('bUnit').value === 'custom'
       && preset.b && (preset.b.race || preset.b.name)) unitIdentity['b'] = {
     ...createCustomUnitIdentity(presetVersion, {
-      isHero: bPresetType === 'hero',
-      baseRace: preset.b.race || customBaseRaceForUnitType(bPresetType),
-      baseFantastic: String(bPresetType).startsWith('fantastic_'),
+      ...readIdentityControls('b'),
+      baseRace: preset.b.race || readIdentityControls('b').baseRace,
     }),
+    specialUnit: readIdentityControls('b').specialUnit,
     name: preset.b.name,
   };
   if (preset.a && preset.a.level) document.getElementById('aLevel').value = preset.a.level;
@@ -2049,6 +2229,17 @@ function applyFullState(blob) {
         if (el.type === 'checkbox') el.checked = !!val;
         else el.value = val;
       }
+    }
+    // Older v1 blobs only carried the legacy unitType hidden field. Seed the new editable
+    // identity controls from it before the value-preserving lock pass.
+    for (const prefix of ['a', 'b']) {
+      const hasIdentityControls = blob.ids && Object.prototype.hasOwnProperty.call(blob.ids, prefix + 'BaseHero');
+      if (!hasIdentityControls) {
+        const legacy = document.getElementById(prefix + 'Abil_unitType');
+        const oldIdentity = blob.identity && blob.identity[prefix];
+        setIdentityControlsFromLegacy(prefix, legacy && legacy.value, oldIdentity && oldIdentity.race);
+      }
+      populateSpecialUnitOptions(prefix, versionSel ? versionSel.value : document.getElementById('gameVersion').value);
     }
     // Reflect aUnit/bUnit selections in the combobox search fields, then rebuild the
     // JS-side unit records (unitBaseStats) and lock styling for the restored selection
@@ -3064,12 +3255,13 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
   }
 
   const version = el('gameVersion').value;
-  const unitType = el(prefix + 'Abil_unitType').value;
+  const identity = unitIdentityForDerivation(prefix, version);
+  const unitType = legacyUnitTypeFromIdentity(identity);
   return deriveUnitStats({
     prefix,
     version,
     abilities,
-    identity: unitIdentityForDerivation(prefix, version, unitType),
+    identity,
     name: (unitIdentity[prefix] || {}).name,
     level: matrixSideSetting(prefix, 'level'),
     weapon: matrixSideSetting(prefix, 'weapon'),
@@ -3809,16 +4001,17 @@ initMatrixPropCombobox('a');
 initMatrixPropCombobox('b');
 initMatrixPropCombobox('global');
 
-// Unit type change -> update level availability
+// Independent identity controls -> update the custom source record and loadout availability.
 ['a', 'b'].forEach(prefix => {
-  const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
-  if (unitTypeSel) {
-    unitTypeSel.addEventListener('change', () => {
+  for (const field of ['BaseHero', 'BaseFantastic', 'BaseRace', 'SpecialUnit']) {
+    const control = document.getElementById(prefix + field);
+    if (!control) continue;
+    control.addEventListener('change', () => {
       const unitSel = document.getElementById(prefix + 'Unit');
       if (unitSel && unitSel.value === 'custom') {
-        setCustomUnitIdentity(
-          prefix, document.getElementById('gameVersion').value, unitTypeSel.value, true);
+        setCustomUnitIdentity(prefix, document.getElementById('gameVersion').value, null, true);
       }
+      updateSpecialUnitDerivedEffects(prefix);
       updateCustomLevelState(prefix);
       recalculate();
     });
@@ -3916,6 +4109,8 @@ document.getElementById('bLevel').addEventListener('change', () => {
 const GLOBAL_RECALC_EXCLUDE = new Set([
   'gameVersion', 'aUnit', 'bUnit', 'aLevel', 'bLevel',
   'presetSearch', 'aUnitSearch', 'bUnitSearch',
+  'aBaseHero', 'aBaseFantastic', 'aBaseRace', 'aSpecialUnit',
+  'bBaseHero', 'bBaseFantastic', 'bBaseRace', 'bSpecialUnit',
 ]);
 document.querySelectorAll('input, select').forEach(el => {
   if (GLOBAL_RECALC_EXCLUDE.has(el.id) || el.id.startsWith('matrix')) return;

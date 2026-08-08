@@ -256,8 +256,14 @@ its editable base identity (`isHero`, `baseRace`, `baseFantastic`). Predefined r
 their source IDs; custom units use null IDs. Every derivation creates a fresh calculated identity
 whose live `race` and `fantastic` values start from the corresponding base fields. Template-based
 states such as Chosen or Golem are predicates derived when needed, never persisted booleans.
-Until R8.2 replaces the combined custom control, a custom `fantastic_<realm>` selection supplies
-that realm as the independent base race; R8.2 owns exposing the base fields directly.
+The card exposes `Hero`, `Fantastic`, and `Base race / realm` as independent editable custom-unit
+controls; no combined user-facing `unitType` control is authoritative. The legacy compact token
+remains only as an internal compatibility projection for existing preset callers. The
+version-gated `Special unit` selector exposes named exceptions (`Other / no exception`, `Golem`,
+`Chosen / Avatar`, `Zombies`, and `Catapult` where the selected engine has that path) without
+exposing numeric template or hero IDs. Predefined roster units populate and lock all identity
+controls. A named special-unit effect is shown at its ordinary point of use: for example, a
+selected modern Golem owns a locked `Resist Elements` Elements value.
 Order is load-bearing:
 
 1. Ability grants from buildings/enchantments fold in first, so every later read sees
@@ -696,7 +702,10 @@ lives in [CLAUDE.md](./CLAUDE.md).
   defaults, LZ-string compressed, and stored in `localStorage`.
 - During R8.1 the persisted identity remains the legacy v1 `{race, name}` shape; the richer
   source/base/calculated identity is an internal boundary and is reconstructed on restore.
-  Identity-schema migration belongs to R8.4.
+  R8.2 identity controls are part of that id→value map, so custom Hero/Fantastic/Base race or
+  realm and Special unit selections survive reloads and share links. The separate persisted
+  identity object remains the legacy v1 shape until the R8.4 schema migration; source/template
+  IDs and calculated identity are never serialized there.
 - A share link carries the same blob in the URL fragment (`#s=…`) and takes precedence
   over `localStorage` on load.
 - Restoring must be order-safe: version first (which repopulates rosters and ability
