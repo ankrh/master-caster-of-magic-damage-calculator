@@ -30,12 +30,16 @@ Use this mode for every calculator backlog-item implementation unless AKH explic
 single-agent run. Its purpose is to compare both model family and reasoning effort on the same
 real task while gaining an independent implementation and review.
 
-The standard pair is:
+The standard comparison pair for new implementation-mode runs is:
 
 | Role | Model and effort |
 |---|---|
-| Main agent, independent implementer and final integrator | GPT-5.6 Luna, XHigh |
-| Subagent and independent implementer | GPT-5.6 Sol, Medium |
+| Main agent, independent implementer and final integrator | GPT-5.6 Luna, High |
+| Subagent and independent implementer | GPT-5.6 Sol, Low |
+
+This pair is intentional: compare Luna at High against Sol at Low. Do not silently raise Sol's
+effort or lower Luna's effort to make the run easier to schedule. Historical benchmark records
+retain the model and effort that actually ran and are not rewritten to match this new default.
 
 If either exact model or effort is unavailable, stop and tell AKH; never silently substitute a
 different configuration. A differently configured subagent must receive a self-contained task

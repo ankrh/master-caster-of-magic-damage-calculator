@@ -18,6 +18,9 @@ not depend on memory or prose summaries.
 - `Active total` is initial implementation plus review plus revision. It excludes time spent
   waiting for the other agent or for external tool results.
 - Model names and reasoning efforts are recorded exactly as configured for the run.
+- Unless AKH explicitly requests another configuration, new implementation runs compare
+  GPT-5.6 Luna at High against GPT-5.6 Sol at Low. Historical records preserve their actual
+  configurations.
 - A task's `initial winner` is a comparison of the two initial implementations only. The
   `integration choice` may differ after reciprocal review.
 - Each agent must supply its own timing block; the main agent must copy it into this ledger.
