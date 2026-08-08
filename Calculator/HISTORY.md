@@ -1,5 +1,24 @@
 # Calculator work history
 
+## 2026-08-08 -- R8.2 independent identity controls
+
+R8.2 is complete. The unit cards now expose independent Hero, Fantastic, and Base race/realm
+controls, plus a version-gated named Special unit selector for Other, Golem, Chosen/Avatar,
+Zombies, and Catapult where applicable. Predefined roster identities populate and lock these
+fields while Custom identities remain editable. Golem's Resist Elements is shown as a locked
+derived ability at its normal point of use; the selector itself does not expose numeric template
+or hero IDs. Persistence and share-state projections retain the independent fields and the
+legacy compatibility token without allowing a blank Custom base race to be overwritten by stale
+stored state.
+
+The work followed the dual-implementation protocol with GPT-5.6 Luna XHigh and GPT-5.6 Sol
+Medium: both cold implementations were committed, reciprocally reviewed, and revised before
+integration. Luna's revised implementation was selected because it resolved the reciprocal
+identity-gating, selector-coverage, derived-effect visibility, and persistence findings; Sol's
+revision independently fixed the blank-race fallback and added focused coverage. Final
+verification passed 9,474 Node identity/derivation assertions, 929 browser presets, and the
+complete 38-test Playwright suite.
+
 Closed work, accepted modelling decisions, and notable verification results removed from
 `BACKLOG.md`. This file is historical context, not a work register and not a source of truth for
 engine behavior. The linked specification, binary analyses, data-table findings, discrepancy
