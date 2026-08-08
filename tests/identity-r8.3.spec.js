@@ -35,7 +35,7 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
     const paladins = derive(simple('com2_1.05.11', createUnitIdentity({
       version: 'com2_1.05.11', templateId: 113, isHero: false,
       baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
-    }), { combatSummoned: true, callToArmsPaladins: true }, { name: 'unrelated label' }));
+    }), { callToArmsPaladins: true }, { name: 'unrelated label' }));
     const wrongTemplate = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
       isHero: false, baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
     }), { combatSummoned: true, callToArmsPaladins: true }, { name: 'Paladins' }));

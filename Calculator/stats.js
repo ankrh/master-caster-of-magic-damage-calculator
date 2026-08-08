@@ -129,22 +129,24 @@ function applyLiveUnitType(identity, unitType) {
 // to execution-time reads in the modern/DOS constructors and are not persisted UI state.
 function applyOrderedIdentityConversions(identity, abilities, version, meta = {}) {
   const live = { ...identity, race: identity.baseRace, fantastic: identity.baseFantastic };
+  const sourceTemplateId = identity.templateId;
   const trace = [];
   const isCoM1 = version === 'com_6.08';
   const isModern = version && version.startsWith('com2_');
   const combatSummonedValue = !!(abilities && abilities.combatSummoned);
   const isConstructCatapult = !!(combatSummonedValue
     && !meta.isHero
-    && ((isModern && identity.templateId === 37)
+    && ((isModern && sourceTemplateId === 37)
       || (isCoM1 && identity.specialUnit === 'catapult')));
   const isCoM1SummonBranch = isCoM1 && combatSummonedValue
-    && [28, 54, 113].includes(identity.templateId);
+    && [28, 54, 113].includes(sourceTemplateId);
   // Call to Arms is a spell-result conversion, not a display-name conversion. The executable
   // reads the summoned Paladin template (STypeID 113) at the point it assigns the live realm;
-  // keep the template ID as source metadata and require both encounter conditions here.
-  const isCallToArmsPaladins = !!(isModern && combatSummonedValue
+  // keep the template ID as source metadata; the explicit spell-result condition itself
+  // represents the summon event and remains independent from the generic Combat Summoned flag.
+  const isCallToArmsPaladins = !!(isModern
     && abilities && abilities.callToArmsPaladins
-    && identity.templateId === 113);
+    && sourceTemplateId === 113);
 
   const identitySteps = [
     statStep({ id: 'identity:zombies', phase: 'base', writes: ['fantastic'],
@@ -161,7 +163,7 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
     statStep({ id: 'identity:com1SummonBranch', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1SummonBranch,
-      apply: u => { u.race = identity.templateId === 54 ? 'Nature' : 'Life'; u.fantastic = true; } }),
+      apply: u => { u.race = sourceTemplateId === 54 ? 'Nature' : 'Life'; u.fantastic = true; } }),
     statStep({ id: 'identity:callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
@@ -869,6 +871,7 @@ function deriveUnitStats(input) {
   // can be spliced into the sequence below where that region runs.
   const abilSteps = getAbilityStatSteps(effectiveAbilities, version, {
     baseFantastic: identity.baseFantastic,
+    liveFantastic: identity.fantastic,
     combatSummoned: !!effectiveAbilities.combatSummoned,
   });
   // `cAfterWarp` is a second splice point inside region c, for the effects the engine writes

@@ -495,7 +495,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     const nonCorporeal = !!abilities.nonCorporeal;
     // The executable derives three independent packages from direct predicates. The normal
     // package excludes base-Fantastic and combat-summoned units; the other two may stack.
-    if (!combatSummoned && !baseFantastic) emit('breakthrough:normal', 'c', { atk: 1, def: 1 });
+    const liveFantastic = identityPredicates.liveFantastic != null
+      ? !!identityPredicates.liveFantastic : !!abilities.liveFantastic;
+    if (!combatSummoned && !baseFantastic && !liveFantastic) {
+      emit('breakthrough:normal', 'c', { atk: 1, def: 1 });
+    }
     if (nonCorporeal) emit('breakthrough:noncorporeal', 'c', { atk: 1, def: 1 });
     if (combatSummoned) emit('breakthrough:combatSummoned', 'c', { atk: 1, def: 1 });
   }
