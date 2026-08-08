@@ -695,6 +695,9 @@ mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
   selections and writes which leave the output unchanged produce no entry. The shared atomic
   `statTrace` remains available so one engine write which affects several outputs is still one
   event rather than duplicated computation.
+  Permanent writes which prepare the base record before the scratch-record sequence are captured
+  at their own application sites. The later `stat:base` seed is therefore not presented as their
+  source; channel-creating writes such as Shadow Strike still begin at editable zero strength.
 - Each section heading carries its own **Show all / Hide inactive** toggle, independent of
   the other section's and of the other panel's — four states in all, each defaulting to
   hiding.

@@ -1315,6 +1315,87 @@ function runModifierTraceChecks(ctx) {
   assertEqual(traced.modifierTraces.race.entries[0].source.id, 'identity:chosen',
     'Identity trace attributes the live race write');
 
+  const tracedDestiny = ctx.deriveUnitStats(baseUnitInput({
+    abilities: { destiny: true },
+    level: 'champion',
+    rtbType: 'missile',
+    atk: 3, rtb: 2, def: 1, res: 4, hp: 2,
+  }));
+  const destinyWrites = [
+    ['melee', 3, 6],
+    ['sharedAttack', 2, 4],
+    ['defense', 1, 5],
+    ['resistance', 4, 8],
+    ['hits', 2, 4],
+  ];
+  for (const [field, from, to] of destinyWrites) {
+    const trace = tracedDestiny.modifierTraces[field];
+    assertEqual(trace.base, from, `Destiny ${field} trace starts at the editable value`);
+    assertEqual(trace.entries.length, 1, `Destiny ${field} is one independently attributed write`);
+    assertEqual(trace.entries[0].source.id, 'destiny', `Destiny owns the ${field} write`);
+    assertEqual(trace.entries[0].source.label, 'Destiny', `Destiny labels the ${field} source`);
+    assertEqual(trace.entries[0].from, from, `Destiny ${field} records its running before value`);
+    assertEqual(trace.entries[0].to, to, `Destiny ${field} records its running after value`);
+    assertEqual(trace.result, to, `Destiny ${field} trace reaches the derived result`);
+  }
+
+  const permanentSourceCases = [
+    [
+      'Chaos Channels', 'chaosChannels:fireBreath',
+      baseUnitInput({ version: 'com2_1.05.11', abilities: { ccFireBreath: true } }), 0, 4,
+    ],
+    [
+      'Lightning Blade', 'lightningBlade:breath',
+      baseUnitInput({ version: 'com2_warlord_1.5.12.6.2', abilities: { lightningBlade: true } }), 0, 1,
+    ],
+    [
+      'Focus Magic', 'focusMagic:conversion',
+      baseUnitInput({ version: 'com2_1.05.11', abilities: { focusMagic: true } }), 0, 3,
+    ],
+  ];
+  for (const [label, sourceId, input, from, to] of permanentSourceCases) {
+    const trace = ctx.deriveUnitStats(input).modifierTraces.sharedAttack;
+    assertEqual(trace.entries[0].source.id, sourceId, `${label} owns its permanent shared-attack write`);
+    assertEqual(trace.entries[0].from, from, `${label} records the editable running value`);
+    assertEqual(trace.entries[0].to, to, `${label} records the prepared running value`);
+  }
+
+  const tracedVampirism = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { vampirism: true },
+    atk: 3, rtb: 5, rtbType: 'thrown',
+  }));
+  for (const [field, from, to] of [['melee', 3, 7], ['sharedAttack', 5, 1]]) {
+    const entry = tracedVampirism.modifierTraces[field].entries[0];
+    assertEqual(entry.source.id, 'vampirism:transfer', `Vampirism owns its ${field} transfer`);
+    assertEqual(entry.from, from, `Vampirism ${field} records its running before value`);
+    assertEqual(entry.to, to, `Vampirism ${field} records its running after value`);
+  }
+
+  const shadowStrikeGrant = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.6.2',
+    abilities: { shadowStrike: true },
+    atk: 6, rtb: 0, rtbType: 'none',
+    modernAttacks: {},
+  }));
+  const grantedThrown = shadowStrikeGrant.modernAttacks.thrown;
+  assertEqual(grantedThrown.baseStrength, 0,
+    'Shadow Strike-created modern Thrown retains its editable zero base');
+  assertEqual(grantedThrown.modifierTrace.base, 0,
+    'Shadow Strike-created modern Thrown trace starts from zero');
+  assertEqual(grantedThrown.modifierTrace.entries.length, 1,
+    'Shadow Strike-created modern Thrown has one applied grant entry');
+  assertEqual(grantedThrown.modifierTrace.entries[0].source.id, 'shadowStrike:thrown',
+    'Shadow Strike owns the created modern Thrown grant');
+  assertEqual(grantedThrown.modifierTrace.entries[0].source.label, 'Shadow Strike',
+    'Created modern Thrown identifies Shadow Strike to presentation');
+  assertEqual(grantedThrown.modifierTrace.entries[0].from, 0,
+    'Shadow Strike grant records zero as its running before value');
+  assertEqual(grantedThrown.modifierTrace.entries[0].to, 3,
+    'Shadow Strike grant records the created strength as its running after value');
+  assertEqual(grantedThrown.modifierTrace.result, grantedThrown.strength,
+    'Shadow Strike-created modern Thrown trace reaches channel strength');
+
   for (const key of ['ranged', 'thrown', 'fireBreath', 'lightningBreath']) {
     const channel = traced.modernAttacks[key];
     assert(channel && channel.modifierTrace,

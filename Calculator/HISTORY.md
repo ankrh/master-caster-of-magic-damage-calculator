@@ -18,6 +18,11 @@ binary/CAS order, identity writes, channel independence, and omission of inactiv
 zero-valued inputs. R7.4 is ready to present these chains through the existing hover/touch
 interaction; R7.3 deliberately adds no tooltip presentation of its own.
 
+Review follow-up records pre-sequence permanent writes at their actual source sites rather than
+collapsing them into the scratch record's `stat:base` seed. Destiny and the permanent attack-slot
+transforms now retain independent attribution, including a Shadow Strike-created modern Thrown
+channel whose trace starts from its editable strength of zero.
+
 ## 2026-08-08 -- R8.4 stateful identity boundaries
 
 R8 is complete. Persistence and share links now write the v2 source/base identity schema while

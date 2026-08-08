@@ -681,20 +681,71 @@ function deriveUnitStats(input) {
     && (unitName.endsWith('Rocs')
       || (!abilities.mechanical && inputBaseRtb > 0
         && (rtbTypeRaw === 'magic_c' || rtbTypeRaw === 'magic_n' || rtbTypeRaw === 'magic_s')));
-  let calcBaseAtk = destinyActive ? inputBaseAtk * 2 : inputBaseAtk;
-  let calcBaseRtb = destinyActive ? inputBaseRtb * 2 : inputBaseRtb;
+  // Some permanent/base-record writes execute before the main scratch-record sequence. Keep
+  // them as individual trace events at those execution sites: `stat:base` then becomes only a
+  // seed of the prepared record, never a catch-all attribution for the sources which prepared it.
+  const basePreparationTrace = [];
+  let basePreparationOrder = 0;
+  const traceBasePreparation = (id, sourceLabel, before, after) => {
+    const changes = {};
+    for (const field of Object.keys(after)) {
+      if (before[field] === after[field]) continue;
+      const from = before[field];
+      const to = after[field];
+      changes[field] = (typeof from === 'number' && typeof to === 'number')
+        ? { from, to, delta: to - from }
+        : { from, to };
+    }
+    if (Object.keys(changes).length === 0) return;
+    basePreparationTrace.push({
+      id,
+      source: { id, label: sourceLabel },
+      phase: 'base',
+      order: basePreparationOrder++,
+      changes,
+    });
+  };
+
+  let calcBaseAtk = inputBaseAtk;
+  let calcBaseRtb = inputBaseRtb;
+  let calcBaseDef = inputBaseDef;
+  let calcBaseRes = inputBaseRes;
+  let calcBaseHP = inputBaseHP;
+  if (destinyActive) {
+    const before = {
+      atk: calcBaseAtk, rtb: calcBaseRtb, def: calcBaseDef,
+      res: calcBaseRes, hp: calcBaseHP,
+    };
+    calcBaseAtk *= 2;
+    calcBaseRtb *= 2;
+    calcBaseDef += 4;
+    calcBaseRes += 4;
+    calcBaseHP *= 2;
+    traceBasePreparation('destiny', 'Destiny', before, {
+      atk: calcBaseAtk, rtb: calcBaseRtb, def: calcBaseDef,
+      res: calcBaseRes, hp: calcBaseHP,
+    });
+  }
   // `Caster.exe` $00599F3E is `add 4 to U.firebreath`, not an assignment, and it is the same
   // routine for CoM2 and Warlord — there is no version split to model. The DOS engines still
   // assign, because the value lands in the one shared `.ranged` slot rather than a field of
   // its own, which is the same reason they exclude ranged units from the mutation.
   if (ccFireBreathActive && ccOwnsThisPass) {
+    const before = { rtb: calcBaseRtb };
     calcBaseRtb = ccIndependentChannels
       ? calcBaseRtb + ccFireBreathStrength
       : ccFireBreathStrength;
+    traceBasePreparation('chaosChannels:fireBreath', 'Chaos Channels', before,
+      { rtb: calcBaseRtb });
   }
   // Lightning Blade's strength-1 grant (melee-only units). The Thrown→Lightning conversion
   // keeps the unit's existing Thrown strength, so it needs no adjustment here.
-  if (lightningBladeGrantsBreath) calcBaseRtb = 1;
+  if (lightningBladeGrantsBreath) {
+    const before = { rtb: calcBaseRtb };
+    calcBaseRtb = 1;
+    traceBasePreparation('lightningBlade:breath', 'Lightning Blade', before,
+      { rtb: calcBaseRtb });
+  }
   // Energy Cannon is a permanent overland conversion to projectile type Beam
   // with ranged Doom damage. Its +50% write is added to the base phase below,
   // after the earlier permanent ranged writes it reads have been assembled.
@@ -704,9 +755,6 @@ function deriveUnitStats(input) {
   if (energyCannon) {
     rangedType = 'beam';
   }
-  const calcBaseDef = destinyActive ? inputBaseDef + 4 : inputBaseDef;
-  const calcBaseRes = destinyActive ? inputBaseRes + 4 : inputBaseRes;
-  const calcBaseHP  = destinyActive ? inputBaseHP * 2 : inputBaseHP;
   const baseToHitMod = parseInt(input.toHitMod) || 0;
   const baseToHitRtbMod = parseInt(input.toHitRtbMod) || 0;
   const baseToBlkMod = parseInt(input.toBlkMod) || 0;
@@ -729,6 +777,7 @@ function deriveUnitStats(input) {
   const focusMagicBuffsExisting = focusMagicActive
     && (hasMagicRangedForFocus || hasBreathForFocus || hasDoomGazeForFocus);
   if (focusMagicActive && !focusMagicBuffsExisting) {
+    const before = { rtb: calcBaseRtb };
     const canConvertThrown = calcBaseRtb > 0 && thrownType === 'thrown';
     const canConvertRanged = calcBaseRtb > 0
       && (rangedType === 'missile' || rangedType === 'boulder');
@@ -736,6 +785,8 @@ function deriveUnitStats(input) {
     rangedType = 'magic_s';
     thrownType = 'none';
     calcBaseRtb = convertedStrength;
+    traceBasePreparation('focusMagic:conversion', 'Focus Magic', before,
+      { rtb: calcBaseRtb });
   }
 
   // Warlord Vampirism: all thrown and breath attacks transfer to melee. Melee gains
@@ -747,8 +798,11 @@ function deriveUnitStats(input) {
   // only to thrown/breath (thrownType), not magical/missile ranged.
   const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
   if (vampirismActive && thrownType !== 'none' && calcBaseRtb > 0) {
+    const before = { atk: calcBaseAtk, rtb: calcBaseRtb };
     calcBaseAtk += Math.max(0, calcBaseRtb - 1);
     calcBaseRtb = 1;
+    traceBasePreparation('vampirism:transfer', 'Vampirism', before,
+      { atk: calcBaseAtk, rtb: calcBaseRtb });
   }
 
   // Warlord Shadow Strike: adds a Thrown attack at 1 + 1/3 of base melee strength (rounded down).
@@ -768,6 +822,7 @@ function deriveUnitStats(input) {
   // case needs no such bump — that unit already has baseRtb > 0.
   let shadowStrikeGrantedBaseRtb = 0;
   if (shadowStrikeBonus > 0) {
+    const before = { rtb: calcBaseRtb };
     if (thrownType === 'thrown') {
       calcBaseRtb += shadowStrikeBonus;
     } else if (thrownType === 'none' && rangedType === 'none') {
@@ -775,6 +830,8 @@ function deriveUnitStats(input) {
       calcBaseRtb = shadowStrikeBonus;
       shadowStrikeGrantedBaseRtb = shadowStrikeBonus;
     }
+    traceBasePreparation('shadowStrike:thrown', 'Shadow Strike', before,
+      { rtb: calcBaseRtb });
   }
 
   // Warlord Blaze of Glory: the unit's Ranged attack (missile/boulder/magic) becomes a Thrown
@@ -1795,7 +1852,7 @@ function deriveUnitStats(input) {
   // stat trace with those applied live-field changes so the affected race/fantastic outputs have
   // one trace alongside the numeric stat sequence; no-op identity steps were already omitted by
   // runStatSteps.
-  const statTrace = [...identityConversion.trace];
+  const statTrace = [...identityConversion.trace, ...basePreparationTrace];
   const statUnit = runStatSteps(statSteps,
     { res: 0, def: 0, atk: 0, rtb: 0, hp: 0, gaze: 0, doomGaze: 0,
       toHit: 0, toBlk: 0, lifeSteal: existingLifeSteal },
@@ -2161,8 +2218,7 @@ function deriveUnitStats(input) {
   const modifierTraces = {
     figures: projectStatTrace(figureTrace, 'figs', baseFigs, figureUnit.figs),
     melee: projectStatTrace(statTrace, 'atk', inputBaseAtk, finalAtk),
-    sharedAttack: projectStatTrace(statTrace, 'rtb',
-      inputBaseRtb + shadowStrikeGrantedBaseRtb, finalRtb),
+    sharedAttack: projectStatTrace(statTrace, 'rtb', inputBaseRtb, finalRtb),
     defense: projectStatTrace(statTrace, 'def', inputBaseDef, displayDef),
     resistance: projectStatTrace(statTrace, 'res', inputBaseRes, finalRes),
     hits: projectStatTrace(statTrace, 'hp', inputBaseHP, hp),

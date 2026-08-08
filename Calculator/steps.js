@@ -173,10 +173,10 @@ function recordStepTrace(trace, step, before, unit, order) {
 // editable base and displayed result separately so R7.4 can render those as the first and
 // last lines without inventing either value from deltas.
 //
-// `stat:base` seeds the mutable record from zero.  That seed is not itself a modifier when
-// it equals the editable base, so it is omitted.  If permanent construction has already
-// changed the value, the entry is retained but its `from` is normalized to the editable
-// base; the chain therefore always has a continuous running value.
+// `stat:base` seeds the mutable record from zero. Permanent construction writes are expected
+// to appear as their own preceding source events, making that seed a no-op relative to the
+// projected running value and therefore invisible. Normalizing the seed's `from` to the running
+// value keeps the chain continuous and makes a missed permanent-write attribution testable.
 function projectStatTrace(trace, field, base, result, options = {}) {
   const entries = [];
   let running = base;
