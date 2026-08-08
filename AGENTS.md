@@ -16,7 +16,8 @@ Instructions are split by directory and are **not** all loaded automatically —
 
 When editing text that contains non-ASCII characters such as `→`, prefer `apply_patch` over PowerShell write/replace commands because `apply_patch` has preserved UTF-8 correctly in this repo.
 
-## Derivations and cross-agent reviews
+## Dual-agent implementation, derivations and cross-agent reviews
 
-Only when asked to perform binary derivation or cross-agent review work, read
-`DERIVATION-REVIEW-PROTOCOL.md` in full before starting. Do not load it for ordinary tasks.
+Before implementing any `Calculator/BACKLOG.md` item, or when asked to perform binary derivation
+or cross-agent review work, read `DERIVATION-REVIEW-PROTOCOL.md` in full. Do not load it for other
+ordinary tasks.

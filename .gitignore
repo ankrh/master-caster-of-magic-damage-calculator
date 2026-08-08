@@ -27,6 +27,7 @@ Raw install files/
 
 # Cross-agent channels — local scratch, see DERIVATION-REVIEW-PROTOCOL.md
 # Named for the agent under review, not the author.
+.reviews/
 .review-of-claude.md
 .review-of-codex.md
 .derivations/

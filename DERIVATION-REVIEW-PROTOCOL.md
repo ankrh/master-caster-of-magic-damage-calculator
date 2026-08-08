@@ -1,7 +1,15 @@
-# Derivation and cross-agent review protocol
+# Dual-agent implementation, derivation and review protocol
 
-Read this file only for binary derivation or cross-agent review work. It is the single home for
-how Claude and Codex divide, independently derive, and cross-check that work.
+Read this file before implementing any `Calculator/BACKLOG.md` item, and for binary derivation or
+other cross-agent review work. It is the single home for independent implementations,
+derivations, reciprocal review and integration.
+
+The two modes are distinct. **Implementation mode** produces competing executable changes in
+isolated Git worktrees. **Derivation mode** produces independent evidence reads and retains the
+stricter evidence-specific rules below. Never substitute one mode's completion gate for the
+other's.
+
+The following scratch files belong to derivation mode:
 
 | File | Subject | Written by | Owned after writing by |
 |---|---|---|---|
@@ -15,6 +23,118 @@ ownership: the reviewer writes the file in one pass, then never touches it again
 moment the agent under review owns it and is the only one who edits it. `.derivations/` files
 are single-writer outright. There is no shared discussion file: two simultaneous writers means
 clobbered edits and no reliable record of who claimed what.
+
+## Implementation mode — both implement the same backlog item cold
+
+Use this mode for every calculator backlog-item implementation unless AKH explicitly requests a
+single-agent run. Its purpose is to compare both model family and reasoning effort on the same
+real task while gaining an independent implementation and review.
+
+The standard pair is:
+
+| Role | Model and effort |
+|---|---|
+| Main agent, independent implementer and final integrator | GPT-5.6 Luna, Max |
+| Subagent and independent implementer | GPT-5.6 Sol, High |
+
+If either exact model or effort is unavailable, stop and tell AKH; never silently substitute a
+different configuration. A differently configured subagent must receive a self-contained task
+packet with no inherited conversation (`fork_turns: "none"` where that control is available).
+This both permits the model override and protects the independence of the first pass.
+
+### Worktree and branch isolation
+
+Separate worktrees are mandatory, not optional. Before either agent reads implementation code:
+
+1. Require the intended base branch to be clean and record its exact commit hash.
+2. Freeze one task packet: backlog ID and text, relevant specs and instructions, acceptance
+   criteria, permitted scope, required tests, base commit, branch name and absolute worktree path.
+   Give the identical substantive packet to both agents.
+3. Create independent `codex/<ID>-luna` and `codex/<ID>-sol` branches and worktrees at that base.
+   Reserve the primary checkout, or a third clean worktree, for integration.
+4. Record a dispatch timestamp for each agent immediately before its implementation starts.
+
+Each agent edits and commits only in its assigned worktree. It must not open, search, diff or
+otherwise inspect the other worktree or branch until both initial implementations are committed.
+Shared generated caches and servers must not write into either implementation worktree unless the
+task packet explicitly assigns safe, separate locations.
+
+### Independent implementation
+
+Both agents implement the complete scoped item, update its specification and tests where
+required, run the task packet's checks, and make an initial local commit. Each reports its commit
+hash, tests, assumptions and remaining concerns. The main agent records the timestamp at which
+each initial commit is ready.
+
+An implementation that omits required tests, documentation or migration work is incomplete even
+if its code appears to work. Neither agent may compensate for a missing requirement by narrowing
+the backlog item without AKH's approval.
+
+### Reciprocal review
+
+Only after both initial commits exist may the agents inspect each other's base-to-tip diffs. Each
+reviews the other implementation against the frozen task packet and writes one review artifact in
+the primary checkout:
+
+| File | Subject | Written by | Owned after writing by |
+|---|---|---|---|
+| `.reviews/<ID>.review-of-luna.md` | Luna implementation | Sol | Luna |
+| `.reviews/<ID>.review-of-sol.md` | Sol implementation | Luna | Sol |
+
+The reviewer writes its artifact in one pass and never edits it again. Findings must identify the
+affected file and line or symbol, explain the observable failure or maintainability risk, and give
+the evidence or test that establishes it. Preference alone is not a finding. Record the review
+start and completion timestamps for each agent.
+
+The main agent then gives each agent the review of its own branch. Each agent revises only its own
+implementation, marks every review entry as fixed or replies with a concrete reason for disputing
+it, reruns the required checks, and makes a revised local commit. Record revision start and ready
+timestamps. Neither agent edits or commits to the other's branch.
+
+### Integration and completion gate
+
+After both revised branches are ready, the Luna main agent compares them against the frozen
+acceptance criteria. It may select either implementation or combine elements of both, but it must
+state why the chosen result is stronger; being the main agent does not give Luna's own branch a
+presumption of correctness.
+
+Perform integration on a clean branch/worktree based on the frozen commit. Do not merge both
+branches mechanically. Apply only the selected changes, reconcile their specifications and tests,
+and run the complete applicable test suite. The item closes only when:
+
+- the integrated implementation satisfies every acceptance criterion;
+- all required tests pass in the integration worktree;
+- the specification, backlog and history are updated consistently;
+- surviving review disputes are reported to AKH rather than silently discarded; and
+- the integrated result is committed locally on the intended branch without pushing.
+
+Cleanup happens only after the final commit is verified and reachable from the intended branch.
+Record the temporary branch tips, remove the exact temporary worktrees, delete their temporary
+branches, clear the two review artifacts, and confirm that the intended worktree is clean. Never
+push as part of this protocol.
+
+### Required end-of-task comparison
+
+The main agent's final user-facing summary must compare the agents rather than merely announcing
+that the integrated tests pass. Report:
+
+- the exact model and effort used by each agent;
+- each agent's initial-implementation time, review time, revision time and total measured time;
+- which agent produced the stronger initial implementation and the evidence for that judgment;
+- which agent produced the more useful reciprocal review;
+- which revised implementation was strongest overall, or that the result was a tie or split
+  decision when the evidence does not support one winner;
+- which implementation supplied the integration base and what material elements, if any, came
+  from the other; and
+- the final commit, test results, worktree cleanup result and confirmation that nothing was
+  pushed.
+
+Measure each stage from the recorded wall-clock timestamps. For each agent, define total measured
+time as initial implementation plus review plus revision time, excluding time spent waiting for
+the other agent. Report parallel agent durations separately; do not add the two agents' totals and
+present that sum as end-to-end elapsed time. A quality claim must cite concrete differences such
+as defects avoided, tests added, requirements covered, review findings accepted, simpler design
+or reduced regression risk. Do not award a winner from model identity, confidence or speed alone.
 
 ## Derivation mode — both answer the same question cold
 

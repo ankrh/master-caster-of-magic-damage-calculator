@@ -171,7 +171,9 @@ Each version's directory also holds the `HELP.TXT` that shipped with it.
 `HELP.TXT` — evidence for version comparisons only, never a source for current behaviour. See
 the README in that directory.
 
-## Optional working protocols
+## Dual-agent implementation and optional working protocols
 
-For binary derivations or cross-agent reviews only, read
-`DERIVATION-REVIEW-PROTOCOL.md` in full before starting. Do not load it for ordinary work.
+Before implementing any `Calculator/BACKLOG.md` item, read
+`DERIVATION-REVIEW-PROTOCOL.md` in full and use its dual implementation mode. Also read it when
+asked to perform binary derivation or cross-agent review work. Do not load it for other ordinary
+work.
