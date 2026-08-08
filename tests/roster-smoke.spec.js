@@ -56,10 +56,15 @@ for (const version of VERSIONS) {
       }
       hidden.value = 'custom';
       hidden.dispatchEvent(new Event('change'));
-      document.getElementById('aAbil_unitType').value = 'hero';
+      const type = document.getElementById('aAbil_unitType');
+      type.value = 'fantastic_chaos';
+      type.dispatchEvent(new Event('change'));
+      const fantasticIdentity = { ...unitIdentity['a'] };
+      type.value = 'hero';
+      type.dispatchEvent(new Event('change'));
       const customIdentity = readUnitStats('a').identity;
       return { count: list.length, bad, identityBad, customIdentity,
-        storedCustomIdentity: unitIdentity['a'] };
+        fantasticIdentity, storedCustomIdentity: unitIdentity['a'] };
     });
 
     expect(report.count, 'the picker should have units for this version').toBeGreaterThan(0);
@@ -68,8 +73,12 @@ for (const version of VERSIONS) {
     expect(report.customIdentity.templateId, 'custom template ID').toBeNull();
     expect(report.customIdentity.heroTypeId, 'custom hero-type ID').toBeNull();
     expect(report.customIdentity.isHero, 'custom Hero remains independent of null IDs').toBe(true);
+    expect(report.fantasticIdentity.baseRace, 'custom Fantastic realm is stored independently').toBe('Chaos');
+    expect(report.fantasticIdentity.baseFantastic, 'custom Fantastic flag is synchronized').toBe(true);
     expect(report.storedCustomIdentity.templateId, 'stored custom template ID').toBeNull();
     expect(report.storedCustomIdentity.heroTypeId, 'stored custom hero-type ID').toBeNull();
+    expect(report.storedCustomIdentity.isHero, 'stored custom Hero flag is synchronized').toBe(true);
+    expect(report.storedCustomIdentity.baseFantastic, 'stored custom Fantastic flag is synchronized').toBe(false);
 
     // Spot-checks: for a few units that have a melee value (so applyLevelBonuses
     // writes the stat fields), the DOM must match the data-table record.
@@ -102,3 +111,30 @@ for (const version of VERSIONS) {
     expectNoConsoleErrors(errors);
   });
 }
+
+test('a predefined preset cannot replace roster-owned identity with synthetic fields', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const report = await page.evaluate(() => {
+    const version = document.getElementById('gameVersion').value;
+    const roster = (unitDatabases[version] || []).find(unit => unit.category !== 'Heroes');
+    const presetName = '__r81_roster_identity_guard__';
+    PRESETS[presetName] = {
+      version,
+      aUnitName: roster.name,
+      a: { race: 'Synthetic Race', name: 'Synthetic Name' },
+    };
+    try {
+      applyPreset(presetName);
+      return {
+        source: createRosterUnitIdentity(version, roster),
+        actual: { ...unitIdentity.a },
+      };
+    } finally {
+      delete PRESETS[presetName];
+    }
+  });
+
+  expect(report.actual).toMatchObject(report.source);
+  expect(report.actual.name).not.toBe('Synthetic Name');
+  expectNoConsoleErrors(errors);
+});

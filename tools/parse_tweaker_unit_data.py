@@ -260,10 +260,16 @@ def process_unit_file(input_file: Path):
                 raise ValueError(f"Unit {row.get('UnitName', '')!r} has no valid Nr template id")
             is_hero = template_id <= 34
             base_race = row.get('Race', '').strip()
-            source_abilities = [
-                token.strip() for token in (row.get('Abilities', '') or '').split(',')
-                if token.strip()
-            ]
+
+            # Collect canonical ability tokens from every source text column before
+            # constructing identity. This is the same ordered stream used below for the
+            # emitted abilities, so source layout changes cannot silently drop Fantastic.
+            attributes = parse_attributes(row.get('Attributes', ''))
+            abilities = parse_abilities(row.get('Abilities', ''))
+            immunities = parse_immunities(row.get('Immunities', ''))
+            attacks_raw = [x.strip() for x in row.get('Attacks', '').split(',') if x.strip()]
+            all_tokens = attributes + abilities + immunities + attacks_raw
+            base_fantastic = 'Fantastic' in all_tokens
 
             unit = {
                 'id': unit_id,
@@ -271,7 +277,7 @@ def process_unit_file(input_file: Path):
                 'heroTypeId': template_id if is_hero else None,
                 'isHero': is_hero,
                 'baseRace': base_race,
-                'baseFantastic': 'Summoned Unit' in source_abilities,
+                'baseFantastic': base_fantastic,
                 'name': row.get('UnitName', '').strip(),
                 'race': base_race,
                 'category': base_race,
@@ -316,12 +322,6 @@ def process_unit_file(input_file: Path):
             if unit.get('ammo') == 0:
                 unit.pop('ammo', None)
 
-            # Collect raw ability tokens from all text columns (+ gaze token from RangedType if present)
-            attributes = parse_attributes(row.get('Attributes', ''))
-            abilities = parse_abilities(row.get('Abilities', ''))
-            immunities = parse_immunities(row.get('Immunities', ''))
-            attacks_raw = [x.strip() for x in row.get('Attacks', '').split(',') if x.strip()]
-
             # Read the raw Gaze/Poison value (used only when a numeric ability is found)
             gaze_poison_str = row.get('Gaze/Poison', '').strip()
             gaze_poison_val = None
@@ -332,9 +332,7 @@ def process_unit_file(input_file: Path):
                     pass
 
             # Build the full flat list, substituting numeric forms where needed.
-            # Source order: Attributes, Abilities, Immunities, Attacks
-            all_tokens = attributes + abilities + immunities + attacks_raw
-
+            # Source order: Attributes, Abilities, Immunities, Attacks.
             final_abilities = []
             seen = set()
             has_byte_consumer = is_gaze
@@ -399,7 +397,7 @@ def process_unit_file(input_file: Path):
                     'heroTypeId': template_id if is_hero else None,
                     'isHero': is_hero,
                     'baseRace': base_race,
-                    'baseFantastic': 'Summoned Unit' in source_abilities,
+                    'baseFantastic': base_fantastic,
                 }
                 for field, source_value in expected_identity.items():
                     if unit.get(field) != source_value:

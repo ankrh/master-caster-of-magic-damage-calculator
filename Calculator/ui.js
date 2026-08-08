@@ -982,19 +982,21 @@ function unitIdentityForDerivation(prefix, version, unitType) {
   if (Number.isInteger(stored.templateId)) {
     return createUnitIdentity({ ...stored, version });
   }
+  const unitTypeRace = customBaseRaceForUnitType(unitType);
   return createCustomUnitIdentity(version, {
     isHero: unitType === 'hero',
-    baseRace: stored.baseRace || stored.race || customBaseRaceForUnitType(unitType),
+    baseRace: unitTypeRace || stored.baseRace || stored.race,
     baseFantastic: String(unitType || '').startsWith('fantastic_'),
   });
 }
 
 function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdentity) {
   const stored = preserveEditableIdentity ? (unitIdentity[prefix] || {}) : {};
+  const unitTypeRace = customBaseRaceForUnitType(unitType);
   unitIdentity[prefix] = {
     ...createCustomUnitIdentity(version, {
       isHero: unitType === 'hero',
-      baseRace: stored.baseRace || stored.race || customBaseRaceForUnitType(unitType),
+      baseRace: unitTypeRace || stored.baseRace || stored.race,
       baseFantastic: String(unitType || '').startsWith('fantastic_'),
     }),
     ...(stored.name ? { name: stored.name } : {}),
@@ -1938,7 +1940,8 @@ function applyPreset(name) {
   const presetVersion = document.getElementById('gameVersion').value;
   const aPresetType = document.getElementById('aAbil_unitType').value;
   const bPresetType = document.getElementById('bAbil_unitType').value;
-  if (preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = {
+  if (document.getElementById('aUnit').value === 'custom'
+      && preset.a && (preset.a.race || preset.a.name)) unitIdentity['a'] = {
     ...createCustomUnitIdentity(presetVersion, {
       isHero: aPresetType === 'hero',
       baseRace: preset.a.race || customBaseRaceForUnitType(aPresetType),
@@ -1946,7 +1949,8 @@ function applyPreset(name) {
     }),
     name: preset.a.name,
   };
-  if (preset.b && (preset.b.race || preset.b.name)) unitIdentity['b'] = {
+  if (document.getElementById('bUnit').value === 'custom'
+      && preset.b && (preset.b.race || preset.b.name)) unitIdentity['b'] = {
     ...createCustomUnitIdentity(presetVersion, {
       isHero: bPresetType === 'hero',
       baseRace: preset.b.race || customBaseRaceForUnitType(bPresetType),
@@ -3810,6 +3814,11 @@ initMatrixPropCombobox('global');
   const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
   if (unitTypeSel) {
     unitTypeSel.addEventListener('change', () => {
+      const unitSel = document.getElementById(prefix + 'Unit');
+      if (unitSel && unitSel.value === 'custom') {
+        setCustomUnitIdentity(
+          prefix, document.getElementById('gameVersion').value, unitTypeSel.value, true);
+      }
       updateCustomLevelState(prefix);
       recalculate();
     });
