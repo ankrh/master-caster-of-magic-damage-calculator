@@ -582,3 +582,174 @@ third run above is the retained 39/39 result; no result is inferred from the sil
 - `git worktree list` contains only the primary checkout. The intended branch was clean at
   integration commit `3495099` before this append-only benchmark entry was written.
 - Nothing was pushed.
+
+## Task R7.3 -- Ordered calculated-stat modifier traces
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | R7.3 -- complete the ordered trace behind every displayed calculated-stat modifier |
+| Date | 2026-08-08 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `c0e3f0f185e3a8d83c28927e18f13935703eca6e` |
+| Integration branch | `codex/R7.3-integration` |
+| Final integration commit | `c686e5037c0f4e504d547a093571b4cf9b691c9f` |
+| Temporary tips | Sol High `1bd9523acfdab2f035914c6f6de8864f636a7b45`; Sol Medium `7af97f2bf512a2438683a2adf05982569cb66cce` |
+| Models | Orchestrator GPT-5.6 Sol High; implementer/reviewer A GPT-5.6 Sol High; implementer/reviewer B GPT-5.6 Sol Medium |
+| Ports | Primary 8080; Sol High 8081; Sol Medium 8082 |
+| Initial winner | Sol High: one source-attribution defect versus Medium's two valid-input derivation failures and one no-op-trace defect; High also made the trace path authoritative and added browser coverage |
+| Most useful review | Sol High's review of Medium, because it supplied three executable reproductions, including the ranged-distance and CoM 1 Zombies failures; Medium's permanent-write attribution finding was also essential |
+| Strongest revised result | Sol High implementation base, combined with Sol Medium's 10% initial To Block clamp correction and distance/clamp-floor regressions |
+| Push | None |
+
+### Subagent timing
+
+Parallel agent spans are reported independently and are not added into an end-to-end duration.
+`Active total` uses the active figures each subagent reported; it does not add separately listed
+verification durations a second time. Where an agent did not pause its stopwatch around tests,
+the stage span is retained with that limitation stated explicitly.
+
+| Agent | Stage | Start | End | Measured span | Active / waiting accounting |
+|---|---|---|---|---:|---|
+| Sol High | Initial implementation | `2026-08-08T20:57:12.7837665+02:00` | `2026-08-08T21:14:44.1252712+02:00` | `1046.458s` | Fallback active `985.630s`, after subtracting precisely timed dependency/failure/verification subprocesses; setup waiting `3.793s`; no other waiting |
+| Sol High | Reciprocal review | `2026-08-08T21:16:19.9112839+02:00` | `2026-08-08T21:23:10.8798414+02:00` | `410.962s` | Active review `410.962s`; waiting `0s` |
+| Sol High | Review-driven revision | `2026-08-08T21:23:45.9474427+02:00` | `2026-08-08T21:30:16.3767599+02:00` | `390.437s` | Agent-reported revision span `390.437s`, including verification; external waiting `0s` |
+| Sol High | Active total | -- | -- | `1787.029s` | Initial fallback active + review + revision; reported waiting `3.793s` |
+| Sol Medium | Initial implementation | `2026-08-08T20:57:32.8842306+02:00` | `2026-08-08T21:10:56.6924133+02:00` | `803.892s` | Agent-reported active `801.989s`; dependency setup waiting `1.903s`; no other waiting |
+| Sol Medium | Reciprocal review | `2026-08-08T21:16:28.2854693+02:00` | `2026-08-08T21:18:28.1225760+02:00` | `119.845s` | Active review `119.845s`; waiting `0s` |
+| Sol Medium | Review-driven revision | `2026-08-08T21:23:53.5275725+02:00` | `2026-08-08T21:27:23.9653703+02:00` | `210.428s` | Agent-reported active `210.428s`, including verification; waiting `0s` |
+| Sol Medium | Active total | -- | -- | `1132.262s` | Initial active + review + revision; reported waiting `1.903s` |
+
+### Per-agent verification timing
+
+#### Sol High
+
+| Phase | Suite | Result | Start | End | Elapsed |
+|---|---|---:|---|---|---:|
+| Initial | Focused modifier-trace Playwright, port 8081 | 2/2 | `2026-08-08T21:11:53.4033230+02:00` | `2026-08-08T21:11:58.0685586+02:00` | `4.664s` |
+| Initial | Node unit checks | 9,613/9,613 | `2026-08-08T21:13:07.0736709+02:00` | `2026-08-08T21:13:07.3061826+02:00` | `0.235s` |
+| Initial | Full Playwright, port 8081 | 50/50 | `2026-08-08T21:13:16.3179894+02:00` | `2026-08-08T21:14:08.4455866+02:00` | `52.136s` |
+| Revision | Focused modifier-trace Playwright, port 8081 | 3/3 | `2026-08-08T21:26:55.5234371+02:00` | `2026-08-08T21:27:00.5314218+02:00` | `4.999s` |
+| Revision | Full Playwright, port 8081 | 51/51 | `2026-08-08T21:28:22.6517340+02:00` | `2026-08-08T21:29:16.0070128+02:00` | `53.349s` |
+| Revision | Node unit checks | 9,671/9,671 | `2026-08-08T21:29:45.6387560+02:00` | `2026-08-08T21:29:45.8428774+02:00` | `0.197s` |
+
+The first focused Playwright launch failed before opening a server because the fresh worktree had
+no `node_modules`; `npm ci` took `1.354s`. This dependency/setup failure was retained in the
+agent's initial timing account and was not reported as a test result.
+
+#### Sol Medium
+
+| Phase | Suite | Result | Start | End | Elapsed |
+|---|---|---:|---|---|---:|
+| Initial | Node unit checks | 9,521/9,521 | `2026-08-08T21:09:28.2364271+02:00` | `2026-08-08T21:09:28.5383156+02:00` | `0.290s` |
+| Initial | Full Playwright, port 8082 | 48/48 | `2026-08-08T21:09:38.1295385+02:00` | `2026-08-08T21:10:30.3352751+02:00` | `52.199s` |
+| Revision | Node unit checks | 9,530/9,530 | `2026-08-08T21:25:37.7727423+02:00` | `2026-08-08T21:25:38.0075576+02:00` | `0.231s` |
+| Revision | Full Playwright, port 8082 | 48/48 | `2026-08-08T21:25:46.8560801+02:00` | `2026-08-08T21:26:37.2732752+02:00` | `50.414s` |
+
+Medium's earlier initial Playwright pass exposed a legacy raw-trace shape regression (47/48),
+which it fixed before the retained 48/48 result. Its first launch also failed before opening a
+server because dependencies were absent; lockfile-pinned `npm install` took `1.903s`.
+
+### Initial comparison
+
+Both initial implementations delivered projected traces for numeric stats, percentage outputs,
+live identity and independent modern attacks; both updated the specification, backlog, history
+and Node coverage. Sol High's initial implementation was stronger overall:
+
+- High routed displayed To Hit and To Block through the traced ordered step path and used that
+  result as authoritative. Medium reconstructed percentage chains after the existing calculation
+  and asserted parity, a weaker fit for the SPEC requirement that the trace be emitted from the
+  same path which computes the value.
+- High added a dedicated Playwright file, finishing with 50 browser tests and 9,613 Node
+  assertions. Medium added Node coverage and retained the pre-existing 48 browser tests.
+- Medium correctly recorded pre-sequence permanent sources from the outset. High collapsed
+  Destiny, Chaos Channels, Lightning Blade, Focus Magic, Vampirism and Shadow Strike into the
+  generic `stat:base` seed, its one P1 initial defect.
+- Medium's initial percentage projection had two P1 valid-input failures: ordinary ranged
+  distance multiplied an already percentage-point-valued penalty by 100, and a legal CoM 1
+  Zombies state reached a 0% traced To Block value while production displayed 10%. It also split
+  clamped resolution effects into an artificial below-floor write plus a compensating clamp,
+  violating no-op omission.
+
+High therefore had the stronger initial result: one completeness defect versus two runtime
+derivation failures and one trace-contract defect, plus the stronger authoritative computation
+boundary and browser coverage. This judgment is based on executable failures and acceptance
+coverage, not model identity or speed.
+
+### Reciprocal review and dispositions
+
+Sol Medium's review of High produced one P1 finding: permanent/base writers were missing or
+misattributed, and a Shadow Strike-created modern Thrown channel exposed `baseStrength: 0` beside
+a positive trace base with no Shadow Strike entry. High fixed it in `1bd9523` by recording each
+permanent write at its application site and added Node/browser fixtures for all six named sources.
+
+Sol High's review of Medium produced three findings:
+
+1. Ranged distance was rescaled by 100 and aborted ordinary CoM2 ranged derivation.
+2. Initial To Block used a 0% rather than 10% floor and aborted a valid CoM 1 Zombies state.
+3. Resolution effects at the floor emitted an unrestricted write and compensating clamp instead
+   of disappearing as actual no-ops.
+
+Medium fixed all three in `7af97f2` with focused Node regressions. No review dispute survived.
+High's review was the more useful reciprocal review because it supplied three concrete VM
+reproductions, two of which were P1 valid-input failures. Medium's single finding was nonetheless
+essential and materially changed the selected branch.
+
+### Integration and final verification
+
+The primary checkout remained on the frozen commit until both initial implementations existed.
+Integration selected High's revised lineage and applied it as:
+
+1. `c33fb1f` -- High initial implementation (`9ce4261`);
+2. `dc01c72` -- High permanent-source revision (`1bd9523`);
+3. `c686e50` -- integrate Medium's 10% initial To Block floor and its ranged-distance,
+   CoM 1 Zombies and capped-Plague regression cases.
+
+No mechanical merge of both branches was performed. The selected implementation is High's
+authoritative trace pipeline and browser suite; Medium materially supplied the clamp correction
+and three focused edge cases. The revised High branch was strongest overall after its review fix,
+but the combined result is stronger than either revised branch alone because High still carried
+the initial To Block floor defect that Medium's revision had corrected.
+
+| Final suite | Result | Start | End | Elapsed |
+|---|---:|---|---|---:|
+| Full Playwright, primary port 8080 | 51/51 | `2026-08-08T21:33:20.1779361+02:00` | exact wrapper end not recorded; completion first observed `2026-08-08T21:34:21.8490412+02:00` | Playwright reported `51.7s` |
+| Node unit checks | 9,679/9,679 | `2026-08-08T21:35:44.0858626+02:00` | `2026-08-08T21:35:44.2629141+02:00` | `0.184867s` |
+| `git diff --check` | pass | `2026-08-08T21:35:44.2786764+02:00` | `2026-08-08T21:35:44.3267760+02:00` | `0.042505s` |
+
+### Orchestrator timing
+
+- Coordination dispatch was recorded at `2026-08-08T20:56:47.1053904+02:00`.
+- Integration comparison began after the final revised branch reported ready at approximately
+  `2026-08-08T21:30:18.9248760+02:00`.
+- Cleanup completed at `2026-08-08T21:35:19.8560754+02:00`.
+- Measured dispatch-through-cleanup wall span: `2312.751s`.
+- Approximate integration-through-cleanup wall span: `300.931s`.
+- Exact orchestrator active coordination time and waiting time were not recorded. The total wall
+  span includes waits for two independent implementations, reciprocal reviews, revisions and
+  external verification, and is not an implementation-runtime comparison.
+
+### Server and cleanup evidence
+
+- Sol High initial full suite: Python PID 17624, started `21:13:17`, observed listening at
+  `21:13:32`; PID exited and port 8081 was free at `21:14:17`, with final free confirmation at
+  `21:15:06`.
+- Sol High revision full suite: Python PID 18004, started
+  `2026-08-08T21:28:23.5270926+02:00`; PID exited and port 8081 was free at
+  `2026-08-08T21:29:22.9338621+02:00`, with final confirmation at `21:30:18`.
+- Sol Medium initial final suite: Python PID 12400 was observed at `21:09:54`; PID exited and port
+  8082 was free at `21:10:44`.
+- Sol Medium revision: Python PID 11744 was observed at `21:26:07`; PID exited and port 8082 was
+  free at `2026-08-08T21:26:48.0710059+02:00`.
+- Primary final: Python PID 11336 started at `2026-08-08T21:33:21.1029468+02:00`, was observed
+  listening at `21:33:37`, and had exited with port 8080 free at
+  `2026-08-08T21:34:21.8490412+02:00`.
+- Ports 8080, 8081 and 8082 were all confirmed free at
+  `2026-08-08T21:35:19.3540942+02:00`.
+- Temporary worktrees `C:\CoM2-damage-calculator-R7.3-sol-high` and
+  `C:\CoM2-damage-calculator-R7.3-sol-medium` were verified clean at the tips recorded above and
+  removed. Temporary branches `codex/R7.3-sol-high` and `codex/R7.3-sol-medium` were deleted.
+- Both resolved review artifacts were cleared; no disagreement survived. `git worktree list`
+  contains only the primary checkout. The intended branch was clean at integration commit
+  `c686e50` before this append-only benchmark entry was written. Nothing was pushed.
