@@ -53,12 +53,12 @@ python tools/nocache_server.py --port 8080        # run_in_background
 (Invoke-WebRequest http://127.0.0.1:8080/ -UseBasicParsing).StatusCode
 
 # For an isolated agent worktree, use its assigned port instead:
-python tools/nocache_server.py --port 8081        # Luna example
+python tools/nocache_server.py --port 8081        # Sol High example
 (Invoke-WebRequest http://127.0.0.1:8081/ -UseBasicParsing).StatusCode
 ```
 
 `npm test` reads `PLAYWRIGHT_PORT` and passes that port to the no-cache server. For example,
-run Luna's suite with `$env:PLAYWRIGHT_PORT='8081'; npm test` and Sol's with
+run Sol High's suite with `$env:PLAYWRIGHT_PORT='8081'; npm test` and Sol Medium's with
 `$env:PLAYWRIGHT_PORT='8082'; npm test`. Playwright does not reuse an existing server unless
 `PLAYWRIGHT_REUSE_EXISTING=1` is explicitly set for an intentional single-checkout run. The
 `tools/browser_check.js` harness chooses its own ephemeral HTTP and Chrome-debugging ports and

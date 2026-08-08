@@ -18,12 +18,16 @@ not depend on memory or prose summaries.
 - `Active total` is initial implementation plus review plus revision. It excludes time spent
   waiting for the other agent or for external tool results.
 - Model names and reasoning efforts are recorded exactly as configured for the run.
-- Unless AKH explicitly requests another configuration, new implementation runs compare
-  GPT-5.6 Luna at High against GPT-5.6 Sol at Low. Historical records preserve their actual
+- Unless AKH explicitly requests another configuration, new implementation runs use GPT-5.6 Sol
+  at High for the orchestrating main agent, with independent implementation subagents running
+  GPT-5.6 Sol at High and GPT-5.6 Sol at Medium. Historical records preserve their actual
   configurations.
+- The orchestrator is not a third implementation competitor. Its coordination, integration and
+  final-verification timing is recorded separately from the two subagent implementation totals.
 - A task's `initial winner` is a comparison of the two initial implementations only. The
   `integration choice` may differ after reciprocal review.
-- Each agent must supply its own timing block; the main agent must copy it into this ledger.
+- Each implementation subagent must supply its own timing block; the main agent must copy both
+  subagent blocks and its own coordination block into this ledger.
   Missing events are recorded as `not recorded`, never inferred from commit times.
 - Each task record must also include the assigned server ports, server PIDs, server start/stop
   events, and post-test free-port checks. Parallel worktrees must not share a server or opt into
@@ -194,6 +198,146 @@ The run's retained verification results were: Luna final Playwright 38/38, Sol r
 reported 1m36.1s for Playwright, 15.1s for the browser preset harness, 11.1s for focused identity
 tests and 0.18s for Node checks. Luna's exact per-suite durations were not retained.
 
+## Task R8.3 -- Ordered identity conversions
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | R8.3 -- ordered identity conversions |
+| Date | 2026-08-08 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `6458808da9030bcefdbc85101ec33176b4c8260b` |
+| Integration branch | `codex/R8.1-integration` |
+| Final integration commit | `4545b4859252ba792ba241bb330bc5510690a85e` |
+| Final integration commit time | `2026-08-08T19:00:11+02:00` |
+| Implementation ports | Primary `8080`; Luna `8081`; Sol `8082` |
+| Server PIDs | Not recorded |
+| Explicit server start/stop events | Not recorded; Playwright-managed server lifecycle was used |
+| Post-test free-port checks | Sol port `8082` was confirmed free before and after testing; primary and Luna post-test timestamps not recorded |
+| Initial winner | No single formal winner recorded; split result described below |
+| Integration choice | Luna-derived integrated implementation, retaining its browser/UI coverage and source-faithful final behavior, with Sol's reciprocal-review corrections incorporated |
+
+### Agent timings and commits
+
+The protocol requires active timing rather than reconstruction from Git commit times. Values marked
+as not recorded remain unavailable in the agent's retained timing block. Luna's review completion
+below was externally measured because the written review artifact retained a placeholder rather
+than a completion timestamp.
+
+| Agent / nickname | Model | Reasoning effort | Stage | Start | End / commit | Duration | Commit |
+|---|---|---|---|---|---|---:|---|
+| Luna | GPT-5.6 Luna | High | Initial implementation | `2026-08-08T18:26:42.7684244+02:00` | `2026-08-08T18:44:36.5179118+02:00` | `1073.749487s` (~17m54s) | `641c3a08173d125147191f3e06e773a880d70a1b` |
+| Luna | GPT-5.6 Luna | High | Reciprocal review of Sol | `2026-08-08T18:45:30.5972373+02:00` | `2026-08-08T18:47:42.4702017+02:00` (external measurement) | ~131.873s | -- |
+| Luna | GPT-5.6 Luna | High | Review-driven revision | Not recorded | `2026-08-08T18:55:23+02:00` | Not recorded | `ac2958c2fbeb4fa3a8fa203fc99cd9265c09eccf` |
+| Luna | GPT-5.6 Luna | High | Supplementary source/spell-context revision | Not recorded | `2026-08-08T18:57:16.6424154+02:00` | Not recorded | `ed0c250e93514f924e663a80116c4a9f68639dfc` |
+| Luna | GPT-5.6 Luna | High | Active total | -- | -- | Not calculable from retained timing blocks | -- |
+| Sol / Bernoulli | GPT-5.6 Sol | Low | Initial implementation | Not recorded | `2026-08-08T18:37:45+02:00` | Not recorded | `f0866218a018ec8a912b1161c9ecc725bc9493b4` |
+| Sol / Bernoulli | GPT-5.6 Sol | Low | Reciprocal review of Luna | `2026-08-08T18:44:58.8763530+02:00` | `2026-08-08T18:48:00.8119658+02:00` | `181.937835s` | -- |
+| Sol / Bernoulli | GPT-5.6 Sol | Low | Review-driven revision | `2026-08-08T18:48:32.8399963+02:00` | `2026-08-08T18:54:59.1532803+02:00` | `386.303511s` | `2e20c192e0b3d08ce0d7d609f326ee009a09b59f` |
+| Sol / Bernoulli | GPT-5.6 Sol | Low | Active total | -- | -- | Initial stage not recorded; measured review plus revision `568.241346s` | -- |
+
+Sol's dispatch timestamp was available (`2026-08-08T18:26:35.3389065+02:00`) but is not used
+as an implementation start because the protocol prohibits treating dispatch-to-commit time as
+active runtime.
+
+### Initial implementation comparison
+
+| Dimension | Luna initial | Sol initial | Comparison |
+|---|---|---|---|
+| Browser/UI coverage | Dedicated R8.3 browser coverage; initial suite `41/41` | Initial sanctioned suite `38/38`; browser command had a timeout note in the initial run | Luna had the stronger initial browser/UI evidence surface |
+| Node/source edge coverage | Initial suite evidence retained as part of the Luna run | `9,489/9,489` Node assertions; stronger coverage of several source-to-output edge cases | Sol had the stronger initial Node/source evidence surface |
+| Identity conversion behavior | Ordered identity model and broad UI integration | Correct CoM1 Zombies and Golem behavior in the initial implementation | Split result; both had material gaps caught by reciprocal review |
+| Initial winner | -- | -- | No formal single initial winner was recorded |
+
+Sol's initial implementation was stronger on CoM1 Zombies' 20% interpretation, CoM1 Golem
+coverage, Chosen's Life/Fantastic result, and avoiding display-name inference for Call to Arms.
+Luna's initial implementation was stronger on dedicated browser/UI coverage and the integrated
+identity test surface. The final integration choice was not made solely from initial results;
+both reciprocal reviews and subsequent revisions were part of the decision.
+
+### Reciprocal review findings and dispositions
+
+#### Sol's review of Luna
+
+1. **P1 -- CoM1 Zombies unit convention.** Luna's initial implementation treated engine
+   `toblock = -1` as a one-percentage-point change, yielding 29% instead of the required 20%.
+   Fixed as a ten-percentage-point change and pinned with a regression test.
+2. **P1 -- Breakthrough trusted UI outcome.** The initial implementation trusted the selected
+   `melee`/`meleeDef` result instead of deriving the package from direct identity predicates.
+   Fixed by deriving the package from calculated identity and encounter predicates.
+3. **P1 -- CoM1 Golem omitted.** Golem -> Resist Elements was initially restricted to modern
+   versions. Fixed to cover the evidenced CoM1 path as well.
+4. **P1 -- Chosen conversion incomplete and incorrectly ordered.** Chosen wrote Fantastic but
+   omitted live Life and ran before Combat Summoned. Fixed with live Life/Fantastic output and
+   corrected ordered execution.
+5. **P1 -- Call to Arms inferred from display name and weak template gates.** Fixed with an
+   explicit modern spell-specific condition and retained Paladins template predicate.
+
+#### Luna's review of Sol
+
+1. **P1 -- Identity conversions ran before the calculated ability pipeline.** Fixed by moving
+   identity execution after calculated grants and gates.
+2. **P1 -- Breakthrough direct/live gating was incomplete.** Fixed so direct predicates prevent
+   the normal package for live-Fantastic units and select the exceptional package for Combat
+   Summoned or Non-Corporeal units.
+3. **P1 -- Call to Arms Paladins lacked an explicit spell-specific condition.** Fixed with an
+   explicit modern condition gated by retained Paladins template ID 113.
+4. **P2 -- Source template metadata was read from mutable identity state.** Fixed by capturing
+   the source template ID before live identity mutation.
+5. **P2 -- Identity trace was not exposed on the calculated output.** Fixed by exposing the
+   top-level calculated-output `identityTrace` while retaining compatibility data.
+6. **P2 -- CoM1 Zombies unit convention lacked an explicit regression test.** Fixed and pinned
+   to -10 percentage points / 20% final To Block.
+
+Both reviews were materially useful and complementary. Sol's review found concrete executable
+result defects in Luna's initial implementation; Luna's review found ordering and predicate-boundary
+defects in Sol's initial implementation. Neither review was assigned a single overall winner.
+
+### Revision and integration decision
+
+Sol's revised implementation was independently verified with `9,506` focused Node assertions and
+`38/38` Playwright tests. Luna's revised implementation was selected as the integration lineage
+because it supplied the stronger final browser/UI integration and the source-faithful Breakthrough
+stack used by the final branch. Sol's review findings and revision evidence were incorporated into
+the final behavior; Sol's revised branch itself was not used as the integration base.
+
+The integration sequence was:
+
+1. Create `codex/R8.1-integration` from the frozen base.
+2. Cherry-pick Luna's initial implementation `641c3a08173d125147191f3e06e773a880d70a1b` as
+   `ba8e62a`.
+3. Cherry-pick Luna's review-driven revision `ac2958c2fbeb4fa3a8fa203fc99cd9265c09eccf` as
+   `2c3d1ce`.
+4. Cherry-pick Luna's supplementary source/spell-context revision `ed0c250e93514f924e663a80116c4a9f68639dfc`
+   as `1ac51ee`.
+5. Add final R8.3 identity verification coverage as `9216222`.
+6. Document final R8.3 identity gates as `4545b48`.
+
+### Verification evidence
+
+- Sol focused Node checks: `9,506/9,506` passed in `0.242272s`.
+- Sol timed Playwright confirmation: `38/38` passed in `111.924868s` on port `8082`.
+- Final Node unit checks: `9,494/9,494` passed; exact result was
+  `{"allPassed":true,"total":9494,"failures":[]}`.
+- Final browser suite: `41/41` passed in `43.9s`.
+- Final `git diff --check`: passed.
+- Final repository status: clean.
+- Final worktree list: primary worktree only.
+- Temporary branches `codex/R8.3-luna` and `codex/R8.3-sol`: removed.
+- Temporary Luna and Sol worktrees: removed.
+- Review artifact files: removed before cleanup.
+- Push: none.
+
+### Cleanup and repository state
+
+- Final branch: `codex/R8.1-integration`.
+- Final commit: `4545b4859252ba792ba241bb330bc5510690a85e`.
+- Final worktree clean.
+- Nothing pushed.
+- Review artifact files were deleted. The ignored `.reviews` directory itself remains empty because
+  directory removal was blocked during cleanup; it contains no review artifacts.
+
 ## Append-only entry template
 
 Copy this section for each future dual-agent task and replace the placeholders. Keep the detailed
@@ -215,10 +359,15 @@ evidence is not lost.
 
 | Agent / nickname | Model | Reasoning effort | Stage | Start | End / commit | Duration | Commit |
 |---|---|---|---|---|---|---:|---|
-| `<agent>` | `<model>` | `<effort>` | Initial implementation | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
-| `<agent>` | `<model>` | `<effort>` | Reciprocal review | `<timestamp or not recorded>` | `<timestamp>` | `<duration>` | — |
-| `<agent>` | `<model>` | `<effort>` | Review-driven revision | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
-| `<agent>` | `<model>` | `<effort>` | Active total | — | — | `<duration>` | — |
+| Orchestrator | GPT-5.6 Sol | High | Coordination/integration | `<timestamp>` | `<timestamp>` | `<duration>` | `<integration commit>` |
+| Sol High subagent | GPT-5.6 Sol | High | Initial implementation | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol High subagent | GPT-5.6 Sol | High | Reciprocal review | `<timestamp or not recorded>` | `<timestamp>` | `<duration>` | — |
+| Sol High subagent | GPT-5.6 Sol | High | Review-driven revision | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol High subagent | GPT-5.6 Sol | High | Active total | — | — | `<duration>` | — |
+| Sol Medium subagent | GPT-5.6 Sol | Medium | Initial implementation | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol Medium subagent | GPT-5.6 Sol | Medium | Reciprocal review | `<timestamp or not recorded>` | `<timestamp>` | `<duration>` | — |
+| Sol Medium subagent | GPT-5.6 Sol | Medium | Review-driven revision | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol Medium subagent | GPT-5.6 Sol | Medium | Active total | — | — | `<duration>` | — |
 
 #### Initial comparison
 
@@ -234,17 +383,25 @@ evidence is not lost.
 
 #### Required timing and server evidence
 
-For each agent, add a timing row for every stage with both wall-clock start/end timestamps and
-elapsed seconds. Include active seconds and waiting seconds separately; use `not recorded` rather
-than inferring a missing start from a commit timestamp. The minimum stage rows are:
+For the orchestrator and each subagent, add a timing row for every applicable stage with both
+wall-clock start/end timestamps and elapsed seconds. Include active seconds and waiting seconds
+separately; use `not recorded` rather than inferring a missing start from a commit timestamp. The
+orchestrator's coordination timing is not an implementation competitor total. The minimum stage
+rows are:
 
 | Agent | Stage | Start | End | Active seconds | Waiting seconds |
 |---|---|---|---|---:|---:|
-| `<agent>` | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| `<agent>` | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| `<agent>` | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| `<agent>` | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| `<agent>` | Active total | - | - | `<seconds>` | `<seconds>` |
+| Orchestrator | Coordination/integration | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High subagent | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High subagent | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High subagent | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High subagent | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High subagent | Active total | - | - | `<seconds>` | `<seconds>` |
+| Sol Medium subagent | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol Medium subagent | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol Medium subagent | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol Medium subagent | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol Medium subagent | Active total | - | - | `<seconds>` | `<seconds>` |
 
-Also record `primary_port`, `luna_port`, `sol_port`, each server PID, server start/stop times, and
-the timestamp when each temporary port was confirmed free.
+Also record `primary_port`, `sol_high_port`, `sol_medium_port`, each server PID, server start/stop
+times, and the timestamp when each temporary port was confirmed free.

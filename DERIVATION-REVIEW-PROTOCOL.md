@@ -24,77 +24,86 @@ moment the agent under review owns it and is the only one who edits it. `.deriva
 are single-writer outright. There is no shared discussion file: two simultaneous writers means
 clobbered edits and no reliable record of who claimed what.
 
-## Implementation mode — both implement the same backlog item cold
+## Implementation mode — two subagents implement the same backlog item cold
 
 Use this mode for every calculator backlog-item implementation unless AKH explicitly requests a
-single-agent run. Its purpose is to compare both model family and reasoning effort on the same
-real task while gaining an independent implementation and review.
+single-agent run. Its purpose is to let one orchestrating main agent coordinate two independent
+implementations and reciprocal review on the same real task while comparing reasoning effort.
 
-The standard comparison pair for new implementation-mode runs is:
+The standard implementation configuration for new implementation-mode runs is:
 
 | Role | Model and effort |
 |---|---|
-| Main agent, independent implementer and final integrator | GPT-5.6 Luna, High |
-| Subagent and independent implementer | GPT-5.6 Sol, Low |
+| Main agent, orchestrator and final integrator | GPT-5.6 Sol, High |
+| Subagent A, independent implementer and reciprocal reviewer | GPT-5.6 Sol, High |
+| Subagent B, independent implementer and reciprocal reviewer | GPT-5.6 Sol, Medium |
 
-This pair is intentional: compare Luna at High against Sol at Low. Do not silently raise Sol's
-effort or lower Luna's effort to make the run easier to schedule. Historical benchmark records
-retain the model and effort that actually ran and are not rewritten to match this new default.
+This configuration is intentional: the orchestrator runs Sol at High, while the independent
+implementations compare Sol at High against Sol at Medium. The orchestrator is not a third
+implementation competitor and must not pre-implement the backlog item before the two subagents'
+initial commits. Historical benchmark records retain the model and effort that actually ran and
+are not rewritten to match this new default.
 
-If either exact model or effort is unavailable, stop and tell AKH; never silently substitute a
-different configuration. A differently configured subagent must receive a self-contained task
-packet with no inherited conversation (`fork_turns: "none"` where that control is available).
-This both permits the model override and protects the independence of the first pass.
+If any exact model or effort is unavailable, stop and tell AKH; never silently substitute a
+different configuration. Each differently configured subagent must receive the same self-contained
+task packet with no inherited conversation (`fork_turns: "none"` where that control is available).
+The main agent may retain the task context for orchestration, but it must not leak one subagent's
+implementation or review into the other subagent's cold first pass.
 
 ### Worktree and branch isolation
 
-Separate worktrees are mandatory, not optional. Before either agent reads implementation code:
+Separate worktrees are mandatory, not optional. Before either subagent reads implementation code:
 
 1. Require the intended base branch to be clean and record its exact commit hash.
 2. Freeze one task packet: backlog ID and text, relevant specs and instructions, acceptance
    criteria, permitted scope, required tests, base commit, branch name and absolute worktree path.
-   Give the identical substantive packet to both agents.
-3. Create independent `codex/<ID>-luna` and `codex/<ID>-sol` branches and worktrees at that base.
-   Reserve the primary checkout, or a third clean worktree, for integration.
-4. Record a dispatch timestamp for each agent immediately before its implementation starts.
+   Give the identical substantive packet to both subagents.
+3. Create independent `codex/<ID>-sol-high` and `codex/<ID>-sol-medium` branches and worktrees at
+   that base. Reserve the primary checkout, or a third clean worktree, for orchestration and
+   integration.
+4. Record a dispatch timestamp for each subagent immediately before its implementation starts.
 5. Assign an isolated test-server port to every checkout and include it in the task packet.
 
-Each agent edits and commits only in its assigned worktree. It must not open, search, diff or
-otherwise inspect the other worktree or branch until both initial implementations are committed.
+Each subagent edits and commits only in its assigned worktree. It must not open, search, diff or
+otherwise inspect the other subagent's worktree or branch until both initial implementations are
+committed. The orchestrating main agent may inspect both only after both initial commits exist.
 Shared generated caches and servers must not write into either implementation worktree unless the
 task packet explicitly assigns safe, separate locations.
 
 ### Timing and test-server isolation
 
-Each agent owns and documents its own timing block. Immediately before dispatch, start both a
+Each implementation subagent owns and documents its own timing block. The orchestrating main
+agent also records a coordination timing block covering dispatch, review handoff, integration and
+final verification; this is reported separately and is not treated as a third implementation
+competitor. Immediately before dispatch, start both a
 wall-clock record (ISO 8601 with offset) and a monotonic stopwatch. At minimum, record these
-events for each agent:
+events for each subagent:
 
 - `implementation_started_at` and `initial_commit_ready_at`;
 - `review_started_at` and `review_completed_at`;
 - `revision_started_at` and `revision_commit_ready_at`; and
 - the start and completion of every named verification suite.
 
-The agent's final report must include elapsed seconds for initial implementation, reciprocal
+Each subagent's final report must include elapsed seconds for initial implementation, reciprocal
 review, review-driven revision, each verification suite, and active total. Also report waiting or
 blocked time separately. Stop the active stopwatch while waiting for the other agent, user input,
 an external process, or a server slot. If a start or stop event was not recorded, write `not
 recorded`; the main agent may report a measurable interval as a fallback only when it labels the
-interval and does not call it active runtime. The main agent copies both timing blocks into the
-append-only `DUAL-AGENT-BENCHMARK.md` entry rather than reconstructing durations from commit
-timestamps.
+interval and does not call it active runtime. The main agent copies both subagent timing blocks
+and its own coordination block into the append-only `DUAL-AGENT-BENCHMARK.md` entry rather than
+reconstructing durations from commit timestamps.
 
 The default local server assignment is:
 
 | Checkout | Default server port | Use |
 |---|---:|---|
 | Primary integration checkout | 8080 | Final integration and ordinary manual work |
-| Luna implementation worktree | 8081 | Luna's Playwright/manual browser work |
-| Sol implementation worktree | 8082 | Sol's Playwright/manual browser work |
+| Sol High implementation worktree | 8081 | Sol High's Playwright/manual browser work |
+| Sol Medium implementation worktree | 8082 | Sol Medium's Playwright/manual browser work |
 
 Verify each assigned port is free before dispatch. If one is occupied, choose and record another
-free port before starting the agent. Run Playwright with `PLAYWRIGHT_PORT=<assigned-port>` and
-manual servers with `python tools/nocache_server.py --port <assigned-port>`. Never point an agent
+free port before starting the subagent. Run Playwright with `PLAYWRIGHT_PORT=<assigned-port>` and
+manual servers with `python tools/nocache_server.py --port <assigned-port>`. Never point a subagent
 at a server started from another worktree. `PLAYWRIGHT_REUSE_EXISTING=1` is prohibited during a
 dual-agent run; server reuse is only acceptable for an explicitly single-checkout manual run.
 Record the server PID, server start and stop times, and the time at which the assigned port was
@@ -103,43 +112,44 @@ removing worktrees.
 
 ### Independent implementation
 
-Both agents implement the complete scoped item, update its specification and tests where
+Both subagents implement the complete scoped item, update its specification and tests where
 required, run the task packet's checks, and make an initial local commit. Each reports its commit
 hash, tests, assumptions, remaining concerns, and the timing block described above. The main agent
-records the timestamp at which each initial commit is ready and copies the agent-reported elapsed
-durations into the benchmark ledger.
+records the timestamp at which each initial commit is ready and copies the subagent-reported
+elapsed durations into the benchmark ledger. The main agent does not make an implementation commit
+before these two independent initial commits exist.
 
 An implementation that omits required tests, documentation or migration work is incomplete even
-if its code appears to work. Neither agent may compensate for a missing requirement by narrowing
+if its code appears to work. Neither subagent may compensate for a missing requirement by narrowing
 the backlog item without AKH's approval.
 
 ### Reciprocal review
 
-Only after both initial commits exist may the agents inspect each other's base-to-tip diffs. Each
-reviews the other implementation against the frozen task packet and writes one review artifact in
-the primary checkout:
+Only after both initial commits exist may the subagents inspect each other's base-to-tip diffs.
+Each subagent reviews the other implementation against the frozen task packet and writes one
+review artifact in the primary checkout:
 
 | File | Subject | Written by | Owned after writing by |
 |---|---|---|---|
-| `.reviews/<ID>.review-of-luna.md` | Luna implementation | Sol | Luna |
-| `.reviews/<ID>.review-of-sol.md` | Sol implementation | Luna | Sol |
+| `.reviews/<ID>.review-of-sol-high.md` | Sol High implementation | Sol Medium | Sol High |
+| `.reviews/<ID>.review-of-sol-medium.md` | Sol Medium implementation | Sol High | Sol Medium |
 
 The reviewer writes its artifact in one pass and never edits it again. Findings must identify the
 affected file and line or symbol, explain the observable failure or maintainability risk, and give
 the evidence or test that establishes it. Preference alone is not a finding. Each reviewer records
 its review start and completion timestamps and elapsed duration in its timing block.
 
-The main agent then gives each agent the review of its own branch. Each agent revises only its own
-implementation, marks every review entry as fixed or replies with a concrete reason for disputing
-it, reruns the required checks, and makes a revised local commit. Record revision start and ready
-timestamps plus elapsed duration. Neither agent edits or commits to the other's branch.
+The main agent then gives each subagent the review of its own branch. Each subagent revises only
+its own implementation, marks every review entry as fixed or replies with a concrete reason for
+disputing it, reruns the required checks, and makes a revised local commit. Record revision start
+and ready timestamps plus elapsed duration. Neither subagent edits or commits to the other's branch.
 
 ### Integration and completion gate
 
-After both revised branches are ready, the Luna main agent compares them against the frozen
-acceptance criteria. It may select either implementation or combine elements of both, but it must
-state why the chosen result is stronger; being the main agent does not give Luna's own branch a
-presumption of correctness.
+After both revised branches are ready, the Sol High orchestrating main agent compares them against
+the frozen acceptance criteria. It may select either implementation or combine elements of both,
+but it must state why the chosen result is stronger; being the orchestrator or running at High does
+not give either subagent a presumption of correctness.
 
 Perform integration on a clean branch/worktree based on the frozen commit. Do not merge both
 branches mechanically. Apply only the selected changes, reconcile their specifications and tests,
@@ -159,14 +169,16 @@ and every assigned temporary port is free.
 
 ### Required end-of-task comparison
 
-The main agent's final user-facing summary must compare the agents rather than merely announcing
+The main agent's final user-facing summary must compare the subagents rather than merely announcing
 that the integrated tests pass. Report:
 
-- the exact model and effort used by each agent;
-- each agent's recorded start/end events, active elapsed duration, waiting duration, verification
+- the exact model and effort used by the orchestrator and each subagent;
+- each subagent's recorded start/end events, active elapsed duration, waiting duration, verification
   durations and total measured time; never substitute commit timestamps for missing starts;
-- which agent produced the stronger initial implementation and the evidence for that judgment;
-- which agent produced the more useful reciprocal review;
+- the orchestrator's coordination and integration timing separately from subagent implementation
+  timing;
+- which subagent produced the stronger initial implementation and the evidence for that judgment;
+- which subagent produced the more useful reciprocal review;
 - which revised implementation was strongest overall, or that the result was a tie or split
   decision when the evidence does not support one winner;
 - which implementation supplied the integration base and what material elements, if any, came
@@ -174,15 +186,16 @@ that the integrated tests pass. Report:
 - the final commit, test results, worktree cleanup result and confirmation that nothing was
   pushed.
 
-Measure each stage from the agent's timing block, using the monotonic stopwatch for elapsed seconds
-and wall-clock timestamps for auditability. For each agent, define active total as initial
-implementation plus review plus revision time, excluding waiting for the other agent or external
-resources. Report parallel agent durations separately; do not add the two agents' totals and
-present that sum as end-to-end elapsed time. If active timing is incomplete, report the missing
-fields and any fallback wall interval explicitly. A quality claim must cite concrete differences
-such as defects avoided, tests added, requirements covered, review findings accepted, simpler
-design or reduced regression risk. Do not award a winner from model identity, confidence or speed
-alone.
+Measure each stage from the subagents' timing blocks, using the monotonic stopwatch for elapsed
+seconds and wall-clock timestamps for auditability. For each subagent, define active total as
+initial implementation plus review plus revision time, excluding waiting for the other subagent or
+external resources. Report parallel subagent durations separately; do not add their totals and
+present that sum as end-to-end elapsed time. Report the orchestrator's active coordination time
+separately and do not compare it as implementation throughput. If active timing is incomplete,
+report the missing fields and any fallback wall interval explicitly. A quality claim must cite
+concrete differences such as defects avoided, tests added, requirements covered, review findings
+accepted, simpler design or reduced regression risk. Do not award a winner from model identity,
+confidence or speed alone.
 
 ## Derivation mode — both answer the same question cold
 
