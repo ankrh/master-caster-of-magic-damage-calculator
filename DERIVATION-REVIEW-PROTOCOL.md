@@ -53,18 +53,57 @@ Separate worktrees are mandatory, not optional. Before either agent reads implem
 3. Create independent `codex/<ID>-luna` and `codex/<ID>-sol` branches and worktrees at that base.
    Reserve the primary checkout, or a third clean worktree, for integration.
 4. Record a dispatch timestamp for each agent immediately before its implementation starts.
+5. Assign an isolated test-server port to every checkout and include it in the task packet.
 
 Each agent edits and commits only in its assigned worktree. It must not open, search, diff or
 otherwise inspect the other worktree or branch until both initial implementations are committed.
 Shared generated caches and servers must not write into either implementation worktree unless the
 task packet explicitly assigns safe, separate locations.
 
+### Timing and test-server isolation
+
+Each agent owns and documents its own timing block. Immediately before dispatch, start both a
+wall-clock record (ISO 8601 with offset) and a monotonic stopwatch. At minimum, record these
+events for each agent:
+
+- `implementation_started_at` and `initial_commit_ready_at`;
+- `review_started_at` and `review_completed_at`;
+- `revision_started_at` and `revision_commit_ready_at`; and
+- the start and completion of every named verification suite.
+
+The agent's final report must include elapsed seconds for initial implementation, reciprocal
+review, review-driven revision, each verification suite, and active total. Also report waiting or
+blocked time separately. Stop the active stopwatch while waiting for the other agent, user input,
+an external process, or a server slot. If a start or stop event was not recorded, write `not
+recorded`; the main agent may report a measurable interval as a fallback only when it labels the
+interval and does not call it active runtime. The main agent copies both timing blocks into the
+append-only `DUAL-AGENT-BENCHMARK.md` entry rather than reconstructing durations from commit
+timestamps.
+
+The default local server assignment is:
+
+| Checkout | Default server port | Use |
+|---|---:|---|
+| Primary integration checkout | 8080 | Final integration and ordinary manual work |
+| Luna implementation worktree | 8081 | Luna's Playwright/manual browser work |
+| Sol implementation worktree | 8082 | Sol's Playwright/manual browser work |
+
+Verify each assigned port is free before dispatch. If one is occupied, choose and record another
+free port before starting the agent. Run Playwright with `PLAYWRIGHT_PORT=<assigned-port>` and
+manual servers with `python tools/nocache_server.py --port <assigned-port>`. Never point an agent
+at a server started from another worktree. `PLAYWRIGHT_REUSE_EXISTING=1` is prohibited during a
+dual-agent run; server reuse is only acceptable for an explicitly single-checkout manual run.
+Record the server PID, server start and stop times, and the time at which the assigned port was
+confirmed free after testing. The integration gate must verify all temporary ports are free before
+removing worktrees.
+
 ### Independent implementation
 
 Both agents implement the complete scoped item, update its specification and tests where
 required, run the task packet's checks, and make an initial local commit. Each reports its commit
-hash, tests, assumptions and remaining concerns. The main agent records the timestamp at which
-each initial commit is ready.
+hash, tests, assumptions, remaining concerns, and the timing block described above. The main agent
+records the timestamp at which each initial commit is ready and copies the agent-reported elapsed
+durations into the benchmark ledger.
 
 An implementation that omits required tests, documentation or migration work is incomplete even
 if its code appears to work. Neither agent may compensate for a missing requirement by narrowing
@@ -83,13 +122,13 @@ the primary checkout:
 
 The reviewer writes its artifact in one pass and never edits it again. Findings must identify the
 affected file and line or symbol, explain the observable failure or maintainability risk, and give
-the evidence or test that establishes it. Preference alone is not a finding. Record the review
-start and completion timestamps for each agent.
+the evidence or test that establishes it. Preference alone is not a finding. Each reviewer records
+its review start and completion timestamps and elapsed duration in its timing block.
 
 The main agent then gives each agent the review of its own branch. Each agent revises only its own
 implementation, marks every review entry as fixed or replies with a concrete reason for disputing
 it, reruns the required checks, and makes a revised local commit. Record revision start and ready
-timestamps. Neither agent edits or commits to the other's branch.
+timestamps plus elapsed duration. Neither agent edits or commits to the other's branch.
 
 ### Integration and completion gate
 
@@ -111,7 +150,8 @@ and run the complete applicable test suite. The item closes only when:
 Cleanup happens only after the final commit is verified and reachable from the intended branch.
 Record the temporary branch tips, remove the exact temporary worktrees, delete their temporary
 branches, clear the two review artifacts, and confirm that the intended worktree is clean. Never
-push as part of this protocol.
+push as part of this protocol. Before cleanup, verify that every temporary server PID has exited
+and every assigned temporary port is free.
 
 ### Required end-of-task comparison
 
@@ -119,7 +159,8 @@ The main agent's final user-facing summary must compare the agents rather than m
 that the integrated tests pass. Report:
 
 - the exact model and effort used by each agent;
-- each agent's initial-implementation time, review time, revision time and total measured time;
+- each agent's recorded start/end events, active elapsed duration, waiting duration, verification
+  durations and total measured time; never substitute commit timestamps for missing starts;
 - which agent produced the stronger initial implementation and the evidence for that judgment;
 - which agent produced the more useful reciprocal review;
 - which revised implementation was strongest overall, or that the result was a tie or split
@@ -129,12 +170,15 @@ that the integrated tests pass. Report:
 - the final commit, test results, worktree cleanup result and confirmation that nothing was
   pushed.
 
-Measure each stage from the recorded wall-clock timestamps. For each agent, define total measured
-time as initial implementation plus review plus revision time, excluding time spent waiting for
-the other agent. Report parallel agent durations separately; do not add the two agents' totals and
-present that sum as end-to-end elapsed time. A quality claim must cite concrete differences such
-as defects avoided, tests added, requirements covered, review findings accepted, simpler design
-or reduced regression risk. Do not award a winner from model identity, confidence or speed alone.
+Measure each stage from the agent's timing block, using the monotonic stopwatch for elapsed seconds
+and wall-clock timestamps for auditability. For each agent, define active total as initial
+implementation plus review plus revision time, excluding waiting for the other agent or external
+resources. Report parallel agent durations separately; do not add the two agents' totals and
+present that sum as end-to-end elapsed time. If active timing is incomplete, report the missing
+fields and any fallback wall interval explicitly. A quality claim must cite concrete differences
+such as defects avoided, tests added, requirements covered, review findings accepted, simpler
+design or reduced regression risk. Do not award a winner from model identity, confidence or speed
+alone.
 
 ## Derivation mode — both answer the same question cold
 

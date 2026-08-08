@@ -45,11 +45,24 @@ When **authoring** a new test case:
 **Evaluating presets — only one sanctioned path.** Run the `PRESETS` suite through the browser via `runTests()` (see *Testing with Playwright*). That is the *only* faithful way to check expected values, because it goes `applyPreset` → DOM → `readUnitStats` → `resolveCombat`, including the `calcKey` remap (e.g. `fortification`→`largeShield`) and all global-toggle wiring. **Do not reconstruct preset evaluation in an ad-hoc Node script** — hand-rebuilding `applyPreset`/`readUnitStats` and calling `resolveCombat` yourself silently skips the DOM/`calcKey` layer and the enemy-side reads, producing *false* failures that waste a session chasing phantom regressions. (`node tools/node_unit_checks.js` is a *separate*, sanctioned Node suite — it asserts on `deriveUnitStats` directly and never touches `PRESETS`; it is not a substitute for `runTests()`.)
 
 ## Testing with Playwright
+`npm test` starts and owns its configured server automatically; the manual launch below is for
+direct browser navigation only.
 Start the no-cache server before the first Playwright navigation — the browser disk cache persists across tab closes, so a reload won't recover from stale JS. Launch it with the Bash/PowerShell tool's `run_in_background`, then confirm it's serving on port 8080:
 ```powershell
-python tools/nocache_server.py        # run_in_background
-(Invoke-WebRequest http://localhost:8080/ -UseBasicParsing).StatusCode
+python tools/nocache_server.py --port 8080        # run_in_background
+(Invoke-WebRequest http://127.0.0.1:8080/ -UseBasicParsing).StatusCode
+
+# For an isolated agent worktree, use its assigned port instead:
+python tools/nocache_server.py --port 8081        # Luna example
+(Invoke-WebRequest http://127.0.0.1:8081/ -UseBasicParsing).StatusCode
 ```
+
+`npm test` reads `PLAYWRIGHT_PORT` and passes that port to the no-cache server. For example,
+run Luna's suite with `$env:PLAYWRIGHT_PORT='8081'; npm test` and Sol's with
+`$env:PLAYWRIGHT_PORT='8082'; npm test`. Playwright does not reuse an existing server unless
+`PLAYWRIGHT_REUSE_EXISTING=1` is explicitly set for an intentional single-checkout run. The
+`tools/browser_check.js` harness chooses its own ephemeral HTTP and Chrome-debugging ports and
+does not need a manual port assignment.
 
 If you do get stuck on cached JS, force-reload via indirect eval:
 ```js

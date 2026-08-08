@@ -20,6 +20,11 @@ not depend on memory or prose summaries.
 - Model names and reasoning efforts are recorded exactly as configured for the run.
 - A task's `initial winner` is a comparison of the two initial implementations only. The
   `integration choice` may differ after reciprocal review.
+- Each agent must supply its own timing block; the main agent must copy it into this ledger.
+  Missing events are recorded as `not recorded`, never inferred from commit times.
+- Each task record must also include the assigned server ports, server PIDs, server start/stop
+  events, and post-test free-port checks. Parallel worktrees must not share a server or opt into
+  `PLAYWRIGHT_REUSE_EXISTING=1`.
 
 ## Task R8.1 — Internal unit identity records
 
@@ -150,6 +155,42 @@ maintenance changes test setup only and does not change calculator behavior.
 - Final worktree clean.
 - Nothing pushed.
 
+## Task R8.2 -- Independent identity controls (retrospective partial record)
+
+This entry was added after the run because the original execution recorded commit endpoints but
+did not require each agent to return a timing block. Missing values remain explicit; commit gaps
+are not relabeled as active runtime.
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | R8.2 -- independent identity controls |
+| Date | 2026-08-08 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `becc9144968302841ef62ad282cd55e3cd8ae113` |
+| Integration branch | `codex/R8.1-integration` |
+| Final integration commit | `5fdea7ba125ecb5e43d7419a6806e5056a0965fd` |
+| Server ports | Both implementation worktrees used the shared default 8080; conflict risk confirmed |
+| Initial winner | Not formally recorded |
+| Integration choice | Luna revised implementation (`0eec729`) after reciprocal review |
+
+### Available timing evidence
+
+| Agent | Stage | Start | End / commit | Active duration | Waiting duration | Evidence |
+|---|---|---|---|---:|---:|---|
+| Luna | Initial implementation | `2026-08-08T17:02:35.4848401+02:00` | `2026-08-08T17:25:32+02:00` / `141eaff` | `1376.5s` (~22m56.5s) | Not separated | Recorded dispatch and commit |
+| Sol / Kepler | Initial implementation | Not recorded | `2026-08-08T17:24:40+02:00` / `73ab18d` | Not recorded | Not recorded | Commit endpoint only |
+| Luna | Reciprocal review | Not recorded | Not recorded | Not recorded | Not recorded | Review artifact was later removed |
+| Sol / Kepler | Reciprocal review | Not recorded | Not recorded | Not recorded | Not recorded | Review artifact was later removed |
+| Luna | Review-driven revision | Not recorded | `2026-08-08T17:47:58+02:00` / `0eec729` | Not recorded | Not recorded | Measurable cold-commit-to-revision interval: 1346s, not active runtime |
+| Sol / Kepler | Review-driven revision | Not recorded | `2026-08-08T17:47:14+02:00` / `989f2e0` | Not recorded | Not recorded | Measurable cold-commit-to-revision interval: 1354s, not active runtime |
+
+The run's retained verification results were: Luna final Playwright 38/38, Sol revised Playwright
+39/39, both 929/929 browser preset checks and 9,474/9,474 Node assertions. Sol's revised suite
+reported 1m36.1s for Playwright, 15.1s for the browser preset harness, 11.1s for focused identity
+tests and 0.18s for Node checks. Luna's exact per-suite durations were not retained.
+
 ## Append-only entry template
 
 Copy this section for each future dual-agent task and replace the placeholders. Keep the detailed
@@ -187,3 +228,20 @@ evidence is not lost.
 #### Integration and verification
 
 `<Integration sequence, selected material, tests, caveats, cleanup, and push status.>`
+
+#### Required timing and server evidence
+
+For each agent, add a timing row for every stage with both wall-clock start/end timestamps and
+elapsed seconds. Include active seconds and waiting seconds separately; use `not recorded` rather
+than inferring a missing start from a commit timestamp. The minimum stage rows are:
+
+| Agent | Stage | Start | End | Active seconds | Waiting seconds |
+|---|---|---|---|---:|---:|
+| `<agent>` | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| `<agent>` | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| `<agent>` | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| `<agent>` | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| `<agent>` | Active total | - | - | `<seconds>` | `<seconds>` |
+
+Also record `primary_port`, `luna_port`, `sol_port`, each server PID, server start/stop times, and
+the timestamp when each temporary port was confirmed free.
