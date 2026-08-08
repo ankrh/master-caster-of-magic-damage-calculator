@@ -899,46 +899,80 @@ function buildDosFlagCell(prefix, key, label) {
 
 // --- Modified Display ---
 
-// Show modified (final) stat values next to base stat fields.
-// Takes a pre-computed stat object to avoid redundant readUnitStats calls.
+// Show one final calculated value next to each editable base stat. R7.3's projection is
+// authoritative for both the displayed result and its explanation: the UI only formats the
+// existing ordered chain and never rebuilds modifier mechanics from controls.
 function updateModifiedDisplay(prefix, stats) {
   const s = stats || readUnitStats(prefix);
+  const traces = s.modifierTraces || {};
 
-  function showMod(id, effective, base) {
+  function formatTraceValue(value, trace) {
+    if (trace && trace.unit === 'percent') return String(value) + '%';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (value === '' || value === null || value === undefined) return 'None / unaligned';
+    return String(value);
+  }
+
+  function formatTraceSource(entry) {
+    const source = entry.source || {};
+    const raw = source.label || source.id || entry.id;
+    if (source.label && source.label !== source.id) return source.label;
+    return String(raw)
+      .replace(/:/g, ' ')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  function formatTraceTooltip(trace) {
+    const lines = ['Editable base: ' + formatTraceValue(trace.base, trace)];
+    for (const entry of trace.entries) {
+      lines.push(formatTraceSource(entry) + ' (phase ' + entry.phase + '): '
+        + formatTraceValue(entry.from, trace) + ' → ' + formatTraceValue(entry.to, trace));
+    }
+    lines.push('Displayed result: ' + formatTraceValue(trace.result, trace));
+    return lines.join('\n');
+  }
+
+  function showTrace(id, trace) {
     const el = document.getElementById(id);
     if (!el) return;
-    if (effective !== base) {
-      el.textContent = String(effective);
+    if (trace && Array.isArray(trace.entries) && trace.entries.length > 0) {
+      el.textContent = formatTraceValue(trace.result, trace);
+      el.dataset.tooltip = formatTraceTooltip(trace);
       el.classList.add('visible');
     } else {
       el.textContent = '';
+      delete el.dataset.tooltip;
       el.classList.remove('visible');
     }
   }
 
-  // Show the total percentage whenever it differs from the default 30%.
-  function showModPct(id, effective, forceShow) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const pct = Math.round(effective * 100);
-    if (pct !== 30 || forceShow) {
-      el.textContent = pct + '%';
-      el.classList.add('visible');
-    } else {
-      el.textContent = '';
-      el.classList.remove('visible');
-    }
+  showTrace(prefix + 'FantasticMod', traces.fantastic);
+  showTrace(prefix + 'RaceMod', traces.race);
+  showTrace(prefix + 'FigsMod', traces.figures);
+  showTrace(prefix + 'AtkMod', traces.melee);
+  showTrace(prefix + 'RtbMod', traces.sharedAttack);
+  showTrace(prefix + 'DefMod', traces.defense);
+  showTrace(prefix + 'ResMod', traces.resistance);
+  showTrace(prefix + 'HPMod', traces.hits);
+
+  showTrace(prefix + 'ToHitMeleeMod', traces.toHitMelee);
+  showTrace(prefix + 'ToHitRtbModDisp', traces.toHitRanged);
+  showTrace(prefix + 'ToBlkModDisp', traces.toBlock);
+
+  const modernTraces = traces.modernAttacks || {};
+  const modernOutputs = {
+    ranged: 'ModernRangedMod',
+    thrown: 'ModernThrownMod',
+    fireBreath: 'ModernFireBreathMod',
+    lightningBreath: 'ModernLightningBreathMod',
+  };
+  for (const [key, id] of Object.entries(modernOutputs)) {
+    showTrace(prefix + id, modernTraces[key]);
   }
-
-  showMod(prefix + 'AtkMod', s.atk, s.baseAtk);
-  showMod(prefix + 'RtbMod', s.rtb, s.baseRtb);
-  showMod(prefix + 'DefMod', s.displayDef ?? s.def, s.baseDef);
-  showMod(prefix + 'ResMod', s.res, s.baseRes);
-  showMod(prefix + 'HPMod', s.hp, s.baseHP);
-
-  showModPct(prefix + 'ToHitMeleeMod', s.displayToHitMelee ?? s.toHitMelee, s.toHitMeleeHasModifiers);
-  showModPct(prefix + 'ToHitRtbModDisp', s.displayToHitRtb ?? s.toHitRtb, s.toHitRtbHasModifiers);
-  showModPct(prefix + 'ToBlkModDisp', s.displayToBlock ?? s.toBlock, s.toBlockHasModifiers);
 }
 
 // --- Level Bonuses ---

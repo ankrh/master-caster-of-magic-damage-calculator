@@ -1,5 +1,22 @@
 # Calculator work history
 
+## 2026-08-08 -- R7.4 calculated-output modifier tooltips
+
+R7 is complete. The unit cards retain one final modified-value column beside each editable base
+stat; no second value column or game-style display tiers were added. Every affected calculated
+output now formats its existing R7.3 `{base, entries, result}` projection as a hover tooltip:
+editable base, each source and phase with its running before/after values in execution order, and
+the displayed result. Percentage-point values, live race/Fantastic identity, figures, both DOS
+shared and modern independent attack fields, and the ordinary combat stats all use that same
+projection. The app's existing long-press interaction exposes the identical chain on touch
+devices.
+
+Outputs with no applied trace remain empty and receive no trace tooltip. Editable base fields,
+Special unit and other identity sources, abilities, enchantments, conditions, and unrelated
+labels retain only their existing explanatory tooltips and never receive modifier chains.
+Focused browser coverage verifies exact content, pointer and touch interaction, attacker/defender
+symmetry, modern-channel and identity formatting, and the output-only boundary.
+
 ## 2026-08-08 -- R7.3 ordered calculated-stat traces
 
 R7.3 is complete. The shared stat-step runner now records an explicit source plus execution

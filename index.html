@@ -114,9 +114,10 @@
 
       <label for="aBaseFantastic" data-tooltip="Base identity predicate. This is independent of Hero and of the base race/realm.">Fantastic</label>
       <input class="identity-checkbox" type="checkbox" id="aBaseFantastic">
+      <span class="mod-val" id="aFantasticMod"></span>
 
       <label for="aBaseRace" data-tooltip="Editable base race or realm used by identity-gated calculations. The live race/realm can still be rewritten by later effects.">Base race / realm</label>
-      <select id="aBaseRace" class="identity-control">
+      <select id="aBaseRace" class="identity-control calculated-base-select">
         <option value="">None / unaligned</option>
         <option value="Barbarian">Barbarian</option>
         <option value="Beastmen">Beastmen</option>
@@ -146,6 +147,7 @@
         <option value="Sorcery">Sorcery</option>
         <option value="Special">Special</option>
       </select>
+      <span class="mod-val" id="aRaceMod"></span>
 
       <label for="aSpecialUnit" data-tooltip="Version-specific template exception. This is a compact named selector; numeric template and hero IDs remain internal.">Special unit</label>
       <select id="aSpecialUnit" class="identity-control">
@@ -156,7 +158,7 @@
 
       <label for="aFigs" data-tooltip="Number of figures in the unit. Each living figure contributes attacks.">Figures</label>
       <input type="number" id="aFigs" min="1" max="9" value="4">
-      <span class="mod-val"></span>
+      <span class="mod-val" id="aFigsMod"></span>
 
       <label for="aAtk" data-tooltip="Melee attack strength — number of dice rolled per figure.">Melee</label>
       <input type="number" id="aAtk" min="0" max="50" value="3">
@@ -189,14 +191,14 @@
         <option value="magic_s">Magic (S)</option><option value="beam">Beam</option>
       </select>
       <input class="modern-attack version-hidden" type="number" id="aModernRanged" min="0" max="50" value="0">
-      <span class="mod-val modern-attack version-hidden"></span>
+      <span class="mod-val modern-attack version-hidden" id="aModernRangedMod"></span>
 
       <label class="modern-attack version-hidden" for="aModernThrown" data-tooltip="CoM2 &amp; Warlord: independent Thrown channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement before melee attacks.&#10;Can coexist with Ranged and both Breath channels.">Thrown</label>
-      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernThrown" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernThrown" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="aModernThrownMod"></span>
       <label class="modern-attack version-hidden" for="aModernFireBreath" data-tooltip="CoM2 &amp; Warlord: independent Fire Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Fire attack.&#10;Can coexist with Ranged, Thrown, and Lightning Breath.">Fire Breath</label>
-      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernFireBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernFireBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="aModernFireBreathMod"></span>
       <label class="modern-attack version-hidden" for="aModernLightningBreath" data-tooltip="CoM2 &amp; Warlord: independent Lightning Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Lightning attack.&#10;Can coexist with Ranged, Thrown, and Fire Breath.">Lightning Breath</label>
-      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="aModernLightningBreathMod"></span>
 
       <label for="aToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
       <span class="prefix">30% +</span>
@@ -280,9 +282,10 @@
 
       <label for="bBaseFantastic" data-tooltip="Base identity predicate. This is independent of Hero and of the base race/realm.">Fantastic</label>
       <input class="identity-checkbox" type="checkbox" id="bBaseFantastic">
+      <span class="mod-val" id="bFantasticMod"></span>
 
       <label for="bBaseRace" data-tooltip="Editable base race or realm used by identity-gated calculations. The live race/realm can still be rewritten by later effects.">Base race / realm</label>
-      <select id="bBaseRace" class="identity-control">
+      <select id="bBaseRace" class="identity-control calculated-base-select">
         <option value="">None / unaligned</option>
         <option value="Barbarian">Barbarian</option>
         <option value="Beastmen">Beastmen</option>
@@ -312,6 +315,7 @@
         <option value="Sorcery">Sorcery</option>
         <option value="Special">Special</option>
       </select>
+      <span class="mod-val" id="bRaceMod"></span>
 
       <label for="bSpecialUnit" data-tooltip="Version-specific template exception. This is a compact named selector; numeric template and hero IDs remain internal.">Special unit</label>
       <select id="bSpecialUnit" class="identity-control">
@@ -322,7 +326,7 @@
 
       <label for="bFigs" data-tooltip="Number of figures in the unit. Each living figure contributes attacks.">Figures</label>
       <input type="number" id="bFigs" min="1" max="9" value="4">
-      <span class="mod-val"></span>
+      <span class="mod-val" id="bFigsMod"></span>
 
       <label for="bAtk" data-tooltip="Melee attack strength — number of dice rolled per figure.">Melee</label>
       <input type="number" id="bAtk" min="0" max="50" value="3">
@@ -355,14 +359,14 @@
         <option value="magic_s">Magic (S)</option><option value="beam">Beam</option>
       </select>
       <input class="modern-attack version-hidden" type="number" id="bModernRanged" min="0" max="50" value="0">
-      <span class="mod-val modern-attack version-hidden"></span>
+      <span class="mod-val modern-attack version-hidden" id="bModernRangedMod"></span>
 
       <label class="modern-attack version-hidden" for="bModernThrown" data-tooltip="CoM2 &amp; Warlord: independent Thrown channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement before melee attacks.&#10;Can coexist with Ranged and both Breath channels.">Thrown</label>
-      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernThrown" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernThrown" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="bModernThrownMod"></span>
       <label class="modern-attack version-hidden" for="bModernFireBreath" data-tooltip="CoM2 &amp; Warlord: independent Fire Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Fire attack.&#10;Can coexist with Ranged, Thrown, and Lightning Breath.">Fire Breath</label>
-      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernFireBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernFireBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="bModernFireBreathMod"></span>
       <label class="modern-attack version-hidden" for="bModernLightningBreath" data-tooltip="CoM2 &amp; Warlord: independent Lightning Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Lightning attack.&#10;Can coexist with Ranged, Thrown, and Fire Breath.">Lightning Breath</label>
-      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden"></span>
+      <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="bModernLightningBreathMod"></span>
 
       <label for="bToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
       <span class="prefix">30% +</span>

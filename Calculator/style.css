@@ -224,6 +224,12 @@ h1 {
   grid-column: 2 / 5;
   text-align: left;
 }
+/* Identity selectors with a calculated live projection retain the same single final-value
+   column as numeric stats. Special unit remains a full-width control because it is a source,
+   never a calculated output. */
+.panel-fields > select.calculated-base-select {
+  grid-column: 2 / 4;
+}
 /* dropdown + input combos */
 .panel-fields > select.mid {
   grid-column: 2;
@@ -340,6 +346,9 @@ h1 {
 }
 .mod-val.visible {
   visibility: visible;
+}
+.mod-val[data-tooltip] {
+  cursor: help;
 }
 /* --- Presets Drawer --- */
 .presets-drawer {

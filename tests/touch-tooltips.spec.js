@@ -1,7 +1,7 @@
 // Touch tooltip behavior (long-press shows, tap dismisses) and the iOS
 // focus-zoom guard (>=16px input text at phone widths).
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors } = require('./helpers');
+const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
 
 test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
@@ -59,5 +59,22 @@ test('inputs render at >=16px on phones so iOS does not zoom on focus', async ({
     const size = await page.locator('#' + id).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
     expect(size, `#${id} font-size`).toBeGreaterThanOrEqual(16);
   }
+  expectNoConsoleErrors(errors);
+});
+
+test('long-press exposes the same modifier chain from a calculated output', async ({ page }) => {
+  const errors = await openCalculator(page);
+  await setValue(page, 'aAbil_highPrayer', true);
+  const target = '#aAtkMod';
+  await page.locator(target).scrollIntoViewIfNeeded();
+  const expected = await page.locator(target).getAttribute('data-tooltip');
+  expect(expected).toBe('Editable base: 3\nHigh Prayer (phase c): 3 → 5\nDisplayed result: 5');
+
+  await touch(page, target, 'touchstart');
+  await page.waitForTimeout(700);
+  await expect(page.locator('#tt')).toBeVisible();
+  await expect(page.locator('#tt')).toHaveText(expected);
+  await touch(page, target, 'touchend');
+  await expect(page.locator('#tt')).toBeVisible();
   expectNoConsoleErrors(errors);
 });
