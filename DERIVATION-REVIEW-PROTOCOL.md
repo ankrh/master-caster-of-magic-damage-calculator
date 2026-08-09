@@ -9,14 +9,57 @@ isolated Git worktrees. **Derivation mode** produces independent evidence reads 
 stricter evidence-specific rules below. Never substitute one mode's completion gate for the
 other's.
 
-The following scratch files belong to derivation mode:
+## Binary source reconstruction is dedicated work
 
-| File | Subject | Written by | Owned after writing by |
-|---|---|---|---|
-| `.review-of-claude.md` | Claude's work | Codex | Claude |
-| `.review-of-codex.md` | Codex's work | Claude | Codex |
-| `.derivations/<ID>.claude.md` | — | Claude | Claude |
-| `.derivations/<ID>.codex.md` | — | Codex | Codex |
+Binary source reconstruction is performed **only** under a dedicated reconstruction item in
+`Calculator/BACKLOG.md`. An implementation, provenance, verification, defect, review, or other
+task may read and cite address-backed reconstructions already checked into the repository, but it
+must not incidentally disassemble a missing extent, create or extend a reconstructed source body,
+or extract an unrecorded binary table row in order to finish its own scope.
+
+When any non-reconstruction task discovers that completion requires binary source which has not
+yet been reconstructed, every agent must stop that part of the task at the checked-in evidence
+boundary and surface the dependency. The orchestrating agent must, before integrating or closing
+the originating task:
+
+1. leave the affected claim or formula UNVERIFIED and make no behavior change from an informal
+   raw-binary observation;
+2. create one or more dedicated reconstruction rows in `Calculator/BACKLOG.md` rather than hiding
+   the work inside the originating item;
+3. name each dependent formula/mechanic, executable and build, known routine/symbol and address
+   extent, and the owning reconstruction/evidence artifact; if the extent is not already known,
+   create a locate-and-bound reconstruction row instead of opening the binary during the current
+   task; and
+4. make the originating backlog row and any dependent defect rows point to the new reconstruction
+   ID or IDs.
+
+A dedicated reconstruction row is the authorization boundary for opening the raw binary and
+writing address-backed source or binary-table evidence. It must have a frozen target and
+acceptance gate before reconstruction begins. Execute it under the derivation rules below: one
+derivation plus review by default, or dual independent derivation only when AKH explicitly asks
+for it. Discovery of a reconstruction dependency never widens the current task's scope.
+
+### Derivation artifact names and ownership
+
+Every derivation item uses its exact `Calculator/BACKLOG.md` ID in all artifact names. New items
+must use the names below; historical artifacts are not renamed. Derivation and review files are
+gitignored scratch. The merged evidence artifact is committed in the evidence directory named by
+the backlog row, while the merged source-shaped body goes to the row's separately named owning
+source file.
+
+| Artifact | Exact name | Subject | Written by | Owned after writing by |
+|---|---|---|---|---|
+| Cold derivation | `.derivations/<ID>.claude.md` | Claude's independent evidence | Claude | Claude |
+| Cold derivation | `.derivations/<ID>.codex.md` | Codex's independent evidence | Codex | Codex |
+| Reciprocal review | `.reviews/<ID>.review-of-claude.md` | Claude's derivation | Codex | Claude |
+| Reciprocal review | `.reviews/<ID>.review-of-codex.md` | Codex's derivation | Claude | Codex |
+| Merged evidence | `<owning evidence directory>/<ID>.evidence.md` | Union, findings, ledgers, counts and disputes | Merger | Repository |
+
+`<ID>` is literal and case-preserving: for example, `R9-G1a-R1` produces
+`.derivations/R9-G1a-R1.claude.md`, `.reviews/R9-G1a-R1.review-of-codex.md`, and
+`Reference docs/DOS reconstructed/R9-G1a-R1.evidence.md`. An item with several builds or
+separately checked extents still has one merged evidence artifact. Do not use unscoped names such
+as `.review-of-claude.md`, and do not reuse another item's files.
 
 **Review files are named for the agent under review, not the author**, and have *phased*
 ownership: the reviewer writes the file in one pass, then never touches it again; from that
@@ -29,6 +72,8 @@ clobbered edits and no reliable record of who claimed what.
 Use this mode for every calculator backlog-item implementation unless AKH explicitly requests a
 single-agent run. Its purpose is to let one orchestrating main agent coordinate two independent
 implementations and reciprocal review on the same real task while comparing reasoning effort.
+Implementation mode does not authorize binary reconstruction; the dedicated-work rule above is a
+hard scope boundary for both implementers and the orchestrator.
 
 The standard implementation configuration for new implementation-mode runs is:
 
@@ -209,17 +254,24 @@ agent deriving plus one review round.
 
 ### The five steps
 
-1. **Scope the item.** Either agent may prepare the top backlog row, naming the target — file,
-   routine, address range — and nothing else. **Size it at roughly 300–1000 instructions**, which
-   is one enchantment block, one named helper, or a comparable unit. The preparing agent must then
-   stop; **derivation starts in a fresh conversation**, so preparing an item confers no head start.
-2. **Both agents derive**, each to its own `.derivations/` file, and **must not read the other's**,
-   even if it exists. Do not grep for it, do not open it to "check formatting". A derivation
-   carries evidence only — see *Findings are a merge product* below. Shared helper tools under
-   `tools/` may be written and refined freely by either agent — tooling is not an answer.
-3. **Both agents review the other's derivation**, writing to the file named for the *other* agent.
-   When AKH asks for a new review, the reviewer **clears any existing content of that file first**
-   — but only after the precondition in *Closing a review round* below is met.
+1. **Scope the dedicated reconstruction item.** Derivation begins only from a dedicated backlog
+   row created under *Binary source reconstruction is dedicated work*. Either agent may prepare
+   that row, naming the target — file, routine, address range — and nothing else. **Size it at up
+   to roughly 1000 instructions**, normally one enchantment block, one named helper, one data row,
+   one locate-and-bound item, or a comparable natural unit. There is no minimum size: do not
+   combine unrelated routines,
+   executables or evidence owners merely to make an item larger. The preparing agent must then stop;
+   **derivation starts in a fresh conversation**, so preparing an item confers no head start.
+2. **Both agents derive**, Claude in `.derivations/<ID>.claude.md` and Codex in
+   `.derivations/<ID>.codex.md`, and **must not read the other's**, even if it exists. Do not grep
+   for it, do not open it to "check formatting". A derivation carries evidence only — see
+   *Findings are a merge product* below. Shared helper tools under `tools/` may be written and
+   refined freely by either agent — tooling is not an answer.
+3. **Both agents review the other's derivation**, writing to the item-scoped file named for the
+   *other* agent: Codex writes `.reviews/<ID>.review-of-claude.md`; Claude writes
+   `.reviews/<ID>.review-of-codex.md`. When AKH asks for a new review, the reviewer **clears any
+   existing content of that same item's file first** — but only after the precondition in
+   *Closing a review round* below is met.
 4. **Both agents work through the review of their own file.** Fix what you agree with and
    **delete that entry**. Leave what you dispute, with a reply line beneath:
    `— <agent>, <YYYY-MM-DD>: <reason>`. Never silently drop an entry. Surface every surviving
@@ -281,17 +333,19 @@ stated once and rests on two independent reads. A reading the two still disagree
 A merged artifact is allowed to be uncertain in places; do not turn an unresolved reading into a
 plain finding.
 
-**The merge closes the scoped derivation item.** After writing the merged artifact, recording any
-surviving disagreements as Q rows, updating its evidence home and supporting documentation, and
-clearing the derivation/review scratch files, mark that backlog item `done`. AKH's merge request
-is the approval to close it; do not leave it `in progress` awaiting a second sign-off.
+**The merge closes the scoped derivation item.** After writing the merged
+`<owning evidence directory>/<ID>.evidence.md` artifact and the owning source-shaped body,
+recording any surviving disagreements as Q rows, updating supporting documentation, and clearing
+that ID's derivation/review scratch files, mark that backlog item `done`. AKH's merge request is
+the approval to close it; do not leave it `in progress` awaiting a second sign-off.
 
 ### Closing a review round
 
-**Before a review file is cleared, every disagreement still standing in it must already exist as a
-Q row in `Calculator/BACKLOG.md`.** Clearing is otherwise a silent deletion of evidence, and it
-would leave an ephemeral, gitignored file doing the register's job — see *One rule for the
-register* in `CLAUDE.md`.
+**Before `.reviews/<ID>.review-of-claude.md` or
+`.reviews/<ID>.review-of-codex.md` is cleared, every disagreement still standing in it must
+already exist as a Q row in `Calculator/BACKLOG.md`.** Clearing is otherwise a silent deletion of
+evidence, and it would leave an ephemeral, gitignored file doing the register's job — see *One
+rule for the register* in `CLAUDE.md`.
 
 ### If a review entry contradicts conversation
 

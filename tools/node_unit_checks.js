@@ -103,7 +103,7 @@ function runIdentityChecks(ctx) {
     ['mom_1.31', evalInContext(ctx, 'MOM_UNITS_DATA')],
     ['com_6.08', evalInContext(ctx, 'COM_UNITS_DATA')],
     ['com2_1.05.11', evalInContext(ctx, 'COM2_UNITS_DATA')],
-    ['com2_warlord_1.5.12.6.2', evalInContext(ctx, 'WARLORD_UNITS_DATA')],
+    ['com2_warlord_1.5.12.7', evalInContext(ctx, 'WARLORD_UNITS_DATA')],
   ];
   for (const [version, data] of rosterSets) {
     for (const unit of Object.values(data)) {
@@ -195,8 +195,8 @@ function runIdentityChecks(ctx) {
   ];
   orderedRealmAbilities.forEach((abilities, index) => {
     const unit = ctx.deriveUnitStats(baseUnitInput({
-      version: 'com2_warlord_1.5.12.6.2',
-      identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.6.2', {
+      version: 'com2_warlord_1.5.12.7',
+      identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.7', {
         baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen',
       }),
       abilities,
@@ -272,7 +272,7 @@ function runIdentityChecks(ctx) {
 
 function runDeriveUnitStatsChecks(ctx) {
   const modernChannels = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     rtbType: 'missile',
     rtb: 7,
     modernAttacks: {
@@ -289,7 +289,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(modernChannels.modernAttacks.lightningBreath.strength, 4, 'Modern Lightning Breath is derived independently');
 
   const modernBlackpowder = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { outlanderWizard: true, rocketry: true, armorPiercing: true },
     rtbType: 'missile',
     rtb: 5,
@@ -325,7 +325,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // Nature Link (Warlord rename of Land Linking) maps to the landLinking calcKey.
   // Fantastic units get the Land Linking melee/def bonus AND the Warlord +1 resistance.
   const natureLinkFantastic = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { landLinking: true },
     unitType: 'fantastic_nature',
     atk: 1, def: 1, res: 1,
@@ -336,7 +336,7 @@ function runDeriveUnitStatsChecks(ctx) {
 
   // Normal units get only the +1 resistance, not the fantastic-only melee/def bonus.
   const natureLinkNormal = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { landLinking: true },
     unitType: 'normal',
     atk: 1, def: 1, res: 1,
@@ -356,7 +356,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(landLinkingCoM2.res, 1, 'Land Linking (CoM2) grants no resistance bonus');
 
   const luckyStar = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { luckyStar: true },
     rtbType: 'missile',
     atk: 2, rtb: 2, def: 2, res: 2,
@@ -370,7 +370,7 @@ function runDeriveUnitStatsChecks(ctx) {
 
   // Only the enchanted unit gains Lucky, expressed with the ordinary `lucky` control.
   const luckyStarTarget = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { luckyStar: true, lucky: true },
     atk: 2, def: 2, res: 2,
   }));
@@ -383,7 +383,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // afterwards, so a Holy Bonus aura must not feed either effect. Both are Outlander-soldier
   // reforms, so the inputs are the wizard retort plus the reform, never the derived label.
   const psychoForceInput = overrides => baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     level: 'veteran',
     atk: 1, def: 1, res: 4, hp: 1,
     ...overrides,
@@ -419,7 +419,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Warp Resist zeroes resistance in region c, so Pneuma Field drains nothing');
 
   const trueSight = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { trueSight: true },
     rtbType: 'magic_s',
     rtb: 1,
@@ -429,7 +429,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertClose(trueSight.toHitRtb, 0.35, 'True Sight gives +5% ranged To-Hit in Warlord');
 
   const eyeOfHeavenTrueSight = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { eyeOfHeaven: true },
     rtbType: 'fire',
     rtb: 1,
@@ -437,7 +437,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertClose(eyeOfHeavenTrueSight.toHitRtb, 0.35, 'Eye of Heaven grants the True Sight To-Hit bonus');
 
   const academyMagicRanged = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { alumniOfAcademy: true },
     race: 'Halfling',
     name: 'Halfling Shamans',
@@ -448,7 +448,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(academyMagicRanged.figs, 8, 'Academy gives a Halfling magical-ranged unit +2 figures');
 
   const academyMechanical = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { alumniOfAcademy: true, mechanical: true },
     race: 'Halfling',
     name: 'Mechanical Shamans',
@@ -459,7 +459,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(academyMechanical.figs, 6, 'Academy excludes Mechanical magical-ranged units');
 
   const academyRocs = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { alumniOfAcademy: true },
     race: 'Halfling',
     name: 'Halfling Rocs',
@@ -468,7 +468,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(academyRocs.figs, 4, 'Academy gives Halfling Rocs +2 figures');
 
   const academyOtherRace = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { alumniOfAcademy: true },
     race: 'High Men',
     name: 'High Men Magicians',
@@ -658,7 +658,7 @@ function runToBlockChecks(ctx) {
 }
 
 function runDerivationStageChecks(ctx) {
-  const version = 'com2_warlord_1.5.12.6.2';
+  const version = 'com2_warlord_1.5.12.7';
 
   // Phase attribution is a step's declared position, so these assert on the emitted step
   // rather than on a bucket total. `null` means the effect emitted no step at all.
@@ -748,7 +748,7 @@ function runDerivationStageChecks(ctx) {
 }
 
 function runWarlordUnitAbilityChecks(ctx) {
-  const version = 'com2_warlord_1.5.12.6.2';
+  const version = 'com2_warlord_1.5.12.7';
   const warlordUnit = (overrides = {}) => baseUnitInput({
     version,
     ...overrides,
@@ -767,6 +767,29 @@ function runWarlordUnitAbilityChecks(ctx) {
     ctx,
   );
   assertEqual(lateSapiens, true, 'Wraiths and Shadow Demons are tagged Sapiens');
+
+  const fireGiant = evalInContext(ctx,
+    "Object.values(WARLORD_UNITS_DATA).find(u => u.name === 'Fire Giant')");
+  assertEqual(fireGiant.hp, 25, 'Warlord 1.5.12.7 Fire Giant HP');
+  assertEqual(fireGiant.defense, 8, 'Warlord 1.5.12.7 Fire Giant Armor');
+  assertEqual(fireGiant.resist, 9, 'Warlord 1.5.12.7 Fire Giant Resistance');
+  assertEqual(fireGiant.to_hit, 20, 'Warlord 1.5.12.7 Fire Giant To-Hit modifier');
+  assertEqual(fireGiant.cost, 220, 'Warlord 1.5.12.7 Fire Giant cost');
+  assertEqual(fireGiant.upkeep, 6, 'Warlord 1.5.12.7 Fire Giant upkeep');
+  assert(fireGiant.abilities.includes('Cold Immunity')
+    && fireGiant.abilities.includes('Immolation'),
+  'Warlord 1.5.12.7 Fire Giant gains Cold Immunity and Immolation');
+
+  const doomBat = evalInContext(ctx,
+    "Object.values(WARLORD_UNITS_DATA).find(u => u.name === 'Doom Bat')");
+  assertEqual(doomBat.melee, 12, 'Warlord 1.5.12.7 Doom Bat Melee');
+  assertEqual(doomBat.resist, 8, 'Warlord 1.5.12.7 Doom Bat Resistance');
+  assertEqual(doomBat.hp, 24, 'Warlord 1.5.12.7 Doom Bat HP');
+  assertEqual(doomBat.cost, 150, 'Warlord 1.5.12.7 Doom Bat cost');
+  assertEqual(doomBat.upkeep, 3, 'Warlord 1.5.12.7 Doom Bat upkeep');
+  assert(doomBat.abilities.includes('First Strike')
+    && doomBat.abilities.includes('Cold Immunity'),
+  'Warlord 1.5.12.7 Doom Bat gains First Strike and Cold Immunity');
 
   const armorclad = ctx.deriveUnitStats(warlordUnit({
     def: 1,
@@ -1065,7 +1088,7 @@ function runPhaseChecks(ctx) {
     };
     const projection = records.ranged || records.thrown || records.fireBreath || records.lightningBreath;
     const attacker = ctx.deriveUnitStats(baseUnitInput({
-      version: 'com2_warlord_1.5.12.6.2', figs: unit.figures, atk: unit.melee,
+      version: 'com2_warlord_1.5.12.7', figs: unit.figures, atk: unit.melee,
       rtb: projection.strength, rtbType: projection.type, def: unit.defense,
       res: unit.resist, hp: unit.hp, toHitRtbMod: 70, modernAttacks: records,
     }));
@@ -1073,13 +1096,13 @@ function runPhaseChecks(ctx) {
     assertEqual(Object.keys(attacker.modernAttacks).length, expectedKeys.length,
       `${unit.name} retains every source attack channel during derivation`);
     const melee = ctx.resolveCombat(attacker, channelTarget,
-      { version: 'com2_warlord_1.5.12.6.2', isRanged: false, wallOfFire: false });
+      { version: 'com2_warlord_1.5.12.7', isRanged: false, wallOfFire: false });
     const expectedMeleeChannels = expectedKeys.filter(key => key !== 'ranged').length;
     assertEqual((melee.phases || []).filter(p => /Breath|Thrown/.test(p.label)).length, expectedMeleeChannels,
       `${unit.name} resolves every non-ranged channel`);
     if (records.ranged) {
       const ranged = ctx.resolveCombat(attacker, channelTarget,
-        { version: 'com2_warlord_1.5.12.6.2', isRanged: true, wallOfFire: false });
+        { version: 'com2_warlord_1.5.12.7', isRanged: true, wallOfFire: false });
       assert(ranged.totalDmgToB.some((p, damage) => damage > 0 && p > 1e-15),
         `${unit.name} resolves its independent conventional ranged channel`);
     }
@@ -1257,8 +1280,8 @@ function runStatStepChecks(ctx) {
 
 function runModifierTraceChecks(ctx) {
   const traced = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
-    identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.6.2', {
+    version: 'com2_warlord_1.5.12.7',
+    identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.7', {
       baseRace: 'High Men', specialUnit: 'chosen',
     }),
     atk: 5,
@@ -1340,7 +1363,7 @@ function runModifierTraceChecks(ctx) {
     'The initial To Block clamp records the floor when it changes the running value');
 
   const cappedPlague = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2', toHitMod: -20,
+    version: 'com2_warlord_1.5.12.7', toHitMod: -20,
     abilities: { plague: true },
   }));
   const cappedSources = cappedPlague.modifierTraces.toHitMelee.entries.map(t => t.id);
@@ -1380,7 +1403,7 @@ function runModifierTraceChecks(ctx) {
     ],
     [
       'Lightning Blade', 'lightningBlade:breath',
-      baseUnitInput({ version: 'com2_warlord_1.5.12.6.2', abilities: { lightningBlade: true } }), 0, 1,
+      baseUnitInput({ version: 'com2_warlord_1.5.12.7', abilities: { lightningBlade: true } }), 0, 1,
     ],
     [
       'Focus Magic', 'focusMagic:conversion',
@@ -1395,7 +1418,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const tracedVampirism = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { vampirism: true },
     atk: 3, rtb: 5, rtbType: 'thrown',
   }));
@@ -1407,7 +1430,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const shadowStrikeGrant = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     abilities: { shadowStrike: true },
     atk: 6, rtb: 0, rtbType: 'none',
     modernAttacks: {},

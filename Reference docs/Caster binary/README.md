@@ -154,7 +154,7 @@ remain in the per-item evidence companions below.
 This is a navigation and evidence index, not a status register. Live state, priority, cost and
 review gates exist only in `Calculator/BACKLOG.md`.
 
-| R5 item | File | Durable coverage and provenance |
+| Item | File | Durable coverage and provenance |
 |---|---|---|
 | R5.1a | [`Units.RecalculateUnits.pas`](./Units.RecalculateUnits.pas); [`region-a evidence`](./Units.RecalculateUnits.R5.1a.evidence.md); [`late-hook evidence`](./Units.RecalculateUnits.R5.1a-late-hook.evidence.md); [`Castercore wrapper evidence`](./Castercore.RecalculateUnits.evidence.md); [`city-tile wrapper evidence`](./Units.RecalculateunitsonCityTile.evidence.md) | Audit dated 2026-08-02: signature/ABI, region `a`, both script-hook boundaries, an address-indexed seam for regions `c` and `e`, plus the CasterCore and city-tile wrappers; all four extents carry current-gate ledgers, branch/call/write evidence and six zero counts |
 | R5.1b | same file, region `c`; [`Units.RecalculateUnits.R5.1b.evidence.md`](./Units.RecalculateUnits.R5.1b.evidence.md) | Merged 2026-08-02 from both derivations; reciprocal review recorded no surviving disagreement |
@@ -176,3 +176,4 @@ review gates exist only in `Calculator/BACKLOG.md`.
 | R5.2k | [`Combat.CallClosureHelpers.pas`](./Combat.CallClosureHelpers.pas); [`Combat.CallClosureHelpers.R5.2k.evidence.md`](./Combat.CallClosureHelpers.R5.2k.evidence.md) | Six resistance, spell, damage, distance, Blur-side and healing helpers |
 | R5.2l | [`Combat.AttackAndWallHelpers.pas`](./Combat.AttackAndWallHelpers.pas); [`Combat.WallStateMapping.R5.2l.evidence.md`](./Combat.WallStateMapping.R5.2l.evidence.md) | `ctws` 12-slot wall-perimeter mapping and `SetWallState` |
 | R5.2m | [`Combat.AmplifiedDamage.pas`](./Combat.AmplifiedDamage.pas); [`Combat.AmplifiedDamage.R5.2m.evidence.md`](./Combat.AmplifiedDamage.R5.2m.evidence.md) | Combat-only, non-stacking opposing-owner Amplifier predicate |
+| R9-G1a-R2 | [`Spells.CombatSummonUnit.pas`](./Spells.CombatSummonUnit.pas); [`R9-G1a-R2.evidence.md`](./R9-G1a-R2.evidence.md) | Complete combat-summon creation, identity writes, Demon Lord/Lesser Demon gate and script handoff; merged 2026-08-09 from independent Claude/Codex derivations and reciprocal byte review with no surviving disagreement |

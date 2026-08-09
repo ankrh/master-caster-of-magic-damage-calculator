@@ -1,0 +1,474 @@
+: Input CITYID = the city being calculated.
+		ROADBONUS = Total road bonus percentage
+		TERRAINGOLD = Total gold gained from terrain
+		BASEGOLD = Base gold from taxes. Equals the tax rate percentage from the tax table multiplied by the total nonrebel population.
+  Output - None. 
+  Use the AddResLine command to add produced gold to the total and as an individual line in the detailed view on the UI.
+		:
+
+TRADE=0;
+BASEORE=0;
+RACE=CITYRACE(CITYID);
+W=CITYOWNER(CityID);
+POP=POPUNITS(CITYID);
+FARMERS=GETCITYDATA(CITYID,CDFARMER);
+WORKERS=GETCITYDATA(CITYID,CDWORKER);
+MAXPOP=GETCITYDATA(CITYID,CDMAXPOP);
+
+MERIT=0;
+IF (SPELLSTATE(W,STMeritBureaucracy)=2) THEN { MERIT=20; }
+RADIO=0;
+IF (SPELLSTATE(W,STRadio)=2) THEN { RADIO=10; }
+
+AS=1;
+FACTOR=1;
+IF RETORT(W,Procurator) THEN { 
+ AS=3;
+ FACTOR=FACTOR*3/4;
+}
+
+: Checking City Overland Coordinates and Planes, if one city is found to have unupdated records, recheck entire map if necessary :
+IF (GETCITYDATA(CITYID,CDCOLP)>0) THEN { GOTO "HAVECITYCOOD"; }
+
+: Recording city coordination value :
+: Forced updating :
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+
+: City on tile found, update necessary records :
+  IF (CU>0) THEN {
+   IF ((GETCITYDATA(CU,CDCOLP))<1) THEN {
+    SETCITYDATA(CU,CDCOLX,X);
+    SETCITYDATA(CU,CDCOLY,Y);
+    SETCITYDATA(CU,CDCOLP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVECITYCOOD!
+
+
+: Check Fortress and City Coordination :
+IF (W=NeutralPlayerID) THEN { GOTO "NOCORRUPTION"; }
+
+: Corruption :
+
+: Check Wizard if they has already registered his address :
+
+IF ((Banished(W))=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=2)
+THEN { GOTO "HAVEFORTRESSORBANISH"; }
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+  I=CITYOWNER(CU);
+  IF (CU>0) THEN {
+   IF ((ISFORTRESS(CU))>0) THEN {
+    SETWIZARDDATA(I,WDFortressX,X);
+    SETWIZARDDATA(I,WDFortressY,Y);
+    SETWIZARDDATA(I,WDFortressP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVEFORTRESSORBANISH!
+
+ IF (GETWIZARDDATA(W,WDFortressP)<>(GETCITYDATA(CITYID,CDCOLP)) THEN { GOTO "DIFFERENTPLANE"; }
+
+  DISTANCEX = ABS( GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  IF ( DISTANCEX > ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) ) ) THEN {
+   DISTANCEX = ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  }
+  DISTANCEY = ABS( GETWIZARDDATA(W,WDFortressY) - GETCITYDATA(CITYID,CDCOLY) );
+  DISTANCEZ= SQRT((DISTANCEX*DISTANCEX)+(DISTANCEY*DISTANCEY));
+  CORRUPTION = %I(ABS(DISTANCEZ))-MERIT;
+  IF CORRUPTION < 0 THEN { CORRUPTION=0; }
+  IF CORRUPTION > (30-RADIO) THEN { CORRUPTION=30-RADIO; }
+  GOTO "NOCORRUPTION";
+
+!DIFFERENTPLANE!
+
+ CORRUPTION = 30-RADIO;
+
+!NOCORRUPTION!
+
+: Global enchantment counting :
+NOFDIVORDER=DIVINEORDERCOUNT;
+
+ IF HASGLOBAL(W,GEDivineOrder) THEN { NOFDIVORDER=NOFDIVORDER-1; }
+
+: Gold gains from tax :
+
+ADDRESLINE "Taxes",BASEGOLD;
+
+IF (RACE=RCDwarf) THEN {
+ ADDRESLINE "Dwarf Business's Taxes",(%I(BASEGOLD/2));
+ BASEGOLD=BASEGOLD + (%I(BASEGOLD/2));
+}
+
+IF (CITYENCHANT(CityID,CENecropolis)<0)
+ %AND (RACE=RCGoblin)
+ %AND ( (W=0) %OR (HOMERACE(W)<>RCGoblin) ) 
+ THEN {
+ ADDRESLINE "Goblin's Tax Avoidance",0-(%I(BASEGOLD/2));
+ BASEGOLD=BASEGOLD - (%I(BASEGOLD/2));
+}
+
+: Gold gains from ore :
+
+I=2*OREINRANGE(cityID,OreSilver);
+ADDRESLINE "Silver Ore", I
+BASEORE=BASEORE+I;
+
+I=4*OREINRANGE(cityID,OreGold);
+ADDRESLINE "Gold Ore", I
+BASEORE=BASEORE+I;
+
+I=6*OREINRANGE(cityID,OreGems);
+ADDRESLINE "Gems", I
+BASEORE=BASEORE+I;
+
+W=CITYOWNER(CityID);
+IF HasGlobal(W,GESeismicMastery) THEN {
+ ADDRESLINE "Planetary Mastery", BASEORE;
+ BASEORE=BASEORE+BASEORE;
+}
+
+MINERGUILD=0
+IF ISBUILT(CITYID,BMinerGuild) THEN {
+ IF (SPELLSTATE(W,STExplosive)=2) THEN {
+  MINERGUILD=BASEORE;
+  ADDRESLINE "Miner's Guild, with Explosive", MINERGUILD;
+ } ELSE {
+  MINERGUILD=%I(BASEORE/2);
+  ADDRESLINE "Miner's Guild", MINERGUILD;
+ }
+}
+
+DWARVENMINER=0
+IF RACE=RCDwarf THEN { 
+ DWARVENMINER=BASEORE
+ ADDRESLINE "Dwarven Miners", DWARVENMINER;
+}
+
+ADVMINING=0;
+IF (SPELLSTATE(W,STAdvancedMining)=2) THEN {
+ ADVMINING=BASEORE
+ ADDRESLINE "Advanced Mining Process", ADVMINING;
+}
+
+BASEORE=BASEORE + MINERGUILD + DWARVENMINER + ADVMINING;
+
+
+: Flat gold gains from buildings :
+
+IF ISBUILT(CITYID,BMarketplace) THEN {
+ BASEGOLD=BASEGOLD+7;
+ ADDRESLINE "Marketplace",7;
+}
+
+IF ISBUILT(CityID,BFarmerMarket) THEN {
+ BASEGOLD=BASEGOLD+%I((1+POP)/2);
+ ADDRESLINE "Farmer's Market", %I((1+POP)/2);
+}
+
+IF (ISBUILT(CityID,BBrewery)=0) THEN { GOTO "NOBREWERY"; }
+
+ BREWER=%I(POP/2);
+ IF ISBUILT(CityID,BDock) THEN {
+  BREWER=%I((3*POP)/4);
+  ADDRESLINE "Brewery with Export", 3*BREWER;
+ } ELSE {
+  ADDRESLINE "Brewery", 3*BREWER;
+ }
+ BASEGOLD=BASEGOLD+3*BREWER;
+
+!NOBREWERY!
+
+IF ISBUILT(CITYID,BBaray) THEN {
+ BASEGOLD=BASEGOLD+MAXPOP;
+ ADDRESLINE "Baray",MAXPOP;
+}
+
+IF CITYENCHANT(CityID,CESorcererStone)<0 THEN { GOTO "NOPHILOSOPHERSTONE"; }
+
+ IF ISBUILT(CITYID,BAlchemistGuild) THEN {
+  BASEGOLD=BASEGOLD+12;
+  ADDRESLINE "Alchemist's Guild",12;
+ }
+
+!NOPHILOSOPHERSTONE!
+
+: In case of have Magocracy global enchantment, flat gold gains from magic market and wizard's guild :
+IF (HASGLOBAL(W,GEMagocracy)=0) THEN { GOTO "NOMAGOCRACY"; }
+
+ IF (ISBUILT(CityID,BMagicMarket)=0) THEN { GOTO "NOMAGICMARKET"; }
+
+  IF (NOFDIVORDER<1) %OR HASGLOBAL(W,GEDivineOrder) THEN {
+   BASEGOLD=BASEGOLD+4;
+   ADDRESLINE "Magic Market", 4;
+  } ELSE {
+   IF BOOKS(W,Life)>0 THEN {  
+    IF (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Death)))-(BOOKS(W,Life)))>0 THEN {
+     BASEGOLD=BASEGOLD+2;
+     ADDRESLINE "Magic Market", 2;
+    }
+   }
+  }
+
+!NOMAGICMARKET!
+
+ IF ISBUILT(CityID,BWizardsGuild) THEN {
+  BASEGOLD=BASEGOLD+12;
+  ADDRESLINE "Wizard's Guild", 12;
+ }
+
+!NOMAGOCRACY!
+
+: Gold from Sage Master's Education Reform :
+IF RETORT(W,SageMaster) THEN {
+ IF (SPELLSTATE(W,SEducationReform)=2) THEN {
+  IF ISBUILT(CITYID,BUniversity) THEN {
+   BASEGOLD=BASEGOLD+1;
+   ADDRESLINE "Education Reform (University)",1;
+  }
+  IF ISBUILT(CITYID,BSagesGuild) THEN {
+   BASEGOLD=BASEGOLD+2;
+   ADDRESLINE "Education Reform (Sage's Guild)",2;
+  }
+  IF ISBUILT(CITYID,BWizardsGuild) THEN {
+   BASEGOLD=BASEGOLD+3;
+   ADDRESLINE "Education Reform (Wizard's Guild)",3;
+  }
+ }
+}
+
+BASEGOLD=BASEGOLD + BASEORE;
+
+
+: Percentage gold gains from buildings :
+
+TRADE=TRADE+ROADBONUS+TERRAINGOLD;
+
+IF TRADE>2*POP THEN { TRADE=2*POP; }
+
+IF RACE=RCNomad THEN { TRADE=TRADE+50; }
+
+IF (SPELLSTATE(W,STStandardization)=2) THEN { TRADE=TRADE+10; }
+IF (RADIO>0) THEN { TRADE=TRADE+20; }
+IF (SPELLSTATE(W,STCorperateCharter)=2) THEN {
+ CORPS=0;
+ CORPS=CORPS+%I(0.5*BUILDINGSOWNED(W,BMarketplace,0));
+ CORPS=CORPS+(1*BUILDINGSOWNED(W,BBank,0));
+ CORPS=CORPS+(1.5*BUILDINGSOWNED(W,BMerchantGuild,0));
+ TRADE=TRADE+CORPS;
+}
+
+PGTOTAL= TRADE*2;
+
+IF ISBUILT(CITYID,BBank) THEN {
+ ADDRESLINE "Bank", %I((BASEGOLD * 30) /100)
+ PGTOTAL=PGTOTAL + 60;
+}
+
+IF ISBUILT(CITYID,BMerchantGuild) THEN {
+ ADDRESLINE "Merchant's Guild", %I((BASEGOLD * 40) /100)
+ PGTOTAL=PGTOTAL + 80;
+}
+
+IF ISBUILT(CITYID,BDragonMound) THEN {
+ ADDRESLINE "Dragon Mound", %I((BASEGOLD * 30) /100)
+ PGTOTAL=PGTOTAL + 60;
+}
+
+IF CITYENCHANT(CityID,CEProsperity)>-1 THEN {
+ ADDRESLINE "Prosperity", %I((BASEGOLD * 77) /100)
+ PGTOTAL=PGTOTAL + 154;
+}
+
+
+: Gold from Administrative Skill :
+
+IF BOOKS(W,Death)>0 THEN {
+ GP=((BOOKS(W,Death)-1)*AS)+(4*AS);
+ ADDRESLINE "Administrative Skill", %I((BASEGOLD * GP) /100)
+ PGTOTAL=PGTOTAL + (2*(GP));
+}
+
+: Trade bonus :
+: Dump anything lost by fractions rounded down into the trade modifier. :
+TRAD=(%I((BASEGOLD*(PGTOTAL+200))/200))-SUMRESLINES();
+
+ADDRESLINE "Trade Bonus "+STRS(TRADE)+"%", TRAD;
+
+: Caravanserai :
+IF ISBUILT(CITYID,BCaravanserai) THEN {
+ P=0;
+ IF (RACE=RCNomad) THEN { P=TRADE-50; } ELSE { P=TRADE; }
+ CARAVAN=(%I((BASEGOLD*P)/100));
+ ADDRESLINE "Caravanserai Bonus "+STRS(P)+"%", CARAVAN;
+}
+
+: If wizard does not research spell, research point from city last turn convert to gold at rate 2 to 1 :
+IF (RESEARCHING(W)=0) THEN {
+ RESGOLD=0;
+ RESGOLD=RESGOLD+%I(GETCITYDATA(CITYID,CDRES)/2);
+ ADDRESLINE "Academic Service", RESGOLD;
+}
+
+IF ((SUMRESLINES())<1) %OR (W=NeutralPlayerID) THEN { GOTO "END"; }
+
+: Corruption :
+
+IF (SCORINGOPTION(SPleasantville)>0) THEN { GOTO "CORRUPTIONEND"; }
+
+ : Siege mechanic :
+ SiEGE=0;
+ CITYP=GETCITYDATA(CITYID,CDCOLP);
+
+ FOR Y=( GETCITYDATA(CITYID,CDCOLY) - 1 ) TO ( GETCITYDATA(CITYID,CDCOLY) + 1 );
+ FOR X=( GETCITYDATA(CITYID,CDCOLX) - 1 ) TO ( GETCITYDATA(CITYID,CDCOLX) + 1 );
+
+  IF (X=GETCITYDATA(CITYID,CDCOLX))
+   %AND (Y=GETCITYDATA(CITYID,CDCOLY))
+  THEN { GOTO "NOTENEMYARMY" }
+
+  ARMYOWNER=GETSTAT(UNITONTILE(CITYP,X,Y,1),SOwner,1);
+
+   IF (NOFUNITSONTILE(CITYP,X,Y)=0) THEN { GOTO "NOTENEMYARMY" }
+
+    IF (ARMYOWNER=W) THEN { GOTO "NOTENEMYARMY" }
+
+     IF ( ARMYOWNER < NeutralPlayerID )
+      %AND ( TREATY(W,ARMYOWNER) < 3 )
+     THEN { GOTO "NOTENEMYARMY" }
+
+      SIEGE=SIEGE+1;
+
+  !NOTENEMYARMY!
+
+ NEXT X;
+ NEXT Y;
+
+ SIEGEPERCENT=%I(100*SIEGE/8);
+
+ ADDRESLINE "Siege Penalty "+STRS(SIEGEPERCENT)+"%", 0-%I(SIEGEPERCENT*SUMRESLINES()/100);
+
+: Corruption for display :
+  DISPLAYCORRUPTION=%I(CORRUPTION*FACTOR);
+  DISPLAYCBANISH=%I(50*FACTOR);
+
+ IF Banished(W) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCBANISH)+"%", 0-(%I(((SUMRESLINES())*50*FACTOR)/100));
+ }
+ IF ((Banished(W))=0) %AND ((ISFORTRESS(CityID))=0) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCORRUPTION)+"%", 0-(%I(((SUMRESLINES())*CORRUPTION*FACTOR)/100));
+ }
+
+!CORRUPTIONEND!
+
+: Special spell/retort upkeep refund :
+IF (CITYENCHANT(CITYID,CEWallOfStone)>-1)
+ %AND ISBUILT(CITYID,BCityWalls)
+THEN {
+ ADDRESLINE "Upkeep Refund: City Walls",1;
+}
+IF (CITYENCHANT(CITYID,CEMarkOfConqueror)>-1)
+ %AND ISBUILT(CITYID,BWarlordHold)
+THEN {
+ ADDRESLINE "Upkeep Refund: Warlord's Hold",5;
+}
+
+: Upkeep refund at fortress for scoring option :
+IF (ISFORTRESS(CityID)=0) THEN { GOTO "NOTFORTRESS"; }
+IF (W=0) THEN {
+ IF SCORINGOPTION(SNeoVenezia)
+  %AND ISBUILT(CITYID,BBaray)
+ THEN {
+  ADDRESLINE "Upkeep Refund: Baray",10;
+ }
+ IF SCORINGOPTION(SDoomsdayBunker)
+  %AND ISBUILT(CITYID,BHiveNetwork)
+ THEN {
+  ADDRESLINE "Upkeep Refund: Undercity Hive Network",10;
+ }
+ IF SCORINGOPTION(SWorldTree)
+  %AND ISBUILT(CITYID,BTreeOfLife)
+ THEN {
+  ADDRESLINE "Upkeep Refund: Tree of Life",20;
+ }
+ IF SCORINGOPTION(SFireworkFactory)
+  %AND ISBUILT(CITYID,BMilitaryWorkshop)
+ THEN {
+  ADDRESLINE "Upkeep Refund: Military Workshop",20;
+ }
+ IF SCORINGOPTION(SGrandBazaar)
+  %AND ISBUILT(CITYID,BCaravanserai)
+ THEN {
+  ADDRESLINE "Upkeep Refund: Caravanserai",3;
+ }
+ IF SCORINGOPTION(SAbsoluteFortress)
+ THEN {
+  IF ISBUILT(CITYID,BCityWalls) THEN {
+   ADDRESLINE "Upkeep Refund: City Wall",1;
+  }
+  IF ISBUILT(CITYID,BMoats) THEN {
+   ADDRESLINE "Upkeep Refund: Fortification",5;
+  }
+  IF ISBUILT(CITYID,BHillfort) THEN {
+   ADDRESLINE "Upkeep Refund: Hillfort",3;
+  }
+ }
+} ELSE {
+ IF SCORINGOPTION(SDemonKingsCastle)
+ THEN {
+  IF ISBUILT(CITYID,BCityWalls) THEN {
+   ADDRESLINE "Upkeep Refund: City Wall",1;
+  }
+  IF ISBUILT(CITYID,BMoats) THEN {
+   ADDRESLINE "Upkeep Refund: Fortification",5;
+  }
+  IF ISBUILT(CITYID,BHillfort) THEN {
+   ADDRESLINE "Upkeep Refund: Hillfort",3;
+  }
+  IF ISBUILT(CITYID,BBaray) THEN {
+   ADDRESLINE "Upkeep Refund: Baray",10;
+  }
+  IF ISBUILT(CITYID,BHiveNetwork) THEN {
+   ADDRESLINE "Upkeep Refund: Undercity Hive Network",10;
+  }
+  IF ISBUILT(CITYID,BTreeOfLife) THEN {
+   ADDRESLINE "Upkeep Refund: Tree of Life",20;
+  }
+ }
+}
+
+!NOTFORTRESS!
+
+: difficulty bonus/penalty :
+IF (W>0) THEN { GOTO "END" }
+
+ IF (DIFFICULTY()=DiffMaster) THEN {
+  ADDRESLINE "Master Gold Penalty",0-(%I((SUMRESLINES())/10));
+ }
+ IF (DIFFICULTY()=DiffLunatic) THEN {
+  ADDRESLINE "Lunatic Gold Penalty",0-(%I((SUMRESLINES())/5));
+ }
+ IF (DIFFICULTY()=DiffPhantasm) THEN {
+  ADDRESLINE "Phantasm Gold Penalty",0-(%I((SUMRESLINES())/4));
+ }
+
+!END!

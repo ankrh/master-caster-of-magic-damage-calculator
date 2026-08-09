@@ -23,8 +23,8 @@ import fitz
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SOURCE = REPO_ROOT / "Reference docs" / "Warlord_Manual v1.5.12.6.pdf"
-DEFAULT_OUTPUT = REPO_ROOT / "Reference docs" / "Warlord manual v1.5.12.6.html"
+DEFAULT_SOURCE = REPO_ROOT / "Reference docs" / "Warlord_Manual v1.5.12.7.pdf"
+DEFAULT_OUTPUT = REPO_ROOT / "Reference docs" / "Warlord manual v1.5.12.7.html"
 
 
 def horizontal_strike_bands(page: fitz.Page) -> list[fitz.Rect]:
@@ -229,7 +229,7 @@ def build_html(source: Path) -> tuple[str, dict[str, int | str]]:
         total_chars += page_chars
         struck_chars += page_struck
 
-    title = "Caster of Magic Warlord Mod Manual — v1.5.12.6"
+    title = "Caster of Magic Warlord Mod Manual — v1.5.12.7"
     body = "\n".join(pages)
     output = f"""<!doctype html>
 <html lang="en">
@@ -311,7 +311,7 @@ def build_html(source: Path) -> tuple[str, dict[str, int | str]]:
 <header class="document-note">
   <p><strong>{html.escape(title)}</strong></p>
   <p>Searchable HTML derived from
-    <a href="Warlord_Manual%20v1.5.12.6.pdf">Warlord_Manual v1.5.12.6.pdf</a>.
+    <a href="Warlord_Manual%20v1.5.12.7.pdf">Warlord_Manual v1.5.12.7.pdf</a>.
     The PDF remains authoritative for visual verification.</p>
   <p>Page anchors correspond to PDF page numbers. Bold, italic, colour, and detected
     strikethrough formatting are preserved.</p>

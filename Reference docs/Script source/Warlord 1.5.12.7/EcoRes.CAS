@@ -1,0 +1,298 @@
+: INPUT - CityID , the ID of the city being processed.
+  Output - None. 
+  Use the AddResLine command to add produced research to the total and as an individual line in the detailed view on the UI.
+:
+
+IF CITYOWNER(CityID)=0 THEN {
+ MASTERVARSET CityInFocus = -1;
+}
+
+RACE=CITYRACE(CityID);
+W=CITYOWNER(CityID);
+FARMERS=GETCITYDATA(CITYID,CDFARMER);
+MAXPOP=GETCITYDATA(CITYID,CDMAXPOP);
+
+PRINT=0;
+IF (SPELLSTATE(W,STPrintingPress)=2) THEN { PRINT=2; }
+MERIT=0;
+IF (SPELLSTATE(W,STMeritBureaucracy)=2) THEN { MERIT=20; }
+RADIO=0;
+IF (SPELLSTATE(W,STRadio)=2) THEN { RADIO=10; }
+
+
+AS=1;
+FACTOR=1;
+IF RETORT(W,Procurator) THEN { 
+ AS=3;
+ FACTOR=FACTOR*3/4;
+}
+
+: Checking City Overland Coordinates and Planes, if one city is found to have unupdated records, recheck entire map if necessary :
+IF (GETCITYDATA(CITYID,CDCOLP)>0) THEN { GOTO "HAVECITYCOOD"; }
+
+: Recording city coordination value :
+: Forced updating :
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+
+: City on tile found, update necessary records :
+  IF (CU>0) THEN {
+   IF ((GETCITYDATA(CU,CDCOLP))<1) THEN {
+    SETCITYDATA(CU,CDCOLX,X);
+    SETCITYDATA(CU,CDCOLY,Y);
+    SETCITYDATA(CU,CDCOLP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVECITYCOOD!
+
+
+: Check Fortress and City Coordination :
+IF (W=NeutralPlayerID) THEN { GOTO "NOCORRUPTION"; }
+
+: Corruption :
+
+: Check Wizard if they has already registered his address :
+
+IF ((Banished(W))=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=1)
+ %OR (GETWIZARDDATA(W,WDFortressP)=2)
+THEN { GOTO "HAVEFORTRESSORBANISH"; }
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  CU=CITYONTILE(P,X,Y);
+  I=CITYOWNER(CU);
+  IF (CU>0) THEN {
+   IF ((ISFORTRESS(CU))>0) THEN {
+    SETWIZARDDATA(I,WDFortressX,X);
+    SETWIZARDDATA(I,WDFortressY,Y);
+    SETWIZARDDATA(I,WDFortressP,P);
+   }
+  }
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!HAVEFORTRESSORBANISH!
+
+ IF (GETWIZARDDATA(W,WDFortressP)<>(GETCITYDATA(CITYID,CDCOLP)) THEN { GOTO "DIFFERENTPLANE"; }
+
+  DISTANCEX = ABS( GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  IF ( DISTANCEX > ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) ) ) THEN {
+   DISTANCEX = ABS( PLANESIZEX(GETCITYDATA(CITYID,CDCOLP)) + GETWIZARDDATA(W,WDFortressX) - GETCITYDATA(CITYID,CDCOLX) );
+  }
+  DISTANCEY = ABS( GETWIZARDDATA(W,WDFortressY) - GETCITYDATA(CITYID,CDCOLY) );
+  DISTANCEZ= SQRT((DISTANCEX*DISTANCEX)+(DISTANCEY*DISTANCEY));
+  CORRUPTION = %I(ABS(DISTANCEZ))-MERIT;
+  IF CORRUPTION < 0 THEN { CORRUPTION=0; }
+  IF CORRUPTION > (30-RADIO) THEN { CORRUPTION=30-RADIO; }
+  GOTO "NOCORRUPTION";
+
+!DIFFERENTPLANE!
+
+ CORRUPTION = 30-RADIO;
+
+!NOCORRUPTION!
+
+
+: Global enchantment counting :
+NOFDARKEST=DARKESTHOURCOUNT;
+
+ IF HASGLOBAL(W,GEDarkestHour) THEN { NOFDARKEST=NOFDARKEST-1; }
+
+
+: Research bonus from population :
+
+IF RACE=RCHalfling THEN {
+ADDRESLINE "Halflings", POPUNITS(CityID);
+}
+
+IF HASGLOBAL(W,GEEnlightenment) THEN {
+ADDRESLINE "Enlightenment", POPUNITS(CityID);
+}
+
+
+: Research buildings, all under influence by Darkest Hours :
+
+RESB=0;
+
+IF ISBUILT(CityID,BLibrary) THEN {
+ ADDRESLINE "Library",4+PRINT;
+ RESB=RESB+4+PRINT;
+}
+
+IF ISBUILT(CityID,BAlchemistguild) THEN {
+ ADDRESLINE "Alchemist's Guild",2+PRINT;
+ RESB=RESB+2+PRINT;
+}
+
+IF ISBUILT(CityID,BUniversity) THEN {
+ ADDRESLINE "University",6+PRINT;
+ RESB=RESB+6+PRINT;
+}
+
+IF ISBUILT(CityID,BSagesGuild) THEN {
+ ADDRESLINE "Sage's Guild",12+PRINT;
+ RESB=RESB+12+PRINT;
+}
+
+IF ISBUILT(CityID,BWizardsGuild) THEN {
+ ADDRESLINE "Wizard's Guild",2+PRINT;
+ RESB=RESB+2+PRINT;
+}
+
+IF ISBUILT(CityID,BAgoge) THEN {
+ ADDRESLINE "Ludus Agoge",15+PRINT;
+ RESB=RESB+15+PRINT;
+}
+
+IF ISBUILT(CityID,BAcademy) THEN {
+ ADDRESLINE "Academy",MAXPOP+PRINT;
+ RESB=RESB+MAXPOP+PRINT;
+}
+
+: Research from Sage Master's Education Reform :
+IF RETORT(W,SageMaster) THEN {
+ IF (SPELLSTATE(W,SEducationReform)=2) THEN {
+  IF ISBUILT(CITYID,BWizardsGuild) THEN {
+   ADDRESLINE "Education Reform (War College)",2;
+   RESB=RESB+2;
+  }
+ }
+ IF (ISFORTRESS(CityID)>0) THEN {
+  IF (HASGLOBAL(W,GEArcaneConference)) THEN {
+
+   NUMLIBRARY=0;
+   NUMUNIVERSITY=0;
+   NUMSAGEGUILD=0;
+   ARCANECON=0;
+
+   FOR I=1 TO NOFWIZARDS()+1;
+
+    NUMLIBRARY=NUMLIBRARY+BUILDINGSOWNED(I,BLibrary,0);
+    NUMUNIVERSITY=NUMUNIVERSITY+BUILDINGSOWNED(I,BUniversity,0);
+    NUMSAGEGUILD=NUMSAGEGUILD+BUILDINGSOWNED(I,BSagesGuild,0);
+
+   NEXT I;
+
+   ARCANECON=(1*NUMLIBRARY)+(2*NUMUNIVERSITY)+(3*NUMSAGEGUILD);
+
+   ADDRESLINE "Arcane Conference",ARCANECON;
+   RESB=RESB+ARCANECON;
+  }
+ }
+}
+
+
+: Darkest Hour curse's penalty :
+IF (HASGLOBAL(W,GEDarkestHour)) THEN { GOTO "HASDH"; }
+
+ DH=0;
+
+ IF (NOFDARKEST>0) THEN {
+  J=%I((RESB+1)/2);
+  DH=DH+J;
+  RESB=RESB-J;
+ }
+
+ IF (DH>0) THEN {
+  ADDRESLINE "Darkest Hour",0-DH;
+ }
+
+!HASDH!
+
+: Research bonus from city enchantment :
+
+IF CITYENCHANT(CityID,CENatureEye)>-1 THEN {
+ ADDRESLINE "Nature's Witness",4;
+}
+
+IF CITYENCHANT(CityID,CEAltarOfPeace)<0 THEN { GOTO "NOALTAROFPEACE"; }
+ J=0;K=0;
+
+ FOR I=0 TO Nofwizards();
+  IF (I<>W) %AND (CONTACT(I,W)) %AND ( DEFEATED(I) = 0 ) THEN { K=K+1; J=J+RELATION(W,I); }
+ NEXT;
+
+ J=J*32; IF K>0 THEN { J=%I (J/K);}
+ J=(%I (J/100))+12;
+ IF J<12 THEN {J=0;}
+ IF J>32 THEN {J=32;}
+ ADDRESLINE "Altar of Duality", J;
+
+!NOALTAROFPEACE!
+
+: new reform, Scientific Process :
+IF (SPELLSTATE(W,STScientificProcess)=2) THEN {
+ ADDRESLINE "Scientific Process", %I((SUMRESLINES() * 25) /100);
+}
+
+: New spell, Inquisition :
+
+IF CITYENCHANT(CityID,CEInquisition)<0 THEN { GOTO "NOINQUISITION"; }
+ : Calculate religious power :
+ RELPOW=GETCITYDATA(CITYID,CDRELPOW);
+
+ : Effect of Inquisition, -3 research for each religious power more than 6 :
+ BOOKBURN=3*(RELPOW-6);
+ IF BOOKBURN<0 THEN { BOOKBURN=0; }
+ ADDRESLINE "Inquisition", 0-BOOKBURN
+
+!NOINQUISITION!
+
+
+: Research bonus from Administrative Skill :
+
+IF BOOKS(W,Sorcery)>0 THEN {
+ PP=((BOOKS(W,Sorcery)-1)*AS)+(4*AS);
+ ADDRESLINE "Administrative Skill", %I((SUMRESLINES() * PP) /100)
+}
+
+
+IF ((SUMRESLINES())<1) %OR (W=NeutralPlayerID) THEN { GOTO "END"; }
+
+: Corruption :
+
+IF (SCORINGOPTION(SPleasantville)>0) THEN { GOTO "CORRUPTIONEND"; }
+
+: Corruption for display :
+  DISPLAYCORRUPTION=%I(CORRUPTION*FACTOR);
+  DISPLAYCBANISH=%I(50*FACTOR);
+
+ IF Banished(W) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCBANISH)+"%", 0-(%I(((SUMRESLINES())*5*FACTOR)/10));
+ }
+ IF ((Banished(W))=0) %AND ((ISFORTRESS(CityID))=0) THEN {
+  ADDRESLINE "Corruption "+STRS(DISPLAYCORRUPTION)+"%", 0-(%I(((SUMRESLINES())*CORRUPTION*FACTOR)/100));
+ }
+
+!CORRUPTIONEND!
+
+
+: difficulty bonus/penalty :
+IF (W>0) THEN { GOTO "END" }
+
+ IF (DIFFICULTY()=DiffMaster) THEN {
+  ADDRESLINE "Master Research Penalty",0-(%I((SUMRESLINES())/10));
+ }
+ IF (DIFFICULTY()=DiffLunatic) THEN {
+  ADDRESLINE "Lunatic Research Penalty",0-(%I((SUMRESLINES())/5));
+ }
+ IF (DIFFICULTY()=DiffPhantasm) THEN {
+  ADDRESLINE "Phantasm Research Penalty",0-(%I((SUMRESLINES())/4));
+ }
+
+!END!
+
+SETCITYDATA(CityID,CDRES,SUMRESLINES())

@@ -7,7 +7,7 @@ load time rather than compiling the numbers in.
 
 This is the runtime-values evidence home for the modern engine, alongside the compiled
 reconstruction indexed by `Caster binary/CoM2 binary analysis.md` and the executing Warlord
-scripts in `Script source/Warlord 1.5.12.6.2/`. The modern-engine source-of-truth routing table
+scripts in `Script source/Warlord 1.5.12.7/`. The modern-engine source-of-truth routing table
 lives in that binary-analysis index. Tracking for everything here lives in
 `Calculator/BACKLOG.md`.
 
@@ -18,13 +18,13 @@ script *adding* an effect the table does not describe.
 
 ## The tables
 
-Under `Reference docs/Script source/CoM2 1.05.11 base/` and `.../Warlord 1.5.12.6.2/`.
+Under `Reference docs/Script source/CoM2 1.05.11 base/` and `.../Warlord 1.5.12.7/`.
 
 | File | Owns |
 |---|---|
 | `MODDING.INI` | tunable combat constants, spell magnitudes, level names, script bindings |
 | `Levelbonus.INI` | the level ladders — `[Hero]` (9 steps) and `[Normal]` (6) |
-| `SPELLS.INI` | per-spell attack strength, `HitChance`, and the `Area` flag |
+| `SPELLS.INI` | per-spell identity and mechanics, including `Realm`, `SummonedUnit`, attack strength, `HitChance`, and the `Area` flag |
 | `DESC.INI` | in-game spell descriptions — prose, but it ships with the data and tracks it |
 
 `UNITS.INI` is a data table too, but it is the roster's source and lives with the roster; see the
@@ -39,6 +39,28 @@ Two conventions worth knowing before reading any value:
   a script uses it, but compiled consumers choose their own arithmetic. `MODDING.INI`'s worked
   `SupernaturalRatio` example (`7 * 34% = 2`) is compatible with both truncation and rounding;
   R5.2c later found that this particular compiled consumer calls Delphi `Round`.
+
+---
+
+## Combat-summon spell bindings
+
+The complete `@Spells@CombatSummonUnit` reconstruction shows that combat-summon identity comes
+from the loaded spell record: `SpellIDToSummon(sp)` supplies its `SummonedUnit`, and the same
+record's `Realm` supplies the new base race through `RealmtoRace`. The executable has no
+template-37 or template-113 identity gate. See
+`Caster binary/Spells.CombatSummonUnit.pas` and `Caster binary/R9-G1a-R2.evidence.md`.
+
+The shipped `SPELLS.INI` rows therefore distinguish the two modern versions:
+
+| Slot / row | CoM2 1.05.11 | Warlord 1.5.12.7 |
+|---|---|---|
+| 12 | Construct Catapult; `Realm=1`; `SummonedUnit=37` (`SPELLS.INI:614-628`) | Water Elemental; `Realm=1`; `SummonedUnit=158` (`SPELLS.INI:901-915`) |
+| 153 | Call to Arms; `Realm=4`; `SummonedUnit=113` (`SPELLS.INI:2689-2702`) | Spirit of Chivalry; `Realm=4`; `SummonedUnit=211` (`SPELLS.INI:3024-3035`) |
+| 260 | *(no corresponding base row)* | Construct Catapult; `Realm=6`; `SummonedUnit=37`; `Custom=True`; `Disabled=True` (`SPELLS.INI:4666-4683`) |
+
+Thus Warlord's enabled spell substitutions, not an executable version gate, prevent the
+base-CoM2 Construct Catapult and Call to Arms identity outcomes from applying there. The required
+calculator version gates remain tracked as F54 and F55.
 
 ---
 

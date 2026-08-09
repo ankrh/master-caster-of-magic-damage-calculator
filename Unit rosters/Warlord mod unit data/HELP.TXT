@@ -1174,8 +1174,8 @@ This option is mutually exclusive with the "World Equalizer", "Race to the Unkno
 #OPT TREASURE IMPACT
 TREASURE IMPACT
 Score Modifier: 0.75x
-High-quality treasure available in lairs, nodes, and towers is drastically increased.
-AI players will prioritize hunting for treasure more and will customize their wizards accordingly.
+High-quality treasure available in lairs, nodes, and towers is drastically increased compare to their monster budget.
+Lairs, nodes, and towers have became slightly easier and AI players will prioritize hunting for treasure more and will customize their wizards accordingly.
 #OPT CORRUPT LEADERS
 CORRUPT LEADERS
 Score Modifier: 0.94x
@@ -1767,13 +1767,13 @@ Maintenance: 20 gold/turn
 Xuanyuan race's unique building.
 The Military Workshop enables newly trained and garrison units to utilize blackpowder technology. The upgrade would occur upon unit creation or garrison unit of the city with Military Workshop at the end of turn. Only units with Physical Range Attack, or Thrown, or Fire Breath are viable for the upgrade. 
 The Military Workshop must be built near a river.
-#B IDOL OF THE HEAVENLY BULL
+#B IDOL OF DIVINE BULL
 *Building55_0.png
- IDOL OF THE HEAVENLY BULL
+ IDOL OF DIVINE BULL
 Maintenance: 20 gold/turn
 Beastman race's unique building.
-The Idol of the Heavenly Bull is a revered cult statue in Beastman culture. Each worker unit generates 1 Food and can receive bonuses from the Animist's Guild. Additionally, all new units trained in the city gain a 25% increase in Health Points, with a minimum of 1 additional Health Point.
-The Idol of the Heavenly Bull must be built in the desert.
+The Idol of Divine Bull is a revered cult statue in Beastman culture. Each worker unit generates 1 Food and can receive bonuses from the Animist's Guild. Additionally, all new units trained in the city gain a 25% increase in Health Points, with a minimum of 1 additional Health Point.
+The Idol of Divine Bull must be built in the desert.
 #B TREE OF MAGIC
 *Building56_0.png
  TREE OF MAGIC
@@ -2073,7 +2073,7 @@ Nature Rare - Instant Overland
 Target: map square
 Casting Cost: 120 mana
 Causes the skies above a target map square to rain down a torrent of icy hail. All Figures in all units occupying that area are struck with a strength 12 Armor Piercing Magical Cold Attack.
-Due to unnatural climate manipulation, the land is adversely affected by the spell. If the terrain is grassland, desert, or forest, it transforms into a swamp with a 1% chance for Nightshade to grow there.
+Due to unnatural climate manipulation, the land is adversely affected by the spell. If the terrain is grassland, desert, swamp, or forest, it transforms into a tundra.
 #Spell EARTHQUAKE
 *Destroyed_2_2.png
  EARTHQUAKE
@@ -2820,11 +2820,11 @@ Shoots a bolt of intense electricity at the target unit, striking as a strength 
 #Spell FIRE GIANT
 *Units\u157x3_1.png
  FIRE GIANT
-Chaos Uncommon - Overland Summoning
+Chaos Rare - Overland Summoning
 Target: Summoning Circle
-Casting Cost: 110 mana
-Upkeep: 3 mana/turn
-Summons a Fire Giant and binds it to the wizard's will. Fire Giants have Fire Immunity and can destroy walls. They can attack with a Magical Ranged attack several times before engaging in Melee.
+Casting Cost: 220 mana
+Upkeep: 6 mana/turn
+Summons a Fire Giant and binds it to the wizard's will. Fire Giants have Fire and Cold Immunity as well as fiery aura and can destroy walls. They can attack with a Magical Ranged attack several times before engaging in Melee.
 #Spell CHAOS CHANNELS
 *ux196.png
  CHAOS CHANNELS
@@ -2956,11 +2956,11 @@ Summons a fire bolt-throwing, flying Efreet. The Efreet possesses Fire Immunity 
 #Spell DOOM BAT
 *Units\u161x3_1.png
  DOOM BAT
-Chaos Rare - Overland Summoning
+Chaos Uncommon - Overland Summoning
 Target: Summoning Circle
-Casting Cost: 300 mana
-Upkeep: 7 mana/turn
-Summons a Doom Bat with a fiery aura that strikes all units it engages with a strength 10 Fireball. Doom Bats move 6 tiles per turn and attack with unavoidable ultrasonic damage.
+Casting Cost: 150 mana
+Upkeep: 3 mana/turn
+Summons a Doom Bat with a fiery aura that strikes all units it engages with a strength 10 Fireball. Doom Bats move 6 tiles per turn and attack with unavoidable ultrasonic attack before most of defenders could retaliate.
 #Spell FLAME STRIKE
 *FlameStrike_6.png
  FLAME STRIKE
@@ -3765,6 +3765,7 @@ Casting Cost: 200 mana
 Upkeep: 3 mana/turn
 Reduces the maximum population of the cursed city by 6 and eliminates all percentage-based production bonuses. Food production in the city is reduced by 25%. If the city exceeds the Maximum Population, racial growth rates are negated and it will shrink by 120 people per turn. If cast on a neutral city, the defending units will desert.
 Enemy wizards can only cast this spell on the city within their explored area.
+Drought could occur naturally in Dry climate at rate 1% per desert tile near the city. The city has a 9% chance to recover from natural drought each turn.
 #Spell DARK RITUAL
 *DarkRitual_2.png
  DARK RITUAL
@@ -4534,7 +4535,7 @@ Target: friendly unit
 Casting Cost: 150 mana
 Upkeep: 0 mana/turn
 Conjurer's signature spell.
-Tune heart, mind, and spirit of the unit to emphatic ability of the Conjurer and enhance their loyalty. The unit gains +2 Resistance permanently. If the unit is Fantastic creature, it gains sentience, able to earn experience. If the unit is regular unit, it could gains bonus as if they are fantastic creature. The unit enchanted with Spirit Link could not be targeted by spell and ability that affected only on fantastic creature.
+Tune heart, mind, and spirit of the unit to emphatic ability of the Conjurer and enhance their loyalty. The unit gains +2 Resistance permanently. If the unit is Fantastic creature, it gains Sapiens and sentience, able to earn experience. If the unit is regular unit, it could gains bonus as if they are fantastic creature. The unit enchanted with Spirit Link could not be targeted by spell and ability that affected only on fantastic creature.
 #Spell RALLY
 *ComEnch26.png
  RALLY
@@ -5940,10 +5941,10 @@ This unit's blackpowder-enhanced armaments grant the following:
 - Units with both Thrown and Physical Ranged attacks gain both bonuses.
 - Fire Breath attack strength increases by 4.
 - Light physical projectiles are upgraded to rockets (heavy physical projectiles).
-#UA BLESS OF THE HEAVENLY BULL
+#UA BLESS OF DIVINE BULL
 *ux253.png
- BLESS OF THE HEAVENLY BULL
-This Beastman unit is blessed by the Idol of the Heavenly Bull, gaining an additional +25% Health Points or at least +1 Health Point upon recruitment.
+ BLESS OF DIVINE BULL
+This Beastman unit is blessed by the Idol of Divine Bull, gaining an additional +25% Health Points or at least +1 Health Point upon recruitment.
 #UA ABSOLUTION OF REPENTANCE
 *ux254.png
  ABSOLUTION OF REPENTANCE
@@ -8672,9 +8673,9 @@ The Conjurer could study how to summon Gargoyles with Conjuring Pact if has at l
 #UA Fire Giant
 *Units\u157x3_1.png
  FIRE GIANT
-The Fire Giant is an uncommon Chaos realm Fantastic creature. The Fire Giant is a massive humanoid creature clad in ember-colored plate armor and a helmet that hides its face. Known for its fierce bravery and fiery temper, the Fire Giant can shatter city walls in fits of rage with its immense strength and unleash powerful fire bolts as ranged magical attacks.
+The Fire Giant is an rare Chaos realm Fantastic creature. The Fire Giant is a massive humanoid creature clad in ember-colored plate armor and a helmet that hides its face. Known for its fierce bravery and fiery temper, the Fire Giant can shatter city walls in fits of rage with its immense strength and unleash powerful fire bolts as ranged magical attacks.
  
-The Conjurer could study how to summon Fire Giant with Conjuring Pact if has at least 4 Chaos Books.
+The Conjurer could study how to summon Fire Giant with Conjuring Pact if has at least 6 Chaos Books.
 #UA Chaos Spawn
 *Units\u159x3_1.png
  CHAOS SPAWN
@@ -8690,9 +8691,9 @@ The Conjurer could study how to summon Chimeras with Conjuring Pact if has at le
 #UA Doom Bat
 *Units\u161x3_1.png
  DOOM BAT
-The Doom Bat is a rare Chaos realm Fantastic creature. Doom Bats are massive, unnatural black bats from the realm of Chaos. They use powerful sonic attacks to hunt their victims, which cannot be blocked or defended against. Due to their high metabolism, Doom Bats emit intense heat waves from their skin, burning anything nearby. Their speed is extraordinary, enabling them to travel like shooting stars. Once they detect their prey, evading them becomes nearly impossible.
+The Doom Bat is a uncommon Chaos realm Fantastic creature. Doom Bats are massive, unnatural black bats from the realm of Chaos. They use powerful sonic attacks to hunt their victims, which cannot be blocked or defended against. Due to their high metabolism, Doom Bats emit intense heat waves from their skin, burning anything nearby. Their speed is extraordinary, enabling them to travel like shooting stars. Once they detect their prey, evading them becomes nearly impossible.
  
-The Conjurer could study how to summon Doom Bat with Conjuring Pact if has at least 6 Chaos Books.
+The Conjurer could study how to summon Doom Bat with Conjuring Pact if has at least 4 Chaos Books.
 #UA Efreet
 *Units\u162x3_1.png
  EFREET

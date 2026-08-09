@@ -1,8 +1,29 @@
 # CoM2 / Warlord binary analysis — direct spells
 
-Direct spell damage, Wall of Fire, post-processing, Amplified Damage, and spell-specific routing.
+Combat summoning, direct spell damage, Wall of Fire, post-processing, Amplified Damage, and
+spell-specific routing.
 
 Addresses refer to the pinned `Caster.exe` build. See the [analysis index](./CoM2%20binary%20analysis.md) for binary identity, method, and the subsystem map.
+
+## Combat summoning and script handoff (R9-G1a-R2)
+
+`@Spells@CombatSummonUnit` (`$005CBEE0..$005CC3E3`) is reconstructed completely in
+[`Spells.CombatSummonUnit.pas`](./Spells.CombatSummonUnit.pas), with the merged ledger,
+inventories and derivation provenance in
+[`R9-G1a-R2.evidence.md`](./R9-G1a-R2.evidence.md).
+
+The routine obtains the summoned template through `SpellIDToSummon(sp)`, creates it, sets the
+base record's Combat Summoned and Fantastic flags, and assigns race from the spell record's Realm.
+There is no hard-coded Construct Catapult or Call to Arms identity gate: CoM2's template-37 and
+template-113 outcomes are supplied by those spells' `SPELLS.INI` rows, while Warlord's enabled
+slots summon templates 158 and 211 instead. After an initial `RecalculateUnits`, the routine
+copies calculated movement, ammunition and combat movement into selected base/current fields and
+publishes the new unit through the combat-summoning globals.
+
+Its only caster-specific branch tests nullary `UnitCaster`: a base unit type `$00AD` (Demon Lord)
+rewrites the summon as `Lesser Demon`, zeroes current/base movement, enables base Life Steal, and
+sets its value to `-2`. Both gate exits converge on `CallCombatSpellEffectScript(sp)`, so the
+Warlord hook runs after all compiled creation writes and before the final `RecalculateUnits`.
 
 ## Direct spell damage and Wall of Fire (R5.2g)
 

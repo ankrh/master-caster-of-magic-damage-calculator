@@ -1,0 +1,71 @@
+: INPUT - CityID - the city being calculated
+		  TERRAINMP - base Maximal Population from terrain in 1/4 units of maxpop.
+  OUTPUT - MP - the calcualted Maximal Population.
+:
+
+W=CITYOWNER(CityID);
+MP=TERRAINMP;
+
+AS=1;
+IF RETORT(W,Procurator) THEN { AS=3; }
+
+IF ISBUILT(CityID,BHiveNetwork) THEN {
+ MP=MP+%I(MP*0.3);
+}
+
+IF ((CITYRACE(CityID))=RCLizard) THEN {
+ MP=MP+((TERRAININRANGE(CityID,LTSwamp))/2);
+}
+
+IF ((CITYRACE(CityID))=RCNomad) THEN {
+ MP=MP+((TERRAININRANGE(CityID,LTDesert)));
+}
+
+IF ((CITYRACE(CityID))=RCTroll) THEN {
+ MP=MP+((TERRAININRANGE(CityID,LTTundra))/2);
+}
+
+IF ((CITYRACE(CityID))=RCRakhshasa) THEN {
+ MP=MP+((TERRAININRANGE(CityID,LTForest))/2);
+}
+
+IF ((CITYRACE(CityID))=RCHawkmen) THEN {
+ MP=MP+((TERRAININRANGE(CityID,LTMountain))/2);
+}
+
+IF ( HASGLOBAL(W,GEIceAge) > 0 ) THEN {
+ MP=MP+(TERRAININRANGE(CityID,LTVolcano))+(TERRAININRANGE(CityID,LTChaosNode));
+}
+
+IF ((CITYRACE(CityID))<>RCXuanyuan) THEN { GOTO "NOTXUANYUAN"; }
+
+ XYBONUS=%I(MP/4);
+ IF (XYBONUS<4) THEN { XYBONUS=4; }
+ MP=MP+XYBONUS;
+
+!NOTXUANYUAN!
+
+IF CITYENCHANT(CityID,CEAbundance)>-1 THEN {
+ MP=MP+28
+ IF MP<72 THEN { MP=72; }
+}
+
+: Max Population from Administrative Skill :
+
+IF BOOKS(W,Nature)>0 THEN {
+ MP=MP+(%I((BOOKS(W,Nature)/2)*AS));
+}
+
+IF RETORT(W,Guardian) THEN {
+ IF CITYRACE(CityID)=HOMERACE(W) THEN { MP=MP+24; }
+}
+
+: Convert from 1 MP = 1/4 POP to 1 MP = 1 POP :
+MP=%I(MP/4);
+
+: From this point on, 1 MP = 1 POP :
+
+IF ISBUILT(CityID,BGranary) THEN { MP=MP+5; }
+IF (CITYENCHANT(CityID,CENecropolis)<0) %AND (CITYENCHANT(CityID,CEDrought)>-1) THEN { MP=MP-6; }
+
+SETCITYDATA(CITYID,CDMAXPOP,MP);

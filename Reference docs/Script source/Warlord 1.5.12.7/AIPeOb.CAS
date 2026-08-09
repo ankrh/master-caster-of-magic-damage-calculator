@@ -1,0 +1,200 @@
+: 
+This script selects AI personality and objective
+INPUT - W contains the wizard to process.
+OUTPUT - None, Personality and Objective should be set via the script directly.
+:
+
+DIMNUM PEWE[6];
+DIMNUM OBWE[6];
+
+: Personality per spellbook :
+
+      Pewe[Maniacal]=
+      (0*Books(W,Nature))+
+      (2*Books(W,Death))+
+      (1*Books(W,Chaos))+
+      (2*Books(W,Sorcery))+
+      (1*Books(W,Life));
+
+      Pewe[Ruthless]=
+      (1*Books(W,Nature))+
+      (2*Books(W,Death))+
+      (2*Books(W,Chaos))+
+      (1*Books(W,Sorcery))+
+      (0*Books(W,Life));
+
+      Pewe[Aggressive]=
+      (1*Books(W,Nature))+
+      (1*Books(W,Death))+
+      (1*Books(W,Chaos))+
+      (1*Books(W,Sorcery))+
+      (1*Books(W,Life));
+
+      Pewe[Chaotic]=
+      (2*Books(W,Nature))+
+      (1*Books(W,Death))+
+      (2*Books(W,Chaos))+
+      (0*Books(W,Sorcery))+
+      (1*Books(W,Life));
+
+      Pewe[Lawful]=
+      (1*Books(W,Nature))+
+      (1*Books(W,Death))+
+      (0*Books(W,Chaos))+
+      (2*Books(W,Sorcery))+
+      (2*Books(W,Life));
+
+      Pewe[Peaceful]=
+      (2*Books(W,Nature))+
+      (0*Books(W,Death))+
+      (1*Books(W,Chaos))+
+      (1*Books(W,Sorcery))+
+      (2*Books(W,Life));
+
+: Objective per spellbook :
+
+      Obwe[Pragmatist]=
+      (1*Books(W,Nature))+
+      (1*Books(W,Sorcery))+
+      (1*Books(W,Chaos))+
+      (1*Books(W,Life))+
+      (1*Books(W,Death));
+
+      Obwe[Militarist]=
+      (1*Books(W,Nature))+
+      (0*Books(W,Sorcery))+
+      (2*Books(W,Chaos))+
+      (2*Books(W,Life))+
+      (1*Books(W,Death));
+
+      Obwe[Theurgist]=
+      (0*Books(W,Nature))+
+      (2*Books(W,Sorcery))+
+      (2*Books(W,Chaos))+
+      (1*Books(W,Life))+
+      (1*Books(W,Death));
+
+      Obwe[Perfectionist]=
+      (2*Books(W,Nature))+
+      (2*Books(W,Sorcery))+
+      (0*Books(W,Chaos))+
+      (1*Books(W,Life))+
+      (1*Books(W,Death));
+
+      Obwe[Expansionist]=
+      (2*Books(W,Nature))+
+      (0*Books(W,Sorcery))+
+      (1*Books(W,Chaos))+
+      (1*Books(W,Life))+
+      (2*Books(W,Death));
+
+      Obwe[Narcissist]=
+      (0*Books(W,Nature))+
+      (1*Books(W,Sorcery))+
+      (1*Books(W,Chaos))+
+      (2*Books(W,Life))+
+      (2*Books(W,Death));
+
+: Effect of retorts :
+
+IF Retort(W,Warlord) THEN {
+ obwe[Militarist]=obwe[Militarist]+5;
+ obwe[Expansionist]=obwe[Expansionist]+5;
+}
+IF Retort(W,Channeler) THEN {
+ pewe[Ruthless]=pewe[Ruthless]+5;
+ obwe[Narcissist]=obwe[Narcissist]+5;
+}
+IF Retort(W,SageMaster) THEN {
+ obwe[Theurgist]=obwe[Theurgist]+5;
+ pewe[Peaceful]=pewe[Peaceful]+5;
+ IF (obwe[Narcissist]<5) THEN {obwe[Narcissist]=0; }
+  ELSE { obwe[Narcissist]=obwe[Narcissist]-5; }
+}
+IF Retort(W,Archmage) THEN {
+ obwe[Theurgist]=obwe[Theurgist]+5;
+ obwe[Narcissist]=obwe[Narcissist]+5;
+}
+IF Retort(W,Runemaster) THEN {
+ obwe[Theurgist]=obwe[Theurgist]+5;
+}
+IF Retort(W,Benefactor) THEN {
+ pewe[Peaceful]=pewe[Peaceful]+5;
+ obwe[Militarist]=obwe[Militarist]+5;
+}
+IF Retort(W,Charismatic) THEN {
+ pewe[Aggressive]=pewe[Aggressive]+5;
+ obwe[Narcissist]=obwe[Narcissist]+5;
+}
+IF Retort(W,Astrologer) THEN {
+ pewe[Chaotic]=pewe[Chaotic]+5;
+ obwe[Theurgist]=obwe[Theurgist]+5;
+}
+IF Retort(W,Artificer) THEN {
+ obwe[Perfectionist]=obwe[Perfectionist]+5;
+}
+IF Retort(W,Guardian) THEN {
+ pewe[Peaceful]=pewe[Peaceful]+5;
+ obwe[Perfectionist]=obwe[Perfectionist]+5;
+}
+IF Retort(W,Procurator) THEN {
+ pewe[Lawful]=pewe[Lawful]+5;
+ obwe[Pragmatist]=obwe[Pragmatist]+5;
+ obwe[Perfectionist]=obwe[Perfectionist]+5;
+}
+IF Retort(W,Tactician) THEN {
+ obwe[Pragmatist]=obwe[Pragmatist]+5;
+ obwe[Expansionist]=obwe[Expansionist]+5;
+}
+IF RETORT(W,CultLeader) THEN {
+ obwe[Theurgist]=obwe[Theurgist]+5;
+ obwe[Narcissist]=obwe[Narcissist]+5;
+ pewe[Lawful]=pewe[Lawful]+10;
+}
+IF retort(W,Conjurer) THEN {
+ obwe[Pragmatist]=obwe[Pragmatist]+5;
+ pewe[Aggressive]=pewe[Aggressive]+5;
+ obwe[Narcissist]=obwe[Narcissist]+5;
+}
+IF retort(W,Enchanter) THEN {
+ obwe[Militarist]=obwe[Militarist]+5;
+ obwe[Perfectionist]=obwe[Perfectionist]+5;
+}
+IF retort(W,Alchemist) THEN {
+ obwe[Theurgist]=obwe[Theurgist]+5;
+ obwe[Perfectionist]=obwe[Perfectionist]+5;
+}
+IF retort(W,Astrologer) THEN {
+ pewe[Lawful]=pewe[Lawful]+5;
+ IF (obwe[Narcissist]<5) THEN {obwe[Narcissist]=0; }
+  ELSE { obwe[Narcissist]=obwe[Narcissist]-5; }
+}
+IF retort(W,Specialist) THEN {
+ obwe[narcissist]=obwe[Narcissist]+5;
+}
+
+IF SCORINGOPTION(SOrderPlease) THEN {
+ Pewe[Chaotic]=0;
+}
+IF SCORINGOPTION(SParanoia) THEN {
+ Pewe[Peaceful]=0;
+}
+IF SCORINGOPTION(SHostility) THEN {
+ Pewe[Peaceful]=0;
+ Pewe[Lawful]=0;
+}
+
+IF difficulty()<=DiffEasy THEN {
+ Pewe[Chaotic]=0;
+ PEWE[Ruthless]=0;
+ Pewe[Maniacal]=0;
+ Obwe[Militarist]=0;
+}
+IF difficulty()<=DiffNormal THEN {
+ Pewe[Maniacal]=0;
+ Obwe[Militarist]=%I(Obwe[Militarist]/2);
+}
+
+SetPersonality W, SelectBasedOn(pewe,6); 
+SetObjective W, SelectBasedOn(obwe,6); 
+

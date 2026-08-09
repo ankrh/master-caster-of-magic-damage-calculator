@@ -129,7 +129,7 @@ test('gaze inputs follow the selected engine record shape', async ({ page }) => 
 
 test('reform controls stay editable and affect predefined Warlord units', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.6.2');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
 
   await page.evaluate(() => {
     const catapult = (unitDatabases[V_WARLORD] || []).find(u => u.name === 'Catapult');

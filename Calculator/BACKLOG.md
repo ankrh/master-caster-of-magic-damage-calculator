@@ -4,7 +4,8 @@ Upcoming calculator work only. Every listed item is actionable unless marked **D
 **Blocked**, or as a tracking umbrella. Keep every entry concise: task, cost, dependencies, and
 an evidence pointer.
 Completed work and accepted decisions move to [HISTORY.md](./HISTORY.md); engine results stay in
-their owning evidence documents. IDs are never reused.
+their owning evidence documents. **`done` is not a valid backlog status:** remove a completed
+item from this file and record its result in `HISTORY.md` in the same change. IDs are never reused.
 
 Behavior is specified in [SPEC.md](./SPEC.md); working conventions are in
 [CLAUDE.md](./CLAUDE.md).
@@ -26,15 +27,16 @@ Costs are `free`, `small`, `medium`, or `large`.
 ## Provenance evidence gaps
 
 R9-G1 is the non-executable tracking umbrella for R9-G1a–R9-G1k. Its live total remains the
-audit reconciliation point; each child owns the fixed formula domain stated below. Every child
-must be undertaken in **dual-agent implementation mode** under
+audit reconciliation point; each implementation child owns the fixed formula domain stated below.
+R9-G1a–R9-G1k must be undertaken in **dual-agent implementation mode** under
 [`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md): two cold implementations,
-reciprocal review, and final integration.
+reciprocal review, and final integration. Dedicated reconstruction dependencies instead use the
+mode stated on their own rows and the protocol's derivation rules.
 
 | ID | Evidence gap / fixed formula domain | Cost | Mode | Strongest pointer / dependency |
 |---|---|---|---|---|
 | R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `165` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | Tracking only | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
-| R9-G1a | Close the remaining `8` identity and creation-grant gaps: six `identity:*` formulas and the two compressed elemental-protection `lavaSmelter:*` formulas still marked `UNVERIFIED` beside the helpers. | medium | **Dual-agent implementation** | `stats.js`; CoM1 summon identities need `0x75D51-0x75D71`, modern spell-result identities need `@Spells@CombatSummonUnit` `0x5CBEE0-0x5CC066`, Zombies needs the unbounded type-`0xAE` ability row, legacy conversions depend on R9-G1g, and elemental grants depend on M6 |
+| R9-G1a | Close the remaining `8` identity and creation-grant gaps: six `identity:*` formulas and the two compressed elemental-protection `lavaSmelter:*` formulas still marked `UNVERIFIED` beside the helpers. | medium | **Dual-agent implementation** | R9-G1a-R1–R3 complete in `HISTORY.md`; legacy conversions depend on R9-G1g; elemental grants depend on M6 |
 | R9-G1b | Close the `6` base/permanent-transform gaps: `destiny`, `chaosChannels:fireBreath`, `lightningBlade:breath`, `focusMagic:conversion`, `vampirism:transfer`, and `shadowStrike:thrown`. | medium | **Dual-agent implementation** | `stats.js`, base/permanent transform sequence; adjacent strongest pointers |
 | R9-G1c | Close the `29` late unit-transform gaps from `stat:base` through `giantStrength:thrown`, inclusive, in the ordered stat-step sequence. | large | **Dual-agent implementation** | `stats.js`, late stat transforms; adjacent strongest pointers |
 | R9-G1d | Close the `14` non-chance tail gaps: the twelve formulas from `nodeAura` through `clamp`, inclusive, plus `altarOfTheSun:figures` and `alumniOfAcademy:figures`. | medium | **Dual-agent implementation** | `stats.js`, late/global and figure transforms; adjacent strongest pointers |
@@ -91,8 +93,8 @@ reciprocal review, and final integration.
 | F51 | Add a CoM 1 Realm Ward city-enchantment input and transform: a matching Nature/Sorcery/Chaos/Life/Death Fantastic unit loses 20% To Hit, 3 Defense and 3 Resistance. | small | R6.1d evidence, *CoM 1 Realm Wards use −2/−3/−3*; absent from `data.js`/stat steps; Q19 |
 | F52 | Split CoM 1 Supreme Light eligibility from the modern helper and reproduce its five binary paths (live magical ranged, Life race, mana, persistent Focus Magic, or base magical ranged), unconditional +2 melee, positive-ranged gate, and signed live-Resistance division. | medium | R6.1d evidence, *CoM 1 Supreme Light has five eligibility paths*; `combat.js:78-82`, `stats.js:1018-1023,1454-1462` |
 | F53 | Use signed truncate-toward-zero division for CoM 1 Warped Defense instead of `Math.floor`; negative pre-Warp Defense can receive later Supreme Light/Tactician writes before the terminal clamp. | small | R6.1d evidence, *Warp Creature and Shatter expose both arithmetic and ordering differences*; `stats.js:1428-1431` |
-| F54 | Version-gate Warlord's Construct Catapult identity conversion. The calculator currently applies the base-CoM2 Nature rewrite to every modern combat-summoned template 37, but Warlord replaces the enabled spell slot with Water Elemental and leaves its Realm-6 template-37 custom entry disabled. | small | base CoM2 `SPELLS.INI:614-628`; Warlord `SPELLS.INI:901-915,4666-4683`; `stats.js`, `identity:constructCatapult`; exact Caster gate/write still needs the R9-G1a reconstruction handoff |
-| F55 | Version-gate Warlord's Call to Arms Paladins identity conversion. The calculator accepts the base spell-result flag plus template 113 in every modern version, while Warlord replaces that spell slot with Spirit of Chivalry summoning template 211. | small | base CoM2 `SPELLS.INI:2689-2702`; Warlord `SPELLS.INI:3024-3035`; `stats.js`, `identity:callToArmsPaladins`; exact Caster gate/write still needs the R9-G1a reconstruction handoff |
+| F54 | Version-gate Warlord's Construct Catapult identity conversion. The calculator currently applies the base-CoM2 Nature rewrite to every modern combat-summoned template 37, but Warlord replaces the enabled spell slot with Water Elemental and leaves its Realm-6 template-37 custom entry disabled. | small | base CoM2 `SPELLS.INI:614-628`; Warlord `SPELLS.INI:901-915,4666-4683`; `stats.js`, `identity:constructCatapult`; R9-G1a-R2 |
+| F55 | Version-gate Warlord's Call to Arms Paladins identity conversion. The calculator accepts the base spell-result flag plus template 113 in every modern version, while Warlord replaces that spell slot with Spirit of Chivalry summoning template 211. | small | base CoM2 `SPELLS.INI:2689-2702`; Warlord `SPELLS.INI:3024-3035`; `stats.js`, `identity:callToArmsPaladins`; R9-G1a-R2 |
 
 ## Engine verification
 
@@ -138,6 +140,7 @@ Accepted limitations remain in `SPEC.md`; only planned changes appear here.
 | Q21 | Resolve CoM 1 helptext's retained Endurance/Giant Strength powers against the manual's Teleportation/Inner Fire/Divine Protection replacements; the executed binary effects match the manual's replacement package. | prose conflict; R6.1e evidence, *Later builds turn the item block into a patch surface* |
 | Q23 | Resolve CoM Logistics scaling: shipped helptext says +0.5 movement per two experience levels, while the manual says +0.5 per level. `Battle_Unit_Moves2` consumes the per-controller maximum at `DS:0x3AC8` but does not calculate it. | R6.1g evidence, *CoM `Battle_Unit_Moves2`*; prose conflict |
 | Q25 | Resolve the R6.1h shared-source rendering disagreement at `0x8E5C6: 25 00 01`. Claude: the statement-level `#if` is “a naming branch only” and may use `IP_COM1_DIVINE_PROTECTION` versus `IP_POWER_DRAIN`. Codex: a statement-level `#if` “visually asserts a source/control-flow divergence” absent from the identical bytes, so one statement plus a build-selected alias is preferable. The merged C uses the alias form and the mechanic is undisputed. | R6.1h evidence, *Disputed source representation* |
+| Q26 | Resolve the R9-G1a-R3 evidence-scope disagreement. Codex: “Retain only raw `[0x2AED2,0x2AED4)` (`81 00`) for the target value” and cite checked-in mapping/name evidence. Claude: “Restricting the read to the two target bytes is exactly the position that produced the wrong record base”, so the target's neighbouring name-pointer rows, table origin, ability-mask bounds and selected strings are the minimum locate evidence. The base, target address/value and constructor linkage are undisputed. | R9-G1a-R3 evidence, *Disputed evidence scope*; data D1–D8 |
 
 ## Blocked on people
 

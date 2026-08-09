@@ -120,7 +120,7 @@ test('version changes remap roster identity or clear source IDs without stale sp
     document.getElementById('aUnit').value = String(golem.id);
     document.getElementById('aUnit').dispatchEvent(new Event('change'));
     const roster = [
-      changeVersion('com2_warlord_1.5.12.6.2'),
+      changeVersion('com2_warlord_1.5.12.7'),
       changeVersion('com_6.08'),
       changeVersion('mom_1.31'),
     ];
@@ -270,8 +270,8 @@ test('special options and ordered live realm overrides preserve base identity', 
       comCatapult: derive('com_6.08', 'catapult'),
       modernGolem: derive('com2_1.05.11', 'golem'),
       modernChosen: derive('com2_1.05.11', 'chosen'),
-      warlordGolem: derive('com2_warlord_1.5.12.6.2', 'golem'),
-      warlordChosen: derive('com2_warlord_1.5.12.6.2', 'chosen'),
+      warlordGolem: derive('com2_warlord_1.5.12.7', 'golem'),
+      warlordChosen: derive('com2_warlord_1.5.12.7', 'chosen'),
     };
     const catapult = {
       ordinary: derive('com_6.08', 'catapult', {}),
@@ -283,7 +283,7 @@ test('special options and ordered live realm overrides preserve base identity', 
       { ccDefense: true, undead: true },
       { ccDefense: true, undead: true, mysticSurge: true },
       { ccDefense: true, undead: true, mysticSurge: true, sanctify: true, clergy: true },
-    ].map(abilities => derive('com2_warlord_1.5.12.6.2', 'chosen', abilities));
+    ].map(abilities => derive('com2_warlord_1.5.12.7', 'chosen', abilities));
     return { options, catapult, ordered };
   });
   for (const value of Object.values(report.options)) {

@@ -1,0 +1,1667 @@
+:
+INPUT - U, the unit being calculated.
+OUTPUT - None, set unit current stats using the SETSTAT command.
+
+Example - 
+If (GetEnchantmentFlag(U,EncStoneSkin,0)>0) THEN {
+ SETSTAT(U,SDefense,0,(GetStat(U,SDefense,0)+1));
+ SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1));
+}
+
+NIB=GetHeAb(U,25);
+IF NIB>0 THEN {
+SETSTAT U,SToDefend,0,(GetStat(U,SToDefend,0)+5);
+}
+
+End of Example - :
+
+:Detect owner:
+W=(GetStat(U,SOwner,0));
+:Detect cityID :
+C=(CITYONTILE(U));
+:unit overland location:
+P=GetStat(U,SPlane,1);
+OX=GetStat(U,SOLX,1);
+OY=GetStat(U,SOLY,1);
+OLT=GETTERRAIN(OX,OY,P);
+NMAX=NOFUNITSONTILE(P,OX,OY);
+:Detect overland combat stack and terrain :
+LT=GETTERRAIN(combatX(),combatY(),combatP());
+NMAXCOMBAT=NOFUNITSONTILE(combatP(),combatX(),combatY());
+
+: Effect trigger during both combat and overland :
+
+: Fix problem that permanent Guardian Wind does not grant missile immunity :
+IF (GETENCHANTMENTFLAG(U,EncGuardianWind,1)>0) THEN {
+ SETSTAT(U,AMissileImmunity,0,1);
+}
+
+: Correction of Chaos Channel fire breath to top up with original fire breath unit has :
+IF (GETENCHANTMENTFLAG(U,EncCCBreath,0)=0) THEN { GOTO "NOTCCBREATH"; }
+ IF (GetStat(U,SFireBreath,1)=0) THEN { GOTO "NOTCCBREATH"; }
+
+  SETSTAT(U,SFireBreath,0,(GetStat(U,SFireBreath,0))+(GetStat(U,SFireBreath,1)));
+
+!NOTCCBREATH!
+
+: new ability for invisibility enchantment, gain stealth :
+IF (GetEnchantmentFlag(U,EncInvisibility,0)>0) THEN {
+ SETSTAT(U,AStealth,0,1);
+}
+
+: New unit enchantment "Planewalking", unit gain teleport movement and Plane Shifting  ability :
+IF (GetEnchantmentFlag(U,EncPlanewalking,0)=0) THEN { GOTO "NOTPLANEWALK"; }
+
+ SETSTAT(U,ATeleporting,0,1);
+ SETSTAT(U,APlaneShifting,0,1);
+
+!NOTPLANEWALK!
+
+: New unit enchantment "Venom", +1 poison and gain poison immunity :
+IF (GetEnchantmentFlag(U,EncVenom,0)=0) THEN { GOTO "NOVENOM"; }
+
+ SETSTAT(U,APoisonImmunity,0,1);
+ IF (GetStat(U,AFPoison,0,1)=100) THEN {
+  SETSTAT(U,AFPoison,0,1,1);
+ } ELSE {
+  SETSTAT(U,AFPoison,0,(GetStat(U,AFPoison,0,1))+1,1);
+ }
+
+!NOVENOM!
+
+
+: Modified Focus Magic :
+: Focus Magic now grant +1 spell charge if they have one :
+IF (GETENCHANTMENTFLAG(U,EncFocusMagic,0)=0) THEN { GOTO "NOOLFOCUSMAGIC"; }
+
+ IF (GETSTAT(U,SSpellCharges,0)>0) THEN {
+  SETSTAT(U,SSpellCharges,0,GETSTAT(U,SSpellCharges,0)+1);
+ }
+
+ : Sanctified cleric allow to get MP bonus from Focus Magic :
+ IF (GetEnchantmentFlag(U,EncSanctify,0)=0) THEN { GOTO "NOOLFOCUSMAGIC"; }
+  IF ( GETSTAT(U,SMaxMP,0) > 0 ) THEN { GOTO "NOOLFOCUSMAGIC"; }
+
+   IF (GETSTAT(U,SCustomAttribute,1)=2) THEN {
+    SETSTAT(U,SMaxMP,0,(GETSTAT(U,SMaxMP,0))+15);
+   }
+
+!NOOLFOCUSMAGIC!
+
+: Modify Sanctify :
+: Sanctify enchantment is now guerentee convert unit into life creature :
+IF (GetEnchantmentFlag(U,EncSanctify,0)=0) THEN { GOTO "NOTSANCTIFY"; }
+
+ IF ((GETSTAT(U,SRace,0))<>RCLife) THEN { SETSTAT(U,SRace,0,RCLife); }
+ IF (GETSTAT(U,SCustomAttribute,1)<>2) THEN { GOTO "NOTSANCTIFYCLERIC"; }
+
+  : Sanctify give clergy units gains 2 MP per 1 base resistance :
+  SETSTAT(U,SMaxMP,0,( (GETSTAT(U,SMaxMP,0)) + ( 2 * ( (GETSTAT(U,SResist,0)) - ( (GETSTAT(U,SResistBuff,0) - (GETSTAT(U,SResistPenalty,0) ) ) ) ) );
+
+ !NOTSANCTIFYCLERIC!
+
+!NOTSANCTIFY!
+
+: Post hardcoded hero effect :
+IF ( ISHERO(U) = 0 ) THEN { GOTO "NOTHEROMP"; }
+
+: New hero abilities calculate based on stats put it here :
+ IF (GETHEAB(U,HARighteousWard)=0) THEN { GOTO "NOTRIGHTEOUSWARD"; }
+
+  IF (GETHEAB(U,HARighteousWard)>8) THEN {
+   IF ((GetStat(U,AFExorcise,0,AFMelee))=100) THEN {
+    SETSTAT( U,AFExorcise,0,(0 - GetStat(U,ALevel,0) ),AFMelee );
+   } ELSE {
+    SETSTAT( U,AFExorcise,0,( GetStat(U,AFExorcise,0,1) - GetStat(U,ALevel,0) ),AFMelee );
+   }
+  }
+
+ !NOTRIGHTEOUSWARD!
+
+ IF (GETHEAB(U,HADeathAscension)=0) THEN { GOTO "NOTDEATHLORD"; }
+
+  IF ((GetStat(U,AFLifeSteal,0,1))=100) THEN {
+   SETSTAT( U,AFLifeSteal,0,( 0 - GetStat(U,ALevel,0) ),1 );
+  } ELSE {
+   SETSTAT( U,AFLifeSteal,0,( GetStat(U,AFLifeSteal,0,1) - GetStat(U,ALevel,0) ),1 );
+  }
+
+ !NOTDEATHLORD!
+
+ : Archmage special ability on heroes :
+ IF (RETORT(W,Archmage) %AND (SPELLSTATE(W,SArchmagesMentorship)=2) THEN {
+  SETSTAT(U,SMaxMP,0,GETSTAT(U,SMaxMP,0)+40);
+ }
+
+ : Modify Hero MP after the fact :
+ IF ( GETSTAT(U,SMaxMP,1) > 0 ) %OR ( GETSTAT(U,SMaxMP,0) < 1 ) THEN { GOTO "NOTHEROMP"; }
+
+  IF (GETITEMPOWER(U,25)>0) THEN {
+   SETSTAT(U,SMaxMP,0,(GETSTAT(U,SMaxMP,0))+(5*GETITEMPOWER(U,25)));
+  }
+
+  IF (GETITEMPOWER(U,26)>0) THEN {
+   SETSTAT(U,SMaxMP,0,(GETSTAT(U,SMaxMP,0))+(10*GETITEMPOWER(U,26)));
+  }
+
+  IF (GETITEMPOWER(U,27)>0) THEN {
+   SETSTAT(U,SMaxMP,0,(GETSTAT(U,SMaxMP,0))+(15*GETITEMPOWER(U,27)));
+  }
+
+  IF (GETITEMPOWER(U,28)>0) THEN {
+   SETSTAT(U,SMaxMP,0,(GETSTAT(U,SMaxMP,0))+(20*GETITEMPOWER(U,28)));
+  }
+
+!NOTHEROMP!
+
+: Additional effect of Undead is here :
+IF (GETENCHANTMENTFLAG(U,EncUndead,1)=0) THEN { GOTO "NOTUNDEAD"; }
+
+ : Undead converting Healing spell to Revenant spell :
+ IF (GETSTAT(U,SSpellAbility,1)=125) THEN {
+  SETSTAT(U,SSpellAbility,1,256);
+ }
+
+!NOTUNDEAD!
+
+: Lifting Ship from Windwalking :
+IF (GETENCHANTMENTFLAG(U,EncLiftedShip,1)>0) THEN { SETSTAT(U,AFlying,0,1); }
+
+
+IF (INCOMBAT(U)=0) THEN { GOTO "NOCOMBAT"; }
+
+ : Effect below suppose to trigger only during Combat :
+ A=ATTACKER();
+ D=DEFENDER();
+ OPPONENT=( ATTACKER() + DEFENDER() ) - W;
+ CBX=(GetStat(U,SCoX,1));
+ CBY=(GetStat(U,SCoY,1));
+ OVERX=COMBATX();
+ OVERY=COMBATY();
+ PLANE=COMBATP();
+ :Detect combat terrain :
+ CT=GETTERRAIN(CBX,CBY,0);
+
+ :COUNT UNIT STACK:
+ HEROINCOMBAT=0;
+ MECHANICALMASTERBONUS=0;
+ CHOSENOFGAIABONUS=0;
+ CHOSENOFAETHERBONUS=0;
+ CHOSENOFCHAOSBONUS=0;
+ CHOSENOFLIFEBONUS=0;
+ CHOSENOFDEATHBONUS=0;
+
+ GOBLIN=0;
+ WARBOSS=0;
+ ENGINEERS=0;
+
+ FOR N=1 TO NMAXCOMBAT;
+
+  UOT=UNITONTILE(combatP(),combatX(),combatY(),N);
+
+  IF ( ISHERO(UOT) = 0 ) THEN { GOTO "NOTOURHERO"; }
+
+   IF ( ALIVE(UOT) = 0 ) THEN { GOTO "NOTOURHERO"; }
+
+    IF (GETSTAT(UOT,SOwner,0)<>W) THEN { GOTO "NOTOURHERO"; }
+
+     HEROINCOMBAT=HEROINCOMBAT+1;
+
+     IF (GETHEAB(UOT,HAMechanicalMaster)>MECHANICALMASTERBONUS) THEN {
+      MECHANICALMASTERBONUS = GETHEAB(UOT,HAMechanicalMaster);
+     }
+     IF (GETHEAB(UOT,HAChosenOfGaia)>CHOSENOFGAIABONUS) THEN {
+      CHOSENOFGAIABONUS = GETHEAB(UOT,HAChosenOfGaia);
+     }
+     IF (GETHEAB(UOT,HAChosenOfAEther)>CHOSENOFAETHERBONUS) THEN {
+      CHOSENOFAETHERBONUS = GETHEAB(UOT,HAChosenOfAEther);
+     }
+     IF (GETHEAB(UOT,HAChosenOfChaos)>CHOSENOFCHAOSBONUS) THEN {
+      CHOSENOFCHAOSBONUS = GETHEAB(UOT,HAChosenOfChaos);
+     }
+     IF (GETHEAB(UOT,HAChosenOfLife)>CHOSENOFLIFEBONUS) THEN {
+      CHOSENOFLIFEBONUS = GETHEAB(UOT,HAChosenOfLife);
+     }
+     IF (GETHEAB(UOT,HAChosenOfDeath)>CHOSENOFDEATHBONUS) THEN {
+      CHOSENOFDEATHBONUS = GETHEAB(UOT,HAChosenOfDeath);
+     }
+
+  !NOTOURHERO!
+
+ NEXT N;
+
+ IF (GETSTAT(U,SRace,1)<>RCGoblin) THEN { GOTO "NOTGOBLINCOUNT"; }
+
+  FOR N=1 TO NMAXCOMBAT;
+
+   UOT=UNITONTILE(combatP(),combatX(),combatY(),N);
+
+   IF (GETSTAT(UOT,SOwner,0)<>W) THEN { GOTO "NOTCOUNTGOBLIN"; }
+
+    : Counting Goblins :
+    IF (GETSTAT(UOT,SRace,1)<>RCGoblin) THEN { GOTO "NOTCOUNTGOBLIN"; }
+
+     GOBLIN=GOBLIN+3;
+     IF (GETSTAT(UOT,STypeID,1)=350) THEN { WARBOSS=WARBOSS+1; }
+
+   !NOTCOUNTGOBLIN!
+
+  NEXT N;
+
+  IF (GETSTAT(U,SRace,0)=RCGoblin)
+   %AND (GETSTAT(U,AFantastic,1)=1)
+  THEN {
+   SETSTAT(U,AFantastic,1,0);
+  }
+
+  : Goblin Pox :
+  IF (GetStat(U,STypeID,1)=358)
+   %AND ( HASCOMBATGLOBAL( W,CGGoblinPox,1 )=0 )
+  THEN {
+   SETCOMBATGLOBAL( W,CGGoblinPox,1,1 );
+  }
+
+: Effect of Goblin Warbosses, all goblins on the same side gains +3X% To-Hit and To-Defend for each goblin units on the same side. :
+  IF (WARBOSS=0) THEN { GOTO "NOWARBOSS"; }
+
+   IF (GOBLIN>20) THEN { GOBLIN=20; }
+   SETSTAT( U,SToHit,0,(GETSTAT(U,SToHit,0)+GOBLIN )
+   SETSTAT( U,SToDefend,0,(GETSTAT(U,SToDefend,0)+GOBLIN )
+
+  !NOWARBOSS!
+
+ !NOTGOBLINCOUNT!
+
+: Effect of Engineers and Mechaniacs, all mechanical units on the same side gains +20%% To-Hit and 10% To-Defend while Engineers or Mechaniacs presence in combat. :
+ IF (GETSTAT(U,SCustomAttribute,1)<>1) THEN { GOTO "NOTENGINEERCOUNT"; }
+
+  FOR N=1 TO NMAXCOMBAT;
+
+   UOT=UNITONTILE(combatP(),combatX(),combatY(),N);
+
+   IF (GETSTAT(UOT,SOwner,0)<>W) THEN { GOTO "NOTCOUNTMECHANIC"; }
+
+    : Counting Mechanics :
+    IF (GETHEAB(UOT,HAMechanicalMaster)>0)
+     %OR (GETSTAT(UOT,STypeID,1)=52)
+     %OR (GETSTAT(UOT,STypeID,1)=78)
+     %OR (GETSTAT(UOT,STypeID,1)=110)
+     %OR (GETSTAT(UOT,STypeID,1)=117)
+     %OR (GETSTAT(UOT,STypeID,1)=144)
+     %OR (GETSTAT(UOT,STypeID,1)=292)
+     %OR (GETSTAT(UOT,STypeID,1)=357)
+     %OR (GETSTAT(UOT,STypeID,1)=363)
+    THEN {
+     ENGINEERS=ENGINEERS+1;
+    }
+
+   !NOTCOUNTMECHANIC!
+
+  NEXT N;
+
+  IF (ENGINEERS>0) THEN {
+   SETSTAT( U,SToHit,0,(GETSTAT(U,SToHit,0)+20 )
+   SETSTAT( U,SToDefend,0,(GETSTAT(U,SToDefend,0)+10 )
+  }
+
+ !NOTENGINEERCOUNT!
+
+: Modified Weakness effect :
+ IF (GETENCHANTMENTFLAG(U,EncWeakness,0)=0) THEN { GOTO "NOTWEAKNESS"; }
+
+  SETSTAT(U,SFireBreath,0,GETSTAT(U,SFireBreath,0)-3);
+  SETSTAT(U,SLightningBreath,0,GETSTAT(U,SLightningBreath,0)-3);
+
+ !NOTWEAKNESS!
+
+: new unit enchantment, Zeal, give first strike and negate first strike during combat :
+ IF (GETENCHANTMENTFLAG(U,EncZeal,0)=0) %OR (GETITEMPOWER(U,78)>0) THEN { GOTO "NOTZEAL"; }
+
+  SETSTAT(U,AFirstStrike,0,1);
+  SETSTAT(U,ANegateFirstStrike,0,1);
+
+ !NOTZEAL!
+
+: new effect of True Sight, grant +5% range to-hit in combat :
+ IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0) THEN {
+  SETSTAT(U,SToRanged,0,(GetStat(U,SToRanged,0)+5));
+ }
+
+: Combat cast Flame Blade now nolonger buff rock type range attack but give fire breath+1 :
+ IF (GETCOMBATENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN { 
+  SETSTAT(U,SFireBreath,0,(GetStat(U,SFireBreath,0))+1);
+ }
+
+: new unit enchantment "Berserk" :
+ IF (GETENCHANTMENTFLAG(U,EncBerserk,0)=0) THEN { GOTO "NOBERSERK"; }
+
+  SETSTAT(U,SToHit,0,(GetStat(U,SToHit,0)+15));
+  SETSTAT(U,SToDefend,0,(GetStat(U,SToDefend,0)-10));
+  SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+2));
+  SETSTAT(U,SCombatMovesLeft,0,(GetStat(U,SCombatMovesLeft,0)+2));
+
+ !NOBERSERK!
+
+: New effect of global enchantment "Angelic Guardians", all normal units get exorcise touch :
+ IF (HASGLOBAL(W,GEAngelicGuardians)=0) THEN { GOTO "NOANGELICGUARDIAN"; }
+
+  IF (GetStat(U,AFExorcise,0,1)=100) THEN {
+   IF ( (GETSTAT(U,SRace,0)=RCLife) %OR (BASEFANTASTIC(U)=0) ) THEN {
+    SETSTAT(U,AFExorcise,0,( 0 - (GETSTAT(U,SRace,0)=RCLife) ),1);
+   }
+  } ELSE {
+   SETSTAT(U,AFExorcise,0,(GetStat(U,AFExorcise,0,1))-( 2 + (GETSTAT(U,SRace,0)=RCLife) ),1);
+  }
+
+ !NOANGELICGUARDIAN!
+
+ : on the opposite, Night Goblin gain bonus from Darkness or Eternal Night :
+ IF (GetStat(U,STypeID,1)<>356) THEN { GOTO "NOTNIGHTGOBLIN"; }
+
+  IF (ETERNALNIGHTCOUNT>0)
+   %OR ( ((HASCOMBATGLOBAL(W,CGDarkness,1))>0)
+   %OR ((HASCOMBATGLOBAL(W,CGDarkness,2))>0) )
+  THEN {
+   SETSTAT(U,SToHit,0,(GetStat(U,SToHit,0)+10));
+   SETSTAT(U,SToDefend,0,(GetStat(U,SToDefend,0)+10));
+  }
+
+!NOTNIGHTGOBLIN!
+
+: new hero ability that effect on other units start here :
+ IF (HEROINCOMBAT=0) THEN { GOTO "NOHERO"; }
+
+  IF (MECHANICALMASTERBONUS=0) THEN { GOTO "NOTMECHANICWITHHERO"; }
+   IF (GETSTAT(U,SCustomAttribute,1)<>1) THEN { GOTO "NOTMECHANICWITHHERO"; }
+
+    SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0) + %I(MECHANICALMASTERBONUS) );
+    SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0) + %I(MECHANICALMASTERBONUS) );
+
+  !NOTMECHANICWITHHERO!
+
+  IF (GetStat(U,SRace,0)<RCArcane) %OR (GetStat(U,SRace,0)>RCDeath) THEN { GOTO "NOTMAGICALRACE"; } 
+
+   IF (CHOSENOFGAIABONUS=0) THEN { GOTO "NOTWITHGAIA"; }
+
+    IF (GetStat(U,SRace,0)<>RCNature) THEN { GOTO "NOTWITHGAIA"; }
+
+     SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0) + %I(CHOSENOFGAIABONUS) );
+     SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0) + %I(CHOSENOFGAIABONUS) );
+
+    :Skip the rest of magical race bonus:
+    GOTO "NOTMAGICALRACE";
+
+   !NOTWITHGAIA!
+
+   IF (CHOSENOFAETHERBONUS=0) THEN { GOTO "NOTWITHAETHER"; }
+
+    IF (GetStat(U,SRace,0)<>RCSorcery) THEN { GOTO "NOTWITHAETHER"; }
+
+     SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0) + %I(CHOSENOFAETHERBONUS) );
+     SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0) + %I(CHOSENOFAETHERBONUS) );
+
+    :Skip the rest of magical race bonus:
+    GOTO "NOTMAGICALRACE";
+
+   !NOTWITHAETHER!
+
+   IF (CHOSENOFCHAOSBONUS=0) THEN { GOTO "NOTWITHCHAOS"; }
+
+    IF (GetStat(U,SRace,0)<>RCChaos) THEN { GOTO "NOTWITHCHAOS"; }
+
+     SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0) + %I(CHOSENOFCHAOSBONUS) );
+     SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0) + %I(CHOSENOFCHAOSBONUS) );
+
+    :Skip the rest of magical race bonus:
+    GOTO "NOTMAGICALRACE";
+
+   !NOTWITHCHAOS!
+
+   IF (CHOSENOFLIFEBONUS=0) THEN { GOTO "NOTWITHLIFE"; }
+
+    IF (GetStat(U,SRace,0)<>RCLife) THEN { GOTO "NOTWITHLIFE"; }
+
+     SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0) + %I(CHOSENOFLIFEBONUS) );
+     SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0) + %I(CHOSENOFLIFEBONUS) );
+
+    :Skip the rest of magical race bonus:
+    GOTO "NOTMAGICALRACE";
+
+   !NOTWITHLIFE!
+
+   IF (CHOSENOFDEATHBONUS=0) THEN { GOTO "NOTWITHDEATH"; }
+
+    IF (GetStat(U,SRace,0)<>RCDeath) THEN { GOTO "NOTWITHDEATH"; }
+
+     SETSTAT(U,SToHit,0,GETSTAT(U,SToHit,0) + %I(CHOSENOFDEATHBONUS) );
+     SETSTAT(U,SToDefend,0,GETSTAT(U,SToDefend,0) + %I(CHOSENOFDEATHBONUS) );
+
+    :Skip the rest of magical race bonus:
+    GOTO "NOTMAGICALRACE";
+
+   !NOTWITHDEATH!
+
+  !NOTMAGICALRACE!
+
+ !NOHERO!
+
+: combat enchantment part start here :
+
+ IF (C<1) THEN { GOTO "NOTCITY"; }
+
+  IF (W=A) THEN { GOTO "NOTDEFENDER"; }
+
+: new effect of Tree of Life, all units on defending side get at least regeneration 0 :
+   IF (ISBUILT(C,BTreeOfLife)) %AND ((GETSTAT(U,ARegeneration,0))<0) THEN {
+    SETSTAT(U,ARegeneration,0,0)
+   }
+
+   : Below are city effect that only meaningful in tactical combat :
+   IF (TACTICALCOMBAT=0) THEN { GOTO "NOTCITY"; }
+
+    : underground hive network give all defending units merging :
+    IF ISBUILT(C,BHiveNetwork) %AND (W=D) %AND (GETSTAT(U,AMerging,0)=0) THEN {
+     SETSTAT(U,AMerging,0,1);
+    }
+
+    : Baray give waterwalk to defending side and give fire immunity inside city area :
+    IF ISBUILT(C,BBaray) %AND (W=D) %AND (GETSTAT(U,AWaterwalking,0)=0) THEN {
+     SETSTAT(U,AWaterwalking,0,1);
+    }
+
+  GOTO "NOTCITY";
+
+: end of universal city defender section :
+  !NOTDEFENDER!
+
+   : new effect of Cloud of Shadow, give -10% to-defend to unit on attacker side :
+   IF (CITYENCHANT(C,CECloudofShadow)>-1) THEN {
+    SETSTAT(U,SToDefend,0,((GetStat(U,SToDefend,0))-10));
+   }
+
+ !NOTCITY!
+
+: new effect of Terrain Bonus module, give first strike when terrain matched movement type :
+ : bonus for tactician in strategic combat :
+ IF (TACTICALCOMBAT=0) THEN { GOTO "ENDOFTACTICALCOMBAT"; }
+
+: This part is only trigger during tactical combat :
+
+: These enchantment only cast in combat or only non-stat effect :
+
+: new unit curse "Rust" unit loses 1/2 of melee/physical range/thrown strength :
+  IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO "NOTRUST"; }
+
+   SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-3));
+   SETSTAT(U,SAttackPenalty,0,(GetStat(U,SAttackPenalty,0)+3));
+   SETSTAT(U,SThrown,0,0);
+   SETSTAT(U,ALargeShield,0,0);
+   IF (GetStat(U,SRangedType,0)>0) %AND (GetStat(U,SRangedType,0)<30) THEN {
+    SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)-3));
+    SETSTAT(U,SRangedPenalty,0,(GetStat(U,SRangedPenalty,0)+3));
+   }
+
+  !NOTRUST!
+
+: modify Focus Magic effect :
+  IF (GETENCHANTMENTFLAG(U,EncFocusMagic,0)=0) THEN { GOTO "NOTFOCUSMAGIC"; }
+
+  : Disable ranged touch ability when enchanted unit with focus magic :
+   IF ((GetStat(U,AFStoningTouch,0,1))<100) THEN { 
+    STONET=GetStat(U,AFStoningTouch,0,1)
+    SETSTAT(U,AFStoningTouch,0,100,1);
+    SETSTAT(U,AFStoningTouch,0,100,3);
+    SETSTAT(U,AFStoningTouch,0,STONET,2);
+   }
+   IF ((GetStat(U,AFDeathTouch,0,1))<100) THEN { 
+    DEATHT=GetStat(U,AFDeathTouch,0,1)
+    SETSTAT(U,AFDeathTouch,0,100,1);
+    SETSTAT(U,AFDeathTouch,0,100,3);
+    SETSTAT(U,AFDeathTouch,0,DEATHT,2);
+   }
+
+  !NOTFOCUSMAGIC!
+
+: Modify Bloodlust spell :
+: Bloodlust now casted from dummy spell, no longer turn unit undead and could cast in combat with additiona noheal :
+  IF (GETENCHANTMENTFLAG(U,EncFrenzy,0)=0) THEN { GOTO "NOTFRENZY"; }
+
+   SETENCHANTMENTFLAG(U,EncBloodLust,0,1);
+   IF (GETCOMBATENCHANTMENTFLAG(U,EncFrenzy,0)>0) THEN { 
+    SETCOMBATENCHANTMENTFLAG(U,EncNoHeal,1,1);
+   }
+
+  !NOTFRENZY!
+
+: additional effect of Buried :
+  IF (GETCOMBATENCHANTMENTFLAG(U,EncBuried,0)>0) THEN { 
+   SETSTAT(U,SToDefend,0,((GetStat(U,SToDefend,0))-10));
+  }
+
+: Combat enchantment is here :
+
+: New combat enchantment "Aether Flux", all friendly units gain +10 Max MP :
+  IF (HASCOMBATGLOBAL(W,CGAetherSurge,1)=0) THEN { GOTO "NOAETHERSURGE"; }
+
+   IF (GETENCHANTMENTFLAG(U,EncInCombat,0)>0) THEN {
+    SETSTAT(U,SMaxMP,0,(GetStat(U,SMaxMP,0)+10));
+   }
+   IF ((GetStat(U,SSpellAbility,0))>0)
+    %AND ((GetStat(U,SSpellRecharge,0))>4)
+   THEN {
+    SETSTAT(U,SSpellRecharge,0,4);
+   }
+
+  !NOAETHERSURGE!
+
+: New combat enchantment "Hurricane", removing flying from all units, -20% to-range/to-thrown and -30% to-breath to-hit, lord of storm perk make unit immune to hurricane :
+  IF (HASCOMBATGLOBAL(W,CGHurricane,1)=0)
+   %AND (HASCOMBATGLOBAL(W,CGHurricane,2)=0)
+  THEN { GOTO "NOHURRICANE"; }
+
+   IF (GETSTAT(U,SLordOfStorm,0)>0) THEN { GOTO "NOHURRICANE"; }
+
+    HURRICANESTR=1;
+    IF (HASCOMBATGLOBAL(W,CGHurricane,1)>0) THEN { HURRICANESTR=HURRICANESTR+1; }
+    IF (HASCOMBATGLOBAL(W,CGHurricane,2)>0) THEN { HURRICANESTR=HURRICANESTR+1; }
+
+    SETSTAT(U,AFlying,0,0);
+    SETSTAT(U,SToBreath,0,( GetStat(U,SToBreath,0) - 15*(HURRICANESTR) ) );
+    SETSTAT(U,SToThrown,0,( GetStat(U,SToThrown,0) - 10*(HURRICANESTR) ) );
+    SETSTAT(U,SToRanged,0,( GetStat(U,SToRanged,0) - 10*(HURRICANESTR) ) );
+
+    IF (GetStat(U,ASailing,0)=0) THEN { GOTO "NOHURRICANE"; }
+
+     SETSTAT(U,SCombatMaxMoves,0,( GetStat(U,SCombatMaxMoves,0) - %I( GetStat(U,SCombatMaxMoves,0)*(HURRICANESTR)/4 ) ) );
+     SETSTAT(U,SCombatMovesLeft,0,( GetStat(U,SCombatMovesLeft,0) - %I( GetStat(U,SCombatMaxMoves,0)*(HURRICANESTR)/4 ) ) );
+
+  !NOHURRICANE!
+
+: New combat enchantment "Temporal Twist", enemy units lose first strike, negate first strike, and -1 movement point, summon creature get additional -1 movement point :
+  IF ((HASCOMBATGLOBAL(W,CGTemporalTwist,2))=0) THEN { GOTO "NOTEMPORALTWIST"; }
+
+   SETSTAT(U,AFirstStrike,0,0);
+   SETSTAT(U,ANegateFirstStrike,0,0);
+   SETSTAT(U,ATeleporting,0,0);
+   IF ( ((HASCOMBATGLOBAL(W,CGEntangle,2))=0) %OR (GETSTAT(U,ANoncorporeal,0)>0) ) %AND ( ( (BASEFANTASTIC(U)>0) %AND (GetStat(U,SCombatMaxMoves,0)<5) ) %OR ( (BASEFANTASTIC(U)=0) %AND (GetStat(U,SCombatMaxMoves,0)<3) ) ) THEN {
+    SETSTAT(U,SCombatMaxMoves,0,1);
+   }
+   IF (BASEFANTASTIC(U)>0) %AND ( ((HASCOMBATGLOBAL(W,CGEntangle,2))>0) %AND (GETSTAT(U,ANoncorporeal,0)=0) ) %OR (GetStat(U,SCombatMaxMoves,0)>4) THEN {
+    SETSTAT(U,SCombatMaxMoves,0,((GetStat(U,SCombatMaxMoves,0))-4));
+   }
+   IF (BASEFANTASTIC(U)=0) %AND ( ((HASCOMBATGLOBAL(W,CGEntangle,2))>0) %AND (GETSTAT(U,ANoncorporeal,0)=0) ) %OR (GetStat(U,SCombatMaxMoves,0)>2) THEN {
+    SETSTAT(U,SCombatMaxMoves,0,((GetStat(U,SCombatMaxMoves,0))-2));
+   }
+
+  !NOTEMPORALTWIST!
+
+  : Effect of Tangling Roots :
+  IF (GETSTAT(U,SCustomAttribute,1)<>3) THEN { GOTO "NOTANGLINGROOT"; }
+
+   FOR TU=1 TO MAXUNIT();
+
+    TCBX=(GetStat(TU,SCoX,1));
+    TCBY=(GetStat(TU,SCoY,1));
+
+    IF ( INCOMBAT(TU) = 0 ) THEN { GOTO "NOTANGLINGBIND"; }
+
+     IF (GetStat(TU,SOwner,0)=GetStat(U,SOwner,0)) THEN { GOTO "NOTANGLINGBIND"; }
+
+      IF (GetStat(TU,AFlying,0)>0) %OR (GetStat(TU,ANoncorporeal,0)>0) THEN { GOTO "NOTANGLINGBIND"; }
+
+       IF (TCBX>CBX-2) %AND (TCBX<CBX+2)
+        %AND (TCBY>CBY-2) %AND (TCBY<CBY+2)
+       THEN {
+        IF (CT=CTSea) THEN {
+         SETSTAT(TU,ASailing,0,0);
+         SETSTAT(TU,AWaterwalking,0,0);
+        } ELSE {
+         SETSTAT(TU,ASailing,0,1);
+        }
+       }
+
+    !NOTANGLINGBIND!
+
+   NEXT TU;
+
+  !NOTANGLINGROOT!
+
+  : new bonus for Terrain bonus module, First Strike and Nagate First Strike require tactician to trigger :
+  TREE=( (CT=CTForest) %OR (CT=CTPine) );
+  ROCKY=( (CT=CTRock2) %OR (CT=CTMountain) );
+  WET=( (CT=CTIce) %OR (CT=CTSwamp) );
+
+  IF ( (RETORT(W,Tactician)>0) %OR ( (SCORINGOPTION(SKhanTheConqueror)=1) %AND (W=NeutralPlayerID) THEN { GOTO "TACTICIANEFFECT"; }
+
+   IF ( ( (GETSTAT(U,AForester,0)>0) %AND TREE )
+    %OR ( (GETSTAT(U,AMountaineer,0)>0) %AND ROCKY )
+    %OR ( (GETSTAT(U,AWaterwalking,0)>0) %AND WET ) )
+   THEN {
+    SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)+5) );
+    SETSTAT( U,SDefense,0,(GetStat(U,SDefense,0)+1) );
+    SETSTAT( U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+1) );
+   }
+   GOTO "ENDOFTACTICIANEFFECT";
+
+  !TACTICIANEFFECT!
+
+   IF ( ( (GETSTAT(U,AForester,0)>0) %AND TREE )
+    %OR ( (GETSTAT(U,AMountaineer,0)>0) %AND ROCKY )
+    %OR ( (GETSTAT(U,AWaterwalking,0)>0) %AND WET ) )
+   THEN {
+    SETSTAT( U,AFirstStrike,0,1 );
+    SETSTAT( U,ANegateFirstStrike,0,1 );
+    SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)+10) );
+    SETSTAT( U,SDefense,0,(GetStat(U,SDefense,0)+2) );
+    SETSTAT( U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+2) );
+   }
+
+   IF (GETSTAT(U,ATeleporting,0)>0)
+    %AND (GETSTAT(U,AFirstStrike,0)=0)
+   THEN {
+    SETSTAT( U,AFirstStrike,0,1 );
+   }
+
+   IF (GETSTAT(U,ANoncorporeal,0)>0)
+    %AND (GETSTAT(U,ANegateFirstStrike,0)=0)
+   THEN {
+    SETSTAT( U,ANegateFirstStrike,0,1 );
+   }
+
+  !ENDOFTACTICIANEFFECT!
+
+  : sacred ancient become immobile in combat (it suppose to be moving slowly with help from wizard on overland, but immobile in combat unless wizard cast flight on wind mastery :
+  IF (GetStat(U,STypeID,1)<>270) THEN { GOTO "NOTSACREDANCIENT"; }
+
+   IF ((HASGLOBAL(W,GEWindMastery))=0) %AND ((GETENCHANTMENTFLAG(U,EncFlight,0))=0) THEN {
+    SETSTAT(U,ASailing,0,1);
+    SETSTAT(U,SCombatMaxMoves,0,1);
+    SETSTAT(U,SCombatMovesLeft,0,1);
+   }
+
+  !NOTSACREDANCIENT!
+
+ : First turn effect :
+ IF (COMBATTURN>0) THEN { GOTO "NOTFIRSTTURN"; }
+
+  : Drop lifting ship :
+  IF (GETENCHANTMENTFLAG(U,EncLiftedShip,1)=0) THEN { GOTO "DROPSHIP" }
+
+   SETENCHANTMENTFLAG(U,EncLiftedShip,1,0);
+   SETSTAT(U,AFlying,0,0);
+
+  !DROPSHIP!
+
+  : Stasis forced defender to skip their first turn :
+  IF (W=D) %AND (GETENCHANTMENTFLAG(U,EncStasisCombat,1)>0) THEN { GOTO "SKIPFIRSTTURN"; }
+
+  : Tactician forced defender to skip their first turn :
+  IF (W=A) THEN { GOTO "NOTSNEAKATTACK"; }
+  IF (SNEAKATTACK=0)
+   %OR (RETORT(A,Tactician)=0)
+   %OR (RETORT(D,Tactician)>0)
+  THEN {
+   GOTO "NOTSNEAKATTACK";
+  }
+
+   !SKIPFIRSTTURN!
+
+   SETSTAT(U,SCombatMaxMoves,0,0);
+   SETSTAT(U,SCombatMovesLeft,0,0);
+   SETSTAT(U,AFlying,0,0);
+   IF (CT<>CTSea) THEN {
+    SETSTAT(U,ASailing,0,1);
+   } ELSE {
+    SETSTAT(U,ASailing,0,0);
+   }
+
+ !NOTSNEAKATTACK!
+
+  : more rocks in the hill :
+  IF (ROCKYHILLCOMBAT=0) THEN { GOTO "NOTHILL"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+    IF (C=0) THEN {
+     IF (X<>7) %OR (Y<>11) THEN {
+      EROSION=RND(5);
+      IF (EROSION=0) THEN { SETTERRAIN(X,Y,0,CTRock2); }
+     }
+    } ELSE {
+     IF (X<6)
+      %OR (X>9)
+      %OR (Y<10)
+      %OR (Y>13)
+     THEN {
+      EROSION=RND(5);
+      IF (EROSION=0) THEN { SETTERRAIN(X,Y,0,CTRock2); }
+     }
+    }
+
+    IF (ICEAGECOUNT=0) THEN { GOTO "NOTWINTERHILL"; }
+
+     IF (GETTERRAIN(X,Y,0)=CTGrass) THEN { SETTERRAIN(X,Y,0,CTIce); }
+     IF (GETTERRAIN(X,Y,0)=CTForest) THEN { SETTERRAIN(X,Y,0,CTPine); }
+
+    !NOTWINTERHILL!
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET ROCKYHILLCOMBAT = 0;
+
+  !NOTHILL!
+
+  : more swamp in the river, convert 33% of grassland to swamp, 66% if climate is wet :
+  IF (SWAMPYRIVERCOMBAT=0) THEN { GOTO "NOTRIVER"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+    IF (CLIMATE()=CliWet) THEN { SWAMP=2; } ELSE { SWAMP=1; }
+    IF (C=0) THEN {
+     IF (X<>7) %OR (Y<>11) THEN {
+      IF (GETTERRAIN(X,Y,0)=CTGrass) THEN {
+       EROSION=RND(3);
+       IF (EROSION<SWAMP) THEN { SETTERRAIN(X,Y,0,CTSwamp); }
+      }
+     }
+    } ELSE {
+     IF (X<6)
+      %OR (X>9)
+      %OR (Y<10)
+      %OR (Y>13)
+     THEN {
+      IF (GETTERRAIN(X,Y,0)=CTGrass) THEN {
+       EROSION=RND(3);
+       IF (EROSION<SWAMP) THEN { SETTERRAIN(X,Y,0,CTSwamp); }
+      }
+     }
+    }
+
+    IF (ICEAGECOUNT=0) THEN { GOTO "NOTWINTERRIVER"; }
+
+     IF (GETTERRAIN(X,Y,0)=CTSwamp) THEN { SETTERRAIN(X,Y,0,CTIce); }
+     IF (GETTERRAIN(X,Y,0)=CTForest) THEN { SETTERRAIN(X,Y,0,CTPine); }
+
+    !NOTWINTERRIVER!
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET SWAMPYRIVERCOMBAT = 0;
+
+  !NOTRIVER!
+
+  : more swamp in the grassland in wet climate, convert 33% of grassland to swamp :
+  IF (WETGRASSLANDCOMBAT=0) THEN { GOTO "NOTWETGRASS"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+     IF (C=0) THEN {
+     IF (X<>7) %OR (Y<>11) THEN {
+      IF (GETTERRAIN(X,Y,0)=CTGrass) THEN {
+       EROSION=RND(3);
+       IF (EROSION<1) THEN { SETTERRAIN(X,Y,0,CTSwamp); }
+      }
+     }
+    } ELSE {
+     IF (X<6)
+      %OR (X>9)
+      %OR (Y<10)
+      %OR (Y>13)
+     THEN {
+      IF (GETTERRAIN(X,Y,0)=CTGrass) THEN {
+       EROSION=RND(3);
+       IF (EROSION<1) THEN { SETTERRAIN(X,Y,0,CTSwamp); }
+      }
+     }
+    }
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET WETGRASSLANDCOMBAT = 0;
+
+  !NOTWETGRASS!
+
+  : more swamp in the grassland in wet climate, convert 33% of grassland to swamp :
+  IF (WETFORESTCOMBAT=0) THEN { GOTO "NOTJUNGLE"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+     IF (C=0) THEN {
+     IF (X<>7) %OR (Y<>11) THEN {
+      IF (GETTERRAIN(X,Y,0)=CTGrass) THEN {
+       SETTERRAIN(X,Y,0,CTSwamp);
+      }
+     }
+    } ELSE {
+     IF (X<6)
+      %OR (X>9)
+      %OR (Y<10)
+      %OR (Y>13)
+     THEN {
+      IF (GETTERRAIN(X,Y,0)=CTGrass)
+       %OR (GETTERRAIN(X,Y,0)=CTRock2)
+      THEN {
+       SETTERRAIN(X,Y,0,CTSwamp);
+      }
+     }
+    }
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET WETFORESTCOMBAT = 0;
+
+  !NOTJUNGLE!
+
+  : Icy sea generation :
+  IF (ICYSEACOMBAT=0) THEN { GOTO "NOTICYSEA"; }
+
+   FOR X=2 TO 21;
+   FOR Y=1 TO 21;
+
+    IF ( ( (X>5) %AND (X<8) ) %OR ( (X>14) %AND (X<17) ) ) %AND ( (Y>8) %AND (Y<14) ) THEN { GOTO "SEADEPLOYMENTZONE"; }
+    IF ( (X=5) %OR (X=17) ) %AND ( (Y>9) %AND (Y<13) ) THEN { GOTO "SEADEPLOYMENTZONE"; }
+    IF (GETTERRAIN(X,Y,0)=CTFloating) THEN { GOTO "SEADEPLOYMENTZONE"; }
+
+     GLACIR=RND(10);
+     IF (GLACIR=9) THEN { SETTERRAIN(X,Y,0,CTMountain); }
+     IF (GLACIR>5) %AND (GLACIR<9) THEN { SETTERRAIN(X,Y,0,CTIce); }
+
+    !SEADEPLOYMENTZONE!
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET ICYSEACOMBAT = 0;
+
+  !NOTICYSEA!
+
+  : Icy mountain generation :
+  IF (ICYMOUNTAINCOMBAT=0) THEN { GOTO "NOTICYMOUNTAIN"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+    IF (GETTERRAIN(X,Y,0)=CTrock) THEN { SETTERRAIN(X,Y,0,CTIce); }
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET ICYMOUNTAINCOMBAT = 0;
+
+  !NOTICYMOUNTAIN!
+
+  : Green volcano generation :
+  IF (GREENVOLCANOCOMBAT=0) THEN { GOTO "NOTGREENVOLCANO"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+    IF (CORRUPTTILECOMBAT=0) %AND (GETTERRAIN(X,Y,0)=CTrock) THEN { SETTERRAIN(X,Y,0,CTGrass); }
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET GREENVOLCANOCOMBAT = 0;
+
+  !NOTGREENVOLCANO!
+
+  : Deadly volcano generation :
+  IF (DEADLYVOLCANOCOMBAT=0) THEN { GOTO "NOTDEADLYVOLCANO"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+    IF ( (X>14) %AND (X<17) ) %AND ( (Y>8) %AND (Y<14) ) THEN { GOTO "VOLCANODEPLOYMENTZONE"; }
+    IF (X=17) %AND ( (Y>9) %AND (Y<13) ) THEN { GOTO "VOLCANODEPLOYMENTZONE"; }
+    IF (LT=LTChaosNode) THEN {
+     IF ( (X>7) %AND (X<10) ) %AND ( (Y>8) %AND (Y<14) ) THEN { GOTO "VOLCANODEPLOYMENTZONE"; }
+     IF (X=7) %AND ( (Y>9) %AND (Y<13) ) THEN { GOTO "VOLCANODEPLOYMENTZONE"; }
+    } ELSE {
+     IF (C>0) THEN {
+      IF ( (X>5) %AND (X<10) ) %AND ( (Y>9) %AND (Y<14) ) THEN { GOTO "VOLCANODEPLOYMENTZONE"; }
+     } ELSE {
+      IF ( (X>5) %AND (X<8) ) %AND ( (Y>8) %AND (Y<14) ) THEN { GOTO "VOLCANODEPLOYMENTZONE"; }
+      IF (X=5) %AND ( (Y>9) %AND (Y<13) ) THEN { GOTO "VOLCANODEPLOYMENTZONE"; }
+     }
+    }
+
+     IF (GETTERRAIN(X,Y,0)=CTrock) %AND ( (X>1) %AND (X<21) ) %AND ( (Y>1) %AND (Y<21) ) THEN { SETTERRAIN(X,Y,0,CTFloating); }
+
+    !VOLCANODEPLOYMENTZONE!
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET DEADLYVOLCANOCOMBAT = 0;
+
+  !NOTDEADLYVOLCANO!
+
+  : Winter forest generation :
+  IF (WINTERFOREST=0) THEN { GOTO "NOTWINTERFOREST"; }
+
+   FOR X=1 TO 21;
+   FOR Y=1 TO 21;
+
+    IF (GETTERRAIN(X,Y,0)=CTGrass) THEN { SETTERRAIN(X,Y,0,CTIce); }
+    IF (GETTERRAIN(X,Y,0)=CTForest) THEN { SETTERRAIN(X,Y,0,CTPine); }
+
+   NEXT Y;
+   NEXT X;
+
+   MASTERVARSET WINTERFOREST = 0;
+
+  !NOTWINTERFOREST!
+
+  : Corrupt tile generation :
+  IF (CORRUPTTILECOMBAT=0) THEN { GOTO "NOTCORRUPTTILE"; }
+
+   MASTERVARSET CORRUPTTILECOMBAT = 0;
+
+   IF (LT=LTGrassland) %OR (LT=LTRiver) %OR (LT=LTRiverStart) %OR (LT=LTSorceryNode) THEN { GOTO "CORRUPTTODESERT"; }
+
+    IF (LT<>LTHill) %AND (LT<>LTForest) %AND (LT<>LTNatureNode) THEN { GOTO "NOTCORRUPTTILE"; }
+
+     FOR X=1 TO 21;
+     FOR Y=1 TO 21;
+
+      IF (C>0) %AND ( (X>5) %AND (X<10) ) %AND ( (Y>9) %AND (Y<14) ) THEN { GOTO "CORRUPTROCKDEPLOYMENTZONE"; }
+
+       IF (RND(3)=0) %AND (GETTERRAIN(X,Y,0)=CTGrass) THEN { SETTERRAIN(X,Y,0,CTrock); }
+
+      !CORRUPTROCKDEPLOYMENTZONE!
+
+     NEXT Y;
+     NEXT X;
+
+     GOTO "NOTCORRUPTTILE";
+
+   !CORRUPTTODESERT!
+
+    FOR X=1 TO 21;
+    FOR Y=1 TO 21;
+
+     IF (C>0) %AND ( (X>5) %AND (X<10) ) %AND ( (Y>9) %AND (Y<14) ) THEN { GOTO "CORRUPTSANDDEPLOYMENTZONE"; }
+
+      IF (RND(4)=0) %AND (GETTERRAIN(X,Y,0)=CTGrass) THEN { SETTERRAIN(X,Y,0,CTDesert); }
+
+     !CORRUPTSANDDEPLOYMENTZONE!
+
+    NEXT Y;
+    NEXT X;
+
+  !NOTCORRUPTTILE!
+
+ !NOTFIRSTTURN!
+
+  IF (C<1) THEN { GOTO "ENDOFTACTICALCOMBAT"; }
+  : start tactical siege here :
+
+  : tactical effect of hillfort :
+  IF (ISBUILT(C,BHillfort)=0) THEN { GOTO "NOHILLFORT"; }
+
+   : Hill fort give missile immunity :
+   IF (W=D) %AND (GETSTAT(U,SCoX,1)>5) %AND (GETSTAT(U,SCoX,1)<10) %AND (GETSTAT(U,SCoY,1)>9) %AND (GETSTAT(U,SCoY,1)<14) THEN {
+    SETSTAT(U,AMissileImmunity,0,1);
+   }
+
+   : Trigger rock formation for hillfort :
+   IF (HILLFORTCOMBAT=0) THEN { GOTO "NOHILLFORT"; }
+
+    MASTERVARSET HILLFORTCOMBAT = 0;
+
+    IF (LT>LTGrassland) %AND (LT<LTDesert) THEN { GOTO "HIGHFORT"; }
+
+     SETTERRAIN(5,9,0,CTRock2);
+     SETTERRAIN(5,10,0,CTRock2);
+     SETTERRAIN(5,11,0,CTRock2);
+     SETTERRAIN(5,12,0,CTRock2);
+     SETTERRAIN(5,13,0,CTRock2);
+     SETTERRAIN(5,14,0,CTRock2);
+     SETTERRAIN(6,9,0,CTRock2);
+     SETTERRAIN(6,14,0,CTRock2);
+     SETTERRAIN(7,9,0,CTRock2);
+     SETTERRAIN(7,14,0,CTRock2);
+     SETTERRAIN(8,9,0,CTRock2);
+     SETTERRAIN(8,14,0,CTRock2);
+     SETTERRAIN(9,9,0,CTRock2);
+     SETTERRAIN(9,14,0,CTRock2);
+     SETTERRAIN(10,9,0,CTRock2);
+     SETTERRAIN(10,10,0,CTRock2);
+     SETTERRAIN(10,11,0,CTRock2);
+     SETTERRAIN(10,12,0,CTrock);
+     SETTERRAIN(10,13,0,CTRock2);
+     SETTERRAIN(10,14,0,CTRock2);
+     GOTO "NOHILLFORT";
+
+    !HIGHFORT!
+
+     SETTERRAIN(5,9,0,CTMountain);
+     SETTERRAIN(5,10,0,CTMountain);
+     SETTERRAIN(5,11,0,CTRock2);
+     SETTERRAIN(5,12,0,CTMountain);
+     SETTERRAIN(5,13,0,CTMountain);
+     SETTERRAIN(5,14,0,CTMountain);
+     SETTERRAIN(6,9,0,CTMountain);
+     SETTERRAIN(6,14,0,CTMountain);
+     SETTERRAIN(7,9,0,CTMountain);
+     SETTERRAIN(7,14,0,CTRock2);
+     SETTERRAIN(8,9,0,CTRock2);
+     SETTERRAIN(8,14,0,CTMountain);
+     SETTERRAIN(9,9,0,CTMountain);
+     SETTERRAIN(9,14,0,CTMountain);
+     SETTERRAIN(10,9,0,CTMountain);
+     SETTERRAIN(10,10,0,CTMountain);
+     SETTERRAIN(10,11,0,CTMountain);
+     SETTERRAIN(10,12,0,CTrock);
+     SETTERRAIN(10,13,0,CTMountain);
+     SETTERRAIN(10,14,0,CTMountain);
+
+   !NOHILLFORT!
+
+: tactical effect of fortification :
+  IF (ISBUILT(C,BMoats)=0) THEN { GOTO "NOFORTIFICATION"; }
+
+: fortification give large shield inside city area, if already have large shield then get missile immunity instead :
+   IF (W=D) %AND (GETSTAT(U,SCoX,1)>5) %AND (GETSTAT(U,SCoX,1)<10) %AND (GETSTAT(U,SCoY,1)>9) %AND (GETSTAT(U,SCoY,1)<14) THEN {
+    IF (GETSTAT(U,ALargeShield,0)>0) THEN { SETSTAT(U,AMissileImmunity,0,1); } ELSE { SETSTAT(U,ALargeShield,0,1); }
+   }
+
+: trigger water tiles for moats :
+   IF (MOATCOMBAT=0) THEN { GOTO "NOFORTIFICATION"; }
+
+    MASTERVARSET MOATCOMBAT = 0;
+
+    IF (ISBUILT(C,BHillfort)>0) THEN { GOTO "FORTIFICATIONWITHHILLFORT"; }
+
+     IF (ICEAGECOUNT=0) %OR ( HASGLOBAL(D,GEIceAge) > 0 ) THEN {
+      SETTERRAIN(5,9,0,CTSea);
+      SETTERRAIN(5,10,0,CTSea);
+      SETTERRAIN(5,12,0,CTSea);
+      SETTERRAIN(5,13,0,CTSea);
+      SETTERRAIN(5,14,0,CTSea);
+      SETTERRAIN(6,9,0,CTSea);
+      SETTERRAIN(6,14,0,CTSea);
+      SETTERRAIN(7,9,0,CTSea);
+      SETTERRAIN(7,14,0,CTSea);
+      SETTERRAIN(8,9,0,CTSea);
+      SETTERRAIN(8,14,0,CTSea);
+      SETTERRAIN(9,9,0,CTSea);
+      SETTERRAIN(9,14,0,CTSea);
+      SETTERRAIN(10,9,0,CTSea);
+      SETTERRAIN(10,10,0,CTSea);
+      SETTERRAIN(10,11,0,CTSea);
+      SETTERRAIN(10,13,0,CTSea);
+      SETTERRAIN(10,14,0,CTSea);
+     } ELSE {
+      SETTERRAIN(5,9,0,CTIce);
+      SETTERRAIN(5,10,0,CTIce);
+      SETTERRAIN(5,12,0,CTIce);
+      SETTERRAIN(5,13,0,CTIce);
+      SETTERRAIN(5,14,0,CTIce);
+      SETTERRAIN(6,9,0,CTIce);
+      SETTERRAIN(6,14,0,CTIce);
+      SETTERRAIN(7,9,0,CTIce);
+      SETTERRAIN(7,14,0,CTIce);
+      SETTERRAIN(8,9,0,CTIce);
+      SETTERRAIN(8,14,0,CTIce);
+      SETTERRAIN(9,9,0,CTIce);
+      SETTERRAIN(9,14,0,CTIce);
+      SETTERRAIN(10,9,0,CTIce);
+      SETTERRAIN(10,10,0,CTIce);
+      SETTERRAIN(10,11,0,CTIce);
+      SETTERRAIN(10,13,0,CTIce);
+      SETTERRAIN(10,14,0,CTIce);
+     }
+     SETTERRAIN(5,11,0,CTrock);
+     SETTERRAIN(10,12,0,CTrock);
+     GOTO "NOFORTIFICATION";
+
+    !FORTIFICATIONWITHHILLFORT!
+
+     IF (ICEAGECOUNT=0) %OR ( HASGLOBAL(D,GEIceAge) > 0 ) THEN {
+      SETTERRAIN(4,8,0,CTSea);
+      SETTERRAIN(4,9,0,CTSea);
+      SETTERRAIN(4,10,0,CTSea);
+      SETTERRAIN(4,12,0,CTSea);
+      SETTERRAIN(4,13,0,CTSea);
+      SETTERRAIN(4,14,0,CTSea);
+      SETTERRAIN(4,15,0,CTSea);
+      SETTERRAIN(5,8,0,CTSea);
+      SETTERRAIN(5,15,0,CTSea);
+      SETTERRAIN(6,8,0,CTSea);
+      SETTERRAIN(6,15,0,CTSea);
+      SETTERRAIN(7,8,0,CTSea);
+      SETTERRAIN(7,15,0,CTSea);
+      SETTERRAIN(8,8,0,CTSea);
+      SETTERRAIN(8,15,0,CTSea);
+      SETTERRAIN(9,8,0,CTSea);
+      SETTERRAIN(9,15,0,CTSea);
+      SETTERRAIN(10,8,0,CTSea);
+      SETTERRAIN(10,15,0,CTSea);
+      SETTERRAIN(11,8,0,CTSea);
+      SETTERRAIN(11,9,0,CTSea);
+      SETTERRAIN(11,10,0,CTSea);
+      SETTERRAIN(11,11,0,CTSea);
+      SETTERRAIN(11,13,0,CTSea);
+      SETTERRAIN(11,14,0,CTSea);
+      SETTERRAIN(11,15,0,CTSea);
+     } ELSE {
+      SETTERRAIN(4,8,0,CTIce);
+      SETTERRAIN(4,9,0,CTIce);
+      SETTERRAIN(4,10,0,CTIce);
+      SETTERRAIN(4,12,0,CTIce);
+      SETTERRAIN(4,13,0,CTIce);
+      SETTERRAIN(4,14,0,CTIce);
+      SETTERRAIN(4,15,0,CTIce);
+      SETTERRAIN(5,8,0,CTIce);
+      SETTERRAIN(5,15,0,CTIce);
+      SETTERRAIN(6,8,0,CTIce);
+      SETTERRAIN(6,15,0,CTIce);
+      SETTERRAIN(7,8,0,CTIce);
+      SETTERRAIN(7,15,0,CTIce);
+      SETTERRAIN(8,8,0,CTIce);
+      SETTERRAIN(8,15,0,CTIce);
+      SETTERRAIN(9,8,0,CTIce);
+      SETTERRAIN(9,15,0,CTIce);
+      SETTERRAIN(10,8,0,CTIce);
+      SETTERRAIN(10,15,0,CTIce);
+      SETTERRAIN(11,8,0,CTIce);
+      SETTERRAIN(11,9,0,CTIce);
+      SETTERRAIN(11,10,0,CTIce);
+      SETTERRAIN(11,11,0,CTIce);
+      SETTERRAIN(11,13,0,CTIce);
+      SETTERRAIN(11,14,0,CTIce);
+      SETTERRAIN(11,15,0,CTIce);
+     }
+     SETTERRAIN(4,11,0,CTrock);
+     SETTERRAIN(11,12,0,CTrock);
+
+   !NOFORTIFICATION!
+
+: tactical effect of Baray :
+  IF (ISBUILT(C,BBaray)=0) THEN { GOTO "NOBARAY"; }
+
+: Baray give waterwalk to defending side and give fire immunity inside city area :
+   IF (W=D) %AND (GETSTAT(U,SCoX,1)>5) %AND (GETSTAT(U,SCoX,1)<10) %AND (GETSTAT(U,SCoY,1)>9) %AND (GETSTAT(U,SCoY,1)<14) THEN {
+    SETSTAT(U,AFireImmunity,0,1);
+   }
+
+: Baray turn area inside city into water tiles :
+   IF (BARAYCOMBAT=0) THEN { GOTO "NOBARAY"; }
+
+    FOR X=6 TO 9;
+    FOR Y=10 TO 13;
+
+     IF (GETTERRAIN(X,Y,0)<>CTCenter) THEN {
+      IF (ICEAGECOUNT=0) %OR ( HASGLOBAL(D,GEIceAge) > 0 ) THEN {
+       SETTERRAIN(X,Y,0,CTSea);
+      } ELSE {
+       SETTERRAIN(X,Y,0,CTIce);
+      }
+     }
+  
+    NEXT Y;
+    NEXT X;
+
+    MASTERVARSET BARAYCOMBAT = 0;
+
+   !NOBARAY!
+
+  !ENDOFTACTICALCOMBAT!
+
+
+: End of the First Combat Part :
+
+!NOCOMBAT!
+
+: Post-script that activate both inside and outside combat due to requires sum of stats to work upon :
+
+: New unit enchantment "Colossal Strength", +40% melee and non-magic range attack :
+IF (GetEnchantmentFlag(U,EncColossalStrength,0)=0) THEN { GOTO "NOCOLOSSALSTRENGTH"; }
+
+ CSM=1+(%I((GetStat(U,SAttack,0)*4)/10));
+ CSR=1+(%I((GetStat(U,SRanged,0)*4)/10));
+ CST=1+(%I((GetStat(U,SThrown,0)*4)/10));
+ SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+CSM));
+ SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+CSM));
+ IF (GetStat(U,SRangedType,0)>0) %AND (GetStat(U,SRangedType,0)<30) THEN {
+  SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+CSR));
+  SETSTAT(U,SRangedBuff,0,(GetStat(U,SRangedBuff,0)+CSR));
+ }
+ IF (GetStat(U,SThrown,0)>0) THEN {
+  SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+CST));
+ }
+
+!NOCOLOSSALSTRENGTH!
+
+: New unit enchantment "Vampirism", unit becomes undead and gain bloodsuck and create undead :
+IF (GetEnchantmentFlag(U,EncVampirism,0)=0) THEN { GOTO "NOVAMPIRISM"; }
+
+ THROWNPOW=((GetStat(U,SThrown,0))/2);
+ BREATHPOW=(((GetStat(U,SFireBreath,0))+(GetStat(U,SLightningBreath,0)))/2);
+
+ SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+(%I(THROWNPOW+BREATHPOW))));
+ SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+(%I(THROWNPOW+BREATHPOW))));
+ SETENCHANTMENTFLAG(U,EncUndead,1,1);
+ SETSTAT(U,ACreateUndead,0,1);
+ SETSTAT(U,ABloodsucker,0,1);
+ IF ((GetStat(U,SThrown,0))>0) THEN { SETSTAT(U,SThrown,0,1); }
+ IF ((GetStat(U,SFireBreath,0))>0) THEN { SETSTAT(U,SFireBreath,0,1); }
+ IF ((GetStat(U,SLightningBreath,0))>0) THEN { SETSTAT(U,SLightningBreath,0,1); }
+
+!NOVAMPIRISM!
+
+: New unit enchantment "Shadow Strike", gain thrown at strength half of its melee power :
+IF (GetEnchantmentFlag(U,EncShadowStrike,0)=0) THEN { GOTO "NOSHADOWSTRIKE"; }
+
+ STRIKE=1+(%I(GetStat(U,SAttack,0)/3));
+ SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+STRIKE));
+
+!NOSHADOWSTRIKE!
+
+: Apotheosis removed no healing from enchanted undead units :
+IF (GETENCHANTMENTFLAG(U,EncDestiny,0)=0) %AND (GETITEMPOWER(U,82)=0) THEN { GOTO "NOTDESTINY"; }
+ IF (GETENCHANTMENTFLAG(U,EncUndead,1)=0) THEN { GOTO "NOTDESTINY"; }
+
+  SETSTAT(U,ANoHealing,0,0);
+
+!NOTDESTINY!
+
+: These units could not fly due to too heavy to do so and have merging, if gain flying ability elsewhere will gain thrown 1 as replacement :
+IF (GetStat(U,STypeID,1)<>189)
+ %AND (GetStat(U,STypeID,1)<>260)
+ %AND (GetStat(U,STypeID,1)<>261)
+ %AND (GetStat(U,STypeID,1)<>331)
+THEN { GOTO "NOTHEAVY"; }
+
+ IF (GetStat(U,AFlying,0)>0) THEN {
+  SETSTAT(U,AFlying,0,0);
+  SETSTAT(U,SThrown,0,GETSTAT(U,SThrown,0)+1);
+ }
+
+!NOTHEAVY!
+
+IF (ICEAGECOUNT=0) THEN { GOTO "NOTICEAGE"; }
+
+ IF (GetStat(U,SRace,0)=RCNature) %AND ( HASGLOBAL(W,GEIceAge) > 0 ) THEN {
+  SETSTAT(U,AColdImmunity,0,1);
+ }
+
+ IF (GetStat(U,ASailing,0)>0) %AND ( HASGLOBAL(W,GEIceAge) = 0 ) THEN {
+  SETSTAT(U,SOLMaxMoves,0,%I(GetStat(U,SOLMaxMoves,0)/2));
+  SETSTAT(U,SCombatMaxMoves,0,%I(GetStat(U,SCombatMaxMoves,0)/2));
+ }
+
+!NOTICEAGE!
+
+: Effect of Sentience, enchanted fantastic unit could not be targeted by fantastic-only spell and gain +2 resistance :
+IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }
+
+: in or outside combat override :
+IF (INCOMBAT(U)>0) THEN { GOTO "COMBATOVERRIDE"; }
+
+: Post-script overland override :
+
+ : This is effect of Astral Gate :
+ IF (C>0) %AND (CITYENCHANT(C,CEAstralGate)>-1) THEN {
+  SETSTAT(U,APlaneShifting,0,1);
+ }
+
+ : Submarine lose sailing overland if has Non corpereal :
+ IF (GetStat(U,STypeID,1)<>361) THEN { GOTO "NOTOVERLANDSUBMARINE"; }
+
+  IF (GetStat(U,ANoncorporeal,0)>0)
+   %OR (GETENCHANTMENTFLAG(U,EncWraithForm,0)>0)
+  THEN {
+   SETSTAT(U,ASailing,0,0);
+  }
+
+ !NOTOVERLANDSUBMARINE!
+
+ : This effect add to drop ship that lifted by windwalking into combat :
+ IF (GETSTAT(U,ASailing,1)=0) THEN { GOTO "NOTSAIL"; }
+
+  IF (GETENCHANTMENTFLAG(U,EncLiftedShip,0)>0) THEN {
+   SETENCHANTMENTFLAG(U,EncLiftedShip,1,0);
+  }
+
+  IF ( OVERLANDACTIVEPLAYER = W ) THEN { GOTO "THEIRTURN"; }
+
+   IF (GETSTAT(U,AFlying,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncFlight,0)>0)
+    %OR (GETENCHANTMENTFLAG(U,EncCCFlight,0)>0)
+    %OR (HASGLOBAL(W,GEWindMastery)>0)
+   THEN { GOTO "NOTSAIL"; }
+
+    IF (OLT>LTRiverMouth) THEN {
+     SETSTAT(U,AFlying,0,1);
+     GOTO "NOTSAIL";
+    } ELSE {
+     SETSTAT(U,AFlying,0,0);
+     GOTO "NOTSAIL";
+    }
+
+  !THEIRTURN!
+
+  IF (GETSTAT(U,AFlying,1)>0)
+   %OR (GETENCHANTMENTFLAG(U,EncFlight,0)>0)
+   %OR (GETENCHANTMENTFLAG(U,EncCCFlight,0)>0)
+   %OR (HASGLOBAL(W,GEWindMastery)>0)
+  THEN { GOTO "NOTSAIL"; }
+
+   WWCOUNTER=0;
+
+   FOR N=1 TO NMAX;
+
+    UOT=UNITONTILE(combatP(),combatX(),combatY(),N);
+
+    IF (GETSTAT(UOT,SOwner,0)<>W) THEN { GOTO "NOWWCOUNTING"; }
+
+     IF (GetStat(UOT,AWindWalking,1)>0)
+      %OR (GETENCHANTMENTFLAG(UOT,EncWindWalking,0)>0)
+     THEN {
+      WWCOUNTER=WWCOUNTER+1;
+     }
+
+    !NOWWCOUNTING!
+
+   NEXT N;
+
+   IF (WWCOUNTER>0) THEN {
+    SETENCHANTMENTFLAG(U,EncLiftedShip,1,1);
+    SETSTAT(U,AFlying,0,1);
+    GOTO "NOTSAIL";
+   } ELSE {
+    SETSTAT(U,AFlying,0,0);
+    GOTO "NOTSAIL";
+   }
+
+ !NOTSAIL!
+
+ : Time-Stop effect and remove all healing from unit at the end of turn :
+ IF (TIMESTOPCOUNT=0) THEN { GOTO "NOTIMESTOP"; }
+
+  SETSTAT(U,SEoTHealPerc,0,-100)
+
+ !NOTIMESTOP!
+
+
+HALT;
+
+:post-script combat override:
+!COMBATOVERRIDE!
+
+ : Outlander Reforms' Effects in combat part that trigger after magic :
+ IF (GETWIZARDDATA(W,WDMuggleWizard)<1) THEN { GOTO "NOTCOMBATOUTLANDER"; }
+
+  IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)
+   %AND (GetStat(U,SCustomAttribute,1)=1) %OR (BASEFANTASTIC(U)>0)
+  THEN { GOTO "NOTOUTLANDERSOLDIER"; }
+
+   IF (SPELLSTATE(W,STMagitekBeamWeapon)=2) THEN {
+    SETSTAT(U,AFDoom,0,1,2);
+   }
+
+   IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=2) THEN {
+    PSYCHE=%I( (GETSTAT(U,SResist,0)) * (GETSTAT(U,ALevel,0)) / 2 );
+    SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)+PSYCHE) );
+    SETSTAT( U,SToDefend,0,(GetStat(U,SToDefend,0)+PSYCHE) );
+   }
+
+   IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {
+    IF (GetStat(U,AFLifeSteal,0,1)>0) THEN {
+     PNEUMA=0-%I( GETSTAT(U,SResist,0) / 2 );
+    } ELSE {
+     PNEUMA=GetStat(U,AFLifeSteal,0,1) - %I( GETSTAT(U,SResist,0) / 2 );
+    }
+    SETSTAT(U,AFLifeSteal,0,PNEUMA,1);
+   }
+
+  !NOTOUTLANDERSOLDIER!
+
+  IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)=0) THEN { GOTO "NOPOWERENGINE"; }
+
+   IF (SPELLSTATE(W,STMagitekBeamWeapon)=2)
+    %AND (GETSTAT(U,SRangedType,1)=40)
+   THEN {
+    DESTRUCTION=GETSTAT(U,AFDestruction,0,3);
+    TRANGE=( GETSTAT(U,SToHit,0) + GETSTAT(U,SToRanged,0) );
+    IF (TRANGE>100) THEN { TRANGE=100; }
+    IF (DESTRUCTION>0) THEN {
+     DESTRUCTION=0-%I(TRANGE/15);
+    } ELSE {
+     DESTRUCTION=DESTRUCTION-%I(TRANGE/15 );
+    }
+    SETSTAT(U,AFDestruction,0,DESTRUCTION,3);
+   }
+
+  !NOPOWERENGINE!
+
+ !NOTCOMBATOUTLANDER!
+
+ : New score modifier "Unstoppable Stampede", in combat, all neutral fantastic creatures gain regeneration 0 :
+ IF (SCORINGOPTION(SUnstoppableStampede)=0) THEN { GOTO "NOTUNSTOPPABLE"; }
+
+  IF ( GETSTAT(U,SOwner,0) = NeutralPlayerID )
+   %AND FANTASTIC(U)
+   %AND ( GETSTAT(U,ARegeneration,0) < 0 )
+  THEN {
+   SETSTAT(U,ARegeneration,0,0)
+  }
+
+ !NOTUNSTOPPABLE!
+
+ : New global enchantment, "State of Rot", non-undead units get -5% to-defend and could nolonger heal or regenerate while caster units lose regeneration and additional -10% to-defend unless owner wizard casting this spell him/herself :
+ IF (HASGLOBAL(W,GEStateOfRot)) %OR (GETENCHANTMENTFLAG(U,EncUndead,0)=1) THEN { GOTO "IMMUNETOROT"; }
+ 
+  IF (HASGLOBAL(OPPONENT,GEStateOfRot)=0) THEN { GOTO "IMMUNETOROT"; }
+
+   SETENCHANTMENTFLAG(U,EncSupremeLightRegen,0,0);
+   SETENCHANTMENTFLAG(U,EncSupremeLightRegen,1,0);
+   SETSTAT(U,ARegeneration,0,-1);
+   IF (GETENCHANTMENTFLAG(U,EncDestiny,0)=0)
+    %AND (GETITEMPOWER(U,82)=0)
+   THEN {
+    SETSTAT(U,ANoHealing,0,1);
+   }
+
+ !IMMUNETOROT!
+
+ : Below is meaningless without tactical combat :
+ IF (TACTICALCOMBAT=0) THEN { HALT; }
+
+ : Effect below would override normal situation completely :
+
+  : New combat enchantment "Eye of Heaven", is also shut off gaze attack of opponent :
+  IF (HASCOMBATGLOBAL(W,CGEyeOfHeaven,2)>0) THEN {
+   SETSTAT(U,SStoningGaze,0,100);
+   SETSTAT(U,SDeathGaze,0,100);
+   SETSTAT(U,SDoomGaze,0,0);
+  }
+
+  : New unit enchantment "Blaze of Glory", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :
+  IF (GetEnchantmentFlag(U,EncBlazeOfGlory,0)=0) THEN { GOTO "NOBLAZEOFGLORY"; }
+
+   BLAZEMELEE=GetStat(U,SDefense,0);
+   BLAZETHROWN=GetStat(U,SRanged,0);
+   SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+BLAZEMELEE));
+   SETSTAT(U,SAttackBonus,0,(GetStat(U,SAttackBonus,0)+BLAZEMELEE));
+   SETSTAT(U,SDefense,0,((GetStat(U,SDefense,0))-BLAZEMELEE));
+   SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+BLAZEMELEE));
+   SETSTAT(U,SThrown,0,((GetStat(U,SThrown,0))+BLAZETHROWN));
+   SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));
+   SETSTAT(U,SRangedPenalty,0,BLAZETHROWN);
+   SETSTAT(U,SAmmo,0,0);
+   SETSTAT(U,AWallCrusher,0,1);
+   SETSTAT(U,AFArmorPiercing,0,1,1);
+   SETSTAT(U,AFirstStrike,0,0);
+
+  !NOBLAZEOFGLORY!
+
+  : New combat enchantment "Beat of Swiftness", all friendly units with melee more than range get +3 movement, or else get +2 :
+  IF (HASCOMBATGLOBAL(W,CGBeatOfSwiftness,1)=0) THEN { GOTO "NOBEATOFSWIFTNESS"; }
+
+   RECKLESS=(%R(((GetStat(U,SDefense,0))/10));
+   SETSTAT(U,SDefense,0,((GetStat(U,SDefense,0))-RECKLESS));
+   SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+RECKLESS));
+   IF (GetStat(U,SAttack,0))>(GetStat(U,SRanged,0)) THEN {
+    SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+6));
+    SETSTAT(U,SCombatMovesLeft,0,(GetStat(U,SCombatMovesLeft,0)+6));
+   } ELSE {
+    SETSTAT(U,SCombatMaxMoves,0,(GetStat(U,SCombatMaxMoves,0)+4));
+    SETSTAT(U,SCombatMovesLeft,0,(GetStat(U,SCombatMovesLeft,0)+4));
+   }
+
+  !NOBEATOFSWIFTNESS!
+
+: Submarine will submerge in combat if possible :
+
+  : Midget Submarine could not retain its function when not submerge :
+  : Midget Submarine's Fire Immunity and Lightning Resist will be put on UnitCalcPre :
+  IF (GetStat(U,STypeID,1)<>361) THEN { GOTO "NOTCOMBATSUBMARINE"; }
+
+   IF (GETTERRAIN(1,11,0)=CTSea) THEN {
+    SETSTAT(U,AFlying,0,0);
+    GOTO "NOTCOMBATSUBMARINE";
+   } ELSE {
+    IF (GetStat(U,ANoncorporeal,0)>0)
+     %OR (GETENCHANTMENTFLAG(U,EncWraithForm,0)>0)
+     %OR (HASGLOBAL(W,GEKingOfUnderworld)>0)
+    THEN {
+     SETSTAT(U,AFlying,0,0);
+     SETSTAT(U,ASailing,0,0);
+     GOTO "NOTCOMBATSUBMARINE";
+    } ELSE {
+     : If Submarine is not submerged, it could not using torpedo :
+     IF (GETSTAT(U,SRangedType,0)<>14) THEN { GOTO "NOTCOMBATSUBMARINE"; }
+      BOMBTHROWN=GETSTAT(U,SRanged,0);
+      SETSTAT( U,SThrown,0,(GETSTAT(U,SThrown,0)+BOMBTHROWN) );
+      SETSTAT( U,SRanged,0,(GETSTAT(U,SRanged,0)-BOMBTHROWN) );
+      SETSTAT( U,SRangedPenalty,0,BOMBTHROWN );
+      SETSTAT(U,SAmmo,0,0);
+     }
+    }
+
+  !NOTCOMBATSUBMARINE!
+
+: Hierophany, combat-only unit curse, unit lose half of defense and lose all of its immunities and lightning resistance :
+  IF (GETCOMBATENCHANTMENTFLAG(U,EncHierophany,0)=0)
+   %AND (GETENCHANTMENTFLAG(U,EncHierophany,0)=0)
+  THEN { GOTO "NOEPIPHANY"; }
+
+   EPIPHANY=%I((GetStat(U,SDefense,0))/2)
+   SETSTAT(U,SDefense,0,((GetStat(U,SDefense,0))-EPIPHANY));
+   SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+EPIPHANY));
+   SETSTAT(U,APoisonImmunity,0,0)
+   SETSTAT(U,AStoningImmunity,0,0)
+   SETSTAT(U,AIllusionImmunity,0,0)
+   SETSTAT(U,ADeathImmunity,0,0)
+   SETSTAT(U,AFireImmunity,0,0)
+   SETSTAT(U,AColdImmunity,0,0)
+   SETSTAT(U,AWeaponImmunity,0,0)
+   SETSTAT(U,AMissileImmunity,0,0)
+   SETSTAT(U,AMagicImmunity,0,0)
+   SETSTAT(U,ALightningResistance,0,0)
+   SETSTAT(U,ANegateFirstStrike,0,0)
+   SETSTAT(U,AMerging,0,0)
+   SETSTAT(U,AFlying,0,0)
+   SETSTAT(U,ANoncorporeal,0,0)
+   SETSTAT(U,AWaterwalking,0,0)
+   SETSTAT(U,AForester,0,0)
+   SETSTAT(U,AMountaineer,0,0)
+   SETSTAT(U,ATeleporting,0,0)
+
+  !NOEPIPHANY!
+
+: Stuck by a trap or Trapped in Fairy Maze :
+  IF (GETENCHANTMENTFLAG(U,EncTrapped,1)=0)
+   %AND (GETCOMBATENCHANTMENTFLAG(U,EncFairyMaze,1)=0)
+  THEN { GOTO "NOTRAP"; }
+
+   SETSTAT(U,SCombatMaxMoves,0,0);
+   SETSTAT(U,SCombatMovesLeft,0,0);
+   SETSTAT(U,AFlying,0,0);
+   IF (CT<>CTSea) THEN {
+    SETSTAT(U,ASailing,0,1);
+   } ELSE {
+    SETSTAT(U,ASailing,0,0);
+   }
+
+  !NOTRAP!
+
+  IF (GETSTAT(U,SSpellAbility,1)<>294) THEN { GOTO "NOREDBOTTON"; }
+
+   TRIGGERPOINT=%I((GETSTAT(U,SFigures,1))*(GETSTAT(U,SHP,0))/2);
+
+   IF ((GETDAMAGE(U,0))<TRIGGERPOINT) THEN {
+    SETSTAT(U,SChargesLeft,1,0);
+   } ELSE {
+    SETSTAT(U,SChargesLeft,1,1);
+   }
+
+  !NOREDBOTTON!
+
+: Tactical retreat is disabled under certain conditions :
+  IF (GETSTAT(U,SSpellAbility,1)<>STacticalRetreat) THEN { GOTO "NOTACTICRETREAT"; }
+
+   TRIGGERPOINT=%I(3*(GETSTAT(U,SFigures,1))*(GETSTAT(U,SHP,0))/4);
+
+   OURSIDE=0;
+
+   FOR I=1 TO MAXUNIT();
+
+    IF (INCOMBAT(I)=0) THEN { GOTO "NOTOURSIDE"; }
+     IF (ALIVE(I)=0) THEN { GOTO "NOTOURSIDE"; }
+      IF (GETCOMBATENCHANTMENTFLAG(I,EncTacticalRetreat,0)>0) THEN { GOTO "NOTOURSIDE"; }
+
+       IF ( (GETSTAT(I,SOwner,1)) = W ) THEN { OURSIDE=OURSIDE+1; }
+
+    !NOTOURSIDE!
+
+   NEXT I;
+
+   IF (OURSIDE>1) %AND (GETSTAT(U,SSpellAbility,1)=STacticalRetreat) THEN {
+    IF (W<>0) THEN {
+     IF ((GETDAMAGE(U,0))<TRIGGERPOINT) THEN {
+      SETSTAT(U,SChargesLeft,1,0);
+     } ELSE {
+      SETSTAT(U,SChargesLeft,1,1);
+     }
+    } ELSE {
+     SETSTAT(U,SChargesLeft,1,1);
+    }
+   } ELSE {
+    SETSTAT(U,SChargesLeft,1,0);
+   }
+
+   : Effect of Tactical retreat :
+   IF (GETCOMBATENCHANTMENTFLAG(U,EncTacticalRetreat,0)=0) THEN { GOTO "THEEND"; }
+ 
+    IF (OURSIDE>0) THEN {
+     SETENCHANTMENTFLAG(U,EncUndead,0,1);
+     DEALCOMBATDAMAGE (U,1000,0,0);
+    }
+
+  !NOTACTICRETREAT!
+
+  : Effect of Strategic Recall :
+  IF GETCOMBATENCHANTMENTFLAG(U,EncTacticalRetreat,0) THEN {
+   SETENCHANTMENTFLAG(U,EncUndead,0,1);
+   IF GETENCHANTMENTFLAG(U,EncUndead,0) THEN {
+    DEALCOMBATDAMAGE (U,1000,0,0);
+   }
+  }
+
+  !THEEND!
+
+: End of Combat override Part :
+
+HALT;

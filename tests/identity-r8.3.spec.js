@@ -152,7 +152,7 @@ test('Combat Summoned is visible and selectable for every engine version', async
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
     const values = {};
-    for (const version of ['mom_1.31', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.6']) {
+    for (const version of ['mom_1.31', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7']) {
       document.getElementById('gameVersion').value = version;
       onVersionChange();
       const control = document.getElementById('aAbil_combatSummoned');

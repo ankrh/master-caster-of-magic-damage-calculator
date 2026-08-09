@@ -306,7 +306,7 @@ const V_MOM_131 = 'mom_1.31';
 const V_MOM_CP  = 'mom_cp_1.60.00';
 const V_COM     = 'com_6.08';
 const V_COM2    = 'com2_1.05.11';
-const V_WARLORD = 'com2_warlord_1.5.12.6.2';
+const V_WARLORD = 'com2_warlord_1.5.12.7';
 
 // --- Version -> Unit Data mapping ---
 // Each *_UNITS_DATA const is defined in its own units_<version>.js file
@@ -6959,7 +6959,7 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 9.000 },
   },
 
-  // --- Warlord v1.5.12.6 Outlander-derived unit abilities ---
+  // --- Warlord v1.5.12.7 Outlander-derived unit abilities ---
   armorcladArmorWarlord: {
     desc: 'Armorclad reform on predefined mechanical Catapult: Armor 4+6=10; atk 10 at 100% hit vs the Catapult\'s 30% block deals 7.0.',
     version: V_WARLORD,

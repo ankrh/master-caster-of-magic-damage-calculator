@@ -9,7 +9,7 @@
  *                 R6.1f level bonuses and hero-template abilities;
  *                 R6.1g item powers, recompute hit points and CoM movement;
  *                 R6.1h item attack-special helper;
- *                 R6.5c overland Unit_Moves2
+ *                 R6.5c overland Unit_Moves2; R9-G1a-R3 Zombies type-table Abilities binding
  */
 
 #include "MOM_DAT.h"
@@ -89,7 +89,7 @@
 #define UA_CREATEOUTPOST          0x0020
 #define UA_INVISIBILITY           0x0040
 #define UA_NONCORPOREAL           0x0800
-
+#define UA_CREATE_UNDEAD          0x0080
 /* BATTLE_UNIT.Move_Flags (16-bit). */
 #define MV_SWIMMING               0x0004
 #define MV_FLYING                 0x0008
@@ -166,6 +166,7 @@
 #define COM1_UT_APPRENTICES       0x3E
 #define COM1_UT_GOLEM             0x51
 #define COM1_UT_ZOMBIES           0xAE
+#define COM1_UT_ZOMBIES_ABILITIES (UA_FANTASTIC | UA_CREATE_UNDEAD) /* raw 0x0081; DS:0x019C + 0xAE*0x24 + 0x1E = file com1:0x2AED2 (`81 00`) */
 #define COM1_UT_ANGEL             0xB1
 #define COM1_UT_DJINN             0xC3
 #define COM1_HOLY_ARMS_TYPE_CEILING 0x97 /* selected set remains an R6.1a open question */
@@ -173,7 +174,6 @@
 #define COM1_LEVEL_TABLE_ROWS     5
 #define COM1_LEVEL_TABLE_STRIDE   7
 #define COM1_CATAPULT_MAGIC_WP    9
-
 /* Signed slot sentinel used by _UNITS[].Hero_Slot. */
 #define HERO_SLOT_NONE            (-1)
 
@@ -1699,7 +1699,7 @@ void BU_Construct(struct s_BATTLE_UNIT far *bu)
     ((uint8_t far *)&bu->Abilities)[0] =
         ((uint8_t far *)&unit_types[type].Abilities)[0];   /* CP preserves the high byte */
 #else
-    bu->Abilities = unit_types[type].Abilities;            /* CoM copies the full word */
+    bu->Abilities = unit_types[type].Abilities;            /* CoM full word; Zombies source COM1_UT_ZOMBIES_ABILITIES at file com1:0x2AED2 (`81 00`) */
 #endif
     /* 131:—  160:0x8EEF9  com1:0x8EF07 */
     *((uint8_t far *)bu + BU_OFF_MOVE_FLAGS_LO) = unit_types[type].Move_Flags_lo;

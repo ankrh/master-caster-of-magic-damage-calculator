@@ -49,7 +49,7 @@ Five rule sets, selected by `#gameVersion`, are first-class and independently co
 | `mom_cp_1.60.00` | MoM CP 1.60 |
 | `com_6.08` | CoM 6.08 |
 | `com2_1.05.11` | CoM2 1.05.11 |
-| `com2_warlord_1.5.12.6.2` | Warlord 1.5.12.6.2 |
+| `com2_warlord_1.5.12.7` | Warlord 1.5.12.7 |
 
 Rules:
 
@@ -330,7 +330,7 @@ enchantment", "trained in the city") does not. A modifier is classified by, in o
 1. Read it out of the region maps in `Reference docs/Caster binary/CoM2 binary
    analysis.md`, *Unit stat recalculation*, which decode `a`, `c` and `e` block by block with
    addresses.
-2. Grep the identifier across `Reference docs/Script source/Warlord 1.5.12.6.2/*.CAS`. In
+2. Grep the identifier across `Reference docs/Script source/Warlord 1.5.12.7/*.CAS`. In
    `UnitCalcPre.CAS` → **b**; in `UnitCalc.CAS` → **d**, at that file's line order.
    (`DisAbil.CAS`, `DisInfo.CAS`, `AIRes.CAS` and `EnterGame.CAS` are display and AI only.)
 3. A raw unit stat, or a value written permanently into the unit's base before the pipeline

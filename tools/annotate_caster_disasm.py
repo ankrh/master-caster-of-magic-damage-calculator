@@ -1,7 +1,14 @@
-"""Annotated disassembly of Caster.exe, for reading @Units@RecalculateUnits.
+"""Annotated disassembly of Caster.exe, written for @Units@RecalculateUnits.
 
-    annotate_caster_disasm.py Caster.exe 0x59A02C 0x200 [--raw]
+    annotate_caster_disasm.py Caster.exe 0x59A02C 0x200 [proc] [--raw]
     annotate_caster_disasm.py Caster.exe 0x59E2DC 0x1D1 --inbound
+
+`proc` names the routine whose TD32 locals annotate ebp-relative operands; a
+bare or partial name resolves like `scan_caster_binary.py locals`. It defaults
+to the routine *containing* the address, which is what you want unless you are
+deliberately reading one frame through another's names. The first output line
+states which frame was used. (`--inbound` finds the enclosing routine itself and
+ignores `proc`.)
 
 **Run `--inbound` before reconstructing any block.** It reports every branch in
 the *enclosing routine* that lands inside the range, and flags those coming from
@@ -122,13 +129,43 @@ def _branch_target(insn):
     return int(m.group(1), 16) if m else None
 
 
-def disassemble(exe, va, length, raw=False, proc='@Units@RecalculateUnits'):
+def enclosing(c, va):
+    """Smallest TD32 procedure containing `va`, as (name, va, len), or None."""
+    host = None
+    for n, (pva, _fo, plen, _mod) in c.procs.items():
+        if pva <= va < pva + plen and (host is None or plen < host[2]):
+            host = (n, pva, plen)
+    return host
+
+
+def resolve_proc(c, va, proc):
+    """Name of the routine whose TD32 locals annotate ebp-relative operands.
+
+    With no `proc`, the routine containing `va`. Annotating one routine's frame
+    with another's locals is silently wrong, not obviously wrong: this defaulted
+    to @Units@RecalculateUnits, so a dump of @Spells@CombatSummonUnit labelled
+    its `i` at [ebp-0x0C] as `{tax}`, that being RecalculateUnits' local at the
+    same offset. Pass a bare or partial name to override.
+    """
+    if proc is None:
+        host = enclosing(c, va)
+        return host[0] if host else None
+    if proc in c.locals:
+        return proc
+    m = c.find(proc)
+    return m[0][0] if m else None
+
+
+def disassemble(exe, va, length, raw=False, proc=None):
     from capstone import CS_ARCH_X86, CS_MODE_32, Cs
     c = Caster(exe)
     byva = {v[0]: n for n, v in c.procs.items()}
     guards = {v[0] for n, v in c.procs.items()
               if 'BoundErr' in n or 'IntOver' in n or 'BoundsCheck' in n}
-    loc = c.locals.get(proc, {})
+    named = resolve_proc(c, va, proc)
+    if proc is not None and named is None:
+        return [f'no TD32 routine matches {proc!r}']
+    loc = c.locals.get(named, {})
 
     fo = None
     for _n, sva, rawoff in c.sections:
@@ -223,7 +260,10 @@ def disassemble(exe, va, length, raw=False, proc='@Units@RecalculateUnits'):
     if raw:
         out = [(i, None, None) for i in insns]
 
-    lines, pending = [], 0
+    # State which frame the `{name}` annotations came from, so a dump carrying
+    # another routine's local names cannot be mistaken for this one's.
+    lines = [f'; ebp locals: {named or "none -- no TD32 routine contains this address"}']
+    pending = 0
     for insn, addr, idx in out:
         if insn is None:
             if pending:
@@ -261,10 +301,7 @@ def inbound(exe, va, length):
     """
     from capstone import CS_ARCH_X86, CS_MODE_32, Cs
     c = Caster(exe)
-    host = None
-    for n, (pva, _fo, plen, _mod) in c.procs.items():
-        if pva <= va < pva + plen and (host is None or plen < host[2]):
-            host = (n, pva, plen)
+    host = enclosing(c, va)
     if host is None:
         return [f'no TD32 routine contains {va:06X}']
     name, pva, plen = host
@@ -316,15 +353,18 @@ def inbound(exe, va, length):
 
 
 def main():
-    if len(sys.argv) < 4:
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    if len(args) < 3:
         sys.exit(__doc__)
-    exe, va, length = sys.argv[1], int(sys.argv[2], 0), int(sys.argv[3], 0)
-    fn = inbound if '--inbound' in sys.argv else None
-    if fn:
-        for line in fn(exe, va, length):
+    exe, va, length = args[0], int(args[1], 0), int(args[2], 0)
+    proc = args[3] if len(args) > 3 else None
+    if '--inbound' in sys.argv:
+        # --inbound already resolves the enclosing routine itself, and reports
+        # branches over the whole of it; a proc argument would have no meaning.
+        for line in inbound(exe, va, length):
             print(line)
         return
-    for line in disassemble(exe, va, length, raw='--raw' in sys.argv):
+    for line in disassemble(exe, va, length, raw='--raw' in sys.argv, proc=proc):
         print(line)
 
 

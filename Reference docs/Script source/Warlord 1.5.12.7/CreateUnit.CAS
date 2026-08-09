@@ -1,0 +1,747 @@
+: INPUT C - The city that produced the unit
+		U - The unit being produced.
+  OUTPUT  - None, set unit stats as desired. :
+
+W=CITYOWNER(C);
+RACE=CITYRACE(C);
+TATTOO=0;
+IF (SPELLSTATE(W,STattooMagic)=2) THEN { TATTOO=1; }
+LOGISTIC=0;
+OWNMITHRIL=0;
+OWNADAMANTIUM=0;
+OWNORIHALCON=0;
+OWNCRYSX=0;
+IF (SPELLSTATE(W,STStrategicLogistic)<>2) THEN { GOTO "NOLOGISTIC"; }
+ LOGISTIC=1;
+
+ FOR I=1 TO MAXCITY();
+
+  IF (CITYOWNER(I)<>W) THEN { GOTO "NOTLINK"; }
+
+   OWNMITHRIL=OWNMITHRIL+OREINRANGE(I,OreMithril);
+   OWNADAMANTIUM=OWNADAMANTIUM+OREINRANGE(I,OreAdamantium);
+   OWNORIHALCON=OWNORIHALCON+OREINRANGE(I,OreOrihalcon);
+   OWNCRYSX=OWNCRYSX+OREINRANGE(I,OreCrysx);
+
+  !NOTLINK!
+
+ NEXT I;
+
+!NOLOGISTIC!
+
+
+IF RETORT(W,ALCHEMIST) %AND (RACE<>RCBarbarian) THEN {
+ SETENCHANTMENTFLAG(U,EncMagic,ABase,1);
+}
+
+: new effect of Artificer retort, mechanical units gain magic weapon, +1 resistance, and land mechanical units get +1 movement :
+IF RETORT(W,Artificer) %AND (GetStat(U,SCustomAttribute,1)=1) THEN {
+ SETENCHANTMENTFLAG(U,EncMagic,1,1);
+ SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));
+ SETSTAT(U,SRanged,1,(GetStat(U,SRanged,1)+1));
+ SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+1));
+ SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+2));
+ SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+ SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+2));
+ SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+2));
+ SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+2));
+}
+
+IF (CITYENCHANT(C,CEMagicPerimeter)>-1) THEN {
+ SETENCHANTMENTFLAG(U,EncMagic,1,1);
+}
+
+IF (CITYENCHANT(C,CEEvilPresence)=-1) %AND ( (CITYENCHANT(C,CESorcererStone)>-1) %OR (ISBUILT(C,BAlchemistGuild)) ) THEN {
+ ORELEVEL=0;
+ IF (OREINRANGE(C,OreMithril)>0) %OR ( (LOGISTIC>0) %AND (OWNMITHRIL>0) ) THEN { ORELEVEL=1; }
+ IF (OREINRANGE(C,OreAdamantium)>0) %OR ( (LOGISTIC>0) %AND (OWNADAMANTIUM>0) ) THEN { ORELEVEL=2; }
+ IF (ISBUILT(C,BLavaSmelter)) THEN { ORELEVEL=ORELEVEL+1; }
+ IF (ISBUILT(C,BAlchemistGuild)) %AND (CITYENCHANT(C,CESorcererStone)>-1) THEN { ORELEVEL=ORELEVEL+1; }
+
+ SETENCHANTMENTFLAG(U,EncMagic,ABase,1); 
+ IF (ORELEVEL=1) THEN { SETENCHANTMENTFLAG(U,EncMithril,ABase,1); }
+ IF (ORELEVEL>1) THEN { SETENCHANTMENTFLAG(U,EncAdamant,ABase,1); }
+ IF (ORELEVEL>2)
+  %OR (OREINRANGE(C,OreOrihalcon)>0)
+  %OR ( (LOGISTIC>0) %AND (OWNORIHALCON>0) )
+ THEN {
+  SETENCHANTMENTFLAG(U,EncOrihalcon,ABase,1);
+ }
+}
+
+: give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+IF GETENCHANTMENTFLAG(U,EncAdamant,ABase) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,ABase) THEN {
+ SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1); 
+}
+
+: Convert generic units to racial units :
+IF (GETSTAT(U,SRace,1)<>RCGeneric) %OR (GETSTAT(U,STypeID,1)=44) THEN { GOTO "NOTGENERIC"; }
+
+ IF (RACE=RCBarbarian) THEN {
+  SETSTAT(U,SRace,1,RCBarbarian);
+  SETSTAT(U,AForester,1,1);
+  SETSTAT(U,AMountaineer,1,1);
+  SETSTAT(U,SToHit,1,GETSTAT(U,SToHit,1)+10);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCBeastmen) THEN {
+  SETSTAT(U,SRace,1,RCBeastmen);
+  SETSTAT(U,SAttack,1,GETSTAT(U,SAttack,1)+1);
+  SETSTAT(U,SHP,1,GETSTAT(U,SHP,1)+1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCDarkElf) THEN {
+  SETSTAT(U,SRace,1,RCDarkElf);
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)+2);
+  IF (GETSTAT(U,SRanged,1)>0) THEN { SETSTAT(U,SRangedType,1,30); }
+  IF (GetStat(U,STypeID,1)=37) THEN {
+   SETSTAT(U,SRanged,1,0);
+   SETSTAT(U,SMaxAmmo,1,0);
+   SETSTAT(U,SSpellAbility,1,SFireball);
+   SETSTAT(U,SSpellCharges,1,4);
+  }
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCDraconian) THEN {
+  SETSTAT(U,SRace,1,RCDraconian);
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)+1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCDwarf) THEN {
+  SETSTAT(U,SRace,1,RCDwarf);
+  SETSTAT(U,AMountaineer,1,1);
+  SETSTAT(U,SDefense,1,(GETSTAT(U,SDefense,1)+3);
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)+2);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCGnoll) THEN {
+  SETSTAT(U,SRace,1,RCGnoll);
+  SETSTAT(U,SAttack,1,GETSTAT(U,SAttack,1)+2);
+  SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+  SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+2));
+  SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+2));
+  SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+2));
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCHalfling) THEN {
+  SETSTAT(U,SRace,1,RCHalfling);
+  SETSTAT(U,SAttack,1,GETSTAT(U,SAttack,1)-1);
+  SETSTAT(U,ALucky,1,1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCHighElf) THEN {
+  SETSTAT(U,SRace,1,RCHighElf);
+  SETSTAT(U,AForester,1,1);
+  SETSTAT(U,SToHit,1,GETSTAT(U,SToHit,1)+10);
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)+2);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCHighMen) THEN {
+  SETSTAT(U,SRace,1,RCHighMen);
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)-1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCKlackon) THEN {
+  SETSTAT(U,SRace,1,RCKlackon);
+  SETSTAT(U,SDefense,1,(GETSTAT(U,SDefense,1)+2);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCLizard) THEN {
+  SETSTAT(U,SRace,1,RCLizard);
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)-1);
+  SETSTAT(U,SHP,1,GETSTAT(U,SHP,1)+1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCNomad) THEN {
+  SETSTAT(U,SRace,1,RCNomad);
+  SETSTAT(U,SMaxAmmo,1,(GetStat(U,SMaxAmmo,1)+2));
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)+3);
+  IF (GETSTAT(U,ASailing,1)=0) THEN {
+   SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+   SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+2));
+  }
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCOrc) THEN {
+  SETSTAT(U,SRace,1,RCOrc);
+   SETSTAT(U,SSpellAbility,1,STacticalRetreat);
+   SETSTAT(U,SSpellCharges,1,1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCTroll) THEN {
+  SETSTAT(U,SRace,1,RCTroll);
+  SETSTAT(U,SAttack,1,GETSTAT(U,SAttack,1)+3);
+  SETSTAT(U,SHP,1,GETSTAT(U,SHP,1)+3);
+  SETSTAT(U,SResist,1,GETSTAT(U,SResist,1)+1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCXuanyuan) THEN {
+  SETSTAT(U,SRace,1,RCXuanyuan);
+  SETSTAT(U,SDefense,1,(GETSTAT(U,SDefense,1)-1);
+  SETSTAT(U,SHP,1,GETSTAT(U,SHP,1)+5);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCRakhshasa) THEN {
+  SETSTAT(U,SRace,1,RCRakhshasa);
+  SETSTAT(U,AForester,1,1);
+  SETSTAT(U,SDefense,1,(GETSTAT(U,SDefense,1)+1);
+  SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+  SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+2));
+  SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+2));
+  SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+2));
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCHawkmen) THEN {
+  SETSTAT(U,SRace,1,RCHawkmen);
+  SETSTAT(U,AMountaineer,1,1);
+  GOTO "NOTGENERIC";
+ }
+ IF (RACE=RCGoblin) THEN {
+  SETSTAT(U,SRace,1,RCGoblin);
+  SETSTAT( U,SAttack,1,GETSTAT(U,SAttack,1)-(%I(GETSTAT(U,SAttack,1)/5)) );
+  SETSTAT( U,SRanged,1,GETSTAT(U,SRanged,1)-(%I(GETSTAT(U,SRanged,1)/5)) );
+  SETSTAT(U,SToDefend,1,(GETSTAT(U,SToDefend,1)-10);
+  SETSTAT(U,SFigures,1,(GETSTAT(U,SFigures,1)+2));
+  SETSTAT( U,SHP,1, (GETSTAT(U,SHP,1)) - %I(GETSTAT(U,SHP,1)/2) );
+  GOTO "NOTGENERIC";
+ }
+
+!NOTGENERIC!
+
+
+: == Unit bonus given to unit permanently == :
+: Holy mother coming into play with enchantment version of windwalking :
+IF (GetStat(U,STypeID,1)=323) %AND (GETENCHANTMENTFLAG(U,EncWindWalking,1)=0) THEN {
+ SETENCHANTMENTFLAG(U,EncWindWalking,ABase,1);
+ SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+6));
+}
+
+: Squire get caravan logistic :
+IF (GetStat(U,STypeID,1)=212) %AND (GetStat(U,SCaravanLogistic,1)=0) THEN {
+ SETSTAT(U,SCaravanLogistic,1,1);
+ SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+4));
+ SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+4));
+}
+
+: Glider get innate guardian wind :
+IF (GetStat(U,STypeID,1)=360) %AND (GETENCHANTMENTFLAG(U,EncGuardianWind,1)=0)THEN {
+ SETENCHANTMENTFLAG(U,EncGuardianWind,1,1);
+}
+
+: Submarine get innate invisibility :
+IF (GetStat(U,STypeID,1)=361) %AND (GETENCHANTMENTFLAG(U,EncInvisibility,1)=0)THEN {
+ SETENCHANTMENTFLAG(U,EncInvisibility,1,1)
+}
+
+: Evil Presence disable positive given to unit upon creation :
+IF CITYENCHANT(C,CEEvilPresence)>-1 THEN { GOTO "HASEVILPRESENCE"; }
+
+: new effect of Caravanserai, non-sailing units gains +2 overland movement bonus permanently :
+ IF ISBUILT(C,BCaravanserai) %AND (GetStat(U,ASailing,1)=0) THEN {
+  SETSTAT(U,SCaravanLogistic,1,1)
+  SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+4));
+  SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+4));
+ }
+
+: new effect of Military Workshop or have Rocketry :
+ IF (ISBUILT(C,BMilitaryWorkshop)=0)
+  %AND (SPELLSTATE(W,STRocketry)<>2)
+ THEN { GOTO "NOMILITARYWORKSHOP"; }
+
+  IF ( (GetStat(U,SRanged,1)>0) %AND (GetStat(U,SRangedType,1)<30) )
+   %OR (GetStat(U,SThrown,1)>0)
+   %OR (GetStat(U,SFireBreath,1)>0)
+  THEN {
+   SETSTAT(U,SBlackpowderUpgrade,1,1);
+   IF (GetStat(U,AFPoison,1,1)<>100) THEN { SETSTAT(U,AFPoison,1,(GetStat(U,AFPoison,1,1))+1,1); } ELSE { SETSTAT(U,AFPoison,1,1,1); }
+   IF (GetStat(U,SThrown,1)>0)
+    %OR ( (GetStat(U,SRanged,1)>0) %AND (GetStat(U,SRangedType,1)<30) )
+   THEN {
+    IF (GetStat(U,SRanged,1)>0) %AND (GetStat(U,SRangedType,1)>19) %AND (GetStat(U,SRangedType,1)<30) THEN { SETSTAT(U,SRangedType,1,13); }
+    IF (GetStat(U,AFArmorPiercing,1,1)=0) %AND (GetStat(U,AFDoom,1,1)=0) THEN {
+     SETSTAT(U,AFArmorPiercing,1,1,1);
+    } ELSE {
+     IF (GetStat(U,SRanged,1)>0) THEN { SETSTAT(U,SRanged,1,(GetStat(U,SRanged,1)+2)); }
+     IF (GetStat(U,SThrown,1)>0) THEN { SETSTAT(U,SThrown,1,(GetStat(U,SThrown,1)+4)); }
+    }
+   }
+   IF (GetStat(U,SFireBreath,1)>0) THEN { SETSTAT(U,SFireBreath,1,(GetStat(U,SFireBreath,1)+4)); }
+  }
+
+!NOMILITARYWORKSHOP!
+
+: new effect of Baray :
+ IF (ISBUILT(C,BBaray)=0) THEN { GOTO "NOBARAY"; }
+  IF ( GETSTAT(U,STypeID,1)=219 )
+   %AND ( GETSTAT(U,AWaterwalking,1)=0 )
+  THEN {
+   SETSTAT(U,AWaterwalking,1,1)
+  }
+  IF ( GETSTAT(U,SMariner,1)=0 ) THEN {
+   SETSTAT(U,SMariner,1,1)
+  }
+
+!NOBARAY!
+
+: all other unique building effect except Dark Elf, Halfling, High Elf, and Klackon are here :
+ IF (RACE=RCDarkElf)
+  %OR (RACE=RCHighElf)
+  %OR (RACE=RCKlackon)
+ THEN {
+  GOTO "ENDOFUNIQUEBUILDING";
+ }
+
+: new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :
+ IF ISBUILT(C,BAltarOfStorm) THEN {
+  SETSTAT(U,SMultiLabel,1,1);
+  SETSTAT(U,SLightningBreath,1,(GetStat(U,SThrown,1)+1));
+  SETSTAT(U,SThrown,1,0);
+  GOTO "ENDOFUNIQUEBUILDING";
+ }
+
+: new effect of Idol of the Heavenly Bull :
+ IF ISBUILT(C,BIdolOfHeavenlyBull) THEN {
+  HPGAIN=%I((GETSTAT(U,SHP,1))*0.25)
+  IF HPGAIN=0 THEN { HPGAIN=1; }
+  SETSTAT(U,SMultiLabel,1,2);
+  SETSTAT(U,SHP,1,(GETSTAT(U,SHP,1)+HPGAIN) );
+  GOTO "ENDOFUNIQUEBUILDING";
+ }
+
+: new effect of Pool of Repentance :
+ IF ISBUILT(C,BPoolOfRepentance) THEN {
+  SETSTAT(U,SMultiLabel,1,3);
+  SETSTAT(U,SDefense,1,(GETSTAT(U,SDefense,1)+1)
+  SETSTAT(U,SResist,1,(GETSTAT(U,SResist,1)+1)
+  GOTO "ENDOFUNIQUEBUILDING";
+ }
+
+: new effect of Dragon Mound :
+ IF (ISBUILT(C,BDragonMound)=0) THEN { GOTO "NODRAGONMOUND"; }
+ 
+  SETSTAT(U,SMultiLabel,1,4);
+  SETSTAT(U,SDefense,1,(GETSTAT(U,SDefense,1)+1)
+  SETSTAT(U,SFireBreath,1,(GETSTAT(U,SFireBreath,1)+2)
+  IF (GETSTAT(U,AFlying,1)>0) THEN {
+   SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+   SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+2));
+   SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+2));
+   SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+2));
+  }
+  GOTO "ENDOFUNIQUEBUILDING";
+
+!NODRAGONMOUND!
+
+: new effect of Agoge :
+ IF (ISBUILT(C,BAgoge)=0) THEN { GOTO "NOAGOGE"; }
+
+  SETSTAT(U,SMultiLabel,1,6);
+  IF (GetStat(U,STypeID,1)=139) THEN {
+   SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+   SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+2));
+   SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+2));
+   SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+2));
+   GOTO "ENDOFUNIQUEBUILDING";
+  } ELSE {
+   SETSTAT(U,SAttack,1,(GetStat(U,SAttack,1)+1));
+   SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+1));
+   SETSTAT(U,SHP,1,(GetStat(U,SHP,1)+1));
+   IF (GETSTAT(U,SRanged,1)>0) THEN { SETSTAT(U,SRanged,1,(GetStat(U,SRanged,1)+1)); }
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+
+!NOAGOGE!
+
+: new effect of Altar of the Sun :
+ IF (ISBUILT(C,BAltarOfTheSun)=0) THEN { GOTO "NOALTAROFTHESUN"; }
+
+  SETSTAT(U,SMultiLabel,1,7);
+  IF (GetStat(U,STypeID,1)=323) THEN {
+   SETSTAT(U,SAttack,1,(GetStat(U,SAttack,1)+1));
+   GOTO "ENDOFUNIQUEBUILDING";
+  } ELSE {
+   IF (GetStat(U,STypeID,1)<>44) THEN {
+    SETSTAT(U,SFigures,1,(GetStat(U,SFigures,1)+1));
+   }
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  GOTO "ENDOFUNIQUEBUILDING";
+
+!NOALTAROFTHESUN!
+
+: new effect of Altar of the Moon :
+ IF (ISBUILT(C,BAltarOfTheMoon)=0) THEN { GOTO "NOALTAROFTHEMOON"; }
+
+  SETSTAT(U,SMultiLabel,1,8);
+  SETSTAT(U,SRage,1,(GetStat(U,SRage,1)+1));
+  SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+1));
+  SETSTAT(U,APoisonImmunity,1,1);
+  IF (GETSTAT(U,SRanged,1)>0) THEN { 
+   SETSTAT(U,SRanged,1,(GetStat(U,SRanged,1)+2));
+  }
+  IF (GetStat(U,STypeID,1)=210) THEN {
+   SETSTAT(U,AFPoison,1,2,1);
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  IF (GetStat(U,STypeID,1)=203) THEN {
+   SETSTAT(U,AFPoison,1,100,1);
+   SETSTAT(U,AFLifeSteal,1,-1,1);
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  GOTO "ENDOFUNIQUEBUILDING";
+
+!NOALTAROFTHEMOON!
+
+: new effect of Frost Club :
+ IF (ISBUILT(C,BFrostClub)=0) THEN { GOTO "NOFROSTCLUB"; }
+
+  SETSTAT(U,SMultiLabel,1,9);
+  IF (GetStat(U,STypeID,1)=145) THEN {
+   SETSTAT(U,ARegeneration,1,1);
+   SETSTAT(U,AFArmorPiercing,1,1,1);
+   GOTO "ENDOFUNIQUEBUILDING";
+  } ELSE {
+   SETSTAT(U,AColdImmunity,1,1);
+   SETSTAT(U,ARegeneration,1,(GetStat(U,ARegeneration,1)*2));
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  GOTO "ENDOFUNIQUEBUILDING";
+
+!NOFROSTCLUB!
+
+: new effect of Sancta Basilica :
+ IF (ISBUILT(C,BBasilica)=0) THEN { GOTO "NOBASILICA"; }
+
+  SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+3));
+  IF (GetStat(U,STypeID,1)=108) THEN {
+   SETSTAT(U,SMultiLabel,1,10);
+   SETENCHANTMENTFLAG(U,EncSanctify,ABase,1);
+   SETSTAT(U,AFExorcise,1,-1,1);
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  IF (GetStat(U,STypeID,1)=231) THEN {
+   SETSTAT(U,SMultiLabel,1,10);
+   SETENCHANTMENTFLAG(U,EncSanctify,ABase,1);
+   SETSTAT(U,AFExorcise,1,-3,1);
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  IF (GetStat(U,STypeID,1)=111) THEN {
+   SETSTAT(U,SMultiLabel,1,10);
+   SETSTAT(U,ALucky,1,1);
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  IF (GetStat(U,STypeID,1)=113) THEN {
+   SETSTAT(U,SMultiLabel,1,10);
+   SETSTAT(U,AMagicImmunity,1,1);
+   GOTO "ENDOFUNIQUEBUILDING";
+  }
+  SETSTAT(U,SMultiLabel,1,11);
+  GOTO "ENDOFUNIQUEBUILDING";
+
+!NOBASILICA!
+
+: new effect of Mother Fungus :
+ IF (ISBUILT(C,BMotherFungus)=0) THEN { GOTO "NOMOTHERFUNGUS"; }
+
+  SETSTAT(U,SMultiLabel,1,12);
+  SETSTAT(U,SToDefend,1,(GETSTAT(U,SToDefend,1)+10)
+  SETSTAT(U,SAttack,1,(GETSTAT(U,SAttack,1)+2)
+  IF (GetStat(U,SRanged,1)>0) THEN {
+   SETSTAT(U,SRanged,1,(GetStat(U,SRanged,1)+2));
+  }
+  IF (GetStat(U,SSpellCharges,1)>0) THEN {
+   SETSTAT( U,SSpellCharges,1,(GetStat(U,SSpellCharges,1)*2) );
+  }
+  IF (GetStat(U,AFPoison,1,1)<>100) THEN { SETSTAT(U,AFPoison,1,(GetStat(U,AFPoison,1,1))+1,1); } ELSE { SETSTAT(U,AFPoison,1,1,1); }
+  GOTO "ENDOFUNIQUEBUILDING";
+
+!NOMOTHERFUNGUS!
+
+: new effect of academy, non-mechanical Magical ranged attack units and fantastic stable get +2 figures :
+ IF (ISBUILT(C,BAcademy)=0) THEN { GOTO "NOACADEMY"; }
+  IF (GetStat(U,STypeID,1)=221)
+   %OR ( ( GETSTAT(U,SRanged,1)>0 )
+    %AND (GetStat(U,SRangedType,1)>29)
+    %AND (GetStat(U,SCustomAttribute,1)<>1) )
+  THEN {
+   SETSTAT(U,SMultiLabel,1,13);
+   SETSTAT(U,SFigures,1,(GetStat(U,SFigures,1)+2) );
+  }
+
+!NOACADEMY!
+
+: new effect of Lava Smelter add effect of weapon and armor based on ore :
+ IF (ISBUILT(C,BLavaSmelter)=0) THEN { GOTO "NOLAVASMELTER"; }
+  ACCESSMITHRIL=0;
+  IF (OREINRANGE(C,OreMithril)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNMITHRIL>0) )
+  THEN { ACCESSMITHRIL=1; }
+  ACCESSADAMANTIUM=0;
+  IF (OREINRANGE(C,OreAdamantium)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNADAMANTIUM>0) )
+  THEN { ACCESSADAMANTIUM=1; }
+  ACCESSORIHALCON=0;
+  IF (OREINRANGE(C,OreOrihalcon)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNORIHALCON>0) )
+  THEN { ACCESSORIHALCON=1; }
+  ACCESSCRYSX=0;
+  IF (OREINRANGE(C,OreCrysx)>0)
+   %OR ( (LOGISTIC>0) %AND (OWNCRYSX>0) )
+  THEN { ACCESSCRYSX=1; }
+
+  IF (ACCESSMITHRIL>0) %AND (ACCESSADAMANTIUM>0) THEN { SETSTAT(U,AWeaponImmunity,ABase,1); }
+  IF (ACCESSMITHRIL>0) %AND (ACCESSCRYSX>0) THEN { SETSTAT(U,AMissileImmunity,ABase,1); }
+  IF (ACCESSMITHRIL>0) %AND (ACCESSORIHALCON>0) THEN { SETENCHANTMENTFLAG(U,EncResistElements,ABase,1); }
+  IF (ACCESSADAMANTIUM>0) %AND (ACCESSORIHALCON>0) THEN { SETENCHANTMENTFLAG(U,EncElementalArmor,ABase,1); }
+  IF (ACCESSADAMANTIUM>0) %AND (ACCESSCRYSX>0) THEN { SETENCHANTMENTFLAG(U,EncFlameBlade,ABase,1); }
+
+  GOTO "ENDOFUNIQUEBUILDING";
+
+!NOLAVASMELTER!
+
+!ENDOFUNIQUEBUILDING!
+
+: New effect of Archmage on fortress :
+ IF (RETORT(W,Archmage)=0) THEN { GOTO "NOTARCHMAGE"; }
+  IF (ISFORTRESS(C)=0) %OR (SPELLSTATE(W,SArchmagesTutition)<>2) THEN { GOTO "NOTARCHMAGE"; }
+
+   SETSTAT(U,SCustomTutition,1,1);
+   IF (GETSTAT(U,SMaxMP,1)>0) THEN {
+    SETSTAT(U,SMaxMP,1,GETSTAT(U,SMaxMP,1)+15);
+   }
+   IF (GETSTAT(U,SSpellCharges,1)>0) THEN {
+    SETSTAT(U,SSpellCharges,1,GETSTAT(U,SSpellCharges,1)+1);
+   }
+   IF (GETSTAT(U,SRangedType,1)>29) THEN {
+    SETSTAT(U,SMaxAmmo,1,GETSTAT(U,SMaxAmmo,1)+2);
+   }
+
+ !NOTARCHMAGE!
+
+: New effect of Survival Instinct, unit gains to-defend through ore :
+ OREGUILED=%I(((7*OREINRANGE(C,OreGems))/2)+((5*OREINRANGE(C,OreGold))/2)+((3*OREINRANGE(C,OreSilver))/2))
+
+ IF HASGLOBAL(W,GESurvivalInstinct) %AND (OREGUILED>0) THEN { 
+  SETSTAT(U,SToDefend,ABase,((GETSTAT(U,SToDefend,ABase))+OREGUILED));
+  SETSTAT(U,SGuiled,ABase,OREGUILED);
+ }
+
+: New global enchantment "Natural Selection", unit gain stats based on resouce in vincinity :
+ IF (HASGLOBAL(W,GENaturalSelection)=0) THEN { GOTO "NOTSURVIVALTHEFITTEST"; }
+  OREPOWER=%I(((1*(OREINRANGE(C,OreMithril))/2)+(2*(OREINRANGE(C,OreAdamantium))/2)+(3*(OREINRANGE(C,OreOrihalcon))/2)+(5*(OREINRANGE(C,OreQuork))/2)+(10*(OREINRANGE(C,OreCrysx))/2))/10)
+  RESIST=GETSTAT(U,SResist,ABase);
+  RNG=GETSTAT(U,SRanged,ABase);
+  ATK=GETSTAT(U,SAttack,ABase);
+  DEF=GETSTAT(U,SDefense,ABase);
+  IF OREPOWER>0 THEN { 
+   SETSTAT U,SResist,ABase,RESIST+OREPOWER;
+   SETSTAT(U,SImmunized,ABase,OREPOWER);
+  }
+  IF (OREINRANGE(C,OreNightshade))>0 THEN { 
+   SETSTAT U,SResist,ABase,RESIST+(1*(OREINRANGE(C,OreNightshade));
+   SETSTAT( U,SNaturalResist,ABase,(1*(OREINRANGE(C,OreNightshade)) );
+  }
+  IF OREINRANGE(C,OreWildgame)>0 %AND (RNG>0) THEN {
+   SETSTAT(U,SRanged,ABase,RNG+1);
+   SETSTAT(U,SHunter,ABase,1);
+  }
+  IF OREINRANGE(C,OreWildgame)>0 THEN { 
+   SETSTAT(U,AForester,ABase,1);
+  }
+  IF OREINRANGE(C,OreCoal)>0 THEN { 
+   SETSTAT(U,SAttack,ABase,ATK+1);
+   SETSTAT(U,SGiantStrength,ABase,1);
+  }
+  IF OREINRANGE(C,OreIron)>0 THEN { 
+   SETSTAT(U,SDefense,ABase,DEF+1);
+   SETSTAT(U,SToughSkin,ABase,1);
+  }
+
+!NOTSURVIVALTHEFITTEST!
+
+: Mariner Mastery bonus is removable by end turn script if global enchantment is removed :
+: all units originally have have sail movement :
+ IF HASGLOBAL(W,GEMarinerMastery) %AND (GetStat(U,ASailing,1)>0) THEN {
+  SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+4));
+  SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+4));
+  SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+4));
+  SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+4));
+  SETSTAT(U,SMMastery,1,1);
+ }
+
+: Effect of Pillar of Faith, unit has chance 20% to get lucky upon unit creation :
+ IF (CITYENCHANT(C,CEPillarOfFaith)=-1) THEN { GOTO "NOPILLAROFFAITH"; }
+  FAITH=0
+  LUCK=RND(5)+1;
+  RESIST=GETSTAT(U,SResist,ABase);
+
+  IF CITYENCHANT(C,CEHeavenlyLight)>-1 THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BShrine) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BParthenon) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BWitchesConvent) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BCathedral) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BTemple) THEN { FAITH=FAITH+1; }
+  IF HASGLOBAL(W,GEKingOfUnderworld) %AND ISBUILT(C,BOracle) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BAltarOfStorm) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BAltarOfTheSun) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BAltarOfTheMoon) THEN { FAITH=FAITH+1; }
+  IF ISBUILT(C,BBasilica) THEN { FAITH=FAITH+1; }
+  SETSTAT(U,SPowerOfFaith,ABase,FAITH);
+  SETSTAT(U,SResist,ABase,RESIST+FAITH);
+  IF (GETSTAT(U,ALucky,ABase)=0) %AND (LUCK=5) THEN { 
+   SETSTAT(U,ALucky,ABase,1);
+  }
+
+!NOPILLAROFFAITH!
+
+: new effect of Tree of Magic :
+ IF (ISBUILT(C,BTreeOfMagic)=0) THEN { GOTO "NOTREEOFMAGIC"; }
+  SETSTAT(U,SMultiLabel,1,5);
+  SETSTAT( U,SMaxMP,1,((GETSTAT(U,SMaxMP,1))+(GETSTAT(U,SResist,1))) )
+  IF ( GETSTAT(U,SRanged,1)>0 ) THEN {
+   IF ( GETSTAT(U,SRangedType,1)>29 ) THEN {
+    SETSTAT( U,SMaxMP,1,((GETSTAT(U,SMaxMP,1))+(GETSTAT(U,SRanged,1))) )
+    SETSTAT( U,SMaxAmmo,1,(GETSTAT(U,SMaxAmmo,1)+2) )
+   }
+  }
+!NOTREEOFMAGIC!
+
+: end of Unit bonus given to unit permanently :
+!HASEVILPRESENCE!
+
+
+: == Unit penalty given to unit permanently == :
+: If city suffer from famine, impaired newly trained units' attack and defense  :
+IF (BASETURN()>0) %AND ( GETCITYDATA(C,CDFOOD) < 2*(POPUNITS(C)) ) THEN {
+ SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1));
+ SETSTAT(U,SDefense,ABase,(GetStat(U,SDefense,ABase)-2));
+ SETSTAT(U,SMalnourished,ABase,1);
+}
+
+
+: == Unit bonus as unit's enchantment == :
+: Evil Presence disable enchantment given to unit upon creation :
+IF CITYENCHANT(C,CEEvilPresence)=-1 THEN {
+
+: New effect of Nature Embrace, Animist's Guild enchant unit with Resist Elements (not permanent) :
+ IF HASGLOBAL(W,GECallTheWild) %AND ISBUILT(C,BAnimistGuild) THEN {
+  IF (TATTOO=1) THEN {
+   SETENCHANTMENTFLAG(U,EncResistElements,ABase,1);
+  } ELSE {
+   SETOLENCHANTMENTFLAG(U,EncResistElements,ABase,1);
+  }
+ }
+
+: New effect of Consecration, Temple/Cathedral enchant unit with Bless (not permanent) :
+ IF (CITYENCHANT(C,CEConsecration)>-1)
+  %AND ( (ISBUILT(C,BCathedral)) %OR (ISBUILT(C,BTemple)) )
+  THEN {
+  IF (TATTOO=1) THEN {
+   SETENCHANTMENTFLAG(U,EncBless,ABase,1);
+  } ELSE {
+   SETOLENCHANTMENTFLAG(U,EncBless,ABase,1);
+  }
+ }
+
+: New effect of Crusade allow city with armorer guild + cathedral/temple to give permanent holy armor enchantment) :
+ IF HASGLOBAL(W,GECrusade) %AND ISBUILT(C,BArmorerGuild)
+  %AND ( (ISBUILT(C,BCathedral)) %OR (ISBUILT(C,BTemple)) )
+  THEN {
+  IF (TATTOO=1) THEN {
+   SETENCHANTMENTFLAG(U,EncDummyArmor,ABase,1);
+  } ELSE {
+   SETOLENCHANTMENTFLAG(U,EncHolyArmor,ABase,1);
+  }
+ }
+
+: New effect of Enlightenment or Military Drilling, give enchanted Discipline, permanent enchant is not possible for some reason :
+ IF HASGLOBAL(W,GEEnlightenment)
+  %OR (SPELLSTATE(W,STMilitaryDrilling)=2)
+ THEN { 
+  SETENCHANTMENTFLAG(U,EncDiscipline,ABase,1);
+ }
+
+: Effect of Chaos' Blessing and/or Doom Mastery :
+ IF (CITYENCHANT(C,CEChaosBless)>-1) %AND (HASGLOBAL(W,GEDoomMastery)) THEN { 
+  SETENCHANTMENTFLAG(U,EncCCBreath,ABase,1);
+  SETENCHANTMENTFLAG(U,EncCCArmor,ABase,1);
+  SETENCHANTMENTFLAG(U,EncCCFlight,ABase,1);
+  :Apply chaos channel:
+  APPLYCHAOSCHANNEL U;
+ } ELSE {
+  IF (CITYENCHANT(C,CEChaosBless)>-1) %OR (HASGLOBAL(W,GEDoomMastery)) THEN { APPLYCHAOSCHANNEL(U); }
+ }
+
+ IF (GetStat(U,SCustomAttribute,1)<>1) THEN { GOTO "NOMECHUPGRADE"; }
+
+  : effect of Heat Power Engine, give power engine to mechanical unit :
+  IF (SPELLSTATE(W,STHeatPowerEngine)=2) THEN { 
+   SETENCHANTMENTFLAG(U,EncPowerEngine,ABase,1);
+   SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+   SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+2));
+   SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+2));
+   SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+2));
+   IF (SPELLSTATE(W,STMagitekAntiGravityDrive)=2) THEN {
+    SETENCHANTMENTFLAG(U,EncHaste,ABase,1);
+    IF (GETSTAT(U,ASailing,1)>0) THEN {
+     SETSTAT(U,AFlying,1,1);
+     SETSTAT(U,AIllusionImmunity,1,1);
+    }
+   }
+   IF (SPELLSTATE(W,STMagitekBeamWeapon)=2)
+    %AND (GETSTAT(U,SMaxAmmo,1)>0)
+   THEN {
+    SETSTAT(U,SRangedType,1,40);
+    SETSTAT(U,SRanged,1,GETSTAT(U,SRanged,1)+%I(GETSTAT(U,SRanged,1)/2));
+    SETSTAT(U,AFDoom,1,1,3);
+   }
+  }
+
+  : effect of Armorclad, give armorclad unit enchantment :
+  IF (SPELLSTATE(W,STArmorClad)=2) THEN { 
+   SETENCHANTMENTFLAG(U,EncArmorClad,ABase,1);
+   SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+6));
+   IF (SPELLSTATE(W,STMagitekMaterialScience)=2) THEN {
+    SETENCHANTMENTFLAG(U,EncResistMagic,ABase,1);
+   }
+  }
+
+ !NOMECHUPGRADE!
+
+: end of unit bonus as unit enchantment :
+}
+
+
+: == Unit penalties as unit's enchantment == :
+: New effect of Chaos Rift, curse unit with warp creature effects :
+IF CITYENCHANT(C,CEChaosRift)>-1 THEN { 
+ R=RND(30)+1;
+ IF (R=1) THEN { SETENCHANTMENTFLAG(U,EncWarpAttack,ABase,1); }
+ IF (R=2) THEN { SETENCHANTMENTFLAG(U,EncWarpDefense,ABase,1); }
+ IF (R=3) THEN { SETENCHANTMENTFLAG(U,EncWarpResist,ABase,1); }
+}
+
+
+: == Unit bonus as unit's veterancy == :
+: Evil Presence disable unit veterancy :
+IF CITYENCHANT(C,CEEvilPresence)=-1 THEN {
+ : Altar of Battle/War College/Barracks's unit veterancy :
+ IF CITYENCHANT(C,CEAltarofBattle)>-1 THEN {
+  SETSTAT(U,ALevel,ABase,4);
+ } ELSE { 
+  IF ISBUILT(C,BWarCollege) THEN {
+   SETSTAT(U,ALevel,ABase,3); 
+  } ELSE {
+   IF ISBUILT(C,BBarracks) THEN { SETSTAT(U,ALevel,ABase,2); }
+  }
+ }
+}
+
+: special, unit from Necropolis becomes Undead :
+IF (CITYENCHANT(C,CENecropolis)>-1) THEN {
+ SETENCHANTMENTFLAG(U,EncUndead,ABase,1);
+ SETENCHANTMENTFLAG(U,EncWraithForm,ABase,1);
+ IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {
+  SETENCHANTMENTFLAG(U,EncFrenzy,ABase,1);
+ }
+}

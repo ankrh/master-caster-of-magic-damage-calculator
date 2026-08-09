@@ -387,7 +387,7 @@ const MAIN_HARNESS = `(() => {
 
     // Default-diff makes a full-featured share payload small (was ~13 KB uncompressed/undiffed).
     {
-      set('gameVersion', 'com2_warlord_1.5.12.6.2'); onVersionChange();
+      set('gameVersion', 'com2_warlord_1.5.12.7'); onVersionChange();
       setupCustom('a'); setupCustom('b');
       set('aAbil_armorPiercing', true); set('cityWalls', '3'); set('nodeAura', 'nature');
       recalculate();
@@ -423,7 +423,7 @@ const BUILD_SHARE = `(() => {
   const set = (id, val) => { const el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = !!val; else el.value = val; };
   const dist = () => (document.querySelector('#distA .dist-header')?.textContent || '') + '||' + (document.querySelector('#distB .dist-header')?.textContent || '');
   localStorage.clear();
-  set('gameVersion', 'com2_warlord_1.5.12.6.2'); onVersionChange();
+  set('gameVersion', 'com2_warlord_1.5.12.7'); onVersionChange();
   for (const s of ['a', 'b']) { set(s + 'Figs', 4); set(s + 'Atk', 11); set(s + 'Def', 2); set(s + 'Res', 9); set(s + 'HP', 8); set(s + 'ToHitMod', 70); set(s + 'ToBlkMod', 70); }
   set('aAbil_armorPiercing', true); set('cityWalls', '3'); set('nodeAura', 'nature');
   recalculate();
@@ -472,7 +472,7 @@ async function main() {
     const shared = await cdpEvaluate(wsUrl, READ_AFTER_SHARE);
     record('URL share: identical damage', shared.dist === expectedDist, { expectedDist, got: shared.dist });
     record('URL share: hash stripped after import', shared.hash === '', { hash: shared.hash });
-    record('URL share: version applied', shared.version === 'com2_warlord_1.5.12.6.2', { version: shared.version });
+    record('URL share: version applied', shared.version === 'com2_warlord_1.5.12.7', { version: shared.version });
     record('URL share: fields applied', shared.aFigs === '4', { aFigs: shared.aFigs });
 
     // 3) Precedence: edit + reload restores the edited localStorage state, not the shared link.
@@ -492,13 +492,13 @@ async function main() {
     // init guard.
     const SETUP_BAD = `(() => {
       const set = (id, v) => { const e = document.getElementById(id); if (e) { if (e.type === 'checkbox') e.checked = !!v; else e.value = v; } };
-      document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.6.2'; onVersionChange();
+      document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.7'; onVersionChange();
       set('aUnit', 'custom'); updateUnitLock('a');
       set('aAbil_unitType', 'normal'); set('aAbil_altarOfTheMoon', true);
       for (const s of ['a', 'b']) { set(s + 'Unit', 'custom'); updateUnitLock(s); set(s + 'Figs', 6); set(s + 'Atk', 9); set(s + 'Def', 3); set(s + 'Res', 8); set(s + 'HP', 12); set(s + 'ToHitMod', 70); set(s + 'ToBlkMod', 70); }
       recalculate();
       const bad = collectState();
-      bad.ids.gameVersion = 'com2_warlord_1.5.12.6.2';
+      bad.ids.gameVersion = 'com2_warlord_1.5.12.7';
       bad.ids.aUnit = 'custom';
       bad.ids.aAbil_altarOfTheMoon = true;
       bad.identity.a = { isHero: false, baseRace: 'Gnoll', baseFantastic: false,
@@ -538,7 +538,7 @@ async function main() {
       const good = collectState();
       localStorage.setItem('pageState_v2', JSON.stringify(good)); // recipient's own saved state
       const badShare = collectState();
-      badShare.ids.gameVersion = 'com2_warlord_1.5.12.6.2';
+      badShare.ids.gameVersion = 'com2_warlord_1.5.12.7';
       badShare.ids.aUnit = 'custom';
       badShare.ids.aFigs = 6;
       badShare.ids.aAbil_altarOfTheMoon = true;

@@ -11,10 +11,10 @@ mechanic questions are tracked as Q/X rows in `Calculator/BACKLOG.md`, *Open que
 specifically the evidence register for *script-vs-prose* conflicts.
 
 Sources cited:
-- **Manual** — `Warlord manual v1.5.12.6.html`, by PDF-page anchor; verify visual details
-  against `Warlord_Manual v1.5.12.6.pdf`.
+- **Manual** — `Warlord manual v1.5.12.7.html`, by PDF-page anchor; verify visual details
+  against `Warlord_Manual v1.5.12.7.pdf`.
 - **Helptext** — `Unit rosters/Warlord mod unit data/HELP.TXT`, by entry (`#Spell X` / `#UA X`).
-- **Script** — `Script source/Warlord 1.5.12.6.2/`, by `file:line`.
+- **Script** — `Script source/Warlord 1.5.12.7/`, by `file:line`.
 
 **The script wins on contested behaviour** — it is what executes. Two caveats:
 `MASTER.CAS`'s trailing `:comments:` are *not* script, and have been wrong every time they were
@@ -84,7 +84,7 @@ The omission was specific to this reform: the manual documents Wall Crusher gran
 deliberate silence.
 
 **Closed in v1.5.12.6.2:** both `#Spell EXPLOSIVE` and `#UA BOMBS&GRENADES` now name Wall
-Crusher. The manual has not been reissued, so it remains silent.
+Crusher. The reissued v1.5.12.7 manual remains silent.
 
 ## 3. Xenopsychology / Radio — scope excludes Sapiens summons in prose only
 
@@ -111,7 +111,8 @@ Xenopsychology and Radio were not. One gate, four reforms, inconsistent document
 condition. The code cannot treat them differently.
 
 **Closed in v1.5.12.6.2:** both helptext entries now read *"all regular units and Sapiens
-summons"*, matching Ballistics Training and the gate. The manual has not been reissued.
+summons"*, matching Ballistics Training and the gate. The reissued v1.5.12.7 manual still
+uses the narrower regular-unit wording.
 
 ## 4. Magitek Engine — movement, and an ability that has no enchantment
 

@@ -1,5 +1,49 @@
 # Calculator work history
 
+## 2026-08-09 -- R9-G1a-R3 CoM 1 Zombies type-table binding
+
+R9-G1a-R3 bound CoM 1's full `unit_types` record base at `DS:0x019C` (raw `0x2963C`),
+distinguished the `DS:0x019E` first-stat payload base, confirmed the `0x24` stride, and located
+type `0xAE` Zombies' full `Abilities` word at record `+0x1E`, raw `0x2AED2 = 0x0081`. The
+constructor loads that word at `0x8EEC3` and copies it to `bu->Abilities` with the full-word store
+at `0x8EF02`. The address-backed binding is recorded in
+`Reference docs/DOS reconstructed/unitcalc.c`; merged ledgers, findings, completion counts,
+review provenance and the surviving evidence-scope dispute are in
+`Reference docs/DOS reconstructed/R9-G1a-R3.evidence.md`. No calculator behavior or provenance
+comment changed.
+
+## 2026-08-09 -- R9-G1a-R2 combat-summon reconstruction
+
+R9-G1a-R2 reconstructed the complete CoM2 1.05.11 `@Spells@CombatSummonUnit` routine over
+`[0x005CBEE0,0x005CC3E3)` through independent Claude/Codex derivations and reciprocal byte
+review. The merged Pascal-like source is in
+`Reference docs/Caster binary/Spells.CombatSummonUnit.pas`; its gapless 26-row ledger, complete
+branch/call/write inventories, six zero completion counts, findings, and verification provenance
+are in `Reference docs/Caster binary/R9-G1a-R2.evidence.md`.
+
+The routine obtains the summoned template and realm-derived race from the spell record, marks
+the new base record Combat Summoned and Fantastic, performs an initial recalculation and selected
+current-to-base field copies, then publishes the summoned-unit globals. Its only identity-specific
+gate rewrites summons cast by a Demon Lord as Lesser Demons with zero movement and Life Steal
+`-2`. The combat-spell-effect script hook runs after those compiled writes and before the final
+recalculation. CoM2's Construct Catapult and Call to Arms identities therefore come from their
+`SPELLS.INI` rows; Warlord's enabled replacements are table substitutions, leaving F54–F55 as
+calculator implementation tasks. No calculator behavior changed.
+
+## 2026-08-09 -- R9-G1a-R1 DOS battle-unit load reconstruction
+
+R9-G1a-R1 reconstructed `BU_UnitLoadToBattle__SEGRAX` over `[0x75C69,0x75D93)` in MoM 1.31,
+CP 1.60, and CoM 1 through independent Claude/Codex derivations and reciprocal byte review. The
+merged source is in `Reference docs/DOS reconstructed/combat.c`; gapless ledgers, complete branch,
+call, and write inventories, five zero completion counts, and verification provenance are in
+`Reference docs/DOS reconstructed/R9-G1a-R1.evidence.md`.
+
+The reconstruction establishes the DOS identity writes needed by R9-G1a: CoM 1 makes combat-loaded
+Catapults and Centaurs Nature, Paladins Life, and every successful load Fantastic. Its Demon branch
+has a separate index/random grant gate and attribute package. It also establishes that the figure
+loader's return becomes `bufpi` in every build, while CP/CoM replace 1.31's picture-slot opener with
+an in-line, bottom-tested and unbounded occupancy scan. No calculator behavior changed.
+
 ## 2026-08-09 -- R9-G1a existing-evidence pass
 
 R9-G1a promoted five of its thirteen identity and creation-grant formulas using only existing

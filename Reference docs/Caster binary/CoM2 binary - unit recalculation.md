@@ -262,7 +262,7 @@ and the one hard-coded Golem enchantment grant rather than general stat accumula
 These two regions need no disassembly. They are the current Warlord
 `UnitCalcPre.CAS` and `UnitCalc.CAS`, respectively, and CAS executes their statements in source
 order except where an explicit `IF`, `GOTO`, loop or `HALT` changes the path. This section reads
-the shipped `Warlord 1.5.12.6.2` files:
+the shipped `Warlord 1.5.12.7` files:
 
 | Region | File | Lines | md5 |
 |---|---|---:|---|

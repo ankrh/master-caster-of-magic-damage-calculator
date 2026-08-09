@@ -1,0 +1,395 @@
+: This script picks the starting city race for AI players.
+Input, W is thw wizard making the choice.
+Output, RACE must contain the selected race. :
+
+LOOP {
+ B=1;
+ IF RETORT(W,MYRRAN) THEN { 
+  IF RETORT(W,TACTICIAN) %AND (BOOKS(W,Nature)<4) THEN {
+   ROLL=RND(2);
+   IF ROLL=0 THEN {
+    IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+    ELSE { RACE=RANDOMMYRRANRACE(0); }
+   }
+   IF ROLL=1 THEN { 
+    IF (BOOKS(W,Sorcery)<=6) THEN {
+     IF (SCORINGOPTION(SBannedDwarves)=0) THEN { RACE=RCDwarf; }
+     ELSE { RACE=RANDOMMYRRANRACE(0); }
+    } ELSE {
+     IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+     ELSE { RACE=RANDOMMYRRANRACE(0); }
+    }
+   }
+  } ELSE {
+   IF RETORT(W,CULTLEADER) THEN {
+    ROLL=RND(5);
+    IF ROLL=0 THEN {
+     IF (SCORINGOPTION(SBannedBeastmen)=0) THEN { RACE=RCBeastmen; }
+     ELSE { RACE=RANDOMMYRRANRACE(0); }
+    }
+    IF ROLL=1 THEN {
+     IF (SCORINGOPTION(SBannedDarkElves)=0) THEN { RACE=RCDarkElf; }
+     ELSE { RACE=RANDOMMYRRANRACE(0); }
+    }
+    IF ROLL=2 THEN {
+     IF (SCORINGOPTION(SBannedDraconians)=0) THEN { RACE=RCDraconian; }
+     ELSE { RACE=RANDOMMYRRANRACE(0); }
+    }
+    IF ROLL=3 THEN {
+     IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+     ELSE { RACE=RANDOMMYRRANRACE(0); }
+    }
+    IF ROLL=4 THEN { 
+     IF (BOOKS(W,Sorcery)<=6) THEN {
+      IF (SCORINGOPTION(SBannedDwarves)=0) THEN { RACE=RCDwarf; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     ELSE {
+      ROLL=RND(4);
+      IF ROLL=0 THEN {
+       IF (SCORINGOPTION(SBannedBeastmen)=0) THEN { RACE=RCBeastmen; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=1 THEN {
+       IF (SCORINGOPTION(SBannedDarkElves)=0) THEN { RACE=RCDarkElf; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=2 THEN {
+       IF (SCORINGOPTION(SBannedDraconians)=0) THEN { RACE=RCDraconian; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=3 THEN {
+       IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+     }
+    }
+   } ELSE {
+    IF (BOOKS(W,Sorcery)>6) THEN {
+     ROLL=RND(6);
+     IF ROLL=0 THEN {
+      IF (SCORINGOPTION(SBannedBeastmen)=0) THEN { RACE=RCBeastmen; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=1 THEN {
+      IF (SCORINGOPTION(SBannedDarkElves)=0) THEN { RACE=RCDarkElf; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=2 THEN {
+      IF (SCORINGOPTION(SBannedDraconians)=0) THEN { RACE=RCDraconian; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=3 THEN {
+      IF (SCORINGOPTION(SBannedTrolls)=0) THEN { RACE=RCTroll; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=4 THEN {
+      IF (SCORINGOPTION(SBannedXuanyuanese)=0) THEN { RACE=RCXuanyuan; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=5 THEN {
+      IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+    } ELSE { RACE=RANDOMMYRRANRACE(0); }
+   }
+  }
+  IF SCORINGOPTION(SBannedBeastmen)
+   %AND SCORINGOPTION(SBannedDarkElves)
+   %AND SCORINGOPTION(SBannedDraconians)
+   %AND SCORINGOPTION(SBannedDwarves)
+   %AND SCORINGOPTION(SBannedTrolls)
+   %AND SCORINGOPTION(SBannedXuanyuanese)
+   %AND SCORINGOPTION(SBannedRakhshasas)
+   %AND SCORINGOPTION(SBannedGoblins)
+  THEN {
+   IF RETORT(W,TACTICIAN) %AND (BOOKS(W,Nature)<4) THEN {
+    IF RETORT(W,CULTLEADER) THEN {
+     ROLL=RND(2);
+     IF ROLL=0 THEN {
+      IF (SCORINGOPTION(SBannedHighElves)=0) THEN { RACE=RCHighElf; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=1 THEN {
+      IF (SCORINGOPTION(SBannedLizardmen)=0) THEN { RACE=RCLizard; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+    } ELSE {
+     ROLL=RND(4);
+     IF ROLL=0 THEN {
+      IF (SCORINGOPTION(SBannedHighElves)=0) THEN { RACE=RCHighElf; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=1 THEN {
+      IF (SCORINGOPTION(SBannedLizardmen)=0) THEN { RACE=RCLizard; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=2 THEN {
+      IF (SCORINGOPTION(SBannedBarbarians)=0) THEN { RACE=RCBarbarian; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=3 THEN {
+      IF (SCORINGOPTION(SBannedGnolls)=0) THEN { RACE=RCGnoll; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+    }
+   } ELSE {
+    IF RETORT(W,CULTLEADER) THEN {
+     ROLL=RND(7);
+     IF ROLL=0 THEN {
+      IF (SCORINGOPTION(SBannedOrcs)=0) THEN { RACE=RCOrc; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=1 THEN {
+      IF (SCORINGOPTION(SBannedHalflings)=0) THEN { RACE=RCHalfling; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=2 THEN {
+      IF (SCORINGOPTION(SBannedHighElves)=0) THEN { RACE=RCHighElf; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=3 THEN {
+      IF (SCORINGOPTION(SBannedHighMen)=0) THEN { RACE=RCHighMen; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=4 THEN {
+      IF (SCORINGOPTION(SBannedLizardmen)=0) THEN { RACE=RCLizard; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=5 THEN {
+      IF (SCORINGOPTION(SBannedNomads)=0) THEN { RACE=RCNomad; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+     IF ROLL=6 THEN {
+      IF (SCORINGOPTION(SBannedHawkmen)=0) THEN { RACE=RCHawkmen; }
+      ELSE { RACE=RANDOMARCANUSRACE(0); }
+     }
+    } ELSE { RACE=RANDOMARCANUSRACE(0); }
+   }
+  }
+ } ELSE {
+  IF RETORT(W,TACTICIAN) %AND (BOOKS(W,Nature)<4) THEN {
+   IF RETORT(W,CULTLEADER) THEN {
+    ROLL=RND(2);
+    IF ROLL=0 THEN {
+     IF (SCORINGOPTION(SBannedHighElves)=0) THEN { RACE=RCHighElf; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=1 THEN {
+     IF (SCORINGOPTION(SBannedLizardmen)=0) THEN { RACE=RCLizard; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+   } ELSE {
+    ROLL=RND(4);
+    IF ROLL=0 THEN {
+     IF (SCORINGOPTION(SBannedHighElves)=0) THEN { RACE=RCHighElf; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=1 THEN {
+     IF (SCORINGOPTION(SBannedLizardmen)=0) THEN { RACE=RCLizard; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=2 THEN {
+     IF (SCORINGOPTION(SBannedBarbarians)=0) THEN { RACE=RCBarbarian; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=3 THEN {
+     IF (SCORINGOPTION(SBannedGnolls)=0) THEN { RACE=RCGnoll; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+   }
+  } ELSE {
+   IF RETORT(W,CULTLEADER) THEN {
+    ROLL=RND(7);
+    IF ROLL=0 THEN {
+     IF (SCORINGOPTION(SBannedOrcs)=0) THEN { RACE=RCOrc; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=1 THEN {
+     IF (SCORINGOPTION(SBannedHalflings)=0) THEN { RACE=RCHalfling; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=2 THEN {
+     IF (SCORINGOPTION(SBannedHighElves)=0) THEN { RACE=RCHighElf; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=3 THEN {
+     IF (SCORINGOPTION(SBannedHighMen)=0) THEN { RACE=RCHighMen; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=4 THEN {
+     IF (SCORINGOPTION(SBannedLizardmen)=0) THEN { RACE=RCLizard; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=5 THEN {
+     IF (SCORINGOPTION(SBannedNomads)=0) THEN { RACE=RCNomad; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+    IF ROLL=6 THEN {
+     IF (SCORINGOPTION(SBannedHawkmen)=0) THEN { RACE=RCHawkmen; }
+     ELSE { RACE=RANDOMARCANUSRACE(0); }
+    }
+   } ELSE { RACE=RANDOMARCANUSRACE(0); }
+  }
+  IF SCORINGOPTION(SBannedBarbarians)
+   %AND SCORINGOPTION(SBannedGnolls)
+   %AND SCORINGOPTION(SBannedHalflings)
+   %AND SCORINGOPTION(SBannedHighElves)
+   %AND SCORINGOPTION(SBannedHighMen)
+   %AND SCORINGOPTION(SBannedKlackons)
+   %AND SCORINGOPTION(SBannedLizardmen)
+   %AND SCORINGOPTION(SBannedNomads)
+   %AND SCORINGOPTION(SBannedOrcs)
+   %AND SCORINGOPTION(SBannedHawkmen)
+  THEN {
+   IF RETORT(W,TACTICIAN) %AND (BOOKS(W,Nature)<4) THEN {
+    ROLL=RND(2);
+    IF ROLL=0 THEN {
+     IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+     ELSE { RACE=RANDOMMYRRANRACE(0); }
+    }
+    IF ROLL=1 THEN { 
+     IF (BOOKS(W,Sorcery)<=6) THEN {
+      IF (SCORINGOPTION(SBannedDwarves)=0) THEN { RACE=RCDwarf; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     } ELSE {
+      IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+    }
+   } ELSE {
+    IF RETORT(W,CULTLEADER) THEN {
+     ROLL=RND(5);
+     IF ROLL=0 THEN {
+      IF (SCORINGOPTION(SBannedBeastmen)=0) THEN { RACE=RCBeastmen; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=1 THEN {
+      IF (SCORINGOPTION(SBannedDarkElves)=0) THEN { RACE=RCDarkElf; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=2 THEN {
+      IF (SCORINGOPTION(SBannedDraconians)=0) THEN { RACE=RCDraconian; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=3 THEN {
+      IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+      ELSE { RACE=RANDOMMYRRANRACE(0); }
+     }
+     IF ROLL=4 THEN { 
+      IF (BOOKS(W,Sorcery)<=6) THEN {
+       IF (SCORINGOPTION(SBannedDwarves)=0) THEN { RACE=RCDwarf; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      ELSE {
+       ROLL=RND(4);
+       IF ROLL=0 THEN {
+        IF (SCORINGOPTION(SBannedBeastmen)=0) THEN { RACE=RCBeastmen; }
+        ELSE { RACE=RANDOMMYRRANRACE(0); }
+       }
+       IF ROLL=1 THEN {
+        IF (SCORINGOPTION(SBannedDarkElves)=0) THEN { RACE=RCDarkElf; }
+        ELSE { RACE=RANDOMMYRRANRACE(0); }
+       }
+       IF ROLL=2 THEN {
+        IF (SCORINGOPTION(SBannedDraconians)=0) THEN { RACE=RCDraconian; }
+        ELSE { RACE=RANDOMMYRRANRACE(0); }
+       }
+       IF ROLL=3 THEN {
+        IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+        ELSE { RACE=RANDOMMYRRANRACE(0); }
+       }
+      }
+     }
+    } ELSE {
+     IF (BOOKS(W,Sorcery)>6) THEN {
+      ROLL=RND(6);
+      IF ROLL=0 THEN {
+       IF (SCORINGOPTION(SBannedBeastmen)=0) THEN { RACE=RCBeastmen; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=1 THEN {
+       IF (SCORINGOPTION(SBannedDarkElves)=0) THEN { RACE=RCDarkElf; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=2 THEN {
+       IF (SCORINGOPTION(SBannedDraconians)=0) THEN { RACE=RCDraconian; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=3 THEN {
+       IF (SCORINGOPTION(SBannedTrolls)=0) THEN { RACE=RCTroll; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=4 THEN {
+       IF (SCORINGOPTION(SBannedXuanyuanese)=0) THEN { RACE=RCXuanyuan; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+      IF ROLL=5 THEN {
+       IF (SCORINGOPTION(SBannedRakhshasas)=0) THEN { RACE=RCRakhshasa; }
+       ELSE { RACE=RANDOMMYRRANRACE(0); }
+      }
+     } ELSE { RACE=RANDOMMYRRANRACE(0); }
+    }
+   }
+  }
+ }
+
+ IF ((RACE=RCBarbarian) %OR (RACE=RCGnoll))
+  %AND ((PERSONALITY(W)=PEACEFUL) %OR (PERSONALITY(W)=LAWFUL)) THEN { B=0; }
+
+ IF (RACE=RCHalfling) THEN {
+  B=0;
+  IF (PERSONALITY(W)=PEACEFUL) THEN {B=1;}
+  IF ((PERSONALITY(W)=LAWFUL) %OR (RETORT(W,Charismatic)))
+   %AND ( (OBJECTIVE(W)<>MILITARIST) %AND (OBJECTIVE(W)<>EXPANSIONIST) ) THEN { B=1; }
+ }
+
+ IF (RACE=RCHawkmen) THEN {
+  B=0;
+  IF (PERSONALITY(W)=LAWFUL) THEN { B=1;}
+ }
+
+: more power-generating race are preferred at higher difficulty :
+ IF (SCORINGOPTION(SEqualizer)=0)
+  %AND (SCORINGOPTION(SLoner)=0)
+  %AND (SCORINGOPTION(SInvertedStart)=0)
+ THEN {
+  IF (B=1)
+   %AND ( ( (RETORT(0,Myrran)=0) %AND (RETORT(W,Myrran)) )
+    %OR ( (RETORT(0,Myrran)) %AND (RETORT(W,Myrran)=0) ) )
+   %AND ( (RACE=RCBarbarian)
+    %OR (RACE=RCGnoll)
+    %OR (RACE=RCKlackon)
+    %OR (RACE=RCLizard)
+    %OR (RACE=RCHalfling) )
+  THEN {
+   IF (RND(DIFFICULTY()+1)>0) THEN { B=0; }
+  }
+ }
+
+: Last check of banning race :
+ IF (B=1) THEN {
+  IF SCORINGOPTION(SBannedBarbarians) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCBarbarian) THEN { B=0; }
+  IF SCORINGOPTION(SBannedGnolls) %AND (RETORT(W,MYRRAN)=0) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCGnoll) THEN { B=0; }
+  IF SCORINGOPTION(SBannedHalflings) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCHalfling) THEN { B=0; }
+  IF SCORINGOPTION(SBannedHighElves) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCHighElf) THEN { B=0; }
+  IF SCORINGOPTION(SBannedHighMen) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCHighMen) THEN { B=0; }
+  IF SCORINGOPTION(SBannedKlackons) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCKlackon) THEN { B=0; }
+  IF SCORINGOPTION(SBannedLizardmen) %AND (RACE=RCLizard) THEN { B=0; }
+  IF SCORINGOPTION(SBannedNomads) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCNomad) THEN { B=0; }
+  IF SCORINGOPTION(SBannedOrcs) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCOrc) THEN { B=0; }
+  IF SCORINGOPTION(SBannedHawkmen) %AND (RETORT(W,MYRRAN)=0) %AND (RACE=RCHawkmen) THEN { B=0; }
+  IF SCORINGOPTION(SBannedBeastmen) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCBeastmen) THEN { B=0; }
+  IF SCORINGOPTION(SBannedDarkElves) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCDarkElf) THEN { B=0; }
+  IF SCORINGOPTION(SBannedDraconians) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCDraconian) THEN { B=0; }
+  IF SCORINGOPTION(SBannedDwarves) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCDwarf) THEN { B=0; }
+  IF SCORINGOPTION(SBannedTrolls) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCTroll) THEN { B=0; }
+  IF SCORINGOPTION(SBannedXuanyuanese) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCXuanyuan) THEN { B=0; }
+  IF SCORINGOPTION(SBannedRakhshasas) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCRakhshasa) THEN { B=0; }
+  IF SCORINGOPTION(SBannedGoblins) %AND (RETORT(W,MYRRAN)) %AND (RACE=RCGoblin) THEN { B=0; }
+ }
+
+} ENDLP (B=1);
+
+DEBUGLOG "OET: W = " + STRS(W);
+DEBUGLOG "HOMERACE: " + STRS(HOMERACE(W));

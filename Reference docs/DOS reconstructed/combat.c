@@ -4,7 +4,8 @@
  * shared combat-resolution helpers, R6.2e's defense-special and Wall of Fire helpers,
  * R6.2f's spell-damage/application closure, R6.5a's side-wide Illusion-sight refresh,
  * R6.5b's exported battle-unit healing/temporary-Hits routine, and R6.5d's exported
- * battlefield side-bonus aggregation routine.
+ * battlefield side-bonus aggregation routine, and R9-G1a-R1's battle-unit load-to-combat
+ * routine and CoM 1 identity tail.
  *
  * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
  * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
@@ -93,11 +94,17 @@
 #define USA_IMMUNITY_DEATH          0x0040
 #define USA_IMMUNITY_POISON         0x0080
 #define USA_IMMUNITY_WEAPON         0x0100
+#define USA_UNKNOWN_0200            0x0200
+#define USA_UNKNOWN_8000            0x8000
+#define USA_HIGH_BYTE(value)        ((uint8_t)(((value) >> 8) & 0xFF))
+#define COM1_DEMON_ATTRIBS_1_HIGH   \
+    USA_HIGH_BYTE(USA_IMMUNITY_WEAPON | USA_UNKNOWN_0200 | USA_UNKNOWN_8000) /* raw 0x83 */
 #define USA_CREATE_UNDEAD_BLOCK_131 USA_IMMUNITY_MAGIC       /* raw 0x0020 */
 #define USA_CREATE_UNDEAD_BLOCK_LATER (USA_IMMUNITY_MAGIC | USA_IMMUNITY_DEATH) /* raw 0x0060 */
 #define USA2_IMMOLATION             0x08
 #define USA2_CAUSE_FEAR             0x20
 #define UA_INVISIBILITY             0x0040
+#define UA_FANTASTIC                0x0001
 #define UA_LARGE_SHIELD             0x0002
 #define UA_CREATE_UNDEAD            0x0080
 #define UA_LONG_RANGE               0x0100
@@ -129,6 +136,8 @@
 #define RACE_FIRST_FANTASTIC        0x0F
 #define RACE_REALM_BIAS             0x10
 #define RACE_CHAOS                  0x12
+#define RACE_NATURE                 0x10
+#define RACE_LIFE                   0x13
 #define RACE_DEATH                  0x14
 #define HERO_SLOT_NONE              (-1)
 #define SPELL_FIREBALL              0x60
@@ -138,6 +147,14 @@
 #define SPELL_AIR_ELEMENTAL         66
 #define SPELL_FIRE_ELEMENTAL        90
 #define UNIT_TYPE_DEMON             0xA9
+#define UNIT_TYPE_CATAPULT          0x25
+#define UNIT_TYPE_CENTAURS          0x36
+#define UNIT_TYPE_PALADINS          0x71
+#define BATTLE_UNIT_RECORD_SIZE     0x006E
+#define FIGURE_SLOT_MAP_BYTES       0x0012
+#define COM1_DEMON_SLOT_FLOOR       0x0013
+#define COM1_DEMON_GRANT_DICE       4
+#define COM1_DEMON_SAVE_MODIFIER    (-4) /* raw byte 0xFC */
 #define SPELL_DAMAGE_RANGED_TYPE_MOM  0x26
 #define SPELL_DAMAGE_RANGED_TYPE_COM1 0x27
 #define INVULNERABILITY_DAMAGE_REDUCTION 2
@@ -293,6 +310,10 @@ extern void __far Battle_Unit_Heal(int16_t battle_unit_idx, int16_t amount,
                                    int16_t temp_hits);
 extern void __far BU_Construct(struct s_BATTLE_UNIT __far *bu);
 extern void __far BU_Apply_Battlefield_Effects(struct s_BATTLE_UNIT __far *bu);
+extern void __far Load_Battle_Unit(int16_t unit_idx,
+                                   struct s_BATTLE_UNIT __far *bu);
+extern int16_t __far Battle_Unit_Pict_Open(void);
+extern int16_t __far Combat_Figure_Load(int16_t unit_type, int16_t figure_slot);
 extern int16_t __far Random(int16_t faces);
 extern int16_t __far CMB_AttackRoll(int16_t strength, int16_t to_hit);
 extern int16_t __far CMB_DefenseRoll(int16_t defense, int16_t to_block);
@@ -333,6 +354,152 @@ static struct s_BATTLE_UNIT __far *com1_load_battle_unit_address(int16_t index);
 extern void __far overlay_03A0_003E(struct s_BATTLE_UNIT __far *bu);
 extern void __far overlay_03A0_0052(struct s_BATTLE_UNIT __far *bu);
 #endif
+
+/* ===========================================================================
+ * BU_UnitLoadToBattle -- overlay 98 thunk slot 102, [0x75C69, 0x75D93)
+ * ReMoM orientation name BU_UnitLoadToBattle__SEGRAX, tag WZD o98p15.
+ * ======================================================================== */
+
+int16_t __far BU_UnitLoadToBattle(int16_t battle_unit_idx, int16_t player_idx,
+                                  int16_t unit_idx, int16_t cgx, int16_t cgy)
+{
+    struct s_BATTLE_UNIT __far *bu;
+#if BUILD == MOM131
+    int16_t figure_slot;             /* [bp-2]; 131:0x75C6C  160:--  com1:-- */
+    int16_t figure_load_result;
+#else
+    uint8_t slot_used[FIGURE_SLOT_MAP_BYTES];
+                                        /* [bp-0x12]; 131:-- 160:0x75C6C com1:0x75C6C */
+    int16_t slot;
+    int16_t unit_type;
+    int16_t result;
+    int16_t figure_load_result;
+#endif
+
+    bu = &_battle_units[battle_unit_idx];
+                                        /* 131:0x75C71..0x75C8A 160:= com1:= */
+    Load_Battle_Unit(unit_idx, bu);      /* 131:0x75C8A 160:= com1:= */
+
+#if BUILD == MOM131
+    figure_slot = Battle_Unit_Pict_Open();
+                                        /* 131:0x75C92 160:-- com1:-- */
+    figure_load_result = Combat_Figure_Load((uint8_t)_UNITS[unit_idx].type,
+                                             figure_slot);
+                                        /* 131:0x75C9A..0x75CB5 160:-- com1:-- */
+    /* The call result is preserved by push AX / pop AX around the address recomputation. */
+    _battle_units[battle_unit_idx].bufpi = figure_load_result;
+                                        /* 131:0x75CB7..0x75CC9 160:-- com1:-- */
+    _battle_units[battle_unit_idx].controller_idx = (int8_t)player_idx;
+                                        /* 131:0x75CCA..0x75CDD 160:-- com1:-- */
+    _battle_units[battle_unit_idx].cgx = cgx;
+                                        /* 131:0x75CDE..0x75CF1 160:-- com1:-- */
+    _battle_units[battle_unit_idx].cgy = cgy;
+                                        /* 131:0x75CF2..0x75D05 160:-- com1:-- */
+    _battle_units[battle_unit_idx].target_cgx = cgx;
+                                        /* 131:0x75D06..0x75D19 160:-- com1:-- */
+    _battle_units[battle_unit_idx].target_cgy = cgy;
+                                        /* 131:0x75D1A..0x75D2D 160:-- com1:-- */
+    _battle_units[battle_unit_idx].move_anim_ctr = 0;
+                                        /* 131:0x75D2E..0x75D40 160:-- com1:-- */
+    _battle_units[battle_unit_idx].outline_magic_realm = 0;
+                                        /* 131:0x75D41..0x75D53 160:-- com1:-- */
+    _battle_units[battle_unit_idx].Atk_FigLoss = 0;
+                                        /* 131:0x75D54..0x75D66 160:-- com1:-- */
+    _battle_units[battle_unit_idx].Moving = 0;
+                                        /* 131:0x75D67..0x75D79 160:-- com1:-- */
+    _battle_units[battle_unit_idx].action = 0;
+                                        /* 131:0x75D7A..0x75D8C 160:-- com1:-- */
+    /* No battlefield-effects call. The last address product remains in AX. */
+    return battle_unit_idx * BATTLE_UNIT_RECORD_SIZE;
+                                        /* value from 131:0x75D7A; epilogue 0x75D8D..0x75D92 */
+#else
+    bu = &_battle_units[battle_unit_idx]; /* 131:-- 160:0x75C92 com1:0x75C92 */
+    bu->controller_idx = (int8_t)player_idx;
+                                        /* 131:-- 160:0x75C9E com1:0x75C9E */
+    bu->cgx = cgx;                     /* 131:-- 160:0x75CA2..0x75CAA com1:= */
+    bu->target_cgx = cgx;              /* 131:-- 160:0x75CAD com1:= */
+    bu->cgy = cgy;                     /* 131:-- 160:0x75CAE..0x75CB4 com1:= */
+    bu->target_cgy = cgy;              /* 131:-- 160:0x75CB7 com1:= */
+    bu->move_anim_ctr = bu->Atk_FigLoss = bu->outline_magic_realm =
+        bu->Moving = bu->action = 0;   /* 131:-- 160:0x75CB8..0x75CBE com1:= */
+
+    for (slot = 0; slot < FIGURE_SLOT_MAP_BYTES; ++slot)
+        slot_used[slot] = 0;           /* 131:-- 160:0x75CBF..0x75CCA com1:= */
+    {
+        int16_t i = 0;                 /* 131:-- 160:0x75CCB com1:= */
+        struct s_BATTLE_UNIT __far *p = _battle_units;
+                                        /* 131:-- 160:0x75CCD com1:= */
+        /* This is bottom-tested: record zero is examined even when the count is nonpositive. */
+        do {
+            int16_t used = p->bufpi;   /* 131:-- 160:0x75CD1 com1:= */
+            if (used >= 0 && (int8_t)p->status == BUS_ACTIVE)
+                                        /* 131:-- 160:0x75CD5..0x75CDE com1:= */
+                slot_used[used]++;     /* 131:-- 160:0x75CE0 com1:= */
+            p = (struct s_BATTLE_UNIT __far *)
+                ((uint8_t __far *)p + BATTLE_UNIT_RECORD_SIZE);
+                                        /* 131:-- 160:0x75CE3 com1:= */
+            ++i;                       /* 131:-- 160:0x75CE6 com1:= */
+        } while (i < _combat_total_unit_count);
+                                        /* 131:-- 160:0x75CE7..0x75CEC com1:= */
+
+        slot = 0;                      /* 131:-- 160:0x75CED com1:= */
+        while (slot_used[slot] != 0)   /* 131:-- 160:0x75CEF..0x75CF3 com1:= */
+            ++slot;                   /* 131:-- 160:0x75CF5..0x75CF7 com1:= */
+        /* Neither slot_used[used] nor this free-slot search has an upper-bound check. */
+    }
+
+    unit_type = (uint8_t)_UNITS[unit_idx].type;
+                                        /* 131:-- 160:0x75CF8..0x75D0A com1:= */
+    figure_load_result = Combat_Figure_Load(unit_type, slot);
+                                        /* 131:-- 160:0x75D0C com1:= */
+    bu->bufpi = figure_load_result;     /* 131:-- 160:0x75D13..0x75D1A com1:= */
+
+#if BUILD == CP160
+    result = unit_type;                /* 131:-- 160:0x75D1B ->0x75D84 com1:-- */
+#endif
+
+#if BUILD == COM1
+    if (unit_type == UNIT_TYPE_DEMON) { /* 131:-- 160:-- com1:0x75D1B..0x75D1F */
+        int16_t grant_word;
+
+        if (battle_unit_idx >= COM1_DEMON_SLOT_FLOOR)
+                                        /* 131:-- 160:-- com1:0x75D21..0x75D25 */
+            grant_word = figure_load_result;
+        else if (Random(COM1_DEMON_GRANT_DICE) == 1)
+                                        /* 131:-- 160:-- com1:0x75D27..0x75D36 */
+            grant_word = 0;            /* DEC AX leaves zero on the taken edge */
+        else {
+            result = -1;               /* 131:-- 160:-- com1:0x75D38 */
+            goto battlefield_tail;     /* 131:-- 160:-- com1:0x75D3B */
+        }
+
+        bu->Spec_Att_Attrib = COM1_DEMON_SAVE_MODIFIER;
+                                        /* 131:-- 160:-- com1:0x75D3D */
+        *((uint8_t __far *)&bu->Attribs_1 + 1) = COM1_DEMON_ATTRIBS_1_HIGH;
+                                        /* 131:-- 160:-- com1:0x75D42 */
+        bu->attack_attributes |= ATT_LIFE_STEAL | ATT_DEATH_TOUCH;
+                                        /* raw 0x0208; 131:-- 160:-- com1:0x75D47 */
+        *(uint16_t __far *)&bu->mana_max = (uint16_t)grant_word;
+                                        /* spans mana_max/mana; com1:0x75D4D */
+    }
+
+    if (unit_type == UNIT_TYPE_PALADINS)/* 131:-- 160:-- com1:0x75D51..0x75D54 */
+        bu->race = RACE_LIFE;           /* 131:-- 160:-- com1:0x75D56 */
+    if (unit_type == UNIT_TYPE_CENTAURS /* 131:-- 160:-- com1:0x75D5B..0x75D5E */
+        || unit_type == UNIT_TYPE_CATAPULT)
+                                        /* 131:-- 160:-- com1:0x75D60..0x75D63 */
+        bu->race = RACE_NATURE;         /* 131:-- 160:-- com1:0x75D65 */
+
+    result = 0;                         /* 131:-- 160:-- com1:0x75D6A */
+    bu->Abilities |= UA_FANTASTIC;      /* 131:-- 160:-- com1:0x75D6C */
+                                        /* nineteen NOPs com1:0x75D71..0x75D83 */
+battlefield_tail:
+#endif
+    BU_Apply_Battlefield_Effects(bu);   /* 131:-- 160:0x75D84 com1:0x75D84 */
+    return result;                      /* mov ax,si 160:0x75D8B com1:=;
+                                           epilogue 160:0x75D8D..0x75D92 com1:= */
+#endif
+}
 
 /* R6.2d shared resolution helpers. */
 

@@ -186,6 +186,7 @@ ReMoM's `MoM/src/UNITTYPE.h`, confirmed by the branches that consume them:
 | Recompute hit-point callee | `0x8E850`–`0x8EAB8` in all three builds; full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1g.evidence.md` |
 | `Unit_Moves2` — overland maximum movement | `0x98494`–`0x986BC` in all three builds; MoM/CP call through `0x03C8:0x0043`, while CoM replaces the constructor path. Full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.5c.evidence.md` |
 | `Calc_Battlefield_Bonuses` — side maxima and combat-enchantment import | `0x9A8AB`–`0x9AD03` in all three builds; exported as `03D0:004D`, with CoM jumping to a relocated continuation at `0x99874`. Full reconstruction: `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.5d.evidence.md` |
+| `BU_UnitLoadToBattle` — persistent-unit load, picture-slot selection and CoM identity tail | `0x75C69`–`0x75D93` in all three builds; full reconstruction: `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R9-G1a-R1.evidence.md` |
 | CoM 1 `Battle_Unit_Moves2` | `0x9F12D`–`0x9F2D3`, with private near helpers through `0x9F2F0`; called through far `0x03E0:0x003E` at `0x90BE9`. Full reconstruction: `DOS reconstructed/unitcalc.c`, evidence `DOS reconstructed/R6.1g.evidence.md` |
 | `Distance(bu_a, bu_b)` — Chebyshev, over `+0x44`/`+0x46` | `0x9B50C`–`0x9B58F`; reconstructed in `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.2d.evidence.md` |
 | `Has_Ranged_Attack(bu_idx)` — `0 < ranged_type < 100` | `0x9BB03`–`0x9BB3D`; reconstructed in `DOS reconstructed/combat.c`, evidence `DOS reconstructed/R6.2d.evidence.md` |
@@ -193,15 +194,42 @@ ReMoM's `MoM/src/UNITTYPE.h`, confirmed by the branches that consume them:
 | `Target_Unit_Value` (AI estimator, *not* a combat path) | `0x9B590`–`0x9BB02` |
 | Weapon-quality stat block | `0x8F060`–`0x8F0FF` |
 | Name→mask tables | `0x2D0B0` (`attack_attributes`), `0x2D020` (`Attribs_1`), `0x2CFA8` (`Abilities`), `0x2D13E` (unit enchantments), `0x2D27E` (`Combat_Effects`); data base `0x294A0` |
-| Unit-type table | `0x2963E` (dseg `0x19E`), stride `0x24`, indexed by `_UNITS[].+0x05`; record +0 melee, +1 ranged, +2 `ranged_type`, +3 ammo |
+| Unit-type table | full records at `0x2963C` (dseg `0x19C`), stride `0x24`, indexed by `_UNITS[].+0x05`; record +0 name pointer, +2 melee, +3 ranged, +4 `ranged_type`, +5 ammo. The older `0x2963E` / dseg `0x19E` anchor is the first-stat payload base |
 | Player record stride / global-enchantment bytes | stride `0x4C8`; Chaos Surge at `[0xA356]`, Holy Arms at `[0xA35F]`, CoM 1 Survival Instinct at `[0xA363]` for player 0 |
 
-The unit-type table's base and first four columns are confirmed by decoding all 35 hero records
-and matching them row-for-row against `Calculator/units_mom.js` (roster id = record index + 1).
-Its ability words have *not* been located — they do not align to the roster's ability lists at
-any offset — so read stats from it, not flags.
+The unit-type table's first four stat columns are confirmed by decoding all 35 hero records and
+matching them row-for-row against `Calculator/units_mom.js` (roster id = record index + 1).
+R9-G1a-R3 additionally binds the CoM 1 Zombies (`0xAE`) record by its name pointer and locates its
+`Abilities` word at record `+0x1E`, raw `0x2AED2`; no other ability row is established by that
+item, so read flags only where a dedicated binding exists.
 
 ## Verified findings
+
+### CoM 1 Zombies type-table binding (resolved 2026-08-09)
+
+R9-G1a-R3 locates the full CoM 1 `unit_types` record base at `DS:0x019C` / raw `0x2963C`, with a
+word name pointer at record `+0x00` and stride `0x24`; the earlier `DS:0x019E` figure is the
+first-stat payload base. The Zombies row is type `0xAE`, starts at raw `0x2AEB4`, and carries
+`Abilities = 0x0081` at record `+0x1E` / raw `0x2AED2`. `BU_Construct` loads the full word at
+`0x8EEC3` and copies it to `bu->Abilities` at `0x8EF02` (`26 89 47 1C`). The merged source is in
+`DOS reconstructed/unitcalc.c`; ledgers, counts, findings, review provenance and the disputed
+evidence-scope readings are in `DOS reconstructed/R9-G1a-R3.evidence.md`.
+
+Verified: Claude 2026-08-09; Codex 2026-08-09, independent. The executable result is undisputed;
+Q26 records only whether the extended raw-data corroboration belongs inside this narrow item.
+
+### Combat-loaded identity and picture slots (resolved 2026-08-09)
+
+R9-G1a-R1 reconstructed `BU_UnitLoadToBattle` across all three DOS builds. The merged body is in
+`DOS reconstructed/combat.c`; gapless ledgers, inventories, counts, findings, and dual-review
+provenance are in `DOS reconstructed/R9-G1a-R1.evidence.md`.
+
+CoM 1 changes Paladins to Life and Centaurs or Catapults to Nature, then marks every successful
+load Fantastic. The failed low-index Demon random path alone skips those identity writes and
+returns `-1`; the grant path adds its save, immunity, touch, and mana package. In all three builds
+the return from `Combat_Figure_Load`, not merely the selected slot, is stored as `bufpi`. CP and
+CoM replace 1.31's separate picture-slot opener with a bottom-tested in-line occupancy scan whose
+occupancy indexing and free-slot search have no upper-bound check.
 
 ### Combat-resolution helper closure (resolved 2026-08-07)
 

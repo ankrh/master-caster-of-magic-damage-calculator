@@ -6,8 +6,8 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => deriveUnitStats({
     prefix: 'a',
-    version: 'com2_warlord_1.5.12.6.2',
-    identity: createCustomUnitIdentity('com2_warlord_1.5.12.6.2', {
+    version: 'com2_warlord_1.5.12.7',
+    identity: createCustomUnitIdentity('com2_warlord_1.5.12.7', {
       baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
     }),
     figs: 1, atk: 5, def: 6, res: 8, hp: 7,
@@ -94,7 +94,7 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
         abilities: { destiny: true },
       }),
       shadowStrike: deriveUnitStats({
-        ...base, version: 'com2_warlord_1.5.12.6.2',
+        ...base, version: 'com2_warlord_1.5.12.7',
         atk: 6, rtb: 0, rtbType: 'none', def: 1, res: 1, hp: 1,
         abilities: { shadowStrike: true }, modernAttacks: {},
       }),
@@ -130,7 +130,7 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
 
 test('R7.4 renders complete trace tooltips only on affected final outputs, symmetrically', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.6.2');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
   await setValue(page, 'aUnit', 'custom');
   await setValue(page, 'bUnit', 'custom');
 

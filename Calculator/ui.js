@@ -1374,8 +1374,9 @@ const GAME_VERSION_STORAGE_KEY = 'gameVersion_v1';
 // Only one Warlord build is supported at a time, so every retired Warlord id resolves to the
 // current one rather than restoring old behaviour.
 const RENAMED_GAME_VERSIONS = {
-  'com2_warlord_1.5.12.5': 'com2_warlord_1.5.12.6.2',
-  'com2_warlord_1.5.12.6': 'com2_warlord_1.5.12.6.2',
+  'com2_warlord_1.5.12.5': 'com2_warlord_1.5.12.7',
+  'com2_warlord_1.5.12.6': 'com2_warlord_1.5.12.7',
+  'com2_warlord_1.5.12.6.2': 'com2_warlord_1.5.12.7',
 };
 
 // Map a version id from persisted or shared state onto one this build actually offers.

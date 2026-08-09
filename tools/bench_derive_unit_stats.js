@@ -82,7 +82,7 @@ const CASES = [
     abilities: { holyWeapon: true, lionheart: true, prayer: true, holyArmor: true },
   })],
   ['Warlord kitchen sink', unitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     race: 'Orc', name: 'Orc Swordsmen',
     level: 'veteran', weapon: 'magic', armor: 'orihalcon',
     rtbType: 'thrown', rtb: 3,
@@ -94,7 +94,7 @@ const CASES = [
     poxHost: true, darkness: true,
   })],
   ['Warlord Outlander reforms', unitInput({
-    version: 'com2_warlord_1.5.12.6.2',
+    version: 'com2_warlord_1.5.12.7',
     rtbType: 'missile', rtb: 5,
     abilities: {
       outlanderWizard: true, armorcladReform: true, heatPowerEngine: true,

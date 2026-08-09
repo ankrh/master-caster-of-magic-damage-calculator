@@ -1,0 +1,318 @@
+: INPUT CITYID - the city to calculate
+		TAXPERC - percentage of unrest caused by the tax rate
+		RACEUN - racial unrest level applied (races.ini)
+  OUTPUT UNREST - the total number of rebels :
+
+IF CITYOWNER(CityID)=0 THEN {
+ MASTERVARSET CityInFocus = -1;
+}
+
+W=CITYOWNER(CITYID);
+FARMERS=GETCITYDATA(CITYID,CDFARMER);
+MAXPOP=GETCITYDATA(CITYID,CDMAXPOP);
+
+RACIAL=RACEUN
+
+: Calculate Unrest Reduction part start here :
+: Unrest reduction from religious buildings :
+
+REL=0;
+
+IF CITYENCHANT(CITYID,CEEvilPresence)>-1 THEN { GOTO "ENDOFRELIGION"; }
+
+ IF HASGLOBAL(W,GERulerOfHeaven) THEN { RUH=1; } ELSE { RUH=0; };
+
+ IF ISBUILT(CITYID,BShrine) THEN { REL=REL+1+RUH; }
+ IF ISBUILT(CITYID,BParthenon) THEN { REL=REL+1+RUH; }
+ IF ISBUILT(CITYID,BCathedral) THEN { REL=REL+2+RUH; }
+ IF (ISBUILT(CITYID,BTemple)=0) THEN { GOTO "NOTEMPLE"; }
+ REL=REL+1+RUH;
+ REL=REL+%I((OREINRANGE(CITYID,OreWildgame)));
+  IF ISBUILT(CITYID,BAlchemistGuild) THEN { 
+   REL=REL+%I((OREINRANGE(CITYID,OreNightshade))+(OREINRANGE(CITYID,OreOrihalcon)));
+  }
+!NOTEMPLE!
+ IF ISBUILT(CITYID,BOracle) THEN { REL=REL+3+RUH; }
+ IF ISBUILT(CITYID,BPoolOfRepentance) THEN { REL=REL+3+RUH; }
+
+ IF RETORT(W,CultLeader) THEN { REL=REL+%I(REL/2); }
+
+!ENDOFRELIGION!
+
+SETCITYDATA(CITYID,CDRELRED,REL);
+
+: If city enchanted by Necropolis, script ended here :
+IF (CITYENCHANT(CITYID,CENecropolis)>-1) THEN {
+ UNREST = 0;
+ HALT;
+}
+
+: Global enchantment counting :
+NOFGEDDON=ARMAGEDDONCOUNT;
+NOFDOOMS=DOOMSDAYCOUNT;
+NOFOMENS=EVILOMENCOUNT;
+NOFDARKEST=DARKESTHOURCOUNT;
+NOFDIVORDER=DIVINEORDERCOUNT;
+
+ IF HASGLOBAL(W,GEArmageddon) THEN { NOFGEDDON=NOFGEDDON-1; }
+ IF HASGLOBAL(W,GEDoomsday) THEN { NOFDOOMS=NOFDOOMS-1; }
+ IF HASGLOBAL(W,GEEvilOmens) THEN { NOFOMENS=NOFOMENS-1; }
+ IF HASGLOBAL(W,GEDarkestHour) THEN { NOFDARKEST=NOFDARKEST-1; }
+ IF HASGLOBAL(W,GEDivineOrder) THEN { NOFDIVORDER=NOFDIVORDER-1; }
+
+
+: Unrest reduction from non-religious building :
+
+RED=REL;
+
+PSY=0;
+IF (SPELLSTATE(W,STXenopsychology)=2) THEN { PSY=3; }
+
+IF ISBUILT(CITYID,BColosseum) THEN { RED=RED+1+PSY; }
+
+IF ISBUILT(CITYID,BBrewery) THEN { RED=RED+1+PSY; }
+
+IF ISBUILT(CITYID,BBaray) THEN { RED=RED+2+PSY; }
+
+
+: Unrest reduction from non-religious resource :
+
+IF (CITYENCHANT(CityID,CENatureEye)>-1) %AND (OREINRANGE(CITYID,OreNightshade)>0) THEN { RED=RED+1; } 
+
+: new effect of Charismatic, -1 unrest :
+IF RETORT(W,Charismatic) THEN { RED=RED+1; }
+
+
+: Unrest reduction by city enchantment :
+
+IF CITYENCHANT(CITYID,CEGaiasBlessing)>-1 THEN { RED=RED+2; }
+
+IF CITYENCHANT(CITYID,CEStreamofLife)>-1 THEN { RED=RED+3; }
+
+IF CITYENCHANT(CITYID,CEBountifulFestivity)>-1 THEN {
+ SURPLUS=GETCITYDATA(CITYID,CDFOOD)-POPUNITS(CITYID);
+ BF=%I(SURPLUS/10);
+ IF (BF>0) THEN { RED=RED+BF; }
+}
+
+
+: Unrest reduction by global enchantment :
+
+IF HASGLOBAL(W,GEJustCause) THEN {RED=RED+1; }
+
+IF HASGLOBAL(W,GEClairvoyance) THEN {RED=RED+2; }
+
+
+: Unrest causes by city enchantment :
+
+IF CITYENCHANT(CITYID,CEDarkRituals)>-1 THEN { RED=RED-1; }
+
+IF CITYENCHANT(CITYID,CEPestilence)>-1 THEN { RED=RED-2; }
+
+
+: Unrest causes by global enchantments :
+
+IF NOFGEDDON>0 THEN { RED=(RED-1)-NOFGEDDON; }
+IF NOFDOOMS>0 THEN { RED=(RED-2)-(2*NOFDOOMS); }
+IF NOFDARKEST>0 THEN { RED=(RED-1)-(2*NOFDARKEST); }
+IF HASGLOBAL(W,GEBloodAndIron)
+ %AND ( CITYRACE(CITYID)<>HOMERACE(W) )
+ %AND (CITYENCHANT(CITYID,CEChaosBless)<0)
+THEN { RED=(RED-3); }
+
+IF HASGLOBAL(W,GEDivineOrder) THEN { GOTO "HASDIVINEORDER"; }
+ IF NOFDIVORDER>0 THEN {
+  IF (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Death)))-(BOOKS(W,Life)))>0 THEN { RED=(RED-NOFDIVORDER); }
+  IF BOOKS(W,Life)=0 THEN { RED=(RED-NOFDIVORDER); }
+ }
+!HASDIVINEORDER!
+
+
+: Set garrison-related public order :
+
+UNITORDER=GARRISON(CITYID);
+GLOBALWARLORDHOLD=0;
+
+IF HASGLOBAL(W,GEHeartOfSolidarity) THEN { UNITORDER=10; }
+
+: Warlord's Hold enhanced global garrison order :
+
+IF (HOMERACE(W)<>RCBarbarian)
+ %AND (HOMERACE(W)<>RCGnoll)
+ %AND (HOMERACE(W)<>RCTroll)
+ %AND (HOMERACE(W)<>RCGoblin)
+ %AND (RETORT(W,WARLORD)=0)
+THEN { GOTO "NOTRAIDERRACE"; }
+
+WARLORDHOLD=0;
+WARLORDHOLD=WARLORDHOLD+(BUILDINGSOWNED(W,BWarlordHold,0);
+OWNEDCITY=0;
+
+FOR C=1 TO MAXCITY();
+
+ IF (CITYOWNER(C)=W) THEN { OWNEDCITY=OWNEDCITY+1; }
+
+NEXT;
+
+GLOBALWARLORDHOLD=%I( (WARLORDHOLD*12)/(1+(OWNEDCITY-WARLORDHOLD) );
+
+!NOTRAIDERRACE!
+
+
+IF (ISBUILT(CITYID,BWarlordHold)=0) THEN { UNITORDER=%I((UNITORDER+GLOBALWARLORDHOLD)/2); }
+
+
+: new global enchantment, Harmony of Followship, if racial unrest more than 0 then racial unrest become 0 :
+IF HASGLOBAL(W,GEHeartOfSolidarity) %AND (RACIAL>0) THEN { RACIAL=0; }
+
+
+: Calculate Unrest part start here :
+: Base value of unrest :
+
+UNPERC=0;
+
+: difficulty penalty :
+IF (W=0) THEN {
+ IF (DIFFICULTY()=DiffPhantasm) THEN { UNPERC=UNPERC+20; }
+ ELSE { IF (DIFFICULTY()=DiffMaster) THEN { UNPERC=UNPERC+15; }
+  ELSE { IF (DIFFICULTY()=DiffLunatic) THEN { UNPERC=UNPERC+10; }
+   ELSE { IF (DIFFICULTY()=DiffExpert) THEN { UNPERC=UNPERC+5; }
+   }
+  }
+ }
+}
+
+UNPERC=UNPERC+TAXPERC;
+UNPERC=UNPERC+(RACIAL*10);
+UNREST = %I ((POPUNITS(CITYID) * UNPERC ) /100)
+INQUISITION=0;
+
+: Effect of Hive Network on city unrest :
+IF ISBUILT(CityID,BHiveNetwork) THEN { UNREST=UNREST+1; }
+
+: New spell, Inquisition :
+
+: Effect of Dishearten Prophacy, +4 unrest in the city :
+IF (CITYENCHANT(CityID,CEDisheartenProphesy)>-1) THEN { UNREST=UNREST+4; }
+
+IF (CITYENCHANT(CityID,CEInquisition)<0) THEN { GOTO "NOINQUISITION"; }
+
+ : Calculate religious power :
+ RELPOW=0;
+
+ IF (GETCITYDATA(CITYID,CDRELPOW)<>0)
+ THEN {
+  RELPOW=GETCITYDATA(CITYID,CDRELPOW);
+  GOTO "ALREADYHASCDRELPOW";
+ }
+
+
+ IF HASGLOBAL(W,GERulerOfHeaven) THEN { RUHPOW=2; } ELSE { RUHPOW=0; };
+
+ IF CITYENCHANT(CityID,CEHeavenlyLight)>-1 THEN {
+  RELPOW=RELPOW+(3+RUHPOW);
+ }
+
+ IF ISBUILT(CityID,BShrine) THEN {
+  RELPOW=RELPOW+(2+RUHPOW);
+ }
+
+ IF ISBUILT(CityID,BParthenon) THEN {
+  RELPOW=RELPOW+(4+RUHPOW);
+ }
+
+ IF ISBUILT(CityID,BWitchesConvent) THEN {
+  RELPOW=RELPOW+(4+RUHPOW);
+ }
+
+ IF HASGLOBAL(W,GEKingOfUnderworld) %AND ISBUILT(CityID,BOracle) THEN {
+  RELPOW=RELPOW+(4+RUHPOW);
+ }
+
+ IF ISBUILT(CityID,BCathedral) THEN {
+  RELPOW=RELPOW+(6+RUHPOW);
+ }
+
+ IF (ISBUILT(CityID,BTemple)=0) THEN { GOTO "INQNOTEMPLE"; }
+
+  WGE=%I((2*OREINRANGE(CITYID,OreWildgame)));
+  NSE=%I((2*OREINRANGE(CITYID,OreNightshade)));
+  OHE=%I((2*OREINRANGE(CITYID,OreOrihalcon)));
+  IF (ISBUILT(CityID,BAlchemistGuild)=0) THEN { NSE=0; OHE=0; }
+  RELPOW=RELPOW+((4+NSE+WGE+OHE)+RUHPOW);
+
+!INQNOTEMPLE!
+
+ IF ISBUILT(CityID,BAltarOfStorm) THEN {
+  RELPOW=RELPOW+(8+RUHPOW);
+ }
+
+ IF ISBUILT(CityID,BAltarOfTheSun) THEN {
+  RELPOW=RELPOW+(8+RUHPOW);
+ }
+
+ IF ISBUILT(CityID,BAltarOfTheMoon) THEN {
+  RELPOW=RELPOW+(8+RUHPOW);
+ }
+
+ IF ISBUILT(CityID,BBasilica) THEN {
+  RELPOW=RELPOW+(MAXPOP+RUHPOW);
+ }
+
+ IF CITYENCHANT(CityID,CEDarkRituals)>-1 THEN {
+  DR=8+%I(RELPOW);
+  RELPOW=RELPOW+DR;
+ }
+
+ IF (EVENTTURN(EvGoodMoon)=0) THEN { GOTO "INQNOGOODMOON"; }
+  IF BOOKS(W,Life)>BOOKS(W,Death) THEN {
+   RELPOW=RELPOW+%I(RELPOW/2);
+  }
+  IF BOOKS(W,Death)>BOOKS(W,Life) THEN {
+   RELPOW=RELPOW-(%I(RELPOW/3));
+  }
+!INQNOGOODMOON!
+
+ IF (EVENTTURN(EvBadMoon)=0) THEN { GOTO "INQNOBADMOON"; }
+  IF BOOKS(W,Death)>BOOKS(W,Life) THEN {
+   RELPOW=RELPOW+%I(RELPOW/2);
+  }
+  IF BOOKS(W,Life)>BOOKS(W,Death) THEN {
+   RELPOW=RELPOW-(%I(RELPOW/3));
+  }
+!INQNOBADMOON!
+
+ IF RETORT(W,CultLeader) THEN {
+  RELPOW=RELPOW+RELPOW;
+ }
+
+ SETCITYDATA(CITYID,CDRELPOW,RELPOW);
+
+!ALREADYHASCDRELPOW!
+
+ : Effect of Inquisition, +2 unrest and additional +0.5 unrest for each religious power more than 6 :
+ INQUISITION = 2 + %I((RELPOW-6)/2);
+ IF INQUISITION<2 THEN { INQUISITION=2; }
+
+!NOINQUISITION!
+
+
+: Final unrest calculation :
+
+UNREST = UNREST - RED;
+
+UNREST = UNREST - UNITORDER;
+
+UNREST = UNREST + INQUISITION;
+
+IF (HOMERACE(W)<>RCHighElf) THEN { GOTO "NOTHIGHELF"; }
+
+ IF (UNREST>0)
+  %AND (ISBUILT(CITYID,BTreeOfLife))
+ THEN {
+  UNREST = %I(UNREST/2);
+ }
+
+!NOTHIGHELF!
+
+SETCITYDATA(CITYID,CDUNREST,UNREST);

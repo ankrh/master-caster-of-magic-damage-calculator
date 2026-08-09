@@ -5,7 +5,7 @@ const { openCalculator, expectNoConsoleErrors } = require('./helpers');
 async function configureTracedCards(page) {
   await page.evaluate(() => {
     const version = document.getElementById('gameVersion');
-    version.value = 'com2_warlord_1.5.12.6.2';
+    version.value = 'com2_warlord_1.5.12.7';
     version.dispatchEvent(new Event('change', { bubbles: true }));
 
     for (const prefix of ['a', 'b']) {

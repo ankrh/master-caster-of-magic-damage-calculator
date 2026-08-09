@@ -1,0 +1,185 @@
+:
+ INPUT
+ W = The ID of the wizard that was rolled
+ TEMPLATE = The template identifier of the wizard that was rolled
+ OUTPUT
+ 
+ REROLL - If set to 1, the wizard is discarded and a new one will be generated. Otherwise the wizard is accepted.
+ 
+ Use this script to manipulate the probability of generating various AI opponents.
+ 
+ Some examples below
+ 
+ IF RETORT(W,WARLORD) THEN { REROLL=1; }
+ Will result in the game never generating a Warlord opponent.
+ 
+ IF (RETORT(W,ALCHEMIST)) %AND (RANDOM(100)>=50) THEN { REROLL=1; }
+ Will result in generating wizards with Alchemist half as often.
+ 
+ By accessing wizard data below W you can even restrict what the current wizard is
+ allowed to roll based on what other wizards are already generated for the game.
+ 
+ Please keep in mind that a very high chance of rerolling can result in wizard generation 
+ taking a large amount of time to execute. 
+ So please avoid defining rules that only allow like 1 out of a million generated wizard to be accepted.
+ 
+ Additionally, you can overwrite the already generated data by setting the books and retorts directly, 
+ using the Setretort and Setbook commands instead of rerolling. You can use that to completely
+ override the default way of generating wizards based on templates. 
+ However in that case you MUST handle every book and retort in this script, except the MYRRAN retort,
+ which shouldn't be changed otherwise the condition to have the intended amount of Myrran wizards
+ will not be fulfilled and the game will be stuck in an endless loop.
+ 
+ Wizard templates are the following 
+ 1 - Mono Nature
+ 2 - Mono Sorcery
+ 3 - Mono Chaos
+ 4 - Mono Life
+ 5 - Mono Death
+ 6 - Nature/Sorcery
+ 7 - Nature/Chaos
+ 8 - Nature/Life
+ 9 - Nature/Death
+ 10 - Sorcery/Chaos
+ 11 - Sorcery/Life
+ 12 - Sorcery/Death
+ 13 - Chaos/Life
+ 14 - Chaos/Death
+ 15 - Life/Death
+ :
+
+HAVENATURE=0;
+HAVESORCERY=0;
+HAVECHAOS=0;
+HAVELIFE=0;
+HAVEDEATH=0;
+MULTIREALM=0;
+
+IF (DIFFICULTY()<DiffAdvanced) THEN { GOTO "SKIPTHIS"; }
+
+ IF (BOOKS(W,Nature)>0) THEN { HAVENATURE=1; }
+ IF (BOOKS(W,Sorcery)>0) THEN { HAVESORCERY=1; }
+ IF (BOOKS(W,Chaos)>0) THEN { HAVECHAOS=1; }
+ IF (BOOKS(W,Life)>0) THEN { HAVELIFE=1; }
+ IF (BOOKS(W,Death)>0) THEN { HAVEDEATH=1; }
+
+ MULTIREALM=HAVENATURE+HAVESORCERY+HAVECHAOS+HAVELIFE+HAVEDEATH;
+
+: If retort is Warlord, wizard will never pick mono-Death template) :
+ IF (RETORT(W,Warlord)) %AND (TEMPLATE=5) THEN { REROLL=1; }
+
+: If retort is Cult Leader, wizard will never pick mono-Sorcery template) :
+ IF (RETORT(W,CultLeader)) %AND (TEMPLATE=2) THEN { REROLL=1; }
+
+: If retort is Conjurer, wizard will never pick mono-Life template) :
+ IF (RETORT(W,Conjurer)) %AND (TEMPLATE=4) THEN { REROLL=1; }
+
+: Chance of specialist retort increase as number of books in main realm increase :
+ IF (TEMPLATE<6) %AND ((RETORT(W,Specialist))=0) THEN {
+  IF (TEMPLATE=1) %AND ((BOOKS(W,Nature))>8) %AND (((BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Life))+(BOOKS(W,Death)))=0) THEN {
+   SETRETORT(W,Specialist,1);
+   SETBOOK(W,Nature,(BOOKS(W,Nature)-1));
+  }
+  IF (TEMPLATE=2) %AND ((BOOKS(W,Sorcery))>8) %AND (((BOOKS(W,Nature))+(BOOKS(W,Chaos))+(BOOKS(W,Life))+(BOOKS(W,Death)))=0) THEN {
+   SETRETORT(W,Specialist,1);
+   SETBOOK(W,Sorcery,(BOOKS(W,Sorcery)-1));
+  }
+  IF (TEMPLATE=3) %AND ((BOOKS(W,Chaos))>8) %AND (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Life))+(BOOKS(W,Death)))=0) THEN {
+   SETRETORT(W,Specialist,1);
+   SETBOOK(W,Chaos,(BOOKS(W,Chaos)-1));
+  }
+  IF (TEMPLATE=4) %AND ((BOOKS(W,Life))>8) %AND (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Death)))=0) THEN {
+   SETRETORT(W,Specialist,1);
+   SETBOOK(W,Life,(BOOKS(W,Life)-1));
+  }
+  IF (TEMPLATE=5) %AND ((BOOKS(W,Death))>8) %AND (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Life)))=0) THEN {
+   SETRETORT(W,Specialist,1);
+   SETBOOK(W,Death,(BOOKS(W,Death)-1));
+  }
+ }
+
+: If retort is Specialist, wizard will only using on mono realm template or has main realm not more than combination of others :
+ IF (RETORT(W,Specialist))
+  %AND ( (TEMPLATE>5)
+   %OR ( (TEMPLATE=1) %AND ( (((BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Life))+(BOOKS(W,Death)))>1) ) )
+   %OR ( (TEMPLATE=2) %AND ( (((BOOKS(W,Nature))+(BOOKS(W,Chaos))+(BOOKS(W,Life))+(BOOKS(W,Death)))>1) ) )
+   %OR ( (TEMPLATE=3) %AND ( (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Life))+(BOOKS(W,Death)))>1) ) )
+   %OR ( (TEMPLATE=4) %AND ( (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Death)))>1) ) )
+   %OR ( (TEMPLATE=5) %AND ( (((BOOKS(W,Nature))+(BOOKS(W,Sorcery))+(BOOKS(W,Chaos))+(BOOKS(W,Life)))>1) ) ) )
+ THEN { REROLL=1; }
+
+: If have more than 2 realms but not have procurator retort, then there is 50% chance to reroll :
+ IF (MULTIREALM>2) %AND (RETORT(W,Procurator)=0) THEN {
+  IF (RND(60/MULTIREALM)<12) THEN {
+   SETRETORT(W,Procurator,1);
+   IF (TEMPLATE=1) THEN {
+    SETBOOK(W,Nature,(BOOKS(W,Nature)-1));
+   }
+   IF (TEMPLATE=2) THEN {
+    SETBOOK(W,Sorcery,(BOOKS(W,Sorcery)-1));
+   }
+   IF (TEMPLATE=3) THEN {
+    SETBOOK(W,Chaos,(BOOKS(W,Chaos)-1));
+   }
+   IF (TEMPLATE=4) THEN {
+    SETBOOK(W,Life,(BOOKS(W,Life)-1));
+   }
+   IF (TEMPLATE=5) THEN {
+    SETBOOK(W,Death,(BOOKS(W,Death)-1));
+   }
+   IF (TEMPLATE=6) THEN {
+    IF ((BOOKS(W,Nature))>(BOOKS(W,Sorcery))) THEN {
+     SETBOOK(W,Nature,(BOOKS(W,Nature)-1));
+    } ELSE { SETBOOK(W,Sorcery,(BOOKS(W,Sorcery)-1)); }
+   }
+   IF (TEMPLATE=7) THEN {
+    IF ((BOOKS(W,Nature))>(BOOKS(W,Chaos))) THEN {
+     SETBOOK(W,Nature,(BOOKS(W,Nature)-1));
+    } ELSE { SETBOOK(W,Chaos,(BOOKS(W,Chaos)-1)); }
+   }
+   IF (TEMPLATE=8) THEN {
+    IF ((BOOKS(W,Nature))>(BOOKS(W,Life))) THEN {
+     SETBOOK(W,Nature,(BOOKS(W,Nature)-1));
+    } ELSE { SETBOOK(W,Life,(BOOKS(W,Life)-1)); }
+   }
+   IF (TEMPLATE=9) THEN {
+    IF ((BOOKS(W,Nature))>(BOOKS(W,Death))) THEN {
+     SETBOOK(W,Nature,(BOOKS(W,Nature)-1));
+    } ELSE { SETBOOK(W,Death,(BOOKS(W,Death)-1)); }
+   }
+   IF (TEMPLATE=10) THEN {
+    IF ((BOOKS(W,Sorcery))>(BOOKS(W,Chaos))) THEN {
+     SETBOOK(W,Sorcery,(BOOKS(W,Sorcery)-1));
+    } ELSE { SETBOOK(W,Chaos,(BOOKS(W,Chaos)-1)); }
+   }
+   IF (TEMPLATE=11) THEN {
+    IF ((BOOKS(W,Sorcery))>(BOOKS(W,Life))) THEN {
+     SETBOOK(W,Sorcery,(BOOKS(W,Sorcery)-1));
+    } ELSE { SETBOOK(W,Life,(BOOKS(W,Life)-1)); }
+   }
+   IF (TEMPLATE=12) THEN {
+    IF ((BOOKS(W,Sorcery))>(BOOKS(W,Death))) THEN {
+     SETBOOK(W,Sorcery,(BOOKS(W,Sorcery)-1));
+    } ELSE { SETBOOK(W,Death,(BOOKS(W,Death)-1)); }
+   }
+   IF (TEMPLATE=13) THEN {
+    IF ((BOOKS(W,Chaos))>(BOOKS(W,Life))) THEN {
+     SETBOOK(W,Chaos,(BOOKS(W,Chaos)-1));
+    } ELSE { SETBOOK(W,Life,(BOOKS(W,Life)-1)); }
+   }
+   IF (TEMPLATE=14) THEN {
+    IF ((BOOKS(W,Chaos))>(BOOKS(W,Death))) THEN {
+     SETBOOK(W,Chaos,(BOOKS(W,Chaos)-1));
+    } ELSE { SETBOOK(W,Death,(BOOKS(W,Death)-1)); }
+   }
+   IF (TEMPLATE=15) THEN {
+    IF ((BOOKS(W,Life))>(BOOKS(W,Death))) THEN {
+     SETBOOK(W,Life,(BOOKS(W,Life)-1));
+    } ELSE { SETBOOK(W,Death,(BOOKS(W,Death)-1)); }
+   }
+  }
+ }
+
+!SKIPTHIS!
+
+REROLL=0;

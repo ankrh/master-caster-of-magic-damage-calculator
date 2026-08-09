@@ -15,7 +15,7 @@ composable set. It replaces any attempt to derive mechanics from manual/helptext
 | Question | Authoritative source | Use it this way |
 |---|---|---|
 | Compiled CoM2 behavior: branches, order, arithmetic, defaults, and fields | The address-backed Pascal-like reconstruction and its evidence companions in this directory | This is the source for behavior implemented in `Caster.exe`. Follow the subsystem index below; verify an address against the binary identity in `README.md` when extending it. |
-| Warlord behavior executed by a script | `../Script source/Warlord 1.5.12.6.2/*.CAS` | The named script is authoritative for the behavior it executes. It can add to or overwrite the compiled layer; identify the exact read/write rather than assuming all Warlord behavior differs. |
+| Warlord behavior executed by a script | `../Script source/Warlord 1.5.12.7/*.CAS` | The named script is authoritative for the behavior it executes. It can add to or overwrite the compiled layer; identify the exact read/write rather than assuming all Warlord behavior differs. |
 | Loaded numeric settings | `MODDING.INI`, `Levelbonus.INI`, and `SPELLS.INI`, catalogued in `../CoM2 data tables.md` | A present key is the runtime value. Absence means use the compiled default, so route back to the reconstruction. The table does not determine the consumer's arithmetic or ordering. |
 | Unit roster values | The version's `UNITS.INI` under `Unit rosters/` | This is roster data, not a formula source; generated calculator datasets must derive from it. |
 
@@ -93,7 +93,7 @@ and review provenance stay in the reconstruction evidence indexed by `README.md`
 |---|---|
 | [Combat flow](./CoM2%20binary%20-%20combat%20flow.md) | Gazes, `ApplyAttack`, riders, ranged/melee dispatch, and phase order |
 | [Resolution helpers](./CoM2%20binary%20-%20resolution%20helpers.md) | Effective Resistance and Defense, attack/defense rolls, and ranged-distance penalties |
-| [Direct spells](./CoM2%20binary%20-%20direct%20spells.md) | `DamageSpell`, Wall of Fire, `ApplyDamageSpell`, and Amplified Damage |
+| [Direct spells](./CoM2%20binary%20-%20direct%20spells.md) | Combat summoning, `DamageSpell`, Wall of Fire, `ApplyDamageSpell`, and Amplified Damage |
 | [Damage and healing](./CoM2%20binary%20-%20damage%20and%20healing.md) | Damage accumulation, `Combatheal`, figure accounting, and death routing |
 | [Unit recalculation](./CoM2%20binary%20-%20unit%20recalculation.md) | Regions `a`–`e`, script hooks, unit fields, enchantments, auras, and the calculator transform audit |
 | [Map and city](./CoM2%20binary%20-%20map%20and%20city.md) | Combat-map eligibility, flying/attack flags, walls, and wall-state mapping |
@@ -119,6 +119,7 @@ and review provenance stay in the reconstruction evidence indexed by `README.md`
 | `@Combat@ApplyAttack` | `0x5B1970` | the attack resolver; named locals make it readable |
 | `@Combat@PerformMeleeAttack` | `0x5B35A4` | phase order, incl. all six gaze calls |
 | `@Combat@PerformRangedAttack` | `0x5B3338` | |
+| `@Spells@CombatSummonUnit` | `0x5CBEE0` | generic creation and identity writes, Demon Lord/Lesser Demon gate, and combat-spell-effect script hook |
 | `@Combat@Dealdamage` | `0x5B41C0` | applies a resolved damage total |
 | `@Units@LivingFigures` | `0x59648C` | current figure count |
 | `@Units@AttackRoll` | `0x595E24` | 10% floor, one `Random(100)` per attack die, no upper clamp |

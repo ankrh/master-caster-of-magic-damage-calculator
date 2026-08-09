@@ -25,7 +25,7 @@ const excludedJavaScript = new Map([
 const allowedImplementationRoots = [
   'Reference docs/DOS reconstructed/',
   'Reference docs/Caster binary/',
-  'Reference docs/Script source/Warlord 1.5.12.6.2/',
+  'Reference docs/Script source/Warlord 1.5.12.7/',
   'Reference docs/Script source/CoM2 1.05.11 base/',
 ];
 const forbiddenSourceSuffixes = [
