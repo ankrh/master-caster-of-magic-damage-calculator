@@ -1072,6 +1072,71 @@ function runWarlordUnitAbilityChecks(ctx) {
 }
 
 function runPhaseChecks(ctx) {
+  // F22: Caster.exe doubles only the selected melee/Thrown scratch strength. The
+  // finished derived channels remain unchanged, and CoM 1 retains melee-only behavior.
+  const bloodLustTarget = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', atk: 0, def: 0, hp: 40, unitType: 'normal',
+  }));
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+    const attacker = ctx.deriveUnitStats(baseUnitInput({
+      version, atk: 0, def: 0, hp: 10, toHitRtbMod: 70, unitType: 'normal',
+      abilities: { bloodLust: true, doomGaze: 4 },
+      modernAttacks: {
+        thrown: { strength: 3, type: 'thrown' },
+        fireBreath: { strength: 3, type: 'fire' },
+        lightningBreath: { strength: 3, type: 'lightning' },
+      },
+    }));
+    const result = ctx.resolveCombat(attacker, bloodLustTarget,
+      { version, isRanged: false, wallOfFire: false, distance: 1 });
+    assertEqual(result.totalDmgToB[16], 1,
+      `${version}: Blood Lust doubles only Thrown while both Breaths and Doom Gaze stay undoubled`);
+    assertEqual(attacker.modernAttacks.thrown.strength, 3,
+      `${version}: Blood Lust does not write the doubled Thrown strength into derived stats`);
+    assertEqual(attacker.modernAttacks.fireBreath.strength, 3,
+      `${version}: the resolution scratch does not leak into a later channel`);
+  }
+
+  const fantasticTarget = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', atk: 0, def: 0, hp: 20,
+    identity: ctx.createCustomUnitIdentity('com2_1.05.11', {
+      isHero: false, baseRace: 'Nature', baseFantastic: true,
+    }),
+  }));
+  const fantasticAttacker = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', atk: 1, def: 0, hp: 10, toHitMod: 70, toHitRtbMod: 70,
+    abilities: { bloodLust: true },
+    modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
+  }));
+  const fantasticResult = ctx.resolveCombat(fantasticAttacker, fantasticTarget,
+    { version: 'com2_1.05.11', isRanged: false, wallOfFire: false, distance: 1 });
+  assertEqual(fantasticResult.totalDmgToB[4], 1,
+    'Modern Blood Lust does not double melee or Thrown against a Fantastic defender');
+
+  const com1Attacker = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08', atk: 1, rtb: 3, rtbType: 'thrown', def: 0, hp: 10,
+    toHitMod: 70, toHitRtbMod: 70, abilities: { bloodLust: true },
+  }));
+  const com1Target = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08', atk: 0, def: 0, hp: 20, unitType: 'normal',
+  }));
+  const com1Result = ctx.resolveCombat(com1Attacker, com1Target,
+    { version: 'com_6.08', isRanged: false, wallOfFire: false, distance: 1 });
+  assertEqual(com1Result.totalDmgToB[5], 1,
+    'CoM 1 Blood Lust doubles melee but leaves Thrown undoubled');
+
+  for (const type of ['missile', 'magic_c']) {
+    const rangedAttacker = ctx.deriveUnitStats(baseUnitInput({
+      version: 'com2_1.05.11', atk: 0, def: 0, hp: 10, toHitRtbMod: 70,
+      abilities: { bloodLust: true },
+      modernAttacks: { ranged: { strength: 3, type } },
+    }));
+    const rangedResult = ctx.resolveCombat(rangedAttacker, bloodLustTarget,
+      { version: 'com2_1.05.11', isRanged: true, wallOfFire: false, distance: 1 });
+    assertEqual(rangedResult.totalDmgToB[3], 1,
+      `Modern Blood Lust does not double ${type === 'missile' ? 'physical' : 'magical'} conventional ranged`);
+  }
+
   // R3.3: Caster.exe's independent attack fields must survive the legacy card's single
   // RTB projection. Three deterministic coexisting channels produce three separate attacks.
   const modernChannels = ctx.deriveUnitStats(baseUnitInput({
