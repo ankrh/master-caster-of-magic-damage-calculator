@@ -167,7 +167,7 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     statStep({ id: 'identity:combatSummoned', phase: 'a', writes: ['fantastic'],
       when: () => isModern && combatSummonedValue,
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[identity:chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1348-1354 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:1133-1134 | TABLE=Reference docs/Script source/Warlord 1.5.12.6.2/MODDING.INI:1133-1134
+    // PROVENANCE[identity:chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1348-1354 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:1134-1134 | TABLE=Reference docs/Script source/Warlord 1.5.12.6.2/MODDING.INI:1134-1134
     statStep({ id: 'identity:chosen', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && identity.specialUnit === 'chosen',
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
