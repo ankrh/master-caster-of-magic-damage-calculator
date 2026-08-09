@@ -1831,15 +1831,20 @@ function applyAngelicGuardiansEffects(unit, version) {
   });
 }
 
-// PROVENANCE[bloodLustMeleeAttack]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=F22 records the missing modern Thrown branch and exact applicable ranges remain split; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[bloodLustMeleeAttack]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=the modern melee/Thrown range is checked in, but the exact CoM 1 melee-only range remains separate; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
 // STAT-FORMULA[bloodLustMeleeAttack]
-function bloodLustMeleeAttack(atkUnit, defUnit) {
+function bloodLustMeleeAttack(atkUnit, defUnit, attackType = 'melee', version = '') {
+  const selectedStrength = attackType === 'melee' ? atkUnit.atk : atkUnit.rtb;
+  const eligibleAttack = attackType === 'melee'
+    || (attackType === 'thrown' && version.startsWith('com2'));
   // Spirit Link makes the target count as a non-fantastic unit for being targeted,
   // so Blood Lust's "double melee vs Normal/Hero" applies to it as well.
   const targetIsNormal = defUnit && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero'
     || hasAbil(defUnit.abilities, 'spiritLink'));
-  if (!targetIsNormal || !hasAbil(atkUnit.abilities, 'bloodLust')) return atkUnit.atk;
-  return atkUnit.atk * 2;
+  if (!eligibleAttack || !targetIsNormal || !hasAbil(atkUnit.abilities, 'bloodLust')) {
+    return selectedStrength;
+  }
+  return selectedStrength * 2;
 }
 
 // --- Resolution-time stat sequences (Caster.exe: CoM2 and Warlord) ---
@@ -3468,8 +3473,8 @@ function resolveCombat(a, b, opts) {
 
   a = normalizeCombatUnit(a, ver);
   b = normalizeCombatUnit(b, ver);
-  const aMeleeAtkVsB = bloodLustMeleeAttack(a, b);
-  const bMeleeAtkVsA = bloodLustMeleeAttack(b, a);
+  const aMeleeAtkVsB = bloodLustMeleeAttack(a, b, 'melee', ver);
+  const bMeleeAtkVsA = bloodLustMeleeAttack(b, a, 'melee', ver);
   const aMinDamageFromHits = supernaturalMinDamageFn(a.abilities, ver);
   const bMinDamageFromHits = supernaturalMinDamageFn(b.abilities, ver);
 
@@ -3942,11 +3947,17 @@ function resolveCombat(a, b, opts) {
       aHaste,
     });
     const thrownPhases = modernThrown
-      ? modernThrown.map(channel => ({
-          attacker: modernAttackUnit(a, channel),
-          type: channel.type,
-          phase: buildThrown(modernAttackUnit(a, channel), true, channel.type),
-        }))
+      ? modernThrown.map(channel => {
+          const selectedAttacker = modernAttackUnit(a, channel);
+          const resolutionAttacker = Object.assign({}, selectedAttacker, {
+            rtb: bloodLustMeleeAttack(selectedAttacker, b, channel.key, ver),
+          });
+          return {
+            attacker: resolutionAttacker,
+            type: channel.type,
+            phase: buildThrown(resolutionAttacker, true, channel.type),
+          };
+        })
       : [{ attacker: a, type: a.thrownType, phase: buildThrown(a, legacyThrown, a.thrownType) }];
 
     // Run the engine: thrown (if active) → WoF (if active) → simultaneous melee+counter.

@@ -21,7 +21,7 @@ Costs are `free`, `small`, `medium`, or `large`.
 | 2 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
 | 3 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
 | 4 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
-| 5 | **F5–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
+| 5 | **F5–F6, F9, F12–F21, F23–F43** | Implement confirmed defects, respecting dependencies below. |
 | 6 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Provenance evidence gaps
@@ -45,7 +45,7 @@ mode stated on their own rows and the protocol's derivation rules.
 | R9-G1g | Close the `16` remaining direct-helper gaps from `clampPct` through `distancePenalty`, excluding the level-dispatch formulas owned by R9-G1f. | large | **Dual-agent implementation** | `combat.js`, direct helpers; `supernaturalMinimumDamage` depends on F7 and `supremeLightEligibility` depends on F52 |
 | R9-G1h | Close the `20` ability-stat-modifier gaps from `holyBonus` through `disheartenProphecy`, inclusive. | large | **Dual-agent implementation** | `combat.js`, `getAbilityStatSteps`; adjacent strongest pointers |
 | R9-G1i | Close the `8` effective-attack, defense and damage-constant gaps from `rageEffectiveAttack` through `wallOfFireStrength`, inclusive. | medium | **Dual-agent implementation** | `combat.js`, attack/defense helpers; DOS and Caster combat reconstructions plus runtime tables |
-| R9-G1j | Close the `13` derived-package gaps from `undeadImmunityDerivation` through `bloodLustMeleeAttack`, inclusive. | large | **Dual-agent implementation** | `combat.js`, derived unit/ability packages; `bloodLustMeleeAttack` depends on F22 |
+| R9-G1j | Close the `13` derived-package gaps from `undeadImmunityDerivation` through `bloodLustMeleeAttack`, inclusive. | large | **Dual-agent implementation** | `combat.js`, derived unit/ability packages; adjacent strongest pointers |
 | R9-G1k | Close the `8` resolution-stat and combat-context gaps: `effectiveDefense:base`, `elemResistBonus`, `dosEffectiveDefenseProfile`, `doomAttackStrengthModifiers`, `normalizeCombatUnit`, `pairToHitModifiers`, `resolutionResistanceContext`, and `resolutionToBlockContext`. | medium | **Dual-agent implementation** | `combat.js`, resolution helpers and combat context; adjacent strongest pointers |
 
 ## Confirmed and suspected defects
@@ -66,7 +66,6 @@ mode stated on their own rows and the protocol's derivation rules.
 | F19 | Add controls/transforms for the calculator-relevant compiled effects identified as absent by the sequential-transform audit, including Lightning Blade's created Breath and Military Workshop/Rocketry channel behavior. | large | CoM2 units, sequential-transform audit; current preset regressions |
 | F20 | **Blocked by F12–F19:** make the represented `b`/`c`/`d` step lists source-order exhaustive and atomic; add a complete trace-order assertion. | medium | CoM2 units, phase and region maps |
 | F21 | Load modern roster `to_block` into the card with one consistent absolute/delta encoding; add non-default controls. | small | generators vs `ui.js`; MoM analysis, constructor |
-| F22 | Apply modern Blood Lust doubling to Thrown as well as melee at the resolution boundary. | small | CoM2 combat, ApplyAttack setup/result flow |
 | F23 | Preserve intrinsic/base Death Immunity separately for modern Cause Fear's direct skip. | small | CoM2 combat, ApplyAttack setup |
 | F24 | Replace unit-owned modern Blur with per-side combat-global inputs and reproduce turn-relative `CGADEnemy` selection. | medium | CoM2 combat, ApplyAttack; call-closure evidence |
 | F25 | Prevent modern touch riders from firing with gaze attack types 6–8. | medium | CoM2 combat, ApplyAttack riders |

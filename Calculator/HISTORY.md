@@ -1,5 +1,14 @@
 # Calculator work history
 
+## 2026-08-09 -- F22 modern Blood Lust Thrown resolution
+
+CoM2 1.05.11 and Warlord 1.5.12.7 now double the selected Thrown strength, as well as
+melee, when a Blood-Lusted attacker targets a non-Fantastic defender. The doubling is applied
+only to the attack-resolution scratch record, so displayed/derived channel strengths and later
+Breath or gaze phases remain unchanged. CoM 1 remains melee-only; conventional ranged, both
+Breaths, gazes, and attacks against Fantastic defenders remain undoubled. Focused preset and Node
+coverage protects both modern versions, the exclusions, the version split, and the no-leak boundary.
+
 ## 2026-08-09 -- R9-G1a-R3 CoM 1 Zombies type-table binding
 
 R9-G1a-R3 bound CoM 1's full `unit_types` record base at `DS:0x019C` (raw `0x2963C`),
