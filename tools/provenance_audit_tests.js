@@ -5,7 +5,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const {
-  computeVerifiedBinding, discoverFormulaSites, readProvenanceComments, runAudit,
+  computeVerifiedBinding, discoverFormulaSites, hasImplementationWrite,
+  readProvenanceComments, runAudit,
 } = require('./provenance_audit');
 
 const sample = [
@@ -46,6 +47,13 @@ const comments = readProvenanceComments('synthetic.js', [
 assert.strictEqual(comments.length, 1);
 assert.strictEqual(comments[0].id, 'x');
 
+assert(hasImplementationWrite('if (active) bu->ranged = 2;'),
+  'ordinary reconstructed-C pointer-field assignment must count as a write');
+assert(hasImplementationWrite('if active then U.attack = U.attack * 2;'),
+  'ordinary reconstructed-C dot-field assignment must count as a write');
+assert(!hasImplementationWrite('if (active) return bu->ranged == 2;'),
+  'a reconstructed-C equality comparison must not count as a write');
+
 const result = runAudit();
 assert(result.formulas > 0, 'repository audit must find formulas');
 assert.strictEqual(result.formulas, result.verified + result.unverified);
@@ -68,4 +76,4 @@ assert.throws(() => discoverFormulaSites('synthetic.js', "emit(id, 'c', { def: 1
 assert.throws(() => discoverFormulaSites('synthetic.js', "case 'elite': return { atk: 2 };"),
   /stat-table case needs an adjacent STAT-FORMULA id/);
 
-console.log(`Provenance tooling checks passed: 10 assertions; ${result.formulas} repository formulas.`);
+console.log(`Provenance tooling checks passed: 13 assertions; ${result.formulas} repository formulas.`);

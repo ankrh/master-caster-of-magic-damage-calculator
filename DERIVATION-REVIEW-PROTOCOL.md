@@ -1,15 +1,27 @@
-# Dual-agent implementation, derivation and review protocol
+# Calculator task execution, derivation and review protocol
 
-Read this file before implementing any `Calculator/BACKLOG.md` item, and for binary derivation or
-other cross-agent review work. It is the single home for independent implementations,
-derivations, reciprocal review and integration.
+Read this file before implementing any `Calculator/BACKLOG.md` item, performing binary
+reconstruction, or doing other cross-agent review work. It is the single home for the project's
+three execution methods:
 
-The two modes are distinct. **Implementation mode** produces competing executable changes in
-isolated Git worktrees. **Derivation mode** produces independent evidence reads and retains the
-stricter evidence-specific rules below. Never substitute one mode's completion gate for the
-other's.
+| Method | Agents | When to use it |
+|---|---|---|
+| **1. Dual-agent derivation** | Claude + Codex, independently | Every binary reconstruction task |
+| **2. Dual-agent implementation** | Codex GPT-5.6 Sol High + Codex GPT-5.6 Sol High, independently | Only when the user requests it or the backlog item records this preference |
+| **3. Current-agent implementation + Sol High review/revision** | The current agent, regardless of model, then one Codex GPT-5.6 Sol High reviewer/reviser | Only when the user requests it or the backlog item records this preference |
 
-## Binary source reconstruction is dedicated work
+The methods are distinct. Derivation produces independent evidence reads. Dual implementation
+produces competing executable changes. Current-agent implementation plus review/revision produces
+one executable change which a Sol High subagent checks and improves, not a second implementation.
+Never substitute one method's completion gate for another's.
+
+For implementation work, the user's explicit request overrides a backlog preference. If neither
+the request nor the backlog row selects method 2 or method 3, stop and ask which method to use
+before reading implementation code or creating a worktree. Neither implementation method is a
+default. If a required agent, model or effort is unavailable, stop and tell the user; never
+silently substitute another configuration.
+
+## Method 1 — Claude and Codex reconstruct binaries independently
 
 Binary source reconstruction is performed **only** under a dedicated reconstruction item in
 `Calculator/BACKLOG.md`. An implementation, provenance, verification, defect, review, or other
@@ -35,9 +47,9 @@ the originating task:
 
 A dedicated reconstruction row is the authorization boundary for opening the raw binary and
 writing address-backed source or binary-table evidence. It must have a frozen target and
-acceptance gate before reconstruction begins. Execute it under the derivation rules below: one
-derivation plus review by default, or dual independent derivation only when AKH explicitly asks
-for it. Discovery of a reconstruction dependency never widens the current task's scope.
+acceptance gate before reconstruction begins. Every such row uses method 1 under the derivation
+rules below: one cold Claude derivation, one cold Codex derivation, reciprocal review, and merge.
+Discovery of a reconstruction dependency never widens the current task's scope.
 
 ### Derivation artifact names and ownership
 
@@ -67,33 +79,31 @@ moment the agent under review owns it and is the only one who edits it. `.deriva
 are single-writer outright. There is no shared discussion file: two simultaneous writers means
 clobbered edits and no reliable record of who claimed what.
 
-## Implementation mode — two subagents implement the same backlog item cold
+## Method 2 — two Codex Sol High agents implement the same backlog item cold
 
-Use this mode for every calculator backlog-item implementation unless AKH explicitly requests a
-single-agent run. Its purpose is to let one orchestrating main agent coordinate two independent
-implementations and reciprocal review on the same real task while comparing reasoning effort.
-Implementation mode does not authorize binary reconstruction; the dedicated-work rule above is a
-hard scope boundary for both implementers and the orchestrator.
+Use this method only when the user requests dual-agent implementation or the backlog item records that
+preference. Its purpose is to let one orchestrating main agent coordinate two independent
+implementations and reciprocal review on the same real task. It does not authorize binary
+reconstruction; the dedicated-work rule above is a hard scope boundary for both implementers and
+the orchestrator.
 
-The standard implementation configuration for new implementation-mode runs is:
+The required method-2 configuration is:
 
 | Role | Model and effort |
 |---|---|
 | Main agent, orchestrator and final integrator | GPT-5.6 Sol, High |
 | Subagent A, independent implementer and reciprocal reviewer | GPT-5.6 Sol, High |
-| Subagent B, independent implementer and reciprocal reviewer | GPT-5.6 Sol, Xhigh |
+| Subagent B, independent implementer and reciprocal reviewer | GPT-5.6 Sol, High |
 
-This configuration is intentional: the orchestrator runs Sol at High, while the independent
-implementations compare Sol at High against Sol at Xhigh. The orchestrator is not a third
-implementation competitor and must not pre-implement the backlog item before the two subagents'
-initial commits. Historical benchmark records retain the model and effort that actually ran and
-are not rewritten to match this new default.
+The orchestrator is not a third implementation competitor and must not pre-implement the backlog
+item before the two subagents' initial commits. Historical benchmark records retain the models and
+efforts that actually ran and are not rewritten to match this configuration.
 
-If any exact model or effort is unavailable, stop and tell AKH; never silently substitute a
-different configuration. Each differently configured subagent must receive the same self-contained
-task packet with no inherited conversation (`fork_turns: "none"` where that control is available).
-The main agent may retain the task context for orchestration, but it must not leak one subagent's
-implementation or review into the other subagent's cold first pass.
+Each subagent must receive the same self-contained task packet with no inherited conversation
+(`fork_turns: "none"` where that control is available). Label them **Sol High A** and **Sol High B**
+throughout the run so their branches, artifacts and timing remain distinct. The main agent may
+retain the task context for orchestration, but it must not leak one subagent's implementation or
+review into the other subagent's cold first pass.
 
 ### Worktree and branch isolation
 
@@ -103,7 +113,7 @@ Separate worktrees are mandatory, not optional. Before either subagent reads imp
 2. Freeze one task packet: backlog ID and text, relevant specs and instructions, acceptance
    criteria, permitted scope, required tests, base commit, branch name and absolute worktree path.
    Give the identical substantive packet to both subagents.
-3. Create independent `codex/<ID>-sol-high` and `codex/<ID>-sol-xhigh` branches and worktrees at
+3. Create independent `codex/<ID>-sol-high-a` and `codex/<ID>-sol-high-b` branches and worktrees at
    that base. Reserve the primary checkout, or a third clean worktree, for orchestration and
    integration.
 4. Record a dispatch timestamp for each subagent immediately before its implementation starts.
@@ -143,8 +153,8 @@ The default local server assignment is:
 | Checkout | Default server port | Use |
 |---|---:|---|
 | Primary integration checkout | 8080 | Final integration and ordinary manual work |
-| Sol High implementation worktree | 8081 | Sol High's Playwright/manual browser work |
-| Sol Xhigh implementation worktree | 8082 | Sol Xhigh's Playwright/manual browser work |
+| Sol High A implementation worktree | 8081 | Sol High A's Playwright/manual browser work |
+| Sol High B implementation worktree | 8082 | Sol High B's Playwright/manual browser work |
 
 Verify each assigned port is free before dispatch. If one is occupied, choose and record another
 free port before starting the subagent. Run Playwright with `PLAYWRIGHT_PORT=<assigned-port>` and
@@ -176,8 +186,8 @@ review artifact in the primary checkout:
 
 | File | Subject | Written by | Owned after writing by |
 |---|---|---|---|
-| `.reviews/<ID>.review-of-sol-high.md` | Sol High implementation | Sol Xhigh | Sol High |
-| `.reviews/<ID>.review-of-sol-xhigh.md` | Sol Xhigh implementation | Sol High | Sol Xhigh |
+| `.reviews/<ID>.review-of-sol-high-a.md` | Sol High A implementation | Sol High B | Sol High A |
+| `.reviews/<ID>.review-of-sol-high-b.md` | Sol High B implementation | Sol High A | Sol High B |
 
 The reviewer writes its artifact in one pass and never edits it again. Findings must identify the
 affected file and line or symbol, explain the observable failure or maintainability risk, and give
@@ -242,22 +252,48 @@ concrete differences such as defects avoided, tests added, requirements covered,
 accepted, simpler design or reduced regression risk. Do not award a winner from model identity,
 confidence or speed alone.
 
-## Derivation mode — both answer the same question cold
+## Method 3 — current-agent implementation, then Sol High review and revision
+
+Use this method only when the user requests it or the backlog item records that preference. It does
+not authorize binary reconstruction.
+
+1. **The current agent implements.** Regardless of its model, the active agent reads the backlog
+   item and relevant project instructions, implements the complete task in the current checkout,
+   updates its specification and tests where required, and runs the applicable checks. Existing
+   unrelated worktree changes are preserved; this method has no clean-base, separate-worktree,
+   branch, commit, timing, or server-isolation gate.
+2. **One Sol High subagent reviews and revises.** After the current agent's implementation is ready,
+   it spawns one Codex GPT-5.6 Sol High subagent at High effort. That subagent reviews the complete
+   task against the backlog text, evidence, specification, implementation and tests, then directly
+   fixes every issue it finds in the current checkout and reruns the applicable checks. It reports
+   both its findings and the revisions it made. It is a reviewer/reviser, not a competing cold
+   implementer.
+3. **The current agent closes and reports.** The current agent verifies the revised result, removes
+   each completed item from `Calculator/BACKLOG.md`, records it in `Calculator/HISTORY.md`, and
+   summarizes the implementation to the user, including what the Sol High review caught and how it
+   was revised.
+
+If the final verification exposes a substantive defect, return it to the same reviewer/reviser for
+another correction pass before closing the item. Method 3 does not receive an entry in
+`DUAL-AGENT-BENCHMARK.md` unless the user explicitly requests one.
+
+## Method 1 workflow and completion gates
 
 Used for binary reads and reconstructions (**BACKLOG** R5, R6), where the value is *independent*
 agreement. Contamination destroys that value: an agent that reads the other's answer first
 anchors to it, and the second read confirms nothing.
 
-**Dual derivation runs only when AKH asks for it.** It costs roughly four to five times a
-single-agent pass, so it is for load-bearing mechanics, not for everything. Anything else is one
-agent deriving plus one review round.
+Every binary reconstruction task uses this method. Claude and Codex each produce a cold,
+independent derivation, then review one another before merge. There is no single-agent
+reconstruction path and no backlog preference or additional request is needed to select method 1.
 
 ### The five steps
 
 1. **Scope the dedicated reconstruction item.** Derivation begins only from a dedicated backlog
-   row created under *Binary source reconstruction is dedicated work*. Either agent may prepare
-   that row, naming the target — file, routine, address range — and nothing else. **Size it at up
-   to roughly 1000 instructions**, normally one enchantment block, one named helper, one data row,
+   row created under *Method 1 — Claude and Codex reconstruct binaries independently*. Either
+   agent may prepare that row, naming the target — file, routine, address range — and nothing else.
+   **Size it at up to roughly 1000 instructions**, normally one enchantment block, one named helper,
+   one data row,
    one locate-and-bound item, or a comparable natural unit. There is no minimum size: do not
    combine unrelated routines,
    executables or evidence owners merely to make an item larger. The preparing agent must then stop;
@@ -277,8 +313,9 @@ agent deriving plus one review round.
    `— <agent>, <YYYY-MM-DD>: <reason>`. Never silently drop an entry. Surface every surviving
    disagreement to AKH.
 5. **AKH prompts one agent to merge.** See *Merging* below. Once the merged artifact and its
-   supporting documentation are complete, the merger marks the scoped backlog item `done`; no
-   separate AKH sign-off is required.
+   supporting documentation are complete, the merger removes the scoped item from
+   `Calculator/BACKLOG.md` and records its completion in `Calculator/HISTORY.md` in the same
+   change; no separate AKH sign-off is required.
 
 ### Findings are a merge product
 
@@ -336,8 +373,10 @@ plain finding.
 **The merge closes the scoped derivation item.** After writing the merged
 `<owning evidence directory>/<ID>.evidence.md` artifact and the owning source-shaped body,
 recording any surviving disagreements as Q rows, updating supporting documentation, and clearing
-that ID's derivation/review scratch files, mark that backlog item `done`. AKH's merge request is
-the approval to close it; do not leave it `in progress` awaiting a second sign-off.
+that ID's derivation/review scratch files, remove the item from `Calculator/BACKLOG.md` and record
+its completion in `Calculator/HISTORY.md` in the same change. `done` is not a backlog state. AKH's
+merge request is the approval to close the item; do not leave it in the backlog awaiting a second
+sign-off.
 
 ### Closing a review round
 
@@ -421,6 +460,6 @@ behaviour that contradicts its own helptext — is a finding like any other and 
 
 When a finding lands in its evidence home, record how it was checked:
 `Verified: Claude 2026-08-01 (0x4a2f10); Codex 2026-08-02, independent.` Distinguish
-*independent* (derivation mode) from *reviewed* (the other agent checked the written finding) —
+*independent* (method 1) from *reviewed* (the other agent checked the written finding) —
 they are not equally strong. Cross-checking alone does not close a derivation item; the completed
 merge does, under the merge gate above.

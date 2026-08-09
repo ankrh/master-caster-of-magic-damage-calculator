@@ -322,6 +322,28 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(destiny.unitType, 'fantastic_life', 'Destiny changes unit type to fantastic Life');
   assertEqual(destiny.abilities.supernatural, true, 'Destiny grants Supernatural for combat');
 
+  const focusMagicLowStrength = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    abilities: { focusMagic: true },
+    rtbType: 'missile',
+    rtb: 1,
+  }));
+  assertEqual(focusMagicLowStrength.rangedType, 'magic_s',
+    'Modern Focus Magic converts a low-strength physical ranged attack');
+  assertEqual(focusMagicLowStrength.rtb, 1,
+    'Modern Focus Magic preserves positive conversion strength below 3');
+
+  const lightningBladeThrown = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { lightningBlade: true },
+    rtbType: 'thrown',
+    rtb: 4,
+  }));
+  assertEqual(lightningBladeThrown.thrownType, 'lightning',
+    'Lightning Blade converts the represented Thrown channel to Lightning Breath');
+  assertEqual(lightningBladeThrown.rtb, 5,
+    'Lightning Blade writes Lightning Breath at Thrown + 1 strength');
+
   // Nature Link (Warlord rename of Land Linking) maps to the landLinking calcKey.
   // Fantastic units get the Land Linking melee/def bonus AND the Warlord +1 resistance.
   const natureLinkFantastic = ctx.deriveUnitStats(baseUnitInput({
@@ -1422,7 +1444,7 @@ function runModifierTraceChecks(ctx) {
     abilities: { vampirism: true },
     atk: 3, rtb: 5, rtbType: 'thrown',
   }));
-  for (const [field, from, to] of [['melee', 3, 7], ['sharedAttack', 5, 1]]) {
+  for (const [field, from, to] of [['melee', 3, 5], ['sharedAttack', 5, 1]]) {
     const entry = tracedVampirism.modifierTraces[field].entries[0];
     assertEqual(entry.source.id, 'vampirism:transfer', `Vampirism owns its ${field} transfer`);
     assertEqual(entry.from, from, `Vampirism ${field} records its running before value`);

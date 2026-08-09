@@ -1,5 +1,49 @@
 # Calculator work history
 
+## 2026-08-10 -- R9-G1b base/permanent-transform provenance
+
+R9-G1b closed six provenance gaps using the checked-in DOS/Caster reconstructions and current
+Warlord scripts: Destiny, Chaos Channels Fire Breath, Lightning Blade, Focus Magic conversion,
+Vampirism transfer, and Shadow Strike. Their formula/version/source tuples are now bound to
+reviewed excerpt digests, reducing the live audit from 165 to 159 `UNVERIFIED` formulas.
+
+The source binding exposed three formula-level corrections. Modern Focus Magic preserves a
+positive Thrown or physical-ranged strength below 3 when converting it, unlike CoM 1's minimum-3
+branch. Warlord Vampirism now transfers truncated half-strength for the represented Thrown/Breath
+channel instead of the manual-derived `strength - 1` approximation; F17 still owns simultaneous
+channel aggregation, independent source resets, and region-d placement. During the required
+GPT-5.6 Sol High review/revision pass, the reviewer caught that Lightning Blade writes Lightning
+Breath as `Thrown + 1`, corrected the implementation and UI contract, added low-strength Focus
+Magic regressions, and hardened the provenance checker so ordinary reconstructed-C field
+assignments count as writes without mistaking equality comparisons for writes. F12 and F17 remain
+open for their wider ordering and multi-channel scopes.
+
+## 2026-08-10 -- F7, F22, F52, F54, F55 and M6 prerequisite bundle
+
+The six named R9 prerequisites are complete in one Method 3 task. F7's deferral was lifted and
+modern Supernatural now evaluates the moddable
+`Round((hits - SupernaturalStarts) * SupernaturalRatio / 100)` formula with Delphi ties-to-even
+rounding; the shipped CoM2 and Warlord inputs remain 0 and 34. F22 applies modern Blood Lust's
+doubling to Thrown as well as melee while leaving both Breath channels unchanged. F52 separates
+CoM 1 Supreme Light from the modern eligibility rule, implements all five reconstructed paths,
+adds melee unconditionally, gates the shared ranged addition on a positive live value, and uses
+signed truncate-toward-zero division of live Resistance for Defense.
+
+F54 and F55 restrict Construct Catapult and Call to Arms Paladins identity rewrites to base CoM2;
+Warlord's Water Elemental and Spirit of Chivalry substitutions no longer inherit those displaced
+spell-result identities. M6 replaces Lava Smelter's single-choice state with five independent
+permanent-grant controls. Multiple grants can coexist, including simultaneously applied Resist
+Elements and Elemental Armor bonuses; old saved and shared single-choice states migrate to the
+corresponding new flag.
+
+The required GPT-5.6 Sol High review-and-revision pass caught three integration/documentation
+issues and fixed them in the shared checkout: the missing legacy Lava Smelter state migration, a
+Blood Lust test that asserted only helper behavior rather than proving Fire Breath was unchanged
+through full combat resolution, and stale F54/F55 provenance comments that still described the
+already reconstructed CombatSummonUnit prefix as missing. Final verification passed 9,692 Node
+assertions, all 932 browser presets, all 62 Playwright tests (including five focused prerequisite
+tests), and the 247-formula provenance audit with the existing 165 `UNVERIFIED` items reconciled.
+
 ## 2026-08-09 -- R9-G1a-R3 CoM 1 Zombies type-table binding
 
 R9-G1a-R3 bound CoM 1's full `unit_types` record base at `DS:0x019C` (raw `0x2963C`),

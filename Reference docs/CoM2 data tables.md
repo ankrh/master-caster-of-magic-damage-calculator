@@ -59,8 +59,7 @@ The shipped `SPELLS.INI` rows therefore distinguish the two modern versions:
 | 260 | *(no corresponding base row)* | Construct Catapult; `Realm=6`; `SummonedUnit=37`; `Custom=True`; `Disabled=True` (`SPELLS.INI:4666-4683`) |
 
 Thus Warlord's enabled spell substitutions, not an executable version gate, prevent the
-base-CoM2 Construct Catapult and Call to Arms identity outcomes from applying there. The required
-calculator version gates remain tracked as F54 and F55.
+base-CoM2 Construct Catapult and Call to Arms identity outcomes from applying there.
 
 ---
 
@@ -189,18 +188,15 @@ change, so it uses the FPU default RC=00; the adjacent `Trunc` has to set RC exp
 truncate. With the shipped `0/34` values, ties fall exactly at `hits ≡ 25 (mod 50)`, so
 `hits = 25` gives `8.5 -> 8`, not 9. A half-up `round` is therefore not a faithful substitute.
 
-`supernaturalMinDamageForHits` (`combat.js`) still disagrees because it hard-codes
-`Math.round(hits / 3)` instead of consuming the two moddable values. The former claim that it
-was one too high for every `hits ≡ 2 (mod 3)` was backwards; the first actual divergences are
-underestimates at higher hit counts:
+The historical `Math.round(hits / 3)` approximation underestimated the exact formula at higher hit
+counts; its first divergences from the shipped 0/34 inputs were:
 
 | hits | 28 | 31 | 34 | 37 |
 |---|---|---|---|---|
 | engine | 10 | 11 | 12 | 13 |
-| calculator | 9 | 10 | 11 | 12 |
+| historical approximation | 9 | 10 | 11 | 12 |
 
-Not fixed; deferred by decision on 2026-07-29 and tracked as **F7** in `Calculator/BACKLOG.md`.
-The exact rounding shape is now executable-backed rather than inferred from table prose.
+The exact rounding shape is executable-backed rather than inferred from table prose.
 
 ## To Defend cap — executable consumer resolved
 

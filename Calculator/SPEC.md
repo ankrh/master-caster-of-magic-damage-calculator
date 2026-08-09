@@ -258,13 +258,16 @@ whose live `race` and `fantastic` values start from the corresponding base field
 states such as Chosen or Golem are predicates derived when needed, never persisted booleans. The
 CoM1 Golem constructor path is retained alongside the modern path and grants `Resist Elements`.
 The calculation then applies a version-scoped identity sequence to the fresh live fields: modern
-Chosen/Avatar writes live Life + Fantastic, Combat Summoned units become live Fantastic, Construct
-Catapult becomes live Nature + Fantastic, and Warlord Spirit Link can later clear only the live
+Chosen/Avatar writes live Life + Fantastic and Combat Summoned units become live Fantastic. Base
+CoM2 Construct Catapult additionally becomes live Nature + Fantastic; Warlord's enabled slot instead
+summons Water Elemental, so template 37 receives no Catapult-specific rewrite there. Warlord Spirit
+Link can later clear only the live
 Fantastic predicate while
 retaining the base predicate and fantastic-only grants. CoM 1 retains its constructor branch for
 Catapult, Centaurs and Paladins; Construct Catapult also receives Magic Weapons, and Zombies start
-with `To Block = -1` (a ten-percentage-point penalty). Call to Arms Paladins use live Life where
-that spell-specific condition is selected only for the retained Paladins template (113); the
+with `To Block = -1` (a ten-percentage-point penalty). Base-CoM2 Call to Arms Paladins use live Life
+where that spell-specific condition is selected only for the retained Paladins template (113);
+Warlord replaces the spell with Spirit of Chivalry summoning template 211. The
 explicit spell-result control is independent from generic Combat Summoned and display names are
 not engine predicates. These writes are version/template
 gated and no-op identity writes are omitted from the calculated-stat trace. Identity changes are
@@ -396,6 +399,16 @@ Two engines reach the secondary-attack slot differently, so a step's delta names
 - **`ranged`** — `Caster.exe`'s `unitT.ranged`, which is *only* the conventional ranged attack.
   Thrown, Fire Breath, Lightning Breath and the gazes are separate fields there, so a CoM2
   bonus written to `ranged` never reaches them. The Holy Bonus aura is the case that matters.
+
+Focus Magic follows that engine split when it converts an attack. CoM 1 raises a converted
+shared-slot attack to a minimum strength of 3. CoM2 and Warlord preserve any positive Thrown or
+physical-ranged strength when moving it to Sorcery magical ranged; only creation from an empty
+base ranged slot uses strength 3.
+
+Warlord Lightning Blade is a permanent creation write: it replaces an innate Thrown attack with
+Lightning Breath at `Thrown + 1` strength and clears Thrown. A unit with no Thrown therefore gains
+strength-1 Lightning Breath. The resulting Breath is innate, receives level bonuses, and is Armor
+Piercing unless Lightning Resist cancels that piercing at resolution.
 
 No hand-built stat sum survives. Blaze of Glory was the last one: in region `d` it reads
 current Defense, adds that whole value to melee, and sets Defense to zero. Region-`e` effects
@@ -636,13 +649,13 @@ The shared soldier gate admits non-fantastic non-Mechanical units, heroes, and A
 Mechanical units; it rejects fantastic units. **Sapiens** remains a roster eligibility tag,
 generated from Warlord `Custom13=14`.
 
-The Warlord Lava Smelter selector records a permanent mineral-pair grant carried by the
-unit. New Dwarf units receive grants when trained; **Upgrade & Retrain** can apply them
-later to any existing non-fantastic unit, so the selector does not independently enforce
-the unit's race or hero status. Fantastic creatures are ineligible. Its **Fiery Blade**
-outcome grants +3 melee, adds +2 Missile/Thrown, bypasses Weapon Immunity, and does not
-stack its bonuses with Flame Blade's corresponding bonuses. Fiery Blade is not exposed as
-an independent checkbox.
+The five Warlord Lava Smelter controls record independent permanent mineral-pair grants carried by
+the unit. New Dwarf units receive grants when trained; **Upgrade & Retrain** can apply them later
+to any existing non-fantastic unit, so the controls do not independently enforce the unit's race
+or hero status. Fantastic creatures are ineligible. All applicable grants can coexist. In
+particular, Resist Elements and Elemental Armor remain separate flags and both defense bonuses
+apply. **Fiery Blade** grants +3 melee, adds +2 Missile/Thrown, bypasses Weapon Immunity, and does
+not stack its bonuses with Flame Blade's corresponding bonuses.
 
 The derived states are not UI inputs:
 
@@ -768,7 +781,8 @@ lives in [CLAUDE.md](./CLAUDE.md).
   rebuilding roster locks.
 - The compressed v2 blob is stored under `pageState_v2`. The reader also accepts legacy v1
   compressed/default-diffed blobs and full plain-JSON blobs under `pageState_v1`, including the
-  old `{race, name}` identity and hidden `unitType` boundary.
+  old `{race, name}` identity and hidden `unitType` boundary. Saved single-choice Lava Smelter
+  selections are migrated to the corresponding independent M6 grant flag.
 - A share link carries the same blob in the URL fragment (`#s=…`) and takes precedence
   over `localStorage` on load.
 - Restoring is order-safe: version first (which repopulates rosters and ability panels), then
@@ -806,6 +820,11 @@ The descriptions below are canonical. Accepted decisions are summarized in
 - Damage is capped at the target's remaining HP; overkill is not tracked. This accepted damage
   limitation does not authorize capping healing amounts that the engine passes independently to
   `Combatheal` (**F27**, **F28**).
+- Warlord Vampirism currently applies the script's half-strength transfer to the represented
+  Thrown or Breath channel and leaves that positive channel at strength 1. The engine instead
+  combines all simultaneously present Thrown, Fire Breath, and Lightning Breath sources before
+  the truncated melee addition, then resets each positive source independently in region `d`;
+  completing that multi-channel aggregation and placement remains **F17**.
 - Destruction is currently modelled only for CoM2/Warlord. The MoM/CP/CoM1 touch dispatcher also
   identifies Destruction as a Chaos effect; in MoM/CP, Elemental Armor and Resist Elements
   therefore protect against it. That older-engine Destruction path is not yet implemented.
@@ -814,9 +833,6 @@ The descriptions below are canonical. Accepted decisions are summarized in
   and then apply level-scaled Agility, Blademaster, Might, Arcane Power, Casting Skill and Lucky
   template abilities. The modern engine has its own nine-step hero table. These hero-specific
   ladders and template abilities are not yet represented (**F41**).
-- The Lava Smelter control records one mineral-pair grant at a time. The Warlord scripts
-  evaluate all five mineral pairs independently, so a unit can carry several simultaneous
-  grants when three or more qualifying minerals are available.
 - **Ammunition is not modelled.** Every engine carries a per-unit shot count — MoM's `ammo`
   (battle-unit `+0x03`, the roster's `Shots` column: 8 for archers, 10 for the Catapult) and
   CoM2's `maxammo`/`ammo` (`SMaxAmmo`=55, `SAmmo`=56, `UNITS.INI` key `Ammo`) — and the

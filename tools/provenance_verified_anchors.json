@@ -1,4 +1,10 @@
 {
+  "destiny": "12b4f133aedab9320aa0e6c3fea0575db905d656a7a6c58f62bac9f8890d37f4",
+  "chaosChannels:fireBreath": "cfb5bd48db45dff8c62c9c2cba1c0f2fa6701a48f2b0def9180f661b17a7826b",
+  "lightningBlade:breath": "3c633aa936fe2366b369479ef9fbc9ae5bf50ebccb181b9da5db8cc7334931f5",
+  "focusMagic:conversion": "5d7adc613cc3ecb3680abe46d7372ff7ec11a9f359908237e8821c717d007173",
+  "vampirism:transfer": "d80d93bb58365159273822625c04f1184356a9fb98150a39461d988c6cf7d241",
+  "shadowStrike:thrown": "6ba020ca0246fdeda196858481e121f5c0c470fe4a5b74f0fd186246cd0cdf4c",
   "identity:combatSummoned": "69a283371e81687e3c23ff4d4f2a000f9b7994c8641cdbadade219494f18ae5c",
   "identity:chosen": "6ae3683e59acf16958726b46469e6cc03c1221af150076694dd9c9fd972a0c9b",
   "identity:spiritLink": "74679ff0f2de6c56c0d8ba15dcde4ab21206cfd406431f0fe08ed60fad0b1a19",

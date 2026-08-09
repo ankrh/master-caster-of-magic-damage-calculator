@@ -19,8 +19,10 @@ provenance; `Calculator/BACKLOG.md` is the **only** home for live calculator-wor
 unresolved question statements — IDs, open/blocked/ready/pending-review state, review gates, cost
 and priority. **`done` is not a backlog state:** when an item is completed, remove its row from
 `Calculator/BACKLOG.md` and summarize the completed work in `Calculator/HISTORY.md` in the same
-change. Reference docs may record that a derivation or review occurred on a date and what it found,
-but must not mirror the work item's current state, parent blockers or next action.
+change. In the backlog's numbered priority queue, every live dependency must appear in an earlier
+row than the item it blocks; when a new dependency is discovered, update both rows and the queue in
+the same change. Reference docs may record that a derivation or review occurred on a date and what
+it found, but must not mirror the work item's current state, parent blockers or next action.
 Their indexes are navigation aids, never status tables. When evidence opens or resolves a
 question, update its finding home and update the Q/X row in the register.
 `Manual/PLAN.md` remains the separate status authority for the Manual deliverable.
@@ -177,9 +179,18 @@ Each version's directory also holds the `HELP.TXT` that shipped with it.
 and `HELP.TXT`; the adjacent v1.5.12.6 directory holds the pre-hotfix release. Both are
 version-comparison evidence only, never sources for current behaviour. See their READMEs.
 
-## Dual-agent implementation and optional working protocols
+## Calculator task-execution protocols
 
-Before implementing any `Calculator/BACKLOG.md` item, read
-`DERIVATION-REVIEW-PROTOCOL.md` in full and use its dual implementation mode. Also read it when
-asked to perform binary derivation or cross-agent review work. Do not load it for other ordinary
-work.
+Before implementing any `Calculator/BACKLOG.md` item, performing binary reconstruction, or doing
+cross-agent review work, read `DERIVATION-REVIEW-PROTOCOL.md` in full. It defines exactly three
+execution methods:
+
+1. Claude + Codex dual-agent derivation for every binary reconstruction task;
+2. two Codex GPT-5.6 Sol High agents independently implementing and reciprocally reviewing a task;
+3. implementation by the current agent, regardless of model, followed by one Codex GPT-5.6 Sol
+   High subagent that reviews and revises the work.
+
+Implementation methods 2 and 3 are never defaults. Use one only when the user requests it or the
+backlog row already records that preference; an explicit request overrides the recorded
+preference. If neither source selects a method, ask the user before starting implementation. Do not
+load the protocol for other ordinary work.

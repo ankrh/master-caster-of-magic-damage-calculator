@@ -102,7 +102,7 @@ const ABILITY_DEFS = [
     { key: 'nonCorporeal', label: 'Non-Corporeal', type: 'bool', match: 'Non-Corporeal', group: 'Abilities', subgroup: '_', tooltip: 'Warlord: Tactician retort grants this unit Negate First Strike.\nNot modeled: terrain/wall movement; immunity to undead conversion.' },
     { key: 'poisonImmunity', label: 'Poison Immunity', type: 'bool', match: 'PoisonImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Poison Touch.' },
     { key: 'stoningImmunity', label: 'Stoning Immunity', type: 'bool', match: 'StoningImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Stoning Gaze and Stoning Touch.' },
-    { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Versions: CoM 1 & 2, Warlord\nEach attack's hits deal at least a minimum damage, regardless of\nthe defender's blocks.\nCoM 1: Minimum = floor((hits − 5) / 2).\nCoM 2 & Warlord: Minimum = round(hits / 3)." },
+    { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Versions: CoM 1 & 2, Warlord\nEach attack's hits deal at least a minimum damage, regardless of\nthe defender's blocks.\nCoM 1: Minimum = floor((hits − 5) / 2).\nCoM 2 & Warlord: Round((hits − start) × ratio / 100), using\nDelphi ties-to-even rounding; shipped start 0, ratio 34." },
     { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Abilities', subgroup: '_', tooltip: 'Unit becomes a fantastic Death creature.\nMoM 1.31: Grants Death Immunity.\nMoM 1.31 bug: Should also have granted Cold, Poison, and Illusion Immunity.\nMoM 1.60: Grants Death, Cold, Poison, and Illusion Immunity.\nCoM 1 & 2 & Warlord: Grants Death, Cold, and Illusion Immunity.\nNot modeled: natural healing / regeneration prevention.' },
     { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense against non-magical attacks from normal units.\nMoM 1.31 & 1.60: Defense = 10.\nMoM 1.31 bug: Thrown attacks, and generic units (e.g. Catapult,\nWarship), bypass it.\nCoM 1 & 2: Defense +8.\nWarlord: Defense +10.' },
   ]),
@@ -125,8 +125,8 @@ const ENCHANTMENT_DEFS = [
   // All versions: Received bonuses on top, then Elements, then Chaos Channels.
   { key: 'combatSummoned', label: 'Combat Summoned', type: 'bool', alwaysVisible: true, group: 'Enchantments', subgroup: '_All versions bools',
     tooltip: 'Encounter condition: the unit was summoned during combat.\nModern CoM2/Warlord: the live unit is Fantastic.\nCoM1: inert except for the version-specific Construct Catapult path.' },
-  { key: 'callToArmsPaladins', label: 'Call to Arms: Paladins', type: 'bool', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'life',
-    tooltip: 'Spell-specific encounter condition. Paladins summoned by Call to Arms use the live Life realm.' },
+  { key: 'callToArmsPaladins', label: 'Call to Arms: Paladins', type: 'bool', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'life',
+    tooltip: 'Versions: CoM 2\nSpell-specific encounter condition. Paladins summoned by Call to Arms use the live Life realm.\nWarlord replaces the spell with Spirit of Chivalry.' },
   { key: 'resistanceToAll', label: 'Received res. to all', type: 'num', match: 'ResistancetoAll', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X resistance.' },
   { key: 'holyBonus', label: 'Received holy bonus', type: 'num', match: 'HolyBonus', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X melee attack, defense, and resistance.\nCoM 1 & 2 & Warlord: Also +X ranged, thrown, and breath attack.' },
   { key: 'elemArmor', label: 'Elements', type: 'select', options: [['none','None'],['resistElements','Resist Elem.'],['elementalArmor','Elem. Armor']], group: 'Enchantments', subgroup: 'All versions', realm: 'nature', tooltip: 'Resist Elements:\nDefense bonus vs magical ranged and breath attacks; resistance\nbonus vs Stoning Touch and Stoning Gaze.\nMoM 1.31 & 1.60: +3. Defense applies to Chaos/Nature magical\nranged, breath, Immolation, and Wall of Fire.\nCoM 1: +4 defense vs all magical ranged, breath, Immolation,\nand Wall of Fire.\nCoM 2 & Warlord: +4 defense vs all magical ranged and breath.\nElemental Armor:\nMoM 1.31 & 1.60: +10 defense vs Chaos/Nature magical ranged,\nbreath, Immolation, and Wall of Fire; +10 resistance vs Stoning\nTouch and Stoning Gaze.\nCoM 1: +12 defense vs all magical ranged, breath, Immolation,\nand Wall of Fire.\nCoM 2 & Warlord: +12 defense vs all magical ranged and breath.' },
@@ -182,14 +182,14 @@ const ENCHANTMENT_DEFS = [
   ...realmLinear([
     { key: 'guardian', label: 'Guardian retort', type: 'bool', match: 'Guardian', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', tooltip: 'Versions: CoM 1 & 2 & Warlord\n+1 Resistance, +10% To Hit, +10% To Block.' },
     { key: 'tactician', label: 'Tactician retort', type: 'bool', match: 'Tactician', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: Non-hero units gain +1 defense.\nHeroes instead gain +2 defense, +2 resistance, and +2 to all\nattack strengths.\nWarlord: All units gain +1 defense (no hero distinction).\nTeleporting units gain First Strike.\nNon-Corporeal units gain Negate First Strike.' },
-    { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'life', tooltip: 'Versions: CoM 1 & 2 & Warlord\nApplies to Life fantastic creatures and Caster units.\n+2 melee and +2 ranged attack (missile, boulder, magic ranged).\n+Defense equal to floor(Resistance / 3).' },
+    { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'life', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 eligibility: live magical ranged, Life race, Caster/mana,\nFocus Magic, or base magical ranged. +2 melee unconditionally;\n+2 to any positive shared ranged/thrown/breath/gaze attack;\nDefense += signed trunc(Resistance / 3).\nCoM 2 & Warlord: applies to Life fantastic creatures and Caster\nunits; +2 existing melee and conventional ranged;\nDefense += floor(max(Resistance, 0) / 3).' },
     { key: 'endurance', label: 'Endurance', type: 'bool', match: 'Endurance', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'life', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1: +2 defense.\nCoM 2 & Warlord: +floor(4 / figures) HP per figure, minimum +1.' },
-    { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'death', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: Unit becomes undead (fantastic Death creature) and\ngains Death, Cold, and Illusion Immunity.\nWarlord: Does not turn the unit undead; no immunities granted.\nAll versions: Doubles melee attack vs Normal and Hero targets.' },
+    { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'death', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: Unit becomes undead (fantastic Death creature) and\ngains Death, Cold, and Illusion Immunity.\nWarlord: Does not turn the unit undead; no immunities granted.\nDoubles melee attack vs Normal and Hero targets.\nCoM 2 & Warlord: also doubles Thrown attack.' },
     { key: 'mysticSurge', label: 'Mystic Surge', type: 'bool', match: 'MysticSurge', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: "Versions: CoM 1 & 2 & Warlord\n+2 defense, −2 resistance.\nOpponent's To Block reduced by 10%.\nUnit becomes an unaligned fantastic creature.\nNot modeled: the granted random enchantments." },
     { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: +3 melee and +3 missile attack.\nWarlord: also +3 thrown attack.\nAffected attacks gain magic weapons (bypass Weapon Immunity).' },
     { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'nature', tooltip: 'Versions: CoM 1 & 2 & Warlord\nApplies to fantastic creatures.\n+1 defense, +2 resistance, +10% To Hit.' },
     { key: 'landLinking', label: 'Land Linking', type: 'bool', match: 'LandLinking', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'nature', tooltip: 'Versions: CoM 1 & 2\nApplies to fantastic units.\n+2 defense, +2 melee, and +2 breath attack.' },
-    { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'sorcery', tooltip: 'Versions: CoM 1 & 2 & Warlord\nMagical ranged or breath attack present: +3 strength.\nCoM 2 & Warlord — Doom Gaze present: +3 doom damage.\nOtherwise, thrown / missile / boulder attack present: converted\ninto a Sorcery magical ranged attack at strength at least 3.\nNo attack to convert: gains a strength-3 Sorcery magical ranged\nattack.' },
+    { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'sorcery', tooltip: 'Versions: CoM 1 & 2 & Warlord\nMagical ranged or breath attack present: +3 strength.\nCoM 2 & Warlord — Doom Gaze present: +3 doom damage.\nThrown / missile / boulder attack: converted into a Sorcery\nmagical ranged attack. CoM 1 has a minimum strength of 3;\nCoM 2 and Warlord preserve its positive strength.\nNo attack to convert: gains a strength-3 Sorcery magical ranged\nattack.' },
   ]),
   // Enchantments — CoM2 & Warlord — select first, then bools interleaved for life → death → chaos → sorcery
   { key: 'discipline', label: 'Discipline', type: 'select', options: [['none','None'],['overland','Overland'],['combat','Combat']], match: 'Discipline', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'life', tooltip: 'Versions: CoM 2\nDoes not affect heroes or fantastic units.\n+1 defense.\nRegular or higher: +2 defense.\nVeteran or higher: +2 defense, +1 melee, +1 physical ranged.\nElite or higher, cast in combat: also Negate First Strike.\nNot modeled: movement bonus (overland cast, Elite+).' },
@@ -212,7 +212,11 @@ const ENCHANTMENT_DEFS = [
     { key: 'natureLink', calcKey: 'landLinking', label: 'Nature Link', type: 'bool', match: 'NatureLink', group: 'Enchantments', subgroup: 'Renamed in Warlord', realm: 'nature', tooltip: 'Versions: Warlord\n+1 resistance (all units).\nFantastic creatures also gain +2 defense, +2 melee, +2 breath attack.\nNot modeled: all-terrain movement.' },
   ]),
   // Enchantments — Warlord only
-  { key: 'lavaSmelter', label: 'Lava Smelter', type: 'select', options: [['none','Basic'],['weaponImmunity','Weapon Imm.'],['missileImmunity','Missile Imm.'],['resistElem','Resist Elem.'],['elementalArmor','Elem. Armor'],['flameBlade','Fiery Blade']], match: 'LavaSmelter', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nSelect a permanent mineral-pair grant carried by this unit.\nNew Dwarf units receive grants when trained; Upgrade & Retrain\ncan apply them later to any existing non-fantastic unit.\nMithril + Adamantium: Weapon Immunity.\nMithril + Crysx: Missile Immunity.\nMithril + Orihalcon: Resist Elements.\nAdamantium + Orihalcon: Elemental Armor.\nAdamantium + Crysx: Fiery Blade.\nNot modeled: simultaneous grants from multiple mineral pairs;\nthe magic-weapon grade upgrade — set weapon and armor manually.' },
+  { key: 'lavaSmelterWeaponImmunity', label: 'Lava Smelter: Weapon Imm.', type: 'bool', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPermanent Mithril + Adamantium grant.\nGrants Weapon Immunity to an eligible non-fantastic unit.' },
+  { key: 'lavaSmelterMissileImmunity', label: 'Lava Smelter: Missile Imm.', type: 'bool', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPermanent Mithril + Crysx grant.\nGrants Missile Immunity to an eligible non-fantastic unit.' },
+  { key: 'lavaSmelterResistElements', label: 'Lava Smelter: Resist Elem.', type: 'bool', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPermanent Mithril + Orihalcon grant.\nGrants Resist Elements independently of Elemental Armor.' },
+  { key: 'lavaSmelterElementalArmor', label: 'Lava Smelter: Elem. Armor', type: 'bool', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPermanent Adamantium + Orihalcon grant.\nGrants Elemental Armor independently of Resist Elements;\nwhen both are present, both defense bonuses apply.' },
+  { key: 'lavaSmelterFieryBlade', label: 'Lava Smelter: Fiery Blade', type: 'bool', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPermanent Adamantium + Crysx grant.\n+3 melee, +2 Missile/Thrown, and bypasses Weapon Immunity.\nDoes not stack corresponding bonuses with Flame Blade.' },
   { key: 'godsPlayDices', label: 'Gods Play Dices: Resistance', type: 'num', min: -2, max: 2, signed: true, match: 'GodsPlayDices', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nEnter the Resistance modifier rolled for this unit at combat start.\nInteger from −2 to +2.' },
   { key: 'pillarOfFaithRes', label: 'Pillar of Faith: +Res', type: 'num', match: 'PillarOfFaithRes', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nApplies to normal units only.\nUnits trained in the city gain +1 Resistance per Religious\nBuilding, capped at +8.\nEnter the number of Religious Buildings.' },
   { key: 'powerMinerals', label: 'Natural Sel.: Power minerals', type: 'num', match: 'PowerMinerals', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\nNatural Selection grants +1 Resistance per 10 Power from\nmineral resources near the training city.\nEnter the Resistance bonus directly.' },
@@ -231,7 +235,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'fortification', label: 'Fortification', type: 'bool', match: 'Fortification', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nDefending units inside city walls gain Large Shield:\n+3 defense vs ranged, thrown, and breath attacks.\nIf the unit already has Large Shield, it gains Missile\nImmunity instead.' },
     { key: 'heatPowerEngine', label: 'Heat Power Engine', type: 'bool', match: 'HeatPowerEngine', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nMechanical units gain the permanent Power Engine upgrade.\nPower Engine enables Magitek Engineering, Temporal Engineering,\nand Energy Beam Weapons effects.' },
     { key: 'hillfort', calcKey: 'missileImmunity', label: 'Hillfort', type: 'bool', match: 'Hillfort', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nDefending units inside city walls gain Missile Immunity.' },
-    { key: 'lightningBlade', label: 'Lightning Blade', type: 'bool', match: 'LightningBlade', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies to normal units only.\nGrants a lightning attack.\nThrown attack: becomes Lightning Breath at the same strength.\nMelee-only unit: gains a strength-1 Lightning Breath.\nLightning Breath is innate and gains veterancy bonuses.\nLightning Breath is Armor Piercing.\nOpponents with Lightning Resist negate the Armor Piercing.' },
+    { key: 'lightningBlade', label: 'Lightning Blade', type: 'bool', match: 'LightningBlade', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies to normal units only.\nGrants a lightning attack.\nThrown attack: becomes Lightning Breath at Thrown +1 strength.\nMelee-only unit: gains a strength-1 Lightning Breath.\nLightning Breath is innate and gains veterancy bonuses.\nLightning Breath is Armor Piercing.\nOpponents with Lightning Resist negate the Armor Piercing.' },
     { key: 'ludusAgoge', label: 'Ludus Agoge', type: 'bool', match: 'LudusAgoge', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies only to normal Orc-race units; Legionaries excluded.\n+1 melee, +1 resistance, +1 HP per figure.\nNot modeled: the Legionary +1 Movement bonus.' },
     { key: 'magitekEngineering', label: 'Magitek Engineering', type: 'bool', match: 'MagitekEngineering', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPower Engine units gain +20% To-Defend and Large Shield.' },
     { key: 'magitekScience', label: 'Magitek Science', type: 'bool', match: 'MagitekScience', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Outlander research reform, not a cast spell.\nArmorclad units gain Resist Magic.\nThe manual and helptext also name Battle Armor, but the script\ndoes not grant it there.' },
@@ -267,7 +271,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'pillarOfFaithLucky', label: 'Pillar of Faith: Lucky', type: 'bool', match: 'PillarOfFaithLucky', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nGrants Lucky: +10% To Hit, +10% To Block, +1 Resistance.' },
     { key: 'shadowStrike', label: 'Shadow Strike', type: 'bool', match: 'ShadowStrike', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nAdds a Thrown attack at 1 + 1/3 of melee (rounded down).\nA unit with an existing Thrown attack adds that to its Thrown.' },
     { key: 'revenant', label: 'Revenant', type: 'bool', match: 'Revenant', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead: grants Death, Cold, Poison, and Illusion\nImmunity.\nGrants melee Death Touch 0: per attacker figure, defender\nresists or one figure dies.\nDeath Touch does not fire on ranged attacks.\nNot modeled: Regeneration.' },
-    { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead and gains Blood Sucker.\nThrown and breath attacks transfer to melee: melee gains\n(strength − 1), the thrown/breath strength drops to 1.' },
+    { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead and gains Blood Sucker.\nHalf of the represented Thrown or Breath strength transfers to\nmelee (truncated); that attack strength drops to 1.' },
     { key: 'soulFlay', label: 'Soul Flay', type: 'bool', match: 'SoulFlay', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures.\nPer experience level: −1 melee, −2 armor, −2 resistance.\nRecruit: −1 / −2 / −2. Elite: −4 / −8 / −8.' },
     { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\n−3 melee, −3 armor, −6 Resistance, −10% To Hit.' },
     { key: 'berserkWarlord', label: 'Berserk (Warlord)', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nArcane Troll Medicineman unit ability, not a wizard spell.\n+15% To Hit.\n−10% To Block.\nNot modeled: combat movement.' },
@@ -1585,6 +1589,20 @@ const PRESETS = {
     b: { hp:10, unitType:'hero' },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
+  bloodLustDoublesThrownCoM2: {
+    desc: 'Blood Lust (CoM2): Thrown 3 doubles to 6 vs a normal 6-HP target and kills it before melee. Without the Thrown doubling, Thrown 3 + doubled melee 2 would deal only 5',
+    version: V_COM2,
+    a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10, abilities: { bloodLust: true } },
+    b: { def:0, toBlkMod:70, hp:6, unitType:'normal' },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  bloodLustDoesNotDoubleFireBreathCoM2: {
+    desc: 'Blood Lust (CoM2): Fire Breath 3 remains 3 against a normal target; only melee and Thrown enter the doubling block',
+    version: V_COM2,
+    a: { atk:0, rtbType:'fire', rtb:3, toHitRtbMod:70, hp:10, abilities: { bloodLust: true } },
+    b: { def:0, toBlkMod:70, hp:10, unitType:'normal' },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
   bloodLustNoDoubleVsFantasticCoM: {
     desc: 'Blood Lust does not double against fantastic units: 3 atk stays 3 vs fantastic target → 3.0',
     version: V_COM,
@@ -1706,11 +1724,11 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   vampirismThrownToMeleeTransferWarlord: {
-    desc: 'Vampirism thrown→melee transfer (all, per manual): thrown 5, melee 2 vs def 2 (100% hit/block). Melee becomes 2+(5−1)=6 → 4 through +2 BS = 6; thrown drops to 1 → 0 through, no BS. Total 6.0. Without transfer: thrown 5→3 +2 BS = 5, melee 2→0 = 5.0. (Helptext "half" transfer would give melee 4 → 4.0.)',
+    desc: 'Vampirism script transfer: thrown 5, melee 2 vs def 2 (100% hit/block). Melee becomes 2+trunc(5/2)=4 → 2 through +2 Blood Sucker = 4; thrown drops to 1 → 0. Total 4.0. Without transfer: thrown 5→3 +2 Blood Sucker = 5, melee 2→0 = 5.0.',
     version: V_WARLORD,
     a: { atk:2, rtbType:'thrown', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { vampirism: true } },
     b: { def:2, toBlkMod:70, hp:30 },
-    expected: { dmgToA: 0, dmgToB: 6.000 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   // --- Revenant (Warlord enchantment: grants undead + melee Death Touch 0) ---
   revenantGrantsDeathTouchWarlord: {
@@ -2893,6 +2911,14 @@ const PRESETS = {
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
+  focusMagicPreservesLowMissileCoM2: {
+    desc: 'Focus Magic (CoM2): missile 1 converts to magic_s at the same strength, bypassing Missile Immunity → 1.0. Raising it to the CoM 1 minimum of 3 would deal 3.0; failing to convert it would deal 0.',
+    version: V_COM2,
+    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
+    b: { hp:10, abilities: { missileImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
   focusMagicConvertsThrownCoM2: {
     desc: 'Focus Magic (CoM2): thrown 5 converts to magic_s 5, so ranged mode uses a magical ranged attack and bypasses Missile Immunity → 5.0',
     version: V_COM2,
@@ -3026,12 +3052,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   orihalconFocusMagicConvertedCoM2: {
-    desc: 'Orihalcon (CoM2): Focus Magic converts missile 2 into minimum-strength magic_s 3, which then gets the +2 Orihalcon bonus → 5 dmg',
+    desc: 'Orihalcon (CoM2): Focus Magic preserves missile strength 2 while converting it to magic_s, then Orihalcon adds +2 → 4 dmg',
     version: V_COM2,
     a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10, armor:'orihalcon', abilities: { focusMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
 
   // --- Reinforce Magic ---
@@ -3059,12 +3085,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   reinforceMagicFocusConvertedCoM2: {
-    desc: 'Reinforce Magic (CoM2): Focus Magic converts missile 2 into minimum-strength magic_s 3, which then gets the +2 bonus for magical ranged → 5 dmg',
+    desc: 'Reinforce Magic (CoM2): Focus Magic preserves missile strength 2 while converting it to magic_s, then Reinforce Magic adds +2 → 4 dmg',
     version: V_COM2,
     a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10, abilities: { reinforceMagic: true, focusMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
 
   // --- Survival Instinct ---
@@ -3499,20 +3525,20 @@ const PRESETS = {
   },
 
   // --- Lava Smelter ---
-  // Dwarf-race building. A selected mineral combo records one permanent ability already
-  // carried by a new Dwarf unit or by an existing non-fantastic unit after Upgrade & Retrain.
+  // Each mineral pair records an independent permanent grant carried by a new Dwarf unit or by
+  // an existing non-fantastic unit after Upgrade & Retrain.
   lavaSmelterWeaponImmunityWarlord: {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Weapon Immunity. Normal melee atk 10 (100% hit) vs def 0 → WI +10 = 10, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
     version: V_WARLORD,
     a: { atk:10, toHitMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'weaponImmunity' } },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterWeaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   lavaSmelterMissileImmunityWarlord: {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Missile Immunity. Missile rtb 10 (100% hit) vs def 0 → MI raises def to 100, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
     version: V_WARLORD,
     a: { rtbType:'missile', rtb:10, toHitRtbMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'missileImmunity' } },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterMissileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
   },
@@ -3520,7 +3546,7 @@ const PRESETS = {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Resist Elements. Chaos magic ranged rtb 6 (100% hit) vs def 0 → +4 = 4, 100% block → 2 dmg (without the grant, def 0 → 6 dmg)',
     version: V_WARLORD,
     a: { rtbType:'magic_c', rtb:6, toHitRtbMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'resistElem' } },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterResistElements: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
@@ -3528,14 +3554,14 @@ const PRESETS = {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Elemental Armor. Chaos magic ranged rtb 10 (100% hit) vs def 0 → +12 = 12, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
     version: V_WARLORD,
     a: { rtbType:'magic_c', rtb:10, toHitRtbMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'elementalArmor' } },
+    b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterElementalArmor: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   lavaSmelterFlameBladeWarlord: {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Fiery Blade. Melee 1+3 = 4, weapon upgraded to magic so it bypasses the target Weapon Immunity → def 0, 100% block of 0 shields → 4 dmg (without the grant, melee 1 vs WI def 10 → 0 dmg)',
     version: V_WARLORD,
-    a: { atk:1, toHitMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'flameBlade' } },
+    a: { atk:1, toHitMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterFieryBlade: true } },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
@@ -3543,31 +3569,42 @@ const PRESETS = {
     desc: 'Lava Smelter + Upgrade & Retrain (Warlord): an existing non-Dwarf unit can carry Weapon Immunity. Normal melee atk 10 (100% hit) vs WI +10 defense, 100% block → 0 dmg',
     version: V_WARLORD,
     a: { atk:10, toHitMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, abilities: { lavaSmelter: 'weaponImmunity' } },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { lavaSmelterWeaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   lavaSmelterUpgradeRetrainHeroWarlord: {
     desc: 'Lava Smelter + Upgrade & Retrain (Warlord): an existing hero can carry Weapon Immunity. Normal melee atk 10 (100% hit) vs WI +10 defense, 100% block → 0 dmg',
     version: V_WARLORD,
     a: { atk:10, toHitMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, unitType:'hero', abilities: { lavaSmelter: 'weaponImmunity' } },
+    b: { def:0, toBlkMod:70, hp:10, unitType:'hero', abilities: { lavaSmelterWeaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   lavaSmelterFantasticExcludedWarlord: {
     desc: 'Lava Smelter + Upgrade & Retrain (Warlord): fantastic creatures are excluded. Normal melee atk 10 (100% hit) vs def 0 → 10 dmg',
     version: V_WARLORD,
     a: { atk:10, toHitMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, unitType:'fantastic_chaos', abilities: { lavaSmelter: 'weaponImmunity' } },
+    b: { def:0, toBlkMod:70, hp:10, unitType:'fantastic_chaos', abilities: { lavaSmelterWeaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
+  lavaSmelterProtectionsStackWarlord: {
+    desc: 'Lava Smelter (Warlord): Resist Elements and Elemental Armor coexist. Magic ranged 20 vs +4 +12 defense at 100% block deals 4; keeping only Elemental Armor would deal 8',
+    version: V_WARLORD,
+    a: { rtbType:'magic_n', rtb:20, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:30, abilities: {
+      lavaSmelterResistElements: true,
+      lavaSmelterElementalArmor: true,
+    } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
 
   // --- Lightning Blade ---
   lightningBladeConvertsThrownWarlord: {
-    desc: 'Lightning Blade (Warlord): innate Thrown becomes Lightning Breath at the same strength (Armor Piercing). Melee atk 1 vs def 4 (100% block) → 0; breath 4 with AP halves def 4→2 → 4−2 = 2 (without conversion, plain thrown 4 vs def 4 → 0)',
+    desc: 'Lightning Blade (Warlord): innate Thrown 4 becomes Lightning Breath 5 (Thrown +1, Armor Piercing). Melee atk 1 vs def 4 (100% block) → 0; breath 5 with AP halves def 4→2 → 5−2 = 3 (without conversion, plain thrown 4 vs def 4 → 0)',
     version: V_WARLORD,
     a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:4, toHitRtbMod:70, hp:10, abilities: { lightningBlade: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:30 },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   lightningBladeGrantsBreathWarlord: {
     desc: 'Lightning Blade (Warlord): melee-only unit gains a strength-1 Lightning Breath (Armor Piercing). Melee atk 2 vs def 1 (100% block) → 1; granted breath 1 with AP halves def 1→0 → 1; total 2 (without the grant, only melee → 1)',
@@ -4338,11 +4375,11 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   supernaturalFormulaCoM2: {
-    desc: 'Supernatural (CoM2): 9 melee fully blocked still deals round(9/3) = 3 dmg',
+    desc: 'Supernatural (CoM2): 28 melee fully blocked still deals Round(28 × 34 / 100) = 10 damage; the old round(hits/3) approximation produced 9',
     version: V_COM2,
-    a: { atk:9, toHitMod:70, hp:10, abilities: { supernatural: true } },
-    b: { def:9, toBlkMod:70, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    a: { atk:28, toHitMod:70, hp:10, abilities: { supernatural: true } },
+    b: { def:28, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
   },
   supernaturalMagicImmunityRangedCoM2: {
     desc: 'Supernatural (CoM2): magic ranged 6 reduced by Magic Immunity still deals the 1/3 minimum = 2 dmg',
@@ -4707,14 +4744,14 @@ const PRESETS = {
   fieryBladeMeleeWarlord: {
     desc: 'Warlord Lava Smelter Fiery Blade +3 melee: 1 atk + Fiery Blade → 4 atk, 100% hit vs 0 def → E[dmg]=4.0',
     version: V_WARLORD,
-    a: { atk:1, toHitMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'flameBlade' } },
+    a: { atk:1, toHitMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterFieryBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   fieryBladeNoFireBreathWarlord: {
     desc: 'Warlord Lava Smelter Fiery Blade does NOT add fire breath: breath stays 1 while melee is 1+3=4 → E[dmg]=5.0',
     version: V_WARLORD,
-    a: { atk:1, toHitMod:70, rtbType:'fire', rtb:1, toHitRtbMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelter: 'flameBlade' } },
+    a: { atk:1, toHitMod:70, rtbType:'fire', rtb:1, toHitRtbMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterFieryBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
@@ -4788,7 +4825,7 @@ const PRESETS = {
   fieryFuryFieryBladeNoStack: {
     desc: 'Warlord Fiery Fury + Fiery Blade: shared bonuses do NOT stack (melee stays +3, missile +2). atk 1+3=4 → E[dmg]=4.0',
     version: V_WARLORD,
-    a: { atk:1, toHitMod:70, hp:10, race:'Dwarf', abilities: { fieryFury: true, lavaSmelter: 'flameBlade' } },
+    a: { atk:1, toHitMod:70, hp:10, race:'Dwarf', abilities: { fieryFury: true, lavaSmelterFieryBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
@@ -6457,7 +6494,7 @@ const PRESETS = {
     version: V_COM,
     a: { atk:8, toHitMod:70, hp:10 },
     b: { def:9, res:9, toBlkMod:70, hp:10, unitType:'fantastic_life', abilities: { warpDefense: true, supremeLight: true } },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0.600, dmgToB: 2.000 },
   },
 
   // --- Weakness ---
@@ -7420,6 +7457,8 @@ const TEST_TREE = [
           'bloodLustDoublesVsNormalCoM',
           'bloodLustFantasticBecomesDeathRealmCoM2',
           'bloodLustHeroTargetCoM2',
+          'bloodLustDoublesThrownCoM2',
+          'bloodLustDoesNotDoubleFireBreathCoM2',
           'bloodLustNoDoubleVsFantasticCoM',
           'bloodLustNotUndeadWarlord',
           'bloodLustVulnerableToDispelEvilCoM2',
@@ -7619,6 +7658,7 @@ const TEST_TREE = [
         keys: [
           'focusMagicBreathCoM2',
           'focusMagicConvertsMissileCoM2',
+          'focusMagicPreservesLowMissileCoM2',
           'focusMagicConvertsThrownCoM2',
           'focusMagicDoomGazeBoostCoM2',
           'focusMagicGrantsRangedCoM2',
@@ -7718,6 +7758,7 @@ const TEST_TREE = [
           'lavaSmelterUpgradeRetrainNonDwarfWarlord',
           'lavaSmelterUpgradeRetrainHeroWarlord',
           'lavaSmelterFantasticExcludedWarlord',
+          'lavaSmelterProtectionsStackWarlord',
         ],
       },
       {

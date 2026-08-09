@@ -18,9 +18,9 @@ not depend on memory or prose summaries.
 - `Active total` is initial implementation plus review plus revision. It excludes time spent
   waiting for the other agent or for external tool results.
 - Model names and reasoning efforts are recorded exactly as configured for the run.
-- Unless AKH explicitly requests another configuration, new implementation runs use GPT-5.6 Sol
-  at High for the orchestrating main agent, with independent implementation subagents running
-  GPT-5.6 Sol at High and GPT-5.6 Sol at Medium. Historical records preserve their actual
+- Dual-agent implementation is run only when the user requests it or the backlog item records that
+  preference. New runs use GPT-5.6 Sol at High for the orchestrating main agent and for both
+  independent implementation/review subagents. Historical records preserve their actual
   configurations.
 - The orchestrator is not a third implementation competitor. Its coordination, integration and
   final-verification timing is recorded separately from the two subagent implementation totals.
@@ -360,14 +360,14 @@ evidence is not lost.
 | Agent / nickname | Model | Reasoning effort | Stage | Start | End / commit | Duration | Commit |
 |---|---|---|---|---|---|---:|---|
 | Orchestrator | GPT-5.6 Sol | High | Coordination/integration | `<timestamp>` | `<timestamp>` | `<duration>` | `<integration commit>` |
-| Sol High subagent | GPT-5.6 Sol | High | Initial implementation | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
-| Sol High subagent | GPT-5.6 Sol | High | Reciprocal review | `<timestamp or not recorded>` | `<timestamp>` | `<duration>` | — |
-| Sol High subagent | GPT-5.6 Sol | High | Review-driven revision | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
-| Sol High subagent | GPT-5.6 Sol | High | Active total | — | — | `<duration>` | — |
-| Sol Medium subagent | GPT-5.6 Sol | Medium | Initial implementation | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
-| Sol Medium subagent | GPT-5.6 Sol | Medium | Reciprocal review | `<timestamp or not recorded>` | `<timestamp>` | `<duration>` | — |
-| Sol Medium subagent | GPT-5.6 Sol | Medium | Review-driven revision | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
-| Sol Medium subagent | GPT-5.6 Sol | Medium | Active total | — | — | `<duration>` | — |
+| Sol High A subagent | GPT-5.6 Sol | High | Initial implementation | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol High A subagent | GPT-5.6 Sol | High | Reciprocal review | `<timestamp or not recorded>` | `<timestamp>` | `<duration>` | — |
+| Sol High A subagent | GPT-5.6 Sol | High | Review-driven revision | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol High A subagent | GPT-5.6 Sol | High | Active total | — | — | `<duration>` | — |
+| Sol High B subagent | GPT-5.6 Sol | High | Initial implementation | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol High B subagent | GPT-5.6 Sol | High | Reciprocal review | `<timestamp or not recorded>` | `<timestamp>` | `<duration>` | — |
+| Sol High B subagent | GPT-5.6 Sol | High | Review-driven revision | `<timestamp>` | `<timestamp>` | `<duration>` | `<commit>` |
+| Sol High B subagent | GPT-5.6 Sol | High | Active total | — | — | `<duration>` | — |
 
 #### Initial comparison
 
@@ -392,18 +392,18 @@ rows are:
 | Agent | Stage | Start | End | Active seconds | Waiting seconds |
 |---|---|---|---|---:|---:|
 | Orchestrator | Coordination/integration | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol High subagent | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol High subagent | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol High subagent | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol High subagent | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol High subagent | Active total | - | - | `<seconds>` | `<seconds>` |
-| Sol Medium subagent | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol Medium subagent | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol Medium subagent | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol Medium subagent | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
-| Sol Medium subagent | Active total | - | - | `<seconds>` | `<seconds>` |
+| Sol High A subagent | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High A subagent | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High A subagent | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High A subagent | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High A subagent | Active total | - | - | `<seconds>` | `<seconds>` |
+| Sol High B subagent | Initial implementation | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High B subagent | Reciprocal review | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High B subagent | Review-driven revision | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High B subagent | Each verification suite | `<timestamp>` | `<timestamp>` | `<seconds>` | `<seconds>` |
+| Sol High B subagent | Active total | - | - | `<seconds>` | `<seconds>` |
 
-Also record `primary_port`, `sol_high_port`, `sol_medium_port`, each server PID, server start/stop
+Also record `primary_port`, `sol_high_a_port`, `sol_high_b_port`, each server PID, server start/stop
 times, and the timestamp when each temporary port was confirmed free.
 
 ## Task R8.4 -- Identity lifecycle migration

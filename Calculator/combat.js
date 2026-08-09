@@ -119,11 +119,23 @@ function getLevelBonuses(level, version) {
   }
 }
 
-// PROVENANCE[supremeLightEligibility]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=calculator helper currently collapses version-divergent eligibility and F52 records a defect; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+function isMagicalRangedType(rangedType) {
+  return rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s';
+}
+
+// PROVENANCE[supremeLightEligibility]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=CoM1 is reconstructed, but the combined helper still needs the exact applicable compiled-modern gate; pointer=Reference docs/DOS reconstructed/unitcalc.c:3271-3294
 // STAT-FORMULA[supremeLightEligibility]
-function supremeLightActiveForUnit(abilities, unitType, version) {
+function supremeLightActiveForUnit(abilities, unitType, version, rangedContext = {}) {
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
   if (!isCoMPlus || !hasAbil(abilities, 'supremeLight')) return false;
+  if (version === 'com_6.08') {
+    return isMagicalRangedType(rangedContext.liveRangedType)
+      || unitType === 'fantastic_life' || unitType === 'normal_life'
+      // The calculator's Caster flag is its representation of a nonzero mana pool.
+      || hasAbil(abilities, 'caster')
+      || hasAbil(abilities, 'focusMagic')
+      || isMagicalRangedType(rangedContext.baseRangedType);
+  }
   return unitType === 'fantastic_life' || hasAbil(abilities, 'caster');
 }
 
@@ -243,16 +255,28 @@ function isNormalUnitType(unitType) {
   return us === 'normal' || us.startsWith('normal_');
 }
 
-// KNOWN DEFECT (F7) — the com2_ branch disagrees with the engine and is left as-is pending a
-// decision. MODDING.INI `[Gameplay]` gives SupernaturalStarts=0 / SupernaturalRatio=34 in both
-// versions, i.e. floor(hits * 34 / 100); its own worked example (7 -> 2) shows truncation.
-// round(hits/3) is one too high whenever hits = 2 (mod 3). See `Calculator/BACKLOG.md`, F7.
-// PROVENANCE[supernaturalMinimumDamage]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=F7 records known modern mismatch and the DOS/CoM1 implementation range is not reconstructed here; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+const MODERN_SUPERNATURAL_DEFAULTS = Object.freeze({ starts: 0, ratio: 34 });
+
+function roundTiesToEven(value) {
+  if (!Number.isFinite(value)) return 0;
+  const lower = Math.floor(value);
+  const fraction = value - lower;
+  if (fraction < 0.5) return lower;
+  if (fraction > 0.5) return lower + 1;
+  return lower % 2 === 0 ? lower : lower + 1;
+}
+
+// MODDING.INI supplies SupernaturalStarts and SupernaturalRatio. Caster.exe applies those inputs
+// as Round((hits - starts) * ratio / 100.0), where Delphi Round uses ties-to-even. The optional
+// settings argument keeps this the moddable formula while the UI uses both shipped tables' 0/34.
+// PROVENANCE[supernaturalMinimumDamage]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=the modern implementation/table inputs are exact, but the DOS/CoM1 implementation range is not reconstructed here; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
 // STAT-FORMULA[supernaturalMinimumDamage]
-function supernaturalMinDamageForHits(hits, version) {
+function supernaturalMinDamageForHits(hits, version, settings = MODERN_SUPERNATURAL_DEFAULTS) {
   if (hits <= 0 || !version) return 0;
   if (version.startsWith('com2_')) {
-    return Math.round(hits / 3);
+    const starts = Number.isFinite(settings.starts) ? settings.starts : 0;
+    const ratio = Number.isFinite(settings.ratio) ? settings.ratio : 34;
+    return Math.max(0, roundTiesToEven((hits - starts) * ratio / 100));
   }
   if (version.startsWith('com_')) {
     return Math.max(0, Math.floor((hits - 5) / 2));
@@ -1831,15 +1855,15 @@ function applyAngelicGuardiansEffects(unit, version) {
   });
 }
 
-// PROVENANCE[bloodLustMeleeAttack]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=F22 records the missing modern Thrown branch and exact applicable ranges remain split; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[bloodLustMeleeAttack]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=the modern melee/Thrown implementation is reconstructed, but the exact applicable CoM1 range remains split; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
 // STAT-FORMULA[bloodLustMeleeAttack]
-function bloodLustMeleeAttack(atkUnit, defUnit) {
+function bloodLustMeleeAttack(atkUnit, defUnit, attackStrength = atkUnit.atk) {
   // Spirit Link makes the target count as a non-fantastic unit for being targeted,
   // so Blood Lust's "double melee vs Normal/Hero" applies to it as well.
   const targetIsNormal = defUnit && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero'
     || hasAbil(defUnit.abilities, 'spiritLink'));
-  if (!targetIsNormal || !hasAbil(atkUnit.abilities, 'bloodLust')) return atkUnit.atk;
-  return atkUnit.atk * 2;
+  if (!targetIsNormal || !hasAbil(atkUnit.abilities, 'bloodLust')) return attackStrength;
+  return attackStrength * 2;
 }
 
 // --- Resolution-time stat sequences (Caster.exe: CoM2 and Warlord) ---
@@ -1872,7 +1896,7 @@ const EFFECTIVE_RESISTANCE_STEPS = [
   // PROVENANCE[effectiveResistance:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:121-122 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:515-515 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:515-515
   resolutionStep('effectiveResistance:resistElements', ['effectiveResistance'],
     u => { u.effectiveResistance += 4; },
-    (u, ctx) => ctx.realm === 'nature' && abilVal(u.abilities, 'elemArmor', 'none') === 'resistElements'),
+    (u, ctx) => ctx.realm === 'nature' && hasResistElementsEffect(u.abilities)),
   // PROVENANCE[effectiveResistance:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:124-126 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:516-516 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:516-516
   resolutionStep('effectiveResistance:bless', ['effectiveResistance'],
     (u, ctx) => { u.effectiveResistance += ctx.blessBonus; },
@@ -1914,13 +1938,11 @@ const EFFECTIVE_DEFENSE_STEPS = [
   // PROVENANCE[effectiveDefense:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:193-194 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:518-518 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:518-518
   resolutionStep('effectiveDefense:resistElements', ['effectiveDefense'],
     u => { u.effectiveDefense += 4; },
-    (u, ctx) => ctx.elementalEligible
-      && abilVal(u.abilities, 'elemArmor', 'none') === 'resistElements'),
+    (u, ctx) => ctx.elementalEligible && hasResistElementsEffect(u.abilities)),
   // PROVENANCE[effectiveDefense:elementalArmor]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:195-196 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:519-519 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:519-519
   resolutionStep('effectiveDefense:elementalArmor', ['effectiveDefense'],
     u => { u.effectiveDefense += 12; },
-    (u, ctx) => ctx.elementalEligible
-      && abilVal(u.abilities, 'elemArmor', 'none') === 'elementalArmor'),
+    (u, ctx) => ctx.elementalEligible && hasElementalArmorEffect(u.abilities)),
   // PROVENANCE[effectiveDefense:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:197-200 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:520-520 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:520-520
   resolutionStep('effectiveDefense:bless', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.blessBonus; },
@@ -1979,14 +2001,24 @@ function effectiveDefense(target, version, attack, trace = null) {
 }
 
 // --- Resistance/Defense bonuses from Elemental Armor / Resist Elements ---
+function hasResistElementsEffect(abilities) {
+  return hasAbil(abilities, 'resistElements')
+    || abilVal(abilities, 'elemArmor', 'none') === 'resistElements';
+}
+
+function hasElementalArmorEffect(abilities) {
+  return hasAbil(abilities, 'elementalArmor')
+    || abilVal(abilities, 'elemArmor', 'none') === 'elementalArmor';
+}
+
 // Bonus amounts to a unit's resistance vs Stoning. CoM RE +4 (Nature only); MoM both grant bonus.
 // PROVENANCE[elemResistBonus]: UNVERIFIED versions=all; gap=combined helper still needs exact DOS and modern implementation gates plus table constants; pointer=Reference docs/DOS reconstructed/combat.c
 // STAT-FORMULA[elemResistBonus]
 function elemResistBonus(unit, version) {
-  const elemVal = abilVal(unit.abilities, 'elemArmor', 'none');
   const isCoM = version && version.startsWith('com');
-  if (isCoM) return elemVal === 'resistElements' ? 4 : 0;
-  return elemVal === 'elementalArmor' ? 10 : elemVal === 'resistElements' ? 3 : 0;
+  if (isCoM) return hasResistElementsEffect(unit.abilities) ? 4 : 0;
+  return (hasElementalArmorEffect(unit.abilities) ? 10 : 0)
+    + (hasResistElementsEffect(unit.abilities) ? 3 : 0);
 }
 
 function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType) {
@@ -2158,10 +2190,11 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const largeShieldBonus = isCoM ? 3 : 2;
 
   // Elemental Armor / Resist Elements defense bonus and per-phase trigger.
-  const tElemVal = abilVal(target.abilities, 'elemArmor', 'none');
   const elemDefBonus = isCoM
-    ? (tElemVal === 'elementalArmor' ? 12 : tElemVal === 'resistElements' ? 4 : 0)
-    : (tElemVal === 'elementalArmor' ? 10 : tElemVal === 'resistElements' ? 3 : 0);
+    ? (hasElementalArmorEffect(target.abilities) ? 12 : 0)
+      + (hasResistElementsEffect(target.abilities) ? 4 : 0)
+    : (hasElementalArmorEffect(target.abilities) ? 10 : 0)
+      + (hasResistElementsEffect(target.abilities) ? 3 : 0);
   const aRangedElem = isCoM
     ? (attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
       || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam')
@@ -3942,11 +3975,19 @@ function resolveCombat(a, b, opts) {
       aHaste,
     });
     const thrownPhases = modernThrown
-      ? modernThrown.map(channel => ({
-          attacker: modernAttackUnit(a, channel),
-          type: channel.type,
-          phase: buildThrown(modernAttackUnit(a, channel), true, channel.type),
-        }))
+      ? modernThrown.map(channel => {
+          // Caster.exe admits ApplyAttack types 2 (melee) and 5 (Thrown) to the same Blood
+          // Lust doubling block. Fire/Lightning Breath use their own types and stay unchanged.
+          const strength = channel.key === 'thrown'
+            ? bloodLustMeleeAttack(a, b, channel.strength)
+            : channel.strength;
+          const attacker = modernAttackUnit(a, { ...channel, strength });
+          return {
+            attacker,
+            type: channel.type,
+            phase: buildThrown(attacker, true, channel.type),
+          };
+        })
       : [{ attacker: a, type: a.thrownType, phase: buildThrown(a, legacyThrown, a.thrownType) }];
 
     // Run the engine: thrown (if active) → WoF (if active) → simultaneous melee+counter.

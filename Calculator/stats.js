@@ -135,10 +135,11 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   const trace = [];
   const isCoM1 = version === 'com_6.08';
   const isModern = version && version.startsWith('com2_');
+  const isBaseCoM2 = isModern && !version.startsWith('com2_warlord');
   const combatSummonedValue = !!(abilities && abilities.combatSummoned);
   const isConstructCatapult = !!(combatSummonedValue
     && !meta.isHero
-    && ((isModern && sourceTemplateId === 37)
+    && ((isBaseCoM2 && sourceTemplateId === 37)
       || (isCoM1 && identity.specialUnit === 'catapult')));
   const isCoM1SummonBranch = isCoM1 && combatSummonedValue
     && [28, 54, 113].includes(sourceTemplateId);
@@ -146,7 +147,7 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   // reads the summoned Paladin template (STypeID 113) at the point it assigns the live realm;
   // keep the template ID as source metadata; the explicit spell-result condition itself
   // represents the summon event and remains independent from the generic Combat Summoned flag.
-  const isCallToArmsPaladins = !!(isModern
+  const isCallToArmsPaladins = !!(isBaseCoM2
     && abilities && abilities.callToArmsPaladins
     && sourceTemplateId === 113);
 
@@ -171,13 +172,13 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     statStep({ id: 'identity:chosen', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && identity.specialUnit === 'chosen',
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[identity:constructCatapult]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=Caster.exe @Spells@CombatSummonUnit identity prefix 0x5CBEE0-0x5CC066 is not reconstructed, and Warlord enables Water Elemental in slot 12 while its custom Catapult entry is disabled; pointer=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI:901-915
+    // PROVENANCE[identity:constructCatapult]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=R9-G1a owns binding the reconstructed generic CombatSummonUnit identity writes to the applicable base-CoM2 spell row and excluding Warlord's replacement/disabled rows; pointer=Reference docs/Caster binary/Spells.CombatSummonUnit.pas:90-110
     statStep({ id: 'identity:constructCatapult', phase: 'a', writes: ['race', 'fantastic'],
-      when: () => isModern && isConstructCatapult,
+      when: () => isBaseCoM2 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[identity:callToArmsPaladins]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=Caster.exe @Spells@CombatSummonUnit identity prefix 0x5CBEE0-0x5CC066 is not reconstructed and Warlord's corresponding spell summons template 211 rather than 113; pointer=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI:3024-3035
+    // PROVENANCE[identity:callToArmsPaladins]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=R9-G1a owns binding the reconstructed generic CombatSummonUnit identity writes to the applicable base-CoM2 spell row and excluding Warlord's replacement row; pointer=Reference docs/Caster binary/Spells.CombatSummonUnit.pas:90-110
     statStep({ id: 'identity:callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
-      when: () => isModern && isCallToArmsPaladins,
+      when: () => isBaseCoM2 && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
     // PROVENANCE[identity:legacyConversions]: UNVERIFIED versions=all; gap=wrapper delegates every write to the still-UNVERIFIED legacyUnitTypeConversions direct helper owned by R9-G1g; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     statStep({ id: 'identity:legacyConversions', phase: 'a', writes: ['race', 'fantastic'],
@@ -191,40 +192,55 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   return { identity: live, trace, isConstructCatapult };
 }
 
-// Lava Smelter (Warlord): the selector records one permanent mineral-pair grant already
-// carried by the unit. New Dwarf units receive it when trained; Upgrade & Retrain can apply
-// it later to any existing non-fantastic unit. Returns the ability set with the grant merged
+// Lava Smelter (Warlord): five independent flags record the permanent mineral-pair grants already
+// carried by the unit. New Dwarf units receive them when trained; Upgrade & Retrain can apply
+// them later to any existing non-fantastic unit. Returns the ability set with every grant merged
 // in (a new object), or the original set unchanged when it does not apply. Merging up-front
 // — rather than into effectiveAbilities — lets the Flame Blade grant reach the weapon-upgrade
 // and stat-bonus logic, which read the raw ability set. The Wall-of-Fire siege effect is not
 // modelled here (it has its own global toggle).
 function applyLavaSmelterGrant(abilities, version, unitType) {
   if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;
-  switch (abilities.lavaSmelter || 'none') {
-    // STAT-FORMULA[lavaSmelter:weaponImmunity]
-    // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-492 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:523-527
-    case 'weaponImmunity':  return { ...abilities, weaponImmunity: true };
-    // STAT-FORMULA[lavaSmelter:missileImmunity]
-    // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-493 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:523-533
-    case 'missileImmunity': return { ...abilities, missileImmunity: true };
-    // STAT-FORMULA[lavaSmelter:flameBlade]
-    // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-496 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:523-551
-    case 'flameBlade':      return { ...abilities, fieryBlade: true };
-    // STAT-FORMULA[lavaSmelter:resistElementsAlias]
-    // PROVENANCE[lavaSmelter:resistElementsAlias]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=current CAS stores Resist Elements independently but the one-key selector suppresses it when Elemental Armor is already selected; pointer=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-495
-    case 'resistElem':
-    // STAT-FORMULA[lavaSmelter:elementalProtection]
-    // PROVENANCE[lavaSmelter:elementalProtection]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=current CAS stores both protection flags independently while this one-key merge keeps only the stronger flag; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:193-196
-    case 'elementalArmor': {
-      // Both the manual Elements selector and this grant share the elemArmor key; keep the
-      // stronger of the two so the smelter never downgrades an explicit Elemental Armor.
-      const rank = { none: 0, resistElements: 1, elementalArmor: 2 };
-      const grant = abilities.lavaSmelter === 'elementalArmor' ? 'elementalArmor' : 'resistElements';
-      const current = abilities.elemArmor || 'none';
-      return { ...abilities, elemArmor: (rank[current] || 0) >= rank[grant] ? current : grant };
-    }
-    default: return abilities;
+  // The legacy selector branches keep old presets/share payloads readable; new UI state uses
+  // the five independent booleans and can therefore carry every applicable pair simultaneously.
+  const legacy = abilities.lavaSmelter || 'none';
+  const weaponImmunity = !!abilities.lavaSmelterWeaponImmunity || legacy === 'weaponImmunity';
+  const missileImmunity = !!abilities.lavaSmelterMissileImmunity || legacy === 'missileImmunity';
+  const resistElements = !!abilities.lavaSmelterResistElements || legacy === 'resistElem';
+  const elementalArmor = !!abilities.lavaSmelterElementalArmor || legacy === 'elementalArmor';
+  const fieryBlade = !!abilities.lavaSmelterFieryBlade || legacy === 'flameBlade';
+  if (!weaponImmunity && !missileImmunity && !resistElements && !elementalArmor && !fieryBlade) {
+    return abilities;
   }
+  const merged = { ...abilities };
+  const grants = [
+    weaponImmunity && 'weaponImmunity',
+    missileImmunity && 'missileImmunity',
+    resistElements && 'resistElements',
+    elementalArmor && 'elementalArmor',
+    fieryBlade && 'fieryBlade',
+  ].filter(Boolean);
+  for (const grant of grants) {
+    switch (grant) {
+      // STAT-FORMULA[lavaSmelter:weaponImmunity]
+      // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-492 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:523-527
+      case 'weaponImmunity': merged.weaponImmunity = true; break;
+      // STAT-FORMULA[lavaSmelter:missileImmunity]
+      // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-493 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:523-533
+      case 'missileImmunity': merged.missileImmunity = true; break;
+      // STAT-FORMULA[lavaSmelter:resistElementsAlias]
+      // PROVENANCE[lavaSmelter:resistElementsAlias]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=the independent flag is implemented, but R9-G1a still owns binding all creation/retraining gates and the runtime resolution consumer into one applicable proof; pointer=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-495
+      case 'resistElements': merged.resistElements = true; break;
+      // STAT-FORMULA[lavaSmelter:elementalProtection]
+      // PROVENANCE[lavaSmelter:elementalProtection]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=the independent Elemental Armor flag now coexists with Resist Elements, but R9-G1a still owns the combined creation/retraining and resolution proof; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:193-196
+      case 'elementalArmor': merged.elementalArmor = true; break;
+      // STAT-FORMULA[lavaSmelter:flameBlade]
+      // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:473-496 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS:523-551
+      case 'fieryBlade': merged.fieryBlade = true; break;
+      default: break;
+    }
+  }
+  return merged;
 }
 
 // Sancta Basilica (Warlord, High Men building): every High Men unit trained here gains +3
@@ -665,12 +681,11 @@ function deriveUnitStats(input) {
     thrownType = 'fire';
   }
 
-  // Lightning Blade (Warlord): the Altar of Storm grants its units a witch blade that blasts
-  // lightning in combat. If the unit has an innate Thrown attack, its type simply becomes
-  // Lightning Breath at the same strength. A unit with no Thrown and no Lightning Breath gains
-  // a strength-1 Lightning Breath. The Lightning Breath is innate and gains veterancy level
-  // bonuses. (Chaos Channels Fire Breath above takes precedence, so a unit already converted
-  // to fire is left as fire.)
+  // Lightning Blade (Warlord): the Altar of Storm writes Lightning Breath = Thrown + 1, then
+  // clears Thrown. A melee-only unit therefore gains strength 1, while an innate Thrown attack
+  // becomes Lightning Breath one point stronger. The Lightning Breath is innate and gains
+  // veterancy level bonuses. (Chaos Channels Fire Breath above takes precedence, so a unit
+  // already converted to fire is left as fire.)
   const lightningBladeAbil = version.startsWith('com2_warlord') && !!abilities.lightningBlade
     && isNormalUnitType(unitTypeVal);
   // Strength-1 grant case: applies only when the unit has no ranged/thrown/breath attack at
@@ -678,7 +693,8 @@ function deriveUnitStats(input) {
   // being overwritten — the single-rtb model cannot hold both.
   const lightningBladeGrantsBreath = lightningBladeAbil
     && rangedType === 'none' && thrownType === 'none';
-  if (lightningBladeAbil && thrownType === 'thrown') {
+  const lightningBladeConvertsThrown = lightningBladeAbil && thrownType === 'thrown';
+  if (lightningBladeConvertsThrown) {
     thrownType = 'lightning';
   } else if (lightningBladeGrantsBreath) {
     thrownType = 'lightning';
@@ -740,7 +756,7 @@ function deriveUnitStats(input) {
     calcBaseDef += 4;
     calcBaseRes += 4;
     calcBaseHP *= 2;
-    // PROVENANCE[destiny]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=the permanent doubling/additive write lacks one narrow applicable implementation range with every arithmetic field; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[destiny]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:588-606
     traceBasePreparation('destiny', 'Destiny', before, {
       atk: calcBaseAtk, rtb: calcBaseRtb, def: calcBaseDef,
       res: calcBaseRes, hp: calcBaseHP,
@@ -755,16 +771,16 @@ function deriveUnitStats(input) {
     calcBaseRtb = ccIndependentChannels
       ? calcBaseRtb + ccFireBreathStrength
       : ccFireBreathStrength;
-    // PROVENANCE[chaosChannels:fireBreath]: UNVERIFIED versions=all; gap=assignment-versus-addition behavior and channel ownership require exact DOS and modern implementation ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[chaosChannels:fireBreath]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:480-485 | Reference docs/DOS reconstructed/unitcalc.c:623-629 | Reference docs/Caster binary/Units.RecalculateUnits.pas:516-521
     traceBasePreparation('chaosChannels:fireBreath', 'Chaos Channels', before,
       { rtb: calcBaseRtb });
   }
-  // Lightning Blade's strength-1 grant (melee-only units). The Thrown→Lightning conversion
-  // keeps the unit's existing Thrown strength, so it needs no adjustment here.
-  if (lightningBladeGrantsBreath) {
+  // Lightning Blade writes `Lightning Breath = Thrown + 1`: this is +1 for both the
+  // Thrown-conversion and melee-only creation paths in the represented attack channel.
+  if (lightningBladeConvertsThrown || lightningBladeGrantsBreath) {
     const before = { rtb: calcBaseRtb };
-    calcBaseRtb = 1;
-    // PROVENANCE[lightningBlade:breath]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=the creation gate and strength-1 assignment have not been matched to one narrow applicable implementation range; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    calcBaseRtb += 1;
+    // PROVENANCE[lightningBlade:breath]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:294-299
     traceBasePreparation('lightningBlade:breath', 'Lightning Blade', before,
       { rtb: calcBaseRtb });
   }
@@ -803,28 +819,31 @@ function deriveUnitStats(input) {
     const canConvertThrown = calcBaseRtb > 0 && thrownType === 'thrown';
     const canConvertRanged = calcBaseRtb > 0
       && (rangedType === 'missile' || rangedType === 'boulder');
-    const convertedStrength = (canConvertThrown || canConvertRanged) ? Math.max(calcBaseRtb, 3) : 3;
+    // CoM 1 raises a converted attack to a minimum of 3. The modern routine preserves a
+    // positive Thrown/physical-ranged strength verbatim and uses 3 only when it creates the
+    // ranged field from an empty base slot.
+    const convertedStrength = (canConvertThrown || canConvertRanged)
+      ? (version === 'com_6.08' ? Math.max(calcBaseRtb, 3) : calcBaseRtb)
+      : 3;
     rangedType = 'magic_s';
     thrownType = 'none';
     calcBaseRtb = convertedStrength;
-    // PROVENANCE[focusMagic:conversion]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=conversion eligibility and strength arithmetic differ across DOS and compiled modern implementations; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[focusMagic:conversion]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:753-772 | Reference docs/Caster binary/Units.RecalculateUnits.pas:613-651
     traceBasePreparation('focusMagic:conversion', 'Focus Magic', before,
       { rtb: calcBaseRtb });
   }
 
-  // Warlord Vampirism: all thrown and breath attacks transfer to melee. Melee gains
-  // (thrown/breath strength − 1) and the thrown/breath strength drops to 1 (the residual
-  // attack still hits flyers and still triggers Blood Sucker on its own phase). Strength is
-  // conserved. Per the Warlord manual (melee += strength − 1); the in-game helptext instead
-  // transfers half ("Half of its Thrown and Breath Attacks strength is transferred to
-  // melee") — a source disagreement the developer resolved in favour of the manual. Applies
-  // only to thrown/breath (thrownType), not magical/missile ranged.
+  // Warlord Vampirism: the executing script transfers half of the represented Thrown/Breath
+  // strength to melee (truncate toward zero), then leaves that positive source channel at 1.
+  // F17 owns aggregating simultaneous modern source channels and moving the write to its exact
+  // region-d position. This formula covers the calculator's selected RTB channel only; it never
+  // applies to magical/missile ranged.
   const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
   if (vampirismActive && thrownType !== 'none' && calcBaseRtb > 0) {
     const before = { atk: calcBaseAtk, rtb: calcBaseRtb };
-    calcBaseAtk += Math.max(0, calcBaseRtb - 1);
+    calcBaseAtk += Math.trunc(calcBaseRtb / 2);
     calcBaseRtb = 1;
-    // PROVENANCE[vampirism:transfer]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=current Warlord implementation lines for the transfer arithmetic have not been located; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
+    // PROVENANCE[vampirism:transfer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS:1245-1258
     traceBasePreparation('vampirism:transfer', 'Vampirism', before,
       { atk: calcBaseAtk, rtb: calcBaseRtb });
   }
@@ -854,7 +873,7 @@ function deriveUnitStats(input) {
       calcBaseRtb = shadowStrikeBonus;
       shadowStrikeGrantedBaseRtb = shadowStrikeBonus;
     }
-    // PROVENANCE[shadowStrike:thrown]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=current Warlord implementation gate and created/boosted Thrown arithmetic have not been located; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
+    // PROVENANCE[shadowStrike:thrown]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS:1262-1266
     traceBasePreparation('shadowStrike:thrown', 'Shadow Strike', before,
       { rtb: calcBaseRtb });
   }
@@ -913,7 +932,10 @@ function deriveUnitStats(input) {
 
   // Node Aura bonus: +2 atk, +2 rtb, +2 def, +2 res for matching Fantastic units.
   // Effective combat type is resolved through the shared precedence helper.
-  const supremeLightEligible = supremeLightActiveForUnit(abilities, unitTypeVal, version);
+  const supremeLightEligible = supremeLightActiveForUnit(abilities, unitTypeVal, version, {
+    liveRangedType: rangedType,
+    baseRangedType: rtbTypeRaw,
+  });
   const survivalInstinctEligible = survivalInstinctActiveForUnit(abilities, unitTypeVal, version);
   const landLinkingEligible = landLinkingActiveForUnit(abilities, unitTypeVal, version);
   const innerPowerEligible = innerPowerActiveForUnit(abilities, version);
@@ -1810,13 +1832,13 @@ function deriveUnitStats(input) {
       } }),
     // Q7, closed: `defense += resistance / 3` is a **live** read of the record, taken where the
     // engine takes it — after Warp Resist and Darkness, before Tactician (0x90992-0x90A53).
-    // PROVENANCE[supremeLight:coM1]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[supremeLight:coM1]: UNVERIFIED versions=com_6.08; gap=F52 corrects behavior from R6.1d, but the fixed provenance-domain task still owns the audited source binding; pointer=Reference docs/DOS reconstructed/unitcalc.c:3271-3294
     statStep({ id: 'supremeLight:coM1', phase: 'c', writes: ['def', 'atk', 'rtb'],
       when: () => isCoM1 && supremeLightEligible,
       apply: u => {
-        u.def += Math.floor(Math.max(0, u.res) / 3);
-        if (hasMeleeAttack) u.atk += 2;
-        if (rtbStatActive) u.rtb += supremeLightRtbMod;
+        u.def += Math.trunc(u.res / 3);
+        u.atk += 2;
+        if (u.rtb > 0) u.rtb += 2;
       } }),
     // Tactician, for every CoM engine: CoM 1 at 0x90AB4, CoM2/Warlord at +0x0C890.
     ...abilByPhase.cAfterWarp,
@@ -1913,7 +1935,8 @@ function deriveUnitStats(input) {
       apply: u => {
         u.res = Math.max(0, u.res);
         u.def = Math.max(0, u.def);
-        u.atk = (hasMeleeAttack || blazeOfGloryActive) ? Math.max(0, u.atk) : 0;
+        u.atk = (hasMeleeAttack || blazeOfGloryActive || (isCoM1 && supremeLightEligible))
+          ? Math.max(0, u.atk) : 0;
         u.rtb = rtbStatActive ? Math.max(0, u.rtb) : 0;
         u.hp = Math.max(1, u.hp);
         u.gaze = baseGazeRanged > 0 ? Math.max(0, u.gaze) : 0;

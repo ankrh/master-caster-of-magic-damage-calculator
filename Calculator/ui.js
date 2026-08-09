@@ -2442,6 +2442,31 @@ function collectState() {
   return { v: full.v, ids, identity: full.identity, generic: full.generic };
 }
 
+// M6 replaced the one-choice Lava Smelter selector with five independent flags. Saved states and
+// share links from before that change still carry `<side>Abil_lavaSmelter`; translate its selected
+// grant unless a newer payload explicitly supplies the corresponding replacement checkbox.
+function migrateRetiredControlIds(ids) {
+  const migrated = { ...(ids || {}) };
+  const lavaSmelterKeys = {
+    weaponImmunity: 'lavaSmelterWeaponImmunity',
+    missileImmunity: 'lavaSmelterMissileImmunity',
+    resistElem: 'lavaSmelterResistElements',
+    elementalArmor: 'lavaSmelterElementalArmor',
+    flameBlade: 'lavaSmelterFieryBlade',
+  };
+  for (const prefix of ['a', 'b']) {
+    const oldId = prefix + 'Abil_lavaSmelter';
+    if (!Object.prototype.hasOwnProperty.call(migrated, oldId)) continue;
+    const replacementKey = lavaSmelterKeys[migrated[oldId]];
+    if (!replacementKey) continue;
+    const replacementId = prefix + 'Abil_' + replacementKey;
+    if (!Object.prototype.hasOwnProperty.call(migrated, replacementId)) {
+      migrated[replacementId] = true;
+    }
+  }
+  return migrated;
+}
+
 // Restore a blob from collectState(): re-expand the default-diff against the blob version's
 // defaults, then apply the full map. Tolerant of full (undiffed) blobs too — legacy
 // localStorage and older share links merge cleanly since their ids already cover everything.
@@ -2451,7 +2476,8 @@ function applyState(blob) {
   }
   const version = (blob.ids && normalizeGameVersion(blob.ids.gameVersion))
     || loadPersistedGameVersion() || DEFAULT_GAME_VERSION;
-  const merged = { ...getDefaultIds(version), ...(blob.ids || {}), gameVersion: version };
+  const migratedIds = migrateRetiredControlIds(blob.ids);
+  const merged = { ...getDefaultIds(version), ...migratedIds, gameVersion: version };
   applyFullState({
     v: blob.v,
     ids: merged,

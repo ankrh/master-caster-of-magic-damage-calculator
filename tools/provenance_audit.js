@@ -88,6 +88,10 @@ function normalizeRepoPath(value) {
   return value.replace(/\\/g, '/');
 }
 
+function hasImplementationWrite(excerpt) {
+  return /:=|\+=|-=|\*=|\/=|(?:->|\.)[A-Za-z_]\w*\s*=(?!=)|\b(?:Inc|Dec|SETSTAT|SetStat|SetUnitStat)\s*\(/.test(excerpt);
+}
+
 function lineNumberAt(text, offset) {
   return text.slice(0, offset).split(/\r?\n/).length;
 }
@@ -196,7 +200,7 @@ function validateSourceCitation(comment, citation) {
     return;
   }
   const hasGate = /\b(if|case|while|for)\b|\?\s*[^:]+:|\b(and|or)\b/i.test(excerpt);
-  const hasWrite = /:=|\+=|-=|\*=|\/=|\b(?:Inc|Dec|SETSTAT|SetStat|SetUnitStat)\s*\(/.test(excerpt);
+  const hasWrite = hasImplementationWrite(excerpt);
   if (!hasGate || !hasWrite) {
     fail(`${comment.file}:${comment.line} source range lacks ${!hasGate ? 'an eligibility gate' : 'a stat write/arithmetic'}: ${citation}`);
   }
@@ -320,4 +324,7 @@ if (require.main === module) {
   }
 }
 
-module.exports = { computeVerifiedBinding, discoverFormulaSites, readProvenanceComments, runAudit };
+module.exports = {
+  computeVerifiedBinding, discoverFormulaSites, hasImplementationWrite,
+  readProvenanceComments, runAudit,
+};
