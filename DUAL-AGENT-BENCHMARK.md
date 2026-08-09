@@ -1111,3 +1111,171 @@ before and after the run.
   disposition. `git worktree list` contains only the primary checkout. The primary branch was
   clean at integration commit `96f1d81` before this append-only benchmark entry was written.
   Nothing was pushed.
+
+## Task R9-G1a -- Existing-evidence identity and creation-grant provenance
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | R9-G1a -- close the 13 identity and creation-grant provenance gaps using checked-in implementation evidence only |
+| Date | 2026-08-09 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `09b6783aed0d9642e9993fb45a1792f1bdd5dd08` |
+| Integration branch | `codex/R7.3-integration` |
+| Final integration commit | `46ab5291d3c15b09256eb86f711772a4fa24f2c8` |
+| Temporary tips | Sol High `e12d3839edc6ccad16a76e1105107df42c2012c6`; Sol Xhigh `906f8ff840624bae5e892307f6fc7be82909a49c` |
+| Models | Orchestrator GPT-5.6 Sol High; implementer/reviewer A GPT-5.6 Sol High; implementer/reviewer B GPT-5.6 Sol Xhigh |
+| Ports | Primary 8080; Sol High 8081; Sol Xhigh 8082 |
+| Initial winner | Sol High: it retained every calculator-applicable modern version, cited both Lava Smelter application paths, and registered the Warlord mismatches instead of hiding them by narrowing metadata |
+| Most useful review | Sol Xhigh's review of High: it found the omitted Logistic bypass, caught that F54 prescribed behavior from a disabled spell, and separated the legacy wrapper from its R9-G1g-owned dependency |
+| Strongest revised result | Sol High, with Sol Xhigh's narrower Chosen table binding and more precise F54/F55 wording integrated |
+| Final result | 5 of 13 promoted; 82 VERIFIED and 165 UNVERIFIED overall; R9-G1a remains live with 8 gaps |
+| Runtime behavior | Unchanged; calculator JavaScript edits are provenance comments only |
+| Raw-binary reconstruction | None integrated; missing extents were surfaced for a separate independent task under the user's mid-run scope correction |
+| Push | None |
+
+The original packet allowed new address-backed reconstruction when necessary. During the initial
+passes, AKH narrowed the task: any formula requiring a raw-binary extent not already reconstructed
+must remain UNVERIFIED and the missing reconstruction must be surfaced. High removed four
+uncommitted reconstruction/evidence files immediately; Xhigh made no reconstruction-artifact
+change. Both revised branches and the integration obey that boundary.
+
+### Subagent timing
+
+Parallel spans are reported separately and are not summed as end-to-end time. Each agent reported
+zero waiting/blocked time; dependency installation occurred inside the initial span, but its exact
+duration was not separately recorded.
+
+| Agent | Stage | Start | End | Active elapsed | Waiting / blocked |
+|---|---|---|---|---:|---:|
+| Sol High | Initial implementation | `2026-08-09T10:03:40.4561398+02:00` | `2026-08-09T10:30:04.5712686+02:00` | `1584.115s` | `0s` |
+| Sol High | Reciprocal review | `2026-08-09T10:30:58.1904681+02:00` | `2026-08-09T10:35:17.4446069+02:00` | `259.254s` | `0s` |
+| Sol High | Review-driven revision | `2026-08-09T10:36:46.0939084+02:00` | `2026-08-09T10:44:09.3593821+02:00` | `443.265s` | `0s` |
+| Sol High | Active total | -- | -- | `2286.634s` | `0s` |
+| Sol Xhigh | Initial implementation | `2026-08-09T10:04:02.7016309+02:00` | `2026-08-09T10:29:04.6210000+02:00` | `1501.919s` | `0s` |
+| Sol Xhigh | Reciprocal review | `2026-08-09T10:31:11.5526924+02:00` | `2026-08-09T10:35:06.4371166+02:00` | `234.884s` | `0s` |
+| Sol Xhigh | Review-driven revision and review responses | `2026-08-09T10:37:02.9405396+02:00` | `2026-08-09T10:47:02.7872064+02:00` | `599.847s` | `0s` |
+| Sol Xhigh | Active total | -- | -- | `2336.650s` | `0s` |
+
+### Per-agent verification timing
+
+| Agent / phase | Suite | Result | Start | End | Elapsed |
+|---|---|---:|---|---|---:|
+| Sol High initial | Provenance audit/tooling | 247 total; 82 verified; 165 unverified; 10 assertions | `2026-08-09T10:26:27.9229464+02:00` | `2026-08-09T10:26:28.6738542+02:00` | `0.751s` |
+| Sol High initial | Node unit checks | 9,679/9,679 | `2026-08-09T10:26:42.1909314+02:00` | `2026-08-09T10:26:42.3791753+02:00` | `0.188s` |
+| Sol High initial | Full Playwright, port 8081 | 56/56 | `2026-08-09T10:27:21.9772245+02:00` | `2026-08-09T10:28:33.1731101+02:00` | `71.196s` |
+| Sol High initial | `git diff --check` | pass | `2026-08-09T10:29:53.0992474+02:00` | `2026-08-09T10:29:53.1598311+02:00` | `0.061s` |
+| Sol High revision | Provenance audit/tooling | 247 total; 82 verified; 165 unverified; 10 assertions | `2026-08-09T10:42:32.1678677+02:00` | `2026-08-09T10:42:32.9321400+02:00` | `0.764s` |
+| Sol High revision | Node unit checks | 9,679/9,679 | `2026-08-09T10:42:38.5322944+02:00` | `2026-08-09T10:42:38.7323358+02:00` | `0.200s` |
+| Sol High revision | Full Playwright, port 8081 | 56/56 | `2026-08-09T10:42:46.3239150+02:00` | `2026-08-09T10:43:43.7593829+02:00` | `57.435s` |
+| Sol High revision | `git diff --check` | pass | `2026-08-09T10:44:01.3062666+02:00` | `2026-08-09T10:44:01.3539028+02:00` | `0.048s` |
+| Sol Xhigh initial | Provenance audit/tooling | 247 total; 82 verified; 165 unverified; 10 assertions | `2026-08-09T10:25:58.2340000+02:00` | `2026-08-09T10:25:59.0020000+02:00` | `0.768s` |
+| Sol Xhigh initial | Node unit checks | 9,679/9,679 | `2026-08-09T10:26:04.7380000+02:00` | `2026-08-09T10:26:04.9930000+02:00` | `0.255s` |
+| Sol Xhigh initial | Full Playwright, port 8082 | 56/56 | `2026-08-09T10:26:54.9880000+02:00` | `2026-08-09T10:28:08.3980000+02:00` | `73.411s` |
+| Sol Xhigh initial | `git diff --check` | pass | `2026-08-09T10:28:30.5750000+02:00` | `2026-08-09T10:28:30.7280000+02:00` | `0.153s` |
+| Sol Xhigh revision | Provenance audit/tooling | 247 total; 82 verified; 165 unverified; 10 assertions | `2026-08-09T10:44:10.0948173+02:00` | `2026-08-09T10:44:10.9463680+02:00` | `0.852s` |
+| Sol Xhigh revision | Node unit checks | 9,679/9,679 | `2026-08-09T10:44:20.8452250+02:00` | `2026-08-09T10:44:21.0294825+02:00` | `0.184s` |
+| Sol Xhigh revision | Full Playwright, port 8082 | 56/56 | `2026-08-09T10:44:44.6262655+02:00` | `2026-08-09T10:45:45.8718299+02:00` | `61.246s` |
+| Sol Xhigh revision | `git diff --check` | pass | `2026-08-09T10:45:59.6578214+02:00` | `2026-08-09T10:45:59.7023438+02:00` | `0.045s` |
+
+Both agents' first Playwright attempt found that the isolated worktree lacked installed Node
+dependencies. High ran `npm ci`; Xhigh ran `npm install`; each then completed the official suite
+without `PLAYWRIGHT_REUSE_EXISTING`. The aborted pre-server attempts are not test failures.
+
+### Initial comparison
+
+Both agents independently reached the conservative 5/13 result: modern Combat Summoned and
+Chosen, plus Warlord Lava Smelter Weapon Immunity, Missile Immunity and Flame Blade were
+promotable; eight formulas were not. Both refused to convert partial evidence into VERIFIED
+claims after the scope correction.
+
+Sol High's initial result was stronger. It kept Warlord in the applicable-version metadata for
+the two modern spell-result formulas, where the calculator still executes the gates, and opened
+the Warlord behavior findings instead of masking them. It also attempted to bind both Lava
+creation and Upgrade/Retrain paths. Its first tuple was still incomplete because it omitted the
+Logistic bypass, and its first F54 wording treated a disabled custom spell as reachable.
+
+Sol Xhigh's initial result had the cleaner M6 disposition and narrower table citations, but its
+Lava anchors covered creation only while HISTORY claimed complete applicability, and it narrowed
+the two spell-result formulas to base CoM2 even though the calculator still executes them for
+Warlord.
+
+### Reciprocal review and dispositions
+
+Sol High's review of Xhigh produced three findings: incomplete Lava applicability evidence;
+incorrect Warlord omission and lost behavior findings; and insufficiently concrete reconstruction
+handoffs. Xhigh fixed the first two, added every already-known extent for the third, and correctly
+disputed deriving the unknown Zombies table-row byte range under the user's scope boundary.
+
+Sol Xhigh's review of High produced four findings: the missing Logistic bypass; F54's use of a
+disabled custom spell; insufficient reconstruction boundaries; and duplicate ownership of the
+legacy conversion chain. High fixed the Logistic tuple, rewrote F54 around the enabled Water
+Elemental replacement and disabled custom entry, added every already-known extent, tied legacy
+conversion to R9-G1g, and correctly disputed deriving the unknown Zombies table-row byte range.
+It also folded the elemental-state mismatch into existing M6 rather than retaining duplicate F56.
+
+No review disagreement survived except the identical, scope-mandated refusal to derive an unknown
+Zombies raw-table bound. That is not a substantive dispute between agents; it is the handoff for
+the separately requested independent reconstruction task. Sol Xhigh's review was more useful
+overall because it found two integration-critical errors in the otherwise stronger High branch
+and clarified task ownership.
+
+### Integration and final verification
+
+Integration selected Sol High's revised lineage (`137d14e`, `e12d383`) because it retained the
+stronger all-applicable-version treatment, the checked-in `BU_Construct` span through the generic
+type-table ability copy, and the expanded M6 scope. The final integration commit added Xhigh's
+narrower one-line `ChosenUnitID` table citations and its more precise F54/F55 wording. No
+mechanical merge of both branches occurred.
+
+Five formulas are now VERIFIED and bound in the reviewed-anchor manifest:
+`identity:combatSummoned`, `identity:chosen`, `lavaSmelter:weaponImmunity`,
+`lavaSmelter:missileImmunity`, and `lavaSmelter:flameBlade`. R9-G1 decreased from 170 to 165
+UNVERIFIED formulas; R9-G1a remains live with eight.
+
+The separate reconstruction handoff is:
+
+- CoM1 combat-summon identity tail `0x75D51-0x75D71` for
+  `identity:com1ConstructCatapult` and `identity:com1SummonBranch`;
+- Caster `@Spells@CombatSummonUnit` identity prefix `0x5CBEE0-0x5CC066` for
+  `identity:constructCatapult` and `identity:callToArmsPaladins`; and
+- the unrecorded `COM1_UT_ZOMBIES` type `0xAE` ability-row extent for `identity:zombies`, paired
+  with the existing checked-in `BU_Construct` reconstruction at `unitcalc.c:1625-1703`.
+
+`identity:legacyConversions` depends on R9-G1g. The two elemental Lava formulas depend on M6.
+F54 and F55 record the Warlord spell-result behavior defects. Runtime behavior is unchanged.
+
+| Final suite | Result | Start | End | Elapsed |
+|---|---:|---|---|---:|
+| Provenance audit/tooling | 247 total; 82 verified; 165 unverified; 10 assertions | `2026-08-09T10:50:05.3730007+02:00` | `2026-08-09T10:50:06.1691039+02:00` | `0.802s` |
+| Node unit checks | 9,679/9,679 | `2026-08-09T10:50:06.1791004+02:00` | `2026-08-09T10:50:06.3797097+02:00` | `0.198s` |
+| Full Playwright, primary port 8080 | 56/56 | `2026-08-09T10:50:11.4668821+02:00` | process completion observed by `2026-08-09T10:51:18.7654740+02:00` | observed wall interval `67.299s`; runner reported `57.0s` |
+| `git diff --check` | pass | `2026-08-09T10:51:21.7050336+02:00` | `2026-08-09T10:51:21.7876319+02:00` | `0.074s` |
+
+`PLAYWRIGHT_REUSE_EXISTING` was absent. The primary server PID 17524 was observed on port 8080 at
+`2026-08-09T10:50:28.9770239+02:00`; it exited with the suite, and port 8080 was free at
+`2026-08-09T10:51:18.7654740+02:00`.
+
+### Orchestrator timing and cleanup
+
+- Implementation dispatches: Sol High `2026-08-09T10:03:40.4561398+02:00`; Sol Xhigh
+  `2026-08-09T10:04:02.7016309+02:00`.
+- Reciprocal-review dispatches: Sol High `2026-08-09T10:30:58.1904681+02:00`; Sol Xhigh
+  `2026-08-09T10:31:11.5526924+02:00`.
+- Review-driven revision dispatches: Sol High `2026-08-09T10:36:46.0939084+02:00`; Sol Xhigh
+  `2026-08-09T10:37:02.9405396+02:00`.
+- Integration comparison began at `2026-08-09T10:49:09.3604589+02:00`; integration commit
+  `46ab529` was ready at `2026-08-09T10:51:28.6856011+02:00`.
+- Temporary cleanup completed at `2026-08-09T10:52:32.2635228+02:00`.
+- First-dispatch-through-cleanup wall span: `2931.807s` (`48m51.807s`).
+- Integration-through-cleanup wall span: `202.903s` (`3m22.903s`).
+- Exact orchestrator active coordination and waiting time were not separately recorded. The wall
+  spans include waits for parallel agents and verification and are not implementation throughput.
+
+Sol High used Python server PIDs 19260 initially and 884 during revision; Sol Xhigh used PIDs
+11692 and 9104. Each exited and its assigned port was confirmed free. At cleanup, ports 8080,
+8081 and 8082 were free; both worktrees were clean at their recorded tips; exact targets
+`C:\CoM2-r9-g1a-sol-high` and `C:\CoM2-r9-g1a-sol-xhigh` were validated and removed; temporary
+branches were deleted; and both resolved review artifacts were cleared. `git worktree list`
+contains only the primary checkout. Nothing was pushed.
