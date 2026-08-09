@@ -25,6 +25,8 @@ function woundedTopFigHP(remHP, hpPerFig) {
 // Magical/Mithril/Adamantium: +10% To Hit (melee, missile, boulder only)
 // Mithril: +1 atk (melee, missile, boulder, thrown), +1 def
 // Adamantium: +2 atk (same types), +2 def
+// PROVENANCE[weaponBonusFunction]: UNVERIFIED versions=all; gap=material dispatch and default behavior are not tied to one exact implementation gate across every engine; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// STAT-FORMULA[weaponBonusFunction]
 function weaponBonus(type) {
   switch (type) {
     // STAT-FORMULA[weaponBonus:magic]
@@ -46,6 +48,8 @@ function weaponBonus(type) {
 // (`Recruit`) is all zeros, so it maps to 'normal' here and the ladder starts at 'regular'.
 // Note this ladder is applied to heroes too, though Levelbonus.INI gives them a separate
 // 9-step `[Hero]` table with a different shape — tracked as D27.
+// PROVENANCE[levelBonusDispatch]: UNVERIFIED versions=all; gap=the version and level dispatch is not tied to exact implementation gates across all engines; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// STAT-FORMULA[levelBonusDispatch]
 function getLevelBonuses(level, version) {
   const isMoM = version.startsWith('mom_');
   const isWarlord = version.startsWith('com2_warlord');
@@ -220,6 +224,8 @@ function determineEffectiveUnitType(baseUnitType, abilities, version) {
 // The realm a unit belongs to, derived from its (possibly rewritten) unitType.
 // Both fantastic_<realm> and normal_<realm> (e.g. the Warlord-only 'normal_life'
 // produced by Sanctify) carry a realm; plain 'normal' and 'hero' have none.
+// PROVENANCE[realmOfUnitType]: UNVERIFIED versions=all; gap=the compatibility projection from live unit type to realm has no matching narrow implementation range; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// STAT-FORMULA[realmOfUnitType]
 function realmOfUnitType(unitType) {
   const us = String(unitType || '');
   if (us.startsWith('fantastic_')) return us.slice('fantastic_'.length);
@@ -230,6 +236,8 @@ function realmOfUnitType(unitType) {
 // True for non-fantastic, non-hero units — plain 'normal' and any realm-tagged
 // normal unit such as 'normal_life'. These share normal-unit behaviour for
 // Weapon Immunity, Blood Lust targeting, Mislead, etc.
+// PROVENANCE[isNormalUnitType]: UNVERIFIED versions=all; gap=the compatibility normal-unit predicate has no matching narrow implementation range across every consumer; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// STAT-FORMULA[isNormalUnitType]
 function isNormalUnitType(unitType) {
   const us = String(unitType || '');
   return us === 'normal' || us.startsWith('normal_');
@@ -2760,6 +2768,8 @@ function applyDoomUAHalving(unit, version) {
   });
 }
 
+// PROVENANCE[normalizeCombatUnit]: UNVERIFIED versions=all; gap=the resolution-boundary record normalization combines multiple engine-specific defaults without one matching implementation range; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// STAT-FORMULA[normalizeCombatUnit]
 function normalizeCombatUnit(unit, version) {
   let normalized = applyBloodLustEffects(unit, version);
   normalized = applyVampirismEffects(normalized, version);

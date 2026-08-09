@@ -31,11 +31,12 @@ States: `ready`, `open`, `deferred`, `blocked`. Costs: `free`, `small`, `medium`
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
-| 2 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
-| 3 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
-| 4 | **F5–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
-| 5 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
+| 1 | **R9-G1** | Reconstruct or locate the implementation lines still missing from the stat-formula provenance audit. |
+| 2 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
+| 3 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
+| 4 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
+| 5 | **F5–F6, F9, F12–F43** | Implement confirmed defects, respecting dependencies below. |
+| 6 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Structural and reconstruction work
 
@@ -92,7 +93,7 @@ R6.1a–R6.2f requires the affected reviewer to re-check it.
 
 | ID | Evidence gap | State | Cost | Strongest pointer |
 |---|---|---|---|---|
-| R9-G1 | Reconstruct or locate exact implementation gates and arithmetic for the `165` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | open | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
+| R9-G1 | Reconstruct or locate exact implementation gates and arithmetic for the `170` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | open | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
 
 ## Confirmed and suspected defects
 

@@ -5,8 +5,8 @@
 R9 audited every source-authored stat modification in the calculator, including ordered
 `deriveUnitStats` writes, ability-emitted transforms, direct helper formulas, dynamic chance
 projection and resolution-time effective-stat transforms. Adjacent structured provenance now
-covers 242 formula IDs: 77 cite exact implementation ranges (and runtime-table assignments where
-loaded constants are used), while 165 are explicitly `UNVERIFIED` rather than presented as
+covers 247 formula IDs: 77 cite exact implementation ranges (and runtime-table assignments where
+loaded constants are used), while 170 are explicitly `UNVERIFIED` rather than presented as
 established behavior. R9-G1 retains those reconstruction gaps as live work.
 
 The durable `npm run provenance` audit independently discovers formula constructors, base

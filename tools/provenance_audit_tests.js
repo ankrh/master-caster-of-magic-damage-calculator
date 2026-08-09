@@ -23,12 +23,19 @@ const sample = [
   '// STAT-FORMULA[chance-projection]',
   'const chanceSteps = chanceContributions.map(item => statStep({',
   'function clampPct(base, mod) { return base + mod; }',
+  'function weaponBonus(type) { return type; }',
+  'function getLevelBonuses(level, version) { return { level, version }; }',
+  'function realmOfUnitType(unitType) { return unitType; }',
+  'function isNormalUnitType(unitType) { return unitType === "normal"; }',
+  'function normalizeCombatUnit(unit, version) { return { unit, version }; }',
 ].join('\n');
 assert.deepStrictEqual(
   discoverFormulaSites('synthetic.js', sample).map(site => site.id).sort(),
   [
     'ability-step', 'base-prep', 'chance-event', 'chance-literal', 'chance-projection',
-    'clampPct', 'dynamic-emit', 'literal-step', 'resolution-step', 'table-case',
+    'clampPct', 'dynamic-emit', 'isNormalUnitType', 'levelBonusDispatch', 'literal-step',
+    'normalizeCombatUnit', 'realmOfUnitType',
+    'resolution-step', 'table-case', 'weaponBonusFunction',
   ],
   'all supported source-authored formula declarations must be discovered',
 );
