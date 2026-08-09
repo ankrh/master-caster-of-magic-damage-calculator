@@ -921,3 +921,193 @@ independently authored R7.4 browser checks.
   `codex/R7.4-sol-high` and `codex/R7.4-sol-medium` were deleted.
 - Both resolved review artifacts were cleared; no disagreement survived. `git worktree list`
   contains only the primary checkout at integration commit `ab3828e`. Nothing was pushed.
+
+## Task R9 -- Exhaustive stat-formula provenance audit
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | R9 -- inventory every source-authored calculator stat formula, attach strongest implementation provenance, enforce coverage and anchor integrity, and retain unresolved evidence as explicit gaps |
+| Date | 2026-08-09 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `1a4c38adfada4c2007d06c2e9c64017cca1f077f` |
+| Integration branch | `codex/R7.3-integration` |
+| Final integration commit | `96f1d8172f733e29ffd29be0e3a5ea720c7756bf` |
+| Temporary tips | Sol High `0adb2d832fd88f7cedd3f484092c08e127c02963`; Sol Medium `7bbcd085bad5436914aa06fa415b3a3e7eeb4e86` |
+| Models | Orchestrator GPT-5.6 Sol High; implementer/reviewer A GPT-5.6 Sol High; implementer/reviewer B GPT-5.6 Sol Medium |
+| Ports | Primary 8080; Sol High 8081; Sol Medium 8082; isolated review checks 8083/8084 |
+| Initial winner | Sol High: broader independently discovered inventory, more readable adjacent evidence, and substantially more defensible VERIFIED anchors; neither initial branch was complete |
+| Most useful review | Sol High's review of Medium: six concrete findings, including formula omissions, marker leakage, incomplete version/table coverage, generic false-positive anchors, unreconciled gaps, and a whitespace failure |
+| Strongest revised result | Sol High's 242-site revised audit plus the five direct helper formulas independently identified from Sol Medium's inventory |
+| Final result | 247 formulas: 77 VERIFIED and 170 explicitly UNVERIFIED; R9-G1 remains live at priority 1 |
+| Runtime behavior | Unchanged; edits in calculator JavaScript are provenance comments only |
+| Push | None |
+
+### Subagent timing
+
+Parallel agent spans are independent and are not summed into end-to-end wall time. The agents used
+slightly different stopwatch accounting: High separated substantive work from named setup/check
+intervals, while Medium's reported active spans include its verification except for the separately
+identified initial dependency wait. The table preserves each agent's labels rather than pretending
+the accounting is identical.
+
+| Agent | Stage | Start | End | Measured span | Active / waiting accounting |
+|---|---|---|---|---:|---|
+| Sol High | Initial implementation | `2026-08-09T00:58:56.6884080+02:00` | `2026-08-09T01:45:40.6467935+02:00` | `2803.962s` | Agent-reported implementation/audit/report `2305.646s`; setup, named verification and wait `498.316s`; dependency install `3.891s`; blocked `0s` |
+| Sol High | Reciprocal review | `2026-08-09T01:50:12.8310215+02:00` | `2026-08-09T01:59:28.2820223+02:00` | `555.451s` | Active review `551.807s`; named checks `3.644s`; waiting/blocked `0s` |
+| Sol High | Review-driven revision | `2026-08-09T02:03:06.5988940+02:00` | `2026-08-09T02:28:50.6632332+02:00` | `1544.065s` | Active revision `1486.056s`; named verification/wait `58.009s`; dependency/blocked `0s` |
+| Sol High | Substantive active total | -- | -- | `4343.509s` | Sum of the three agent-reported substantive active intervals; named setup/check/wait intervals excluded |
+| Sol Medium | Initial implementation | `2026-08-09T00:59:48.4634028+02:00` | `2026-08-09T01:32:36.1165351+02:00` | `1968.423s` | Agent-reported active `1945.171s`; dependency setup/wait `23.252s`; external waiting/blocked `0s` |
+| Sol Medium | Reciprocal review | `2026-08-09T01:50:30.3376052+02:00` | `2026-08-09T01:56:55.3712030+02:00` | `385.039s` | Active span `385.039s`, including `55.064s` of named checks; waiting/blocked `0s` |
+| Sol Medium | Review-driven revision | `2026-08-09T02:03:29.1874831+02:00` | `2026-08-09T02:21:05.6261926+02:00` | `1056.438s` | Agent-reported active `1056.438s`, including named checks; setup/wait/blocked `0s` |
+| Sol Medium | Agent-reported active total | -- | -- | `3386.648s` | Initial active plus review and revision spans; initial dependency setup/wait excluded |
+
+### Per-agent verification timing
+
+#### Sol High
+
+| Phase | Suite | Result | Start | End | Elapsed |
+|---|---|---:|---|---|---:|
+| Initial | Provenance audit/tooling | 172 total; 83 verified; 89 unverified; pass | recorded within initial verification block | recorded within initial verification block | `2.421s` |
+| Initial | Node unit checks | 9,679/9,679 | recorded within initial verification block | recorded within initial verification block | `0.953s` |
+| Initial | Full Playwright, port 8081 | 54 passed, 2 unrelated UI-state failures | recorded within initial verification block | recorded within initial verification block | `209.139s` |
+| Initial | Failed-test retry | one tooltip race remained | recorded within initial verification block | recorded within initial verification block | `22.791s` |
+| Initial | `git diff --check` | pass | recorded within initial verification block | recorded within initial verification block | `0.072s` |
+| Review | Medium provenance, Node, diff, and full Playwright on port 8084 | provenance pass; 9,679/9,679; diff pass; 56/56 | `2026-08-09T01:50:30.3376052+02:00` | `2026-08-09T01:56:55.3712030+02:00` | named checks `55.064s` |
+| Revision | Provenance audit/tooling | 242 total; 77 verified; 165 unverified; pass | `2026-08-09T02:25:32.2499775+02:00` | `2026-08-09T02:25:33.0057403+02:00` | `0.746s` |
+| Revision | Node unit checks | 9,679/9,679 | `2026-08-09T02:26:09.5281119+02:00` | `2026-08-09T02:26:09.7383790+02:00` | `0.205s` |
+| Revision | Full Playwright, port 8081 | 56/56 | `2026-08-09T02:26:26.3917141+02:00` | `2026-08-09T02:27:23.3818177+02:00` | `56.986s` |
+| Revision | `git diff --check` | pass | `2026-08-09T02:27:32.5300742+02:00` | `2026-08-09T02:27:32.6080048+02:00` | `0.072s` |
+
+The initial browser failures moved between expectations and did not correlate with the
+comment/tooling-only implementation. Medium's fresh isolated review run passed 56/56, High's
+revision passed 56/56, and the final integrated primary run also passed 56/56; they were therefore
+recorded as flaky UI-state evidence rather than hidden or treated as an R9 behavior regression.
+
+#### Sol Medium
+
+| Phase | Suite | Result | Start | End | Elapsed |
+|---|---|---:|---|---|---:|
+| Initial | Provenance audit/tooling | 176 total; 39 verified; 137 unverified; pass | `2026-08-09T01:23:03.9507946+02:00` | `2026-08-09T01:23:06.5184576+02:00` | `2.556s` |
+| Initial | Node unit checks | 9,679/9,679 | `2026-08-09T01:23:35.3222833+02:00` | `2026-08-09T01:23:36.1701742+02:00` | `0.844s` |
+| Initial | Full Playwright attempt 1, port 8082 | 56 passed, 1 flaky failure | `2026-08-09T01:23:52.8778762+02:00` | `2026-08-09T01:26:26.0859666+02:00` | `153.185s` |
+| Initial | Focused retry | 2 passed, 1 flaky failure at a different expectation | `2026-08-09T01:26:57.0739721+02:00` | `2026-08-09T01:27:09.7618884+02:00` | `12.686s` |
+| Initial | Final full Playwright, port 8082 | 57/57 | `2026-08-09T01:28:54.3579880+02:00` | `2026-08-09T01:30:18.3234063+02:00` | `83.958s` |
+| Initial | `git diff --check` | pass | `2026-08-09T01:30:35.3405200+02:00` | `2026-08-09T01:30:35.5955495+02:00` | `0.245s` |
+| Review | High provenance, Node, diff, and full Playwright | provenance pass as implemented; 9,679/9,679; diff pass; 56/56 | `2026-08-09T01:50:12.8310215+02:00` | `2026-08-09T01:59:28.2820223+02:00` | named checks `3.644s`; review analysis supplied the remaining span |
+| Revision | Provenance audit/tooling | 228 total; 14 verified; 214 unverified; pass | `2026-08-09T02:18:47.9592897+02:00` | `2026-08-09T02:18:48.8427479+02:00` | `0.885s` |
+| Revision | Node unit checks | 9,679/9,679 | `2026-08-09T02:18:48.8427479+02:00` | `2026-08-09T02:18:49.0298344+02:00` | `0.178s` |
+| Revision | Full Playwright, port 8082 | 57/57 | `2026-08-09T02:18:55.1527905+02:00` | `2026-08-09T02:19:53.6831731+02:00` | `58.533s` |
+| Revision | `git diff --check` | pass | `2026-08-09T02:20:41.1802493+02:00` | `2026-08-09T02:20:41.2994541+02:00` | `0.117s` |
+
+### Initial comparison
+
+Both agents preserved runtime behavior and built executable provenance audits with adjacent
+formula markers, omission detection, stale-anchor checks, explicit UNVERIFIED dispositions, and
+documentation/backlog lifecycle updates. Both also made conservative evidence decisions instead
+of converting prose or partial implementation matches into VERIFIED claims.
+
+Sol High's initial implementation was stronger overall. It found 172 formulas and verified 83,
+while Medium found 176 and verified 39, but raw verification count was not the deciding metric.
+High's structured adjacent comments were more readable at each formula site, its reviewed source
+bindings were easier to inspect, and its design had the clearer path to formula-specific source
+digest enforcement. Medium's initial checker had stronger explicit mutation fixtures in some
+areas and its independent inventory exposed formula families High had overlooked. Neither branch
+met R9 initially: High missed base-preparation transforms and collapsed independently editable
+table/dynamic sites, while Medium missed other direct/dynamic sites and allowed marker ownership
+and generic-source false positives.
+
+### Reciprocal review and dispositions
+
+Sol Medium's review of High produced three P1 findings:
+
+1. Discovery was partly circular and omitted six base-preparation transforms while aggregating
+   independently editable table and dynamic Tactician formulas.
+2. A wrong but code-shaped source range could replace Inner Power with Flame Blade and still pass.
+3. VERIFIED metadata undercovered reachable versions and required runtime-table constants.
+
+High fixed all three in `0adb2d8`: independent discovery expanded to 242 formula sites;
+formula-specific/version-specific citations were bound to exact source-excerpt SHA-256 digests;
+and incomplete claims were downgraded to explicit gaps.
+
+Sol High's review of Medium produced six findings:
+
+1. Formula discovery remained incomplete and did not classify every Calculator JavaScript file.
+2. Adjacent marker leakage and reused IDs allowed one marker to cover another formula.
+3. Applicable-version metadata and both runtime tables were incomplete.
+4. Generic code-shape checks accepted semantically unrelated implementation ranges.
+5. The grouped backlog gap was not exactly reconciled to formula-specific evidence gaps.
+6. The branch failed the whitespace check at EOF.
+
+Medium fixed all six in `7bbcd08`: 228 independently owned sites, explicit file classification,
+version/table-aware semantic bindings, an exact 214-entry gap manifest and digest, negative
+fixtures for marker and source mutations, and clean whitespace. No review dispute survived.
+High's review was the more useful one because it supplied more independently actionable defects,
+including actual marker leakage and the failing diff check. Medium's review was nevertheless
+crucial: its three findings drove the selected implementation's exhaustive discovery and exact
+source binding.
+
+### Integration and final verification
+
+Integration selected High's revised lineage and applied it as:
+
+1. `ed34c22` -- High initial implementation (`5807988`);
+2. `2d9d73d` -- High review-driven hardening (`0adb2d8`);
+3. `96f1d81` -- add five direct helper formulas identified by comparing Medium's independent
+   inventory: `weaponBonus`, `getLevelBonuses`, `realmOfUnitType`, `isNormalUnitType`, and
+   `normalizeCombatUnit`; promote R9-G1 to backlog priority 1 and reconcile counts.
+
+No mechanical merge of both branches was performed. High supplied the selected adjacent audit,
+formula-specific digest manifest, independent discovery checker, mutation tests, and readable
+source bindings. Medium materially supplied the five missing direct-formula sites and the priority
+signal that unresolved implementation reconstruction is R9's immediate successor. Its separate
+`STAT-PROVENANCE-GAPS.json` was not imported because the repository contract makes BACKLOG the
+sole live calculator-work register and the selected adjacent UNVERIFIED markers already retain the
+formula-specific pointers.
+
+The combined result discovers 247 unique formulas: 77 have exact implementation/version/table
+evidence and 170 remain explicitly UNVERIFIED in live gap R9-G1. Calculator JavaScript differs
+from the frozen base only by comments, so R9 changes auditability rather than combat behavior.
+
+| Final suite | Result | Start | End | Elapsed |
+|---|---:|---|---|---:|
+| Provenance audit/tooling | 247 total; 77 verified; 170 unverified; 10 tooling assertions | `2026-08-09T02:40:37.0557013+02:00` | `2026-08-09T02:40:37.8385439+02:00` | `0.767s` |
+| Node unit checks | 9,679/9,679 | `2026-08-09T02:41:07.8880353+02:00` | `2026-08-09T02:41:08.1149811+02:00` | `0.224s` |
+| Full Playwright, primary port 8080 | 56/56 | `2026-08-09T02:41:32.3533011+02:00` | `2026-08-09T02:42:31.8931026+02:00` | `59.522s` |
+| `git diff --check` | pass | `2026-08-09T02:42:46.8378259+02:00` | `2026-08-09T02:42:46.9168314+02:00` | `0.075s` |
+| Post-commit provenance audit/tooling | 247 total; 77 verified; 170 unverified; pass | after integration commit `96f1d81` | before cleanup at `2026-08-09T02:45:26.0289954+02:00` | separate elapsed not recorded |
+
+`PLAYWRIGHT_REUSE_EXISTING` was absent for the final full suite. No manual server was started;
+Playwright owned the server lifecycle and did not expose a PID. Port 8080 was free immediately
+before and after the run.
+
+### Orchestrator timing
+
+- First implementation dispatch was recorded at `2026-08-09T00:57:43.5583106+02:00`; the second
+  dispatch was recorded at `2026-08-09T00:59:09.7194401+02:00`.
+- Reciprocal-review handoff began at `2026-08-09T01:49:42.8619705+02:00`.
+- Review-driven revision handoff began at `2026-08-09T02:02:27.7132946+02:00`.
+- Integration comparison began at `2026-08-09T02:31:52.8787367+02:00`.
+- Temporary worktree/branch cleanup completed at `2026-08-09T02:45:26.0289954+02:00`.
+- Measured first-dispatch-through-cleanup wall span: `6462.471s` (`1h47m42.471s`).
+- Measured integration-through-cleanup wall span: `813.150s` (`13m33.150s`).
+- Exact orchestrator active coordination time and waiting time were not recorded. These wall spans
+  include waits for parallel implementations, reciprocal reviews, revisions, verification and
+  cleanup and must not be interpreted as single-agent implementation throughput.
+
+### Server and cleanup evidence
+
+- Sol High used port 8081; Sol Medium used port 8082; isolated review checks used 8083/8084.
+  Playwright-owned server PIDs were not exposed. Each agent confirmed its assigned port free at
+  the end of its stage.
+- The primary final suite used port 8080 with no reusable or manual server. Ports 8080, 8081,
+  8082, 8083 and 8084 were all confirmed free at the cleanup gate.
+- Temporary worktrees `C:\CoM2-damage-calculator-R9-sol-high` and
+  `C:\CoM2-damage-calculator-R9-sol-medium` were verified clean at their recorded tips, their
+  exact absolute paths were resolved, and they were removed. Temporary branches
+  `codex/R9-sol-high` and `codex/R9-sol-medium` were deleted.
+- Both resolved R9 review artifacts were cleared after every numbered finding had a final fixed
+  disposition. `git worktree list` contains only the primary checkout. The primary branch was
+  clean at integration commit `96f1d81` before this append-only benchmark entry was written.
+  Nothing was pushed.
