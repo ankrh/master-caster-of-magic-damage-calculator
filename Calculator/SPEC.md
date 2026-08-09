@@ -671,11 +671,16 @@ been reconstructed, the comment says `UNVERIFIED` and records the live gap and s
 such a formula is implemented behavior, not an established source claim.
 
 `npm run provenance` enforces unique adjacency, source existence and range bounds, implementation
-content, runtime-table assignments, the live backlog gap count, and complete classification of
-every JavaScript file under `Calculator/`. The audited formula files are `stats.js` and
-`combat.js`. Generated `units_*.js` rosters, generic probability math and the generic step runner,
-matrix orchestration, UI/data declarations and formatting, and the vendored compression library
-are deliberately classified as non-formula sources.
+content, runtime-table assignments, complete applicable-version metadata, the live backlog gap
+count, and complete classification of every JavaScript file under `Calculator/`. Discovery is
+independent of provenance comments: it recognizes ordered/resolution constructors, all literal or
+dynamic ability emissions, the six base-preparation writes, each stat-table case, literal and
+dynamic chance contributions/projection, and a reviewed inventory of direct formula functions.
+Every VERIFIED formula/version/source tuple is additionally bound to a reviewed digest of the
+exact source excerpts in `tools/provenance_verified_anchors.json`, so a code-shaped but unrelated
+range or stale source content fails. Generated `units_*.js` rosters, generic probability math and
+the generic step runner, matrix orchestration, UI/data declarations and formatting, and the
+vendored compression library are deliberately classified as non-formula sources.
 
 ## UI contract
 

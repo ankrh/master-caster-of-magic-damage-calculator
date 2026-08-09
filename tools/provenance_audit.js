@@ -9,8 +9,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const repoRoot = path.resolve(__dirname, '..');
+const verifiedManifestPath = path.join(__dirname, 'provenance_verified_anchors.json');
 const calculatorFiles = ['Calculator/stats.js', 'Calculator/combat.js'];
 const excludedJavaScript = new Map([
   ['Calculator/data.js', 'declarative UI/version metadata'],
@@ -31,6 +33,47 @@ const forbiddenSourceSuffixes = [
 ];
 const provenancePattern = /^\s*\/\/\s*PROVENANCE\[([^\]]+)\]:\s*(.+?)\s*$/;
 const directFormulaPattern = /STAT-FORMULA\[([^\]]+)\]/g;
+const directFunctionIds = new Map([
+  ['clampPct', 'clampPct'],
+  ['woundedTopFigHP', 'woundedTopFigureHp'],
+  ['supremeLightActiveForUnit', 'supremeLightEligibility'],
+  ['survivalInstinctActiveForUnit', 'survivalInstinctEligibility'],
+  ['landLinkingActiveForUnit', 'landLinkingEligibility'],
+  ['innerPowerActiveForUnit', 'innerPowerEligibility'],
+  ['blazingEyesDoomGazeForUnit', 'blazingEyesDoomGaze'],
+  ['misleadActiveForUnit', 'misleadEligibility'],
+  ['destinyActiveForUnit', 'destinyEligibility'],
+  ['determineEffectiveUnitType', 'legacyUnitTypeConversions'],
+  ['supernaturalMinDamageForHits', 'supernaturalMinimumDamage'],
+  ['distancePenalty', 'distancePenalty'],
+  ['applyRage', 'rageEffectiveAttack'],
+  ['weaponImmunityDef', 'weaponImmunityEffectiveDefense'],
+  ['missileImmunityDef', 'missileImmunityEffectiveDefense'],
+  ['fireImmunityDef', 'fireImmunityEffectiveDefense'],
+  ['righteousnessDef', 'righteousnessEffectiveDefense'],
+  ['magicImmunityDef', 'magicImmunityEffectiveDefense'],
+  ['immolationStr', 'immolationStrength'],
+  ['wallOfFireStr', 'wallOfFireStrength'],
+  ['applyUndeadImmunities', 'undeadImmunityDerivation'],
+  ['applyAnimatedEffects', 'animatedEffectDerivation'],
+  ['applyBlackChannelsEffects', 'blackChannelsEffectDerivation'],
+  ['applyRebuildEffects', 'rebuildEffectDerivation'],
+  ['applyTacticianWarlordEffects', 'tacticianAbilityDerivation'],
+  ['applyFieryFuryEffects', 'fieryFuryAbilityDerivation'],
+  ['applyZealEffects', 'zealAbilityDerivation'],
+  ['applyTemporalTwistEffects', 'temporalTwistAbilityDerivation'],
+  ['applyBloodLustEffects', 'bloodLustAbilityDerivation'],
+  ['applyVampirismEffects', 'vampirismAbilityDerivation'],
+  ['applyRevenantEffects', 'revenantAbilityDerivation'],
+  ['applyAngelicGuardiansEffects', 'angelicGuardiansAbilityDerivation'],
+  ['bloodLustMeleeAttack', 'bloodLustMeleeAttack'],
+  ['elemResistBonus', 'elemResistBonus'],
+  ['computeDefenseProfile', 'dosEffectiveDefenseProfile'],
+  ['applyDoomUAHalving', 'doomAttackStrengthModifiers'],
+  ['applyPairToHitModifiers', 'pairToHitModifiers'],
+  ['buildResistanceContext', 'resolutionResistanceContext'],
+  ['buildToBlockContext', 'resolutionToBlockContext'],
+]);
 
 function fail(message) {
   throw new Error(`provenance audit: ${message}`);
@@ -49,7 +92,8 @@ function discoverFormulaSites(file, text) {
   const patterns = [
     { kind: 'statStep', regex: /statStep\(\{\s*id:\s*'([^']+)'/g },
     { kind: 'resolutionStep', regex: /resolutionStep\(\s*'([^']+)'/g },
-    { kind: 'ability emit', regex: /\bemit\(\s*'([^']+)'/g },
+    { kind: 'base preparation', regex: /traceBasePreparation\(\s*'([^']+)'/g },
+    { kind: 'chance delta', regex: /addChanceDelta\(\s*'([^']+)'/g },
   ];
   for (const { kind, regex } of patterns) {
     let match;
@@ -57,9 +101,48 @@ function discoverFormulaSites(file, text) {
       sites.push({ id: match[1], kind, line: lineNumberAt(text, match.index), file });
     }
   }
+  const lines = text.split(/\r?\n/);
+  function markerNear(lineIndex) {
+    for (let index = Math.max(0, lineIndex - 2); index <= Math.min(lines.length - 1, lineIndex + 1); index++) {
+      const match = /STAT-FORMULA\[([^\]]+)\]/.exec(lines[index]);
+      if (match) return match[1];
+    }
+    return null;
+  }
+  lines.forEach((line, index) => {
+    const functionMatch = /^function\s+([A-Za-z_$][\w$]*)\s*\(/.exec(line);
+    if (functionMatch && directFunctionIds.has(functionMatch[1])) {
+      sites.push({ id: directFunctionIds.get(functionMatch[1]), kind: 'direct function', line: index + 1, file });
+    }
+    if (/\bemit\s*\(/.test(line) && !/const\s+emit\s*=/.test(line)) {
+      const literal = /\bemit\(\s*'([^']+)'/.exec(line);
+      const id = literal ? literal[1] : markerNear(index);
+      if (!id) fail(`${file}:${index + 1} dynamic ability emit needs an adjacent STAT-FORMULA id`);
+      sites.push({ id, kind: 'ability emit', line: index + 1, file });
+    }
+    if (/\bcase\s+'[^']+'\s*:/.test(line)) {
+      const id = markerNear(index);
+      if (!id) fail(`${file}:${index + 1} independently editable stat-table case needs an adjacent STAT-FORMULA id`);
+      sites.push({ id, kind: 'stat table case', line: index + 1, file });
+    }
+    if (/addChanceContribution\(\s*`chance:\$\{event\.id\}`/.test(line)) {
+      const id = markerNear(index);
+      if (!id) fail(`${file}:${index + 1} dynamic chance contribution needs an adjacent STAT-FORMULA id`);
+      sites.push({ id, kind: 'dynamic chance contribution', line: index + 1, file });
+    }
+    if (/chanceContributions\.map\(item\s*=>\s*statStep/.test(line)) {
+      const id = markerNear(index);
+      if (!id) fail(`${file}:${index + 1} dynamic chance projection needs an adjacent STAT-FORMULA id`);
+      sites.push({ id, kind: 'dynamic chance projection', line: index + 1, file });
+    }
+  });
+
   let match;
   while ((match = directFormulaPattern.exec(text)) !== null) {
-    sites.push({ id: match[1], kind: 'direct formula', line: lineNumberAt(text, match.index), file });
+    const id = match[1];
+    if (!sites.some(site => site.id === id && Math.abs(site.line - lineNumberAt(text, match.index)) <= 3)) {
+      fail(`${file}:${lineNumberAt(text, match.index)} orphan STAT-FORMULA[${id}] marker`);
+    }
   }
   return sites;
 }
@@ -122,6 +205,7 @@ function validateVerifiedComment(comment) {
   const citations = match[2].split('|').map(value => value.trim()).filter(Boolean);
   if (citations.length === 0) fail(`${comment.file}:${comment.line} VERIFIED entry has no citations`);
   citations.forEach(citation => validateSourceCitation(comment, citation));
+  return { versions, citations };
 }
 
 function validateUnverifiedComment(comment) {
@@ -134,6 +218,18 @@ function validateUnverifiedComment(comment) {
   if (/^(Calculator|Manual)\//.test(pointer)) {
     fail(`${comment.file}:${comment.line} UNVERIFIED pointer cannot point back to calculator/manual prose`);
   }
+}
+
+function computeVerifiedBinding(versions, citations, root = repoRoot) {
+  const sourceDigests = citations.map(citation => {
+    const value = citation.startsWith('TABLE=') ? citation.slice(6) : citation;
+    const match = /^(.*):(\d+)-(\d+)$/.exec(value);
+    if (!match) throw new Error(`malformed binding citation ${citation}`);
+    const sourceLines = fs.readFileSync(path.join(root, ...match[1].split('/')), 'utf8').split(/\r?\n/);
+    const excerpt = sourceLines.slice(Number(match[2]) - 1, Number(match[3])).join('\n');
+    return crypto.createHash('sha256').update(excerpt).digest('hex');
+  });
+  return crypto.createHash('sha256').update(JSON.stringify({ versions, citations, sourceDigests })).digest('hex');
 }
 
 function runAudit() {
@@ -176,11 +272,26 @@ function runAudit() {
       fail(`${comment.file}:${comment.line} PROVENANCE[${id}] is not adjacent (within 14 lines) to its formula`);
     }
   }
+  const manifest = fs.existsSync(verifiedManifestPath)
+    ? JSON.parse(fs.readFileSync(verifiedManifestPath, 'utf8')) : {};
+  const seenVerified = new Set();
   for (const [id, comment] of commentsById) {
     if (!sitesById.has(id)) fail(`${comment.file}:${comment.line} PROVENANCE[${id}] has no formula site`);
-    if (comment.body.startsWith('VERIFIED ')) validateVerifiedComment(comment);
+    if (comment.body.startsWith('VERIFIED ')) {
+      const parsed = validateVerifiedComment(comment);
+      const expected = manifest[id];
+      if (!expected) fail(`${comment.file}:${comment.line} VERIFIED ${id} lacks a formula-specific anchor manifest entry`);
+      const binding = computeVerifiedBinding(parsed.versions, parsed.citations);
+      if (binding !== expected) {
+        fail(`${comment.file}:${comment.line} VERIFIED ${id} metadata/source content differs from its reviewed formula-specific anchor`);
+      }
+      seenVerified.add(id);
+    }
     else if (comment.body.startsWith('UNVERIFIED ')) validateUnverifiedComment(comment);
     else fail(`${comment.file}:${comment.line} must be VERIFIED or UNVERIFIED`);
+  }
+  for (const id of Object.keys(manifest)) {
+    if (!seenVerified.has(id)) fail(`reviewed anchor manifest has stale/non-VERIFIED entry ${id}`);
   }
 
   const unverified = comments.filter(comment => comment.body.startsWith('UNVERIFIED '));
@@ -204,4 +315,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { discoverFormulaSites, readProvenanceComments, runAudit };
+module.exports = { computeVerifiedBinding, discoverFormulaSites, readProvenanceComments, runAudit };

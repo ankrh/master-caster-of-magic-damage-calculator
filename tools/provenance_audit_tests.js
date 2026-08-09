@@ -2,17 +2,34 @@
 'use strict';
 
 const assert = require('assert');
-const { discoverFormulaSites, readProvenanceComments, runAudit } = require('./provenance_audit');
+const fs = require('fs');
+const path = require('path');
+const {
+  computeVerifiedBinding, discoverFormulaSites, readProvenanceComments, runAudit,
+} = require('./provenance_audit');
 
 const sample = [
   "statStep({ id: 'literal-step', apply: u => { u.def += 1; } });",
   "resolutionStep('resolution-step', true, () => {});",
   "emit('ability-step', 'c', { atk: 2 });",
-  '// STAT-FORMULA[direct-step]',
+  '// STAT-FORMULA[dynamic-emit]',
+  "emit(id, 'c', { def: 1 });",
+  "traceBasePreparation('base-prep', 'Base prep', before, after);",
+  "addChanceDelta('chance-literal', source, 'c', 1, fields, 10);",
+  '// STAT-FORMULA[table-case]',
+  "case 'elite': return { atk: 2 };",
+  '// STAT-FORMULA[chance-event]',
+  'addChanceContribution(`chance:${event.id}`, event.source, event.phase, event.order, deltas);',
+  '// STAT-FORMULA[chance-projection]',
+  'const chanceSteps = chanceContributions.map(item => statStep({',
+  'function clampPct(base, mod) { return base + mod; }',
 ].join('\n');
 assert.deepStrictEqual(
   discoverFormulaSites('synthetic.js', sample).map(site => site.id).sort(),
-  ['ability-step', 'direct-step', 'literal-step', 'resolution-step'],
+  [
+    'ability-step', 'base-prep', 'chance-event', 'chance-literal', 'chance-projection',
+    'clampPct', 'dynamic-emit', 'literal-step', 'resolution-step', 'table-case',
+  ],
   'all supported source-authored formula declarations must be discovered',
 );
 
@@ -25,4 +42,23 @@ assert.strictEqual(comments[0].id, 'x');
 const result = runAudit();
 assert(result.formulas > 0, 'repository audit must find formulas');
 assert.strictEqual(result.formulas, result.verified + result.unverified);
-console.log(`Provenance tooling checks passed: 6 assertions; ${result.formulas} repository formulas.`);
+
+const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'provenance_verified_anchors.json'), 'utf8'));
+const validBinding = computeVerifiedBinding(
+  ['com2_1.05.11', 'com2_warlord_1.5.12.6.2'],
+  ['Reference docs/Caster binary/Units.RecalculateUnits.pas:1602-1608'],
+);
+assert.strictEqual(validBinding, manifest.innerPowerEligibility, 'reviewed formula binding must match');
+const unrelatedBinding = computeVerifiedBinding(
+  ['com2_1.05.11', 'com2_warlord_1.5.12.6.2'],
+  ['Reference docs/Caster binary/Units.RecalculateUnits.pas:1414-1424'],
+);
+assert.notStrictEqual(unrelatedBinding, manifest.innerPowerEligibility,
+  'wrong-but-code-shaped source range must fail the formula-specific binding');
+
+assert.throws(() => discoverFormulaSites('synthetic.js', "emit(id, 'c', { def: 1 });"),
+  /dynamic ability emit needs an adjacent STAT-FORMULA id/);
+assert.throws(() => discoverFormulaSites('synthetic.js', "case 'elite': return { atk: 2 };"),
+  /stat-table case needs an adjacent STAT-FORMULA id/);
+
+console.log(`Provenance tooling checks passed: 10 assertions; ${result.formulas} repository formulas.`);

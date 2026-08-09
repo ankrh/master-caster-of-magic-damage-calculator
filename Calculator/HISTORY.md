@@ -5,16 +5,19 @@
 R9 audited every source-authored stat modification in the calculator, including ordered
 `deriveUnitStats` writes, ability-emitted transforms, direct helper formulas, dynamic chance
 projection and resolution-time effective-stat transforms. Adjacent structured provenance now
-covers 172 formula IDs: 83 cite exact implementation ranges (and runtime-table assignments where
-loaded constants are used), while 89 are explicitly `UNVERIFIED` rather than presented as
+covers 242 formula IDs: 77 cite exact implementation ranges (and runtime-table assignments where
+loaded constants are used), while 165 are explicitly `UNVERIFIED` rather than presented as
 established behavior. R9-G1 retains those reconstruction gaps as live work.
 
-The durable `npm run provenance` audit mechanically discovers formula constructors and explicit
-direct-formula declarations, checks comment adjacency and uniqueness, resolves every cited path
-and narrow range, content-checks implementation gates/arithmetic and table assignments, reconciles
-the live gap count, and requires every Calculator JavaScript file to be formula-bearing, generated,
-or explicitly excluded. Focused tooling checks exercise discovery and the repository audit. R9
-changed provenance and enforcement only; calculator behavior is unchanged.
+The durable `npm run provenance` audit independently discovers formula constructors, base
+preparation writes, every editable stat-table case, literal and dynamic chance writes, dynamic
+ability emissions, resolution steps, and a reviewed direct-function inventory. It checks comment
+adjacency and uniqueness, resolves every cited path and narrow range, content-checks implementation
+gates/arithmetic and table assignments, binds each VERIFIED formula/version/source tuple to a
+reviewed source-content digest, reconciles the live gap count, and requires every Calculator
+JavaScript file to be formula-bearing, generated, or explicitly excluded. Focused negative checks
+cover omitted dynamic/table sites and wrong-but-code-shaped source substitutions. R9 changed
+provenance and enforcement only; calculator behavior is unchanged.
 
 ## 2026-08-08 -- R7.4 calculated-output modifier tooltips
 

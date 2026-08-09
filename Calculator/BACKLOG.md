@@ -92,7 +92,7 @@ R6.1a–R6.2f requires the affected reviewer to re-check it.
 
 | ID | Evidence gap | State | Cost | Strongest pointer |
 |---|---|---|---|---|
-| R9-G1 | Reconstruct or locate exact implementation gates and arithmetic for the `89` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | open | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
+| R9-G1 | Reconstruct or locate exact implementation gates and arithmetic for the `165` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | open | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
 
 ## Confirmed and suspected defects
 

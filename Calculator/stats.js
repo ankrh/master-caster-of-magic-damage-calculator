@@ -201,10 +201,20 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
 function applyLavaSmelterGrant(abilities, version, unitType) {
   if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;
   switch (abilities.lavaSmelter || 'none') {
+    // STAT-FORMULA[lavaSmelter:weaponImmunity]
+    // PROVENANCE[lavaSmelter:weaponImmunity]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair eligibility and granted immunity lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
     case 'weaponImmunity':  return { ...abilities, weaponImmunity: true };
+    // STAT-FORMULA[lavaSmelter:missileImmunity]
+    // PROVENANCE[lavaSmelter:missileImmunity]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair eligibility and granted immunity lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
     case 'missileImmunity': return { ...abilities, missileImmunity: true };
+    // STAT-FORMULA[lavaSmelter:flameBlade]
+    // PROVENANCE[lavaSmelter:flameBlade]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair eligibility and granted Flame Blade lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
     case 'flameBlade':      return { ...abilities, fieryBlade: true };
+    // STAT-FORMULA[lavaSmelter:resistElementsAlias]
+    // PROVENANCE[lavaSmelter:resistElementsAlias]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=Resist Elements selector alias lacks an exact current implementation gate/table range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
     case 'resistElem':
+    // STAT-FORMULA[lavaSmelter:elementalProtection]
+    // PROVENANCE[lavaSmelter:elementalProtection]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair gate and stronger-of-two elemental protection derivation lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
     case 'elementalArmor': {
       // Both the manual Elements selector and this grant share the elemArmor key; keep the
       // stronger of the two so the smelter never downgrades an explicit Elemental Armor.
@@ -730,6 +740,7 @@ function deriveUnitStats(input) {
     calcBaseDef += 4;
     calcBaseRes += 4;
     calcBaseHP *= 2;
+    // PROVENANCE[destiny]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=the permanent doubling/additive write lacks one narrow applicable implementation range with every arithmetic field; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     traceBasePreparation('destiny', 'Destiny', before, {
       atk: calcBaseAtk, rtb: calcBaseRtb, def: calcBaseDef,
       res: calcBaseRes, hp: calcBaseHP,
@@ -744,6 +755,7 @@ function deriveUnitStats(input) {
     calcBaseRtb = ccIndependentChannels
       ? calcBaseRtb + ccFireBreathStrength
       : ccFireBreathStrength;
+    // PROVENANCE[chaosChannels:fireBreath]: UNVERIFIED versions=all; gap=assignment-versus-addition behavior and channel ownership require exact DOS and modern implementation ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     traceBasePreparation('chaosChannels:fireBreath', 'Chaos Channels', before,
       { rtb: calcBaseRtb });
   }
@@ -752,6 +764,7 @@ function deriveUnitStats(input) {
   if (lightningBladeGrantsBreath) {
     const before = { rtb: calcBaseRtb };
     calcBaseRtb = 1;
+    // PROVENANCE[lightningBlade:breath]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=the creation gate and strength-1 assignment have not been matched to one narrow applicable implementation range; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     traceBasePreparation('lightningBlade:breath', 'Lightning Blade', before,
       { rtb: calcBaseRtb });
   }
@@ -794,6 +807,7 @@ function deriveUnitStats(input) {
     rangedType = 'magic_s';
     thrownType = 'none';
     calcBaseRtb = convertedStrength;
+    // PROVENANCE[focusMagic:conversion]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.6.2; gap=conversion eligibility and strength arithmetic differ across DOS and compiled modern implementations; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     traceBasePreparation('focusMagic:conversion', 'Focus Magic', before,
       { rtb: calcBaseRtb });
   }
@@ -810,6 +824,7 @@ function deriveUnitStats(input) {
     const before = { atk: calcBaseAtk, rtb: calcBaseRtb };
     calcBaseAtk += Math.max(0, calcBaseRtb - 1);
     calcBaseRtb = 1;
+    // PROVENANCE[vampirism:transfer]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=current Warlord implementation lines for the transfer arithmetic have not been located; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalc.CAS
     traceBasePreparation('vampirism:transfer', 'Vampirism', before,
       { atk: calcBaseAtk, rtb: calcBaseRtb });
   }
@@ -839,6 +854,7 @@ function deriveUnitStats(input) {
       calcBaseRtb = shadowStrikeBonus;
       shadowStrikeGrantedBaseRtb = shadowStrikeBonus;
     }
+    // PROVENANCE[shadowStrike:thrown]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=current Warlord implementation gate and created/boosted Thrown arithmetic have not been located; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalc.CAS
     traceBasePreparation('shadowStrike:thrown', 'Shadow Strike', before,
       { rtb: calcBaseRtb });
   }
@@ -1551,7 +1567,7 @@ function deriveUnitStats(input) {
     ...abilByPhase.b,
     // Fiery Fury: melee at UnitCalcPre.CAS:832-846, and the ranged half of what the bucket
     // model merged into one `Math.max` term — see the M4 note at `fbBladeRtb`.
-    // PROVENANCE[fieryFury]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS:832-844
+    // PROVENANCE[fieryFury]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=cited CAS range establishes the ranged Flame Blade branch but not this combined melee-plus-ranged arithmetic; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS
     statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', 'rtb'],
       apply: u => { u.atk += ffMeleeBonus; u.rtb += ffRtbMod; } }),
     // PROVENANCE[wallOfFire:garrison]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS:1635-1649
@@ -1661,7 +1677,7 @@ function deriveUnitStats(input) {
       } }),
     // Each of these carries the type-conditional half of an effect whose flat half is an
     // ability step above — hence the `:<what it writes>` suffix on the shared name.
-    // PROVENANCE[flameBlade:ranged]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1414-1424
+    // PROVENANCE[flameBlade:ranged]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=compiled gate/write is reconstructed but configured ranged/Thrown constants require both applicable runtime-table citations; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     statStep({ id: 'flameBlade:ranged', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += fbRtbMod; } }),
     // PROVENANCE[blazingMarch:ranged]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
@@ -1676,7 +1692,7 @@ function deriveUnitStats(input) {
     // PROVENANCE[landLinking:breath]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.6.2; sources=Reference docs/DOS reconstructed/unitcalc.c:723-731 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1491-1506
     statStep({ id: 'landLinking:breath', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += landLinkingBreathRtbMod; } }),
-    // PROVENANCE[giantStrength:thrown]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:441-450
+    // PROVENANCE[giantStrength:thrown]: UNVERIFIED versions=all; gap=DOS proof covers MoM/CP only while CoM 1 and compiled-modern/Warlord reachable executions lack complete implementation/table citations; pointer=Reference docs/DOS reconstructed/unitcalc.c
     statStep({ id: 'giantStrength:thrown', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += gsRtbMod; } }),
     // PROVENANCE[lionheart:rangedHp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.6.2; sources=Reference docs/DOS reconstructed/unitcalc.c:487-500 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1463-1478
@@ -1871,7 +1887,7 @@ function deriveUnitStats(input) {
         u.atk += u.def;
         u.def = 0;
       } }),
-    // PROVENANCE[beatOfSwiftness]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalc.CAS:1509-1514
+    // PROVENANCE[beatOfSwiftness]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=current CAS uses %R(defense/10) while calculator uses floor(defense*0.9), so the arithmetic is not established as identical; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalc.CAS
     statStep({ id: 'beatOfSwiftness', phase: 'd', writes: ['def'],
       when: () => !!(abilities && abilities.beatOfSwiftness),
       apply: u => { u.def = Math.floor(u.def * 0.9); } }),
@@ -2150,8 +2166,6 @@ function deriveUnitStats(input) {
     rtb: ['toHitRtb', 'displayToHitRtb'],
     block: ['toBlock', 'displayToBlock'],
   };
-  // STAT-FORMULA[chanceContributions]
-  // PROVENANCE[chanceContributions]: UNVERIFIED versions=all; gap=the dynamic ordered percentage-point projection aggregates multiple implementation formulas whose exact per-version ranges and table constants have not all been reconstructed; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
   const chanceContributions = [];
   let chanceSerial = 0;
   const statOrderById = new Map(statSteps.map((step, order) => [step.id, order]));
@@ -2166,10 +2180,13 @@ function deriveUnitStats(input) {
     addChanceContribution(id, source, phase, order, deltas);
   }
 
+  // PROVENANCE[chance:baseMelee]: UNVERIFIED versions=all; gap=base melee To-Hit initialization lacks exact applicable implementation ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:baseMelee', { id: 'baseToHitMelee', label: 'Base melee To Hit' },
     'base', -30, chanceFields.melee, baseToHitMod);
+  // PROVENANCE[chance:baseRtb]: UNVERIFIED versions=all; gap=base ranged/Thrown/Breath To-Hit initialization lacks exact applicable implementation ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:baseRtb', { id: 'baseToHitRtb', label: 'Base ranged/Thrown/Breath To Hit' },
     'base', -29, chanceFields.rtb, baseToHitRtbMod);
+  // PROVENANCE[chance:baseBlock]: UNVERIFIED versions=all; gap=base To-Block initialization lacks exact applicable implementation ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:baseBlock', { id: 'baseToBlock', label: 'Base To Block' },
     'base', -28, chanceFields.block, baseToBlkMod);
   for (const event of statTrace) {
@@ -2182,46 +2199,64 @@ function deriveUnitStats(input) {
     if (event.changes.toBlk) {
       for (const field of chanceFields.block) deltas[field] = event.changes.toBlk.delta;
     }
+    // STAT-FORMULA[chance:statTraceProjection]
+    // PROVENANCE[chance:statTraceProjection]: UNVERIFIED versions=all; gap=dynamic projection combines the independently cited source step with percentage fields and lacks one implementation range; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     addChanceContribution(`chance:${event.id}`, event.source, event.phase, event.order, deltas);
   }
+  // PROVENANCE[chance:outlanderXenoveterinary]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=To-Hit arithmetic needs its exact current Warlord gate/write range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS
   addChanceDelta('chance:outlanderXenoveterinary',
     { id: 'outlanderXenoveterinary', label: 'Xenoveterinary' }, 'b',
     orderOf('outlanderXenoveterinary', 0) + 0.1,
     [...chanceFields.melee, ...chanceFields.rtb], abilities.outlanderXenoveterinary ? 10 : 0);
+  // PROVENANCE[chance:uphillBattle]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS:1132-1143
   addChanceDelta('chance:uphillBattle', { id: 'uphillBattle', label: 'Uphill Battle' }, 'b',
     orderOf('uphillBattle', 900) + 0.1,
     [...chanceFields.melee, ...chanceFields.rtb, ...chanceFields.block], uphillBattlePct);
+  // PROVENANCE[chance:outlanderRadio:hit]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=Radio To-Hit gate/write range has not been matched; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS
   addChanceDelta('chance:outlanderRadio:hit', { id: 'outlanderRadio', label: 'Radio' }, 'b',
     orderOf('outlanderRadio', 920) + 0.1,
     [...chanceFields.melee, ...chanceFields.rtb], abilities.outlanderRadio ? 10 : 0);
+  // PROVENANCE[chance:outlanderRadio:block]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=Radio To-Defend gate/write range has not been matched; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS
   addChanceDelta('chance:outlanderRadio:block', { id: 'outlanderRadio', label: 'Radio' }, 'b',
     orderOf('outlanderRadio', 920) + 0.2, chanceFields.block, outlanderToDefendBonus);
+  // PROVENANCE[chance:outlanderBallisticsTraining]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=Ballistics Training ranged To-Hit gate/write range has not been matched; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalcPre.CAS
   addChanceDelta('chance:outlanderBallisticsTraining',
     { id: 'outlanderBallisticsTraining', label: 'Ballistics Training' }, 'b',
     orderOf('outlanderRadio', 920) + 0.3, chanceFields.rtb, outlanderRtbToHitBonus);
+  // PROVENANCE[chance:level]: UNVERIFIED versions=all; gap=level To-Hit arithmetic requires per-version implementation and runtime-table citations; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:level', { id: 'level', label: 'Experience level' }, 'c',
     orderOf('level', 0) + 0.1, [...chanceFields.melee, ...chanceFields.rtb], lvl.toHit);
+  // PROVENANCE[chance:weapon:melee]: UNVERIFIED versions=all; gap=weapon-material melee To-Hit arithmetic requires per-version implementation/table citations; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:weapon:melee', { id: 'weapon', label: 'Weapon material' }, 'c',
     orderOf('weapon', 10) + 0.1, chanceFields.melee, wpn.toHit);
+  // PROVENANCE[chance:weapon:rtb]: UNVERIFIED versions=all; gap=weapon-material ranged To-Hit arithmetic requires per-version implementation/table citations; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:weapon:rtb', { id: 'weapon', label: 'Weapon material' }, 'c',
     orderOf('weapon', 10) + 0.2, chanceFields.rtb, rtbToHitWpn);
+  // PROVENANCE[chance:holyWeapon:melee]: UNVERIFIED versions=all; gap=Holy Weapon melee To-Hit gate/write range has not been matched across engines; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:holyWeapon:melee', { id: 'holyWeapon', label: 'Holy Weapon' }, 'c',
     orderOf('weapon', 10) + 0.3, chanceFields.melee, hwMeleeToHit);
+  // PROVENANCE[chance:holyWeapon:rtb]: UNVERIFIED versions=all; gap=Holy Weapon ranged To-Hit gate/write range has not been matched across engines; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:holyWeapon:rtb', { id: 'holyWeapon', label: 'Holy Weapon' }, 'c',
     orderOf('weapon', 10) + 0.4, chanceFields.rtb, hwRtbToHit);
+  // PROVENANCE[chance:motherFungus]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=Mother Fungus To-Defend gate/write range has not been matched; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
   addChanceDelta('chance:motherFungus', { id: 'motherFungus', label: 'Mother Fungus' }, 'base',
     orderOf('motherFungus', 10) + 0.1, chanceFields.block, motherFungusToBlkBonus);
+  // PROVENANCE[chance:survivalInstinctToBlock]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.6.2; gap=To-Block gate/write requires complete DOS and modern ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:survivalInstinctToBlock',
     { id: 'survivalInstinctToBlock', label: 'Survival Instinct' }, 'c',
     orderOf('survivalInstinct', 100) + 0.1, chanceFields.block, survivalInstinctToBlkBonus);
+  // PROVENANCE[chance:trueSight:ranged]: UNVERIFIED versions=all; gap=True Sight ranged To-Hit gate/write range has not been matched across engines; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   addChanceDelta('chance:trueSight:ranged', { id: 'trueSight', label: 'True Sight' }, 'd',
     -10, chanceFields.rtb, trueSightRtbToHitBonus);
+  // PROVENANCE[chance:distancePenalty]: UNVERIFIED versions=all; gap=distance To-Hit penalty requires per-version implementation and runtime-table citations; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
   addChanceDelta('chance:distancePenalty', { id: 'distancePenalty', label: 'Range distance' },
     'resolution', -100, chanceFields.rtb, rtbDistPenalty);
 
   chanceContributions.sort((left, right) =>
     STEP_PHASE_RANK[left.phase] - STEP_PHASE_RANK[right.phase]
       || left.order - right.order || left.serial - right.serial);
+  // STAT-FORMULA[chance:dynamicProjection]
+  // PROVENANCE[chance:dynamicProjection]: UNVERIFIED versions=all; gap=dynamic application writes each collected delta and is not independently established by one implementation range; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
   const chanceSteps = chanceContributions.map(item => statStep({
     id: item.id, sourceId: item.source.id, sourceLabel: item.source.label,
     phase: item.phase, writes: Object.keys(item.deltas),
