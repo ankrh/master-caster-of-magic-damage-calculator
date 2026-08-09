@@ -22,6 +22,10 @@ not depend on memory or prose summaries.
   preference. New runs use GPT-5.6 Sol at High for the orchestrating main agent and for both
   independent implementation/review subagents. Historical records preserve their actual
   configurations.
+- A method-2 selection does not authorize branches. Before creating its two temporary branches,
+  the orchestrator must explain why they are necessary, give their exact names/paths and cleanup
+  plan, and receive explicit user approval. New runs integrate to `main` and remove all temporary
+  branches/worktrees before completion; historical branch records remain unchanged.
 - The orchestrator is not a third implementation competitor. Its coordination, integration and
   final-verification timing is recorded separately from the two subagent implementation totals.
 - A task's `initial winner` is a comparison of the two initial implementations only. The
@@ -352,7 +356,7 @@ evidence is not lost.
 | Date | `<YYYY-MM-DD>` |
 | Time zone | `<zone and offset>` |
 | Frozen base | `<commit>` |
-| Integration branch | `<branch>` |
+| Integration branch | `main` |
 | Final integration commit | `<commit>` |
 | Initial winner | `<agent and reason>` |
 | Integration choice | `<agent/material selected and reason>` |

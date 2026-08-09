@@ -52,7 +52,7 @@ Start the no-cache server before the first Playwright navigation — the browser
 python tools/nocache_server.py --port 8080        # run_in_background
 (Invoke-WebRequest http://127.0.0.1:8080/ -UseBasicParsing).StatusCode
 
-# For an isolated agent worktree, use its assigned port instead:
+# For a user-approved isolated agent worktree, use its assigned port instead:
 python tools/nocache_server.py --port 8081        # Sol High A example
 (Invoke-WebRequest http://127.0.0.1:8081/ -UseBasicParsing).StatusCode
 ```

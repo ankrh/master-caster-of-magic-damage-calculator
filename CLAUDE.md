@@ -14,6 +14,16 @@ everything outstanding, whatever kind of work it is and wherever its evidence li
 relevant spec before changing behaviour, and update it in the same change. This file
 holds only what applies across both deliverables.
 
+## Git topology
+
+`main` is the default and final home for all agent work. Before creating any branch, an agent must
+explain to the user why it is necessary, identify the exact proposed branch/worktree names and
+cleanup plan, and receive explicit approval. Task authorization and protocol selection do not
+imply branch authorization. Approved temporary work must be integrated into `main` and its
+branches/worktrees removed before the agent reports completion, unless the user explicitly asks
+to retain a named branch. Agent-created uncommitted work must also be resolved; unrelated user
+changes remain untouched. See `AGENTS.md` for the mandatory approval gate.
+
 **One rule for the register.** Docs under `Reference docs/` own findings, evidence and immutable
 provenance; `Calculator/BACKLOG.md` is the **only** home for live calculator-work state and concise
 unresolved question statements — IDs, open/blocked/ready/pending-review state, review gates, cost

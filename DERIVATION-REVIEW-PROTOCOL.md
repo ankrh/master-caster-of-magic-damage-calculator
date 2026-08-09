@@ -15,11 +15,26 @@ produces competing executable changes. Current-agent implementation plus review/
 one executable change which a Sol High subagent checks and improves, not a second implementation.
 Never substitute one method's completion gate for another's.
 
+## Branch approval applies to every method
+
+All work starts and finishes on `main`. No method in this document authorizes branch creation by
+itself. Before an agent creates any branch, it must explain why isolation cannot be achieved on
+`main`, list the exact proposed branch and worktree names and its cleanup plan, and receive the
+user's explicit approval. Selecting method 2, requesting multiple agents, or recording a method-2
+preference in the backlog is **not** branch approval.
+
+Methods 1 and 3 do not normally require branches and must run on `main`. Method 2 requires two
+temporary branches for independent writable worktrees, so after method 2 is selected the
+orchestrator must separately explain that necessity and ask permission before setup. Every
+approved temporary branch must be integrated into `main` and deleted, with its worktree removed,
+before the task is reported complete unless the user explicitly asks to retain a named branch.
+Never create or leave a separate integration branch.
+
 For implementation work, the user's explicit request overrides a backlog preference. If neither
 the request nor the backlog row selects method 2 or method 3, stop and ask which method to use
-before reading implementation code or creating a worktree. Neither implementation method is a
-default. If a required agent, model or effort is unavailable, stop and tell the user; never
-silently substitute another configuration.
+before reading implementation code. Neither implementation method is a default. Method selection
+and branch approval are separate gates. If a required agent, model or effort is unavailable, stop
+and tell the user; never silently substitute another configuration.
 
 ## Method 1 — Claude and Codex reconstruct binaries independently
 
@@ -105,19 +120,23 @@ throughout the run so their branches, artifacts and timing remain distinct. The 
 retain the task context for orchestration, but it must not leak one subagent's implementation or
 review into the other subagent's cold first pass.
 
-### Worktree and branch isolation
+### User-approved worktree and branch isolation
 
-Separate worktrees are mandatory, not optional. Before either subagent reads implementation code:
+Separate writable worktrees are mandatory for method 2, so its two temporary branches require the
+separate user approval above. Before either subagent reads implementation code:
 
-1. Require the intended base branch to be clean and record its exact commit hash.
-2. Freeze one task packet: backlog ID and text, relevant specs and instructions, acceptance
+1. Explain why two branches are necessary for independent writable worktrees; give the exact two
+   proposed branch names, absolute worktree paths, `main` base commit, and cleanup plan. Ask the
+   user for explicit approval and stop until it is granted.
+2. Require `main` to be clean and record its exact commit hash.
+3. Freeze one task packet: backlog ID and text, relevant specs and instructions, acceptance
    criteria, permitted scope, required tests, base commit, branch name and absolute worktree path.
    Give the identical substantive packet to both subagents.
-3. Create independent `codex/<ID>-sol-high-a` and `codex/<ID>-sol-high-b` branches and worktrees at
-   that base. Reserve the primary checkout, or a third clean worktree, for orchestration and
-   integration.
-4. Record a dispatch timestamp for each subagent immediately before its implementation starts.
-5. Assign an isolated test-server port to every checkout and include it in the task packet.
+4. Only after approval, create independent `codex/<ID>-sol-high-a` and
+   `codex/<ID>-sol-high-b` branches and worktrees at that base. Reserve the primary `main`
+   checkout for orchestration and integration; do not create an integration branch.
+5. Record a dispatch timestamp for each subagent immediately before its implementation starts.
+6. Assign an isolated test-server port to every checkout and include it in the task packet.
 
 Each subagent edits and commits only in its assigned worktree. It must not open, search, diff or
 otherwise inspect the other subagent's worktree or branch until both initial implementations are
@@ -206,21 +225,24 @@ the frozen acceptance criteria. It may select either implementation or combine e
 but it must state why the chosen result is stronger; being the orchestrator or running at High does
 not give either subagent a presumption of correctness.
 
-Perform integration on a clean branch/worktree based on the frozen commit. Do not merge both
-branches mechanically. Apply only the selected changes, reconcile their specifications and tests,
-and run the complete applicable test suite. The item closes only when:
+Perform integration directly in the clean `main` checkout based on the frozen commit. Do not
+create an integration branch and do not merge both temporary branches mechanically. Apply only the
+selected changes, reconcile their specifications and tests, and run the complete applicable test
+suite. The item closes only when:
 
 - the integrated implementation satisfies every acceptance criterion;
 - all required tests pass in the integration worktree;
 - the specification, backlog and history are updated consistently;
 - surviving review disputes are reported to AKH rather than silently discarded; and
-- the integrated result is committed locally on the intended branch without pushing.
+- the integrated result is committed locally on `main` without pushing.
 
-Cleanup happens only after the final commit is verified and reachable from the intended branch.
+Cleanup happens only after the final commit is verified and reachable from `main`.
 Record the temporary branch tips, remove the exact temporary worktrees, delete their temporary
-branches, clear the two review artifacts, and confirm that the intended worktree is clean. Never
-push as part of this protocol. Before cleanup, verify that every temporary server PID has exited
-and every assigned temporary port is free.
+branches, clear the two review artifacts, and confirm that the primary worktree is clean on
+`main`. This cleanup is part of completion, not a follow-up for the user; if it cannot be completed,
+stop and report the blocker instead of declaring the task complete. Never push as part of this
+protocol. Before cleanup, verify that every temporary server PID has exited and every assigned
+temporary port is free.
 
 ### Required end-of-task comparison
 
@@ -257,11 +279,11 @@ confidence or speed alone.
 Use this method only when the user requests it or the backlog item records that preference. It does
 not authorize binary reconstruction.
 
-1. **The current agent implements.** Regardless of its model, the active agent reads the backlog
-   item and relevant project instructions, implements the complete task in the current checkout,
+1. **The current agent implements on `main`.** Regardless of its model, the active agent first
+   ensures the primary checkout is on `main`, then reads the backlog item and relevant
+   project instructions, implements the complete task in that checkout,
    updates its specification and tests where required, and runs the applicable checks. Existing
-   unrelated worktree changes are preserved; this method has no clean-base, separate-worktree,
-   branch, commit, timing, or server-isolation gate.
+   unrelated changes are preserved; this method creates no branch or separate worktree.
 2. **One Sol High subagent reviews and revises.** After the current agent's implementation is ready,
    it spawns one Codex GPT-5.6 Sol High subagent at High effort. That subagent reviews the complete
    task against the backlog text, evidence, specification, implementation and tests, then directly
