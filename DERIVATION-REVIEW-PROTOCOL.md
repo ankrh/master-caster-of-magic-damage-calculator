@@ -36,10 +36,10 @@ The standard implementation configuration for new implementation-mode runs is:
 |---|---|
 | Main agent, orchestrator and final integrator | GPT-5.6 Sol, High |
 | Subagent A, independent implementer and reciprocal reviewer | GPT-5.6 Sol, High |
-| Subagent B, independent implementer and reciprocal reviewer | GPT-5.6 Sol, Medium |
+| Subagent B, independent implementer and reciprocal reviewer | GPT-5.6 Sol, Xhigh |
 
 This configuration is intentional: the orchestrator runs Sol at High, while the independent
-implementations compare Sol at High against Sol at Medium. The orchestrator is not a third
+implementations compare Sol at High against Sol at Xhigh. The orchestrator is not a third
 implementation competitor and must not pre-implement the backlog item before the two subagents'
 initial commits. Historical benchmark records retain the model and effort that actually ran and
 are not rewritten to match this new default.
@@ -58,7 +58,7 @@ Separate worktrees are mandatory, not optional. Before either subagent reads imp
 2. Freeze one task packet: backlog ID and text, relevant specs and instructions, acceptance
    criteria, permitted scope, required tests, base commit, branch name and absolute worktree path.
    Give the identical substantive packet to both subagents.
-3. Create independent `codex/<ID>-sol-high` and `codex/<ID>-sol-medium` branches and worktrees at
+3. Create independent `codex/<ID>-sol-high` and `codex/<ID>-sol-xhigh` branches and worktrees at
    that base. Reserve the primary checkout, or a third clean worktree, for orchestration and
    integration.
 4. Record a dispatch timestamp for each subagent immediately before its implementation starts.
@@ -99,7 +99,7 @@ The default local server assignment is:
 |---|---:|---|
 | Primary integration checkout | 8080 | Final integration and ordinary manual work |
 | Sol High implementation worktree | 8081 | Sol High's Playwright/manual browser work |
-| Sol Medium implementation worktree | 8082 | Sol Medium's Playwright/manual browser work |
+| Sol Xhigh implementation worktree | 8082 | Sol Xhigh's Playwright/manual browser work |
 
 Verify each assigned port is free before dispatch. If one is occupied, choose and record another
 free port before starting the subagent. Run Playwright with `PLAYWRIGHT_PORT=<assigned-port>` and
@@ -131,8 +131,8 @@ review artifact in the primary checkout:
 
 | File | Subject | Written by | Owned after writing by |
 |---|---|---|---|
-| `.reviews/<ID>.review-of-sol-high.md` | Sol High implementation | Sol Medium | Sol High |
-| `.reviews/<ID>.review-of-sol-medium.md` | Sol Medium implementation | Sol High | Sol Medium |
+| `.reviews/<ID>.review-of-sol-high.md` | Sol High implementation | Sol Xhigh | Sol High |
+| `.reviews/<ID>.review-of-sol-xhigh.md` | Sol Xhigh implementation | Sol High | Sol Xhigh |
 
 The reviewer writes its artifact in one pass and never edits it again. Findings must identify the
 affected file and line or symbol, explain the observable failure or maintainability risk, and give
