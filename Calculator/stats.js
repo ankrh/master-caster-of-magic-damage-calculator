@@ -151,15 +151,15 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     && sourceTemplateId === 113);
 
   const identitySteps = [
-    // PROVENANCE[identity:zombies]: UNVERIFIED versions=com_6.08; gap=the checked-in constructor proves the Zombies type gate and generic type-table copy separately but has no narrow implementation range containing the Fantastic table value and write; pointer=Reference docs/DOS reconstructed/unitcalc.c:1625-1703
+    // PROVENANCE[identity:zombies]: UNVERIFIED versions=com_6.08; gap=the checked-in BU_Construct range proves the Zombies gate and generic type-table copy, but the COM1_UT_ZOMBIES type 0xAE/174 ability-row byte extent containing Fantastic is not recorded and requires separate independent reconstruction; pointer=Reference docs/DOS reconstructed/unitcalc.c:1625-1703
     statStep({ id: 'identity:zombies', phase: 'base', writes: ['fantastic'],
       when: () => isCoM1 && identity.specialUnit === 'zombies',
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[identity:com1ConstructCatapult]: UNVERIFIED versions=com_6.08; gap=the CoM1 combat-summon identity-write routine is not reconstructed in the repository; pointer=Reference docs/DOS reconstructed/combat.c
+    // PROVENANCE[identity:com1ConstructCatapult]: UNVERIFIED versions=com_6.08; gap=the CoM1 combat-summon identity tail at 0x75D51-0x75D71 is not reconstructed in the repository; pointer=Reference docs/DOS reconstructed/combat.c
     statStep({ id: 'identity:com1ConstructCatapult', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[identity:com1SummonBranch]: UNVERIFIED versions=com_6.08; gap=the CoM1 combat-summon identity-write routine is not reconstructed and the template-28 Life rewrite needs separate independent reconstruction; pointer=Reference docs/DOS reconstructed/combat.c
+    // PROVENANCE[identity:com1SummonBranch]: UNVERIFIED versions=com_6.08; gap=the CoM1 combat-summon identity tail at 0x75D51-0x75D71 is not reconstructed and its template-28 Life rewrite needs separate independent reconstruction; pointer=Reference docs/DOS reconstructed/combat.c
     statStep({ id: 'identity:com1SummonBranch', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1SummonBranch,
       apply: u => { u.race = sourceTemplateId === 54 ? 'Nature' : 'Life'; u.fantastic = true; } }),
@@ -171,15 +171,15 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     statStep({ id: 'identity:chosen', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && identity.specialUnit === 'chosen',
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[identity:constructCatapult]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=the modern CombatSummonUnit race-write routine is not reconstructed in the repository and the two shipped spell tables disagree on realm; pointer=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI:615-626
+    // PROVENANCE[identity:constructCatapult]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=Caster.exe @Spells@CombatSummonUnit identity prefix 0x5CBEE0-0x5CC066 is not reconstructed, and Warlord enables Water Elemental in slot 12 while its custom Catapult entry is disabled; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/SPELLS.INI:901-915
     statStep({ id: 'identity:constructCatapult', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[identity:callToArmsPaladins]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=the modern CombatSummonUnit race-write routine is not reconstructed and Warlord's corresponding spell summons template 211 rather than 113; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/SPELLS.INI:3024-3035
+    // PROVENANCE[identity:callToArmsPaladins]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=Caster.exe @Spells@CombatSummonUnit identity prefix 0x5CBEE0-0x5CC066 is not reconstructed and Warlord's corresponding spell summons template 211 rather than 113; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/SPELLS.INI:3024-3035
     statStep({ id: 'identity:callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[identity:legacyConversions]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:legacyConversions]: UNVERIFIED versions=all; gap=wrapper delegates every write to the still-UNVERIFIED legacyUnitTypeConversions direct helper owned by R9-G1g; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     statStep({ id: 'identity:legacyConversions', phase: 'a', writes: ['race', 'fantastic'],
       apply: u => applyLiveUnitType(u, determineEffectiveUnitType(legacyUnitTypeFromLiveIdentity(u), abilities, version)) }),
     // PROVENANCE[identity:spiritLink]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/UnitCalc.CAS:1306-1306
@@ -202,13 +202,13 @@ function applyLavaSmelterGrant(abilities, version, unitType) {
   if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;
   switch (abilities.lavaSmelter || 'none') {
     // STAT-FORMULA[lavaSmelter:weaponImmunity]
-    // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-492 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-527
+    // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-492 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-527
     case 'weaponImmunity':  return { ...abilities, weaponImmunity: true };
     // STAT-FORMULA[lavaSmelter:missileImmunity]
-    // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-493 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-533
+    // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-493 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-533
     case 'missileImmunity': return { ...abilities, missileImmunity: true };
     // STAT-FORMULA[lavaSmelter:flameBlade]
-    // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-496 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-551
+    // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-496 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:464-503 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-551
     case 'flameBlade':      return { ...abilities, fieryBlade: true };
     // STAT-FORMULA[lavaSmelter:resistElementsAlias]
     // PROVENANCE[lavaSmelter:resistElementsAlias]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=current CAS stores Resist Elements independently but the one-key selector suppresses it when Elemental Armor is already selected; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-495

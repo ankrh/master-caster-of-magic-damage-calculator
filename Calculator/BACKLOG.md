@@ -34,7 +34,7 @@ reciprocal review, and final integration.
 | ID | Evidence gap / fixed formula domain | Cost | Mode | Strongest pointer / dependency |
 |---|---|---|---|---|
 | R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `165` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | Tracking only | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
-| R9-G1a | Close the remaining `8` identity and creation-grant gaps: six `identity:*` formulas and the two compressed elemental-protection `lavaSmelter:*` formulas still marked `UNVERIFIED` beside the helpers. | medium | **Dual-agent implementation** | `stats.js`; the four combat-summon realm formulas require separate independent reconstruction, Zombies needs a narrow table-to-write implementation range, legacy conversions need an all-version composite audit, and the elemental grants depend on F56 |
+| R9-G1a | Close the remaining `8` identity and creation-grant gaps: six `identity:*` formulas and the two compressed elemental-protection `lavaSmelter:*` formulas still marked `UNVERIFIED` beside the helpers. | medium | **Dual-agent implementation** | `stats.js`; CoM1 summon identities need `0x75D51-0x75D71`, modern spell-result identities need `@Spells@CombatSummonUnit` `0x5CBEE0-0x5CC066`, Zombies needs the unbounded type-`0xAE` ability row, legacy conversions depend on R9-G1g, and elemental grants depend on M6 |
 | R9-G1b | Close the `6` base/permanent-transform gaps: `destiny`, `chaosChannels:fireBreath`, `lightningBlade:breath`, `focusMagic:conversion`, `vampirism:transfer`, and `shadowStrike:thrown`. | medium | **Dual-agent implementation** | `stats.js`, base/permanent transform sequence; adjacent strongest pointers |
 | R9-G1c | Close the `29` late unit-transform gaps from `stat:base` through `giantStrength:thrown`, inclusive, in the ordered stat-step sequence. | large | **Dual-agent implementation** | `stats.js`, late stat transforms; adjacent strongest pointers |
 | R9-G1d | Close the `14` non-chance tail gaps: the twelve formulas from `nodeAura` through `clamp`, inclusive, plus `altarOfTheSun:figures` and `alumniOfAcademy:figures`. | medium | **Dual-agent implementation** | `stats.js`, late/global and figure transforms; adjacent strongest pointers |
@@ -91,9 +91,8 @@ reciprocal review, and final integration.
 | F51 | Add a CoM 1 Realm Ward city-enchantment input and transform: a matching Nature/Sorcery/Chaos/Life/Death Fantastic unit loses 20% To Hit, 3 Defense and 3 Resistance. | small | R6.1d evidence, *CoM 1 Realm Wards use −2/−3/−3*; absent from `data.js`/stat steps; Q19 |
 | F52 | Split CoM 1 Supreme Light eligibility from the modern helper and reproduce its five binary paths (live magical ranged, Life race, mana, persistent Focus Magic, or base magical ranged), unconditional +2 melee, positive-ranged gate, and signed live-Resistance division. | medium | R6.1d evidence, *CoM 1 Supreme Light has five eligibility paths*; `combat.js:78-82`, `stats.js:1018-1023,1454-1462` |
 | F53 | Use signed truncate-toward-zero division for CoM 1 Warped Defense instead of `Math.floor`; negative pre-Warp Defense can receive later Supreme Light/Tactician writes before the terminal clamp. | small | R6.1d evidence, *Warp Creature and Shatter expose both arithmetic and ordering differences*; `stats.js:1428-1431` |
-| F54 | Make Warlord Construct Catapult use its shipped Arcane-realm spell result rather than the base-CoM2 Nature rewrite. | small | Warlord `SPELLS.INI:4668-4679` has `Realm=6` and `SummonedUnit=37`; modern combat-summon race flow still requires separate independent reconstruction |
+| F54 | Version-gate or remove the Warlord Construct Catapult Nature rewrite unless a separate reconstruction proves another reachable creation path. Warlord's enabled slot 12 summons Water Elemental; its custom Arcane Catapult entry is disabled. | small | Warlord `SPELLS.INI:901-915,4666-4683`; modern combat-summon race flow still requires separate independent reconstruction |
 | F55 | Replace or version-gate the Warlord Call to Arms Paladins condition: Warlord's corresponding Spirit of Chivalry spell summons template 211, not Paladins template 113. | small | base CoM2 `SPELLS.INI:2690-2701`; Warlord `SPELLS.INI:3024-3035`; modern combat-summon race flow still requires separate independent reconstruction |
-| F56 | Represent Resist Elements and Elemental Armor as independent flags so a Lava Smelter grant does not suppress the other protection already carried by the unit. | medium | Warlord `CreateUnit.CAS:492-496` and `OverlandEndTurn.CAS:537-545` write both independently; `Combat.ResolutionHelpers.pas:193-196` applies both independently; current `elemArmor` merge keeps only one |
 
 ## Engine verification
 
@@ -118,7 +117,7 @@ Accepted limitations remain in `SPEC.md`; only planned changes appear here.
 | ID | Upcoming task |
 |---|---|
 | M3 | Implement the older-engine Destruction path, including elemental protection. Present in all three DOS builds but hero-only, so it stays unreachable until heroes are modelled; 1.31 adds the defender's per-figure hits where CoM 1 adds a flat 100. |
-| M6 | Represent all simultaneous Lava Smelter mineral-pair grants. |
+| M6 | Represent all simultaneous Lava Smelter mineral-pair grants as independent ability/enchantment flags, including coexisting Resist Elements and Elemental Armor; the scripts write both independently and the compiled resolution helper applies both. |
 
 ## Open questions
 

@@ -9,14 +9,15 @@ paths. Their version metadata now names only the engines covered by those implem
 reviewed anchor manifest binds every source range and runtime table assignment. The live R9-G1
 reconciliation is now 82 VERIFIED and 165 UNVERIFIED formulas.
 
-Eight formulas remain live. The four combat-summon realm conversions require separate independent
-reconstruction of the modern and CoM1 creation routines; Zombies lacks one narrow checked-in range
-joining its template constant to the Fantastic write; and the all-version legacy-conversion
-composition is broader than the checked-in evidence supports. The two elemental Lava Smelter
+Eight formulas remain live. The CoM1 summon identities require separate reconstruction of
+`0x75D51-0x75D71`, and the modern spell-result identities require the `@Spells@CombatSummonUnit`
+prefix `0x5CBEE0-0x5CC066`. Zombies lacks the unbounded CoM1 type-`0xAE` ability row joining its
+template constant to the Fantastic write; separately bounding that row is prohibited in this pass.
+The legacy wrapper depends on the R9-G1g-owned `legacyUnitTypeConversions` helper. The two elemental Lava Smelter
 formulas remain unverified because the scripts and compiled resolution helper keep Resist Elements
 and Elemental Armor as independent, stacking flags while the calculator compresses them into one
-stronger-only selector. F54-F56 record the resulting Warlord spell-table and elemental-state
-defects. Calculator behavior is unchanged.
+stronger-only selector. F54-F55 record the spell-table mismatches, while the existing M6 owns the
+simultaneous elemental-state model. Calculator behavior is unchanged.
 
 ## 2026-08-09 -- R9 enforceable stat-formula provenance
 
