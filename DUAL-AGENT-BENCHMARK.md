@@ -1279,3 +1279,119 @@ Sol High used Python server PIDs 19260 initially and 884 during revision; Sol Xh
 `C:\CoM2-r9-g1a-sol-high` and `C:\CoM2-r9-g1a-sol-xhigh` were validated and removed; temporary
 branches were deleted; and both resolved review artifacts were cleared. `git worktree list`
 contains only the primary checkout. Nothing was pushed.
+
+## Task F22 -- Modern Blood Lust Thrown resolution
+
+### Run metadata
+
+| Field | Value |
+|---|---|
+| Task | F22 -- apply modern Blood Lust doubling to Thrown as well as melee at the resolution boundary |
+| Date | 2026-08-09 |
+| Time zone | Europe/Copenhagen (`+02:00`) |
+| Frozen base | `b844423c39331922e71f18c076aba6d298f3f82b` |
+| Integration branch | `codex/F22-integration` (a separate clean worktree preserved pre-existing edits in the primary checkout) |
+| Final implementation commit | `4225c9a3b175aff5b6bd7bf66403192bfd37c182` |
+| Temporary tips | Sol High `6c7e3e4afa1ba2e80028fa7d7f4f63bc22be5dba`; Sol Xhigh `82f36133688605399bd6618724566202cfdcc950` |
+| Models | Orchestrator GPT-5.6 Sol High; implementer/reviewer A GPT-5.6 Sol High; implementer/reviewer B GPT-5.6 Sol Xhigh |
+| Ports | Integration 8080; Sol High 8081; Sol Xhigh 8082 |
+| Initial winner | Sol Xhigh, narrowly: equivalent production behavior plus deterministic phase-level checks for both modern versions, excluded channels, derived-record preservation and cross-channel leakage |
+| Most useful review | Sol Xhigh's review of High, because it independently reran all three required suites and mapped the broader UI preset matrix to every acceptance exclusion; both reviews found no defect |
+| Strongest revised result | Sol Xhigh; neither review required a source revision, and its branch retained the established provenance ID while supplying the stronger low-level boundary coverage |
+| Integration | Sol Xhigh supplied the base; Sol High materially supplied five additional UI exclusion presets and the explicit CoM1/CoM2 version-difference pair |
+| Push | None |
+
+### Subagent timing
+
+Parallel durations are reported separately and are not summed as end-to-end time. Both agents
+reported zero waiting or blocked time.
+
+| Agent | Stage | Start | End | Active elapsed | Waiting / blocked |
+|---|---|---|---|---:|---:|
+| Sol High | Initial implementation | `2026-08-09T22:38:05.8677395+02:00` | `2026-08-09T22:47:47.9443310+02:00` | `582.046s` | `0s` |
+| Sol High | Reciprocal review | `2026-08-09T22:58:39.2027338+02:00` | `2026-08-09T22:59:57.4010904+02:00` | `78.175s` | `0s` |
+| Sol High | Review-driven revision | `2026-08-09T23:05:04.7375909+02:00` | `2026-08-09T23:07:22.1735764+02:00` | `137.435s` | `0s` |
+| Sol High | Active total | -- | -- | `797.656s` | `0s` |
+| Sol Xhigh | Initial implementation | `2026-08-09T22:38:17.9837827+02:00` | `2026-08-09T22:57:02.9306323+02:00` | `1124.915s` | `0s` |
+| Sol Xhigh | Reciprocal review | `2026-08-09T22:58:49.3450252+02:00` | `2026-08-09T23:03:33.3446104+02:00` | `283.991s` | `0s` |
+| Sol Xhigh | Review-driven revision | `2026-08-09T23:05:13.9170396+02:00` | `2026-08-09T23:10:15.4500242+02:00` | `301.548s` | `0s` |
+| Sol Xhigh | Active total | -- | -- | `1710.454s` | `0s` |
+
+### Per-agent verification timing
+
+| Agent / phase | Suite | Result | Elapsed |
+|---|---|---:|---:|
+| Sol High initial, final exact tree | Node unit checks | 9,692/9,692 | `0.318s` |
+| Sol High initial, final exact tree | Provenance audit/tooling | 247 formulas; 10 assertions | `1.878s` |
+| Sol High initial, final exact tree | Full Playwright, port 8081 | 57/57 | `62.461s` |
+| Sol High review | Independent review verification | Node, provenance and 57/57 Playwright passed | included in `78.175s` review block |
+| Sol High revision | Node / provenance / Playwright | 9,692; 247 + 10; 57/57 | `0.188s` / `1.014s` / `76.024s` |
+| Sol Xhigh initial | Node unit checks | 9,702/9,702 | `0.319s` |
+| Sol Xhigh initial | Provenance audit/tooling | 247 formulas; 10 assertions | `1.123s` |
+| Sol Xhigh initial | Focused browser preset regression | four F22 presets passed | `1.943s` |
+| Sol Xhigh initial | Full Playwright, port 8082 | 57/57 | `59.319s` |
+| Sol Xhigh review | Independent review verification | Node 9,692; provenance; 57/57 Playwright | included in `283.991s` review block |
+| Sol Xhigh revision | Node / provenance / definitive Playwright | 9,702; 247 + 10; 57/57 | `0.246s` / `1.102s` / `54.512s` |
+
+Each fresh implementation worktree initially lacked Playwright dependencies. The first `npm test`
+launch stopped before testing; each agent installed the lockfile dependencies and then completed
+the isolated suite with `PLAYWRIGHT_REUSE_EXISTING` unset. High also corrected one malformed
+provenance-comment attempt. Xhigh's fixture development exposed and corrected a test setup that
+had skipped the current identity/initiation boundary; no implementation defect survived to its
+initial commit.
+
+### Comparison and reciprocal review
+
+Both agents independently selected the same production shape: choose the current attack channel,
+apply Blood Lust to a shallow per-phase attacker only when the attack is melee or modern Thrown,
+and leave the finished unit and later channels untouched. Both preserved CoM 1's melee-only rule,
+the non-Fantastic target gate, and the conventional-ranged, Breath and gaze exclusions.
+
+Sol High's initial result had the broader UI-path matrix: separate presets for both modern
+versions, the CoM 1 split, Fantastic targets, physical and magical ranged, both Breaths and Doom
+Gaze. Sol Xhigh's initial result was stronger overall because its deterministic Node checks also
+asserted the unchanged derived Thrown record and absence of cross-channel leakage, while retaining
+focused UI presets and the established `bloodLustMeleeAttack` provenance identity. Neither
+reciprocal review found a defect, so both post-review commits were intentionally empty verification
+commits. No review dispute survived.
+
+Integration used Sol Xhigh's production code, precise tooltip, history/backlog wording and Node
+checks, then added Sol High's five extra UI exclusion presets and its version-difference grouping.
+No mechanical merge of both branches was performed.
+
+### Integration and final verification
+
+| Final suite | Result | Start | End | Elapsed |
+|---|---:|---|---|---:|
+| Node unit checks | 9,702/9,702 | `2026-08-09T23:12:29.9296724+02:00` | `2026-08-09T23:12:30.5186916+02:00` | `0.589s` |
+| Provenance audit/tooling | 247 total; 82 verified; 165 unverified; 10 assertions | `2026-08-09T23:12:30.5186916+02:00` | `2026-08-09T23:12:31.4595817+02:00` | `0.941s` |
+| Full Playwright, integration port 8080 | 57/57 | `2026-08-09T23:12:38.2907207+02:00` | completion observed by `2026-08-09T23:13:40.7105610+02:00` | runner reported `54.3s` |
+| `git diff --check` | pass | after the final suites | before commit `4225c9a` | exact elapsed not recorded |
+
+`PLAYWRIGHT_REUSE_EXISTING` was absent. Integration server PID 14900 was observed listening at
+`2026-08-09T23:12:52.2974804+02:00`; it exited with the suite, and ports 8080-8082 were free at
+`2026-08-09T23:13:40.7105610+02:00`.
+
+### Orchestrator timing and cleanup
+
+- Worktree creation completed at `2026-08-09T22:37:24.0011857+02:00`.
+- Implementation dispatch/start: Sol High `2026-08-09T22:38:05.8677395+02:00`; Sol Xhigh
+  `2026-08-09T22:38:17.9837827+02:00`.
+- Reciprocal-review handoff/start: Sol High `2026-08-09T22:58:39.2027338+02:00`; Sol Xhigh
+  `2026-08-09T22:58:49.3450252+02:00`.
+- Review-driven revision handoff/start: Sol High `2026-08-09T23:05:04.7375909+02:00`; Sol Xhigh
+  `2026-08-09T23:05:13.9170396+02:00`.
+- Exact integration-comparison start was not recorded. Final verification began at
+  `2026-08-09T23:12:27.3590177+02:00`; implementation commit `4225c9a` was ready at
+  `2026-08-09T23:14:02.3890938+02:00`.
+- Temporary cleanup completed at `2026-08-09T23:15:42.4672951+02:00`.
+- First-dispatch-through-cleanup wall span: `2256.600s` (`37m36.600s`).
+- Final-verification-through-cleanup wall span: `195.108s` (`3m15.108s`).
+- Exact orchestrator active coordination and waiting time were not separately recorded. These wall
+  spans include waits for parallel work and are not implementation throughput.
+
+Before cleanup, both temporary worktrees were clean at the recorded tips, their exact targets
+`C:\CoM2-worktrees\F22-sol-high` and `C:\CoM2-worktrees\F22-sol-xhigh` were resolved and
+validated, all assigned ports were free, and the integration commit was reachable. The worktrees
+and temporary branches were removed, and both no-finding review artifacts were cleared. The
+primary checkout's pre-existing edits remained untouched. Nothing was pushed.
