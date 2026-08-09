@@ -151,31 +151,31 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     && sourceTemplateId === 113);
 
   const identitySteps = [
-    // PROVENANCE[identity:zombies]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:zombies]: UNVERIFIED versions=com_6.08; gap=the checked-in constructor proves the Zombies type gate and generic type-table copy separately but has no narrow implementation range containing the Fantastic table value and write; pointer=Reference docs/DOS reconstructed/unitcalc.c:1625-1703
     statStep({ id: 'identity:zombies', phase: 'base', writes: ['fantastic'],
       when: () => isCoM1 && identity.specialUnit === 'zombies',
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[identity:com1ConstructCatapult]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:com1ConstructCatapult]: UNVERIFIED versions=com_6.08; gap=the CoM1 combat-summon identity-write routine is not reconstructed in the repository; pointer=Reference docs/DOS reconstructed/combat.c
     statStep({ id: 'identity:com1ConstructCatapult', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[identity:com1SummonBranch]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:com1SummonBranch]: UNVERIFIED versions=com_6.08; gap=the CoM1 combat-summon identity-write routine is not reconstructed and the template-28 Life rewrite needs separate independent reconstruction; pointer=Reference docs/DOS reconstructed/combat.c
     statStep({ id: 'identity:com1SummonBranch', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1SummonBranch,
       apply: u => { u.race = sourceTemplateId === 54 ? 'Nature' : 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[identity:combatSummoned]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:523-525
     statStep({ id: 'identity:combatSummoned', phase: 'a', writes: ['fantastic'],
       when: () => isModern && combatSummonedValue,
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[identity:chosen]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1348-1354 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:1133-1134 | TABLE=Reference docs/Script source/Warlord 1.5.12.6.2/MODDING.INI:1133-1134
     statStep({ id: 'identity:chosen', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && identity.specialUnit === 'chosen',
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[identity:constructCatapult]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:constructCatapult]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=the modern CombatSummonUnit race-write routine is not reconstructed in the repository and the two shipped spell tables disagree on realm; pointer=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI:615-626
     statStep({ id: 'identity:constructCatapult', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[identity:callToArmsPaladins]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:callToArmsPaladins]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.6.2; gap=the modern CombatSummonUnit race-write routine is not reconstructed and Warlord's corresponding spell summons template 211 rather than 113; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/SPELLS.INI:3024-3035
     statStep({ id: 'identity:callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
@@ -202,19 +202,19 @@ function applyLavaSmelterGrant(abilities, version, unitType) {
   if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;
   switch (abilities.lavaSmelter || 'none') {
     // STAT-FORMULA[lavaSmelter:weaponImmunity]
-    // PROVENANCE[lavaSmelter:weaponImmunity]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair eligibility and granted immunity lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
+    // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-492 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-527
     case 'weaponImmunity':  return { ...abilities, weaponImmunity: true };
     // STAT-FORMULA[lavaSmelter:missileImmunity]
-    // PROVENANCE[lavaSmelter:missileImmunity]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair eligibility and granted immunity lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
+    // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-493 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-533
     case 'missileImmunity': return { ...abilities, missileImmunity: true };
     // STAT-FORMULA[lavaSmelter:flameBlade]
-    // PROVENANCE[lavaSmelter:flameBlade]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair eligibility and granted Flame Blade lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
+    // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.6.2; sources=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-496 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:446-464 | Reference docs/Script source/Warlord 1.5.12.6.2/OverlandEndTurn.CAS:523-551
     case 'flameBlade':      return { ...abilities, fieryBlade: true };
     // STAT-FORMULA[lavaSmelter:resistElementsAlias]
-    // PROVENANCE[lavaSmelter:resistElementsAlias]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=Resist Elements selector alias lacks an exact current implementation gate/table range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
+    // PROVENANCE[lavaSmelter:resistElementsAlias]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=current CAS stores Resist Elements independently but the one-key selector suppresses it when Elemental Armor is already selected; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS:473-495
     case 'resistElem':
     // STAT-FORMULA[lavaSmelter:elementalProtection]
-    // PROVENANCE[lavaSmelter:elementalProtection]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=mineral-pair gate and stronger-of-two elemental protection derivation lack an exact current implementation range; pointer=Reference docs/Script source/Warlord 1.5.12.6.2/CreateUnit.CAS
+    // PROVENANCE[lavaSmelter:elementalProtection]: UNVERIFIED versions=com2_warlord_1.5.12.6.2; gap=current CAS stores both protection flags independently while this one-key merge keeps only the stronger flag; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:193-196
     case 'elementalArmor': {
       // Both the manual Elements selector and this grant share the elemArmor key; keep the
       // stronger of the two so the smelter never downgrades an explicit Elemental Armor.
