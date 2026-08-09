@@ -1,7 +1,8 @@
 # Calculator backlog
 
-Upcoming calculator work only. Every listed item is actionable unless marked **Deferred** or
-**Blocked**. Keep every entry concise: task, cost, dependencies, and an evidence pointer.
+Upcoming calculator work only. Every listed item is actionable unless marked **Deferred**,
+**Blocked**, or as a tracking umbrella. Keep every entry concise: task, cost, dependencies, and
+an evidence pointer.
 Completed work and accepted decisions move to [HISTORY.md](./HISTORY.md); engine results stay in
 their owning evidence documents. IDs are never reused.
 
@@ -15,7 +16,7 @@ Costs are `free`, `small`, `medium`, or `large`.
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **R9-G1** | Reconstruct or locate the implementation lines still missing from the stat-formula provenance audit. |
+| 1 | **R9-G1a–R9-G1k** | Reconstruct or locate the implementation lines still missing from the stat-formula provenance audit, one fixed formula domain at a time. |
 | 2 | **F7** | Replace the known-wrong Supernatural approximation when the deferral is lifted. |
 | 3 | **B4, B7, B9** | Verify foundational DOS damage and rider behavior. |
 | 4 | **D2, D18** | Audit modern Weapon Immunity mapping and Warlord touch-flag placement. |
@@ -24,9 +25,26 @@ Costs are `free`, `small`, `medium`, or `large`.
 
 ## Provenance evidence gaps
 
-| ID | Evidence gap | Cost | Strongest pointer |
-|---|---|---|---|
-| R9-G1 | Reconstruct or locate exact implementation gates and arithmetic for the `170` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
+R9-G1 is the non-executable tracking umbrella for R9-G1a–R9-G1k. Its live total remains the
+audit reconciliation point; each child owns the fixed formula domain stated below. Every child
+must be undertaken in **dual-agent implementation mode** under
+[`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md): two cold implementations,
+reciprocal review, and final integration.
+
+| ID | Evidence gap / fixed formula domain | Cost | Mode | Strongest pointer / dependency |
+|---|---|---|---|---|
+| R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `170` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | Tracking only | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
+| R9-G1a | Close the `13` identity and creation-grant gaps: the eight `identity:*` formulas adjacent to `applyOrderedIdentityConversions` and the five `lavaSmelter:*` formulas adjacent to `applyLavaSmelterGrant`. | medium | **Dual-agent implementation** | `stats.js`, identity/grant helpers; adjacent strongest pointers |
+| R9-G1b | Close the `6` base/permanent-transform gaps: `destiny`, `chaosChannels:fireBreath`, `lightningBlade:breath`, `focusMagic:conversion`, `vampirism:transfer`, and `shadowStrike:thrown`. | medium | **Dual-agent implementation** | `stats.js`, base/permanent transform sequence; adjacent strongest pointers |
+| R9-G1c | Close the `29` late unit-transform gaps from `stat:base` through `giantStrength:thrown`, inclusive, in the ordered stat-step sequence. | large | **Dual-agent implementation** | `stats.js`, late stat transforms; adjacent strongest pointers |
+| R9-G1d | Close the `14` non-chance tail gaps: the twelve formulas from `nodeAura` through `clamp`, inclusive, plus `altarOfTheSun:figures` and `alumniOfAcademy:figures`. | medium | **Dual-agent implementation** | `stats.js`, late/global and figure transforms; adjacent strongest pointers |
+| R9-G1e | Close all `27` `chance:*` provenance gaps in the chance-contribution and projection sequence. | large | **Dual-agent implementation** | `stats.js`, chance transforms; adjacent strongest pointers |
+| R9-G1f | Close the `16` level-dispatch gaps: `levelBonusDispatch` and all fifteen `levelBonuses:*` formulas. | medium | **Dual-agent implementation** | `combat.js`, `getLevelBonuses`; DOS reconstruction, Caster implementation and current runtime tables |
+| R9-G1g | Close the `16` remaining direct-helper gaps from `clampPct` through `distancePenalty`, excluding the level-dispatch formulas owned by R9-G1f. | large | **Dual-agent implementation** | `combat.js`, direct helpers; `supernaturalMinimumDamage` depends on F7 and `supremeLightEligibility` depends on F52 |
+| R9-G1h | Close the `20` ability-stat-modifier gaps from `holyBonus` through `disheartenProphecy`, inclusive. | large | **Dual-agent implementation** | `combat.js`, `getAbilityStatSteps`; adjacent strongest pointers |
+| R9-G1i | Close the `8` effective-attack, defense and damage-constant gaps from `rageEffectiveAttack` through `wallOfFireStrength`, inclusive. | medium | **Dual-agent implementation** | `combat.js`, attack/defense helpers; DOS and Caster combat reconstructions plus runtime tables |
+| R9-G1j | Close the `13` derived-package gaps from `undeadImmunityDerivation` through `bloodLustMeleeAttack`, inclusive. | large | **Dual-agent implementation** | `combat.js`, derived unit/ability packages; `bloodLustMeleeAttack` depends on F22 |
+| R9-G1k | Close the `8` resolution-stat and combat-context gaps: `effectiveDefense:base`, `elemResistBonus`, `dosEffectiveDefenseProfile`, `doomAttackStrengthModifiers`, `normalizeCombatUnit`, `pairToHitModifiers`, `resolutionResistanceContext`, and `resolutionToBlockContext`. | medium | **Dual-agent implementation** | `combat.js`, resolution helpers and combat context; adjacent strongest pointers |
 
 ## Confirmed and suspected defects
 
