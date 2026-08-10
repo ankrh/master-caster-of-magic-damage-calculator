@@ -1177,11 +1177,13 @@ function lifeStealEffective(defRes, defAbilities, modifier) {
   return modifier;
 }
 
-// Check whether touch attacks fire for a given attack phase.
-// v1.31 bug: touch attacks don't fire if the effective attack value is 0.
-// Other versions: only skip if the base (pre-modifier) attack value is 0.
+// Check whether BU_ProcessAttack reaches its touch dispatcher for a selected attack call.
+// MoM 1.31 returns when that call's live strength is 0. CP 1.60 and CoM 1 patch the
+// conditional jump to an unconditional jump, so a call that was already admitted still
+// dispatches touches at 0 strength. Modern callers retain their represented base-channel gate.
 function touchAttackFires(effectiveAtk, baseAtk, version) {
   if (version === 'mom_1.31') return effectiveAtk > 0;
+  if (version === 'mom_cp_1.60.00' || version === 'com_6.08') return true;
   return (baseAtk || 0) > 0;
 }
 
@@ -1815,18 +1817,53 @@ function applyVampirismEffects(unit, version) {
 // Warlord Revenant (Death uncommon unit enchantment): unit permanently becomes
 // undead for the battle and gains melee Death Touch 0. Immunities follow from the
 // granted `undead` flag via applyUndeadImmunities. Death Touch fires per attacking
-// figure on melee (and is blocked on ranged attacks by the Warlord touch-dispatch
-// rule). Regeneration has no bearing on single-combat damage.
+// figure on melee and Thrown. Regeneration has no bearing on single-combat damage.
 // STAT-FORMULA[revenantAbilityDerivation]
-// PROVENANCE[revenantAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Revenant derived package lacks complete current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
+// PROVENANCE[revenantAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Revenant derived package lacks complete current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS
 function applyRevenantEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'revenant')) return unit;
-  const extra = { undead: true };
-  // Don't override an existing (stronger) Death Touch the unit already carries.
-  if (!abilDefined(unit.abilities, 'deathTouch')) extra.deathTouch = 0;
   return Object.assign({}, unit, {
-    abilities: Object.assign({}, unit.abilities, extra),
+    // UnitCalcPre.CAS writes the touch value unconditionally, so Revenant replaces
+    // an intrinsic stronger Death Touch rather than preserving it.
+    abilities: Object.assign({}, unit.abilities, { undead: true, deathTouch: 0 }),
   });
+}
+
+// Warlord keeps touch flags in general, melee, and ranged attack records. Unit-card
+// and roster abilities are general flags; represented spell effects can relocate or
+// overwrite them. Keep that engine detail internal so the card still has one value.
+const PLACED_TOUCH_KEYS = [
+  'poison', 'stoningTouch', 'deathTouch', 'dispelEvil', 'exorcise', 'destruction', 'lifeSteal',
+];
+const WARLORD_RELOCATED_TOUCH_KEYS = ['stoningTouch', 'deathTouch'];
+function applyWarlordTouchFlagPlacement(unit, version) {
+  if (!version || !version.startsWith('com2_warlord')) return unit;
+  const records = { global: {}, melee: {}, ranged: {} };
+  for (const key of PLACED_TOUCH_KEYS) {
+    if (abilDefined(unit.abilities, key)) records.global[key] = unit.abilities[key];
+  }
+
+  // UnitCalcPre.CAS writes Death Touch 0 to melee and clears the general/ranged
+  // copies. This intentionally overwrites any stronger intrinsic Death Touch.
+  if (hasAbil(unit.abilities, 'revenant')) {
+    delete records.global.deathTouch;
+    delete records.ranged.deathTouch;
+    records.melee.deathTouch = 0;
+  }
+
+  // UnitCalc.CAS saves each existing general touch value, clears general/ranged,
+  // and writes the saved value to melee. Thrown shares melee flags in ApplyAttack.
+  if (hasAbil(unit.abilities, 'focusMagic')) {
+    for (const key of WARLORD_RELOCATED_TOUCH_KEYS) {
+      if (records.global[key] == null) continue;
+      const value = records.global[key];
+      delete records.global[key];
+      delete records.ranged[key];
+      records.melee[key] = value;
+    }
+  }
+
+  return Object.assign({}, unit, { touchFlagRecords: records });
 }
 
 // Warlord Angelic Guardians (Life rare global enchantment): in combat, grants or
@@ -2714,46 +2751,95 @@ function marginalB(joint) {
 // gates:
 //   fires:             whether touch attacks deliver at all this phase
 //                      (per-phase touchAttackFires / Black Sleep / gaze-active rule)
-//   blockStoningDeath: Warlord removes Stoning Touch and Death Touch from ranged
-//                      attacks (physical and magical) per the Warlord manual
-function touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver, fires, blockStoningDeath = false) {
-  const poisonStr = fires ? abilVal(self.abilities, 'poison', 0) : 0;
+//   record:            normalized global/melee/ranged flag record for this phase
+// `touchFlagRecords` is an internal normalized representation. When present it owns
+// placement; record values are already effective calculator values. The ordinary card and
+// every DOS roster ability remain common flags and therefore use the ability fallback.
+function placedTouchValue(self, key, record) {
+  const fallback = abilDefined(self.abilities, key) ? self.abilities[key] : null;
+  if (!self.touchFlagRecords) return fallback;
+  const records = self.touchFlagRecords;
+  const values = [];
+  if (records.global && records.global[key] != null) values.push(records.global[key]);
+  if (record !== 'global' && records[record] && records[record][key] != null) {
+    values.push(records[record][key]);
+  }
+  if (!values.length) return null;
+  if (key === 'poison') return Math.max(...values);
+  if (key === 'dispelEvil') return values.some(Boolean);
+  // MergeFlags keeps the stronger (more negative) save modifier when a general
+  // and channel-specific valued flag are both present.
+  return Math.min(...values);
+}
+
+function dosChannelTouchModifier(self, key, record, ver) {
+  const dos = ver === 'mom_1.31' || ver === 'mom_cp_1.60.00' || ver === 'com_6.08';
+  if (!dos || record === 'global' || !self.touchFlagRecords
+      || !self.touchFlagRecords[record]
+      || self.touchFlagRecords[record][key] == null) return 0;
+  if (key === 'stoningTouch') return -1;
+  if (key === 'deathTouch') return -3;
+  return 0;
+}
+
+// DOS has one channel record for every non-melee BU_ProcessAttack call: ordinary ranged,
+// Thrown, both Breaths, and all Gazes. Caster has distinct dispatch choices; Warlord Thrown
+// deliberately shares its melee record, while Breath and Gaze use only general flags.
+function touchRecordForPhase(ver, phase) {
+  const dos = ver === 'mom_1.31' || ver === 'mom_cp_1.60.00' || ver === 'com_6.08';
+  if (dos) return phase === 'melee' ? 'melee' : 'ranged';
+  if (phase === 'melee' || phase === 'ranged') return phase;
+  if (phase === 'thrown' && ver && ver.startsWith('com2_warlord')) return 'melee';
+  return 'global';
+}
+
+function touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver, fires, record = 'global') {
+  const poison = placedTouchValue(self, 'poison', record);
+  const poisonStr = fires && poison != null ? poison : 0;
+  const stoningTouchBase = placedTouchValue(self, 'stoningTouch', record);
+  const deathTouchBase = placedTouchValue(self, 'deathTouch', record);
+  const stoningTouch = stoningTouchBase == null ? null
+    : stoningTouchBase + dosChannelTouchModifier(self, 'stoningTouch', record, ver);
+  const deathTouch = deathTouchBase == null ? null
+    : deathTouchBase + dosChannelTouchModifier(self, 'deathTouch', record, ver);
+  const dispelEvil = placedTouchValue(self, 'dispelEvil', record);
+  const exorcise = placedTouchValue(self, 'exorcise', record);
+  const destruction = placedTouchValue(self, 'destruction', record);
+  const lifeSteal = placedTouchValue(self, 'lifeSteal', record);
   return {
     poisonStr,
     poisonFail:     poisonStr > 0 ? poisonFailProb(otherResPoison, other.abilities, ver) : 0,
-    stoningFail:    (fires && !blockStoningDeath && abilDefined(self.abilities, 'stoningTouch'))
-                      ? stoningFailProb(otherResStoning, other.abilities, self.abilities.stoningTouch) : 0,
-    deathTouchFail: (fires && !blockStoningDeath && abilDefined(self.abilities, 'deathTouch'))
-                      ? deathTouchFailProb(otherResDeath, other.abilities, self.abilities.deathTouch) : 0,
-    dispelEvilFail: (fires && hasAbil(self.abilities, 'dispelEvil'))
+    stoningFail:    (fires && stoningTouch != null)
+                      ? stoningFailProb(otherResStoning, other.abilities, stoningTouch) : 0,
+    deathTouchFail: (fires && deathTouch != null)
+                      ? deathTouchFailProb(otherResDeath, other.abilities, deathTouch) : 0,
+    dispelEvilFail: (fires && dispelEvil)
                       ? dispelEvilFailProb(otherResM, other.abilities, other.unitType) : 0,
-    exorciseFail:   (fires && abilDefined(self.abilities, 'exorcise'))
-                      ? exorciseFailProb(otherResM, other.abilities, other.unitType, self.abilities.exorcise) : 0,
-    // Not gated by blockStoningDeath: the Warlord ranged exclusion is documented only for
-    // Stoning Touch and Death Touch (whose help text says they do not apply to Magic
-    // Ranged attacks). Destruction's help text carries no such exclusion, Warlord's Energy
-    // Cannon triggers it from a magical beam, and the one roster unit that has it (the
-    // Magician) attacks only at range — so blocking it on ranged would make it inert.
+    exorciseFail:   (fires && exorcise != null)
+                      ? exorciseFailProb(otherResM, other.abilities, other.unitType, exorcise) : 0,
+    // Destruction remains a general touch flag. Warlord's Energy Cannon triggers it
+    // from a magical beam, and the roster Magician attacks only at range.
     // otherResDeath (not otherResM): Destruction is Chaos-realm, and that figure is the
     // Bless-boosted resistance the engine uses for Death/Chaos effects.
-    destructionFail: (fires && abilDefined(self.abilities, 'destruction'))
-                      ? destructionFailProb(otherResDeath, other.abilities, self.abilities.destruction, ver) : 0,
-    lifeStealMod:   (fires && abilDefined(self.abilities, 'lifeSteal'))
-                      ? lifeStealEffective(otherResDeath, other.abilities, self.abilities.lifeSteal) : null,
+    destructionFail: (fires && destruction != null)
+                      ? destructionFailProb(otherResDeath, other.abilities, destruction, ver) : 0,
+    lifeStealMod:   (fires && lifeSteal != null)
+                      ? lifeStealEffective(otherResDeath, other.abilities, lifeSteal) : null,
   };
 }
 
 // Touch-attack parameters for `self` striking `other` in melee.
 function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver) {
   return touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver,
-    touchAttackFires(self.atk, self.baseAtk, ver));
+    touchAttackFires(self.atk, self.baseAtk, ver), touchRecordForPhase(ver, 'melee'));
 }
 
 // Touch-attack parameters for `self` firing alongside its gaze phase against `other`.
 // Returns raw probs plus `*With` booleans gated on the gaze actually being active.
 function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, gazeActive, selfSleep, ver) {
   const { poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, destructionFail, lifeStealMod }
-    = touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver, true);
+    = touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison,
+      ver, true, touchRecordForPhase(ver, 'gaze'));
   const active = !selfSleep && gazeActive;
   return {
     poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, destructionFail, lifeStealMod,
@@ -2820,7 +2906,8 @@ function normalizeCombatUnit(unit, version) {
     unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version),
   });
   // Angelic Guardians grants/improves Exorcise based on the finalized realm.
-  return applyAngelicGuardiansEffects(withType, version);
+  const withGuardians = applyAngelicGuardiansEffects(withType, version);
+  return applyWarlordTouchFlagPlacement(withGuardians, version);
 }
 
 // PROVENANCE[pairToHitModifiers]: UNVERIFIED versions=all; gap=side-relative Lucky and visibility To-Hit writes need separate exact implementation ranges; pointer=Reference docs/DOS reconstructed/combat.c
@@ -3121,10 +3208,12 @@ function buildThrownPhase(active, params) {
     target: 'b',
     consumesFear: false,
     compute: (sAlive, tAlive, cap) => {
-      if (sAlive <= 0 || cap <= 0 || a.rtb <= 0 || aBlackSleep) return { dist: [1], lifeStealEV: 0 };
-      let dist = aDoomsB ? calcDoomDist(sAlive, a.rtb, cap)
-                : calcTotalDamageDist(sAlive, a.rtb, aToHitRtbVert, bDefForThrown, bToBlockVsAThrEW, b.hp, cap, bInvulnBonus, bBlurChance, blurBuggy,
-                    isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, aMinDamageFromHits);
+      if (sAlive <= 0 || cap <= 0 || aBlackSleep) return { dist: [1], lifeStealEV: 0 };
+      let dist = a.rtb > 0
+        ? (aDoomsB ? calcDoomDist(sAlive, a.rtb, cap)
+          : calcTotalDamageDist(sAlive, a.rtb, aToHitRtbVert, bDefForThrown, bToBlockVsAThrEW, b.hp, cap, bInvulnBonus, bBlurChance, blurBuggy,
+              isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, aMinDamageFromHits))
+        : [1];
       const aImmTDist = (aImmWithThrown && tAlive > 0)
         ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
         : null;
@@ -3626,17 +3715,19 @@ function resolveCombat(a, b, opts) {
     : bFearedByA ? 'Attacker Cause Fear' : 'Defender Cause Fear';
 
   // Determine if attacker has thrown/breath (melee only). Two version-sensitive conditions:
-  //  (1) Melee must enable the non-ranged sequence — same rule as touch delivery
-  //      (touchAttackFires): MoM 1.31 needs *effective* melee > 0 (the v1.31 bug suppresses
-  //      delivery at 0 effective strength); every other version needs *base* melee > 0 (so
+  //  (1) Melee must enable the non-ranged sequence.
+  //      MoM 1.31 needs *effective* melee > 0; every other version needs *base* melee > 0 (so
   //      Weakness reducing effective melee to 0 does not suppress the breath/thrown phase).
   //  (2) The breath/thrown attack must exist: MoM 1.31 needs *effective* strength > 0; every
   //      other version accepts *base OR effective* > 0 (so a granted breath with base 0 fires,
   //      and a breath reduced to 0 effective but with base > 0 still fires).
   // Black Sleep also prevents all outgoing attacks.
   const breathExists = ver === 'mom_1.31' ? a.rtb > 0 : (a.baseRtb > 0 || a.rtb > 0);
+  // BU_AttackTarget's admission rule is separate from BU_ProcessAttack's later 1.31-only
+  // zero-strength abort. The former keeps the established live/base melee predicate here.
+  const legacyMeleeExists = ver === 'mom_1.31' ? a.atk > 0 : (a.baseAtk || 0) > 0;
   const legacyThrown = !isRanged && a.thrownType !== 'none' && breathExists
-    && touchAttackFires(a.atk, a.baseAtk, ver) && !aBlackSleep;
+    && legacyMeleeExists && !aBlackSleep;
   const modernThrown = isCoM2 && !isRanged ? modernAttackChannels(a) : null;
   const hasThrown = modernThrown ? modernThrown.length > 0 : legacyThrown;
 
@@ -3734,10 +3825,12 @@ function resolveCombat(a, b, opts) {
     // Touch attack params: thrown-phase activation (for thrown/breath).
     const aTouchWithThrown = !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
     const { poisonStr: aPoisonStrT, poisonFail: aPoisonFailT, stoningFail: aStoningFailT, deathTouchFail: aDeathTouchFailT, dispelEvilFail: aDispelEvilFailT, exorciseFail: aExorciseFailT, destructionFail: aDestructionFailT, lifeStealMod: aLifeStealModT }
-      = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version, aTouchWithThrown);
-    // Whether Life Steal is carried on the thrown phase, for the display-dist count
-    // (aLifeStealModT is null both when absent and when the target is immune).
-    const aLifeStealOnT = aTouchWithThrown && abilDefined(a.abilities, 'lifeSteal');
+      = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version,
+        aTouchWithThrown, touchRecordForPhase(ver, a.thrownType));
+    // Whether Life Steal survives routing and immunity for the thrown-phase
+    // display count. Use the routed result so a ranged-record item power is not
+    // lost merely because it is absent from the unit's common ability record.
+    const aLifeStealOnT = aLifeStealModT !== null;
 
     // Gaze-phase touch activation (touches fire alongside gaze regardless of melee atk).
     const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, exorciseFail: aExorciseFailG, destructionFail: aDestructionFailG, lifeStealMod: aLifeStealModG,
@@ -3945,35 +4038,44 @@ function resolveCombat(a, b, opts) {
 
     // Thrown / breath: A→B, fires before melee.  DOS has one shared slot; Caster.exe
     // runs each independently-derived channel.  F29 owns their final engine ordering.
-    const buildThrown = (attacker, active, type) => buildThrownPhase(active, {
-      a: attacker,
-      b,
-      aDoomsB,
-      aBlackSleep,
-      aToHitRtbVert: isCoM2 && hasAbil(attacker.abilities, 'vertigo')
-        ? Math.max(0.1, attacker.toHitRtb - 0.25) : aToHitRtbVert,
-      bDefForThrown: isCoM2 ? computeCasterDefenseForAttack(b, attacker, ver, bVertigoDefPenalty, 'thrown') : bDefForThrown,
-      bToBlockVsAThrEW: isCoM2 ? buildToBlockContext(attacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty).bToBlockVsAThrEW : bToBlockVsAThrEW,
-      bInvulnBonus,
-      bBlurChance,
-      blurBuggy,
-      isCoM2,
-      aMinDamageFromHits,
-      aImmWithThrown,
-      immStr,
-      bDefForImm,
-      bToBlockVsAAll,
-      aPoisonStrT,
-      aPoisonFailT,
-      aStoningFailT,
-      aDeathTouchFailT,
-      aDispelEvilFailT,
-      aExorciseFailT,
-      aDestructionFailT,
-      aLifeStealModT,
-      bResDeath,
-      aHaste,
-    });
+    const buildThrown = (attacker, active, type, touchRecord) => {
+      const touchActive = active && !aBlackSleep
+        && (isCoM2 || touchAttackFires(attacker.rtb, attacker.baseRtb, opts.version));
+      const touch = touchParams(attacker, b, bResM, bResDeath, bResStoning, bResPoison,
+        opts.version, touchActive, touchRecord);
+      return {
+        touch,
+        phase: buildThrownPhase(active, {
+          a: attacker,
+          b,
+          aDoomsB,
+          aBlackSleep,
+          aToHitRtbVert: isCoM2 && hasAbil(attacker.abilities, 'vertigo')
+            ? Math.max(0.1, attacker.toHitRtb - 0.25) : aToHitRtbVert,
+          bDefForThrown: isCoM2 ? computeCasterDefenseForAttack(b, attacker, ver, bVertigoDefPenalty, 'thrown') : bDefForThrown,
+          bToBlockVsAThrEW: isCoM2 ? buildToBlockContext(attacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty).bToBlockVsAThrEW : bToBlockVsAThrEW,
+          bInvulnBonus,
+          bBlurChance,
+          blurBuggy,
+          isCoM2,
+          aMinDamageFromHits,
+          aImmWithThrown,
+          immStr,
+          bDefForImm,
+          bToBlockVsAAll,
+          aPoisonStrT: touch.poisonStr,
+          aPoisonFailT: touch.poisonFail,
+          aStoningFailT: touch.stoningFail,
+          aDeathTouchFailT: touch.deathTouchFail,
+          aDispelEvilFailT: touch.dispelEvilFail,
+          aExorciseFailT: touch.exorciseFail,
+          aDestructionFailT: touch.destructionFail,
+          aLifeStealModT: touch.lifeStealMod,
+          bResDeath,
+          aHaste,
+        }),
+      };
+    };
     const thrownPhases = modernThrown
       ? modernThrown.map(channel => {
           // Caster.exe admits ApplyAttack types 2 (melee) and 5 (Thrown) to the same Blood
@@ -3982,13 +4084,16 @@ function resolveCombat(a, b, opts) {
             ? bloodLustMeleeAttack(a, b, channel.strength)
             : channel.strength;
           const attacker = modernAttackUnit(a, { ...channel, strength });
-          return {
-            attacker,
-            type: channel.type,
-            phase: buildThrown(attacker, true, channel.type),
-          };
+          const built = buildThrown(attacker, true, channel.type,
+            touchRecordForPhase(ver, channel.key === 'thrown' ? 'thrown' : channel.type));
+          return { attacker, type: channel.type, ...built };
         })
-      : [{ attacker: a, type: a.thrownType, phase: buildThrown(a, legacyThrown, a.thrownType) }];
+      : [{
+          attacker: a,
+          type: a.thrownType,
+          ...buildThrown(a, legacyThrown, a.thrownType,
+            touchRecordForPhase(ver, a.thrownType)),
+        }];
 
     // Run the engine: thrown (if active) → WoF (if active) → simultaneous melee+counter.
     let joint = makeJoint2D(aRemHP, bRemHP);
@@ -3997,7 +4102,7 @@ function resolveCombat(a, b, opts) {
 
     const pendingFear = { aFearDist: null, bFearDist: null };
 
-    for (const { attacker: channelAttacker, type: channelType, phase: thrownPhase } of thrownPhases) {
+    for (const { attacker: channelAttacker, type: channelType, phase: thrownPhase, touch } of thrownPhases) {
       if (!thrownPhase) continue;
       const r = applyDamagePhase(joint, thrownPhase, pendingFear, { a: channelAttacker, b }, bRemHP);
       joint = r.joint;
@@ -4006,13 +4111,13 @@ function resolveCombat(a, b, opts) {
       const thrownLabel = thrownPhaseLabel({
         thrownType: channelType,
         hasted: aHaste && channelAttacker.rtb > 0,
-        poisonTouch: aPoisonFailT > 0,
-        stoningTouch: aStoningFailT > 0,
-        deathTouch: aDeathTouchFailT > 0,
-        dispelEvil: aDispelEvilFailT > 0,
-        exorcise: aExorciseFailT > 0,
-        destruction: aDestructionFailT > 0,
-        lifeSteal: aLifeStealModT !== null,
+        poisonTouch: touch.poisonFail > 0,
+        stoningTouch: touch.stoningFail > 0,
+        deathTouch: touch.deathTouchFail > 0,
+        dispelEvil: touch.dispelEvilFail > 0,
+        exorcise: touch.exorciseFail > 0,
+        destruction: touch.destructionFail > 0,
+        lifeSteal: touch.lifeStealMod !== null,
         immolation: aImmWithThrown,
       });
       breakdown.push({ label: thrownLabel,
@@ -4310,13 +4415,14 @@ function resolveCombat(a, b, opts) {
                      isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined, aMinDamageFromHits))
       : [1];
 
-    // Touch attacks accompanying ranged: Poison, Stoning, Death Touch, Dispel Evil,
-    // Life Steal, Immolation (MoM only). Warlord removes Stoning Touch and Death Touch
-    // from ranged (physical and magical) per the Warlord manual.
-    const rangedTouchFires = touchAttackFires(rangedAttacker.rtb, rangedAttacker.baseRtb, opts.version);
-    const warlordRangedTouchBlocked = ver && ver.startsWith('com2_warlord');
+    // Touch attacks accompanying ranged use the general + ranged attack-flag records.
+    // Warlord's manual describes a magical-ranged exclusion, but the dispatcher has
+    // no blanket type gate; represented spells instead move or clear record values.
+    const rangedTouchFires = touchAttackFires(
+      rangedAttacker.rtb, rangedAttacker.baseRtb, opts.version);
     const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, destructionFail: aDestructionFailR, lifeStealMod: aLifeStealModR }
-      = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version, rangedTouchFires, warlordRangedTouchBlocked);
+      = touchParams(rangedAttacker, b, bResM, bResDeath, bResStoning, bResPoison,
+        opts.version, rangedTouchFires, touchRecordForPhase(ver, 'ranged'));
     const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
     const aImmDistR = (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0)
       ? calcAreaDamageDist(bAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(bRemHP, b.hp))

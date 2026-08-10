@@ -160,12 +160,28 @@ Death Immunity derived only during stat recalculation (for example from Blood Lu
 Rebuild) does not skip those rolls. Intrinsic/base Death Immunity does. Magic Immunity still
 blocks Cause Fear through the resolution-time effective-resistance assignment.
 
-Special riders resolve with whichever phase their version's dispatcher admits. In CoM2 and
-Warlord, Exorcise, Stoning Touch, Death Touch, Life Steal, Destruction and Poison run for
-physical ranged, magical ranged, both Breath attacks, Thrown and melee, but not for any Gaze attack.
-All six sit inside the attacker-figure loop and therefore make one attempt per surviving
-attacker figure. A failed Destruction roll assigns 150 damage and destroys the target unit,
-but Destruction still makes one resistance roll per attacking figure.
+Special riders resolve with whichever phase their version's dispatcher admits. In the three DOS
+builds, `BU_ProcessAttack` starts from the unit's common attack flags, then merges the melee flag
+record for a melee call or the ranged flag record for **every non-melee call**: ordinary ranged,
+Thrown, Fire Breath, Lightning Breath, Stoning Gaze, Multiple Gaze and Death Gaze. The shipped
+roster touch flags are common flags, so a roster carrier fires on every admitted attack call;
+notably, Chaos Spawn's common Poison accompanies its Multiple Gaze. Weapon-item powers instead
+enter only their eligible melee and/or ranged record. A channel-carried Stoning Touch receives an
+additional -1 save modifier and a channel-carried Death Touch an additional -3. MoM 1.31 aborts
+the entire selected call, including all riders, when its live attack strength is zero. CP 1.60 and
+CoM 1 patch that abort away, so an already-admitted zero-strength call still dispatches its flags.
+
+In CoM2 and
+Warlord, Exorcise, Stoning Touch, Death Touch, Life Steal, Destruction and Poison are dispatched
+for physical ranged, magical ranged, both Breath attacks, Thrown and melee, but not for any Gaze
+attack. General flags merge into every admitted attack; channel flags merge only into their own
+record. The unit card and roster expose innate Stoning/Death Touch as one general value. Warlord
+Focus Magic moves either existing general value to melee, which also feeds Thrown, and clears it
+from general/ranged; Revenant replaces Death Touch with 0 in that same melee/Thrown record. There
+is no general physical-versus-magical ranged gate. All six riders sit inside the attacker-figure
+loop and therefore make one attempt per surviving attacker figure. A failed Destruction roll
+assigns 150 damage and destroys the target unit, but Destruction still makes one resistance roll
+per attacking figure.
 
 An immunity that stops one of these effects **skips its roll outright** — it is not
 modelled as a large resistance bonus, and there is no MoM-vs-CoM magnitude on this side.
@@ -363,6 +379,8 @@ place:
 - **Xenoveterinary**, +25% HP (minimum +1) — `UnitCalcPre.CAS:1038-1049`, the head of region
   `b`, so it precedes every other phase-b HP write and does not compound the level ladder,
   Lionheart, Endurance or Charm of Life, which are all `c`.
+- **Charm of Life**, +25% live HP (minimum +1) — the modern compiled block reads `U.hp` after
+  Endurance, Lionheart and every earlier HP writer, then adds `max(1, trunc(U.hp / 4))`.
 - **Colossal Strength**, +1 + 40% of melee / physical ranged / thrown — `UnitCalc.CAS:1227-1243`
   reads `GetStat` in region `d`, so everything earlier in that file scales and nothing later does.
 - **Upgraded Explosive's fire-breath doubling** — `UnitCalcPre.CAS:1074-1078` doubles the
@@ -403,12 +421,20 @@ Two engines reach the secondary-attack slot differently, so a step's delta names
 Focus Magic follows that engine split when it converts an attack. CoM 1 raises a converted
 shared-slot attack to a minimum strength of 3. CoM2 and Warlord preserve any positive Thrown or
 physical-ranged strength when moving it to Sorcery magical ranged; only creation from an empty
-base ranged slot uses strength 3.
+base ranged slot uses strength 3. Warlord runs Focus Magic in phase `d`, so permanent and
+phase-`b`/`c` attack-type gates retain the channel standing before that later conversion.
 
 Warlord Lightning Blade is a permanent creation write: it replaces an innate Thrown attack with
 Lightning Breath at `Thrown + 1` strength and clears Thrown. A unit with no Thrown therefore gains
 strength-1 Lightning Breath. The resulting Breath is innate, receives level bonuses, and is Armor
 Piercing unless Lightning Resist cancels that piercing at resolution.
+
+Warlord permanent training writes follow executing `CreateUnit.CAS` even where its prose omits or
+summarizes a write, and their gates use the trained unit's base identity before later conversions.
+Ludus Agoge adds +1 to an existing ranged-strength field, and Mother
+Fungus adds +2. Pillar of Faith adds its full counted building total with no script-side cap.
+Natural Selection snapshots Resistance before its resource writes, so a later Nightshade write
+replaces an earlier Power-mineral Resistance bonus when both are present.
 
 No hand-built stat sum survives. Blaze of Glory was the last one: in region `d` it reads
 current Defense, adds that whole value to melee, and sets Defense to zero. Region-`e` effects
@@ -676,24 +702,11 @@ A version's roster is authoritative only as a faithful derivation of its source 
 mapping and the no-hand-editing rule are in the root [CLAUDE.md](../CLAUDE.md).
 
 Every source-authored game formula that derives, writes, replaces, scales, clamps, or gates a
-unit/combat stat has an adjacent `PROVENANCE[id]` comment. `VERIFIED` comments name the applicable
-versions and cite an exact, narrow line range in the DOS C reconstruction, Caster Pascal
-reconstruction, or current Warlord CAS that contains both the eligibility gate and arithmetic.
-Loaded constants additionally cite their `TABLE=` assignment. If no matching implementation has
-been reconstructed, the comment says `UNVERIFIED` and records the live gap and strongest pointer;
-such a formula is implemented behavior, not an established source claim.
-
-`npm run provenance` enforces unique adjacency, source existence and range bounds, implementation
-content, runtime-table assignments, complete applicable-version metadata, the live backlog gap
-count, and complete classification of every JavaScript file under `Calculator/`. Discovery is
-independent of provenance comments: it recognizes ordered/resolution constructors, all literal or
-dynamic ability emissions, the six base-preparation writes, each stat-table case, literal and
-dynamic chance contributions/projection, and a reviewed inventory of direct formula functions.
-Every VERIFIED formula/version/source tuple is additionally bound to a reviewed digest of the
-exact source excerpts in `tools/provenance_verified_anchors.json`, so a code-shaped but unrelated
-range or stale source content fails. Generated `units_*.js` rosters, generic probability math and
-the generic step runner, matrix orchestration, UI/data declarations and formatting, and the
-vendored compression library are deliberately classified as non-formula sources.
+unit/combat stat has an adjacent `PROVENANCE[id]` comment. `VERIFIED` names applicable versions
+and narrowly cites the implementation gate, arithmetic, and any loaded table value. `UNVERIFIED`
+records the live gap and strongest pointer without presenting implemented behavior as established
+source fact. `npm run provenance` enforces classification, source/anchor integrity, version and
+table coverage, and reconciliation with the live backlog.
 
 ## UI contract
 
@@ -811,40 +824,16 @@ The descriptions below are canonical. Accepted decisions are summarized in
 [HISTORY.md](./HISTORY.md); only limitations with planned implementation work appear in
 [BACKLOG.md](./BACKLOG.md), *Modelling work*.
 
-- Life Steal's *displayed* distribution is an approximation (phase count × single-firing
-  distribution). Its damage expectation is exact within the calculator's capped-damage model,
-  but its displayed self-healing currently undercounts rolls that exceed the target's remaining
-  HP and does not reproduce `Combatheal`'s category order and overheal conversion: the engine
-  feeds the uncapped resistance-roll result into that routine, which heals recoverable normal
-  damage before undead damage and converts any remainder to per-living-figure bonus HP (**F28**).
-- Damage is capped at the target's remaining HP; overkill is not tracked. This accepted damage
-  limitation does not authorize capping healing amounts that the engine passes independently to
-  `Combatheal` (**F27**, **F28**).
-- Warlord Vampirism currently applies the script's half-strength transfer to the represented
-  Thrown or Breath channel and leaves that positive channel at strength 1. The engine instead
-  combines all simultaneously present Thrown, Fire Breath, and Lightning Breath sources before
-  the truncated melee addition, then resets each positive source independently in region `d`;
-  completing that multi-channel aggregation and placement remains **F17**.
-- Destruction is currently modelled only for CoM2/Warlord. The MoM/CP/CoM1 touch dispatcher also
-  identifies Destruction as a Chaos effect; in MoM/CP, Elemental Armor and Resist Elements
-  therefore protect against it. That older-engine Destruction path is not yet implemented.
-- Heroes currently use the same five-rank level table and controls as normal units. The DOS
-  binaries instead execute an eight-threshold hero ladder, with a different CoM 1 write pattern,
-  and then apply level-scaled Agility, Blademaster, Might, Arcane Power, Casting Skill and Lucky
-  template abilities. The modern engine has its own nine-step hero table. These hero-specific
-  ladders and template abilities are not yet represented (**F41**).
-- **Ammunition is not modelled.** Every engine carries a per-unit shot count — MoM's `ammo`
-  (battle-unit `+0x03`, the roster's `Shots` column: 8 for archers, 10 for the Catapult) and
-  CoM2's `maxammo`/`ammo` (`SMaxAmmo`=55, `SAmmo`=56, `UNITS.INI` key `Ammo`) — and the
-  calculator ignores both. A ranged attacker is treated as able to fire in every ranged
-  exchange the scenario specifies. Deliberate: the calculator resolves a single engagement
-  rather than a multi-turn battle, so a shot budget has nothing to deplete. It is therefore
-  omitted from the unit card in every version. The consequence to be aware of is that a
-  many-round ranged scenario can overstate an ammo-limited unit's output.
-- **Regeneration is not modelled.** Both engines define it per unit — MoM as an `Abilities` flag
-  (`0x2000`), CoM2 as a magnitude (`regeneration`, `SRegeneration`=41, `−1` = absent, roster
-  values up to 7) — and all four rosters carry the token, but no ability definition matches it,
-  so it is dropped at load. Deliberate, for the same reason as ammunition: it is between-turn
-  healing, and the calculator resolves a single engagement. Omitted from the unit card in every
-  version. The consequence to be aware of is that a regenerating unit's survivability across a
-  long battle is not represented.
+- Life Steal's displayed healing distribution is approximate and does not reproduce uncapped
+  `Combatheal` category order or overheal conversion (**F28**).
+- Target damage is capped at remaining HP and overkill is not tracked; engine healing inputs must
+  not inherit that cap (**F27**, **F28**).
+- Warlord Vampirism represents one transferred Thrown/Breath channel, not the engine's complete
+  simultaneous-channel aggregation and reset sequence (**F17**).
+- Destruction is modelled only for CoM2/Warlord; the older-engine hero path remains absent (**M3**).
+- Modern touch riders currently accompany Gaze attacks even though the compiled dispatcher excludes
+  attack types 6–8 (**F25**).
+- Heroes use normal-unit level controls rather than the DOS eight-threshold and modern nine-step
+  hero ladders and their level-scaled template abilities (**F41**).
+- Ammunition is omitted because one engagement has no multi-turn shot budget.
+- Regeneration is omitted because it is between-turn healing.

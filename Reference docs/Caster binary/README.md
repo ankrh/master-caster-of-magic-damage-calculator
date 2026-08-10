@@ -141,9 +141,7 @@ first one's rows. A clean run proves
 coverage, not that the cited instructions were interpreted correctly; the branch-target and
 full-arithmetic evidence still requires human review.
 
-Both checks guard against treating a fall-through tail as a top-level sibling. The motivating
-incident is summarized in [`Calculator/HISTORY.md`](../../Calculator/HISTORY.md),
-*Reconstruction-review lessons*.
+Both checks guard against treating a fall-through tail as a top-level sibling.
 
 Mechanic-level analysis is split by subsystem and routed by
 [`CoM2 binary analysis.md`](./CoM2%20binary%20analysis.md). Reconstruction and review provenance

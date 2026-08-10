@@ -488,6 +488,7 @@ function deriveUnitStats(input) {
   // so building buffs are inert on them. The display name may be race-prefixed for some
   // units and not others, so name exceptions match with endsWith (always gated by race).
   const unitRace = identity.race;
+  const baseUnitRace = identity.baseRace;
   const unitName = input.name || '';
   const abilities = applyMagicImmunityCurseGating(
     applyOutlanderReformGrants(
@@ -532,7 +533,7 @@ function deriveUnitStats(input) {
   // folded into effectiveAbilities below; the ranged bonus is added to the rtb total.
   // Gated on the Gnoll race — non-Gnoll units and heroes gain nothing.
   const altarOfTheMoon = isWarlord && !!abilities.altarOfTheMoon
-    && unitRace === 'Gnoll' && !isHero;
+    && baseUnitRace === 'Gnoll' && !isHero;
   // Unit-specific Altar of the Moon grants: Gnoll Hunters gain Poison 2; Gnoll
   // Witchdoctors gain Life Steal -1 which replaces their Poison. Applied via effectiveAbilities below.
   const altarHunter = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Hunters');
@@ -542,7 +543,7 @@ function deriveUnitStats(input) {
   // heroes are excluded and gain nothing. Only these unit bonuses are modelled; the
   // defending-city High Prayer buff is not.
   const altarOfTheSunEligible = isWarlord
-    && !!abilities.altarOfTheSun && unitRace === 'Hawkmen' && !isHero;
+    && !!abilities.altarOfTheSun && baseUnitRace === 'Hawkmen' && !isHero;
   const altarOfTheSunHolyMother = altarOfTheSunEligible && unitName.endsWith('Holy Mother');
   const altarOfTheSun = altarOfTheSunEligible && !unitName.endsWith('Holy Mother');
   // Dragon Mound (Warlord, Draconian building): Draconian units trained here gain +1 Armor
@@ -551,30 +552,30 @@ function deriveUnitStats(input) {
   // than granting one to melee-only units. Gated on the Draconian race — non-Draconian
   // units and heroes gain nothing, matching the in-game race-exclusive building.
   const dragonMound = isWarlord
-    && !!abilities.dragonMound && unitRace === 'Draconian' && !isHero;
+    && !!abilities.dragonMound && baseUnitRace === 'Draconian' && !isHero;
   // Ludus Agoge (Warlord, Orc building): Orc units trained here gain +1 Attack (melee, folded
   // into atk below), +1 Resistance, and +1 HP. Legionary units gain +1 Movement instead — not
   // modelled here — so they receive no stat bonus. Gated on the Orc race — non-Orc units,
   // Legionaries, and heroes gain nothing, matching the in-game race-exclusive building.
   const ludusAgoge = isWarlord
-    && !!abilities.ludusAgoge && unitRace === 'Orc' && !unitName.endsWith('Legionary') && !isHero;
+    && !!abilities.ludusAgoge && baseUnitRace === 'Orc' && !unitName.endsWith('Legionary') && !isHero;
   // Mother Fungus (Warlord, Goblin building): Goblin units trained here gain +2 Attack (melee,
   // folded into atk below), +10% To Defend (folded into toBlock below), and Poison 1 (boosts an
   // existing poison attack, or grants Poison 1 if it has none). The ×2 Spellcharge bonus is not
   // modelled. Gated on the Goblin race — non-Goblin units and heroes gain nothing, matching the
   // in-game race-exclusive building.
   const motherFungus = isWarlord
-    && !!abilities.motherFungus && unitRace === 'Goblin' && !isHero;
+    && !!abilities.motherFungus && baseUnitRace === 'Goblin' && !isHero;
   // Pool of Repentance (Warlord, Rakhshasa building): Rakhshasa units trained here gain +1 Armor
   // (folded into defBase below) and +1 Resistance (folded into res below). Gated on the Rakhshasa
   // race — non-Rakhshasa units and heroes gain nothing, matching the in-game race-exclusive building.
   const poolOfRepentance = isWarlord
-    && !!abilities.poolOfRepentance && unitRace === 'Rakhshasa' && !isHero;
+    && !!abilities.poolOfRepentance && baseUnitRace === 'Rakhshasa' && !isHero;
   // Sancta Basilica (Warlord, High Men building): +3 Resistance for every High Men unit trained
   // here (folded into res below). The unit-specific Sanctify / Lucky / Magic Immunity grants are
   // applied earlier via applySanctaBasilicaGrant. Gated on the High Men race; heroes gain nothing.
   const sanctaBasilica = isWarlord
-    && !!abilities.sanctaBasilica && unitRace === 'High Men' && !isHero;
+    && !!abilities.sanctaBasilica && baseUnitRace === 'High Men' && !isHero;
   // Rust (Warlord Chaos common combat curse): permanently strips magic/orihalcon weapons
   // (the unit reverts to regular weapons), −3 melee attack (applied in combat.js), and
   // eliminates thrown attacks and Large Shield for the rest of combat (below).
@@ -707,6 +708,9 @@ function deriveUnitStats(input) {
   const inputBaseDef = Math.max(0, parseInt(input.def) || 0);
   const inputBaseRes = Math.max(0, parseInt(input.res) || 0);
   const inputBaseHP  = Math.max(1, parseInt(input.hp) || 1);
+  // CreateUnit.CAS city/resource gates read the permanent unit record before later
+  // enchantment-driven channel conversions can create or replace an attack.
+  const hasPermanentRangedStat = inputBaseRtb > 0 && RANGED_TYPES.includes(rtbTypeRaw);
   // Alumni of Academy is a permanent +2-figure write made when a unit is trained.
   // Academy is Halfling-only, so the UI condition is race-gated. The script admits
   // Halfling Rocs (type 221, their Fantastic Stable unit) unconditionally; its other
@@ -796,6 +800,11 @@ function deriveUnitStats(input) {
   const baseToHitMod = parseInt(input.toHitMod) || 0;
   const baseToHitRtbMod = parseInt(input.toHitRtbMod) || 0;
   const baseToBlkMod = parseInt(input.toBlkMod) || 0;
+
+  // Warlord moves Focus Magic to UnitCalc.CAS (phase d). Preserve the attack types standing
+  // immediately before that conversion for earlier Warlord phase-b/c gates.
+  const rangedTypeBeforeFocus = rangedType;
+  const thrownTypeBeforeFocus = thrownType;
 
   // Focus Magic: CoM/CoM2-only. In CoM2, magical ranged, doom gaze, and breath get +3.
   // In CoM, doom gaze is not mentioned, so only magical ranged and breath are boosted.
@@ -1068,10 +1077,7 @@ function deriveUnitStats(input) {
     ? Math.max(1, Math.floor(4 / baseFigs))
     : 0;
 
-  // Charm of Life: +1 HP per figure if base HP ≤ 7, else +25% (floor) of base HP.
-  const charmOfLifeHpMod = (abilities && abilities.charmOfLife)
-    ? (calcBaseHP >= 8 ? Math.floor(calcBaseHP * 0.25) : 1)
-    : 0;
+  const charmOfLifeActive = !!(abilities && abilities.charmOfLife);
   const levelRank = ({
     normal: 0,
     regular: 1,
@@ -1086,8 +1092,9 @@ function deriveUnitStats(input) {
   const disciplineDefMod = disciplineActive ? (levelRank >= 1 ? 2 : 1) : 0;
   const disciplineAtkMod = disciplineActive && levelRank >= 2 ? 1 : 0;
   // Overland Discipline grants +1 movement at Elite+, but movement is not modeled here.
+  const disciplineRangedType = isWarlord ? rangedTypeBeforeFocus : rangedType;
   const disciplineRtbMod = disciplineActive && levelRank >= 2
-    && (rangedType === 'missile' || rangedType === 'boulder') ? 1 : 0;
+    && (disciplineRangedType === 'missile' || disciplineRangedType === 'boulder') ? 1 : 0;
 
   // Soul Flay (Warlord, Death rare combat curse): irresistible curse on normal units
   // or heroes. Penalises stats by −1 melee, −2 armor and −2 resistance per experience
@@ -1136,20 +1143,22 @@ function deriveUnitStats(input) {
   const greatUnbindingResMod = greatUnbindingActive ? -2 : 0;
 
   // Natural Selection (Warlord Nature common global): units trained in a city gain
-  // bonuses from resources in the city's surroundings. Each resource is an independent
-  // toggle on the trained unit:
+  // bonuses from resources in the city's surroundings. The inputs expose each resource
+  // separately on the trained unit:
   //   Coal → +1 melee; Iron → +1 armor; Wild game → +1 ranged attack (+ Forester);
   //   Nightshade → +1 resistance; Power minerals → +N resistance (the numeric input
-  //   holds the resistance bonus directly).
+  //   holds the resistance bonus directly). The Resistance resources are not independent:
+  //   Nightshade's later snapshot-based write replaces the Power-mineral bonus.
   // Forester is a terrain/movement perk with no combat effect, so only the +1 ranged
   // attack from Wild game is reflected in the stats.
-  const naturalSelectionCoalMod = isWarlord && !!(abilities && abilities.coal) ? 1 : 0;
-  const naturalSelectionIronMod = isWarlord && !!(abilities && abilities.iron) ? 1 : 0;
-  const naturalSelectionNightshadeMod = isWarlord && !!(abilities && abilities.nightshade) ? 1 : 0;
+  const naturalSelectionEligible = isWarlord && !isFantasticBase && !isHero;
+  const naturalSelectionCoalMod = naturalSelectionEligible && !!(abilities && abilities.coal) ? 1 : 0;
+  const naturalSelectionIronMod = naturalSelectionEligible && !!(abilities && abilities.iron) ? 1 : 0;
+  const naturalSelectionNightshadeMod = naturalSelectionEligible && !!(abilities && abilities.nightshade) ? 1 : 0;
   // Nature Link (Warlord rename of Land Linking): grants +1 resistance to any unit
   // (normal or fantastic). The fantastic-only +2 melee/def/breath is handled with Land Linking.
   const natureLinkResMod = isWarlord && !!(abilities && abilities.landLinking) ? 1 : 0;
-  const naturalSelectionPowerMineralsMod = isWarlord && isNormalUnitType(unitTypeVal)
+  const naturalSelectionPowerMineralsMod = naturalSelectionEligible
     ? Math.max(0, parseInt(abilities.powerMinerals) || 0)
     : 0;
 
@@ -1161,12 +1170,13 @@ function deriveUnitStats(input) {
     ? Math.max(0, parseInt(abilities.survivalInstinctToBlock) || 0)
     : 0;
 
-  // Orihalcon: +1 resistance, +2 magical ranged attack (CoM2 only).
+  // Orihalcon: +1 resistance, +2 magical ranged attack (CoM/CoM2).
   const orihalconActive = armor === 'orihalcon';
   const orihalconResMod = orihalconActive ? 1 : 0;
+  const orihalconRangedType = isWarlord ? rangedTypeBeforeFocus : rangedType;
   const orihalconRtbMod = orihalconActive
-    && (rangedType === 'magic_c' || rangedType === 'magic_n'
-      || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
+    && (orihalconRangedType === 'magic_c' || orihalconRangedType === 'magic_n'
+      || orihalconRangedType === 'magic_s' || orihalconRangedType === 'beam') ? 2 : 0;
 
   // Wall of Fire garrison boost (Warlord): the city enchantment grants +1 to all
   // defending normal-unit non-magic attacks, mirroring the original game's Metal
@@ -1194,7 +1204,7 @@ function deriveUnitStats(input) {
   const hasWarlordBlade = warlordCombatFlameBlade || warlordFieryBlade;
   const nonWarlordFlameBlade = !!abilities.flameBlade && !isWarlord;
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : (abilities.metalFires ? 1 : 0);
-  const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticLive;
+  const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
   // M4, resolved at R1 stage 9. The two sources fall in different regions — Fiery Fury in
   // `b` (UnitCalcPre.CAS:832-846), the blades in `c` — and do not stack, which the bucket
   // model could only express as a single `Math.max` booked whole to `c`. Two steps carry it
@@ -1205,8 +1215,8 @@ function deriveUnitStats(input) {
   // which Fiery Fury's bonus never covers.
   let fbBladeRtb = 0;
   if (hasWarlordBlade) {
-    if (rangedType === 'missile' || thrownType === 'thrown') fbBladeRtb = 2;
-    else if (warlordCombatFlameBlade && thrownType === 'fire') fbBladeRtb = 1;
+    if (rangedTypeBeforeFocus === 'missile' || thrownTypeBeforeFocus === 'thrown') fbBladeRtb = 2;
+    else if (warlordCombatFlameBlade && thrownTypeBeforeFocus === 'fire') fbBladeRtb = 1;
   } else if (fbAtkBonus > 0) {
     // MoM Flame Blade / Metal Fires boost missile and thrown; CoM Flame Blade
     // boosts missile only (the CoM helptext drops the thrown bonus — Warlord, handled
@@ -1217,14 +1227,17 @@ function deriveUnitStats(input) {
     }
   }
   const ffRtbMod = ffRegularBonus
-    && (rangedType === 'missile' || rangedType === 'boulder' || thrownType === 'thrown') ? 2 : 0;
+    && (rangedTypeBeforeFocus === 'missile' || rangedTypeBeforeFocus === 'boulder'
+      || thrownTypeBeforeFocus === 'thrown') ? 2 : 0;
   const fbRtbMod = Math.max(0, fbBladeRtb - ffRtbMod);
   // Fiery Fury melee +3 for regular units; non-cumulative with Flame Blade / Fiery Blade
   // (combat.js already adds +3 melee for a Warlord blade effect).
   const ffMeleeBonus = ffRegularBonus && !hasWarlordBlade ? 3 : 0;
 
   const ludusAgogeAtkMod = ludusAgoge ? 1 : 0;
+  const ludusAgogeRtbMod = ludusAgoge && hasPermanentRangedStat ? 1 : 0;
   const motherFungusAtkMod = motherFungus ? 2 : 0;
+  const motherFungusRtbMod = motherFungus && hasPermanentRangedStat ? 2 : 0;
   const altarOfTheSunMeleeMod = altarOfTheSunHolyMother ? 1 : 0;
   // Warlord Colossal Strength: +1 + 40% (rounded down) of Melee, Physical Ranged, and
   // Thrown attack strength. Breath and magic ranged are not "physical ranged" and do not
@@ -1252,10 +1265,10 @@ function deriveUnitStats(input) {
   const ludusAgogeResMod = ludusAgoge ? 1 : 0;
   const poolOfRepentanceResMod = poolOfRepentance ? 1 : 0;
   const sanctaBasilicaResMod = sanctaBasilica ? 3 : 0;
-  // Pillar of Faith (Warlord, Life rare city enchantment): +1 Resistance per Religious Building
-  // in the training city, capped at +8. The numeric input holds the building count.
-  const pillarOfFaithResMod = isWarlord && isNormalUnitType(unitTypeVal)
-    ? Math.min(8, Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0))
+  // Pillar of Faith (Warlord, Life rare city enchantment): +1 Resistance per qualifying
+  // building in the training city. The script has no cap; the numeric input holds the count.
+  const pillarOfFaithResMod = isWarlord && !isFantasticBase && !isHero
+    ? Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0)
     : 0;
   // Warlord scoring options run in UnitCalcPre.CAS (phase b). Uphill Battle is
   // represented per unit so the caller can mark whichever side is AI-controlled.
@@ -1286,12 +1299,15 @@ function deriveUnitStats(input) {
   // Blazing March: +3 to missile only (not boulder, magic ranged, or breath).
   // Warlord also boosts thrown.
   const blazingMarchActive = !!(abilities && abilities.blazingMarch);
-  const blazingMarchBoostsThrown = version.startsWith('com2_warlord') && thrownType === 'thrown';
-  const blazingMarchRtbMod = blazingMarchActive && (rangedType === 'missile' || blazingMarchBoostsThrown) ? 3 : 0;
+  const blazingMarchRangedType = isWarlord ? rangedTypeBeforeFocus : rangedType;
+  const blazingMarchThrownType = isWarlord ? thrownTypeBeforeFocus : thrownType;
+  const blazingMarchBoostsThrown = isWarlord && blazingMarchThrownType === 'thrown';
+  const blazingMarchRtbMod = blazingMarchActive
+    && (blazingMarchRangedType === 'missile' || blazingMarchBoostsThrown) ? 3 : 0;
 
   // Natural Selection — Wild game: +1 ranged attack on physical ranged (missile/boulder)
   // and magic ranged. Thrown and breath are not "ranged attacks" for this bonus.
-  const naturalSelectionWildGameRtbMod = isWarlord && !!(abilities && abilities.wildGame)
+  const naturalSelectionWildGameRtbMod = naturalSelectionEligible && !!(abilities && abilities.wildGame)
     && (rangedType === 'missile' || rangedType === 'boulder'
       || rangedType === 'magic_c' || rangedType === 'magic_n'
       || rangedType === 'magic_s' || rangedType === 'beam') ? 1 : 0;
@@ -1335,10 +1351,7 @@ function deriveUnitStats(input) {
 
   // Altar of the Moon: +2 to ranged attack strength (missile/boulder/magic ranged only;
   // thrown and breath are not affected), matching the "ranged units" wording.
-  const altarOfTheMoonRtbMod = altarOfTheMoon
-    && (rangedType === 'missile' || rangedType === 'boulder'
-      || rangedType === 'magic_c' || rangedType === 'magic_n'
-      || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
+  const altarOfTheMoonRtbMod = altarOfTheMoon && hasPermanentRangedStat ? 2 : 0;
 
   // CoM/CoM2 Land Linking boosts melee and breath only.
   const landLinkingBreathRtbMod = landLinkingEligible && version.startsWith('com')
@@ -1502,7 +1515,7 @@ function deriveUnitStats(input) {
   // the order their evidence lists them.
   const statSteps = [
     // --- base: raw stats, and writes made permanently before the encounter ---
-    // PROVENANCE[stat:base]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[stat:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:1273-1296 | Reference docs/DOS reconstructed/unitcalc.c:1676-1713 | Reference docs/Caster binary/Units.RecalculateUnits.pas:435-462
     statStep({ id: 'stat:base', phase: 'base',
       writes: ['res', 'def', 'atk', 'rtb', 'hp', 'gaze', 'doomGaze'],
       apply: u => {
@@ -1512,67 +1525,72 @@ function deriveUnitStats(input) {
     // CoM1's Zombies constructor starts the live To Block field at -1. This is an
     // identity-sourced write, but it belongs on the calculated stat sequence so its
     // effect is attributed to To Block rather than to the Special unit control.
-    // PROVENANCE[identity:zombies:toBlock]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[identity:zombies:toBlock]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c:1617-1629
     statStep({ id: 'identity:zombies:toBlock', phase: 'base', writes: ['toBlk'],
       when: () => isCoM1 && identity.specialUnit === 'zombies',
       // The DOS constructor stores a signed D10 threshold step. The calculator's accumulator
       // is percentage points, so one engine step is ten percentage points.
       apply: u => { u.toBlk -= 10; } }),
     ...abilByPhase.base,
-    // PROVENANCE[altarOfTheMoon]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:372-381
     statStep({ id: 'altarOfTheMoon', phase: 'base', writes: ['res', 'rtb'],
       apply: u => { u.res += altarOfTheMoonResMod; u.rtb += altarOfTheMoonRtbMod; } }),
-    // PROVENANCE[militaryWorkshop]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[militaryWorkshop]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=the current strength/AP branch re-tests the post-conversion selected channel instead of the cited permanent SRanged/SThrown/SFireBreath fields; pointer=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS
     statStep({ id: 'militaryWorkshop', phase: 'base', writes: ['rtb'],
       apply: u => { u.rtb += blackpowderRtbMod + blackpowderFireBreathRtbMod; } }),
-    // PROVENANCE[naturalSelection:wildGame]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[naturalSelection:wildGame]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=the current gate reads the post-conversion selected channel instead of the saved RNG field at the cited permanent CreateUnit position; pointer=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS
     statStep({ id: 'naturalSelection:wildGame', phase: 'base', writes: ['rtb'],
       apply: u => { u.rtb += naturalSelectionWildGameRtbMod; } }),
-    // Energy Cannon's +50% is a permanent overland write that CreateUnit.CAS makes after
-    // Artificer, Blackpowder, Altar of the Moon and Natural Selection — so it reads exactly
-    // the ranged strength standing at this point, and nothing written later.
-    // PROVENANCE[energyCannon]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // The executing script also adds +1 to an existing ranged-strength field, despite
+    // that write being omitted from Ludus Agoge's prose description.
+    // PROVENANCE[ludusAgoge]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:335-350
+    statStep({ id: 'ludusAgoge', phase: 'base', writes: ['res', 'atk', 'rtb', 'hp'],
+      apply: u => {
+        u.res += ludusAgogeResMod; u.atk += ludusAgogeAtkMod;
+        u.rtb += ludusAgogeRtbMod; u.hp += ludusAgogeHpMod;
+      } }),
+    // PROVENANCE[motherFungus]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:443-455
+    statStep({ id: 'motherFungus', phase: 'base', writes: ['atk', 'rtb'],
+      apply: u => { u.atk += motherFungusAtkMod; u.rtb += motherFungusRtbMod; } }),
+    // PROVENANCE[altarOfTheSun:holyMother]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:355-366
+    statStep({ id: 'altarOfTheSun:holyMother', phase: 'base', writes: ['atk'],
+      apply: u => { u.atk += altarOfTheSunMeleeMod; } }),
+    // PROVENANCE[naturalSelection:coal]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:529-554
+    statStep({ id: 'naturalSelection:coal', phase: 'base', writes: ['atk'],
+      apply: u => { u.atk += naturalSelectionCoalMod; } }),
+    // PROVENANCE[poolOfRepentance]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:311-316
+    statStep({ id: 'poolOfRepentance', phase: 'base', writes: ['res', 'def'],
+      apply: u => { u.res += poolOfRepentanceResMod; u.def += poolOfRepentanceDefMod; } }),
+    // PROVENANCE[sanctaBasilica]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:412-415
+    statStep({ id: 'sanctaBasilica', phase: 'base', writes: ['res'],
+      apply: u => { u.res += sanctaBasilicaResMod; } }),
+    // PROVENANCE[pillarOfFaith]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:572-590
+    statStep({ id: 'pillarOfFaith', phase: 'base', writes: ['res'],
+      apply: u => { u.res += pillarOfFaithResMod; } }),
+    // PROVENANCE[naturalSelection:powerMinerals]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:529-539
+    statStep({ id: 'naturalSelection:powerMinerals', phase: 'base', writes: ['res'],
+      apply: u => { u.res += naturalSelectionPowerMineralsMod; } }),
+    // CreateUnit.CAS snapshots Resistance before either resource write, then processes
+    // Nightshade second. When both are present, Nightshade replaces the Power-mineral bonus.
+    // PROVENANCE[naturalSelection:nightshade]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=the source adds the full Nightshade count while the current boolean input can represent only one; pointer=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS
+    statStep({ id: 'naturalSelection:nightshade', phase: 'base', writes: ['res'],
+      apply: u => {
+        if (naturalSelectionNightshadeMod) {
+          u.res += naturalSelectionNightshadeMod - naturalSelectionPowerMineralsMod;
+        }
+      } }),
+    // PROVENANCE[dragonMound]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=the source unconditionally creates or boosts Fire Breath while the current single-channel model boosts only an existing Fire Breath; pointer=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS
+    statStep({ id: 'dragonMound', phase: 'base', writes: ['def', 'rtb'],
+      apply: u => { u.def += dragonMoundDefMod; u.rtb += dragonMoundRtbMod; } }),
+    // PROVENANCE[naturalSelection:iron]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:529-558
+    statStep({ id: 'naturalSelection:iron', phase: 'base', writes: ['def'],
+      apply: u => { u.def += naturalSelectionIronMod; } }),
+    // Energy Cannon is the last represented CreateUnit.CAS ranged-strength write, so its
+    // +50% reads every earlier permanent ranged contribution in this sequence.
+    // PROVENANCE[energyCannon]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=the source gates on SMaxAmmo while the current single-channel model substitutes a positive selected ranged-strength/type test and has no ammo field; pointer=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS
     statStep({ id: 'energyCannon', phase: 'base', writes: ['rtb'],
       when: () => energyCannon,
       apply: u => { u.rtb += Math.floor(Math.max(0, u.rtb) / 2); } }),
-    // PROVENANCE[ludusAgoge]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'ludusAgoge', phase: 'base', writes: ['res', 'atk', 'hp'],
-      apply: u => {
-        u.res += ludusAgogeResMod; u.atk += ludusAgogeAtkMod; u.hp += ludusAgogeHpMod;
-      } }),
-    // PROVENANCE[motherFungus]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'motherFungus', phase: 'base', writes: ['atk'],
-      apply: u => { u.atk += motherFungusAtkMod; } }),
-    // PROVENANCE[altarOfTheSun:holyMother]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'altarOfTheSun:holyMother', phase: 'base', writes: ['atk'],
-      apply: u => { u.atk += altarOfTheSunMeleeMod; } }),
-    // PROVENANCE[naturalSelection:coal]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'naturalSelection:coal', phase: 'base', writes: ['atk'],
-      apply: u => { u.atk += naturalSelectionCoalMod; } }),
-    // PROVENANCE[poolOfRepentance]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'poolOfRepentance', phase: 'base', writes: ['res', 'def'],
-      apply: u => { u.res += poolOfRepentanceResMod; u.def += poolOfRepentanceDefMod; } }),
-    // PROVENANCE[sanctaBasilica]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'sanctaBasilica', phase: 'base', writes: ['res'],
-      apply: u => { u.res += sanctaBasilicaResMod; } }),
-    // PROVENANCE[pillarOfFaith]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'pillarOfFaith', phase: 'base', writes: ['res'],
-      apply: u => { u.res += pillarOfFaithResMod; } }),
-    // PROVENANCE[orihalcon]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'orihalcon', phase: 'base', writes: ['res', 'rtb'],
-      apply: u => { u.res += orihalconResMod; u.rtb += orihalconRtbMod; } }),
-    // PROVENANCE[naturalSelection:nightshade]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'naturalSelection:nightshade', phase: 'base', writes: ['res'],
-      apply: u => { u.res += naturalSelectionNightshadeMod; } }),
-    // PROVENANCE[naturalSelection:powerMinerals]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'naturalSelection:powerMinerals', phase: 'base', writes: ['res'],
-      apply: u => { u.res += naturalSelectionPowerMineralsMod; } }),
-    // PROVENANCE[dragonMound]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'dragonMound', phase: 'base', writes: ['def', 'rtb'],
-      apply: u => { u.def += dragonMoundDefMod; u.rtb += dragonMoundRtbMod; } }),
-    // PROVENANCE[naturalSelection:iron]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'naturalSelection:iron', phase: 'base', writes: ['def'],
-      apply: u => { u.def += naturalSelectionIronMod; } }),
     // --- a: precalc, in the binary ---
     // Region `a` writes nine unit fields against region `c`'s 492, and the ones it writes are
     // flags rather than stats. City Walls is not here: ApplyAttack passes it as EffectiveDefense's
@@ -1589,7 +1607,7 @@ function deriveUnitStats(input) {
     ...abilByPhase.b,
     // Fiery Fury: melee at UnitCalcPre.CAS:832-846, and the ranged half of what the bucket
     // model merged into one `Math.max` term — see the M4 note at `fbBladeRtb`.
-    // PROVENANCE[fieryFury]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=cited CAS range establishes the ranged Flame Blade branch but not this combined melee-plus-ranged arithmetic; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS
+    // PROVENANCE[fieryFury]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:831-845 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1409-1427 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:524-526
     statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', 'rtb'],
       apply: u => { u.atk += ffMeleeBonus; u.rtb += ffRtbMod; } }),
     // PROVENANCE[wallOfFire:garrison]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1635-1649
@@ -1663,7 +1681,7 @@ function deriveUnitStats(input) {
     // +0x0139A, the same region. MoM and CoM 1 apply theirs from the battle-unit constructor
     // instead, but `b` and `d` are empty for them, so nothing sits between `a` and `c` there
     // and the position is unobservable: one step serves every version.
-    // PROVENANCE[level]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[level]: UNVERIFIED versions=all; gap=the modern citation proves only the call position and adjacent unrelated writes while R9-G1f still owns the ApplyLevelBonus dispatch and field arithmetic; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     statStep({ id: 'level', phase: 'c',
       writes: ['res', 'def', 'atk', 'rtb', 'hp', 'gaze', 'doomGaze'],
       apply: u => {
@@ -1676,50 +1694,52 @@ function deriveUnitStats(input) {
     // is not read directly, but the complete list of what its recompute writes after Warp
     // (MoM analysis, *Warp Creature runs early*) does not contain it, so it is pre-Warp there
     // too.
-    // PROVENANCE[focusMagic]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[focusMagic]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c:753-770 | Reference docs/Caster binary/Units.RecalculateUnits.pas:612-649
     statStep({ id: 'focusMagic', phase: 'c', writes: ['rtb', 'doomGaze'],
       when: () => !isWarlord,
       apply: u => { u.rtb += focusMagicRtbMod; u.doomGaze += focusMagicDoomGazeMod; } }),
     // Weapon material is `@Units@ApplyMagicWeapons` at +0x04B90, after the equipment loop —
     // also D25, also region c.
-    // PROVENANCE[weapon]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[weapon]: UNVERIFIED versions=all; gap=the modern citation reaches only the ApplyMagicWeapons call and unrelated writes and the shared step does not preserve the DOS pre-Focus ordering; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     statStep({ id: 'weapon', phase: 'c', writes: ['def', 'atk', 'rtb'],
       apply: u => { u.def += wpn.def; u.atk += wpn.atk; u.rtb += rtbWpn; } }),
     ...abilByPhase.c,
-    // PROVENANCE[charmOfLife]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-    statStep({ id: 'charmOfLife', phase: 'c', writes: ['hp'],
-      apply: u => { u.hp += charmOfLifeHpMod; } }),
-    // PROVENANCE[endurance]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[endurance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:610-614 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1266-1277 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:528-528 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:528-528
     statStep({ id: 'endurance', phase: 'c', writes: ['def', 'hp'],
       apply: u => { u.def += enduranceDefMod; u.hp += enduranceHpMod; } }),
-    // PROVENANCE[discipline]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[discipline]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1279-1298
     statStep({ id: 'discipline', phase: 'c', writes: ['def', 'atk', 'rtb'],
       apply: u => {
         u.def += disciplineDefMod; u.atk += disciplineAtkMod; u.rtb += disciplineRtbMod;
       } }),
     // Each of these carries the type-conditional half of an effect whose flat half is an
     // ability step above — hence the `:<what it writes>` suffix on the shared name.
-    // PROVENANCE[flameBlade:ranged]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=compiled gate/write is reconstructed but configured ranged/Thrown constants require both applicable runtime-table citations; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[flameBlade:ranged]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=CoM1 applies Flame Blade before Focus Magic, but the current shared step runs after the pre-applied Focus conversion/minimum and does not preserve low-strength arithmetic; pointer=Reference docs/DOS reconstructed/unitcalc.c
     statStep({ id: 'flameBlade:ranged', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += fbRtbMod; } }),
-    // PROVENANCE[blazingMarch:ranged]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[blazingMarch:ranged]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:2889-2914 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1794-1815 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:536-539 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:536-539
     statStep({ id: 'blazingMarch:ranged', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += blazingMarchRtbMod; } }),
     // PROVENANCE[reinforceMagic:ranged]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1640-1648
     statStep({ id: 'reinforceMagic:ranged', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += reinforceMagicRtbMod; } }),
-    // PROVENANCE[mislead:ranged]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[mislead:ranged]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=the cited aura-pass write is phase e while the current step remains in phase c under F14; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     statStep({ id: 'mislead:ranged', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += misleadRtbMod; } }),
     // PROVENANCE[landLinking:breath]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:723-731 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1491-1506
     statStep({ id: 'landLinking:breath', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += landLinkingBreathRtbMod; } }),
-    // PROVENANCE[giantStrength:thrown]: UNVERIFIED versions=all; gap=DOS proof covers MoM/CP only while CoM 1 and compiled-modern/Warlord reachable executions lack complete implementation/table citations; pointer=Reference docs/DOS reconstructed/unitcalc.c
+    // PROVENANCE[giantStrength:thrown]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:441-450
     statStep({ id: 'giantStrength:thrown', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += gsRtbMod; } }),
     // PROVENANCE[lionheart:rangedHp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:487-500 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1463-1478
     statStep({ id: 'lionheart:rangedHp', phase: 'c', writes: ['rtb', 'hp'],
       apply: u => { u.rtb += lionheartRtbMod; u.hp += lionheartHpMod; } }),
+    // Charm of Life reads live HP after every earlier HP writer, including Lionheart and Endurance.
+    // PROVENANCE[charmOfLife]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:1356-1361 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1673-1684
+    statStep({ id: 'charmOfLife', phase: 'c', writes: ['hp'],
+      when: () => charmOfLifeActive,
+      apply: u => { u.hp += Math.max(1, Math.trunc(u.hp / 4)); } }),
     // PROVENANCE[weakness:ranged]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3107-3134 | Reference docs/Caster binary/Units.RecalculateUnits.pas:2012-2019
     statStep({ id: 'weakness:ranged', phase: 'c', writes: ['rtb'],
       apply: u => { u.rtb += weaknessRtbModBinary; } }),
@@ -1736,6 +1756,9 @@ function deriveUnitStats(input) {
         if (isCoMVersion && u.def > 5) u.toBlk += 10;
         else u.def += 2;
       } }),
+    // PROVENANCE[orihalcon]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:773-778 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1522-1531
+    statStep({ id: 'orihalcon', phase: 'c', writes: ['res', 'rtb'],
+      apply: u => { u.res += orihalconResMod; u.rtb += orihalconRtbMod; } }),
     // PROVENANCE[nodeAura]: UNVERIFIED versions=all; gap=exact applicable implementation gate/arithmetic ranges not yet matched; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
     statStep({ id: 'nodeAura', phase: 'c',
       writes: ['res', 'def', 'atk', 'rtb', 'gaze', 'doomGaze'],

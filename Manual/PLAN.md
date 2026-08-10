@@ -32,9 +32,7 @@ fantastic units, extracted from their summoning spells' effect text.
 
 Extraction surfaced four places where the manual contradicts itself or writes in
 shorthand; all are resolved and logged rather than silently repaired — see SPEC.md,
-*Discrepancies report*. Two facts the manual never states (the `*` Super marker, and what
-`Ship Wringhts Guild` refers to) came from the maintainer and are recorded under
-*Knowledge that is not in the manual*.
+*Discrepancies report*. Two notation mappings supplied by the maintainer are recorded there too.
 
 ### Stage 2 — tables and verification
 
@@ -71,6 +69,3 @@ the data is the painful part to redo. Stages 1 and 2 before Stage 3.
   wrong — the 233-vs-234 spell error survived into the spec because a single
   regex was trusted. Corroborate with a second, structurally different method.
 - **Stop and report** on anything the spec does not cover, rather than guessing.
-
-Runs happen locally in a git worktree (no remote agents available). The manual
-HTML and its images are tracked precisely so a worktree checkout has them.

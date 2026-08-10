@@ -60,9 +60,9 @@ function realmLinear(items) {
 const ABILITY_DEFS = [
   // Abilities — gaze (left col) | touch (right col); the Exorcise/Destruction touch pair is last.
   { key: 'stoningGaze', label: 'Stoning Gaze', type: 'numcheck', match: 'StoningGaze', group: 'Abilities', tooltip: 'Opponents with Stoning Immunity or Magic Immunity are unaffected.\nFor each defender figure: Defender resist at −X or die.\nFires before the melee exchange, on both attack and defense.' },
-  { key: 'stoningTouch', label: 'Stoning Touch', type: 'numcheck', match: 'StoningTouch', group: 'Abilities', tooltip: 'Opponents with Stoning Immunity or Magic Immunity are unaffected.\nFor each attacker figure: Defender resist at −X or die.\nFires on melee, thrown, breath, ranged, and gaze attacks.\nWarlord: Does not fire on ranged attacks.' },
+  { key: 'stoningTouch', label: 'Stoning Touch', type: 'numcheck', match: 'StoningTouch', group: 'Abilities', tooltip: 'Opponents with Stoning Immunity or Magic Immunity are unaffected.\nFor each attacker figure: Defender resist at −X or die.\nDOS: An innate/card value fires on every selected attack, including Gaze.\nItem-granted values follow their melee or shared non-melee weapon record.\nCoM 2 & Warlord: An innate/card value should fire only on non-Gaze\nattacks; the calculator currently also carries it into Gaze attacks.\nWarlord Focus Magic moves it to melee and Thrown only.' },
   { key: 'deathGaze', label: 'Death Gaze', type: 'numcheck', match: 'DeathGaze', group: 'Abilities', tooltip: 'Opponents with Death Immunity, Magic Immunity, or\nRighteousness are unaffected.\nFor each defender figure: Defender resist at −X or die.\nFires before the melee exchange, on both attack and defense.' },
-  { key: 'deathTouch', label: 'Death Touch', type: 'numcheck', match: 'DeathTouch', group: 'Abilities', tooltip: 'Opponents with Death Immunity, Magic Immunity, or\nRighteousness are unaffected.\nFor each attacker figure: Defender resist at −X or die.\nFires on melee, thrown, breath, ranged, and gaze attacks.\nWarlord: Does not fire on ranged attacks.' },
+  { key: 'deathTouch', label: 'Death Touch', type: 'numcheck', match: 'DeathTouch', group: 'Abilities', tooltip: 'Opponents with Death Immunity or Magic Immunity are unaffected.\nRighteousness grants +30 Resistance against this effect.\nFor each attacker figure: Defender resist at −X or die.\nDOS: An innate/card value fires on every selected attack, including Gaze.\nItem-granted values follow their melee or shared non-melee weapon record.\nCoM 2 & Warlord: An innate/card value should fire only on non-Gaze\nattacks; the calculator currently also carries it into Gaze attacks.\nWarlord Focus Magic moves it to melee and Thrown only.' },
   { key: 'doomGaze', label: 'Doom Gaze', type: 'num', match: 'DoomGaze', group: 'Abilities', tooltip: 'Deals X damage, ignoring to-hit and defense rolls.\nFires before the melee exchange, on both attack and defense.' },
   { key: 'lifeSteal', label: 'Life Steal', type: 'numcheck', match: 'LifeSteal', group: 'Abilities', tooltip: 'Opponents with Death Immunity, Magic Immunity, or\nRighteousness are unaffected.\nFor each attacker figure: Defender resist; damage dealt =\nroll − (resistance − X). Attacker heals the same amount.\nFires on melee, thrown, breath, ranged, and gaze attacks.' },
   { key: 'poison', label: 'Poison Touch', type: 'num', match: 'PoisonTouch', group: 'Abilities', tooltip: 'Opponents with Poison Immunity are unaffected.\nX times per attacker figure: Defender resist or take 1 damage.\nFires on melee, thrown, breath, ranged, and gaze attacks.\nMoM 1.31 & 1.60: No save modifier.\nCoM 1 & 2 & Warlord: Save modifier −1.' },
@@ -189,7 +189,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: +3 melee and +3 missile attack.\nWarlord: also +3 thrown attack.\nAffected attacks gain magic weapons (bypass Weapon Immunity).' },
     { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'nature', tooltip: 'Versions: CoM 1 & 2 & Warlord\nApplies to fantastic creatures.\n+1 defense, +2 resistance, +10% To Hit.' },
     { key: 'landLinking', label: 'Land Linking', type: 'bool', match: 'LandLinking', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'nature', tooltip: 'Versions: CoM 1 & 2\nApplies to fantastic units.\n+2 defense, +2 melee, and +2 breath attack.' },
-    { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'sorcery', tooltip: 'Versions: CoM 1 & 2 & Warlord\nMagical ranged or breath attack present: +3 strength.\nCoM 2 & Warlord — Doom Gaze present: +3 doom damage.\nThrown / missile / boulder attack: converted into a Sorcery\nmagical ranged attack. CoM 1 has a minimum strength of 3;\nCoM 2 and Warlord preserve its positive strength.\nNo attack to convert: gains a strength-3 Sorcery magical ranged\nattack.' },
+    { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'sorcery', tooltip: 'Versions: CoM 1 & 2 & Warlord\nMagical ranged or breath attack present: +3 strength.\nCoM 2 & Warlord — Doom Gaze present: +3 doom damage.\nThrown / missile / boulder attack: converted into a Sorcery\nmagical ranged attack. CoM 1 has a minimum strength of 3;\nCoM 2 and Warlord preserve its positive strength.\nNo attack to convert: gains a strength-3 Sorcery magical ranged\nattack.\nWarlord: Moves an existing general/card Stoning or Death Touch\nto melee and Thrown.' },
   ]),
   // Enchantments — CoM2 & Warlord — select first, then bools interleaved for life → death → chaos → sorcery
   { key: 'discipline', label: 'Discipline', type: 'select', options: [['none','None'],['overland','Overland'],['combat','Combat']], match: 'Discipline', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'life', tooltip: 'Versions: CoM 2\nDoes not affect heroes or fantastic units.\n+1 defense.\nRegular or higher: +2 defense.\nVeteran or higher: +2 defense, +1 melee, +1 physical ranged.\nElite or higher, cast in combat: also Negate First Strike.\nNot modeled: movement bonus (overland cast, Elite+).' },
@@ -218,7 +218,7 @@ const ENCHANTMENT_DEFS = [
   { key: 'lavaSmelterElementalArmor', label: 'Lava Smelter: Elem. Armor', type: 'bool', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPermanent Adamantium + Orihalcon grant.\nGrants Elemental Armor independently of Resist Elements;\nwhen both are present, both defense bonuses apply.' },
   { key: 'lavaSmelterFieryBlade', label: 'Lava Smelter: Fiery Blade', type: 'bool', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPermanent Adamantium + Crysx grant.\n+3 melee, +2 Missile/Thrown, and bypasses Weapon Immunity.\nDoes not stack corresponding bonuses with Flame Blade.' },
   { key: 'godsPlayDices', label: 'Gods Play Dices: Resistance', type: 'num', min: -2, max: 2, signed: true, match: 'GodsPlayDices', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nEnter the Resistance modifier rolled for this unit at combat start.\nInteger from −2 to +2.' },
-  { key: 'pillarOfFaithRes', label: 'Pillar of Faith: +Res', type: 'num', match: 'PillarOfFaithRes', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nApplies to normal units only.\nUnits trained in the city gain +1 Resistance per Religious\nBuilding, capped at +8.\nEnter the number of Religious Buildings.' },
+  { key: 'pillarOfFaithRes', label: 'Pillar of Faith: +Res', type: 'num', match: 'PillarOfFaithRes', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nApplies to normal units only.\nUnits trained in the city gain +1 Resistance per qualifying\nbuilding; the executing script has no cap.\nEnter the counted building total.' },
   { key: 'powerMinerals', label: 'Natural Sel.: Power minerals', type: 'num', match: 'PowerMinerals', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\nNatural Selection grants +1 Resistance per 10 Power from\nmineral resources near the training city.\nEnter the Resistance bonus directly.' },
   { key: 'survivalInstinctToBlock', label: 'Survival Instinct: +To Block%', type: 'num', match: 'SurvivalInstinctToBlock', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\nNewly trained units gain To Block from precious-metal veins:\nsilver +3%, gold +5%, gems +7%.\nEnter the To Block bonus percentage directly.' },
   ...realmLinear([
@@ -236,14 +236,14 @@ const ENCHANTMENT_DEFS = [
     { key: 'heatPowerEngine', label: 'Heat Power Engine', type: 'bool', match: 'HeatPowerEngine', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nMechanical units gain the permanent Power Engine upgrade.\nPower Engine enables Magitek Engineering, Temporal Engineering,\nand Energy Beam Weapons effects.' },
     { key: 'hillfort', calcKey: 'missileImmunity', label: 'Hillfort', type: 'bool', match: 'Hillfort', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nDefending units inside city walls gain Missile Immunity.' },
     { key: 'lightningBlade', label: 'Lightning Blade', type: 'bool', match: 'LightningBlade', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies to normal units only.\nGrants a lightning attack.\nThrown attack: becomes Lightning Breath at Thrown +1 strength.\nMelee-only unit: gains a strength-1 Lightning Breath.\nLightning Breath is innate and gains veterancy bonuses.\nLightning Breath is Armor Piercing.\nOpponents with Lightning Resist negate the Armor Piercing.' },
-    { key: 'ludusAgoge', label: 'Ludus Agoge', type: 'bool', match: 'LudusAgoge', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies only to normal Orc-race units; Legionaries excluded.\n+1 melee, +1 resistance, +1 HP per figure.\nNot modeled: the Legionary +1 Movement bonus.' },
+    { key: 'ludusAgoge', label: 'Ludus Agoge', type: 'bool', match: 'LudusAgoge', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies only to normal Orc-race units; Legionaries excluded.\n+1 melee, +1 ranged, +1 resistance, +1 HP per figure.\nNot modeled: the Legionary +1 Movement bonus.' },
     { key: 'magitekEngineering', label: 'Magitek Engineering', type: 'bool', match: 'MagitekEngineering', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPower Engine units gain +20% To-Defend and Large Shield.' },
     { key: 'magitekScience', label: 'Magitek Science', type: 'bool', match: 'MagitekScience', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Outlander research reform, not a cast spell.\nArmorclad units gain Resist Magic.\nThe manual and helptext also name Battle Armor, but the script\ndoes not grant it there.' },
     { key: 'malnourished', label: 'Malnourished', type: 'bool', match: 'Malnourished', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\n-1 melee attack, -2 armor.' },
     { key: 'mechanicalExpert', label: 'Mechanical Expert', type: 'bool', match: 'MechanicalExpert', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies only to Mechanical units.\n+20% To Hit and +10% To Block.' },
     { key: 'militaryWorkshop', label: 'Military Workshop', type: 'bool', match: 'MilitaryWorkshop', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nEligible normal units with physical ranged, Thrown, or Fire\nBreath gain Blackpowder Weapon.\nPhysical ranged/Thrown gains Armor Piercing; if already Armor\nPiercing or Doom, ranged gains +2 and Thrown gains +4.\nFire Breath gains +4; Missile becomes a heavy projectile.\nPoison increases by 1.' },
     { key: 'militaryDrilling', label: 'Military Drilling', type: 'bool', match: 'MilitaryDrilling', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Outlander research reform, not a cast spell.\nNew non-fantastic units gain permanent Discipline.\nNot modeled: Mechanical units heal 3 HP per turn below half Health.' },
-    { key: 'motherFungus', label: 'Mother Fungus', type: 'bool', match: 'MotherFungus', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies only to normal Goblin-race units.\n+2 melee and +10% To Block.\n+1 Poison (grants Poison 1 if the unit has none).\nNot modeled: the x2 ability-charge bonus.' },
+    { key: 'motherFungus', label: 'Mother Fungus', type: 'bool', match: 'MotherFungus', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies only to normal Goblin-race units.\n+2 melee, +2 ranged, and +10% To Block.\n+1 Poison (grants Poison 1 if the unit has none).\nNot modeled: the x2 ability-charge bonus.' },
     { key: 'pneumaReactor', label: 'Pneuma Reactor', type: 'bool', match: 'PneumaReactor', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nNon-fantastic regular, Hero, and Armorclad units gain Life\nSteal at −floor(current Resistance / 2).\nStacks with an existing negative Life Steal modifier.' },
     { key: 'poolOfRepentance', label: 'Pool of Repentance', type: 'bool', match: 'PoolOfRepentance', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nApplies only to normal Rakhshasa-race units.\n+1 armor and +1 resistance.' },
     { key: 'psychoConverter', label: 'Psycho Converter', type: 'bool', match: 'PsychoConverter', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nNon-fantastic regular, Hero, and Armorclad units gain To-Hit\nand To-Defend equal to\nfloor(current Resistance × Level / 2)%.' },
@@ -270,7 +270,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'hierophany', label: 'Hierophany', type: 'bool', match: 'Hierophany', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nHalves the cursed unit\'s Defense (rounded down).\nStrips all immunities, Lightning Resist, Negate First Strike.\nNot modeled: stripped mobility perks.' },
     { key: 'pillarOfFaithLucky', label: 'Pillar of Faith: Lucky', type: 'bool', match: 'PillarOfFaithLucky', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nGrants Lucky: +10% To Hit, +10% To Block, +1 Resistance.' },
     { key: 'shadowStrike', label: 'Shadow Strike', type: 'bool', match: 'ShadowStrike', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nAdds a Thrown attack at 1 + 1/3 of melee (rounded down).\nA unit with an existing Thrown attack adds that to its Thrown.' },
-    { key: 'revenant', label: 'Revenant', type: 'bool', match: 'Revenant', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead: grants Death, Cold, Poison, and Illusion\nImmunity.\nGrants melee Death Touch 0: per attacker figure, defender\nresists or one figure dies.\nDeath Touch does not fire on ranged attacks.\nNot modeled: Regeneration.' },
+    { key: 'revenant', label: 'Revenant', type: 'bool', match: 'Revenant', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead: grants Death, Cold, and Illusion Immunity.\nReplaces Death Touch with 0 on melee and Thrown: per attacker\nfigure, defender resists or one figure dies.\nDoes not apply to Breath or ranged attacks.\nNot modeled: Regeneration.' },
     { key: 'vampirism', label: 'Vampirism', type: 'bool', match: 'Vampirism', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nUnit becomes undead and gains Blood Sucker.\nHalf of the represented Thrown or Breath strength transfers to\nmelee (truncated); that attack strength drops to 1.' },
     { key: 'soulFlay', label: 'Soul Flay', type: 'bool', match: 'SoulFlay', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures.\nPer experience level: −1 melee, −2 armor, −2 resistance.\nRecruit: −1 / −2 / −2. Elite: −4 / −8 / −8.' },
     { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\n−3 melee, −3 armor, −6 Resistance, −10% To Hit.' },
@@ -283,10 +283,10 @@ const ENCHANTMENT_DEFS = [
     { key: 'wallOfFireBoost', label: 'Wall of Fire: garrison', type: 'bool', match: 'WallOfFireBoost', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Wall of Fire (Warlord Chaos Common city enchantment) garrison buff.\nDefending regular units gain +1 melee, +1 physical ranged (missile/boulder), and +1 thrown attack.\nThose attacks bypass Weapon Immunity.\nApplies to normal units only.\nThe fire-line damage to attackers crossing the wall is the separate global Wall of Fire toggle.' },
     { key: 'colossalStrength', label: 'Colossal Strength', type: 'bool', match: 'ColossalStrength', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\n+1 plus 40% of current melee strength (rounded down).\nScales the strength after other bonuses and penalties, not the base.\nSame bonus to physical ranged and thrown attacks.' },
     { key: 'venom', label: 'Venom', type: 'bool', match: 'Venom', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\n+1 Poison (grants Poison 1 if the unit has none).\nGrants Poison Immunity.' },
-    { key: 'coal', label: 'Natural Sel.: Coal', type: 'bool', match: 'NaturalSelectionCoal', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\n+1 melee attack.' },
-    { key: 'iron', label: 'Natural Sel.: Iron', type: 'bool', match: 'NaturalSelectionIron', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\n+1 Armor.' },
-    { key: 'wildGame', label: 'Natural Sel.: Wild game', type: 'bool', match: 'NaturalSelectionWildGame', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\n+1 to ranged attacks (physical and magical ranged; not thrown or breath).\nNot modeled: Forester.' },
-    { key: 'nightshade', label: 'Natural Sel.: Nightshade', type: 'bool', match: 'NaturalSelectionNightshade', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\n+1 Resistance.' },
+    { key: 'coal', label: 'Natural Sel.: Coal', type: 'bool', match: 'NaturalSelectionCoal', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\n+1 melee attack.' },
+    { key: 'iron', label: 'Natural Sel.: Iron', type: 'bool', match: 'NaturalSelectionIron', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\n+1 Armor.' },
+    { key: 'wildGame', label: 'Natural Sel.: Wild game', type: 'bool', match: 'NaturalSelectionWildGame', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\n+1 to ranged attacks (physical and magical ranged; not thrown or breath).\nNot modeled: Forester.' },
+    { key: 'nightshade', label: 'Natural Sel.: Nightshade', type: 'bool', match: 'NaturalSelectionNightshade', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\n+1 Resistance. If Power minerals are also present, this later\nscript write replaces their Resistance bonus.' },
     { key: 'planewalking', calcKey: 'teleporting', label: 'Planewalking', type: 'bool', match: 'Planewalking', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Versions: Warlord\nGrants Teleporting.' },
     { key: 'temporalTwist', label: 'Temporal Twist', type: 'bool', match: 'TemporalTwist', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Versions: Warlord\nDoes not affect units with Magic Immunity.\nStrips First Strike, Negate First Strike, and Teleporting.\nNot modeled: movement penalty.' },
     { key: 'greatUnbinding', label: 'Great Unbinding', type: 'bool', match: 'GreatUnbinding', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Versions: Warlord\nFantastic targets only.\n−20% To Hit.\n−20% To Block.\n−2 Resistance.\nNot modeled: Confusion.' },
@@ -596,9 +596,9 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
 
-  // --- Warlord ranged gating for touch attacks (Stoning Touch + Death Touch only) ---
-  // Per Warlord manual @ 2338 & @ 2496: Stoning/Death Touch no longer fire on ranged or
-  // magical ranged. Each pair has the same scenario, only the version differs.
+  // --- Warlord source-record placement for Stoning Touch and Death Touch ---
+  // Unit-card/roster values occupy the general record, so both physical and magical
+  // ranged attacks merge them. Focus Magic and Revenant supply the record-specific cases.
   stoningTouchRangedMissileCoM2: {
     desc: 'Stoning Touch on ranged missile (CoM2): rtb 1 fully blocked, stoningTouch -3 vs Res 5 fires per arrow → pFail 0.8 × 10 hp = 8.0',
     version: V_COM2,
@@ -608,12 +608,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   stoningTouchRangedMissileWarlord: {
-    desc: 'Stoning Touch on ranged missile (Warlord): touch gated, only physical damage — 1 rtb fully blocked → 0',
+    desc: 'Global Stoning Touch on ranged missile (Warlord): rtb 1 fully blocked, Stoning -3 vs Res 5 fires → 8.0',
     version: V_WARLORD,
     a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.000 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   stoningTouchRangedMagicCoM2: {
     desc: 'Stoning Touch on magical ranged (CoM2): magic_n rtb 1 fully blocked, stoningTouch -3 vs Res 5 fires → 8.0',
@@ -624,12 +624,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   stoningTouchRangedMagicWarlord: {
-    desc: 'Stoning Touch on magical ranged (Warlord): touch gated → 0',
+    desc: 'Global Stoning Touch on magical ranged (Warlord): magic_n rtb 1 fully blocked, Stoning -3 fires → 8.0',
     version: V_WARLORD,
     a: { rtbType:'magic_n', rtb:1, toHitRtbMod:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.000 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   deathTouchRangedMissileCoM2: {
     desc: 'Death Touch on ranged missile (CoM2): rtb 1 fully blocked, deathTouch -3 vs Res 5 fires per arrow → pFail 0.8 × 10 hp = 8.0',
@@ -640,12 +640,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   deathTouchRangedMissileWarlord: {
-    desc: 'Death Touch on ranged missile (Warlord): touch gated, only physical damage — 0',
+    desc: 'Global Death Touch on ranged missile (Warlord): rtb 1 fully blocked, Death Touch -3 fires → 8.0',
     version: V_WARLORD,
     a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.000 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   deathTouchRangedMagicCoM2: {
     desc: 'Death Touch on magical ranged (CoM2): magic_n rtb 1 fully blocked, deathTouch -3 vs Res 5 fires → 8.0',
@@ -656,12 +656,34 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   deathTouchRangedMagicWarlord: {
-    desc: 'Death Touch on magical ranged (Warlord): touch gated → 0',
+    desc: 'Global Death Touch on magical ranged (Warlord): magic_n rtb 1 fully blocked, Death Touch -3 fires → 8.0',
     version: V_WARLORD,
     a: { rtbType:'magic_n', rtb:1, toHitRtbMod:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  focusMagicMovesStoningOffRangedWarlord: {
+    desc: 'Focus Magic moves global Stoning Touch -3 to melee/Thrown: magic_n 1 becomes 4 but is fully blocked by def 4; ranged touch no longer fires → 0',
+    version: V_WARLORD,
+    a: { rtbType:'magic_n', rtb:1, toHitRtbMod:70, hp:10, abilities: { focusMagic: true, stoningTouch: -3 } },
+    b: { def:4, toBlkMod:70, res:5, hp:10 },
+    rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.000 },
+  },
+  focusMagicMovesDeathOffBreathWarlord: {
+    desc: 'Focus Magic moves global Death Touch -3 to melee/Thrown: fire breath 1 becomes 4 but is fully blocked by def 4; Breath uses general flags and has no touch → 0',
+    version: V_WARLORD,
+    a: { atk:0, rtbType:'fire', rtb:1, toHitRtbMod:70, hp:10, abilities: { focusMagic: true, deathTouch: -3 } },
+    b: { def:4, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0.000 },
+  },
+  stoningTouchMultipleModernChannelsWarlord: {
+    desc: 'Global Stoning Touch joins both modern attack calls: Lightning Breath 1 and Chaos Channels Fire Breath 4 are fully blocked, while two Stoning -3 attempts vs Res 5 average 16.0 damage.',
+    version: V_WARLORD,
+    a: { atk:0, rtbType:'lightning', rtb:1, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true, stoningTouch: -3 } },
+    b: { figs:4, def:20, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 16.000 },
   },
   poisonTouchBasic: {
     desc: 'Poison Touch: 1 atk (100% blocked) + Poison 4 vs Res 5 — 4 rolls × 50% fail = 2.0',
@@ -719,6 +741,15 @@ const PRESETS = {
     a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, hp:10, abilities: { poison: 2 } },
     b: { res:5, hp:20 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  chaosSpawnPoisonGazeMom: {
+    desc: 'DOS roster Chaos Spawn keeps Poison 4 in the common attack flags, so its Multiple Gaze carries four realm-less saves. Weakness suppresses its 1.31 melee call; gaze immunities and full blocking leave the unavoidable Doom Gaze 4 plus 2.0 poison EV.',
+    version: V_MOM_131,
+    aUnitName: 'Chaos Spawn',
+    a: { abilities: { weakness: true } },
+    b: { atk:0, figs:1, def:50, toBlkMod:70, res:5, hp:100,
+      abilities: { stoningImmunity: true, deathImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   stoningTouchBasic: {
     desc: 'Stoning Touch: 1 atk (100% blocked) + Stoning -3 vs Res 5 — pFail 80%, E[dmg] = 0.8 × 10 = 8.0',
@@ -1796,6 +1827,28 @@ const PRESETS = {
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
+  revenantDeathTouchOnThrownWarlord: {
+    desc: 'Revenant writes Death Touch 0 to melee flags, which Caster.exe also uses for Thrown: thrown 1 fully blocked by def 1, Death Touch averages 5.0.',
+    version: V_WARLORD,
+    a: { atk:0, rtbType:'thrown', rtb:1, toHitRtbMod:70, hp:10, abilities: { revenant: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  revenantDeathTouchNotRangedWarlord: {
+    desc: 'Revenant clears the general/ranged Death Touch records: magic_n 1 fully blocked by def 1 and the melee-only Death Touch does not join the ranged attack → 0.',
+    version: V_WARLORD,
+    a: { rtbType:'magic_n', rtb:1, toHitRtbMod:70, hp:10, abilities: { revenant: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0.000 },
+  },
+  revenantOverwritesStrongerDeathTouchWarlord: {
+    desc: 'Revenant unconditionally replaces intrinsic Death Touch -3 with melee Death Touch 0: fully blocked melee averages 5.0, not the intrinsic 8.0.',
+    version: V_WARLORD,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { revenant: true, deathTouch: -3 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
   revenantGrantsUndeadImmunityWarlord: {
     desc: 'Revenant makes defender undead → Death Touch immune. Atk 1 (100% blocked by def 1) + attacker Death Touch -3 vs Res 5 → 0 (immune). Without undead it would be (10−5−3)/10 × 10 = 2.0.',
     version: V_WARLORD,
@@ -2200,12 +2253,12 @@ const PRESETS = {
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { pillarOfFaithRes: 3 } },
     expected: { dmgToA: 0, dmgToB: 1.200 },
   },
-  pillarOfFaithResistanceCapWarlord: {
-    desc: 'Pillar of Faith Resistance caps at +8: 12 buildings → +8 res (not +12). Poison 10 (CoM −1) vs res 0+8=8 → pFail (11−8)/10=0.3 × 10 = 3.0 (uncapped +12 would give res 12 → immune → 0.0)',
+  pillarOfFaithResistanceUncappedWarlord: {
+    desc: 'Pillar of Faith has no script-side cap: 12 qualifying buildings → +12 res. Poison 10 (CoM −1) vs res 0+12=12 → immune → 0.0 (an artificial +8 cap would produce 3.0 damage)',
     version: V_WARLORD,
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 10 } },
     b: { def:1, toBlkMod:70, res:0, hp:20, abilities: { pillarOfFaithRes: 12 } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, dmgToB: 0 },
   },
 
   // --- Blaze of Glory (Warlord Chaos enchantment: Armor→Melee, Defense→0, Ranged→Thrown, +Armor Piercing, −First Strike) ---
@@ -3673,7 +3726,8 @@ const PRESETS = {
   },
 
   // --- Ludus Agoge ---
-  // Orc-race building. Trained Orc units gain +1 Attack, +1 Resistance, +1 HP.
+  // Orc-race building. Trained Orc units gain +1 Attack, +1 existing ranged,
+  // +1 Resistance, and +1 HP.
   // Legionaries gain +1 Movement instead (not modelled) and heroes are excluded.
   ludusAgogeAttackWarlord: {
     desc: 'Ludus Agoge (Warlord): an Orc unit gains +1 Attack. Melee 4+1 = 5 (100% hit) vs def 1 (100% block) → 5−1 = 4 (without the grant, melee 4 → 3)',
@@ -3719,7 +3773,8 @@ const PRESETS = {
   },
 
   // --- Mother Fungus ---
-  // Goblin building. Trained Goblin units gain +2 Attack, +10% To Defend, and Poison 1
+  // Goblin building. Trained Goblin units gain +2 Attack, +2 existing ranged,
+  // +10% To Defend, and Poison 1
   // (heroes excluded; the ×2 Spellcharge bonus is not modelled). Attack and To-Defend cases
   // give the defender Poison Immunity so the always-on Poison 1 grant does not contaminate the
   // effect under test.
@@ -6949,6 +7004,13 @@ const PRESETS = {
     b: { figs:2, def:2, toBlkMod:70, hp:8, abilities: { charmOfLife: true } },
     expected: { dmgToA: 0, dmgToB: 10.000 },
   },
+  charmOfLifeReadsLiveHpCoM2: {
+    desc: 'Charm of Life reads live HP after Endurance: hp 7+4=11, then +floor(11×0.25)=2 → 13 HP.',
+    version: V_COM2,
+    a: { atk:13, toHitMod:70, hp:20 },
+    b: { def:0, toBlkMod:70, hp:7, abilities: { endurance: true, charmOfLife: true } },
+    expected: { dmgToA: 0, dmgToB: 13.000 },
+  },
   lionheartMissileBonus: {
     desc: 'Lionheart +3 missile rtb: rtb 3+3=6, 100% hit → 6.0',
     a: { rtbType:'missile', rtb:3, toHitRtbMod:70, hp:10, abilities: { lionheart: true } },
@@ -7276,7 +7338,7 @@ const TEST_TREE = [
       { name: 'Cause Fear', keys: ['fearBasic', 'fearDefenderNoop', 'fearDeathImmune', 'fearMagicImmune', 'fearNotRanged', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccFireBreathBasic', 'ccFireBreathReplacesThrown', 'ccFireBreathVsFireImmunity', 'ccBypassWeaponImmunity', 'ccNodeAuraChaos'] },
       { name: 'Chaos Surge', keys: ['chaosSurgeMeleeMoM', 'chaosSurgeRangedMoM', 'chaosSurgeThrownMoM', 'chaosSurgeDoomGazeMoM', 'chaosSurgeNoResistanceMoM', 'chaosSurgeStackingMoM', 'chaosSurgeChaosChannelsBreathMoM'] },
-      { name: 'Charm of Life', keys: ['charmOfLifeHpLow', 'charmOfLifeHpHigh'] },
+      { name: 'Charm of Life', keys: ['charmOfLifeHpLow', 'charmOfLifeHpHigh', 'charmOfLifeReadsLiveHpCoM2'] },
       { name: 'Combined gaze', keys: ['combinedStoningDeathGaze'] },
       { name: 'Hidden gaze attack', keys: ['hiddenGazePerAttackerFigure', 'hiddenGazeStoningKillsPerDefenderFigure', 'hiddenGazeIgnoresWeaponImmunity'] },
       { name: 'Darkness / True Light', keys: ['darknessDeathVsLife', 'trueLightDeathVsLife', 'trueLightDeathVsLifeWarlord', 'trueLightWarlordIllusionToHit', 'sanctifyTrueLightWarlord', 'sanctifyClergyFantasticWarlord'] },
@@ -7314,7 +7376,7 @@ const TEST_TREE = [
       { name: 'Mind Storm', keys: ['mindStormMeleePenaltyMoM', 'mindStormRangedPenaltyMoM', 'mindStormDefPenaltyMoM'] },
       { name: 'Missile Immunity', keys: ['missileImmunityMissile', 'missileImmunityBoulder', 'missileImmunityMagic', 'missileImmunityMelee', 'missileImmunityArmorPiercing', 'missileImmunityWIOverwrite131', 'missileImmunityWraithFormOverwrite131', 'missileImmunityInvulnerabilityOverwrite131', 'missileImmunityGenericKeepsMI131', 'missileImmunityWIMagicWeapon'] },
       { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch'] },
-      { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'magicImmunityPoisonTouch', 'poisonHighRes', 'charmedPoisonMoM', 'poisonRanged', 'poisonThrown'] },
+      { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'magicImmunityPoisonTouch', 'poisonHighRes', 'charmedPoisonMoM', 'poisonRanged', 'poisonThrown', 'chaosSpawnPoisonGazeMom'] },
       { name: 'Prayer', keys: ['prayerToHit', 'prayerToHitRanged', 'prayerToBlock', 'prayerResistance', 'prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyNotRanged131'] },
       { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'magicImmunityMagicRanged', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose', 'longRangeMidRange'] },
       { name: 'Resist Magic', keys: ['resistMagicBlocks', 'resistMagicNotPoison'] },
@@ -7948,7 +8010,7 @@ const TEST_TREE = [
         keys: [
           'pillarOfFaithLuckyResistanceWarlord',
           'pillarOfFaithResistanceWarlord',
-          'pillarOfFaithResistanceCapWarlord',
+          'pillarOfFaithResistanceUncappedWarlord',
         ],
       },
       {
@@ -8046,6 +8108,9 @@ const TEST_TREE = [
         name: 'Revenant',
         keys: [
           'revenantGrantsDeathTouchWarlord',
+          'revenantDeathTouchOnThrownWarlord',
+          'revenantDeathTouchNotRangedWarlord',
+          'revenantOverwritesStrongerDeathTouchWarlord',
           'revenantGrantsUndeadImmunityWarlord',
         ],
       },
@@ -8264,7 +8329,6 @@ const TEST_TREE = [
       { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },
       { name: 'Endurance', keys: ['enduranceEffectCoM', 'enduranceEffectCoM2'] },
       { name: 'Experience bonuses', keys: ['experienceChampionMeleeCoM2', 'experienceChampionMeleeWarlord', 'experienceUltraEliteThrownCoM2', 'experienceUltraEliteThrownWarlord', 'experienceChampionDefenseCoM2', 'experienceChampionDefenseWarlord', 'experienceUltraEliteToHitCoM2', 'experienceUltraEliteToHitWarlord', 'experienceChampionHpCoM2', 'experienceChampionHpWarlord'] },
-      { name: 'Ranged touch attacks (Warlord)', keys: ['stoningTouchRangedMissileCoM2', 'stoningTouchRangedMissileWarlord', 'stoningTouchRangedMagicCoM2', 'stoningTouchRangedMagicWarlord', 'deathTouchRangedMissileCoM2', 'deathTouchRangedMissileWarlord', 'deathTouchRangedMagicCoM2', 'deathTouchRangedMagicWarlord'] },
       { name: 'First Strike', keys: ['firstStrikeCapCoM', 'firstStrikeCapCoM2', 'firstStrikeCapIgnoresThrownCoM', 'firstStrikeCapRemovedThrownCoM2'] },
       { name: 'Flame Blade', keys: ['flameBladeMelee', 'flameBladeMeleeCoM2'] },
       { name: 'Focus Magic', keys: ['focusMagicDoomGazeCoM', 'focusMagicDoomGazeCoM2'] },
@@ -8287,6 +8351,7 @@ const TEST_TREE = [
       { name: 'Ranged Distance Penalty', keys: ['distPenaltyMoM3', 'distPenaltyCoM3', 'distPenaltyMoM12', 'distPenaltyCoM12', 'distPenaltyHeroMoM12', 'distPenaltyHeroCoM12', 'distPenaltyCoM6', 'distPenaltyCoM2_6', 'distPenaltyCoM16', 'distPenaltyCoM2_16'] },
       { name: 'Supernatural', keys: ['supernaturalFormulaCoM', 'supernaturalFormulaCoM2'] },
       { name: 'Tactician', keys: ['tacticianHeroDefenseCoM2', 'tacticianHeroDefenseWarlord'] },
+      { name: 'Touch flag placement (Warlord)', keys: ['stoningTouchRangedMissileCoM2', 'stoningTouchRangedMissileWarlord', 'stoningTouchRangedMagicCoM2', 'stoningTouchRangedMagicWarlord', 'deathTouchRangedMissileCoM2', 'deathTouchRangedMissileWarlord', 'deathTouchRangedMagicCoM2', 'deathTouchRangedMagicWarlord', 'focusMagicMovesStoningOffRangedWarlord', 'focusMagicMovesDeathOffBreathWarlord', 'stoningTouchMultipleModernChannelsWarlord', 'revenantDeathTouchOnThrownWarlord', 'revenantDeathTouchNotRangedWarlord', 'revenantOverwritesStrongerDeathTouchWarlord'] },
       { name: 'Undead', keys: ['undeadBypassesWeaponImmunity', 'undeadTriggersBless', 'undeadDeathImmunity131', 'undeadPoisonImmunityPatched', 'undeadIllusionImmunityPatched', 'undeadPoisonNotImmune131', 'undeadNoPoisonImmunityCoM2', 'undeadIllusionNotImmune131'] },
       { name: 'Vertigo', keys: ['vertigoMeleeHitMoM', 'vertigoMeleeHitCoM', 'vertigoMeleeHitMoM', 'vertigoMeleeHitCoM2', 'vertigoRangedHitMoM', 'vertigoRangedHitCoM', 'vertigoRangedHitMoM', 'vertigoRangedHitCoM2', 'vertigoDefenseMoM', 'vertigoDefenseCoM', 'vertigoDefenseMoM', 'vertigoDefenseCoM2', 'vertigoWallOfFireDefenseMoM', 'vertigoWallOfFireDefenseCoM'] },
       { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireCoM2Strength', 'wallOfFireCoMStrength', 'wallOfFireCoM2Strength', 'wallOfFireWarlordStrength'] },

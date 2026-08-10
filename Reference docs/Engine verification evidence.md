@@ -70,10 +70,12 @@ engine.
 
 ### B7. Touch-effect phase mapping
 
-The MoM 1.31 dispatcher is data-driven: it reads the unit's effect fields without a phase gate,
-and CoM 1 has the same shape. The calculator hard-codes phase eligibility per effect. The open
-work is to compare those hard-coded routes with the actual DOS rosters; Q4 carries the remaining
-Chaos Spawn poison-touch question.
+The reconstructed DOS dispatcher has general, melee and ranged attack-attribute masks, but one
+shared special-attack modifier byte. It starts with general flags, selects melee flags for melee,
+and selects ranged flags for every DOS non-melee attack mode (conventional ranged, Thrown, Breath
+and Gaze). The open work is to compare those routes and shared values against all three DOS
+rosters, then correct calculator DOS delivery where necessary. Q4 carries the remaining Chaos
+Spawn poison-touch case.
 
 Evidence: `MoM binary analysis.md`, touch/effect-dispatch findings.
 
@@ -111,12 +113,19 @@ Evidence: `Caster binary/CoM2 binary - resolution helpers.md`, *Resolution-time 
 
 ### D18. Warlord touch-flag placement
 
-The compiled dispatcher is settled: attack types 1–5 execute the full Exorcise → Stoning Touch →
-Death Touch → Life Steal → Destruction → Poison package; gaze types 6–8 skip it. What remains is
-Warlord's source-record placement before that dispatcher. `UnitCalc.CAS:509-520` moves Stoning and
-Death Touch flags when Focus Magic creates magical ranged, while the help text says those effects
-do not apply to magical ranged. The audit must distinguish that script-driven selection from the
-calculator's blanket `warlordRangedTouchBlocked`, which also blocks physical ranged.
+Resolved 2026-08-10. The compiled dispatcher admits attack types 1–5 to the full Exorcise →
+Stoning Touch → Death Touch → Life Steal → Destruction → Poison package and skips gaze types 6–8.
+It begins with general flags and merges ranged flags for conventional ranged, melee flags for
+melee and Thrown, and no channel record for either Breath. Warlord `UNITS.INI` supplies intrinsic
+Stoning/Death Touch through the general record; Great Gaia Lord and Gambler prove that this reaches
+physical ranged. Nature Marionette's global Stoning Touch plus created magical ranged proves there
+is no blanket magical-ranged gate.
+
+The apparent exclusion is source placement. Focus Magic moves existing general Stoning/Death
+values to melee and clears general/ranged (`UnitCalc.CAS:509-520`). Revenant clears general/ranged
+Death Touch and unconditionally writes melee value 0 (`UnitCalcPre.CAS:1757-1762`). Because Thrown
+uses melee flags, both spell-specific placements fire on melee and Thrown only. The contradictory
+manual/helptext statement is retained in `Source discrepancies.md`.
 
 Evidence: `Touch attack trigger matrix.md`; `Caster binary/CoM2 binary - combat flow.md`,
 *ApplyAttack riders, damage loop and result routing*.

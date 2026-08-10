@@ -51,8 +51,18 @@ assert(hasImplementationWrite('if (active) bu->ranged = 2;'),
   'ordinary reconstructed-C pointer-field assignment must count as a write');
 assert(hasImplementationWrite('if active then U.attack = U.attack * 2;'),
   'ordinary reconstructed-C dot-field assignment must count as a write');
+assert(hasImplementationWrite('if (level > 0) bu->resist++;'),
+  'reconstructed-C pointer-field increments must count as writes');
+assert(hasImplementationWrite('if (value > 0) ((int8_t far *)bu)[field]++;'),
+  'reconstructed-C computed field increments must count as writes');
+assert(hasImplementationWrite('if active then U.resistance--;'),
+  'reconstructed-C dot-field decrements must count as writes');
+assert(hasImplementationWrite('if (value > 0) ((int8_t far *)bu)[field]--;'),
+  'reconstructed-C computed field decrements must count as writes');
 assert(!hasImplementationWrite('if (active) return bu->ranged == 2;'),
   'a reconstructed-C equality comparison must not count as a write');
+assert(!hasImplementationWrite('if (active) return ((int8_t far *)bu)[field] == 2;'),
+  'a computed-field equality comparison must not count as a write');
 
 const result = runAudit();
 assert(result.formulas > 0, 'repository audit must find formulas');
@@ -76,4 +86,4 @@ assert.throws(() => discoverFormulaSites('synthetic.js', "emit(id, 'c', { def: 1
 assert.throws(() => discoverFormulaSites('synthetic.js', "case 'elite': return { atk: 2 };"),
   /stat-table case needs an adjacent STAT-FORMULA id/);
 
-console.log(`Provenance tooling checks passed: 13 assertions; ${result.formulas} repository formulas.`);
+console.log(`Provenance tooling checks passed: 17 assertions; ${result.formulas} repository formulas.`);

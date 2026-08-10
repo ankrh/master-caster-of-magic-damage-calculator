@@ -1092,7 +1092,7 @@ recorded with the rule itself in *Unit enchantment effects* above, and these thr
   values in `buildVertigoContext`, and the tooltip is correct. The displayed modifier
   calculation in `Calculator/stats.js`, however, selected −30 / −10 for every
   `version.startsWith('com')`, so CoM2/Warlord's red displayed modifiers used CoM 1's values.
-  *(Fixed 2026-07-29 — see the F1 closure note in `Calculator/HISTORY.md`.)*
+  *(Fixed 2026-07-29; the current contract is in `Calculator/SPEC.md`.)*
 
   **Warlord inherits these values unchanged (resolved 2026-07-29).** `EncVertigo` appears
   exactly twice in the Warlord stat scripts, both at `UnitCalcPre.CAS:1227-1228`, and the pair is

@@ -322,6 +322,134 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(destiny.unitType, 'fantastic_life', 'Destiny changes unit type to fantastic Life');
   assertEqual(destiny.abilities.supernatural, true, 'Destiny grants Supernatural for combat');
 
+  const liveHpCharm = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    abilities: { charmOfLife: true, endurance: true },
+    hp: 7,
+  }));
+  assertEqual(liveHpCharm.hp, 13,
+    'Charm of Life reads live HP after Endurance (7 + 4 + trunc(11 / 4))');
+
+  const allEarlierHpCharm = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    abilities: { charmOfLife: true, endurance: true, lionheart: true },
+    hp: 7,
+  }));
+  assertEqual(allEarlierHpCharm.hp, 23,
+    'Charm of Life reads live HP after Endurance and Lionheart (7 + 4 + 8 + trunc(19 / 4))');
+
+  const ludusRanged = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', race: 'Orc',
+    abilities: { ludusAgoge: true }, rtbType: 'missile', rtb: 5,
+  }));
+  assertEqual(ludusRanged.rtb, 6,
+    'Ludus Agoge preserves the executing script ranged +1 write');
+
+  const motherFungusRanged = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', race: 'Goblin',
+    abilities: { motherFungus: true }, rtbType: 'missile', rtb: 5,
+  }));
+  assertEqual(motherFungusRanged.rtb, 7,
+    'Mother Fungus preserves the executing script ranged +2 write');
+
+  const altarMoonBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', race: 'Gnoll',
+    abilities: { altarOfTheMoon: true, focusMagic: true }, rtbType: 'none', rtb: 0,
+  }));
+  assertEqual(altarMoonBeforeFocus.rtb, 3,
+    'Altar of the Moon does not treat the later Focus Magic ranged creation as permanent ranged');
+
+  const ludusBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', race: 'Orc',
+    abilities: { ludusAgoge: true, focusMagic: true }, rtbType: 'none', rtb: 0,
+  }));
+  assertEqual(ludusBeforeFocus.rtb, 3,
+    'Ludus Agoge does not treat the later Focus Magic ranged creation as permanent ranged');
+
+  const motherFungusBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', race: 'Goblin',
+    abilities: { motherFungus: true, focusMagic: true }, rtbType: 'none', rtb: 0,
+  }));
+  assertEqual(motherFungusBeforeFocus.rtb, 3,
+    'Mother Fungus does not treat the later Focus Magic ranged creation as permanent ranged');
+
+  const orihalconBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', armor: 'orihalcon',
+    abilities: { focusMagic: true }, rtbType: 'missile', rtb: 2,
+  }));
+  assertEqual(orihalconBeforeFocus.rtb, 2,
+    'Orihalcon tests magical ranged before Warlord Focus Magic converts a missile attack');
+
+  const disciplineBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', level: 'veteran',
+    abilities: { discipline: 'overland', focusMagic: true }, rtbType: 'missile', rtb: 1,
+  }));
+  assertEqual(disciplineBeforeFocus.rtb, 4,
+    'Discipline tests physical ranged before Warlord Focus Magic converts it');
+
+  const flameBladeBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { flameBladeWarlord: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
+  }));
+  assertEqual(flameBladeBeforeFocus.rtb, 4,
+    'Warlord Flame Blade tests missile ranged before the later Focus Magic conversion');
+
+  const blazingMarchBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { blazingMarch: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
+  }));
+  assertEqual(blazingMarchBeforeFocus.rtb, 5,
+    'Warlord Blazing March tests missile ranged before the later Focus Magic conversion');
+
+  const fieryFuryBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { fieryFury: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
+  }));
+  assertEqual(fieryFuryBeforeFocus.rtb, 4,
+    'Fiery Fury tests missile ranged before the later Warlord Focus Magic conversion');
+
+  const ludusUsesBaseRace = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', race: 'Orc', atk: 1,
+    abilities: { ludusAgoge: true, ccFireBreath: true },
+  }));
+  assertEqual(ludusUsesBaseRace.atk, 2,
+    'Permanent recruitment gates retain base race after Chaos Channels changes live identity');
+
+  const naturalSelectionUsesBaseType = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', atk: 1,
+    abilities: { coal: true, ccFireBreath: true },
+  }));
+  assertEqual(naturalSelectionUsesBaseType.atk, 2,
+    'Natural Selection retains normal base-unit eligibility after Chaos Channels');
+
+  const pillarUsesBaseType = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', res: 1,
+    abilities: { pillarOfFaithRes: 2, ccFireBreath: true },
+  }));
+  assertEqual(pillarUsesBaseType.res, 3,
+    'Pillar of Faith retains normal base-unit eligibility after Chaos Channels');
+
+  const fieryFuryUsesBaseType = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', atk: 1,
+    abilities: { fieryFury: true, ccFireBreath: true },
+  }));
+  assertEqual(fieryFuryUsesBaseType.atk, 4,
+    'Fiery Fury follows BASEFANTASTIC after Chaos Channels changes live identity');
+
+  const uncappedPillar = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { pillarOfFaithRes: 10 }, res: 1,
+  }));
+  assertEqual(uncappedPillar.res, 11,
+    'Pillar of Faith uses the executing script building count without an artificial cap');
+
+  const naturalSelectionOverwrite = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { powerMinerals: 2, nightshade: true }, res: 3,
+  }));
+  assertEqual(naturalSelectionOverwrite.res, 4,
+    'Natural Selection Nightshade overwrites the earlier Power-mineral resistance write');
+
   const focusMagicLowStrength = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11',
     abilities: { focusMagic: true },
@@ -1194,6 +1322,104 @@ function runPhaseChecks(ctx) {
         `${unit.name} resolves its independent conventional ranged channel`);
     }
   }
+
+  // B7: DOS uses the ranged attack-attribute record for every non-melee call. These
+  // normalized record-only fixtures isolate placement from the common roster flags.
+  const routedDosTouch = ({ version = 'mom_cp_1.60.00', atk = 1, rtb = 0,
+                            rtbType = 'none', isRanged = false, record = 'ranged' }) => {
+    const dosTouchTarget = ctx.deriveUnitStats(baseUnitInput({
+      version, prefix: 'b', figs: 1, atk: 0, def: 1, res: 0,
+      hp: 10, toBlkMod: 70, abilities: { deathImmunity: true },
+    }));
+    const attacker = ctx.deriveUnitStats(baseUnitInput({
+      version, atk, rtb, rtbType, def: 0, hp: 10,
+      toHitMod: 70, toHitRtbMod: 70,
+    }));
+    attacker.touchFlagRecords = {
+      global: {}, melee: {}, ranged: {},
+    };
+    attacker.touchFlagRecords[record].stoningTouch = -10;
+    return ctx.resolveCombat(attacker, dosTouchTarget, {
+      version, isRanged, wallOfFire: false, distance: 1,
+    });
+  };
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
+    assertEqual(routedDosTouch({ version, record: 'melee' }).totalDmgToB[10], 1,
+      `B7 ${version} melee call merges the melee touch record`);
+    assertEqual(routedDosTouch({ version, record: 'ranged' }).totalDmgToB[0], 1,
+      `B7 ${version} melee call excludes a ranged-only touch record`);
+    for (const scenario of [
+      { label: 'ordinary ranged', rtb: 1, rtbType: 'missile', isRanged: true },
+      { label: 'Thrown', rtb: 1, rtbType: 'thrown' },
+      { label: 'Fire Breath', rtb: 1, rtbType: 'fire' },
+      { label: 'Lightning Breath', rtb: 1, rtbType: 'lightning' },
+      { label: 'Stoning Gaze', rtb: 1, rtbType: 'gaze_stoning' },
+      { label: 'Multiple Gaze', rtb: 1, rtbType: 'gaze_multiple' },
+      { label: 'Death Gaze', rtb: 1, rtbType: 'gaze_death' },
+    ]) {
+      const result = routedDosTouch({ version, ...scenario, record: 'ranged' });
+      assertEqual(result.totalDmgToB[10], 1,
+        `B7 ${version} ${scenario.label} call merges the shared ranged touch record`);
+    }
+  }
+
+  const dosChannelModifier = key => {
+    const version = 'mom_cp_1.60.00';
+    const attacker = ctx.deriveUnitStats(baseUnitInput({
+      version, atk: 1, def: 0, hp: 10, toHitMod: 70,
+    }));
+    attacker.touchFlagRecords = { global: {}, melee: {}, ranged: {} };
+    attacker.touchFlagRecords.melee[key] = 0;
+    const target = ctx.deriveUnitStats(baseUnitInput({
+      version, prefix: 'b', atk: 0, def: 1, res: 9, hp: 10, toBlkMod: 70,
+    }));
+    return ctx.resolveCombat(attacker, target,
+      { version, isRanged: false, wallOfFire: false, distance: 1 });
+  };
+  assertClose(dosChannelModifier('stoningTouch').totalDmgToB[10], 0.2,
+    'B7 DOS channel-carried Stoning Touch receives an additional -1 save modifier');
+  assertClose(dosChannelModifier('deathTouch').totalDmgToB[10], 0.4,
+    'B7 DOS channel-carried Death Touch receives an additional -3 save modifier');
+
+  const zeroStrengthThrownTouch = version => {
+    const attacker = ctx.deriveUnitStats(baseUnitInput({
+      version, atk: 1, rtb: 1, rtbType: 'thrown', def: 0, hp: 10,
+      toHitMod: 70, toHitRtbMod: 70,
+    }));
+    attacker.rtb = 0;
+    attacker.touchFlagRecords = { global: {}, melee: {}, ranged: { stoningTouch: -10 } };
+    const target = ctx.deriveUnitStats(baseUnitInput({
+      version, prefix: 'b', atk: 0, def: 1, res: 0, hp: 10, toBlkMod: 70,
+    }));
+    return ctx.resolveCombat(attacker, target,
+      { version, isRanged: false, wallOfFire: false, distance: 1 });
+  };
+  assertEqual(zeroStrengthThrownTouch('mom_1.31').totalDmgToB[0], 1,
+    'B7 MoM 1.31 does not admit a zero-live-strength Thrown call');
+  for (const version of ['mom_cp_1.60.00', 'com_6.08']) {
+    assertEqual(zeroStrengthThrownTouch(version).totalDmgToB[10], 1,
+      `B7 ${version} patched zero-strength Thrown call still dispatches its ranged record`);
+  }
+
+  // The zero-strength abort is a distinct 1.31-only dispatcher gate. A gaze can admit
+  // combat for a zero-melee attacker; CP then dispatches the common touch on both calls,
+  // while 1.31 discards the zero-strength melee call's rider.
+  const zeroMeleeGazeTouch = version => {
+    const attacker = ctx.deriveUnitStats(baseUnitInput({
+      version, atk: 0, rtb: 1, rtbType: 'gaze_death', def: 0, hp: 10,
+      toHitRtbMod: 70, abilities: { stoningTouch: -10 },
+    }));
+    const target = ctx.deriveUnitStats(baseUnitInput({
+      version, prefix: 'b', figs: 2, atk: 0, def: 1, res: 0, hp: 10,
+      toBlkMod: 70, abilities: { deathImmunity: true },
+    }));
+    return ctx.resolveCombat(attacker, target,
+      { version, isRanged: false, wallOfFire: false, distance: 1 });
+  };
+  assertEqual(zeroMeleeGazeTouch('mom_1.31').totalDmgToB[10], 1,
+    'B7 MoM 1.31 zero-strength melee abort leaves only the gaze-carried common touch');
+  assertEqual(zeroMeleeGazeTouch('mom_cp_1.60.00').totalDmgToB[20], 1,
+    'B7 CP 1.60 patched abort lets the common touch fire on gaze and zero-strength melee');
 
   assertEqual(ctx.buildWallOfFirePhase(false, {}), null, 'Inactive Wall of Fire phase is null');
   const wallOfFire = ctx.buildWallOfFirePhase(true, {

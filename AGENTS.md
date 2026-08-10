@@ -10,6 +10,13 @@ and proposed fix first, then wait for approval before changing any file. A reque
 numbered verification-evidence items does not authorize resolving/removing those items or updating their
 supporting documents.
 
+## Documentation discipline
+
+Every policy, status, and finding has one owning document; other documents link to it instead of
+restating it. Keep history and benchmark entries to outcomes and durable pointers, not process
+transcripts. When changing instructions or project information, replace obsolete text and avoid net
+growth unless a genuinely new rule or behavior requires it.
+
 ## Branch and worktree approval
 
 Work directly on `main` by default. An agent must **never create a branch** unless it first tells

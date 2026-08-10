@@ -36,6 +36,7 @@ file shows.
 | 11 | Alumni of Academy — Mechanical exclusion | helptext omits the restriction | resolved (script) |
 | 12 | Magitek Science — Battle Armor eligibility | manual and helptext include Battle Armor | resolved (script) |
 | 13 | Blaze of Glory — enchantment Armor survival | helptext says non-base Armor remains | resolved (script) |
+| 14 | Stoning/Death Touch — magical-ranged delivery | manual and helptext state a blanket exclusion | resolved (script/dispatcher record placement) |
 
 The table's `Status` column records the durable **source-resolution outcome**, not project work
 state. Any calculator or documentation follow-up is tracked only in `Calculator/BACKLOG.md`.
@@ -367,6 +368,28 @@ have been corrected.
 enchantment-granted Armor, and then sets Defense to zero. Later region-`e` effects still run
 and may add Defense afterward. The calculator's surviving-Armor reconstruction was removed
 under **F8**.
+
+## 14. Stoning/Death Touch — no blanket magical-ranged exclusion
+
+- **Manual** v1.4.7 changelog: *"Death Touch and Stone Touch nolonger apply to magic range
+  attack"*.
+- **Helptext** `#UA STONING TOUCH` and `#UA DEATH TOUCH`: each says the ability does not apply
+  to Magic Ranged attacks.
+- **Script, Focus Magic** `UnitCalc.CAS:509-520`: saves an existing general Stoning/Death
+  value, clears general and ranged, and writes the saved value to melee. This creates a
+  spell-specific exclusion by record placement, not by attack type.
+- **Script, Nature Marionette** `UnitCalcPre.CAS:104,263`: creates magical ranged and writes
+  Stoning Touch −2 to the general record. `UNITS.INI` likewise stores intrinsic touch carriers
+  in the general record, including the physically ranged Great Gaia Lord (`[261]`) and Gambler
+  (`[273]`).
+- **Compiled dispatcher** `Caster.exe` `@Combat@ApplyAttack`: attack types 1–5 all run the
+  Stoning/Death riders after merging general with the selected channel record; there is no
+  physical-versus-magical ranged test.
+
+**Resolved in favour of the executing script and dispatcher:** an innate/general touch reaches
+both physical and magical ranged. Focus Magic moves an existing touch to melee/Thrown only.
+Revenant independently writes Death Touch 0 to that same melee/Thrown record. The manual and
+helptext overgeneralize the Focus Magic-style placement into a blanket magical-ranged rule.
 
 ## Script checks with no calculator discrepancy
 
