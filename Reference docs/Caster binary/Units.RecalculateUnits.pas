@@ -59,6 +59,7 @@ interface
     [EBP+$08] = tay
 }
 procedure RecalculateUnits(com: Boolean; tap, tax, tay: Integer); register;
+procedure ApplyLevelBonus(i: Integer); register;
 procedure RecalculateunitsonCityTile(c: Integer); register;
 procedure BuildAuraTable; register;
 procedure AddtoAuraTable(uid, at, val, ow: Integer); register;
@@ -166,6 +167,12 @@ const
   inferred_AuraMisfortune = 10;
 
 type
+  { [inferred name; exact element type and bound]
+    Every inline level-table access in @Units@ApplyLevelBonus checks
+    `level - 1 <= $13` before indexing a pointer-loaded Integer array. }
+  inferred_LevelBonusT = array[1..20] of Integer;
+  Pinferred_LevelBonusT = ^inferred_LevelBonusT;
+
   { [exact name; bound read from the executable] }
   EnchFlagT = array[1..maxmaxenchantmentflag] of Boolean;
 
@@ -193,6 +200,9 @@ type
     thrown: Integer;                           { +$02C, $005A67E6 }
     firebreath: Integer;                        { +$030, $00599F3E }
     lightningbreath: Integer;                   { +$034, $005A6808 }
+    deathgaze: Integer;                         { +$038, absent from ApplyLevelBonus }
+    stoninggaze: Integer;                       { +$03C, absent from ApplyLevelBonus }
+    doomgaze: Integer;                          { +$040, absent from ApplyLevelBonus }
     maxammo: Integer;                           { +$044, $005A6D28 }
     hitchance: Integer;                         { +$04C, $005A660D }
     defendchance: Integer;                      { +$050, $005A6D12 }
@@ -380,6 +390,26 @@ var
   inferred_HeroAbilityPtr: ^inferred_HeroAbilityTableT absolute $007086C8;
   inferred_RangedTypesPtr: ^inferred_RangedTypeTableT absolute $0070A144;
 
+  { [inferred names/types; exact pointer-global addresses]
+    @Init@LoadLevelBonusINI fills these arrays. The final pointer is named for
+    its consumer rather than its apparent section: loader bytes $00630D7B..
+    $00630DAD fill it from [Hero] ToDefend even though the normal arm consumes
+    it. The six @Heroes@ table helpers use seven further pointers recorded in
+    D21.evidence.md. }
+  inferred_HeroThrownPtr: Pinferred_LevelBonusT absolute $00709278;
+  inferred_HeroBreathPtr: Pinferred_LevelBonusT absolute $00709EF4;
+  inferred_HeroToDefendPtr: Pinferred_LevelBonusT absolute $00708940;
+  inferred_NormalAttackPtr: Pinferred_LevelBonusT absolute $00708C54;
+  inferred_NormalMissileRangedPtr: Pinferred_LevelBonusT absolute $00709BA4;
+  inferred_NormalMagicRangedPtr: Pinferred_LevelBonusT absolute $00709C4C;
+  inferred_NormalHPPtr: Pinferred_LevelBonusT absolute $007090AC;
+  inferred_NormalResistancePtr: Pinferred_LevelBonusT absolute $0070876C;
+  inferred_NormalThrownPtr: Pinferred_LevelBonusT absolute $00708B64;
+  inferred_NormalBreathPtr: Pinferred_LevelBonusT absolute $00709824;
+  inferred_NormalDefensePtr: Pinferred_LevelBonusT absolute $00709E5C;
+  inferred_NormalHitPtr: Pinferred_LevelBonusT absolute $00709200;
+  inferred_NormalToDefendFromHeroPtr: Pinferred_LevelBonusT absolute $00708268;
+
   { Reading alias, not a separate object: every use below is exactly
     Pinferred_CombatStateT(global_CombatStatePtr)^.inferred_CombatGlobals,
     and compiles to [ [$0070969C] + side*$190 - $190 + (id-1)*4 ]. }
@@ -402,6 +432,100 @@ end;
 procedure inferred_RunUnitScript(handle: Integer);
 begin
   { Scripts.RunScript(handle, True); }
+end;
+
+{ $005981F8..$00598D86 [exact control, operands and writes; inferred bindings]
+  @Units@ApplyLevelBonus. The named @Heroes@ helpers and SetMaxMp are real
+  executable calls; their targets and table bodies are recorded in
+  D21.evidence.md. Every addition below is a checked signed 32-bit `add` into
+  the calculated record. The routine never writes BaseUnits and never touches
+  deathgaze +$38, stoninggaze +$3C or doomgaze +$40. }
+procedure ApplyLevelBonus(i: Integer); register;
+begin
+  { $00598223..$00598754: the path split reads BaseUnits.ishero. }
+  if BaseUnits[i].ishero then
+  begin
+    { $00598231..$00598295 }
+    Inc(Units[i].attack, Heroes.HeroLvToAttack(Units[i].level));
+
+    { $00598295..$0059835D: gate reads base rangedtype. }
+    if BaseUnits[i].rangedtype > 0 then
+      Inc(Units[i].ranged,
+          Heroes.HeroLvToRanged(
+            Units[i].level,
+            Ismagicalranged(BaseUnits[i].rangedtype)));
+
+    { $0059835D..$00598425 }
+    Inc(Units[i].hp, Heroes.HeroLvToHP(Units[i].level));
+    Inc(Units[i].resistance,
+        Heroes.HeroLvToResistance(Units[i].level));
+
+    { $00598425..$0059860E: unlike the normal arm, these three gates read the
+      calculated channel. Hero Breath shares one table for Fire and Lightning. }
+    if Units[i].thrown > 0 then
+      Inc(Units[i].thrown,
+          inferred_HeroThrownPtr^[Units[i].level]);
+    if Units[i].firebreath > 0 then
+      Inc(Units[i].firebreath,
+          inferred_HeroBreathPtr^[Units[i].level]);
+    if Units[i].lightningbreath > 0 then
+      Inc(Units[i].lightningbreath,
+          inferred_HeroBreathPtr^[Units[i].level]);
+
+    { $0059860E..$00598754 }
+    Inc(Units[i].defense,
+        Heroes.HeroLvToDefense(Units[i].level));
+    Inc(Units[i].hitchance,
+        Heroes.HeroLvToHitchance(Units[i].level));
+    Inc(Units[i].defendchance,
+        inferred_HeroToDefendPtr^[Units[i].level]);
+  end
+  else
+  begin
+    { $00598754..$005987F7: normal Attack is gated on the base channel. }
+    if BaseUnits[i].attack > 0 then
+      Inc(Units[i].attack,
+          inferred_NormalAttackPtr^[Units[i].level]);
+
+    { $005987F7..$00598949: both alternatives write only Units.ranged +$24. }
+    if BaseUnits[i].rangedtype > 0 then
+      if Ismagicalranged(BaseUnits[i].rangedtype) then
+        Inc(Units[i].ranged,
+            inferred_NormalMagicRangedPtr^[Units[i].level])
+      else
+        Inc(Units[i].ranged,
+            inferred_NormalMissileRangedPtr^[Units[i].level]);
+
+    { $00598949..$00598A33 }
+    Inc(Units[i].defense,
+        inferred_NormalDefensePtr^[Units[i].level]);
+    Inc(Units[i].resistance,
+        inferred_NormalResistancePtr^[Units[i].level]);
+
+    { $00598A33..$00598C1C: all three normal gates read BaseUnits. }
+    if BaseUnits[i].thrown > 0 then
+      Inc(Units[i].thrown,
+          inferred_NormalThrownPtr^[Units[i].level]);
+    if BaseUnits[i].firebreath > 0 then
+      Inc(Units[i].firebreath,
+          inferred_NormalBreathPtr^[Units[i].level]);
+    if BaseUnits[i].lightningbreath > 0 then
+      Inc(Units[i].lightningbreath,
+          inferred_NormalBreathPtr^[Units[i].level]);
+
+    { $00598C1C..$00598D7B }
+    Inc(Units[i].hp,
+        inferred_NormalHPPtr^[Units[i].level]);
+    Inc(Units[i].hitchance,
+        inferred_NormalHitPtr^[Units[i].level]);
+    { Loader anomaly: this normal-path pointer is filled from [Hero] ToDefend,
+      not [Normal] ToDefend ($00630D7B..$00630DAD). }
+    Inc(Units[i].defendchance,
+        inferred_NormalToDefendFromHeroPtr^[Units[i].level]);
+  end;
+
+  { $00598D7B..$00598D86: common tail and sole return. }
+  SetMaxMp(i);
 end;
 
 procedure RecalculateUnits(com: Boolean; tap, tax, tay: Integer); register;

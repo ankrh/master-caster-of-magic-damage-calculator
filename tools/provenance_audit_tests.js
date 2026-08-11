@@ -71,12 +71,12 @@ assert.strictEqual(result.formulas, result.verified + result.unverified);
 const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'provenance_verified_anchors.json'), 'utf8'));
 const validBinding = computeVerifiedBinding(
   ['com2_1.05.11', 'com2_warlord_1.5.12.7'],
-  ['Reference docs/Caster binary/Units.RecalculateUnits.pas:1602-1608'],
+  ['Reference docs/Caster binary/Units.RecalculateUnits.pas:1726-1732'],
 );
 assert.strictEqual(validBinding, manifest.innerPowerEligibility, 'reviewed formula binding must match');
 const unrelatedBinding = computeVerifiedBinding(
   ['com2_1.05.11', 'com2_warlord_1.5.12.7'],
-  ['Reference docs/Caster binary/Units.RecalculateUnits.pas:1414-1424'],
+  ['Reference docs/Caster binary/Units.RecalculateUnits.pas:1538-1548'],
 );
 assert.notStrictEqual(unrelatedBinding, manifest.innerPowerEligibility,
   'wrong-but-code-shaped source range must fail the formula-specific binding');

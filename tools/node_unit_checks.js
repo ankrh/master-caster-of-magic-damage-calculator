@@ -247,7 +247,8 @@ function runIdentityChecks(ctx) {
     version: 'com2_1.05.11', abilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
   }));
   assertEqual(breakthroughNormal.atk, 3, 'Normal Breakthrough derives the melee package');
-  assertEqual(breakthroughNormal.def, 3, 'Normal Breakthrough derives the defense package');
+  assertEqual(breakthroughNormal.def, 2,
+    'Exceptional Breakthrough labels cannot override the normal package\'s zero Defense bonus');
   const breakthroughChosen = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', abilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 34,
@@ -287,6 +288,68 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(modernChannels.modernAttacks.thrown.strength, 3, 'Modern Thrown is derived independently');
   assertEqual(modernChannels.modernAttacks.fireBreath.strength, 5, 'Modern Fire Breath is derived independently');
   assertEqual(modernChannels.modernAttacks.lightningBreath.strength, 4, 'Modern Lightning Breath is derived independently');
+
+  const modernAttackInput = {
+    ranged: { strength: 7, type: 'missile' },
+    thrown: { strength: 3, type: 'thrown' },
+    fireBreath: { strength: 5, type: 'fire' },
+    lightningBreath: { strength: 4, type: 'lightning' },
+  };
+  const animatedChannels = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { animated: true, doomGaze: 6 },
+    modernAttacks: modernAttackInput,
+  }));
+  assertEqual(animatedChannels.modernAttacks.ranged.strength, 8,
+    'Modern Animated writes conventional Ranged');
+  assertEqual(animatedChannels.modernAttacks.thrown.strength, 4,
+    'Modern Animated writes Thrown');
+  assertEqual(animatedChannels.modernAttacks.fireBreath.strength, 6,
+    'Modern Animated writes Fire Breath');
+  assertEqual(animatedChannels.modernAttacks.lightningBreath.strength, 5,
+    'Modern Animated writes Lightning Breath');
+  assertEqual(animatedChannels.effectiveDoomGaze, 6,
+    'Modern Animated leaves the independent Doom Gaze field unchanged');
+
+  const blackPrayerChannels = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { blackPrayer: true, doomGaze: 6 },
+    modernAttacks: modernAttackInput,
+  }));
+  assertEqual(blackPrayerChannels.modernAttacks.ranged.strength, 6,
+    'Modern Black Prayer writes conventional Ranged');
+  assertEqual(blackPrayerChannels.modernAttacks.thrown.strength, 2,
+    'Modern Black Prayer writes Thrown');
+  assertEqual(blackPrayerChannels.modernAttacks.fireBreath.strength, 4,
+    'Modern Black Prayer writes Fire Breath');
+  assertEqual(blackPrayerChannels.modernAttacks.lightningBreath.strength, 3,
+    'Modern Black Prayer writes Lightning Breath');
+  assertEqual(blackPrayerChannels.effectiveDoomGaze, 6,
+    'Modern Black Prayer leaves the independent Doom Gaze field unchanged');
+
+  const tacticianHeroChannels = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', unitType: 'hero', abilities: { tactician: true, doomGaze: 6 },
+    modernAttacks: modernAttackInput,
+  }));
+  assertEqual(tacticianHeroChannels.modernAttacks.ranged.strength, 9,
+    'Modern Tactician hero writes conventional Ranged');
+  assertEqual(tacticianHeroChannels.modernAttacks.thrown.strength, 3,
+    'Modern Tactician hero leaves Thrown unchanged');
+  assertEqual(tacticianHeroChannels.modernAttacks.fireBreath.strength, 5,
+    'Modern Tactician hero leaves Fire Breath unchanged');
+  assertEqual(tacticianHeroChannels.modernAttacks.lightningBreath.strength, 4,
+    'Modern Tactician hero leaves Lightning Breath unchanged');
+  assertEqual(tacticianHeroChannels.effectiveDoomGaze, 6,
+    'Modern Tactician hero leaves the independent Doom Gaze field unchanged');
+
+  const metalFiresFantastic = ctx.deriveUnitStats(baseUnitInput({
+    version: 'mom_1.31', unitType: 'fantastic_chaos', atk: 2, rtb: 3,
+    rtbType: 'missile', abilities: { metalFires: true },
+  }));
+  assertEqual(metalFiresFantastic.atk, 2,
+    'Metal Fires leaves a Fantastic unit\'s melee unchanged');
+  assertEqual(metalFiresFantastic.rtb, 3,
+    'Metal Fires leaves a Fantastic unit\'s missile/Thrown strength unchanged');
+  assertEqual(metalFiresFantastic.weapon, 'normal',
+    'Metal Fires leaves a Fantastic unit\'s weapon quality unchanged');
 
   const modernBlackpowder = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
@@ -460,6 +523,50 @@ function runDeriveUnitStatsChecks(ctx) {
     'Modern Focus Magic converts a low-strength physical ranged attack');
   assertEqual(focusMagicLowStrength.rtb, 1,
     'Modern Focus Magic preserves positive conversion strength below 3');
+
+  const warlordFocusBeforeWarp = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { focusMagic: true, warpAttack: true },
+    rtbType: 'magic_s',
+    rtb: 5,
+  }));
+  assertEqual(warlordFocusBeforeWarp.rtb, 4,
+    'Warlord compiled Focus Magic adds 3 before Warp Attack halves the strength');
+
+  const modernNegativeWarp = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    abilities: { mindStorm: true, warpAttack: true },
+    rtbType: 'missile',
+    rtb: 2,
+  }));
+  const modernNegativeWarpEntry = modernNegativeWarp.modifierTraces.sharedAttack.entries
+    .find(entry => entry.source.id === 'warpAttack');
+  assertEqual(modernNegativeWarpEntry.from, -3,
+    'Modern Warp Attack reads the negative odd strength left by Mind Storm');
+  assertEqual(modernNegativeWarpEntry.to, -1,
+    'Modern Warp Attack uses signed truncate-toward-zero division');
+
+  const beatFiveDefense = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { beatOfSwiftness: true },
+    def: 5,
+  }));
+  assertEqual(beatFiveDefense.def, 5,
+    'Beat of Swiftness rounds a 0.5 defense reduction to even');
+  const beatTwentyFiveDefense = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { beatOfSwiftness: true },
+    def: 25,
+  }));
+  assertEqual(beatTwentyFiveDefense.def, 23,
+    'Beat of Swiftness rounds a 2.5 defense reduction to even');
+  const beatHiddenOutsideWarlord = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    abilities: { beatOfSwiftness: true },
+    def: 25,
+  }));
+  assertEqual(beatHiddenOutsideWarlord.def, 25,
+    'Beat of Swiftness is inert outside Warlord even when supplied as a raw hidden input');
 
   const lightningBladeThrown = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
@@ -670,6 +777,38 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(darknessDeath.def, 4, 'Darkness gives Death units +1 defense');
   assertEqual(darknessDeath.res, 6, 'Darkness gives Death units +1 resistance');
 
+  const modernDarknessDoesNotBoostGaze = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    unitType: 'fantastic_death',
+    abilities: { doomGaze: 4 },
+    darkness: true,
+  }));
+  assertEqual(modernDarknessDoesNotBoostGaze.abilities.doomGaze, 4,
+    'Modern Darkness does not write the separate Doom Gaze field');
+
+  const modernDarknessPositiveGates = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    unitType: 'fantastic_life',
+    atk: 0,
+    rtb: 0,
+    def: 0,
+    res: 0,
+    darkness: true,
+  }));
+  assert(!modernDarknessPositiveGates.statTrace.some(entry => entry.id === 'darkness'),
+    'Modern Darkness does not subtract from zero Life attack, defense, or resistance channels');
+
+  const modernChaosSurgeKeepsBaseMeleeGate = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    unitType: 'fantastic_chaos',
+    abilities: { blazeOfGlory: true },
+    chaosSurge: 1,
+    atk: 0,
+    def: 4,
+  }));
+  assertEqual(modernChaosSurgeKeepsBaseMeleeGate.atk, 4,
+    'Modern Chaos Surge does not create melee before Blaze of Glory widens the slot');
+
   const trueLightDeath = ctx.deriveUnitStats(baseUnitInput({
     version: 'mom_cp_1.60.00',
     unitType: 'fantastic_death',
@@ -770,8 +909,8 @@ function runDeriveUnitStatsChecks(ctx) {
     res: 5,
     enemyEternalNight: true,
   }));
-  assertEqual(enemyEternalNightLifeCoM2.atk, 2, 'Enemy Eternal Night applies doubled Darkness attack penalty to Life units in CoM2');
-  assertEqual(enemyEternalNightLifeCoM2.def, 1, 'Enemy Eternal Night applies doubled Darkness defense penalty to Life units in CoM2');
+  assertEqual(enemyEternalNightLifeCoM2.atk, 3, 'Enemy Eternal Night applies the Darkness attack penalty once to Life units in CoM2');
+  assertEqual(enemyEternalNightLifeCoM2.def, 2, 'Enemy Eternal Night applies the Darkness defense penalty once to Life units in CoM2');
   assertEqual(enemyEternalNightLifeCoM2.res, 3, 'Enemy Eternal Night applies Darkness resistance plus enemy resistance penalty to Life units in CoM2');
 
   const enemyEternalNightDeathCoM2 = ctx.deriveUnitStats(baseUnitInput({
@@ -860,6 +999,19 @@ function runDerivationStageChecks(ctx) {
     "CoM 1 writes Holy Bonus to the shared `.ranged` slot, so it reaches Thrown and Breath");
   assertEqual(phaseOf({ resistanceToAll: 2 }, 'resistanceToAll:aura'), 'e',
     'Resistance to All feeds the region-e Prayermaster aura');
+  assertEqual(phaseOf({ spiritLink: true }, 'spiritLink'), 'base',
+    'Spirit Link writes +2 Resistance permanently to ABase when cast');
+
+  const animatedModern = stepFor({ animated: true }, 'animated', 'com2_1.05.11');
+  assertEqual(animatedModern.delta.nonGazeRtb, 1,
+    'Modern Animated targets the conventional Ranged/Thrown/Breath channels');
+  assertEqual(animatedModern.delta.rtb, undefined,
+    'Modern Animated does not target the independent Gaze fields');
+  const blackPrayerModern = stepFor({ blackPrayer: true }, 'blackPrayer', 'com2_1.05.11');
+  assertEqual(blackPrayerModern.delta.nonGazeRtb, -1,
+    'Modern Black Prayer targets the conventional Ranged/Thrown/Breath channels');
+  assertEqual(blackPrayerModern.delta.rtb, undefined,
+    'Modern Black Prayer does not target the independent Gaze fields');
 
   // D24/D25: both engines write Supreme Light and Tactician after their Warp block, and each
   // is emitted as a version-exclusive step rather than as a version predicate.
@@ -873,6 +1025,12 @@ function runDerivationStageChecks(ctx) {
   const tacticianCoM1 = stepFor({ tactician: true }, 'tactician:coM1', 'com_6.08');
   assertEqual(tacticianCoM1.phase, 'c', "CoM 1's Tactician retort is also region c (0x90AB4)");
   assertEqual(tacticianCoM1.afterWarp, true, 'and also after Warp Creature');
+  const tacticianHeroCoM2 = stepFor({ tactician: true, unitType: 'hero' },
+    'tactician', 'com2_1.05.11');
+  assertEqual(tacticianHeroCoM2.delta.ranged, 2,
+    'Modern Tactician hero targets conventional Ranged');
+  assertEqual(tacticianHeroCoM2.delta.rtb, undefined,
+    'Modern Tactician hero does not target Thrown, Breath, or Gaze');
 
   const mixedAbilities = {
     artificer: true,
@@ -1892,6 +2050,156 @@ function runResolutionStepChecks(ctx) {
     'Legacy Charmed adds 30 Resistance to realm-less rolls for heroes');
 }
 
+function runModernWeaponImmunityMappingChecks(ctx) {
+  const com2 = 'com2_1.05.11';
+  const warlord = 'com2_warlord_1.5.12.7';
+  const derive = overrides => ctx.deriveUnitStats(baseUnitInput({ version: com2, ...overrides }));
+  const deriveWarlord = overrides => ctx.deriveUnitStats(baseUnitInput({ version: warlord, ...overrides }));
+  const identity = (version, values) => ctx.createUnitIdentity({ version, ...values });
+
+  const chosen = derive({
+    identity: identity(com2, { templateId: 34, isHero: true, baseRace: 'Dwarf',
+      baseFantastic: false, specialUnit: 'chosen' }),
+  });
+  const constructCatapult = derive({
+    abilities: { combatSummoned: true },
+    identity: identity(com2, { templateId: 37, baseRace: 'Special', baseFantastic: false }),
+  });
+  const callToArmsPaladins = derive({
+    abilities: { callToArmsPaladins: true },
+    identity: identity(com2, { templateId: 113, baseRace: 'High Men', baseFantastic: false }),
+  });
+  assert(chosen.identityTrace.some(t => t.id === 'identity:chosen'),
+    'Focused Weapon Immunity coverage reaches the Chosen conversion');
+  assert(constructCatapult.identityTrace.some(t => t.id === 'identity:constructCatapult'),
+    'Focused Weapon Immunity coverage reaches the Construct Catapult conversion');
+  assert(callToArmsPaladins.identityTrace.some(t => t.id === 'identity:callToArmsPaladins'),
+    'Focused Weapon Immunity coverage reaches the Call to Arms Paladins conversion');
+
+  const encMagicCases = [
+    ['ordinary normal unit', derive({}), false],
+    ['magic weapon material', derive({ weapon: 'magic' }), true],
+    ['mithril weapon material', derive({ weapon: 'mithril' }), true],
+    ['adamantium weapon material', derive({ weapon: 'adamantium' }), true],
+    ['hero standing grant', derive({ unitType: 'hero' }), true],
+    ['natural Fantastic standing grant', derive({ unitType: 'fantastic_nature' }), true],
+    ['Combat Summoned conversion', derive({ abilities: { combatSummoned: true } }), true],
+    ['Chosen conversion', chosen, true],
+    ['Construct Catapult conversion', constructCatapult, true],
+    ['Call to Arms Paladins conversion', callToArmsPaladins, true],
+    ['Chaos Channels Fire Breath conversion', derive({ abilities: { ccFireBreath: true } }), true],
+    ['Chaos Channels Flight conversion', derive({ abilities: { ccFlight: true } }), true],
+    ['Chaos Channels Defense conversion', derive({ abilities: { ccDefense: true } }), true],
+    ['Destiny conversion', derive({ abilities: { destiny: true } }), true],
+    ['Warlord Apotheosis conversion', deriveWarlord({ abilities: { destiny: true } }), true],
+    ['Blood Lust conversion', derive({ abilities: { bloodLust: true } }), true],
+    ['Undead conversion', derive({ abilities: { undead: true } }), true],
+    ['Animated conversion', derive({ abilities: { animated: true } }), true],
+    ['Mystic Surge conversion', derive({ abilities: { mysticSurge: true } }), true],
+    ['Raise Dead conversion', derive({ abilities: { raiseDead: true } }), true],
+    ['Flame Blade', derive({ abilities: { flameBlade: true } }), true],
+    ['Holy Weapon', derive({ abilities: { holyWeapon: true } }), true],
+    ['Wraith Form', derive({ abilities: { wraithForm: true } }), true],
+    ['Ruler of Underworld', derive({ abilities: { rulerOfUnderworld: true } }), true],
+    ['Blazing March', derive({ abilities: { blazingMarch: true } }), true],
+    ['Warlord Flame Blade', deriveWarlord({ abilities: { flameBladeWarlord: true } }), true],
+    ['Warlord Fiery Blade', deriveWarlord({ abilities: { fieryBlade: true } }), true],
+    ['Warlord Fiery Fury', deriveWarlord({ abilities: { fieryFury: true } }), true],
+    ['Warlord Wall of Fire garrison', deriveWarlord({ abilities: { wallOfFireBoost: true } }), true],
+    ['Warlord Artificer Mechanical', deriveWarlord({ abilities: { artificer: true, mechanical: true } }), true],
+    ['Warlord Sanctify Clergy', deriveWarlord({ abilities: { sanctify: true, clergy: true } }), true],
+    ['Warlord Sanctify non-clergy', deriveWarlord({ abilities: { sanctify: true } }), false],
+    ['Warlord Blood Lust without conversion', deriveWarlord({ abilities: { bloodLust: true } }), false],
+  ];
+  for (const [label, unit, expected] of encMagicCases) {
+    assertEqual(unit.encMagic, expected, `${label} maps to calculated EncMagic`);
+  }
+
+  const spiritLinked = deriveWarlord({
+    unitType: 'fantastic_chaos',
+    abilities: { spiritLink: true },
+  });
+  assertEqual(spiritLinked.identity.fantastic, false,
+    'Spirit Link clears calculated Fantastic in phase d');
+  assertEqual(spiritLinked.encMagic, true,
+    'Spirit Link preserves the EncMagic already granted by the phase-c Fantastic rule');
+  assertEqual(spiritLinked.encMagicIndependentOfMaterial, true,
+    'Spirit Link EncMagic survives enemy weapon-material suppression');
+
+  const spiritLinkedNormalInput = deriveWarlord({ abilities: { spiritLink: true } });
+  assertEqual(spiritLinkedNormalInput.identity.fantastic, false,
+    'Spirit Link leaves a calculator-reachable normal input non-fantastic after phase d');
+  assertEqual(spiritLinkedNormalInput.encMagic, true,
+    'Spirit Link phase b makes even that input Fantastic when the standing EncMagic rule runs');
+
+  const wiTarget = derive({
+    prefix: 'b', def: 0, abilities: { weaponImmunity: true },
+  });
+  assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, derive({}), com2, 0, 'melee'), 8,
+    'Ordinary modern physical melee receives the CoM2 Weapon Immunity bonus');
+  assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, spiritLinked, warlord, 0, 'melee'), 0,
+    'Spirit-linked physical melee still bypasses Weapon Immunity through persisted EncMagic');
+
+  const blazingThrown = derive({
+    atk: 0, rtb: 2, rtbType: 'thrown', abilities: { blazingMarch: true },
+  });
+  assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, blazingThrown, com2, 0, 'thrown'), 0,
+    'CoM2 Blazing March EncMagic reaches Thrown even though the strength bonus does not');
+
+  const magicRanged = derive({
+    atk: 0, rtb: 2, rtbType: 'magic_c',
+  });
+  assertEqual(magicRanged.encMagic, false,
+    'Innate magical ranged type does not invent the unit-level EncMagic flag');
+  assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, magicRanged, com2, 0, 'ranged'), 0,
+    'ApplyAttack magicranged independently bypasses Weapon Immunity');
+
+  const attackLocalMagicCases = [
+    ['Nature magical ranged', derive({ rtb: 2, rtbType: 'magic_n' }), 'ranged'],
+    ['Sorcery magical ranged', derive({ rtb: 2, rtbType: 'magic_s' }), 'ranged'],
+    ['Warlord Beam ranged', deriveWarlord({ rtb: 2, rtbType: 'beam' }), 'ranged'],
+    ['Fire Breath', derive({ rtb: 2, rtbType: 'fire' }), 'thrown'],
+    ['Lightning Breath', derive({ rtb: 2, rtbType: 'lightning' }), 'thrown'],
+    ['Doom Gaze', derive({ abilities: { doomGaze: 2 } }), 'gaze'],
+    ['Death Gaze', derive({ abilities: { deathGaze: 0 } }), 'gaze'],
+    ['Stoning Gaze', derive({ abilities: { stoningGaze: 0 } }), 'gaze'],
+  ];
+  for (const [label, attacker, attackType] of attackLocalMagicCases) {
+    assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, attacker, com2, 0, attackType), 0,
+      `${label} maps to ApplyAttack magicranged and bypasses Weapon Immunity`);
+  }
+
+  const attackLocalPhysicalCases = [
+    ['physical missile ranged', derive({ rtb: 2, rtbType: 'missile' }), 'ranged'],
+    ['physical boulder ranged', derive({ rtb: 2, rtbType: 'boulder' }), 'ranged'],
+    ['Thrown', derive({ rtb: 2, rtbType: 'thrown' }), 'thrown'],
+  ];
+  for (const [label, attacker, attackType] of attackLocalPhysicalCases) {
+    assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, attacker, com2, 0, attackType), 8,
+      `${label} leaves ApplyAttack magicranged false and receives Weapon Immunity`);
+  }
+
+  const rulerTarget = derive({
+    prefix: 'b', def: 0, abilities: { rulerOfUnderworld: true },
+  });
+  for (const material of ['magic', 'mithril', 'adamantium']) {
+    assertEqual(ctx.computeCasterDefenseForAttack(
+      rulerTarget, derive({ weapon: material }), com2, 0, 'melee'), 8,
+      `Enemy Ruler of Underworld suppresses the ${material} ApplyMagicWeapons grant`);
+  }
+  assertEqual(ctx.computeCasterDefenseForAttack(
+    rulerTarget,
+    deriveWarlord({ abilities: { artificer: true, mechanical: true } }),
+    warlord, 0, 'melee'), 10,
+    'Enemy Ruler of Underworld suppresses Artificer\'s derived material grant');
+  assertEqual(ctx.computeCasterDefenseForAttack(
+    rulerTarget, derive({ abilities: { flameBlade: true } }), com2, 0, 'melee'), 0,
+    'A later Flame Blade EncMagic write survives enemy Ruler of Underworld suppression');
+  assertEqual(ctx.computeCasterDefenseForAttack(
+    rulerTarget, deriveWarlord({ abilities: { wallOfFireBoost: true } }), warlord, 0, 'melee'), 0,
+    'The earlier Warlord Wall of Fire EncMagic write also survives material suppression');
+}
+
 function main() {
   const ctx = loadCalculatorContext();
   // Every deriveUnitStats call below runs the step runner's write check (steps.js).
@@ -1899,6 +2207,7 @@ function main() {
   runStatStepChecks(ctx);
   runModifierTraceChecks(ctx);
   runResolutionStepChecks(ctx);
+  runModernWeaponImmunityMappingChecks(ctx);
   runIdentityChecks(ctx);
   runDeriveUnitStatsChecks(ctx);
   runDerivationStageChecks(ctx);

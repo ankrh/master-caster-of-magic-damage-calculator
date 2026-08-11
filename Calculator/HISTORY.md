@@ -4,8 +4,59 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-11
+
+- **R9-G1h — ability-stat provenance.** Bound all 20 formulas from `holyBonus` through
+  `disheartenProphecy` across MoM 1.31, CP 1.60, CoM 6.08, CoM2 1.05.11 and Warlord 1.5.12.7,
+  reducing the live audit to 68 `UNVERIFIED` formulas. Corrected modern Animated and Black Prayer
+  leaking into independent Gaze fields, modern Tactician hero bonuses leaking into Thrown/Breath/
+  Gaze, Breakthrough's normal-package Defense from +1 to the configured 0, and Metal Fires on
+  Fantastic units, including its secondary-channel and weapon-upgrade paths. The review also
+  restored Spirit Link's permanent +2 Resistance write to the base phase. Focused regressions
+  cover every corrected channel and eligibility boundary.
+- **R9-G1f — level-dispatch provenance.** Bound the version dispatch and all fifteen normal-unit
+  ladder formulas across the five supported builds to the reconstructed DOS gates and HP
+  thresholds, reconstructed Caster consumer, and current CoM2/Warlord tables. Existing calculated
+  bonuses remain unchanged; the audit now reports 158 `VERIFIED` and 88 `UNVERIFIED` formulas.
+- **R9-G1e existing-evidence pass.** Bound 24 of the 27 chance-contribution and projection
+  formulas to exact DOS, Caster, Warlord-script and runtime-table sources, with no calculator
+  behavior change. Corrected overbroad version metadata for seven Warlord-only formulas. The
+  modern material helper and two-stage clamp remain live under R9-G1g and F5; the audit now
+  reports 142 `VERIFIED` and 104 `UNVERIFIED` formulas.
+- **R9-G1d — late/global and figure-transform provenance.** Closed ten formulas against their
+  strongest implementation sources and retired the erroneous Warlord-only Focus Magic duplicate,
+  reducing the live audit to 118 `VERIFIED` and 128 `UNVERIFIED`. Corrected Focus Magic ordering,
+  Chaos Surge and Darkness channel gates, Eternal Night's modern Life/Death asymmetry, signed
+  modern Warp Attack division, Warlord Beat of Swiftness rounding/gating, and both figure-count
+  transforms. Focused regressions and the full calculator suite cover the corrected behavior.
+- **A32 — DOS Shatter eligibility.** Reconstructed human admission, AI selection, the generic
+  effect setter, and recompute consumer for MoM 1.31, CP 1.60, and CoM 1. All three admit normal
+  units and heroes but reject Fantastic units; existing calculator behavior is correct. The
+  method-4 proof is `Reference docs/DOS reconstructed/A32.evidence.md`.
+- **B4/B5/B6 — DOS rollover and Defense.** Verified one cohesive three-build package:
+  conventional and non-Area excess receives fresh Defense and Invulnerability −2 at each figure;
+  Area attacks are independently capped per figure; Armor Piercing is signed `/2` truncated toward
+  zero; and Immolation uses Fireball's non-AP flags. Existing calculator outcomes were correct;
+  DOS halving now expresses the exact arithmetic. The reviewed proof is
+  `Reference docs/DOS reconstructed/B4_B5_B6.evidence.md`.
+- **B9 — DOS `Create_Unit`.** Reconstructed overlay 121 entry 0 for MoM 1.31, CP 1.60 and CoM 1.
+  Every unit instance starts with `mutations = 0`; the complete constructor write set cannot add
+  `UM_UNDEAD`, so natural Death creatures do not receive Dispel Evil's created-undead-only extra
+  penalty. Existing calculator behavior is correct. Merged source and evidence are in
+  `Reference docs/DOS reconstructed/unitcalc.c` and `B9.evidence.md`.
+- **D2 — modern Weapon Immunity eligibility.** Replaced the weapon/type proxy with the exact
+  calculated `EncMagic or magicranged` rule. Corrected Spirit Link and Blazing March bypasses,
+  King/Ruler's material-only suppression, and Wall of Fire ordering; added exhaustive represented
+  source and attack-class regressions. Method-3 review found and corrected the ordering defect.
+
 ## 2026-08-10
 
+- **D21 — modern level-bonus helper.** Reconstructed `@Units@ApplyLevelBonus` completely and
+  bound its CoM2/Warlord runtime tables. The 21 writes omit Death, Stoning and Doom Gaze; the
+  loader also feeds the normal To Defend slot from `[Hero]ToDefend`. Independent Claude/Codex
+  derivations and reciprocal review left no disagreement. Durable source and coverage are in
+  `Reference docs/Caster binary/Units.RecalculateUnits.pas` and `D21.evidence.md`; F56 owns the
+  newly confirmed calculator mismatch.
 - **B7 — DOS touch record routing.** Verified that common flags reach every admitted call, while
   melee records remain melee-only and one ranged record feeds ordinary ranged, Thrown, both
   Breaths and every Gaze. Corrected all-rider record routing, channel-carried Stoning −1 and Death

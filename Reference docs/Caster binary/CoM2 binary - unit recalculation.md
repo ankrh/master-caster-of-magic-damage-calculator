@@ -459,7 +459,7 @@ Warp Defense gate at +0xBCDF, which confirms there is no sixth channel.
 in +0xBA3C–+0xBCDF returns eight values, and none is `deathgaze` (+0x38), `stoninggaze` (+0x3C)
 or `doomgaze` (+0x40). Combined with [Combat flow](./CoM2%20binary%20-%20combat%20flow.md),
 *Gaze attacks* — the gazes are independent fields and
-share no slot with `ranged` — this settles the Warp/gaze half of verification item D21.
+share no slot with `ranged`; D21's later helper reconstruction completes the gaze-level result.
 `rangedtype` (+0x28) is likewise untouched, as expected for a type rather than a strength.
 
 **Warp Defense** is `defense = defense / 3` (`idiv` with `ecx = 3`, +0xBD11–+0xBDD1), loss to the
@@ -542,7 +542,7 @@ enchantment's effect):
 | +0x0654B | Flame Blade | +0x0C317 | Frozen |
 | +0x067EB | Immolation, Mystic Surge | +0x0C371 | Black Sleep |
 
-**This resolves the ordering half of verification item D21.** CoM2/Warlord run the three Warps late in
+This establishes the ordering used by D21's later helper reconstruction. CoM2/Warlord run the three Warps late in
 `c` with Shatter immediately after — **MoM's shape, not CoM 1's**, which is what the calculator
 already assumes for `com2*`. Endurance, Discipline, Lionheart, Holy Armor, Haste, Vertigo,
 Weakness and Mind Storm all precede the Warps and so land at full value before the reduction.
@@ -640,6 +640,19 @@ Destiny is not a disposable calculated-stat bonus. Its block writes to `BaseUnit
 
 `ApplyLevelBonus` runs after that transformation and before Focus Magic. This is direct
 execution-order evidence that ordinary level bonuses belong in phase `c`.
+
+The complete helper reconstruction is [`D21.evidence.md`](./D21.evidence.md). It splits on
+**base** `ishero` and performs 21 checked additions into the calculated record. Hero Attack, HP,
+Resistance, Defense, Hit and To Defend are unconditional; hero Ranged tests base `rangedtype`,
+while hero Thrown and both Breaths test their calculated channel. The normal path instead tests
+base Attack, `rangedtype`, Thrown and both Breaths. Missile and magical Ranged select different
+tables but both write only conventional `ranged +$24`.
+
+No instruction in `$005981F8..$00598D86` reads or writes Death Gaze `+$38`, Stoning Gaze `+$3C`
+or Doom Gaze `+$40`, and the loaded tables have no gaze key. **Modern gazes therefore receive no
+level strength in either CoM2 or Warlord.** The final normal To Defend table is also misbound in
+the loader: it reads `[Hero]ToDefend`, leaving `[Normal]ToDefend` dead. Current shipped values are
+zero in both sections, so that bug is numerically invisible.
 
 Focus Magic then adds 3 to an existing Doom Gaze, Fire Breath and Lightning Breath — three
 independent `> 0` tests — and runs **one** of four mutually exclusive ranged branches, in this

@@ -1130,6 +1130,15 @@ anywhere in the function; none of the four gates a touch effect. (The push at `0
 the mode to the helper at `0x99150`, whose return lands in `[bp-0x18]` and is only forwarded as
 an argument, never compared.)
 
+**B9 resolves what can set that mutation bit during unit creation.** `Create_Unit` at
+`0x97B30..0x9801A` first writes `_UNITS[].mutations = 0` for every type. Its only later sources are
+weapon quality `0..3`, Magic Weapons `0x01`, and Chaos Channels `0x04/0x08/0x10`; non-city
+creation bypasses those writes entirely. It never reads the type record's race or realm when
+setting mutations. Natural Death creatures therefore lack `UM_UNDEAD`; the extra -5 is provenance
+state for explicitly converted/created undead, not a roster property. Full three-build proof and
+the roster-versus-instance distinction: `DOS reconstructed/B9.evidence.md`; reconstruction:
+`DOS reconstructed/unitcalc.c`.
+
 This disproves the MoM Fandom wiki's `Dispel Evil (Ability).md`, which calls it a melee-only
 touch attack. No calculator impact — the Angel, the only MoM unit with it, has no non-melee
 attack — but the wiki cannot be cited as justification for a melee-only restriction.
@@ -1295,6 +1304,12 @@ current figure with Damage Limit, Warp Lightning attacks once per starting stren
 strength each pass, and Black Sleep converts the spell to automatic damage
 (`0x871C6..0x8721C`, `0x8733E..0x87345`). Invulnerability subtracts two after each defense roll.
 
+The B4/B5/B6 closure follows both damage paths through every figure boundary. Conventional and
+non-Area spell excess repeats Defense and Invulnerability −2; Area attacks bypass rollover and cap
+each outer per-figure attack. Armor Piercing's signed `/2` truncates toward zero, while Immolation
+loads Fireball's Area-only flags and cannot inherit the initiator's Armor Piercing. Full reviewed
+proof: `DOS reconstructed/B4_B5_B6.evidence.md`.
+
 `BU_ApplyDamage` returns before all state changes when the input-bucket sum is nonpositive or the
 unit is not Active (`0x873B1..0x873CE`), caps each persistent damage bucket at 200, and uses signed
 division for figures lost and the front-figure remainder (`0x873D1..0x87500`). Its terminal status
@@ -1416,7 +1431,9 @@ byte-identical. So every result in this section and in *Level bonuses* holds for
 a second read.
 
 The two changed regions sit immediately after each of 1.31's Shatter writes (`0x90AE5` melee,
-`0x90B07` ranged). **What CP 1.60 changed about Shatter has not been decoded.**
+`0x90B07` ranged). CP 1.60 changes only the `Grey_Melee` / `Grey_Ranged` accounting order; final
+melee and ranged still become 1, and eligibility is unchanged. The complete target-admission,
+effect-setter, and recompute proof is in `DOS reconstructed/A32.evidence.md`.
 
 **CoM 1 moved the whole block to `0x9074C`–`0x907AA`**, near the front of the same
 `0x8FF09`–`0x90B8D` recompute:

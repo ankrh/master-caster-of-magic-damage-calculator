@@ -73,6 +73,7 @@ Generators:
 Before implementing a calculator backlog item, reconstructing binary code, or doing cross-agent
 review work, read `DERIVATION-REVIEW-PROTOCOL.md`.
 
-- Binary reconstruction always uses method 1, independent Claude + Codex derivation.
+- Binary reconstruction always uses method 4: two independent Codex GPT-5.6 Sol High derivations,
+  main-agent merge, then one Claude Opus 5 High review.
 - Implementation uses method 2 or 3 only when the user or backlog row selects it.
 - If neither selects an implementation method, ask before reading implementation code.

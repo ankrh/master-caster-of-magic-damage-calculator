@@ -5,11 +5,13 @@
  * R6.2f's spell-damage/application closure, R6.5a's side-wide Illusion-sight refresh,
  * R6.5b's exported battle-unit healing/temporary-Hits routine, and R6.5d's exported
  * battlefield side-bonus aggregation routine, and R9-G1a-R1's battle-unit load-to-combat
- * routine and CoM 1 identity tail.
+ * routine and CoM 1 identity tail, and A32's Shatter target-admission and
+ * generic effect-setter path.
  *
  * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
  * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
- * R6.2a.evidence.md through R6.2f.evidence.md and R6.5a/b/d.evidence.md. The overlay-entry names
+ * R6.2a.evidence.md through R6.2f.evidence.md, R6.5a/b/d.evidence.md, and
+ * A32.evidence.md. The overlay-entry names
  * below are ReMoM
  * attributions: the VROOMM
  * targets cannot be mapped back to file offsets from the executable images.
@@ -141,6 +143,21 @@
 #define RACE_DEATH                  0x14
 #define HERO_SLOT_NONE              (-1)
 #define SPELL_FIREBALL              0x60
+#define SPELL_SHATTER               0x58
+#define SPELL_CLASS_MUNDANE_CURSE   0x10
+#define COMBAT_TARGET_ENEMY_NORMAL  11
+#define BUE_SHATTER                 0x0010
+#define COM1_SHATTER_CONFLICT_MASK  0x0052
+#define SPELL_RECORD_CLASS_OFFSET   0x15
+#define SPELL_RECORD_EFFECT_OFFSET  0x20
+#define COMBAT_CASTER_UNIT_MAX      19
+#define COMBAT_CASTER_PLAYER_BIAS   20
+#define HERO_ITEM_SLOTS             3
+#define ITEM_RECORD_SIZE            0x32
+#define ITEM_SPELL_SAVE_OFFSET      0x2A
+#define MOM_SHATTER_RESIST_LIMIT    10
+#define COM1_SHATTER_RESIST_LIMIT   8
+#define COM1_SHATTER_ATTACK_FLOOR   2
 #define SPELL_EARTH_ELEMENTAL       30
 #define SPELL_PHANTOM_WARRIORS      45
 #define SPELL_PHANTOM_BEAST         60
@@ -325,12 +342,191 @@ extern int16_t __far Battle_Unit_Defense_Special(int16_t defender_battle_unit_id
 extern int16_t __far Eliminated_Opponent(void);
 extern int16_t __far Battle_Unit_Is_Summoned_Creature(int16_t battle_unit_idx);
 extern void __far Update_Sees_Illusions(void);
+extern struct s_SPELL_DATA __far *_SPELL_DATA;
+extern int16_t __far Target_Is_Visible(int16_t battle_unit_idx);
+extern int16_t __far Spell_Resistance_Modifier(int16_t spell_idx);
+extern int16_t __far Effective_Battle_Unit_Strength(int16_t battle_unit_idx);
+extern void __far Combat_Spell_Animation(int16_t target_cgx, int16_t target_cgy,
+                                         int16_t spell_idx, int16_t player_idx,
+                                         int16_t anims_on, int16_t caster_idx);
 #if BUILD == COM1
 extern void __far Calc_Battlefield_Bonuses(int16_t combat_structure);
 extern int16_t _combat_structure;     /* absolute word DS:0xC520 */
 #endif
+
+/* ===========================================================================
+ * A32 -- Shatter target admission and generic effect setter.
+ * Complete extent ledgers and cross-build differences are in A32.evidence.md.
+ * These are source-shaped excerpts of three larger overlay routines.
+ * ======================================================================== */
+
+static uint8_t A32_spell_class(int16_t spell_idx)
+{
+    return *((uint8_t __far *)&_SPELL_DATA[spell_idx] + SPELL_RECORD_CLASS_OFFSET);
+}
+
+static uint16_t A32_spell_effect_mask(int16_t spell_idx)
+{
+    return *((uint16_t __far *)((uint8_t __far *)&_SPELL_DATA[spell_idx]
+                                + SPELL_RECORD_EFFECT_OFFSET));
+}
+
+#if BUILD == COM1
+extern uint8_t __far *_ITEMS; /* ITEM_RECORD_SIZE records; spell_save at ITEM_SPELL_SAVE_OFFSET. */
+
+/* Near callee shares AITP_Combat_Spell's frame; com1:0x80338 -> 0x8156A. */
+static void __near A32_com1_prepare_ai_context(int16_t caster_idx,
+                                               int16_t *player_idx,
+                                               int16_t *item_spell_save_adjust,
+                                               int16_t *picked_target)
+{
+    int16_t unit_idx;
+    int16_t owner_idx;
+    int16_t hero_slot;
+    int16_t item_slot;
+
+    *item_spell_save_adjust = 0;                   /* com1:0x8156A */
+    if (caster_idx > COMBAT_CASTER_UNIT_MAX) {      /* JLE ->0x8157F at com1:0x81575 */
+        *player_idx = caster_idx - COMBAT_CASTER_PLAYER_BIAS;
+                                                    /* com1:0x81577..0x8157C */
+        goto done;
+    }
+
+    *player_idx = _battle_units[caster_idx].controller_idx;
+                                                    /* com1:0x8157F..0x81591 */
+    unit_idx = _battle_units[caster_idx].unit_idx;  /* com1:0x81594..0x815A2 */
+    owner_idx = (int8_t)_UNITS[unit_idx].owner_idx; /* com1:0x815A2..0x815A7 */
+    hero_slot = (int8_t)_UNITS[unit_idx].Hero_Slot;
+    if (hero_slot >= 0) {                           /* JLE ->0x81612 at com1:0x815AF */
+        for (item_slot = 0; item_slot < HERO_ITEM_SLOTS; ++item_slot) {
+                                                    /* JGE ->0x81612 at com1:0x815B6;
+                                                       loop ->0x815B3 at com1:0x81610 */
+            int16_t item_idx = _HEROES2[owner_idx]->heroes[hero_slot].Items[item_slot];
+                                                    /* com1:0x815B8..0x815F1 */
+            if (item_idx >= 0)                      /* JLE ->0x8160F at com1:0x815F6 */
+                *item_spell_save_adjust -=
+                    (int8_t)_ITEMS[item_idx * ITEM_RECORD_SIZE + ITEM_SPELL_SAVE_OFFSET];
+                                                    /* com1:0x815F8..0x8160C */
+        }
+    }
+done:
+    *picked_target = -1;                            /* com1:0x81615..0x8161D */
+}
+#endif
+
+/* AITP_Combat_Spell class dispatch is 131:0x80342..0x80366 160:= com1:=;
+   class-16 table word is 131:0x81343 160:= com1:= and enters 0x80D3E. */
+static int16_t A32_ai_shatter_candidate(int16_t spell_idx, int16_t battle_unit_idx,
+                                        int16_t player_idx,
+                                        int16_t item_spell_save_adjust)
+{
+    struct s_BATTLE_UNIT __far *bu = &_battle_units[battle_unit_idx];
+    struct s_SPELL_DATA __far *spell = &_SPELL_DATA[spell_idx];
+    int16_t effective_resist;
+    int16_t target_value;
+
+    if (A32_spell_class(spell_idx) != SPELL_CLASS_MUNDANE_CURSE)
+        return ST_FALSE;
+    if (bu->Attribs_1 & USA_IMMUNITY_MAGIC)         /* 131:0x80D50..0x80D56 160:= com1:= */
+        return ST_FALSE;
+    if (bu->Combat_Effects & A32_spell_effect_mask(spell_idx))
+                                                    /* 131:0x80D5B..0x80D89 160:= com1:= */
+        return ST_FALSE;
+
+#if BUILD == MOM131
+    if (spell->magic_realm == sbr_Sorcery && (bu->Attribs_1 & USA_IMMUNITY_ILLUSION))
+        return ST_FALSE;                            /* 131:0x80D8E..0x80DBB 160:-- com1:-- */
+#else
+    if (spell->magic_realm == sbr_Death
+        && (int8_t)_UNITS[bu->unit_idx].Hero_Slot >= 0)
+        return ST_FALSE;                            /* 131:-- 160:0x80D8E..0x80DBB com1:= */
+#endif
+
+#if BUILD == MOM131 || BUILD == CP160
+    if (((_UNITS[bu->unit_idx].enchantments | bu->enchantments | bu->item_enchantments)
+         & UE_RIGHTEOUSNESS)
+        && (spell->magic_realm == sbr_Chaos || spell->magic_realm == sbr_Death))
+        return ST_FALSE;                            /* 131:0x80DBB..0x80E53 160:= com1:-- */
+#else
+    if (bu->Combat_Effects & COM1_SHATTER_CONFLICT_MASK)
+        return ST_FALSE;                            /* 131:-- 160:-- com1:0x80DBB..0x80DD2 */
+#endif
+
+    if (bu->controller_idx == player_idx || bu->status != BUS_ACTIVE)
+        return ST_FALSE;                            /* 131:0x80E53..0x80E84 160:= com1:0x80E32..0x80E87 */
+
+#if BUILD == COM1
+    if (spell_idx == SPELL_SHATTER) {                /* com1:0x80E87..0x80E8D ->0x80C74 */
+        if ((uint8_t)bu->race >= RACE_FIRST_FANTASTIC)
+            return ST_FALSE;                        /* com1:0x80C81..0x80C95 */
+        if ((uint8_t)bu->melee <= COM1_SHATTER_ATTACK_FLOOR
+            && (uint8_t)bu->ranged <= COM1_SHATTER_ATTACK_FLOOR)
+            return ST_FALSE;                        /* com1:0x80C88..0x80C98 */
+    }
+#endif
+
+    if ((uint8_t)bu->race >= RACE_FIRST_FANTASTIC)
+        return ST_FALSE;                            /* 131:0x80E84..0x80E98 160:0x80E91..0x80E98 com1:= */
+
+    if (!Target_Is_Visible(battle_unit_idx))
+        return ST_FALSE;                            /* 131:0x80E98..0x80EA5 160:= com1:= */
+
+    effective_resist = Combat_Effective_Resistance(*bu, spell->magic_realm);
+                                                    /* 131:0x80EA5..0x80EDB 160:= com1:= */
+#if BUILD == COM1
+    effective_resist += Spell_Resistance_Modifier(spell_idx) + item_spell_save_adjust;
+                                                    /* 131:-- 160:-- com1:0x80DD2..0x80DDE,0x80EDB */
+    if (effective_resist >= COM1_SHATTER_RESIST_LIMIT)
+        return ST_FALSE;                            /* com1:0x80EDE..0x80EE6 */
+    target_value = (Effective_Battle_Unit_Strength(battle_unit_idx)
+                    * (COM1_SHATTER_RESIST_LIMIT - effective_resist)
+                    + COM1_SHATTER_RESIST_LIMIT - 1) / COM1_SHATTER_RESIST_LIMIT;
+                                                    /* com1:0x80EE6..0x80F01 */
+#else
+    if (effective_resist >= MOM_SHATTER_RESIST_LIMIT)
+        return ST_FALSE;                            /* 131:0x80EDB..0x80EE6 160:= */
+    target_value = (Effective_Battle_Unit_Strength(battle_unit_idx)
+                    * (MOM_SHATTER_RESIST_LIMIT - effective_resist)
+                    + MOM_SHATTER_RESIST_LIMIT - 1) / MOM_SHATTER_RESIST_LIMIT;
+                                                    /* 131:0x80EE6..0x80F01 160:= */
+#endif
+    (void)target_value;                             /* comparison/pick loop 131:0x80F01..0x80F1F 160:= com1:= */
+    return ST_TRUE;
+}
+
+/* Combat_Spell_Target_Screen class dispatch is 131:0x85C29..0x85C4C 160:= com1:=;
+   class-16 blocks are 131:0x85C55..0x85C5E, 160:0x85C50..0x85C70, com1:=. */
+static int16_t A32_human_shatter_target(int16_t target_type, int16_t battle_unit_idx)
+{
+    struct s_BATTLE_UNIT __far *bu = &_battle_units[battle_unit_idx];
+
+    if (bu->controller_idx == 0)
+        return ST_FALSE;                            /* 131:0x85F0F..0x85F19 160:= com1:= */
+    if (target_type != COMBAT_TARGET_ENEMY_NORMAL)
+        return ST_FALSE;
+    return (uint8_t)bu->race < RACE_FIRST_FANTASTIC;
+                                                    /* 131:0x85F31..0x85F50 160:= com1:= */
+}
+
+/* Cast_Spell_On_Battle_Unit class dispatch is 131:0x81F4C..0x81F6F 160:= com1:=;
+   class-16 table word 131:0x82F91 160:= com1:= enters the shared type-13/16 island. */
+static int16_t A32_apply_class_16_effect(int16_t spell_idx, int16_t battle_unit_idx,
+                                         int16_t resistance_modifier, int16_t target_cgx,
+                                         int16_t target_cgy, int16_t player_idx,
+                                         int16_t anims_on, int16_t caster_idx)
+{
+    struct s_BATTLE_UNIT __far *target = &_battle_units[battle_unit_idx];
+
+    Combat_Spell_Animation(target_cgx, target_cgy, spell_idx, player_idx, anims_on, caster_idx);
+                                                    /* 131:0x82256..0x8226E 160:= com1:0x82256..0x82274 */
+    if (Combat_Resistance_Check(*target, resistance_modifier,
+                                _SPELL_DATA[spell_idx].magic_realm) <= 0)
+        return ST_FALSE;                            /* 131:0x82256..0x822B2 160:= com1:= */
+    target->Combat_Effects |= A32_spell_effect_mask(spell_idx);
+                                                    /* 131:0x822B2..0x822E9 160:= com1:= */
+    return ST_TRUE;
+}
 extern struct s_BATTLEFIELD __far *battlefield;
-extern struct s_SPELL_DATA __far *_SPELL_DATA;
 extern int8_t __far *combat_enchantments;
 extern int16_t _combat_defender_player;
 extern int16_t _combat_attacker_player;

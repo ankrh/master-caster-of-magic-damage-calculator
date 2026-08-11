@@ -16,7 +16,10 @@ the reconstruction anchors on the test, not the jump.
 
 Also parses the artifact's coverage ledger and recomputes each row's innermost
 gate from the branches that straddle it, so a block written as top-level while
-the binary nests it inside another is reported.
+the binary nests it inside another is reported. Compiler range/overflow guards
+whose next instruction calls a known handler are excluded from both semantic
+branch accounting and nesting; their success and failure paths are scaffolding,
+not source-level gates.
 
 The executable path is an argument, not a constant: `Reference docs/Caster
 binary/README.md` is its single home.
@@ -178,12 +181,15 @@ def check(LO, HI, rows):
       return None
 
 
-  # innermost row that gates each row, computed from straddling branches
+  # innermost row that gates each row, computed from semantic straddling branches
   bad = []
   for lo, hi, declared, title, num in rows:
       gates = set()
-      for i in ins:
+      for k, i in enumerate(ins):
           if not i.mnemonic.startswith('j') or i.mnemonic == 'jmp':
+              continue
+          nxt = ins[k + 1] if k + 1 < len(ins) else None
+          if nxt and nxt.mnemonic == 'call' and tgt(nxt) in guards:
               continue
           t = tgt(i)
           if t is None or not (i.address < lo and t >= hi):

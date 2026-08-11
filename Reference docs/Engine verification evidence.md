@@ -19,16 +19,11 @@ analysis and the modern analysis index.
 
 ### A32. Shatter in CP 1.60 and CoM 1
 
-- CP 1.60 changes the code immediately after both of 1.31's Shatter writes:
-  `0x90AE6`–`0x90AF9` after `melee = 1` at `0x90AE5`, and `0x90B08`–`0x90B1B` after
-  `ranged = 1` at `0x90B07`. These are two of only five changed regions in the complete
-  recompute; their effect has not been decoded.
-- CoM 1's Shatter block at `0x907DC`–`0x90827` was read for position, not eligibility. The
-  calculator restricts Shatter to normal units and heroes outside Warlord, but no equivalent
-  unit-type gate has been established. The binary caps at 1 (`cmp …, 1 / jle`), while the
-  calculator sets a positive value to 1; those shapes agree for reachable values.
-
-Evidence: `MoM binary analysis.md`, *Warp Creature runs early*.
+Resolved 2026-08-11. MoM 1.31, CP 1.60, and CoM 1 all restrict Shatter admission to enemy
+`race < 0x0F`, which includes normal units and heroes but excludes Fantastic units. CP's changed
+recompute bytes correct only the two `Grey_*` accounting writes; CoM's recompute consumer has no
+additional unit-kind gate. Existing calculator behavior is correct. Owning evidence:
+`DOS reconstructed/A32.evidence.md`.
 
 ### A33. Unidentified CoM 1 per-realm debuff
 
@@ -52,21 +47,25 @@ a natural-roll clause rather than by clamping the intermediate percentage, but t
 
 ### B4. Damage rollover
 
-`singleAttackDmgDist` rolls Defense again for each new figure reached by excess damage;
-`areaPerFigureDmgDist` does not roll damage over. These two foundational shapes have not been
-verified against the DOS binary. ReMoM names `BU_ApplyDamage` as the likely entry point.
+Resolved for MoM 1.31, CP 1.60 and CoM 1. Conventional and non-Area spell excess crosses figure
+boundaries and receives a fresh Defense roll at every new figure. Area damage instead makes one
+capped outer attack per current figure and never enters the rollover loop. Existing calculator
+behavior is correct. Owning evidence: `DOS reconstructed/B4_B5_B6.evidence.md`.
 
 ### B5. Armor Piercing rounding and Immolation exclusion
 
-`computeDefenseProfile` halves eligible Defense with floor rounding and never applies Armor
-Piercing to Immolation. The rounding direction and the Immolation exclusion are separate
-assumptions currently sourced to another calculator rather than the game.
+Resolved for all three DOS builds. Armor Piercing uses signed division by two with truncation
+toward zero. Immolation passes Fireball's own `0x1000` flags, whose Armor Piercing bit is clear,
+and receives no initiating-attack flag word. The calculator's reachable results were already
+correct; its DOS halving expression now states the exact arithmetic. Owning evidence:
+`DOS reconstructed/B4_B5_B6.evidence.md`.
 
 ### B6. Invulnerability during rollover
 
-`singleAttackDmgDist` subtracts Invulnerability inside the per-figure rollover loop, so the bonus
-reduces every chained Defense roll. That repeated application has not been established from the
-engine.
+Resolved for all three DOS builds. Every conventional or non-Area spell boundary repeats the
+fresh Defense roll and then Invulnerability's −2 subtraction. Automatic/Doom damage bypasses both.
+Existing calculator behavior is correct. Owning evidence:
+`DOS reconstructed/B4_B5_B6.evidence.md`.
 
 ### B7. Touch-effect phase mapping
 
@@ -81,10 +80,11 @@ Evidence: `MoM binary analysis.md`, touch/effect-dispatch findings.
 
 ### B9. Dispel Evil and `UM_UNDEAD`
 
-MoM 1.31 applies −4, plus another −5 when the target unit type carries `UM_UNDEAD`. The calculator
-uses a narrower created-undead test (Undead, Animate Dead, or Revenant state). Whether natural
-Death creatures carry the mutation flag has not been checked; if they do, the calculator's
-restriction is wrong.
+Resolved by reconstructing `Create_Unit` in MoM 1.31, CP 1.60 and CoM 1. The constructor zeroes
+the dynamic unit instance's `mutations` byte for every unit type, and its complete downstream write
+set cannot add `UM_UNDEAD`. Natural Death creatures therefore do not receive the created-undead
+extra penalty; the calculator's existing classification is correct. Owning evidence:
+`DOS reconstructed/B9.evidence.md`; merged source: `DOS reconstructed/unitcalc.c`.
 
 ### C1. Animate Dead's DOS ranged bonus
 
@@ -97,15 +97,30 @@ invalid-version-id defect in this area is fixed and is not part of this dossier.
 
 ### D2. Weapon Immunity eligibility mapping
 
-The engine-side rule is now known. `EffectiveDefense` adds the configured bonus when the attack is
-not magical and the defender's calculated `weaponimmunity` flag is set
-(`$0059681A..$00596833`). `ApplyAttack` supplies magic as calculated `EncMagic or magicranged`
-(`$005B28ED..$005B292A`). There is no generic-hull special case in those consumers.
+Resolved 2026-08-11. `EffectiveDefense` adds the configured bonus when the attack is not magical
+and the defender's calculated `weaponimmunity` flag is set (`$0059681A..$00596833`). `ApplyAttack`
+supplies magic as calculated `EncMagic or magicranged` (`$005B28ED..$005B292A`). There is no
+generic-hull or final-unit-type test in those consumers. The magnitude and additive position are
+8 for CoM2 and 10 for Warlord.
 
-What remains is a calculator-mapping audit: `weaponImmunityApplies` approximates the engine flag
-with attacker weapon, unit type, and a MoM-1.31-only generic exception. Confirm that this proxy is
-equivalent for every reachable modern transformation, especially script-derived type or magic
-changes. The magnitude and additive position are resolved at 8 for CoM2 and 10 for Warlord.
+The calculator now carries calculated `EncMagic` separately from weapon display state and final
+Fantastic identity, and combines it with the attack-local `magicranged` classification at the
+modern defense boundary. The audit covered every represented source. Identity coverage
+distinguishes natural Fantastic, generic Combat Summoned, Chosen, Construct Catapult, Call to
+Arms Paladins, all three Chaos Channels variants, Destiny/Apotheosis, Blood Lust, Undead, Animated,
+Mystic Surge, Raise Dead and Sanctify Clergy, including the negative Warlord Blood Lust and
+non-Clergy Sanctify branches.
+Direct coverage includes weapon material, hero standing, Flame Blade/Fiery Blade/Fiery Fury,
+Holy Weapon, Wraith Form, Ruler of Underworld, Blazing March, Wall of Fire's garrison grant and
+Artificer. Attack-local coverage distinguishes physical ranged and Thrown from magical
+conventional ranged, both Breaths and all three Gazes.
+
+The proxy audit corrected three mismatches. Warlord Spirit Link clears `Fantastic` in region `d` but
+does not clear the `EncMagic` already granted by region `c`, so its physical attacks still bypass
+Weapon Immunity. Base CoM2 Blazing March grants unit-wide `EncMagic`; its Thrown channel therefore
+bypasses Weapon Immunity even though that version adds no Thrown strength. King/Ruler of
+Underworld suppresses only the grant made by `ApplyMagicWeapons`; an independent source survives
+whether it is earlier, such as Warlord Wall of Fire in region `b`, or later, such as Flame Blade.
 
 Evidence: `Caster binary/CoM2 binary - resolution helpers.md`, *Resolution-time modifiers*;
 `Caster binary/CoM2 binary - combat flow.md`, *ApplyAttack riders, damage loop and result routing*;
@@ -130,17 +145,17 @@ manual/helptext statement is retained in `Source discrepancies.md`.
 Evidence: `Touch attack trigger matrix.md`; `Caster binary/CoM2 binary - combat flow.md`,
 *ApplyAttack riders, damage loop and result routing*.
 
-### D21. Level bonuses for gazes
+### D21. Level bonuses for gazes — resolved 2026-08-10
 
-Warp ordering and Warp's lack of gaze writes are resolved. The remaining question is whether
-`ApplyLevelBonus` adds any strength to a modern gaze. `Levelbonus.INI` has columns for Attack,
-Missile Ranged, Magic Ranged, Thrown, Breath, Defense, Resistance, HP, MP, Hit, and To Defend, but
-none for gazes; any surviving gate is therefore in the helper itself. The calculator currently
-gives an ordinary CoM2 gaze the ranged column and Doom Gaze no level bonus.
+The complete `$005981F8..$00598D86` reconstruction proves that `ApplyLevelBonus` never reads or
+writes Death Gaze, Stoning Gaze or Doom Gaze. Modern gazes therefore receive no level strength in
+either CoM2 or Warlord. The helper has 21 checked writes across ten other calculated channels;
+its only ranged writes target conventional `ranged +$24`. The loader also fills the normal path's
+To Defend pointer from `[Hero]ToDefend`, though current shipped values are zero in both sections.
 
-Evidence: `CoM2 data tables.md`, *Level bonuses*;
-`Caster binary/CoM2 binary - unit recalculation.md`, *Experience, Destiny and the named stat
-helpers*.
+Evidence: `Caster binary/D21.evidence.md`; `Caster binary/Units.RecalculateUnits.pas`,
+`ApplyLevelBonus`; `Caster binary/CoM2 binary - unit recalculation.md`, *Experience, Destiny and
+the named stat helpers*. The calculator correction is tracked separately by F56.
 
 ### D22. Plain versus gold stat icons on the unit display
 

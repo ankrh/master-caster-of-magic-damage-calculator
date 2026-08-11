@@ -13,10 +13,13 @@ Behavior is specified in [SPEC.md](./SPEC.md); working conventions are in
 Evidence short names below follow the source routing in the root [CLAUDE.md](../CLAUDE.md).
 Costs are `free`, `small`, `medium`, or `large`.
 
+Every item must satisfy the explicit version-scope rule in
+[`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md).
+
 An implementation preference is explicit only when its row names **method 2** or **method 3** from
 [`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md). If a row has no preference and
 the user does not select one, ask before implementation begins. Binary reconstruction always uses
-method 1 and does not need a per-row preference.
+method 4 and does not need a per-row preference.
 
 ## Priority
 
@@ -27,38 +30,32 @@ items in the same or later rows.
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **D21** | Complete the modern level-bonus helper reconstruction and make R9-G1f actionable. |
-| 2 | **D2** | Audit the calculator's modern Weapon-Immunity proxy against the now-known engine rule. |
-| 3 | **B9** | Settle natural Death-creature `UM_UNDEAD` classification for Dispel Evil. |
-| 4 | **B4, B5, B6** | Verify the cohesive DOS rollover/Defense package: fresh rolls, Armor Piercing, and repeated Invulnerability. |
-| 5 | **A32** | Decode the remaining CP/CoM 1 Shatter eligibility branch. |
-| 6 | **R9-G1d–R9-G1f, R9-G1h–R9-G1i, R9-G1k** | Close the provenance domains after their foundational verification reads. |
-| 7 | **R9-G1g, R9-G1j** | Close direct-helper and derived-package provenance; their named behavioral prerequisites are complete. |
-| 8 | **R9-G1a** | After row 7's R9-G1g: close identity/creation provenance; M6, F54 and F55 are complete. |
-| 9 | **F5–F6, F9, F12–F15, F17–F19, F21, F23–F43, F50–F51, F53** | Implement the remaining confirmed defects that have no named live prerequisite. |
-| 10 | **R9-G1c, F20** | After rows 1, 6 and 9: close R9-G1c's blocked claims and finish the exhaustive step lists after F12–F19. |
-| 11 | **M3** | After row 9's F41: implement the hero-only older-engine Destruction path. |
-| 12 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
+| 1 | **R9-G1i, R9-G1k** | Close the remaining independent provenance domains after their foundational verification reads. |
+| 2 | **R9-G1g, R9-G1j** | Close direct-helper and derived-package provenance; their named behavioral prerequisites are complete. |
+| 3 | **R9-G1a** | After row 2's R9-G1g: close identity/creation provenance; M6, F54 and F55 are complete. |
+| 4 | **F5–F6, F9, F12–F15, F17–F19, F21, F23–F43, F50–F51, F53, F56** | Implement the remaining confirmed defects that have no named live prerequisite. |
+| 5 | **R9-G1e, R9-G1c, F20** | After rows 1, 2 and 4: close R9-G1e's weapon/clamp projections, R9-G1c's blocked claims, and the exhaustive step lists after their named prerequisites. |
+| 6 | **M7** | After R9-G1a, R9-G1j and F20: retire the transitional non-linear transform helpers. |
+| 7 | **M3** | After row 4's F41: implement the hero-only older-engine Destruction path. |
+| 8 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Provenance evidence gaps
 
 R9-G1 is the non-executable tracking umbrella for R9-G1a–R9-G1k. Its live total remains the
-audit reconciliation point; each implementation child owns the fixed formula domain stated below.
+audit reconciliation point; each implementation child or named defect owner owns the fixed formula
+domain stated below.
 R9-G1a–R9-G1k must be undertaken with **method 3: current-agent implementation followed by one
 Codex GPT-5.6 Sol High review-and-revision pass** under
 [`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md). Dedicated reconstruction
-dependencies always use Claude + Codex dual-agent derivation under the protocol's derivation rules.
+dependencies always use method 4 under the protocol's derivation rules.
 
 | ID | Evidence gap / fixed formula domain | Cost | Strongest pointer / dependency |
 |---|---|---|---|
-| R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `139` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
+| R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `68` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
 | R9-G1a | **Blocked by R9-G1g:** close the remaining `8` identity and creation-grant gaps: six `identity:*` formulas and the two independent elemental-protection `lavaSmelter:*` formulas still marked `UNVERIFIED` beside the helpers. | medium | R9-G1a-R1–R3 complete in `HISTORY.md`; legacy conversions depend on R9-G1g; M6 and F54–F55 completed 2026-08-10 |
-| R9-G1c | Close the remaining `9` late unit-transform gaps: Military Workshop, Wild Game, Energy Cannon, Nightshade, Dragon Mound, level, weapon, Flame Blade ranged, and Mislead ranged. | medium | F12/F14/F19 and R9-G1f own the known ordering/channel dependencies; `ApplyMagicWeapons` still lacks a checked-in modern formula body |
-| R9-G1d | Close the `14` non-chance tail gaps: the twelve formulas from `nodeAura` through `clamp`, inclusive, plus `altarOfTheSun:figures` and `alumniOfAcademy:figures`. | medium | `stats.js`, late/global and figure transforms; adjacent strongest pointers |
-| R9-G1e | Close all `27` `chance:*` provenance gaps in the chance-contribution and projection sequence. | large | `stats.js`, chance transforms; adjacent strongest pointers |
-| R9-G1f | Close the `16` level-dispatch gaps: `levelBonusDispatch` and all fifteen `levelBonuses:*` formulas. | medium | `combat.js`, `getLevelBonuses`; DOS reconstruction, Caster implementation and current runtime tables |
-| R9-G1g | Close the `16` remaining direct-helper gaps from `clampPct` through `distancePenalty`, excluding the level-dispatch formulas owned by R9-G1f. | large | `combat.js`, direct helpers; F7 and F52 completed 2026-08-10 |
-| R9-G1h | Close the `20` ability-stat-modifier gaps from `holyBonus` through `disheartenProphecy`, inclusive. | large | `combat.js`, `getAbilityStatSteps`; adjacent strongest pointers |
+| R9-G1c | Close the remaining `9` late unit-transform gaps: Military Workshop, Wild Game, Energy Cannon, Nightshade, Dragon Mound, level, weapon, Flame Blade ranged, and Mislead ranged. | medium | F12/F14/F19 own the live ordering/channel dependencies; [R9-G1f](./HISTORY.md) closed the level helper; `ApplyMagicWeapons` still lacks a checked-in modern formula body |
+| R9-G1e | **Blocked by R9-G1g and F5:** close the remaining `3` chance-projection gaps: `chance:weapon:melee`, `chance:weapon:rtb`, and `chance:clamp`. Versions: evidence/builds — MoM 1.31 `WIZARDS.EXE`, MoM CP 1.60 `WIZARDS.EXE`, CoM 6.08 `MAGIC.EXE`, CoM2 1.05.11 `Caster.exe`, Warlord 1.5.12.7 `Caster.exe` plus scripts/runtime tables; calculator — `mom_1.31`, `mom_cp_1.60.00`, `com_6.08`, `com2_1.05.11`, `com2_warlord_1.5.12.7`. | small | `stats.js`, chance transforms; R9-G1e existing-evidence pass in `HISTORY.md`; R9-G1g owns modern material To-Hit evidence and F5 owns the modern two-stage clamp |
+| R9-G1g | Close the `16` remaining direct-helper gaps from `clampPct` through `distancePenalty`, excluding the verified level-dispatch formulas recorded in [HISTORY.md](./HISTORY.md). | large | `combat.js`, direct helpers; F7 and F52 completed 2026-08-10 |
 | R9-G1i | Close the `8` effective-attack, defense and damage-constant gaps from `rageEffectiveAttack` through `wallOfFireStrength`, inclusive. | medium | `combat.js`, attack/defense helpers; DOS and Caster combat reconstructions plus runtime tables |
 | R9-G1j | Close the `13` derived-package gaps from `undeadImmunityDerivation` through `bloodLustMeleeAttack`, inclusive. | large | `combat.js`, derived unit/ability packages; F22 completed 2026-08-10 |
 | R9-G1k | Close the `8` resolution-stat and combat-context gaps: `effectiveDefense:base`, `elemResistBonus`, `dosEffectiveDefenseProfile`, `doomAttackStrengthModifiers`, `normalizeCombatUnit`, `pairToHitModifiers`, `resolutionResistanceContext`, and `resolutionToBlockContext`. | medium | `combat.js`, resolution helpers and combat context; adjacent strongest pointers |
@@ -67,15 +64,15 @@ dependencies always use Claude + Codex dual-agent derivation under the protocol'
 
 | ID | Upcoming task | Cost | Evidence / dependency |
 |---|---|---|---|
-| F5 | Put common and channel To Hit/To Block writes in the transform record and implement the modern two-stage clamp. | large | CoM2 units, region `e` and sequential-transform audit |
-| F6 | Implement the remaining DOS Chaos Channels shared-slot gaze-and-breath behavior. | medium | MoM analysis, Chaos Channels; `stats.js:436-441` |
+| F5 | Put common and channel To Hit/To Block writes in the transform record, implement the modern two-stage clamp, and close `PROVENANCE[clamp]`. | large | CoM2 units, region `e` and sequential-transform audit |
+| F6 | First reconstruct `Apply_Chaos_Channels` for MoM 1.31, MoM CP 1.60 and CoM 1, then implement the remaining DOS Chaos Channels shared-slot gaze-and-breath behavior for calculator `mom_1.31`, `mom_cp_1.60.00` and `com_6.08`. | medium | **Reconstruction uses method 4:** `WIZARDS.EXE` overlay 129 entry 7, `[0xA4DEF,0xA4EEE)` (255 bytes, one external call); B9 bounded the three mutation writes in `DOS reconstructed/B9.evidence.md`; MoM analysis, Chaos Channels; `stats.js:436-441` |
 | F9 | Model Marionette's Channeler transformation, bonuses, spell package, and live-Fantastic Xenoveterinary eligibility. | medium | discrepancies, script checks without a calculator discrepancy |
 | F12 | Move Destiny to the end of permanent `base` writes and make later channel transformations ordinary ordered steps, including Focus Magic conversion and Shadow Strike's creation/boost of Thrown. | medium | CoM2 units, Destiny; `CreateUnit.CAS:695,703`; current preset regressions |
 | F13 | Move Upgraded Explosive's Fire Breath doubling to its early `UnitCalcPre` position and test a later bonus escaping it. | small | CoM2 units, Warlord region `b` |
 | F14 | Move Misfortune/Mislead to aura type 10 in region `e`, preserving eligibility gates. | small | CoM2 units, aura pass |
 | F15 | Put Holy Armor at its exact region-`c` position so its `Defense > 5` test cannot see later effects. | medium | CoM2 units, unit-enchantment effects |
 | F17 | Finish Warlord Vampirism by aggregating simultaneous Thrown/Fire/Lightning source channels, resetting each positive source independently, and moving the transfer to its region-`d` position. | medium | `UnitCalc.CAS:1245-1258`; R9-G1b corrected the represented-channel half transfer |
-| F18 | Split Mind Storm, Tactician, True Light, node aura, and combat Flame Blade writes onto their actual channels/positions. | medium | CoM2 units, calculator-facing discrepancies and aura pass |
+| F18 | Split Mind Storm, Tactician, True Light, node aura, and combat Flame Blade writes onto their actual channels/positions; close `PROVENANCE[nodeAura]`. | medium | CoM2 units, calculator-facing discrepancies and aura pass |
 | F19 | Add controls/transforms for the calculator-relevant compiled effects identified as absent by the sequential-transform audit, including Lightning Blade's created Breath and Military Workshop/Rocketry channel behavior. | large | CoM2 units, sequential-transform audit; current preset regressions |
 | F20 | **Blocked by F12–F19:** make the represented `b`/`c`/`d` step lists source-order exhaustive and atomic; add a complete trace-order assertion. | medium | CoM2 units, phase and region maps |
 | F21 | Load modern roster `to_block` into the card with one consistent absolute/delta encoding; add non-default controls. | small | generators vs `ui.js`; MoM analysis, constructor |
@@ -103,21 +100,8 @@ dependencies always use Claude + Codex dual-agent derivation under the protocol'
 | F49 | Add a CoM 1 Heavenly Light active-effect control and transform for defending units: +1 positive melee/ranged, +1 Defense and Resistance, conditional weapon To Hit, and minimum magic-weapon quality. Add focused tests and state that the user enables it only for a defender in city combat. | small | R6.1c evidence, *The CoM 1 city-defense bytes are Guardian and Heavenly Light*; currently absent from `data.js` and `combat.js` |
 | F50 | Add CoM 1 side-maximum controls/transforms for Guiding Beacon, Divine Barrier and Soul Linker. Preserve the ranged-type/Fantastic gates and Soul Linker's `ceil(v/2)` To Hit versus `floor(v/2)` To Block split. | medium | R6.1d evidence, *CoM 1's relocated tail consumes three side-wide hero maxima*; absent from `data.js`/stat steps |
 | F51 | Add a CoM 1 Realm Ward city-enchantment input and transform: a matching Nature/Sorcery/Chaos/Life/Death Fantastic unit loses 20% To Hit, 3 Defense and 3 Resistance. | small | R6.1d evidence, *CoM 1 Realm Wards use −2/−3/−3*; absent from `data.js`/stat steps; Q19 tracks the prose conflict but does not block the binary-backed implementation |
-| F53 | Use signed truncate-toward-zero division for CoM 1 Warped Defense instead of `Math.floor`; negative pre-Warp Defense can receive later Supreme Light/Tactician writes before the terminal clamp. | small | R6.1d evidence, *Warp Creature and Shatter expose both arithmetic and ordering differences*; `stats.js:1428-1431` |
-
-## Engine verification
-
-Detailed dossiers live in **verification evidence**. This table states only the remaining read.
-
-| ID | Upcoming verification | Cost | Method |
-|---|---|---|---|
-| A32 | Locate and decode the CoM 1 Shatter effect-setter eligibility gate. | small | **Method 1 — independent binary derivation** |
-| B4 | Verify per-figure damage rollover and fresh Defense rolls. | medium | **Method 1 — independent binary derivation** |
-| B5 | Verify Armor Piercing rounding and its Immolation exclusion. | small | **Method 1 — independent binary derivation** |
-| B6 | Verify repeated Invulnerability subtraction across rollover. | small | **Method 1 — independent binary derivation** |
-| B9 | Locate and verify natural Death-creature `UM_UNDEAD` values in the DOS unit records. | small | **Method 1 — independent binary derivation** |
-| D2 | Prove the calculator's modern Weapon-Immunity proxy matches `EncMagic or magicranged` for every reachable transformation. | medium | **Method 3 — current implementation + Sol High review/revision** |
-| D21 | Fully reconstruct the README-identified CoM2 1.05.11 `Caster.exe` routine `@Units@ApplyLevelBonus`, half-open extent `[0x5981F8, 0x598D86)`, into `Caster binary/Units.RecalculateUnits.pas`. Recover every gate, table lookup, arithmetic operation and stat-channel write; determine explicitly whether Death, Stoning or Doom Gaze receives level strength. Interpret the loaded values jointly with the current CoM2 and Warlord `Levelbonus.INI` files. D21 supplies the modern evidence needed by R9-G1f but does not implement calculator or provenance changes. | medium | **Method 1 — independent binary derivation.** Merge durable evidence into `Caster binary/D21.evidence.md`; update the D21 verification dossier and modern unit-recalculation analysis. Acceptance requires a complete coverage ledger, the protocol's six zero counts, and a passing `tools/verify_derivation.py`. |
+| F53 | Use signed truncate-toward-zero division for CoM 1 Warped Defense instead of `Math.floor`; negative pre-Warp Defense can receive later Supreme Light/Tactician writes before the terminal clamp. Close `PROVENANCE[warpDefense]`. | small | R6.1d evidence, *Warp Creature and Shatter expose both arithmetic and ordering differences*; `stats.js:1428-1431` |
+| F56 | Stop applying a conventional Ranged level bonus to modern Stoning and Death Gaze. CoM2/Warlord `ApplyLevelBonus` writes none of the three independent gaze fields; Doom Gaze is already unmodified. Add focused CoM2/Warlord regressions. | small | `Caster binary/D21.evidence.md`; current `getLevelBonuses` ordinary-gaze mapping |
 
 ## Modelling work
 
@@ -126,6 +110,7 @@ Accepted limitations remain in `SPEC.md`; only planned changes appear here.
 | ID | Upcoming task |
 |---|---|
 | M3 | **Blocked by F41:** implement the older-engine Destruction path, including elemental protection. Present in all three DOS builds but hero-only, so it stays unreachable until heroes are modelled; 1.31 adds the defender's per-figure hits where CoM 1 adds a flat 100. |
+| M7 | **Blocked by R9-G1a, R9-G1j and F20:** enforce [SPEC.md](./SPEC.md)'s transitional-helper retirement rule across derivation and combat normalization. Audit for helpers that compose ordered engine effects outside the phase-tagged records; replace each finding with atomic source-ordered steps, beginning with `determineEffectiveUnitType` and its second type rewrite in `normalizeCombatUnit`. Retain `unitType` only as a pure projection for legacy callers, then add a structural regression that prevents effect rules from returning to compatibility projections. |
 
 ## Open questions
 

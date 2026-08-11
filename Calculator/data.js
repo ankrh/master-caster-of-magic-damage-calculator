@@ -104,7 +104,7 @@ const ABILITY_DEFS = [
     { key: 'stoningImmunity', label: 'Stoning Immunity', type: 'bool', match: 'StoningImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Stoning Gaze and Stoning Touch.' },
     { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Versions: CoM 1 & 2, Warlord\nEach attack's hits deal at least a minimum damage, regardless of\nthe defender's blocks.\nCoM 1: Minimum = floor((hits − 5) / 2).\nCoM 2 & Warlord: Round((hits − start) × ratio / 100), using\nDelphi ties-to-even rounding; shipped start 0, ratio 34." },
     { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Abilities', subgroup: '_', tooltip: 'Unit becomes a fantastic Death creature.\nMoM 1.31: Grants Death Immunity.\nMoM 1.31 bug: Should also have granted Cold, Poison, and Illusion Immunity.\nMoM 1.60: Grants Death, Cold, Poison, and Illusion Immunity.\nCoM 1 & 2 & Warlord: Grants Death, Cold, and Illusion Immunity.\nNot modeled: natural healing / regeneration prevention.' },
-    { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense against non-magical attacks from normal units.\nMoM 1.31 & 1.60: Defense = 10.\nMoM 1.31 bug: Thrown attacks, and generic units (e.g. Catapult,\nWarship), bypass it.\nCoM 1 & 2: Defense +8.\nWarlord: Defense +10.' },
+    { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense against attacks not marked magical.\nMoM 1.31 & 1.60: Defense = 10.\nMoM 1.31 bug: Thrown attacks, and generic units (e.g. Catapult,\nWarship), bypass it.\nCoM 1: Defense +8; normal-unit and weapon-quality rules apply.\nCoM 2: Defense +8. Warlord: Defense +10.\nModern bypass: calculated Magic Weapon, magical ranged, Breath,\nor Gaze. Final Fantastic/normal identity is not the direct gate.' },
   ]),
   // Warlord-mod-only unit tags, shown under a 'Warlord' subheader.
   // Keep labels column-major alphabetical: the UI grid flows row-first.
@@ -142,20 +142,20 @@ const ENCHANTMENT_DEFS = [
     { key: 'charmOfLife', label: 'Charm of Life', type: 'bool', match: 'CharmOfLife', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: '+25% HP per figure (minimum +1 HP per figure).' },
     { key: 'fear', label: 'Cloak of Fear', type: 'bool', match: 'CauseFear', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: "Grants Cause Fear.\nOpponents with Death Immunity, Magic Immunity, or\nRighteousness are unaffected.\nFor each opponent figure: Resist or freeze for the melee exchange.\nMoM 1.31 & 1.60: No resistance modifier.\nMoM 1.31 bug 1: Defender's Cause Fear never fires — only the\nattacker's does.\nMoM 1.31 bug 2: Each of the defender's failed rolls also fears one\nattacker figure (self-fear), bypassing immunity.\nCoM 1 & 2 & Warlord: Modifier −3." },
     { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Unit becomes a fantastic Death creature.\nMoM 1.31: Grants Death Immunity.\nMoM 1.31 bug: Should also have granted Cold, Poison, and Illusion Immunity.\nMoM 1.60: Grants Death, Cold, Poison, and Illusion Immunity.\nCoM 1 & 2 & Warlord: Grants Death, Cold, and Illusion Immunity.' },
-    { key: 'animated', label: 'Animate Dead', type: 'bool', match: 'Animated', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature).\nMoM 1.31: Grants Death Immunity.\nMoM 1.31 bug: Should also have granted Cold, Poison, and Illusion Immunity.\nMoM 1.60: Grants Death, Cold, Poison, and Illusion Immunity.\nCoM 1 & 2 & Warlord: Grants Death, Cold, and Illusion Immunity as well as\nthe Animated buff: +1 melee, ranged, thrown, breath, and defense;\n+10% To Hit; Weapon Immunity.' },
+    { key: 'animated', label: 'Animate Dead', type: 'bool', match: 'Animated', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature).\nMoM 1.31: Grants Death Immunity.\nMoM 1.31 bug: Should also have granted Cold, Poison, and Illusion Immunity.\nMoM 1.60: Grants Death, Cold, Poison, and Illusion Immunity.\nCoM 1 & 2 & Warlord: Grants Death, Cold, and Illusion Immunity as well as\nthe Animated buff: +1 melee, ranged, thrown, breath, and defense;\n+10% To Hit; Weapon Immunity. CoM2/Warlord Gaze is unchanged.' },
     { key: 'blackSleep', label: 'Black Sleep', type: 'bool', match: 'BlackSleep', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Units with Magic Immunity are unaffected.\nSleeping unit cannot attack or counterattack.\nIncoming conventional attacks skip to-hit and defense rolls and deal\nfull strength as exact damage (maximum damage). Ranged penalties and\nmissile immunity are ignored.\nThe damage is not halved (unlike the Doom ability).' },
-    { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: '−1 to melee, ranged, thrown, and breath attack;\n−1 defense; −2 resistance.' },
+    { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: '−1 to melee, ranged, thrown, and breath attack;\n−1 defense; −2 resistance.\nCoM2/Warlord: Independent Gaze fields are unchanged.' },
     { key: 'raiseDead', label: 'Raise Dead', type: 'bool', match: 'RaiseDead', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'MoM 1.31 & 1.60: No effect on combat stats; the revived unit\nretains its original type and realm.\nCoM 1 & 2 & Warlord: Revived unit becomes an unaligned fantastic\ncreature.' },
     { key: 'weakness', label: 'Weakness', type: 'bool', match: 'Weakness', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Units with Magic Immunity are unaffected.\nMoM 1.31: −2 melee, −2 missile.\nMoM 1.31 bug: Thrown is unaffected.\nMoM 1.60: −2 melee, −2 missile, −2 thrown.\nMoM: Boulder and magic ranged are unaffected.\nCoM 1 & 2: −3 melee, −3 thrown, −3 to any ranged attack.\nWarlord: as CoM 2, plus −3 breath.\nBreath and gaze are unaffected except in Warlord.' },
     { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Grants Weapon Immunity and Non-Corporeal.\nCoM 1 & 2 & Warlord: Attacks bypass enemy Weapon Immunity.' },
-    { key: 'eternalNight', label: 'Eternal Night', type: 'bool', match: 'EternalNight', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Side owns the global enchantment.\nMoM 1.31/1.60 and CoM 1: All combats are under Darkness at normal strength.\nCoM 2 & Warlord: Darkness grants twice the normal attack and defense modifier.\nCoM 1 & 2 & Warlord: Enemy non-Death units lose 1 resistance.\nWarlord: Enemy non-Death units also suffer −2 ranged attack strength\n(missile, boulder, and magic ranged; thrown and breath unaffected).' },
+    { key: 'eternalNight', label: 'Eternal Night', type: 'bool', match: 'EternalNight', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Side owns the global enchantment.\nMoM 1.31/1.60 and CoM 1: All combats are under Darkness at normal strength.\nCoM 2 & Warlord: Death attack/Armor bonuses are doubled.\nLife penalties stay at normal strength.\nCoM 1 & 2 & Warlord: Enemy non-Death units lose 1 resistance.\nWarlord: Enemy non-Death units also suffer −2 ranged attack strength\n(missile, boulder, and magic ranged; thrown and breath unaffected).' },
     { key: 'ccDefense', label: 'CC: +Defense', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\n+3 defense.\nMoM 1.31 bug: Defense applied twice in combat (net +6).' },
     { key: 'ccFireBreath', label: 'CC: +Fire Breath', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nGrants a fire breath attack.\nNever granted to a unit with a ranged attack.\nMoM 1.31 & 1.60: Strength 2; replaces an existing thrown attack.\nCoM 1: Strength 4; replaces an existing thrown attack.\nCoM 2 & Warlord: Strength 4; added to an existing fire breath.\nCoexists with thrown, lightning breath and gaze.' },
     { key: 'ccFlight', label: 'CC: +Flight', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nNot modeled: flight (movement and targeting).' },
     { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Fire area attack each melee phase, hitting all opponent figures.\nOpponents with Fire Immunity, Magic Immunity, or Righteousness\nare unaffected.\nMoM 1.31 & 1.60: Strength 4.\nMoM 1.31 bug: Also fires alongside ranged attacks.\nCoM 1 & 2 & Warlord: Strength 10.\nNot modeled: web burning, freeze prevention.' },
     { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions bools', exceptVersions: ['com2_warlord_'], realm: 'chaos', tooltip: 'Bypasses Weapon Immunity.\nMoM 1.31 & 1.60: +2 melee, thrown and missile attack.\nCoM 1 & 2: +3 melee and +2 missile.' },
     { key: 'shatter', label: 'Shatter', type: 'bool', match: 'Shatter', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'All melee, ranged, thrown, and breath attack strengths reduced to 1.\nAffects normal units and heroes only.\nUnits with Magic Immunity are unaffected.\nWarlord: Affects any unit.' },
-    { key: 'warpAttack', label: 'Warp: Attack', type: 'bool', match: 'WarpAttack', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Units with Magic Immunity are unaffected.\nMelee attack halved.\nCoM 1 & 2 & Warlord: Ranged, thrown and breath attacks also halved.\nCoM 1: Gaze attacks too — they share the ranged stat.\nCoM 1: Halves before Darkness, Supreme Light and Tactician,\nwhich are added at full value afterwards.' },
+    { key: 'warpAttack', label: 'Warp: Attack', type: 'bool', match: 'WarpAttack', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Units with Magic Immunity are unaffected.\nMelee attack halved.\nCoM 1 & 2 & Warlord: Ranged, thrown and breath attacks also halved.\nCoM 1: Gaze attacks too — they share the ranged stat.\nCoM 1 signed halves round down; CoM 2/Warlord truncate toward zero.\nCoM 1: Halves before Darkness, Supreme Light and Tactician,\nwhich are added at full value afterwards.' },
     { key: 'warpDefense', label: 'Warp: Defense', type: 'bool', match: 'WarpDefense', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Units with Magic Immunity are unaffected.\nDefense halved.\nCoM 1 & 2 & Warlord: Defense reduced to one-third instead.\nCoM 1: Reduces before Darkness, Supreme Light and Tactician,\nwhich are added at full value afterwards.' },
     { key: 'warpResist', label: 'Warp: Resist', type: 'bool', match: 'WarpResist', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Units with Magic Immunity are unaffected.\nResistance set to 0.\nResist Magic still adds +5 on top.\nCoM 1: Zeroes before Darkness, Tactician and Eternal Night,\nwhich are added at full value afterwards.' },
     { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions bools', realm: 'nature', tooltip: '+5 defense.\nSupersedes Stone Skin (does not stack).' },
@@ -173,7 +173,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Enchantments', subgroup: 'MoM only', realm: 'life', tooltip: 'Versions: MoM 1.31 & 1.60\nImmune to Chaos magical ranged, Fire Breath, Lightning Breath,\nImmolation, and Wall of Fire.\nImmune to Cause Fear, Life Steal, Death Gaze, and Death Touch.' },
     { key: 'berserk', label: 'Berserk (MoM)', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Versions: MoM 1.31 & 1.60\nDoubles melee attack, applied after all other bonuses.\nSets defense to 0; no other bonus can raise it.' },
     { key: 'blackChannels', label: 'Black Channels', type: 'bool', match: 'BlackChannels', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Versions: MoM 1.31 & 1.60\n+2 melee, +1 ranged/thrown/breath/gaze, +1 defense,\n+1 resistance, +1 HP per figure.\nUnit becomes a fantastic Death creature.\nGrants Cold, Illusion, Poison, and Death Immunity.' },
-    { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: 'Versions: MoM 1.31 & 1.60\n+1 melee, +1 missile, +1 thrown.\nUpgrades normal weapons to magic (bypasses Weapon Immunity).\nDoes not stack with Flame Blade.' },
+    { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: 'Versions: MoM 1.31 & 1.60\nNon-Fantastic units only.\n+1 melee, +1 missile, +1 thrown.\nUpgrades normal weapons to magic (bypasses Weapon Immunity).\nDoes not stack with Flame Blade.' },
     { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: "Versions: MoM 1.31 & 1.60\nTarget's To Block reduced by 10% against this unit's melee,\nmissile, and thrown attacks.\nUpgrades a normal melee weapon to magic (melee bypasses Weapon\nImmunity); ranged/thrown attacks stay non-magical." },
     { key: 'giantStrength', label: 'Giant Strength', type: 'bool', match: 'GiantStrength', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: 'Versions: MoM 1.31 & 1.60\n+1 melee and +1 thrown.' },
     { key: 'stoneSkin', label: 'Stone Skin', type: 'bool', match: 'StoneSkin', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: 'Versions: MoM 1.31 & 1.60\n+1 defense.\nDoes not stack with Iron Skin.' },
@@ -181,15 +181,15 @@ const ENCHANTMENT_DEFS = [
   // Enchantments — CoM, CoM2 & Warlord (added in CoM, kept in CoM2) — visual order: life → death → chaos → nature → sorcery
   ...realmLinear([
     { key: 'guardian', label: 'Guardian retort', type: 'bool', match: 'Guardian', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', tooltip: 'Versions: CoM 1 & 2 & Warlord\n+1 Resistance, +10% To Hit, +10% To Block.' },
-    { key: 'tactician', label: 'Tactician retort', type: 'bool', match: 'Tactician', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: Non-hero units gain +1 defense.\nHeroes instead gain +2 defense, +2 resistance, and +2 to all\nattack strengths.\nWarlord: All units gain +1 defense (no hero distinction).\nTeleporting units gain First Strike.\nNon-Corporeal units gain Negate First Strike.' },
+    { key: 'tactician', label: 'Tactician retort', type: 'bool', match: 'Tactician', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: Non-hero units gain +1 defense.\nHeroes instead gain +2 defense, +2 resistance, +2 melee, and +2 ranged.\nCoM 1: Its shared ranged slot also reaches Thrown, Breath, and Gaze.\nCoM 2: Only conventional ranged receives the secondary-attack bonus.\nWarlord: All units gain +1 defense (no hero distinction).\nTeleporting units gain First Strike.\nNon-Corporeal units gain Negate First Strike.' },
     { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'life', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 eligibility: live magical ranged, Life race, Caster/mana,\nFocus Magic, or base magical ranged. +2 melee unconditionally;\n+2 to any positive shared ranged/thrown/breath/gaze attack;\nDefense += signed trunc(Resistance / 3).\nCoM 2 & Warlord: applies to Life fantastic creatures and Caster\nunits; +2 existing melee and conventional ranged;\nDefense += floor(max(Resistance, 0) / 3).' },
     { key: 'endurance', label: 'Endurance', type: 'bool', match: 'Endurance', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'life', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1: +2 defense.\nCoM 2 & Warlord: +floor(4 / figures) HP per figure, minimum +1.' },
     { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'death', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: Unit becomes undead (fantastic Death creature) and\ngains Death, Cold, and Illusion Immunity.\nWarlord: Does not turn the unit undead; no immunities granted.\nCoM 1: Doubles melee attack vs Normal and Hero targets.\nCoM 2 & Warlord: Doubles melee and Thrown attacks vs\nnon-Fantastic targets.' },
     { key: 'mysticSurge', label: 'Mystic Surge', type: 'bool', match: 'MysticSurge', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: "Versions: CoM 1 & 2 & Warlord\n+2 defense, −2 resistance.\nOpponent's To Block reduced by 10%.\nUnit becomes an unaligned fantastic creature.\nNot modeled: the granted random enchantments." },
-    { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: +3 melee and +3 missile attack.\nWarlord: also +3 thrown attack.\nAffected attacks gain magic weapons (bypass Weapon Immunity).' },
+    { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'chaos', tooltip: 'Versions: CoM 1 & 2 & Warlord\nCoM 1 & 2: +3 melee and +3 missile attack.\nWarlord: also +3 thrown attack.\nCoM 1: boosted melee and missile bypass Weapon Immunity.\nCoM 2 & Warlord: sets the unit-wide Magic Weapon flag, so all\nphysical attacks bypass Weapon Immunity.' },
     { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'nature', tooltip: 'Versions: CoM 1 & 2 & Warlord\nApplies to fantastic creatures.\n+1 defense, +2 resistance, +10% To Hit.' },
     { key: 'landLinking', label: 'Land Linking', type: 'bool', match: 'LandLinking', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'nature', tooltip: 'Versions: CoM 1 & 2\nApplies to fantastic units.\n+2 defense, +2 melee, and +2 breath attack.' },
-    { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'sorcery', tooltip: 'Versions: CoM 1 & 2 & Warlord\nMagical ranged or breath attack present: +3 strength.\nCoM 2 & Warlord — Doom Gaze present: +3 doom damage.\nThrown / missile / boulder attack: converted into a Sorcery\nmagical ranged attack. CoM 1 has a minimum strength of 3;\nCoM 2 and Warlord preserve its positive strength.\nNo attack to convert: gains a strength-3 Sorcery magical ranged\nattack.\nWarlord: Moves an existing general/card Stoning or Death Touch\nto melee and Thrown.' },
+    { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM, CoM2 & Warlord', realm: 'sorcery', tooltip: 'Versions: CoM 1 & 2 & Warlord\nMagical ranged or breath attack present: +3 strength.\nCoM 2 & Warlord — Doom Gaze present: +3 doom damage.\nThrown / missile / boulder attack: converted into a Sorcery\nmagical ranged attack. CoM 1 has a minimum strength of 3;\nCoM 2 and Warlord preserve its positive strength.\nNo attack to convert: gains a strength-3 Sorcery magical ranged\nattack.\nCoM 2 & Warlord: strength changes occur before Warp Attack.\nWarlord: Moves an existing general/card Stoning or Death Touch\nto melee and Thrown.' },
   ]),
   // Enchantments — CoM2 & Warlord — select first, then bools interleaved for life → death → chaos → sorcery
   { key: 'discipline', label: 'Discipline', type: 'select', options: [['none','None'],['overland','Overland'],['combat','Combat']], match: 'Discipline', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'life', tooltip: 'Versions: CoM 2\nDoes not affect heroes or fantastic units.\n+1 defense.\nRegular or higher: +2 defense.\nVeteran or higher: +2 defense, +1 melee, +1 physical ranged.\nElite or higher, cast in combat: also Negate First Strike.\nNot modeled: movement bonus (overland cast, Elite+).' },
@@ -197,7 +197,7 @@ const ENCHANTMENT_DEFS = [
   { key: 'breakthrough', label: 'Breakthrough', type: 'select', options: [['none','None'],['melee','+1mel'],['meleeDef','+1mel/+1def']], match: 'Breakthrough', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'chaos', tooltip: 'Versions: CoM 2 & Warlord\nPermanent normal unit: +1 melee.\nNon-corporeal or temporary unit: +1 melee, +1 defense.\nNot modeled: Wall Crusher.' },
   ...realmLinear([
     { key: 'destiny', label: 'Destiny', type: 'bool', match: 'Destiny', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'life', tooltip: 'Versions: CoM 2\nDoes not affect heroes or fantastic units.\nUnit becomes a fantastic Life creature, losing all experience.\nDoubles base melee, ranged attack, and HP. +4 defense, +4 resistance.\nGrants Supernatural.' },
-    { key: 'rulerOfUnderworld', label: 'Ruler of Underworld', type: 'bool', match: 'RulerOfUnderworld', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'death', tooltip: 'Versions: CoM 2 & Warlord\nGrants Wraith Form: Weapon Immunity, Non-Corporeal, and\nattacks bypass enemy Weapon Immunity.\nEnemy magical/mithril/adamantium weapons do not bypass\nthis unit\'s Weapon Immunity.\nNot modeled: religious-power generation (oracles).' },
+    { key: 'rulerOfUnderworld', label: 'Ruler of Underworld', type: 'bool', match: 'RulerOfUnderworld', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'death', tooltip: 'Versions: CoM 2 & Warlord\nGrants Wraith Form: Weapon Immunity, Non-Corporeal, and\nattacks bypass enemy Weapon Immunity.\nSuppresses only an enemy Magic/Mithril/Adamantium material\ngrant. Independent sources such as Flame Blade still bypass.\nNot modeled: religious-power generation (oracles).' },
     { key: 'mislead', label: 'Mislead', type: 'bool', match: 'Mislead', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'death', tooltip: 'Versions: CoM 2\nAffects normal units and heroes only.\n−1 melee, −1 ranged attack, −1 defense, −1 resistance.' },
     { key: 'innerPower', label: 'Inner Power', type: 'bool', match: 'InnerPower', group: 'Enchantments', subgroup: 'CoM2 & Warlord', realm: 'chaos', tooltip: 'Versions: CoM 2 & Warlord\nApplies only to units with Fire Immunity or Lightning Resist.\n+3 to all attack strengths (melee, ranged, thrown, breath).\n+2 defense, +2 resistance.\nNot modeled: Mountaineer/Pathfinding movement perks (Warlord).' },
     { key: 'blazingEyes', label: 'Blazing Eyes', type: 'bool', match: 'BlazingEyes', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'chaos', tooltip: 'Versions: CoM 2\nApplies only to fantastic Chaos creatures.\nGains Doom Gaze 3, or +1 strength if it already has Doom Gaze.' },
@@ -257,7 +257,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'outlanderWizard', label: 'Outlander wizard', type: 'bool', match: 'OutlanderWizard', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Owner is an Outlander wizard.\nRequired for every Outlander reform condition in this panel.' },
     { key: 'flameBladeWarlord', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nArcane unit ability, not a wizard spell.\nBypasses Weapon Immunity.\n+3 melee, +2 missile/thrown, +1 fire breath.\nStacks with Fiery Blade or Fiery Fury — shared bonuses do not double; the only added bonus is +1 fire breath.' },
     { key: 'rebuild', label: 'Rebuild', type: 'bool', match: 'Rebuild', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nUnit becomes Mechanical.\n+2 melee, +2 armor.\nGrants Death Immunity, Illusion Immunity, and Armor Piercing.' },
-    { key: 'spiritLink', label: 'Spirit Link', type: 'bool', match: 'SpiritLink', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Conjurer signature unit enchantment.\n+2 Resistance.\nFantastic creature: stays non-fantastic but keeps fantastic-only bonuses (Node Aura, Darkness/True Light, Land Linking, Survival Instinct, Supreme Light).\nNo longer counts as fantastic for being targeted: immune to Dispel Evil, no enemy Bless bonus vs its attacks, and its physical attacks are stopped by enemy Weapon Immunity.' },
+    { key: 'spiritLink', label: 'Spirit Link', type: 'bool', match: 'SpiritLink', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Conjurer signature unit enchantment.\n+2 Resistance.\nFantastic creature: stays non-fantastic but keeps fantastic-only bonuses (Node Aura, Darkness/True Light, Land Linking, Survival Instinct, Supreme Light).\nNo longer counts as fantastic for targeting: immune to Dispel Evil and grants no enemy Bless bonus.\nIts attacks still bypass Weapon Immunity because the earlier Fantastic-to-magic-weapon write persists.' },
     { key: 'luckyStar', label: 'Lucky Star aura', type: 'bool', match: 'LuckyStar', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nSet when any friendly unit in the combat has Lucky Star.\nEvery friendly unit gains +1 melee, ranged, thrown, and breath attack.\n+1 Armor, +1 Resistance. Multiple copies do not stack.\nThe enchanted unit itself also gains Lucky — tick Lucky for it.' },
     { key: 'rally', label: 'Rally', type: 'bool', match: 'Rally', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\n+2 Resistance.' },
     { key: 'nausea', label: 'Nausea', type: 'bool', match: 'Nausea', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures or units with Magic Immunity.\n−10% To Hit, −10% To Defend.' },
@@ -278,7 +278,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'blazeOfGlory', label: 'Blaze of Glory', type: 'bool', match: 'BlazeOfGlory', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nDoes not affect heroes.\nGains melee equal to its current Armor, then Armor becomes 0.\nLater aura bonuses can add Armor afterward.\nRanged attacks become Thrown attacks of the same strength.\nGrants Armor Piercing and loses First Strike.\nNot modeled: ammo loss, Wall Crusher.' },
     { key: 'fieryFury', label: 'Fiery Fury', type: 'bool', match: 'FieryFury', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nRegular units: gain Fiery Blade, plus +2 boulder.\nRegular units bypass Weapon Immunity.\nFantastic creatures: gain First Strike.\nBecome Chaos creatures unless undead, Apotheosis, or Sanctify.\nBonuses except boulder are not cumulative with Flame Blade or Fiery Blade.' },
     { key: 'insulation', label: 'Insulation', type: 'bool', match: 'Insulation', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nGrants Fire Immunity, Cold Immunity, and Lightning Resist.\nImmune: Fire Breath, Immolation, Wall of Fire, cold attacks.\nNegates the Armor Piercing of incoming Lightning Breath.' },
-    { key: 'beatOfSwiftness', label: 'Beat of Swiftness', type: 'bool', match: 'BeatOfSwiftness', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nFinal Armor × 0.9 (rounded down).\nNot modeled: combat movement.' },
+    { key: 'beatOfSwiftness', label: 'Beat of Swiftness', type: 'bool', match: 'BeatOfSwiftness', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nSubtracts current Armor / 10, rounded to nearest (ties to even).\nNot modeled: combat movement.' },
     { key: 'rust', label: 'Rust', type: 'bool', match: 'Rust', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures.\nMagic and orihalcon weapons stripped (unit reverts to regular weapons).\n−3 melee and physical ranged (missile/boulder).\nThrown attacks eliminated for the rest of combat.\nLarge Shield eliminated for the rest of combat.\nNot modeled: loss of permanent enchantments.' },
     { key: 'wallOfFireBoost', label: 'Wall of Fire: garrison', type: 'bool', match: 'WallOfFireBoost', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Wall of Fire (Warlord Chaos Common city enchantment) garrison buff.\nDefending regular units gain +1 melee, +1 physical ranged (missile/boulder), and +1 thrown attack.\nThose attacks bypass Weapon Immunity.\nApplies to normal units only.\nThe fire-line damage to attackers crossing the wall is the separate global Wall of Fire toggle.' },
     { key: 'colossalStrength', label: 'Colossal Strength', type: 'bool', match: 'ColossalStrength', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\n+1 plus 40% of current melee strength (rounded down).\nScales the strength after other bonuses and penalties, not the base.\nSame bonus to physical ranged and thrown attacks.' },
@@ -1345,7 +1345,7 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   sanctifyClergyFantasticWarlord: {
-    desc: 'Sanctify (Warlord): sanctified clergy becomes Life FANTASTIC, so Weapon Immunity does not apply (attacker not normal). atk6+TL=7 vs def2, 100% hit/block: 7-2=5. As non-clergy (normal_life) WI would add +10 def -> 0.',
+    desc: 'Sanctify (Warlord): clergy becomes Life Fantastic before the standing EncMagic rule, so its attacks bypass Weapon Immunity. atk6+TL=7 vs def2, 100% hit/block: 7-2=5. Non-clergy stays non-fantastic without EncMagic, so WI would add +10 def -> 0.',
     version: V_WARLORD,
     a: { figs:1, atk:6, res:5, hp:10, toHitMod:70, weapon:'normal', unitType:'normal', abilities: { sanctify: true, clergy: true } },
     b: { figs:1, atk:0, def:2, res:5, hp:10, toBlkMod:70, unitType:'normal', abilities: { weaponImmunity: true } },
@@ -1486,7 +1486,7 @@ const PRESETS = {
   // --- Warlord Berserk: +15% To Hit, -10% To Block, no atk doubling, no def-zero ---
   // --- Beat of Swiftness (Warlord) ---
   beatOfSwiftnessArmorPenaltyWarlord: {
-    desc: 'Beat of Swiftness: def 10 → floor(10×0.9)=9. atk 10 @100% hit, 100% block → 10−9=1 dmg (without it: 10−10=0)',
+    desc: 'Beat of Swiftness: def 10 loses round-to-even(10/10)=1, leaving 9. atk 10 @100% hit, 100% block → 10−9=1 dmg (without it: 10−10=0)',
     version: V_WARLORD,
     a: { atk:10, toHitMod:70, hp:10 },
     b: { def:10, toBlkMod:70, hp:20, abilities: { beatOfSwiftness: true } },
@@ -1708,7 +1708,7 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   bloodLustBypassesWeaponImmunityCoM2: {
-    desc: 'Blood Lust makes a normal attacker undead/fantastic_death in CoM2, so Weapon Immunity does not trigger, and the normal-unit target still takes doubled melee: 5 atk → 10 vs def 2 → 9.4',
+    desc: 'Blood Lust makes a normal attacker undead/Fantastic before CoM2 derives EncMagic, so Weapon Immunity is bypassed; the normal target still takes doubled melee: 5 atk → 10 vs def 2 → 9.4',
     version: V_COM2,
     a: { atk:5, toHitMod:70, hp:10, unitType:'normal', abilities: { bloodLust: true } },
     b: { def:2, hp:10, abilities: { weaponImmunity: true } },
@@ -2905,11 +2905,11 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   breakthroughMeleeDefDefenseCoM2: {
-    desc: 'Breakthrough (CoM2) +1melee/+1def grants +1 defense on defense: 1 atk 100% hit vs def 1 at 30% block → 0.7 dmg',
+    desc: 'Breakthrough (CoM2) derives its normal package from identity: the exceptional +def label cannot override a normal unit, so defense stays 0 and 1 hit deals 1 damage.',
     version: V_COM2,
     a: { atk:1, toHitMod:70, hp:10 },
     b: { def:0, hp:10, abilities: { breakthrough: 'meleeDef' } },
-    expected: { dmgToA: 0, dmgToB: 0.700 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
   },
 
   // --- Combat Discipline / Overland Discipline ---
@@ -3265,6 +3265,14 @@ const PRESETS = {
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  tacticianHeroThrownUnchangedCoM2: {
+    desc: 'Tactician (CoM2) writes only conventional ranged: a hero\'s Thrown 1 stays 1 instead of receiving +2.',
+    version: V_COM2,
+    a: { atk:0, rtbType:'thrown', rtb:1, toHitRtbMod:70, hp:10,
+      unitType:'hero', abilities: { tactician: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   tacticianHeroDefenseCoM2: {
     desc: 'Tactician (CoM2): hero gets +2 defense. 5 hits vs 2 shields at 100% block → 3 dmg',
@@ -4472,7 +4480,7 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 14.000 },
   },
   mysticSurgeFantasticAndToDefendCoM2: {
-    desc: 'Mystic Surge (CoM2): attacker becomes unaligned fantastic and applies -10% To Defend, so Weapon Immunity does not trigger and 5 atk vs 1 def at 20% block → 4.8 dmg',
+    desc: 'Mystic Surge (CoM2): directly grants EncMagic and makes the attacker unaligned Fantastic; Weapon Immunity is bypassed, and its -10% To Defend gives 5 atk vs 1 def at 20% block → 4.8 dmg',
     version: V_COM2,
     a: { atk:5, toHitMod:70, hp:10, unitType:'normal', abilities: { mysticSurge: true } },
     b: { def:1, hp:10, abilities: { weaponImmunity: true } },
@@ -4738,7 +4746,7 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 10.000 },
   },
   rulerOfUnderworldPreservesMagicWICoM2: {
-    desc: 'Ruler of Underworld (CoM2): magical weapons no longer bypass the granted Weapon Immunity, so 10 magic atk vs def 0 still faces WI +8 → 2.0 dmg',
+    desc: 'Ruler of Underworld (CoM2): a material-only Magic Weapon grant no longer bypasses the granted Weapon Immunity, so 10 magic atk vs def 0 still faces WI +8 → 2.0 dmg',
     version: V_COM2,
     a: { atk:10, toHitMod:70, hp:10, weapon: 'magic' },
     b: { def:0, toBlkMod:70, hp:20, abilities: { rulerOfUnderworld: true } },
@@ -4751,6 +4759,33 @@ const PRESETS = {
     a: { atk:1, toHitMod:70, hp:10, abilities: { metalFires: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  metalFiresFantasticUnaffected: {
+    desc: 'Metal Fires is non-Fantastic-only: a Fantastic Chaos unit keeps melee 1 instead of receiving +1.',
+    a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { metalFires: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  metalFiresFantasticMissileUnaffected: {
+    desc: 'Metal Fires does not boost a Fantastic unit\'s missile attack: strength 1 stays 1.',
+    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10,
+      unitType:'fantastic_chaos', abilities: { metalFires: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  metalFiresFantasticThrownUnaffected: {
+    desc: 'Metal Fires does not boost a Fantastic unit\'s melee or Thrown attacks: strength 1 + 1 deals 2.',
+    a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, hp:10,
+      unitType:'fantastic_chaos', abilities: { metalFires: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  metalFiresFantasticNoWeaponUpgrade: {
+    desc: 'Metal Fires does not upgrade a Fantastic unit\'s weapon: Weapon Immunity still blocks its physical melee.',
+    a: { atk:2, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { metalFires: true } },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 0.000 },
   },
   metalFiresMissile: {
     desc: 'Metal Fires +1 missile: base 1 + MF → 2 rtb, 100% hit vs 0 def → E[dmg]=2.0',
@@ -4958,12 +4993,12 @@ const PRESETS = {
     b: { figs:2, def:0, res:5, hp:10, unitType: 'fantastic_death', abilities: { spiritLink: true } },
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
-  spiritLinkWeaponImmunityBlockedWarlord: {
-    desc: 'Spirit Link: spirit-linked fantastic_chaos attacker counts as non-fantastic, so Weapon Immunity now stops its normal weapon. atk 10 vs def 0+10 WI → 0 (vs 10.0 without Spirit Link)',
+  spiritLinkWeaponImmunityBypassWarlord: {
+    desc: 'Spirit Link: phase c grants magical attacks while the unit is still fantastic; phase d then clears Fantastic without clearing EncMagic. The spirit-linked attacker therefore still bypasses Weapon Immunity and deals 10.0.',
     version: V_WARLORD,
     a: { atk:10, toHitMod:70, hp:10, unitType: 'fantastic_chaos', abilities: { spiritLink: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
-    expected: { dmgToA: 0, dmgToB: 0.000 },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
   },
   spiritLinkBlessNoBonusWarlord: {
     desc: "Spirit Link: spirit-linked fantastic_chaos missile attacker grants the enemy no anti-Chaos Bless bonus. missile 10 vs def 0 → 10.0 (vs 3.0 with Bless's +7)",
@@ -6364,6 +6399,13 @@ const PRESETS = {
     b: { atk:0, hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
+  blackPrayerDoomGazeUnchangedCoM2: {
+    desc: 'Black Prayer (CoM2) does not write the independent Doom Gaze field: Doom Gaze 5 still deals 5 damage.',
+    version: V_COM2,
+    a: { atk:0, hp:10, abilities: { blackPrayer: true, doomGaze: 5 } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
 
   // --- Righteousness ---
   righteousnessMagicChaos: {
@@ -6911,6 +6953,13 @@ const PRESETS = {
     b: { def:0, hp:2 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
+  animatedDoomGazeUnchangedCoM2: {
+    desc: 'Animated (CoM2) boosts ordinary secondary attacks but not independent Gaze fields: Doom Gaze 5 stays 5.',
+    version: V_COM2,
+    a: { atk:0, hp:10, abilities: { animated: true, doomGaze: 5 } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
   dispelEvilAnimatedCoM2: {
     desc: 'Dispel Evil vs Animated res:7 in CoM2 uses the undead -9 penalty, but Animated weapon immunity reduces the 1 physical chip to 0.04 → 10.04',
     version: V_COM2,
@@ -6958,10 +7007,10 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   blazingMarchThrownNotBoostedCoM2: {
-    desc: 'Blazing March does NOT boost thrown in CoM2: thrown 2 → 2, defender dies on thrown',
+    desc: 'Blazing March does not boost CoM2 Thrown strength, but its unit-wide EncMagic still bypasses Weapon Immunity: thrown 2 → 2 damage.',
     version: V_COM2,
     a: { atk:1, rtbType:'thrown', rtb:2, toHitRtbMod:70, hp:10, abilities: { blazingMarch: true } },
-    b: { hp:2 },
+    b: { def:0, toBlkMod:70, hp:2, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
 
@@ -7372,7 +7421,7 @@ const TEST_TREE = [
       { name: 'Lightning Resist', keys: ['lightningResistCancelsAP', 'lightningResistKeepsAbilityAP'] },
       { name: 'Lionheart', keys: ['lionheartMeleeAtk', 'lionheartRes', 'lionheartMissileBonus', 'lionheartBoulderBonus', 'lionheartNoMagicRangedBonus', 'lionheartThrownBonus'] },
       { name: 'Lucky', keys: ['luckyToHit', 'luckyToHitRanged', 'luckyToBlock', 'luckyResistance', 'luckyEnemyMeleePenalty131', 'luckyEnemyPenaltyNotRanged131'] },
-      { name: 'Metal Fires / Flame Blade / Fiery Blade', keys: ['metalFiresMelee', 'metalFiresMissile', 'metalFiresNotBoulder', 'metalFiresThrown', 'metalFiresWeaponUpgrade', 'flameBladeMelee', 'flameBladeMissile', 'flameBladeThrown', 'flameBladeMetalFiresNoStack', 'flameBladeMeleeCoM2', 'flameBladeThrownNotBoostedCoM2', 'flameBladeMeleeWarlord', 'flameBladeMissileWarlord', 'flameBladeBoulderWarlord', 'flameBladeThrownWarlord', 'flameBladeFireBreathWarlord', 'fieryBladeMeleeWarlord', 'fieryBladeNoFireBreathWarlord'] },
+      { name: 'Metal Fires / Flame Blade / Fiery Blade', keys: ['metalFiresMelee', 'metalFiresFantasticUnaffected', 'metalFiresFantasticMissileUnaffected', 'metalFiresFantasticThrownUnaffected', 'metalFiresFantasticNoWeaponUpgrade', 'metalFiresMissile', 'metalFiresNotBoulder', 'metalFiresThrown', 'metalFiresWeaponUpgrade', 'flameBladeMelee', 'flameBladeMissile', 'flameBladeThrown', 'flameBladeMetalFiresNoStack', 'flameBladeMeleeCoM2', 'flameBladeThrownNotBoostedCoM2', 'flameBladeMeleeWarlord', 'flameBladeMissileWarlord', 'flameBladeBoulderWarlord', 'flameBladeThrownWarlord', 'flameBladeFireBreathWarlord', 'fieryBladeMeleeWarlord', 'fieryBladeNoFireBreathWarlord'] },
       { name: 'Mind Storm', keys: ['mindStormMeleePenaltyMoM', 'mindStormRangedPenaltyMoM', 'mindStormDefPenaltyMoM'] },
       { name: 'Missile Immunity', keys: ['missileImmunityMissile', 'missileImmunityBoulder', 'missileImmunityMagic', 'missileImmunityMelee', 'missileImmunityArmorPiercing', 'missileImmunityWIOverwrite131', 'missileImmunityWraithFormOverwrite131', 'missileImmunityInvulnerabilityOverwrite131', 'missileImmunityGenericKeepsMI131', 'missileImmunityWIMagicWeapon'] },
       { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch'] },
@@ -7469,6 +7518,7 @@ const TEST_TREE = [
           'animatedAttackAndToHitCoM',
           'animatedBypassesWeaponImmunityCoM',
           'animatedBreathBonusCoM2',
+          'animatedDoomGazeUnchangedCoM2',
           'animatedGrantsWeaponImmunityCoM',
           'dispelEvilAnimatedCoM2',
         ],
@@ -7502,6 +7552,12 @@ const TEST_TREE = [
         keys: [
           'berserkWarlordPlus15ToHit',
           'berserkWarlordMinus10ToBlock',
+        ],
+      },
+      {
+        name: 'Black Prayer',
+        keys: [
+          'blackPrayerDoomGazeUnchangedCoM2',
         ],
       },
       {
@@ -8173,7 +8229,7 @@ const TEST_TREE = [
         name: 'Spirit Link',
         keys: [
           'spiritLinkDispelEvilImmuneWarlord',
-          'spiritLinkWeaponImmunityBlockedWarlord',
+          'spiritLinkWeaponImmunityBypassWarlord',
           'spiritLinkBlessNoBonusWarlord',
           'spiritLinkResistanceWarlord',
           'spiritLinkGrantsLevelBonusWarlord',
@@ -8225,6 +8281,7 @@ const TEST_TREE = [
           'tacticianHeroDefenseCoM2',
           'tacticianHeroRangedCoM2',
           'tacticianHeroResistanceCoM2',
+          'tacticianHeroThrownUnchangedCoM2',
           'tacticianNormalDefenseCoM',
           'tacticianHeroDefenseWarlord',
           'tacticianNonCorporealNegateFirstStrikeWarlord',

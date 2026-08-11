@@ -131,7 +131,10 @@ verify_derivation.py Caster.exe <doc.md>
 
 Parses the ledger, recomputes each row's innermost gate from the straddling branches, and fails on
 any row whose `Within` disagrees with the binary. It also checks citation coverage for semantic
-branches, calls and named-field writes, and exits non-zero if anything is wrong. A document
+branches, calls and named-field writes, and exits non-zero if anything is wrong. Compiler
+range/overflow guards immediately followed by their known handler calls are excluded from nesting,
+just as they are from semantic-branch coverage; they are scaffolding rather than source-level
+gates. A document
 owning several extents is split one group per ledger — a new ledger begins wherever the row
 number restarts or the addresses stop being contiguous — and each is checked separately, so no
 extent argument is needed; pass one only to check a single extent. The row-number rule matters
@@ -156,6 +159,7 @@ review gates exist only in `Calculator/BACKLOG.md`.
 |---|---|---|
 | R5.1a | [`Units.RecalculateUnits.pas`](./Units.RecalculateUnits.pas); [`region-a evidence`](./Units.RecalculateUnits.R5.1a.evidence.md); [`late-hook evidence`](./Units.RecalculateUnits.R5.1a-late-hook.evidence.md); [`Castercore wrapper evidence`](./Castercore.RecalculateUnits.evidence.md); [`city-tile wrapper evidence`](./Units.RecalculateunitsonCityTile.evidence.md) | Audit dated 2026-08-02: signature/ABI, region `a`, both script-hook boundaries, an address-indexed seam for regions `c` and `e`, plus the CasterCore and city-tile wrappers; all four extents carry current-gate ledgers, branch/call/write evidence and six zero counts |
 | R5.1b | same file, region `c`; [`Units.RecalculateUnits.R5.1b.evidence.md`](./Units.RecalculateUnits.R5.1b.evidence.md) | Merged 2026-08-02 from both derivations; reciprocal review recorded no surviving disagreement |
+| D21 | same file, `@Units@ApplyLevelBonus`; [`D21.evidence.md`](./D21.evidence.md) | Complete `$005981F8..$00598D86` helper, current CoM2/Warlord table bindings and values, and exhaustive no-gaze-write result; merged 2026-08-10 from independent Claude/Codex derivations and reciprocal review with no surviving disagreement |
 | R5.1c | same file, region `e`; and the named helpers | R5.1c-a–R5.1c-c durable source and evidence artifact group |
 | R5.1c-a | same file; [`Units.RecalculateUnits.R5.1c-a.evidence.md`](./Units.RecalculateUnits.R5.1c-a.evidence.md) | Final first-pass clamps, aura-pass preparation/dispatch, `@Map@unitonoverlandtile`, and `@Units@Ismagicalranged`; dual derivation and reciprocal review provenance are recorded in the evidence |
 | R5.1c-b | same file; [`Units.RecalculateUnits.R5.1c-b.evidence.md`](./Units.RecalculateUnits.R5.1c-b.evidence.md) | Supreme Light, MP/movement reconciliation, DebugInvis, deferred-damage reconciliation, `@Units@Immobile`, `@Units@TotalHpLeft`, `@Combat@Iscombat`, `@Units@HpPerFigure`, and `@Game@Min`; reciprocal review on 2026-08-03 recorded no semantic misreading and five reproducibility/naming fixes |

@@ -9,7 +9,8 @@
  *                 R6.1f level bonuses and hero-template abilities;
  *                 R6.1g item powers, recompute hit points and CoM movement;
  *                 R6.1h item attack-special helper;
- *                 R6.5c overland Unit_Moves2; R9-G1a-R3 Zombies type-table Abilities binding
+ *                 R6.5c overland Unit_Moves2; R9-G1a-R3 Zombies type-table Abilities binding;
+ *                 B9 overland Create_Unit
  */
 
 #include "MOM_DAT.h"
@@ -322,6 +323,263 @@
 #define COM1_LOGISTICS_MAX_ADDR       0x3AC8
 #define COM1_ENTANGLE_PLAYER_C584     0xC584
 #define COM1_ENTANGLE_PLAYER_C586     0xC586
+
+/* B9 Create_Unit frame, sentinels and build-specific unit limits. */
+#define HUMAN_PLAYER_IDX               0
+#define CREATE_UNIT_NO_CITY         2000   /* raw 0x07D0 */
+#define CREATE_UNIT_SEED_NONE        (-1)  /* raw 0xFFFF */
+#if BUILD == MOM131
+#define CREATE_UNIT_SOFT_CAP_AI      950   /* raw 0x03B6 */
+#define CREATE_UNIT_SOFT_CAP_ANY     980   /* raw 0x03D4 */
+#define MAX_UNIT_COUNT              1000   /* raw 0x03E8 */
+#else
+#define CREATE_UNIT_SOFT_CAP_AI     1950   /* raw 0x079E */
+#define CREATE_UNIT_SOFT_CAP_ANY    1980   /* raw 0x07BC */
+#define MAX_UNIT_COUNT              2000   /* raw 0x07D0 */
+#endif
+
+/* B9 city building/enchantment selectors and experience levels. */
+#define BLDG_BARRACKS                    3
+#define BLDG_FIGHTERS_GUILD              5
+#define BLDG_WAR_COLLEGE                 7
+#define BLDG_STATUS_ACCEPTED_A           1
+#define BLDG_STATUS_ACCEPTED_B           0
+#define CITY_BUILDING_PRESENT(s) \
+    ((s) == BLDG_STATUS_ACCEPTED_A || (s) == BLDG_STATUS_ACCEPTED_B)
+#define CITY_ENCHANT_EVIL_PRESENCE    0x03
+#define CITY_ENCHANT_ALTAR_OF_BATTLE  0x18
+#define CITY_DESTROYED_POP_10S            3
+#define UL_REGULAR                        1
+#define UL_VETERAN                        2
+#define UL_ELITE                          3
+#define OE_DOOM_MASTERY                0x0B
+
+/* CoM 1 Create_Unit substitutions and partial-field stores. */
+#define COM1_UT_SETTLERS_GENERIC     0x2C
+#define COM1_UT_SETTLERS_RACE_01_04  0x35
+#define COM1_UT_SETTLERS_RACE_03     0x49
+#define COM1_UT_SETTLERS_RACE_0D     0x64
+#define COM1_UT_SETTLERS_RACE_0A     0x7D
+#define COM1_UNIT_OFF_RACE            0x1E
+#define COM1_UNIT_OFF_UNKNOWN_13      0x13
+
+/* ===========================================================================================
+ * Create_Unit(unit_type, owner_idx, wx, wy, wp, city_or_seed)                             [B9]
+ *
+ * Overlay 121 entry 0, raw extent 0x97B30..0x9801A. Appends one 0x20-byte `_UNITS[]` record
+ * and returns 1, or returns 0 without incrementing the count. `city_or_seed` selects a city
+ * (0..1999), explicit no-city creation (2000), a seeded XP level (<= -2), or no XP seed (-1).
+ * =========================================================================================== */
+
+#if BUILD == COM1
+/* Relocated overlay-121 fragments physically inside the extent but unreachable from Create_Unit.
+ * Their sole callers are in other routines at 0x98133 and 0x98458. */
+static uint8_t near Overlay121_Near_0x97B88(void)
+{
+    if (di == 0xBF || di == 0xB2 || di == 0x57)     /* com1:0x97B88..0x97B99 */
+        al = 3;
+    return al;                                      /* com1:0x97B9B */
+}
+
+static const uint8_t Overlay121_Table_0x97C0B[35] = {
+    0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3C, 0x0A, 0x32,
+    0x23, 0x14, 0x0A, 0x00, 0x1E, 0x1E, 0x14, 0x1E, 0x50, 0x00, 0x23, 0x1E,
+    0x28, 0x32, 0x96, 0x78, 0x96, 0x96, 0x64, 0x82, 0x78, 0x64, 0x00
+};                                                  /* com1:0x97C0B..0x97C2E */
+
+/* This caller-frame fragment returns its predicate in ZF, not AX; caller 0x9845C consumes it. */
+static void near Overlay121_Near_0x97BDF(void)
+{
+    if (si == 0x14 && *(int16_t *)dseg(0xBD90) < 0x64) /* com1:0x97BDF..0x97BEB */
+        goto clear;
+    if (*(uint8_t *)(bp + 8) == 2                    /* com1:0x97BEE */
+        && (int16_t)Overlay121_Table_0x97C0B[si] > *(int16_t *)dseg(0xBD90))
+        goto clear;                                  /* com1:0x97BF4..0x97BFF */
+    goto test;
+clear:
+    *(int16_t *)(bp - 2) = 0;                        /* com1:0x97C01 */
+test:
+    ZF = (*(int16_t *)(bp - 2) == 0);                /* com1:0x97C06 */
+}                                                    /* com1:0x97C0A */
+
+static struct s_UNIT __far *near Unit_Slot_0x97D37(void)
+{
+    return &_UNITS[_units];                          /* com1:0x97D37..0x97D44 */
+}
+
+/* No pushed argument: one-operand `imul si` makes SI the implicit city index. */
+static struct s_CITY __far *near City_Slot_0x97D45(void)
+{
+    return &_CITIES[si];                             /* com1:0x97D45..0x97D50 */
+}
+#endif
+
+int16_t __far Create_Unit(int16_t unit_type, int16_t owner_idx,
+                          int16_t wx, int16_t wy, int16_t wp, int16_t city_or_seed)
+{
+    int16_t city = city_or_seed;                     /* 131:0x97B35  160:=  com1:= */
+    int16_t itr;
+    struct s_UNIT __far *u;
+    struct s_CITY __far *c;
+
+    if (owner_idx != HUMAN_PLAYER_IDX                /* 131:0x97B38  160:=  com1:= */
+        && _units > CREATE_UNIT_SOFT_CAP_AI          /* 131:0x97B3E  160:=  com1:= */
+        && city != CREATE_UNIT_NO_CITY)              /* 131:0x97B46  160:=  com1:= */
+        return 0;                                    /* 131:0x97B4C  160:=  com1:= */
+    if (city != CREATE_UNIT_NO_CITY                  /* 131:0x97B51  160:=  com1:= */
+        && _units > CREATE_UNIT_SOFT_CAP_ANY)        /* 131:0x97B57  160:=  com1:= */
+        return 0;                                    /* 131:0x97B5F  160:=  com1:= */
+    if (_units == MAX_UNIT_COUNT)                    /* equality, not >=; 131:0x97B61  160:=  com1:= */
+        return 0;                                    /* 131:0x97B69  160:=  com1:= */
+
+    u = &_UNITS[_units];                             /* 131:0x97B6B  160:=  com1:= */
+    u->wx = (int8_t)wx;                              /* 131:0x97B7B  160:=  com1:= */
+    u->wy = (int8_t)wy;                              /* 131:0x97B8E  160:=  com1:0x97B81 */
+    /* com1:0x97B85 jumps over the relocated fragments to com1:0x97C2E. */
+    u->wp = (int8_t)wp;                              /* 131:0x97BA2  160:=  com1:0x97C31 */
+    u->owner_idx = (int8_t)owner_idx;                /* 131:0x97BB6  160:=  com1:0x97C38 */
+    u->moves2_max = unit_types[unit_type].Move_Halves;
+                                                     /* 131:0x97BD6  160:=  com1:0x97C58 */
+    u->type = (uint8_t)unit_type;                    /* 131:0x97BEA  160:=  com1:0x97C6C */
+    u->Hero_Slot = HERO_SLOT_NONE;                   /* 131:0x97BFB  160:=  com1:0x97C7D */
+#if BUILD == COM1
+    *((uint8_t __far *)u + COM1_UNIT_OFF_UNKNOWN_13) = 0; /* com1:0x97C8F */
+    u->Rd_From_X = 0;                                /* com1:0x97C95 */
+#endif
+    u->in_tower = 0;                                 /* 131:0x97C0D  160:=  com1:0x97C9A */
+    u->Finished = 1;                                 /* 131:0x97C20  160:=  com1:0x97CA2 */
+    u->moves2 = 0;                                   /* 131:0x97C32  160:=  com1:0x97CB4 */
+    u->Sight_Range = unit_types[unit_type].Sight;    /* 131:0x97C53  160:=  com1:0x97CD5 */
+    u->dst_wx = 0;                                   /* 131:0x97C64  160:=  com1:0x97CE6 */
+    u->dst_wy = 0;                                   /* 131:0x97C76  160:=  com1:0x97CEB */
+    u->Status = 0;                                   /* 131:0x97C88  160:=  com1:0x97CF0 */
+    u->Level = 0;                                    /* 131:0x97C9A  160:=  com1:0x97CF5 */
+    u->XP = 0;                                       /* 131:0x97CAC  160:=  com1:0x97CFA */
+    u->Damage = 0;                                   /* 131:0x97CBF  160:=  com1:0x97D00 */
+    u->Draw_Priority = 0;                            /* 131:0x97CD1  160:=  com1:0x97D05 */
+    u->enchantments = 0;                             /* 131:0x97CE3/0x97CE9  160:=  com1:0x97D0A/0x97D10 */
+#if BUILD == MOM131 || BUILD == CP160
+    u->mutations = 0;                                /* 131:0x97CFC  160:= */
+    u->Move_Failed = 0;                              /* 131:0x97D0E  160:= */
+#else
+    u->Move_Failed = 0;                              /* com1:0x97D16 */
+    u->mutations = 0;                                /* com1:0x97D1B */
+#endif
+    u->Rd_Constr_Left = -1;                          /* 131:0x97D20  160:=  com1:= */
+
+    if (city < 0)                                    /* 131:0x97D25  160:=  com1:= */
+        goto seeded_path;
+    if (city >= CREATE_UNIT_NO_CITY)                 /* 131:0x97D2C  160:=  com1:= */
+        goto seeded_path;
+
+#if BUILD == MOM131 || BUILD == CP160
+    if (CITY_BUILDING_PRESENT(_CITIES[city].bldg_status[BLDG_FIGHTERS_GUILD]))
+                                                     /* 131:0x97D42/0x97D56  160:= */
+        _UNITS[_units].XP = TBL_Experience[UL_REGULAR]; /* 131:0x97D6D  160:= */
+    if (CITY_BUILDING_PRESENT(_CITIES[city].bldg_status[BLDG_WAR_COLLEGE]))
+                                                     /* 131:0x97D7E/0x97D92  160:= */
+        _UNITS[_units].XP = TBL_Experience[UL_VETERAN]; /* 131:0x97DA9  160:= */
+    if (_CITIES[city].enchantments[CITY_ENCHANT_ALTAR_OF_BATTLE] > 0)
+        _UNITS[_units].XP = TBL_Experience[UL_ELITE];   /* 131:0x97DD1  160:= */
+#else
+    {
+        int16_t xp = 0;                              /* com1:0x97D51 */
+        c = City_Slot_0x97D45();                     /* call com1:0x97D53 */
+        if (c->enchantments[CITY_ENCHANT_EVIL_PRESENCE] == 0) {
+                                                     /* com1:0x97D56 */
+            if (CITY_BUILDING_PRESENT(c->bldg_status[BLDG_BARRACKS]))
+                xp = TBL_Experience[UL_REGULAR];     /* com1:0x97D5D..0x97D6B */
+            if (CITY_BUILDING_PRESENT(c->bldg_status[BLDG_WAR_COLLEGE]))
+                xp = TBL_Experience[UL_VETERAN];     /* com1:0x97D6F..0x97D7D */
+        }
+        if (c->enchantments[CITY_ENCHANT_ALTAR_OF_BATTLE] > 0)
+            xp = TBL_Experience[UL_ELITE];           /* com1:0x97D81..0x97D88 */
+        u = Unit_Slot_0x97D37();
+        u->XP = xp;                                  /* com1:0x97D8C..0x97D8F */
+
+        {
+            uint8_t race = City_Slot_0x97D45()->race; /* call com1:0x97D93; read 0x97D96 */
+            uint8_t type = (uint8_t)unit_type;
+            u = Unit_Slot_0x97D37();                 /* call com1:0x97D9A */
+            *((uint8_t __far *)u + COM1_UNIT_OFF_RACE) = race; /* com1:0x97D9D */
+            if ((uint8_t)unit_type == COM1_UT_SETTLERS_GENERIC) {
+                if (race == 4 || race == 1)
+                    type = COM1_UT_SETTLERS_RACE_01_04;
+                if (race == 3)
+                    type = COM1_UT_SETTLERS_RACE_03;
+                if (race == 0x0A)
+                    type = COM1_UT_SETTLERS_RACE_0A;
+                if (race == 0x0D)
+                    type = COM1_UT_SETTLERS_RACE_0D;
+            }                                       /* com1:0x97DA4..0x97DC9 */
+            u->type = type;                          /* com1:0x97DCB */
+        }
+    }
+#endif
+
+    {
+        /* Bounded to 0..3 by its four assignments at raw 0xED2A2..0xED37D. */
+        int16_t best_weapon = City_Best_Weapon(city); /* call 131:0x97DD6  160:=  com1:= */
+        _UNITS[_units].mutations = (uint8_t)best_weapon; /* 131:0x97DEA  160:=  com1:= */
+#if BUILD == COM1
+        if ((best_weapon >> 8) != 0)                 /* com1:0x97DEE */
+            _UNITS[_units].enchantments |= UE_ORIHALCON; /* com1:0x97DF2 */
+#endif
+    }
+
+    if (unit_types[unit_type].Abilities & UA_CREATEOUTPOST) {
+                                                     /* 131:0x97DF8  160:=  com1:0x97E07 */
+        _CITIES[city].population -= 1;               /* 131:0x97E10..0x97E25  160:=  com1:= */
+        if (_CITIES[city].population == 0) {
+            _CITIES[city].Pop_10s = CITY_DESTROYED_POP_10S; /* 131:0x97E4D  160:=  com1:= */
+            if ((int8_t)_CITIES[city].owner_idx < num_players) {
+                                                     /* 131:0x97E60..0x97E69  160:=  com1:= */
+                for (itr = 0; itr < num_players; itr++) {
+                    if (_CITIES[city].wx != _FORTRESSES[itr].wx)
+                        continue;
+                    if (_CITIES[city].wy != _FORTRESSES[itr].wy)
+                        continue;
+                    if (_CITIES[city].wp != _FORTRESSES[itr].wp)
+                        continue;                    /* 131:0x97E73..0x97EDC  160:=  com1:= */
+                    _CITIES[city].population += 1;   /* 131:0x97EEB..0x97F00  160:=  com1:= */
+                    if (itr == HUMAN_PLAYER_IDX) {
+                        LBX_Load_Data_Static("message", 0, GUI_NearMsgString, 11, 1, 150);
+                        Warn0(GUI_NearMsgString);     /* 131:0x97F08..0x97F2B  160:=  com1:= */
+                    }
+                    return 0;                        /* 131:0x97F31  160:=  com1:= */
+                }
+            }
+            Destroy_City(city);                      /* 131:0x97F3E..0x97F3F  160:=  com1:= */
+        }
+    }
+
+    if (players[owner_idx].alchemy > 0               /* 131:0x97F45..0x97F54  160:=  com1:= */
+#if BUILD == COM1
+        && City_Slot_0x97D45()->race != 0            /* com1:0x97F56..0x97F5E */
+#endif
+        && _UNITS[_units].mutations == 0)            /* 131:0x97F63  160:=  com1:0x97F60/0x97F63 */
+        _UNITS[_units].mutations = UM_MAGIC_WEAPONS; /* 131:0x97F77  160:=  com1:0x97F6A */
+
+    if (players[owner_idx].Globals[OE_DOOM_MASTERY] > 0
+        && (unit_types[unit_type].Abilities & UA_FANTASTIC) == 0)
+        Apply_Chaos_Channels(_units);                 /* 131:0x97F7C..0x97FA3  160:=  com1:= */
+
+    _UNITS[_units].Level = (int8_t)Calc_Unit_Level(_units);
+                                                     /* 131:0x97FA9..0x97FC1  160:=  com1:= */
+    goto success;
+
+seeded_path:
+    if (city_or_seed < CREATE_UNIT_SEED_NONE) {      /* 131:0x97FC7  160:=  com1:= */
+        int16_t seed = abs(city_or_seed) - 1;        /* call 131:0x97FCD  160:=  com1:= */
+        _UNITS[_units].XP = TBL_Experience[seed];    /* 131:0x97FD6..0x97FEC  160:=  com1:= */
+        _UNITS[_units].Level = (int8_t)Calc_Unit_Level(_units);
+                                                     /* 131:0x97FF0..0x98008  160:=  com1:= */
+    }
+
+success:
+    _units += 1;                                     /* 131:0x9800C  160:=  com1:= */
+    return 1;                                        /* 131:0x98010; epilogue 0x98016  160:=  com1:= */
+}
 
 /* ===========================================================================================
  * BU_Apply_Specials(bu, enchantments, mutations)                                      [R6.1a]

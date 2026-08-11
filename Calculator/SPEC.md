@@ -199,6 +199,10 @@ apply: +10/+3 in the MoM builds and +12/+4 in CoM 1. The modern Caster engine ke
 calculator's narrower elemental scope: CoM2 and Warlord apply the +12/+4 defence to
 magical ranged and breath attacks, but not to Immolation or Wall of Fire.
 
+DOS Armor Piercing halves the accumulated Defense with signed truncation toward zero. Defense is
+nonnegative at this point, so odd values round down. Immolation cannot inherit Armor Piercing from
+its initiating unit: it uses Fireball's own Area-only flag word.
+
 CoM2 and Warlord resolve Immolation and Wall of Fire through `DamageSpell`. Magic Immunity
 short-circuits a magical spell to zero damage before any roll. Black Sleep is checked later and
 turns the spell into Doom damage, bypassing hit, defense and Invulnerability rolls; the earlier
@@ -279,7 +283,8 @@ CoM2 Construct Catapult additionally becomes live Nature + Fantastic; Warlord's 
 summons Water Elemental, so template 37 receives no Catapult-specific rewrite there. Warlord Spirit
 Link can later clear only the live
 Fantastic predicate while
-retaining the base predicate and fantastic-only grants. CoM 1 retains its constructor branch for
+retaining the base predicate and fantastic-only grants. Casting Spirit Link permanently adds +2
+Resistance to the base record before that encounter-time identity sequence. CoM 1 retains its constructor branch for
 Catapult, Centaurs and Paladins; Construct Catapult also receives Magic Weapons, and Zombies start
 with `To Block = -1` (a ten-percentage-point penalty). Base-CoM2 Call to Arms Paladins use live Life
 where that spell-specific condition is selected only for the retained Paladins template (113);
@@ -299,7 +304,25 @@ controls. A named special-unit effect is shown at its ordinary point of use: for
 selected Golem owns a locked `Resist Elements` Elements value.
 Breakthrough is enabled by its combat-global control, but its normal, Combat Summoned, and
 Non-Corporeal packages are derived from the direct calculated predicates; exceptional package
-labels cannot override those gates.
+labels cannot override those gates. The normal package is +1 melee and +0 Defense; the Combat
+Summoned and Non-Corporeal packages are independently +1 melee and +1 Defense, and may stack.
+
+Attack channels remain engine-specific during stat derivation. CoM2/Warlord Animated and Black
+Prayer write conventional ranged, Thrown and both Breath fields but not the independent Gaze
+fields. A CoM2 Tactician hero receives +2 melee and +2 conventional ranged, not +2 Thrown,
+Breath or Gaze; CoM 1's corresponding write reaches its shared secondary-attack slot. DOS Metal
+Fires applies only to a non-Fantastic unit and still does not stack with Flame Blade.
+
+Compatibility code may translate legacy inputs into the live record or project the finished live
+record into a legacy shape, but it must not remain an alternate place where engine effects execute.
+Any transitional helper that applies or composes multiple ordered identity, ability, attack-channel
+or stat rewrites outside the phase-tagged sequence is temporary. As soon as switch-over comparisons
+no longer require it, replace its rules with atomic steps at their source-backed positions and
+remove the helper. A retained compatibility projection must be pure: it may read the finished
+record, but may not contain effect precedence or mutation rules. `determineEffectiveUnitType` and
+the corresponding combat-normalization rewrite are the current identity examples of this temporary
+pattern.
+
 Order is load-bearing:
 
 1. Ability grants from buildings/enchantments fold in first, so every later read sees
@@ -413,7 +436,8 @@ Two engines reach the secondary-attack slot differently, so a step's delta names
 
 - **`rtb`** — the DOS engines' shared `.ranged` slot. One write reaches conventional ranged,
   Thrown, Breath and both gaze strengths alike; that sharing is why CoM 1's Warp Attack halves
-  a gaze, and why Chaos Surge reaches everything.
+  a gaze, and why DOS Chaos Surge reaches every existing shared-slot attack (except a MoM
+  Chaos-Channels Fire Breath that is assigned afterward).
 - **`ranged`** — `Caster.exe`'s `unitT.ranged`, which is *only* the conventional ranged attack.
   Thrown, Fire Breath, Lightning Breath and the gazes are separate fields there, so a CoM2
   bonus written to `ranged` never reaches them. The Holy Bonus aura is the case that matters.
@@ -421,8 +445,10 @@ Two engines reach the secondary-attack slot differently, so a step's delta names
 Focus Magic follows that engine split when it converts an attack. CoM 1 raises a converted
 shared-slot attack to a minimum strength of 3. CoM2 and Warlord preserve any positive Thrown or
 physical-ranged strength when moving it to Sorcery magical ranged; only creation from an empty
-base ranged slot uses strength 3. Warlord runs Focus Magic in phase `d`, so permanent and
-phase-`b`/`c` attack-type gates retain the channel standing before that later conversion.
+base ranged slot uses strength 3. CoM2 and Warlord both run the compiled attack-strength package
+near the head of region `c`, before Warp Attack. Warlord's later phase-`d` script moves existing
+Stoning/Death Touch riders from general/ranged to melee/Thrown but makes no ranged, Breath or Doom
+Gaze strength write.
 
 Warlord Lightning Blade is a permanent creation write: it replaces an innate Thrown attack with
 Lightning Breath at `Thrown + 1` strength and clears Thrown. A unit with no Thrown therefore gains
@@ -486,6 +512,18 @@ return prevents every later bonus and immunity from applying. Righteousness rema
 8's replacement slot for compatibility while its CoM2/Warlord classification is still open
 under D1/D3.
 
+For unit attacks, Weapon Immunity's modern eligibility input is exactly the attacker's calculated
+`EncMagic` flag **or** `ApplyAttack`'s attack-local `magicranged` flag. `magicranged` is true for
+magical conventional ranged, both Breaths, and all three Gazes; it is false for melee, Thrown,
+and physical conventional ranged. The calculated unit record carries `EncMagic` independently
+from final race/Fantastic and weapon-display state. This distinction is observable in Warlord:
+Spirit Link asserts Fantastic in region `b`, the compiled region-`c` standing rule therefore
+grants `EncMagic`, and region `d` then clears Fantastic without clearing `EncMagic`. The linked
+unit no longer counts as Fantastic for targeting but its physical attacks still bypass Weapon
+Immunity. King/Ruler of Underworld suppresses only the material-derived grant made by
+`ApplyMagicWeapons`. Independent writes survive on either side of that call: Wall of Fire's
+garrison write precedes it, while Flame Blade and the standing Fantastic rule follow it.
+
 The subsequent CoM2/Warlord defense roll changes probability after the fifteenth defense die.
 Dice 1–15 use the unit's ordinary To Block. Dice 16 onward use the lower of that chance and 30%
 (the shipped `ToDefendCap=15` / `ToDefendCappedValue=30` settings). The current calculator does
@@ -513,11 +551,11 @@ An effect an engine orders differently is modelled as **two version-exclusive st
 than one step with a version predicate, which keeps the divergence visible in the list instead
 of hidden inside a condition. Darkness has a pre-Warp CoM2/Warlord step and a post-Warp CoM 1
 step; Warlord True Light is its own `UnitCalcPre.CAS` step; and Eternal Night's CoM 1 Resistance
-penalty is a third, later write after Tactician. Supreme Light, the Tactician retort, and Focus
-Magic likewise have version-specific positions. The binary runs Focus Magic at `+0x00D3F`, near
-the head of `c` and therefore *before* Warp, while Warlord re-implements it in
-`UnitCalc.CAS:515` and therefore after. CoM 1's Focus Magic position is deduced rather than
-read: the list of what its recompute writes after Warp is exhaustive and does not contain it.
+penalty is a third, later write after Tactician. Supreme Light and the Tactician retort likewise
+have version-specific positions. The modern binary runs Focus Magic at `+0x00D3F`, near the head
+of `c` and therefore *before* Warp in both CoM2 and Warlord. CoM 1's Focus Magic position is
+deduced rather than read: the list of what its recompute writes after Warp is exhaustive and does
+not contain it.
 
 Shatter precedes CoM 1's post-Warp writes, so a Shattered CoM 1 unit under Supreme Light
 attacks at 3, not 1.
@@ -533,14 +571,27 @@ Two further consequences of CoM 1's early Warp are CoM 1's alone: it halves a ga
 CoM2's Warp Attack leaves the separate gaze fields untouched), and CoM 1's level ladder gives
 every `ranged_type >= 100` attack — Thrown, both Breaths and all three gaze types — only its
 step-1 ranged increment, which is the calculator ladder's `thrown` column. MoM's level routine
-has no such gate, so those attacks take its full `ranged` column. CoM2's gaze ladder is still
-unread — see `Reference docs/Engine verification evidence.md`, D21.
+has no such gate, so those attacks take its full `ranged` column. CoM2/Warlord instead write no
+level strength to Death, Stoning or Doom Gaze: the three independent modern gaze fields are absent
+from `ApplyLevelBonus`. F56 tracks the calculator's remaining ordinary-gaze mismatch.
 
-The DOS arithmetic is signed at these sites. CoM 1 Warped Attack uses an arithmetic byte shift,
-so negative melee/shared-ranged values round downward; Warped Defense instead uses signed `/3`
-and truncates toward zero (`0x90749..0x90795`). This distinction is observable because CoM 1
-still writes Darkness, Supreme Light and Tactician before the terminal clamp. F53 tracks the
-calculator's current `Math.floor` mismatch.
+The arithmetic is signed at these sites. CoM 1 Warped Attack uses an arithmetic byte shift, so
+negative melee/shared-ranged values round downward; CoM2/Warlord Warp Attack uses signed `/2` and
+truncates toward zero. CoM 1 Warped Defense uses signed `/3` and also truncates toward zero
+(`0x90749..0x90795`). These distinctions are observable because later writes can occur before the
+terminal clamp. F53 tracks the remaining calculator mismatch for CoM 1 Warped Defense.
+
+Darkness preserves each engine's channel gates. The DOS Death bonus and both modern race branches
+modify only positive attack channels; modern Darkness never writes the independent gaze fields.
+The modern Life penalty also requires positive Defense and Resistance, while the Death bonuses to
+those two stats are ungated. Eternal Night makes the modern Death attack/Defense package run twice,
+but the Life penalty remains a single write; Resistance changes once for either race. Modern Chaos
+Surge similarly requires a base melee attack, requires a positive Breath strength, omits Thrown and
+gazes, and uses the current ranged type as the ordinary ranged gate.
+
+Warlord Beat of Swiftness subtracts `%R(current Defense / 10)` in phase `d`. `%R` is the script
+language's nearest-integer operation (Delphi ties-to-even), so Defense 5 loses 0 and Defense 25
+loses 2; this is not equivalent to flooring 90% of Defense.
 
 ### CoM 1 late battlefield and side modifiers
 

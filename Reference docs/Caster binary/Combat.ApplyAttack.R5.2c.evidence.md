@@ -355,15 +355,15 @@ because the repository verifier scans the whole TD32 extent.
 | 4 | `$005B2D42` | `$005B2DC8` | 0 | reconstructed | Destruction |
 | 5 | `$005B2DC8` | `$005B2E6F` | 0 | reconstructed | Poison save loop |
 | 6 | `$005B2E6F` | `$005B2EC5` | — | reconstructed | partial and full Doom arithmetic |
-| 7 | `$005B2EC5` | `$005B2F21` | 6 | reconstructed | AttackRoll and rounded Supernatural minimum |
-| 8 | `$005B2F21` | `$005B2FAB` | 6 | reconstructed | Blur/Invisibility reduction selection |
-| 9 | `$005B2FAB` | `$005B3012` | 6 | reconstructed | attacker-Illusion-Immunity gate and per-hit reduction loop |
-| 10 | `$005B3012` | `$005B308E` | 6 | reconstructed | DefenseRoll, Invulnerability, clamp and Supernatural floor |
+| 7 | `$005B2EC5` | `$005B2F21` | — | reconstructed | AttackRoll and rounded Supernatural minimum |
+| 8 | `$005B2F21` | `$005B2FAB` | — | reconstructed | Blur/Invisibility reduction selection |
+| 9 | `$005B2FAB` | `$005B3012` | — | reconstructed | attacker-Illusion-Immunity gate and per-hit reduction loop |
+| 10 | `$005B3012` | `$005B308E` | — | reconstructed | DefenseRoll, Invulnerability, clamp and Supernatural floor |
 | 11 | `$005B308E` | `$005B3135` | — | reconstructed | defender figure HP and spillover body |
 | 12 | `$005B3135` | `$005B3158` | — | reconstructed | spillover condition and final damage accumulation |
 | 13 | `$005B3158` | `$005B316A` | — | reconstructed | per-attacker-figure loop advance |
 | 14 | `$005B316A` | `$005B3206` | — | reconstructed | Create Undead routing gate and special bucket write |
-| 15 | `$005B3206` | `$005B3216` | 14 | reconstructed | ordinary result-bucket write |
+| 15 | `$005B3206` | `$005B3216` | — | reconstructed | ordinary result-bucket write |
 | 16 | `$005B3216` | `$005B3295` | — | reconstructed | result total, Bloodsucker damage and healing |
 | 17 | `$005B3295` | `$005B32BC` | — | reconstructed | epilogue, error string, padding and Single constant 100.0 |
 
