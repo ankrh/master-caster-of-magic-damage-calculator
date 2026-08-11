@@ -20,6 +20,7 @@ vocabulary matches.
 |---|---|
 | `unitcalc.c` | Overland `Create_Unit`; battle-unit constructor, stat recompute, `BU_Apply_Specials`, and their callees |
 | `combat.c` | Combat dispatch, target admission, spell resolution, `BU_AttackTarget`, and `BU_ProcessAttack` |
+| `spelldat.c` | Source-shaped `SPELLDAT.LBX` records materialized by dedicated table-reconstruction items |
 | `<ID>.evidence.md` | One item's coverage ledgers, counts, findings and any `disputed` rows |
 | `R6.version-differences.md` | Merged three-build difference index and overlay-aware call closure |
 

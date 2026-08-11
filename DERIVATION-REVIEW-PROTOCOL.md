@@ -102,6 +102,23 @@ If the session cannot be resumed, report the failure and stop the review track. 
 requires explicit user approval. Method 4 has no routine second Claude pass: Codex revises from the
 single review and requests another paid Claude turn only when the user explicitly asks.
 
+On the Windows project host, `claude` may not be on `PATH`. The cached native launcher is under
+`%LOCALAPPDATA%\npm-cache\_npx\<cache-key>\node_modules\@anthropic-ai\claude-code\bin\claude.exe`;
+the cache key can change, so resolve the newest launcher rather than hard-coding it:
+
+```powershell
+$claudeExe = Get-ChildItem -LiteralPath "$env:LOCALAPPDATA\npm-cache\_npx" `
+    -Filter claude.exe -File -Recurse |
+    Where-Object FullName -Like '*\@anthropic-ai\claude-code\bin\claude.exe' |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1 -ExpandProperty FullName
+& $claudeExe --version
+& $claudeExe auth status
+```
+
+Those two commands are local preflight; if they do not reach a model, report zero Claude token
+usage under the usage-analysis rule below.
+
 ### Mechanical review bundle and Claude tool use
 
 The main agent generates the review bundle from the frozen binaries, merged coverage ledgers, and

@@ -6,6 +6,11 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-11
 
+- **D22 — DOS Fireball spell-table record.** Materialized the complete MoM 1.31/CP 1.60
+  36-byte Fireball record in `Reference docs/DOS reconstructed/spelldat.c` with byte coverage in
+  `D22.evidence.md`. Both builds load unsigned strength 5 from `+0x20`; the sole record difference
+  is `AI_Group` at `+0x13`. Calculator behavior is unchanged and R9-G1i is unblocked. Method-4
+  review also corrected a CP-only incoming Wall call; D28 owns its out-of-scope trigger semantics.
 - **R9-G1i existing-evidence pass.** Bound seven of the eight effective-attack, defense and
   damage-constant formulas across their applicable calculator versions, reducing the live audit
   to 61 `UNVERIFIED` formulas without changing calculator behavior. The remaining DOS Wall of

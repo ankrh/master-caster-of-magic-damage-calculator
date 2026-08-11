@@ -17,6 +17,8 @@ trusting any offset below.
 | MoM 1.31 | `C:\Program Files (x86)\Steam\steamapps\common\Master of Magic Classic\Master of Magic Official Release\WIZARDS.EXE` | `4123a5e17b7829dcb4457bd3c83cce3d` | 1,001,232 |
 | MoM CP 1.60 | `C:\Program Files (x86)\Steam\steamapps\common\Master of Magic Classic\Master of Magic Community Patch\WIZARDS.EXE` | `7700b989590cd71f0535d62c5079e230` | 1,001,232 |
 | CoM 1 | `C:\Program Files (x86)\Steam\steamapps\common\Master of Magic Classic\Master of Magic Caster of Magic DLC\WIZARDS.EXE` | `d92830af2c18fd57e82f26d6c690af82` | 1,006,232 |
+| MoM 1.31 spell table | `C:\Program Files (x86)\Steam\steamapps\common\Master of Magic Classic\Master of Magic Official Release\SPELLDAT.LBX` | `16e1e3ded5074a67578ab2d6b0935725` | 8,288 |
+| MoM CP 1.60 spell table | `C:\Program Files (x86)\Steam\steamapps\common\Master of Magic Classic\Master of Magic Community Patch\SPELLDAT.LBX` | `e1e051f736efb62c8b469a85770cfa83` | 8,288 |
 
 All three are patched builds of the same 1991 Borland executable, but they differ in how far
 they drift from 1.31's addresses:
