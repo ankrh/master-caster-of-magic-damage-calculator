@@ -89,7 +89,7 @@ function normalizeRepoPath(value) {
 }
 
 function hasImplementationWrite(excerpt) {
-  return /:=|\+=|-=|\*=|\/=|(?:->|\.)[A-Za-z_]\w*\s*(?:=(?!=)|\+\+|--)|\]\s*(?:\+\+|--)|\b(?:Inc|Dec|SETSTAT|SetStat|SetUnitStat)\s*\(/.test(excerpt);
+  return /:=|\+=|-=|\*=|\/=|\|=|&=|\^=|\b[A-Za-z_]\w*\s*=(?!=)|(?:->|\.)[A-Za-z_]\w*\s*(?:=(?!=)|\+\+|--)|\]\s*(?:\+\+|--)|\b(?:Inc|Dec|SETSTAT|SetStat|SetUnitStat)\s*\(|\boverlay_0388_0039\s*\(/.test(excerpt);
 }
 
 function lineNumberAt(text, offset) {

@@ -1253,7 +1253,7 @@ function hasNonCorporealEffect(abilities) {
 // combat — the alive count passed in already reflects cumulative in-combat damage.
 // Only boosts an attack that already exists (base strength > 0); never creates one.
 // STAT-FORMULA[rageEffectiveAttack]
-// PROVENANCE[rageEffectiveAttack]: UNVERIFIED versions=all; gap=Rage survivor scaling lacks complete applicable implementation ranges; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[rageEffectiveAttack]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1466-1478
 function applyRage(baseAtk, unit, aliveNow) {
   if (baseAtk <= 0 || !hasAbil(unit.abilities, 'rage')) return baseAtk;
   return baseAtk + Math.max(0, unit.figs - aliveNow);
@@ -1270,7 +1270,7 @@ function applyRage(baseAtk, unit, aliveNow) {
 //   Magic ranged: never (already magical).
 // v1.31 bug: Generic units (Trireme, Galley, Warship, Catapult) bypass WI regardless of attack type.
 // STAT-FORMULA[weaponImmunityEffectiveDefense]
-// PROVENANCE[weaponImmunityEffectiveDefense]: UNVERIFIED versions=all; gap=combined DOS/modern effective-Defense gate and constants are not fully cited; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+// PROVENANCE[weaponImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:878-902 | Reference docs/DOS reconstructed/combat.c:1076-1100 | Reference docs/DOS reconstructed/combat.c:1197-1205 | Reference docs/Caster binary/Combat.ApplyAttack.pas:435-446 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:214-215 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:890-890 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:890-890
 function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, version, atkGeneric) {
   if (!weaponImmunityApplies(defAbilities, atkWeapon, atkUnitType, version, atkGeneric)) return baseDef;
   if (version && version.startsWith('com2_warlord')) {
@@ -1286,7 +1286,7 @@ function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, versio
 // Applies Missile Immunity defense boost. Only triggers against Ranged Missile Attacks.
 // MoM: defense set to 50. CoM/CoM2: defense set to 100. Applied after armor piercing and weapon immunity.
 // STAT-FORMULA[missileImmunityEffectiveDefense]
-// PROVENANCE[missileImmunityEffectiveDefense]: UNVERIFIED versions=all; gap=per-version Missile Immunity effective-Defense formula lacks complete implementation ranges; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+// PROVENANCE[missileImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:866-869 | Reference docs/DOS reconstructed/combat.c:1076-1100 | Reference docs/DOS reconstructed/combat.c:1209-1215 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:212-212
 function missileImmunityDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'missileImmunity')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1296,7 +1296,7 @@ function missileImmunityDef(baseDef, defAbilities, version) {
 // Raises defense against Fire Breath and Immolation damage. MoM: 50. CoM/CoM2: 100.
 // Applied after armor piercing and weapon immunity.
 // STAT-FORMULA[fireImmunityEffectiveDefense]
-// PROVENANCE[fireImmunityEffectiveDefense]: UNVERIFIED versions=all; gap=per-version Fire Immunity effective-Defense formula lacks complete implementation ranges; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+// PROVENANCE[fireImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:870-872 | Reference docs/DOS reconstructed/combat.c:1076-1100 | Reference docs/DOS reconstructed/combat.c:1209-1215 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:207-208
 function fireImmunityDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'fireImmunity')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1310,7 +1310,7 @@ function fireImmunityDef(baseDef, defAbilities, version) {
 //   Defense 50 vs the hidden component of a Chaos- or Death-realm gaze (MoM only)
 //   +30 Resistance vs Cause Fear, Life Steal, Death Gaze (always pushes effective Res ≥ 10).
 // STAT-FORMULA[righteousnessEffectiveDefense]
-// PROVENANCE[righteousnessEffectiveDefense]: UNVERIFIED versions=all; gap=per-version Righteousness effective-Defense formula lacks complete implementation ranges; pointer=Reference docs/DOS reconstructed/combat.c
+// PROVENANCE[righteousnessEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c:1135-1144 | Reference docs/DOS reconstructed/combat.c:1145-1152 | Reference docs/DOS reconstructed/combat.c:1209-1215
 function righteousnessDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'righteousness')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1321,7 +1321,7 @@ function righteousnessDef(baseDef, defAbilities, version) {
 // MoM: defense set to 50. CoM/CoM2: defense set to 100.
 // Applied after other defense modifiers; overrides Fire Immunity and Righteousness if higher.
 // STAT-FORMULA[magicImmunityEffectiveDefense]
-// PROVENANCE[magicImmunityEffectiveDefense]: UNVERIFIED versions=all; gap=per-version Magic Immunity effective-Defense formula lacks complete implementation ranges; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+// PROVENANCE[magicImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:1102-1118 | Reference docs/DOS reconstructed/combat.c:1209-1215 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:211-211
 function magicImmunityDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'magicImmunity')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1332,7 +1332,7 @@ function magicImmunityDef(baseDef, defAbilities, version) {
 // Delivered as a Fireball effect (spell 96) with an explicit strength override:
 // WIZARDS.EXE 0x99D5E pushes 4 in both MoM builds, CoM 1's 0x99D50 pushes 10.
 // STAT-FORMULA[immolationStrength]
-// PROVENANCE[immolationStrength]: UNVERIFIED versions=all; gap=per-version Immolation strength constants lack complete implementation/table citations; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[immolationStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:3096-3133 | Reference docs/DOS reconstructed/combat.c:1384-1392 | Reference docs/Caster binary/Combat.ApplyAttack.pas:367-372 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini:1909-1909 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini:2228-2228
 function immolationStr(version) {
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
   return 4;
@@ -1365,7 +1365,7 @@ function immolationBlocksRanged(version) {
 // Att_AREAFLAG, and the only such removal between the two rosters. CoM2's 30% is the engine
 // default rather than a stated value. See `Reference docs/CoM2 data tables.md`, *Wall of Fire*.
 // STAT-FORMULA[wallOfFireStrength]
-// PROVENANCE[wallOfFireStrength]: UNVERIFIED versions=all; gap=per-version Wall of Fire strength constants lack complete implementation/table citations; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[wallOfFireStrength]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00; gap=the zero strength override and fallback are reconstructed, but no allowed checked-in implementation/table excerpt binds Fireball's inherited SPELLDAT.LBX strength 5; pointer=Reference docs/MoM binary analysis.md
 function wallOfFireStr(version) {
   if (version && version.startsWith('com2_warlord')) return 12;
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;

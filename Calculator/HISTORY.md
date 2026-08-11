@@ -6,6 +6,10 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-11
 
+- **R9-G1i existing-evidence pass.** Bound seven of the eight effective-attack, defense and
+  damage-constant formulas across their applicable calculator versions, reducing the live audit
+  to 61 `UNVERIFIED` formulas without changing calculator behavior. The remaining DOS Wall of
+  Fire strength binding needs D22's source-shaped `SPELLDAT.LBX` record before R9-G1i can close.
 - **R9-G1h — ability-stat provenance.** Bound all 20 formulas from `holyBonus` through
   `disheartenProphecy` across MoM 1.31, CP 1.60, CoM 6.08, CoM2 1.05.11 and Warlord 1.5.12.7,
   reducing the live audit to 68 `UNVERIFIED` formulas. Corrected modern Animated and Black Prayer

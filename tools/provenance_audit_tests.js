@@ -59,6 +59,10 @@ assert(hasImplementationWrite('if active then U.resistance--;'),
   'reconstructed-C dot-field decrements must count as writes');
 assert(hasImplementationWrite('if (value > 0) ((int8_t far *)bu)[field]--;'),
   'reconstructed-C computed field decrements must count as writes');
+assert(hasImplementationWrite('if (active) overlay_0388_0039(spell, target, local_damage, strength);'),
+  'the DOS spell helper call must count as its documented damage-array out-parameter write');
+assert(hasImplementationWrite('if (active) defense_special = DEF_SPECIAL_FULL;'),
+  'a reconstructed local result assignment must count as formula arithmetic');
 assert(!hasImplementationWrite('if (active) return bu->ranged == 2;'),
   'a reconstructed-C equality comparison must not count as a write');
 assert(!hasImplementationWrite('if (active) return ((int8_t far *)bu)[field] == 2;'),
@@ -86,4 +90,4 @@ assert.throws(() => discoverFormulaSites('synthetic.js', "emit(id, 'c', { def: 1
 assert.throws(() => discoverFormulaSites('synthetic.js', "case 'elite': return { atk: 2 };"),
   /stat-table case needs an adjacent STAT-FORMULA id/);
 
-console.log(`Provenance tooling checks passed: 17 assertions; ${result.formulas} repository formulas.`);
+console.log(`Provenance tooling checks passed: 19 assertions; ${result.formulas} repository formulas.`);

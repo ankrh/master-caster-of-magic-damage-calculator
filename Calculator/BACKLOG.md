@@ -30,14 +30,15 @@ items in the same or later rows.
 
 | # | Items | Next outcome |
 |---|---|---|
-| 1 | **R9-G1i, R9-G1k** | Close the remaining independent provenance domains after their foundational verification reads. |
-| 2 | **R9-G1g, R9-G1j** | Close direct-helper and derived-package provenance; their named behavioral prerequisites are complete. |
-| 3 | **R9-G1a** | After row 2's R9-G1g: close identity/creation provenance; M6, F54 and F55 are complete. |
-| 4 | **F5–F6, F9, F12–F15, F17–F19, F21, F23–F43, F50–F51, F53, F56** | Implement the remaining confirmed defects that have no named live prerequisite. |
-| 5 | **R9-G1e, R9-G1c, F20** | After rows 1, 2 and 4: close R9-G1e's weapon/clamp projections, R9-G1c's blocked claims, and the exhaustive step lists after their named prerequisites. |
-| 6 | **M7** | After R9-G1a, R9-G1j and F20: retire the transitional non-linear transform helpers. |
-| 7 | **M3** | After row 4's F41: implement the hero-only older-engine Destruction path. |
-| 8 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
+| 1 | **D22, R9-G1k** | Materialize the missing DOS spell-table source and close the independent resolution provenance domain. |
+| 2 | **R9-G1i** | After D22: bind the remaining Wall of Fire strength formula. |
+| 3 | **R9-G1g, R9-G1j** | Close direct-helper and derived-package provenance; their named behavioral prerequisites are complete. |
+| 4 | **R9-G1a** | After row 3's R9-G1g: close identity/creation provenance; M6, F54 and F55 are complete. |
+| 5 | **F5–F6, F9, F12–F15, F17–F19, F21, F23–F43, F50–F51, F53, F56** | Implement the remaining confirmed defects that have no named live prerequisite. |
+| 6 | **R9-G1e, R9-G1c, F20** | After rows 1, 3 and 5: close R9-G1e's weapon/clamp projections, R9-G1c's blocked claims, and the exhaustive step lists after their named prerequisites. |
+| 7 | **M7** | After R9-G1a, R9-G1j and F20: retire the transitional non-linear transform helpers. |
+| 8 | **M3** | After row 5's F41: implement the hero-only older-engine Destruction path. |
+| 9 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
 
 ## Provenance evidence gaps
 
@@ -51,14 +52,20 @@ dependencies always use method 4 under the protocol's derivation rules.
 
 | ID | Evidence gap / fixed formula domain | Cost | Strongest pointer / dependency |
 |---|---|---|---|
-| R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `68` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
+| R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `61` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
 | R9-G1a | **Blocked by R9-G1g:** close the remaining `8` identity and creation-grant gaps: six `identity:*` formulas and the two independent elemental-protection `lavaSmelter:*` formulas still marked `UNVERIFIED` beside the helpers. | medium | R9-G1a-R1–R3 complete in `HISTORY.md`; legacy conversions depend on R9-G1g; M6 and F54–F55 completed 2026-08-10 |
 | R9-G1c | Close the remaining `9` late unit-transform gaps: Military Workshop, Wild Game, Energy Cannon, Nightshade, Dragon Mound, level, weapon, Flame Blade ranged, and Mislead ranged. | medium | F12/F14/F19 own the live ordering/channel dependencies; [R9-G1f](./HISTORY.md) closed the level helper; `ApplyMagicWeapons` still lacks a checked-in modern formula body |
 | R9-G1e | **Blocked by R9-G1g and F5:** close the remaining `3` chance-projection gaps: `chance:weapon:melee`, `chance:weapon:rtb`, and `chance:clamp`. Versions: evidence/builds — MoM 1.31 `WIZARDS.EXE`, MoM CP 1.60 `WIZARDS.EXE`, CoM 6.08 `MAGIC.EXE`, CoM2 1.05.11 `Caster.exe`, Warlord 1.5.12.7 `Caster.exe` plus scripts/runtime tables; calculator — `mom_1.31`, `mom_cp_1.60.00`, `com_6.08`, `com2_1.05.11`, `com2_warlord_1.5.12.7`. | small | `stats.js`, chance transforms; R9-G1e existing-evidence pass in `HISTORY.md`; R9-G1g owns modern material To-Hit evidence and F5 owns the modern two-stage clamp |
 | R9-G1g | Close the `16` remaining direct-helper gaps from `clampPct` through `distancePenalty`, excluding the verified level-dispatch formulas recorded in [HISTORY.md](./HISTORY.md). | large | `combat.js`, direct helpers; F7 and F52 completed 2026-08-10 |
-| R9-G1i | Close the `8` effective-attack, defense and damage-constant gaps from `rageEffectiveAttack` through `wallOfFireStrength`, inclusive. | medium | `combat.js`, attack/defense helpers; DOS and Caster combat reconstructions plus runtime tables |
+| R9-G1i | **Blocked by D22:** close the remaining `wallOfFireStrength` gap for the inherited DOS Fireball strength. Versions: evidence/builds — MoM 1.31 `SPELLDAT.LBX`, MoM CP 1.60 `SPELLDAT.LBX`; calculator — `mom_1.31`, `mom_cp_1.60.00`. | small | Seven effective-attack, defense and damage-constant formulas closed in [HISTORY.md](./HISTORY.md); D22 owns the missing source-shaped table record |
 | R9-G1j | Close the `13` derived-package gaps from `undeadImmunityDerivation` through `bloodLustMeleeAttack`, inclusive. | large | `combat.js`, derived unit/ability packages; F22 completed 2026-08-10 |
 | R9-G1k | Close the `8` resolution-stat and combat-context gaps: `effectiveDefense:base`, `elemResistBonus`, `dosEffectiveDefenseProfile`, `doomAttackStrengthModifiers`, `normalizeCombatUnit`, `pairToHitModifiers`, `resolutionResistanceContext`, and `resolutionToBlockContext`. | medium | `combat.js`, resolution helpers and combat context; adjacent strongest pointers |
+
+## Evidence-source prerequisites
+
+| ID | Required source artifact | Cost | Method / evidence |
+|---|---|---|---|
+| D22 | Reconstruct Fireball's complete 36-byte `SPELLDAT.LBX` record `[0x0FA4,0x0FC8)` for MoM 1.31 and MoM CP 1.60 into a checked-in source-shaped `Reference docs/DOS reconstructed/spelldat.c` body, including the inherited Wall of Fire strength field. Write durable coverage and field mapping to `Reference docs/DOS reconstructed/D22.evidence.md`. Versions: evidence/builds — MoM 1.31 `SPELLDAT.LBX`, MoM CP 1.60 `SPELLDAT.LBX`; calculator — `mom_1.31`, `mom_cp_1.60.00`. | small | **Method 4:** two independent Codex GPT-5.6 Sol High derivations, main-agent merge, then one Claude Opus 5 High review; B4/B5/B6 previously bounded and reviewed the same record extent but did not create an allowed source-shaped table artifact |
 
 ## Confirmed and suspected defects
 
