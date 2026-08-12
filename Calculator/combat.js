@@ -6,8 +6,9 @@ function hasAbil(ab, key) { return !!(ab && ab[key]); }
 function abilVal(ab, key, def) { return (ab && ab[key] != null) ? ab[key] : def; }
 function abilDefined(ab, key) { return ab != null && ab[key] != null; }
 
-// Clamp a percentage to 10%-100% (MoM rules: always at least 10%, at most 100%)
-// PROVENANCE[clampPct]: UNVERIFIED versions=all; gap=exact per-version implementation clamp range not matched; pointer=Reference docs/DOS reconstructed/unitcalc.c
+// Legacy 10%-100% To-Hit clamp primitive. `chance:clamp` owns the still-UNVERIFIED
+// combined To-Hit/To-Block projection and its modern common-then-channel ordering.
+// PROVENANCE[clampPct]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:26:68e7e2b7c0ba44df6f0af0aa
 // STAT-FORMULA[clampPct]
 function clampPct(base, mod) {
   return Math.min(1.0, Math.max(0.1, (base + mod) / 100));
@@ -16,7 +17,7 @@ function clampPct(base, mod) {
 // CoM2: remaining HP of the wounded top figure in a stack.
 // If remHP is an exact multiple of hpPerFig, all figures are at full HP → return hpPerFig.
 // STAT-FORMULA[woundedTopFigureHp]
-// PROVENANCE[woundedTopFigureHp]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=wounded top-figure HP remainder formula lacks an exact implementation range; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[woundedTopFigureHp]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.DamageHandling.pas@span:30:ee8d05c1beac22182b95fbf9 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:14:2f5764024a52fb0aae3ebf95 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:15:910123b625584f9e2f6b856c
 function woundedTopFigHP(remHP, hpPerFig) {
   return remHP % hpPerFig || hpPerFig;
 }
@@ -25,8 +26,7 @@ function woundedTopFigHP(remHP, hpPerFig) {
 // Magical/Mithril/Adamantium: +10% To Hit (melee, missile, boulder only)
 // Mithril: +1 atk (melee, missile, boulder, thrown), +1 def
 // Adamantium: +2 atk (same types), +2 def
-// PROVENANCE[weaponBonusFunction]: UNVERIFIED versions=all; gap=material dispatch and default behavior are not tied to one exact implementation gate across every engine; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-// STAT-FORMULA[weaponBonusFunction]
+// Dispatch wrapper only: the independently sourced formulas are the material cases below.
 function weaponBonus(type) {
   switch (type) {
     // STAT-FORMULA[weaponBonus:magic]
@@ -48,7 +48,7 @@ function weaponBonus(type) {
 // (`Recruit`) is all zeros, so it maps to 'normal' here and the ladder starts at 'regular'.
 // Note this ladder is applied to heroes too, though Levelbonus.INI gives them a separate
 // 9-step `[Hero]` table with a different shape — tracked as D27.
-// PROVENANCE[levelBonusDispatch]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:2553-2590 | Reference docs/DOS reconstructed/unitcalc.c:1570-1609 | Reference docs/DOS reconstructed/unitcalc.c:2593-2631 | TABLE=Reference docs/DOS reconstructed/unitcalc.c:2323-2329 | Reference docs/DOS reconstructed/unitcalc.c:1425-1464 | Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:129-158 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:129-158
+// PROVENANCE[levelBonusDispatch]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b | Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
 // STAT-FORMULA[levelBonusDispatch]
 function getLevelBonuses(level, version) {
   const isMoM = version.startsWith('mom_');
@@ -56,19 +56,19 @@ function getLevelBonuses(level, version) {
   if (isMoM) {
     switch (level) {
       // STAT-FORMULA[levelBonuses:mom:regular]
-      // PROVENANCE[levelBonuses:mom:regular]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:2553-2590 | Reference docs/DOS reconstructed/unitcalc.c:1570-1609
+      // PROVENANCE[levelBonuses:mom:regular]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b
       case 'regular':    return { atk: 1, ranged: 1, thrown: 1, def: 0, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:mom:veteran]
-      // PROVENANCE[levelBonuses:mom:veteran]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:2553-2590 | Reference docs/DOS reconstructed/unitcalc.c:1570-1609
+      // PROVENANCE[levelBonuses:mom:veteran]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b
       case 'veteran':    return { atk: 1, ranged: 1, thrown: 1, def: 1, res: 2, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:mom:elite]
-      // PROVENANCE[levelBonuses:mom:elite]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:2553-2590 | Reference docs/DOS reconstructed/unitcalc.c:1570-1609
+      // PROVENANCE[levelBonuses:mom:elite]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b
       case 'elite':      return { atk: 2, ranged: 2, thrown: 2, def: 1, res: 3, hp: 1, toHit: 10 };
       // STAT-FORMULA[levelBonuses:mom:ultraElite]
-      // PROVENANCE[levelBonuses:mom:ultraElite]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:2553-2590 | Reference docs/DOS reconstructed/unitcalc.c:1570-1609
+      // PROVENANCE[levelBonuses:mom:ultraElite]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b
       case 'ultra_elite':return { atk: 2, ranged: 2, thrown: 2, def: 2, res: 4, hp: 1, toHit: 20 };
       // STAT-FORMULA[levelBonuses:mom:champion]
-      // PROVENANCE[levelBonuses:mom:champion]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:2553-2590 | Reference docs/DOS reconstructed/unitcalc.c:1570-1609
+      // PROVENANCE[levelBonuses:mom:champion]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b
       case 'champion':   return { atk: 3, ranged: 3, thrown: 3, def: 2, res: 5, hp: 2, toHit: 30 };
       default:           return { atk: 0, ranged: 0, thrown: 0, def: 0, res: 0, hp: 0, toHit: 0 };
     }
@@ -81,38 +81,38 @@ function getLevelBonuses(level, version) {
     // gains don't affect damage. Champion does NOT gain the +1 hp that CoM2 grants.
     switch (level) {
       // STAT-FORMULA[levelBonuses:warlord:regular]
-      // PROVENANCE[levelBonuses:warlord:regular]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:warlord:regular]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
       case 'regular':    return { atk: 1, ranged: 1, thrown: 0, def: 0, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:warlord:veteran]
-      // PROVENANCE[levelBonuses:warlord:veteran]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:warlord:veteran]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
       case 'veteran':    return { atk: 2, ranged: 2, thrown: 1, def: 1, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:warlord:elite]
-      // PROVENANCE[levelBonuses:warlord:elite]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:warlord:elite]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
       case 'elite':      return { atk: 2, ranged: 2, thrown: 1, def: 2, res: 2, hp: 1, toHit: 0 };
       // STAT-FORMULA[levelBonuses:warlord:ultraElite]
-      // PROVENANCE[levelBonuses:warlord:ultraElite]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:warlord:ultraElite]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
       case 'ultra_elite':return { atk: 3, ranged: 3, thrown: 2, def: 3, res: 2, hp: 1, toHit: 5 };
       // STAT-FORMULA[levelBonuses:warlord:champion]
-      // PROVENANCE[levelBonuses:warlord:champion]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:warlord:champion]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
       case 'champion':   return { atk: 4, ranged: 4, thrown: 2, def: 5, res: 3, hp: 1, toHit: 10 };
       default:           return { atk: 0, ranged: 0, thrown: 0, def: 0, res: 0, hp: 0, toHit: 0 };
     }
   } else {
     switch (level) {
       // STAT-FORMULA[levelBonuses:com2:regular]
-      // PROVENANCE[levelBonuses:com2:regular]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c:2593-2631 | TABLE=Reference docs/DOS reconstructed/unitcalc.c:2323-2329 | Reference docs/DOS reconstructed/unitcalc.c:1425-1464 | Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:com2:regular]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
       case 'regular':    return { atk: 1, ranged: 1, thrown: 0, def: 0, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:veteran]
-      // PROVENANCE[levelBonuses:com2:veteran]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c:2593-2631 | TABLE=Reference docs/DOS reconstructed/unitcalc.c:2323-2329 | Reference docs/DOS reconstructed/unitcalc.c:1425-1464 | Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:com2:veteran]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
       case 'veteran':    return { atk: 2, ranged: 2, thrown: 1, def: 1, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:elite]
-      // PROVENANCE[levelBonuses:com2:elite]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c:2593-2631 | TABLE=Reference docs/DOS reconstructed/unitcalc.c:2323-2329 | Reference docs/DOS reconstructed/unitcalc.c:1425-1464 | Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:com2:elite]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
       case 'elite':      return { atk: 2, ranged: 2, thrown: 1, def: 2, res: 2, hp: 1, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:ultraElite]
-      // PROVENANCE[levelBonuses:com2:ultraElite]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c:2593-2631 | TABLE=Reference docs/DOS reconstructed/unitcalc.c:2323-2329 | Reference docs/DOS reconstructed/unitcalc.c:1425-1464 | Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:com2:ultraElite]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
       case 'ultra_elite':return { atk: 3, ranged: 3, thrown: 1, def: 3, res: 2, hp: 1, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:champion]
-      // PROVENANCE[levelBonuses:com2:champion]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c:2593-2631 | TABLE=Reference docs/DOS reconstructed/unitcalc.c:2323-2329 | Reference docs/DOS reconstructed/unitcalc.c:1425-1464 | Reference docs/Caster binary/Units.RecalculateUnits.pas:483-514 | Reference docs/Caster binary/Units.RecalculateUnits.pas:505-524 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:92-128 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI:129-158
+      // PROVENANCE[levelBonuses:com2:champion]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
       case 'champion':   return { atk: 3, ranged: 3, thrown: 1, def: 3, res: 2, hp: 2, toHit: 10 };
       default:           return { atk: 0, ranged: 0, thrown: 0, def: 0, res: 0, hp: 0, toHit: 0 };
     }
@@ -120,10 +120,11 @@ function getLevelBonuses(level, version) {
 }
 
 function isMagicalRangedType(rangedType) {
-  return rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s';
+  return rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s'
+    || rangedType === 'beam';
 }
 
-// PROVENANCE[supremeLightEligibility]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=CoM1 is reconstructed, but the combined helper still needs the exact applicable compiled-modern gate; pointer=Reference docs/DOS reconstructed/unitcalc.c:3529-3552
+// PROVENANCE[supremeLightEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:b1236fda671c45bc369f8550 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:b19d1884df8862734b87977a | TABLE=Reference docs/Script source/CoM2 1.05.11 base/RangedType.INI@span:39:8f03d3b4a323d9fa0b89b64d | TABLE=Reference docs/Script source/CoM2 1.05.11 base/RangedType.INI@span:5:cf1a2cb09950084992b45e7f | TABLE=Reference docs/Script source/Warlord 1.5.12.7/RangedType.INI@span:39:8f03d3b4a323d9fa0b89b64d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/RangedType.INI@span:12:e137b286525bf5559c9b2cdb
 // STAT-FORMULA[supremeLightEligibility]
 function supremeLightActiveForUnit(abilities, unitType, version, rangedContext = {}) {
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
@@ -136,10 +137,14 @@ function supremeLightActiveForUnit(abilities, unitType, version, rangedContext =
       || hasAbil(abilities, 'focusMagic')
       || isMagicalRangedType(rangedContext.baseRangedType);
   }
-  return unitType === 'fantastic_life' || hasAbil(abilities, 'caster');
+  return isMagicalRangedType(rangedContext.liveRangedType)
+    || unitType === 'fantastic_life' || unitType === 'normal_life'
+    // The calculator's Caster flag is its representation of a nonzero mana pool.
+    || hasAbil(abilities, 'caster')
+    || isMagicalRangedType(rangedContext.baseRangedType);
 }
 
-// PROVENANCE[survivalInstinctEligibility]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=modern eligibility is reconstructed but the applicable CoM 1 implementation gate has not been matched; pointer=Reference docs/DOS reconstructed/unitcalc.c
+// PROVENANCE[survivalInstinctEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:392fb79051e1dfb503869c27 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:b1ed625810a6547724965296
 // STAT-FORMULA[survivalInstinctEligibility]
 function survivalInstinctActiveForUnit(abilities, unitType, version) {
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
@@ -147,7 +152,7 @@ function survivalInstinctActiveForUnit(abilities, unitType, version) {
   return !!unitType && unitType.startsWith('fantastic_');
 }
 
-// PROVENANCE[landLinkingEligibility]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=DOS and compiled-modern gates have not been reconciled to one narrow applicable set; pointer=Reference docs/DOS reconstructed/unitcalc.c
+// PROVENANCE[landLinkingEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:233068cc98f57fe5ee4a9d3f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
 // STAT-FORMULA[landLinkingEligibility]
 function landLinkingActiveForUnit(abilities, unitType, version) {
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
@@ -155,14 +160,14 @@ function landLinkingActiveForUnit(abilities, unitType, version) {
   return !!unitType && unitType.startsWith('fantastic_');
 }
 
-// PROVENANCE[innerPowerEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1726-1732
+// PROVENANCE[innerPowerEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:63976f145f718df520e80186
 // STAT-FORMULA[innerPowerEligibility]
 function innerPowerActiveForUnit(abilities, version) {
   if (!version || !version.startsWith('com2_') || !hasAbil(abilities, 'innerPower')) return false;
   return hasAbil(abilities, 'fireImmunity') || hasAbil(abilities, 'lightningResist');
 }
 
-// PROVENANCE[blazingEyesDoomGaze]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1750-1761
+// PROVENANCE[blazingEyesDoomGaze]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:c4d9140bdc468735df396fa7
 // STAT-FORMULA[blazingEyesDoomGaze]
 function blazingEyesDoomGazeForUnit(abilities, unitType, version) {
   const baseDoomGaze = abilVal(abilities, 'doomGaze', 0);
@@ -171,7 +176,7 @@ function blazingEyesDoomGazeForUnit(abilities, unitType, version) {
   return baseDoomGaze > 0 ? baseDoomGaze + 1 : 3;
 }
 
-// PROVENANCE[misleadEligibility]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=matching aura-type-10 implementation range is not reconstructed; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// PROVENANCE[misleadEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:f8b72704f1366630a616f50f
 // STAT-FORMULA[misleadEligibility]
 function misleadActiveForUnit(abilities, unitType, version) {
   if (!version || !version.startsWith('com2_') || !hasAbil(abilities, 'mislead')) return false;
@@ -179,7 +184,7 @@ function misleadActiveForUnit(abilities, unitType, version) {
 }
 
 // STAT-FORMULA[destinyEligibility]
-// PROVENANCE[destinyEligibility]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=Destiny version/enchantment eligibility lacks an exact implementation gate; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// PROVENANCE[destinyEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
 function destinyActiveForUnit(abilities, version) {
   return !!(version && version.startsWith('com2_') && hasAbil(abilities, 'destiny'));
 }
@@ -236,8 +241,7 @@ function determineEffectiveUnitType(baseUnitType, abilities, version) {
 // The realm a unit belongs to, derived from its (possibly rewritten) unitType.
 // Both fantastic_<realm> and normal_<realm> (e.g. the Warlord-only 'normal_life'
 // produced by Sanctify) carry a realm; plain 'normal' and 'hero' have none.
-// PROVENANCE[realmOfUnitType]: UNVERIFIED versions=all; gap=the compatibility projection from live unit type to realm has no matching narrow implementation range; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-// STAT-FORMULA[realmOfUnitType]
+// Calculator compatibility projection; not an independent source-authored formula.
 function realmOfUnitType(unitType) {
   const us = String(unitType || '');
   if (us.startsWith('fantastic_')) return us.slice('fantastic_'.length);
@@ -248,8 +252,7 @@ function realmOfUnitType(unitType) {
 // True for non-fantastic, non-hero units — plain 'normal' and any realm-tagged
 // normal unit such as 'normal_life'. These share normal-unit behaviour for
 // Weapon Immunity, Blood Lust targeting, Mislead, etc.
-// PROVENANCE[isNormalUnitType]: UNVERIFIED versions=all; gap=the compatibility normal-unit predicate has no matching narrow implementation range across every consumer; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
-// STAT-FORMULA[isNormalUnitType]
+// Calculator compatibility projection; source-owned eligibility stays with each consumer.
 function isNormalUnitType(unitType) {
   const us = String(unitType || '');
   return us === 'normal' || us.startsWith('normal_');
@@ -303,7 +306,7 @@ function supernaturalMinDamageFn(abilities, version) {
 // *Ranged distance penalty*): one divisor byte at 0x99BB0 is 3 in MoM 1.31/CP 1.60 and
 // 4 in CoM 1; Long Range clamps the step count to 1 only when it is already positive;
 // and CoM 1 alone skips the whole block for heroes.
-// PROVENANCE[distancePenalty]: UNVERIFIED versions=all; gap=combined helper requires both DOS combat reconstruction and compiled-modern ranged-penalty implementation plus table constants; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+// PROVENANCE[distancePenalty]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:33:22975a3fffd0f231133eb550 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:b13db6265b2feaabf81fb261 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:6:791acb631b8f903c2812da35 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:fd8ae8fc654e2f8ef8afd276 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:6:791acb631b8f903c2812da35 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:fd8ae8fc654e2f8ef8afd276
 // STAT-FORMULA[distancePenalty]
 function distancePenalty(distance, rangedType, longRange, version, isHero) {
   if (rangedType !== 'missile' && rangedType !== 'boulder') return 0;
@@ -426,9 +429,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const hb = abilVal(abilities, 'holyBonus', 0);
   if (hb > 0) {
     const isCoM2 = version && version.startsWith('com2_');
-    // PROVENANCE[holyBonus:aura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:2387-2403
+    // PROVENANCE[holyBonus:aura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:be00bc2f90338549d6e09741
     if (isCoM2) emit('holyBonus:aura', 'e', { atk: hb, def: hb, res: hb, ranged: hb });
-    // PROVENANCE[holyBonus]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c:2969-2992
+    // PROVENANCE[holyBonus]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:355495d2e88ef940a57b8515
     else emit('holyBonus', 'a', isCoMPlus
       ? { atk: hb, def: hb, res: hb, rtb: hb }
       : { atk: hb, def: hb, res: hb });
@@ -439,7 +442,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Weapon Immunity is added in combat flow; the stat bonuses are applied here.
   // Phase c: a spell effect with no CAS implementation.
   if (hasAbil(abilities, 'animated') && isCoMPlus) {
-    // PROVENANCE[animated]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:907-924 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1481-1508
+    // PROVENANCE[animated]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:c8375636d2d3d88ca4eaae97 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:859998a2522c86efb243689d
     emit('animated', 'c', isCoM1
       ? { atk: 1, def: 1, rtb: 1, toHit: 10 }
       : { atk: 1, def: 1, nonGazeRtb: 1, toHit: 10 });
@@ -453,9 +456,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // aura pass.
   const rta = abilVal(abilities, 'resistanceToAll', 0);
   if (rta > 0) {
-    // PROVENANCE[resistanceToAll:aura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:2383-2416
+    // PROVENANCE[resistanceToAll:aura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:77eb7e2f668ac3b092fa3b7d
     if (version && version.startsWith('com2_')) emit('resistanceToAll:aura', 'e', { res: rta });
-    // PROVENANCE[resistanceToAll]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c:2969-2992
+    // PROVENANCE[resistanceToAll]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:355495d2e88ef940a57b8515
     else emit('resistanceToAll', 'a', { res: rta });
   }
 
@@ -472,7 +475,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     const luckyPhase = hasAbil(abilities, 'luckyPhaseBase')
       ? 'base'
       : ((!hasAbil(abilities, 'luckyPhaseA') && hasAbil(abilities, 'luckyPhaseB')) ? 'b' : 'c');
-    // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:2008-2020 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1247-1258
+    // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:bf74c9101f80f286adb7d2a0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:761ca75657bf39dc15095e55
     emit('lucky', luckyPhase, { res: 1, toHit: 10, toBlk: 10 });
   }
 
@@ -483,7 +486,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // reaches only the enchanted unit, so it is the plain `lucky` control, not this one.
   // The loop-variable bug that confined the aura to the enchanted unit was fixed in 1.5.12.6.2.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'luckyStar')) {
-    // PROVENANCE[luckyStar]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1611-1621
+    // PROVENANCE[luckyStar]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:2cd8ef385c4ba4e42016a04d
     emit('luckyStar', 'b', { atk: 1, def: 1, res: 1, rtb: 1 });
   }
 
@@ -503,21 +506,21 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const hasPrayer = hasAbil(abilities, 'prayer');
   const hasHighPrayer = hasAbil(abilities, 'highPrayer');
   if (hasHighPrayer) {
-    // PROVENANCE[highPrayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3013-3037 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1895-1910
+    // PROVENANCE[highPrayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:9e2e521e9eba230ae2bc6977 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:1211c780f887c8558d60d073
     emit('highPrayer', 'c', { atk: 2, def: 2, res: 3, toHit: 10, toBlk: 10 });
     if (hasPrayer && version && version.startsWith('com2_warlord')) {
-      // PROVENANCE[prayer:warlordStack]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1484-1494
+      // PROVENANCE[prayer:warlordStack]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:cd3b7dd8d55f06aacde8812c
       emit('prayer:warlordStack', 'b', { atk: 1, def: 1, res: 1 });
     }
   } else if (hasPrayer) {
-    // PROVENANCE[prayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3040-3058 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1897-1918
+    // PROVENANCE[prayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:19:ff7bdd24b7f56fef70abb02b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:22:b3cdb6f87df741fb103a6989
     emit('prayer', 'c', { res: 1, toHit: 10, toBlk: 10 });
   }
 
   // Black Prayer (debuff): -1 all conventional attack strengths, -1 Defense, -2 Resistance.
   // Phase c — curse with no CAS implementation.
   if (hasAbil(abilities, 'blackPrayer')) {
-    // PROVENANCE[blackPrayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3189-3205 | Reference docs/DOS reconstructed/unitcalc.c:3304-3320 | Reference docs/Caster binary/Units.RecalculateUnits.pas:2003-2018
+    // PROVENANCE[blackPrayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:17:6726e65e7d4815dc6beb7e5a | Reference docs/DOS reconstructed/unitcalc.c@span:17:7bda7e6636c6c0560ea2ecee | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:57700011d70aa83ec35b9eaa
     emit('blackPrayer', 'c', version && version.startsWith('com2_')
       ? { atk: -1, def: -1, res: -2, nonGazeRtb: -1 }
       : { atk: -1, def: -1, res: -2, rtb: -1 });
@@ -527,7 +530,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // The +2 magical ranged attack strength bonus is type-conditional and handled in stats.js.
   // Phase c — global enchantment with no CAS implementation.
   if (hasAbil(abilities, 'reinforceMagic') && version && version.startsWith('com2_')) {
-    // PROVENANCE[reinforceMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1764-1772
+    // PROVENANCE[reinforceMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:c46cf0a067fb9eff1afc4064
     emit('reinforceMagic', 'c', { res: 2 });
   }
 
@@ -537,7 +540,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // affecting other units.
   // Phase c: UnitCalcPre.CAS:1743-1749 grants only Mountaineer — the stat bonuses are binary.
   if (hasAbil(abilities, 'innerPower')) {
-    // PROVENANCE[innerPower]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1729-1747
+    // PROVENANCE[innerPower]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:cb6a5d278f05325e495f0d20
     emit('innerPower', 'c', { atk: 3, def: 2, res: 2, rtb: 3 });
   }
 
@@ -547,7 +550,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // thrown or breath) per the source helptext, so stats.js applies it as misleadRtbMod.
   // Phase c — curse with no CAS implementation.
   if (hasAbil(abilities, 'mislead')) {
-    // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:2453-2470
+    // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:638993cd0d572a8e093d7d6c
     emit('mislead', 'c', { atk: -1, def: -1, res: -1 });
   }
 
@@ -556,10 +559,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // the file's `Example - ... End of Example` header comment; UnitCalcPre.CAS:456/661 only
   // set the Iron Skin flag. Neither applies a stat.
   if (hasAbil(abilities, 'ironSkin')) {
-    // PROVENANCE[ironSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:665-670 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1606-1610
+    // PROVENANCE[ironSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:7157204464b034c8f40530d5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:1e9389176cf9e793db19626f
     emit('ironSkin', 'c', { def: 5 });
   } else if (hasAbil(abilities, 'stoneSkin')) {
-    // PROVENANCE[stoneSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:665-674
+    // PROVENANCE[stoneSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:e6801f056adc81573e92ef9b
     emit('stoneSkin', 'c', { def: 1 });
   }
 
@@ -570,7 +573,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // (version/figs-dependent) are the `lionheart:rangedHp` step in stats.js.
   // Phase c — spell with no CAS implementation.
   if (hasAbil(abilities, 'lionheart')) {
-    // PROVENANCE[lionheart]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:745-758 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1587-1598
+    // PROVENANCE[lionheart]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:0e597d1ff73a00332d952e72 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:87ae0c5af5c55a4b1df9577b
     emit('lionheart', 'c', { atk: 3, res: 3 });
   }
 
@@ -584,10 +587,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const warlordBlade = version && version.startsWith('com2_warlord')
     && (hasAbil(abilities, 'flameBladeWarlord') || hasAbil(abilities, 'fieryBlade'));
   if (hasAbil(abilities, 'flameBlade') || warlordBlade) {
-    // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:684-698 | Reference docs/DOS reconstructed/unitcalc.c:928-940 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1538-1547 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:524-526 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:524-526
+    // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:43a163f18b24d003ce1baa22 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
     emit('flameBlade', 'c', { atk: version && version.startsWith('com') ? 3 : 2 });
   } else if (hasAbil(abilities, 'metalFires') && !identityPredicates.liveFantastic) {
-    // PROVENANCE[metalFires]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:3269-3292
+    // PROVENANCE[metalFires]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8c88e810ad0fd6705c30bb95
     emit('metalFires', 'c', { atk: 1 });
   }
 
@@ -597,7 +600,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // MissileRangedBonus=3, BreathBonus=0 both versions, ThrownBonus 0 (CoM2) / 3 (Warlord).
   // Phase c — no CAS implementation.
   if (hasAbil(abilities, 'blazingMarch')) {
-    // PROVENANCE[blazingMarch]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3147-3177 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1922-1936 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:536-539 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:536-539
+    // PROVENANCE[blazingMarch]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:31:d2ba78de4b00594fb355f0e5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:88f3514b127f13fa92f35d8e | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:4:948215fe7c75f15252145bd4 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:4:2e38314c2c8fd875465a75dd
     emit('blazingMarch', 'c', { atk: 3 });
   }
 
@@ -620,12 +623,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     const liveFantastic = identityPredicates.liveFantastic != null
       ? !!identityPredicates.liveFantastic : !!abilities.liveFantastic;
     if (!combatSummoned && !baseFantastic && !liveFantastic) {
-      // PROVENANCE[breakthrough:normal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1949-1964 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:541-548 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:541-548
+      // PROVENANCE[breakthrough:normal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:3ca5011dcfb4738952b30067 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09
       emit('breakthrough:normal', 'c', { atk: 1 });
     }
-    // PROVENANCE[breakthrough:noncorporeal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1967-1975
+    // PROVENANCE[breakthrough:noncorporeal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:fa4543aa4289101fada66dad
     if (nonCorporeal) emit('breakthrough:noncorporeal', 'c', { atk: 1, def: 1 });
-    // PROVENANCE[breakthrough:combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1977-1985
+    // PROVENANCE[breakthrough:combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:0f491fbb9d925602e7b57300
     if (combatSummoned) emit('breakthrough:combatSummoned', 'c', { atk: 1, def: 1 });
   }
 
@@ -634,7 +637,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c — spell with no CAS implementation. (CreateUnit.CAS:552-554's SGiantStrength is
   // the Natural Selection coal-ore grant, a different effect, handled in stats.js.)
   if (hasAbil(abilities, 'giantStrength')) {
-    // PROVENANCE[giantStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:699-710
+    // PROVENANCE[giantStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:d3b7235f7b74f0d7c75b9b2f
     emit('giantStrength', 'c', { atk: 1 });
   }
 
@@ -648,7 +651,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Fire Breath option is handled in stats.js (modifies thrownType/rtb).
   // Phase c: UnitCalcPre.CAS's EncCCArmor references only set or test the flag.
   if (abilVal(abilities, 'ccDefense', false)) {
-    // PROVENANCE[chaosChannels:armor]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:725-731 | Reference docs/DOS reconstructed/unitcalc.c:3420-3432 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1449-1456
+    // PROVENANCE[chaosChannels:armor]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:bd2b6b86ac7fbcc85505a039 | Reference docs/DOS reconstructed/unitcalc.c@span:13:55dbda9953bbaf8f2f1bb81f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:490bf1c3cfe8b5827cde324a
     emit('chaosChannels:armor', 'c', { def: (version === 'mom_1.31') ? 6 : 3 });
   }
 
@@ -657,7 +660,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // +1 defense, +1 resistance, +1 HP per figure. Death realm; MoM only.
   // Phase c — MoM-only enchantment, so there is no CAS to consult.
   if (hasAbil(abilities, 'blackChannels')) {
-    // PROVENANCE[blackChannels]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c:645-663
+    // PROVENANCE[blackChannels]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:19:4a92e2a9611b35504558f854
     emit('blackChannels', 'c', { atk: 2, def: 1, res: 1, hp: 1, rtb: 1 });
   }
 
@@ -666,7 +669,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c for the melee penalty — Warlord's UnitCalc.CAS:309-315 adds only the -3 to
   // fire/lightning breath (phase d, applied in stats.js).
   if (hasAbil(abilities, 'weakness')) {
-    // PROVENANCE[weakness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3365-3392 | Reference docs/Caster binary/Units.RecalculateUnits.pas:2136-2143
+    // PROVENANCE[weakness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:51bb7b42de5195f9edf69a86 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:e4cfc8d10fb6c6beee42bb6f
     emit('weakness', 'c', { atk: version && version.startsWith('com') ? -3 : -2 });
   }
 
@@ -674,7 +677,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // weapon stripping, thrown removal, and Large Shield removal are handled in stats.js.
   // Phase d — UnitCalc.CAS:492-504.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'rust')) {
-    // PROVENANCE[rust]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS:492-501
+    // PROVENANCE[rust]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:98745d26b4fbf74694b1a932
     emit('rust', 'd', { atk: -3 });
   }
 
@@ -682,7 +685,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // CoM2: -3 melee, -5 all ranged/thrown, -5 defense, -5 resistance.
   // Phase c: UnitCalcPre.CAS:1221-1223 only mirrors the combat flag to overland.
   if (hasAbil(abilities, 'mindStorm')) {
-    // PROVENANCE[mindStorm]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3396-3416 | Reference docs/Caster binary/Units.RecalculateUnits.pas:2147-2158
+    // PROVENANCE[mindStorm]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:5aef6d0a81b854a2f8a97a63 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:b93fe4b2bed30f6662144a8f
     emit('mindStorm', 'c', {
       atk: version && version.startsWith('com') ? -3 : -5,
       def: -5, res: -5, rtb: -5,
@@ -697,7 +700,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // eligibility is resolved by survivalInstinctActiveForUnit using the effective combat unit type.
   // Phase c — no CAS implementation in either calc file.
   if (hasAbil(abilities, 'survivalInstinct')) {
-    // PROVENANCE[survivalInstinct]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas:1711-1719
+    // PROVENANCE[survivalInstinct]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:b1ed625810a6547724965296
     emit('survivalInstinct', 'c', { def: 1, res: 2, toHit: 10 });
   }
 
@@ -708,7 +711,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Marionettes, so Warlord adds nothing and inherits the position. Nothing between a and c
   // reads Resistance, To Hit or To Defend, so this is faithful without being observable.
   if (hasAbil(abilities, 'guardian') && isCoMPlus) {
-    // PROVENANCE[guardian]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3208-3220 | Reference docs/Caster binary/Units.RecalculateUnits.pas:2092-2105
+    // PROVENANCE[guardian]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:db312d02daf8f891ea293893 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:1687b0fe505cf275355adb4e
     emit('guardian', 'c', { res: 1, toHit: 10, toBlk: 10 });
   }
 
@@ -737,17 +740,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     const id = isCoM1 ? 'tactician:coM1' : 'tactician';
     if (abilVal(abilities, 'unitType', 'normal') === 'hero') {
       // STAT-FORMULA[tactician:heroDynamic]
-      // PROVENANCE[tactician:heroDynamic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3566-3582 | Reference docs/Caster binary/Units.RecalculateUnits.pas:2273-2299
+      // PROVENANCE[tactician:heroDynamic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:17:74a62c399fece2ea93dcbdc3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:27:69075629fb02a3678e0526aa
       emit(id, 'c', isCoM1
         ? { atk: 2, def: 2, res: 2, rtb: 2 }
         : { atk: 2, def: 2, res: 2, ranged: 2 }, afterWarp);
       if (isWarlord) {
-        // PROVENANCE[tactician:warlordClawback]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:756-770
+        // PROVENANCE[tactician:warlordClawback]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:e1a9888013d858dd0217c1a9
         emit('tactician:warlordClawback', 'b', { atk: -2, def: -1, res: -2, ranged: -2 });
       }
     } else {
       // STAT-FORMULA[tactician:nonheroDynamic]
-      // PROVENANCE[tactician:nonheroDynamic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:3566-3582 | Reference docs/Caster binary/Units.RecalculateUnits.pas:2273-2299
+      // PROVENANCE[tactician:nonheroDynamic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:17:74a62c399fece2ea93dcbdc3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:27:69075629fb02a3678e0526aa
       emit(id, 'c', { def: 1 }, afterWarp);
     }
   }
@@ -759,7 +762,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase d — UnitCalc.CAS:629-671, with the doubled branch at :646-658.
   if (hasAbil(abilities, 'favoredTerrain') && version && version.startsWith('com2_warlord')) {
     const mult = hasAbil(abilities, 'tactician') ? 2 : 1;
-    // PROVENANCE[favoredTerrain]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS:629-657
+    // PROVENANCE[favoredTerrain]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:29:8a7eccc577a846564d7742f8
     emit('favoredTerrain', 'd', { def: 1 * mult, toHit: 5 * mult });
   }
 
@@ -768,7 +771,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c: UnitCalcPre.CAS:889 is the separate Nature Link upgrade (+1 resistance),
   // not this bonus.
   if (hasAbil(abilities, 'landLinking')) {
-    // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:981-989 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1615-1630
+    // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:3fa8c2fabf80e91cf859f9b0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
     emit('landLinking', 'c', { atk: 2, def: 2 });
   }
 
@@ -777,7 +780,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // (MODDING.INI MysticSurgeToDefPenalty=10, both versions).
   // Phase c — SpellMysticSurge.CAS sets enchantment flags only; no stat application.
   if (hasAbil(abilities, 'mysticSurge')) {
-    // PROVENANCE[mysticSurge]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c:993-1000 | Reference docs/Caster binary/Units.RecalculateUnits.pas:1563-1571
+    // PROVENANCE[mysticSurge]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:de8c9dc3bc0bf7ec94ba9028
     emit('mysticSurge', 'c', { def: 2, res: -2 });
   }
 
@@ -794,26 +797,26 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Armorclad is a permanent mechanical hull upgrade. CreateUnit.CAS:702-703
   // and OverlandEndTurn.CAS:405-406/428-429 write +6 Defense to ABase.
   if (isWarlord && hasAbil(abilities, 'armorclad')) {
-    // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:700-703
+    // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:4:f33e8912a11fbfe562941d50
     emit('armorclad', 'base', { def: 6 });
   }
 
   // Battle Armor is the in-combat regular non-mechanical branch of the
   // Armorclad reform. UnitCalcPre.CAS:1106-1113 applies +3 Defense.
   if (isWarlord && hasAbil(abilities, 'battleArmor')) {
-    // PROVENANCE[battleArmor]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1104-1113
+    // PROVENANCE[battleArmor]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:c7c2d7da26a07332de4fa4f3
     emit('battleArmor', 'b', { def: 3 });
   }
 
   // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units.
   // The reform grant helper has already derived `magitekEngine` and Large Shield.
   if (isWarlord && hasAbil(abilities, 'magitekEngine')) {
-    // PROVENANCE[magitekEngine]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1051-1058
+    // PROVENANCE[magitekEngine]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:d96a238f19276a8e5adea472
     emit('magitekEngine', 'b', { toBlk: 20 });
   }
 
   if (isWarlord && hasAbil(abilities, 'artificer') && hasAbil(abilities, 'mechanical')) {
-    // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:37-48
+    // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
     emit('artificer', 'base', { atk: 1, def: 1, res: 2, rtb: 1 });
   }
 
@@ -821,7 +824,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // perk, granting mechanical units +20% To Hit and +10% To Defend.
   // Phase d — UnitCalc.CAS:275-309.
   if (isWarlord && hasAbil(abilities, 'mechanicalExpert') && hasAbil(abilities, 'mechanical')) {
-    // PROVENANCE[mechanicalExpert]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS:275-305
+    // PROVENANCE[mechanicalExpert]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:31:5cf138553247cd4344245e09
     emit('mechanicalExpert', 'd', { toHit: 20, toBlk: 10 });
   }
 
@@ -832,7 +835,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // (ABase) when the spell is cast, so it is baked into the base stage.
   // Heroes: UnitCalcPre.CAS:682-691 re-applies them at index 0 on every recalc — phase b.
   if (isWarlord && hasAbil(abilities, 'rebuild')) {
-    // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS:273-285 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:683-690
+    // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
     emit('rebuild', abilVal(abilities, 'unitType', 'normal') === 'hero' ? 'b' : 'base',
       { atk: 2, def: 2 });
   }
@@ -840,7 +843,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.
   // Base stage: CreateUnit.CAS:614-618 writes both at index 1 (ABase).
   if (isWarlord && hasAbil(abilities, 'malnourished')) {
-    // PROVENANCE[malnourished]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS:614-618
+    // PROVENANCE[malnourished]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:5:66825b694152a9b945a1d0b6
     emit('malnourished', 'base', { atk: -1, def: -2 });
   }
 
@@ -849,7 +852,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // non-fantastic targeting status is handled at the target-gating sites; the phase-c EncMagic
   // write deliberately survives that phase-d identity change.
   if (isWarlord && hasAbil(abilities, 'spiritLink')) {
-    // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS:181-190
+    // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
     emit('spiritLink', 'base', { res: 2 });
   }
 
@@ -857,7 +860,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // units gain +2 Resistance until the end of combat.
   // Phase b — UnitCalcPre.CAS:1499-1504 (labelled "Rousing Speech" in the script).
   if (isWarlord && hasAbil(abilities, 'rally')) {
-    // PROVENANCE[rally]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1498-1502
+    // PROVENANCE[rally]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:489ddb7eb9cdcfbb11f54431
     emit('rally', 'b', { res: 2 });
   }
 
@@ -866,7 +869,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // resistance debuff is modeled (the +4 city unrest is outside this calculator).
   // Phase b — UnitCalcPre.CAS:1630-1633.
   if (isWarlord && hasAbil(abilities, 'disheartenProphecy')) {
-    // PROVENANCE[disheartenProphecy]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1625-1634
+    // PROVENANCE[disheartenProphecy]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:dff452481f1564630c441f62
     emit('disheartenProphecy', 'b', { res: -2 });
   }
 
@@ -1253,7 +1256,7 @@ function hasNonCorporealEffect(abilities) {
 // combat — the alive count passed in already reflects cumulative in-combat damage.
 // Only boosts an attack that already exists (base strength > 0); never creates one.
 // STAT-FORMULA[rageEffectiveAttack]
-// PROVENANCE[rageEffectiveAttack]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS:1466-1478
+// PROVENANCE[rageEffectiveAttack]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:13:325ede6460c3b3ea9b78f8a2
 function applyRage(baseAtk, unit, aliveNow) {
   if (baseAtk <= 0 || !hasAbil(unit.abilities, 'rage')) return baseAtk;
   return baseAtk + Math.max(0, unit.figs - aliveNow);
@@ -1270,7 +1273,7 @@ function applyRage(baseAtk, unit, aliveNow) {
 //   Magic ranged: never (already magical).
 // v1.31 bug: Generic units (Trireme, Galley, Warship, Catapult) bypass WI regardless of attack type.
 // STAT-FORMULA[weaponImmunityEffectiveDefense]
-// PROVENANCE[weaponImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:878-902 | Reference docs/DOS reconstructed/combat.c:1076-1100 | Reference docs/DOS reconstructed/combat.c:1197-1205 | Reference docs/Caster binary/Combat.ApplyAttack.pas:435-446 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:214-215 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:890-890 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:890-890
+// PROVENANCE[weaponImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:25:3a05783701e4dc0bb3997f01 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72 | Reference docs/DOS reconstructed/combat.c@span:9:091e1f3c04458619a8eb1828 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:12:579afca0c054420752f52644 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:64343218ebddfe0d2454f929 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:8c99d740dfd473b21f906b13 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:4c279bb027bcde85badd90e7
 function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, version, atkGeneric) {
   if (!weaponImmunityApplies(defAbilities, atkWeapon, atkUnitType, version, atkGeneric)) return baseDef;
   if (version && version.startsWith('com2_warlord')) {
@@ -1286,7 +1289,7 @@ function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, versio
 // Applies Missile Immunity defense boost. Only triggers against Ranged Missile Attacks.
 // MoM: defense set to 50. CoM/CoM2: defense set to 100. Applied after armor piercing and weapon immunity.
 // STAT-FORMULA[missileImmunityEffectiveDefense]
-// PROVENANCE[missileImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:866-869 | Reference docs/DOS reconstructed/combat.c:1076-1100 | Reference docs/DOS reconstructed/combat.c:1209-1215 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:212-212
+// PROVENANCE[missileImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:4:7631b0118223ca1089ef4ce6 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:1:e432b988437369fabb54b4c5
 function missileImmunityDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'missileImmunity')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1296,7 +1299,7 @@ function missileImmunityDef(baseDef, defAbilities, version) {
 // Raises defense against Fire Breath and Immolation damage. MoM: 50. CoM/CoM2: 100.
 // Applied after armor piercing and weapon immunity.
 // STAT-FORMULA[fireImmunityEffectiveDefense]
-// PROVENANCE[fireImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:870-872 | Reference docs/DOS reconstructed/combat.c:1076-1100 | Reference docs/DOS reconstructed/combat.c:1209-1215 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:207-208
+// PROVENANCE[fireImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:3:88dfe5adc853afc5bfed6290 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:4803e9b487f6f1a1cb49bdaa
 function fireImmunityDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'fireImmunity')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1310,7 +1313,7 @@ function fireImmunityDef(baseDef, defAbilities, version) {
 //   Defense 50 vs the hidden component of a Chaos- or Death-realm gaze (MoM only)
 //   +30 Resistance vs Cause Fear, Life Steal, Death Gaze (always pushes effective Res ≥ 10).
 // STAT-FORMULA[righteousnessEffectiveDefense]
-// PROVENANCE[righteousnessEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c:1135-1144 | Reference docs/DOS reconstructed/combat.c:1145-1152 | Reference docs/DOS reconstructed/combat.c:1209-1215
+// PROVENANCE[righteousnessEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:10:8b80214da56946e4a9fbfbdd | Reference docs/DOS reconstructed/combat.c@span:8:66077c35eb258dac5ab28d94 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06
 function righteousnessDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'righteousness')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1321,7 +1324,7 @@ function righteousnessDef(baseDef, defAbilities, version) {
 // MoM: defense set to 50. CoM/CoM2: defense set to 100.
 // Applied after other defense modifiers; overrides Fire Immunity and Righteousness if higher.
 // STAT-FORMULA[magicImmunityEffectiveDefense]
-// PROVENANCE[magicImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:1102-1118 | Reference docs/DOS reconstructed/combat.c:1209-1215 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas:211-211
+// PROVENANCE[magicImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:17:7ad26f1791d700f7e217ba27 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:1:70abb44002337f3267802332
 function magicImmunityDef(baseDef, defAbilities, version) {
   if (!hasAbil(defAbilities, 'magicImmunity')) return baseDef;
   return (version && version.startsWith('com')) ? 100 : 50;
@@ -1332,7 +1335,7 @@ function magicImmunityDef(baseDef, defAbilities, version) {
 // Delivered as a Fireball effect (spell 96) with an explicit strength override:
 // WIZARDS.EXE 0x99D5E pushes 4 in both MoM builds, CoM 1's 0x99D50 pushes 10.
 // STAT-FORMULA[immolationStrength]
-// PROVENANCE[immolationStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c:3096-3133 | Reference docs/DOS reconstructed/combat.c:1384-1392 | Reference docs/Caster binary/Combat.ApplyAttack.pas:367-372 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini:1909-1909 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini:2228-2228
+// PROVENANCE[immolationStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:38:88b87d43f6f27bfce4600ec3 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:6:61977524faa49301ba9b8fa3 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1
 function immolationStr(version) {
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
   return 4;
@@ -1365,7 +1368,7 @@ function immolationBlocksRanged(version) {
 // Att_AREAFLAG, and the only such removal between the two rosters. CoM2's 30% is the engine
 // default rather than a stated value. See `Reference docs/CoM2 data tables.md`, *Wall of Fire*.
 // STAT-FORMULA[wallOfFireStrength]
-// PROVENANCE[wallOfFireStrength]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00; gap=the zero strength override and fallback are reconstructed, but no allowed checked-in implementation/table excerpt binds Fireball's inherited SPELLDAT.LBX strength 5; pointer=Reference docs/MoM binary analysis.md
+// PROVENANCE[wallOfFireStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:7:ff40688656520f07bf1f3557 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/DOS reconstructed/spelldat.c@span:30:33d3c975302b2b73b0595bca
 function wallOfFireStr(version) {
   if (version && version.startsWith('com2_warlord')) return 12;
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
@@ -1941,26 +1944,26 @@ function resolutionStep(id, writes, apply, when) {
 }
 
 const EFFECTIVE_RESISTANCE_STEPS = [
-  // PROVENANCE[effectiveResistance:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:110-116
+  // PROVENANCE[effectiveResistance:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
   resolutionStep('effectiveResistance:base', ['effectiveResistance'],
     u => { u.effectiveResistance = u.res; }),
-  // PROVENANCE[effectiveResistance:charmed]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:110-116
+  // PROVENANCE[effectiveResistance:charmed]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
   resolutionStep('effectiveResistance:charmed', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
     (u, ctx) => ctx.isRoll && (u.isHero || u.unitType === 'hero') && hasAbil(u.abilities, 'charmed')),
-  // PROVENANCE[effectiveResistance:magicImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:118-119
+  // PROVENANCE[effectiveResistance:magicImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc
   resolutionStep('effectiveResistance:magicImmunity', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
     (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'magicImmunity')),
-  // PROVENANCE[effectiveResistance:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:121-122 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:515-515 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:515-515
+  // PROVENANCE[effectiveResistance:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:c5d736809b27903ec0e40f87 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c
   resolutionStep('effectiveResistance:resistElements', ['effectiveResistance'],
     u => { u.effectiveResistance += 4; },
     (u, ctx) => ctx.realm === 'nature' && hasResistElementsEffect(u.abilities)),
-  // PROVENANCE[effectiveResistance:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:124-126 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:516-516 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:516-516
+  // PROVENANCE[effectiveResistance:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:8da0a27a31fedd3ba0134ffc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:139a1e53fbfbc5356d693d1d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:e9ef47259ac28c3d1c61598a
   resolutionStep('effectiveResistance:bless', ['effectiveResistance'],
     (u, ctx) => { u.effectiveResistance += ctx.blessBonus; },
     (u, ctx) => (ctx.realm === 'chaos' || ctx.realm === 'death') && hasAbil(u.abilities, 'bless')),
-  // PROVENANCE[effectiveResistance:resistMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:128-129 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:514-514 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:514-514
+  // PROVENANCE[effectiveResistance:resistMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:144365f7a66eeaa2a77f8a4d | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:9944e135e5c46465171e6e72 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:9944e135e5c46465171e6e72
   resolutionStep('effectiveResistance:resistMagic', ['effectiveResistance'],
     u => { u.effectiveResistance += 5; },
     (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'resistMagic')),
@@ -1983,35 +1986,35 @@ function effectiveResistance(target, version, realm, isRoll = true, trace = null
 }
 
 const EFFECTIVE_DEFENSE_STEPS = [
-  // PROVENANCE[effectiveDefense:base]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; gap=cited helper establishes defense plus extra defense but not this combined pre-zero clamp and Vertigo subtraction; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+  // PROVENANCE[effectiveDefense:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:16:a817f716eaa0bf5bc9a83904
   resolutionStep('effectiveDefense:base', ['effectiveDefense'],
-    (u, ctx) => { u.effectiveDefense = Math.max(0, u.def - ctx.vertigoDefPenalty) + ctx.extraDefense; }),
-  // PROVENANCE[effectiveDefense:illusion]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:183-188
+    (u, ctx) => { u.effectiveDefense = u.def + ctx.extraDefense; }),
+  // PROVENANCE[effectiveDefense:illusion]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:73589286bdb2cf542120a0a1
   resolutionStep('effectiveDefense:illusion', ['effectiveDefense'],
     u => { u.effectiveDefense = 0; return HALT; },
     (u, ctx) => ctx.illusion && !hasAbil(u.abilities, 'illusionImmunity')),
-  // PROVENANCE[effectiveDefense:largeShield]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:191-192 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:888-888 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:888-888
+  // PROVENANCE[effectiveDefense:largeShield]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:cad06bcca352e1e701c06cfe | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:baa485ae66a250e528069e54 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:baa485ae66a250e528069e54
   resolutionStep('effectiveDefense:largeShield', ['effectiveDefense'],
     u => { u.effectiveDefense += 3; },
     (u, ctx) => ctx.isRanged && hasAbil(u.abilities, 'largeShield')),
-  // PROVENANCE[effectiveDefense:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:193-194 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:518-518 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:518-518
+  // PROVENANCE[effectiveDefense:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:69075b87f644f18cbdb1c64a | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:c99051561c61668cea94903d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:c99051561c61668cea94903d
   resolutionStep('effectiveDefense:resistElements', ['effectiveDefense'],
     u => { u.effectiveDefense += 4; },
     (u, ctx) => ctx.elementalEligible && hasResistElementsEffect(u.abilities)),
-  // PROVENANCE[effectiveDefense:elementalArmor]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:195-196 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:519-519 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:519-519
+  // PROVENANCE[effectiveDefense:elementalArmor]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:95c224910389756ff6f69515 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:473b9eac9397f92d8022c2cd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:473b9eac9397f92d8022c2cd
   resolutionStep('effectiveDefense:elementalArmor', ['effectiveDefense'],
     u => { u.effectiveDefense += 12; },
     (u, ctx) => ctx.elementalEligible && hasElementalArmorEffect(u.abilities)),
-  // PROVENANCE[effectiveDefense:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:197-200 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:520-520 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:520-520
+  // PROVENANCE[effectiveDefense:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:1aa8579dfe4d99fda5935346 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:db54edb1372f3254301b3b9b | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:aaec01b51dfbddfb4fb45271
   resolutionStep('effectiveDefense:bless', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.blessBonus; },
     (u, ctx) => ctx.blessEligible && hasAbil(u.abilities, 'bless')),
-  // PROVENANCE[effectiveDefense:armorPiercing]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:202-205
+  // PROVENANCE[effectiveDefense:armorPiercing]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:d2fe7b44d5e48e4e73b98cde
   resolutionStep('effectiveDefense:armorPiercing', ['effectiveDefense'],
     u => { u.effectiveDefense = Math.floor(u.effectiveDefense / 2); },
     (u, ctx) => ctx.armorPiercing
       && !(ctx.isLightning && hasAbil(u.abilities, 'lightningResist'))),
-  // PROVENANCE[effectiveDefense:immunities]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:207-212
+  // PROVENANCE[effectiveDefense:immunities]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:2f2c6876d3c7d7f5d2533b8b
   resolutionStep('effectiveDefense:immunities', ['effectiveDefense'],
     (u, ctx) => {
       // The six Caster.exe tests are assignments in this order. Righteousness is MoM-only and
@@ -2025,7 +2028,7 @@ const EFFECTIVE_DEFENSE_STEPS = [
       if (hasAbil(u.abilities, 'missileImmunity') && ctx.isMissile) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'righteousness') && ctx.righteousnessEligible) u.effectiveDefense = 100;
     }),
-  // PROVENANCE[effectiveDefense:weaponImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas:214-215 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI:890-890 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI:890-890
+  // PROVENANCE[effectiveDefense:weaponImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:64343218ebddfe0d2454f929 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:8c99d740dfd473b21f906b13 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:4c279bb027bcde85badd90e7
   resolutionStep('effectiveDefense:weaponImmunity', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.weaponImmunityBonus; },
     (u, ctx) => ctx.weaponImmunityEligible),
@@ -2070,14 +2073,14 @@ function hasElementalArmorEffect(abilities) {
     || abilVal(abilities, 'elemArmor', 'none') === 'elementalArmor';
 }
 
-// Bonus amounts to a unit's resistance vs Stoning. CoM RE +4 (Nature only); MoM both grant bonus.
-// PROVENANCE[elemResistBonus]: UNVERIFIED versions=all; gap=combined helper still needs exact DOS and modern implementation gates plus table constants; pointer=Reference docs/DOS reconstructed/combat.c
+// Bonus amounts to a unit's resistance vs Stoning. CoM RE +4 (Nature only); in MoM,
+// Elemental Armor's +10 wins over Resist Elements' +3 when both are present.
+// PROVENANCE[elemResistBonus]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:21:d4c342b397e25bb4de7c2e8e
 // STAT-FORMULA[elemResistBonus]
 function elemResistBonus(unit, version) {
-  const isCoM = version && version.startsWith('com');
-  if (isCoM) return hasResistElementsEffect(unit.abilities) ? 4 : 0;
-  return (hasElementalArmorEffect(unit.abilities) ? 10 : 0)
-    + (hasResistElementsEffect(unit.abilities) ? 3 : 0);
+  if (version === 'com_6.08') return hasResistElementsEffect(unit.abilities) ? 4 : 0;
+  if (hasElementalArmorEffect(unit.abilities)) return 10;
+  return hasResistElementsEffect(unit.abilities) ? 3 : 0;
 }
 
 function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType) {
@@ -2185,7 +2188,7 @@ function computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalt
 //   attacker: attacking unit (provides weapon, unitType, rangedType, thrownType, abilities, generic)
 //   vertigoDefPenalty: precomputed Vertigo defense malus on the target (0 in CoM/CoM2).
 // Returns: { vsMelee, vsRanged, vsThrown, vsGaze, vsImmolation }
-// PROVENANCE[dosEffectiveDefenseProfile]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; gap=the compatibility profile combines several DOS defense-special blocks whose exact ranges remain to be split; pointer=Reference docs/DOS reconstructed/combat.c
+// PROVENANCE[dosEffectiveDefenseProfile]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:36:3e1214d9d09f0f4987d21875 | Reference docs/DOS reconstructed/combat.c@span:40:0ac6fd1c15499db045318a64 | Reference docs/DOS reconstructed/combat.c@span:40:6f729d8ce84e732b58d084c0 | Reference docs/DOS reconstructed/combat.c@span:36:cc02fe00e69095b915718ee5 | Reference docs/DOS reconstructed/combat.c@span:19:a16fdca112f4ee20e4440f08 | Reference docs/DOS reconstructed/combat.c@span:39:92665849702ec840ab52d0c4 | Reference docs/DOS reconstructed/combat.c@span:22:e75af0ad84433181ba29fac1
 // STAT-FORMULA[dosEffectiveDefenseProfile]
 function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const isCoM = version && version.startsWith('com');
@@ -2236,8 +2239,8 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   const elemDefBonus = isCoM
     ? (hasElementalArmorEffect(target.abilities) ? 12 : 0)
       + (hasResistElementsEffect(target.abilities) ? 4 : 0)
-    : (hasElementalArmorEffect(target.abilities) ? 10 : 0)
-      + (hasResistElementsEffect(target.abilities) ? 3 : 0);
+    : hasElementalArmorEffect(target.abilities) ? 10
+      : hasResistElementsEffect(target.abilities) ? 3 : 0;
   const aRangedElem = isCoM
     ? (attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
       || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam')
@@ -2873,7 +2876,7 @@ function gazeKillProbs(self, selfStoningActive, selfDeathActive, other, otherRes
 // Intrinsic Doom affects every conventional attack; Warlord Energy Weaponry is
 // melee-only and Energy Cannon is ranged-only. Gaze has its own explicit Doom
 // strength. Black Sleep's damage→Doom conversion uses full strength.
-// PROVENANCE[doomAttackStrengthModifiers]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=exact Energy Weaponry and Doom halves have not been matched to narrow ApplyAttack ranges; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[doomAttackStrengthModifiers]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:23:b0c6213a0d9c2c2e5d3f54ec | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:34:935a71829ffc2ed26b56056c | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:30:b0c2bd6060999b364362d31d | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:8:ede4f7dc06908e75ecaa412b | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:8:02e6fff5e548271398f1d598 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:9:d4b5090bf579662a98cef0d9 | Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:10:57c912964ac8750b69987067 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:21fdd7af4a50407f32527bbf | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:21fdd7af4a50407f32527bbf
 // STAT-FORMULA[doomAttackStrengthModifiers]
 function applyDoomUAHalving(unit, version) {
   const allDoom = hasAbil(unit.abilities, 'doom');
@@ -2894,8 +2897,8 @@ function applyDoomUAHalving(unit, version) {
   });
 }
 
-// PROVENANCE[normalizeCombatUnit]: UNVERIFIED versions=all; gap=the resolution-boundary record normalization combines multiple engine-specific defaults without one matching implementation range; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
-// STAT-FORMULA[normalizeCombatUnit]
+// Calculator orchestration over individually classified source-authored transforms. M7 owns
+// retiring the remaining transitional transforms; this wrapper is not itself an engine formula.
 function normalizeCombatUnit(unit, version) {
   let normalized = applyBloodLustEffects(unit, version);
   normalized = applyVampirismEffects(normalized, version);
@@ -2917,7 +2920,7 @@ function normalizeCombatUnit(unit, version) {
   return applyWarlordTouchFlagPlacement(withGuardians, version);
 }
 
-// PROVENANCE[pairToHitModifiers]: UNVERIFIED versions=all; gap=side-relative Lucky and visibility To-Hit writes need separate exact implementation ranges; pointer=Reference docs/DOS reconstructed/combat.c
+// PROVENANCE[pairToHitModifiers]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:1ff32cf14236f60c8659c472 | Reference docs/DOS reconstructed/unitcalc.c@span:40:7a990661f197312ddc553d16 | Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/DOS reconstructed/combat.c@span:28:50bbe6203a794ed0191be832 | Reference docs/DOS reconstructed/combat.c@span:12:0485456526aaa82ac1801b1c | Reference docs/DOS reconstructed/combat.c@span:17:c3f9b1d6c7b49267895ba012 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:11:b08aaa1432383a78ae466dd0
 // STAT-FORMULA[pairToHitModifiers]
 function applyPairToHitModifiers(a, b, version) {
   // Lucky v1.31: defender's Lucky penalizes opponent's melee To Hit by -10%.
@@ -2992,7 +2995,7 @@ function remainingUnitState(unit) {
 }
 
 // STAT-FORMULA[resolutionResistanceContext]
-// PROVENANCE[resolutionResistanceContext]: UNVERIFIED versions=all; gap=side-specific effective Resistance assembly combines multiple engine gates/constants without complete per-version ranges; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+// PROVENANCE[resolutionResistanceContext]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:34:f8439a410123d6cce14590d2 | Reference docs/DOS reconstructed/combat.c@span:39:dbb4cbc9b3c3b594fa500562 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:f4adc7d2f65b9cfc509a10b0 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:18:78623ea798a8f277b575ffcd | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:35:575882ffecd40ed0b3c1ac6f | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:40:6e6d5d731c162207114b446a | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:21:ebeef9a1796d93992d2edd16 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:480d9a786f490a899b5cb259 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:0ae9bd687c26c112798c0947
 function buildResistanceContext(a, b, version, isCoM) {
   if (version && version.startsWith('com2')) {
     const needsAgainst = source => ({
@@ -3122,7 +3125,7 @@ function buildDefenseContext(a, b, version, aVertigoDefPenalty, bVertigoDefPenal
 }
 
 // STAT-FORMULA[resolutionToBlockContext]
-// PROVENANCE[resolutionToBlockContext]: UNVERIFIED versions=all; gap=side-specific To-Block transformation combines clamp and battlefield penalties without complete per-version ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// PROVENANCE[resolutionToBlockContext]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:988ef64cd77214c23cb77397 | Reference docs/DOS reconstructed/combat.c@span:22:f1bd863bb2e19d690ca89983 | Reference docs/DOS reconstructed/combat.c@span:17:168e451097f43626bf9c9d57 | Reference docs/DOS reconstructed/combat.c@span:13:ee0ffb0fdc5af4e30c63a285 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:12:08b392da258c1aa5831668e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:34f14a18e857be474ba8f10a | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:8:ede4f7dc06908e75ecaa412b | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:2cb725296f6895640edcf211 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:ce6c3e49e9933d68f63f9666 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:ce6c3e49e9933d68f63f9666
 function buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty) {
   // Eldritch Weapon: -10pp to defender's toBlock on melee, thrown, and missile ranged attacks.
   // Mystic Surge: -10pp to opponent's To Block on all conventional attacks.

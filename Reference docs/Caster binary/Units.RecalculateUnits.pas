@@ -60,6 +60,7 @@ interface
 }
 procedure RecalculateUnits(com: Boolean; tap, tax, tay: Integer); register;
 procedure ApplyLevelBonus(i: Integer); register;
+procedure ApplyMagicWeapons(i: Integer); register;
 procedure RecalculateunitsonCityTile(c: Integer); register;
 procedure BuildAuraTable; register;
 procedure AddtoAuraTable(uid, at, val, ow: Integer); register;
@@ -133,6 +134,8 @@ const
 
   { [exact typed-constant names and values] }
   EncMagic = 1;
+  EncMithril = 2;
+  EncAdamant = 3;
   EncStasisCombat = 9;
   EncConfusion = 12;
   EncResistElements = 16;
@@ -144,6 +147,8 @@ const
   EncMisfortune = 58;
   EncBuried = 60;
   EncFrozen = 61;
+
+  GEKingOfUnderworld = 30;
 
   HADivineBarrier = 4;
   HAGuidingBeacon = 5;
@@ -289,11 +294,16 @@ type
   inferred_HeroAbilityTableT =
     array[1..maxmaxheroability] of HeroAbilityT;
 
-  { [exact shipped field name/bounds; inferred binding and offset]
-    Only the field R5.1c-c reads is located; see the Wizards declaration below
-    for the address evidence behind the offset and both bounds. }
+  { [exact shipped field names/bounds; inferred bindings and offsets]
+    D33 locates GlobalEnchantments and R5.1c-c locates Hero. The executable's
+    indexed displacement uses the address of hypothetical element zero for the
+    declared 1-based Boolean array: +$089AEB + enchantment id. }
   WizardT = record
-    inferred_padding000000_08A7EF: array[$000000..$08A7EF] of Byte;
+    inferred_padding000000_089AEA: array[$000000..$089AEA] of Byte;
+    GlobalEnchantments: array[1..100] of Boolean;
+                                                { element-zero base +$089AEB;
+                                                  [30] at +$089B09 }
+    inferred_padding089B50_08A7EF: array[$089B50..$08A7EF] of Byte;
     Hero: array[1..MaxMaxherotypes] of
             array[1..maxmaxheroability] of Integer;  { +$08A7F0 }
   end;
@@ -353,6 +363,11 @@ var
     are $4965100 apart, which is exactly 40000 * 1924. }
   BaseUnits, Units: array[1..Maxunitslots + 1] of unitT;
 
+  { [exact shipped field name/type; exact runtime-data offset]
+    D33 reads GameDataType.Maxwizards from byte +$03 at
+    $00598E23..$00598E28 and iterates wizard slots 0..Maxwizards. }
+  Maxwizards: Byte;
+
   { [exact shipped field name and bounds; inferred record binding]
     Shares the runtime-data block base $00709188 with Units and BaseUnits. The
     owner index is *not* decremented before its guard, so this array is 0-based
@@ -389,6 +404,10 @@ var
   inferred_AuraTablePtr: ^inferred_AuraTableT absolute $00709BF4;
   inferred_HeroAbilityPtr: ^inferred_HeroAbilityTableT absolute $007086C8;
   inferred_RangedTypesPtr: ^inferred_RangedTypeTableT absolute $0070A144;
+  { [inferred name/type; exact pointer-global address and dereference shape]
+    The relocated slot points at the Integer loaded from
+    [Gameplay] MagicWeaponBonusHit by $00633890..$006338AA. }
+  inferred_MagicWeaponBonusHitPtr: ^Integer absolute $0070A070;
 
   { [inferred names/types; exact pointer-global addresses]
     @Init@LoadLevelBonusINI fills these arrays. The final pointer is named for
@@ -526,6 +545,86 @@ begin
 
   { $00598D7B..$00598D86: common tail and sole return. }
   SetMaxMp(i);
+end;
+
+{ $00598D88..$005992CC
+  [exact control, operands, arithmetic and writes; inferred runtime-pointer name]
+  TD32: @Units@ApplyMagicWeapons. D33.evidence.md owns the complete branch,
+  call, write, arithmetic and coverage inventories. All material-presence and
+  melee-presence tests read BaseUnits; every destination is calculated Units.
+  The sole semantic callee, Ismagicalranged, is reconstructed separately at
+  $005963F4..$00596440. }
+procedure ApplyMagicWeapons(i: Integer); register;
+var
+  { [exact TD32 local names and types] }
+  j: Integer;
+  b: Boolean;
+begin
+  { $00598D91..$00598E1F: exact short-circuit OR. No base material
+    reaches the common epilogue without a semantic state write. }
+  if BaseUnits[i].EnchantmentFlags[EncMagic] or
+     BaseUnits[i].EnchantmentFlags[EncMithril] or
+     BaseUnits[i].EnchantmentFlags[EncAdamant] then
+  begin
+    b := True;                                  { $00598E1F }
+
+    { $00598E23..$00598EA0. MOVZX of Maxwizards makes the generated
+      negative-upper-bound guard dead; the inclusive loop visits configured
+      player slots 0..Maxwizards in ascending order. Own-owner records skip
+      the global read, and the loop does not stop after b becomes False. }
+    for j := 0 to Maxwizards do
+      if (ShortInt(Units[i].owner) <> j) and
+         Wizards[j].GlobalEnchantments[GEKingOfUnderworld] then
+        b := False;                              { $00598E96 }
+
+    { $00598EA2..$00598EA4: the loop/material local is reset before b is
+      tested, matching executable statement order. }
+    j := 0;
+    { $00598EA7..$00598ED9. A rival King of Underworld suppresses only
+      this calculated-layer assignment; it clears neither an existing flag
+      nor any material stat/To-Hit write below. }
+    if b then
+      Units[i].EnchantmentFlags[EncMagic] := True;
+
+    { $00598ED9..$00598F43. Separate tests make Adamantium override
+      Mithril if both malformed base flags coexist. Magic alone keeps 0. }
+    if BaseUnits[i].EnchantmentFlags[EncMithril] then
+      j := 1;
+    if BaseUnits[i].EnchantmentFlags[EncAdamant] then
+      j := 2;
+
+    { $00598F43..$0059905D. Write order is To-Hit, strength, display
+      bonus. The SmallInt assignment emits checked signed conversion:
+      MOVSX, checked add, +$8000, unsigned <=$FFFF guard, -$8000, store. }
+    if BaseUnits[i].attack > 0 then
+    begin
+      Inc(Units[i].hitchancemelee, inferred_MagicWeaponBonusHitPtr^);
+      Inc(Units[i].attack, j);
+      Units[i].attackbonus := Units[i].attackbonus + j;
+    end;
+
+    { $0059905D..$0059910B: Defense has no strength/presence gate. }
+    Inc(Units[i].defense, j);
+    Units[i].defensebonus := Units[i].defensebonus + j;
+
+    { $0059910B..$0059922B. Ismagicalranged returns False for rangedtype
+      zero, so this group also writes strength, display bonus and To-Hit to a
+      unit with no ranged attack. There is no positive-strength gate. }
+    if not Ismagicalranged(Units[i].rangedtype) then
+    begin
+      Inc(Units[i].ranged, j);
+      Units[i].rangedbonus := Units[i].rangedbonus + j;
+      Inc(Units[i].hitchanceranged, inferred_MagicWeaponBonusHitPtr^);
+    end;
+
+    { $0059922B..$005992C8. Current/calculated Thrown gates the group;
+      To-Hit precedes strength and no display-bonus field is written. }
+    if Units[i].thrown > 0 then
+    begin
+      Inc(Units[i].hitchancethrown, inferred_MagicWeaponBonusHitPtr^);
+      Inc(Units[i].thrown, j);
+    end;
+  end;
 end;
 
 procedure RecalculateUnits(com: Boolean; tap, tax, tay: Integer); register;

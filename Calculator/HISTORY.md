@@ -4,8 +4,39 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-12
+
+- **D33 — reconstruct `ApplyMagicWeapons`.** Reconstructed the complete shared CoM2/Warlord
+  `$00598D88..$005992CC` helper: base material gates, other-owner King-of-Underworld suppression,
+  Magic/Mithril/Adamantium tiers 0/1/2, channel-specific strength and runtime To-Hit writes,
+  checked display-bonus arithmetic, both callers and Warlord composition. Durable source and
+  coverage are in [`D33.evidence.md`](../Reference%20docs/Caster%20binary/D33.evidence.md).
+  Calculator behavior is unchanged; the result supplies R9-G1g's modern weapon prerequisite.
+- **R9-G1g existing-evidence pass.** Bound eight direct formulas across their applicable DOS,
+  CoM2 and Warlord builds, and removed the aggregate weapon dispatch plus two calculator-only
+  unit-type projections from the source-formula inventory. Corrected modern Supreme Light so
+  live or base magical ranged, either Life identity, or nonzero mana independently satisfies its
+  compiled eligibility gate. The audit now reports 201 `VERIFIED` and 41 `UNVERIFIED` formulas.
+  The five remaining R9-G1g gaps were isolated to four reconstruction domains; D33 now supplies
+  the modern material domain, while D30–D32 own the remaining Supernatural and Raise Dead scopes.
+- **D29 — locate `ApplyMagicWeapons`.** Corrected the supplied interior anchor to the exact shared
+  CoM2/Warlord extent `$00598D88..$005992CC`, proved its two direct callers and sole normal return,
+  and moved the now-fixed semantic reconstruction into D33. Durable boundary and dependency
+  evidence is in [`D29.evidence.md`](../Reference%20docs/Caster%20binary/D29.evidence.md).
+
 ## 2026-08-11
 
+- **R9-G1i — DOS Wall of Fire strength provenance.** Bound the inherited MoM 1.31 and
+  CP 1.60 Wall of Fire strength to the zero-override spell path and D22's source-shaped
+  Fireball record. Both calculator versions remain at strength 5; behavior is unchanged and
+  the audit now reports 193 `VERIFIED` and 52 `UNVERIFIED` formulas.
+- **R9-G1k — resolution-stat and combat-context provenance.** Bound seven source-authored
+  formulas across all applicable DOS, CoM2 and Warlord versions, and removed the aggregate
+  `normalizeCombatUnit` orchestration marker from the formula inventory without performing M7's
+  helper retirement. Corrected modern Defense to avoid a second Vertigo subtraction and corrected
+  DOS Elemental Armor/Resist Elements overlap rules for Defense and Resistance. Focused
+  regressions cover the corrected behavior; the audit now reports 192 `VERIFIED` and 53
+  `UNVERIFIED` formulas.
 - **D22 — DOS Fireball spell-table record.** Materialized the complete MoM 1.31/CP 1.60
   36-byte Fireball record in `Reference docs/DOS reconstructed/spelldat.c` with byte coverage in
   `D22.evidence.md`. Both builds load unsigned strength 5 from `+0x20`; the sole record difference

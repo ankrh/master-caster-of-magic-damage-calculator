@@ -6,6 +6,10 @@
 // resolutionStep(). Every literal formula ID at those construction sites must have exactly one
 // adjacent PROVENANCE comment. Direct formulas which cannot use one of those constructors are
 // declared with STAT-FORMULA and are checked by the same machinery.
+//
+// Reviewed source excerpts may use `path@span:<line-count>:<sha256-prefix>`. The digest locates
+// the exact 1-40-line excerpt wherever it currently lives, so unrelated insertions do not move
+// the citation while an edit inside the reviewed excerpt still invalidates its manifest binding.
 
 const fs = require('fs');
 const path = require('path');
@@ -33,10 +37,11 @@ const forbiddenSourceSuffixes = [
 ];
 const provenancePattern = /^\s*\/\/\s*PROVENANCE\[([^\]]+)\]:\s*(.+?)\s*$/;
 const directFormulaPattern = /STAT-FORMULA\[([^\]]+)\]/g;
+const stableSpanPrefixLength = 24;
+const sourceSnapshotCache = new Map();
 const directFunctionIds = new Map([
   ['clampPct', 'clampPct'],
   ['woundedTopFigHP', 'woundedTopFigureHp'],
-  ['weaponBonus', 'weaponBonusFunction'],
   ['getLevelBonuses', 'levelBonusDispatch'],
   ['supremeLightActiveForUnit', 'supremeLightEligibility'],
   ['survivalInstinctActiveForUnit', 'survivalInstinctEligibility'],
@@ -46,8 +51,6 @@ const directFunctionIds = new Map([
   ['misleadActiveForUnit', 'misleadEligibility'],
   ['destinyActiveForUnit', 'destinyEligibility'],
   ['determineEffectiveUnitType', 'legacyUnitTypeConversions'],
-  ['realmOfUnitType', 'realmOfUnitType'],
-  ['isNormalUnitType', 'isNormalUnitType'],
   ['supernaturalMinDamageForHits', 'supernaturalMinimumDamage'],
   ['distancePenalty', 'distancePenalty'],
   ['applyRage', 'rageEffectiveAttack'],
@@ -74,7 +77,6 @@ const directFunctionIds = new Map([
   ['elemResistBonus', 'elemResistBonus'],
   ['computeDefenseProfile', 'dosEffectiveDefenseProfile'],
   ['applyDoomUAHalving', 'doomAttackStrengthModifiers'],
-  ['normalizeCombatUnit', 'normalizeCombatUnit'],
   ['applyPairToHitModifiers', 'pairToHitModifiers'],
   ['buildResistanceContext', 'resolutionResistanceContext'],
   ['buildToBlockContext', 'resolutionToBlockContext'],
@@ -90,6 +92,96 @@ function normalizeRepoPath(value) {
 
 function hasImplementationWrite(excerpt) {
   return /:=|\+=|-=|\*=|\/=|\|=|&=|\^=|\b[A-Za-z_]\w*\s*=(?!=)|(?:->|\.)[A-Za-z_]\w*\s*(?:=(?!=)|\+\+|--)|\]\s*(?:\+\+|--)|\b(?:Inc|Dec|SETSTAT|SetStat|SetUnitStat)\s*\(|\boverlay_0388_0039\s*\(/.test(excerpt);
+}
+
+function excerptDigest(excerpt) {
+  return crypto.createHash('sha256').update(excerpt).digest('hex');
+}
+
+function readSourceSnapshot(absolute) {
+  const text = fs.readFileSync(absolute, 'utf8');
+  const cached = sourceSnapshotCache.get(absolute);
+  if (cached && cached.text === text) return cached;
+  const snapshot = { text, lines: text.split(/\r?\n/), spanIndexes: new Map() };
+  sourceSnapshotCache.set(absolute, snapshot);
+  return snapshot;
+}
+
+function stableSpanIndex(snapshot, lineCount) {
+  if (snapshot.spanIndexes.has(lineCount)) return snapshot.spanIndexes.get(lineCount);
+  const index = new Map();
+  for (let offset = 0; offset + lineCount <= snapshot.lines.length; offset++) {
+    const excerpt = snapshot.lines.slice(offset, offset + lineCount).join('\n');
+    const prefix = excerptDigest(excerpt).slice(0, stableSpanPrefixLength);
+    if (!index.has(prefix)) index.set(prefix, []);
+    index.get(prefix).push({ start: offset + 1, end: offset + lineCount, excerpt });
+  }
+  snapshot.spanIndexes.set(lineCount, index);
+  return index;
+}
+
+function parseSourceCitation(citation, root = repoRoot) {
+  const trimmed = citation.trim();
+  const isTable = trimmed.startsWith('TABLE=');
+  const value = isTable ? trimmed.slice('TABLE='.length) : trimmed;
+  const stableMatch = /^(.*)@span:(\d+):([0-9a-f]{24})$/.exec(value);
+  const lineMatch = /^(.*):(\d+)-(\d+)$/.exec(value);
+  if (!stableMatch && !lineMatch) throw new Error(`has malformed citation "${citation}"`);
+
+  const sourcePath = normalizeRepoPath((stableMatch || lineMatch)[1]);
+  const absolute = path.join(root, ...sourcePath.split('/'));
+  if (!fs.existsSync(absolute)) throw new Error(`source does not exist: ${sourcePath}`);
+  const snapshot = readSourceSnapshot(absolute);
+  const sourceLines = snapshot.lines;
+
+  if (stableMatch) {
+    const lineCount = Number(stableMatch[2]);
+    const digestPrefix = stableMatch[3];
+    if (lineCount < 1 || lineCount > 40) {
+      throw new Error(`stable span must contain 1-40 lines: ${citation}`);
+    }
+    const matches = stableSpanIndex(snapshot, lineCount).get(digestPrefix) || [];
+    if (matches.length === 0) throw new Error(`stable span was not found: ${citation}`);
+    if (matches.length > 1) throw new Error(`stable span is ambiguous (${matches.length} matches): ${citation}`);
+    return { isTable, sourcePath, ...matches[0] };
+  }
+
+  const start = Number(lineMatch[2]);
+  const end = Number(lineMatch[3]);
+  if (start < 1 || end < start || end - start > 39) {
+    throw new Error(`citation must be a valid narrow range (max 40 lines): ${citation}`);
+  }
+  if (end > sourceLines.length) {
+    throw new Error(`source range exceeds ${sourcePath} (${sourceLines.length} lines)`);
+  }
+  return {
+    isTable, sourcePath, start, end,
+    excerpt: sourceLines.slice(start - 1, end).join('\n'),
+  };
+}
+
+function makeStableSpanCitation(citation, root = repoRoot) {
+  const resolved = parseSourceCitation(citation, root);
+  const prefix = resolved.isTable ? 'TABLE=' : '';
+  const absolute = path.join(root, ...resolved.sourcePath.split('/'));
+  const snapshot = readSourceSnapshot(absolute);
+  let start = resolved.start;
+  let end = resolved.end;
+  while (end - start < 40) {
+    const excerpt = snapshot.lines.slice(start - 1, end).join('\n');
+    const lineCount = end - start + 1;
+    const digestPrefix = excerptDigest(excerpt).slice(0, stableSpanPrefixLength);
+    const matches = stableSpanIndex(snapshot, lineCount).get(digestPrefix) || [];
+    if (matches.length === 1) {
+      return `${prefix}${resolved.sourcePath}@span:${lineCount}:${digestPrefix}`;
+    }
+    // Identical one-line assignments occur in some INI tables. Expand equally around the
+    // reviewed range until its local section/record context makes the selector unique.
+    if (start > 1) start--;
+    if (end < snapshot.lines.length && end - start < 39) end++;
+    if (start === 1 && end === snapshot.lines.length) break;
+  }
+  throw new Error(`cannot make a unique stable span (max 40 lines): ${citation}`);
 }
 
 function lineNumberAt(text, offset) {
@@ -166,30 +258,19 @@ function readProvenanceComments(file, lines) {
 }
 
 function validateSourceCitation(comment, citation) {
-  const trimmed = citation.trim();
-  const isTable = trimmed.startsWith('TABLE=');
-  const value = isTable ? trimmed.slice('TABLE='.length) : trimmed;
-  const match = /^([^:]+(?:\/[^:]+)*):(\d+)-(\d+)$/.exec(value);
-  if (!match) fail(`${comment.file}:${comment.line} has malformed citation "${citation}"`);
-  const sourcePath = normalizeRepoPath(match[1]);
-  const start = Number(match[2]);
-  const end = Number(match[3]);
+  let resolved;
+  try {
+    resolved = parseSourceCitation(citation);
+  } catch (error) {
+    fail(`${comment.file}:${comment.line} ${error.message}`);
+  }
+  const { isTable, sourcePath, excerpt } = resolved;
   if (!allowedImplementationRoots.some(root => sourcePath.startsWith(root))) {
     fail(`${comment.file}:${comment.line} cites non-implementation source ${sourcePath}`);
   }
   if (forbiddenSourceSuffixes.some(suffix => sourcePath.toLowerCase().endsWith(suffix))) {
     fail(`${comment.file}:${comment.line} cites prose instead of implementation: ${sourcePath}`);
   }
-  if (start < 1 || end < start || end - start > 39) {
-    fail(`${comment.file}:${comment.line} citation must be a valid narrow range (max 40 lines): ${citation}`);
-  }
-  const absolute = path.join(repoRoot, ...sourcePath.split('/'));
-  if (!fs.existsSync(absolute)) fail(`${comment.file}:${comment.line} source does not exist: ${sourcePath}`);
-  const sourceLines = fs.readFileSync(absolute, 'utf8').split(/\r?\n/);
-  if (end > sourceLines.length) {
-    fail(`${comment.file}:${comment.line} source range exceeds ${sourcePath} (${sourceLines.length} lines)`);
-  }
-  const excerpt = sourceLines.slice(start - 1, end).join('\n');
   // A strong implementation citation must carry the eligibility/control-flow gate and the
   // resulting write/arithmetic in the cited range. Runtime-table citations are supplemental
   // and are identified explicitly with TABLE=, so they are checked for a concrete assignment.
@@ -231,12 +312,8 @@ function validateUnverifiedComment(comment) {
 
 function computeVerifiedBinding(versions, citations, root = repoRoot) {
   const sourceDigests = citations.map(citation => {
-    const value = citation.startsWith('TABLE=') ? citation.slice(6) : citation;
-    const match = /^(.*):(\d+)-(\d+)$/.exec(value);
-    if (!match) throw new Error(`malformed binding citation ${citation}`);
-    const sourceLines = fs.readFileSync(path.join(root, ...match[1].split('/')), 'utf8').split(/\r?\n/);
-    const excerpt = sourceLines.slice(Number(match[2]) - 1, Number(match[3])).join('\n');
-    return crypto.createHash('sha256').update(excerpt).digest('hex');
+    const resolved = parseSourceCitation(citation, root);
+    return excerptDigest(resolved.excerpt);
   });
   return crypto.createHash('sha256').update(JSON.stringify({ versions, citations, sourceDigests })).digest('hex');
 }
@@ -326,5 +403,5 @@ if (require.main === module) {
 
 module.exports = {
   computeVerifiedBinding, discoverFormulaSites, hasImplementationWrite,
-  readProvenanceComments, runAudit,
+  makeStableSpanCitation, parseSourceCitation, readProvenanceComments, runAudit,
 };

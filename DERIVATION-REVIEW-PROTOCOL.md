@@ -106,6 +106,16 @@ On the Windows project host, `claude` may not be on `PATH`. The cached native la
 `%LOCALAPPDATA%\npm-cache\_npx\<cache-key>\node_modules\@anthropic-ai\claude-code\bin\claude.exe`;
 the cache key can change, so resolve the newest launcher rather than hard-coding it:
 
+Claude's project trust lookup is path-string-sensitive on this host, and current Claude Code
+normalizes Windows project keys to forward slashes before consulting `%USERPROFILE%\.claude.json`.
+The selectable key for this checkout is therefore exactly `C:/CoM2-damage-calculator`; a trusted
+backslash entry such as `C:\CoM2-damage-calculator` is not selected by the current launcher. Verify
+that this normalized entry has `hasTrustDialogAccepted: true` before invocation; another spelling
+does not satisfy the check. A non-interactive trust warning may merely say that local
+permission entries were ignored while the model process continues: if `exec_command` returns a
+live session ID, poll that exact process to completion before declaring preflight failure or
+starting another session.
+
 ```powershell
 $claudeExe = Get-ChildItem -LiteralPath "$env:LOCALAPPDATA\npm-cache\_npx" `
     -Filter claude.exe -File -Recurse |

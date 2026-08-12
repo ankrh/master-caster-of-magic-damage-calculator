@@ -1,7 +1,7 @@
 # `Caster.exe`
 
 Everything read out of the modern engine's executable, which covers **both CoM2 and Warlord**
-(Warlord ships no executable of its own).
+(Warlord bundles the same `Caster.exe` and ships no Warlord-specific engine executable).
 
 | File | Owns |
 |---|---|
@@ -160,6 +160,8 @@ review gates exist only in `Calculator/BACKLOG.md`.
 | R5.1a | [`Units.RecalculateUnits.pas`](./Units.RecalculateUnits.pas); [`region-a evidence`](./Units.RecalculateUnits.R5.1a.evidence.md); [`late-hook evidence`](./Units.RecalculateUnits.R5.1a-late-hook.evidence.md); [`Castercore wrapper evidence`](./Castercore.RecalculateUnits.evidence.md); [`city-tile wrapper evidence`](./Units.RecalculateunitsonCityTile.evidence.md) | Audit dated 2026-08-02: signature/ABI, region `a`, both script-hook boundaries, an address-indexed seam for regions `c` and `e`, plus the CasterCore and city-tile wrappers; all four extents carry current-gate ledgers, branch/call/write evidence and six zero counts |
 | R5.1b | same file, region `c`; [`Units.RecalculateUnits.R5.1b.evidence.md`](./Units.RecalculateUnits.R5.1b.evidence.md) | Merged 2026-08-02 from both derivations; reciprocal review recorded no surviving disagreement |
 | D21 | same file, `@Units@ApplyLevelBonus`; [`D21.evidence.md`](./D21.evidence.md) | Complete `$005981F8..$00598D86` helper, current CoM2/Warlord table bindings and values, and exhaustive no-gaze-write result; merged 2026-08-10 from independent Claude/Codex derivations and reciprocal review with no surviving disagreement |
+| D29 | same file, `@Units@ApplyMagicWeapons`; [`D29.evidence.md`](./D29.evidence.md) | Locate-and-bound result `$00598D88..$005992CC`, including exact adjacency, two direct callers, reachable exits, shared CoM2/Warlord build proof and the frontier handed to D33 |
+| D33 | same file, `@Units@ApplyMagicWeapons`; [`D33.evidence.md`](./D33.evidence.md) | Complete `$00598D88..$005992CC` material gates, rival-global suppression scan, tiered stat/To-Hit writes, runtime INI binding, checked arithmetic and shared-build ledgers; dual Sol High derivation plus Claude Opus 5 High review |
 | R5.1c | same file, region `e`; and the named helpers | R5.1c-a–R5.1c-c durable source and evidence artifact group |
 | R5.1c-a | same file; [`Units.RecalculateUnits.R5.1c-a.evidence.md`](./Units.RecalculateUnits.R5.1c-a.evidence.md) | Final first-pass clamps, aura-pass preparation/dispatch, `@Map@unitonoverlandtile`, and `@Units@Ismagicalranged`; dual derivation and reciprocal review provenance are recorded in the evidence |
 | R5.1c-b | same file; [`Units.RecalculateUnits.R5.1c-b.evidence.md`](./Units.RecalculateUnits.R5.1c-b.evidence.md) | Supreme Light, MP/movement reconciliation, DebugInvis, deferred-damage reconciliation, `@Units@Immobile`, `@Units@TotalHpLeft`, `@Combat@Iscombat`, `@Units@HpPerFigure`, and `@Game@Min`; reciprocal review on 2026-08-03 recorded no semantic misreading and five reproducibility/naming fixes |

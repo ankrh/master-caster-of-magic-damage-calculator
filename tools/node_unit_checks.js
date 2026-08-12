@@ -1998,6 +1998,13 @@ function runResolutionStepChecks(ctx) {
   }), 6,
   'City Walls enters EffectiveDefense before Armor Piercing: floor((9 + 3) / 2)');
 
+  assertEqual(ctx.effectiveDefense({
+    def: 4,
+    unitType: 'normal',
+    abilities: {},
+  }, 'com2_1.05.11', { vertigoDefPenalty: 1 }), 4,
+  'Modern EffectiveDefense copies finished Defense without an additional Vertigo subtraction');
+
   const illusionDef = ctx.effectiveDefense({
     def: 9,
     unitType: 'normal',
@@ -2048,6 +2055,78 @@ function runResolutionStepChecks(ctx) {
     false);
   assertEqual(legacyResistance.bResPoison, 30,
     'Legacy Charmed adds 30 Resistance to realm-less rolls for heroes');
+
+  const bothElemental = {
+    res: 0,
+    unitType: 'normal',
+    abilities: { elementalArmor: true, resistElements: true },
+  };
+  const plainResistanceSource = { res: 0, unitType: 'normal', abilities: {} };
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00']) {
+    const context = ctx.buildResistanceContext(
+      plainResistanceSource, bothElemental, version, false);
+    assertEqual(context.bResStoning, 10,
+      `${version}: Elemental Armor supersedes Resist Elements on the resistance path`);
+  }
+  const comResistance = ctx.buildResistanceContext(
+    plainResistanceSource, bothElemental, 'com_6.08', true);
+  assertEqual(comResistance.bResStoning, 4,
+    'CoM 1 resistance ignores Elemental Armor and retains Resist Elements +4');
+
+  const elementalDefenseTarget = {
+    def: 4,
+    unitType: 'normal',
+    abilities: { elementalArmor: true, resistElements: true },
+  };
+  const natureRangedAttacker = {
+    unitType: 'normal',
+    weapon: 'normal',
+    rangedType: 'magic_n',
+    thrownType: 'none',
+    abilities: {},
+  };
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00']) {
+    assertEqual(ctx.computeDefenseProfile(
+      elementalDefenseTarget, natureRangedAttacker, version, 0).vsRanged, 14,
+    `${version}: Elemental Armor supersedes Resist Elements on the defense path`);
+  }
+  assertEqual(ctx.computeDefenseProfile(
+    elementalDefenseTarget, natureRangedAttacker, 'com_6.08', 0).vsRanged, 20,
+  'CoM 1 independently stacks Elemental Armor +12 and Resist Elements +4 on defense');
+
+  const energyDoom = ctx.applyDoomUAHalving({
+    atk: 5,
+    rtb: 7,
+    abilities: { energyWeaponry: true, energyCannon: true },
+    modernAttacks: {
+      ranged: { strength: 7 },
+      thrown: { strength: 5 },
+      fireBreath: { strength: 3 },
+    },
+  }, 'com2_warlord_1.5.12.7');
+  assertEqual(energyDoom.atk, 2,
+    'Warlord Energy Weaponry applies configured 50% Doom damage to odd melee strength');
+  assertEqual(energyDoom.rtb, 3,
+    'Warlord Energy Cannon applies configured 50% Doom damage to odd ranged projection');
+  assertEqual(energyDoom.modernAttacks.ranged.strength, 3,
+    'Warlord Energy Cannon applies configured 50% Doom damage to independent Ranged');
+  assertEqual(energyDoom.modernAttacks.thrown.strength, 5,
+    'Warlord Energy Weaponry does not convert independent Thrown to Doom');
+  assertEqual(energyDoom.modernAttacks.fireBreath.strength, 3,
+    'Warlord Energy Weaponry does not convert independent Breath to Doom');
+
+  const paired = ctx.applyPairToHitModifiers(
+    { toHitMelee: 0.5, toHitRtb: 0.5, abilities: { prayer: true } },
+    { toHitMelee: 0.5, toHitRtb: 0.5, abilities: { lucky: true, invisibility: true } },
+    'mom_1.31');
+  assertClose(paired.a.toHitMelee, 0.3,
+    'MoM 1.31 combines defender Lucky and Invisibility melee To-Hit penalties');
+  assertClose(paired.a.toHitRtb, 0.4,
+    'MoM 1.31 Invisibility applies to the shared secondary-attack To-Hit channel');
+  assertClose(paired.b.toHitMelee, 0.4,
+    'MoM 1.31 opposing Prayer applies the defender To-Block melee quirk');
+  assertEqual(paired.aCanSeeB, false,
+    'An attacker without Illusion Immunity cannot target an Invisible defender at range');
 }
 
 function runModernWeaponImmunityMappingChecks(ctx) {

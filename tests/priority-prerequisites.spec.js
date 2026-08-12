@@ -67,6 +67,42 @@ test('F52 reproduces CoM1 Supreme Light eligibility and signed ordered writes', 
   expectNoConsoleErrors(errors);
 });
 
+test('R9-G1g preserves every compiled-modern Supreme Light eligibility alternative', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const report = await page.evaluate(() => {
+    const eligible = version => ({
+      liveMagical: supremeLightActiveForUnit({ supremeLight: true }, 'normal', version,
+        { liveRangedType: 'magic_c', baseRangedType: 'missile' }),
+      baseMagical: supremeLightActiveForUnit({ supremeLight: true }, 'normal', version,
+        { liveRangedType: 'missile', baseRangedType: 'magic_s' }),
+      fantasticLife: supremeLightActiveForUnit({ supremeLight: true }, 'fantastic_life', version),
+      normalLife: supremeLightActiveForUnit({ supremeLight: true }, 'normal_life', version),
+      mana: supremeLightActiveForUnit({ supremeLight: true, caster: true }, 'normal', version),
+      focusOnly: supremeLightActiveForUnit({ supremeLight: true, focusMagic: true }, 'normal', version),
+      none: supremeLightActiveForUnit({ supremeLight: true }, 'normal', version,
+        { liveRangedType: 'missile', baseRangedType: 'missile' }),
+    });
+    return {
+      com2: eligible('com2_1.05.11'),
+      warlord: eligible('com2_warlord_1.5.12.7'),
+      warlordBeam: {
+        live: supremeLightActiveForUnit({ supremeLight: true }, 'normal',
+          'com2_warlord_1.5.12.7', { liveRangedType: 'beam', baseRangedType: 'missile' }),
+        base: supremeLightActiveForUnit({ supremeLight: true }, 'normal',
+          'com2_warlord_1.5.12.7', { liveRangedType: 'missile', baseRangedType: 'beam' }),
+      },
+    };
+  });
+  const expected = {
+    liveMagical: true, baseMagical: true, fantasticLife: true,
+    normalLife: true, mana: true, focusOnly: false, none: false,
+  };
+  expect(report.com2).toEqual(expected);
+  expect(report.warlord).toEqual(expected);
+  expect(report.warlordBeam).toEqual({ live: true, base: true });
+  expectNoConsoleErrors(errors);
+});
+
 test('F54/F55 keep base-CoM2 summon identities out of Warlord', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {

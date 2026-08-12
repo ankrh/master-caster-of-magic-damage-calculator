@@ -195,7 +195,9 @@ Gaze, Life Steal), and none at all against Poison, which is dispatched realm-les
 In the DOS builds, Immolation and Wall of Fire both resolve through the Fireball
 spell-damage path and therefore share its defence specials. Large Shield applies to both:
 +2 defence in MoM 1.31/CP 1.60 and +3 in CoM 1. Elemental Armor / Resist Elements also
-apply: +10/+3 in the MoM builds and +12/+4 in CoM 1. The modern Caster engine keeps the
+apply: +10/+3 in the MoM builds and +12/+4 in CoM 1. The MoM checks are exclusive when
+both enchantments are present—Elemental Armor's +10 wins and Resist Elements' +3 is skipped—
+while CoM 1 performs two independent checks and therefore stacks +12 and +4. The modern Caster engine keeps the
 calculator's narrower elemental scope: CoM2 and Warlord apply the +12/+4 defence to
 magical ranged and breath attacks, but not to Immolation or Wall of Fire.
 
@@ -488,7 +490,10 @@ Immunity and the three realm bonuses do not. Charmed is roll-only and never chan
 displayed stat.
 
 The DOS engines retain their additive resistance path: in MoM 1.31, CP 1.60, and CoM 1,
-Charmed adds 30 to a hero's Resistance for rolls, including realm-less Poison.
+Charmed adds 30 to a hero's Resistance for rolls, including realm-less Poison. Against
+Chaos or Nature in the MoM builds, Elemental Armor adds 10 and suppresses the otherwise
+applicable Resist Elements +3 when both are present. CoM 1 instead ignores Elemental Armor
+on resistance and applies Resist Elements +4 only against Nature.
 
 `EffectiveDefense` is keyed by the incoming attack flags and runs in this order:
 
@@ -597,9 +602,11 @@ loses 2; this is not equivalent to flooring 90% of Defense.
 
 CoM 1 Supreme Light's side and active-status gates are followed by five alternative unit gates:
 live magical ranged type, Life race, nonzero mana, persistent Focus Magic, or a magical base
-ranged type. It then adds 2 melee unconditionally, adds 2 shared ranged only when positive, and
-adds signed live `Resistance / 3` to Defense. The current shared eligibility helper is narrower;
-F52 owns the correction. Its additional `Move_Flags 0x0100` write remains unidentified under Q20.
+ranged type. Modern CoM2/Warlord retains those alternatives except the separate persistent Focus
+Magic test: its live/base ranged checks already observe the recalculated record. CoM 1 then adds 2
+melee unconditionally, adds 2 shared ranged only when positive, and adds signed live
+`Resistance / 3` to Defense. Its additional `Move_Flags 0x0100` write remains unidentified under
+Q20.
 
 Realm Wards map city-enchantment slots 9–13 to Nature/Sorcery/Chaos/Life/Death and subtract
 20% To Hit, 3 Defense and 3 Resistance from a matching Fantastic unit. Q19 records the shipped
