@@ -60,6 +60,9 @@ async function setValue(page, id, value) {
     else el.value = value;
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
+    // A first visit to a version builds its default-state cache by temporarily resetting and
+    // restoring the DOM. Do that synchronously here so the delayed save hook cannot race tests.
+    if (id === 'gameVersion' && typeof collectState === 'function') collectState();
   }, [id, value]);
 }
 

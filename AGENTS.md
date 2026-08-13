@@ -42,6 +42,6 @@ When editing text that contains non-ASCII characters such as `→`, prefer `appl
 Before implementing any `Calculator/BACKLOG.md` item, performing binary reconstruction, or doing
 cross-agent review work, read `DERIVATION-REVIEW-PROTOCOL.md` in full. Binary reconstruction always
 uses method 4: two independent Codex GPT-5.6 Sol High derivations, main-agent merge, then one Claude
-Opus 5 High review. An implementation uses the dual-implementation or
+Opus 5 Medium review. An implementation uses the dual-implementation or
 single-implementation-plus-review method only when the user requests it or the backlog item already
 records that preference. Do not load the protocol for other ordinary tasks.

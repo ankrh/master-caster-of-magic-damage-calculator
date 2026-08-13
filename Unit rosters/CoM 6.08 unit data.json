@@ -3803,7 +3803,8 @@
     "spec_att_attrib": 7,
     "abilities": [
       "Fantastic",
-      "Regeneration"
+      "Regeneration",
+      "Supernatural"
     ],
     "cost": 300,
     "upkeep": 11
@@ -3829,7 +3830,8 @@
     "thrown_breath": 35,
     "abilities": [
       "Flight",
-      "Fantastic"
+      "Fantastic",
+      "Supernatural"
     ],
     "cost": 550,
     "upkeep": 15
@@ -4079,7 +4081,8 @@
       "Poison Immunity",
       "Armor Piercing",
       "First Strike",
-      "Life Steal"
+      "Life Steal",
+      "Supernatural"
     ],
     "cost": 550,
     "upkeep": 8
@@ -4115,7 +4118,8 @@
       "Missile Immunity",
       "Illusion Immunity",
       "Death Immunity",
-      "Life Steal"
+      "Life Steal",
+      "Supernatural"
     ],
     "cost": 610,
     "upkeep": 18
@@ -4256,7 +4260,8 @@
       "Healer",
       "Wind Walking",
       "Negate First Strike",
-      "Illusion Immunity"
+      "Illusion Immunity",
+      "Supernatural"
     ],
     "cost": 610,
     "upkeep": 18
@@ -4443,7 +4448,8 @@
       "Stoning Immunity",
       "Illusion Immunity",
       "Poison Immunity",
-      "First Strike"
+      "First Strike",
+      "Supernatural"
     ],
     "cost": 610,
     "upkeep": 12
@@ -4469,7 +4475,8 @@
     "ranged_type": "Gaze(Stoning)",
     "spec_att_attrib": 3,
     "abilities": [
-      "Fantastic"
+      "Fantastic",
+      "Supernatural"
     ],
     "cost": 450,
     "upkeep": 8
@@ -4521,7 +4528,8 @@
     "abilities": [
       "Caster 40 MP",
       "Fantastic",
-      "Regeneration"
+      "Regeneration",
+      "Supernatural"
     ],
     "cost": 450,
     "upkeep": 12
@@ -4547,7 +4555,8 @@
     "abilities": [
       "Fantastic",
       "Armor Piercing",
-      "Poison Touch"
+      "Poison Touch",
+      "Supernatural"
     ],
     "cost": 610,
     "upkeep": 15
@@ -4716,7 +4725,8 @@
       "Caster 20 MP",
       "Caster 40 MP",
       "Fantastic",
-      "Wind Walking"
+      "Wind Walking",
+      "Supernatural"
     ],
     "cost": 450,
     "upkeep": 9
@@ -4744,7 +4754,8 @@
       "Flight",
       "Fantastic",
       "Illusion Immunity",
-      "Magic Immunity"
+      "Magic Immunity",
+      "Supernatural"
     ],
     "cost": 611,
     "upkeep": 15

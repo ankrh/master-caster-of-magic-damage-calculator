@@ -1393,14 +1393,12 @@ cases above prove that this is not only a trace-display concern. Rust is one con
 violation: its melee and ranged writes are emitted by separate steps with other work allowed
 between them, although `UnitCalc.CAS:492-504` is one effect block.
 
-### To-Hit/To-Block writes remain outside the derivation sequence
+### To-Hit/To-Block writes use the derivation sequence
 
-The record already carries `toHit` and `toBlk`, but a second calculation after `runStatSteps`
-still combines level, weapon, Holy Weapon, Ballistics, Xenoveterinary, Radio, True Sight,
-Hurricane, Vertigo, Plague, Great Unbinding and other modifiers. Region `e` therefore cannot
-perform its real two-stage normalization over the same ordered record: common To Hit must be
-clamped first, then each common-plus-channel sum. This is the broader structural cause behind
-backlog F5, not only a final `clampPct` formula.
+The calculator's ordered record now carries the common and channel-specific To Hit writes plus
+To Block through the source-shaped steps. Modern region `e` first clamps common To Hit, then
+normalizes each common-plus-channel sum. Modern To Defend remains signed in the record because
+the engine does not clamp it here; combat resolution naturally bounds its effective probability.
 
 ### Attack-channel overreach
 

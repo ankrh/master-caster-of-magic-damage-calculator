@@ -133,6 +133,15 @@ function runIdentityChecks(ctx) {
   assert(momIdentity.version !== cpIdentity.version,
     'The shared MoM source template is scoped independently to each active version');
 
+  const comData = evalInContext(ctx, 'COM_UNITS_DATA');
+  const comSupernaturalUnits = Object.values(comData)
+    .filter(unit => (unit.abilities || []).includes('Supernatural'))
+    .map(unit => unit.name);
+  assertEqual(JSON.stringify(comSupernaturalUnits), JSON.stringify([
+    'Hydra', 'Great Drake', 'Death Knights', 'Demon Lord', 'Arch Angel',
+    'Colossus', 'Gorgons', 'Behemoth', 'Great Wyrm', 'Djinn', 'Sky Drake',
+  ]), 'CoM roster imports every executable $2000 Supernatural carrier');
+
   const customBaseIdentity = ctx.createCustomUnitIdentity('com2_1.05.11', {
     isHero: true,
     baseRace: 'Life',
@@ -191,7 +200,7 @@ function runIdentityChecks(ctx) {
     ['Chaos', 'fantastic_chaos'],
     ['Death', 'fantastic_death'],
     ['No Heal', 'fantastic_unaligned'],
-    ['Life', 'fantastic_life'],
+    ['No Heal', 'fantastic_unaligned'],
   ];
   orderedRealmAbilities.forEach((abilities, index) => {
     const unit = ctx.deriveUnitStats(baseUnitInput({
@@ -234,6 +243,48 @@ function runIdentityChecks(ctx) {
   }));
   assertEqual(invalidCallToArms.identity.race, 'High Men', 'Call to Arms ignores display names');
   assertEqual(invalidCallToArms.identityTrace.length, 0, 'Invalid Call to Arms is trace-free');
+
+  const com1SummonedOther = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08', abilities: { combatSummoned: true },
+    identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 150,
+      baseRace: 'Troll', baseFantastic: false }),
+  }));
+  assertEqual(com1SummonedOther.identity.race, 'Troll',
+    'CoM1 generic combat summons retain their loaded race');
+  assertEqual(com1SummonedOther.identity.fantastic, true,
+    'CoM1 generic combat summons become live Fantastic');
+
+  const com1ConstructCatapult = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08', abilities: { combatSummoned: true }, rtb: 9, rtbType: 'boulder',
+    identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 37,
+      baseRace: 'Special', baseFantastic: false, specialUnit: 'none' }),
+  }));
+  assertEqual(com1ConstructCatapult.identity.race, 'Nature',
+    'CoM1 Construct Catapult recognizes source type 37 without a duplicated special-unit token');
+  assertEqual(com1ConstructCatapult.identity.fantastic, true,
+    'CoM1 Construct Catapult becomes live Fantastic');
+  assertEqual(com1ConstructCatapult.weapon, 'magic',
+    'CoM1 Construct Catapult source type 37 receives Magic Weapons');
+
+  const com1SummonedCentaurs = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08', abilities: { combatSummoned: true },
+    identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 54,
+      baseRace: 'Beastmen', baseFantastic: false }),
+  }));
+  assertEqual(com1SummonedCentaurs.identity.race, 'Nature',
+    'CoM1 combat-summoned Centaurs become live Nature');
+  assertEqual(com1SummonedCentaurs.identity.fantastic, true,
+    'CoM1 combat-summoned Centaurs become live Fantastic');
+
+  const com1SummonedPaladins = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com_6.08', abilities: { combatSummoned: true },
+    identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 113,
+      baseRace: 'High Men', baseFantastic: false }),
+  }));
+  assertEqual(com1SummonedPaladins.identity.race, 'Life',
+    'CoM1 combat-summoned Paladins become live Life');
+  assertEqual(com1SummonedPaladins.identity.fantastic, true,
+    'CoM1 combat-summoned Paladins become live Fantastic');
 
   const zombies = ctx.deriveUnitStats(baseUnitInput({
     version: 'com_6.08',
@@ -498,6 +549,190 @@ function runDeriveUnitStatsChecks(ctx) {
   }));
   assertEqual(fieryFuryUsesBaseType.atk, 4,
     'Fiery Fury follows BASEFANTASTIC after Chaos Channels changes live identity');
+
+  const ccMomThrownAtCeiling = ctx.deriveUnitStats(baseUnitInput({
+    version: 'mom_1.31', rtb: 3, rtbType: 'thrown',
+    abilities: { ccFireBreath: true },
+  }));
+  assertEqual(ccMomThrownAtCeiling.rtb, 2,
+    'MoM 1.31 Chaos Channels replaces a strength-3 Thrown shared slot with Fire Breath 2');
+  assertEqual(ccMomThrownAtCeiling.thrownType, 'fire',
+    'MoM 1.31 admits the Fire Breath mutation at its signed ranged ceiling');
+  const ccMomTrace = ccMomThrownAtCeiling.statTrace
+    .find(step => step.id === 'chaosChannels:fireBreath');
+  assertEqual(ccMomTrace.changes.rtb.from, 3,
+    'MoM 1.31 Chaos Channels trace starts from the source shared-slot strength');
+  assertEqual(ccMomTrace.changes.rtb.to, 2,
+    'MoM 1.31 Chaos Channels trace records the replacing Fire Breath write');
+
+  const ccMomAboveCeiling = ctx.deriveUnitStats(baseUnitInput({
+    version: 'mom_1.31', rtb: 4, rtbType: 'thrown',
+    abilities: { ccFireBreath: true },
+  }));
+  assertEqual(ccMomAboveCeiling.rtb, 4,
+    'MoM 1.31 rejects a base Thrown strength above its ceiling of 3');
+  assertEqual(ccMomAboveCeiling.thrownType, 'thrown',
+    'MoM 1.31 leaves an above-ceiling shared Thrown slot intact');
+
+  for (const [version, expectedStrength] of [
+    ['mom_cp_1.60.00', 3],
+    ['com_6.08', 3],
+  ]) {
+    const positiveThrown = ctx.deriveUnitStats(baseUnitInput({
+      version, rtb: 3, rtbType: 'thrown',
+      abilities: { ccFireBreath: true },
+    }));
+    assertEqual(positiveThrown.rtb, expectedStrength,
+      `${version}: positive base Thrown strength rejects the Chaos Channels Fire Breath option`);
+    assertEqual(positiveThrown.thrownType, 'thrown',
+      `${version}: rejected Chaos Channels leaves the shared Thrown type intact`);
+  }
+
+  for (const [version, grantedStrength] of [
+    ['mom_1.31', 2],
+    ['mom_cp_1.60.00', 2],
+    ['com_6.08', 4],
+  ]) {
+    const emptySlot = ctx.deriveUnitStats(baseUnitInput({
+      version, rtb: 0, rtbType: 'none', abilities: { ccFireBreath: true },
+    }));
+    assertEqual(emptySlot.rtb, grantedStrength,
+      `${version}: an empty DOS shared slot receives the version-specific Fire Breath strength`);
+    assertEqual(emptySlot.thrownType, 'fire',
+      `${version}: an empty DOS shared slot becomes Fire Breath`);
+
+    const gazeSlot = ctx.deriveUnitStats(baseUnitInput({
+      version, rtb: 2, rtbType: 'gaze_multiple', abilities: { ccFireBreath: true },
+    }));
+    assertEqual(gazeSlot.rtb, 2,
+      `${version}: a Gaze in the DOS shared slot rejects Chaos Channels Fire Breath`);
+    assertEqual(gazeSlot.thrownType, 'none',
+      `${version}: a DOS Gaze never gains a second Breath channel`);
+    assert(!gazeSlot.statTrace.some(step => step.id === 'chaosChannels:fireBreath'),
+      `${version}: rejected shared-slot Fire Breath emits no stat write`);
+
+    const explicitGaze = ctx.deriveUnitStats(baseUnitInput({
+      version, rtb: 0, rtbType: 'none',
+      abilities: { ccFireBreath: true, stoningGaze: -1 },
+    }));
+    assertEqual(explicitGaze.rtb, 0,
+      `${version}: an explicit DOS Gaze control also occupies the shared attack slot`);
+    assertEqual(explicitGaze.thrownType, 'none',
+      `${version}: explicit DOS Gaze and Chaos Channels Breath cannot coexist`);
+
+    for (const breathType of ['fire', 'lightning']) {
+      const existingBreath = ctx.deriveUnitStats(baseUnitInput({
+        version, rtb: 2, rtbType: breathType, abilities: { ccFireBreath: true },
+      }));
+      assertEqual(existingBreath.rtb, 2,
+        `${version}: an existing ${breathType} Breath rejects Chaos Channels Fire Breath`);
+      assertEqual(existingBreath.thrownType, breathType,
+        `${version}: rejected Chaos Channels leaves the existing ${breathType} Breath intact`);
+      assert(!existingBreath.statTrace.some(step => step.id === 'chaosChannels:fireBreath'),
+        `${version}: a rejected second Breath emits no Chaos Channels stat write`);
+    }
+  }
+
+  const ccPatchedSignedNegative = ctx.deriveUnitStats(baseUnitInput({
+    version: 'mom_cp_1.60.00', rtb: -1, rtbType: 'thrown',
+    abilities: { ccFireBreath: true },
+  }));
+  assertEqual(ccPatchedSignedNegative.rtb, 2,
+    'CP 1.60 compares the source shared strength as signed and admits negative Thrown');
+  assertEqual(ccPatchedSignedNegative.thrownType, 'fire',
+    'CP 1.60 replaces an admitted negative Thrown slot with Fire Breath 2');
+
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+    const ccModernBesideRanged = ctx.deriveUnitStats(baseUnitInput({
+      version, rtb: 7, rtbType: 'missile',
+      abilities: { ccFireBreath: true, stoningGaze: -3 },
+      modernAttacks: {
+        ranged: { strength: 7, type: 'missile' },
+        thrown: null, fireBreath: null, lightningBreath: null,
+      },
+    }));
+    assertEqual(ccModernBesideRanged.modernAttacks.ranged.strength, 7,
+      `${version}: Chaos Channels leaves conventional Ranged unchanged`);
+    assertEqual(ccModernBesideRanged.modernAttacks.fireBreath.strength, 4,
+      `${version}: Chaos Channels seeds Fire Breath beside conventional Ranged and Gaze`);
+    assertEqual(ccModernBesideRanged.abilities.stoningGaze, -3,
+      `${version}: Chaos Channels leaves the independent Stoning Gaze unchanged`);
+    const ccModernTrace = ccModernBesideRanged.modernAttacks.fireBreath.modifierTrace.entries
+      .find(entry => entry.id === 'chaosChannels:fireBreath');
+    assertEqual(ccModernTrace.from, 0,
+      `${version}: Chaos Channels Fire Breath trace starts at the empty independent channel`);
+    assertEqual(ccModernTrace.to, 4,
+      `${version}: Chaos Channels Fire Breath trace records the additive grant`);
+  }
+
+  const fieryFuryBeforeRaiseDead = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_nature',
+    identity: {
+      version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+      isHero: false, baseRace: 'Nature', baseFantastic: true, specialUnit: 'none',
+    },
+    abilities: { fieryFury: true, raiseDead: true },
+  }));
+  assertEqual(fieryFuryBeforeRaiseDead.unitType, 'fantastic_unaligned',
+    'Raise Dead No-Heal conversion runs after Warlord Fiery Fury identity conversion');
+
+  const fieryFuryBeforeMysticSurge = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_nature',
+    identity: {
+      version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+      isHero: false, baseRace: 'Nature', baseFantastic: true, specialUnit: 'none',
+    },
+    abilities: { fieryFury: true, mysticSurge: true },
+  }));
+  assertEqual(fieryFuryBeforeMysticSurge.unitType, 'fantastic_unaligned',
+    'Mystic Surge No-Heal conversion runs after Warlord Fiery Fury identity conversion');
+
+  const sanctifyRetainsLiveFantastic = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { combatSummoned: true, sanctify: true },
+  }));
+  assertEqual(sanctifyRetainsLiveFantastic.unitType, 'fantastic_life',
+    'Sanctify writes Life without clearing a non-clergy unit already made Fantastic');
+
+  const sanctifyBeforeRaiseDead = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { sanctify: true, clergy: true, raiseDead: true },
+  }));
+  assertEqual(sanctifyBeforeRaiseDead.unitType, 'fantastic_unaligned',
+    'Raise Dead No-Heal conversion runs after Warlord Sanctify identity writes');
+
+  const sanctifiedClergyHero = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', unitType: 'hero', atk: 1, trueLight: true,
+    identity: {
+      version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+      isHero: true, baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
+    },
+    abilities: { sanctify: true, clergy: true },
+  }));
+  assertEqual(sanctifiedClergyHero.unitType, 'hero',
+    'Sanctify does not apply its clergy Fantastic write to heroes');
+  assertEqual(sanctifiedClergyHero.identity.race, 'Life',
+    'Sanctify still writes live Life race for heroes');
+  assertEqual(sanctifiedClergyHero.identity.fantastic, false,
+    'Sanctify leaves a Clergy hero non-Fantastic');
+  assertEqual(sanctifiedClergyHero.atk, 2,
+    'Sanctified hero live Life race reaches later True Light realm gates');
+
+  assertEqual(evalInContext(ctx,
+    "supernaturalMinDamageFn({ supernatural: true }, 'mom_1.31')"), null,
+  'MoM Supernatural input produces no minimum-damage callback');
+  assertEqual(evalInContext(ctx,
+    "supernaturalMinDamageFn({ supernatural: true }, 'com_6.08')"), null,
+  'CoM Supernatural produces no minimum-damage callback');
+  assertEqual(evalInContext(ctx,
+    "supernaturalMinDamageForHits(9, 'com_6.08')"), 0,
+  'CoM Supernatural helper has no combat effect');
+  assertEqual(evalInContext(ctx,
+    "supernaturalMinDamageForHits(25, 'com2_1.05.11')"), 8,
+  'Modern Supernatural rounds an 8.5 tie to the even integer 8');
+  assertEqual(evalInContext(ctx,
+    "supernaturalMinDamageForHits(75, 'com2_1.05.11')"), 26,
+  'Modern Supernatural rounds a 25.5 tie to the even integer 26');
 
   const uncappedPillar = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
@@ -964,10 +1199,10 @@ function runDerivationStageChecks(ctx) {
 
   assertEqual(phaseOf({ lucky: true, luckyPhaseA: true }, 'lucky'), 'c',
     'Intrinsic Lucky is applied in region c, where +0x044C7 puts it');
-  assertEqual(phaseOf({ lucky: true, luckyPhaseBase: true, luckyPhaseA: true }, 'lucky'), 'base',
-    'Creation-time Lucky grant uses the base stage, and is not counted again later');
-  assertEqual(phaseOf({ lucky: true, luckyPhaseB: true }, 'lucky'), 'b',
-    'Lucky Star / Divine Protection grant Lucky in phase b');
+  assertEqual(phaseOf({ lucky: true, luckyPhaseBase: true, luckyPhaseA: true }, 'lucky'), 'c',
+    'Creation-time Lucky establishes the flag before its compiled region-c stat write');
+  assertEqual(phaseOf({ lucky: true, luckyPhaseB: true }, 'lucky'), 'c',
+    'Lucky Star / Divine Protection establish the flag before the compiled region-c stat write');
 
   const artificer = stepFor({ artificer: true, mechanical: true }, 'artificer');
   assertEqual(artificer.phase, 'base', 'Artificer ABase writes use the base stage');
@@ -1265,6 +1500,19 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(energyCannon.rangedType, 'beam', 'Energy Cannon converts ranged projectile to Beam');
   assertEqual(energyCannon.rtb, 7, 'Energy Cannon adds floor(50% base ranged strength)');
   assertEqual(energyCannon.abilities.destruction, -2, 'Energy Cannon derives Destruction from 30% ranged To-Hit');
+
+  const aimedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
+    rtbType: 'missile',
+    rtb: 5,
+    toHitMod: 10,
+    toHitRtbMod: 20,
+    abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
+  }));
+  assertEqual(aimedEnergyCannon.abilities.destruction, -3,
+    'Energy Cannon snapshots the live 50% common-plus-ranged threshold without double-counting base modifiers');
+  const energyThresholdStep = aimedEnergyCannon.statTrace.find(t => t.id === 'chance:energyCannonThreshold');
+  assertEqual(energyThresholdStep.changes.energyCannonToHit.to, 50,
+    'Energy Cannon records its source-ordered pre-region-e chance snapshot');
 
   const upgradedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'missile',
@@ -1802,7 +2050,7 @@ function runModifierTraceChecks(ctx) {
   assert(chanceSources.indexOf('weapon') < chanceSources.indexOf('lucky'),
     'To Hit trace keeps weapon before Lucky in this engine sequence');
   assert(chanceSources.indexOf('highPrayer') < chanceSources.indexOf('vertigo'),
-    'Displayed To Hit trace keeps recalculation writes before resolution-time Vertigo');
+    'Displayed To Hit trace keeps High Prayer before the later recalculation-time Vertigo write');
 
   assertEqual(traced.modifierTraces.fantastic.entries[0].source.id, 'identity:chosen',
     'Boolean identity trace attributes the live Fantastic write');
@@ -1830,7 +2078,7 @@ function runModifierTraceChecks(ctx) {
     'Negative base To Block plus Zombies retains the production ten-percent floor');
   assertEqual(lowBlockZombies.modifierTraces.toBlock.result, 10,
     'To Block trace uses the same initial ten-percent floor');
-  assertEqual(lowBlockZombies.modifierTraces.toBlock.entries.slice(-1)[0].id, 'chance:clamp',
+  assertEqual(lowBlockZombies.modifierTraces.toBlock.entries.slice(-1)[0].id, 'chance:legacyClamp',
     'The initial To Block clamp records the floor when it changes the running value');
 
   const cappedPlague = ctx.deriveUnitStats(baseUnitInput({
@@ -1838,10 +2086,64 @@ function runModifierTraceChecks(ctx) {
     abilities: { plague: true },
   }));
   const cappedSources = cappedPlague.modifierTraces.toHitMelee.entries.map(t => t.id);
-  assert(!cappedSources.includes('chance:plague'),
-    'Active Plague at the To Hit floor is omitted as an actual no-op');
+  assert(cappedSources.includes('chance:plague'),
+    'Active Plague writes the signed common chance before the region-e floor');
+  assert(cappedSources.indexOf('chance:plague') < cappedSources.indexOf('chance:modernClampCommon'),
+    'Plague precedes the modern common-Hit clamp in the projected trace');
   assertEqual(cappedPlague.modifierTraces.toHitMelee.result, 10,
-    'Omitting capped Plague preserves the displayed To Hit floor');
+    'The later region-e clamp restores the displayed To Hit floor');
+
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+    const twoStage = ctx.deriveUnitStats(baseUnitInput({
+      version, rtb: 1, rtbType: 'missile',
+      toHitMod: -50, toHitRtbMod: -40, toBlkMod: -40,
+    }));
+    assertClose(twoStage.toHitMelee, 0.1,
+      `${version}: common Hit is clamped to ten percent before channel modifiers`);
+    assertClose(twoStage.toHitRtb, 0.2,
+      `${version}: the positive ranged channel survives the earlier common-Hit clamp`);
+    assertClose(twoStage.toBlock, 0,
+      `${version}: modern To Defend is carried on the record without a ten-percent clamp`);
+    const signedBlockWrites = twoStage.statTrace.filter(t => t.changes.toBlk);
+    assertEqual(signedBlockWrites[signedBlockWrites.length - 1].changes.toBlk.to, -10,
+      `${version}: the authoritative modern To Defend record retains its signed value`);
+    assertEqual(twoStage.modifierTraces.toBlock.entries.slice(-1)[0].id,
+      'chance:toBlockProbabilityBound',
+      `${version}: only the DefenseRoll probability projection bounds signed To Defend`);
+    const orderedClamp = ctx.deriveUnitStats(baseUnitInput({
+      version, rtb: 1, rtbType: 'missile', toHitMod: -50, toHitRtbMod: 100,
+    }));
+    const commonClamp = orderedClamp.statTrace.findIndex(t => t.id === 'chance:modernClampCommon');
+    const channelClamp = orderedClamp.statTrace.findIndex(t => t.id === 'chance:clamp');
+    assert(commonClamp >= 0 && commonClamp < channelClamp,
+      `${version}: the ordered record clamps common Hit before attack-channel Hit`);
+  }
+
+  const recoveringBlock = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', toBlkMod: -40,
+    abilities: {
+      outlanderWizard: true, mechanical: true, heatPowerEngine: true,
+      magitekEngineering: true, radio: true,
+    },
+  }));
+  assertClose(recoveringBlock.toBlock, 0.2,
+    'Warlord phase-b To Defend bonuses recover from the signed base record without an intermediate floor');
+  const recoveringBlockIds = recoveringBlock.statTrace.filter(t => t.changes.toBlk).map(t => t.id);
+  assert(recoveringBlockIds.indexOf('magitekEngine') < recoveringBlockIds.indexOf('outlanderRadio'),
+    'Warlord To Defend writes retain UnitCalcPre source order');
+
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
+    const highLegacy = ctx.deriveUnitStats(baseUnitInput({
+      version, toHitMod: 70, abilities: { lucky: true },
+    }));
+    assertClose(highLegacy.toHitMelee, 1,
+      `${version}: legacy terminal normalization clamps the effective common-plus-melee threshold`);
+    const lowLegacy = ctx.deriveUnitStats(baseUnitInput({
+      version, toHitMod: -20, warpReality: true,
+    }));
+    assertClose(lowLegacy.toHitMelee, 0.1,
+      `${version}: legacy terminal normalization preserves the effective ten-percent floor after common penalties`);
+  }
 
   const tracedDestiny = ctx.deriveUnitStats(baseUnitInput({
     abilities: { destiny: true },

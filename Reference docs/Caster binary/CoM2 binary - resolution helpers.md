@@ -153,7 +153,7 @@ Not stat modifiers at all, which is the second reason these ten do not share a p
 | Buried (60) | `@Units@Immobile`, `@Combat@Dealdamage` `0x5B4274`, `@Combat@Combatend` ×2, `@Combat@CombatEndTurn`, `@Scripts@EvaluateExpression` (exposed to CAS) |
 | Necromancy (55) | `@Combat@Combatend` `0x5B581E` — the only site in the binary |
 | Regeneration (22) | no gameplay read found; region `c` normalizes the value, and only AI dispel-priority code reads the flag |
-| No Heal (62) | one site in the whole binary, and it is a **write**: `@Spells@InitializeCombatSpellcasting` `0x5CD265` sets the combat-layer flag. No reader found |
+| No Heal (62) | `@Spells@InitializeCombatSpellcasting` `0x5CD265` writes the combat-layer flag for Raise Dead; the reconstructed Mystic Surge block `$005A016D..$005A0420` also writes it; the shared consumer `$005A0420..$005A04A9` reads it and derives race 21 plus `Fantastic`. See [`D32.evidence.md`](./D32.evidence.md) |
 
 **Method and its limits.** Three uncapped whole-binary detectors were run: absolute array
 addresses; the five `Castercore` accessors (all 32 call sites are in render/UI modules, so

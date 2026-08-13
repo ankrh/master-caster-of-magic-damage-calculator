@@ -4,8 +4,106 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-13
+
+- **F6 — DOS Chaos Channels shared attack slot.** MoM 1.31 now admits the Fire Breath
+  result only for a base None/Thrown slot with signed strength at most 3; CP 1.60 and CoM 6.08
+  use the patched ceiling of 0. Gaze and existing Breath types reject the result, so DOS no
+  longer invents a second attack channel; admitted slots receive the exact 2/2/4 strengths.
+  CoM2 1.05.11 and Warlord 1.5.12.7 retain independent channels and add Fire Breath 4 beside
+  ranged, Thrown, Lightning Breath, and Gaze. Durable reconstruction evidence is in
+  [`F6.evidence.md`](../Reference%20docs/DOS%20reconstructed/F6.evidence.md).
+- **F5 — ordered chance transforms and modern two-stage clamp.** CoM2 1.05.11 and Warlord
+  1.5.12.7 now carry common/channel To Hit and To Defend writes on the source-ordered unit record.
+  Region `e` clamps common To Hit to 10–100 before normalizing each channel against it: a common
+  −50 modifier plus a +10 ranged-channel modifier now resolves as 10% melee and 20% ranged, not
+  10% for both. Modern signed To Defend remains unclamped in recalculation and is naturally bounded
+  by the defense-roll probability; MoM 1.31, CP 1.60 and CoM 6.08 retain their legacy final-threshold
+  clamps. Source-position fixes also removed late chance replays and Vertigo duplication and made
+  Energy Cannon snapshot its live pre-clamp threshold. The audit now reports 223 `VERIFIED` and 13
+  `UNVERIFIED` formulas.
+- **R9-G1a — identity and creation-grant provenance.** Closed the five live identity gaps for
+  CoM 6.08, CoM2 1.05.11 and Warlord 1.5.12.7 plus both Warlord Lava Smelter elemental-grant
+  gaps against the completed constructor/summon reconstructions, shipped spell rows, creation and
+  retraining scripts, resolution consumers and runtime constants. Corrected CoM 1's summon branch:
+  previously only an unsupported template whitelist became Fantastic, with every entry except
+  Centaurs forced to Life; now every successful combat summon becomes Fantastic, only Paladins
+  become Life, only Centaurs and Catapult become Nature, and other types retain their loaded race.
+  The audit now reports 227
+  `VERIFIED` and 15 `UNVERIFIED` formulas.
+- **R9-G1g — Supernatural direct helper.** CoM 6.08 now imports and displays the 11 roster
+  templates carrying attack-attribute `$2000`, despite its misleading Tweaker-export label, but
+  gives Supernatural no combat effect: D39 proves its resolver test is inactive and the live floor
+  belongs to Destruction `$0020`. CoM2 1.05.11 and Warlord 1.5.12.7 retain their shipped `0`/`34`
+  ties-to-even minimum-damage formula. The provenance audit now reports 220 `VERIFIED` and 22
+  `UNVERIFIED` formulas; durable legacy evidence is in
+  [`D39.evidence.md`](../Reference%20docs/DOS%20reconstructed/D39.evidence.md).
+- **D39 — reconstruct the CoM 6.08 standard attack resolver.** Completed and independently
+  reviewed the parent `[0x99292,0x999C9)`, resolver `[0x999C9,0x9A587)`, adjacent defense
+  producer `[0x9A587,0x9A79E)`, BP-sharing helpers, all callers, loops, reductions, output routing,
+  and required dependencies. Confirmed the only live `(hits - 5) >> 1` first-reduction floor is
+  Destruction `$0020`; the Supernatural `$2000` test is dead, and the residual reduction has no
+  floor call. Durable findings are in
+  [`D39.evidence.md`](../Reference%20docs/DOS%20reconstructed/D39.evidence.md). Calculator behavior
+  is unchanged; R9-G1g is now unblocked and owns the separate helper decision.
+- **D38 — locate the CoM 6.08 Supernatural minimum-damage consumer.** Proved the frozen
+  `WIZARDS.EXE` has no executing binding from binary-named Supernatural `$2000` to the documented
+  `(damage-5)/2` floor. The only live formula path is gated by binary-named Destruction `$0020`,
+  applies only on the first per-strike reduction below an adjusted defense threshold, and is absent
+  from the residual-damage reduction. Bounded the complete standard resolver at
+  `[0x999C9,0x9A587)` with all direct callers and exits; D39 owns its fixed-extent reconstruction.
+  Durable findings are in
+  [`D38.evidence.md`](../Reference%20docs/DOS%20reconstructed/D38.evidence.md). Calculator behavior
+  is unchanged; R9-G1g remains blocked by D39.
+
 ## 2026-08-12
 
+- **R9-G1g second pass — four direct helpers closed.** Bound Magic, Mithril, and Adamantium
+  weapon bonuses plus the legacy identity-conversion helper across their applicable MoM 1.31,
+  CP 1.60, CoM 6.08, CoM2 1.05.11, and Warlord 1.5.12.7 sources. Corrected Warlord's
+  Fiery Fury/Sanctify/compiled-conversion order and preserved Sanctify's Life-race write for
+  heroes. The user's CoM2 1.4.2 changelog pointer, corroborated by CoM 6.08 helptext, required
+  retaining the legacy Supernatural floor; D34 disproves only the proposed executable binding,
+  so that final helper remains under R9-G1g behind D39. The audit now reports 219 `VERIFIED` and
+  23 `UNVERIFIED` formulas.
+- **D36 — reconstruct modern Raise Dead.** Reconstructed the shared CoM2/Warlord
+  `$005CD1FF..$005CD372` Raise Dead case and complete `$0064435C..$00644377` Castercore
+  wrapper. The engine clears revival/status state, sets combat No Heal, restores position and
+  movement, recalculates, stores checked half-total-HP damage, publishes the target ID, and
+  recalculates again. Warlord's script adds disjoint combat-wide living-unit recounts; D36 does
+  not assert the hook's exact order. Durable source and coverage are in
+  [`D36.evidence.md`](../Reference%20docs/Caster%20binary/D36.evidence.md). Calculator behavior is
+  unchanged; the modern Raise Dead prerequisite for R9-G1g is complete.
+- **R9-G1j — derived-package provenance.** Bound all 13 unit/ability-package formulas from
+  `undeadImmunityDerivation` through `bloodLustMeleeAttack` to the applicable DOS, shared
+  `Caster.exe`, and Warlord-script implementations; the audit now reports 214 `VERIFIED` and
+  28 `UNVERIFIED`. Corrected Warlord strike-effect order, Fiery Fury and Angelic Guardians
+  base-Fantastic gates, Angelic Guardians' existing-Exorcise branch, and Blood Lust targeting;
+  focused regressions and the durable behavior contract are in `data.js` and `SPEC.md`.
+- **D35 — reconstruct CoM 6.08 Raise Dead.** Reconstructed the complete
+  `[0xAB04D,0xAB474)` routine and `[0x82ED0,0x82EEA)` dispatcher. Raise Dead halves the
+  restored figures/front damage, clears combat effects, both combat and persistent enchantment
+  dwords, and movement-recalculation flags `$0800|$1000`, then writes the inline unaligned
+  Fantastic identity and `Grey_Hits = -1` cache sentinel before rebuilding the battle unit.
+  Durable findings and coverage are in
+  [`D35.evidence.md`](../Reference%20docs/DOS%20reconstructed/D35.evidence.md). Calculator behavior
+  is unchanged; D36 supplies the corresponding modern prerequisite for R9-G1g.
+- **D34 — falsify the CoM 6.08 Supernatural damage-floor binding.** Proved common attack mask
+  `$2000` is Supernatural and `$0020` is Destruction; the existing signed `(hits - 5) >> 1`
+  helper is a branch-specific Destruction floor suppressed by defense-special scores `>=80`.
+  The supplied `Attribs_2` anchor instead projects `$4000`, lowers to-block by one, and ensures
+  minimum weapon quality. The only direct functional Supernatural consumer found is inside newly
+  bounded `[0x9BCE0,0x9D535)`, now owned by D37. Durable findings are in
+  [`D34.evidence.md`](../Reference%20docs/DOS%20reconstructed/D34.evidence.md). Calculator behavior
+  is unchanged; R9-G1g owns removal or replacement of the unverified CoM formula.
+- **D30_D31_D32 — locate Supernatural and Raise Dead prerequisites.** Corrected the two DOS
+  rows from non-implementation `MAGIC.EXE` to CoM 6.08 `WIZARDS.EXE`. D30 found an already
+  reconstructed minimum-damage candidate but left the Supernatural-to-`$0020` binding unproved;
+  D31 bounded the DOS Raise Dead routine and its inline unaligned identity writes; D32 bounded the
+  modern Raise Dead case, wrapper, `EncNoHeal` producer, and existing recomputation consumer.
+  Durable results are indexed by
+  [`D30_D31_D32.evidence.md`](../Reference%20docs/DOS%20reconstructed/D30_D31_D32.evidence.md);
+  D34–D36 own the corrected follow-up work. Calculator behavior is unchanged.
 - **D33 — reconstruct `ApplyMagicWeapons`.** Reconstructed the complete shared CoM2/Warlord
   `$00598D88..$005992CC` helper: base material gates, other-owner King-of-Underworld suppression,
   Magic/Mithril/Adamantium tiers 0/1/2, channel-specific strength and runtime To-Hit writes,
@@ -18,7 +116,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   live or base magical ranged, either Life identity, or nonzero mana independently satisfies its
   compiled eligibility gate. The audit now reports 201 `VERIFIED` and 41 `UNVERIFIED` formulas.
   The five remaining R9-G1g gaps were isolated to four reconstruction domains; D33 now supplies
-  the modern material domain, while D30–D32 own the remaining Supernatural and Raise Dead scopes.
+  the modern material domain, while D34–D36 own the remaining Supernatural and Raise Dead scopes.
 - **D29 — locate `ApplyMagicWeapons`.** Corrected the supplied interior anchor to the exact shared
   CoM2/Warlord extent `$00598D88..$005992CC`, proved its two direct callers and sole normal return,
   and moved the now-fixed semantic reconstruction into D33. Durable boundary and dependency
@@ -61,8 +159,8 @@ pre-2026-08-10 narratives remain recoverable from git history.
 - **R9-G1e existing-evidence pass.** Bound 24 of the 27 chance-contribution and projection
   formulas to exact DOS, Caster, Warlord-script and runtime-table sources, with no calculator
   behavior change. Corrected overbroad version metadata for seven Warlord-only formulas. The
-  modern material helper and two-stage clamp remain live under R9-G1g and F5; the audit now
-  reports 142 `VERIFIED` and 104 `UNVERIFIED` formulas.
+  remaining modern material helper was routed to R9-G1g and the two-stage clamp to F5, both now
+  closed above; the audit then reported 142 `VERIFIED` and 104 `UNVERIFIED` formulas.
 - **R9-G1d — late/global and figure-transform provenance.** Closed ten formulas against their
   strongest implementation sources and retired the erroneous Warlord-only Focus Magic duplicate,
   reducing the live audit to 118 `VERIFIED` and 128 `UNVERIFIED`. Corrected Focus Magic ordering,

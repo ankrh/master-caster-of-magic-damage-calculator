@@ -102,7 +102,7 @@ const ABILITY_DEFS = [
     { key: 'nonCorporeal', label: 'Non-Corporeal', type: 'bool', match: 'Non-Corporeal', group: 'Abilities', subgroup: '_', tooltip: 'Warlord: Tactician retort grants this unit Negate First Strike.\nNot modeled: terrain/wall movement; immunity to undead conversion.' },
     { key: 'poisonImmunity', label: 'Poison Immunity', type: 'bool', match: 'PoisonImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Poison Touch.' },
     { key: 'stoningImmunity', label: 'Stoning Immunity', type: 'bool', match: 'StoningImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Stoning Gaze and Stoning Touch.' },
-    { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Versions: CoM 1 & 2, Warlord\nEach attack's hits deal at least a minimum damage, regardless of\nthe defender's blocks.\nCoM 1: Minimum = floor((hits − 5) / 2).\nCoM 2 & Warlord: Round((hits − start) × ratio / 100), using\nDelphi ties-to-even rounding; shipped start 0, ratio 34." },
+    { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Versions: CoM 1 & 2, Warlord\nCoM 1: Trait is present, but its executable test is inactive;\nit has no combat effect.\nCoM 2 & Warlord: Each attack's hits deal at least\nRound((hits − start) × ratio / 100), using ties-to-even rounding.\nShipped start 0, ratio 34." },
     { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Abilities', subgroup: '_', tooltip: 'Unit becomes a fantastic Death creature.\nMoM 1.31: Grants Death Immunity.\nMoM 1.31 bug: Should also have granted Cold, Poison, and Illusion Immunity.\nMoM 1.60: Grants Death, Cold, Poison, and Illusion Immunity.\nCoM 1 & 2 & Warlord: Grants Death, Cold, and Illusion Immunity.\nNot modeled: natural healing / regeneration prevention.' },
     { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense against attacks not marked magical.\nMoM 1.31 & 1.60: Defense = 10.\nMoM 1.31 bug: Thrown attacks, and generic units (e.g. Catapult,\nWarship), bypass it.\nCoM 1: Defense +8; normal-unit and weapon-quality rules apply.\nCoM 2: Defense +8. Warlord: Defense +10.\nModern bypass: calculated Magic Weapon, magical ranged, Breath,\nor Gaze. Final Fantastic/normal identity is not the direct gate.' },
   ]),
@@ -124,7 +124,7 @@ const ABILITY_DEFS = [
 const ENCHANTMENT_DEFS = [
   // All versions: Received bonuses on top, then Elements, then Chaos Channels.
   { key: 'combatSummoned', label: 'Combat Summoned', type: 'bool', alwaysVisible: true, group: 'Enchantments', subgroup: '_All versions bools',
-    tooltip: 'Encounter condition: the unit was summoned during combat.\nModern CoM2/Warlord: the live unit is Fantastic.\nCoM1: inert except for the version-specific Construct Catapult path.' },
+    tooltip: 'Encounter condition: the unit was summoned during combat.\nCoM1/CoM2/Warlord: the live unit is Fantastic.\nCoM1: Paladins become Life; Centaurs and Catapult become Nature.' },
   { key: 'callToArmsPaladins', label: 'Call to Arms: Paladins', type: 'bool', group: 'Enchantments', subgroup: 'CoM2 & Warlord', exceptVersions: ['com2_warlord_'], realm: 'life',
     tooltip: 'Versions: CoM 2\nSpell-specific encounter condition. Paladins summoned by Call to Arms use the live Life realm.\nWarlord replaces the spell with Spirit of Chivalry.' },
   { key: 'resistanceToAll', label: 'Received res. to all', type: 'num', match: 'ResistancetoAll', group: 'Enchantments', subgroup: 'All versions', tooltip: '+X resistance.' },
@@ -150,7 +150,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Grants Weapon Immunity and Non-Corporeal.\nCoM 1 & 2 & Warlord: Attacks bypass enemy Weapon Immunity.' },
     { key: 'eternalNight', label: 'Eternal Night', type: 'bool', match: 'EternalNight', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Side owns the global enchantment.\nMoM 1.31/1.60 and CoM 1: All combats are under Darkness at normal strength.\nCoM 2 & Warlord: Death attack/Armor bonuses are doubled.\nLife penalties stay at normal strength.\nCoM 1 & 2 & Warlord: Enemy non-Death units lose 1 resistance.\nWarlord: Enemy non-Death units also suffer −2 ranged attack strength\n(missile, boulder, and magic ranged; thrown and breath unaffected).' },
     { key: 'ccDefense', label: 'CC: +Defense', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\n+3 defense.\nMoM 1.31 bug: Defense applied twice in combat (net +6).' },
-    { key: 'ccFireBreath', label: 'CC: +Fire Breath', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nGrants a fire breath attack.\nNever granted to a unit with a ranged attack.\nMoM 1.31 & 1.60: Strength 2; replaces an existing thrown attack.\nCoM 1: Strength 4; replaces an existing thrown attack.\nCoM 2 & Warlord: Strength 4; added to an existing fire breath.\nCoexists with thrown, lightning breath and gaze.' },
+    { key: 'ccFireBreath', label: 'CC: +Fire Breath', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nMoM 1.31: A base None/Thrown slot at most 3 becomes Fire Breath 2.\nMoM 1.60: A base None/Thrown slot at most 0 becomes Fire Breath 2.\nCoM 1: A base None/Thrown slot at most 0 becomes Fire Breath 4.\nCoM 2 & Warlord: Adds 4 to the independent Fire Breath channel;\nranged, Thrown, Lightning Breath, and Gaze remain.' },
     { key: 'ccFlight', label: 'CC: +Flight', type: 'bool', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\nNot modeled: flight (movement and targeting).' },
     { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Fire area attack each melee phase, hitting all opponent figures.\nOpponents with Fire Immunity, Magic Immunity, or Righteousness\nare unaffected.\nMoM 1.31 & 1.60: Strength 4.\nMoM 1.31 bug: Also fires alongside ranged attacks.\nCoM 1 & 2 & Warlord: Strength 10.\nNot modeled: web burning, freeze prevention.' },
     { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions bools', exceptVersions: ['com2_warlord_'], realm: 'chaos', tooltip: 'Bypasses Weapon Immunity.\nMoM 1.31 & 1.60: +2 melee, thrown and missile attack.\nCoM 1 & 2: +3 melee and +2 missile.' },
@@ -263,9 +263,9 @@ const ENCHANTMENT_DEFS = [
     { key: 'nausea', label: 'Nausea', type: 'bool', match: 'Nausea', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures or units with Magic Immunity.\n−10% To Hit, −10% To Defend.' },
     { key: 'disheartenProphecy', label: 'Dishearten Prophesy', type: 'bool', match: 'DisheartenProphecy', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\n−2 Resistance.' },
     { key: 'divineProtection', label: 'Divine Protection', type: 'bool', match: 'DivineProtection', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nGrants Lucky and Death Immunity.\n+10% To Hit, +10% To Block, +1 Resistance.' },
-    { key: 'angelicGuardians', label: 'Angelic Guardians', type: 'bool', match: 'AngelicGuardians', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Rare global enchantment.\nGrants or improves Exorcise on this unit (fantastic targets only).\nOnly buffs realm-less units (normal/hero) and Life/Sanctified units.\nLife/Sanctified unit: Exorcise −1, or −3 stronger if it already has Exorcise.\nNormal/hero unit: Exorcise −0, or −2 stronger if it already has Exorcise.\nFantastic creatures of other realms are not buffed.\nCreated-undead defenders suffer an additional −3.' },
+    { key: 'angelicGuardians', label: 'Angelic Guardians', type: 'bool', match: 'AngelicGuardians', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Warlord Life Rare global enchantment.\nGrants Exorcise −0 to a base non-Fantastic unit, even after a\nFantastic conversion; a current Life/Sanctified unit gets −1.\nAn existing Exorcise is improved on any unit: −2 stronger, or\n−3 stronger for Life/Sanctified.\nCreated-undead defenders suffer an additional −3.' },
     { key: 'eyeOfHeaven', label: 'Eye of Heaven', type: 'bool', match: 'EyeOfHeaven', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nGrants True Sight (Illusion Immunity).\nThe opposing unit loses all gaze attacks (Doom, Death,\nStoning, hidden gaze).' },
-    { key: 'sanctify', label: 'Sanctify', type: 'bool', match: 'Sanctify', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nDoes not affect heroes.\nNormal unit becomes a Life-realm non-fantastic unit.\nClergy units become Life-realm fantastic creatures.\nNot modeled: Cleric casting-skill bonus.' },
+    { key: 'sanctify', label: 'Sanctify', type: 'bool', match: 'Sanctify', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nUnit becomes Life realm.\nNon-hero Clergy also become Fantastic; heroes do not.\nNot modeled: Cleric casting-skill bonus.' },
     { key: 'zeal', label: 'Zeal', type: 'bool', match: 'Zeal', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nArcane unit ability, not a wizard spell.\nGrants First Strike and Negate First Strike.' },
     { key: 'hierophany', label: 'Hierophany', type: 'bool', match: 'Hierophany', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nHalves the cursed unit\'s Defense (rounded down).\nStrips all immunities, Lightning Resist, Negate First Strike.\nNot modeled: stripped mobility perks.' },
     { key: 'pillarOfFaithLucky', label: 'Pillar of Faith: Lucky', type: 'bool', match: 'PillarOfFaithLucky', group: 'Enchantments', subgroup: 'Warlord only', realm: 'life', tooltip: 'Versions: Warlord\nGrants Lucky: +10% To Hit, +10% To Block, +1 Resistance.' },
@@ -276,7 +276,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'plague', label: 'Plague', type: 'bool', match: 'Plague', group: 'Enchantments', subgroup: 'Warlord only', realm: 'death', tooltip: 'Versions: Warlord\n−3 melee, −3 armor, −6 Resistance, −10% To Hit.' },
     { key: 'berserkWarlord', label: 'Berserk (Warlord)', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'Warlord only', realm: 'arcane', tooltip: 'Versions: Warlord\nArcane Troll Medicineman unit ability, not a wizard spell.\n+15% To Hit.\n−10% To Block.\nNot modeled: combat movement.' },
     { key: 'blazeOfGlory', label: 'Blaze of Glory', type: 'bool', match: 'BlazeOfGlory', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nDoes not affect heroes.\nGains melee equal to its current Armor, then Armor becomes 0.\nLater aura bonuses can add Armor afterward.\nRanged attacks become Thrown attacks of the same strength.\nGrants Armor Piercing and loses First Strike.\nNot modeled: ammo loss, Wall Crusher.' },
-    { key: 'fieryFury', label: 'Fiery Fury', type: 'bool', match: 'FieryFury', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nRegular units: gain Fiery Blade, plus +2 boulder.\nRegular units bypass Weapon Immunity.\nFantastic creatures: gain First Strike.\nBecome Chaos creatures unless undead, Apotheosis, or Sanctify.\nBonuses except boulder are not cumulative with Flame Blade or Fiery Blade.' },
+    { key: 'fieryFury', label: 'Fiery Fury', type: 'bool', match: 'FieryFury', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nBase non-Fantastic units: gain Fiery Blade, plus +2 boulder.\nThey bypass Weapon Immunity.\nBase Fantastic creatures: gain First Strike.\nBecome Chaos creatures unless undead, Apotheosis, or Sanctify.\nBonuses except boulder are not cumulative with Flame Blade or Fiery Blade.' },
     { key: 'insulation', label: 'Insulation', type: 'bool', match: 'Insulation', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nGrants Fire Immunity, Cold Immunity, and Lightning Resist.\nImmune: Fire Breath, Immolation, Wall of Fire, cold attacks.\nNegates the Armor Piercing of incoming Lightning Breath.' },
     { key: 'beatOfSwiftness', label: 'Beat of Swiftness', type: 'bool', match: 'BeatOfSwiftness', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nSubtracts current Armor / 10, rounded to nearest (ties to even).\nNot modeled: combat movement.' },
     { key: 'rust', label: 'Rust', type: 'bool', match: 'Rust', group: 'Enchantments', subgroup: 'Warlord only', realm: 'chaos', tooltip: 'Versions: Warlord\nDoes not affect fantastic creatures.\nMagic and orihalcon weapons stripped (unit reverts to regular weapons).\n−3 melee and physical ranged (missile/boulder).\nThrown attacks eliminated for the rest of combat.\nLarge Shield eliminated for the rest of combat.\nNot modeled: loss of permanent enchantments.' },
@@ -288,7 +288,7 @@ const ENCHANTMENT_DEFS = [
     { key: 'wildGame', label: 'Natural Sel.: Wild game', type: 'bool', match: 'NaturalSelectionWildGame', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\n+1 to ranged attacks (physical and magical ranged; not thrown or breath).\nNot modeled: Forester.' },
     { key: 'nightshade', label: 'Natural Sel.: Nightshade', type: 'bool', match: 'NaturalSelectionNightshade', group: 'Enchantments', subgroup: 'Warlord only', realm: 'nature', tooltip: 'Versions: Warlord\nApplies to normal units only.\n+1 Resistance. If Power minerals are also present, this later\nscript write replaces their Resistance bonus.' },
     { key: 'planewalking', calcKey: 'teleporting', label: 'Planewalking', type: 'bool', match: 'Planewalking', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Versions: Warlord\nGrants Teleporting.' },
-    { key: 'temporalTwist', label: 'Temporal Twist', type: 'bool', match: 'TemporalTwist', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Versions: Warlord\nDoes not affect units with Magic Immunity.\nStrips First Strike, Negate First Strike, and Teleporting.\nNot modeled: movement penalty.' },
+    { key: 'temporalTwist', label: 'Temporal Twist', type: 'bool', match: 'TemporalTwist', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Versions: Warlord\nDoes not affect units with Magic Immunity.\nStrips First Strike, Negate First Strike, and Teleporting.\nThe later Tactician step can restore strike flags from Favored\nTerrain or Non-Corporeal, but not from stripped Teleporting.\nNot modeled: movement penalty.' },
     { key: 'greatUnbinding', label: 'Great Unbinding', type: 'bool', match: 'GreatUnbinding', group: 'Enchantments', subgroup: 'Warlord only', realm: 'sorcery', tooltip: 'Versions: Warlord\nFantastic targets only.\n−20% To Hit.\n−20% To Block.\n−2 Resistance.\nNot modeled: Confusion.' },
   ]),
 ];
@@ -1989,6 +1989,20 @@ const PRESETS = {
     b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
+  angelicGuardiansImprovesExistingExorciseOnChaosWarlord: {
+    desc: 'Angelic Guardians improves an existing Exorcise even on a non-Life fantastic unit: Chaos Exorcise -1 becomes -3, so Res 5 fails 80% of the time for 8.0 expected damage. Without the improvement it would deal 6.0.',
+    version: V_WARLORD,
+    a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { angelicGuardians: true, exorcise: -1 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  angelicGuardiansUsesBaseFantasticGateWarlord: {
+    desc: 'Angelic Guardians uses BASEFANTASTIC: a base regular unit made Fantastic by Combat Summoned still gains Exorcise 0, dealing 5.0 expected damage. A live-Fantastic gate would incorrectly deal 0.',
+    version: V_WARLORD,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { angelicGuardians: true, combatSummoned: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
   shadowStrikeGrantsThrownWarlord: {
     desc: 'Shadow Strike (Warlord): melee-only unit gains a thrown attack at 1 + 1/3 of melee. Melee 9 → thrown 1+floor(9/3)=4. Both 100% hit vs def 0 → 9 + 4 = 13.0 (without Shadow Strike, melee 9 only → 9.0)',
     version: V_WARLORD,
@@ -3442,6 +3456,20 @@ const PRESETS = {
     b: { atk:5, toHitMod:70, hp:10 },
     expected: { dmgToA: 4.000, dmgToB: 10.000 },
   },
+  temporalTwistTacticianRestoresNonCorporealNegateWarlord: {
+    desc: 'Temporal Twist clears Negate First Strike before the later Tactician step restores it from Non-Corporeal, so B survives A\'s First Strike and retaliates for 5.',
+    version: V_WARLORD,
+    a: { atk:10, toHitMod:70, hp:10, abilities: { firstStrike: true } },
+    b: { atk:5, toHitMod:70, hp:10, abilities: { tactician: true, nonCorporeal: true, temporalTwist: true } },
+    expected: { dmgToA: 5.000, dmgToB: 10.000 },
+  },
+  temporalTwistTacticianRestoresFavoredTerrainStrikesWarlord: {
+    desc: 'Temporal Twist clears strike flags before the later Tactician Favored Terrain branch restores both; A kills B by First Strike and takes no counter damage.',
+    version: V_WARLORD,
+    a: { atk:10, toHitMod:70, hp:10, abilities: { tactician: true, favoredTerrain: true, temporalTwist: true } },
+    b: { atk:5, toHitMod:70, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
 
   // --- Zeal ---
   zealGrantsFirstStrikeWarlord: {
@@ -4489,11 +4517,11 @@ const PRESETS = {
 
   // --- Supernatural ---
   supernaturalFormulaCoM: {
-    desc: 'Supernatural (CoM): 9 melee fully blocked still deals max(0, floor((9-5)/2)) = 2 dmg',
+    desc: 'Supernatural (CoM): the roster trait has no combat effect; 9 melee fully blocked deals 0 damage',
     version: V_COM,
     a: { atk:9, toHitMod:70, hp:10, abilities: { supernatural: true } },
     b: { def:9, toBlkMod:70, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, dmgToB: 0.000 },
   },
   supernaturalFormulaCoM2: {
     desc: 'Supernatural (CoM2): 28 melee fully blocked still deals Round(28 × 34 / 100) = 10 damage; the old round(hits/3) approximation produced 9',
@@ -5057,11 +5085,19 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   ccFireBreathReplacesThrown: {
-    desc: 'Chaos Channels Fire Breath replaces Thrown: thrown 5 overridden by fire breath 2 → 3 dmg',
+    desc: 'Chaos Channels Fire Breath (MoM 1.31): base Thrown 3 is admitted at the signed ceiling and replaced by Fire Breath 2, so melee 1 + breath 2 = 3 dmg',
     version: V_MOM_131,
-    a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:5, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
+    a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  ccFireBreathRejectsPositiveThrownCP: {
+    desc: 'Chaos Channels Fire Breath (CP 1.60): positive base Thrown 3 exceeds the patched ceiling of 0, so the shared slot stays Thrown; Chaos identity still admits the +2 node aura, making melee 3 + Thrown 5 = 8 (7 if wrongly replaced, 4 without Chaos Channels)',
+    version: V_MOM_CP,
+    a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
+    b: { hp:10 },
+    nodeAura: 'chaos',
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   ccFireBreathCoexistsWithLightningCoM2: {
     // F44: this asserted 5.000 on the assumption that CC overwrites the lightning breath. No
@@ -6406,6 +6442,13 @@ const PRESETS = {
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
+  fieryFuryUsesBaseFantasticForFirstStrikeWarlord: {
+    desc: 'Fiery Fury uses BASEFANTASTIC: a base regular Combat Summoned unit receives the +3 regular-unit melee package but not First Strike, so B still counters for 5. A live-Fantastic gate would incorrectly prevent the counter.',
+    version: V_WARLORD,
+    a: { atk:5, toHitMod:70, hp:10, abilities: { fieryFury: true, combatSummoned: true } },
+    b: { atk:5, toHitMod:70, def:0, hp:8 },
+    expected: { dmgToA: 5.000, dmgToB: 8.000 },
+  },
 
   // --- Righteousness ---
   righteousnessMagicChaos: {
@@ -7400,7 +7443,7 @@ const TEST_TREE = [
       { name: 'Elemental Armor / Resist Elements', keys: ['elemArmorMagicCRanged', 'elemArmorMagicNRanged', 'elemArmorNotVsMagicS', 'elemArmorNotMelee', 'elemArmorFireBreath', 'elemArmorLightningBreath', 'resistElementsMagicC', 'resistElementsNotVsMagicSMoM', 'resistElementsFireBreathMoM', 'elemArmorNotCumulative', 'elemArmorImmolationCoM', 'resistElementsWallOfFireCoM'] },
       { name: 'Eldritch Weapon', keys: ['eldritchWeaponMelee', 'eldritchWeaponRangedMissile', 'eldritchWeaponWeaponUpgrade', 'eldritchWeaponRangedKeepsWI'] },
       { name: 'Eternal Night', keys: ['eternalNightDarknessMoM', 'eternalNightNoEnemyResistanceMoM'] },
-      { name: 'Fiery Fury', keys: ['fieryFuryMeleeWarlord', 'fieryFuryMissileWarlord', 'fieryFuryBoulderWarlord', 'fieryFuryThrownWarlord', 'fieryFuryNoBreathBonusWarlord', 'fieryFuryFantasticNoStatBonus', 'fieryFuryFantasticFirstStrike', 'fieryFuryFantasticChaosConversion', 'fieryFuryUndeadNoChaosConversion', 'fieryFuryFieryBladeNoStack', 'fieryFuryWeaponImmunityBypass'] },
+      { name: 'Fiery Fury', keys: ['fieryFuryMeleeWarlord', 'fieryFuryMissileWarlord', 'fieryFuryBoulderWarlord', 'fieryFuryThrownWarlord', 'fieryFuryNoBreathBonusWarlord', 'fieryFuryFantasticNoStatBonus', 'fieryFuryFantasticFirstStrike', 'fieryFuryUsesBaseFantasticForFirstStrikeWarlord', 'fieryFuryFantasticChaosConversion', 'fieryFuryUndeadNoChaosConversion', 'fieryFuryFieryBladeNoStack', 'fieryFuryWeaponImmunityBypass'] },
       { name: 'Fire Immunity', keys: ['fireImmunityFireBreath', 'fireImmunityNotMelee', 'fireImmunityNotThrown', 'fireImmunityNotMissile', 'fireImmunityAfterArmorPiercing', 'fireImmunityIllusionOverrides'] },
       { name: 'First Strike', keys: ['firstStrikeKillsBeforeCounter', 'negateFirstStrike', 'firstStrikeMultiFig', 'firstStrikeNoKillUnchanged', 'firstStrikeIgnoredOnRanged'] },
       { name: 'Giant Strength', keys: ['giantStrengthMelee', 'giantStrengthThrown', 'giantStrengthNotMissile'] },
@@ -7510,6 +7553,8 @@ const TEST_TREE = [
           'angelicGuardiansLifeTierWarlord',
           'angelicGuardiansImprovesExistingExorciseWarlord',
           'angelicGuardiansFantasticChaosNotBuffedWarlord',
+          'angelicGuardiansImprovesExistingExorciseOnChaosWarlord',
+          'angelicGuardiansUsesBaseFantasticGateWarlord',
         ],
       },
       {
@@ -8303,6 +8348,8 @@ const TEST_TREE = [
           'temporalTwistStripsFirstStrikeWarlord',
           'temporalTwistStripsNegateFirstStrikeWarlord',
           'temporalTwistStripsTeleportingWarlord',
+          'temporalTwistTacticianRestoresNonCorporealNegateWarlord',
+          'temporalTwistTacticianRestoresFavoredTerrainStrikesWarlord',
         ],
       },
       {
@@ -8380,7 +8427,7 @@ const TEST_TREE = [
       { name: 'Blood Lust', keys: ['bloodLustThrownCoM1MeleeOnly', 'bloodLustThrownCoM2'] },
       { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM2', 'blurPlusInvisCoM2v2', 'blurPlusInvisWarlord'] },
       { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderPenaltyCoM2', 'fearDefenderFixedFirstStrike'] },
-      { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathCoM', 'ccFireBreathCoexistsWithLightningCoM2', 'ccFireBreathCoexistsWithGazeCoM2', 'ccFireBreathAddsToExistingCoM2', 'ccFireBreathAddsToExistingWarlord'] },
+      { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathCoM', 'ccFireBreathReplacesThrown', 'ccFireBreathRejectsPositiveThrownCP', 'ccFireBreathCoexistsWithLightningCoM2', 'ccFireBreathCoexistsWithGazeCoM2', 'ccFireBreathAddsToExistingCoM2', 'ccFireBreathAddsToExistingWarlord'] },
       { name: 'Chaos Surge', keys: ['chaosSurgeThrownCoM', 'chaosSurgeThrownCoM2', 'chaosSurgeDoomGazeCoM', 'chaosSurgeDoomGazeCoM2', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsBreathCoM'] },
       { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
       { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },

@@ -6,8 +6,8 @@ function hasAbil(ab, key) { return !!(ab && ab[key]); }
 function abilVal(ab, key, def) { return (ab && ab[key] != null) ? ab[key] : def; }
 function abilDefined(ab, key) { return ab != null && ab[key] != null; }
 
-// Legacy 10%-100% To-Hit clamp primitive. `chance:clamp` owns the still-UNVERIFIED
-// combined To-Hit/To-Block projection and its modern common-then-channel ordering.
+// Compatibility 10%-100% To-Hit clamp for isolated calculations such as Energy Cannon.
+// Ordered unit thresholds and modern common-then-channel normalization live in stats.js.
 // PROVENANCE[clampPct]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:26:68e7e2b7c0ba44df6f0af0aa
 // STAT-FORMULA[clampPct]
 function clampPct(base, mod) {
@@ -30,13 +30,13 @@ function woundedTopFigHP(remHP, hpPerFig) {
 function weaponBonus(type) {
   switch (type) {
     // STAT-FORMULA[weaponBonus:magic]
-    // PROVENANCE[weaponBonus:magic]: UNVERIFIED versions=all; gap=material gate and To-Hit arithmetic are not fully matched across every engine and runtime table; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[weaponBonus:magic]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:69469f057ab9fbf0bae6bf1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:5cf2b9b947be869791070ddc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
     case 'magic':      return { atk: 0, def: 0, toHit: 10 };
     // STAT-FORMULA[weaponBonus:mithril]
-    // PROVENANCE[weaponBonus:mithril]: UNVERIFIED versions=all; gap=material gate and attack/defense/To-Hit arithmetic are not fully matched across every engine and runtime table; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[weaponBonus:mithril]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:69469f057ab9fbf0bae6bf1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:5cf2b9b947be869791070ddc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
     case 'mithril':    return { atk: 1, def: 1, toHit: 10 };
     // STAT-FORMULA[weaponBonus:adamantium]
-    // PROVENANCE[weaponBonus:adamantium]: UNVERIFIED versions=all; gap=material gate and attack/defense/To-Hit arithmetic are not fully matched across every engine and runtime table; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[weaponBonus:adamantium]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:69469f057ab9fbf0bae6bf1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:5cf2b9b947be869791070ddc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
     case 'adamantium': return { atk: 2, def: 2, toHit: 10 };
     default:           return { atk: 0, def: 0, toHit: 0 };
   }
@@ -189,9 +189,9 @@ function destinyActiveForUnit(abilities, version) {
   return !!(version && version.startsWith('com2_') && hasAbil(abilities, 'destiny'));
 }
 
-// PROVENANCE[legacyUnitTypeConversions]: UNVERIFIED versions=all; gap=legacy compatibility helper composes multiple version-specific identity writes; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// PROVENANCE[legacyUnitTypeConversions]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:d4e30893d832cb480ebf32b3 | Reference docs/DOS reconstructed/unitcalc.c@span:24:924a9c7939c2ac5634769450 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e3a2910961158d35a5fab1ec | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:4e8bdcd399e4740f3cd26f41 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
 // STAT-FORMULA[legacyUnitTypeConversions]
-function determineEffectiveUnitType(baseUnitType, abilities, version) {
+function determineEffectiveUnitType(baseUnitType, abilities, version, sourceIdentity = {}) {
   let unitType = baseUnitType || 'normal';
   const ccDefense = !!abilVal(abilities, 'ccDefense', false);
   const ccFireBreath = !!abilVal(abilities, 'ccFireBreath', false);
@@ -199,9 +199,26 @@ function determineEffectiveUnitType(baseUnitType, abilities, version) {
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
   const isWarlord = version && version.startsWith('com2_warlord');
   const destinyActive = destinyActiveForUnit(abilities, version);
+  const baseFantastic = typeof sourceIdentity.baseFantastic === 'boolean'
+    ? sourceIdentity.baseFantastic : (baseUnitType || '').startsWith('fantastic_');
+  const isHero = typeof sourceIdentity.isHero === 'boolean'
+    ? sourceIdentity.isHero : baseUnitType === 'hero';
 
-  // Reported CoM2 combat recalculation order: last applicable type rewrite wins.
+  // Source order is load-bearing. Chaos-Channels Breath runs before Warlord's early
+  // UnitCalcPre hook; Fiery Fury and then Sanctify run inside that hook. Destiny and
+  // the remaining compiled conversions run afterwards, so their later writes win.
   if (ccFireBreath) unitType = 'fantastic_chaos';
+  if (isWarlord && hasAbil(abilities, 'fieryFury') && baseFantastic) {
+    unitType = 'fantastic_chaos';
+  }
+  if (isWarlord && hasAbil(abilities, 'sanctify')) {
+    // Sanctify always writes live race Life. Its separate Fantastic write is gated
+    // to clergy which are not heroes; the compact token cannot carry a hero realm,
+    // so the identity wrapper preserves that one write directly.
+    if (hasAbil(abilities, 'clergy') && !isHero) unitType = 'fantastic_life';
+    else if (unitType.startsWith('fantastic_')) unitType = 'fantastic_life';
+    else if (!isHero) unitType = 'normal_life';
+  }
   if (destinyActive) unitType = 'fantastic_life';
   if (ccFlight) unitType = 'fantastic_chaos';
   if (ccDefense) unitType = 'fantastic_chaos';
@@ -212,37 +229,18 @@ function determineEffectiveUnitType(baseUnitType, abilities, version) {
   if (hasAbil(abilities, 'mysticSurge')) unitType = 'fantastic_unaligned';
   if (isCoMPlus && hasAbil(abilities, 'raiseDead')) unitType = 'fantastic_unaligned';
 
-  // Fiery Fury (Warlord): if cast on a fantastic creature, turns it into a Chaos
-  // creature unless it is undead or enchanted with Apotheosis/Sanctify. (Regular
-  // units instead get stat bonuses — handled in stats.js.)
-  if (isWarlord && hasAbil(abilities, 'fieryFury')
-      && (unitType || '').startsWith('fantastic_')
-      && unitType !== 'fantastic_death'
-      && !hasAbil(abilities, 'sanctify')
-      && !hasAbil(abilities, 'apotheosis')) {
-    unitType = 'fantastic_chaos';
-  }
-
-  // Sanctify (Warlord): during combat a sanctified unit becomes a Life-realm unit.
-  // A 'cleric' (clergy) unit turns into a Life *fantastic* creature; any other
-  // normal unit becomes a Life-realm *non-fantastic* unit. Both gain +1 from True
-  // Light / -1 from Darkness; the fantastic form additionally counts as fantastic
-  // for fantastic-gated effects (Weapon Immunity targeting, Dispel Evil, etc.).
-  // (The cleric spellcasting-skill bonus is not modelled — unit casting is out of
-  // scope for the damage calculator.)
-  if (isWarlord && hasAbil(abilities, 'sanctify')) {
-    if (hasAbil(abilities, 'clergy')) unitType = 'fantastic_life';
-    else if (unitType === 'normal') unitType = 'normal_life';
-  }
-
   return unitType;
 }
 
-// The realm a unit belongs to, derived from its (possibly rewritten) unitType.
-// Both fantastic_<realm> and normal_<realm> (e.g. the Warlord-only 'normal_life'
-// produced by Sanctify) carry a realm; plain 'normal' and 'hero' have none.
+// The realm a unit belongs to. Prefer the live identity because the compact compatibility
+// token cannot represent a realm-tagged hero (notably a Sanctified Warlord hero).
 // Calculator compatibility projection; not an independent source-authored formula.
-function realmOfUnitType(unitType) {
+function realmOfUnitType(unitType, identity = null) {
+  const liveRealm = identity && {
+    Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
+    Sorcery: 'sorcery', Arcane: 'arcane', 'No Heal': 'unaligned',
+  }[identity.race];
+  if (liveRealm) return liveRealm;
   const us = String(unitType || '');
   if (us.startsWith('fantastic_')) return us.slice('fantastic_'.length);
   if (us.startsWith('normal_')) return us.slice('normal_'.length);
@@ -272,7 +270,10 @@ function roundTiesToEven(value) {
 // MODDING.INI supplies SupernaturalStarts and SupernaturalRatio. Caster.exe applies those inputs
 // as Round((hits - starts) * ratio / 100.0), where Delphi Round uses ties-to-even. The optional
 // settings argument keeps this the moddable formula while the UI uses both shipped tables' 0/34.
-// PROVENANCE[supernaturalMinimumDamage]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=the modern implementation/table inputs are exact, but the DOS/CoM1 implementation range is not reconstructed here; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// CoM 6.08 preserves the $2000 trait on its roster records, but D39's complete resolver shows its
+// only $2000 test is dead. Its live (hits - 5) >> 1 floor is instead gated by Destruction $0020,
+// so Supernatural deliberately supplies no CoM 6.08 callback.
+// PROVENANCE[supernaturalMinimumDamage]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:14:802be6a30fdc261073ab86f3 | Reference docs/DOS reconstructed/combat.c@span:13:b21e0acf44cfeb8be8521eb9 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:17:f435321610de7c4db53837da | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:c13764d5e17557e6d5f483a4 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:5:a414079b477c39f4e9b9f6f5 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:5:a414079b477c39f4e9b9f6f5
 // STAT-FORMULA[supernaturalMinimumDamage]
 function supernaturalMinDamageForHits(hits, version, settings = MODERN_SUPERNATURAL_DEFAULTS) {
   if (hits <= 0 || !version) return 0;
@@ -281,13 +282,11 @@ function supernaturalMinDamageForHits(hits, version, settings = MODERN_SUPERNATU
     const ratio = Number.isFinite(settings.ratio) ? settings.ratio : 34;
     return Math.max(0, roundTiesToEven((hits - starts) * ratio / 100));
   }
-  if (version.startsWith('com_')) {
-    return Math.max(0, Math.floor((hits - 5) / 2));
-  }
   return 0;
 }
 
 function supernaturalMinDamageFn(abilities, version) {
+  if (!(version && version.startsWith('com2_'))) return null;
   const hasSupernatural = hasAbil(abilities, 'supernatural');
   const destinyActive = destinyActiveForUnit(abilities, version);
   if (!hasSupernatural && !destinyActive) return null;
@@ -464,19 +463,13 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Lucky: +10% To Hit, +10% To Block, +1 Resistance.
   // The v1.31 enemy melee penalty (-10% To Hit) is applied in resolveCombat.
-  // Lucky reaches a unit from sources in three different stages and does not stack, so it
-  // is counted once, in the earliest phase that grants it — resolved from the markers
-  // set in stats.js rather than by name. An unmarked `lucky` is the unit's own intrinsic
-  // ability, which is phase a.
-  // The unit's own intrinsic Lucky is `+0x044C7`, in region c — the pre-map judgment put it in
-  // a. Nothing between the two regions reads Resistance, To Hit or To Defend, so the move is
-  // faithful without being observable.
+  // Permanent and early-hook sources establish the Lucky ability flag. The actual stat write
+  // is the compiled `+0x044C7` block in region c and does not stack regardless of flag source.
   if (hasAbil(abilities, 'lucky')) {
-    const luckyPhase = hasAbil(abilities, 'luckyPhaseBase')
-      ? 'base'
-      : ((!hasAbil(abilities, 'luckyPhaseA') && hasAbil(abilities, 'luckyPhaseB')) ? 'b' : 'c');
     // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:bf74c9101f80f286adb7d2a0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:761ca75657bf39dc15095e55
-    emit('lucky', luckyPhase, { res: 1, toHit: 10, toBlk: 10 });
+    // Creation/enchantment sources establish ALucky earlier, but the chance/stat write itself
+    // is the compiled Lucky block in region c for every engine.
+    emit('lucky', 'c', { res: 1, toHit: 10, toBlk: 10 });
   }
 
   // Lucky Star's aura: while any friendly unit in the combat carries the enchantment, every
@@ -1678,14 +1671,14 @@ function getBlurChance(defAbilities, atkAbilities, version) {
 }
 
 // Apply immunities granted by the Undead / Animate Dead state.
-// v1.31 bug: only Death Immunity actually applies; Cold/Poison/Illusions Immunity are missing.
-// Fixed in v1.51 (all four apply). All our non-1.31 versions are v1.51+.
+// MoM 1.31 grants only Death Immunity; CP 1.60 grants all four immunities.
+// CoM 1, CoM2, and Warlord grant Death, Cold, and Illusion Immunity, but not Poison.
 // MoM grants these off a *race* test rather than the undead flag — the undead block sets
 // race = Death, then WIZARDS.EXE 0x8F81A ORs 0x40 (Death only) in 1.31 and 0xD8 (all four)
 // in CP 1.60. CoM 1 deletes that gate and ORs 0x58 (Death|Cold|Illusion, no Poison) inside
 // the undead block itself (0x8F4C6).
 // STAT-FORMULA[undeadImmunityDerivation]
-// PROVENANCE[undeadImmunityDerivation]: UNVERIFIED versions=all; gap=derived immunity package lacks complete applicable implementation gates/writes; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// PROVENANCE[undeadImmunityDerivation]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:b0b100600e12a7776e6f6705 | Reference docs/DOS reconstructed/unitcalc.c@span:7:4f777961fd94cbdfe370ee1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:f913c873848cd66c2e8a77bf
 function applyUndeadImmunities(unit, version) {
   if (!hasAbil(unit.abilities, 'undead') && !hasAbil(unit.abilities, 'animated')) return unit;
   const extra = { deathImmunity: true };
@@ -1707,7 +1700,7 @@ function applyUndeadImmunities(unit, version) {
 }
 
 // STAT-FORMULA[animatedEffectDerivation]
-// PROVENANCE[animatedEffectDerivation]: UNVERIFIED versions=all; gap=Animated derived stat/ability package lacks complete applicable implementation ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// PROVENANCE[animatedEffectDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:16:ae07dbabe0a67cb84ddd5b15 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:808c1e69f457f734b2c8e8a8
 function applyAnimatedEffects(unit, version) {
   if (!hasAbil(unit.abilities, 'animated')) return unit;
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
@@ -1718,10 +1711,10 @@ function applyAnimatedEffects(unit, version) {
 }
 
 // Apply immunities from Black Channels.
-// Grants Cold, Illusion, Poison, Death immunities in all versions (BC explicitly grants all four,
-// unlike the Undead attribute which only grants Death Immunity in v1.31).
+// In both supported MoM builds it grants Cold, Illusion, Poison, and Death Immunity
+// (unlike the Undead attribute, which grants only Death Immunity in v1.31).
 // STAT-FORMULA[blackChannelsEffectDerivation]
-// PROVENANCE[blackChannelsEffectDerivation]: UNVERIFIED versions=all; gap=Black Channels derived immunity/status package lacks complete applicable implementation ranges; pointer=Reference docs/DOS reconstructed/unitcalc.c
+// PROVENANCE[blackChannelsEffectDerivation]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:20:d70b30ff5120b7a9057ab7e3 | Reference docs/DOS reconstructed/unitcalc.c@span:7:641fa01e4a1f0fb71d4d0402
 function applyBlackChannelsEffects(unit) {
   if (!hasAbil(unit.abilities, 'blackChannels')) return unit;
   const extra = {
@@ -1739,7 +1732,7 @@ function applyBlackChannelsEffects(unit) {
 // Death Immunity, Illusion Immunity, and Armor Piercing. Stat bonuses are
 // applied by getAbilityStatSteps.
 // STAT-FORMULA[rebuildEffectDerivation]
-// PROVENANCE[rebuildEffectDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Rebuild derived type/immunity/armor-piercing package lacks all current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS
+// PROVENANCE[rebuildEffectDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:14:4bf7fbd36a952469a8d78b9b | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
 function applyRebuildEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'rebuild')) return unit;
   return Object.assign({}, unit, {
@@ -1756,7 +1749,7 @@ function applyRebuildEffects(unit, version) {
 // non-corporeal units (including via Wraith Form / Ruler of Underworld) gain Negate First Strike;
 // units on their favored terrain gain both First Strike and Negate First Strike.
 // STAT-FORMULA[tacticianAbilityDerivation]
-// PROVENANCE[tacticianAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Tactician First Strike/Negate First Strike derivation lacks complete current gates; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
+// PROVENANCE[tacticianAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:20:ad27ec0c811d3a388faf52ab | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:22:89e62a9b6d30ab5269ff1a55
 function applyTacticianWarlordEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'tactician')) return unit;
   const extra = {};
@@ -1773,25 +1766,30 @@ function applyTacticianWarlordEffects(unit, version) {
   });
 }
 
-// Warlord Fiery Fury (Chaos unit enchantment): when cast on a fantastic creature,
-// grants First Strike. (Regular units instead get stat bonuses — handled in stats.js.
+// Warlord Fiery Fury (Chaos unit enchantment): when cast on a base-Fantastic creature,
+// grants First Strike. (Base non-Fantastic units instead get stat bonuses — handled in stats.js.
 // The realm conversion to Chaos is handled in determineEffectiveUnitType.)
 // STAT-FORMULA[fieryFuryAbilityDerivation]
-// PROVENANCE[fieryFuryAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Fiery Fury realm/First Strike/Flame Blade derivation lacks complete current ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS
+// PROVENANCE[fieryFuryAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:14:28f3f207149034b0e805f4b5
 function applyFieryFuryEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord')) return unit;
   if (!hasAbil(unit.abilities, 'fieryFury')) return unit;
-  if (!(unit.unitType || '').startsWith('fantastic_')) return unit;
+  const baseFantastic = unit.identity && typeof unit.identity.baseFantastic === 'boolean'
+    ? unit.identity.baseFantastic
+    : typeof unit.abilities.baseFantastic === 'boolean'
+      ? unit.abilities.baseFantastic
+      : (unit.unitType || '').startsWith('fantastic_');
+  if (!baseFantastic) return unit;
   return Object.assign({}, unit, {
     abilities: Object.assign({}, unit.abilities, { firstStrike: true }),
   });
 }
 
-// Warlord Zeal (Life unit enchantment, cast only by Inquisitors/Grand Inquisitor):
-// grants First Strike and Negate First Strike. Applied before Temporal Twist so
-// Temporal Twist can strip the granted flags.
+// Warlord Zeal grants First Strike and Negate First Strike. Item power 78 grants the
+// same flags earlier in phase b; the ordinary phase-d Zeal block skips that duplicate.
+// Both precede Temporal Twist, which can strip the granted flags.
 // STAT-FORMULA[zealAbilityDerivation]
-// PROVENANCE[zealAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Zeal derived ability package lacks complete current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
+// PROVENANCE[zealAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:d530a92fb1e7f722142a627e | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:4:31ac70ff5715861521e99085
 function applyZealEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'zeal')) return unit;
   return Object.assign({}, unit, {
@@ -1800,13 +1798,13 @@ function applyZealEffects(unit, version) {
 }
 
 // Warlord Temporal Twist (enemy combat global enchantment): strips First Strike,
-// Negate First Strike, and Teleporting from the affected unit. Applied after the
-// Tactician retort so that Tactician-granted First Strike / Negate First Strike
-// are removed too.
+// Negate First Strike, and Teleporting from the affected unit. It runs before the
+// later Tactician block, which can restore Negate First Strike from Non-Corporeal
+// or both strike flags from Favored Terrain, but cannot restore Teleporting's First Strike.
 // STAT-FORMULA[temporalTwistAbilityDerivation]
-// PROVENANCE[temporalTwistAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Temporal Twist derived ability package lacks complete current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
-function applyTemporalTwistEffects(unit) {
-  if (!hasAbil(unit.abilities, 'temporalTwist')) return unit;
+// PROVENANCE[temporalTwistAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:f1f4495ca7b57ea954b01136
+function applyTemporalTwistEffects(unit, version) {
+  if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'temporalTwist')) return unit;
   const stripped = Object.assign({}, unit.abilities);
   delete stripped.firstStrike;
   delete stripped.negateFirstStrike;
@@ -1818,7 +1816,7 @@ function applyTemporalTwistEffects(unit) {
 // determineEffectiveUnitType(). Warlord: Bloodlust no longer turns the unit undead
 // (only doubled melee vs normals/heroes is retained), so this becomes a no-op.
 // STAT-FORMULA[bloodLustAbilityDerivation]
-// PROVENANCE[bloodLustAbilityDerivation]: UNVERIFIED versions=all; gap=Blood Lust derived type/immunity/status package lacks complete applicable ranges; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+// PROVENANCE[bloodLustAbilityDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:4291d05361823ad272e4e04f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:e894ef880a35e8ad7d3f714b | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:8:32ea534d834bbcec63f4826a
 function applyBloodLustEffects(unit, version) {
   if (!hasAbil(unit.abilities, 'bloodLust')) return unit;
   if (version && version.startsWith('com2_warlord')) return unit;
@@ -1830,8 +1828,10 @@ function applyBloodLustEffects(unit, version) {
 // Warlord Vampirism (Death very rare unit enchantment): unit becomes undead and gains
 // Blood Sucker. Immunities follow from the granted `undead` flag via applyUndeadImmunities.
 // The thrown/breath -> melee strength transfer is applied in deriveUnitStats (stats.js).
+// Its Create Undead grant only routes damage into a post-combat creation category; it does
+// not change one-round damage or Blood Sucker triggering, so this calculator omits that flag.
 // STAT-FORMULA[vampirismAbilityDerivation]
-// PROVENANCE[vampirismAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Vampirism derived package lacks complete current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
+// PROVENANCE[vampirismAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:13:6359ba6a575e608e160b3466
 function applyVampirismEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'vampirism')) return unit;
   return Object.assign({}, unit, {
@@ -1839,12 +1839,12 @@ function applyVampirismEffects(unit, version) {
   });
 }
 
-// Warlord Revenant (Death uncommon unit enchantment): unit permanently becomes
-// undead for the battle and gains melee Death Touch 0. Immunities follow from the
+// Warlord Revenant (Death uncommon unit enchantment): unit becomes undead and gains
+// melee Death Touch 0. Immunities follow from the
 // granted `undead` flag via applyUndeadImmunities. Death Touch fires per attacking
 // figure on melee and Thrown. Regeneration has no bearing on single-combat damage.
 // STAT-FORMULA[revenantAbilityDerivation]
-// PROVENANCE[revenantAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Revenant derived package lacks complete current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS
+// PROVENANCE[revenantAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/COSpell.CAS@span:3:6d47f9da2fa86fd972f40ae4 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:7:76f065dbf8571714ba992fd1
 function applyRevenantEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'revenant')) return unit;
   return Object.assign({}, unit, {
@@ -1892,24 +1892,27 @@ function applyWarlordTouchFlagPlacement(unit, version) {
 }
 
 // Warlord Angelic Guardians (Life rare global enchantment): in combat, grants or
-// improves Exorcise Touch on friendly units. Only realm-less units (normal/hero) and
-// Life-realm units (Life creatures and Sanctified units) are buffed — fantastic
-// creatures of any other realm receive nothing. The tier depends on the realm:
-//   - already has Exorcise: extra -3 (life) / -2 (regular) save penalty
-//   - no Exorcise: gains it at -1 (life) / -0 (regular)
+// improves Exorcise Touch on friendly units. Existing Exorcise is improved on every
+// realm: extra -3 (Life) or -2 (all others). A unit without Exorcise receives it when
+// its base record is non-Fantastic (value 0) or its current realm is Life (value -1).
 // Run after the effective unit type is finalized, so Sanctify's life-realm rewrite is
 // already reflected. The extra -3 vs created-undead defenders lives in exorciseFailProb.
 // STAT-FORMULA[angelicGuardiansAbilityDerivation]
-// PROVENANCE[angelicGuardiansAbilityDerivation]: UNVERIFIED versions=com2_warlord_1.5.12.7; gap=Angelic Guardians derived package lacks complete current implementation ranges; pointer=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS
+// PROVENANCE[angelicGuardiansAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:9:f742373b8f5966edd2fa5c3b
 function applyAngelicGuardiansEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'angelicGuardians')) return unit;
-  const realm = realmOfUnitType(unit.unitType);
-  if (realm !== null && realm !== 'life') return unit;
+  const realm = realmOfUnitType(unit.unitType, unit.identity);
   const isLife = realm === 'life';
+  const baseFantastic = unit.identity && typeof unit.identity.baseFantastic === 'boolean'
+    ? unit.identity.baseFantastic
+    : typeof unit.abilities.baseFantastic === 'boolean'
+      ? unit.abilities.baseFantastic
+      : (unit.unitType || '').startsWith('fantastic_');
   let val;
   if (abilDefined(unit.abilities, 'exorcise')) {
     val = abilVal(unit.abilities, 'exorcise', 0) + (isLife ? -3 : -2);
   } else {
+    if (baseFantastic && !isLife) return unit;
     val = isLife ? -1 : 0;
   }
   return Object.assign({}, unit, {
@@ -1917,13 +1920,12 @@ function applyAngelicGuardiansEffects(unit, version) {
   });
 }
 
-// PROVENANCE[bloodLustMeleeAttack]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; gap=the modern melee/Thrown implementation is reconstructed, but the exact applicable CoM1 range remains split; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+// PROVENANCE[bloodLustMeleeAttack]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:7:28677485bcd26d6205a27127 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:ac0c26ac4b856f2574b214d5
 // STAT-FORMULA[bloodLustMeleeAttack]
 function bloodLustMeleeAttack(atkUnit, defUnit, attackStrength = atkUnit.atk) {
-  // Spirit Link makes the target count as a non-fantastic unit for being targeted,
-  // so Blood Lust's "double melee vs Normal/Hero" applies to it as well.
-  const targetIsNormal = defUnit && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero'
-    || hasAbil(defUnit.abilities, 'spiritLink'));
+  // The final calculated unit type already reflects conversions such as Spirit Link.
+  const targetIsNormal = defUnit
+    && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero');
   if (!targetIsNormal || !hasAbil(atkUnit.abilities, 'bloodLust')) return attackStrength;
   return attackStrength * 2;
 }
@@ -2903,17 +2905,21 @@ function normalizeCombatUnit(unit, version) {
   let normalized = applyBloodLustEffects(unit, version);
   normalized = applyVampirismEffects(normalized, version);
   normalized = applyRevenantEffects(normalized, version);
-  normalized = applyUndeadImmunities(normalized, version);
   normalized = applyAnimatedEffects(normalized, version);
+  normalized = applyUndeadImmunities(normalized, version);
   normalized = applyBlackChannelsEffects(normalized);
   normalized = applyRebuildEffects(normalized, version);
-  normalized = applyTacticianWarlordEffects(normalized, version);
-  normalized = applyZealEffects(normalized, version);
   normalized = applyFieryFuryEffects(normalized, version);
-  normalized = applyTemporalTwistEffects(normalized);
+  normalized = applyZealEffects(normalized, version);
+  normalized = applyTemporalTwistEffects(normalized, version);
+  normalized = applyTacticianWarlordEffects(normalized, version);
   normalized = applyDoomUAHalving(normalized, version);
   const withType = Object.assign({}, normalized, {
-    unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version),
+    unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version,
+      normalized.identity || {
+        baseFantastic: normalized.baseFantastic,
+        isHero: normalized.isHero,
+      }),
   });
   // Angelic Guardians grants/improves Exorcise based on the finalized realm.
   const withGuardians = applyAngelicGuardiansEffects(withType, version);
@@ -2966,22 +2972,23 @@ function applyPairToHitModifiers(a, b, version) {
 
 function buildVertigoContext(a, b, version) {
   const isCoM = version && version.startsWith('com');
-  const isCoM2Vert = version && version.startsWith('com2');
-  const aVertigo = hasAbil(a.abilities, 'vertigo');
-  const bVertigo = hasAbil(b.abilities, 'vertigo');
-  const vertigoHitPenalty = isCoM2Vert ? 0.25 : (isCoM ? 0.3 : 0.2);
-  const vertigoBlockPenalty = isCoM2Vert ? 0.07 : (isCoM ? 0.1 : 0);
+  const aVertigo = hasAbil(a.abilities, 'vertigo')
+    && !hasAbil(a.abilities, 'illusionImmunity') && !hasAbil(a.abilities, 'magicImmunity');
+  const bVertigo = hasAbil(b.abilities, 'vertigo')
+    && !hasAbil(b.abilities, 'illusionImmunity') && !hasAbil(b.abilities, 'magicImmunity');
 
   return {
     isCoM,
-    aToHitMeleeVert: aVertigo ? Math.max(0.1, a.toHitMelee - vertigoHitPenalty) : a.toHitMelee,
-    bToHitMeleeVert: bVertigo ? Math.max(0.1, b.toHitMelee - vertigoHitPenalty) : b.toHitMelee,
-    aToHitRtbVert: aVertigo ? Math.max(0.1, a.toHitRtb - vertigoHitPenalty) : a.toHitRtb,
-    bToHitRtbVert: bVertigo ? Math.max(0.1, b.toHitRtb - vertigoHitPenalty) : b.toHitRtb,
+    // Persistent Hit/To Defend penalties were already applied by recalculation. Only MoM's
+    // separate -1 Defense-die projection remains resolution-time state here.
+    aToHitMeleeVert: a.toHitMelee,
+    bToHitMeleeVert: b.toHitMelee,
+    aToHitRtbVert: a.toHitRtb,
+    bToHitRtbVert: b.toHitRtb,
     aVertigoDefPenalty: !isCoM && aVertigo ? 1 : 0,
     bVertigoDefPenalty: !isCoM && bVertigo ? 1 : 0,
-    aVertigoBlockPenalty: aVertigo ? vertigoBlockPenalty : 0,
-    bVertigoBlockPenalty: bVertigo ? vertigoBlockPenalty : 0,
+    aVertigoBlockPenalty: 0,
+    bVertigoBlockPenalty: 0,
   };
 }
 
@@ -3587,7 +3594,8 @@ function buildDefenderGazePhase(active, params) {
 //   a, b: unit stat objects with fields:
 //     { figs, atk, def, res, hp, dmg, rtb, rangedType, thrownType,
 //       toHitMelee, toHitRtb, toBlock, abilities }
-//     where toHitMelee/toHitRtb/toBlock are already-clamped decimals (0.1-1.0)
+//     where toHitMelee/toHitRtb are region-e-clamped decimals (0.1-1.0), while modern
+//     toBlock is DefenseRoll's effective probability projection (0.0-1.0)
 //   opts: { isRanged, distance }
 //
 // Returns:
@@ -4060,8 +4068,7 @@ function resolveCombat(a, b, opts) {
           b,
           aDoomsB,
           aBlackSleep,
-          aToHitRtbVert: isCoM2 && hasAbil(attacker.abilities, 'vertigo')
-            ? Math.max(0.1, attacker.toHitRtb - 0.25) : aToHitRtbVert,
+          aToHitRtbVert: isCoM2 ? attacker.toHitRtb : aToHitRtbVert,
           bDefForThrown: isCoM2 ? computeCasterDefenseForAttack(b, attacker, ver, bVertigoDefPenalty, 'thrown') : bDefForThrown,
           bToBlockVsAThrEW: isCoM2 ? buildToBlockContext(attacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty).bToBlockVsAThrEW : bToBlockVsAThrEW,
           bInvulnBonus,
@@ -4420,7 +4427,7 @@ function resolveCombat(a, b, opts) {
     let dmgToB = aAlive > 0 && bRemHP > 0 && rangedAttacker.rtb > 0 && !aBlackSleep
       ? (aRangedDoomsB ? calcDoomDist(aAlive, aRtbRanged, bRemHP)
                  : calcTotalDamageDist(aAlive, aRtbRanged,
-                     hasAbil(rangedAttacker.abilities, 'vertigo') && isCoM2 ? Math.max(0.1, rangedAttacker.toHitRtb - 0.25) : aToHitRtbVert,
+                     isCoM2 ? rangedAttacker.toHitRtb : aToHitRtbVert,
                      rangedDefense, rangedToBlock, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
                      isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined, aMinDamageFromHits))
       : [1];

@@ -7,6 +7,9 @@ async function configureTracedCards(page) {
     const version = document.getElementById('gameVersion');
     version.value = 'com2_warlord_1.5.12.7';
     version.dispatchEvent(new Event('change', { bubbles: true }));
+    // Warm this version's default-state cache before configuring the cards. Otherwise the
+    // delayed persistence hook can build the cache mid-assertion, briefly resetting the DOM.
+    collectState();
 
     for (const prefix of ['a', 'b']) {
       document.getElementById(prefix + 'Atk').value = prefix === 'a' ? 5 : 6;

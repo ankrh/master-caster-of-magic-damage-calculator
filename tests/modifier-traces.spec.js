@@ -80,6 +80,67 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
   expectNoConsoleErrors(errors);
 });
 
+test('F5 keeps modern common and channel chance writes on the ordered record', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const reports = await page.evaluate(() => Object.fromEntries(
+    ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => [version, {
+      twoStage: deriveUnitStats({
+      prefix: 'a', version,
+      identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
+      figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
+      level: 'normal', weapon: 'normal', armor: 'none', abilities: {},
+      toHitMod: -50, toHitRtbMod: -40, toBlkMod: -40,
+      }),
+      orderedClamp: deriveUnitStats({
+        prefix: 'a', version,
+        identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
+        figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
+        level: 'normal', weapon: 'normal', armor: 'none', abilities: {},
+        toHitMod: -50, toHitRtbMod: 100, toBlkMod: 0,
+      }),
+      sourceOrdered: version.startsWith('com2_warlord') ? deriveUnitStats({
+        prefix: 'a', version,
+        identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
+        figs: 1, atk: 5, rtb: 5, rtbType: 'missile', def: 5, res: 6, hp: 5,
+        level: 'normal', weapon: 'normal', armor: 'none',
+        abilities: { plague: true, vertigo: true, berserkWarlord: true },
+        toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
+        warpReality: true, hurricane: true,
+      }) : null,
+    }]),
+  ));
+
+  for (const { twoStage: report, orderedClamp } of Object.values(reports)) {
+    expect(report.toHitMelee).toBeCloseTo(0.1);
+    expect(report.toHitRtb).toBeCloseTo(0.2);
+    expect(report.toBlock).toBe(0);
+    const ids = orderedClamp.statTrace.map(entry => entry.id);
+    expect(ids.indexOf('chance:modernClampCommon')).toBeGreaterThanOrEqual(0);
+    expect(ids.indexOf('chance:modernClampCommon')).toBeLessThan(ids.indexOf('chance:clamp'));
+    expect(report.modifierTraces.toHitRanged.entries.at(-1)).toMatchObject({
+      id: 'chance:modernClampCommon', from: -10, to: 20,
+    });
+  }
+
+  const sourceOrdered = Object.values(reports).find(report => report.sourceOrdered).sourceOrdered;
+  const expectedChanceSteps = [
+    ['plague', 'b', 'Plague'],
+    ['chance:warpReality', 'c', 'Warp Reality'],
+    ['chance:vertigo', 'c', 'Vertigo'],
+    ['chance:berserkWarlord', 'd', 'Berserk'],
+    ['chance:hurricane', 'd', 'Hurricane'],
+  ];
+  for (const [id, phase, label] of expectedChanceSteps) {
+    const entry = sourceOrdered.statTrace.find(item => item.id === id);
+    expect(entry).toMatchObject({ phase, source: { label } });
+  }
+  const sourceIds = sourceOrdered.statTrace.map(entry => entry.id);
+  expect(sourceIds.indexOf('chance:berserkWarlord'))
+    .toBeLessThan(sourceIds.indexOf('chance:modernClampCommon'));
+  expect(sourceIds.indexOf('chance:hurricane')).toBeLessThan(sourceIds.indexOf('chance:clamp'));
+  expectNoConsoleErrors(errors);
+});
+
 test('R7.3 attributes permanent writes and a created modern channel to their sources', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {

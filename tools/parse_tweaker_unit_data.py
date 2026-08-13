@@ -120,6 +120,9 @@ TOKEN_RENAMES = {
     'Summon Demons 1': 'Summon Demons Spell',
     'Weapon Imm': 'Weapon Immunity',
     'Automatic Damage': 'Doom',
+    # CoM 6.08's Tweaker export uses this misleading label for the common
+    # attack-attribute bit that WIZARDS.EXE names Supernatural ($2000).
+    'Simultaneous Damage COMBAT': 'Supernatural',
     # The DOS source spells this out; the modern rosters and the ability def both call it
     # `Illusion`. Kept verbatim it matched nothing, so the Phantoms lost the ability.
     'Illusionary attack': 'Illusion',
@@ -128,7 +131,6 @@ TOKEN_RENAMES = {
 TOKEN_DISCARD = {
     'Standard',
     'Summon Demons 2',
-    'Simultaneous Damage COMBAT',
 }
 
 # Relevant tokens that are intentionally passed through verbatim (no rename

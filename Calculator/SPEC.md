@@ -154,6 +154,13 @@ In CoM2 and Warlord, Blood Lust doubles the selected attack strength for **melee
 attacks against a non-Fantastic defender. It does not double ranged or either Breath attack.
 CoM 1 retains its melee-only rule.
 
+Supernatural is imported and displayed on the shipped CoM 1 roster units that carry its `$2000`
+attack-attribute bit, but it has no combat effect in that version. The frozen CoM 6.08 resolver's
+only `$2000` test is inactive; its live `(hits - 5) >> 1` minimum is a distinct Destruction
+`$0020` path. CoM2 and Warlord compute the minimum from pre-defense hits as
+`Round((hits - SupernaturalStarts) × SupernaturalRatio / 100)`, with Delphi ties-to-even rounding,
+then enforce that floor after defense; both shipped `MODDING.INI` files use `0` and `34`.
+
 CoM2 and Warlord Cause Fear have a base/current-record distinction. The direct Death-Immunity
 gate reads the feared unit's persistent base record before the −3 Death-realm resistance rolls;
 Death Immunity derived only during stat recalculation (for example from Blood Lust, Animated or
@@ -279,15 +286,17 @@ their source IDs; custom units use null IDs. Every derivation creates a fresh ca
 whose live `race` and `fantastic` values start from the corresponding base fields. Template-based
 states such as Chosen or Golem are predicates derived when needed, never persisted booleans. The
 CoM1 Golem constructor path is retained alongside the modern path and grants `Resist Elements`.
-The calculation then applies a version-scoped identity sequence to the fresh live fields: modern
-Chosen/Avatar writes live Life + Fantastic and Combat Summoned units become live Fantastic. Base
-CoM2 Construct Catapult additionally becomes live Nature + Fantastic; Warlord's enabled slot instead
+The calculation then applies a version-scoped identity sequence to the fresh live fields. Every
+successful CoM 1 combat summon becomes live Fantastic; Paladins become Life, Centaurs and Catapult
+become Nature, and all other types retain their loaded race. Modern Chosen/Avatar writes live Life
++ Fantastic and Combat Summoned units become live Fantastic. Base CoM2 Construct Catapult
+additionally becomes live Nature + Fantastic; Warlord's enabled slot instead
 summons Water Elemental, so template 37 receives no Catapult-specific rewrite there. Warlord Spirit
 Link can later clear only the live
 Fantastic predicate while
 retaining the base predicate and fantastic-only grants. Casting Spirit Link permanently adds +2
-Resistance to the base record before that encounter-time identity sequence. CoM 1 retains its constructor branch for
-Catapult, Centaurs and Paladins; Construct Catapult also receives Magic Weapons, and Zombies start
+Resistance to the base record before that encounter-time identity sequence. CoM 1 Construct
+Catapult also receives Magic Weapons, and Zombies start
 with `To Block = -1` (a ten-percentage-point penalty). Base-CoM2 Call to Arms Paladins use live Life
 where that spell-specific condition is selected only for the retained Paladins template (113);
 Warlord replaces the spell with Spirit of Chivalry summoning template 211. The
@@ -314,6 +323,26 @@ Prayer write conventional ranged, Thrown and both Breath fields but not the inde
 fields. A CoM2 Tactician hero receives +2 melee and +2 conventional ranged, not +2 Thrown,
 Breath or Gaze; CoM 1's corresponding write reaches its shared secondary-attack slot. DOS Metal
 Fires applies only to a non-Fantastic unit and still does not stack with Flame Blade.
+
+Chaos Channels Fire Breath follows the source unit type's pre-transform attack record. In the DOS
+engines, that record is one shared ranged/Thrown/Breath/Gaze slot: the Fire Breath result is
+eligible only when its type is None or Thrown and its signed base strength is at most 3 in MoM
+1.31 or at most 0 in CP 1.60 and CoM 6.08. An admitted result replaces the shared slot with Fire
+Breath 2 in both MoM builds or Fire Breath 4 in CoM 6.08; a rejected result leaves the existing
+slot unchanged, so a DOS Gaze never coexists with the Breath. CoM2 and Warlord instead add 4 to
+their independent Fire Breath field without suppressing ranged, Thrown, Lightning Breath, or Gaze.
+
+Warlord's script order is also load-bearing for strike flags. Fiery Fury runs in phase `b` and
+uses the base-Fantastic predicate for its First Strike grant;
+Sanctify runs later in the same phase and always writes live race Life, while its Fantastic write
+requires Clergy and excludes heroes. Destiny and the compiled No-Heal conversions run after both,
+so their later identity writes win.
+Zeal, Temporal Twist, and Tactician then run in that order in phase `d`. Temporal Twist therefore
+removes Fiery Fury/Zeal strike grants and Teleporting before Tactician runs. Tactician cannot
+restore First Strike from the cleared Teleporting flag, but can restore Negate First Strike from
+Non-Corporeal or both strike flags from Favored Terrain. Angelic Guardians grants Exorcise to a
+base non-Fantastic unit or a current Life unit when it is absent; its separate existing-Exorcise
+branch improves any realm by 2, or Life by 3.
 
 Compatibility code may translate legacy inputs into the live record or project the finished live
 record into a legacy shape, but it must not remain an alternate place where engine effects execute.
@@ -363,6 +392,16 @@ Order is load-bearing:
 
    The consequence that is easy to get wrong: **b runs before c**. A Warlord CAS effect in
    the early pass lands *before* base-game spells, not after.
+
+   To-Hit and To-Defend writes use this same ordered record. In CoM2 and Warlord the record
+   keeps one common Hit field plus separate melee, conventional-ranged, Thrown, and Breath
+   modifiers. Region `e` first clamps common Hit to 10–100%, then adjusts each channel modifier
+   so its sum with that already-clamped common value is 10–100%. These are two ordered writes,
+   not one clamp over the pre-clamp sum: common `−50` with a ranged modifier of `+10` resolves
+   to 20%, not 10%. Modern To Defend is not clamped in region `e`; its eventual random-threshold
+   comparison naturally makes values at or below zero a 0% chance and values above 100 a 100%
+   chance. The DOS engines retain their single effective attack-threshold representation and
+   terminal 10–100% clamp.
 
    Every phase is an engine region — there is no scaffolding left. **Region `a` is effectively
    empty**: it writes nine unit fields against `c`'s 492, and the ones it writes are flags, not

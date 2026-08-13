@@ -5,13 +5,13 @@
  * R6.2f's spell-damage/application closure, R6.5a's side-wide Illusion-sight refresh,
  * R6.5b's exported battle-unit healing/temporary-Hits routine, and R6.5d's exported
  * battlefield side-bonus aggregation routine, and R9-G1a-R1's battle-unit load-to-combat
- * routine and CoM 1 identity tail, and A32's Shatter target-admission and
- * generic effect-setter path.
+ * routine and CoM 1 identity tail, A32's Shatter target-admission and generic
+ * effect-setter path, and D35's CoM 1 Raise Dead routine and dispatcher case.
  *
  * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
  * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
  * R6.2a.evidence.md through R6.2f.evidence.md, R6.5a/b/d.evidence.md, and
- * A32.evidence.md. The overlay-entry names
+ * A32.evidence.md, D35.evidence.md, and D39.evidence.md. The overlay-entry names
  * below are ReMoM
  * attributions: the VROOMM
  * targets cannot be mapped back to file offsets from the executable images.
@@ -24,6 +24,7 @@
 #define ST_TRUE                     1
 #define ST_UNDEFINED               (-1)
 #define BUS_ACTIVE                  0
+#define BUS_UNKNOWN_3               3
 #define BUS_DEAD                    4
 #define BUS_DRAINED                 5
 #define BUS_GONE                    6
@@ -86,6 +87,7 @@
 #define ATT_DISPEL_EVIL             0x0800
 #define ATT_ELDRITCH_WEAPON         0x4000
 #define ATT_DAMAGE_LIMIT            0x2000
+#define ATT_SUPERNATURAL            0x2000
 #define ATT_AREA                    0x1000
 #define ATT_WARP_LIGHTNING          0x8000
 #define USA_IMMUNITY_STONING        0x0002
@@ -135,15 +137,19 @@
 #define MV_FLYING                   0x0008
 #define MV_TELEPORT                 0x0010
 #define MV_MERGING                  0x0080
+#define MV_UNKNOWN_0800             0x0800 /* CoM 1 Moves2: halve changed movement maximum */
+#define MV_UNKNOWN_1000             0x1000 /* CoM 1 Moves2: suppress movement carry-over */
 #define RACE_FIRST_FANTASTIC        0x0F
 #define RACE_REALM_BIAS             0x10
 #define RACE_CHAOS                  0x12
 #define RACE_NATURE                 0x10
 #define RACE_LIFE                   0x13
 #define RACE_DEATH                  0x14
+#define rt_Fantastic_No_Realm       0x15
 #define HERO_SLOT_NONE              (-1)
 #define SPELL_FIREBALL              0x60
 #define SPELL_SHATTER               0x58
+#define SPELL_RAISE_DEAD            0x89
 #define SPELL_CLASS_MUNDANE_CURSE   0x10
 #define COMBAT_TARGET_ENEMY_NORMAL  11
 #define BUE_SHATTER                 0x0010
@@ -197,6 +203,12 @@
 #define COM1_DESTRUCTION_FLOOR_GATE 80
 #define COM1_HERO_BYTE_0B_FACTOR_2  0x02
 #define COM1_HERO_BYTE_0B_FACTOR_3  0x04
+#define RAISE_DEAD_NO_SELECTION     (-1) /* raw 0xFFFF */
+#define RAISE_DEAD_NAME_BYTES       16
+#define RAISE_DEAD_CANDIDATE_SLOTS  8
+#define COM1_RAISE_DEAD_NAME_BUFFER 0x83E0
+#define COM1_RAISE_DEAD_PROMPT      0x686F
+#define GREY_HITS_UNINITIALIZED     (-1) /* raw 0xFF movement-cache sentinel */
 
 #define BLUR_ATTKR                  0x1C
 #define BLUR_DFNDR                  0x1D
@@ -352,6 +364,19 @@ extern void __far Combat_Spell_Animation(int16_t target_cgx, int16_t target_cgy,
 #if BUILD == COM1
 extern void __far Calc_Battlefield_Bonuses(int16_t combat_structure);
 extern int16_t _combat_structure;     /* absolute word DS:0xC520 */
+extern int16_t __far Calc_Unit_Level(int16_t unit_idx); /* 03C0:008E -> 0x9761F */
+extern void __far overlay_0518_0025(void);             /* -> 0xF2840 */
+extern void __far overlay_00E0_001A(void);             /* -> 0x1278A */
+extern void __far overlay_0318_0020(void);             /* -> 0x767A0 */
+extern void __far overlay_0008_0503(void);             /* -> 0x06DC3 */
+extern void __far overlay_00E0_0073(void);             /* -> 0x127E3 */
+extern char *__far overlay_0000_3C37(char *dst, const char *src); /* -> 0x06637 */
+extern int16_t __far overlay_04A8_003E(int16_t arg0, int16_t *arg1,
+                                       int16_t arg2, char *arg3); /* -> 0xCF89D */
+extern void __far overlay_0428_0066(int16_t arg0, int16_t arg1, int16_t arg2,
+                                    int16_t arg3, int16_t arg4); /* -> 0xAF380 */
+extern int8_t *com1_combat_grid_rows[]; /* near row pointers at DS:0xC524 */
+extern int16_t com1_ai_raise_dead_target; /* DS:0x4995; producer 0xBB30D */
 #endif
 
 /* ===========================================================================
@@ -3132,7 +3157,7 @@ ranged_channel_done:
                                       /* args pushed 131:—  160:—  com1:0x99D50..0x99D56,
                                          call com1:0x99D6B, cleanup com1:0x99D70 */
         } else {
-            (void)(attacker_bu->attack_attributes & ATT_DAMAGE_LIMIT);
+            (void)(attacker_bu->attack_attributes & ATT_SUPERNATURAL);
                                       /* `26 F6 47 1F 20` on the high byte of +0x1E;
                                          test com1:0x99D58; the result is discarded because
                                          0x99D5D is an unconditional jmp to 0x99D73 */
@@ -3942,4 +3967,177 @@ void com1_relocated_battle_unit_tail(void)
 }
 
 /* Twenty-seven NOP bytes at com1:0x998A6..0x998C0. */
+#endif
+
+/* ===========================================================================
+ * D35 -- CoM 1 Raise Dead combat routine and dispatcher case.
+ * Complete coverage, call/branch/write inventories, patched-byte accounting,
+ * and the SPELLDAT binding are in D35.evidence.md.
+ * ======================================================================== */
+#if BUILD == COM1
+void __far CMB_Raise_Dead(int16_t player_idx, int16_t caster_idx,
+                          int16_t cgx, int16_t cgy)
+{
+    int16_t candidate_names[RAISE_DEAD_CANDIDATE_SLOTS];
+    int16_t candidate_units[RAISE_DEAD_CANDIDATE_SLOTS];
+    int16_t candidate_count = 0;
+    int16_t selected = RAISE_DEAD_NO_SELECTION;
+    int16_t candidate_scan_idx;
+    int16_t raised_battle_unit_idx;
+
+    overlay_0518_0025();                         /* 131:—  160:—  com1:0xAB055 */
+    overlay_00E0_001A();                         /* 131:—  160:—  com1:0xAB05A */
+    overlay_0318_0020();                         /* 131:—  160:—  com1:0xAB05F */
+    overlay_0008_0503();                         /* 131:—  160:—  com1:0xAB064 */
+    overlay_00E0_0073();                         /* 131:—  160:—  com1:0xAB069 */
+    /* JMP ->0xAB073 at 131:—  160:—  com1:0xAB06E; jump-skipped [0xAB070,0xAB073). */
+
+    for (candidate_scan_idx = 0;
+         candidate_scan_idx < _combat_total_unit_count;
+         ++candidate_scan_idx) {                 /* init 131:—  160:—  com1:0xAB073; test 131:—  160:—  com1:0xAB14A */
+        struct s_BATTLE_UNIT __far *bu = &_battle_units[candidate_scan_idx];
+        struct s_UNIT __far *u;
+
+        if ((int8_t)bu->status <= BUS_UNKNOWN_3) /* JG ->0xAB094 at 131:—  160:—  com1:0xAB08F */
+            continue;                            /* JMP ->0xAB149 at 131:—  160:—  com1:0xAB091 */
+        if ((int8_t)bu->controller_idx != player_idx)
+            continue;                            /* JNE ->0xAB091 at 131:—  160:—  com1:0xAB09C */
+        if ((int8_t)bu->race >= RACE_FIRST_FANTASTIC)
+            continue;                            /* JGE ->0xAB091 at 131:—  160:—  com1:0xAB0A3 */
+        if ((int8_t)bu->status == BUS_GONE)
+            continue;                            /* JE ->0xAB091 at 131:—  160:—  com1:0xAB0AA */
+        if ((int8_t)bu->status == BUS_UNKNOWN_3)
+            continue;                            /* redundant JE ->0xAB091 at 131:—  160:—  com1:0xAB0B1 */
+        u = &_UNITS[bu->unit_idx];               /* 131:—  160:—  com1:0xAB0B3 */
+        if ((uint8_t)u->wp == UNIT_WP_GONE)
+            continue;                            /* JE ->0xAB091 at 131:—  160:—  com1:0xAB0C6 */
+
+        candidate_names[candidate_count] =
+            COM1_RAISE_DEAD_NAME_BUFFER
+            + candidate_count * RAISE_DEAD_NAME_BYTES;
+                                                 /* 131:—  160:—  com1:0xAB0C8..0xAB0DD */
+        /* CoM patch NOP at [0xAB0D7,0xAB0D8); 28 NOPs at [0xAB0DF,0xAB0FB)
+         * occupy the exact space between the two local-array stores. */
+        candidate_units[candidate_count] = candidate_scan_idx;
+                                                 /* 131:—  160:—  com1:0xAB0FB..0xAB105 */
+        overlay_0000_3C37((char *)candidate_names[candidate_count],
+                          unit_types[(uint8_t)u->type].name);
+                                                 /* call 131:—  160:—  com1:0xAB13F */
+        ++candidate_count;                       /* 131:—  160:—  com1:0xAB146 */
+        /* No eight-slot bound check precedes either local-array write. */
+    }                                            /* JGE ->0xAB153 at 131:—  160:—  com1:0xAB14E;
+                                                   JMP ->0xAB07D at 131:—  160:—  com1:0xAB150 */
+
+    if (candidate_count > 0) {                   /* JLE ->0xAB1A9 at 131:—  160:—  com1:0xAB15C */
+        if (player_idx != 0) {
+            selected = 0;                        /* 131:—  160:—  com1:0xAB15E..0xAB164 */
+        } else if (candidate_count == 1) {
+            selected = 0;                        /* 131:—  160:—  com1:0xAB16B..0xAB171 */
+        } else {
+            /* CMP candidate_count,7 at 0xAB178 is followed by two NOPs, not a branch.
+             * Live pushes are count, names, 0, and the 0x686F prompt. */
+            selected = overlay_04A8_003E(candidate_count, candidate_names, 0,
+                                         (char *)COM1_RAISE_DEAD_PROMPT);
+                                                 /* JMP ->0xAB19E at 131:—  160:—  com1:0xAB18C;
+                                                    call 131:—  160:—  com1:0xAB19E */
+        }
+    }
+
+    /* Dormant [0xAB18E,0xAB19E) pushes 6, names, 1, and the same prompt, then
+     * falls into the call. No direct branch/call enters that argument builder. */
+    overlay_00E0_001A();                         /* 131:—  160:—  com1:0xAB1A9 */
+    overlay_0318_0020();                         /* 131:—  160:—  com1:0xAB1AE */
+    overlay_0008_0503();                         /* 131:—  160:—  com1:0xAB1B3 */
+    if (selected == RAISE_DEAD_NO_SELECTION)
+        goto cleanup;                            /* JNE ->0xAB1C1 at 131:—  160:—  com1:0xAB1BC;
+                                                   JMP ->0xAB45F at 131:—  160:—  com1:0xAB1BE */
+
+    if (player_idx != 0) {                       /* JE ->0xAB222 at 131:—  160:—  com1:0xAB1C5 */
+        do {
+            if (player_idx == _combat_attacker_player)
+                cgx = 14 - Random(3);            /* JNE ->0xAB1E4 at 131:—  160:—  com1:0xAB1CE;
+                                                   call/write 131:—  160:—  com1:0xAB1D4/0xAB1DF */
+            else
+                cgx = 8 + Random(2);             /* call/write 131:—  160:—  com1:0xAB1E8/0xAB1F1 */
+            cgy = 8 + Random(3);                 /* call/write 131:—  160:—  com1:0xAB1F8/0xAB201 */
+        } while ((int8_t)com1_combat_grid_rows[cgy][cgx] >= 0);
+                                                 /* JGE ->0xAB1C7 at 131:—  160:—  com1:0xAB213 */
+        raised_battle_unit_idx = com1_ai_raise_dead_target;
+                                                 /* 131:—  160:—  com1:0xAB215 */
+        /* CoM patch NOPs occupy [0xAB219,0xAB220). */
+    } else {
+        raised_battle_unit_idx = candidate_units[selected];
+                                                 /* 131:—  160:—  com1:0xAB222..0xAB22C */
+    }
+
+    {
+        struct s_BATTLE_UNIT __far *bu = &_battle_units[raised_battle_unit_idx];
+        struct s_UNIT __far *u;
+        int8_t max_figures = (int8_t)bu->Max_Figures;
+
+        if ((max_figures & 1) == 0) {             /* JNE ->0xAB250 at 131:—  160:—  com1:0xAB241 */
+            bu->Cur_Figures = max_figures >> 1;   /* byte SAR at 131:—  160:—  com1:0xAB243/0xAB245 */
+            bu->front_figure_damage = 0;          /* 131:—  160:—  com1:0xAB249 */
+        } else {
+            max_figures = (int8_t)(max_figures + 1); /* byte INC wraps; 131:—  160:—  com1:0xAB250 */
+            bu->Cur_Figures = max_figures >> 1;   /* byte SAR/store 131:—  160:—  com1:0xAB252/0xAB254 */
+            bu->front_figure_damage = (int8_t)bu->hits >> 1;
+                                                 /* byte SAR/store 131:—  160:—  com1:0xAB258..0xAB25E */
+        }
+
+        bu->Combat_Effects = 0;                  /* 131:—  160:—  com1:0xAB26F */
+        bu->Move_Flags &= (uint16_t)~(MV_UNKNOWN_0800 | MV_UNKNOWN_1000);
+                                                 /* raw byte AND 0xE7 at +0x17; 131:—  160:—  com1:0xAB275 */
+        bu->enchantments = 0;                    /* high/low words 131:—  160:—  com1:0xAB27A/0xAB280 */
+        bu->cgx = bu->target_cgx = cgx;           /* 131:—  160:—  com1:0xAB286..0xAB297 */
+        bu->cgy = bu->target_cgy = cgy;           /* 131:—  160:—  com1:0xAB28D..0xAB29E */
+        bu->move_anim_ctr = 0;                    /* 131:—  160:—  com1:0xAB2A2 */
+        bu->Web_HP = 0;                           /* 131:—  160:—  com1:0xAB2A8 */
+        bu->Confusion_State = 0;                  /* 131:—  160:—  com1:0xAB2AD */
+        bu->outline_magic_realm = 0;              /* 131:—  160:—  com1:0xAB2B2 */
+        bu->race = rt_Fantastic_No_Realm;         /* raw 0x15; 131:—  160:—  com1:0xAB2B8 */
+        bu->Attribs_1 &= (uint16_t)~USA_UNKNOWN_8000;
+                                                 /* raw high-byte AND 0x7F; 131:—  160:—  com1:0xAB2BD */
+        bu->Grey_Hits = GREY_HITS_UNINITIALIZED;  /* raw 0xFF sentinel; 131:—  160:—  com1:0xAB2C2 */
+        bu->Atk_FigLoss = 0;                      /* 131:—  160:—  com1:0xAB2C7 */
+        bu->Moving = 0;                           /* 131:—  160:—  com1:0xAB2CD */
+        bu->action = 0;                           /* 131:—  160:—  com1:0xAB2D3 */
+
+        /* CoM patch NOPs occupy [0xAB2D9,0xAB314). */
+        u = &_UNITS[bu->unit_idx];               /* 131:—  160:—  com1:0xAB314 */
+        u->enchantments = 0;                     /* high/low words 131:—  160:—  com1:0xAB324/0xAB32A */
+        /* CoM patch NOPs occupy [0xAB330,0xAB393). */
+        u->Level = (int8_t)Calc_Unit_Level(bu->unit_idx);
+                                                 /* call/store 131:—  160:—  com1:0xAB393/0xAB3A6 */
+        /* CoM patch NOPs occupy [0xAB3AA,0xAB3C3). */
+        bu->bufpi = Combat_Figure_Load((uint8_t)u->type,
+                                       Battle_Unit_Pict_Open());
+                                                 /* calls/store 131:—  160:—  com1:0xAB3C3/0xAB3EB/0xAB401 */
+        bu->status = BUS_ACTIVE;                 /* 131:—  160:—  com1:0xAB412 */
+        BU_Construct(bu);                        /* 131:—  160:—  com1:0xAB429 */
+        BU_Apply_Battlefield_Effects(bu);        /* 131:—  160:—  com1:0xAB442 */
+        overlay_0428_0066(raised_battle_unit_idx, cgx, cgy,
+                          SPELL_RAISE_DEAD, caster_idx);
+                                                 /* five words; call 131:—  160:—  com1:0xAB457 */
+    }
+
+cleanup:
+    overlay_00E0_001A();                         /* 131:—  160:—  com1:0xAB45F */
+    overlay_0318_0020();                         /* 131:—  160:—  com1:0xAB464 */
+    overlay_0008_0503();                         /* 131:—  160:—  com1:0xAB469 */
+    return;                                      /* sole RETF at 131:—  160:—  com1:0xAB473 */
+}
+
+/* Source-shaped fragment of Cast_Spell_On_Battle_Unit. The enclosing routine derives
+ * player_idx in [bp-6]; JNE at 0x82ED4 and normal fallthrough both reach the next
+ * spell comparison at 0x82EEA. */
+void com1_raise_dead_dispatch_fragment(int16_t spell_idx, int16_t player_idx,
+                                        int16_t caster_idx, int16_t target_cgx,
+                                        int16_t target_cgy)
+{
+    if (spell_idx == SPELL_RAISE_DEAD) {          /* 131:—  160:—  com1:0x82ED0; JNE ->0x82EEA at 0x82ED4 */
+        CMB_Raise_Dead(player_idx, caster_idx, target_cgx, target_cgy);
+                                                 /* 0418:0048; call 131:—  160:—  com1:0x82EE2 */
+    }                                            /* caller cleanup 131:—  160:—  com1:0x82EE7 */
+}
 #endif

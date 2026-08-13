@@ -67,6 +67,51 @@ test('F52 reproduces CoM1 Supreme Light eligibility and signed ordered writes', 
   expectNoConsoleErrors(errors);
 });
 
+test('R9-G1g imports CoM Supernatural carriers but leaves their effect inactive', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const report = await page.evaluate(() => {
+    document.getElementById('gameVersion').value = 'com_6.08';
+    onVersionChange();
+    const hydra = Object.values(COM_UNITS_DATA).find(unit => unit.name === 'Hydra');
+    const selection = document.getElementById('aUnit');
+    selection.value = String(hydra.id);
+    selection.dispatchEvent(new Event('change'));
+    const control = document.getElementById('aAbil_supernatural');
+    const item = control.closest('.abil-item');
+    const com2Callback = supernaturalMinDamageFn({ supernatural: true }, 'com2_1.05.11');
+    const warlordCallback = supernaturalMinDamageFn(
+      { supernatural: true }, 'com2_warlord_1.5.12.7');
+    return {
+      carriers: Object.values(COM_UNITS_DATA)
+        .filter(unit => (unit.abilities || []).includes('Supernatural'))
+        .map(unit => unit.name),
+      callback: supernaturalMinDamageFn({ supernatural: true }, 'com_6.08'),
+      direct: supernaturalMinDamageForHits(9, 'com_6.08'),
+      rosterControl: {
+        checked: control.checked,
+        disabled: control.disabled,
+        hidden: item.classList.contains('abil-hidden'),
+        tooltip: item.dataset.tooltip,
+      },
+      modernCallbacks: {
+        com2: com2Callback(28),
+        warlord: warlordCallback(28),
+      },
+    };
+  });
+  expect(report.carriers).toEqual([
+    'Hydra', 'Great Drake', 'Death Knights', 'Demon Lord', 'Arch Angel',
+    'Colossus', 'Gorgons', 'Behemoth', 'Great Wyrm', 'Djinn', 'Sky Drake',
+  ]);
+  expect(report.callback).toBeNull();
+  expect(report.direct).toBe(0);
+  expect(report.rosterControl).toMatchObject({ checked: true, disabled: true, hidden: false });
+  expect(report.rosterControl.tooltip).toContain('executable test is inactive');
+  expect(report.rosterControl.tooltip).toContain('no combat effect');
+  expect(report.modernCallbacks).toEqual({ com2: 10, warlord: 10 });
+  expectNoConsoleErrors(errors);
+});
+
 test('R9-G1g preserves every compiled-modern Supreme Light eligibility alternative', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {

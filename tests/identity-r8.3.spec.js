@@ -84,7 +84,7 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
   expectNoConsoleErrors(errors);
 });
 
-test('R8.3 applies CoM1 Zombies and Construct Catapult writes only on valid paths', async ({ page }) => {
+test('R8.3 applies CoM1 Zombies and success-wide combat-summon identity writes', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
     const simple = (identity, abilities = {}, extra = {}) => ({
@@ -101,7 +101,7 @@ test('R8.3 applies CoM1 Zombies and Construct Catapult writes only on valid path
     }));
     const catapultIdentity = createUnitIdentity({
       version: 'com_6.08', templateId: 37, isHero: false,
-      baseRace: 'Special', baseFantastic: false, specialUnit: 'catapult',
+      baseRace: 'Special', baseFantastic: false, specialUnit: 'none',
     });
     const ordinary = derive(catapultIdentity, {}, { rtb: 9, rtbType: 'boulder' });
     const construct = derive(catapultIdentity, { combatSummoned: true }, { rtb: 9, rtbType: 'boulder' });
@@ -126,7 +126,7 @@ test('R8.3 applies CoM1 Zombies and Construct Catapult writes only on valid path
   expect(report.zombies.toBlock).toBeCloseTo(0.20);
   expect(report.zombies.statTrace).toContainEqual(expect.objectContaining({
     id: 'identity:zombies:toBlock', phase: 'base',
-    changes: { toBlk: { from: 0, to: -10, delta: -10 } },
+    changes: { toBlk: { from: 30, to: 20, delta: -10 } },
   }));
   expect(report.zombies.identityTrace.map(step => step.id)).not.toContain('identity:zombies');
 
@@ -143,8 +143,8 @@ test('R8.3 applies CoM1 Zombies and Construct Catapult writes only on valid path
   expect(report.paladins.identity).toMatchObject({ race: 'Life', fantastic: true });
   expect(report.golem.abilities.elemArmor).toBe('resistElements');
 
-  expect(report.unrelated.identity.fantastic).toBe(false);
-  expect(report.unrelated.identityTrace).toEqual([]);
+  expect(report.unrelated.identity).toMatchObject({ race: 'Dwarf', fantastic: true });
+  expect(report.unrelated.identityTrace.map(step => step.id)).toEqual(['identity:com1SummonBranch']);
   expectNoConsoleErrors(errors);
 });
 

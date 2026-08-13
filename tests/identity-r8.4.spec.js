@@ -303,7 +303,7 @@ test('special options and ordered live realm overrides preserve base identity', 
     ['Chaos', 'fantastic_chaos'],
     ['Death', 'fantastic_death'],
     ['No Heal', 'fantastic_unaligned'],
-    ['Life', 'fantastic_life'],
+    ['No Heal', 'fantastic_unaligned'],
   ]);
   expectNoConsoleErrors(errors);
 });

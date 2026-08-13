@@ -10,7 +10,7 @@
  *                 R6.1g item powers, recompute hit points and CoM movement;
  *                 R6.1h item attack-special helper;
  *                 R6.5c overland Unit_Moves2; R9-G1a-R3 Zombies type-table Abilities binding;
- *                 B9 overland Create_Unit
+ *                 B9 overland Create_Unit; F6 Apply_Chaos_Channels
  */
 
 #include "MOM_DAT.h"
@@ -123,6 +123,19 @@
 #define UM_CHAOS_CHANNELS_WINGS   0x08
 #define UM_CHAOS_CHANNELS_BREATH  0x10
 #define UM_UNDEAD                 0x20
+
+/* unit_types[].Move_Flags (16-bit). Kept distinct from BATTLE_UNIT.Move_Flags. */
+#define UT_MOVE_SAILING           0x0002
+#define UT_MOVE_FLYING            0x0008
+
+/* F6 Apply_Chaos_Channels selection state and build-specific ranged ceilings. */
+#define CHAOS_CHANNELS_OPTION_INVALID    (-1) /* raw 0xFFFF */
+#define CHAOS_CHANNELS_OPTION_WINGS        0
+#define CHAOS_CHANNELS_OPTION_BREATH       1
+#define CHAOS_CHANNELS_OPTION_ARMOR        2
+#define CHAOS_CHANNELS_RANDOM_FACES        3
+#define MOM131_CHAOS_BREATH_RANGED_MAX     3
+#define PATCHED_CHAOS_BREATH_RANGED_MAX   0
 
 /* BATTLE_UNIT melee/ranged attack-attribute fields (16-bit). */
 #define ATT_ARMOR_PIERCING        0x0001
@@ -362,6 +375,99 @@
 #define COM1_UT_SETTLERS_RACE_0A     0x7D
 #define COM1_UNIT_OFF_RACE            0x1E
 #define COM1_UNIT_OFF_UNKNOWN_13      0x13
+
+/* ===========================================================================================
+ * Apply_Chaos_Channels(unit_idx)                                                        [F6]
+ *
+ * Overlay 129 entry 7, raw extent 0xA4DEF..0xA4EEE. Randomly chooses one eligible Chaos
+ * Channels mutation, rerolling rejected Wings or Fire Breath choices, then preserves the
+ * existing mutation byte while ORing the selected flag. Complete ledgers and edge closure are
+ * in F6.evidence.md.
+ * =========================================================================================== */
+
+void __far Apply_Chaos_Channels(int16_t unit_idx)
+{
+    int16_t unit_type;
+    int16_t option;
+
+    option = CHAOS_CHANNELS_OPTION_INVALID;     /* 131:0xA4DFA  160:=  com1:= */
+    unit_type = (uint8_t)_UNITS[unit_idx].type; /* zero-extended by `mov ah,0` at
+                                                   131:0xA4DFD  160:=  com1:= */
+
+    while (option == CHAOS_CHANNELS_OPTION_INVALID) { /* entry jmp 131:0xA4E12  160:=  com1:=;
+                                                        test 131:0xA4E85  160:=  com1:= */
+        option = Random(CHAOS_CHANNELS_RANDOM_FACES) - 1;
+                                                /* setup 131:0xA4E14  160:=  com1:=;
+                                                   call 131:0xA4E18  160:=  com1:= */
+
+        if (option == CHAOS_CHANNELS_OPTION_WINGS) { /* 131:0xA4E21  160:=  com1:= */
+            if (unit_types[unit_type].Move_Flags & UT_MOVE_FLYING) {
+                                                /* 131:0xA4E25  160:=  com1:= */
+                option = CHAOS_CHANNELS_OPTION_INVALID;
+                                                /* 131:0xA4E47  160:=  com1:= */
+            }
+#if BUILD == MOM131 || BUILD == CP160
+            else if (unit_types[unit_type].Move_Flags & UT_MOVE_SAILING) {
+                                                /* 131:0xA4E36  160:=  com1:— */
+                option = CHAOS_CHANNELS_OPTION_INVALID;
+                                                /* 131:0xA4E47  160:=  com1:— */
+            }
+#else
+            else {
+                /* CoM still reads/tests Sailing, but its patched unconditional jump discards
+                 * the flags and skips invalidation. */
+                (void)(unit_types[unit_type].Move_Flags & UT_MOVE_SAILING);
+                                                /* test 131:—  160:—  com1:0xA4E36;
+                                                   jmp 131:—  160:—  com1:0xA4E45 */
+            }
+#endif
+        }
+
+        if (option == CHAOS_CHANNELS_OPTION_BREATH) { /* 131:0xA4E4A  160:=  com1:= */
+#if BUILD == MOM131
+            if (unit_types[unit_type].ranged > MOM131_CHAOS_BREATH_RANGED_MAX) {
+                                                /* cmp 131:0xA4E4F  160:—  com1:—;
+                                                   jg 131:0xA4E5E  160:—  com1:— */
+#else
+            if (unit_types[unit_type].ranged > PATCHED_CHAOS_BREATH_RANGED_MAX) {
+                                                /* cmp 131:—  160:0xA4E4F  com1:0xA4E4F;
+                                                   jg 131:—  160:0xA4E5E  com1:0xA4E5E */
+#endif
+                option = CHAOS_CHANNELS_OPTION_INVALID;
+                                                /* 131:0xA4E82  160:=  com1:= */
+            } else if (unit_types[unit_type].ranged_type != RAT_NONE
+                                                /* 131:0xA4E60  160:=  com1:= */
+                    && unit_types[unit_type].ranged_type != RAT_THROWN) {
+                                                /* 131:0xA4E71  160:=  com1:= */
+                option = CHAOS_CHANNELS_OPTION_INVALID;
+                                                /* 131:0xA4E82  160:=  com1:= */
+            }
+        }
+    }
+
+    switch (option) {                           /* 131:0xA4E8A  160:=  com1:= */
+    case CHAOS_CHANNELS_OPTION_WINGS:
+        _UNITS[unit_idx].mutations |= UM_CHAOS_CHANNELS_WINGS;
+                                                /* 131:0xA4E9C/0xA4EBA  160:=  com1:= */
+        break;                                  /* 131:0xA4EBE  160:=  com1:= */
+
+    case CHAOS_CHANNELS_OPTION_BREATH:
+        _UNITS[unit_idx].mutations |= UM_CHAOS_CHANNELS_BREATH;
+                                                /* 131:0xA4EC0/0xA4EBA  160:=  com1:= */
+        break;                                  /* 131:0xA4ED2  160:=  com1:= */
+
+    case CHAOS_CHANNELS_OPTION_ARMOR:
+        _UNITS[unit_idx].mutations |= UM_CHAOS_CHANNELS_ARMOR;
+                                                /* 131:0xA4ED4/0xA4EBA  160:=  com1:= */
+        break;                                  /* 131:0xA4EE6  160:=  com1:= */
+
+    default:
+        /* Unreachable: Random(3)-1 is 0..2, and rejected choices reroll. */
+        break;                                  /* compiler switch jmp 131:0xA4E9A  160:=  com1:= */
+    }
+
+    return;                                     /* 131:0xA4EE8/0xA4EED  160:=  com1:= */
+}
 
 /* ===========================================================================================
  * Create_Unit(unit_type, owner_idx, wx, wy, wp, city_or_seed)                             [B9]

@@ -5,7 +5,7 @@ code, or doing cross-agent review work.
 
 | Method | Use |
 |---|---|
-| **4. Dual Codex derivation + Claude review** | Every binary-reconstruction execution package: two Codex GPT-5.6 Sol High agents derive the whole package independently, the main Codex agent merges them, and one Claude Opus 5 High session reviews the merged derivation before Codex revises and finishes the package. Method 1 is retired. |
+| **4. Dual Codex derivation + Claude review** | Every binary-reconstruction execution package: two Codex GPT-5.6 Sol High agents derive the whole package independently, the main Codex agent merges them, and one Claude Opus 5 Medium session reviews the merged derivation before Codex revises and finishes the package. Method 1 is retired. |
 | **2. Independent implementation** | Two Codex GPT-5.6 Sol High agents implement the same execution package cold. Use only when selected by the user or backlog row. |
 | **3. Implementation + review/revision** | The current agent implements the execution package, then one Codex GPT-5.6 Sol High agent reviews and fixes it. Use only when selected by the user or backlog row. |
 
@@ -23,7 +23,7 @@ effort, or method silently.
   `B4_B5_B6`).
 - Agent and paid-session counts are per execution package, never per member backlog item. Method 1
   is retired. Method 4 uses exactly two Codex GPT-5.6 Sol High derivation agents and one Claude
-  Opus 5 High review session for the whole package; method 2 uses two implementer agents for the
+  Opus 5 Medium review session for the whole package; method 2 uses two implementer agents for the
   whole package; method 3 uses one reviewer/reviser for the whole package. Do not multiply agents,
   sessions, derivations, or reviews merely because the package contains several IDs.
 - If a proposed package is too broad for one pair of tracks, narrow or split it before dispatch and
@@ -44,10 +44,10 @@ effort, or method silently.
 - Preserve unrelated user changes. Never push as part of these methods.
 - An implementation is incomplete if required behavior, tests, specification, or migration work is
   missing.
-- Every calculator change must explain its before-and-after state in the task packet, review
-  handoff, and user-facing completion report: state the previous observable or calculated behavior
-  and the resulting behavior, using a concrete scenario or value when behavior changes. For a
-  refactor or documentation-only change, state what changed and which behavior remains unchanged.
+- Every calculator change must explain its before-and-after state in the task packet and review
+  handoff. The user-facing completion report must show a Markdown table with `Area`, `Before`, and
+  `After` columns, using a concrete scenario or value when behavior changes. For a refactor or
+  documentation-only change, the table states what changed and which behavior remains unchanged.
 - When a calculator item completes, remove it from `Calculator/BACKLOG.md` and add a concise result
   to `Calculator/HISTORY.md` in the same change.
 
@@ -92,7 +92,7 @@ derivation track.
 
 Only after the main agent has merged the two Codex derivations, run the applicable derivation
 checker, and generated the mechanical review bundle does it invoke Claude through the Claude CLI.
-Create exactly one new package-specific Claude session using Claude Opus 5 at High effort, capture
+Create exactly one new package-specific Claude session using Claude Opus 5 at Medium effort, capture
 its session ID, and ask it for one review of the merged Codex derivation against the frozen packet,
 bundle, and raw binary. Claude writes only the package review; it does not create a competing
 derivation or edit the merged artifact.
@@ -102,31 +102,32 @@ If the session cannot be resumed, report the failure and stop the review track. 
 requires explicit user approval. Method 4 has no routine second Claude pass: Codex revises from the
 single review and requests another paid Claude turn only when the user explicitly asks.
 
-On the Windows project host, `claude` may not be on `PATH`. The cached native launcher is under
-`%LOCALAPPDATA%\npm-cache\_npx\<cache-key>\node_modules\@anthropic-ai\claude-code\bin\claude.exe`;
-the cache key can change, so resolve the newest launcher rather than hard-coding it:
+Invoke the `claude` CLI resolved from `PATH`. Launch every package review with
+`--dangerously-skip-permissions` (or the SDK-equivalent `bypassPermissions` mode) under the user's
+explicit authorization for this project. Keep the available tool surface limited to `Read`,
+`Glob`, `Grep`, `PowerShell`, `Bash`, `Write`, and `Edit`. On Windows, enable the native
+PowerShell tool and make it the primary shell for Windows paths and native executables; retain Bash
+for POSIX-oriented repository tooling. The review prompt keeps both shells read-only and permits
+`Write` and `Edit` only for `.reviews/<PACKAGE>.review-of-codex.md`. Bypassing approval prompts does
+not widen the review task.
 
-Claude's project trust lookup is path-string-sensitive on this host, and current Claude Code
-normalizes Windows project keys to forward slashes before consulting `%USERPROFILE%\.claude.json`.
-The selectable key for this checkout is therefore exactly `C:/CoM2-damage-calculator`; a trusted
-backslash entry such as `C:\CoM2-damage-calculator` is not selected by the current launcher. Verify
-that this normalized entry has `hasTrustDialogAccepted: true` before invocation; another spelling
-does not satisfy the check. A non-interactive trust warning may merely say that local
-permission entries were ignored while the model process continues: if `exec_command` returns a
-live session ID, poll that exact process to completion before declaring preflight failure or
-starting another session.
+Claude's project trust lookup is path-string-sensitive on this host and normalizes Windows project
+keys to forward slashes before consulting `%USERPROFILE%\.claude.json`. The selectable key for this
+checkout is exactly `C:/CoM2-damage-calculator`; verify that it has
+`hasTrustDialogAccepted: true` before invocation. If `exec_command` returns a live session ID, poll
+that exact process to completion before declaring preflight failure or starting another session.
 
 ```powershell
-$claudeExe = Get-ChildItem -LiteralPath "$env:LOCALAPPDATA\npm-cache\_npx" `
-    -Filter claude.exe -File -Recurse |
-    Where-Object FullName -Like '*\@anthropic-ai\claude-code\bin\claude.exe' |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1 -ExpandProperty FullName
-& $claudeExe --version
-& $claudeExe auth status
+Get-Command claude -ErrorAction Stop
+claude --version
+claude auth status
+# Add to the package invocation:
+$env:CLAUDE_CODE_USE_POWERSHELL_TOOL = '1'
+# claude --dangerously-skip-permissions `
+#   --tools Read Glob Grep PowerShell Bash Write Edit ...
 ```
 
-Those two commands are local preflight; if they do not reach a model, report zero Claude token
+Those preflight commands are local-only; if they do not reach a model, report zero Claude token
 usage under the usage-analysis rule below.
 
 ### Mechanical review bundle and Claude tool use
@@ -150,13 +151,17 @@ affect a finding, coverage claim, build difference, or completion verdict. Examp
 unexplained local or global, an incoming or outgoing control-flow edge, an unresolved call target,
 a questionable table binding, or a producer/consumer relationship outside the bundle.
 
-Claude keeps `Read`, read-only `Bash`, and `Write` available. It should minimize separate tool-use
-round trips when the bundle already answers a question, collect currently known unanswered
-questions before calling tools, and batch related bounded inspections where practical. It must not
-avoid important dependency-driven exploration merely to save usage, and it must not replace many
-small calls with one unbounded output dump. A supplemental tool inspection should pursue a stated
-hypothesis whose result could change the review. Do not impose a routine `--max-turns` cap; Claude
-uses its own judgment to decide when the evidence is complete.
+Claude keeps `Read`, `Glob`, `Grep`, read-only `PowerShell`, read-only `Bash`, `Write`, and `Edit`
+available. `Write` and `Edit` are exclusively for creating and revising the package's single review
+artifact; Claude must not create scratch scripts or alter any other file. Prefer `Glob`/`Grep` for
+repository discovery and PowerShell for Windows-native paths and executables; use Bash for bounded
+POSIX-oriented commands. Claude should minimize separate tool-use round trips when the bundle
+already answers a question, collect currently known unanswered questions before calling tools, and
+batch related bounded inspections where practical. It must not avoid important dependency-driven
+exploration merely to save usage, and it must not replace many small calls with one unbounded output
+dump. A supplemental tool inspection should pursue a stated hypothesis whose result could change
+the review. Do not impose a routine `--max-turns` cap; Claude uses its own judgment to decide when
+the evidence is complete.
 
 ### Claude usage analysis
 
@@ -195,7 +200,7 @@ unless the provider supplies that mapping.
    Codex derivation. It resolves differences by re-reading and quoting the bytes rather than by
    choosing a preferred author, preserves any unresolved disagreement explicitly, reruns the
    applicable checker, and generates the mechanical Claude review bundle.
-4. The main agent launches the package's single Claude Opus 5 High review session with the merged
+4. The main agent launches the package's single Claude Opus 5 Medium review session with the merged
    derivation, frozen packet, and mechanical bundle. A review finding is actionable only when it
    identifies the address, quotes the relevant instruction bytes, and explains the semantic
    consequence. Claude records findings in the package review file. After the invocation ends, the
