@@ -59,6 +59,7 @@ interface
     [EBP+$08] = tay
 }
 procedure RecalculateUnits(com: Boolean; tap, tax, tay: Integer); register;
+procedure applynodeaura(i: Integer); register;
 procedure ApplyLevelBonus(i: Integer); register;
 procedure ApplyMagicWeapons(i: Integer); register;
 procedure RecalculateunitsonCityTile(c: Integer); register;
@@ -451,6 +452,43 @@ end;
 procedure inferred_RunUnitScript(handle: Integer);
 begin
   { Scripts.RunScript(handle, True); }
+end;
+
+{ $0059718C..$005973A3 [exact control, operands and writes; inferred bindings]
+  @Units@applynodeaura. EAX carries i and TD32 names the two locals `i` at
+  [EBP-$04] and `$161453776` at [EBP-$08]. The latter caches @Units[i].
+  Every addition is checked. The four SmallInt bonus additions include the
+  emitted signed-range bias/check/correction sequence. See F18.evidence.md. }
+procedure applynodeaura(i: Integer); register;
+begin
+  { $005971C3..$00597233: unlike the following three gates, this one reads
+    the persistent BaseUnits record, then writes the calculated Units record. }
+  if BaseUnits[i].attack > 0 then
+  begin
+    Inc(Units[i].attack, 2);
+    Inc(Units[i].attackbonus, 2);
+  end;
+
+  { $00597233..$005972A3 }
+  if Units[i].ranged > 0 then
+  begin
+    Inc(Units[i].ranged, 2);
+    Inc(Units[i].rangedbonus, 2);
+  end;
+
+  { $005972A3..$005972DF }
+  if Units[i].firebreath > 0 then
+    Inc(Units[i].firebreath, 2);
+
+  { $005972DF..$0059731B }
+  if Units[i].lightningbreath > 0 then
+    Inc(Units[i].lightningbreath, 2);
+
+  { $0059731B..$0059739F: unconditional tail. }
+  Inc(Units[i].defense, 2);
+  Inc(Units[i].defensebonus, 2);
+  Inc(Units[i].resistance, 2);
+  Inc(Units[i].resistancebonus, 2);
 end;
 
 { $005981F8..$00598D86 [exact control, operands and writes; inferred bindings]

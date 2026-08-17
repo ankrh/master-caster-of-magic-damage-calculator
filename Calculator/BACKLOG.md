@@ -13,46 +13,39 @@ Behavior is specified in [SPEC.md](./SPEC.md); working conventions are in
 Evidence short names below follow the source routing in the root [CLAUDE.md](../CLAUDE.md).
 Costs are `free`, `small`, `medium`, or `large`.
 
-Every item must satisfy the explicit version-scope rule in
-[`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md).
+Every item must carry an explicit `Versions` scope naming separately (1) each binary or build
+relevant to its evidence or reconstruction and (2) each calculator version whose behavior may
+change or must be verified. Write `not applicable` for either category when it has none. Family
+labels such as `DOS`, `modern` or `all` are insufficient unless the exact versions are enumerated.
 
-An implementation preference is explicit only when its row names **method 2** or **method 3** from
-[`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md). If a row has no preference and
-the user does not select one, ask before implementation begins. Binary reconstruction always uses
-method 4 and does not need a per-row preference.
+Items are implemented directly. No execution method governs them; binary reconstruction is the sole
+exception and always uses method 4 from
+[`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md).
 
 ## Priority
 
-This is the execution order; the category tables below are not ordered queues. Every dependency
-must occur in an earlier numbered row than the item it blocks. Items within one row are independent
-unless the row says otherwise. A deferred item blocks only its named dependents, not unrelated
-items in the same or later rows.
+This is the execution order; the category tables below are not ordered queues. Each numbered row
+is one proposed execution package sized for one agent prompt and one review track. Multiple members
+in a row are tightly related and run together under the package key shown. Every dependency must
+occur in an earlier numbered row than the item it blocks. A deferred item blocks only its named
+dependents, not unrelated later rows.
 
-| # | Items | Next outcome |
-|---|---|---|
-| 1 | **F9, F12–F15, F17–F19, F21, F23–F43, F50–F51, F53, F56** | Implement the remaining confirmed defects that have no named live prerequisite. |
-| 2 | **R9-G1e, R9-G1c, F20** | After row 1: close R9-G1e's weapon projections, R9-G1c's blocked claims, and the exhaustive step lists after their named prerequisites. |
-| 3 | **M7** | After F20: retire the transitional non-linear transform helpers. |
-| 4 | **M3** | After row 1's F41: implement the hero-only older-engine Destruction path. |
-| 5 | **F49** | Add the confirmed CoM 1 Heavenly Light effect when higher-priority work is complete. |
-| 6 | **D28** | Bound the newly exposed CP-only Wall of Fire trigger without widening D22's table reconstruction. |
-| 7 | **D37** | Reconstruct the newly bounded CoM 6.08 routine containing the material Supernatural consumer. |
-
-## Provenance evidence gaps
-
-R9-G1 is the non-executable tracking umbrella for R9-G1a–R9-G1k. Its live total remains the
-audit reconciliation point; each implementation child or named defect owner owns the fixed formula
-domain stated below.
-R9-G1a–R9-G1k must be undertaken with **method 3: current-agent implementation followed by one
-Codex GPT-5.6 Sol High review-and-revision pass** under
-[`DERIVATION-REVIEW-PROTOCOL.md`](../DERIVATION-REVIEW-PROTOCOL.md). Dedicated reconstruction
-dependencies always use method 4 under the protocol's derivation rules.
-
-| ID | Evidence gap / fixed formula domain | Cost | Strongest pointer / dependency |
+| # | Package | Members | Next outcome |
 |---|---|---|---|
-| R9-G1 | **Tracking umbrella; do not execute directly.** Reconstruct or locate exact implementation gates and arithmetic for the `13` UNVERIFIED formulas named by adjacent `PROVENANCE[...]` comments; replace each gap only when the strongest implementation source covers every applicable version and runtime-table constant. | large | `node tools/provenance_audit.js`; strongest pointers are recorded beside each formula |
-| R9-G1c | Close the remaining `9` late unit-transform gaps: Military Workshop, Wild Game, Energy Cannon, Nightshade, Dragon Mound, level, weapon, Flame Blade ranged, and Mislead ranged. | medium | F12/F14/F19 own the live ordering/channel dependencies; [R9-G1f](./HISTORY.md) closed the level helper; D33 supplies the checked-in modern weapon formula body |
-| R9-G1e | Close the remaining `2` chance-projection gaps: `chance:weapon:melee` and `chance:weapon:rtb`. Versions: evidence/builds — MoM 1.31 `WIZARDS.EXE`, MoM CP 1.60 `WIZARDS.EXE`, CoM 6.08 `WIZARDS.EXE`, CoM2 1.05.11 `Caster.exe`, Warlord 1.5.12.7 `Caster.exe` plus scripts/runtime tables; calculator — `mom_1.31`, `mom_cp_1.60.00`, `com_6.08`, `com2_1.05.11`, `com2_warlord_1.5.12.7`. | small | `stats.js`, chance transforms; R9-G1e existing-evidence pass in `HISTORY.md`; D33 and R9-G1g own modern material To-Hit evidence |
+| 1 | **T1** | T1 | Stop the generated rosters dumping whole files into any content search. |
+| 2 | **T2** | T2 | Make adding a source file one edit instead of five. |
+| 3 | **T3** | T3 | Split the largest file in the repo so a task can read the part it needs. |
+| 4 | **T4** | T4 | Split the two remaining files no agent can read whole. |
+| 5 | **T5** | T5 | Let a task read the slice of the contract it needs. |
+| 6 | **T6** | T6 | Decide which provenance prose belongs in the code and which in evidence. |
+| 7 | **M9** | M9 | Stage 1 shipped; filter every phase by the canonical scope, then unify to one chain. |
+| 8 | **M7** | M7 | Retire transitional non-linear transform helpers. |
+| 9 | **M10** | M10 | Represent the DOS attack-specific stage as ordered sequences, like CoM2's. |
+| 10 | **F49** | F49 | Add the confirmed CoM 1 Heavenly Light effect. |
+| 11 | **D28** | D28 | Bound the CP-only Wall of Fire trigger without widening D22. |
+| 12 | **D37** | D37 | Reconstruct the bounded CoM 6.08 routine containing the Supernatural consumer. |
+| 13 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
+| 14 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
 
 ## Evidence-source prerequisites
 
@@ -65,42 +58,8 @@ dependencies always use method 4 under the protocol's derivation rules.
 
 | ID | Upcoming task | Cost | Evidence / dependency |
 |---|---|---|---|
-| F9 | Model Marionette's Channeler transformation, bonuses, spell package, and live-Fantastic Xenoveterinary eligibility. | medium | discrepancies, script checks without a calculator discrepancy |
-| F12 | Move Destiny to the end of permanent `base` writes and make later channel transformations ordinary ordered steps, including Focus Magic conversion and Shadow Strike's creation/boost of Thrown. | medium | CoM2 units, Destiny; `CreateUnit.CAS:695,703`; current preset regressions |
-| F13 | Move Upgraded Explosive's Fire Breath doubling to its early `UnitCalcPre` position and test a later bonus escaping it. | small | CoM2 units, Warlord region `b` |
-| F14 | Move Misfortune/Mislead to aura type 10 in region `e`, preserving eligibility gates. | small | CoM2 units, aura pass |
-| F15 | Put Holy Armor at its exact region-`c` position so its `Defense > 5` test cannot see later effects. | medium | CoM2 units, unit-enchantment effects |
-| F17 | Finish Warlord Vampirism by aggregating simultaneous Thrown/Fire/Lightning source channels, resetting each positive source independently, and moving the transfer to its region-`d` position. | medium | `UnitCalc.CAS:1245-1258`; R9-G1b corrected the represented-channel half transfer |
-| F18 | Split Mind Storm, Tactician, True Light, node aura, and combat Flame Blade writes onto their actual channels/positions; close `PROVENANCE[nodeAura]`. | medium | CoM2 units, calculator-facing discrepancies and aura pass |
-| F19 | Add controls/transforms for the calculator-relevant compiled effects identified as absent by the sequential-transform audit, including Lightning Blade's created Breath and Military Workshop/Rocketry channel behavior. | large | CoM2 units, sequential-transform audit; current preset regressions |
-| F20 | **Blocked by F12–F19:** make the represented `b`/`c`/`d` step lists source-order exhaustive and atomic; add a complete trace-order assertion. | medium | CoM2 units, phase and region maps |
-| F21 | Load modern roster `to_block` into the card with one consistent absolute/delta encoding; add non-default controls. | small | generators vs `ui.js`; MoM analysis, constructor |
-| F23 | Preserve intrinsic/base Death Immunity separately for modern Cause Fear's direct skip. | small | CoM2 combat, ApplyAttack setup |
-| F24 | Replace unit-owned modern Blur with per-side combat-global inputs and reproduce turn-relative `CGADEnemy` selection. | medium | CoM2 combat, ApplyAttack; call-closure evidence |
-| F25 | Prevent modern touch riders from firing with gaze attack types 6–8. | medium | CoM2 combat, ApplyAttack riders |
-| F26 | Roll modern Destruction once per surviving attacking figure. | small | CoM2 combat, ApplyAttack riders |
-| F27 | Trigger Warlord Bloodsucker after all result categories and route configured healing through non-overheal `Combatheal`. | medium | CoM2 combat and CoM2 damage |
-| F28 | Keep Life Steal's uncapped roll distribution separate from target damage and route healing through `Combatheal`. | medium | CoM2 combat and CoM2 damage |
-| F29 | Reorder modern melee phases to Wall of Fire → attacker gazes → defender gazes → Lightning → Fire → Thrown → melee. | large | CoM2 combat, attack dispatch |
-| F30 | Repeat initiating modern gazes under Haste while leaving retaliation gazes/counterattack single. | medium | CoM2 combat, attack dispatch |
-| F31 | Give each Hasted modern melee `ApplyAttack` call an independent Cause Fear sample. | medium | CoM2 combat, attack dispatch |
-| F32 | Split modern Defense dice into pre-cap and capped-To-Defend binomials. | medium | CoM2 resolution, roll helpers; CoM2 tables |
-| F33 | Exempt modern heroes from ranged distance penalties and retain the separate magical-ranged rule. | small | CoM2 resolution, ranged penalty |
-| F34 | Remove Bless Defense from modern unit-attack profiles; retain it only for qualifying positive-ID Chaos/Death spells. | small | CoM2 resolution and CoM2 combat |
-| F35 | Remove the wounded-top remaining-HP cap from modern area-spell subattacks. | small | CoM2 spells, DamageSpell |
-| F36 | Implement Warlord Wall of Fire's repeated non-area spill distribution and `ApplyDamageSpell` category adjustment. | medium | CoM2 spells; R5.2g/j/m evidence |
-| F37 | Short-circuit modern magical spell damage on Magic Immunity when the spell is not `Nonmagic`. | small | CoM2 spells, DamageSpell |
-| F38 | Apply modern Black Sleep's Doom conversion to DamageSpell-shaped Immolation/Wall of Fire after the immunity exit. | small | CoM2 spells, DamageSpell |
-| F39 | Add Chaos Conjunction combat state and apply `Trunc(str × 1.34)` to modern Immolation only. | medium | CoM2 spells, direct spell damage |
-| F40 | Exclude calculated Teleporting/Merging attackers from modern Wall of Fire and expose Merging in the roster/card. | small | CoM2 spells; R5.2g/k evidence |
 | F41 | Add engine-specific hero progression: the DOS eight-threshold ladders and template-ability formulas (including CoM's Blademaster divisors, mana table and Lucky rewrite), plus the modern nine-step hero table. Decide how the current six-entry level control exposes them. | large | R6.1f evidence, hero ladders and abilities; CoM2 tables, level bonuses; `combat.js:39-74` |
-| F42 | Stop a Level change from overwriting hand-edited stats on a custom unit: `resetCardToRosterBase` fires on every Level change and rewrites the card from a stale roster record even when the unit selector is "custom" and the fields are unlocked. | small | found during R7.1; `ui.js` Level change handlers and `unitBaseStats` lifetime |
-| F43 | Determine whether CoM 1's retained `0x800` flag makes Dispel Evil live despite the roster naming Exorcise instead. | small | MoM analysis, touch-effect table and *Dispel Evil*; `data.js:71,72` |
 | F49 | Add a CoM 1 Heavenly Light active-effect control and transform for defending units: +1 positive melee/ranged, +1 Defense and Resistance, conditional weapon To Hit, and minimum magic-weapon quality. Add focused tests and state that the user enables it only for a defender in city combat. | small | R6.1c evidence, *The CoM 1 city-defense bytes are Guardian and Heavenly Light*; currently absent from `data.js` and `combat.js` |
-| F50 | Add CoM 1 side-maximum controls/transforms for Guiding Beacon, Divine Barrier and Soul Linker. Preserve the ranged-type/Fantastic gates and Soul Linker's `ceil(v/2)` To Hit versus `floor(v/2)` To Block split. | medium | R6.1d evidence, *CoM 1's relocated tail consumes three side-wide hero maxima*; absent from `data.js`/stat steps |
-| F51 | Add a CoM 1 Realm Ward city-enchantment input and transform: a matching Nature/Sorcery/Chaos/Life/Death Fantastic unit loses 20% To Hit, 3 Defense and 3 Resistance. | small | R6.1d evidence, *CoM 1 Realm Wards use −2/−3/−3*; absent from `data.js`/stat steps; Q19 tracks the prose conflict but does not block the binary-backed implementation |
-| F53 | Use signed truncate-toward-zero division for CoM 1 Warped Defense instead of `Math.floor`; negative pre-Warp Defense can receive later Supreme Light/Tactician writes before the terminal clamp. Close `PROVENANCE[warpDefense]`. | small | R6.1d evidence, *Warp Creature and Shatter expose both arithmetic and ordering differences*; `stats.js:1428-1431` |
-| F56 | Stop applying a conventional Ranged level bonus to modern Stoning and Death Gaze. CoM2/Warlord `ApplyLevelBonus` writes none of the three independent gaze fields; Doom Gaze is already unmodified. Add focused CoM2/Warlord regressions. | small | `Caster binary/D21.evidence.md`; current `getLevelBonuses` ordinary-gaze mapping |
 
 ## Modelling work
 
@@ -109,7 +68,24 @@ Accepted limitations remain in `SPEC.md`; only planned changes appear here.
 | ID | Upcoming task |
 |---|---|
 | M3 | **Blocked by F41:** implement the older-engine Destruction path, including elemental protection. Present in all three DOS builds but hero-only, so it stays unreachable until heroes are modelled; 1.31 adds the defender's per-figure hits where CoM 1 adds a flat 100. |
-| M7 | **Blocked by F20:** enforce [SPEC.md](./SPEC.md)'s transitional-helper retirement rule across derivation and combat normalization. Audit for helpers that compose ordered engine effects outside the phase-tagged records; replace each finding with atomic source-ordered steps, beginning with `determineEffectiveUnitType` and its second type rewrite in `normalizeCombatUnit`. Retain `unitType` only as a pure projection for legacy callers, then add a structural regression that prevents effect rules from returning to compatibility projections. |
+| M9 | Give every derivation phase one canonical version scope, enforced the same way. **Stage 1 is complete; stages 2 and 3 remain.** Stage 1 established the single home: `STEP_VERSION_SCOPES` in `steps.js`, keyed `phase:id` (the manifests' own key, so `b:trueLight` and `c:trueLight` stay distinct) and covering `base` through `e` plus the `attackSpecific` lists. Every step entering a sequence must resolve a scope — no default — and the call-site case is closed, since `effectiveResistance`/`effectiveDefense` now assert their own ungated list against the passed version. Scope is authoritative; `when` gates firing within scope, `subgroup` governs control visibility only (several controls share one `calcKey`, so it can never be per-step), and `PROVENANCE versions=` seeds each entry with the checks asserting the reviewed versions fall inside the scope. Stage 2: filter every phase by the canonical scope before composition, exactly as `stats.js` already filters `b`/`d` by `isWarlord`, and delete the region-`c` manifest entries the filter makes unreachable. The exact worklist is now measured and asserted per version in `tools/node_unit_checks.js`: 48 (`mom_1.31`), 48 (`mom_cp_1.60.00`), 39 (`com_6.08`), 32 (`com2_1.05.11`) and 15 (`com2_warlord_1.5.12.7`) out-of-scope sequence members. Two corrections to the pre-stage-1 reading. The named `base` cases — `militaryWorkshop`, `dragonMound`, `sanctaBasilica`, `naturalSelection:*`, `pillarOfFaith` — do execute under `mom_1.31`, but write nothing there, because each one's own modifier resolves to zero outside Warlord; 21/21/20/18/5 out-of-scope steps per version evaluate their predicate true and are inert. The steps that would actually change a stat if filtered are a different, smaller set — eight steps, twenty step/version pairs: `c:blazingMarch` and `c:mysticSurge` under both MoM builds; `c:blackChannels`, `c:giantStrength`, `c:giantStrength:thrown`, `c:metalFires`, `c:stoneSkin` under CoM 1, CoM2 and Warlord; plus `c:reinforceMagic:ranged` under CoM 1. Each is an enchantment whose own control `subgroup` hides in that version, so the state is not reachable through the UI but is reachable programmatically — stage 2 must justify each removal rather than assume inertness. Then unify the ordering mechanism: one ordered manifest per version covering `base` through `e` as a single chain, with `phase` retained only as a provenance label recording which region or script file the write was found in. The phase split is a filing system for where evidence came from, not a difference in kind between writes, and it currently produces three mechanisms for one fact — manifests in `b`/`c`/`d`, array order in `base`/`a`, and predicate-selected variants in `e` (`chance:modernClampCommon`/`chance:clamp` versus `chance:legacyClamp`). The `attackSpecific` phase stays outside the chain: it is a separate compiled routine pair (`GetEffectiveResistance`/`EffectiveDefense`) run on a scratch copy and keyed by an incoming attack, so folding it in would add writes `RecalculateUnits` never performs. Its lists stay separate but must use the same concept, syntax and representation as the chain's — see M10. Mark every entry whose position is not transcribed from an address map with the existing `provisional` flag — currently set on `berserk` alone and consumed by nothing — and assert it is set wherever evidence is absent, so a version's chain distinguishes transcribed order from inherited order. Region `c`'s four manifests are the transcribed core to build outward from; `base`/`a`/`e` positions are inherited from array order until sourced, so they start provisional. Ships in three stages, each independently shippable: stage 1 (canonical scope + exclusion assertion, all phases) shipped behavior-neutral and validated the classification before anything depends on it; stage 2 (filter every phase, delete the unreachable region-`c` entries); stage 3 (unify to one per-version chain, `phase` to provenance label, `provisional` enforced, and give a step a marker distinguishing a real `chance:` step from a projection — `resolveStepVersionScope`'s prefix fallback currently hands a missing row the scope of the step it would project, masking a coverage failure). Stage 2 must not take `STAGE2_SCOPE_EXCEPTIONS.members` as its complete worklist: it reads only `statExecutionTrace`, so the figure and chance sequences' out-of-scope members are absent — named with the reason at `tools/node_unit_checks.js:4555-4563`. Open from stage 1: three formulas run in builds their citations do not cover — the MoM region-`c` True Light block (`PROVENANCE[trueLight]` cites only the Warlord CAS), `nodeAura` under both MoM builds and CoM 1 (cites `Caster.exe` only, though `apply()` carries the DOS branch), and `survivalInstinct` under CoM 1 (cited for `Caster.exe` while its own eligibility helper is VERIFIED for `com_6.08`). The scope table takes the wider set and the gaps are enumerated in `tools/node_unit_checks.js`; closing them needs citations, not a scope change. Arithmetic must not change in any version. Cost: large remaining (two of three stages). Versions: evidence/builds — MoM 1.31 `WIZARDS.EXE`, MoM CP 1.60 `WIZARDS.EXE`, CoM 6.08 `WIZARDS.EXE`, CoM2 1.05.11 `Caster.exe`, Warlord 1.5.12.7 `Caster.exe`; calculator — `mom_1.31`, `mom_cp_1.60.00`, `com_6.08`, `com2_1.05.11`, `com2_warlord_1.5.12.7` (all five verified unchanged). Evidence: [F20](./HISTORY.md); canonical scope `steps.js`, `STEP_VERSION_SCOPES`, and [SPEC.md](./SPEC.md), *Stat derivation contract*; stage-2 worklist `tools/node_unit_checks.js`, `STAGE2_SCOPE_EXCEPTIONS`; manifests `stats.js:17-142`; phase sections `stats.js:2042-2887`; `b`/`d` precedent `stats.js:2893` and `tests/f20-source-order.spec.js:227-231`; non-manifest phase passthrough `steps.js:174-176`; version-exclusive-step principle `combat.js:349-351`. |
+| M10 | Represent the DOS attack-specific stage as ordered sequences, in the same form as CoM2's. The stage exists in every engine, but only CoM2/Warlord model it as `phase: 'attackSpecific'` steps (`EFFECTIVE_RESISTANCE_STEPS`, `EFFECTIVE_DEFENSE_STEPS`). MoM 1.31, CP 1.60 and CoM 1 take the non-`com2` branch of `buildResistanceContext` (`combat.js:4215`) and `computeDefenseProfile` (`combat.js:2635`), where the same effects are inline arithmetic — Charmed +30, Resist Magic +5, Bless +3/+5 — with no step objects, no ordered list to inspect, no trace entries and no execution ledger, despite being evidence-backed (`PROVENANCE[dosEffectiveDefenseProfile]` over seven `DOS reconstructed/combat.c` spans; `PROVENANCE[resolutionResistanceContext]` covering all five versions). Convert the DOS paths to per-version ordered step lists using the same step type, runner, manifest concept, authoring syntax and provenance-label conventions the `base`–`e` chain uses after M9, so the two stages differ only in which routine they transcribe. The DOS resistance path is additive where CoM2's assigns (Charmed and Magic Immunity set 100, so a unit can finish above 100), so this is a distinct transcription per engine, not one list with version variants. Depends on M9 for the canonical version scope and the chain's final list form. Cost: large. Versions: evidence/builds — MoM 1.31 `WIZARDS.EXE`, MoM CP 1.60 `WIZARDS.EXE`, CoM 6.08 `WIZARDS.EXE`; calculator — `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` (behavior unchanged; `com2_1.05.11` and `com2_warlord_1.5.12.7` unaffected). Evidence: [SPEC.md](./SPEC.md), *Attack-specific sequences*; `Reference docs/DOS reconstructed/combat.c`. |
+| M7 | Enforce [SPEC.md](./SPEC.md)'s transitional-helper retirement rule across derivation and combat normalization. Audit for helpers that compose ordered engine effects outside the phase-tagged records; replace each finding with atomic source-ordered steps, beginning with `determineEffectiveUnitType` and its second type rewrite in `normalizeCombatUnit`. Retain `unitType` only as a pure projection for legacy callers, then add a structural regression that prevents effect rules from returning to compatibility projections. |
+
+## Context cost and maintainability
+
+Measured 2026-08-17. The four largest calculator sources total roughly 410k tokens, so no agent can
+hold them; every task pays repeated search round-trips instead. These items cut the fixed cost each
+later task pays, whoever executes it.
+
+| ID | Upcoming task | Cost |
+|---|---|---|
+| T1 | Emit the generated rosters newline-delimited. `units_warlord.js` (140 KB), `units_com2.js` (72 KB), `units_com.js` (69 KB) and `units_mom.js` (64 KB) are each a **single line**, so any content-mode search matching one returns the whole file — about 95k tokens of build product sitting in the search path. Fix the generators (`tools/generate_com2_units_json.py`, `tools/generate_warlord_units_json.py`, `tools/parse_tweaker_unit_data.py`), never the outputs. Versions: evidence/builds — not applicable; calculator — all five, parse byte-identical. | small |
+| T2 | Introduce one source manifest that `index.html`, `tools/node_unit_checks.js`, `tools/bench_derive_unit_stats.js`, the matrix-worker `importScripts` in `Calculator/ui.js`, and the three specs hardcoding the list all consume, so adding a file is one edit rather than five. The current five-way duplication is why sources grow instead of splitting, and it blocks T3 and T4. Versions: evidence/builds — not applicable; calculator — all five, behavior unchanged. | medium |
+| T3 | **Depends on T2:** split `Calculator/data.js` — 509 KB, 8,520 lines, ~141k tokens, the single largest context cost in the repo and unreadable whole by any agent. Split by realm or ability family behind T2's manifest. Preserve `twoColumnMajor` column-major authoring and the rendered column order required by [CLAUDE.md](./CLAUDE.md). Versions: evidence/builds — not applicable; calculator — all five, behavior unchanged. | large |
+| T4 | **Depends on T2:** split `Calculator/combat.js` (325 KB, ~90k tokens) and `tools/node_unit_checks.js` (232 KB, 4,351 lines, ~63k tokens), the two remaining files no agent can read whole. Versions: evidence/builds — not applicable; calculator — all five, behavior unchanged. | large |
+| T5 | Section [SPEC.md](./SPEC.md) — 90 KB, ~24.8k tokens — so a task reads the slice it needs rather than the whole contract every time. Keep exactly one canonical home per behavior statement; sectioning must not duplicate. Versions: evidence/builds — not applicable; calculator — all five, documentation only. | medium |
+| T6 | **After T3–T4:** audit the long-form provenance narrative in `combat.js` (39% of characters, 125 KB of comment text) and `stats.js` (49%, 107 KB) for relocation to the owning evidence documents, leaving a one-line citation pointer in the code. Sample a dozen blocks and agree the boundary before moving any: explanation that justifies a step's position belongs beside the code, while derivation narrative belongs in evidence under the ownership rule in the root [CLAUDE.md](../CLAUDE.md). Measured 2026-08-17: ~311 KB of comment text (~86k tokens) across the calculator sources, with no rot — 13 lines carrying historical markers, zero `TODO`/`FIXME`. This is a relocation question, not a deletion one, and the splits land first because they redistribute the same prose. Versions: evidence/builds — not applicable; calculator — all five, comments only, no behavior change. | medium |
 
 ## Open questions
 
@@ -135,3 +111,4 @@ Accepted limitations remain in `SPEC.md`; only planned changes appear here.
 
 | ID | Needed answer |
 |---|---|
+| H1 | **Human:** Contact Seravy about the confirmed CoM2/Warlord Blur bug: turn-relative `CGADEnemy` makes the opposing army's Blur reduce that army's own retaliation gazes and counterattack. Record whether this is intended and whether a future engine build should change it. |

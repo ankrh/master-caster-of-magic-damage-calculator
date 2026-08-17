@@ -3,7 +3,7 @@
 
 // R9's durable stat-formula provenance audit. The calculator uses three constructors for
 // source-authored stat transforms: statStep(), getAbilityStatSteps()'s emit(), and
-// resolutionStep(). Every literal formula ID at those construction sites must have exactly one
+// attackSpecificStep(). Every literal formula ID at those construction sites must have exactly one
 // adjacent PROVENANCE comment. Direct formulas which cannot use one of those constructors are
 // declared with STAT-FORMULA and are checked by the same machinery.
 //
@@ -23,7 +23,7 @@ const excludedJavaScript = new Map([
   ['Calculator/engine.js', 'generic probability and damage-distribution math'],
   ['Calculator/lz-string.min.js', 'vendored compression library'],
   ['Calculator/matrix-worker.js', 'matrix orchestration over calculator results'],
-  ['Calculator/steps.js', 'generic ordered-step runner'],
+  ['Calculator/steps.js', 'ordered-step runner and the canonical step version-scope table'],
   ['Calculator/ui.js', 'UI state, rendering, and formatting'],
 ]);
 const allowedImplementationRoots = [
@@ -51,6 +51,7 @@ const directFunctionIds = new Map([
   ['misleadActiveForUnit', 'misleadEligibility'],
   ['destinyActiveForUnit', 'destinyEligibility'],
   ['determineEffectiveUnitType', 'legacyUnitTypeConversions'],
+  ['deriveMarionettePackage', 'marionettePackage'],
   ['supernaturalMinDamageForHits', 'supernaturalMinimumDamage'],
   ['distancePenalty', 'distancePenalty'],
   ['applyRage', 'rageEffectiveAttack'],
@@ -61,6 +62,13 @@ const directFunctionIds = new Map([
   ['magicImmunityDef', 'magicImmunityEffectiveDefense'],
   ['immolationStr', 'immolationStrength'],
   ['wallOfFireStr', 'wallOfFireStrength'],
+  ['applyDamageSpellAmplifier', 'applyDamageSpellAmplifier'],
+  ['calcDamageSpellDist', 'damageSpellResolution'],
+  ['wallOfFireToHit', 'wallOfFireToHit'],
+  ['wallOfFireSingleFigure', 'wallOfFireAreaShape'],
+  ['wallOfFireEligible', 'wallOfFireEligibility'],
+  ['wallOfFireAmplified', 'wallOfFireAmplifierProjection'],
+  ['applyHierophanyAbilityStrip', 'hierophanyAbilityStrip'],
   ['applyUndeadImmunities', 'undeadImmunityDerivation'],
   ['applyAnimatedEffects', 'animatedEffectDerivation'],
   ['applyBlackChannelsEffects', 'blackChannelsEffectDerivation'],
@@ -192,7 +200,7 @@ function discoverFormulaSites(file, text) {
   const sites = [];
   const patterns = [
     { kind: 'statStep', regex: /statStep\(\{\s*id:\s*'([^']+)'/g },
-    { kind: 'resolutionStep', regex: /resolutionStep\(\s*'([^']+)'/g },
+    { kind: 'attackSpecificStep', regex: /attackSpecificStep\(\s*'([^']+)'/g },
     { kind: 'base preparation', regex: /traceBasePreparation\(\s*'([^']+)'/g },
     { kind: 'chance delta', regex: /addChanceDelta\(\s*'([^']+)'/g },
   ];
@@ -383,8 +391,13 @@ function runAudit() {
   const unverified = comments.filter(comment => comment.body.startsWith('UNVERIFIED '));
   const backlog = fs.readFileSync(path.join(repoRoot, 'Calculator', 'BACKLOG.md'), 'utf8');
   const backlogMatch = /\| R9-G1 \|[^\n]*`(\d+)` UNVERIFIED formulas/.exec(backlog);
-  if (!backlogMatch) fail('Calculator/BACKLOG.md lacks the live R9-G1 UNVERIFIED count');
-  if (Number(backlogMatch[1]) !== unverified.length) {
+  if (unverified.length === 0 && backlogMatch) {
+    fail('Calculator/BACKLOG.md retains R9-G1 although the audit found no UNVERIFIED formulas');
+  }
+  if (unverified.length > 0 && !backlogMatch) {
+    fail('Calculator/BACKLOG.md lacks the live R9-G1 UNVERIFIED count');
+  }
+  if (backlogMatch && Number(backlogMatch[1]) !== unverified.length) {
     fail(`BACKLOG R9-G1 says ${backlogMatch[1]} UNVERIFIED formulas; audit found ${unverified.length}`);
   }
 

@@ -86,18 +86,16 @@ The rest of the flow is:
 `FirewallEffect` does nothing when `HasTeleMerge(u)` is true or the calculated unit is Flying.
 R5.2k proves that `HasTeleMerge` is exactly calculated `Units[u].teleporting` or calculated
 `Units[u].merging`, with Teleporting short-circuiting the second read, so either state exits before
-`ApplyDamageSpell`. The calculator's `wallOfFireActive` gate currently tests only the global
-toggle and melee mode and defines no Merging ability; that discrepancy is F40. Otherwise the
-engine calls `ApplyDamageSpell(u, 87, SpellTable[87].Attack)`. CoM2's `Area=True` therefore
+`ApplyDamageSpell`. The engine otherwise calls `ApplyDamageSpell(u, 87,
+SpellTable[87].Attack)`. CoM2's `Area=True` therefore
 uses step 6 once per living figure. Warlord's deliberate removal of `Area` sends Wall of Fire
 through step 7 instead; it is not a one-figure area roll.
 
-Five calculator mismatches inside the two scoped R5.2g extents are tracked as F35–F39: the
-wounded-top area cap, Warlord Wall of Fire's non-area spill shape, Magic Immunity's direct-spell
-short circuit, Black Sleep's Doom conversion for spell damage, and Chaos Conjunction's
-Immolation scaling. R5.2j subsequently completed the wrapper post-processing described below.
-The additional `HasTeleMerge` caller/callee mismatch is tracked separately as F40.
-No calculator implementation was changed by either derivation or by this reconstruction correction.
+Calculator implementation status is owned by
+[`Calculator/BACKLOG.md`](../../Calculator/BACKLOG.md) and
+[`Calculator/HISTORY.md`](../../Calculator/HISTORY.md). R5.2j subsequently completed the wrapper
+post-processing evidence described below. No calculator implementation was changed by either
+derivation or by this reconstruction correction.
 
 Verified: Codex 2026-08-02, cold derivation plus separate raw-byte self-review. The user directed
 single-agent integration. Claude's 2026-08-03 R5.C review initially found no semantic misreading;
@@ -158,7 +156,7 @@ help states the same side effects; its manual changes Ice Bolt's strength, hit c
 without contradicting them. No prose discrepancy was found. Mana, ammunition, Frozen's later-turn
 action denial and off-combat roster cleanup remain outside the calculator's single-engagement
 damage output. Amplifier's direct-damage adjustment is now fully supported by R5.2m evidence;
-its calculator implementation remains part of F36 rather than this reconstruction merge.
+the calculator implementation status is recorded in the owning calculator documents linked above.
 
 Verified: Codex 2026-08-02, cold single-agent derivation plus separate raw-byte self-review. The
 user directed single-agent integration. Claude reviewed the full R5.2j extent against the binary

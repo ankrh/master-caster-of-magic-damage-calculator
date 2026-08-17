@@ -7,6 +7,7 @@ Fields match the MoM/CoM1 JSON schema:
   ranged, ranged_type, ammo         (legacy projection; omitted when absent)
   thrown_breath, thrown_breath_type (legacy projection; omitted when absent)
   thrown, fire_breath, lightning_breath (modern independent channels; omitted when absent)
+  to_hit, to_block                  (percentage-point deltas above the 30% base)
   abilities                         (omitted when empty)
 
 Run from any working directory:
@@ -217,9 +218,10 @@ def ini_unit_to_record(u):
         'resist':  int(u.get('Resistance', 0)),
     }
 
-    # Non-standard base block chance (e.g. Zombie = 20%)
-    to_defend = int(u.get('ToDefend', 30))
-    if to_defend != 30:
+    # Innate To Defend bonus. Keep the calculator roster schema aligned with To Hit:
+    # both fields are percentage-point deltas above the engine's 30% base.
+    to_defend = int(u.get('ToDefend', 30)) - 30
+    if to_defend != 0:
         record['to_block'] = to_defend
 
     # Innate To Hit bonus. The INI stores the absolute To Hit chance (default 30%);

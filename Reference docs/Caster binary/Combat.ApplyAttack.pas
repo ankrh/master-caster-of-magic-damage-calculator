@@ -82,6 +82,10 @@ const
   EncBloodLust = 48;
   SImmolation = 99;
   HABattlemage = 9;
+  Maxmaxcombatenchantments = 100;
+  CGDefender = 1;
+  CGAttacker = 2;
+  CGBlur = 3;
 
   { [inferred semantic aliases; exact numeric values] }
   inferred_NatureRealm = 1;
@@ -101,6 +105,10 @@ type
   end;
 
   EnchFlagT = array[1..100] of Boolean;
+
+  inferred_CombatGlobalsT =
+    array[CGDefender..CGAttacker] of
+      array[1..Maxmaxcombatenchantments] of Integer;
 
   { [exact names; inferred offset bindings]
     Only fields read by R5.2a-c are shown. Units and BaseUnits share this
@@ -167,8 +175,11 @@ var
   inferred_InvulnerabilityDamageReduction: Integer;       { $0070808C }
   inferred_BloodsuckerDamage: Integer;                    { $00708740 }
   inferred_BloodsuckerHealing: Integer;                   { $00708F54 }
-  inferred_CombatGlobalBlur: array[1..2] of Integer;       { projected access
-                                                              $005B2F2E..$005B2F55 }
+  inferred_CombatGlobals: inferred_CombatGlobalsT;         { runtime pointer $0070969C;
+                                                              shared layout also declared in
+                                                              Units.RecalculateUnits.pas;
+                                                              $190 side stride, CGBlur +$08;
+                                                              access $005B2F2E..$005B2F55 }
 
 function ApplyAttack(au, du, at: Integer; figs: Integer;
   counter, simul: Boolean): inferred_AttackResultT; register;
@@ -554,7 +565,7 @@ begin
       i := CGADEnemy;                              { call $005B2F26; side opposite the
                                                      current combat-turn side, not a
                                                      direct Units[du] owner lookup }
-      if inferred_CombatGlobalBlur[i] > 0 then
+      if inferred_CombatGlobals[i][CGBlur] > 0 then
         redper := inferred_BlurDamageReduction;    { false target $005B2F61 }
       if Units[du].invisible then
       begin

@@ -26,6 +26,11 @@ reconstruction review is recorded in `.review-of-claude.md`.
 | Size | 10,584,041 bytes |
 | Format | PE32, i386, image base `0x400000`, Delphi (Embarcadero) |
 
+The Warlord 1.5.12.7 distribution copy at
+`Raw install files/CoM2ModWarlord1.5.12.7/CoMWin1511/Caster.exe` has the same size and MD5, so it
+uses this exact engine binary; Warlord's executing `.CAS` scripts remain a separate higher-priority
+layer where they overwrite compiled behavior.
+
 Every address in this directory is a virtual address in that exact build. Verify the hash before
 using them.
 
@@ -163,6 +168,7 @@ review gates exist only in `Calculator/BACKLOG.md`.
 | D29 | same file, `@Units@ApplyMagicWeapons`; [`D29.evidence.md`](./D29.evidence.md) | Locate-and-bound result `$00598D88..$005992CC`, including exact adjacency, two direct callers, reachable exits, shared CoM2/Warlord build proof and the frontier handed to D33 |
 | D32 | [`Spells.InitializeCombatSpellcasting.pas`](./Spells.InitializeCombatSpellcasting.pas); [`D32.evidence.md`](./D32.evidence.md) | Locate-and-bound result for Raise Dead case `$005CD1FF..$005CD372`, wrapper `$0064435C..$00644377`, the existing No-Heal recalculation consumer, direct callers, ordinary return, and symbol-owned post-return data |
 | D33 | [`Units.RecalculateUnits.pas`](./Units.RecalculateUnits.pas), `@Units@ApplyMagicWeapons`; [`D33.evidence.md`](./D33.evidence.md) | Complete `$00598D88..$005992CC` material gates, rival-global suppression scan, tiered stat/To-Hit writes, runtime INI binding, checked arithmetic and shared-build ledgers; dual Sol High derivation plus Claude Opus 5 High review |
+| F18 | [`Units.RecalculateUnits.pas`](./Units.RecalculateUnits.pas), `@Units@applynodeaura`; [`F18.evidence.md`](./F18.evidence.md) | Complete `$0059718C..$005973A3` persistent-melee/current-ranged-and-breath gates, literal `+2` writes, compiler checks, callers and shared CoM2/Warlord ledgers; dual Sol High derivation plus Claude Opus 5 Medium review |
 | D36 | [`Spells.InitializeCombatSpellcasting.pas`](./Spells.InitializeCombatSpellcasting.pas); [`D36.evidence.md`](./D36.evidence.md) | Complete shared CoM2/Warlord Raise Dead case and Castercore wrapper: No-Heal/status/location/movement writes, checked half-HP damage, output ID, enclosing context, excluded Animate Dead sibling, and disjoint Warlord recount |
 | R5.1c | same file, region `e`; and the named helpers | R5.1c-a–R5.1c-c durable source and evidence artifact group |
 | R5.1c-a | same file; [`Units.RecalculateUnits.R5.1c-a.evidence.md`](./Units.RecalculateUnits.R5.1c-a.evidence.md) | Final first-pass clamps, aura-pass preparation/dispatch, `@Map@unitonoverlandtile`, and `@Units@Ismagicalranged`; dual derivation and reciprocal review provenance are recorded in the evidence |

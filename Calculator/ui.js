@@ -303,7 +303,7 @@ function setAbilityControlValue(prefix, abil, val) {
     if (chk) chk.checked = val != null;
     el.value = val != null ? val : 0;
   } else {
-    el.value = val || 0;
+    el.value = val === true ? 1 : (val || 0);
   }
 }
 
@@ -568,10 +568,16 @@ function readUnitStats(prefix, overrides) {
     res: el(prefix + 'Res').value,
     hp: el(prefix + 'HP').value,
     dmg: el(prefix + 'Dmg').value,
+    // The card exposes only aggregate starting damage. Category/bonus state starts at
+    // zero, remains exact internally during combat, and is reported as output.
+    irrecoverableDamage: 0,
+    undeadDamage: 0,
+    baseBonusHp: 0,
+    noHealing: false,
     toHitMod: el(prefix + 'ToHitMod').value,
     toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
     toBlkMod: el(prefix + 'ToBlkMod').value,
-    cityWalls: el('cityWalls').value,
+    cityWalls: el(prefix + 'CityWalls').value,
     nodeAura: el('nodeAura').value,
     wallOfFire: !!el('wallOfFire').checked,
     trueLight: !!el('trueLight').checked,
@@ -703,10 +709,10 @@ const DOS_SPECIAL_CONSUMERS = [
   ['resistanceToAll', 'Res. to all', 1],
 ];
 
-// Dispel Evil and Destruction dispatch alongside the touch riders but their modifiers are
-// literals in the DOS code — -4 and 0 — so they never read the byte. They therefore stay
-// ordinary ability rows rather than joining the card block, which is reserved for the byte's
-// consumers.
+// Dispel Evil, CoM 1 Exorcise, and Destruction dispatch alongside the touch riders but their
+// modifiers are literals in the DOS code — -4, -3, and 0 — so they never read the byte. They
+// therefore stay ordinary ability rows rather than joining the card block, which is reserved
+// for the byte's consumers.
 
 // Consumers the shared slot's type selects rather than a flag, so they get no DOS control.
 const DOS_GAZE_KEYS = ['stoningGaze', 'deathGaze', 'doomGaze'];
@@ -818,8 +824,8 @@ function dosSpecialValues(prefix, withReceived = true) {
   // Doom damage is the shared *strength* slot, not the byte — `deriveUnitStats` reads it from
   // there for type 104 — so the ability value contributes nothing in the DOS versions.
   out.doomGaze = 0;
-  // Dispel Evil and Destruction are deliberately absent: their modifiers are literals, so they
-  // stay ordinary ability rows and `readAbilitiesFromDOM` supplies them.
+  // Dispel Evil, CoM 1 Exorcise, and Destruction are deliberately absent: their modifiers are
+  // literals, so they stay ordinary ability rows and `readAbilitiesFromDOM` supplies them.
   return out;
 }
 
@@ -988,6 +994,8 @@ function updateModifiedDisplay(prefix, stats) {
 // step in deriveUnitStats (`stats.js`, statStep 'level'). Guarded on base.atk because a
 // custom unit's record may hold only the `generic` flag (see applyFullState), not base stats.
 function resetCardToRosterBase(prefix) {
+  const unit = document.getElementById(prefix + 'Unit');
+  if (!unit || unit.value === 'custom') return;
   const base = unitBaseStats[prefix];
   if (!base || base.atk === undefined) return;
   document.getElementById(prefix + 'Atk').value = base.atk;
@@ -1281,9 +1289,8 @@ function applyUnit(prefix, unitIndex) {
 
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
   document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
-  // Modern rosters store an absolute To Defend chance; the card stores the
-  // calculator's modifier above its 30% base.
-  document.getElementById(prefix + 'ToBlkMod').value = (unit.to_block == null ? 30 : unit.to_block) - 30;
+  // Both modern roster chance fields use the card's percentage-point delta above 30%.
+  document.getElementById(prefix + 'ToBlkMod').value = unit.to_block || 0;
   document.getElementById(prefix + 'Dmg').value = 0;
   document.getElementById(prefix + 'RtbType').value = predefinedUnitRtbType(unit);
   applyModernAttackFields(prefix, unitBaseStats[prefix].modernAttacks);
@@ -1416,6 +1423,7 @@ function resetUnitFields(prefix) {
   document.getElementById(prefix + 'ToHitRtbMod').value = s.toHitRtbMod;
   document.getElementById(prefix + 'ToBlkMod').value = s.toBlkMod;
   document.getElementById(prefix + 'HP').value = s.hp;
+  document.getElementById(prefix + 'CityWalls').value = s.cityWalls;
   document.getElementById(prefix + 'Dmg').value = s.dmg;
   document.getElementById(prefix + 'Weapon').value = s.weapon;
   document.getElementById(prefix + 'Armor').value = s.armor;
@@ -1434,13 +1442,13 @@ function resetUnitFields(prefix) {
 function resetGlobalOptions() {
   document.getElementById('rangedCheck').checked = true;
   document.getElementById('rangedDist').value = 1;
-  document.getElementById('cityWalls').value = 'none';
   document.getElementById('nodeAura').value = 'none';
   document.getElementById('trueLight').checked = false;
   document.getElementById('darkness').checked = false;
   document.getElementById('chaosSurge').value = 0;
   document.getElementById('wallOfFire').checked = false;
   document.getElementById('warpReality').checked = false;
+  document.getElementById('chaosConjunction').checked = false;
   document.getElementById('hurricane').checked = false;
   document.getElementById('poxHost').checked = false;
 }
@@ -1780,7 +1788,7 @@ function renderBreakdownGrid(phases) {
 
 // --- Life Steal Summary ---
 
-function renderLifeStealSummary(result) {
+function renderLifeStealSummary(result, version) {
   const el = document.getElementById('lifeStealSummary');
   if (!el) return;
 
@@ -1790,23 +1798,50 @@ function renderLifeStealSummary(result) {
   const bLS = (result.bLifeStealExpected != null)
     ? result.bLifeStealExpected
     : distExpectedValue(result.bLifeStealDist);
+  const modernCombatHealing = version === 'com2_1.05.11'
+    || version === 'com2_warlord_1.5.12.7';
+  const aRaw = result.aLifeStealRawExpected != null
+    ? result.aLifeStealRawExpected : distExpectedValue(result.aLifeStealRawDist || result.aLifeStealDist);
+  const bRaw = result.bLifeStealRawExpected != null
+    ? result.bLifeStealRawExpected : distExpectedValue(result.bLifeStealRawDist || result.bLifeStealDist);
 
-  if (aLS < 0.001 && bLS < 0.001) {
+  if (aLS < 0.001 && bLS < 0.001 && aRaw < 0.001 && bRaw < 0.001) {
     el.style.display = 'none';
     el.innerHTML = '';
     return;
   }
 
   let html = '';
-  if (aLS >= 0.001) {
-    html += `<span>Attacker self-heal (life steal / bloodsucker): <strong>${aLS.toFixed(3)}</strong></span>`;
+  const benefitLabel = modernCombatHealing
+    ? 'applied self-heal / bonus-HP benefit (including Bloodsucker)'
+    : 'applied self-heal / Extra-Hits benefit';
+  if (aLS >= 0.001 || aRaw >= 0.001) {
+    html += `<span>Attacker raw Life Steal drain: <strong>${aRaw.toFixed(3)}</strong>; ${benefitLabel}: <strong>${aLS.toFixed(3)}</strong></span>`;
   }
-  if (bLS >= 0.001) {
+  if (bLS >= 0.001 || bRaw >= 0.001) {
     if (html) html += ' &nbsp;|&nbsp; ';
-    html += `<span>Defender self-heal (life steal / bloodsucker): <strong>${bLS.toFixed(3)}</strong></span>`;
+    html += `<span>Defender raw Life Steal drain: <strong>${bRaw.toFixed(3)}</strong>; ${benefitLabel}: <strong>${bLS.toFixed(3)}</strong></span>`;
   }
   el.style.display = '';
   el.innerHTML = html;
+}
+
+function renderCombatStateSummary(container, prefix, mean, version) {
+  const values = mean || { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
+  const modern = version.startsWith('com2');
+  const categoryLabel = modern ? 'Irrecoverable damage' : 'Irreversible damage';
+  const bonusLabel = modern ? 'Bonus HP / figure' : 'Extra Hits / figure';
+  const previous = container.querySelector('#' + prefix + 'CombatStateSummary');
+  if (previous) previous.remove();
+  const summary = document.createElement('div');
+  summary.id = prefix + 'CombatStateSummary';
+  summary.className = 'combat-state-summary';
+  summary.innerHTML = `
+    <div class="combat-state-heading">Mean post-combat state</div>
+    <div><span>${categoryLabel}</span><strong data-metric="irreversibleDamage">${values.irreversibleDamage.toFixed(3)}</strong></div>
+    <div><span>Undeath damage</span><strong data-metric="undeadDamage">${values.undeadDamage.toFixed(3)}</strong></div>
+    <div><span>${bonusLabel}</span><strong data-metric="extraHits">${values.extraHits.toFixed(3)}</strong></div>`;
+  container.appendChild(summary);
 }
 
 // --- Main Calculate ---
@@ -1841,18 +1876,26 @@ function recalculate() {
   const isRanged = document.getElementById('rangedCheck').checked && hasRangedAttack;
   const version = document.getElementById('gameVersion').value;
   const wallOfFire = document.getElementById('wallOfFire').checked;
+  const chaosConjunction = document.getElementById('chaosConjunction').checked;
 
-  const result = resolveCombat(a, b, { isRanged, version, wallOfFire });
+  const result = resolveCombat(a, b, {
+    isRanged,
+    version,
+    wallOfFire,
+    chaosConjunction,
+  });
 
   const aFirstFigRem = a.hp > 0 && a.dmg % a.hp !== 0 ? a.hp - (a.dmg % a.hp) : a.hp;
   const bFirstFigRem = b.hp > 0 && b.dmg % b.hp !== 0 ? b.hp - (b.dmg % b.hp) : b.hp;
 
   renderBreakdownGrid(result.phases);
   renderDistPanel(document.getElementById('distA'), 'Mean damage to attacker', result.totalDmgToA, result.aHP, result.aAlive,
-    { showSkulls: true, firstFigRem: aFirstFigRem });
+    { showSkulls: true, firstFigRem: aFirstFigRem, pDestroy: result.aDestroyPct });
   renderDistPanel(document.getElementById('distB'), 'Mean damage to defender', result.totalDmgToB, result.bHP, result.bAlive,
-    { showSkulls: true, firstFigRem: bFirstFigRem });
-  renderLifeStealSummary(result);
+    { showSkulls: true, firstFigRem: bFirstFigRem, pDestroy: result.bDestroyPct });
+  renderCombatStateSummary(document.getElementById('distA'), 'a', result.aPostCombatStateMean, version);
+  renderCombatStateSummary(document.getElementById('distB'), 'b', result.bPostCombatStateMean, version);
+  renderLifeStealSummary(result, version);
 
   // Persist the live page state, unless we're mid-restore (applyState calls recalculate
   // once at the end; saving a half-applied blob would be wrong).
@@ -1874,6 +1917,7 @@ function subgroupAllowedForVersion(subgroup, version) {
   const isWarlord = version.startsWith('com2_warlord_');
   const sg = (subgroup || '').replace(/^_/, '');
   if (sg === 'MoM only') return isMoM;
+  if (sg === 'CoM only') return version === 'com_6.08';
   if (sg === 'CoM, CoM2 & Warlord') return isCoMorCoM2;
   if (sg === 'CoM2 & Warlord') return isCoM2;
   if (sg === 'Warlord only') return isWarlord;
@@ -1904,6 +1948,7 @@ function globalEnchantmentAllowedForVersion(elementId, version) {
   const isWarlord = version.startsWith('com2_warlord_');
   switch (elementId) {
     case 'trueLight': return isMoM || isWarlord; // removed in CoM 1 & 2
+    case 'chaosConjunction': return version.startsWith('com2_');
     case 'hurricane': return isWarlord;
     case 'poxHost':   return isWarlord;
     default:          return true;
@@ -1913,7 +1958,7 @@ function globalEnchantmentAllowedForVersion(elementId, version) {
 // Show/hide (and reset when hidden) the version-restricted controls in the global-enchantment
 // frame. Safe to call repeatedly; invoked on version change, reset, and state restore.
 function updateGlobalEnchantmentVisibility(version) {
-  for (const id of ['trueLight', 'hurricane', 'poxHost']) {
+  for (const id of ['trueLight', 'chaosConjunction', 'hurricane', 'poxHost']) {
     const el = document.getElementById(id);
     if (!el) continue;
     const wrapper = el.closest('.check-label') || el;
@@ -2048,7 +2093,10 @@ function updateTypeVisibility() {
     const gEl = document.getElementById(id);
     if (!gEl) continue;
     const allowed = globalEnchantmentAllowedForVersion(id, version);
-    if (!allowed) gEl.checked = false;
+    if (!allowed) {
+      if (gEl.type === 'checkbox') gEl.checked = false;
+      else gEl.value = 'attacker';
+    }
     gEl.disabled = !allowed;
     const gLabel = gEl.closest('.check-label');
     if (gLabel) gLabel.classList.toggle('disabled-field', !allowed);
@@ -2143,6 +2191,7 @@ function applyPreset(name) {
     document.getElementById(prefix + 'ToHitRtbMod').value = s.toHitRtbMod;
     document.getElementById(prefix + 'ToBlkMod').value = s.toBlkMod;
     document.getElementById(prefix + 'HP').value = s.hp;
+    document.getElementById(prefix + 'CityWalls').value = s.cityWalls;
     document.getElementById(prefix + 'Dmg').value = s.dmg;
     document.getElementById(prefix + 'Weapon').value = s.weapon;
     document.getElementById(prefix + 'Armor').value = s.armor || 'normal';
@@ -2222,7 +2271,9 @@ function applyPreset(name) {
   if (preset.b && preset.b.weapon) document.getElementById('bWeapon').value = preset.b.weapon;
   document.getElementById('rangedCheck').checked = preset.rangedCheck || false;
   document.getElementById('rangedDist').value = preset.rangedDist || 1;
-  document.getElementById('cityWalls').value = preset.cityWalls || 'none';
+  document.getElementById('aCityWalls').value = (preset.a && preset.a.cityWalls) || 'none';
+  document.getElementById('bCityWalls').value = (preset.b && preset.b.cityWalls)
+    || preset.cityWalls || 'none';
   document.getElementById('nodeAura').value = preset.nodeAura || 'none';
   const legacyLightDark = preset.enchLightDark || 'none';
   document.getElementById('trueLight').checked = !!preset.trueLight || legacyLightDark === 'trueLight';
@@ -2235,6 +2286,7 @@ function applyPreset(name) {
   document.getElementById('chaosSurge').value = preset.chaosSurge || 0;
   document.getElementById('wallOfFire').checked = preset.wallOfFire || false;
   document.getElementById('warpReality').checked = preset.warpReality || false;
+  document.getElementById('chaosConjunction').checked = preset.chaosConjunction || false;
   document.getElementById('hurricane').checked = preset.hurricane || false;
   document.getElementById('poxHost').checked = preset.poxHost || false;
   refreshAbilityFieldVisibility();
@@ -2369,6 +2421,8 @@ function applyFullState(blob) {
         const el = document.getElementById(id);
         if (!el) continue; // forward-compat: ignore ids this build no longer has
         if (el.type === 'checkbox') el.checked = !!val;
+        else if ((id === 'aAbil_nightshade' || id === 'bAbil_nightshade')
+          && typeof val === 'boolean') el.value = val ? 1 : 0;
         else el.value = val;
       }
     }
@@ -2445,8 +2499,42 @@ function collectState() {
 // M6 replaced the one-choice Lava Smelter selector with five independent flags. Saved states and
 // share links from before that change still carry `<side>Abil_lavaSmelter`; translate its selected
 // grant unless a newer payload explicitly supplies the corresponding replacement checkbox.
-function migrateRetiredControlIds(ids) {
+function migrateRetiredControlIds(ids, fallbackVersion = '') {
   const migrated = { ...(ids || {}) };
+  // Starting healing-category state is no longer a UI concept. Older local state and
+  // share links may contain these controls; discard them instead of silently restoring
+  // an invisible combat condition.
+  for (const prefix of ['a', 'b']) {
+    for (const suffix of ['IrrecoverableDamage', 'UndeadDamage', 'BaseBonusHp', 'NoHealing']) {
+      delete migrated[prefix + suffix];
+    }
+  }
+  // The retired global selector always affected card B. Carry old saved states and share
+  // links forward without guessing that card A was inside the walls.
+  if (Object.prototype.hasOwnProperty.call(migrated, 'cityWalls')
+      && !Object.prototype.hasOwnProperty.call(migrated, 'bCityWalls')) {
+    migrated.bCityWalls = migrated.cityWalls;
+  }
+  delete migrated.cityWalls;
+  // F24 briefly stored modern army Blur in three global controls. Card A is always the
+  // tactical attacker and Card B the tactical defender now, so translate the persistent
+  // army flags through the old initiating-side mapping. The retired representation wins
+  // when present because the modern card checkboxes were disabled and always false in F24,
+  // including in a full (undiffed) state blob.
+  const version = normalizeGameVersion(migrated.gameVersion)
+    || normalizeGameVersion(fallbackVersion) || '';
+  const hasRetiredBlur = ['combatTurnSide', 'combatAttackerBlur', 'combatDefenderBlur']
+    .some(key => Object.prototype.hasOwnProperty.call(migrated, key));
+  if (version.startsWith('com2') && hasRetiredBlur) {
+    const initiatingSide = migrated.combatTurnSide === 'defender' ? 'defender' : 'attacker';
+    const attackerArmyBlur = !!migrated.combatAttackerBlur;
+    const defenderArmyBlur = !!migrated.combatDefenderBlur;
+    migrated.aAbil_blur = initiatingSide === 'attacker' ? attackerArmyBlur : defenderArmyBlur;
+    migrated.bAbil_blur = initiatingSide === 'attacker' ? defenderArmyBlur : attackerArmyBlur;
+  }
+  delete migrated.combatTurnSide;
+  delete migrated.combatAttackerBlur;
+  delete migrated.combatDefenderBlur;
   const lavaSmelterKeys = {
     weaponImmunity: 'lavaSmelterWeaponImmunity',
     missileImmunity: 'lavaSmelterMissileImmunity',
@@ -2476,7 +2564,7 @@ function applyState(blob) {
   }
   const version = (blob.ids && normalizeGameVersion(blob.ids.gameVersion))
     || loadPersistedGameVersion() || DEFAULT_GAME_VERSION;
-  const migratedIds = migrateRetiredControlIds(blob.ids);
+  const migratedIds = migrateRetiredControlIds(blob.ids, version);
   const merged = { ...getDefaultIds(version), ...migratedIds, gameVersion: version };
   applyFullState({
     v: blob.v,
@@ -2751,17 +2839,17 @@ function toggleGroupInactive(group, section) {
 const MATRIX_LEVEL_OPTIONS  = [['normal','Normal'],['regular','Regular'],['veteran','Veteran'],['elite','Elite'],['ultra_elite','Ultra Elite'],['champion','Champion']];
 const MATRIX_WEAPON_OPTIONS = [['normal','Normal'],['magic','Magic'],['mithril','Mithril'],['adamantium','Adamantium']];
 const MATRIX_ARMOR_OPTIONS  = [['normal','Normal'],['orihalcon','Orihalcon']];
+const MATRIX_CITY_WALL_OPTIONS = [['none','Outside / none'],['1','Inside (+1 def)'],['3','Inside (+3 def)']];
 
 const MATRIX_GLOBAL_DEFS = [
   { key: 'trueLight',   label: 'True Light',    type: 'bool' },
   { key: 'darkness',    label: 'Darkness',      type: 'bool' },
   { key: 'wallOfFire',  label: 'Wall of Fire',  type: 'bool' },
   { key: 'warpReality', label: 'Warp Reality',  type: 'bool' },
+  { key: 'chaosConjunction', label: 'Chaos Conjunction', type: 'bool', modernOnly: true },
   { key: 'hurricane',   label: 'Hurricane',     type: 'bool' },
   { key: 'poxHost',     label: 'Pox host present', type: 'bool' },
   { key: 'chaosSurge',  label: 'Chaos Surge enchantments', type: 'num', min: 0, max: 99 },
-  { key: 'cityWalls',   label: 'City walls', type: 'select',
-    options: [['none','None'],['1','+1 def'],['3','+3 def']] },
   { key: 'nodeAura',    label: 'Node aura',  type: 'select',
     options: [['none','None'],['chaos','Chaos'],['nature','Nature'],['sorcery','Sorcery']] },
   { key: 'rangedDist',  label: 'Ranged distance', type: 'num', min: 1, max: 99,
@@ -2777,10 +2865,51 @@ function loadMatrixPropertyStateFromStorage() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
+    const a = Array.isArray(parsed.a) ? parsed.a : [];
+    const b = Array.isArray(parsed.b) ? parsed.b : [];
+    const global = Array.isArray(parsed.global) ? parsed.global : [];
+    // City Walls used to be a global property implicitly attached to card B. Preserve that
+    // saved meaning once, then expose the migrated row in the Defender settings box.
+    const retiredCityWalls = global.find(row => row.key === 'cityWalls');
+    if (retiredCityWalls && !b.some(row => row.key === 'cityWalls')) {
+      b.push({ ...retiredCityWalls });
+    }
+    // Migrate F24's retired global army controls to card-owned army context. The old turn
+    // selector said which persistent army contained tactical attacker Card A; Card B was
+    // necessarily the other army. Only active Blur rows need representation because an
+    // absent card row is the false/default value.
+    const retiredBlurKeys = new Set([
+      'combatTurnSide', 'combatAttackerBlur', 'combatDefenderBlur',
+    ]);
+    const hasRetiredBlurRows = global.some(row => retiredBlurKeys.has(row.key));
+    const globalValue = (key, fallback) => {
+      const row = global.find(candidate => candidate.key === key);
+      return row && row.enabled ? row.value : fallback;
+    };
+    const initiatingSide = globalValue('combatTurnSide', 'attacker') === 'defender'
+      ? 'defender' : 'attacker';
+    const attackerArmyBlur = !!globalValue('combatAttackerBlur', false);
+    const defenderArmyBlur = !!globalValue('combatDefenderBlur', false);
+    const migratedCardBlur = initiatingSide === 'attacker'
+      ? { a: attackerArmyBlur, b: defenderArmyBlur }
+      : { a: defenderArmyBlur, b: attackerArmyBlur };
+    if (hasRetiredBlurRows) {
+      for (const prefix of ['a', 'b']) {
+        const rows = prefix === 'a' ? a : b;
+        const withoutOldBlur = rows.filter(row => row.key !== 'blur');
+        rows.splice(0, rows.length, ...withoutOldBlur);
+        if (migratedCardBlur[prefix]) {
+          rows.push({ key: 'blur', enabled: true, value: true });
+        }
+      }
+    }
+    const retiredStartingState = new Set([
+      'irrecoverableDamage', 'undeadDamage', 'baseBonusHp', 'noHealing',
+    ]);
     return {
-      a: Array.isArray(parsed.a) ? parsed.a : [],
-      b: Array.isArray(parsed.b) ? parsed.b : [],
-      global: Array.isArray(parsed.global) ? parsed.global : [],
+      a: a.filter(row => !retiredStartingState.has(row.key)),
+      b: b.filter(row => !retiredStartingState.has(row.key)),
+      global: global.filter(row => row.key !== 'cityWalls' && !retiredBlurKeys.has(row.key)),
       _seeded: true,
     };
   } catch (err) {
@@ -2811,6 +2940,8 @@ function matrixPropertyDef(box, key) {
   if (key === 'level')  return { key: 'level',  label: 'Unit level',  type: 'select', options: MATRIX_LEVEL_OPTIONS };
   if (key === 'weapon') return { key: 'weapon', label: 'Weapon type', type: 'select', options: MATRIX_WEAPON_OPTIONS };
   if (key === 'armor')  return { key: 'armor',  label: 'Armor type',  type: 'select', options: MATRIX_ARMOR_OPTIONS };
+  if (key === 'cityWalls') return { key: 'cityWalls', label: 'City walls', type: 'select', options: MATRIX_CITY_WALL_OPTIONS };
+  if (key === 'damageTaken') return { key, label: 'Damage taken', type: 'num', min: 0, max: 999 };
   const abil = abilityUiDefs().find(a => a.source === 'enchantment' && a.uiKey === key);
   if (!abil) return null;
   return {
@@ -2818,6 +2949,8 @@ function matrixPropertyDef(box, key) {
     label: abilityDisplayLabel(abil),
     type: abil.type,
     options: abil.options,
+    min: abil.min,
+    max: abil.max,
     abil,
   };
 }
@@ -2826,14 +2959,18 @@ function matrixPropertyDef(box, key) {
 function matrixPropertyCandidates(box) {
   if (box === 'global') {
     const isRanged = activeMatrixMode === 'ranged';
+    const modern = document.getElementById('gameVersion').value.startsWith('com2');
     return MATRIX_GLOBAL_DEFS
       .filter(d => !d.rangedOnly || isRanged)
+      .filter(d => !d.modernOnly || modern)
       .map(d => ({ key: d.key, label: d.label }));
   }
   const version = document.getElementById('gameVersion').value;
   const list = [
     { key: 'level',  label: 'Unit level' },
     { key: 'weapon', label: 'Weapon type' },
+    { key: 'cityWalls', label: 'City walls' },
+    { key: 'damageTaken', label: 'Damage taken' },
   ];
   // Armor quality doesn't exist in MoM (see armorExists in deriveUnitStats).
   if (!version.startsWith('mom_')) list.push({ key: 'armor', label: 'Armor type' });
@@ -2865,9 +3002,13 @@ function seedMatrixPropertyStateFromDOM() {
     const levelEl  = document.getElementById(prefix + 'Level');
     const weaponEl = document.getElementById(prefix + 'Weapon');
     const armorEl  = document.getElementById(prefix + 'Armor');
+    const cityWallsEl = document.getElementById(prefix + 'CityWalls');
     if (levelEl  && levelEl.value  !== 'normal') rows[prefix].push({ key: 'level',  enabled: true, value: levelEl.value });
     if (weaponEl && weaponEl.value !== 'normal') rows[prefix].push({ key: 'weapon', enabled: true, value: weaponEl.value });
     if (armorEl  && armorEl.value  !== 'normal') rows[prefix].push({ key: 'armor',  enabled: true, value: armorEl.value });
+    if (cityWallsEl && cityWallsEl.value !== 'none') rows[prefix].push({ key: 'cityWalls', enabled: true, value: cityWallsEl.value });
+    const damageTaken = parseInt(document.getElementById(prefix + 'Dmg').value, 10) || 0;
+    if (damageTaken) rows[prefix].push({ key: 'damageTaken', enabled: true, value: damageTaken });
     for (const abil of abilityUiDefs()) {
       if (abil.source !== 'enchantment') continue;
       const val = getAbilityControlValue(prefix, abil);
@@ -2908,16 +3049,24 @@ function matrixPropertyRow(box, key) {
   return (matrixPropertyState[box] || []).find(r => r.key === key) || null;
 }
 
-// Read the effective value of a per-side level/weapon/armor.
+// Read the effective value of a per-side select property.
 function matrixSideSetting(prefix, key) {
+  const def = matrixPropertyDef(prefix, key);
   const row = matrixPropertyRow(prefix, key);
-  if (!row || !row.enabled) return 'normal';
-  return row.value || 'normal';
+  const defaultValue = def && def.type === 'select' && def.options && def.options[0]
+    ? def.options[0][0] : (def && def.type === 'bool' ? false : 0);
+  if (!row || !row.enabled) return defaultValue;
+  return row.value ?? defaultValue;
 }
 
 // Read the effective value of a global property.
 function matrixGlobalValue(key) {
   const def = MATRIX_GLOBAL_DEFS.find(d => d.key === key);
+  if (def && def.modernOnly
+      && !document.getElementById('gameVersion').value.startsWith('com2')) {
+    if (def.type === 'bool') return false;
+    if (def.type === 'select') return def.options[0][0];
+  }
   const row = matrixPropertyRow('global', key);
   if (!row || !row.enabled) {
     if (!def) return null;
@@ -2999,7 +3148,9 @@ function renderMatrixPropList(box) {
     const def = matrixPropertyDef(box, row.key);
     if (!def) return false;
     if (box === 'global' && def.rangedOnly && activeMatrixMode !== 'ranged') return false;
+    if (box === 'global' && def.modernOnly && !version.startsWith('com2')) return false;
     if (def.abil && !subgroupAllowedForVersion(def.abil.subgroup, version)) return false;
+    if (def.abil && def.abil.key === 'blur' && abilityVersionGated(def.abil, version)) return false;
     if (row.key === 'armor' && version.startsWith('mom_')) return false; // no armor in MoM
     return true;
   });
@@ -3376,11 +3527,15 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     def: unit.defense,
     res: unit.resist,
     hp: unit.hp,
-    dmg: 0,
+    dmg: matrixSideSetting(prefix, 'damageTaken'),
+    irrecoverableDamage: 0,
+    undeadDamage: 0,
+    baseBonusHp: 0,
+    noHealing: false,
     toHitMod: unit.to_hit || 0,
     toHitRtbMod: unit.to_hit || 0,
-    toBlkMod: document.getElementById(prefix + 'ToBlkMod').value,
-    cityWalls: matrixGlobalValue('cityWalls'),
+    toBlkMod: unit.to_block || 0,
+    cityWalls: matrixSideSetting(prefix, 'cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),
     wallOfFire: !!matrixGlobalValue('wallOfFire'),
     trueLight: !!matrixGlobalValue('trueLight'),
@@ -3449,11 +3604,15 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     def: el(prefix + 'Def').value,
     res: el(prefix + 'Res').value,
     hp: el(prefix + 'HP').value,
-    dmg: el(prefix + 'Dmg').value,
+    dmg: matrixSideSetting(prefix, 'damageTaken'),
+    irrecoverableDamage: 0,
+    undeadDamage: 0,
+    baseBonusHp: 0,
+    noHealing: false,
     toHitMod: el(prefix + 'ToHitMod').value,
     toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
     toBlkMod: el(prefix + 'ToBlkMod').value,
-    cityWalls: matrixGlobalValue('cityWalls'),
+    cityWalls: matrixSideSetting(prefix, 'cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),
     wallOfFire: !!matrixGlobalValue('wallOfFire'),
     trueLight: !!matrixGlobalValue('trueLight'),
@@ -3601,9 +3760,18 @@ function hasMatrixRangedAttack(info) {
     : info.stats.rangedType !== 'none' && info.stats.rtb > 0;
 }
 
+function matrixCombatOptions(matrixMode) {
+  return {
+    isRanged: matrixMode === 'ranged',
+    version: document.getElementById('gameVersion').value,
+    wallOfFire: !!matrixGlobalValue('wallOfFire'),
+    chaosConjunction: !!matrixGlobalValue('chaosConjunction'),
+  };
+}
+
 async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matrixMode) {
-  const version = document.getElementById('gameVersion').value;
-  const wallOfFire = !!matrixGlobalValue('wallOfFire');
+  const opts = matrixCombatOptions(matrixMode);
+  const { version } = opts;
   const isRangedMatrix = matrixMode === 'ranged';
   const allAttackers = predefinedMatrixUnitRows('a', attackerEnchantments, matrixMode)
     .filter(info => !isRangedMatrix || hasMatrixRangedAttack(info));
@@ -3615,7 +3783,6 @@ async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matr
     : [...allAttackers];
   const defenders = [...allDefenders, selectedDefender];
 
-  const opts = { isRanged: isRangedMatrix, version, wallOfFire };
   const allDefenderStats = defenders.map(d => d.stats);
   const rowRatios = new Array(attackers.length);
 
@@ -3782,6 +3949,8 @@ function applyMatrixCellToMain(attackerIndex, defenderIndex) {
     if (armorEl)  armorEl.value  = armor;
     if (unitBaseStats[prefix]) resetCardToRosterBase(prefix);
 
+    document.getElementById(prefix + 'Dmg').value = matrixSideSetting(prefix, 'damageTaken');
+
     clearAbilities(prefix, 'enchantment');
     applyAbilities(prefix, matrixAppliedEnchantments(prefix), 'enchantment');
   }
@@ -3792,16 +3961,17 @@ function applyMatrixCellToMain(attackerIndex, defenderIndex) {
   const rangedDistEl = document.getElementById('rangedDist');
   if (rangedDistEl) rangedDistEl.value = isRanged ? matrixGlobalValue('rangedDist') : 1;
 
-  document.getElementById('cityWalls').value  = matrixGlobalValue('cityWalls')  || 'none';
+  document.getElementById('aCityWalls').value = matrixSideSetting('a', 'cityWalls');
+  document.getElementById('bCityWalls').value = matrixSideSetting('b', 'cityWalls');
   document.getElementById('nodeAura').value   = matrixGlobalValue('nodeAura')   || 'none';
   document.getElementById('trueLight').checked   = !!matrixGlobalValue('trueLight');
   document.getElementById('darkness').checked    = !!matrixGlobalValue('darkness');
   document.getElementById('wallOfFire').checked  = !!matrixGlobalValue('wallOfFire');
   document.getElementById('warpReality').checked = !!matrixGlobalValue('warpReality');
+  document.getElementById('chaosConjunction').checked = !!matrixGlobalValue('chaosConjunction');
   document.getElementById('hurricane').checked   = !!matrixGlobalValue('hurricane');
   document.getElementById('poxHost').checked     = !!matrixGlobalValue('poxHost');
   document.getElementById('chaosSurge').value    = matrixGlobalValue('chaosSurge') || 0;
-
   refreshAbilityFieldVisibility();
   updateTypeVisibility();
   updateAbilityVisibility();
@@ -4356,8 +4526,9 @@ document.querySelectorAll('.abil-item').forEach(item => {
   function combatStateTokens(preset) {
     const out = [];
     if (preset.rangedCheck) out.push('ranged');
-    if (preset.cityWalls && preset.cityWalls !== 'none') {
-      out.push('city walls', preset.cityWalls);
+    for (const side of ['a', 'b']) {
+      const cityWalls = preset[side] && preset[side].cityWalls;
+      if (cityWalls && cityWalls !== 'none') out.push(side, 'city walls', cityWalls);
     }
     if (preset.nodeAura && preset.nodeAura !== 'none') {
       out.push('node aura', preset.nodeAura);

@@ -1103,6 +1103,30 @@ select:disabled[data-tooltip] {
   color: var(--text);
   padding: 0.4rem 0;
 }
+.combat-state-summary {
+  border-top: 1px solid var(--border);
+  margin-top: 0.85rem;
+  padding-top: 0.7rem;
+  font-size: 0.8rem;
+}
+.combat-state-heading {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+.combat-state-summary > div:not(.combat-state-heading) {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.12rem 0;
+}
+.combat-state-summary strong {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
 .dist-panel {
   background: var(--panel);
   border: 1px solid var(--border);

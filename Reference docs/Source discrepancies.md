@@ -397,10 +397,9 @@ helptext overgeneralize the Focus Magic-style placement into a blanket magical-r
 reform, then gives a currently Fantastic unit +10% To-Hit and
 `max(1, floor(current HP / 4))` HP. The read occurs at the head of the Outlander phase-b
 block. This matches the calculator's magnitude, rounding, and sequence position, and its gate
-for every unit state the calculator currently represents. One adjacent gap surfaced:
-`UnitCalcPre.CAS:82-115` makes the Marionette hero Fantastic in the Channeler branch before
-Xenoveterinary runs. The calculator represents neither that hero-specific branch nor its
-Channeler inputs, so the interaction is tracked separately as **F9**.
+for every represented unit state. The adjacent Marionette interaction is now resolved: the
+Channeler branch makes Wanderer Fantastic before this block, so Xenoveterinary applies there too.
+The calculator contract is in [Calculator/SPEC.md](../Calculator/SPEC.md#warlord-marionette-package).
 
 **Corruption radiation.** `CombatEndTurn.CAS:518-542` runs once per combat end turn on a
 corrupted rock, desert, or swamp tile, but not on a node. Poison Immunity, Magic Immunity,

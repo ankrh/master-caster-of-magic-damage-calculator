@@ -70,10 +70,12 @@ Generators:
 
 ## Calculator execution methods
 
-Before implementing a calculator backlog item, reconstructing binary code, or doing cross-agent
-review work, read `DERIVATION-REVIEW-PROTOCOL.md`.
+Backlog items are implemented directly by the working agent. No execution method governs them, and
+no agent proposes one or launches subagents unless the user asks by name.
+
+Read `DERIVATION-REVIEW-PROTOCOL.md` only when reconstructing binary code, or when the user names
+one of its methods.
 
 - Binary reconstruction always uses method 4: two independent Codex GPT-5.6 Sol High derivations,
   main-agent merge, then one Claude Opus 5 Medium review.
-- Implementation uses method 2 or 3 only when the user or backlog row selects it.
-- If neither selects an implementation method, ask before reading implementation code.
+- Every other method is opt-in.

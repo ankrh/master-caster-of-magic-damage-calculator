@@ -59,7 +59,7 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
 test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => deriveUnitStats({
-    prefix: 'a', version: 'com2_1.05.11',
+    prefix: 'a', version: 'com2_1.05.11', name: 'Paladins',
     identity: createCustomUnitIdentity('com2_1.05.11', {
       baseRace: 'High Men', baseFantastic: false,
     }),
@@ -67,7 +67,7 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
     rtb: 0, rtbType: 'none', level: 'normal', weapon: 'normal', armor: 'none',
     abilities: {
       highPrayer: false, warpAttack: false, holyBonus: 0,
-      callToArmsPaladins: true, // invalid without the retained Paladins template
+      combatSummoned: true, // display name alone does not establish the retained template
     },
   }));
   const sources = Object.values(report.modifierTraces)

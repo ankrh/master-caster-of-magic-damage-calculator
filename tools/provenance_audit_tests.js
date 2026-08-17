@@ -11,7 +11,7 @@ const {
 
 const sample = [
   "statStep({ id: 'literal-step', apply: u => { u.def += 1; } });",
-  "resolutionStep('resolution-step', true, () => {});",
+  "attackSpecificStep('resolution-step', true, () => {});",
   "emit('ability-step', 'c', { atk: 2 });",
   '// STAT-FORMULA[dynamic-emit]',
   "emit(id, 'c', { def: 1 });",

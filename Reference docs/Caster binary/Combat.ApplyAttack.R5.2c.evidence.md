@@ -1,9 +1,11 @@
 # `@Combat@ApplyAttack` R5.2c reconstruction evidence
 
 Durable evidence for `$005B2994..$005B32BC` of the pinned `Caster.exe`. Codex cold-derived the
-slice, then performed a byte-level self-review before user-directed integration on 2026-08-02.
-The independent Claude derivation and formal cross-review were unavailable. The source-shaped
-body below continues the already-established R5.2a–b locals and record bindings.
+slice, then performed a byte-level self-review before user-directed integration on 2026-08-02,
+when formal independent cross-review was unavailable. D40's independent Sol High and Claude
+Opus 5 High reviews on 2026-08-15 later confirmed the Blur reconstruction and
+its Card-B-only calculator projection. The source-shaped body below continues the
+already-established R5.2a–b locals and record bindings.
 
 ## Source-shaped reconstruction
 
@@ -119,8 +121,11 @@ repeat
 
     redper := 0;
     i := CGADEnemy;                                { call `$005B2F26 E831A30000` }
-    if inferred_CombatGlobalBlur[i] > 0 then
-      redper := inferred_BlurDamageReduction;      { compiled array access
+    if inferred_CombatGlobals[i][CGBlur] > 0 then
+      redper := inferred_BlurDamageReduction;      { `$005B2F3D 6BC032` gives the
+                                                     `$32 * 8 = $190` side stride;
+                                                     `-$188 = -$190 + $08` selects
+                                                     `CGBlur = 3`; access
                                                      `$005B2F2E..$005B2F55`;
                                                      false target `$005B2F61` }
     if Units[du].invisible then
@@ -221,12 +226,25 @@ Bloodsucker passes `(False, True)` for the last two booleans.
 `CGADEnemy` is not an alias for the defender unit's owner. Its body tests
 `CombatAttackersTurn` at `$005BD265 80B8E444000000` and returns combat-global side 1 when true,
 side 2 when false; `CGADOwn` returns the opposite mapping. The CAS API defines side 1 as the
-combat defender and side 2 as the combat attacker. In `PerformMeleeAttack`, the counterattack
-pushes `counter=True` at `$005B3B99 6A01`, loads the original attacker as the new defender at
-`$005B3BA6 8B55FC`, loads the original defender as the new attacker at
-`$005B3BA9 8B45F8`, and calls `ApplyAttack` at `$005B3BAC E8BFDDFFFF` without changing the
-combat-turn flag. Consequently the initiating strike reads the target side's Blur, while the
-counterattack reads the counterattacker's own side-wide Blur.
+combat defender and side 2 as the combat attacker. The field is initialized false by
+`$005BE6F3 C680E444000000` and toggled only at end turn by `$005BBA10 8A80E4440000`,
+`$005BBA16 3401`, and `$005BBA1E 8882E4440000`; a scan of every executable `$44E4` reference
+found no other writer.
+
+The initiating unit is necessarily on that active side. Human attack processing is gated by
+`HumanCombatTurn` at `$006D391A E845F8F6FF`, and its selection path rejects a nonzero `UnitOwner`
+at `$006D3A16 E8D504F7FF` / `$006D3A1D 7521` before `CombatSelectUnit` at
+`$006D3A2E E819F7F6FF`. The AI path obtains `CombatturnPlayer` at
+`$0054BAF0 E8F7530600`, passes it to `AiCombatUnitOrders` at `$0054BAF5 E832B6FFFF`, and filters
+candidates through `Iscombatunitof(w, i)` at `$00547206 E8BD9B0600`. `Meleeattackvalid` rejects
+equal owners at `$005BB360 3A8491316F4206` / `$005BB369 C645F700`. Thus Card A is the active-side
+initiator and Card B belongs to `CGADEnemy` for every voluntary tactical exchange.
+
+In `PerformMeleeAttack`, the counterattack pushes `counter=True` at `$005B3B99 6A01`, loads the
+original attacker as the new defender at `$005B3BA6 8B55FC`, loads the original defender as the
+new attacker at `$005B3BA9 8B45F8`, and calls `ApplyAttack` at `$005B3BAC E8BFDDFFFF` without
+changing the combat-turn flag. Consequently the initiating strike reads the target side's Blur,
+while the counterattack reads the counterattacker's own side-wide Blur.
 
 This is a targeted caller trace used only to establish `ApplyAttack`'s side selection. It does
 not reconstruct the separately scoped R5.2d `PerformMeleeAttack` extent.

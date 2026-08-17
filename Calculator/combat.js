@@ -23,7 +23,8 @@ function woundedTopFigHP(remHP, hpPerFig) {
 }
 
 // Weapon type bonuses: { atk, def, toHit }
-// Magical/Mithril/Adamantium: +10% To Hit (melee, missile, boulder only)
+// Magical/Mithril/Adamantium: +10% To Hit on eligible melee, missile, boulder, and
+// thrown channels. The exact per-engine presence/type gates are applied in stats.js.
 // Mithril: +1 atk (melee, missile, boulder, thrown), +1 def
 // Adamantium: +2 atk (same types), +2 def
 // Dispatch wrapper only: the independently sourced formulas are the material cases below.
@@ -178,9 +179,9 @@ function blazingEyesDoomGazeForUnit(abilities, unitType, version) {
 
 // PROVENANCE[misleadEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:f8b72704f1366630a616f50f
 // STAT-FORMULA[misleadEligibility]
-function misleadActiveForUnit(abilities, unitType, version) {
+function misleadActiveForUnit(abilities, liveFantastic, version) {
   if (!version || !version.startsWith('com2_') || !hasAbil(abilities, 'mislead')) return false;
-  return isNormalUnitType(unitType) || unitType === 'hero';
+  return !liveFantastic;
 }
 
 // STAT-FORMULA[destinyEligibility]
@@ -299,7 +300,7 @@ function supernaturalMinDamageFn(abilities, version) {
 // CoM: -10% per full 4 tiles.
 // CoM2: -10% at 4 tiles, then -3% per additional tile.
 // Long Range caps the penalty at -10% in all versions.
-// CoM 1 exempts heroes entirely.
+// CoM 1, CoM2, and Warlord exempt heroes entirely.
 //
 // The DOS half is read off WIZARDS.EXE (see `Reference docs/MoM binary analysis.md`,
 // *Ranged distance penalty*): one divisor byte at 0x99BB0 is 3 in MoM 1.31/CP 1.60 and
@@ -309,11 +310,11 @@ function supernaturalMinDamageFn(abilities, version) {
 // STAT-FORMULA[distancePenalty]
 function distancePenalty(distance, rangedType, longRange, version, isHero) {
   if (rangedType !== 'missile' && rangedType !== 'boulder') return 0;
+  if (version && version.startsWith('com') && isHero) return 0;
   let penalty = 0;
   if (version && version.startsWith('com2')) {
     if (distance >= 4) penalty = -10 - 3 * (distance - 4);
   } else if (version && version.startsWith('com')) {
-    if (isHero) return 0;
     penalty = -10 * Math.floor(distance / 4);
   } else {
     penalty = -10 * Math.floor(distance / 3);
@@ -348,8 +349,9 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // An effect an engine orders differently is emitted as **two version-exclusive steps** rather
 // than one step carrying a version predicate, so the divergence is a position in the list
 // instead of a condition inside a step: `supremeLight` / `supremeLight:coM1`, `holyBonus` /
-// `holyBonus:aura`. A step carrying `afterWarp` runs in the part of region `c` that follows
-// the engine's Warp Creature block (SPEC.md, *Warp Creature ordering*).
+// `holyBonus:aura`. A step carrying `beforeHolyArmor` runs before Holy Armor's live Defense
+// threshold in modern region `c`; `afterWarp` runs after the engine's Warp Creature block
+// (SPEC.md, *Warp Creature ordering*).
 
 // `delta` names the stats the effect writes, using the record's own field names, plus two
 // that stand for how the engine reaches the secondary-attack slot:
@@ -358,6 +360,10 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 //   ranged  the `unitT.ranged` field of `Caster.exe`, which is *only* the conventional ranged
 //           attack: Thrown, Fire Breath, Lightning Breath and the gazes are separate fields
 //           there, so a bonus written to `ranged` never reaches them
+//   positiveRanged  the same conventional-ranged field, but only while its live value is
+//           positive at this exact step
+//   rangedOrThrown  Caster.exe's conventional-ranged and Thrown fields, excluding both
+//           Breaths and every gaze field
 //   nonGazeRtb  the selected modern secondary attack except Stoning/Death/Doom Gaze; this
 //           represents compiled blocks that write conventional ranged, Thrown and both Breaths
 //           separately while leaving the independent gaze fields untouched
@@ -372,7 +378,8 @@ function abilityStatStep(id, phase, delta, extra) {
   const writes = [];
   for (const field of fields) {
     if (field === 'rtb') writes.push(...ABILITY_STEP_RTB_FIELDS);
-    else if (field === 'ranged') writes.push('rtb');
+    else if (field === 'ranged' || field === 'positiveRanged'
+      || field === 'rangedOrThrown') writes.push('rtb');
     else if (field === 'nonGazeRtb') writes.push('rtb');
     else writes.push(field);
   }
@@ -390,6 +397,10 @@ function abilityStatStep(id, phase, delta, extra) {
           if (!slots || slots.doomGaze) u.doomGaze += value;
         } else if (field === 'ranged') {
           if (!slots || slots.ranged) u.rtb += value;
+        } else if (field === 'positiveRanged') {
+          if ((!slots || slots.ranged) && u.rtb > 0) u.rtb += value;
+        } else if (field === 'rangedOrThrown') {
+          if (!slots || slots.rangedOrThrown) u.rtb += value;
         } else if (field === 'nonGazeRtb') {
           if (!slots || slots.rtb) u.rtb += value;
         } else {
@@ -408,6 +419,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // CoM 1 moved Warp to the front (0x907AA), so its Darkness, Supreme Light and Tactician all
   // land here; CoM2/Warlord run Warp late (+0x0BA3C) with only Tactician (+0x0C890) after it.
   const afterWarp = { afterWarp: true };
+  // Caster.exe tests Holy Armor at +0x07407. These compiled unit-enchantment blocks have
+  // already written their stats there; global/combat-global effects and curses have not.
+  const beforeHolyArmor = { beforeHolyArmor: true };
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
   const isCoM1 = !!(version && version.startsWith('com_'));
 
@@ -444,21 +458,61 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // PROVENANCE[animated]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:c8375636d2d3d88ca4eaae97 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:859998a2522c86efb243689d
     emit('animated', 'c', isCoM1
       ? { atk: 1, def: 1, rtb: 1, toHit: 10 }
-      : { atk: 1, def: 1, nonGazeRtb: 1, toHit: 10 });
+      : { atk: 1, def: 1, nonGazeRtb: 1, toHit: 10 }, beforeHolyArmor);
   }
 
   // Resistance to All: +X to resistance.
   // CoM2/Warlord feed it into **aura type 3 in region `e`** — the Prayermaster aura — so it
   // runs after `d` and after the Warps, and competes with Prayermaster by maximum rather than
-  // stacking with it (CoM2 analysis, *The aura pass*). The calculator carries no Prayermaster control, so only the
-  // position is observable today. MoM and CoM 1 keep phase a: intrinsic ability, no CAS, no
-  // aura pass.
+  // stacking with it (CoM2 analysis, *The aura pass*). MoM and CoM 1 keep phase a: intrinsic
+  // ability, no CAS, no aura pass.
+  const isModern = !!(version && version.startsWith('com2_'));
+  const auraValue = key => Math.max(0, parseInt(abilVal(abilities, key, 0), 10) || 0);
+
+  // Aura type 2: current positive conventional Ranged only.
+  const guidingBeaconAura = isModern ? auraValue('guidingBeaconAura') : 0;
+  if (guidingBeaconAura > 0) {
+    // PROVENANCE[guidingBeaconAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:abd8cf46993fffbdb3811617
+    emit('guidingBeaconAura', 'e', { positiveRanged: guidingBeaconAura });
+  }
+
+  // Aura type 3 is shared by Resistance to All and Prayermaster. BuildAuraTable keeps the
+  // maximum per owner/type, so the two sources compete rather than stack.
   const rta = abilVal(abilities, 'resistanceToAll', 0);
-  if (rta > 0) {
+  const prayermasterAura = isModern ? Math.max(rta, auraValue('prayermasterAura')) : 0;
+  if (prayermasterAura > 0) {
     // PROVENANCE[resistanceToAll:aura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:77eb7e2f668ac3b092fa3b7d
-    if (version && version.startsWith('com2_')) emit('resistanceToAll:aura', 'e', { res: rta });
+    emit('resistanceToAll:aura', 'e', { res: prayermasterAura },
+      { sourceId: 'prayermasterAura', sourceLabel: 'Prayermaster / Resistance to All' });
+  } else if (rta > 0) {
     // PROVENANCE[resistanceToAll]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:355495d2e88ef940a57b8515
-    else emit('resistanceToAll', 'a', { res: rta });
+    emit('resistanceToAll', 'a', { res: rta });
+  }
+
+  const divineBarrierAura = isModern ? auraValue('divineBarrierAura') : 0;
+  if (divineBarrierAura > 0) {
+    // PROVENANCE[divineBarrierAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:df43d1668aa163cfcd4ab77e
+    emit('divineBarrierAura', 'e', { def: divineBarrierAura });
+  }
+
+  const soulLinkerAura = isModern ? auraValue('soulLinkerAura') : 0;
+  if (soulLinkerAura > 0 && identityPredicates.liveFantastic) {
+    // PROVENANCE[soulLinkerAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:044e08011083c94abc942c1b
+    emit('soulLinkerAura', 'e', { toHit: soulLinkerAura, toBlk: soulLinkerAura });
+  }
+
+  const leadershipAura = isModern ? auraValue('leadershipAura') : 0;
+  if (leadershipAura > 0 && !identityPredicates.liveFantastic) {
+    // PROVENANCE[leadershipAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:1ec384f5af2fc785c3b46a8e
+    steps.push(statStep({ id: 'leadershipAura', phase: 'e', writes: ['atk', 'rtb'],
+      apply: (u, ctx) => {
+        const slots = ctx && ctx.slots;
+        if (!slots || slots.melee) u.atk += leadershipAura;
+        if ((!slots || slots.ranged) && u.rtb > 0
+            && (u.rangedType === 'missile' || u.rangedType === 'boulder')) {
+          u.rtb += Math.trunc(leadershipAura / 2);
+        }
+      } }));
   }
 
   // Lucky: +10% To Hit, +10% To Block, +1 Resistance.
@@ -469,7 +523,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:bf74c9101f80f286adb7d2a0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:761ca75657bf39dc15095e55
     // Creation/enchantment sources establish ALucky earlier, but the chance/stat write itself
     // is the compiled Lucky block in region c for every engine.
-    emit('lucky', 'c', { res: 1, toHit: 10, toBlk: 10 });
+    emit('lucky', 'c', { res: 1, toHit: 10, toBlk: 10 }, beforeHolyArmor);
   }
 
   // Lucky Star's aura: while any friendly unit in the combat carries the enchantment, every
@@ -537,14 +591,21 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     emit('innerPower', 'c', { atk: 3, def: 2, res: 2, rtb: 3 });
   }
 
-  // Mislead applies Misfortune in CoM2. The checkbox represents the current unit being
-  // affected by Misfortune; normal units and heroes are eligible, and that gating is in
-  // misleadActiveForUnit. The -1 ranged-attack penalty applies only to ranged attacks (not
-  // thrown or breath) per the source helptext, so stats.js applies it as misleadRtbMod.
-  // Phase c — curse with no CAS implementation.
+  // Mislead/Liability supplies Misfortune aura type 10. The checkbox represents the current
+  // unit receiving that aura; its live non-Fantastic gate is resolved by misleadActiveForUnit.
+  // The engine applies all four writes atomically in region e after the terminal clamps. Its
+  // ranged write tests the persistent conventional-ranged slot, represented by the narrow
+  // `ctx.slots.persistentRanged` gate, so Thrown and Breath are unaffected without changing
+  // the calculated-channel gate shared by other ability steps.
   if (hasAbil(abilities, 'mislead')) {
-    // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:638993cd0d572a8e093d7d6c
-    emit('mislead', 'c', { atk: -1, def: -1, res: -1 });
+    // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:bc3d65175e46c59dd1bcbd1f
+    steps.push(statStep({ id: 'mislead', phase: 'e', writes: ['atk', 'def', 'res', 'rtb'],
+      apply: (u, ctx) => {
+        u.atk -= 1;
+        u.def -= 1;
+        u.res -= 1;
+        if (!ctx || !ctx.slots || ctx.slots.persistentRanged) u.rtb -= 1;
+      } }));
   }
 
   // Stone Skin / Iron Skin: +1 / +5 Defense. Iron Skin supersedes Stone Skin.
@@ -553,10 +614,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // set the Iron Skin flag. Neither applies a stat.
   if (hasAbil(abilities, 'ironSkin')) {
     // PROVENANCE[ironSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:7157204464b034c8f40530d5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:1e9389176cf9e793db19626f
-    emit('ironSkin', 'c', { def: 5 });
+    emit('ironSkin', 'c', { def: 5 }, beforeHolyArmor);
   } else if (hasAbil(abilities, 'stoneSkin')) {
     // PROVENANCE[stoneSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:e6801f056adc81573e92ef9b
-    emit('stoneSkin', 'c', { def: 1 });
+    emit('stoneSkin', 'c', { def: 1 }, beforeHolyArmor);
   }
 
   // Holy Armor: handled in stats.js (version- and stat-conditional).
@@ -567,7 +628,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c — spell with no CAS implementation.
   if (hasAbil(abilities, 'lionheart')) {
     // PROVENANCE[lionheart]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:0e597d1ff73a00332d952e72 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:87ae0c5af5c55a4b1df9577b
-    emit('lionheart', 'c', { atk: 3, res: 3 });
+    emit('lionheart', 'c', { atk: 3, res: 3 }, beforeHolyArmor);
   }
 
   // Metal Fires / Flame Blade: +1 / +2 (MoM) or +3 (CoM/CoM2/Warlord) melee attack.
@@ -581,10 +642,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     && (hasAbil(abilities, 'flameBladeWarlord') || hasAbil(abilities, 'fieryBlade'));
   if (hasAbil(abilities, 'flameBlade') || warlordBlade) {
     // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:43a163f18b24d003ce1baa22 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
-    emit('flameBlade', 'c', { atk: version && version.startsWith('com') ? 3 : 2 });
+    emit('flameBlade', 'c', { atk: version && version.startsWith('com') ? 3 : 2 }, beforeHolyArmor);
   } else if (hasAbil(abilities, 'metalFires') && !identityPredicates.liveFantastic) {
     // PROVENANCE[metalFires]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8c88e810ad0fd6705c30bb95
-    emit('metalFires', 'c', { atk: 1 });
+    emit('metalFires', 'c', { atk: 1 }, beforeHolyArmor);
   }
 
   // Blazing March: CoM/CoM2 combat enchantment. +3 melee attack to all units.
@@ -631,7 +692,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // the Natural Selection coal-ore grant, a different effect, handled in stats.js.)
   if (hasAbil(abilities, 'giantStrength')) {
     // PROVENANCE[giantStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:d3b7235f7b74f0d7c75b9b2f
-    emit('giantStrength', 'c', { atk: 1 });
+    emit('giantStrength', 'c', { atk: 1 }, beforeHolyArmor);
   }
 
   // Chaos Channels (Demon-Skin Armor): +6 Defense in MoM 1.31 (bug: applied twice in combat),
@@ -645,7 +706,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c: UnitCalcPre.CAS's EncCCArmor references only set or test the flag.
   if (abilVal(abilities, 'ccDefense', false)) {
     // PROVENANCE[chaosChannels:armor]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:bd2b6b86ac7fbcc85505a039 | Reference docs/DOS reconstructed/unitcalc.c@span:13:55dbda9953bbaf8f2f1bb81f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:490bf1c3cfe8b5827cde324a
-    emit('chaosChannels:armor', 'c', { def: (version === 'mom_1.31') ? 6 : 3 });
+    emit('chaosChannels:armor', 'c', { def: (version === 'mom_1.31') ? 6 : 3 }, beforeHolyArmor);
   }
 
   // Black Channels: +2 melee attack (discarded by the melee slot gate when the unit has none),
@@ -654,7 +715,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c — MoM-only enchantment, so there is no CAS to consult.
   if (hasAbil(abilities, 'blackChannels')) {
     // PROVENANCE[blackChannels]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:19:4a92e2a9611b35504558f854
-    emit('blackChannels', 'c', { atk: 2, def: 1, res: 1, hp: 1, rtb: 1 });
+    emit('blackChannels', 'c', { atk: 2, def: 1, res: 1, hp: 1, rtb: 1 }, beforeHolyArmor);
   }
 
   // Weakness: -2 (MoM) or -3 (CoM/CoM2) melee attack. RTB penalty is type-specific — the
@@ -674,15 +735,16 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     emit('rust', 'd', { atk: -3 });
   }
 
-  // Mind Storm: MoM: -5 melee, -5 all ranged/thrown/breath, -5 defense, -5 resistance.
-  // CoM2: -3 melee, -5 all ranged/thrown, -5 defense, -5 resistance.
+  // Mind Storm: DOS: -5 melee, -5 to the shared ranged/Thrown/Breath/Gaze slot,
+  // -5 defense, -5 resistance. CoM2/Warlord: -3 melee, -5 conventional ranged and
+  // Thrown only, -5 defense, -5 resistance; both Breath fields and all gazes are separate.
   // Phase c: UnitCalcPre.CAS:1221-1223 only mirrors the combat flag to overland.
   if (hasAbil(abilities, 'mindStorm')) {
     // PROVENANCE[mindStorm]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:5aef6d0a81b854a2f8a97a63 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:b93fe4b2bed30f6662144a8f
-    emit('mindStorm', 'c', {
-      atk: version && version.startsWith('com') ? -3 : -5,
-      def: -5, res: -5, rtb: -5,
-    });
+    emit('mindStorm', 'c', version && version.startsWith('com2')
+      ? { atk: -3, def: -5, res: -5, rangedOrThrown: -5 }
+      : { atk: version && version.startsWith('com') ? -3 : -5,
+        def: -5, res: -5, rtb: -5 });
   }
 
   // Supreme Light is not built here. The engine writes its three stats as one block whose
@@ -736,7 +798,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       // PROVENANCE[tactician:heroDynamic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:17:74a62c399fece2ea93dcbdc3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:27:69075629fb02a3678e0526aa
       emit(id, 'c', isCoM1
         ? { atk: 2, def: 2, res: 2, rtb: 2 }
-        : { atk: 2, def: 2, res: 2, ranged: 2 }, afterWarp);
+        : { atk: 2, def: 2, res: 2, positiveRanged: 2 }, afterWarp);
       if (isWarlord) {
         // PROVENANCE[tactician:warlordClawback]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:e1a9888013d858dd0217c1a9
         emit('tactician:warlordClawback', 'b', { atk: -2, def: -1, res: -2, ranged: -2 });
@@ -765,7 +827,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // not this bonus.
   if (hasAbil(abilities, 'landLinking')) {
     // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:3fa8c2fabf80e91cf859f9b0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
-    emit('landLinking', 'c', { atk: 2, def: 2 });
+    emit('landLinking', 'c', { atk: 2, def: 2 }, beforeHolyArmor);
   }
 
   // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is in
@@ -774,7 +836,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c — SpellMysticSurge.CAS sets enchantment flags only; no stat application.
   if (hasAbil(abilities, 'mysticSurge')) {
     // PROVENANCE[mysticSurge]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:de8c9dc3bc0bf7ec94ba9028
-    emit('mysticSurge', 'c', { def: 2, res: -2 });
+    emit('mysticSurge', 'c', { def: 2, res: -2 }, beforeHolyArmor);
   }
 
   // Artificer retort (Warlord): mechanical units gain +1 melee, +1 ranged,
@@ -958,19 +1020,23 @@ function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
 // as the base penalty. `modifier` is the Exorcise strength (e.g. -1 → -1 penalty).
 // Created-undead targets suffer an additional -3 (vs Dispel Evil's additional -5).
 // Spirit Link strips the target's fantastic status, so it cannot be exorcised.
-function exorciseFailProb(defRes, defAbilities, defUnitType, modifier) {
+function exorciseFailProb(defRes, defAbilities, defUnitType, modifier, version) {
   if (hasAbil(defAbilities, 'spiritLink')) return 0;
   if (!String(defUnitType || '').startsWith('fantastic_')) return 0;
-  const penalty = -modifier + (isCreatedUndeadTarget(defUnitType, defAbilities) ? 3 : 0);
+  // CoM 6.08's common 0x0800 flag retains the executable-table name Dispel Evil,
+  // but the version-specific consumer ignores Spec_Att_Attrib and uses literal -3.
+  // Its persistent-unit Spell Lock bit skips the resistance call altogether.
+  if (version === 'com_6.08' && hasAbil(defAbilities, 'spellLock')) return 0;
+  const basePenalty = version === 'com_6.08' ? 3 : -modifier;
+  const penalty = basePenalty + (isCreatedUndeadTarget(defUnitType, defAbilities) ? 3 : 0);
   return fantasticResistKillFailProb(defRes, defAbilities, penalty);
 }
 
 // --- Destruction ---
-// CoM2 and Warlord only ("Ability that causes attacked units to make a resistance roll
-// or be disintegrated. Affects the entire unit." — CoM2/Warlord help text, identical in
-// both). Two things separate it from Stoning/Death Touch:
-//   * ONE roll for the attack, not one per attacking figure ("a resistance roll").
-//   * A failed roll destroys the WHOLE unit, not a single figure ("the entire unit").
+// CoM2 and Warlord only. Each surviving attacking figure makes one resistance-roll
+// attempt inside ApplyAttack's figure loop. Any failed attempt assigns 150 to the
+// engine's destruction result bucket, which destroys the whole target unit after the
+// calculator's remaining-HP cap; repeated failures do not add or multiply that 150.
 // Treated as a Chaos-realm attack, so Bless protects: callers pass the Bless-boosted
 // resistance (the same `ResDeath` figure the engine uses for Death/Chaos effects).
 // Righteousness is deliberately absent — it is MoM-only, and Destruction is CoM2/Warlord-only,
@@ -1066,6 +1132,66 @@ function calcDoomDist(figs, str, maxDmg) {
   const dist = new Array(totalDmg + 1).fill(0);
   dist[totalDmg] = 1;
   return dist;
+}
+
+// ApplyDamageSpell adjusts the returned damageT after DamageSpell has selected its category.
+// The tests are strictly ordered and mutually exclusive, so one positive record gains exactly
+// one point even if more than one field is positive. A wholly non-positive record is unchanged.
+// STAT-FORMULA[applyDamageSpellAmplifier]
+// PROVENANCE[applyDamageSpellAmplifier]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
+function applyDamageSpellAmplifier(damageRecord, amplified) {
+  const adjusted = {
+    normal: damageRecord.normal,
+    irrec: damageRecord.irrec,
+    undead: damageRecord.undead,
+  };
+  if (!amplified) return adjusted;
+  if (adjusted.normal > 0) adjusted.normal += 1;
+  else if (adjusted.irrec > 0) adjusted.irrec += 1;
+  else if (adjusted.undead > 0) adjusted.undead += 1;
+  return adjusted;
+}
+
+// Shared direct-spell damage path for Immolation and Wall of Fire. The modern engine exits
+// on Magic Immunity before inspecting Black Sleep. Black Sleep then turns the spell into Doom
+// damage. Modern Area iterations use a full HP-per-figure cap. A non-Area spell instead uses the
+// ordinary attack spill loop: the wounded top figure supplies the first boundary, and every
+// crossed boundary rerolls Defense and reapplies Invulnerability before the remainder continues.
+// STAT-FORMULA[damageSpellResolution]
+// PROVENANCE[damageSpellResolution]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:8:678a9503cf9c8ef4b13b7642 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:23:c169d74794484ec3c2d57202 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:34:6c7e183574c858090c5884e5 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
+function calcDamageSpellDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap,
+  invulnBonus, minDamageFromHits, topFigHP, version, targetAbilities,
+  area = true, nonmagic = false, amplified = false) {
+  const modern = !!(version && version.startsWith('com2_'));
+  if (modern && hasAbil(targetAbilities, 'magicImmunity') && !nonmagic) return [1];
+  let dist;
+  if (modern && hasAbil(targetAbilities, 'blackSleep')) {
+    dist = area
+      ? calcDoomDist(targetFigs, Math.min(atkStr, hp), cap)
+      : calcDoomDist(1, atkStr, cap);
+  } else if (area) {
+    const areaTopFigHP = modern ? undefined : topFigHP;
+    dist = calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap,
+      invulnBonus, minDamageFromHits, areaTopFigHP);
+  } else {
+    dist = calcTotalDamageDist(1, atkStr, toHit, defStr, toBlock, hp, cap,
+      invulnBonus, 0, false, topFigHP, minDamageFromHits);
+  }
+
+  // Wall of Fire routes its DamageSpell result through the normal category. Keep the category
+  // adjustment explicit here so this total-damage projection uses ApplyDamageSpell's exact
+  // normal -> irrecoverable -> undead priority instead of an equivalent but category-blind shift.
+  if (!amplified) return dist;
+  const adjusted = new Array(cap + 1).fill(0);
+  for (let damage = 0; damage < dist.length; damage++) {
+    if (dist[damage] < 1e-15) continue;
+    const damageRecord = applyDamageSpellAmplifier(
+      { normal: damage, irrec: 0, undead: 0 }, amplified,
+    );
+    const adjustedDamage = damageRecord.normal + damageRecord.irrec + damageRecord.undead;
+    adjusted[Math.min(cap, adjustedDamage)] += dist[damage];
+  }
+  return adjusted;
 }
 
 // Phase label for a gaze attack given which gaze types are active.
@@ -1313,8 +1439,9 @@ function righteousnessDef(baseDef, defAbilities, version) {
 }
 
 // --- Magic Immunity (defense) ---
-// Raises defense against magic ranged attacks, Immolation, and Wall of Fire.
-// MoM: defense set to 50. CoM/CoM2: defense set to 100.
+// Raises defense against magic ranged attacks and the DOS Immolation/Wall-of-Fire spell path.
+// MoM: defense set to 50. CoM/CoM2: defense set to 100. Modern direct spell damage separately
+// exits before rolling; its computed defense value is therefore redundant for Immolation/WoF.
 // Applied after other defense modifiers; overrides Fire Immunity and Righteousness if higher.
 // STAT-FORMULA[magicImmunityEffectiveDefense]
 // PROVENANCE[magicImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:17:7ad26f1791d700f7e217ba27 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:1:70abb44002337f3267802332
@@ -1324,14 +1451,17 @@ function magicImmunityDef(baseDef, defAbilities, version) {
 }
 
 // --- Immolation ---
-// Immolation strength: 4 in MoM, 10 in CoM/CoM2.
+// Immolation strength: 4 in MoM, 10 in CoM/CoM2. The modern DamageSpell path applies
+// Chaos Conjunction's exact extended-real 1.34 multiplier and Delphi Trunc conversion
+// to spell ID 99. Wall of Fire is spell ID 87 and does not use this helper.
 // Delivered as a Fireball effect (spell 96) with an explicit strength override:
 // WIZARDS.EXE 0x99D5E pushes 4 in both MoM builds, CoM 1's 0x99D50 pushes 10.
 // STAT-FORMULA[immolationStrength]
-// PROVENANCE[immolationStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:38:88b87d43f6f27bfce4600ec3 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:6:61977524faa49301ba9b8fa3 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1
-function immolationStr(version) {
-  if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
-  return 4;
+// PROVENANCE[immolationStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:38:88b87d43f6f27bfce4600ec3 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:6:61977524faa49301ba9b8fa3 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:3:d7f972d281da4e1635757ec7 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1
+function immolationStr(version, chaosConjunction = false) {
+  const modern = !!(version && version.startsWith('com2_'));
+  const base = (version && (version.startsWith('com_') || modern)) ? 10 : 4;
+  return modern && chaosConjunction ? Math.trunc(base * 1.34) : base;
 }
 
 // After 1.50 patch (and CoM/CoM2), immolation no longer accompanies ranged attacks.
@@ -1348,8 +1478,8 @@ function immolationBlocksRanged(version) {
 // and gaze phases, BEFORE the melee damage + counter-attack.
 // Targets only the attacker (A) - the unit passing through the wall.
 // Does not fire in ranged combat (attacker shoots from outside the wall).
-// Magic Immunity raises defense to 50 (MoM) / 100 (CoM/CoM2). Fire Immunity and
-// Righteousness also raise defense to 50/100. Large Shield and AP apply.
+// Magic Immunity raises defense to 50 in MoM and 100 in CoM 1; modern DamageSpell exits before
+// rolling. Fire Immunity and Righteousness also raise defense to 50/100. Large Shield and AP apply.
 // Warlord: hits a single figure at strength 12 instead of every figure at 10.
 // Also a Fireball effect (spell 96), but MoM passes no strength override
 // (WIZARDS.EXE 0x9EE60) so it inherits Fireball's own SPELLDAT.LBX strength of 5.
@@ -1361,7 +1491,7 @@ function immolationBlocksRanged(version) {
 // Att_AREAFLAG, and the only such removal between the two rosters. CoM2's 30% is the engine
 // default rather than a stated value. See `Reference docs/CoM2 data tables.md`, *Wall of Fire*.
 // STAT-FORMULA[wallOfFireStrength]
-// PROVENANCE[wallOfFireStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:7:ff40688656520f07bf1f3557 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/DOS reconstructed/spelldat.c@span:30:33d3c975302b2b73b0595bca
+// PROVENANCE[wallOfFireStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:7:ff40688656520f07bf1f3557 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/DOS reconstructed/spelldat.c@span:30:33d3c975302b2b73b0595bca | TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI@span:17:760d893e17440a46164523c2
 function wallOfFireStr(version) {
   if (version && version.startsWith('com2_warlord')) return 12;
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
@@ -1369,26 +1499,54 @@ function wallOfFireStr(version) {
 }
 
 // Wall of Fire To Hit: standard 30% spell To Hit, except Warlord raises it to 60%.
+// STAT-FORMULA[wallOfFireToHit]
+// PROVENANCE[wallOfFireToHit]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI@span:17:760d893e17440a46164523c2
 function wallOfFireToHit(version) {
   return (version && version.startsWith('com2_warlord')) ? 0.6 : 0.3;
 }
 
-// Warlord: Wall of Fire strikes a single attacker figure rather than all of them.
+// Warlord removes Wall of Fire's Area flag, selecting one ordinary spill-capable attack.
+// STAT-FORMULA[wallOfFireAreaShape]
+// PROVENANCE[wallOfFireAreaShape]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI@span:17:760d893e17440a46164523c2
 function wallOfFireSingleFigure(version) {
   return !!(version && version.startsWith('com2_warlord'));
+}
+
+// FirewallEffect reads the calculated Teleporting/Merging fields through HasTeleMerge.
+// STAT-FORMULA[wallOfFireEligibility]
+// PROVENANCE[wallOfFireEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.CallClosureHelpers.pas@span:6:39bf9c419009b48c27e6c076
+function wallOfFireEligible(version, attackerAbilities) {
+  return !(version && version.startsWith('com2_')
+    && (hasAbil(attackerAbilities, 'teleporting') || hasAbil(attackerAbilities, 'merging')));
+}
+
+// The two-card projection treats Card B as the present opposing-owner unit in AmplifiedDamage's
+// combat scan. Copies do not stack because this result is Boolean.
+// STAT-FORMULA[wallOfFireAmplifierProjection]
+// PROVENANCE[wallOfFireAmplifierProjection]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
+function wallOfFireAmplified(version, opposingAbilities) {
+  return !!(version && version.startsWith('com2_warlord_'))
+    && hasAbil(opposingAbilities, 'amplifier');
 }
 
 // --- Cause Fear ---
 // Probability of a single figure failing its fear resistance roll.
 // MoM: no resistance modifier. CoM/CoM2: -3 resistance modifier.
-// Death Immunity skips the roll outright rather than granting resistance.
-// Magic Immunity and Righteousness each grant +30 resistance and stack
-// (either alone already pushes effective Res ≥ 10).
-function fearFailProb(defRes, defAbilities, version) {
+// Death Immunity skips the roll outright rather than granting resistance. In CoM2/Warlord,
+// this direct gate reads the persistent BaseUnits record; calculated Death Immunity still
+// proceeds to the roll. The older engines use their effective ability record here.
+// The modern caller has already run GetEffectiveResistance, including Magic Immunity's
+// assignment to 100. The older engines still apply their additive Magic-Immunity bonus here;
+// Righteousness remains an attack-specific additive bonus in every version.
+function fearFailProb(defRes, defAbilities, version, baseDeathImmunity) {
   const isCoM = version && version.startsWith('com');
+  const isModern = version && version.startsWith('com2');
   const modifier = isCoM ? -3 : 0;
-  if (hasAbil(defAbilities, 'deathImmunity')) return 0;
-  const bonus = (hasAbil(defAbilities, 'magicImmunity') ? 30 : 0)
+  const directDeathImmunity = isModern && baseDeathImmunity != null
+    ? !!baseDeathImmunity
+    : hasAbil(defAbilities, 'deathImmunity');
+  if (directDeathImmunity) return 0;
+  const bonus = (!isModern && hasAbil(defAbilities, 'magicImmunity') ? 30 : 0)
     + (hasAbil(defAbilities, 'righteousness') ? 30 : 0);
   const effectiveRes = defRes + modifier + bonus;
   if (effectiveRes >= 10) return 0;
@@ -1436,6 +1594,31 @@ function calcFearDist(numFigs, pFear) {
   return binomialPMF(numFigs, 1 - pFear);
 }
 
+// Convert the combat PMF over active (unfeared) figures into the UI PMF over
+// feared figures for the same ApplyAttack call.
+function fearedCountDist(activeDist, maxFigs) {
+  if (!activeDist) return [1];
+  const result = new Array(Math.max(0, maxFigs) + 1).fill(0);
+  for (let active = 0; active < activeDist.length; active++) {
+    const probability = activeDist[active] || 0;
+    if (probability < 1e-15) continue;
+    result[Math.max(0, maxFigs - active)] += probability;
+  }
+  return result;
+}
+
+function addWeightedDist(target, source, weight) {
+  if (!source || weight < 1e-15) return;
+  while (target.length < source.length) target.push(0);
+  for (let i = 0; i < source.length; i++) target[i] += weight * (source[i] || 0);
+}
+
+function addWeightedFearSamples(target, samples, weight) {
+  const actual = samples && samples.length ? samples : [[1]];
+  while (target.length < actual.length) target.push([]);
+  for (let i = 0; i < actual.length; i++) addWeightedDist(target[i], actual[i], weight);
+}
+
 // v1.31 bug: attacker self-fears based on defender's resistance rolls.
 // Defender's figures each roll; each fail fears one attacker figure.
 // Returns dist[k] = P(k attacker figures are unfeared).
@@ -1464,70 +1647,251 @@ function calcFearBugDist(atkFigs, defFigs, pFear) {
 //   deathTouchFail > 0                → Death Touch   (kills figures, damage = targetHP)
 //   dispelEvilFail > 0                → Dispel Evil   (kills figures, damage = targetHP)
 //   exorciseFail > 0                  → Exorcise      (kills figures, damage = targetHP)
-//   destructionFail > 0               → Destruction   (kills the whole unit, damage = cap;
-//                                       one roll for the attack, so it does NOT scale with
-//                                       atkFigs the way the figure-kill touches do)
+//   destructionFail > 0               → Destruction   (one independent whole-unit-kill
+//                                       attempt per surviving attacking figure)
 //   lifeStealMod != null              → Life Steal    (uses lifeStealRes)
 //   immDist truthy                    → Immolation    (caller pre-computes the area dist)
-// Returns { dist, lifeStealEV, lifeStealDist }. lifeStealDist is the standalone life-steal
-// distribution (or null if life steal not active) — exposed so callers that need to display
-// or further transform it (e.g. Haste doubling) don't have to recompute.
-// Convolution is commutative, so the chosen order is purely a readability choice.
+function usesModernCombatHealing(version) {
+  return version === 'com2_1.05.11' || version === 'com2_warlord_1.5.12.7';
+}
+
+function usesDosCombatHealing(version) {
+  return version === 'mom_1.31' || version === 'mom_cp_1.60.00'
+    || version === 'com_6.08';
+}
+
+function usesStatefulCombatHealing(version) {
+  return usesModernCombatHealing(version) || usesDosCombatHealing(version);
+}
+
+// Returns target-capped damage plus the version-appropriate Life Steal marginals.
+// Modern `outcomes` retain uncapped raw drain and Combatheal correlation for repeated
+// ApplyAttack calls such as Haste; legacy outcomes retain the former capped drain model.
 function convolveTouchAttacks(dist, cap, atkFigs, p) {
-  let lifeStealEV = 0;
-  let lifeStealDist = null;
-  let bloodsuckerHealEV = 0;
-  if (atkFigs <= 0) return { dist, lifeStealEV, lifeStealDist, bloodsuckerHealEV };
-  // Bloodsucker (Warlord): fires once per phase if the base attack dealt ≥1 damage
-  // through armor. The input `dist` here is the post-armor base attack damage (touch
-  // attacks haven't been folded in yet), so dist[0] correctly reflects "armor blocked
-  // everything". On trigger: +2 damage to target, attacker heals by the same amount.
-  // The +2 is capped at the target's remaining HP for the phase, and the heal is
-  // capped to the actual extra damage dealt (you can't drain more than you removed),
-  // so a +2 clipped to +1 by overkill also heals only 1. Folded into lifeStealEV in
-  // the return since both abilities are attacker self-heal — exposed separately as
-  // bloodsuckerHealEV so haste self-convolution callers can double it.
-  if (p.bloodsucker && dist && dist.length > 0) {
-    const pTrigger = 1 - (dist[0] || 0);
-    if (pTrigger > 1e-15) {
-      const shifted = new Array(cap + 1).fill(0);
-      shifted[0] = dist[0] || 0;
-      for (let d = 1; d < dist.length; d++) {
-        if (dist[d] < 1e-15) continue;
-        const actualBS = Math.max(0, Math.min(2, cap - d));
-        shifted[d + actualBS] += dist[d];
-        bloodsuckerHealEV += dist[d] * actualBS;
+  const modernCombatHealing = usesModernCombatHealing(p.version);
+  const dosCombatHealing = usesDosCombatHealing(p.version);
+  const statefulCombatHealing = modernCombatHealing || dosCombatHealing;
+  let outcomes = [];
+  for (let damage = 0; damage < dist.length; damage++) {
+    if (dist[damage] < 1e-15) continue;
+    const cappedDamage = Math.min(damage, cap);
+    const baseCategory = p.baseDamageCategory || 'normalDamage';
+    outcomes.push({ probability: dist[damage], damage: cappedDamage,
+      state: statefulCombatHealing && p.sourceState
+        ? (dosCombatHealing
+          ? normalizeDosCombatHealState(p.sourceState)
+          : normalizeCombatHealState(p.sourceState)) : null,
+      rawDrain: 0, healedDamage: 0, bonusHpGain: 0, bonusHpBenefit: 0,
+      legacyLifeStealBenefit: 0,
+      bloodsuckerHealed: 0,
+      irrecoverableDamage: baseCategory === 'irrecoverableDamage' ? cappedDamage : 0,
+      undeadDamage: baseCategory === 'undeadDamage' ? cappedDamage : 0,
+      normalDamage: baseCategory === 'normalDamage' ? cappedDamage : 0 });
+  }
+  const addDamage = (riderDist, category = 'normalDamage') => {
+    if (!riderDist) return;
+    const next = [];
+    for (const outcome of outcomes) {
+      for (let damage = 0; damage < riderDist.length; damage++) {
+        const probability = outcome.probability * riderDist[damage];
+        if (probability < 1e-15) continue;
+        const cappedDamage = Math.min(cap, outcome.damage + damage);
+        next.push({ ...outcome, probability, damage: cappedDamage,
+          [category]: outcome[category] + cappedDamage - outcome.damage });
       }
-      dist = shifted;
     }
+    outcomes = next;
+  };
+  if (atkFigs <= 0) {
+    return collapseTouchOutcomes(outcomes, cap, false, statefulCombatHealing);
   }
   if (p.poisonStr > 0 && p.poisonFail > 0) {
-    dist = convolveDists(dist, calcResistDmgDist(atkFigs * p.poisonStr, p.poisonFail, cap), cap);
+    addDamage(calcResistDmgDist(atkFigs * p.poisonStr, p.poisonFail, cap));
   }
   if (p.stoningFail > 0) {
-    dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.stoningFail, p.targetHP, cap), cap);
+    addDamage(calcFigureKillDmgDist(atkFigs, p.stoningFail, p.targetHP, cap),
+      'irrecoverableDamage');
   }
   if (p.deathTouchFail > 0) {
-    dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.deathTouchFail, p.targetHP, cap), cap);
+    addDamage(calcFigureKillDmgDist(atkFigs, p.deathTouchFail, p.targetHP, cap));
   }
   if (p.dispelEvilFail > 0) {
-    dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.dispelEvilFail, p.targetHP, cap), cap);
+    addDamage(calcFigureKillDmgDist(atkFigs, p.dispelEvilFail, p.targetHP, cap),
+      'irrecoverableDamage');
   }
   if (p.exorciseFail > 0) {
-    dist = convolveDists(dist, calcFigureKillDmgDist(atkFigs, p.exorciseFail, p.targetHP, cap), cap);
+    addDamage(calcFigureKillDmgDist(atkFigs, p.exorciseFail, p.targetHP, cap),
+      'irrecoverableDamage');
   }
   if (p.destructionFail > 0) {
-    dist = convolveDists(dist, calcUnitKillDmgDist(p.destructionFail, cap), cap);
+    const anyDestructionFail = 1 - Math.pow(1 - p.destructionFail, atkFigs);
+    addDamage(calcUnitKillDmgDist(anyDestructionFail, cap), 'irrecoverableDamage');
   }
   if (p.lifeStealMod != null) {
-    lifeStealDist = calcLifeStealDmgDist(atkFigs, p.lifeStealRes, p.lifeStealMod, cap);
-    dist = convolveDists(dist, lifeStealDist, cap);
-    lifeStealEV = expectedDamage(lifeStealDist);
+    const next = [];
+    for (const outcome of outcomes) {
+      const healPaths = dosCombatHealing && outcome.state
+        ? calcDosLifeStealHealOutcomes(atkFigs, p.lifeStealRes, p.lifeStealMod,
+          outcome.state)
+        : modernCombatHealing && outcome.state
+          ? calcLifeStealCombatHealOutcomes(atkFigs, p.lifeStealRes, p.lifeStealMod,
+            outcome.state)
+        : (statefulCombatHealing
+          ? calcLifeStealRawDist(atkFigs, p.lifeStealRes, p.lifeStealMod)
+          : calcLifeStealDmgDist(atkFigs, p.lifeStealRes, p.lifeStealMod, cap))
+          .map((probability, rawDrain) => ({ probability, rawDrain,
+            healedDamage: 0, bonusHpGain: 0, bonusHpBenefit: 0, state: null }));
+      for (const heal of healPaths) {
+        const probability = outcome.probability * heal.probability;
+        if (probability < 1e-15) continue;
+        const cappedDamage = Math.min(cap, outcome.damage + heal.rawDrain);
+        next.push({ ...outcome, probability, state: heal.state,
+          damage: cappedDamage,
+          undeadDamage: outcome.undeadDamage + cappedDamage - outcome.damage,
+          rawDrain: outcome.rawDrain + heal.rawDrain,
+          healedDamage: outcome.healedDamage + heal.healedDamage,
+          bonusHpGain: outcome.bonusHpGain + heal.bonusHpGain,
+          bonusHpBenefit: outcome.bonusHpBenefit + heal.bonusHpBenefit,
+          legacyLifeStealBenefit: outcome.legacyLifeStealBenefit
+            + (statefulCombatHealing ? 0 : heal.rawDrain) });
+      }
+    }
+    outcomes = next;
   }
-  if (p.immDist) {
-    dist = convolveDists(dist, p.immDist, cap);
+  addDamage(p.immDist);
+
+  // ApplyAttack tests all routed result categories only after the riders above. The shipped
+  // Warlord constants are independent inputs to target damage and Combatheal.
+  const bloodsucker = p.version === 'com2_warlord_1.5.12.7' && p.bloodsucker
+    ? { damage: 2, healing: 2 } : null;
+  if (bloodsucker) {
+    outcomes = outcomes.map(outcome => {
+      if (outcome.damage <= 0) return outcome;
+      const healed = outcome.state
+        ? combatHealTransition(outcome.state, bloodsucker.healing, false, true)
+        : { state: null, healedDamage: 0 };
+      return { ...outcome, state: healed.state,
+        damage: Math.min(cap, outcome.damage + bloodsucker.damage),
+        normalDamage: outcome.normalDamage
+          + Math.min(cap - outcome.damage, bloodsucker.damage),
+        healedDamage: outcome.healedDamage + healed.healedDamage,
+        bloodsuckerHealed: outcome.bloodsuckerHealed + healed.healedDamage };
+    });
   }
-  return { dist, lifeStealEV: lifeStealEV + bloodsuckerHealEV, lifeStealDist, bloodsuckerHealEV };
+  return collapseTouchOutcomes(outcomes, cap, p.lifeStealMod != null,
+    statefulCombatHealing);
+}
+
+function collapseTouchOutcomes(outcomes, cap, hasLifeSteal, modernCombatHealing) {
+  const dist = new Array(cap + 1).fill(0);
+  for (const outcome of outcomes) dist[outcome.damage] += outcome.probability;
+  const lifeStealDist = hasLifeSteal ? outcomeMetricDist(outcomes, 'rawDrain') : null;
+  const healedDamageDist = outcomeMetricDist(outcomes, 'healedDamage');
+  const bonusHpDist = outcomeMetricDist(outcomes, 'bonusHpGain');
+  const bonusHpBenefitDist = outcomeMetricDist(outcomes, 'bonusHpBenefit');
+  const bloodsuckerHealDist = outcomeMetricDist(outcomes, 'bloodsuckerHealed');
+  return {
+    dist, outcomes, lifeStealDist,
+    rawDrainEV: expectedDamage(lifeStealDist),
+    healedDamageDist, bonusHpDist, bonusHpBenefitDist, bloodsuckerHealDist,
+    lifeStealEV: modernCombatHealing
+      ? expectedDamage(healedDamageDist) + expectedDamage(bonusHpBenefitDist)
+      : expectedDamage(outcomeMetricDist(outcomes, 'legacyLifeStealBenefit')),
+    bonusHpEV: expectedDamage(bonusHpDist),
+    bloodsuckerHealEV: expectedDamage(bloodsuckerHealDist),
+  };
+}
+
+function repeatTouchAttack(first, baseDist, cap, atkFigs, spec) {
+  const modernCombatHealing = usesModernCombatHealing(spec.version);
+  const statefulCombatHealing = usesStatefulCombatHealing(spec.version);
+  const outcomes = [];
+  for (const prior of first.outcomes) {
+    // Legacy Haste self-convolved two identical target-capped attacks. Modern callers of
+    // this helper are sequentially dealt channels, so their second ApplyAttack reads the
+    // exact remaining target and revised source-healing state. Modern melee is instead
+    // expanded in calcMeleeTouchOutcome because its damage remains pending.
+    const remaining = statefulCombatHealing ? Math.max(0, cap - prior.damage) : cap;
+    const next = convolveTouchAttacks(baseDist, remaining, atkFigs,
+      { ...spec, sourceState: statefulCombatHealing ? prior.state : null });
+    for (const after of next.outcomes) {
+      const probability = prior.probability * after.probability;
+      if (probability < 1e-15) continue;
+      outcomes.push({ probability, state: after.state,
+        damage: Math.min(cap, prior.damage + after.damage),
+        irrecoverableDamage: prior.irrecoverableDamage + after.irrecoverableDamage,
+        undeadDamage: prior.undeadDamage + after.undeadDamage,
+        normalDamage: prior.normalDamage + after.normalDamage,
+        rawDrain: statefulCombatHealing
+          ? prior.rawDrain + after.rawDrain
+          : Math.min(cap, prior.rawDrain + after.rawDrain),
+        healedDamage: prior.healedDamage + after.healedDamage,
+        bonusHpGain: prior.bonusHpGain + after.bonusHpGain,
+        bonusHpBenefit: prior.bonusHpBenefit + after.bonusHpBenefit,
+        legacyLifeStealBenefit: prior.legacyLifeStealBenefit
+          + after.legacyLifeStealBenefit,
+        bloodsuckerHealed: prior.bloodsuckerHealed + after.bloodsuckerHealed });
+    }
+  }
+  return collapseTouchOutcomes(outcomes, cap, spec.lifeStealMod != null,
+    statefulCombatHealing);
+}
+
+function combineModernRepeatedTouchOutcome(prior, after, probability, cap) {
+  return {
+    probability,
+    state: after.state,
+    damage: Math.min(cap, prior.damage + after.damage),
+    irrecoverableDamage: prior.irrecoverableDamage + after.irrecoverableDamage,
+    undeadDamage: prior.undeadDamage + after.undeadDamage,
+    normalDamage: prior.normalDamage + after.normalDamage,
+    rawDrain: prior.rawDrain + after.rawDrain,
+    healedDamage: prior.healedDamage + after.healedDamage,
+    bonusHpGain: prior.bonusHpGain + after.bonusHpGain,
+    bonusHpBenefit: prior.bonusHpBenefit + after.bonusHpBenefit,
+    legacyLifeStealBenefit: prior.legacyLifeStealBenefit
+      + after.legacyLifeStealBenefit,
+    bloodsuckerHealed: prior.bloodsuckerHealed + after.bloodsuckerHealed,
+  };
+}
+
+function sequenceTouchApplyAttacks(steps, cap, sourceState) {
+  let paths = [{ probability: 1, state: normalizeCombatHealState(sourceState),
+    damage: 0, rawDrain: 0, healedDamage: 0, bonusHpGain: 0,
+    bonusHpBenefit: 0, bloodsuckerHealed: 0,
+    irrecoverableDamage: 0, undeadDamage: 0, normalDamage: 0 }];
+  for (const buildStep of steps) {
+    const next = [];
+    for (const prior of paths) {
+      const remaining = Math.max(0, cap - prior.damage);
+      if (remaining <= 0) {
+        next.push(prior);
+        continue;
+      }
+      const step = buildStep(remaining, healingStateAlive(prior.state));
+      const result = convolveTouchAttacks(step.dist, remaining, step.atkFigs,
+        { ...step.spec, sourceState: prior.state });
+      for (const after of result.outcomes) {
+        const probability = prior.probability * after.probability;
+        if (probability < 1e-15) continue;
+        next.push({
+          probability,
+          state: after.state,
+          damage: Math.min(cap, prior.damage + after.damage),
+          rawDrain: prior.rawDrain + after.rawDrain,
+          healedDamage: prior.healedDamage + after.healedDamage,
+          bonusHpGain: prior.bonusHpGain + after.bonusHpGain,
+          bonusHpBenefit: prior.bonusHpBenefit + after.bonusHpBenefit,
+          bloodsuckerHealed: prior.bloodsuckerHealed + after.bloodsuckerHealed,
+          irrecoverableDamage: prior.irrecoverableDamage + after.irrecoverableDamage,
+          undeadDamage: prior.undeadDamage + after.undeadDamage,
+          normalDamage: prior.normalDamage + after.normalDamage,
+        });
+      }
+    }
+    paths = next;
+  }
+  return collapseTouchOutcomes(paths, cap, false, true);
 }
 
 // Compute melee + touch-attack damage distribution, weighted over possible
@@ -1547,10 +1911,19 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
                                blurChance, blurBuggy,
                                doubleStrike, defTopFigHP,
                                minDamageFromHits,
-                               bloodsucker) {
+                               bloodsucker, version, sourceState,
+                               independentFearProbability = null) {
   if (remHP <= 0 || maxFigs <= 0) return { damageDist: [1], lifeStealEV: 0 };
   const result = new Array(remHP + 1).fill(0);
   let lifeStealEV = 0;
+  const outcomes = [];
+  const firstOutcomes = [];
+  const modernDoubleStrike = doubleStrike && usesModernCombatHealing(version);
+  const dosHealingDoubleStrike = doubleStrike && usesDosCombatHealing(version)
+    && lifeStealMod !== null;
+  const statefulDoubleStrike = modernDoubleStrike || dosHealingDoubleStrike;
+  const independentModernFear = modernDoubleStrike
+    && independentFearProbability !== null;
   const lo = fearDist ? 0 : maxFigs;
   const touchSpec = {
     poisonStr, poisonFail,
@@ -1558,6 +1931,8 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
     lifeStealMod, lifeStealRes,
     immDist: immolationDist,
     bloodsucker,
+    version,
+    sourceState,
   };
   for (let k = lo; k <= maxFigs; k++) {
     const pK = fearDist ? fearDist[k] : 1;
@@ -1570,18 +1945,75 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
     } else {
       dist = calcTotalDamageDist(k, atk, toHit, def, toBlock, targetHP, remHP, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, minDamageFromHits);
     }
-    const tOut = convolveTouchAttacks(dist, remHP, k, touchSpec);
+    let tOut = convolveTouchAttacks(dist, remHP, k, touchSpec);
+    if (doubleStrike && !statefulDoubleStrike && k > 0 && atk > 0) {
+      tOut = repeatTouchAttack(tOut, dist, remHP, k, touchSpec);
+    }
+    if (statefulDoubleStrike) {
+      for (const outcome of tOut.outcomes) {
+        firstOutcomes.push({ ...outcome, probability: pK * outcome.probability,
+          fearFailures: maxFigs - k });
+      }
+      continue;
+    }
     dist = tOut.dist;
     lifeStealEV += pK * tOut.lifeStealEV;
-    if (doubleStrike && k > 0 && atk > 0) {
-      dist = convolveDists(dist, dist, remHP);
-      if (lifeStealMod !== null) lifeStealEV += pK * expectedDamage(calcLifeStealDmgDist(k, lifeStealRes, lifeStealMod, remHP));
-      // Bloodsucker fires once per strike; haste's second strike is a second trigger check.
-      if (bloodsucker) lifeStealEV += pK * tOut.bloodsuckerHealEV;
+    for (const outcome of tOut.outcomes) {
+      outcomes.push({ ...outcome, probability: pK * outcome.probability });
     }
     for (let d = 0; d < dist.length; d++) result[d] += pK * dist[d];
   }
-  return { damageDist: result, lifeStealEV };
+
+  if (statefulDoubleStrike) {
+    const repeatedOutcomes = [];
+    const repeatFearedDist = [];
+    for (const prior of firstOutcomes) {
+      // Both modern Hasted melee ApplyAttack calls precede Dealdamage. The second
+      // therefore reads the same target snapshot even though it sees the source's
+      // exact first-call healing outcome.
+      const remaining = remHP;
+      const secondMaxFigs = prior.state
+        ? healingStateAlive(prior.state) : maxFigs;
+      const secondFearDist = independentModernFear
+        ? calcFearDist(secondMaxFigs, independentFearProbability) : null;
+      const sharedDosFigures = dosHealingDoubleStrike
+        ? Math.max(0, secondMaxFigs - prior.fearFailures) : secondMaxFigs;
+      addWeightedDist(repeatFearedDist,
+        secondFearDist
+          ? fearedCountDist(secondFearDist, secondMaxFigs)
+          : (() => { const d = []; d[sharedDosFigures] = 1; return d; })(),
+        prior.probability);
+      const secondLo = secondFearDist ? 0 : sharedDosFigures;
+      const secondHi = secondFearDist ? secondMaxFigs : sharedDosFigures;
+      for (let k = secondLo; k <= secondHi; k++) {
+        const pK = secondFearDist ? secondFearDist[k] : 1;
+        if (pK < 1e-15) continue;
+        let dist;
+        if (k <= 0 || atk <= 0) {
+          dist = [1];
+        } else if (isDoom) {
+          dist = calcDoomDist(k, atk, remaining);
+        } else {
+          dist = calcTotalDamageDist(k, atk, toHit, def, toBlock, targetHP,
+            remaining, defInvulnBonus, blurChance, blurBuggy, defTopFigHP,
+            minDamageFromHits);
+        }
+        const second = convolveTouchAttacks(dist, remaining, k,
+          { ...touchSpec, sourceState: prior.state });
+        for (const after of second.outcomes) {
+          const probability = prior.probability * pK * after.probability;
+          if (probability < 1e-15) continue;
+          repeatedOutcomes.push(combineModernRepeatedTouchOutcome(
+            prior, after, probability, remHP));
+        }
+      }
+    }
+    const collapsed = collapseTouchOutcomes(repeatedOutcomes, remHP,
+      lifeStealMod != null, true);
+    return { ...collapsed, damageDist: collapsed.dist,
+      repeatFearedDist: repeatFearedDist.length ? repeatFearedDist : [1] };
+  }
+  return { damageDist: result, lifeStealEV, outcomes };
 }
 
 function repeatDist(dist, times, cap) {
@@ -1641,12 +2073,17 @@ function buildFearPhaseDists(aFigs, bFigs, bPFear, aPFear, aFearedByB, aFearBug,
 // The three CoM2/Warlord rates are confirmed by MODDING.INI `[Spells]` — BlurDamageReduction=20,
 // InvisibilitydamageReduction=20, BlurInvisibilityTotalReduction=30 (40 in Warlord). R5.2c/k
 // establish that Blur is side-wide and selected through turn-relative `CGADEnemy` (F24).
+// The calculator projects that battle state onto tactical defender Card B for one displayed
+// exchange; Card A's army-state checkbox becomes relevant only after the cards are swapped.
 // v1.31 bug: Illusion Immunity checked on defender instead of attacker.
 // Fixed (1.51+/CoM/CoM2): Illusion Immunity checked on attacker.
-function getBlurChance(defAbilities, atkAbilities, version) {
+function getBlurChance(defAbilities, atkAbilities, version, modernTacticalDefenderBlur = false) {
   const isCoM = version && version.startsWith('com');
+  const isCoM2 = version && version.startsWith('com2');
   const isWarlord = version && version.startsWith('com2_warlord');
-  const hasBlur = !!(defAbilities && defAbilities.blur);
+  // CoM2/Warlord read the fixed tactical-defender army state for this calculator exchange.
+  // Older engines retain the current target unit's enchantment bit.
+  const hasBlur = isCoM2 ? !!modernTacticalDefenderBlur : !!(defAbilities && defAbilities.blur);
   const hasInvis = !!(defAbilities && defAbilities.invisibility);
   const invisGivesBlur = isCoM;
   const blurRate = isCoM ? 0.2 : 0.1;
@@ -1888,6 +2325,14 @@ function applyWarlordTouchFlagPlacement(unit, version) {
     }
   }
 
+  // Energy Cannon's UnitCalc.CAS write targets attack record 3, not the general
+  // record. Preserve any independent general Destruction while routing this derived
+  // modifier only to conventional ranged ApplyAttack calls.
+  if (hasAbil(unit.abilities, 'energyCannon')
+      && abilDefined(unit.abilities, 'energyCannonDestruction')) {
+    records.ranged.destruction = unit.abilities.energyCannonDestruction;
+  }
+
   return Object.assign({}, unit, { touchFlagRecords: records });
 }
 
@@ -1930,15 +2375,15 @@ function bloodLustMeleeAttack(atkUnit, defUnit, attackStrength = atkUnit.atk) {
   return attackStrength * 2;
 }
 
-// --- Resolution-time stat sequences (Caster.exe: CoM2 and Warlord) ---
+// --- Attack-specific stat sequences (Caster.exe: CoM2 and Warlord) ---
 // These use the same step type and runner as derivation, but on a scratch copy which
 // is discarded after one incoming attack. They therefore never change the displayed
 // stat block. Order follows @Units@GetEffectiveResistance and
 // @Units@EffectiveDefense; see CoM2 binary analysis, "Resolution-time modifiers".
-function resolutionStep(id, writes, apply, when) {
+function attackSpecificStep(id, writes, apply, when) {
   return statStep({
     id,
-    phase: 'resolution',
+    phase: 'attackSpecific',
     writes,
     apply,
     ...(when ? { when } : {}),
@@ -1947,26 +2392,26 @@ function resolutionStep(id, writes, apply, when) {
 
 const EFFECTIVE_RESISTANCE_STEPS = [
   // PROVENANCE[effectiveResistance:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
-  resolutionStep('effectiveResistance:base', ['effectiveResistance'],
+  attackSpecificStep('effectiveResistance:base', ['effectiveResistance'],
     u => { u.effectiveResistance = u.res; }),
   // PROVENANCE[effectiveResistance:charmed]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
-  resolutionStep('effectiveResistance:charmed', ['effectiveResistance'],
+  attackSpecificStep('effectiveResistance:charmed', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
     (u, ctx) => ctx.isRoll && (u.isHero || u.unitType === 'hero') && hasAbil(u.abilities, 'charmed')),
   // PROVENANCE[effectiveResistance:magicImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc
-  resolutionStep('effectiveResistance:magicImmunity', ['effectiveResistance'],
+  attackSpecificStep('effectiveResistance:magicImmunity', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
     (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'magicImmunity')),
   // PROVENANCE[effectiveResistance:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:c5d736809b27903ec0e40f87 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c
-  resolutionStep('effectiveResistance:resistElements', ['effectiveResistance'],
+  attackSpecificStep('effectiveResistance:resistElements', ['effectiveResistance'],
     u => { u.effectiveResistance += 4; },
     (u, ctx) => ctx.realm === 'nature' && hasResistElementsEffect(u.abilities)),
   // PROVENANCE[effectiveResistance:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:8da0a27a31fedd3ba0134ffc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:139a1e53fbfbc5356d693d1d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:e9ef47259ac28c3d1c61598a
-  resolutionStep('effectiveResistance:bless', ['effectiveResistance'],
+  attackSpecificStep('effectiveResistance:bless', ['effectiveResistance'],
     (u, ctx) => { u.effectiveResistance += ctx.blessBonus; },
     (u, ctx) => (ctx.realm === 'chaos' || ctx.realm === 'death') && hasAbil(u.abilities, 'bless')),
   // PROVENANCE[effectiveResistance:resistMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:144365f7a66eeaa2a77f8a4d | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:9944e135e5c46465171e6e72 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:9944e135e5c46465171e6e72
-  resolutionStep('effectiveResistance:resistMagic', ['effectiveResistance'],
+  attackSpecificStep('effectiveResistance:resistMagic', ['effectiveResistance'],
     u => { u.effectiveResistance += 5; },
     (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'resistMagic')),
 ];
@@ -1983,41 +2428,49 @@ function effectiveResistance(target, version, realm, isRoll = true, trace = null
     blessBonus: version && version.startsWith('com2_warlord') ? 4 : 5,
     ...(trace ? { trace } : {}),
   };
+  // None of these steps carries a version predicate: the list is CoM2-only because the
+  // `startsWith('com2')` branch of buildResistanceContext is the only path that reaches it.
+  // That scope is therefore checkable only here, where the steps enter the sequence.
+  if (statStepDebugEnabled()) {
+    assertSequenceVersionScope(EFFECTIVE_RESISTANCE_STEPS, version, 'GetEffectiveResistance');
+  }
   runStatSteps(EFFECTIVE_RESISTANCE_STEPS, scratch, context);
   return scratch.effectiveResistance;
 }
 
 const EFFECTIVE_DEFENSE_STEPS = [
   // PROVENANCE[effectiveDefense:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:16:a817f716eaa0bf5bc9a83904
-  resolutionStep('effectiveDefense:base', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:base', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense = u.def + ctx.extraDefense; }),
   // PROVENANCE[effectiveDefense:illusion]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:73589286bdb2cf542120a0a1
-  resolutionStep('effectiveDefense:illusion', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:illusion', ['effectiveDefense'],
     u => { u.effectiveDefense = 0; return HALT; },
     (u, ctx) => ctx.illusion && !hasAbil(u.abilities, 'illusionImmunity')),
   // PROVENANCE[effectiveDefense:largeShield]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:cad06bcca352e1e701c06cfe | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:baa485ae66a250e528069e54 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:baa485ae66a250e528069e54
-  resolutionStep('effectiveDefense:largeShield', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:largeShield', ['effectiveDefense'],
     u => { u.effectiveDefense += 3; },
     (u, ctx) => ctx.isRanged && hasAbil(u.abilities, 'largeShield')),
   // PROVENANCE[effectiveDefense:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:69075b87f644f18cbdb1c64a | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:c99051561c61668cea94903d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:c99051561c61668cea94903d
-  resolutionStep('effectiveDefense:resistElements', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:resistElements', ['effectiveDefense'],
     u => { u.effectiveDefense += 4; },
     (u, ctx) => ctx.elementalEligible && hasResistElementsEffect(u.abilities)),
   // PROVENANCE[effectiveDefense:elementalArmor]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:95c224910389756ff6f69515 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:473b9eac9397f92d8022c2cd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:473b9eac9397f92d8022c2cd
-  resolutionStep('effectiveDefense:elementalArmor', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:elementalArmor', ['effectiveDefense'],
     u => { u.effectiveDefense += 12; },
     (u, ctx) => ctx.elementalEligible && hasElementalArmorEffect(u.abilities)),
   // PROVENANCE[effectiveDefense:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:1aa8579dfe4d99fda5935346 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:db54edb1372f3254301b3b9b | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:aaec01b51dfbddfb4fb45271
-  resolutionStep('effectiveDefense:bless', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:bless', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.blessBonus; },
-    (u, ctx) => ctx.blessEligible && hasAbil(u.abilities, 'bless')),
+    (u, ctx) => ctx.magicImmunityEligible && ctx.spellId > 0
+      && (ctx.spellRealm === 'chaos' || ctx.spellRealm === 'death')
+      && hasAbil(u.abilities, 'bless')),
   // PROVENANCE[effectiveDefense:armorPiercing]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:d2fe7b44d5e48e4e73b98cde
-  resolutionStep('effectiveDefense:armorPiercing', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:armorPiercing', ['effectiveDefense'],
     u => { u.effectiveDefense = Math.floor(u.effectiveDefense / 2); },
     (u, ctx) => ctx.armorPiercing
       && !(ctx.isLightning && hasAbil(u.abilities, 'lightningResist'))),
   // PROVENANCE[effectiveDefense:immunities]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:2f2c6876d3c7d7f5d2533b8b
-  resolutionStep('effectiveDefense:immunities', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:immunities', ['effectiveDefense'],
     (u, ctx) => {
       // The six Caster.exe tests are assignments in this order. Righteousness is MoM-only and
       // unreachable through the modern version-filtered inputs; its defensive low-level branch
@@ -2031,7 +2484,7 @@ const EFFECTIVE_DEFENSE_STEPS = [
       if (hasAbil(u.abilities, 'righteousness') && ctx.righteousnessEligible) u.effectiveDefense = 100;
     }),
   // PROVENANCE[effectiveDefense:weaponImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:64343218ebddfe0d2454f929 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:8c99d740dfd473b21f906b13 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:4c279bb027bcde85badd90e7
-  resolutionStep('effectiveDefense:weaponImmunity', ['effectiveDefense'],
+  attackSpecificStep('effectiveDefense:weaponImmunity', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.weaponImmunityBonus; },
     (u, ctx) => ctx.weaponImmunityEligible),
 ];
@@ -2045,7 +2498,8 @@ function effectiveDefense(target, version, attack, trace = null) {
     illusion: !!attack.illusion,
     isRanged: !!attack.isRanged,
     elementalEligible: !!attack.elementalEligible,
-    blessEligible: !!attack.blessEligible,
+    spellId: Number.isInteger(attack.spellId) ? attack.spellId : 0,
+    spellRealm: attack.spellRealm || null,
     blessBonus: version && version.startsWith('com2_warlord') ? 7 : 5,
     armorPiercing: !!attack.armorPiercing,
     isLightning: !!attack.isLightning,
@@ -2060,6 +2514,11 @@ function effectiveDefense(target, version, attack, trace = null) {
     weaponImmunityBonus: version && version.startsWith('com2_warlord') ? 10 : 8,
     ...(trace ? { trace } : {}),
   };
+  // Same ungated shape as GetEffectiveResistance above: computeDefenseProfile's non-com2
+  // branch is what keeps the DOS engines out, so the check belongs at this call site.
+  if (statStepDebugEnabled()) {
+    assertSequenceVersionScope(EFFECTIVE_DEFENSE_STEPS, version, 'EffectiveDefense');
+  }
   runStatSteps(EFFECTIVE_DEFENSE_STEPS, scratch, context);
   return scratch.effectiveDefense;
 }
@@ -2095,25 +2554,21 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
   let attack;
   if (attackType === 'melee') {
     attack = {
+      spellId: 0,
       vertigoDefPenalty,
       illusion: aIllusion,
       armorPiercing: aArmorPiercing,
       weaponImmunityEligible: wi(false),
     };
   } else if (attackType === 'ranged') {
-    const aSpiritLink = hasAbil(attacker.abilities, 'spiritLink');
-    const aIsDC = !aSpiritLink
-      && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
-    const aRangedDC = attacker.rangedType === 'magic_c'
-      || ((attacker.rangedType === 'missile' || attacker.rangedType === 'boulder') && aIsDC);
     const aRangedElem = attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
       || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam';
     attack = {
+      spellId: 0,
       vertigoDefPenalty,
       illusion: aIllusion,
       isRanged: true,
       elementalEligible: aRangedElem,
-      blessEligible: aRangedDC,
       armorPiercing: aArmorPiercing,
       magicImmunityEligible: aRangedElem,
       isMissile: attacker.rangedType === 'missile',
@@ -2121,18 +2576,13 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       weaponImmunityEligible: wi(aRangedElem),
     };
   } else if (attackType === 'thrown') {
-    const aSpiritLink = hasAbil(attacker.abilities, 'spiritLink');
-    const aIsDC = !aSpiritLink
-      && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
-    const aThrownDC = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning'
-      || (attacker.thrownType === 'thrown' && aIsDC);
     const aThrownElem = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning';
     attack = {
+      spellId: 0,
       vertigoDefPenalty,
       illusion: aIllusion,
       isRanged: true,
       elementalEligible: aThrownElem,
-      blessEligible: aThrownDC,
       armorPiercing: aArmorPiercing || attacker.thrownType === 'lightning',
       isLightning: attacker.thrownType === 'lightning',
       isFire: attacker.thrownType === 'fire',
@@ -2141,21 +2591,21 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       weaponImmunityEligible: wi(aThrownElem),
     };
   } else if (attackType === 'gaze') {
-    const aGazeRealm = gazeRealm(attacker.abilities);
     attack = {
+      spellId: 0,
       vertigoDefPenalty,
       illusion: aIllusion,
       isRanged: true,
-      blessEligible: aGazeRealm === 'chaos' || aGazeRealm === 'death',
       armorPiercing: aArmorPiercing,
       magicImmunityEligible: true,
       weaponImmunityEligible: wi(true),
     };
   } else if (attackType === 'immolation') {
     attack = {
+      spellId: 99,
+      spellRealm: 'chaos',
       vertigoDefPenalty,
       isRanged: true,
-      blessEligible: true,
       isFire: true,
       magicImmunityEligible: true,
       righteousnessEligible: true,
@@ -2164,10 +2614,11 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
     throw new Error(`Unknown Caster.exe defense attack type: ${attackType}`);
   }
   // Combat@ApplyAttack supplies City Walls as EffectiveDefense's `extradef`: +3 intact, +1
-  // damaged, only for attacks crossing into the walls. The UI's City Walls control already
-  // expresses that contextual value for the defending unit. DamageSpell passes 0 instead, so
-  // Immolation does not receive it.
-  if (attackType !== 'immolation') attack.extraDefense = target.cityWallBonus || 0;
+  // damaged, only when the target is inside and this particular attacker is outside. Card
+  // exchange role and army membership do not participate. DamageSpell passes 0 instead.
+  if (attackType !== 'immolation' && !(attacker.cityWallBonus > 0)) {
+    attack.extraDefense = target.cityWallBonus || 0;
+  }
   return effectiveDefense(target, version, attack);
 }
 
@@ -2213,8 +2664,8 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
   // are realm-less, so they never inherit a Chaos/Death attacker's realm; only melee
   // (type 0) reads the attacker's race. CoM 1 additionally requires `ranged_type > 39`,
   // which drops melee and every conventional ranged type, leaving breath and gaze.
-  // Caster.exe classifies these flags more widely, but no unit attack can activate modern Bless
-  // defense because ApplyAttack passes spell ID 0; the calculator mismatch is F34.
+  // Caster.exe classifies these flags more widely, but its unit-attack caller passes spell ID 0,
+  // so none of those classifications can activate modern Bless Defense.
   const aThrownDC = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning'
                   || (isCaster && attacker.thrownType === 'thrown' && aIsDC);
   const aRangedDC = isCaster
@@ -2264,6 +2715,10 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
 
   // Defense bases. Vertigo writes directly to the battle-unit Defense/To-Block stat in
   // the DOS binaries, so spell damage such as Immolation and Wall of Fire sees it too.
+  // City Walls is deliberately absent here: BU_Apply_Attack adds it only after the complete
+  // Battle_Unit_Defense_Special result, while the separate spell-damage path never adds it.
+  const cityWallBonus = target.cityWallBonus > 0 && !(attacker.cityWallBonus > 0)
+    ? target.cityWallBonus : 0;
   const defBase = Math.max(0, target.def - vertigoDefPenalty);
   const defLS = tLargeShield ? defBase + largeShieldBonus : defBase;
 
@@ -2364,17 +2819,24 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
       target.abilities, version),
     target.abilities, version);
 
-  // Illusion: sets conventional attack defense to city walls bonus only. Negated by Illusion Immunity.
-  // It does not alter immolation/area-fire defense, which is not Illusion Damage.
+  // Illusion zeroes the defense-special result and is negated by Illusion Immunity. DOS then
+  // adds an applicable City Walls bonus after that result, so walls alone survive Illusion.
+  // The separate immolation/area-fire spell path receives neither Illusion nor City Walls.
   const aIllusion = hasAbil(attacker.abilities, 'illusion');
   const tIllusionImmune = hasAbil(target.abilities, 'illusionImmunity');
   if (aIllusion && !tIllusionImmune) {
-    const cw = target.cityWallBonus || 0;
-    vsMelee = cw;
-    vsRanged = cw;
-    vsThrown = cw;
-    vsGaze = cw;
+    vsMelee = 0;
+    vsRanged = 0;
+    vsThrown = 0;
+    vsGaze = 0;
   }
+
+  // BU_Apply_Attack's inside-target/outside-source block follows the defense-special call.
+  // Consequently Armor Piercing and every immunity resolve before this unhalved addition.
+  vsMelee += cityWallBonus;
+  vsRanged += cityWallBonus;
+  vsThrown += cityWallBonus;
+  vsGaze += cityWallBonus;
 
   return { vsMelee, vsRanged, vsThrown, vsGaze, vsImmolation };
 }
@@ -2403,27 +2865,317 @@ function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
 // the resulting damage into the appropriate dimension. Per-phase 1D damage marginals
 // are accumulated for the breakdown UI.
 //
-// In FS+Haste configurations, a single 'firstStrikeBlock' phase replaces phases 5-8b
-// and internally couples A's First Strike and 2nd strike to the same fear sample k_a
-// (one fear roll per round per side, persisting through subsequent same-side attacks).
+// In FS+Haste configurations, a single 'firstStrikeBlock' phase replaces phases 5-8b.
+// The legacy engines retain their shared fear sample; modern Caster ApplyAttack calls
+// sample Cause Fear independently for First Strike and the Haste strike.
 
 function aliveCount(unit, cumDmgInCombat) {
   return Math.max(0, unit.figs - Math.floor((unit.dmg + cumDmgInCombat) / unit.hp));
 }
 
 // Initialise joint state with all probability at (0, 0).
-function makeJoint2D(aRemHP, bRemHP) {
+function healingPathKey(path) {
+  return [combatHealStateKey(path.aState), combatHealStateKey(path.bState),
+    path.aDamageTaken, path.bDamageTaken,
+    path.aRawDrain, path.bRawDrain,
+    path.aHealedDamage, path.bHealedDamage,
+    path.aBonusHpGain, path.bBonusHpGain,
+    path.aBonusHpBenefit, path.bBonusHpBenefit,
+    path.aBloodsuckerHealed, path.bBloodsuckerHealed].join('|');
+}
+
+function addHealingPath(cell, path) {
+  const key = healingPathKey(path);
+  const previous = cell.get(key);
+  if (previous) previous.probability += path.probability;
+  else cell.set(key, path);
+}
+
+function initialHealingPath(units) {
+  return {
+    probability: 1,
+    aState: combatHealStateFromUnit(units.a),
+    bState: combatHealStateFromUnit(units.b),
+    aDamageTaken: 0, bDamageTaken: 0,
+    aRawDrain: 0, bRawDrain: 0,
+    aHealedDamage: 0, bHealedDamage: 0,
+    aBonusHpGain: 0, bBonusHpGain: 0,
+    aBonusHpBenefit: 0, bBonusHpBenefit: 0,
+    aBloodsuckerHealed: 0, bBloodsuckerHealed: 0,
+  };
+}
+
+function makeJoint2D(aRemHP, bRemHP, healingUnits = null) {
   const j = new Array(aRemHP + 1);
-  for (let i = 0; i <= aRemHP; i++) j[i] = new Array(bRemHP + 1).fill(0);
-  j[0][0] = 1;
+  if (healingUnits) {
+    j.healingPaths = true;
+    for (let i = 0; i <= aRemHP; i++) {
+      j[i] = Array.from({ length: bRemHP + 1 }, () => new Map());
+    }
+    addHealingPath(j[0][0], initialHealingPath(healingUnits));
+  } else {
+    for (let i = 0; i <= aRemHP; i++) j[i] = new Array(bRemHP + 1).fill(0);
+    j[0][0] = 1;
+  }
   return j;
 }
 
 // Build an empty joint of the same shape.
 function emptyJointLike(joint) {
   const j = new Array(joint.length);
-  for (let i = 0; i < joint.length; i++) j[i] = new Array(joint[0].length).fill(0);
+  if (joint.healingPaths) {
+    j.healingPaths = true;
+    for (let i = 0; i < joint.length; i++) {
+      j[i] = Array.from({ length: joint[0].length }, () => new Map());
+    }
+  } else {
+    for (let i = 0; i < joint.length; i++) j[i] = new Array(joint[0].length).fill(0);
+  }
   return j;
+}
+
+function jointCellProbability(cell) {
+  if (!(cell instanceof Map)) return cell;
+  let total = 0;
+  for (const path of cell.values()) total += path.probability;
+  return total;
+}
+
+function outcomePaths(out, sourceState) {
+  if (out.outcomes) return out.outcomes;
+  return out.dist.map((probability, damage) => ({
+    probability,
+    damage,
+    state: sourceState,
+    rawDrain: 0,
+    healedDamage: 0,
+    bonusHpGain: 0,
+    bonusHpBenefit: 0,
+    bloodsuckerHealed: 0,
+    irrecoverableDamage: 0,
+    undeadDamage: 0,
+    normalDamage: damage,
+  }));
+}
+
+function applyOutcomeToHealingPath(path, side, outcome) {
+  return {
+    ...path,
+    [side + 'State']: outcome.state || path[side + 'State'],
+    [side + 'RawDrain']: path[side + 'RawDrain'] + (outcome.rawDrain || 0),
+    [side + 'HealedDamage']: path[side + 'HealedDamage'] + (outcome.healedDamage || 0),
+    [side + 'BonusHpGain']: path[side + 'BonusHpGain'] + (outcome.bonusHpGain || 0),
+    [side + 'BonusHpBenefit']: path[side + 'BonusHpBenefit'] + (outcome.bonusHpBenefit || 0),
+    [side + 'BloodsuckerHealed']: path[side + 'BloodsuckerHealed']
+      + (outcome.bloodsuckerHealed || 0),
+  };
+}
+
+function applyOutcomeDamageToState(state, outcome) {
+  const damage = Math.max(0, outcome.damage || 0);
+  if (damage <= 0) return state;
+  if (state && state.engine === 'dos') {
+    const next = normalizeDosCombatHealState(state);
+    // BU_ApplyDamage caps each stored DOS category independently at 200, while
+    // its front-figure/current-figure calculation still consumes the full sum.
+    next.regularDamage = Math.min(200,
+      next.regularDamage + Math.max(0, outcome.normalDamage || 0));
+    next.irreversibleDamage = Math.min(200,
+      next.irreversibleDamage + Math.max(0, outcome.irrecoverableDamage || 0));
+    next.undeadDamage = Math.min(200,
+      next.undeadDamage + Math.max(0, outcome.undeadDamage || 0));
+    const hits = dosCombatHits(next);
+    let front = next.frontFigureDamage + damage;
+    while (hits > 0 && front >= hits && next.currentFigures > 0) {
+      front -= hits;
+      next.currentFigures--;
+    }
+    next.frontFigureDamage = next.currentFigures > 0 ? front : 0;
+    return normalizeDosCombatHealState(next);
+  }
+  const next = normalizeCombatHealState(state);
+  next.totalDamage += damage;
+  next.irrecoverableDamage += Math.max(0, outcome.irrecoverableDamage || 0);
+  next.undeadDamage += Math.max(0, outcome.undeadDamage || 0);
+  return normalizeCombatHealState(next);
+}
+
+function healingStateAlive(state) {
+  return state && state.engine === 'dos'
+    ? dosCombatHealLivingFigures(state)
+    : Math.max(0, combatHealLivingFigures(state));
+}
+
+function healingStateRemainingHp(state) {
+  if (state && state.engine === 'dos') return dosCombatHealRemainingHp(state);
+  const normalized = normalizeCombatHealState(state);
+  return Math.max(0,
+    normalized.figures * (normalized.hp + normalized.bonusHp) - normalized.totalDamage);
+}
+
+// Stable presentation boundary for the version-specific healing records. The resolver
+// keeps DOS Irreversible Damage / Extra Hits and Caster Irrecoverable Damage / Bonus HP
+// distinct internally, but callers need one set of comparable post-combat means.
+function combatHealingStateMetrics(state) {
+  if (state && state.engine === 'dos') {
+    const normalized = normalizeDosCombatHealState(state);
+    return {
+      irreversibleDamage: normalized.irreversibleDamage,
+      undeadDamage: normalized.undeadDamage,
+      extraHits: normalized.extraHits,
+    };
+  }
+  const normalized = normalizeCombatHealState(state);
+  return {
+    irreversibleDamage: normalized.irrecoverableDamage,
+    undeadDamage: normalized.undeadDamage,
+    extraHits: normalized.bonusHp,
+  };
+}
+
+function initialCombatHealingStateMeans(unit) {
+  return combatHealingStateMetrics(combatHealStateFromUnit(unit));
+}
+
+function jointCombatHealingStateMeans(joint, side, unit) {
+  if (!joint.healingPaths) return initialCombatHealingStateMeans(unit);
+  const means = { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
+  for (const row of joint) {
+    for (const cell of row) {
+      for (const path of cell.values()) {
+        const metrics = combatHealingStateMetrics(path[side + 'State']);
+        means.irreversibleDamage += path.probability * metrics.irreversibleDamage;
+        means.undeadDamage += path.probability * metrics.undeadDamage;
+        means.extraHits += path.probability * metrics.extraHits;
+      }
+    }
+  }
+  return means;
+}
+
+function rangedCombatHealingStateMeans(outcomes, sourceUnit, targetUnit) {
+  const sourceMeans = { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
+  const targetMeans = { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
+  const sourceInitial = combatHealStateFromUnit(sourceUnit);
+  const targetInitial = combatHealStateFromUnit(targetUnit);
+  for (const outcome of outcomes || []) {
+    const probability = outcome.probability || 0;
+    const sourceMetrics = combatHealingStateMetrics(outcome.state || sourceInitial);
+    const targetMetrics = combatHealingStateMetrics(
+      applyOutcomeDamageToState(targetInitial, outcome));
+    for (const key of Object.keys(sourceMeans)) {
+      sourceMeans[key] += probability * sourceMetrics[key];
+      targetMeans[key] += probability * targetMetrics[key];
+    }
+  }
+  return { sourceMeans, targetMeans };
+}
+
+function dosTopFigureRemainingHp(state) {
+  const normalized = normalizeDosCombatHealState(state);
+  return dosInt8(dosInt8(dosCombatHits(normalized))
+    - dosInt8(normalized.frontFigureDamage));
+}
+
+function jointMetricDist(joint, key) {
+  if (!joint.healingPaths) return null;
+  let max = 0;
+  for (const row of joint) {
+    for (const cell of row) {
+      for (const path of cell.values()) max = Math.max(max, path[key] || 0);
+    }
+  }
+  const dist = new Array(max + 1).fill(0);
+  for (const row of joint) {
+    for (const cell of row) {
+      for (const path of cell.values()) dist[path[key] || 0] += path.probability;
+    }
+  }
+  return dist;
+}
+
+function jointCombinedMetricDist(joint, keys) {
+  if (!joint.healingPaths) return null;
+  let max = 0;
+  const valueOf = path => keys.reduce((sum, key) => sum + (path[key] || 0), 0);
+  for (const row of joint) {
+    for (const cell of row) {
+      for (const path of cell.values()) max = Math.max(max, valueOf(path));
+    }
+  }
+  const dist = new Array(max + 1).fill(0);
+  for (const row of joint) {
+    for (const cell of row) {
+      for (const path of cell.values()) dist[valueOf(path)] += path.probability;
+    }
+  }
+  return dist;
+}
+
+function jointDestroyedProbability(joint, side, fallbackDist, remainingHp) {
+  if (!joint.healingPaths) return pDestroyedFrom(fallbackDist, remainingHp);
+  let probability = 0;
+  for (const row of joint) {
+    for (const cell of row) {
+      for (const path of cell.values()) {
+        if (healingStateAlive(path[side + 'State']) <= 0) probability += path.probability;
+      }
+    }
+  }
+  return probability;
+}
+
+function addDistProbability(dist, value, probability) {
+  const index = Math.max(0, Math.trunc(Number(value) || 0));
+  while (dist.length <= index) dist.push(0);
+  dist[index] += probability;
+}
+
+function applyDamagePhaseWithHealing(joint, phase, pendingFear, units, targetTotalRemHP) {
+  const newJoint = emptyJointLike(joint);
+  const marginal = new Array(targetTotalRemHP + 1).fill(0);
+  let lifeStealEV = 0;
+  for (let cumA = 0; cumA < joint.length; cumA++) {
+    for (let cumB = 0; cumB < joint[0].length; cumB++) {
+      for (const path of joint[cumA][cumB].values()) {
+        const sourceState = path[phase.source + 'State'];
+        const targetState = path[phase.target + 'State'];
+        const sourceAlive = healingStateAlive(sourceState);
+        const targetAlive = healingStateAlive(targetState);
+        const targetCum = phase.target === 'a' ? cumA : cumB;
+        // The displayed cumulative-damage axis remains capped at the target's
+        // initial remaining HP, but an intervening Life Steal can restore real
+        // HP or add bonus HP. Later ApplyAttack calls must use that revised
+        // capacity, not the already-clipped display coordinate.
+        const cap = healingStateRemainingHp(targetState);
+        if (cap <= 0) {
+          addHealingPath(newJoint[cumA][cumB], { ...path });
+          marginal[0] += path.probability;
+          continue;
+        }
+        const fearDist = phase.consumesFear ? pendingFear[phase.source + 'FearDist'] : null;
+        const out = phase.compute(sourceAlive, targetAlive, cap, fearDist, { sourceState });
+        for (const outcome of outcomePaths(out, sourceState)) {
+          const probability = path.probability * outcome.probability;
+          if (probability < 1e-15) continue;
+          let nextPath = applyOutcomeToHealingPath(path, phase.source, outcome);
+          nextPath = { ...nextPath, probability,
+            [phase.target + 'DamageTaken']:
+              nextPath[phase.target + 'DamageTaken'] + outcome.damage,
+            [phase.target + 'State']: applyOutcomeDamageToState(
+              nextPath[phase.target + 'State'], outcome) };
+          const newTargetCum = Math.min(targetCum + outcome.damage, targetTotalRemHP);
+          const newCumA = phase.target === 'a' ? newTargetCum : cumA;
+          const newCumB = phase.target === 'b' ? newTargetCum : cumB;
+          addHealingPath(newJoint[newCumA][newCumB], nextPath);
+          addDistProbability(marginal, outcome.damage, probability);
+          lifeStealEV += probability
+            * ((outcome.healedDamage || 0) + (outcome.bonusHpBenefit || 0));
+        }
+      }
+    }
+  }
+  return { joint: newJoint, marginal, lifeStealEV };
 }
 
 // Apply a damage phase to a 2D joint state.
@@ -2434,6 +3186,9 @@ function emptyJointLike(joint) {
 //   targetTotalRemHP: target's bRemHP / aRemHP (initial-cap on target's cum damage this combat)
 // Returns { joint: newJoint, marginal, lifeStealEV }
 function applyDamagePhase(joint, phase, pendingFear, units, targetTotalRemHP) {
+  if (joint.healingPaths) {
+    return applyDamagePhaseWithHealing(joint, phase, pendingFear, units, targetTotalRemHP);
+  }
   const newJoint = emptyJointLike(joint);
   const marginal = new Array(targetTotalRemHP + 1).fill(0);
   let lifeStealEV = 0;
@@ -2456,7 +3211,9 @@ function applyDamagePhase(joint, phase, pendingFear, units, targetTotalRemHP) {
         marginal[0] += p;
         continue;
       }
-      const out = phase.compute(sourceAlive, targetAlive, cap, fearDist);
+      const sourceCumDamage = phase.source === 'a' ? cumA : cumB;
+      const out = phase.compute(sourceAlive, targetAlive, cap, fearDist,
+        { sourceState: combatHealStateFromUnit(sourceUnit, sourceCumDamage) });
       const dist = out.dist;
       for (let d = 0; d < dist.length; d++) {
         const pp = p * dist[d];
@@ -2475,10 +3232,114 @@ function applyDamagePhase(joint, phase, pendingFear, units, targetTotalRemHP) {
 // Apply a simultaneous pair of damage phases (counter B→A, 2nd-strike A→B) reading
 // from a frozen snapshot of the input joint. Both sub-phase outputs are folded into
 // one new joint so neither phase sees the other's update on the source dimension.
+function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
+                                          aTotalRemHP, bTotalRemHP) {
+  const newJoint = emptyJointLike(joint);
+  const marginalA = new Array(aTotalRemHP + 1).fill(0);
+  const marginalB = new Array(bTotalRemHP + 1).fill(0);
+  const fearSamplesA = [], fearSamplesB = [];
+  let lifeStealEV_a = 0, lifeStealEV_b = 0;
+  for (let cumA = 0; cumA < joint.length; cumA++) {
+    for (let cumB = 0; cumB < joint[0].length; cumB++) {
+      for (const path of joint[cumA][cumB].values()) {
+        const aAlive = healingStateAlive(path.aState);
+        const bAlive = healingStateAlive(path.bState);
+        const capB = healingStateRemainingHp(path.bState);
+        const fearA = subA.consumesFear ? pendingFear[subA.source + 'FearDist'] : null;
+        const fearB = subB.consumesFear ? pendingFear[subB.source + 'FearDist'] : null;
+        // PerformMeleeAttack calls the initiating attack (and its Haste repeat) before
+        // it calls the counter, although all pending damage is dealt afterwards.  Resolve
+        // subB's in-call healing first so the counter sees A's revised HP/bonus-HP state;
+        // neither attack may see the other's still-pending damage.
+        // PerformMeleeAttack invokes every selected melee slot even when its target
+        // was killed by an earlier, already-dealt phase.  The compute closure folds
+        // damage to zero at cap 0 while still returning that call's fear metadata.
+        const outB = subB.compute(aAlive, bAlive, capB, fearB,
+          { sourceState: path.aState });
+        addWeightedFearSamples(fearSamplesB, outB.fearSamples, path.probability);
+        for (const outcomeB of outcomePaths(outB, path.aState)) {
+          if (outcomeB.probability < 1e-15) continue;
+          if (path.aState && path.aState.engine === 'dos') {
+            // DOS main melee and counterattack execute from one frozen battle-unit
+            // snapshot. Each call may revise its own source state internally, but
+            // neither call observes the other's healing or still-pending damage.
+            const capA = healingStateRemainingHp(path.aState);
+            const outA = subA.compute(bAlive, aAlive, capA, fearA,
+              { sourceState: path.bState });
+            addWeightedFearSamples(fearSamplesA, outA.fearSamples,
+              path.probability * outcomeB.probability);
+            for (const outcomeA of outcomePaths(outA, path.bState)) {
+              const probability = path.probability
+                * outcomeB.probability * outcomeA.probability;
+              if (probability < 1e-15) continue;
+              let nextPath = applyOutcomeToHealingPath(path, 'a', outcomeB);
+              nextPath = applyOutcomeToHealingPath(nextPath, 'b', outcomeA);
+              nextPath = {
+                ...nextPath,
+                probability,
+                aDamageTaken: nextPath.aDamageTaken + outcomeA.damage,
+                bDamageTaken: nextPath.bDamageTaken + outcomeB.damage,
+                aState: applyOutcomeDamageToState(nextPath.aState, outcomeA),
+                bState: applyOutcomeDamageToState(nextPath.bState, outcomeB),
+              };
+              const newCumA = Math.min(cumA + outcomeA.damage, aTotalRemHP);
+              const newCumB = Math.min(cumB + outcomeB.damage, bTotalRemHP);
+              addHealingPath(newJoint[newCumA][newCumB], nextPath);
+              addDistProbability(marginalA, outcomeA.damage, probability);
+              addDistProbability(marginalB, outcomeB.damage, probability);
+              lifeStealEV_a += probability * (outcomeB.healedDamage || 0);
+              lifeStealEV_b += probability * (outcomeA.healedDamage || 0);
+            }
+            continue;
+          }
+          const counterTargetState = outcomeB.state || path.aState;
+          const counterTargetAlive = healingStateAlive(counterTargetState);
+          const capA = healingStateRemainingHp(counterTargetState);
+          const outA = subA.compute(bAlive, counterTargetAlive, capA, fearA,
+            { sourceState: path.bState });
+          addWeightedFearSamples(fearSamplesA, outA.fearSamples,
+            path.probability * outcomeB.probability);
+          for (const outcomeA of outcomePaths(outA, path.bState)) {
+            const probability = path.probability
+              * outcomeB.probability * outcomeA.probability;
+            if (probability < 1e-15) continue;
+            let nextPath = applyOutcomeToHealingPath(path, 'a', outcomeB);
+            nextPath = applyOutcomeToHealingPath(nextPath, 'b', outcomeA);
+            nextPath = {
+              ...nextPath,
+              probability,
+              aDamageTaken: nextPath.aDamageTaken + outcomeA.damage,
+              bDamageTaken: nextPath.bDamageTaken + outcomeB.damage,
+              aState: applyOutcomeDamageToState(nextPath.aState, outcomeA),
+              bState: applyOutcomeDamageToState(nextPath.bState, outcomeB),
+            };
+            const newCumA = Math.min(cumA + outcomeA.damage, aTotalRemHP);
+            const newCumB = Math.min(cumB + outcomeB.damage, bTotalRemHP);
+            addHealingPath(newJoint[newCumA][newCumB], nextPath);
+            addDistProbability(marginalA, outcomeA.damage, probability);
+            addDistProbability(marginalB, outcomeB.damage, probability);
+            lifeStealEV_a += probability
+              * ((outcomeB.healedDamage || 0) + (outcomeB.bonusHpBenefit || 0));
+            lifeStealEV_b += probability
+              * ((outcomeA.healedDamage || 0) + (outcomeA.bonusHpBenefit || 0));
+          }
+        }
+      }
+    }
+  }
+  return { joint: newJoint, marginalA, marginalB, lifeStealEV_a, lifeStealEV_b,
+    fearSamplesA, fearSamplesB };
+}
+
 function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemHP, bTotalRemHP) {
+  if (joint.healingPaths) {
+    return applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
+      aTotalRemHP, bTotalRemHP);
+  }
   const newJoint = emptyJointLike(joint);
   const marginalA = new Array(aTotalRemHP + 1).fill(0);   // damage to A this phase
   const marginalB = new Array(bTotalRemHP + 1).fill(0);   // damage to B this phase
+  const fearSamplesA = [], fearSamplesB = [];
   let lifeStealEV_a = 0, lifeStealEV_b = 0;
   const aDim = joint.length, bDim = joint[0].length;
   const fearA = subA.consumesFear ? pendingFear[subA.source + 'FearDist'] : null;
@@ -2492,10 +3353,12 @@ function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemH
       const bAlive = aliveCount(units.b, cumB);
       const capA = aTotalRemHP - cumA;
       const capB = bTotalRemHP - cumB;
-      let outA = { dist: [1], lifeStealEV: 0 };
-      let outB = { dist: [1], lifeStealEV: 0 };
-      if (capA > 0) outA = subA.compute(bAlive, aAlive, capA, fearA);
-      if (capB > 0) outB = subB.compute(aAlive, bAlive, capB, fearB);
+      const outA = subA.compute(bAlive, aAlive, capA, fearA,
+        { sourceState: combatHealStateFromUnit(units.b, cumB) });
+      const outB = subB.compute(aAlive, bAlive, capB, fearB,
+        { sourceState: combatHealStateFromUnit(units.a, cumA) });
+      addWeightedFearSamples(fearSamplesA, outA.fearSamples, p);
+      addWeightedFearSamples(fearSamplesB, outB.fearSamples, p);
       lifeStealEV_a += p * (subA.source === 'a' ? (outA.lifeStealEV || 0) : 0)
                     +  p * (subB.source === 'a' ? (outB.lifeStealEV || 0) : 0);
       lifeStealEV_b += p * (subA.source === 'b' ? (outA.lifeStealEV || 0) : 0)
@@ -2517,7 +3380,8 @@ function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemH
       }
     }
   }
-  return { joint: newJoint, marginalA, marginalB, lifeStealEV_a, lifeStealEV_b };
+  return { joint: newJoint, marginalA, marginalB, lifeStealEV_a, lifeStealEV_b,
+    fearSamplesA, fearSamplesB };
 }
 
 // Apply a First-Strike-no-Haste block: per cell, FS strike → counter (sequential),
@@ -2527,7 +3391,125 @@ function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemH
 //   computes:   { fsStrike, counter } phase compute closures (each takes (sAlive, tAlive, cap))
 //   ctx:        { a, b, aRemHP, bRemHP, isCoM1Only }
 // Returns { joint, postFsJoint, fsMarginal, counterMarginal, lifeStealEV_a, lifeStealEV_b }.
+function applyFsBlockNoHasteWithHealing(joint, computes, ctx) {
+  if (!ctx.isCoM1Only) {
+    const pendingFear = { aFearDist: null, bFearDist: null };
+    const fsPhase = { source: 'a', target: 'b', consumesFear: false,
+      compute: computes.fsStrike };
+    const counterPhase = { source: 'b', target: 'a', consumesFear: false,
+      compute: computes.counter };
+    const fs = applyDamagePhaseWithHealing(joint, fsPhase, pendingFear,
+      { a: ctx.a, b: ctx.b }, ctx.bRemHP);
+    const counter = applyDamagePhaseWithHealing(fs.joint, counterPhase, pendingFear,
+      { a: ctx.a, b: ctx.b }, ctx.aRemHP);
+    return {
+      joint: counter.joint,
+      postFsJoint: fs.joint,
+      fsMarginal: fs.marginal,
+      counterMarginal: counter.marginal,
+      lifeStealEV_a: fs.lifeStealEV,
+      lifeStealEV_b: counter.lifeStealEV,
+    };
+  }
+
+  const newJoint = emptyJointLike(joint);
+  const postFsJoint = emptyJointLike(joint);
+  const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
+  const counterMarginal = new Array(ctx.aRemHP + 1).fill(0);
+  let lifeStealEV_a = 0, lifeStealEV_b = 0;
+  for (let cumA = 0; cumA < joint.length; cumA++) {
+    for (let cumB = 0; cumB < joint[0].length; cumB++) {
+      for (const path of joint[cumA][cumB].values()) {
+        const aAlive = healingStateAlive(path.aState);
+        const bAlive = healingStateAlive(path.bState);
+        const capA = healingStateRemainingHp(path.aState);
+        const capB = healingStateRemainingHp(path.bState);
+        const fsApplies = dosTopFigureRemainingHp(path.bState) <= 24;
+        if (fsApplies) {
+          const fsOut = computes.fsStrike(aAlive, bAlive, capB, null,
+            { sourceState: path.aState });
+          for (const fsOutcome of outcomePaths(fsOut, path.aState)) {
+            const pFs = path.probability * fsOutcome.probability;
+            if (pFs < 1e-15) continue;
+            let postFsPath = applyOutcomeToHealingPath(path, 'a', fsOutcome);
+            postFsPath = { ...postFsPath, probability: pFs,
+              bDamageTaken: postFsPath.bDamageTaken + fsOutcome.damage,
+              bState: applyOutcomeDamageToState(postFsPath.bState, fsOutcome) };
+            const newCumB = Math.min(cumB + fsOutcome.damage, ctx.bRemHP);
+            addHealingPath(postFsJoint[cumA][newCumB], postFsPath);
+            addDistProbability(fsMarginal, fsOutcome.damage, pFs);
+            lifeStealEV_a += pFs
+              * ((fsOutcome.healedDamage || 0) + (fsOutcome.bonusHpBenefit || 0));
+
+            const bAliveAfterFs = healingStateAlive(postFsPath.bState);
+            const counterOut = capA > 0 && bAliveAfterFs > 0
+              ? computes.counter(bAliveAfterFs, aAlive, capA, null,
+                { sourceState: postFsPath.bState })
+              : { dist: [1], lifeStealEV: 0 };
+            for (const counterOutcome of outcomePaths(counterOut, postFsPath.bState)) {
+              const probability = pFs * counterOutcome.probability;
+              if (probability < 1e-15) continue;
+              let finalPath = applyOutcomeToHealingPath(postFsPath, 'b', counterOutcome);
+              finalPath = { ...finalPath, probability,
+                aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
+                aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome) };
+              addHealingPath(
+                newJoint[Math.min(cumA + counterOutcome.damage, ctx.aRemHP)][newCumB],
+                finalPath,
+              );
+              addDistProbability(counterMarginal, counterOutcome.damage, probability);
+              lifeStealEV_b += probability
+                * ((counterOutcome.healedDamage || 0)
+                  + (counterOutcome.bonusHpBenefit || 0));
+            }
+          }
+          continue;
+        }
+
+        // Suppressed CoM First Strike falls through to a simultaneous main/counter pair.
+        const mainOut = computes.fsStrike(aAlive, bAlive, capB, null,
+          { sourceState: path.aState });
+        const counterOut = capA > 0 && bAlive > 0
+          ? computes.counter(bAlive, aAlive, capA, null,
+            { sourceState: path.bState })
+          : { dist: [1], lifeStealEV: 0 };
+        addHealingPath(postFsJoint[cumA][cumB], { ...path });
+        for (const mainOutcome of outcomePaths(mainOut, path.aState)) {
+          if (mainOutcome.probability < 1e-15) continue;
+          for (const counterOutcome of outcomePaths(counterOut, path.bState)) {
+            const probability = path.probability * mainOutcome.probability
+              * counterOutcome.probability;
+            if (probability < 1e-15) continue;
+            let finalPath = applyOutcomeToHealingPath(path, 'a', mainOutcome);
+            finalPath = applyOutcomeToHealingPath(finalPath, 'b', counterOutcome);
+            finalPath = { ...finalPath, probability,
+              aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
+              bDamageTaken: finalPath.bDamageTaken + mainOutcome.damage,
+              aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome),
+              bState: applyOutcomeDamageToState(finalPath.bState, mainOutcome) };
+            addHealingPath(
+              newJoint[Math.min(cumA + counterOutcome.damage, ctx.aRemHP)]
+                [Math.min(cumB + mainOutcome.damage, ctx.bRemHP)],
+              finalPath,
+            );
+            addDistProbability(fsMarginal, mainOutcome.damage, probability);
+            addDistProbability(counterMarginal, counterOutcome.damage, probability);
+            lifeStealEV_a += probability
+              * ((mainOutcome.healedDamage || 0) + (mainOutcome.bonusHpBenefit || 0));
+            lifeStealEV_b += probability
+              * ((counterOutcome.healedDamage || 0)
+                + (counterOutcome.bonusHpBenefit || 0));
+          }
+        }
+      }
+    }
+  }
+  return { joint: newJoint, postFsJoint, fsMarginal, counterMarginal,
+    lifeStealEV_a, lifeStealEV_b };
+}
+
 function applyFsBlockNoHaste(joint, computes, ctx) {
+  if (joint.healingPaths) return applyFsBlockNoHasteWithHealing(joint, computes, ctx);
   const newJoint = emptyJointLike(joint);
   const postFsJoint = emptyJointLike(joint);
   const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
@@ -2546,7 +3528,8 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
       // in the pending damage arrays, so it does not affect the First Strike cutoff.
       const fsApplies = !ctx.isCoM1Only || woundedTopFigHP(ctx.bRemHP, ctx.b.hp) <= 24;
       if (fsApplies) {
-        const fsOut = computes.fsStrike(aAliveL, bAliveL, capB);
+        const fsOut = computes.fsStrike(aAliveL, bAliveL, capB, null,
+          { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
         for (let fsDmg = 0; fsDmg < fsOut.dist.length; fsDmg++) {
           const pFs = fsOut.dist[fsDmg];
           if (pFs < 1e-15) continue;
@@ -2561,7 +3544,8 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
             counterMarginal[0] += p * pFs;
             continue;
           }
-          const counterOut = computes.counter(bAliveAfterFS, aAliveL, capA);
+          const counterOut = computes.counter(bAliveAfterFS, aAliveL, capA, null,
+            { sourceState: combatHealStateFromUnit(ctx.b, newCumB) });
           for (let cDmg = 0; cDmg < counterOut.dist.length; cDmg++) {
             const pC = counterOut.dist[cDmg];
             if (pC < 1e-15) continue;
@@ -2574,9 +3558,11 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
         lifeStealEV_a += p * fsOut.lifeStealEV;
       } else {
         // CoM1 fallthrough: simultaneous melee+counter (using fsStrike compute, no Haste).
-        const mOut = computes.fsStrike(aAliveL, bAliveL, capB);
+        const mOut = computes.fsStrike(aAliveL, bAliveL, capB, null,
+          { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
         const cOut = (capA > 0 && bAliveL > 0)
-          ? computes.counter(bAliveL, aAliveL, capA)
+          ? computes.counter(bAliveL, aAliveL, capA, null,
+            { sourceState: combatHealStateFromUnit(ctx.b, cumB) })
           : { dist: [1], lifeStealEV: 0 };
         // Treat post-FS state as unchanged (no FS damage applied to this cell).
         postFsJoint[cumA][cumB] += p;
@@ -2607,11 +3593,168 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
 // CoM1 fallthrough: simultaneous melee+counter (single strike via fsStrike compute, no Haste 2nd).
 //   computes:   { fsStrike, secondStrike, aStrikeNoFear, counter, fallthroughCounter }
 //   ctx:        { a, b, aRemHP, bRemHP, isCoM1Only, coupleKa, aPFear }
-// coupleKa: when true (B has fear on A in non-v1.31), sample k_a once and use the SAME
-// k_a for both FS strike and 2nd strike (rules-faithful). Otherwise FS and 2nd strike
-// roll fear independently (matching existing behavior in v1.31 and no-fear cases).
+// coupleKa: for the legacy shared-sample path, sample k_a once and use the SAME k_a
+// for both FS strike and 2nd strike. Modern callers leave this false because every
+// ApplyAttack call samples Cause Fear independently.
 // Returns { joint, postFsJoint, fsMarginal, secondMarginal, counterMarginal, lifeStealEV_a, lifeStealEV_b }.
+function applyFsBlockHasteCoupledWithHealing(joint, computes, ctx) {
+  const newJoint = emptyJointLike(joint);
+  const postFsJoint = emptyJointLike(joint);
+  const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
+  const secondMarginal = new Array(ctx.bRemHP + 1).fill(0);
+  const counterMarginal = new Array(ctx.aRemHP + 1).fill(0);
+  let lifeStealEV_a = 0, lifeStealEV_b = 0;
+  for (let cumA = 0; cumA < joint.length; cumA++) {
+    for (let cumB = 0; cumB < joint[0].length; cumB++) {
+      for (const path of joint[cumA][cumB].values()) {
+        const fsApplies = !ctx.isCoM1Only || dosTopFigureRemainingHp(path.bState) <= 24;
+        if (!fsApplies) {
+          // CoM 6.08 falls through to one simultaneous main/counter exchange.
+          // Both calls read the frozen pre-exchange records, while each keeps its
+          // own in-call Life Steal transition before pending damage is committed.
+          const aAlive = healingStateAlive(path.aState);
+          const bAlive = healingStateAlive(path.bState);
+          const capA = healingStateRemainingHp(path.aState);
+          const capB = healingStateRemainingHp(path.bState);
+          const mainOut = computes.fsStrike(aAlive, bAlive, capB, null,
+            { sourceState: path.aState });
+          const counterOut = capA > 0 && bAlive > 0
+            ? computes.counter(bAlive, aAlive, capA, null,
+              { sourceState: path.bState })
+            : { dist: [1], lifeStealEV: 0 };
+          addHealingPath(postFsJoint[cumA][cumB], { ...path });
+          for (const mainOutcome of outcomePaths(mainOut, path.aState)) {
+            if (mainOutcome.probability < 1e-15) continue;
+            for (const counterOutcome of outcomePaths(counterOut, path.bState)) {
+              const probability = path.probability * mainOutcome.probability
+                * counterOutcome.probability;
+              if (probability < 1e-15) continue;
+              let finalPath = applyOutcomeToHealingPath(path, 'a', mainOutcome);
+              finalPath = applyOutcomeToHealingPath(finalPath, 'b', counterOutcome);
+              finalPath = {
+                ...finalPath,
+                probability,
+                aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
+                bDamageTaken: finalPath.bDamageTaken + mainOutcome.damage,
+                aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome),
+                bState: applyOutcomeDamageToState(finalPath.bState, mainOutcome),
+              };
+              addHealingPath(
+                newJoint[Math.min(cumA + counterOutcome.damage, ctx.aRemHP)]
+                  [Math.min(cumB + mainOutcome.damage, ctx.bRemHP)],
+                finalPath,
+              );
+              addDistProbability(fsMarginal, mainOutcome.damage, probability);
+              addDistProbability(secondMarginal, 0, probability);
+              addDistProbability(counterMarginal, counterOutcome.damage, probability);
+              lifeStealEV_a += probability
+                * ((mainOutcome.healedDamage || 0) + (mainOutcome.bonusHpBenefit || 0));
+              lifeStealEV_b += probability
+                * ((counterOutcome.healedDamage || 0)
+                  + (counterOutcome.bonusHpBenefit || 0));
+            }
+          }
+          continue;
+        }
+        const aAlive = healingStateAlive(path.aState);
+        const bAlive = healingStateAlive(path.bState);
+        const capA = healingStateRemainingHp(path.aState);
+        const capB = healingStateRemainingHp(path.bState);
+        const fearKDist = calcFearDist(aAlive, ctx.aPFear);
+        for (let k = 0; k <= aAlive; k++) {
+          const pK = fearKDist[k];
+          if (pK < 1e-15) continue;
+          const fsOut = computes.aStrikeNoFear(k, bAlive, capB, null,
+            { sourceState: path.aState });
+          for (const fsOutcome of outcomePaths(fsOut, path.aState)) {
+            const pFs = path.probability * pK * fsOutcome.probability;
+            if (pFs < 1e-15) continue;
+            let postFsPath = applyOutcomeToHealingPath(path, 'a', fsOutcome);
+            postFsPath = { ...postFsPath, probability: pFs,
+              bDamageTaken: postFsPath.bDamageTaken + fsOutcome.damage,
+              bState: applyOutcomeDamageToState(postFsPath.bState, fsOutcome) };
+            const newCumB = Math.min(cumB + fsOutcome.damage, ctx.bRemHP);
+            addHealingPath(postFsJoint[cumA][newCumB], postFsPath);
+            addDistProbability(fsMarginal, fsOutcome.damage, pFs);
+            lifeStealEV_a += pFs
+              * ((fsOutcome.healedDamage || 0) + (fsOutcome.bonusHpBenefit || 0));
+
+            const bAliveAfterFs = healingStateAlive(postFsPath.bState);
+            const capBAfterFs = healingStateRemainingHp(postFsPath.bState);
+            const counterOut = capA > 0 && bAliveAfterFs > 0
+              ? computes.counter(bAliveAfterFs, aAlive, capA, null,
+                { sourceState: postFsPath.bState })
+              : { dist: [1], lifeStealEV: 0 };
+            const secondOut = k > 0 && capBAfterFs > 0
+              ? computes.aStrikeNoFear(k, bAliveAfterFs, capBAfterFs, null,
+                { sourceState: postFsPath.aState })
+              : { dist: [1], lifeStealEV: 0 };
+            for (const counterOutcome of outcomePaths(counterOut, postFsPath.bState)) {
+              if (counterOutcome.probability < 1e-15) continue;
+              for (const secondOutcome of outcomePaths(secondOut, postFsPath.aState)) {
+                const probability = pFs * counterOutcome.probability
+                  * secondOutcome.probability;
+                if (probability < 1e-15) continue;
+                let finalPath = applyOutcomeToHealingPath(postFsPath, 'b', counterOutcome);
+                finalPath = applyOutcomeToHealingPath(finalPath, 'a', secondOutcome);
+                finalPath = {
+                  ...finalPath,
+                  probability,
+                  aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
+                  bDamageTaken: finalPath.bDamageTaken + secondOutcome.damage,
+                  aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome),
+                  bState: applyOutcomeDamageToState(finalPath.bState, secondOutcome),
+                };
+                const newCumA = Math.min(cumA + counterOutcome.damage, ctx.aRemHP);
+                const finalCumB = Math.min(newCumB + secondOutcome.damage, ctx.bRemHP);
+                addHealingPath(newJoint[newCumA][finalCumB], finalPath);
+                addDistProbability(counterMarginal, counterOutcome.damage, probability);
+                addDistProbability(secondMarginal, secondOutcome.damage, probability);
+                lifeStealEV_a += probability
+                  * ((secondOutcome.healedDamage || 0)
+                    + (secondOutcome.bonusHpBenefit || 0));
+                lifeStealEV_b += probability
+                  * ((counterOutcome.healedDamage || 0)
+                    + (counterOutcome.bonusHpBenefit || 0));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return { joint: newJoint, postFsJoint, fsMarginal, secondMarginal,
+    counterMarginal, lifeStealEV_a, lifeStealEV_b };
+}
+
+function applyFsBlockHasteWithHealing(joint, computes, ctx) {
+  if (ctx.coupleKa || ctx.isCoM1Only) {
+    return applyFsBlockHasteCoupledWithHealing(joint, computes, ctx);
+  }
+  const pendingFear = { aFearDist: null, bFearDist: null };
+  const fsPhase = { source: 'a', target: 'b', consumesFear: false,
+    compute: computes.fsStrike };
+  const counterPhase = { source: 'b', target: 'a', consumesFear: false,
+    compute: computes.counter };
+  const secondPhase = { source: 'a', target: 'b', consumesFear: false,
+    compute: computes.secondStrike };
+  const fs = applyDamagePhaseWithHealing(joint, fsPhase, pendingFear,
+    { a: ctx.a, b: ctx.b }, ctx.bRemHP);
+  const pair = applySimultaneousPairWithHealing(fs.joint, counterPhase, secondPhase,
+    pendingFear, { a: ctx.a, b: ctx.b }, ctx.aRemHP, ctx.bRemHP);
+  return {
+    joint: pair.joint,
+    postFsJoint: fs.joint,
+    fsMarginal: fs.marginal,
+    secondMarginal: pair.marginalB,
+    counterMarginal: pair.marginalA,
+    lifeStealEV_a: fs.lifeStealEV + pair.lifeStealEV_a,
+    lifeStealEV_b: pair.lifeStealEV_b,
+  };
+}
+
 function applyFsBlockHaste(joint, computes, ctx) {
+  if (joint.healingPaths) return applyFsBlockHasteWithHealing(joint, computes, ctx);
   const newJoint = emptyJointLike(joint);
   const postFsJoint = emptyJointLike(joint);
   const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
@@ -2636,9 +3779,13 @@ function applyFsBlockHaste(joint, computes, ctx) {
           for (let k_a = 0; k_a <= aAliveL; k_a++) {
             const pK = fearKDist[k_a];
             if (pK < 1e-15) continue;
-            const fsOut = computes.aStrikeNoFear(k_a, bAliveL, capB);
-            for (let fsDmg = 0; fsDmg < fsOut.dist.length; fsDmg++) {
-              const pFs = fsOut.dist[fsDmg];
+            const fsOut = computes.aStrikeNoFear(k_a, bAliveL, capB, null,
+              { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
+            const fsPaths = fsOut.outcomes || fsOut.dist.map((probability, damage) => (
+              { probability, damage, state: combatHealStateFromUnit(ctx.a, cumA) }));
+            for (const fsPath of fsPaths) {
+              const fsDmg = fsPath.damage;
+              const pFs = fsPath.probability;
               if (pFs < 1e-15) continue;
               const newCumB = Math.min(cumB + fsDmg, ctx.bRemHP);
               const bAliveAfterFS = aliveCount(ctx.b, newCumB);
@@ -2646,10 +3793,12 @@ function applyFsBlockHaste(joint, computes, ctx) {
               fsMarginal[Math.min(fsDmg, ctx.bRemHP)] += p * pK * pFs;
               postFsJoint[cumA][newCumB] += p * pK * pFs;
               const counterOut = (capA > 0 && bAliveAfterFS > 0)
-                ? computes.counter(bAliveAfterFS, aAliveL, capA)
+                ? computes.counter(bAliveAfterFS, aAliveL, capA, null,
+                  { sourceState: combatHealStateFromUnit(ctx.b, newCumB) })
                 : { dist: [1], lifeStealEV: 0 };
               const secondOut = (k_a > 0 && capBAfterFS > 0)
-                ? computes.aStrikeNoFear(k_a, bAliveAfterFS, capBAfterFS)
+                ? computes.aStrikeNoFear(k_a, bAliveAfterFS, capBAfterFS, null,
+                  { sourceState: fsPath.state })
                 : { dist: [1], lifeStealEV: 0 };
               for (let cDmg = 0; cDmg < counterOut.dist.length; cDmg++) {
                 const pC = counterOut.dist[cDmg];
@@ -2673,9 +3822,13 @@ function applyFsBlockHaste(joint, computes, ctx) {
           }
         } else {
           // Independent (existing behavior, no coupling).
-          const fsOut = computes.fsStrike(aAliveL, bAliveL, capB);
-          for (let fsDmg = 0; fsDmg < fsOut.dist.length; fsDmg++) {
-            const pFs = fsOut.dist[fsDmg];
+          const fsOut = computes.fsStrike(aAliveL, bAliveL, capB, null,
+            { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
+          const fsPaths = fsOut.outcomes || fsOut.dist.map((probability, damage) => (
+            { probability, damage, state: combatHealStateFromUnit(ctx.a, cumA) }));
+          for (const fsPath of fsPaths) {
+            const fsDmg = fsPath.damage;
+            const pFs = fsPath.probability;
             if (pFs < 1e-15) continue;
             const newCumB = Math.min(cumB + fsDmg, ctx.bRemHP);
             const bAliveAfterFS = aliveCount(ctx.b, newCumB);
@@ -2683,10 +3836,12 @@ function applyFsBlockHaste(joint, computes, ctx) {
             fsMarginal[Math.min(fsDmg, ctx.bRemHP)] += p * pFs;
             postFsJoint[cumA][newCumB] += p * pFs;
             const counterOut = (capA > 0 && bAliveAfterFS > 0)
-              ? computes.counter(bAliveAfterFS, aAliveL, capA)
+              ? computes.counter(bAliveAfterFS, aAliveL, capA, null,
+                { sourceState: combatHealStateFromUnit(ctx.b, newCumB) })
               : { dist: [1], lifeStealEV: 0 };
             const secondOut = (aAliveL > 0 && capBAfterFS > 0)
-              ? computes.secondStrike(aAliveL, bAliveAfterFS, capBAfterFS)
+              ? computes.secondStrike(aAliveL, bAliveAfterFS, capBAfterFS, null,
+                { sourceState: fsPath.state })
               : { dist: [1], lifeStealEV: 0 };
             for (let cDmg = 0; cDmg < counterOut.dist.length; cDmg++) {
               const pC = counterOut.dist[cDmg];
@@ -2710,9 +3865,11 @@ function applyFsBlockHaste(joint, computes, ctx) {
         }
       } else {
         // CoM1 fallthrough: simultaneous melee+counter (single strike, no Haste 2nd).
-        const mOut = computes.fsStrike(aAliveL, bAliveL, capB);
+        const mOut = computes.fsStrike(aAliveL, bAliveL, capB, null,
+          { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
         const cOut = (capA > 0 && bAliveL > 0)
-          ? computes.fallthroughCounter(bAliveL, aAliveL, capA)
+          ? computes.fallthroughCounter(bAliveL, aAliveL, capA, null,
+            { sourceState: combatHealStateFromUnit(ctx.b, cumB) })
           : { dist: [1], lifeStealEV: 0 };
         postFsJoint[cumA][cumB] += p;
         for (let m = 0; m < mOut.dist.length; m++) {
@@ -2742,7 +3899,7 @@ function marginalA(joint) {
   for (let i = 0; i < joint.length; i++) {
     const row = joint[i];
     let s = 0;
-    for (let j = 0; j < row.length; j++) s += row[j];
+    for (let j = 0; j < row.length; j++) s += jointCellProbability(row[j]);
     out[i] = s;
   }
   return out;
@@ -2753,7 +3910,7 @@ function marginalB(joint) {
   const out = new Array(cols).fill(0);
   for (let i = 0; i < joint.length; i++) {
     const row = joint[i];
-    for (let j = 0; j < cols; j++) out[j] += row[j];
+    for (let j = 0; j < cols; j++) out[j] += jointCellProbability(row[j]);
   }
   return out;
 }
@@ -2828,7 +3985,7 @@ function touchParams(self, other, otherResM, otherResDeath, otherResStoning, oth
     dispelEvilFail: (fires && dispelEvil)
                       ? dispelEvilFailProb(otherResM, other.abilities, other.unitType) : 0,
     exorciseFail:   (fires && exorcise != null)
-                      ? exorciseFailProb(otherResM, other.abilities, other.unitType, exorcise) : 0,
+                      ? exorciseFailProb(otherResM, other.abilities, other.unitType, exorcise, ver) : 0,
     // Destruction remains a general touch flag. Warlord's Energy Cannon triggers it
     // from a magical beam, and the roster Magician attacks only at range.
     // otherResDeath (not otherResM): Destruction is Chaos-realm, and that figure is the
@@ -2847,11 +4004,24 @@ function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning
 }
 
 // Touch-attack parameters for `self` firing alongside its gaze phase against `other`.
+// DOS BU_ProcessAttack merges its ranged flag record into every non-melee call, including
+// Gazes. Modern ApplyAttack attack types 6–8 jump past all six riders, so their routed
+// records remain available to other phases but are inert here.
 // Returns raw probs plus `*With` booleans gated on the gaze actually being active.
 function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, gazeActive, selfSleep, ver) {
-  const { poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, destructionFail, lifeStealMod }
-    = touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison,
-      ver, true, touchRecordForPhase(ver, 'gaze'));
+  const modernGazeSkipsRiders = ver === 'com2_1.05.11' || ver === 'com2_warlord_1.5.12.7';
+  const touch = touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison,
+    ver, true, touchRecordForPhase(ver, 'gaze'));
+  // The modern jump skips exactly the six ApplyAttack riders reconstructed in the frozen
+  // evidence. Dispel Evil is a separate calculator effect and retains its prior routing.
+  const poisonStr = modernGazeSkipsRiders ? 0 : touch.poisonStr;
+  const poisonFail = modernGazeSkipsRiders ? 0 : touch.poisonFail;
+  const stoningFail = modernGazeSkipsRiders ? 0 : touch.stoningFail;
+  const deathTouchFail = modernGazeSkipsRiders ? 0 : touch.deathTouchFail;
+  const dispelEvilFail = touch.dispelEvilFail;
+  const exorciseFail = modernGazeSkipsRiders ? 0 : touch.exorciseFail;
+  const destructionFail = modernGazeSkipsRiders ? 0 : touch.destructionFail;
+  const lifeStealMod = modernGazeSkipsRiders ? null : touch.lifeStealMod;
   const active = !selfSleep && gazeActive;
   return {
     poisonStr, poisonFail, stoningFail, deathTouchFail, dispelEvilFail, exorciseFail, destructionFail, lifeStealMod,
@@ -2902,6 +4072,11 @@ function applyDoomUAHalving(unit, version) {
 // Calculator orchestration over individually classified source-authored transforms. M7 owns
 // retiring the remaining transitional transforms; this wrapper is not itself an engine formula.
 function normalizeCombatUnit(unit, version) {
+  // Derived calculator records carry the raw BaseUnits flag explicitly. Plain resolver callers
+  // predate that boundary, so an omitted marker means their supplied Death Immunity is intrinsic.
+  const baseDeathImmunity = unit.baseDeathImmunity == null
+    ? hasAbil(unit.abilities, 'deathImmunity')
+    : !!unit.baseDeathImmunity;
   let normalized = applyBloodLustEffects(unit, version);
   normalized = applyVampirismEffects(normalized, version);
   normalized = applyRevenantEffects(normalized, version);
@@ -2914,7 +4089,22 @@ function normalizeCombatUnit(unit, version) {
   normalized = applyTemporalTwistEffects(normalized, version);
   normalized = applyTacticianWarlordEffects(normalized, version);
   normalized = applyDoomUAHalving(normalized, version);
+  const carriesExtraHits = usesStatefulCombatHealing(version);
+  const extraHitsCap = version === 'com_6.08' || (version && version.startsWith('com2_'))
+    ? 90 : 255;
+  const modernBonusHp = carriesExtraHits
+    ? Math.min(extraHitsCap,
+      Math.max(0, Math.trunc(Number(normalized.baseBonusHp) || 0))) : 0;
   const withType = Object.assign({}, normalized, {
+    combatVersion: version,
+    baseDeathImmunity,
+    combatBaseHp: normalized.combatBaseHp || normalized.hp,
+    baseBonusHp: modernBonusHp,
+    hp: normalized.hp + modernBonusHp,
+    noHealing: !!normalized.noHealing
+      || hasAbil(normalized.abilities, 'undead')
+      || hasAbil(normalized.abilities, 'animated')
+      || hasAbil(normalized.abilities, 'mysticSurge'),
     unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version,
       normalized.identity || {
         baseFantastic: normalized.baseFantastic,
@@ -2924,6 +4114,36 @@ function normalizeCombatUnit(unit, version) {
   // Angelic Guardians grants/improves Exorcise based on the finalized realm.
   const withGuardians = applyAngelicGuardiansEffects(withType, version);
   return applyWarlordTouchFlagPlacement(withGuardians, version);
+}
+
+function combatHealStateFromUnit(unit, additionalDamage = 0) {
+  const baseTotal = Math.max(0, Math.trunc(Number(unit.totalDamage ?? unit.dmg) || 0));
+  const totalDamage = baseTotal + Math.max(0, Math.trunc(Number(additionalDamage) || 0));
+  if (usesDosCombatHealing(unit.combatVersion)) {
+    return normalizeDosCombatHealState({
+      version: unit.combatVersion,
+      figures: unit.figs,
+      baseHp: unit.combatBaseHp || unit.hp,
+      totalDamage,
+      irreversibleDamage: Math.min(baseTotal,
+        Math.max(0, Math.trunc(Number(unit.irrecoverableDamage) || 0))),
+      undeadDamage: Math.min(baseTotal,
+        Math.max(0, Math.trunc(Number(unit.undeadDamage) || 0))),
+      extraHits: unit.baseBonusHp,
+    });
+  }
+  return normalizeCombatHealState({
+    figures: unit.figs,
+    hp: unit.combatBaseHp || unit.hp,
+    totalDamage,
+    irrecoverableDamage: Math.min(baseTotal,
+      Math.max(0, Math.trunc(Number(unit.irrecoverableDamage) || 0))),
+    undeadDamage: Math.min(baseTotal,
+      Math.max(0, Math.trunc(Number(unit.undeadDamage) || 0))),
+    bonusHp: unit.baseBonusHp,
+    noHealing: unit.noHealing,
+    raceNoHeal: unit.raceNoHeal,
+  });
 }
 
 // PROVENANCE[pairToHitModifiers]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:1ff32cf14236f60c8659c472 | Reference docs/DOS reconstructed/unitcalc.c@span:40:7a990661f197312ddc553d16 | Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/DOS reconstructed/combat.c@span:28:50bbe6203a794ed0191be832 | Reference docs/DOS reconstructed/combat.c@span:12:0485456526aaa82ac1801b1c | Reference docs/DOS reconstructed/combat.c@span:17:c3f9b1d6c7b49267895ba012 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:11:b08aaa1432383a78ae466dd0
@@ -3133,7 +4353,7 @@ function buildDefenseContext(a, b, version, aVertigoDefPenalty, bVertigoDefPenal
 
 // STAT-FORMULA[resolutionToBlockContext]
 // PROVENANCE[resolutionToBlockContext]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:988ef64cd77214c23cb77397 | Reference docs/DOS reconstructed/combat.c@span:22:f1bd863bb2e19d690ca89983 | Reference docs/DOS reconstructed/combat.c@span:17:168e451097f43626bf9c9d57 | Reference docs/DOS reconstructed/combat.c@span:13:ee0ffb0fdc5af4e30c63a285 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:12:08b392da258c1aa5831668e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:34f14a18e857be474ba8f10a | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:8:ede4f7dc06908e75ecaa412b | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:2cb725296f6895640edcf211 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:ce6c3e49e9933d68f63f9666 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:ce6c3e49e9933d68f63f9666
-function buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty) {
+function buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty, version = null) {
   // Eldritch Weapon: -10pp to defender's toBlock on melee, thrown, and missile ranged attacks.
   // Mystic Surge: -10pp to opponent's To Block on all conventional attacks.
   const aEW = hasAbil(a.abilities, 'eldritchWeapon');
@@ -3145,15 +4365,18 @@ function buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty) {
   const bToBlockVsAAll = aMysticSurge ? Math.max(0, bToBlockConventional - 0.10) : bToBlockConventional;
   const aToBlockVsBAll = bMysticSurge ? Math.max(0, aToBlockConventional - 0.10) : aToBlockConventional;
 
+  const modernProfile = chance => version && version.startsWith('com2_')
+    ? { chance, capDice: 15, cappedChance: 0.30 }
+    : chance;
   return {
-    bToBlockConventional,
-    aToBlockConventional,
-    bToBlockVsAAll,
-    aToBlockVsBAll,
-    bToBlockVsAMelee: aEW ? Math.max(0, bToBlockVsAAll - 0.10) : bToBlockVsAAll,
-    bToBlockVsAThrEW: (aEW && a.thrownType === 'thrown') ? Math.max(0, bToBlockVsAAll - 0.10) : bToBlockVsAAll,
-    bToBlockVsARangedEW: (aEW && a.rangedType === 'missile') ? Math.max(0, bToBlockVsAAll - 0.10) : bToBlockVsAAll,
-    aToBlockVsBMelee: bEW ? Math.max(0, aToBlockVsBAll - 0.10) : aToBlockVsBAll,
+    bToBlockConventional: modernProfile(bToBlockConventional),
+    aToBlockConventional: modernProfile(aToBlockConventional),
+    bToBlockVsAAll: modernProfile(bToBlockVsAAll),
+    aToBlockVsBAll: modernProfile(aToBlockVsBAll),
+    bToBlockVsAMelee: modernProfile(aEW ? Math.max(0, bToBlockVsAAll - 0.10) : bToBlockVsAAll),
+    bToBlockVsAThrEW: modernProfile((aEW && a.thrownType === 'thrown') ? Math.max(0, bToBlockVsAAll - 0.10) : bToBlockVsAAll),
+    bToBlockVsARangedEW: modernProfile((aEW && a.rangedType === 'missile') ? Math.max(0, bToBlockVsAAll - 0.10) : bToBlockVsAAll),
+    aToBlockVsBMelee: modernProfile(bEW ? Math.max(0, aToBlockVsBAll - 0.10) : aToBlockVsBAll),
   };
 }
 
@@ -3167,10 +4390,13 @@ function buildWallOfFirePhase(active, params) {
     aToBlock,
     aHP,
     aInvulnBonus,
+    aAbilities,
+    amplifiedDamage,
+    version,
   } = params;
 
-  // Wall of Fire: area damage to A using A's defense profile vs immolation. Touch-free.
-  // Warlord strikes a single figure; all other versions hit every alive figure.
+  // Wall of Fire damage to A using A's defense profile vs immolation. Touch-free.
+  // Warlord makes one non-Area spill-capable attack; all other versions use Area iterations.
   return {
     kind: 'damage',
     source: 'a',
@@ -3180,7 +4406,9 @@ function buildWallOfFirePhase(active, params) {
       if (tAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
       const targetFigs = wofSingleFigure ? 1 : tAlive;
       return {
-        dist: calcAreaDamageDist(targetFigs, wofStr, wofToHit, aDefForImm, aToBlock, aHP, cap, aInvulnBonus, null, woundedTopFigHP(cap, aHP)),
+        dist: calcDamageSpellDist(targetFigs, wofStr, wofToHit, aDefForImm, aToBlock,
+          aHP, cap, aInvulnBonus, null, woundedTopFigHP(cap, aHP), version, aAbilities,
+          !wofSingleFigure, false, amplifiedDamage),
         lifeStealEV: 0,
       };
     },
@@ -3216,6 +4444,7 @@ function buildThrownPhase(active, params) {
     aLifeStealModT,
     bResDeath,
     aHaste,
+    version,
   } = params;
 
   // Thrown / breath: A->B, fires before melee. Touch attacks fold in. Haste self-convolves.
@@ -3224,7 +4453,7 @@ function buildThrownPhase(active, params) {
     source: 'a',
     target: 'b',
     consumesFear: false,
-    compute: (sAlive, tAlive, cap) => {
+    compute: (sAlive, tAlive, cap, _fearDist, context = {}) => {
       if (sAlive <= 0 || cap <= 0 || aBlackSleep) return { dist: [1], lifeStealEV: 0 };
       let dist = a.rtb > 0
         ? (aDoomsB ? calcDoomDist(sAlive, a.rtb, cap)
@@ -3232,9 +4461,11 @@ function buildThrownPhase(active, params) {
               isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, aMinDamageFromHits))
         : [1];
       const aImmTDist = (aImmWithThrown && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
+        ? calcDamageSpellDist(tAlive, immStr, a.toHitImmolation, bDefForImm,
+          bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits,
+          woundedTopFigHP(cap, b.hp), version, b.abilities)
         : null;
-      const t = convolveTouchAttacks(dist, cap, sAlive, {
+      const touchSpec = {
         poisonStr: aPoisonStrT, poisonFail: aPoisonFailT,
         stoningFail: aStoningFailT,
         deathTouchFail: aDeathTouchFailT,
@@ -3245,15 +4476,13 @@ function buildThrownPhase(active, params) {
         lifeStealMod: aLifeStealModT, lifeStealRes: bResDeath,
         immDist: aImmTDist,
         bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
-      });
-      dist = t.dist;
-      let lifeStealEV = t.lifeStealEV;
-      if (aHaste) {
-        dist = convolveDists(dist, dist, cap);
-        lifeStealEV *= 2;
-      }
-      // (Bloodsucker heal is already inside t.lifeStealEV; haste doubles it via *= 2 above.)
-      return { dist, lifeStealEV };
+        sourceState: usesStatefulCombatHealing(version)
+          ? (context.sourceState || combatHealStateFromUnit(a)) : null,
+        version,
+      };
+      let t = convolveTouchAttacks(dist, cap, sAlive, touchSpec);
+      if (aHaste) t = repeatTouchAttack(t, dist, cap, sAlive, touchSpec);
+      return t;
     },
   };
 }
@@ -3284,6 +4513,7 @@ function buildMeleePhase(params) {
     bInvulnBonus,
     aMinDamageFromHits,
     aFearForCell,
+    aFearProbability,
     aDoomsB,
     aBlackSleep,
     aMeleeAtkVsB,
@@ -3303,6 +4533,7 @@ function buildMeleePhase(params) {
     blurBuggy,
     aHaste,
     isCoM2,
+    version,
   } = params;
 
   return {
@@ -3310,22 +4541,41 @@ function buildMeleePhase(params) {
     source: 'a',
     target: 'b',
     consumesFear: false,
-    compute: (sAlive, tAlive, cap) => {
-      if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+    compute: (sAlive, tAlive, cap, _fearDist, context = {}) => {
+      const fearD = aFearForCell(sAlive, tAlive);
+      // ApplyAttack zeroes Black-Sleeping sources before its Cause Fear loop.
+      // A dead target does not suppress the call or that loop; only zero source
+      // figures do, so cap=0 still carries a real feared-count sample.
+      const firstFearedDist = aBlackSleep ? [1] : fearedCountDist(fearD, sAlive);
+      if (sAlive <= 0 || cap <= 0 || (isCoM2 && aBlackSleep)) {
+        return { dist: [1], lifeStealEV: 0,
+        fearSamples: aHaste
+          ? [firstFearedDist, firstFearedDist]
+          : [firstFearedDist] };
+      }
       if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
-        return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+        return { dist: deterministicKillDist(cap), lifeStealEV: 0,
+          fearSamples: aHaste ? [firstFearedDist, firstFearedDist] : [firstFearedDist] };
       }
       const aImmMDist = (aImmWithMelee && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
+        ? calcDamageSpellDist(tAlive, immStr, a.toHitImmolation, bDefForImm,
+          bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits,
+          woundedTopFigHP(cap, b.hp), version, b.abilities)
         : null;
-      const fearD = aFearForCell(sAlive, tAlive);
       const o = calcMeleeTouchOutcome(fearD, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
         bDefVsA, bToBlockVsAMelee, b.hp, cap,
         aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aDestructionFailM, aLifeStealModM, bResDeath,
         aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, aHaste,
         isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-        aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
-      return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
+        aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'), version,
+        usesStatefulCombatHealing(version)
+          ? (context.sourceState || combatHealStateFromUnit(a)) : null,
+        isCoM2 ? aFearProbability : null);
+      return { ...o, dist: o.damageDist,
+        fearSamples: aHaste
+          ? [firstFearedDist,
+            aBlackSleep ? [1] : (o.repeatFearedDist || firstFearedDist)]
+          : [firstFearedDist] };
     },
   };
 }
@@ -3360,6 +4610,7 @@ function buildCounterPhase(params) {
     blurBuggy,
     bCounterHaste,
     isCoM2,
+    version,
   } = params;
 
   return {
@@ -3367,22 +4618,30 @@ function buildCounterPhase(params) {
     source: 'b',
     target: 'a',
     consumesFear: false,
-    compute: (sAlive, tAlive, cap) => {
-      if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+    compute: (sAlive, tAlive, cap, _fearDist, context = {}) => {
+      const fearD = bFearForCell(sAlive);
+      const fearedDist = bBlackSleep ? [1] : fearedCountDist(fearD, sAlive);
+      if (sAlive <= 0 || cap <= 0 || (isCoM2 && bBlackSleep)) {
+        return { dist: [1], lifeStealEV: 0, fearSamples: [fearedDist] };
+      }
       if (destroyMechanicalApplies(b, a, bBlackSleep ? 0 : bMeleeAtkVsA)) {
-        return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+        return { dist: deterministicKillDist(cap), lifeStealEV: 0,
+          fearSamples: [fearedDist] };
       }
       const bImmMDist = (bImmWithMelee && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, b.toHitImmolation, aDefForImm, aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits, woundedTopFigHP(cap, a.hp))
+        ? calcDamageSpellDist(tAlive, immStr, b.toHitImmolation, aDefForImm,
+          aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits,
+          woundedTopFigHP(cap, a.hp), version, a.abilities)
         : null;
-      const fearD = bFearForCell(sAlive);
       const o = calcMeleeTouchOutcome(fearD, sAlive, bDoomsA, bBlackSleep ? 0 : applyRage(bMeleeAtkVsA, b, sAlive), bToHitMeleeVert,
         aDefVsB, aToBlockVsBMelee, a.hp, cap,
         bPoisonStrM, bPoisonFailM, bStoningFailM, bDeathTouchFailM, bDispelEvilFailM, bExorciseFailM, bDestructionFailM, bLifeStealModM, aResDeath,
         bImmMDist, aInvulnBonus, aBlurChance, blurBuggy, bCounterHaste,
         isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined,
-        bMinDamageFromHits, hasAbil(b.abilities, 'bloodSucker'));
-      return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
+        bMinDamageFromHits, hasAbil(b.abilities, 'bloodSucker'), version,
+        usesStatefulCombatHealing(version)
+          ? (context.sourceState || combatHealStateFromUnit(b)) : null);
+      return { ...o, dist: o.damageDist, fearSamples: [fearedDist] };
     },
   };
 }
@@ -3418,27 +4677,37 @@ function buildFirstStrikeComputes(params) {
     bBlurChance,
     blurBuggy,
     isCoM2,
+    version,
   } = params;
 
   // All three FS-block strike computes are the same single A→B melee strike
   // (no doubleStrike — the FS block sequences strikes itself); they differ only
   // in which fear distribution applies. `fearFor` maps (sAlive, tAlive) to the
   // fear PMF over A's unfeared count, or null for no fear.
-  const makeAStrike = (fearFor) => (sAlive, tAlive, cap) => {
-    if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+  const makeAStrike = (fearFor) => (sAlive, tAlive, cap, _fearDist, context = {}) => {
+    const fearDist = fearFor(sAlive, tAlive);
+    const fearedDist = aBlackSleep ? [1] : fearedCountDist(fearDist, sAlive);
+    if (sAlive <= 0 || cap <= 0 || (isCoM2 && aBlackSleep)) {
+      return { dist: [1], lifeStealEV: 0, fearSamples: [fearedDist] };
+    }
     if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
-      return { dist: deterministicKillDist(cap), lifeStealEV: 0 };
+      return { dist: deterministicKillDist(cap), lifeStealEV: 0,
+        fearSamples: [fearedDist] };
     }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
-      ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
+      ? calcDamageSpellDist(tAlive, immStr, a.toHitImmolation, bDefForImm,
+        bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits,
+        woundedTopFigHP(cap, b.hp), version, b.abilities)
       : null;
-    const o = calcMeleeTouchOutcome(fearFor(sAlive, tAlive), sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
+    const o = calcMeleeTouchOutcome(fearDist, sAlive, aDoomsB, aBlackSleep ? 0 : applyRage(aMeleeAtkVsB, a, sAlive), aToHitMeleeVert,
       bDefVsA, bToBlockVsAMelee, b.hp, cap,
       aPoisonStrM, aPoisonFailM, aStoningFailM, aDeathTouchFailM, aDispelEvilFailM, aExorciseFailM, aDestructionFailM, aLifeStealModM, bResDeath,
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
-      aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'));
-    return { dist: o.damageDist, lifeStealEV: o.lifeStealEV };
+      aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'), version,
+      usesStatefulCombatHealing(version)
+        ? (context.sourceState || combatHealStateFromUnit(a)) : null);
+    return { ...o, dist: o.damageDist, fearSamples: [fearedDist] };
   };
 
   return {
@@ -3448,7 +4717,7 @@ function buildFirstStrikeComputes(params) {
     // Hasted 2nd strike: full A-side fear (aFearForCell, includes aFearBug).
     secondStrikeCompute: makeAStrike((sAlive, tAlive) => aFearForCell(sAlive, tAlive)),
     // No-fear strike: caller passes in k_a as sAlive (fear pre-sampled). Used when
-    // FS+Haste shares one fear roll across FS and 2nd strike (rules-faithful k_a coupling).
+    // Legacy FS+Haste can share one pre-sampled fear count across both strikes.
     aStrikeNoFear: makeAStrike(() => null),
   };
 }
@@ -3458,6 +4727,8 @@ function buildAttackerGazePhase(active, params) {
   const {
     a,
     b,
+    aStoningGazeActiveP,
+    aDeathGazeActiveP,
     aStoningGazeFailP,
     aDeathGazeFailP,
     aGazeDoomStrP,
@@ -3488,6 +4759,7 @@ function buildAttackerGazePhase(active, params) {
     aLifeStealWithGaze,
     aLifeStealModG,
     bResDeath,
+    version,
   } = params;
 
   // Attacker gaze A->B. Source = A's surviving figs; target = B.
@@ -3496,12 +4768,61 @@ function buildAttackerGazePhase(active, params) {
     source: 'a',
     target: 'b',
     consumesFear: false,
-    compute: (sAlive, tAlive, cap) => {
+    compute: (sAlive, tAlive, cap, _fearDist, context = {}) => {
       if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+      if (isCoM2) {
+        const steps = [];
+        let dispelEvilPending = aDispelEvilWithGaze ? aDispelEvilFailG : 0;
+        const nextGazeSpec = (extra = {}) => {
+          const spec = { ...commonSpec, dispelEvilFail: dispelEvilPending, ...extra };
+          dispelEvilPending = 0;
+          return spec;
+        };
+        const commonSpec = {
+          poisonStr: 0, poisonFail: 0, stoningFail: 0, deathTouchFail: 0,
+          dispelEvilFail: 0, exorciseFail: 0, destructionFail: 0,
+          targetHP: b.hp, lifeStealMod: null, lifeStealRes: bResDeath,
+          immDist: null, bloodsucker: hasAbil(a.abilities, 'bloodSucker'), version,
+        };
+        if (aStoningGazeActiveP) {
+          steps.push((remaining, stepAlive) => ({
+            dist: buildGazeDist(a, b, stepAlive, Math.max(0, Math.ceil(remaining / b.hp)),
+              remaining, aStoningGazeFailP, 0, 0, bDefForGaze, bInvulnBonus,
+              bBlurChance, blurBuggy, woundedTopFigHP(remaining, b.hp), false,
+              bToBlockVsAAll, aMinDamageFromHits),
+            atkFigs: stepAlive,
+            spec: nextGazeSpec({ baseDamageCategory: 'irrecoverableDamage' }),
+          }));
+        }
+        if (aDeathGazeActiveP) {
+          steps.push((remaining, stepAlive) => ({
+            dist: buildGazeDist(a, b, stepAlive, Math.max(0, Math.ceil(remaining / b.hp)),
+              remaining, 0, aDeathGazeFailP, 0, bDefForGaze, bInvulnBonus,
+              bBlurChance, blurBuggy, woundedTopFigHP(remaining, b.hp), false,
+              bToBlockVsAAll, aMinDamageFromHits),
+            atkFigs: stepAlive,
+            spec: nextGazeSpec(),
+          }));
+        }
+        if (aGazeDoomStrP > 0) {
+          steps.push((remaining, stepAlive) => ({
+            dist: buildGazeDist(a, b, stepAlive, Math.max(0, Math.ceil(remaining / b.hp)),
+              remaining, 0, 0, aGazeDoomStrP, bDefForGaze, bInvulnBonus,
+              bBlurChance, blurBuggy, woundedTopFigHP(remaining, b.hp), bBlackSleep,
+              bToBlockVsAAll, aMinDamageFromHits),
+            atkFigs: 1,
+            spec: nextGazeSpec(),
+          }));
+        }
+        return sequenceTouchApplyAttacks(steps, cap,
+          context.sourceState || combatHealStateFromUnit(a));
+      }
       let dist = buildGazeDist(a, b, sAlive, tAlive, cap, aStoningGazeFailP, aDeathGazeFailP, aGazeDoomStrP, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
         isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, bBlackSleep, bToBlockVsAAll, aMinDamageFromHits);
       const aImmGDist = (aImmWithGaze && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(cap, b.hp))
+        ? calcDamageSpellDist(tAlive, immStr, a.toHitImmolation, bDefForImm,
+          bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits,
+          woundedTopFigHP(cap, b.hp), version, b.abilities)
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: aPoisonWithGaze ? aPoisonStrG_raw : 0, poisonFail: aPoisonFailG,
@@ -3514,8 +4835,11 @@ function buildAttackerGazePhase(active, params) {
         lifeStealMod: aLifeStealWithGaze ? aLifeStealModG : null, lifeStealRes: bResDeath,
         immDist: aImmGDist,
         bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
+        sourceState: usesStatefulCombatHealing(version)
+          ? (context.sourceState || combatHealStateFromUnit(a)) : null,
+        version,
       });
-      return { dist: t.dist, lifeStealEV: t.lifeStealEV };
+      return t;
     },
   };
 }
@@ -3525,6 +4849,8 @@ function buildDefenderGazePhase(active, params) {
   const {
     a,
     b,
+    bStoningGazeActiveP,
+    bDeathGazeActiveP,
     bStoningGazeFailP,
     bDeathGazeFailP,
     bGazeDoomStrP,
@@ -3555,6 +4881,7 @@ function buildDefenderGazePhase(active, params) {
     bLifeStealWithGaze,
     bLifeStealModG,
     aResDeath,
+    version,
   } = params;
 
   // Defender gaze B->A.
@@ -3563,12 +4890,61 @@ function buildDefenderGazePhase(active, params) {
     source: 'b',
     target: 'a',
     consumesFear: false,
-    compute: (sAlive, tAlive, cap) => {
+    compute: (sAlive, tAlive, cap, _fearDist, context = {}) => {
       if (sAlive <= 0 || cap <= 0) return { dist: [1], lifeStealEV: 0 };
+      if (isCoM2) {
+        const steps = [];
+        let dispelEvilPending = bDispelEvilWithGaze ? bDispelEvilFailG : 0;
+        const nextGazeSpec = (extra = {}) => {
+          const spec = { ...commonSpec, dispelEvilFail: dispelEvilPending, ...extra };
+          dispelEvilPending = 0;
+          return spec;
+        };
+        const commonSpec = {
+          poisonStr: 0, poisonFail: 0, stoningFail: 0, deathTouchFail: 0,
+          dispelEvilFail: 0, exorciseFail: 0, destructionFail: 0,
+          targetHP: a.hp, lifeStealMod: null, lifeStealRes: aResDeath,
+          immDist: null, bloodsucker: hasAbil(b.abilities, 'bloodSucker'), version,
+        };
+        if (bStoningGazeActiveP) {
+          steps.push((remaining, stepAlive) => ({
+            dist: buildGazeDist(b, a, stepAlive, Math.max(0, Math.ceil(remaining / a.hp)),
+              remaining, bStoningGazeFailP, 0, 0, aDefForGaze, aInvulnBonus,
+              aBlurChance, blurBuggy, woundedTopFigHP(remaining, a.hp), false,
+              aToBlockVsBAll, bMinDamageFromHits),
+            atkFigs: stepAlive,
+            spec: nextGazeSpec({ baseDamageCategory: 'irrecoverableDamage' }),
+          }));
+        }
+        if (bDeathGazeActiveP) {
+          steps.push((remaining, stepAlive) => ({
+            dist: buildGazeDist(b, a, stepAlive, Math.max(0, Math.ceil(remaining / a.hp)),
+              remaining, 0, bDeathGazeFailP, 0, aDefForGaze, aInvulnBonus,
+              aBlurChance, blurBuggy, woundedTopFigHP(remaining, a.hp), false,
+              aToBlockVsBAll, bMinDamageFromHits),
+            atkFigs: stepAlive,
+            spec: nextGazeSpec(),
+          }));
+        }
+        if (bGazeDoomStrP > 0) {
+          steps.push((remaining, stepAlive) => ({
+            dist: buildGazeDist(b, a, stepAlive, Math.max(0, Math.ceil(remaining / a.hp)),
+              remaining, 0, 0, bGazeDoomStrP, aDefForGaze, aInvulnBonus,
+              aBlurChance, blurBuggy, woundedTopFigHP(remaining, a.hp), aBlackSleep,
+              aToBlockVsBAll, bMinDamageFromHits),
+            atkFigs: 1,
+            spec: nextGazeSpec(),
+          }));
+        }
+        return sequenceTouchApplyAttacks(steps, cap,
+          context.sourceState || combatHealStateFromUnit(b));
+      }
       let dist = buildGazeDist(b, a, sAlive, tAlive, cap, bStoningGazeFailP, bDeathGazeFailP, bGazeDoomStrP, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy,
         isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined, aBlackSleep, aToBlockVsBAll, bMinDamageFromHits);
       const bImmGDist = (bImmWithGaze && tAlive > 0)
-        ? calcAreaDamageDist(tAlive, immStr, b.toHitImmolation, aDefForImm, aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits, woundedTopFigHP(cap, a.hp))
+        ? calcDamageSpellDist(tAlive, immStr, b.toHitImmolation, aDefForImm,
+          aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits,
+          woundedTopFigHP(cap, a.hp), version, a.abilities)
         : null;
       const t = convolveTouchAttacks(dist, cap, sAlive, {
         poisonStr: bPoisonWithGaze ? bPoisonStrG_raw : 0, poisonFail: bPoisonFailG,
@@ -3581,8 +4957,11 @@ function buildDefenderGazePhase(active, params) {
         lifeStealMod: bLifeStealWithGaze ? bLifeStealModG : null, lifeStealRes: aResDeath,
         immDist: bImmGDist,
         bloodsucker: hasAbil(b.abilities, 'bloodSucker'),
+        sourceState: usesStatefulCombatHealing(version)
+          ? (context.sourceState || combatHealStateFromUnit(b)) : null,
+        version,
       });
-      return { dist: t.dist, lifeStealEV: t.lifeStealEV };
+      return t;
     },
   };
 }
@@ -3637,10 +5016,14 @@ function resolveCombat(a, b, opts) {
 
   // Blur: pre-defense hit negation. Applies to melee, counter, ranged, thrown/breath,
   // and gaze hidden ranged component. Does NOT apply to doom damage or special/spell damage.
-  // Rate: 10% (MoM), 20% (CoM/CoM2; Invisibility also grants 20%, combined cap 30%).
-  // v1.31 bugs: success skips next roll (max 50%) and illusionImmunity checked on wrong unit.
-  const bBlurChance = getBlurChance(b.abilities, a.abilities, ver);
-  const aBlurChance = getBlurChance(a.abilities, b.abilities, ver);
+  // CoM2/Warlord fix tactical defender Card B's army-wide Blur for the entire displayed
+  // exchange, including B's counterattack. Unit-owned Invisibility and source Illusion
+  // Immunity still follow each call's target/source direction. Older engines use the current
+  // target unit's Blur, so a counterattack instead reads Card A's checkbox.
+  const modernTacticalDefenderBlur = !!(ver && ver.startsWith('com2'))
+    && hasAbil(b.abilities, 'blur');
+  const bBlurChance = getBlurChance(b.abilities, a.abilities, ver, modernTacticalDefenderBlur);
+  const aBlurChance = getBlurChance(a.abilities, b.abilities, ver, modernTacticalDefenderBlur);
   const blurBuggy = ver === 'mom_1.31';
 
   // First Strike applies when A is voluntarily attacking in melee and B cannot negate it.
@@ -3649,8 +5032,9 @@ function resolveCombat(a, b, opts) {
     && hasAbil(a.abilities, 'firstStrike')
     && !hasAbil(b.abilities, 'negateFirstStrike');
 
-  // Haste: doubles melee, thrown/breath, and (most) ranged attacks. Gaze, Fear, and
-  // Wall of Fire do not double. Counter-attacks double in MoM but not in CoM/CoM2.
+  // Haste repeats melee, thrown/breath, and (most) ranged attacks. Modern Caster also
+  // repeats each initiating gaze and samples Cause Fear inside each melee ApplyAttack.
+  // Wall of Fire never repeats. Counter-attacks repeat in MoM but not in CoM/CoM2.
   const aHaste = hasAbil(a.abilities, 'haste');
   const bHaste = hasAbil(b.abilities, 'haste');
   const isCoMVer = ver && ver.startsWith('com');
@@ -3676,8 +5060,9 @@ function resolveCombat(a, b, opts) {
   // Black Sleep: sleeping unit cannot attack; all incoming conventional damage becomes Doom.
   const aBlackSleep = hasAbil(a.abilities, 'blackSleep');
   const bBlackSleep = hasAbil(b.abilities, 'blackSleep');
-  // A Black Slept attacker cannot initiate combat at all.
-  // No ranged volley, gaze exchange, Wall of Fire, melee, or counter-attack occurs.
+  // A Black-Sleeping tactical attacker cannot initiate the represented combat.
+  // Keep the calculator boundary unambiguous: no outgoing attack and no incoming
+  // Wall of Fire, retaliation, or counterattack are resolved in any version/mode.
   if (aBlackSleep) {
     return {
       phases: null,
@@ -3685,6 +5070,8 @@ function resolveCombat(a, b, opts) {
       totalDmgToB: [1],
       aLifeStealDist: null,
       bLifeStealDist: null,
+      aPostCombatStateMean: initialCombatHealingStateMeans(a),
+      bPostCombatStateMean: initialCombatHealingStateMeans(b),
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };
@@ -3718,8 +5105,10 @@ function resolveCombat(a, b, opts) {
   // v1.31 bugs: (1) defending Fear doesn't work; (2) attacker's Fear also self-fears attacker.
   const aFear = !isRanged && hasAbil(a.abilities, 'fear');
   const bFear = !isRanged && hasAbil(b.abilities, 'fear');
-  const bPFear = aFear ? fearFailProb(bResDeath, b.abilities, opts.version) : 0; // A's fear on B
-  const aPFear = bFear ? fearFailProb(aResDeath, a.abilities, opts.version) : 0; // B's fear on A
+  const bPFear = aFear
+    ? fearFailProb(bResDeath, b.abilities, opts.version, b.baseDeathImmunity) : 0; // A's fear on B
+  const aPFear = bFear
+    ? fearFailProb(aResDeath, a.abilities, opts.version, a.baseDeathImmunity) : 0; // B's fear on A
   // Phase always shows when either unit has Cause Fear; immunity (Death/Magic Immunity)
   // results in 0 feared figures via the skip / +30 resistance bonus in fearFailProb.
   const bFearedByA = aFear; // A can fear B (all versions; immune B shows phase with 0 feared)
@@ -3757,7 +5146,7 @@ function resolveCombat(a, b, opts) {
     bToBlockVsAThrEW,
     bToBlockVsARangedEW,
     aToBlockVsBMelee,
-  } = buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty);
+  } = buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty, ver);
 
   // --- Immolation ---
   // Area fire damage: targets each defender figure independently (like fire breath).
@@ -3765,12 +5154,16 @@ function resolveCombat(a, b, opts) {
   // Defense vs immolation is computed in computeDefenseProfile (vsImmolation above).
   const aHasImm = hasAbil(a.abilities, 'immolation');
   const bHasImm = hasAbil(b.abilities, 'immolation');
-  const immStr = (aHasImm || bHasImm) ? immolationStr(ver) : 0;
+  const immStr = (aHasImm || bHasImm)
+    ? immolationStr(ver, !!opts.chaosConjunction) : 0;
 
   // --- Wall of Fire ---
-  // Area Immolation damage to attacker A between gaze and melee. Not in ranged combat.
+  // Area Immolation damage to attacker A during the melee opening. Not in ranged combat.
   // Uses the same defense chain as immolation against A, and the same immunities.
-  const wallOfFireActive = !!opts.wallOfFire && !isRanged;
+  // FirewallEffect tests the calculated unit record. Both modern builds skip the effect for
+  // Teleporting or Merging attackers; the older engines retain their independent behavior.
+  const wallOfFireActive = !!opts.wallOfFire && !isRanged
+    && wallOfFireEligible(ver, a.abilities);
   const wofStr = wallOfFireActive ? wallOfFireStr(ver) : 0;
   // Wall of Fire is cast at 30% base To Hit (standard spell To Hit, like immolation);
   // Warlord raises this to 60% but limits the strike to a single attacker figure.
@@ -3778,8 +5171,10 @@ function resolveCombat(a, b, opts) {
   const wofSingleFigure = wallOfFireSingleFigure(ver);
 
   // --- Melee phase pipeline ---
-  // All non-ranged combat runs through a single joint-state engine:
-  // thrown → attacker gaze → defender gaze → Wall of Fire → fear → melee/counter.
+  // All non-ranged combat runs through a single joint-state engine. The DOS engines keep
+  // Thrown/Breath → attacker gaze → defender gaze → Wall of Fire; Caster.exe uses
+  // Wall of Fire → attacker Stoning/Death/Doom → defender Stoning/Death/Doom →
+  // Lightning Breath → Fire Breath → Thrown. Fear/First Strike/melee follow either opening.
   // Gaze-active flags (used both by gate and by phase compute below).
   const aGazeDoomStrP = (a.effectiveDoomGaze || 0) > 0 ? a.effectiveDoomGaze : 0;
   const bGazeDoomStrP = (b.effectiveDoomGaze || 0) > 0 ? b.effectiveDoomGaze : 0;
@@ -3829,6 +5224,8 @@ function resolveCombat(a, b, opts) {
         phases: null,
         totalDmgToA: [1], totalDmgToB: [1],
         aLifeStealDist: null, bLifeStealDist: null,
+        aPostCombatStateMean: initialCombatHealingStateMeans(a),
+        bPostCombatStateMean: initialCombatHealingStateMeans(b),
         aRemHP, aHP: aTotalHP, aAlive,
         bRemHP, bHP: bTotalHP, bAlive,
       };
@@ -3850,7 +5247,8 @@ function resolveCombat(a, b, opts) {
     // lost merely because it is absent from the unit's common ability record.
     const aLifeStealOnT = aLifeStealModT !== null;
 
-    // Gaze-phase touch activation (touches fire alongside gaze regardless of melee atk).
+    // DOS BU_ProcessAttack gazes can carry common roster riders; modern gaze types 6-8
+    // construct no touch-rider parameters (gazeTouchParams enforces that split).
     const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, exorciseFail: aExorciseFailG, destructionFail: aDestructionFailG, lifeStealMod: aLifeStealModG,
             poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, exorciseWith: aExorciseWithGaze, destructionWith: aDestructionWithGaze, lifeStealWith: aLifeStealWithGaze }
       = gazeTouchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, aGazeActiveP, aBlackSleep, opts.version);
@@ -3866,21 +5264,19 @@ function resolveCombat(a, b, opts) {
 
     // Immolation activation per phase.
     const aImmWithThrown = aHasImm && !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
-    const aImmWithGaze   = aHasImm && aGazeActiveP;
-    const bImmWithGaze   = bHasImm && bGazeActiveP;
+    const aImmWithGaze   = !isCoM2 && aHasImm && aGazeActiveP;
+    const bImmWithGaze   = !isCoM2 && bHasImm && bGazeActiveP;
     const aImmWithMelee  = aHasImm && !aBlackSleep && touchAttackFires(a.atk, a.baseAtk, opts.version);
     const bImmWithMelee  = bHasImm && !bBlackSleep && touchAttackFires(b.atk, b.baseAtk, opts.version);
 
-    // Standalone life-steal dists for UI summary. Approximation: count of phases
-    // where life-steal fires, convolved (matches existing thrown-branch behavior;
-    // EV is computed exactly per-phase below and is the correct displayed value).
-    // Approximate life-steal display dist: number of phases × single-firing dist.
+    // Compatibility fallback for an unknown external version. Every supported build
+    // uses the correlated state path and derives its displayed marginal from execution.
     let aLifeStealDistP = null;
     {
       const lsRefMod = aLifeStealModM !== null ? aLifeStealModM
                      : aLifeStealModT !== null ? aLifeStealModT
                      : aLifeStealWithGaze ? aLifeStealModG : null;
-      if (lsRefMod !== null && aAlive > 0 && bRemHP > 0) {
+      if (!usesStatefulCombatHealing(ver) && lsRefMod !== null && aAlive > 0 && bRemHP > 0) {
         const single = calcLifeStealDmgDist(aAlive, bResDeath, lsRefMod, bRemHP);
         const count = (aLifeStealOnT ? 1 : 0)
                     + (aLifeStealWithGaze ? 1 : 0)
@@ -3892,7 +5288,7 @@ function resolveCombat(a, b, opts) {
     {
       const lsRefMod = bLifeStealModM !== null ? bLifeStealModM
                      : bLifeStealWithGaze ? bLifeStealModG : null;
-      if (lsRefMod !== null && bAlive > 0 && aRemHP > 0) {
+      if (!usesStatefulCombatHealing(ver) && lsRefMod !== null && bAlive > 0 && aRemHP > 0) {
         const single = calcLifeStealDmgDist(bAlive, aResDeath, lsRefMod, aRemHP);
         const count = (bLifeStealWithGaze ? 1 : 0)
                     + (bLifeStealModM !== null ? 1 : 0);
@@ -3922,6 +5318,7 @@ function resolveCombat(a, b, opts) {
       bInvulnBonus,
       aMinDamageFromHits,
       aFearForCell,
+      aFearProbability: aFearedByB ? aPFear : null,
       aDoomsB: aMeleeDoomsB,
       aBlackSleep,
       aMeleeAtkVsB,
@@ -3941,6 +5338,7 @@ function resolveCombat(a, b, opts) {
       blurBuggy,
       aHaste,
       isCoM2,
+      version: ver,
     });
     const counterPhase = buildCounterPhase({
       a,
@@ -3971,6 +5369,7 @@ function resolveCombat(a, b, opts) {
       blurBuggy,
       bCounterHaste,
       isCoM2,
+      version: ver,
     });
     const wofPhase = buildWallOfFirePhase(wallOfFireActive, {
       wofStr,
@@ -3982,11 +5381,18 @@ function resolveCombat(a, b, opts) {
       aToBlock: aToBlockConventional,
       aHP: a.hp,
       aInvulnBonus,
+      aAbilities: a.abilities,
+      // Within this two-unit projection, Card B is the opposing owner whose present calculated
+      // Amplifier can qualify the spell. Multiple copies remain a single Boolean adjustment.
+      amplifiedDamage: wallOfFireAmplified(ver, b.abilities),
+      version: ver,
     });
 
-    const aGazePhase = buildAttackerGazePhase(aGazeActiveP, {
+    const aGazeParams = {
       a,
       b,
+      aStoningGazeActiveP,
+      aDeathGazeActiveP,
       aStoningGazeFailP,
       aDeathGazeFailP,
       aGazeDoomStrP,
@@ -4017,11 +5423,14 @@ function resolveCombat(a, b, opts) {
       aLifeStealWithGaze,
       aLifeStealModG,
       bResDeath,
-    });
+      version: ver,
+    };
 
-    const bGazePhase = buildDefenderGazePhase(bGazeActiveP, {
+    const bGazeParams = {
       a,
       b,
+      bStoningGazeActiveP,
+      bDeathGazeActiveP,
       bStoningGazeFailP,
       bDeathGazeFailP,
       bGazeDoomStrP,
@@ -4052,10 +5461,95 @@ function resolveCombat(a, b, opts) {
       bLifeStealWithGaze,
       bLifeStealModG,
       aResDeath,
-    });
+      version: ver,
+    };
 
-    // Thrown / breath: A→B, fires before melee.  DOS has one shared slot; Caster.exe
-    // runs each independently-derived channel.  F29 owns their final engine ordering.
+    // DOS represents its selected gaze as one shared-slot phase. Caster.exe instead makes
+    // six separately dealt ApplyAttack calls in fixed Stoning/Death/Doom order. Keeping
+    // those as distinct joint phases makes every later call recompute living figures and
+    // gives the breakdown the same observable phase boundaries as the engine.
+    const aGazePhase = !isCoM2
+      ? buildAttackerGazePhase(aGazeActiveP, aGazeParams) : null;
+    const bGazePhase = !isCoM2
+      ? buildDefenderGazePhase(bGazeActiveP, bGazeParams) : null;
+    const modernAttackerGazePhases = [];
+    const modernDefenderGazePhases = [];
+    if (isCoM2) {
+      let aDispelPending = aDispelEvilWithGaze;
+      const addAttackerGaze = (kind, active) => {
+        if (!active) return;
+        const stoning = kind === 'stoning';
+        const death = kind === 'death';
+        const doom = kind === 'doom';
+        const dispelEvil = aDispelPending;
+        aDispelPending = false;
+        modernAttackerGazePhases.push({
+          phase: buildAttackerGazePhase(true, {
+            ...aGazeParams,
+            aStoningGazeActiveP: stoning,
+            aDeathGazeActiveP: death,
+            aGazeDoomStrP: doom ? aGazeDoomStrP : 0,
+            // Preserve the established one-call Dispel Evil compatibility path: when
+            // several modern gazes coexist it attaches only to the first admitted call.
+            aDispelEvilWithGaze: dispelEvil,
+          }),
+          labelParams: {
+            stoningGaze: stoning,
+            deathGaze: death,
+            doomGaze: doom,
+            poisonTouch: false,
+            stoningTouch: false,
+            deathTouch: false,
+            dispelEvil,
+            exorcise: false,
+            destruction: false,
+            lifeSteal: false,
+            immolation: false,
+          },
+        });
+      };
+      addAttackerGaze('stoning', aStoningGazeActiveP);
+      addAttackerGaze('death', aDeathGazeActiveP);
+      addAttackerGaze('doom', aGazeDoomStrP > 0);
+
+      let bDispelPending = bDispelEvilWithGaze;
+      const addDefenderGaze = (kind, active) => {
+        if (!active) return;
+        const stoning = kind === 'stoning';
+        const death = kind === 'death';
+        const doom = kind === 'doom';
+        const dispelEvil = bDispelPending;
+        bDispelPending = false;
+        modernDefenderGazePhases.push({
+          phase: buildDefenderGazePhase(true, {
+            ...bGazeParams,
+            bStoningGazeActiveP: stoning,
+            bDeathGazeActiveP: death,
+            bGazeDoomStrP: doom ? bGazeDoomStrP : 0,
+            bDispelEvilWithGaze: dispelEvil,
+          }),
+          labelParams: {
+            stoningGaze: stoning,
+            deathGaze: death,
+            doomGaze: doom,
+            poisonTouch: false,
+            stoningTouch: false,
+            deathTouch: false,
+            dispelEvil,
+            exorcise: false,
+            destruction: false,
+            lifeSteal: false,
+            immolation: false,
+          },
+        });
+      };
+      addDefenderGaze('stoning', bStoningGazeActiveP);
+      addDefenderGaze('death', bDeathGazeActiveP);
+      addDefenderGaze('doom', bGazeDoomStrP > 0);
+    }
+
+    // Thrown / breath: A→B, fires before melee. DOS has one shared slot; Caster.exe
+    // runs each independently-derived channel (`Combat.PerformAttacks.pas` $005B399B..$005B3A9E).
     const buildThrown = (attacker, active, type, touchRecord) => {
       const touchActive = active && !aBlackSleep
         && (isCoM2 || touchAttackFires(attacker.rtb, attacker.baseRtb, opts.version));
@@ -4070,7 +5564,7 @@ function resolveCombat(a, b, opts) {
           aBlackSleep,
           aToHitRtbVert: isCoM2 ? attacker.toHitRtb : aToHitRtbVert,
           bDefForThrown: isCoM2 ? computeCasterDefenseForAttack(b, attacker, ver, bVertigoDefPenalty, 'thrown') : bDefForThrown,
-          bToBlockVsAThrEW: isCoM2 ? buildToBlockContext(attacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty).bToBlockVsAThrEW : bToBlockVsAThrEW,
+          bToBlockVsAThrEW: isCoM2 ? buildToBlockContext(attacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty, ver).bToBlockVsAThrEW : bToBlockVsAThrEW,
           bInvulnBonus,
           bBlurChance,
           blurBuggy,
@@ -4090,6 +5584,7 @@ function resolveCombat(a, b, opts) {
           aLifeStealModT: touch.lifeStealMod,
           bResDeath,
           aHaste,
+          version: ver,
         }),
       };
     };
@@ -4112,94 +5607,142 @@ function resolveCombat(a, b, opts) {
             touchRecordForPhase(ver, a.thrownType)),
         }];
 
-    // Run the engine: thrown (if active) → WoF (if active) → simultaneous melee+counter.
-    let joint = makeJoint2D(aRemHP, bRemHP);
+    // Run the version-specific opening, then the shared fear/First Strike/melee tail.
+    const trackModernHealing = usesStatefulCombatHealing(ver) && (
+      aLifeStealModM !== null || bLifeStealModM !== null
+      || thrownPhases.some(({ touch }) => touch.lifeStealMod !== null)
+      || aLifeStealWithGaze || bLifeStealWithGaze
+      || hasAbil(a.abilities, 'bloodSucker') || hasAbil(b.abilities, 'bloodSucker')
+      || aStoningGazeActiveP || bStoningGazeActiveP
+      || aStoningFailM > 0 || bStoningFailM > 0
+      || aDispelEvilFailM > 0 || bDispelEvilFailM > 0
+      || aExorciseFailM > 0 || bExorciseFailM > 0
+      || aDestructionFailM > 0 || bDestructionFailM > 0
+      || thrownPhases.some(({ touch }) => touch.stoningFail > 0
+        || touch.dispelEvilFail > 0 || touch.exorciseFail > 0
+        || touch.destructionFail > 0)
+      || aDispelEvilWithGaze || bDispelEvilWithGaze
+      || aExorciseWithGaze || bExorciseWithGaze
+      || aDestructionWithGaze || bDestructionWithGaze);
+    let joint = makeJoint2D(aRemHP, bRemHP,
+      trackModernHealing ? { a, b } : null);
     let lifeStealEV_a = 0, lifeStealEV_b = 0;
     const breakdown = [];   // accumulate phase rows
 
     const pendingFear = { aFearDist: null, bFearDist: null };
 
-    for (const { attacker: channelAttacker, type: channelType, phase: thrownPhase, touch } of thrownPhases) {
-      if (!thrownPhase) continue;
-      const r = applyDamagePhase(joint, thrownPhase, pendingFear, { a: channelAttacker, b }, bRemHP);
-      joint = r.joint;
-      lifeStealEV_a += r.lifeStealEV;
-      const bMargAtThrown = marginalB(joint);
-      const thrownLabel = thrownPhaseLabel({
-        thrownType: channelType,
-        hasted: aHaste && channelAttacker.rtb > 0,
-        poisonTouch: touch.poisonFail > 0,
-        stoningTouch: touch.stoningFail > 0,
-        deathTouch: touch.deathTouchFail > 0,
-        dispelEvil: touch.dispelEvilFail > 0,
-        exorcise: touch.exorciseFail > 0,
-        destruction: touch.destructionFail > 0,
-        lifeSteal: touch.lifeStealMod !== null,
-        immolation: aImmWithThrown,
-      });
-      breakdown.push({ label: thrownLabel,
-        atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
-        defDist: r.marginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-        atkDestroyPct: 0, defDestroyPct: pDestroyedFrom(bMargAtThrown, bRemHP) });
-    }
+    const applyThrownPhases = () => {
+      for (const { attacker: channelAttacker, type: channelType, phase: thrownPhase, touch } of thrownPhases) {
+        if (!thrownPhase) continue;
+        const r = applyDamagePhase(joint, thrownPhase, pendingFear, { a: channelAttacker, b }, bRemHP);
+        joint = r.joint;
+        lifeStealEV_a += r.lifeStealEV;
+        const bMargAtThrown = marginalB(joint);
+        const thrownLabel = thrownPhaseLabel({
+          thrownType: channelType,
+          hasted: aHaste && channelAttacker.rtb > 0,
+          poisonTouch: touch.poisonFail > 0,
+          stoningTouch: touch.stoningFail > 0,
+          deathTouch: touch.deathTouchFail > 0,
+          dispelEvil: touch.dispelEvilFail > 0,
+          exorcise: touch.exorciseFail > 0,
+          destruction: touch.destructionFail > 0,
+          lifeSteal: touch.lifeStealMod !== null,
+          immolation: aImmWithThrown,
+        });
+        breakdown.push({ label: thrownLabel,
+          atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
+          defDist: r.marginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
+          atkDestroyPct: 0,
+          defDestroyPct: jointDestroyedProbability(joint, 'b', bMargAtThrown, bRemHP) });
+      }
+    };
 
-    if (aGazePhase) {
-      const r = applyDamagePhase(joint, aGazePhase, pendingFear, { a, b }, bRemHP);
+    const applyAttackerGazePhase = (phase, labelParams) => {
+      if (!phase) return;
+      const r = applyDamagePhase(joint, phase, pendingFear, { a, b }, bRemHP);
       joint = r.joint;
       lifeStealEV_a += r.lifeStealEV;
       const bMargAtAGz = marginalB(joint);
-      const aGzLabel = gazePhaseLabel('Attacker', {
-        stoningGaze: aStoningGazeActiveP,
-        deathGaze: aDeathGazeActiveP,
-        doomGaze: aGazeDoomStrP > 0,
-        poisonTouch: aPoisonWithGaze,
-        stoningTouch: aStoningWithGaze,
-        deathTouch: aDeathTouchWithGaze,
-        dispelEvil: aDispelEvilWithGaze,
-        exorcise: aExorciseWithGaze,
-        destruction: aDestructionWithGaze,
-        lifeSteal: aLifeStealWithGaze,
-        immolation: aImmWithGaze,
-      });
+      const aGzLabel = gazePhaseLabel('Attacker', labelParams);
       breakdown.push({ label: aGzLabel,
         atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: r.marginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-        atkDestroyPct: 0, defDestroyPct: pDestroyedFrom(bMargAtAGz, bRemHP) });
-    }
+        atkDestroyPct: 0,
+        defDestroyPct: jointDestroyedProbability(joint, 'b', bMargAtAGz, bRemHP) });
+    };
 
-    if (bGazePhase) {
-      const r = applyDamagePhase(joint, bGazePhase, pendingFear, { a, b }, aRemHP);
+    const applyDefenderGazePhase = (phase, labelParams) => {
+      if (!phase) return;
+      const r = applyDamagePhase(joint, phase, pendingFear, { a, b }, aRemHP);
       joint = r.joint;
       lifeStealEV_b += r.lifeStealEV;
       const aMargAtBGz = marginalA(joint);
       const bMargAtBGz = marginalB(joint);
-      const bGzLabel = gazePhaseLabel('Defender', {
-        stoningGaze: bStoningGazeActiveP,
-        deathGaze: bDeathGazeActiveP,
-        doomGaze: bGazeDoomStrP > 0,
-        poisonTouch: bPoisonWithGaze,
-        stoningTouch: bStoningWithGaze,
-        deathTouch: bDeathTouchWithGaze,
-        dispelEvil: bDispelEvilWithGaze,
-        exorcise: bExorciseWithGaze,
-        destruction: bDestructionWithGaze,
-        lifeSteal: bLifeStealWithGaze,
-        immolation: bImmWithGaze,
-      });
+      const bGzLabel = gazePhaseLabel('Defender', labelParams);
       breakdown.push({ label: bGzLabel,
         atkDist: r.marginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-        atkDestroyPct: pDestroyedFrom(aMargAtBGz, aRemHP), defDestroyPct: pDestroyedFrom(bMargAtBGz, bRemHP) });
-    }
+        atkDestroyPct: jointDestroyedProbability(joint, 'a', aMargAtBGz, aRemHP),
+        defDestroyPct: jointDestroyedProbability(joint, 'b', bMargAtBGz, bRemHP) });
+    };
 
-    if (wofPhase) {
+    const applyWallOfFirePhase = () => {
+      if (!wofPhase) return;
       const r = applyDamagePhase(joint, wofPhase, pendingFear, { a, b }, aRemHP);
       joint = r.joint;
       const aMargAtWof = marginalA(joint);
       breakdown.push({ label: 'Wall of Fire',
         atkDist: r.marginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-        atkDestroyPct: pDestroyedFrom(aMargAtWof, aRemHP), defDestroyPct: 0 });
+        atkDestroyPct: jointDestroyedProbability(joint, 'a', aMargAtWof, aRemHP),
+        defDestroyPct: 0 });
+    };
+
+    const legacyAttackerGazeLabels = {
+      stoningGaze: aStoningGazeActiveP,
+      deathGaze: aDeathGazeActiveP,
+      doomGaze: aGazeDoomStrP > 0,
+      poisonTouch: aPoisonWithGaze,
+      stoningTouch: aStoningWithGaze,
+      deathTouch: aDeathTouchWithGaze,
+      dispelEvil: aDispelEvilWithGaze,
+      exorcise: aExorciseWithGaze,
+      destruction: aDestructionWithGaze,
+      lifeSteal: aLifeStealWithGaze,
+      immolation: aImmWithGaze,
+    };
+    const legacyDefenderGazeLabels = {
+      stoningGaze: bStoningGazeActiveP,
+      deathGaze: bDeathGazeActiveP,
+      doomGaze: bGazeDoomStrP > 0,
+      poisonTouch: bPoisonWithGaze,
+      stoningTouch: bStoningWithGaze,
+      deathTouch: bDeathTouchWithGaze,
+      dispelEvil: bDispelEvilWithGaze,
+      exorcise: bExorciseWithGaze,
+      destruction: bDestructionWithGaze,
+      lifeSteal: bLifeStealWithGaze,
+      immolation: bImmWithGaze,
+    };
+
+    if (isCoM2) {
+      applyWallOfFirePhase();
+      for (const gaze of modernAttackerGazePhases) {
+        const repeats = aHaste ? 2 : 1;
+        for (let repeat = 0; repeat < repeats; repeat++) {
+          applyAttackerGazePhase(gaze.phase, gaze.labelParams);
+        }
+      }
+      for (const gaze of modernDefenderGazePhases) {
+        applyDefenderGazePhase(gaze.phase, gaze.labelParams);
+      }
+      applyThrownPhases();
+    } else {
+      applyThrownPhases();
+      applyAttackerGazePhase(aGazePhase, legacyAttackerGazeLabels);
+      applyDefenderGazePhase(bGazePhase, legacyDefenderGazeLabels);
+      applyWallOfFirePhase();
     }
 
     // Survivor-distribution helper.
@@ -4207,16 +5750,56 @@ function resolveCombat(a, b, opts) {
       const aSurv = new Array(a.figs + 1).fill(0);
       const bSurv = new Array(b.figs + 1).fill(0);
       for (let cumA = 0; cumA < j.length; cumA++) {
-        const ak = aliveCount(a, cumA);
         const bRow = j[cumA];
         for (let cumB = 0; cumB < bRow.length; cumB++) {
-          const p = bRow[cumB];
-          if (p < 1e-15) continue;
-          aSurv[ak] += p;
-          bSurv[aliveCount(b, cumB)] += p;
+          if (j.healingPaths) {
+            for (const path of bRow[cumB].values()) {
+              if (path.probability < 1e-15) continue;
+              aSurv[healingStateAlive(path.aState)] += path.probability;
+              bSurv[healingStateAlive(path.bState)] += path.probability;
+            }
+          } else {
+            const p = bRow[cumB];
+            if (p < 1e-15) continue;
+            aSurv[aliveCount(a, cumA)] += p;
+            bSurv[aliveCount(b, cumB)] += p;
+          }
         }
       }
       return { aSurv, bSurv };
+    };
+
+    // Exact feared-figure marginal for one modern ApplyAttack call at this joint
+    // snapshot. PerformMeleeAttack still makes a selected call against a target
+    // killed by an earlier dealt phase, so only a zero-figure or Black-Sleeping
+    // source suppresses the fear loop.
+    const modernFearCallDist = (j, sourceSide, pFear) => {
+      const sourceUnit = sourceSide === 'a' ? a : b;
+      const result = new Array(sourceUnit.figs + 1).fill(0);
+      const sourceBlackSleep = hasAbil(sourceUnit.abilities, 'blackSleep');
+      const addPath = (probability, sourceAlive) => {
+        if (sourceAlive <= 0 || sourceBlackSleep || pFear <= 0) {
+          result[0] += probability;
+          return;
+        }
+        addWeightedDist(result, binomialPMF(sourceAlive, pFear), probability);
+      };
+      for (let cumA = 0; cumA < j.length; cumA++) {
+        for (let cumB = 0; cumB < j[0].length; cumB++) {
+          if (j.healingPaths) {
+            for (const path of j[cumA][cumB].values()) {
+              const sourceState = path[sourceSide + 'State'];
+              addPath(path.probability, healingStateAlive(sourceState));
+            }
+          } else {
+            const probability = j[cumA][cumB];
+            if (probability < 1e-15) continue;
+            const sourceDamage = sourceSide === 'a' ? cumA : cumB;
+            addPath(probability, aliveCount(sourceUnit, sourceDamage));
+          }
+        }
+      }
+      return result;
     };
 
     if (hasFirstStrike) {
@@ -4225,11 +5808,16 @@ function resolveCombat(a, b, opts) {
       // Per-cell CoM1 fallthrough → simultaneous melee+counter (single strike).
 
       // Step 5: Defender Cause Fear row (B's fear on A only; aFearBug fires after FS).
-      const survPre = computeSurv(joint);
-      const beforeFear = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, aFearedByB, false, false, showFearNoop, survPre.bSurv, survPre.aSurv);
-      if (beforeFear) {
-        breakdown.push({ label: 'Defender Cause Fear', mode: 'feared',
-          atkDist: beforeFear.atkFearedDist, defDist: beforeFear.defFearedDist });
+      if (isCoM2 && (aFear || bFear)) {
+        breakdown.push({ label: 'First Strike Cause Fear', mode: 'feared',
+          atkDist: modernFearCallDist(joint, 'a', aPFear), defDist: [1] });
+      } else {
+        const survPre = computeSurv(joint);
+        const beforeFear = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, aFearedByB, false, false, showFearNoop, survPre.bSurv, survPre.aSurv);
+        if (beforeFear) {
+          breakdown.push({ label: 'Defender Cause Fear', mode: 'feared',
+            atkDist: beforeFear.atkFearedDist, defDist: beforeFear.defFearedDist });
+        }
       }
 
       const { fsStrikeCompute, secondStrikeCompute, aStrikeNoFear } = buildFirstStrikeComputes({
@@ -4262,14 +5850,15 @@ function resolveCombat(a, b, opts) {
         bBlurChance,
         blurBuggy,
         isCoM2,
+        version: ver,
       });
 
       let fsResult;
       if (aHaste) {
-        // Couple k_a across FS and 2nd strike when B has fear on A (and not v1.31, where
-        // aFearedByB=false anyway). Otherwise no fear roll happens at all on the FS strike,
+        // Modern ApplyAttack calls sample independently; the DOS engines retain their
+        // established First-Strike/Haste coupling. Otherwise no fear roll happens on FS,
         // so coupling is moot — fall through to independent path.
-        const coupleKa = aFearedByB && aHaste;
+        const coupleKa = !isCoM2 && aFearedByB && aHaste;
         fsResult = applyFsBlockHaste(joint,
           { fsStrike: fsStrikeCompute, secondStrike: secondStrikeCompute,
             aStrikeNoFear, counter: counterPhase.compute, fallthroughCounter: counterPhase.compute },
@@ -4299,14 +5888,26 @@ function resolveCombat(a, b, opts) {
       breakdown.push({ label: fsLabel,
         atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: fsResult.fsMarginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-        atkDestroyPct: pDestroyedFrom(aMargPostFS, aRemHP), defDestroyPct: pDestroyedFrom(bMargPostFS, bRemHP) });
+        atkDestroyPct: jointDestroyedProbability(fsResult.postFsJoint, 'a', aMargPostFS, aRemHP),
+        defDestroyPct: jointDestroyedProbability(fsResult.postFsJoint, 'b', bMargPostFS, bRemHP) });
 
       // Step 7: Attacker Cause Fear row (post-FS; includes A's fear on B and v1.31 self-fear bug).
-      const survPostFS = computeSurv(fsResult.postFsJoint);
-      const afterFear = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, false, aFearBug, bFearedByA, false, survPostFS.bSurv, survPostFS.aSurv);
-      if (afterFear) {
-        breakdown.push({ label: 'Attacker Cause Fear', mode: 'feared',
-          atkDist: afterFear.atkFearedDist, defDist: afterFear.defFearedDist });
+      if (isCoM2 && (aFear || bFear)) {
+        if (aHaste) {
+          breakdown.push({ label: 'Haste Cause Fear', mode: 'feared',
+            atkDist: modernFearCallDist(fsResult.postFsJoint, 'a', aPFear),
+            defDist: [1] });
+        }
+        breakdown.push({ label: 'Counter Cause Fear', mode: 'feared',
+          atkDist: [1],
+          defDist: modernFearCallDist(fsResult.postFsJoint, 'b', bPFear) });
+      } else {
+        const survPostFS = computeSurv(fsResult.postFsJoint);
+        const afterFear = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, false, aFearBug, bFearedByA, false, survPostFS.bSurv, survPostFS.aSurv);
+        if (afterFear) {
+          breakdown.push({ label: 'Attacker Cause Fear', mode: 'feared',
+            atkDist: afterFear.atkFearedDist, defDist: afterFear.defFearedDist });
+        }
       }
 
       // Step 8: Counter (no-Haste) or 2nd strike + Counter combined (FS+Haste).
@@ -4328,7 +5929,8 @@ function resolveCombat(a, b, opts) {
         breakdown.push({ label,
           atkDist: fsResult.counterMarginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: fsResult.secondMarginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-          atkDestroyPct: pDestroyedFrom(totalDmgToAFs, aRemHP), defDestroyPct: pDestroyedFrom(totalDmgToBFs, bRemHP) });
+          atkDestroyPct: jointDestroyedProbability(joint, 'a', totalDmgToAFs, aRemHP),
+          defDestroyPct: jointDestroyedProbability(joint, 'b', totalDmgToBFs, bRemHP) });
       } else {
         const counterLabel = counterBreakdownLabel({
           counterHasted: bCounterHaste,
@@ -4344,12 +5946,13 @@ function resolveCombat(a, b, opts) {
         breakdown.push({ label: counterLabel,
           atkDist: fsResult.counterMarginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-          atkDestroyPct: pDestroyedFrom(totalDmgToAFs, aRemHP), defDestroyPct: pDestroyedFrom(totalDmgToBFs, bRemHP) });
+          atkDestroyPct: jointDestroyedProbability(joint, 'a', totalDmgToAFs, aRemHP),
+          defDestroyPct: jointDestroyedProbability(joint, 'b', totalDmgToBFs, bRemHP) });
       }
     } else {
       // Non-FS path: emits a single combined Cause Fear row + simultaneous melee+counter.
       const hasDefenderFearP = aFearedByB || aFearBug || showFearNoop;
-      if (bFearedByA || hasDefenderFearP) {
+      if (!isCoM2 && (bFearedByA || hasDefenderFearP)) {
         const surv = computeSurv(joint);
         const fearRow = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, aFearedByB, aFearBug, bFearedByA, showFearNoop, surv.bSurv, surv.aSurv);
         if (fearRow) {
@@ -4362,6 +5965,17 @@ function resolveCombat(a, b, opts) {
       joint = pair.joint;
       lifeStealEV_a += pair.lifeStealEV_a;
       lifeStealEV_b += pair.lifeStealEV_b;
+
+      if (isCoM2 && (aFear || bFear)) {
+        breakdown.push({ label: 'Main Cause Fear', mode: 'feared',
+          atkDist: (pair.fearSamplesB && pair.fearSamplesB[0]) || [1], defDist: [1] });
+        if (aHaste) {
+          breakdown.push({ label: 'Haste Cause Fear', mode: 'feared',
+            atkDist: (pair.fearSamplesB && pair.fearSamplesB[1]) || [1], defDist: [1] });
+        }
+        breakdown.push({ label: 'Counter Cause Fear', mode: 'feared',
+          atkDist: [1], defDist: (pair.fearSamplesA && pair.fearSamplesA[0]) || [1] });
+      }
 
       const totalDmgToANF = marginalA(joint);
       const totalDmgToBNF = marginalB(joint);
@@ -4382,20 +5996,51 @@ function resolveCombat(a, b, opts) {
         breakdown.push({ label: meleeLabel,
           atkDist: pair.marginalA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: pair.marginalB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
-          atkDestroyPct: pDestroyedFrom(totalDmgToANF, aRemHP), defDestroyPct: pDestroyedFrom(totalDmgToBNF, bRemHP) });
+          atkDestroyPct: jointDestroyedProbability(joint, 'a', totalDmgToANF, aRemHP),
+          defDestroyPct: jointDestroyedProbability(joint, 'b', totalDmgToBNF, bRemHP) });
       }
     }
 
-    const totalDmgToA = marginalA(joint);
-    const totalDmgToB = marginalB(joint);
+    const cappedDmgToA = marginalA(joint);
+    const cappedDmgToB = marginalB(joint);
+    const exactADamageDist = jointMetricDist(joint, 'aDamageTaken');
+    const exactBDamageDist = jointMetricDist(joint, 'bDamageTaken');
+    const totalDmgToA = exactADamageDist || cappedDmgToA;
+    const totalDmgToB = exactBDamageDist || cappedDmgToB;
+    const exactARawDist = jointMetricDist(joint, 'aRawDrain');
+    const exactBRawDist = jointMetricDist(joint, 'bRawDrain');
+    const exactAHealedDist = jointMetricDist(joint, 'aHealedDamage');
+    const exactBHealedDist = jointMetricDist(joint, 'bHealedDamage');
+    const exactABonusDist = jointMetricDist(joint, 'aBonusHpGain');
+    const exactBBonusDist = jointMetricDist(joint, 'bBonusHpGain');
+    const exactABenefitDist = jointCombinedMetricDist(joint,
+      ['aHealedDamage', 'aBonusHpBenefit']);
+    const exactBBenefitDist = jointCombinedMetricDist(joint,
+      ['bHealedDamage', 'bBonusHpBenefit']);
 
     return {
       phases: breakdown.length > 0 ? breakdown : null,
       totalDmgToA, totalDmgToB,
-      aLifeStealDist: aLifeStealDistP,
-      aLifeStealExpected: lifeStealEV_a,
-      bLifeStealDist: bLifeStealDistP,
-      bLifeStealExpected: lifeStealEV_b,
+      aDestroyPct: jointDestroyedProbability(joint, 'a', cappedDmgToA, aRemHP),
+      bDestroyPct: jointDestroyedProbability(joint, 'b', cappedDmgToB, bRemHP),
+      aLifeStealDist: exactARawDist || aLifeStealDistP,
+      aLifeStealRawDist: exactARawDist || aLifeStealDistP,
+      aLifeStealRawExpected: expectedDamage(exactARawDist || aLifeStealDistP),
+      aLifeStealExpected: exactABenefitDist
+        ? expectedDamage(exactABenefitDist) : lifeStealEV_a,
+      aHealedDamageDist: exactAHealedDist,
+      aBonusHpDist: exactABonusDist,
+      aAppliedHealingBenefitDist: exactABenefitDist,
+      bLifeStealDist: exactBRawDist || bLifeStealDistP,
+      bLifeStealRawDist: exactBRawDist || bLifeStealDistP,
+      bLifeStealRawExpected: expectedDamage(exactBRawDist || bLifeStealDistP),
+      bLifeStealExpected: exactBBenefitDist
+        ? expectedDamage(exactBBenefitDist) : lifeStealEV_b,
+      bHealedDamageDist: exactBHealedDist,
+      bBonusHpDist: exactBBonusDist,
+      bAppliedHealingBenefitDist: exactBBenefitDist,
+      aPostCombatStateMean: jointCombatHealingStateMeans(joint, 'a', a),
+      bPostCombatStateMean: jointCombatHealingStateMeans(joint, 'b', b),
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };
@@ -4408,6 +6053,8 @@ function resolveCombat(a, b, opts) {
       return {
         phases: null,
         totalDmgToA: [1], totalDmgToB: [1],
+        aPostCombatStateMean: initialCombatHealingStateMeans(a),
+        bPostCombatStateMean: initialCombatHealingStateMeans(b),
         aRemHP, aHP: aTotalHP, aAlive,
         bRemHP, bHP: bTotalHP, bAlive,
       };
@@ -4418,7 +6065,7 @@ function resolveCombat(a, b, opts) {
       ? computeCasterDefenseForAttack(b, rangedAttacker, ver, bVertigoDefPenalty, 'ranged')
       : bDefVsARanged;
     const rangedToBlock = rangedChannel
-      ? buildToBlockContext(rangedAttacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty).bToBlockVsARangedEW
+      ? buildToBlockContext(rangedAttacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty, ver).bToBlockVsARangedEW
       : bToBlockVsARangedEW;
 
     // Rage: +1 ranged per figure lost (ranged combat has no counter-attack, so only
@@ -4442,9 +6089,11 @@ function resolveCombat(a, b, opts) {
         opts.version, rangedTouchFires, touchRecordForPhase(ver, 'ranged'));
     const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
     const aImmDistR = (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0)
-      ? calcAreaDamageDist(bAlive, immStr, a.toHitImmolation, bDefForImm, bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits, woundedTopFigHP(bRemHP, b.hp))
+      ? calcDamageSpellDist(bAlive, immStr, a.toHitImmolation, bDefForImm,
+        bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits,
+        woundedTopFigHP(bRemHP, b.hp), ver, b.abilities)
       : null;
-    const tR = convolveTouchAttacks(dmgToB, bRemHP, aAlive, {
+    const rangedTouchSpec = {
       poisonStr: aPoisonStrR, poisonFail: aPoisonFailR,
       stoningFail: aStoningFailR,
       deathTouchFail: aDeathTouchFailR,
@@ -4455,10 +6104,10 @@ function resolveCombat(a, b, opts) {
       lifeStealMod: aLifeStealModR, lifeStealRes: bResDeath,
       immDist: aImmDistR,
       bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
-    });
-    dmgToB = tR.dist;
-    let aLifeStealDistR = tR.lifeStealDist;
-    let aLifeStealExpectedR = tR.lifeStealEV;
+      sourceState: usesStatefulCombatHealing(ver) ? combatHealStateFromUnit(a) : null,
+      version: ver,
+    };
+    let tR = convolveTouchAttacks(dmgToB, bRemHP, aAlive, rangedTouchSpec);
 
     // Haste doubles ranged attacks, including mana-pool magical ranged from Caster
     // *units* (Djinn, Efreet). The DOS engines require 7 mana in 1.31 or 6 in CP 1.60
@@ -4483,19 +6132,29 @@ function resolveCombat(a, b, opts) {
     const hasteDoublesRanged = aHaste && rangedAttacker.rtb > 0 && aAlive > 0 && bRemHP > 0
       && !momHeroManaRanged;
     if (hasteDoublesRanged) {
-      dmgToB = convolveDists(dmgToB, dmgToB, bRemHP);
-      if (aLifeStealDistR) aLifeStealDistR = convolveDists(aLifeStealDistR, aLifeStealDistR, bRemHP);
-      aLifeStealExpectedR *= 2;
+      tR = repeatTouchAttack(tR, dmgToB, bRemHP, aAlive, rangedTouchSpec);
     }
+    dmgToB = tR.dist;
+    const aLifeStealDistR = tR.lifeStealDist;
+    const aLifeStealExpectedR = tR.lifeStealEV;
+    const rangedStateMeans = rangedCombatHealingStateMeans(tR.outcomes, a, b);
 
     return {
       phases: null,
       totalDmgToA: [1],
       totalDmgToB: dmgToB,
       aLifeStealDist: aLifeStealDistR,
+      aLifeStealRawDist: aLifeStealDistR,
       aLifeStealExpected: aLifeStealExpectedR,
+      aLifeStealRawExpected: tR.rawDrainEV,
+      aHealedDamageDist: tR.healedDamageDist,
+      aBonusHpDist: tR.bonusHpDist,
+      aBonusHpExpected: tR.bonusHpEV,
+      aBloodsuckerHealDist: tR.bloodsuckerHealDist,
       bLifeStealDist: null,
       bLifeStealExpected: 0,
+      aPostCombatStateMean: rangedStateMeans.sourceMeans,
+      bPostCombatStateMean: rangedStateMeans.targetMeans,
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };

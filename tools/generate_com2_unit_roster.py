@@ -116,10 +116,10 @@ def abilities_str(u):
         else:
             parts.append(f"Spell: {raw}")
 
-    # Non-standard base block chance
+    # Non-standard base block chance; calculator rosters store a delta above 30%.
     to_block = u.get("to_block")
     if to_block is not None:
-        parts.append(f"Block {to_block}%")
+        parts.append(f"Block {30 + to_block}%")
 
     return ", ".join(parts)
 

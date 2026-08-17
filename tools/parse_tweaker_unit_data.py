@@ -236,10 +236,10 @@ def process_unit_file(input_file: Path):
     units = {}
     unmatched = Counter()
     unit_id = 1
-    # In CoM the Dispel Evil spell/ability was renamed to Exorcise (save -1, hits any
-    # fantastic creature; created-undead suffer an additional -3). The CoM 6.08 tweaker
-    # export still uses the legacy MoM label, so translate it here. MoM files keep
-    # "Dispel Evil" untouched.
+    # CoM 6.08's Tweaker export retains the legacy "Dispel Evil" label for common
+    # attack bit 0x0800. WIZARDS.EXE consumes that bit as Exorcise: the flag's presence
+    # selects a literal -3 save modifier, so the roster must not derive its value from
+    # the unrelated Spec_Att_Attrib/Gaze-Poison byte. MoM files keep "Dispel Evil".
     is_com = 'CoM' in input_file.name
 
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -369,7 +369,7 @@ def process_unit_file(input_file: Path):
                     final_abilities.insert(0, 'Hero')
 
             if is_com:
-                final_abilities = ['Exorcise=-1' if a == 'Dispel Evil' else a
+                final_abilities = ['Exorcise' if a == 'Dispel Evil' else a
                                    for a in final_abilities]
 
             if final_abilities:

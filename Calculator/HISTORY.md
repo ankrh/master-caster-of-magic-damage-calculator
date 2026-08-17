@@ -4,8 +4,240 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-16
+
+- **F20 — source-order stat-transform closure.** Explicit per-version `b`/`c`/`d` manifests now account for every represented step exactly once in source order, preserve atomic multi-field writes, and expose a complete applied/skipped execution trace with order assertions. Existing arithmetic and sparse public traces remain unchanged across `mom_1.31`, `mom_cp_1.60.00`, `com_6.08`, `com2_1.05.11`, and `com2_warlord_1.5.12.7`; focused structural regressions cover atomicity and malformed manifests. See [the method-3.1 review artifact](../.reviews/F20.review-of-luna.md).
+
+## 2026-08-15
+
+- **R9-G1c — final unit-transform provenance closure.** Bound the last seven formula sites to
+  checked-in DOS, modern Caster, and Warlord script/table implementations. Warlord permanent
+  creation now uses the saved Wild Game ranged channel, the full Nightshade count, unconditional
+  Dragon Mound Fire Breath creation, and Energy Cannon's roster-equivalent permanent-Ranged gate
+  and ranged-only riders;
+  DOS material and CoM 1 Flame Blade writes now retain their pre-Focus order. The provenance audit
+  has no open formulas.
+
+- **R9-G1e — weapon material chance projections.** Bound melee and secondary-channel material
+  To-Hit across all five builds to the reconstructed DOS material block, reconstructed modern
+  `ApplyMagicWeapons`, and both shipped runtime values. Eligible Thrown attacks now receive the
+  material bonus, while a zero-melee unit no longer displays a material melee bonus; magical
+  Ranged, Breath, Gaze, and CoM 1 Focus-Magic exclusions are preserved.
+
+- **F50/F51/F53 — CoM 1 side maxima, Realm Ward, and signed Warped Defense.** CoM 6.08 now
+  applies Guiding Beacon, Divine Barrier, and Soul Linker at their pre-Heavenly-Light side-tail
+  position; exposes the binary-backed Realm Ward −20%/−3/−3 transform; and truncates negative
+  Warped Defense toward zero before later Supreme Light and Tactician writes. MoM 1.31, CP 1.60,
+  CoM2 1.05.11, and Warlord 1.5.12.7 behavior is unchanged. The owning evidence is
+  [R6.1d](../Reference%20docs/DOS%20reconstructed/R6.1d.evidence.md).
+
+- **Combat healing state moved from advanced inputs to result means.** Unit cards and the matrix
+  now accept only aggregate starting Damage Taken, treating it as Regular damage. Each side's
+  result panel reports mean post-combat Irrecoverable/Irreversible Damage, Undeath Damage, and
+  Bonus HP/Extra Hits per figure from the exact correlated final-state paths; retired saved input
+  values are ignored.
+
+- **F43 — CoM 6.08 common `0x0800` resolves as Exorcise.** The calculator now
+  maps the retained *Dispel Evil* data label to the executable's literal Exorcise consumer and
+  applies its CoM-only target, modifier, immunity, and attack-channel behavior. The address-backed
+  path is recorded in [the MoM/CoM touch-effect analysis](../Reference%20docs/MoM%20binary%20analysis.md)
+  and [D39's reconstructed common-attack flow](../Reference%20docs/DOS%20reconstructed/D39.evidence.md).
+
+- **F57 — immediate DOS Life Steal healing.** MoM 1.31, CP 1.60, and CoM 6.08 now
+  apply each eligible Life Steal margin immediately through the exact build-specific
+  `Battle_Unit_Heal` transition and carry its correlated attacker state into later calls and
+  dealt phases. Regular/Undeath/Irreversible categories, restored figures, temporary Extra Hits,
+  signed-byte quirks, incoming category caps, and frozen simultaneous exchanges follow
+  [R6.2c](../Reference%20docs/DOS%20reconstructed/R6.2c.evidence.md) and
+  [R6.5b](../Reference%20docs/DOS%20reconstructed/R6.5b.evidence.md); modern Combatheal and
+  Warlord Bloodsucker behavior remains unchanged.
+
+- **F42 — Custom Level changes preserve editable base stats.** In all five calculator versions,
+  changing Level on a Custom unit now leaves its hand-edited pre-level card stats and base identity
+  untouched; only the downstream effective-stat transform changes. Predefined roster cards retain
+  their roster reset and locking behavior.
+
+- **F39 — combat-global Chaos Conjunction Immolation scaling.** CoM2 1.05.11 and
+  Warlord 1.5.12.7 now expose one combat-global state that applies
+  `Trunc(10 × 1.34) = 13` to every eligible Immolation firing from either side. Swap leaves the
+  global in place, and persistence, share links, and matrix workers carry it. Wall of Fire and
+  MoM 1.31, CP 1.60, and CoM 6.08 behavior are unchanged.
+
+- **F36 — Warlord Wall of Fire spill and amplification.** Warlord 1.5.12.7 now
+  resolves Wall of Fire as one ordinary non-Area attack whose surviving damage crosses wounded
+  and full-figure boundaries with a fresh Defense roll and Invulnerability subtraction at each
+  boundary. Its `ApplyDamageSpell` result receives the source-ordered, nonstacking Amplifier
+  category adjustment. CoM2 Area Wall of Fire, Immolation, and all DOS versions are unchanged.
+
+- **F40 — modern Wall of Fire Teleporting/Merging eligibility.** CoM2 1.05.11 and
+  Warlord 1.5.12.7 now skip Wall of Fire when the attacker's calculated abilities include
+  Teleporting or Merging. The abilities remain separate controls because Warlord Temporal Twist
+  and Tactician treat Teleporting differently; Hierophany strips both. DOS versions keep both
+  controls hidden and inert.
+
+- **F35 — modern Area spell caps.** CoM2 1.05.11 and Warlord 1.5.12.7 Area
+  `DamageSpell` iterations now cap at full HP per figure rather than the wounded top figure's
+  remaining HP; the aggregate still caps at remaining unit HP. This covers both modern
+  Immolations and CoM2 Wall of Fire. DOS behavior and Warlord's non-Area Wall of Fire are unchanged.
+
+- **F37 — modern spell Magic-Immunity exit.** CoM2 1.05.11 and Warlord 1.5.12.7
+  magical Immolation and Wall of Fire now return zero before Black Sleep or any attack,
+  defense, or Invulnerability roll when the target has calculated Magic Immunity. The explicit
+  `Nonmagic` bypass remains represented; DOS behavior is unchanged.
+
+- **F38 — modern Black Sleep spell Doom conversion.** After the earlier immunity exit,
+  CoM2 1.05.11 and Warlord 1.5.12.7 Immolation and Wall of Fire now deal deterministic Doom
+  spell damage against a sleeping target. A Black-Sleeping tactical attacker cannot initiate the
+  represented combat, so all incoming and outgoing damage remains zero. CoM2 keeps Area iteration
+  semantics; Warlord Wall of Fire uses exact non-Area Doom strength. DOS behavior is unchanged.
+
+- **F33 — modern hero ranged-distance exemption.** CoM2 1.05.11 and Warlord 1.5.12.7
+  heroes now bypass physical missile and boulder distance penalties before range arithmetic.
+  Nonheroes retain the modern distance formula and Long Range cap, while magical, thrown,
+  breath, and gaze attacks retain their separate zero-penalty rule. MoM 1.31, CP 1.60, and
+  CoM 6.08 behavior is unchanged.
+
+- **F56 — modern independent gazes exclude Level.** CoM2 1.05.11 and Warlord 1.5.12.7
+  Level processing now writes none of the independent Stoning, Death, or Doom Gaze fields or
+  their trace changes. Conventional ranged, Thrown, Fire Breath, and Lightning Breath retain
+  their level bonuses; MoM 1.31, CP 1.60, and CoM 6.08 gaze ladders are unchanged.
+
+- **F58 — per-call modern Cause Fear breakdown.** CoM2 1.05.11 and Warlord
+  1.5.12.7 now show separate normalized feared-figure distributions for Main or First Strike,
+  Haste, and Counter melee calls. Each row follows the call's exact living source state, including
+  immediate Life Steal/Bloodsucker healing and calls whose target was already killed, while zero
+  source figures and Black Sleep show zero feared. MoM 1.31 retains its no-op/self-fear bug
+  presentation; CP 1.60 and CoM 6.08 retain their shared Haste sample and combined row.
+
+- **F32/F34 — modern Defense rolls and Bless Defense gate.** CoM2 1.05.11 and
+  Warlord 1.5.12.7 now convolve ordinary To Defend for dice 1–15 with the shipped 30% cap
+  for dice 16 onward; thresholds above 100% make the first fifteen dice certain while the capped
+  dice remain 30%. Unit `ApplyAttack` channels pass spell ID 0 and receive no Bless Defense.
+  Positive-ID Chaos/Death spells retain +5 CoM2 or +7 Warlord Defense before Armor Piercing,
+  while Bless Resistance remains +5/+4 respectively. MoM 1.31, CP 1.60, and CoM 6.08 retain
+  their ordinary single-binomial Defense rolls.
+
+- **F30/F31 — modern Haste attack calls.** CoM2 1.05.11 and Warlord 1.5.12.7 now repeat
+  each initiating Stoning, Death, and Doom Gaze under Haste while retaliation gazes remain
+  single, and each Hasted melee `ApplyAttack` samples Cause Fear independently. The main,
+  Haste, and counter block preserves its frozen pending-damage snapshot while immediate Life
+  Steal and Bloodsucker healing follows call order and conditions later calls. MoM 1.31,
+  CP 1.60, and CoM 6.08 retain their legacy Haste and fear behavior.
+
+- **F29 — modern melee opening order.** CoM2 1.05.11 and Warlord 1.5.12.7 now deal
+  Wall of Fire, each attacker and defender Stoning/Death/Doom Gaze, Lightning Breath, Fire
+  Breath, and Thrown in compiled order before the melee block. Each boundary carries exact
+  casualties and healing state forward; MoM 1.31, CP 1.60, and CoM 6.08 retain their legacy order.
+
+- **D40 — modern Blur side review.** Independent raw-byte reviews confirmed that CoM2 1.05.11
+  and Warlord 1.5.12.7 keep `CGADEnemy` fixed on the army opposing the active-side initiator
+  throughout every displayed exchange. Card B's army Blur therefore affects initiating attacks,
+  retaliation gazes, and Card B's own counterattack; Warlord's executing scripts do not override
+  that flow. The durable array binding and active-side caller proof are recorded in
+  [`Combat.ApplyAttack.R5.2c.evidence.md`](../Reference%20docs/Caster%20binary/Combat.ApplyAttack.R5.2c.evidence.md).
+
+## 2026-08-14
+
+- **F27/F28 — modern immediate drain and Warlord Bloodsucker.** CoM2 1.05.11 and
+  Warlord 1.5.12.7 now preserve uncapped per-figure Life Steal rolls separately from
+  target-capped damage and apply immediate `Combatheal` results through exact correlated attack
+  paths. Warlord Bloodsucker finalizes once per `ApplyAttack` call after all routed result
+  categories, using its independent runtime damage and healing values. Explicit modern damage
+  categories and bonus-HP state round-trip through UI, saved/share state, swaps, and matrix cells;
+  MoM 1.31, CP 1.60, CoM 6.08, and base CoM2 Bloodsucker behavior remain unchanged.
+
+- **F25/F26 — modern ApplyAttack rider dispatch.** CoM2 1.05.11 and Warlord
+  1.5.12.7 now exclude Poison, Stoning Touch, Death Touch, Life Steal, Exorcise, and
+  Destruction from all three Gaze types. Eligible non-Gaze calls retain their routed riders,
+  and Destruction makes one independent resistance attempt per surviving attacker figure with
+  any failure destroying the target. MoM 1.31, CP 1.60, and CoM 6.08 remain unchanged.
+
+- **F24 — modern army-global Blur.** CoM2 1.05.11 and Warlord 1.5.12.7 represent
+  each army's Blur on its unit card: Card B is the tactical defender and supplies Blur for every
+  eligible attack in the displayed exchange, including its counterattack; Card A's stored value
+  becomes active after Swap. Retired strategic-side state migrates to the two card controls, and
+  matrix workers use the same projection. Target Invisibility and source Illusion Immunity remain
+  directional. MoM 1.31, CP 1.60, and CoM 6.08 retain target-unit Blur.
+
+- **F23 — modern Cause Fear base-immunity gate.** CoM2 1.05.11 and Warlord
+  1.5.12.7 now preserve intrinsic/base Death Immunity separately for Cause Fear's direct
+  skip. Recalculation-only grants from Blood Lust, Animated, Rebuild, and Divine Protection
+  still make the −3 roll, while Magic Immunity remains protective through effective Resistance
+  100. MoM 1.31, CP 1.60, and CoM 6.08 behavior remains unchanged.
+
+- **F21 — modern roster To Defend.** CoM2 1.05.11 and Warlord 1.5.12.7 roster
+  generators now encode both `to_hit` and `to_block` as percentage-point deltas above 30%.
+  The main cards and matrix rows load each unit's own value, including all 29 shipped
+  non-default 20%, 40%, and 50% records; reporting tools still render absolute percentages.
+  MoM 1.31, CP 1.60, and CoM 6.08 roster behavior remains unchanged.
+
+- **City Walls exchange-role correction.** City-wall position now belongs to each unit card.
+  Resolution grants its +1/+3 extra Defense only when that attack's target is inside and source
+  is outside, including the reversed source/target on a counter-attack; army identity and card
+  label are irrelevant. Modern and DOS resolution retain their distinct extra-Defense ordering,
+  and DOS spell damage remains wall-independent. Old global saved state migrates to card B.
+
+- **F19 — complete calculator-relevant modern transform inventory.** CoM2 1.05.11 and Warlord
+  1.5.12.7 now expose and apply Dark Force, the Heavenly Light/Guardian-node package, all three
+  Moon/Conjunction effects, Spell Ward, and the Guiding Beacon, Prayermaster, Divine Barrier,
+  Soul Linker, and Leadership auras at their compiled positions. Heavenly Light's per-unit input
+  follows defending-army membership independently of which unit initiates the exchange.
+  Warlord 1.5.12.7 additionally
+  preserves independent Military Workshop/Rocketry channels, gates permanent training on base
+  identity, and applies those writes before Lightning Blade creates, overwrites, or converts
+  Lightning Breath. Military Workshop is
+  now source-bound, leaving 10 live provenance gaps. MoM 1.31, CP 1.60, and CoM 6.08 remain
+  unchanged. Durable ordering and gate evidence lives in
+  `Reference docs/Caster binary/CoM2 binary - unit recalculation.md`,
+  `Units.RecalculateUnits.pas`, and Warlord 1.5.12.7 `CreateUnit.CAS`.
+- **F18 — modern node aura reconstruction and correction.** Reconstructed the complete shared
+  CoM2 1.05.11/Warlord 1.5.12.7 `@Units@applynodeaura` helper. It gates melee on persistent
+  `BaseUnits.attack`, gates current conventional Ranged and both Breath fields independently,
+  never writes Thrown or Gaze, and adds 2 Defense/Resistance unconditionally. The calculator now
+  preserves both persistent-versus-live melee cases and leaves Thrown unchanged; focused checks
+  cover the corrected channels. Method-4 review found no reconstruction error and exposed both
+  corrected model mismatches. Durable coverage is in `Reference docs/Caster binary/F18.evidence.md`.
+- **F17 — complete Warlord Vampirism channel transfer.** Warlord 1.5.12.7 now reads
+  simultaneous Thrown, Fire Breath, and Lightning Breath strengths at Vampirism's exact
+  post-Colossal region-`d` position, adds half their combined total to melee with one truncation,
+  and independently resets every positive source channel to strength 1 before Shadow Strike.
+  Conventional ranged remains unchanged. Focused regressions cover odd combined totals, all three
+  resets, and Colossal/Vampirism/Shadow ordering; MoM 1.31, CP 1.60, CoM 6.08, and CoM2 1.05.11
+  remain unchanged.
+- **F15 — Holy Armor threshold ordering.** CoM2 1.05.11 and Warlord 1.5.12.7 now
+  evaluate Holy Armor's `Defense > 5` branch at its exact region-`c` boundary: after the
+  earlier item and unit-enchantment Defense writers, but before Orihalcon, Holy Weapon,
+  globals, combat globals, auras, and curses. Later positive or negative Defense changes no
+  longer flip its +2 Defense / +10% To Defend result; ordered traces and focused regressions
+  cover both branch directions and the boundary's split attack-channel writes.
+- **F14 — Misfortune aura ordering.** CoM2 1.05.11 Mislead and Warlord 1.5.12.7
+  Liability now apply one atomic aura-type-10 write in region `e`, after the terminal clamps and
+  before Supreme Light. Live non-Fantastic units lose 1 melee, Defense, and Resistance; only a
+  persistent base Ranged slot also loses 1, so Focus Magic-created Ranged and independent Thrown,
+  Breath, and Gaze channels remain untouched. An eligible zero stat can finish at −1. MoM 1.31,
+  CP 1.60, and CoM 6.08 remain unchanged.
+- **F13 — Upgraded Explosive source order.** Warlord 1.5.12.7 now doubles Fire Breath at
+  its exact `UnitCalcPre.CAS` position, before later phase-`b` effects. The derived trace keeps
+  the doubling attached to the Blackpowder-upgraded subtotal instead of folding later writes
+  into it; focused derivation and browser regressions cover the ordering.
+  MoM 1.31, CP 1.60, CoM 6.08, and CoM2 1.05.11 remain unchanged.
+
 ## 2026-08-13
 
+- **F12 — ordered late unit transforms.** CoM2 1.05.11 and Warlord 1.5.12.7 now apply
+  Chaos Channels, Destiny, level bonuses, and Focus Magic in compiled order. Focus uses the
+  persistent base-channel gate while converting the live post-level channel, including the
+  Marionette and Bombs & Grenades interactions, and retains independent modern attack channels.
+  Warlord now applies Colossal Growth, represented Vampirism, and Shadow Strike in region-`d`
+  order; MoM 1.31, CP 1.60, and CoM 6.08 behavior remains unchanged.
+- **F9 — Warlord Marionette.** Wanderer now derives the Warlord 1.5.12.7 Channeler
+  transformation from wizard skill, primary realm, all five book counts, Ascension, and
+  Conjurer. The package covers live Fantastic identity, generated magical ranged, ordered stat
+  and threshold grants, spell/charge metadata, Ascension attack flags, and the persistent strayed
+  package including Transmute Equipment's latent Chaos ranged channel, Rebuild, and Charmed.
+  The early Fantastic write now makes an Outlander-owned Wanderer eligible for
+  Xenoveterinary. Controls are exact-version gated and round-trip through saved/share state;
+  remaining retort-to-hero-template progression stays with F41.
 - **F6 — DOS Chaos Channels shared attack slot.** MoM 1.31 now admits the Fire Breath
   result only for a base None/Thrown slot with signed strength at most 3; CP 1.60 and CoM 6.08
   use the patched ceiling of 0. Gaze and existing Breath types reject the result, so DOS no
@@ -305,7 +537,5 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 Canonical descriptions are in `SPEC.md`, Known modelling limitations.
 
-- **M1:** Life Steal's displayed distribution is approximate; F28 owns healing semantics.
-- **M2:** displayed target damage is capped at remaining HP; F27/F28 own uncapped healing inputs.
 - **M7:** ammunition is outside the one-engagement model.
 - **M8:** between-turn regeneration is outside the one-engagement model.

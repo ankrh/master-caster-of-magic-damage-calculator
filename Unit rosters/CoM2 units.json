@@ -4234,7 +4234,7 @@
     "melee": 4,
     "defense": 3,
     "resist": 3,
-    "to_block": 20,
+    "to_block": -10,
     "to_hit": 10,
     "abilities": [
       "Illusion Immunity",

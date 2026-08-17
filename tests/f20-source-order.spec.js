@@ -1,0 +1,432 @@
+const { test, expect } = require('@playwright/test');
+const { openCalculator, expectNoConsoleErrors } = require('./helpers');
+
+const F20_VERSIONS = [
+  'mom_1.31',
+  'mom_cp_1.60.00',
+  'com_6.08',
+  'com2_1.05.11',
+  'com2_warlord_1.5.12.7',
+];
+
+const F20_PROBE_ABILITIES = {
+  lucky: true, darkForce: true, heavenlyLight: true, endurance: true, discipline: true,
+  animated: true, flameBlade: true, mysticSurge: true, lionheart: true, ironSkin: true,
+  stoneSkin: true, landLinking: true, ccDefense: true, blackChannels: true,
+  giantStrength: true, holyArmor: true, orihalcon: true, highPrayer: true, prayer: true,
+  trueLight: true, blackPrayer: true, darkness: true, warpReality: true, vertigo: true,
+  weakness: true, mindStorm: true, warpAttack: true, warpDefense: true, warpResist: true,
+  shatter: true, guardian: true, survivalInstinct: true, reinforceMagic: true,
+  innerPower: true, blazingMarch: true, charmOfLife: true, badMoon: true, goodMoon: true,
+  natureConjunction: true, tactician: true, spellWard: 'life', metalFires: true,
+  rebuild: true, fieryFury: true, outlanderXenoveterinary: true,
+  outlanderXenopsychology: true, outlanderRadio: true,
+  outlanderBallisticsTraining: true, nausea: true, uphillBattle: true, soulFlay: true,
+  eternalNight: true, greatUnbinding: true, plague: true, goblinPox: true, luckyStar: true,
+  disheartenProphecy: true, wallOfFireGarrison: true, godsPlayDices: true,
+  mechanical: true, mechanicalExpert: true, trueSight: true, flameBladeWarlord: true,
+  berserkWarlord: true, rust: true, hurricane: true, favoredTerrain: true,
+  colossalStrength: true, vampirism: true, shadowStrike: true, psychoForce: true,
+  pneumaField: true, energyBeamWeapons: true, blazeOfGlory: true, beatOfSwiftness: true,
+  hierophany: true, channeler: true, militaryWorkshop: true, rocketry: true,
+};
+
+// Independent source-order anchors from the checked-in DOS ledgers and CoM2 region map.
+// These deliberately do not come from f20SourceManifests(), so a copied or misordered
+// manifest cannot make this regression pass by agreeing with itself.
+const F20_SOURCE_ANCHORS = {
+  'mom_1.31': {
+    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'chance:holyWeapon:melee',
+      'chance:holyWeapon:rtb', 'blackChannels', 'ironSkin', 'flameBlade',
+      'flameBlade:ranged', 'giantStrength', 'giantStrength:thrown',
+      'chaosChannels:armor', 'lionheart', 'lionheart:rangedHp', 'holyArmor',
+      'berserk', 'nodeAura', 'highPrayer', 'trueLight', 'darkness',
+      'chance:warpReality', 'blackPrayer', 'chance:vertigo', 'weakness',
+      'weakness:ranged', 'warpAttack', 'warpDefense', 'warpResist', 'shatter'],
+  },
+  'mom_cp_1.60.00': {
+    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'blackChannels', 'ironSkin',
+      'flameBlade', 'flameBlade:ranged', 'giantStrength', 'giantStrength:thrown',
+      'chaosChannels:armor', 'lionheart', 'lionheart:rangedHp', 'holyArmor',
+      'berserk', 'chance:holyWeapon:melee', 'chance:holyWeapon:rtb', 'nodeAura',
+      'highPrayer', 'trueLight', 'darkness', 'chance:warpReality',
+      'blackPrayer', 'chance:vertigo', 'weakness', 'weakness:ranged', 'warpAttack',
+      'warpDefense', 'warpResist', 'shatter'],
+  },
+  'com_6.08': {
+    // CoM 1's BU_Apply_Specials layout: Lionheart com1:0x8F660, Iron Skin 0x8F71F, the
+    // Chaos Channels armor mutation 0x8F735, Land Link 0x8F75C, then Mystic Surge's
+    // stat-writing half 0x8F795, then Holy Armor 0x8F7C1.
+    c: ['level', 'lucky', 'weapon', 'endurance', 'discipline', 'animated',
+      'flameBlade', 'flameBlade:ranged', 'lionheart',
+      'lionheart:rangedHp', 'ironSkin', 'chaosChannels:armor',
+      'landLinking', 'landLinking:breath', 'mysticSurge',
+      'holyArmor', 'focusMagic', 'focusMagic:conversion',
+      'orihalcon', 'chance:holyWeapon:melee', 'chance:holyWeapon:rtb', 'chaosSurge',
+      'survivalInstinct', 'nodeAura', 'highPrayer', 'badMoon', 'goodMoon',
+      'natureConjunction', 'blazingMarch', 'blazingMarch:ranged',
+      'chance:warpReality', 'blackPrayer', 'guardian', 'chance:vertigo', 'weakness',
+      'weakness:ranged', 'warpAttack', 'warpDefense', 'warpResist', 'shatter',
+      'darkness:coM1', 'supremeLight:coM1', 'realmWard', 'tactician:coM1'],
+  },
+  'com2_1.05.11': {
+    c: ['level', 'focusMagic', 'focusMagic:conversion', 'lucky', 'darkForce',
+      'heavenlyLight', 'chance:heavenlyLight:melee', 'chance:heavenlyLight:rtb',
+      'weapon', 'chance:weapon:melee', 'chance:weapon:rtb', 'endurance', 'discipline',
+      'chaosChannels:armor', 'animated', 'flameBlade', 'flameBlade:ranged',
+      'mysticSurge', 'lionheart', 'lionheart:rangedHp', 'ironSkin', 'landLinking',
+      'landLinking:breath', 'holyArmor', 'orihalcon', 'chance:holyWeapon:melee',
+      'chance:holyWeapon:rtb', 'chaosSurge', 'survivalInstinct', 'reinforceMagic',
+      'reinforceMagic:ranged', 'eternalNight:enemyResistance', 'charmOfLife',
+      'nodeAura', 'badMoon', 'goodMoon', 'natureConjunction', 'highPrayer',
+      'blazingMarch', 'blazingMarch:ranged', 'chance:warpReality', 'blackPrayer',
+      'darkness', 'guardian', 'chance:vertigo', 'weakness', 'weakness:ranged',
+      'warpAttack', 'warpDefense', 'warpResist', 'shatter', 'spellWard', 'tactician'],
+  },
+  'com2_warlord_1.5.12.7': {
+    b: ['marionette:stats', 'fieryFury', 'natureLink', 'outlanderXenoveterinary',
+      'bombsGrenades', 'upgradedExplosive:ranged', 'upgradedExplosive:fireBreath',
+      'chance:outlanderBallisticsTraining', 'outlanderXenopsychology', 'outlanderRadio',
+      'chance:nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
+      'greatUnbinding', 'prayer:warlordStack', 'trueLight', 'plague', 'goblinPox',
+      'luckyStar', 'disheartenProphecy', 'wallOfFire:garrison', 'godsPlayDices'],
+    c: ['level', 'focusMagic', 'focusMagic:conversion', 'lucky', 'darkForce',
+      'heavenlyLight', 'chance:heavenlyLight:melee', 'chance:heavenlyLight:rtb',
+      'weapon', 'endurance', 'discipline', 'chaosChannels:armor', 'animated',
+      'flameBlade', 'flameBlade:ranged', 'mysticSurge', 'lionheart',
+      'lionheart:rangedHp', 'ironSkin', 'landLinking', 'landLinking:breath',
+      'holyArmor', 'orihalcon', 'chance:holyWeapon:melee', 'chance:holyWeapon:rtb',
+      'chaosSurge', 'survivalInstinct', 'reinforceMagic', 'reinforceMagic:ranged',
+      'eternalNight:enemyResistance', 'charmOfLife', 'nodeAura', 'badMoon', 'goodMoon',
+      'natureConjunction', 'highPrayer', 'blazingMarch', 'blazingMarch:ranged',
+      'chance:warpReality', 'blackPrayer', 'darkness', 'guardian', 'chance:vertigo',
+      'weakness', 'weakness:ranged', 'warpAttack', 'warpDefense', 'warpResist',
+      'shatter', 'spellWard', 'tactician'],
+    d: ['mechanicalExpert', 'weakness:breath', 'chance:trueSight:ranged',
+      'flameBlade:fireBreath', 'chance:berserkWarlord', 'rust', 'chance:hurricane',
+      'favoredTerrain', 'colossalStrength', 'vampirism:transfer', 'shadowStrike:thrown',
+      'psychoForce', 'pneumaField', 'chance:energyCannonThreshold', 'blazeOfGlory',
+      'beatOfSwiftness', 'hierophany'],
+  },
+};
+
+const F20_WARLORD_NORMAL_ANCHORS = {
+  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'],
+  b: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].b
+    .filter(id => id !== 'marionette:stats'),
+  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].d
+    .filter(id => id !== 'rust'),
+};
+
+const F20_WARLORD_MARIONETTE_ANCHORS = {
+  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'],
+  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].d
+    .filter(id => id !== 'rust'),
+};
+
+function f20Anchors(version, scenario) {
+  if (version !== 'com2_warlord_1.5.12.7') return F20_SOURCE_ANCHORS[version];
+  return scenario === 'marionette'
+    ? F20_WARLORD_MARIONETTE_ANCHORS
+    : F20_WARLORD_NORMAL_ANCHORS;
+}
+
+function expectSubsequence(actual, expected, label) {
+  let next = 0;
+  for (const id of actual) {
+    if (id === expected[next]) next += 1;
+  }
+  expect(next, label).toBe(expected.length);
+}
+
+test('F20 covers every represented b/c/d step in source order for all five versions', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const reports = await page.evaluate(({ versions, probeAbilities }) => {
+    const makeInput = (version, scenario) => ({
+      prefix: 'a', version,
+      identity: version === 'com2_warlord_1.5.12.7' && scenario === 'marionette'
+        ? createUnitIdentity({
+            version, heroTypeId: 48, isHero: true, baseRace: 'High Men',
+            baseFantastic: false, specialUnit: 'none',
+          })
+        : createCustomUnitIdentity(version, {
+            baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
+          }),
+      figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
+      level: 'normal', weapon: 'normal', armor: 'none',
+      toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
+      cityWalls: 'none', nodeAura: 'life', chaosSurge: 1,
+      guidingBeaconAura: 2, divineBarrierAura: 2, soulLinkerAura: 2,
+      realmWard: 'life', abilities: { ...probeAbilities },
+    });
+    return Object.fromEntries(versions.map(version => {
+      const scenarios = version === 'com2_warlord_1.5.12.7'
+        ? ['normal', 'marionette'] : ['default'];
+      return [version, Object.fromEntries(scenarios.map(scenario => {
+        const report = deriveUnitStats(makeInput(version, scenario));
+        const manifest = f20SourceManifests(version);
+        return [scenario, {
+          manifest,
+          statTrace: report.statTrace,
+          executionTrace: report.statExecutionTrace,
+          enumerableExecutionTrace: Object.keys(report).includes('statExecutionTrace'),
+          hasExecutionTrace: Object.prototype.hasOwnProperty.call(report, 'statExecutionTrace'),
+        }];
+      }))];
+    }));
+  }, { versions: F20_VERSIONS, probeAbilities: F20_PROBE_ABILITIES });
+
+  expect(Object.keys(reports).sort()).toEqual([...F20_VERSIONS].sort());
+  for (const version of F20_VERSIONS) {
+    for (const [scenario, report] of Object.entries(reports[version])) {
+      const label = scenario === 'default' ? version : `${version}/${scenario}`;
+      const { manifest, statTrace, executionTrace } = report;
+      expect(Array.isArray(executionTrace), label).toBe(true);
+      expect(executionTrace.length, label).toBeGreaterThan(0);
+      expect(report.hasExecutionTrace, label).toBe(true);
+      expect(report.enumerableExecutionTrace, label).toBe(false);
+      expect(statTrace.every((event, index) => event.traceOrder === index), label).toBe(true);
+      expect(executionTrace.every((event, index) => event.traceOrder === index
+        && event.executionOrder === index
+        && ['applied', 'skipped'].includes(event.status)), `${label} complete trace`).toBe(true);
+
+      const represented = executionTrace.filter(event => ['b', 'c', 'd'].includes(event.phase));
+      const representedIds = represented.map(event => event.id);
+      const manifestIds = new Set([...manifest.b, ...manifest.c, ...manifest.d]);
+      expect(representedIds.every(id => manifestIds.has(id)), `${label} manifest coverage`).toBe(true);
+      expect(new Set(representedIds).size, `${label} duplicate represented ids`).toBe(representedIds.length);
+
+      for (const phase of ['b', 'c', 'd']) {
+        const actual = represented.filter(event => event.phase === phase);
+        const expected = manifest[phase].filter(id => representedIds.includes(id));
+        expect(actual.map(event => event.id), `${label} ${phase} source order`).toEqual(expected);
+        expect(actual.every(event => Number.isInteger(event.sourceOrder)),
+          `${label} ${phase} source annotations`).toBe(true);
+        expect(actual.every((event, index) => event.sourceOrder === manifest[phase].indexOf(event.id)),
+          `${label} ${phase} manifest ranks`).toBe(true);
+        expect(actual.every((event, index) => index === 0
+          || event.sourceOrder > actual[index - 1].sourceOrder),
+        `${label} ${phase} increasing source ranks`).toBe(true);
+        expectSubsequence(actual.map(event => event.id),
+          (f20Anchors(version, scenario)[phase]) || [],
+          `${label} ${phase} independent source anchors`);
+      }
+
+      const skippedIds = new Set(executionTrace
+        .filter(event => event.status === 'skipped').map(event => event.id));
+      expect(statTrace.some(event => skippedIds.has(event.id)), `${label} sparse skipped projection`).toBe(false);
+
+      // The public trace merges the identity pre-pass with the stat sequence, so it is the
+      // place a represented b/c/d write could escape a manifest by living in another sequence.
+      const tracedRepresented = statTrace.filter(event => ['b', 'c', 'd'].includes(event.phase));
+      expect(tracedRepresented.every(event => manifestIds.has(event.id)),
+        `${label} public trace manifest coverage`).toBe(true);
+      expect(tracedRepresented.every(event => Number.isInteger(event.sourceOrder)),
+        `${label} public trace source annotations`).toBe(true);
+
+      if (version !== 'com2_warlord_1.5.12.7') {
+        expect(represented.some(event => event.phase === 'b' || event.phase === 'd'), label).toBe(false);
+        expect(tracedRepresented.some(event => event.phase === 'b' || event.phase === 'd'),
+          `${label} public trace has no Warlord-hook write`).toBe(false);
+      }
+    }
+  }
+  expectNoConsoleErrors(errors);
+});
+
+test('F20 keeps multi-field writes atomic while the public trace stays sparse', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const report = await page.evaluate(() => {
+    const input = {
+      prefix: 'a', version: 'com2_1.05.11',
+      identity: createCustomUnitIdentity('com2_1.05.11', {
+        baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
+      }),
+      figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
+      level: 'normal', weapon: 'normal', armor: 'none',
+      toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
+      cityWalls: 'none', nodeAura: 'none', abilities: { destiny: true },
+    };
+    const destinyReport = deriveUnitStats(input);
+    const rustReport = deriveUnitStats({
+      ...input,
+      version: 'com2_warlord_1.5.12.7',
+      identity: createCustomUnitIdentity('com2_warlord_1.5.12.7', {
+        baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
+      }),
+      rtbType: 'thrown',
+      abilities: { rust: true },
+    });
+    return {
+      destiny: {
+        statExecutionTrace: destinyReport.statExecutionTrace,
+        statTrace: destinyReport.statTrace,
+        enumerable: Object.keys(destinyReport).includes('statExecutionTrace'),
+      },
+      rust: {
+        statExecutionTrace: rustReport.statExecutionTrace,
+        statTrace: rustReport.statTrace,
+      },
+    };
+  });
+
+  const destinyEvents = report.destiny.statExecutionTrace.filter(event => event.id === 'destiny');
+  expect(destinyEvents).toHaveLength(1);
+  expect(destinyEvents[0].status).toBe('applied');
+  const destinyTrace = report.destiny.statTrace.filter(event => event.id === 'destiny');
+  expect(destinyTrace).toHaveLength(1);
+  expect(Object.keys(destinyTrace[0].changes).sort()).toEqual(['atk', 'def', 'hp', 'res', 'rtb']);
+  expect(report.destiny.statExecutionTrace.length).toBeGreaterThan(report.destiny.statTrace.length);
+  expect(report.destiny.enumerable).toBe(false);
+
+  const rustEvents = report.rust.statExecutionTrace.filter(event => event.id === 'rust');
+  expect(rustEvents).toHaveLength(1);
+  expect(rustEvents[0].status).toBe('applied');
+  expect(rustEvents[0].sourceOrder).toBe(
+    F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].d.indexOf('rust'));
+  const rustTrace = report.rust.statTrace.filter(event => event.id === 'rust');
+  expect(rustTrace).toHaveLength(1);
+  expect(Object.keys(rustTrace[0].changes)).toEqual(['atk', 'thrownType']);
+
+  const inactive = await page.evaluate(() => {
+    const report = deriveUnitStats({
+      prefix: 'a', version: 'com2_1.05.11',
+      identity: createCustomUnitIdentity('com2_1.05.11', {
+        baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
+      }),
+      figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
+      level: 'normal', weapon: 'normal', armor: 'none',
+      toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
+      cityWalls: 'none', nodeAura: 'none', abilities: {},
+    });
+    return { statExecutionTrace: report.statExecutionTrace, statTrace: report.statTrace };
+  });
+  expect(inactive.statExecutionTrace.find(event => event.id === 'destiny').status).toBe('skipped');
+  expect(inactive.statTrace.some(event => event.id === 'destiny')).toBe(false);
+  expectNoConsoleErrors(errors);
+});
+
+test('F20 accounts for the Warlord identity writes that land in b and d', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const report = await page.evaluate(() => {
+    const version = 'com2_warlord_1.5.12.7';
+    const base = {
+      prefix: 'a', version, figs: 1, atk: 5, rtb: 4, rtbType: 'missile',
+      def: 6, res: 8, hp: 7, level: 'normal', weapon: 'normal', armor: 'none',
+      toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, cityWalls: 'none', nodeAura: 'none',
+    };
+    const channeler = deriveUnitStats({
+      ...base,
+      identity: createUnitIdentity({
+        version, heroTypeId: 48, isHero: true, baseRace: 'High Men',
+        baseFantastic: false, specialUnit: 'none',
+      }),
+      abilities: { channeler: true },
+    });
+    const spiritLink = deriveUnitStats({
+      ...base,
+      identity: createCustomUnitIdentity(version, {
+        baseRace: 'Chaos', baseFantastic: true, specialUnit: 'none',
+      }),
+      abilities: { spiritLink: true },
+    });
+    const pick = (unit, id) => unit.statTrace.find(event => event.id === id) || null;
+    return {
+      manifest: f20SourceManifests(version),
+      baseManifest: f20SourceManifests('com2_1.05.11'),
+      channelerEvent: pick(channeler, 'identity:marionetteChanneler'),
+      channelerLedgerIds: channeler.statExecutionTrace.map(event => event.id),
+      spiritLinkEvent: pick(spiritLink, 'identity:spiritLink'),
+      firstStatPhaseD: spiritLink.statTrace
+        .filter(event => event.phase === 'd' && event.id !== 'identity:spiritLink')
+        .map(event => event.traceOrder),
+    };
+  });
+
+  const { b, d } = report.manifest;
+  expect(b.filter(id => id === 'identity:marionetteChanneler')).toHaveLength(1);
+  expect(b.indexOf('identity:marionetteChanneler')).toBe(b.indexOf('marionette:stats') - 1);
+  expect(d.filter(id => id === 'identity:spiritLink')).toHaveLength(1);
+  expect(d.indexOf('identity:spiritLink')).toBeGreaterThan(d.indexOf('shadowStrike:thrown'));
+  expect(d.indexOf('identity:spiritLink')).toBeLessThan(d.indexOf('psychoForce'));
+  // Base CoM2 ships HALT stubs for both hooks, so neither id may appear there.
+  expect(report.baseManifest.b).toEqual([]);
+  expect(report.baseManifest.d).toEqual([]);
+
+  expect(report.channelerEvent).not.toBeNull();
+  expect(report.channelerEvent.phase).toBe('b');
+  expect(report.channelerEvent.sourceOrder).toBe(b.indexOf('identity:marionetteChanneler'));
+  expect(report.channelerEvent.changes.fantastic).toEqual({ from: false, to: true });
+  // The complete stat ledger stays one-to-one with the stat sequence; the identity pre-pass
+  // is its own sequence and does not inject events into it.
+  expect(report.channelerLedgerIds).not.toContain('identity:marionetteChanneler');
+
+  expect(report.spiritLinkEvent).not.toBeNull();
+  expect(report.spiritLinkEvent.phase).toBe('d');
+  expect(report.spiritLinkEvent.sourceOrder).toBe(d.indexOf('identity:spiritLink'));
+  expect(report.spiritLinkEvent.changes.fantastic).toEqual({ from: true, to: false });
+  // Documented divergence: the pre-pass executes this write ahead of every region-d stat
+  // write even though UnitCalc.CAS:1306 puts its source rank late in d.
+  expect(report.firstStatPhaseD.every(order => order > report.spiritLinkEvent.traceOrder))
+    .toBe(true);
+  expectNoConsoleErrors(errors);
+});
+
+test('F20 rejects missing, duplicate, and malformed structural trace entries', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const failures = await page.evaluate(() => {
+    const step = id => ({ id, phase: 'c', writes: ['res'], apply: unit => { unit.res += 1; } });
+    const shouldThrow = callback => {
+      try { callback(); return false; } catch (error) { return !!error; }
+    };
+    const malformedTrace = [{
+      id: 'a', source: { id: 'a', label: 'a' }, phase: 'c', order: 0,
+      traceOrder: 1, changes: { res: { from: 1, to: 2, delta: 1 } }, sourceOrder: 0,
+    }];
+    const completeStep = { id: 'complete', phase: 'c', sourceOrder: 0 };
+    const completeEvent = {
+      id: 'complete', phase: 'c', order: 0, traceOrder: 0, executionOrder: 0, status: 'skipped',
+    };
+    const changedEvent = (id, sourceOrder, traceOrder) => ({
+      id, phase: 'c', order: traceOrder, traceOrder, changes: { res: { from: 1, to: 2, delta: 1 } },
+      sourceOrder,
+    });
+    return {
+      missingManifestEntry: shouldThrow(() => orderStatStepsBySource(
+        [step('unlisted')], { c: ['listed'] }, ['c'])),
+      duplicateStep: shouldThrow(() => orderStatStepsBySource(
+        [step('same'), step('same')], { c: ['same'] }, ['c'])),
+      duplicateManifestEntry: shouldThrow(() => orderStatStepsBySource(
+        [step('same')], { c: ['same', 'same'] }, ['c'])),
+      duplicateManifestAcrossPhases: shouldThrow(() => orderStatStepsBySource(
+        [step('same')], { b: ['same'], c: [] }, ['b', 'c'])),
+      malformedPhase: shouldThrow(() => orderStatStepsBySource(
+        [{ ...step('badPhase'), phase: 'toString' }], { c: ['badPhase'] }, ['c'])),
+      missingPhaseManifest: shouldThrow(() => orderStatStepsBySource(
+        [step('listed')], { c: ['listed'] }, ['b', 'c'])),
+      badTraceOrder: shouldThrow(() => assertStatTraceOrder(malformedTrace)),
+      missingSourceOrder: shouldThrow(() => assertStatTraceOrder(
+        [completeEvent], { steps: [{ ...completeStep, sourceOrder: undefined }] })),
+      wrongSourceOrder: shouldThrow(() => assertStatTraceOrder([
+        changedEvent('first', 1, 0), changedEvent('second', 0, 1),
+      ])),
+      wrongExecutionOrder: shouldThrow(() => assertStatTraceOrder([
+        { ...completeEvent, executionOrder: 1 },
+      ], { steps: [completeStep] })),
+    };
+  });
+
+  expect(failures).toEqual({
+    missingManifestEntry: true,
+    duplicateStep: true,
+    duplicateManifestEntry: true,
+    duplicateManifestAcrossPhases: true,
+    malformedPhase: true,
+    missingPhaseManifest: true,
+    badTraceOrder: true,
+    missingSourceOrder: true,
+    wrongSourceOrder: true,
+    wrongExecutionOrder: true,
+  });
+  expectNoConsoleErrors(errors);
+});

@@ -39,9 +39,8 @@ When editing text that contains non-ASCII characters such as `→`, prefer `appl
 
 ## Task execution, derivations and cross-agent reviews
 
-Before implementing any `Calculator/BACKLOG.md` item, performing binary reconstruction, or doing
-cross-agent review work, read `DERIVATION-REVIEW-PROTOCOL.md` in full. Binary reconstruction always
-uses method 4: two independent Codex GPT-5.6 Sol High derivations, main-agent merge, then one Claude
-Opus 5 Medium review. An implementation uses the dual-implementation or
-single-implementation-plus-review method only when the user requests it or the backlog item already
-records that preference. Do not load the protocol for other ordinary tasks.
+Implement `Calculator/BACKLOG.md` items directly: no execution method applies, and do not propose
+one or launch subagents unless the user asks by name. Read `DERIVATION-REVIEW-PROTOCOL.md` in full
+only when performing binary reconstruction, which always uses method 4 — two independent Codex
+GPT-5.6 Sol High derivations, main-agent merge, then one Claude Opus 5 Medium review — or when the
+user names one of its other methods. Do not load it otherwise.

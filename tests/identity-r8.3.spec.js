@@ -35,10 +35,10 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
     const paladins = derive(simple('com2_1.05.11', createUnitIdentity({
       version: 'com2_1.05.11', templateId: 113, isHero: false,
       baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
-    }), { callToArmsPaladins: true }, { name: 'unrelated label' }));
+    }), { combatSummoned: true }, { name: 'unrelated label' }));
     const wrongTemplate = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
       isHero: false, baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
-    }), { combatSummoned: true, callToArmsPaladins: true }, { name: 'Paladins' }));
+    }), { combatSummoned: true }, { name: 'Paladins' }));
     const normalBreakthrough = derive(simple('com2_1.05.11', createCustomUnitIdentity('com2_1.05.11', {
       isHero: false, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'none',
     }), { breakthrough: 'meleeDef' }));
@@ -148,7 +148,7 @@ test('R8.3 applies CoM1 Zombies and success-wide combat-summon identity writes',
   expectNoConsoleErrors(errors);
 });
 
-test('Combat Summoned is visible and selectable for every engine version', async ({ page }) => {
+test('Combat Summoned is the sole visible summon-state control in every engine version', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
     const values = {};
@@ -167,5 +167,6 @@ test('Combat Summoned is visible and selectable for every engine version', async
   for (const value of Object.values(report)) {
     expect(value).toEqual({ present: true, disabled: false, hidden: false });
   }
+  await expect(page.locator('[id$="Abil_callToArmsPaladins"]')).toHaveCount(0);
   expectNoConsoleErrors(errors);
 });

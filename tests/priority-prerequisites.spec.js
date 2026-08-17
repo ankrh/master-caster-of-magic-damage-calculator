@@ -163,24 +163,16 @@ test('F54/F55 keep base-CoM2 summon identities out of Warlord', async ({ page })
     const paladins = simple(createUnitIdentity({
       version: 'com2_warlord_1.5.12.7', templateId: 113,
       baseRace: 'High Men', baseFantastic: false,
-    }), { callToArmsPaladins: true });
-    document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.7';
-    onVersionChange();
-    const callControl = document.getElementById('aAbil_callToArmsPaladins');
+    }), { combatSummoned: true });
     return {
       construct: { identity: construct.identity, ids: construct.identityTrace.map(step => step.id) },
       paladins: { identity: paladins.identity, ids: paladins.identityTrace.map(step => step.id) },
-      callControl: {
-        disabled: callControl.disabled,
-        hidden: callControl.closest('.abil-item').classList.contains('abil-hidden'),
-      },
     };
   });
   expect(report.construct.identity).toMatchObject({ race: 'Special', fantastic: true });
   expect(report.construct.ids).not.toContain('identity:constructCatapult');
-  expect(report.paladins.identity).toMatchObject({ race: 'High Men', fantastic: false });
+  expect(report.paladins.identity).toMatchObject({ race: 'High Men', fantastic: true });
   expect(report.paladins.ids).not.toContain('identity:callToArmsPaladins');
-  expect(report.callControl).toEqual({ disabled: true, hidden: true });
   expectNoConsoleErrors(errors);
 });
 

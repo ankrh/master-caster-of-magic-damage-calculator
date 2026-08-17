@@ -57,11 +57,14 @@
     <label class="check-label" data-tooltip="Death units: +1 to positive attacks, defense, and resistance.&#10;Life units: &#8722;1 to attacks, defense, and resistance.&#10;CoM 2 &amp; Warlord: Life penalties affect only positive channels.&#10;CoM 2 &amp; Warlord: Gaze attacks are separate and unchanged.">
       <input type="checkbox" id="darkness"> <span class="realm-death">Darkness</span>
     </label>
-    <label class="check-label" data-tooltip="Defender-side fire attack on the attacker, before the melee phase.&#10;Only in melee combat (not ranged).&#10;Magical fire. Opponents with Fire Immunity, Magic Immunity, or&#10;Righteousness are unaffected.&#10;MoM 1.31 &amp; 1.60: strength 5, 30% To Hit, hits every figure.&#10;CoM 1 &amp; 2: strength 10, 30% To Hit, hits every figure.&#10;Warlord: strength 12, 60% To Hit, hits a single figure.">
+    <label class="check-label" data-tooltip="Checking this asserts that Card B's unit belongs to the persistent defending army and is inside a city enchanted with Wall of Fire, while Card A's unit belongs to the attacking army and is outside.&#10;Defender-side fire attack on the attacker, before the melee phase.&#10;Only in melee combat (not ranged).&#10;Magical fire. Opponents with Fire Immunity, Magic Immunity, or&#10;Righteousness are unaffected.&#10;CoM2/Warlord: Teleporting or Merging attackers are unaffected.&#10;MoM 1.31 &amp; 1.60: strength 5, 30% To Hit, hits every figure.&#10;CoM 1 &amp; 2: strength 10, 30% To Hit, hits every figure.&#10;Warlord: one strength-12, 60%-To-Hit non-Area attack; damage&#10;spills across figures with fresh defense and Invulnerability rolls.">
       <input type="checkbox" id="wallOfFire"> <span class="realm-chaos">Wall of Fire</span>
     </label>
     <label class="check-label" data-tooltip="Non-Chaos units: &#8722;20% To Hit (melee, ranged, thrown, breath).&#10;Chaos units (including via Chaos Channels) are unaffected.">
       <input type="checkbox" id="warpReality"> <span class="realm-chaos">Warp Reality</span>
+    </label>
+    <label class="check-label" data-tooltip="Versions: CoM 2 1.05.11 &amp; Warlord 1.5.12.7&#10;Combat-global state affecting both sides.&#10;Immolation only: &times;1.34, then truncation (strength 10&#8594;13).&#10;Does not affect Wall of Fire.">
+      <input type="checkbox" id="chaosConjunction"> <span class="realm-chaos">Chaos Conjunction</span>
     </label>
     <label class="check-label" data-tooltip="Versions: Warlord&#10;Affects both sides.&#10;&#8722;20% To Hit for ranged and thrown attacks.&#10;&#8722;30% To Hit for breath attacks.&#10;Melee is unaffected.&#10;Not modeled: prevents flying; extra copies stack at half strength.">
       <input type="checkbox" id="hurricane"> <span class="realm-nature">Hurricane</span>
@@ -76,16 +79,8 @@
       <input type="checkbox" id="rangedCheck" checked> Ranged attack
     </label>
     <span class="field-group" id="rangedDistLabel">
-      <label for="rangedDist" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;MoM 1.31 &amp; 1.60: &#8722;10% per full 3 tiles.&#10;CoM 1: &#8722;10% per full 4 tiles.&#10;CoM 2: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">Ranged attack distance:</label>
-      <input type="number" id="rangedDist" min="1" max="99" value="1" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;MoM 1.31 &amp; 1.60: &#8722;10% per full 3 tiles.&#10;CoM 1: &#8722;10% per full 4 tiles.&#10;CoM 2: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">
-    </span>
-    <span class="field-group">
-      <label for="cityWalls" data-tooltip="Defense bonus applied to the defender only.&#10;MoM 1.31: Intact city wall: +3 def. Destroyed city wall or inner area: +1 def.&#10;MoM 1.60, CoM 1 &amp; 2: Intact city wall or inner area: +3 def. Destroyed city wall: +1 def.">City walls:</label>
-      <select id="cityWalls" data-tooltip="Defense bonus applied to the defender only.&#10;MoM 1.31: Intact city wall: +3 def. Destroyed city wall or inner area: +1 def.&#10;MoM 1.60, CoM 1 &amp; 2: Intact city wall or inner area: +3 def. Destroyed city wall: +1 def.">
-        <option value="none" selected>None</option>
-        <option value="1">+1 def</option>
-        <option value="3">+3 def</option>
-      </select>
+      <label for="rangedDist" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;CoM 1, CoM 2 &amp; Warlord: Heroes ignore distance penalties.&#10;MoM 1.31 &amp; 1.60: &#8722;10% per full 3 tiles.&#10;CoM 1: &#8722;10% per full 4 tiles.&#10;CoM 2 &amp; Warlord: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">Ranged attack distance:</label>
+      <input type="number" id="rangedDist" min="1" max="99" value="1" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;CoM 1, CoM 2 &amp; Warlord: Heroes ignore distance penalties.&#10;MoM 1.31 &amp; 1.60: &#8722;10% per full 3 tiles.&#10;CoM 1: &#8722;10% per full 4 tiles.&#10;CoM 2 &amp; Warlord: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">
     </span>
     <label class="abil-check" data-tooltip="Fantastic units of the node's realm:&#10;+2 to all attack strengths, defense, and resistance.">Node aura:
       <select id="nodeAura" class="enchant-row-select">
@@ -226,6 +221,14 @@
       <label for="aHP" data-tooltip="Hit points per figure.">Hit Points</label>
       <input type="number" id="aHP" min="1" max="99" value="1">
       <span class="mod-val" id="aHPMod"></span>
+
+      <label for="aCityWalls" data-tooltip="This unit's position relative to the city walls.&#10;The bonus applies only when this unit is inside and its attacker is outside.&#10;MoM 1.31: Intact wall: +3 defense; destroyed wall or inner area: +1.&#10;MoM CP 1.60, CoM 1, CoM 2 &amp; Warlord: intact wall or inner area: +3; destroyed wall: +1.">City walls</label>
+      <select id="aCityWalls" data-tooltip="This unit's position relative to the city walls.&#10;The bonus applies only when this unit is inside and its attacker is outside.">
+        <option value="none" selected>Outside / none</option>
+        <option value="1">Inside (+1 def)</option>
+        <option value="3">Inside (+3 def)</option>
+      </select>
+      <span class="mod-val"></span>
 
     </div>
     <div class="abilities-section hide-inactive-abilities hide-inactive-enchantments">
@@ -394,6 +397,14 @@
       <label for="bHP" data-tooltip="Hit points per figure.">Hit Points</label>
       <input type="number" id="bHP" min="1" max="99" value="1">
       <span class="mod-val" id="bHPMod"></span>
+
+      <label for="bCityWalls" data-tooltip="This unit's position relative to the city walls.&#10;The bonus applies only when this unit is inside and its attacker is outside.&#10;MoM 1.31: Intact wall: +3 defense; destroyed wall or inner area: +1.&#10;MoM CP 1.60, CoM 1, CoM 2 &amp; Warlord: intact wall or inner area: +3; destroyed wall: +1.">City walls</label>
+      <select id="bCityWalls" data-tooltip="This unit's position relative to the city walls.&#10;The bonus applies only when this unit is inside and its attacker is outside.">
+        <option value="none" selected>Outside / none</option>
+        <option value="1">Inside (+1 def)</option>
+        <option value="3">Inside (+3 def)</option>
+      </select>
+      <span class="mod-val"></span>
 
     </div>
     <div class="abilities-section hide-inactive-abilities hide-inactive-enchantments">

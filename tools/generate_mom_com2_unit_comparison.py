@@ -105,10 +105,10 @@ def abilities_str(u):
             else:
                 parts.append(f"{label} {v}")
 
-    # Non-standard base block chance (default is 30%); only emit when explicitly set
+    # Non-standard base block chance (default is 30%); calculator rosters store its delta.
     to_block = u.get("to_block")
     if to_block is not None:
-        parts.append(f"Block {to_block}%")
+        parts.append(f"Block {30 + to_block}%")
 
     return ", ".join(parts)
 

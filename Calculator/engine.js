@@ -17,6 +17,30 @@ function binomialPMF(n, p) {
   return pmf;
 }
 
+// Build the exact block-count PMF for one defense roll. Most engines roll every
+// defense die at the same chance. Caster.exe profiles instead carry the shipped
+// post-cap rule: dice after capDice use cappedChance.
+function defenseBlockPMF(defStr, toBlock) {
+  const probability = chance => Math.min(1, Math.max(0, Number(chance) || 0));
+  if (!toBlock || typeof toBlock !== 'object') return binomialPMF(defStr, probability(toBlock));
+  // DefenseRoll compares Random(100) directly with To Defend. Values above 100
+  // therefore block with certainty; values at or below zero never block.
+  const chance = probability(toBlock.chance);
+  const capDice = Math.max(0, Math.min(defStr, toBlock.capDice));
+  const cappedDice = defStr - capDice;
+  const ordinary = binomialPMF(capDice, chance);
+  if (cappedDice <= 0) return ordinary;
+  const capped = binomialPMF(cappedDice,
+    Math.min(chance, probability(toBlock.cappedChance)));
+  const combined = new Array(defStr + 1).fill(0);
+  for (let i = 0; i < ordinary.length; i++) {
+    for (let j = 0; j < capped.length; j++) {
+      combined[i + j] += ordinary[i] * capped[j];
+    }
+  }
+  return combined;
+}
+
 // Compute distribution of surviving hits after Blur filtering.
 // h: number of initial hits; blurChance: probability each hit is negated (0.1 or 0.2).
 // buggy (v1.31): on success, skip next roll — at most ceil(h / 2) hits are blocked.
@@ -79,7 +103,7 @@ function remapDistByMinDamage(dist, minDamage) {
 // total damage floor for this single attack (used by Supernatural).
 function singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, blurChance, blurBuggy, topFigHP, minDamageFromHits) {
   const hitsPMF = binomialPMF(atkStr, toHit);
-  const blocksPMF = binomialPMF(defStr, toBlock);
+  const blocksPMF = defenseBlockPMF(defStr, toBlock);
   const inv = invulnBonus || 0;
 
   const chainDmg = new Array(atkStr + 1);
@@ -193,7 +217,7 @@ function calcTotalDamageDist(atkFigs, atkStr, toHit, defStr, toBlock, hp, cap, i
 // per-target damage floor (still capped by hp).
 function areaPerFigureDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, minDamageFromHits) {
   const hitsPMF = binomialPMF(atkStr, toHit);
-  const blocksPMF = binomialPMF(defStr, toBlock);
+  const blocksPMF = defenseBlockPMF(defStr, toBlock);
   const inv = invulnBonus || 0;
   const maxDmg = Math.min(atkStr, hp);
   const dist = new Array(maxDmg + 1).fill(0);
@@ -285,6 +309,317 @@ function calcLifeStealDmgDist(numFigs, defRes, modifier, cap) {
   return result;
 }
 
+// Modern Caster keeps the resistance-roll magnitude separate from the target's
+// remaining HP. This wrapper deliberately uses the mathematical maximum rather
+// than a target cap; callers may project it into a capped damage PMF afterwards.
+function calcLifeStealRawDist(numFigs, defRes, modifier) {
+  const effRes = defRes + modifier;
+  const maxPerFigure = Math.max(0, 10 - effRes);
+  return calcLifeStealDmgDist(numFigs, defRes, modifier,
+    Math.max(0, numFigs) * maxPerFigure);
+}
+
+function clampDamageDist(dist, cap) {
+  const out = new Array(Math.max(0, cap) + 1).fill(0);
+  for (let value = 0; value < dist.length; value++) {
+    if (dist[value] < 1e-15) continue;
+    out[Math.min(value, cap)] += dist[value];
+  }
+  return out;
+}
+
+// Persistent Combatheal state used by the modern Life Steal/Bloodsucker model.
+// `hp` excludes base bonus HP; HpPerFigure is hp + bonusHp.
+function normalizeCombatHealState(state) {
+  const totalDamage = Math.max(0, Math.trunc(Number(state.totalDamage) || 0));
+  const irrecoverableDamage = Math.min(totalDamage,
+    Math.max(0, Math.trunc(Number(state.irrecoverableDamage) || 0)));
+  const undeadDamage = Math.min(totalDamage - irrecoverableDamage,
+    Math.max(0, Math.trunc(Number(state.undeadDamage) || 0)));
+  return {
+    figures: Math.max(1, Math.trunc(Number(state.figures) || 1)),
+    hp: Math.max(1, Math.trunc(Number(state.hp) || 1)),
+    totalDamage,
+    irrecoverableDamage,
+    undeadDamage,
+    bonusHp: Math.min(90, Math.max(0, Math.trunc(Number(state.bonusHp) || 0))),
+    noHealing: !!state.noHealing,
+    raceNoHeal: !!state.raceNoHeal,
+  };
+}
+
+function combatHealLivingFigures(state) {
+  const hpPerFigure = state.hp + state.bonusHp;
+  return state.figures - Math.trunc(state.totalDamage / hpPerFigure);
+}
+
+// Exact source-shaped projection of Combatheal(u, amount, overheal, isregen).
+// Returns the revised persistent state plus the two user-visible benefits:
+// recoverable damage removed and base bonus HP gained per living figure.
+function combatHealTransition(inputState, requestedAmount, overheal, isregen) {
+  const state = normalizeCombatHealState(inputState);
+  let amount = Math.max(0, Math.trunc(Number(requestedAmount) || 0));
+  const healable = state.totalDamage - state.irrecoverableDamage;
+  if (!overheal && healable < amount) amount = healable;
+
+  let healedDamage = 0;
+  const canHealNaturally = !state.noHealing && !state.raceNoHeal;
+  if (canHealNaturally || isregen || overheal) {
+    const normalDamage = healable - state.undeadDamage;
+    const normalHeal = Math.min(normalDamage, amount);
+    state.totalDamage -= normalHeal;
+    amount -= normalHeal;
+    healedDamage += normalHeal;
+
+    const undeadHeal = Math.min(state.undeadDamage, amount);
+    state.totalDamage -= undeadHeal;
+    state.undeadDamage -= undeadHeal;
+    amount -= undeadHeal;
+    healedDamage += undeadHeal;
+  }
+
+  let bonusHpGain = 0;
+  let bonusHpBenefit = 0;
+  if (overheal) {
+    const livingFigures = combatHealLivingFigures(state);
+    // ApplyAttack can call Life Steal only for a living attacker. Keep the helper
+    // total for defensive direct callers without inventing a division-by-zero result.
+    if (livingFigures > 0) {
+      const deadFigures = state.figures - livingFigures;
+      bonusHpGain = Math.trunc(amount / livingFigures);
+      if (state.bonusHp + bonusHpGain > 90) bonusHpGain = 90 - state.bonusHp;
+      state.bonusHp += bonusHpGain;
+      bonusHpBenefit = bonusHpGain * livingFigures;
+      const deadAdjustment = bonusHpGain * deadFigures;
+      if (!canHealNaturally) state.irrecoverableDamage += deadAdjustment;
+      state.totalDamage += deadAdjustment;
+    }
+  }
+
+  return { state, healedDamage, bonusHpGain, bonusHpBenefit };
+}
+
+function combatHealStateKey(state) {
+  if (state && state.engine === 'dos') {
+    return ['dos', state.version, state.figures, state.baseHp, state.extraHits,
+      state.currentFigures, state.frontFigureDamage, state.regularDamage,
+      state.undeadDamage, state.irreversibleDamage].join(',');
+  }
+  return [state.figures, state.hp, state.totalDamage, state.irrecoverableDamage,
+    state.undeadDamage, state.bonusHp, state.noHealing ? 1 : 0,
+    state.raceNoHeal ? 1 : 0].join(',');
+}
+
+function dosUint8(value) {
+  return Math.trunc(Number(value) || 0) & 0xff;
+}
+
+function dosInt8(value) {
+  const byte = dosUint8(value);
+  return byte >= 0x80 ? byte - 0x100 : byte;
+}
+
+function dosInt16(value) {
+  const word = Math.trunc(Number(value) || 0) & 0xffff;
+  return word >= 0x8000 ? word - 0x10000 : word;
+}
+
+function dosCombatHits(state) {
+  return dosUint8(state.baseHp + state.extraHits);
+}
+
+function normalizeDosCombatHealState(input) {
+  const version = input.version || 'mom_1.31';
+  const figures = Math.min(255, Math.max(1, Math.trunc(Number(input.figures) || 1)));
+  const baseHp = Math.max(1, Math.trunc(Number(input.baseHp ?? input.hp) || 1));
+  const extraCap = version === 'com_6.08' ? 90 : 255;
+  const extraHits = Math.min(extraCap,
+    Math.max(0, Math.trunc(Number(input.extraHits ?? input.bonusHp) || 0)));
+  const hits = dosCombatHits({ baseHp, extraHits });
+  const suppliedCategoryTotal = input.regularDamage == null ? null
+    : Math.min(255, Math.max(0, Math.trunc(Number(input.regularDamage) || 0)))
+      + Math.min(255, Math.max(0, Math.trunc(Number(input.undeadDamage) || 0)))
+      + Math.min(255, Math.max(0, Math.trunc(Number(input.irreversibleDamage) || 0)));
+  const totalDamage = suppliedCategoryTotal == null
+    ? Math.max(0, Math.trunc(Number(input.totalDamage) || 0))
+    : suppliedCategoryTotal;
+  const irreversibleDamage = Math.min(255, totalDamage,
+    Math.max(0, Math.trunc(Number(input.irreversibleDamage
+      ?? input.irrecoverableDamage) || 0)));
+  const undeadDamage = Math.min(255, totalDamage - irreversibleDamage,
+    Math.max(0, Math.trunc(Number(input.undeadDamage) || 0)));
+  const regularDamage = input.regularDamage == null
+    ? Math.min(255, totalDamage - irreversibleDamage - undeadDamage)
+    : Math.min(255, Math.max(0, Math.trunc(Number(input.regularDamage) || 0)));
+  const currentFigures = input.currentFigures == null
+    ? Math.max(0, figures - (hits > 0 ? Math.floor(totalDamage / hits) : figures))
+    : Math.min(255, Math.max(0, Math.trunc(Number(input.currentFigures) || 0)));
+  const frontFigureDamage = input.frontFigureDamage == null
+    ? (currentFigures > 0 && hits > 0 ? dosUint8(totalDamage % hits) : 0)
+    : dosUint8(input.frontFigureDamage);
+  return { engine: 'dos', version, figures, baseHp, extraHits,
+    currentFigures, frontFigureDamage, regularDamage, undeadDamage,
+    irreversibleDamage };
+}
+
+function dosCombatHealLivingFigures(state) {
+  return normalizeDosCombatHealState(state).currentFigures;
+}
+
+function dosCombatHealRemainingHp(state) {
+  const s = normalizeDosCombatHealState(state);
+  return Math.max(0, s.currentFigures * dosCombatHits(s)
+    - s.frontFigureDamage);
+}
+
+function dosLifeStealHealTransition(inputState, requestedAmount) {
+  const state = normalizeDosCombatHealState(inputState);
+  const oldRemaining = dosCombatHealRemainingHp(state);
+  const oldExtraHits = state.extraHits;
+  const healing = Math.max(0, Math.trunc(Number(requestedAmount) || 0));
+
+  let remainder = healing;
+  const regular = Math.min(state.regularDamage, remainder);
+  state.regularDamage -= regular;
+  remainder -= regular;
+  const undeath = Math.min(state.undeadDamage, remainder);
+  state.undeadDamage -= undeath;
+
+  // Battle_Unit_Heal subtracts the low byte and tests the stored byte as signed.
+  let storedFront = ((state.frontFigureDamage - (healing & 0xff)) & 0xff);
+  if (storedFront >= 0x80) storedFront -= 0x100;
+  state.frontFigureDamage = storedFront < 0 ? 0 : storedFront;
+  // The local is initialized to zero and is populated only by the signed-negative
+  // front-damage arm. A nonnegative byte stays in the record but cannot create
+  // MoM 1.31 Extra Hits merely because its value exceeds Max Figures.
+  let top = storedFront < 0 ? storedFront : 0;
+  const hits = dosCombatHits(state);
+  const signedHits = dosInt8(hits);
+  const irreversibleFigures = state.version === 'mom_cp_1.60.00'
+    ? (hits > 0 ? Math.floor(dosUint8(state.irreversibleDamage) / hits) : 0) : 0;
+  const effectiveMax = dosUint8(state.figures - irreversibleFigures);
+  while (top < 0) {
+    const canRestore = state.version === 'mom_cp_1.60.00'
+      ? dosInt8(effectiveMax) > dosInt8(state.currentFigures)
+      : dosInt8(state.figures) > dosInt8(state.currentFigures);
+    if (!canRestore) break;
+    state.currentFigures = dosUint8(state.currentFigures + 1);
+    top += signedHits;
+  }
+  if (top > 0) {
+    state.frontFigureDamage = top & 0xff;
+    if (state.version !== 'mom_1.31') top &= 0xff00;
+  }
+  top = Math.abs(top);
+
+  let extraHitsGain = 0;
+  if (state.version === 'mom_cp_1.60.00') {
+    const signedEffectiveMax = dosInt8(effectiveMax);
+    const signedTopLow = dosInt8(top);
+    if (signedEffectiveMax <= signedTopLow && effectiveMax !== 0) {
+      extraHitsGain = Math.floor(top / effectiveMax) & 0xff;
+      state.extraHits = (state.extraHits + extraHitsGain) & 0xff;
+      let irreversible = (extraHitsGain * irreversibleFigures
+        + dosUint8(state.irreversibleDamage)) & 0xffff;
+      if (dosInt16(irreversible) > 200) irreversible = (irreversible & 0xff00) | 200;
+      state.irreversibleDamage = irreversible & 0xff;
+    }
+  } else if (dosInt8(state.figures) <= top && dosInt8(state.figures) !== 0) {
+    extraHitsGain = Math.trunc(top / dosInt8(state.figures));
+    if (state.version === 'com_6.08') {
+      state.extraHits = Math.min(90, state.extraHits + extraHitsGain);
+      extraHitsGain = state.extraHits - oldExtraHits;
+    } else {
+      state.extraHits = (state.extraHits + extraHitsGain) & 0xff;
+    }
+  }
+
+  const normalized = normalizeDosCombatHealState(state);
+  return {
+    state: normalized,
+    healedDamage: Math.max(0, dosCombatHealRemainingHp(normalized) - oldRemaining),
+    bonusHpGain: Math.max(0, extraHitsGain),
+    bonusHpBenefit: 0,
+  };
+}
+
+function calcDosLifeStealHealOutcomes(numFigs, defRes, modifier, inputState) {
+  let paths = new Map();
+  const initial = normalizeDosCombatHealState(inputState);
+  paths.set(`${combatHealStateKey(initial)}|0|0|0`, {
+    probability: 1, state: initial, rawDrain: 0, healedDamage: 0,
+    bonusHpGain: 0, bonusHpBenefit: 0,
+  });
+  const effRes = defRes + modifier;
+  for (let figure = 0; figure < Math.max(0, numFigs); figure++) {
+    const next = new Map();
+    for (const path of paths.values()) {
+      for (let roll = 1; roll <= 10; roll++) {
+        const raw = Math.max(0, roll - effRes);
+        const healed = dosLifeStealHealTransition(path.state, raw);
+        const value = {
+          probability: path.probability / 10,
+          state: healed.state,
+          rawDrain: path.rawDrain + raw,
+          healedDamage: path.healedDamage + healed.healedDamage,
+          bonusHpGain: path.bonusHpGain + healed.bonusHpGain,
+          bonusHpBenefit: 0,
+        };
+        const key = `${combatHealStateKey(value.state)}|${value.rawDrain}|${value.healedDamage}|${value.bonusHpGain}`;
+        const old = next.get(key);
+        if (old) old.probability += value.probability;
+        else next.set(key, value);
+      }
+    }
+    paths = next;
+  }
+  return [...paths.values()];
+}
+
+// One Combatheal call is made immediately for every eligible modern Life Steal
+// resistance roll. Preserve the roll order so integer overheal conversion and the
+// 90-point base-bonus cap are exact rather than applying Combatheal once to an EV/sum.
+function calcLifeStealCombatHealOutcomes(numFigs, defRes, modifier, inputState) {
+  let paths = new Map();
+  const initial = normalizeCombatHealState(inputState);
+  paths.set(`${combatHealStateKey(initial)}|0|0|0`, {
+    probability: 1, state: initial, rawDrain: 0, healedDamage: 0,
+    bonusHpGain: 0, bonusHpBenefit: 0,
+  });
+  const effRes = defRes + modifier;
+  for (let figure = 0; figure < Math.max(0, numFigs); figure++) {
+    const next = new Map();
+    for (const path of paths.values()) {
+      for (let roll = 1; roll <= 10; roll++) {
+        const raw = Math.max(0, roll - effRes);
+        const healed = combatHealTransition(path.state, raw, true, false);
+        const value = {
+          probability: path.probability / 10,
+          state: healed.state,
+          rawDrain: path.rawDrain + raw,
+          healedDamage: path.healedDamage + healed.healedDamage,
+          bonusHpGain: path.bonusHpGain + healed.bonusHpGain,
+          bonusHpBenefit: path.bonusHpBenefit + healed.bonusHpBenefit,
+        };
+        const key = `${combatHealStateKey(value.state)}|${value.rawDrain}|${value.healedDamage}|${value.bonusHpGain}|${value.bonusHpBenefit}`;
+        const old = next.get(key);
+        if (old) old.probability += value.probability;
+        else next.set(key, value);
+      }
+    }
+    paths = next;
+  }
+  return [...paths.values()];
+}
+
+function outcomeMetricDist(outcomes, key) {
+  let max = 0;
+  for (const outcome of outcomes) max = Math.max(max, outcome[key] || 0);
+  const dist = new Array(max + 1).fill(0);
+  for (const outcome of outcomes) dist[outcome[key] || 0] += outcome.probability;
+  return dist;
+}
+
 // Compute figure-kill damage distribution (for Stoning Touch, etc.).
 // Each roll is an independent Bernoulli trial: fail → one figure killed (= defHP damage).
 // numRolls: number of resistance rolls (one per attacking figure)
@@ -302,11 +637,11 @@ function calcFigureKillDmgDist(numRolls, pFail, defHP, cap) {
   return dist;
 }
 
-// Compute whole-unit kill damage distribution (for Destruction).
-// A single resistance roll is made for the attack, not one per attacking figure, and a
-// failed roll disintegrates the entire target unit — so the damage is the target's whole
-// remaining HP rather than one figure's HP. Contrast calcFigureKillDmgDist above.
-// pFail: probability of failing the roll (0 to 1)
+// Compute a whole-unit kill damage distribution (for Destruction).
+// Destruction's caller combines the independent per-attacker-figure resistance attempts
+// into the probability that at least one fails. A failure disintegrates the entire target,
+// so the damage is its whole remaining HP rather than one figure's HP.
+// pFail: probability that the whole-unit kill occurs (0 to 1)
 // cap: target's remaining HP (the damage dealt when the roll fails)
 function calcUnitKillDmgDist(pFail, cap) {
   if (pFail <= 0 || cap <= 0) return [1];

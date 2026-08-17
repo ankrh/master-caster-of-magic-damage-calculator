@@ -933,8 +933,9 @@ fields; each later copy contributes +1. CoM2 does not write Thrown or Doom Gaze 
 
 After Sanctify and the generic Flying/scouting normalization, `@Map@NodeAuraType` chooses the
 node realm. Nature race 16, Sorcery race 17 and `@Units@IsChaosUnit` dispatch to
-`@Units@applynodeaura`; matching creatures receive +2 to each positive melee, ranged, Thrown,
-Fire Breath and Lightning Breath field, plus +2 Defense and Resistance.
+`@Units@applynodeaura`. The helper reads persistent/base melee for its positive gate, but reads
+the current conventional Ranged, Fire Breath and Lightning Breath fields for theirs; each admitted
+field gains 2. Defense and Resistance gain 2 unconditionally. There is no Thrown or Gaze write.
 
 The three adjacent fixed globals are astronomical events, identifiable from their exact stat
 shapes:
@@ -1409,7 +1410,8 @@ channels their engine write does not:
 - Mind Storm has no Fire- or Lightning-Breath write in CoM2 or Warlord.
 - Tactician's hero block writes conventional ranged, not Thrown, Breath or gaze.
 - Warlord True Light writes melee and conventional ranged, not every secondary attack or gaze.
-- The native node aura writes positive melee/ranged/Thrown/breath fields, not Doom Gaze.
+- The native node aura gates melee on persistent/base Attack, writes positive current conventional
+  Ranged and both Breath fields, and does not write Thrown or any Gaze.
 - The Warlord combat-cast Flame Blade point is Fire Breath only and belongs in `d`, as above.
 
 These are output defects, not merely missing trace detail. They are another reason F12's wider

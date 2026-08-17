@@ -146,7 +146,7 @@ function cdpEvaluate(wsUrl, expression) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl);
     let nextId = 1, settled = false, lastPageException = null;
-    const timer = setTimeout(() => { settled = true; ws.close(); reject(new Error('Timed out waiting for CDP result')); }, 30000);
+    const timer = setTimeout(() => { settled = true; ws.close(); reject(new Error('Timed out waiting for CDP result')); }, 60000);
     const fail = err => {
       if (settled) return; settled = true; clearTimeout(timer);
       try { ws.close(); } catch (_) {}
@@ -243,7 +243,7 @@ const MAIN_HARNESS = `(() => {
     for (const v of VERSIONS) {
       set('gameVersion', v); onVersionChange();
       setupCustom('a'); setupCustom('b');
-      set('rangedCheck', false); set('cityWalls', '3'); set('nodeAura', 'none');
+      set('rangedCheck', false); set('aCityWalls', '1'); set('bCityWalls', '3'); set('nodeAura', 'none');
       recalculate();
       const before = dist();
       const blob = clone(collectState());
@@ -271,7 +271,7 @@ const MAIN_HARNESS = `(() => {
         set(side + 'Abil_stoningGaze', 2);
       }
       set('rangedCheck', true); set('rangedDist', 5);
-      set('cityWalls', '3'); set('nodeAura', 'chaos'); set('chaosSurge', 4);
+      set('aCityWalls', '1'); set('bCityWalls', '3'); set('nodeAura', 'chaos'); set('chaosSurge', 4);
       recalculate();
       const before = dist();
       const blob = clone(collectState());
@@ -280,8 +280,65 @@ const MAIN_HARNESS = `(() => {
       const after = dist();
       const abilOk = get('aAbil_armorPiercing') === true && get('aAbil_poison') === '3'
         && get('aAbil_stoningGaze_on') === true && get('aAbil_stoningGaze') === '2'
-        && get('aAbil_elemArmor') !== 'none' && get('rangedDist') === '5' && get('nodeAura') === 'chaos';
+        && get('aAbil_elemArmor') !== 'none' && get('rangedDist') === '5'
+        && get('aCityWalls') === '1' && get('bCityWalls') === '3' && get('nodeAura') === 'chaos';
       log('abilities-each-kind + globals', after === before && abilOk, { before, after, abilOk });
+    }
+
+    // R9-G1c widens Nightshade from a checkbox to a count. It round-trips in v2;
+    // a pre-change boolean Nightshade value migrates to count 1.
+    {
+      set('gameVersion', 'com2_warlord_1.5.12.7'); onVersionChange();
+      setupCustom('a'); setupCustom('b');
+      set('aAbil_nightshade', 3); recalculate();
+      const blob = clone(collectState());
+      resetCalculatorState(); recalculate();
+      applyState(clone(blob));
+      log('R9-G1c Nightshade count round-trip',
+        get('aAbil_nightshade') === '3', { nightshade: get('aAbil_nightshade') });
+
+      const legacyBool = clone(blob);
+      legacyBool.ids.aAbil_nightshade = true;
+      applyState(legacyBool);
+      log('backward-compat: boolean Nightshade migrates to count 1',
+        get('aAbil_nightshade') === '1', { nightshade: get('aAbil_nightshade') });
+    }
+
+    // The retired global City Walls id always described card B. Old states migrate there,
+    // while card A remains outside unless the new per-card id explicitly says otherwise.
+    {
+      set('gameVersion', 'com2_1.05.11'); onVersionChange();
+      setupCustom('a'); setupCustom('b'); recalculate();
+      const blob = clone(collectState());
+      blob.ids.cityWalls = '3';
+      delete blob.ids.aCityWalls; delete blob.ids.bCityWalls;
+      applyState(blob);
+      log('backward-compat: global City Walls migrates to card B',
+        get('aCityWalls') === 'none' && get('bCityWalls') === '3',
+        { a: get('aCityWalls'), b: get('bCityWalls') });
+    }
+
+    // Matrix settings formerly stored City Walls in the Global box. Preserve its implicit
+    // card-B meaning while retaining unrelated global rows and any explicit card-A settings.
+    {
+      localStorage.setItem('matrixPropertyState_v1', JSON.stringify({
+        a: [{ key: 'cityWalls', enabled: true, value: '1' }],
+        b: [],
+        global: [
+          { key: 'cityWalls', enabled: true, value: '3' },
+          { key: 'nodeAura', enabled: true, value: 'nature' },
+        ],
+      }));
+      const migrated = loadMatrixPropertyStateFromStorage();
+      const aWall = migrated.a.find(row => row.key === 'cityWalls');
+      const bWall = migrated.b.find(row => row.key === 'cityWalls');
+      const globalWall = migrated.global.find(row => row.key === 'cityWalls');
+      const nodeAura = migrated.global.find(row => row.key === 'nodeAura');
+      log('backward-compat: matrix City Walls migrates from Global to card B',
+        aWall && aWall.value === '1' && bWall && bWall.value === '3'
+          && !globalWall && nodeAura && nodeAura.value === 'nature',
+        { aWall, bWall, globalWall, nodeAura });
+      localStorage.removeItem('matrixPropertyState_v1');
     }
 
     // Roster unit with a manual field edit: applyState must restore the edit (syncUnitDisplay),
@@ -389,7 +446,7 @@ const MAIN_HARNESS = `(() => {
     {
       set('gameVersion', 'com2_warlord_1.5.12.7'); onVersionChange();
       setupCustom('a'); setupCustom('b');
-      set('aAbil_armorPiercing', true); set('cityWalls', '3'); set('nodeAura', 'nature');
+      set('aAbil_armorPiercing', true); set('bCityWalls', '3'); set('nodeAura', 'nature');
       recalculate();
       const len = lzEncode(JSON.stringify(collectState())).length;
       log('share payload is compact (< 1 KB)', len < 1024, { len });
@@ -425,7 +482,7 @@ const BUILD_SHARE = `(() => {
   localStorage.clear();
   set('gameVersion', 'com2_warlord_1.5.12.7'); onVersionChange();
   for (const s of ['a', 'b']) { set(s + 'Figs', 4); set(s + 'Atk', 11); set(s + 'Def', 2); set(s + 'Res', 9); set(s + 'HP', 8); set(s + 'ToHitMod', 70); set(s + 'ToBlkMod', 70); }
-  set('aAbil_armorPiercing', true); set('cityWalls', '3'); set('nodeAura', 'nature');
+  set('aAbil_armorPiercing', true); set('bCityWalls', '3'); set('nodeAura', 'nature');
   recalculate();
   const expectedDist = dist();
   const frag = 's=' + lzEncode(JSON.stringify(collectState()));
