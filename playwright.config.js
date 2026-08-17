@@ -20,11 +20,10 @@ module.exports = defineConfig({
   // state across steps within a file. The dev server is a ThreadingHTTPServer, so concurrent
   // loads are fine; a parallel worktree needs its own PLAYWRIGHT_PORT, not fewer workers.
   fullyParallel: false,
-  // Measured on this 8-core laptop over repeated whole-suite runs: ~148s serial, ~115s at 2.
-  // The tests are CPU-bound in-page combat resolution, so oversubscribing starves the long
-  // presets run (33s alone, 72s against three siblings); one 4-worker sample came in at 163s,
-  // slower than serial. Re-measure before raising this.
-  workers: 2,
+  // Serial on purpose. The tests are CPU-bound in-page combat resolution, so parallel workers
+  // mostly contend: measured on this 8-core laptop, 2 workers returned ~115s against ~148s
+  // serial, and 4 workers ran 163s — slower than serial — by starving the long presets test.
+  workers: 1,
   use: {
     baseURL: BASE_URL,
     channel: 'chrome',

@@ -11,9 +11,12 @@ pre-2026-08-10 narratives remain recoverable from git history.
   automated run; `tests/presets.spec.js` now drives them all in one page load. It is red at
   `25/979` and [F59](./BACKLOG.md) owns the reconciliation. The matrix drawer tests, which assert
   panel layout and scroll behavior and never read a cell, now trim the roster before opening the
-  matrix instead of resolving ~150x150 combats per test — 124s to 8s, with an overflow assertion
-  so a too-small matrix cannot make the scroll checks pass vacuously. Playwright workers went
-  1 to 2. Whole suite: 246s to ~115s, while gaining the 33s preset run.
+  matrix instead of resolving ~150x150 combats per test, cutting each from 19–23s to 1.4–2.2s,
+  with an overflow assertion so a too-small matrix cannot make the scroll checks pass vacuously.
+  That file was 51% of suite runtime. The suite stays serial: parallel workers measured worse
+  than their complexity was worth. Absolute suite totals on this laptop drift heavily under
+  sustained load — the same serial configuration measured between 146s and 262s — so compare
+  per-test durations rather than wall clock.
 
 - **CoM 6.08 Quick Casting relabel.** The Tweaker export still carries MoM's `Land Corruption`
   name for `Abilities` bit `0x0200`, which CoM 1 reassigned to Quick Casting. Illusionist and
