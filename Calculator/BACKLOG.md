@@ -32,19 +32,20 @@ dependents, not unrelated later rows.
 
 | # | Package | Members | Next outcome |
 |---|---|---|---|
-| 1 | **T2** | T2 | Make adding a source file one edit instead of five. |
-| 2 | **T3** | T3 | Split the largest file in the repo so a task can read the part it needs. |
-| 3 | **T4** | T4 | Split the two remaining files no agent can read whole. |
-| 4 | **T5** | T5 | Let a task read the slice of the contract it needs. |
-| 5 | **T6** | T6 | Decide which provenance prose belongs in the code and which in evidence. |
-| 6 | **M9** | M9 | Stage 1 shipped; filter every phase by the canonical scope, then unify to one chain. |
-| 7 | **M7** | M7 | Retire transitional non-linear transform helpers. |
-| 8 | **M10** | M10 | Represent the DOS attack-specific stage as ordered sequences, like CoM2's. |
-| 9 | **F49** | F49 | Add the confirmed CoM 1 Heavenly Light effect. |
-| 10 | **D28** | D28 | Bound the CP-only Wall of Fire trigger without widening D22. |
-| 11 | **D37** | D37 | Reconstruct the bounded CoM 6.08 routine containing the Supernatural consumer. |
-| 12 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
-| 13 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
+| 1 | **F59** | F59 | Return the numeric preset suite to green; it is red and `npm test` fails. |
+| 2 | **T2** | T2 | Make adding a source file one edit instead of five. |
+| 3 | **T3** | T3 | Split the largest file in the repo so a task can read the part it needs. |
+| 4 | **T4** | T4 | Split the two remaining files no agent can read whole. |
+| 5 | **T5** | T5 | Let a task read the slice of the contract it needs. |
+| 6 | **T6** | T6 | Decide which provenance prose belongs in the code and which in evidence. |
+| 7 | **M9** | M9 | Stage 1 shipped; filter every phase by the canonical scope, then unify to one chain. |
+| 8 | **M7** | M7 | Retire transitional non-linear transform helpers. |
+| 9 | **M10** | M10 | Represent the DOS attack-specific stage as ordered sequences, like CoM2's. |
+| 10 | **F49** | F49 | Add the confirmed CoM 1 Heavenly Light effect. |
+| 11 | **D28** | D28 | Bound the CP-only Wall of Fire trigger without widening D22. |
+| 12 | **D37** | D37 | Reconstruct the bounded CoM 6.08 routine containing the Supernatural consumer. |
+| 13 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
+| 14 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
 
 ## Evidence-source prerequisites
 
@@ -57,6 +58,7 @@ dependents, not unrelated later rows.
 
 | ID | Upcoming task | Cost | Evidence / dependency |
 |---|---|---|---|
+| F59 | Reconcile the 25 failing numeric presets. `tests/presets.spec.js` runs the `PRESETS` suite that [CLAUDE.md](./CLAUDE.md) makes authoritative for calculation correctness; it reports `25/979` failing, so `npm test` is red. Each case is either a stale expectation from the transform and combat work of 2026-08-13→16 or a regression that work introduced — decide per preset against `SPEC.md` and the owning evidence. **Do not rewrite an expectation to match current output without that decision:** these presets exist to prove a feature's result changes when the feature is removed, so accepting whatever the code prints would silently retire the regression. Suspected owners below are inferred from preset names and descriptions and are unverified; the parenthesised value is the reported error. F17/F18/F19 modern and Warlord transforms (11): `weaponImmunityAfterMissileImmunityCoM2` (20), `blazeOfGloryRangedToThrownWarlord` (6), `bloodLustMagicalRangedUndoubledWarlord` (3), `fieryFuryUndeadNoChaosConversion` (3), `berserkDoublesAfterOtherBonuses` (2), `metalFiresFantasticNoWeaponUpgrade` (2), `metalFiresFantasticUnaffected` (1), `lavaSmelterProtectionsStackWarlord` (0.7), `temporalTwistTacticianRestoresNonCorporealNegateWarlord` (0.3), `supernaturalFormulaCoM2` (0.276), `vertigoRangedHitCoM2` (0.05). F13 Upgraded Explosive (3): `levelBonusAfterUpgradedExplosiveWarlord` (4), `upgradedExplosiveFireWarlord` (3), `upgradedExplosiveBeforeTrueLightWarlord` (2). F12 Destiny/Focus Magic (3): `focusMagicDoomGazeCoM2` (6.1), `destinyAfterLuckyStarWarlord` (4), `destinyOverridesCCFireBreathCoM2` (0.135). F43 Exorcise (2): `dispelEvilAnimatedCoM2` (10), `bloodLustVulnerableToDispelEvilCoM2` (7). F34 Bless (2): `blessBreathBonusWarlord` (7), `blessBreathBonusCoM2` (5). R9-G1c Flame Blade (2): `flameBladeThrownWarlord` (1), `flameBladeMeleeWarlord` (0.3). F50 (1): `guidingBeaconExcludesThrownCoM` (3). F53 (1): `warpDefenseSignedBeforeSupremeLightCoM` (0.6). Versions: evidence/builds — CoM 6.08 `WIZARDS.EXE`, CoM2 1.05.11 `Caster.exe`, Warlord 1.5.12.7 `Caster.exe` plus scripts/runtime tables; calculator — `com_6.08` (2 presets), `com2_1.05.11` (8), `com2_warlord_1.5.12.7` (12), plus three presets carrying no explicit `version:` whose inherited scope must be resolved during triage. | large | `npx playwright test tests/presets.spec.js`; `PRESETS` and `runTests` were unreachable from `npm test` until 2026-08-17, which is why the drift went unseen |
 | F41 | Add engine-specific hero progression: the DOS eight-threshold ladders and template-ability formulas (including CoM's Blademaster divisors, mana table and Lucky rewrite), plus the modern nine-step hero table. Decide how the current six-entry level control exposes them. | large | R6.1f evidence, hero ladders and abilities; CoM2 tables, level bonuses; `combat.js:39-74` |
 | F49 | Add a CoM 1 Heavenly Light active-effect control and transform for defending units: +1 positive melee/ranged, +1 Defense and Resistance, conditional weapon To Hit, and minimum magic-weapon quality. Add focused tests and state that the user enables it only for a defender in city combat. | small | R6.1c evidence, *The CoM 1 city-defense bytes are Guardian and Heavenly Light*; currently absent from `data.js` and `combat.js` |
 
