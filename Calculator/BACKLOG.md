@@ -32,20 +32,19 @@ dependents, not unrelated later rows.
 
 | # | Package | Members | Next outcome |
 |---|---|---|---|
-| 1 | **T1** | T1 | Stop the generated rosters dumping whole files into any content search. |
-| 2 | **T2** | T2 | Make adding a source file one edit instead of five. |
-| 3 | **T3** | T3 | Split the largest file in the repo so a task can read the part it needs. |
-| 4 | **T4** | T4 | Split the two remaining files no agent can read whole. |
-| 5 | **T5** | T5 | Let a task read the slice of the contract it needs. |
-| 6 | **T6** | T6 | Decide which provenance prose belongs in the code and which in evidence. |
-| 7 | **M9** | M9 | Stage 1 shipped; filter every phase by the canonical scope, then unify to one chain. |
-| 8 | **M7** | M7 | Retire transitional non-linear transform helpers. |
-| 9 | **M10** | M10 | Represent the DOS attack-specific stage as ordered sequences, like CoM2's. |
-| 10 | **F49** | F49 | Add the confirmed CoM 1 Heavenly Light effect. |
-| 11 | **D28** | D28 | Bound the CP-only Wall of Fire trigger without widening D22. |
-| 12 | **D37** | D37 | Reconstruct the bounded CoM 6.08 routine containing the Supernatural consumer. |
-| 13 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
-| 14 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
+| 1 | **T2** | T2 | Make adding a source file one edit instead of five. |
+| 2 | **T3** | T3 | Split the largest file in the repo so a task can read the part it needs. |
+| 3 | **T4** | T4 | Split the two remaining files no agent can read whole. |
+| 4 | **T5** | T5 | Let a task read the slice of the contract it needs. |
+| 5 | **T6** | T6 | Decide which provenance prose belongs in the code and which in evidence. |
+| 6 | **M9** | M9 | Stage 1 shipped; filter every phase by the canonical scope, then unify to one chain. |
+| 7 | **M7** | M7 | Retire transitional non-linear transform helpers. |
+| 8 | **M10** | M10 | Represent the DOS attack-specific stage as ordered sequences, like CoM2's. |
+| 9 | **F49** | F49 | Add the confirmed CoM 1 Heavenly Light effect. |
+| 10 | **D28** | D28 | Bound the CP-only Wall of Fire trigger without widening D22. |
+| 11 | **D37** | D37 | Reconstruct the bounded CoM 6.08 routine containing the Supernatural consumer. |
+| 12 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
+| 13 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
 
 ## Evidence-source prerequisites
 
@@ -80,7 +79,6 @@ later task pays, whoever executes it.
 
 | ID | Upcoming task | Cost |
 |---|---|---|
-| T1 | Emit the generated rosters newline-delimited. `units_warlord.js` (140 KB), `units_com2.js` (72 KB), `units_com.js` (69 KB) and `units_mom.js` (64 KB) are each a **single line**, so any content-mode search matching one returns the whole file — about 95k tokens of build product sitting in the search path. Fix the generators (`tools/generate_com2_units_json.py`, `tools/generate_warlord_units_json.py`, `tools/parse_tweaker_unit_data.py`), never the outputs. Versions: evidence/builds — not applicable; calculator — all five, parse byte-identical. | small |
 | T2 | Introduce one source manifest that `index.html`, `tools/node_unit_checks.js`, `tools/bench_derive_unit_stats.js`, the matrix-worker `importScripts` in `Calculator/ui.js`, and the three specs hardcoding the list all consume, so adding a file is one edit rather than five. The current five-way duplication is why sources grow instead of splitting, and it blocks T3 and T4. Versions: evidence/builds — not applicable; calculator — all five, behavior unchanged. | medium |
 | T3 | **Depends on T2:** split `Calculator/data.js` — 509 KB, 8,520 lines, ~141k tokens, the single largest context cost in the repo and unreadable whole by any agent. Split by realm or ability family behind T2's manifest. Preserve `twoColumnMajor` column-major authoring and the rendered column order required by [CLAUDE.md](./CLAUDE.md). Versions: evidence/builds — not applicable; calculator — all five, behavior unchanged. | large |
 | T4 | **Depends on T2:** split `Calculator/combat.js` (325 KB, ~90k tokens) and `tools/node_unit_checks.js` (232 KB, 4,351 lines, ~63k tokens), the two remaining files no agent can read whole. Versions: evidence/builds — not applicable; calculator — all five, behavior unchanged. | large |

@@ -468,9 +468,11 @@ def main():
             if js_target:
                 js_name, const_name = js_target
                 js_path = calculator_dir / js_name
+                # Indented like the JSON sibling above so a content search returns
+                # matching lines instead of the whole build product.
                 with open(js_path, 'w', encoding='utf-8') as f:
                     f.write(f'const {const_name} = ')
-                    json.dump(units, f, ensure_ascii=False)
+                    json.dump(units, f, indent=2, ensure_ascii=False)
                     f.write(';\n')
                 print(f"  OK: JS written to {js_path}")
             if unmatched:

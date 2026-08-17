@@ -432,10 +432,12 @@ def main():
 
     print(f"Wrote {len(records)} units to {out_path}")
 
-    # Also emit JS-loadable version consumed by the calculator
+    # Also emit JS-loadable version consumed by the calculator. Indented like the
+    # JSON sibling above so a content search returns matching lines instead of the
+    # whole build product.
     with open(js_out_path, 'w', encoding='utf-8') as f:
         f.write('const COM2_UNITS_DATA = ')
-        json.dump(output, f, ensure_ascii=False)
+        json.dump(output, f, indent=2, ensure_ascii=False)
         f.write(';\n')
     print(f"Wrote {js_out_path}")
 
