@@ -6,6 +6,15 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-17
 
+- **Numeric preset suite runs from `npm test`, and the suite runs twice as fast.** `runTests`
+  had no caller in the repo, so none of `PRESETS`' 979 expectations were ever evaluated by an
+  automated run; `tests/presets.spec.js` now drives them all in one page load. It is red at
+  `25/979` and [F59](./BACKLOG.md) owns the reconciliation. The matrix drawer tests, which assert
+  panel layout and scroll behavior and never read a cell, now trim the roster before opening the
+  matrix instead of resolving ~150x150 combats per test — 124s to 8s, with an overflow assertion
+  so a too-small matrix cannot make the scroll checks pass vacuously. Playwright workers went
+  1 to 2. Whole suite: 246s to ~115s, while gaining the 33s preset run.
+
 - **CoM 6.08 Quick Casting relabel.** The Tweaker export still carries MoM's `Land Corruption`
   name for `Abilities` bit `0x0200`, which CoM 1 reassigned to Quick Casting. Illusionist and
   Demon Lord now carry `Quick Casting`, matching the CoM2 and Warlord rosters and the manual's

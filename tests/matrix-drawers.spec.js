@@ -4,10 +4,34 @@
 const { test, expect } = require('@playwright/test');
 const { openCalculator, expectNoConsoleErrors } = require('./helpers');
 
+// These tests assert panel layout, badge counts and scroll behavior — never a cell value —
+// but opening the matrix resolves combat for every roster unit against every other, which at
+// the default version is ~150x150 and cost about 19s per test. Trim the roster first; the
+// table still overflows both axes, so every scroll assertion keeps its meaning.
+const MATRIX_ROSTER_LIMIT = 40;
+
+async function useSmallRoster(page) {
+  await page.evaluate((limit) => {
+    const version = document.getElementById('gameVersion').value;
+    // populateUnitDropdown drops Heroes, and the DOS roster's first 35 templates are all
+    // heroes, so filter before slicing or the matrix comes back empty.
+    unitDatabases[version] = unitDatabases[version]
+      .filter(u => u.category !== 'Heroes')
+      .slice(0, limit);
+    populateUnitDropdown('aUnit', unitDatabases[version]);
+    populateUnitDropdown('bUnit', unitDatabases[version]);
+  }, MATRIX_ROSTER_LIMIT);
+}
+
 async function openMeleeMatrix(page) {
   await page.click('#meleeMatrixBtn');
   await page.waitForSelector('#matrixModal.is-open');
   await page.waitForSelector('#matrixTableWrap table');
+  // Guards the trim above: a matrix too small to overflow would make the scroll assertions
+  // below pass vacuously, which is the one way shrinking the roster could hide a regression.
+  const overflows = await page.locator('#matrixTableWrap').evaluate(
+    el => el.scrollHeight > el.clientHeight && el.scrollWidth > el.clientWidth);
+  expect(overflows, 'trimmed matrix must still overflow for the scroll assertions to mean anything').toBe(true);
 }
 
 // Ratio of the matrix table wrap width to the whole modal panel width.
@@ -21,6 +45,7 @@ function wrapRatio(page) {
 
 test('panel defaults open on a wide viewport and pushes the matrix', async ({ page }) => {
   const errors = await openCalculator(page); // default viewport 1280 wide (>= 1000)
+  await useSmallRoster(page);
   await openMeleeMatrix(page);
 
   await expect(page.locator('#matrixSidePanel')).toHaveClass(/open/);
@@ -33,6 +58,7 @@ test('panel defaults open on a wide viewport and pushes the matrix', async ({ pa
 test('narrow viewport defaults the panel closed and the table spans the width', async ({ page }) => {
   await page.setViewportSize({ width: 720, height: 900 });
   const errors = await openCalculator(page);
+  await useSmallRoster(page);
   await openMeleeMatrix(page);
 
   await expect(page.locator('#matrixSidePanel')).not.toHaveClass(/open/);
@@ -43,6 +69,7 @@ test('narrow viewport defaults the panel closed and the table spans the width', 
 
 test('toggling collapses/expands the panel, reclaims width, and persists state', async ({ page }) => {
   const errors = await openCalculator(page);
+  await useSmallRoster(page);
   await openMeleeMatrix(page);
 
   const panel = page.locator('#matrixSidePanel');
@@ -66,6 +93,7 @@ test('toggling collapses/expands the panel, reclaims width, and persists state',
 
 test('combined badge tracks both settings and filters', async ({ page }) => {
   const errors = await openCalculator(page);
+  await useSmallRoster(page);
   await openMeleeMatrix(page);
   await expect(page.locator('#matrixSidePanel')).toHaveClass(/open/);
 
@@ -97,6 +125,7 @@ test('combined badge tracks both settings and filters', async ({ page }) => {
 
 test('scroll gestures on sticky header cells move the page, not the matrix', async ({ page }) => {
   const errors = await openCalculator(page);
+  await useSmallRoster(page);
   await openMeleeMatrix(page);
 
   const wrapTop = () => page.locator('#matrixTableWrap').evaluate(el => el.scrollTop);
@@ -153,6 +182,7 @@ test('scroll gestures on sticky header cells move the page, not the matrix', asy
 
 test('scrolling the modal hides the header while the close stays visible and clickable', async ({ page }) => {
   const errors = await openCalculator(page);
+  await useSmallRoster(page);
   await openMeleeMatrix(page);
 
   // Header visible before scroll.

@@ -29,8 +29,9 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
 - Prefer +70% To Hit and To Block for deterministic 100% chances unless probability is the subject.
 - Prove the expected result changes when the feature is removed; otherwise the preset is not a
   regression test.
-- Evaluate `PRESETS` only through browser `runTests()`. Ad-hoc Node reconstruction skips DOM and
-  `calcKey` behavior. `node tools/node_unit_checks.js` is a separate `deriveUnitStats` suite.
+- Evaluate `PRESETS` only through browser `runTests()`; `npm test` does this in
+  `tests/presets.spec.js`. Ad-hoc Node reconstruction skips DOM and `calcKey` behavior.
+  `node tools/node_unit_checks.js` is a separate `deriveUnitStats` suite.
 
 ## Tests
 

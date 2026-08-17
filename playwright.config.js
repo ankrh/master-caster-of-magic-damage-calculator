@@ -15,8 +15,16 @@ const BASE_URL = `http://${HOST}:${PORT}`;
 module.exports = defineConfig({
   testDir: './tests',
   timeout: 30_000,
+  // Parallelize across files but keep each file's tests in order: specs share no state
+  // (fresh context per test, localStorage cleared in openCalculator) but several build up
+  // state across steps within a file. The dev server is a ThreadingHTTPServer, so concurrent
+  // loads are fine; a parallel worktree needs its own PLAYWRIGHT_PORT, not fewer workers.
   fullyParallel: false,
-  workers: 1, // single laptop, single server port — keep runs serial
+  // Measured on this 8-core laptop over repeated whole-suite runs: ~148s serial, ~115s at 2.
+  // The tests are CPU-bound in-page combat resolution, so oversubscribing starves the long
+  // presets run (33s alone, 72s against three siblings); one 4-worker sample came in at 163s,
+  // slower than serial. Re-measure before raising this.
+  workers: 2,
   use: {
     baseURL: BASE_URL,
     channel: 'chrome',
