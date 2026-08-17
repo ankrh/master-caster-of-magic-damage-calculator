@@ -133,6 +133,20 @@ TOKEN_DISCARD = {
     'Summon Demons 2',
 }
 
+# Bits CoM 6.08 reassigned whose Tweaker export still shows MoM's label. Applied only to
+# CoM inputs; the MoM exports keep the original meaning, so these are not in TOKEN_RENAMES.
+COM_TOKEN_RENAMES = {
+    # Common attack bit 0x0800. WIZARDS.EXE consumes it as Exorcise: the flag's presence
+    # selects a literal -3 save modifier, so the roster must not derive its value from the
+    # unrelated Spec_Att_Attrib/Gaze-Poison byte.
+    'Dispel Evil': 'Exorcise',
+    # Abilities bit 0x0200. CoM 1 reuses MoM's unused Land Corruption slot for Quick
+    # Casting: R6.1a evidence, `Abilities 0x0200 Land Corruption -> Quick Casting`, and
+    # CoM1manual, "Ability replaces the unused Land Corruption slot". Carried inert like
+    # the other strategic abilities the calculator does not model.
+    'Land Corruption': 'Quick Casting',
+}
+
 # Relevant tokens that are intentionally passed through verbatim (no rename
 # needed). Listed here so they count as "matched" and stay out of the
 # unmatched-token report.
@@ -140,6 +154,9 @@ EXPLICIT_KEEP = {
     'Caster 20 MP', 'Caster 40 MP', 'Doombolt Spell', 'Healing Spell',
     'Immolation', 'Lucky', 'Web Spell',          # Attributes column
     'Armor Piercing', 'First Strike', 'Dispel Evil',  # Attacks column
+    # Attacks column. Combat-relevant and bound to the `destruction` control by its
+    # `match`; the older-engine path itself is unmodelled and owned by BACKLOG M3.
+    'Destruction',
 }
 
 def parse_attributes(attributes_str: str) -> list:
@@ -207,12 +224,17 @@ KNOWN_SOURCE_TOKENS = (
 )
 
 
-def collect_unmatched(row, counter):
-    """Record raw Immunities/Attributes/Abilities/Attacks tokens that no filter recognizes."""
+def collect_unmatched(row, counter, is_com=False):
+    """Record raw Immunities/Attributes/Abilities/Attacks tokens that no filter recognizes.
+
+    `COM_TOKEN_RENAMES` counts as recognition only for CoM inputs, so a MoM export that
+    grew one of those tokens would still be reported rather than silently relabelled.
+    """
+    known = KNOWN_SOURCE_TOKENS | set(COM_TOKEN_RENAMES) if is_com else KNOWN_SOURCE_TOKENS
     for col in ('Immunities', 'Attributes', 'Abilities', 'Attacks'):
         for token in (row.get(col, '') or '').split(','):
             token = token.strip()
-            if token and token not in KNOWN_SOURCE_TOKENS:
+            if token and token not in known:
                 counter[token] += 1
 
 
@@ -236,10 +258,8 @@ def process_unit_file(input_file: Path):
     units = {}
     unmatched = Counter()
     unit_id = 1
-    # CoM 6.08's Tweaker export retains the legacy "Dispel Evil" label for common
-    # attack bit 0x0800. WIZARDS.EXE consumes that bit as Exorcise: the flag's presence
-    # selects a literal -3 save modifier, so the roster must not derive its value from
-    # the unrelated Spec_Att_Attrib/Gaze-Poison byte. MoM files keep "Dispel Evil".
+    # CoM 6.08's Tweaker export retains MoM's labels for bits CoM reassigned; the
+    # relabels and their evidence live in COM_TOKEN_RENAMES.
     is_com = 'CoM' in input_file.name
 
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -251,7 +271,7 @@ def process_unit_file(input_file: Path):
             if not any(row.values()):
                 continue
 
-            collect_unmatched(row, unmatched)
+            collect_unmatched(row, unmatched, is_com)
 
             # Nr is the source `_UNITS[]` template index. Picker ids are intentionally
             # independent because excluded rows (Settlers) make the generated sequence
@@ -369,8 +389,7 @@ def process_unit_file(input_file: Path):
                     final_abilities.insert(0, 'Hero')
 
             if is_com:
-                final_abilities = ['Exorcise' if a == 'Dispel Evil' else a
-                                   for a in final_abilities]
+                final_abilities = [COM_TOKEN_RENAMES.get(a, a) for a in final_abilities]
 
             if final_abilities:
                 unit['abilities'] = final_abilities

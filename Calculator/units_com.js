@@ -638,7 +638,7 @@ const COM_UNITS_DATA = {
     "ranged_type": "Magic(S)",
     "abilities": [
       "Hero",
-      "Land Corruption",
+      "Quick Casting",
       "Missile Immunity",
       "Illusion"
     ],
@@ -4114,7 +4114,7 @@ const COM_UNITS_DATA = {
       "Summon Demons Spell",
       "Cause Fear",
       "Fantastic",
-      "Land Corruption",
+      "Quick Casting",
       "Missile Immunity",
       "Illusion Immunity",
       "Death Immunity",

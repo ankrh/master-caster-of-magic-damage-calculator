@@ -6,6 +6,16 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-17
 
+- **CoM 6.08 Quick Casting relabel.** The Tweaker export still carries MoM's `Land Corruption`
+  name for `Abilities` bit `0x0200`, which CoM 1 reassigned to Quick Casting. Illusionist and
+  Demon Lord now carry `Quick Casting`, matching the CoM2 and Warlord rosters and the manual's
+  own unit entries; the ability stays unmodelled and inert, like the other strategic abilities the
+  roster retains. `Destruction` on the CoM 6.08 Magician is now explicitly kept rather than
+  reported as an unrecognized tag — it binds to the `destruction` control and M3 still owns the
+  older-engine path. The generator's unmatched-token report is clean for all three DOS inputs and
+  is now version-aware, so a MoM export growing either token would still be reported. Evidence:
+  [R6.1a](../Reference%20docs/DOS%20reconstructed/R6.1a.evidence.md).
+
 - **T1 — newline-delimited generated rosters.** The three roster generators now emit
   `units_mom.js`, `units_com.js`, `units_com2.js`, and `units_warlord.js` at `indent=2`, matching
   the JSON sibling each already wrote, so a content search returns matching lines instead of four
