@@ -32,12 +32,12 @@ dependents, not unrelated later rows.
 
 | # | Package | Members | Next outcome |
 |---|---|---|---|
-| 1 | **F59** | F59 | Return the numeric preset suite to green; it is red and `npm test` fails. |
-| 2 | **T2** | T2 | Make adding a source file one edit instead of five. |
-| 3 | **T3** | T3 | Split the largest file in the repo so a task can read the part it needs. |
-| 4 | **T4** | T4 | Split the two remaining files no agent can read whole. |
-| 5 | **T5** | T5 | Let a task read the slice of the contract it needs. |
-| 6 | **T6** | T6 | Decide which provenance prose belongs in the code and which in evidence. |
+| 1 | **T2** | T2 | Make adding a source file one edit instead of five. |
+| 2 | **T3** | T3 | Split the largest file in the repo so a task can read the part it needs. |
+| 3 | **T4** | T4 | Split the two remaining files no agent can read whole. |
+| 4 | **T5** | T5 | Let a task read the slice of the contract it needs. |
+| 5 | **T6** | T6 | Decide which provenance prose belongs in the code and which in evidence. |
+| 6 | **F59** | F59 | Return the numeric preset suite to green; it is red and `npm test` fails throughout. |
 | 7 | **M9** | M9 | Stage 1 shipped; filter every phase by the canonical scope, then unify to one chain. |
 | 8 | **M7** | M7 | Retire transitional non-linear transform helpers. |
 | 9 | **M10** | M10 | Represent the DOS attack-specific stage as ordered sequences, like CoM2's. |
