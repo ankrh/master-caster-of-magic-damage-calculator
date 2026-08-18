@@ -4,7 +4,129 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-18
+
+- **F64 — the DOS thrown/breath phase no longer requires melee strength.** `combat.js` gated the
+  melee-path thrown/breath rider on base melee > 0 for `mom_1.31`, `mom_cp_1.60.00` and
+  `com_6.08`, an unsourced predicate added in `563d4d3`. It is gone: `BU_AttackTarget` admits the
+  rider on attack type alone (`DOS reconstructed/combat.c:2605`), its melee entry carries no
+  strength gate in any build, and the routine's sole call site — one near call at `0x9AF40`,
+  identical across the three builds, found by scanning both direct call encodings over each whole
+  executable — is unconditional, computing a ranged-versus-melee mode argument rather than
+  deciding whether to engage. The call-site evidence is in
+  [R6.2a](../Reference%20docs/DOS%20reconstructed/R6.2a.evidence.md), *Call-site admission*;
+  the routine at `0x9AD04` remains unreconstructed and no reconstruction was needed. Whether the
+  game's UI offers a zero-melee unit a melee attack is a command-layer question the calculator
+  deliberately does not model — it computes the exchange it is given, which also sidesteps the
+  unresolved base-versus-effective and Confusion cases. `guidingBeaconExcludesThrownCoM` is green;
+  `fireImmunityAfterArmorPiercing` keeps its expectation of 0 but now reaches the immunity it
+  names. CoM2 and Warlord are unaffected: their thrown/breath channels never used this predicate.
+
+- **T7 — `ui.js` split into readable sources.** The last calculator file no agent could read whole
+  (205 KB, 4,772 lines) is now seven, cut along its own responsibilities: `ui_abilities.js` (ability
+  controls, version gating, show-inactive visibility), `ui_units.js` (roster comboboxes and identity
+  controls), `ui_card.js` (control reading, the modern and DOS special blocks, the derived stat
+  card), `ui_state.js` (reset/swap/version switching, presets, and the share, hash and localStorage
+  payloads), `ui_matrix_properties.js` (the matrix property drawer) and `ui_matrix.js` (matrix
+  stats, worker, table, CSV, modal), with `ui.js` keeping result rendering, `recalculate` and the
+  bootstrap wiring. Largest is now `ui_state.js` at 40 KB. The cut is load-order-safe by
+  construction: every top-level statement in the UI layer stays in `ui.js` in its original order and
+  `ui.js` stays last, so the other six declare only and nothing runs before what it needs — the rule
+  is recorded in index.html's manifest comment, which owns load order. No behavior change; every
+  moved line moved verbatim. `node tools/node_unit_checks.js` passes 12,750 assertions (12,744 plus
+  one manifest existence check per new source), `npm run provenance` is unchanged at 264 formulas,
+  and `npm test` is unchanged at 113 passed with [F59](./BACKLOG.md)'s 25 preset failures still red,
+  identical in name and error magnitude. The largest calculator source is now `stats.js` at 113 KB.
+
 ## 2026-08-17
+
+- **T6 — the provenance-narrative boundary decided, and the duplication it found removed.** The
+  boundary: prose stays beside the code when it justifies the step's *position*, records a
+  divergence the calculator makes deliberately, or documents the code's own vocabulary; it belongs
+  in evidence when it establishes how an engine *value* was arrived at — patch sites, table
+  lookups, source-vs-source reconciliation. An address in the prose does not decide it: position
+  justification cites addresses too. The audit measured 250 KB of comment text across the twelve
+  formula-bearing sources, in 760 blocks of which 92% are four lines or shorter, so there was no
+  bulk move available. Of 319 multi-line prose blocks only **92 carry a `PROVENANCE`/`STAT-FORMULA`
+  citation**; triaging all 92 against the boundary found seven carrying value-derivation, each with
+  an evidence home strictly richer than the code text (Wall of Fire and Immolation to *Immolation
+  and Wall of Fire are both Fireball*, Chaos Channels to *`BU_Apply_Specials` runs twice*, undead
+  immunities to *Undead immunities are a race gate in MoM*, the ranged divisor to *Ranged distance
+  penalty*, Artificer and Lucky Star to `Source discrepancies.md` §6 and §10). Those were replaced
+  by section pointers, and the phase-model restatement in `combat_abilities.js` — a third copy of
+  what `SPEC.md`, *Phases* and `CLAUDE.md`, *Step authoring* own — was deleted outright. The
+  measured saving is **1,461 characters**: the anchored corpus turned out to be almost entirely
+  position justification and deliberate-divergence notes, both of which stay, so T6's premise that
+  long-form narrative was displaceable in bulk does not hold and it is retired rather than
+  continued. The 227 unanchored blocks are the opposite problem and became T8. Comments only —
+  `node tools/node_unit_checks.js` passes 12,744 assertions, `npm run provenance` is unchanged at
+  264 formulas.
+
+- **`SPEC.md` stopped restating engine behavior, retiring T5.** The spec described what individual
+  abilities, enchantments and effects do — magnitudes, gates, arithmetic, channel lists — in prose
+  that nothing checked, alongside binary addresses, CAS line numbers and loaded INI constants whose
+  owners are the evidence documents. `PROVENANCE[id]` citations carry the same claims and *are*
+  checked, by `npm run provenance`, so the spec's copy was an unverified duplicate of a verified
+  one, with drift resolved by whichever copy the reader opened. Effect behavior now has one home:
+  the citation beside the implementing step. `SPEC.md` keeps scope, computation and derivation
+  architecture, the input/output contract, invariants, and a new **Deliberate deviations from the
+  engine** section — the 17 places the calculator knowingly departs from, narrows or declines to
+  reproduce the engine, which no binary states and which were previously buried mid-paragraph.
+  1,281 lines to 619 (92 KB to 40 KB, ~24.8k tokens to ~10.7k), so T5's premise no longer holds and
+  it is retired rather than done. The phase-classification procedure moved to `CLAUDE.md` as the
+  authoring convention it is; routing in the root `CLAUDE.md` and `Calculator/CLAUDE.md` now sends
+  effect questions to the citation rather than the spec. Two orphans surfaced: a dangling `D1/D3`
+  reference behind Righteousness' parked classification, re-filed as Q27, and the DOS per-figure
+  Doom Gaze divergence, filed as F60. Documentation only — `node tools/node_unit_checks.js` passes
+  12,744 assertions and `npm run provenance` is unchanged at 264 formulas.
+
+- **T4 — the three unreadable sources split.** `combat.js` (325 KB) is seven files cut at
+  top-level function boundaries, `combat.js` itself keeping `resolveCombat`; `stats.js` (221 KB)
+  is four, cut at the phase boundaries [M9](./BACKLOG.md) works in — `stats_manifests.js`,
+  `stats_identity.js`, and `stats_sequence.js`, whose six functions are the engine regions `base`
+  through `e` in execution order; and `tools/node_unit_checks.js` (233 KB) is an entry point over
+  ten suites in `tools/unit_checks/`, sharing one assertion counter. Largest remaining file of the
+  three: `stats.js` at 113 KB. The stat sequence no longer closes over `deriveUnitStats`' locals:
+  it takes the 182 values it reads as one context object, so a region states its own inputs, and
+  the classification checks proved this behavior-neutral because nothing the sections read is
+  reassigned after the sequence is built. Formula-bearing sources also got one home —
+  `calculatorFiles` in `provenance_audit.js`, which the manifest generator and the version-scope
+  checks now read instead of repeating a list that would otherwise have grown from two names to
+  ten in four places. No behavior change: `node tools/node_unit_checks.js` passes 12,744
+  assertions (12,735 plus one manifest existence check per new calculator source), `npm run
+  provenance` is unchanged at 264 formulas, and `npm test` is unchanged at 113 passed with
+  [F59](./BACKLOG.md)'s 25 preset failures still red. T4 named three files; `ui.js` (205 KB) was
+  larger than any of them and became T7.
+
+- **T3 — `data.js` split into readable sources.** The repo's largest file (509 KB, ~141k tokens)
+  is now twelve, each one an agent can read whole: `data.js` keeps the constants, the version ids
+  and the two definition-layout helpers; `abilities.js` and `enchantments.js` take the definition
+  lists; and the 979 numeric presets are cut by ability family across seven `presets_*.js` files
+  that merge into one `PRESETS` through `definePresets()` (`presets.js`), with `TEST_TREE` in
+  `test_tree.js`. Nothing was reordered — the cuts fall on the existing `// --- family ---`
+  boundaries, so the presets' relative-position prose still reads true — and `definePresets()`
+  rejects a key defined twice, which the single object literal accepted silently. The presets and
+  the tree are `data-scope="page"`, which is the manifest stating what `CLAUDE.md` already
+  required: `PRESETS` is evaluated only through the page's `runTests()`, and the Node suites now
+  load 424 KB less. No behavior change: every global is byte-identical in content and key order
+  (all 979 presets), `node tools/node_unit_checks.js` passes 12,735 assertions — 12,724 plus one
+  manifest existence check per new file — `npm run provenance` is unchanged at 264 formulas, and
+  `npm test` is unchanged at 113 passed with [F59](./BACKLOG.md)'s `25/979` preset failures still
+  red. Per-test cost is unchanged: eleven more requests per page load measured +0.09s per load.
+
+- **T2 — one source manifest.** `index.html`'s `<script>` tags are now the single home for the
+  calculator's file list and load order, classified `data-scope="core"`/`"page"` with `data-worker`
+  marking the matrix worker's subset. `tools/calculator_sources.js` reads them for Node and owns the
+  shared headless `loadCalculatorContext()`; `matrixWorkerSource()` in `ui.js` reads the same tags
+  from the DOM for the matrix worker and the three specs that build a worker to check parity.
+  Adding or splitting a source is one edit instead of five, unblocking T3 and T4. The readers throw
+  on an unclassified tag, on `data-worker` outside `core`, and on any `Calculator/*.js` file no tag
+  mentions — an unconditional rule, since `Calculator/matrix-worker.js` is deleted. That file was an
+  unloaded hand-synced copy of the worker body and the one import list that could not read the
+  manifest; it had already drifted, missing `steps.js`. No behavior change: all five versions and
+  the loaded file set are identical,
+  `node tools/node_unit_checks.js` passes 12,724 assertions and `npm test` is unchanged at 113
+  passed with [F59](./BACKLOG.md)'s 25 preset failures still red.
 
 - **Numeric preset suite runs from `npm test`, and the suite runs twice as fast.** `runTests`
   had no caller in the repo, so none of `PRESETS`' 979 expectations were ever evaluated by an
@@ -556,7 +678,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 | ID | Result | Durable home |
 |---|---|---|
-| Q7 | Supreme Light reads live Resistance at its engine position. | `SPEC.md`; DOS and modern recalculation analyses |
+| Q7 | Supreme Light reads live Resistance at its engine position. | DOS and modern recalculation analyses |
 | Q9 | CoM2/Warlord may carry Doom Gaze and ranged simultaneously. | modern combat-flow and recalculation analyses |
 | Q10 | Destiny does not remove later weapon-material bonuses. | modern recalculation analysis |
 | Q13 | Modern Land Link adds +2 to each positive breath field for current Fantastic units. | modern recalculation analysis |

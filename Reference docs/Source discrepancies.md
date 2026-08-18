@@ -186,7 +186,7 @@ is at index 1 (`ABase`), so it is baked into the unit's base permanently rather 
 `CreateUnit.CAS:38` is the mod's only Artificer stat grant and no other `SCustomAttribute=1`
 gate adjusts resistance, so nothing compensates elsewhere.
 
-**Calculator:** applied. [combat.js](../Calculator/combat.js) `getAbilityStatSteps` grants
+**Calculator:** applied. [combat_abilities.js](../Calculator/combat_abilities.js) `getAbilityStatSteps` grants
 +2, the `artificer` tooltip notes the divergence from the in-game helptext, and both
 `artificerMechanicalResistanceWarlord` and a `node_unit_checks.js` assertion pin the value.
 
@@ -399,7 +399,6 @@ reform, then gives a currently Fantastic unit +10% To-Hit and
 block. This matches the calculator's magnitude, rounding, and sequence position, and its gate
 for every represented unit state. The adjacent Marionette interaction is now resolved: the
 Channeler branch makes Wanderer Fantastic before this block, so Xenoveterinary applies there too.
-The calculator contract is in [Calculator/SPEC.md](../Calculator/SPEC.md#warlord-marionette-package).
 
 **Corruption radiation.** `CombatEndTurn.CAS:518-542` runs once per combat end turn on a
 corrupted rock, desert, or swamp tile, but not on a node. Poison Immunity, Magic Immunity,

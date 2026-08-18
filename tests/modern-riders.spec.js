@@ -270,10 +270,9 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
     const rangedOpts = { version, isRanged: true, wallOfFire: false, distance: 1 };
     const mainResult = resolveCombat(rangedAttacker, rangedTarget, rangedOpts);
     const mainRatio = distExpectedValue(mainResult.totalDmgToB) / mainResult.bRemHP;
-    const scriptAbsUrl = name => [...document.querySelectorAll('script[src]')]
-      .find(script => script.src.endsWith(name)).src;
-    const src = `importScripts(${JSON.stringify(scriptAbsUrl('engine.js'))}, ${JSON.stringify(scriptAbsUrl('steps.js'))}, ${JSON.stringify(scriptAbsUrl('combat.js'))});\n${MATRIX_WORKER_HANDLER}`;
-    const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    // Same builder the matrix modal uses, so the worker under test imports exactly what the
+    // app's worker imports (index.html's data-worker tags).
+    const url = URL.createObjectURL(new Blob([matrixWorkerSource()], { type: 'text/javascript' }));
     const workerRatio = await new Promise((resolve, reject) => {
       const worker = new Worker(url);
       worker.onmessage = event => { worker.terminate(); resolve(event.data.ratios[0]); };

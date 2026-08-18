@@ -5,9 +5,10 @@
 // manually checked. It never writes the manifest; updating that trust anchor is an explicit diff.
 const fs = require('fs');
 const crypto = require('crypto');
+const { calculatorFiles } = require('./provenance_audit');
 
 const output = {};
-for (const file of ['Calculator/stats.js', 'Calculator/combat.js']) {
+for (const file of calculatorFiles) {
   for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
     const match = /PROVENANCE\[([^\]]+)\]: VERIFIED\s+versions=([^;]+);\s*sources=(.+)$/.exec(line);
     if (!match) continue;

@@ -174,4 +174,4 @@ assignment for every modifier source requires reading the display path in `Caste
 extrapolating from two points.
 
 Note that the tier is a *display* classification and need not follow the transform sequence in
-`stats.js` — two effects writing the same stat at the same phase may still render differently.
+`stats_sequence.js` — two effects writing the same stat at the same phase may still render differently.

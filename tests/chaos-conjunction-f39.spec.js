@@ -234,10 +234,9 @@ test('F39 combat-global state persists and shares, survives Swap, and crosses th
     const inactiveRatio = distExpectedValue(inactive.totalDmgToB) / inactive.bRemHP
       / (distExpectedValue(inactive.totalDmgToA) / inactive.aRemHP);
 
-    const scriptAbsUrl = name => [...document.querySelectorAll('script[src]')]
-      .find(script => script.src.endsWith(name)).src;
-    const source = `importScripts(${JSON.stringify(scriptAbsUrl('engine.js'))}, ${JSON.stringify(scriptAbsUrl('steps.js'))}, ${JSON.stringify(scriptAbsUrl('combat.js'))});\n${MATRIX_WORKER_HANDLER}`;
-    const url = URL.createObjectURL(new Blob([source], { type: 'application/javascript' }));
+    // Same builder the matrix modal uses, so the worker under test imports exactly what the
+    // app's worker imports (index.html's data-worker tags).
+    const url = URL.createObjectURL(new Blob([matrixWorkerSource()], { type: 'application/javascript' }));
     const workerRatio = await new Promise((resolve, reject) => {
       const worker = new Worker(url);
       worker.onmessage = event => { worker.terminate(); resolve(event.data.ratios[0]); };

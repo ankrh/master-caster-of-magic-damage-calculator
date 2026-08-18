@@ -8,7 +8,7 @@
 // engine makes them all the same way. A step may read any field's *current* value —
 // that is what its position means — and the permanent base record through `ctx.base`.
 //
-// No DOM dependencies; loaded before combat.js and stats.js.
+// No DOM dependencies; loaded before the combat_*.js and stats*.js sources.
 
 // Returned by a step's apply() to stop the sequence. `EffectiveDefense` step 2 needs it
 // (Illusion against a defender without Illusion Immunity returns immediately, so no
@@ -53,9 +53,10 @@ const STEP_PHASE_RANK = STEP_PHASES.reduce((rank, phase, i) => (rank[phase] = i,
 // Relationship to the three mechanisms that used to carry this fact:
 //   `when` predicates       still gate firing *within* scope; a version test inside a
 //                           predicate is now a duplicate of the scope entry, not the home.
-//   `subgroup` (data.js)    is a property of a UI *control*, not of a step: several controls
-//                           map to one calcKey (`discipline`/`disciplineWarlord`), so it can
-//                           never be per-step. It stays the authority for control visibility.
+//   `subgroup`              is a property of a UI *control* (abilities.js, enchantments.js), not
+//                           of a step: several controls map to one calcKey
+//                           (`discipline`/`disciplineWarlord`), so it can never be per-step. It
+//                           stays the authority for control visibility.
 //   PROVENANCE `versions=`  states which builds' sources were reviewed for the formula. Every
 //                           entry here is initialised from it and the checks assert the two
 //                           agree, except for the recorded gaps where the write is evidenced

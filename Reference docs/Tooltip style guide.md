@@ -1,6 +1,7 @@
 # Tooltip style guide
 
-Standard structure for `tooltip:` strings in `ABILITY_DEFS` / `ENCHANTMENT_DEFS` (`data.js`).
+Standard structure for `tooltip:` strings in `ABILITY_DEFS` (`Calculator/abilities.js`) and
+`ENCHANTMENT_DEFS` (`Calculator/enchantments.js`).
 
 Tooltips render with `\n` as line breaks. No line should be more than 75 characters, preferably fewer. Include only the line types that apply, always in the order below. Omit any line that doesn't.
 

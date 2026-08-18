@@ -66,7 +66,7 @@ base-CoM2 Construct Catapult and Call to Arms identity outcomes from applying th
 ## Level bonuses
 
 **Settles verification item D13 outright, both versions.** `Levelbonus.INI` `[Normal]`, diffed against
-`getLevelBonuses` (`combat.js`): **all 70 values match**, for CoM2 and Warlord alike, including
+`getLevelBonuses` (`combat_abilities.js`): **all 70 values match**, for CoM2 and Warlord alike, including
 the Warlord divergences the function's comment enumerates by hand.
 
 Row 1 is all zeros for every stat, and `MODDING.INI [UI]` names it (`UnitLevelName1=Recruit` …
@@ -77,7 +77,7 @@ Three structural points the diff also settles:
 - `MissileRanged` and `MagicRanged` are **identical** throughout both `[Normal]` sections, so the
   calculator's single `ranged` field loses nothing. They diverge only in `[Hero]`.
 - `Breath` and `Thrown` are likewise identical throughout both, so routing breath through
-  `lvl.thrown` (`stats.js`) is correct.
+  `lvl.thrown` (`stats_sequence.js`) is correct.
 - `Todefend1..6=0` everywhere — level grants no To Block, as the calculator has it.
 
 **What it does not settle — the hero ladder (D27).** `getLevelBonuses` takes no unit type, so
@@ -96,7 +96,7 @@ and Warlord adds to-hit steps at levels 3–4 (+5) and 7–8 (+15) that CoM2 doe
 | `InvisibilitydamageReduction` | 20 | 20 |
 | `BlurInvisibilityTotalReduction` | 30 | **40** |
 
-`getBlurChance` (`combat.js`) matches all three. R5.2c subsequently settled the shape from
+`getBlurChance` (`combat_effects.js`) matches all three. R5.2c subsequently settled the shape from
 `Caster.exe`: Blur is a side-wide combat global selected by `CGADEnemy`, each hit is independently
 removed at the configured percentage before defence, and the attacker's Illusion Immunity
 disables it. `CGADEnemy` selects the side opposite the current combat-turn side, so this is the

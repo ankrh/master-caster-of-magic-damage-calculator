@@ -525,18 +525,55 @@
   </div>
 </div>
 
-<!-- Load order: units (data blobs) -> data (constants) -> engine (math) -> combat/stats (logic) -> ui (DOM) -->
 <div id="tt" class="tt"></div>
-<script src="Calculator/units_mom.js"></script>
-<script src="Calculator/units_com.js"></script>
-<script src="Calculator/units_com2.js"></script>
-<script src="Calculator/units_warlord.js"></script>
-<script src="Calculator/data.js"></script>
-<script src="Calculator/engine.js"></script>
-<script src="Calculator/steps.js"></script>
-<script src="Calculator/combat.js"></script>
-<script src="Calculator/stats.js"></script>
-<script src="Calculator/lz-string.min.js"></script>
-<script src="Calculator/ui.js"></script>
+<!-- Source manifest. These tags are the single home for the calculator's file list and its load
+     order: units (data blobs) -> data and definitions (constants) -> engine (math) ->
+     steps/combat/stats (logic) -> presets (test fixtures) -> ui (DOM). Node reads them through
+     tools/calculator_sources.js and the matrix worker reads them from the DOM, so adding or
+     splitting a source file is one edit here. The ui_*.js sources declare only; ui.js carries
+     every top-level statement in the UI layer and so must stay last.
+       data-scope="core"   computation layer; runs in a bare JS context, loaded by the Node suites
+       data-scope="page"   only the browser page loads it
+       data-worker         additionally imported by the matrix worker (core only)
+     Both readers reject a Calculator script tag with no data-scope, and reject a Calculator/*.js
+     file that appears on disk but in no tag, so a new source cannot be silently left out of one
+     consumer while the others still report green. -->
+<script src="Calculator/units_mom.js" data-scope="core"></script>
+<script src="Calculator/units_com.js" data-scope="core"></script>
+<script src="Calculator/units_com2.js" data-scope="core"></script>
+<script src="Calculator/units_warlord.js" data-scope="core"></script>
+<script src="Calculator/data.js" data-scope="core"></script>
+<script src="Calculator/abilities.js" data-scope="core"></script>
+<script src="Calculator/enchantments.js" data-scope="core"></script>
+<script src="Calculator/engine.js" data-scope="core" data-worker></script>
+<script src="Calculator/steps.js" data-scope="core" data-worker></script>
+<script src="Calculator/combat_abilities.js" data-scope="core" data-worker></script>
+<script src="Calculator/combat_special_attacks.js" data-scope="core" data-worker></script>
+<script src="Calculator/combat_fear_and_touch.js" data-scope="core" data-worker></script>
+<script src="Calculator/combat_effects.js" data-scope="core" data-worker></script>
+<script src="Calculator/combat_state.js" data-scope="core" data-worker></script>
+<script src="Calculator/combat_phases.js" data-scope="core" data-worker></script>
+<script src="Calculator/combat.js" data-scope="core" data-worker></script>
+<script src="Calculator/stats_manifests.js" data-scope="core"></script>
+<script src="Calculator/stats_identity.js" data-scope="core"></script>
+<script src="Calculator/stats_sequence.js" data-scope="core"></script>
+<script src="Calculator/stats.js" data-scope="core"></script>
+<script src="Calculator/presets.js" data-scope="page"></script>
+<script src="Calculator/presets_ranged_and_haste.js" data-scope="page"></script>
+<script src="Calculator/presets_warlord_effects.js" data-scope="page"></script>
+<script src="Calculator/presets_immunities_and_abilities.js" data-scope="page"></script>
+<script src="Calculator/presets_buildings_and_machines.js" data-scope="page"></script>
+<script src="Calculator/presets_protections_and_weapons.js" data-scope="page"></script>
+<script src="Calculator/presets_fire_and_blessings.js" data-scope="page"></script>
+<script src="Calculator/presets_curses_and_undead.js" data-scope="page"></script>
+<script src="Calculator/test_tree.js" data-scope="page"></script>
+<script src="Calculator/lz-string.min.js" data-scope="page"></script>
+<script src="Calculator/ui_abilities.js" data-scope="page"></script>
+<script src="Calculator/ui_units.js" data-scope="page"></script>
+<script src="Calculator/ui_card.js" data-scope="page"></script>
+<script src="Calculator/ui_state.js" data-scope="page"></script>
+<script src="Calculator/ui_matrix_properties.js" data-scope="page"></script>
+<script src="Calculator/ui_matrix.js" data-scope="page"></script>
+<script src="Calculator/ui.js" data-scope="page"></script>
 </body>
 </html>

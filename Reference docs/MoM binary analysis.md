@@ -1724,7 +1724,7 @@ melee to-hit penalty re-reads the struct field instead, so Eldritch Weapon affec
 roll only.
 
 The calculator models this correctly, as a flat −10% per carrier in
-`applyPairToHitModifiers` (`combat.js`) gated to `mom_1.31`, floored at 10%. The floor is right:
+`applyPairToHitModifiers` (`combat_phases.js`) gated to `mom_1.31`, floored at 10%. The floor is right:
 `CMB_AttackRoll`'s `|| die_roll == 10` clause guarantees a 10% hit chance regardless of how
 negative the to-hit goes. Note the implementation encodes the *symptom* per named ability
 rather than the *mechanism*; that is equivalent only because Lucky and Prayer are the sole
@@ -1790,7 +1790,7 @@ still `Random(10)`, the success sentinel merely moved from `==10` to `==1`.
 So CoM 1's rate is 20%, Invisibility alone grants the same 20%, the two together cap at 30%
 (`mov cx, 0x1E`), and no equivalent invisibility branch exists in either MoM build.
 
-The calculator matches all of this: `getBlurChance` (`combat.js`) and `blurSurvivingDist`
+The calculator matches all of this: `getBlurChance` (`combat_effects.js`) and `blurSurvivingDist`
 (`engine.js`, whose DP is exactly the 1.31 loop's distribution). Its one simplification is
 modelling Blur as a defender ability rather than a side-wide enchantment.
 

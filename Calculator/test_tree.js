@@ -1,0 +1,1095 @@
+// The preset browser's grouping tree: which presets appear under which version and ability
+// group, and the version a group's presets inherit. Keys resolve against PRESETS
+// (presets.js); a key with no preset is skipped.
+
+const TEST_TREE = [
+  {
+    name: 'Artificial MoM 1.31 tests',
+    version: V_MOM_131,
+    subs: [
+      { name: 'Armor Piercing', keys: ['armorPiercingMelee', 'armorPiercingRanged', 'armorPiercingThrown', 'armorPiercingLightningNoDoubleHalve', 'armorPiercingDefenderCounter'] },
+      { name: 'Berserk', keys: ['berserkDoublesMelee', 'berserkDoublesAfterOtherBonuses', 'berserkSetsDefToZero', 'berserkIronSkinOverridden'] },
+      { name: 'Black Channels', keys: ['blackChannelsMeleeBonus', 'blackChannelsRangedBonus', 'blackChannelsThrownBonus', 'blackChannelsDefBonus', 'blackChannelsResBonus', 'blackChannelsHpBonus', 'blackChannelsPoisonImmune', 'blackChannelsDeathImmune', 'blackChannelsFantasticDeath'] },
+      { name: 'Black Prayer', keys: ['blackPrayerAtkPenalty', 'blackPrayerDefPenalty', 'blackPrayerResPenalty', 'blackPrayerRangedAtk', 'blackPrayerThrownAtk'] },
+      { name: 'Black Sleep', keys: ['blackSleepIncomingMelee', 'blackSleepIgnoresDef', 'blackSleepIncomingRanged', 'blackSleepIncomingGazeRanged', 'blackSleepCannotAttack', 'blackSleepAttackerCannotInitiateMelee', 'blackSleepAttackerCannotInitiateRanged', 'blackSleepIgnoresMissileImmunity'] },
+      { name: 'Bless', keys: ['blessMeleeFromDeath', 'blessMeleeFromChaos', 'blessMeleeFromNormal', 'blessFireBreathAlwaysChaos', 'blessLightningBreathAlwaysChaos', 'blessMagicChaosRanged', 'blessMissileFromDeathNoBonus', 'blessThrownFromChaosNoBonus', 'blessArmorPiercingHalves', 'blessCauseFear', 'blessCauseFearImmune', 'blessLifeSteal', 'blessDeathGaze'] },
+      { name: 'Blur', keys: ['blurBasicMoM131', 'blurIllImmBugV131', 'blurIllImmAtkBugV131', 'blurVsDoom', 'blurRangedMissile131', 'blurBoulder131', 'blurMagicRanged131', 'blurThrown131', 'blurFireBreath131', 'blurGazeRanged131'] },
+      { name: 'Breath', keys: ['fireBreathBasic', 'lightningBreathBasic'] },
+      { name: 'Cause Fear', keys: ['fearBasic', 'fearDefenderNoop', 'fearDeathImmune', 'fearMagicImmune', 'fearNotRanged', 'fearDefenderFixedFirstStrike'] },
+      { name: 'Chaos Channels', keys: ['ccDefense131', 'ccFireBreathBasic', 'ccFireBreathReplacesThrown', 'ccFireBreathVsFireImmunity', 'ccBypassWeaponImmunity', 'ccNodeAuraChaos'] },
+      { name: 'Chaos Surge', keys: ['chaosSurgeMeleeMoM', 'chaosSurgeRangedMoM', 'chaosSurgeThrownMoM', 'chaosSurgeDoomGazeMoM', 'chaosSurgeNoResistanceMoM', 'chaosSurgeStackingMoM', 'chaosSurgeChaosChannelsBreathMoM'] },
+      { name: 'Charm of Life', keys: ['charmOfLifeHpLow', 'charmOfLifeHpHigh', 'charmOfLifeReadsLiveHpCoM2'] },
+      { name: 'Combined gaze', keys: ['combinedStoningDeathGaze'] },
+      { name: 'Hidden gaze attack', keys: ['hiddenGazePerAttackerFigure', 'hiddenGazeStoningKillsPerDefenderFigure', 'hiddenGazeIgnoresWeaponImmunity'] },
+      { name: 'Darkness / True Light', keys: ['darknessDeathVsLife', 'trueLightDeathVsLife', 'trueLightDeathVsLifeWarlord', 'trueLightWarlordIllusionToHit', 'sanctifyTrueLightWarlord', 'sanctifyClergyFantasticWarlord'] },
+      { name: 'Death gaze', keys: ['deathGazeBasic', 'deathGazeMultiFig', 'deathGazeDeathImmunity', 'deathGazeMagicImmunity', 'deathGazeStoningImmunityNotBlocked', 'deathGazeHighRes'] },
+      { name: 'Death touch', keys: ['deathTouchBasic', 'deathTouchDeathImmune', 'deathTouchMagicImmune', 'deathTouchHighRes', 'deathTouchStoningImmunityNotBlocked', 'deathTouchMultiFig', 'deathTouchRighteousness'] },
+      { name: 'Discipline', keys: ['combatDisciplineEliteNegatesFirstStrikeCoM2', 'overlandDisciplineDefenseNormalCoM2', 'overlandDisciplineDefenseRegularCoM2', 'overlandDisciplineVeteranMeleeCoM2', 'overlandDisciplineVeteranMagicRangedNoBonusCoM2', 'overlandDisciplineVeteranMissileCoM2'] },
+      { name: 'Dispel Evil', keys: ['dispelEvilBasicDC', 'dispelEvilUndead', 'dispelEvilNormalImmune', 'dispelEvilMagicImmune', 'dispelEvilHighRes', 'dispelEvilChaosChanneled', 'dispelEvilChaos', 'dispelEvilMultiFig', 'dispelEvilThrown', 'dispelEvilRanged'] },
+      { name: 'Doom damage', keys: ['doomDamageMelee', 'doomDamageMultiFig', 'doomDamageRanged', 'doomDamageThrownAffected', 'doomDamageCounter'] },
+      { name: 'Doom gaze', keys: ['doomGazeBasic', 'doomGazeMagicImmunity', 'doomGazeKill', 'doomGazeChaosSpawn'] },
+      { name: 'Elemental Armor / Resist Elements', keys: ['elemArmorMagicCRanged', 'elemArmorMagicNRanged', 'elemArmorNotVsMagicS', 'elemArmorNotMelee', 'elemArmorFireBreath', 'elemArmorLightningBreath', 'resistElementsMagicC', 'resistElementsNotVsMagicSMoM', 'resistElementsFireBreathMoM', 'elemArmorNotCumulative', 'elemArmorImmolationCoM', 'resistElementsWallOfFireCoM'] },
+      { name: 'Eldritch Weapon', keys: ['eldritchWeaponMelee', 'eldritchWeaponRangedMissile', 'eldritchWeaponWeaponUpgrade', 'eldritchWeaponRangedKeepsWI'] },
+      { name: 'Eternal Night', keys: ['eternalNightDarknessMoM', 'eternalNightNoEnemyResistanceMoM'] },
+      { name: 'Fiery Fury', keys: ['fieryFuryMeleeWarlord', 'fieryFuryMissileWarlord', 'fieryFuryBoulderWarlord', 'fieryFuryThrownWarlord', 'fieryFuryNoBreathBonusWarlord', 'fieryFuryFantasticNoStatBonus', 'fieryFuryFantasticFirstStrike', 'fieryFuryUsesBaseFantasticForFirstStrikeWarlord', 'fieryFuryFantasticChaosConversion', 'fieryFuryUndeadNoChaosConversion', 'fieryFurySanctifyNoChaosConversionWarlord', 'fieryFuryFieryBladeNoStack', 'fieryFuryWeaponImmunityBypass'] },
+      { name: 'Fire Immunity', keys: ['fireImmunityFireBreath', 'fireImmunityNotMelee', 'fireImmunityNotThrown', 'fireImmunityNotMissile', 'fireImmunityAfterArmorPiercing', 'fireImmunityIllusionOverrides'] },
+      { name: 'First Strike', keys: ['firstStrikeKillsBeforeCounter', 'negateFirstStrike', 'firstStrikeMultiFig', 'firstStrikeNoKillUnchanged', 'firstStrikeIgnoredOnRanged'] },
+      { name: 'Giant Strength', keys: ['giantStrengthMelee', 'giantStrengthThrown', 'giantStrengthNotMissile'] },
+      { name: 'Guardian Wind', keys: ['guardianWindBlocksMissile'] },
+      { name: 'Haste', keys: ['hasteMeleeDoubles', 'hasteRangedDoubles', 'hasteMagicRangedDoublesNoCaster', 'hasteMagicRangedDoublesForCaster', 'hasteThrownDoubles', 'hasteGazeNotDoubled', 'hasteCounterDoublesMoM', 'hasteFirstStrikeSecondConcurrent'] },
+      { name: 'High Prayer', keys: ['highPrayerMeleeAtk', 'highPrayerDefense', 'highPrayerResistance', 'highPrayerToHit', 'highPrayerToBlock', 'highPrayerMeleeNotRanged', 'highPrayerCombined'] },
+      { name: 'Holy Armor', keys: ['holyArmorDef', 'holyArmorVsRanged', 'holyArmorStacksWithStoneSkin'] },
+      { name: 'Holy Bonus', keys: ['holyBonusMeleeAtk', 'holyBonusDef', 'holyBonusRes', 'holyBonusRangedMoM'] },
+      { name: 'Holy Weapon', keys: ['holyWeaponMelee', 'holyWeaponMissile', 'holyWeaponBoulder', 'holyWeaponNotMagicRanged', 'holyWeaponNotFireBreath', 'holyWeaponBypassesWI'] },
+      { name: 'Hurricane', keys: ['hurricaneRanged', 'hurricaneBreath', 'hurricaneMeleeUnaffected'] },
+      { name: 'Illusion', keys: ['illusionMelee', 'illusionRanged', 'illusionThrown', 'illusionCounter', 'illusionImmunityNegates', 'illusionCityWalls', 'illusionOverridesWeaponImmunity', 'illusionDoesNotOverrideImmolationDefense'] },
+      { name: 'Immolation', keys: ['immolationMelee', 'immolationAreaMultiFig', 'immolationNoOverflow', 'immolationMagicImmunity', 'immolationRighteousness', 'immolationFireImmunity', 'immolationArmorPiercingIgnored', 'immolationBothSides', 'immolationRangedMoM', 'immolationWithThrown', 'immolationAtkZeroNoFire'] },
+      { name: 'Invisibility', keys: ['invisibilityMelee', 'invisibilityRangedBlocked', 'invisibilityRangedIllusionImmune', 'invisibilityCounter', 'invisibilityIllusionImmuneNoPenalty', 'invisibilityDoomIgnores'] },
+      { name: 'Invulnerability', keys: ['invulnerabilityMelee', 'invulnerabilityFloorsAtZero', 'invulnerabilityGrantsWeaponImmunity', 'invulnerabilityRanged', 'invulnerabilityImmolation', 'invulnerabilityNotDoom', 'invulnerabilityMultiFigOverflow'] },
+      { name: 'Large Shield', keys: ['largeShieldRangedMissile', 'largeShieldMeleeNoEffect', 'largeShieldThrown', 'largeShieldArmorPiercing', 'largeShieldFireBreath'] },
+      { name: 'Level & Weapon bonuses', keys: ['levelWeaponBonus'] },
+      { name: 'Life steal', keys: ['lifeStealBasic', 'lifeStealDeathImmune', 'lifeStealMagicImmune', 'lifeStealHighRes', 'lifeStealNoMod', 'lifeStealNegativeRes'] },
+      { name: 'Lightning Resist', keys: ['lightningResistCancelsAP', 'lightningResistKeepsAbilityAP'] },
+      { name: 'Lionheart', keys: ['lionheartMeleeAtk', 'lionheartRes', 'lionheartMissileBonus', 'lionheartBoulderBonus', 'lionheartNoMagicRangedBonus', 'lionheartThrownBonus'] },
+      { name: 'Lucky', keys: ['luckyToHit', 'luckyToHitRanged', 'luckyToBlock', 'luckyResistance', 'luckyEnemyMeleePenalty131', 'luckyEnemyPenaltyNotRanged131'] },
+      { name: 'Metal Fires / Flame Blade / Fiery Blade', keys: ['metalFiresMelee', 'metalFiresFantasticUnaffected', 'metalFiresFantasticMissileUnaffected', 'metalFiresFantasticThrownUnaffected', 'metalFiresFantasticNoWeaponUpgrade', 'metalFiresMissile', 'metalFiresNotBoulder', 'metalFiresThrown', 'metalFiresWeaponUpgrade', 'flameBladeMelee', 'flameBladeMissile', 'flameBladeThrown', 'flameBladeMetalFiresNoStack', 'flameBladeMeleeCoM2', 'flameBladeThrownNotBoostedCoM2', 'flameBladeMeleeWarlord', 'flameBladeMissileWarlord', 'flameBladeBoulderWarlord', 'flameBladeThrownWarlord', 'flameBladeFireBreathWarlord', 'flameBladeCreatesFireBreathWarlord', 'fieryBladeMeleeWarlord', 'fieryBladeNoFireBreathWarlord'] },
+      { name: 'Mind Storm', keys: ['mindStormMeleePenaltyMoM', 'mindStormRangedPenaltyMoM', 'mindStormDefPenaltyMoM'] },
+      { name: 'Missile Immunity', keys: ['missileImmunityMissile', 'missileImmunityBoulder', 'missileImmunityMagic', 'missileImmunityMelee', 'missileImmunityArmorPiercing', 'missileImmunityWIOverwrite131', 'missileImmunityWraithFormOverwrite131', 'missileImmunityInvulnerabilityOverwrite131', 'missileImmunityGenericKeepsMI131', 'missileImmunityWIMagicWeapon'] },
+      { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch'] },
+      { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'magicImmunityPoisonTouch', 'poisonHighRes', 'charmedPoisonMoM', 'poisonRanged', 'poisonThrown', 'chaosSpawnPoisonGazeMom'] },
+      { name: 'Prayer', keys: ['prayerToHit', 'prayerToHitRanged', 'prayerToBlock', 'prayerResistance', 'prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyNotRanged131'] },
+      { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'magicImmunityMagicRanged', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose', 'longRangeMidRange'] },
+      { name: 'Resist Magic', keys: ['resistMagicBlocks', 'resistMagicNotPoison'] },
+      { name: 'Resistance to All', keys: ['resistanceToAllBasic', 'resistanceToAllCap', 'holyBonusPlusResistanceToAll'] },
+      { name: 'Righteousness', keys: ['righteousnessMagicChaos', 'righteousnessMagicNatureNotBlocked', 'righteousnessFireBreath', 'righteousnessLightningBreath', 'righteousnessPhysicalThrownNotBlocked', 'righteousnessMissileNotBlocked', 'righteousnessCauseFear', 'righteousnessLifeSteal', 'righteousnessDeathGaze', 'righteousnessStoningGazeNotBlocked', 'immolationRighteousness', 'wallOfFireRighteousness'] },
+      { name: 'Stone Skin / Iron Skin', keys: ['stoneSkinDef', 'ironSkinDef', 'ironSkinStoneSkinNoStack'] },
+      { name: 'Stoning gaze', keys: ['stoningGazeBasic', 'stoningGazeMultiFig', 'stoningGazeBilateral', 'stoningGazeImmunity', 'stoningGazeMagicImmunity'] },
+      { name: 'Stoning touch', keys: ['stoningTouchBasic', 'stoningImmunity', 'stoningMagicImmunity', 'stoningHighRes', 'stoningMultiFig'] },
+      { name: 'Thrown', keys: ['thrownBasic'] },
+      { name: 'True Sight', keys: ['trueSightNegatesIllusion', 'trueSightRangedToHitWarlord'] },
+      { name: 'Undead', keys: ['undeadDeathImmunity131', 'undeadBypassesWeaponImmunity', 'undeadTriggersBless'] },
+      { name: 'Vertigo', keys: ['vertigoMeleeHitMoM', 'vertigoRangedHitMoM', 'vertigoDefenseMoM', 'vertigoImmolationDefenseMoM', 'vertigoWallOfFireDefenseMoM'] },
+      { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireMultiFig', 'wallOfFireMagicImmunity', 'wallOfFireRighteousness', 'wallOfFireFireImmunity', 'wallOfFireNotRanged', 'wallOfFireAfterThrown', 'wallOfFireAfterGazeCounter', 'wallOfFireAfterThrownAndGaze', 'wallOfFireBilateralGaze'] },
+      { name: 'Warp Creature', keys: ['warpAttackMelee', 'warpAttackNotRangedMoM', 'warpDefenseHalfMoM', 'warpResistSetsToZero', 'warpResistMagicSurvives'] },
+      { name: 'Warp Reality', keys: ['warpRealityBasic', 'warpRealityChaosExempt', 'warpRealityChaosChannelsExempt', 'warpRealityMagicImmunityNotExempt', 'warpRealityBothSides', 'warpRealityFloorAt10', 'warpRealityRanged'] },
+      { name: 'Weakness', keys: ['weaknessMeleePenalty', 'weaknessMissileRangedPenalty', 'weaknessThrownNotAffected131', 'weaknessBoulderNotAffected'] },
+      { name: 'Weapon Immunity', keys: ['weaponImmunityMelee', 'weaponImmunityMagicWeapon', 'weaponImmunityFantastic', 'weaponImmunityHero', 'weaponImmunityCounter', 'weaponImmunityThrown131', 'weaponImmunityRangedMissile', 'weaponImmunityRangedMagic'] },
+      { name: 'Wraith Form', keys: ['wraithFormGrantsWeaponImmunity', 'wraithFormBypassesWIMoM'] },
+    ],
+  },
+  {
+    name: 'Predefined units tests',
+    version: V_MOM_131,
+    subs: [
+      {
+        name: 'Basic matchups',
+        keys: [
+          'predefBarbSwordsVsSpears',
+          'predefLongbowmenVsOrcSpears',
+          'predefWarBearsVsDwarvenHalberdiers',
+          'predefGreatDrakeVsHydra',
+          'predefDeathKnightsVsPaladins',
+          'predefChaosSpawnVsUnicorns',
+        ],
+      },
+      {
+        name: 'Roster ability wiring',
+        keys: [
+          'predefPhantomWarriorsVsPaladins',
+          'predefPhantomWarriorsVsGreatDrakeCoM',
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Artificial CoM / CoM2 tests',
+    subs: [
+      {
+        name: 'Alumni of Academy',
+        keys: [
+          'alumniOfAcademyMagicRangedWarlord',
+          'alumniOfAcademyMechanicalExcludedWarlord',
+          'alumniOfAcademyRocsWarlord',
+          'alumniOfAcademyNonHalflingExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Altar of the Moon',
+        keys: [
+          'altarOfTheMoonRangedWarlord',
+          'altarOfTheMoonRageWarlord',
+          'altarOfTheMoonPoisonImmunityWarlord',
+          'altarOfTheMoonResistanceWarlord',
+          'altarOfTheMoonNonGnollWarlord',
+          'altarOfTheMoonHunterPoisonWarlord',
+          'altarOfTheMoonWitchdoctorLifeStealWarlord',
+        ],
+      },
+      {
+        name: 'Altar of the Sun',
+        keys: [
+          'altarOfTheSunFigureWarlord',
+          'altarOfTheSunNonHawkmanWarlord',
+          'altarOfTheSunHolyMotherMeleeWarlord',
+          'altarOfTheSunHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Angelic Guardians',
+        keys: [
+          'angelicGuardiansGrantsExorciseRegularWarlord',
+          'angelicGuardiansLifeTierWarlord',
+          'angelicGuardiansImprovesExistingExorciseWarlord',
+          'angelicGuardiansFantasticChaosNotBuffedWarlord',
+          'angelicGuardiansImprovesExistingExorciseOnChaosWarlord',
+          'angelicGuardiansUsesBaseFantasticGateWarlord',
+        ],
+      },
+      {
+        name: 'Animate Dead',
+        keys: [
+          'animatedAttackAndToHitCoM',
+          'animatedBypassesWeaponImmunityCoM',
+          'animatedBreathBonusCoM2',
+          'animatedDoomGazeUnchangedCoM2',
+          'animatedGrantsWeaponImmunityCoM',
+          'exorciseAnimatedCoM2',
+        ],
+      },
+      {
+        name: 'Armorclad / Battle Armor',
+        keys: [
+          'armorcladArmorWarlord',
+          'battleArmorWarlord',
+        ],
+      },
+      {
+        name: 'Artificer',
+        keys: [
+          'artificerMechanicalMeleeWarlord',
+          'artificerMechanicalRangedWarlord',
+          'artificerMechanicalDefenseWarlord',
+          'artificerMechanicalResistanceWarlord',
+          'artificerMagicWeaponBypassesWIWarlord',
+          'artificerNoBonusForNonMechanicalWarlord',
+        ],
+      },
+      {
+        name: 'Beat of Swiftness (Warlord)',
+        keys: [
+          'beatOfSwiftnessArmorPenaltyWarlord',
+        ],
+      },
+      {
+        name: 'Berserk (Warlord)',
+        keys: [
+          'berserkWarlordPlus15ToHit',
+          'berserkWarlordMinus10ToBlock',
+        ],
+      },
+      {
+        name: 'Black Prayer',
+        keys: [
+          'blackPrayerDoomGazeUnchangedCoM2',
+        ],
+      },
+      {
+        name: 'Blackpowder Weapon',
+        keys: [
+          'blackpowderMissileWarlord',
+        ],
+      },
+      {
+        name: 'Bombs&Grenades',
+        keys: [
+          'bombsGrenadesWarlord',
+        ],
+      },
+      {
+        name: 'Conjuring Pact nausea (Warlord)',
+        keys: [
+          'nauseaMinus10ToHit',
+          'nauseaMinus10ToDefend',
+        ],
+      },
+      {
+        name: 'Magic Immunity curse gating',
+        keys: [
+          'magicImmunityGatesWeakness',
+          'magicImmunityGatesBlackSleep',
+          'magicImmunityGatesShatter',
+          'magicImmunityGatesVertigo',
+          'magicImmunityGatesWarpAttack',
+          'magicImmunityGatesMindStorm',
+          'illusionImmunityGatesMindStorm',
+          'illusionImmunityGatesVertigo',
+          'magicImmunityGatesNausea',
+          'magicImmunityGatesTemporalTwist',
+          'blackPrayerBypassesMagicImmunity',
+        ],
+      },
+      {
+        name: 'Blaze of Glory (Warlord)',
+        keys: [
+          'blazeOfGloryArmorToMeleeWarlord',
+          'blazeOfGloryArmorPiercingWarlord',
+          'blazeOfGloryZeroesEnchantmentArmorWarlord',
+          'blazeOfGloryRangedToThrownWarlord',
+          'blazeOfGloryHeroUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Blazing Eyes',
+        keys: [
+          'blazingEyesChaosCreatureGetsDoomGazeCoM2',
+          'blazingEyesChaosCreatureUpgradesDoomGazeCoM2',
+          'blazingEyesChaosChannelsEligibleCoM2',
+          'blazingEyesNonChaosNoUpgradeCoM2',
+        ],
+      },
+      {
+        name: 'Blazing March',
+        keys: [
+          'blazingMarchFlameBladeStacksCoM2',
+          'blazingMarchMeleeCoM2',
+          'blazingMarchMissileIgnoresWICoM2',
+          'blazingMarchThrownIgnoresWIWarlord',
+          'blazingMarchThrownNotBoostedCoM2',
+          'blazingMarchThrownWarlord',
+        ],
+      },
+      {
+        name: 'Blood Lust',
+        keys: [
+          'bloodLustBypassesWeaponImmunityCoM2',
+          'bloodLustDoesNotBypassWeaponImmunityWarlord',
+          'bloodLustDoublesVsNormalCoM',
+          'bloodLustDoomGazeUndoubledCoM2',
+          'bloodLustFantasticBecomesDeathRealmCoM2',
+          'bloodLustHeroTargetCoM2',
+          'bloodLustDoublesThrownCoM2',
+          'bloodLustDoesNotDoubleFireBreathCoM2',
+          'bloodLustLightningBreathUndoubledWarlord',
+          'bloodLustMagicalRangedUndoubledWarlord',
+          'bloodLustNoDoubleVsFantasticCoM',
+          'bloodLustNotUndeadWarlord',
+          'bloodLustPhysicalRangedUndoubledCoM2',
+          'bloodLustThrownCoM1MeleeOnly',
+          'bloodLustThrownCoM2',
+          'bloodLustThrownFantasticTargetCoM2',
+          'bloodLustThrownWarlord',
+          'bloodLustVulnerableToExorciseCoM2',
+        ],
+      },
+      {
+        name: 'Blood Sucker',
+        keys: [
+          'bloodsuckerBasicMeleeWarlord',
+          'bloodsuckerMultiFigCapWarlord',
+          'bloodsuckerArmorBlocksAllNoTriggerWarlord',
+          'bloodsuckerThrownMeleeDoubleTriggerWarlord',
+          'bloodsuckerHasteDoublesWarlord',
+          'bloodsuckerRangedWarlord',
+          'bloodsuckerCapAtRemHPWarlord',
+          'bloodsuckerCounterAttackWarlord',
+        ],
+      },
+      {
+        name: 'Breakthrough',
+        keys: [
+          'breakthroughMeleeCoM2',
+          'breakthroughMeleeDefAttackCoM2',
+          'breakthroughMeleeDefDefenseCoM2',
+        ],
+      },
+      {
+        name: 'Cause Fear',
+        keys: [
+          'fearDefenderPenaltyCoM',
+          'fearDefenderPenaltyCoM2',
+        ],
+      },
+      {
+        name: 'Chaos Channels (Warlord)',
+        keys: [
+          'ccFireBreathAddsToExistingWarlord',
+        ],
+      },
+      {
+        name: 'Chaos Surge',
+        keys: [
+          'chaosSurgeBreathCoM2',
+          'chaosSurgeMeleeCoM2',
+          'chaosSurgeNonChaosNoBonusCoM2',
+          'chaosSurgeRangedCoM2',
+          'chaosSurgeResistanceCoM2',
+          'chaosSurgeStackingCoM2',
+        ],
+      },
+      {
+        name: 'Colossal Strength',
+        keys: [
+          'colossalStrengthMeleeWarlord',
+          'colossalStrengthPhysicalRangedWarlord',
+          'colossalStrengthThrownWarlord',
+          'colossalStrengthMagicRangedNoBonusWarlord',
+          'colossalStrengthScalesBuffedMeleeWarlord',
+          'colossalStrengthScalesAfterRustWarlord',
+          'colossalStrengthScalesBuffedRangedWarlord',
+        ],
+      },
+      {
+        name: 'Destiny',
+        keys: [
+          'destinyAfterLuckyStarWarlord',
+          'destinyDefenseAndHealthCoM2',
+          'destinyFireBreathDoublesCoM2',
+          'destinyGrantsSupernaturalCoM2',
+          'destinyLightningBreathDoublesCoM2',
+          'destinyMeleeRemovesLevelsCoM2',
+          'destinyRangedDoublesBaseCoM2',
+          'destinyResistanceAndHpCoM2',
+          'destinyThrownDoublesCoM2',
+        ],
+      },
+      {
+        name: 'Destroy Mechanical',
+        keys: [
+          'destroyMechanicalMeleeOneShotWarlord',
+          'destroyMechanicalCounterAttackWarlord',
+          'destroyMechanicalNoEffectOnNonMechanicalWarlord',
+          'destroyMechanicalRebuildTargetWarlord',
+        ],
+      },
+      {
+        name: 'Destruction',
+        keys: [
+          'destructionWholeUnitCoM2',
+          'destructionPerAttackerFigureCoM2',
+          'destructionSaveModifierCoM2',
+          'destructionMagicImmunityCoM2',
+          'destructionHighResistanceCoM2',
+          'destructionRangedMagicCoM2',
+          'destructionRangedMagicWarlord',
+          'destructionBlessCoM2',
+          'destructionBlessWarlord',
+          'destructionDeathImmunityNoProtectionCoM2',
+          'destructionNotInMoM',
+        ],
+      },
+      {
+        name: 'Discipline',
+        keys: [
+          'combatDisciplineEliteNegatesFirstStrikeCoM2',
+          'overlandDisciplineDefenseNormalCoM2',
+          'overlandDisciplineDefenseRegularCoM2',
+          'overlandDisciplineVeteranMagicRangedNoBonusCoM2',
+          'overlandDisciplineVeteranMeleeCoM2',
+          'overlandDisciplineVeteranMissileCoM2',
+        ],
+      },
+      {
+        name: 'Dishearten Prophesy',
+        keys: [
+          'disheartenProphecyResistanceWarlord',
+        ],
+      },
+      {
+        name: 'Divine Barrier',
+        keys: [
+          'divineBarrierAuraCoM',
+        ],
+      },
+      {
+        name: 'Divine Protection',
+        keys: [
+          'divineProtectionLuckyToHitWarlord',
+          'divineProtectionLuckyResistanceWarlord',
+          'divineProtectionDeathImmunityWarlord',
+        ],
+      },
+      {
+        name: 'Dragon Mound',
+        keys: [
+          'dragonMoundFireBreathWarlord',
+          'dragonMoundArmorWarlord',
+          'dragonMoundNonDraconianWarlord',
+          'dragonMoundHeroExcludedWarlord',
+          'dragonMoundThrownNotBoostedWarlord',
+        ],
+      },
+      {
+        name: 'Energy Cannon',
+        keys: [
+          'energyCannonDoomWarlord',
+          'energyCannonDestructionWarlord',
+        ],
+      },
+      {
+        name: 'Energy Weaponry',
+        keys: [
+          'energyWeaponryMeleeWarlord',
+          'energyWeaponryRangedUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Endurance',
+        keys: [
+          'enduranceDefenseCoM',
+          'enduranceHpBonusCoM2',
+          'enduranceHpMinimumCoM2',
+        ],
+      },
+      {
+        name: 'Eternal Night',
+        keys: [
+          'eternalNightDarknessCoM',
+          'eternalNightDoubleDarknessCoM2',
+          'eternalNightEnemyLifeResistanceCoM2',
+          'eternalNightEnemyResistanceCoM',
+          'eternalNightEnemyPoorSightWarlord',
+          'eternalNightMagicRangedWarlord',
+          'eternalNightDeathUnitNoPoorSightWarlord',
+          'eternalNightThrownUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Eye of Heaven',
+        keys: [
+          'eyeOfHeavenNegatesIllusion',
+          'eyeOfHeavenDisablesEnemyGaze',
+          'eyeOfHeavenTrueSightToHitWarlord',
+        ],
+      },
+      {
+        name: 'Exorcise',
+        keys: [
+          'exorciseFantasticWarlord',
+          'exorciseNonFantasticImmuneWarlord',
+          'exorciseUndeadExtraPenaltyWarlord',
+        ],
+      },
+      {
+        name: 'Favored Terrain',
+        keys: [
+          'favoredTerrainDefenseWarlord',
+          'favoredTerrainToHitWarlord',
+          'favoredTerrainTacticianDefenseWarlord',
+          'favoredTerrainTacticianToHitWarlord',
+          'favoredTerrainTacticianFirstStrikeWarlord',
+          'favoredTerrainTacticianNegateFirstStrikeWarlord',
+        ],
+      },
+      {
+        name: 'Focus Magic',
+        keys: [
+          'focusMagicBreathCoM2',
+          'focusMagicConvertsMissileCoM2',
+          'focusMagicPreservesLowMissileCoM2',
+          'focusMagicConvertsThrownCoM2',
+          'focusMagicDoomGazeBoostCoM2',
+          'focusMagicDoomGazeRangedBranchCoM2',
+          'focusMagicCreationAfterLevelCoM2',
+          'focusMagicGrantsRangedCoM2',
+          'focusMagicMagicRangedCoM2',
+        ],
+      },
+      {
+        name: 'Fortification',
+        keys: [
+          'fortificationRangedWarlord',
+          'fortificationBreathWarlord',
+          'fortificationLargeShieldUpgradeWarlord',
+        ],
+      },
+      {
+        name: 'Goblin Pox',
+        keys: [
+          'goblinPoxNonGoblinMeleeWarlord',
+          'goblinPoxNonGoblinArmorWarlord',
+          'goblinPoxNonGoblinResistanceWarlord',
+          'goblinPoxGoblinMilderWarlord',
+          'goblinPoxGoblinResistanceWarlord',
+        ],
+      },
+      {
+        name: 'Great Unbinding',
+        keys: [
+          'greatUnbindingToHitWarlord',
+          'greatUnbindingToBlockWarlord',
+          'greatUnbindingResistanceWarlord',
+          'greatUnbindingNonFantasticUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Guiding Beacon',
+        keys: [
+          'guidingBeaconAuraCoM',
+          'guidingBeaconExcludesThrownCoM',
+        ],
+      },
+      {
+        name: 'Guardian',
+        keys: [
+          'guardianResistanceCoM2',
+          'guardianToDefendCoM2',
+          'guardianToHitCoM',
+        ],
+      },
+      {
+        name: 'Hierophany',
+        keys: [
+          'hierophanyHalvesDefenseWarlord',
+          'hierophanyStripsWeaponImmunityWarlord',
+          'hierophanyStripsMagicImmunityWarlord',
+        ],
+      },
+      {
+        name: 'Hillfort',
+        keys: [
+          'hillfortMissileWarlord',
+          'hillfortMeleeUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Holy Armor',
+        keys: [
+          'holyArmorLowDefCoM2',
+        ],
+      },
+      {
+        name: 'Inner Power',
+        keys: [
+          'innerPowerFireImmunityMeleeCoM2',
+          'innerPowerLightningResistRangedCoM2',
+          'innerPowerDefenseCoM2',
+          'innerPowerResistanceCoM2',
+          'innerPowerNoTraitNoBonusCoM2',
+        ],
+      },
+      {
+        name: 'Insulation',
+        keys: [
+          'insulationFireImmunityWarlord',
+          'insulationLightningResistWarlord',
+        ],
+      },
+      {
+        name: 'Land Linking',
+        keys: [
+          'landLinkingFantasticBreathCoM2',
+          'landLinkingFantasticDefenseCoM2',
+          'landLinkingFantasticMeleeCoM2',
+          'landLinkingNormalNoBonusCoM2',
+        ],
+      },
+      {
+        name: 'Lava Smelter',
+        keys: [
+          'lavaSmelterWeaponImmunityWarlord',
+          'lavaSmelterMissileImmunityWarlord',
+          'lavaSmelterResistElemWarlord',
+          'lavaSmelterElementalArmorWarlord',
+          'lavaSmelterFlameBladeWarlord',
+          'lavaSmelterUpgradeRetrainNonDwarfWarlord',
+          'lavaSmelterUpgradeRetrainHeroWarlord',
+          'lavaSmelterFantasticExcludedWarlord',
+          'lavaSmelterProtectionsStackWarlord',
+        ],
+      },
+      {
+        name: 'Lightning Blade',
+        keys: [
+          'lightningBladeConvertsThrownWarlord',
+          'lightningBladeGrantsBreathWarlord',
+        ],
+      },
+      {
+        name: 'Lucky Star',
+        keys: [
+          'luckyStarAuraMeleeWarlord',
+          'luckyStarEnchantedUnitWarlord',
+          'luckyStarAuraResistanceWarlord',
+          'luckyStarAuraArmorWarlord',
+        ],
+      },
+      {
+        name: 'Ludus Agoge',
+        keys: [
+          'ludusAgogeAttackWarlord',
+          'ludusAgogeResistanceWarlord',
+          'ludusAgogeHpWarlord',
+          'ludusAgogeNonOrcWarlord',
+          'ludusAgogeLegionaryExcludedWarlord',
+          'ludusAgogeHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Magitek Engineering',
+        keys: [
+          'magitekEngineeringWarlord',
+        ],
+      },
+      {
+        name: 'Malnourished',
+        keys: [
+          'malnourishedMeleePenaltyWarlord',
+          'malnourishedDefensePenaltyWarlord',
+        ],
+      },
+      {
+        name: 'Mechanical Expert',
+        keys: [
+          'mechanicalExpertToHitWarlord',
+          'mechanicalExpertToDefendWarlord',
+          'mechanicalExpertNoBonusForNonMechanicalWarlord',
+          'mechanicalExpertRebuildMakesMechanicalWarlord',
+        ],
+      },
+      {
+        name: 'Military Workshop',
+        keys: [
+          'militaryWorkshopArmorPiercingWarlord',
+          'militaryWorkshopDoomGetsStrengthNotAPWarlord',
+          'militaryWorkshopFireBreathWarlord',
+          'militaryWorkshopProjectileUpgradeWarlord',
+          'militaryWorkshopMeleeOnlyExcludedWarlord',
+          'militaryWorkshopHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Mother Fungus',
+        keys: [
+          'motherFungusAttackWarlord',
+          'motherFungusToDefendWarlord',
+          'motherFungusPoisonWarlord',
+          'motherFungusNonGoblinWarlord',
+          'motherFungusHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Mislead/Misfortune',
+        keys: [
+          'misleadMisfortuneNormalMeleeCoM2',
+          'misleadMisfortuneNormalRangedCoM2',
+          'misleadMisfortuneNormalDefenseCoM2',
+          'misleadMisfortuneNormalResistanceCoM2',
+          'misleadMisfortuneHeroAffectedCoM2',
+        ],
+      },
+      {
+        name: 'Mystic Surge',
+        keys: [
+          'mysticSurgeDefenseBonusCoM2',
+          'mysticSurgeFantasticAndToDefendCoM2',
+          'mysticSurgeResistPenaltyCoM2',
+        ],
+      },
+      {
+        name: 'Natural Selection',
+        keys: [
+          'naturalSelectionCoalWarlord',
+          'naturalSelectionIronWarlord',
+          'naturalSelectionWildGameWarlord',
+          'naturalSelectionWildGameMagicRangedWarlord',
+          'naturalSelectionWildGameThrownNoBonusWarlord',
+          'naturalSelectionNightshadeWarlord',
+          'naturalSelectionPowerMineralsWarlord',
+        ],
+      },
+      {
+        name: 'Nature Link',
+        keys: [
+          'natureLinkFantasticMeleeWarlord',
+          'natureLinkNormalResistanceWarlord',
+        ],
+      },
+      {
+        name: 'Orihalcon',
+        keys: [
+          'orihalconMagicRangedBonusCoM2',
+          'orihalconResBonusCoM2',
+          'orihalconNoMissileBonusCoM2',
+          'orihalconFocusMagicConvertedCoM2',
+        ],
+      },
+      {
+        name: 'Pillar of Faith',
+        keys: [
+          'pillarOfFaithLuckyResistanceWarlord',
+          'pillarOfFaithResistanceWarlord',
+          'pillarOfFaithResistanceUncappedWarlord',
+        ],
+      },
+      {
+        name: 'Plague',
+        keys: [
+          'plagueMeleeWarlord',
+          'plagueArmorWarlord',
+          'plagueResistanceWarlord',
+          'plagueToHitWarlord',
+        ],
+      },
+      {
+        name: 'Planewalking',
+        keys: [
+          'planewalkingTacticianFirstStrikeWarlord',
+        ],
+      },
+      {
+        name: 'Pneuma Field',
+        keys: [
+          'pneumaFieldWarlord',
+        ],
+      },
+      {
+        name: 'Pool of Repentance',
+        keys: [
+          'poolOfRepentanceArmorWarlord',
+          'poolOfRepentanceResistanceWarlord',
+          'poolOfRepentanceNonRakhshasaWarlord',
+          'poolOfRepentanceHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Prayer / High Prayer (Warlord stacking)',
+        keys: [
+          'warlordPrayerStackAtk',
+          'warlordPrayerStackDef',
+          'warlordPrayerStackRes',
+          'warlordPrayerStackToHitNoStack',
+          'warlordPrayerStackToBlockNoStack',
+          'com2PrayerHpSupersedes',
+        ],
+      },
+      {
+        name: 'Psycho Force',
+        keys: [
+          'psychoForceWarlord',
+        ],
+      },
+      {
+        name: 'Rage',
+        keys: [
+          'rageMeleePreCombatLossWarlord',
+          'rageRangedPreCombatLossWarlord',
+          'rageDynamicCounterFirstStrikeWarlord',
+        ],
+      },
+      {
+        name: 'Rally',
+        keys: [
+          'rallyResistanceWarlord',
+        ],
+      },
+      {
+        name: 'Realm Ward',
+        keys: [
+          'realmWardCoM',
+        ],
+      },
+      {
+        name: 'Rebuild',
+        keys: [
+          'rebuildMeleeWarlord',
+          'rebuildArmorWarlord',
+          'rebuildArmorPiercingWarlord',
+          'rebuildDeathImmunityWarlord',
+          'rebuildIllusionImmunityWarlord',
+          'rebuildMakesMechanicalForArtificerWarlord',
+        ],
+      },
+      {
+        name: 'Reinforce Magic',
+        keys: [
+          'reinforceMagicResistanceCoM2',
+          'reinforceMagicMagicRangedCoM2',
+          'reinforceMagicMissileNoBonusCoM2',
+          'reinforceMagicFocusConvertedCoM2',
+        ],
+      },
+      {
+        name: 'Resolution sequences',
+        keys: [
+          'charmedPoisonCoM2',
+          'illusionCityWallsCoM2',
+          'cityWallsAfterWarpDefenseCoM2',
+          'cityWallsAfterBlazeOfGloryWarlord',
+          'cityWallsNoBonusWhenBothInsideCoM2',
+          'cityWallsProtectsInitiatorOnCounterattackCoM2',
+          'cityWallsProtectsRecipientAcrossWallCoM2',
+          'weaponImmunityAfterMissileImmunityCoM2',
+        ],
+      },
+      {
+        name: 'Revenant',
+        keys: [
+          'revenantGrantsDeathTouchWarlord',
+          'revenantDeathTouchOnThrownWarlord',
+          'revenantDeathTouchNotRangedWarlord',
+          'revenantOverwritesStrongerDeathTouchWarlord',
+          'revenantGrantsUndeadImmunityWarlord',
+        ],
+      },
+      {
+        name: 'Ruler of Underworld',
+        keys: [
+          'rulerOfUnderworldBypassesWICoM2',
+          'rulerOfUnderworldPreservesMagicWICoM2',
+        ],
+      },
+      {
+        name: 'Rust (Warlord)',
+        keys: [
+          'rustMeleePenaltyWarlord',
+          'rustPhysicalRangedPenaltyWarlord',
+          'rustBoulderRangedPenaltyWarlord',
+          'rustStripsMagicWeaponWarlord',
+          'rustEliminatesThrownWarlord',
+          'rustEliminatesLargeShieldWarlord',
+          'rustFantasticUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Sancta Basilica',
+        keys: [
+          'sanctaBasilicaResistanceWarlord',
+          'sanctaBasilicaCrusaderLuckyWarlord',
+          'sanctaBasilicaPaladinMagicImmunityWarlord',
+          'sanctaBasilicaClergySanctifyWarlord',
+          'sanctaBasilicaNonHighMenWarlord',
+          'sanctaBasilicaHeroExcludedWarlord',
+        ],
+      },
+      {
+        name: 'Scoring options',
+        keys: [
+          'godsPlayDicesResistanceWarlord',
+          'uphillBattleResistanceWarlord',
+          'uphillBattleToHitWarlord',
+        ],
+      },
+      {
+        name: 'Shadow Strike',
+        keys: [
+          'shadowStrikeAfterColossalWarlord',
+          'shadowStrikeGrantsThrownWarlord',
+          'shadowStrikeBoostsExistingThrownWarlord',
+          'shadowStrikeDoublePoisonWarlord',
+        ],
+      },
+      {
+        name: 'Soul Flay',
+        keys: [
+          'soulFlayMeleeRecruitWarlord',
+          'soulFlayMeleeScalesEliteWarlord',
+          'soulFlayArmorRecruitWarlord',
+          'soulFlayResistanceRecruitWarlord',
+        ],
+      },
+      {
+        name: 'Spirit Link',
+        keys: [
+          'spiritLinkExorciseImmuneWarlord',
+          'spiritLinkWeaponImmunityBypassWarlord',
+          'spiritLinkBlessNoBonusWarlord',
+          'spiritLinkResistanceWarlord',
+          'spiritLinkGrantsLevelBonusWarlord',
+        ],
+      },
+      {
+        name: 'Stat derivation order',
+        keys: [
+          'warpBeforeColossalStrengthWarlord',
+          'holyBonusAfterWarpCoM2',
+          'holyBonusSkipsThrownCoM2',
+          'holyBonusReachesMissileCoM2',
+          'supremeLightReadsWarpedResistanceCoM2',
+          'supremeLightUnwarpedResistanceCoM2',
+          'levelBonusAfterUpgradedExplosiveWarlord',
+          'holyArmorThresholdBeforeNodeAuraCoM2',
+          'eternalNightAfterSupremeLightCoM1',
+        ],
+      },
+      {
+        name: 'Supernatural',
+        keys: [
+          'supernaturalFireBreathFireImmunityCoM2',
+          'supernaturalMagicImmunityRangedCoM2',
+        ],
+      },
+      {
+        name: 'Supreme Light',
+        keys: [
+          'supremeLightLifeCreatureMeleeCoM',
+          'supremeLightCasterRangedCoM2',
+          'supremeLightDefenseFromResistanceCoM2',
+          'supremeLightNonEligibleNoBonusCoM2',
+        ],
+      },
+      {
+        name: 'Survival Instinct',
+        keys: [
+          'survivalInstinctFantasticBonusCoM2',
+          'survivalInstinctTransformedEligibleCoM2',
+          'survivalInstinctToBlockNormalWarlord',
+          'survivalInstinctToBlockFantasticUnaffectedWarlord',
+        ],
+      },
+      {
+        name: 'Tactician',
+        keys: [
+          'tacticianHeroAttackCoM2',
+          'tacticianHeroDefenseCoM2',
+          'tacticianHeroRangedCoM2',
+          'tacticianHeroResistanceCoM2',
+          'tacticianHeroThrownUnchangedCoM2',
+          'tacticianNormalDefenseCoM',
+          'tacticianHeroDefenseWarlord',
+          'tacticianNonCorporealNegateFirstStrikeWarlord',
+          'tacticianRulerNegateFirstStrikeWarlord',
+          'tacticianTeleportingFirstStrikeWarlord',
+          'tacticianWraithFormNegateFirstStrikeWarlord',
+        ],
+      },
+      {
+        name: 'Temporal Engineering / Temporal-Gravity Drive',
+        keys: [
+          'temporalEngineeringHasteWarlord',
+          'temporalGravityDriveWarlord',
+        ],
+      },
+      {
+        name: 'Temporal Twist',
+        keys: [
+          'temporalTwistStripsFirstStrikeWarlord',
+          'temporalTwistStripsNegateFirstStrikeWarlord',
+          'temporalTwistStripsTeleportingWarlord',
+          'temporalTwistTacticianRestoresNonCorporealNegateWarlord',
+          'temporalTwistTacticianRestoresFavoredTerrainStrikesWarlord',
+        ],
+      },
+      {
+        name: 'Type precedence',
+        keys: [
+          'bloodLustOverridesCCDefenseCoM2',
+          'ccDefenseOverridesDestinyCoM2',
+          'ccFlightOverridesDestinyCoM2',
+          'destinyOverridesCCFireBreathCoM2',
+          'mysticSurgeOverridesUndeadCoM2',
+          'raiseDeadOverridesUndeadCoM2',
+        ],
+      },
+      {
+        name: 'Upgraded Explosive',
+        keys: [
+          'upgradedExplosiveFireWarlord',
+          'trueLightSkipsExplosiveChannelsWarlord',
+        ],
+      },
+      {
+        name: 'Soul Linker',
+        keys: [
+          'soulLinkerAuraToHitCoM',
+          'soulLinkerAuraToBlockCoM',
+        ],
+      },
+      {
+        name: 'Vampirism',
+        keys: [
+          'vampirismGrantsBloodSuckerWarlord',
+          'vampirismGrantsUndeadImmunityWarlord',
+          'vampirismThrownToMeleeTransferWarlord',
+        ],
+      },
+      {
+        name: 'Venom',
+        keys: [
+          'venomGrantsPoisonWarlord',
+          'venomBoostsExistingPoisonWarlord',
+          'venomGrantsPoisonImmunityWarlord',
+        ],
+      },
+      {
+        name: 'Vertigo',
+        keys: [
+          'vertigoWallOfFireDefenseCoM',
+        ],
+      },
+      {
+        name: 'Wall of Fire (Warlord)',
+        keys: [
+          'wallOfFireWarlordSingleFigure',
+          'wallOfFireWarlordDefenderMetalFires',
+          'wallOfFireWarlordDefenderMagicWeapon',
+          'wallOfFireWarlordBoostOnAttacker',
+          'wallOfFireWarlordBoostBoulder',
+          'wallOfFireWarlordFireLineNoBoost',
+        ],
+      },
+      {
+        name: 'Warp Creature',
+        keys: [
+          'warpAttackBeforeSupremeLightCoM',
+          'warpAttackHalvesGazeCoM',
+          'warpAttackBeforeTacticianCoM',
+          'warpDefenseBeforeSupremeLightCoM',
+          'warpDefenseSignedBeforeSupremeLightCoM',
+          'warpDefenseSignedBeforeTacticianCoM',
+          'shatterBeforeSupremeLightCoM',
+        ],
+      },
+      {
+        name: 'Zeal',
+        keys: [
+          'zealGrantsFirstStrikeWarlord',
+          'zealGrantsNegateFirstStrikeWarlord',
+          'zealStrippedByTemporalTwistWarlord',
+        ],
+      },
+    ],
+  },
+  { name: 'Version differences tests', subs: [
+      { name: 'Bless', keys: ['blessMeleeFromDeath', 'blessMeleeFromDeathCoM2', 'blessMeleeFromChaos', 'blessMeleeFromChaosCoM2', 'blessBreathBonusMoM', 'blessBreathBonusCoM', 'blessBreathBonusCoM2', 'blessBreathBonusWarlord', 'blessFireBreathDefMoM', 'blessFireBreathDefCoM', 'blessResistBonusMoM', 'blessResistBonusCoM2', 'blessResistBonusWarlord'] },
+      { name: 'Blood Lust', keys: ['bloodLustThrownCoM1MeleeOnly', 'bloodLustThrownCoM2'] },
+      { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurCoM2CounterOwnSide', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM2', 'blurPlusInvisCoM2v2', 'blurPlusInvisWarlord'] },
+      { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderPenaltyCoM2', 'fearDefenderFixedFirstStrike'] },
+      { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathCoM', 'ccFireBreathReplacesThrown', 'ccFireBreathRejectsPositiveThrownCP', 'ccFireBreathCoexistsWithLightningCoM2', 'ccFireBreathCoexistsWithGazeCoM2', 'ccFireBreathAddsToExistingCoM2', 'ccFireBreathAddsToExistingWarlord'] },
+      { name: 'Chaos Surge', keys: ['chaosSurgeThrownCoM', 'chaosSurgeThrownCoM2', 'chaosSurgeDoomGazeCoM', 'chaosSurgeDoomGazeCoM2', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsBreathCoM'] },
+      { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
+      { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },
+      { name: 'Endurance', keys: ['enduranceEffectCoM', 'enduranceEffectCoM2'] },
+      { name: 'Experience bonuses', keys: ['experienceChampionMeleeCoM2', 'experienceChampionMeleeWarlord', 'experienceUltraEliteThrownCoM2', 'experienceUltraEliteThrownWarlord', 'experienceChampionDefenseCoM2', 'experienceChampionDefenseWarlord', 'experienceUltraEliteToHitCoM2', 'experienceUltraEliteToHitWarlord', 'experienceChampionHpCoM2', 'experienceChampionHpWarlord'] },
+      { name: 'First Strike', keys: ['firstStrikeCapCoM', 'firstStrikeCapCoM2', 'firstStrikeCapIgnoresThrownCoM', 'firstStrikeCapRemovedThrownCoM2'] },
+      { name: 'Flame Blade', keys: ['flameBladeMelee', 'flameBladeMeleeCoM2'] },
+      { name: 'Focus Magic', keys: ['focusMagicDoomGazeCoM', 'focusMagicDoomGazeCoM2'] },
+      { name: 'Haste', keys: ['hasteCounterDoublesMoM', 'hasteCounterNotDoubledCoM', 'hasteMagicRangedHeroNoRepeatMoM131', 'hasteMagicRangedHeroRepeatsMoM160'] },
+      { name: 'Haste (complex)', keys: ['hasteComplexThrownDefenderGaze', 'hasteComplexThrownDefenderGaze160', 'hasteComplexBilateralGaze', 'hasteComplexBilateralGaze160'] },
+      { name: 'Holy Armor', keys: ['holyArmorHighDefMoM', 'holyArmorHighDefCoM2'] },
+      { name: 'Holy Bonus', keys: ['holyBonusRangedMoM', 'holyBonusRangedCoM2'] },
+      { name: 'Holy Weapon', keys: ['holyWeaponThrownMoM', 'holyWeaponThrownPatched'] },
+      { name: 'Immolation', keys: ['immolationRangedMoM', 'immolationNotRangedPatched', 'immolationMoMStrength', 'immolationCoMStrength10'] },
+      { name: 'Invisibility', keys: ['invisToHitMoM', 'blurInvisCoM2'] },
+      { name: 'Large Shield', keys: ['largeShieldRangedMissile', 'largeShieldCom2Ranged'] },
+      { name: 'Land Linking', keys: ['landLinkingRangedCoM', 'landLinkingRangedCoM2'] },
+      { name: 'Lionheart', keys: ['lionheartHpMoM', 'lionheartHpCoM2', 'lionheartThrownMoM', 'lionheartThrownCoM2'] },
+      { name: 'Magic Immunity', keys: ['magicImmunityFireBreathMoM', 'magicImmunityFireBreathCoM'] },
+      { name: 'Mind Storm', keys: ['mindStormMeleePenaltyMoM', 'mindStormMeleePenaltyCoM2'] },
+      { name: 'Lucky', keys: ['luckyEnemyMeleePenalty131', 'luckyEnemyPenaltyRemovedPatched'] },
+      { name: 'Missile Immunity', keys: ['missileImmunityWIOverwrite131', 'missileImmunityWIOverwriteFixed'] },
+      { name: 'Prayer', keys: ['prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyRemovedPatched', 'prayerHpStackPairCoM2', 'prayerHpStackPairWarlord'] },
+      { name: 'Raise Dead', keys: ['raiseDeadDoesNotOverrideUndeadMoM', 'raiseDeadOverridesUndeadCoM2'] },
+      { name: 'Ranged Distance Penalty', keys: ['distPenaltyMoM3', 'distPenaltyCoM3', 'distPenaltyMoM12', 'distPenaltyCoM12', 'distPenaltyHeroMoM12', 'distPenaltyHeroCoM12', 'distPenaltyCoM6', 'distPenaltyCoM2_6', 'distPenaltyCoM16', 'distPenaltyCoM2_16'] },
+      { name: 'Supernatural', keys: ['supernaturalFormulaCoM', 'supernaturalFormulaCoM2'] },
+      { name: 'Tactician', keys: ['tacticianHeroDefenseCoM2', 'tacticianHeroDefenseWarlord'] },
+      { name: 'Touch flag placement (Warlord)', keys: ['stoningTouchRangedMissileCoM2', 'stoningTouchRangedMissileWarlord', 'stoningTouchRangedMagicCoM2', 'stoningTouchRangedMagicWarlord', 'deathTouchRangedMissileCoM2', 'deathTouchRangedMissileWarlord', 'deathTouchRangedMagicCoM2', 'deathTouchRangedMagicWarlord', 'focusMagicMovesStoningOffRangedWarlord', 'focusMagicMovesDeathOffBreathWarlord', 'stoningTouchMultipleModernChannelsWarlord', 'revenantDeathTouchOnThrownWarlord', 'revenantDeathTouchNotRangedWarlord', 'revenantOverwritesStrongerDeathTouchWarlord'] },
+      { name: 'Undead', keys: ['undeadBypassesWeaponImmunity', 'undeadTriggersBless', 'undeadDeathImmunity131', 'undeadPoisonImmunityPatched', 'undeadIllusionImmunityPatched', 'undeadPoisonNotImmune131', 'undeadNoPoisonImmunityCoM2', 'undeadIllusionNotImmune131'] },
+      { name: 'Vertigo', keys: ['vertigoMeleeHitMoM', 'vertigoMeleeHitCoM', 'vertigoMeleeHitMoM', 'vertigoMeleeHitCoM2', 'vertigoRangedHitMoM', 'vertigoRangedHitCoM', 'vertigoRangedHitMoM', 'vertigoRangedHitCoM2', 'vertigoDefenseMoM', 'vertigoDefenseCoM', 'vertigoDefenseMoM', 'vertigoDefenseCoM2', 'vertigoWallOfFireDefenseMoM', 'vertigoWallOfFireDefenseCoM'] },
+      { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireCoM2Strength', 'wallOfFireCoMStrength', 'wallOfFireCoM2Strength', 'wallOfFireWarlordStrength'] },
+      { name: 'Warp Creature', keys: ['warpAttackNotRangedMoM', 'warpAttackHalvedCoM', 'warpDefenseHalfMoM', 'warpDefenseThirdCoM', 'warpDarknessOrderMoM', 'warpDarknessOrderCoM', 'gazeLevelLadderMoM', 'gazeLevelLadderCoM', 'doomGazeLevelLadderMoM', 'doomGazeLevelLadderCoM'] },
+      { name: 'Weakness', keys: ['weaknessThrownNotAffected131', 'weaknessThrownFixed160', 'weaknessMeleePenaltyMoM', 'weaknessMeleePenaltyCoM2', 'weaknessBoulderNotAffectedMoM', 'weaknessBoulderPenaltyCoM', 'weaknessMagicRangedNotAffectedMoM', 'weaknessMagicRangedPenaltyCoM', 'weaknessBreathNotAffectedCoM2', 'weaknessBreathPenaltyWarlord'] },
+      { name: 'Weapon Immunity', keys: ['weaponImmunityThrown131', 'weaponImmunityThrownPatched', 'weaponImmunityMelee', 'weaponImmunityCom2Melee', 'weaponImmunityCom2Melee', 'weaponImmunityWarlordMelee', 'weaponImmunityGeneric131', 'weaponImmunityGenericPatched', 'weaponImmunityGenericCatapult131', 'weaponImmunityGenericCatapultPatched'] },
+      { name: 'Wraith Form', keys: ['wraithFormBypassesWIMoM', 'wraithFormBypassesWICoM2'] },
+    ],
+  },
+];

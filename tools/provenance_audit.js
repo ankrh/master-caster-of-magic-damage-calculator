@@ -17,14 +17,40 @@ const crypto = require('crypto');
 
 const repoRoot = path.resolve(__dirname, '..');
 const verifiedManifestPath = path.join(__dirname, 'provenance_verified_anchors.json');
-const calculatorFiles = ['Calculator/stats.js', 'Calculator/combat.js'];
+// The single home for "which calculator sources carry source-authored stat formulas". The
+// provenance manifest generator and node_unit_checks.js read it from here rather than repeating
+// the list, so splitting a formula-bearing source is one edit. Every other Calculator/*.js must
+// be excluded below or matched by the generated-set pattern in runAudit(), which fails loudly on
+// an unclassified file.
+const calculatorFiles = [
+  'Calculator/stats_identity.js',
+  'Calculator/stats_sequence.js',
+  'Calculator/stats.js',
+  'Calculator/combat_abilities.js',
+  'Calculator/combat_special_attacks.js',
+  'Calculator/combat_fear_and_touch.js',
+  'Calculator/combat_effects.js',
+  'Calculator/combat_state.js',
+  'Calculator/combat_phases.js',
+  'Calculator/combat.js',
+];
 const excludedJavaScript = new Map([
   ['Calculator/data.js', 'declarative UI/version metadata'],
+  ['Calculator/abilities.js', 'declarative UI ability metadata'],
+  ['Calculator/enchantments.js', 'declarative UI enchantment metadata'],
+  ['Calculator/presets.js', 'numeric preset fixtures'],
+  ['Calculator/test_tree.js', 'preset browser grouping tree'],
   ['Calculator/engine.js', 'generic probability and damage-distribution math'],
   ['Calculator/lz-string.min.js', 'vendored compression library'],
-  ['Calculator/matrix-worker.js', 'matrix orchestration over calculator results'],
   ['Calculator/steps.js', 'ordered-step runner and the canonical step version-scope table'],
-  ['Calculator/ui.js', 'UI state, rendering, and formatting'],
+  ['Calculator/stats_manifests.js', 'F20 source-order id lists, carrying no stat formula'],
+  ['Calculator/ui.js', 'UI rendering, formatting, and page wiring'],
+  ['Calculator/ui_abilities.js', 'UI ability controls and version gating'],
+  ['Calculator/ui_units.js', 'UI unit selection and identity controls'],
+  ['Calculator/ui_card.js', 'UI stat card reading and display'],
+  ['Calculator/ui_state.js', 'UI state, presets, and share payloads'],
+  ['Calculator/ui_matrix_properties.js', 'UI matrix property drawer state'],
+  ['Calculator/ui_matrix.js', 'UI matrix view rendering and export'],
 ]);
 const allowedImplementationRoots = [
   'Reference docs/DOS reconstructed/',
@@ -331,8 +357,10 @@ function runAudit() {
   for (const entry of fs.readdirSync(calculatorDirectory, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.js')) continue;
     const file = `Calculator/${entry.name}`;
+    // units_*.js are generated rosters and presets_*.js are numeric fixtures cut by ability
+    // family; both are open-ended sets, so they are matched rather than listed one by one.
     if (calculatorFiles.includes(file) || excludedJavaScript.has(file)
-        || /^Calculator\/units_(?:mom|com|com2|warlord)\.js$/.test(file)) continue;
+        || /^Calculator\/(?:units_(?:mom|com|com2|warlord)|presets_[a-z_]+)\.js$/.test(file)) continue;
     fail(`${file} is not classified as formula-bearing, generated roster, or explicitly excluded`);
   }
   const sites = [];
@@ -415,6 +443,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  computeVerifiedBinding, discoverFormulaSites, hasImplementationWrite,
+  calculatorFiles, computeVerifiedBinding, discoverFormulaSites, hasImplementationWrite,
   makeStableSpanCitation, parseSourceCitation, readProvenanceComments, runAudit,
 };

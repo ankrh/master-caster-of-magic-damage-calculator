@@ -8,6 +8,10 @@ Read `AGENTS.md` in full and follow it before starting work.
 | `Manual/` | Interactive CoM2 manual | `Manual/SPEC.md` | `Manual/PLAN.md` | this file |
 
 Read the relevant behavior document before changing behavior and update it in the same change.
+`Calculator/SPEC.md` covers scope, architecture, the input/output contract, deliberate deviations
+and invariants — **not what an individual ability, enchantment or effect does**. That is engine
+behavior, owned by the `PROVENANCE[id]` citation beside the implementing step and the sources it
+names; changing an effect means reading those, not a prose summary.
 Rules that apply to all agents, including the read-only and branch-approval gates, live only in
 `AGENTS.md`.
 

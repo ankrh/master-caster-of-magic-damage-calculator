@@ -9,30 +9,9 @@
 // Performance was not a gate on R1 (Calculator/HISTORY.md) — this
 // reports, it does not judge.
 
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
-
-const repoRoot = path.resolve(__dirname, '..');
-
-function loadCalculatorContext() {
-  const context = { console };
-  vm.createContext(context);
-  [
-    'Calculator/units_mom.js',
-    'Calculator/units_com.js',
-    'Calculator/units_com2.js',
-    'Calculator/units_warlord.js',
-    'Calculator/data.js',
-    'Calculator/engine.js',
-    'Calculator/steps.js',
-    'Calculator/combat.js',
-    'Calculator/stats.js',
-  ].forEach(file => {
-    vm.runInContext(fs.readFileSync(path.join(repoRoot, file), 'utf8'), context, { filename: file });
-  });
-  return context;
-}
+// The file list and load order come from index.html's <script> tags via the source manifest,
+// so a benchmark reading always covers the same sources the page does.
+const { loadCalculatorContext } = require('./calculator_sources');
 
 function unitInput(overrides = {}) {
   return {
