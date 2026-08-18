@@ -43,7 +43,7 @@ const excludedJavaScript = new Map([
   ['Calculator/engine.js', 'generic probability and damage-distribution math'],
   ['Calculator/lz-string.min.js', 'vendored compression library'],
   ['Calculator/steps.js', 'ordered-step runner and the canonical step version-scope table'],
-  ['Calculator/stats_manifests.js', 'F20 source-order id lists, carrying no stat formula'],
+  ['Calculator/stats_manifests.js', 'per-version execution chains, carrying no stat formula'],
   ['Calculator/ui.js', 'UI rendering, formatting, and page wiring'],
   ['Calculator/ui_abilities.js', 'UI ability controls and version gating'],
   ['Calculator/ui_units.js', 'UI unit selection and identity controls'],

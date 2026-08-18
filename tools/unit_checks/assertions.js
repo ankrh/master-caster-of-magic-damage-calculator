@@ -39,10 +39,14 @@ function assertDistSumsToOne(dist, message) {
   assertClose(sum, 1, `${message}: probability sum`);
 }
 
+// The default probe unit. `version` must be one of the five real calculator versions: every
+// engine-version predicate is exact somewhere (Calculator/steps.js ENGINE_VERSIONS, and the
+// `version === 'com2_1.05.11'` tests in combat_fear_and_touch.js / combat_phases.js), so a
+// synthetic string silently probes a build that does not exist.
 function baseUnitInput(overrides = {}) {
   return {
     prefix: 'a',
-    version: 'com2_1.5',
+    version: 'com2_1.05.11',
     abilities: {},
     level: 'normal',
     weapon: 'normal',

@@ -248,9 +248,10 @@ Two engines reach the secondary-attack slot differently, so a step's delta names
 
 ### Phases
 
-Each step carries a **phase**: which region of the engine makes that write. A sequence must be
-authored in non-decreasing phase order. How a step is assigned to a phase is a working convention
-and lives in [CLAUDE.md](./CLAUDE.md).
+Each step carries a **phase**: which region of the engine makes that write. Phase is a provenance
+label — it records where the evidence for the write was found and orders nothing, because the
+execution chain below does that. How a step is assigned to a phase is a working convention and
+lives in [CLAUDE.md](./CLAUDE.md).
 
 | Phase | Where it runs |
 |---|---|
@@ -266,12 +267,35 @@ have no b or d at all** — every modifier in those versions is a or c. The cons
 to get wrong: **b runs before c**, so a Warlord early-pass effect lands *before* base-game spells,
 not after.
 
-The represented `b`/`c`/`d` steps additionally use the applicable version manifest as an explicit
-source-order sequence. Construction must account for every emitted step exactly once; it may not
-repair an unordered list with a generic sort or silently discard an unlisted step. The ordered
-identity conversions are composed through the same manifests. Ranks are comparable only within one
-sequence: the identity pre-pass runs before the stat sequence, so a late-ranked identity write can
-still execute early.
+### The execution chain
+
+One ordered chain per engine version, `base` through `e`, is the single mechanism that orders a
+derivation — `statChain(version)` in `stats_manifests.js`. There is no second one: array order
+decides nothing, and a step whose key the chain does not name fails composition rather than landing
+wherever it happened to be authored. Construction must account for every emitted step exactly once;
+it may not repair an unordered list with a generic sort or silently discard an unlisted step. Chain
+entries a run does not emit are skipped without complaint — a step is version- or
+predicate-exclusive — but the reverse is an error.
+
+A chain entry states three things. Its **key** is `phase:id`, the same key the version scope uses,
+so position and scope are keyed alike and two engines writing one effect from different regions
+stay distinct. Its **phase** is the provenance label above; it orders nothing, but a chain is
+authored in non-decreasing phase order, so an entry filed under the wrong region shows up as a
+chain out of order. Its **provisional** flag says whether the position is transcribed or inherited:
+regions `b`, `c` and `d` come from the compiled address map and the CAS files and are transcribed;
+`base`, `a` and `e` are inherited from the order the steps were authored in, and stay provisional
+until sourced.
+
+Each version's chain is written out in full, including the parts two versions currently share. A
+chain is what one engine does, and reading it should not mean assembling it from fragments.
+
+Both derivation sequences walk the same chain — the stat sequence and the ordered identity
+conversions — so an identity write is accounted for exactly once too. Ranks are comparable only
+within one sequence: the identity pre-pass runs before the stat sequence, so a late-ranked identity
+write can still execute early.
+
+The `attackSpecific` lists stay outside the chain. They are a separate compiled routine pair run on
+a scratch copy and keyed by an incoming attack, not writes the recalculation makes.
 
 To-Hit and To-Defend writes use this same ordered record. Where a version keeps one common Hit
 field plus per-channel modifiers, region `e` first clamps the common value, then adjusts each
@@ -288,16 +312,20 @@ random-threshold comparison naturally makes values at or below zero a 0% chance 
 covering every phase plus the separate `attackSpecific` lists. Two step objects may share an id
 when two engines make the same effect from different regions, which is why the key carries the
 phase. A scope always names its exact member versions; a family label such as "DOS" or "modern" is
-not a scope. The To-Hit/To-Block ledger re-emits stat events as `chance:`-prefixed projections, and
-a projection inherits the scope of the step it projects rather than carrying a second copy.
+not a scope. The To-Hit/To-Block ledger re-emits stat events as `chance:`-prefixed projections; a
+projection is the same write seen through another output, so it carries the key of the write it
+projects as `projectionOf` rather than a second copy of its scope. That marker is stated, never
+inferred from the id: `c:chance:vertigo` is a real engine write with a row of its own, and reading
+the prefix could not tell the two apart.
 
 Scope is an upper bound on applicability, not a firing condition: inside its scope a step still
-asks `when` whether this unit and state fire it, and outside its scope the engine has no such
-write, so the step must never contribute. Two things follow, both checked rather than asserted
-here. Every step entering a sequence must resolve a scope — there is no default, so an unclassified
-step fails at composition. And a step out of scope for the selected version must never evaluate its
-predicate true in it; the current exceptions are enumerated and asserted for exact equality in
-`tools/unit_checks/version_scope.js`, so the set can neither grow silently nor rot as it shrinks.
+asks `when` whether this unit and state fire it, and outside its scope the engine has no such write.
+Every sequence is therefore filtered by scope before composition, for every phase alike: a version's
+sequence is the writes that version's engine makes, so an out-of-scope step is absent rather than
+present behind a false predicate. Two things follow, both checked rather than asserted here. Every
+step entering a sequence must resolve a scope — there is no default, so an unclassified step fails
+at the filter. And no composed sequence contains an out-of-scope step in any version, which
+`tools/unit_checks/version_scope.js` asserts across all four sequences at once.
 
 Scope also hides at call sites, where no per-step predicate can see it: the attack-specific step
 lists carry no version test and are modern-only solely because their callers reach them from a
@@ -441,9 +469,10 @@ the calculator does instead, and why.
 - **One classification is parked for compatibility.** Righteousness sits in the defense transform's
   replacement slot while its modern classification is unresolved, open under
   [Q27](./BACKLOG.md).
-- **One position is deduced rather than read.** CoM 1's Focus Magic position is inferred from the
-  exhaustive list of what its recompute writes after Warp, which does not contain it. It carries
-  the `provisional` marker that distinguishes deduced placement from transcribed order.
+- **One position inside a transcribed region is deduced rather than read.** CoM 1's Focus Magic
+  position is inferred from the exhaustive list of what its recompute writes after Warp, which does
+  not contain it. Both halves are marked `provisional` on the chain, which is what distinguishes a
+  deduced placement from a transcribed one.
 
 ## Data provenance
 

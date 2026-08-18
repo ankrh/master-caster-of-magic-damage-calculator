@@ -207,12 +207,11 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   ];
   // F20: identity writes in b or d are represented CAS writes like any other, so they go
   // through the same manifest walk. That is what stops one from being added later and never
-  // reaching a manifest. UnitCalcPre/UnitCalc are Warlord-only hooks, so their definitions are
-  // dropped for the other versions exactly as the stat sequence drops them.
-  const isWarlordHookVersion = !!(version && version.startsWith('com2_warlord'));
-  const applicableIdentitySteps = identitySteps.filter(step =>
-    (step.phase !== 'b' && step.phase !== 'd') || isWarlordHookVersion);
-  runStatSteps(orderStatStepsBySource(applicableIdentitySteps, f20SourceManifests(version)),
+  // reaching a manifest. The canonical version scope filters this sequence exactly as it
+  // filters the stat sequence, so an identity conversion an engine does not make is absent
+  // rather than present with a false predicate.
+  const applicableIdentitySteps = filterStepsToVersionScope(identitySteps, version);
+  runStatSteps(orderStatStepsBySource(applicableIdentitySteps, statChain(version)),
     live, { version, base: identity, trace });
   return { identity: live, trace, isConstructCatapult };
 }

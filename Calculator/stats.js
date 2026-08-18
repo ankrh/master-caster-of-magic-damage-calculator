@@ -1,6 +1,6 @@
 // --- Unit Stat Derivation ---
 // Depends on data.js and the combat_*.js helper functions. No DOM dependencies.
-// The F20 source-order manifests are in stats_manifests.js, the identity helpers in
+// The per-version execution chain is in stats_manifests.js, the identity helpers in
 // stats_identity.js, and the phase-tagged stat sequence in stats_sequence.js.
 
 // Derive all effective stats for a unit from raw UI state.
@@ -486,17 +486,21 @@ function deriveUnitStats(input) {
     thrownType = 'thrown';
   }
 
-  // Warlord Blaze of Glory: the unit's Ranged attack (missile/boulder/magic) becomes a Thrown
-  // attack of the same strength (it loses the Ranged attack and Ammo, neither of which the model
-  // tracks separately). Breath and existing thrown attacks are not "Ranged" and are untouched.
+  // Warlord Blaze of Glory: the unit's whole Ranged strength is added to the Thrown field and
+  // the Ranged field is emptied (Ammo goes with it; the model tracks neither Ammo nor the
+  // `SRangedPenalty` bookkeeping write). Breath attacks are not "Ranged" and are untouched.
   // The Armor→Melee transfer, Armor Piercing grant, and First Strike loss are handled below.
   // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
+  // This local flip re-aims every later type predicate in this pass at the surviving channel;
+  // the record write itself is the `blazeOfGlory:thrown` step, and the cross-channel addition
+  // is completed by the modern channel assembly at the end of this function.
   const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
     && version.startsWith('com2_warlord') && !isHero;
-  if (blazeOfGloryActive && calcBaseRtb > 0
+  const blazeOfGloryConvertsChannel = blazeOfGloryActive && calcBaseRtb > 0
     && (rangedType === 'missile' || rangedType === 'boulder'
       || rangedType === 'magic_c' || rangedType === 'magic_n'
-      || rangedType === 'magic_s' || rangedType === 'beam')) {
+      || rangedType === 'magic_s' || rangedType === 'beam');
+  if (blazeOfGloryConvertsChannel) {
     rangedType = 'none';
     thrownType = 'thrown';
   }
@@ -1261,7 +1265,8 @@ function deriveUnitStats(input) {
     abilByPhase, abilities, altarOfTheMoon, altarOfTheMoonResMod, altarOfTheMoonRtbMod,
     altarOfTheSun, altarOfTheSunMeleeMod, armor, badMoonActive, baseDoomGaze, baseGazeRanged,
     baseSequenceRangedType, baseSequenceThrownType, baseToBlkMod, baseToHitMod, baseToHitRtbMod,
-    blackpowderFireBreathRtbMod, blackpowderRtbMod, blazeOfGloryActive, blazingMarchRtbMod,
+    blackpowderFireBreathRtbMod, blackpowderRtbMod, blazeOfGloryActive,
+    blazeOfGloryConvertsChannel, blazingMarchRtbMod,
     bombsGrenades, bombsGrenadesRtbMod, calcBaseAtk, calcBaseDef, calcBaseHP, calcBaseRes,
     calcBaseRtb, ccFireBreathActive, ccFireBreathStrength, ccIndependentChannels, ccOwnsThisPass,
     chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus, charmOfLifeActive,
@@ -1301,11 +1306,13 @@ function deriveUnitStats(input) {
   // The raw assembly intentionally keeps the implementation fragments close to their formulas.
   // F20 performs one explicit manifest walk here so the executed list is source ordered, every
   // emitted b/c/d step is covered once, and each returned step carries its source position.
-  // UnitCalcPre/UnitCalc are Warlord-only hooks; do not report their definitions as applied
-  // no-ops in the DOS or base-CoM2 ledgers, whose checked-in scripts are HALT stubs.
-  const applicableRawStatSteps = rawStatSteps.filter(step =>
-    (step.phase !== 'b' && step.phase !== 'd') || isWarlord);
-  const statSteps = orderStatStepsBySource(applicableRawStatSteps, f20SourceManifests(version));
+  // The canonical version scope (steps.js, STEP_VERSION_SCOPES) is applied first, for every
+  // phase alike: this version's sequence is the writes this version's engine makes. That
+  // subsumes the Warlord-hook filter this line used to carry — UnitCalcPre/UnitCalc steps are
+  // scoped to Warlord, so the DOS and base-CoM2 sequences drop them along with every other
+  // region's out-of-scope write.
+  const applicableRawStatSteps = filterStepsToVersionScope(rawStatSteps, version);
+  const statSteps = orderStatStepsBySource(applicableRawStatSteps, statChain(version));
   // `slots` carries the source-specific attack gates. `melee`, `rtb`, and `ranged` retain the
   // calculated-channel semantics shared by ordinary ability steps. `persistentRanged` is the
   // narrower `BaseUnits.ranged > 0` predicate consumed only by Misfortune's custom aura step.
@@ -1474,9 +1481,11 @@ function deriveUnitStats(input) {
   };
   const chanceContributions = [];
   let chanceSerial = 0;
-  function addChanceContribution(id, source, phase, order, deltas) {
+  function addChanceContribution(id, source, phase, order, deltas, projectionOf) {
     if (!Object.values(deltas).some(value => value !== 0)) return;
-    chanceContributions.push({ id, source, phase, order, deltas, serial: chanceSerial++ });
+    chanceContributions.push({
+      id, source, phase, order, deltas, projectionOf, serial: chanceSerial++,
+    });
   }
   function addChanceDelta(id, source, phase, order, fields, value) {
     const deltas = {};
@@ -1498,8 +1507,10 @@ function deriveUnitStats(input) {
     }
     const projectedId = event.id === 'trueLight' ? 'chance:trueLightIllusion'
       : event.id.startsWith('chance:') ? event.id : `chance:${event.id}`;
+    // Every entry produced here re-presents a stat write, so it carries that write's canonical
+    // scope key rather than claiming one of its own (steps.js, `projectionOf`).
     addChanceContribution(projectedId,
-      event.source, event.phase, event.order, deltas);
+      event.source, event.phase, event.order, deltas, `${event.phase}:${event.id}`);
   }
   // PROVENANCE[chance:distancePenalty]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:28:4d6d2024c9551eae456f2bbf | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:b13db6265b2feaabf81fb261 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:6:791acb631b8f903c2812da35 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:6:791acb631b8f903c2812da35
   addChanceDelta('chance:distancePenalty', { id: 'distancePenalty', label: 'Range distance' },
@@ -1530,6 +1541,7 @@ function deriveUnitStats(input) {
   const chanceSteps = chanceContributions.map(item => statStep({
     id: item.id, sourceId: item.source.id, sourceLabel: item.source.label,
     phase: item.phase, writes: Object.keys(item.deltas),
+    ...(item.projectionOf ? { projectionOf: item.projectionOf } : {}),
     apply: u => {
       for (const [field, value] of Object.entries(item.deltas)) u[field] += value;
     },
@@ -1558,10 +1570,7 @@ function deriveUnitStats(input) {
   );
   // Most of this sequence is projected from the stat ledger, so its entries inherit their
   // canonical scope from the step they project (steps.js, resolveStepVersionScope).
-  if (statStepDebugEnabled()) {
-    assertSequenceVersionScopeCoverage(chanceSteps, 'To-Hit/To-Block ledger');
-  }
-  const chanceUnit = runStatSteps(chanceSteps, {
+  const chanceUnit = runStatSteps(filterStepsToVersionScope(chanceSteps, version), {
     toHitMelee: 30, toHitRtb: 30, toBlock: 30,
     displayToHitMelee: 30, displayToHitRtb: 30, displayToBlock: 30,
   }, { version, trace: chanceTrace });
@@ -1585,11 +1594,9 @@ function deriveUnitStats(input) {
       sourceLabel: 'Academy', phase: 'base', writes: ['figs'],
       when: () => alumniOfAcademy, apply: u => { u.figs += 2; } }),
   ];
-  if (statStepDebugEnabled()) {
-    assertSequenceVersionScopeCoverage(figureSteps, 'figure sequence');
-  }
-  const figureUnit = runStatSteps(figureSteps, { figs: baseFigs },
-    { version, trace: figureTrace });
+  const figureUnit = runStatSteps(
+    orderStatStepsBySource(filterStepsToVersionScope(figureSteps, version), statChain(version)),
+    { figs: baseFigs }, { version, trace: figureTrace });
 
   const modifierTraces = {
     figures: projectStatTrace(figureTrace, 'figs', baseFigs, figureUnit.figs),
@@ -1752,6 +1759,14 @@ function deriveUnitStats(input) {
       if (baseModernHasThrown) delete modernInputs.lightningBreath;
       else modernInputs.lightningBreath = { strength: 0, type: 'none' };
     }
+    // Blaze of Glory's channel write is an addition — `SThrown := SThrown + SRanged`, then
+    // `SRanged := SRanged - SRanged` — not a rename, so a unit carrying both a conventional
+    // Ranged and an independent Thrown finishes with one Thrown attack at the summed
+    // strength. Those are two separate derivations here, so hold the converted Ranged
+    // contribution aside and merge it after the walk; deciding it inside the loop would make
+    // the result depend on which channel `modernInputs` happens to list first. The Thrown
+    // field is the survivor and keeps its own type, To Hit and traces.
+    let blazeConvertedRanged = null;
     for (const [key, attack] of Object.entries(modernInputs)) {
       const channelKey = key === 'shadowStrikeThrown' ? 'thrown' : key;
       const seeded = (channelKey === 'ranged' && focusMagicActive)
@@ -1784,7 +1799,7 @@ function deriveUnitStats(input) {
       // Rust can eliminate an existing Thrown field.  A channel with no resolved
       // attack type must not survive merely because it still has a positive stat value.
       if (!outputKey) continue;
-      channels[outputKey] = {
+      const channel = {
         baseStrength: attack.strength,
         strength: child.rtb,
         type: child.rangedType !== 'none' ? child.rangedType : child.thrownType,
@@ -1795,7 +1810,28 @@ function deriveUnitStats(input) {
         modifierTrace: child.modifierTraces.sharedAttack,
         toHitTrace: child.modifierTraces.toHitRanged,
       };
+      // Blaze of Glory is the only effect that can leave a conventional Ranged channel
+      // resolved as Thrown: Shadow Strike fires only on a channel that is already Thrown or
+      // empty, and Focus Magic converts in the opposite direction.
+      if (blazeOfGloryActive && channelKey === 'ranged' && outputKey === 'thrown') {
+        blazeConvertedRanged = channel;
+        continue;
+      }
+      channels[outputKey] = channel;
       result.modifierTraces.modernAttacks[outputKey] = child.modifierTraces.sharedAttack;
+    }
+    if (blazeConvertedRanged) {
+      if (channels.thrown) {
+        const merged = channels.thrown.strength + blazeConvertedRanged.strength;
+        appendProjectedTraceEntry(channels.thrown.modifierTrace,
+          { id: 'blazeOfGlory:thrown', sourceId: 'blazeOfGlory', sourceLabel: 'Blaze of Glory',
+            phase: 'd' },
+          channels.thrown.strength, merged);
+        channels.thrown.strength = merged;
+      } else {
+        channels.thrown = blazeConvertedRanged;
+        result.modifierTraces.modernAttacks.thrown = blazeConvertedRanged.modifierTrace;
+      }
     }
     result.modernAttacks = channels;
   }

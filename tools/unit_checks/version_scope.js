@@ -1,5 +1,5 @@
-// M9 stage 1: the canonical engine-version scope, its measured stage-2 worklist, and the
-// checks that hold both current. The scope table itself lives in Calculator/steps.js.
+// M9: the canonical engine-version scope and the checks that hold it current. The scope table
+// itself lives in Calculator/steps.js.
 
 'use strict';
 
@@ -12,157 +12,14 @@ const {
 } = require('./assertions');
 
 // `Calculator/steps.js` STEP_VERSION_SCOPES is the single home for which engines make a
-// derivation write at all. Stage 1 classifies and validates only: nothing filters a sequence
-// yet, so every version's arithmetic is unchanged. These checks are what make the
-// classification a claim rather than a comment.
+// derivation write at all, and `filterStepsToVersionScope` applies it to every sequence before
+// composition. These checks are what make that a claim rather than a comment.
 //
-// Three inventories per version, each asserted for exact equality so it can neither grow
-// silently nor rot once stage 2 shrinks it:
-//   members        composed into the sequence although this engine has no such write. Stage 2
-//                  filters these; in region `c` they are the manifest entries parked behind a
-//                  false predicate, and the execution ledger records a `skipped` visit for a
-//                  branch the binary does not contain.
-//   predicateTrue  the complement assertion's violations: out of scope, yet `when` still says
-//                  yes. This is the backlog's "a step excluded for a version must never
-//                  evaluate its predicate true there", enumerated rather than enforced,
-//                  because enforcing it in stage 1 would not be behavior-neutral.
-//   changed        the subset that also writes a field, so stage 2's filter would change a
-//                  displayed number for these inputs. Each of the ten is an enchantment whose
-//                  own UI control is hidden in that version (enchantments.js `subgroup`), so the state
-//                  is not reachable through the UI — but it is reachable programmatically, and
-//                  stage 2 has to justify each removal rather than assume it is inert.
-const STAGE2_SCOPE_EXCEPTIONS = {
-  'mom_1.31': {
-    members: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother',
-      'base:chance:survivalInstinctToBlock', 'base:dragonMound', 'base:energyCannon',
-      'base:identity:zombies:toBlock', 'base:lightningBlade:breath', 'base:ludusAgoge',
-      'base:militaryWorkshop', 'base:motherFungus', 'base:naturalSelection:coal',
-      'base:naturalSelection:iron', 'base:naturalSelection:nightshade',
-      'base:naturalSelection:powerMinerals', 'base:naturalSelection:wildGame',
-      'base:pillarOfFaith', 'base:poolOfRepentance', 'base:sanctaBasilica', 'c:badMoon',
-      'c:blazingMarch', 'c:blazingMarch:ranged', 'c:chance:heavenlyLight:melee',
-      'c:chance:heavenlyLight:rtb', 'c:darkForce', 'c:darkness:coM1', 'c:destiny',
-      'c:discipline', 'c:divineBarrierAura:coM1', 'c:endurance',
-      'c:eternalNight:enemyResistance', 'c:eternalNight:enemyResistance:coM1', 'c:focusMagic',
-      'c:focusMagic:conversion', 'c:goodMoon', 'c:guidingBeaconAura:coM1', 'c:heavenlyLight',
-      'c:landLinking:breath', 'c:mysticSurge', 'c:natureConjunction', 'c:orihalcon',
-      'c:realmWard', 'c:reinforceMagic:ranged', 'c:soulLinkerAura:coM1', 'c:spellWard',
-      'c:supremeLight:coM1', 'e:chance:clamp', 'e:chance:modernClampCommon', 'e:supremeLight',
-    ],
-    predicateTrue: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother', 'base:dragonMound',
-      'base:ludusAgoge', 'base:militaryWorkshop', 'base:motherFungus',
-      'base:naturalSelection:coal', 'base:naturalSelection:iron',
-      'base:naturalSelection:nightshade', 'base:naturalSelection:powerMinerals',
-      'base:pillarOfFaith', 'base:poolOfRepentance', 'base:sanctaBasilica', 'c:blazingMarch',
-      'c:blazingMarch:ranged', 'c:discipline', 'c:endurance', 'c:landLinking:breath',
-      'c:mysticSurge', 'c:orihalcon', 'c:reinforceMagic:ranged',
-    ],
-    changed: ['c:blazingMarch', 'c:mysticSurge'],
-  },
-  'mom_cp_1.60.00': {
-    members: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother',
-      'base:chance:survivalInstinctToBlock', 'base:dragonMound', 'base:energyCannon',
-      'base:identity:zombies:toBlock', 'base:lightningBlade:breath', 'base:ludusAgoge',
-      'base:militaryWorkshop', 'base:motherFungus', 'base:naturalSelection:coal',
-      'base:naturalSelection:iron', 'base:naturalSelection:nightshade',
-      'base:naturalSelection:powerMinerals', 'base:naturalSelection:wildGame',
-      'base:pillarOfFaith', 'base:poolOfRepentance', 'base:sanctaBasilica', 'c:badMoon',
-      'c:blazingMarch', 'c:blazingMarch:ranged', 'c:chance:heavenlyLight:melee',
-      'c:chance:heavenlyLight:rtb', 'c:darkForce', 'c:darkness:coM1', 'c:destiny',
-      'c:discipline', 'c:divineBarrierAura:coM1', 'c:endurance',
-      'c:eternalNight:enemyResistance', 'c:eternalNight:enemyResistance:coM1', 'c:focusMagic',
-      'c:focusMagic:conversion', 'c:goodMoon', 'c:guidingBeaconAura:coM1', 'c:heavenlyLight',
-      'c:landLinking:breath', 'c:mysticSurge', 'c:natureConjunction', 'c:orihalcon',
-      'c:realmWard', 'c:reinforceMagic:ranged', 'c:soulLinkerAura:coM1', 'c:spellWard',
-      'c:supremeLight:coM1', 'e:chance:clamp', 'e:chance:modernClampCommon', 'e:supremeLight',
-    ],
-    predicateTrue: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother', 'base:dragonMound',
-      'base:ludusAgoge', 'base:militaryWorkshop', 'base:motherFungus',
-      'base:naturalSelection:coal', 'base:naturalSelection:iron',
-      'base:naturalSelection:nightshade', 'base:naturalSelection:powerMinerals',
-      'base:pillarOfFaith', 'base:poolOfRepentance', 'base:sanctaBasilica', 'c:blazingMarch',
-      'c:blazingMarch:ranged', 'c:discipline', 'c:endurance', 'c:landLinking:breath',
-      'c:mysticSurge', 'c:orihalcon', 'c:reinforceMagic:ranged',
-    ],
-    changed: ['c:blazingMarch', 'c:mysticSurge'],
-  },
-  'com_6.08': {
-    members: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother',
-      'base:chance:survivalInstinctToBlock', 'base:dragonMound', 'base:energyCannon',
-      'base:lightningBlade:breath', 'base:ludusAgoge', 'base:militaryWorkshop',
-      'base:motherFungus', 'base:naturalSelection:coal', 'base:naturalSelection:iron',
-      'base:naturalSelection:nightshade', 'base:naturalSelection:powerMinerals',
-      'base:naturalSelection:wildGame', 'base:pillarOfFaith', 'base:poolOfRepentance',
-      'base:sanctaBasilica', 'c:badMoon', 'c:berserk', 'c:blackChannels',
-      'c:chance:heavenlyLight:melee', 'c:chance:heavenlyLight:rtb', 'c:darkForce', 'c:darkness',
-      'c:destiny', 'c:discipline', 'c:eternalNight:enemyResistance', 'c:giantStrength',
-      'c:giantStrength:thrown', 'c:goodMoon', 'c:heavenlyLight', 'c:metalFires',
-      'c:natureConjunction', 'c:reinforceMagic:ranged', 'c:spellWard', 'c:stoneSkin',
-      'e:chance:clamp', 'e:chance:modernClampCommon', 'e:supremeLight',
-    ],
-    predicateTrue: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother', 'base:dragonMound',
-      'base:ludusAgoge', 'base:militaryWorkshop', 'base:motherFungus',
-      'base:naturalSelection:coal', 'base:naturalSelection:iron',
-      'base:naturalSelection:nightshade', 'base:naturalSelection:powerMinerals',
-      'base:pillarOfFaith', 'base:poolOfRepentance', 'base:sanctaBasilica', 'c:blackChannels',
-      'c:discipline', 'c:giantStrength', 'c:giantStrength:thrown', 'c:metalFires',
-      'c:reinforceMagic:ranged', 'c:stoneSkin',
-    ],
-    changed: [
-      'c:blackChannels', 'c:giantStrength', 'c:giantStrength:thrown', 'c:metalFires',
-      'c:reinforceMagic:ranged', 'c:stoneSkin',
-    ],
-  },
-  'com2_1.05.11': {
-    members: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother',
-      'base:chance:survivalInstinctToBlock', 'base:dragonMound', 'base:energyCannon',
-      'base:identity:zombies:toBlock', 'base:lightningBlade:breath', 'base:ludusAgoge',
-      'base:militaryWorkshop', 'base:motherFungus', 'base:naturalSelection:coal',
-      'base:naturalSelection:iron', 'base:naturalSelection:nightshade',
-      'base:naturalSelection:powerMinerals', 'base:naturalSelection:wildGame',
-      'base:pillarOfFaith', 'base:poolOfRepentance', 'base:sanctaBasilica', 'c:berserk',
-      'c:blackChannels', 'c:darkness:coM1', 'c:divineBarrierAura:coM1',
-      'c:eternalNight:enemyResistance:coM1', 'c:giantStrength', 'c:giantStrength:thrown',
-      'c:guidingBeaconAura:coM1', 'c:metalFires', 'c:realmWard', 'c:soulLinkerAura:coM1',
-      'c:stoneSkin', 'c:supremeLight:coM1', 'e:chance:legacyClamp',
-    ],
-    predicateTrue: [
-      'base:altarOfTheMoon', 'base:altarOfTheSun:holyMother', 'base:dragonMound',
-      'base:ludusAgoge', 'base:militaryWorkshop', 'base:motherFungus',
-      'base:naturalSelection:coal', 'base:naturalSelection:iron',
-      'base:naturalSelection:nightshade', 'base:naturalSelection:powerMinerals',
-      'base:pillarOfFaith', 'base:poolOfRepentance', 'base:sanctaBasilica', 'c:blackChannels',
-      'c:giantStrength', 'c:giantStrength:thrown', 'c:metalFires', 'c:stoneSkin',
-    ],
-    changed: [
-      'c:blackChannels', 'c:giantStrength', 'c:giantStrength:thrown', 'c:metalFires',
-      'c:stoneSkin',
-    ],
-  },
-  'com2_warlord_1.5.12.7': {
-    members: [
-      'base:identity:zombies:toBlock', 'c:berserk', 'c:blackChannels', 'c:darkness:coM1',
-      'c:divineBarrierAura:coM1', 'c:eternalNight:enemyResistance:coM1', 'c:giantStrength',
-      'c:giantStrength:thrown', 'c:guidingBeaconAura:coM1', 'c:metalFires', 'c:realmWard',
-      'c:soulLinkerAura:coM1', 'c:stoneSkin', 'c:supremeLight:coM1', 'e:chance:legacyClamp',
-    ],
-    predicateTrue: [
-      'c:blackChannels', 'c:giantStrength', 'c:giantStrength:thrown', 'c:metalFires',
-      'c:stoneSkin',
-    ],
-    changed: [
-      'c:blackChannels', 'c:giantStrength', 'c:giantStrength:thrown', 'c:metalFires',
-      'c:stoneSkin',
-    ],
-  },
-};
+// Stage 2 turned the measured worklist into an invariant. Where stage 1 enumerated, per
+// version, the steps composed outside their scope (48/48/39/32/15 of them), the sweep below
+// asserts the list is now empty in all three senses at once: no out-of-scope step is composed,
+// none evaluates its predicate true, and none writes a field. An enumeration would only rot;
+// zero is the whole statement.
 
 // The canonical scope is initialised from PROVENANCE `versions=` and the two are asserted to
 // agree, so neither can drift. Where the canonical scope is *wider*, the write demonstrably
@@ -248,12 +105,6 @@ function runCanonicalVersionScopeChecks(ctx) {
   const phaseRank = evalInContext(ctx, 'STEP_PHASE_RANK');
 
   assertEqual(engineVersions.length, 5, 'The canonical scope covers exactly five calculator versions');
-  for (const version of Object.keys(STAGE2_SCOPE_EXCEPTIONS)) {
-    assert(engineVersions.includes(version),
-      `Stage-2 exception inventory names a real calculator version (${version})`);
-  }
-  assertEqual(Object.keys(STAGE2_SCOPE_EXCEPTIONS).length, engineVersions.length,
-    'Every calculator version has a stage-2 exception inventory');
 
   // --- 1. the registry itself ---
   const scopeKeys = Object.keys(scopes);
@@ -279,12 +130,88 @@ function runCanonicalVersionScopeChecks(ctx) {
   }
 
   // --- 2. the projected To-Hit/To-Block ledger inherits, rather than duplicates, a scope ---
-  assertEqual(resolveScope('c', 'chance:lucky'), resolveScope('c', 'lucky'),
+  assertEqual(resolveScope({ phase: 'c', id: 'chance:lucky', projectionOf: 'c:lucky' }),
+    resolveScope({ phase: 'c', id: 'lucky' }),
     'A projected chance step inherits the scope of the step it projects');
-  assertEqual(resolveScope('b', 'chance:trueLightIllusion'), resolveScope('b', 'trueLight'),
+  assertEqual(
+    resolveScope({ phase: 'b', id: 'chance:trueLightIllusion', projectionOf: 'b:trueLight' }),
+    resolveScope({ phase: 'b', id: 'trueLight' }),
     "True Light's Illusion projection inherits the Warlord region-b scope");
-  assertEqual(resolveScope('c', 'nope:missing'), null,
+  assertEqual(resolveScope({ phase: 'c', id: 'nope:missing' }), null,
     'An unclassified step resolves no scope rather than defaulting to every version');
+  // The marker has to be what does the inheriting. `c:chance:vertigo` is a real engine write
+  // with a row of its own, and the old `chance:` prefix strip could not tell it from a
+  // projection: a real step whose row went missing quietly took `c:vertigo`'s scope instead of
+  // failing. Without a `projectionOf`, an unrowed `chance:` id now resolves nothing.
+  assertEqual(resolveScope({ phase: 'c', id: 'chance:vertigo' }), scopes['c:chance:vertigo'],
+    'A real chance step resolves through its own row');
+  assertEqual(resolveScope({ phase: 'c', id: 'chance:weakness' }), null,
+    'An unmarked chance id no longer inherits the scope of the step it would project');
+
+  // --- 2b. the filter itself, tested directly rather than only through its effect ---
+  // `filterStepsToVersionScope` is what makes the registry decide membership. The sweep below
+  // proves the composed sequences are clean; this proves the mechanism that cleans them, so a
+  // filter accidentally reduced to the identity function fails here rather than passing there
+  // because nothing happened to be out of scope.
+  const filterSteps = evalInContext(ctx, 'filterStepsToVersionScope');
+  const filterProbe = [
+    { id: 'berserk', phase: 'c' },        // SCOPE_MOM
+    { id: 'level', phase: 'c' },          // SCOPE_ALL
+    { id: 'destiny', phase: 'c' },        // SCOPE_MODERN
+    { id: 'chance:lucky', phase: 'c', projectionOf: 'c:lucky' },  // projection, inherits SCOPE_ALL
+  ];
+  assertEqual(filterSteps(filterProbe, 'mom_1.31').map(step => step.id).join(','),
+    'berserk,level,chance:lucky', 'The scope filter keeps exactly the writes MoM 1.31 makes');
+  assertEqual(filterSteps(filterProbe, 'com2_1.05.11').map(step => step.id).join(','),
+    'level,destiny,chance:lucky', 'The scope filter keeps exactly the writes CoM2 makes');
+  assertEqual(filterSteps([], 'mom_1.31').length, 0, 'The scope filter accepts an empty sequence');
+  let filterThrew = false;
+  try {
+    filterSteps([{ id: 'nope:missing', phase: 'c' }], 'mom_1.31');
+  } catch (error) { filterThrew = true; }
+  assert(filterThrew,
+    'An unclassified step reaching the filter throws rather than being silently kept or dropped');
+
+  // --- 2c. the execution chain: one ordering mechanism, and what it claims about each entry ---
+  // The chain is the position authority the version scope is keyed against, so it is checked
+  // here rather than in a file of its own: the same `phase:id` key has to name a real scope row
+  // and a real chain entry, or the two registries describe different things.
+  const statChain = evalInContext(ctx, 'statChain');
+  const deducedInsideTranscribedRegion = {
+    // CoM 1's Focus Magic position is inferred from what its recompute writes after Warp.
+    'com_6.08': ['c:focusMagic', 'c:focusMagic:conversion'],
+  };
+  for (const version of engineVersions) {
+    const chain = statChain(version);
+    const keys = chain.map(entry => entry.key);
+    assertEqual(new Set(keys).size, keys.length, `${version}'s execution chain names no key twice`);
+    for (const entry of chain) {
+      const scope = scopes[entry.key];
+      assert(!!scope, `Chain entry ${entry.key} (${version}) names a step with a canonical scope`);
+      assert(scope.includes(version),
+        `Chain entry ${entry.key} is in ${version}'s chain and in scope for it`);
+    }
+    // Every in-scope write has a position. `d:rust:ranged` is the one exception: it is the
+    // internal ranged half of Rust's single atomic engine write, constructed as a step object
+    // but never composed into a sequence, so it has a scope row and no chain entry.
+    const positioned = new Set(keys);
+    const needsPosition = Object.keys(scopes).filter(key => scopes[key].includes(version)
+      && !key.startsWith('attackSpecific:') && key !== 'd:rust:ranged');
+    assertSameKeyList(needsPosition.filter(key => !positioned.has(key)).sort(), [],
+      `${version} gives every in-scope derivation write a position in its chain`);
+    // `provisional` is a claim about evidence, so it is asserted key by key rather than left as
+    // a decoration: the transcribed regions are the compiled region-c map and the Warlord CAS
+    // hooks, minus the individually deduced positions inside them.
+    const expectedProvisional = keys.filter(key => {
+      const phase = key.slice(0, key.indexOf(':'));
+      if (['base', 'a', 'e'].includes(phase)) return true;
+      return (deducedInsideTranscribedRegion[version] || []).includes(key);
+    }).sort();
+    const observedProvisional = chain.filter(entry => entry.provisional)
+      .map(entry => entry.key).sort();
+    assertSameKeyList(observedProvisional, expectedProvisional,
+      `${version} marks exactly the inherited and deduced chain positions provisional`);
+  }
 
   // --- 3. the relationship to PROVENANCE versions= ---
   const provenanceVersions = new Map();
@@ -380,7 +307,7 @@ function runCanonicalVersionScopeChecks(ctx) {
       // Coverage is a throw rather than a counted assertion: it runs once per visited step per
       // derivation, and counting it would bury every other assertion in the suite.
       const scopeOf = event => {
-        const scope = resolveScope(event.phase, event.id);
+        const scope = resolveScope(event);
         if (!scope) {
           throw new Error(`step ${event.phase}:${event.id} has no canonical version scope`);
         }
@@ -398,14 +325,11 @@ function runCanonicalVersionScopeChecks(ctx) {
         if (!scopeOf(event).includes(version)) changed.add(`${event.phase}:${event.id}`);
       }
       // deriveUnitStats runs four sequences, not one. The stat sequence's complete ledger is
-      // read above; the figure sequence and the To-Hit/To-Block ledger keep their own traces,
-      // which the result exposes only as projections. Read those too, so `changed` means "no
-      // out-of-scope step writes anything this version displays" rather than "none writes a
-      // stat". Both sequences are composed unconditionally, so each does carry out-of-scope
-      // members outside its scope — `base:altarOfTheSun:figures` and
-      // `base:alumniOfAcademy:figures` (Warlord) in every other version, and the two
-      // `attackSpecific:chance:*ProbabilityBound` steps (modern) in the DOS builds. None of
-      // them fires there, which is what these lists assert rather than assume.
+      // read above; the figure sequence, the identity pre-pass and the To-Hit/To-Block ledger
+      // keep their own traces, which the result exposes only as projections. Read those too, so
+      // the invariant covers every sequence rather than the largest one — stage 1 measured its
+      // worklist from `statExecutionTrace` alone, and the figure and chance sequences carried
+      // out-of-scope members it could not see.
       const projections = result.modifierTraces || {};
       for (const name of ['figures', 'toHitMelee', 'toHitRanged', 'toBlock']) {
         for (const event of (projections[name] && projections[name].entries) || []) {
@@ -432,23 +356,20 @@ function runCanonicalVersionScopeChecks(ctx) {
           unitType: 'fantastic_chaos', rtbType: 'thrown', level: 'elite' }));
       }
     }
-    const expected = STAGE2_SCOPE_EXCEPTIONS[version];
-    assertSameKeyList([...members].sort(), expected.members,
-      `${version} composes exactly the recorded out-of-scope steps (stage 2 filters these)`);
-    assertSameKeyList([...predicateTrue].sort(), expected.predicateTrue,
-      `${version} has exactly the recorded complement-assertion violations`);
-    assertSameKeyList([...changed].sort(), expected.changed,
-      `${version} has exactly the recorded out-of-scope steps that still write a field`);
-    // The partition has to hold in both directions, or the inventories describe nothing.
-    for (const key of expected.predicateTrue) {
-      assert(expected.members.includes(key),
-        `${version} complement violation ${key} is also a recorded sequence member`);
-    }
-    for (const key of expected.changed) {
-      assert(expected.predicateTrue.includes(key),
-        `${version} out-of-scope writer ${key} also has a true predicate`);
-    }
+    // The stage-2 invariant. `members` is the strongest of the three — an out-of-scope step
+    // that is never composed can neither fire nor write — but all three are asserted, because
+    // they are read from different traces and a projection could reintroduce one on its own.
+    assertSameKeyList([...members].sort(), [],
+      `${version} composes no step outside its canonical version scope`);
+    assertSameKeyList([...predicateTrue].sort(), [],
+      `${version} evaluates no out-of-scope step's predicate`);
+    assertSameKeyList([...changed].sort(), [],
+      `${version} has no out-of-scope step writing a displayed field`);
   }
+  // The sweep has to be the reason those lists are empty, not an empty sweep. Its own coverage
+  // is asserted below (section 6) against the whole registry; this is the cheap floor.
+  assert(visitedKeys.size > 100,
+    'The derivation sweep observed a populated set of steps, so the empty inventories mean something');
 
   // --- 6. no orphan entries: a registry row for a step that no longer exists would rot ---
   // The sweep observes steps through what deriveUnitStats exposes, which is the stat sequence's
@@ -468,9 +389,8 @@ function runCanonicalVersionScopeChecks(ctx) {
     'a:identity:callToArmsPaladins', 'a:identity:chosen', 'a:identity:constructCatapult',
     'b:identity:marionetteChanneler', 'base:identity:com1ConstructCatapult',
     'base:identity:zombies',
-    // Writes behind a prerequisite the sweep does not build: the Outlander armorclad reform,
-    // and the Rust ranged half, which is merged into the `rust` ability step's apply().
-    'b:battleArmor', 'd:rust:ranged',
+    // A write behind a prerequisite the sweep does not build: the Outlander armorclad reform.
+    'b:battleArmor',
   ].sort();
   const orphans = scopeKeys.filter(key => !visitedKeys.has(key)).sort();
   assertSameKeyList(orphans, unreachedByTheSweep,

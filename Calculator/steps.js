@@ -15,8 +15,10 @@
 // later bonus or immunity applies); nothing in the derivation phases does.
 const HALT = Object.freeze({ halt: true });
 
-// Sequence-position labels, in execution order. `base` plus the engine's five
-// derivation regions, followed by the separate attack-specific axis:
+// Provenance labels for where a write was found, listed in region order. `base` plus the engine's
+// five derivation regions, followed by the separate attack-specific axis. A phase orders nothing —
+// the per-version execution chain does (stats_manifests.js, statChain) — but a chain is authored
+// in non-decreasing phase order, so the two have to agree:
 //   base      permanent ABase writes made before combat
 //   a         precalc, in the binary
 //   b         precalc, in UnitCalcPre.CAS      (Warlord only)
@@ -62,7 +64,8 @@ const STEP_PHASE_RANK = STEP_PHASES.reduce((rank, phase, i) => (rank[phase] = i,
 //                           agree, except for the recorded gaps where the write is evidenced
 //                           for fewer builds than it runs in (see the notes below).
 //
-// Stage 1 only classifies: nothing here filters a sequence yet, so no arithmetic changes.
+// Every derivation sequence is filtered through `filterStepsToVersionScope` before it is
+// composed, so this table decides membership rather than merely describing it.
 const ENGINE_VERSIONS = Object.freeze([
   'mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7',
 ]);
@@ -176,14 +179,12 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:chaosSurge': SCOPE_ALL,
   'c:charmOfLife': SCOPE_ALL,
   'c:darkForce': SCOPE_MODERN,
-  'c:darkness': SCOPE_MOM_MODERN,
-  'c:darkness:coM1': SCOPE_COM1,
+  'c:darkness': SCOPE_ALL,
   'c:destiny': SCOPE_MODERN,
   'c:discipline': SCOPE_MODERN,
   'c:divineBarrierAura:coM1': SCOPE_COM1,
   'c:endurance': SCOPE_COM_PLUS,
-  'c:eternalNight:enemyResistance': SCOPE_MODERN,
-  'c:eternalNight:enemyResistance:coM1': SCOPE_COM1,
+  'c:eternalNight:enemyResistance': SCOPE_COM_PLUS,
   'c:flameBlade': SCOPE_ALL,
   'c:flameBlade:ranged': SCOPE_ALL,
   'c:focusMagic': SCOPE_COM_PLUS,
@@ -240,6 +241,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   // --- d: magic calc, in UnitCalc.CAS ---
   'd:beatOfSwiftness': SCOPE_WARLORD,
   'd:blazeOfGlory': SCOPE_WARLORD,
+  'd:blazeOfGlory:thrown': SCOPE_WARLORD,
   'd:chance:berserkWarlord': SCOPE_WARLORD,
   'd:chance:energyCannonThreshold': SCOPE_WARLORD,
   'd:chance:hurricane': SCOPE_WARLORD,
@@ -253,7 +255,6 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'd:pneumaField': SCOPE_WARLORD,
   'd:psychoForce': SCOPE_WARLORD,
   'd:rust': SCOPE_WARLORD,
-  'd:rust:ranged': SCOPE_WARLORD,
   'd:shadowStrike:thrown': SCOPE_WARLORD,
   'd:vampirism:transfer': SCOPE_WARLORD,
   'd:weakness:breath': SCOPE_WARLORD,
@@ -294,21 +295,24 @@ const STEP_VERSION_SCOPES = Object.freeze({
 
 // The To-Hit/To-Block ledger re-emits each stat event as a `chance:`-prefixed projection step
 // (`chance:${event.id}`, and `chance:trueLightIllusion` for True Light's Illusion malus). A
-// projection is the same engine write seen through another output, so it inherits the scope of
-// the step it projects rather than getting a second, separately maintained entry.
-function stepVersionScopeKey(phase, id) {
-  return `${phase}:${id}`;
+// projection is the same engine write seen through another output, not a second write, so it
+// carries the key of the write it projects instead of a separately maintained entry — stated on
+// the step as `projectionOf`, never guessed from the id.
+//
+// It has to be stated. Reading `chance:` off the front and stripping it cannot tell a projection
+// from a real `chance:` step (`c:chance:vertigo` is an engine write with a row of its own), so a
+// real one whose row was missing silently inherited the scope of the step it would have
+// projected — a coverage failure that reported itself as coverage.
+//
+// `entry` is a step or a trace event: both carry `phase`, `id` and, for a projection,
+// `projectionOf`.
+function stepVersionScopeKey(entry) {
+  if (entry && typeof entry.projectionOf === 'string') return entry.projectionOf;
+  return `${entry && entry.phase}:${entry && entry.id}`;
 }
 
-function resolveStepVersionScope(phase, id) {
-  const direct = STEP_VERSION_SCOPES[stepVersionScopeKey(phase, id)];
-  if (direct) return direct;
-  if (typeof id === 'string' && id.startsWith('chance:')) {
-    const projected = id === 'chance:trueLightIllusion' ? 'trueLight' : id.slice('chance:'.length);
-    const inherited = STEP_VERSION_SCOPES[stepVersionScopeKey(phase, projected)];
-    if (inherited) return inherited;
-  }
-  return null;
+function resolveStepVersionScope(entry) {
+  return STEP_VERSION_SCOPES[stepVersionScopeKey(entry)] || null;
 }
 
 // The canonical scope of one step. Throws rather than defaulting: a step with no entry has no
@@ -316,9 +320,9 @@ function resolveStepVersionScope(phase, id) {
 // exists to remove.
 function stepVersionScope(step) {
   if (!step || typeof step.id !== 'string') throw new Error('stepVersionScope: step has no id');
-  const scope = resolveStepVersionScope(step.phase, step.id);
+  const scope = resolveStepVersionScope(step);
   if (!scope) {
-    throw new Error(`step ${step.phase}:${step.id} has no canonical version scope`);
+    throw new Error(`step ${stepVersionScopeKey(step)} has no canonical version scope`);
   }
   return scope;
 }
@@ -327,20 +331,17 @@ function stepAppliesToVersion(step, version) {
   return stepVersionScope(step).includes(version);
 }
 
-// Coverage, asserted where a real derivation sequence is composed rather than inside
-// `statStep`: the constructor is the generic runner's, and its own unit tests build synthetic
-// steps that are not engine writes and have no scope. Every step that enters one of the
-// calculator's sequences, however, is an engine write and must be classified — a step with no
-// entry in STEP_VERSION_SCOPES is precisely the missing home M9 removes, so a default of
-// "every version" would silently absorb it.
-function assertSequenceVersionScopeCoverage(steps, label) {
-  for (const step of steps || []) {
-    if (!resolveStepVersionScope(step && step.phase, step && step.id)) {
-      throw new Error(`${label || 'sequence'}: step ${step && step.phase}:${step && step.id}`
-        + ' has no canonical version scope');
-    }
-  }
-  return steps;
+// The filter (M9 stage 2). Every derivation sequence passes through this before composition,
+// so a version's sequence contains only the writes that version's engine makes. A step outside
+// its scope is not a write the engine declines to make — it is a write the engine does not
+// have — so it must not be ordered, must not be visited, and must not appear in a ledger as a
+// skipped branch of a binary that has no such branch.
+//
+// This is also the coverage check: `stepVersionScope` throws on a step with no entry, and it
+// runs on every step of every sequence rather than under the debug switch, so an unclassified
+// step cannot reach a sequence in any build.
+function filterStepsToVersionScope(steps, version) {
+  return (steps || []).filter(step => stepAppliesToVersion(step, version));
 }
 
 // The membership check. Scope also hides at call sites — the six EFFECTIVE_RESISTANCE_STEPS
@@ -352,7 +353,7 @@ function sequenceVersionScopeViolations(steps, version) {
   const violations = [];
   for (const step of steps || []) {
     if (!stepAppliesToVersion(step, version)) {
-      violations.push({ key: stepVersionScopeKey(step.phase, step.id), scope: stepVersionScope(step) });
+      violations.push({ key: stepVersionScopeKey(step), scope: stepVersionScope(step) });
     }
   }
   return violations;
@@ -385,8 +386,9 @@ function statStepDebugEnabled() { return statStepDebug; }
 //               sourceId defaults to the stable step id, so every applied entry is named
 //   when(unit, ctx)   optional predicate; a step that never fires costs one call
 //   apply(unit, ctx)  mutates `unit`; return HALT to stop the sequence
-//   provisional true when the position is not established from the engine but deduced
-//               or inherited from the bucket it was migrated out of
+//   projectionOf  set only on a projection: the `phase:id` scope key of the engine write this
+//               step re-presents through another output. A projection is not an engine write,
+//               so it never gets a STEP_VERSION_SCOPES row of its own
 // The checks run under the debug switch only. A sequence is rebuilt on every
 // deriveUnitStats call — once per roster unit per side when the matrix view is built — so
 // in normal use this is the identity function, and the test suites are where a malformed
@@ -405,17 +407,14 @@ function statStep(step) {
   return step;
 }
 
-// List order *is* execution order — there is no sort. A within-region ordering such as
-// Warp-before-Shatter has nowhere else to live, and sorting by phase on every call would
-// both cost (deriveUnitStats runs once per roster unit per side when the matrix is built)
-// and quietly repair a list authored in the wrong order.
+// List order *is* execution order — there is no sort. Sorting on every call would both cost
+// (deriveUnitStats runs once per roster unit per side when the matrix is built) and quietly repair
+// a sequence composed in the wrong order.
 //
-// What phase buys instead is a checkable invariant: a sequence must be authored in
-// non-decreasing phase order, since a step cannot run in region `b` after one in `c`.
-//
-// Ids must also be unique, because a sequence is assembled from two places — the list in
-// `deriveUnitStats` and the ability steps spliced into it — and a collision would silently
-// make the trace ambiguous rather than fail. Both checked under the debug switch only.
+// What phase buys is a checkable invariant: a composed sequence is in non-decreasing phase order,
+// since a step cannot run in region `b` after one in `c`. Ids must also be unique, because a
+// sequence is assembled from two places — the list in `deriveUnitStats` and the ability steps
+// spliced into it — and a collision would silently make the trace ambiguous rather than fail.
 function assertStatStepOrder(steps) {
   let rank = -1;
   let previous = null;
@@ -439,94 +438,79 @@ function assertStatStepOrder(steps) {
   return steps;
 }
 
-// F20's phase manifests are the source-order authority for represented b/c/d writes. The
-// composer is deliberately separate from the runner: it walks the manifest explicitly, annotates
-// every represented step with its source position, and rejects a missing or duplicated entry.
-// There is no generic sort here: a manifest is an authored execution sequence, not a repair for
-// an accidentally unordered list, and an unclassified spread must fail loudly.
+// The per-version execution chain (stats_manifests.js, statChain) is the source-order authority
+// for every represented write, `base` through `e`. The composer is deliberately separate from
+// the runner: it walks the chain explicitly, annotates every step with its chain position and
+// whether that position is transcribed or inherited, and rejects a step the chain does not name.
+// There is no generic sort here — a chain is an authored execution sequence, not a repair for an
+// accidentally unordered list, and an unclassified step must fail loudly.
 //
 // Both derivation sequences go through this composer — the stat sequence and the ordered
-// identity conversions — so a represented b/c/d write cannot reach the trace from a sequence
-// that no manifest covers. Their ranks are comparable only within one sequence: the identity
-// pre-pass runs entirely before the stat sequence, which is earlier than the source rank one
-// of its entries carries (see F20_WARLORD_D_ORDER, `identity:spiritLink`).
-function orderStatStepsBySource(steps, manifests, phases = ['b', 'c', 'd']) {
-  if (!Array.isArray(steps)) throw new Error('source-order composer received no step list');
-  if (!Array.isArray(phases) || phases.length === 0) {
-    throw new Error('source-order composer received no phases');
-  }
-  const phaseSet = new Set(phases);
-  if (phaseSet.size !== phases.length) throw new Error('source-order composer received duplicate phases');
-  const sourceRanks = new Map();
-  const manifestIds = new Set();
-  for (const phase of phases) {
-    if (!Object.prototype.hasOwnProperty.call(STEP_PHASE_RANK, phase)) {
-      throw new Error(`source-order composer received unknown phase ${phase}`);
-    }
-    const order = manifests && manifests[phase];
-    if (!Array.isArray(order)) {
-      throw new Error(`source-order manifest for phase ${phase} is missing`);
-    }
-    for (let rank = 0; rank < order.length; rank++) {
-      const id = order[rank];
-      if (typeof id !== 'string' || !id) {
-        throw new Error(`source-order manifest for phase ${phase} has an invalid id`);
-      }
-      if (manifestIds.has(id)) throw new Error(`source-order manifest repeats step id ${id}`);
-      manifestIds.add(id);
-      const key = `${phase}:${id}`;
-      if (sourceRanks.has(key)) throw new Error(`source-order manifest repeats ${key}`);
-      sourceRanks.set(key, rank);
-    }
-  }
+// identity conversions — so a represented write cannot reach the trace from a sequence no chain
+// covers. Chain entries a run does not emit are simply skipped: a step is version-exclusive or
+// predicate-exclusive, and its absence is not an error. The reverse is.
+const validatedChains = new WeakSet();
 
-  const grouped = new Map(STEP_PHASES.map(phase => [phase, []]));
-  const represented = new Map();
+// Checked once per chain, not once per derivation: a chain is a frozen module constant, and
+// deriveUnitStats runs once per roster unit per side when the matrix is built.
+function assertStatChain(chain) {
+  if (!Array.isArray(chain)) throw new Error('the composer received no execution chain');
+  if (validatedChains.has(chain)) return chain;
+  const seen = new Set();
+  let rank = -1;
+  for (const entry of chain) {
+    if (!entry || typeof entry.key !== 'string' || !entry.key) {
+      throw new Error('execution chain has an entry without a key');
+    }
+    if (!Object.prototype.hasOwnProperty.call(STEP_PHASE_RANK, entry.phase)) {
+      throw new Error(`execution chain entry ${entry.key} has unknown phase ${entry.phase}`);
+    }
+    if (entry.key !== `${entry.phase}:${entry.id}`) {
+      throw new Error(`execution chain entry ${entry.key} disagrees with its phase and id`);
+    }
+    if (typeof entry.provisional !== 'boolean') {
+      throw new Error(`execution chain entry ${entry.key} does not say whether its position is provisional`);
+    }
+    if (seen.has(entry.key)) throw new Error(`execution chain repeats ${entry.key}`);
+    seen.add(entry.key);
+    // Phase orders nothing, but it still has to agree with the chain: a chain authored out of
+    // region order is an entry filed under the wrong region.
+    const entryRank = STEP_PHASE_RANK[entry.phase];
+    if (entryRank < rank) {
+      throw new Error(`execution chain entry ${entry.key} is declared after a later phase`);
+    }
+    rank = entryRank;
+  }
+  validatedChains.add(chain);
+  return chain;
+}
+
+function orderStatStepsBySource(steps, chain) {
+  if (!Array.isArray(steps)) throw new Error('the composer received no step list');
+  assertStatChain(chain);
+  const emitted = new Map();
   for (const step of steps) {
     if (!step || typeof step.id !== 'string' || !step.id) {
-      throw new Error('source-order composer received a step without an id');
+      throw new Error('the composer received a step without an id');
     }
-    if (!grouped.has(step.phase)) {
-      throw new Error(`source-order composer received unknown phase ${step.phase}`);
-    }
-    if (phases.includes(step.phase)) {
-      const key = `${step.phase}:${step.id}`;
-      if (!sourceRanks.has(key)) {
-        throw new Error(`phase ${step.phase} step ${step.id} is missing from its source-order manifest`);
-      }
-      if (represented.has(key)) {
-        throw new Error(`phase ${step.phase} step ${step.id} is represented twice`);
-      }
-      represented.set(key, step);
-    }
-    grouped.get(step.phase).push(step);
+    const key = stepVersionScopeKey(step);
+    if (emitted.has(key)) throw new Error(`step ${key} is represented twice`);
+    emitted.set(key, step);
   }
-
   const ordered = [];
-  for (const phase of STEP_PHASES) {
-    if (!phaseSet.has(phase)) {
-      ordered.push(...grouped.get(phase));
-      continue;
-    }
-    const manifest = manifests[phase];
-    for (let sourceOrder = 0; sourceOrder < manifest.length; sourceOrder++) {
-      const key = `${phase}:${manifest[sourceOrder]}`;
-      const step = represented.get(key);
-      if (!step) continue; // A predicate/version-exclusive step may be absent this run.
-      ordered.push({ ...step, sourceOrder });
-      represented.delete(key);
-    }
+  for (let sourceOrder = 0; sourceOrder < chain.length; sourceOrder++) {
+    const entry = chain[sourceOrder];
+    const step = emitted.get(entry.key);
+    if (!step) continue; // A version- or predicate-exclusive step may be absent this run.
+    ordered.push({ ...step, sourceOrder, provisional: entry.provisional });
+    emitted.delete(entry.key);
   }
-  // Every actual represented step must have been consumed by exactly one manifest entry. This
-  // is the omission check: inactive manifest entries may be unused, but an emitted step may not.
-  for (const [key] of represented) {
-    throw new Error(`source-order manifest did not consume represented step ${key}`);
+  // Every emitted step must have been consumed by exactly one chain entry. This is the omission
+  // check: unused chain entries are fine, an unplaced step is not.
+  for (const [key] of emitted) {
+    throw new Error(`step ${key} is missing from its version's execution chain`);
   }
   assertStatStepOrder(ordered);
-  // Both derivation sequences are composed here, so this is the one place that sees every
-  // phase — `base`/`a`/`e` included, which no manifest covers — and can require each step to
-  // carry a canonical engine-version scope.
-  if (statStepDebug) assertSequenceVersionScopeCoverage(ordered, 'derivation sequence');
   return ordered;
 }
 
@@ -613,6 +597,7 @@ function recordStepTrace(trace, step, before, unit, order) {
       changes,
     };
     if (Number.isInteger(step.sourceOrder)) event.sourceOrder = step.sourceOrder;
+    if (typeof step.projectionOf === 'string') event.projectionOf = step.projectionOf;
     trace.push(event);
     return event;
   }
@@ -636,6 +621,7 @@ function recordStepExecution(trace, step, order, status) {
     status,
   };
   if (Number.isInteger(step.sourceOrder)) event.sourceOrder = step.sourceOrder;
+  if (typeof step.projectionOf === 'string') event.projectionOf = step.projectionOf;
   trace.push(event);
 }
 
@@ -788,6 +774,7 @@ function projectStatTrace(trace, field, base, result, options = {}) {
       phase: event.phase,
       order: event.order,
       ...(Number.isInteger(event.traceOrder) ? { traceOrder: event.traceOrder } : {}),
+      ...(typeof event.projectionOf === 'string' ? { projectionOf: event.projectionOf } : {}),
       from,
       to,
     });

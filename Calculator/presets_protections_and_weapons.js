@@ -486,7 +486,7 @@ definePresets({
     desc: 'Metal Fires is non-Fantastic-only: a Fantastic Chaos unit keeps melee 1 instead of receiving +1.',
     a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { metalFires: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   metalFiresFantasticMissileUnaffected: {
     desc: 'Metal Fires does not boost a Fantastic unit\'s missile attack: strength 1 stays 1.',
@@ -502,12 +502,6 @@ definePresets({
       unitType:'fantastic_chaos', abilities: { metalFires: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
-  },
-  metalFiresFantasticNoWeaponUpgrade: {
-    desc: 'Metal Fires does not upgrade a Fantastic unit\'s weapon: Weapon Immunity still blocks its physical melee.',
-    a: { atk:2, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { metalFires: true } },
-    b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
-    expected: { dmgToA: 0, dmgToB: 0.000 },
   },
   metalFiresMissile: {
     desc: 'Metal Fires +1 missile: base 1 + MF → 2 rtb, 100% hit vs 0 def → E[dmg]=2.0',

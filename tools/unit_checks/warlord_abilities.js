@@ -243,6 +243,35 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(blazeWithIronSkin.def, 0,
     'Blaze of Glory zeroes current Armor instead of reconstructing enchantment Armor');
 
+  // The same block's channel write is `SThrown := SThrown + SRanged`, so a unit carrying both
+  // fields finishes with one Thrown attack at the summed strength. The preset fixture format
+  // maps a scenario onto a single modern channel, so the two-channel case is asserted here.
+  const blazeChannels = (attacks, abilities) => ctx.deriveUnitStats(warlordUnit({
+    atk: 1, def: 0, modernAttacks: attacks, abilities,
+  })).modernAttacks;
+
+  const blazeRangedOnly = blazeChannels(
+    { ranged: { strength: 6, type: 'missile' } }, { blazeOfGlory: true });
+  assert(!blazeRangedOnly.ranged, 'Blaze of Glory empties the conventional Ranged field');
+  assertEqual(blazeRangedOnly.thrown.strength, 6,
+    'A lone Ranged channel arrives whole on the Thrown field');
+
+  const blazeBothChannels = blazeChannels(
+    { ranged: { strength: 6, type: 'missile' }, thrown: { strength: 2, type: 'thrown' } },
+    { blazeOfGlory: true });
+  assert(!blazeBothChannels.ranged, 'Blaze of Glory empties Ranged beside an existing Thrown');
+  assertEqual(blazeBothChannels.thrown.strength, 8,
+    'Blaze of Glory adds the Ranged strength to an existing Thrown attack');
+  assertEqual(blazeBothChannels.thrown.modifierTrace.result, 8,
+    'The merged Thrown strength stays reachable through its own modifier trace');
+
+  const noBlazeBothChannels = blazeChannels(
+    { ranged: { strength: 6, type: 'missile' }, thrown: { strength: 2, type: 'thrown' } }, {});
+  assertEqual(noBlazeBothChannels.ranged.strength, 6,
+    'Without Blaze of Glory the two channels stay independent');
+  assertEqual(noBlazeBothChannels.thrown.strength, 2,
+    'Without Blaze of Glory the Thrown field keeps its own strength');
+
   const noOutlanderArmorclad = ctx.deriveUnitStats(baseUnitInput({
     version,
     def: 1,

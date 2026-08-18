@@ -6,6 +6,75 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-18
 
+- **M9 — one canonical version scope, one execution chain.** Stages 2 and 3, closing the item.
+  *Stage 2:* `filterStepsToVersionScope` applies `STEP_VERSION_SCOPES` to all four sequences —
+  stat, identity, figure and the To-Hit/To-Block ledger — before composition, replacing the
+  `phase b/d && isWarlord` filter that was the only one of its kind. A version's sequence is now
+  the writes that version's engine makes, so an out-of-scope step is absent rather than present
+  behind a false predicate, and the region-`c` lists lost the entries the filter made unreachable
+  (68→60 modern, 68→49 CoM 1, 68→37 both MoM builds). The filter is also the coverage check —
+  an unclassified step throws there, in every build rather than under the debug switch — so the
+  three debug-only coverage assertions are gone. Stage 1's measured worklist of 48/48/39/32/15
+  out-of-scope members per version is now an invariant instead of an inventory: no version
+  composes an out-of-scope step, evaluates one's predicate, or writes a field from one. The eight
+  steps whose removal could have changed a number are each an enchantment whose control the
+  version hides, so no UI state reached them.
+  *Stage 3:* one ordered chain per version, `base` through `e`, is the single ordering mechanism —
+  `statChain` in `stats_manifests.js`. Array order decides nothing, `phase` is a provenance label
+  that orders nothing, and a step whose key the chain does not name fails composition instead of
+  landing where it was authored. Both derivation sequences and the figure sequence walk it. Each
+  entry says whether its position is transcribed or `provisional`: region `c` and the Warlord
+  `b`/`d` lists are transcribed, `base`/`a`/`e` are inherited from authoring order, and CoM 1's
+  Focus Magic is the one deduced position inside a transcribed region. That flag was set on
+  `berserk` alone and consumed by nothing; it is now asserted key by key per version. A projection
+  states the write it re-presents as `projectionOf` instead of having it guessed from a `chance:`
+  prefix — the guess could not tell a projection from a real `chance:` step, so a real one whose
+  scope row went missing silently inherited another step's. Arithmetic is unchanged in all five
+  versions: 114 Playwright tests, 983 presets and 13459 node checks green.
+
+- **F59 — the preset reconciliation is closed; the suite is green.** The last three failures were
+  not M9's to fix — all three run under `mom_1.31`, where both effects are in scope, so the scope
+  filter never touched them. Each was a separate, sourced problem. `berserkDoublesAfterOtherBonuses`
+  expected High Prayer before Berserk's doubling; `unitcalc.c` doubles at `131:0x8F860`, the last
+  block of the unit-enchantment routine, and adds High Prayer's +2 at `131:0x902CF` in the
+  combat-enchantment blocks that follow, so 8 is the engine's answer and 10 was the pre-R1 deduced
+  position. Renamed `berserkDoublesBeforeHighPrayer`; the step's `provisional` flag and the "after
+  all other bonuses" claim in its comment and tooltip are gone, because the routine is decoded.
+  `metalFiresFantasticUnaffected` expected 2.000 against its own description; it expected 1.000
+  until `a1d686d` renumbered it, and 1.000 is what the Fantastic gate produces.
+  `metalFiresFantasticNoWeaponUpgrade` is retired: a Fantastic unit's `Weapon_Plus1` is already 1
+  at `131:0x8F266`, long before Metal Fires' region-`c` block, so its attacks are always magical,
+  `Battle_Unit_Attack_Immunities` never sets the Weapon Immunity flag, and the preset's premise
+  could not hold. Measured with and without Metal Fires: 2.0 either way. Its claim has no
+  observable consequence in the model — [F61](./BACKLOG.md)'s aim-vacuity mode, which it now
+  illustrates alongside `upgradedExplosiveBeforeTrueLightWarlord`.
+
+- **Two defects the M9 filter surfaced.** `baseUnitInput` defaulted the node suites to
+  `version: 'com2_1.5'`, which is not one of the five: every `startsWith('com2_')` predicate
+  accepted it while the exact `version === 'com2_1.05.11'` tests in `combat_fear_and_touch.js`,
+  `combat_phases.js` and `ui.js` did not, so those paths were probed as a build that does not
+  exist. And the CoM 1 source-order anchors in `tests/f20-source-order.spec.js` named
+  `discipline`, `badMoon`, `goodMoon` and `natureConjunction` — `Caster.exe` writes with no CoM 1
+  counterpart, which only ever matched skipped visits to steps the binary does not contain.
+
+- **F63 — Blaze of Glory's channel transfer reaches the output, and adds.** The Ranged→Thrown
+  conversion was a local mutation that the stepped record could not see, so it had stopped
+  reaching the result; it is now `d:blazeOfGlory:thrown`, a step beside `d:blazeOfGlory` under the
+  same `UnitCalc.CAS:1490-1501` citation, which covers both transfers of the one script block. The
+  script's `SThrown := SThrown + SRanged` is an addition, not a rename, so the modern channel
+  assembly in `stats.js` now merges a Blaze-converted Ranged channel onto the Thrown field instead
+  of letting the two collide on one output key: `ranged 6 + thrown 2` yields `thrown 8`, the
+  script's answer, where the collision previously dropped the converted strength and printed
+  `thrown 2`. The Thrown field is the survivor and keeps its own type, To Hit and traces; the
+  merge happens after the channel walk so it does not depend on channel order, and it extends the
+  surviving modifier trace so `modifierTrace.result` still equals the reported strength. The
+  preset fixture format maps a scenario onto a single modern channel, so the two-channel case is
+  asserted in `tools/unit_checks/warlord_abilities.js` with its feature-removed control.
+  `blazeOfGloryRangedToThrownWarlord` is green; `npm test` is 113 passed with [F59](./BACKLOG.md)'s
+  three M9-held preset failures remaining. Implementing it measured a third, distinct defect at the
+  same site, filed as [F66](./BACKLOG.md): the local flip re-aims the type predicates of every
+  earlier region, so a Blaze unit escapes Rust and gains Giant Strength's Thrown-only bonus.
+
 - **F64 — the DOS thrown/breath phase no longer requires melee strength.** `combat.js` gated the
   melee-path thrown/breath rider on base melee > 0 for `mom_1.31`, `mom_cp_1.60.00` and
   `com_6.08`, an unsourced predicate added in `563d4d3`. It is gone: `BU_AttackTarget` admits the
@@ -82,7 +151,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 - **T4 — the three unreadable sources split.** `combat.js` (325 KB) is seven files cut at
   top-level function boundaries, `combat.js` itself keeping `resolveCombat`; `stats.js` (221 KB)
-  is four, cut at the phase boundaries [M9](./BACKLOG.md) works in — `stats_manifests.js`,
+  is four, cut at the phase boundaries M9 works in — `stats_manifests.js`,
   `stats_identity.js`, and `stats_sequence.js`, whose six functions are the engine regions `base`
   through `e` in execution order; and `tools/node_unit_checks.js` (233 KB) is an entry point over
   ten suites in `tools/unit_checks/`, sharing one assertion counter. Largest remaining file of the

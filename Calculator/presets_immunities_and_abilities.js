@@ -639,7 +639,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 20.000 },
   },
   destinyGrantsSupernaturalCoM2: {
-    desc: 'Destiny (CoM2): enchanted unit becomes Supernatural. doubled melee 3â†’6 fully blocked still deals round(6/3) = 2 damage',
+    desc: 'Destiny (CoM2): enchanted unit becomes Supernatural. doubled melee 3→6 fully blocked still deals round(6/3) = 2 damage',
     version: V_COM2,
     a: { atk:3, toHitMod:70, hp:10, abilities: { destiny: true } },
     b: { def:6, toBlkMod:70, hp:10 },

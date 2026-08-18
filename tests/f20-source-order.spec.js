@@ -32,8 +32,15 @@ const F20_PROBE_ABILITIES = {
 };
 
 // Independent source-order anchors from the checked-in DOS ledgers and CoM2 region map.
-// These deliberately do not come from f20SourceManifests(), so a copied or misordered
-// manifest cannot make this regression pass by agreeing with itself.
+// These deliberately do not come from statChain(), so a copied or misordered chain cannot make
+// this regression pass by agreeing with itself.
+//
+// An anchor is a write the named build makes. The CoM 1 list used to carry `discipline`,
+// `badMoon`, `goodMoon` and `natureConjunction`, which are Caster.exe writes with no CoM 1
+// counterpart (PROVENANCE cites com2_1.05.11/com2_warlord only; their controls are the
+// `CoM2 & Warlord` subgroup). They anchored nothing in the CoM 1 ledger and only appeared in
+// its trace as skipped visits to steps the binary does not contain — which M9's canonical
+// version scope now filters out before composition.
 const F20_SOURCE_ANCHORS = {
   'mom_1.31': {
     c: ['level', 'lucky', 'weapon', 'chaosSurge', 'chance:holyWeapon:melee',
@@ -57,17 +64,18 @@ const F20_SOURCE_ANCHORS = {
     // CoM 1's BU_Apply_Specials layout: Lionheart com1:0x8F660, Iron Skin 0x8F71F, the
     // Chaos Channels armor mutation 0x8F735, Land Link 0x8F75C, then Mystic Surge's
     // stat-writing half 0x8F795, then Holy Armor 0x8F7C1.
-    c: ['level', 'lucky', 'weapon', 'endurance', 'discipline', 'animated',
+    c: ['level', 'lucky', 'weapon', 'endurance', 'animated',
       'flameBlade', 'flameBlade:ranged', 'lionheart',
       'lionheart:rangedHp', 'ironSkin', 'chaosChannels:armor',
       'landLinking', 'landLinking:breath', 'mysticSurge',
       'holyArmor', 'focusMagic', 'focusMagic:conversion',
       'orihalcon', 'chance:holyWeapon:melee', 'chance:holyWeapon:rtb', 'chaosSurge',
-      'survivalInstinct', 'nodeAura', 'highPrayer', 'badMoon', 'goodMoon',
-      'natureConjunction', 'blazingMarch', 'blazingMarch:ranged',
+      'survivalInstinct', 'nodeAura', 'highPrayer',
+      'blazingMarch', 'blazingMarch:ranged',
       'chance:warpReality', 'blackPrayer', 'guardian', 'chance:vertigo', 'weakness',
       'weakness:ranged', 'warpAttack', 'warpDefense', 'warpResist', 'shatter',
-      'darkness:coM1', 'supremeLight:coM1', 'realmWard', 'tactician:coM1'],
+      'darkness', 'supremeLight:coM1', 'realmWard', 'tactician:coM1',
+      'eternalNight:enemyResistance'],
   },
   'com2_1.05.11': {
     c: ['level', 'focusMagic', 'focusMagic:conversion', 'lucky', 'darkForce',
@@ -164,9 +172,9 @@ test('F20 covers every represented b/c/d step in source order for all five versi
         ? ['normal', 'marionette'] : ['default'];
       return [version, Object.fromEntries(scenarios.map(scenario => {
         const report = deriveUnitStats(makeInput(version, scenario));
-        const manifest = f20SourceManifests(version);
+        const chain = statChain(version).map(entry => ({ ...entry }));
         return [scenario, {
-          manifest,
+          chain,
           statTrace: report.statTrace,
           executionTrace: report.statExecutionTrace,
           enumerableExecutionTrace: Object.keys(report).includes('statExecutionTrace'),
@@ -180,7 +188,10 @@ test('F20 covers every represented b/c/d step in source order for all five versi
   for (const version of F20_VERSIONS) {
     for (const [scenario, report] of Object.entries(reports[version])) {
       const label = scenario === 'default' ? version : `${version}/${scenario}`;
-      const { manifest, statTrace, executionTrace } = report;
+      const { chain, statTrace, executionTrace } = report;
+      const chainKeys = chain.map(entry => entry.key);
+      const chainIds = phase => chain.filter(entry => entry.phase === phase)
+        .map(entry => entry.id);
       expect(Array.isArray(executionTrace), label).toBe(true);
       expect(executionTrace.length, label).toBeGreaterThan(0);
       expect(report.hasExecutionTrace, label).toBe(true);
@@ -190,23 +201,26 @@ test('F20 covers every represented b/c/d step in source order for all five versi
         && event.executionOrder === index
         && ['applied', 'skipped'].includes(event.status)), `${label} complete trace`).toBe(true);
 
+      // The chain covers every phase now, so the whole executed sequence is checked against
+      // it, not only the three regions a manifest used to cover.
+      const executedKeys = executionTrace.map(event => `${event.phase}:${event.id}`);
+      expect(executedKeys.every(key => chainKeys.includes(key)), `${label} chain coverage`).toBe(true);
+      expect(new Set(executedKeys).size, `${label} duplicate executed keys`).toBe(executedKeys.length);
+      expect(executionTrace.every(event => Number.isInteger(event.sourceOrder)),
+        `${label} chain annotations`).toBe(true);
+      expect(executionTrace.every(event =>
+        event.sourceOrder === chainKeys.indexOf(`${event.phase}:${event.id}`)),
+      `${label} chain ranks`).toBe(true);
+      expect(executionTrace.every((event, index) => index === 0
+        || event.sourceOrder > executionTrace[index - 1].sourceOrder),
+      `${label} increasing chain ranks`).toBe(true);
+
       const represented = executionTrace.filter(event => ['b', 'c', 'd'].includes(event.phase));
       const representedIds = represented.map(event => event.id);
-      const manifestIds = new Set([...manifest.b, ...manifest.c, ...manifest.d]);
-      expect(representedIds.every(id => manifestIds.has(id)), `${label} manifest coverage`).toBe(true);
-      expect(new Set(representedIds).size, `${label} duplicate represented ids`).toBe(representedIds.length);
-
       for (const phase of ['b', 'c', 'd']) {
         const actual = represented.filter(event => event.phase === phase);
-        const expected = manifest[phase].filter(id => representedIds.includes(id));
+        const expected = chainIds(phase).filter(id => representedIds.includes(id));
         expect(actual.map(event => event.id), `${label} ${phase} source order`).toEqual(expected);
-        expect(actual.every(event => Number.isInteger(event.sourceOrder)),
-          `${label} ${phase} source annotations`).toBe(true);
-        expect(actual.every((event, index) => event.sourceOrder === manifest[phase].indexOf(event.id)),
-          `${label} ${phase} manifest ranks`).toBe(true);
-        expect(actual.every((event, index) => index === 0
-          || event.sourceOrder > actual[index - 1].sourceOrder),
-        `${label} ${phase} increasing source ranks`).toBe(true);
         expectSubsequence(actual.map(event => event.id),
           (f20Anchors(version, scenario)[phase]) || [],
           `${label} ${phase} independent source anchors`);
@@ -219,8 +233,8 @@ test('F20 covers every represented b/c/d step in source order for all five versi
       // The public trace merges the identity pre-pass with the stat sequence, so it is the
       // place a represented b/c/d write could escape a manifest by living in another sequence.
       const tracedRepresented = statTrace.filter(event => ['b', 'c', 'd'].includes(event.phase));
-      expect(tracedRepresented.every(event => manifestIds.has(event.id)),
-        `${label} public trace manifest coverage`).toBe(true);
+      expect(tracedRepresented.every(event => chainKeys.includes(`${event.phase}:${event.id}`)),
+        `${label} public trace chain coverage`).toBe(true);
       expect(tracedRepresented.every(event => Number.isInteger(event.sourceOrder)),
         `${label} public trace source annotations`).toBe(true);
 
@@ -266,6 +280,8 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
       rust: {
         statExecutionTrace: rustReport.statExecutionTrace,
         statTrace: rustReport.statTrace,
+        rustChainRank: statChain('com2_warlord_1.5.12.7')
+          .findIndex(entry => entry.key === 'd:rust'),
       },
     };
   });
@@ -282,8 +298,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
   const rustEvents = report.rust.statExecutionTrace.filter(event => event.id === 'rust');
   expect(rustEvents).toHaveLength(1);
   expect(rustEvents[0].status).toBe('applied');
-  expect(rustEvents[0].sourceOrder).toBe(
-    F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].d.indexOf('rust'));
+  expect(rustEvents[0].sourceOrder).toBe(report.rust.rustChainRank);
   const rustTrace = report.rust.statTrace.filter(event => event.id === 'rust');
   expect(rustTrace).toHaveLength(1);
   expect(Object.keys(rustTrace[0].changes)).toEqual(['atk', 'thrownType']);
@@ -332,8 +347,8 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
     });
     const pick = (unit, id) => unit.statTrace.find(event => event.id === id) || null;
     return {
-      manifest: f20SourceManifests(version),
-      baseManifest: f20SourceManifests('com2_1.05.11'),
+      chain: statChain(version).map(entry => ({ ...entry })),
+      baseChain: statChain('com2_1.05.11').map(entry => ({ ...entry })),
       channelerEvent: pick(channeler, 'identity:marionetteChanneler'),
       channelerLedgerIds: channeler.statExecutionTrace.map(event => event.id),
       spiritLinkEvent: pick(spiritLink, 'identity:spiritLink'),
@@ -343,19 +358,30 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
     };
   });
 
-  const { b, d } = report.manifest;
+  const phaseIds = (chain, phase) => chain.filter(entry => entry.phase === phase)
+    .map(entry => entry.id);
+  const b = phaseIds(report.chain, 'b');
+  const d = phaseIds(report.chain, 'd');
   expect(b.filter(id => id === 'identity:marionetteChanneler')).toHaveLength(1);
   expect(b.indexOf('identity:marionetteChanneler')).toBe(b.indexOf('marionette:stats') - 1);
   expect(d.filter(id => id === 'identity:spiritLink')).toHaveLength(1);
   expect(d.indexOf('identity:spiritLink')).toBeGreaterThan(d.indexOf('shadowStrike:thrown'));
   expect(d.indexOf('identity:spiritLink')).toBeLessThan(d.indexOf('psychoForce'));
-  // Base CoM2 ships HALT stubs for both hooks, so neither id may appear there.
-  expect(report.baseManifest.b).toEqual([]);
-  expect(report.baseManifest.d).toEqual([]);
+  // Base CoM2 ships HALT stubs for both hooks, so neither region may appear there.
+  expect(phaseIds(report.baseChain, 'b')).toEqual([]);
+  expect(phaseIds(report.baseChain, 'd')).toEqual([]);
+  // The chain also says which positions are transcribed and which are inherited.
+  const allProvisional = phase => report.chain.filter(entry => entry.phase === phase)
+    .every(entry => entry.provisional);
+  expect(['b', 'c', 'd'].every(phase => !allProvisional(phase)),
+    'the transcribed regions are not marked provisional').toBe(true);
+  expect(['base', 'a', 'e'].every(phase => allProvisional(phase)),
+    'the inherited regions are marked provisional').toBe(true);
 
   expect(report.channelerEvent).not.toBeNull();
   expect(report.channelerEvent.phase).toBe('b');
-  expect(report.channelerEvent.sourceOrder).toBe(b.indexOf('identity:marionetteChanneler'));
+  expect(report.channelerEvent.sourceOrder)
+    .toBe(report.chain.findIndex(entry => entry.key === 'b:identity:marionetteChanneler'));
   expect(report.channelerEvent.changes.fantastic).toEqual({ from: false, to: true });
   // The complete stat ledger stays one-to-one with the stat sequence; the identity pre-pass
   // is its own sequence and does not inject events into it.
@@ -363,7 +389,8 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
 
   expect(report.spiritLinkEvent).not.toBeNull();
   expect(report.spiritLinkEvent.phase).toBe('d');
-  expect(report.spiritLinkEvent.sourceOrder).toBe(d.indexOf('identity:spiritLink'));
+  expect(report.spiritLinkEvent.sourceOrder)
+    .toBe(report.chain.findIndex(entry => entry.key === 'd:identity:spiritLink'));
   expect(report.spiritLinkEvent.changes.fantastic).toEqual({ from: true, to: false });
   // Documented divergence: the pre-pass executes this write ahead of every region-d stat
   // write even though UnitCalc.CAS:1306 puts its source rank late in d.
@@ -391,19 +418,23 @@ test('F20 rejects missing, duplicate, and malformed structural trace entries', a
       id, phase: 'c', order: traceOrder, traceOrder, changes: { res: { from: 1, to: 2, delta: 1 } },
       sourceOrder,
     });
+    const chain = (...entries) => entries.map(([phase, id, provisional = false]) =>
+      ({ key: `${phase}:${id}`, phase, id, provisional }));
     return {
-      missingManifestEntry: shouldThrow(() => orderStatStepsBySource(
-        [step('unlisted')], { c: ['listed'] }, ['c'])),
+      missingChainEntry: shouldThrow(() => orderStatStepsBySource(
+        [step('unlisted')], chain(['c', 'listed']))),
       duplicateStep: shouldThrow(() => orderStatStepsBySource(
-        [step('same'), step('same')], { c: ['same'] }, ['c'])),
-      duplicateManifestEntry: shouldThrow(() => orderStatStepsBySource(
-        [step('same')], { c: ['same', 'same'] }, ['c'])),
-      duplicateManifestAcrossPhases: shouldThrow(() => orderStatStepsBySource(
-        [step('same')], { b: ['same'], c: [] }, ['b', 'c'])),
+        [step('same'), step('same')], chain(['c', 'same']))),
+      duplicateChainEntry: shouldThrow(() => orderStatStepsBySource(
+        [step('same')], chain(['c', 'same'], ['c', 'same']))),
       malformedPhase: shouldThrow(() => orderStatStepsBySource(
-        [{ ...step('badPhase'), phase: 'toString' }], { c: ['badPhase'] }, ['c'])),
-      missingPhaseManifest: shouldThrow(() => orderStatStepsBySource(
-        [step('listed')], { c: ['listed'] }, ['b', 'c'])),
+        [{ ...step('badPhase'), phase: 'toString' }], chain(['toString', 'badPhase']))),
+      chainOutOfPhaseOrder: shouldThrow(() => orderStatStepsBySource(
+        [], chain(['c', 'first'], ['b', 'second']))),
+      chainEntryWithoutProvisional: shouldThrow(() => orderStatStepsBySource(
+        [], [{ key: 'c:x', phase: 'c', id: 'x' }])),
+      chainKeyDisagreeingWithPhase: shouldThrow(() => orderStatStepsBySource(
+        [], [{ key: 'b:x', phase: 'c', id: 'x', provisional: false }])),
       badTraceOrder: shouldThrow(() => assertStatTraceOrder(malformedTrace)),
       missingSourceOrder: shouldThrow(() => assertStatTraceOrder(
         [completeEvent], { steps: [{ ...completeStep, sourceOrder: undefined }] })),
@@ -417,12 +448,13 @@ test('F20 rejects missing, duplicate, and malformed structural trace entries', a
   });
 
   expect(failures).toEqual({
-    missingManifestEntry: true,
+    missingChainEntry: true,
     duplicateStep: true,
-    duplicateManifestEntry: true,
-    duplicateManifestAcrossPhases: true,
+    duplicateChainEntry: true,
     malformedPhase: true,
-    missingPhaseManifest: true,
+    chainOutOfPhaseOrder: true,
+    chainEntryWithoutProvisional: true,
+    chainKeyDisagreeingWithPhase: true,
     badTraceOrder: true,
     missingSourceOrder: true,
     wrongSourceOrder: true,

@@ -15,8 +15,9 @@
 // *Resolution-time modifiers*, and from *MoM analysis*, *Warp Creature runs early*, for the
 // two DOS engines. Where the engines order an effect differently it appears twice, as
 // version-exclusive steps — that keeps both the runner and the list trivial and makes the
-// divergence visible instead of hidden in a condition. A step whose position is deduced
-// rather than read is marked `provisional`, and says from what.
+// divergence visible instead of hidden in a condition. Where a position is deduced rather than
+// read, the deduction is marked on the chain entry that carries it (stats_manifests.js,
+// `provisional`), not on the step.
 //
 // Within a region, order only has consequences where a step *reads* — the scaling effects
 // (Xenoveterinary, Upgraded Explosive, Colossal Strength, Energy Cannon, Blaze of Glory,
@@ -530,19 +531,23 @@ function magicCalcBinaryStatSteps(ctx) {
           if (u.doomGaze > 0) u.doomGaze += chaosSurgeRtbBonus;
         }
       } }),
-    // Berserk doubles melee and sets defence to 0 absolutely. MoM-only, and MoM's recompute
-    // has not been decoded here, so the position is deduced: last thing before the Warps,
-    // which is where the pre-R1 model effectively had it.
+    // Berserk doubles melee and sets defence to 0 absolutely. MoM-only. Its position is
+    // transcribed, not deduced: 131:0x8F832 is the last block of the unit-enchantment routine,
+    // so the doubling takes every enchantment melee contribution above it and none of the
+    // combat-enchantment blocks that follow. High Prayer's melee +2 is 131:0x902CF, after the
+    // shift at 131:0x8F860.
     // PROVENANCE[berserk]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:086abf5cb60f1b58a36ab85f
-    statStep({ id: 'berserk', phase: 'c', writes: ['def', 'atk'], provisional: true,
+    statStep({ id: 'berserk', phase: 'c', writes: ['def', 'atk'],
       when: () => classicBerserk, apply: u => { u.def = 0; u.atk *= 2; } }),
 
     // CoM2/Warlord's Eternal Night resistance write (+0x089A8/+0x0A8A2) precedes the
     // compiled Darkness block (+0x0A8DA/+0x0A90F). Both are before the Warps. CoM 1 instead
     // writes its Eternal Night penalty after Tactician, below.
-    // PROVENANCE[eternalNight:enemyResistance]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:3810e1c47b8eb421a7ebb24f
+    // CoM 1 makes the same write, but as the final stat write before its terminal clamp
+    // (0x90B31) rather than before the Darkness block; each version's chain places it.
+    // PROVENANCE[eternalNight:enemyResistance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:3810e1c47b8eb421a7ebb24f | Reference docs/DOS reconstructed/unitcalc.c@span:17:72658795c2f8899328df83db
     statStep({ id: 'eternalNight:enemyResistance', phase: 'c', writes: ['res'],
-      when: () => !isCoM1 && eternalNightEnemyResPenalty !== 0,
+      when: () => eternalNightEnemyResPenalty !== 0,
       apply: u => { u.res += eternalNightEnemyResPenalty; } }),
     // The DOS recompute writes the same +2 package near the head of region c. Caster.exe
     // dispatches its native node aura after the global-enchantment block and before the Moon
@@ -609,10 +614,14 @@ function magicCalcBinaryStatSteps(ctx) {
         if (u.atk > 0) u.atk += 2;
         if (modernConventionalRangedPass && u.rtb > 0) u.rtb += 2;
       } }),
-    // PROVENANCE[darkness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:a43a4b9b9c796ff5baa3e070 | Reference docs/DOS reconstructed/unitcalc.c@span:30:a6f103fc8632f6d1513712c0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:18f99324928d11bffe6f2858 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:e289006c649dcfb1c6e9a280
+    // PROVENANCE[darkness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:a43a4b9b9c796ff5baa3e070 | Reference docs/DOS reconstructed/unitcalc.c@span:30:a6f103fc8632f6d1513712c0 | Reference docs/DOS reconstructed/unitcalc.c@span:8:7e6d93372e0de3d445a9db2b | Reference docs/DOS reconstructed/unitcalc.c@span:12:750dc4f6540b4d84533b2557 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:18f99324928d11bffe6f2858 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:e289006c649dcfb1c6e9a280
+    // CoM 1 writes Darkness after its Warp block (0x9084C) rather than before, so its position
+    // differs; each version's chain places it. The arithmetic differs too: CoM 1 lands the full
+    // value on the reduced stat and touches both gazes, where CoM2 gates every field on being
+    // positive and MoM gates only the attack fields.
     statStep({ id: 'darkness', phase: 'c',
       writes: ['res', 'def', 'atk', 'rtb', 'gaze', 'doomGaze'],
-      when: () => !isCoM1 && hasDarkness,
+      when: () => hasDarkness,
       apply: u => {
         if (isCoM2) {
           if (darknessResBonus > 0 || u.res > 0) u.res += darknessResBonus;
@@ -695,18 +704,6 @@ function magicCalcBinaryStatSteps(ctx) {
     // --- c, after the Warp block ---
     // CoM 1 only: Darkness at 0x9084C, then Supreme Light at 0x90992. Both land at full value
     // on the reduced stat. Eternal Night is deliberately not folded in: it is after Tactician.
-    // PROVENANCE[darkness:coM1]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:7e6d93372e0de3d445a9db2b | Reference docs/DOS reconstructed/unitcalc.c@span:12:750dc4f6540b4d84533b2557
-    statStep({ id: 'darkness:coM1', phase: 'c',
-      writes: ['res', 'def', 'atk', 'rtb', 'gaze', 'doomGaze'],
-      when: () => isCoM1 && hasDarkness,
-      apply: u => {
-        u.res += darknessResBonus;
-        u.def += darknessDefBonus;
-        if (darknessAtkBonus < 0 || u.atk > 0) u.atk += darknessAtkBonus;
-        if (darknessAtkBonus < 0 || u.rtb > 0) u.rtb += darknessAtkBonus;
-        if (darknessAtkBonus < 0 || u.gaze > 0) u.gaze += darknessAtkBonus;
-        if (darknessAtkBonus < 0 || u.doomGaze > 0) u.doomGaze += darknessAtkBonus;
-      } }),
     // Q7, closed: `defense += resistance / 3` is a **live** read of the record, taken where the
     // engine takes it — after Warp Resist and Darkness, before Tactician (0x90992-0x90A53).
     // PROVENANCE[supremeLight:coM1]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:b1236fda671c45bc369f8550
@@ -728,19 +725,14 @@ function magicCalcBinaryStatSteps(ctx) {
       apply: u => { u.toHit -= 20; u.def -= 3; u.res -= 3; } }),
     // Tactician, for every CoM engine: CoM 1 at 0x90AB4, CoM2/Warlord at +0x0C890.
     ...abilByPhase.cAfterWarp,
-    // CoM 1's Eternal Night resistance penalty is the final stat write before the terminal
-    // clamp (0x90B31): after Darkness, Supreme Light's live read, and Tactician.
-    // PROVENANCE[eternalNight:enemyResistance:coM1]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:17:72658795c2f8899328df83db
-    statStep({ id: 'eternalNight:enemyResistance:coM1', phase: 'c', writes: ['res'],
-      when: () => isCoM1 && eternalNightEnemyResPenalty !== 0,
-      apply: u => { u.res += eternalNightEnemyResPenalty; } }),
   ];
 }
 
 // `d`: magic calc, in UnitCalc.CAS (Warlord only).
 function magicCalcScriptStatSteps(ctx) {
   const {
-    abilByPhase, abilities, blazeOfGloryActive, colossalScaled, colossalStrength, energyCannon,
+    abilByPhase, abilities, blazeOfGloryActive, blazeOfGloryConvertsChannel, colossalScaled,
+    colossalStrength, energyCannon,
     hasMeleeAttack, hurricaneActive, hurricaneRtbPenalty, input, isWarlord, levelRank,
     modernChannelKey, pneumaFieldActive, psychoForceActive, rangedType, shadowStrikeApplies,
     thrownType, trueSightRtbToHitBonus, vampirismActive, vampirismAggregateTransfer,
@@ -869,6 +861,21 @@ function magicCalcScriptStatSteps(ctx) {
         u.atk += u.def;
         u.def = 0;
       } }),
+    // The same block's second transfer, `SThrown := SThrown + SRanged` followed by
+    // `SRanged := SRanged - SRanged`. Within one derived channel that is the type flip this
+    // step makes: the shared `rtb` slot already holds the strength, so only the channel
+    // identity moves. The
+    // addition is visible only when the unit carries a conventional Ranged *and* an independent
+    // Thrown, which are separate derivations here; the modern channel assembly in `stats.js`
+    // sums them onto the surviving Thrown field.
+    // PROVENANCE[blazeOfGlory:thrown]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:12:e27e857d1cda6919711e5456
+    statStep({ id: 'blazeOfGlory:thrown', sourceId: 'blazeOfGlory',
+      sourceLabel: 'Blaze of Glory', phase: 'd', writes: ['rangedType', 'thrownType'],
+      when: () => blazeOfGloryConvertsChannel,
+      apply: u => {
+        u.rangedType = 'none';
+        u.thrownType = 'thrown';
+      } }),
     // PROVENANCE[beatOfSwiftness]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:6:7f8a22e8f9456e94a223b150
     statStep({ id: 'beatOfSwiftness', phase: 'd', writes: ['def'],
       when: () => isWarlord && !!(abilities && abilities.beatOfSwiftness),
@@ -955,8 +962,9 @@ function postHookStatSteps(ctx) {
   ];
 }
 
-// The single ordered list, in region order. `deriveUnitStats` filters the Warlord-only script
-// regions and then walks the F20 source manifests over the result.
+// Every step this version might make, in region order. `deriveUnitStats` filters the list by
+// canonical version scope and then walks the version's execution chain over the result, so the
+// order here is an authoring convenience, not the execution order.
 function buildRawStatSteps(ctx) {
   return [
     ...baseStatSteps(ctx),

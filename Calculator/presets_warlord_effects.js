@@ -8,11 +8,11 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
-  berserkDoublesAfterOtherBonuses: {
-    desc: 'Berserk applied after all other bonuses: atk 3 + High Prayer +2 = 5, Berserk × 2 = 10 → E[dmg]=10.0',
+  berserkDoublesBeforeHighPrayer: {
+    desc: 'Berserk is the last unit-enchantment block (131:0x8F860), so it doubles before the combat-enchantment blocks: atk 3 × 2 = 6, then High Prayer +2 (131:0x902CF) → E[dmg]=8.0 (without Berserk: 5.0)',
     a: { atk:3, toHitMod:70, hp:10, abilities: { berserk: true, highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 10.000 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   berserkSetsDefToZero: {
     desc: 'Berserk sets own def to 0: Berserked unit has def=5 but effective def=0 → all atk hits land, E[dmg]=4.0',

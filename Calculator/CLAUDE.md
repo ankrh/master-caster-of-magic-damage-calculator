@@ -31,8 +31,10 @@ file that no tag mentions, so a new source cannot reach some consumers while the
 
 ## Step authoring
 
-A sequence is authored in non-decreasing phase order, checked under the debug switch. The phase
-model itself is in `SPEC.md`, *Phases*; this is how a new step is assigned to one.
+A step needs two facts beside its formula: a **phase**, the provenance label naming the region
+that makes the write, and a position in its version's **execution chain** (`statChain`,
+`stats_manifests.js`), which is what actually orders it. The phase model and the chain are in
+`SPEC.md`, *Phases* and *The execution chain*; this is how a new step is assigned a phase.
 
 **Which source implements an effect decides its phase.** Game-fiction wording ("combat
 enchantment", "trained in the city") does not. Classify by, in order:
@@ -45,10 +47,14 @@ enchantment", "trained in the city") does not. Classify by, in order:
 3. A raw unit stat, or a value written permanently into the unit's base before the pipeline runs
    — `CreateUnit.CAS`, `OverlandEndTurn.CAS`, or a cast handler writing `ABase` in `OLSpell.CAS`
    — → **base**.
-4. Neither map nor script names it → deduce, mark the step `provisional`, and say from what.
+4. Neither map nor script names it → deduce, and say from what.
 
 Steps 1–3 are checkable, which is the point; only step 4 is judgment, and it is the exception.
 Routing to each source corpus is in the root [CLAUDE.md](../CLAUDE.md).
+
+A deduced *position* is marked on the chain entry, not the step: the `provisional` flag belongs to
+the segment that carries the order. The `base`, `a` and `e` segments are provisional as a whole
+today; promoting one entry means splitting its segment and citing the address map that sources it.
 
 ## Tooltips
 
@@ -72,6 +78,21 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
 - Evaluate `PRESETS` only through browser `runTests()`; `npm test` does this in
   `tests/presets.spec.js`. Ad-hoc Node reconstruction skips DOM and `calcKey` behavior.
   `node tools/node_unit_checks.js` is a separate `deriveUnitStats` suite.
+
+## What an assertion has to be bound to
+
+An assertion earns its place only when its expected value comes from somewhere the implementation
+cannot reach: the content of a cited source (`PROVENANCE` anchors hash it), an independent
+transcription (`tests/f20-source-order.spec.js` anchors, deliberately not derived from the chain
+they check), or a numeric consequence whose expectation came from evidence rather than from
+running the code.
+
+An assertion that restates the implementation in a second notation and then checks the two agree
+has no force: both are written by the same author from the same reading, so a wrong reading passes,
+and a correct rewrite in another notation fails. Do not add one, and prefer a preset over one that
+exists — `holyBonusSkipsThrownCoM2` proves the Holy Bonus aura skips Thrown by its damage number,
+whatever shape the step has. Where a claim has no observable consequence at all, its home is a
+`PROVENANCE` citation or a comment, not an assertion that looks like verification.
 
 ## Tests
 
