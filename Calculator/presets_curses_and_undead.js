@@ -587,10 +587,10 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.040 },
   },
   animatedBreathBonusCoM2: {
-    desc: 'Animated grants +1 thrown strength in CoM2: 1 thrown → 2, 100% hit vs 0 def → 2.0',
+    desc: 'Animated grants +1 thrown strength in CoM2: 1 thrown → 2, 100% hit vs 0 def → 2.0, against 1.0 without it. Base melee is 0 so the thrown channel is measured alone, and the defender holds 10 hit points: at the earlier 1 melee against a 2 HP defender the pool clipped 3 to 2 and printed the same 2.0 with the bonus removed.',
     version: V_COM2,
-    a: { atk:1, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { animated: true } },
-    b: { def:0, hp:2 },
+    a: { atk:0, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { animated: true } },
+    b: { def:0, hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   warpDefenseSignedBeforeSupremeLightCoM: {

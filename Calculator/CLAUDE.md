@@ -68,16 +68,23 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
   object through `definePresets()` (`presets.js`), which rejects a key defined twice. Add a preset
   beside its family; add a part file by listing it in the manifest. `TEST_TREE` (`test_tree.js`)
   owns the browser's grouping. These are `data-scope="page"`: the page is the only consumer.
-- A preset must appear in `TEST_TREE`; keep ability-named groups alphabetical.
+- A preset must appear in `TEST_TREE`, and every `TEST_TREE` key must name a preset;
+  `node tools/node_unit_checks.js` asserts both directions. Keep ability-named groups alphabetical.
 - Every version-difference preset needs an explicit `version:` unless it also belongs to a
   versioned group. Artificial MoM tests resolve to `mom_1.31`; version-difference subgroups contain
   paired scenarios differing only by version.
 - Prefer +70% To Hit and To Block for deterministic 100% chances unless probability is the subject.
 - Prove the expected result changes when the feature is removed; otherwise the preset is not a
-  regression test.
+  regression test. A preset may assert that nothing changes, but only where that absence is the
+  rule under test — an exclusion the engine really makes, such as a channel, race or immunity
+  boundary. Inertness that is merely incidental to a preset named for a positive rule is a defect,
+  not a negative claim. Say which it is in the `desc`. `node tools/preset_vacuity_sweep.js` runs
+  that control over every preset and reports the ones whose named feature moves nothing; it is a
+  diagnostic, not part of `npm test`.
 - Evaluate `PRESETS` only through browser `runTests()`; `npm test` does this in
   `tests/presets.spec.js`. Ad-hoc Node reconstruction skips DOM and `calcKey` behavior.
-  `node tools/node_unit_checks.js` is a separate `deriveUnitStats` suite.
+  `node tools/node_unit_checks.js` is a separate `deriveUnitStats` suite; it reads preset keys but
+  never evaluates one.
 
 ## What an assertion has to be bound to
 

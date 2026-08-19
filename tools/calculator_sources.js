@@ -64,16 +64,36 @@ function calculatorSources() {
   return cached;
 }
 
+// `filename` is set so a throw inside a source reports that source.
+function runSource(context, file) {
+  const absolute = path.join(repoRoot, ...file.split('/'));
+  vm.runInContext(fs.readFileSync(absolute, 'utf8'), context, { filename: file });
+}
+
 // The headless calculator context every Node suite runs against: the `core` files, in manifest
-// order, in one vm context. `filename` is set so a throw inside a source reports that source.
+// order, in one vm context.
 function loadCalculatorContext() {
   const context = { console };
   vm.createContext(context);
-  for (const file of calculatorSources().core) {
-    const absolute = path.join(repoRoot, ...file.split('/'));
-    vm.runInContext(fs.readFileSync(absolute, 'utf8'), context, { filename: file });
-  }
+  for (const file of calculatorSources().core) runSource(context, file);
   return context;
 }
 
-module.exports = { calculatorSources, loadCalculatorContext, repoRoot };
+// The preset fixtures are data-scope="page" because the page is their only consumer, but they are
+// plain data and need no DOM, so the core context can load them. Selected by the names
+// Calculator/CLAUDE.md, *Presets* already fixes — the `presets*.js` parts and `test_tree.js` — so a
+// new part file added to the manifest is picked up without a second list. This exposes PRESETS and
+// TEST_TREE for key-level checks; evaluating a preset still belongs to the browser's runTests().
+const FIXTURE_SOURCE = /^Calculator\/(presets[^/]*|test_tree)\.js$/;
+
+function loadPresetContext() {
+  const fixtures = calculatorSources().page.filter(file => FIXTURE_SOURCE.test(file));
+  if (!fixtures.includes('Calculator/test_tree.js') || fixtures.length < 2) {
+    throw new Error('loadPresetContext: index.html lists no preset fixture sources');
+  }
+  const context = loadCalculatorContext();
+  for (const file of fixtures) runSource(context, file);
+  return context;
+}
+
+module.exports = { calculatorSources, loadCalculatorContext, loadPresetContext, repoRoot };

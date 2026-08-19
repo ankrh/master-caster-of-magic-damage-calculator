@@ -381,7 +381,9 @@ function statStepDebugEnabled() { return statStepDebug; }
 //   phase       one of STEP_PHASES — evidence, not decoration: it records which region
 //               or resolution axis makes this write
 //   writes      the fields the step may write. The trace and the write check read it,
-//               so it has to be complete.
+//               so it has to be complete. It is also what attributes the write to an attack
+//               channel (STAT_CHANNEL_FIELDS below), so name the exact per-channel fields
+//               rather than the widest set that happens to pass the write check.
 //   sourceId / sourceLabel  optional presentation identity for the write's game source;
 //               sourceId defaults to the stable step id, so every applied entry is named
 //   when(unit, ctx)   optional predicate; a step that never fires costs one call
@@ -560,9 +562,210 @@ function assertStepWrites(step, before, unit) {
   }
 }
 
+// --- Channel attribution (F87) ---
+//
+// A modern unit record keeps several attack channels side by side, so a write to it is not
+// only "which field" but "whose channel". These two tables are the single home for that fact,
+// and `writes:` is what resolves it: a step already declares the fields it may write, so the
+// channel it targets is read off that declaration rather than restated beside it.
+//
+// The four channels are the keys `result.modernAttacks` exposes. A To Hit modifier can serve
+// more than one of them — the modern record carries `hitchancebreath` once for two separate
+// breath strength fields (Units.RecalculateUnits.pas:203-219) — so a field maps to a *list*.
+//
+// A field absent from `STAT_CHANNEL_FIELDS` is channel-agnostic and reaches every channel:
+// either it belongs to no channel at all (`def`, `res`, `toHit`), or it is a shared slot one
+// write reaches all channels through — `toHitRtb`, which is the shape the DOS engines store.
+const STAT_ATTACK_CHANNELS = Object.freeze(['ranged', 'thrown', 'fireBreath', 'lightningBreath']);
+
+// --- Derivation slots (F80 stage C) ---
+//
+// The modern record carries the engine's four named strength fields side by side, so one walk
+// derives every channel. A **slot** is one such field plus the two type fields the calculator
+// still needs beside it: `Caster.exe` stores a single `rangedtype`, but the positioned Blaze of
+// Glory transfer and Shadow Strike grant each supply an identity to a field that was empty, so
+// each slot answers type predicates for itself.
+//
+// `legacy` is the DOS engines' shared `.ranged` slot — one field carrying ranged, Thrown, Breath
+// and both gaze strengths alike. The modern engines keep it too, as the card's legacy secondary
+// projection (`result.rtb`), which is why it is a slot here rather than a channel.
+//
+// `shadowThrown` is transitional: the engine's Focus Magic moves a unit's Thrown strength into
+// its Ranged field and zeroes Thrown (Units.RecalculateUnits.pas:885-891), leaving that field
+// free for Shadow Strike's later grant, but the calculator models the move as an identity flip
+// in place, so the two grants need separate accumulators. F90 retires it with the field move.
+// `extra` names the fields a slot owns beyond its strength and type pair: the DOS-shaped
+// `legacy` slot also stores its own secondary To Hit threshold, where the modern channels share
+// the record's three `hitchance<channel>` modifiers listed in `STAT_CHANNEL_FIELDS` below.
+const STAT_DERIVATION_SLOTS = Object.freeze({
+  legacy: Object.freeze({ channel: null, strength: 'rtb', rangedType: 'rangedType', thrownType: 'thrownType', extra: Object.freeze(['toHitRtb']) }),
+  ranged: Object.freeze({ channel: 'ranged', strength: 'rtbRanged', rangedType: 'rangedTypeRanged', thrownType: 'thrownTypeRanged' }),
+  thrown: Object.freeze({ channel: 'thrown', strength: 'rtbThrown', rangedType: 'rangedTypeThrown', thrownType: 'thrownTypeThrown' }),
+  fireBreath: Object.freeze({ channel: 'fireBreath', strength: 'rtbFireBreath', rangedType: 'rangedTypeFireBreath', thrownType: 'thrownTypeFireBreath' }),
+  lightningBreath: Object.freeze({ channel: 'lightningBreath', strength: 'rtbLightningBreath', rangedType: 'rangedTypeLightningBreath', thrownType: 'thrownTypeLightningBreath' }),
+  shadowThrown: Object.freeze({ channel: 'thrown', strength: 'rtbShadowThrown', rangedType: 'rangedTypeShadowThrown', thrownType: 'thrownTypeShadowThrown' }),
+});
+
+function statSlotFields(slot) {
+  return [slot.strength, slot.rangedType, slot.thrownType, ...(slot.extra || [])];
+}
+
+// field -> slot key, derived from the one declaration above so the two views cannot drift.
+const STAT_SLOT_OF_FIELD = Object.freeze(Object.fromEntries(
+  Object.entries(STAT_DERIVATION_SLOTS).flatMap(([key, slot]) =>
+    statSlotFields(slot).map(field => [field, key]))));
+
+const STAT_CHANNEL_FIELDS = Object.freeze({
+  toHitRanged: Object.freeze(['ranged']),
+  toHitThrown: Object.freeze(['thrown']),
+  toHitBreath: Object.freeze(['fireBreath', 'lightningBreath']),
+  ...Object.fromEntries(Object.values(STAT_DERIVATION_SLOTS)
+    .filter(slot => slot.channel)
+    .flatMap(slot => [slot.strength, slot.rangedType, slot.thrownType]
+      .map(field => [field, Object.freeze([slot.channel])]))),
+});
+
+// Checked once, at load: a field registered against a channel the output does not have would
+// otherwise attribute writes to a channel no consumer can ask for.
+for (const [field, channels] of Object.entries(STAT_CHANNEL_FIELDS)) {
+  if (!Array.isArray(channels) || channels.length === 0) {
+    throw new Error(`STAT_CHANNEL_FIELDS entry ${field} names no attack channel`);
+  }
+  for (const channel of channels) {
+    if (!STAT_ATTACK_CHANNELS.includes(channel)) {
+      throw new Error(`STAT_CHANNEL_FIELDS maps ${field} to unknown attack channel ${channel}`);
+    }
+  }
+}
+
+function assertKnownAttackChannel(channel) {
+  if (!STAT_ATTACK_CHANNELS.includes(channel)) {
+    throw new Error(`unknown attack channel ${channel}`);
+  }
+  return channel;
+}
+
+// The channels a set of record fields reaches, in canonical channel order, or `null` when none
+// of them is channel-scoped. `null` and `[]` are deliberately different answers: `null` means
+// "this write is not about any one channel", which is what makes it visible to all of them.
+function channelsForStatFields(fields) {
+  let found = null;
+  for (const field of fields || []) {
+    const owned = STAT_CHANNEL_FIELDS[field];
+    if (!owned) continue;
+    if (!found) found = new Set();
+    for (const channel of owned) found.add(channel);
+  }
+  return found ? STAT_ATTACK_CHANNELS.filter(channel => found.has(channel)) : null;
+}
+
+// What a step *may* target, from its declaration. The execution ledger uses this, because a
+// predicate-skipped step made no writes to read attribution off.
+function stepChannelTargets(step) {
+  return channelsForStatFields(step && step.writes);
+}
+
+// What an event *did* target, from the fields it actually changed.
+function traceEventChannels(event) {
+  return channelsForStatFields(event && event.changes ? Object.keys(event.changes) : null);
+}
+
+function sameChannelList(actual, expected) {
+  if (actual === null || actual === undefined) return expected === null;
+  if (!Array.isArray(actual) || expected === null) return false;
+  return actual.length === expected.length
+    && actual.every((channel, index) => channel === expected[index]);
+}
+
+function describeChannels(channels) {
+  return channels ? channels.join('+') : 'no channel';
+}
+
+function assertEventChannelAttribution(event, expected) {
+  const actual = Object.prototype.hasOwnProperty.call(event, 'channels') ? event.channels : null;
+  if (!sameChannelList(actual, expected)) {
+    throw new Error(`trace event ${event.id} attributes its write to ${describeChannels(actual)}, expected ${describeChannels(expected)}`);
+  }
+}
+
+// Reconstruct one channel's view of a walk. An event keeps the changes that reach this channel —
+// every channel-agnostic field, plus the fields this channel owns — and an event left with
+// nothing is dropped. `traceOrder` is renumbered over the survivors, so the result is a trace in
+// its own right and `assertStatTraceOrder` holds on it.
+//
+// A complete-ledger event carries attribution but no changes, so it is kept or dropped whole on
+// the channels its declaration named. That makes this work on either trace shape.
+//
+// This is what lets one walk answer for four channels: F80 stage C reads each channel's strength
+// and To Hit projection out of the same ledger the per-channel recursion produces today.
+function projectTraceToChannel(trace, channel) {
+  assertKnownAttackChannel(channel);
+  return projectTraceByField(trace,
+    field => {
+      // A slot-owned field belongs to that slot's channel and to no other, so the DOS-shaped
+      // `legacy` slot's fields reach none of them.
+      const owner = STAT_SLOT_OF_FIELD[field];
+      if (owner) return STAT_DERIVATION_SLOTS[owner].channel === channel;
+      const owned = STAT_CHANNEL_FIELDS[field];
+      return !owned || owned.includes(channel);
+    },
+    event => !Array.isArray(event.channels) || event.channels.includes(channel));
+}
+
+// One derivation slot's view of the same walk. A slot is narrower than a channel: two slots can
+// answer for one channel while `shadowThrown` remains (see above), and the DOS-shaped `legacy`
+// slot answers for none. Every other slot's fields drop; everything else survives, so a channel's
+// exposed `statTrace` is the events that reached *its* accumulator and no other.
+function projectTraceToSlot(trace, slot) {
+  if (!Object.prototype.hasOwnProperty.call(STAT_DERIVATION_SLOTS, slot)) {
+    throw new Error(`unknown derivation slot ${slot}`);
+  }
+  const channel = STAT_DERIVATION_SLOTS[slot].channel;
+  return projectTraceByField(trace,
+    field => {
+      const owner = STAT_SLOT_OF_FIELD[field];
+      if (owner) return owner === slot;
+      if (channel === null) return true;
+      const owned = STAT_CHANNEL_FIELDS[field];
+      return !owned || owned.includes(channel);
+    },
+    event => channel === null || !Array.isArray(event.channels)
+      || event.channels.includes(channel));
+}
+
+function projectTraceByField(trace, keepField, keepLedgerEvent) {
+  const projected = [];
+  for (const event of trace || []) {
+    if (!event.changes) {
+      if (!keepLedgerEvent(event)) continue;
+      projected.push(event.traceOrder === projected.length
+        ? event : { ...event, traceOrder: projected.length });
+      continue;
+    }
+    const changes = {};
+    let removed = false;
+    for (const [field, change] of Object.entries(event.changes || {})) {
+      if (!keepField(field)) { removed = true; continue; }
+      changes[field] = change;
+    }
+    if (!removed) {
+      projected.push(event.traceOrder === projected.length
+        ? event : { ...event, traceOrder: projected.length });
+      continue;
+    }
+    if (Object.keys(changes).length === 0) continue;
+    const next = { ...event, changes, traceOrder: projected.length };
+    const channels = channelsForStatFields(Object.keys(changes));
+    if (channels) next.channels = channels;
+    else delete next.channels;
+    projected.push(next);
+  }
+  return projected;
+}
+
 // One entry per step that changed something, in execution order. Not needed for the red
 // display numbers — those are `final - base` — but it is what an ordered "what modified
-// this unit" breakdown would read, and where M4's fbRtbMod attribution belongs.
+// this unit" breakdown would read, and where M4's `flameBlade:ranged` attribution belongs.
 function traceSourceForStep(step) {
   const id = step.sourceId || step.id;
   return {
@@ -598,6 +801,13 @@ function recordStepTrace(trace, step, before, unit, order) {
     };
     if (Number.isInteger(step.sourceOrder)) event.sourceOrder = step.sourceOrder;
     if (typeof step.projectionOf === 'string') event.projectionOf = step.projectionOf;
+    // Attribution comes from the fields this write actually changed, not from the declaration:
+    // a step that may write three channels but moved one records the one it moved. `changes`
+    // only ever holds declared fields, so a step that reaches an undeclared channel field is
+    // caught by `assertStepWrites` under the development write check, like any other
+    // undeclared write — not here.
+    const channels = channelsForStatFields(Object.keys(changes));
+    if (channels) event.channels = channels;
     trace.push(event);
     return event;
   }
@@ -622,6 +832,8 @@ function recordStepExecution(trace, step, order, status) {
   };
   if (Number.isInteger(step.sourceOrder)) event.sourceOrder = step.sourceOrder;
   if (typeof step.projectionOf === 'string') event.projectionOf = step.projectionOf;
+  const channels = stepChannelTargets(step);
+  if (channels) event.channels = channels;
   trace.push(event);
 }
 
@@ -666,15 +878,19 @@ function createStatExecutionTraceLedger() {
       }
     },
     materialize() {
-      return records.map(([step, order, status], traceOrder) => ({
-        id: step.id,
-        phase: step.phase,
-        order,
-        traceOrder,
-        executionOrder: traceOrder,
-        status,
-        ...(Number.isInteger(step.sourceOrder) ? { sourceOrder: step.sourceOrder } : {}),
-      }));
+      return records.map(([step, order, status], traceOrder) => {
+        const channels = stepChannelTargets(step);
+        return {
+          id: step.id,
+          phase: step.phase,
+          order,
+          traceOrder,
+          executionOrder: traceOrder,
+          status,
+          ...(Number.isInteger(step.sourceOrder) ? { sourceOrder: step.sourceOrder } : {}),
+          ...(channels ? { channels } : {}),
+        };
+      });
     },
   };
 }
@@ -714,6 +930,12 @@ function assertStatTraceOrder(trace, options = {}) {
     if (!complete && (!event.changes || Object.keys(event.changes).length === 0)) {
       throw new Error(`trace event ${event.id} records no changes`);
     }
+    // Channel attribution is part of what makes a trace well formed, and a sparse trace is
+    // assembled from several producers — the identity pre-pass, the permanent-write pass, the
+    // sequence runner — plus whatever a channel projection rebuilds. Deriving the expectation
+    // from the changed fields here, and from the step's declaration in the complete case,
+    // keeps every producer answerable to the same registry.
+    if (!complete) assertEventChannelAttribution(event, traceEventChannels(event));
     if (complete) {
       const expected = expectedSteps[index];
       if (!expected || event.id !== expected.id || event.phase !== expected.phase
@@ -732,6 +954,7 @@ function assertStatTraceOrder(trace, options = {}) {
       if (!['applied', 'skipped'].includes(event.status)) {
         throw new Error(`complete trace event ${event.id} has no execution status`);
       }
+      assertEventChannelAttribution(event, stepChannelTargets(expected));
     }
     const phaseRank = STEP_PHASE_RANK[event.phase];
     if (Number.isInteger(event.sourceOrder)) {

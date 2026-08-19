@@ -1370,7 +1370,7 @@ resolution-time routines all occupy the right relative positions. The remaining 
 
 | Effect | Engine position/effect | Calculator state on 2026-07-30 | Consequence |
 |---|---|---|---|
-| Destiny, Chaos Channels Breath, Focus Magic conversion, Vampirism, Shadow Strike | `a`/`c`/`d`, at the exact sites above | Strength and type are still mutated in the pre-sequence `calcBase*` chain | The sequence cannot reproduce which transformations see Warp, Colossal Strength or Destiny; tracked together under F12 because the single `rtb` projection is the common blocker |
+| Destiny, Chaos Channels Breath, Focus Magic conversion, Vampirism, Shadow Strike | `a`/`c`/`d`, at the exact sites above | Strength and type are still mutated in the pre-sequence `calcBase*` chain | The sequence cannot reproduce which transformations see Warp, Colossal Strength or Destiny; the single `rtb` projection named here as the common blocker is F80, with the surviving pre-sequence type flips under F81–F83 (F12 closed the ordered-transform half) |
 | Upgraded Explosive | `UnitCalcPre.CAS:1066-1078`, before Ballistics, Xenopsychology, Radio and every later combat-global/city block in `b` | `upgradedExplosive:fireBreath` is the last `b` step | Later Fire Breath additions such as True Light and Lucky Star can be doubled although the script adds them after the doubling |
 | Misfortune (the landed result exposed as Mislead) | Aura type 10 in `e`, after `UnitCalc` and the initial clamps | `mislead`/`mislead:ranged` are in `c`, before Holy Armor, Warp and all of `d` | Warp can reduce its penalty, and Blaze of Glory can consume its Defense penalty; neither happens in the engine |
 | Holy Armor | `c` +0x07407, after the earlier unit-enchantment blocks but before the global-enchantment and combat-global blocks | Inserted after the whole `abilByPhase.c` spread | Its `Defense > 5` read incorrectly sees later effects including High Prayer, Survival Instinct, Inner Power, Black Prayer and Mind Storm |
@@ -1414,8 +1414,8 @@ channels their engine write does not:
   Ranged and both Breath fields, and does not write Thrown or any Gaze.
 - The Warlord combat-cast Flame Blade point is Fire Breath only and belongs in `d`, as above.
 
-These are output defects, not merely missing trace detail. They are another reason F12's wider
-engine-shaped attack record is prerequisite work.
+These are output defects, not merely missing trace detail. They are another reason the
+engine-shaped attack record (F80) is prerequisite work.
 
 ### Calculator-relevant effects with no transform/control
 

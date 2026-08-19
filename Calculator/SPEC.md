@@ -466,6 +466,20 @@ the calculator does instead, and why.
 - **Package metadata is returned without resolver effect.** Regeneration, healing, spellcasting,
   post-combat undead creation, and side-wide ally effects have no one-round resolver consequence
   but remain visible in the returned package metadata rather than being dropped.
+- **The modern record carries a fifth secondary-attack slot the engine does not have.** `Caster.exe`
+  holds Ranged, Thrown, Fire Breath and Lightning Breath as named fields of one unit record, and the
+  calculator's modern record now carries those four and derives them in one walk. Beside them it
+  keeps the DOS engines' shared `.ranged` slot, because the card's legacy secondary value and the
+  DOS-shaped preset fixtures still read it. One deviation remains from the per-channel derivation
+  this replaced: a sixth `shadowThrown` accumulator, which exists only because Focus Magic's
+  `U.ranged := U.thrown` is modelled as an identity flip in place rather than the field move the
+  engine makes, leaving no free Thrown field for Shadow Strike's later grant; retiring it is
+  [F90](./BACKLOG.md). The DOS shared-slot shape is faithful and stays.
+- **A conventional Ranged field emptied by Blaze of Glory is retired by clearing its type.** The
+  engine retires it with `SETSTAT(U,SAmmo,0,0)` beside the transfer (`UnitCalc.CAS:1502`), and the
+  calculator models no ammunition, so the positioned transfer clears the ranged type instead. The
+  observable difference is confined to region-`e` writes that would otherwise land on a field with
+  no shots left.
 - **One classification is parked for compatibility.** Righteousness sits in the defense transform's
   replacement slot while its modern classification is unresolved, open under
   [Q27](./BACKLOG.md).

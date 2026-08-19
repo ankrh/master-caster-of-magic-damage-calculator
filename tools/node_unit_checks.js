@@ -4,7 +4,8 @@
 // This is NOT a way to evaluate PRESETS. Never reconstruct the applyPreset →
 // readUnitStats → resolveCombat path here or in any Node script — that skips the
 // DOM/calcKey layer and yields false failures. Evaluate PRESETS only via runTests()
-// in the browser (see CLAUDE.md → Testing with Playwright).
+// in the browser (see CLAUDE.md → Testing with Playwright). Reading preset *keys*
+// to check TEST_TREE membership is not evaluation; running a preset is.
 //
 // The suites themselves live one per check family in tools/unit_checks/; this entry point owns
 // the manifest checks, the shared calculator context, and the run order.
@@ -13,16 +14,20 @@ const fs = require('fs');
 const path = require('path');
 // index.html's <script> tags are the source manifest; the loader reads them rather than
 // restating the file list here.
-const { calculatorSources, loadCalculatorContext, repoRoot } = require('./calculator_sources');
 const {
-  assert, assertEqual, assertionTotal, assertSameKeyList,
+  calculatorSources, loadCalculatorContext, loadPresetContext, repoRoot,
+} = require('./calculator_sources');
+const {
+  assert, assertEqual, assertionTotal, assertSameKeyList, evalInContext,
 } = require('./unit_checks/assertions');
 const { runIdentityChecks } = require('./unit_checks/identity');
 const { runDeriveUnitStatsChecks } = require('./unit_checks/derive_unit_stats');
 const { runToBlockChecks, runDerivationStageChecks } = require('./unit_checks/derivation_stages');
 const { runWarlordUnitAbilityChecks } = require('./unit_checks/warlord_abilities');
 const { runPhaseChecks } = require('./unit_checks/phases');
-const { runStatStepChecks, runModifierTraceChecks } = require('./unit_checks/step_traces');
+const {
+  runStatStepChecks, runModifierTraceChecks, runChannelAttributionChecks,
+} = require('./unit_checks/step_traces');
 const {
   runResolutionStepChecks, runModernWeaponImmunityMappingChecks,
 } = require('./unit_checks/resolution_steps');
@@ -53,13 +58,39 @@ function runSourceManifestChecks() {
     'The data-worker sources are core sources, in manifest order');
 }
 
+// Calculator/CLAUDE.md, *Presets* requires every preset to appear in TEST_TREE. The two files are
+// authored independently — the `presets_*.js` parts by ability family, `test_tree.js` by browser
+// grouping — so neither derives the other and a key can fall out of either silently: a preset in no
+// group is unreachable from the browser, and a TEST_TREE key naming no preset is skipped without a
+// word. This asserts the stated contract in both directions and reports both in one message.
+function runPresetGroupingChecks() {
+  const context = loadPresetContext();
+  const presetKeys = new Set(Object.keys(evalInContext(context, 'PRESETS')));
+  const treeKeys = new Set();
+  const collect = nodes => {
+    for (const node of nodes) {
+      for (const key of node.keys || []) treeKeys.add(key);
+      if (node.subs) collect(node.subs);
+    }
+  };
+  collect(evalInContext(context, 'TEST_TREE'));
+  const ungrouped = [...presetKeys].filter(key => !treeKeys.has(key)).sort();
+  const orphaned = [...treeKeys].filter(key => !presetKeys.has(key)).sort();
+  assert(ungrouped.length === 0 && orphaned.length === 0,
+    'PRESETS and TEST_TREE name the same keys (Calculator/CLAUDE.md, Presets): '
+    + `${ungrouped.length} preset(s) in no TEST_TREE group [${ungrouped.join(', ')}]; `
+    + `${orphaned.length} TEST_TREE key(s) naming no preset [${orphaned.join(', ')}]`);
+}
+
 function main() {
   runSourceManifestChecks();
+  runPresetGroupingChecks();
   const ctx = loadCalculatorContext();
   // Every deriveUnitStats call below runs the step runner's write check (steps.js).
   ctx.setStatStepDebug(true);
   runStatStepChecks(ctx);
   runModifierTraceChecks(ctx);
+  runChannelAttributionChecks(ctx);
   runResolutionStepChecks(ctx);
   runModernWeaponImmunityMappingChecks(ctx);
   runIdentityChecks(ctx);

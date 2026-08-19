@@ -2,7 +2,9 @@
 
 'use strict';
 
-const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
+const {
+  evalInContext, assert, assertEqual, assertClose, assertSameKeyList, baseUnitInput,
+} = require('./assertions');
 
 function runStatStepChecks(ctx) {
   const HALT = evalInContext(ctx, 'HALT');
@@ -481,7 +483,7 @@ function runModifierTraceChecks(ctx) {
   const typeOnlyFocusEvent = typeOnlyFocus.modernAttacks.ranged.statTrace
     .find(entry => entry.id === 'focusMagic:conversion');
   assert(typeOnlyFocusEvent && typeOnlyFocusEvent.phase === 'c'
-      && typeOnlyFocusEvent.changes.rangedType,
+      && typeOnlyFocusEvent.changes.rangedTypeRanged,
   'A strength-preserving Focus type conversion remains visible as a phase-c channel event');
 
   const tracedVampirism = ctx.deriveUnitStats(baseUnitInput({
@@ -671,4 +673,232 @@ function runModifierTraceChecks(ctx) {
     'Inactive and zero-valued inputs are omitted instead of producing no-op trace entries');
 }
 
-module.exports = { runStatStepChecks, runModifierTraceChecks };
+// Channel attribution on the trace layer (F87). A modern record keeps its attack channels in
+// separate fields, so a recorded write says which channel it reached, and one walk can answer
+// for all four. The expected channel sets below come from the sources each step cites — what
+// the engine writes — not from the step's own code.
+function runChannelAttributionChecks(ctx) {
+  const projectTraceToChannel = ctx.projectTraceToChannel;
+  const assertStatTraceOrder = ctx.assertStatTraceOrder;
+
+  // One Warlord unit carrying all four channels, with three To Hit writers whose channel sets
+  // differ: Heavenly Light Ranged and Thrown, True Sight Ranged alone, Hurricane all four.
+  const multiChannel = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', atk: 6, rtb: 5, rtbType: 'missile', hp: 10,
+    abilities: { heavenlyLight: true, trueSight: true },
+    hurricane: true,
+    modernAttacks: {
+      ranged: { strength: 5, type: 'missile' },
+      thrown: { strength: 4, type: 'thrown' },
+      fireBreath: { strength: 3, type: 'fire' },
+      lightningBreath: { strength: 2, type: 'lightning' },
+    },
+  }));
+  // The one walk, before any channel projection: F80 stage C derives every channel from it.
+  const walk = multiChannel.statTrace;
+  const eventOf = id => walk.find(entry => entry.id === id);
+
+  // Units.RecalculateUnits.pas:1451-1454 writes hitchanceranged and hitchancethrown; breath is
+  // untouched.
+  const heavenlyLight = eventOf('chance:heavenlyLight:rtb');
+  assert(!!heavenlyLight, 'Heavenly Light records a To Hit write on the multi-channel unit');
+  assertSameKeyList(heavenlyLight.channels, ['ranged', 'thrown'],
+    'Heavenly Light attributes its To Hit write to Ranged and Thrown');
+  assert(!Object.prototype.hasOwnProperty.call(heavenlyLight.changes, 'toHitBreath'),
+    'Heavenly Light leaves the Breath To Hit field alone');
+
+  // UnitCalc.CAS:326-328 writes SToRanged alone.
+  const trueSight = eventOf('chance:trueSight:ranged');
+  assert(!!trueSight, 'True Sight records a To Hit write on the multi-channel unit');
+  assertSameKeyList(trueSight.channels, ['ranged'],
+    'True Sight attributes its To Hit write to Ranged alone');
+
+  // UnitCalc.CAS:558,569-571 writes -20 Ranged, -20 Thrown and -30 Breath, and the one breath
+  // modifier serves both breath strength fields (Units.RecalculateUnits.pas:203-219).
+  const hurricane = eventOf('chance:hurricane');
+  assert(!!hurricane, 'Hurricane records a To Hit write on the multi-channel unit');
+  assertSameKeyList(hurricane.channels, ['ranged', 'thrown', 'fireBreath', 'lightningBreath'],
+    'Hurricane attributes its To Hit write to every channel');
+  assertEqual(hurricane.changes.toHitRanged.delta, -20, 'Hurricane takes 20 points off Ranged');
+  assertEqual(hurricane.changes.toHitThrown.delta, -20, 'Hurricane takes 20 points off Thrown');
+  assertEqual(hurricane.changes.toHitBreath.delta, -30, 'Hurricane takes 30 points off Breath');
+
+  // Reconstructing one channel's view of that single walk.
+  const projections = {};
+  for (const channel of ['ranged', 'thrown', 'fireBreath', 'lightningBreath']) {
+    projections[channel] = projectTraceToChannel(walk, channel);
+    assertStatTraceOrder(projections[channel]);
+    assert(projections[channel].every(entry =>
+      !entry.channels || entry.channels.includes(channel)),
+    `The ${channel} reconstruction carries no other channel's write`);
+  }
+
+  const idsIn = trace => trace.map(entry => entry.id);
+  assert(!idsIn(projections.fireBreath).includes('chance:trueSight:ranged')
+      && !idsIn(projections.fireBreath).includes('chance:heavenlyLight:rtb'),
+  'A Breath reconstruction drops the Ranged-only and Ranged/Thrown To Hit writes');
+  assert(idsIn(projections.thrown).includes('chance:heavenlyLight:rtb')
+      && !idsIn(projections.thrown).includes('chance:trueSight:ranged'),
+  'A Thrown reconstruction keeps Heavenly Light and drops True Sight');
+  assertSameKeyList(
+    Object.keys(projections.thrown.find(entry => entry.id === 'chance:heavenlyLight:rtb').changes),
+    ['toHitThrown'],
+    'A Thrown reconstruction keeps only the Thrown half of a two-channel write');
+  assertSameKeyList(
+    Object.keys(projections.fireBreath.find(entry => entry.id === 'chance:hurricane').changes),
+    ['toHitBreath'],
+    'A Breath reconstruction keeps only the Breath half of a four-channel write');
+
+  // Fire and Lightning Breath share the one To Hit modifier, so their reconstructions agree.
+  assertSameKeyList(idsIn(projections.fireBreath), idsIn(projections.lightningBreath),
+    'The two Breath channels reconstruct the same To Hit writes');
+
+  // Nothing channel-agnostic is lost: a def or res write belongs to every channel. The reverse
+  // does not hold — a write that reached only other channels' strength fields is stripped to its
+  // agnostic remainder, which is why this is containment rather than set equality.
+  const agnosticIds = idsIn(walk.filter(entry => !entry.channels));
+  for (const channel of Object.keys(projections)) {
+    const projectedIds = idsIn(projections[channel]);
+    assert(agnosticIds.every(id => projectedIds.includes(id)),
+      `The ${channel} reconstruction keeps every channel-agnostic write`);
+  }
+
+  let unknownChannel = null;
+  try { projectTraceToChannel(walk, 'breath'); } catch (err) { unknownChannel = err.message; }
+  assert(unknownChannel && unknownChannel.includes('unknown attack channel'),
+    'A reconstruction cannot be asked for a channel the record has no field for');
+
+  // The complete ledger attributes from the declaration, so a predicate-skipped step still says
+  // which channel it would have reached — what a per-channel execution ledger is rebuilt from.
+  const withoutTrueSight = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', atk: 6, rtb: 5, rtbType: 'missile', hp: 10,
+    hurricane: true,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
+  }));
+  const skippedTrueSight = withoutTrueSight.statExecutionTrace
+    .find(event => event.id === 'chance:trueSight:ranged');
+  assert(!!skippedTrueSight && skippedTrueSight.status === 'skipped',
+    'The ledger still visits True Sight when its predicate is false');
+  assertSameKeyList(skippedTrueSight.channels, ['ranged'],
+    'A predicate-skipped step keeps the channel its declaration targets');
+
+  // The same reconstruction runs over the complete ledger, where an event carries attribution
+  // but no changes and is therefore kept or dropped whole.
+  const ledger = multiChannel.statExecutionTrace;
+  const breathLedger = projectTraceToChannel(ledger, 'fireBreath');
+  const breathLedgerIds = breathLedger.map(event => event.id);
+  assert(!breathLedgerIds.includes('chance:trueSight:ranged')
+      && !breathLedgerIds.includes('chance:heavenlyLight:rtb')
+      && breathLedgerIds.includes('chance:hurricane'),
+  'A Breath ledger reconstruction drops the steps whose declaration excludes Breath');
+  assertSameKeyList(
+    breathLedgerIds.filter(id => !breathLedger.find(event => event.id === id).channels),
+    ledger.filter(event => !event.channels).map(event => event.id),
+    'A ledger reconstruction keeps every channel-agnostic step');
+  assert(breathLedger.every((event, index) => event.traceOrder === index),
+    'A ledger reconstruction is renumbered over its survivors');
+
+  // Attribution is only as complete as `writes:`, so the existing write check is what keeps a
+  // step from reaching a channel field its declaration does not name.
+  let undeclaredChannel = null;
+  try {
+    ctx.runStatSteps([{
+      id: 'leak', phase: 'c', writes: ['toHitRanged'],
+      apply: u => { u.toHitRanged += 5; u.toHitThrown += 5; },
+    }], { toHitRanged: 0, toHitThrown: 0 }, { trace: [], validateWrites: true });
+  } catch (err) {
+    undeclaredChannel = err.message;
+  }
+  assert(undeclaredChannel && undeclaredChannel.includes('undeclared field toHitThrown'),
+    'A step reaching a channel field it did not declare is rejected');
+
+  let misattributed = null;
+  try {
+    assertStatTraceOrder([{
+      id: 'wrong', source: { id: 'wrong', label: 'wrong' }, phase: 'c', order: 0, traceOrder: 0,
+      channels: ['thrown'], changes: { toHitRanged: { from: 0, to: 5, delta: 5 } },
+    }]);
+  } catch (err) {
+    misattributed = err.message;
+  }
+  assert(misattributed && misattributed.includes('attributes its write to'),
+    'A trace event whose attribution disagrees with its changed fields is rejected');
+
+  runRecordFieldChecks(ctx);
+}
+
+// One walk, four strength fields (F80). These read every channel of one unit, so a write that
+// landed on the wrong record field, or a To Hit gate decided by some other channel's type, shows
+// up as a wrong number on a channel this derivation was not "for". The expectations come from the
+// cited engine gates, not from the steps.
+function runRecordFieldChecks(ctx) {
+  const fourChannels = rangedType => ({
+    ranged: { strength: 5, type: rangedType },
+    thrown: { strength: 4, type: 'thrown' },
+    fireBreath: { strength: 3, type: 'fire' },
+    lightningBreath: { strength: 2, type: 'lightning' },
+  });
+  const probe = overrides => ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7', atk: 4, hp: 10, ...overrides,
+  }));
+  const strengths = derived => ['ranged', 'thrown', 'fireBreath', 'lightningBreath']
+    .map(key => derived.modernAttacks[key].strength);
+  const toHits = derived => ['ranged', 'thrown', 'fireBreath', 'lightningBreath']
+    .map(key => derived.modernAttacks[key].toHit);
+
+  // `Caster.exe` $00599EE8-$00599FA8 writes `firebreath += 4` and no other attack field.
+  const chaosChannels = probe({
+    abilities: { ccFireBreath: true }, rtbType: 'missile', rtb: 5,
+    modernAttacks: fourChannels('missile'),
+  });
+  assertEqual(strengths(chaosChannels).join(','), '5,4,7,2',
+    'Chaos Channels adds its Fire Breath to the Fire Breath field alone');
+
+  // Units.RecalculateUnits.pas:1451-1454 and its strength half (:span e405a407) write the
+  // conventional Ranged field; Thrown and both Breaths keep their own values.
+  const goodMoon = probe({
+    abilities: { goodMoon: true }, rtbType: 'missile', rtb: 5,
+    modernAttacks: fourChannels('missile'),
+  });
+  assertEqual(strengths(goodMoon).join(','), '6,4,3,2',
+    'Good Moon adds its point to the conventional Ranged field alone');
+
+  // ApplyMagicWeapons (Units.RecalculateUnits.pas:639-662) writes `hitchanceranged` only when the
+  // record's own `rangedtype` is not magical, `hitchancethrown` only while the record's Thrown
+  // field is positive, and never `hitchancebreath`. Holy Weapon (:1806-1809) repeats both gates.
+  // The two probes differ only in the Ranged channel's type, so the Ranged modifier cannot have
+  // been decided by the Thrown channel that is present in both.
+  const magicWeapon = { weapon: 'magic', abilities: { holyWeapon: true } };
+  const materialOnMissile = probe({
+    ...magicWeapon, rtbType: 'missile', rtb: 5, modernAttacks: fourChannels('missile'),
+  });
+  assertEqual(toHits(materialOnMissile).join(','), '0.5,0.5,0.3,0.3',
+    'Material and Holy Weapon reach a non-magical Ranged channel and the Thrown channel');
+  const materialOnMagicRanged = probe({
+    ...magicWeapon, rtbType: 'magic_s', rtb: 5, modernAttacks: fourChannels('magic_s'),
+  });
+  assertEqual(toHits(materialOnMagicRanged).join(','), '0.3,0.5,0.3,0.3',
+    'A magical Ranged channel is withheld both modifiers while Thrown still receives them');
+
+  // Units.RecalculateUnits.pas:1451-1454: the Heavenly Light material tail writes Ranged only
+  // when the current type is not magical, and Thrown unconditionally. Its strength half reads
+  // the conventional Ranged field, so the +1 lands there whatever that field's type is.
+  const heavenlyMissile = probe({
+    abilities: { heavenlyLight: true }, rtbType: 'missile', rtb: 5,
+    modernAttacks: fourChannels('missile'),
+  });
+  assertEqual(toHits(heavenlyMissile).join(','), '0.4,0.4,0.3,0.3',
+    'Heavenly Light reaches a non-magical Ranged channel and the Thrown channel');
+  assertEqual(strengths(heavenlyMissile).join(','), '6,4,3,2',
+    'Heavenly Light adds its strength to the conventional Ranged field alone');
+  const heavenlyMagicRanged = probe({
+    abilities: { heavenlyLight: true }, rtbType: 'magic_s', rtb: 5,
+    modernAttacks: fourChannels('magic_s'),
+  });
+  assertEqual(toHits(heavenlyMagicRanged).join(','), '0.3,0.4,0.3,0.3',
+    'Heavenly Light withholds its To Hit from a magical Ranged channel but not from Thrown');
+  assertEqual(strengths(heavenlyMagicRanged).join(','), '6,4,3,2',
+    'Heavenly Light still writes the conventional Ranged strength when that channel is magical');
+}
+
+module.exports = { runStatStepChecks, runModifierTraceChecks, runChannelAttributionChecks };

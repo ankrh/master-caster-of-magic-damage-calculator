@@ -438,6 +438,52 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
 
+  // --- Heavenly Light ---
+  heavenlyLightRangedCoM2: {
+    desc: 'Heavenly Light (CoM 2) on an eligible normal unit: +1 conventional ranged strength and +10% Ranged To Hit → missile 3 at 40% = 1.200. Without the enchantment this is missile 2 at 30% = 0.600.',
+    version: V_COM2,
+    a: { rtbType:'missile', rtb:2, hp:10, abilities: { heavenlyLight: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
+  heavenlyLightNotBreathCoM2: {
+    desc: 'Channel boundary: Units.RecalculateUnits.pas:1451-1454 writes Ranged and Thrown only, and the strength bonus reads the conventional Ranged field, so a Fire Breath unit gains neither — breath 2 at 30% = 0.600, the same as without the enchantment. A leak into the Breath To Hit modifier gives 0.800; one into the Breath strength gives 0.900. Paired with heavenlyLightRangedCoM2, which is the same unit with a missile attack.',
+    version: V_COM2,
+    a: { rtbType:'fire', rtb:2, hp:10, abilities: { heavenlyLight: true } },
+    b: { hp:10 },
+    rangedCheck: false,
+    expected: { dmgToA: 0, dmgToB: 0.600 },
+  },
+
+  // --- Channel fields on the modern record (F80) ---
+  ccFireBreathSeparatesThrownWarlord: {
+    desc: 'Record fields: `Caster.exe` $00599F3E adds 4 to the Fire Breath field and writes no other attack, so a Thrown unit finishes with two attacks rather than one boosted one. Hurricane separates them by channel — UnitCalc.CAS:558,569-571 takes 20 points off Thrown and 30 off Breath — so from a 100% base the Thrown 2 fires at 80% and the granted Fire Breath 4 at 70%: 1.6 + 2.8 = 4.400. A grant landing on the Thrown field instead leaves one attack of 6 (4.200 as Breath, 4.800 as Thrown), and a lost Breath field leaves the Thrown alone at 1.600.',
+    version: V_WARLORD,
+    a: { atk:0, rtbType:'thrown', rtb:2, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
+    b: { hp:10 },
+    hurricane: true,
+    expected: { dmgToA: 0, dmgToB: 4.400 },
+  },
+  weaponToHitReadsOwnRangedChannelWarlord: {
+    desc: 'ApplyMagicWeapons (Units.RecalculateUnits.pas:639-662) gates `hitchanceranged` on the record\'s own `rangedtype` and `hitchancethrown` on the record\'s Thrown field, so the Ranged modifier is decided by the Ranged channel even while the unit also carries the Thrown attack Bombs & Grenades creates. Magic weapon on missile 3: 3 at 40% = 1.200. Without the material this is 0.900. Paired with weaponToHitSkipsMagicRangedChannelWarlord, the same unit with a magical ranged type.',
+    version: V_WARLORD,
+    a: { atk:1, weapon:'magic', rtbType:'missile', rtb:3, hp:10,
+      abilities: { outlanderWizard: true, explosive: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
+  weaponToHitSkipsMagicRangedChannelWarlord: {
+    desc: 'Channel boundary: the same unit with a Sorcery ranged attack. `Ismagicalranged` holds, so ApplyMagicWeapons withholds the material To Hit modifier from the Ranged channel and the attack stays at 30% — 3 at 30% = 0.900, the same as with no weapon material at all. That inertness is the rule under test, and it is not general: its missile pair reaches 1.200 from the same material, and reading this gate from the Thrown channel Bombs & Grenades created, whose own material gate passes, would reach 1.200 here too.',
+    version: V_WARLORD,
+    a: { atk:1, weapon:'magic', rtbType:'magic_s', rtb:3, hp:10,
+      abilities: { outlanderWizard: true, explosive: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
+
   // --- Wraith Form ---
   wraithFormGrantsWeaponImmunity: {
     desc: 'Wraith Form grants Weapon Immunity: normal melee vs WF unit gets blocked by WI defense',

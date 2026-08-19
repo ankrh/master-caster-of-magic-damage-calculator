@@ -423,6 +423,24 @@ definePresets({
     hurricane: true,
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
+  hurricanePenaltySizeRanged: {
+    desc: 'Hurricane’s ranged penalty is 20 points, not 30: missile 2 at 100% to hit drops to 80% → 1.6 dmg. Paired with hurricanePenaltySizeBreath, which starts from the same 100% and lands on 70%. The 30%-base presets above cannot tell the two penalties apart because both floor at 10%. Without Hurricane this is 2.0.',
+    version: V_WARLORD,
+    a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    hurricane: true,
+    expected: { dmgToA: 0, dmgToB: 1.600 },
+  },
+  hurricanePenaltySizeBreath: {
+    desc: 'Hurricane’s breath penalty is 30 points: fire breath 2 at 100% to hit drops to 70% → 1.4, plus 1 melee at an untouched 30% → 1.7 dmg. Paired with hurricanePenaltySizeRanged: same base, 10 points further down because Fire and Lightning Breath read the separate breath modifier. Without Hurricane this is 2.3.',
+    version: V_WARLORD,
+    a: { atk:1, rtbType:'fire', rtb:2, toHitRtbMod:70, hp:10 },
+    b: { hp:10 },
+    rangedCheck: false,
+    hurricane: true,
+    expected: { dmgToA: 0, dmgToB: 1.700 },
+  },
 
   destinyOverridesCCFireBreathCoM2: {
     desc: 'Type precedence (CoM2): Chaos Channels Fire Breath is applied before Destiny, so the final type is Life and Warp Reality penalizes both channels. Destiny doubles more than melee and HP — it also doubles fire breath ($0059A51F), lightning breath ($0059A559) and thrown ($0059A593) — so the Chaos Channels breath 4 doubles to 8 and its Supernatural minimum rides alongside the doubled melee → 0.387 dmg. Dropping Destiny gives 0.300; reversing the type precedence would give 1.403.',

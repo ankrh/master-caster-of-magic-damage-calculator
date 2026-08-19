@@ -4,6 +4,206 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-19
+
+- **F83 — the pre-Focus type snapshots are gone.** `rangedTypeBeforeFocus` /
+  `thrownTypeBeforeFocus` and all six per-site version ternaries reading them are deleted
+  (`stats.js`). Each reader now takes the channel identity live at its own step's position: the
+  three writes the chain puts ahead of `c:focusMagic:conversion` — `b:fieryFury`,
+  `b:bombsGrenades` and `c:level` — are evaluated before the conversion in the pre-sequence
+  chain, and `flameBlade:ranged` reads `u[rangedTypeField]`/`u[thrownTypeField]` in its own
+  `apply`, which is what lets one gate serve CoM 1 (whose chain puts the step *before* the
+  conversion) and CoM2/Warlord (after) with no `isCoM1` test. The M4 excess still subtracts
+  `ffRtbMod`, the amount region `b` actually wrote. **Arithmetic moved in one version:** the
+  three `isWarlord ?` ternaries were standing in for the pre-sequence Blaze of Glory and Shadow
+  Strike flips that F81 and F82 removed, and their pre-Focus side effect made Warlord disagree
+  with CoM2 at region-`c` positions the two chains share. On Warlord under Focus Magic only,
+  Orihalcon now reaches the converted magical ranged (missile 6 → `magic_s` 8, was 6) while
+  Discipline (−1), Blazing March (−3) and the Warlord blade (−2) stop reaching it — each now
+  equal to CoM2 1.05.11, which no Warlord script overrides: `UnitCalcPre.CAS` and `UnitCalc.CAS`
+  name Discipline and Blazing March only to set flags and Orihalcon not at all. Nothing moves in
+  `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` or `com2_1.05.11`, measured by diffing 298,720
+  derivations against an inverted-edit baseline. The four assertions that pinned the old Warlord
+  values are replaced by the claim that carries them: a Focus-converted attack and a native
+  magical one of the same strength must be treated alike by every write after the conversion,
+  checked in both modern versions.
+
+- **F82 — Shadow Strike's grant is a positioned region-`d` step.** `SThrown := SThrown + 1 +
+  SAttack/3` (`UnitCalc.CAS:1262-1266`) still runs where it always did, after Colossal Strength
+  and Vampirism, but the pre-sequence `shadowStrikeApplies` flip that re-aimed a slot's identity
+  before any step ran is gone, and the Thrown field it fills is now seeded empty and typeless
+  like the Blaze of Glory transfer's: the step supplies the identity, so nothing before
+  `UnitCalc.CAS:1262` sees a Thrown attack the grant has not yet made. `shadowStrikeFillsSlot`
+  replaces the flip and states only which field the write reaches. Three writers keep reaching
+  that field through it, because the binary writes them with no positivity or type gate:
+  Weakness's and Mind Storm's `Dec(U.thrown, …)` (`Units.RecalculateUnits.pas:2273-2295`) and
+  Holy Weapon's `Inc(U.hitchancethrown, 10)` (`:1803-1809`) — cross-referenced from F84, which
+  owns generalizing them. Five type-gated ones stop reaching it, each toward the engine: Blazing
+  March's +3 Thrown, Flame Blade (Warlord) +2, Fiery Fury +2, the Wall of Fire garrison +1, and
+  Metal Fires' shared blade bonus. So do the level ladder, gated on `BaseUnits.thrown > 0`
+  (`:562-564`), and the magic-weapon strength and To Hit, gated on `Units.thrown > 0` (`:660-663`)
+  — both read the field in region `c`, where the grant has not written it. Nothing moves in the
+  other four versions. The transitional `shadowThrown` slot stays: the calculator models Focus
+  Magic's `U.ranged := U.thrown; U.thrown := 0` as an identity flip in place, so the record's
+  Thrown field is not free for the grant, and making that move real needs position-aware slot
+  gates — filed as [F90](./BACKLOG.md), blocked on M12. New coverage:
+  `shadowStrikeGrantPrecedesNoBlazingMarchWarlord` 17.000, plus the two-channel acceptance case
+  (`thrown 10` on F81's fixture) and the level/weapon exclusions in
+  `tools/unit_checks/warlord_abilities.js`.
+
+- **F81 — Blaze of Glory's channel transfer is a positioned region-`d` step.** `SThrown :=
+  SThrown + SRanged` / `SRanged := SRanged - SRanged` (`UnitCalc.CAS:1490-1501`) is now emitted by
+  `d:blazeOfGlory:thrown` at that line's own position instead of by a pre-sequence
+  `blazeOfGloryConvertsChannel` flip plus a post-walk merge of two slots, so every earlier
+  predicate reads the conventional Ranged identity the engine's earlier writes read. The Thrown
+  field is seeded empty and typeless where the unit has none, since the transfer has no existence
+  gate; the step supplies the identity, and the region-`e` slot clamp spares that field the way it
+  already spares the armor-to-melee transfer. Rust gained the `SETSTAT(U,SThrown,0,0)` strength
+  write beside its type clear (`:493-503`) — cosmetic until the transfer had a position, load-bearing
+  now. Eight further effects change under Blaze on Warlord, each toward the engine: Rust −3 reaches
+  the missile field (`thrown 3`, was 6); Weakness and Mind Storm carry their pre-clamp negative into
+  the transfer; Lionheart's +3 lands on missile; Misfortune's `persistentRanged` −1 lands on the
+  emptied Ranged field rather than the survivor; Metal Fires and Wall of Fire stop reaching a magic
+  ranged attack through the flipped branch; Reinforce Magic reaches it; and the Focus-created Ranged
+  is transferred, the old `calcBaseRtb > 0` gate having skipped it. `blazeOfGlory` alone, Colossal
+  Strength, Vampirism and Shadow Strike are unchanged. Clearing the emptied field's ranged type is
+  this model's stand-in for the `SETSTAT(U,SAmmo,0,0)` beside the transfer, recorded in
+  [SPEC.md](./SPEC.md), *Deliberate deviations from the engine*. New coverage:
+  `blazeOfGloryFollowsRustWarlord` 3.000, and the two-channel acceptance case in
+  `tools/unit_checks/warlord_abilities.js`.
+
+- **F88 — the modern engines derive every attack channel in one walk.** `Caster.exe` holds Ranged,
+  Thrown, Fire Breath and Lightning Breath as four named fields of one record
+  (`Units.RecalculateUnits.pas:203-219`) and mutates them in place, so the calculator now does too:
+  `STAT_DERIVATION_SLOTS` (`steps.js`) declares one **slot** per record strength field, each with
+  the type pair the two surviving pre-sequence flips still need beside it, and `deriveUnitStats`
+  builds one context per slot and runs the sequence once. The per-channel recursion is gone with
+  every ownership gate it needed — `_modernChannelPass`, `_modernChannelKey`,
+  `energyCannonOwnsThisPass`, `ccOwnsThisPass`, `marionetteRangedPass`,
+  `modernConventionalRangedPass`, `shadowStrikeOwnsThisPass` and the rest are per-slot facts now,
+  not per-derivation ones. The channel-seeding rules survive as field creation: an effect with no
+  existence gate — Shadow Strike, Bombs & Grenades, Focus Magic, Marionette, Chaos Channels Fire
+  Breath, combat Flame Blade, Dragon Mound, Lightning Blade — seeds the field its step then writes.
+  Vampirism stops probing: `UnitCalc.CAS:1490`'s combined truncation is now a plain cross-channel
+  read of the three source fields at its own region-`d` position, which is the write F80 existed to
+  make expressible. The DOS engines keep the shared `.ranged` slot, which the modern record carries
+  beside its four as the card's legacy secondary projection — a fifth slot the engine has no field
+  for, recorded in [SPEC.md](./SPEC.md), *Deliberate deviations from the engine*. The three To Hit
+  writers F87 measured are re-sourced: `chance:weapon:rtb`, `chance:holyWeapon:rtb` and
+  `chance:heavenlyLight:rtb` decide `hitchanceranged` from the record's own `rangedtype` and
+  `hitchancethrown` from its Thrown field (`Units.RecalculateUnits.pas:639-662`, `:1806-1809`,
+  `:1451-1454`), so a Thrown channel can no longer decide the Ranged modifier — latent under the
+  recursion, a live defect under one walk. No arithmetic moves in any of the five versions; the
+  flips and the Blaze of Glory merge stayed for F81/F82. New coverage: `ccFireBreathSeparatesThrownWarlord`
+  4.400, which Hurricane's −20/−30 split makes sensitive to which field the grant lands in, and the
+  pair `weaponToHitReadsOwnRangedChannelWarlord` 1.200 / `weaponToHitSkipsMagicRangedChannelWarlord`
+  0.900, which read the Ranged modifier off a unit that also carries a Bombs & Grenades Thrown;
+  plus per-channel strength and To Hit checks over a four-channel unit in
+  `tools/unit_checks/step_traces.js`.
+
+- **F87 — a recorded write now names the attack channel it reached.** `STAT_CHANNEL_FIELDS`
+  (`steps.js`) is the single map from record field to channel — `toHitRanged` → Ranged,
+  `toHitThrown` → Thrown, `toHitBreath` → both Breaths, since one `hitchancebreath` modifier
+  serves two strength fields (`Units.RecalculateUnits.pas:203-219`) — and a step’s `writes:` is
+  what resolves it, so nothing gains a second declaration. `recordStepTrace` tags a sparse event
+  with the channels its *changed* fields reached; the execution ledger tags every visited step,
+  applied or predicate-skipped, with the channels its *declaration* targets, so a step that did
+  not fire still says which channel it would have reached. `projectTraceToChannel` rebuilds one
+  channel’s view of a walk: channel-agnostic writes survive whole, a shared write keeps only that
+  channel’s half, emptied events are dropped and `traceOrder` is renumbered, so the result is a
+  trace `assertStatTraceOrder` holds on — that assertion now also requires attribution to be
+  present and exact, in both the sparse and the complete form, which reaches the producers that
+  build trace events outside the runner. No arithmetic moves in any of the five versions and the
+  per-channel recursion stays; the next stage of F80 removes it and registers the four strength
+  fields in the same table. Measuring the walk found three To Hit writers whose eligibility still
+  reads the pass’s `rangedType`/`thrownType` rather than a per-channel field, recorded at
+  `secondaryHitField` (`stats.js`); each pass’s own field is right, the others are latent. New
+  coverage: channel-attribution and reconstruction checks in `tools/unit_checks/step_traces.js`,
+  plus the enchantment’s first presets — `heavenlyLightRangedCoM2` 1.200 and, for the channel
+  boundary, `heavenlyLightNotBreathCoM2` 0.600 against the 0.800 a Breath To Hit leak gives.
+
+- **F86 — The modern secondary To Hit slot became three fields.** `toHitRtb` splits into
+  `toHitRanged`, `toHitThrown` and `toHitBreath` for `com2_1.05.11` and `com2_warlord_1.5.12.7`;
+  the three DOS engines keep the single slot, which is the shape they store. Fire and Lightning
+  Breath are separate strength fields sharing one `hitchancebreath` modifier
+  (`Units.RecalculateUnits.pas:203-219`), so three fields and not four — `toHitMelee` was already
+  its own. Every writer now names its channels instead of depending on which channel the pass
+  derives: Ballistics Training all three (`UnitCalcPre.CAS:1084-1086`); Heavenly Light, Holy Weapon
+  and weapon material ranged and thrown but never breath (`Units.RecalculateUnits.pas:1451-1454`,
+  `:1806-1809`, `:639-662`); True Sight ranged alone (`UnitCalc.CAS:326-328`), replacing the
+  `modernConventionalRangedPass` gate F85 above used; Hurricane −20 ranged, −20 thrown, −30 breath
+  (`UnitCalc.CAS:558,569-571`), retiring the `hurricaneRtbPenalty` 0.2/0.3 ternary that existed
+  only because two engine fields shared one slot. Region `e` clamps all three against the
+  already-clamped common value (`:2456-2480`), and Energy Cannon’s threshold reads the ranged
+  field (`UnitCalc.CAS:1435-1443`). `result.toHitRtb` still exposes the deriving channel’s field,
+  so the output contract is unchanged. Two values move, both where the shared slot had been
+  self-inconsistent: a Lightning-Blade-converted channel is Breath and so no longer takes Heavenly
+  Light’s Thrown bonus, and a modern unit with no secondary attack now shows True Sight’s
+  unconditional `SToRanged` write. Nothing else moves, in any of the five versions. The
+  per-channel recursion stays; collapsing it is the next stage of F80. New coverage reads several
+  channels off one unit — Hurricane in `warlord_abilities.js`, Holy Weapon in
+  `derive_unit_stats.js` — plus presets `hurricanePenaltySizeRanged` 1.600 and
+  `hurricanePenaltySizeBreath` 1.700, because the existing `hurricaneRanged`/`hurricaneBreath` pair
+  cannot separate −20 from −30: from a 30% base both floor at 10%.
+
+- **F85 — Warlord True Sight leaked its To Hit bonus onto Thrown and Breath.** `UnitCalc.CAS:326-328`
+  writes `SToRanged` alone, but `trueSightRtbToHitBonus` (`stats.js`) carried no channel test, so
+  under the per-channel derivation the +5 also landed on the Thrown, Fire Breath and Lightning
+  Breath passes. Gated on `modernConventionalRangedPass`, the same fix F67 below used for the
+  Goblin Pox and Soul Flay ranged penalties; no ranged-type test, because the script writes the
+  modifier whatever the type. Eye of Heaven inherits the bug and the fix through
+  `UnitCalcPre.CAS:1840-1842`, which grants `EncTrueSight`. `PROVENANCE[chance:trueSight:ranged]`
+  is unchanged and already cited the correct lines. The `derive_unit_stats` Eye of Heaven check
+  asserted the leak — it measured `rtbType:'fire'` and expected 0.35 — and is re-aimed onto magical
+  ranged, with a second case holding Fire Breath at 0.30. Two new presets,
+  `trueSightBreathUnaffectedWarlord` and `trueSightThrownUnaffectedWarlord`, each 0.600 against the
+  0.650 the leak produced. Found while checking whether existing evidence settles F80's record
+  shape: the modern unit record carries `hitchance` plus four separate modifiers
+  (`hitchanceranged`, `hitchancethrown`, `hitchancebreath`, `hitchancemelee`), so Fire and
+  Lightning Breath share one To Hit field while remaining separate strength fields
+  (`Units.RecalculateUnits.pas:203-219`; `MASTER.CAS:1000-1006`).
+
+- **F67 — Goblin Pox and Soul Flay ranged penalties.** Both curses write `SRanged` in
+  `UnitCalcPre.CAS` — Goblin Pox −1 on the Goblin branch and −3 on the non-Goblin branch, Soul
+  Flay −FLAY per experience level — and both steps dropped it, the same defect F62 below fixed for
+  Plague between them. Added `goblinPoxRtbMod` and `soulFlayRtbMod` (`stats.js`) gated on
+  `modernConventionalRangedPass`, so each penalty lands on the conventional ranged channel and
+  leaves Warlord’s independent Thrown and Breath fields alone, and extended both steps’ `writes`
+  with `rtb`. Neither citation changed: `PROVENANCE[goblinPox]` covers `UnitCalcPre.CAS:1554-1572`
+  and `PROVENANCE[soulFlay]` covers `1298-1310`, both including the ranged lines, so these were
+  partial readings of correct sources. `goblinPoxNonGoblinArmorWarlord` asserted the opposite —
+  its missile attacker was chosen because “Pox Host reduces only melee” — and is re-aimed onto
+  Thrown, the channel the script really does leave alone, keeping its 3.000 against 0.000 without
+  Pox Host while now also failing at 0.000 if the ranged write leaked to Thrown. Three new presets
+  measure the write: `soulFlayRangedRecruitWarlord` 4.000 against 5.000, and
+  `goblinPoxNonGoblinRangedWarlord` 5.000 and `goblinPoxGoblinRangedMilderWarlord` 7.000, both
+  against 8.000, the Goblin pair also separating −1 from −3. The Soul Flay enchantment tooltip
+  and the Pox host control tooltip now list the ranged term.
+
+- **F65 — the `PRESETS`/`TEST_TREE` contract is now checked.** `CLAUDE.md`, *Presets* required
+  every preset to appear in `TEST_TREE` with nothing enforcing it, and `immolationNotRangedCoM` had
+  fallen out — evaluated by `runTests()` but unreachable from the browser grouping.
+  `runPresetGroupingChecks` (`tools/node_unit_checks.js`) now diffs the merged `PRESETS` keys
+  against every `keys:` list in `TEST_TREE` in both directions and reports both in one message; the
+  reverse direction guards the same defect in an orphaned group key, of which there are none.
+  `loadPresetContext` (`tools/calculator_sources.js`) loads the `data-scope="page"` fixture sources
+  on top of the core context — they are plain data — selected by the names the *Presets* section
+  already fixes, so a new part file needs no second list. Keys only: Node still never evaluates a
+  preset. The missing key joined the version-differences `Immolation` group, where it completes a
+  three-version scenario with `immolationRangedMoM` and `immolationNotRangedPatched` that is
+  identical apart from `version:`.
+
+- **F62 — Warlord Plague's ranged penalty.** The `plague` step applied melee, armor, resistance
+  and To Hit but silently dropped `SETSTAT(U,SRanged,0,GetStat(U,SRanged,0)-3)`, which its
+  `PROVENANCE[plague]` span already bound. Added `plagueRtbMod` (`stats.js`) gated on
+  `modernConventionalRangedPass`, so the penalty lands on the conventional ranged channel only and
+  leaves Warlord's independent Thrown and Breath fields alone, as the script does; extended the
+  step's `writes` to include `rtb`. The citation and its anchor were unchanged — the span covers
+  `UnitCalcPre.CAS:1540-1550` in full, so the defect was a partial reading of a correct source,
+  not a mis-scoped one. New preset `plagueRangedWarlord` measures 4.500 with the write and 7.200
+  without it, the gap being the 8-strength missile the old code left unreduced. The `plague`
+  enchantment tooltip now lists the ranged term.
+
 ## 2026-08-18
 
 - **M9 — one canonical version scope, one execution chain.** Stages 2 and 3, closing the item.
@@ -73,7 +273,8 @@ pre-2026-08-10 narratives remain recoverable from git history.
   `blazeOfGloryRangedToThrownWarlord` is green; `npm test` is 113 passed with [F59](./BACKLOG.md)'s
   three M9-held preset failures remaining. Implementing it measured a third, distinct defect at the
   same site, filed as [F66](./BACKLOG.md): the local flip re-aims the type predicates of every
-  earlier region, so a Blaze unit escapes Rust and gains Giant Strength's Thrown-only bonus.
+  earlier region, so a Blaze unit escapes Rust's missile/boulder penalty. The Giant Strength
+  half of that first reading was wrong and is withdrawn in F66 — the ability is MoM-scoped.
 
 - **F64 — the DOS thrown/breath phase no longer requires melee strength.** `combat.js` gated the
   melee-path thrown/breath rider on base melee > 0 for `mom_1.31`, `mom_cp_1.60.00` and

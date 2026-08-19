@@ -265,6 +265,54 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(blazeBothChannels.thrown.modifierTrace.result, 8,
     'The merged Thrown strength stays reachable through its own modifier trace');
 
+  // The transfer stands at `UnitCalc.CAS:1490`, so every earlier region-d write sees the
+  // conventional Ranged identity it is written against. Rust (`:493-503`) takes its −3 off the
+  // missile field and empties Thrown before the transfer moves what is left.
+  const blazeAfterRust = ctx.deriveUnitStats(warlordUnit({
+    atk: 3, def: 0,
+    modernAttacks: { ranged: { strength: 6, type: 'missile' }, thrown: { strength: 2, type: 'thrown' } },
+    abilities: { blazeOfGlory: true, rust: true },
+  })).modernAttacks;
+  assertEqual(blazeAfterRust.thrown.strength, 3,
+    'Rust reaches the missile field before Blaze of Glory moves it to Thrown');
+  assert(!blazeAfterRust.ranged, 'Rust and Blaze of Glory together leave no Ranged channel');
+
+  // Shadow Strike's `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS:1262-1266) stands at its
+  // own region-`d` position, before the transfer at `:1490`: melee 3 grants 1 + 3/3 = 2 onto the
+  // Thrown field's 2, and Blaze of Glory then moves the missile 6 onto the 4 standing there.
+  const shadowAndBlaze = ctx.deriveUnitStats(warlordUnit({
+    atk: 3, def: 0,
+    modernAttacks: { ranged: { strength: 6, type: 'missile' }, thrown: { strength: 2, type: 'thrown' } },
+    abilities: { shadowStrike: true, blazeOfGlory: true },
+  })).modernAttacks;
+  assertEqual(shadowAndBlaze.thrown.strength, 10,
+    'Shadow Strike adds to the Thrown field before Blaze of Glory transfers the Ranged one');
+  assert(!shadowAndBlaze.ranged, 'Blaze of Glory still empties Ranged beside the Shadow Strike grant');
+
+  const shadowBesideRanged = ctx.deriveUnitStats(warlordUnit({
+    atk: 3, def: 0,
+    modernAttacks: { ranged: { strength: 6, type: 'missile' } },
+    abilities: { shadowStrike: true },
+  })).modernAttacks;
+  assertEqual(shadowBesideRanged.ranged.strength, 6,
+    'The Shadow Strike grant leaves a conventional Ranged attack alone');
+  assertEqual(shadowBesideRanged.thrown.strength, 2,
+    'The grant creates the record Thrown field beside an existing Ranged attack');
+
+  // The created field is empty when the level ladder (`BaseUnits.thrown > 0`,
+  // Units.RecalculateUnits.pas:562-564) and the magic-weapon branch (`Units.thrown > 0`, :660-663)
+  // read it, so neither reaches the attack Shadow Strike makes afterwards: the grant is
+  // 1 + 9/3 off the champion-and-adamantium melee alone, and the Thrown threshold carries the
+  // champion To Hit ladder without the weapon's +10.
+  const shadowChampionAdamant = ctx.deriveUnitStats(warlordUnit({
+    atk: 3, def: 0, level: 'champion', weapon: 'adamantium',
+    modernAttacks: {}, abilities: { shadowStrike: true },
+  })).modernAttacks;
+  assertEqual(shadowChampionAdamant.thrown.strength, 4,
+    'Neither the level ladder nor the weapon strength reaches the Shadow Strike grant');
+  assertEqual(shadowChampionAdamant.thrown.toHit, 0.4,
+    'The created Thrown reads the record threshold without the magic-weapon To Hit');
+
   const noBlazeBothChannels = blazeChannels(
     { ranged: { strength: 6, type: 'missile' }, thrown: { strength: 2, type: 'thrown' } }, {});
   assertEqual(noBlazeBothChannels.ranged.strength, 6,
@@ -558,6 +606,59 @@ function runWarlordUnitAbilityChecks(ctx) {
     abilities: { godsPlayDices: 9 },
   }));
   assertEqual(godsPlayDicesClamped.res, 7, 'Gods Play Dices clamps its Resistance roll to +2');
+
+  // The modern record separates Ranged, Thrown and Breath To Hit modifiers, and Hurricane is
+  // the effect that tells them apart: UnitCalc.CAS:569-571 subtracts 10 x HURRICANESTR from
+  // SToRanged and SToThrown but 15 x HURRICANESTR from SToBreath, and HURRICANESTR is 2 for a
+  // normally cast Hurricane. Read all three off one unit, so a penalty landing on the wrong
+  // field cannot pass by being right for the channel that happens to be derived.
+  const hurricaneChannels = ctx.deriveUnitStats(warlordUnit({
+    atk: 2, toHitRtbMod: 70, hurricane: true,
+    modernAttacks: {
+      ranged: { strength: 4, type: 'missile' },
+      thrown: { strength: 4, type: 'thrown' },
+      fireBreath: { strength: 4, type: 'fire' },
+    },
+  }));
+  assertClose(hurricaneChannels.modernAttacks.ranged.toHit, 0.8,
+    'Hurricane takes 20 points off the Ranged To-Hit modifier');
+  assertClose(hurricaneChannels.modernAttacks.thrown.toHit, 0.8,
+    'Hurricane takes 20 points off the Thrown To-Hit modifier');
+  assertClose(hurricaneChannels.modernAttacks.fireBreath.toHit, 0.7,
+    'Hurricane takes 30 points off the shared Breath To-Hit modifier');
+  assertClose(hurricaneChannels.toHitMelee, 0.3,
+    'Hurricane leaves the melee To-Hit modifier alone');
+
+  const hurricaneLightningBreath = ctx.deriveUnitStats(warlordUnit({
+    atk: 2, toHitRtbMod: 70, hurricane: true,
+    modernAttacks: {
+      ranged: { strength: 4, type: 'missile' },
+      lightningBreath: { strength: 4, type: 'lightning' },
+    },
+  }));
+  assertClose(hurricaneLightningBreath.modernAttacks.lightningBreath.toHit, 0.7,
+    'Fire and Lightning Breath share one Breath To-Hit modifier');
+
+  // Heavenly Light writes `hitchancethrown` unconditionally (Units.RecalculateUnits.pas:1451-1454),
+  // but Lightning Blade leaves the unit carrying a Lightning Breath, and the resolver reads
+  // `hitchancebreath` for a breath attack (Combat.ApplyAttack.pas:272). The +10 lands on a field
+  // nothing reads, so the surviving channel keeps the base 30%.
+  const lightningBladeHeavenlyLight = ctx.deriveUnitStats(warlordUnit({
+    atk: 1, rtbType: 'thrown', rtb: 4,
+    modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
+    abilities: { lightningBlade: true, heavenlyLight: true },
+  }));
+  assertClose(lightningBladeHeavenlyLight.modernAttacks.lightningBreath.toHit, 0.3,
+    'Heavenly Light writes the Thrown To-Hit field, which a Lightning Breath channel does not read');
+
+  // True Sight writes `SToRanged` with no presence gate (UnitCalc.CAS:326-328), so the record
+  // holds the modifier even on a unit with no secondary attack to spend it on.
+  const trueSightNoSecondary = ctx.deriveUnitStats(warlordUnit({
+    atk: 1, rtbType: 'none', rtb: 0, modernAttacks: {},
+    abilities: { trueSight: true },
+  }));
+  assertClose(trueSightNoSecondary.toHitRtb, 0.35,
+    'True Sight writes the Ranged To-Hit modifier without a ranged-presence gate');
 
   const scoringOptionsInertOutsideWarlord = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11',

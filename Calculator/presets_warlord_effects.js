@@ -568,6 +568,13 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 18.000 },
   },
+  shadowStrikeGrantPrecedesNoBlazingMarchWarlord: {
+    desc: 'Ordered Shadow Strike (Warlord): Blazing March adds +3 melee in region c, so the grant reads melee 12 and creates thrown 1+floor(12/3)=5 in region d. Its +3 Thrown bonus is written in region c, where the Thrown field does not exist yet, so the created attack does not carry it: 12 + 5 = 17.0, not the 20.0 a pre-sequence grant would take',
+    version: V_WARLORD,
+    a: { atk:9, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { blazingMarch: true, shadowStrike: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 17.000 },
+  },
   shadowStrikeDoublePoisonWarlord: {
     desc: 'Shadow Strike (Warlord): the granted thrown is a separate phase, so Poison fires on both thrown and melee. Melee 9 grants thrown 4, both 100% hit vs def 0 → 13 physical; Poison 3 vs res 5 (CoM2 fail = (11−5)/10 = 0.6) → 1.8 per phase × 2 = 3.6, total 16.6 (without Shadow Strike, melee 9 + single poison 1.8 = 10.8)',
     version: V_WARLORD,
@@ -576,7 +583,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 16.600 },
   },
 
-  // --- Soul Flay (Warlord Death curse: −1 melee / −2 armor / −2 resistance per experience level; Recruit counts as level 1) ---
+  // --- Soul Flay (Warlord Death curse: −1 melee / −1 ranged / −2 armor / −2 resistance per experience level; Recruit counts as level 1) ---
   soulFlayMeleeRecruitWarlord: {
     desc: 'Soul Flay (Warlord) on a Recruit (normal level = level 1): melee 5 − 1 = 4, 100% hit vs def 0 → 4.0 (without Soul Flay it would be 5.0)',
     version: V_WARLORD,
@@ -590,6 +597,14 @@ definePresets({
     a: { atk:10, level:'elite', toHitMod:70, hp:10, abilities: { soulFlay: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  soulFlayRangedRecruitWarlord: {
+    desc: 'Soul Flay (Warlord) on a Recruit missile attacker: SRanged 5 − 1 = 4, 100% hit vs def 0 → 4.0. Without the ranged write it would be 5.0; without Soul Flay entirely, also 5.0.',
+    version: V_WARLORD,
+    a: { atk:0, rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { soulFlay: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   soulFlayArmorRecruitWarlord: {
     desc: 'Soul Flay (Warlord) on a Recruit defender: armor 2 − 2 = 0, so atk 2 (100% hit/block) passes a defenseless target → 2.0 (without Soul Flay, def 2 blocks all → 0.0)',
@@ -606,12 +621,20 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
 
-  // --- Plague (Warlord combat curse: −3 melee / −3 armor / −6 resistance / −10% To Hit) ---
+  // --- Plague (Warlord combat curse: −3 melee / −3 ranged / −3 armor / −6 resistance / −10% To Hit) ---
   plagueMeleeWarlord: {
     desc: 'Plague (Warlord) on the attacker: melee 8 − 3 = 5, 100% base hit − 10% Plague = 90% vs def 0 → 5 × 0.9 = 4.5 (without Plague it would be 8.0)',
     version: V_WARLORD,
     a: { atk:8, toHitMod:70, hp:10, abilities: { plague: true } },
     b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 4.500 },
+  },
+  plagueRangedWarlord: {
+    desc: 'Plague (Warlord) on a missile attacker: SRanged 8 − 3 = 5, 100% base hit − 10% Plague = 90% vs def 0 → 5 × 0.9 = 4.5. Without the ranged write it would be 8 × 0.9 = 7.2; without Plague entirely, 8.0.',
+    version: V_WARLORD,
+    a: { atk:0, rtbType:'missile', rtb:8, toHitRtbMod:70, hp:10, abilities: { plague: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.500 },
   },
   plagueArmorWarlord: {
@@ -637,7 +660,7 @@ definePresets({
   },
 
   // --- Pox Host / Goblin Pox (Warlord global combat debuff, race-dependent) ---
-  // Non-Goblin: −3 melee / −3 armor / −1 resistance, no To Hit. Goblin: −1 melee / −1 armor (no resistance penalty). Per helptext.
+  // Non-Goblin: −3 melee / −3 ranged / −3 armor / −1 resistance, no To Hit. Goblin: −1 melee / −1 ranged / −1 armor (no resistance penalty).
   goblinPoxNonGoblinMeleeWarlord: {
     desc: 'Pox Host (Warlord) on a non-Goblin attacker: melee 8 − 3 = 5, 100% hit vs def 0 → 5.0 (no To Hit penalty, unlike Plague). Without Pox Host it would be 8.0',
     version: V_WARLORD,
@@ -647,13 +670,21 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   goblinPoxNonGoblinArmorWarlord: {
-    desc: 'Pox Host (Warlord) on a non-Goblin defender: armor 3 − 3 = 0, so missile 3 (100% hit/block) passes a defenseless target → 3.0 (without Pox Host, def 3 blocks all → 0.0). Uses a ranged attacker since Pox Host reduces only melee, leaving the attack strength intact.',
+    desc: 'Pox Host (Warlord) on a non-Goblin defender: armor 3 − 3 = 0, so thrown 3 (100% hit/block) passes a defenseless target → 3.0 (without Pox Host, def 3 blocks all → 0.0). Pox Host is a global, so both sides take it; the attack uses Thrown, the one channel the script leaves alone, which keeps the attack strength at 3 and isolates the armor rule. A conventional missile would be reduced to 0 and print 0.0.',
     version: V_WARLORD,
     poxHost: true,
-    a: { atk:0, rtbType:'missile', rtb:3, toHitRtbMod:70, hp:10 },
+    a: { atk:0, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10 },
     b: { def:3, toBlkMod:70, hp:10 },
-    rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  goblinPoxNonGoblinRangedWarlord: {
+    desc: 'Pox Host (Warlord) on a non-Goblin missile attacker: SRanged 8 − 3 = 5, 100% hit vs def 0 → 5.0 (no To Hit penalty, unlike Plague). Without the ranged write it would be 8.0.',
+    version: V_WARLORD,
+    poxHost: true,
+    a: { atk:0, rtbType:'missile', rtb:8, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   goblinPoxNonGoblinResistanceWarlord: {
     desc: 'Pox Host (Warlord) on a non-Goblin defender: resistance 5 − 1 = 4 (helptext: non-Goblins take −1 resistance). Death Touch 0 vs res 4 → pFail (10−4)/10 = 0.6 × 10 hp = 6.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Pox Host, res 5 → pFail 0.5 → 5.0; the manual −3 would give res 2 → 8.0)',
@@ -669,6 +700,15 @@ definePresets({
     poxHost: true,
     a: { atk:8, toHitMod:70, hp:10, race: 'Goblin' },
     b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  goblinPoxGoblinRangedMilderWarlord: {
+    desc: 'Pox Host (Warlord) on a GOBLIN missile attacker: only −1 ranged (not −3). SRanged 8 − 1 = 7, 100% hit vs def 0 → 7.0 (without Pox Host, 8.0; if it wrongly used the non-Goblin −3 it would be 5.0)',
+    version: V_WARLORD,
+    poxHost: true,
+    a: { atk:0, rtbType:'missile', rtb:8, toHitRtbMod:70, hp:10, race: 'Goblin' },
+    b: { def:0, toBlkMod:70, hp:20 },
+    rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   goblinPoxGoblinResistanceWarlord: {
@@ -847,6 +887,13 @@ definePresets({
     a: { atk:1, def:0, rtbType:'missile', rtb:6, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { blazeOfGlory: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  blazeOfGloryFollowsRustWarlord: {
+    desc: 'Rust (UnitCalc.CAS:493) runs before Blaze of Glory (:1490), so Rust still sees a missile attack and takes its −3 before the transfer. Melee 1−3 → 0, missile 6−3=3 → thrown 3 → 3.0. (Without Rust, thrown 6 + melee 1 → 7.0; with the transfer applied first, Rust would find no missile and the thrown would be 6.)',
+    version: V_WARLORD,
+    a: { atk:1, def:0, rtbType:'missile', rtb:6, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { blazeOfGlory: true, rust: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   blazeOfGloryHeroUnaffectedWarlord: {
     desc: 'Blaze of Glory targets a non-hero unit, so a hero is unaffected: no Armor→Melee transfer. Hero melee 2, Armor 6 → melee stays 2 vs def 0 → 2.0. (If wrongly applied, melee 2+6 = 8.)',

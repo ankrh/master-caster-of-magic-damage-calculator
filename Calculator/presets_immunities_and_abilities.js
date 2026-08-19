@@ -235,10 +235,10 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   fireImmunityAfterArmorPiercing: {
-    desc: 'Fire Immunity after Armor Piercing: AP halves def 6→3, then FI raises to 50 → breath blocked',
-    a: { atk:0, rtbType:'fire', rtb:5, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
-    b: { atk:0, def:6, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
-    expected: { dmgToA: 0, dmgToB: 0 },
+    desc: 'Fire Immunity after Armor Piercing: AP halves def 6→3, then Fire Immunity assigns 50, so breath 70 deals 20. The assignment is absolute, not a raise — measured, a defender at def 6, 60 or 100 all end at 50 — so removing Armor Piercing leaves 20 as well, and no fixture can make its presence move this number. What the size does prove is the order: Armor Piercing applied *after* Fire Immunity would halve the 50 and the same breath would deal 45, which is what the same shot deals against a plain def 25. The earlier 5-strength breath against a 10 HP defender printed 0 under both orders and could not fail. Armor Piercing is live in the same setup without Fire Immunity: 67 against 64.',
+    a: { atk:0, rtbType:'fire', rtb:70, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
+    b: { atk:0, def:6, toBlkMod:70, hp:200, abilities: { fireImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 20.000 },
   },
   fireImmunityIllusionOverrides: {
     desc: 'Illusion overrides Fire Immunity: FI sets def to 50, then Illusion sets to 0 → full breath damage',
@@ -327,6 +327,22 @@ definePresets({
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.350 },
+  },
+  trueSightBreathUnaffectedWarlord: {
+    desc: 'True Sight (Warlord) writes SToRanged only: melee 1 and fire breath 1 both stay at 30% → 0.3 + 0.3 = 0.6. If the bonus reached the Breath channel the breath would hit at 35% and give 0.650.',
+    version: V_WARLORD,
+    a: { atk:1, rtbType:'fire', rtb:1, hp:10, abilities: { trueSight: true } },
+    b: { hp:10 },
+    rangedCheck: false,
+    expected: { dmgToA: 0, dmgToB: 0.600 },
+  },
+  trueSightThrownUnaffectedWarlord: {
+    desc: 'True Sight (Warlord) writes SToRanged only: melee 1 and thrown 1 both stay at 30% → 0.3 + 0.3 = 0.6. If the bonus reached the Thrown channel the thrown attack would hit at 35% and give 0.650.',
+    version: V_WARLORD,
+    a: { atk:1, rtbType:'thrown', rtb:1, hp:10, abilities: { trueSight: true } },
+    b: { hp:10 },
+    rangedCheck: false,
+    expected: { dmgToA: 0, dmgToB: 0.600 },
   },
   eyeOfHeavenNegatesIllusion: {
     desc: 'Eye of Heaven grants Illusion Immunity to its own unit: 5 atk 100% hit vs def 6 + Eye of Heaven 100% block → def stays 6, 0 dmg (would be 5 if illusion still ignored armor)',
@@ -759,19 +775,24 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
+  // The two members below are one fixture under two versions, which is what a version-difference
+  // pair has to be. A doom gaze is held differently by the two engines — the DOS record keeps its
+  // strength in the shared RTB slot while CoM2 keeps it in the ability row — so the fixture states
+  // both, and each engine reads the one it has. Selecting the type-104 slot also arms the stoning
+  // and death kill loops in the DOS build, so the defender's Resistance is put out of their reach
+  // and only the doom strength is left to measure.
   focusMagicDoomGazeCoM: {
-    desc: 'Focus Magic (CoM): doom gaze is not in the +3 clause, so a doom-gaze-only unit instead gains a new strength-3 magic_s ranged attack; at base 30% To Hit that averages 0.9 dmg',
+    desc: 'Focus Magic (CoM): the +3 doom-gaze clause is CoM2\'s, not CoM 1\'s, so the same gaze of strength 2 is still 2 here — the paired focusMagicDoomGazeCoM2 runs this fixture on the engine that does add the +3 and deals 5. Removing Focus Magic leaves 2 either way, which is the claim; the version pair is what makes the number falsifiable. Melee mode: gazes do not fire in the ranged sequence.',
     version: V_COM,
-    a: { hp:10, abilities: { focusMagic: true, doomGaze: 4 } },
-    b: { hp:10 },
-    rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.900 },
+    a: { rtbType:'gaze_multiple', rtb:2, hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
+    b: { def:10, res:50, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   focusMagicDoomGazeCoM2: {
-    desc: 'Focus Magic (CoM2): the doomgaze +3 test ($0059A66D) and the ranged-creation branch ($0059A790) are independent tests that both run (Units.RecalculateUnits.pas:873-910), so the gaze bonus is not traded away for the created attack. Melee mode isolates the gaze half: doom gaze 2 → 5 exact damage, against 2 with Focus Magic off. Strength 2 rather than 4 keeps this distinct from focusMagicDoomGazeBoostCoM2; the created ranged attack is measured by focusMagicDoomGazeRangedBranchCoM2. A ranged-mode setup cannot show the gaze at all, because gazes do not fire in the ranged sequence.',
+    desc: 'Focus Magic (CoM2): the doomgaze +3 test ($0059A66D) and the ranged-creation branch ($0059A790) are independent tests that both run (Units.RecalculateUnits.pas:873-910), so the gaze bonus is not traded away for the created attack. Melee mode isolates the gaze half: doom gaze 2 → 5 exact damage, against 2 with Focus Magic off, and against the 2 the CoM 1 member of this pair reports from the identical fixture. Strength 2 rather than 4 keeps this distinct from focusMagicDoomGazeBoostCoM2; the created ranged attack is measured by focusMagicDoomGazeRangedBranchCoM2.',
     version: V_COM2,
-    a: { hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
-    b: { hp:10 },
+    a: { rtbType:'gaze_multiple', rtb:2, hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
+    b: { def:10, res:50, hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   focusMagicDoomGazeRangedBranchCoM2: {

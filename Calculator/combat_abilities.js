@@ -364,37 +364,51 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // `ctx.slots` says the slot is dead. That is also the aura pass's own gate — "add … to
 // melee/ranged when the corresponding base attack exists". Blaze of Glory's armor-to-melee
 // transfer is the deliberate exception: it is not a bonus, and it is not built here.
-const ABILITY_STEP_RTB_FIELDS = ['rtb', 'gaze', 'doomGaze'];
-function abilityStatStep(id, phase, delta, extra) {
+//
+// The secondary-attack names above resolve against the derivation's slots (`ctx.channels`), one
+// per record strength field: the DOS engines run one, the modern engines one per attack channel.
+// Each slot carries its own `slots` gates and its own type fields, so one write lands on every
+// field the engine writes and on no other.
+const ABILITY_STEP_GAZE_FIELDS = ['gaze', 'doomGaze'];
+const ABILITY_STEP_RTB_NAMES = ['rtb', 'ranged', 'positiveRanged', 'rangedOrThrown', 'nonGazeRtb'];
+function abilityStatStep(id, phase, delta, extra, strengthFields) {
   const fields = Object.keys(delta);
+  const secondaryFields = strengthFields && strengthFields.length ? strengthFields : ['rtb'];
   const writes = [];
   for (const field of fields) {
-    if (field === 'rtb') writes.push(...ABILITY_STEP_RTB_FIELDS);
-    else if (field === 'ranged' || field === 'positiveRanged'
-      || field === 'rangedOrThrown') writes.push('rtb');
-    else if (field === 'nonGazeRtb') writes.push('rtb');
+    if (field === 'rtb') writes.push(...secondaryFields, ...ABILITY_STEP_GAZE_FIELDS);
+    else if (ABILITY_STEP_RTB_NAMES.includes(field)) writes.push(...secondaryFields);
     else writes.push(field);
   }
   return statStep({
     id, phase, writes, delta, ...(extra || {}),
     apply: (u, ctx) => {
       const slots = (ctx && ctx.slots) || null;
+      const channels = (ctx && ctx.channels) || null;
+      const eachSlot = write => {
+        if (!channels) { write('rtb', slots); return; }
+        for (const channel of channels) write(channel.strengthField, channel.slots);
+      };
       for (const field of fields) {
         const value = delta[field];
         if (field === 'atk') {
           if (!slots || slots.melee) u.atk += value;
         } else if (field === 'rtb') {
-          if (!slots || slots.rtb) u.rtb += value;
+          eachSlot((target, gates) => { if (!gates || gates.rtb) u[target] += value; });
           if (!slots || slots.gaze) u.gaze += value;
           if (!slots || slots.doomGaze) u.doomGaze += value;
         } else if (field === 'ranged') {
-          if (!slots || slots.ranged) u.rtb += value;
+          eachSlot((target, gates) => { if (!gates || gates.ranged) u[target] += value; });
         } else if (field === 'positiveRanged') {
-          if ((!slots || slots.ranged) && u.rtb > 0) u.rtb += value;
+          eachSlot((target, gates) => {
+            if ((!gates || gates.ranged) && u[target] > 0) u[target] += value;
+          });
         } else if (field === 'rangedOrThrown') {
-          if (!slots || slots.rangedOrThrown) u.rtb += value;
+          eachSlot((target, gates) => {
+            if (!gates || gates.rangedOrThrown) u[target] += value;
+          });
         } else if (field === 'nonGazeRtb') {
-          if (!slots || slots.rtb) u.rtb += value;
+          eachSlot((target, gates) => { if (!gates || gates.rtb) u[target] += value; });
         } else {
           u[field] += value;
         }
@@ -405,7 +419,10 @@ function abilityStatStep(id, phase, delta, extra) {
 
 function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const steps = [];
-  const emit = (id, phase, delta, extra) => { steps.push(abilityStatStep(id, phase, delta, extra)); };
+  const strengthFields = identityPredicates.strengthFields || null;
+  const emit = (id, phase, delta, extra) => {
+    steps.push(abilityStatStep(id, phase, delta, extra, strengthFields));
+  };
   // A position *within* region c, not a region of its own: every engine writes some of `c`
   // after its Warp Creature block, and which effects those are is the version divergence.
   // CoM 1 moved Warp to the front (0x907AA), so its Darkness, Supreme Light and Tactician all
@@ -496,13 +513,20 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const leadershipAura = isModern ? auraValue('leadershipAura') : 0;
   if (leadershipAura > 0 && !identityPredicates.liveFantastic) {
     // PROVENANCE[leadershipAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:1ec384f5af2fc785c3b46a8e
-    steps.push(statStep({ id: 'leadershipAura', phase: 'e', writes: ['atk', 'rtb'],
+    steps.push(statStep({ id: 'leadershipAura', phase: 'e',
+      writes: ['atk', ...(strengthFields || ['rtb'])],
       apply: (u, ctx) => {
         const slots = ctx && ctx.slots;
         if (!slots || slots.melee) u.atk += leadershipAura;
-        if ((!slots || slots.ranged) && u.rtb > 0
-            && (u.rangedType === 'missile' || u.rangedType === 'boulder')) {
-          u.rtb += Math.trunc(leadershipAura / 2);
+        const channels = (ctx && ctx.channels)
+          || [{ strengthField: 'rtb', rangedTypeField: 'rangedType', slots }];
+        for (const channel of channels) {
+          const gates = channel.slots;
+          if ((!gates || gates.ranged) && u[channel.strengthField] > 0
+              && (u[channel.rangedTypeField] === 'missile'
+                || u[channel.rangedTypeField] === 'boulder')) {
+            u[channel.strengthField] += Math.trunc(leadershipAura / 2);
+          }
         }
       } }));
   }
@@ -593,12 +617,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // the calculated-channel gate shared by other ability steps.
   if (hasAbil(abilities, 'mislead')) {
     // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:bc3d65175e46c59dd1bcbd1f
-    steps.push(statStep({ id: 'mislead', phase: 'e', writes: ['atk', 'def', 'res', 'rtb'],
+    steps.push(statStep({ id: 'mislead', phase: 'e',
+      writes: ['atk', 'def', 'res', ...(strengthFields || ['rtb'])],
       apply: (u, ctx) => {
         u.atk -= 1;
         u.def -= 1;
         u.res -= 1;
-        if (!ctx || !ctx.slots || ctx.slots.persistentRanged) u.rtb -= 1;
+        const channels = (ctx && ctx.channels)
+          || [{ strengthField: 'rtb', slots: ctx && ctx.slots }];
+        for (const channel of channels) {
+          if (!channel.slots || channel.slots.persistentRanged) u[channel.strengthField] -= 1;
+        }
       } }));
   }
 

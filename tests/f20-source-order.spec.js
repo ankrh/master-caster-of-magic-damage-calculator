@@ -301,7 +301,10 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
   expect(rustEvents[0].sourceOrder).toBe(report.rust.rustChainRank);
   const rustTrace = report.rust.statTrace.filter(event => event.id === 'rust');
   expect(rustTrace).toHaveLength(1);
-  expect(Object.keys(rustTrace[0].changes)).toEqual(['atk', 'thrownType']);
+  // `SETSTAT(U,SAttack,…)` and `SETSTAT(U,SThrown,0,0)` are two writes of one Rust block
+  // (`UnitCalc.CAS:493-503`); the type clear beside the emptied Thrown strength is the model's
+  // stand-in for Warlord storing no Thrown type. One trace entry carries all three.
+  expect(Object.keys(rustTrace[0].changes)).toEqual(['atk', 'rtb', 'thrownType']);
 
   const inactive = await page.evaluate(() => {
     const report = deriveUnitStats({

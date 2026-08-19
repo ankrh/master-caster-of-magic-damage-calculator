@@ -300,33 +300,57 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(motherFungusBeforeFocus.rtb, 3,
     'Mother Fungus does not treat the later Focus Magic ranged creation as permanent ranged');
 
-  const orihalconBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', armor: 'orihalcon',
-    abilities: { focusMagic: true }, rtbType: 'missile', rtb: 2,
-  }));
-  assertEqual(orihalconBeforeFocus.rtb, 2,
-    'Orihalcon tests magical ranged before Warlord Focus Magic converts a missile attack');
+  // Branch 3 of the Focus Magic ranged block grants the magical type and no strength
+  // (Units.RecalculateUnits.pas; CoM2 binary - unit recalculation.md, *Focus Magic*), so from
+  // that line on the record carries an ordinary magical ranged attack. Every write the chain
+  // places after `c:focusMagic:conversion` must therefore treat a converted attack exactly as
+  // it treats a native one of the same strength — that equivalence is the claim, not a number
+  // read off the implementation. Orihalcon, Discipline and Blazing March write the channel from
+  // the CoM2 binary's region `c`, and no Warlord script writes it (`UnitCalcPre.CAS` and
+  // `UnitCalc.CAS` name Discipline and Blazing March only to set flags, Orihalcon not at all),
+  // so the two engines must also answer alike.
+  const convertedVsNative = (label, overrides) => {
+    for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+      const converted = ctx.deriveUnitStats(baseUnitInput({
+        version, rtbType: 'missile', ...overrides,
+        abilities: { ...(overrides.abilities || {}), focusMagic: true },
+      }));
+      const native = ctx.deriveUnitStats(baseUnitInput({
+        version, rtbType: 'magic_s', ...overrides,
+      }));
+      assertEqual(converted.rtb, native.rtb,
+        `${label} treats a Focus-converted attack as a native magical one (${version})`);
+    }
+    const warlord = ctx.deriveUnitStats(baseUnitInput({
+      version: 'com2_warlord_1.5.12.7', rtbType: 'missile', ...overrides,
+      abilities: { ...(overrides.abilities || {}), focusMagic: true },
+    }));
+    const coM2 = ctx.deriveUnitStats(baseUnitInput({
+      version: 'com2_1.05.11', rtbType: 'missile', ...overrides,
+      abilities: { ...(overrides.abilities || {}), focusMagic: true },
+    }));
+    assertEqual(warlord.rtb, coM2.rtb,
+      `${label} reads the converted channel alike in Warlord and CoM2`);
+  };
+  convertedVsNative('Orihalcon', { armor: 'orihalcon', rtb: 2 });
+  convertedVsNative('Discipline',
+    { level: 'veteran', rtb: 1, abilities: { discipline: 'overland' } });
+  convertedVsNative('Blazing March', { rtb: 2, abilities: { blazingMarch: true } });
 
-  const disciplineBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', level: 'veteran',
-    abilities: { discipline: 'overland', focusMagic: true }, rtbType: 'missile', rtb: 1,
-  }));
-  assertEqual(disciplineBeforeFocus.rtb, 4,
-    'Discipline tests physical ranged before Warlord Focus Magic converts it');
-
-  const flameBladeBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+  // The Warlord blade's ranged bonus sits at the same `c:flameBlade:ranged` entry, which the
+  // Warlord chain places after the conversion and the CoM 1 chain before it — the version
+  // difference is the step's position, not a gate. CoM 1 keeps its bonus below
+  // (`com1FlameBeforeFocus`); Warlord sees the converted attack.
+  const warlordBladeConverted = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { flameBladeWarlord: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
   }));
-  assertEqual(flameBladeBeforeFocus.rtb, 4,
-    'Warlord Flame Blade tests missile ranged before the later Focus Magic conversion');
-
-  const blazingMarchBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
+  const warlordBladeNative = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
-    abilities: { blazingMarch: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
+    abilities: { flameBladeWarlord: true }, rtbType: 'magic_s', rtb: 2,
   }));
-  assertEqual(blazingMarchBeforeFocus.rtb, 5,
-    'Warlord Blazing March tests missile ranged before the later Focus Magic conversion');
+  assertEqual(warlordBladeConverted.rtb, warlordBladeNative.rtb,
+    'The Warlord blade treats a Focus-converted attack as a native magical one');
 
   const fieryFuryBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
@@ -769,10 +793,21 @@ function runDeriveUnitStatsChecks(ctx) {
   const eyeOfHeavenTrueSight = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { eyeOfHeaven: true },
-    rtbType: 'fire',
+    rtbType: 'magic_s',
     rtb: 1,
   }));
   assertClose(eyeOfHeavenTrueSight.toHitRtb, 0.35, 'Eye of Heaven grants the True Sight To-Hit bonus');
+
+  // UnitCalc.CAS:326-328 writes SToRanged alone. The engine record carries hitchancethrown and
+  // hitchancebreath as separate fields, so neither receives the bonus.
+  const eyeOfHeavenBreath = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { eyeOfHeaven: true },
+    rtbType: 'fire',
+    rtb: 1,
+  }));
+  assertClose(eyeOfHeavenBreath.toHitRtb, 0.3,
+    'True Sight writes SToRanged only, so Fire Breath To-Hit is unchanged');
 
   const academyMagicRanged = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
@@ -843,6 +878,27 @@ function runDeriveUnitStatsChecks(ctx) {
   }));
   assertEqual(holyWeaponThrown.rtbToHitWpnBonus, 0, 'Holy Weapon thrown to-hit bonus is tracked separately from weapon bonus');
   assertClose(holyWeaponThrown.toHitRtb, 0.4, 'Holy Weapon boosts thrown to-hit outside MoM 1.31');
+
+  // Units.RecalculateUnits.pas:1806-1809 writes hitchancemelee, hitchancethrown and — for a
+  // non-magical type — hitchanceranged. hitchancebreath is not among them, and no other write
+  // in that routine touches it, so a Breath channel keeps the unmodified common value.
+  const holyWeaponChannels = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11',
+    abilities: { holyWeapon: true },
+    modernAttacks: {
+      ranged: { strength: 4, type: 'missile' },
+      thrown: { strength: 4, type: 'thrown' },
+      fireBreath: { strength: 4, type: 'fire' },
+    },
+  }));
+  assertClose(holyWeaponChannels.modernAttacks.ranged.toHit, 0.4,
+    'Holy Weapon reaches the Ranged To-Hit modifier');
+  assertClose(holyWeaponChannels.modernAttacks.thrown.toHit, 0.4,
+    'Holy Weapon reaches the Thrown To-Hit modifier');
+  assertClose(holyWeaponChannels.modernAttacks.fireBreath.toHit, 0.3,
+    'Holy Weapon does not reach the Breath To-Hit modifier');
+  assertClose(holyWeaponChannels.toHitMelee, 0.4,
+    'Holy Weapon reaches the melee To-Hit modifier');
 
   const darknessDeath = ctx.deriveUnitStats(baseUnitInput({
     unitType: 'fantastic_death',
