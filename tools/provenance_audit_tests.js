@@ -12,9 +12,9 @@ const {
 const sample = [
   "statStep({ id: 'literal-step', apply: u => { u.def += 1; } });",
   "attackSpecificStep('resolution-step', true, () => {});",
-  "emit('ability-step', 'c', { atk: 2 });",
+  "abilityStep('ability-step', 'c', { writes: ['atk'], apply: u => { u.atk += 2; } });",
   '// STAT-FORMULA[dynamic-emit]',
-  "emit(id, 'c', { def: 1 });",
+  "abilityStep(id, 'c', { writes: ['def'], apply: u => { u.def += 1; } });",
   "traceBasePreparation('base-prep', 'Base prep', before, after);",
   "addChanceDelta('chance-literal', source, 'c', 1, fields, 10);",
   '// STAT-FORMULA[table-case]',
@@ -111,8 +111,8 @@ const unrelatedBinding = computeVerifiedBinding(
 assert.notStrictEqual(unrelatedBinding, manifest.innerPowerEligibility,
   'wrong-but-code-shaped source range must fail the formula-specific binding');
 
-assert.throws(() => discoverFormulaSites('synthetic.js', "emit(id, 'c', { def: 1 });"),
-  /dynamic ability emit needs an adjacent STAT-FORMULA id/);
+assert.throws(() => discoverFormulaSites('synthetic.js', "abilityStep(id, 'c', {});"),
+  /dynamic ability step needs an adjacent STAT-FORMULA id/);
 assert.throws(() => discoverFormulaSites('synthetic.js', "case 'elite': return { atk: 2 };"),
   /stat-table case needs an adjacent STAT-FORMULA id/);
 

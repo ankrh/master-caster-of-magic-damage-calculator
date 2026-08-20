@@ -429,7 +429,7 @@ function deriveUnitStats(input) {
   const soulFlayActive = version.startsWith('com2_warlord')
     && !!(abilities && abilities.soulFlay)
     && !isFantasticBase;
-  const soulFlayLevels = soulFlayActive ? levelRank + 1 : 0;
+  const soulFlayLevels = levelRank + 1;
   const soulFlayAtkMod = -1 * soulFlayLevels;
   const soulFlayDefMod = -2 * soulFlayLevels;
   const soulFlayResMod = -2 * soulFlayLevels;
@@ -441,9 +441,6 @@ function deriveUnitStats(input) {
   // script writes `SRanged`, the conventional ranged field, so the penalty lands on the
   // ranged channel only; Warlord's independent Thrown and Breath fields are untouched.
   const plagueActive = version.startsWith('com2_warlord') && !!(abilities && abilities.plague);
-  const plagueAtkMod = plagueActive ? -3 : 0;
-  const plagueDefMod = plagueActive ? -3 : 0;
-  const plagueResMod = plagueActive ? -6 : 0;
 
   // Pox Host (Warlord global combat debuff): a Goblin Poxbearer unit present on the
   // battlefield spreads Goblin Pox to every unit, with the effect varying by race.
@@ -454,9 +451,9 @@ function deriveUnitStats(input) {
   // global toggle; the unit's race (empty on custom units) determines which branch applies.
   const poxHostActive = version.startsWith('com2_warlord') && !!input.poxHost;
   const poxHostIsGoblin = unitRace === 'Goblin';
-  const goblinPoxAtkMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
-  const goblinPoxDefMod = poxHostActive ? (poxHostIsGoblin ? -1 : -3) : 0;
-  const goblinPoxResMod = poxHostActive ? (poxHostIsGoblin ? 0 : -1) : 0;
+  const goblinPoxAtkMod = poxHostIsGoblin ? -1 : -3;
+  const goblinPoxDefMod = poxHostIsGoblin ? -1 : -3;
+  const goblinPoxResMod = poxHostIsGoblin ? 0 : -1;
 
   // Great Unbinding (Warlord Sorcery very rare global): debuffs opponent fantastic
   // creatures in combat with −20% To-Hit, −20% To-Defend and −2 Resistance for the
@@ -466,7 +463,6 @@ function deriveUnitStats(input) {
   const greatUnbindingActive = version.startsWith('com2_warlord')
     && !!(abilities && abilities.greatUnbinding)
     && isFantasticBase;
-  const greatUnbindingResMod = greatUnbindingActive ? -2 : 0;
 
   // Natural Selection (Warlord Nature common global): units trained in a city gain
   // bonuses from resources in the city's surroundings. The inputs expose each resource
@@ -478,18 +474,19 @@ function deriveUnitStats(input) {
   // Forester is a terrain/movement perk with no combat effect, so only the +1 ranged
   // attack from Wild game is reflected in the stats.
   const naturalSelectionEligible = isWarlord && !isFantasticBase && !isHero;
-  const naturalSelectionCoalMod = naturalSelectionEligible && !!(abilities && abilities.coal) ? 1 : 0;
-  const naturalSelectionIronMod = naturalSelectionEligible && !!(abilities && abilities.iron) ? 1 : 0;
+  const naturalSelectionCoal = naturalSelectionEligible && !!(abilities && abilities.coal);
+  const naturalSelectionIron = naturalSelectionEligible && !!(abilities && abilities.iron);
   const naturalSelectionNightshadeCount = abilities && abilities.nightshade === true
     ? 1 : Math.max(0, parseInt(abilities && abilities.nightshade) || 0);
-  const naturalSelectionNightshadeMod = naturalSelectionEligible
-    ? naturalSelectionNightshadeCount : 0;
+  const naturalSelectionNightshade = naturalSelectionEligible
+    && naturalSelectionNightshadeCount > 0;
   // Nature Link (Warlord rename of Land Linking): grants +1 resistance to any unit
   // (normal or fantastic). The fantastic-only +2 melee/def/breath is handled with Land Linking.
-  const natureLinkResMod = isWarlord && !!(abilities && abilities.landLinking) ? 1 : 0;
-  const naturalSelectionPowerMineralsMod = naturalSelectionEligible
+  const natureLinkActive = isWarlord && !!(abilities && abilities.landLinking);
+  const naturalSelectionPowerMineralsCount = naturalSelectionEligible
     ? Math.max(0, parseInt(abilities.powerMinerals) || 0)
     : 0;
+  const naturalSelectionPowerMinerals = naturalSelectionPowerMineralsCount > 0;
 
   // Survival Instinct (Warlord addition): newly trained normal units gain a small
   // +3% to +7% To-Defend from gold-producing resources in the city's surroundings.
@@ -501,7 +498,6 @@ function deriveUnitStats(input) {
 
   // Orihalcon: +1 resistance, +2 magical ranged attack (CoM/CoM2).
   const orihalconActive = armor === 'orihalcon';
-  const orihalconResMod = orihalconActive ? 1 : 0;
 
   // Wall of Fire garrison boost (Warlord): the city enchantment grants +1 to all
   // defending normal-unit non-magic attacks, mirroring the original game's Metal
@@ -513,7 +509,6 @@ function deriveUnitStats(input) {
   // separate global Wall of Fire toggle, handled in combat_special_attacks.js.)
   const wofDefenderBonusActive = isWarlord && !!(abilities && abilities.wallOfFireBoost)
     && isNormalUnitType(unitTypeVal);
-  const wofDefenderAtkMod = wofDefenderBonusActive ? 1 : 0;
 
   // Metal Fires / Flame Blade: +1/+2 to missile and thrown rtb only (not boulder, magic).
   // Warlord Flame Blade / Fiery Blade (per in-game helptext): +2 to missile and thrown.
@@ -535,9 +530,6 @@ function deriveUnitStats(input) {
   // (combat_abilities.js already adds +3 melee for a Warlord blade effect).
   const ffMeleeBonus = ffRegularBonus && !hasWarlordBlade ? 3 : 0;
 
-  const ludusAgogeAtkMod = ludusAgoge ? 1 : 0;
-  const motherFungusAtkMod = motherFungus ? 2 : 0;
-  const altarOfTheSunMeleeMod = altarOfTheSunHolyMother ? 1 : 0;
   // Warlord Colossal Strength: +1 + 40% (rounded down) of Melee, Physical Ranged, and
   // Thrown attack strength. Breath and magic ranged are not "physical ranged" and do not
   // qualify.
@@ -551,19 +543,13 @@ function deriveUnitStats(input) {
   const colossalStrength = isWarlord && !!(abilities && abilities.colossalStrength);
   // Stats are never negative in the engine, so a subtotal driven below zero scales as zero.
   const colossalScaled = (subtotal) => 1 + Math.floor(0.4 * Math.max(0, subtotal));
-  const dragonMoundDefMod = dragonMound ? 1 : 0;
-  const poolOfRepentanceDefMod = poolOfRepentance ? 1 : 0;
   const holyArmorActive = !!(abilities && abilities.holyArmor);
-  // Altar of the Moon: trained units gain +1 Resistance (all units, not just ranged).
-  const altarOfTheMoonResMod = altarOfTheMoon ? 1 : 0;
-  const ludusAgogeResMod = ludusAgoge ? 1 : 0;
-  const poolOfRepentanceResMod = poolOfRepentance ? 1 : 0;
-  const sanctaBasilicaResMod = sanctaBasilica ? 3 : 0;
   // Pillar of Faith (Warlord, Life rare city enchantment): +1 Resistance per qualifying
   // building in the training city. The script has no cap; the numeric input holds the count.
-  const pillarOfFaithResMod = isWarlord && !isFantasticBase && !isHero
+  const pillarOfFaithCount = isWarlord && !isFantasticBase && !isHero
     ? Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0)
     : 0;
+  const pillarOfFaith = pillarOfFaithCount > 0;
   // Warlord scoring options run in UnitCalcPre.CAS (phase b). Uphill Battle is
   // represented per unit so the caller can mark whichever side is AI-controlled.
   // Gods Play Dices records the already-rolled combat modifier rather than rolling
@@ -590,8 +576,6 @@ function deriveUnitStats(input) {
   // attack bonus, this source-backed write creates the live attack.
   const trueLightCreatesMelee = isWarlord && hasTrueLight && trueLightAtkBonus > 0;
   const hasMeleeAttack = calcBaseAtk > 0 || marionetteAttackBonus > 0 || trueLightCreatesMelee;
-
-  const ludusAgogeHpMod = ludusAgoge ? 1 : 0;
 
   // Blazing March: +3 to missile only (not boulder, magic ranged, or breath).
   // Warlord also boosts thrown.
@@ -774,52 +758,8 @@ function deriveUnitStats(input) {
       && (permanentRangedType === 'missile' || permanentRangedType === 'boulder');
     const blackpowderSelectedThrown = blackpowder && permanentThrownType === 'thrown';
     const blackpowderSelectedFireBreath = blackpowder && permanentThrownType === 'fire';
-    if (blackpowderSelectedPhysicalRanged && permanentRangedType === 'missile') {
-      rangedType = 'boulder';
-    }
-    if (bombsGrenades && rangedType === 'none' && thrownType === 'none') {
-      thrownType = 'thrown';
-    }
-
-    const hasGazeAttack = gazeType !== 'none'
-      || abilities.stoningGaze != null
-      || abilities.deathGaze != null
-      || baseDoomGazeWithBlazingEyes > 0;
-    const ccDosBaseRanged = inputSlotRtb;
-    const ccDosBreathEligible = (rtbTypeRaw === 'none' || rtbTypeRaw === 'thrown')
-      && !hasGazeAttack && ccDosBaseRanged <= ccDosBaseRangedMax;
-    const ccFireBreathGranted = ccFireBreathAbil
-      && (ccIndependentChannels || ccDosBreathEligible);
-    // Only the Fire Breath channel takes the grant; without this the shared-slot write would
-    // land in whichever channel this slot derives and overwrite it.
-    const ccOwnsThisSlot = !channelKey || channelKey === 'fireBreath';
-    const ccFireBreathActive = ccFireBreathGranted
-      && (ccIndependentChannels ? rangedType === 'none' : ccDosBreathEligible);
-
-    // Channel types immediately before the Altar of Storm write. Military Workshop has already
-    // converted a missile projectile; Lightning Blade remains an explicit later base step.
-    const baseSequenceRangedType = rangedType;
-    const baseSequenceThrownType = thrownType;
-
-    const lightningBladeOwnsThisSlot = isChannelSlot
-      ? channelKey === 'thrown' || channelKey === 'lightningBreath'
-      : !slot.baseAttacks && rangedType === 'none';
-    // Without a Thrown source the assignment creates strength 1; an existing Lightning Breath is
-    // overwritten. The modern record seeds this independent channel beside Ranged/Fire.
-    const lightningBladeGrantsBreath = lightningBladeAbil
-      && lightningBladeOwnsThisSlot && permanentThrownType !== 'thrown';
-    const lightningBladeConvertsThrown = lightningBladeAbil
-      && lightningBladeOwnsThisSlot && permanentThrownType === 'thrown';
-    if (lightningBladeConvertsThrown || lightningBladeGrantsBreath) {
-      thrownType = 'lightning';
-    }
-    // These are the actual channel types at the permanent-record boundary. Chaos Channels
-    // Fire Breath is a later region-a calculated-record write and must not be baked into this
-    // seed merely because the UI still projects one secondary attack at a time.
-    if (ccFireBreathActive && ccOwnsThisSlot) {
-      rangedType = 'none';
-      thrownType = 'fire';
-    }
+    const blackpowderUpgradesToBoulder = blackpowderSelectedPhysicalRanged
+      && permanentRangedType === 'missile';
 
     const calcBaseRtb = inputSlotRtb;
     // CreateUnit.CAS city/resource gates read the permanent unit record before later
@@ -834,7 +774,43 @@ function deriveUnitStats(input) {
       && (unitName.endsWith('Rocs')
         || (!abilities.mechanical && inputSlotRtb > 0
           && (rtbTypeRaw === 'magic_c' || rtbTypeRaw === 'magic_n' || rtbTypeRaw === 'magic_s')));
-    // Energy Cannon is a permanent overland conversion to projectile type Beam
+
+    // --- The running pair, advanced in chain order (F94) ---
+    //
+    // `rangedType`/`thrownType` are a running pair, not a set of snapshots: each predicate below
+    // is written where its own step sits in the execution chain, so it reads the identity the
+    // record carries at that point. The flips between them are therefore applied in the order
+    // the Warlord chain gives their steps (`stats_manifests.js`) — `base:militaryWorkshop`,
+    // `base:lightningBlade:breath`, `base:energyCannon`, `a:chaosChannels:fireBreath`,
+    // `b:bombsGrenades` — with the predicates each of those positions feeds interleaved between
+    // them. Nothing before a flip may see the identity that flip has not yet written.
+    //
+    // The seed is what `base:stat:base` writes (`stats_sequence.js`), and `base:stat:base` is the
+    // chain's first entry, so it carries the permanent record's identity and nothing else. Every
+    // flip below belongs to a later chain entry and is made by that entry's own step.
+    const baseSequenceRangedType = rangedType;
+    const baseSequenceThrownType = thrownType;
+
+    // `base:militaryWorkshop`: the missile-to-boulder projectile upgrade.
+    if (blackpowderUpgradesToBoulder) {
+      rangedType = 'boulder';
+    }
+
+    // `base:lightningBlade:breath`.
+    const lightningBladeOwnsThisSlot = isChannelSlot
+      ? channelKey === 'thrown' || channelKey === 'lightningBreath'
+      : !slot.baseAttacks && rangedType === 'none';
+    // Without a Thrown source the assignment creates strength 1; an existing Lightning Breath is
+    // overwritten. The modern record seeds this independent channel beside Ranged/Fire.
+    const lightningBladeGrantsBreath = lightningBladeAbil
+      && lightningBladeOwnsThisSlot && permanentThrownType !== 'thrown';
+    const lightningBladeConvertsThrown = lightningBladeAbil
+      && lightningBladeOwnsThisSlot && permanentThrownType === 'thrown';
+    if (lightningBladeConvertsThrown || lightningBladeGrantsBreath) {
+      thrownType = 'lightning';
+    }
+
+    // `base:energyCannon` is a permanent overland conversion to projectile type Beam
     // with ranged Doom damage. The script gates it on persistent Max Ammo > 0, but every
     // shipped Warlord conventional-ranged unit has positive Max Ammo and every Mechanical
     // zero-ammo unit lacks conventional Ranged. The one-round calculator therefore infers
@@ -848,14 +824,40 @@ function deriveUnitStats(input) {
       rangedType = 'beam';
     }
 
-    // `rangedType`/`thrownType` are a running pair, not a set of snapshots: each predicate below
-    // is written where its own step sits in the execution chain, so it reads the identity the
-    // record carries at that point. The three that follow are the writes the chain places ahead
-    // of `c:focusMagic`'s conversion — `b:fieryFury`, `b:bombsGrenades` and `c:level` — so they are
-    // evaluated here, before the conversion re-aims the pair for everything after it.
+    // `a:chaosChannels:fireBreath`, which the chain places after the three permanent writes above.
+    const hasGazeAttack = gazeType !== 'none'
+      || abilities.stoningGaze != null
+      || abilities.deathGaze != null
+      || baseDoomGazeWithBlazingEyes > 0;
+    const ccDosBaseRanged = inputSlotRtb;
+    const ccDosBreathEligible = (rtbTypeRaw === 'none' || rtbTypeRaw === 'thrown')
+      && !hasGazeAttack && ccDosBaseRanged <= ccDosBaseRangedMax;
+    const ccFireBreathGranted = ccFireBreathAbil
+      && (ccIndependentChannels || ccDosBreathEligible);
+    // Only the Fire Breath channel takes the grant; without this the shared-slot write would
+    // land in whichever channel this slot derives and overwrite it.
+    const ccOwnsThisSlot = !channelKey || channelKey === 'fireBreath';
+    const ccFireBreathActive = ccFireBreathGranted
+      && (ccIndependentChannels ? rangedType === 'none' : ccDosBreathEligible);
+    if (ccFireBreathActive && ccOwnsThisSlot) {
+      rangedType = 'none';
+      thrownType = 'fire';
+    }
+
+    // `b:fieryFury` (`UnitCalcPre.CAS:832-846`) precedes the Bombs & Grenades block
+    // (`:1066-1080`) in the same file, so it cannot see the Thrown field that block creates.
     const ffRtbMod = ffRegularBonus
       && (rangedType === 'missile' || rangedType === 'boulder'
         || thrownType === 'thrown') ? 2 : 0;
+
+    // `b:bombsGrenades`. The grant supplies the identity of the field it fills, exactly as the
+    // later `d:shadowStrike:thrown` grant does, so no earlier predicate sees a Thrown attack it
+    // has not yet created.
+    const bombsGrenadesGrantsThrown = bombsGrenades
+      && rangedType === 'none' && thrownType === 'none';
+    if (bombsGrenadesGrantsThrown) {
+      thrownType = 'thrown';
+    }
     const bombsGrenadesRtbMod = bombsGrenades && thrownType === 'thrown'
       ? Math.max(0, Math.floor(8 - baseFigs / 2))
       : 0;
@@ -1021,7 +1023,8 @@ function deriveUnitStats(input) {
     // The script writes `SRanged` by the same per-level amount as melee, so the penalty lands
     // on the conventional ranged channel only; Warlord's independent Thrown and Breath fields
     // are untouched.
-    const soulFlayRtbMod = modernConventionalRangedChannel ? -1 * soulFlayLevels : 0;
+    const soulFlayRtbMod = soulFlayActive && modernConventionalRangedChannel
+      ? -1 * soulFlayLevels : 0;
     const plagueRtbMod = plagueActive && modernConventionalRangedChannel ? -3 : 0;
     // Both branches write `SRanged` by the same amount as melee, so the penalty lands on the
     // conventional ranged channel only; Warlord's independent Thrown and Breath fields are
@@ -1051,12 +1054,8 @@ function deriveUnitStats(input) {
     const reinforceMagicRtbMod = reinforceMagicActive
       && (rangedType === 'magic_c' || rangedType === 'magic_n'
         || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
-    // Supreme Light: +2 to ranged attack strength (missile/boulder/magic ranged).
-    // Source manuals say "+2 melee and ranged attack" — thrown and breath are not affected.
-    const supremeLightRtbMod = supremeLightEligible
-      && (rangedType === 'missile' || rangedType === 'boulder'
-        || rangedType === 'magic_c' || rangedType === 'magic_n'
-        || rangedType === 'magic_s' || rangedType === 'beam') ? 2 : 0;
+    // Supreme Light's +2 has no precomputed modifier: its gate is the live `if U.ranged > 0`
+    // the `e:supremeLight` step reads at its own position (stats_sequence.js).
     // Altar of the Moon: +2 to ranged attack strength (missile/boulder/magic ranged only;
     // thrown and breath are not affected), matching the "ranged units" wording.
     const altarOfTheMoonRtbMod = altarOfTheMoon && hasPermanentRangedStat ? 2 : 0;
@@ -1152,7 +1151,8 @@ function deriveUnitStats(input) {
       secondaryHitKind, blazeOfGloryFillsSlot,
       marionetteRangedSlot, marionetteOwnsThisRangedSlot,
       blackpowder, blackpowderGrantsAP, blackpowderBasePoison, venom, venomBasePoison,
-      blackpowderRtbMod, blackpowderFireBreathRtbMod,
+      blackpowderRtbMod, blackpowderFireBreathRtbMod, blackpowderUpgradesToBoulder,
+      bombsGrenadesGrantsThrown,
       ccFireBreathGranted, ccFireBreathActive, ccOwnsThisSlot,
       lightningBladeGrantsBreath, lightningBladeConvertsThrown,
       alumniOfAcademy, energyCannon, energyCannonOwnsThisSlot,
@@ -1164,7 +1164,7 @@ function deriveUnitStats(input) {
       eternalNightRtbMod, lionheartRtbMod, disciplineRtbMod, soulFlayRtbMod, plagueRtbMod,
       goblinPoxRtbMod, orihalconRtbMod, wofDefenderRtbMod, ffRtbMod,
       bombsGrenadesRtbMod, ludusAgogeRtbMod, motherFungusRtbMod, blazingMarchRtbMod,
-      naturalSelectionWildGameActive, reinforceMagicRtbMod, supremeLightRtbMod,
+      naturalSelectionWildGameActive, reinforceMagicRtbMod,
       altarOfTheMoonRtbMod, landLinkingBreathRtbMod, dragonMoundRtbMod, gsRtbMod,
       weaknessRtbModBinary, weaknessRtbModCas, rustRtbMod,
       hwRangedToHit, hwThrownToHit, heavenlyLightRangedToHit, heavenlyLightThrownToHit,
@@ -1213,9 +1213,12 @@ function deriveUnitStats(input) {
       modernInputs[shadowKey] = { strength: 0, type: 'none' };
     }
     // Bombs & Grenades writes the independent Thrown field regardless of any conventional
-    // ranged or Breath field already present.
+    // ranged or Breath field already present. `SETSTAT(U,SThrown,0,…)` (UnitCalcPre.CAS:1071)
+    // names the calculated record, so the field is seeded empty and typeless like the Shadow
+    // Strike and Blaze of Glory fields below, and `b:bombsGrenades` supplies its identity at
+    // its own position rather than the permanent record carrying a region-`b` write.
     if (bombsGrenades && !modernInputs.thrown) {
-      modernInputs.thrown = { strength: 0, type: 'thrown' };
+      modernInputs.thrown = { strength: 0, type: 'none' };
     }
     // Focus Magic always executes its ranged branch. Breath and gaze fields do not prevent
     // creation of ranged 3; only an existing conventional ranged or convertible Thrown does.
@@ -1425,8 +1428,6 @@ function deriveUnitStats(input) {
   const focusMagicDoomGazeMod = recordContext.focusMagicBuffsExisting && isCoM2 ? 3 : 0;
   const alumniOfAcademy = recordContext.alumniOfAcademy;
   const energyCannon = recordContext.energyCannon;
-  const rangedType = recordContext.rangedType;
-  const thrownType = recordContext.thrownType;
   const calcBaseRtb = recordContext.calcBaseRtb;
   const rtbStatActive = recordContext.rtbStatActive;
   const hasPermanentRangedStat = recordContext.hasPermanentRangedStat;
@@ -1462,8 +1463,14 @@ function deriveUnitStats(input) {
     return 0;
   };
   // PROVENANCE[weapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:bc81a9f3b6ba3703d596d756 | Reference docs/DOS reconstructed/unitcalc.c@span:15:9b957c6ff1d6ae8d9afca04b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:eae87788c081c49037f75656 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:2cc8f80e45e1482ee9229fd8 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:06ea8c358024e0163de78588 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
+  // Both engines gate the whole material block on the material itself: `if EncMagic or
+  // EncMithril or EncAdamant` at $00598D91, and `if (quality > 0)` over
+  // `mutations & UM_WEAPON_QUALITY_MASK` in every DOS build. Everything inside is the
+  // material's own magnitude, so a normal weapon is a block neither engine enters.
+  const hasWeaponMaterial = weapon === 'magic' || weapon === 'mithril' || weapon === 'adamantium';
   const weaponStatSteps = [
     statStep({ id: 'weapon', phase: 'c', writes: ['def', 'atk', ...strengthFields],
+      when: () => hasWeaponMaterial,
       apply: u => {
         u.def += wpn.def; u.atk += wpn.atk;
         for (const context of derivationContexts) u[context.strengthField] += context.rtbWpn;
@@ -1475,8 +1482,9 @@ function deriveUnitStats(input) {
     // PROVENANCE[chance:weapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:c4c0e22bb79483f8e5729dfb | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:8365c7617ed27a3bba5164a3 | Reference docs/DOS reconstructed/unitcalc.c@span:34:beda653e161112c68e8cdff3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:444355c621ef17cc85a05318 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:55a524751c4be78ffea17562 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
     statStep({ id: 'chance:weapon', sourceId: 'weapon', sourceLabel: 'Weapon material',
       phase: 'c', writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
-      when: u => (wpn.toHit !== 0 && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0))
-        || secondaryHitTargets.some(target => weaponHitWrite(u, target) !== 0),
+      when: u => hasWeaponMaterial
+        && ((wpn.toHit !== 0 && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0))
+          || secondaryHitTargets.some(target => weaponHitWrite(u, target) !== 0)),
       apply: u => {
         if (wpn.toHit !== 0 && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0)) {
           u.toHitMelee += wpn.toHit;
@@ -1504,6 +1512,7 @@ function deriveUnitStats(input) {
   // PROVENANCE[flameBlade:ranged]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:98daf6b1cfd836c4a184f151 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
   const flameBladeRangedStep = statStep({
     id: 'flameBlade:ranged', phase: 'c', writes: strengthFields,
+    when: () => hasWarlordBlade || fbAtkBonus > 0,
     apply: u => {
       for (const context of derivationContexts) {
         const liveRangedType = u[context.rangedTypeField];
@@ -1554,49 +1563,50 @@ function deriveUnitStats(input) {
   // they read is handed over explicitly, so a section states its own inputs instead of
   // depending on everything this function happens to have in scope.
   const rawStatSteps = buildRawStatSteps({
-    abilByPhase, abilities, altarOfTheMoon, altarOfTheMoonResMod,
-    altarOfTheSun, altarOfTheSunMeleeMod, armor, badMoonActive, baseDoomGaze, baseGazeRanged,
+    abilByPhase, abilities, altarOfTheMoon,
+    altarOfTheSun, altarOfTheSunHolyMother, armor, badMoonActive, baseDoomGaze, baseGazeRanged,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod,
-    blazeOfGloryActive,
+    blazeOfGloryActive, bombsGrenades,
     calcBaseAtk, calcBaseDef, calcBaseHP, calcBaseRes,
     ccFireBreathStrength, ccIndependentChannels,
-    chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus, charmOfLifeActive,
+    chaosSurgeCount, chaosSurgeMeleeBonus, chaosSurgeResBonus,
+    chaosSurgeRtbBonus, charmOfLifeActive,
     channels: derivationContexts, recordContext, strengthFields, rangedTypeFields,
     thrownTypeFields, secondaryHitTargets, secondaryHitFields, secondaryHitFieldsFor,
     classicBerserk, colossalScaled, colossalStrength, com1DivineBarrierAura,
     com1GuidingBeaconAura, com1SoulLinkerAura, darkForceActive, darknessAtkBonus,
-    darknessDefBonus, darknessResBonus, destinyActive, disciplineAtkMod, disciplineDefMod,
-    doomGazeLvlMod, dosTrueLightStep, dragonMound, dragonMoundDefMod,
-    enduranceDefMod, enduranceHpMod, energyCannon,
-    eternalNightEnemyResPenalty, ffMeleeBonus,
+    darknessDefBonus, darknessResBonus, destinyActive, disciplineActive, disciplineAtkMod,
+    disciplineDefMod, doomGazeLvlMod, dosTrueLightStep, dragonMound,
+    enduranceActive, enduranceDefMod, enduranceHpMod, energyCannon,
+    eternalNightEnemyResPenalty, ffMeleeBonus, ffRegularBonus,
     flameBladeRangedStep, focusMagicActive,
     focusMagicDoomGazeMod, gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod,
     goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod, goodMoonActive,
-    greatUnbindingActive, greatUnbindingResMod, hasDarkness, hasMeleeAttack,
+    greatUnbindingActive, hasDarkness, hasMeleeAttack,
     hasPermanentRangedStat, heavenlyLightActive, heavenlyLightMeleeToHit,
     heavenlyLightThrownToHit,
     holyArmorActive, hurricaneActive, hwMeleeToHit, identity,
     input, inputBaseAtk,
     isCoM1, isCoM2, isCoMVersion, isWarlord, landLinkingEligible, level, levelRank,
     lionheartHpMod,
-    ludusAgoge, ludusAgogeAtkMod, ludusAgogeHpMod, ludusAgogeResMod, lvl,
+    ludusAgoge, lvl,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
     marionetteStrayed,
     modernNodeBaseMelee, motherFungus,
-    motherFungusAtkMod, naturalSelectionCoalMod, naturalSelectionIronMod,
-    naturalSelectionNightshadeMod, naturalSelectionPowerMineralsMod,
-    natureConjunctionActive, natureLinkResMod, nodeAuraActive,
-    orihalconResMod, outlanderRtbToHitBonus, pillarOfFaithResMod, plagueActive,
-    plagueAtkMod, plagueDefMod, plagueResMod, pneumaFieldActive, poolOfRepentance,
-    poolOfRepentanceDefMod, poolOfRepentanceResMod, psychoForceActive,
+    naturalSelectionCoal, naturalSelectionIron, naturalSelectionNightshade,
+    naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
+    naturalSelectionPowerMineralsCount,
+    natureConjunctionActive, natureLinkActive, nodeAuraActive,
+    orihalconActive, outlanderRtbToHitBonus, pillarOfFaith, pillarOfFaithCount, plagueActive,
+    pneumaFieldActive, poolOfRepentance, poxHostActive, psychoForceActive,
     realmWardActive, rtbStatActive, sanctaBasilica,
-    sanctaBasilicaResMod, soulFlayAtkMod, soulFlayDefMod, soulFlayResMod,
+    soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayResMod,
     spellWardActive, supremeLightEligible,
     survivalInstinctToBlkBonus, trueSightRangedToHitBonus, unitIsChaos, unitTypeVal,
     uphillBattleActive, vampirismActive,
     version, vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warlordBerserk,
-    warlordCombatFlameBlade, warlordTrueLightStep, warpRealityActive,
-    weaponStatSteps, wofDefenderAtkMod,
+    warlordCombatFlameBlade, warlordEternalNightActive, warlordTrueLightStep,
+    warpRealityActive, weaknessActive, weaponStatSteps, wofDefenderBonusActive,
   });
   // The raw assembly intentionally keeps the implementation fragments close to their formulas.
   // F20 performs one explicit manifest walk here so the executed list is source ordered, every
@@ -1610,7 +1620,13 @@ function deriveUnitStats(input) {
   const statSteps = orderStatStepsBySource(applicableRawStatSteps, statChain(version));
   // `slots` carries the source-specific attack gates. `melee`, `rtb`, and `ranged` retain the
   // calculated-channel semantics shared by ordinary ability steps. `persistentRanged` is the
-  // narrower `BaseUnits.ranged > 0` predicate consumed only by Misfortune's custom aura step.
+  // aura pass's `B.ranged > 0` (Units.RecalculateUnits.pas:2535, :2599): the **permanent**
+  // record's Ranged field carrying strength, with no test of what type stands in it and none of
+  // what the calculated record now holds. Which slot that field is, is record structure — the
+  // modern `ranged` channel is `SRanged`; the DOS-shaped shared slot is the Ranged field only
+  // while its permanent type is a conventional ranged one, since one value stands there for
+  // ranged, Thrown, Breath or a gaze. `hasPermanentRangedStat` keeps its own narrower job: the
+  // `CreateUnit.CAS` city gates, which do read a permanent ranged *type*.
   //
   // `rtb` is the DOS engines' shared `.ranged` slot; `ranged` is `Caster.exe`'s narrower
   // `unitT.ranged` field, which excludes Thrown, both breaths and the two gazes. Each
@@ -1632,7 +1648,9 @@ function deriveUnitStats(input) {
       // Thrown field while that field still stands empty.
       rangedOrThrown: context.modernRangedOrThrownChannel
         && (context.rtbStatActive || context.modernThrownField),
-      persistentRanged: context.hasPermanentRangedStat,
+      persistentRanged: context.isChannelSlot
+        ? (context.channelKey === 'ranged' && context.baseStrength > 0)
+        : context.hasPermanentRangedStat,
       gaze: baseGazeRanged > 0, doomGaze: baseDoomGaze > 0,
     };
   }
@@ -1761,23 +1779,31 @@ function deriveUnitStats(input) {
 
   const displayDef = (vertigoActive && !isCoMVersion) ? Math.max(0, finalDef - 1) : finalDef;
 
-  // R7.3 chance trace. To Hit and To Block already execute on the authoritative ordered
-  // `statSteps` record. Project those recorded deltas into the separate display/effective
-  // resolution trace so every displayed write keeps its source and running before/after value.
-  // One projection per derivation slot: each reads the secondary modifier its own channel reads,
-  // which is what lets a single walk answer for the legacy slot and every modern channel alike.
-  const chanceFields = {
-    melee: ['toHitMelee', 'displayToHitMelee'],
-    rtb: ['toHitRtb', 'displayToHitRtb'],
-    block: ['toBlock', 'displayToBlock'],
-  };
-  const allHitFields = [...chanceFields.melee, ...chanceFields.rtb];
-  // Distance penalty (attacker ranged only)
+  // Chance trace. To Hit and To Block already execute on the authoritative ordered `statSteps`
+  // record. Project those recorded deltas into a percentage-point resolution trace so every
+  // displayed write keeps its source and running before/after value. One field per quantity:
+  // the trace and the resolver read the same number, because nothing between recalculation and
+  // the roll changes one without the other. One projection per derivation slot: each reads the
+  // secondary modifier its own channel reads, which is what lets a single walk answer for the
+  // legacy slot and every modern channel alike.
+  const chanceFields = { melee: 'toHitMelee', rtb: 'toHitRtb', block: 'toBlock' };
+  const allHitFields = [chanceFields.melee, chanceFields.rtb];
+  // Distance penalty (attacker ranged only). This is a resolution-time projection, not a
+  // recalculation write, so it reads the **finished** record: the projectile type standing in
+  // this slot's Ranged field after the whole sequence has run, rather than the value the
+  // precomputed pass left behind at `c:focusMagic`. Only the post-`c:focusMagic` type writes can
+  // separate the two, and Warlord's `d:blazeOfGlory` is the one that does: it empties the Ranged
+  // field and moves its strength onto Thrown (`UnitCalc.CAS:1494-1500`), so the surviving attack
+  // is Thrown, fires in the melee engagement, and has no range to be penalised for.
+  // This is a *type* read, not the field-identity question `isRangedFieldSlot` answers: the curve
+  // itself differs between missile and boulder, and a Ranged field standing typeless is a field
+  // with no projectile, so both tests have to come from the same finished type.
   const distancePenaltyFor = context => {
     if (prefix !== 'a' || !input.rangedCheck) return 0;
-    if (context.rangedType !== 'missile' && context.rangedType !== 'boulder') return 0;
+    const finishedRangedType = statUnit[context.rangedTypeField];
+    if (finishedRangedType !== 'missile' && finishedRangedType !== 'boulder') return 0;
     const dist = Math.max(1, parseInt(input.rangedDist) || 1);
-    return distancePenalty(dist, context.rangedType, !!(abilities && abilities.longRange), version,
+    return distancePenalty(dist, finishedRangedType, !!(abilities && abilities.longRange), version,
       isHero);
   };
 
@@ -1805,11 +1831,9 @@ function deriveUnitStats(input) {
       const rtbHitDelta = commonHitDelta
         + (event.changes[context.secondaryHitField]
           ? event.changes[context.secondaryHitField].delta : 0);
-      for (const field of chanceFields.melee) deltas[field] = meleeHitDelta;
-      for (const field of chanceFields.rtb) deltas[field] = rtbHitDelta;
-      if (event.changes.toBlk) {
-        for (const field of chanceFields.block) deltas[field] = event.changes.toBlk.delta;
-      }
+      deltas[chanceFields.melee] = meleeHitDelta;
+      deltas[chanceFields.rtb] = rtbHitDelta;
+      if (event.changes.toBlk) deltas[chanceFields.block] = event.changes.toBlk.delta;
       const projectedId = event.id === 'trueLight' ? 'chance:trueLightIllusion'
         : event.id.startsWith('chance:') ? event.id : `chance:${event.id}`;
       // Every entry produced here re-presents a stat write, so it carries that write's canonical
@@ -1819,7 +1843,7 @@ function deriveUnitStats(input) {
     }
     // PROVENANCE[chance:distancePenalty]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:28:4d6d2024c9551eae456f2bbf | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:b13db6265b2feaabf81fb261 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:6:791acb631b8f903c2812da35 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:6:791acb631b8f903c2812da35
     addChanceDelta('chance:distancePenalty', { id: 'distancePenalty', label: 'Range distance' },
-      'attackSpecific', -100, chanceFields.rtb, distancePenaltyFor(context));
+      'attackSpecific', -100, [chanceFields.rtb], distancePenaltyFor(context));
 
     // Contribution order is the order the writes execute, in every version. A projection
     // re-presents the ordered ledger; it does not re-sequence it.
@@ -1844,20 +1868,19 @@ function deriveUnitStats(input) {
           for (const field of allHitFields) u[field] = Math.max(10, Math.min(100, u[field]));
         } }),
       // DefenseRoll compares Random(100), whose output is 0..99, directly against the
-      // signed record value. Project that comparison to the calculator's displayed/effective
-      // probability without pretending Caster.exe wrote a region-e To-Defend clamp.
+      // signed record value. Project that comparison to the calculator's To-Block probability
+      // without pretending Caster.exe wrote a region-e To-Defend clamp.
       // PROVENANCE[chance:toBlockProbabilityBound]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:12:08b392da258c1aa5831668e7
       statStep({ id: 'chance:toBlockProbabilityBound', sourceId: 'defenseRoll',
-        sourceLabel: 'Defense-roll threshold', phase: 'attackSpecific', writes: chanceFields.block,
+        sourceLabel: 'Defense-roll threshold', phase: 'attackSpecific', writes: [chanceFields.block],
         when: () => isCoM2, apply: u => {
-          for (const field of chanceFields.block) u[field] = Math.max(0, Math.min(100, u[field]));
+          u[chanceFields.block] = Math.max(0, Math.min(100, u[chanceFields.block]));
         } }),
     );
     // Most of this sequence is projected from the stat ledger, so its entries inherit their
     // canonical scope from the step they project (steps.js, resolveStepVersionScope).
     const chanceUnit = runStatSteps(filterStepsToVersionScope(chanceSteps, version), {
       toHitMelee: 30, toHitRtb: 30, toBlock: 30,
-      displayToHitMelee: 30, displayToHitRtb: 30, displayToBlock: 30,
     }, { version, trace: chanceTrace });
     return { chanceTrace, chanceUnit };
   }
@@ -1871,9 +1894,6 @@ function deriveUnitStats(input) {
   const toHitMelee = chanceUnit.toHitMelee / 100;
   const toHitRtb = chanceUnit.toHitRtb / 100;
   toBlock = Math.max(0, Math.min(1, chanceUnit.toBlock / 100));
-  const displayToHitMelee = chanceUnit.displayToHitMelee / 100;
-  const displayToHitRtb = chanceUnit.displayToHitRtb / 100;
-  const displayToBlock = Math.max(0, Math.min(1, chanceUnit.displayToBlock / 100));
 
   const figureTrace = [];
   const figureSteps = [
@@ -1900,12 +1920,12 @@ function deriveUnitStats(input) {
     hits: projectStatTrace(statTrace, 'hp', inputBaseHP, hp),
     gaze: projectStatTrace(statTrace, 'gaze', baseGazeRanged, effectiveGazeRanged),
     doomGaze: projectStatTrace(statTrace, 'doomGaze', baseDoomGaze, effectiveDoomGaze),
-    toHitMelee: projectStatTrace(chanceTrace, 'displayToHitMelee', 30,
-      chanceUnit.displayToHitMelee, { unit: 'percent' }),
-    toHitRanged: projectStatTrace(chanceTrace, 'displayToHitRtb', 30,
-      chanceUnit.displayToHitRtb, { unit: 'percent' }),
-    toBlock: projectStatTrace(chanceTrace, 'displayToBlock', 30,
-      chanceUnit.displayToBlock, { unit: 'percent' }),
+    toHitMelee: projectStatTrace(chanceTrace, chanceFields.melee, 30,
+      chanceUnit.toHitMelee, { unit: 'percent' }),
+    toHitRanged: projectStatTrace(chanceTrace, chanceFields.rtb, 30,
+      chanceUnit.toHitRtb, { unit: 'percent' }),
+    toBlock: projectStatTrace(chanceTrace, chanceFields.block, 30,
+      chanceUnit.toBlock, { unit: 'percent' }),
     race: projectStatTrace(identityConversion.trace, 'race', identity.baseRace, identity.race),
     fantastic: projectStatTrace(identityConversion.trace, 'fantastic',
       identity.baseFantastic, identity.fantastic),
@@ -1973,12 +1993,9 @@ function deriveUnitStats(input) {
     rangedGetsWpn, thrownGetsWpn: finalThrownType === 'thrown',
     cityWallBonus,
     wpn, lvl,
-    // Display values (can include modifiers that resolveCombat also applies internally)
+    // Display value: `resolveCombat` applies the Vertigo Defense die penalty itself, so the
+    // card's number and the resolver's input are genuinely two quantities here.
     displayDef,
-    displayToHitMelee,
-    displayToHitRtb,
-    displayToBlock,
-    // Pre-clamped combat values
     toHitMelee, toHitRtb, toHitImmolation, toBlock,
     // Abilities (for combat flow modifiers)
     abilities: combatAbilities,
@@ -2025,8 +2042,8 @@ function deriveUnitStats(input) {
         statTrace: slotTrace,
         modifierTrace: projectStatTrace(slotTrace, context.strengthField,
           context.baseStrength, strength),
-        toHitTrace: projectStatTrace(slotChance.chanceTrace, 'displayToHitRtb', 30,
-          slotChance.chanceUnit.displayToHitRtb, { unit: 'percent' }),
+        toHitTrace: projectStatTrace(slotChance.chanceTrace, chanceFields.rtb, 30,
+          slotChance.chanceUnit.toHitRtb, { unit: 'percent' }),
       };
       channels[outputKey] = channel;
       result.modifierTraces.modernAttacks[outputKey] = channel.modifierTrace;

@@ -103,13 +103,28 @@ whatever shape the step has. Where a claim has no observable consequence at all,
 
 ## Tests
 
-Run the applicable checks; calculator behavior changes normally require:
+Cost sets the cadence. `node tools/node_unit_checks.js` is ~7s and `npm run provenance` ~6s;
+`npm test` is ~2.7 minutes of the user's wall clock, and the user waits through it.
 
 ```powershell
 node tools/node_unit_checks.js
 npm run provenance
 npm test
 ```
+
+- **Documentation only — run nothing.** `BACKLOG.md`, `HISTORY.md`, `SPEC.md`, `CLAUDE.md` and
+  `AGENTS.md` move no check. The one exception: a `BACKLOG.md` edit runs `npm run provenance`
+  alone, because `provenance_audit.js` reads that file and checks its UNVERIFIED count against
+  the audit's own.
+- **While implementing — the two Node checks, as often as useful.** They are cheap and carry the
+  fast signal.
+- **`npm test` once, at the end of a finished implementation round.** Not after each edit, not
+  before a commit that changed no code, and not to re-confirm a green run that nothing since
+  could have invalidated — including a green run a subagent already reported.
+
+A red check is still a blocker: never skip, weaken or delete an assertion to reach green, and
+never report a task complete with one outstanding. Say which checks you ran and what they returned,
+so a reader can tell a skipped check from a passing one.
 
 `npm test` owns its no-cache server and honors `PLAYWRIGHT_PORT`. Direct browser inspection may use:
 

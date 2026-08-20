@@ -82,9 +82,9 @@ function constructibleStepKeys() {
     for (const match of text.matchAll(/attackSpecificStep\(\s*'([^']+)'/g)) {
       keys.add(`attackSpecific:${match[1]}`);
     }
-    // emit(id, phase, …) and abilityStatStep(id, phase, …) take the phase positionally.
+    // abilityStep(id, phase, …) takes the phase positionally.
     for (const match of text.matchAll(
-      new RegExp(`(?:emit|abilityStatStep)\\(\\s*'([^']+)',\\s*'(${phases})'`, 'g'))) {
+      new RegExp(`abilityStep\\(\\s*'([^']+)',\\s*'(${phases})'`, 'g'))) {
       keys.add(`${match[2]}:${match[1]}`);
     }
     // addChanceDelta(id, source, phase, …) — the source object's own strings are never phases.

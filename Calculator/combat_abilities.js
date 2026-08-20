@@ -345,83 +345,84 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // threshold in modern region `c`; `afterWarp` runs after the engine's Warp Creature block
 // (SPEC.md, *Warp Creature ordering*).
 
-// `delta` names the stats the effect writes, using the record's own field names, plus two
-// that stand for how the engine reaches the secondary-attack slot:
-//   rtb     the shared `.ranged` slot of the DOS engines — ranged, Thrown, Breath and both
-//           gaze strengths alike, which is why one write reaches all of them
-//   ranged  the `unitT.ranged` field of `Caster.exe`, which is *only* the conventional ranged
-//           attack: Thrown, Fire Breath, Lightning Breath and the gazes are separate fields
-//           there, so a bonus written to `ranged` never reaches them
-//   positiveRanged  the same conventional-ranged field, but only while its live value is
-//           positive at this exact step
-//   rangedOrThrown  Caster.exe's conventional-ranged and Thrown fields, excluding both
-//           Breaths and every gaze field
-//   nonGazeRtb  the selected modern secondary attack except Stoning/Death/Doom Gaze; this
-//           represents compiled blocks that write conventional ranged, Thrown and both Breaths
-//           separately while leaving the independent gaze fields untouched
+// The slot rule, in one place: a bonus never conjures a slot the unit does not have, so a write
+// is skipped when `ctx.slots` says the slot is dead. That is the aura pass's own gate — "add …
+// to melee/ranged when the corresponding base attack exists" — and it is the rule every ability
+// write below shares. Blaze of Glory's armor-to-melee transfer is the deliberate exception: it
+// is not a bonus, and it is not built here.
 //
-// A bonus never conjures a slot the unit does not have, so a write is skipped when
-// `ctx.slots` says the slot is dead. That is also the aura pass's own gate — "add … to
-// melee/ranged when the corresponding base attack exists". Blaze of Glory's armor-to-melee
-// transfer is the deliberate exception: it is not a bonus, and it is not built here.
+// `slot` names which of the record's gates the engine's own test corresponds to. These are gate
+// names, not field names — several of them reach the same field and differ only in what the
+// engine tested before writing it:
+//   melee           the melee attack field
+//   rtb             every secondary strength field the derivation carries: the DOS engines'
+//                   one shared `.ranged` slot, or one per modern attack channel
+//   ranged          `Caster.exe`'s narrow `unitT.ranged` — the conventional ranged attack only,
+//                   so Thrown, both Breaths and the gazes never take the write
+//   rangedField     the record's `U.ranged` field itself, whatever type stands in it, resolved
+//                   against the record at the writing step's own position (`isRangedFieldSlot`)
+//   rangedOrThrown  Caster.exe's conventional-ranged and Thrown fields, excluding both Breaths
+//                   and every gaze field
+//   persistentRanged  `B.ranged > 0`: the permanent record's Ranged field carrying strength,
+//                   tested without regard to what the calculated record holds
+//   gaze            the two gaze strengths, which are fields of the DOS engines' shared
+//                   `.ranged` slot and independent fields in the modern ones
+// `whereStrength` is an optional extra test on the slot's live strength, for the blocks that
+// make one (the aura pass's own `if U.ranged > 0`).
 //
-// The secondary-attack names above resolve against the derivation's slots (`ctx.channels`), one
-// per record strength field: the DOS engines run one, the modern engines one per attack channel.
+// The secondary-attack gates resolve against the derivation's slots (`ctx.channels`), one per
+// record strength field: the DOS engines run one, the modern engines one per attack channel.
 // Each slot carries its own `slots` gates and its own type fields, so one write lands on every
 // field the engine writes and on no other.
-const ABILITY_STEP_GAZE_FIELDS = ['gaze', 'doomGaze'];
-const ABILITY_STEP_RTB_NAMES = ['rtb', 'ranged', 'positiveRanged', 'rangedOrThrown', 'nonGazeRtb'];
-function abilityStatStep(id, phase, delta, extra, strengthFields) {
-  const fields = Object.keys(delta);
-  const secondaryFields = strengthFields && strengthFields.length ? strengthFields : ['rtb'];
-  const writes = [];
-  for (const field of fields) {
-    if (field === 'rtb') writes.push(...secondaryFields, ...ABILITY_STEP_GAZE_FIELDS);
-    else if (ABILITY_STEP_RTB_NAMES.includes(field)) writes.push(...secondaryFields);
-    else writes.push(field);
+function addToSlot(u, ctx, slot, value, whereStrength) {
+  const slots = (ctx && ctx.slots) || null;
+  if (slot === 'melee') {
+    if (!slots || slots.melee) u.atk += value;
+    return;
   }
-  return statStep({
-    id, phase, writes, delta, ...(extra || {}),
-    apply: (u, ctx) => {
-      const slots = (ctx && ctx.slots) || null;
-      const channels = (ctx && ctx.channels) || null;
-      const eachSlot = write => {
-        if (!channels) { write('rtb', slots); return; }
-        for (const channel of channels) write(channel.strengthField, channel.slots);
-      };
-      for (const field of fields) {
-        const value = delta[field];
-        if (field === 'atk') {
-          if (!slots || slots.melee) u.atk += value;
-        } else if (field === 'rtb') {
-          eachSlot((target, gates) => { if (!gates || gates.rtb) u[target] += value; });
-          if (!slots || slots.gaze) u.gaze += value;
-          if (!slots || slots.doomGaze) u.doomGaze += value;
-        } else if (field === 'ranged') {
-          eachSlot((target, gates) => { if (!gates || gates.ranged) u[target] += value; });
-        } else if (field === 'positiveRanged') {
-          eachSlot((target, gates) => {
-            if ((!gates || gates.ranged) && u[target] > 0) u[target] += value;
-          });
-        } else if (field === 'rangedOrThrown') {
-          eachSlot((target, gates) => {
-            if (!gates || gates.rangedOrThrown) u[target] += value;
-          });
-        } else if (field === 'nonGazeRtb') {
-          eachSlot((target, gates) => { if (!gates || gates.rtb) u[target] += value; });
-        } else {
-          u[field] += value;
-        }
-      }
-    },
-  });
+  if (slot === 'gaze') {
+    if (!slots || slots.gaze) u.gaze += value;
+    if (!slots || slots.doomGaze) u.doomGaze += value;
+    return;
+  }
+  const channels = (ctx && ctx.channels)
+    || [{ strengthField: 'rtb', rangedTypeField: 'rangedType', slots }];
+  for (const channel of channels) {
+    if (slot === 'rangedField') {
+      if (!isRangedFieldSlot(u, channel)) continue;
+    } else if (channel.slots && !channel.slots[slot]) continue;
+    if (whereStrength && !whereStrength(u[channel.strengthField])) continue;
+    u[channel.strengthField] += value;
+  }
+}
+
+// `U.ranged` names a **field of the unit record**, not an attack the unit owns, so which slot
+// that field is cannot be answered by a type test alone (F96). The modern `ranged` channel is
+// `SRanged` whatever type stands in it — including while it is typeless, which is why the
+// region-`c` `not Ismagicalranged` writers reach it — as is a Thrown channel Focus Magic has
+// converted in place, for as long as that conversion is an identity flip (F90). The DOS-shaped
+// shared slot is a different thing: one value stands for conventional ranged, Thrown, Breath or
+// a gaze there, so it is the Ranged field only while it carries a conventional ranged type.
+// The record is read at the calling step's own position, so a type write between the slot pass
+// and that step — `d:blazeOfGlory` empties the Ranged field and retypes the shared slot — is
+// visible to it.
+function isRangedFieldSlot(u, channel) {
+  if (!channel) return false;
+  if (channel.channelKey === 'ranged') return true;
+  const field = channel.rangedTypeField;
+  return !!field && u[field] !== 'none';
 }
 
 function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const steps = [];
-  const strengthFields = identityPredicates.strengthFields || null;
-  const emit = (id, phase, delta, extra) => {
-    steps.push(abilityStatStep(id, phase, delta, extra, strengthFields));
+  // The record's secondary strength fields, and the two shapes an ability write over them takes:
+  // `attackWrites` for a write that reaches the strength fields alone, `rtbWrites` for one that
+  // also reaches the two gaze strengths.
+  const declared = identityPredicates.strengthFields;
+  const attackWrites = declared && declared.length ? [...declared] : ['rtb'];
+  const rtbWrites = [...attackWrites, 'gaze', 'doomGaze'];
+  const abilityStep = (id, phase, options) => {
+    steps.push(statStep({ id, phase, ...options }));
   };
   // A position *within* region c, not a region of its own: every engine writes some of `c`
   // after its Warp Creature block, and which effects those are is the version divergence.
@@ -440,11 +441,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // CoM2/Warlord run it as **aura type 1 in region `e`**, after `d` and after the Warps — not
   // in `a`, where the pre-map judgment put it (CoM2 analysis, *The aura pass*).
   // The aura table merges sources by maximum rather than summing them, which the calculator's
-  // single numeric input already expresses. Two consequences of the aura block's own wording,
-  // "add the aura value to defense and resistance, and to melee/ranged when the corresponding
-  // base attack exists": the melee/ranged writes are gated on the base attack existing, which
-  // is the slot gate every ability step applies; and it reaches the **ranged** field only, so
-  // a Thrown or Breath attack takes no bonus — `ctx.slots.rangedIsConventional`.
+  // single numeric input already expresses. Both attack writes are gated on the **permanent**
+  // record — `if B.attack > 0` and `if B.ranged > 0` (Units.RecalculateUnits.pas:2530,2535) —
+  // and neither tests a type: the ranged half asks only whether the permanent record's Ranged
+  // field carries strength, which is the `persistentRanged` gate. It reaches that one field, so
+  // a Thrown or Breath attack takes no bonus, and a Ranged field the calculated record has since
+  // emptied or retyped still takes it.
   //
   // MoM and CoM 1 keep phase a: intrinsic unit ability, no CAS implementation, and no aura
   // pass in either DOS recompute.
@@ -452,10 +454,22 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   if (hb > 0) {
     const isCoM2 = version && version.startsWith('com2_');
     // PROVENANCE[holyBonus]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:be00bc2f90338549d6e09741 | Reference docs/DOS reconstructed/unitcalc.c@span:24:355495d2e88ef940a57b8515
-    if (isCoM2) emit('holyBonus', 'e', { atk: hb, def: hb, res: hb, ranged: hb });
-    else emit('holyBonus', 'a', isCoMPlus
-      ? { atk: hb, def: hb, res: hb, rtb: hb }
-      : { atk: hb, def: hb, res: hb });
+    if (isCoM2) {
+      abilityStep('holyBonus', 'e', { writes: ['atk', 'def', 'res', ...attackWrites],
+        apply: (u, ctx) => {
+          addToSlot(u, ctx, 'melee', hb); u.def += hb; u.res += hb;
+          addToSlot(u, ctx, 'persistentRanged', hb);
+        } });
+    } else if (isCoMPlus) {
+      abilityStep('holyBonus', 'a', { writes: ['atk', 'def', 'res', ...rtbWrites],
+        apply: (u, ctx) => {
+          addToSlot(u, ctx, 'melee', hb); u.def += hb; u.res += hb;
+          addToSlot(u, ctx, 'rtb', hb); addToSlot(u, ctx, 'gaze', hb);
+        } });
+    } else {
+      abilityStep('holyBonus', 'a', { writes: ['atk', 'def', 'res'],
+        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', hb); u.def += hb; u.res += hb; } });
+    }
   }
 
   // Animate Dead's Animated buff in CoM/CoM2: +1 to every existing attack channel,
@@ -464,9 +478,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c: a spell effect with no CAS implementation.
   if (hasAbil(abilities, 'animated') && isCoMPlus) {
     // PROVENANCE[animated]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:c8375636d2d3d88ca4eaae97 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:859998a2522c86efb243689d
-    emit('animated', 'c', isCoM1
-      ? { atk: 1, def: 1, rtb: 1, toHit: 10 }
-      : { atk: 1, def: 1, nonGazeRtb: 1, toHit: 10 }, beforeHolyArmor);
+    abilityStep('animated', 'c', { ...beforeHolyArmor,
+      writes: ['atk', 'def', ...(isCoM1 ? rtbWrites : attackWrites), 'toHit'],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', 1); u.def += 1;
+        addToSlot(u, ctx, 'rtb', 1);
+        // CoM 1 writes the one shared slot, so the gaze strengths in it move too; the modern
+        // block writes ranged, Thrown and both Breaths separately and leaves the independent
+        // gaze fields alone.
+        if (isCoM1) addToSlot(u, ctx, 'gaze', 1);
+        u.toHit += 10;
+      } });
   }
 
   // Resistance to All: +X to resistance.
@@ -477,10 +499,14 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const isModern = !!(version && version.startsWith('com2_'));
   const auraValue = key => Math.max(0, parseInt(abilVal(abilities, key, 0), 10) || 0);
 
-  // Aura type 2: current positive conventional Ranged only.
+  // Aura type 2: `if U.ranged > 0` (Units.RecalculateUnits.pas:2543) and nothing else — the
+  // calculated record's Ranged field carrying strength at this position, with no type test.
   const guidingBeaconAura = isModern ? auraValue('guidingBeaconAura') : 0;
   if (guidingBeaconAura > 0) {
-    emit('guidingBeaconAura', 'e', { positiveRanged: guidingBeaconAura });
+    abilityStep('guidingBeaconAura', 'e', { writes: attackWrites,
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'rangedField', guidingBeaconAura, strength => strength > 0);
+      } });
   }
 
   // Aura type 3 is shared by Resistance to All and Prayermaster. BuildAuraTable keeps the
@@ -489,49 +515,50 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const prayermasterAura = isModern ? Math.max(rta, auraValue('prayermasterAura')) : 0;
   if (prayermasterAura > 0) {
     // PROVENANCE[resistanceToAll]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:77eb7e2f668ac3b092fa3b7d | Reference docs/DOS reconstructed/unitcalc.c@span:24:355495d2e88ef940a57b8515
-    emit('resistanceToAll', 'e', { res: prayermasterAura },
-      { sourceId: 'prayermasterAura', sourceLabel: 'Prayermaster / Resistance to All' });
+    abilityStep('resistanceToAll', 'e', {
+      sourceId: 'prayermasterAura', sourceLabel: 'Prayermaster / Resistance to All',
+      writes: ['res'], apply: u => { u.res += prayermasterAura; } });
   } else if (rta > 0) {
-    emit('resistanceToAll', 'a', { res: rta });
+    abilityStep('resistanceToAll', 'a', { writes: ['res'], apply: u => { u.res += rta; } });
   }
 
   const divineBarrierAura = isModern ? auraValue('divineBarrierAura') : 0;
   if (divineBarrierAura > 0) {
-    emit('divineBarrierAura', 'e', { def: divineBarrierAura });
+    abilityStep('divineBarrierAura', 'e', { writes: ['def'],
+      apply: u => { u.def += divineBarrierAura; } });
   }
 
   const soulLinkerAura = isModern ? auraValue('soulLinkerAura') : 0;
   if (soulLinkerAura > 0 && identityPredicates.liveFantastic) {
-    emit('soulLinkerAura', 'e', { toHit: soulLinkerAura, toBlk: soulLinkerAura });
+    abilityStep('soulLinkerAura', 'e', { writes: ['toHit', 'toBlk'],
+      apply: u => { u.toHit += soulLinkerAura; u.toBlk += soulLinkerAura; } });
   }
 
   const leadershipAura = isModern ? auraValue('leadershipAura') : 0;
   if (leadershipAura > 0 && !identityPredicates.liveFantastic) {
     // PROVENANCE[leadershipAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:1ec384f5af2fc785c3b46a8e
-    steps.push(statStep({ id: 'leadershipAura', phase: 'e',
-      writes: ['atk', ...(strengthFields || ['rtb'])],
+    abilityStep('leadershipAura', 'e', { writes: ['atk', ...attackWrites],
       apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', leadershipAura);
         const slots = ctx && ctx.slots;
-        if (!slots || slots.melee) u.atk += leadershipAura;
         const channels = (ctx && ctx.channels)
           || [{ strengthField: 'rtb', rangedTypeField: 'rangedType', slots }];
         for (const channel of channels) {
-          const gates = channel.slots;
           const liveRangedType = u[channel.rangedTypeField];
-          // `not Ismagicalranged(U.rangedtype)` is True for a zero ranged type
-          // (Units.RecalculateUnits.pas:2968-2975), so the aura's type half admits the record's
-          // `SRanged` field while it is still typeless; `U.ranged > 0` is the engine's other
-          // half and is the strength test below. The DOS-shaped shared slot is not that field
-          // and keeps the two names it can stand for. The `gates.ranged` slot test is a type
-          // test the engine does not make here at all — that is F96, not this breadth.
+          // `not Ismagicalranged(U.rangedtype) and (U.ranged > 0)`
+          // (Units.RecalculateUnits.pas:2583) is the whole gate: which record field the slot is,
+          // that field's live type, and that field's live strength. `not Ismagicalranged` is
+          // True for a zero ranged type (:2968-2975), so the type half admits the record's
+          // `SRanged` field while it is still typeless; the DOS-shaped shared slot is not that
+          // field and keeps the two names it can stand for.
           const nonMagicalRanged = channel.channelKey === 'ranged'
             ? !isMagicalRangedType(liveRangedType)
             : (liveRangedType === 'missile' || liveRangedType === 'boulder');
-          if ((!gates || gates.ranged) && u[channel.strengthField] > 0 && nonMagicalRanged) {
+          if (isRangedFieldSlot(u, channel) && u[channel.strengthField] > 0 && nonMagicalRanged) {
             u[channel.strengthField] += Math.trunc(leadershipAura / 2);
           }
         }
-      } }));
+      } });
   }
 
   // Lucky: +10% To Hit, +10% To Block, +1 Resistance.
@@ -542,7 +569,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:bf74c9101f80f286adb7d2a0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:761ca75657bf39dc15095e55
     // Creation/enchantment sources establish ALucky earlier, but the chance/stat write itself
     // is the compiled Lucky block in region c for every engine.
-    emit('lucky', 'c', { res: 1, toHit: 10, toBlk: 10 }, beforeHolyArmor);
+    abilityStep('lucky', 'c', { ...beforeHolyArmor, writes: ['res', 'toHit', 'toBlk'],
+      apply: u => { u.res += 1; u.toHit += 10; u.toBlk += 10; } });
   }
 
   // Lucky Star's aura: while any friendly unit in the combat carries the enchantment, every
@@ -554,7 +582,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // §10 records the earlier build's enchanted-unit-only bug.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'luckyStar')) {
     // PROVENANCE[luckyStar]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:2cd8ef385c4ba4e42016a04d
-    emit('luckyStar', 'b', { atk: 1, def: 1, res: 1, rtb: 1 });
+    abilityStep('luckyStar', 'b', { writes: ['atk', 'def', 'res', ...rtbWrites],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 1;
+        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'gaze', 1);
+      } });
   }
 
   // Prayer / High Prayer: combat enchantments.
@@ -574,22 +606,33 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const hasHighPrayer = hasAbil(abilities, 'highPrayer');
   if (hasHighPrayer) {
     // PROVENANCE[highPrayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:9e2e521e9eba230ae2bc6977 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:1211c780f887c8558d60d073
-    emit('highPrayer', 'c', { atk: 2, def: 2, res: 3, toHit: 10, toBlk: 10 });
+    abilityStep('highPrayer', 'c', { writes: ['atk', 'def', 'res', 'toHit', 'toBlk'],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', 2); u.def += 2; u.res += 3; u.toHit += 10; u.toBlk += 10;
+      } });
     if (hasPrayer && version && version.startsWith('com2_warlord')) {
       // PROVENANCE[prayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:cd3b7dd8d55f06aacde8812c | Reference docs/DOS reconstructed/unitcalc.c@span:19:ff7bdd24b7f56fef70abb02b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:22:b3cdb6f87df741fb103a6989
-      emit('prayer', 'b', { atk: 1, def: 1, res: 1 });
+      abilityStep('prayer', 'b', { writes: ['atk', 'def', 'res'],
+        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 1; } });
     }
   } else if (hasPrayer) {
-    emit('prayer', 'c', { res: 1, toHit: 10, toBlk: 10 });
+    abilityStep('prayer', 'c', { writes: ['res', 'toHit', 'toBlk'],
+      apply: u => { u.res += 1; u.toHit += 10; u.toBlk += 10; } });
   }
 
   // Black Prayer (debuff): -1 all conventional attack strengths, -1 Defense, -2 Resistance.
   // Phase c — curse with no CAS implementation.
   if (hasAbil(abilities, 'blackPrayer')) {
     // PROVENANCE[blackPrayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:17:6726e65e7d4815dc6beb7e5a | Reference docs/DOS reconstructed/unitcalc.c@span:17:7bda7e6636c6c0560ea2ecee | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:57700011d70aa83ec35b9eaa
-    emit('blackPrayer', 'c', version && version.startsWith('com2_')
-      ? { atk: -1, def: -1, res: -2, nonGazeRtb: -1 }
-      : { atk: -1, def: -1, res: -2, rtb: -1 });
+    abilityStep('blackPrayer', 'c', {
+      writes: ['atk', 'def', 'res', ...(isModern ? attackWrites : rtbWrites)],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', -1); u.def -= 1; u.res -= 2;
+        addToSlot(u, ctx, 'rtb', -1);
+        // The DOS engines keep both gaze strengths in the shared slot this write reaches; the
+        // modern engines hold them in fields of their own that this block does not touch.
+        if (!isModern) addToSlot(u, ctx, 'gaze', -1);
+      } });
   }
 
   // Reinforce Magic: CoM2 global enchantment. All units gain +2 resistance.
@@ -603,29 +646,30 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c: UnitCalcPre.CAS:1743-1749 grants only Mountaineer — the stat bonuses are binary.
   if (hasAbil(abilities, 'innerPower')) {
     // PROVENANCE[innerPower]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:cb6a5d278f05325e495f0d20
-    emit('innerPower', 'c', { atk: 3, def: 2, res: 2, rtb: 3 });
+    abilityStep('innerPower', 'c', { writes: ['atk', 'def', 'res', ...rtbWrites],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', 3); u.def += 2; u.res += 2;
+        addToSlot(u, ctx, 'rtb', 3); addToSlot(u, ctx, 'gaze', 3);
+      } });
   }
 
   // Mislead/Liability supplies Misfortune aura type 10. The checkbox represents the current
   // unit receiving that aura; its live non-Fantastic gate is resolved by misleadActiveForUnit.
   // The engine applies all four writes atomically in region e after the terminal clamps. Its
-  // ranged write tests the persistent conventional-ranged slot, represented by the narrow
-  // `ctx.slots.persistentRanged` gate, so Thrown and Breath are unaffected without changing
-  // the calculated-channel gate shared by other ability steps.
+  // ranged write is gated on `if B.ranged > 0` (Units.RecalculateUnits.pas:2599) — the
+  // permanent record's Ranged field carrying strength, with no type test — which is the
+  // `ctx.slots.persistentRanged` gate, so Thrown and Breath are unaffected.
   if (hasAbil(abilities, 'mislead')) {
     // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:bc3d65175e46c59dd1bcbd1f
-    steps.push(statStep({ id: 'mislead', phase: 'e',
-      writes: ['atk', 'def', 'res', ...(strengthFields || ['rtb'])],
+    abilityStep('mislead', 'e', { writes: ['atk', 'def', 'res', ...attackWrites],
       apply: (u, ctx) => {
+        // The melee write has no slot gate here: the engine's four writes are atomic and it
+        // tests the persistent ranged slot only.
         u.atk -= 1;
         u.def -= 1;
         u.res -= 1;
-        const channels = (ctx && ctx.channels)
-          || [{ strengthField: 'rtb', slots: ctx && ctx.slots }];
-        for (const channel of channels) {
-          if (!channel.slots || channel.slots.persistentRanged) u[channel.strengthField] -= 1;
-        }
-      } }));
+        addToSlot(u, ctx, 'persistentRanged', -1);
+      } });
   }
 
   // Stone Skin / Iron Skin: +1 / +5 Defense. Iron Skin supersedes Stone Skin.
@@ -634,10 +678,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // set the Iron Skin flag. Neither applies a stat.
   if (hasAbil(abilities, 'ironSkin')) {
     // PROVENANCE[ironSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:7157204464b034c8f40530d5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:1e9389176cf9e793db19626f
-    emit('ironSkin', 'c', { def: 5 }, beforeHolyArmor);
+    abilityStep('ironSkin', 'c', { ...beforeHolyArmor, writes: ['def'],
+      apply: u => { u.def += 5; } });
   } else if (hasAbil(abilities, 'stoneSkin')) {
     // PROVENANCE[stoneSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:e6801f056adc81573e92ef9b
-    emit('stoneSkin', 'c', { def: 1 }, beforeHolyArmor);
+    abilityStep('stoneSkin', 'c', { ...beforeHolyArmor, writes: ['def'],
+      apply: u => { u.def += 1; } });
   }
 
   // Holy Armor: the `holyArmor` step in stats_sequence.js (version- and stat-conditional).
@@ -657,10 +703,13 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const warlordBlade = version && version.startsWith('com2_warlord')
     && (hasAbil(abilities, 'flameBladeWarlord') || hasAbil(abilities, 'fieryBlade'));
   if (hasAbil(abilities, 'flameBlade') || warlordBlade) {
-    emit('flameBlade', 'c', { atk: version && version.startsWith('com') ? 3 : 2 }, beforeHolyArmor);
+    const bladeMelee = version && version.startsWith('com') ? 3 : 2;
+    abilityStep('flameBlade', 'c', { ...beforeHolyArmor, writes: ['atk'],
+      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', bladeMelee); } });
   } else if (hasAbil(abilities, 'metalFires') && !identityPredicates.liveFantastic) {
     // PROVENANCE[metalFires]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8c88e810ad0fd6705c30bb95
-    emit('metalFires', 'c', { atk: 1 }, beforeHolyArmor);
+    abilityStep('metalFires', 'c', { ...beforeHolyArmor, writes: ['atk'],
+      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); } });
   }
 
   // Blazing March: CoM/CoM2 combat enchantment. +3 melee attack to all units.
@@ -690,12 +739,19 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       ? !!identityPredicates.liveFantastic : !!abilities.liveFantastic;
     if (!combatSummoned && !baseFantastic && !liveFantastic) {
       // PROVENANCE[breakthrough:normal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:3ca5011dcfb4738952b30067 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09
-      emit('breakthrough:normal', 'c', { atk: 1 });
+      abilityStep('breakthrough:normal', 'c', { writes: ['atk'],
+        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); } });
     }
     // PROVENANCE[breakthrough:noncorporeal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:fa4543aa4289101fada66dad
-    if (nonCorporeal) emit('breakthrough:noncorporeal', 'c', { atk: 1, def: 1 });
+    if (nonCorporeal) {
+      abilityStep('breakthrough:noncorporeal', 'c', { writes: ['atk', 'def'],
+        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); u.def += 1; } });
+    }
     // PROVENANCE[breakthrough:combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:0f491fbb9d925602e7b57300
-    if (combatSummoned) emit('breakthrough:combatSummoned', 'c', { atk: 1, def: 1 });
+    if (combatSummoned) {
+      abilityStep('breakthrough:combatSummoned', 'c', { writes: ['atk', 'def'],
+        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); u.def += 1; } });
+    }
   }
 
   // Giant Strength: +1 melee attack. +1 thrown bonus is `giantStrength:thrown` in
@@ -713,7 +769,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c: UnitCalcPre.CAS's EncCCArmor references only set or test the flag.
   if (abilVal(abilities, 'ccDefense', false)) {
     // PROVENANCE[chaosChannels:armor]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:bd2b6b86ac7fbcc85505a039 | Reference docs/DOS reconstructed/unitcalc.c@span:13:55dbda9953bbaf8f2f1bb81f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:490bf1c3cfe8b5827cde324a
-    emit('chaosChannels:armor', 'c', { def: (version === 'mom_1.31') ? 6 : 3 }, beforeHolyArmor);
+    const ccArmorDef = version === 'mom_1.31' ? 6 : 3;
+    abilityStep('chaosChannels:armor', 'c', { ...beforeHolyArmor, writes: ['def'],
+      apply: u => { u.def += ccArmorDef; } });
   }
 
   // Black Channels: +2 melee attack (discarded by the melee slot gate when the unit has none),
@@ -722,7 +780,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c — MoM-only enchantment, so there is no CAS to consult.
   if (hasAbil(abilities, 'blackChannels')) {
     // PROVENANCE[blackChannels]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:19:4a92e2a9611b35504558f854
-    emit('blackChannels', 'c', { atk: 2, def: 1, res: 1, hp: 1, rtb: 1 }, beforeHolyArmor);
+    abilityStep('blackChannels', 'c', { ...beforeHolyArmor,
+      writes: ['atk', 'def', 'res', 'hp', ...rtbWrites],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', 2); u.def += 1; u.res += 1; u.hp += 1;
+        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'gaze', 1);
+      } });
   }
 
   // Weakness: -2 (MoM) or -3 (CoM/CoM2) melee attack. RTB penalty is type-specific — the
@@ -735,7 +798,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase d — UnitCalc.CAS:492-504.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'rust')) {
     // PROVENANCE[rust]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:98745d26b4fbf74694b1a932
-    emit('rust', 'd', { atk: -3 });
+    abilityStep('rust', 'd', { writes: ['atk'],
+      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', -3); } });
   }
 
   // Mind Storm: DOS: -5 melee, -5 to the shared ranged/Thrown/Breath/Gaze slot,
@@ -744,10 +808,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c: UnitCalcPre.CAS:1221-1223 only mirrors the combat flag to overland.
   if (hasAbil(abilities, 'mindStorm')) {
     // PROVENANCE[mindStorm]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:5aef6d0a81b854a2f8a97a63 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:b93fe4b2bed30f6662144a8f
-    emit('mindStorm', 'c', version && version.startsWith('com2')
-      ? { atk: -3, def: -5, res: -5, rangedOrThrown: -5 }
-      : { atk: version && version.startsWith('com') ? -3 : -5,
-        def: -5, res: -5, rtb: -5 });
+    const mindStormMelee = version && version.startsWith('com') ? -3 : -5;
+    abilityStep('mindStorm', 'c', {
+      writes: ['atk', 'def', 'res', ...(isModern ? attackWrites : rtbWrites)],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', mindStormMelee); u.def -= 5; u.res -= 5;
+        if (isModern) {
+          addToSlot(u, ctx, 'rangedOrThrown', -5);
+        } else {
+          addToSlot(u, ctx, 'rtb', -5); addToSlot(u, ctx, 'gaze', -5);
+        }
+      } });
   }
 
   // Supreme Light is not built here. The engine writes its three stats as one block whose
@@ -759,7 +830,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c — no CAS implementation in either calc file.
   if (hasAbil(abilities, 'survivalInstinct')) {
     // PROVENANCE[survivalInstinct]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:b1ed625810a6547724965296
-    emit('survivalInstinct', 'c', { def: 1, res: 2, toHit: 10 });
+    abilityStep('survivalInstinct', 'c', { writes: ['def', 'res', 'toHit'],
+      apply: u => { u.def += 1; u.res += 2; u.toHit += 10; } });
   }
 
   // Guardian retort: CoM/CoM2 units gain +1 resistance, +10% To Hit,
@@ -770,7 +842,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // reads Resistance, To Hit or To Defend, so this is faithful without being observable.
   if (hasAbil(abilities, 'guardian') && isCoMPlus) {
     // PROVENANCE[guardian]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:db312d02daf8f891ea293893 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:1687b0fe505cf275355adb4e
-    emit('guardian', 'c', { res: 1, toHit: 10, toBlk: 10 });
+    abilityStep('guardian', 'c', { writes: ['res', 'toHit', 'toBlk'],
+      apply: u => { u.res += 1; u.toHit += 10; u.toBlk += 10; } });
   }
 
   // Tactician retort:
@@ -800,14 +873,26 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   if (hasAbil(abilities, 'tactician') && isCoMPlus) {
     const isWarlord = version && version.startsWith('com2_warlord');
     if (abilVal(abilities, 'unitType', 'normal') === 'hero') {
-      emit('tactician', 'c', isCoM1
-        ? { atk: 2, def: 2, res: 2, rtb: 2 }
-        : { atk: 2, def: 2, res: 2, positiveRanged: 2 }, afterWarp);
+      abilityStep('tactician', 'c', { ...afterWarp,
+        writes: ['atk', 'def', 'res', ...(isCoM1 ? rtbWrites : attackWrites)],
+        apply: (u, ctx) => {
+          addToSlot(u, ctx, 'melee', 2); u.def += 2; u.res += 2;
+          if (isCoM1) {
+            addToSlot(u, ctx, 'rtb', 2); addToSlot(u, ctx, 'gaze', 2);
+          } else {
+            addToSlot(u, ctx, 'ranged', 2, strength => strength > 0);
+          }
+        } });
       if (isWarlord) {
-        emit('tactician', 'b', { atk: -2, def: -1, res: -2, ranged: -2 });
+        abilityStep('tactician', 'b', { writes: ['atk', 'def', 'res', ...attackWrites],
+          apply: (u, ctx) => {
+            addToSlot(u, ctx, 'melee', -2); u.def -= 1; u.res -= 2;
+            addToSlot(u, ctx, 'ranged', -2);
+          } });
       }
     } else {
-      emit('tactician', 'c', { def: 1 }, afterWarp);
+      abilityStep('tactician', 'c', { ...afterWarp, writes: ['def'],
+        apply: u => { u.def += 1; } });
     }
   }
 
@@ -819,7 +904,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   if (hasAbil(abilities, 'favoredTerrain') && version && version.startsWith('com2_warlord')) {
     const mult = hasAbil(abilities, 'tactician') ? 2 : 1;
     // PROVENANCE[favoredTerrain]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:29:8a7eccc577a846564d7742f8
-    emit('favoredTerrain', 'd', { def: 1 * mult, toHit: 5 * mult });
+    abilityStep('favoredTerrain', 'd', { writes: ['def', 'toHit'],
+      apply: u => { u.def += 1 * mult; u.toHit += 5 * mult; } });
   }
 
   // Land Linking (+2 melee, breath and defense to fantastic units) is one hand-written
@@ -833,7 +919,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c — SpellMysticSurge.CAS sets enchantment flags only; no stat application.
   if (hasAbil(abilities, 'mysticSurge')) {
     // PROVENANCE[mysticSurge]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:de8c9dc3bc0bf7ec94ba9028
-    emit('mysticSurge', 'c', { def: 2, res: -2 }, beforeHolyArmor);
+    abilityStep('mysticSurge', 'c', { ...beforeHolyArmor, writes: ['def', 'res'],
+      apply: u => { u.def += 2; u.res -= 2; } });
   }
 
   // Artificer retort (Warlord): mechanical units gain +1 melee, +1 ranged,
@@ -848,26 +935,30 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // and OverlandEndTurn.CAS:405-406/428-429 write +6 Defense to ABase.
   if (isWarlord && hasAbil(abilities, 'armorclad')) {
     // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:4:f33e8912a11fbfe562941d50
-    emit('armorclad', 'base', { def: 6 });
+    abilityStep('armorclad', 'base', { writes: ['def'], apply: u => { u.def += 6; } });
   }
 
   // Battle Armor is the in-combat regular non-mechanical branch of the
   // Armorclad reform. UnitCalcPre.CAS:1106-1113 applies +3 Defense.
   if (isWarlord && hasAbil(abilities, 'battleArmor')) {
     // PROVENANCE[battleArmor]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:c7c2d7da26a07332de4fa4f3
-    emit('battleArmor', 'b', { def: 3 });
+    abilityStep('battleArmor', 'b', { writes: ['def'], apply: u => { u.def += 3; } });
   }
 
   // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units.
   // The reform grant helper has already derived `magitekEngine` and Large Shield.
   if (isWarlord && hasAbil(abilities, 'magitekEngine')) {
     // PROVENANCE[magitekEngine]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:d96a238f19276a8e5adea472
-    emit('magitekEngine', 'b', { toBlk: 20 });
+    abilityStep('magitekEngine', 'b', { writes: ['toBlk'], apply: u => { u.toBlk += 20; } });
   }
 
   if (isWarlord && hasAbil(abilities, 'artificer') && hasAbil(abilities, 'mechanical')) {
     // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
-    emit('artificer', 'base', { atk: 1, def: 1, res: 2, rtb: 1 });
+    abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...rtbWrites],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 2;
+        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'gaze', 1);
+      } });
   }
 
   // Mechanical Expert (Warlord): an Engineer/Combat Engineer in the stack carries this
@@ -875,7 +966,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase d — UnitCalc.CAS:275-309.
   if (isWarlord && hasAbil(abilities, 'mechanicalExpert') && hasAbil(abilities, 'mechanical')) {
     // PROVENANCE[mechanicalExpert]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:31:5cf138553247cd4344245e09
-    emit('mechanicalExpert', 'd', { toHit: 20, toBlk: 10 });
+    abilityStep('mechanicalExpert', 'd', { writes: ['toHit', 'toBlk'],
+      apply: u => { u.toHit += 20; u.toBlk += 10; } });
   }
 
   // Rebuild (Warlord): +2 melee and +2 armor. Mechanical flag, Death/Illusion
@@ -886,15 +978,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Heroes: UnitCalcPre.CAS:682-691 re-applies them at index 0 on every recalc — phase b.
   if (isWarlord && hasAbil(abilities, 'rebuild')) {
     // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
-    emit('rebuild', abilVal(abilities, 'unitType', 'normal') === 'hero' ? 'b' : 'base',
-      { atk: 2, def: 2 });
+    abilityStep('rebuild', abilVal(abilities, 'unitType', 'normal') === 'hero' ? 'b' : 'base',
+      { writes: ['atk', 'def'],
+        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 2); u.def += 2; } });
   }
 
   // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.
   // Base stage: CreateUnit.CAS:614-618 writes both at index 1 (ABase).
   if (isWarlord && hasAbil(abilities, 'malnourished')) {
     // PROVENANCE[malnourished]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:5:66825b694152a9b945a1d0b6
-    emit('malnourished', 'base', { atk: -1, def: -2 });
+    abilityStep('malnourished', 'base', { writes: ['atk', 'def'],
+      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', -1); u.def -= 2; } });
   }
 
   // Spirit Link (Warlord, Conjurer signature): +2 Resistance. OLSpell.CAS writes the bonus
@@ -902,7 +996,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // non-fantastic targeting status is handled at the target-gating sites; the phase-c EncMagic
   // write deliberately survives that phase-d identity change.
   if (isWarlord && hasAbil(abilities, 'spiritLink')) {
-    emit('spiritLink', 'base', { res: 2 });
+    abilityStep('spiritLink', 'base', { writes: ['res'], apply: u => { u.res += 2; } });
   }
 
   // Rally (Warlord, Charismatic retort exclusive combat enchantment): all friendly
@@ -910,7 +1004,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase b — UnitCalcPre.CAS:1499-1504 (labelled "Rousing Speech" in the script).
   if (isWarlord && hasAbil(abilities, 'rally')) {
     // PROVENANCE[rally]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:489ddb7eb9cdcfbb11f54431
-    emit('rally', 'b', { res: 2 });
+    abilityStep('rally', 'b', { writes: ['res'], apply: u => { u.res += 2; } });
   }
 
   // Dishearten Prophesy (Warlord, Astrologer retort exclusive city curse): garrison
@@ -919,7 +1013,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase b — UnitCalcPre.CAS:1630-1633.
   if (isWarlord && hasAbil(abilities, 'disheartenProphecy')) {
     // PROVENANCE[disheartenProphecy]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:dff452481f1564630c441f62
-    emit('disheartenProphecy', 'b', { res: -2 });
+    abilityStep('disheartenProphecy', 'b', { writes: ['res'], apply: u => { u.res -= 2; } });
   }
 
   return steps;

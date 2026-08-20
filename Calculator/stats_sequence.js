@@ -34,14 +34,13 @@
 // `base`: the raw stats, and the writes the engines make permanently before the encounter.
 function baseStatSteps(ctx) {
   const {
-    abilByPhase, altarOfTheMoonResMod, altarOfTheSunMeleeMod, baseDoomGaze, baseGazeRanged,
+    abilByPhase, altarOfTheMoon, altarOfTheSunHolyMother, baseDoomGaze, baseGazeRanged,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod, calcBaseAtk, calcBaseDef, calcBaseHP,
-    calcBaseRes, channels, dragonMoundDefMod, identity, isCoM1, isCoM2, ludusAgogeAtkMod,
-    ludusAgogeHpMod, ludusAgogeResMod, motherFungus, motherFungusAtkMod,
-    naturalSelectionCoalMod, naturalSelectionIronMod,
-    naturalSelectionNightshadeMod, naturalSelectionPowerMineralsMod,
-    pillarOfFaithResMod, poolOfRepentanceDefMod, poolOfRepentanceResMod,
-    rangedTypeFields, sanctaBasilicaResMod, secondaryHitFields, strengthFields,
+    calcBaseRes, channels, dragonMound, identity, isCoM1, isCoM2, ludusAgoge, motherFungus,
+    naturalSelectionCoal, naturalSelectionIron, naturalSelectionNightshade,
+    naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
+    naturalSelectionPowerMineralsCount, pillarOfFaith, pillarOfFaithCount, poolOfRepentance,
+    rangedTypeFields, sanctaBasilica, secondaryHitFields, strengthFields,
     survivalInstinctToBlkBonus, thrownTypeFields,
   } = ctx;
   return [
@@ -92,16 +91,25 @@ function baseStatSteps(ctx) {
       apply: u => { u.toBlk -= 10; } }),
     ...abilByPhase.base,
     // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:10:6f667006e3c7a79f7c8a4862
+    // The Resistance point reaches every trained unit, not only a ranged one; the ranged
+    // half carries its own slot gate.
     statStep({ id: 'altarOfTheMoon', phase: 'base', writes: ['res', ...strengthFields],
+      when: () => altarOfTheMoon,
       apply: u => {
-        u.res += altarOfTheMoonResMod;
+        u.res += 1;
         for (const c of channels) u[c.strengthField] += c.altarOfTheMoonRtbMod;
       } }),
     // PROVENANCE[militaryWorkshop]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:24:ab44f1ca0fc9eab7723b232b
-    statStep({ id: 'militaryWorkshop', phase: 'base', writes: strengthFields,
+    // The missile-to-boulder projectile upgrade is made here, at the block's own position,
+    // rather than seeded into the base record: `base:stat:base` is the chain's first entry and
+    // carries the permanent identity alone.
+    statStep({ id: 'militaryWorkshop', phase: 'base',
+      writes: [...strengthFields, ...rangedTypeFields],
+      when: () => channels.some(c => c.blackpowder),
       apply: u => {
         for (const c of channels) {
           u[c.strengthField] += c.blackpowderRtbMod + c.blackpowderFireBreathRtbMod;
+          if (c.blackpowderUpgradesToBoulder) u[c.rangedTypeField] = 'boulder';
         }
       } }),
     // Lightning Blade follows Military Workshop in CreateUnit.CAS. It assigns rather than adds
@@ -120,48 +128,52 @@ function baseStatSteps(ctx) {
       } }),
     // PROVENANCE[poolOfRepentance]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:6:3e9df07e383cb9fc3cb6ec88
     statStep({ id: 'poolOfRepentance', phase: 'base', writes: ['res', 'def'],
-      apply: u => { u.res += poolOfRepentanceResMod; u.def += poolOfRepentanceDefMod; } }),
+      when: () => poolOfRepentance,
+      apply: u => { u.res += 1; u.def += 1; } }),
     // Dragon Mound follows Pool of Repentance and precedes Agoge in CreateUnit.CAS.
     // PROVENANCE[dragonMound]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:071c420ab03821e688a6e290
     statStep({ id: 'dragonMound', phase: 'base', writes: ['def', ...strengthFields],
+      when: () => dragonMound,
       apply: u => {
-        u.def += dragonMoundDefMod;
+        u.def += 1;
         for (const c of channels) u[c.strengthField] += c.dragonMoundRtbMod;
       } }),
     // The executing script also adds +1 to an existing ranged-strength field, despite
     // that write being omitted from Ludus Agoge's prose description.
     // PROVENANCE[ludusAgoge]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:16:74a31ea6126eaa0915ee33a2
     statStep({ id: 'ludusAgoge', phase: 'base', writes: ['res', 'atk', ...strengthFields, 'hp'],
+      when: () => ludusAgoge,
       apply: u => {
-        u.res += ludusAgogeResMod; u.atk += ludusAgogeAtkMod;
+        u.res += 1; u.atk += 1;
         for (const c of channels) u[c.strengthField] += c.ludusAgogeRtbMod;
-        u.hp += ludusAgogeHpMod;
+        u.hp += 1;
       } }),
     // PROVENANCE[motherFungus]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:13:5feb79a87ed503bfc3388e6a
     statStep({ id: 'motherFungus', sourceId: 'motherFungus', sourceLabel: 'Mother Fungus',
       phase: 'base', writes: ['atk', ...strengthFields, 'toBlk'],
+      when: () => motherFungus,
       apply: u => {
-        u.atk += motherFungusAtkMod;
+        u.atk += 2;
         for (const c of channels) u[c.strengthField] += c.motherFungusRtbMod;
-        u.toBlk += motherFungus ? 10 : 0;
+        u.toBlk += 10;
       } }),
     // PROVENANCE[altarOfTheSun:holyMother]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
     statStep({ id: 'altarOfTheSun:holyMother', phase: 'base', writes: ['atk'],
-      apply: u => { u.atk += altarOfTheSunMeleeMod; } }),
+      when: () => altarOfTheSunHolyMother, apply: u => { u.atk += 1; } }),
     // PROVENANCE[sanctaBasilica]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:4:39fc91fc980453890ebc8f7f
     statStep({ id: 'sanctaBasilica', phase: 'base', writes: ['res'],
-      apply: u => { u.res += sanctaBasilicaResMod; } }),
+      when: () => sanctaBasilica, apply: u => { u.res += 3; } }),
     // PROVENANCE[naturalSelection:powerMinerals]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:11:6612cf82e93af571954fbfad
     statStep({ id: 'naturalSelection:powerMinerals', phase: 'base', writes: ['res'],
-      apply: u => { u.res += naturalSelectionPowerMineralsMod; } }),
+      when: () => naturalSelectionPowerMinerals,
+      apply: u => { u.res += naturalSelectionPowerMineralsCount; } }),
     // CreateUnit.CAS snapshots Resistance before either resource write, then processes
     // Nightshade second. When both are present, Nightshade replaces the Power-mineral bonus.
     // PROVENANCE[naturalSelection:nightshade]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:18:448497300397f81837f9b5ab
     statStep({ id: 'naturalSelection:nightshade', phase: 'base', writes: ['res'],
+      when: () => naturalSelectionNightshade,
       apply: u => {
-        if (naturalSelectionNightshadeMod) {
-          u.res += naturalSelectionNightshadeMod - naturalSelectionPowerMineralsMod;
-        }
+        u.res += naturalSelectionNightshadeCount - naturalSelectionPowerMineralsCount;
       } }),
     // Wild Game uses the ranged snapshot taken beside the Resistance snapshot above.
     // PROVENANCE[naturalSelection:wildGame]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:18:448497300397f81837f9b5ab
@@ -174,13 +186,13 @@ function baseStatSteps(ctx) {
       } }),
     // PROVENANCE[naturalSelection:coal]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:26:cef191739c3f088137ea1ffc
     statStep({ id: 'naturalSelection:coal', phase: 'base', writes: ['atk'],
-      apply: u => { u.atk += naturalSelectionCoalMod; } }),
+      when: () => naturalSelectionCoal, apply: u => { u.atk += 1; } }),
     // PROVENANCE[naturalSelection:iron]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:30:b83cb1d01140dbc56424aff9
     statStep({ id: 'naturalSelection:iron', phase: 'base', writes: ['def'],
-      apply: u => { u.def += naturalSelectionIronMod; } }),
+      when: () => naturalSelectionIron, apply: u => { u.def += 1; } }),
     // PROVENANCE[pillarOfFaith]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:19:80527272b0e3dd1465419cc8
     statStep({ id: 'pillarOfFaith', phase: 'base', writes: ['res'],
-      apply: u => { u.res += pillarOfFaithResMod; } }),
+      when: () => pillarOfFaith, apply: u => { u.res += pillarOfFaithCount; } }),
     // Energy Cannon is the last represented CreateUnit.CAS ranged-strength write, so its
     // +50% reads every earlier permanent ranged contribution in this sequence.
     // PROVENANCE[energyCannon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:40a6858a207fd2460b6df58e
@@ -236,13 +248,15 @@ function precalcBinaryStatSteps(ctx) {
 // `b`: precalc, in UnitCalcPre.CAS (Warlord only).
 function precalcScriptStatSteps(ctx) {
   const {
-    abilByPhase, abilities, channels, ffMeleeBonus, goblinPoxAtkMod, goblinPoxDefMod,
-    goblinPoxResMod, godsPlayDicesResMod, greatUnbindingActive, greatUnbindingResMod, isWarlord,
+    abilByPhase, abilities, bombsGrenades, channels, ffMeleeBonus, ffRegularBonus,
+    goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
+    greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
-    marionetteStrayed, natureLinkResMod, outlanderRtbToHitBonus,
-    plagueActive, plagueAtkMod, plagueDefMod, plagueResMod, secondaryHitFields, soulFlayAtkMod,
-    soulFlayDefMod, soulFlayResMod, strengthFields, unitTypeVal,
-    uphillBattleActive, warlordTrueLightStep, wofDefenderAtkMod,
+    marionetteStrayed, natureLinkActive, outlanderRtbToHitBonus,
+    plagueActive, poxHostActive, secondaryHitFields, soulFlayActive, soulFlayAtkMod,
+    soulFlayDefMod, soulFlayResMod, strengthFields, thrownTypeFields, unitTypeVal,
+    uphillBattleActive, warlordEternalNightActive, warlordTrueLightStep,
+    wofDefenderBonusActive,
   } = ctx;
   return [
     // Marionette's stat writes precede the later Outlander research block. This order is
@@ -328,28 +342,41 @@ function precalcScriptStatSteps(ctx) {
     // model merged into one `Math.max` term — see the M4 note at `flameBladeRangedStep`.
     // PROVENANCE[fieryFury]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:124bc19c147f5de83f487583 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:551d408ad4d5ae821c5eaf58 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
     statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', ...strengthFields],
+      when: () => ffRegularBonus,
       apply: u => {
         u.atk += ffMeleeBonus;
         for (const c of channels) u[c.strengthField] += c.ffRtbMod;
       } }),
     // PROVENANCE[wallOfFire:garrison]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:a221a36b384a9457291e5a8a
     statStep({ id: 'wallOfFire:garrison', phase: 'b', writes: ['atk', ...strengthFields],
+      when: () => wofDefenderBonusActive,
       apply: u => {
-        u.atk += wofDefenderAtkMod;
+        u.atk += 1;
         for (const c of channels) u[c.strengthField] += c.wofDefenderRtbMod;
       } }),
     // PROVENANCE[eternalNight:poorVision]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:714df04471d1c63eb32e3964
     statStep({ id: 'eternalNight:poorVision', phase: 'b', writes: strengthFields,
+      when: () => warlordEternalNightActive,
       apply: u => {
         for (const c of channels) u[c.strengthField] += c.eternalNightRtbMod;
       } }),
     // PROVENANCE[bombsGrenades]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:7:99e85b5dc6de1ad3f95908c1
-    statStep({ id: 'bombsGrenades', phase: 'b', writes: strengthFields,
+    // `SETSTAT(U,SThrown,0,…)` writes the calculated record, not the permanent one, so the
+    // Thrown field this creates does not exist before this position. The step supplies its
+    // identity here — as `d:shadowStrike:thrown` does for the same field — instead of the base
+    // seed carrying a region-`b` write from the chain's first entry.
+    statStep({ id: 'bombsGrenades', phase: 'b',
+      writes: [...strengthFields, ...thrownTypeFields],
+      when: () => bombsGrenades,
       apply: u => {
-        for (const c of channels) u[c.strengthField] += c.bombsGrenadesRtbMod;
+        for (const c of channels) {
+          if (c.bombsGrenadesGrantsThrown) u[c.thrownTypeField] = 'thrown';
+          u[c.strengthField] += c.bombsGrenadesRtbMod;
+        }
       } }),
     // PROVENANCE[upgradedExplosive:ranged]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:4:716e4812acd6432198553e28
     statStep({ id: 'upgradedExplosive:ranged', phase: 'b', writes: strengthFields,
+      when: () => channels.some(c => c.upgradedExplosive && c.rangedType !== 'none'),
       apply: u => {
         for (const c of channels) u[c.strengthField] += c.upgradedExplosiveRangedMod;
       } }),
@@ -368,12 +395,14 @@ function precalcScriptStatSteps(ctx) {
       } }),
     // PROVENANCE[soulFlay]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:13:1a0ee111433e436b3c5da065
     statStep({ id: 'soulFlay', phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields],
+      when: () => soulFlayActive,
       apply: u => {
         u.res += soulFlayResMod; u.def += soulFlayDefMod; u.atk += soulFlayAtkMod;
         for (const c of channels) u[c.strengthField] += c.soulFlayRtbMod;
       } }),
     // PROVENANCE[goblinPox]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:19:4d062d7899f6c61a2403d4a4
     statStep({ id: 'goblinPox', phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields],
+      when: () => poxHostActive,
       apply: u => {
         u.res += goblinPoxResMod; u.def += goblinPoxDefMod; u.atk += goblinPoxAtkMod;
         for (const c of channels) u[c.strengthField] += c.goblinPoxRtbMod;
@@ -381,26 +410,29 @@ function precalcScriptStatSteps(ctx) {
     // PROVENANCE[greatUnbinding]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:51f2e6d3d15bd989ebfff7cd
     statStep({ id: 'greatUnbinding', sourceId: 'greatUnbinding', sourceLabel: 'Great Unbinding',
       phase: 'b', writes: ['res', 'toHit', 'toBlk'],
-      apply: u => {
-        u.res += greatUnbindingResMod;
-        if (greatUnbindingActive) { u.toHit -= 20; u.toBlk -= 20; }
-      } }),
+      when: () => greatUnbindingActive,
+      apply: u => { u.res -= 2; u.toHit -= 20; u.toBlk -= 20; } }),
     // PROVENANCE[natureLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:8d549c3c9d2b586869606d77
     statStep({ id: 'natureLink', phase: 'b', writes: ['res'],
-      apply: u => { u.res += natureLinkResMod; } }),
+      when: () => natureLinkActive, apply: u => { u.res += 1; } }),
     ...(isWarlord ? [warlordTrueLightStep] : []),
     // PROVENANCE[plague]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:52017a20d7efd62a9584c02a
     statStep({ id: 'plague', sourceId: 'plague', sourceLabel: 'Plague',
       phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields, 'toHit'],
+      when: () => plagueActive,
       apply: u => {
-        u.res += plagueResMod; u.def += plagueDefMod; u.atk += plagueAtkMod;
+        u.res -= 6; u.def -= 3; u.atk -= 3;
         for (const c of channels) u[c.strengthField] += c.plagueRtbMod;
-        if (plagueActive) u.toHit -= 10;
+        u.toHit -= 10;
       } }),
     // Xenopsychology and Radio are +1 Resistance each; the rest of what they grant is To Hit
     // and To Defend, which are not in the sequence yet.
     // PROVENANCE[godsPlayDices]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:14:34909b07ee2554c5452c485b
     statStep({ id: 'godsPlayDices', phase: 'b', writes: ['res'],
+      // UnitCalcPre.CAS:1699-1714 tests four separate EncDICE flags, each writing its own
+      // ±1 or ±2; the calculator's one signed control is which of them is set, and zero is
+      // none of them.
+      when: () => godsPlayDicesResMod !== 0,
       apply: u => { u.res += godsPlayDicesResMod; } }),
   ];
 }
@@ -409,17 +441,18 @@ function precalcScriptStatSteps(ctx) {
 function magicCalcBinaryStatSteps(ctx) {
   const {
     abilByPhase, abilities, badMoonActive, channels,
-    chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus, charmOfLifeActive,
-    classicBerserk, com1DivineBarrierAura, com1SoulLinkerAura,
+    chaosSurgeCount, chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus,
+    charmOfLifeActive, classicBerserk, com1DivineBarrierAura, com1SoulLinkerAura,
     com1GuidingBeaconAura, darkForceActive, darknessAtkBonus, darknessDefBonus, darknessResBonus,
-    destinyActive, disciplineAtkMod, disciplineDefMod, doomGazeLvlMod, dosTrueLightStep,
-    enduranceDefMod, enduranceHpMod, eternalNightEnemyResPenalty, flameBladeRangedStep,
+    destinyActive, disciplineActive, disciplineAtkMod, disciplineDefMod, doomGazeLvlMod,
+    dosTrueLightStep, enduranceActive, enduranceDefMod, enduranceHpMod,
+    eternalNightEnemyResPenalty, flameBladeRangedStep,
     focusMagicActive, focusMagicDoomGazeMod, gazeLvlMod, gazeWarpHalves, goodMoonActive,
     hasDarkness, hasMeleeAttack, heavenlyLightActive, heavenlyLightMeleeToHit, landLinkingEligible,
     heavenlyLightThrownToHit, holyArmorActive, hwMeleeToHit,
     identity, inputBaseAtk, isCoM1, isCoM2,
     isCoMVersion, isWarlord, lionheartHpMod, lvl,
-    modernNodeBaseMelee, natureConjunctionActive, nodeAuraActive, orihalconResMod,
+    modernNodeBaseMelee, natureConjunctionActive, nodeAuraActive, orihalconActive,
     rangedTypeFields, realmWardActive, secondaryHitTargets, secondaryHitFields, spellWardActive,
     secondaryHitFieldsFor, strengthFields, supremeLightEligible, thrownTypeFields, unitIsChaos, unitTypeVal, version,
     vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warpRealityActive, weaponStatSteps,
@@ -536,9 +569,11 @@ function magicCalcBinaryStatSteps(ctx) {
     ...abilByPhase.cBeforeHolyArmor,
     // PROVENANCE[endurance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:f1faba1a3ffce4883dce32c1 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:61c518b9d5be7ff83193cb0c | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:746a48490cec4055321bc210 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:746a48490cec4055321bc210
     statStep({ id: 'endurance', phase: 'c', writes: ['def', 'hp'],
+      when: () => enduranceActive,
       apply: u => { u.def += enduranceDefMod; u.hp += enduranceHpMod; } }),
     // PROVENANCE[discipline]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:445349dde257497d94440bc9
     statStep({ id: 'discipline', phase: 'c', writes: ['def', 'atk', ...strengthFields],
+      when: () => disciplineActive,
       apply: u => {
         u.def += disciplineDefMod; u.atk += disciplineAtkMod;
         for (const c of channels) u[c.strengthField] += c.disciplineRtbMod;
@@ -589,8 +624,9 @@ function magicCalcBinaryStatSteps(ctx) {
       } }),
     // PROVENANCE[orihalcon]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:edcd009b70fbdd75f5a2cbd5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:ceaf7256e4e54cba7caba1c2
     statStep({ id: 'orihalcon', phase: 'c', writes: ['res', ...strengthFields],
+      when: () => orihalconActive,
       apply: u => {
-        u.res += orihalconResMod;
+        u.res += 1;
         for (const c of channels) u[c.strengthField] += c.orihalconRtbMod;
       } }),
     // PROVENANCE[chance:holyWeapon:melee]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:f35bf69e3356d00f90e013ed | Reference docs/DOS reconstructed/unitcalc.c@span:14:057c7ba8762bb65c4a011e69 | Reference docs/DOS reconstructed/unitcalc.c@span:12:1acacb263828739ad9aeab50 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:aeee04e431949f9a5f171311
@@ -645,6 +681,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // PROVENANCE[chaosSurge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8aac79f44ffe2fbae619cb5d | Reference docs/DOS reconstructed/unitcalc.c@span:28:ef6419306ce4c0b275103ee1 | Reference docs/DOS reconstructed/unitcalc.c@span:29:0f32c183c37c88a243ddb6cf | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:bc81b31ab5f15a3717465711
     statStep({ id: 'chaosSurge', phase: 'c',
       writes: ['res', 'atk', ...strengthFields, 'gaze', 'doomGaze'],
+      when: () => chaosSurgeCount > 0,
       apply: u => {
         u.res += chaosSurgeResBonus;
         if ((isCoM2 && hasMeleeAttack) || (!isCoM2 && u.atk > 0))
@@ -917,7 +954,7 @@ function magicCalcScriptStatSteps(ctx) {
     pneumaFieldActive, psychoForceActive, rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     trueSightRangedToHitBonus, vampirismActive,
-    warlordBerserk, warlordCombatFlameBlade,
+    warlordBerserk, warlordCombatFlameBlade, weaknessActive,
   } = ctx;
   const vampirismSources = channels.filter(c => c.slotKey !== 'legacy').length > 0
     ? channels.filter(c => c.slotKey !== 'legacy')
@@ -930,6 +967,7 @@ function magicCalcScriptStatSteps(ctx) {
     // the first represented phase-d chance writer.
     ...abilByPhase.d.filter(step => step.id === 'mechanicalExpert'),
     statStep({ id: 'weakness', phase: 'd', writes: strengthFields,
+      when: () => weaknessActive,
       apply: u => {
         for (const c of channels) u[c.strengthField] += c.weaknessRtbModCas;
       } }),
@@ -1093,11 +1131,9 @@ function magicCalcScriptStatSteps(ctx) {
         u.def = 0;
         // `GetStat(U,SRanged,0)` names the record's Ranged field, not an attack the unit owns,
         // so the transfer takes whatever stands in that field — including the strength the
-        // region-`c` blocks gated on `not Ismagicalranged` put there while it is typeless. The
-        // `ranged` channel slot is that field; a Thrown slot Focus Magic converted in place is
-        // it as well, for as long as that conversion is modelled as an identity flip (F90).
-        const sources = channels.filter(c => c.isChannelSlot
-          && (c.channelKey === 'ranged' || u[c.rangedTypeField] !== 'none'));
+        // region-`c` blocks gated on `not Ismagicalranged` put there while it is typeless.
+        // Which slot that field is has one home, `isRangedFieldSlot` (combat_abilities.js).
+        const sources = channels.filter(c => c.isChannelSlot && isRangedFieldSlot(u, c));
         // The record's Thrown field: a Thrown channel that is neither a Ranged source itself
         // nor spent on a Breath — Lightning Blade converts the Thrown field into Lightning
         // Breath before this line, and that breath is not what `SThrown` names any more.
@@ -1115,7 +1151,7 @@ function magicCalcScriptStatSteps(ctx) {
         }
         if (thrownField && sources.length) u[thrownField.thrownTypeField] = 'thrown';
         for (const c of channels) {
-          if (c.isChannelSlot || u[c.rangedTypeField] === 'none') continue;
+          if (c.isChannelSlot || !isRangedFieldSlot(u, c)) continue;
           u[c.rangedTypeField] = 'none';
           u[c.thrownTypeField] = 'thrown';
         }
@@ -1204,8 +1240,12 @@ function postHookStatSteps(ctx) {
     // Q7, closed: Supreme Light is the last stat write the recompute makes, and its defence
     // component is a **live** read of Resistance — after Warp Resist, after `d`, and after the
     // aura pass, which is why the CoM2 manual's changelog says it is "applied last, after
-    // Resistance To All, Holy Bonus, and Prayermaster". The melee and ranged additions are
-    // each gated on that base attack existing (D24; CoM2 analysis, *Supreme Light*).
+    // Resistance To All, Holy Bonus, and Prayermaster". The melee write is gated on the
+    // permanent record (`if B.attack > 0`), and the ranged one on the calculated record —
+    // `if U.ranged > 0` (Units.RecalculateUnits.pas:2632), whose own comment marks that
+    // difference. Neither tests a type, so the ranged half asks only which record field the
+    // slot is and what strength stands in it *here*, after `d:blazeOfGlory` has emptied the
+    // Ranged field and after the region-`e` clamp has zeroed a spent one.
     statStep({ id: 'supremeLight', phase: 'e', writes: ['def', 'atk', ...strengthFields],
       when: () => !isCoM1
         && (supremeLightEligible || channels.some(c => c.supremeLightEligible)),
@@ -1215,8 +1255,8 @@ function postHookStatSteps(ctx) {
           if (hasMeleeAttack) u.atk += 2;
         }
         for (const c of channels) {
-          if (c.supremeLightEligible && c.rtbStatActive) {
-            u[c.strengthField] += c.supremeLightRtbMod;
+          if (c.supremeLightEligible && isRangedFieldSlot(u, c) && u[c.strengthField] > 0) {
+            u[c.strengthField] += 2;
           }
         }
       } }),

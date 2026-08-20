@@ -256,7 +256,7 @@ function runModifierTraceChecks(ctx) {
     version: 'com_6.08', toBlkMod: -20,
     identity: ctx.createCustomUnitIdentity('com_6.08', { specialUnit: 'zombies' }),
   }));
-  assertClose(lowBlockZombies.displayToBlock, 0.1,
+  assertClose(lowBlockZombies.toBlock, 0.1,
     'Negative base To Block plus Zombies retains the production ten-percent floor');
   assertEqual(lowBlockZombies.modifierTraces.toBlock.result, 10,
     'To Block trace uses the same initial ten-percent floor');

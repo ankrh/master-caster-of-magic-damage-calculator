@@ -52,14 +52,10 @@ function runDerivationStageChecks(ctx) {
   assertEqual(phaseOf({ lucky: true, luckyPhaseB: true }, 'lucky'), 'c',
     'Lucky Star / Divine Protection establish the flag before the compiled region-c stat write');
 
-  const artificer = stepFor({ artificer: true, mechanical: true }, 'artificer');
-  assertEqual(artificer.phase, 'base', 'Artificer ABase writes use the base stage');
-  assertEqual(artificer.delta.atk, 1, 'Artificer grants +1 melee');
-  // +2, not the +1 the in-game helptext states — CreateUnit.CAS:43 matches manual changelog
-  // 1.4.22, which restored the +2 that 1.4.17 had cut. See Source discrepancies.md §6.
-  assertEqual(artificer.delta.res, 2, 'Artificer grants +2 resistance, per the script');
-  assertEqual(artificer.delta.def, 1, 'Artificer grants +1 armor');
-  assertEqual(artificer.delta.rtb, 1, 'Artificer grants +1 ranged');
+  // The four magnitudes are proved by damage instead — `artificerMechanical*Warlord`, whose
+  // resistance case is written against the script's +2 rather than the helptext's +1.
+  assertEqual(phaseOf({ artificer: true, mechanical: true }, 'artificer'), 'base',
+    'Artificer ABase writes use the base stage');
 
   assertEqual(phaseOf({ guardian: true }, 'guardian'), 'c',
     'The Guardian retort is region c, where +0x0B092 puts it');
@@ -70,16 +66,13 @@ function runDerivationStageChecks(ctx) {
 
   // D23: CoM2/Warlord apply Holy Bonus and Resistance to All as region-`e` stack auras, after
   // `d` and after the Warps. The DOS engines have no aura pass and keep them in `a`.
-  const holyBonusCoM2 = stepFor({ holyBonus: 3 }, 'holyBonus');
-  assertEqual(holyBonusCoM2.phase, 'e', "CoM2/Warlord run Holy Bonus in region e's aura pass");
-  assertEqual(holyBonusCoM2.delta.ranged, 3,
-    'The Holy Bonus aura writes the narrow ranged field, not the shared rtb slot');
-  assertEqual(holyBonusCoM2.delta.rtb, undefined,
-    'so Thrown, Breath and the gazes take no Holy Bonus in CoM2');
+  // Which field each engine's Holy Bonus reaches is proved by damage: `holyBonusSkipsThrownCoM2`
+  // against `holyBonusReachesMissileCoM2` for the modern narrow field, and
+  // `holyBonusReachesThrownCoM1` for CoM 1's shared slot.
+  assertEqual(phaseOf({ holyBonus: 3 }, 'holyBonus'), 'e',
+    "CoM2/Warlord run Holy Bonus in region e's aura pass");
   assertEqual(phaseOf({ holyBonus: 3 }, 'holyBonus', 'mom_1.31'), 'a',
     'MoM has no aura pass and keeps Holy Bonus in phase a');
-  assertEqual(stepFor({ holyBonus: 3 }, 'holyBonus', 'com_6.08').delta.rtb, 3,
-    "CoM 1 writes Holy Bonus to the shared `.ranged` slot, so it reaches Thrown and Breath");
   assertEqual(phaseOf({ resistanceToAll: 2 }, 'resistanceToAll'), 'e',
     'Resistance to All feeds the region-e Prayermaster aura');
   for (const modernVersion of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
@@ -129,16 +122,22 @@ function runDerivationStageChecks(ctx) {
       .some(entry => entry.id === 'mislead'),
     `${modernVersion}: a created Ranged channel emits no Misfortune ranged trace write`);
 
-    const createdRangedWithHolyBonus = ctx.deriveUnitStats(baseUnitInput({
+    // Holy Bonus and Misfortune both test `B.ranged > 0` (Units.RecalculateUnits.pas:2535,
+    // :2599), so a Ranged channel created after the permanent record takes neither; Guiding
+    // Beacon tests the calculated `U.ranged > 0` (:2543) and takes it. That is what separates
+    // the two gates in one aura pass — the record each reads, not the slot each writes.
+    const createdRangedWithAuras = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, rtb: 0, rtbType: 'none',
-      abilities: { focusMagic: true, holyBonus: 2, mislead: true }, modernAttacks: {},
+      abilities: { focusMagic: true, holyBonus: 2, mislead: true, guidingBeaconAura: 2 },
+      modernAttacks: {},
     }));
-    assertEqual(createdRangedWithHolyBonus.modernAttacks.ranged.strength, 5,
-      `${modernVersion}: F14 preserves other ability steps' calculated-Ranged slot semantics`);
-    const createdAuraIds = createdRangedWithHolyBonus.modernAttacks.ranged.modifierTrace.entries
+    assertEqual(createdRangedWithAuras.modernAttacks.ranged.strength, 5,
+      `${modernVersion}: a created Ranged channel takes Guiding Beacon but neither permanent-record aura`);
+    const createdAuraIds = createdRangedWithAuras.modernAttacks.ranged.modifierTrace.entries
       .map(entry => entry.id);
-    assert(createdAuraIds.includes('holyBonus') && !createdAuraIds.includes('mislead'),
-      `${modernVersion}: calculated and persistent Ranged gates remain isolated in one aura pass`);
+    assert(createdAuraIds.includes('guidingBeaconAura')
+      && !createdAuraIds.includes('holyBonus') && !createdAuraIds.includes('mislead'),
+    `${modernVersion}: calculated and permanent Ranged gates remain isolated in one aura pass`);
 
     const hero = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, unitType: 'hero', atk: 2, def: 2, res: 2,
@@ -177,16 +176,8 @@ function runDerivationStageChecks(ctx) {
   assertEqual(phaseOf({ spiritLink: true }, 'spiritLink'), 'base',
     'Spirit Link writes +2 Resistance permanently to ABase when cast');
 
-  const animatedModern = stepFor({ animated: true }, 'animated', 'com2_1.05.11');
-  assertEqual(animatedModern.delta.nonGazeRtb, 1,
-    'Modern Animated targets the conventional Ranged/Thrown/Breath channels');
-  assertEqual(animatedModern.delta.rtb, undefined,
-    'Modern Animated does not target the independent Gaze fields');
-  const blackPrayerModern = stepFor({ blackPrayer: true }, 'blackPrayer', 'com2_1.05.11');
-  assertEqual(blackPrayerModern.delta.nonGazeRtb, -1,
-    'Modern Black Prayer targets the conventional Ranged/Thrown/Breath channels');
-  assertEqual(blackPrayerModern.delta.rtb, undefined,
-    'Modern Black Prayer does not target the independent Gaze fields');
+  // Which fields modern Animated and Black Prayer reach is proved by the four channel strengths
+  // and the untouched Doom Gaze in `runDeriveUnitStatsChecks`.
 
   // D24/D25: both engines write Supreme Light and Tactician after their Warp block, and each
   // is emitted as a version-exclusive step rather than as a version predicate.
@@ -200,12 +191,9 @@ function runDerivationStageChecks(ctx) {
   const tacticianCoM1 = stepFor({ tactician: true }, 'tactician', 'com_6.08');
   assertEqual(tacticianCoM1.phase, 'c', "CoM 1's Tactician retort is also region c (0x90AB4)");
   assertEqual(tacticianCoM1.afterWarp, true, 'and also after Warp Creature');
-  const tacticianHeroCoM2 = stepFor({ tactician: true, unitType: 'hero' },
-    'tactician', 'com2_1.05.11');
-  assertEqual(tacticianHeroCoM2.delta.positiveRanged, 2,
-    'Modern Tactician hero targets positive live conventional Ranged');
-  assertEqual(tacticianHeroCoM2.delta.rtb, undefined,
-    'Modern Tactician hero does not target Thrown, Breath, or Gaze');
+  // The modern hero grant's narrow conventional-Ranged target is proved by the four channel
+  // strengths in `runDeriveUnitStatsChecks`, and its live-strength gate by the same suite's
+  // `tacticianReadsLiveRanged`.
 
   const mixedAbilities = {
     artificer: true,

@@ -49,7 +49,7 @@ text you have just shown to be wrong, and do not implement a scope the evidence 
 
 **Fixing an adjacent defect is preferred to filing one, within a bound.** Fix it in the same change
 when all four hold: it is in code the item already touches; its correction is backed by a cited
-source, not by inference; you add a preset that fails before the fix and passes after; and it moves
+source, not by inference; you add a preset that fails against the unfixed code and passes after, confirmed in the round's single `npm test` rather than by a suite run per fix; and it moves
 no number in a version outside the item's declared `Versions` scope, measured rather than assumed.
 Anything failing one of those is filed instead. Say in the `HISTORY.md` entry what was folded in and
 why, so the scope growth stays visible; a fix that outgrows the item mid-change is a signal to stop

@@ -916,6 +916,22 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 4.800 },
   },
+  blazeOfGloryThrownTakesNoDistancePenaltyWarlord: {
+    desc: 'The ranged distance penalty is a resolution-time read of the finished record, so it '
+      + 'follows the attack Blaze of Glory leaves behind. Lightning Blade has already spent the '
+      + 'Thrown field (CreateUnit.CAS:294-299), so the transfer at UnitCalc.CAS:1494-1500 retypes '
+      + 'the Ranged slot in place: missile 6 becomes Thrown 6 and fires in the melee engagement, '
+      + 'where there is no range. Melee 1 + thrown 6 + the granted Lightning Breath 1, all at '
+      + '30+70 = 100% → 8.0. (Reading the pre-sequence missile type instead applies CoM2\'s '
+      + '−10−3×(6−4) = −16% to the thrown attack, giving 1 + 5.04 + 1 = 7.04; without Blaze of '
+      + 'Glory the attack is still a missile, fires at range 6 and does take the −16% → 5.04.)',
+    version: V_WARLORD,
+    a: { atk:1, def:0, rtbType:'missile', rtb:6, toHitMod:70, toHitRtbMod:70, hp:10,
+      abilities: { blazeOfGlory: true, lightningBlade: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    rangedCheck: true, rangedDist: 6,
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
   blazeOfGloryHeroUnaffectedWarlord: {
     desc: 'Blaze of Glory targets a non-hero unit, so a hero is unaffected: no Armor→Melee transfer. Hero melee 2, Armor 6 → melee stays 2 vs def 0 → 2.0. (If wrongly applied, melee 2+6 = 8.)',
     version: V_WARLORD,

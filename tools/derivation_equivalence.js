@@ -36,18 +36,42 @@ function rng(seed) {
 }
 
 // The control surface, read from the definitions rather than restated.
+//
+// `key` names the control and so names the case; `calcKey` is what `deriveUnitStats` reads.
+// The two differ on eight enchantments (`natureLink` -> `landLinking`, `apotheosis` ->
+// `destiny`, ...), and `abilityUiDefs()` (`ui_abilities.js`) is what establishes that the
+// derivation sees the `calcKey`. Both defs lists reach the derivation the same way — the UI
+// merges them into one `abilities` map — so a spec never names a top-level input field.
 function controlSpecs(defs) {
   const specs = [];
   for (const def of defs) {
     if (!def || !def.key) continue;
-    if (def.type === 'bool') specs.push({ key: def.key, values: [true] });
-    else if (def.type === 'num') specs.push({ key: def.key, values: [3] });
-    else if (def.type === 'numcheck') specs.push({ key: def.key, values: [3] });
+    const calcKey = def.calcKey || def.key;
+    if (def.type === 'bool') specs.push({ key: def.key, calcKey, values: [true] });
+    else if (def.type === 'num') specs.push({ key: def.key, calcKey, values: [3] });
+    else if (def.type === 'numcheck') specs.push({ key: def.key, calcKey, values: [3] });
     else if (def.type === 'select' && Array.isArray(def.options)) {
-      specs.push({ key: def.key, values: def.options.map(o => o[0]).filter(v => v !== 'none') });
+      specs.push({ key: def.key, calcKey,
+        values: def.options.map(o => o[0]).filter(v => v !== 'none') });
     }
   }
   return specs;
+}
+
+// The Outlander reform spells are owned by an Outlander wizard: `applyOutlanderReformGrants`
+// (`stats_identity.js`) deletes every one of them from the effective ability set when
+// `outlanderWizard` is absent, so a case that sets one alone exercises nothing. Pair them.
+const OUTLANDER_REFORMS = new Set([
+  'armorcladReform', 'ballisticsTraining', 'energyBeamWeapons', 'explosive',
+  'heatPowerEngine', 'magitekEngineering', 'magitekScience', 'militaryDrilling',
+  'pneumaReactor', 'psychoConverter', 'radio', 'rocketry', 'temporalEngineering',
+  'xenopsychology', 'xenoveterinary',
+]);
+
+// One control into the map the derivation reads, with its owner where it has one.
+function setControl(abilities, spec, value) {
+  abilities[spec.calcKey] = value;
+  if (OUTLANDER_REFORMS.has(spec.calcKey)) abilities.outlanderWizard = true;
 }
 
 const abilitySpecs = controlSpecs(read('ABILITY_DEFS'));
@@ -178,8 +202,8 @@ function run() {
         for (const value of spec.values) {
           for (const shape of SHAPES) {
             const over = { ...shape.over };
-            if (kind === 'abil') over.abilities = { [spec.key]: value };
-            else over[spec.key] = value;
+            over.abilities = {};
+            setControl(over.abilities, spec, value);
             record(`${version}|solo|${kind}|${spec.key}=${value}|${shape.name}`,
               baseInput(version, over));
           }
@@ -201,13 +225,16 @@ function run() {
       const abilities = {};
       const over = { ...shape.over, ...env.over };
       const pick = 6;
+      // Both lists write the one map, so a shared `calcKey` picked twice keeps the later
+      // value rather than being counted in two places, which is what the UI's merge does
+      // for the controls that collapse onto one key.
       for (let n = 0; n < pick; n += 1) {
         const spec = abilitySpecs[Math.floor(random() * abilitySpecs.length)];
-        abilities[spec.key] = spec.values[Math.floor(random() * spec.values.length)];
+        setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
       }
       for (let n = 0; n < pick; n += 1) {
         const spec = enchantSpecs[Math.floor(random() * enchantSpecs.length)];
-        over[spec.key] = spec.values[Math.floor(random() * spec.values.length)];
+        setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
       }
       over.abilities = abilities;
       record(`${version}|combo|${i}`, baseInput(version, over));

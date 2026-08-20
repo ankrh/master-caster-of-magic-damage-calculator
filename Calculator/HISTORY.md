@@ -6,6 +6,215 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-20
 
+- **F99 — the distance penalty reads the finished ranged type.** `distancePenaltyFor`
+  (`stats.js:1801-1808`) decided both whether a ranged distance penalty applies and which curve to
+  use from `context.rangedType`, the value the precomputed pass leaves after `c:focusMagic`. It
+  feeds a resolution-time projection, so it now reads `statUnit[context.rangedTypeField]`. The one
+  write that separates the two is Warlord's `d:blazeOfGlory`: `SThrown := SThrown + SRanged`
+  followed by `SRanged := SRanged - SRanged` (`UnitCalc.CAS:1494-1500`) empties the Ranged field,
+  and the calculator's stand-in for the `SETSTAT(U,SAmmo,0,0)` beside it (`:1502`) clears the type,
+  so the surviving attack is Thrown and has no range to be charged for. This is a projectile-*type*
+  read, not the field-identity question `isRangedFieldSlot` answers — missile and boulder select
+  different curves, and a typeless Ranged field carries no projectile — so it does not go through
+  that helper.
+
+  **The measurement the row asked for, first.** The legacy-slot `toHitRtb` projection did carry the
+  penalty into a resolved number, not just a display: a Warlord unit with melee 1 and missile 6 at
+  range 6, Blaze of Glory active, derived `toHitRtb` 0.84 with `rtbDistPenalty` −16 while its
+  finished types were `ranged none` / `thrown thrown`, and the Thrown phase reads that same
+  `toHitRtb` (`combat_phases.js`, `aToHitRtbVert`), giving 6.040 damage where 7.000 is correct. The
+  row's two claims both hold as written, with only line numbers stale.
+
+  **Measured, per version.** The 15,480-case digest moves **0 cases in all five versions** — it
+  sets `rangedCheck`/`rangedDist` only through its `walls-ranged` environment at distance 3, below
+  CoM2's threshold of 4, and never beside Blaze of Glory. A supplementary 33,800-case sweep crossed
+  13 attack shapes (the four modern channels singly and together, and each conventional type on the
+  DOS-shaped slot) with 26 late-type-write combinations, hero and non-hero, `rangedCheck` off and on
+  at nine distances, over all five versions, recording the finished types, `toHitRtb`, the penalty,
+  each channel's To Hit and both resolved damage means. **504 cases move, all
+  `com2_warlord_1.5.12.7`; `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11` are
+  unchanged.** Every one is Blaze of Glory on a non-hero missile or boulder attack at distance ≥ 4,
+  and every one is a penalty that stops being charged. `blaze+focusMagic` and `blaze+energyCannon`
+  move nothing, which is the type read doing its work: those retype the attack to `magic_s` and
+  `beam` before Blaze, and neither takes a distance penalty either way.
+
+  192 of the 504 move a resolved damage mean and the other 312 move only the record-level
+  `toHitRtb`/`rtbDistPenalty` pair, which for a unit with modern channels is the card's displayed
+  To Hit line. Of the 192, 168 are the DOS-shaped shared slot, which no CoM2/Warlord browser input
+  produces — every modern unit gets attack channels from `modernCardAttacks` (`ui_units.js`), and
+  presets translate their `rtb` pair into one. The 24 a user can reach are the modern-channel case
+  where the transfer has nowhere to move to: Lightning Blade has already spent the Thrown field
+  (`CreateUnit.CAS:294-299`), so Blaze retypes the Ranged slot in place and that slot's own
+  projection was charging a missile penalty to a Thrown attack. Where the Thrown field is free the
+  move is real, the emptied Ranged channel disappears from the output, and the surviving channel
+  never had a ranged type to be penalised for.
+
+  New coverage: `blazeOfGloryThrownTakesNoDistancePenaltyWarlord` = **8.000** — melee 1, the
+  transferred Thrown 6 and Lightning Blade's granted Lightning Breath 1, all at 30+70 = 100% —
+  against the **7.040** the pre-sequence type gives by charging the Thrown attack CoM2's
+  −10−3×(6−4) = −16%. Without Blaze the same unit's attack is still a missile, fires at range 6 and
+  does take the −16% → 5.040. Nothing was folded in. E71's other half is left alone deliberately:
+  the output contract's `rangedGetsWpn` is still the pre-sequence const where `thrownGetsWpn` is
+  recomputed from `finalThrownType`, but `GetsWpn` occurs on 10 lines of `stats.js` and nowhere else
+  in the repository, so neither field is read and no reading of them is observable. Settling that
+  pair belongs to [M14](./BACKLOG.md), which removes the pass they escape from.
+
+- **F96 — the region-`e` aura ranged gates are the strength tests the engine makes, on the record
+  it reads.** Five aura-pass writes gate a ranged bonus and only one tests a type: Holy Bonus
+  `if B.ranged > 0` (`Units.RecalculateUnits.pas:2535`), Guiding Beacon `if U.ranged > 0` (`:2543`),
+  Misfortune `if B.ranged > 0` (`:2599`), Supreme Light `if U.ranged > 0` (`:2632`), and Leadership,
+  which pairs `not Ismagicalranged(U.rangedtype)` with `U.ranged > 0` (`:2583`). `U` is `Units[i]`
+  and `B` is `BaseUnits[i]` (`:806`). The item's premise holds block for block; its four line
+  numbers were each one to four lines off the gate they named and are corrected here and in the
+  [predicate inventory](../Reference%20docs/Attack-type%20predicate%20inventory.md).
+
+  `addToSlot`'s `persistentRanged` arm is now `B.ranged > 0` — which record field the slot is, plus
+  that field's permanent strength, with no type test on a modern channel — and carries Holy Bonus
+  as well as Misfortune. A new `rangedField` arm answers which slot is `U.ranged` **at the writing
+  step's own position**, through `isRangedFieldSlot` (`combat_abilities.js`), and carries Guiding
+  Beacon, Leadership's strength half and `e:supremeLight`'s `+2`; the six-name `supremeLightRtbMod`
+  is deleted. `hasPermanentRangedStat` keeps its own job, the `CreateUnit.CAS` city gates, which do
+  read a permanent ranged type. The Blaze of Glory transfer's own "which slot is `SRanged`" test is
+  the same helper now, so that rule has one home.
+
+  **Measured.** The 15,480-case digest moves 2 cases, one `com2_1.05.11` and one
+  `com2_warlord_1.5.12.7`, both Focus Magic + Holy Bonus at ranged 6 → 3; `mom_1.31`,
+  `mom_cp_1.60.00` and `com_6.08` are unchanged. Its combination pass does not pair an aura with a
+  late type write, so a supplementary 70,890-case sweep crossed the five gates — singly and all
+  together — with 47 type- and strength-writing controls plus 153 pairs of the 18 that can reach a
+  ranged field, over 17 attack shapes and all five versions: **640 cases move, 233 `com2_1.05.11`
+  and 407 `com2_warlord_1.5.12.7`, none in the three DOS versions.** Every one is a bonus that
+  stops being made; no number rises. Misfortune and Leadership alone move nothing, so their
+  corrections are faithfulness only.
+
+  Three shapes account for all of it. Holy Bonus no longer reaches a Ranged attack created or
+  converted after the permanent record, where `B.ranged = 0`. Supreme Light no longer adds `+2` to
+  a Ranged field standing at zero. And neither Guiding Beacon nor Supreme Light reaches the Ranged
+  field `d:blazeOfGlory` has emptied — the position half, invisible to a predicate computed before
+  region `d`. Holy Bonus does now write that emptied field, as the engine does, and the ranged-type
+  clear standing in for `SETSTAT(U,SAmmo,0,0)` retires the result, so no output moves (`SPEC.md`,
+  *Deliberate deviations*, which now names it).
+
+  New coverage: `holyBonusSkipsFocusCreatedRangedCoM2` = 1.000 against the 5.000 the slot's type
+  test gave, `supremeLightSkipsZeroedRangedCoM2` = 0 against 2.000,
+  `guidingBeaconSkipsBlazedRangedWarlord` = 3.000 against 6.000, and
+  `supremeLightSkipsBlazedRangedWarlord` = 3.000 against 5.000. One existing node check moved with
+  the engine reading rather than against it: `derivation_stages.js` asserted that a Focus-Magic-
+  created Ranged channel takes Holy Bonus while refusing Misfortune, to show two gates isolated —
+  both read `B.ranged`, so what separates them is Guiding Beacon's calculated `U.ranged`, and the
+  created channel is now 5 with neither permanent-record aura in its trace. Nothing was folded in.
+  E40's own `Ismagicalranged(U.rangedtype)` eligibility read stays stale deliberately: making it
+  live would feed the calculator's Blaze ranged-type stand-in into a gate the engine resolves from
+  a record it never clears, which is [M14](./BACKLOG.md)'s to settle.
+
+- **F102 — the equivalence digest was blind to every enchantment.** `deriveUnitStats` reads
+  abilities and enchantments from one `input.abilities` map, because `abilityUiDefs()`
+  (`ui_abilities.js`) merges `ABILITY_DEFS` and `ENCHANTMENT_DEFS` into it by `calcKey` — but
+  `tools/derivation_equivalence.js` wrote ability specs to `over.abilities` and enchantment specs
+  to `over[spec.key]` at the top level of the input, where nothing reads them. Measured: **0 of
+  8,370** solo enchantment cases moved a number before the fix, **8,112** after. None of the
+  genuinely top-level inputs are in either defs list, so nothing was relying on the old routing;
+  the `ENVS` list already covers `trueLight`, `darkness`, `warpReality`, `nodeAura`, `cityWalls`
+  and the rest. Both lists now go through one `setControl`, keyed by `calcKey` — which differs
+  from the control's own key on eight enchantments (`natureLink` → `landLinking`, `apotheosis`
+  → `destiny`, `liability` → `mislead`, `guardianWind` and `hillfort` → `missileImmunity`,
+  `disciplineWarlord` → `discipline`, `chaosEmbrace` → `blazingEyes`, `planewalking` →
+  `teleporting`) — and a case setting an Outlander reform now sets `outlanderWizard` with it,
+  since `applyOutlanderReformGrants` (`stats_identity.js:540-547`) strips all fifteen without it.
+  No stored digest survives the change, which is the point of the item. Re-verified with the
+  corrected harness across the whole of [M12](#2026-08-20) and [F94](#2026-08-20): **15,480 cases,
+  0 differing, all five versions**, against the tree as it stood before both landed. The digest's
+  combination pass still does not reach F94's `explosive` + `fieryFury` pair, which is covered by
+  `bombsGrenadesAfterFieryFuryWarlord` instead.
+
+- **F94 — the pre-sequence type flips run in chain order, and the base seed is the permanent
+  record.** `buildSlotContext` advances one `rangedType`/`thrownType` pair through five writes of
+  its own, and advanced it in the order they happened to be authored — Military Workshop, Bombs &
+  Grenades, Lightning Blade, Chaos Channels, Energy Cannon — where the Warlord chain orders their
+  steps `base:militaryWorkshop`, `base:lightningBlade:breath`, `base:energyCannon`,
+  `a:chaosChannels:fireBreath`, `b:bombsGrenades` (`stats_manifests.js`). The pair now advances in
+  that order, with each position's predicates evaluated between the flips rather than after all of
+  them.
+
+  **The number this moves is Fiery Fury's.** `UnitCalcPre.CAS:832-846` runs before the Bombs &
+  Grenades block at `:1066-1080` in the same file, and `b:fieryFury` precedes `b:bombsGrenades` in
+  the chain, so Fiery Fury cannot see the Thrown field that block creates — but `ffRtbMod` read the
+  pair after the grant and added its `+2` to it. Over a 54,900-case pairwise sweep of 60
+  attack- and type-relevant controls across all five versions and six attack shapes, exactly three
+  cases move, all `com2_warlord_1.5.12.7` and all Explosive Reform + Fiery Fury: Thrown 9 → 7 at
+  one figure and 8 → 6 at four. `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11` are
+  unchanged, as is the 15,480-case `tools/derivation_equivalence.js` digest.
+
+  **`base:stat:base` no longer carries a later step's write.** It is the chain's first entry, yet
+  it seeded the type fields from a pair that had already taken both the `base:militaryWorkshop`
+  boulder upgrade and the region-`b` Bombs & Grenades grant. Each is now made by its own step —
+  `base:militaryWorkshop` declares `rangedTypeFields` and writes `'boulder'`, `b:bombsGrenades`
+  declares `thrownTypeFields` and writes `'thrown'` — and the modern Thrown channel that grant
+  creates is seeded `type: 'none'` like the Shadow Strike and Blaze of Glory fields beside it,
+  because `SETSTAT(U,SThrown,0,…)` (`UnitCalcPre.CAS:1071`) names the calculated record. That is
+  what F95 needs: `BaseUnits.thrown` now reads zero where `ApplyLevelBonus` reads it.
+
+  The Chaos Channels / Energy Cannon transposition the item flagged moves no number and cannot:
+  `ccFireBreathActive`'s modern arm asks `rangedType === 'none'` while Energy Cannon requires a
+  permanent conventional ranged attack, so the pair is never `'none'` where the order could be
+  observed — and on the modern record the two write different channel slots. It is corrected
+  anyway, because the order is what the invariant claims. The dead `rangedType`/`thrownType`
+  locals in `deriveUnitStats` are gone.
+
+  New coverage: `bombsGrenadesAfterFieryFuryWarlord` = 40.000 against the 48.000 the previous
+  order gave. **Nothing was folded in; two adjacent defects the measurement exposed were filed
+  instead.** F101 — the grant has no slot test, so it lands on every channel field standing empty
+  at `b:bombsGrenades`, and Explosive Reform + Blaze of Glory derives Thrown 14 where the engine
+  gives 7. F102 — `tools/derivation_equivalence.js` writes enchantment controls to the top level of
+  the input where `deriveUnitStats` reads them from `input.abilities`, so ~164 of the 170
+  `ENCHANTMENT_DEFS` entries are inert in it and its run reported 0 differences over this change.
+
+- **M12 — an `applied` ledger entry now means a block the engine entered.** A step whose
+  enchantment was absent still ran, because its modifier had been precomputed to zero, so it had
+  no `when` and the ledger recorded a visit to a branch the engine never took. Thirty-one steps
+  now state the condition the engine tests and write the engine's constant: the thirteen
+  `CreateUnit.CAS` building and Natural Selection writes, the ten `UnitCalcPre.CAS` curses and
+  boosts, Endurance, Discipline, Orihalcon, Chaos Surge, Flame Blade's ranged half, region-`d`
+  Weakness, and the weapon-material block — the last on the engines' own outer gate, `if EncMagic
+  or EncMithril or EncAdamant` (`Units.RecalculateUnits.pas:603-605`) and `if (quality > 0)` over
+  `mutations & 0x03` in all three DOS builds (`unitcalc.c`, `BU_Construct`). On a unit with
+  nothing selected the ledger falls from 35 `applied` to 4 under Warlord, 10 to 4 in CoM2, 9 to 4
+  in CoM 1 and 7 to 4 in both MoM builds. **The four that remain are correct and stay ungated:**
+  the base seed, the level ladder — `ApplyLevelBonus` has no outer gate and always writes defense,
+  resistance, HP, To-Hit and To-Defend (`Units.RecalculateUnits.pas:500-585`) — and the two
+  terminal clamps. Gods Play Dices keeps a magnitude test because the script's four separate
+  `EncDICE` flags (`UnitCalcPre.CAS:1699-1714`) are what the calculator's one signed control
+  stands for, and zero is none of them set.
+
+  **The `delta` dialect is retired.** Its 39 emit sites through `abilityStatStep` are ordinary
+  `statStep` records with explicit `writes` and `apply` bodies, matching the rest of the sequence.
+  Its five channel names were never five fields — `ranged`, `rangedOrThrown` and `nonGazeRtb` all
+  wrote the same strength field and differed only in which `ctx.slots` gate they read. The one
+  real content, the slot rule, is single-homed as `addToSlot(u, ctx, slot, value, whereStrength)`
+  (`combat_abilities.js`), which `mislead` and `leadershipAura` now call as well. The `delta`-shape
+  assertions in `tools/unit_checks/derivation_stages.js` are gone. Mutation probes settled which of
+  their claims had behavioural cover, correcting the row's own list: the `nonGazeRtb` claims for
+  `animated` and `blackPrayer` and both halves of the `positiveRanged` claim for CoM2 `tactician`
+  are already covered by numeric consequences in `tools/unit_checks/derive_unit_stats.js`
+  (`tacticianReadsLiveRanged` for the live-strength half); the one claim with no cover was CoM 1's
+  Holy Bonus reaching Thrown through the shared `.ranged` slot, which is now the preset
+  `holyBonusReachesThrownCoM1` 5.000, the mirror of `holyBonusSkipsThrownCoM2`.
+
+  **The collapsed display/effective split is retired.** `chanceFields` is one field per quantity.
+  The `display*` twins existed because Vertigo once wrote only the displayed halves while
+  `resolveCombat` applied the effective ones itself; that stopped being true when Vertigo's To-Hit
+  and To-Block writes moved onto the ordered record, and the split has stated nothing since. The
+  surviving real instance of the distinction is `displayDef`, where `resolveCombat` still applies
+  the Vertigo Defense die penalty itself. `deriveUnitStats` no longer returns
+  `displayToHitMelee`/`displayToHitRtb`/`displayToBlock`; the one outside reference,
+  in `tools/unit_checks/step_traces.js`, reads `toBlock`.
+
+  Arithmetic is unchanged in all five versions: 15,480 derivations identical once the three
+  removed twins are excluded, plus 600 targeted weapon/armor/attack-type/level cases covering
+  `magic` weapons and `orihalcon` armor, which the digest's case list does not reach. The
+  scope-key scraper (`tools/unit_checks/version_scope.js`) and the provenance auditor
+  (`tools/provenance_audit.js`) key on `abilityStep(` where they keyed on `emit(`.
+
 - **F91 — an ungated write to `SThrown` is a field write, not a type predicate.** `Dec(U.thrown, 3)`,
   `Dec(U.thrown, 5)` (`Units.RecalculateUnits.pas:2273-2295`) and `Inc(U.hitchancethrown, 10)`
   (`:1803-1809`) carry no positivity and no type gate, so what decides them is which record field
@@ -88,7 +297,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   the implementation rather than a source, which [CLAUDE.md](./CLAUDE.md), *What an assertion has to
   be bound to*, exists to forbid. It now asserts the chains' own order. No arithmetic moves; all
   five versions present `lucky` then `weapon`. The related collapsed display/effective field split
-  it exposed is folded into M12.
+  it exposed was folded into M12, above.
 
 - **M11 — one step id per enchantment.** A step id is now the effect a player selects, carrying no
   qualifier the `phase:id` key, the scope table or the step's own `writes` already states.
@@ -166,7 +375,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   other four versions. The transitional `shadowThrown` slot stays: the calculator models Focus
   Magic's `U.ranged := U.thrown; U.thrown := 0` as an identity flip in place, so the record's
   Thrown field is not free for the grant, and making that move real needs position-aware slot
-  gates — filed as [F90](./BACKLOG.md), blocked on M12. New coverage:
+  gates — filed as [F90](./BACKLOG.md), which M12 did not lift. New coverage:
   `shadowStrikeGrantPrecedesNoBlazingMarchWarlord` 17.000, plus the two-channel acceptance case
   (`thrown 10` on F81's fixture) and the level/weapon exclusions in
   `tools/unit_checks/warlord_abilities.js`.

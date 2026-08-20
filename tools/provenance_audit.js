@@ -249,11 +249,11 @@ function discoverFormulaSites(file, text) {
     if (functionMatch && directFunctionIds.has(functionMatch[1])) {
       sites.push({ id: directFunctionIds.get(functionMatch[1]), kind: 'direct function', line: index + 1, file });
     }
-    if (/\bemit\s*\(/.test(line) && !/const\s+emit\s*=/.test(line)) {
-      const literal = /\bemit\(\s*'([^']+)'/.exec(line);
+    if (/\babilityStep\s*\(/.test(line) && !/const\s+abilityStep\s*=/.test(line)) {
+      const literal = /\babilityStep\(\s*'([^']+)'/.exec(line);
       const id = literal ? literal[1] : markerNear(index);
-      if (!id) fail(`${file}:${index + 1} dynamic ability emit needs an adjacent STAT-FORMULA id`);
-      sites.push({ id, kind: 'ability emit', line: index + 1, file });
+      if (!id) fail(`${file}:${index + 1} dynamic ability step needs an adjacent STAT-FORMULA id`);
+      sites.push({ id, kind: 'ability step', line: index + 1, file });
     }
     if (/\bcase\s+'[^']+'\s*:/.test(line)) {
       const id = markerNear(index);

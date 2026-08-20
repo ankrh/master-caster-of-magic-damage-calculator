@@ -251,7 +251,8 @@ A bonus normally never conjures an attack slot the unit does not have, so an abi
 write to a dead slot. Source-backed exceptions exist; each is marked at its step rather than
 folded into the general rule.
 
-Two engines reach the secondary-attack slot differently, so a step's delta names which:
+Two engines reach the secondary-attack slot differently, so a step's `apply` names which gate it
+writes through:
 
 - **`rtb`** — the DOS engines' shared slot. One write reaches conventional ranged, Thrown, Breath
   and both gaze strengths alike.
@@ -359,6 +360,12 @@ unnoticed.
 applied or predicate-skipped event per visited step, carrying the manifest's `sourceOrder` for
 represented `b`/`c`/`d` steps, asserted against the executed list. The public `statTrace` is the
 sparse projection: inactive predicates, no-op writes and invalid selections do not create an entry.
+
+An `applied` event means the engine entered that block. A step therefore states the condition the
+engine tests as its `when` and writes the engine's constant, rather than adding a modifier that is
+zero when the effect is absent. The blocks the engine enters unconditionally — the base seed, the
+level ladder, and the terminal clamps — carry no `when` and are the only entries a unit with
+nothing selected records.
 
 `modifierTraces` is the per-output projection consumed by the UI: one entry per calculated output
 with `{base, entries, result}`, where every entry carries its source, phase and running
@@ -491,9 +498,13 @@ the calculator does instead, and why.
   either and is retired with it. The DOS shared-slot shape is faithful and stays.
 - **A conventional Ranged field emptied by Blaze of Glory is retired by clearing its type.** The
   engine retires it with `SETSTAT(U,SAmmo,0,0)` beside the transfer (`UnitCalc.CAS:1502`), and the
-  calculator models no ammunition, so the positioned transfer clears the ranged type instead. The
-  observable difference is confined to region-`e` writes that would otherwise land on a field with
-  no shots left.
+  calculator models no ammunition, so the positioned transfer clears the ranged type instead. Two
+  things read that cleared type. One is the region-`e` aura pass, where exactly one write would
+  otherwise land on a field with no shots left — Holy Bonus, whose `B.ranged > 0` gate reads the
+  permanent record and is indifferent to what the calculated one holds — and the cleared type
+  retires its result as the spent ammunition would. The other is the resolution-time distance
+  penalty, which reads the finished ranged type, so no attack the transfer has put on Thrown is
+  charged for a range it no longer has.
 - **One classification is parked for compatibility.** Righteousness sits in the defense transform's
   replacement slot while its modern classification is unresolved, open under
   [Q27](./BACKLOG.md).
