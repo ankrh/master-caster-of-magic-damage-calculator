@@ -70,7 +70,7 @@ function runDerivationStageChecks(ctx) {
 
   // D23: CoM2/Warlord apply Holy Bonus and Resistance to All as region-`e` stack auras, after
   // `d` and after the Warps. The DOS engines have no aura pass and keep them in `a`.
-  const holyBonusCoM2 = stepFor({ holyBonus: 3 }, 'holyBonus:aura');
+  const holyBonusCoM2 = stepFor({ holyBonus: 3 }, 'holyBonus');
   assertEqual(holyBonusCoM2.phase, 'e', "CoM2/Warlord run Holy Bonus in region e's aura pass");
   assertEqual(holyBonusCoM2.delta.ranged, 3,
     'The Holy Bonus aura writes the narrow ranged field, not the shared rtb slot');
@@ -80,7 +80,7 @@ function runDerivationStageChecks(ctx) {
     'MoM has no aura pass and keeps Holy Bonus in phase a');
   assertEqual(stepFor({ holyBonus: 3 }, 'holyBonus', 'com_6.08').delta.rtb, 3,
     "CoM 1 writes Holy Bonus to the shared `.ranged` slot, so it reaches Thrown and Breath");
-  assertEqual(phaseOf({ resistanceToAll: 2 }, 'resistanceToAll:aura'), 'e',
+  assertEqual(phaseOf({ resistanceToAll: 2 }, 'resistanceToAll'), 'e',
     'Resistance to All feeds the region-e Prayermaster aura');
   for (const modernVersion of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
     const misfortune = stepFor({ mislead: true }, 'mislead', modernVersion);
@@ -137,7 +137,7 @@ function runDerivationStageChecks(ctx) {
       `${modernVersion}: F14 preserves other ability steps' calculated-Ranged slot semantics`);
     const createdAuraIds = createdRangedWithHolyBonus.modernAttacks.ranged.modifierTrace.entries
       .map(entry => entry.id);
-    assert(createdAuraIds.includes('holyBonus:aura') && !createdAuraIds.includes('mislead'),
+    assert(createdAuraIds.includes('holyBonus') && !createdAuraIds.includes('mislead'),
       `${modernVersion}: calculated and persistent Ranged gates remain isolated in one aura pass`);
 
     const hero = ctx.deriveUnitStats(baseUnitInput({
@@ -192,12 +192,12 @@ function runDerivationStageChecks(ctx) {
   // is emitted as a version-exclusive step rather than as a version predicate.
   assertEqual(phaseOf({ supremeLight: true }, 'supremeLight'), null,
     'Supreme Light is one step in stats.js, not an ability step, outside CoM 1');
-  assertEqual(phaseOf({ supremeLight: true }, 'supremeLight:coM1', 'com_6.08'), null,
+  assertEqual(phaseOf({ supremeLight: true }, 'supremeLight', 'com_6.08'), null,
     "CoM 1's Supreme Light is likewise one step in stats.js");
   const tacticianCoM2 = stepFor({ tactician: true }, 'tactician');
   assertEqual(tacticianCoM2.phase, 'c', 'Tactician is region c (+0x0C890), not a');
   assertEqual(tacticianCoM2.afterWarp, true, 'and it runs after the Warp block');
-  const tacticianCoM1 = stepFor({ tactician: true }, 'tactician:coM1', 'com_6.08');
+  const tacticianCoM1 = stepFor({ tactician: true }, 'tactician', 'com_6.08');
   assertEqual(tacticianCoM1.phase, 'c', "CoM 1's Tactician retort is also region c (0x90AB4)");
   assertEqual(tacticianCoM1.afterWarp, true, 'and also after Warp Creature');
   const tacticianHeroCoM2 = stepFor({ tactician: true, unitType: 'hero' },
@@ -224,7 +224,7 @@ function runDerivationStageChecks(ctx) {
   // Emission is in source order, which is *not* phase order — Artificer is `base` and comes
   // last. Partitioning by phase is therefore the caller's job, not something to be assumed.
   assertEqual(mixed.map(step => step.id).join(','),
-    'holyBonus:aura,prayer,rust,favoredTerrain,artificer',
+    'holyBonus,prayer,rust,favoredTerrain,artificer',
     'Steps are emitted in source order, which the caller partitions by phase');
   assertEqual(mixed.map(step => step.phase).join(','), 'e,c,d,d,base',
     'Emission order is not phase order');

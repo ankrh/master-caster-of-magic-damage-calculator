@@ -151,40 +151,39 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     && sourceTemplateId === 113);
 
   const identitySteps = [
-    // PROVENANCE[identity:zombies]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:3ed9fd7025a17d7041e72be8
-    statStep({ id: 'identity:zombies', phase: 'base', writes: ['fantastic'],
+    // PROVENANCE[zombies]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:3ed9fd7025a17d7041e72be8
+    statStep({ id: 'zombies', phase: 'base', writes: ['fantastic'],
       when: () => isCoM1 && identity.specialUnit === 'zombies',
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[identity:com1ConstructCatapult]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16
-    statStep({ id: 'identity:com1ConstructCatapult', phase: 'base', writes: ['race', 'fantastic'],
+    // PROVENANCE[constructCatapult]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16 | Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:22d4847c5bd5843526ea3fc0 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:14:0c00ef951862849e15604add | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:18:0dad2f766ea1e74b0aa62aa1
+    statStep({ id: 'constructCatapult', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[identity:com1SummonBranch]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16
-    statStep({ id: 'identity:com1SummonBranch', phase: 'base', writes: ['race', 'fantastic'],
+    // PROVENANCE[summonBranch]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16
+    statStep({ id: 'summonBranch', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1SummonBranch,
       apply: u => {
         if (sourceTemplateId === 113) u.race = 'Life';
         if (sourceTemplateId === 54) u.race = 'Nature';
         u.fantastic = true;
       } }),
-    // PROVENANCE[identity:combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:3:8b5b382b46651d5d1ddfb014
-    statStep({ id: 'identity:combatSummoned', phase: 'a', writes: ['fantastic'],
+    // PROVENANCE[combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:3:8b5b382b46651d5d1ddfb014
+    statStep({ id: 'combatSummoned', phase: 'a', writes: ['fantastic'],
       when: () => isModern && combatSummonedValue,
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[identity:chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:c9d9c1b29c14707318605a05 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936
-    statStep({ id: 'identity:chosen', phase: 'a', writes: ['race', 'fantastic'],
+    // PROVENANCE[chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:c9d9c1b29c14707318605a05 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936
+    statStep({ id: 'chosen', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && identity.specialUnit === 'chosen',
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[identity:constructCatapult]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:22d4847c5bd5843526ea3fc0 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:14:0c00ef951862849e15604add | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:18:0dad2f766ea1e74b0aa62aa1
-    statStep({ id: 'identity:constructCatapult', phase: 'a', writes: ['race', 'fantastic'],
+    statStep({ id: 'constructCatapult', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isBaseCoM2 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[identity:callToArmsPaladins]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:fff6a55971377c87264d2e0d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:13:5f2ec3d006ad08bc02189c7b
-    statStep({ id: 'identity:callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
+    // PROVENANCE[callToArmsPaladins]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:fff6a55971377c87264d2e0d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:13:5f2ec3d006ad08bc02189c7b
+    statStep({ id: 'callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isBaseCoM2 && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[identity:legacyConversions]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:d4e30893d832cb480ebf32b3 | Reference docs/DOS reconstructed/unitcalc.c@span:24:924a9c7939c2ac5634769450 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e3a2910961158d35a5fab1ec | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:4e8bdcd399e4740f3cd26f41 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
-    statStep({ id: 'identity:legacyConversions', phase: 'a', writes: ['race', 'fantastic'],
+    // PROVENANCE[legacyConversions]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:d4e30893d832cb480ebf32b3 | Reference docs/DOS reconstructed/unitcalc.c@span:24:924a9c7939c2ac5634769450 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e3a2910961158d35a5fab1ec | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:4e8bdcd399e4740f3cd26f41 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
+    statStep({ id: 'legacyConversions', phase: 'a', writes: ['race', 'fantastic'],
       apply: u => {
         const unitType = determineEffectiveUnitType(
           legacyUnitTypeFromLiveIdentity(u), abilities, version, identity);
@@ -194,14 +193,14 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
         if (version && version.startsWith('com2_warlord')
             && abilities && abilities.sanctify && unitType === 'hero') u.race = 'Life';
       } }),
-    // PROVENANCE[identity:marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
-    statStep({ id: 'identity:marionetteChanneler', phase: 'b', writes: ['fantastic'],
+    // PROVENANCE[marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
+    statStep({ id: 'marionetteChanneler', phase: 'b', writes: ['fantastic'],
       when: () => version === MARIONETTE_VERSION
         && identity.heroTypeId === MARIONETTE_HERO_TYPE_ID
         && !!(abilities && abilities.channeler),
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[identity:spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:1:15d81b9f3b72c934c9219502
-    statStep({ id: 'identity:spiritLink', phase: 'd', writes: ['fantastic'],
+    // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:1:15d81b9f3b72c934c9219502 | Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
+    statStep({ id: 'spiritLink', phase: 'd', writes: ['fantastic'],
       when: () => !!(version && version.startsWith('com2_warlord')) && !!(abilities && abilities.spiritLink),
       apply: u => { u.fantastic = false; } }),
   ];

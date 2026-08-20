@@ -277,6 +277,52 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Rust reaches the missile field before Blaze of Glory moves it to Thrown');
   assert(!blazeAfterRust.ranged, 'Rust and Blaze of Glory together leave no Ranged channel');
 
+  // Mind Storm's `Dec(U.ranged, 5)` and `Dec(U.thrown, 5)` carry no positivity and no type gate
+  // (Units.RecalculateUnits.pas:2281-2295), so both record fields hold the penalty before the
+  // transfer at `UnitCalc.CAS:1499` adds one into the other. Missile 6 arrives as 1 on a Thrown
+  // field already standing at −5, so the recompute's floor leaves no attack at all; missile 12
+  // arrives as 7 and finishes at 2.
+  const mindStormBlaze = attacks => ctx.deriveUnitStats(warlordUnit({
+    atk: 3, def: 0, modernAttacks: attacks,
+    abilities: { blazeOfGlory: true, mindStorm: true },
+  })).modernAttacks;
+  assert(!mindStormBlaze({ ranged: { strength: 6, type: 'missile' } }).thrown,
+    'Mind Storm reaches the empty Thrown field, so a missile 6 does not survive the transfer');
+  assertEqual(mindStormBlaze({ ranged: { strength: 12, type: 'missile' } }).thrown.strength, 2,
+    'Both Mind Storm writes land before Blaze of Glory sums the two fields');
+
+  // The same block leaves both Breath fields untouched, and Lightning Blade has already moved
+  // the Thrown strength into `SLightningBreath` and cleared `SThrown` (CreateUnit.CAS:294-299),
+  // so the breath keeps its whole thrown+1.
+  const mindStormLightningBlade = ctx.deriveUnitStats(warlordUnit({
+    atk: 3, def: 0, modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
+    abilities: { lightningBlade: true, mindStorm: true },
+  })).modernAttacks;
+  assertEqual(mindStormLightningBlade.lightningBreath.strength, 5,
+    'Mind Storm leaves the Lightning Blade breath alone once it is no longer the Thrown field');
+
+  // The attack the transfer leaves behind is `SThrown` whichever field ends up holding it, and
+  // combat reads `hitchancethrown + hitchance` for it (Combat.ApplyAttack.pas:239). Holy Weapon's
+  // unconditional `Inc(U.hitchancethrown, 10)` (Units.RecalculateUnits.pas:1803-1809) therefore
+  // reaches it, while True Sight's `SToRanged` +5 (UnitCalc.CAS:326-328) and Holy Weapon's own
+  // ranged arm — skipped here by `Ismagicalranged` — do not. Lightning Blade has spent the
+  // record's Thrown field, so this is the shape where the strength stays in the Ranged slot.
+  const blazeThrownThreshold = abilities => ctx.deriveUnitStats(warlordUnit({
+    atk: 1, def: 0,
+    modernAttacks: { ranged: { strength: 6, type: 'magic_s' }, thrown: { strength: 4, type: 'thrown' } },
+    abilities,
+  })).modernAttacks;
+  const blazeAfterLightningBlade = blazeThrownThreshold({
+    lightningBlade: true, blazeOfGlory: true, trueSight: true, holyWeapon: true });
+  assertEqual(blazeAfterLightningBlade.thrown.toHit, 0.4,
+    'A Blaze of Glory attack the Thrown field could not take still reads the Thrown threshold');
+  assertEqual(blazeThrownThreshold({
+    blazeOfGlory: true, trueSight: true, holyWeapon: true }).thrown.toHit, 0.4,
+  'The same threshold applies where the Thrown field was free to take the transfer');
+  assertEqual(blazeThrownThreshold({
+    lightningBlade: true, trueSight: true, holyWeapon: true }).ranged.toHit, 0.35,
+  'Without the transfer the magical Ranged attack keeps its own True Sight threshold');
+
   // Shadow Strike's `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS:1262-1266) stands at its
   // own region-`d` position, before the transfer at `:1490`: melee 3 grants 1 + 3/3 = 2 onto the
   // Thrown field's 2, and Blaze of Glory then moves the missile 6 onto the 4 standing there.

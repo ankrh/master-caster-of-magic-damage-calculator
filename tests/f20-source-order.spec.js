@@ -45,19 +45,19 @@ const F20_SOURCE_ANCHORS = {
   'mom_1.31': {
     c: ['level', 'lucky', 'weapon', 'chaosSurge', 'chance:holyWeapon:melee',
       'chance:holyWeapon:rtb', 'blackChannels', 'ironSkin', 'flameBlade',
-      'flameBlade:ranged', 'giantStrength', 'giantStrength:thrown',
-      'chaosChannels:armor', 'lionheart', 'lionheart:rangedHp', 'holyArmor',
+      'flameBlade:ranged', 'giantStrength',
+      'chaosChannels:armor', 'lionheart', 'holyArmor',
       'berserk', 'nodeAura', 'highPrayer', 'trueLight', 'darkness',
-      'chance:warpReality', 'blackPrayer', 'chance:vertigo', 'weakness',
-      'weakness:ranged', 'warpAttack', 'warpDefense', 'warpResist', 'shatter'],
+      'warpReality', 'blackPrayer', 'vertigo', 'weakness',
+      'warpAttack', 'warpDefense', 'warpResist', 'shatter'],
   },
   'mom_cp_1.60.00': {
     c: ['level', 'lucky', 'weapon', 'chaosSurge', 'blackChannels', 'ironSkin',
-      'flameBlade', 'flameBlade:ranged', 'giantStrength', 'giantStrength:thrown',
-      'chaosChannels:armor', 'lionheart', 'lionheart:rangedHp', 'holyArmor',
+      'flameBlade', 'flameBlade:ranged', 'giantStrength',
+      'chaosChannels:armor', 'lionheart', 'holyArmor',
       'berserk', 'chance:holyWeapon:melee', 'chance:holyWeapon:rtb', 'nodeAura',
-      'highPrayer', 'trueLight', 'darkness', 'chance:warpReality',
-      'blackPrayer', 'chance:vertigo', 'weakness', 'weakness:ranged', 'warpAttack',
+      'highPrayer', 'trueLight', 'darkness', 'warpReality',
+      'blackPrayer', 'vertigo', 'weakness', 'warpAttack',
       'warpDefense', 'warpResist', 'shatter'],
   },
   'com_6.08': {
@@ -66,52 +66,52 @@ const F20_SOURCE_ANCHORS = {
     // stat-writing half 0x8F795, then Holy Armor 0x8F7C1.
     c: ['level', 'lucky', 'weapon', 'endurance', 'animated',
       'flameBlade', 'flameBlade:ranged', 'lionheart',
-      'lionheart:rangedHp', 'ironSkin', 'chaosChannels:armor',
-      'landLinking', 'landLinking:breath', 'mysticSurge',
-      'holyArmor', 'focusMagic', 'focusMagic:conversion',
+      'ironSkin', 'chaosChannels:armor',
+      'landLinking', 'mysticSurge',
+      'holyArmor', 'focusMagic',
       'orihalcon', 'chance:holyWeapon:melee', 'chance:holyWeapon:rtb', 'chaosSurge',
       'survivalInstinct', 'nodeAura', 'highPrayer',
-      'blazingMarch', 'blazingMarch:ranged',
-      'chance:warpReality', 'blackPrayer', 'guardian', 'chance:vertigo', 'weakness',
-      'weakness:ranged', 'warpAttack', 'warpDefense', 'warpResist', 'shatter',
-      'darkness', 'supremeLight:coM1', 'realmWard', 'tactician:coM1',
+      'blazingMarch',
+      'warpReality', 'blackPrayer', 'guardian', 'vertigo', 'weakness',
+      'warpAttack', 'warpDefense', 'warpResist', 'shatter',
+      'darkness', 'supremeLight', 'realmWard', 'tactician',
       'eternalNight:enemyResistance'],
   },
   'com2_1.05.11': {
-    c: ['level', 'focusMagic', 'focusMagic:conversion', 'lucky', 'darkForce',
-      'heavenlyLight', 'chance:heavenlyLight:melee', 'chance:heavenlyLight:rtb',
-      'weapon', 'chance:weapon:melee', 'chance:weapon:rtb', 'endurance', 'discipline',
+    c: ['level', 'focusMagic', 'lucky', 'darkForce',
+      'heavenlyLight', 'chance:heavenlyLight',
+      'weapon', 'chance:weapon', 'endurance', 'discipline',
       'chaosChannels:armor', 'animated', 'flameBlade', 'flameBlade:ranged',
-      'mysticSurge', 'lionheart', 'lionheart:rangedHp', 'ironSkin', 'landLinking',
-      'landLinking:breath', 'holyArmor', 'orihalcon', 'chance:holyWeapon:melee',
+      'mysticSurge', 'lionheart', 'ironSkin', 'landLinking',
+      'holyArmor', 'orihalcon', 'chance:holyWeapon:melee',
       'chance:holyWeapon:rtb', 'chaosSurge', 'survivalInstinct', 'reinforceMagic',
-      'reinforceMagic:ranged', 'eternalNight:enemyResistance', 'charmOfLife',
+      'eternalNight:enemyResistance', 'charmOfLife',
       'nodeAura', 'badMoon', 'goodMoon', 'natureConjunction', 'highPrayer',
-      'blazingMarch', 'blazingMarch:ranged', 'chance:warpReality', 'blackPrayer',
-      'darkness', 'guardian', 'chance:vertigo', 'weakness', 'weakness:ranged',
+      'blazingMarch', 'warpReality', 'blackPrayer',
+      'darkness', 'guardian', 'vertigo', 'weakness',
       'warpAttack', 'warpDefense', 'warpResist', 'shatter', 'spellWard', 'tactician'],
   },
   'com2_warlord_1.5.12.7': {
     b: ['marionette:stats', 'fieryFury', 'natureLink', 'outlanderXenoveterinary',
       'bombsGrenades', 'upgradedExplosive:ranged', 'upgradedExplosive:fireBreath',
       'chance:outlanderBallisticsTraining', 'outlanderXenopsychology', 'outlanderRadio',
-      'chance:nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
-      'greatUnbinding', 'prayer:warlordStack', 'trueLight', 'plague', 'goblinPox',
+      'nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
+      'greatUnbinding', 'prayer', 'trueLight', 'plague', 'goblinPox',
       'luckyStar', 'disheartenProphecy', 'wallOfFire:garrison', 'godsPlayDices'],
-    c: ['level', 'focusMagic', 'focusMagic:conversion', 'lucky', 'darkForce',
-      'heavenlyLight', 'chance:heavenlyLight:melee', 'chance:heavenlyLight:rtb',
+    c: ['level', 'focusMagic', 'lucky', 'darkForce',
+      'heavenlyLight', 'chance:heavenlyLight',
       'weapon', 'endurance', 'discipline', 'chaosChannels:armor', 'animated',
       'flameBlade', 'flameBlade:ranged', 'mysticSurge', 'lionheart',
-      'lionheart:rangedHp', 'ironSkin', 'landLinking', 'landLinking:breath',
+      'ironSkin', 'landLinking',
       'holyArmor', 'orihalcon', 'chance:holyWeapon:melee', 'chance:holyWeapon:rtb',
-      'chaosSurge', 'survivalInstinct', 'reinforceMagic', 'reinforceMagic:ranged',
+      'chaosSurge', 'survivalInstinct', 'reinforceMagic',
       'eternalNight:enemyResistance', 'charmOfLife', 'nodeAura', 'badMoon', 'goodMoon',
-      'natureConjunction', 'highPrayer', 'blazingMarch', 'blazingMarch:ranged',
-      'chance:warpReality', 'blackPrayer', 'darkness', 'guardian', 'chance:vertigo',
-      'weakness', 'weakness:ranged', 'warpAttack', 'warpDefense', 'warpResist',
+      'natureConjunction', 'highPrayer', 'blazingMarch',
+      'warpReality', 'blackPrayer', 'darkness', 'guardian', 'vertigo',
+      'weakness', 'warpAttack', 'warpDefense', 'warpResist',
       'shatter', 'spellWard', 'tactician'],
-    d: ['mechanicalExpert', 'weakness:breath', 'chance:trueSight:ranged',
-      'flameBlade:fireBreath', 'chance:berserkWarlord', 'rust', 'chance:hurricane',
+    d: ['mechanicalExpert', 'weakness', 'chance:trueSight:ranged',
+      'flameBlade', 'berserkWarlord', 'rust', 'hurricane',
       'favoredTerrain', 'colossalStrength', 'vampirism:transfer', 'shadowStrike:thrown',
       'psychoForce', 'pneumaField', 'chance:energyCannonThreshold', 'blazeOfGlory',
       'beatOfSwiftness', 'hierophany'],
@@ -216,19 +216,26 @@ test('F20 covers every represented b/c/d step in source order for all five versi
       `${label} increasing chain ranks`).toBe(true);
 
       const represented = executionTrace.filter(event => ['b', 'c', 'd'].includes(event.phase));
-      const representedIds = represented.map(event => event.id);
+      // Keyed by `phase:id` like every other comparison here: one enchantment may write in two
+      // regions of one engine (Warlord's `b:tactician` clawback and `c:tactician` grant), so a
+      // bare id would let a write represented in one region claim a place in the other's order.
+      const representedKeys = represented.map(event => `${event.phase}:${event.id}`);
       for (const phase of ['b', 'c', 'd']) {
         const actual = represented.filter(event => event.phase === phase);
-        const expected = chainIds(phase).filter(id => representedIds.includes(id));
+        const expected = chainIds(phase)
+          .filter(id => representedKeys.includes(`${phase}:${id}`));
         expect(actual.map(event => event.id), `${label} ${phase} source order`).toEqual(expected);
         expectSubsequence(actual.map(event => event.id),
           (f20Anchors(version, scenario)[phase]) || [],
           `${label} ${phase} independent source anchors`);
       }
 
-      const skippedIds = new Set(executionTrace
-        .filter(event => event.status === 'skipped').map(event => event.id));
-      expect(statTrace.some(event => skippedIds.has(event.id)), `${label} sparse skipped projection`).toBe(false);
+      // Also `phase:id`: Warlord skips the `b:tactician` clawback on a non-hero while applying
+      // the `c:tactician` grant, and those are two writes of one enchantment, not one write.
+      const skippedKeys = new Set(executionTrace
+        .filter(event => event.status === 'skipped').map(event => `${event.phase}:${event.id}`));
+      expect(statTrace.some(event => skippedKeys.has(`${event.phase}:${event.id}`)),
+        `${label} sparse skipped projection`).toBe(false);
 
       // The public trace merges the identity pre-pass with the stat sequence, so it is the
       // place a represented b/c/d write could escape a manifest by living in another sequence.
@@ -352,11 +359,11 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
     return {
       chain: statChain(version).map(entry => ({ ...entry })),
       baseChain: statChain('com2_1.05.11').map(entry => ({ ...entry })),
-      channelerEvent: pick(channeler, 'identity:marionetteChanneler'),
+      channelerEvent: pick(channeler, 'marionetteChanneler'),
       channelerLedgerIds: channeler.statExecutionTrace.map(event => event.id),
-      spiritLinkEvent: pick(spiritLink, 'identity:spiritLink'),
+      spiritLinkEvent: pick(spiritLink, 'spiritLink'),
       firstStatPhaseD: spiritLink.statTrace
-        .filter(event => event.phase === 'd' && event.id !== 'identity:spiritLink')
+        .filter(event => event.phase === 'd' && event.id !== 'spiritLink')
         .map(event => event.traceOrder),
     };
   });
@@ -365,11 +372,11 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
     .map(entry => entry.id);
   const b = phaseIds(report.chain, 'b');
   const d = phaseIds(report.chain, 'd');
-  expect(b.filter(id => id === 'identity:marionetteChanneler')).toHaveLength(1);
-  expect(b.indexOf('identity:marionetteChanneler')).toBe(b.indexOf('marionette:stats') - 1);
-  expect(d.filter(id => id === 'identity:spiritLink')).toHaveLength(1);
-  expect(d.indexOf('identity:spiritLink')).toBeGreaterThan(d.indexOf('shadowStrike:thrown'));
-  expect(d.indexOf('identity:spiritLink')).toBeLessThan(d.indexOf('psychoForce'));
+  expect(b.filter(id => id === 'marionetteChanneler')).toHaveLength(1);
+  expect(b.indexOf('marionetteChanneler')).toBe(b.indexOf('marionette:stats') - 1);
+  expect(d.filter(id => id === 'spiritLink')).toHaveLength(1);
+  expect(d.indexOf('spiritLink')).toBeGreaterThan(d.indexOf('shadowStrike:thrown'));
+  expect(d.indexOf('spiritLink')).toBeLessThan(d.indexOf('psychoForce'));
   // Base CoM2 ships HALT stubs for both hooks, so neither region may appear there.
   expect(phaseIds(report.baseChain, 'b')).toEqual([]);
   expect(phaseIds(report.baseChain, 'd')).toEqual([]);
@@ -384,16 +391,16 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   expect(report.channelerEvent).not.toBeNull();
   expect(report.channelerEvent.phase).toBe('b');
   expect(report.channelerEvent.sourceOrder)
-    .toBe(report.chain.findIndex(entry => entry.key === 'b:identity:marionetteChanneler'));
+    .toBe(report.chain.findIndex(entry => entry.key === 'b:marionetteChanneler'));
   expect(report.channelerEvent.changes.fantastic).toEqual({ from: false, to: true });
   // The complete stat ledger stays one-to-one with the stat sequence; the identity pre-pass
   // is its own sequence and does not inject events into it.
-  expect(report.channelerLedgerIds).not.toContain('identity:marionetteChanneler');
+  expect(report.channelerLedgerIds).not.toContain('marionetteChanneler');
 
   expect(report.spiritLinkEvent).not.toBeNull();
   expect(report.spiritLinkEvent.phase).toBe('d');
   expect(report.spiritLinkEvent.sourceOrder)
-    .toBe(report.chain.findIndex(entry => entry.key === 'd:identity:spiritLink'));
+    .toBe(report.chain.findIndex(entry => entry.key === 'd:spiritLink'));
   expect(report.spiritLinkEvent.changes.fantastic).toEqual({ from: true, to: false });
   // Documented divergence: the pre-pass executes this write ahead of every region-d stat
   // write even though UnitCalc.CAS:1306 puts its source rank late in d.

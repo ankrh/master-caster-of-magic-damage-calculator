@@ -303,7 +303,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // Branch 3 of the Focus Magic ranged block grants the magical type and no strength
   // (Units.RecalculateUnits.pas; CoM2 binary - unit recalculation.md, *Focus Magic*), so from
   // that line on the record carries an ordinary magical ranged attack. Every write the chain
-  // places after `c:focusMagic:conversion` must therefore treat a converted attack exactly as
+  // places after `c:focusMagic` must therefore treat a converted attack exactly as
   // it treats a native one of the same strength — that equivalence is the claim, not a number
   // read off the implementation. Orihalcon, Discipline and Blazing March write the channel from
   // the CoM2 binary's region `c`, and no Warlord script writes it (`UnitCalcPre.CAS` and
@@ -606,8 +606,8 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(com1FlameBeforeFocus.rtb, 3,
     'CoM 1 Flame Blade adds 2 before Focus Magic applies its minimum of 3');
   assertEqual(com1FlameBeforeFocus.statTrace
-    .filter(step => ['level', 'weapon', 'flameBlade:ranged', 'focusMagic:conversion'].includes(step.id))
-    .map(step => step.id).join(','), 'flameBlade:ranged,focusMagic:conversion',
+    .filter(step => ['level', 'weapon', 'flameBlade:ranged', 'focusMagic'].includes(step.id))
+    .map(step => step.id).join(','), 'flameBlade:ranged,focusMagic',
   'CoM 1 trace preserves Flame Blade before Focus Magic when no other step mutates');
 
   const com1MaterialOrder = ctx.deriveUnitStats(baseUnitInput({
@@ -615,7 +615,7 @@ function runDeriveUnitStatsChecks(ctx) {
     rtbType: 'missile', rtb: 1,
   }));
   assert(com1MaterialOrder.statTrace.findIndex(step => step.id === 'weapon')
-      < com1MaterialOrder.statTrace.findIndex(step => step.id === 'focusMagic:conversion'),
+      < com1MaterialOrder.statTrace.findIndex(step => step.id === 'focusMagic'),
     'DOS weapon material executes before CoM 1 Focus Magic');
 
   const focusMagicLowStrength = ctx.deriveUnitStats(baseUnitInput({

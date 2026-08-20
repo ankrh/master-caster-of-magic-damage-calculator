@@ -96,10 +96,10 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:chance:survivalInstinctToBlock': SCOPE_WARLORD,
   'base:dragonMound': SCOPE_WARLORD,
   'base:energyCannon': SCOPE_WARLORD,
-  'base:identity:com1ConstructCatapult': SCOPE_COM1,
-  'base:identity:com1SummonBranch': SCOPE_COM1,
-  'base:identity:zombies': SCOPE_COM1,
-  'base:identity:zombies:toBlock': SCOPE_COM1,
+  'base:constructCatapult': SCOPE_COM1,
+  'base:summonBranch': SCOPE_COM1,
+  'base:zombies': SCOPE_COM1,
+  'base:zombies:toBlock': SCOPE_COM1,
   'base:lightningBlade:breath': SCOPE_WARLORD,
   'base:ludusAgoge': SCOPE_WARLORD,
   'base:malnourished': SCOPE_WARLORD,
@@ -119,16 +119,16 @@ const STEP_VERSION_SCOPES = Object.freeze({
   // --- a: precalc, in the binary ---
   'a:chaosChannels:fireBreath': SCOPE_ALL,
   'a:holyBonus': SCOPE_DOS,
-  'a:identity:callToArmsPaladins': SCOPE_MODERN,
-  'a:identity:chosen': SCOPE_MODERN,
-  'a:identity:combatSummoned': SCOPE_MODERN,
-  'a:identity:constructCatapult': SCOPE_MODERN,
-  'a:identity:legacyConversions': SCOPE_ALL,
+  'a:callToArmsPaladins': SCOPE_MODERN,
+  'a:chosen': SCOPE_MODERN,
+  'a:combatSummoned': SCOPE_MODERN,
+  'a:constructCatapult': SCOPE_MODERN,
+  'a:legacyConversions': SCOPE_ALL,
   'a:resistanceToAll': SCOPE_DOS,
   // --- b: precalc, in UnitCalcPre.CAS ---
   'b:battleArmor': SCOPE_WARLORD,
   'b:bombsGrenades': SCOPE_WARLORD,
-  'b:chance:nausea': SCOPE_WARLORD,
+  'b:nausea': SCOPE_WARLORD,
   'b:chance:outlanderBallisticsTraining': SCOPE_WARLORD,
   'b:disheartenProphecy': SCOPE_WARLORD,
   'b:eternalNight:poorVision': SCOPE_WARLORD,
@@ -136,7 +136,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:goblinPox': SCOPE_WARLORD,
   'b:godsPlayDices': SCOPE_WARLORD,
   'b:greatUnbinding': SCOPE_WARLORD,
-  'b:identity:marionetteChanneler': SCOPE_WARLORD,
+  'b:marionetteChanneler': SCOPE_WARLORD,
   'b:luckyStar': SCOPE_WARLORD,
   'b:magitekEngine': SCOPE_WARLORD,
   'b:marionette:stats': SCOPE_WARLORD,
@@ -146,11 +146,11 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:outlanderXenopsychology': SCOPE_WARLORD,
   'b:outlanderXenoveterinary': SCOPE_WARLORD,
   'b:plague': SCOPE_WARLORD,
-  'b:prayer:warlordStack': SCOPE_WARLORD,
+  'b:prayer': SCOPE_WARLORD,
   'b:rally': SCOPE_WARLORD,
   'b:rebuild': SCOPE_WARLORD,
   'b:soulFlay': SCOPE_WARLORD,
-  'b:tactician:warlordClawback': SCOPE_WARLORD,
+  'b:tactician': SCOPE_WARLORD,
   'b:trueLight': SCOPE_WARLORD,
   'b:upgradedExplosive:fireBreath': SCOPE_WARLORD,
   'b:upgradedExplosive:ranged': SCOPE_WARLORD,
@@ -163,18 +163,15 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:blackChannels': SCOPE_MOM,
   'c:blackPrayer': SCOPE_ALL,
   'c:blazingMarch': SCOPE_COM_PLUS,
-  'c:blazingMarch:ranged': SCOPE_COM_PLUS,
   'c:breakthrough:combatSummoned': SCOPE_MODERN,
   'c:breakthrough:noncorporeal': SCOPE_MODERN,
   'c:breakthrough:normal': SCOPE_MODERN,
-  'c:chance:heavenlyLight:melee': SCOPE_MODERN,
-  'c:chance:heavenlyLight:rtb': SCOPE_MODERN,
+  'c:chance:heavenlyLight': SCOPE_MODERN,
   'c:chance:holyWeapon:melee': SCOPE_ALL,
   'c:chance:holyWeapon:rtb': SCOPE_ALL,
-  'c:chance:vertigo': SCOPE_ALL,
-  'c:chance:warpReality': SCOPE_ALL,
-  'c:chance:weapon:melee': SCOPE_ALL,
-  'c:chance:weapon:rtb': SCOPE_ALL,
+  'c:vertigo': SCOPE_ALL,
+  'c:warpReality': SCOPE_ALL,
+  'c:chance:weapon': SCOPE_ALL,
   'c:chaosChannels:armor': SCOPE_ALL,
   'c:chaosSurge': SCOPE_ALL,
   'c:charmOfLife': SCOPE_ALL,
@@ -182,28 +179,24 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:darkness': SCOPE_ALL,
   'c:destiny': SCOPE_MODERN,
   'c:discipline': SCOPE_MODERN,
-  'c:divineBarrierAura:coM1': SCOPE_COM1,
+  'c:divineBarrierAura': SCOPE_COM1,
   'c:endurance': SCOPE_COM_PLUS,
   'c:eternalNight:enemyResistance': SCOPE_COM_PLUS,
   'c:flameBlade': SCOPE_ALL,
   'c:flameBlade:ranged': SCOPE_ALL,
   'c:focusMagic': SCOPE_COM_PLUS,
-  'c:focusMagic:conversion': SCOPE_COM_PLUS,
   'c:giantStrength': SCOPE_MOM,
-  'c:giantStrength:thrown': SCOPE_MOM,
   'c:goodMoon': SCOPE_MODERN,
   'c:guardian': SCOPE_COM_PLUS,
-  'c:guidingBeaconAura:coM1': SCOPE_COM1,
+  'c:guidingBeaconAura': SCOPE_COM1,
   'c:heavenlyLight': SCOPE_MODERN,
   'c:highPrayer': SCOPE_ALL,
   'c:holyArmor': SCOPE_ALL,
   'c:innerPower': SCOPE_MODERN,
   'c:ironSkin': SCOPE_ALL,
   'c:landLinking': SCOPE_COM_PLUS,
-  'c:landLinking:breath': SCOPE_COM_PLUS,
   'c:level': SCOPE_ALL,
   'c:lionheart': SCOPE_ALL,
-  'c:lionheart:rangedHp': SCOPE_ALL,
   'c:lucky': SCOPE_ALL,
   'c:metalFires': SCOPE_MOM,
   'c:mindStorm': SCOPE_ALL,
@@ -216,19 +209,18 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:prayer': SCOPE_ALL,
   'c:realmWard': SCOPE_COM1,
   'c:reinforceMagic': SCOPE_MODERN,
-  'c:reinforceMagic:ranged': SCOPE_MODERN,
   'c:shatter': SCOPE_ALL,
-  'c:soulLinkerAura:coM1': SCOPE_COM1,
+  'c:soulLinkerAura': SCOPE_COM1,
   'c:spellWard': SCOPE_MODERN,
   'c:stoneSkin': SCOPE_MOM,
-  'c:supremeLight:coM1': SCOPE_COM1,
+  'c:supremeLight': SCOPE_COM1,
   // Wider than PROVENANCE[survivalInstinct] (Caster.exe only): survivalInstinctActiveForUnit
   // gates the effect to CoM+ and PROVENANCE[survivalInstinctEligibility] covers com_6.08.
   'c:survivalInstinct': SCOPE_COM_PLUS,
-  // `tactician` is emitted under a version-chosen id; its PROVENANCE lives on
-  // tactician:heroDynamic / tactician:nonheroDynamic, which cover com_6.08 as `tactician:coM1`.
-  'c:tactician': SCOPE_MODERN,
-  'c:tactician:coM1': SCOPE_COM1,
+  // One id for all three CoM engines: the chains place it after Realm Ward in CoM 1 and last in
+  // region `c` in CoM2/Warlord, which is the whole of the difference. Its PROVENANCE lives on
+  // tactician:heroDynamic / tactician:nonheroDynamic, which cover com_6.08 too.
+  'c:tactician': SCOPE_COM_PLUS,
   // The DOS half of True Light. PROVENANCE[trueLight] cites only the Warlord CAS block, which
   // is the separate `b:trueLight` step; the MoM region-c block has no citation yet.
   'c:trueLight': SCOPE_MOM,
@@ -236,39 +228,36 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:warpDefense': SCOPE_ALL,
   'c:warpResist': SCOPE_ALL,
   'c:weakness': SCOPE_ALL,
-  'c:weakness:ranged': SCOPE_ALL,
   'c:weapon': SCOPE_ALL,
   // --- d: magic calc, in UnitCalc.CAS ---
   'd:beatOfSwiftness': SCOPE_WARLORD,
   'd:blazeOfGlory': SCOPE_WARLORD,
-  'd:blazeOfGlory:thrown': SCOPE_WARLORD,
-  'd:chance:berserkWarlord': SCOPE_WARLORD,
+  'd:berserkWarlord': SCOPE_WARLORD,
   'd:chance:energyCannonThreshold': SCOPE_WARLORD,
-  'd:chance:hurricane': SCOPE_WARLORD,
+  'd:hurricane': SCOPE_WARLORD,
   'd:chance:trueSight:ranged': SCOPE_WARLORD,
   'd:colossalStrength': SCOPE_WARLORD,
   'd:favoredTerrain': SCOPE_WARLORD,
-  'd:flameBlade:fireBreath': SCOPE_WARLORD,
+  'd:flameBlade': SCOPE_WARLORD,
   'd:hierophany': SCOPE_WARLORD,
-  'd:identity:spiritLink': SCOPE_WARLORD,
+  'd:spiritLink': SCOPE_WARLORD,
   'd:mechanicalExpert': SCOPE_WARLORD,
   'd:pneumaField': SCOPE_WARLORD,
   'd:psychoForce': SCOPE_WARLORD,
   'd:rust': SCOPE_WARLORD,
   'd:shadowStrike:thrown': SCOPE_WARLORD,
   'd:vampirism:transfer': SCOPE_WARLORD,
-  'd:weakness:breath': SCOPE_WARLORD,
+  'd:weakness': SCOPE_WARLORD,
   // --- e: the binary's post-hook tail ---
-  'e:chance:clamp': SCOPE_MODERN,
   'e:chance:legacyClamp': SCOPE_DOS,
   'e:chance:modernClampCommon': SCOPE_MODERN,
   'e:clamp': SCOPE_ALL,
   'e:divineBarrierAura': SCOPE_MODERN,
   'e:guidingBeaconAura': SCOPE_MODERN,
-  'e:holyBonus:aura': SCOPE_MODERN,
+  'e:holyBonus': SCOPE_MODERN,
   'e:leadershipAura': SCOPE_MODERN,
   'e:mislead': SCOPE_MODERN,
-  'e:resistanceToAll:aura': SCOPE_MODERN,
+  'e:resistanceToAll': SCOPE_MODERN,
   'e:soulLinkerAura': SCOPE_MODERN,
   'e:supremeLight': SCOPE_MODERN,
   // --- attackSpecific: GetEffectiveResistance / EffectiveDefense, and the resolution-time
@@ -414,9 +403,13 @@ function statStep(step) {
 // a sequence composed in the wrong order.
 //
 // What phase buys is a checkable invariant: a composed sequence is in non-decreasing phase order,
-// since a step cannot run in region `b` after one in `c`. Ids must also be unique, because a
+// since a step cannot run in region `b` after one in `c`. Keys must also be unique, because a
 // sequence is assembled from two places — the list in `deriveUnitStats` and the ability steps
 // spliced into it — and a collision would silently make the trace ambiguous rather than fail.
+// The key is `phase:id`, the same one the composer, the chains and STEP_VERSION_SCOPES use: one
+// enchantment writing in two regions of one engine (`c:weakness` and Warlord's `d:weakness`) is
+// two distinct writes of one effect, and the phase is what separates them. Every trace event
+// carries its phase, so a consumer reading the ledger sees the same distinction.
 function assertStatStepOrder(steps) {
   let rank = -1;
   let previous = null;
@@ -432,8 +425,9 @@ function assertStatStepOrder(steps) {
     if (stepRank < rank) {
       throw new Error(`step ${step.id} (phase ${step.phase}) is declared after ${previous.id} (phase ${previous.phase})`);
     }
-    if (seen.has(step.id)) throw new Error(`step id ${step.id} is declared twice in one sequence`);
-    seen.add(step.id);
+    const key = stepVersionScopeKey(step);
+    if (seen.has(key)) throw new Error(`step ${key} is declared twice in one sequence`);
+    seen.add(key);
     rank = stepRank;
     previous = step;
   }

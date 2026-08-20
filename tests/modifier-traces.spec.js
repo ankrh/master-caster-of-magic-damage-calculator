@@ -45,7 +45,7 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
   expect(hitSources[0]).toBe('baseToHitMelee');
   expect(hitSources.indexOf('level')).toBeLessThan(hitSources.indexOf('weapon'));
   expect(hitSources.indexOf('highPrayer')).toBeLessThan(hitSources.indexOf('vertigo'));
-  expect(report.modifierTraces.fantastic.entries[0].source.id).toBe('identity:chosen');
+  expect(report.modifierTraces.fantastic.entries[0].source.id).toBe('chosen');
 
   for (const key of ['ranged', 'thrown', 'fireBreath', 'lightningBreath']) {
     const channel = report.modernAttacks[key];
@@ -76,7 +76,7 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
   expect(sources).not.toContain('highPrayer');
   expect(sources).not.toContain('warpAttack');
   expect(sources).not.toContain('holyBonus');
-  expect(sources).not.toContain('identity:callToArmsPaladins');
+  expect(sources).not.toContain('callToArmsPaladins');
   expectNoConsoleErrors(errors);
 });
 
@@ -116,7 +116,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
     expect(report.toBlock).toBe(0);
     const ids = orderedClamp.statTrace.map(entry => entry.id);
     expect(ids.indexOf('chance:modernClampCommon')).toBeGreaterThanOrEqual(0);
-    expect(ids.indexOf('chance:modernClampCommon')).toBeLessThan(ids.indexOf('chance:clamp'));
+    expect(ids.indexOf('chance:modernClampCommon')).toBeLessThan(ids.indexOf('clamp'));
     expect(report.modifierTraces.toHitRanged.entries.at(-1)).toMatchObject({
       id: 'chance:modernClampCommon', from: -10, to: 20,
     });
@@ -125,19 +125,19 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
   const sourceOrdered = Object.values(reports).find(report => report.sourceOrdered).sourceOrdered;
   const expectedChanceSteps = [
     ['plague', 'b', 'Plague'],
-    ['chance:warpReality', 'c', 'Warp Reality'],
-    ['chance:vertigo', 'c', 'Vertigo'],
-    ['chance:berserkWarlord', 'd', 'Berserk'],
-    ['chance:hurricane', 'd', 'Hurricane'],
+    ['warpReality', 'c', 'Warp Reality'],
+    ['vertigo', 'c', 'Vertigo'],
+    ['berserkWarlord', 'd', 'Berserk'],
+    ['hurricane', 'd', 'Hurricane'],
   ];
   for (const [id, phase, label] of expectedChanceSteps) {
     const entry = sourceOrdered.statTrace.find(item => item.id === id);
     expect(entry).toMatchObject({ phase, source: { label } });
   }
   const sourceIds = sourceOrdered.statTrace.map(entry => entry.id);
-  expect(sourceIds.indexOf('chance:berserkWarlord'))
+  expect(sourceIds.indexOf('berserkWarlord'))
     .toBeLessThan(sourceIds.indexOf('chance:modernClampCommon'));
-  expect(sourceIds.indexOf('chance:hurricane')).toBeLessThan(sourceIds.indexOf('chance:clamp'));
+  expect(sourceIds.indexOf('hurricane')).toBeLessThan(sourceIds.indexOf('clamp'));
   expectNoConsoleErrors(errors);
 });
 
@@ -231,10 +231,10 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
       + '\nHigh Prayer (phase c): 35% → 45%\nDisplayed result: 45%');
   await expect(page.locator('#aRaceMod')).toHaveText('Life');
   await expect(page.locator('#aRaceMod')).toHaveAttribute('data-tooltip',
-    'Editable base: High Men\nIdentity Chosen (phase a): High Men → Life\nDisplayed result: Life');
+    'Editable base: High Men\nChosen (phase a): High Men → Life\nDisplayed result: Life');
   await expect(page.locator('#aFantasticMod')).toHaveText('Yes');
   await expect(page.locator('#aFantasticMod')).toHaveAttribute('data-tooltip',
-    'Editable base: No\nIdentity Chosen (phase a): No → Yes\nDisplayed result: Yes');
+    'Editable base: No\nChosen (phase a): No → Yes\nDisplayed result: Yes');
 
   await expect(page.locator('#bModernRangedMod')).toHaveText('5');
   await expect(page.locator('#bModernRangedMod')).toHaveAttribute('data-tooltip',

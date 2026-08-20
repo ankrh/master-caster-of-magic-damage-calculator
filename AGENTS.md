@@ -40,7 +40,20 @@ When editing text that contains non-ASCII characters such as `→`, prefer `appl
 ## Task execution, derivations and cross-agent reviews
 
 Implement `Calculator/BACKLOG.md` items directly: no execution method applies, and do not propose
-one or launch subagents unless the user asks by name. Read `DERIVATION-REVIEW-PROTOCOL.md` in full
+one or launch subagents unless the user asks by name.
+
+**Check the item's premise before implementing it.** A row's stated measurements, line numbers and
+scope are a snapshot from when it was written and go stale as the code moves. Re-measure what the
+row asserts. If the premise is falsified, correcting the row is part of the task — do not implement
+text you have just shown to be wrong, and do not implement a scope the evidence no longer supports.
+
+**Fixing an adjacent defect is preferred to filing one, within a bound.** Fix it in the same change
+when all four hold: it is in code the item already touches; its correction is backed by a cited
+source, not by inference; you add a preset that fails before the fix and passes after; and it moves
+no number in a version outside the item's declared `Versions` scope, measured rather than assumed.
+Anything failing one of those is filed instead. Say in the `HISTORY.md` entry what was folded in and
+why, so the scope growth stays visible; a fix that outgrows the item mid-change is a signal to stop
+and report, not to keep going. Read `DERIVATION-REVIEW-PROTOCOL.md` in full
 only when performing binary reconstruction, which always uses method 4 — two independent Codex
 GPT-5.6 Sol High derivations, main-agent merge, then one Claude Opus 5 Medium review — or when the
 user names one of its other methods. Do not load it otherwise.

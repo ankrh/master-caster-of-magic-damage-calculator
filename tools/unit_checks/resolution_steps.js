@@ -244,11 +244,11 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     abilities: { combatSummoned: true },
     identity: identity(com2, { templateId: 113, baseRace: 'High Men', baseFantastic: false }),
   });
-  assert(chosen.identityTrace.some(t => t.id === 'identity:chosen'),
+  assert(chosen.identityTrace.some(t => t.id === 'chosen'),
     'Focused Weapon Immunity coverage reaches the Chosen conversion');
-  assert(constructCatapult.identityTrace.some(t => t.id === 'identity:constructCatapult'),
+  assert(constructCatapult.identityTrace.some(t => t.id === 'constructCatapult'),
     'Focused Weapon Immunity coverage reaches the Construct Catapult conversion');
-  assert(callToArmsPaladins.identityTrace.some(t => t.id === 'identity:callToArmsPaladins'),
+  assert(callToArmsPaladins.identityTrace.some(t => t.id === 'callToArmsPaladins'),
     'Focused Weapon Immunity coverage reaches the Call to Arms Paladins conversion');
 
   const encMagicCases = [

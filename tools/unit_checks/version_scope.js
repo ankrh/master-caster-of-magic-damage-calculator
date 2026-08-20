@@ -25,14 +25,15 @@ const {
 // agree, so neither can drift. Where the canonical scope is *wider*, the write demonstrably
 // runs in a build whose sources the formula's citations do not cover; that is an evidence gap
 // in the citation, not a scope error, and each one is listed here with its reason so a new gap
-// cannot appear silently. `tactician` is emitted under a version-chosen id whose PROVENANCE
-// lives on the tactician:*Dynamic formulas, so it has no comment of its own.
+// cannot appear silently.
 const SCOPE_PROVENANCE_GAPS = {
   trueLight: ['mom_1.31', 'mom_cp_1.60.00'],
   nodeAura: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'],
   survivalInstinct: ['com_6.08'],
 };
-const SCOPE_IDS_WITHOUT_PROVENANCE = ['tactician', 'tactician:coM1'];
+// M11 gave `tactician` one id across all three CoM engines, so its own PROVENANCE comment now
+// covers it and the exemption this list held is gone. Every scope id carries its own citation.
+const SCOPE_IDS_WITHOUT_PROVENANCE = [];
 
 // Ability/enchantment values to probe, taken from the definition tables so a new control is
 // swept without editing this file. Mutually exclusive effects (Iron Skin supersedes Stone
@@ -143,7 +144,7 @@ function runCanonicalVersionScopeChecks(ctx) {
   // with a row of its own, and the old `chance:` prefix strip could not tell it from a
   // projection: a real step whose row went missing quietly took `c:vertigo`'s scope instead of
   // failing. Without a `projectionOf`, an unrowed `chance:` id now resolves nothing.
-  assertEqual(resolveScope({ phase: 'c', id: 'chance:vertigo' }), scopes['c:chance:vertigo'],
+  assertEqual(resolveScope({ phase: 'c', id: 'vertigo' }), scopes['c:vertigo'],
     'A real chance step resolves through its own row');
   assertEqual(resolveScope({ phase: 'c', id: 'chance:weakness' }), null,
     'An unmarked chance id no longer inherits the scope of the step it would project');
@@ -179,7 +180,7 @@ function runCanonicalVersionScopeChecks(ctx) {
   const statChain = evalInContext(ctx, 'statChain');
   const deducedInsideTranscribedRegion = {
     // CoM 1's Focus Magic position is inferred from what its recompute writes after Warp.
-    'com_6.08': ['c:focusMagic', 'c:focusMagic:conversion'],
+    'com_6.08': ['c:focusMagic'],
   };
   for (const version of engineVersions) {
     const chain = statChain(version);
@@ -246,7 +247,7 @@ function runCanonicalVersionScopeChecks(ctx) {
     if (wider.length > 0) observedGaps[id] = wider.sort();
   }
   assertSameKeyList(observedMissingProvenance.sort(), [...SCOPE_IDS_WITHOUT_PROVENANCE].sort(),
-    'Only the version-chosen tactician ids lack a PROVENANCE comment of their own');
+    'Every canonical scope id has a PROVENANCE comment of its own');
   assertSameKeyList(Object.keys(observedGaps).sort(), Object.keys(SCOPE_PROVENANCE_GAPS).sort(),
     'The recorded evidence-coverage gaps are exactly the formulas whose scope exceeds their citations');
   for (const [id, versions] of Object.entries(observedGaps)) {
@@ -386,9 +387,9 @@ function runCanonicalVersionScopeChecks(ctx) {
     'base:altarOfTheSun:figures', 'base:alumniOfAcademy:figures',
     // Identity conversions appear only in the sparse identity trace, so they are invisible
     // here unless they change race/Fantastic for the swept template-less custom unit.
-    'a:identity:callToArmsPaladins', 'a:identity:chosen', 'a:identity:constructCatapult',
-    'b:identity:marionetteChanneler', 'base:identity:com1ConstructCatapult',
-    'base:identity:zombies',
+    'a:callToArmsPaladins', 'a:chosen', 'a:constructCatapult',
+    'b:marionetteChanneler', 'base:constructCatapult',
+    'base:zombies',
     // A write behind a prerequisite the sweep does not build: the Outlander armorclad reform.
     'b:battleArmor',
   ].sort();

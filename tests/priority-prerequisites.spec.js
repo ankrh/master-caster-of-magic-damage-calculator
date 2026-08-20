@@ -56,7 +56,7 @@ test('F52 reproduces CoM1 Supreme Light eligibility and signed ordered writes', 
     return {
       eligible,
       writes: { atk: writes.atk, rtb: writes.rtb, def: writes.def },
-      signedStep: signed.statTrace.find(step => step.id === 'supremeLight:coM1'),
+      signedStep: signed.statTrace.find(step => step.id === 'supremeLight'),
     };
   });
   expect(report.eligible).toEqual({
@@ -170,9 +170,9 @@ test('F54/F55 keep base-CoM2 summon identities out of Warlord', async ({ page })
     };
   });
   expect(report.construct.identity).toMatchObject({ race: 'Special', fantastic: true });
-  expect(report.construct.ids).not.toContain('identity:constructCatapult');
+  expect(report.construct.ids).not.toContain('constructCatapult');
   expect(report.paladins.identity).toMatchObject({ race: 'High Men', fantastic: true });
-  expect(report.paladins.ids).not.toContain('identity:callToArmsPaladins');
+  expect(report.paladins.ids).not.toContain('callToArmsPaladins');
   expectNoConsoleErrors(errors);
 });
 

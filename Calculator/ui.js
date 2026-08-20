@@ -258,9 +258,6 @@ function recalculate() {
   if (!_restoring) scheduleSaveState();
 }
 
-// Backward-compatible alias
-function calculate() { recalculate(); }
-
 // --- Event Wiring ---
 
 // Build ability UI

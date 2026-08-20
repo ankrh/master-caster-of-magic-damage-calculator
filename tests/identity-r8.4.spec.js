@@ -375,7 +375,7 @@ test('production Matrix rows and worker match main cards for an identity-sensiti
   expect(report.customIdentity).toMatchObject({ race: 'Chaos', fantastic: true, baseRace: 'Chaos', baseFantastic: true });
   expect(report.customIdentity).toEqual(report.mainCustomIdentity);
   expect(report.weapon).toBe('magic');
-  expect(report.trace).toContain('identity:com1ConstructCatapult');
+  expect(report.trace).toContain('constructCatapult');
   expect(report.matrixMain).toBeCloseTo(report.main, 12);
   expect(report.main).toBeGreaterThan(report.ordinaryMain);
   expect(report.workerRatio).toBeCloseTo(report.main, 12);

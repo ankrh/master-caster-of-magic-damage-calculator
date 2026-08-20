@@ -57,7 +57,7 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
     isHero: true, specialUnit: 'chosen',
   });
   expect(report.chosen.unitType).toBe('fantastic_life');
-  expect(report.chosen.identityTrace.map(step => step.id)).toContain('identity:chosen');
+  expect(report.chosen.identityTrace.map(step => step.id)).toContain('chosen');
 
   expect(report.summoned.identity).toMatchObject({
     baseRace: 'Dwarf', baseFantastic: false, race: 'Dwarf', fantastic: true,
@@ -65,7 +65,7 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
   expect(report.summoned.unitType).toBe('fantastic_arcane');
   expect(report.summoned.abilities.liveFantastic).toBe(true);
   expect(report.summoned.atk).toBe(2); // direct Breakthrough value is applied to this live unit
-  expect(report.summoned.identityTrace.map(step => step.id)).toContain('identity:combatSummoned');
+  expect(report.summoned.identityTrace.map(step => step.id)).toContain('combatSummoned');
 
   expect(report.construct.identity).toMatchObject({
     baseRace: 'Special', baseFantastic: false, race: 'Nature', fantastic: true,
@@ -77,7 +77,7 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
   });
   expect(report.wrongTemplate.identity.race).toBe('High Men');
   expect(report.wrongTemplate.identity.fantastic).toBe(true); // Combat Summoned is independent
-  expect(report.wrongTemplate.identityTrace.map(step => step.id)).not.toContain('identity:callToArmsPaladins');
+  expect(report.wrongTemplate.identityTrace.map(step => step.id)).not.toContain('callToArmsPaladins');
   expect(report.normalBreakthrough.statTrace.map(step => step.id)).toContain('breakthrough:normal');
   expect(report.fantasticBreakthrough.statTrace.map(step => step.id)).not.toContain('breakthrough:normal');
   expect(report.incorporealBreakthrough.statTrace.map(step => step.id)).toContain('breakthrough:noncorporeal');
@@ -125,10 +125,10 @@ test('R8.3 applies CoM1 Zombies and success-wide combat-summon identity writes',
 
   expect(report.zombies.toBlock).toBeCloseTo(0.20);
   expect(report.zombies.statTrace).toContainEqual(expect.objectContaining({
-    id: 'identity:zombies:toBlock', phase: 'base',
+    id: 'zombies:toBlock', phase: 'base',
     changes: { toBlk: { from: 30, to: 20, delta: -10 } },
   }));
-  expect(report.zombies.identityTrace.map(step => step.id)).not.toContain('identity:zombies');
+  expect(report.zombies.identityTrace.map(step => step.id)).not.toContain('zombies');
 
   expect(report.ordinary.identity.fantastic).toBe(false);
   expect(report.ordinary.weapon).toBe('normal');
@@ -138,13 +138,13 @@ test('R8.3 applies CoM1 Zombies and success-wide combat-summon identity writes',
   expect(report.construct.weapon).toBe('magic');
   expect(report.construct.wpn.toHit).toBe(10);
   expect(report.construct.toHitRtb).toBeGreaterThan(report.ordinary.toHitRtb);
-  expect(report.construct.identityTrace.map(step => step.id)).not.toContain('identity:combatSummoned');
+  expect(report.construct.identityTrace.map(step => step.id)).not.toContain('combatSummoned');
   expect(report.centaurs.identity).toMatchObject({ race: 'Nature', fantastic: true });
   expect(report.paladins.identity).toMatchObject({ race: 'Life', fantastic: true });
   expect(report.golem.abilities.elemArmor).toBe('resistElements');
 
   expect(report.unrelated.identity).toMatchObject({ race: 'Dwarf', fantastic: true });
-  expect(report.unrelated.identityTrace.map(step => step.id)).toEqual(['identity:com1SummonBranch']);
+  expect(report.unrelated.identityTrace.map(step => step.id)).toEqual(['summonBranch']);
   expectNoConsoleErrors(errors);
 });
 

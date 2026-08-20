@@ -895,6 +895,27 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
+  blazeOfGloryCarriesRangedlessLionheartWarlord: {
+    desc: 'Lionheart\'s ranged +3 is gated on not Ismagicalranged(U.rangedtype) (Units.RecalculateUnits.pas:1730), which is True for a zero ranged type (:2968-2975), so it lands on the Ranged field of a unit with no ranged attack; Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS:1494-1500). Melee 1+3 = 4 plus a new thrown 3 → 7.0. (Without Blaze, melee 4 only → 4.0; without Lionheart, melee 1 and nothing to transfer → 1.0.)',
+    version: V_WARLORD,
+    a: { atk:1, def:0, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { blazeOfGlory: true, lionheart: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  blazeOfGloryCarriesWeaknessThrownPenaltyWarlord: {
+    desc: 'Weakness writes Dec(U.ranged, 3) and Dec(U.thrown, 3) with no positivity and no type gate (Units.RecalculateUnits.pas:2273-2279), so both record fields carry the penalty before Blaze of Glory adds Ranged into Thrown (UnitCalc.CAS:1494-1500): missile 7-3 = 4 arrives on a Thrown field already standing at -3 → thrown 1, beside melee 5-3 = 2 → 3.0. (Without Weakness, melee 5 plus thrown 7 → 12.0; without Blaze of Glory the missile attack does not fire in melee, leaving melee 2 → 2.0.)',
+    version: V_WARLORD,
+    a: { atk:5, rtb:7, rtbType:'missile', def:0, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { blazeOfGlory: true, weakness: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  blazeOfGloryThrownReadsHolyWeaponToHitWarlord: {
+    desc: 'Inc(U.hitchancethrown, 10) is unconditional (Units.RecalculateUnits.pas:1803-1809), so Holy Weapon\'s +10 already stands on the record\'s Thrown threshold when Blaze of Glory puts an attack there (UnitCalc.CAS:1494-1500). Melee 5 at 30+10 = 40% plus the transferred thrown 7 at the same 40% → 2.0 + 2.8 = 4.8. (Without Holy Weapon both read 30% → 3.6; without Blaze of Glory the missile does not fire in melee, leaving melee 5 at 40% → 2.0.)',
+    version: V_WARLORD,
+    a: { atk:5, rtb:7, rtbType:'missile', def:0, hp:10, abilities: { blazeOfGlory: true, holyWeapon: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 4.800 },
+  },
   blazeOfGloryHeroUnaffectedWarlord: {
     desc: 'Blaze of Glory targets a non-hero unit, so a hero is unaffected: no Armor→Melee transfer. Hero melee 2, Armor 6 → melee stays 2 vs def 0 → 2.0. (If wrongly applied, melee 2+6 = 8.)',
     version: V_WARLORD,

@@ -493,10 +493,10 @@ function runF50F51F53Checks(ctx) {
   });
   const orderedIds = orderedAuras.statTrace.map(event => event.id);
   for (const [earlier, later] of [
-    ['nodeAura', 'guidingBeaconAura:coM1'],
-    ['guidingBeaconAura:coM1', 'divineBarrierAura:coM1'],
-    ['divineBarrierAura:coM1', 'soulLinkerAura:coM1'],
-    ['soulLinkerAura:coM1', 'mindStorm'],
+    ['nodeAura', 'guidingBeaconAura'],
+    ['guidingBeaconAura', 'divineBarrierAura'],
+    ['divineBarrierAura', 'soulLinkerAura'],
+    ['soulLinkerAura', 'mindStorm'],
     ['mindStorm', 'warpAttack'],
     ['warpAttack', 'warpDefense'],
   ]) {
@@ -537,8 +537,8 @@ function runF50F51F53Checks(ctx) {
     },
   });
   const wardOrderIds = wardOrder.statTrace.map(event => event.id);
-  assert(wardOrderIds.indexOf('supremeLight:coM1') < wardOrderIds.indexOf('realmWard')
-      && wardOrderIds.indexOf('realmWard') < wardOrderIds.indexOf('tactician:coM1'),
+  assert(wardOrderIds.indexOf('supremeLight') < wardOrderIds.indexOf('realmWard')
+      && wardOrderIds.indexOf('realmWard') < wardOrderIds.indexOf('tactician'),
   'F51 CoM 1 Realm Ward stays between Supreme Light and Tactician');
 
   const warpedBeforeSupremeLight = derive({
@@ -556,7 +556,7 @@ function runF50F51F53Checks(ctx) {
     'F53 CoM 1 signed -4 / 3 truncates to -1 before hero Tactician adds 2');
   const warpTraceIds = warpedBeforeTactician.statTrace.map(event => event.id);
   assert(warpTraceIds.indexOf('mindStorm') < warpTraceIds.indexOf('warpDefense')
-      && warpTraceIds.indexOf('warpDefense') < warpTraceIds.indexOf('tactician:coM1'),
+      && warpTraceIds.indexOf('warpDefense') < warpTraceIds.indexOf('tactician'),
   'F53 CoM 1 trace preserves negative pre-Warp Defense and later Tactician ordering');
 
   for (const version of [

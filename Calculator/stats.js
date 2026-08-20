@@ -851,7 +851,7 @@ function deriveUnitStats(input) {
     // `rangedType`/`thrownType` are a running pair, not a set of snapshots: each predicate below
     // is written where its own step sits in the execution chain, so it reads the identity the
     // record carries at that point. The three that follow are the writes the chain places ahead
-    // of `c:focusMagic:conversion` — `b:fieryFury`, `b:bombsGrenades` and `c:level` — so they are
+    // of `c:focusMagic`'s conversion — `b:fieryFury`, `b:bombsGrenades` and `c:level` — so they are
     // evaluated here, before the conversion re-aims the pair for everything after it.
     const ffRtbMod = ffRegularBonus
       && (rangedType === 'missile' || rangedType === 'boulder'
@@ -908,8 +908,24 @@ function deriveUnitStats(input) {
         || (!isChannelSlot && (thrownType === 'thrown'
           || (thrownType === 'none' && rangedType === 'none'))));
 
+    // `SThrown` is a field of the record, not an attack the unit owns. `Dec(U.thrown, 3)`,
+    // `Dec(U.thrown, 5)` (Units.RecalculateUnits.pas:2273-2295) and `Inc(U.hitchancethrown, 10)`
+    // (:1803-1809) write it with no positivity and no type gate, so what decides those writes is
+    // which record field the slot is — not whether that field currently names an attack, and not
+    // whether a later step will fill it. The modern `thrown` channel slot is that field until an
+    // earlier write spends it: Lightning Blade assigns `SLightningBreath` and clears `SThrown`
+    // (CreateUnit.CAS:294-299), and Focus Magic takes its contents into `SRanged`. Neither leaves
+    // `SThrown` behind, so a slot carrying one of those is no longer the Thrown field.
+    // The DOS-shaped `legacy` slot is a different thing — one shared value carrying conventional
+    // ranged, Thrown, Breath or a gaze — so there the type test is what routes the two halves,
+    // and the Shadow Strike grant is what claims the shared slot while it stands free.
+    const modernThrownField = channelKey === 'thrown' && rangedType === 'none'
+      && thrownType !== 'fire' && thrownType !== 'lightning';
+    const thrownFieldSlot = isChannelSlot ? modernThrownField
+      : (thrownType === 'thrown' || shadowStrikeFillsSlot);
+
     // Blaze of Glory's channel transfer is not a pre-sequence flip: it is the positioned
-    // region-`d` step `blazeOfGlory:thrown` (stats_sequence.js), which runs at
+    // region-`d` step `blazeOfGlory` (stats_sequence.js), which runs at
     // `UnitCalc.CAS:1490`. Every predicate before that position therefore still sees the
     // conventional Ranged identity, which is what the engine's earlier writes see.
 
@@ -940,7 +956,19 @@ function deriveUnitStats(input) {
       : altarHunter ? 2
       : (abilities.poison || 0);
 
-    const rangedGetsWpn = (rangedType === 'missile' || rangedType === 'boulder');
+    // `Ismagicalranged(rt)` is False for `rt < 1` and otherwise the entry's `Ismagic` byte
+    // (Units.RecalculateUnits.pas:2968-2975), so every gate the engine writes as
+    // `not Ismagicalranged(U.rangedtype)` also passes on a unit whose ranged type is zero:
+    // `SRanged` is a field of the record, present whether or not the unit owns a ranged attack.
+    // The modern `ranged` channel slot *is* that field, so those gates admit it while it is
+    // still typeless. The DOS-shaped `legacy` slot is a different thing — there `'none'` means
+    // the one shared value is carrying a Thrown, Breath or gaze attack instead — so it keeps
+    // the two names the DOS material body admits.
+    const isModernRangedField = isCoM2 && channelKey === 'ranged';
+    const nonMagicalRangedField = isModernRangedField
+      ? !isMagicalRangedType(rangedType)
+      : (rangedType === 'missile' || rangedType === 'boulder');
+    const rangedGetsWpn = nonMagicalRangedField;
     const thrownGetsWpn = (thrownType === 'thrown');
     const supremeLightEligible = supremeLightActiveForUnit(abilities, unitTypeVal, version, {
       liveRangedType: rangedType,
@@ -952,9 +980,12 @@ function deriveUnitStats(input) {
     // The shared `legacy` slot answers this by identity, and the Shadow Strike grant gives it
     // one: `Dec(U.thrown, 5)` and its neighbours carry no positivity or type gate
     // (Units.RecalculateUnits.pas:2273-2295), so a Thrown field this slot will hold is reached
-    // by them even while it stands empty, and the region-`e` clamp settles the result.
+    // by them even while it stands empty, and the region-`e` clamp settles the result. The
+    // modern engines name the two record fields directly: the `ranged` channel is `SRanged`,
+    // as is a Thrown channel Focus Magic has converted for as long as that move is an identity
+    // flip in place (F90), and `modernThrownField` is `SThrown`. Both Breaths stay outside.
     const modernRangedOrThrownChannel = isCoM2 && (channelKey
-      ? channelKey === 'ranged' || channelKey === 'thrown'
+      ? channelKey === 'ranged' || rangedType !== 'none' || modernThrownField
       : rangedType !== 'none' || thrownType === 'thrown' || shadowStrikeFillsSlot);
     const modernNodeSecondaryChannel = isCoM2 && (channelKey
       ? ['ranged', 'fireBreath', 'lightningBreath'].includes(channelKey)
@@ -983,10 +1014,10 @@ function deriveUnitStats(input) {
         || rangedType === 'magic_c' || rangedType === 'magic_n'
         || rangedType === 'magic_s' || rangedType === 'beam') ? -2 : 0;
     const lionheartRtbMod = lionheartActive
-      && (rangedType === 'missile' || rangedType === 'boulder'
+      && (nonMagicalRangedField
           || (thrownType === 'thrown' && version.startsWith('mom'))) ? 3 : 0;
     const disciplineRtbMod = disciplineActive && levelRank >= 2
-      && (rangedType === 'missile' || rangedType === 'boulder') ? 1 : 0;
+      && nonMagicalRangedField ? 1 : 0;
     // The script writes `SRanged` by the same per-level amount as melee, so the penalty lands
     // on the conventional ranged channel only; Warlord's independent Thrown and Breath fields
     // are untouched.
@@ -1039,13 +1070,13 @@ function deriveUnitStats(input) {
     const gsRtbMod = (abilities.giantStrength && thrownType === 'thrown') ? 1 : 0;
     const weaknessHitsRanged = isCoMVersion ? rangedType !== 'none' : rangedType === 'missile';
     // `Dec(U.thrown, 3)` carries no positivity or type gate (Units.RecalculateUnits.pas:2273-2279),
-    // so it reaches a Thrown field the Shadow Strike grant has not filled yet; the negative
-    // stands until the grant adds to it and the region-`e` clamp settles the result. The type
-    // tests here still choose *which* field a slot answers for, which is what F84 audits.
+    // so it reaches the record's Thrown field whether or not anything stands in it; the negative
+    // holds until a later grant or transfer adds to it and the region-`e` clamp settles the
+    // result. `thrownFieldSlot` is that field, by record structure in the modern engines and by
+    // the shared slot's identity in the DOS ones.
     const weaknessRtbModBinary = weaknessActive
       ? (weaknessHitsRanged ? -weaknessPenalty
-        : ((thrownType === 'thrown' || shadowStrikeFillsSlot) && version !== 'mom_1.31'
-          ? -weaknessPenalty : 0))
+        : (thrownFieldSlot && version !== 'mom_1.31' ? -weaknessPenalty : 0))
       : 0;
     const weaknessRtbModCas = weaknessActive && weaknessRtbModBinary === 0
       && (thrownType === 'fire' || thrownType === 'lightning') && version.startsWith('com2_warlord')
@@ -1056,14 +1087,14 @@ function deriveUnitStats(input) {
     const rustRtbMod = (rustActive && (rangedType === 'missile' || rangedType === 'boulder')) ? -3 : 0;
     // Units.RecalculateUnits.pas:1806-1809 writes melee, Thrown and — when the current type is
     // not already magical — Ranged. Breath is untouched.
-    const hwRangedToHit = hwActive
-      && (rangedType === 'missile' || rangedType === 'boulder') ? 10 : 0;
+    const hwRangedToHit = hwActive && nonMagicalRangedField ? 10 : 0;
     // `Inc(U.hitchancethrown, 10)` is unconditional (Units.RecalculateUnits.pas:1803-1809), so
-    // the modifier is on the record's Thrown threshold before the Shadow Strike grant creates
-    // the attack that reads it — as `heavenlyLightThrownToHit` already models for the same
-    // material tail. The type test still routes the DOS shared slot's two halves.
-    const hwThrownToHit = hwActive && version !== 'mom_1.31'
-      && (thrownType === 'thrown' || shadowStrikeFillsSlot) ? 10 : 0;
+    // the modifier stands on the record's Thrown threshold before any later grant or transfer
+    // creates the attack that reads it — as `heavenlyLightThrownToHit` already models for the
+    // same material tail, and with the same absence of a gate. Which threshold a slot reads is
+    // `secondaryHitKind`, so the DOS shared slot still consults this only while it is carrying
+    // Thrown. MoM 1.31 alone omits the write.
+    const hwThrownToHit = hwActive && version !== 'mom_1.31' ? 10 : 0;
     // The DOS material body admits Missile, Boulder, and Thrown by type, without a
     // strength test. Caster.exe keeps the same no-strength gate for conventional
     // non-magical ranged, but requires the current independent Thrown field to be
@@ -1071,16 +1102,18 @@ function deriveUnitStats(input) {
     const rtbToHitWpnRanged = wpn.toHit !== 0 && rangedGetsWpn ? wpn.toHit : 0;
     const rtbToHitWpnThrown = wpn.toHit !== 0 && thrownGetsWpn ? wpn.toHit : 0;
     const rtbToHitWpn = rtbToHitWpnRanged + rtbToHitWpnThrown;
-    const heavenlyLightRangedNonmagical = rangedType !== 'none'
-      && !['magic_c', 'magic_n', 'magic_s', 'beam'].includes(rangedType);
+    const heavenlyLightRangedNonmagical = nonMagicalRangedField;
     // Units.RecalculateUnits.pas:1451-1454 writes Ranged (non-magical types only) and Thrown.
     // Breath is untouched.
     const heavenlyLightRangedToHit = heavenlyLightMaterialTail
       && heavenlyLightRangedNonmagical ? 10 : 0;
 
-    // Ranged/Thrown/Breath strength
+    // Ranged/Thrown/Breath strength. The modern `ranged` channel answers for `SRanged` even
+    // while it is typeless, so the branch is chosen by which record field the slot is, not by
+    // whether that field currently names an attack. The `calcBaseRtb > 0` gate below is the
+    // engine's missing positive-strength test and belongs to F97, not to this type breadth.
     let rtbWpn = 0;
-    if (rangedType !== 'none') {
+    if (isModernRangedField || rangedType !== 'none') {
       rtbWpn = (calcBaseRtb > 0 && rangedGetsWpn) ? wpn.atk : 0;
     } else if (thrownType !== 'none') {
       rtbWpn = (calcBaseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
@@ -1125,7 +1158,7 @@ function deriveUnitStats(input) {
       alumniOfAcademy, energyCannon, energyCannonOwnsThisSlot,
       focusMagicBuffsExisting, focusMagicConvertsThrown, focusMagicConvertsRanged,
       focusMagicCreatesRanged,
-      shadowStrikeFillsSlot,
+      shadowStrikeFillsSlot, modernThrownField,
       rangedGetsWpn, thrownGetsWpn, supremeLightEligible,
       modernConventionalRangedChannel, modernRangedOrThrownChannel, modernNodeSecondaryChannel,
       eternalNightRtbMod, lionheartRtbMod, disciplineRtbMod, soulFlayRtbMod, plagueRtbMod,
@@ -1218,10 +1251,20 @@ function deriveUnitStats(input) {
     if (blazeOfGloryActive && !modernInputs.thrown) {
       modernInputs.thrown = { strength: 0, type: 'none' };
     }
+    // `BLAZETHROWN = GetStat(U,SRanged,0)` (UnitCalc.CAS:1494-1500) reads the Ranged *field*
+    // with no type or strength gate, and the region-`c` writes it carries have none either:
+    // `not Ismagicalranged(U.rangedtype)` passes on a zero ranged type, so Lionheart (`:1730`),
+    // Discipline at level 3 (`:1554`) and the weapon material (`:651`) all land on `SRanged`
+    // even where the unit owns no ranged attack. The field therefore has to exist for the
+    // transfer to have something to move — the same reason the Thrown field is seeded above.
+    if (blazeOfGloryActive && !modernInputs.ranged) {
+      modernInputs.ranged = { strength: 0, type: 'none' };
+    }
     for (const [key, attack] of Object.entries(modernInputs)) {
       const channelKey = key === 'shadowStrikeThrown' ? 'thrown' : key;
       const slotKey = key === 'shadowStrikeThrown' ? 'shadowThrown' : key;
       const seeded = (channelKey === 'ranged' && focusMagicActive)
+        || (channelKey === 'ranged' && blazeOfGloryActive)
         || (channelKey === 'ranged' && (marionetteOwned || marionetteStrayed))
         || (channelKey === 'fireBreath' && recordContext.ccFireBreathGranted)
         || (channelKey === 'fireBreath' && warlordCombatFlameBlade)
@@ -1257,7 +1300,20 @@ function deriveUnitStats(input) {
   const LEGACY_HIT_FIELD = 'toHitRtb';
   const hasModernChannels = channelContexts.length > 0;
   recordContext.secondaryHitField = LEGACY_HIT_FIELD;
+  // `SThrown := SThrown + SRanged` (UnitCalc.CAS:1499) leaves the surviving attack in the
+  // record's Thrown field, so it reads `hitchancethrown`. Where that field is free the transfer
+  // moves the strength into it and `blazeOfGloryFillsSlot` already routes the target. Where it is
+  // not — Lightning Blade having spent the field on `SLightningBreath`, or Focus Magic having
+  // taken it into `SRanged` — the step retypes each source slot in place rather than moving the
+  // strength out of it, because that conversion is still an identity flip (F90). The attack that
+  // survives is `SThrown` in both shapes, so the source slot reads the Thrown threshold too.
+  const blazeTransferRetypesSourceSlot = blazeOfGloryActive
+    && !channelContexts.some(context => context.modernThrownField);
   for (const context of channelContexts) {
+    if (blazeTransferRetypesSourceSlot
+      && (context.channelKey === 'ranged' || context.rangedType !== 'none')) {
+      context.secondaryHitKind = 'thrown';
+    }
     context.secondaryHitField = SECONDARY_HIT_FIELD_BY_KIND[context.secondaryHitKind];
   }
   // What a writer declares is what attributes it to a channel (steps.js, STAT_CHANNEL_FIELDS),
@@ -1386,7 +1442,7 @@ function deriveUnitStats(input) {
   // CoM 1 Focus Magic). Modern Caster calls ApplyMagicWeapons later in region c. Reuse the same
   // atomic steps at those two version-exclusive splice points.
   //
-  // `chance:weapon:rtb` and the two To Hit tails below decide each secondary modifier from the
+  // `chance:weapon` and the two To Hit tails below decide each secondary modifier from the
   // channel that reads it: Units.RecalculateUnits.pas:639-662 gates `hitchanceranged` on the
   // current `rangedtype` and `hitchancethrown` on the current Thrown field, and :1451-1454 /
   // :1806-1809 do the same for Heavenly Light's material tail and Holy Weapon. Breath is
@@ -1412,17 +1468,19 @@ function deriveUnitStats(input) {
         u.def += wpn.def; u.atk += wpn.atk;
         for (const context of derivationContexts) u[context.strengthField] += context.rtbWpn;
       } }),
-    // PROVENANCE[chance:weapon:melee]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:c4c0e22bb79483f8e5729dfb | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:8365c7617ed27a3bba5164a3 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
-    statStep({ id: 'chance:weapon:melee', sourceId: 'weapon', sourceLabel: 'Weapon material',
-      phase: 'c', writes: ['toHitMelee'],
-      when: u => wpn.toHit !== 0
-        && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0),
-      apply: u => { u.toHitMelee += wpn.toHit; } }),
-    // PROVENANCE[chance:weapon:rtb]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:34:beda653e161112c68e8cdff3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:444355c621ef17cc85a05318 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:55a524751c4be78ffea17562 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
-    statStep({ id: 'chance:weapon:rtb', sourceId: 'weapon', sourceLabel: 'Weapon material',
-      phase: 'c', writes: secondaryHitFieldsFor(['ranged', 'thrown']),
-      when: u => secondaryHitTargets.some(target => weaponHitWrite(u, target) !== 0),
+    // One To-Hit write. The halves keep separate gates because the engine's are separate — melee
+    // on a positive melee attack, each secondary slot on its own material write — so they fold
+    // into the `apply`. `weaponHitWrite` reads only strength fields, which the melee half does
+    // not touch, so evaluating both gates at this one position is what the two steps did.
+    // PROVENANCE[chance:weapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:c4c0e22bb79483f8e5729dfb | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:8365c7617ed27a3bba5164a3 | Reference docs/DOS reconstructed/unitcalc.c@span:34:beda653e161112c68e8cdff3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:444355c621ef17cc85a05318 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:55a524751c4be78ffea17562 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
+    statStep({ id: 'chance:weapon', sourceId: 'weapon', sourceLabel: 'Weapon material',
+      phase: 'c', writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
+      when: u => (wpn.toHit !== 0 && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0))
+        || secondaryHitTargets.some(target => weaponHitWrite(u, target) !== 0),
       apply: u => {
+        if (wpn.toHit !== 0 && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0)) {
+          u.toHitMelee += wpn.toHit;
+        }
         for (const target of secondaryHitTargets) {
           const value = weaponHitWrite(u, target);
           if (value === 0) continue;
@@ -1519,7 +1577,7 @@ function deriveUnitStats(input) {
     heavenlyLightThrownToHit,
     holyArmorActive, hurricaneActive, hwMeleeToHit, identity,
     input, inputBaseAtk,
-    isCoM1, isCoM2, isCoMVersion, isWarlord, level, levelRank,
+    isCoM1, isCoM2, isCoMVersion, isWarlord, landLinkingEligible, level, levelRank,
     lionheartHpMod,
     ludusAgoge, ludusAgogeAtkMod, ludusAgogeHpMod, ludusAgogeResMod, lvl,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
@@ -1569,7 +1627,11 @@ function deriveUnitStats(input) {
     context.slots = {
       melee: hasMeleeAttack, rtb: context.rtbStatActive,
       ranged: context.rtbStatActive && context.rangedType !== 'none',
-      rangedOrThrown: context.rtbStatActive && context.modernRangedOrThrownChannel,
+      // The dead-slot rule's one source-backed exception here: `Dec(U.thrown, 5)` has no
+      // positivity gate (Units.RecalculateUnits.pas:2281-2295), so it reaches the record's
+      // Thrown field while that field still stands empty.
+      rangedOrThrown: context.modernRangedOrThrownChannel
+        && (context.rtbStatActive || context.modernThrownField),
       persistentRanged: context.hasPermanentRangedStat,
       gaze: baseGazeRanged > 0, doomGaze: baseDoomGaze > 0,
     };
@@ -1759,26 +1821,8 @@ function deriveUnitStats(input) {
     addChanceDelta('chance:distancePenalty', { id: 'distancePenalty', label: 'Range distance' },
       'attackSpecific', -100, chanceFields.rtb, distancePenaltyFor(context));
 
-    // The complete stat ledger above follows the compiled source map. Keep the pre-F20 public
-    // To-Hit projection's established CoM2 presentation order for the material contribution,
-    // which historically appeared before Lucky even though the calculated material-strength
-    // write executes after Lucky. This projection does not feed the stat or execution ledger.
-    if (isCoM2) {
-      const weaponContributions = chanceContributions.filter(item =>
-        item.id === 'chance:weapon:melee' || item.id === 'chance:weapon:rtb');
-      const luckyIndex = chanceContributions.findIndex(item => item.id === 'chance:lucky');
-      if (weaponContributions.length > 0 && luckyIndex >= 0) {
-        const withoutWeapon = chanceContributions.filter(item =>
-          item.id !== 'chance:weapon:melee' && item.id !== 'chance:weapon:rtb');
-        const projectedLuckyIndex = withoutWeapon.findIndex(item => item.id === 'chance:lucky');
-        chanceContributions.length = 0;
-        chanceContributions.push(
-          ...withoutWeapon.slice(0, projectedLuckyIndex),
-          ...weaponContributions,
-          ...withoutWeapon.slice(projectedLuckyIndex),
-        );
-      }
-    }
+    // Contribution order is the order the writes execute, in every version. A projection
+    // re-presents the ordered ledger; it does not re-sequence it.
     // STAT-FORMULA[chance:dynamicProjection]
     // PROVENANCE[chance:dynamicProjection]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:8afd898f274ed76b7474ccfc | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:5d84b2c3857f747269473386 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:013e80fc5cd1dea733651726
     const chanceSteps = chanceContributions.map(item => statStep({

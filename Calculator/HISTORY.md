@@ -4,6 +4,126 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-20
+
+- **F91 — an ungated write to `SThrown` is a field write, not a type predicate.** `Dec(U.thrown, 3)`,
+  `Dec(U.thrown, 5)` (`Units.RecalculateUnits.pas:2273-2295`) and `Inc(U.hitchancethrown, 10)`
+  (`:1803-1809`) carry no positivity and no type gate, so what decides them is which record field
+  the slot is. `modernThrownField` states that — the `thrown` channel slot, unless an earlier write
+  has spent it on `SLightningBreath` or `SRanged` — and replaces the `thrownType === 'thrown' ||
+  shadowStrikeFillsSlot` disjuncts F82 left at Weakness, Mind Storm and Holy Weapon's Thrown
+  To Hit. Holy Weapon's now matches `heavenlyLightThrownToHit`'s shape exactly: no gate at all,
+  because `secondaryHitKind` is what routes a slot to its threshold. The DOS-shaped `legacy` slot
+  keeps the type test, which is what routes its shared value's two halves. **(b), settled with (a):**
+  where the transfer finds no free Thrown field — Lightning Blade having spent it — `d:blazeOfGlory`
+  retypes the source slot in place, and that slot now reads `toHitThrown` too, since the surviving
+  attack is `SThrown` whichever slot holds it. Four things move, all
+  `com2_warlord_1.5.12.7`: the Blaze-filled Thrown field takes Holy Weapon's +10 (missile 7 under
+  Blaze, 30% → 40%); Weakness's and Mind Storm's penalties land on that field as well as on the one
+  transferred into it (missile 7 + Weakness → thrown 1, was 4; + Mind Storm → no attack, was 2);
+  neither reaches a Lightning Blade breath any more, which the engine leaves untouched (thrown 4 +
+  Lightning Blade + Mind Storm → breath 5, was gone); and a transfer that stays in the Ranged slot
+  reads the Thrown threshold rather than the Ranged one (magic ranged 6 + thrown 4 + Lightning Blade
+  + Blaze + True Sight + Holy Weapon → 40%, was 35%). Measured as 1,495 differing cases out of
+  69,540 derivations, every one of them Warlord and every one under Blaze of Glory or Lightning
+  Blade; `com2_1.05.11`, `mom_1.31`, `mom_cp_1.60.00` and `com_6.08` are unchanged, measured rather
+  than assumed. New cover:
+  `blazeOfGloryCarriesWeaknessThrownPenaltyWarlord` 3.000, `blazeOfGloryThrownReadsHolyWeaponToHitWarlord`
+  4.800, and six assertions in `tools/unit_checks/warlord_abilities.js`. The measurement also found
+  two things left for [F100](./BACKLOG.md): the region-`e` clamp drops an attack the transfer
+  retypes in place when the source slot has no permanent strength, and the ranged siblings
+  `Dec(U.ranged, 3)`/`Dec(U.ranged, 5)` are still type-gated, though no number moves for them today.
+
+- **F89 — a ranged-less unit passes the engine's non-magical-ranged gate, and the gates now say
+  so.** `Ismagicalranged(rt)` is `False` for `rt < 1` (`Units.RecalculateUnits.pas:2968-2975`), so
+  every `not Ismagicalranged(U.rangedtype)` gate also admits a unit whose ranged type is zero:
+  `SRanged` is a record field, not an attack the unit has to own. The measurement settled whether
+  that matters. It does — `UnitCalc.CAS:1494-1500` reads `GetStat(U,SRanged,0)` with no type or
+  strength gate and moves the whole field into `SThrown`, so a Warlord unit with **no ranged
+  attack** and Lionheart gains a Thrown 3 attack it did not have: melee 1+3 plus thrown 3 measures
+  **7.000** against 4.000 without Blaze of Glory and 1.000 without Lionheart
+  (`blazeOfGloryCarriesRangedlessLionheartWarlord`). The six sites the
+  [predicate inventory](../Reference%20docs/Attack-type%20predicate%20inventory.md) lists (I3, I5,
+  I6, I7, I9, I11) now read `!isMagicalRangedType` on the modern record's `ranged` channel, while
+  the DOS-shaped shared slot keeps Missile/Boulder — there `'none'` means the one value is
+  carrying a Thrown, Breath or gaze attack instead. Two companion writes were needed for the
+  widened gates to have anywhere to land: the `ranged` channel is seeded under Blaze of Glory, as
+  the Thrown field already was, and `d:blazeOfGlory` identifies `SRanged` by which record field
+  the slot is rather than by its current type. Measured across 19,140 derivations, exactly six
+  cases move, all `com2_warlord_1.5.12.7`, all under Blaze of Glory; `com2_1.05.11` has no
+  region-`d` reader of `SRanged` and the three DOS versions are untouched. Two gates are widened
+  but still inert: Holy Weapon's and Heavenly Light's ranged To-Hit tails land on a field the
+  transfer empties, and Discipline is hidden in Warlord by `exceptVersions`. The weapon material's
+  ranged *strength* is still held off the typeless field by `rtbWpn`'s `calcBaseRtb > 0` gate,
+  which is F97's.
+
+- **F84 — every attack-type predicate read twice.** The audit swept all 96 `rangedType`/
+  `thrownType` lines of `stats.js` and all 45 of `stats_sequence.js` — 141 lines, 73 predicate
+  entries and 12 sequence rows — and recorded, beside each, the engine position it models and
+  whether its breadth matches the gate at that position. The readings, including the map of all
+  13 `Ismagicalranged` call sites to their calculator counterparts that F89 consumed, are in
+  [`Attack-type predicate inventory.md`](../Reference%20docs/Attack-type%20predicate%20inventory.md).
+  **Audit only: nothing was fixed.** The structural finding is that `buildSlotContext` computes
+  every type-dependent modifier once from a pair that advances through five of its own writes in
+  an order the execution chain does not have, and then stops at `c:focusMagic` — so the three
+  later type writes (`d:rust`, `d:shadowStrike:thrown`, `d:blazeOfGlory`) are invisible to every
+  precomputed predicate, which is the whole of region `e`. The Weakness case the item named as its
+  starting point is already closed by F81/F83; six further right-number/wrong-branch cases replace
+  it, one of them measured — Focus Magic writes `doomGaze 0 -> 3` on a magical-ranged unit that has
+  no Doom Gaze, and only `e:clamp` hides it. One finding is number-changing and was measured too:
+  a Warlord Explosive-Reform unit with no base secondary attack derives Thrown 8 at Veteran and 9
+  at Champion where the engine's `BaseUnits.thrown` gate leaves it at 7. Six new items were filed — F94 the flip order and the base seed, F95 the level ladder's four
+  base-record gates and three tables, F96 the region-`e` aura gates, F97 the weapon-material
+  strength gates, F98 Focus Magic's four-way branch and its Doom Gaze test, F99 the distance
+  penalty's stale type — and three additional narrow-gate call sites (Discipline, Lionheart,
+  Leadership) were added to F89's scope. F91, F92 and F93 were confirmed in place and
+  cross-referenced to the entries that carry their evidence.
+
+- **The CoM2 To-Hit presentation reorder is gone.** The chance projection moved the
+  weapon-material contribution ahead of Lucky in CoM2 and Warlord tooltips to preserve the order
+  the projection had before F20 corrected the execution sequence. Lucky precedes weapon material in
+  all five chains, so the reorder made two identical orderings display differently and left the
+  tooltip asserting a sequence the model contradicts. Removed, along with the check that had pinned
+  it — whose message claimed the order was "this engine sequence", making it an assertion bound to
+  the implementation rather than a source, which [CLAUDE.md](./CLAUDE.md), *What an assertion has to
+  be bound to*, exists to forbid. It now asserts the chains' own order. No arithmetic moves; all
+  five versions present `lucky` then `weapon`. The related collapsed display/effective field split
+  it exposed is folded into M12.
+
+- **M11 — one step id per enchantment.** A step id is now the effect a player selects, carrying no
+  qualifier the `phase:id` key, the scope table or the step's own `writes` already states.
+  Eleven adjacent same-phase groups merged into one step each — `lionheart`, `giantStrength`,
+  `landLinking`, `blazingMarch`, `reinforceMagic`, `weakness`, `focusMagic`, `blazeOfGlory`, and
+  the `chance:` pairs `weapon`, `heavenlyLight` and `clamp`; `flameBlade`'s c-pair is deferred to
+  F92, which merges it once it has settled whether the Warlord half belongs in region `b`, so the
+  pair is not merged and then split again. `tactician` lost its version-chosen second id and is one
+  `SCOPE_COM_PLUS` step whose CoM 1 and modern chains place it differently, which retired the last
+  entry in the version-scope checks' PROVENANCE exemption list: every scope id now carries its own
+  citation. Ten `:coM1` / `:aura` / `:warlordStack` suffixes and the `identity:` prefix on all
+  eleven identity steps are gone, as is the `chance:` prefix on the five real writes that kept no
+  bare sibling. `base:zombies:toBlock` is the one surviving qualifier — the only enchantment
+  writing at two non-adjacent positions inside one region. `base:com1ConstructCatapult` folded into
+  `constructCatapult` beside the modern step; `com1SummonBranch` did **not**, because it covers
+  both the Paladins-to-Life and the Nature branches that the modern engines split into two writes,
+  so it kept its own id as `summonBranch` with the engine name dropped.
+  **One invariant changed:** `assertStatStepOrder` now keys sequence uniqueness on `phase:id`, the
+  key the composer, the chains and `STEP_VERSION_SCOPES` already used; the bare-id check it
+  replaced could not express one enchantment writing in two regions of one engine (Warlord's
+  `c:weakness` and `d:weakness`). Two F20 assertions and one trace-projection assertion moved to
+  the same key for the same reason, and the projection check now states what it always meant — a
+  Breath reconstruction drops the *fields* belonging to other channels, not the whole entry, since
+  a merged step's melee half belongs to every channel's view.
+  Six flat halves left `getAbilityStatSteps` for hand-written steps in `stats_sequence.js`, because
+  their attack-strength half reads a per-channel mod that builder never receives; `landLinking`
+  needed `landLinkingEligible` plumbed through, since the emit it replaced read the pre-gated
+  `effectiveAbilities`. Twenty-one PROVENANCE comments merged and their anchors rebound —
+  the same reviewed spans regrouped, no new evidence — leaving 239 formulas. Player-facing
+  modifier tooltips lost the raw qualifiers with them ("Identity Chosen" is now "Chosen").
+  **Arithmetic is unchanged in all five versions**, measured as zero differences across 15,480
+  derivations spanning every ability and enchantment control, eight attack shapes and nine
+  environments, against a baseline taken on the pristine tree
+  (`tools/derivation_equivalence.js`, `tools/derivation_equivalence_diff.js`).
+
 ## 2026-08-19
 
 - **F83 — the pre-Focus type snapshots are gone.** `rangedTypeBeforeFocus` /
@@ -37,8 +157,8 @@ pre-2026-08-10 narratives remain recoverable from git history.
   replaces the flip and states only which field the write reaches. Three writers keep reaching
   that field through it, because the binary writes them with no positivity or type gate:
   Weakness's and Mind Storm's `Dec(U.thrown, …)` (`Units.RecalculateUnits.pas:2273-2295`) and
-  Holy Weapon's `Inc(U.hitchancethrown, 10)` (`:1803-1809`) — cross-referenced from F84, which
-  owns generalizing them. Five type-gated ones stop reaching it, each toward the engine: Blazing
+  Holy Weapon's `Inc(U.hitchancethrown, 10)` (`:1803-1809`); F91 generalized all three to the
+  record field they write. Five type-gated ones stop reaching it, each toward the engine: Blazing
   March's +3 Thrown, Flame Blade (Warlord) +2, Fiery Fury +2, the Wall of Fire garrison +1, and
   Metal Fires' shared blade bonus. So do the level ladder, gated on `BaseUnits.thrown > 0`
   (`:562-564`), and the magic-weapon strength and To Hit, gated on `Units.thrown > 0` (`:660-663`)

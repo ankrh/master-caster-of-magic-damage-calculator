@@ -232,8 +232,20 @@ scale rather than add reduce to a plain field read once they stand in the right 
 
 `getAbilityStatSteps()` emits one step per ability or enchantment that writes a stat, and
 `deriveUnitStats` splices those into the sequence region by region. Nothing is bucketed or summed
-on the way in, so an ordering finding lands as a step move. An effect whose flat half and
-attack-type-conditional half sit at different positions appears as two steps sharing a name.
+on the way in, so an ordering finding lands as a step move. An effect whose attack-strength half
+needs a per-channel modifier that builder never receives is hand-written in `stats_sequence.js`
+instead, as one step covering the whole write.
+
+**An id is the effect a player selects, and carries no qualifier the key already states.** The
+`phase:id` key places a write and `STEP_VERSION_SCOPES` says which engines make it, so neither the
+version nor the region belongs in the id: one enchantment writing in two regions of one engine is
+`c:weakness` and `d:weakness`, and one writing in different regions of different engines is
+`b:trueLight` and `c:trueLight`. A step's `writes` already names the fields it reaches, so the
+field does not belong there either — a melee bonus and the attack-strength bonus of the same
+engine write are one step, not two. The one surviving qualifier marks an enchantment writing at
+two **non-adjacent** positions inside one region, which `phase:id` cannot otherwise express
+(`base:zombies` and `base:zombies:toBlock`). Sequence composition, the chains and the scope table
+all key on `phase:id` alike, so two writes of one effect stay distinct without a qualifier.
 
 A bonus normally never conjures an attack slot the unit does not have, so an ability step skips a
 write to a dead slot. Source-backed exceptions exist; each is marked at its step rather than
@@ -315,7 +327,7 @@ phase. A scope always names its exact member versions; a family label such as "D
 not a scope. The To-Hit/To-Block ledger re-emits stat events as `chance:`-prefixed projections; a
 projection is the same write seen through another output, so it carries the key of the write it
 projects as `projectionOf` rather than a second copy of its scope. That marker is stated, never
-inferred from the id: `c:chance:vertigo` is a real engine write with a row of its own, and reading
+inferred from the id: `c:chance:weapon` is a real engine write with a row of its own, and reading
 the prefix could not tell the two apart.
 
 Scope is an upper bound on applicability, not a firing condition: inside its scope a step still
@@ -474,7 +486,9 @@ the calculator does instead, and why.
   this replaced: a sixth `shadowThrown` accumulator, which exists only because Focus Magic's
   `U.ranged := U.thrown` is modelled as an identity flip in place rather than the field move the
   engine makes, leaving no free Thrown field for Shadow Strike's later grant; retiring it is
-  [F90](./BACKLOG.md). The DOS shared-slot shape is faithful and stays.
+  [F90](./BACKLOG.md). Lightning Blade's move out of the Thrown field is modelled the same way,
+  reusing that slot for the Breath instead of moving the field, so it leaves no free Thrown field
+  either and is retired with it. The DOS shared-slot shape is faithful and stays.
 - **A conventional Ranged field emptied by Blaze of Glory is retired by clearing its type.** The
   engine retires it with `SETSTAT(U,SAmmo,0,0)` beside the transfer (`UnitCalc.CAS:1502`), and the
   calculator models no ammunition, so the positioned transfer clears the ranged type instead. The

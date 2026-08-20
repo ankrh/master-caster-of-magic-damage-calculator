@@ -90,9 +90,9 @@ function runIdentityChecks(ctx) {
   }));
   assertEqual(chosen.identity.race, 'Life', 'Chosen writes live Life');
   assertEqual(chosen.identity.fantastic, true, 'Chosen writes live Fantastic');
-  assertEqual(chosen.identityTrace.map(t => t.id).join(','), 'identity:chosen',
+  assertEqual(chosen.identityTrace.map(t => t.id).join(','), 'chosen',
     'Identity writes are exposed on the calculated output trace');
-  assert(chosen.statTrace.some(t => t.id === 'identity:chosen'),
+  assert(chosen.statTrace.some(t => t.id === 'chosen'),
     'Identity writes are included with affected calculated-stat output trace');
 
   const orderedRealmAbilities = [
@@ -149,7 +149,7 @@ function runIdentityChecks(ctx) {
     identity: ctx.createCustomUnitIdentity('com2_1.05.11', { baseRace: 'High Men' }),
   }));
   assertEqual(invalidCallToArms.identity.race, 'High Men', 'Call to Arms ignores display names');
-  assert(!invalidCallToArms.identityTrace.some(t => t.id === 'identity:callToArmsPaladins'),
+  assert(!invalidCallToArms.identityTrace.some(t => t.id === 'callToArmsPaladins'),
     'Custom Paladins display name does not infer Call to Arms');
 
   const com1SummonedOther = ctx.deriveUnitStats(baseUnitInput({
@@ -199,7 +199,7 @@ function runIdentityChecks(ctx) {
     identity: ctx.createCustomUnitIdentity('com_6.08', { specialUnit: 'zombies' }),
   }));
   assertClose(zombies.toBlock, 0.2, 'CoM1 Zombies convert toblock=-1 to 20% To Block');
-  assertEqual(zombies.statTrace.find(t => t.id === 'identity:zombies:toBlock').changes.toBlk.delta, -10,
+  assertEqual(zombies.statTrace.find(t => t.id === 'zombies:toBlock').changes.toBlk.delta, -10,
     'CoM1 Zombies trace the ten-percentage-point engine step');
 
   const breakthroughNormal = ctx.deriveUnitStats(baseUnitInput({
