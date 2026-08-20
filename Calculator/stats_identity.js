@@ -109,27 +109,17 @@ function legacyUnitTypeFromLiveIdentity(identity) {
   return 'fantastic_' + (realm || 'arcane');
 }
 
-function applyLiveUnitType(identity, unitType) {
-  const value = unitType || 'normal';
-  const fantastic = value.startsWith('fantastic_');
-  const realm = value.startsWith('fantastic_')
-    ? value.slice('fantastic_'.length)
-    : value.startsWith('normal_') ? value.slice('normal_'.length) : null;
-  const race = {
-    life: 'Life', death: 'Death', chaos: 'Chaos', nature: 'Nature',
-    sorcery: 'Sorcery', arcane: 'Arcane', unaligned: 'No Heal',
-  }[realm];
-  // `fantastic_arcane` is also the compact compatibility projection for an unaligned
-  // custom/special identity. Do not overwrite an otherwise meaningful source race such
-  // as Generic, or an intentionally blank custom race, with that fallback label.
-  if (race && (realm !== 'arcane' || identity.race === 'Arcane')) identity.race = race;
-  identity.fantastic = fantastic;
-}
-
-// Identity conversions are deliberately kept separate from the compact unitType compatibility
-// token. The source identity and editable base predicates remain intact; this sequence mutates
-// only the fresh live fields used by later stat gates. The template/name checks here correspond
-// to execution-time reads in the modern/DOS constructors and are not persisted UI state.
+// Identity conversions write the live race and Fantastic fields directly. The compact
+// `unitType` token is projected from those fields only after the sequence, so no conversion
+// reads or writes it and the base predicates stay available to later gates. The source
+// identity and editable base predicates remain intact; this sequence mutates only the fresh
+// live fields used by later stat gates. The template/name checks here correspond to
+// execution-time reads in the modern/DOS constructors and are not persisted UI state.
+//
+// Six conversions carry a `:race` qualifier because the engine block that writes the realm
+// also writes a stat, and the calculator runs identity in a separate pre-pass: `c:mysticSurge`
+// and `c:mysticSurge:race` are the two positions one region-`c` block reaches here. This is the
+// same surviving qualifier `base:zombies:toBlock` uses, for the same reason.
 function applyOrderedIdentityConversions(identity, abilities, version, meta = {}) {
   const live = { ...identity, race: identity.baseRace, fantastic: identity.baseFantastic };
   const sourceTemplateId = identity.templateId;
@@ -149,6 +139,10 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   const isCallToArmsPaladins = !!(isBaseCoM2
     && combatSummonedValue
     && sourceTemplateId === 113);
+  // Fiery Fury and Sanctify read the permanent record, not the running one: `BASEFANTASTIC(U)`
+  // and `ISHERO(U)` are base-record predicates in UnitCalcPre.CAS.
+  const baseFantastic = !!identity.baseFantastic;
+  const isHero = typeof meta.isHero === 'boolean' ? meta.isHero : !!identity.isHero;
 
   const identitySteps = [
     // PROVENANCE[zombies]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:3ed9fd7025a17d7041e72be8
@@ -182,23 +176,83 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     statStep({ id: 'callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isBaseCoM2 && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[legacyConversions]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:d4e30893d832cb480ebf32b3 | Reference docs/DOS reconstructed/unitcalc.c@span:24:924a9c7939c2ac5634769450 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e3a2910961158d35a5fab1ec | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:4e8bdcd399e4740f3cd26f41 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
-    statStep({ id: 'legacyConversions', phase: 'a', writes: ['race', 'fantastic'],
-      apply: u => {
-        const unitType = determineEffectiveUnitType(
-          legacyUnitTypeFromLiveIdentity(u), abilities, version, identity);
-        applyLiveUnitType(u, unitType);
-        // A compact `hero` token has no realm slot. Preserve Sanctify's unconditional
-        // Life-race write when no later Fantastic conversion superseded the hero state.
-        if (version && version.startsWith('com2_warlord')
-            && abilities && abilities.sanctify && unitType === 'hero') u.race = 'Life';
-      } }),
+    // The Chaos Channels breath block is region `a` in every engine: the DOS builds write the
+    // realm beside the fire-breath assignment, and `Caster.exe` does the same before its first
+    // script hook. Both MoM builds set the realm alone — a race at or above the first fantastic
+    // value is fantastic there whether or not `UA_FANTASTIC` is set (`unitcalc.c`, the
+    // `bu->race >= RACE_FIRST_FANTASTIC` test) — so writing both fields here matches all five.
+    // PROVENANCE[chaosChannels:fireBreath:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
+    statStep({ id: 'chaosChannels:fireBreath:race', sourceId: 'chaosChannels:fireBreath',
+      sourceLabel: 'Chaos Channels', phase: 'a', writes: ['race', 'fantastic'],
+      when: () => !!abilVal(abilities, 'ccFireBreath', false),
+      apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
     // PROVENANCE[marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
     statStep({ id: 'marionetteChanneler', phase: 'b', writes: ['fantastic'],
       when: () => version === MARIONETTE_VERSION
         && identity.heroTypeId === MARIONETTE_HERO_TYPE_ID
         && !!(abilities && abilities.channeler),
       apply: u => { u.fantastic = true; } }),
+    // The THEN arm of Fiery Fury's one `IF (BASEFANTASTIC(U))`; `b:fieryFury` is its ELSE arm.
+    // PROVENANCE[fieryFury:race]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7
+    statStep({ id: 'fieryFury:race', sourceId: 'fieryFury', sourceLabel: 'Fiery Fury',
+      phase: 'b', writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'fieryFury') && baseFantastic,
+      apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
+    // Sanctify writes the Life realm unconditionally; its separate Fantastic write is gated on
+    // a non-hero clergy unit. Two writes, not the three-branch compact-token approximation the
+    // realm-less `hero` token used to force.
+    // PROVENANCE[sanctify]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
+    statStep({ id: 'sanctify', sourceLabel: 'Sanctify', phase: 'b',
+      writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'sanctify'),
+      apply: u => {
+        u.race = 'Life';
+        if (hasAbil(abilities, 'clergy') && !isHero) u.fantastic = true;
+      } }),
+    // PROVENANCE[destiny:race]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
+    statStep({ id: 'destiny:race', sourceId: 'destiny', sourceLabel: 'Destiny', phase: 'c',
+      writes: ['race', 'fantastic'],
+      when: () => destinyActiveForUnit(abilities, version),
+      apply: u => { u.race = 'Life'; u.fantastic = true; } }),
+    // PROVENANCE[chaosChannels:flight]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:2ae7951f1bbf4272fb3fb151 | Reference docs/DOS reconstructed/unitcalc.c@span:6:e09942f2ee9f377d85168241 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:11:81ed5af7fe4aa5e7b8bcf958
+    statStep({ id: 'chaosChannels:flight',
+      sourceLabel: 'Chaos Channels', phase: 'c', writes: ['race', 'fantastic'],
+      when: () => !!abilVal(abilities, 'ccFlight', false),
+      apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
+    // PROVENANCE[chaosChannels:armor:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:bd2b6b86ac7fbcc85505a039 | Reference docs/DOS reconstructed/unitcalc.c@span:6:2202b972a2c87abe05bad467 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:490bf1c3cfe8b5827cde324a
+    statStep({ id: 'chaosChannels:armor:race', sourceId: 'chaosChannels:armor',
+      sourceLabel: 'Chaos Channels', phase: 'c', writes: ['race', 'fantastic'],
+      when: () => !!abilVal(abilities, 'ccDefense', false),
+      apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
+    // Warlord is out of scope rather than gated: `UnitCalc.CAS` recasts the spell as Frenzy and
+    // sets `EncBloodLust` only afterwards, so the compiled region-`c` block never sees the flag.
+    // PROVENANCE[bloodLust]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:43a34010d4b8c511782d0586 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:13:ef98ab4f1bd2277cbd5fb59a | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a
+    statStep({ id: 'bloodLust', sourceLabel: 'Blood Lust', phase: 'c',
+      writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'bloodLust'),
+      apply: u => { u.race = 'Death'; u.fantastic = true; } }),
+    // PROVENANCE[blackChannels:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:19:4a92e2a9611b35504558f854
+    statStep({ id: 'blackChannels:race', sourceId: 'blackChannels',
+      sourceLabel: 'Black Channels', phase: 'c', writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'blackChannels'),
+      apply: u => { u.race = 'Death'; u.fantastic = true; } }),
+    // One conversion for both controls: CoM 1's Animated block writes the Death realm itself,
+    // and `Caster.exe`'s Animated block sets `EncUndead` for the aggregate normalization that
+    // follows it. `c:animated` carries the same block's stat half.
+    // PROVENANCE[undead]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:e9bb34d05b36853748045d37 | Reference docs/DOS reconstructed/unitcalc.c@span:8:204c1ca5e5884733de92e687 | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d
+    statStep({ id: 'undead', sourceLabel: 'Undead', phase: 'c', writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated'),
+      apply: u => { u.race = 'Death'; u.fantastic = true; } }),
+    // PROVENANCE[mysticSurge:race]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49
+    statStep({ id: 'mysticSurge:race', sourceId: 'mysticSurge', sourceLabel: 'Mystic Surge',
+      phase: 'c', writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'mysticSurge'),
+      apply: u => { u.race = 'No Heal'; u.fantastic = true; } }),
+    // PROVENANCE[raiseDead]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90
+    statStep({ id: 'raiseDead', sourceLabel: 'Raise Dead', phase: 'c',
+      writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'raiseDead'),
+      apply: u => { u.race = 'No Heal'; u.fantastic = true; } }),
     // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:1:15d81b9f3b72c934c9219502 | Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
     statStep({ id: 'spiritLink', phase: 'd', writes: ['fantastic'],
       when: () => !!(version && version.startsWith('com2_warlord')) && !!(abilities && abilities.spiritLink),

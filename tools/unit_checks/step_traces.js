@@ -206,12 +206,12 @@ function runModifierTraceChecks(ctx) {
     })).statTrace.map(entry => entry.id);
     assert(postThresholdOrder.indexOf('holyArmor') < postThresholdOrder.indexOf('orihalcon')
         && postThresholdOrder.indexOf('orihalcon')
-          < postThresholdOrder.indexOf('chance:holyWeapon:melee')
-        && postThresholdOrder.indexOf('chance:holyWeapon:melee')
+          < postThresholdOrder.indexOf('holyWeapon')
+        && postThresholdOrder.indexOf('holyWeapon')
           < postThresholdOrder.indexOf('highPrayer'),
     `${version}: post-threshold order is Holy Armor, Orihalcon, Holy Weapon, then globals`);
     const representativeLaterIds = ['reinforceMagic', 'charmOfLife', 'weakness'];
-    let previousLaterIndex = postThresholdOrder.indexOf('chance:holyWeapon:melee');
+    let previousLaterIndex = postThresholdOrder.indexOf('holyWeapon');
     for (const laterId of representativeLaterIds) {
       const laterIndex = postThresholdOrder.indexOf(laterId);
       assert(previousLaterIndex < laterIndex,
@@ -225,7 +225,7 @@ function runModifierTraceChecks(ctx) {
         charmOfLife: true, blazingMarch: true, weakness: true,
       },
     })).statTrace.map(entry => entry.id);
-    assert(physicalLaterOrder.indexOf('chance:holyWeapon:melee')
+    assert(physicalLaterOrder.indexOf('holyWeapon')
         < physicalLaterOrder.indexOf('charmOfLife')
         && physicalLaterOrder.indexOf('charmOfLife')
           < physicalLaterOrder.indexOf('blazingMarch')
@@ -295,7 +295,7 @@ function runModifierTraceChecks(ctx) {
     const orderedClamp = ctx.deriveUnitStats(baseUnitInput({
       version, rtb: 1, rtbType: 'missile', toHitMod: -50, toHitRtbMod: 100,
     }));
-    const commonClamp = orderedClamp.statTrace.findIndex(t => t.id === 'chance:modernClampCommon');
+    const commonClamp = orderedClamp.statTrace.findIndex(t => t.id === 'modernClampCommon');
     const channelClamp = orderedClamp.statTrace.findIndex(t => t.id === 'clamp');
     assert(commonClamp >= 0 && commonClamp < channelClamp,
       `${version}: the ordered record clamps common Hit before attack-channel Hit`);
@@ -702,7 +702,7 @@ function runChannelAttributionChecks(ctx) {
 
   // Units.RecalculateUnits.pas:1451-1454 writes hitchanceranged and hitchancethrown; breath is
   // untouched.
-  const heavenlyLight = eventOf('chance:heavenlyLight');
+  const heavenlyLight = eventOf('heavenlyLight:toHit');
   assert(!!heavenlyLight, 'Heavenly Light records a To Hit write on the multi-channel unit');
   assertSameKeyList(heavenlyLight.channels, ['ranged', 'thrown'],
     'Heavenly Light attributes its To Hit write to Ranged and Thrown');
@@ -710,7 +710,7 @@ function runChannelAttributionChecks(ctx) {
     'Heavenly Light leaves the Breath To Hit field alone');
 
   // UnitCalc.CAS:326-328 writes SToRanged alone.
-  const trueSight = eventOf('chance:trueSight:ranged');
+  const trueSight = eventOf('trueSight:ranged');
   assert(!!trueSight, 'True Sight records a To Hit write on the multi-channel unit');
   assertSameKeyList(trueSight.channels, ['ranged'],
     'True Sight attributes its To Hit write to Ranged alone');
@@ -743,14 +743,14 @@ function runChannelAttributionChecks(ctx) {
   // Heavenly Light writes melee and the Ranged/Thrown secondaries in one step, so what a
   // reconstruction drops is the *fields* that belong to other channels, not the whole entry:
   // the melee half belongs to every channel's view, exactly as a common To Hit write does.
-  assert(!idsIn(projections.fireBreath).includes('chance:trueSight:ranged'),
+  assert(!idsIn(projections.fireBreath).includes('trueSight:ranged'),
     'A Breath reconstruction drops the Ranged-only To Hit write');
-  assertSameKeyList(fieldsIn(projections.fireBreath, 'chance:heavenlyLight'), ['toHitMelee'],
+  assertSameKeyList(fieldsIn(projections.fireBreath, 'heavenlyLight:toHit'), ['toHitMelee'],
     'A Breath reconstruction keeps only the channel-agnostic half of a Ranged/Thrown write');
-  assert(idsIn(projections.thrown).includes('chance:heavenlyLight')
-      && !idsIn(projections.thrown).includes('chance:trueSight:ranged'),
+  assert(idsIn(projections.thrown).includes('heavenlyLight:toHit')
+      && !idsIn(projections.thrown).includes('trueSight:ranged'),
   'A Thrown reconstruction keeps Heavenly Light and drops True Sight');
-  assertSameKeyList(fieldsIn(projections.thrown, 'chance:heavenlyLight'),
+  assertSameKeyList(fieldsIn(projections.thrown, 'heavenlyLight:toHit'),
     ['toHitMelee', 'toHitThrown'],
     'A Thrown reconstruction keeps only the Thrown half of a two-channel write');
   assertSameKeyList(
@@ -785,7 +785,7 @@ function runChannelAttributionChecks(ctx) {
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
   const skippedTrueSight = withoutTrueSight.statExecutionTrace
-    .find(event => event.id === 'chance:trueSight:ranged');
+    .find(event => event.id === 'trueSight:ranged');
   assert(!!skippedTrueSight && skippedTrueSight.status === 'skipped',
     'The ledger still visits True Sight when its predicate is false');
   assertSameKeyList(skippedTrueSight.channels, ['ranged'],
@@ -796,8 +796,8 @@ function runChannelAttributionChecks(ctx) {
   const ledger = multiChannel.statExecutionTrace;
   const breathLedger = projectTraceToChannel(ledger, 'fireBreath');
   const breathLedgerIds = breathLedger.map(event => event.id);
-  assert(!breathLedgerIds.includes('chance:trueSight:ranged')
-      && !breathLedgerIds.includes('chance:heavenlyLight')
+  assert(!breathLedgerIds.includes('trueSight:ranged')
+      && !breathLedgerIds.includes('heavenlyLight:toHit')
       && breathLedgerIds.includes('hurricane'),
   'A Breath ledger reconstruction drops the steps whose declaration excludes Breath');
   assertSameKeyList(

@@ -10,6 +10,34 @@ function hasAbil(ab, key) { return !!(ab && ab[key]); }
 function abilVal(ab, key, def) { return (ab && ab[key] != null) ? ab[key] : def; }
 function abilDefined(ab, key) { return ab != null && ab[key] != null; }
 
+// The write side of the same object. Several controls can name one `calcKey` — a unit's own
+// Holy Bonus and the one it receives, Guardian Wind and Hillfort both granting Missile
+// Immunity — and how two sources of one effect combine is an engine rule, not marshalling.
+//
+// Two numeric providers contend by **maximum**, and the winner applies once. The DOS builds
+// scan the battlefield keeping a per-player maximum of each provider's shared value byte for
+// Holy Bonus and Resistance to All, then the recompute adds that one number; CoM2/Warlord's
+// aura table merges a new source into an existing record when tile, owner and type match and
+// retains only the higher value, which is the helptext's highest-source-only language.
+//
+// A boolean is a record flag, so a second grant sets a bit the unit may already carry — the
+// same shape as Holy Arms granting Holy Weapon to a unit that may already have it — and the
+// two OR rather than stack. The remaining arms are what a single source needs from a fold: a
+// `select` keeps whichever source left its default behind, a `numcheck` keeps whichever
+// supplied a value (`null` and `0` stay distinct states), and a `signed` number takes the
+// later write, its sign being a direction rather than a magnitude to maximize.
+// PROVENANCE[abilityCalcKeyMerge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:19:2479e7f72df0edd5cef33c89 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:3580d32230eb923ea4a5b467 | Reference docs/DOS reconstructed/unitcalc.c@span:5:a4af7b8e027f6d6b80cf20d1
+function mergeAbilityCalcValue(def, currentValue, nextValue) {
+  if (def.type === 'bool') return !!currentValue || !!nextValue;
+  if (def.type === 'select') {
+    const defaultValue = def.options && def.options[0] ? def.options[0][0] : 'none';
+    return nextValue !== defaultValue ? nextValue : (currentValue === undefined ? defaultValue : currentValue);
+  }
+  if (def.type === 'numcheck') return nextValue != null ? nextValue : (currentValue === undefined ? null : currentValue);
+  if (def.signed) return nextValue || 0;
+  return Math.max(currentValue === undefined ? 0 : currentValue, nextValue || 0);
+}
+
 // Compatibility 10%-100% To-Hit clamp for isolated calculations such as Energy Cannon.
 // Ordered unit thresholds and modern common-then-channel normalization are region-e steps
 // PROVENANCE[clampPct]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:26:68e7e2b7c0ba44df6f0af0aa
@@ -129,6 +157,69 @@ function isMagicalRangedType(rangedType) {
     || rangedType === 'beam';
 }
 
+// --- Live slot type reads (M14) ---
+//
+// The type-list tests the engines' own gates make, asked of the record at the reading step's own
+// position rather than of a pair advanced before the walk. A slot's identity — which record field
+// it is — is fixed; what stands in that field is sequence state.
+//
+// `physicalRanged` is the DOS material body's Missile/Boulder pair, `magicalRanged` is
+// `Ismagicalranged` (Units.RecalculateUnits.pas:2968-2975), and `breath` is the two independent
+// breath fields, which the DOS-shaped shared slot also carries one at a time.
+function slotHasPhysicalRanged(u, channel) {
+  const rangedType = u[channel.rangedTypeField];
+  return rangedType === 'missile' || rangedType === 'boulder';
+}
+
+function slotHasMagicalRanged(u, channel) {
+  return isMagicalRangedType(u[channel.rangedTypeField]);
+}
+
+function slotHasThrown(u, channel) {
+  return u[channel.thrownTypeField] === 'thrown';
+}
+
+function slotHasBreath(u, channel) {
+  const thrownType = u[channel.thrownTypeField];
+  return thrownType === 'fire' || thrownType === 'lightning';
+}
+
+// `Caster.exe`'s conventional ranged channel: the `SRanged` field itself in the modern record —
+// whatever type stands in it, including while it is typeless — and the DOS-shaped shared slot
+// while a conventional ranged type stands in it, since one value stands there for ranged,
+// Thrown, Breath or a gaze alike.
+function isConventionalRangedSlot(u, channel) {
+  if (!channel || !channel.isCoM2) return false;
+  return channel.channelKey ? channel.channelKey === 'ranged'
+    : u[channel.rangedTypeField] !== 'none';
+}
+
+// `Ismagicalranged(rt)` is False for `rt < 1` and otherwise the entry's `Ismagic` byte
+// (Units.RecalculateUnits.pas:2968-2975), so every gate the engine writes as
+// `not Ismagicalranged(U.rangedtype)` also passes on a unit whose ranged type is zero: `SRanged`
+// is a field of the record, present whether or not the unit owns a ranged attack. The modern
+// `ranged` channel *is* that field, so those gates admit it while it is still typeless. The
+// DOS-shaped shared slot is a different thing — there `'none'` means the one shared value is
+// carrying a Thrown, Breath or gaze attack instead — so it keeps the two names the DOS material
+// body admits.
+function isNonMagicalRangedFieldSlot(u, channel) {
+  if (channel.isCoM2 && channel.channelKey === 'ranged') {
+    return !isMagicalRangedType(u[channel.rangedTypeField]);
+  }
+  return slotHasPhysicalRanged(u, channel);
+}
+
+// The modern record's three secondary channels other than Thrown: conventional Ranged and the
+// two independent Breath fields.
+function isModernSecondarySlot(u, channel) {
+  if (!channel || !channel.isCoM2) return false;
+  if (channel.channelKey) {
+    return channel.channelKey === 'ranged' || channel.channelKey === 'fireBreath'
+      || channel.channelKey === 'lightningBreath';
+  }
+  return u[channel.rangedTypeField] !== 'none' || slotHasBreath(u, channel);
+}
+
 // PROVENANCE[supremeLightEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:b1236fda671c45bc369f8550 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:b19d1884df8862734b87977a | TABLE=Reference docs/Script source/CoM2 1.05.11 base/RangedType.INI@span:39:8f03d3b4a323d9fa0b89b64d | TABLE=Reference docs/Script source/CoM2 1.05.11 base/RangedType.INI@span:5:cf1a2cb09950084992b45e7f | TABLE=Reference docs/Script source/Warlord 1.5.12.7/RangedType.INI@span:39:8f03d3b4a323d9fa0b89b64d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/RangedType.INI@span:12:e137b286525bf5559c9b2cdb
 // STAT-FORMULA[supremeLightEligibility]
 function supremeLightActiveForUnit(abilities, unitType, version, rangedContext = {}) {
@@ -192,49 +283,6 @@ function misleadActiveForUnit(abilities, liveFantastic, version) {
 // PROVENANCE[destinyEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
 function destinyActiveForUnit(abilities, version) {
   return !!(version && version.startsWith('com2_') && hasAbil(abilities, 'destiny'));
-}
-
-// PROVENANCE[legacyUnitTypeConversions]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:d4e30893d832cb480ebf32b3 | Reference docs/DOS reconstructed/unitcalc.c@span:24:924a9c7939c2ac5634769450 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e3a2910961158d35a5fab1ec | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:4e8bdcd399e4740f3cd26f41 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
-// STAT-FORMULA[legacyUnitTypeConversions]
-function determineEffectiveUnitType(baseUnitType, abilities, version, sourceIdentity = {}) {
-  let unitType = baseUnitType || 'normal';
-  const ccDefense = !!abilVal(abilities, 'ccDefense', false);
-  const ccFireBreath = !!abilVal(abilities, 'ccFireBreath', false);
-  const ccFlight = !!abilVal(abilities, 'ccFlight', false);
-  const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
-  const isWarlord = version && version.startsWith('com2_warlord');
-  const destinyActive = destinyActiveForUnit(abilities, version);
-  const baseFantastic = typeof sourceIdentity.baseFantastic === 'boolean'
-    ? sourceIdentity.baseFantastic : (baseUnitType || '').startsWith('fantastic_');
-  const isHero = typeof sourceIdentity.isHero === 'boolean'
-    ? sourceIdentity.isHero : baseUnitType === 'hero';
-
-  // Source order is load-bearing. Chaos-Channels Breath runs before Warlord's early
-  // UnitCalcPre hook; Fiery Fury and then Sanctify run inside that hook. Destiny and
-  // the remaining compiled conversions run afterwards, so their later writes win.
-  if (ccFireBreath) unitType = 'fantastic_chaos';
-  if (isWarlord && hasAbil(abilities, 'fieryFury') && baseFantastic) {
-    unitType = 'fantastic_chaos';
-  }
-  if (isWarlord && hasAbil(abilities, 'sanctify')) {
-    // Sanctify always writes live race Life. Its separate Fantastic write is gated
-    // to clergy which are not heroes; the compact token cannot carry a hero realm,
-    // so the identity wrapper preserves that one write directly.
-    if (hasAbil(abilities, 'clergy') && !isHero) unitType = 'fantastic_life';
-    else if (unitType.startsWith('fantastic_')) unitType = 'fantastic_life';
-    else if (!isHero) unitType = 'normal_life';
-  }
-  if (destinyActive) unitType = 'fantastic_life';
-  if (ccFlight) unitType = 'fantastic_chaos';
-  if (ccDefense) unitType = 'fantastic_chaos';
-  // Warlord: Bloodlust no longer turns the unit undead, so it stays its original type.
-  if (hasAbil(abilities, 'bloodLust') && !isWarlord) unitType = 'fantastic_death';
-  if (hasAbil(abilities, 'blackChannels')) unitType = 'fantastic_death';
-  if (hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated')) unitType = 'fantastic_death';
-  if (hasAbil(abilities, 'mysticSurge')) unitType = 'fantastic_unaligned';
-  if (isCoMPlus && hasAbil(abilities, 'raiseDead')) unitType = 'fantastic_unaligned';
-
-  return unitType;
 }
 
 // The realm a unit belongs to. Prefer the live identity because the compact compatibility
@@ -386,26 +434,90 @@ function addToSlot(u, ctx, slot, value, whereStrength) {
     return;
   }
   const channels = (ctx && ctx.channels)
-    || [{ strengthField: 'rtb', rangedTypeField: 'rangedType', slots }];
+    || [{ strengthField: 'rtb', rangedTypeField: 'rangedType', thrownTypeField: 'thrownType',
+      slots }];
   for (const channel of channels) {
-    if (slot === 'rangedField') {
-      if (!isRangedFieldSlot(u, channel)) continue;
-    } else if (channel.slots && !channel.slots[slot]) continue;
+    if (!slotGateAdmits(u, channel, slot)) continue;
     if (whereStrength && !whereStrength(u[channel.strengthField])) continue;
     u[channel.strengthField] += value;
   }
 }
 
+// The secondary-strength gates, resolved against the record the sequence is mutating rather than
+// predicted once before the walk (M14). Only `persistentRanged` is not a live read: it is
+// `B.ranged > 0`, a fact of the permanent record, which answers the same at every position and so
+// stays on the slot. A slot with no gates at all — a caller that supplied none — admits every
+// write, which is the shape the DOS-shaped fallback channel above relies on.
+function slotGateAdmits(u, channel, gate) {
+  if (gate === 'rangedField') return isRangedFieldSlot(u, channel);
+  if (!channel || !channel.slots) return true;
+  if (gate === 'persistentRanged') return !!channel.slots.persistentRanged;
+  if (gate === 'rtb') return isLiveSlot(u, channel);
+  if (gate === 'ranged') return isLiveSlot(u, channel) && u[channel.rangedTypeField] !== 'none';
+  // The dead-slot rule's one source-backed exception: `Dec(U.thrown, 5)` has no positivity gate
+  // (Units.RecalculateUnits.pas:2281-2295), so it reaches the record's Thrown field while that
+  // field still stands empty and the region-`e` clamp settles the result.
+  if (gate === 'rangedOrThrown') {
+    return isModernRangedOrThrownSlot(u, channel)
+      && (isLiveSlot(u, channel) || isThrownFieldSlot(u, channel));
+  }
+  throw new Error(`unknown slot gate ${gate}`);
+}
+
+// A slot is **alive** when the record shows an attack standing in it: a type that names one, or
+// strength the permanent record supplied. This is the dead-slot rule (SPEC.md, *The step model*)
+// asked at the writing step's own position, so a slot a later step fills is dead until that step
+// runs and a slot an earlier step created is alive from there on. Strength alone does not settle
+// it, because the ungated decrements drive a live field to zero and below and the region-`e`
+// clamp settles the result.
+function isLiveSlot(u, channel) {
+  if (!channel) return true;
+  return channel.calcBaseRtb > 0
+    || u[channel.strengthField] > 0
+    || u[channel.rangedTypeField] !== 'none'
+    || u[channel.thrownTypeField] !== 'none';
+}
+
+// `Dec(U.thrown, 5)` and its neighbours name the modern record's Ranged and Thrown fields and
+// exclude both Breaths (Units.RecalculateUnits.pas:2273-2295). Which field a slot is, is record
+// structure for the modern channels; the DOS-shaped shared slot is one value standing for
+// conventional ranged, Thrown, Breath or a gaze, so there it is a live identity read.
+function isModernRangedOrThrownSlot(u, channel) {
+  if (!channel || !channel.isCoM2) return false;
+  if (channel.channelKey) {
+    return channel.channelKey === 'ranged' || u[channel.rangedTypeField] !== 'none'
+      || isThrownFieldSlot(u, channel);
+  }
+  return u[channel.rangedTypeField] !== 'none' || isThrownFieldSlot(u, channel);
+}
+
+// `SThrown` is a field of the record, not an attack the unit owns, so which slot is that field is
+// a structural question asked of the record at the reading step's own position. The modern
+// `thrown` channel is `SThrown` until an earlier write spends it: Lightning Blade assigns
+// `SLightningBreath` and clears `SThrown` (CreateUnit.CAS:294-299), and Focus Magic moves its
+// contents into `SRanged` (Units.RecalculateUnits.pas:885-891). Neither leaves `SThrown` behind.
+// The DOS-shaped shared slot is one value standing for conventional ranged, Thrown, Breath or a
+// gaze, so it is the Thrown field while it carries Thrown or while it stands free — which is what
+// the ungated `Dec(U.thrown, …)` writes reach, and what a later grant claims.
+function isThrownFieldSlot(u, channel) {
+  if (!channel) return false;
+  const rangedType = u[channel.rangedTypeField];
+  const thrownType = u[channel.thrownTypeField];
+  if (channel.channelKey) {
+    return channel.channelKey === 'thrown' && rangedType === 'none'
+      && thrownType !== 'fire' && thrownType !== 'lightning';
+  }
+  return rangedType === 'none' && (thrownType === 'thrown' || thrownType === 'none');
+}
+
 // `U.ranged` names a **field of the unit record**, not an attack the unit owns, so which slot
 // that field is cannot be answered by a type test alone (F96). The modern `ranged` channel is
 // `SRanged` whatever type stands in it — including while it is typeless, which is why the
-// region-`c` `not Ismagicalranged` writers reach it — as is a Thrown channel Focus Magic has
-// converted in place, for as long as that conversion is an identity flip (F90). The DOS-shaped
-// shared slot is a different thing: one value stands for conventional ranged, Thrown, Breath or
-// a gaze there, so it is the Ranged field only while it carries a conventional ranged type.
-// The record is read at the calling step's own position, so a type write between the slot pass
-// and that step — `d:blazeOfGlory` empties the Ranged field and retypes the shared slot — is
-// visible to it.
+// region-`c` `not Ismagicalranged` writers reach it. The DOS-shaped shared slot is a different
+// thing: one value stands for conventional ranged, Thrown, Breath or a gaze there, so it is the
+// Ranged field only while it carries a conventional ranged type. The record is read at the
+// calling step's own position, so a type write an earlier step made — `d:blazeOfGlory` empties
+// the Ranged field and retypes the shared slot — is visible to it.
 function isRangedFieldSlot(u, channel) {
   if (!channel) return false;
   if (channel.channelKey === 'ranged') return true;
@@ -913,8 +1025,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // builder never receives. UnitCalcPre.CAS:889 is the separate Nature Link upgrade
   // (+1 resistance), not this bonus.
 
-  // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is in
-  // determineEffectiveUnitType and the -10% To Block in resolveCombat
+  // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is the
+  // ordered identity step `c:mysticSurge:race` and the -10% To Block is in resolveCombat
   // (MODDING.INI MysticSurgeToDefPenalty=10, both versions).
   // Phase c — SpellMysticSurge.CAS sets enchantment flags only; no stat application.
   if (hasAbil(abilities, 'mysticSurge')) {

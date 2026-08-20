@@ -6,6 +6,302 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-20
 
+- **M13 — `chance:` is the To-Hit/To-Block ledger's namespace and nothing else's.** The prefix used
+  to mean two things at once: the ledger's projection namespace (`buildChanceProjection` emitted
+  `chance:${id}` *unless the id already started with it*) and a qualifier on sixteen real writes.
+  That exception was what let a real write and its own projection share one `phase:id` key on all
+  sixteen — the key the chains, `STEP_VERSION_SCOPES` and `assertStatStepOrder` all treat as naming
+  exactly one step. **Decision: the two id spaces are disjoint.** Every step of the ledger carries
+  the prefix — one projection per stat event, plus the three resolution-time writes native to it —
+  and no step of a derivation sequence does, so the projected id is now mechanical and the exception
+  is gone. `projectionOf` stays the authoritative marker, because an id is presentation and a ledger
+  step that projects nothing (`attackSpecific:chance:distancePenalty`) has a scope row of its own.
+  Thirteen ids lost the prefix accordingly: the three base seeds, `survivalInstinctToBlock`,
+  `outlanderBallisticsTraining`, `energyCannonThreshold`, `trueSight:ranged`, `legacyClamp`,
+  `modernClampCommon`, and the `holyWeapon` pair merged by (a). The two that keep a bare sibling
+  took the qualifier `SPEC.md` already licenses instead — `c:weapon:toHit` beside `c:weapon`,
+  `c:heavenlyLight:toHit` beside `c:heavenlyLight` — because each pair is two separately cited
+  engine blocks, not one write split by field, which is what separates them from M11's merges.
+  **(a)** `c:chance:holyWeapon:melee` and `c:chance:holyWeapon:rtb` are one step, `c:holyWeapon`,
+  built the way M11 built the `heavenlyLight` pair: the union of the two `writes`, the `or` of the
+  two gates, both halves in one `apply`. `hitTargetValue` reads only type and strength fields, so
+  the melee half cannot change what the secondary half computes. Its merged citation is the `:rtb`
+  list, of which the `:melee` list is a subset — the anchor is byte-identical, so no reviewed span
+  moved. The ledger's own ids did not move at all: stripping the prefix from a real write makes
+  `buildChanceProjection` re-add it, so `modifierTraces` still shows `chance:modernClampCommon`,
+  `chance:legacyClamp` and `chance:distancePenalty`, and only `statTrace` ids changed.
+  **Premise re-measurement.** Two of the row's three claims held and one did not. The pair is
+  chain-adjacent in all five versions (positions 17/18, 27/28, 34/35, 38/39, 93/94), and the prefix
+  was on exactly 16 ids, 14 of them without a bare sibling — the row's list of fourteen was exact.
+  The row's “6 carry the prefix and 8 do not” was wrong on the second number when it was written,
+  not stale: counting effects whose declared `writes` are only To-Hit/To-Block fields gives **11**
+  unprefixed, not 8. `b:magitekEngine`, `d:hurricane` and `d:mechanicalExpert` were all present and
+  hit-only at `865a648`, and the row's list omits them. The asymmetry the row argued from is
+  therefore larger than it claimed, not smaller.
+  **New coverage:** two sweep assertions state the namespace rule as an observation — no
+  stat-sequence step carries `chance:`, every ledger entry does — plus a registry assertion that no
+  derivation scope row does (`tools/unit_checks/version_scope.js`). The two `resolveScope` probes
+  that named the pre-M11 `c:chance:vertigo` are re-aimed at the case that still exists, a ledger
+  step with no `projectionOf`. **Arithmetic is unchanged in all five versions**, measured as zero
+  differing cases and zero field differences across 15,480 derivations
+  (`tools/derivation_equivalence.js`, `tools/derivation_equivalence_diff.js`). The seed steps' own
+  split and two leftover field qualifiers were left alone and filed as `T10`.
+  Checks: `node tools/node_unit_checks.js` 14,255 assertions, none failing; `npm run provenance`
+  265 formulas, 265 verified, 0 UNVERIFIED (266 before: the merge retired one); `npm test`
+  114 passed.
+
+- **M10 — the DOS attack-specific stage is ordered steps, one list per engine.**
+  `Combat_Effective_Resistance` and `Battle_Unit_Defense_Special` are transcribed as
+  `DOS_RESISTANCE_STEPS` and `DOS_DEFENSE_STEPS` (`combat_effects.js`), keyed by version and run
+  by `dosEffectiveResistance` / `dosEffectiveDefense` over a scratch copy — the same step type,
+  runner, authoring syntax, canonical-scope rows and `PROVENANCE` labelling the Caster.exe pair
+  already used, so the two stages now differ only in which routine they transcribe. Five
+  resistance writes and twelve or thirteen defense writes replace the inline arithmetic in
+  `buildResistanceContext` (`combat_phases.js`) and `computeDefenseProfile`, which keep only what
+  the engine keeps outside the routines: the per-realm and per-attack classification
+  (`dosDefenseForAttack`, the DOS counterpart of `computeCasterDefenseForAttack`) and the City
+  Walls addition its caller makes afterwards. `SPEC.md`, *Attack-specific sequences*, *Version
+  scope* and *The execution chain* record what moved; the stage is no longer a known limitation.
+
+  **Premise, re-measured.** The named effects held — Charmed +30, Resist Magic +5, Bless +3 (MoM)
+  / +5 (CoM 1), the latter two being what `isCoM` selected in a branch Warlord can never enter.
+  `PROVENANCE[dosEffectiveDefenseProfile]` did span **seven** `DOS reconstructed/combat.c` ranges,
+  and `PROVENANCE[resolutionResistanceContext]` did cover all five versions. Both line references
+  had drifted by the earlier uncommitted rounds: `buildResistanceContext` is at
+  `combat_phases.js:310` (row: `:313`) and `computeDefenseProfile` at `combat_effects.js:583`
+  (row: `:584`).
+
+  **Order, and which positions are provisional.** Every position is transcribed from
+  `DOS reconstructed/combat.c`, address by address; none is deduced, so nothing here is marked
+  provisional. Resistance runs base, Charmed, elemental, Bless, Resist Magic (131:0x9903C ->
+  0x990A6 -> 0x990F5 -> 0x9912A -> 0x99143) — additive throughout, which is why a DOS unit can
+  finish above the 100 Caster.exe's assignments cap it at, and why this is a separate
+  transcription rather than a variant. Defense runs base, Illusion, Large Shield, the two
+  `defense_special` markers, Magic Immunity, Bless, Righteousness, the elemental block, Armor
+  Piercing, the Weapon Immunity payout and the blanket replacement. **MoM 1.31 writes the blanket
+  marker before the Weapon Immunity one and CP 1.60 and CoM 1 write them the other way round**
+  (131:0x9A66E/0x9A68C against 160:0x9A66B/0x9A68C), which is the whole of that build's
+  Weapon-Immunity-overwrites-Missile-Immunity bug, now an ordering fact in the list rather than a
+  version test in a branch. CoM 1 additionally splits MoM's `else if` elemental pair into two
+  independent adds and cashes the Weapon Immunity marker as `+8` where the MoM builds raise to a
+  floor of 10, so it has two step ids of its own.
+
+  **Folded in.** The five `*Def` immunity helpers (`weaponImmunityDef`, `missileImmunityDef`,
+  `fireImmunityDef`, `righteousnessDef`, `magicImmunityDef`) are deleted: their constants are now
+  the ordered steps' own, and keeping them would have left the 50/100 replacement value and the
+  Weapon Immunity floor with two homes. `weaponImmunityApplies` survives as the eligibility test
+  both engine families call. `buildResistanceContext`'s dead `isCoM` parameter and its three
+  unconsumed `bBless`/`aBless`/`blessBonus` return fields go with them, as do the `isCaster` and
+  `isWarlord` branches inside `computeDefenseProfile`, which the `com2` early return had made
+  unreachable.
+
+  **Filed, not fixed.** Two engine facts the conversion made visible are new backlog rows rather
+  than changes, because both would have moved a number in a version M10 scoped `behavior
+  unchanged`. **F104:** the DOS resistance routine's `USA_IMMUNITY_MAGIC` and `UE_RIGHTEOUSNESS`
+  +30 writes have no step, because the calculator models both as a skipped roll. **F105:** CoM 1
+  NOPs the Righteousness defence block out entirely, yet the calculator still admits the write on
+  its Chaos magical-ranged, breath and spell-damage channels; that is recorded as an explicit
+  `SCOPE_PROVENANCE_GAPS` entry so the checks name it rather than pass over it.
+
+  **Measurement.** A digest over three surfaces, before and after, in all five versions: 2400
+  `computeDefenseProfile` profiles, 900 `buildResistanceContext` contexts and 160 full
+  `resolveCombat` results per version. Defense and combat outputs are byte-identical; all eight
+  resistance values are identical in every case, the only difference being the three dead return
+  fields. Checks: `node tools/node_unit_checks.js` 14277/14277; `npm run provenance` 266 formulas,
+  266 verified, 0 UNVERIFIED; `npm test` 114 passed.
+
+- **M7 — eleven atomic identity conversions, and `unitType` is only a projection.**
+  `determineEffectiveUnitType` is deleted. The single `a:legacyConversions` step it hid behind is
+  eleven steps in `applyOrderedIdentityConversions` (`stats_identity.js`), each writing live
+  `race`/`fantastic` directly, each with its own position, trace entry, ledger visit, canonical
+  scope row and `PROVENANCE` citation. Sanctify loses the compact token's three-branch
+  approximation and becomes what `UnitCalcPre.CAS:1246-1252` is: an unconditional Life-realm
+  write plus a Fantastic write gated on a non-hero clergy unit — the hero special case existed
+  only because a `hero` token has no realm slot. `normalizeCombatUnit` (`combat_phases.js`) no
+  longer rewrites `unitType` a second time, and `applyLiveUnitType` — the token round-trip — is
+  gone with it. `SPEC.md`, *Identity*, *The step model* and *The execution chain* record the
+  three rules that moved.
+
+  **Premise, re-measured.** Both counts held: **eleven** ordered conversions in the helper body,
+  and **fifteen** source spans in `PROVENANCE[legacyUnitTypeConversions]` — which was duplicated
+  verbatim as `PROVENANCE[legacyConversions]` beside the step. Two of three line references had
+  drifted: the step was `stats_identity.js:186-195` (row: `:187-198`) and the helper
+  `combat_abilities.js:290-329` (row: `:199-238`, a 91-line drift from the uncommitted M15
+  round); `combat_phases.js:195` was exact.
+
+  **Phases and positions.** Region maps first: `CoM2 binary - unit recalculation.md`'s phase
+  index puts Chaos Channels Breath's realm write in `a` and CC Flight, CC Armor, Blood Lust,
+  Animated, Undead, Mystic Surge and Destiny in `c`; the Warlord script grep puts Fiery Fury
+  (`UnitCalcPre.CAS:832`) and Sanctify (`:1246`) in `b`, at those line positions. Nothing needed
+  step 4. Scopes come from the same evidence: `SCOPE_ALL` for the three Chaos Channels writes and
+  `undead`; `SCOPE_WARLORD` for `fieryFury:race` and `sanctify`; `SCOPE_MODERN` for
+  `destiny:race`; `SCOPE_COM_PLUS` for `mysticSurge:race` and `raiseDead`; `SCOPE_MOM` for
+  `blackChannels:race`; and a new `SCOPE_COM1_COM2` for `bloodLust`, because Warlord recasts the
+  spell as Frenzy and sets `EncBloodLust` only in `UnitCalc.CAS`, after the compiled block that
+  would have read it. **Provisional:** the two `b` entries are transcribed at their CAS lines and
+  the `a` entry is provisional with its whole region; all eight region-`c` identity entries are
+  named in `DEDUCED_POSITIONS` (`stats_manifests.js`) rather than inheriting region `c`'s
+  transcribed claim, because they head their region by convention and, in the DOS builds, their
+  order among themselves is inherited from the helper rather than from the address map.
+
+  **Six ids carry a `:race` qualifier** — `chaosChannels:fireBreath:race`,
+  `chaosChannels:armor:race`, `fieryFury:race`, `destiny:race`, `blackChannels:race`,
+  `mysticSurge:race` — because one engine block writes the realm and a stat, and the calculator
+  runs identity in a separate pre-pass, so `phase:id` has to separate two positions. This is
+  `base:zombies:toBlock`'s exception, not a return of M11's `identity:` prefix.
+
+  **Arithmetic, measured.** Full-digest comparison over **15,480** derivations
+  (`tools/derivation_equivalence.js`): **0** differences for deleting the helper and the second
+  rewrite. Splitting the merged scope moved **212** cases, every one of them a control the
+  calculator's own version gating (`abilityVersionGated`, `ui_abilities.js`) hides in that
+  version — Blood Lust and Mystic Surge under the two MoM builds, Black Channels under CoM 1,
+  CoM2 and Warlord — which is the inconsistency the merged step hid: the stat halves
+  `c:blackChannels` and `c:mysticSurge` already carried those scopes while the realm half ran
+  everywhere. Every differing case was checked against the gating table, with **0** unexplained.
+  Removing `normalizeCombatUnit`'s rewrite is separately shown inert: over **3,498** reachable
+  version × base-identity × up-to-three-control combinations, the derived `unitType` is already a
+  fixed point of the deleted helper, with **0** mismatches.
+
+  **The structural regression** (`tools/unit_checks/identity.js`, +465 assertions) is four
+  claims: no ordered identity conversion mentions `unitType` at all; every one of them declares
+  only `race`/`fantastic`; combat normalization writes no `unitType`; and no step in any
+  formula-bearing source declares a `unitType` write. Beside them, the projection is decoded by a
+  transcription of the token's grammar — not by re-running the projection — and asserted to agree
+  with the live identity across all five versions. Five mutations were run against a scratch copy
+  and all five were caught, including "the projection stops tracking the live fields", which the
+  decoder catches by name.
+
+  **The audit for remaining merged helpers** found no more of this class. The largest surviving
+  merged citations are `level` (13 spans, one `ApplyLevelBonus` block — [F95](./BACKLOG.md)),
+  `levelBonusDispatch` (a table dispatch) and `resolutionResistanceContext` /
+  `resolutionToBlockContext` (DOS resolution-time arithmetic; the resistance half has since
+  become ordered steps under [M10](#2026-08-20)). The two
+  remaining ordered compositions outside the phase-tagged records — `deriveUnitStats`'s ability
+  grant chain and `normalizeCombatUnit`'s normalization chain — compose ability grants, not stat
+  or identity writes, and each member already carries its own citation.
+
+  **Filed, not folded in:** [F103](./BACKLOG.md). The split made the DOS conversion order
+  readable, and it is the reverse of the address order — `unitcalc.c` runs Undead and Black
+  Channels *before* the Chaos Channels blocks in the MoM builds, and puts CC armor *after*
+  Undead in CoM 1, where the calculator has both the other way round. A MoM unit holding Black
+  Channels and Chaos Channels Fire Breath finishes fantastic Chaos in the engine and fantastic
+  Death here. Correcting it moves numbers in three versions, which is outside a row whose whole
+  claim is that arithmetic does not move.
+
+  **Checks:** `node tools/node_unit_checks.js` 14,006/14,006; `npm run provenance` 251 formulas,
+  251 verified, 0 UNVERIFIED (239 → 242 → 251 as the merged pair became eleven anchors);
+  `npm test` 114 passed.
+
+- **M15 — the engine rules the DOM layer was deciding are cited derivation-layer functions.**
+  `mergedAbilityValue` is now `mergeAbilityCalcValue` in `combat_abilities.js`, beside the ability
+  accessors it is the write-side counterpart of. The DOS record's shared special-value byte —
+  `DOS_SPECIAL_CONSUMERS`, `DOS_GAZE_KEYS`, `dosSpecialIsActive`, `dosSpecialAbilityValues` and
+  `dosGazeAbilityValues` — is in `combat_special_attacks.js` beside `gazeRealm`, which already
+  read the 103/104/105 contention back out of it. `ui_card.js`'s `dosSpecialValues` and
+  `dosReceivedValue` only marshal now: read a control, name a key, pass a value. Three new
+  VERIFIED anchors take the audit from 239 formulas to 242 — `abilityCalcKeyMerge` (the DOS
+  per-player provider maximum in `combat.c`, `AddtoAuraTable`'s higher-value merge in
+  `Units.RecalculateUnits.pas`, and a second grant of a record flag in `unitcalc.c`),
+  `dosSharedSpecialByte` (the touch riders' `-abs(Spec_Att_Attrib)` reads plus those maxima) and
+  `dosGazeTypeContention` (both kill loops). `tools/unit_checks/ability_inputs.js` adds 71
+  assertions to `node tools/node_unit_checks.js`; each was confirmed to fail against a mutated
+  rule before being kept. `SPEC.md`, *Stat derivation contract* now states the boundary.
+
+  **Premise, re-measured.** The counts were exact — 0 `PROVENANCE` anchors in `ui_*.js` against
+  66 / 30 / 11 / 4 — and `mergedAbilityValue` was exactly `ui_abilities.js:42-51`. Two spans had
+  drifted: `dosReceivedValue` was `ui_card.js:254-261` and `dosSpecialValues` `:270-305`, against
+  the row's `:254-260` and `:270-300`. Neither changes what the row claimed.
+
+  **Arithmetic unchanged, measured rather than assumed.** `mergeAbilityCalcValue`'s body is the
+  old one verbatim; the restructured `dosSpecialValues` was diffed against a transcription of the
+  pre-move body over **62,720** marshalled states — five versions × seven byte spellings
+  (including empty and non-numeric) × seven ranged types × four received-value sets × all 64 flag
+  combinations — with **0** differences.
+
+  **Not asserted, deliberately.** That two grants of one *boolean* do not stack has no observable
+  consequence: every consumer of a boolean is a flag test, so any truthy merge behaves alike.
+  That half of the rule stays a citation; what the checks assert is that either control alone
+  reaches the effect, which is what separates OR from AND.
+
+  **One membership left uncited.** Poison Touch's repeat count is modelled as a seventh consumer
+  of the shared byte, but the reconstruction names its loop bound separately (`Poison_Strength`)
+  and no evidence document gives that field's offset — only the roster's single `Gaze/Poison`
+  column ties them. The gap is stated beside the consumer list rather than folded into the
+  citation, which is [T8](./BACKLOG.md)'s class of work.
+
+- **F90 + M14 — the field moves are real and the precomputed pass is gone.** Run as one package,
+  which is how the sequencing conflict both rows recorded was settled: M14's position-aware gates
+  are what F90 was blocked on, and F90's field moves are what let M14 reduce the pass to identity.
+  M14 first, then F90, in one change.
+
+  **M14.** `buildSlotContext` computed every type-dependent modifier and gate once, before the walk,
+  from a `rangedType`/`thrownType` pair it advanced by hand through the chain's type writes. That
+  pair is gone. Every modifier is now written in the step that consumes it and reads
+  `u[c.rangedTypeField]` / `u[c.thrownTypeField]` at that step's own position; the slot gates
+  `rtb`, `ranged` and `rangedOrThrown` moved out of the per-slot `slots` object into
+  `slotGateAdmits` (`combat_abilities.js`), which resolves them against the record `addToSlot` is
+  writing to. The type-list tests the engines make are named once beside it —
+  `slotHasPhysicalRanged`, `slotHasMagicalRanged`, `slotHasThrown`, `slotHasBreath`,
+  `isNonMagicalRangedFieldSlot`, `isConventionalRangedSlot`, `isModernSecondarySlot`,
+  `isThrownFieldSlot`, `isLiveSlot` — so a step states the engine's condition rather than
+  re-deriving a type list. `buildSlotContext` went from **457 lines, 111 bindings and 22 `*Mod`
+  values to 159 lines, 44 bindings and none**, and returns slot identity plus the permanent-record
+  facts the engine's own gates read from `B`. The row's premise held on re-measurement: it said
+  461 lines, 112 bindings and 23 `*Mod` values, drift of four, one and one.
+
+  **F90.** `U.ranged := U.thrown; U.thrown := 0` (`Units.RecalculateUnits.pas:885-891`) and
+  `SETSTAT(U,SLightningBreath,1,GetStat(U,SThrown,1)+1)` / `SETSTAT(U,SThrown,1,0)`
+  (`CreateUnit.CAS:294-299`) are now moves between two fields of the modern record, not retypes in
+  place. Both free the Thrown field, so the `shadowThrown` accumulator is gone from
+  `STAT_DERIVATION_SLOTS`, and with it `focusOwner`, `skipFocusBranch`, `deferShadowStrike`,
+  `blazeOfGloryFillsSlot`, `blazeTransferRetypesSourceSlot` and the precomputed `secondaryHitKind`:
+  a modern channel's To Hit modifier is now fixed by which record field it is, because no slot
+  changes identity part-way through the walk. `d:shadowStrike:thrown` targets `isThrownFieldSlot`,
+  which is that same structural question read at `UnitCalc.CAS:1262`. Acceptance holds:
+  `focusMagic`+`shadowStrike` on Warlord melee 9 with `thrown 4` is `ranged 4 magic_s` +
+  `thrown 4`.
+
+  **Measured, per version.** The 15,480-case digest moves **12 cases**, in two classes and nothing
+  else. Eleven are `modernAttacks.<channel>.baseStrength: 4 -> 0` on the channel that now
+  *receives* a move (`com2_1.05.11` and `com2_warlord_1.5.12.7`), which is the move showing up as a
+  trace entry from editable zero instead of a type-only change on a slot that already held the
+  strength — what `SPEC.md`, *Traces* already requires of a channel-creating write. The twelfth is
+  a correction: **CoM 1, missile ranged with Lionheart and Focus Magic, `rtb` 7 → 10.** Lionheart
+  is com1:0x8F660 and Focus Magic com1:0x8F7E6 (`DOS reconstructed/unitcalc.c`), so the `+3` reads
+  a type that is still Missile; the precomputed pass showed it the converted type and suppressed
+  it. `mom_1.31` and `mom_cp_1.60.00` move nothing at all.
+
+  **Folded in, because the live read exposed it:** CoM 1's material block gates its *whole*
+  secondary half — strength, display bonus and threshold together — on
+  `if (!(ench_lo & UE_FOCUS_MAGIC))` at com1:0x8F095, a test of the enchantment flag rather than of
+  a type. The precomputed pass reproduced that by accident, reading the post-conversion type at a
+  block the chain places before the conversion; with the read live the gate has to be stated where
+  the engine makes it, and `R9-G1e CoM 1 Focus Magic suppresses the material shared-slot To-Hit
+  write` is what caught its absence.
+
+  **One thing the shared slot cannot read from the record.** The DOS-shaped `legacy` projection
+  keeps one secondary threshold where the modern record keeps three, so it has to know which attack
+  it will be carrying: Shadow Strike's grant creates a Thrown attack in region `d` while the ungated
+  Thrown thresholds are written back in `c`. That is an input fact, not a prediction of any step's
+  arithmetic, and it is the one place `secondaryHitTargets` consults `shadowStrikeActive`.
+
+  **Closed in passing:** [F100](./BACKLOG.md)(a). Its fixture — Warlord melee 1, `thrown 4`,
+  `lightningBlade`+`blazeOfGlory`+`lionheart` — now derives Lightning Breath 5 **and Thrown 3**,
+  the number the row said the engine gives, because Lightning Blade's move leaves `SThrown` free
+  for the transfer and the region-`e` clamp's slot test is a live read rather than
+  `channelKey === 'thrown'`. The row's other half — the ungated ranged arms of Weakness and Mind
+  Storm — is untouched and stays. [F101](./BACKLOG.md)'s premise was re-measured and still holds at
+  Thrown **14**.
+
+  New coverage: `focusMagicFollowsLionheartCoM` = **5.000** (missile 2 + Lionheart 3, retyped to
+  `magic_s` and so unstopped by Missile Immunity; reading the converted type at Lionheart's
+  position leaves the branch minimum 3, and without Focus Magic the missile is stopped for 0) and
+  `shadowStrikeFillsThrownFocusMagicVacatedWarlord` = **13.000** (melee 9 plus the grant's own
+  thrown 4, against 17.000 where the grant lands on an unvacated 4 and 9.000 with no grant).
+  `node tools/node_unit_checks.js` 13303/13303, `npm run provenance` 239/239 verified, `npm test`
+  114/114 including all 987 preset expectations, and `node tools/preset_vacuity_sweep.js` reports
+  neither new preset.
+
 - **F99 — the distance penalty reads the finished ranged type.** `distancePenaltyFor`
   (`stats.js:1801-1808`) decided both whether a ranged distance penalty applies and which curve to
   use from `context.rangedType`, the value the precomputed pass leaves after `c:focusMagic`. It
@@ -57,7 +353,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   the output contract's `rangedGetsWpn` is still the pre-sequence const where `thrownGetsWpn` is
   recomputed from `finalThrownType`, but `GetsWpn` occurs on 10 lines of `stats.js` and nowhere else
   in the repository, so neither field is read and no reading of them is observable. Settling that
-  pair belongs to [M14](./BACKLOG.md), which removes the pass they escape from.
+  pair belongs to [M14](#2026-08-20), which removes the pass they escape from.
 
 - **F96 — the region-`e` aura ranged gates are the strength tests the engine makes, on the record
   it reads.** Five aura-pass writes gate a ranged bonus and only one tests a type: Holy Bonus
@@ -105,7 +401,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   created channel is now 5 with neither permanent-record aura in its trace. Nothing was folded in.
   E40's own `Ismagicalranged(U.rangedtype)` eligibility read stays stale deliberately: making it
   live would feed the calculator's Blaze ranged-type stand-in into a gate the engine resolves from
-  a record it never clears, which is [M14](./BACKLOG.md)'s to settle.
+  a record it never clears, which is [M14](#2026-08-20)'s to settle.
 
 - **F102 — the equivalence digest was blind to every enchantment.** `deriveUnitStats` reads
   abilities and enchantments from one `input.abilities` map, because `abilityUiDefs()`
@@ -375,7 +671,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   other four versions. The transitional `shadowThrown` slot stays: the calculator models Focus
   Magic's `U.ranged := U.thrown; U.thrown := 0` as an identity flip in place, so the record's
   Thrown field is not free for the grant, and making that move real needs position-aware slot
-  gates — filed as [F90](./BACKLOG.md), which M12 did not lift. New coverage:
+  gates — filed as [F90](#2026-08-20), which M12 did not lift. New coverage:
   `shadowStrikeGrantPrecedesNoBlazingMarchWarlord` 17.000, plus the two-channel acceptance case
   (`thrown 10` on F81's fixture) and the level/weapon exclusions in
   `tools/unit_checks/warlord_abilities.js`.

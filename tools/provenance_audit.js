@@ -66,6 +66,7 @@ const directFormulaPattern = /STAT-FORMULA\[([^\]]+)\]/g;
 const stableSpanPrefixLength = 24;
 const sourceSnapshotCache = new Map();
 const directFunctionIds = new Map([
+  ['mergeAbilityCalcValue', 'abilityCalcKeyMerge'],
   ['clampPct', 'clampPct'],
   ['woundedTopFigHP', 'woundedTopFigureHp'],
   ['getLevelBonuses', 'levelBonusDispatch'],
@@ -76,16 +77,12 @@ const directFunctionIds = new Map([
   ['blazingEyesDoomGazeForUnit', 'blazingEyesDoomGaze'],
   ['misleadActiveForUnit', 'misleadEligibility'],
   ['destinyActiveForUnit', 'destinyEligibility'],
-  ['determineEffectiveUnitType', 'legacyUnitTypeConversions'],
   ['deriveMarionettePackage', 'marionettePackage'],
   ['supernaturalMinDamageForHits', 'supernaturalMinimumDamage'],
   ['distancePenalty', 'distancePenalty'],
   ['applyRage', 'rageEffectiveAttack'],
-  ['weaponImmunityDef', 'weaponImmunityEffectiveDefense'],
-  ['missileImmunityDef', 'missileImmunityEffectiveDefense'],
-  ['fireImmunityDef', 'fireImmunityEffectiveDefense'],
-  ['righteousnessDef', 'righteousnessEffectiveDefense'],
-  ['magicImmunityDef', 'magicImmunityEffectiveDefense'],
+  ['dosGazeAbilityValues', 'dosGazeTypeContention'],
+  ['dosSpecialAbilityValues', 'dosSharedSpecialByte'],
   ['immolationStr', 'immolationStrength'],
   ['wallOfFireStr', 'wallOfFireStrength'],
   ['applyDamageSpellAmplifier', 'applyDamageSpellAmplifier'],

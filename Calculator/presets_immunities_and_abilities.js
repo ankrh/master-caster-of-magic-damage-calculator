@@ -752,6 +752,15 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
+  focusMagicFollowsLionheartCoM: {
+    desc: 'Ordered Focus Magic (CoM 1): Lionheart is com1:0x8F660 and Focus Magic com1:0x8F7E6, so the +3 reads the still-Missile type and lands — missile 2 + 3 = 5 — and the later conversion retypes that 5 to magic_s, which Missile Immunity does not stop: 5.0. Reading the converted type at Lionheart\'s position would leave 2, raised to the branch minimum of 3; without Focus Magic the missile 5 is stopped outright for 0.',
+    version: V_COM,
+    a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10,
+      abilities: { lionheart: true, focusMagic: true } },
+    b: { hp:10, abilities: { missileImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
   focusMagicGrantsRangedCoM2: {
     desc: 'Focus Magic (CoM2): no qualifying attack grants strength-3 magic_s ranged; at base 30% To Hit that averages 0.9 dmg',
     version: V_COM2,

@@ -11,7 +11,7 @@ function readAbilitiesFromDOM(prefix) {
     const val = getAbilityControlValue(prefix, abil);
     if (val === undefined) continue;
     const calcKey = abil.calcKey || abil.key;
-    result[calcKey] = mergedAbilityValue(abil, result[calcKey], val);
+    result[calcKey] = mergeAbilityCalcValue(abil, result[calcKey], val);
   }
   return result;
 }
@@ -164,40 +164,13 @@ function buildModernSpecialCard(prefix) {
   }
 }
 // --- DOS shared special-value block ---
-
-// The DOS record carries one `Spec_Att_Attrib` byte (+0x15) and every consumer below reads
-// it: the touch riders as a save modifier (the code negates it at the read site), Poison
-// Touch as a repeat count, Holy Bonus and Resistance to All as a magnitude. So the block is
-// one number plus flags, not a number each. The third element is the sign the consumer's
-// existing ability control expects, which is how the rosters have always stored it.
-//
-// The gazes read the same byte but are selected by `ranged_type` (103/104/105), not by a
-// flag, so they get no control here — the shared strength/type slot above already selects
-// them. Holy Bonus and Resistance to All are this unit's *provided* value; the received
-// side stays in the enchantment section and the two max together in `mergedAbilityValue`.
-const DOS_SPECIAL_CONSUMERS = [
-  ['stoningTouch', 'Stoning Touch', -1],
-  ['deathTouch', 'Death Touch', -1],
-  ['lifeSteal', 'Life Steal', -1],
-  ['poison', 'Poison Touch', 1],
-  ['holyBonus', 'Holy bonus', 1],
-  ['resistanceToAll', 'Res. to all', 1],
-];
-
-// Dispel Evil, CoM 1 Exorcise, and Destruction dispatch alongside the touch riders but their
-// modifiers are literals in the DOS code — -4, -3, and 0 — so they never read the byte. They
-// therefore stay ordinary ability rows rather than joining the card block, which is reserved
-// for the byte's consumers.
-
-// Consumers the shared slot's type selects rather than a flag, so they get no DOS control.
-const DOS_GAZE_KEYS = ['stoningGaze', 'deathGaze', 'doomGaze'];
+// The record model this block renders — which effects consume the shared `Spec_Att_Attrib`
+// byte, with what sign, and how `ranged_type` selects the gazes — lives in
+// `combat_special_attacks.js` beside the effects it governs, with its citations. This file
+// builds the controls and marshals their state into it.
 
 function dosSpecialDef(key) {
   return ABILITY_DEFS.find(a => a.key === key);
-}
-
-function dosSpecialIsActive(version) {
-  return !version.startsWith('com2');
 }
 
 // Card -> ability controls. Each ticked consumer takes the shared magnitude with its own
@@ -248,60 +221,52 @@ function syncDosSpecialCard(prefix, byte) {
   magEl.value = magnitude === null ? 0 : magnitude;
 }
 
-// Highest value the enchantment section supplies for a calc key. Holy Bonus and Resistance to
-// All are the two that matter: the block above is what this unit *provides*, this is what it
-// *receives*, and the engine takes the winner once rather than stacking them.
+// What the enchantment section supplies for a calc key. The block above is what this unit
+// *provides*, this is what it *receives*; which controls count is a UI fact, and how the two
+// combine is `mergeAbilityCalcValue`'s cited rule.
 function dosReceivedValue(prefix, calcKey) {
   let out;
   for (const def of abilityUiDefs()) {
     if (def.source !== 'enchantment' || def.calcKey !== calcKey) continue;
-    out = mergedAbilityValue(def, out, getAbilityControlValue(prefix, def));
+    out = mergeAbilityCalcValue(def, out, getAbilityControlValue(prefix, def));
   }
   return out;
 }
 
-// The DOS read side. Consumer values are derived from the one byte and its flags rather than
-// from the per-effect ability controls, so the record's contention holds however the state was
-// reached — roster, preset, share link or hand edit. The DOS rosters no longer carry a
-// per-effect magnitude at all; the ability controls survive only as the presets' and share
-// links' way of naming these values, and the card overwrites them on load.
+// The DOS read side, marshalled only: control state in, `dosSpecialAbilityValues` decides.
+// Consumer values come from the one byte and its flags rather than from the per-effect ability
+// controls, so the record's contention holds however the state was reached — roster, preset,
+// share link or hand edit. The DOS rosters no longer carry a per-effect magnitude at all; the
+// ability controls survive only as the presets' and share links' way of naming these values,
+// and the card overwrites them on load.
 // `withReceived` is false on the matrix path, where the received side comes from matrix state
 // and is overlaid after this, not from the enchantment controls.
+// Dispel Evil, CoM 1 Exorcise, and Destruction are deliberately absent from the consumer list:
+// their modifiers are literals, so they stay ordinary ability rows that
+// `readAbilitiesFromDOM` supplies.
 function dosSpecialValues(prefix, withReceived = true) {
-  if (!dosSpecialIsActive(document.getElementById('gameVersion').value)) return {};
+  const version = document.getElementById('gameVersion').value;
+  if (!dosSpecialIsActive(version)) return {};
   const magEl = document.getElementById(prefix + 'DosSpecial');
   if (!magEl) return {};
-  const magnitude = Math.abs(parseInt(magEl.value, 10) || 0);
-  const out = {};
+  const consumers = [];
   for (const [key, , sign] of DOS_SPECIAL_CONSUMERS) {
     const def = dosSpecialDef(key);
     const chk = document.getElementById(prefix + 'DosFlag_' + key);
     if (!def || !chk) continue;
-    const calcKey = def.calcKey || def.key;
-    if (def.type === 'numcheck') {
-      out[calcKey] = chk.checked ? sign * magnitude : null;
-    } else {
-      // Numeric consumers max against whatever the enchantment section grants.
-      out[calcKey] = mergedAbilityValue(def,
-        withReceived ? dosReceivedValue(prefix, calcKey) : undefined,
-        chk.checked ? sign * magnitude : 0);
-    }
+    consumers.push({
+      def,
+      sign,
+      checked: chk.checked,
+      received: withReceived ? dosReceivedValue(prefix, def.calcKey || def.key) : undefined,
+    });
   }
-  // The gazes read the same byte, but the shared slot's type selects them rather than a flag:
-  // 103 runs the stoning kill loop, 105 the death loop, and 104 runs both — which is why a
-  // unit with two gazes is necessarily 104, and why the two share one modifier. Selecting a
-  // non-gaze type therefore removes the gaze outright; the record cannot hold both.
-  const gazeType = (document.getElementById(prefix + 'RtbType') || {}).value;
-  const stoning = gazeType === 'gaze_stoning' || gazeType === 'gaze_multiple';
-  const death = gazeType === 'gaze_death' || gazeType === 'gaze_multiple';
-  out.stoningGaze = stoning ? -magnitude : null;
-  out.deathGaze = death ? -magnitude : null;
-  // Doom damage is the shared *strength* slot, not the byte — `deriveUnitStats` reads it from
-  // there for type 104 — so the ability value contributes nothing in the DOS versions.
-  out.doomGaze = 0;
-  // Dispel Evil, CoM 1 Exorcise, and Destruction are deliberately absent: their modifiers are
-  // literals, so they stay ordinary ability rows and `readAbilitiesFromDOM` supplies them.
-  return out;
+  return dosSpecialAbilityValues({
+    version,
+    magnitude: parseInt(magEl.value, 10) || 0,
+    rangedType: (document.getElementById(prefix + 'RtbType') || {}).value,
+    consumers,
+  });
 }
 
 // Mirror of updateModernSpecialDuplicates: in the DOS versions these values are on the card,

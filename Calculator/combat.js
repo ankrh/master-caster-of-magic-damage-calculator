@@ -134,7 +134,7 @@ function resolveCombat(a, b, opts) {
     aResStoning,
     bResPoison,
     aResPoison,
-  } = buildResistanceContext(a, b, ver, isCoM);
+  } = buildResistanceContext(a, b, ver);
 
   // Cause Fear: reduces opponent's effective melee + touch-attack figures.
   // Fires before the melee exchange. MoM has no resistance modifier; CoM/CoM2 is -3.

@@ -39,17 +39,6 @@ function abilityValueIsActive(abil, val) {
   return (val || 0) !== 0;
 }
 
-function mergedAbilityValue(abil, currentValue, nextValue) {
-  if (abil.type === 'bool') return !!currentValue || !!nextValue;
-  if (abil.type === 'select') {
-    const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
-    return nextValue !== defaultValue ? nextValue : (currentValue === undefined ? defaultValue : currentValue);
-  }
-  if (abil.type === 'numcheck') return nextValue != null ? nextValue : (currentValue === undefined ? null : currentValue);
-  if (abil.signed) return nextValue || 0;
-  return Math.max(currentValue === undefined ? 0 : currentValue, nextValue || 0);
-}
-
 function abilityDisplayLabel(abil) {
   return abil.label;
 }

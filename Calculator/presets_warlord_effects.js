@@ -575,6 +575,14 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 17.000 },
   },
+  shadowStrikeFillsThrownFocusMagicVacatedWarlord: {
+    desc: 'Focus Magic moves the Thrown field rather than retyping it (Units.RecalculateUnits.pas:885-891), so `SThrown` stands empty when Shadow Strike reaches `UnitCalc.CAS:1262` and the grant is the whole of it. Melee 9, thrown 4: the 4 leaves for the Ranged field, the grant makes thrown 1+floor(9/3)=4, and melee mode fires melee plus thrown for 9 + 4 = 13.0. Without Focus Magic the grant lands on the untouched 4 for 9 + 8 = 17.0; without Shadow Strike the vacated field stays empty for 9.0.',
+    version: V_WARLORD,
+    a: { atk:9, rtbType:'thrown', rtb:4, toHitMod:70, toHitRtbMod:70, hp:10,
+      abilities: { focusMagic: true, shadowStrike: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 13.000 },
+  },
   shadowStrikeDoublePoisonWarlord: {
     desc: 'Shadow Strike (Warlord): the granted thrown is a separate phase, so Poison fires on both thrown and melee. Melee 9 grants thrown 4, both 100% hit vs def 0 → 13 physical; Poison 3 vs res 5 (CoM2 fail = (11−5)/10 = 0.6) → 1.8 per phase × 2 = 3.6, total 16.6 (without Shadow Strike, melee 9 + single poison 1.8 = 10.8)',
     version: V_WARLORD,

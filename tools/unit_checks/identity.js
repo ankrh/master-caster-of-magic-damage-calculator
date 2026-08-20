@@ -3,9 +3,111 @@
 
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+const { calculatorFiles } = require('../provenance_audit');
+const { repoRoot } = require('../calculator_sources');
 const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
 
+function calculatorSource(file) {
+  return fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8');
+}
+
+// The `fantastic_<realm>` / `normal_<realm>` / `hero` grammar, transcribed from the token's own
+// consumers rather than from the projection that builds it, so this decodes the token
+// independently of the function under test.
+const TOKEN_REALM_RACES = Object.freeze({
+  life: 'Life', death: 'Death', chaos: 'Chaos', nature: 'Nature',
+  sorcery: 'Sorcery', arcane: 'Arcane', unaligned: 'No Heal',
+});
+const TOKEN_RACES = Object.freeze(Object.values(TOKEN_REALM_RACES));
+
+function unitTypeTokenAgreesWithIdentity(token, identity) {
+  if (token === 'hero') return !!identity.isHero && !identity.fantastic;
+  if (token.startsWith('fantastic_')) {
+    if (!identity.fantastic) return false;
+    const realm = token.slice('fantastic_'.length);
+    if (TOKEN_REALM_RACES[realm] === identity.race) return true;
+    // `fantastic_arcane` is also the token for a fantastic unit whose race names no realm.
+    return realm === 'arcane' && !TOKEN_RACES.includes(identity.race);
+  }
+  if (token.startsWith('normal_')) {
+    return !identity.fantastic
+      && TOKEN_REALM_RACES[token.slice('normal_'.length)] === identity.race;
+  }
+  return token === 'normal' && !identity.fantastic && !TOKEN_RACES.includes(identity.race);
+}
+
+// M7: the ordered identity conversions write the live `race`/`fantastic` fields, and the compact
+// `unitType` token is projected from those fields after the sequence. These are the structural
+// bounds that stop an effect rule from drifting back onto the compatibility projection — a
+// conversion that read or wrote the token would fuse realm and Fantastic again, which is what
+// forced Sanctify's realm-less `hero` special case before the split.
+function runIdentityProjectionChecks(ctx) {
+  const identitySource = calculatorSource('Calculator/stats_identity.js');
+  const conversionsStart = identitySource.indexOf('function applyOrderedIdentityConversions(');
+  assert(conversionsStart >= 0, 'The ordered identity conversions are found in stats_identity.js');
+  const conversionsEnd = identitySource.indexOf('\nfunction ', conversionsStart + 1);
+  const conversions = identitySource.slice(conversionsStart,
+    conversionsEnd === -1 ? identitySource.length : conversionsEnd);
+  assert(!/unitType/.test(conversions),
+    'No ordered identity conversion reads or writes the compact unitType token');
+  const declaredWrites = [...conversions.matchAll(/writes:\s*\[([^\]]*)\]/g)]
+    .map(match => match[1].split(',').map(value => value.trim().replace(/^'|'$/g, ''))
+      .filter(Boolean));
+  assert(declaredWrites.length >= 11,
+    'The identity pre-pass is a list of individually declared steps, not one merged write');
+  for (const writes of declaredWrites) {
+    assertEqual(writes.filter(field => field !== 'race' && field !== 'fantastic').join(','), '',
+      'Every ordered identity conversion writes only the live race and Fantastic fields');
+  }
+
+  const phasesSource = calculatorSource('Calculator/combat_phases.js');
+  const normalizeStart = phasesSource.indexOf('function normalizeCombatUnit(');
+  assert(normalizeStart >= 0, 'normalizeCombatUnit is found in combat_phases.js');
+  const normalize = phasesSource.slice(normalizeStart,
+    phasesSource.indexOf('\nfunction ', normalizeStart + 1));
+  assert(!/unitType\s*:/.test(normalize),
+    'Combat normalization no longer rewrites the unit type a derivation already projected');
+
+  for (const file of calculatorFiles) {
+    const text = calculatorSource(file);
+    for (const match of text.matchAll(/writes:\s*\[([^\]]*)\]/g)) {
+      assert(!/'unitType'/.test(match[1]),
+        `${file} declares no step that writes the compact unitType token`);
+    }
+  }
+
+  // The projection itself, decoded by the grammar above rather than re-run: no derivation may
+  // report a token whose realm or Fantastic value its live identity does not carry.
+  const conversionControls = ['ccFireBreath', 'fieryFury', 'sanctify', 'clergy', 'destiny',
+    'ccFlight', 'ccDefense', 'bloodLust', 'blackChannels', 'undead', 'animated', 'mysticSurge',
+    'raiseDead'];
+  const identityShapes = [
+    { isHero: false, baseRace: 'High Men', baseFantastic: false },
+    { isHero: true, baseRace: 'High Men', baseFantastic: false },
+    { isHero: false, baseRace: 'Chaos', baseFantastic: true },
+    { isHero: false, baseRace: '', baseFantastic: false },
+  ];
+  for (const version of evalInContext(ctx, 'ENGINE_VERSIONS')) {
+    for (const shape of identityShapes) {
+      for (const control of ['none', ...conversionControls]) {
+        const result = ctx.deriveUnitStats(baseUnitInput({
+          version,
+          identity: ctx.createCustomUnitIdentity(version, shape),
+          abilities: control === 'none' ? {} : { [control]: true },
+        }));
+        assert(unitTypeTokenAgreesWithIdentity(result.unitType, result.identity),
+          `${version}/${control}: the projected unit type agrees with the live identity `
+          + `(${result.unitType} vs race ${JSON.stringify(result.identity.race)}, `
+          + `fantastic ${result.identity.fantastic})`);
+      }
+    }
+  }
+}
+
 function runIdentityChecks(ctx) {
+  runIdentityProjectionChecks(ctx);
   const rosterSets = [
     ['mom_1.31', evalInContext(ctx, 'MOM_UNITS_DATA')],
     ['com_6.08', evalInContext(ctx, 'COM_UNITS_DATA')],

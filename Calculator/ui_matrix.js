@@ -217,7 +217,7 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     const val = getAbilityControlValue(prefix, abil);
     if (val === undefined) continue;
     const calcKey = abil.calcKey || abil.key;
-    abilities[calcKey] = mergedAbilityValue(abil, abilities[calcKey], val);
+    abilities[calcKey] = mergeAbilityCalcValue(abil, abilities[calcKey], val);
   }
   // The DOS block replaces the ability-row values for its consumers, same as on the main path.
   Object.assign(abilities, dosSpecialValues(prefix, false));

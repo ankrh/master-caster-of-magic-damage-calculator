@@ -177,7 +177,11 @@ versions that lack it.
 ## Stat derivation contract
 
 `deriveUnitStats(input)` is the single place raw inputs become effective combat stats.
-Callers must not recompute effective stats themselves.
+Callers must not recompute effective stats themselves, and must not decide values the engine
+decides on the way in. The `ui_*.js` layer reads a control, names a calc key and passes a value;
+the rules that turn several controls into one input — how sources of one effect combine, and the
+DOS record's shared special-value byte — are derivation-layer functions with `PROVENANCE`
+citations and Node coverage.
 
 ### Identity
 
@@ -192,6 +196,12 @@ booleans**. Display names are never engine predicates. Identity writes are versi
 no-op identity writes are omitted from the trace, and the rest are seeded into the same ordered
 trace as the affected calculated outputs, while source and base identity fields remain
 controls/metadata.
+
+**Every identity conversion is one atomic step writing `race`/`fantastic`, and the compact
+`unitType` token is a read-only compatibility projection.** No conversion reads it, no step writes
+it, and nothing downstream rewrites it: a rule that consulted the token would fuse realm and
+Fantastic back into one string and lose distinctions the engine keeps — a hero with a realm is the
+case the token cannot express.
 
 The card exposes `Hero`, `Fantastic`, and `Base race / realm` as independent editable custom-unit
 controls; no combined user-facing `unitType` control is authoritative. The version-gated `Special
@@ -242,10 +252,15 @@ version nor the region belongs in the id: one enchantment writing in two regions
 `c:weakness` and `d:weakness`, and one writing in different regions of different engines is
 `b:trueLight` and `c:trueLight`. A step's `writes` already names the fields it reaches, so the
 field does not belong there either — a melee bonus and the attack-strength bonus of the same
-engine write are one step, not two. The one surviving qualifier marks an enchantment writing at
-two **non-adjacent** positions inside one region, which `phase:id` cannot otherwise express
-(`base:zombies` and `base:zombies:toBlock`). Sequence composition, the chains and the scope table
-all key on `phase:id` alike, so two writes of one effect stay distinct without a qualifier.
+engine write are one step, not two. The one surviving qualifier marks an effect making **two
+separately cited engine writes** that `phase:id` cannot otherwise tell apart: two non-adjacent
+positions inside one region (`base:zombies` beside `base:zombies:toBlock`); the six `:race`
+identity conversions whose engine block also writes a stat, since the identity pre-pass and the
+stat sequence are two positions (`c:mysticSurge` beside `c:mysticSurge:race`); and the two effects
+whose stat block and To-Hit block carry citations of their own (`c:weapon` beside `c:weapon:toHit`,
+`c:heavenlyLight` beside `c:heavenlyLight:toHit`). Sequence composition, the chains and the
+scope table all key on `phase:id` alike, so two writes of one effect stay distinct without a
+qualifier.
 
 A bonus normally never conjures an attack slot the unit does not have, so an ability step skips a
 write to a dead slot. Source-backed exceptions exist; each is marked at its step rather than
@@ -297,7 +312,9 @@ authored in non-decreasing phase order, so an entry filed under the wrong region
 chain out of order. Its **provisional** flag says whether the position is transcribed or inherited:
 regions `b`, `c` and `d` come from the compiled address map and the CAS files and are transcribed;
 `base`, `a` and `e` are inherited from the order the steps were authored in, and stay provisional
-until sourced.
+until sourced. Named entries inside a transcribed region can still be deduced — the region-`c`
+identity conversions head their region by convention rather than at their blocks' addresses — and
+each is listed as such rather than inheriting the region's claim.
 
 Each version's chain is written out in full, including the parts two versions currently share. A
 chain is what one engine does, and reading it should not mean assembling it from fragments.
@@ -307,8 +324,9 @@ conversions — so an identity write is accounted for exactly once too. Ranks ar
 within one sequence: the identity pre-pass runs before the stat sequence, so a late-ranked identity
 write can still execute early.
 
-The `attackSpecific` lists stay outside the chain. They are a separate compiled routine pair run on
-a scratch copy and keyed by an incoming attack, not writes the recalculation makes.
+The `attackSpecific` lists stay outside the chain. Each transcribes a separate compiled routine
+run on a scratch copy and keyed by an incoming attack, not a write the recalculation makes, and
+list order is what orders it.
 
 To-Hit and To-Defend writes use this same ordered record. Where a version keeps one common Hit
 field plus per-channel modifiers, region `e` first clamps the common value, then adjusts each
@@ -325,11 +343,16 @@ random-threshold comparison naturally makes values at or below zero a 0% chance 
 covering every phase plus the separate `attackSpecific` lists. Two step objects may share an id
 when two engines make the same effect from different regions, which is why the key carries the
 phase. A scope always names its exact member versions; a family label such as "DOS" or "modern" is
-not a scope. The To-Hit/To-Block ledger re-emits stat events as `chance:`-prefixed projections; a
-projection is the same write seen through another output, so it carries the key of the write it
-projects as `projectionOf` rather than a second copy of its scope. That marker is stated, never
-inferred from the id: `c:chance:weapon` is a real engine write with a row of its own, and reading
-the prefix could not tell the two apart.
+not a scope.
+
+**`chance:` is the To-Hit/To-Block ledger's namespace and nothing else's.** Every step in that
+ledger carries it and no step of a derivation sequence does, so the two id spaces are disjoint and
+one `phase:id` key never names both a real write and a projection of that write. The ledger holds
+one projection per stat event, plus the three resolution-time writes native to it. A projection is
+the same write seen through another output, so it carries the key of the write it projects as
+`projectionOf` rather than a second copy of its scope. That marker is stated, never inferred from
+the prefix: a ledger step that projects nothing — `attackSpecific:chance:distancePenalty` — has a
+scope row of its own, and the id cannot tell the two apart.
 
 Scope is an upper bound on applicability, not a firing condition: inside its scope a step still
 asks `when` whether this unit and state fire it, and outside its scope the engine has no such write.
@@ -340,10 +363,11 @@ step entering a sequence must resolve a scope — there is no default, so an unc
 at the filter. And no composed sequence contains an out-of-scope step in any version, which
 `tools/unit_checks/version_scope.js` asserts across all four sequences at once.
 
-Scope also hides at call sites, where no per-step predicate can see it: the attack-specific step
-lists carry no version test and are modern-only solely because their callers reach them from a
-modern branch alone. Those callers therefore assert their own list's scope against the passed
-version under the debug switch.
+Scope also hides at call sites, where no per-step predicate can see it: no step in the
+attack-specific lists carries a version test. The modern pair is modern-only solely because its
+callers reach it from a modern branch alone, and each DOS list is its own engine's transcription
+selected by version rather than gated. Those callers therefore assert their own list's scope
+against the passed version under the debug switch.
 
 The canonical scope is the authority. The three mechanisms that used to carry the fact between them
 keep narrower jobs: a `when` predicate gates firing within scope; a `subgroup` on an ability or
@@ -377,23 +401,35 @@ their source, and channel-creating writes still begin at editable zero strength.
 
 ### Attack-specific sequences
 
-CoM2 and Warlord run two further ordered transforms for each incoming attack — one keyed by the
+Every engine runs two further ordered transforms for each incoming attack — one keyed by the
 attack's realm, one by the incoming attack flags. They use the same step type and runner as
 derivation, but operate on a **scratch copy** of the finished unit record and discard it
 afterwards. They therefore cannot change the displayed Defense or Resistance, or leak a modifier
-into a later attack. The DOS engines reach the same stage as inline arithmetic rather than ordered
-steps; converting them is [M10](./BACKLOG.md).
+into a later attack. Each engine family transcribes its own routine pair, so the two stages differ
+only in which routine they transcribe: CoM2 and Warlord share one list per transform, while the
+DOS engines carry **one list per version**, because their three builds do not agree on the order
+or the content of every write.
 
 The orderings themselves are the step arrays. What the contract fixes is their consequences:
 
-- **Assignments deliberately precede additions** in the resistance transform, so a unit whose
-  resistance was assigned a ceiling can finish above it. One of those assignments is roll-only and
-  never changes the displayed stat, and it alone reaches realm-less rolls.
-- In the defense transform, **an early return on an unresisted Illusion halts the whole sequence**,
-  preventing every later bonus and immunity from applying.
+- **Assignments deliberately precede additions** in the modern resistance transform, so a unit
+  whose resistance was assigned a ceiling can finish above it. One of those assignments is
+  roll-only and never changes the displayed stat, and it alone reaches realm-less rolls.
+- **The DOS resistance transform adds where the modern one assigns.** Every write is an addition,
+  so a unit accumulates each applicable bonus and can finish above the value an assignment would
+  have capped it at. This is why it is a separate transcription rather than a version variant.
+- In the modern defense transform, **an early return on an unresisted Illusion halts the whole
+  sequence**, preventing every later bonus and immunity from applying. The DOS transform returns
+  at the same point.
 - **Armor Piercing halves the bonuses that precede it** and not those that follow; an immunity
   assignment afterwards discards that halved total; and a bonus after the immunities can stack on
   top of an immunity's replacement value.
+- **The DOS defense transform carries a marker rather than a number.** Every immunity it
+  recognises writes one of two markers, which terminal steps cash in after Armor Piercing: one
+  raises or adds the Weapon Immunity amount, the other replaces the total outright. The order in
+  which two markers are written therefore decides which survives, and MoM 1.31 writes them in the
+  opposite order to CP 1.60 and CoM 1 — which is the whole of the difference between reproducing
+  and not reproducing that build's Weapon-Immunity-overwrites-Missile-Immunity bug.
 - The DOS City Walls bonus is added *after* the complete defense-special result, so it is neither
   halved by Armor Piercing nor removed by an unresisted Illusion — the reverse of the modern order.
 
@@ -487,15 +523,13 @@ the calculator does instead, and why.
   but remain visible in the returned package metadata rather than being dropped.
 - **The modern record carries a fifth secondary-attack slot the engine does not have.** `Caster.exe`
   holds Ranged, Thrown, Fire Breath and Lightning Breath as named fields of one unit record, and the
-  calculator's modern record now carries those four and derives them in one walk. Beside them it
-  keeps the DOS engines' shared `.ranged` slot, because the card's legacy secondary value and the
-  DOS-shaped preset fixtures still read it. One deviation remains from the per-channel derivation
-  this replaced: a sixth `shadowThrown` accumulator, which exists only because Focus Magic's
-  `U.ranged := U.thrown` is modelled as an identity flip in place rather than the field move the
-  engine makes, leaving no free Thrown field for Shadow Strike's later grant; retiring it is
-  [F90](./BACKLOG.md). Lightning Blade's move out of the Thrown field is modelled the same way,
-  reusing that slot for the Breath instead of moving the field, so it leaves no free Thrown field
-  either and is retired with it. The DOS shared-slot shape is faithful and stays.
+  calculator's modern record carries those four and derives them in one walk. Beside them it keeps
+  the DOS engines' shared `.ranged` slot, because the card's legacy secondary value and the
+  DOS-shaped preset fixtures still read it. That shared-slot shape is faithful to the DOS engines
+  and stays. Nothing else is added: Focus Magic's `U.ranged := U.thrown` and Lightning Blade's
+  `SLightningBreath := SThrown + 1` are field moves between two of the four, as the engine makes
+  them, so the Thrown field they empty is free for Shadow Strike's later grant without a sixth
+  accumulator.
 - **A conventional Ranged field emptied by Blaze of Glory is retired by clearing its type.** The
   engine retires it with `SETSTAT(U,SAmmo,0,0)` beside the transfer (`UnitCalc.CAS:1502`), and the
   calculator models no ammunition, so the positioned transfer clears the ranged type instead. Two
@@ -681,6 +715,5 @@ The descriptions below are canonical. Accepted decisions are summarized in
 - Destruction is modelled only for CoM2/Warlord; the older-engine hero path remains absent (**M3**).
 - Heroes use normal-unit level controls rather than the DOS eight-threshold and modern nine-step
   hero ladders and their level-scaled template abilities (**F41**).
-- The DOS attack-specific stage is inline arithmetic rather than ordered steps (**M10**).
 - Ammunition is omitted because one engagement has no multi-turn shot budget.
 - Regeneration is omitted because it is between-turn healing.

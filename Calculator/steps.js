@@ -26,11 +26,11 @@ const HALT = Object.freeze({ halt: true });
 //   d         magic calc, in UnitCalc.CAS      (Warlord only)
 //   e         the binary's post-hook tail: the final clamps, the aura pass, Supreme Light
 //
-// `attackSpecific` is not a sixth derivation phase. It tags steps in
-// GetEffectiveResistance / EffectiveDefense, which run on a disposable copy after
-// derivation and are keyed by an incoming attack. The stage itself exists in every
-// engine; only CoM2/Warlord model it as steps today — the DOS engines compute the
-// same values as inline arithmetic in buildResistanceContext / computeDefenseProfile.
+// `attackSpecific` is not a sixth derivation phase. It tags steps in the routines that run on
+// a disposable copy after derivation, keyed by an incoming attack: Caster.exe's
+// GetEffectiveResistance / EffectiveDefense, and the DOS engines' Combat_Effective_Resistance /
+// Battle_Unit_Defense_Special. Every engine models the stage as ordered steps; what differs is
+// the routine each list transcribes, and each list carries its own version scope below.
 //
 // Every other phase is an engine region. The two scaffolding phases the migration ran on —
 // `tail` (a post-total pass over finished stats) and `warpLate` (CoM 1's post-Warp tail) —
@@ -79,6 +79,8 @@ const SCOPE_MOM_MODERN = Object.freeze([
 ]);
 const SCOPE_COM1 = Object.freeze(['com_6.08']);
 const SCOPE_COM_PLUS = Object.freeze(['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7']);
+// CoM 1 and base CoM2 only: Warlord replaces the effect rather than omitting it.
+const SCOPE_COM1_COM2 = Object.freeze(['com_6.08', 'com2_1.05.11']);
 const SCOPE_MODERN = Object.freeze(['com2_1.05.11', 'com2_warlord_1.5.12.7']);
 const SCOPE_WARLORD = Object.freeze(['com2_warlord_1.5.12.7']);
 
@@ -90,10 +92,9 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:alumniOfAcademy:figures': SCOPE_WARLORD,
   'base:armorclad': SCOPE_WARLORD,
   'base:artificer': SCOPE_WARLORD,
-  'base:chance:baseBlock': SCOPE_ALL,
-  'base:chance:baseMelee': SCOPE_ALL,
-  'base:chance:baseRtb': SCOPE_ALL,
-  'base:chance:survivalInstinctToBlock': SCOPE_WARLORD,
+  'base:baseBlock': SCOPE_ALL,
+  'base:baseMelee': SCOPE_ALL,
+  'base:baseRtb': SCOPE_ALL,
   'base:dragonMound': SCOPE_WARLORD,
   'base:energyCannon': SCOPE_WARLORD,
   'base:constructCatapult': SCOPE_COM1,
@@ -116,6 +117,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:sanctaBasilica': SCOPE_WARLORD,
   'base:spiritLink': SCOPE_WARLORD,
   'base:stat:base': SCOPE_ALL,
+  'base:survivalInstinctToBlock': SCOPE_WARLORD,
   // --- a: precalc, in the binary ---
   'a:chaosChannels:fireBreath': SCOPE_ALL,
   'a:holyBonus': SCOPE_DOS,
@@ -123,25 +125,27 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'a:chosen': SCOPE_MODERN,
   'a:combatSummoned': SCOPE_MODERN,
   'a:constructCatapult': SCOPE_MODERN,
-  'a:legacyConversions': SCOPE_ALL,
+  'a:chaosChannels:fireBreath:race': SCOPE_ALL,
   'a:resistanceToAll': SCOPE_DOS,
   // --- b: precalc, in UnitCalcPre.CAS ---
   'b:battleArmor': SCOPE_WARLORD,
   'b:bombsGrenades': SCOPE_WARLORD,
   'b:nausea': SCOPE_WARLORD,
-  'b:chance:outlanderBallisticsTraining': SCOPE_WARLORD,
   'b:disheartenProphecy': SCOPE_WARLORD,
   'b:eternalNight:poorVision': SCOPE_WARLORD,
   'b:fieryFury': SCOPE_WARLORD,
   'b:goblinPox': SCOPE_WARLORD,
   'b:godsPlayDices': SCOPE_WARLORD,
   'b:greatUnbinding': SCOPE_WARLORD,
+  'b:fieryFury:race': SCOPE_WARLORD,
   'b:marionetteChanneler': SCOPE_WARLORD,
   'b:luckyStar': SCOPE_WARLORD,
   'b:magitekEngine': SCOPE_WARLORD,
   'b:marionette:stats': SCOPE_WARLORD,
   'b:marionette:strayedTransmute': SCOPE_WARLORD,
   'b:natureLink': SCOPE_WARLORD,
+  'b:sanctify': SCOPE_WARLORD,
+  'b:outlanderBallisticsTraining': SCOPE_WARLORD,
   'b:outlanderRadio': SCOPE_WARLORD,
   'b:outlanderXenopsychology': SCOPE_WARLORD,
   'b:outlanderXenoveterinary': SCOPE_WARLORD,
@@ -161,23 +165,22 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:badMoon': SCOPE_MODERN,
   'c:berserk': SCOPE_MOM,
   'c:blackChannels': SCOPE_MOM,
+  'c:blackChannels:race': SCOPE_MOM,
   'c:blackPrayer': SCOPE_ALL,
   'c:blazingMarch': SCOPE_COM_PLUS,
+  'c:bloodLust': SCOPE_COM1_COM2,
   'c:breakthrough:combatSummoned': SCOPE_MODERN,
   'c:breakthrough:noncorporeal': SCOPE_MODERN,
   'c:breakthrough:normal': SCOPE_MODERN,
-  'c:chance:heavenlyLight': SCOPE_MODERN,
-  'c:chance:holyWeapon:melee': SCOPE_ALL,
-  'c:chance:holyWeapon:rtb': SCOPE_ALL,
-  'c:vertigo': SCOPE_ALL,
-  'c:warpReality': SCOPE_ALL,
-  'c:chance:weapon': SCOPE_ALL,
   'c:chaosChannels:armor': SCOPE_ALL,
+  'c:chaosChannels:armor:race': SCOPE_ALL,
+  'c:chaosChannels:flight': SCOPE_ALL,
   'c:chaosSurge': SCOPE_ALL,
   'c:charmOfLife': SCOPE_ALL,
   'c:darkForce': SCOPE_MODERN,
   'c:darkness': SCOPE_ALL,
   'c:destiny': SCOPE_MODERN,
+  'c:destiny:race': SCOPE_MODERN,
   'c:discipline': SCOPE_MODERN,
   'c:divineBarrierAura': SCOPE_COM1,
   'c:endurance': SCOPE_COM_PLUS,
@@ -190,8 +193,10 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:guardian': SCOPE_COM_PLUS,
   'c:guidingBeaconAura': SCOPE_COM1,
   'c:heavenlyLight': SCOPE_MODERN,
+  'c:heavenlyLight:toHit': SCOPE_MODERN,
   'c:highPrayer': SCOPE_ALL,
   'c:holyArmor': SCOPE_ALL,
+  'c:holyWeapon': SCOPE_ALL,
   'c:innerPower': SCOPE_MODERN,
   'c:ironSkin': SCOPE_ALL,
   'c:landLinking': SCOPE_COM_PLUS,
@@ -201,12 +206,14 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:metalFires': SCOPE_MOM,
   'c:mindStorm': SCOPE_ALL,
   'c:mysticSurge': SCOPE_COM_PLUS,
+  'c:mysticSurge:race': SCOPE_COM_PLUS,
   'c:natureConjunction': SCOPE_MODERN,
   // Wider than PROVENANCE[nodeAura] (Caster.exe only): apply() carries an explicit `!isCoM2`
   // DOS branch for the same +2 package and the node-aura control exists in every version.
   'c:nodeAura': SCOPE_ALL,
   'c:orihalcon': SCOPE_COM_PLUS,
   'c:prayer': SCOPE_ALL,
+  'c:raiseDead': SCOPE_COM_PLUS,
   'c:realmWard': SCOPE_COM1,
   'c:reinforceMagic': SCOPE_MODERN,
   'c:shatter': SCOPE_ALL,
@@ -224,18 +231,22 @@ const STEP_VERSION_SCOPES = Object.freeze({
   // The DOS half of True Light. PROVENANCE[trueLight] cites only the Warlord CAS block, which
   // is the separate `b:trueLight` step; the MoM region-c block has no citation yet.
   'c:trueLight': SCOPE_MOM,
+  'c:undead': SCOPE_ALL,
   'c:warpAttack': SCOPE_ALL,
   'c:warpDefense': SCOPE_ALL,
   'c:warpResist': SCOPE_ALL,
+  'c:vertigo': SCOPE_ALL,
+  'c:warpReality': SCOPE_ALL,
   'c:weakness': SCOPE_ALL,
   'c:weapon': SCOPE_ALL,
+  'c:weapon:toHit': SCOPE_ALL,
   // --- d: magic calc, in UnitCalc.CAS ---
   'd:beatOfSwiftness': SCOPE_WARLORD,
   'd:blazeOfGlory': SCOPE_WARLORD,
   'd:berserkWarlord': SCOPE_WARLORD,
-  'd:chance:energyCannonThreshold': SCOPE_WARLORD,
+  'd:energyCannonThreshold': SCOPE_WARLORD,
   'd:hurricane': SCOPE_WARLORD,
-  'd:chance:trueSight:ranged': SCOPE_WARLORD,
+  'd:trueSight:ranged': SCOPE_WARLORD,
   'd:colossalStrength': SCOPE_WARLORD,
   'd:favoredTerrain': SCOPE_WARLORD,
   'd:flameBlade': SCOPE_WARLORD,
@@ -249,9 +260,9 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'd:vampirism:transfer': SCOPE_WARLORD,
   'd:weakness': SCOPE_WARLORD,
   // --- e: the binary's post-hook tail ---
-  'e:chance:legacyClamp': SCOPE_DOS,
-  'e:chance:modernClampCommon': SCOPE_MODERN,
   'e:clamp': SCOPE_ALL,
+  'e:legacyClamp': SCOPE_DOS,
+  'e:modernClampCommon': SCOPE_MODERN,
   'e:divineBarrierAura': SCOPE_MODERN,
   'e:guidingBeaconAura': SCOPE_MODERN,
   'e:holyBonus': SCOPE_MODERN,
@@ -280,18 +291,44 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'attackSpecific:effectiveResistance:magicImmunity': SCOPE_MODERN,
   'attackSpecific:effectiveResistance:resistElements': SCOPE_MODERN,
   'attackSpecific:effectiveResistance:resistMagic': SCOPE_MODERN,
+  'attackSpecific:dosEffectiveDefense:armorPiercing': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:base': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:bless': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:defenseSpecial': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:elemental': SCOPE_MOM,
+  'attackSpecific:dosEffectiveDefense:elementalArmor': SCOPE_COM1,
+  'attackSpecific:dosEffectiveDefense:illusion': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:immunityMask': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:largeShield': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:magicImmunity': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:resistElements': SCOPE_COM1,
+  // Wider than PROVENANCE[dosEffectiveDefense:righteousness] (the MoM builds only): CoM 1
+  // replaces the block with an 87-byte NOP field, but the calculator still admits the write on
+  // its magical-ranged, breath and spell-damage channels. That is F105, not a scope error.
+  'attackSpecific:dosEffectiveDefense:righteousness': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:weaponImmunityBonus': SCOPE_COM1,
+  'attackSpecific:dosEffectiveDefense:weaponImmunityFloor': SCOPE_MOM,
+  'attackSpecific:dosEffectiveDefense:weaponImmunityMark': SCOPE_DOS,
+  'attackSpecific:dosEffectiveResistance:base': SCOPE_DOS,
+  'attackSpecific:dosEffectiveResistance:bless': SCOPE_DOS,
+  'attackSpecific:dosEffectiveResistance:charmed': SCOPE_DOS,
+  'attackSpecific:dosEffectiveResistance:elemental': SCOPE_DOS,
+  'attackSpecific:dosEffectiveResistance:resistMagic': SCOPE_DOS,
 });
 
-// The To-Hit/To-Block ledger re-emits each stat event as a `chance:`-prefixed projection step
-// (`chance:${event.id}`, and `chance:trueLightIllusion` for True Light's Illusion malus). A
-// projection is the same engine write seen through another output, not a second write, so it
-// carries the key of the write it projects instead of a separately maintained entry — stated on
-// the step as `projectionOf`, never guessed from the id.
+// `chance:` is the To-Hit/To-Block ledger's namespace and nothing else's (M13): every step in
+// that ledger carries it and no step of the stat sequence does, so the two id spaces are
+// disjoint and one `phase:id` key names one step. The ledger holds the projection of each stat
+// event (`chance:${event.id}`, and `chance:trueLightIllusion` for True Light's Illusion malus)
+// plus the three resolution-time writes native to it.
 //
-// It has to be stated. Reading `chance:` off the front and stripping it cannot tell a projection
-// from a real `chance:` step (`c:chance:vertigo` is an engine write with a row of its own), so a
-// real one whose row was missing silently inherited the scope of the step it would have
-// projected — a coverage failure that reported itself as coverage.
+// A projection is the same engine write seen through another output, not a second write, so it
+// carries the key of the write it projects instead of a separately maintained entry — stated on
+// the step as `projectionOf`, never guessed from the id. The marker has to be what does the
+// inheriting: an id is presentation, and a ledger step that is *not* a projection
+// (`attackSpecific:chance:distancePenalty`) has a scope row of its own. Deriving inheritance
+// from the prefix instead would give such a step the scope of whatever it appeared to project —
+// a coverage failure that reports itself as coverage.
 //
 // `entry` is a step or a trace event: both carry `phase`, `id` and, for a projection,
 // `projectionOf`.
@@ -335,8 +372,9 @@ function filterStepsToVersionScope(steps, version) {
 
 // The membership check. Scope also hides at call sites — the six EFFECTIVE_RESISTANCE_STEPS
 // carry no predicate and are CoM2-only solely because the `startsWith('com2')` branch of
-// buildResistanceContext is the only path that reaches them — so membership has to be checkable
-// where steps enter a sequence, not only inside their predicates.
+// buildResistanceContext is the only path that reaches them, and the DOS lists are keyed by
+// version rather than gated — so membership has to be checkable where steps enter a sequence,
+// not only inside their predicates.
 // Returns the steps this version's engine does not contain, in sequence order.
 function sequenceVersionScopeViolations(steps, version) {
   const violations = [];
@@ -584,10 +622,6 @@ const STAT_ATTACK_CHANNELS = Object.freeze(['ranged', 'thrown', 'fireBreath', 'l
 // and both gaze strengths alike. The modern engines keep it too, as the card's legacy secondary
 // projection (`result.rtb`), which is why it is a slot here rather than a channel.
 //
-// `shadowThrown` is transitional: the engine's Focus Magic moves a unit's Thrown strength into
-// its Ranged field and zeroes Thrown (Units.RecalculateUnits.pas:885-891), leaving that field
-// free for Shadow Strike's later grant, but the calculator models the move as an identity flip
-// in place, so the two grants need separate accumulators. F90 retires it with the field move.
 // `extra` names the fields a slot owns beyond its strength and type pair: the DOS-shaped
 // `legacy` slot also stores its own secondary To Hit threshold, where the modern channels share
 // the record's three `hitchance<channel>` modifiers listed in `STAT_CHANNEL_FIELDS` below.
@@ -597,7 +631,6 @@ const STAT_DERIVATION_SLOTS = Object.freeze({
   thrown: Object.freeze({ channel: 'thrown', strength: 'rtbThrown', rangedType: 'rangedTypeThrown', thrownType: 'thrownTypeThrown' }),
   fireBreath: Object.freeze({ channel: 'fireBreath', strength: 'rtbFireBreath', rangedType: 'rangedTypeFireBreath', thrownType: 'thrownTypeFireBreath' }),
   lightningBreath: Object.freeze({ channel: 'lightningBreath', strength: 'rtbLightningBreath', rangedType: 'rangedTypeLightningBreath', thrownType: 'thrownTypeLightningBreath' }),
-  shadowThrown: Object.freeze({ channel: 'thrown', strength: 'rtbShadowThrown', rangedType: 'rangedTypeShadowThrown', thrownType: 'thrownTypeShadowThrown' }),
 });
 
 function statSlotFields(slot) {
@@ -706,10 +739,10 @@ function projectTraceToChannel(trace, channel) {
     event => !Array.isArray(event.channels) || event.channels.includes(channel));
 }
 
-// One derivation slot's view of the same walk. A slot is narrower than a channel: two slots can
-// answer for one channel while `shadowThrown` remains (see above), and the DOS-shaped `legacy`
-// slot answers for none. Every other slot's fields drop; everything else survives, so a channel's
-// exposed `statTrace` is the events that reached *its* accumulator and no other.
+// One derivation slot's view of the same walk. A slot is narrower than a channel: the DOS-shaped
+// `legacy` slot answers for no channel at all. Every other slot's fields drop; everything else
+// survives, so a channel's exposed `statTrace` is the events that reached *its* accumulator and
+// no other.
 function projectTraceToSlot(trace, slot) {
   if (!Object.prototype.hasOwnProperty.call(STAT_DERIVATION_SLOTS, slot)) {
     throw new Error(`unknown derivation slot ${slot}`);

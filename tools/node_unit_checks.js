@@ -20,6 +20,7 @@ const {
 const {
   assert, assertEqual, assertionTotal, assertSameKeyList, evalInContext,
 } = require('./unit_checks/assertions');
+const { runAbilityInputChecks } = require('./unit_checks/ability_inputs');
 const { runIdentityChecks } = require('./unit_checks/identity');
 const { runDeriveUnitStatsChecks } = require('./unit_checks/derive_unit_stats');
 const { runToBlockChecks, runDerivationStageChecks } = require('./unit_checks/derivation_stages');
@@ -94,6 +95,7 @@ function main() {
   runResolutionStepChecks(ctx);
   runModernWeaponImmunityMappingChecks(ctx);
   runIdentityChecks(ctx);
+  runAbilityInputChecks(ctx);
   runDeriveUnitStatsChecks(ctx);
   runDerivationStageChecks(ctx);
   runWarlordUnitAbilityChecks(ctx);

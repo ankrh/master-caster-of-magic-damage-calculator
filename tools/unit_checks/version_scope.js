@@ -30,6 +30,10 @@ const SCOPE_PROVENANCE_GAPS = {
   trueLight: ['mom_1.31', 'mom_cp_1.60.00'],
   nodeAura: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'],
   survivalInstinct: ['com_6.08'],
+  // CoM 1 replaces Battle_Unit_Defense_Special's Righteousness block with an 87-byte NOP field,
+  // so the citation covers the MoM builds only; the calculator still admits the write on CoM 1's
+  // magical-ranged, breath and spell-damage channels (F105).
+  'dosEffectiveDefense:righteousness': ['com_6.08'],
 };
 // M11 gave `tactician` one id across all three CoM engines, so its own PROVENANCE comment now
 // covers it and the exemption this list held is gone. Every scope id carries its own citation.
@@ -140,14 +144,23 @@ function runCanonicalVersionScopeChecks(ctx) {
     "True Light's Illusion projection inherits the Warlord region-b scope");
   assertEqual(resolveScope({ phase: 'c', id: 'nope:missing' }), null,
     'An unclassified step resolves no scope rather than defaulting to every version');
-  // The marker has to be what does the inheriting. `c:chance:vertigo` is a real engine write
-  // with a row of its own, and the old `chance:` prefix strip could not tell it from a
-  // projection: a real step whose row went missing quietly took `c:vertigo`'s scope instead of
-  // failing. Without a `projectionOf`, an unrowed `chance:` id now resolves nothing.
-  assertEqual(resolveScope({ phase: 'c', id: 'vertigo' }), scopes['c:vertigo'],
-    'A real chance step resolves through its own row');
+  // The marker has to be what does the inheriting, not the prefix. A `chance:` step that is not
+  // a projection — the three resolution-time writes native to the ledger — has a row of its own,
+  // and deriving inheritance from the id would silently hand it the scope of whatever it looked
+  // like it projected. Without a `projectionOf`, an unrowed `chance:` id resolves nothing.
+  assertEqual(resolveScope({ phase: 'attackSpecific', id: 'chance:distancePenalty' }),
+    scopes['attackSpecific:chance:distancePenalty'],
+    'A ledger step that projects nothing resolves through its own row');
   assertEqual(resolveScope({ phase: 'c', id: 'chance:weakness' }), null,
-    'An unmarked chance id no longer inherits the scope of the step it would project');
+    'An unmarked chance id does not inherit the scope of the step it would project');
+  // M13: `chance:` is the To-Hit/To-Block ledger's namespace and nothing else's, which is what
+  // keeps a projection's key from colliding with the key of the write it projects. Every ledger
+  // step lives under `attackSpecific:` (its own three) or is built by buildChanceProjection from
+  // a stat event; no *derivation* row may carry the prefix.
+  assertSameKeyList(
+    scopeKeys.filter(key => !key.startsWith('attackSpecific:')
+      && key.slice(key.indexOf(':') + 1).startsWith('chance:')).sort(), [],
+    'No derivation write carries the To-Hit/To-Block ledger\'s `chance:` namespace');
 
   // --- 2b. the filter itself, tested directly rather than only through its effect ---
   // `filterStepsToVersionScope` is what makes the registry decide membership. The sweep below
@@ -178,9 +191,20 @@ function runCanonicalVersionScopeChecks(ctx) {
   // here rather than in a file of its own: the same `phase:id` key has to name a real scope row
   // and a real chain entry, or the two registries describe different things.
   const statChain = evalInContext(ctx, 'statChain');
+  // The region-`c` identity conversions head their region by convention rather than sitting at
+  // the addresses their blocks occupy, and in the DOS builds their order among themselves is
+  // inherited from the merged helper M7 split rather than transcribed (F103).
+  const deducedIdentityC = [
+    'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust',
+    'c:blackChannels:race', 'c:undead', 'c:mysticSurge:race', 'c:raiseDead',
+  ];
   const deducedInsideTranscribedRegion = {
+    'mom_1.31': deducedIdentityC,
+    'mom_cp_1.60.00': deducedIdentityC,
     // CoM 1's Focus Magic position is inferred from what its recompute writes after Warp.
-    'com_6.08': ['c:focusMagic'],
+    'com_6.08': ['c:focusMagic', ...deducedIdentityC],
+    'com2_1.05.11': deducedIdentityC,
+    'com2_warlord_1.5.12.7': deducedIdentityC,
   };
   for (const version of engineVersions) {
     const chain = statChain(version);
@@ -256,24 +280,36 @@ function runCanonicalVersionScopeChecks(ctx) {
   }
 
   // --- 4. scope at the call site, where no per-step predicate can see it ---
-  // All six GetEffectiveResistance steps and all nine EffectiveDefense steps are ungated: the
-  // lists are CoM2-only because buildResistanceContext / computeDefenseProfile only reach them
-  // from their `startsWith('com2')` branch. Checking membership here is the only way to see it.
+  // No step in any of the four attack-specific lists carries a version predicate. The Caster.exe
+  // pair is CoM2-only because buildResistanceContext / computeDefenseProfile only reach them from
+  // their `startsWith('com2')` branch, and the DOS pair is keyed by version rather than gated, so
+  // checking membership here is the only way to see either fact.
   const resistanceSteps = evalInContext(ctx, 'EFFECTIVE_RESISTANCE_STEPS');
   const defenseSteps = evalInContext(ctx, 'EFFECTIVE_DEFENSE_STEPS');
-  for (const [label, steps] of [['GetEffectiveResistance', resistanceSteps],
-    ['EffectiveDefense', defenseSteps]]) {
-    for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  const dosResistanceSteps = evalInContext(ctx, 'DOS_RESISTANCE_STEPS');
+  const dosDefenseSteps = evalInContext(ctx, 'DOS_DEFENSE_STEPS');
+  const MODERN = ['com2_1.05.11', 'com2_warlord_1.5.12.7'];
+  const DOS = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'];
+  const assertCallSiteScope = (label, steps, inScope, outOfScope) => {
+    for (const version of inScope) {
       assertEqual(sequenceViolations(steps, version).length, 0,
         `${label} runs entirely inside its version scope in ${version}`);
     }
-    for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
+    for (const version of outOfScope) {
       assertEqual(sequenceViolations(steps, version).length, steps.length,
         `${label} is out of scope for every step in ${version}`);
       let threw = false;
       try { assertSequenceScope(steps, version, label); } catch (error) { threw = true; }
       assert(threw, `${label} entering a sequence under ${version} is caught at the call site`);
     }
+  };
+  assertCallSiteScope('GetEffectiveResistance', resistanceSteps, MODERN, DOS);
+  assertCallSiteScope('EffectiveDefense', defenseSteps, MODERN, DOS);
+  for (const version of DOS) {
+    assertCallSiteScope(`Combat_Effective_Resistance(${version})`,
+      dosResistanceSteps[version], [version], MODERN);
+    assertCallSiteScope(`Battle_Unit_Defense_Special(${version})`,
+      dosDefenseSteps[version], [version], MODERN);
   }
   // The DOS engines must not reach those lists at all. effectiveResistance/effectiveDefense
   // assert their own scope while the step-debug switch is on, which it is for this whole run,
@@ -299,6 +335,11 @@ function runCanonicalVersionScopeChecks(ctx) {
     { rangedCheck: true, rangedDist: 5 }];
 
   const visitedKeys = new Set();
+  // M13's namespace rule, observed rather than declared: every entry of the To-Hit/To-Block
+  // ledger is `chance:`-prefixed and no entry of the stat sequence is, so a projected key can
+  // never be the key of the write it projects.
+  const prefixedStatSteps = new Set();
+  const unprefixedLedgerSteps = new Set();
   for (const version of engineVersions) {
     const members = new Set();
     const predicateTrue = new Set();
@@ -316,6 +357,7 @@ function runCanonicalVersionScopeChecks(ctx) {
       };
       for (const event of result.statExecutionTrace) {
         visitedKeys.add(`${event.phase}:${event.id}`);
+        if (event.id.startsWith('chance:')) prefixedStatSteps.add(`${event.phase}:${event.id}`);
         if (scopeOf(event).includes(version)) continue;
         const key = `${event.phase}:${event.id}`;
         members.add(key);
@@ -335,6 +377,9 @@ function runCanonicalVersionScopeChecks(ctx) {
       for (const name of ['figures', 'toHitMelee', 'toHitRanged', 'toBlock']) {
         for (const event of (projections[name] && projections[name].entries) || []) {
           visitedKeys.add(`${event.phase}:${event.id}`);
+          if (name !== 'figures' && !event.id.startsWith('chance:')) {
+            unprefixedLedgerSteps.add(`${event.phase}:${event.id}`);
+          }
           if (!scopeOf(event).includes(version)) changed.add(`${event.phase}:${event.id}`);
         }
       }
@@ -371,16 +416,22 @@ function runCanonicalVersionScopeChecks(ctx) {
   // is asserted below (section 6) against the whole registry; this is the cheap floor.
   assert(visitedKeys.size > 100,
     'The derivation sweep observed a populated set of steps, so the empty inventories mean something');
+  assertSameKeyList([...prefixedStatSteps].sort(), [],
+    'No stat-sequence step carries the ledger\'s `chance:` namespace');
+  assertSameKeyList([...unprefixedLedgerSteps].sort(), [],
+    'Every To-Hit/To-Block ledger entry carries the `chance:` namespace');
 
   // --- 6. no orphan entries: a registry row for a step that no longer exists would rot ---
   // The sweep observes steps through what deriveUnitStats exposes, which is the stat sequence's
   // complete execution ledger plus two sparse traces. Everything it cannot see that way is
   // listed here with the reason, so an entry can never go unexplained.
-  const unreachedByTheSweep = [
+  const unreachedByTheSweepEntries = [
     // The attack-specific routines run on a scratch copy from resolveCombat, not from
     // deriveUnitStats; section 4 above checks their membership directly instead.
     ...resistanceSteps.map(step => `attackSpecific:${step.id}`),
     ...defenseSteps.map(step => `attackSpecific:${step.id}`),
+    ...DOS.flatMap(version => [...dosResistanceSteps[version], ...dosDefenseSteps[version]]
+      .map(step => `attackSpecific:${step.id}`)),
     // The figure sequence is read through its projection above, but a projection carries only
     // the steps that changed `figs`, and neither Warlord building's race/name prerequisite is
     // built by the swept template-less custom unit.
@@ -390,9 +441,15 @@ function runCanonicalVersionScopeChecks(ctx) {
     'a:callToArmsPaladins', 'a:chosen', 'a:constructCatapult',
     'b:marionetteChanneler', 'base:constructCatapult',
     'base:zombies',
+    // Fiery Fury's realm write fires only on a base-Fantastic unit, and the sweep's only
+    // base-Fantastic shapes are already Chaos by the time it runs — either from their own
+    // `fantastic_chaos` identity or from the region-`a` Chaos Channels write — so the step
+    // applies and changes nothing.
+    'b:fieryFury:race',
     // A write behind a prerequisite the sweep does not build: the Outlander armorclad reform.
     'b:battleArmor',
-  ].sort();
+  ];
+  const unreachedByTheSweep = [...new Set(unreachedByTheSweepEntries)].sort();
   const orphans = scopeKeys.filter(key => !visitedKeys.has(key)).sort();
   assertSameKeyList(orphans, unreachedByTheSweep,
     'Every canonical scope entry names a step the derivation sweep composes, or a listed exception');

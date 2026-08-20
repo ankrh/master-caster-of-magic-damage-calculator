@@ -25,16 +25,23 @@
 // conversions — so an identity write is accounted for exactly once too, and cannot reach the
 // trace from a sequence no chain covers. Their ranks are comparable only within one sequence:
 // the identity pre-pass runs entirely before the stat sequence, which is earlier than the chain
-// rank one of its entries carries (`d:identity:spiritLink`).
+// rank one of its entries carries (`d:spiritLink`).
 //
 // Within a chain, the identity conversions head their phase: they run in the pre-pass, before any
-// stat write, and no address map places them among the writes beside them.
-// `identity:marionetteChanneler` is the exception the CAS gives a real position — the AFantastic
-// write at UnitCalcPre.CAS:94, one line ahead of the `marionette:stats` attack writes — as is
-// `identity:spiritLink` at UnitCalc.CAS:1306, between Shadow Strike and Psycho Force. Spirit Link
-// is the one place where the calculator's execution position and its source rank disagree: it
-// runs in the pre-pass, because live Fantastic gates the whole derivation, while the engine
-// writes it late in region d.
+// stat write, so their rank relative to the stat writes beside them decides nothing and is a
+// convention rather than a transcription — which is why every region-`c` identity entry is listed
+// as a deduced position below. The CAS hooks are the exception, because they give real line
+// positions: `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the
+// `marionette:stats` attack writes; `fieryFury:race` at UnitCalcPre.CAS:834, the THEN arm of the
+// same `IF` whose ELSE arm is `b:fieryFury`; `sanctify` at UnitCalcPre.CAS:1249; and
+// `spiritLink` at UnitCalc.CAS:1306, between Shadow Strike and Psycho Force. Spirit Link is the
+// one place where the calculator's execution position and its source rank disagree: it runs in
+// the pre-pass, because live Fantastic gates the whole derivation, while the engine writes it
+// late in region d.
+//
+// One engine block can reach both sequences — Mystic Surge writes Defense, Resistance and the
+// realm in one region-`c` block — so six identity conversions carry a `:race` qualifier to keep
+// `phase:id` unique across the two (`c:mysticSurge` and `c:mysticSurge:race`).
 
 // Which positions the evidence fixes, stated once rather than per chain. Regions `b`, `c` and `d`
 // are transcribed — the compiled region-c address map, and the top-level order of UnitCalcPre.CAS
@@ -43,10 +50,22 @@
 const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
 
 // Individual positions inside a transcribed region that the map does not actually give.
+// The region-`c` identity conversions are all here: they head the region by the convention
+// above rather than at the addresses their blocks occupy, and in the DOS builds their order
+// among themselves is inherited from the merged helper M7 split rather than from the address
+// map, which lists them the other way round (F103).
+const DEDUCED_IDENTITY_C_POSITIONS = [
+  'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust',
+  'c:blackChannels:race', 'c:undead', 'c:mysticSurge:race', 'c:raiseDead',
+];
 const DEDUCED_POSITIONS = Object.freeze({
+  'mom_1.31': DEDUCED_IDENTITY_C_POSITIONS,
+  'mom_cp_1.60.00': DEDUCED_IDENTITY_C_POSITIONS,
   // CoM 1's Focus Magic position is inferred from the exhaustive list of what its recompute
   // writes after Warp, which does not contain it. Both halves share that one deduced position.
-  'com_6.08': ['c:focusMagic'],
+  'com_6.08': ['c:focusMagic', ...DEDUCED_IDENTITY_C_POSITIONS],
+  'com2_1.05.11': DEDUCED_IDENTITY_C_POSITIONS,
+  'com2_warlord_1.5.12.7': DEDUCED_IDENTITY_C_POSITIONS,
 });
 
 function versionChain(version, keys) {
@@ -64,66 +83,75 @@ function versionChain(version, keys) {
 }
 
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
-  'base:stat:base', 'base:chance:baseMelee', 'base:chance:baseRtb', 'base:chance:baseBlock',
-  'a:legacyConversions', 'a:holyBonus', 'a:resistanceToAll', 'a:chaosChannels:fireBreath',
-  'c:level', 'c:lucky', 'c:weapon', 'c:chance:weapon', 'c:chaosSurge',
-  'c:chance:holyWeapon:melee', 'c:chance:holyWeapon:rtb', 'c:blackChannels', 'c:ironSkin',
+  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'a:chaosChannels:fireBreath:race', 'a:holyBonus', 'a:resistanceToAll',
+  'a:chaosChannels:fireBreath', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race',
+  'c:blackChannels:race', 'c:undead',
+  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
+  'c:holyWeapon', 'c:blackChannels', 'c:ironSkin',
   'c:stoneSkin', 'c:flameBlade', 'c:flameBlade:ranged', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:lionheart', 'c:holyArmor', 'c:berserk', 'c:nodeAura',
   'c:highPrayer', 'c:prayer', 'c:trueLight', 'c:darkness', 'c:metalFires', 'c:warpReality',
   'c:blackPrayer', 'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense',
-  'c:warpResist', 'c:shatter', 'c:charmOfLife', 'e:chance:legacyClamp', 'e:clamp',
+  'c:warpResist', 'c:shatter', 'c:charmOfLife', 'e:legacyClamp', 'e:clamp',
 ]);
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
-  'base:stat:base', 'base:chance:baseMelee', 'base:chance:baseRtb', 'base:chance:baseBlock',
-  'a:legacyConversions', 'a:holyBonus', 'a:resistanceToAll', 'a:chaosChannels:fireBreath',
-  'c:level', 'c:lucky', 'c:weapon', 'c:chance:weapon', 'c:chaosSurge', 'c:blackChannels',
+  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'a:chaosChannels:fireBreath:race', 'a:holyBonus', 'a:resistanceToAll',
+  'a:chaosChannels:fireBreath', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race',
+  'c:blackChannels:race', 'c:undead',
+  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge', 'c:blackChannels',
   'c:ironSkin', 'c:stoneSkin', 'c:flameBlade', 'c:flameBlade:ranged', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:lionheart', 'c:holyArmor', 'c:berserk',
-  'c:chance:holyWeapon:melee', 'c:chance:holyWeapon:rtb', 'c:nodeAura', 'c:highPrayer',
+  'c:holyWeapon', 'c:nodeAura', 'c:highPrayer',
   'c:prayer', 'c:trueLight', 'c:darkness', 'c:metalFires', 'c:warpReality', 'c:blackPrayer',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
-  'c:shatter', 'c:charmOfLife', 'e:chance:legacyClamp', 'e:clamp',
+  'c:shatter', 'c:charmOfLife', 'e:legacyClamp', 'e:clamp',
 ]);
 
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
   'base:zombies', 'base:constructCatapult', 'base:summonBranch', 'base:stat:base',
-  'base:chance:baseMelee', 'base:chance:baseRtb', 'base:chance:baseBlock',
-  'base:zombies:toBlock', 'a:legacyConversions', 'a:holyBonus', 'a:resistanceToAll',
-  'a:chaosChannels:fireBreath', 'c:level', 'c:lucky', 'c:weapon', 'c:chance:weapon',
+  'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'base:zombies:toBlock', 'a:chaosChannels:fireBreath:race', 'a:holyBonus',
+  'a:resistanceToAll', 'a:chaosChannels:fireBreath', 'c:chaosChannels:flight',
+  'c:chaosChannels:armor:race', 'c:bloodLust', 'c:undead', 'c:mysticSurge:race',
+  'c:raiseDead', 'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit',
   'c:endurance', 'c:animated', 'c:flameBlade', 'c:flameBlade:ranged', 'c:lionheart',
   'c:ironSkin', 'c:chaosChannels:armor', 'c:landLinking', 'c:mysticSurge', 'c:holyArmor',
-  'c:focusMagic', 'c:orihalcon', 'c:chance:holyWeapon:melee', 'c:chance:holyWeapon:rtb',
+  'c:focusMagic', 'c:orihalcon', 'c:holyWeapon',
   'c:chaosSurge', 'c:survivalInstinct', 'c:nodeAura', 'c:highPrayer', 'c:prayer',
   'c:blazingMarch', 'c:warpReality', 'c:blackPrayer', 'c:guardian', 'c:guidingBeaconAura',
   'c:divineBarrierAura', 'c:soulLinkerAura', 'c:vertigo', 'c:weakness', 'c:mindStorm',
   'c:warpAttack', 'c:warpDefense', 'c:warpResist', 'c:shatter', 'c:darkness', 'c:supremeLight',
   'c:realmWard', 'c:tactician', 'c:eternalNight:enemyResistance', 'c:charmOfLife',
-  'e:chance:legacyClamp', 'e:clamp',
+  'e:legacyClamp', 'e:clamp',
 ]);
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
-  'base:stat:base', 'base:chance:baseMelee', 'base:chance:baseRtb', 'base:chance:baseBlock',
+  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
-  'a:legacyConversions', 'a:chaosChannels:fireBreath', 'c:destiny', 'c:level', 'c:focusMagic',
-  'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:chance:heavenlyLight', 'c:weapon',
-  'c:chance:weapon', 'c:endurance', 'c:discipline', 'c:chaosChannels:armor', 'c:animated',
+  'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath', 'c:destiny:race',
+  'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust', 'c:undead',
+  'c:mysticSurge:race', 'c:raiseDead',
+  'c:destiny', 'c:level', 'c:focusMagic',
+  'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:heavenlyLight:toHit', 'c:weapon',
+  'c:weapon:toHit', 'c:endurance', 'c:discipline', 'c:chaosChannels:armor', 'c:animated',
   'c:flameBlade', 'c:flameBlade:ranged', 'c:mysticSurge', 'c:lionheart', 'c:ironSkin',
-  'c:landLinking', 'c:holyArmor', 'c:orihalcon', 'c:chance:holyWeapon:melee',
-  'c:chance:holyWeapon:rtb', 'c:chaosSurge', 'c:survivalInstinct', 'c:innerPower',
-  'c:reinforceMagic', 'c:eternalNight:enemyResistance', 'c:charmOfLife', 'c:nodeAura',
+  'c:landLinking', 'c:holyArmor', 'c:orihalcon', 'c:holyWeapon', 'c:chaosSurge',
+  'c:survivalInstinct', 'c:innerPower', 'c:reinforceMagic',
+  'c:eternalNight:enemyResistance', 'c:charmOfLife', 'c:nodeAura',
   'c:badMoon', 'c:goodMoon', 'c:natureConjunction', 'c:highPrayer', 'c:prayer', 'c:blazingMarch',
   'c:breakthrough:normal', 'c:breakthrough:noncorporeal', 'c:breakthrough:combatSummoned',
   'c:warpReality', 'c:blackPrayer', 'c:darkness', 'c:guardian', 'c:vertigo', 'c:weakness',
   'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist', 'c:shatter', 'c:spellWard',
-  'c:tactician', 'e:chance:modernClampCommon', 'e:clamp', 'e:holyBonus', 'e:guidingBeaconAura',
+  'c:tactician', 'e:modernClampCommon', 'e:clamp', 'e:holyBonus', 'e:guidingBeaconAura',
   'e:resistanceToAll', 'e:divineBarrierAura', 'e:soulLinkerAura', 'e:leadershipAura',
   'e:mislead', 'e:supremeLight',
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
-  'base:stat:base', 'base:chance:baseMelee', 'base:chance:baseRtb', 'base:chance:baseBlock',
+  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
   'base:armorclad', 'base:artificer', 'base:rebuild', 'base:malnourished', 'base:spiritLink',
   'base:altarOfTheMoon', 'base:militaryWorkshop', 'base:lightningBlade:breath',
   'base:poolOfRepentance', 'base:dragonMound', 'base:ludusAgoge', 'base:motherFungus',
@@ -131,31 +159,35 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'base:sanctaBasilica', 'base:naturalSelection:powerMinerals',
   'base:naturalSelection:nightshade', 'base:naturalSelection:wildGame',
   'base:naturalSelection:coal', 'base:naturalSelection:iron', 'base:pillarOfFaith',
-  'base:energyCannon', 'base:chance:survivalInstinctToBlock', 'a:combatSummoned', 'a:chosen',
-  'a:constructCatapult', 'a:callToArmsPaladins', 'a:legacyConversions',
+  'base:energyCannon', 'base:survivalInstinctToBlock', 'a:combatSummoned', 'a:chosen',
+  'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:marionetteChanneler', 'b:marionette:stats',
-  'b:marionette:strayedTransmute', 'b:rebuild', 'b:tactician', 'b:fieryFury', 'b:natureLink',
+  'b:marionette:strayedTransmute', 'b:rebuild', 'b:tactician', 'b:fieryFury:race',
+  'b:fieryFury', 'b:natureLink',
   'b:outlanderXenoveterinary', 'b:magitekEngine', 'b:bombsGrenades',
   'b:upgradedExplosive:ranged', 'b:upgradedExplosive:fireBreath',
-  'b:chance:outlanderBallisticsTraining', 'b:outlanderXenopsychology', 'b:outlanderRadio',
-  'b:battleArmor', 'b:nausea', 'b:uphillBattle', 'b:soulFlay', 'b:eternalNight:poorVision',
+  'b:outlanderBallisticsTraining', 'b:outlanderXenopsychology', 'b:outlanderRadio',
+  'b:battleArmor', 'b:nausea', 'b:uphillBattle', 'b:soulFlay', 'b:sanctify',
+  'b:eternalNight:poorVision',
   'b:greatUnbinding', 'b:prayer', 'b:rally', 'b:trueLight', 'b:plague', 'b:goblinPox',
-  'b:luckyStar', 'b:disheartenProphecy', 'b:wallOfFire:garrison', 'b:godsPlayDices', 'c:destiny',
+  'b:luckyStar', 'b:disheartenProphecy', 'b:wallOfFire:garrison', 'b:godsPlayDices',
+  'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:undead',
+  'c:mysticSurge:race', 'c:raiseDead', 'c:destiny',
   'c:level', 'c:focusMagic', 'c:lucky', 'c:darkForce', 'c:heavenlyLight',
-  'c:chance:heavenlyLight', 'c:weapon', 'c:chance:weapon', 'c:endurance', 'c:discipline',
+  'c:heavenlyLight:toHit', 'c:weapon', 'c:weapon:toHit', 'c:endurance', 'c:discipline',
   'c:chaosChannels:armor', 'c:animated', 'c:flameBlade', 'c:flameBlade:ranged', 'c:mysticSurge',
   'c:lionheart', 'c:ironSkin', 'c:landLinking', 'c:holyArmor', 'c:orihalcon',
-  'c:chance:holyWeapon:melee', 'c:chance:holyWeapon:rtb', 'c:chaosSurge', 'c:survivalInstinct',
+  'c:holyWeapon', 'c:chaosSurge', 'c:survivalInstinct',
   'c:innerPower', 'c:reinforceMagic', 'c:eternalNight:enemyResistance', 'c:charmOfLife',
   'c:nodeAura', 'c:badMoon', 'c:goodMoon', 'c:natureConjunction', 'c:highPrayer', 'c:prayer',
   'c:blazingMarch', 'c:breakthrough:normal', 'c:breakthrough:noncorporeal',
   'c:breakthrough:combatSummoned', 'c:warpReality', 'c:blackPrayer', 'c:darkness', 'c:guardian',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
   'c:shatter', 'c:spellWard', 'c:tactician', 'd:mechanicalExpert', 'd:weakness',
-  'd:chance:trueSight:ranged', 'd:flameBlade', 'd:berserkWarlord', 'd:rust', 'd:hurricane',
+  'd:trueSight:ranged', 'd:flameBlade', 'd:berserkWarlord', 'd:rust', 'd:hurricane',
   'd:favoredTerrain', 'd:colossalStrength', 'd:vampirism:transfer', 'd:shadowStrike:thrown',
-  'd:spiritLink', 'd:psychoForce', 'd:pneumaField', 'd:chance:energyCannonThreshold',
-  'd:blazeOfGlory', 'd:beatOfSwiftness', 'd:hierophany', 'e:chance:modernClampCommon', 'e:clamp',
+  'd:spiritLink', 'd:psychoForce', 'd:pneumaField', 'd:energyCannonThreshold',
+  'd:blazeOfGlory', 'd:beatOfSwiftness', 'd:hierophany', 'e:modernClampCommon', 'e:clamp',
   'e:holyBonus', 'e:guidingBeaconAura', 'e:resistanceToAll', 'e:divineBarrierAura',
   'e:soulLinkerAura', 'e:leadershipAura', 'e:mislead', 'e:supremeLight',
 ]);

@@ -548,7 +548,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   }));
   assertEqual(aimedEnergyCannon.abilities.energyCannonDestruction, -3,
     'Energy Cannon snapshots the live 50% common-plus-ranged threshold without double-counting base modifiers');
-  const energyThresholdStep = aimedEnergyCannon.statTrace.find(t => t.id === 'chance:energyCannonThreshold');
+  const energyThresholdStep = aimedEnergyCannon.statTrace.find(t => t.id === 'energyCannonThreshold');
   assertEqual(energyThresholdStep.changes.energyCannonToHit.to, 50,
     'Energy Cannon records its source-ordered pre-region-e chance snapshot');
 

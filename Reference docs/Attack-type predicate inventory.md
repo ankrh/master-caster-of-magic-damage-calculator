@@ -76,12 +76,20 @@ Two things broke that invariant, and between them they account for most of what 
    types. Its only arithmetic consequence was Fiery Fury's `+2` reaching a Thrown field
    `b:bombsGrenades` had not yet created.
 
-2. **The pair stops advancing at `c:focusMagic`.** Three later steps write types on the live
-   record and no precomputed predicate sees them: `d:rust` (`stats.js:1341-1343`),
-   `d:shadowStrike:thrown` (`stats_sequence.js:1029-1030`) and `d:blazeOfGlory`
-   (`stats_sequence.js:1107-1115`). Every precomputed predicate consumed at or after `d:rust` in
-   the Warlord chain is therefore reading a pair that is up to three writes out of date. That is
-   the whole of region `e`.
+2. ~~**The pair stops advancing at `c:focusMagic`.** Three later steps write types on the live
+   record and no precomputed predicate sees them: `d:rust`, `d:shadowStrike:thrown` and
+   `d:blazeOfGlory`. Every precomputed predicate consumed at or after `d:rust` in the Warlord
+   chain is therefore reading a pair that is up to three writes out of date. That is the whole of
+   region `e`.~~ **Closed by [M14](../Calculator/HISTORY.md):** the pair is gone. Every
+   type-dependent modifier and gate is now read from the record at its own consuming step, and
+   `buildSlotContext` returns slot identity and permanent-record facts alone. Measured across
+   15,480 derivations in all five versions, one number moved — see the CoM 1 ordering row added to
+   the *Ismagicalranged* map below.
+
+**Section B's rows record the pass as it stood on 2026-08-20, with the line numbers it had then.**
+They are kept as the reading that produced the items, not as a description of the current code: a
+row's `stale`/`early` verdict is answered wholesale by M14, and its `narrow`/`wide`/`wrong-shape`
+breadth verdict is what the remaining items still turn on.
 
 The Weakness case F84 names as its starting point is no longer live: `c:weakness` sits well
 before `d:blazeOfGlory` in the Warlord chain, so `weaknessHitsRanged` (E57) reads the pair the
@@ -167,8 +175,8 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 | E35 | Focus Magic type write | `:896-899` | `c:focusMagic` | `U.rangedtype := 34` at `:891`/`:899`/`:904` | live | match |
 | E36 | `shadowStrikeFillsSlot` | `:906-909` | `d:shadowStrike:thrown` | `UnitCalc.CAS:1262` | live | match — deliberately field-identity, not a live type test |
 | E37 | `blackpowderHasRangedOrThrown` | `:919-920` | `base:militaryWorkshop` | `CreateUnit.CAS` | permanent | match |
-| E38 | `rangedGetsWpn` | `:943` | `c:weapon`, `c:chance:weapon` | `not Ismagicalranged(Units[i].rangedtype)` at `:651` (I3) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
-| E39 | `thrownGetsWpn` | `:944` | `c:weapon`, `c:chance:weapon` | `if Units[i].thrown > 0` at `:658` | live type | `wrong-shape` — the engine tests the **calculated** Thrown strength; this tests type, and `rtbWpn` supplies `calcBaseRtb > 0`, the slot's *input* strength |
+| E38 | `rangedGetsWpn` | `:943` | `c:weapon`, `c:weapon:toHit` | `not Ismagicalranged(Units[i].rangedtype)` at `:651` (I3) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
+| E39 | `thrownGetsWpn` | `:944` | `c:weapon`, `c:weapon:toHit` | `if Units[i].thrown > 0` at `:658` | live type | `wrong-shape` — the engine tests the **calculated** Thrown strength; this tests type, and `rtbWpn` supplies `calcBaseRtb > 0`, the slot's *input* strength |
 | E40 | `supremeLightEligible`'s `liveRangedType` | `:975-978` | `c:supremeLight` (CoM 1), `e:supremeLight` | `Ismagicalranged(U.rangedtype)` at `:2621` (I12) | **`stale`** for `e:supremeLight` — three region-`d` type writes lie between | match |
 | E41 | `modernConventionalRangedChannel` | `:950-951` | `c:heavenlyLight`, `c:goodMoon`, `c:natureConjunction`, `b:trueLight`/`c:trueLight`, `b:soulFlay`, `b:plague`, `b:goblinPox` | `if U.ranged > 0` at `:1546` and the matching blocks | live for channel slots (identity test); **`stale`/`early`** for the legacy slot, which uses the post-Focus type at region-`b` positions | `wrong-shape` on the legacy slot only |
 | E42 | `modernRangedOrThrownChannel` | `:956-958` | `c:mindStorm` (`rangedOrThrown` slot) | Mind Storm's `Ismagicalranged`-free field writes | live for channel slots | match |
@@ -194,10 +202,10 @@ Continued. E59–E66 are still inside `buildSlotContext`; E67–E73 sit outside 
 | # | Symbol | Line | Consuming step | Engine position and source | Position | Breadth |
 |---|---|---|---|---|---|---|
 | E59 | `rustRtbMod` | `stats.js:1056` | `d:rust` | `UnitCalc.CAS:493` Rust | live | match |
-| E60 | `hwRangedToHit` | `:1059-1060` | `c:chance:holyWeapon:rtb` | `not Ismagicalranged(U.rangedtype)` at `:1808` (I9) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
-| E61 | `hwThrownToHit` | `:1065-1066` | `c:chance:holyWeapon:rtb` | `Inc(U.hitchancethrown, 10)` at `:1806`, unconditional | live | match since [F91](../Calculator/HISTORY.md) — the constant carries no gate, as `heavenlyLightThrownToHit` already did, and `secondaryHitKind` routes each slot to its threshold, the DOS shared slot included |
-| E62 | `rtbToHitWpnRanged` / `rtbToHitWpnThrown` / `rtbToHitWpn` | `:1071-1073` | `c:chance:weapon` | `:648-662` — ranged To-Hit ungated on strength, Thrown To-Hit inside `if Units[i].thrown > 0` | live type | `wrong-shape` on the Thrown half: no strength test at all where the engine has one |
-| E63 | `heavenlyLightRangedNonmagical` / `heavenlyLightRangedToHit` | `:1074-1079` | `c:chance:heavenlyLight` | `not Ismagicalranged(U.rangedtype)` at `:1452` (I5) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
+| E60 | `hwRangedToHit` | `:1059-1060` | `c:holyWeapon` | `not Ismagicalranged(U.rangedtype)` at `:1808` (I9) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
+| E61 | `hwThrownToHit` | `:1065-1066` | `c:holyWeapon` | `Inc(U.hitchancethrown, 10)` at `:1806`, unconditional | live | match since [F91](../Calculator/HISTORY.md) — the constant carries no gate, as `heavenlyLightThrownToHit` already did, and `secondaryHitKind` routes each slot to its threshold, the DOS shared slot included |
+| E62 | `rtbToHitWpnRanged` / `rtbToHitWpnThrown` / `rtbToHitWpn` | `:1071-1073` | `c:weapon:toHit` | `:648-662` — ranged To-Hit ungated on strength, Thrown To-Hit inside `if Units[i].thrown > 0` | live type | `wrong-shape` on the Thrown half: no strength test at all where the engine has one |
+| E63 | `heavenlyLightRangedNonmagical` / `heavenlyLightRangedToHit` | `:1074-1079` | `c:heavenlyLight:toHit` | `not Ismagicalranged(U.rangedtype)` at `:1452` (I5) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
 | E64 | `rtbWpn` | `:1082-1087` | `c:weapon` | `Inc(Units[i].ranged, j)` at `:653` (no strength gate) and `Inc(Units[i].thrown, j)` at `:661` (`Units[i].thrown > 0`) | input strength, not calculated | **`wrong-shape`** — the ranged half carries a `calcBaseRtb > 0` gate the engine does not have; the Thrown half reads the input strength where the engine reads the calculated one |
 | E65 | `upgradedExplosiveRangedMod` | `:1091` | `b:upgradedExplosive:ranged` | `UnitCalcPre.CAS` explosive block | live | match |
 | E66 | `warlordCombatFlameBladeOwnsThis` | `:1106-1107` | `d:flameBlade` | `UnitCalc.CAS` combat Flame Blade | live | match |
@@ -205,7 +213,7 @@ Continued. E59–E66 are still inside `buildSlotContext`; E67–E73 sit outside 
 | E68 | `slots.rangedOrThrown` | `:1574` | `c:mindStorm` | Mind Storm's paired field writes | live | match |
 | E69 | `slots.persistentRanged` | `:1651` | `e:mislead` (Misfortune aura), `e:holyBonus` | `if B.ranged > 0` at `:2599` and `:2535` | permanent | match — [F96](../Calculator/HISTORY.md) made it the permanent record's Ranged **field** carrying strength: which field the slot is, with no type test on a modern channel |
 | E70 | `distancePenaltyFor` | `:1801-1808` | resolution-time projection | the finished record's ranged attack | **live** since [F99](../Calculator/HISTORY.md) — both the applicability test and the curve read `statUnit[context.rangedTypeField]`, so `d:blazeOfGlory` emptying the Ranged field retires the penalty with the attack | match. This is a projectile-*type* read, not the field-identity question `isRangedFieldSlot` answers: missile and boulder select different curves, and a typeless Ranged field carries no projectile |
-| E71 | output `rangedGetsWpn` / `thrownGetsWpn` | `:1993` | output contract | n/a | the two halves still disagree: `thrownGetsWpn` is recomputed from `finalThrownType`, `rangedGetsWpn` is `recordContext.rangedGetsWpn`, the pre-sequence const | n/a — and **no number turns on it**: `GetsWpn` occurs on 10 lines of `Calculator/stats.js` and nowhere else in the repository (uncapped `grep -rn`, 16 hits over 3 files, the other two being prose), so both output fields are read by nothing. [F99](../Calculator/HISTORY.md) measured this and left them alone rather than change an unobservable; settling them belongs to [M14](../Calculator/BACKLOG.md), which removes the precomputed pass they escape from |
+| E71 | output `rangedGetsWpn` / `thrownGetsWpn` | `:1993` | output contract | n/a | the two halves still disagree: `thrownGetsWpn` is recomputed from `finalThrownType`, `rangedGetsWpn` is `recordContext.rangedGetsWpn`, the pre-sequence const | n/a — and **no number turns on it**: `GetsWpn` occurs on 10 lines of `Calculator/stats.js` and nowhere else in the repository (uncapped `grep -rn`, 16 hits over 3 files, the other two being prose), so both output fields are read by nothing. [F99](../Calculator/HISTORY.md) measured this and left them alone rather than change an unobservable; settling them belonged to [M14](../Calculator/HISTORY.md), which removed the precomputed pass they escape from and both fields with it |
 | E72 | `flameBladeRangedStep`'s live type read | `:1449-1470` | `c:flameBlade:ranged` | `UnitCalcPre.CAS:840-845` for Warlord | **live**, correctly — but the *step* is positioned in `c` while Warlord's write is region `b` ([F92](../Calculator/BACKLOG.md)) | match |
 | E73 | `trueLight`'s `modernConventionalRangedChannel` use | `:1483-1487` | `b:trueLight`, `c:trueLight` | `UnitCalcPre.CAS:1507-1540`; DOS True Light | see E41 | see E41 |
 
@@ -226,7 +234,7 @@ Continued. E59–E66 are still inside `buildSlotContext`; E67–E73 sit outside 
 | S9 | `d:vampirism:transfer` | `:926` | reads the **live** thrown type | correct |
 | S10 | `d:colossalStrength` | `:987-988` | reads the **live** pair | correct |
 | S11 | `d:shadowStrike:thrown` | `:1029-1030` | writes `'none'` / `'thrown'` | correct; invisible to every precomputed predicate |
-| S12 | `d:blazeOfGlory` | `:1095-1116` | reads and writes the **live** pair | reads live, which is right, and is invisible to every precomputed predicate. The ranged-type clear is the recorded `SETSTAT(U,SAmmo,0,0)` stand-in (`SPEC.md`, *Deliberate deviations*). This sweep called the row correct and missed one thing [F89](../Calculator/HISTORY.md) then measured: the transfer *selected its source* by ranged type, where `GetStat(U,SRanged,0)` (`UnitCalc.CAS:1494`) names the field with no gate at all, so a typeless `SRanged` was dropped instead of moved. [F91](../Calculator/HISTORY.md) added the transfer's other end: the surviving attack is `SThrown` whichever slot holds it, so a source retyped in place reads `hitchancethrown` too. Two things at this row remain, both [F100](../Calculator/BACKLOG.md) — the region-`e` clamp's Blaze exception is `channelKey === 'thrown'`, which zeroes a retyped-in-place source with no permanent strength, and Lightning Blade's `SThrown` → `SLightningBreath` move is the slot reuse that creates that shape ([F90](../Calculator/BACKLOG.md)) |
+| S12 | `d:blazeOfGlory` | `:1095-1116` | reads and writes the **live** pair | reads live, which is right, and is invisible to every precomputed predicate. The ranged-type clear is the recorded `SETSTAT(U,SAmmo,0,0)` stand-in (`SPEC.md`, *Deliberate deviations*). This sweep called the row correct and missed one thing [F89](../Calculator/HISTORY.md) then measured: the transfer *selected its source* by ranged type, where `GetStat(U,SRanged,0)` (`UnitCalc.CAS:1494`) names the field with no gate at all, so a typeless `SRanged` was dropped instead of moved. [F91](../Calculator/HISTORY.md) added the transfer's other end: the surviving attack is `SThrown` whichever slot holds it, so a source retyped in place reads `hitchancethrown` too. Two things at this row remain, both [F100](../Calculator/BACKLOG.md) — the region-`e` clamp's Blaze exception is `channelKey === 'thrown'`, which zeroes a retyped-in-place source with no permanent strength, and Lightning Blade's `SThrown` → `SLightningBreath` move is the slot reuse that created that shape, made a real field move by [F90](../Calculator/HISTORY.md) — which closed the clamp half with it, leaving [F100](../Calculator/BACKLOG.md) the ungated ranged writes alone |
 
 ### Not predicates
 
@@ -251,11 +259,13 @@ none was fixed here.
 | Narrow non-magical-ranged predicate, at three call sites beyond the three already listed | I6, I7, I11 / E47, E48, and the Leadership step | settled by [F89](../Calculator/HISTORY.md) |
 | Pre-sequence flip order does not match the chain, and the base seed carries a region-`b` write | E23, E24, S1, S3 | settled by [F94](../Calculator/HISTORY.md) |
 | `rtbLvl` collapses four base-record gates and three tables into one live if/else | E29, I2 | F95 |
-| Region-`e` aura gates are type tests where the engine tests a strength field, and are precomputed before the region-`d` type writes | E16, E40, E53, E67, E69 | settled by [F96](../Calculator/HISTORY.md) for the four strength gates; E40's own eligibility read stays `stale` and is [M14](../Calculator/BACKLOG.md) |
+| Region-`e` aura gates are type tests where the engine tests a strength field, and are precomputed before the region-`d` type writes | E16, E40, E53, E67, E69 | settled by [F96](../Calculator/HISTORY.md) for the four strength gates; E40's own eligibility read settled by [M14](../Calculator/HISTORY.md), which made `supremeLightActiveForUnit`'s live-type argument a read at `e:supremeLight`'s own position |
 | Weapon-material strength gates read the wrong record and add a gate the engine lacks | E39, E62, E64 | F97 |
 | Focus Magic's Doom Gaze `+3` fires on the wrong disjunct; its ranged `+3` reads the calculated record | E18, E30, E31, E32, E33 | F98 |
-| Distance penalty reads the pre-sequence ranged type | E70, E71 | settled by [F99](../Calculator/HISTORY.md) for E70, which measured the penalty reaching resolved damage under `d:blazeOfGlory`; E71's output pair is read by nothing and is left to [M14](../Calculator/BACKLOG.md) |
+| Distance penalty reads the pre-sequence ranged type | E70, E71 | settled by [F99](../Calculator/HISTORY.md) for E70, which measured the penalty reaching resolved damage under `d:blazeOfGlory`; E71's output pair was read by nothing and [M14](../Calculator/HISTORY.md) removed both fields with the pass they escaped from |
 | Ungated field writes expressed as type predicates | E57, E61 | settled by [F91](../Calculator/HISTORY.md); the ranged siblings and the transfer's clamped-away target are [F100](../Calculator/BACKLOG.md) |
+| CoM 1 gates the material block's whole secondary half on the Focus Magic **flag**, not on a type | I3 / E38, E62 | recorded by [M14](../Calculator/HISTORY.md): `if (!(ench_lo & UE_FOCUS_MAGIC))` at com1:0x8F095 wraps the strength, display-bonus and threshold writes together (`DOS reconstructed/unitcalc.c`). The precomputed pass reproduced it by accident, reading the post-conversion type at a block the chain places before the conversion; the gate is now stated where the engine makes it |
+| CoM 1 orders Lionheart before Focus Magic, and Lionheart's own `+3` has no such flag gate | E47, I7 | measured by [M14](../Calculator/HISTORY.md): Lionheart is com1:0x8F660 and Focus Magic com1:0x8F7E6, so `RAT_CLASS(bu->ranged_type) == MISSILE` is still true when the `+3` lands. Reading the converted type there suppressed it; the live read restores it, and `focusMagicFollowsLionheartCoM` pins the number |
 | Warlord flame blade positioned in `c` where its script write is `b` | E72 | [F92](../Calculator/BACKLOG.md) (already filed) |
 | Six fixed type names against a moddable table | E1, E49, E52 | [F93](../Calculator/BACKLOG.md) (already filed) |
 

@@ -859,8 +859,8 @@ resistance bonuses are additive, this one **replaces** the computed defence outr
 ```
 
 CoM 1 differs in exactly one byte here — `0x9A78E`: `32` → `64`, i.e. **100**. So the
-calculator's `missileImmunityDef` / `fireImmunityDef` / `righteousnessDef` / `magicImmunityDef`
-are correct in both value and shape (they return the constant, not `baseDef + constant`).
+calculator's terminal `dosEffectiveDefense:defenseSpecial` step is correct in both value and
+shape: it replaces the running defence with the constant rather than adding to it.
 
 The Fandom `Righteousness.md` states both halves correctly — "either Defense **50** or a bonus
 of **+30 Resistance**" — which is the clearest prose confirmation that the two numbers belong to
@@ -870,8 +870,11 @@ Also read off this function: Elemental Armor **+10** /
 Resist Elements **+3** on defence in MoM (`0x9A750`, `0x9A766`), against realm Chaos or Nature
 and non-melee only; CoM 1 raises them to **+12** / **+4** and drops the `else`, so both can
 apply. CoM 1 also replaces the Weapon Immunity floor with `add si, 8` at `0x9A780` — the
-calculator's CoM `baseDef + 8`. CP 1.60's only change in the function is a *reordering* of the
-two `Immunity_Type` assignments at `0x9A663`–`0x9A68F`, which is the mechanism behind A9.
+calculator's `dosEffectiveDefense:weaponImmunityBonus`, against the MoM builds'
+`dosEffectiveDefense:weaponImmunityFloor`. CP 1.60's only change in the function is a
+*reordering* of the two `Immunity_Type` assignments at `0x9A663`–`0x9A68F`, which is the
+mechanism behind A9 and, in the calculator, the difference between the `mom_1.31` and
+`mom_cp_1.60.00` entries of `DOS_DEFENSE_STEPS`.
 
 The completed R6.2e derivation supplies the bounded control-flow details. Illusionary defense
 returns zero unless the defender's Illusions Immunity first clears the attack's Illusionary bit
@@ -1927,7 +1930,7 @@ in CP/CoM (`0x9ACD9..0x9ACFC`). Verified: Codex Agent A 2026-08-08, independent;
 `DOS reconstructed/R6.5d.evidence.md`.
 
 Two consequences. **The engine maxes over providers and applies the winner once**, so copies do
-not stack — which is what `mergedAbilityValue`'s `max(own, received)` already yields.
+not stack — which is what `mergeAbilityCalcValue`'s `max(own, received)` already yields.
 And **receiving costs a unit nothing**: a Death Gaze −2 unit has `+0x15 = 2` and `Attribs_2 = 0`,
 and takes a stackmate's Holy Bonus with no interaction. Only *providing* contends for the byte,
 which is why no unit in the roster both provides one of these and carries a gaze or touch effect.

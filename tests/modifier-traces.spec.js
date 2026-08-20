@@ -115,8 +115,8 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
     expect(report.toHitRtb).toBeCloseTo(0.2);
     expect(report.toBlock).toBe(0);
     const ids = orderedClamp.statTrace.map(entry => entry.id);
-    expect(ids.indexOf('chance:modernClampCommon')).toBeGreaterThanOrEqual(0);
-    expect(ids.indexOf('chance:modernClampCommon')).toBeLessThan(ids.indexOf('clamp'));
+    expect(ids.indexOf('modernClampCommon')).toBeGreaterThanOrEqual(0);
+    expect(ids.indexOf('modernClampCommon')).toBeLessThan(ids.indexOf('clamp'));
     expect(report.modifierTraces.toHitRanged.entries.at(-1)).toMatchObject({
       id: 'chance:modernClampCommon', from: -10, to: 20,
     });
@@ -136,7 +136,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
   }
   const sourceIds = sourceOrdered.statTrace.map(entry => entry.id);
   expect(sourceIds.indexOf('berserkWarlord'))
-    .toBeLessThan(sourceIds.indexOf('chance:modernClampCommon'));
+    .toBeLessThan(sourceIds.indexOf('modernClampCommon'));
   expect(sourceIds.indexOf('hurricane')).toBeLessThan(sourceIds.indexOf('clamp'));
   expectNoConsoleErrors(errors);
 });

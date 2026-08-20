@@ -241,11 +241,12 @@ Four calculator-facing results follow directly:
   spell-targeting path permits `EncCCBreath` on a unit which already has Fire Breath is a
   separate eligibility question; if the flag is present, recalculation adds four.
 - **The same block confirms the type rewrite the calculator already performs.** `EncCCBreath`
-  sets `race := RCChaos` *and* `Fantastic`, which is exactly `determineEffectiveUnitType`'s
-  `ccFireBreath → 'fantastic_chaos'` (`determineEffectiveUnitType`) — previously carried on a
+  sets `race := RCChaos` *and* `Fantastic`, which is exactly the calculator's region-`a` identity
+  conversion (`a:chaosChannels:fireBreath:race`) — previously carried on a
   "reported recalculation order" comment with no source. It covers **only** the Breath variant:
   `EncCCFlight` (34) and `EncCCArmor` (35) are handled in region `c`, at +0x5A34/+0xB3A4 and
-  +0x5BA7, so the calculator's other two `→ fantastic_chaos` rewrites are still unsourced. The
+  +0x5BA7, which is where `c:chaosChannels:flight` and `c:chaosChannels:armor:race` now cite
+  them; at the time of this finding those two rewrites were still unsourced. The
   split also means only the Breath rewrite is visible to `UnitCalcPre`, which is what
   `BASEFANTASTIC(U)` vs `FANTASTIC(U)` distinguishes in the Warlord scripts.
 - **A unit summoned during combat counts as Fantastic**, and the calculator has no input for

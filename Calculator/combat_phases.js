@@ -156,8 +156,10 @@ function applyDoomUAHalving(unit, version) {
   });
 }
 
-// Calculator orchestration over individually classified source-authored transforms. M7 owns
-// retiring the remaining transitional transforms; this wrapper is not itself an engine formula.
+// Calculator orchestration over individually classified source-authored transforms; this wrapper
+// is not itself an engine formula. It no longer rewrites `unitType`: the ordered identity
+// conversions own the realm and Fantastic writes, and `unitType` reaches here already projected
+// from the finished live identity (M7).
 function normalizeCombatUnit(unit, version) {
   // Derived calculator records carry the raw BaseUnits flag explicitly. Plain resolver callers
   // predate that boundary, so an omitted marker means their supplied Death Immunity is intrinsic.
@@ -192,11 +194,6 @@ function normalizeCombatUnit(unit, version) {
       || hasAbil(normalized.abilities, 'undead')
       || hasAbil(normalized.abilities, 'animated')
       || hasAbil(normalized.abilities, 'mysticSurge'),
-    unitType: determineEffectiveUnitType(normalized.unitType, normalized.abilities, version,
-      normalized.identity || {
-        baseFantastic: normalized.baseFantastic,
-        isHero: normalized.isHero,
-      }),
   });
   // Angelic Guardians grants/improves Exorcise based on the finalized realm.
   const withGuardians = applyAngelicGuardiansEffects(withType, version);
@@ -310,7 +307,7 @@ function remainingUnitState(unit) {
 
 // STAT-FORMULA[resolutionResistanceContext]
 // PROVENANCE[resolutionResistanceContext]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:34:f8439a410123d6cce14590d2 | Reference docs/DOS reconstructed/combat.c@span:39:dbb4cbc9b3c3b594fa500562 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:f4adc7d2f65b9cfc509a10b0 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:18:78623ea798a8f277b575ffcd | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:35:575882ffecd40ed0b3c1ac6f | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:40:6e6d5d731c162207114b446a | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:21:ebeef9a1796d93992d2edd16 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:480d9a786f490a899b5cb259 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:0ae9bd687c26c112798c0947
-function buildResistanceContext(a, b, version, isCoM) {
+function buildResistanceContext(a, b, version) {
   if (version && version.startsWith('com2')) {
     const needsAgainst = source => ({
       magic: hasAbil(source.abilities, 'dispelEvil') || abilDefined(source.abilities, 'exorcise'),
@@ -340,35 +337,20 @@ function buildResistanceContext(a, b, version, isCoM) {
     };
   }
 
-  // Bless (resistance half): +3 resistance (MoM) or +5 (CoM/CoM2) vs Death-realm resistable
-  // effects (Cause Fear, Life Steal, Death Gaze). The defense half is computed elsewhere.
-  const bBless = hasAbil(b.abilities, 'bless');
-  const aBless = hasAbil(a.abilities, 'bless');
-  const isWarlord = version && version.startsWith('com2_warlord');
-  const blessBonus = isWarlord ? 4 : (isCoM ? 5 : 3);
-  const charmedBonus = unit => (unit.isHero || unit.unitType === 'hero')
-    && hasAbil(unit.abilities, 'charmed') ? 30 : 0;
-  const bBaseRes = b.res + charmedBonus(b);
-  const aBaseRes = a.res + charmedBonus(a);
-
-  // Resist Magic: +5 resistance vs all magical/special effects except Poison.
-  const bResM = bBaseRes + (hasAbil(b.abilities, 'resistMagic') ? 5 : 0);
-  const aResM = aBaseRes + (hasAbil(a.abilities, 'resistMagic') ? 5 : 0);
-  const bResDeath = bResM + (bBless ? blessBonus : 0);
-  const aResDeath = aResM + (aBless ? blessBonus : 0);
-
+  // The DOS engines reach the same stage through `Combat_Effective_Resistance`, one call per
+  // incoming attack realm, transcribed as the ordered `DOS_RESISTANCE_STEPS` list. The realms
+  // below are the calculator's names for the `magic_realm` argument the engine derives from the
+  // attack's `ranged_type`, and they are the same four the `com2` branch above passes.
+  const resistance = (target, realm) => dosEffectiveResistance(target, version, realm);
   return {
-    bBless,
-    aBless,
-    blessBonus,
-    bResM,
-    aResM,
-    bResDeath,
-    aResDeath,
-    bResStoning: bResM + elemResistBonus(b, version),
-    aResStoning: aResM + elemResistBonus(a, version),
-    bResPoison: bBaseRes,
-    aResPoison: aBaseRes,
+    bResM: resistance(b, 'life'),
+    aResM: resistance(a, 'life'),
+    bResDeath: resistance(b, 'death'),
+    aResDeath: resistance(a, 'death'),
+    bResStoning: resistance(b, 'nature'),
+    aResStoning: resistance(a, 'nature'),
+    bResPoison: resistance(b, null),
+    aResPoison: resistance(a, null),
   };
 }
 

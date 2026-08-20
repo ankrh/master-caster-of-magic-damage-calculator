@@ -136,6 +136,88 @@ function deathGazeFailProb(defRes, defAbilities, modifier) {
   return Math.max(0, (10 - effectiveRes) / 10);
 }
 
+// --- The DOS shared special-value byte ---
+
+// The DOS record carries one `Spec_Att_Attrib` byte (+0x15) and every consumer below reads it:
+// the touch riders as a save modifier (the code negates it at the read site), Holy Bonus and
+// Resistance to All as the magnitude a per-player maximum is taken over. So the record is one
+// number plus flags, not a number each. The third element is the sign that consumer's
+// calculator ability value carries, which is how the rosters have always stored it.
+//
+// Poison Touch's repeat count shares the roster's single `Gaze/Poison` column, and is modelled
+// here as a consumer of the same byte, but the reconstruction names its loop bound separately
+// (`Poison_Strength`, `combat.c`) and no evidence document states that field's offset. That one
+// membership is therefore uncited — a T8-class gap, listed here rather than folded into the
+// citation below.
+//
+// The gazes read the same byte but are selected by `ranged_type` (103/104/105) rather than by a
+// flag of their own, so they take no entry here; the shared strength/type slot selects them.
+// Holy Bonus and Resistance to All are this unit's *provided* value; the received side is a
+// separate control and the two contend in `mergeAbilityCalcValue`.
+const DOS_SPECIAL_CONSUMERS = [
+  ['stoningTouch', 'Stoning Touch', -1],
+  ['deathTouch', 'Death Touch', -1],
+  ['lifeSteal', 'Life Steal', -1],
+  ['poison', 'Poison Touch', 1],
+  ['holyBonus', 'Holy bonus', 1],
+  ['resistanceToAll', 'Res. to all', 1],
+];
+
+// Dispel Evil, CoM 1 Exorcise, and Destruction dispatch alongside the touch riders but their
+// modifiers are literals in the DOS code — -4, -3, and 0 — so they never read the byte. They
+// therefore stay ordinary ability values rather than joining this block, which is reserved for
+// the byte's consumers.
+
+// Consumers the shared slot's type selects rather than a flag, so they get no DOS control.
+const DOS_GAZE_KEYS = ['stoningGaze', 'deathGaze', 'doomGaze'];
+
+// CoM2 and Warlord replaced the shared byte with independent per-effect fields.
+function dosSpecialIsActive(version) {
+  return !version.startsWith('com2');
+}
+
+// The gazes read the shared byte through the shared `ranged_type`: 103 runs the stoning kill
+// loop, 105 the death loop, and 104 runs both — which is why a unit with two gazes is
+// necessarily 104, and why the two share one modifier. Selecting a non-gaze type therefore
+// removes the gaze outright; the record cannot hold both.
+// PROVENANCE[dosGazeTypeContention]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:23:ba289a70c76622d0c1837f6e | Reference docs/DOS reconstructed/combat.c@span:23:d3690441e61c73a51c7266fd
+function dosGazeAbilityValues(rangedType, magnitude) {
+  const mag = Math.abs(magnitude || 0);
+  const stoning = rangedType === 'gaze_stoning' || rangedType === 'gaze_multiple';
+  const death = rangedType === 'gaze_death' || rangedType === 'gaze_multiple';
+  return {
+    stoningGaze: stoning ? -mag : null,
+    deathGaze: death ? -mag : null,
+    // Doom damage is the shared *strength* slot, not the byte — `deriveUnitStats` reads it from
+    // there for type 104 — so the ability value contributes nothing in the DOS versions.
+    doomGaze: 0,
+  };
+}
+
+// The DOS read side. Consumer values are derived from the one byte and its flags rather than
+// from per-effect inputs, so the record's contention holds however the state was reached —
+// roster, preset, share link or hand edit. `consumers` is marshalled by the caller: each entry
+// names the ability definition the byte feeds, the sign it carries, whether its flag is set,
+// and the value the same calc key receives from elsewhere (`undefined` on the matrix path,
+// where the received side is overlaid afterwards).
+// PROVENANCE[dosSharedSpecialByte]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:20:058c9ea7d6c14be3d698e06a | Reference docs/DOS reconstructed/combat.c@span:22:cfb3908957e79fe942a78119 | Reference docs/DOS reconstructed/combat.c@span:19:2479e7f72df0edd5cef33c89
+function dosSpecialAbilityValues({ version, magnitude, rangedType, consumers }) {
+  if (!dosSpecialIsActive(version)) return {};
+  const mag = Math.abs(magnitude || 0);
+  const out = {};
+  for (const { def, sign, checked, received } of consumers) {
+    const calcKey = def.calcKey || def.key;
+    // `null` (absent) and 0 (present, modifier −0) are different states for a numcheck: the
+    // engine tests the flag, so an unset flag must read back as null rather than 0.
+    if (def.type === 'numcheck') {
+      out[calcKey] = checked ? sign * mag : null;
+    } else {
+      out[calcKey] = mergeAbilityCalcValue(def, received, checked ? sign * mag : 0);
+    }
+  }
+  return { ...out, ...dosGazeAbilityValues(rangedType, mag) };
+}
+
 // --- Gaze realm ---
 // A gaze's damage realm is a property of the single `ranged_type` field, not of the
 // attacker's own realm. MoM 1.31 classifies 103 Stoning Gaze -> Nature, 104 Multi/Doom
@@ -145,7 +227,7 @@ function deathGazeFailProb(defRes, defAbilities, modifier) {
 // which is also what gives Doom Gaze its automatic damage.
 //
 // In the DOS versions the flags below are themselves derived from `ranged_type` (see
-// `dosSpecialValues`), so this reads the type through them rather than treating them as
+// `dosGazeAbilityValues`), so this reads the type through them rather than treating them as
 // independent inputs: stoning-only is 103, death-only 105, both 104. CoM2 and Warlord keep
 // genuinely independent gaze fields, which is why the inference stays flag-shaped here.
 function gazeRealm(atkAbilities) {
@@ -420,6 +502,15 @@ function modernAttackIsMagic(attacker, defAbilities, magicranged) {
   return !!attacker.encMagic;
 }
 
+// --- Weapon Immunity eligibility ---
+// Triggers only against Normal units carrying a normal (non-magical) weapon. Which attacks can
+// present that weapon at all is decided by the caller: `dosDefenseForAttack` for the DOS
+// engines, whose immunity mask never admits Thrown in MoM 1.31 and never admits a gaze in any
+// build, and `computeCasterDefenseForAttack` for Caster.exe. The bonus each engine then applies
+// is its own ordered step: `dosEffectiveDefense:weaponImmunityFloor` (MoM, raise to 10),
+// `dosEffectiveDefense:weaponImmunityBonus` (CoM 1, +8) and `effectiveDefense:weaponImmunity`
+// (CoM2 +8, Warlord +10).
+// v1.31 bug: Generic units (Trireme, Galley, Warship, Catapult) bypass WI regardless of attack type.
 function weaponImmunityApplies(defAbilities, atkWeapon, atkUnitType, version, atkGeneric) {
   if (!hasWeaponImmunityEffect(defAbilities)) return false;
   // Ruler of Underworld preserves Weapon Immunity against magical/mithril/adamantium
@@ -450,75 +541,6 @@ function hasNonCorporealEffect(abilities) {
 function applyRage(baseAtk, unit, aliveNow) {
   if (baseAtk <= 0 || !hasAbil(unit.abilities, 'rage')) return baseAtk;
   return baseAtk + Math.max(0, unit.figs - aliveNow);
-}
-
-// --- Weapon Immunity ---
-// Applies Weapon Immunity defense boost after armor piercing.
-// MoM: defense raised to minimum 10.  CoM/CoM2: +8 defense.  Warlord: +10 defense.
-// Triggers only against Normal units with normal (non-magical) weapons.
-// Phase applicability varies by version:
-//   Melee: always applies.
-//   Thrown: applies in all versions EXCEPT v1.31 (bug: thrown ignores WI).
-//   Ranged missile/boulder: always applies (all versions).
-//   Magic ranged: never (already magical).
-// v1.31 bug: Generic units (Trireme, Galley, Warship, Catapult) bypass WI regardless of attack type.
-// STAT-FORMULA[weaponImmunityEffectiveDefense]
-// PROVENANCE[weaponImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:25:3a05783701e4dc0bb3997f01 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72 | Reference docs/DOS reconstructed/combat.c@span:9:091e1f3c04458619a8eb1828 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:12:579afca0c054420752f52644 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:64343218ebddfe0d2454f929 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:8c99d740dfd473b21f906b13 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:4c279bb027bcde85badd90e7
-function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, version, atkGeneric) {
-  if (!weaponImmunityApplies(defAbilities, atkWeapon, atkUnitType, version, atkGeneric)) return baseDef;
-  if (version && version.startsWith('com2_warlord')) {
-    return baseDef + 10;
-  }
-  if (version && version.startsWith('com')) {
-    return baseDef + 8;
-  }
-  return Math.max(baseDef, 10);
-}
-
-// --- Missile Immunity ---
-// Applies Missile Immunity defense boost. Only triggers against Ranged Missile Attacks.
-// MoM: defense set to 50. CoM/CoM2: defense set to 100. Applied after armor piercing and weapon immunity.
-// STAT-FORMULA[missileImmunityEffectiveDefense]
-// PROVENANCE[missileImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:4:7631b0118223ca1089ef4ce6 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:1:e432b988437369fabb54b4c5
-function missileImmunityDef(baseDef, defAbilities, version) {
-  if (!hasAbil(defAbilities, 'missileImmunity')) return baseDef;
-  return (version && version.startsWith('com')) ? 100 : 50;
-}
-
-// --- Fire Immunity ---
-// Raises defense against Fire Breath and Immolation damage. MoM: 50. CoM/CoM2: 100.
-// Applied after armor piercing and weapon immunity.
-// STAT-FORMULA[fireImmunityEffectiveDefense]
-// PROVENANCE[fireImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:3:88dfe5adc853afc5bfed6290 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:4803e9b487f6f1a1cb49bdaa
-function fireImmunityDef(baseDef, defAbilities, version) {
-  if (!hasAbil(defAbilities, 'fireImmunity')) return baseDef;
-  return (version && version.startsWith('com')) ? 100 : 50;
-}
-
-// --- Righteousness ---
-// Life-realm unit enchantment. Protects against Chaos/Death magic.
-// In combat, applies:
-//   Defense 50 (MoM) / 100 (CoM/CoM2) vs Chaos-realm Ranged Magical Attack (magic_c), Fire Breath, Lightning Breath
-//   Defense 50/100 vs Immolation and Wall of Fire (via magicImmunityDef chain)
-//   Defense 50 vs the hidden component of a Chaos- or Death-realm gaze (MoM only)
-//   +30 Resistance vs Cause Fear, Life Steal, Death Gaze (always pushes effective Res ≥ 10).
-// STAT-FORMULA[righteousnessEffectiveDefense]
-// PROVENANCE[righteousnessEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:10:8b80214da56946e4a9fbfbdd | Reference docs/DOS reconstructed/combat.c@span:8:66077c35eb258dac5ab28d94 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06
-function righteousnessDef(baseDef, defAbilities, version) {
-  if (!hasAbil(defAbilities, 'righteousness')) return baseDef;
-  return (version && version.startsWith('com')) ? 100 : 50;
-}
-
-// --- Magic Immunity (defense) ---
-// Raises defense against magic ranged attacks and the DOS Immolation/Wall-of-Fire spell path.
-// MoM: defense set to 50. CoM/CoM2: defense set to 100. Modern direct spell damage separately
-// exits before rolling; its computed defense value is therefore redundant for Immolation/WoF.
-// Applied after other defense modifiers; overrides Fire Immunity and Righteousness if higher.
-// STAT-FORMULA[magicImmunityEffectiveDefense]
-// PROVENANCE[magicImmunityEffectiveDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:17:7ad26f1791d700f7e217ba27 | Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:1:70abb44002337f3267802332
-function magicImmunityDef(baseDef, defAbilities, version) {
-  if (!hasAbil(defAbilities, 'magicImmunity')) return baseDef;
-  return (version && version.startsWith('com')) ? 100 : 50;
 }
 
 // --- Immolation ---

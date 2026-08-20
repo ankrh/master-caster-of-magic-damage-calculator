@@ -147,8 +147,7 @@ function runResolutionStepChecks(ctx) {
   const legacyResistance = ctx.buildResistanceContext(
     { res: 0, unitType: 'normal', abilities: {} },
     { res: 0, unitType: 'hero', abilities: { charmed: true } },
-    'mom_1.31',
-    false);
+    'mom_1.31');
   assertEqual(legacyResistance.bResPoison, 30,
     'Legacy Charmed adds 30 Resistance to realm-less rolls for heroes');
 
@@ -160,12 +159,12 @@ function runResolutionStepChecks(ctx) {
   const plainResistanceSource = { res: 0, unitType: 'normal', abilities: {} };
   for (const version of ['mom_1.31', 'mom_cp_1.60.00']) {
     const context = ctx.buildResistanceContext(
-      plainResistanceSource, bothElemental, version, false);
+      plainResistanceSource, bothElemental, version);
     assertEqual(context.bResStoning, 10,
       `${version}: Elemental Armor supersedes Resist Elements on the resistance path`);
   }
   const comResistance = ctx.buildResistanceContext(
-    plainResistanceSource, bothElemental, 'com_6.08', true);
+    plainResistanceSource, bothElemental, 'com_6.08');
   assertEqual(comResistance.bResStoning, 4,
     'CoM 1 resistance ignores Elemental Armor and retains Resist Elements +4');
 
@@ -189,6 +188,74 @@ function runResolutionStepChecks(ctx) {
   assertEqual(ctx.computeDefenseProfile(
     elementalDefenseTarget, natureRangedAttacker, 'com_6.08', 0).vsRanged, 20,
   'CoM 1 independently stacks Elemental Armor +12 and Resist Elements +4 on defense');
+
+  // Battle_Unit_Defense_Special carries one `defense_special` marker that the later immunity
+  // steps cash in, so which marker a build writes last decides the result. MoM 1.31 sets the
+  // blanket marker first (131:0x9A66E) and the Weapon Immunity one after it (0x9A68C), so
+  // Weapon Immunity overwrites Missile Immunity; CP 1.60 and CoM 1 write them the other way
+  // round (160:0x9A66B then 0x9A68C) and the blanket value survives.
+  const missileAttacker = {
+    unitType: 'normal', weapon: 'normal', generic: false,
+    rangedType: 'missile', thrownType: 'none', abilities: {},
+  };
+  const bothImmunities = {
+    def: 4, unitType: 'normal', abilities: { missileImmunity: true, weaponImmunity: true },
+  };
+  const missileImmuneOnly = { def: 4, unitType: 'normal', abilities: { missileImmunity: true } };
+  const markerCases = [
+    ['mom_1.31', 10, 50],
+    ['mom_cp_1.60.00', 50, 50],
+    ['com_6.08', 100, 100],
+  ];
+  for (const [version, both, missileOnly] of markerCases) {
+    assertEqual(ctx.computeDefenseProfile(bothImmunities, missileAttacker, version, 0).vsRanged,
+      both, `${version}: Weapon and Missile Immunity resolve in the order that build writes them`);
+    assertEqual(ctx.computeDefenseProfile(missileImmuneOnly, missileAttacker, version, 0).vsRanged,
+      missileOnly, `${version}: Missile Immunity alone reaches the defense-special value`);
+  }
+
+  // The mask admits the Weapon bit for Thrown only where `ranged_type == RAT_THROWN` is
+  // satisfiable, which MoM 1.31's second `/ 10` comparison is not (131:0x99235).
+  const thrownAttacker = {
+    unitType: 'normal', weapon: 'normal', generic: false,
+    rangedType: 'none', thrownType: 'thrown', abilities: {},
+  };
+  const weaponImmuneOnly = { def: 4, unitType: 'normal', abilities: { weaponImmunity: true } };
+  for (const [version, expected] of [['mom_1.31', 4], ['mom_cp_1.60.00', 10], ['com_6.08', 12]]) {
+    assertEqual(ctx.computeDefenseProfile(weaponImmuneOnly, thrownAttacker, version, 0).vsThrown,
+      expected, `${version}: Thrown reaches Weapon Immunity only where the mask admits it`);
+  }
+
+  // Combat_Effective_Resistance adds where GetEffectiveResistance assigns, so a DOS unit
+  // accumulates every applicable bonus and can finish above the 100 the modern ceiling sets.
+  const dosCharmedHero = {
+    res: 70, isHero: true, unitType: 'hero',
+    abilities: { charmed: true, resistMagic: true, bless: true },
+  };
+  const dosResistanceTrace = [];
+  assertEqual(ctx.dosEffectiveResistance(dosCharmedHero, 'mom_1.31', 'death', dosResistanceTrace),
+    108, 'DOS Charmed adds 30 rather than assigning, so Bless and Resist Magic stack past 100');
+  assertEqual(ctx.dosEffectiveResistance(dosCharmedHero, 'com_6.08', 'death'), 110,
+    "CoM 1 raises only Bless's contribution, leaving the additive shape intact");
+  assertEqual(ctx.dosEffectiveResistance(dosCharmedHero, 'mom_1.31', null), 100,
+    'A realm-less DOS roll takes Charmed alone: every other bonus is realm-gated');
+  assert(dosResistanceTrace.length > 0,
+    'Combat_Effective_Resistance emits an ordered trace, which the inline form could not');
+  assert(!Object.prototype.hasOwnProperty.call(dosCharmedHero, 'effectiveResistance'),
+    'Combat_Effective_Resistance runs on a discarded scratch copy');
+
+  const dosDefenseScratchTarget = {
+    def: 4, unitType: 'normal', abilities: { largeShield: true },
+  };
+  const dosDefenseTrace = [];
+  assertEqual(ctx.dosEffectiveDefense(dosDefenseScratchTarget, 'mom_1.31',
+    { isRanged: true, armorPiercing: true }, dosDefenseTrace), 3,
+  'Battle_Unit_Defense_Special halves the Large Shield bonus with the base: trunc((4 + 2) / 2)');
+  assert(!Object.prototype.hasOwnProperty.call(dosDefenseScratchTarget, 'effectiveDefense')
+    && !Object.prototype.hasOwnProperty.call(dosDefenseScratchTarget, 'defenseSpecial'),
+  'Battle_Unit_Defense_Special runs on a discarded scratch copy');
+  assert(dosDefenseTrace.length > 0,
+    'Battle_Unit_Defense_Special emits an ordered trace, which the inline form could not');
 
   const energyDoom = ctx.applyDoomUAHalving({
     atk: 5,

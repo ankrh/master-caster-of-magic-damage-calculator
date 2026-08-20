@@ -34,9 +34,10 @@
 // `base`: the raw stats, and the writes the engines make permanently before the encounter.
 function baseStatSteps(ctx) {
   const {
-    abilByPhase, altarOfTheMoon, altarOfTheSunHolyMother, baseDoomGaze, baseGazeRanged,
+    abilities, abilByPhase, altarOfTheMoon, altarOfTheSunHolyMother, baseDoomGaze, baseGazeRanged,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod, calcBaseAtk, calcBaseDef, calcBaseHP,
-    calcBaseRes, channels, dragonMound, identity, isCoM1, isCoM2, ludusAgoge, motherFungus,
+    calcBaseRes, channels, dragonMound, identity, isCoM1, isCoM2, lightningBladeSlots,
+    ludusAgoge, motherFungus,
     naturalSelectionCoal, naturalSelectionIron, naturalSelectionNightshade,
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount, pillarOfFaith, pillarOfFaithCount, poolOfRepentance,
@@ -57,16 +58,16 @@ function baseStatSteps(ctx) {
           u[c.thrownTypeField] = c.baseSequenceThrownType;
         }
       } }),
-    // PROVENANCE[chance:baseMelee]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
-    statStep({ id: 'chance:baseMelee', sourceId: 'baseToHitMelee',
+    // PROVENANCE[baseMelee]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
+    statStep({ id: 'baseMelee', sourceId: 'baseToHitMelee',
       sourceLabel: 'Base melee To Hit', phase: 'base', writes: ['toHit', 'toHitMelee'],
       when: () => baseToHitMod !== 0,
       apply: u => {
         if (isCoM2) u.toHit += baseToHitMod;
         else u.toHitMelee += baseToHitMod;
       } }),
-    // PROVENANCE[chance:baseRtb]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
-    statStep({ id: 'chance:baseRtb', sourceId: 'baseToHitRtb',
+    // PROVENANCE[baseRtb]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
+    statStep({ id: 'baseRtb', sourceId: 'baseToHitRtb',
       sourceLabel: 'Base ranged/Thrown/Breath To Hit', phase: 'base',
       writes: secondaryHitFields,
       when: () => baseToHitRtbMod !== (isCoM2 ? baseToHitMod : 0),
@@ -74,8 +75,8 @@ function baseStatSteps(ctx) {
         const mod = baseToHitRtbMod - (isCoM2 ? baseToHitMod : 0);
         for (const field of secondaryHitFields) u[field] += mod;
       } }),
-    // PROVENANCE[chance:baseBlock]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
-    statStep({ id: 'chance:baseBlock', sourceId: 'baseToBlock',
+    // PROVENANCE[baseBlock]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
+    statStep({ id: 'baseBlock', sourceId: 'baseToBlock',
       sourceLabel: 'Base To Block', phase: 'base', writes: ['toBlk'],
       when: () => baseToBlkMod !== 0,
       apply: u => { u.toBlk += baseToBlkMod; } }),
@@ -97,7 +98,9 @@ function baseStatSteps(ctx) {
       when: () => altarOfTheMoon,
       apply: u => {
         u.res += 1;
-        for (const c of channels) u[c.strengthField] += c.altarOfTheMoonRtbMod;
+        for (const c of channels) {
+          if (c.hasPermanentRangedStat) u[c.strengthField] += 2;
+        }
       } }),
     // PROVENANCE[militaryWorkshop]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:24:ab44f1ca0fc9eab7723b232b
     // The missile-to-boulder projectile upgrade is made here, at the block's own position,
@@ -107,8 +110,15 @@ function baseStatSteps(ctx) {
       writes: [...strengthFields, ...rangedTypeFields],
       when: () => channels.some(c => c.blackpowder),
       apply: u => {
+        // Doom or Armor Piercing means the block grants strength instead of the piercing flag:
+        // +4 on Thrown, +2 on a physical ranged attack. Fire Breath takes +4 either way. All
+        // three read the permanent record's channel, which is what the script's gates read.
+        const grantsStrength = !!abilities.doom || !!abilities.armorPiercing;
         for (const c of channels) {
-          u[c.strengthField] += c.blackpowderRtbMod + c.blackpowderFireBreathRtbMod;
+          if (!c.blackpowder) continue;
+          if (grantsStrength && c.blackpowderSelectedThrown) u[c.strengthField] += 4;
+          else if (grantsStrength && c.blackpowderSelectedPhysicalRanged) u[c.strengthField] += 2;
+          if (c.blackpowderSelectedFireBreath) u[c.strengthField] += 4;
           if (c.blackpowderUpgradesToBoulder) u[c.rangedTypeField] = 'boulder';
         }
       } }),
@@ -117,13 +127,26 @@ function baseStatSteps(ctx) {
     // PROVENANCE[lightningBlade:breath]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:6:81632d425b80bc83dc627d23
     statStep({ id: 'lightningBlade:breath', sourceLabel: 'Lightning Blade', phase: 'base',
       writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
-      when: () => channels.some(c => c.lightningBladeConvertsThrown || c.lightningBladeGrantsBreath),
+      when: u => lightningBladeSlots.some(({ target, source }) =>
+        target !== source || u[target.rangedTypeField] === 'none'),
       apply: u => {
-        for (const c of channels) {
-          if (!c.lightningBladeConvertsThrown && !c.lightningBladeGrantsBreath) continue;
-          u[c.strengthField] = c.lightningBladeConvertsThrown ? u[c.strengthField] + 1 : 1;
-          u[c.rangedTypeField] = 'none';
-          u[c.thrownTypeField] = 'lightning';
+        // A move out of the record's Thrown field, so an existing Lightning Breath is replaced
+        // and the emptied Thrown field stays the Thrown field for the writes that reach it
+        // later. The DOS-shaped shared slot is both ends at once, so there the write is made in
+        // place, and only what stands in the slot as *Thrown* is what the assignment reads.
+        for (const { target, source } of lightningBladeSlots) {
+          const inPlace = target === source;
+          if (inPlace && u[target.rangedTypeField] !== 'none') continue;
+          const moved = inPlace
+            ? (slotHasThrown(u, source) ? u[source.strengthField] : 0)
+            : u[source.strengthField];
+          u[target.strengthField] = moved + 1;
+          u[target.rangedTypeField] = 'none';
+          u[target.thrownTypeField] = 'lightning';
+          if (!inPlace) {
+            u[source.strengthField] = 0;
+            u[source.thrownTypeField] = 'none';
+          }
         }
       } }),
     // PROVENANCE[poolOfRepentance]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:6:3e9df07e383cb9fc3cb6ec88
@@ -136,7 +159,13 @@ function baseStatSteps(ctx) {
       when: () => dragonMound,
       apply: u => {
         u.def += 1;
-        for (const c of channels) u[c.strengthField] += c.dragonMoundRtbMod;
+        // Unconditional +2 to the independent Fire Breath field; the DOS-shaped shared slot is
+        // that field while it carries a fire breath, read here at the block's own position.
+        for (const c of channels) {
+          if (c.channelKey ? c.channelKey === 'fireBreath' : u[c.thrownTypeField] === 'fire') {
+            u[c.strengthField] += 2;
+          }
+        }
       } }),
     // The executing script also adds +1 to an existing ranged-strength field, despite
     // that write being omitted from Ludus Agoge's prose description.
@@ -145,7 +174,9 @@ function baseStatSteps(ctx) {
       when: () => ludusAgoge,
       apply: u => {
         u.res += 1; u.atk += 1;
-        for (const c of channels) u[c.strengthField] += c.ludusAgogeRtbMod;
+        for (const c of channels) {
+          if (c.hasPermanentRangedStat) u[c.strengthField] += 1;
+        }
         u.hp += 1;
       } }),
     // PROVENANCE[motherFungus]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:13:5feb79a87ed503bfc3388e6a
@@ -154,7 +185,9 @@ function baseStatSteps(ctx) {
       when: () => motherFungus,
       apply: u => {
         u.atk += 2;
-        for (const c of channels) u[c.strengthField] += c.motherFungusRtbMod;
+        for (const c of channels) {
+          if (c.hasPermanentRangedStat) u[c.strengthField] += 2;
+        }
         u.toBlk += 10;
       } }),
     // PROVENANCE[altarOfTheSun:holyMother]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
@@ -206,8 +239,8 @@ function baseStatSteps(ctx) {
           u[c.rangedTypeField] = 'beam';
         }
       } }),
-    // PROVENANCE[chance:survivalInstinctToBlock]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:fafe4abfecfd17491cbdbc10
-    statStep({ id: 'chance:survivalInstinctToBlock', sourceId: 'survivalInstinctToBlock',
+    // PROVENANCE[survivalInstinctToBlock]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:fafe4abfecfd17491cbdbc10
+    statStep({ id: 'survivalInstinctToBlock', sourceId: 'survivalInstinctToBlock',
       sourceLabel: 'Survival Instinct', phase: 'base', writes: ['toBlk'],
       when: () => survivalInstinctToBlkBonus !== 0,
       apply: u => { u.toBlk += survivalInstinctToBlkBonus; } }),
@@ -217,7 +250,7 @@ function baseStatSteps(ctx) {
 // `a`: precalc, in the binary.
 function precalcBinaryStatSteps(ctx) {
   const {
-    abilByPhase, ccFireBreathStrength, ccIndependentChannels, channels,
+    abilByPhase, ccFireBreathStrength, ccGrantsThisSlot, ccIndependentChannels, channels,
     rangedTypeFields, strengthFields, thrownTypeFields,
   } = ctx;
   return [
@@ -232,10 +265,10 @@ function precalcBinaryStatSteps(ctx) {
     statStep({ id: 'chaosChannels:fireBreath', sourceId: 'chaosChannels:fireBreath',
       sourceLabel: 'Chaos Channels', phase: 'a',
       writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
-      when: () => channels.some(c => c.ccFireBreathActive && c.ccOwnsThisSlot),
+      when: u => channels.some(c => ccGrantsThisSlot(u, c)),
       apply: u => {
         for (const c of channels) {
-          if (!c.ccFireBreathActive || !c.ccOwnsThisSlot) continue;
+          if (!ccGrantsThisSlot(u, c)) continue;
           u[c.strengthField] = ccIndependentChannels
             ? u[c.strengthField] + ccFireBreathStrength : ccFireBreathStrength;
           u[c.rangedTypeField] = 'none';
@@ -248,13 +281,14 @@ function precalcBinaryStatSteps(ctx) {
 // `b`: precalc, in UnitCalcPre.CAS (Warlord only).
 function precalcScriptStatSteps(ctx) {
   const {
-    abilByPhase, abilities, bombsGrenades, channels, ffMeleeBonus, ffRegularBonus,
-    goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
+    abilByPhase, abilities, baseFigs, bombsGrenades, channels, ffMeleeBonus, ffRegularBonus,
+    fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
     greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
     marionetteStrayed, natureLinkActive, outlanderRtbToHitBonus,
-    plagueActive, poxHostActive, secondaryHitFields, soulFlayActive, soulFlayAtkMod,
-    soulFlayDefMod, soulFlayResMod, strengthFields, thrownTypeFields, unitTypeVal,
+    plagueActive, poxHostActive, poxHostIsGoblin, secondaryHitFields,
+    soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayLevels, soulFlayResMod,
+    strengthFields, thrownTypeFields, unitTypeVal,
     uphillBattleActive, warlordEternalNightActive, warlordTrueLightStep,
     wofDefenderBonusActive,
   } = ctx;
@@ -309,8 +343,8 @@ function precalcScriptStatSteps(ctx) {
       && step.id !== 'tactician'),
     // The Outlander channel/common writes follow the script's own sequence:
     // Magitek Engine (ability step above), Ballistics, Xenopsychology, then Radio.
-    // PROVENANCE[chance:outlanderBallisticsTraining]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ba5b3ebcb89e99e403fbbac4
-    statStep({ id: 'chance:outlanderBallisticsTraining',
+    // PROVENANCE[outlanderBallisticsTraining]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ba5b3ebcb89e99e403fbbac4
+    statStep({ id: 'outlanderBallisticsTraining',
       sourceId: 'outlanderBallisticsTraining', sourceLabel: 'Ballistics Training',
       phase: 'b', writes: secondaryHitFields,
       when: () => outlanderRtbToHitBonus !== 0,
@@ -345,20 +379,26 @@ function precalcScriptStatSteps(ctx) {
       when: () => ffRegularBonus,
       apply: u => {
         u.atk += ffMeleeBonus;
-        for (const c of channels) u[c.strengthField] += c.ffRtbMod;
+        // The block precedes Bombs & Grenades (`:1066-1080`) in the same file, so the Thrown
+        // field that block creates is not yet there to be read.
+        for (const c of channels) u[c.strengthField] += fieryFuryRtbWrite(u, c);
       } }),
     // PROVENANCE[wallOfFire:garrison]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:a221a36b384a9457291e5a8a
     statStep({ id: 'wallOfFire:garrison', phase: 'b', writes: ['atk', ...strengthFields],
       when: () => wofDefenderBonusActive,
       apply: u => {
         u.atk += 1;
-        for (const c of channels) u[c.strengthField] += c.wofDefenderRtbMod;
+        for (const c of channels) {
+          if (slotHasPhysicalRanged(u, c) || slotHasThrown(u, c)) u[c.strengthField] += 1;
+        }
       } }),
     // PROVENANCE[eternalNight:poorVision]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:714df04471d1c63eb32e3964
     statStep({ id: 'eternalNight:poorVision', phase: 'b', writes: strengthFields,
       when: () => warlordEternalNightActive,
       apply: u => {
-        for (const c of channels) u[c.strengthField] += c.eternalNightRtbMod;
+        for (const c of channels) {
+          if (slotHasPhysicalRanged(u, c) || slotHasMagicalRanged(u, c)) u[c.strengthField] -= 2;
+        }
       } }),
     // PROVENANCE[bombsGrenades]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:7:99e85b5dc6de1ad3f95908c1
     // `SETSTAT(U,SThrown,0,…)` writes the calculated record, not the permanent one, so the
@@ -369,26 +409,31 @@ function precalcScriptStatSteps(ctx) {
       writes: [...strengthFields, ...thrownTypeFields],
       when: () => bombsGrenades,
       apply: u => {
+        const grant = Math.max(0, Math.floor(8 - baseFigs / 2));
         for (const c of channels) {
-          if (c.bombsGrenadesGrantsThrown) u[c.thrownTypeField] = 'thrown';
-          u[c.strengthField] += c.bombsGrenadesRtbMod;
+          if (u[c.rangedTypeField] === 'none' && u[c.thrownTypeField] === 'none') {
+            u[c.thrownTypeField] = 'thrown';
+          }
+          if (slotHasThrown(u, c)) u[c.strengthField] += grant;
         }
       } }),
     // PROVENANCE[upgradedExplosive:ranged]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:4:716e4812acd6432198553e28
     statStep({ id: 'upgradedExplosive:ranged', phase: 'b', writes: strengthFields,
-      when: () => channels.some(c => c.upgradedExplosive && c.rangedType !== 'none'),
+      when: u => channels.some(c => c.upgradedExplosive && u[c.rangedTypeField] !== 'none'),
       apply: u => {
-        for (const c of channels) u[c.strengthField] += c.upgradedExplosiveRangedMod;
+        for (const c of channels) {
+          if (c.upgradedExplosive && u[c.rangedTypeField] !== 'none') u[c.strengthField] += 2;
+        }
       } }),
     // The Fire Breath write is part of the same UnitCalcPre block as the ranged write.
     // Later phase-b effects such as True Light must see, but must not be included in,
     // this doubled subtotal.
     // PROVENANCE[upgradedExplosive:fireBreath]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:4:716e4812acd6432198553e28
     statStep({ id: 'upgradedExplosive:fireBreath', phase: 'b', writes: strengthFields,
-      when: () => channels.some(c => c.upgradedExplosive && c.thrownType === 'fire'),
+      when: u => channels.some(c => c.upgradedExplosive && u[c.thrownTypeField] === 'fire'),
       apply: u => {
         for (const c of channels) {
-          if (c.upgradedExplosive && c.thrownType === 'fire') {
+          if (c.upgradedExplosive && u[c.thrownTypeField] === 'fire') {
             u[c.strengthField] += Math.max(0, u[c.strengthField]);
           }
         }
@@ -398,14 +443,23 @@ function precalcScriptStatSteps(ctx) {
       when: () => soulFlayActive,
       apply: u => {
         u.res += soulFlayResMod; u.def += soulFlayDefMod; u.atk += soulFlayAtkMod;
-        for (const c of channels) u[c.strengthField] += c.soulFlayRtbMod;
+        // The script writes `SRanged` by the same per-level amount as melee, so the penalty
+        // lands on the conventional ranged channel only; Warlord's independent Thrown and
+        // Breath fields are untouched.
+        for (const c of channels) {
+          if (isConventionalRangedSlot(u, c)) u[c.strengthField] -= soulFlayLevels;
+        }
       } }),
     // PROVENANCE[goblinPox]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:19:4d062d7899f6c61a2403d4a4
     statStep({ id: 'goblinPox', phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields],
       when: () => poxHostActive,
       apply: u => {
         u.res += goblinPoxResMod; u.def += goblinPoxDefMod; u.atk += goblinPoxAtkMod;
-        for (const c of channels) u[c.strengthField] += c.goblinPoxRtbMod;
+        // Both branches write `SRanged` by the same amount as melee, so the penalty lands on
+        // the conventional ranged channel only.
+        for (const c of channels) {
+          if (isConventionalRangedSlot(u, c)) u[c.strengthField] -= poxHostIsGoblin ? 1 : 3;
+        }
       } }),
     // PROVENANCE[greatUnbinding]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:51f2e6d3d15bd989ebfff7cd
     statStep({ id: 'greatUnbinding', sourceId: 'greatUnbinding', sourceLabel: 'Great Unbinding',
@@ -422,7 +476,9 @@ function precalcScriptStatSteps(ctx) {
       when: () => plagueActive,
       apply: u => {
         u.res -= 6; u.def -= 3; u.atk -= 3;
-        for (const c of channels) u[c.strengthField] += c.plagueRtbMod;
+        for (const c of channels) {
+          if (isConventionalRangedSlot(u, c)) u[c.strengthField] -= 3;
+        }
         u.toHit -= 10;
       } }),
     // Xenopsychology and Radio are +1 Resistance each; the rest of what they grant is To Hit
@@ -440,31 +496,36 @@ function precalcScriptStatSteps(ctx) {
 // `c`: magic calc, in the binary, including the Warp Creature block.
 function magicCalcBinaryStatSteps(ctx) {
   const {
-    abilByPhase, abilities, badMoonActive, channels,
+    abilByPhase, abilities, badMoonActive, bombsGrenades, channels,
     chaosSurgeCount, chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus,
     charmOfLifeActive, classicBerserk, com1DivineBarrierAura, com1SoulLinkerAura,
     com1GuidingBeaconAura, darkForceActive, darknessAtkBonus, darknessDefBonus, darknessResBonus,
     destinyActive, disciplineActive, disciplineAtkMod, disciplineDefMod, doomGazeLvlMod,
     dosTrueLightStep, enduranceActive, enduranceDefMod, enduranceHpMod,
     eternalNightEnemyResPenalty, flameBladeRangedStep,
-    focusMagicActive, focusMagicDoomGazeMod, gazeLvlMod, gazeWarpHalves, goodMoonActive,
-    hasDarkness, hasMeleeAttack, heavenlyLightActive, heavenlyLightMeleeToHit, landLinkingEligible,
-    heavenlyLightThrownToHit, holyArmorActive, hwMeleeToHit,
+    focusMagicActive, focusMagicBranchSlots, focusMagicDoomGazeMod, gazeLvlMod, gazeWarpHalves,
+    goodMoonActive,
+    hasDarkness, hasMeleeAttack, heavenlyLightActive, heavenlyLightHitPick,
+    heavenlyLightMeleeToHit, holyArmorActive, holyWeaponHitPick, hwMeleeToHit,
+    landLinkingEligible,
     identity, inputBaseAtk, isCoM1, isCoM2,
-    isCoMVersion, isWarlord, lionheartHpMod, lvl,
+    isCoMVersion, isWarlord, levelRank, lionheartHpMod, lvl,
     modernNodeBaseMelee, natureConjunctionActive, nodeAuraActive, orihalconActive,
     rangedTypeFields, realmWardActive, secondaryHitTargets, secondaryHitFields, spellWardActive,
-    secondaryHitFieldsFor, strengthFields, supremeLightEligible, thrownTypeFields, unitIsChaos, unitTypeVal, version,
-    vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warpRealityActive, weaponStatSteps,
+    recordContext, secondaryHitFieldsFor, strengthFields, supremeLightEligibleAt,
+    thrownTypeFields, unitIsChaos, unitTypeVal, version,
+    vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warpRealityActive, weaknessBinaryHits,
+    weaknessPenalty, weaponStatSteps,
   } = ctx;
   // A gated secondary To Hit write is decided by the channel that reads the modifier — the
   // record's own `rangedtype` and Thrown field (Units.RecalculateUnits.pas:639-662, :1451-1454,
   // :1806-1809) — not by whichever channel a derivation happens to be for. Slots that share a
   // modifier share the decision, which is what one `hitchancebreath` for two breath strengths
   // means; Breath is untouched by all three of these writers.
-  const hitTargetValue = (target, pick) => {
+  const hitTargetValue = (u, target, pick) => {
+    const kind = target.kindAt(u);
     for (const context of target.contexts) {
-      const value = pick(context, target.kind);
+      const value = pick(u, context, kind);
       if (value) return value;
     }
     return 0;
@@ -492,7 +553,14 @@ function magicCalcBinaryStatSteps(ctx) {
         ...(!isCoM2 ? ['gaze', 'doomGaze'] : [])],
       apply: u => {
         u.res += lvl.res; u.def += lvl.def; u.atk += lvl.atk;
-        for (const c of channels) u[c.strengthField] += c.rtbLvl;
+        // ApplyLevelBonus dispatches on the channel the record carries here.
+        for (const c of channels) {
+          if (u[c.rangedTypeField] !== 'none') {
+            if (c.calcBaseRtb > 0) u[c.strengthField] += lvl.ranged;
+          } else if (u[c.thrownTypeField] !== 'none') {
+            u[c.strengthField] += lvl.thrown;
+          }
+        }
         u.hp += lvl.hp;
         if (!isCoM2) {
           u.gaze += gazeLvlMod; u.doomGaze += doomGazeLvlMod;
@@ -518,17 +586,38 @@ function magicCalcBinaryStatSteps(ctx) {
       apply: u => {
         for (const c of channels) {
           const magicalRanged = isMagicalRangedType(u[c.rangedTypeField]);
-          const breath = u[c.thrownTypeField] === 'fire' || u[c.thrownTypeField] === 'lightning';
-          if (u[c.strengthField] > 0 && (magicalRanged || breath)) u[c.strengthField] += 3;
+          if (u[c.strengthField] > 0 && (magicalRanged || slotHasBreath(u, c))) {
+            u[c.strengthField] += 3;
+          }
         }
-        u.doomGaze += focusMagicDoomGazeMod;
-        for (const c of channels) {
-          if (!c.focusMagicConvertsThrown && !c.focusMagicConvertsRanged
-            && !c.focusMagicCreatesRanged) continue;
-          if (c.focusMagicCreatesRanged) u[c.strengthField] = 3;
-          else if (version === 'com_6.08') u[c.strengthField] = Math.max(u[c.strengthField], 3);
-          u[c.rangedTypeField] = 'magic_s';
-          u[c.thrownTypeField] = 'none';
+        u.doomGaze += focusMagicDoomGazeMod(u);
+        // The ranged branch. `U.ranged := U.thrown; U.thrown := 0`
+        // (Units.RecalculateUnits.pas:885-891) is a **move** between two fields of the modern
+        // record, which is what leaves the Thrown field free for the Shadow Strike grant at
+        // `UnitCalc.CAS:1262`. The DOS engines carry one shared secondary field, so there both
+        // ends of the move are the same slot and the branch is a retype in place. Restoring the
+        // engine's four-way base-record branch and its independent Doom Gaze test is F98.
+        for (const { target, source } of focusMagicBranchSlots) {
+          const inPlace = target === source;
+          const convertsThrown = !target.baseRangedPresent
+            && (source.calcBaseRtb > 0 || bombsGrenades) && slotHasThrown(u, source);
+          const createsRanged = !target.baseRangedPresent && !convertsThrown
+            && u[target.thrownTypeField] === 'none';
+          const convertsRanged = (target.calcBaseRtb > 0 || target.marionetteRangedSlot)
+            && slotHasPhysicalRanged(u, target);
+          if (!convertsThrown && !createsRanged && !convertsRanged) continue;
+          if (createsRanged) {
+            u[target.strengthField] = 3;
+          } else {
+            if (convertsThrown && !inPlace) {
+              u[target.strengthField] = u[source.strengthField];
+              u[source.strengthField] = 0;
+            }
+            if (version === 'com_6.08') u[target.strengthField] = Math.max(u[target.strengthField], 3);
+          }
+          u[target.rangedTypeField] = 'magic_s';
+          u[target.thrownTypeField] = 'none';
+          if (convertsThrown) u[source.thrownTypeField] = 'none';
         }
       } }),
     // Weapon material is `@Units@ApplyMagicWeapons` at +0x04B90, after the equipment loop —
@@ -547,22 +636,22 @@ function magicCalcBinaryStatSteps(ctx) {
         u.def += 1; u.res += 1;
         if (inputBaseAtk > 0) u.atk += 1;
         for (const c of channels) {
-          if (c.modernConventionalRangedChannel && u[c.strengthField] > 0) u[c.strengthField] += 1;
+          if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 1;
         }
       } }),
     // One To-Hit write reaching melee and the secondary slots. Each half keeps its own gate,
     // both read from values fixed before this step, so they fold into the `apply`.
-    // PROVENANCE[chance:heavenlyLight]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
-    statStep({ id: 'chance:heavenlyLight', sourceId: 'heavenlyLight',
+    // PROVENANCE[heavenlyLight:toHit]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
+    statStep({ id: 'heavenlyLight:toHit', sourceId: 'heavenlyLight',
       sourceLabel: 'Heavenly Light / Guardian node', phase: 'c',
       writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
-      when: () => heavenlyLightMeleeToHit !== 0
+      when: u => heavenlyLightMeleeToHit !== 0
         || secondaryHitTargets.some(target =>
-          hitTargetValue(target, heavenlyLightHitPick) !== 0),
+          hitTargetValue(u, target, heavenlyLightHitPick) !== 0),
       apply: u => {
         if (heavenlyLightMeleeToHit !== 0) u.toHitMelee += heavenlyLightMeleeToHit;
         for (const target of secondaryHitTargets) {
-          u[target.field] += hitTargetValue(target, heavenlyLightHitPick);
+          u[target.field] += hitTargetValue(u, target, heavenlyLightHitPick);
         }
       } }),
     ...(isCoM2 ? weaponStatSteps : []),
@@ -576,29 +665,39 @@ function magicCalcBinaryStatSteps(ctx) {
       when: () => disciplineActive,
       apply: u => {
         u.def += disciplineDefMod; u.atk += disciplineAtkMod;
-        for (const c of channels) u[c.strengthField] += c.disciplineRtbMod;
+        if (levelRank >= 2) {
+          for (const c of channels) {
+            if (isNonMagicalRangedFieldSlot(u, c)) u[c.strengthField] += 1;
+          }
+        }
       } }),
     // Each of these is one enchantment's whole region-c write, hand-written here rather than
     // emitted from `getAbilityStatSteps` because its attack-strength half reads a per-channel
     // mod that builder never receives.
     ...(!isCoM1 ? [flameBladeRangedStep] : []),
     // One write: the flat melee/defence package and the Breath addition the same block makes.
-    // `landLinkingBreathRtbMod` carries its own narrower eligibility, so it is 0 where only the
-    // flat half applies.
+    // CoM/CoM2 Land Linking boosts melee and breath only.
     // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:3fa8c2fabf80e91cf859f9b0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
     statStep({ id: 'landLinking', phase: 'c', writes: ['atk', 'def', ...strengthFields],
       when: () => landLinkingEligible,
       apply: u => {
         if (hasMeleeAttack) u.atk += 2;
         u.def += 2;
-        for (const c of channels) u[c.strengthField] += c.landLinkingBreathRtbMod;
+        if (version.startsWith('com')) {
+          for (const c of channels) {
+            if (slotHasBreath(u, c)) u[c.strengthField] += 2;
+          }
+        }
       } }),
     // PROVENANCE[giantStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:d3b7235f7b74f0d7c75b9b2f | Reference docs/DOS reconstructed/unitcalc.c@span:10:89de343d2e17866257ac560a
     statStep({ id: 'giantStrength', phase: 'c', writes: ['atk', ...strengthFields],
       when: () => !!(abilities && abilities.giantStrength),
       apply: u => {
         if (hasMeleeAttack) u.atk += 1;
-        for (const c of channels) u[c.strengthField] += c.gsRtbMod;
+        // +1 Thrown only: not missile/boulder/magic ranged, and not breath.
+        for (const c of channels) {
+          if (slotHasThrown(u, c)) u[c.strengthField] += 1;
+        }
       } }),
     // PROVENANCE[lionheart]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:0e597d1ff73a00332d952e72 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:87ae0c5af5c55a4b1df9577b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:828f58debc909e639ff119f0
     statStep({ id: 'lionheart', phase: 'c', writes: ['atk', 'res', ...strengthFields, 'hp'],
@@ -606,7 +705,10 @@ function magicCalcBinaryStatSteps(ctx) {
       apply: u => {
         if (hasMeleeAttack) u.atk += 3;
         u.res += 3;
-        for (const c of channels) u[c.strengthField] += c.lionheartRtbMod;
+        for (const c of channels) {
+          if (isNonMagicalRangedFieldSlot(u, c)
+            || (slotHasThrown(u, c) && version.startsWith('mom'))) u[c.strengthField] += 3;
+        }
         u.hp += lionheartHpMod;
       } }),
     // Holy Armor writes defence *or* To Block: MoM always +2 defence, CoM/CoM2 +2 defence at
@@ -627,21 +729,24 @@ function magicCalcBinaryStatSteps(ctx) {
       when: () => orihalconActive,
       apply: u => {
         u.res += 1;
-        for (const c of channels) u[c.strengthField] += c.orihalconRtbMod;
+        for (const c of channels) {
+          if (slotHasMagicalRanged(u, c)) u[c.strengthField] += 2;
+        }
       } }),
-    // PROVENANCE[chance:holyWeapon:melee]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:f35bf69e3356d00f90e013ed | Reference docs/DOS reconstructed/unitcalc.c@span:14:057c7ba8762bb65c4a011e69 | Reference docs/DOS reconstructed/unitcalc.c@span:12:1acacb263828739ad9aeab50 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:aeee04e431949f9a5f171311
-    statStep({ id: 'chance:holyWeapon:melee', sourceId: 'holyWeapon',
-      sourceLabel: 'Holy Weapon', phase: 'c', writes: ['toHitMelee'],
-      when: () => hwMeleeToHit !== 0,
-      apply: u => { u.toHitMelee += hwMeleeToHit; } }),
-    // PROVENANCE[chance:holyWeapon:rtb]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:f35bf69e3356d00f90e013ed | Reference docs/DOS reconstructed/unitcalc.c@span:14:057c7ba8762bb65c4a011e69 | Reference docs/DOS reconstructed/unitcalc.c@span:12:1acacb263828739ad9aeab50 | Reference docs/DOS reconstructed/combat.c@span:11:be24e47e7e5719d3e16efdf5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:aeee04e431949f9a5f171311
-    statStep({ id: 'chance:holyWeapon:rtb', sourceId: 'holyWeapon',
+    // One To-Hit write reaching melee and the secondary slots. Each half keeps its own gate —
+    // melee on the enchantment alone, each secondary slot on the channel that reads the
+    // modifier — and neither reads a field the other writes, so they fold into one `apply`.
+    // PROVENANCE[holyWeapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:f35bf69e3356d00f90e013ed | Reference docs/DOS reconstructed/unitcalc.c@span:14:057c7ba8762bb65c4a011e69 | Reference docs/DOS reconstructed/unitcalc.c@span:12:1acacb263828739ad9aeab50 | Reference docs/DOS reconstructed/combat.c@span:11:be24e47e7e5719d3e16efdf5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:aeee04e431949f9a5f171311
+    statStep({ id: 'holyWeapon', sourceId: 'holyWeapon',
       sourceLabel: 'Holy Weapon', phase: 'c',
-      writes: secondaryHitFieldsFor(['ranged', 'thrown']),
-      when: () => secondaryHitTargets.some(target => hitTargetValue(target, holyWeaponHitPick) !== 0),
+      writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
+      when: u => hwMeleeToHit !== 0
+        || secondaryHitTargets.some(target =>
+          hitTargetValue(u, target, holyWeaponHitPick) !== 0),
       apply: u => {
+        if (hwMeleeToHit !== 0) u.toHitMelee += hwMeleeToHit;
         for (const target of secondaryHitTargets) {
-          u[target.field] += hitTargetValue(target, holyWeaponHitPick);
+          u[target.field] += hitTargetValue(u, target, holyWeaponHitPick);
         }
       } }),
     // Global enchantments, combat globals, and curses execute after Holy Armor's live
@@ -655,7 +760,9 @@ function magicCalcBinaryStatSteps(ctx) {
       when: () => !!(abilities && abilities.reinforceMagic),
       apply: u => {
         u.res += 2;
-        for (const c of channels) u[c.strengthField] += c.reinforceMagicRtbMod;
+        for (const c of channels) {
+          if (slotHasMagicalRanged(u, c)) u[c.strengthField] += 2;
+        }
       } }),
     // Charm of Life reads live HP after every earlier HP writer, including Lionheart and Endurance.
     // PROVENANCE[charmOfLife]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:bac4e9b3eab5dcd73146e126 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:95fe4413d7ef9ab38400cfb7
@@ -667,16 +774,24 @@ function magicCalcBinaryStatSteps(ctx) {
       when: () => !!(abilities && abilities.blazingMarch),
       apply: u => {
         if (hasMeleeAttack) u.atk += 3;
-        for (const c of channels) u[c.strengthField] += c.blazingMarchRtbMod;
+        // Warlord's script adds the Thrown branch the CoM2 binary does not have; the version
+        // test is that difference, not a position correction.
+        for (const c of channels) {
+          if (u[c.rangedTypeField] === 'missile' || (isWarlord && slotHasThrown(u, c))) {
+            u[c.strengthField] += 3;
+          }
+        }
       } }),
-    // The melee penalty is -3 in every CoM engine and -2 in MoM; the attack-strength half is
-    // `weaknessRtbModBinary`, which chooses its own branch and carries the same magnitude.
+    // The melee penalty is -3 in every CoM engine and -2 in MoM; the attack-strength half
+    // chooses its own branch and carries the same magnitude.
     // PROVENANCE[weakness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:51bb7b42de5195f9edf69a86 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:e4cfc8d10fb6c6beee42bb6f | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:a64ed4008bd0ec13a817f841
     statStep({ id: 'weakness', phase: 'c', writes: ['atk', ...strengthFields],
       when: () => !!(abilities && abilities.weakness),
       apply: u => {
         if (hasMeleeAttack) u.atk += version.startsWith('com') ? -3 : -2;
-        for (const c of channels) u[c.strengthField] += c.weaknessRtbModBinary;
+        for (const c of channels) {
+          if (weaknessBinaryHits(u, c)) u[c.strengthField] -= weaknessPenalty;
+        }
       } }),
     // PROVENANCE[chaosSurge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8aac79f44ffe2fbae619cb5d | Reference docs/DOS reconstructed/unitcalc.c@span:28:ef6419306ce4c0b275103ee1 | Reference docs/DOS reconstructed/unitcalc.c@span:29:0f32c183c37c88a243ddb6cf | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:bc81b31ab5f15a3717465711
     statStep({ id: 'chaosSurge', phase: 'c',
@@ -688,12 +803,12 @@ function magicCalcBinaryStatSteps(ctx) {
           u.atk += chaosSurgeMeleeBonus;
         for (const c of channels) {
           if (isCoM2) {
-            if (c.rangedType !== 'none'
-                || ((c.thrownType === 'fire' || c.thrownType === 'lightning')
-                  && u[c.strengthField] > 0))
+            if (u[c.rangedTypeField] !== 'none'
+                || (slotHasBreath(u, c) && u[c.strengthField] > 0))
               u[c.strengthField] += chaosSurgeRtbBonus;
           } else if (u[c.strengthField] > 0
-              && !(c.ccFireBreathActive && version.startsWith('mom'))) {
+              && !(c.ccFireBreathGranted && c.ccDosBreathEligible
+                && version.startsWith('mom'))) {
             u[c.strengthField] += chaosSurgeRtbBonus;
           }
         }
@@ -740,7 +855,7 @@ function magicCalcBinaryStatSteps(ctx) {
         } else {
           if (modernNodeBaseMelee) u.atk += 2;
           for (const c of channels) {
-            if (c.modernNodeSecondaryChannel && u[c.strengthField] > 0) u[c.strengthField] += 2;
+            if (isModernSecondarySlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 2;
           }
         }
       } }),
@@ -784,7 +899,7 @@ function magicCalcBinaryStatSteps(ctx) {
         u.def += 1;
         if (u.atk > 0) u.atk += 1;
         for (const c of channels) {
-          if (c.modernConventionalRangedChannel && u[c.strengthField] > 0) u[c.strengthField] += 1;
+          if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 1;
         }
       } }),
     // PROVENANCE[natureConjunction]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:4c6f881ef1f956f17e1bd803
@@ -795,7 +910,7 @@ function magicCalcBinaryStatSteps(ctx) {
         u.res += 2; u.def += 2;
         if (u.atk > 0) u.atk += 2;
         for (const c of channels) {
-          if (c.modernConventionalRangedChannel && u[c.strengthField] > 0) u[c.strengthField] += 2;
+          if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 2;
         }
       } }),
     // PROVENANCE[darkness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:a43a4b9b9c796ff5baa3e070 | Reference docs/DOS reconstructed/unitcalc.c@span:30:a6f103fc8632f6d1513712c0 | Reference docs/DOS reconstructed/unitcalc.c@span:8:7e6d93372e0de3d445a9db2b | Reference docs/DOS reconstructed/unitcalc.c@span:12:750dc4f6540b4d84533b2557 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:18f99324928d11bffe6f2858 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:e289006c649dcfb1c6e9a280
@@ -907,7 +1022,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // engine takes it — after Warp Resist and Darkness, before Tactician (0x90992-0x90A53).
     // PROVENANCE[supremeLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:b1236fda671c45bc369f8550 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:21:57c5217db1d984c019548cee
     statStep({ id: 'supremeLight', phase: 'c', writes: ['def', 'atk', ...strengthFields],
-      when: () => isCoM1 && supremeLightEligible,
+      when: u => isCoM1 && supremeLightEligibleAt(u, recordContext),
       apply: u => {
         u.def += Math.trunc(u.res / 3);
         u.atk += 2;
@@ -931,18 +1046,19 @@ function magicCalcBinaryStatSteps(ctx) {
 
 // Heavenly Light's material tail writes Ranged only when the current type is not magical, and
 // Thrown unconditionally; Holy Weapon does the same. Both leave Breath alone.
-function heavenlyLightHitPick(context, kind) {
-  if (kind === 'ranged') return context.heavenlyLightRangedToHit;
-  if (kind === 'thrown') return context.heavenlyLightThrownToHit;
-  return 0;
-}
-
-function holyWeaponHitPick(context, kind) {
-  // A slot's ranged and thrown types are mutually exclusive, so picking by kind gives the DOS
-  // shared slot exactly the sum of the two halves its own type admits.
-  if (kind === 'ranged') return context.hwRangedToHit;
-  if (kind === 'thrown') return context.hwThrownToHit;
-  return 0;
+// Both write Ranged — non-magical types only — and Thrown, and leave Breath untouched
+// (Units.RecalculateUnits.pas:1451-1454 and :1806-1809). A slot's ranged and thrown types are
+// mutually exclusive, so picking by kind gives the DOS shared slot exactly the half its own live
+// type admits. `Inc(U.hitchancethrown, 10)` carries no gate at all, so the Thrown half stands on
+// the record's Thrown threshold before any later grant creates the attack that reads it;
+// MoM 1.31 alone omits Holy Weapon's write.
+function makeSecondaryHitPick(active, thrownValue) {
+  return (u, context, kind) => {
+    if (!active) return 0;
+    if (kind === 'ranged') return isNonMagicalRangedFieldSlot(u, context) ? 10 : 0;
+    if (kind === 'thrown') return thrownValue;
+    return 0;
+  };
 }
 
 // `d`: magic calc, in UnitCalc.CAS (Warlord only).
@@ -953,8 +1069,9 @@ function magicCalcScriptStatSteps(ctx) {
     hasMeleeAttack, hurricaneActive, isWarlord, levelRank,
     pneumaFieldActive, psychoForceActive, rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
-    trueSightRangedToHitBonus, vampirismActive,
-    warlordBerserk, warlordCombatFlameBlade, weaknessActive,
+    shadowStrikeActive, trueSightRangedToHitBonus, vampirismActive,
+    warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
+    weaknessActive, weaknessBinaryHits, weaknessPenalty,
   } = ctx;
   const vampirismSources = channels.filter(c => c.slotKey !== 'legacy').length > 0
     ? channels.filter(c => c.slotKey !== 'legacy')
@@ -969,14 +1086,18 @@ function magicCalcScriptStatSteps(ctx) {
     statStep({ id: 'weakness', phase: 'd', writes: strengthFields,
       when: () => weaknessActive,
       apply: u => {
-        for (const c of channels) u[c.strengthField] += c.weaknessRtbModCas;
+        // Warlord's script half, which reaches the two Breath fields the compiled block leaves
+        // alone — and only where that block made no write to this slot.
+        for (const c of channels) {
+          if (!weaknessBinaryHits(u, c) && slotHasBreath(u, c)) u[c.strengthField] -= weaknessPenalty;
+        }
       } }),
-    // PROVENANCE[chance:trueSight:ranged]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
-    statStep({ id: 'chance:trueSight:ranged', sourceId: 'trueSight', sourceLabel: 'True Sight',
+    // PROVENANCE[trueSight:ranged]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
+    statStep({ id: 'trueSight:ranged', sourceId: 'trueSight', sourceLabel: 'True Sight',
       phase: 'd', writes: secondaryHitFieldsFor(['ranged']), when: () => trueSightRangedToHitBonus !== 0,
       apply: u => {
         for (const target of secondaryHitTargets) {
-          if (target.kind === 'ranged') u[target.field] += trueSightRangedToHitBonus;
+          if (target.kindAt(u) === 'ranged') u[target.field] += trueSightRangedToHitBonus;
         }
       } }),
     // Combat-cast Flame Blade's script-only point is Fire Breath, not the selected shared
@@ -985,11 +1106,11 @@ function magicCalcScriptStatSteps(ctx) {
     // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:549122cfd5e672f77f13100e | Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:43a163f18b24d003ce1baa22 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
     statStep({ id: 'flameBlade', sourceId: 'flameBlade',
       sourceLabel: 'Flame Blade', phase: 'd', writes: strengthFields,
-      when: () => warlordCombatFlameBlade
-        && channels.some(c => c.warlordCombatFlameBladeOwnsThis),
+      when: u => warlordCombatFlameBlade
+        && channels.some(c => warlordFlameBladeOwnsSlot(u, c)),
       apply: u => {
         for (const c of channels) {
-          if (c.warlordCombatFlameBladeOwnsThis) u[c.strengthField] += 1;
+          if (warlordFlameBladeOwnsSlot(u, c)) u[c.strengthField] += 1;
         }
       } }),
     // PROVENANCE[berserkWarlord]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:6:1f86b30d6505c657da0d1205
@@ -1007,7 +1128,7 @@ function magicCalcScriptStatSteps(ctx) {
         // HURRICANESTR is 2 for a normally cast Hurricane: the script seeds 1 and adds 1 for
         // the cast level, which is the case its own comment at UnitCalc.CAS:558 states.
         for (const target of secondaryHitTargets) {
-          u[target.field] -= target.kind === 'breath' ? 30 : 20;
+          u[target.field] -= target.kindAt(u) === 'breath' ? 30 : 20;
         }
       } }),
     // Favored Terrain is later in the same script, after Hurricane.
@@ -1059,10 +1180,10 @@ function magicCalcScriptStatSteps(ctx) {
     statStep({ id: 'shadowStrike:thrown', sourceId: 'shadowStrike:thrown',
       sourceLabel: 'Shadow Strike', phase: 'd',
       writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
-      when: () => channels.some(c => c.shadowStrikeFillsSlot),
+      when: u => shadowStrikeActive && channels.some(c => isThrownFieldSlot(u, c)),
       apply: u => {
         for (const c of channels) {
-          if (!c.shadowStrikeFillsSlot) continue;
+          if (!isThrownFieldSlot(u, c)) continue;
           u[c.strengthField] += 1 + Math.trunc(u.atk / 3);
           u[c.rangedTypeField] = 'none';
           u[c.thrownTypeField] = 'thrown';
@@ -1093,8 +1214,8 @@ function magicCalcScriptStatSteps(ctx) {
       } }),
     // Energy Cannon reads the live common-plus-ranged threshold here, before region e, and
     // caps only its upper bound. Preserve that snapshot on the same ordered record.
-    // PROVENANCE[chance:energyCannonThreshold]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:9:415a610fbab04f989880d02e
-    statStep({ id: 'chance:energyCannonThreshold', sourceId: 'energyCannon',
+    // PROVENANCE[energyCannonThreshold]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:9:415a610fbab04f989880d02e
+    statStep({ id: 'energyCannonThreshold', sourceId: 'energyCannon',
       sourceLabel: 'Energy Cannon', phase: 'd', writes: ['energyCannonToHit'],
       when: () => energyCannon,
       apply: u => {
@@ -1115,7 +1236,9 @@ function magicCalcScriptStatSteps(ctx) {
     // the Thrown field, and empties Ranged.
     //
     // Two record shapes reach this step. Where the caller supplied modern channels, Ranged and
-    // Thrown are separate fields and the move is a real addition. Where it did not, the
+    // Thrown are separate fields — and both are always there to move between, because Focus
+    // Magic and Lightning Blade move out of the Thrown field rather than spending it (F90) — so
+    // the move is a real addition. Where it did not, the
     // DOS-shaped `legacy` slot carries one shared secondary value, so the same transfer is
     // expressed by the channel identity alone; the strength is already in the only field there
     // is. The engine writes no ranged *type* here (`UnitCalc.CAS` never assigns `SRangedType,0`)
@@ -1171,7 +1294,7 @@ function magicCalcScriptStatSteps(ctx) {
 function postHookStatSteps(ctx) {
   const {
     abilByPhase, baseDoomGaze, baseGazeRanged, blazeOfGloryActive, channels, hasMeleeAttack,
-    isCoM1, isCoM2, secondaryHitFields, strengthFields, supremeLightEligible,
+    isCoM1, isCoM2, recordContext, secondaryHitFields, strengthFields, supremeLightEligibleAt,
   } = ctx;
   return [
     // The engine clamps here and nowhere else (+0x0CCBC), after `d` and *before* the aura pass
@@ -1189,15 +1312,15 @@ function postHookStatSteps(ctx) {
     // Caster.exe clamps the common Hit field first, then clamps each attack-specific
     // modifier against that normalized common value. Keeping these as two steps makes the
     // load-bearing order visible and preserves the channel modifier stored by the engine.
-    // PROVENANCE[chance:modernClampCommon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
-    statStep({ id: 'chance:modernClampCommon', sourceId: 'statClamp',
+    // PROVENANCE[modernClampCommon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
+    statStep({ id: 'modernClampCommon', sourceId: 'statClamp',
       sourceLabel: 'Stat clamp', phase: 'e', writes: ['toHit'],
       when: () => isCoM2,
       apply: u => { u.toHit = Math.max(10, Math.min(100, u.toHit)); } }),
     // DOS stores one effective threshold per attack and clamps those final thresholds
     // directly. Its To Block floor remains 10%; modern defendchance has no region-e clamp.
-    // PROVENANCE[chance:legacyClamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/DOS reconstructed/combat.c@span:21:f6ae6f3564fbf6300c289918
-    statStep({ id: 'chance:legacyClamp', sourceId: 'statClamp', sourceLabel: 'Stat clamp',
+    // PROVENANCE[legacyClamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/DOS reconstructed/combat.c@span:21:f6ae6f3564fbf6300c289918
+    statStep({ id: 'legacyClamp', sourceId: 'statClamp', sourceLabel: 'Stat clamp',
       phase: 'e', writes: ['toHitMelee', ...secondaryHitFields, 'toBlk'], when: () => !isCoM2,
       apply: u => {
         u.toHitMelee = Math.max(10 - u.toHit, Math.min(100 - u.toHit, u.toHitMelee));
@@ -1209,7 +1332,7 @@ function postHookStatSteps(ctx) {
     // The recompute's final floor, over the stat record and — in the modern engines only — the
     // per-attack To Hit offsets. The two touch disjoint fields, so the modern half is a branch
     // inside one step rather than a second id: this step is `SCOPE_ALL` and the To Hit clamp
-    // has no DOS counterpart, which `e:chance:legacyClamp` above covers instead.
+    // has no DOS counterpart, which `e:legacyClamp` above covers instead.
     // PROVENANCE[clamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:264ed04fa725139a19a9de7d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:f42794b5fb78038c35722afa | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
     statStep({ id: 'clamp', phase: 'e',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'gaze', 'doomGaze',
@@ -1225,11 +1348,15 @@ function postHookStatSteps(ctx) {
         }
         u.res = Math.max(0, u.res);
         u.def = Math.max(0, u.def);
-        u.atk = (hasMeleeAttack || blazeOfGloryActive || (isCoM1 && supremeLightEligible))
+        u.atk = (hasMeleeAttack || blazeOfGloryActive
+          || (isCoM1 && supremeLightEligibleAt(u, recordContext)))
           ? Math.max(0, u.atk) : 0;
+        // The slot is read at the clamp's own position, so a slot an earlier step created or
+        // filled — Chaos Channels, Focus Magic, the Shadow Strike grant, the Blaze of Glory
+        // transfer — is alive here and keeps what it holds, while one nothing ever reached is
+        // discarded rather than conjuring an attack.
         for (const c of channels) {
-          u[c.strengthField] = (c.rtbStatActive || c.blazeOfGloryFillsSlot)
-            ? Math.max(0, u[c.strengthField]) : 0;
+          u[c.strengthField] = isLiveSlot(u, c) ? Math.max(0, u[c.strengthField]) : 0;
         }
         u.hp = Math.max(1, u.hp);
         u.gaze = baseGazeRanged > 0 ? Math.max(0, u.gaze) : 0;
@@ -1247,15 +1374,17 @@ function postHookStatSteps(ctx) {
     // slot is and what strength stands in it *here*, after `d:blazeOfGlory` has emptied the
     // Ranged field and after the region-`e` clamp has zeroed a spent one.
     statStep({ id: 'supremeLight', phase: 'e', writes: ['def', 'atk', ...strengthFields],
-      when: () => !isCoM1
-        && (supremeLightEligible || channels.some(c => c.supremeLightEligible)),
+      when: u => !isCoM1
+        && (supremeLightEligibleAt(u, recordContext)
+          || channels.some(c => supremeLightEligibleAt(u, c))),
       apply: u => {
-        if (supremeLightEligible) {
+        if (supremeLightEligibleAt(u, recordContext)) {
           u.def += Math.floor(Math.max(0, u.res) / 3);
           if (hasMeleeAttack) u.atk += 2;
         }
         for (const c of channels) {
-          if (c.supremeLightEligible && isRangedFieldSlot(u, c) && u[c.strengthField] > 0) {
+          if (supremeLightEligibleAt(u, c) && isRangedFieldSlot(u, c)
+            && u[c.strengthField] > 0) {
             u[c.strengthField] += 2;
           }
         }

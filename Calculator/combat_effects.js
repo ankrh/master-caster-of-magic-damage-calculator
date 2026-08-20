@@ -142,7 +142,7 @@ function applyTacticianWarlordEffects(unit, version) {
 
 // Warlord Fiery Fury (Chaos unit enchantment): when cast on a base-Fantastic creature,
 // grants First Strike. (Base non-Fantastic units instead get stat bonuses — stepped in stats_sequence.js.
-// The realm conversion to Chaos is handled in determineEffectiveUnitType.)
+// The realm conversion to Chaos is the ordered identity step `b:fieryFury:race`.)
 // STAT-FORMULA[fieryFuryAbilityDerivation]
 // PROVENANCE[fieryFuryAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:14:28f3f207149034b0e805f4b5
 function applyFieryFuryEffects(unit, version) {
@@ -186,8 +186,8 @@ function applyTemporalTwistEffects(unit, version) {
   return Object.assign({}, unit, { abilities: stripped });
 }
 
-// CoM/CoM2: Blood Lust grants the undead state; final unit type is resolved by
-// determineEffectiveUnitType(). Warlord: Bloodlust no longer turns the unit undead
+// CoM/CoM2: Blood Lust grants the undead state; the realm write is the ordered identity step
+// `c:bloodLust`. Warlord: Bloodlust no longer turns the unit undead
 // (only doubled melee vs normals/heroes is retained), so this becomes a no-op.
 // STAT-FORMULA[bloodLustAbilityDerivation]
 // PROVENANCE[bloodLustAbilityDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:4291d05361823ad272e4e04f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:e894ef880a35e8ad7d3f714b | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:8:32ea534d834bbcec63f4826a
@@ -460,6 +460,97 @@ function effectiveDefense(target, version, attack, trace = null) {
   return scratch.effectiveDefense;
 }
 
+// --- Attack-specific stat sequences (WIZARDS.EXE: MoM 1.31, CP 1.60, CoM 1) ---
+//
+// The DOS engines run the same stage as Caster.exe — two routines keyed by an incoming
+// attack, on a scratch copy of the finished record — so they get the same step type, runner,
+// authoring syntax and provenance labelling as the two lists above. Only the transcribed
+// routine differs. `Combat_Effective_Resistance` is here; `Battle_Unit_Defense_Special`
+// follows below.
+//
+// The DOS resistance routine is **additive throughout**, where Caster.exe's Charmed and Magic
+// Immunity assign 100. A DOS unit therefore accumulates every applicable bonus and can finish
+// above any one of them, which is why this is its own transcription rather than a variant of
+// `EFFECTIVE_RESISTANCE_STEPS`.
+//
+// Two engine writes have no step here, because the calculator models both effects as a
+// *skipped roll* rather than as resistance (SPEC.md, "Immunities skip rolls"): the
+// `USA_IMMUNITY_MAGIC` +30 at 131:0x990B6 and the `UE_RIGHTEOUSNESS` +30 at 131:0x990D5.
+// Whether the two models agree everywhere is open under F104.
+const DOS_RESISTANCE_WRITES = {
+  // PROVENANCE[dosEffectiveResistance:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:14:bfc0a231fc99e42b7d605b4e
+  base: attackSpecificStep('dosEffectiveResistance:base', ['effectiveResistance'],
+    u => { u.effectiveResistance = u.res; }),
+  // PROVENANCE[dosEffectiveResistance:charmed]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:10:74ef0dc0feb25f1dee8657e4
+  charmed: attackSpecificStep('dosEffectiveResistance:charmed', ['effectiveResistance'],
+    u => { u.effectiveResistance += 30; },
+    u => (u.isHero || u.unitType === 'hero') && hasAbil(u.abilities, 'charmed')),
+  // PROVENANCE[dosEffectiveResistance:elemental]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:22:123b893c305519061ccb5408
+  elemental: attackSpecificStep('dosEffectiveResistance:elemental', ['effectiveResistance'],
+    (u, ctx) => { u.effectiveResistance += elemResistBonus(u, ctx.version); },
+    (u, ctx) => ctx.elementalRealms.includes(ctx.realm)
+      && (hasElementalArmorEffect(u.abilities) || hasResistElementsEffect(u.abilities))),
+  // PROVENANCE[dosEffectiveResistance:bless]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:11:f46c042d7316f5bcefb5255e
+  bless: attackSpecificStep('dosEffectiveResistance:bless', ['effectiveResistance'],
+    (u, ctx) => { u.effectiveResistance += ctx.blessBonus; },
+    (u, ctx) => (ctx.realm === 'chaos' || ctx.realm === 'death') && hasAbil(u.abilities, 'bless')),
+  // PROVENANCE[dosEffectiveResistance:resistMagic]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:9:59769ac406c13cba485cb093
+  resistMagic: attackSpecificStep('dosEffectiveResistance:resistMagic', ['effectiveResistance'],
+    u => { u.effectiveResistance += 5; },
+    (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'resistMagic')),
+};
+
+// One ordered list per engine, written out in full. The three builds transcribe the same
+// address sequence; what separates them is carried as context constants below, in the shape
+// `blessBonus` already takes in the Caster.exe lists.
+const DOS_RESISTANCE_STEPS = Object.freeze({
+  'mom_1.31': [
+    DOS_RESISTANCE_WRITES.base,
+    DOS_RESISTANCE_WRITES.charmed,
+    DOS_RESISTANCE_WRITES.elemental,
+    DOS_RESISTANCE_WRITES.bless,
+    DOS_RESISTANCE_WRITES.resistMagic,
+  ],
+  'mom_cp_1.60.00': [
+    DOS_RESISTANCE_WRITES.base,
+    DOS_RESISTANCE_WRITES.charmed,
+    DOS_RESISTANCE_WRITES.elemental,
+    DOS_RESISTANCE_WRITES.bless,
+    DOS_RESISTANCE_WRITES.resistMagic,
+  ],
+  'com_6.08': [
+    DOS_RESISTANCE_WRITES.base,
+    DOS_RESISTANCE_WRITES.charmed,
+    DOS_RESISTANCE_WRITES.elemental,
+    DOS_RESISTANCE_WRITES.bless,
+    DOS_RESISTANCE_WRITES.resistMagic,
+  ],
+});
+
+// `realm` is null for a realm-less roll (Poison), otherwise one of nature, sorcery, chaos,
+// life, death — the calculator's name for the `magic_realm` argument the engine derives from
+// the attack's `ranged_type`.
+function dosEffectiveResistance(target, version, realm, trace = null) {
+  const steps = DOS_RESISTANCE_STEPS[version];
+  if (!steps) throw new Error(`no DOS resistance sequence for version ${version}`);
+  const scratch = { ...target };
+  const context = {
+    version,
+    realm,
+    blessBonus: version === 'com_6.08' ? 5 : 3,
+    // CoM 1 replaced the Chaos arm of the elemental gate with a NOP at com1:0x990DC.
+    elementalRealms: version === 'com_6.08' ? ['nature'] : ['chaos', 'nature'],
+    ...(trace ? { trace } : {}),
+  };
+  // Same ungated shape as the Caster.exe lists: no step carries a version predicate, so the
+  // list's scope is checkable only where the steps enter the sequence.
+  if (statStepDebugEnabled()) {
+    assertSequenceVersionScope(steps, version, 'Combat_Effective_Resistance');
+  }
+  runStatSteps(steps, scratch, context);
+  return scratch.effectiveResistance;
+}
+
 // --- Resistance/Defense bonuses from Elemental Armor / Resist Elements ---
 function hasResistElementsEffect(abilities) {
   return hasAbil(abilities, 'resistElements')
@@ -569,211 +660,338 @@ function computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalt
   };
 }
 
+// --- Attack-specific defense sequence (WIZARDS.EXE: MoM 1.31, CP 1.60, CoM 1) ---
+//
+// `Battle_Unit_Defense_Special`, transcribed as ordered steps in the same shape as
+// `EFFECTIVE_DEFENSE_STEPS`. The routine carries two values at once: a running `defense`, and
+// a `defense_special` marker that later steps replace the running value from. Every immunity
+// the engine recognises writes that marker rather than a number, which is why the whole family
+// collapses to one constant — 50 in the MoM builds, 100 in CoM 1.
+//
+// The marker is what makes MoM 1.31's Weapon-Immunity-overwrites-Missile-Immunity bug an
+// ordering fact rather than a special case: 1.31 sets the blanket marker before the Weapon
+// Immunity one (131:0x9A66E then 0x9A68C), so Weapon Immunity wins; CP 1.60 and CoM 1 set them
+// the other way round (160:0x9A66B then 0x9A68C), so the blanket value wins.
+//
+// What each incoming attack sets is not decided here: `dosDefenseForAttack` below builds the
+// per-attack descriptor, exactly as `computeCasterDefenseForAttack` does for Caster.exe.
+const DOS_DEFENSE_NONE = 'none';
+const DOS_DEFENSE_WEAPON_IMMUNITY = 'weapon';
+const DOS_DEFENSE_FULL = 'full';
+
+const DOS_DEFENSE_WRITES = {
+  // PROVENANCE[dosEffectiveDefense:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:26:23dc90c22f1178554f615524
+  base: attackSpecificStep('dosEffectiveDefense:base', ['effectiveDefense', 'defenseSpecial'],
+    (u, ctx) => {
+      // Vertigo writes the battle-unit Defense stat directly in the DOS binaries, so the
+      // separate spell-damage path sees it too; it is subtracted from the seed here.
+      u.effectiveDefense = Math.max(0, u.def - ctx.vertigoDefPenalty);
+      u.defenseSpecial = DOS_DEFENSE_NONE;
+    }),
+  // PROVENANCE[dosEffectiveDefense:illusion]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:8:07e4721467f2127b94284e57
+  illusion: attackSpecificStep('dosEffectiveDefense:illusion', ['effectiveDefense'],
+    u => { u.effectiveDefense = 0; return HALT; },
+    (u, ctx) => ctx.illusion && !hasAbil(u.abilities, 'illusionImmunity')),
+  // PROVENANCE[dosEffectiveDefense:largeShield]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:10:57204d1dbc16cbd3fc70afe5
+  largeShield: attackSpecificStep('dosEffectiveDefense:largeShield', ['effectiveDefense'],
+    (u, ctx) => { u.effectiveDefense += ctx.largeShieldBonus; },
+    (u, ctx) => ctx.isRanged && hasAbil(u.abilities, 'largeShield')),
+  // The blanket marker: any immunity bit the attack's `ranged_type` sets that the target also
+  // carries. Missile and Fire are the two the mask builder derives from the type; Magic is
+  // tested directly by the separate step below, which is how a gaze reaches it at all.
+  // PROVENANCE[dosEffectiveDefense:immunityMask]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:4:7631b0118223ca1089ef4ce6 | Reference docs/DOS reconstructed/combat.c@span:3:88dfe5adc853afc5bfed6290 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72
+  immunityMask: attackSpecificStep('dosEffectiveDefense:immunityMask', ['defenseSpecial'],
+    u => { u.defenseSpecial = DOS_DEFENSE_FULL; },
+    (u, ctx) => ctx.isRanged
+      && ((ctx.missileAttack && hasAbil(u.abilities, 'missileImmunity'))
+        || (ctx.fireAttack && hasAbil(u.abilities, 'fireImmunity')))),
+  // PROVENANCE[dosEffectiveDefense:weaponImmunityMark]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:25:3a05783701e4dc0bb3997f01 | Reference docs/DOS reconstructed/combat.c@span:25:cd4c8b870408c2f3ef541b72
+  weaponImmunityMark: attackSpecificStep('dosEffectiveDefense:weaponImmunityMark', ['defenseSpecial'],
+    u => { u.defenseSpecial = DOS_DEFENSE_WEAPON_IMMUNITY; },
+    (u, ctx) => ctx.weaponImmunityEligible),
+  // PROVENANCE[dosEffectiveDefense:magicImmunity]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:17:7ad26f1791d700f7e217ba27
+  magicImmunity: attackSpecificStep('dosEffectiveDefense:magicImmunity', ['defenseSpecial'],
+    u => { u.defenseSpecial = DOS_DEFENSE_FULL; },
+    (u, ctx) => ctx.magicImmunityEligible && hasAbil(u.abilities, 'magicImmunity')),
+  // PROVENANCE[dosEffectiveDefense:bless]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:14:4528b739bd15b90fdb0a0e12
+  bless: attackSpecificStep('dosEffectiveDefense:bless', ['effectiveDefense'],
+    (u, ctx) => { u.effectiveDefense += ctx.blessBonus; },
+    (u, ctx) => ctx.blessEligible && hasAbil(u.abilities, 'bless')),
+  // CoM 1 replaces this whole block with an 87-byte NOP field (com1:0x9A6DC..0x9A732), so the
+  // citation covers the MoM builds only. The calculator nevertheless still admits the write on
+  // CoM 1's magical-ranged, breath and spell-damage channels; that gap is F105, and it is a
+  // recorded scope/PROVENANCE gap rather than a silent one.
+  // PROVENANCE[dosEffectiveDefense:righteousness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:10:8b80214da56946e4a9fbfbdd | Reference docs/DOS reconstructed/combat.c@span:8:66077c35eb258dac5ab28d94
+  righteousness: attackSpecificStep('dosEffectiveDefense:righteousness', ['defenseSpecial'],
+    u => { u.defenseSpecial = DOS_DEFENSE_FULL; },
+    (u, ctx) => ctx.righteousnessEligible && hasAbil(u.abilities, 'righteousness')),
+  // PROVENANCE[dosEffectiveDefense:elemental]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:30:3fc4cd987afcc5ead9252efc
+  elemental: attackSpecificStep('dosEffectiveDefense:elemental', ['effectiveDefense'],
+    u => {
+      u.effectiveDefense += hasElementalArmorEffect(u.abilities) ? 10
+        : hasResistElementsEffect(u.abilities) ? 3 : 0;
+    },
+    (u, ctx) => ctx.elementalEligible
+      && (hasElementalArmorEffect(u.abilities) || hasResistElementsEffect(u.abilities))),
+  // CoM 1 splits the MoM else-if into two independent tests, so both bonuses can land.
+  // PROVENANCE[dosEffectiveDefense:elementalArmor]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:30:3fc4cd987afcc5ead9252efc
+  elementalArmor: attackSpecificStep('dosEffectiveDefense:elementalArmor', ['effectiveDefense'],
+    u => { u.effectiveDefense += 12; },
+    (u, ctx) => ctx.elementalEligible && hasElementalArmorEffect(u.abilities)),
+  // PROVENANCE[dosEffectiveDefense:resistElements]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:30:3fc4cd987afcc5ead9252efc
+  resistElements: attackSpecificStep('dosEffectiveDefense:resistElements', ['effectiveDefense'],
+    u => { u.effectiveDefense += 4; },
+    (u, ctx) => ctx.elementalEligible && hasResistElementsEffect(u.abilities)),
+  // Signed division truncating toward zero; Defense is nonnegative at this point.
+  // PROVENANCE[dosEffectiveDefense:armorPiercing]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:7:654e34cd21930e64d987422a
+  armorPiercing: attackSpecificStep('dosEffectiveDefense:armorPiercing', ['effectiveDefense'],
+    u => { u.effectiveDefense = Math.trunc(u.effectiveDefense / 2); },
+    (u, ctx) => ctx.armorPiercing),
+  // PROVENANCE[dosEffectiveDefense:weaponImmunityFloor]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:9:091e1f3c04458619a8eb1828
+  weaponImmunityFloor: attackSpecificStep('dosEffectiveDefense:weaponImmunityFloor', ['effectiveDefense'],
+    u => { u.effectiveDefense = Math.max(u.effectiveDefense, 10); },
+    u => u.defenseSpecial === DOS_DEFENSE_WEAPON_IMMUNITY),
+  // PROVENANCE[dosEffectiveDefense:weaponImmunityBonus]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:9:091e1f3c04458619a8eb1828
+  weaponImmunityBonus: attackSpecificStep('dosEffectiveDefense:weaponImmunityBonus', ['effectiveDefense'],
+    u => { u.effectiveDefense += 8; },
+    u => u.defenseSpecial === DOS_DEFENSE_WEAPON_IMMUNITY),
+  // PROVENANCE[dosEffectiveDefense:defenseSpecial]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:7:3ca39d47d348cb2363d68c06
+  defenseSpecial: attackSpecificStep('dosEffectiveDefense:defenseSpecial', ['effectiveDefense'],
+    (u, ctx) => { u.effectiveDefense = ctx.defenseSpecialValue; },
+    u => u.defenseSpecial === DOS_DEFENSE_FULL),
+};
+
+// One ordered list per engine, written out in full. MoM 1.31 differs from the other two in the
+// order of the two marker writes; CoM 1 differs in the elemental block and in how the Weapon
+// Immunity marker is cashed in.
+const DOS_DEFENSE_STEPS = Object.freeze({
+  'mom_1.31': [
+    DOS_DEFENSE_WRITES.base,
+    DOS_DEFENSE_WRITES.illusion,
+    DOS_DEFENSE_WRITES.largeShield,
+    DOS_DEFENSE_WRITES.immunityMask,
+    DOS_DEFENSE_WRITES.weaponImmunityMark,
+    DOS_DEFENSE_WRITES.magicImmunity,
+    DOS_DEFENSE_WRITES.bless,
+    DOS_DEFENSE_WRITES.righteousness,
+    DOS_DEFENSE_WRITES.elemental,
+    DOS_DEFENSE_WRITES.armorPiercing,
+    DOS_DEFENSE_WRITES.weaponImmunityFloor,
+    DOS_DEFENSE_WRITES.defenseSpecial,
+  ],
+  'mom_cp_1.60.00': [
+    DOS_DEFENSE_WRITES.base,
+    DOS_DEFENSE_WRITES.illusion,
+    DOS_DEFENSE_WRITES.largeShield,
+    DOS_DEFENSE_WRITES.weaponImmunityMark,
+    DOS_DEFENSE_WRITES.immunityMask,
+    DOS_DEFENSE_WRITES.magicImmunity,
+    DOS_DEFENSE_WRITES.bless,
+    DOS_DEFENSE_WRITES.righteousness,
+    DOS_DEFENSE_WRITES.elemental,
+    DOS_DEFENSE_WRITES.armorPiercing,
+    DOS_DEFENSE_WRITES.weaponImmunityFloor,
+    DOS_DEFENSE_WRITES.defenseSpecial,
+  ],
+  'com_6.08': [
+    DOS_DEFENSE_WRITES.base,
+    DOS_DEFENSE_WRITES.illusion,
+    DOS_DEFENSE_WRITES.largeShield,
+    DOS_DEFENSE_WRITES.weaponImmunityMark,
+    DOS_DEFENSE_WRITES.immunityMask,
+    DOS_DEFENSE_WRITES.magicImmunity,
+    DOS_DEFENSE_WRITES.bless,
+    DOS_DEFENSE_WRITES.righteousness,
+    DOS_DEFENSE_WRITES.elementalArmor,
+    DOS_DEFENSE_WRITES.resistElements,
+    DOS_DEFENSE_WRITES.armorPiercing,
+    DOS_DEFENSE_WRITES.weaponImmunityBonus,
+    DOS_DEFENSE_WRITES.defenseSpecial,
+  ],
+});
+
+function dosEffectiveDefense(target, version, attack, trace = null) {
+  const steps = DOS_DEFENSE_STEPS[version];
+  if (!steps) throw new Error(`no DOS defense sequence for version ${version}`);
+  const isCoM1 = version === 'com_6.08';
+  const scratch = { ...target };
+  const context = {
+    version,
+    vertigoDefPenalty: attack.vertigoDefPenalty || 0,
+    isRanged: !!attack.isRanged,
+    illusion: !!attack.illusion,
+    missileAttack: !!attack.missileAttack,
+    fireAttack: !!attack.fireAttack,
+    magicImmunityEligible: !!attack.magicImmunityEligible,
+    righteousnessEligible: !!attack.righteousnessEligible,
+    blessEligible: !!attack.blessEligible,
+    elementalEligible: !!attack.elementalEligible,
+    armorPiercing: !!attack.armorPiercing,
+    weaponImmunityEligible: !!attack.weaponImmunityEligible,
+    largeShieldBonus: isCoM1 ? 3 : 2,
+    blessBonus: isCoM1 ? 5 : 3,
+    defenseSpecialValue: isCoM1 ? 100 : 50,
+    ...(trace ? { trace } : {}),
+  };
+  if (statStepDebugEnabled()) {
+    assertSequenceVersionScope(steps, version, 'Battle_Unit_Defense_Special');
+  }
+  runStatSteps(steps, scratch, context);
+  return scratch.effectiveDefense;
+}
+
+// The per-attack descriptor: which immunity bits this attack's `ranged_type` sets, which realm
+// gates it opens, and which weapon the Weapon Immunity test sees. This is the DOS counterpart
+// of `computeCasterDefenseForAttack`, and it is where the calculator's channel model meets the
+// engine's single `ranged_type` argument.
+//
+// Two DOS classifier facts sit behind it. The defence-special realm comes from the attacker's
+// `ranged_type` alone (classifier 0x9A79E): boulder/missile (10-29) and Thrown (100) are
+// realm-less and never inherit a Chaos/Death attacker's realm, and only melee (type 0) reads
+// the attacker's race. CoM 1 additionally requires `ranged_type > 39`, which drops melee and
+// every conventional ranged type, leaving breath and gaze. The immunity mask (0x9921A) admits
+// the Weapon bit only for `ranged_type / 10 < 3`, or MoM 1.31's unsatisfiable `== 100` — which
+// is why 1.31 alone misses Thrown, and why no build lets Weapon Immunity reach a gaze (103-105).
+function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType) {
+  const isCoM1 = version === 'com_6.08';
+  const aArmorPiercing = hasAbil(attacker.abilities, 'armorPiercing');
+  const aIllusion = hasAbil(attacker.abilities, 'illusion');
+  // Spirit Link strips the attacker's fantastic targeting status, so enemy Bless gains no
+  // bonus against it.
+  const aIsDC = !hasAbil(attacker.abilities, 'spiritLink')
+    && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
+  // The gaze's own realm, not the attacker's unit type, is what the defence specials key off.
+  const aGazeRealm = gazeRealm(attacker.abilities);
+  const aGazeDC = aGazeRealm === 'chaos' || aGazeRealm === 'death';
+  // Blazing March upgrades melee and missile attacks to magical weapons; Eldritch Weapon
+  // upgrades the melee attack only, so a ranged or thrown attack still meets Weapon Immunity.
+  const aBlazingMarch = hasAbil(attacker.abilities, 'blazingMarch');
+  const aEldritch = hasAbil(attacker.abilities, 'eldritchWeapon');
+  const wi = weapon => weaponImmunityApplies(
+    target.abilities, weapon, attacker.unitType, version, attacker.generic);
+
+  let attack;
+  if (attackType === 'melee') {
+    const weapon = ((aBlazingMarch || aEldritch) && attacker.weapon === 'normal')
+      ? 'magic' : attacker.weapon;
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      blessEligible: !isCoM1 && aIsDC,
+      armorPiercing: aArmorPiercing,
+      weaponImmunityEligible: wi(weapon),
+    };
+  } else if (attackType === 'ranged') {
+    const isMissile = attacker.rangedType === 'missile';
+    const isPhysical = isMissile || attacker.rangedType === 'boulder';
+    const isMagical = attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
+      || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam';
+    const weapon = (aBlazingMarch && isMissile && attacker.weapon === 'normal')
+      ? 'magic' : attacker.weapon;
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      isRanged: true,
+      blessEligible: attacker.rangedType === 'magic_c' && !isCoM1,
+      elementalEligible: isCoM1
+        ? isMagical
+        : (attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'),
+      armorPiercing: aArmorPiercing,
+      missileAttack: isMissile,
+      magicImmunityEligible: isMagical,
+      righteousnessEligible: attacker.rangedType === 'magic_c',
+      weaponImmunityEligible: isPhysical && wi(weapon),
+    };
+  } else if (attackType === 'thrown') {
+    const isThrown = attacker.thrownType === 'thrown';
+    const isFire = attacker.thrownType === 'fire';
+    const isLightning = attacker.thrownType === 'lightning';
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      isRanged: true,
+      blessEligible: isFire || isLightning,
+      elementalEligible: isFire || isLightning,
+      // Lightning Breath carries the Armor Piercing flag unless the target resists lightning.
+      armorPiercing: aArmorPiercing
+        || (isLightning && !hasAbil(target.abilities, 'lightningResist')),
+      fireAttack: isFire,
+      magicImmunityEligible: (isFire || isLightning) && !isCoM1,
+      righteousnessEligible: isFire || isLightning,
+      // MoM 1.31's mask cannot set the Weapon bit for Thrown at all.
+      weaponImmunityEligible: isThrown && version !== 'mom_1.31' && wi(attacker.weapon),
+    };
+  } else if (attackType === 'gaze') {
+    attack = {
+      vertigoDefPenalty,
+      illusion: aIllusion,
+      isRanged: true,
+      blessEligible: aGazeDC,
+      // MoM grants the elemental bonus against Chaos- and Nature-realm gazes (0x9A72D). CoM 1
+      // replaced the realm gate with a `ranged_type` range, which is not modelled: no CoM unit
+      // carries a hidden gaze component.
+      elementalEligible: !isCoM1 && (aGazeRealm === 'nature' || aGazeRealm === 'chaos'),
+      armorPiercing: aArmorPiercing,
+      magicImmunityEligible: true,
+      righteousnessEligible: !isCoM1 && aGazeDC,
+      weaponImmunityEligible: false,
+    };
+  } else if (attackType === 'immolation') {
+    // The DOS spell-damage helper feeds Immolation and Wall of Fire through this routine as a
+    // magical ranged type (38 in MoM, 39 in CoM 1), so the elemental bonus applies in all three
+    // builds. Armor Piercing attaches to a unit's own attacks only, and neither Illusion nor
+    // City Walls reaches the spell path.
+    attack = {
+      vertigoDefPenalty,
+      isRanged: true,
+      blessEligible: true,
+      elementalEligible: true,
+      armorPiercing: false,
+      fireAttack: true,
+      magicImmunityEligible: true,
+      righteousnessEligible: true,
+      weaponImmunityEligible: false,
+    };
+  } else {
+    throw new Error(`Unknown DOS defense attack type: ${attackType}`);
+  }
+  return dosEffectiveDefense(target, version, attack);
+}
+
 // --- Defense Profile ---
-// Compute defender's effective defense vs each attack type from `attacker`.
-// Aggregates: Vertigo def penalty, Large Shield, Bless (defense half), Elemental Armor,
-// Armor Piercing, Weapon Immunity, Missile Immunity, Righteousness, Magic Immunity,
-// Fire Immunity, and Illusion override (final).
+// The defender's effective defense against each attack type the attacker can make, for the
+// DOS engines; `com2` versions hand off to the Caster.exe profile above. Each entry is one
+// `Battle_Unit_Defense_Special` call over the ordered `DOS_DEFENSE_STEPS` list, on a scratch
+// copy of the finished record, plus the City Walls bonus its caller adds afterwards.
 //   target: defender unit (provides def, abilities, cityWallBonus, weapon, unitType)
 //   attacker: attacking unit (provides weapon, unitType, rangedType, thrownType, abilities, generic)
-//   vertigoDefPenalty: precomputed Vertigo defense malus on the target (0 in CoM/CoM2).
+//   vertigoDefPenalty: precomputed Vertigo defense malus on the target (0 in CoM2/Warlord).
 // Returns: { vsMelee, vsRanged, vsThrown, vsGaze, vsImmolation }
-// PROVENANCE[dosEffectiveDefenseProfile]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:36:3e1214d9d09f0f4987d21875 | Reference docs/DOS reconstructed/combat.c@span:40:0ac6fd1c15499db045318a64 | Reference docs/DOS reconstructed/combat.c@span:40:6f729d8ce84e732b58d084c0 | Reference docs/DOS reconstructed/combat.c@span:36:cc02fe00e69095b915718ee5 | Reference docs/DOS reconstructed/combat.c@span:19:a16fdca112f4ee20e4440f08 | Reference docs/DOS reconstructed/combat.c@span:39:92665849702ec840ab52d0c4 | Reference docs/DOS reconstructed/combat.c@span:22:e75af0ad84433181ba29fac1
+// PROVENANCE[dosEffectiveDefenseProfile]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:39:92665849702ec840ab52d0c4 | Reference docs/DOS reconstructed/combat.c@span:22:e75af0ad84433181ba29fac1 | Reference docs/DOS reconstructed/combat.c@span:39:87871cadde938ca420e0159a
 // STAT-FORMULA[dosEffectiveDefenseProfile]
 function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
-  const isCoM = version && version.startsWith('com');
   if (version && version.startsWith('com2')) {
     return computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalty);
   }
 
-  // Bless (defense half) — version-sensitive scope (no melee bonus in CoM/CoM2/Warlord).
-  const tBless = hasAbil(target.abilities, 'bless');
-  const isWarlord = version && version.startsWith('com2_warlord');
-  const isCaster = version && version.startsWith('com2');   // CoM2 + Warlord: Caster.exe
-  const isCoM1 = version && version.startsWith('com_');
-  const blessBonus = isWarlord ? 7 : (isCoM ? 5 : 3);
-  // Spirit Link strips the attacker's fantastic targeting status: enemy Bless gains
-  // no bonus against it, so it is treated as a non-Death/Chaos-fantastic attacker.
-  const aSpiritLink = hasAbil(attacker.abilities, 'spiritLink');
-  const aIsDC = !aSpiritLink && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
-  // The DOS engines derive the defence-special realm from the attacker's `ranged_type`
-  // alone (WIZARDS.EXE classifier `0x9A79E`): boulder/missile (10–29) and Thrown (100)
-  // are realm-less, so they never inherit a Chaos/Death attacker's realm; only melee
-  // (type 0) reads the attacker's race. CoM 1 additionally requires `ranged_type > 39`,
-  // which drops melee and every conventional ranged type, leaving breath and gaze.
-  // Caster.exe classifies these flags more widely, but its unit-attack caller passes spell ID 0,
-  // so none of those classifications can activate modern Bless Defense.
-  const aThrownDC = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning'
-                  || (isCaster && attacker.thrownType === 'thrown' && aIsDC);
-  const aRangedDC = isCaster
-    ? (attacker.rangedType === 'magic_c'
-       || ((attacker.rangedType === 'missile' || attacker.rangedType === 'boulder') && aIsDC))
-    : (attacker.rangedType === 'magic_c' && !isCoM1);
-  const blessMeleeActive = !isCoM;
-  // The gaze's own realm, not the attacker's unit type, is what the defence specials key
-  // off (see `gazeRealm`). On the shipped rosters the two coincide, but a hand-entered
-  // combination can separate them.
-  const aGazeRealm = gazeRealm(attacker.abilities);
-  const aGazeDC = aGazeRealm === 'chaos' || aGazeRealm === 'death';
-  const blessMelee  = (blessMeleeActive && tBless && aIsDC) ? blessBonus : 0;
-  const blessThrown = (tBless && aThrownDC) ? blessBonus : 0;
-  const blessRanged = (tBless && aRangedDC) ? blessBonus : 0;
-  const blessGaze   = (tBless && aGazeDC)   ? blessBonus : 0;
-  const blessImm    = tBless ? blessBonus : 0;
+  const defense = attackType =>
+    dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType);
+  const vsMelee = defense('melee');
+  const vsRanged = defense('ranged');
+  const vsThrown = defense('thrown');
+  const vsGaze = defense('gaze');
+  const vsImmolation = defense('immolation');
 
-  // Large Shield — applies to all non-melee phases.
-  const tLargeShield = hasAbil(target.abilities, 'largeShield');
-  const largeShieldBonus = isCoM ? 3 : 2;
-
-  // Elemental Armor / Resist Elements defense bonus and per-phase trigger.
-  const elemDefBonus = isCoM
-    ? (hasElementalArmorEffect(target.abilities) ? 12 : 0)
-      + (hasResistElementsEffect(target.abilities) ? 4 : 0)
-    : hasElementalArmorEffect(target.abilities) ? 10
-      : hasResistElementsEffect(target.abilities) ? 3 : 0;
-  const aRangedElem = isCoM
-    ? (attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
-      || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam')
-    : (attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n');
-  const aThrownElem = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning';
-  const elemRanged = aRangedElem ? elemDefBonus : 0;
-  const elemThrown = aThrownElem ? elemDefBonus : 0;
-  // MoM grants the elemental defence bonus against Chaos- and Nature-realm gazes
-  // (WIZARDS.EXE 0x9A72D, the same realm pair as on the resistance side). CoM 1 replaced
-  // the realm gate with a `ranged_type` range and is not modelled here — no CoM/CoM2/
-  // Warlord unit carries a hidden gaze component. See `CoM2 binary analysis.md`, *Gaze attacks*.
-  const elemGaze   = (!isCoM && (aGazeRealm === 'nature' || aGazeRealm === 'chaos'))
-    ? elemDefBonus : 0;
-  // The DOS spell-damage helper feeds both Immolation and Wall of Fire through the
-  // defence-special routine as a magical ranged type (38 in MoM, 39 in CoM 1), so
-  // Elemental Armor / Resist Elements applies in all three DOS builds. Caster.exe
-  // (CoM2/Warlord) keeps the separate, narrower scope modelled here.
-  const elemImm    = !isCaster ? elemDefBonus : 0;
-
-  // Defense bases. Vertigo writes directly to the battle-unit Defense/To-Block stat in
-  // the DOS binaries, so spell damage such as Immolation and Wall of Fire sees it too.
-  // City Walls is deliberately absent here: BU_Apply_Attack adds it only after the complete
-  // Battle_Unit_Defense_Special result, while the separate spell-damage path never adds it.
+  // BU_Apply_Attack's inside-target/outside-source block follows the defense-special call, so
+  // Armor Piercing, every immunity and an unresisted Illusion all resolve before this unhalved
+  // addition. The separate spell-damage path never adds it, which is why Immolation is absent.
   const cityWallBonus = target.cityWallBonus > 0 && !(attacker.cityWallBonus > 0)
     ? target.cityWallBonus : 0;
-  const defBase = Math.max(0, target.def - vertigoDefPenalty);
-  const defLS = tLargeShield ? defBase + largeShieldBonus : defBase;
-
-  // Armor Piercing uses DOS signed /2 with truncation toward zero (B5); Defense is
-  // nonnegative here. Immolation uses Fireball's own non-AP flags instead.
-  // Evidence: Reference docs/DOS reconstructed/B4_B5_B6.evidence.md.
-  const aArmorPiercing = hasAbil(attacker.abilities, 'armorPiercing');
-  const tLightningResist = hasAbil(target.abilities, 'lightningResist');
-  const lightningAP = attacker.thrownType === 'lightning' && !tLightningResist;
-  const halve = (n) => Math.trunc(n / 2);
-  const defAPMelee   = aArmorPiercing ? halve(defBase + blessMelee)             : (defBase + blessMelee);
-  const defAPRanged  = aArmorPiercing ? halve(defLS + blessRanged + elemRanged) : (defLS + blessRanged + elemRanged);
-  const defAPGaze    = aArmorPiercing ? halve(defLS + blessGaze + elemGaze)     : (defLS + blessGaze + elemGaze);
-  // Immolation Damage is never affected by Armor Piercing (matches MoM and the
-  // ADC reference): AP attaches only to the unit's melee/ranged/thrown attacks.
-  const defImm       = defLS + blessImm + elemImm;
-  const defAPThrown  = (aArmorPiercing || lightningAP)
-    ? halve(defLS + blessThrown + elemThrown) : (defLS + blessThrown + elemThrown);
-
-  // Weapon Immunity. Blazing March upgrades melee + missile attacks to magical weapons in CoM/CoM2.
-  // Warlord also upgrades thrown attacks.
-  const aBlazingMarch = hasAbil(attacker.abilities, 'blazingMarch');
-  const isWarlordVersion = version && version.startsWith('com2_warlord');
-  // Eldritch Weapon upgrades a normal weapon to magic for Weapon Immunity purposes,
-  // but ONLY for the melee attack (MoM Eldritch Weapon page). Its ranged/thrown attacks
-  // stay non-magical, so WI still applies to them (handled below via attacker.weapon).
-  const aEldritchMelee = hasAbil(attacker.abilities, 'eldritchWeapon');
-  const meleeWeaponWI = ((aBlazingMarch || aEldritchMelee) && attacker.weapon === 'normal') ? 'magic' : attacker.weapon;
-  const rangedWeaponWI = (aBlazingMarch && attacker.rangedType === 'missile' && attacker.weapon === 'normal')
-    ? 'magic' : attacker.weapon;
-  const thrownWeaponWI = (aBlazingMarch && isWarlordVersion && attacker.thrownType === 'thrown' && attacker.weapon === 'normal')
-    ? 'magic' : attacker.weapon;
-
-  // This compatibility profile serves only the DOS engines; modern Spirit Link and
-  // calculated EncMagic are handled by computeCasterDefenseForAttack above.
-  const atkWIType = attacker.unitType;
-  let vsMelee = weaponImmunityDef(defAPMelee, target.abilities, meleeWeaponWI, atkWIType, version, attacker.generic);
-  // Gaze: hidden ranged component. **Weapon Immunity can never reach a gaze.** The
-  // immunity-mask builder admits bit 0x100 only when `ranged_type / 10 < 3` or the
-  // (unsatisfiable) `ranged_type / 10 == 100`; gaze is 103-105, so it fails both
-  // (WIZARDS.EXE 0x9921A, and the six patched bytes at 0x9922C in CP 1.60 / CoM 1 do not
-  // change that). This is structural — it does not depend on gaze attackers happening to
-  // be fantastic — so no Weapon Immunity term is applied here at all.
-  // Magic Immunity does apply, tested directly rather than through the mask (0x9A69E).
-  let vsGaze = magicImmunityDef(defAPGaze, target.abilities, version);
-  // Righteousness nullifies a Chaos- or Death-realm gaze (0x9A722, realm gate at 0x9A6B7).
-  // MoM-only: CoM 1 nops the entire Righteousness block out of this function
-  // (0x9A6DC-0x9A732).
-  if (!isCoM && aGazeDC) {
-    vsGaze = righteousnessDef(vsGaze, target.abilities, version);
-  }
-
-  // Ranged: WI applies to physical ranged (missile/boulder); magic ranged is already magical.
-  const isPhysRanged = attacker.rangedType === 'missile' || attacker.rangedType === 'boulder';
-  let vsRanged = isPhysRanged
-    ? weaponImmunityDef(defAPRanged, target.abilities, rangedWeaponWI, atkWIType, version, attacker.generic)
-    : defAPRanged;
-
-  // Thrown: WI eligible except v1.31 bug. Breath (fire/lightning) is magical, never triggers WI.
-  const thrownWI = attacker.thrownType === 'thrown' && version !== 'mom_1.31';
-  let vsThrown = thrownWI
-    ? weaponImmunityDef(defAPThrown, target.abilities, thrownWeaponWI, atkWIType, version, attacker.generic)
-    : defAPThrown;
-
-  // Missile Immunity (vs missile only). v1.31 bug: WI overwrites MI when both apply.
-  const isMissile = attacker.rangedType === 'missile';
-  const wiTriggeredOnMissile = isMissile && weaponImmunityApplies(
-    target.abilities, rangedWeaponWI, atkWIType, version, attacker.generic);
-  if (isMissile && !(version === 'mom_1.31' && wiTriggeredOnMissile)) {
-    vsRanged = missileImmunityDef(vsRanged, target.abilities, version);
-  }
-
-  // Righteousness vs Chaos magic ranged.
-  if (attacker.rangedType === 'magic_c') {
-    vsRanged = righteousnessDef(vsRanged, target.abilities, version);
-  }
-  // Magic Immunity vs all magic ranged.
-  if (attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
-      || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam') {
-    vsRanged = magicImmunityDef(vsRanged, target.abilities, version);
-  }
-
-  // Breath: Fire Immunity, Righteousness, Magic Immunity (MoM only — CoM v2.3 removed MI on breath).
-  if (attacker.thrownType === 'fire') {
-    vsThrown = fireImmunityDef(vsThrown, target.abilities, version);
-  }
-  if (attacker.thrownType === 'fire' || attacker.thrownType === 'lightning') {
-    vsThrown = righteousnessDef(vsThrown, target.abilities, version);
-  }
-  if ((attacker.thrownType === 'fire' || attacker.thrownType === 'lightning') && !isCoM) {
-    vsThrown = magicImmunityDef(vsThrown, target.abilities, version);
-  }
-
-  // Immolation defense chain: base (no AP) → Magic Immunity → Fire Immunity → Righteousness.
-  let vsImmolation = righteousnessDef(
-    fireImmunityDef(
-      magicImmunityDef(defImm, target.abilities, version),
-      target.abilities, version),
-    target.abilities, version);
-
-  // Illusion zeroes the defense-special result and is negated by Illusion Immunity. DOS then
-  // adds an applicable City Walls bonus after that result, so walls alone survive Illusion.
-  // The separate immolation/area-fire spell path receives neither Illusion nor City Walls.
-  const aIllusion = hasAbil(attacker.abilities, 'illusion');
-  const tIllusionImmune = hasAbil(target.abilities, 'illusionImmunity');
-  if (aIllusion && !tIllusionImmune) {
-    vsMelee = 0;
-    vsRanged = 0;
-    vsThrown = 0;
-    vsGaze = 0;
-  }
-
-  // BU_Apply_Attack's inside-target/outside-source block follows the defense-special call.
-  // Consequently Armor Piercing and every immunity resolve before this unhalved addition.
-  vsMelee += cityWallBonus;
-  vsRanged += cityWallBonus;
-  vsThrown += cityWallBonus;
-  vsGaze += cityWallBonus;
-
-  return { vsMelee, vsRanged, vsThrown, vsGaze, vsImmolation };
+  return {
+    vsMelee: vsMelee + cityWallBonus,
+    vsRanged: vsRanged + cityWallBonus,
+    vsThrown: vsThrown + cityWallBonus,
+    vsGaze: vsGaze + cityWallBonus,
+    vsImmolation,
+  };
 }
