@@ -6,12 +6,13 @@
  * R6.5b's exported battle-unit healing/temporary-Hits routine, and R6.5d's exported
  * battlefield side-bonus aggregation routine, and R9-G1a-R1's battle-unit load-to-combat
  * routine and CoM 1 identity tail, A32's Shatter target-admission and generic
- * effect-setter path, and D35's CoM 1 Raise Dead routine and dispatcher case.
+ * effect-setter path, D35's CoM 1 Raise Dead routine and dispatcher case, and D37's
+ * complete CoM 6.08 post-combat result-materialization routine.
  *
  * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
  * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
  * R6.2a.evidence.md through R6.2f.evidence.md, R6.5a/b/d.evidence.md, and
- * A32.evidence.md, D28.evidence.md, D35.evidence.md, and D39.evidence.md. The overlay-entry names
+ * A32.evidence.md, D28.evidence.md, D35.evidence.md, D37.evidence.md, and D39.evidence.md. The overlay-entry names
  * below are ReMoM
  * attributions: the VROOMM
  * targets cannot be mapped back to file offsets from the executable images.
@@ -951,6 +952,644 @@ void __far Sort_Battle_Unit_Indices_By_Movement_Points(int16_t *indices,
     /* epilogue/retf; 131:0x89500..0x89504  160:—  com1:— */
 }
 #endif
+
+
+/* D37: complete CoM 6.08 post-combat result materialization.
+ * Durable control-flow, ABI, write census, and fact/inference evidence:
+ * D37.evidence.md. This build-only body covers raw [0x9BCE0,0x9D535). */
+#if BUILD == COM1
+#define BUS_RECALLED                         0x01
+#define BUS_FLEE                             0x02
+#define BUS_UNINVOLVED                       0x03
+#define BUS_OVERFLOW_REPROCESS               0x0C
+#define BUE_CONFUSION                        0x0002
+#define BUE_CREATURE_BINDING                 0x2000
+#define BUE_POSSESSION                       0x4000
+#define UA_CREATE_OUTPOST                    0x0020
+#define UA_NONCORPOREAL                      0x0800
+#define UA_REGENERATION                      0x2000
+#define ATTRIB1_REJECT_MASK                  0x0060
+#define ATTRIB1_UNDEAD_MARK                  0x0040
+#define UM_UNDEAD                            0x20
+#define UE_REGENERATION_LOW                  0x00000040UL
+#define UE_MYSTIC_SURGE                      0x00200000UL
+#define RACE_ARCANE_BOUND                    0x0F
+#define UNITTYPE_MAGIC_SPIRIT_BOUND          0x97
+#define UNITTYPE_GARGOYLES                   0x9C
+#define UNITTYPE_ZOMBIES                     0xAE
+#define NEUTRAL_PLAYER                       5
+#define HUMAN_PLAYER                         0
+#define UNDEAD_DIRECT_ATTRIBUTE_SKILL_GATE   0x00F0
+#define MAX_STACK_AFTER_CONVERSION           10
+#define MAX_RECOVERED_ITEMS                  18
+#define NUM_BUILDINGS                        36
+#define NUM_HERO_ITEMS                       3
+#define RARE_UNIT_COST                       500
+#define FAME_XP_THRESHOLD                    12
+#define COMBAT_ENV_ARMY                      0
+#define COMBAT_ENV_CITY                      1
+#define COMBAT_ENV_LAIR                      5
+#define RESULT_MESSAGE_NORMALIZE_ALL         4
+#define RESULT_MESSAGE_HIDE_UNDEAD_COUNTS    6
+#define PLAYER_GLOBAL_ZOMBIE_MASTERY         2
+#define RAIDERS_WON_RESULT                   0x029B
+#define RAMPAGE_RUINS_RESULT                 0x029C
+#define DIPLO_ACTION_COMBAT                  8
+#define KILL_NORMAL                          0
+#define KILL_DISAPPEARED                     2
+#define MOUSE_LIST_REPLACE                   1
+
+/* 131:—  160:—  com1:0x9BCE0 */
+void far End_Of_Combat(int16_t winner, int16_t *item_count,
+                       int16_t item_list[], int16_t msg_type)
+{
+    int16_t i, j, k, survivor_count, experience, zombies, undead;
+    int16_t diplomatic_value, lair_secondary_slot_empty, rare_foe, city_loss, destroy_chance;
+    int16_t first_neutral_is_fantastic; /* [bp-0x22], intentionally uninitialized */
+    int16_t building_lost[NUM_BUILDINGS], hp_delta;
+    int16_t human_strength, enemy_lost_strength, human_lost_strength;
+    uint32_t enchantments;
+    char temp_buffer[10];
+
+    /* 131:—  160:—  com1:0x9BCE8 */ rare_foe = 0;
+    /* 131:—  160:—  com1:0x9BCED */ RESULT_MESSAGE_TYPE = msg_type;
+    /* 131:—  160:—  com1:0x9BCF3 */ POPULATION_LOST = 0;
+    /* 131:—  160:—  com1:0x9BCF9 */ BUILDINGS_LOST_COUNT = 0;
+    /* 131:—  160:—  com1:0x9BCFF */ GOLD_REWARD = 0;
+
+    /* 131:—  160:—  com1:0x9BD05 */
+    if (winner < HUMAN_PLAYER || winner > NEUTRAL_PLAYER)
+        /* 131:—  160:—  com1:0x9BD11 */
+        for (i = 0; i < COMBAT_UNIT_COUNT; ++i)
+            /* 131:—  160:—  com1:0x9BD15 */
+            if (BU(i)->controller_idx == winner)
+                /* 131:—  160:—  com1:0x9BD2C */ BU(i)->status = BUS_GONE;
+
+    /* 131:—  160:—  com1:0x9BD45 */ *item_count = 0;
+    /* 131:—  160:—  com1:0x9BD4C */ experience = 0;
+    /* 131:—  160:—  com1:0x9BD51 */ zombies = 0;
+    /* 131:—  160:—  com1:0x9BD56 */ undead = 0;
+    /* 131:—  160:—  com1:0x9BD5B */ lair_secondary_slot_empty = 0;
+    /* 131:—  160:—  com1:0x9BD60 */
+    if (COMBAT_ENVIRONMENT == COMBAT_ENV_LAIR) {
+        /* 131:—  160:—  com1:0x9BD67 */ LAIR(COMBAT_ENV_INDEX)->guard1_count &= 0xF0;
+        /* 131:—  160:—  com1:0x9BD8F */
+        if ((LAIR(COMBAT_ENV_INDEX)->guard2_count & 0x0F) == 0)
+            /* 131:—  160:—  com1:0x9BDA4 */ lair_secondary_slot_empty = 1;
+        /* 131:—  160:—  com1:0x9BDA9 */ LAIR(COMBAT_ENV_INDEX)->guard2_count &= 0xF0;
+    }
+
+    /* 131:—  160:—  com1:0x9BDBC */ bp_helper_zero_three_strength_accumulators();
+    /* 131:—  160:—  com1:0x9BDBF */ memset(DS_3AAC, 0, 35);
+    /* 131:—  160:—  com1:0x9BDCB */ diplomatic_value = 0;
+    /* 131:—  160:—  com1:0x9BDD1 */ survivor_count = 0;
+
+    /* 131:—  160:—  com1:0x9BDD6 */
+    for (i = 0; i < COMBAT_UNIT_COUNT; ++i) {
+        /* 131:—  160:—  com1:0x9BDDB */
+        if (BU(i)->Combat_Effects & BUE_CONFUSION)
+            /* CoM patch is unconditional; no owner test remains. */
+            /* 131:—  160:—  com1:0x9BDF0 */ BU(i)->status = BUS_GONE;
+
+        /* 131:—  160:—  com1:0x9BE62 */
+        if (msg_type == RESULT_MESSAGE_NORMALIZE_ALL || BU(i)->controller_idx == winner) {
+            /* 131:—  160:—  com1:0x9BE72 */
+            if (BU(i)->status == BUS_UNINVOLVED)
+                /* 131:—  160:—  com1:0x9BE86 */ BU(i)->status = BUS_ACTIVE;
+        } else {
+            /* 131:—  160:—  com1:0x9BE9A */
+            if (BU(i)->status == BUS_UNINVOLVED)
+                /* 131:—  160:—  com1:0x9BEAE */ BU(i)->status = BUS_FLEE;
+        }
+
+        /* 131:—  160:—  com1:0x9BEC0 */
+        enchantments = BU(i)->enchantments | UNIT(BU(i)->unit_idx)->enchantments
+                     | BU(i)->item_enchantments;
+
+        /* 131:—  160:—  com1:0x9BF1B */
+        if (BU(i)->Combat_Effects & (BUE_POSSESSION | BUE_CREATURE_BINDING))
+            /* The controller comparison at 0x9BF52 has no branch; CoM always executes this write. */
+            /* 131:—  160:—  com1:0x9BF45 */ BU(i)->status = BUS_GONE;
+
+        /* Retained, unreachable after the unconditional jump at 0x9BF6E. */
+        /* 131:—  160:—  com1:0x9BF70 */
+        if (false) {
+            if (BU(i)->controller_idx == COMBAT_ATTACKER)
+                /* 131:—  160:—  com1:0x9BF88 */ BU(i)->controller_idx = (int8_t)COMBAT_DEFENDER;
+            else
+                /* 131:—  160:—  com1:0x9BF9A */ BU(i)->controller_idx = (int8_t)COMBAT_ATTACKER;
+        }
+
+        /* 131:—  160:—  com1:0x9BFAE */
+        if (BU(i)->status <= BUS_DEAD || BU(i)->status == BUS_FLEE ||
+            BU(i)->status == BUS_RECALLED) {
+            /* 131:—  160:—  com1:0x9BFED */
+            if ((BU(i)->Move_Flags & 0x0100) || (BU(i)->Abilities & UA_REGENERATION) ||
+                (enchantments & UE_REGENERATION_LOW)) {
+                /* 131:—  160:—  com1:0x9C016 */
+                if (BU(i)->controller_idx == winner && BU(i)->status != BUS_RECALLED)
+                    /* 131:—  160:—  com1:0x9C02D */ BU(i)->status = BUS_ACTIVE;
+                /* 131:—  160:—  com1:0x9C03F */ BU(i)->Cur_Figures = BU(i)->Max_Figures;
+                /* 131:—  160:—  com1:0x9C063 */
+                BU(i)->enchantments &= ~UE_MYSTIC_SURGE;
+                /* 131:—  160:—  com1:0x9C070 */ BU(i)->front_figure_damage = 0;
+            }
+        }
+
+        /* 131:—  160:—  com1:0x9C083 */
+        if (BU(i)->status != BUS_UNINVOLVED) {
+            if (BU(i)->controller_idx == HUMAN_PLAYER)
+                /* 131:—  160:—  com1:0x9C098 */ human_strength += BU(i)->cost;
+            if (BU(i)->status != BUS_ACTIVE) {
+                /* 131:—  160:—  com1:0x9C0AC */
+                int16_t lost = (BU(i)->status == BUS_FLEE) ? BU(i)->cost / 2 : BU(i)->cost;
+                if (BU(i)->controller_idx != HUMAN_PLAYER)
+                    /* 131:—  160:—  com1:0x9C0B2 */ enemy_lost_strength += lost;
+                else
+                    /* 131:—  160:—  com1:0x9C0BC */ human_lost_strength += lost;
+            }
+        }
+
+        /* 131:—  160:—  com1:0x9C0FC */
+        if (BU(i)->enchantments & UE_MYSTIC_SURGE) {
+            /* 131:—  160:—  com1:0x9C103 */ BU(i)->Cur_Figures = 1;
+            /* 131:—  160:—  com1:0x9C108 */ BU(i)->front_figure_damage = BU(i)->hits - 1;
+        }
+
+        /* 131:—  160:—  com1:0x9C163 */
+        if (BU(i)->controller_idx == winner && BU(i)->status == BUS_ACTIVE)
+            /* 131:—  160:—  com1:0x9C18E */ ++survivor_count;
+    }
+
+    /* 131:—  160:—  com1:0x9C19B */ human_strength /= 10;
+    /* 131:—  160:—  com1:0x9C1A7 */
+    { int16_t pct = human_lost_strength == 0 ? 100
+                    : MIN(100, (50 * enemy_lost_strength) / human_lost_strength);
+      /* 131:—  160:—  com1:0x9C1BE */ UNKNOWN_DWORD_9F0E += (int32_t)pct * human_strength;
+      /* 131:—  160:—  com1:0x9C1C9 */ UNKNOWN_DWORD_A204 += (uint16_t)human_strength; }
+
+    /* 131:—  160:—  com1:0x9C1DC */ produce_drained_candidates_from_item_bit_0x10000000__external_bp_sharing();
+reprocess_overflow:
+    /* 131:—  160:—  com1:0x9C1DF */ Retreat_From_Combat(winner);
+    /* 131:—  160:—  com1:0x9C1E8 */ GUI_MULTIPURPOSE_INT = 0;
+
+    /* 131:—  160:—  com1:0x9C1EE */
+    for (i = 0; i < COMBAT_UNIT_COUNT; ++i) {
+        /* 131:—  160:—  com1:0x9C1F3 */
+        if (BU(i)->controller_idx != winner &&
+            !(BU(i)->Abilities & UA_NONCORPOREAL) &&
+            BU(i)->status == BUS_DRAINED &&
+            !(BU(i)->Combat_Effects & BUE_BLACK_SLEEP) &&
+            !(BU(i)->Attribs_1 & ATTRIB1_REJECT_MASK) &&
+            UNIT(BU(i)->unit_idx)->Hero_Slot == -1 &&
+            (!(BU(i)->attack_attributes & ATT_SUPERNATURAL) ||
+             PLAYER(winner)->Nominal_Skill >= UNDEAD_DIRECT_ATTRIBUTE_SKILL_GATE)) {
+            /* 131:—  160:—  com1:0x9C2B7 */ BU(i)->Cur_Figures = BU(i)->Max_Figures;
+            /* 131:—  160:—  com1:0x9C2CC */ BU(i)->front_figure_damage = 0;
+            /* 131:—  160:—  com1:0x9C2D1 */ BU(i)->Attribs_1 |= ATTRIB1_UNDEAD_MARK;
+            /* 131:—  160:—  com1:0x9C2D6 */ BU(i)->race = RACE_DEATH;
+            /* 131:—  160:—  com1:0x9C2EC */ UNIT(BU(i)->unit_idx)->wx = COMBAT_WX;
+            /* 131:—  160:—  com1:0x9C2EF */ UNIT(BU(i)->unit_idx)->Finished = 1;
+            /* 131:—  160:—  com1:0x9C2F4 */ UNIT(BU(i)->unit_idx)->moves2 = 0;
+            /* 131:—  160:—  com1:0x9C2F9 */ UNIT(BU(i)->unit_idx)->Status = 0;
+            /* 8-bit patched add: no carry into the high byte. */
+            /* 131:—  160:—  com1:0x9C2FE */ *(uint8_t *)&diplomatic_value += 3;
+            /* 131:—  160:—  com1:0x9C305 */ UNIT(BU(i)->unit_idx)->wy = COMBAT_WY;
+            /* 131:—  160:—  com1:0x9C30C */ UNIT(BU(i)->unit_idx)->wp = COMBAT_WP;
+            /* 131:—  160:—  com1:0x9C313 */ UNIT(BU(i)->unit_idx)->owner_idx = (int8_t)winner;
+            /* 131:—  160:—  com1:0x9C355 */ UNIT(BU(i)->unit_idx)->mutations |= UM_UNDEAD;
+            /* 131:—  160:—  com1:0x9C369 */ BU(i)->controller_idx = (int8_t)winner;
+            /* 131:—  160:—  com1:0x9C36D */ ++undead;
+            /* 131:—  160:—  com1:0x9C370 */ ++survivor_count;
+            /* 131:—  160:—  com1:0x9C373 */ experience += 2;
+            /* 131:—  160:—  com1:0x9C377 */ BU(i)->status = BUS_ACTIVE;
+            /* 131:—  160:—  com1:0x9C37C */
+            if ((int8_t)(uint8_t)survivor_count >= MAX_STACK_AFTER_CONVERSION) {
+                /* 131:—  160:—  com1:0x9C382 */ BU(i)->status = BUS_OVERFLOW_REPROCESS;
+                goto reprocess_overflow;
+            }
+        }
+
+        /* 131:—  160:—  com1:0x9C398 */
+        if (PLAYER(winner)->Globals[PLAYER_GLOBAL_ZOMBIE_MASTERY] > 0 && BU(i)->status == BUS_DEAD &&
+            !(BU(i)->Attribs_1 & ATTRIB1_REJECT_MASK) && BU(i)->race < RACE_ARCANE_BOUND &&
+            UNIT(BU(i)->unit_idx)->Hero_Slot == -1) {
+            /* Raw 0x9C3FF comparison with 9 is followed by unconditional JMP 0x9C408. */
+            if (BU(i)->controller_idx != winner) {
+                /* 131:—  160:—  com1:0x9C41F */ experience += 2;
+                /* 8-bit patched add: no carry into the high byte. */
+                /* 131:—  160:—  com1:0x9C423 */ *(uint8_t *)&diplomatic_value += 3;
+            }
+            /* 131:—  160:—  com1:0x9C427 */ ++zombies;
+            /* 131:—  160:—  com1:0x9C42A */ BU(i)->race = RACE_DEATH;
+            /* 131:—  160:—  com1:0x9C43C */ BU(i)->hits = 3;
+            /* 131:—  160:—  com1:0x9C45B */ UNIT(BU(i)->unit_idx)->Sight_Range = 1;
+            /* 131:—  160:—  com1:0x9C460 */ UNIT(BU(i)->unit_idx)->type = UNITTYPE_ZOMBIES;
+            /* 131:—  160:—  com1:0x9C465 */ UNIT(BU(i)->unit_idx)->Finished = 1;
+            /* 131:—  160:—  com1:0x9C46A */ UNIT(BU(i)->unit_idx)->moves2 = 0;
+            /* 131:—  160:—  com1:0x9C46F */ UNIT(BU(i)->unit_idx)->Status = 0;
+            /* 131:—  160:—  com1:0x9C474 */ UNIT(BU(i)->unit_idx)->owner_idx = (int8_t)winner;
+            /* 131:—  160:—  com1:0x9C47B */ UNIT(BU(i)->unit_idx)->XP = 0;
+            /* 131:—  160:—  com1:0x9C49C */ UNIT(BU(i)->unit_idx)->Level = 0;
+            /* 131:—  160:—  com1:0x9C4BC */ UNIT(BU(i)->unit_idx)->wx = COMBAT_WX;
+            /* 131:—  160:—  com1:0x9C4DD */ UNIT(BU(i)->unit_idx)->wy = COMBAT_WY;
+            /* 131:—  160:—  com1:0x9C4FF */ UNIT(BU(i)->unit_idx)->wp = COMBAT_WP;
+            /* 131:—  160:—  com1:0x9C513 */ BU(i)->Cur_Figures = DS_BYTE_1A29;
+            /* 131:—  160:—  com1:0x9C527 */ BU(i)->Max_Figures = DS_BYTE_1A29;
+            /* 131:—  160:—  com1:0x9C52E */ BU(i)->controller_idx = (int8_t)winner;
+            /* 131:—  160:—  com1:0x9C536 */ BU(i)->status = BUS_ACTIVE;
+            /* 131:—  160:—  com1:0x9C53B */ BU(i)->front_figure_damage = 0;
+            /* 131:—  160:—  com1:0x9C540 */ ++survivor_count;
+            /* 131:—  160:—  com1:0x9C543 */
+            if ((int8_t)(uint8_t)survivor_count >= MAX_STACK_AFTER_CONVERSION) {
+                /* 131:—  160:—  com1:0x9C549 */ BU(i)->status = BUS_OVERFLOW_REPROCESS;
+                goto reprocess_overflow;
+            }
+        }
+    }
+
+    /* 131:—  160:—  com1:0x9C567 */
+    if (COMBAT_ENVIRONMENT == COMBAT_ENV_CITY) {
+        /* 131:—  160:—  com1:0x9C571 */ POPULATION_LOST = 0;
+        /* 131:—  160:—  com1:0x9C577 */ BUILDINGS_LOST_COUNT = 0;
+        /* 131:—  160:—  com1:0x9C57D */
+        if (winner == COMBAT_ATTACKER) {
+            /* 131:—  160:—  com1:0x9C589 */
+            if (COMBAT_DEFENDER != NEUTRAL_PLAYER) {
+                /* 131:—  160:—  com1:0x9C590 */ PLAYER(COMBAT_DEFENDER)->fame -= CITY(COMBAT_ENV_INDEX)->size;
+                /* 131:—  160:—  com1:0x9C5B3 */ PLAYER(COMBAT_DEFENDER)->fame = MAX(0, PLAYER(COMBAT_DEFENDER)->fame);
+            }
+            /* 131:—  160:—  com1:0x9C5D4 */
+            if (COMBAT_DEFENDER == HUMAN_PLAYER)
+                /* 131:—  160:—  com1:0x9C5DB */ GUI_MULTIPURPOSE_INT -= CITY(COMBAT_ENV_INDEX)->size;
+
+            /* One call at 0x9C600; 0x9C603 tests its inherited-SI result. */
+            /* 131:—  160:—  com1:0x9C600 */
+            if (bp_helper_city_requires_automatic_raze()) RAZE_CITY = 1;
+            else if (winner == HUMAN_PLAYER) {
+                /* 131:—  160:—  com1:0x9C615 */
+                if (MAGIC_SET_RAZE_CITY == 1 && Raze_City_Prompt(DS_5EA6) == 0)
+                    /* 131:—  160:—  com1:0x9C62C */ RAZE_CITY = 1;
+            } else if (winner < NUM_PLAYERS)
+                /* 131:—  160:—  com1:0x9C634 */ RAZE_CITY = Raze_Check(winner, COMBAT_ENV_INDEX);
+
+            /* 131:—  160:—  com1:0x9C64E */
+            if (!RAZE_CITY) {
+                /* 131:—  160:—  com1:0x9C658 */ GOLD_REWARD = MAX(0, CITY(COMBAT_ENV_INDEX)->size - 2);
+                /* 131:—  160:—  com1:0x9C67E */ PLAYER(winner)->fame += GOLD_REWARD;
+                /* 131:—  160:—  com1:0x9C694 */ if (winner == HUMAN_PLAYER) GUI_MULTIPURPOSE_INT += GOLD_REWARD;
+                /* 131:—  160:—  com1:0x9C6A1 */ GOLD_REWARD = 0;
+                /* 131:—  160:—  com1:0x9C6AC */
+                if (UNKNOWN_WORD_912A == 0) {
+                    /* 131:—  160:—  com1:0x9C6B3 */ GOLD_REWARD = City_Gold(COMBAT_ENV_INDEX);
+                    /* 131:—  160:—  com1:0x9C6C0 */ if (winner < NUM_PLAYERS) Player_Add_Gold(winner, GOLD_REWARD);
+                    /* 131:—  160:—  com1:0x9C6D7 */
+                    if (CITY(COMBAT_ENV_INDEX)->owner_idx < NUM_PLAYERS)
+                        PLAYER(COMBAT_DEFENDER)->gold_reserve -= GOLD_REWARD;
+                }
+            } else {
+                /* CoM raw adds, rather than subtracts, both summary and fame. */
+                /* 131:—  160:—  com1:0x9C705 */ GOLD_REWARD = CITY(COMBAT_ENV_INDEX)->size;
+                /* 131:—  160:—  com1:0x9C71B */ if (winner == HUMAN_PLAYER) GUI_MULTIPURPOSE_INT += GOLD_REWARD;
+                /* 131:—  160:—  com1:0x9C728 */ PLAYER(winner)->fame += GOLD_REWARD;
+                /* 131:—  160:—  com1:0x9C73A */ PLAYER(winner)->fame = MAX(0, PLAYER(winner)->fame);
+                /* 131:—  160:—  com1:0x9C747 */ GOLD_REWARD = 0;
+                /* 131:—  160:—  com1:0x9C74D */
+                if (UNKNOWN_WORD_912A == 0) {
+                    /* 131:—  160:—  com1:0x9C75B */ GOLD_REWARD = City_Gold(COMBAT_ENV_INDEX);
+                    /* 131:—  160:—  com1:0x9C768 */
+                    if (CITY(COMBAT_ENV_INDEX)->owner_idx < NUM_PLAYERS)
+                        PLAYER(COMBAT_DEFENDER)->gold_reserve -= GOLD_REWARD;
+                    /* 131:—  160:—  com1:0x9C793 */
+                    for (i = 3; i < NUM_BUILDINGS; ++i)
+                        /* 131:—  160:—  com1:0x9C798 */
+                        if (CITY(COMBAT_ENV_INDEX)->bldg_status[i] > -1)
+                            GOLD_REWARD += BUILDING_TABLE[i].construction_cost / 10;
+                    /* 131:—  160:—  com1:0x9C7D0 */
+                    if (winner < NUM_PLAYERS) Player_Add_Gold(winner, GOLD_REWARD);
+                }
+            }
+        } else {
+            /* 131:—  160:—  com1:0x9C7E9 */ GOLD_REWARD = 0;
+        }
+
+        /* 131:—  160:—  com1:0x9C7EF */
+        if (CITY(COMBAT_ENV_INDEX)->population != 0) {
+            /* 131:—  160:—  com1:0x9C807 */ int16_t population_pct = COMBAT_CITY_DAMAGE * 2;
+            /* 131:—  160:—  com1:0x9C80F */
+            if (winner == COMBAT_ATTACKER) {
+                if (winner == NEUTRAL_PLAYER) {
+                    /* 131:—  160:—  com1:0x9C81E */
+                    for (i = 0; i < COMBAT_UNIT_COUNT; ++i) {
+                        /* 131:—  160:—  com1:0x9C822 */
+                        if (BU(i)->controller_idx == NEUTRAL_PLAYER) {
+                            /* 131:—  160:—  com1:0x9C836 */
+                            first_neutral_is_fantastic = (BU(i)->Abilities & 1) != 0;
+                            /* Both assignment arms jump out at 0x9C850/0x9C857. */
+                            break;
+                        }
+                    }
+                    /* 131:—  160:—  com1:0x9C860 */
+                    if (first_neutral_is_fantastic == 1) {
+                        /* 131:—  160:—  com1:0x9C866 */ population_pct += 50;
+                        /* 131:—  160:—  com1:0x9C86A */ ACTIVE_BATTLE_UNIT = Rampage_Combat_City();
+                    } else
+                        /* 131:—  160:—  com1:0x9C874 */ ACTIVE_BATTLE_UNIT = RAIDERS_WON_RESULT;
+                } else
+                    /* 131:—  160:—  com1:0x9C87C */ population_pct += 10;
+            }
+            /* 131:—  160:—  com1:0x9C880 */ population_pct = MIN(population_pct, 50);
+            /* 131:—  160:—  com1:0x9C88B */ city_loss = 0;
+            /* 131:—  160:—  com1:0x9C88D */
+            for (i = 0; i < CITY(COMBAT_ENV_INDEX)->population - 1; ++i)
+                /* 131:—  160:—  com1:0x9C891 */ if (Random(100) <= population_pct) ++city_loss;
+            /* 131:—  160:—  com1:0x9C8BA */
+            for (i = 0; i < NUM_BUILDINGS; ++i) building_lost[i] = 0;
+            /* 131:—  160:—  com1:0x9C8D1 */ destroy_chance = COMBAT_CITY_DAMAGE;
+            /* 131:—  160:—  com1:0x9C8D7 */
+            if (winner == COMBAT_ATTACKER) {
+                if (winner == NEUTRAL_PLAYER)
+                    /* 131:—  160:—  com1:0x9C8E6 */ destroy_chance += 50;
+                else
+                    /* 131:—  160:—  com1:0x9C8EC */ bp_helper_add_difficulty_destruction_bonus();
+            }
+            /* 131:—  160:—  com1:0x9C8F0 */ destroy_chance = MIN(destroy_chance, 75);
+            /* 131:—  160:—  com1:0x9C8FB */
+            if (ACTIVE_BATTLE_UNIT != RAMPAGE_RUINS_RESULT)
+                /* 131:—  160:—  com1:0x9C903 */
+                Apply_Damage_To_City(COMBAT_ENV_INDEX, city_loss, destroy_chance, building_lost);
+
+            /* 0x9C917 performs a dead winner/defender comparison; 0x9C91E then jumps over
+               the retained message-compaction island unconditionally. */
+            if (false) {
+                /* 131:—  160:—  com1:0x9C920 */
+                for (i = 0; i < BUILDING_COMPLETION_MESSAGE_COUNT; ++i) {
+                    /* 131:—  160:—  com1:0x9C924 */
+                    if (BUILDING_COMPLETION_MESSAGE_CITY[i] == COMBAT_ENV_INDEX) {
+                        /* 131:—  160:—  com1:0x9C935 */
+                        for (j = i; j < BUILDING_COMPLETION_MESSAGE_COUNT; ++j)
+                            /* Copies the next record's city byte over the current record. */
+                            /* 131:—  160:—  com1:0x9C939 */
+                            BUILDING_COMPLETION_MESSAGE_CITY[j] =
+                                BUILDING_COMPLETION_MESSAGE_CITY[j + 1];
+                        /* 131:—  160:—  com1:0x9C956 */
+                        --BUILDING_COMPLETION_MESSAGE_COUNT;
+                    }
+                }
+            }
+
+            /* 131:—  160:—  com1:0x9C967 */ BUILDINGS_LOST_COUNT = 0;
+            /* 131:—  160:—  com1:0x9C96D */
+            for (i = 0; i < NUM_BUILDINGS; ++i)
+                /* 131:—  160:—  com1:0x9C971 */ if (building_lost[i] > 0) ++BUILDINGS_LOST_COUNT;
+            /* 131:—  160:—  com1:0x9C989 */ POPULATION_LOST = city_loss;
+            /* The published near pointer expires when this far frame returns. */
+            /* 131:—  160:—  com1:0x9C98D */ LOST_BUILDINGS_PTR = building_lost;
+        }
+    }
+
+    /* 131:—  160:—  com1:0x9C993 */
+    for (i = 0; i < COMBAT_UNIT_COUNT; ++i) {
+        /* 131:—  160:—  com1:0x9C998 */
+        if (COMBAT_ENVIRONMENT == COMBAT_ENV_LAIR && winner == NEUTRAL_PLAYER &&
+            BU(i)->controller_idx == NEUTRAL_PLAYER && BU(i)->status == BUS_ACTIVE) {
+            /* 131:—  160:—  com1:0x9C9D9 */
+            if (UNIT(BU(i)->unit_idx)->type == LAIR(COMBAT_ENV_INDEX)->guard1_unit_type) {
+                /* 131:—  160:—  com1:0x9CA14 */ ++LAIR(COMBAT_ENV_INDEX)->guard1_count;
+                /* 131:—  160:—  com1:0x9CA3C */ BU(i)->status = BUS_DEAD;
+            } else if (UNIT(BU(i)->unit_idx)->type == LAIR(COMBAT_ENV_INDEX)->guard2_unit_type) {
+                /* 131:—  160:—  com1:0x9CA8C */ ++LAIR(COMBAT_ENV_INDEX)->guard2_count;
+                /* 131:—  160:—  com1:0x9CAB4 */ BU(i)->status = BUS_DEAD;
+            } else if (lair_secondary_slot_empty == 1) {
+                /* 131:—  160:—  com1:0x9CACF */ LAIR(COMBAT_ENV_INDEX)->guard2_unit_type = UNIT(BU(i)->unit_idx)->type;
+                /* 131:—  160:—  com1:0x9CB02 */ LAIR(COMBAT_ENV_INDEX)->guard2_count += 0x11;
+                /* 131:—  160:—  com1:0x9CB2A */ BU(i)->status = BUS_DEAD;
+                /* 131:—  160:—  com1:0x9CB3C */ lair_secondary_slot_empty = 0;
+            } else
+                /* 131:—  160:—  com1:0x9CB43 */ BU(i)->status = BUS_DEAD;
+        }
+
+        /* 131:—  160:—  com1:0x9CB55 */
+        if (msg_type >= RESULT_MESSAGE_HIDE_UNDEAD_COUNTS) { zombies = 0; undead = 0; }
+
+        /* Exact dead/removal admission, including neutral-environment exceptions. */
+        /* 131:—  160:—  com1:0x9CB67 */
+        bool remove = BU(i)->status > BUS_ACTIVE || UNIT(BU(i)->unit_idx)->wp == UNIT_WP_GONE;
+        /* 131:—  160:—  com1:0x9CBAB */
+        if (!remove && UNIT(BU(i)->unit_idx)->owner_idx == NEUTRAL_PLAYER) {
+            if (COMBAT_ENVIRONMENT != 0) {
+                if (COMBAT_ENVIRONMENT != 1) remove = true;
+                else if (BU(i)->race >= RACE_ARCANE_BOUND && winner == NEUTRAL_PLAYER) remove = true;
+            }
+        }
+
+        /* 131:—  160:—  com1:0x9CBDE */
+        if (remove) {
+            if (BU(i)->controller_idx != winner) {
+                /* 131:—  160:—  com1:0x9CBF5 */
+                experience += 1 + ((BU(i)->cost >> 5) /
+                              (((uint8_t)COMBAT_ATTACKER == NEUTRAL_PLAYER ||
+                                (uint8_t)COMBAT_DEFENDER == NEUTRAL_PLAYER) ? 2 : 1));
+                /* 131:—  160:—  com1:0x9CC13 */
+                if (UNIT_TYPE_TABLE[UNIT(BU(i)->unit_idx)->type].cost >= RARE_UNIT_COST) rare_foe = 1;
+            }
+            /* 131:—  160:—  com1:0x9CC3B */
+            if (BU(i)->controller_idx == COMBAT_DEFENDER &&
+                UNIT(BU(i)->unit_idx)->wp != UNIT_WP_GONE) {
+                if (UNIT(BU(i)->unit_idx)->Hero_Slot > -1)
+                    /* 131:—  160:—  com1:0x9CC8D */ diplomatic_value += 30;
+                else {
+                    /* 131:—  160:—  com1:0x9CC93 */ diplomatic_value += Random(5);
+                    /* 131:—  160:—  com1:0x9CCA0 */
+                    if (BU(i)->Construction > 0 || (BU(i)->Abilities & UA_CREATE_OUTPOST))
+                        /* 131:—  160:—  com1:0x9CCC9 */ diplomatic_value += Random(20);
+                }
+            }
+
+            /* 131:—  160:—  com1:0x9CCD6 */
+            if (UNIT(BU(i)->unit_idx)->Hero_Slot > -1) {
+                /* 131:—  160:—  com1:0x9CCFB */
+                for (j = 0; j < NUM_HERO_ITEMS; ++j) {
+                    int16_t *slot = HERO_ITEM_SLOT(UNIT(BU(i)->unit_idx)->owner_idx,
+                                                  UNIT(BU(i)->unit_idx)->Hero_Slot, j);
+                    /* 131:—  160:—  com1:0x9CD00 */
+                    if (*slot > -1) {
+                        if (BU(i)->status == BUS_GONE)
+                            /* 131:—  160:—  com1:0x9CD72 */ Remove_Item(*slot);
+                        else if (*item_count < MAX_RECOVERED_ITEMS) {
+                            /* 131:—  160:—  com1:0x9CDDB */ item_list[*item_count] = *slot;
+                            /* 131:—  160:—  com1:0x9CE41 */ ++*item_count;
+                        } else
+                            /* 131:—  160:—  com1:0x9CE4E */ Remove_Item(*slot);
+                    }
+                    /* 131:—  160:—  com1:0x9CEAC */ *slot = -1;
+                }
+
+                /* 131:—  160:—  com1:0x9CF0F */
+                if (BU(i)->controller_idx != winner) {
+                    int16_t fame_loss = (UNIT(BU(i)->unit_idx)->Level + 1) / 2;
+                    /* 131:—  160:—  com1:0x9CF29 */
+                    if (BU(i)->controller_idx == HUMAN_PLAYER) GUI_MULTIPURPOSE_INT -= fame_loss;
+                    /* 131:—  160:—  com1:0x9CF67 */ PLAYER(BU(i)->controller_idx)->fame -= fame_loss;
+                }
+            }
+
+            /* 131:—  160:—  com1:0x9CFAC */
+            Kill_Unit(BU(i)->unit_idx,
+                      (BU(i)->status == BUS_GONE || (UNIT(BU(i)->unit_idx)->mutations & UM_UNDEAD))
+                      ? KILL_DISAPPEARED : KILL_NORMAL);
+        } else {
+            /* 131:—  160:—  com1:0x9D005 */ BU(i)->front_figure_damage = MAX(0, BU(i)->front_figure_damage);
+            /* 131:—  160:—  com1:0x9D02B */ BU(i)->Extra_Hits = 0;
+            /* 131:—  160:—  com1:0x9D03D */ BU(i)->enchantments = 0;
+            /* 131:—  160:—  com1:0x9D056 */ hp_delta = Battle_Unit_Hit_Points(BU(i));
+            /* 131:—  160:—  com1:0x9D072 */ hp_delta -= BU(i)->hits;
+            /* 131:—  160:—  com1:0x9D08A */ BU(i)->front_figure_damage -= hp_delta;
+            /* 131:—  160:—  com1:0x9D0B1 */ BU(i)->front_figure_damage = MAX(0, BU(i)->front_figure_damage);
+            /* 131:—  160:—  com1:0x9D0D7 */
+            UNIT(BU(i)->unit_idx)->Damage =
+                (BU(i)->Max_Figures - BU(i)->Cur_Figures) * (BU(i)->hits - hp_delta)
+                + BU(i)->front_figure_damage;
+            /* 131:—  160:—  com1:0x9D152 */
+            if (UNIT(BU(i)->unit_idx)->owner_idx != winner)
+                /* 131:—  160:—  com1:0x9D16D */ UNIT(BU(i)->unit_idx)->moves2 = 0;
+        }
+    }
+
+    /* 131:—  160:—  com1:0x9D17C */
+    if (COMBAT_DEFENDER != HUMAN_PLAYER && COMBAT_DEFENDER != NEUTRAL_PLAYER &&
+        COMBAT_ATTACKER != NEUTRAL_PLAYER)
+        /* 131:—  160:—  com1:0x9D191 */
+        Change_Relations(-diplomatic_value, COMBAT_ATTACKER, COMBAT_DEFENDER,
+                         DIPLO_ACTION_COMBAT, 0, 0);
+
+    /* 131:—  160:—  com1:0x9D1B1 */
+    if (COMBAT_ENVIRONMENT == COMBAT_ENV_LAIR && winner == NEUTRAL_PLAYER) {
+        /* 131:—  160:—  com1:0x9D1C4 */
+        if ((LAIR(COMBAT_ENV_INDEX)->guard1_count & 0x0F) == 0 &&
+            (LAIR(COMBAT_ENV_INDEX)->guard2_count & 0x0F) > 0) {
+            /* 131:—  160:—  com1:0x9D1F5 */ LAIR(COMBAT_ENV_INDEX)->guard1_count = LAIR(COMBAT_ENV_INDEX)->guard2_count;
+            /* 131:—  160:—  com1:0x9D21B */ LAIR(COMBAT_ENV_INDEX)->guard1_unit_type = LAIR(COMBAT_ENV_INDEX)->guard2_unit_type;
+            /* 131:—  160:—  com1:0x9D241 */ LAIR(COMBAT_ENV_INDEX)->guard2_count = 0;
+            /* 131:—  160:—  com1:0x9D254 */ LAIR(COMBAT_ENV_INDEX)->guard2_unit_type = UNITTYPE_GARGOYLES;
+        }
+        /* 131:—  160:—  com1:0x9D267 */
+        if (undead > 0 && LAIR(COMBAT_ENV_INDEX)->guard1_unit_type >= UNITTYPE_MAGIC_SPIRIT_BOUND &&
+            LAIR(COMBAT_ENV_INDEX)->guard2_unit_type >= UNITTYPE_MAGIC_SPIRIT_BOUND)
+            /* 131:—  160:—  com1:0x9D297 */ undead = 0;
+    }
+
+    /* 131:—  160:—  com1:0x9D29C */
+    if (winner != NEUTRAL_PLAYER && experience >= FAME_XP_THRESHOLD) {
+        /* 131:—  160:—  com1:0x9D2AE */ if (winner == HUMAN_PLAYER) ++GUI_MULTIPURPOSE_INT;
+        /* 131:—  160:—  com1:0x9D2B8 */ ++PLAYER(winner)->fame;
+        /* 131:—  160:—  com1:0x9D2D7 */
+        if (winner == COMBAT_ATTACKER) {
+            /* 131:—  160:—  com1:0x9D2E0 */
+            if (PLAYER(COMBAT_DEFENDER)->fame > 20) {
+                /* 131:—  160:—  com1:0x9D2F1 */ if (COMBAT_DEFENDER == HUMAN_PLAYER) --GUI_MULTIPURPOSE_INT;
+                /* 131:—  160:—  com1:0x9D2FC */ --PLAYER(COMBAT_DEFENDER)->fame;
+            }
+        } else if (PLAYER(COMBAT_ATTACKER)->fame > 20) { /* com1:0x9D30C */
+            /* 131:—  160:—  com1:0x9D31D */ if (COMBAT_ATTACKER == HUMAN_PLAYER) --GUI_MULTIPURPOSE_INT;
+            /* 131:—  160:—  com1:0x9D328 */ --PLAYER(COMBAT_ATTACKER)->fame;
+        }
+    }
+    /* 131:—  160:—  com1:0x9D336 */ if (winner == HUMAN_PLAYER) GUI_MULTIPURPOSE_INT += rare_foe;
+    /* 131:—  160:—  com1:0x9D343 */ PLAYER(winner)->fame += rare_foe;
+    /* 131:—  160:—  com1:0x9D354 */
+    if (COMBAT_ATTACKER == HUMAN_PLAYER || COMBAT_DEFENDER == HUMAN_PLAYER)
+        /* 131:—  160:—  com1:0x9D362 */ Combat_Results_Scroll();
+
+    /* 131:—  160:—  com1:0x9D367 */
+    for (i = 0; i < COMBAT_UNIT_COUNT; ++i)
+        /* 131:—  160:—  com1:0x9D36C */
+        if (BU(i)->status == BUS_ACTIVE && UNIT(BU(i)->unit_idx)->type < UNITTYPE_MAGIC_SPIRIT_BOUND &&
+            /* 0x9D385 loads BU race into CL but no later instruction consumes it. */
+            !(UNIT(BU(i)->unit_idx)->mutations & UM_UNDEAD) &&
+            BU(i)->controller_idx == (uint8_t)winner)
+            /* 131:—  160:—  com1:0x9D3B3 */ bp_helper_add_experience_to_unit(experience);
+
+    /* 131:—  160:—  com1:0x9D3F9 */
+    if (COMBAT_ATTACKER == HUMAN_PLAYER || COMBAT_DEFENDER == HUMAN_PLAYER) {
+        /* 131:—  160:—  com1:0x9D40A */
+        if (zombies > 0) {
+            /* 131:—  160:—  com1:0x9D410 */ itoa(zombies, temp_buffer, 10);
+            /* 131:—  160:—  com1:0x9D423 */ strcpy(GUI_NEAR_MSG, temp_buffer);
+            /* 131:—  160:—  com1:0x9D432 */ strcat(GUI_NEAR_MSG, zombies > 1 ? DS_5ED3 : DS_5EDF);
+            /* 131:—  160:—  com1:0x9D44C */ strcat(GUI_NEAR_MSG, DS_5EE9);
+            /* 131:—  160:—  com1:0x9D45B */ Undead_Animation(UNITTYPE_ZOMBIES);
+        }
+        /* 131:—  160:—  com1:0x9D465 */
+        if (undead > 0) {
+            /* 131:—  160:—  com1:0x9D46E */ itoa(undead, temp_buffer, 10);
+            /* 131:—  160:—  com1:0x9D481 */ strcpy(GUI_NEAR_MSG, temp_buffer);
+            /* 131:—  160:—  com1:0x9D490 */ strcat(GUI_NEAR_MSG, undead > 1 ? DS_5F09 : DS_5F2D);
+            /* 131:—  160:—  com1:0x9D4AA */
+            if (winner == HUMAN_PLAYER) strcat(GUI_NEAR_MSG, DS_5F51);
+            else if (winner == NEUTRAL_PLAYER)
+                /* 131:—  160:—  com1:0x9D4EF */ strcat(GUI_NEAR_MSG, undead > 1 ? DS_5F56 : DS_5F66);
+            else {
+                /* 131:—  160:—  com1:0x9D4C7 */ strcat(GUI_NEAR_MSG, PLAYER(winner)->name);
+                /* 131:—  160:—  com1:0x9D4DE */ strcat(GUI_NEAR_MSG, DS_5F07);
+            }
+            /* 131:—  160:—  com1:0x9D509 */
+            Undead_Animation(excluded_next_routine_at_0x9D535(winner));
+        }
+    }
+    /* 131:—  160:—  com1:0x9D519 */
+    if (COMBAT_ATTACKER != HUMAN_PLAYER)
+        /* 131:—  160:—  com1:0x9D520 */ Set_Mouse_List(MOUSE_LIST_REPLACE, DS_0106);
+}
+
+/* BP-sharing helper; live caller 0x9D3B6. */
+/* 131:—  160:—  com1:0x9BE04 */
+static near void bp_helper_add_experience_to_unit(int16_t amount_in_ax)
+{
+    /* inherited BX = current s_UNIT, BP = End_Of_Combat frame */
+    /* 131:—  160:—  com1:0x9BE04 */
+    if (winner != HUMAN_PLAYER && UNIT_IN_BX->Hero_Slot > -1)
+        /* 131:—  160:—  com1:0x9BE11 */ amount_in_ax = (amount_in_ax * DIFFICULTY) >> 1;
+    /* 131:—  160:—  com1:0x9BE1B */ UNIT_IN_BX->XP += amount_in_ax;
+    /* 131:—  160:—  com1:0x9BE1F */ return;
+}
+
+/* BP-sharing helper; live caller 0x9BDBC. */
+/* 131:—  160:—  com1:0x9C077 */
+static near void bp_helper_zero_three_strength_accumulators(void)
+{
+    /* 131:—  160:—  com1:0x9C077 */ human_strength = enemy_lost_strength = human_lost_strength = 0;
+    /* 131:—  160:—  com1:0x9C082 */ return;
+}
+
+/* BP-sharing helper; live caller 0x9C600, returns in inherited SI. */
+/* 131:—  160:—  com1:0x9C0C1 */
+static near int16_t bp_helper_city_requires_automatic_raze(void)
+{
+    /* 131:—  160:—  com1:0x9C0C1 */
+    uint8_t unused_cl = PLAYER(COMBAT_ATTACKER)->UNKNOWN_0068; /* executed read, base+0x68 */
+    /* 131:—  160:—  com1:0x9C0CA */
+    uint8_t unused_ch = PLAYER(COMBAT_ATTACKER)->UNKNOWN_0015; /* executed read, base+0x15 */
+    /* 131:—  160:—  com1:0x9C0D2 */ i = 0;
+    /* 131:—  160:—  com1:0x9C0E1 */ if (CITY(COMBAT_ENV_INDEX)->population == 0) ++i;
+    /* 0x9C0E9 executes a dead attacker comparison; 0x9C0EE jumps directly to RET. */
+    (void)(COMBAT_ATTACKER != NEUTRAL_PLAYER);
+    /* Retained patched-out residue at 0x9C0F0..0x9C0FA. */
+    if (false && unused_cl != 0 && unused_ch != CITY(COMBAT_ENV_INDEX)->race) ++i;
+    /* 131:—  160:—  com1:0x9C0FB */ return i;
+}
+
+/* BP-sharing helper; live caller 0x9C8EC. */
+/* 131:—  160:—  com1:0x9C114 */
+static near void bp_helper_add_difficulty_destruction_bonus(void)
+{
+    /* 131:—  160:—  com1:0x9C114 */ destroy_chance += CS_DIFFICULTY_BONUS[DIFFICULTY];
+    /* 131:—  160:—  com1:0x9C121 */ return;
+}
+/* 131:—  160:—  com1:0x9C122 */
+static const uint8_t CS_DIFFICULTY_BONUS[7] = {0x0A,0x14,0x14,0x1C,0x23,0x28,0x2D};
+#endif
+
 
 #if BUILD == CP160
 /* Near BP-sharing helper called only from Auto_Move_Unit.  It has no prologue:

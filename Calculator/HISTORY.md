@@ -6,6 +6,20 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-21
 
+- **D37 — reconstructed CoM 6.08's complete post-combat result materialization routine; no
+  calculator change.** The CoM-only `[0x9BCE0,0x9D535)` body now lives in
+  [combat.c](../Reference%20docs/DOS%20reconstructed/combat.c), with its four-word winner/item-list
+  ABI, four BP-sharing helpers, city/lair aftermath, item recovery, fame/experience, UI tail, and
+  every material write. The direct drained-unit path admits a non-Supernatural candidate without
+  reading skill; a candidate carrying common attack mask `$2000` (Supernatural) instead requires
+  the winner's `Nominal_Skill` at player offset `+0x56` to be at least 240. Overflow status 12
+  re-enters at `0x9C1DF` after the one-time drained-candidate producer, and CoM's patched
+  automatic-raze helper forces razing only for population zero. Durable ABI, edge/call/write
+  inventories, the 56-row ledger, and review dispositions are in
+  [D37.evidence.md](../Reference%20docs/DOS%20reconstructed/D37.evidence.md); its checker accounts
+  for 170 conditional branches, 38 calls, and 99 named writes with none unaccounted. Calculator
+  scope is not applicable, so all five calculator versions are unchanged; backlog D37 is closed.
+
 - **D28 — reconstructed `Auto_Move_Unit` and resolved CP's third Wall-of-Fire edge as movement
   parity, with no calculator change.** The complete MoM 1.31/CP 1.60 routine
   `[0x8A90D,0x8B30D)` and the version-specific `0x89448` body now live in
