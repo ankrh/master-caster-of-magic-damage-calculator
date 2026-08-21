@@ -1045,7 +1045,7 @@ definePresets({
   supremeLightSkipsZeroedRangedCoM2: {
     desc: 'Supreme Light\'s ranged half is a live strength test, `if U.ranged > 0` (:2632), not a type test, so a magic ranged 5 that Mind Storm\'s −5 and the region-e clamp have left at zero takes no +2 and the attack stays gone: 0 damage (the six-name type test it replaced added 2 to the emptied field, for 2). The absence is the rule under test. Mind Storm is the live half — without it the same unit deals 5 + 2 = 7, which is `supremeLightCasterRangedCoM2`\'s claim at another size.',
     version: V_COM2,
-    a: { figs:1, atk:0, rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:20,
+    a: { figs:1, atk:0, rtbType:'magic', rtb:5, toHitRtbMod:70, hp:20,
       abilities: { supremeLight: true, mindStorm: true } },
     b: { figs:1, atk:0, def:0, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,

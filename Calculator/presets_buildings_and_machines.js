@@ -198,7 +198,7 @@ definePresets({
   alumniOfAcademyMagicRangedWarlord: {
     desc: 'Academy (Warlord): a 6-figure Halfling magical-ranged unit gains a flat +2 figures. 1 ranged × 8 figs at 100% hit vs def 0 → 8 dmg (without Academy, 6)',
     version: V_WARLORD,
-    a: { figs:6, rtbType:'magic_n', rtb:1, toHitRtbMod:70, hp:2, race:'Halfling', name:'Halfling Shamans', abilities: { alumniOfAcademy: true } },
+    a: { figs:6, rtbType:'magic', rtb:1, toHitRtbMod:70, hp:2, race:'Halfling', name:'Halfling Shamans', abilities: { alumniOfAcademy: true } },
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -206,10 +206,18 @@ definePresets({
   alumniOfAcademyMechanicalExcludedWarlord: {
     desc: 'Academy (Warlord): Mechanical excludes the magical-ranged branch. 1 ranged × 6 figs at 100% hit vs def 0 → 6 dmg (a non-Mechanical unit would deal 8)',
     version: V_WARLORD,
-    a: { figs:6, rtbType:'magic_n', rtb:1, toHitRtbMod:70, hp:2, race:'Halfling', name:'Mechanical Shamans', abilities: { alumniOfAcademy: true, mechanical: true } },
+    a: { figs:6, rtbType:'magic', rtb:1, toHitRtbMod:70, hp:2, race:'Halfling', name:'Mechanical Shamans', abilities: { alumniOfAcademy: true, mechanical: true } },
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  alumniOfAcademyLightningBoltWarlord: {
+    desc: 'Academy (Warlord): the gate is `GetStat(U,SRangedType,1)>29` (CreateUnit.CAS:462-464) — the whole magical band, not an enumeration of realms — so the id-30 lightning-bolt projectile is inside it exactly as any other magical id is. 1 ranged × 8 figs at 100% hit vs def 0 → 8 dmg (without Academy, 6). Missile Immunity on the target is the control that the projectile is classed magical rather than physical: it blocks nothing here.',
+    version: V_WARLORD,
+    a: { figs:6, rtbType:'magic_lightning', rtb:1, toHitRtbMod:70, hp:2, race:'Halfling', name:'Halfling Stormcallers', abilities: { alumniOfAcademy: true } },
+    b: { atk:0, def:0, hp:20, abilities: { missileImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   alumniOfAcademyRocsWarlord: {
     desc: 'Academy (Warlord): Halfling Rocs qualify as the Fantastic Stable unit. 1 melee × (2+2) figs at 100% hit vs def 0 → 4 dmg (without Academy, 2)',
@@ -221,7 +229,7 @@ definePresets({
   alumniOfAcademyNonHalflingExcludedWarlord: {
     desc: 'Academy (Warlord): non-Halfling magical-ranged units cannot use the racial building. 1 ranged × 4 figs at 100% hit vs def 0 → 4 dmg (a Halfling would deal 6)',
     version: V_WARLORD,
-    a: { figs:4, rtbType:'magic_c', rtb:1, toHitRtbMod:70, hp:2, race:'High Men', name:'High Men Magicians', abilities: { alumniOfAcademy: true } },
+    a: { figs:4, rtbType:'magic', rtb:1, toHitRtbMod:70, hp:2, race:'High Men', name:'High Men Magicians', abilities: { alumniOfAcademy: true } },
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -283,17 +291,17 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   lavaSmelterResistElemWarlord: {
-    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Resist Elements. Chaos magic ranged rtb 6 (100% hit) vs def 0 → +4 = 4, 100% block → 2 dmg (without the grant, def 0 → 6 dmg)',
+    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Resist Elements. Magic ranged rtb 6 (100% hit) vs def 0 → +4 = 4, 100% block → 2 dmg (without the grant, def 0 → 6 dmg)',
     version: V_WARLORD,
-    a: { rtbType:'magic_c', rtb:6, toHitRtbMod:70, hp:10 },
+    a: { rtbType:'magic', rtb:6, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterResistElements: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   lavaSmelterElementalArmorWarlord: {
-    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Elemental Armor. Chaos magic ranged rtb 10 (100% hit) vs def 0 → +12 = 12, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
+    desc: 'Lava Smelter (Warlord): a Dwarf unit gains Elemental Armor. Magic ranged rtb 10 (100% hit) vs def 0 → +12 = 12, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
     version: V_WARLORD,
-    a: { rtbType:'magic_c', rtb:10, toHitRtbMod:70, hp:10 },
+    a: { rtbType:'magic', rtb:10, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterElementalArmor: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -329,7 +337,7 @@ definePresets({
   lavaSmelterProtectionsStackWarlord: {
     desc: 'Lava Smelter (Warlord): Resist Elements and Elemental Armor stack as two independent Inc writes (Combat.ResolutionHelpers.pas:191-195). Magic ranged 20 meets 4 + 12 = 16 Defense, but DefenseRoll (:159-171) rolls only dice 1-15 at the rolled chance and caps the rest at 30% (ToDefendCap 15, ToDefendCappedValue 30), so 15 × 1.0 + 1 × 0.3 = 15.3 is blocked → 4.7. The cap makes a cap-free re-size impossible here, since 4 + 12 always exceeds 15. Elemental Armor alone deals 8.0, Resist Elements alone 16.0.',
     version: V_WARLORD,
-    a: { rtbType:'magic_n', rtb:20, toHitRtbMod:70, hp:10 },
+    a: { rtbType:'magic', rtb:20, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:30, abilities: {
       lavaSmelterResistElements: true,
       lavaSmelterElementalArmor: true,
@@ -724,7 +732,7 @@ definePresets({
   colossalStrengthMagicRangedNoBonusWarlord: {
     desc: 'Colossal Strength (Warlord): magic ranged is not physical ranged, so it gets no bonus. Base magic 10, 100% hit, def 2 blocks 2 → E[dmg] = 8 (unchanged by Colossal Strength)',
     version: V_WARLORD,
-    a: { rtbType:'magic_n', rtb:10, toHitRtbMod:70, hp:10, abilities: { colossalStrength: true } },
+    a: { rtbType:'magic', rtb:10, toHitRtbMod:70, hp:10, abilities: { colossalStrength: true } },
     b: { def:2, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8 },

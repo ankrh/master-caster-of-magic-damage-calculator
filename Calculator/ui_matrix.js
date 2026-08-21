@@ -114,11 +114,24 @@ function predefinedUnitRtb(unit) {
     : (unit.thrown_breath && parseInt(unit.thrown_breath, 10) > 0) ? parseInt(unit.thrown_breath, 10) : 0;
 }
 
+// The roster writes `ranged_type` in the display spelling `RANGED_TYPE_NORMALIZE` keys, and
+// `thrown_breath_type` already in the calculator's own lowercase token. A third spelling is a
+// projectile class the card has no field for, and passing it through unrecognized is how it
+// would reach the resolver looking derived (`SPEC.md`, *Out-of-range values stop the run*).
 function predefinedUnitRtbType(unit) {
   const rawRtb = (unit.ranged_type && unit.ranged_type !== 'none') ? unit.ranged_type
     : (unit.thrown_breath_type && unit.thrown_breath_type !== 'none') ? unit.thrown_breath_type
     : 'none';
-  return RANGED_TYPE_NORMALIZE[rawRtb] || rawRtb;
+  if (rawRtb === 'none' || THROWN_TYPES.includes(rawRtb)) return rawRtb;
+  const normalized = RANGED_TYPE_NORMALIZE[rawRtb];
+  if (!normalized) {
+    throw new Error(
+      `predefinedUnitRtbType: roster record ${JSON.stringify(unit.name || unit.id)} carries `
+      + `attack type '${rawRtb}', which names no calculator channel type. Expected a display `
+      + `spelling from RANGED_TYPE_NORMALIZE (${Object.keys(RANGED_TYPE_NORMALIZE).join(', ')}) `
+      + `or one of ${THROWN_TYPES.join('/')}.`);
+  }
+  return normalized;
 }
 
 // Caster.exe keeps these attacks in separate fields. The visible card still uses its
@@ -130,9 +143,17 @@ function predefinedModernAttacks(unit) {
   const thrown = parse(unit.thrown);
   const fireBreath = parse(unit.fire_breath);
   const lightningBreath = parse(unit.lightning_breath);
-  if (!ranged && !thrown && !fireBreath && !lightningBreath) return null;
+  // The Ranged record exists when its projectile type is set, whatever its strength
+  // (`SPEC.md`, *Attack channels on the card*): `UNITS.INI [362]` Wanderer ships
+  // `RangedType=30` with `Ranged=0`, and the engine writes gated on the permanent type land
+  // on it. `thrown_breath_type` is the other slot's projection and never names this record,
+  // so the type is read from `ranged_type` alone.
+  const rangedType = predefinedUnitRtbType(
+    { id: unit.id, name: unit.name, ranged_type: unit.ranged_type });
+  const hasRanged = ranged > 0 || rangedType !== 'none';
+  if (!hasRanged && !thrown && !fireBreath && !lightningBreath) return null;
   return {
-    ranged: ranged ? { strength: ranged, type: predefinedUnitRtbType({ ranged_type: unit.ranged_type }) } : null,
+    ranged: hasRanged ? { strength: ranged, type: rangedType } : null,
     thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
     fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
     lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,
@@ -238,7 +259,7 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     level: matrixSideSetting(prefix, 'level'),
     weapon: matrixSideSetting(prefix, 'weapon'),
     armor: matrixSideSetting(prefix, 'armor'),
-    rtbType: el(prefix + 'RtbType').value,
+    rtbType: sharedSlotRangedType(prefix),
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,

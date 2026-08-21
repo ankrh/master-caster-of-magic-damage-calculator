@@ -6,9 +6,9 @@
 const DEFAULT_GAME_VERSION = 'mom_1.31';
 const GAME_VERSION_STORAGE_KEY = 'gameVersion_v1';
 
-// Version ids that have been renamed. Saved state and shared links outlive a rename, and an
-// unknown id fails silently rather than loudly — loadUnitDatabase() returns [] for one, so the
-// symptom is an empty unit dropdown. Map retired ids forward instead.
+// Version ids that have been renamed. Saved state and shared links outlive a rename, so map
+// retired ids forward here; `normalizeGameVersion` rejects anything this build does not offer
+// and `loadUnitDatabase` throws on an id that reaches it unmapped.
 // Only one Warlord build is supported at a time, so every retired Warlord id resolves to the
 // current one rather than restoring old behaviour.
 const RENAMED_GAME_VERSIONS = {
@@ -292,24 +292,31 @@ const PRESET_VERSIONS = {};
 // A type with no modern channel throws rather than returning nothing (`SPEC.md`, *Out-of-range
 // values stop the run*). The gaze and touch types are the live case: they are DOS shared-slot
 // values, and the modern card holds them in their own fields, so a fixture naming one here was
-// silently contributing no channel at all while looking as though it did.
+// silently contributing no channel at all while looking as though it did. The projectile list is
+// the modern one: a fixture running in a modern version states the modern card's vocabulary, so a
+// DOS realm token here is a fixture error rather than something to project onto `magic`.
 function dosPairAsModernChannels(s) {
   const strength = Number(s.rtb) || 0;
   if (strength <= 0) return null;
-  if (RANGED_TYPES.includes(s.rtbType)) return { ranged: { strength, type: s.rtbType } };
+  if (MODERN_RANGED_TYPES.includes(s.rtbType)) return { ranged: { strength, type: s.rtbType } };
   if (s.rtbType === 'thrown') return { thrown: { strength, type: 'thrown' } };
   if (s.rtbType === 'fire') return { fireBreath: { strength, type: 'fire' } };
   if (s.rtbType === 'lightning') return { lightningBreath: { strength, type: 'lightning' } };
   throw new Error(
     `Preset fixture: rtbType '${s.rtbType}' with rtb ${strength} names no modern attack channel. `
-    + `The DOS pair projects onto ${RANGED_TYPES.join('/')} (Ranged), thrown, fire or lightning. `
+    + `The DOS pair projects onto ${MODERN_RANGED_TYPES.join('/')} (Ranged), thrown, fire or lightning. `
     + `Gaze and touch values belong in \`abilities\` on a CoM2/Warlord fixture; a second channel `
     + `or a typed Ranged record at strength 0 needs \`modernAttacks\`.`);
 }
 
 function applyPreset(name) {
   const preset = PRESETS[name];
-  if (!preset) return;
+  // Every caller — the TEST_TREE buttons and runTests — names a key `definePresets` merged.
+  // Returning silently left the button inert and the suite one assertion short with nothing
+  // reporting it (`SPEC.md`, *Out-of-range values stop the run*).
+  if (!preset) {
+    throw new Error(`applyPreset: '${name}' is not a key of PRESETS.`);
+  }
   const targetVersion = preset.version || PRESET_VERSIONS[name];
   if (targetVersion) {
     const versionSel = document.getElementById('gameVersion');
@@ -380,28 +387,29 @@ function applyPreset(name) {
     refreshAbilityFieldVisibility();
   }
   const activeVersion = document.getElementById('gameVersion').value;
-  const unitsDb = unitDatabases[activeVersion] || [];
+  const unitsDb = loadUnitDatabase(activeVersion);
+  // A fixture that names a roster unit is asserting a number about *that record*. Falling back
+  // to the preset's custom stat block computed a different unit under the same expectation, and
+  // a console warning nothing reads is not a stop (`SPEC.md`, *Out-of-range values stop the
+  // run*). A preset for a unit only some versions ship states its own `version:`.
   function selectPredefined(prefix, unitName) {
     const match = unitsDb.find(u => u.name === unitName);
     if (!match) {
-      console.warn(`Preset "${name}": predefined unit "${unitName}" not found in ${activeVersion}`);
-      document.getElementById(prefix + 'Unit').value = 'custom';
-      syncUnitDisplay(prefix);
-      return false;
+      throw new Error(
+        `Preset '${name}': roster unit '${unitName}' is not in the ${activeVersion} roster.`);
     }
     document.getElementById(prefix + 'Unit').value = String(match.id);
     syncUnitDisplay(prefix);
-    return true;
   }
   if (preset.aUnitName) {
-    if (!selectPredefined('a', preset.aUnitName)) setUnit('a', preset.a || {});
+    selectPredefined('a', preset.aUnitName);
   } else {
     setUnit('a', preset.a || {});
     document.getElementById('aUnit').value = 'custom';
     syncUnitDisplay('a');
   }
   if (preset.bUnitName) {
-    if (!selectPredefined('b', preset.bUnitName)) setUnit('b', preset.b || {});
+    selectPredefined('b', preset.bUnitName);
   } else {
     setUnit('b', preset.b || {});
     document.getElementById('bUnit').value = 'custom';

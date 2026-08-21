@@ -292,8 +292,14 @@ function deriveUnitStats(input) {
 
   // Per-card wall position. Combat resolution admits this bonus only when the incoming
   // attacker is outside; card A/B exchange role and persistent army ownership are irrelevant.
-  const cwVal = String(input.cityWalls || 'none');
-  const cityWallBonus = cwVal === '3' ? 3 : (cwVal === '1' ? 1 : 0);
+  const cwVal = input.cityWalls === undefined || input.cityWalls === null
+    ? 'none' : String(input.cityWalls);
+  const cityWallBonus = cwVal === 'none' ? 0 : cwVal === '1' ? 1 : cwVal === '3' ? 3 : null;
+  if (cityWallBonus === null) {
+    throw new Error(
+      `deriveUnitStats: city-walls position '${cwVal}' is not one of none/1/3, the option set `
+      + `of the City walls control and of MATRIX_CITY_WALL_OPTIONS.`);
+  }
 
   const survivalInstinctEligible = survivalInstinctActiveForUnit(abilities, unitTypeVal, version);
   const landLinkingEligible = landLinkingActiveForUnit(abilities, unitTypeVal, version);
@@ -408,6 +414,9 @@ function deriveUnitStats(input) {
     : 0;
 
   const charmOfLifeActive = !!(abilities && abilities.charmOfLife);
+  // Position on the same six-rung ladder `getLevelBonuses` reads. An unlisted level stops
+  // rather than ranking as an unpromoted unit, which would silently withhold the Discipline
+  // and Soul Flay steps below (`SPEC.md`, *Out-of-range values stop the run*).
   const levelRank = ({
     normal: 0,
     regular: 1,
@@ -415,7 +424,12 @@ function deriveUnitStats(input) {
     elite: 3,
     ultra_elite: 4,
     champion: 5,
-  })[level] || 0;
+  })[level];
+  if (levelRank === undefined) {
+    throw new Error(
+      `deriveUnitStats: experience level '${level}' is not one of `
+      + `${LEVEL_LADDER.join('/')}, the option set of the Unit Level control.`);
+  }
   const disciplineVal = version.startsWith('com2') ? ((abilities && abilities.discipline) || 'none') : 'none';
   const disciplineActive = disciplineVal === 'overland' || disciplineVal === 'combat';
   const combatDisciplineNegatesFirstStrike = disciplineVal === 'combat' && levelRank >= 3;
@@ -512,7 +526,7 @@ function deriveUnitStats(input) {
   const wofDefenderBonusActive = isWarlord && !!(abilities && abilities.wallOfFireBoost)
     && isNormalUnitType(unitTypeVal);
 
-  // Metal Fires / Flame Blade: +1/+2 to missile and thrown rtb only (not boulder, magic).
+  // Flame Blade: +2 to missile and thrown rtb only (not boulder, magic).
   // Warlord Flame Blade / Fiery Blade (per in-game helptext): +2 to missile and thrown.
   // Combat-cast Flame Blade's +1 Fire Breath is a separate region-d script write below;
   // neither blade boosts boulder here.
@@ -523,10 +537,15 @@ function deriveUnitStats(input) {
   const warlordFieryBlade = isWarlord && !!abilities.fieryBlade;
   const hasWarlordBlade = warlordCombatFlameBlade || warlordFieryBlade;
   const nonWarlordFlameBlade = !!abilities.flameBlade && !isWarlord;
-  // Metal Fires checks the live Fantastic flag before applying its entire package: melee,
-  // missile/Thrown strength, and the magic-weapon upgrade all share this eligibility gate.
-  const metalFiresActive = !!abilities.metalFires && !identity.fantastic;
-  const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : (metalFiresActive ? 1 : 0);
+  // Metal Fires is one compiled block (`unitcalc.c` 131:0x9065F..0x9072B), built only into
+  // MoM 1.31 and CP 1.60, and one eligibility gate covers its whole package: melee 0x906C1,
+  // missile/Thrown strength 0x906FC, and the magic-weapon upgrade 0x90723. The strength and
+  // melee halves are the `c:metalFires` step (`combat_abilities.js`), which `SCOPE_MOM` keeps
+  // out of the CoM engines; the weapon upgrade is not a step, so it carries the same version
+  // test here. The engine's `!(ench & UE_FLAME_BLADE)` non-stacking gate is the last term.
+  const metalFiresActive = !!abilities.metalFires && !identity.fantastic
+    && !isCoMVersion && !abilities.flameBlade;
+  const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : 0;
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
   // Fiery Fury melee +3 for regular units; non-cumulative with Flame Blade / Fiery Blade
   // (combat_abilities.js already adds +3 melee for a Warlord blade effect).
@@ -649,7 +668,7 @@ function deriveUnitStats(input) {
   // (see meleeWeaponWI in combat_effects.js). Its ranged/thrown attacks stay non-magical, so
   // Weapon Immunity still raises the target's defense against them.
   const weaponUpgradedByHeavenlyLight = heavenlyLightActive && weapon === 'normal';
-  const effectiveWeapon = (fbAtkBonus > 0 && weapon === 'normal') ? 'magic'
+  const effectiveWeapon = ((fbAtkBonus > 0 || metalFiresActive) && weapon === 'normal') ? 'magic'
     : (ffRegularBonus && weapon === 'normal') ? 'magic'
     : (weaponUpgradedByHW ? 'magic'
     : (wraithFormBypassesWI ? 'magic'
@@ -769,18 +788,21 @@ function deriveUnitStats(input) {
     // Alumni of Academy is a permanent +2-figure write made when a unit is trained.
     // Academy is Halfling-only, so the UI condition is race-gated. The script admits
     // Halfling Rocs (type 221, their Fantastic Stable unit) unconditionally; its other
-    // branch requires an innate magical ranged attack and rejects Mechanical units.
+    // branch requires an innate magical ranged attack and rejects Mechanical units. That gate is
+    // `GetStat(U,SRangedType,1) > 29` (`CreateUnit.CAS:462-464`), the whole magical band — which
+    // includes Warlord's own id 40, beam energy. Naming three realm tokens excluded it; the
+    // modern vocabulary's `magic`/`magic_lightning` are exactly ids 30-38 and 40, so the
+    // predicate is the band.
     const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
       && unitRace === 'Halfling' && !isHero
       && (unitName.endsWith('Rocs')
-        || (!abilities.mechanical && inputSlotRtb > 0
-          && (rtbTypeRaw === 'magic_c' || rtbTypeRaw === 'magic_n' || rtbTypeRaw === 'magic_s')));
+        || (!abilities.mechanical && inputSlotRtb > 0 && isMagicalRangedType(rtbTypeRaw)));
 
-    // What `base:stat:base` seeds, the chain's first entry: the permanent record's identity.
-    // Marionette writes the conventional ranged type without clearing any independent
-    // Thrown/Breath field; per-channel slots make that distinction exact for modern records.
-    const baseSequenceRangedType = marionetteRangedSlot
-      ? marionette.rangedType : permanentRangedType;
+    // What `base:stat:base` seeds, the chain's first entry: the permanent record's identity
+    // alone. The Marionette realm retype is `SETSTAT(U,SRangedType,0,…)` — record selector `0`,
+    // the calculated record — so it is `b:marionette:rangedType` at its own position and not a
+    // seed here (F107). Wanderer's own permanent Chaos type comes from its roster record.
+    const baseSequenceRangedType = permanentRangedType;
     const baseSequenceThrownType = permanentThrownType;
 
     // `base:energyCannon` is a permanent overland conversion to projectile type Beam
@@ -809,14 +831,6 @@ function deriveUnitStats(input) {
     // Only the Fire Breath channel takes the grant; without this the shared-slot write would
     // land in whichever channel this slot derives and overwrite it.
     const ccOwnsThisSlot = !channelKey || channelKey === 'fireBreath';
-
-    // CoM 1's Focus Magic branch reads the **unit type's** ranged type rather than the battle
-    // unit's (`unit_types[...].ranged_type`, com1:0x8F804), so its permanent fact is the raw
-    // template pair, not the record the base phase leaves behind. The modern branch reads
-    // `B.ranged`/`B.rangedtype` through `ctx.base` at `c:focusMagic` instead.
-    const baseRangedPresent = isChannelSlot
-      ? !!slot.baseHasRanged
-      : inputSlotRtb > 0 && RANGED_TYPES.includes(rtbTypeRaw);
 
     // Blackpowder-derived bonuses (see the Military Workshop / Rocketry gate above). These read
     // the permanent source fields, as the script's own gates do, and so survive later channel
@@ -869,7 +883,7 @@ function deriveUnitStats(input) {
       rtbTypeRaw, gazeType,
       baseSequenceRangedType, baseSequenceThrownType,
       permanentRangedType, permanentThrownType,
-      calcBaseRtb, hasPermanentRangedStat, baseRangedPresent,
+      calcBaseRtb, hasPermanentRangedStat,
       marionetteRangedSlot, marionetteOwnsThisRangedSlot,
       blackpowder, blackpowderGrantsAP, blackpowderBasePoison, venom, venomBasePoison,
       blackpowderSelectedPhysicalRanged, blackpowderSelectedThrown,
@@ -895,7 +909,6 @@ function deriveUnitStats(input) {
   const channelSlots = [];
   if (isCoM2 && input.modernAttacks) {
     const modernInputs = { ...input.modernAttacks };
-    const baseModernHasRanged = !!(modernInputs.ranged && modernInputs.ranged.strength > 0);
     // `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS:1262-1266) has no existence gate, so
     // the Thrown field has to exist for the positioned grant to land on it. Seeded empty and
     // typeless, exactly as the Blaze of Glory transfer's field is: nothing before
@@ -918,8 +931,13 @@ function deriveUnitStats(input) {
     if (focusMagicActive && !modernInputs.ranged) {
       modernInputs.ranged = { strength: 0, type: 'none' };
     }
+    // `SETSTAT(U,SRanged,0,…)` (UnitCalcPre.CAS:87, and `:412` for the strayed branch's
+    // Transmute Equipment) names the calculated record and has no existence gate, so the Ranged
+    // field has to exist for the positioned writes to land on it. It is seeded empty and
+    // typeless, like the Focus Magic and Blaze of Glory fields above: the permanent type is the
+    // roster record's own, and the owned branch's retype is `b:marionette:rangedType`.
     if ((marionetteOwned || marionetteStrayed) && !modernInputs.ranged) {
-      modernInputs.ranged = { strength: 0, type: marionette.rangedType };
+      modernInputs.ranged = { strength: 0, type: 'none' };
     }
     // Unconditional: the grant is `firebreath += 4` whatever else the unit carries, so the
     // channel must exist even beside a gaze, a lightning breath or a thrown attack.
@@ -977,7 +995,6 @@ function deriveUnitStats(input) {
       channelSlots.push({
         slotKey: channelKey, channelKey,
         strength: attack.strength, type: attack.type, baseAttacks: null,
-        baseHasRanged: baseModernHasRanged,
       });
     }
   }
@@ -1199,7 +1216,6 @@ function deriveUnitStats(input) {
     hwActive && version !== 'mom_1.31' ? 10 : 0);
   const alumniOfAcademy = recordContext.alumniOfAcademy;
   const energyCannon = recordContext.energyCannon;
-  const calcBaseRtb = recordContext.calcBaseRtb;
   const hasPermanentRangedStat = recordContext.hasPermanentRangedStat;
   const existingLifeSteal = effectiveAbilities.lifeSteal;
 
@@ -1271,21 +1287,22 @@ function deriveUnitStats(input) {
         // Inc(Units[i].thrown, j)` reads the **calculated** Thrown field at this position
         // (:660-663) — which by `c:weapon` has already seen region `b` and `c:focusMagic`.
         //
-        // The DOS body is one type-only gate over Missile, Boulder and Thrown and has no
-        // strength test either, but its `calcBaseRtb > 0` moves numbers in all three DOS
-        // versions and so is F109's rather than this item's.
+        // The DOS body is one type-only gate over Missile, Boulder and Thrown —
+        // `RAT_CLASS(bu->ranged_type) == RAT_CLASS_MISSILE || RAT_CLASS_BOULDER ||
+        // bu->ranged_type == RAT_THROWN` (`unitcalc.c`, 131:0x8F089/0x8F09C/0x8F0A4) — and its
+        // three writes, `bu->ranged += quality - 1`, `Gold_Ranged` and `ranged_tohit++`, make no
+        // strength test, so the calculator makes none either.
         if (!materialSecondaryOpen) return;
         for (const context of derivationContexts) {
           const isRangedField = (context.isCoM2 && context.channelKey === 'ranged')
             || u[context.rangedTypeField] !== 'none';
           if (isRangedField) {
-            if (isNonMagicalRangedFieldSlot(u, context)
-              && (isCoM2 || context.calcBaseRtb > 0)) {
+            if (isNonMagicalRangedFieldSlot(u, context)) {
               u[context.strengthField] += wpn.atk;
             }
           } else if (u[context.thrownTypeField] !== 'none') {
             if (slotHasThrown(u, context)
-              && (isCoM2 ? u[context.strengthField] > 0 : context.calcBaseRtb > 0)) {
+              && (!isCoM2 || u[context.strengthField] > 0)) {
               u[context.strengthField] += wpn.atk;
             }
           }
@@ -1340,16 +1357,25 @@ function deriveUnitStats(input) {
   // Fiery Fury writes its own bonus in `b`, and this step adds only the excess, so the total is
   // still the maximum of the two while each lands in its own region. What the excess is measured
   // against is the amount region `b` actually wrote, which `fieryFuryRtbWrite` below states once.
-  // PROVENANCE[flameBlade:ranged]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:98daf6b1cfd836c4a184f151 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
+  //
+  // One block, one step (M11/F92). Every engine's Flame Blade is a single compiled block
+  // writing melee and secondary strength together — `unitcalc.c` 131:0x8F56E, com1:0x8F55C and
+  // `$0059FE47..$005A00E7` — so the melee bonus and the attack-strength bonus are one write,
+  // not two effects. The halves keep their own gates because the engine's are separate: melee
+  // on a melee attack existing, each secondary slot on its own type test.
+  // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:549122cfd5e672f77f13100e | Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:98daf6b1cfd836c4a184f151 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
   // `b:fieryFury` (`UnitCalcPre.CAS:832-846`) adds 2 to a physical ranged or Thrown field. The
   // blade step below subtracts what that block wrote, so both ask the same live test — each at
   // its own position, which agree wherever the blade's own narrower gate fires.
   const fieryFuryRtbWrite = (u, context) => (ffRegularBonus
     && (slotHasPhysicalRanged(u, context) || slotHasThrown(u, context)) ? 2 : 0);
-  const flameBladeRangedStep = statStep({
-    id: 'flameBlade:ranged', phase: 'c', writes: strengthFields,
-    when: () => hasWarlordBlade || fbAtkBonus > 0,
+  // MoM's block adds 2 melee, the CoM engines' 3 (`MODDING.INI` FlameBladeAttackBonus).
+  const bladeMeleeBonus = isCoMVersion ? 3 : 2;
+  const flameBladeStep = statStep({
+    id: 'flameBlade', phase: 'c', writes: ['atk', ...strengthFields],
+    when: () => hasWarlordBlade || !!abilities.flameBlade,
     apply: u => {
+      if (hasMeleeAttack) u.atk += bladeMeleeBonus;
       for (const context of derivationContexts) {
         const liveRangedType = u[context.rangedTypeField];
         const liveThrownType = u[context.thrownTypeField];
@@ -1357,10 +1383,10 @@ function deriveUnitStats(input) {
         if (hasWarlordBlade) {
           if (liveRangedType === 'missile' || liveThrownType === 'thrown') bladeRtb = 2;
         } else if (fbAtkBonus > 0) {
-          // MoM Flame Blade / Metal Fires boost missile and thrown; CoM Flame Blade
-          // boosts missile only (the CoM helptext drops the thrown bonus — Warlord, handled
-          // above, re-adds it). Metal Fires is MoM-only so the CoM gate only affects Flame Blade.
-          const fbThrownEligible = !(nonWarlordFlameBlade && isCoMVersion);
+          // MoM Flame Blade boosts missile and thrown; CoM 1's block nopped the Thrown test
+          // (`unitcalc.c` com1:0x8F596-0x8F59B), so it boosts missile only — Warlord, handled
+          // above, re-adds Thrown.
+          const fbThrownEligible = !isCoMVersion;
           if (liveRangedType === 'missile' || (fbThrownEligible && liveThrownType === 'thrown')) {
             bladeRtb = fbAtkBonus;
           }
@@ -1418,7 +1444,7 @@ function deriveUnitStats(input) {
     lightningBladeSlots,
     fieryFuryRtbWrite, focusMagicBranchSlots, poxHostIsGoblin, shadowStrikeActive,
     soulFlayLevels, warlordFlameBladeOwnsSlot, weaknessBinaryHits, weaknessPenalty,
-    flameBladeRangedStep, focusMagicActive,
+    flameBladeStep, focusMagicActive,
     gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod,
     goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod, goodMoonActive,
     greatUnbindingActive, hasDarkness, hasMeleeAttack,

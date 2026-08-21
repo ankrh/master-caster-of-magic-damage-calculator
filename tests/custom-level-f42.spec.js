@@ -58,7 +58,7 @@ test('F42 Custom Level changes preserve pre-level card stats and base identity i
           aAtk: String(11 + index),
           aRtbType: 'boulder',
           aRtb: String(7 + index),
-          aModernRangedType: 'magic_c',
+          aModernRangedType: 'magic',
           aModernRanged: String(6 + index),
           aModernThrown: String(5 + index),
           aModernFireBreath: String(4 + index),

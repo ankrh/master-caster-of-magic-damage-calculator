@@ -236,7 +236,9 @@ function baseStatSteps(ctx) {
         for (const c of channels) {
           if (!c.energyCannon || !c.energyCannonOwnsThisSlot) continue;
           u[c.strengthField] += Math.floor(Math.max(0, u[c.strengthField]) / 2);
-          u[c.rangedTypeField] = 'beam';
+          // `RangedType=40`, Warlord's beam energy: `IsMagic=Yes` and nothing else
+          // (`RangedType.INI [40]`), which is the whole of what the modern engine reads.
+          u[c.rangedTypeField] = 'magic';
         }
       } }),
     // PROVENANCE[survivalInstinctToBlock]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:fafe4abfecfd17491cbdbc10
@@ -295,7 +297,7 @@ function precalcScriptStatSteps(ctx) {
     greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
     marionetteStrayed, natureLinkActive, outlanderRtbToHitBonus,
-    plagueActive, poxHostActive, poxHostIsGoblin, secondaryHitFields,
+    plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields, secondaryHitFields,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayLevels, soulFlayResMod,
     strengthFields, thrownTypeFields, unitTypeVal,
     uphillBattleActive, warlordEternalNightActive, warlordTrueLightStep,
@@ -315,6 +317,40 @@ function precalcScriptStatSteps(ctx) {
           if (c.marionetteOwnsThisRangedSlot) u[c.strengthField] += marionetteAttackBonus;
         }
         u.def += marionetteDefenseBonus;
+      } }),
+    // The realm retype follows the attack writes in the same block, one arm per primary realm.
+    // Every arm is `SETSTAT(U,SRangedType,0,…)` — record selector `0`, the **calculated**
+    // record — so this is a region-`b` write at its own position, not part of the permanent
+    // record that the `base` and `a` regions and `c:level`'s `BaseUnits[i].rangedtype` gate
+    // read; Wanderer's permanent Chaos type is its roster record's own (F107). All five ids are
+    // `IsMagic=Yes` and carry nothing else the modern engine reads, so all five arms write the
+    // one modern token.
+    // PROVENANCE[marionette:rangedType]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:82379f8ff60b109851bbd5b7 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:febf06298a828b2584eed37d | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:bb8bbb1a6e2c70031e61f6ab | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:962023c71d4fb00d0451568f | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:1fbcb6160390109ce2cb43d6 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:558b5f33e065f62accd1690c
+    statStep({ id: 'marionette:rangedType', sourceId: 'marionetteChanneler',
+      sourceLabel: 'Marionette (Channeler)', phase: 'b', writes: rangedTypeFields,
+      when: () => marionetteOwned,
+      apply: u => {
+        for (const c of channels) {
+          if (c.marionetteOwnsThisRangedSlot) u[c.rangedTypeField] = marionette.rangedType;
+        }
+      } }),
+    // The ascension block's own retype, a second `SETSTAT(U,SRangedType,0,…)` at a second
+    // position: the five realm arms above are `UnitCalcPre.CAS:104-176`, the twenty book-grant
+    // blocks follow, and only then does the ascension branch write `SRangedType = 30` for a
+    // Chaos primary (`:272`), beside the Wall Crusher and Armor Piercing grants the package
+    // already carries. Id 30 is the lightning-bolt projectile and a token of its own, so this
+    // is a write the primary arm's value does not stand in for. Nothing modelled writes a
+    // projectile type between the two, which is why they are adjacent on the chain.
+    // PROVENANCE[marionette:ascensionRangedType]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    statStep({ id: 'marionette:ascensionRangedType', sourceId: 'marionetteChanneler',
+      sourceLabel: 'Marionette (Channeler)', phase: 'b', writes: rangedTypeFields,
+      when: () => marionetteOwned && !!marionette.ascensionRangedType,
+      apply: u => {
+        for (const c of channels) {
+          if (c.marionetteOwnsThisRangedSlot) {
+            u[c.rangedTypeField] = marionette.ascensionRangedType;
+          }
+        }
       } }),
     // The strayed branch first grants Transmute Equipment; its hero augmentation block later
     // in this same hook runs before Rebuild and the Outlander research block.
@@ -382,7 +418,7 @@ function precalcScriptStatSteps(ctx) {
         u.res += 1; u.toHit += 10; u.toBlk += 10;
       } }),
     // Fiery Fury: melee at UnitCalcPre.CAS:832-846, and the ranged half of what the bucket
-    // model merged into one `Math.max` term — see the M4 note at `flameBladeRangedStep`.
+    // model merged into one `Math.max` term — see the M4 note at `flameBladeStep`.
     // PROVENANCE[fieryFury]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:124bc19c147f5de83f487583 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:551d408ad4d5ae821c5eaf58 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
     statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', ...strengthFields],
       when: () => ffRegularBonus,
@@ -514,7 +550,7 @@ function magicCalcBinaryStatSteps(ctx) {
     com1GuidingBeaconAura, darkForceActive, darknessAtkBonus, darknessDefBonus, darknessResBonus,
     destinyActive, disciplineActive, disciplineAtkMod, disciplineDefMod, doomGazeLvlMod,
     dosTrueLightStep, enduranceActive, enduranceDefMod, enduranceHpMod,
-    eternalNightEnemyResPenalty, flameBladeRangedStep,
+    eternalNightEnemyResPenalty, flameBladeStep,
     focusMagicActive, focusMagicBranchSlots, gazeLvlMod, gazeWarpHalves,
     goodMoonActive,
     hasDarkness, hasMeleeAttack, heavenlyLightActive, heavenlyLightHitPick,
@@ -621,7 +657,7 @@ function magicCalcBinaryStatSteps(ctx) {
         u.toHit += lvl.toHit;
       } }),
     ...(!isCoM2 ? weaponStatSteps : []),
-    ...(isCoM1 ? [flameBladeRangedStep] : []),
+    ...(isCoM1 ? [flameBladeStep] : []),
     // Focus Magic is +0x00D3F, immediately after the level ladder, so CoM2 and Warlord write its
     // attack-strength package before the Warps. Warlord's later CAS block moves touch riders but
     // makes no attack-strength write. CoM 1 executes Focus Magic in BU_Apply_Specials, after the
@@ -637,36 +673,51 @@ function magicCalcBinaryStatSteps(ctx) {
     // it has no live-strength test of its own, so a magical ranged attack an earlier region drove
     // to or below zero still takes it.
     //
-    // CoM 1 runs a different block: no Doom Gaze or Breath clause at all, a three-way branch, and
-    // gates its `+3` on the **unit type's** ranged type or a live type above Thrown, with the
-    // fallback raising the retyped attack to a minimum of 3 (`unitcalc.c`, com1:0x8F7E6).
+    // CoM 1 runs a different block: no Doom Gaze or Breath clause at all, and one three-way
+    // branch over the shared slot (`unitcalc.c`, com1:0x8F7E6-0x8F84C). Arm 1 tests the **unit
+    // type's** ranged type (com1:0x8F804) for `>= 30 and <> 100`, which admits magical ranged,
+    // both breaths and all three gazes, and makes no strength test; arm 2 is the same `+3` for a
+    // live type above Thrown, whose reachable CoM 1 producer is the ungated Chaos Channels
+    // fire-breath write (com1:0x8F47C); arm 3 retypes the slot to shot type 34 — "Shot type 22h
+    // (from Focus Magic) is now Sorcery type", per the CoM 1 manual's changelog — and floors at 3.
+    //
+    // `if (bu->ammo > 0)` (com1:0x8F7FB) wraps all three arms and is not modelled, because it can
+    // never be closed for an enchanted unit: the battle-unit setup floors `bu->ammo` at 4 for any
+    // unit carrying the persistent Focus Magic bit (com1:0x8EB87-0x8EB9F, CoM 1 only; absent from
+    // both MoM builds) and then calls the constructor at com1:0x8EC99, which writes no ammunition
+    // of its own. Ammunition is therefore not an input (`SPEC.md`, *Deliberate deviations*) and
+    // needs no inferred stand-in. One residual: that floor reads the **persistent** enchantment
+    // word, so a mid-combat cast would leave ammo alone — outside the one-round model, not a
+    // deviation from it. `R6.1a.evidence.md`, *FocusMagic's `ammo > 0` gate is vacuous*, owns the
+    // decode and the two places the CoM 1 prose disagrees with the binary.
     // PROVENANCE[focusMagic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:84c8baeb7a2f577dca38e056 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:5036ba273068428523d6008e | Reference docs/DOS reconstructed/unitcalc.c@span:20:fa0079de675211a02db49173 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:afc551599f5229a3bbe362bb
     statStep({ id: 'focusMagic', phase: 'c',
-      writes: [...strengthFields, 'doomGaze', ...rangedTypeFields, ...thrownTypeFields],
+      writes: [...strengthFields, 'doomGaze', ...(isCoM1 ? ['gaze'] : []),
+        ...rangedTypeFields, ...thrownTypeFields],
       when: () => focusMagicActive,
       // `runCtx`, not `ctx`: the enclosing name is this file's derivation context, while the
       // runner passes the sequence context that carries the permanent record.
       apply: (u, runCtx) => {
         if (!isCoM2) {
-          // CoM 1: `base_rt >= 30 and base_rt <> 100` or a live type above Thrown adds 3;
-          // everything else is retyped and floored at 3.
-          for (const c of channels) {
-            const magicalRanged = isMagicalRangedType(u[c.rangedTypeField]);
-            if (u[c.strengthField] > 0 && (magicalRanged || slotHasBreath(u, c))) {
-              u[c.strengthField] += 3;
+          for (const { target } of focusMagicBranchSlots) {
+            // Arm 1 reads the permanent template pair, which is where a gaze shows: no step
+            // writes a gaze type into the live slot, so the live read below is the two breaths.
+            const baseType = target.rtbTypeRaw;
+            const permanentAboveThrown = isMagicalRangedType(baseType)
+              || baseType === 'fire' || baseType === 'lightning'
+              || GAZE_TYPES.includes(baseType);
+            if (permanentAboveThrown || slotHasBreath(u, target)) {
+              u[target.strengthField] += 3;                          // com1:0x8F82D
+              // The one engine field the calculator splits: the shared slot also carries the
+              // gaze strength, mirrored into `gaze`/`doomGaze` (`stats.js`, `dosGazeStrength`).
+              if (baseType === 'gaze_stoning' || baseType === 'gaze_death') u.gaze += 3;
+              if (baseType === 'gaze_multiple') u.doomGaze += 3;
+              continue;
             }
-          }
-          for (const { target, source } of focusMagicBranchSlots) {
-            const convertsThrown = !target.baseRangedPresent
-              && source.calcBaseRtb > 0 && slotHasThrown(u, source);
-            const createsRanged = !target.baseRangedPresent && !convertsThrown
-              && u[target.thrownTypeField] === 'none';
-            const convertsRanged = target.calcBaseRtb > 0 && slotHasPhysicalRanged(u, target);
-            if (!convertsThrown && !createsRanged && !convertsRanged) continue;
-            if (createsRanged) u[target.strengthField] = 3;
-            else u[target.strengthField] = Math.max(u[target.strengthField], 3);
-            u[target.rangedTypeField] = 'magic_s';
+            u[target.rangedTypeField] = 'magic_s';                   // com1:0x8F840, shot type 34
             u[target.thrownTypeField] = 'none';
+            // A floor, not an assignment: a typeless slot already above 3 keeps what it holds.
+            if (u[target.strengthField] < 3) u[target.strengthField] = 3; // com1:0x8F845/0x8F84C
           }
           return;
         }
@@ -683,6 +734,12 @@ function magicCalcBinaryStatSteps(ctx) {
         // the one value is a conventional ranged attack at all, and it cannot hold a created
         // ranged attack beside a Breath already standing in it — the modern record's own Ranged
         // field is separate and always takes that write.
+        //
+        // Each arm's `U.rangedtype := 34` is `RangedType.INI [34]`, `IsMagic=Yes` with no other
+        // classification the modern engine reads, so the modern token is `magic`. CoM 1's arm
+        // above writes `magic_s` for the same id 34, because its
+        // `Battle_Unit_Attack_Magic_Realm` really does make it Sorcery (com1:0x8F840; the CoM 1
+        // manual changelog: "Shot type 22h is now Sorcery type").
         const base = runCtx.base;
         for (const { target, source } of focusMagicBranchSlots) {
           const inPlace = target === source;
@@ -697,15 +754,15 @@ function magicCalcBinaryStatSteps(ctx) {
               u[source.strengthField] = 0;
               u[source.thrownTypeField] = 'none';
             }
-            u[target.rangedTypeField] = 'magic_s';
+            u[target.rangedTypeField] = 'magic';
             u[target.thrownTypeField] = 'none';
           } else if (baseRangedAbsent) {
             if (inPlace && slotHasBreath(u, target)) continue;
             u[target.strengthField] = 3;
-            u[target.rangedTypeField] = 'magic_s';
+            u[target.rangedTypeField] = 'magic';
             u[target.thrownTypeField] = 'none';
           } else if (!isMagicalRangedType(base[target.rangedTypeField])) {
-            u[target.rangedTypeField] = 'magic_s';
+            u[target.rangedTypeField] = 'magic';
           } else {
             u[target.strengthField] += 3;
           }
@@ -792,7 +849,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // Each of these is one enchantment's whole region-c write, hand-written here rather than
     // emitted from `getAbilityStatSteps` because its attack-strength half reads a per-channel
     // mod that builder never receives.
-    ...(!isCoM1 ? [flameBladeRangedStep] : []),
+    ...(!isCoM1 ? [flameBladeStep] : []),
     // One write: the flat melee/defence package and the Breath addition the same block makes.
     // CoM/CoM2 Land Linking boosts melee and breath only.
     // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:3fa8c2fabf80e91cf859f9b0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
@@ -1220,8 +1277,8 @@ function magicCalcScriptStatSteps(ctx) {
       } }),
     // Combat-cast Flame Blade's script-only point is Fire Breath, not the selected shared
     // secondary channel. It executes after True Sight and before Berserk, so Warp (region c)
-    // cannot halve it and Colossal Strength (later in d) does not scale it.
-    // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:549122cfd5e672f77f13100e | Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:43a163f18b24d003ce1baa22 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
+    // cannot halve it and Colossal Strength (later in d) does not scale it. One id, two
+    // regions, one citation: `PROVENANCE[flameBlade]` (stats.js) covers this write too.
     statStep({ id: 'flameBlade', sourceId: 'flameBlade',
       sourceLabel: 'Flame Blade', phase: 'd', writes: strengthFields,
       when: u => warlordCombatFlameBlade

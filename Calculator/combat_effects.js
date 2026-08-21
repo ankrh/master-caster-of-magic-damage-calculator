@@ -409,16 +409,18 @@ const EFFECTIVE_DEFENSE_STEPS = [
   // PROVENANCE[effectiveDefense:immunities]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:2f2c6876d3c7d7f5d2533b8b
   attackSpecificStep('effectiveDefense:immunities', ['effectiveDefense'],
     (u, ctx) => {
-      // The six Caster.exe tests are assignments in this order. Righteousness is MoM-only and
-      // unreachable through the modern version-filtered inputs; its defensive low-level branch
-      // stays in this replacement step without inventing a second ordering mechanism.
+      // The six Caster.exe tests are assignments in this order, and six is the whole of them:
+      // `Caster.exe` contains no `Righteousness` symbol or string (0 hits ASCII and UTF-16LE
+      // over all 10,584,041 bytes) and no such member in the 62-strong `@Sharedconstants@Enc*`
+      // enumeration, and the six assignments run back to back to $00596813 with the Weapon
+      // Immunity tail at $0059681A leaving no gap for a seventh. The modern engine's Chaos/Death
+      // realm term is `EncBless`, keyed on `SpellTable[spellid].Realm` in GetEffectiveResistance.
       if (hasAbil(u.abilities, 'fireImmunity') && ctx.fireSpell) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'fireImmunity') && ctx.isFire) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'coldImmunity') && ctx.coldSpell) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'poisonImmunity') && ctx.poisonSpell) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'magicImmunity') && ctx.magicImmunityEligible) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'missileImmunity') && ctx.isMissile) u.effectiveDefense = 100;
-      if (hasAbil(u.abilities, 'righteousness') && ctx.righteousnessEligible) u.effectiveDefense = 100;
     }),
   // PROVENANCE[effectiveDefense:weaponImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:64343218ebddfe0d2454f929 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:8c99d740dfd473b21f906b13 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:4c279bb027bcde85badd90e7
   attackSpecificStep('effectiveDefense:weaponImmunity', ['effectiveDefense'],
@@ -446,7 +448,6 @@ function effectiveDefense(target, version, attack, trace = null) {
     poisonSpell: !!attack.poisonSpell,
     magicImmunityEligible: !!attack.magicImmunityEligible,
     isMissile: !!attack.isMissile,
-    righteousnessEligible: !!attack.righteousnessEligible,
     weaponImmunityEligible: !!attack.weaponImmunityEligible,
     weaponImmunityBonus: version && version.startsWith('com2_warlord') ? 10 : 8,
     ...(trace ? { trace } : {}),
@@ -608,8 +609,7 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       weaponImmunityEligible: wi(false),
     };
   } else if (attackType === 'ranged') {
-    const aRangedElem = attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
-      || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam';
+    const aRangedElem = attacker.rangedType === 'magic' || attacker.rangedType === 'magic_lightning';
     attack = {
       spellId: 0,
       vertigoDefPenalty,
@@ -617,9 +617,21 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       isRanged: true,
       elementalEligible: aRangedElem,
       armorPiercing: aArmorPiercing,
+      // `islightning := aflags2.armorpiercing or (Units[au].rangedtype = 30)`
+      // (`Combat.ApplyAttack.pas:230-231`, `$005B1B9C..$005B1BD9`). Only the id-30 arm is
+      // reachable here: `aflags2` on the ranged path is `rangedflags`
+      // (`Combat.ApplyAttack.pas:225`), whose `armorpiercing` is written by the hero-item
+      // `IPLightning` power alone (`Units.RecalculateUnits.pas:1306`), and hero item powers are
+      // not a calculator input. Every Armor Piercing this calculator can carry is the *global*
+      // record's — the roster's one `ArmorPiercing=Yes` byte, and every script grant, which write
+      // `AFArmorPiercing` with flag selector 1, "Global" (`Scripts.TXT:642-643`;
+      // `CreateUnit.CAS:261` reads that same global record to ask what the template gave). That
+      // record is `attackflags`, which `islightning` does not read, so folding it in here would
+      // let Lightning Resist cancel Armor Piercing for missile, boulder and plain magic ranged
+      // attacks the engine still halves.
+      isLightning: attacker.rangedType === 'magic_lightning',
       magicImmunityEligible: aRangedElem,
       isMissile: attacker.rangedType === 'missile',
-      righteousnessEligible: attacker.rangedType === 'magic_c',
       weaponImmunityEligible: wi(aRangedElem),
     };
   } else if (attackType === 'thrown') {
@@ -633,8 +645,6 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       armorPiercing: aArmorPiercing || attacker.thrownType === 'lightning',
       isLightning: attacker.thrownType === 'lightning',
       isFire: attacker.thrownType === 'fire',
-      righteousnessEligible: attacker.thrownType === 'fire'
-        || attacker.thrownType === 'lightning',
       weaponImmunityEligible: wi(aThrownElem),
     };
   } else if (attackType === 'gaze') {
@@ -655,7 +665,6 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       isRanged: true,
       isFire: true,
       magicImmunityEligible: true,
-      righteousnessEligible: true,
     };
   } else {
     throw new Error(`Unknown Caster.exe defense attack type: ${attackType}`);
@@ -903,8 +912,10 @@ function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attac
   } else if (attackType === 'ranged') {
     const isMissile = attacker.rangedType === 'missile';
     const isPhysical = isMissile || attacker.rangedType === 'boulder';
+    // The DOS realm triple, and only that: shot type 40 has no entry in
+    // `Battle_Unit_Attack_Magic_Realm` (131:0x9A7A9) and no DOS build can carry one.
     const isMagical = attacker.rangedType === 'magic_c' || attacker.rangedType === 'magic_n'
-      || attacker.rangedType === 'magic_s' || attacker.rangedType === 'beam';
+      || attacker.rangedType === 'magic_s';
     const weapon = (aBlazingMarch && isMissile && attacker.weapon === 'normal')
       ? 'magic' : attacker.weapon;
     attack = {

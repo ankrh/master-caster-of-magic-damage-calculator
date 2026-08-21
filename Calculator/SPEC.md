@@ -580,9 +580,21 @@ the calculator does instead, and why.
   retires its result as the spent ammunition would. The other is the resolution-time distance
   penalty, which reads the finished ranged type, so no attack the transfer has put on Thrown is
   charged for a range it no longer has.
-- **One classification is parked for compatibility.** Righteousness sits in the defense transform's
-  replacement slot while its modern classification is unresolved, open under
-  [Q27](./BACKLOG.md).
+- **Projectile classes are assigned at roster-generation time, and the two engine families are
+  given different vocabularies.** The modern engine classifies a projectile by id through
+  `RangedType.INI`, which carries five keys per entry — `Image`, `StatIcon`, `Sound`, `Ismissile`,
+  `Ismagic` (`@Init@LoadRangedIni`, `$00625E28`) — and reads the loaded table only through
+  `Ismagicalranged` and `Ismissileranged`. There is no realm attached to a modern projectile. The
+  calculator therefore converts each id to a token when the roster is generated
+  (`tools/ranged_types.py`) rather than carrying the id and the table into the runtime, and the
+  modern vocabulary is `none`/`missile`/`boulder`/`magic`/`magic_lightning`: the two flags, plus
+  id 30, the lightning-bolt projectile, kept separate because the engine's lightning behaviour
+  keys on it. The DOS builds keep `magic_c`/`magic_n`/`magic_s` instead, because their engine does
+  have a realm table — `Battle_Unit_Attack_Magic_Realm`, 21 entries, 131:0x9A7A9 — so the two
+  vocabularies diverge on purpose and every read that spans both names both. What the deviation
+  costs is runtime modding: an id a shipped `RangedType.INI` does not define halts roster
+  generation naming the id, rather than being classified from a table the calculator would have
+  had to load.
 - **Some positions inside a transcribed region are deduced rather than read.** CoM 1's Focus Magic
   position is inferred from the exhaustive list of what its recompute writes after Warp, which does
   not contain it; CoM 1's Raise Dead is a combat-spell write with nothing to order it against the

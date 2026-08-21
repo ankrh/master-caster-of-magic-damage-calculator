@@ -79,6 +79,9 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
   channels come from its record. The gaze and touch fields are not channels: they are DOS
   shared-slot values, and a CoM2/Warlord fixture states them through `abilities`. A `rtbType` the
   pair cannot project throws rather than contributing nothing.
+- A preset naming a roster unit (`aUnitName`/`bUnitName`) must resolve in the version it runs in:
+  `applyPreset` throws rather than falling back to the fixture's custom stat block, which would
+  compute a different unit under the same expectation.
 - Every version-difference preset needs an explicit `version:` unless it also belongs to a
   versioned group. Artificial MoM tests resolve to `mom_1.31`; version-difference subgroups contain
   paired scenarios differing only by version.

@@ -7,8 +7,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+# Every RangedType string the three shipped Tweaker exports contain. A blank column is the
+# record stating no shared special value; anything else this function does not recognize is a
+# projectile class the calculator has never been checked against, and guessing one silently
+# produces wrong damage -- `Calculator/SPEC.md`, *Out-of-range values stop the run*.
 def parse_ranged_type(ranged_type_str: str) -> dict:
-    """Parse the DOS shared ranged/throw/breath/gaze type."""
+    """Parse the DOS shared ranged/throw/breath/gaze type, or raise."""
     result = {}
 
     if not ranged_type_str or ranged_type_str.strip() == '':
@@ -52,8 +56,14 @@ def parse_ranged_type(ranged_type_str: str) -> dict:
         result['ranged_type'] = 'thrown'
     elif 'Rock' in ranged_type_str:
         result['ranged_type'] = 'Boulder'
-    elif 'Illusion' in ranged_type_str:
-        result['ranged_type'] = 'Magic(I)'
+    else:
+        raise ValueError(
+            f"RangedType={ranged_type_str!r} names no projectile, breath or gaze class. "
+            f"The recognized forms are a magic school (Chaos/Nature/Sorcery), Arrow, Bullet, "
+            f"Rock, Thrown Weapons, Fire Breath, Lightning Breath, or a "
+            f"Death/Stoning/Doom/Multiple Gaze. Add the new form with the class its record "
+            f"gives it -- do not guess."
+        )
 
     return result
 
@@ -238,8 +248,14 @@ def collect_unmatched(row, counter, is_com=False):
                 counter[token] += 1
 
 
-def parse_int(val, default=0):
-    """Safely parse integer from string, handling whitespace and floats."""
+def parse_int(val, default=0, column=''):
+    """Parse an integer from a Tweaker export cell, or raise.
+
+    A blank cell is the export's way of writing the field's zero -- 105 of the 198 MoM rows
+    leave `Ra` blank -- so `default` is transcription of that convention. A cell holding
+    something that is not a number is not: substituting a plausible stat there ships a unit
+    whose numbers no source produced (`Calculator/SPEC.md`, *Out-of-range values stop the run*).
+    """
     if not val or not val.strip():
         return default
     try:
@@ -247,7 +263,10 @@ def parse_int(val, default=0):
         float_val = float(val.strip())
         return int(float_val)
     except ValueError:
-        return default
+        raise ValueError(
+            f"Column {column or '<unnamed>'} holds {val.strip()!r}, which is not a number. "
+            f"The Tweaker export writes a decimal integer or leaves the cell blank."
+        ) from None
 
 def process_unit_file(input_file: Path):
     """Process a single unit data file.
@@ -277,7 +296,7 @@ def process_unit_file(input_file: Path):
             # independent because excluded rows (Settlers) make the generated sequence
             # diverge from that index. In the DOS roster the first 35 templates are the
             # persistent hero slots, so their source index is also the Hero_Slot value.
-            template_id = parse_int(row.get('Nr', ''), -1)
+            template_id = parse_int(row.get('Nr', ''), -1, 'Nr')
             if template_id < 0:
                 raise ValueError(f"Unit {row.get('UnitName', '')!r} has no valid Nr template id")
             is_hero = template_id <= 34
@@ -303,15 +322,15 @@ def process_unit_file(input_file: Path):
                 'name': row.get('UnitName', '').strip(),
                 'race': base_race,
                 'category': base_race,
-'figures': parse_int(row.get('Fig', '1'), 1),
-                'defense': parse_int(row.get('Df', '0')),
-                'resist': parse_int(row.get('Re', '0')),
-                'hp': parse_int(row.get('Hp', '0')),
-                'melee': parse_int(row.get('Me', '0')),
-                'ranged': parse_int(row.get('Ra', '0')),
-                'to_hit': parse_int(row.get('Th', '0')) * 10,
-                'moves': parse_int(row.get('Move', '0'), 0),
-                'ammo': parse_int(row.get('Shots', '0')),
+                'figures': parse_int(row.get('Fig', '1'), 1, 'Fig'),
+                'defense': parse_int(row.get('Df', '0'), 0, 'Df'),
+                'resist': parse_int(row.get('Re', '0'), 0, 'Re'),
+                'hp': parse_int(row.get('Hp', '0'), 0, 'Hp'),
+                'melee': parse_int(row.get('Me', '0'), 0, 'Me'),
+                'ranged': parse_int(row.get('Ra', '0'), 0, 'Ra'),
+                'to_hit': parse_int(row.get('Th', '0'), 0, 'Th') * 10,
+                'moves': parse_int(row.get('Move', '0'), 0, 'Move'),
+                'ammo': parse_int(row.get('Shots', '0'), 0, 'Shots'),
             }
 
             # Parse ranged/breath type
@@ -345,13 +364,19 @@ def process_unit_file(input_file: Path):
                 unit.pop('ammo', None)
 
             # Read the raw Gaze/Poison value (used only when a numeric ability is found)
+            # A blank column means the byte is absent; a non-numeric one is a value this
+            # parser has no reading for and must not be silently taken as 0.
             gaze_poison_str = row.get('Gaze/Poison', '').strip()
             gaze_poison_val = None
             if gaze_poison_str:
                 try:
                     gaze_poison_val = int(gaze_poison_str)
                 except (ValueError, TypeError):
-                    pass
+                    raise ValueError(
+                        f"Unit {row.get('UnitName', '')!r}: Gaze/Poison holds "
+                        f"{gaze_poison_str!r}, which is not a Spec_Att_Attrib byte value. "
+                        f"The column carries a signed decimal integer or is blank."
+                    ) from None
 
             # Build the full flat list, substituting numeric forms where needed.
             # Source order: Attributes, Abilities, Immunities, Attacks.
@@ -394,22 +419,15 @@ def process_unit_file(input_file: Path):
             if final_abilities:
                 unit['abilities'] = final_abilities
 
-            # Add cost and upkeep if present
-            if row.get('Cost'):
-                try:
-                    cost = int(row.get('Cost'))
-                    if cost > 0:
-                        unit['cost'] = cost
-                except (ValueError, TypeError):
-                    pass
+            # Add cost and upkeep if present. A blank cell omits the field; a non-numeric one
+            # raises rather than dropping a value the export did state.
+            cost = parse_int(row.get('Cost', ''), 0, 'Cost')
+            if cost > 0:
+                unit['cost'] = cost
 
-            if row.get('Upkeep'):
-                try:
-                    upkeep = int(row.get('Upkeep'))
-                    if upkeep > 0:
-                        unit['upkeep'] = upkeep
-                except (ValueError, TypeError):
-                    pass
+            upkeep = parse_int(row.get('Upkeep', ''), 0, 'Upkeep')
+            if upkeep > 0:
+                unit['upkeep'] = upkeep
 
             # Only add if unit has a name and is not a Settlers unit
             if unit['name'] and unit['name'] != 'Settlers':
@@ -472,38 +490,40 @@ def main():
 
         print(f"Processing {input_file}...")
 
-        try:
-            units, unmatched = process_unit_file(input_file)
+        # Nothing catches here on purpose. `process_unit_file` raises on an unreadable
+        # template id, an identity field that did not survive, an unrecognized RangedType and
+        # a non-numeric stat cell; swallowing those into a printed line and continuing would
+        # write a roster past the very checks that exist to stop it, and leave the previous
+        # file in place looking generated (`Calculator/SPEC.md`, *Out-of-range values stop the
+        # run*).
+        units, unmatched = process_unit_file(input_file)
 
-            output_file = Path(get_output_filename(input_file))
+        output_file = Path(get_output_filename(input_file))
 
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(units, f, indent=2)
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(units, f, indent=2)
 
-            print(f"  OK: Parsed {len(units)} units")
-            print(f"  OK: Output written to {output_file}")
+        print(f"  OK: Parsed {len(units)} units")
+        print(f"  OK: Output written to {output_file}")
 
-            js_target = JS_OUTPUTS.get(input_file.name)
-            if js_target:
-                js_name, const_name = js_target
-                js_path = calculator_dir / js_name
-                # Indented like the JSON sibling above so a content search returns
-                # matching lines instead of the whole build product.
-                with open(js_path, 'w', encoding='utf-8') as f:
-                    f.write(f'const {const_name} = ')
-                    json.dump(units, f, indent=2, ensure_ascii=False)
-                    f.write(';\n')
-                print(f"  OK: JS written to {js_path}")
-            if unmatched:
-                print(f"  Unmatched source tags ({len(unmatched)}) "
-                      f"— verify these are all combat-irrelevant:")
-                for token, count in sorted(unmatched.items()):
-                    print(f"      {count:3}x  {token!r}")
-            else:
-                print("  No unmatched source tags.")
-        except Exception as e:
-            print(f"  ERROR: processing {input_file}: {e}")
-            continue
+        js_target = JS_OUTPUTS.get(input_file.name)
+        if js_target:
+            js_name, const_name = js_target
+            js_path = calculator_dir / js_name
+            # Indented like the JSON sibling above so a content search returns
+            # matching lines instead of the whole build product.
+            with open(js_path, 'w', encoding='utf-8') as f:
+                f.write(f'const {const_name} = ')
+                json.dump(units, f, indent=2, ensure_ascii=False)
+                f.write(';\n')
+            print(f"  OK: JS written to {js_path}")
+        if unmatched:
+            print(f"  Unmatched source tags ({len(unmatched)}) "
+                  f"— verify these are all combat-irrelevant:")
+            for token, count in sorted(unmatched.items()):
+                print(f"      {count:3}x  {token!r}")
+        else:
+            print("  No unmatched source tags.")
 
     print("\nDone!")
 

@@ -146,6 +146,8 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:marionetteChanneler': SCOPE_WARLORD,
   'b:luckyStar': SCOPE_WARLORD,
   'b:magitekEngine': SCOPE_WARLORD,
+  'b:marionette:ascensionRangedType': SCOPE_WARLORD,
+  'b:marionette:rangedType': SCOPE_WARLORD,
   'b:marionette:stats': SCOPE_WARLORD,
   'b:marionette:strayedTransmute': SCOPE_WARLORD,
   'b:natureLink': SCOPE_WARLORD,
@@ -193,7 +195,6 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:endurance': SCOPE_COM_PLUS,
   'c:eternalNight:enemyResistance': SCOPE_COM_PLUS,
   'c:flameBlade': SCOPE_ALL,
-  'c:flameBlade:ranged': SCOPE_ALL,
   'c:focusMagic': SCOPE_COM_PLUS,
   'c:giantStrength': SCOPE_MOM,
   'c:goodMoon': SCOPE_MODERN,
@@ -807,7 +808,7 @@ function projectTraceByField(trace, keepField, keepLedgerEvent) {
 
 // One entry per step that changed something, in execution order. Not needed for the red
 // display numbers — those are `final - base` — but it is what an ordered "what modified
-// this unit" breakdown would read, and where M4's `flameBlade:ranged` attribution belongs.
+// this unit" breakdown would read, and where M4's `flameBlade` attribution belongs.
 function traceSourceForStep(step) {
   const id = step.sourceId || step.id;
   return {

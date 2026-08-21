@@ -117,9 +117,9 @@ test('R9-G1g preserves every compiled-modern Supreme Light eligibility alternati
   const report = await page.evaluate(() => {
     const eligible = version => ({
       liveMagical: supremeLightActiveForUnit({ supremeLight: true }, 'normal', version,
-        { liveRangedType: 'magic_c', baseRangedType: 'missile' }),
+        { liveRangedType: 'magic', baseRangedType: 'missile' }),
       baseMagical: supremeLightActiveForUnit({ supremeLight: true }, 'normal', version,
-        { liveRangedType: 'missile', baseRangedType: 'magic_s' }),
+        { liveRangedType: 'missile', baseRangedType: 'magic' }),
       fantasticLife: supremeLightActiveForUnit({ supremeLight: true }, 'fantastic_life', version),
       normalLife: supremeLightActiveForUnit({ supremeLight: true }, 'normal_life', version),
       mana: supremeLightActiveForUnit({ supremeLight: true, caster: true }, 'normal', version),
@@ -130,11 +130,11 @@ test('R9-G1g preserves every compiled-modern Supreme Light eligibility alternati
     return {
       com2: eligible('com2_1.05.11'),
       warlord: eligible('com2_warlord_1.5.12.7'),
-      warlordBeam: {
+      warlordLightningBolt: {
         live: supremeLightActiveForUnit({ supremeLight: true }, 'normal',
-          'com2_warlord_1.5.12.7', { liveRangedType: 'beam', baseRangedType: 'missile' }),
+          'com2_warlord_1.5.12.7', { liveRangedType: 'magic_lightning', baseRangedType: 'missile' }),
         base: supremeLightActiveForUnit({ supremeLight: true }, 'normal',
-          'com2_warlord_1.5.12.7', { liveRangedType: 'missile', baseRangedType: 'beam' }),
+          'com2_warlord_1.5.12.7', { liveRangedType: 'missile', baseRangedType: 'magic_lightning' }),
       },
     };
   });
@@ -144,7 +144,7 @@ test('R9-G1g preserves every compiled-modern Supreme Light eligibility alternati
   };
   expect(report.com2).toEqual(expected);
   expect(report.warlord).toEqual(expected);
-  expect(report.warlordBeam).toEqual({ live: true, base: true });
+  expect(report.warlordLightningBolt).toEqual({ live: true, base: true });
   expectNoConsoleErrors(errors);
 });
 

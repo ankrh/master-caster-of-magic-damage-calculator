@@ -109,7 +109,7 @@ const TEST_TREE = [
       {
         name: 'Alumni of Academy',
         keys: [
-          'alumniOfAcademyMagicRangedWarlord',
+          'alumniOfAcademyLightningBoltWarlord', 'alumniOfAcademyMagicRangedWarlord',
           'alumniOfAcademyMechanicalExcludedWarlord',
           'alumniOfAcademyRocsWarlord',
           'alumniOfAcademyNonHalflingExcludedWarlord',
@@ -495,7 +495,11 @@ const TEST_TREE = [
         name: 'Focus Magic',
         keys: [
           'focusMagicBreathCoM2',
+          'focusMagicBreathIgnoresLiveStrengthCoM',
           'focusMagicConvertsMissileCoM2',
+          'focusMagicConvertsZeroThrownCoM',
+          'focusMagicFloorsTypelessSlotCoM',
+          'focusMagicStoningGazeCoM',
           'focusMagicPreservesLowMissileCoM2',
           'focusMagicConvertsThrownCoM2',
           'focusMagicDoomGazeBoostCoM2',
@@ -619,6 +623,7 @@ const TEST_TREE = [
           'levelRangedGateZeroStrengthWarlord',
           'levelThrownGateBaseRecordWarlord',
           'levelThrownGateHeroCalculatedWarlord',
+          'wandererRosterRangedTypeWarlord',
         ],
       },
       {
@@ -626,6 +631,15 @@ const TEST_TREE = [
         keys: [
           'lightningBladeConvertsThrownWarlord',
           'lightningBladeGrantsBreathWarlord',
+        ],
+      },
+      {
+        name: 'Lightning Resist',
+        keys: [
+          'lightningResistCancelsAPLightningBoltRangedCoM2',
+          'lightningResistKeepsAPMagicRangedCoM2',
+          'lightningResistCancelsAPLightningBoltRangedWarlord',
+          'lightningResistKeepsAPMagicRangedWarlord',
         ],
       },
       {
@@ -947,6 +961,10 @@ const TEST_TREE = [
           'weaponToHitSkipsMagicRangedChannelWarlord',
           'weaponMaterialRangedHasNoStrengthGateWarlord',
           'weaponMaterialThrownReadsCalculatedFieldWarlord',
+          'weaponMaterialDosThrownHasNoStrengthGateMoM',
+          'weaponMaterialDosMissileHasNoStrengthGateMoM',
+          'weaponMaterialDosThrownHasNoStrengthGateCoM1',
+          'weaponMaterialDosSecondarySkippedByFocusMagicCoM1',
         ],
       },
       {
@@ -1096,7 +1114,7 @@ const TEST_TREE = [
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathAfterLevelMoM', 'ccFireBreathCoM', 'ccFireBreathReplacesThrown', 'ccFireBreathRejectsPositiveThrownCP', 'ccFireBreathCoexistsWithLightningCoM2', 'ccFireBreathCoexistsWithGazeCoM2', 'ccFireBreathAddsToExistingCoM2', 'ccFireBreathAddsToExistingWarlord'] },
       { name: 'Chaos Surge', keys: ['chaosSurgeThrownCoM', 'chaosSurgeThrownCoM2', 'chaosSurgeDoomGazeCoM', 'chaosSurgeDoomGazeCoM2', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsBreathCoM'] },
       { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
-      { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },
+      { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsNotVsMagicSMoM', 'resistElementsMagicRangedCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorMagicRangedCoM2'] },
       { name: 'Endurance', keys: ['enduranceEffectCoM', 'enduranceEffectCoM2'] },
       { name: 'Experience bonuses', keys: ['experienceChampionMeleeCoM2', 'experienceChampionMeleeWarlord', 'experienceUltraEliteThrownCoM2', 'experienceUltraEliteThrownWarlord', 'experienceChampionDefenseCoM2', 'experienceChampionDefenseWarlord', 'experienceUltraEliteToHitCoM2', 'experienceUltraEliteToHitWarlord', 'experienceChampionHpCoM2', 'experienceChampionHpWarlord'] },
       { name: 'First Strike', keys: ['firstStrikeCapCoM', 'firstStrikeCapCoM2', 'firstStrikeCapIgnoresThrownCoM', 'firstStrikeCapRemovedThrownCoM2'] },

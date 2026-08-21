@@ -215,6 +215,46 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(metalFiresFantastic.weapon, 'normal',
     'Metal Fires leaves a Fantastic unit\'s weapon quality unchanged');
 
+  // The version boundary, asserted where it is reachable. Metal Fires is the compiled block at
+  // `unitcalc.c` 131:0x9065F, which the reconstruction guards with
+  // `#if BUILD == MOM131 || BUILD == CP160`: CoM 1 does not build it and `Caster.exe` has no
+  // counterpart, so all three of its writes — melee 0x906C1, missile/Thrown strength 0x906FC
+  // and the magic-weapon upgrade 0x90723 — are absent from the three CoM engines. This cannot
+  // be a preset: `ui_abilities.js` hides the control outside MoM, so `applyPreset` leaves it
+  // unchecked and `deriveUnitStats` is the only path that reaches the input at all (F111).
+  // MoM 1.31 is the positive control, so the claim is an exclusion rather than an inert input.
+  const metalFiresMoM = ctx.deriveUnitStats(baseUnitInput({
+    version: 'mom_1.31', atk: 2, rtb: 3, rtbType: 'missile', abilities: { metalFires: true },
+  }));
+  assertEqual(metalFiresMoM.atk, 3, 'MoM Metal Fires adds its +1 melee');
+  assertEqual(metalFiresMoM.rtb, 4, 'MoM Metal Fires adds its +1 missile strength');
+  assertEqual(metalFiresMoM.weapon, 'magic', 'MoM Metal Fires upgrades a normal weapon to magic');
+  for (const version of ['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+    const metalFiresCoM = ctx.deriveUnitStats(baseUnitInput({
+      version, atk: 2, rtb: 3, rtbType: 'missile', abilities: { metalFires: true },
+    }));
+    assertEqual(metalFiresCoM.atk, 2, `${version} builds no Metal Fires melee write`);
+    assertEqual(metalFiresCoM.rtb, 3, `${version} builds no Metal Fires ranged/Thrown write`);
+    assertEqual(metalFiresCoM.weapon, 'normal',
+      `${version} builds no Metal Fires magic-weapon upgrade`);
+  }
+  const metalFiresThrownCoM2 = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', atk: 2,
+    modernAttacks: { ranged: { strength: 3, type: 'missile' },
+      thrown: { strength: 4, type: 'thrown' } },
+  }));
+  const metalFiresThrownCoM2On = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', atk: 2, abilities: { metalFires: true },
+    modernAttacks: { ranged: { strength: 3, type: 'missile' },
+      thrown: { strength: 4, type: 'thrown' } },
+  }));
+  assertEqual(metalFiresThrownCoM2On.modernAttacks.ranged.strength,
+    metalFiresThrownCoM2.modernAttacks.ranged.strength,
+    'CoM2 Metal Fires reaches no modern Ranged channel');
+  assertEqual(metalFiresThrownCoM2On.modernAttacks.thrown.strength,
+    metalFiresThrownCoM2.modernAttacks.thrown.strength,
+    'CoM2 Metal Fires reaches no modern Thrown channel');
+
   const modernBlackpowder = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { outlanderWizard: true, rocketry: true, armorPiercing: true },
@@ -316,7 +356,7 @@ function runDeriveUnitStatsChecks(ctx) {
         abilities: { ...(overrides.abilities || {}), focusMagic: true },
       }));
       const native = ctx.deriveUnitStats(baseUnitInput({
-        version, rtbType: 'magic_s', ...overrides,
+        version, rtbType: 'magic', ...overrides,
       }));
       assertEqual(converted.rtb, native.rtb,
         `${label} treats a Focus-converted attack as a native magical one (${version})`);
@@ -337,7 +377,7 @@ function runDeriveUnitStatsChecks(ctx) {
     { level: 'veteran', rtb: 1, abilities: { discipline: 'overland' } });
   convertedVsNative('Blazing March', { rtb: 2, abilities: { blazingMarch: true } });
 
-  // The Warlord blade's ranged bonus sits at the same `c:flameBlade:ranged` entry, which the
+  // The Warlord blade's ranged bonus sits at the same `c:flameBlade` entry, which the
   // Warlord chain places after the conversion and the CoM 1 chain before it — the version
   // difference is the step's position, not a gate. CoM 1 keeps its bonus below
   // (`com1FlameBeforeFocus`); Warlord sees the converted attack.
@@ -347,7 +387,7 @@ function runDeriveUnitStatsChecks(ctx) {
   }));
   const warlordBladeNative = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
-    abilities: { flameBladeWarlord: true }, rtbType: 'magic_s', rtb: 2,
+    abilities: { flameBladeWarlord: true }, rtbType: 'magic', rtb: 2,
   }));
   assertEqual(warlordBladeConverted.rtb, warlordBladeNative.rtb,
     'The Warlord blade treats a Focus-converted attack as a native magical one');
@@ -606,8 +646,8 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(com1FlameBeforeFocus.rtb, 3,
     'CoM 1 Flame Blade adds 2 before Focus Magic applies its minimum of 3');
   assertEqual(com1FlameBeforeFocus.statTrace
-    .filter(step => ['level', 'weapon', 'flameBlade:ranged', 'focusMagic'].includes(step.id))
-    .map(step => step.id).join(','), 'flameBlade:ranged,focusMagic',
+    .filter(step => ['level', 'weapon', 'flameBlade', 'focusMagic'].includes(step.id))
+    .map(step => step.id).join(','), 'flameBlade,focusMagic',
   'CoM 1 trace preserves Flame Blade before Focus Magic when no other step mutates');
 
   const com1MaterialOrder = ctx.deriveUnitStats(baseUnitInput({
@@ -624,7 +664,7 @@ function runDeriveUnitStatsChecks(ctx) {
     rtbType: 'missile',
     rtb: 1,
   }));
-  assertEqual(focusMagicLowStrength.rangedType, 'magic_s',
+  assertEqual(focusMagicLowStrength.rangedType, 'magic',
     'Modern Focus Magic converts a low-strength physical ranged attack');
   assertEqual(focusMagicLowStrength.rtb, 1,
     'Modern Focus Magic preserves positive conversion strength below 3');
@@ -635,8 +675,8 @@ function runDeriveUnitStatsChecks(ctx) {
   const focusMagicUnderPlague = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { focusMagic: true, plague: true },
-    rtbType: 'magic_c', rtb: 2,
-    modernAttacks: { ranged: { strength: 2, type: 'magic_c' } },
+    rtbType: 'magic', rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'magic' } },
   }));
   assertEqual((focusMagicUnderPlague.modernAttacks.ranged || {}).strength, 2,
     'Focus Magic adds three to a permanently magical ranged attack a phase-b penalty drove below zero');
@@ -644,7 +684,7 @@ function runDeriveUnitStatsChecks(ctx) {
   const warlordFocusBeforeWarp = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { focusMagic: true, warpAttack: true },
-    rtbType: 'magic_s',
+    rtbType: 'magic',
     rtb: 5,
   }));
   assertEqual(warlordFocusBeforeWarp.rtb, 4,
@@ -795,7 +835,7 @@ function runDeriveUnitStatsChecks(ctx) {
   const trueSight = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { trueSight: true },
-    rtbType: 'magic_s',
+    rtbType: 'magic',
     rtb: 1,
   }));
   assertEqual(trueSight.abilities.illusionImmunity, true, 'True Sight grants Illusion Immunity');
@@ -805,7 +845,7 @@ function runDeriveUnitStatsChecks(ctx) {
   const eyeOfHeavenTrueSight = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { eyeOfHeaven: true },
-    rtbType: 'magic_s',
+    rtbType: 'magic',
     rtb: 1,
   }));
   assertClose(eyeOfHeavenTrueSight.toHitRtb, 0.35, 'Eye of Heaven grants the True Sight To-Hit bonus');
@@ -826,7 +866,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { alumniOfAcademy: true },
     race: 'Halfling',
     name: 'Halfling Shamans',
-    rtbType: 'magic_n',
+    rtbType: 'magic',
     rtb: 3,
     figs: 6,
   }));
@@ -837,7 +877,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { alumniOfAcademy: true, mechanical: true },
     race: 'Halfling',
     name: 'Mechanical Shamans',
-    rtbType: 'magic_n',
+    rtbType: 'magic',
     rtb: 3,
     figs: 6,
   }));
@@ -857,7 +897,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { alumniOfAcademy: true },
     race: 'High Men',
     name: 'High Men Magicians',
-    rtbType: 'magic_c',
+    rtbType: 'magic',
     rtb: 3,
     figs: 4,
   }));

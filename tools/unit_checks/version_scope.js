@@ -328,7 +328,10 @@ function runCanonicalVersionScopeChecks(ctx) {
     'boulder', 'magic'];
   const globals = [{}, { trueLight: true }, { darkness: true }, { warpReality: true },
     { enemyEternalNight: true, eternalNight: true }, { hurricane: true },
-    { cityWalls: 'normal' }, { nodeAura: 'chaos' }, { chaosSurge: true }, { poxHost: true },
+    // `'3'` is the intact-wall position. The list carried `'normal'` — a weapon/armor
+    // spelling that names no City walls option, so the axis produced bonus 0 and was never
+    // exercised. F113's fail-loud conversion in `deriveUnitStats` is what surfaced it.
+    { cityWalls: '3' }, { nodeAura: 'chaos' }, { chaosSurge: true }, { poxHost: true },
     { rangedCheck: true, rangedDist: 5 }];
 
   const visitedKeys = new Set();

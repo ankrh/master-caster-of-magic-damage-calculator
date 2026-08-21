@@ -345,7 +345,14 @@ function subgroupAllowedForVersion(subgroup, version) {
   if (sg === 'Warlord only') return isWarlord;
   if (sg === 'Warlord') return isWarlord;
   if (sg === 'Renamed in Warlord') return isWarlord;
-  return true;
+  // The unrestricted labels, named rather than defaulted: a subgroup that is only the `_`
+  // marker, and the two headings that mean "every version". A misspelt restriction would
+  // otherwise resolve to "allowed everywhere" and show a control in versions whose engine has
+  // no such effect (`SPEC.md`, *Out-of-range values stop the run*).
+  if (sg === '' || sg === 'All versions' || sg === 'All versions bools') return true;
+  throw new Error(
+    `subgroupAllowedForVersion: subgroup '${subgroup}' is not a known version restriction. `
+    + `Add it here with the versions it names, or use 'All versions'.`);
 }
 
 // The single home for "does this def exist in this version". Both enchantments and ability tags
@@ -363,9 +370,11 @@ function abilityVersionGated(abil, version) {
 
 // Global-enchantment controls in the .combat-enchantments frame are hardcoded HTML (not
 // driven by ABILITY_DEFS), so they need their own version gating. Each entry maps a control
-// element id to the versions in which it's valid. Controls not listed here are valid in every
-// version. When a control is hidden it's also reset (unchecked) so a hidden enchantment can't
-// silently keep affecting the calculation.
+// element id to the versions in which it's valid; a control valid everywhere still needs a
+// case saying so, because a control this function has never heard of is a wiring mistake, not
+// a universal enchantment (`SPEC.md`, *Out-of-range values stop the run*). When a control is
+// hidden it's also reset (unchecked) so a hidden enchantment can't silently keep affecting the
+// calculation.
 function globalEnchantmentAllowedForVersion(elementId, version) {
   const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
   const isWarlord = version.startsWith('com2_warlord_');
@@ -374,7 +383,15 @@ function globalEnchantmentAllowedForVersion(elementId, version) {
     case 'chaosConjunction': return version.startsWith('com2_');
     case 'hurricane': return isWarlord;
     case 'poxHost':   return isWarlord;
-    default:          return true;
+    case 'darkness':        return true;
+    case 'chaosSurge':      return true;
+    case 'wallOfFire':      return true;
+    case 'warpReality':     return true;
+    case 'rangedCheck':     return true;
+    case 'rangedDist':      return true;
+    case 'nodeAura':        return true;
+    default: throw new Error(
+      `globalEnchantmentAllowedForVersion: control '${elementId}' has no version rule.`);
   }
 }
 

@@ -624,9 +624,9 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   blessBreathBonusCoM2: {
-    desc: 'CoM2 Bless gives NO def bonus vs a Chaos magical ranged unit attack: its defense half is gated on a positive spell ID and ApplyAttack passes 0 for every unit channel. 7 hits − 0 = 7 dmg (MoM blocks 3, and a +5 here would leave 2)',
+    desc: 'CoM2 Bless gives NO def bonus vs a magical ranged unit attack: its defense half is gated on a positive spell ID and ApplyAttack passes 0 for every unit channel. 7 hits − 0 = 7 dmg (MoM blocks 3, and a +5 here would leave 2)',
     version: V_COM2,
-    a: { rtbType:'magic_c', rtb:7, toHitRtbMod:70, hp:10 },
+    a: { rtbType:'magic', rtb:7, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -646,9 +646,9 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   blessBreathBonusWarlord: {
-    desc: 'Warlord Bless gives NO def bonus vs a Chaos magical ranged unit attack: the same positive-spell-ID gate excludes every ApplyAttack unit channel. 7 hits − 0 = 7 dmg (a +7 here would leave 0)',
+    desc: 'Warlord Bless gives NO def bonus vs a magical ranged unit attack: the same positive-spell-ID gate excludes every ApplyAttack unit channel. 7 hits − 0 = 7 dmg (a +7 here would leave 0)',
     version: V_WARLORD,
-    a: { rtbType:'magic_c', rtb:7, toHitRtbMod:70, hp:10 },
+    a: { rtbType:'magic', rtb:7, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -750,14 +750,6 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
-  resistElementsVsMagicSCoM2: {
-    desc: 'CoM2 Resist Elements +4 def vs ALL magic ranged incl. Sorcery: 5 hits vs def 4 → 1 dmg',
-    version: V_COM2,
-    a: { rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:10 },
-    b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
-    rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
-  },
   resistElementsFireBreathMoM: {
     desc: 'MoM Resist Elements +3 def vs Fire Breath: 5 breath vs def 3 → 2 dmg + 1 melee = 3 total',
     a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
@@ -771,18 +763,18 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
-  resistElementsMagicCCoM2: {
-    desc: 'CoM2 Resist Elements +4 def vs Chaos magic ranged: 5 hits vs def 4 → 1 dmg (not 2 in MoM)',
+  resistElementsMagicRangedCoM2: {
+    desc: 'CoM2 Resist Elements +4 def vs magic ranged: 5 hits vs def 4 → 1 dmg. The modern engine attaches no realm to a projectile, so this one case is the CoM2 endpoint of both MoM contrasts beside it: +4 against `resistElementsMagicC`\'s +3, and applying at all where `resistElementsNotVsMagicSMoM`\'s Sorcery arm is excluded.',
     version: V_COM2,
-    a: { rtbType:'magic_c', rtb:5, toHitRtbMod:70, hp:10 },
+    a: { rtbType:'magic', rtb:5, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
-  elemArmorVsMagicSCoM2: {
-    desc: 'CoM2 Elemental Armor +12 def vs ALL magic ranged incl. Sorcery: 5 hits vs def 12 → 0 dmg',
+  elemArmorMagicRangedCoM2: {
+    desc: 'CoM2 Elemental Armor +12 def vs magic ranged: 5 hits vs def 12 → 0 dmg, where MoM\'s `elemArmorNotVsMagicS` takes nothing on the Sorcery realm its table has and the modern engine does not.',
     version: V_COM2,
-    a: { rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:10 },
+    a: { rtbType:'magic', rtb:5, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },

@@ -96,7 +96,7 @@ function runF19Checks(ctx) {
     atk: 2, def: 3, res: 4,
     abilities: { natureConjunction: true, goodMoon: true, badMoon: true },
     modernAttacks: {
-      ranged: { strength: 3, type: 'magic_n' },
+      ranged: { strength: 3, type: 'magic' },
       fireBreath: { strength: 4, type: 'fire' },
     },
   });
@@ -164,7 +164,7 @@ function runF19Checks(ctx) {
     'F19 modern auras leave Breath unchanged');
   const magicalLeadership = modern({
     abilities: { leadershipAura: 5 },
-    modernAttacks: { ranged: { strength: 3, type: 'magic_s' } },
+    modernAttacks: { ranged: { strength: 3, type: 'magic' } },
   });
   assertEqual(magicalLeadership.modernAttacks.ranged.strength, 3,
     'F19 Leadership excludes magical conventional Ranged');
@@ -453,7 +453,7 @@ function runF50F51F53Checks(ctx) {
   });
   assertEqual(beaconRanged.rtb, 8,
     'F50 CoM 1 Guiding Beacon adds its side maximum to conventional Ranged');
-  for (const rtbType of ['boulder', 'magic_c', 'magic_n', 'magic_s', 'beam']) {
+  for (const rtbType of ['boulder', 'magic_c', 'magic_n', 'magic_s']) {
     const eligible = derive({
       rtb: 3, rtbType, abilities: { guidingBeaconAura: 5 },
     });
@@ -645,7 +645,10 @@ function runR9G1eChecks(ctx) {
         `R9-G1e ${version} ${weapon} ${rtbType} trace attributes the material write`);
       }
 
-      for (const rtbType of ['magic_c', 'fire', 'lightning', 'stoning_gaze']) {
+      // Each family's own magical token: the DOS engines keep the realm their
+      // `Battle_Unit_Attack_Magic_Realm` table really has, the modern ones do not.
+      const magicalToken = version.startsWith('com2') ? 'magic' : 'magic_c';
+      for (const rtbType of [magicalToken, 'fire', 'lightning', 'stoning_gaze']) {
         const excluded = ctx.deriveUnitStats(baseUnitInput({
           version, weapon, rtb: 2, rtbType,
         }));

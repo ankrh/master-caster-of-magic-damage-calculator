@@ -63,6 +63,9 @@ function createCustomUnitIdentity(version, values = {}) {
 // The combat code still accepts its historical compact unitType token. Keep that token as a
 // derived compatibility boundary rather than allowing it to remain the source of identity.
 // A fantastic custom unit with no realm is the unaligned/Arcane case used by the old control.
+// The same `|| 'arcane'` also absorbs Fantastic + a mundane base race, a control pair the UI
+// allows and `UNITS.INI` cannot express. F113 left it rather than converting a live UI path into
+// a crash with no sourced answer to replace it; the question is BACKLOG Q28.
 function legacyUnitTypeFromIdentity(identity) {
   if (!identity || !identity.baseFantastic) return identity && identity.isHero ? 'hero' : 'normal';
   const realm = {
@@ -106,7 +109,7 @@ function legacyUnitTypeFromLiveIdentity(identity) {
     Sorcery: 'sorcery', Arcane: 'arcane', 'No Heal': 'unaligned',
   }[identity.race];
   if (!identity.fantastic) return realm ? 'normal_' + realm : 'normal';
-  return 'fantastic_' + (realm || 'arcane');
+  return 'fantastic_' + (realm || 'arcane');   // Fantastic + a mundane race: BACKLOG Q28
 }
 
 // Identity conversions write the live race and Fantastic fields directly. The compact
@@ -318,7 +321,10 @@ function applyLavaSmelterGrant(abilities, version, unitType) {
       // STAT-FORMULA[lavaSmelter:flameBlade]
       // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:24:03c7f203c08a93035f9d5921 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:29:9803f0d614b7957485b50536
       case 'fieryBlade': merged.fieryBlade = true; break;
-      default: break;
+      // A grant added to the list above without a case here would be dropped in silence.
+      default: throw new Error(
+        `applyLavaSmelterGrant: '${grant}' is not one of weaponImmunity/missileImmunity/`
+        + `resistElements/elementalArmor/fieryBlade.`);
     }
   }
   return merged;
@@ -436,9 +442,22 @@ function applyInsulationGrant(abilities, version) {
 const MARIONETTE_VERSION = 'com2_warlord_1.5.12.7';
 const MARIONETTE_HERO_TYPE_ID = 48;
 const MARIONETTE_REALMS = ['nature', 'sorcery', 'chaos', 'life', 'death'];
+// The projectile retype the owned branch writes, by primary realm: ids 37, 34, 31, 35 and 33
+// (`UnitCalcPre.CAS:104`, `:122`, `:140`, `:158`, `:176`). Every one of them is a
+// `SETSTAT(U,SRangedType,0,…)` — record selector `0`, the calculated record — so this value is
+// what the region-`b` step `b:marionette:rangedType` writes, not part of the permanent record.
+// All five ids are `IsMagic=Yes` with nothing else the modern engine reads, so all five are the
+// one modern token; the realm the script's arms select is a spell-flavour choice the engine
+// attaches to the projectile nowhere (`SPEC.md`, *Deliberate deviations*).
 const MARIONETTE_RANGED_TYPES = {
-  nature: 'magic_n', sorcery: 'magic_s', chaos: 'magic_c', life: 'magic_n', death: 'magic_c',
+  nature: 'magic', sorcery: 'magic', chaos: 'magic', life: 'magic', death: 'magic',
 };
+// The ascension block's own second retype, for a Chaos primary alone: `SRangedType = 30`
+// (`UnitCalcPre.CAS:272`), beside the Wall Crusher and Armor Piercing grants of the same three
+// lines. Id 30 is the lightning-bolt projectile, a token of its own, so this is a second write
+// at a second position — `b:marionette:ascensionRangedType`, after the book grants — and not
+// something the primary arm's value already covers.
+const MARIONETTE_ASCENSION_RANGED_TYPES = { chaos: 'magic_lightning' };
 const MARIONETTE_SPELLS = {
   nature: { base: 'Web', ascended: 'Ice Bolt', conjurer: 'Water Elemental' },
   sorcery: { base: 'AEther Sparks', ascended: 'Psionic Blast', conjurer: 'Phantom Beast' },
@@ -452,6 +471,9 @@ function marionetteBookCount(abilities, realm) {
   return Math.max(0, Math.trunc(Number(abilities[key]) || 0));
 }
 
+// The package carries the branch's grants, its spell and charge metadata, and — for the owned
+// branch alone — the realm retype value `b:marionette:rangedType` writes. It carries no permanent
+// ranged type: the Wanderer's own is `UNITS.INI [362] RangedType=30`, read from the roster record.
 // STAT-FORMULA[marionettePackage]
 // PROVENANCE[marionettePackage]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:39:58a1f4eccd319a76072204a6 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:40:278fa1f3acca365b536cf823 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:19:55ebed8c65ed05b617bc2a17 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:37:2a33b53fd826bd83bed71132 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:40:53a8e746ffb95d09d43c6694 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:31:0485f6bca9517d221d1400be | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:31:8e93c3479df43f3aa01d74ab
 function deriveMarionettePackage(identity, abilities, version) {
@@ -479,9 +501,11 @@ function deriveMarionettePackage(identity, abilities, version) {
         arcaneWard: 2,
         spellLock: true,
       },
-      // Wanderer's roster record retains Chaos ranged type 30 at zero strength. Transmute
-      // Equipment's later +2 SRanged write therefore activates that latent channel.
-      package: { state: 'strayed', spellLock: true, rangedType: 'magic_c', grantedAbilities },
+      // The strayed branch writes no ranged type at all (`UnitCalcPre.CAS:364-392`), so the
+      // package projects none: the Wanderer's Chaos ranged type 30 at zero strength is its own
+      // roster record's (`UNITS.INI [362]`), and Transmute Equipment's later +2 `SRanged` write
+      // activates that latent channel wherever the record states it.
+      package: { state: 'strayed', spellLock: true, grantedAbilities },
     };
   }
 
@@ -551,7 +575,8 @@ function deriveMarionettePackage(identity, abilities, version) {
     package: {
       state: 'owned', primary, books, ascended, conjurer, baseSkill,
       attackBonus, defenseBonus,
-      rangedType: ascended && primary === 'chaos' ? 'magic_c' : MARIONETTE_RANGED_TYPES[primary],
+      rangedType: MARIONETTE_RANGED_TYPES[primary],
+      ascensionRangedType: ascended ? (MARIONETTE_ASCENSION_RANGED_TYPES[primary] || null) : null,
       spell, charges, grantedAbilities,
     },
   };

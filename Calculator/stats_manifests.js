@@ -75,7 +75,15 @@ const DEDUCED_POSITIONS = Object.freeze({
 });
 
 function versionChain(version, keys) {
-  const deduced = new Set(DEDUCED_POSITIONS[version] || []);
+  // Every version names its own deduced-position list, including the two MoM builds whose
+  // list is empty. A version with no entry would silently get an empty set and mark its whole
+  // chain transcribed (`SPEC.md`, *Out-of-range values stop the run*).
+  if (!Object.prototype.hasOwnProperty.call(DEDUCED_POSITIONS, version)) {
+    throw new Error(
+      `versionChain: '${version}' has no DEDUCED_POSITIONS entry `
+      + `(expected one of ${Object.keys(DEDUCED_POSITIONS).join(', ')}).`);
+  }
+  const deduced = new Set(DEDUCED_POSITIONS[version]);
   return Object.freeze(keys.map(key => {
     const cut = key.indexOf(':');
     const phase = key.slice(0, cut);
@@ -97,7 +105,7 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
   'c:holyWeapon', 'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
-  'c:stoneSkin', 'c:flameBlade', 'c:flameBlade:ranged', 'c:giantStrength',
+  'c:stoneSkin', 'c:flameBlade', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
   'c:chaosChannels:fireBreath', 'c:chaosChannels:fireBreath:race',
   'c:lionheart', 'c:holyArmor', 'c:berserk', 'c:nodeAura',
@@ -111,7 +119,7 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
   'c:undead', 'c:blackChannels', 'c:blackChannels:race',
-  'c:ironSkin', 'c:stoneSkin', 'c:flameBlade', 'c:flameBlade:ranged', 'c:giantStrength',
+  'c:ironSkin', 'c:stoneSkin', 'c:flameBlade', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
   'c:chaosChannels:fireBreath', 'c:chaosChannels:fireBreath:race',
   'c:lionheart', 'c:holyArmor', 'c:berserk',
@@ -132,7 +140,7 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   // `c:undead`. Demon-skin armor lands far later, at 0x8F757 — after Undead, not before it.
   'c:endurance', 'c:chaosChannels:flight', 'c:chaosChannels:fireBreath',
   'c:chaosChannels:fireBreath:race', 'c:bloodLust', 'c:undead',
-  'c:animated', 'c:flameBlade', 'c:flameBlade:ranged', 'c:lionheart',
+  'c:animated', 'c:flameBlade', 'c:lionheart',
   'c:ironSkin', 'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:landLinking',
   'c:mysticSurge:race', 'c:mysticSurge', 'c:raiseDead', 'c:holyArmor',
   'c:focusMagic', 'c:orihalcon', 'c:holyWeapon',
@@ -156,7 +164,7 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   'c:destiny', 'c:level', 'c:focusMagic',
   'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:heavenlyLight:toHit', 'c:weapon',
   'c:weapon:toHit', 'c:endurance', 'c:discipline', 'c:chaosChannels:armor', 'c:animated',
-  'c:flameBlade', 'c:flameBlade:ranged', 'c:mysticSurge', 'c:lionheart', 'c:ironSkin',
+  'c:flameBlade', 'c:mysticSurge', 'c:lionheart', 'c:ironSkin',
   'c:landLinking', 'c:holyArmor', 'c:orihalcon', 'c:holyWeapon', 'c:chaosSurge',
   'c:survivalInstinct', 'c:innerPower', 'c:reinforceMagic',
   'c:eternalNight:enemyResistance', 'c:charmOfLife', 'c:nodeAura',
@@ -181,6 +189,7 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'base:energyCannon', 'base:survivalInstinctToBlock', 'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:marionetteChanneler', 'b:marionette:stats',
+  'b:marionette:rangedType', 'b:marionette:ascensionRangedType',
   'b:marionette:strayedTransmute', 'b:rebuild', 'b:tactician', 'b:fieryFury:race',
   'b:fieryFury', 'b:natureLink',
   'b:outlanderXenoveterinary', 'b:magitekEngine', 'b:bombsGrenades',
@@ -194,7 +203,7 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'c:mysticSurge:race', 'c:raiseDead', 'c:destiny',
   'c:level', 'c:focusMagic', 'c:lucky', 'c:darkForce', 'c:heavenlyLight',
   'c:heavenlyLight:toHit', 'c:weapon', 'c:weapon:toHit', 'c:endurance', 'c:discipline',
-  'c:chaosChannels:armor', 'c:animated', 'c:flameBlade', 'c:flameBlade:ranged', 'c:mysticSurge',
+  'c:chaosChannels:armor', 'c:animated', 'c:flameBlade', 'c:mysticSurge',
   'c:lionheart', 'c:ironSkin', 'c:landLinking', 'c:holyArmor', 'c:orihalcon',
   'c:holyWeapon', 'c:chaosSurge', 'c:survivalInstinct',
   'c:innerPower', 'c:reinforceMagic', 'c:eternalNight:enemyResistance', 'c:charmOfLife',

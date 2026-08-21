@@ -112,19 +112,55 @@ def parse_units_ini(path):
     return units
 
 
+def unit_label(u):
+    return f"[{u['index']}] {u.get('Name', '<no Name key>')}"
+
+
+def ini_value(u, key):
+    """Read a key every shipped UNITS.INI record defines, or raise.
+
+    All 364 `[n]` sections carry Race, Name, Figures, HP, Attack, Defense, Resistance, Hit,
+    Moves, Cost and Upkeep, so a missing one means the roster is not the file this generator
+    was written against. Substituting a plausible stat would ship a unit whose numbers no
+    source produced -- `Calculator/SPEC.md`, *Out-of-range values stop the run*.
+    """
+    if key not in u:
+        raise ValueError(
+            f"{unit_label(u)}: UNITS.INI record has no '{key}' key. Every record in the "
+            f"shipped roster defines it; fix the source record rather than defaulting."
+        )
+    return u[key]
+
+
+def race_name(race_int, label):
+    """Name one `Race` id, or raise. The id set is closed per version."""
+    try:
+        return RACE_NAMES[race_int]
+    except KeyError:
+        raise ValueError(
+            f"{label}: Race={race_int} is not defined by this version's race table "
+            f"(known ids: {sorted(RACE_NAMES)}). Add it to RACE_NAMES with the name its "
+            f"UNITS.INI/manual gives it -- do not fall back to the raw id."
+        ) from None
+
+
 def get_category(u):
     idx = u['index']
     if u.get('HeroType'):
         return 'Heroes'
     if 35 <= idx <= 39:
         return 'General'
-    race = int(u.get('Race', 0))
+    race = int(ini_value(u, 'Race'))
     # Check named races first (includes Warlord new races at IDs 22-25)
     if race in RACE_NAMES and race not in REALM_NAMES:
         return RACE_NAMES[race]
-    if race >= 15:
-        return REALM_NAMES.get(race, 'Fantastic') + ' Creatures'
-    return 'Other'
+    if race in REALM_NAMES:
+        return REALM_NAMES[race] + ' Creatures'
+    raise ValueError(
+        f"{unit_label(u)}: Race={race} is in neither the race table "
+        f"(known ids: {sorted(RACE_NAMES)}) nor the realm table "
+        f"(known ids: {sorted(REALM_NAMES)}), so it names no picker category."
+    )
 
 
 # Heroes that kept their CoM2 name and canonical character name
@@ -161,20 +197,23 @@ HERO_NAMES = {
 
 
 def get_display_name(u):
-    name = u.get('Name', 'Unknown')
+    """`HERO_NAMES` is a decoration table, not an enumeration: it adds the canonical character
+    name to the heroes that have one, and the 20 Warlord heroes with no entry keep their own
+    name. That pass-through is the rule, not a miss-path."""
+    name = ini_value(u, 'Name')
     if u.get('HeroType'):
         return HERO_NAMES.get(name, name)
-    race = int(u.get('Race', 0))
-    if u.get('DisplayRace') == 'Yes' and RACE_NAMES.get(race) and RACE_NAMES.get(race) != 'Special':
-        return RACE_NAMES[race] + ' ' + name
+    race = race_name(int(ini_value(u, 'Race')), unit_label(u))
+    if u.get('DisplayRace') == 'Yes' and race != 'Special':
+        return race + ' ' + name
     return name
 
 
 def ini_unit_to_record(u):
     idx = u['index']
 
-    race_int = int(u.get('Race', 0))
-    base_race = RACE_NAMES.get(race_int, str(race_int))
+    race_int = int(ini_value(u, 'Race'))
+    base_race = race_name(race_int, unit_label(u))
     hero_type_id = int(u['HeroType']) if u.get('HeroType') else None
     record = {
         'id':      idx,
@@ -187,37 +226,51 @@ def ini_unit_to_record(u):
         'baseFantastic': u.get('Fantastic', '').strip().lower() == 'yes',
         'name':    get_display_name(u),
         'race':    base_race,
-        'figures': int(u.get('Figures', 1)),
-        'hp':      int(u.get('HP', 1)),
-        'melee':   int(u.get('Attack', 0)),
-        'defense': int(u.get('Defense', 0)),
-        'resist':  int(u.get('Resistance', 0)),
+        'figures': int(ini_value(u, 'Figures')),
+        'hp':      int(ini_value(u, 'HP')),
+        'melee':   int(ini_value(u, 'Attack')),
+        'defense': int(ini_value(u, 'Defense')),
+        'resist':  int(ini_value(u, 'Resistance')),
     }
 
     # Match `to_hit`: the roster schema stores the percentage-point delta above 30%,
-    # while UNITS.INI stores the absolute To Defend chance.
+    # while UNITS.INI stores the absolute To Defend chance. `ToDefend` is absent from 334 of
+    # the 364 records and 30 is the engine's stated base To Block chance (`statRecord.toBlk`
+    # in `Calculator/stats.js`), so reading a missing key as 30 is transcription.
     to_defend = int(u.get('ToDefend', 30)) - 30
     if to_defend != 0:
         record['to_block'] = to_defend
 
     # Innate To Hit bonus. The INI stores the absolute To Hit chance (default 30%);
     # the app schema stores the modifier above the 30% base, matching the MoM/CoM
-    # convention (e.g. Hit=40 -> to_hit 10 = +10%).
+    # convention (e.g. Hit=40 -> to_hit 10 = +10%). `Hit=30` is the engine's stated base To
+    # Hit, so reading a missing key as 30 is transcription -- `SPEC.md`, *Out-of-range values
+    # stop the run*, names this case.
     to_hit = int(u.get('Hit', 30)) - 30
     if to_hit != 0:
         record['to_hit'] = to_hit
 
-    if u.get('Ranged') and int(u['Ranged']) > 0:
-        label = f"[{idx}] {u.get('Name', 'Unknown')}"
-        if 'RangedType' not in u:
-            raise ValueError(
-                f"{label}: Ranged={u['Ranged']} with no RangedType key. The projectile class "
-                f"cannot be derived from strength alone."
-            )
-        rt = int(u['RangedType'])
-        record['ranged']      = int(u['Ranged'])
-        record['ranged_type'] = ranged_type_token(rt, WARLORD_RANGED_TYPES, label)
-        record['ammo']        = int(u.get('Ammo', 0))
+    # The Ranged record's existence is stated by its projectile type, not by its strength:
+    # `[362]` Wanderer ships `RangedType=30` with `Ranged=0`, and the engine writes that read
+    # the permanent type land on it regardless -- `ApplyLevelBonus`'s ranged arm is
+    # `BaseUnits[i].rangedtype > 0` with no strength test. `RangedType=0` states no type and is
+    # not a class the table maps. The three assignments stay in this order because the emitted
+    # key order is the record's.
+    label = unit_label(u)
+    ranged_strength = int(u.get('Ranged') or 0)
+    ranged_type_id = int(u.get('RangedType') or 0)
+    if ranged_strength > 0 and ranged_type_id <= 0:
+        raise ValueError(
+            f"{label}: Ranged={ranged_strength} with RangedType={u.get('RangedType', '<absent>')}. "
+            f"The projectile class cannot be derived from strength alone."
+        )
+    if ranged_strength > 0:
+        record['ranged']      = ranged_strength
+    if ranged_type_id > 0:
+        record['ranged_type'] = ranged_type_token(ranged_type_id, WARLORD_RANGED_TYPES, label)
+    if ranged_strength > 0:
+        # Every record with Ranged > 0 states its Ammo; an absent key is not "unlimited".
+        record['ammo']        = int(ini_value(u, 'Ammo'))
 
     # Caster.exe stores four independently usable attack channels. Keep the existing
     # fields for the current UI/resolver, but emit the three channels that its former
@@ -279,6 +332,12 @@ def ini_unit_to_record(u):
     spell_id = u.get('Spellability', '').strip()
     if spell_id and spell_id != '0':
         spell_id_int = int(spell_id)
+        # `SPELL_NAMES` is a display-name table over the record's own numeric id. A miss
+        # renders the id verbatim rather than substituting another spell, so nothing is
+        # invented: `Spell#260` states exactly what the record states. 44 of the 50 ids the
+        # Warlord roster uses currently render that way; transcribing their names from
+        # `MASTER.CAS`/`DESC.INI` is BACKLOG F115. No calculator code reads this value --
+        # only `tools/generate_com2_unit_roster.py` displays it.
         spell_name = SPELL_NAMES.get(spell_id_int, f'Spell#{spell_id}')
         charges = u.get('Spellcharges', '0').strip()
         charges_int = int(charges) if charges else 0
@@ -349,9 +408,9 @@ def ini_unit_to_record(u):
         record['abilities'] = abilities
 
     record['category'] = get_category(u)
-    record['moves']    = int(u.get('Moves', 0)) // 2
-    record['cost']     = int(u.get('Cost', 0))
-    record['upkeep']   = int(u.get('Upkeep', 0))
+    record['moves']    = int(ini_value(u, 'Moves')) // 2
+    record['cost']     = int(ini_value(u, 'Cost'))
+    record['upkeep']   = int(ini_value(u, 'Upkeep'))
 
     return record
 
@@ -382,6 +441,19 @@ def verify_attack_channel_coverage(raw_units, records):
                     f"Unit {unit['index']} {unit.get('Name', '')!r}: "
                     f"unexpected {output_key}={output_value} without {ini_key}"
                 )
+        # The projectile type is a channel fact of its own, carried whether or not the record
+        # states a strength for it.
+        source_type = int(unit.get('RangedType', 0) or 0)
+        if source_type > 0 and record.get('ranged_type') is None:
+            raise ValueError(
+                f"Unit {unit['index']} {unit.get('Name', '')!r}: "
+                f"RangedType={source_type} did not reach ranged_type"
+            )
+        if source_type <= 0 and record.get('ranged_type') is not None:
+            raise ValueError(
+                f"Unit {unit['index']} {unit.get('Name', '')!r}: "
+                f"unexpected ranged_type={record['ranged_type']!r} without RangedType"
+            )
 
 
 def verify_identity_coverage(raw_units, records):
@@ -391,12 +463,12 @@ def verify_identity_coverage(raw_units, records):
         record = records_by_template.get(unit['index'])
         if record is None:
             continue
-        race_int = int(unit.get('Race', 0))
+        race_int = int(ini_value(unit, 'Race'))
         expected = {
             'templateId': unit['index'],
             'heroTypeId': int(unit['HeroType']) if unit.get('HeroType') else None,
             'isHero': bool(unit.get('HeroType')),
-            'baseRace': RACE_NAMES.get(race_int, str(race_int)),
+            'baseRace': race_name(race_int, unit_label(unit)),
             'baseFantastic': unit.get('Fantastic', '').strip().lower() == 'yes',
         }
         for field, source_value in expected.items():

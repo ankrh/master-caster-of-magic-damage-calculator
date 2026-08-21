@@ -198,7 +198,7 @@ function runModifierTraceChecks(ctx) {
       `${version}: Holy Armor trace precedes the later curse Defense write`);
 
     const postThresholdOrder = ctx.deriveUnitStats(baseUnitInput({
-      version, def: 6, hp: 8, armor: 'orihalcon', rtb: 2, rtbType: 'magic_n',
+      version, def: 6, hp: 8, armor: 'orihalcon', rtb: 2, rtbType: 'magic',
       abilities: {
         holyArmor: true, holyWeapon: true, highPrayer: true,
         reinforceMagic: true, charmOfLife: true, weakness: true,
@@ -429,8 +429,8 @@ function runModifierTraceChecks(ctx) {
   assertEqual(focusedThrown.modernAttacks.ranged.strength,
     leveledThrown.modernAttacks.thrown.strength,
     'Focus Magic converts the live post-level Thrown strength without reapplying the level bonus');
-  assertEqual(focusedThrown.modernAttacks.ranged.type, 'magic_s',
-    'Focus Magic conversion changes the ordered channel type to Sorcery ranged');
+  assertEqual(focusedThrown.modernAttacks.ranged.type, 'magic',
+    'Focus Magic conversion changes the ordered channel type to magical ranged');
   assertEqual(focusedThrown.modernAttacks.thrown, undefined,
     'Focus Magic consumes the original Thrown channel');
 
@@ -458,8 +458,8 @@ function runModifierTraceChecks(ctx) {
   // stray one, which is why the ledger rather than the total is where this is observable.
   const focusedNoGaze = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', abilities: { focusMagic: true },
-    rtbType: 'magic_c', rtb: 4,
-    modernAttacks: { ranged: { strength: 4, type: 'magic_c' } },
+    rtbType: 'magic', rtb: 4,
+    modernAttacks: { ranged: { strength: 4, type: 'magic' } },
   }));
   const focusedNoGazeEvent = focusedNoGaze.statTrace.find(entry => entry.id === 'focusMagic');
   assert(focusedNoGazeEvent && !focusedNoGazeEvent.changes.doomGaze,
@@ -472,8 +472,8 @@ function runModifierTraceChecks(ctx) {
   }));
   assertEqual(focusedBombs.modernAttacks.ranged.strength, 7,
     'Focus Magic converts the live phase-b Bombs & Grenades Thrown strength');
-  assertEqual(focusedBombs.modernAttacks.ranged.type, 'magic_s',
-    'Focus Magic converts phase-b-created Thrown to Sorcery ranged');
+  assertEqual(focusedBombs.modernAttacks.ranged.type, 'magic',
+    'Focus Magic converts phase-b-created Thrown to magical ranged');
   assertEqual(focusedBombs.modernAttacks.thrown, undefined,
     'Focus Magic consumes the phase-b-created Thrown channel');
   const focusedBombIds = focusedBombs.modernAttacks.ranged.statTrace.map(entry => entry.id);
@@ -573,7 +573,7 @@ function runModifierTraceChecks(ctx) {
     'Vampirism reads Focus-boosted Breaths and the coexisting unconverted Thrown channel');
   assertEqual(focusedCoexistingVampirism.modernAttacks.ranged.strength, 4,
     'Vampirism does not consume or reset conventional ranged beside its three sources');
-  assertEqual(focusedCoexistingVampirism.modernAttacks.ranged.type, 'magic_s',
+  assertEqual(focusedCoexistingVampirism.modernAttacks.ranged.type, 'magic',
     'Focus Magic owns conventional ranged when ranged and Thrown coexist');
   for (const key of ['thrown', 'fireBreath', 'lightningBreath']) {
     assertEqual(focusedCoexistingVampirism.modernAttacks[key].strength, 1,
@@ -662,8 +662,8 @@ function runModifierTraceChecks(ctx) {
   }));
   assertEqual(focusAndShadow.modernAttacks.ranged.strength, 4,
     'Focus Magic converts the original Thrown channel at its live strength');
-  assertEqual(focusAndShadow.modernAttacks.ranged.type, 'magic_s',
-    'The converted original channel is Sorcery ranged');
+  assertEqual(focusAndShadow.modernAttacks.ranged.type, 'magic',
+    'The converted original channel is magical ranged');
   assertEqual(focusAndShadow.modernAttacks.thrown.strength, 4,
     'Later Shadow Strike recreates an independent Thrown channel');
 
@@ -897,7 +897,7 @@ function runRecordFieldChecks(ctx) {
   assertEqual(toHits(materialOnMissile).join(','), '0.5,0.5,0.3,0.3',
     'Material and Holy Weapon reach a non-magical Ranged channel and the Thrown channel');
   const materialOnMagicRanged = probe({
-    ...magicWeapon, rtbType: 'magic_s', rtb: 5, modernAttacks: fourChannels('magic_s'),
+    ...magicWeapon, rtbType: 'magic', rtb: 5, modernAttacks: fourChannels('magic'),
   });
   assertEqual(toHits(materialOnMagicRanged).join(','), '0.3,0.5,0.3,0.3',
     'A magical Ranged channel is withheld both modifiers while Thrown still receives them');
@@ -914,8 +914,8 @@ function runRecordFieldChecks(ctx) {
   assertEqual(strengths(heavenlyMissile).join(','), '6,4,3,2',
     'Heavenly Light adds its strength to the conventional Ranged field alone');
   const heavenlyMagicRanged = probe({
-    abilities: { heavenlyLight: true }, rtbType: 'magic_s', rtb: 5,
-    modernAttacks: fourChannels('magic_s'),
+    abilities: { heavenlyLight: true }, rtbType: 'magic', rtb: 5,
+    modernAttacks: fourChannels('magic'),
   });
   assertEqual(toHits(heavenlyMagicRanged).join(','), '0.3,0.4,0.3,0.3',
     'Heavenly Light withholds its To Hit from a magical Ranged channel but not from Thrown');

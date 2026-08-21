@@ -16,10 +16,19 @@ let _activeVersion = null;
 // applyState() needs it; Task B's save logic reads it.
 let _restoring = false;
 
+// Version dispatch for the roster. `VERSION_DATA` names all five engine versions, and
+// `normalizeGameVersion` is what maps a retired or foreign id forward before anything reaches
+// here. Returning an empty roster for an unmapped id used to leave the symptom as an empty
+// unit dropdown with every other control still computing — `SPEC.md`, *Out-of-range values
+// stop the run*.
 function loadUnitDatabase(version) {
   if (unitDatabases[version]) return unitDatabases[version];
   const data = VERSION_DATA[version];
-  if (!data) { unitDatabases[version] = []; return []; }
+  if (!data) {
+    throw new Error(
+      `loadUnitDatabase: no roster for game version '${version}' `
+      + `(expected one of ${Object.keys(VERSION_DATA).join(', ')}).`);
+  }
   unitDatabases[version] = Object.values(data);
   return unitDatabases[version];
 }

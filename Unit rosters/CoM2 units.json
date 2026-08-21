@@ -63,7 +63,7 @@
     "defense": 4,
     "resist": 6,
     "ranged": 10,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Hero"
@@ -188,7 +188,7 @@
     "defense": 6,
     "resist": 8,
     "ranged": 10,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -264,7 +264,7 @@
     "defense": 5,
     "resist": 5,
     "ranged": 10,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Hero",
@@ -313,7 +313,7 @@
     "defense": 6,
     "resist": 5,
     "ranged": 8,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero"
@@ -338,7 +338,7 @@
     "defense": 5,
     "resist": 8,
     "ranged": 12,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -390,7 +390,7 @@
     "defense": 5,
     "resist": 5,
     "ranged": 10,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -470,7 +470,7 @@
     "defense": 5,
     "resist": 5,
     "ranged": 12,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -496,7 +496,7 @@
     "defense": 7,
     "resist": 9,
     "ranged": 10,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Hero",
@@ -593,7 +593,7 @@
     "defense": 5,
     "resist": 8,
     "ranged": 12,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -619,7 +619,7 @@
     "defense": 6,
     "resist": 8,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -645,7 +645,7 @@
     "defense": 6,
     "resist": 6,
     "ranged": 9,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -695,7 +695,7 @@
     "defense": 7,
     "resist": 8,
     "ranged": 12,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 9,
     "abilities": [
       "Hero",
@@ -777,7 +777,7 @@
     "resist": 8,
     "to_hit": 10,
     "ranged": 12,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Hero",
@@ -826,7 +826,7 @@
     "defense": 7,
     "resist": 8,
     "ranged": 11,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -856,7 +856,7 @@
     "defense": 7,
     "resist": 7,
     "ranged": 12,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -1112,7 +1112,7 @@
     "resist": 5,
     "to_hit": 10,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -1251,7 +1251,7 @@
     "defense": 4,
     "resist": 8,
     "ranged": 5,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -1278,7 +1278,7 @@
     "defense": 3,
     "resist": 8,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -1399,7 +1399,7 @@
     "defense": 1,
     "resist": 5,
     "ranged": 1,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "category": "Dark Elf",
     "moves": 2,
@@ -1421,7 +1421,7 @@
     "defense": 3,
     "resist": 6,
     "ranged": 2,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Large Shield"
@@ -1446,7 +1446,7 @@
     "defense": 4,
     "resist": 7,
     "ranged": 3,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "category": "Dark Elf",
     "moves": 2,
@@ -1468,7 +1468,7 @@
     "defense": 2,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "First Strike"
@@ -1493,7 +1493,7 @@
     "defense": 4,
     "resist": 10,
     "ranged": 7,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -1520,7 +1520,7 @@
     "defense": 2,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Large Shield",
@@ -1569,7 +1569,7 @@
     "defense": 4,
     "resist": 9,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -1596,7 +1596,7 @@
     "resist": 12,
     "to_hit": 20,
     "ranged": 8,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Flight"
@@ -1722,7 +1722,7 @@
     "defense": 5,
     "resist": 7,
     "ranged": 4,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Flight",
@@ -1750,7 +1750,7 @@
     "defense": 4,
     "resist": 9,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -2204,7 +2204,7 @@
     "defense": 3,
     "resist": 8,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -2231,7 +2231,7 @@
     "defense": 3,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -2408,7 +2408,7 @@
     "resist": 9,
     "to_hit": 10,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -2599,7 +2599,7 @@
     "defense": 4,
     "resist": 6,
     "ranged": 5,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -2627,7 +2627,7 @@
     "defense": 3,
     "resist": 6,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -2969,7 +2969,7 @@
     "defense": 2,
     "resist": 5,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Water Walking",
@@ -3070,7 +3070,7 @@
     "defense": 2,
     "resist": 8,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -3097,7 +3097,7 @@
     "defense": 4,
     "resist": 11,
     "ranged": 5,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -3124,7 +3124,7 @@
     "defense": 3,
     "resist": 11,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -3378,7 +3378,7 @@
     "defense": 3,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -3405,7 +3405,7 @@
     "defense": 3,
     "resist": 8,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -3568,7 +3568,7 @@
     "defense": 3,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -3725,7 +3725,7 @@
     "resist": 7,
     "to_hit": 10,
     "ranged": 12,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 3,
     "abilities": [
       "Fire Immunity",
@@ -3755,7 +3755,7 @@
     "resist": 7,
     "to_hit": 20,
     "ranged": 14,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Poison Immunity",
@@ -3868,7 +3868,7 @@
     "resist": 9,
     "to_hit": 20,
     "ranged": 18,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Fire Immunity",
@@ -3982,7 +3982,7 @@
     "defense": 3,
     "resist": 6,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Illusion Immunity",
@@ -4129,7 +4129,7 @@
     "resist": 6,
     "to_hit": 20,
     "ranged": 5,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Illusion Immunity",
@@ -4199,7 +4199,7 @@
     "resist": 13,
     "to_hit": 30,
     "ranged": 20,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Negate First Strike",
@@ -4398,7 +4398,7 @@
     "resist": 8,
     "to_hit": 10,
     "ranged": 4,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Flight",
@@ -4726,7 +4726,7 @@
     "resist": 9,
     "to_hit": 20,
     "ranged": 18,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 5,
     "abilities": [
       "Armor Piercing",
@@ -4786,7 +4786,7 @@
     "resist": 12,
     "to_hit": 30,
     "ranged": 15,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Flight",

@@ -429,7 +429,15 @@ function dosCombatHits(state) {
 }
 
 function normalizeDosCombatHealState(input) {
-  const version = input.version || 'mom_1.31';
+  // The version selects the Extra Hits ceiling (CoM 1's 90 against the two MoM builds' 255),
+  // so it is a stat input, not a label. Every caller reaches here through
+  // `usesDosCombatHealing(version)` or re-normalizes a record that already carries one.
+  const version = input.version;
+  if (!ENGINE_VERSIONS.includes(version)) {
+    throw new Error(
+      `normalizeDosCombatHealState: version '${version}' is not one of `
+      + `${ENGINE_VERSIONS.join(', ')}; the Extra Hits ceiling cannot be chosen without it.`);
+  }
   const figures = Math.min(255, Math.max(1, Math.trunc(Number(input.figures) || 1)));
   const baseHp = Math.max(1, Math.trunc(Number(input.baseHp ?? input.hp) || 1));
   const extraCap = version === 'com_6.08' ? 90 : 255;

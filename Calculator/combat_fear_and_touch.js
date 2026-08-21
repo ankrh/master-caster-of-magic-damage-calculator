@@ -124,6 +124,11 @@ function calcFearBugDist(atkFigs, defFigs, pFear) {
 //                                       attempt per surviving attacking figure)
 //   lifeStealMod != null              → Life Steal    (uses lifeStealRes)
 //   immDist truthy                    → Immolation    (caller pre-computes the area dist)
+// The three healing categories an outcome can carry, named so a read of the field can be
+// checked against them.
+const DAMAGE_CATEGORIES = Object.freeze(
+  ['normalDamage', 'undeadDamage', 'irrecoverableDamage']);
+
 function usesModernCombatHealing(version) {
   return version === 'com2_1.05.11' || version === 'com2_warlord_1.5.12.7';
 }
@@ -148,7 +153,16 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
   for (let damage = 0; damage < dist.length; damage++) {
     if (dist[damage] < 1e-15) continue;
     const cappedDamage = Math.min(damage, cap);
-    const baseCategory = p.baseDamageCategory || 'normalDamage';
+    // An attack that names no category deals normal damage; the two gaze specs that name one
+    // name `irrecoverableDamage`. A fourth spelling would silently become normal damage and
+    // heal off (`SPEC.md`, *Out-of-range values stop the run*).
+    const baseCategory = p.baseDamageCategory === undefined || p.baseDamageCategory === null
+      ? 'normalDamage' : p.baseDamageCategory;
+    if (!DAMAGE_CATEGORIES.includes(baseCategory)) {
+      throw new Error(
+        `convolveTouchAttacks: damage category '${baseCategory}' is not one of `
+        + `${DAMAGE_CATEGORIES.join('/')}.`);
+    }
     outcomes.push({ probability: dist[damage], damage: cappedDamage,
       state: statefulCombatHealing && p.sourceState
         ? (dosCombatHealing

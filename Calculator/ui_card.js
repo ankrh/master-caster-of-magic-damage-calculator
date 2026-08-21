@@ -16,6 +16,25 @@ function readAbilitiesFromDOM(prefix) {
   return result;
 }
 
+// The DOS-shaped shared slot's type, as the derivation input wants it.
+//
+// In the DOS versions the `#*RtbType` select *is* that slot, and its value is the answer. In the
+// modern versions it is not a control at all: it is hidden, and the card's real projectile
+// statement is the Ranged record's own selector. Since the two engine families' vocabularies
+// diverged (`SPEC.md`, *Deliberate deviations*) the shared-slot select cannot even hold the modern
+// tokens, so a modern Ranged record typed `magic` or `magic_lightning` would reach the derivation
+// as the empty string — and the record-level reads that ask what projectile the unit carries,
+// Alumni of Academy among them, would see no type. Where the modern selector names a projectile
+// the shared slot cannot, that is the projection; a Thrown or Breath statement, which only the
+// shared-slot select carries on a modern card, still comes from it.
+function sharedSlotRangedType(prefix) {
+  const dosValue = (document.getElementById(prefix + 'RtbType') || {}).value;
+  if (!document.getElementById('gameVersion').value.startsWith('com2')) return dosValue;
+  const modernValue = (document.getElementById(prefix + 'ModernRangedType') || {}).value;
+  return (MODERN_RANGED_TYPES.includes(modernValue) && !DOS_RANGED_TYPES.includes(modernValue))
+    ? modernValue : dosValue;
+}
+
 // Read DOM inputs and compute all effective stats for a unit.
 // Returns a stat object suitable for both display and resolveCombat.
 function readUnitStats(prefix, overrides) {
@@ -34,7 +53,7 @@ function readUnitStats(prefix, overrides) {
     level: el(prefix + 'Level').value,
     weapon: el(prefix + 'Weapon').value,
     armor: el(prefix + 'Armor').value,
-    rtbType: el(prefix + 'RtbType').value,
+    rtbType: sharedSlotRangedType(prefix),
     figs: el(prefix + 'Figs').value,
     atk: el(prefix + 'Atk').value,
     rtb: el(prefix + 'Rtb').value,
@@ -264,7 +283,7 @@ function dosSpecialValues(prefix, withReceived = true) {
   return dosSpecialAbilityValues({
     version,
     magnitude: parseInt(magEl.value, 10) || 0,
-    rangedType: (document.getElementById(prefix + 'RtbType') || {}).value,
+    rangedType: sharedSlotRangedType(prefix),
     consumers,
   });
 }

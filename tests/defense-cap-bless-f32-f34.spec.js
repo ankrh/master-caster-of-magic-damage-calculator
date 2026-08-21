@@ -136,7 +136,7 @@ test('F34 keeps Bless Defense spell-only in both modern versions', async ({ page
     });
     const channels = {
       melee: { unitType: 'fantastic_chaos', rangedType: 'none', thrownType: 'none', abilities: {} },
-      ranged: { unitType: 'fantastic_chaos', rangedType: 'magic_c', thrownType: 'none', abilities: {} },
+      ranged: { unitType: 'fantastic_chaos', rangedType: 'magic', thrownType: 'none', abilities: {} },
       breath: { unitType: 'fantastic_chaos', rangedType: 'none', thrownType: 'fire', abilities: {} },
       gaze: { unitType: 'fantastic_death', rangedType: 'none', thrownType: 'none', abilities: { deathGaze: -2 } },
     };

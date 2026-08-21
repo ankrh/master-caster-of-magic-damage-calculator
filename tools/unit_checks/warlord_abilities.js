@@ -53,6 +53,17 @@ function runWarlordUnitAbilityChecks(ctx) {
   const wanderer = evalInContext(ctx,
     "Object.values(WARLORD_UNITS_DATA).find(u => u.heroTypeId === 48)");
   assertEqual(wanderer.name, 'Wanderer', 'Warlord hero type 48 is Wanderer');
+  // `UNITS.INI [362]` states `RangedType=30` with `Ranged=0`, and `RangedType.INI [30]` is
+  // `IsMagic=Yes` and nothing else -- the modern engine attaches no realm to a projectile, so
+  // id 30 is the lightning-bolt token. The Wanderer's permanent ranged type therefore has a
+  // roster home rather than being projected by the Marionette package (F107), and the fixture
+  // below states the record the roster ships instead of an empty one.
+  assertEqual(wanderer.ranged, undefined, 'Wanderer roster record states no ranged strength');
+  assertEqual(wanderer.ranged_type, 'Magic-lightning',
+    'Wanderer roster record carries UNITS.INI RangedType=30 at zero strength');
+  const wandererRangedType = evalInContext(ctx,
+    `RANGED_TYPE_NORMALIZE[${JSON.stringify(wanderer.ranged_type)}]`);
+  assertEqual(wandererRangedType, 'magic_lightning', 'RangedType 30 is the lightning-bolt magical projectile');
   const wandererIdentity = ctx.createRosterUnitIdentity(version, wanderer);
   const marionetteUnit = (abilityOverrides = {}, inputOverrides = {}) => warlordUnit({
     name: wanderer.name,
@@ -60,8 +71,8 @@ function runWarlordUnitAbilityChecks(ctx) {
     unitType: 'hero',
     atk: wanderer.melee,
     rtb: 0,
-    rtbType: 'none',
-    modernAttacks: {},
+    rtbType: wandererRangedType,
+    modernAttacks: { ranged: { strength: 0, type: wandererRangedType } },
     def: wanderer.defense,
     res: wanderer.resist,
     hp: wanderer.hp,
@@ -88,13 +99,13 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(ownedMarionette.def, 6, 'Marionette adds floor(Base Skill / 50) armor');
   assertEqual(ownedMarionette.modernAttacks.ranged.strength, 3,
     'Marionette creates and boosts its conventional ranged field');
-  assertEqual(ownedMarionette.modernAttacks.ranged.type, 'magic_n',
-    'Nature-primary Marionette uses Nature magical ranged');
+  assertEqual(ownedMarionette.modernAttacks.ranged.type, 'magic',
+    'Nature-primary Marionette retypes the projectile to id 37, the plain magical token');
   const focusedMarionette = ctx.deriveUnitStats(marionetteUnit({ focusMagic: true }));
   assertEqual(focusedMarionette.modernAttacks.ranged.strength, 3,
     'Focus Magic overwrites phase-b Marionette ranged when persistent base ranged is empty');
-  assertEqual(focusedMarionette.modernAttacks.ranged.type, 'magic_s',
-    'Focus Magic empty-base overwrite replaces Marionette ranged with Sorcery');
+  assertEqual(focusedMarionette.modernAttacks.ranged.type, 'magic',
+    'Focus Magic empty-base overwrite replaces the Marionette retype with shot type 34');
   assertEqual(ownedMarionette.hp, 15,
     'Channeler Fantastic write makes Wanderer eligible for live-Fantastic Xenoveterinary');
   assertEqual(ownedMarionette.abilities.outlanderXenoveterinary, true,
@@ -128,8 +139,8 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Strayed Marionette receives the unconditional Transmute Equipment ranged-field write');
   assertEqual(strayedMarionette.modernAttacks.ranged.strength, 2,
     'Strayed Transmute Equipment activates Wanderer\'s latent ranged field');
-  assertEqual(strayedMarionette.modernAttacks.ranged.type, 'magic_c',
-    'Strayed Transmute Equipment retains Wanderer\'s Chaos ranged type 30');
+  assertEqual(strayedMarionette.modernAttacks.ranged.type, 'magic_lightning',
+    'Strayed Transmute Equipment retains Wanderer\'s roster ranged type 30');
   assertEqual(strayedMarionette.abilities.charmed, true,
     'Strayed Marionette receives persistent Charmed');
   const strayedTraceIds = strayedMarionette.statTrace.map(step => step.id);
@@ -309,7 +320,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // record's Thrown field, so this is the shape where the strength stays in the Ranged slot.
   const blazeThrownThreshold = abilities => ctx.deriveUnitStats(warlordUnit({
     atk: 1, def: 0,
-    modernAttacks: { ranged: { strength: 6, type: 'magic_s' }, thrown: { strength: 4, type: 'thrown' } },
+    modernAttacks: { ranged: { strength: 6, type: 'magic' }, thrown: { strength: 4, type: 'thrown' } },
     abilities,
   })).modernAttacks;
   const blazeAfterLightningBlade = blazeThrownThreshold({
@@ -516,7 +527,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtb: 5,
     abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
   }));
-  assertEqual(energyCannon.rangedType, 'beam', 'Energy Cannon converts ranged projectile to Beam');
+  assertEqual(energyCannon.rangedType, 'magic', 'Energy Cannon converts the projectile to id 40, beam energy');
   assertEqual(energyCannon.rtb, 7, 'Energy Cannon adds floor(50% base ranged strength)');
   assertEqual(energyCannon.abilities.energyCannonDestruction, -2,
     'Energy Cannon derives ranged-record Destruction from 30% ranged To-Hit');

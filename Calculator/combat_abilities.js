@@ -60,7 +60,18 @@ function woundedTopFigHP(remHP, hpPerFig) {
 // Mithril: +1 atk (melee, missile, boulder, thrown), +1 def
 // Adamantium: +2 atk (same types), +2 def
 // Dispatch wrapper only: the independently sourced formulas are the material cases below.
+// The option set of the `#aWeapon`/`#bWeapon` controls and of `MATRIX_WEAPON_OPTIONS`. Membership
+// is tested before the switch so `normal` — the loadout's "no material" member — keeps the zero
+// row in `default:` while a value outside the set stops the run instead of silently reading as an
+// unequipped unit (`SPEC.md`, *Out-of-range values stop the run*).
+const WEAPON_MATERIALS = Object.freeze(['normal', 'magic', 'mithril', 'adamantium']);
+
 function weaponBonus(type) {
+  if (!WEAPON_MATERIALS.includes(type)) {
+    throw new Error(
+      `weaponBonus: weapon material '${type}' is not one of ${WEAPON_MATERIALS.join('/')}, `
+      + `the option set of the Weapon Type control and of MATRIX_WEAPON_OPTIONS.`);
+  }
   switch (type) {
     // STAT-FORMULA[weaponBonus:magic]
     // PROVENANCE[weaponBonus:magic]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:69469f057ab9fbf0bae6bf1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:5cf2b9b947be869791070ddc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
@@ -71,9 +82,17 @@ function weaponBonus(type) {
     // STAT-FORMULA[weaponBonus:adamantium]
     // PROVENANCE[weaponBonus:adamantium]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:69469f057ab9fbf0bae6bf1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:5cf2b9b947be869791070ddc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
     case 'adamantium': return { atk: 2, def: 2, toHit: 10 };
-    default:           return { atk: 0, def: 0, toHit: 0 };
+    default:           return { atk: 0, def: 0, toHit: 0 };   // 'normal': no material
   }
 }
+
+// The six rungs of the experience ladder: the option set of the Unit Level control and of
+// `MATRIX_LEVEL_OPTIONS`. Membership is tested before `getLevelBonuses`' switches so `normal` --
+// level 1, Recruit -- keeps the zero row in each `default:` arm, while a seventh value stops the
+// run instead of being read as an unpromoted unit, which would hide the whole ladder behind a
+// plausible number (`SPEC.md`, *Out-of-range values stop the run*).
+const LEVEL_LADDER = Object.freeze(
+  ['normal', 'regular', 'veteran', 'elite', 'ultra_elite', 'champion']);
 
 // Level bonuses vary by game version.
 // CoM2 and Warlord are confirmed against their own Levelbonus.INI `[Normal]` sections — every
@@ -95,6 +114,11 @@ function weaponBonus(type) {
 // PROVENANCE[levelBonusDispatch]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b | Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
 // STAT-FORMULA[levelBonusDispatch]
 function getLevelBonuses(level, version) {
+  if (!LEVEL_LADDER.includes(level)) {
+    throw new Error(
+      `getLevelBonuses: experience level '${level}' has no row in the ${version} level table `
+      + `(expected one of ${LEVEL_LADDER.join('/')}).`);
+  }
   const isMoM = version.startsWith('mom_');
   const isWarlord = version.startsWith('com2_warlord');
   if (isMoM) {
@@ -163,9 +187,14 @@ function getLevelBonuses(level, version) {
   }
 }
 
+// `Ismagicalranged` (`Units.RecalculateUnits.pas:2968-2975`) and the DOS engines' shot-type band
+// `>= 30` both answer one question: is this projectile a magical one. The two engine families
+// spell their tokens differently — the modern rosters carry `magic`/`magic_lightning`, the DOS
+// rosters the realm split their `Battle_Unit_Attack_Magic_Realm` table really has — and this
+// predicate is called from both paths, so it names both vocabularies.
 function isMagicalRangedType(rangedType) {
-  return rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s'
-    || rangedType === 'beam';
+  return rangedType === 'magic' || rangedType === 'magic_lightning'
+    || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s';
 }
 
 // --- Live slot type reads (M14) ---
@@ -826,23 +855,37 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // (version/figs-dependent) are part of the `lionheart` step in stats_sequence.js.
   // Phase c — spell with no CAS implementation.
 
-  // Metal Fires / Flame Blade: +1 / +2 (MoM) or +3 (CoM/CoM2/Warlord) melee attack.
-  // Flame Blade supersedes Metal Fires.
-  // Missile/thrown/breath bonus and weapon upgrade are handled in stats.js (type-conditional).
-  // Both phase c: the melee bonus is binary. Warlord keeps three distinct displays:
-  // combat-cast Flame Blade, permanent Fiery Blade, and Fiery Fury (whose regular-unit
-  // effect grants the permanent Blade package). The latter's extra ranged effects are in
-  // stats.js; UnitCalc.CAS:331-333 gives fire breath only to the combat-cast variant.
+  // Flame Blade is one write to melee and secondary strength together, so the whole block is
+  // the `c:flameBlade` step in stats.js — its strength half needs the per-channel type tests
+  // this builder never receives. What stays here is the enchantment Flame Blade supersedes:
+  // the engine's Metal Fires block will not fire while `UE_FLAME_BLADE` is set.
   const warlordBlade = version && version.startsWith('com2_warlord')
     && (hasAbil(abilities, 'flameBladeWarlord') || hasAbil(abilities, 'fieryBlade'));
-  if (hasAbil(abilities, 'flameBlade') || warlordBlade) {
-    const bladeMelee = version && version.startsWith('com') ? 3 : 2;
-    abilityStep('flameBlade', 'c', { ...beforeHolyArmor, writes: ['atk'],
-      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', bladeMelee); } });
-  } else if (hasAbil(abilities, 'metalFires') && !identityPredicates.liveFantastic) {
+  if (!(hasAbil(abilities, 'flameBlade') || warlordBlade)
+    && hasAbil(abilities, 'metalFires') && !identityPredicates.liveFantastic) {
+    // One compiled block, one step. `unitcalc.c` 131:0x9065F is the whole of Metal Fires, and
+    // its `!FANTASTIC && !FLAME_BLADE` branch makes three writes: melee at 0x906C1, the
+    // missile/Thrown strength at 0x906FC, and `Weapon_Plus1 = 1` at 0x90723. The first two are
+    // this step; the third is not a stat write and sits with `metalFiresActive` in stats.js.
+    // The strength test is the engine's own — missile class or Thrown, so boulder, magic ranged
+    // and breath take nothing — and it reads the type live at this position, which is where
+    // the block stands: far after Flame Blade's at 0x8F56E, not beside it.
+    // The block is compiled into MoM 1.31 and CP 1.60 alone, which is `SCOPE_MOM` (`steps.js`).
     // PROVENANCE[metalFires]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8c88e810ad0fd6705c30bb95
-    abilityStep('metalFires', 'c', { ...beforeHolyArmor, writes: ['atk'],
-      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); } });
+    abilityStep('metalFires', 'c', { ...beforeHolyArmor, writes: ['atk', ...attackWrites],
+      apply: (u, ctx) => {
+        addToSlot(u, ctx, 'melee', 1);
+        const slots = ctx && ctx.slots;
+        const channels = (ctx && ctx.channels)
+          || [{ strengthField: 'rtb', rangedTypeField: 'rangedType',
+            thrownTypeField: 'thrownType', slots }];
+        for (const channel of channels) {
+          if (u[channel.rangedTypeField] === 'missile'
+            || u[channel.thrownTypeField] === 'thrown') {
+            u[channel.strengthField] += 1;
+          }
+        }
+      } });
   }
 
   // Blazing March: CoM/CoM2 combat enchantment. +3 melee attack to all units.

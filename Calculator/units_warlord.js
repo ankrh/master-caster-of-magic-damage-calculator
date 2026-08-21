@@ -72,7 +72,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 7,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Hero"
@@ -211,7 +211,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -292,7 +292,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 6,
     "to_hit": 20,
     "ranged": 7,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Hero",
@@ -350,7 +350,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 7,
     "to_hit": 10,
     "ranged": 6,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero"
@@ -376,7 +376,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 10,
     "to_hit": 10,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -431,7 +431,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -518,7 +518,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 6,
     "to_hit": 10,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -545,7 +545,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Hero",
@@ -649,7 +649,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 10,
     "to_hit": 10,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -677,7 +677,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -704,7 +704,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 8,
     "to_hit": 10,
     "ranged": 7,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -757,7 +757,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 9,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 9,
     "abilities": [
       "Hero",
@@ -851,7 +851,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 10,
     "to_hit": 20,
     "ranged": 8,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Hero",
@@ -904,7 +904,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -934,7 +934,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 7,
     "to_hit": 10,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -1200,7 +1200,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 6,
     "to_hit": 10,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "thrown": 1,
     "thrown_breath": 1,
@@ -1348,7 +1348,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -1376,7 +1376,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 5,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Caster=14"
@@ -1501,7 +1501,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 2,
     "resist": 5,
     "ranged": 1,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Negate First Strike"
@@ -1526,7 +1526,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 6,
     "ranged": 2,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Large Shield"
@@ -1551,7 +1551,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 6,
     "ranged": 2,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Negate First Strike"
@@ -1576,7 +1576,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 2,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "First Strike"
@@ -1601,7 +1601,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 10,
     "ranged": 6,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -1630,7 +1630,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 7,
     "ranged": 6,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Large Shield",
@@ -1680,7 +1680,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 9,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -1708,7 +1708,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 12,
     "to_hit": 10,
     "ranged": 6,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Flight",
@@ -1843,7 +1843,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 5,
     "resist": 7,
     "ranged": 5,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "fire_breath": 2,
     "thrown_breath": 2,
@@ -1876,7 +1876,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 9,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "fire_breath": 2,
     "thrown_breath": 2,
@@ -2352,7 +2352,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 8,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Large Shield",
@@ -2379,7 +2379,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -2558,7 +2558,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Forester",
@@ -2757,7 +2757,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 5,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -2785,7 +2785,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 7,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Large Shield",
@@ -3141,7 +3141,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 2,
     "resist": 5,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Water Walking",
@@ -3272,7 +3272,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 11,
     "ranged": 4,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -3301,7 +3301,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 11,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Large Shield",
@@ -3578,7 +3578,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -3606,7 +3606,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 8,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Large Shield",
@@ -3773,7 +3773,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 7,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -3940,7 +3940,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 20,
     "ranged": 13,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Fire Immunity",
@@ -3973,7 +3973,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 7,
     "to_hit": 10,
     "ranged": 10,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Poison Immunity",
@@ -4090,7 +4090,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 20,
     "ranged": 18,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Fire Immunity",
@@ -4215,7 +4215,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 6,
     "to_hit": 10,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Illusion Immunity",
@@ -4371,7 +4371,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 6,
     "to_hit": 20,
     "ranged": 5,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Illusion Immunity",
@@ -4444,7 +4444,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 13,
     "to_hit": 30,
     "ranged": 20,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Missile Immunity",
@@ -4652,7 +4652,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 8,
     "to_hit": 10,
     "ranged": 4,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Flight",
@@ -4994,7 +4994,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 20,
     "ranged": 18,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 5,
     "abilities": [
       "Armor Piercing",
@@ -5057,7 +5057,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 12,
     "to_hit": 30,
     "ranged": 15,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "Flight",
@@ -5305,7 +5305,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 2,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Illusion Immunity",
@@ -5678,7 +5678,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 8,
     "ranged": 5,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -5992,7 +5992,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 8,
     "ranged": 4,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -6021,7 +6021,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 7,
     "ranged": 5,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -6051,7 +6051,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 7,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "fire_breath": 1,
     "thrown_breath": 1,
@@ -6083,7 +6083,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 9,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -6111,7 +6111,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 8,
     "ranged": 7,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Large Shield",
@@ -6137,7 +6137,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 6,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "fire_breath": 1,
     "thrown_breath": 1,
@@ -6166,7 +6166,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 5,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Lucky",
@@ -6193,7 +6193,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 6,
     "to_hit": 10,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Forester",
@@ -6219,7 +6219,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 4,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Caster=14"
@@ -6244,7 +6244,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 8,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Caster=14"
@@ -6269,7 +6269,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 3,
     "resist": 5,
     "ranged": 4,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Caster=14"
@@ -6516,7 +6516,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 9,
     "ranged": 5,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Large Shield",
@@ -6568,7 +6568,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 20,
     "ranged": 13,
-    "ranged_type": "Magic(S)",
+    "ranged_type": "Magic",
     "ammo": 5,
     "abilities": [
       "Illusion Immunity",
@@ -6770,7 +6770,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 16,
     "to_hit": 30,
     "ranged": 6,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "fire_breath": 9,
     "thrown_breath": 9,
@@ -6816,7 +6816,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 17,
     "to_hit": 30,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "fire_breath": 15,
     "thrown_breath": 15,
@@ -7006,7 +7006,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 20,
     "to_hit": 30,
     "ranged": 18,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 5,
     "lightning_breath": 21,
     "thrown_breath": 21,
@@ -7056,7 +7056,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 7,
     "ranged": 4,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Water Walking",
@@ -7086,7 +7086,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 1,
     "resist": 6,
     "ranged": 1,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "category": "Dark Elf",
     "moves": 3,
@@ -7326,7 +7326,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 12,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -7385,7 +7385,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 10,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 9,
     "abilities": [
       "Hero",
@@ -7420,7 +7420,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 10,
     "to_hit": 10,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -7584,7 +7584,7 @@ const WARLORD_UNITS_DATA = {
     "to_block": 10,
     "to_hit": 40,
     "ranged": 20,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 8,
     "abilities": [
       "First Strike",
@@ -7663,7 +7663,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 10,
     "to_hit": 10,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Hero",
@@ -7695,7 +7695,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 10,
     "ranged": 10,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 6,
     "fire_breath": 14,
     "lightning_breath": 8,
@@ -8003,7 +8003,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 2,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Healer",
@@ -8142,7 +8142,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 7,
     "to_hit": 20,
     "ranged": 9,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 10,
     "thrown": 9,
     "thrown_breath": 9,
@@ -8174,7 +8174,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 6,
     "resist": 9,
     "ranged": 8,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 10,
     "fire_breath": 6,
     "thrown_breath": 6,
@@ -8421,7 +8421,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 4,
     "resist": 6,
     "ranged": 3,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Forester",
@@ -8450,7 +8450,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 5,
     "resist": 8,
     "ranged": 4,
-    "ranged_type": "Magic(N)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Forester",
@@ -8506,7 +8506,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 5,
     "resist": 8,
     "ranged": 6,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Illusion Immunity",
@@ -8871,7 +8871,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 9,
     "to_hit": 20,
     "ranged": 18,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic-lightning",
     "ammo": 5,
     "abilities": [
       "First Strike",
@@ -8938,7 +8938,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 8,
     "to_hit": 10,
     "ranged": 8,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 4,
     "abilities": [
       "Missile Immunity",
@@ -9240,7 +9240,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 6,
     "to_block": -10,
     "ranged": 3,
-    "ranged_type": "Magic(C)",
+    "ranged_type": "Magic",
     "ammo": 6,
     "abilities": [
       "Illusion",
@@ -9462,6 +9462,7 @@ const WARLORD_UNITS_DATA = {
     "defense": 5,
     "resist": 10,
     "to_hit": 10,
+    "ranged_type": "Magic-lightning",
     "abilities": [
       "Hero",
       "Stealth",

@@ -323,7 +323,7 @@ definePresets({
   trueSightRangedToHitWarlord: {
     desc: 'True Sight (Warlord): ranged 1 at base 30% + True Sight 5% To-Hit vs def 0 → E[dmg] = 0.35 (without True Sight, 0.30)',
     version: V_WARLORD,
-    a: { rtbType:'magic_s', rtb:1, hp:10, abilities: { trueSight: true } },
+    a: { rtbType:'magic', rtb:1, hp:10, abilities: { trueSight: true } },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.350 },
@@ -361,7 +361,7 @@ definePresets({
   eyeOfHeavenTrueSightToHitWarlord: {
     desc: 'Eye of Heaven (Warlord): grants True Sight, so ranged 1 at base 30% + 5% To-Hit vs def 0 → E[dmg] = 0.35 (without Eye of Heaven, 0.30)',
     version: V_WARLORD,
-    a: { rtbType:'magic_s', rtb:1, hp:10, abilities: { eyeOfHeaven: true } },
+    a: { rtbType:'magic', rtb:1, hp:10, abilities: { eyeOfHeaven: true } },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.350 },
@@ -555,7 +555,7 @@ definePresets({
   supremeLightCasterRangedCoM2: {
     desc: 'Supreme Light (CoM2): Caster unit gains +2 ranged. rtb 1 → 3, 100% hit vs 0 def → 3 dmg',
     version: V_COM2,
-    a: { rtbType:'magic_c', rtb:1, toHitRtbMod:70, hp:10, abilities: { supremeLight: true, caster: true } },
+    a: { rtbType:'magic', rtb:1, toHitRtbMod:70, hp:10, abilities: { supremeLight: true, caster: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -638,9 +638,9 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   overlandDisciplineVeteranMagicRangedNoBonusCoM2: {
-    desc: 'Overland Discipline (CoM2): Veteran+ does not boost magical ranged. magic_s 1 + veteran 2 = 3, not 4',
+    desc: 'Overland Discipline (CoM2): Veteran+ does not boost magical ranged. magic 1 + veteran 2 = 3, not 4',
     version: V_COM2,
-    a: { rtbType:'magic_s', rtb:1, toHitRtbMod:70, hp:10, level:'veteran', abilities: { discipline: 'overland' } },
+    a: { rtbType:'magic', rtb:1, toHitRtbMod:70, hp:10, level:'veteran', abilities: { discipline: 'overland' } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -714,17 +714,17 @@ definePresets({
 
   // --- Focus Magic ---
   focusMagicMagicRangedCoM2: {
-    desc: 'Focus Magic (CoM2): magical ranged gets +3. magic_s 4 → 7, 100% hit vs 0 def → 7.0',
+    desc: 'Focus Magic (CoM2): magical ranged gets +3. magic 4 → 7, 100% hit vs 0 def → 7.0',
     version: V_COM2,
-    a: { rtbType:'magic_s', rtb:4, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
+    a: { rtbType:'magic', rtb:4, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   focusMagicMagicalRangedIgnoresLiveStrengthWarlord: {
-    desc: 'Focus Magic (Warlord): the magical-ranged +3 is the fourth arm of the ranged branch ($0059AAA3), reached on `B.ranged <> 0` and a magical `B.rangedtype` — both permanent-record reads, and the arm makes no live-strength test of its own (Units.RecalculateUnits.pas:874-909). Plague is region `b`, so its −3 has already driven the magic_c 2 to −1 by the time the branch runs; the arm still adds 3, and the region-`e` clamp settles it at 2. Ranged mode at 100% To Hit → 2.0. Gating the +3 on live strength instead loses the attack outright for 0.0, and removing Focus Magic does exactly that.',
+    desc: 'Focus Magic (Warlord): the magical-ranged +3 is the fourth arm of the ranged branch ($0059AAA3), reached on `B.ranged <> 0` and a magical `B.rangedtype` — both permanent-record reads, and the arm makes no live-strength test of its own (Units.RecalculateUnits.pas:874-909). Plague is region `b`, so its −3 has already driven the magic 2 to −1 by the time the branch runs; the arm still adds 3, and the region-`e` clamp settles it at 2. Ranged mode at 100% To Hit → 2.0. Gating the +3 on live strength instead loses the attack outright for 0.0, and removing Focus Magic does exactly that.',
     version: V_WARLORD,
-    a: { rtbType:'magic_c', rtb:2, toHitRtbMod:80, hp:10,
+    a: { rtbType:'magic', rtb:2, toHitRtbMod:80, hp:10,
       abilities: { focusMagic: true, plague: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
@@ -738,7 +738,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   focusMagicConvertsMissileCoM2: {
-    desc: 'Focus Magic (CoM2): missile 5 converts to magic_s 5, bypassing Missile Immunity → 5.0',
+    desc: 'Focus Magic (CoM2): missile 5 converts to magic 5, bypassing Missile Immunity → 5.0',
     version: V_COM2,
     a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10, abilities: { missileImmunity: true } },
@@ -746,7 +746,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   focusMagicPreservesLowMissileCoM2: {
-    desc: 'Focus Magic (CoM2): missile 1 converts to magic_s at the same strength, bypassing Missile Immunity → 1.0. Raising it to the CoM 1 minimum of 3 would deal 3.0; failing to convert it would deal 0.',
+    desc: 'Focus Magic (CoM2): missile 1 converts to magic at the same strength, bypassing Missile Immunity → 1.0. Raising it to the CoM 1 minimum of 3 would deal 3.0; failing to convert it would deal 0.',
     version: V_COM2,
     a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10, abilities: { missileImmunity: true } },
@@ -754,7 +754,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   focusMagicConvertsThrownCoM2: {
-    desc: 'Focus Magic (CoM2): thrown 5 converts to magic_s 5, so ranged mode uses a magical ranged attack and bypasses Missile Immunity → 5.0',
+    desc: 'Focus Magic (CoM2): thrown 5 converts to magic 5, so ranged mode uses a magical ranged attack and bypasses Missile Immunity → 5.0',
     version: V_COM2,
     a: { rtbType:'thrown', rtb:5, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10, abilities: { missileImmunity: true } },
@@ -771,7 +771,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   focusMagicGrantsRangedCoM2: {
-    desc: 'Focus Magic (CoM2): no qualifying attack grants strength-3 magic_s ranged; at base 30% To Hit that averages 0.9 dmg',
+    desc: 'Focus Magic (CoM2): no qualifying attack grants strength-3 magic ranged; at base 30% To Hit that averages 0.9 dmg',
     version: V_COM2,
     a: { hp:10, abilities: { focusMagic: true } },
     b: { hp:10 },
@@ -779,7 +779,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.900 },
   },
   focusMagicCreationAfterLevelCoM2: {
-    desc: 'Ordered Focus Magic (CoM2): Champion on an attack-less unit resolves before Focus creates strength-3 magic_s ranged, so the new field gets no level bonus. At 100% hit → 3.0',
+    desc: 'Ordered Focus Magic (CoM2): Champion on an attack-less unit resolves before Focus creates strength-3 magic ranged, so the new field gets no level bonus. At 100% hit → 3.0',
     version: V_COM2,
     a: { atk:0, level:'champion', toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10 },
@@ -795,31 +795,70 @@ definePresets({
   },
   // The two members below are one fixture under two versions, which is what a version-difference
   // pair has to be. A doom gaze is held differently by the two engines — the DOS record keeps its
-  // strength in the shared RTB slot while CoM2 keeps it in the ability row — so the fixture states
-  // both, and each engine reads the one it has. Selecting the type-104 slot also arms the stoning
+  // strength in the shared RTB slot while CoM2 keeps it in the ability row — so each half states
+  // the same unit in its own engine's notation. Selecting the type-104 slot also arms the stoning
   // and death kill loops in the DOS build, so the defender's Resistance is put out of their reach
-  // and only the doom strength is left to measure.
+  // and only the doom strength is left to measure. Both engines reach `+3` on the gaze, so the
+  // difference the pair measures is **what else the block does**, which ranged mode exposes.
   focusMagicDoomGazeCoM: {
-    desc: 'Focus Magic (CoM): the +3 doom-gaze clause is CoM2\'s, not CoM 1\'s, so the same gaze of strength 2 is still 2 here — the paired focusMagicDoomGazeCoM2 runs the same unit on the engine that does add the +3 and deals 5. The gaze rides the DOS shared slot here, so this half states it with the rtbType/rtb pair; CoM2 has a dedicated Doom Gaze field and its half states it with the ability alone. Removing Focus Magic leaves 2 either way, which is the claim; the version pair is what makes the number falsifiable. Melee mode: gazes do not fire in the ranged sequence.',
+    desc: 'Focus Magic (CoM 1): one three-way branch, and a doom-gaze template takes its first arm — the unit type\'s ranged type 104 satisfies `>= 30 and <> 100` (com1:0x8F825/0x8F829) — so the gaze goes 2 → 5 and **no ranged attack is created**. Ranged mode at 100% To Hit therefore falls back to melee and only the gaze lands, for 5.0. The paired focusMagicDoomGazeCoM2 runs the same unit on the engine whose gaze clause and ranged-creation branch are independent tests, so there the created strength-3 magic attack fires and the gaze does not, for 3.0. Removing Focus Magic leaves 2 here; retyping the slot as arm 3 would leaves the gaze at 2 and fires a created 3.',
     version: V_COM,
-    a: { rtbType:'gaze_multiple', rtb:2, hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
-    b: { def:10, res:50, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
-  },
-  focusMagicDoomGazeCoM2: {
-    desc: 'Focus Magic (CoM2): the doomgaze +3 test ($0059A66D) and the ranged-creation branch ($0059A790) are independent tests that both run (Units.RecalculateUnits.pas:873-910), so the gaze bonus is not traded away for the created attack. Melee mode isolates the gaze half: doom gaze 2 → 5 exact damage, against 2 with Focus Magic off, and against the 2 the CoM 1 member of this pair reports for the same unit, which that half states through the DOS shared slot because CoM 1 has no separate gaze field. Strength 2 rather than 4 keeps this distinct from focusMagicDoomGazeBoostCoM2; the created ranged attack is measured by focusMagicDoomGazeRangedBranchCoM2.',
-    version: V_COM2,
-    a: { hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
-    b: { def:10, res:50, hp:10 },
+    a: { rtbType:'gaze_multiple', rtb:2, toHitRtbMod:70, hp:10,
+      abilities: { focusMagic: true, doomGaze: 2 } },
+    b: { def:0, res:50, hp:10 },
+    rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
+  focusMagicDoomGazeCoM2: {
+    desc: 'Focus Magic (CoM2): the doomgaze +3 test ($0059A66D) and the ranged-creation branch ($0059A790) are independent tests that both run (Units.RecalculateUnits.pas:873-910), so a doom-gaze unit gains the strength-3 magic ranged attack as well. Ranged mode at 100% To Hit fires that attack and the gaze does not, for 3.0 — against the 5.0 the CoM 1 member of this pair reports for the same unit, whose single branch spends itself on the gaze and creates nothing. Without Focus Magic there is no ranged attack, the exchange falls back to melee and the bare gaze deals 2.0. The gaze half alone is focusMagicDoomGazeBoostCoM2.',
+    version: V_COM2,
+    a: { toHitRtbMod:70, hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
+    b: { def:0, res:50, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
   focusMagicDoomGazeRangedBranchCoM2: {
-    desc: 'The other half of the same independence: a doom-gaze-only CoM2 unit still gets Focus Magic\'s created strength-3 magic_s ranged attack ($0059A790), so the +3 gaze clause does not consume it. Ranged mode at 100% hit → 3.0; without Focus Magic the unit has no ranged attack, the exchange falls back to melee and only the bare gaze lands, for 2.0.',
+    desc: 'The other half of the same independence: a doom-gaze-only CoM2 unit still gets Focus Magic\'s created strength-3 magic ranged attack ($0059A790), so the +3 gaze clause does not consume it. Ranged mode at 100% hit → 3.0; without Focus Magic the unit has no ranged attack, the exchange falls back to melee and only the bare gaze lands, for 2.0.',
     version: V_COM2,
     a: { hp:10, toHitRtbMod:70, abilities: { focusMagic: true, doomGaze: 2 } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  // Arm 1 of CoM 1's three-way branch tests the **unit type's** ranged type for
+  // `>= RAT_MAGIC_FIRST and <> RAT_THROWN` (com1:0x8F825, com1:0x8F829, both signed), so it admits
+  // 101-105 — the two breaths and all three gazes — beside magical ranged, and it makes no
+  // strength test. The four presets below hold that reach and the two shapes of arm 3.
+  focusMagicStoningGazeCoM: {
+    desc: 'Focus Magic (CoM 1): arm 1 admits a gaze template, so a stoning gaze of 2 becomes 5 exact damage. The gaze rides the DOS shared slot, which is the value the +3 lands on (com1:0x8F82D). Removing Focus Magic leaves 2, and so does treating the gaze as arm 3\'s fallback — retyping the slot to a magical ranged attack leaves the gaze itself at 2. Melee mode: gazes do not fire in the ranged sequence. Resistance 50 puts the petrify roll out of reach, so the gaze strength is all that is measured.',
+    version: V_COM,
+    a: { rtbType:'gaze_stoning', rtb:2, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
+    b: { def:0, res:50, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  focusMagicBreathIgnoresLiveStrengthCoM: {
+    desc: 'Focus Magic (CoM 1): arm 1 makes no strength test at all (com1:0x8F825 straight to the +3 at com1:0x8F82D), so a fire-breath template standing at strength 0 still takes it. Melee 1 at 100% plus the breath raised 0 → 3 deals 4.0; a fabricated `strength > 0` gate on the arm leaves the breath at 0 for 1.0, which is also what removing Focus Magic gives.',
+    version: V_COM,
+    a: { atk:1, toHitMod:70, rtbType:'fire', rtb:0, toHitRtbMod:70, hp:10,
+      abilities: { focusMagic: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  focusMagicConvertsZeroThrownCoM: {
+    desc: 'Focus Magic (CoM 1): a Thrown template is excluded from arm 1 by `base_rt <> RAT_THROWN` (com1:0x8F829) and from arm 2 by `> RAT_THROWN` (com1:0x8F839), so it falls to arm 3 whatever its strength — retyped to shot type 34 and floored at 3 (com1:0x8F840, com1:0x8F84C). Ranged mode at 100% To Hit → 3.0. Gating the conversion on positive Thrown strength leaves the unit with no ranged attack for 0.0, which is also what removing Focus Magic gives.',
+    version: V_COM,
+    a: { rtbType:'thrown', rtb:0, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  focusMagicFloorsTypelessSlotCoM: {
+    desc: 'Focus Magic (CoM 1): arm 3 floors rather than assigns — `if (bu->ranged < 3) bu->ranged = 3` (com1:0x8F845, com1:0x8F84C) — so a typeless slot already carrying 4 keeps 4 after the retype to shot type 34. Ranged mode at 100% To Hit → 4.0; assigning 3 instead cuts it to 3.0, and removing Focus Magic leaves the slot typeless with no ranged attack, for 0.0.',
+    version: V_COM,
+    a: { rtbType:'none', rtb:4, toHitRtbMod:70, hp:10, abilities: { focusMagic: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
 
   // --- Blazing Eyes ---
@@ -861,9 +900,9 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   innerPowerLightningResistRangedCoM2: {
-    desc: 'Inner Power (CoM2): Lightning Resist unit gets +3 to magical ranged, so magic_c 2 becomes 5 → 5 dmg',
+    desc: 'Inner Power (CoM2): Lightning Resist unit gets +3 to magical ranged, so magic 2 becomes 5 → 5 dmg',
     version: V_COM2,
-    a: { rtbType:'magic_c', rtb:2, toHitRtbMod:70, hp:10, abilities: { innerPower: true, lightningResist: true } },
+    a: { rtbType:'magic', rtb:2, toHitRtbMod:70, hp:10, abilities: { innerPower: true, lightningResist: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -892,9 +931,9 @@ definePresets({
 
   // --- Orihalcon ---
   orihalconMagicRangedBonusCoM2: {
-    desc: 'Orihalcon (CoM2): magical ranged gets +2 strength, so magic_s 2 becomes 4 → 4 dmg',
+    desc: 'Orihalcon (CoM2): magical ranged gets +2 strength, so magic 2 becomes 4 → 4 dmg',
     version: V_COM2,
-    a: { rtbType:'magic_s', rtb:2, toHitRtbMod:70, hp:10, armor:'orihalcon' },
+    a: { rtbType:'magic', rtb:2, toHitRtbMod:70, hp:10, armor:'orihalcon' },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -915,7 +954,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   orihalconFocusMagicConvertedCoM2: {
-    desc: 'Orihalcon (CoM2): Focus Magic preserves missile strength 2 while converting it to magic_s, then Orihalcon adds +2 → 4 dmg',
+    desc: 'Orihalcon (CoM2): Focus Magic preserves missile strength 2 while converting it to magic, then Orihalcon adds +2 → 4 dmg',
     version: V_COM2,
     a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10, armor:'orihalcon', abilities: { focusMagic: true } },
     b: { hp:10 },
@@ -932,9 +971,9 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   reinforceMagicMagicRangedCoM2: {
-    desc: 'Reinforce Magic (CoM2): magical ranged gets +2 strength, so magic_s 2 becomes 4 → 4 dmg',
+    desc: 'Reinforce Magic (CoM2): magical ranged gets +2 strength, so magic 2 becomes 4 → 4 dmg',
     version: V_COM2,
-    a: { rtbType:'magic_s', rtb:2, toHitRtbMod:70, hp:10, abilities: { reinforceMagic: true } },
+    a: { rtbType:'magic', rtb:2, toHitRtbMod:70, hp:10, abilities: { reinforceMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -948,7 +987,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   reinforceMagicFocusConvertedCoM2: {
-    desc: 'Reinforce Magic (CoM2): Focus Magic preserves missile strength 2 while converting it to magic_s, then Reinforce Magic adds +2 → 4 dmg',
+    desc: 'Reinforce Magic (CoM2): Focus Magic preserves missile strength 2 while converting it to magic, then Reinforce Magic adds +2 → 4 dmg',
     version: V_COM2,
     a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10, abilities: { reinforceMagic: true, focusMagic: true } },
     b: { hp:10 },

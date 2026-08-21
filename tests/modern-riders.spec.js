@@ -86,13 +86,13 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
     });
     const rangedPlain = makeUnit(version, 'a', {
       rtb: 1,
-      rtbType: 'magic_c',
-      modernAttacks: { ranged: { strength: 1, type: 'magic_c' } },
+      rtbType: 'magic',
+      modernAttacks: { ranged: { strength: 1, type: 'magic' } },
     });
     const rangedRiders = makeUnit(version, 'a', {
       rtb: 1,
-      rtbType: 'magic_c',
-      modernAttacks: { ranged: { strength: 1, type: 'magic_c' } },
+      rtbType: 'magic',
+      modernAttacks: { ranged: { strength: 1, type: 'magic' } },
       abilities: riderAbilities,
     });
     const rangedOpts = { version, isRanged: true, wallOfFire: false, distance: 1 };
@@ -262,8 +262,8 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
     const rangedAttacker = makeUnit(version, 'a', {
       figs: 4,
       rtb: 1,
-      rtbType: 'magic_c',
-      modernAttacks: { ranged: { strength: 1, type: 'magic_c' } },
+      rtbType: 'magic',
+      modernAttacks: { ranged: { strength: 1, type: 'magic' } },
       abilities: { destruction: 0 },
     });
     const rangedTarget = makeUnit(version, 'b', { figs: 4, def: 1, res: 5, hp: 10 });

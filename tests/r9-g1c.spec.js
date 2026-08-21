@@ -87,14 +87,14 @@ test('R9-G1c preserves late-transform source gates, arithmetic, order, and UI st
   expect(report.convertedThrown).toBe(2);
   expect(report.nightshade).toBe(6);
   expect(report.dragon).toBe(2);
-  expect(report.cannonWithRanged).toBe('beam');
+  expect(report.cannonWithRanged).toBe('magic');
   expect(report.cannonNoRanged).toBe(false);
   expect(report.cannonNoRangedStrength).toBe(0);
   expect(report.cannonRangedDestruction).toBe(-2);
   expect(report.cannonGeneralDestruction).toBeUndefined();
   expect(report.com1Strength).toBe(3);
-  expect(report.com1Order.indexOf('weapon')).toBeLessThan(report.com1Order.indexOf('flameBlade:ranged'));
-  expect(report.com1Order.indexOf('flameBlade:ranged')).toBeLessThan(report.com1Order.indexOf('focusMagic'));
+  expect(report.com1Order.indexOf('weapon')).toBeLessThan(report.com1Order.indexOf('flameBlade'));
+  expect(report.com1Order.indexOf('flameBlade')).toBeLessThan(report.com1Order.indexOf('focusMagic'));
   expect(report.modernOrder.indexOf('focusMagic')).toBeLessThan(report.modernOrder.indexOf('weapon'));
   expect(report.restoredNightshade).toBe('3');
   expect(report.nightshadeType).toBe('number');

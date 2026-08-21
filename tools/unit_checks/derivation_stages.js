@@ -101,7 +101,7 @@ function runDerivationStageChecks(ctx) {
 
     const beforeSupremeLight = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, atk: 1, def: 1, res: 3,
-      rtb: 1, rtbType: 'magic_n', abilities: { mislead: true, supremeLight: true },
+      rtb: 1, rtbType: 'magic', abilities: { mislead: true, supremeLight: true },
     }));
     const supremeIndex = beforeSupremeLight.statTrace
       .findIndex(entry => entry.id === 'supremeLight');

@@ -61,7 +61,7 @@ function runPhaseChecks(ctx) {
   assertEqual(com1Result.totalDmgToB[5], 1,
     'CoM 1 Blood Lust doubles melee but leaves Thrown undoubled');
 
-  for (const type of ['missile', 'magic_c']) {
+  for (const type of ['missile', 'magic']) {
     const rangedAttacker = ctx.deriveUnitStats(baseUnitInput({
       version: 'com2_1.05.11', atk: 0, def: 0, hp: 10, toHitRtbMod: 70,
       abilities: { bloodLust: true },
@@ -97,7 +97,7 @@ function runPhaseChecks(ctx) {
   // R3.4: cover the complete modern roster boundary, not just a hand-authored fixture.
   // Every source channel must make it through derivation; every non-ranged channel must
   // surface as a melee phase, and a conventional ranged channel must remain selectable.
-  const typeMap = { Missile: 'missile', Boulder: 'boulder', 'Magic(C)': 'magic_c', 'Magic(N)': 'magic_n', 'Magic(S)': 'magic_s' };
+  const typeMap = { Missile: 'missile', Boulder: 'boulder', Magic: 'magic', 'Magic-lightning': 'magic_lightning' };
   const warlordRoster = Object.values(evalInContext(ctx, 'WARLORD_UNITS_DATA'));
   const multiChannelRoster = warlordRoster.filter(unit =>
     ['ranged', 'thrown', 'fire_breath', 'lightning_breath'].filter(key => Number(unit[key]) > 0).length > 1);

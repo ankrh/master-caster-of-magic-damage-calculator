@@ -79,6 +79,9 @@ const enchantSpecs = controlSpecs(read('ENCHANTMENT_DEFS'));
 
 // Unit shapes: the attack-channel configuration is what most type predicates read, so the
 // spread covers an empty secondary slot, each conventional type, and a full modern channel set.
+// A version-resolved placeholder: `magic` in CoM2/Warlord, `magic_s` in the DOS builds.
+const MAGICAL_RANGED = '@magical';
+
 const SHAPES = [
   { name: 'bare', over: { atk: 5, rtb: 0, rtbType: 'none', def: 4, res: 6, hp: 3, figs: 6 } },
   { name: 'missile', over: { atk: 5, rtb: 7, rtbType: 'missile', def: 4, res: 6, hp: 3, figs: 6 } },
@@ -86,7 +89,10 @@ const SHAPES = [
   { name: 'thrown', over: { atk: 5, rtb: 4, rtbType: 'thrown', def: 4, res: 6, hp: 3, figs: 6 } },
   { name: 'fire', over: { atk: 5, rtb: 5, rtbType: 'fire', def: 4, res: 6, hp: 3, figs: 2 } },
   { name: 'lightning', over: { atk: 5, rtb: 5, rtbType: 'lightning', def: 4, res: 6, hp: 3, figs: 2 } },
-  { name: 'magic_s', over: { atk: 5, rtb: 8, rtbType: 'magic_s', def: 4, res: 6, hp: 3, figs: 1 } },
+  // Resolved per version in baseInput(): the two engine families spell the magical class
+  // differently, and a shape naming the other family's token exercises no magical branch
+  // at all. The shape count is fixed, so the seeded pass below keeps its selection.
+  { name: 'magical', over: { atk: 5, rtb: 8, rtbType: MAGICAL_RANGED, def: 4, res: 6, hp: 3, figs: 1 } },
   {
     name: 'channels',
     over: {
@@ -118,11 +124,15 @@ const ENVS = [
   { name: 'node-dark', over: { nodeAura: 'chaos', darkness: true } },
   { name: 'truelight-warp', over: { trueLight: true, warpReality: true } },
   { name: 'enemy-night', over: { enemyEternalNight: true } },
-  { name: 'walls-ranged', over: { cityWalls: 'stone', rangedCheck: true, rangedDist: 3 } },
+  // `'3'` is the intact-wall position. This carried `'stone'`, which names no City walls
+  // option, so the env produced bonus 0 and never exercised the axis (F113).
+  { name: 'walls-ranged', over: { cityWalls: '3', rangedCheck: true, rangedDist: 3 } },
   { name: 'chaos-channels', over: { chaosChannels: 'demonWings' } },
 ];
 
 function baseInput(version, over) {
+  const resolved = over.rtbType === MAGICAL_RANGED
+    ? { ...over, rtbType: version.startsWith('com2') ? 'magic' : 'magic_s' } : over;
   return {
     prefix: 'a',
     version,
@@ -151,7 +161,7 @@ function baseInput(version, over) {
     rangedDist: 1,
     warpReality: false,
     chaosChannels: 'none',
-    ...over,
+    ...resolved,
   };
 }
 

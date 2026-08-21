@@ -44,8 +44,7 @@ const F20_PROBE_ABILITIES = {
 const F20_SOURCE_ANCHORS = {
   'mom_1.31': {
     c: ['level', 'lucky', 'weapon', 'chaosSurge', 'holyWeapon',
-      'blackChannels', 'ironSkin', 'flameBlade',
-      'flameBlade:ranged', 'giantStrength',
+      'blackChannels', 'ironSkin', 'flameBlade', 'giantStrength',
       'chaosChannels:armor', 'lionheart', 'holyArmor',
       'berserk', 'nodeAura', 'highPrayer', 'trueLight', 'darkness',
       'warpReality', 'blackPrayer', 'vertigo', 'weakness',
@@ -53,7 +52,7 @@ const F20_SOURCE_ANCHORS = {
   },
   'mom_cp_1.60.00': {
     c: ['level', 'lucky', 'weapon', 'chaosSurge', 'blackChannels', 'ironSkin',
-      'flameBlade', 'flameBlade:ranged', 'giantStrength',
+      'flameBlade', 'giantStrength',
       'chaosChannels:armor', 'lionheart', 'holyArmor',
       'berserk', 'holyWeapon', 'nodeAura',
       'highPrayer', 'trueLight', 'darkness', 'warpReality',
@@ -65,7 +64,7 @@ const F20_SOURCE_ANCHORS = {
     // Chaos Channels armor mutation 0x8F735, Land Link 0x8F75C, then Mystic Surge's
     // stat-writing half 0x8F795, then Holy Armor 0x8F7C1.
     c: ['level', 'lucky', 'weapon', 'endurance', 'animated',
-      'flameBlade', 'flameBlade:ranged', 'lionheart',
+      'flameBlade', 'lionheart',
       'ironSkin', 'chaosChannels:armor',
       'landLinking', 'mysticSurge',
       'holyArmor', 'focusMagic',
@@ -83,7 +82,7 @@ const F20_SOURCE_ANCHORS = {
     c: ['level', 'focusMagic', 'lucky', 'darkForce',
       'heavenlyLight', 'heavenlyLight:toHit',
       'weapon', 'weapon:toHit', 'endurance', 'discipline',
-      'chaosChannels:armor', 'animated', 'flameBlade', 'flameBlade:ranged',
+      'chaosChannels:armor', 'animated', 'flameBlade',
       'mysticSurge', 'lionheart', 'ironSkin', 'landLinking',
       'holyArmor', 'orihalcon', 'holyWeapon',
       'chaosSurge', 'survivalInstinct', 'reinforceMagic',
@@ -94,7 +93,8 @@ const F20_SOURCE_ANCHORS = {
       'warpAttack', 'warpDefense', 'warpResist', 'shatter', 'spellWard', 'tactician'],
   },
   'com2_warlord_1.5.12.7': {
-    b: ['marionette:stats', 'fieryFury', 'natureLink', 'outlanderXenoveterinary',
+    b: ['marionette:stats', 'marionette:rangedType',
+      'fieryFury', 'natureLink', 'outlanderXenoveterinary',
       'bombsGrenades', 'upgradedExplosive:ranged', 'upgradedExplosive:fireBreath',
       'outlanderBallisticsTraining', 'outlanderXenopsychology', 'outlanderRadio',
       'nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
@@ -103,7 +103,7 @@ const F20_SOURCE_ANCHORS = {
     c: ['level', 'focusMagic', 'lucky', 'darkForce',
       'heavenlyLight', 'heavenlyLight:toHit',
       'weapon', 'endurance', 'discipline', 'chaosChannels:armor', 'animated',
-      'flameBlade', 'flameBlade:ranged', 'mysticSurge', 'lionheart',
+      'flameBlade', 'mysticSurge', 'lionheart',
       'ironSkin', 'landLinking',
       'holyArmor', 'orihalcon', 'holyWeapon',
       'chaosSurge', 'survivalInstinct', 'reinforceMagic',
@@ -123,7 +123,7 @@ const F20_SOURCE_ANCHORS = {
 const F20_WARLORD_NORMAL_ANCHORS = {
   ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'],
   b: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].b
-    .filter(id => id !== 'marionette:stats'),
+    .filter(id => id !== 'marionette:stats' && id !== 'marionette:rangedType'),
   d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].d
     .filter(id => id !== 'rust'),
 };

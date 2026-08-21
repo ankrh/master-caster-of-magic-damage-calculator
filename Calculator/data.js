@@ -7,16 +7,34 @@ const RACE_NAMES = {
   15: 'Arcane', 16: 'Nature', 17: 'Sorcery', 18: 'Chaos', 19: 'Life', 20: 'Death',
 };
 
-// Normalized ranged type from unit DB display strings
+// Normalized ranged type from unit DB display strings.
+//
+// The two engine families classify a projectile differently, so their rosters speak different
+// vocabularies and this map covers both. The DOS engines carry a real realm table —
+// `Battle_Unit_Attack_Magic_Realm`, 21 entries, 131:0x9A7A9 — so their records keep
+// `Magic(C)`/`Magic(N)`/`Magic(S)`. `Caster.exe` attaches no realm to a projectile at all
+// (`SPEC.md`, *Deliberate deviations*), so the modern rosters carry one magical token,
+// `Magic`, plus `Magic-lightning` for id 30, the lightning-bolt projectile.
 const RANGED_TYPE_NORMALIZE = {
   'Missile': 'missile', 'Boulder': 'boulder',
+  'Magic': 'magic', 'Magic-lightning': 'magic_lightning',
   'Magic(C)': 'magic_c', 'Magic(N)': 'magic_n', 'Magic(S)': 'magic_s',
-  'Beam': 'beam',
   'Gaze(Stoning)': 'gaze_stoning', 'Gaze(Multiple)': 'gaze_multiple',
   'Gaze(Death)': 'gaze_death',
 };
 
-const RANGED_TYPES = ['missile', 'boulder', 'magic_c', 'magic_n', 'magic_s', 'beam'];
+// The projectile tokens each engine family's card offers. `MODERN_RANGED_TYPES` is also the
+// `#*ModernRangedType` option list and `DOS_RANGED_TYPES` the conventional-ranged head of the
+// `#*RtbType` shared-slot list; a token outside its version's set cannot be selected there.
+const MODERN_RANGED_TYPES = ['missile', 'boulder', 'magic', 'magic_lightning'];
+const DOS_RANGED_TYPES = ['missile', 'boulder', 'magic_c', 'magic_n', 'magic_s'];
+
+// The union. `stats.js` asks only which record field a slot's token names — Ranged, Thrown or
+// gaze — and that question is the same in every version, so it reads this rather than a
+// version-scoped list. Reads that decide *behaviour* from the token use a predicate instead:
+// `isMagicalRangedType` (`combat_abilities.js`), which spans both vocabularies too.
+const RANGED_TYPES = [...MODERN_RANGED_TYPES,
+  ...DOS_RANGED_TYPES.filter(type => !MODERN_RANGED_TYPES.includes(type))];
 const THROWN_TYPES = ['thrown', 'fire', 'lightning'];
 const GAZE_TYPES = ['gaze_stoning', 'gaze_multiple', 'gaze_death'];
 

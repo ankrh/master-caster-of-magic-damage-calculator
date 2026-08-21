@@ -3,7 +3,7 @@
 
 'use strict';
 
-const { assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
+const { assert, assertEqual, assertClose, baseUnitInput, evalInContext } = require('./assertions');
 
 function runResolutionStepChecks(ctx) {
   const defenseTarget = {
@@ -389,7 +389,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     'CoM2 Blazing March EncMagic reaches Thrown even though the strength bonus does not');
 
   const magicRanged = derive({
-    atk: 0, rtb: 2, rtbType: 'magic_c',
+    atk: 0, rtb: 2, rtbType: 'magic',
   });
   assertEqual(magicRanged.encMagic, false,
     'Innate magical ranged type does not invent the unit-level EncMagic flag');
@@ -397,9 +397,9 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     'ApplyAttack magicranged independently bypasses Weapon Immunity');
 
   const attackLocalMagicCases = [
-    ['Nature magical ranged', derive({ rtb: 2, rtbType: 'magic_n' }), 'ranged'],
-    ['Sorcery magical ranged', derive({ rtb: 2, rtbType: 'magic_s' }), 'ranged'],
-    ['Warlord Beam ranged', deriveWarlord({ rtb: 2, rtbType: 'beam' }), 'ranged'],
+    ['Magical ranged', derive({ rtb: 2, rtbType: 'magic' }), 'ranged'],
+    ['Magical lightning ranged', derive({ rtb: 2, rtbType: 'magic_lightning' }), 'ranged'],
+    ['Warlord beam-energy ranged', deriveWarlord({ rtb: 2, rtbType: 'magic' }), 'ranged'],
     ['Fire Breath', derive({ rtb: 2, rtbType: 'fire' }), 'thrown'],
     ['Lightning Breath', derive({ rtb: 2, rtbType: 'lightning' }), 'thrown'],
     ['Doom Gaze', derive({ abilities: { doomGaze: 2 } }), 'gaze'],
@@ -419,6 +419,46 @@ function runModernWeaponImmunityMappingChecks(ctx) {
   for (const [label, attacker, attackType] of attackLocalPhysicalCases) {
     assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, attacker, com2, 0, attackType), 8,
       `${label} leaves ApplyAttack magicranged false and receives Weapon Immunity`);
+  }
+
+  // `islightning := aflags2.armorpiercing or (Units[au].rangedtype = 30)` on the ranged path
+  // (`Combat.ApplyAttack.pas:230-231`), and its one consumer clears Armor Piercing against a
+  // Lightning Resist defender (`Combat.ResolutionHelpers.pas:202-203`). Only the id-30 arm is
+  // reachable in this calculator: `aflags2` there is `rangedflags`, written by the hero-item
+  // `IPLightning` power alone (`Units.RecalculateUnits.pas:1306`), while every Armor Piercing the
+  // calculator models is the global `attackflags` one — the roster's `ArmorPiercing=Yes` byte and
+  // the script grants, all `AFArmorPiercing` with selector 1, "Global" (`Scripts.TXT:642-643`).
+  // The expected numbers are the engine's: an unhalved 8 against a halved 4.
+  const lightningResistTarget = { def: 8, unitType: 'normal', abilities: { lightningResist: true } };
+  const plainTarget = { def: 8, unitType: 'normal', abilities: {} };
+  const rosterLightningAttackers = [
+    // CoM2 [33] Chaos Warrior (Warrax) and Warlord [301] Sky Lantern: `UNITS.INI` RangedType 30
+    // with the roster's own Armor Piercing. Both rosters are read for the record, not restated.
+    [com2, 'COM2_UNITS_DATA', 33],
+    [warlord, 'WARLORD_UNITS_DATA', 301],
+  ];
+  for (const [version, dataName, templateId] of rosterLightningAttackers) {
+    const record = evalInContext(ctx, dataName)[String(templateId)];
+    assertEqual(record.ranged_type, 'Magic-lightning',
+      `${dataName}[${templateId}] ${record.name} carries the id-30 projectile`);
+    assert((record.abilities || []).includes('Armor Piercing'),
+      `${dataName}[${templateId}] ${record.name} carries roster Armor Piercing`);
+    const attacker = ctx.deriveUnitStats(baseUnitInput({
+      version, figs: record.figures, atk: record.melee, def: record.defense,
+      res: record.resist, hp: record.hp, rtb: record.ranged, rtbType: 'magic_lightning',
+      abilities: { armorPiercing: true },
+    }));
+    assertEqual(ctx.computeCasterDefenseForAttack(lightningResistTarget, attacker, version, 0, 'ranged'), 8,
+      `${record.name} id-30 ranged sets islightning, so Lightning Resist clears Armor Piercing`);
+    assertEqual(ctx.computeCasterDefenseForAttack(plainTarget, attacker, version, 0, 'ranged'), 4,
+      `${record.name} id-30 ranged still halves a defender without Lightning Resist`);
+    const magicAttacker = ctx.deriveUnitStats(baseUnitInput({
+      version, figs: record.figures, atk: record.melee, def: record.defense,
+      res: record.resist, hp: record.hp, rtb: record.ranged, rtbType: 'magic',
+      abilities: { armorPiercing: true },
+    }));
+    assertEqual(ctx.computeCasterDefenseForAttack(lightningResistTarget, magicAttacker, version, 0, 'ranged'), 4,
+      `${record.name} retyped to a plain magical projectile leaves islightning false, so Armor Piercing still halves`);
   }
 
   const rulerTarget = derive({
