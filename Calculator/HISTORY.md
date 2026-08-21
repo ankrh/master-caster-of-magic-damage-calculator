@@ -6,6 +6,18 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-21
 
+- **The preset boundary's DOS-to-modern projection stops instead of contributing nothing.** First
+  application of `SPEC.md`, *Out-of-range values stop the run*, outside the roster generators.
+  `dosPairAsModernChannels` (`ui_state.js`) returned `null` for any `rtbType` naming no modern
+  channel, so a CoM2/Warlord fixture could state an attack and silently get none. The live case was
+  `focusMagicDoomGazeCoM2`, carrying `rtbType:'gaze_multiple', rtb:2`: gaze and touch values are DOS
+  shared-slot state and the modern card holds them in their own fields, so the pair contributed
+  nothing and the preset was correct only through its `abilities: { doomGaze: 2 }`. The pair is off
+  that fixture, its paired `focusMagicDoomGazeCoM` desc now says the two halves state the same unit
+  in each engine's own notation rather than sharing a fixture, and the function throws naming the
+  type, the strength and the notations that can carry it. No number moved. The 183 remaining modern
+  sides still written with the DOS pair are [F114](./BACKLOG.md).
+
 - **F112 — the projectile-id map is complete, versioned, and stops on an id it does not know.**
   `RangedType.INI` classifies by flag: ids 10–14 carry neither `IsMagic` nor `IsMissile` and are
   the calculator's `boulder` class, 20–22 are `IsMissile`, 30–38 and 40 are `IsMagic`. Roster

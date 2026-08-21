@@ -288,6 +288,11 @@ const PRESET_VERSIONS = {};
 // single modern channel its type selects. It cannot state a second channel beside that one, nor
 // a Ranged record that carries a projectile type at strength 0 — a fixture needing either says
 // so with `modernAttacks` instead.
+//
+// A type with no modern channel throws rather than returning nothing (`SPEC.md`, *Out-of-range
+// values stop the run*). The gaze and touch types are the live case: they are DOS shared-slot
+// values, and the modern card holds them in their own fields, so a fixture naming one here was
+// silently contributing no channel at all while looking as though it did.
 function dosPairAsModernChannels(s) {
   const strength = Number(s.rtb) || 0;
   if (strength <= 0) return null;
@@ -295,7 +300,11 @@ function dosPairAsModernChannels(s) {
   if (s.rtbType === 'thrown') return { thrown: { strength, type: 'thrown' } };
   if (s.rtbType === 'fire') return { fireBreath: { strength, type: 'fire' } };
   if (s.rtbType === 'lightning') return { lightningBreath: { strength, type: 'lightning' } };
-  return null;
+  throw new Error(
+    `Preset fixture: rtbType '${s.rtbType}' with rtb ${strength} names no modern attack channel. `
+    + `The DOS pair projects onto ${RANGED_TYPES.join('/')} (Ranged), thrown, fire or lightning. `
+    + `Gaze and touch values belong in \`abilities\` on a CoM2/Warlord fixture; a second channel `
+    + `or a typed Ranged record at strength 0 needs \`modernAttacks\`.`);
 }
 
 function applyPreset(name) {

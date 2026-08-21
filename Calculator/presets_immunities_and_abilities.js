@@ -800,16 +800,16 @@ definePresets({
   // and death kill loops in the DOS build, so the defender's Resistance is put out of their reach
   // and only the doom strength is left to measure.
   focusMagicDoomGazeCoM: {
-    desc: 'Focus Magic (CoM): the +3 doom-gaze clause is CoM2\'s, not CoM 1\'s, so the same gaze of strength 2 is still 2 here — the paired focusMagicDoomGazeCoM2 runs this fixture on the engine that does add the +3 and deals 5. Removing Focus Magic leaves 2 either way, which is the claim; the version pair is what makes the number falsifiable. Melee mode: gazes do not fire in the ranged sequence.',
+    desc: 'Focus Magic (CoM): the +3 doom-gaze clause is CoM2\'s, not CoM 1\'s, so the same gaze of strength 2 is still 2 here — the paired focusMagicDoomGazeCoM2 runs the same unit on the engine that does add the +3 and deals 5. The gaze rides the DOS shared slot here, so this half states it with the rtbType/rtb pair; CoM2 has a dedicated Doom Gaze field and its half states it with the ability alone. Removing Focus Magic leaves 2 either way, which is the claim; the version pair is what makes the number falsifiable. Melee mode: gazes do not fire in the ranged sequence.',
     version: V_COM,
     a: { rtbType:'gaze_multiple', rtb:2, hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
     b: { def:10, res:50, hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   focusMagicDoomGazeCoM2: {
-    desc: 'Focus Magic (CoM2): the doomgaze +3 test ($0059A66D) and the ranged-creation branch ($0059A790) are independent tests that both run (Units.RecalculateUnits.pas:873-910), so the gaze bonus is not traded away for the created attack. Melee mode isolates the gaze half: doom gaze 2 → 5 exact damage, against 2 with Focus Magic off, and against the 2 the CoM 1 member of this pair reports from the identical fixture. Strength 2 rather than 4 keeps this distinct from focusMagicDoomGazeBoostCoM2; the created ranged attack is measured by focusMagicDoomGazeRangedBranchCoM2.',
+    desc: 'Focus Magic (CoM2): the doomgaze +3 test ($0059A66D) and the ranged-creation branch ($0059A790) are independent tests that both run (Units.RecalculateUnits.pas:873-910), so the gaze bonus is not traded away for the created attack. Melee mode isolates the gaze half: doom gaze 2 → 5 exact damage, against 2 with Focus Magic off, and against the 2 the CoM 1 member of this pair reports for the same unit, which that half states through the DOS shared slot because CoM 1 has no separate gaze field. Strength 2 rather than 4 keeps this distinct from focusMagicDoomGazeBoostCoM2; the created ranged attack is measured by focusMagicDoomGazeRangedBranchCoM2.',
     version: V_COM2,
-    a: { rtbType:'gaze_multiple', rtb:2, hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
+    a: { hp:10, abilities: { focusMagic: true, doomGaze: 2 } },
     b: { def:10, res:50, hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },

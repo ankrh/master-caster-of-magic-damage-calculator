@@ -76,7 +76,9 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
   all four. Use `modernAttacks` where the pair cannot say what is meant: a channel beside another,
   or a Ranged record carrying a projectile type at strength 0. Either form is the complete
   statement — an unnamed channel is empty — and neither applies to a roster-selected unit, whose
-  channels come from its record.
+  channels come from its record. The gaze and touch fields are not channels: they are DOS
+  shared-slot values, and a CoM2/Warlord fixture states them through `abilities`. A `rtbType` the
+  pair cannot project throws rather than contributing nothing.
 - Every version-difference preset needs an explicit `version:` unless it also belongs to a
   versioned group. Artificial MoM tests resolve to `mom_1.31`; version-difference subgroups contain
   paired scenarios differing only by version.
