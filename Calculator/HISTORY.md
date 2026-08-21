@@ -6,6 +6,20 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-21
 
+- **D28 — reconstructed `Auto_Move_Unit` and resolved CP's third Wall-of-Fire edge as movement
+  parity, with no calculator change.** The complete MoM 1.31/CP 1.60 routine
+  `[0x8A90D,0x8B30D)` and the version-specific `0x89448` body now live in
+  [combat.c](../Reference%20docs/DOS%20reconstructed/combat.c); byte inventories, the exact
+  175-byte nine-run diff, incoming-edge classification, ledgers, and review dispositions live in
+  [D28.evidence.md](../Reference%20docs/DOS%20reconstructed/D28.evidence.md). CP's
+  `0x8AF6B -> 0x89448 -> 0x9EDAA` chain applies Wall of Fire to an admitted automatic/AI movement
+  step crossing into the city box. Both builds already have the interactive movement-phase edge
+  at `0x6CF07` and attack-phase edge at `0x99670`; CP adds parity for the second movement
+  executor, not a new damage-strength rule. Movement and path history remain outside the
+  calculator's one-exchange contract, so `mom_1.31` and `mom_cp_1.60.00` preserve their existing
+  single melee Wall phase. Both durable checker runs cover all four assigned extents with zero
+  unaccounted semantic branches, calls, or named writes; backlog D28 is closed.
+
 - **F124 — the modern ranged branch now sets `isLightning`, so Lightning Resist clears Armor
   Piercing against a lightning-bolt ranged attack.** `Combat.ApplyAttack.pas:230-231`
   (`$005B1B9C..$005B1BD9`) sets `islightning := aflags2.armorpiercing or (Units[au].rangedtype = 30)`
@@ -2103,7 +2117,8 @@ pre-2026-08-10 narratives remain recoverable from git history.
   36-byte Fireball record in `Reference docs/DOS reconstructed/spelldat.c` with byte coverage in
   `D22.evidence.md`. Both builds load unsigned strength 5 from `+0x20`; the sole record difference
   is `AI_Group` at `+0x13`. Calculator behavior is unchanged and R9-G1i is unblocked. Method-4
-  review also corrected a CP-only incoming Wall call; D28 owns its out-of-scope trigger semantics.
+  review also corrected a CP-only incoming Wall call; [D28](#2026-08-21) later reconstructed its
+  out-of-scope movement trigger.
 - **R9-G1i existing-evidence pass.** Bound seven of the eight effective-attack, defense and
   damage-constant formulas across their applicable calculator versions, reducing the live audit
   to 61 `UNVERIFIED` formulas without changing calculator behavior. The remaining DOS Wall of

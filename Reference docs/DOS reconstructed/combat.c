@@ -11,7 +11,7 @@
  * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
  * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
  * R6.2a.evidence.md through R6.2f.evidence.md, R6.5a/b/d.evidence.md, and
- * A32.evidence.md, D35.evidence.md, and D39.evidence.md. The overlay-entry names
+ * A32.evidence.md, D28.evidence.md, D35.evidence.md, and D39.evidence.md. The overlay-entry names
  * below are ReMoM
  * attributions: the VROOMM
  * targets cannot be mapped back to file offsets from the executable images.
@@ -174,6 +174,18 @@
 #define UNIT_TYPE_CENTAURS          0x36
 #define UNIT_TYPE_PALADINS          0x71
 #define BATTLE_UNIT_RECORD_SIZE     0x006E
+#define COMBAT_GRID_WIDTH           0x0015
+#define COMBAT_GRID_XMIN            0x0000
+#define COMBAT_GRID_XMAX            0x0015
+#define COMBAT_GRID_YMIN            0x0000
+#define COMBAT_GRID_YMAX            0x0016
+#define MOVE_COST_IMPASSABLE        0x00FF
+#define MOVEMENT_POINTS_DEAD_SENTINEL (-2) /* raw byte 0xFE */
+#define MOVE_ANIM_FRAME_FIRST       1
+#define MOVE_ANIM_FRAME_LAST        7
+#define MOVE_ANIM_FRAME_COUNT       8
+#define AI_CITY_WALLS_UNKNOWN_0001  0x0001 /* raw field value; semantics unresolved */
+#define HUMAN_PLAYER_IDX            0
 #define FIGURE_SLOT_MAP_BYTES       0x0012
 #define COM1_DEMON_SLOT_FLOOR       0x0013
 #define COM1_DEMON_GRANT_DICE       4
@@ -378,6 +390,582 @@ extern void __far overlay_0428_0066(int16_t arg0, int16_t arg1, int16_t arg2,
 extern int8_t *com1_combat_grid_rows[]; /* near row pointers at DS:0xC524 */
 extern int16_t com1_ai_raise_dead_target; /* DS:0x4995; producer 0xBB30D */
 #endif
+
+/* ===========================================================================
+ * D28 -- automatic battle-unit movement and version-specific helper at 0390:002A.
+ * Complete extent ledgers, the 175-byte CP diff, and incoming Wall-of-Fire edges
+ * are in D28.evidence.md.  MoM 1.31 and CP 1.60 only; CoM 1 is outside D28.
+ * ======================================================================== */
+
+#if BUILD == MOM131 || BUILD == CP160
+#define ADDR_AUTO_COMBAT_FLAG            0xC432
+#define ADDR_SOUND_SILENCE               0xC41A
+#define ADDR_DEFENDER_SEES_ILLUSIONS     0xC41E
+#define ADDR_ATTACKER_SEES_ILLUSIONS     0xC420
+#define ADDR_COMBAT_DEFENDER_PLAYER      0xC584
+#define ADDR_COMBAT_ATTACKER_PLAYER      0xC586
+#define ADDR_COMBAT_TOTAL_UNIT_COUNT     0xC588
+#define ADDR_AI_IMMOBILE_COUNTER         0xC8B0
+#define ADDR_AI_STAY_IN_CITY             0xC8B2
+#define ADDR_AI_BATTLEFIELD_CITY_WALLS   0xC8B4
+#define ADDR_MOVEMENT_SCRATCH            0x7082
+#define ADDR_MAGIC_SET_SOUND_EFFECTS     0xBD9E
+#define ADDR_MAGIC_SET_MOVE_ANIMATIONS   0xBE7E
+#define ADDR_WORLD_DATA                  0x9D20
+#define ADDR_VORTEX_COUNT                0xD152
+
+/* Far-pointer slots and the near path-length word consumed by Auto_Move_Unit. */
+struct s_D28_VORTEX {
+    int16_t cgx;
+    int16_t cgy;
+    uint8_t opaque[8];                  /* record stride 0x0C */
+};
+#define path_y       (*(int16_t __far **)0xD13E)
+#define path_x       (*(int16_t __far **)0xD140)
+#define path_length  (*(int16_t *)0xD142)
+#define path_cost    (*(uint8_t __far **)0xD146)
+#define move_cost_map (*(uint8_t __far **)0xD148)
+#define vortices     (*(struct s_D28_VORTEX __far **)0xD14E)
+
+extern void __far Set_Movement_Cost_Map(int16_t battle_unit_idx);
+extern void __far Update_Move_Map_City_Area_Restrictions(int16_t battle_unit_idx);
+extern void __far AI_Restrict_To_City(void);
+extern void __far Combat_Move_Path_Find(int16_t src_cgx, int16_t src_cgy,
+                                         int16_t dst_cgx, int16_t dst_cgy);
+extern void __far Battle_Unit_Attack(int16_t attacker, int16_t defender,
+                                     int16_t arg2, int16_t arg3);
+extern void __far BU_Teleport(int16_t battle_unit_idx, int16_t cgx, int16_t cgy);
+extern void __far BU_TunnelTo(int16_t battle_unit_idx, int16_t cgx, int16_t cgy);
+extern void __far Play_Sound(int16_t sound_seg);
+extern void __far Mark_Block(int16_t block);
+extern int16_t __far Reload_Battle_Unit_Move_Sound(int16_t battle_unit_idx);
+extern void __far Release_Block(int16_t block);
+extern void __far Combat_Screen_Draw(void);
+extern void __far PageFlip_FX(void);
+extern int16_t __far Battle_Unit_In_City_Wall_Box(int16_t battle_unit_idx);
+extern void __far Check_Wall_Of_Fire_Attack(int16_t battle_unit_idx);
+
+int16_t __far Auto_Move_Unit(int16_t battle_unit_idx,
+                             int16_t dst_cgx, int16_t dst_cgy,
+                             int16_t target_battle_unit_idx,
+                             int16_t max_x, int16_t max_y)
+{
+    /* far prologue; 131:0x8A90D..0x8A915  160:=  com1:— */
+    int16_t move_anim_speed;
+    int16_t first_step_index = 0;
+    int16_t move_sound_seg;
+    int16_t move_visible;
+    int16_t delta_y, delta_x, min_y, min_x;
+    int16_t origin_y_2, origin_x_2;
+    int16_t first_step, attack_step;
+    int16_t last_target_y, last_target_x, origin_y, origin_x;
+    int16_t facing_y_offset, facing_x_offset;
+    int16_t i, path_i;
+#if BUILD == CP160
+    int16_t charge_instant_move = ST_FALSE;
+                                      /* local [bp-0x28]; 131:—  160:0x8AD0F  com1:— */
+#endif
+
+    move_anim_speed = (*(int16_t *)ADDR_AUTO_COMBAT_FLAG == ST_TRUE) ? 2 : 1;
+                                      /* CMP/JNE ->0x8A926, then JMP ->0x8A92B
+                                       * 131:0x8A918..0x8A92B  160:=  com1:— */
+    Set_Movement_Cost_Map(battle_unit_idx);
+                                      /* lcall 02D8:002A ->0x6CB64
+                                       * 131:0x8A92B..0x8A931  160:=  com1:— */
+
+    for (i = 0; i < *(int16_t *)ADDR_COMBAT_TOTAL_UNIT_COUNT; ++i) {
+                                      /* init/JMP ->0x8A98D; JL ->0x8A939
+                                       * 131:0x8A932..0x8A937,0x8A98A..0x8A994  160:=  com1:— */
+        if (i == target_battle_unit_idx)
+                                      /* JE ->0x8A98A  131:0x8A939..0x8A93F  160:=  com1:— */
+            continue;
+        if (_battle_units[i].status != BUS_ACTIVE)
+                                      /* JNE ->0x8A98A  131:0x8A941..0x8A954  160:=  com1:— */
+            continue;
+        move_cost_map[_battle_units[i].cgy * COMBAT_GRID_WIDTH +
+                      _battle_units[i].cgx] = MOVE_COST_IMPASSABLE;
+                                      /* C6 07 FF; 131:0x8A956..0x8A987  160:=  com1:— */
+    }
+
+    Update_Move_Map_City_Area_Restrictions(battle_unit_idx);
+                                      /* lcall 03E0:006B ->0x9E544
+                                       * 131:0x8A996..0x8A99C  160:=  com1:— */
+    if ((int8_t)_battle_units[battle_unit_idx].controller_idx ==
+            *(int16_t *)ADDR_COMBAT_DEFENDER_PLAYER &&
+        *(int16_t *)ADDR_AI_STAY_IN_CITY == ST_TRUE &&
+        (battlefield->wall_of_fire > 0 || battlefield->wall_of_darkness > 0) &&
+        Battle_Unit_In_City_Wall_Box(battle_unit_idx) == ST_TRUE) {
+                                      /* JNEs ->0x8A9E5; JG ->0x8A9D4; JLE ->0x8A9E5;
+                                       * lcall 03E0:0052 ->0x9EFE3; JNE ->0x8A9E5
+                                       * 131:0x8A99D..0x8A9DE  160:=  com1:— */
+        AI_Restrict_To_City();        /* lcall 03E0:0075 ->0x9E81B
+                                       * 131:0x8A9E0  160:=  com1:— */
+    }
+
+    for (i = 0; i < *(int16_t *)ADDR_VORTEX_COUNT; ++i) {
+                                      /* init/JMP ->0x8AA22; JL ->0x8A9EC
+                                       * 131:0x8A9E5..0x8A9EA,0x8AA1F..0x8AA29  160:=  com1:— */
+        move_cost_map[vortices[i].cgy * COMBAT_GRID_WIDTH + vortices[i].cgx] =
+            MOVE_COST_IMPASSABLE;    /* C6 07 FF; 131:0x8A9EC..0x8AA1C  160:=  com1:— */
+    }
+
+    Combat_Move_Path_Find(_battle_units[battle_unit_idx].cgx,
+                          _battle_units[battle_unit_idx].cgy, dst_cgx, dst_cgy);
+                                      /* lcall 04D8:0020 ->0xDBC80
+                                       * 131:0x8AA2B..0x8AA58  160:=  com1:— */
+    if (path_length == 0)
+                                      /* JNE ->0x8AA67; 131:0x8AA5B..0x8AA60  160:=  com1:— */
+        return ST_FALSE;             /* AX=0; JMP ->epilogue 0x8B307
+                                       * 131:0x8AA62..0x8AA64  160:=  com1:— */
+
+    if ((int8_t)_battle_units[battle_unit_idx].controller_idx != HUMAN_PLAYER_IDX)
+                                      /* JE ->0x8AA81  131:0x8AA67..0x8AA79  160:=  com1:— */
+        *(int16_t *)ADDR_AI_IMMOBILE_COUNTER = ST_UNDEFINED;
+                                      /* C7 06 B0 C8 FF FF; 131:0x8AA7B  160:=  com1:— */
+
+    origin_x = _battle_units[battle_unit_idx].cgx;
+                                      /* 131:0x8AA81..0x8AA92  160:=  com1:— */
+    origin_y = _battle_units[battle_unit_idx].cgy;
+                                      /* 131:0x8AA95..0x8AAA6  160:=  com1:— */
+    _battle_units[battle_unit_idx].target_cgx = dst_cgx;
+                                      /* 131:0x8AAA9..0x8AAB9  160:=  com1:— */
+    _battle_units[battle_unit_idx].target_cgy = dst_cgy;
+                                      /* 131:0x8AABD..0x8AACD  160:=  com1:— */
+    *(int16_t *)ADDR_MOVEMENT_SCRATCH = 0;
+                                      /* C7 06 82 70 00 00; 131:0x8AAD1  160:=  com1:— */
+    _battle_units[battle_unit_idx].Moving = ST_TRUE;
+                                      /* raw +0x52; 131:0x8AAD7..0x8AAE9  160:=  com1:— */
+    origin_x_2 = _battle_units[battle_unit_idx].cgx;
+                                      /* 131:0x8AAEA..0x8AAFB  160:=  com1:— */
+    origin_y_2 = _battle_units[battle_unit_idx].cgy;
+                                      /* 131:0x8AAFE..0x8AB0F  160:=  com1:— */
+
+    if (target_battle_unit_idx > ST_UNDEFINED) {
+                                      /* JLE ->0x8AB42  131:0x8AB12..0x8AB16  160:=  com1:— */
+        dst_cgx = _battle_units[target_battle_unit_idx].cgx;
+                                      /* 131:0x8AB18..0x8AB2A  160:=  com1:— */
+        dst_cgy = _battle_units[target_battle_unit_idx].cgy;
+                                      /* 131:0x8AB2D..0x8AB3F  160:=  com1:— */
+    }
+
+    if (max_x == dst_cgx && max_y == dst_cgy) {
+                                      /* JNEs ->0x8AB69  131:0x8AB42..0x8AB50  160:=  com1:— */
+        min_x = COMBAT_GRID_XMIN;     /* 131:0x8AB52  160:=  com1:— */
+        max_x = COMBAT_GRID_XMAX;     /* 131:0x8AB57  160:=  com1:— */
+        min_y = COMBAT_GRID_YMIN;     /* 131:0x8AB5C  160:=  com1:— */
+        max_y = COMBAT_GRID_YMAX;     /* 131:0x8AB61; JMP ->0x8AC1D  160:=  com1:— */
+    } else {
+        delta_x = abs(origin_x_2 - dst_cgx);
+                                      /* full idiom SUB/PUSH/lcall 0000:02C8 ->0x02CC8
+                                       * 131:0x8AB69..0x8AB76  160:=  com1:— */
+        delta_y = abs(origin_y_2 - dst_cgy);
+                                      /* full idiom SUB/PUSH/lcall 0000:02C8 ->0x02CC8
+                                       * 131:0x8AB79..0x8AB86  160:=  com1:— */
+        if (delta_x < delta_y) {
+                                      /* JGE ->0x8ABB5  131:0x8AB89..0x8AB8F  160:=  com1:— */
+            min_x = COMBAT_GRID_XMIN; /* 131:0x8AB91  160:=  com1:— */
+            max_x = COMBAT_GRID_XMAX; /* 131:0x8AB96  160:=  com1:— */
+            if (origin_y_2 < dst_cgy) /* JGE ->0x8ABAA  131:0x8AB9B..0x8ABA1  160:=  com1:— */
+                min_y = COMBAT_GRID_YMIN;
+                                      /* 131:0x8ABA3; JMP ->0x8ABB5  160:=  com1:— */
+            else {
+                min_y = max_y;        /* 131:0x8ABAA  160:=  com1:— */
+                max_y = COMBAT_GRID_YMAX;
+                                      /* 131:0x8ABB0  160:=  com1:— */
+            }
+        }
+        if (delta_x > delta_y) {
+                                      /* JLE ->0x8ABE1  131:0x8ABB5..0x8ABBB  160:=  com1:— */
+            min_y = COMBAT_GRID_YMIN; /* 131:0x8ABBD  160:=  com1:— */
+            max_y = COMBAT_GRID_YMAX; /* 131:0x8ABC2  160:=  com1:— */
+            if (origin_x_2 < dst_cgx) /* JGE ->0x8ABD6  131:0x8ABC7..0x8ABCD  160:=  com1:— */
+                min_x = COMBAT_GRID_XMIN;
+                                      /* 131:0x8ABCF; JMP ->0x8ABE1  160:=  com1:— */
+            else {
+                min_x = max_x;        /* 131:0x8ABD6  160:=  com1:— */
+                max_x = COMBAT_GRID_XMAX;
+                                      /* 131:0x8ABDC  160:=  com1:— */
+            }
+        }
+        if (delta_x == delta_y) {
+                                      /* JNE ->0x8AC1D  131:0x8ABE1..0x8ABE7  160:=  com1:— */
+            if (origin_x_2 < dst_cgx) /* JGE ->0x8ABF8  131:0x8ABE9..0x8ABEF  160:=  com1:— */
+                min_x = COMBAT_GRID_XMIN;
+                                      /* 131:0x8ABF1; JMP ->0x8AC03  160:=  com1:— */
+            else {
+                min_x = max_x;        /* 131:0x8ABF8  160:=  com1:— */
+                max_x = COMBAT_GRID_XMAX;
+                                      /* 131:0x8ABFE  160:=  com1:— */
+            }
+            if (origin_y_2 < dst_cgy) /* JGE ->0x8AC12  131:0x8AC03..0x8AC09  160:=  com1:— */
+                min_y = COMBAT_GRID_YMIN;
+                                      /* 131:0x8AC0B; JMP ->0x8AC1D  160:=  com1:— */
+            else {
+                min_y = max_y;        /* 131:0x8AC12  160:=  com1:— */
+                max_y = COMBAT_GRID_YMAX;
+                                      /* 131:0x8AC18  160:=  com1:— */
+            }
+        }
+    }
+
+    first_step = ST_TRUE;             /* 131:0x8AC1D  160:=  com1:— */
+    if (((_battle_units[battle_unit_idx].enchantments & UE_INVISIBILITY) ||
+         (_battle_units[battle_unit_idx].item_enchantments & UE_INVISIBILITY) ||
+         (_battle_units[battle_unit_idx].Abilities & UA_INVISIBILITY) ||
+         (_UNITS[_battle_units[battle_unit_idx].unit_idx].enchantments &
+             UE_INVISIBILITY)) &&
+        (int8_t)_battle_units[battle_unit_idx].controller_idx != HUMAN_PLAYER_IDX) {
+                                      /* 32-bit pair masks DX:AX: 81 E2 00 80 / 25 00 00 / OR;
+                                       * JNEs ->0x8ACA5, UA TEST 0040, final JE ->0x8AD05;
+                                       * controller JE ->0x8AD05
+                                       * 131:0x8AC22..0x8ACB7  160:=  com1:— */
+        if ((((int8_t)_battle_units[battle_unit_idx].controller_idx ==
+                 *(int16_t *)ADDR_COMBAT_ATTACKER_PLAYER) ||
+              *(int16_t *)ADDR_ATTACKER_SEES_ILLUSIONS == ST_TRUE) &&
+             (((int8_t)_battle_units[battle_unit_idx].controller_idx ==
+                 *(int16_t *)ADDR_COMBAT_DEFENDER_PLAYER) ||
+              *(int16_t *)ADDR_DEFENDER_SEES_ILLUSIONS == ST_TRUE)))
+                                      /* JEs ->0x8ACD8/0x8ACF7; JNEs ->0x8ACFE
+                                       * 131:0x8ACB9..0x8ACF5  160:=  com1:— */
+            move_visible = ST_TRUE;   /* 131:0x8ACF7; JMP ->0x8AD03  160:=  com1:— */
+        else
+            move_visible = ST_FALSE;  /* 131:0x8ACFE; JMP ->0x8AD0A  160:=  com1:— */
+    } else {
+        move_visible = ST_TRUE;       /* 131:0x8AD05  160:=  com1:— */
+    }
+
+    first_step_index = 0;             /* 131:0x8AD0A  160:=  com1:— */
+#if BUILD == MOM131
+    if ((_battle_units[battle_unit_idx].Move_Flags & MV_TELEPORT) ||
+        (_battle_units[battle_unit_idx].Move_Flags & MV_MERGING)) {
+                                      /* two TESTs, JNE ->0x8AD37 / JE ->0x8AD9E
+                                       * 131:0x8AD0F..0x8AD35  160:—  com1:— */
+#else
+    /* 0x8AD14..0x8AD22 are fifteen NOPs left by the in-place patch. */
+    if (_battle_units[battle_unit_idx].Move_Flags & (MV_TELEPORT | MV_MERGING)) {
+                                      /* TEST raw 0x90; JE ->0x8AD9E
+                                       * 131:—  160:0x8AD14..0x8AD35  com1:— */
+#endif
+        if (target_battle_unit_idx > ST_UNDEFINED &&
+            path_x[path_length - 1] == _battle_units[target_battle_unit_idx].cgx &&
+            path_y[path_length - 1] == _battle_units[target_battle_unit_idx].cgy) {
+                                      /* JLE/JNE ->0x8AD97
+                                       * 131:0x8AD37..0x8AD83  160:=  com1:— */
+            if (path_length > 1)      /* JLE ->0x8AD95  131:0x8AD85..0x8AD8A  160:=  com1:— */
+                first_step_index = path_length - 2;
+                                      /* ADD AX,FFFE; 131:0x8AD8C..0x8AD92  160:=  com1:— */
+        } else {
+            first_step_index = path_length - 1;
+                                      /* 131:0x8AD97..0x8AD9B  160:=  com1:— */
+        }
+    }
+
+    for (path_i = first_step_index; path_i < path_length; ++path_i) {
+                                      /* JMP ->0x8B11E; JGE ->0x8B171
+                                       * 131:0x8AD9E..0x8ADA1,0x8B11D..0x8B122  160:=  com1:— */
+        if ((path_x[path_i] <= max_x && path_x[path_i] >= min_x &&
+             path_y[path_i] <= max_y && path_y[path_i] >= min_y) ||
+            (path_x[path_i] == dst_cgx && path_y[path_i] == dst_cgy)) {
+                                      /* four range Jccs ->0x8ADE8/0x8AE0D and destination JNE/JE
+                                       * 131:0x8ADA4..0x8AE08  160:=  com1:— */
+            first_step = ST_FALSE;    /* 131:0x8AE0D  160:=  com1:— */
+            _battle_units[battle_unit_idx].target_cgx = path_x[path_i];
+                                      /* raw +0x48; 131:0x8AE12..0x8AE2D  160:=  com1:— */
+            _battle_units[battle_unit_idx].target_cgy = path_y[path_i];
+                                      /* raw +0x4A; 131:0x8AE31..0x8AE4C  160:=  com1:— */
+            attack_step = ST_FALSE;   /* 131:0x8AE50  160:=  com1:— */
+
+#if BUILD == CP160
+            /* The binary reads mover.target_cgx through inherited ES:BX and forms
+             * &_battle_units[target_battle_unit_idx] before comparing the index
+             * with -1; only the target dereference below is guarded. */
+            if (target_battle_unit_idx != ST_UNDEFINED) {
+                                      /* JE ->0x8AEBD  131:—  160:0x8AE55..0x8AE6D  com1:— */
+                if (_battle_units[target_battle_unit_idx].status != BUS_ACTIVE)
+                                      /* JE ->0x8AE79 else JMP ->0x8B171
+                                       * 131:—  160:0x8AE6F..0x8AE78  com1:— */
+                    break;
+                /* 0x8AE79..0x8AE83: eleven NOPs. */
+#endif
+                if (_battle_units[battle_unit_idx].target_cgx ==
+                        _battle_units[target_battle_unit_idx].cgx &&
+                    _battle_units[battle_unit_idx].target_cgy ==
+                        _battle_units[target_battle_unit_idx].cgy &&
+                    _battle_units[target_battle_unit_idx].status == BUS_ACTIVE)
+                                      /* 131: CMP/JNE at 0x8AE55..0x8AEB6;
+                                       * 160: CMP/JNE at 0x8AE84..0x8AEB6; all ->0x8AEBD
+                                       * 131:0x8AE55  160:0x8AE84  com1:— */
+                    attack_step = ST_TRUE;
+                                      /* 131:0x8AEB8  160:=  com1:— */
+#if BUILD == CP160
+            }
+#endif
+
+            if (attack_step == ST_TRUE) {
+                                      /* JNE ->0x8AF01  131:0x8AEBD..0x8AEC1  160:=  com1:— */
+                if (_battle_units[battle_unit_idx].Cur_Figures <= 0)
+                                      /* JG ->0x8AEEB  131:0x8AEC3..0x8AED5  160:=  com1:— */
+                    _battle_units[battle_unit_idx].movement_points =
+                        MOVEMENT_POINTS_DEAD_SENTINEL;
+                                      /* C6 47 07 FE; 131:0x8AED7..0x8AEE4  160:=  com1:— */
+                else
+                    Battle_Unit_Attack(battle_unit_idx, target_battle_unit_idx, 0, 0);
+                                      /* lcall 03D0:0052 ->0x9AD04
+                                       * 131:0x8AEEB..0x8AEFA  160:=  com1:— */
+                --path_i;             /* 131:0x8AEFD; JMP ->0x8B11D  160:=  com1:— */
+            } else {
+                if ((int8_t)_battle_units[battle_unit_idx].controller_idx ==
+                        *(int16_t *)ADDR_COMBAT_DEFENDER_PLAYER &&
+                    *(int16_t *)ADDR_AI_BATTLEFIELD_CITY_WALLS ==
+                        AI_CITY_WALLS_UNKNOWN_0001 &&
+                    !(path_x[path_i] >= CITY_WALL_BOX_CGX_FIRST &&
+                      path_x[path_i] <= CITY_WALL_BOX_CGX_LAST &&
+                      path_y[path_i] >= CITY_WALL_BOX_CGY_FIRST &&
+                      path_y[path_i] <= CITY_WALL_BOX_CGY_LAST) &&
+                    Battle_Unit_In_City_Wall_Box(battle_unit_idx) == ST_TRUE)
+                                      /* owner/wall JNE ->0x8AF6B; bounds Jcc ->0x8AF5C/0x8AF6B;
+                                       * lcall 03E0:0052 ->0x9EFE3; JNE then JMP ->0x8B171
+                                       * 131:0x8AF01..0x8AF68  160:=  com1:— */
+                    break;
+
+#if BUILD == CP160
+                cp_wall_step_and_compare_visibility(battle_unit_idx);
+                                      /* E8 DA E4 ->0x89448; 131:—  160:0x8AF6B  com1:— */
+                charge_instant_move = ST_TRUE;
+                                      /* MOV [bp-0x28],1 preserves helper CMP flags
+                                       * 131:—  160:0x8AF6E  com1:— */
+                if (move_visible != ST_TRUE)
+                                      /* helper CMP; JE ->0x8AF78 else JMP ->0x8B0CC
+                                       * 131:—  160:0x8AF73..0x8AF75  com1:— */
+                    goto commit_step;
+                if (_battle_units[battle_unit_idx].status != BUS_ACTIVE)
+                                      /* JNE ->0x8AF75/commit_step
+                                       * 131:—  160:0x8AF78..0x8AF8A  com1:— */
+                    goto commit_step;
+                /* 0x8AF8C..0x8AF97: twelve NOPs. */
+                if (_battle_units[battle_unit_idx].Move_Flags & (MV_TELEPORT | MV_MERGING))
+                                      /* TEST raw 0x90; JE ->0x8AFA2 else JMP ->0x8B077
+                                       * 131:—  160:0x8AF8C..0x8AF9F  com1:— */
+                    goto instant_move;
+#else
+                if (move_visible != ST_TRUE)
+                                      /* CMP/JE ->0x8AF74 else JMP ->0x8B0CC
+                                       * 131:0x8AF6B..0x8AF71  160:—  com1:— */
+                    goto commit_step;
+                if (_battle_units[battle_unit_idx].Move_Flags & MV_TELEPORT)
+                                      /* TEST/JE ->0x8AF8B else JMP ->0x8B077
+                                       * 131:0x8AF74..0x8AF88  160:—  com1:— */
+                    goto instant_move;
+                if (_battle_units[battle_unit_idx].Move_Flags & MV_MERGING)
+                                      /* TEST/JE ->0x8AFA2 else JMP ->0x8B077
+                                       * 131:0x8AF8B..0x8AF9F  160:—  com1:— */
+                    goto instant_move;
+#endif
+
+                if (*(int16_t *)ADDR_MAGIC_SET_SOUND_EFFECTS == ST_TRUE) {
+                                      /* JNE ->0x8AFD3  131:0x8AFA2..0x8AFA7  160:=  com1:— */
+                    Play_Sound(*(int16_t *)ADDR_SOUND_SILENCE);
+                                      /* lcall 0130:076B ->0x2467B
+                                       * 131:0x8AFA9..0x8AFB2  160:=  com1:— */
+                    Mark_Block(*(int16_t *)ADDR_WORLD_DATA);
+                                      /* lcall 0040:0222 ->0x07CC2
+                                       * 131:0x8AFB3..0x8AFBC  160:=  com1:— */
+                    move_sound_seg = Reload_Battle_Unit_Move_Sound(battle_unit_idx);
+                                      /* lcall 03E0:002F ->0x9EC30
+                                       * 131:0x8AFBD..0x8AFC4  160:=  com1:— */
+                    Release_Block(*(int16_t *)ADDR_WORLD_DATA);
+                                      /* lcall 0040:0250 ->0x07CF0
+                                       * 131:0x8AFC7..0x8AFD1  160:=  com1:— */
+                } else {
+                    move_sound_seg = ST_UNDEFINED;
+                                      /* 131:0x8AFD3  160:=  com1:— */
+                }
+                _battle_units[battle_unit_idx].move_anim_ctr = MOVE_ANIM_FRAME_FIRST;
+                                      /* raw +0x4C; 131:0x8AFD8..0x8AFE5  160:=  com1:— */
+                if (move_sound_seg != ST_UNDEFINED)
+                                      /* JE ->0x8AFFA  131:0x8AFEB..0x8AFEF  160:=  com1:— */
+                    Play_Sound(move_sound_seg);
+                                      /* lcall 0130:076B ->0x2467B
+                                       * 131:0x8AFF1..0x8AFF9  160:=  com1:— */
+
+                if (*(int16_t *)ADDR_MAGIC_SET_MOVE_ANIMATIONS == ST_TRUE) {
+                                      /* JNE ->0x8B047  131:0x8AFFA..0x8AFFF  160:=  com1:— */
+                    for (i = 0; i < MOVE_ANIM_FRAME_COUNT; i += move_anim_speed) {
+                                      /* init/JMP ->0x8B03F; JL ->0x8B008
+                                       * 131:0x8B001..0x8B006,0x8B039..0x8B043  160:=  com1:— */
+                        _battle_units[battle_unit_idx].move_anim_ctr += move_anim_speed;
+                                      /* raw +0x4C read/add/write
+                                       * 131:0x8B008..0x8B02B  160:=  com1:— */
+                        Combat_Screen_Draw();
+                                      /* lcall 0318:0020 ->0x767A0  131:0x8B02F  160:=  com1:— */
+                        PageFlip_FX();/* lcall 0008:0503 ->0x06DC3  131:0x8B034  160:=  com1:— */
+                    }
+                } else {
+                    _battle_units[battle_unit_idx].move_anim_ctr = MOVE_ANIM_FRAME_LAST;
+                                      /* raw +0x4C; 131:0x8B047..0x8B054  160:=  com1:— */
+                    Combat_Screen_Draw();
+                                      /* lcall 0318:0020 ->0x767A0  131:0x8B05A  160:=  com1:— */
+                    PageFlip_FX();    /* lcall 0008:0503 ->0x06DC3  131:0x8B05F  160:=  com1:— */
+                }
+                if (*(int16_t *)ADDR_MAGIC_SET_SOUND_EFFECTS == ST_TRUE)
+                                      /* JNE ->0x8B075  131:0x8B064..0x8B069  160:=  com1:— */
+                    Play_Sound(*(int16_t *)ADDR_SOUND_SILENCE);
+                                      /* lcall 0130:076B ->0x2467B
+                                       * 131:0x8B06B..0x8B074  160:=  com1:— */
+                goto commit_step;     /* 131:0x8B075  160:=  com1:— */
+
+instant_move:
+                if (_battle_units[battle_unit_idx].Move_Flags & MV_TELEPORT)
+                                      /* JE ->0x8B0AB  131:0x8B077..0x8B089  160:=  com1:— */
+                    BU_Teleport(battle_unit_idx, path_x[path_i], path_y[path_i]);
+                                      /* lcall 0428:005C ->0xAEDF4
+                                       * 131:0x8B08B..0x8B0A9  160:=  com1:— */
+                else
+                    BU_TunnelTo(battle_unit_idx, path_x[path_i], path_y[path_i]);
+                                      /* lcall 0428:0061 ->0xAF07F
+                                       * 131:0x8B0AB..0x8B0C9  160:=  com1:— */
+
+commit_step:
+                _battle_units[battle_unit_idx].move_anim_ctr = 0;
+                                      /* raw +0x4C; 131:0x8B0CC..0x8B0D9  160:=  com1:— */
+                _battle_units[battle_unit_idx].cgx = path_x[path_i];
+                                      /* raw +0x44; 131:0x8B0DF..0x8B0FA  160:=  com1:— */
+                _battle_units[battle_unit_idx].cgy = path_y[path_i];
+                                      /* raw +0x46; 131:0x8B0FE..0x8B119  160:=  com1:— */
+            }
+        } else {
+            break;                    /* JMP ->0x8B171; 131:0x8AE0A  160:=  com1:— */
+        }
+        if (path_i + 1 >= path_length)
+                                      /* INC; CMP/JGE ->0x8B171
+                                       * 131:0x8B11D..0x8B122  160:=  com1:— */
+            break;
+        if (first_step == ST_TRUE)    /* JNE ->0x8B12D else JMP ->0x8ADA4
+                                       * 131:0x8B124..0x8B12A  160:=  com1:— */
+            continue;
+        if ((int16_t)(int8_t)_battle_units[battle_unit_idx].movement_points -
+                (int16_t)(uint8_t)path_cost[path_i] > 0)
+                                      /* full idiom: MOV AL,[+07]/CBW; index (DI-1)*2;
+                                       * y*0x15+x+path_cost; MOV AL/[AH=0]; SUB DX,AX;
+                                       * JLE ->0x8B171 else JMP ->0x8ADA4
+                                       * 131:0x8B12D..0x8B16E  160:=  com1:— */
+            continue;
+        break;
+    }
+
+    _battle_units[battle_unit_idx].move_anim_ctr = 0;
+                                      /* 131:0x8B171..0x8B17E  160:=  com1:— */
+    _battle_units[battle_unit_idx].Moving = ST_FALSE;
+                                      /* 131:0x8B184..0x8B191  160:=  com1:— */
+    if (path_i > 1) {                /* JLE ->0x8B1DF  131:0x8B197..0x8B19A  160:=  com1:— */
+        origin_x = path_x[path_i - 2];
+                                      /* 131:0x8B19C..0x8B1AB  160:=  com1:— */
+        origin_y = path_y[path_i - 2];
+                                      /* 131:0x8B1AE..0x8B1BD  160:=  com1:— */
+        last_target_x = path_x[path_i - 1];
+                                      /* 131:0x8B1C0..0x8B1CD  160:=  com1:— */
+        last_target_y = path_y[path_i - 1];
+                                      /* 131:0x8B1D0..0x8B1DD; JMP ->0x8B1E8  160:=  com1:— */
+    } else {
+        last_target_x = dst_cgx;     /* 131:0x8B1DF..0x8B1E2  160:=  com1:— */
+        last_target_y = dst_cgy;     /* 131:0x8B1E5..0x8B1E8  160:=  com1:— */
+    }
+    facing_x_offset = last_target_x - origin_x;
+                                      /* 131:0x8B1EB..0x8B1F1  160:=  com1:— */
+    facing_y_offset = last_target_y - origin_y;
+                                      /* 131:0x8B1F4..0x8B1FA  160:=  com1:— */
+    if (path_i != 0) {               /* JE ->0x8B26F  131:0x8B1FD..0x8B1FF  160:=  com1:— */
+        _battle_units[battle_unit_idx].cgx = path_x[path_i - 1];
+                                      /* 131:0x8B201..0x8B21D  160:=  com1:— */
+        _battle_units[battle_unit_idx].cgy = path_y[path_i - 1];
+                                      /* 131:0x8B221..0x8B23D  160:=  com1:— */
+        _battle_units[battle_unit_idx].target_cgx = last_target_x + facing_x_offset;
+                                      /* 131:0x8B241..0x8B254  160:=  com1:— */
+        _battle_units[battle_unit_idx].target_cgy = last_target_y + facing_y_offset;
+                                      /* 131:0x8B258..0x8B26B  160:=  com1:— */
+    }
+
+    if (!(_battle_units[battle_unit_idx].Move_Flags & MV_TELEPORT) &&
+        !(_battle_units[battle_unit_idx].Move_Flags & MV_MERGING)) {
+                                      /* JNEs ->0x8B2DB
+                                       * 131:0x8B26F..0x8B295  160:=  com1:— */
+        _battle_units[battle_unit_idx].movement_points -=
+            path_cost[_battle_units[battle_unit_idx].cgy * COMBAT_GRID_WIDTH +
+                      _battle_units[battle_unit_idx].cgx];
+                                      /* byte SUB AL,[BX]; 131:0x8B297..0x8B2D9  160:=  com1:— */
+    } else {
+#if BUILD == MOM131
+        _battle_units[battle_unit_idx].movement_points -= 2;
+                                      /* ADD AL,FE (mod-256 subtract 2)
+                                       * 131:0x8B2DB..0x8B2EC  160:—  com1:— */
+#else
+        if (charge_instant_move == ST_TRUE)
+                                      /* JNE ->0x8B2EE; 131:—  160:0x8B2DB..0x8B2E3  com1:— */
+            _battle_units[battle_unit_idx].movement_points -= 2;
+                                      /* seven NOPs then ADD AL,FE
+                                       * 131:—  160:0x8B2E5..0x8B2EC  com1:— */
+#endif
+    }
+    /* common byte store to movement_points +0x07 */
+                                      /* 131:0x8B2EE..0x8B2FD  160:=  com1:— */
+    return ST_TRUE;                  /* AX=1; JMP ->0x8AA64 then epilogue
+                                       * 131:0x8B301..0x8B30C  160:=  com1:— */
+}
+
+#if BUILD == MOM131
+/* Exported overlay entry 0390:002A in 1.31.  It sorts the first `count`
+ * 16-bit battle-unit indices into ascending signed-byte movement_points. */
+void __far Sort_Battle_Unit_Indices_By_Movement_Points(int16_t *indices,
+                                                        int16_t count)
+{
+    /* prologue, SI=indices; 131:0x89448..0x8944F  160:—  com1:— */
+    int16_t i;
+    int8_t j, current_idx, previous_mp, current_mp;
+    for (i = 1; i < count; ++i) {
+                                      /* init/JMP ->0x894F5; JGE ->0x89500;
+                                       * back JMP ->0x8945A
+                                       * 131:0x89452..0x89457,0x894F2..0x894FD  160:—  com1:— */
+        current_idx = (int8_t)indices[i];
+                                      /* low-byte load 8A 00; 131:0x8945A..0x89461  160:—  com1:— */
+        j = (int8_t)(i - 1);         /* byte DEC and CL copy; 131:0x89464..0x8946B  160:—  com1:— */
+        previous_mp = _battle_units[indices[j]].movement_points;
+                                      /* CBW/SHL, index load, *0x6E, +_battle_units, byte load;
+                                       * 131:0x8946B..0x89483  160:—  com1:— */
+        current_mp = _battle_units[current_idx].movement_points;
+                                      /* CBW/*0x6E/byte load; 131:0x89486..0x89499  160:—  com1:— */
+        while (j > -1 && previous_mp > current_mp) {
+                                      /* JLE ->0x894E2; JG ->0x8949E
+                                       * 131:0x894D5..0x894E0  160:—  com1:— */
+            indices[j + 1] = indices[j];
+                                      /* two sign extensions/index scales and word store 89 00
+                                       * 131:0x8949E..0x894B1  160:—  com1:— */
+            --j;                     /* 131:0x894B3  160:—  com1:— */
+            if (j > -1)              /* JLE ->0x894D5  131:0x894B5..0x894B8  160:—  com1:— */
+                previous_mp = _battle_units[indices[j]].movement_points;
+                                      /* 131:0x894BA..0x894D2  160:—  com1:— */
+        }
+        indices[j + 1] = (int16_t)current_idx;
+                                      /* CBW/index scale/word store 89 00
+                                       * 131:0x894E2..0x894F0  160:—  com1:— */
+    }
+    /* epilogue/retf; 131:0x89500..0x89504  160:—  com1:— */
+}
+#endif
+
+#if BUILD == CP160
+/* Near BP-sharing helper called only from Auto_Move_Unit.  It has no prologue:
+ * SI is the parent's battle_unit_idx and BP is the parent's frame. */
+static void cp_wall_step_and_compare_visibility(int16_t implicit_si)
+{
+    Check_Wall_Of_Fire_Attack(implicit_si);
+                                      /* PUSH SI; lcall 03E0:0043 ->0x9EDAA; POP CX
+                                       * 131:—  160:0x89448..0x8944E  com1:— */
+    /* Return flags are those from CMP parent [bp-0x20],1. */
+                                      /* 83 7E E0 01 / C3; 131:—  160:0x8944F..0x89453  com1:— */
+}
+#endif
+#endif /* BUILD == MOM131 || BUILD == CP160 */
+
 
 /* ===========================================================================
  * A32 -- Shatter target admission and generic effect setter.

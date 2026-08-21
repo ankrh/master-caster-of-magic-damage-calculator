@@ -33,46 +33,44 @@ dependents, not unrelated later rows.
 
 | # | Package | Members | Next outcome |
 |---|---|---|---|
-| 1 | **D28** | D28 | Bound the CP-only Wall of Fire trigger without widening D22. |
-| 2 | **D37** | D37 | Reconstruct the bounded CoM 6.08 routine containing the Supernatural consumer. |
-| 3 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
-| 4 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
-| 5 | **F60** | F60 | Decide whether the DOS per-figure Doom Gaze scaling should be modelled. |
-| 6 | **F106** | F106 | Decide whether MoM 1.31's second `BU_Apply_Specials` call needs a chain position. |
-| 7 | **F114** | F114 | Migrate the 183 modern preset sides off the DOS-shaped fixture pair. |
-| 8 | **F116** | F116 | Restore the two Warlord `Special` units the picker's category order silently drops. |
-| 9 | **F117** | F117 | Repair the three check harnesses that probe attack-type and armor values no control offers. |
-| 10 | **F118** | F118 | Stop a base-game Flame Blade input from adding melee in Warlord, where the control is hidden. |
-| 11 | **F119** | F119 | Decide whether ticking Ranged with no ranged attack should fail loud instead of silently resolving melee. |
-| 12 | **F120** | F120 | Establish the modern engine's melee gate, then settle the DOS melee write's missing `bu->melee > 0` test. |
-| 13 | **F121** | F121 | Make the card and matrix roster readers agree on a zero-attack modern record; unreachable today. |
-| 14 | **F122** | F122 | Settle whether the DOS gaze mirrors follow the shared slot through the region-`e` clamp. |
-| 15 | **F123** | F123 | Stop a restored control value the current option list no longer has from silently becoming the empty string. |
-| 16 | **D41** | D41 | Reconstruct the CoM 6.08 battle-unit setup routine that runs before the constructor. |
-| 17 | **T8** | T8 | Low priority: give the unsourced engine claims in the code a citation or an evidence home. |
-| 18 | **T9** | T9 | Low priority: rename the `legacy*` DOS identifiers; no behavior change. |
-| 19 | **T10** | T10 | Low priority: retire the three To-Hit seed steps’ split and the two leftover field qualifiers. |
-| 20 | **T11** | T11 | Low priority: drop the Chaos Surge carve-out the corrected fire-breath position made inert. |
-| 21 | **T12** | T12 | Low priority: delete the two dead lookup tables the fail-loud sweep found. |
-| 22 | **F115** | F115 | Low priority: name the 44 Warlord spell ids the roster still renders as `Spell#N`. |
-| 23 | **F68** | F68 | Low priority: triage the 20 MoM 1.31 presets whose positive claim no named feature moves. |
-| 24 | **F69** | F69 | Low priority: the same class for CP 1.60 and CoM 6.08 (9 presets). |
-| 25 | **F70** | F70 | Low priority: the same class for CoM2 and Warlord (14 presets). |
-| 26 | **F71** | F71 | Low priority: triage the 33 DOS presets where one named feature is inert and another is not. |
-| 27 | **F72** | F72 | Low priority: the same class for Warlord (30 presets). |
-| 28 | **F73** | F73 | Low priority: the same class for CoM2 (22 presets). |
-| 29 | **F74** | F74 | Low priority: confirm the 59 MoM/CP negative claims against the settled policy. |
-| 30 | **F75** | F75 | Low priority: confirm the 45 Warlord/CoM2/CoM 1 negative claims, including the Land Linking pair. |
-| 31 | **F76** | F76 | Low priority: triage the 37 negative claims with one live and one inert named feature. |
-| 32 | **F77** | F77 | Low priority: bind the 43 presets whose key names no feature they configure. |
-| 33 | **F78** | F78 | Low priority: confirm the 25 presets with nothing ablatable are baseline scenarios. |
-| 34 | **F79** | F79 | Low priority: run the sweep’s `--interactions` pass and read the 26 ordering-named presets. |
+| 1 | **D37** | D37 | Reconstruct the bounded CoM 6.08 routine containing the Supernatural consumer. |
+| 2 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
+| 3 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
+| 4 | **F60** | F60 | Decide whether the DOS per-figure Doom Gaze scaling should be modelled. |
+| 5 | **F106** | F106 | Decide whether MoM 1.31's second `BU_Apply_Specials` call needs a chain position. |
+| 6 | **F114** | F114 | Migrate the 183 modern preset sides off the DOS-shaped fixture pair. |
+| 7 | **F116** | F116 | Restore the two Warlord `Special` units the picker's category order silently drops. |
+| 8 | **F117** | F117 | Repair the three check harnesses that probe attack-type and armor values no control offers. |
+| 9 | **F118** | F118 | Stop a base-game Flame Blade input from adding melee in Warlord, where the control is hidden. |
+| 10 | **F119** | F119 | Decide whether ticking Ranged with no ranged attack should fail loud instead of silently resolving melee. |
+| 11 | **F120** | F120 | Establish the modern engine's melee gate, then settle the DOS melee write's missing `bu->melee > 0` test. |
+| 12 | **F121** | F121 | Make the card and matrix roster readers agree on a zero-attack modern record; unreachable today. |
+| 13 | **F122** | F122 | Settle whether the DOS gaze mirrors follow the shared slot through the region-`e` clamp. |
+| 14 | **F123** | F123 | Stop a restored control value the current option list no longer has from silently becoming the empty string. |
+| 15 | **D41** | D41 | Reconstruct the CoM 6.08 battle-unit setup routine that runs before the constructor. |
+| 16 | **T8** | T8 | Low priority: give the unsourced engine claims in the code a citation or an evidence home. |
+| 17 | **T9** | T9 | Low priority: rename the `legacy*` DOS identifiers; no behavior change. |
+| 18 | **T10** | T10 | Low priority: retire the three To-Hit seed steps’ split and the two leftover field qualifiers. |
+| 19 | **T11** | T11 | Low priority: drop the Chaos Surge carve-out the corrected fire-breath position made inert. |
+| 20 | **T12** | T12 | Low priority: delete the two dead lookup tables the fail-loud sweep found. |
+| 21 | **F115** | F115 | Low priority: name the 44 Warlord spell ids the roster still renders as `Spell#N`. |
+| 22 | **F68** | F68 | Low priority: triage the 20 MoM 1.31 presets whose positive claim no named feature moves. |
+| 23 | **F69** | F69 | Low priority: the same class for CP 1.60 and CoM 6.08 (9 presets). |
+| 24 | **F70** | F70 | Low priority: the same class for CoM2 and Warlord (14 presets). |
+| 25 | **F71** | F71 | Low priority: triage the 33 DOS presets where one named feature is inert and another is not. |
+| 26 | **F72** | F72 | Low priority: the same class for Warlord (30 presets). |
+| 27 | **F73** | F73 | Low priority: the same class for CoM2 (22 presets). |
+| 28 | **F74** | F74 | Low priority: confirm the 59 MoM/CP negative claims against the settled policy. |
+| 29 | **F75** | F75 | Low priority: confirm the 45 Warlord/CoM2/CoM 1 negative claims, including the Land Linking pair. |
+| 30 | **F76** | F76 | Low priority: triage the 37 negative claims with one live and one inert named feature. |
+| 31 | **F77** | F77 | Low priority: bind the 43 presets whose key names no feature they configure. |
+| 32 | **F78** | F78 | Low priority: confirm the 25 presets with nothing ablatable are baseline scenarios. |
+| 33 | **F79** | F79 | Low priority: run the sweep’s `--interactions` pass and read the 26 ordering-named presets. |
 
 ## Evidence-source prerequisites
 
 | ID | Required source artifact | Cost | Method / evidence |
 |---|---|---|---|
-| D28 | Reconstruct the MoM 1.31/CP 1.60 routine `[0x8A90D,0x8B30D)` and the version-specific helper at `0x89448` (1.31 `[0x89448,0x89505)`; CP `[0x89448,0x89454)`) to identify the CP-only `0x8AF6B -> 0x89448 -> Check_Wall_Of_Fire_Attack` trigger and determine calculator relevance. Write the source-shaped body to `Reference docs/DOS reconstructed/combat.c` and durable evidence to `Reference docs/DOS reconstructed/D28.evidence.md`. Versions: evidence/builds — MoM 1.31 `WIZARDS.EXE`, MoM CP 1.60 `WIZARDS.EXE`; calculator — `mom_1.31`, `mom_cp_1.60.00`. | large | **Method 4:** [D22 evidence](../Reference%20docs/DOS%20reconstructed/D22.evidence.md) proves the extra CP incoming edge but keeps the containing trigger semantics outside its frozen table extent |
 | D37 | Reconstruct the complete CoM 6.08 far routine `[0x9BCE0,0x9D535)` in `Reference docs/DOS reconstructed/combat.c`. Account for internal BP-sharing near helpers ending at `0x9BE1F`, `0x9C082`, `0x9C0FB`, and `0x9C121`; all semantic branches, calls, tables, state reads/writes, and exits; overlay `$03D8` slot-0 callers `0x6C3C4` and `0x7FC98`; and the adjacent slot-1 boundary at `0x9D535`. Bind the argument, `DS:[0x9F20 + arg0*0x04C8]`, candidate filters, complete state transition, and the `$2000` Supernatural bypass without assuming a post-combat or player-record identity. Versions: evidence/builds — CoM 6.08 `WIZARDS.EXE`; calculator — not applicable. | large | **Method 4 fixed extent:** [D34 evidence](../Reference%20docs/DOS%20reconstructed/D34.evidence.md) proves the direct Supernatural gate, exact natural boundary, two callers, sole `retf`, and no intervening overlay entry; SHA-256 `f7f19608db94c4f058916e831610147792ebde0b5cff7d4086ea151413cfc75f` |
 | D41 | Reconstruct the CoM 6.08 battle-unit setup routine `[0x8EAB9,0x8EDFD)` — the far routine (`retf` at `0x8EDFC`, immediately before the constructor's `push bp`) that zeroes the combat fields, copies the permanent record and calls the battle-unit constructor at `0x8EC99` — into `Reference docs/DOS reconstructed/unitcalc.c`, and confirm that extent. It lies outside both R6.1a's `BU_Apply_Specials` extent and R6.1b's constructor extent, so nothing reconstructs it today, yet it decides the entry state every one of those blocks reads. One of its writes is already decoded and load-bearing: the CoM 1-only `bu->ammo = max(bu->ammo, 4)` for a Focus Magic unit at `0x8EB87..0x8EB9F`, which is why `unitcalc.c`'s `if (bu->ammo > 0)` gate needs no calculator model ([R6.1a evidence](../Reference%20docs/DOS%20reconstructed/R6.1a.evidence.md), *FocusMagic's `ammo > 0` gate is vacuous*). Versions: evidence/builds — MoM 1.31, MoM CP 1.60 and CoM 6.08 `WIZARDS.EXE`; calculator — no change expected. | small | **Method 4:** byte decode of the ammunition block and of the `0x8EC99` call recorded in [R6.1a evidence](../Reference%20docs/DOS%20reconstructed/R6.1a.evidence.md); filed 2026-08-21 from the [F108](./HISTORY.md) implementation, which cited the bytes rather than writing a body |
 
