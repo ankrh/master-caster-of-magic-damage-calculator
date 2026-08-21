@@ -6,6 +6,24 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-21
 
+- **F112 — the projectile-id map is complete, versioned, and stops on an id it does not know.**
+  `RangedType.INI` classifies by flag: ids 10–14 carry neither `IsMagic` nor `IsMissile` and are
+  the calculator's `boulder` class, 20–22 are `IsMissile`, 30–38 and 40 are `IsMagic`. Roster
+  generation covered 10, 11, 20, 21 and 30–40 and sent every other id to a `'Missile'` default, so
+  five Warlord units on ids 12 and 14 shipped as missile attackers — Stone Giant, Colossus, both
+  Gaia Lords and the Goblin Midget Submarine. `Ismissileranged` reads the flag directly
+  (`Combat.AttackAndWallHelpers.pas:181`) and `Combat.ApplyAttack.pas:228` feeds it straight into
+  `EffectiveDefense`, so Missile Immunity was zeroing attacks the engine lets through, while
+  Blazing March's magic-weapon grant and Elven Wind applied where they should not. The three map
+  copies — the two generators, which disagreed on id 40, and a dead one in `data.js` with no
+  reader — are now one home, `tools/ranged_types.py`, carrying a separate table per version
+  because CoM2 1.05.11 base defines neither 12–14 nor 22 nor 40. Reserved id 39 is deliberately
+  absent from both. Regeneration moves exactly five `ranged_type` values, all Warlord;
+  `units_com2.js` is byte-identical. **This is the worked example behind `SPEC.md`,
+  *Out-of-range values stop the run*, added in the same change:** the lookup and the missing-key
+  path now raise with the value, the record and the expected set, and the codebase-wide sweep for
+  the same shape is [F113](./BACKLOG.md).
+
 - **F110 — a preset can state the modern card's four attack channels directly.** A CoM2/Warlord
   fixture may now carry `modernAttacks: { ranged: { strength, type }, thrown, fireBreath,
   lightningBreath }` on either unit; it is the complete statement of the card's channels, and the

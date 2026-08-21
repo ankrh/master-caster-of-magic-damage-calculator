@@ -7,24 +7,6 @@ const RACE_NAMES = {
   15: 'Arcane', 16: 'Nature', 17: 'Sorcery', 18: 'Chaos', 19: 'Life', 20: 'Death',
 };
 
-// RangedType ID -> calculator ranged type (used by INI parser)
-const RANGED_TYPE_MAP = {
-  10: 'boulder', // boulder
-  11: 'boulder', // cannon
-  20: 'missile',
-  21: 'missile', // sling
-  30: 'magic_c', // chaos — lightning bolt
-  31: 'magic_c', // chaos — fire bolt
-  32: 'magic_s', // sorcery — ice bolt
-  33: 'magic_c', // chaos — death bolt
-  34: 'magic_s', // sorcery (Water Elemental)
-  35: 'magic_n', // nature — priest sparkles
-  36: 'magic_c', // chaos — drow sparkles
-  37: 'magic_n', // nature — sprite shimmer
-  38: 'magic_n', // nature — green bolt
-  40: 'beam',    // Warlord beam energy
-};
-
 // Normalized ranged type from unit DB display strings
 const RANGED_TYPE_NORMALIZE = {
   'Missile': 'missile', 'Boulder': 'boulder',

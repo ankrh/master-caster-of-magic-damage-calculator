@@ -714,6 +714,28 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertClose(scoringOptionsInertOutsideWarlord.toHitMelee, 0.3, 'Warlord scoring To-Hit is inert outside Warlord');
   assertClose(scoringOptionsInertOutsideWarlord.toBlock, 0.3, 'Warlord scoring To-Defend is inert outside Warlord');
   assertEqual(scoringOptionsInertOutsideWarlord.res, 5, 'Warlord scoring Resistance is inert outside Warlord');
+
+  // RangedType.INI classifies by flag, not by id range: 12/13/14 carry neither `IsMagic` nor
+  // `IsMissile` under `StatIcon=2`, which is the boulder class ids 10 and 11 already hold, and
+  // 22 carries `IsMissile=Yes`. `Ismissileranged` reads that flag directly
+  // (Combat.AttackAndWallHelpers.pas:181), so a boulder must not reach Missile Immunity,
+  // Blazing March's magic-weapon grant or Elven Wind. Expectations come from the table.
+  const rangedClassByName = vm.runInContext(
+    "JSON.stringify(Object.fromEntries(['Stone Giant','Colossus','Lesser Gaia Lord',"
+    + "'Great Gaia Lord','Goblin Midget Submarine','Arquebusiers','Musketeers'].map("
+    + "n => [n, (Object.values(WARLORD_UNITS_DATA).find(u => u.name === n) || {}).ranged_type])))",
+    ctx,
+  );
+  const rangedClass = JSON.parse(rangedClassByName);
+  for (const name of ['Stone Giant', 'Colossus', 'Lesser Gaia Lord', 'Great Gaia Lord',
+    'Goblin Midget Submarine']) {
+    assertEqual(rangedClass[name], 'Boulder',
+      `${name} carries a RangedType.INI id with no IsMissile flag, so it is boulder-class`);
+  }
+  for (const name of ['Arquebusiers', 'Musketeers']) {
+    assertEqual(rangedClass[name], 'Missile',
+      `${name} carries RangedType 22, which the table marks IsMissile=Yes`);
+  }
 }
 
 module.exports = { runWarlordUnitAbilityChecks };

@@ -54,6 +54,34 @@ in one round of combat.
   package; they do not add an attack phase by themselves.
 - Movement changes other than Haste, transport behavior, and overland-only effects.
 
+## Out-of-range values stop the run
+
+**A value outside its expected set must halt the code with an error. It must never be replaced by
+a fallback.** This governs every layer — INI and roster parsers, the generators, id-to-class maps,
+version dispatch, table lookups, and any read of a field the sources define by enumeration.
+
+The reason is that this calculator's output is a number that looks correct whatever produced it. A
+fallback does not degrade gracefully; it manufactures an answer indistinguishable downstream from a
+derived one, and the wrongness surfaces only as damage figures nobody can trace. The worked example
+is `RangedType`: roster generation classified any unmapped projectile id as `Missile`, so five
+Warlord units carrying ids the map had never been given — Stone Giant, Colossus, both Gaia Lords and
+the Goblin Midget Submarine — silently became missile attackers. The engine's `Ismissileranged`
+reads the table flag directly, so Missile Immunity zeroed attacks the engine lets through, and both
+Blazing March and Elven Wind applied where they should not. Nothing failed; the numbers were just
+wrong, for as long as the map was incomplete.
+
+An error raised here must name the offending value, the record or file it came from, and what set
+was expected, so the reader can go to the source rather than guess.
+
+**A default the sources define is not a fallback.** `Hit=30` is the engine's stated base To Hit, and
+reading a missing `Hit` key as 30 is transcription. The distinguishing test is whether a cited
+source supplies the value: if it does, it is data; if the code picks something plausible because the
+real answer is unknown, it is a guess wearing a default's clothing, and it is forbidden. When a
+source genuinely leaves a case undefined, that is a finding for `BACKLOG.md`, not a value to invent.
+
+Widening an enumeration is a deliberate act with evidence behind it. Failing loudly is what forces
+that act to happen instead of being skipped.
+
 ## Versions
 
 Five rule sets, selected by `#gameVersion`, are first-class and independently correct:

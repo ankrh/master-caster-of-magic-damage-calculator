@@ -4759,7 +4759,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 10,
     "to_hit": 20,
     "ranged": 20,
-    "ranged_type": "Missile",
+    "ranged_type": "Boulder",
     "ammo": 3,
     "abilities": [
       "Poison Immunity",
@@ -4791,7 +4791,7 @@ const WARLORD_UNITS_DATA = {
     "to_block": 10,
     "to_hit": 30,
     "ranged": 25,
-    "ranged_type": "Missile",
+    "ranged_type": "Boulder",
     "ammo": 3,
     "abilities": [
       "First Strike",
@@ -6867,7 +6867,7 @@ const WARLORD_UNITS_DATA = {
     "to_block": 10,
     "to_hit": 30,
     "ranged": 20,
-    "ranged_type": "Missile",
+    "ranged_type": "Boulder",
     "ammo": 4,
     "abilities": [
       "First Strike",
@@ -6914,7 +6914,7 @@ const WARLORD_UNITS_DATA = {
     "to_block": 10,
     "to_hit": 30,
     "ranged": 25,
-    "ranged_type": "Missile",
+    "ranged_type": "Boulder",
     "ammo": 4,
     "abilities": [
       "First Strike",
@@ -9435,7 +9435,7 @@ const WARLORD_UNITS_DATA = {
     "resist": 8,
     "to_block": -10,
     "ranged": 12,
-    "ranged_type": "Missile",
+    "ranged_type": "Boulder",
     "ammo": 8,
     "abilities": [
       "Sailing",

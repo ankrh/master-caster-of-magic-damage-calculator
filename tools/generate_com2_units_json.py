@@ -18,6 +18,8 @@ import json
 import re
 from pathlib import Path
 
+from ranged_types import COM2_RANGED_TYPES, ranged_type_token
+
 RACE_NAMES = {
     0: 'Barbarian', 1: 'Beastmen', 2: 'Dark Elf', 3: 'Draconian', 4: 'Dwarf',
     5: 'Gnoll', 6: 'Halfling', 7: 'High Elf', 8: 'High Men', 9: 'Klackon',
@@ -26,24 +28,6 @@ RACE_NAMES = {
 }
 
 # RangedType ID -> ranged type string (matching MoM/CoM1 JSON format)
-RANGED_TYPE_MAP = {
-    10: 'Boulder',   # boulder / catapult
-    11: 'Boulder',   # cannon
-    20: 'Missile',
-    21: 'Missile',   # sling
-    30: 'Magic(C)',  # chaos — lightning bolt
-    31: 'Magic(C)',  # chaos — fire bolt
-    32: 'Magic(S)',  # sorcery — ice bolt / illusion ball
-    33: 'Magic(C)',  # chaos — death bolt
-    34: 'Magic(S)',  # sorcery
-    35: 'Magic(N)',  # nature — priest sparkles
-    36: 'Magic(C)',  # chaos — drow sparkles
-    37: 'Magic(N)',  # nature — sprite shimmer
-    38: 'Magic(N)',  # nature — green bolt
-    39: 'Magic(C)',  # chaos (misc)
-    40: 'Magic(N)',  # nature (misc)
-}
-
 # Realm lookup for fantastic creatures (Race >= 15)
 REALM_NAMES = {
     15: 'Arcane', 16: 'Nature', 17: 'Sorcery', 18: 'Chaos', 19: 'Life', 20: 'Death',
@@ -235,9 +219,15 @@ def ini_unit_to_record(u):
     # fields for the current UI/resolver, but emit the three channels that its former
     # thrown_breath projection could erase so the next migration can be lossless.
     if u.get('Ranged') and int(u['Ranged']) > 0:
-        rt = int(u.get('RangedType', 20))
+        label = f"[{idx}] {u.get('Name', 'Unknown')}"
+        if 'RangedType' not in u:
+            raise ValueError(
+                f"{label}: Ranged={u['Ranged']} with no RangedType key. The projectile class "
+                f"cannot be derived from strength alone."
+            )
+        rt = int(u['RangedType'])
         record['ranged']      = int(u['Ranged'])
-        record['ranged_type'] = RANGED_TYPE_MAP.get(rt, 'Missile')
+        record['ranged_type'] = ranged_type_token(rt, COM2_RANGED_TYPES, label)
         record['ammo']        = int(u.get('Ammo', 0))
 
     for ini_key, output_key in [
