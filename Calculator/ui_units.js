@@ -415,8 +415,13 @@ function modernCardAttacks(prefix) {
   const thrown = number('ModernThrown');
   const fireBreath = number('ModernFireBreath');
   const lightningBreath = number('ModernLightningBreath');
+  // The Ranged record's existence is stated by its type selector, not by its strength: the
+  // record ships with a projectile type and no strength (Warlord [362] Wanderer), and the
+  // engine writes that read the permanent type land on it regardless. The Thrown and Breath
+  // fields have no type of their own, so for them strength is the only statement of existence.
+  const rangedType = document.getElementById(prefix + 'ModernRangedType').value;
   return {
-    ranged: ranged ? { strength: ranged, type: document.getElementById(prefix + 'ModernRangedType').value } : null,
+    ranged: (ranged || rangedType !== 'none') ? { strength: ranged, type: rangedType } : null,
     thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
     fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
     lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,

@@ -452,6 +452,19 @@ function runModifierTraceChecks(ctx) {
   assertEqual(focusedGaze.modernAttacks.ranged.strength, 3,
     'Focus Magic executes its independent empty-ranged creation branch beside a Gaze');
 
+  // `if U.doomgaze > 0 then Inc(U.doomgaze, 3)` (Units.RecalculateUnits.pas:876-877) is one
+  // positive-strength test on the Doom Gaze field and reads nothing else, so a magical-ranged
+  // unit with no Doom Gaze takes no Doom Gaze write at all. The region-`e` clamp discards a
+  // stray one, which is why the ledger rather than the total is where this is observable.
+  const focusedNoGaze = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_1.05.11', abilities: { focusMagic: true },
+    rtbType: 'magic_c', rtb: 4,
+    modernAttacks: { ranged: { strength: 4, type: 'magic_c' } },
+  }));
+  const focusedNoGazeEvent = focusedNoGaze.statTrace.find(entry => entry.id === 'focusMagic');
+  assert(focusedNoGazeEvent && !focusedNoGazeEvent.changes.doomGaze,
+    'Focus Magic records no Doom Gaze write on a unit whose Doom Gaze field is empty');
+
   const focusedBombs = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7', atk: 3,
     abilities: { outlanderWizard: true, explosive: true, focusMagic: true },

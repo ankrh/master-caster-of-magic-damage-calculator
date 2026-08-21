@@ -54,6 +54,19 @@ definePresets({
     b: { atk:0, def:1, toBlkMod:70, res:5, hp:20, abilities: { righteousness: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
+  righteousnessLifeStealDrain: {
+    desc: 'Righteousness vs Life Steal −30: the +30 is inside the resistance the drain is a margin over, so Res 5 → 35 − 30 = 5 drains 1.500, not the 30.500 an unbonused −25 would',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { lifeSteal: -30 } },
+    b: { atk:0, def:1, toBlkMod:70, res:5, hp:60, abilities: { righteousness: true } },
+    expected: { dmgToA: 0, dmgToB: 1.500 },
+  },
+  righteousnessLifeStealDrain160: {
+    desc: 'MoM 1.60 makes the same Righteousness write as 1.31: Life Steal −30 vs Res 5 drains 1.500',
+    version: V_MOM_CP,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { lifeSteal: -30 } },
+    b: { atk:0, def:1, toBlkMod:70, res:5, hp:60, abilities: { righteousness: true } },
+    expected: { dmgToA: 0, dmgToB: 1.500 },
+  },
   righteousnessDeathGaze: {
     desc: 'Righteousness vs Death Gaze −3: kill roll blocked by +30 res, AND the hidden physical component blocked too — Righteousness sets defence 50 against a Chaos/Death-realm gaze in MoM. Total 0 (would be ~8 without it)',
     a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },

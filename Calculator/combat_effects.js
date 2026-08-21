@@ -473,10 +473,12 @@ function effectiveDefense(target, version, attack, trace = null) {
 // above any one of them, which is why this is its own transcription rather than a variant of
 // `EFFECTIVE_RESISTANCE_STEPS`.
 //
-// Two engine writes have no step here, because the calculator models both effects as a
-// *skipped roll* rather than as resistance (SPEC.md, "Immunities skip rolls"): the
-// `USA_IMMUNITY_MAGIC` +30 at 131:0x990B6 and the `UE_RIGHTEOUSNESS` +30 at 131:0x990D5.
-// Whether the two models agree everywhere is open under F104.
+// The `USA_IMMUNITY_MAGIC` and `UE_RIGHTEOUSNESS` +30 writes are steps here, not consumer-side
+// bonuses. Magic Immunity is *also* a skip (SPEC.md, "Immunities skip rolls"), but only at the
+// consuming sites that jump past the whole touch/gaze group; Cause Fear reaches the roll and
+// takes the bonus, and Righteousness is never a skip in any build. Keeping either write at a
+// consumer left it out of the value that consumer hands on, and `Combat_Resistance_Check`
+// returns `roll - resistance` — the margin Life Steal spends as drain (F104).
 const DOS_RESISTANCE_WRITES = {
   // PROVENANCE[dosEffectiveResistance:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:14:bfc0a231fc99e42b7d605b4e
   base: attackSpecificStep('dosEffectiveResistance:base', ['effectiveResistance'],
@@ -485,6 +487,18 @@ const DOS_RESISTANCE_WRITES = {
   charmed: attackSpecificStep('dosEffectiveResistance:charmed', ['effectiveResistance'],
     u => { u.effectiveResistance += 30; },
     u => (u.isHero || u.unitType === 'hero') && hasAbil(u.abilities, 'charmed')),
+  // PROVENANCE[dosEffectiveResistance:magicImmunity]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35
+  magicImmunity: attackSpecificStep('dosEffectiveResistance:magicImmunity', ['effectiveResistance'],
+    u => { u.effectiveResistance += 30; },
+    (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'magicImmunity')),
+  // CoM 1 keeps this write but repurposes the `UE_RIGHTEOUSNESS` bit as Shadow Attack, an
+  // enchantment the calculator has no control for, so the step is absent from that engine's
+  // list below rather than predicated on a name it no longer means there.
+  // PROVENANCE[dosEffectiveResistance:righteousness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:6:4a90488718a822fc09095678
+  righteousness: attackSpecificStep('dosEffectiveResistance:righteousness', ['effectiveResistance'],
+    u => { u.effectiveResistance += 30; },
+    (u, ctx) => (ctx.realm === 'chaos' || ctx.realm === 'death')
+      && hasAbil(u.abilities, 'righteousness')),
   // PROVENANCE[dosEffectiveResistance:elemental]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:22:123b893c305519061ccb5408
   elemental: attackSpecificStep('dosEffectiveResistance:elemental', ['effectiveResistance'],
     (u, ctx) => { u.effectiveResistance += elemResistBonus(u, ctx.version); },
@@ -507,6 +521,8 @@ const DOS_RESISTANCE_STEPS = Object.freeze({
   'mom_1.31': [
     DOS_RESISTANCE_WRITES.base,
     DOS_RESISTANCE_WRITES.charmed,
+    DOS_RESISTANCE_WRITES.magicImmunity,
+    DOS_RESISTANCE_WRITES.righteousness,
     DOS_RESISTANCE_WRITES.elemental,
     DOS_RESISTANCE_WRITES.bless,
     DOS_RESISTANCE_WRITES.resistMagic,
@@ -514,6 +530,8 @@ const DOS_RESISTANCE_STEPS = Object.freeze({
   'mom_cp_1.60.00': [
     DOS_RESISTANCE_WRITES.base,
     DOS_RESISTANCE_WRITES.charmed,
+    DOS_RESISTANCE_WRITES.magicImmunity,
+    DOS_RESISTANCE_WRITES.righteousness,
     DOS_RESISTANCE_WRITES.elemental,
     DOS_RESISTANCE_WRITES.bless,
     DOS_RESISTANCE_WRITES.resistMagic,
@@ -521,6 +539,7 @@ const DOS_RESISTANCE_STEPS = Object.freeze({
   'com_6.08': [
     DOS_RESISTANCE_WRITES.base,
     DOS_RESISTANCE_WRITES.charmed,
+    DOS_RESISTANCE_WRITES.magicImmunity,
     DOS_RESISTANCE_WRITES.elemental,
     DOS_RESISTANCE_WRITES.bless,
     DOS_RESISTANCE_WRITES.resistMagic,
@@ -717,10 +736,9 @@ const DOS_DEFENSE_WRITES = {
   bless: attackSpecificStep('dosEffectiveDefense:bless', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.blessBonus; },
     (u, ctx) => ctx.blessEligible && hasAbil(u.abilities, 'bless')),
-  // CoM 1 replaces this whole block with an 87-byte NOP field (com1:0x9A6DC..0x9A732), so the
-  // citation covers the MoM builds only. The calculator nevertheless still admits the write on
-  // CoM 1's magical-ranged, breath and spell-damage channels; that gap is F105, and it is a
-  // recorded scope/PROVENANCE gap rather than a silent one.
+  // CoM 1 replaces this whole block with an 87-byte NOP field (com1:0x9A6DC..0x9A732) and
+  // repurposes the `UE_RIGHTEOUSNESS` bit itself as Shadow Attack, so the step is absent from
+  // that engine's list below rather than gated per channel.
   // PROVENANCE[dosEffectiveDefense:righteousness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:10:8b80214da56946e4a9fbfbdd | Reference docs/DOS reconstructed/combat.c@span:8:66077c35eb258dac5ab28d94
   righteousness: attackSpecificStep('dosEffectiveDefense:righteousness', ['defenseSpecial'],
     u => { u.defenseSpecial = DOS_DEFENSE_FULL; },
@@ -762,8 +780,8 @@ const DOS_DEFENSE_WRITES = {
 };
 
 // One ordered list per engine, written out in full. MoM 1.31 differs from the other two in the
-// order of the two marker writes; CoM 1 differs in the elemental block and in how the Weapon
-// Immunity marker is cashed in.
+// order of the two marker writes; CoM 1 differs in the elemental block, in how the Weapon
+// Immunity marker is cashed in, and in having no Righteousness step at all.
 const DOS_DEFENSE_STEPS = Object.freeze({
   'mom_1.31': [
     DOS_DEFENSE_WRITES.base,
@@ -801,7 +819,6 @@ const DOS_DEFENSE_STEPS = Object.freeze({
     DOS_DEFENSE_WRITES.immunityMask,
     DOS_DEFENSE_WRITES.magicImmunity,
     DOS_DEFENSE_WRITES.bless,
-    DOS_DEFENSE_WRITES.righteousness,
     DOS_DEFENSE_WRITES.elementalArmor,
     DOS_DEFENSE_WRITES.resistElements,
     DOS_DEFENSE_WRITES.armorPiercing,
@@ -848,8 +865,10 @@ function dosEffectiveDefense(target, version, attack, trace = null) {
 // Two DOS classifier facts sit behind it. The defence-special realm comes from the attacker's
 // `ranged_type` alone (classifier 0x9A79E): boulder/missile (10-29) and Thrown (100) are
 // realm-less and never inherit a Chaos/Death attacker's realm, and only melee (type 0) reads
-// the attacker's race. CoM 1 additionally requires `ranged_type > 39`, which drops melee and
-// every conventional ranged type, leaving breath and gaze. The immunity mask (0x9921A) admits
+// the attacker's race. CoM 1's Bless arm additionally requires `ranged_type > 39` (com1:0x9A6D3),
+// which drops melee, every conventional ranged type and the spell path's own 39, leaving breath
+// and gaze. Righteousness is not gated here at all: CoM 1 has no such step, and the enchantment
+// bit it would read is Shadow Attack in that build. The immunity mask (0x9921A) admits
 // the Weapon bit only for `ranged_type / 10 < 3`, or MoM 1.31's unsatisfiable `== 100` — which
 // is why 1.31 alone misses Thrown, and why no build lets Weapon Immunity reach a gaze (103-105).
 function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType) {
@@ -933,7 +952,7 @@ function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attac
       elementalEligible: !isCoM1 && (aGazeRealm === 'nature' || aGazeRealm === 'chaos'),
       armorPiercing: aArmorPiercing,
       magicImmunityEligible: true,
-      righteousnessEligible: !isCoM1 && aGazeDC,
+      righteousnessEligible: aGazeDC,
       weaponImmunityEligible: false,
     };
   } else if (attackType === 'immolation') {
@@ -941,10 +960,13 @@ function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attac
     // magical ranged type (38 in MoM, 39 in CoM 1), so the elemental bonus applies in all three
     // builds. Armor Piercing attaches to a unit's own attacks only, and neither Illusion nor
     // City Walls reaches the spell path.
+    //
+    // Bless is the one term the two constants separate: CoM 1's arm needs `ranged_type > 39` and
+    // the helper passes exactly 39, so the bonus lands in the MoM builds alone.
     attack = {
       vertigoDefPenalty,
       isRanged: true,
-      blessEligible: true,
+      blessEligible: !isCoM1,
       elementalEligible: true,
       armorPiercing: false,
       fireAttack: true,

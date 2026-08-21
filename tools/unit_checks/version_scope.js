@@ -30,10 +30,6 @@ const SCOPE_PROVENANCE_GAPS = {
   trueLight: ['mom_1.31', 'mom_cp_1.60.00'],
   nodeAura: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'],
   survivalInstinct: ['com_6.08'],
-  // CoM 1 replaces Battle_Unit_Defense_Special's Righteousness block with an 87-byte NOP field,
-  // so the citation covers the MoM builds only; the calculator still admits the write on CoM 1's
-  // magical-ranged, breath and spell-damage channels (F105).
-  'dosEffectiveDefense:righteousness': ['com_6.08'],
 };
 // M11 gave `tactician` one id across all three CoM engines, so its own PROVENANCE comment now
 // covers it and the exemption this list held is gone. Every scope id carries its own citation.
@@ -191,18 +187,19 @@ function runCanonicalVersionScopeChecks(ctx) {
   // here rather than in a file of its own: the same `phase:id` key has to name a real scope row
   // and a real chain entry, or the two registries describe different things.
   const statChain = evalInContext(ctx, 'statChain');
-  // The region-`c` identity conversions head their region by convention rather than sitting at
-  // the addresses their blocks occupy, and in the DOS builds their order among themselves is
-  // inherited from the merged helper M7 split rather than transcribed (F103).
+  // The modern region-`c` identity conversions head their region by convention rather than
+  // sitting at the offsets their blocks occupy. The DOS builds take theirs from the addresses
+  // `unitcalc.c` gives every realm write in `BU_Apply_Specials`, so only Raise Dead — a
+  // combat-spell write from `combat.c` that routine never makes — stays inherited there.
   const deducedIdentityC = [
     'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust',
     'c:blackChannels:race', 'c:undead', 'c:mysticSurge:race', 'c:raiseDead',
   ];
   const deducedInsideTranscribedRegion = {
-    'mom_1.31': deducedIdentityC,
-    'mom_cp_1.60.00': deducedIdentityC,
+    'mom_1.31': [],
+    'mom_cp_1.60.00': [],
     // CoM 1's Focus Magic position is inferred from what its recompute writes after Warp.
-    'com_6.08': ['c:focusMagic', ...deducedIdentityC],
+    'com_6.08': ['c:focusMagic', 'c:raiseDead'],
     'com2_1.05.11': deducedIdentityC,
     'com2_warlord_1.5.12.7': deducedIdentityC,
   };

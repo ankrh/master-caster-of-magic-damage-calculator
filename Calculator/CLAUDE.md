@@ -70,6 +70,13 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
   owns the browser's grouping. These are `data-scope="page"`: the page is the only consumer.
 - A preset must appear in `TEST_TREE`, and every `TEST_TREE` key must name a preset;
   `node tools/node_unit_checks.js` asserts both directions. Keep ability-named groups alphabetical.
+- A CoM2/Warlord fixture states a unit's attack channels either with the DOS-shaped `rtb`/`rtbType`
+  pair, which projects onto the one channel its type names, or with
+  `modernAttacks: { ranged: { strength, type }, thrown, fireBreath, lightningBreath }`, which states
+  all four. Use `modernAttacks` where the pair cannot say what is meant: a channel beside another,
+  or a Ranged record carrying a projectile type at strength 0. Either form is the complete
+  statement — an unnamed channel is empty — and neither applies to a roster-selected unit, whose
+  channels come from its record.
 - Every version-difference preset needs an explicit `version:` unless it also belongs to a
   versioned group. Artificial MoM tests resolve to `mom_1.31`; version-difference subgroups contain
   paired scenarios differing only by version.

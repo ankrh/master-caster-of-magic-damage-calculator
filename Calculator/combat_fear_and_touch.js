@@ -8,9 +8,11 @@
 // Death Immunity skips the roll outright rather than granting resistance. In CoM2/Warlord,
 // this direct gate reads the persistent BaseUnits record; calculated Death Immunity still
 // proceeds to the roll. The older engines use their effective ability record here.
-// The modern caller has already run GetEffectiveResistance, including Magic Immunity's
-// assignment to 100. The older engines still apply their additive Magic-Immunity bonus here;
-// Righteousness remains an attack-specific additive bonus in every version.
+// `defRes` already carries every resistance write its version's engine makes: the modern caller
+// has run GetEffectiveResistance, including Magic Immunity's assignment to 100, and the DOS
+// caller has run Combat_Effective_Resistance, whose Magic Immunity and Righteousness +30 are
+// steps of that transform. Cause Fear is the one consumer that reaches the roll with a
+// magic-immune target, so the bonus decides it where the touch/gaze group's skips never fire.
 function fearFailProb(defRes, defAbilities, version, baseDeathImmunity) {
   const isCoM = version && version.startsWith('com');
   const isModern = version && version.startsWith('com2');
@@ -19,9 +21,7 @@ function fearFailProb(defRes, defAbilities, version, baseDeathImmunity) {
     ? !!baseDeathImmunity
     : hasAbil(defAbilities, 'deathImmunity');
   if (directDeathImmunity) return 0;
-  const bonus = (!isModern && hasAbil(defAbilities, 'magicImmunity') ? 30 : 0)
-    + (hasAbil(defAbilities, 'righteousness') ? 30 : 0);
-  const effectiveRes = defRes + modifier + bonus;
+  const effectiveRes = defRes + modifier;
   if (effectiveRes >= 10) return 0;
   return Math.min(1, Math.max(0, (10 - effectiveRes) / 10));
 }

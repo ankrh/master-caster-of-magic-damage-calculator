@@ -81,6 +81,17 @@ function weaponBonus(type) {
 // (`Recruit`) is all zeros, so it maps to 'normal' here and the ladder starts at 'regular'.
 // Note this ladder is applied to heroes too, though Levelbonus.INI gives them a separate
 // 9-step `[Hero]` table with a different shape — tracked as D27.
+//
+// The secondary-attack columns are named for the arrays the engine indexes, because it indexes
+// four of them independently. `ApplyLevelBonus`'s normal arm reads `NormalMissileRanged` or
+// `NormalMagicRanged` by the base ranged type, `NormalThrown`, and `NormalBreath` for both
+// breaths (Units.RecalculateUnits.pas:548-571); `@Init@LoadLevelBonusINI` fills all four from
+// separate `[Normal]` keys, so a mod can make them disagree even though both shipped
+// `Levelbonus.INI` files have MissileRanged/MagicRanged and Thrown/Breath column-identical.
+// `ranged`/`thrown` are a different fact and stay: the DOS ladders have no tables at all, and
+// those two keys are the cumulative values of their inline increments — MoM's ungated
+// `bu->ranged++` steps, and CoM 1's table walk with and without its `ranged_type >= 100`
+// skip. `com_6.08` and `com2_1.05.11` share a branch below only because their numbers agree.
 // PROVENANCE[levelBonusDispatch]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b | Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
 // STAT-FORMULA[levelBonusDispatch]
 function getLevelBonuses(level, version) {
@@ -115,39 +126,39 @@ function getLevelBonuses(level, version) {
     switch (level) {
       // STAT-FORMULA[levelBonuses:warlord:regular]
       // PROVENANCE[levelBonuses:warlord:regular]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
-      case 'regular':    return { atk: 1, ranged: 1, thrown: 0, def: 0, res: 1, hp: 0, toHit: 0 };
+      case 'regular':    return { atk: 1, ranged: 1, missileRanged: 1, magicRanged: 1, thrown: 0, breath: 0, def: 0, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:warlord:veteran]
       // PROVENANCE[levelBonuses:warlord:veteran]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
-      case 'veteran':    return { atk: 2, ranged: 2, thrown: 1, def: 1, res: 1, hp: 0, toHit: 0 };
+      case 'veteran':    return { atk: 2, ranged: 2, missileRanged: 2, magicRanged: 2, thrown: 1, breath: 1, def: 1, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:warlord:elite]
       // PROVENANCE[levelBonuses:warlord:elite]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
-      case 'elite':      return { atk: 2, ranged: 2, thrown: 1, def: 2, res: 2, hp: 1, toHit: 0 };
+      case 'elite':      return { atk: 2, ranged: 2, missileRanged: 2, magicRanged: 2, thrown: 1, breath: 1, def: 2, res: 2, hp: 1, toHit: 0 };
       // STAT-FORMULA[levelBonuses:warlord:ultraElite]
       // PROVENANCE[levelBonuses:warlord:ultraElite]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
-      case 'ultra_elite':return { atk: 3, ranged: 3, thrown: 2, def: 3, res: 2, hp: 1, toHit: 5 };
+      case 'ultra_elite':return { atk: 3, ranged: 3, missileRanged: 3, magicRanged: 3, thrown: 2, breath: 2, def: 3, res: 2, hp: 1, toHit: 5 };
       // STAT-FORMULA[levelBonuses:warlord:champion]
       // PROVENANCE[levelBonuses:warlord:champion]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
-      case 'champion':   return { atk: 4, ranged: 4, thrown: 2, def: 5, res: 3, hp: 1, toHit: 10 };
-      default:           return { atk: 0, ranged: 0, thrown: 0, def: 0, res: 0, hp: 0, toHit: 0 };
+      case 'champion':   return { atk: 4, ranged: 4, missileRanged: 4, magicRanged: 4, thrown: 2, breath: 2, def: 5, res: 3, hp: 1, toHit: 10 };
+      default:           return { atk: 0, ranged: 0, missileRanged: 0, magicRanged: 0, thrown: 0, breath: 0, def: 0, res: 0, hp: 0, toHit: 0 };
     }
   } else {
     switch (level) {
       // STAT-FORMULA[levelBonuses:com2:regular]
       // PROVENANCE[levelBonuses:com2:regular]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
-      case 'regular':    return { atk: 1, ranged: 1, thrown: 0, def: 0, res: 1, hp: 0, toHit: 0 };
+      case 'regular':    return { atk: 1, ranged: 1, missileRanged: 1, magicRanged: 1, thrown: 0, breath: 0, def: 0, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:veteran]
       // PROVENANCE[levelBonuses:com2:veteran]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
-      case 'veteran':    return { atk: 2, ranged: 2, thrown: 1, def: 1, res: 1, hp: 0, toHit: 0 };
+      case 'veteran':    return { atk: 2, ranged: 2, missileRanged: 2, magicRanged: 2, thrown: 1, breath: 1, def: 1, res: 1, hp: 0, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:elite]
       // PROVENANCE[levelBonuses:com2:elite]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
-      case 'elite':      return { atk: 2, ranged: 2, thrown: 1, def: 2, res: 2, hp: 1, toHit: 0 };
+      case 'elite':      return { atk: 2, ranged: 2, missileRanged: 2, magicRanged: 2, thrown: 1, breath: 1, def: 2, res: 2, hp: 1, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:ultraElite]
       // PROVENANCE[levelBonuses:com2:ultraElite]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
-      case 'ultra_elite':return { atk: 3, ranged: 3, thrown: 1, def: 3, res: 2, hp: 1, toHit: 0 };
+      case 'ultra_elite':return { atk: 3, ranged: 3, missileRanged: 3, magicRanged: 3, thrown: 1, breath: 1, def: 3, res: 2, hp: 1, toHit: 0 };
       // STAT-FORMULA[levelBonuses:com2:champion]
       // PROVENANCE[levelBonuses:com2:champion]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8
-      case 'champion':   return { atk: 3, ranged: 3, thrown: 1, def: 3, res: 2, hp: 2, toHit: 10 };
-      default:           return { atk: 0, ranged: 0, thrown: 0, def: 0, res: 0, hp: 0, toHit: 0 };
+      case 'champion':   return { atk: 3, ranged: 3, missileRanged: 3, magicRanged: 3, thrown: 1, breath: 1, def: 3, res: 2, hp: 2, toHit: 10 };
+      default:           return { atk: 0, ranged: 0, missileRanged: 0, magicRanged: 0, thrown: 0, breath: 0, def: 0, res: 0, hp: 0, toHit: 0 };
     }
   }
 }
@@ -182,6 +193,18 @@ function slotHasThrown(u, channel) {
 function slotHasBreath(u, channel) {
   const thrownType = u[channel.thrownTypeField];
   return thrownType === 'fire' || thrownType === 'lightning';
+}
+
+// The record's two independent Breath *fields*, which `U.firebreath > 0` and
+// `U.lightningbreath > 0` (Units.RecalculateUnits.pas:878-882) test without a type gate because
+// each is a field of its own. Which field a modern slot is, is record structure; the DOS-shaped
+// shared slot is one value standing for ranged, Thrown, Breath or a gaze, so there it stays a
+// live identity read.
+function isBreathFieldSlot(u, channel) {
+  if (channel.channelKey) {
+    return channel.channelKey === 'fireBreath' || channel.channelKey === 'lightningBreath';
+  }
+  return slotHasBreath(u, channel);
 }
 
 // `Caster.exe`'s conventional ranged channel: the `SRanged` field itself in the modern record —
@@ -454,13 +477,11 @@ function slotGateAdmits(u, channel, gate) {
   if (gate === 'persistentRanged') return !!channel.slots.persistentRanged;
   if (gate === 'rtb') return isLiveSlot(u, channel);
   if (gate === 'ranged') return isLiveSlot(u, channel) && u[channel.rangedTypeField] !== 'none';
-  // The dead-slot rule's one source-backed exception: `Dec(U.thrown, 5)` has no positivity gate
-  // (Units.RecalculateUnits.pas:2281-2295), so it reaches the record's Thrown field while that
-  // field still stands empty and the region-`e` clamp settles the result.
-  if (gate === 'rangedOrThrown') {
-    return isModernRangedOrThrownSlot(u, channel)
-      && (isLiveSlot(u, channel) || isThrownFieldSlot(u, channel));
-  }
+  // The dead-slot rule's one source-backed exception: neither `Dec(U.ranged, 5)` nor
+  // `Dec(U.thrown, 5)` has a positivity or a type gate (Units.RecalculateUnits.pas:2281-2295), so
+  // each reaches its field while that field still stands empty and typeless, and the region-`e`
+  // clamp settles the result. Being one of those two fields is all this gate asks (F100).
+  if (gate === 'rangedOrThrown') return isModernRangedOrThrownSlot(u, channel);
   throw new Error(`unknown slot gate ${gate}`);
 }
 

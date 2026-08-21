@@ -119,13 +119,18 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:stat:base': SCOPE_ALL,
   'base:survivalInstinctToBlock': SCOPE_WARLORD,
   // --- a: precalc, in the binary ---
-  'a:chaosChannels:fireBreath': SCOPE_ALL,
+  // Chaos Channels Fire Breath is region `a` in `Caster.exe` alone: its block is
+  // $00599EE8..$00599FA8, ahead of the UnitCalcPre hook at $0059A002. The DOS builds put the
+  // same effect inside `BU_Apply_Specials` (131:0x8F720, com1:0x8F474), one block past the
+  // demon wings the chains already carry in region `c`, so both of its halves are
+  // `c:chaosChannels:fireBreath*` there (F103).
+  'a:chaosChannels:fireBreath': SCOPE_MODERN,
   'a:holyBonus': SCOPE_DOS,
   'a:callToArmsPaladins': SCOPE_MODERN,
   'a:chosen': SCOPE_MODERN,
   'a:combatSummoned': SCOPE_MODERN,
   'a:constructCatapult': SCOPE_MODERN,
-  'a:chaosChannels:fireBreath:race': SCOPE_ALL,
+  'a:chaosChannels:fireBreath:race': SCOPE_MODERN,
   'a:resistanceToAll': SCOPE_DOS,
   // --- b: precalc, in UnitCalcPre.CAS ---
   'b:battleArmor': SCOPE_WARLORD,
@@ -174,6 +179,8 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:breakthrough:normal': SCOPE_MODERN,
   'c:chaosChannels:armor': SCOPE_ALL,
   'c:chaosChannels:armor:race': SCOPE_ALL,
+  'c:chaosChannels:fireBreath': SCOPE_DOS,
+  'c:chaosChannels:fireBreath:race': SCOPE_DOS,
   'c:chaosChannels:flight': SCOPE_ALL,
   'c:chaosSurge': SCOPE_ALL,
   'c:charmOfLife': SCOPE_ALL,
@@ -192,8 +199,8 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:goodMoon': SCOPE_MODERN,
   'c:guardian': SCOPE_COM_PLUS,
   'c:guidingBeaconAura': SCOPE_COM1,
-  'c:heavenlyLight': SCOPE_MODERN,
-  'c:heavenlyLight:toHit': SCOPE_MODERN,
+  'c:heavenlyLight': SCOPE_COM_PLUS,
+  'c:heavenlyLight:toHit': SCOPE_COM_PLUS,
   'c:highPrayer': SCOPE_ALL,
   'c:holyArmor': SCOPE_ALL,
   'c:holyWeapon': SCOPE_ALL,
@@ -302,10 +309,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'attackSpecific:dosEffectiveDefense:largeShield': SCOPE_DOS,
   'attackSpecific:dosEffectiveDefense:magicImmunity': SCOPE_DOS,
   'attackSpecific:dosEffectiveDefense:resistElements': SCOPE_COM1,
-  // Wider than PROVENANCE[dosEffectiveDefense:righteousness] (the MoM builds only): CoM 1
-  // replaces the block with an 87-byte NOP field, but the calculator still admits the write on
-  // its magical-ranged, breath and spell-damage channels. That is F105, not a scope error.
-  'attackSpecific:dosEffectiveDefense:righteousness': SCOPE_DOS,
+  'attackSpecific:dosEffectiveDefense:righteousness': SCOPE_MOM,
   'attackSpecific:dosEffectiveDefense:weaponImmunityBonus': SCOPE_COM1,
   'attackSpecific:dosEffectiveDefense:weaponImmunityFloor': SCOPE_MOM,
   'attackSpecific:dosEffectiveDefense:weaponImmunityMark': SCOPE_DOS,
@@ -313,7 +317,9 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'attackSpecific:dosEffectiveResistance:bless': SCOPE_DOS,
   'attackSpecific:dosEffectiveResistance:charmed': SCOPE_DOS,
   'attackSpecific:dosEffectiveResistance:elemental': SCOPE_DOS,
+  'attackSpecific:dosEffectiveResistance:magicImmunity': SCOPE_DOS,
   'attackSpecific:dosEffectiveResistance:resistMagic': SCOPE_DOS,
+  'attackSpecific:dosEffectiveResistance:righteousness': SCOPE_MOM,
 });
 
 // `chance:` is the To-Hit/To-Block ledger's namespace and nothing else's (M13): every step in
@@ -552,6 +558,14 @@ function orderStatStepsBySource(steps, chain) {
 //
 // `ctx` carries everything a step may read besides the unit: `version`, the permanent
 // base record as `ctx.base`, and — for the resolution sequences — the attack context.
+//
+// `ctx.base` is maintained here rather than passed in. Every write an engine makes to its
+// permanent record before the recalculation's `Units[i] := BaseUnits[i]` copy is a `base`-phase
+// step (CLAUDE.md, *Step authoring*), so the record as the last base step leaves it is exactly
+// what a later region's `BaseUnits[i].…` gate reads. It is therefore refreshed through the base
+// phase and frozen when that phase ends. A sequence with no base-phase step — the resolution
+// transforms, the To-Hit ledger, the figure sequence — leaves it absent.
+//
 // Two optional fields are for development only:
 //   ctx.trace             an array; each step that changes a declared field appends an entry
 //   ctx.executionTrace    an array; every visited step appends an applied/skipped entry
@@ -570,6 +584,7 @@ function runStatSteps(steps, unit, ctx) {
     }
     const before = (trace || validate) ? { ...unit } : null;
     const result = step.apply(unit, context);
+    if (step.phase === 'base') context.base = { ...unit };
     if (validate) assertStepWrites(step, before, unit);
     if (trace) recordStepTrace(trace, step, before, unit, order);
     if (executionTrace) recordStepExecution(executionTrace, step, order, 'applied');

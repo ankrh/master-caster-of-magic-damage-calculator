@@ -721,6 +721,15 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
+  focusMagicMagicalRangedIgnoresLiveStrengthWarlord: {
+    desc: 'Focus Magic (Warlord): the magical-ranged +3 is the fourth arm of the ranged branch ($0059AAA3), reached on `B.ranged <> 0` and a magical `B.rangedtype` — both permanent-record reads, and the arm makes no live-strength test of its own (Units.RecalculateUnits.pas:874-909). Plague is region `b`, so its −3 has already driven the magic_c 2 to −1 by the time the branch runs; the arm still adds 3, and the region-`e` clamp settles it at 2. Ranged mode at 100% To Hit → 2.0. Gating the +3 on live strength instead loses the attack outright for 0.0, and removing Focus Magic does exactly that.',
+    version: V_WARLORD,
+    a: { rtbType:'magic_c', rtb:2, toHitRtbMod:80, hp:10,
+      abilities: { focusMagic: true, plague: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
   focusMagicBreathCoM2: {
     desc: 'Focus Magic (CoM2): breath gets +3. fire breath 2 → 5 plus melee 1 → 6.0',
     version: V_COM2,

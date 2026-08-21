@@ -35,14 +35,14 @@ function stoningFailProb(defRes, defAbilities, modifier) {
 
 // --- Death Touch ---
 // Same kill-roll mechanics as Stoning Touch, but with the Death-realm immunity model:
-// Death Immunity and Magic Immunity each skip the roll outright; Righteousness is a real
-// +30 resistance bonus (the realm is Death, which Righteousness covers).
+// Death Immunity and Magic Immunity each skip the roll outright. Righteousness is a real
+// +30 resistance bonus (the realm is Death, which Righteousness covers) and reaches `defRes`
+// as a step of the resistance transform, not as a second bonus here.
 // Each attacking figure makes one resistance roll on the target; a failed roll kills
 // one defender figure.
 function deathTouchFailProb(defRes, defAbilities, modifier) {
   if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) return 0;
-  const bonus = hasAbil(defAbilities, 'righteousness') ? 30 : 0;
-  const effectiveRes = defRes + modifier + bonus;
+  const effectiveRes = defRes + modifier;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
 }
@@ -127,11 +127,10 @@ function destructionFailProb(defRes, defAbilities, modifier, version) {
 
 // --- Death Gaze ---
 // Same roll mechanics as Stoning Gaze. Death Immunity and Magic Immunity each skip the
-// roll outright; Righteousness grants +30 resistance (always pushes effective Res ≥ 10).
+// roll outright; Righteousness' +30 is already inside `defRes`.
 function deathGazeFailProb(defRes, defAbilities, modifier) {
   if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) return 0;
-  const bonus = hasAbil(defAbilities, 'righteousness') ? 30 : 0;
-  const effectiveRes = defRes + modifier + bonus;
+  const effectiveRes = defRes + modifier;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
 }
@@ -451,13 +450,14 @@ function meleeBreakdownLabel(params) {
 
 // --- Life Steal ---
 // Compute whether life steal can affect the target, and return the modifier.
-// Returns null if immune: Death Immunity and Magic Immunity each skip the roll outright,
-// Righteousness grants +30 resistance, and an effective Res ≥ 10 can never fail a save.
+// Returns null if immune: Death Immunity and Magic Immunity each skip the roll outright, and an
+// effective Res ≥ 10 can never fail a save. Righteousness' +30 is already inside `defRes`, which
+// matters here beyond the gate: the same `defRes` is the resistance the drain magnitude is a
+// margin over, so a bonus applied only to this test would be spent as damage.
 // The lifeSteal value is the resistance penalty (e.g. -3 means target's res is penalized by 3).
 function lifeStealEffective(defRes, defAbilities, modifier) {
   if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) return null;
-  const bonus = hasAbil(defAbilities, 'righteousness') ? 30 : 0;
-  const effRes = defRes + modifier + bonus;
+  const effRes = defRes + modifier;
   if (effRes >= 10) return null;
   return modifier;
 }

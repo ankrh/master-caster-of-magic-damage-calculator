@@ -253,6 +253,46 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
 
+  // --- The level ladder's four base-record gates ---
+  // `ApplyLevelBonus` gates its ranged write on `BaseUnits[i].rangedtype > 0` alone, with no
+  // strength test, and its Thrown and two Breath writes on `BaseUnits[i].thrown`,
+  // `.firebreath` and `.lightningbreath` being positive — the permanent record in the normal
+  // arm, the calculated fields in the hero arm (Units.RecalculateUnits.pas:548-571, :509-530).
+  levelRangedGateZeroStrengthCoM2: {
+    desc: 'The ranged level bonus is gated on the permanent ranged *type*, with no strength test: a record carrying a magical ranged type at strength 0 finishes Champion on the CoM2 MagicRanged column, 0 + 3 = 3, so the ladder creates the attack. UNITS.INI ships one such record (Warlord [362] Wanderer, RangedType=30 with Ranged=0). The same card at level normal deals 0.',
+    version: V_COM2,
+    a: { figs:1, atk:0, modernAttacks: { ranged: { strength: 0, type: 'magic_c' } },
+      level:'champion', toHitRtbMod:70, hp:10 },
+    b: { atk:0, def:0, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  levelRangedGateZeroStrengthWarlord: {
+    desc: 'The same zero-strength typed ranged record under Warlord, whose MagicRanged column gives Champion 4 where CoM2 gives 3: 0 + 4 = 4. The same card at level normal deals 0.',
+    version: V_WARLORD,
+    a: { figs:1, atk:0, modernAttacks: { ranged: { strength: 0, type: 'magic_c' } },
+      level:'champion', toHitRtbMod:70, hp:10 },
+    b: { atk:0, def:0, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  levelThrownGateBaseRecordWarlord: {
+    desc: 'Explosive Reform writes `SETSTAT(U,SThrown,0,...)` (UnitCalcPre.CAS:1071) — record selector 0, the calculated record — so `BaseUnits[i].thrown` is still zero when the normal arm reads it and the Thrown ladder adds nothing. One figure gives Thrown 7, and Champion melee is 5 + 4 = 9, for 16.0. Reading the calculated field instead would carry the Thrown to 9, for 18.0.',
+    version: V_WARLORD,
+    a: { figs:1, atk:5, level:'champion', toHitMod:70, toHitRtbMod:70, hp:10,
+      abilities: { outlanderWizard: true, explosive: true } },
+    b: { atk:0, def:0, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 16.000 },
+  },
+  levelThrownGateHeroCalculatedWarlord: {
+    desc: 'The paired hero case: the hero arm tests the *calculated* Thrown field, so the same Explosive Reform grant does take the Champion Thrown step — Thrown 7 + 2 = 9 beside melee 9, for 18.0 where the normal arm gives 16.0. The +2 comes from the [Normal] ladder because the separate nine-step [Hero] progression is not modelled (D27/F41); what this pair fixes is which record each arm reads.',
+    version: V_WARLORD,
+    a: { figs:1, atk:5, level:'champion', unitType:'hero', toHitMod:70, toHitRtbMod:70, hp:10,
+      abilities: { outlanderWizard: true, explosive: true } },
+    b: { atk:0, def:0, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 18.000 },
+  },
+
   // --- Warlord source-record placement for Stoning Touch and Death Touch ---
   // Unit-card/roster values occupy the general record, so both physical and magical
   // ranged attacks merge them. Focus Magic and Revenant supply the record-specific cases.

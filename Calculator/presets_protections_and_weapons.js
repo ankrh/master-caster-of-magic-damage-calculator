@@ -455,6 +455,43 @@ definePresets({
     rangedCheck: false,
     expected: { dmgToA: 0, dmgToB: 0.600 },
   },
+  heavenlyLightMeleeCoM: {
+    desc: 'Heavenly Light (CoM 1), the defender-side city block at com1:0x905BB: a positive melee attack gains +1, and a unit carrying no weapon material also gains +10% melee To Hit → 3 at 40% = 1.200. Without the enchantment this is 2 at 30% = 0.600.',
+    version: V_COM,
+    a: { atk:2, toHitMod:0, hp:10, abilities: { heavenlyLight: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
+  heavenlyLightToHitNeedsBareWeaponCoM: {
+    desc: 'Material boundary: com1:0x90600 grants the melee threshold only where `mutations & UM_WEAPON_QUALITY_MASK` is clear, so a mithril unit takes the +1 strength and none of the To Hit. Mithril alone is 3 at 40% = 1.200; with Heavenly Light it is 4 at 40% = 1.600, not the 4 at 50% = 2.000 an unconditional threshold gives. Paired with heavenlyLightMeleeCoM, the same unit with a bare weapon.',
+    version: V_COM,
+    a: { atk:2, toHitMod:0, weapon:'mithril', hp:10, abilities: { heavenlyLight: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.600 },
+  },
+  heavenlyLightMissileCoM: {
+    desc: 'The shared-slot half: com1:0x90610 raises a positive ranged strength and com1:0x9062B adds the threshold for Thrown, Missile and Boulder types → missile 3 at 40% = 1.200. Without the enchantment this is missile 2 at 30% = 0.600.',
+    version: V_COM,
+    a: { atk:0, rtbType:'missile', rtb:2, hp:10, abilities: { heavenlyLight: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
+  heavenlyLightBreathStrengthNoToHitCoM: {
+    desc: 'Type boundary inside one slot: the CoM 1 strength write carries no `ranged_type` test, so the DOS shared slot takes +1 whatever stands in it, while the threshold at com1:0x90618 admits only Thrown and types below RAT_MAGIC_FIRST. A Fire Breath unit is therefore breath 3 at 30% = 0.900, not the 2 at 30% = 0.600 it is without the enchantment and not the 3 at 40% = 1.200 a leaking threshold gives. Paired with heavenlyLightMissileCoM, the same unit with a missile attack.',
+    version: V_COM,
+    a: { atk:0, rtbType:'fire', rtb:2, hp:10, abilities: { heavenlyLight: true } },
+    b: { hp:10 },
+    rangedCheck: false,
+    expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
+  heavenlyLightMagicWeaponCoM: {
+    desc: 'The minimum weapon quality: com1:0x9063F raises `Weapon_Plus1` to 1 where it was 0, so a bare-weapon unit bypasses Weapon Immunity. atk 10 at a forced 100% To Hit against a Weapon-Immune defender: 11 (the block\'s own +1) all land for 11.000. Without the enchantment Weapon Immunity holds the defense up and only 2.000 gets through; a plain magic weapon and no enchantment gives 10.000, which is the same bypass without the strength bonus.',
+    version: V_COM,
+    a: { atk:10, toHitMod:70, hp:10, abilities: { heavenlyLight: true } },
+    b: { def:0, toBlkMod:70, hp:20, abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 11.000 },
+  },
 
   // --- Channel fields on the modern record (F80) ---
   ccFireBreathSeparatesThrownWarlord: {
@@ -482,6 +519,22 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
+  weaponMaterialRangedHasNoStrengthGateWarlord: {
+    desc: 'ApplyMagicWeapons writes `Inc(Units[i].ranged, j)` inside `if not Ismagicalranged(Units[i].rangedtype)` with no positive-strength gate at all (Units.RecalculateUnits.pas:648-656), and `Ismagicalranged` is False for a zero ranged type (:2968-2975), so the adamantium +2 lands on the `SRanged` field of a unit that owns no ranged attack. Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS:1494-1500): melee 3 + 2 material + 2 for the Armor the material gave = 7, beside a new Thrown 2 → 9.0. (Gating that write on the slot\'s input strength leaves nothing to transfer, for 7.0; without Blaze of Glory melee 5 and Armor 2 stay where they are, for 5.0; without the material, melee 3 → 3.0.)',
+    version: V_WARLORD,
+    a: { atk:3, def:0, toHitMod:70, toHitRtbMod:70, hp:10, weapon:'adamantium',
+      abilities: { blazeOfGlory: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 9.000 },
+  },
+  weaponMaterialThrownReadsCalculatedFieldWarlord: {
+    desc: 'The Thrown half of the same block is gated on `if Units[i].thrown > 0` — the *calculated* Thrown field at ApplyMagicWeapons\' own position (Units.RecalculateUnits.pas:658-662), which region `b` has already written. Bombs & Grenades creates Thrown floor(8 − 4/2) = 6 at `UnitCalcPre.CAS:1071` on a card with no Thrown input at all, so the adamantium +2 reaches it: 4 figures at melee 1+2 = 3 and Thrown 6+2 = 8 deal (3 + 8) × 4 = 44.0. (Reading the slot\'s input strength instead withholds the material from the created attack, leaving Thrown 6 for 36.0; the sibling bombsGrenadesWarlord fixture without the material is 28.0.)',
+    version: V_WARLORD,
+    a: { figs:4, atk:1, toHitMod:70, toHitRtbMod:70, hp:10, weapon:'adamantium',
+      abilities: { outlanderWizard: true, explosive: true } },
+    b: { def:0, toBlkMod:70, hp:50 },
+    expected: { dmgToA: 0, dmgToB: 44.000 },
   },
 
   // --- Wraith Form ---
@@ -825,6 +878,13 @@ definePresets({
     a: { atk:1, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  ccFireBreathAfterLevelMoM: {
+    desc: 'Chaos Channels Fire Breath (MoM 1.31) is written inside BU_Apply_Specials at 0x8F720, after the level bonus, and it assigns the shared slot rather than adding to it — so an elite unit breathes 2, not 2 + the elite ranged bonus. Elite melee 1 + 2 = 3 plus breath 2 → 5 dmg (7 if the assignment ran before the level bonus; a normal-level unit deals 3).',
+    version: V_MOM_131,
+    a: { atk:1, level:'elite', toHitMod:70, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   ccFireBreathCoM: {
     desc: 'Chaos Channels Fire Breath 4 in CoM: atk 1 melee + breath 4 → 5 dmg',

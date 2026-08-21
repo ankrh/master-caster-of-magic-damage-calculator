@@ -629,6 +629,18 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(focusMagicLowStrength.rtb, 1,
     'Modern Focus Magic preserves positive conversion strength below 3');
 
+  // The magical-ranged `+3` is the branch's fourth arm, reached on `B.ranged <> 0` and a magical
+  // `B.rangedtype` and carrying no live-strength test (Units.RecalculateUnits.pas:903-907), so a
+  // region-`b` penalty that has already driven the field below zero does not withhold it.
+  const focusMagicUnderPlague = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.7',
+    abilities: { focusMagic: true, plague: true },
+    rtbType: 'magic_c', rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'magic_c' } },
+  }));
+  assertEqual((focusMagicUnderPlague.modernAttacks.ranged || {}).strength, 2,
+    'Focus Magic adds three to a permanently magical ranged attack a phase-b penalty drove below zero');
+
   const warlordFocusBeforeWarp = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { focusMagic: true, warpAttack: true },

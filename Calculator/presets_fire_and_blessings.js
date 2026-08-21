@@ -474,6 +474,22 @@ definePresets({
     warpReality: true,
     expected: { dmgToA: 0, dmgToB: 0.200 },
   },
+  ccDefenseOverridesBlackChannelsMoM: {
+    desc: 'Type precedence (MoM 1.31): BU_Apply_Specials writes Black Channels\' Death realm at 0x8F4A1 and demon-skin armor\'s Chaos realm at 0x8F6FE, so the later Chaos write wins and Darkness gives the defender nothing. Defence 2 + Black Channels 1 + armor 3 twice = 9; 12 certain hits against 9 certain blocks deal 3 (Death would take Darkness\' +1 and leave 2).',
+    version: V_MOM_131,
+    darkness: true,
+    a: { atk:12, toHitMod:70, hp:10 },
+    b: { atk:0, def:2, res:5, toBlkMod:70, hp:10, abilities: { blackChannels: true, ccDefense: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  ccDefenseOverridesUndeadCoM1: {
+    desc: 'Type precedence (CoM 1): the same two blocks are reordered — Undead\'s Death realm at com1:0x8F4BC, demon-skin armor\'s Chaos realm at com1:0x8F757 — so Chaos still wins and Darkness gives nothing. Defence 2 + armor 3 = 5; 12 certain hits against 5 certain blocks deal 7 (Death would take Darkness\' +1 and leave 6).',
+    version: V_COM,
+    darkness: true,
+    a: { atk:12, toHitMod:70, hp:10 },
+    b: { atk:0, def:2, res:5, toBlkMod:70, hp:10, abilities: { undead: true, ccDefense: true } },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
   raiseDeadOverridesUndeadCoM2: {
     desc: 'Type precedence (CoM2): Raise Dead makes the unit unaligned fantastic, overriding Undead, so Exorcise −4 still reaches it but loses the created-undead −3: res 7 stays at effective 3, pFail=0.7, E[banish]=7 plus 1 physical → 8.0 (11.0 without Raise Dead)',
     version: V_COM2,
@@ -650,6 +666,20 @@ definePresets({
     a: { atk:1, rtbType:'fire', rtb:7, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  blessImmolationDefMoM: {
+    desc: 'MoM Bless +3 def vs Immolation: the spell path enters the defense routine as ranged_type 38 and MoM puts no type gate on the Bless arm, so immolation def 1+3=4 blocks all 4 strength at 100% block. Melee 3 − 1 = 2 → 2 dmg (2.440 without Bless)',
+    version: V_MOM_131,
+    a: { atk:3, toHitMod:70, hp:10, abilities: { immolation: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:20, abilities: { bless: true } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  blessImmolationDefCoM: {
+    desc: 'CoM 1 Bless gives NO def bonus vs Immolation — a channel exclusion, not an inert fixture: CoM 1 gates the Bless arm on ranged_type > 39 and the spell-damage helper passes exactly 39. Immolation def stays 1 vs strength 10 at 100% block → 2.028, plus melee 3 − 1 = 2 → 4.028 (a +5 here would leave 2.012)',
+    version: V_COM,
+    a: { atk:3, toHitMod:70, hp:10, abilities: { immolation: true } },
+    b: { atk:0, def:1, toBlkMod:70, hp:20, abilities: { bless: true } },
+    expected: { dmgToA: 0, dmgToB: 4.028 },
   },
   blessResistBonusWarlord: {
     desc: 'Warlord Bless +4 res vs Death Gaze −3: effRes=5+4−3=6, pFail=0.4 → 4.0. Bless\'s +7 Defense half does not touch gaze (HELP.TXT: fire/lightning and Chaos/Death damage spells only), and Warlord has no hidden gaze strength stat.',

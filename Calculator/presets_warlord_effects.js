@@ -917,6 +917,38 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
+  blazeOfGloryCarriesWeaknessRangedPenaltyWarlord: {
+    desc: 'Dec(U.ranged, 3) has no type gate either (Units.RecalculateUnits.pas:2273-2279), so it reaches a typeless Ranged field: Lionheart\'s own ungated +3 (:1730) puts 3 there, Weakness takes it back to 0, and Blaze of Glory transfers that 0 into Thrown (UnitCalc.CAS:1494-1500). Melee 5+3-3 = 5 plus thrown 4-3 = 1 → 6.0. (Without Weakness, melee 8 plus thrown 4+3 = 7 → 15.0; reading the ranged arm as a type predicate leaves SRanged at 3 and gives thrown 4 → 9.0.)',
+    version: V_WARLORD,
+    a: { atk:5, rtb:4, rtbType:'thrown', def:0, toHitMod:70, toHitRtbMod:70, hp:10,
+      abilities: { blazeOfGlory: true, weakness: true, lionheart: true } },
+    b: { def:0, toBlkMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  blazeOfGloryCarriesMindStormRangedPenaltyWarlord: {
+    desc: 'Mind Storm\'s Dec(U.ranged, 5) is ungated in the same way (Units.RecalculateUnits.pas:2281-2295), so an empty typeless Ranged field stands at -5 when Blaze of Glory adds it into Thrown (UnitCalc.CAS:1494-1500). Melee 9-3 = 6 with an armor of 5-5 = 0 to carry, plus thrown 12-5 = 7 taking the -5 → 2 → 8.0. (Without Mind Storm, melee 9+5 = 14 plus thrown 12 → 26.0; gating the ranged arm on a live slot leaves the transfer nothing to carry and gives thrown 7 → 13.0.)',
+    version: V_WARLORD,
+    a: { atk:9, rtb:12, rtbType:'thrown', def:5, toHitMod:70, toHitRtbMod:70, hp:10,
+      abilities: { blazeOfGlory: true, mindStorm: true } },
+    b: { def:0, toBlkMod:70, hp:40 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  blazeOfGloryCarriesNoBombsGrenadesGrantWarlord: {
+    desc: 'SETSTAT(U,SThrown,0,GETSTAT(U,SThrown,0)+%I(8-SFigures/2)) (UnitCalcPre.CAS:1071) is one '
+      + 'write to one field, so the Ranged field Blaze of Glory needs standing by for its transfer '
+      + '(UnitCalc.CAS:1494-1500) never takes a copy of the grant merely because it is empty and '
+      + 'typeless when the block runs. 1-figure melee 5 with Armor 2: Blaze moves the armor into '
+      + 'melee for 7, Bombs&Grenades grants Thrown floor(8 - 1/2) = 7, and there is nothing in the '
+      + 'Ranged field for the transfer to carry, so 100% hit vs def 0 gives 7 + 7 = 14.0. (Letting '
+      + 'the grant fire on every empty typeless slot puts 7 in the Ranged field too and Blaze adds '
+      + 'it in for Thrown 14 and 21.0; dropping Explosive Reform leaves melee 7 alone → 7.0, and '
+      + 'dropping Blaze of Glory leaves melee 5 beside the same Thrown 7 → 12.0.)',
+    version: V_WARLORD,
+    a: { figs:1, atk:5, def:2, toHitMod:70, toHitRtbMod:70, hp:10,
+      abilities: { outlanderWizard: true, explosive: true, blazeOfGlory: true } },
+    b: { def:0, toBlkMod:70, hp:40 },
+    expected: { dmgToA: 0, dmgToB: 14.000 },
+  },
   blazeOfGloryThrownReadsHolyWeaponToHitWarlord: {
     desc: 'Inc(U.hitchancethrown, 10) is unconditional (Units.RecalculateUnits.pas:1803-1809), so Holy Weapon\'s +10 already stands on the record\'s Thrown threshold when Blaze of Glory puts an attack there (UnitCalc.CAS:1494-1500). Melee 5 at 30+10 = 40% plus the transferred thrown 7 at the same 40% → 2.0 + 2.8 = 4.8. (Without Holy Weapon both read 30% → 3.6; without Blaze of Glory the missile does not fire in melee, leaving melee 5 at 40% → 2.0.)',
     version: V_WARLORD,

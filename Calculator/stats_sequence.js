@@ -247,34 +247,43 @@ function baseStatSteps(ctx) {
   ];
 }
 
-// `a`: precalc, in the binary.
-function precalcBinaryStatSteps(ctx) {
+// The Chaos Channels fire-breath strength write, built once for the two regions that make it.
+// `Caster.exe` adds 4 to its independent Fire Breath field at $00599EE8, ahead of the
+// UnitCalcPre hook, so the modern builds make it in region `a`. The DOS engines assign their
+// shared secondary slot instead, inside `BU_Apply_Specials` at 131:0x8F720 / com1:0x8F474 —
+// one block past the demon wings in both, and so after everything the MoM constructor wrote
+// before it — so their write is region `c` at that address (F103). The admission gate is
+// checked before either; whether the slot is free is the step's own live read.
+// PROVENANCE[chaosChannels:fireBreath]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
+function chaosChannelsFireBreathStep(ctx, phase) {
   const {
-    abilByPhase, ccFireBreathStrength, ccGrantsThisSlot, ccIndependentChannels, channels,
+    ccFireBreathStrength, ccGrantsThisSlot, ccIndependentChannels, channels,
     rangedTypeFields, strengthFields, thrownTypeFields,
   } = ctx;
+  return statStep({ id: 'chaosChannels:fireBreath', sourceId: 'chaosChannels:fireBreath',
+    sourceLabel: 'Chaos Channels', phase,
+    writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
+    when: u => channels.some(c => ccGrantsThisSlot(u, c)),
+    apply: u => {
+      for (const c of channels) {
+        if (!ccGrantsThisSlot(u, c)) continue;
+        u[c.strengthField] = ccIndependentChannels
+          ? u[c.strengthField] + ccFireBreathStrength : ccFireBreathStrength;
+        u[c.rangedTypeField] = 'none';
+        u[c.thrownTypeField] = 'fire';
+      }
+    } });
+}
+
+// `a`: precalc, in the binary.
+function precalcBinaryStatSteps(ctx) {
   return [
-    // Region `a` is narrow: Chaos Channels Fire Breath is its represented strength write;
-    // its other represented writes are identity/flags. City Walls is not here: ApplyAttack
-    // passes it as EffectiveDefense's
+    // Region `a` is narrow: the modern Chaos Channels Fire Breath write is its represented
+    // strength write; its other represented writes are identity/flags. City Walls is not here:
+    // ApplyAttack passes it as EffectiveDefense's
     // per-attack `extradef` argument after the finished region-e record is read.
-    ...abilByPhase.a,
-    // `Caster.exe` adds 4 to its independent Fire Breath field. The DOS engines assign their
-    // shared secondary slot instead, after checking the version-specific admission gate.
-    // PROVENANCE[chaosChannels:fireBreath]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
-    statStep({ id: 'chaosChannels:fireBreath', sourceId: 'chaosChannels:fireBreath',
-      sourceLabel: 'Chaos Channels', phase: 'a',
-      writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
-      when: u => channels.some(c => ccGrantsThisSlot(u, c)),
-      apply: u => {
-        for (const c of channels) {
-          if (!ccGrantsThisSlot(u, c)) continue;
-          u[c.strengthField] = ccIndependentChannels
-            ? u[c.strengthField] + ccFireBreathStrength : ccFireBreathStrength;
-          u[c.rangedTypeField] = 'none';
-          u[c.thrownTypeField] = 'fire';
-        }
-      } }),
+    ...ctx.abilByPhase.a,
+    chaosChannelsFireBreathStep(ctx, 'a'),
   ];
 }
 
@@ -405,15 +414,18 @@ function precalcScriptStatSteps(ctx) {
     // Thrown field this creates does not exist before this position. The step supplies its
     // identity here — as `d:shadowStrike:thrown` does for the same field — instead of the base
     // seed carrying a region-`b` write from the chain's first entry.
+    //
+    // One write to one field: `SThrown`. Which slot is that field is a structural question
+    // `isThrownFieldSlot` answers, so the grant does not spill into a slot that merely stands
+    // empty and typeless here — the `SRanged` field the Blaze of Glory transfer and the Focus
+    // Magic branch need standing by for their own writes is exactly that (F101).
     statStep({ id: 'bombsGrenades', phase: 'b',
       writes: [...strengthFields, ...thrownTypeFields],
       when: () => bombsGrenades,
       apply: u => {
         const grant = Math.max(0, Math.floor(8 - baseFigs / 2));
         for (const c of channels) {
-          if (u[c.rangedTypeField] === 'none' && u[c.thrownTypeField] === 'none') {
-            u[c.thrownTypeField] = 'thrown';
-          }
+          if (isThrownFieldSlot(u, c)) u[c.thrownTypeField] = 'thrown';
           if (slotHasThrown(u, c)) u[c.strengthField] += grant;
         }
       } }),
@@ -496,17 +508,17 @@ function precalcScriptStatSteps(ctx) {
 // `c`: magic calc, in the binary, including the Warp Creature block.
 function magicCalcBinaryStatSteps(ctx) {
   const {
-    abilByPhase, abilities, badMoonActive, bombsGrenades, channels,
+    abilByPhase, abilities, badMoonActive, channels,
     chaosSurgeCount, chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus,
     charmOfLifeActive, classicBerserk, com1DivineBarrierAura, com1SoulLinkerAura,
     com1GuidingBeaconAura, darkForceActive, darknessAtkBonus, darknessDefBonus, darknessResBonus,
     destinyActive, disciplineActive, disciplineAtkMod, disciplineDefMod, doomGazeLvlMod,
     dosTrueLightStep, enduranceActive, enduranceDefMod, enduranceHpMod,
     eternalNightEnemyResPenalty, flameBladeRangedStep,
-    focusMagicActive, focusMagicBranchSlots, focusMagicDoomGazeMod, gazeLvlMod, gazeWarpHalves,
+    focusMagicActive, focusMagicBranchSlots, gazeLvlMod, gazeWarpHalves,
     goodMoonActive,
     hasDarkness, hasMeleeAttack, heavenlyLightActive, heavenlyLightHitPick,
-    heavenlyLightMeleeToHit, holyArmorActive, holyWeaponHitPick, hwMeleeToHit,
+    heavenlyLightMeleeToHitAt, holyArmorActive, holyWeaponHitPick, hwMeleeToHit,
     landLinkingEligible,
     identity, inputBaseAtk, isCoM1, isCoM2,
     isCoMVersion, isWarlord, levelRank, lionheartHpMod, lvl,
@@ -551,14 +563,55 @@ function magicCalcBinaryStatSteps(ctx) {
     statStep({ id: 'level', phase: 'c',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'toHit',
         ...(!isCoM2 ? ['gaze', 'doomGaze'] : [])],
-      apply: u => {
+      // `runCtx`, not `ctx`: the enclosing name is this file's derivation context, while the
+      // runner passes the sequence context that carries the permanent record.
+      apply: (u, runCtx) => {
         u.res += lvl.res; u.def += lvl.def; u.atk += lvl.atk;
-        // ApplyLevelBonus dispatches on the channel the record carries here.
+        // The modern arm makes four independent secondary writes, each indexing a table of its
+        // own. The normal path gates all four on the **permanent** record —
+        // `BaseUnits[i].rangedtype > 0` selecting NormalMagicRanged or NormalMissileRanged by
+        // `Ismagicalranged` of that same base type, `BaseUnits[i].thrown > 0` selecting
+        // NormalThrown, and `.firebreath > 0` / `.lightningbreath > 0` both selecting
+        // NormalBreath (Units.RecalculateUnits.pas:548-571). The hero path keeps the base ranged
+        // gate and its base-type table selection, but tests the **calculated** Thrown and both
+        // Breaths instead (:509-530); it is `BaseUnits[i].ishero` that picks the path, which is
+        // the base identity flag. The hero *tables* are a separate nine-step progression and
+        // remain outside this step's supported scope (D27/F41), so both paths read the same
+        // `[Normal]` values here.
+        //
+        // One slot is one record field, so which of the four writes can reach it is decided by
+        // the identity that field carries in the record being read, and the arms are exclusive
+        // for that reason rather than the engine's — there `ranged`, `thrown`, `firebreath` and
+        // `lightningbreath` are four separate fields and cannot collide.
+        //
+        // The DOS engines run a different routine and keep their own arm: MoM increments the
+        // shared `.ranged` slot with no ranged-type test at all, and CoM 1's table walk skips the
+        // ranged step for `ranged_type >= 100` on every row but Veteran (unitcalc.c,
+        // `BU_Apply_Level_Bonus`) — which is what `lvl.ranged` and `lvl.thrown` are the
+        // cumulative values of. Both DOS gaze strengths are handled by the `gazeLvlMod` pair
+        // below, so this arm covers conventional ranged, Thrown and Breath alone.
+        const base = runCtx.base;
         for (const c of channels) {
-          if (u[c.rangedTypeField] !== 'none') {
-            if (c.calcBaseRtb > 0) u[c.strengthField] += lvl.ranged;
-          } else if (u[c.thrownTypeField] !== 'none') {
+          if (!isCoM2) {
+            if (u[c.rangedTypeField] !== 'none') {
+              if (c.calcBaseRtb > 0) u[c.strengthField] += lvl.ranged;
+            } else if (u[c.thrownTypeField] !== 'none') {
+              u[c.strengthField] += lvl.thrown;
+            }
+            continue;
+          }
+          const baseRangedType = base[c.rangedTypeField];
+          // The Thrown and Breath gates are positive-strength tests on a field with no type of
+          // its own; the slot's type pair is what says which of the three fields it is.
+          const gatedType = identity.isHero ? u[c.thrownTypeField] : base[c.thrownTypeField];
+          const gatedStrength = identity.isHero ? u[c.strengthField] : base[c.strengthField];
+          if (baseRangedType !== 'none') {
+            u[c.strengthField] += isMagicalRangedType(baseRangedType)
+              ? lvl.magicRanged : lvl.missileRanged;
+          } else if (gatedStrength > 0 && gatedType === 'thrown') {
             u[c.strengthField] += lvl.thrown;
+          } else if (gatedStrength > 0 && (gatedType === 'fire' || gatedType === 'lightning')) {
+            u[c.strengthField] += lvl.breath;
           }
         }
         u.hp += lvl.hp;
@@ -573,51 +626,89 @@ function magicCalcBinaryStatSteps(ctx) {
     // attack-strength package before the Warps. Warlord's later CAS block moves touch riders but
     // makes no attack-strength write. CoM 1 executes Focus Magic in BU_Apply_Specials, after the
     // constructor's material block and after Flame Blade's ranged addition.
-    // One compiled block, so one step: the independent Doom/Breath additions and the ranged
-    // branch that follows them. The ranged branch reads the live post-addition strength —
-    // physical ranged only changes type, Thrown moves to conventional ranged at its current
-    // strength, and an empty ranged record gets 3 — which is why the two bodies run in this
-    // order. Every conversion flag already requires `focusMagicActive`, so it is the whole gate;
-    // with no channel to convert the second loop `continue`s over all of them.
+    // One compiled block, so one step. The two engines shape it differently and each arm below
+    // is its own engine's, not a predicate over a shared body.
+    //
+    // Modern: three independent positive-strength tests on the calculated record — `U.doomgaze`,
+    // `U.firebreath`, `U.lightningbreath`, each `+3` — and then **exactly one** of four ranged
+    // arms, every one of them gated on the **permanent** record through `ctx.base`
+    // (Units.RecalculateUnits.pas:874-909). The magical-ranged `+3` is the fourth arm, not a
+    // fourth strength test: it runs only where `B.ranged <> 0` and `B.rangedtype` is magical, and
+    // it has no live-strength test of its own, so a magical ranged attack an earlier region drove
+    // to or below zero still takes it.
+    //
+    // CoM 1 runs a different block: no Doom Gaze or Breath clause at all, a three-way branch, and
+    // gates its `+3` on the **unit type's** ranged type or a live type above Thrown, with the
+    // fallback raising the retyped attack to a minimum of 3 (`unitcalc.c`, com1:0x8F7E6).
     // PROVENANCE[focusMagic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:84c8baeb7a2f577dca38e056 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:5036ba273068428523d6008e | Reference docs/DOS reconstructed/unitcalc.c@span:20:fa0079de675211a02db49173 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:afc551599f5229a3bbe362bb
     statStep({ id: 'focusMagic', phase: 'c',
       writes: [...strengthFields, 'doomGaze', ...rangedTypeFields, ...thrownTypeFields],
       when: () => focusMagicActive,
-      apply: u => {
-        for (const c of channels) {
-          const magicalRanged = isMagicalRangedType(u[c.rangedTypeField]);
-          if (u[c.strengthField] > 0 && (magicalRanged || slotHasBreath(u, c))) {
-            u[c.strengthField] += 3;
+      // `runCtx`, not `ctx`: the enclosing name is this file's derivation context, while the
+      // runner passes the sequence context that carries the permanent record.
+      apply: (u, runCtx) => {
+        if (!isCoM2) {
+          // CoM 1: `base_rt >= 30 and base_rt <> 100` or a live type above Thrown adds 3;
+          // everything else is retyped and floored at 3.
+          for (const c of channels) {
+            const magicalRanged = isMagicalRangedType(u[c.rangedTypeField]);
+            if (u[c.strengthField] > 0 && (magicalRanged || slotHasBreath(u, c))) {
+              u[c.strengthField] += 3;
+            }
           }
+          for (const { target, source } of focusMagicBranchSlots) {
+            const convertsThrown = !target.baseRangedPresent
+              && source.calcBaseRtb > 0 && slotHasThrown(u, source);
+            const createsRanged = !target.baseRangedPresent && !convertsThrown
+              && u[target.thrownTypeField] === 'none';
+            const convertsRanged = target.calcBaseRtb > 0 && slotHasPhysicalRanged(u, target);
+            if (!convertsThrown && !createsRanged && !convertsRanged) continue;
+            if (createsRanged) u[target.strengthField] = 3;
+            else u[target.strengthField] = Math.max(u[target.strengthField], 3);
+            u[target.rangedTypeField] = 'magic_s';
+            u[target.thrownTypeField] = 'none';
+          }
+          return;
         }
-        u.doomGaze += focusMagicDoomGazeMod(u);
-        // The ranged branch. `U.ranged := U.thrown; U.thrown := 0`
+        // The three independent tests, in executable order.
+        if (u.doomGaze > 0) u.doomGaze += 3;
+        for (const c of channels) {
+          if (isBreathFieldSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 3;
+        }
+        // The four-way ranged branch. `U.ranged := U.thrown; U.thrown := 0`
         // (Units.RecalculateUnits.pas:885-891) is a **move** between two fields of the modern
         // record, which is what leaves the Thrown field free for the Shadow Strike grant at
-        // `UnitCalc.CAS:1262`. The DOS engines carry one shared secondary field, so there both
-        // ends of the move are the same slot and the branch is a retype in place. Restoring the
-        // engine's four-way base-record branch and its independent Doom Gaze test is F98.
+        // `UnitCalc.CAS:1262`. The DOS-shaped shared slot is both ends at once, so there the
+        // move is a retype in place, its `B.ranged` read needs the permanent type pair to say
+        // the one value is a conventional ranged attack at all, and it cannot hold a created
+        // ranged attack beside a Breath already standing in it — the modern record's own Ranged
+        // field is separate and always takes that write.
+        const base = runCtx.base;
         for (const { target, source } of focusMagicBranchSlots) {
           const inPlace = target === source;
-          const convertsThrown = !target.baseRangedPresent
-            && (source.calcBaseRtb > 0 || bombsGrenades) && slotHasThrown(u, source);
-          const createsRanged = !target.baseRangedPresent && !convertsThrown
-            && u[target.thrownTypeField] === 'none';
-          const convertsRanged = (target.calcBaseRtb > 0 || target.marionetteRangedSlot)
-            && slotHasPhysicalRanged(u, target);
-          if (!convertsThrown && !createsRanged && !convertsRanged) continue;
-          if (createsRanged) {
-            u[target.strengthField] = 3;
-          } else {
-            if (convertsThrown && !inPlace) {
-              u[target.strengthField] = u[source.strengthField];
+          const baseRangedAbsent = !(base[target.strengthField] > 0
+            && (!!target.channelKey || base[target.rangedTypeField] !== 'none'));
+          const thrownStrength = !source ? 0
+            : inPlace ? (slotHasThrown(u, source) ? u[source.strengthField] : 0)
+              : u[source.strengthField];
+          if (baseRangedAbsent && thrownStrength > 0) {
+            if (!inPlace) {
+              u[target.strengthField] = thrownStrength;
               u[source.strengthField] = 0;
+              u[source.thrownTypeField] = 'none';
             }
-            if (version === 'com_6.08') u[target.strengthField] = Math.max(u[target.strengthField], 3);
+            u[target.rangedTypeField] = 'magic_s';
+            u[target.thrownTypeField] = 'none';
+          } else if (baseRangedAbsent) {
+            if (inPlace && slotHasBreath(u, target)) continue;
+            u[target.strengthField] = 3;
+            u[target.rangedTypeField] = 'magic_s';
+            u[target.thrownTypeField] = 'none';
+          } else if (!isMagicalRangedType(base[target.rangedTypeField])) {
+            u[target.rangedTypeField] = 'magic_s';
+          } else {
+            u[target.strengthField] += 3;
           }
-          u[target.rangedTypeField] = 'magic_s';
-          u[target.thrownTypeField] = 'none';
-          if (convertsThrown) u[source.thrownTypeField] = 'none';
         }
       } }),
     // Weapon material is `@Units@ApplyMagicWeapons` at +0x04B90, after the equipment loop —
@@ -629,33 +720,60 @@ function magicCalcBinaryStatSteps(ctx) {
       apply: u => { u.toHit += 10; u.toBlk += 10; } }),
     // Heavenly Light and the friendly Guardian-node path share one compiled package. The
     // attack gates intentionally differ: persistent/base melee and current conventional Ranged.
-    // PROVENANCE[heavenlyLight]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:e405a407e722dce9ad79aea3
-    statStep({ id: 'heavenlyLight', phase: 'c', writes: ['def', 'res', 'atk', ...strengthFields],
+    //
+    // CoM 1 keeps its own Heavenly Light block in the space MoM used for True Light, entered at
+    // com1:0x905BB from the relocated aura tail. It gates on the defending side plus a non-zero
+    // `city_enchantments` byte and takes no node path. Its attack gates are both live and neither
+    // carries a type test — `if (bu->ranged > 0)` writes the DOS shared slot whatever stands in
+    // it, so a Thrown, Breath or gaze attack is raised exactly as a conventional ranged one is.
+    // PROVENANCE[heavenlyLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:e751e4e796518f15a4a77481 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:e405a407e722dce9ad79aea3
+    statStep({ id: 'heavenlyLight', phase: 'c',
+      writes: ['def', 'res', 'atk', ...strengthFields,
+        ...(isCoM1 ? ['gaze', 'doomGaze'] : [])],
       when: () => heavenlyLightActive,
       apply: u => {
         u.def += 1; u.res += 1;
+        if (isCoM1) {
+          if (u.atk > 0) u.atk += 1;
+          for (const c of channels) {
+            if (u[c.strengthField] > 0) u[c.strengthField] += 1;
+          }
+          if (u.gaze > 0) u.gaze += 1;
+          if (u.doomGaze > 0) u.doomGaze += 1;
+          return;
+        }
         if (inputBaseAtk > 0) u.atk += 1;
         for (const c of channels) {
           if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 1;
         }
       } }),
     // One To-Hit write reaching melee and the secondary slots. Each half keeps its own gate,
-    // both read from values fixed before this step, so they fold into the `apply`.
-    // PROVENANCE[heavenlyLight:toHit]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
+    // both read from values fixed before this step, so they fold into the `apply`. CoM 1 makes
+    // the same two writes from *inside* the strength gates above, so its halves read the live
+    // melee and the live slot strength; the material condition both share is
+    // `heavenlyLightMaterialTail` (stats.js). Reading those fields one step later is the same
+    // test: the gate above only increments where the value was already positive, so a field is
+    // positive after that step exactly when it was positive before it.
+    // PROVENANCE[heavenlyLight:toHit]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:74dcaa7c7c6760a9196277c6 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
     statStep({ id: 'heavenlyLight:toHit', sourceId: 'heavenlyLight',
-      sourceLabel: 'Heavenly Light / Guardian node', phase: 'c',
+      sourceLabel: isCoM1 ? 'Heavenly Light' : 'Heavenly Light / Guardian node', phase: 'c',
       writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
-      when: u => heavenlyLightMeleeToHit !== 0
+      when: u => heavenlyLightMeleeToHitAt(u) !== 0
         || secondaryHitTargets.some(target =>
           hitTargetValue(u, target, heavenlyLightHitPick) !== 0),
       apply: u => {
-        if (heavenlyLightMeleeToHit !== 0) u.toHitMelee += heavenlyLightMeleeToHit;
+        const meleeToHit = heavenlyLightMeleeToHitAt(u);
+        if (meleeToHit !== 0) u.toHitMelee += meleeToHit;
         for (const target of secondaryHitTargets) {
           u[target.field] += hitTargetValue(u, target, heavenlyLightHitPick);
         }
       } }),
     ...(isCoM2 ? weaponStatSteps : []),
     ...abilByPhase.cBeforeHolyArmor,
+    // The DOS half of the Chaos Channels fire-breath write, beside the demon-skin armor and
+    // demon-wings blocks it shares `BU_Apply_Specials` with. Its modern counterpart is the
+    // region-`a` step; the canonical version scope keeps exactly one of the two per version.
+    chaosChannelsFireBreathStep(ctx, 'c'),
     // PROVENANCE[endurance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:f1faba1a3ffce4883dce32c1 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:61c518b9d5be7ff83193cb0c | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:746a48490cec4055321bc210 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:746a48490cec4055321bc210
     statStep({ id: 'endurance', phase: 'c', writes: ['def', 'hp'],
       when: () => enduranceActive,

@@ -166,9 +166,14 @@ internal state, not starting-state inputs — see *Deliberate deviations*. The r
 each side's mean post-combat Irrecoverable/Irreversible Damage, Undeath Damage, and Bonus HP/Extra
 Hits per figure from the correlated final-state paths.
 
-**Immunities skip rolls.** An immunity that stops one of these effects **skips its roll outright**
-— it is not modelled as a large resistance bonus. Genuine resistance *bonuses* against these
-effects are realm-scoped and are ordinary modifiers.
+**Immunities skip rolls where the engine skips them.** An immunity the engine enforces at the
+*consuming* site **skips its roll outright** and is never restated as a large resistance bonus.
+An immunity the engine enforces as a bonus inside its resistance transform is a **step of that
+transform**, not an addition at the consumer: the same value is both the roll's pass/fail
+threshold and the margin a failed roll returns, so a bonus applied only to the test would be
+spent as damage. One effect can be both — DOS Magic Immunity skips the touch/gaze group and
+bonuses Cause Fear. Genuine resistance *bonuses* against these effects are realm-scoped and are
+ordinary modifiers.
 
 **Combat-global state.** Chaos Conjunction is one combat-global state affecting both sides. It is
 not owned by either unit or army, so Swap leaves it in place, and it is hidden and inert in the
@@ -239,6 +244,13 @@ isomorphic to that.
 **There is no subtotal-read mechanism, and none is needed.** A step reads whatever field it needs
 at its own position — `u.res`, not a named subtotal — exactly as the engine does. Effects that
 scale rather than add reduce to a plain field read once they stand in the right place.
+
+**The permanent record is the second record a step may read, and it is not a snapshot of
+convenience.** The engines keep `BaseUnits` beside the calculated record and each gate chooses per
+site which one it tests, so the model keeps both. Every permanent write is a `base`-phase step, so
+the record as that phase leaves it *is* the permanent record for everything after it, and a later
+region reads it through `ctx.base`. A step that reads it says so; every other read is the live
+field at the step's own position.
 
 `getAbilityStatSteps()` emits one step per ability or enchantment that writes a stat, and
 `deriveUnitStats` splices those into the sequence region by region. Nothing is bucketed or summed
@@ -312,9 +324,10 @@ authored in non-decreasing phase order, so an entry filed under the wrong region
 chain out of order. Its **provisional** flag says whether the position is transcribed or inherited:
 regions `b`, `c` and `d` come from the compiled address map and the CAS files and are transcribed;
 `base`, `a` and `e` are inherited from the order the steps were authored in, and stay provisional
-until sourced. Named entries inside a transcribed region can still be deduced — the region-`c`
-identity conversions head their region by convention rather than at their blocks' addresses — and
-each is listed as such rather than inheriting the region's claim.
+until sourced. Named entries inside a transcribed region can still be deduced — the modern
+region-`c` identity conversions head their region by convention rather than at their blocks'
+addresses, where the DOS ones sit at the offsets the address map gives them — and each is listed
+as such rather than inheriting the region's claim.
 
 Each version's chain is written out in full, including the parts two versions currently share. A
 chain is what one engine does, and reading it should not mean assembling it from fragments.
@@ -542,10 +555,12 @@ the calculator does instead, and why.
 - **One classification is parked for compatibility.** Righteousness sits in the defense transform's
   replacement slot while its modern classification is unresolved, open under
   [Q27](./BACKLOG.md).
-- **One position inside a transcribed region is deduced rather than read.** CoM 1's Focus Magic
+- **Some positions inside a transcribed region are deduced rather than read.** CoM 1's Focus Magic
   position is inferred from the exhaustive list of what its recompute writes after Warp, which does
-  not contain it. Both halves are marked `provisional` on the chain, which is what distinguishes a
-  deduced placement from a transcribed one.
+  not contain it; CoM 1's Raise Dead is a combat-spell write with nothing to order it against the
+  region-`c` blocks; and the modern identity conversions head their region by convention. Each is
+  marked `provisional` on the chain, which is what distinguishes a deduced placement from a
+  transcribed one.
 
 ## Data provenance
 
@@ -632,6 +647,11 @@ projecting them into a common shape:
   plus roster-bound gaze and touch save modifiers and their To Defend value, each an independent
   field. The modern resolver consumes those named records, so coexisting roster attacks are neither
   projected into one card field nor discarded.
+- **The Ranged record exists when its projectile type is set, whatever its strength**, on the card
+  and in `deriveUnitStats` input alike: the roster ships a typed record with no strength, and the
+  engine writes gated on the permanent type land on it. Thrown and both Breath fields carry no type
+  of their own, so for them strength is the only statement of existence. A channel the walk leaves
+  at or below zero strength is still absent from the output.
 - Modern roster To Hit and To Block values are percentage-point deltas above the common base shown
   on the card; an omitted field means the default. The DOS rosters have no per-template To Block
   field, so their cards retain the ordinary zero delta.

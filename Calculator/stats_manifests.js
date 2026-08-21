@@ -27,11 +27,13 @@
 // the identity pre-pass runs entirely before the stat sequence, which is earlier than the chain
 // rank one of its entries carries (`d:spiritLink`).
 //
-// Within a chain, the identity conversions head their phase: they run in the pre-pass, before any
-// stat write, so their rank relative to the stat writes beside them decides nothing and is a
-// convention rather than a transcription — which is why every region-`c` identity entry is listed
-// as a deduced position below. The CAS hooks are the exception, because they give real line
-// positions: `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the
+// An identity conversion runs in the pre-pass, before any stat write, so its rank relative to the
+// stat writes beside it decides nothing — only its rank against the other conversions does. In the
+// modern chains that leaves the region-`c` conversions heading their region by convention, and
+// each is listed as a deduced position below. The DOS chains and the CAS hooks are transcribed
+// instead, because both give real positions: `unitcalc.c` addresses every DOS realm write inside
+// `BU_Apply_Specials`, so each of those entries sits at its own block's offset; and
+// `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the
 // `marionette:stats` attack writes; `fieryFury:race` at UnitCalcPre.CAS:834, the THEN arm of the
 // same `IF` whose ELSE arm is `b:fieryFury`; `sanctify` at UnitCalcPre.CAS:1249; and
 // `spiritLink` at UnitCalc.CAS:1306, between Shadow Strike and Psycho Force. Spirit Link is the
@@ -50,20 +52,24 @@
 const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
 
 // Individual positions inside a transcribed region that the map does not actually give.
-// The region-`c` identity conversions are all here: they head the region by the convention
-// above rather than at the addresses their blocks occupy, and in the DOS builds their order
-// among themselves is inherited from the merged helper M7 split rather than from the address
-// map, which lists them the other way round (F103).
+// The modern region-`c` identity conversions are all here: `Units.RecalculateUnits.pas` puts
+// their blocks in the order the chains carry, but the conversions head the region by the
+// convention above rather than sitting at those blocks' offsets.
+//
+// The DOS builds no longer share that list. `unitcalc.c`'s `BU_Apply_Specials` gives every one
+// of their realm writes an address, so each sits at the offset of its own block and is
+// transcribed, not deduced. Only `c:raiseDead` stays inherited there: it is a combat-spell
+// write from `combat.c`, not a block of this routine, and nothing orders it against them.
 const DEDUCED_IDENTITY_C_POSITIONS = [
   'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust',
   'c:blackChannels:race', 'c:undead', 'c:mysticSurge:race', 'c:raiseDead',
 ];
 const DEDUCED_POSITIONS = Object.freeze({
-  'mom_1.31': DEDUCED_IDENTITY_C_POSITIONS,
-  'mom_cp_1.60.00': DEDUCED_IDENTITY_C_POSITIONS,
+  'mom_1.31': [],
+  'mom_cp_1.60.00': [],
   // CoM 1's Focus Magic position is inferred from the exhaustive list of what its recompute
   // writes after Warp, which does not contain it. Both halves share that one deduced position.
-  'com_6.08': ['c:focusMagic', ...DEDUCED_IDENTITY_C_POSITIONS],
+  'com_6.08': ['c:focusMagic', 'c:raiseDead'],
   'com2_1.05.11': DEDUCED_IDENTITY_C_POSITIONS,
   'com2_warlord_1.5.12.7': DEDUCED_IDENTITY_C_POSITIONS,
 });
@@ -82,15 +88,19 @@ function versionChain(version, keys) {
   }));
 }
 
+// The identity conversions of the two MoM builds sit at the offsets `BU_Apply_Specials` gives
+// them: Undead 0x8F3DC, Black Channels' realm write 0x8F4A1 at the end of its own block,
+// demon-skin armor 0x8F6FE, demon wings 0x8F71B and fire breath 0x8F738. A unit holding both
+// Black Channels and a Chaos Channels mutation therefore finishes Chaos, not Death.
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
-  'a:chaosChannels:fireBreath:race', 'a:holyBonus', 'a:resistanceToAll',
-  'a:chaosChannels:fireBreath', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race',
-  'c:blackChannels:race', 'c:undead',
+  'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
-  'c:holyWeapon', 'c:blackChannels', 'c:ironSkin',
+  'c:holyWeapon', 'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
   'c:stoneSkin', 'c:flameBlade', 'c:flameBlade:ranged', 'c:giantStrength',
-  'c:chaosChannels:armor', 'c:lionheart', 'c:holyArmor', 'c:berserk', 'c:nodeAura',
+  'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
+  'c:chaosChannels:fireBreath', 'c:chaosChannels:fireBreath:race',
+  'c:lionheart', 'c:holyArmor', 'c:berserk', 'c:nodeAura',
   'c:highPrayer', 'c:prayer', 'c:trueLight', 'c:darkness', 'c:metalFires', 'c:warpReality',
   'c:blackPrayer', 'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense',
   'c:warpResist', 'c:shatter', 'c:charmOfLife', 'e:legacyClamp', 'e:clamp',
@@ -98,12 +108,13 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
   'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
-  'a:chaosChannels:fireBreath:race', 'a:holyBonus', 'a:resistanceToAll',
-  'a:chaosChannels:fireBreath', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race',
-  'c:blackChannels:race', 'c:undead',
-  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge', 'c:blackChannels',
+  'a:holyBonus', 'a:resistanceToAll',
+  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
+  'c:undead', 'c:blackChannels', 'c:blackChannels:race',
   'c:ironSkin', 'c:stoneSkin', 'c:flameBlade', 'c:flameBlade:ranged', 'c:giantStrength',
-  'c:chaosChannels:armor', 'c:lionheart', 'c:holyArmor', 'c:berserk',
+  'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
+  'c:chaosChannels:fireBreath', 'c:chaosChannels:fireBreath:race',
+  'c:lionheart', 'c:holyArmor', 'c:berserk',
   'c:holyWeapon', 'c:nodeAura', 'c:highPrayer',
   'c:prayer', 'c:trueLight', 'c:darkness', 'c:metalFires', 'c:warpReality', 'c:blackPrayer',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
@@ -113,16 +124,24 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
   'base:zombies', 'base:constructCatapult', 'base:summonBranch', 'base:stat:base',
   'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
-  'base:zombies:toBlock', 'a:chaosChannels:fireBreath:race', 'a:holyBonus',
-  'a:resistanceToAll', 'a:chaosChannels:fireBreath', 'c:chaosChannels:flight',
-  'c:chaosChannels:armor:race', 'c:bloodLust', 'c:undead', 'c:mysticSurge:race',
-  'c:raiseDead', 'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit',
-  'c:endurance', 'c:animated', 'c:flameBlade', 'c:flameBlade:ranged', 'c:lionheart',
-  'c:ironSkin', 'c:chaosChannels:armor', 'c:landLinking', 'c:mysticSurge', 'c:holyArmor',
+  'base:zombies:toBlock', 'a:holyBonus', 'a:resistanceToAll',
+  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit',
+  // CoM 1 reorders `BU_Apply_Specials` around its own repurposed enchantment slots: Endurance
+  // 0x8F439, demon wings 0x8F46F, fire breath 0x8F48C, Blood Lust 0x8F49A, Undead 0x8F4BC and
+  // the Animated block 0x8F4D0, whose own realm write at 0x8F50B is the second half of
+  // `c:undead`. Demon-skin armor lands far later, at 0x8F757 — after Undead, not before it.
+  'c:endurance', 'c:chaosChannels:flight', 'c:chaosChannels:fireBreath',
+  'c:chaosChannels:fireBreath:race', 'c:bloodLust', 'c:undead',
+  'c:animated', 'c:flameBlade', 'c:flameBlade:ranged', 'c:lionheart',
+  'c:ironSkin', 'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:landLinking',
+  'c:mysticSurge:race', 'c:mysticSurge', 'c:raiseDead', 'c:holyArmor',
   'c:focusMagic', 'c:orihalcon', 'c:holyWeapon',
   'c:chaosSurge', 'c:survivalInstinct', 'c:nodeAura', 'c:highPrayer', 'c:prayer',
   'c:blazingMarch', 'c:warpReality', 'c:blackPrayer', 'c:guardian', 'c:guidingBeaconAura',
-  'c:divineBarrierAura', 'c:soulLinkerAura', 'c:vertigo', 'c:weakness', 'c:mindStorm',
+  // The relocated tail returns to 0x905BB, so Heavenly Light lands after the three aura writes
+  // and before R6.1d resumes at 0x9064B.
+  'c:divineBarrierAura', 'c:soulLinkerAura', 'c:heavenlyLight', 'c:heavenlyLight:toHit',
+  'c:vertigo', 'c:weakness', 'c:mindStorm',
   'c:warpAttack', 'c:warpDefense', 'c:warpResist', 'c:shatter', 'c:darkness', 'c:supremeLight',
   'c:realmWard', 'c:tactician', 'c:eternalNight:enemyResistance', 'c:charmOfLife',
   'e:legacyClamp', 'e:clamp',

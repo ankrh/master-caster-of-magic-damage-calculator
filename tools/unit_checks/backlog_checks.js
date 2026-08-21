@@ -299,10 +299,12 @@ function runF19Checks(ctx) {
     assertEqual(inert.def, 3, `F19 modern controls are inert in ${version} Defense`);
     assertEqual(inert.res, 4, `F19 modern controls are inert in ${version} Resistance`);
   }
+  // `heavenlyLight` left this list with F49: CoM 1 has its own Heavenly Light block at
+  // com1:0x905BB, so the control is live there and only the MoM loop above still holds it inert.
   const inertInCoM1 = ctx.deriveUnitStats(baseUnitInput({
     version: 'com_6.08', atk: 2, def: 3, res: 4,
     abilities: {
-      darkForce: true, heavenlyLight: true, badMoon: true, goodMoon: true,
+      darkForce: true, badMoon: true, goodMoon: true,
       natureConjunction: true, spellWard: 'life', prayermasterAura: 5,
       leadershipAura: 5,
     },

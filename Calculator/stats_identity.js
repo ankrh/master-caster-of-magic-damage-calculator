@@ -176,16 +176,20 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     statStep({ id: 'callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isBaseCoM2 && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // The Chaos Channels breath block is region `a` in every engine: the DOS builds write the
-    // realm beside the fire-breath assignment, and `Caster.exe` does the same before its first
-    // script hook. Both MoM builds set the realm alone — a race at or above the first fantastic
-    // value is fantastic there whether or not `UA_FANTASTIC` is set (`unitcalc.c`, the
+    // The Chaos Channels breath block writes the realm beside the fire-breath assignment in
+    // every engine, but not in the same region. `Caster.exe` makes it at $00599EE8, ahead of
+    // the UnitCalcPre hook, so the modern builds keep phase `a`; the DOS builds make it inside
+    // `BU_Apply_Specials` at 131:0x8F720 / com1:0x8F474, one block past the demon-wings write
+    // the chains already place in region `c`, so their half is `c` at that address (F103).
+    // Both MoM builds set the realm alone — a race at or above the first fantastic value is
+    // fantastic there whether or not `UA_FANTASTIC` is set (`unitcalc.c`, the
     // `bu->race >= RACE_FIRST_FANTASTIC` test) — so writing both fields here matches all five.
     // PROVENANCE[chaosChannels:fireBreath:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
-    statStep({ id: 'chaosChannels:fireBreath:race', sourceId: 'chaosChannels:fireBreath',
-      sourceLabel: 'Chaos Channels', phase: 'a', writes: ['race', 'fantastic'],
+    ...['a', 'c'].map(phase => statStep({
+      id: 'chaosChannels:fireBreath:race', sourceId: 'chaosChannels:fireBreath',
+      sourceLabel: 'Chaos Channels', phase, writes: ['race', 'fantastic'],
       when: () => !!abilVal(abilities, 'ccFireBreath', false),
-      apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
+      apply: u => { u.race = 'Chaos'; u.fantastic = true; } })),
     // PROVENANCE[marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
     statStep({ id: 'marionetteChanneler', phase: 'b', writes: ['fantastic'],
       when: () => version === MARIONETTE_VERSION

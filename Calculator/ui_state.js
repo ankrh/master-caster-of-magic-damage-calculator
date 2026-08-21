@@ -284,6 +284,20 @@ function onVersionChange() {
 
 const PRESET_VERSIONS = {};
 
+// The DOS-shaped `rtb`/`rtbType` fixture pair names one attack, so it projects onto whichever
+// single modern channel its type selects. It cannot state a second channel beside that one, nor
+// a Ranged record that carries a projectile type at strength 0 — a fixture needing either says
+// so with `modernAttacks` instead.
+function dosPairAsModernChannels(s) {
+  const strength = Number(s.rtb) || 0;
+  if (strength <= 0) return null;
+  if (RANGED_TYPES.includes(s.rtbType)) return { ranged: { strength, type: s.rtbType } };
+  if (s.rtbType === 'thrown') return { thrown: { strength, type: 'thrown' } };
+  if (s.rtbType === 'fire') return { fireBreath: { strength, type: 'fire' } };
+  if (s.rtbType === 'lightning') return { lightningBreath: { strength, type: 'lightning' } };
+  return null;
+}
+
 function applyPreset(name) {
   const preset = PRESETS[name];
   if (!preset) return;
@@ -325,20 +339,12 @@ function applyPreset(name) {
     document.getElementById(prefix + 'Atk').value = s.atk;
     document.getElementById(prefix + 'RtbType').value = s.rtbType;
     document.getElementById(prefix + 'Rtb').value = s.rtb;
-    // Older presets use the DOS-shaped `rtb` pair.  Translate that fixture format into
-    // the modern card's named ranged channel when a CoM2/Warlord custom unit is applied;
-    // ordinary UI reads never consult the hidden DOS controls in modern versions.
+    // A CoM2/Warlord fixture states the card's four named channels either directly, through
+    // `modernAttacks`, or through the older DOS-shaped `rtb` pair, which projects onto exactly
+    // one of them. Either way the statement is complete: an unnamed channel is empty.
+    // Ordinary UI reads never consult the hidden DOS controls in modern versions.
     if (document.getElementById('gameVersion').value.startsWith('com2')) {
-      applyModernAttackFields(prefix, null);
-      if (s.rtb > 0 && RANGED_TYPES.includes(s.rtbType)) {
-        applyModernAttackFields(prefix, { ranged: { strength: s.rtb, type: s.rtbType } });
-      } else if (s.rtb > 0 && s.rtbType === 'thrown') {
-        applyModernAttackFields(prefix, { thrown: { strength: s.rtb, type: 'thrown' } });
-      } else if (s.rtb > 0 && s.rtbType === 'fire') {
-        applyModernAttackFields(prefix, { fireBreath: { strength: s.rtb, type: 'fire' } });
-      } else if (s.rtb > 0 && s.rtbType === 'lightning') {
-        applyModernAttackFields(prefix, { lightningBreath: { strength: s.rtb, type: 'lightning' } });
-      }
+      applyModernAttackFields(prefix, s.modernAttacks || dosPairAsModernChannels(s));
     }
     document.getElementById(prefix + 'Def').value = s.def;
     document.getElementById(prefix + 'Res').value = s.res;

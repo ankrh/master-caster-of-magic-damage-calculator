@@ -4,6 +4,285 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-21
+
+- **F110 — a preset can state the modern card's four attack channels directly.** A CoM2/Warlord
+  fixture may now carry `modernAttacks: { ranged: { strength, type }, thrown, fireBreath,
+  lightningBreath }` on either unit; it is the complete statement of the card's channels, and the
+  DOS-shaped `rtb`/`rtbType` pair keeps its one-channel projection where no `modernAttacks` is
+  given (`dosPairAsModernChannels`, `ui_state.js`). **Two strength gates had to come off for the
+  statement to reach the resolver, and both are the gate [F95](#2026-08-21) removed from the level
+  ladder:** `modernCardAttacks` (`ui_units.js`) discarded the Ranged type selector's value unless
+  the strength box was positive, and `deriveUnitStats` (`stats.js`) dropped a supplied channel at
+  strength 0 unless an internal seed had asked for it. Both now treat a named projectile type as
+  the Ranged record's statement of existence, which is what `UNITS.INI` ships (Warlord `[362]`
+  Wanderer, `RangedType=30` with `Ranged=0`) and what `BaseUnits[i].rangedtype > 0` reads
+  (`Units.RecalculateUnits.pas:548-571`). Thrown and both Breath fields have no type of their own,
+  so strength remains their only existence statement, on the card and in the fixture alike.
+  **Measurement.** No other preset can reach either relaxed gate: the only writer of the card's
+  channels is `applyModernAttackFields`, which sets the type selector to `none` whenever it applies
+  no ranged channel, and both channel sources — the DOS pair projection and `predefinedModernAttacks`
+  — yield a ranged channel only above strength 0. The three internal zero-strength typed seeds
+  (Marionette, Warlord combat Flame Blade, Dragon Mound) were already admitted as seeded. The suite
+  confirms it: the whole 1032-preset suite passes, the two named presets included. Checks:
+  `node tools/node_unit_checks.js` 14295/14295; `npm run provenance` 267 formulas, 267 verified,
+  0 UNVERIFIED; `npm test` 114 passed, 0 failed.
+
+- **F49 — CoM 1 now has its own Heavenly Light block.** `com1:0x905BB` reuses the space MoM
+  spends on True Light: gated on the defending side and a non-zero `city_enchantments` byte, it
+  adds +1 Defense and Resistance, +1 to a positive melee attack and to a positive shared ranged
+  slot, raises `Weapon_Plus1` to 1 where it was 0, and adds a To Hit threshold to melee and to
+  Thrown/Missile/Boulder where the persistent record carries no weapon quality
+  (`unitcalc.c` com1:0x905BB-0x9064B). **Premise partly falsified.** The row said the effect was
+  "absent from `enchantments.js` and `combat_abilities.js`"; the *CoM 1* effect was absent, but
+  `heavenlyLight` has been a CoM2/Warlord control and a `c:heavenlyLight`/`c:heavenlyLight:toHit`
+  step pair since M11, and neither engine's write lives in `combat_abilities.js`. CoM 1 was
+  therefore added by widening the existing control (`subgroup: 'CoM, CoM2 & Warlord'`) and the
+  existing step pair to `SCOPE_COM_PLUS` with a CoM 1 branch, as `blazingMarch` and `nodeAura`
+  already do, rather than by adding a second control. The chain position is transcribed, not
+  deduced: the relocated aura tail returns to `0x905BB`, so the pair sits after `c:soulLinkerAura`
+  and before R6.1d resumes at `0x9064B`; `tests/f20-source-order.spec.js` gained the same two
+  anchors independently. Two engine facts distinguish the CoM 1 branch from the modern one: its
+  attack gates are **live**, not the persistent base attack, and its strength write carries **no
+  type test**, so the DOS shared slot takes +1 whatever stands in it — Thrown, Breath and both
+  gazes included — while the threshold keeps the narrower Thrown/Missile/Boulder set.
+  **Left unmodelled, deliberately:** `com1:0x905E7` forces the weapon-quality byte to Magic Weapons
+  for `_UNITS[si].type >= 0x97`, withholding both thresholds from high roster indices. What that
+  ceiling selects is [Q18](./BACKLOG.md), open because the index-to-roster-id mapping is unsettled;
+  the condition the evidence does determine — no weapon material — is implemented, the ceiling is
+  not, and Q18 now records that it decides this block too. **Measurement.** 3,920 `deriveUnitStats`
+  inputs over all five versions — the control on and off, crossed with seven ranged-slot shapes,
+  four weapon materials, two melee values and seven co-occurring effects — differ in **392** cases,
+  **every one `com_6.08` with the control on**. `mom_1.31`, `mom_cp_1.60.00`, `com2_1.05.11` and
+  `com2_warlord_1.5.12.7` are identical throughout, as is CoM 1 with the control off. New coverage,
+  each browser-confirmed against the number the unfixed code gives: `heavenlyLightMeleeCoM`
+  **1.200** (0.600), `heavenlyLightToHitNeedsBareWeaponCoM` **1.600** (1.200, the material
+  exclusion), `heavenlyLightMissileCoM` **1.200** (0.600),
+  `heavenlyLightBreathStrengthNoToHitCoM` **0.900** (0.600, the strength write with no type test
+  beside the threshold that has one), and `heavenlyLightMagicWeaponCoM` **11.000** (2.000, the
+  Weapon Immunity bypass). `backlog_checks.js`'s F19 sweep dropped `heavenlyLight` from its CoM 1
+  inert list, which the item makes false; the MoM half of that sweep still holds it inert. Nothing
+  was folded in. Checks: `node tools/node_unit_checks.js` 14295/14295; `npm run provenance` 267
+  formulas, 267 verified, 0 UNVERIFIED.
+
+- **F101 — the Bombs & Grenades grant now lands on the record's Thrown field alone.**
+  `SETSTAT(U,SThrown,0,(GETSTAT(U,SThrown,0)+%I(8-(GETSTAT(U,SFigures,1)/2))))`
+  (`UnitCalcPre.CAS:1071`) is one write to one field, but `b:bombsGrenades` (`stats_sequence.js`)
+  asked only whether the slot stood empty and typeless, so it typed and filled every slot in that
+  state. It now asks `isThrownFieldSlot` (`combat_abilities.js`), the same structural question the
+  ungated `Dec(U.thrown, …)` writes ask since [F91](#2026-08-20). **Premise held where it counts
+  and was falsified in one detail.** Re-measured after today's six changes, the row's headline
+  reading stands: a Warlord 1-figure melee-5 unit with Explosive Reform and Blaze of Glory derived
+  Thrown **14**, because the grant filled the `SRanged` field the transfer needs standing by and
+  `d:blazeOfGlory` then moved that spurious 7 into Thrown. The row's third named victim, the
+  Lightning Blade `lightningBreath` seed, **never was one**: the base-phase `lightningBlade:breath`
+  step types that field `'lightning'` before region `b` (`CreateUnit.CAS:294-299`), so the old test
+  already excluded it. Focus Magic's `ranged` seed did take the grant, but its branch assigns rather than
+  adds (`Units.RecalculateUnits.pas:885-891`), so no number moved there — only the modifier trace,
+  which no longer shows a `rtbRanged` write the engine does not make. **Measurement.** 235,000
+  `deriveUnitStats` inputs over all five versions — 14 seed-carrying and grant-carrying ability
+  toggles up to three at a time, crossed with five DOS-shaped slot shapes, five modern channel
+  shapes and four figure/melee/Chaos-Channels shapes — differ in **90** cases counting the step
+  trace and **45** counting output alone, **every one `com2_warlord_1.5.12.7`**. `mom_1.31`,
+  `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11` are identical throughout, which is the row's
+  declared scope (Bombs & Grenades is Warlord-only). Every moving case is Explosive Reform beside
+  Blaze of Glory, and each loses exactly the duplicated grant. New coverage:
+  `blazeOfGloryCarriesNoBombsGrenadesGrantWarlord` = **14.000** against the 21.000 the untested
+  slot gave, browser-confirmed failing before and passing after against a reverted copy of the
+  source. Nothing was folded in. Checks: `node tools/node_unit_checks.js` 14287/14287;
+  `npm run provenance` 267 formulas, 267 verified, 0 UNVERIFIED.
+
+- **F100 — Weakness' and Mind Storm's ranged arms now reach a typeless `SRanged`, as their
+  ungated `Dec` does.** `Dec(U.ranged, 3)` and `Dec(U.ranged, 5)` sit beside their Thrown siblings
+  with no positivity and no type gate (`Units.RecalculateUnits.pas:2273-2295`), so each names a
+  field of the record rather than an attack the unit owns. `weaknessBinaryHits` (`stats.js`) asked
+  `rangedType !== 'none'` and `slotGateAdmits`'s `rangedOrThrown` arm (`combat_abilities.js`)
+  required a live slot; both now ask only which field the slot is — `isRangedFieldSlot ||
+  isThrownFieldSlot` and `isModernRangedOrThrownSlot`, whose live-slot conjunct was the whole of
+  the difference. **The row's "no number moves today" premise was stale, falsified by
+  [F97](#2026-08-21), [F95](#2026-08-21) and [F98](#2026-08-21) earlier the same day**, and this is
+  a defect with a fixture, not faithfulness. **Measurement.** 251,940 `deriveUnitStats` inputs over
+  all five versions — every ability and enchantment key singly, crossed with five carriers that
+  give a typeless `SRanged` an identity or move it, eight modern channel shapes and six DOS-shaped
+  slot shapes — move **1,308 cases, every one `com2_warlord_1.5.12.7`**; `mom_1.31`,
+  `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11` are identical throughout, which is the row's
+  declared scope. Every moving case has a Thrown attack beside the typeless Ranged field and
+  `d:blazeOfGlory` to carry the penalty into it (`UnitCalc.CAS:1494-1500`); base CoM2 has no Blaze
+  of Glory, which is why it cannot reach the difference. Held by
+  `blazeOfGloryCarriesWeaknessRangedPenaltyWarlord` (6.000 against 9.000) and
+  `blazeOfGloryCarriesMindStormRangedPenaltyWarlord` (8.000 against 13.000), both browser-confirmed
+  failing before and passing after against a reverted copy of the two sources. Nothing was folded
+  in. Checks: `node tools/node_unit_checks.js` 14287/14287; `npm run provenance` 267 formulas,
+  267 verified, 0 UNVERIFIED.
+
+- **F97 — the weapon material's two modern strength gates are the engine's.** `ApplyMagicWeapons`
+  writes `Inc(Units[i].ranged, j)`, its display bonus and `hitchanceranged` inside
+  `if not Ismagicalranged(Units[i].rangedtype)` with **no** positive-strength gate
+  (`Units.RecalculateUnits.pas:648-656`), and writes `hitchancethrown` then `Inc(Units[i].thrown, j)`
+  inside `if Units[i].thrown > 0` — the **calculated** Thrown field at that position (`:658-662`),
+  which by `c:weapon` has already seen region `b` and `c:focusMagic`. `c:weapon` (`stats.js`,
+  `weaponStatSteps`) had it the other way round on both, gating each on `context.calcBaseRtb > 0`,
+  the slot's *input* strength. **The row's premise held on the two strength halves and was stale on
+  its third claim:** `weaponHitThrown` did carry no strength test, but `weaponHitWrite` applied the
+  engine's `U.thrown > 0` one level up, at the To-Hit target, so moving it into the function moves
+  no number — the correction is where the test lives, not whether it is made. **Measurement.** A
+  22,528-case weapon-material sweep — five versions × four materials × 16 control sets that create,
+  move, retype or drain a secondary field × two levels × every DOS shared-slot type at zero and
+  positive strength × 22 modern channel shapes — moves **508 cases, 90 `com2_1.05.11` and 418
+  `com2_warlord_1.5.12.7`, none in the three DOS versions**; the 15,480-case derivation digest is
+  unchanged throughout. Every moving case is a strength field; no To-Hit field moves anywhere, and
+  nothing decreases. Two classes: a typeless `SRanged` now takes the material, which
+  `d:blazeOfGlory` then moves into Thrown, and a Thrown field Bombs & Grenades created in region `b`
+  now takes it too. On `com2_1.05.11` the only reachable class is the DOS-shaped legacy projection
+  `result.rtb` at zero input strength, which the modern resolver does not fire, so no CoM2 damage
+  number moves. Held by `weaponMaterialRangedHasNoStrengthGateWarlord` (9.000 against 7.000) and
+  `weaponMaterialThrownReadsCalculatedFieldWarlord` (44.000 against 36.000), both browser-confirmed
+  failing before and passing after. **Nothing was folded in:** the DOS material body has no strength
+  test either (`unitcalc.c`, 131:0x8F089), but removing its `calcBaseRtb > 0` moves 164/162/132
+  cases in `mom_1.31`/`mom_cp_1.60.00`/`com_6.08` — outside this row's declared scope — so it is
+  filed as [F109](./BACKLOG.md). Checks: `node tools/node_unit_checks.js` 14287/14287;
+  `npm run provenance` 267 formulas, 267 verified, 0 UNVERIFIED; the whole preset suite driven
+  through the page's own `applyPreset` in a local browser, 1022 of 1024. **Those two red presets
+  were found by this item, not caused by
+  it:** `levelRangedGateZeroStrengthCoM2` and `levelRangedGateZeroStrengthWarlord`
+  ([F95](#2026-08-21)) both measure 0 against expectations of 3 and 4, identically before and after
+  this change — `applyPreset` builds no modern ranged channel from a DOS-shaped `rtb: 0` fixture,
+  so the modern resolver has no attack to fire. Filed as [F110](#2026-08-21), since resolved.
+
+- **F98 — Focus Magic now makes the engine's four-way permanent-record branch and its three
+  independent strength tests.** `Caster.exe` runs `if U.doomgaze > 0`, `if U.firebreath > 0` and
+  `if U.lightningbreath > 0`, each `+3`, and then **exactly one** of four ranged arms, all four
+  gated on the permanent record: `(U.thrown > 0) and (B.ranged = 0)`, `B.ranged = 0`,
+  `not Ismagicalranged(B.rangedtype)`, and an `else` adding `+3` to `U.ranged`
+  (`Units.RecalculateUnits.pas:874-909`). `c:focusMagic` had hoisted that fourth arm out of the
+  branch into a pre-loop over every channel gated on the *live* strength and type, and computed the
+  conversion arms from `baseRangedPresent` — the raw card input, with a type test the engine's
+  strength-only `B.ranged` does not make. The branch now reads `ctx.base`, and the modern and CoM 1
+  bodies are separate: CoM 1's block is a three-way branch on the unit *type's* ranged type with a
+  minimum of 3 (`unitcalc.c`, com1:0x8F7E6) and keeps `baseRangedPresent`, now its only consumer.
+  **The row's premise held on both halves.** The re-measured `doomGaze 0 -> 3` on a CoM2 `magic_c`
+  ranged 4 unit was still in the `c:focusMagic` ledger entry, and `e:clamp` still reverted it —
+  `focusMagicDoomGazeMod`'s first disjunct is the same predicate the clamp gates on, so the wrong
+  write could never reach a total. That half is therefore bound in the ledger rather than in a
+  number, by `step_traces.js`. The row's `stats_sequence.js:486-490` pointer had gone stale to
+  line 637. **Measurement.** 16,840 `deriveUnitStats` inputs over all five versions, before and
+  after: `mom_1.31`, `mom_cp_1.60.00` and `com_6.08` are identical, and the modern diffs are two
+  classes. A Warlord unit whose permanently magical ranged attack a region-`b` penalty drove to or
+  below zero now takes the fourth arm's `+3` and survives the clamp — held by
+  `focusMagicMagicalRangedIgnoresLiveStrengthWarlord` (not yet browser-confirmed) and a
+  `deriveUnitStats` check. And the DOS-shaped shared slot, when it carries a Thrown *type* at zero
+  strength, now takes the creation arm as the engine does; no preset or roster record reaches it,
+  and the modern Ranged channel already held the created attack. Nothing was folded in. Checks:
+  `node tools/node_unit_checks.js` 14287/14287; `npm run provenance` 267 formulas, 267 verified,
+  0 UNVERIFIED.
+
+- **F95 — the level ladder now makes the engine's four independent secondary writes, each on the
+  record its own arm reads.** `ApplyLevelBonus`'s normal arm gates all four on the permanent record
+  — `BaseUnits[i].rangedtype > 0` selecting `NormalMagicRanged` or `NormalMissileRanged`,
+  `BaseUnits[i].thrown > 0`, and `.firebreath > 0` / `.lightningbreath > 0` sharing `NormalBreath`
+  (`Units.RecalculateUnits.pas:548-571`) — while the hero arm keeps the base ranged gate and tests
+  the calculated Thrown and both Breaths (`:509-530`). `c:level` had one if/else-if over the live
+  record with an extra `calcBaseRtb > 0` on the ranged arm and no positivity test on the other.
+  `getLevelBonuses` now carries `missileRanged`, `magicRanged`, `thrown` and `breath` as the four
+  arrays `@Init@LoadLevelBonusINI` fills; `ranged`/`thrown` stay for the DOS ladders, which have no
+  tables. The split moves no number with the shipped data — both `Levelbonus.INI` files have
+  MissileRanged/MagicRanged and Thrown/Breath column-identical — so nothing tests it; the gates do.
+  **The row's premise held in both halves.** Warlord Outlander with Explosive Reform, melee 5, one
+  figure, no base secondary attack: Thrown 7/8/9 at Recruit/Veteran/Champion before, 7/7/7 after,
+  and `UnitCalcPre.CAS:1071` is `SETSTAT(U,SThrown,0,...)`, record selector `0`.
+  **The permanent record is now a real read.** Every permanent write is a `base`-phase step, so
+  `runStatSteps` maintains the record through that phase and freezes it as `ctx.base` — the
+  mechanism `steps.js` already documented and nothing populated. Reading it rather than the raw
+  input is what lets Dragon Mound's and Lightning Blade's permanent breath writes meet the gate.
+  **Measurement.** 151,200 `deriveUnitStats` inputs across all five versions and 6,588 roster-unit
+  derivations, before and after: `mom_1.31`, `mom_cp_1.60.00` and `com_6.08` are byte-identical, and
+  the modern diffs are two classes — a record whose ranged *type* names an attack at zero strength
+  now takes the ladder, and a Thrown/Breath field created after the permanent record no longer does
+  unless the unit is a hero. One shipped roster record is in the first class, Warlord `[362]`
+  Wanderer (`RangedType=30`, `Ranged=0`), which also produced [F107](./BACKLOG.md). Held by
+  `levelRangedGateZeroStrengthCoM2`, `levelRangedGateZeroStrengthWarlord`,
+  `levelThrownGateBaseRecordWarlord` and `levelThrownGateHeroCalculatedWarlord`. Nothing was folded
+  in. Checks: `node tools/node_unit_checks.js` 14285/14285; `npm run provenance` 267 formulas, 267
+  verified, 0 UNVERIFIED.
+
+- **F104 — the DOS resistance transform makes both +30 writes, and one consumer was spending the
+  missing one as damage.** `dosEffectiveResistance:magicImmunity` (131:0x990B6, `SCOPE_DOS`) and
+  `dosEffectiveResistance:righteousness` (131:0x990D5, `SCOPE_MOM`) are steps of
+  `DOS_RESISTANCE_STEPS`; the duplicate +30s that stood at `fearFailProb`, `deathTouchFailProb`,
+  `deathGazeFailProb` and `lifeStealEffective` are gone. **The row's premise was stale in both
+  halves.** Neither effect was modelled as a skipped roll: Magic Immunity was a skip at eight
+  consumers and a consumer-side +30 at Cause Fear — which is what the engine does, since the two
+  gates at 0x99D3F and 0x99F67 jump past the touch/gaze group before any roll — and Righteousness
+  was a consumer-side +30 at all four Death-realm consumers and never a skip.
+  **Where they disagreed: Life Steal's margin.** `Combat_Resistance_Check` returns `roll −
+  resistance`, and Life Steal spends that margin as drain, so a bonus held at the consumer reached
+  the pass/fail gate but not the drain. Measured on a MoM unit at Resistance 5 against Life Steal
+  −30: 30.500 damage before, 1.500 after, which is the engine's 35 − 30 = 5. Held by
+  `righteousnessLifeStealDrain` and `righteousnessLifeStealDrain160`. CoM 1 keeps the address but
+  reads Shadow Attack there ([F105](#2026-08-21)), so its list has no Righteousness step;
+  `fearMagicImmune` already covers the Magic Immunity write's one visible consumer.
+  **Measurement.** 3840 `buildResistanceContext` contexts and 1080 `resolveCombat` results across
+  all five versions, before and after: every differing combat row has a Righteousness defender, and
+  `com_6.08`, `com2_1.05.11` and `com2_warlord_1.5.12.7` are byte-identical once the Righteousness
+  control is restricted to the versions that render it (`subgroup: 'MoM only'`, cleared by
+  `applyDisabled`). Only two MoM rows move, both Life Steal. Checks:
+  `node tools/node_unit_checks.js` 14285/14285; `npm run provenance` 267 formulas, 267 verified,
+  0 UNVERIFIED.
+- **F105 — CoM 1 no longer takes the two defence writes its own binary withholds.**
+  `Battle_Unit_Defense_Special`'s Righteousness block is an 87-byte NOP field in CoM 1
+  (com1:0x9A6DC..0x9A732) where both MoM builds make the write (131:0x9A728, 160:0x9A728), so
+  `dosEffectiveDefense:righteousness` is now absent from CoM 1's ordered list rather than gated
+  channel by channel — the same shape the elemental block already had. Its scope narrowed to
+  `SCOPE_MOM`, which closed the `SCOPE_PROVENANCE_GAPS` entry M10 filed, and the gaze channel's
+  now-redundant `!isCoM1` went with it. The spell path is settled with it: CoM 1 gates the Bless
+  arm on `ranged_type > 39` (com1:0x9A6D3) and the spell-damage helper passes exactly 39
+  (com1:0x871B6, against MoM's 38), so Immolation and Wall of Fire get no CoM 1 Bless bonus.
+  `blessImmolationDefMoM`/`blessImmolationDefCoM` hold the pair, and the Bless tooltip stopped
+  claiming Immolation for CoM 1.
+- **The row's own preset is not writable, and that is the finding.** Righteousness does not exist
+  in CoM 1 at all: `UE_RIGHTEOUSNESS` `0x40000000` is Shadow Attack there, both in the
+  enchantment-name table (`R6.1a`) and in the item-power helper (`R6.1g`), which is why the block
+  was NOPped. The calculator already models that with `subgroup: 'MoM only'`, so the control is
+  hidden and cleared under `com_6.08` and no preset can reach the write; the CoM 1 Righteousness
+  half is faithfulness, measurable only below the UI. Measured there, `computeDefenseProfile` over
+  seven attack types and three defender configurations moves only in `com_6.08` — Righteousness'
+  100 disappears from vsRanged, vsThrown and vsImmolation, and Bless' +5 from vsImmolation — with
+  all four other versions byte-identical.
+- **F103 — the DOS identity conversions now sit where the address map puts them.** The eleven
+  ordered conversions ran in the order M7's helper split left behind; `unitcalc.c`'s
+  `BU_Apply_Specials` gives every DOS realm write an address, and it runs them the other way round.
+  The two MoM chains now carry Undead (131:0x8F3DC), Black Channels' realm write (0x8F4A1),
+  demon-skin armor (0x8F6FE), demon wings (0x8F71B) and fire breath (0x8F738) in that order, and
+  CoM 1 carries demon wings (com1:0x8F46F), fire breath (0x8F48C), Blood Lust (0x8F49A), Undead
+  (0x8F4BC), demon-skin armor (0x8F757) and Mystic Surge (0x8F79E). Consequence: a DOS unit holding
+  both a Chaos Channels mutation and a Death conversion finishes fantastic **Chaos**, as the engine
+  leaves it, not Death — which moves Land Link, Survival Instinct, the realm gates and every
+  realm-keyed aura. The reordered entries left `DEDUCED_POSITIONS`; only CoM 1's Focus Magic and
+  Raise Dead stay inherited there, Raise Dead because it is a `combat.c` combat-spell write that
+  `BU_Apply_Specials` never makes. The modern chains are untouched:
+  `Units.RecalculateUnits.pas` already ordered them, and a probe over both CoM2 builds confirmed no
+  number moved.
+- **The sub-fork is settled against phase `a`, for both halves of the write.** Chaos Channels fire
+  breath is region `a` in `Caster.exe` alone ($00599EE8, ahead of the UnitCalcPre hook at
+  $0059A002). The DOS builds make the same effect inside `BU_Apply_Specials`, between the two
+  sibling mutation blocks the chains already carried in region `c`, so nothing distinguishes it
+  from them and `a:chaosChannels:fireBreath*` is now modern-scoped with `c:` DOS counterparts. Its
+  stat half moved with its realm half, because they are one block: the shared-slot **assignment**
+  now lands after the level bonus and the enchantment writes ahead of it rather than before them,
+  so an elite MoM breather deals 2 and not 2 plus its level bonus. That reproduces a documented
+  engine result independently — MoM's constructor runs Chaos Surge before `BU_Apply_Specials` and
+  the assignment overwrites its +2, while CoM 1 calls `BU_Apply_Specials` first and keeps it.
+- **Folded in:** nothing. Two findings were filed instead. **F106:** MoM 1.31 alone passes the
+  mutations byte whole at the recompute's second `BU_Apply_Specials` call (131:0x90A1D), so its
+  Chaos Channels blocks run twice; the chain models the constructor position only, which is exact
+  for the additive armor bonus and lossy for the breath assignment. **T11:** the `c:chaosSurge`
+  carve-out that skipped a MoM fire-breath slot is now inert — the corrected position produces the
+  exclusion by itself — but removing it moves no number, so no preset can hold the removal.
+- **Premise re-measurement.** Every address the row named was checked against
+  `Reference docs/DOS reconstructed/unitcalc.c` and held. The row's headline example held too, and
+  turned out to need the phase move it filed as an open question: reordering region `c` alone
+  leaves fire breath ahead of Black Channels and the MoM unit still finishing Death.
+
 ## 2026-08-20
 
 - **M13 — `chance:` is the To-Hit/To-Block ledger's namespace and nothing else's.** The prefix used
@@ -285,12 +564,12 @@ pre-2026-08-10 narratives remain recoverable from git history.
   Thrown thresholds are written back in `c`. That is an input fact, not a prediction of any step's
   arithmetic, and it is the one place `secondaryHitTargets` consults `shadowStrikeActive`.
 
-  **Closed in passing:** [F100](./BACKLOG.md)(a). Its fixture — Warlord melee 1, `thrown 4`,
+  **Closed in passing:** [F100](#2026-08-21)(a). Its fixture — Warlord melee 1, `thrown 4`,
   `lightningBlade`+`blazeOfGlory`+`lionheart` — now derives Lightning Breath 5 **and Thrown 3**,
   the number the row said the engine gives, because Lightning Blade's move leaves `SThrown` free
   for the transfer and the region-`e` clamp's slot test is a live read rather than
   `channelKey === 'thrown'`. The row's other half — the ungated ranged arms of Weakness and Mind
-  Storm — is untouched and stays. [F101](./BACKLOG.md)'s premise was re-measured and still holds at
+  Storm — is untouched and stays. [F101](#2026-08-21)'s premise was re-measured and still held at
   Thrown **14**.
 
   New coverage: `focusMagicFollowsLionheartCoM` = **5.000** (missile 2 + Lionheart 3, retyped to
@@ -535,9 +814,9 @@ pre-2026-08-10 narratives remain recoverable from git history.
   than assumed. New cover:
   `blazeOfGloryCarriesWeaknessThrownPenaltyWarlord` 3.000, `blazeOfGloryThrownReadsHolyWeaponToHitWarlord`
   4.800, and six assertions in `tools/unit_checks/warlord_abilities.js`. The measurement also found
-  two things left for [F100](./BACKLOG.md): the region-`e` clamp drops an attack the transfer
+  two things left for [F100](#2026-08-21): the region-`e` clamp drops an attack the transfer
   retypes in place when the source slot has no permanent strength, and the ranged siblings
-  `Dec(U.ranged, 3)`/`Dec(U.ranged, 5)` are still type-gated, though no number moves for them today.
+  `Dec(U.ranged, 3)`/`Dec(U.ranged, 5)` are still type-gated.
 
 - **F89 — a ranged-less unit passes the engine's non-magical-ranged gate, and the gates now say
   so.** `Ismagicalranged(rt)` is `False` for `rt < 1` (`Units.RecalculateUnits.pas:2968-2975`), so
