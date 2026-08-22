@@ -18,13 +18,20 @@
 //                            then `set('ModernRanged', …)`
 //   3. array-literal loops — `for (const f of ['HitMelee', …]) getElementById(prefix+f).value = 0`
 //   4. variable bindings   — `const type = getElementById(prefix+'X'); … type.value = …`
-// A write whose control name is still not a literal after those is REPORTED, never skipped.
+// A write whose control name is still not a literal after those is REPORTED, never skipped, and
+// a call site holding one is listed as UNJUDGED rather than scored: its control set is a floor,
+// not a statement. `applyFullState` restores every saved control through
+// `getElementById(<variable>)`, so scoring it would report a fact about this scanner.
+// A caller that writes no card control of its own is a pure delegator; the finding resolves
+// through it to the call sites that stand for a statement, since asking whether
+// `setIdentityControlsFromUnit` states the stat half answers the wrong question.
 // Attribution is a brace walk, not a parse, and call edges are name-based, so a function reached
 // only through a variable is invisible. Coverage for the finding is therefore tested at DEPTH 1
 // — what a call site writes itself plus what it directly calls — because a full transitive
 // closure over name-based edges accumulates spurious reach and clears every caller. The lexer
-// self-checks for brace/paren balance per file and reports desynchronization, and unresolved
-// writes and unwritten controls are printed, so a reader can tell coverage from silence.
+// (`js_lexical_scan.js`, shared with `drift_class_sweep.js`) self-checks for brace/paren balance
+// per file and reports desynchronization, and unresolved writes and unwritten controls are
+// printed, so a reader can tell coverage from silence.
 //
 // Usage:
 //   node tools/control_write_census.js            inventory + findings
@@ -34,21 +41,17 @@
 
 const fs = require('fs');
 const path = require('path');
+const { calculatorSources } = require('./calculator_sources');
+const {
+  blank, lexSanity, matchBrace, skipParens, functionBodies, enclosing, lineIndex,
+  splitArgs, literalOf,
+} = require('./js_lexical_scan');
 
 const ROOT = path.resolve(__dirname, '..');
 const INDEX = path.join(ROOT, 'index.html');
 const INIT_MIN = 4;   // a function writing fewer card controls is a targeted setter, not a statement
 
 // ---------------------------------------------------------------- source and control inventory
-
-function calculatorSources(html) {
-  const out = [];
-  const re = /<script\s+[^>]*src="(Calculator\/[^"]+\.js)"/g;
-  let m;
-  while ((m = re.exec(html))) out.push(m[1]);
-  if (!out.length) throw new Error('control_write_census: no Calculator/*.js script tags in index.html');
-  return out;
-}
 
 function readControls(html) {
   const ids = new Set();
@@ -62,122 +65,6 @@ function readControls(html) {
     else global.add(id);
   }
   return { card, global };
-}
-
-// ---------------------------------------------------------------------------- lexical scaffold
-
-// Blank out comments, strings and template literals so brace and paren walks are not shifted by
-// their contents. Offsets are preserved: the blanked text is the same length as the original.
-function blank(text, opts) {
-  const wipeStrings = !opts || opts.strings !== false;
-  const out = text.split('');
-  let i = 0;
-  const N = text.length;
-  const wipe = (a, b) => { for (let k = a; k < b && k < N; k++) if (out[k] !== '\n') out[k] = ' '; };
-  while (i < N) {
-    const c = text[i];
-    if (c === '/' && text[i + 1] === '/') { const s = i; while (i < N && text[i] !== '\n') i++; wipe(s, i); continue; }
-    if (c === '/' && text[i + 1] === '*') {
-      const s = i; i += 2;
-      while (i < N && !(text[i] === '*' && text[i + 1] === '/')) i++;
-      i = Math.min(i + 2, N); wipe(s, i); continue;
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      const q = c, s = i; i++;
-      while (i < N) { if (text[i] === '\\') { i += 2; continue; } if (text[i] === q) { i++; break; } i++; }
-      if (wipeStrings) wipe(s + 1, i - 1);
-      continue;
-    }
-    // Regex literal. `/[",\r\n]/` in ui_matrix.js contains a quote; treating it as a string start
-    // desynchronizes every scan after it, which is how a census reports clean by not looking.
-    // A `/` opens a regex when the previous significant character cannot end an expression.
-    if (c === '/') {
-      let k = i - 1;
-      while (k >= 0 && /\s/.test(text[k])) k--;
-      const prev = k >= 0 ? text[k] : '';
-      if (!/[\w$)\]]/.test(prev)) {
-        const s = i; i++;
-        let inClass = false;
-        while (i < N) {
-          if (text[i] === '\\') { i += 2; continue; }
-          if (text[i] === '[') inClass = true;
-          else if (text[i] === ']') inClass = false;
-          else if (text[i] === '/' && !inClass) { i++; break; }
-          else if (text[i] === '\n') break;          // not a regex after all
-          i++;
-        }
-        wipe(s + 1, i - 1);
-        continue;
-      }
-    }
-    i++;
-  }
-  return out.join('');
-}
-
-// Self-check: after blanking, braces and parens must balance. An unbalanced file means the
-// lexer desynchronized and every finding downstream of that point is unreliable — report it
-// rather than letting the census look clean.
-function lexSanity(src, b) {
-  let brace = 0, paren = 0;
-  for (const ch of b) {
-    if (ch === '{') brace++; else if (ch === '}') brace--;
-    else if (ch === '(') paren++; else if (ch === ')') paren--;
-  }
-  return (brace === 0 && paren === 0) ? null : { src, brace, paren };
-}
-
-function matchBrace(b, from) {
-  let d = 0;
-  for (let i = from; i < b.length; i++) {
-    if (b[i] === '{') d++;
-    else if (b[i] === '}') { d--; if (d === 0) return i + 1; }
-  }
-  return b.length;
-}
-
-function skipParens(b, from) {
-  let d = 0;
-  for (let i = from; i < b.length; i++) {
-    if (b[i] === '(') d++;
-    else if (b[i] === ')') { d--; if (d === 0) return i + 1; }
-  }
-  return b.length;
-}
-
-// Named `function` declarations and expressions, with their body extents.
-function functionBodies(text, b) {
-  const bodies = [];
-  const re = /(?:^|[^\w.$])function\s+([A-Za-z_$][\w$]*)\s*\(/g;
-  let m;
-  while ((m = re.exec(b))) {
-    const openParen = b.indexOf('(', m.index + m[0].length - 1);
-    let i = skipParens(b, openParen);
-    while (i < b.length && /\s/.test(b[i])) i++;
-    if (b[i] !== '{') continue;
-    bodies.push({ name: m[1], start: i, end: matchBrace(b, i) });
-  }
-  return bodies;
-}
-
-function enclosing(bodies, at) {
-  let best = null;
-  for (const f of bodies) {
-    if (at >= f.start && at < f.end) {
-      if (!best || (f.end - f.start) < (best.end - best.start)) best = f;
-    }
-  }
-  return best ? best.name : '(top level)';
-}
-
-function lineIndex(text) {
-  const starts = [0];
-  for (let i = 0; i < text.length; i++) if (text[i] === '\n') starts.push(i + 1);
-  return at => {
-    let lo = 0, hi = starts.length - 1;
-    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (starts[mid] <= at) lo = mid; else hi = mid - 1; }
-    return lo + 1;
-  };
 }
 
 // ------------------------------------------------------------------------ indirection resolvers
@@ -266,7 +153,7 @@ function scanFile(src, text, controls, findings) {
   const lit = blank(text, { strings: false });   // comments blanked, literals intact: names
   const desync = lexSanity(src, b);
   if (desync) findings.desync.push(desync);
-  const bodies = functionBodies(text, b);
+  const bodies = functionBodies(b);
   const lineOf = lineIndex(text);
   const accessors = findAccessors(text, b, lit, bodies);
   const setters = findSetters(text, b, lit);
@@ -327,6 +214,24 @@ function scanFile(src, text, controls, findings) {
     const region = lit.slice(at, scopeEnd);
     for (const w of region.matchAll(re)) push(raw, at + w.index, 'binding ' + varName);
   }
+  // (5) the same binding shape with a control name this scan cannot reduce to a literal:
+  //     `const el = getElementById(id); … el.value = val`, and `[...].forEach(id => …)` over a
+  //     computed id. `applyFullState` restores every saved control that way, so leaving the shape
+  //     out entirely — neither counted nor reported — let the census read `unresolved writes 0`
+  //     while a function that states the whole card appeared to state almost none of it.
+  const dynBindRe = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:document\s*\.\s*)?getElementById\(([^()]*)\)/g;
+  for (const m of lit.matchAll(dynBindRe)) {
+    if (/['"]/.test(m[2])) continue;                       // resolved above
+    const owner = bodies.find(f => m.index >= f.start && m.index < f.end);
+    const scopeEnd = owner ? owner.end : lit.length;
+    const re = new RegExp('\\b' + m[1] + '\\s*\\.\\s*(?:value|checked)\\s*=(?!=)', 'g');
+    for (const w of lit.slice(m.index, scopeEnd).matchAll(re)) {
+      findings.unresolved.push({
+        src, line: lineOf(m.index + w.index), fn: enclosing(bodies, m.index + w.index),
+        expr: m[1] + ' = getElementById(' + m[2].trim() + ')',
+      });
+    }
+  }
 
   // dynamic: getElementById(prefix + ident).value = — resolve through a loop binding if one covers it
   for (const m of lit.matchAll(/getElementById\(\s*[\w$]+\s*\+\s*([A-Za-z_$][\w$]*)\s*\)\s*\.\s*(?:value|checked)\s*=(?!=)/g)) {
@@ -364,26 +269,6 @@ function scanFile(src, text, controls, findings) {
   return { writes, calls };
 }
 
-function litAt(text, at) {
-  const m = /getElementById\(\s*(?:[\w$]+\s*\+\s*)?['"]([A-Za-z0-9_]+)['"]/.exec(text.slice(at, at + 200));
-  return m ? m[1] : null;
-}
-function splitArgs(s) {
-  const out = []; let d = 0, cur = '';
-  for (const ch of s) {
-    if (ch === '(' || ch === '[' || ch === '{') d++;
-    if (ch === ')' || ch === ']' || ch === '}') d--;
-    if (ch === ',' && d === 0) { out.push(cur); cur = ''; continue; }
-    cur += ch;
-  }
-  out.push(cur);
-  return out.map(x => x.trim());
-}
-function literalOf(arg) {
-  if (!arg) return null;
-  const m = /^['"]([A-Za-z0-9_]+)['"]$/.exec(arg.trim());
-  return m ? m[1] : null;
-}
 function normalize(raw, controls) {
   if (!raw) return null;
   if (controls.card.has(raw)) return raw;
@@ -401,7 +286,7 @@ function main() {
   const wantFull = argv.includes('--full');
 
   const html = fs.readFileSync(INDEX, 'utf8');
-  const sources = calculatorSources(html);
+  const sources = calculatorSources().all;
   const controls = readControls(html);
   const findings = { unresolved: [], desync: [] };
 
@@ -445,6 +330,25 @@ function main() {
   const callersOf = fn => calls.filter(c => c.to === fn && c.from !== fn)
     .map(c => c.from + ' (' + c.src + ':' + c.line + ')');
 
+  // A function that writes no card control of its own is a pure delegator: it shapes arguments
+  // and forwards. Testing ITS coverage answers the wrong question — `setIdentityControlsFromUnit`
+  // states no stat because stating stats was never its job — so resolve through it to the call
+  // sites that actually stand for a statement. A delegator with no caller stays as its own site
+  // rather than vanishing, so looking through can never clear a path by losing it.
+  const throughDelegators = (fn, seen = new Set()) => {
+    if (direct.has(fn) || seen.has(fn)) return [{ fn, via: [...seen] }];
+    seen.add(fn);
+    const up = calls.filter(c => c.to === fn && c.from !== fn);
+    if (!up.length) return [{ fn, via: [...seen] }];
+    const out = [];
+    for (const c of up) {
+      for (const r of throughDelegators(c.from, new Set(seen))) {
+        if (!out.some(x => x.fn === r.fn)) out.push({ ...r, at: c.src + ':' + c.line });
+      }
+    }
+    return out;
+  };
+
   const inits = [...direct.keys()]
     .map(fn => ({ fn, src: home.get(fn), direct: direct.get(fn), trans: trans.get(fn) || direct.get(fn) }))
     .filter(f => f.trans.size >= INIT_MIN)
@@ -455,6 +359,12 @@ function main() {
   // not itself state A's half produces a partial card. That is F136 exactly, and it generalizes:
   // the defect is not "B writes fewer fields" (every helper does) but "B is reachable as if it
   // were the whole statement".
+  // A function holding a write this scan could not resolve cannot be judged either way: its
+  // control set is a floor, not a statement. `applyFullState` restores every saved control
+  // through `getElementById(<variable>)`, so scoring it against a half it demonstrably writes
+  // would be a finding about the scanner. Such call sites are reported separately, as unjudged.
+  const opaque = new Set(findings.unresolved.map(u => u.fn));
+
   const partials = [];
   for (const a of inits) {
     for (const bF of inits) {
@@ -463,30 +373,43 @@ function main() {
       if (bF.direct.size < 2 || a.direct.size < 2) continue;
       if ([...a.direct].some(c => bF.direct.has(c))) continue;             // must be disjoint
       const exposed = [];
+      const unjudged = [];
       for (const c of calls) {
         if (c.to !== bF.fn || c.from === a.fn || c.from === bF.fn) continue;
-        // Coverage is tested at depth 1 — what the caller writes itself, plus what the functions
-        // it calls write directly. The full transitive closure is not used here: edges are
-        // name-based, so a long chain accumulates spurious reach and silently clears every
-        // caller. Depth 1 is what "does this call site state the other half" actually means.
-        const callerWrites = new Set(direct.get(c.from) || []);
-        for (const callee of (edges.get(c.from) || [])) {
-          for (const x of (direct.get(callee) || [])) callerWrites.add(x);
+        for (const site of throughDelegators(c.from)) {
+          if (site.fn === a.fn || site.fn === bF.fn) continue;
+          // Coverage is tested at depth 1 — what the caller writes itself, plus what the functions
+          // it calls write directly. The full transitive closure is not used here: edges are
+          // name-based, so a long chain accumulates spurious reach and silently clears every
+          // caller. Depth 1 is what "does this call site state the other half" actually means.
+          const callerWrites = new Set(direct.get(site.fn) || []);
+          for (const callee of (edges.get(site.fn) || [])) {
+            for (const x of (direct.get(callee) || [])) callerWrites.add(x);
+          }
+          const missing = [...a.direct].filter(x => !callerWrites.has(x));
+          if (!missing.length) continue;
+          (opaque.has(site.fn) ? unjudged : exposed).push({
+            caller: site.fn,
+            at: site.at || (c.src + ':' + c.line),
+            via: site.via && site.via.length ? site.via.join(' -> ') : null,
+            missing: missing.sort(),
+          });
         }
-        const missing = [...a.direct].filter(x => !callerWrites.has(x));
-        if (missing.length) exposed.push({ caller: c.from, at: c.src + ':' + c.line, missing: missing.sort() });
       }
-      if (!exposed.length) continue;
-      const seen = new Set();
-      const uniq = exposed.filter(e => !seen.has(e.caller + e.at) && seen.add(e.caller + e.at));
+      if (!exposed.length && !unjudged.length) continue;
+      const dedupe = list => {
+        const seen = new Set();
+        return list.filter(e => !seen.has(e.caller + e.at) && seen.add(e.caller + e.at));
+      };
       partials.push({
         whole: a.fn, part: bF.fn,
         wholeHalf: [...a.direct].sort(), partHalf: [...bF.direct].sort(),
-        exposed: uniq,
+        exposed: dedupe(exposed), unjudged: dedupe(unjudged),
       });
     }
   }
   partials.sort((a, b) => b.exposed.length - a.exposed.length);
+  const findingCount = partials.filter(p => p.exposed.length).length;
 
   const written = new Set(writes.map(w => w.control));
   const unwritten = [...controls.card].filter(c => !written.has(c)).sort();
@@ -495,7 +418,7 @@ function main() {
     sources: sources.length, cardControls: controls.card.size, globalControls: controls.global.size,
     writes: writes.length,
     initializers: inits.map(f => ({ fn: f.fn, src: f.src, direct: f.direct.size, transitive: f.trans.size, callers: callersOf(f.fn) })),
-    partials, unwritten, unresolved: findings.unresolved, desync: findings.desync,
+    partials, findingCount, unwritten, unresolved: findings.unresolved, desync: findings.desync,
   };
   if (wantJson) { console.log(JSON.stringify(report, null, 1)); return; }
 
@@ -517,16 +440,23 @@ function main() {
   }
   L('');
   L('FINDING — split statement: two functions writing disjoint halves of one card statement,');
-  L('          where the second half is reachable on its own.  ' + partials.length + ' found.');
+  L('          where the second half is reachable on its own.  ' + report.findingCount + ' found.');
   for (const p of partials) {
     L('');
     L('  ' + p.whole + '  states  [' + p.wholeHalf.join(', ') + ']');
     L('  ' + ' '.repeat(p.whole.length) + '  and calls  ' + p.part);
     L('  ' + p.part + '  states  [' + p.partHalf.join(', ') + ']');
-    L('     but is also reached without the first half by:');
+    if (p.exposed.length) L('     but is also reached without the first half by:');
     for (const e of p.exposed) {
-      L('        ' + e.caller + '  —  ' + e.at);
+      L('        ' + e.caller + '  —  ' + e.at
+        + (e.via ? '   (through ' + e.via + ')' : ''));
       L('             leaves unstated: ' + e.missing.join(', '));
+    }
+    if (p.unjudged.length) {
+      L('     reached by call sites this scan cannot judge (they hold unresolved writes):');
+      for (const e of p.unjudged) {
+        L('        ' + e.caller + '  —  ' + e.at + (e.via ? '   (through ' + e.via + ')' : ''));
+      }
     }
   }
   L('');

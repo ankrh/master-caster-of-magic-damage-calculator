@@ -177,19 +177,18 @@ function deriveUnitStats(input) {
   // Military Workshop (Warlord, XuanYuan building): upgrades any normal unit trained,
   // garrisoned in, or fighting from the city — not race-gated, per the "any defending units
   // of the city" + "base normal units" changelog wording. Heroes and fantastic creatures are
-  // excluded. Rocketry is an alternative source of the same Blackpowder upgrade.
-  // Combat-relevant effects, checked against the 1.5.12.7 scripts:
-  //   - Small Physical Ranged (missile) projectiles upgrade to Heavy Physical Ranged (boulder,
-  //     gunpowder), bypassing Missile Immunity — applied here so all downstream logic treats
-  //     the attack as a boulder (original 1.5.4.1 effect, still in the helptext).
-  //   - Physical ranged or thrown attack gains Armor Piercing, unless the unit has a Doom
-  //     attack — Armor Piercing is wasted on Doom (it already ignores armor), so it gets +2
-  //     ranged/thrown strength instead (patch 1.5.9.5). Folded in below.
-  //   - Fire Breath attack: +4 strength (patch 1.5.7.4, up from the original +2).
-  //   - +1 Poison: boosts an existing poison attack, or grants Poison 1 if it has none.
-  // Military Workshop and Rocketry are alternative causes of the same permanent
-  // Blackpowder upgrade. The source scripts grant it only to normal units that
-  // actually have physical ranged, Thrown, or Fire Breath.
+  // excluded, and Rocketry is an alternative cause of the same permanent Blackpowder upgrade,
+  // which the scripts grant only to a normal unit that already has physical ranged, Thrown or
+  // Fire Breath. What the upgrade then writes is `PROVENANCE[militaryWorkshop]`
+  // (`base:militaryWorkshop`, `stats_sequence.js`) and the Blackpowder gate further down.
+  //
+  // The magnitudes are patch history, and the changelog in
+  // `Reference docs/Warlord manual v1.5.12.7.html` is what records them: the missile-to-boulder
+  // projectile upgrade is the original 1.5.4.1 effect; 1.5.7.4 replaced a flat +2 physical
+  // ranged / +4 Thrown with Armor Piercing and raised Fire Breath from +2 to +4; 1.5.9.5 gave a
+  // Doom attack that strength back rather than the Armor Piercing Doom already makes redundant.
+  // Where changelog and script could disagree the script wins, and the step implements the
+  // script.
   const blackpowderSource = isWarlord
     && (!!abilities.militaryWorkshop || !!abilities.rocketry);
   // CreateUnit.CAS makes this permanent training decision before any later combat-time
@@ -660,19 +659,11 @@ function deriveUnitStats(input) {
   // Chaos Surge *before* BU_Apply_Specials, whose CC block then assigns ranged = 2 over
   // the top. CoM 1 swapped that call order, so there the CC breath keeps the bonus.
   // CoM2/Warlord are a separate engine and keep the narrower helptext scope.
-  // Weakness: -2 (MoM) or -3 (CoM/CoM2/Warlord) to ranged and thrown.
-  // Which ranged types are hit differs by engine (WIZARDS.EXE 0x908FC / 0x9067F):
-  //   MoM  — missile only (`ranged_type / 10 == 2`, i.e. Bow/Sling). Boulder and magic
-  //          ranged are exempt, matching the Fandom page's "Other types of Ranged Attacks
-  //          are not affected".
-  //   CoM+ — every conventional ranged type (`ranged_type / 10 <= 3`: missile, boulder,
-  //          magic), matching "melee, thrown and ranged attack strengths" in the CoM 1
-  //          and CoM2 helptext.
-  // Thrown is a separate test in both engines (`ranged_type == 100`); in MoM 1.31 that
-  // test is written `ranged_type / 10 == 100`, which no int8 can satisfy, so thrown is
-  // never reduced there. CP 1.60 nops the divide and the penalty starts applying.
-  // Breath and gaze (`ranged_type >= 101`) are exempt in every binary; Warlord adds the
-  // breath penalty on top in UnitCalc.CAS:309-315.
+  // Weakness: -2 (MoM) or -3 (CoM/CoM2/Warlord). Which ranged types each build's gate admits,
+  // and MoM 1.31's unsatisfiable `int8` second test that exempts thrown there, are
+  // `Reference docs/MoM binary analysis.md`, *Combat-effect stat writes* — its per-build gate
+  // table, richer than any restatement here. The steps are `PROVENANCE[weakness]`
+  // (`stats_sequence.js`), phase c for the compiled block and phase d for Warlord's script half.
   // The three branches are mutually exclusive and fall in different phases: ranged and
   // thrown are binary (phase c), while the Warlord breath penalty is phase d. They are
   // kept as separate terms so each lands in the right accumulator.

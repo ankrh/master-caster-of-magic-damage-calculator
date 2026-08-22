@@ -82,7 +82,7 @@ test('F30 repeats each initiating modern gaze under Haste and leaves retaliation
         labels: ordered.phases.map(phase => phase.label),
       };
     });
-    const legacy = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
+    const dos = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
       const result = resolveCombat(makeUnit(version, 'a', {
         atk: 1,
         rtb: 1,
@@ -95,7 +95,7 @@ test('F30 repeats each initiating modern gaze under Haste and leaves retaliation
           phase.label.startsWith('Attacker') && phase.label.includes('Gaze')).length,
       };
     });
-    return { modern, legacy };
+    return { modern, dos };
   });
 
   const expectedOpening = [
@@ -118,7 +118,7 @@ test('F30 repeats each initiating modern gaze under Haste and leaves retaliation
     expect(result.labels.slice(0, expectedOpening.length), result.version)
       .toEqual(expectedOpening);
   }
-  for (const result of report.legacy) {
+  for (const result of report.dos) {
     expect(result.phases, result.version).toBe(1);
   }
   expectNoConsoleErrors(errors);
@@ -171,7 +171,7 @@ test('F31 samples Cause Fear independently for both modern Hasted melee calls', 
           firstStrike,
           dist: run(version, firstStrike).totalDmgToB.slice(0, 5),
         }))),
-      legacy: {
+      dos: {
         mom: run('mom_1.31', false, 5).totalDmgToB.slice(0, 5),
         cp: run('mom_cp_1.60.00', false, 5).totalDmgToB.slice(0, 5),
         com: run('com_6.08', false).totalDmgToB.slice(0, 5),
@@ -193,14 +193,14 @@ test('F31 samples Cause Fear independently for both modern Hasted melee calls', 
   // CoM 6.08 retains the established one-sample Haste model: both strikes use the
   // same active-figure count, so odd total damage remains impossible.
   for (const version of ['cp', 'com']) {
-    expect(report.legacy[version][0]).toBeCloseTo(0.25, 12);
-    expect(report.legacy[version][1] || 0).toBeCloseTo(0, 12);
-    expect(report.legacy[version][2]).toBeCloseTo(0.5, 12);
-    expect(report.legacy[version][3] || 0).toBeCloseTo(0, 12);
-    expect(report.legacy[version][4]).toBeCloseTo(0.25, 12);
+    expect(report.dos[version][0]).toBeCloseTo(0.25, 12);
+    expect(report.dos[version][1] || 0).toBeCloseTo(0, 12);
+    expect(report.dos[version][2]).toBeCloseTo(0.5, 12);
+    expect(report.dos[version][3] || 0).toBeCloseTo(0, 12);
+    expect(report.dos[version][4]).toBeCloseTo(0.25, 12);
   }
   // MoM 1.31's defender Cause Fear bug still silences the roll entirely.
-  expect(report.legacy.mom[4]).toBeCloseTo(1, 12);
+  expect(report.dos.mom[4]).toBeCloseTo(1, 12);
   expectNoConsoleErrors(errors);
 });
 
@@ -397,7 +397,7 @@ test('F58 shows one Cause Fear distribution for every modern melee ApplyAttack c
           version, firstStrike, haste,
           rows: fearRows(run(version, firstStrike, haste)),
         })))),
-      legacy: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => ({
+      dos: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => ({
         version,
         rows: fearRows(run(version, false)),
       })),
@@ -424,7 +424,7 @@ test('F58 shows one Cause Fear distribution for every modern melee ApplyAttack c
 
   // The older engines retain their established single shared row/sample in the
   // simultaneous non-First-Strike exchange, including MoM 1.31's bug presentation.
-  for (const result of report.legacy) expect(result.rows, result.version).toHaveLength(1);
+  for (const result of report.dos) expect(result.rows, result.version).toHaveLength(1);
   expect(report.uiRows.map(row => row.label)).toEqual([
     'Main Cause Fear', 'Haste Cause Fear', 'Counter Cause Fear',
   ]);

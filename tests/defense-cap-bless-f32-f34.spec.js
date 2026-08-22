@@ -90,14 +90,14 @@ test('F32 splits modern defense dice after die 15 and leaves boundaries unchange
           { chance: 1.2, capDice: 15, cappedChance: 0.30 }),
       };
     });
-    const legacy = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
+    const dos = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
       const attacker = makeUnit(version, 'a');
       const defender = makeUnit(version, 'b', { def: 20, toBlkMod: 30 });
       const chance = buildToBlockContext(attacker, defender, 0, 0, version)
         .bToBlockVsAMelee;
       return { version, chance, mean: mean(defenseBlockPMF(20, chance)) };
     });
-    return { modern, legacy };
+    return { modern, dos };
   });
 
   for (const row of report.modern) {
@@ -116,7 +116,7 @@ test('F32 splits modern defense dice after die 15 and leaves boundaries unchange
     expect(row.overHundred.reduce((sum, p, value) => sum + p * value, 0))
       .toBeCloseTo(16.5, 12);
   }
-  for (const row of report.legacy) {
+  for (const row of report.dos) {
     expect(row.chance, row.version).toBe(0.6);
     expect(row.mean, row.version).toBeCloseTo(12, 12);
   }

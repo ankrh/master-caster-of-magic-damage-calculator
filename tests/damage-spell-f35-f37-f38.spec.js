@@ -14,7 +14,7 @@ test('F35 modern Area spell iterations use full HP instead of the wounded-top ca
       })),
       fullHpReference: calcAreaDamageDist(2, 10, 0.5, 2, 0.5, 10, 11, 0, null),
       woundedReference: calcAreaDamageDist(2, 10, 0.5, 2, 0.5, 10, 11, 0, null, 1),
-      legacy: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => ({
+      dos: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => ({
         version,
         actual: run(version),
       })),
@@ -23,7 +23,7 @@ test('F35 modern Area spell iterations use full HP instead of the wounded-top ca
 
   expect(report.fullHpReference).not.toEqual(report.woundedReference);
   for (const row of report.modern) expect(row.actual).toEqual(report.fullHpReference);
-  for (const row of report.legacy) expect(row.actual).toEqual(report.woundedReference);
+  for (const row of report.dos) expect(row.actual).toEqual(report.woundedReference);
   expectNoConsoleErrors(errors);
 });
 
@@ -147,7 +147,7 @@ test('F37/F38 order modern Magic Immunity before Black Sleep Doom spell damage',
         immuneSleepingMeleeTotalToB: immuneSleepingMelee.totalDmgToB,
       };
     });
-    const legacy = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
+    const dos = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
       const sleepingSource = makeUnit(version, 'a', {
         abilities: { blackSleep: true, firstStrike: true, immolation: true, poison: 10 },
       });
@@ -161,7 +161,7 @@ test('F37/F38 order modern Magic Immunity before Black Sleep Doom spell damage',
         totalDmgToB: result.totalDmgToB,
       };
     });
-    return { modern, legacy };
+    return { modern, dos };
   });
 
   for (const row of report.modern) {
@@ -182,7 +182,7 @@ test('F37/F38 order modern Magic Immunity before Black Sleep Doom spell damage',
     expect(row.immuneSleepingMeleeTotalToA).toEqual([1]);
     expect(row.immuneSleepingMeleeTotalToB).toEqual([1]);
   }
-  for (const row of report.legacy) {
+  for (const row of report.dos) {
     expect(row.phases).toBeNull();
     expect(row.totalDmgToA).toEqual([1]);
     expect(row.totalDmgToB).toEqual([1]);

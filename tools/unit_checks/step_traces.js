@@ -147,7 +147,7 @@ function runModifierTraceChecks(ctx) {
     'Melee trace keeps High Prayer before Warp Attack');
 
   const chanceSources = traced.modifierTraces.toHitMelee.entries.map(entry => entry.source.id);
-  assertEqual(chanceSources[0], 'baseToHitMelee',
+  assertEqual(chanceSources[0], 'baseThresholds',
     'To Hit trace starts with the editable base modifier when it is active');
   assert(chanceSources.indexOf('level') < chanceSources.indexOf('weapon'),
     'To Hit trace keeps level before weapon');
@@ -263,7 +263,7 @@ function runModifierTraceChecks(ctx) {
     'Negative base To Block plus Zombies retains the production ten-percent floor');
   assertEqual(lowBlockZombies.modifierTraces.toBlock.result, 10,
     'To Block trace uses the same initial ten-percent floor');
-  assertEqual(lowBlockZombies.modifierTraces.toBlock.entries.slice(-1)[0].id, 'chance:legacyClamp',
+  assertEqual(lowBlockZombies.modifierTraces.toBlock.entries.slice(-1)[0].id, 'chance:dosClamp',
     'The initial To Block clamp records the floor when it changes the running value');
 
   const cappedPlague = ctx.deriveUnitStats(baseUnitInput({
@@ -319,16 +319,16 @@ function runModifierTraceChecks(ctx) {
     'Warlord To Defend writes retain UnitCalcPre source order');
 
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
-    const highLegacy = ctx.deriveUnitStats(baseUnitInput({
+    const highDos = ctx.deriveUnitStats(baseUnitInput({
       version, toHitMod: 70, abilities: { lucky: true },
     }));
-    assertClose(highLegacy.toHitMelee, 1,
-      `${version}: legacy terminal normalization clamps the effective common-plus-melee threshold`);
-    const lowLegacy = ctx.deriveUnitStats(baseUnitInput({
+    assertClose(highDos.toHitMelee, 1,
+      `${version}: DOS terminal normalization clamps the effective common-plus-melee threshold`);
+    const lowDos = ctx.deriveUnitStats(baseUnitInput({
       version, toHitMod: -20, warpReality: true,
     }));
-    assertClose(lowLegacy.toHitMelee, 0.1,
-      `${version}: legacy terminal normalization preserves the effective ten-percent floor after common penalties`);
+    assertClose(lowDos.toHitMelee, 0.1,
+      `${version}: DOS terminal normalization preserves the effective ten-percent floor after common penalties`);
   }
 
   const tracedDestiny = ctx.deriveUnitStats(baseUnitInput({
@@ -727,7 +727,7 @@ function runChannelAttributionChecks(ctx) {
     'Heavenly Light leaves the Breath To Hit field alone');
 
   // UnitCalc.CAS:326-328 writes SToRanged alone.
-  const trueSight = eventOf('trueSight:ranged');
+  const trueSight = eventOf('trueSight');
   assert(!!trueSight, 'True Sight records a To Hit write on the multi-channel unit');
   assertSameKeyList(trueSight.channels, ['ranged'],
     'True Sight attributes its To Hit write to Ranged alone');
@@ -760,12 +760,12 @@ function runChannelAttributionChecks(ctx) {
   // Heavenly Light writes melee and the Ranged/Thrown secondaries in one step, so what a
   // reconstruction drops is the *fields* that belong to other channels, not the whole entry:
   // the melee half belongs to every channel's view, exactly as a common To Hit write does.
-  assert(!idsIn(projections.fireBreath).includes('trueSight:ranged'),
+  assert(!idsIn(projections.fireBreath).includes('trueSight'),
     'A Breath reconstruction drops the Ranged-only To Hit write');
   assertSameKeyList(fieldsIn(projections.fireBreath, 'heavenlyLight:toHit'), ['toHitMelee'],
     'A Breath reconstruction keeps only the channel-agnostic half of a Ranged/Thrown write');
   assert(idsIn(projections.thrown).includes('heavenlyLight:toHit')
-      && !idsIn(projections.thrown).includes('trueSight:ranged'),
+      && !idsIn(projections.thrown).includes('trueSight'),
   'A Thrown reconstruction keeps Heavenly Light and drops True Sight');
   assertSameKeyList(fieldsIn(projections.thrown, 'heavenlyLight:toHit'),
     ['toHitMelee', 'toHitThrown'],
@@ -802,7 +802,7 @@ function runChannelAttributionChecks(ctx) {
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
   const skippedTrueSight = withoutTrueSight.statExecutionTrace
-    .find(event => event.id === 'trueSight:ranged');
+    .find(event => event.id === 'trueSight');
   assert(!!skippedTrueSight && skippedTrueSight.status === 'skipped',
     'The ledger still visits True Sight when its predicate is false');
   assertSameKeyList(skippedTrueSight.channels, ['ranged'],
@@ -813,7 +813,7 @@ function runChannelAttributionChecks(ctx) {
   const ledger = multiChannel.statExecutionTrace;
   const breathLedger = projectTraceToChannel(ledger, 'fireBreath');
   const breathLedgerIds = breathLedger.map(event => event.id);
-  assert(!breathLedgerIds.includes('trueSight:ranged')
+  assert(!breathLedgerIds.includes('trueSight')
       && !breathLedgerIds.includes('heavenlyLight:toHit')
       && breathLedgerIds.includes('hurricane'),
   'A Breath ledger reconstruction drops the steps whose declaration excludes Breath');

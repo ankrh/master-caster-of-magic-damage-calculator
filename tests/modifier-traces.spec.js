@@ -42,7 +42,7 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
   expect(meleeSources.indexOf('highPrayer')).toBeLessThan(meleeSources.indexOf('warpAttack'));
 
   const hitSources = report.modifierTraces.toHitMelee.entries.map(entry => entry.source.id);
-  expect(hitSources[0]).toBe('baseToHitMelee');
+  expect(hitSources[0]).toBe('baseThresholds');
   expect(hitSources.indexOf('level')).toBeLessThan(hitSources.indexOf('weapon'));
   expect(hitSources.indexOf('highPrayer')).toBeLessThan(hitSources.indexOf('vertigo'));
   expect(report.modifierTraces.fantastic.entries[0].source.id).toBe('chosen');
@@ -230,7 +230,7 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
 
   await expect(page.locator('#aHitMeleeDisp')).toHaveText('45%');
   await expect(page.locator('#aHitMeleeDisp')).toHaveAttribute('data-tooltip',
-    'Editable base: 30%\nBase melee To Hit (phase base): 30% → 35%'
+    'Editable base: 30%\nBase To Hit / To Block (phase base): 30% → 35%'
       + '\nHigh Prayer (phase c): 35% → 45%\nDisplayed result: 45%');
   // The common row shows that field alone, so the melee-only modifier above is absent from
   // it while the write High Prayer makes to the common field appears in both.

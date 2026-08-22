@@ -52,8 +52,8 @@ test('modern uses tactical defender Card B Blur for both directions; DOS uses ea
       modernOnlyA: means('com2_1.05.11', true, false),
       modernOnlyB: means('com2_1.05.11', false, true),
       warlordOnlyB: means('com2_warlord_1.5.12.7', false, true),
-      legacyOnlyA: means('com_6.08', true, false),
-      legacyOnlyB: means('com_6.08', false, true),
+      dosOnlyA: means('com_6.08', true, false),
+      dosOnlyB: means('com_6.08', false, true),
       hiddenOptions: (() => {
         const base = resolveCombat(unit(baseA, false), unit(baseB, false), {
           isRanged: false,
@@ -75,8 +75,8 @@ test('modern uses tactical defender Card B Blur for both directions; DOS uses ea
   expect(result.modernOnlyA).toEqual([10, 10]);
   expect(result.modernOnlyB).toEqual([8, 8]);
   expect(result.warlordOnlyB).toEqual([8, 8]);
-  expect(result.legacyOnlyA).toEqual([8, 10]);
-  expect(result.legacyOnlyB).toEqual([10, 8]);
+  expect(result.dosOnlyA).toEqual([8, 10]);
+  expect(result.dosOnlyB).toEqual([10, 8]);
   expect(result.hiddenOptions.slice(2)).toEqual(result.hiddenOptions.slice(0, 2));
 
   expectNoConsoleErrors(errors);

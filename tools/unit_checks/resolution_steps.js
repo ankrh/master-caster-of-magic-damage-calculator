@@ -144,12 +144,12 @@ function runResolutionStepChecks(ctx) {
   assertEqual(ctx.effectiveResistance(resistanceTarget, 'com2_1.05.11', null, false), 3,
     'Charmed is inert when GetEffectiveResistance is not serving a roll');
 
-  const legacyResistance = ctx.buildResistanceContext(
+  const dosResistance = ctx.buildResistanceContext(
     { res: 0, unitType: 'normal', abilities: {} },
     { res: 0, unitType: 'hero', abilities: { charmed: true } },
     'mom_1.31');
-  assertEqual(legacyResistance.bResPoison, 30,
-    'Legacy Charmed adds 30 Resistance to realm-less rolls for heroes');
+  assertEqual(dosResistance.bResPoison, 30,
+    'DOS Charmed adds 30 Resistance to realm-less rolls for heroes');
 
   const bothElemental = {
     res: 0,

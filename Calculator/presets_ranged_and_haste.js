@@ -465,7 +465,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   charmedPoisonMoM: {
-    desc: 'Legacy Charmed gives a hero +30 Resistance for rolls, including realm-less Poison.',
+    desc: 'DOS Charmed gives a hero +30 Resistance for rolls, including realm-less Poison.',
     version: V_MOM_131,
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:0, hp:10, unitType:'hero', abilities: { charmed: true } },

@@ -21,10 +21,15 @@ function placedTouchValue(self, key, record) {
     values.push(records[record][key]);
   }
   if (!values.length) return null;
+  // `@Combat@mergeflags` **adds** the two Poison values where both records carry one, and that
+  // is not what `max` does — but no record other than `global` is ever given poison
+  // (`applyWarlordTouchFlagPlacement`, `combat_effects.js`), so `values` holds one entry here
+  // and the two rules cannot be distinguished. A channel-specific poison would need the sum.
   if (key === 'poison') return Math.max(...values);
   if (key === 'dispelEvil') return values.some(Boolean);
-  // MergeFlags keeps the stronger (more negative) save modifier when a general
-  // and channel-specific valued flag are both present.
+  // For the other valued riders `@Combat@mergeflags` keeps `Min(existing, incoming)` — the
+  // stronger, more negative save modifier — when a general and a channel-specific flag are both
+  // present: `Reference docs/Caster binary/CoM2 binary - map and city.md`, `$005B168A..$005B17FA`.
   return Math.min(...values);
 }
 
@@ -38,8 +43,10 @@ function dosChannelTouchModifier(self, key, record, ver) {
   return 0;
 }
 
-// DOS has one channel record for every non-melee BU_ProcessAttack call: ordinary ranged,
-// Thrown, both Breaths, and all Gazes. Caster has distinct dispatch choices; Warlord Thrown
+// DOS loads one channel record for every non-melee BU_ProcessAttack call — ordinary ranged,
+// Thrown, both Breaths and all Gazes all read `ranged_attack_attributes` (131:0x99AF7), melee
+// reads `melee_attack_attributes` (131:0x99C0D): `Reference docs/DOS reconstructed/
+// R6.2c.evidence.md`, findings 5 and 7. Caster has distinct dispatch choices; Warlord Thrown
 // deliberately shares its melee record, while Breath and Gaze use only general flags.
 function touchRecordForPhase(ver, phase) {
   const dos = ver === 'mom_1.31' || ver === 'mom_cp_1.60.00' || ver === 'com_6.08';
@@ -99,8 +106,10 @@ function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning,
   const modernGazeSkipsRiders = ver === 'com2_1.05.11' || ver === 'com2_warlord_1.5.12.7';
   const touch = touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison,
     ver, true, touchRecordForPhase(ver, 'gaze'));
-  // The modern jump skips exactly the six ApplyAttack riders reconstructed in the frozen
-  // evidence. Dispel Evil is a separate calculator effect and retains its prior routing.
+  // The unsigned two-step range idiom admits exactly attack types 6..8 and sends them past all
+  // six rider blocks, which every other type executes in order: `Reference docs/Caster binary/
+  // Combat.ApplyAttack.R5.2c.evidence.md`. Dispel Evil is a separate calculator effect and
+  // retains its prior routing.
   const poisonStr = modernGazeSkipsRiders ? 0 : touch.poisonStr;
   const poisonFail = modernGazeSkipsRiders ? 0 : touch.poisonFail;
   const stoningFail = modernGazeSkipsRiders ? 0 : touch.stoningFail;
@@ -251,8 +260,10 @@ function applyPairToHitModifiers(a, b, version) {
     }
   }
 
-  // Invisibility blocks ranged targeting in all versions. In MoM, it also applies
-  // a -10% to-hit penalty to conventional attacks unless negated by Illusion Immunity.
+  // Invisibility blocks ranged targeting in all versions — a separate, earlier eligibility
+  // check. In MoM it additionally costs the attacker 10 percentage points of To Hit unless the
+  // attacker has Illusions Immunity, a block CoM 1 replaces with 62 nops:
+  // `Reference docs/MoM binary analysis.md`, *Invisibility's To-Hit penalty*.
   const invisIsCoM = version && version.startsWith('com');
   const aInvisible = hasAbil(a.abilities, 'invisibility');
   const bInvisible = hasAbil(b.abilities, 'invisibility');
@@ -284,7 +295,9 @@ function buildVertigoContext(a, b, version) {
   return {
     isCoM,
     // Persistent Hit/To Defend penalties were already applied by recalculation. Only MoM's
-    // separate -1 Defense-die projection remains resolution-time state here.
+    // separate -1 Defense-die projection remains resolution-time state here — Vertigo's
+    // defensive half is a live-stat write, not a conventional-attack modifier
+    // (`Reference docs/MoM binary analysis.md`, *Combat-effect stat writes*).
     aToHitMeleeVert: a.toHitMelee,
     bToHitMeleeVert: b.toHitMelee,
     aToHitRtbVert: a.toHitRtb,
@@ -355,8 +368,9 @@ function buildResistanceContext(a, b, version) {
 }
 
 // Caster.exe keeps conventional ranged, Thrown, Fire Breath and Lightning Breath in
-// independent fields.  The UI still exposes the legacy RTB projection (R4), but combat
-// must never recover a modern channel from that lossy display value.
+// independent fields.  The card still carries the shared slot the modern engine does not have
+// (`SPEC.md`, *Deliberate deviations from the engine*), but combat must never recover a modern
+// channel from that lossy display value.
 function modernAttackUnit(unit, channel) {
   if (!channel) return null;
   const ranged = channel.key === 'ranged';
@@ -556,9 +570,12 @@ function buildThrownPhase(active, params) {
   };
 }
 
-// Destroy Mechanical (Warlord, Clockwork Tinmen): melee attack instantly
-// destroys a Mechanical defender. Gated on attacker having a usable melee
-// strike (atk > 0; sAlive > 0 is checked by callers).
+// Destroy Mechanical (Warlord, Clockwork Tinmen): the summon "could destroy any mechanical unit
+// in 1 hit with its special ability" — `Reference docs/Warlord manual v1.5.12.7.html`, the
+// 1.5.12.0 unit entry, and the only source that states the effect at all. No Warlord script and
+// no `Caster.exe` reconstruction names it, so the three restrictions modelled here — melee only,
+// a usable melee strike (atk > 0; sAlive > 0 is the caller's), and firing on the counter-attack
+// — are unsourced inferences. See `BACKLOG.md` Q29.
 function destroyMechanicalApplies(attacker, defender, atk) {
   return atk > 0
     && hasAbil(attacker.abilities, 'destroyMechanical')
@@ -612,8 +629,9 @@ function buildMeleePhase(params) {
     consumesFear: false,
     compute: (sAlive, tAlive, cap, _fearDist, context = {}) => {
       const fearD = aFearForCell(sAlive, tAlive);
-      // ApplyAttack zeroes Black-Sleeping sources before its Cause Fear loop.
-      // A dead target does not suppress the call or that loop; only zero source
+      // ApplyAttack sets a Black-Sleeping source's caller-supplied `figs := 0` before its Cause
+      // Fear loop (`Reference docs/Caster binary/Combat.ApplyAttack.R5.2a-b.evidence.md`,
+      // `$005B19D6`). A dead target does not suppress the call or that loop; only zero source
       // figures do, so cap=0 still carries a real feared-count sample.
       const firstFearedDist = aBlackSleep ? [1] : fearedCountDist(fearD, sAlive);
       if (sAlive <= 0 || cap <= 0 || (isCoM2 && aBlackSleep)) {
@@ -786,7 +804,7 @@ function buildFirstStrikeComputes(params) {
     // Hasted 2nd strike: full A-side fear (aFearForCell, includes aFearBug).
     secondStrikeCompute: makeAStrike((sAlive, tAlive) => aFearForCell(sAlive, tAlive)),
     // No-fear strike: caller passes in k_a as sAlive (fear pre-sampled). Used when
-    // Legacy FS+Haste can share one pre-sampled fear count across both strikes.
+    // DOS FS+Haste can share one pre-sampled fear count across both strikes.
     aStrikeNoFear: makeAStrike(() => null),
   };
 }
@@ -887,7 +905,9 @@ function buildAttackerGazePhase(active, params) {
           context.sourceState || combatHealStateFromUnit(a));
       }
       // DOS only — the modern branch returned above. The DOS doom assignment sits inside the
-      // per-attacker-figure loop, so it is delivered once per living gazer figure.
+      // per-figure loop, so MoM's doom damage scales with the attacker's figure count where
+      // CoM2 and Warlord deliberately do not: `Reference docs/MoM binary analysis.md`,
+      // *Gaze attacks: one slot, two figure bounds, and a realm*.
       let dist = buildGazeDist(a, b, sAlive, tAlive, cap, aStoningGazeFailP, aDeathGazeFailP, aGazeDoomStrP, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
         isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, bBlackSleep, bToBlockVsAAll, aMinDamageFromHits, sAlive);
       const aImmGDist = (aImmWithGaze && tAlive > 0)

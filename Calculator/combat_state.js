@@ -3,20 +3,13 @@
 // damage phase, a simultaneous pair, or a first-strike block to it.
 
 // --- Combat Flow Modifiers ---
-// Abilities that change *how* combat resolves rather than just stat values.
-// These are checked during resolveCombat to alter phase ordering, defense
-// effectiveness, damage types, etc.
-//
-// Categories:
-//   Phase ordering:  First Strike, Negate First Strike
-//   Defense halving: Armor Piercing, Illusion (defender ignores defense if no Illusion Immunity)
-//   Damage immunity: Magic Immunity (vs magic ranged),
-//                    Missile Immunity (vs missile/boulder), Weapon Immunity (vs non-magic melee),
-//                    Poison Immunity, Stoning Immunity, Cold Immunity, Death Immunity
-//   Special attacks: Poison Touch, Life Steal, Stoning Touch/Gaze, Death Gaze, Doom Gaze, Cause Fear
-//   Defense bonus:   Large Shield (+2 def vs ranged), Invulnerability
-//   Hit bonus:       Lucky (+10% To Hit, +10% To Block, +1 Res; v1.31: enemy melee -10% To Hit), Bless (vs Chaos/Death)
-//   Misc:           Haste (double melee attacks), Immolation (extra damage phase)
+// Abilities that change *how* combat resolves rather than just stat values — phase ordering,
+// defense effectiveness, damage type, the immunities and the special attacks — are read as
+// `resolveCombat` builds the phase list below. No catalogue of them is kept here: a second list
+// of what each one does is a second home, and drifts from the code that implements it. Each is
+// owned by the `PROVENANCE` citation beside its own reader — phase ordering and the special
+// attacks in `combat_phases.js` and `combat_special_attacks.js`, every defense term and immunity
+// in the two attack-specific defense sequences in `combat_effects.js`.
 
 // --- Combat Phase Pipeline ---
 // A phase is { kind, source, target, active, label, compute } where compute is
@@ -27,7 +20,7 @@
 // are accumulated for the breakdown UI.
 //
 // In FS+Haste configurations, a single 'firstStrikeBlock' phase replaces phases 5-8b.
-// The legacy engines retain their shared fear sample; modern Caster ApplyAttack calls
+// The DOS engines retain their shared fear sample; modern Caster ApplyAttack calls
 // sample Cause Fear independently for First Strike and the Haste strike.
 
 function aliveCount(unit, cumDmgInCombat) {
@@ -137,8 +130,10 @@ function applyOutcomeDamageToState(state, outcome) {
   if (damage <= 0) return state;
   if (state && state.engine === 'dos') {
     const next = normalizeDosCombatHealState(state);
-    // BU_ApplyDamage caps each stored DOS category independently at 200, while
-    // its front-figure/current-figure calculation still consumes the full sum.
+    // BU_ApplyDamage saturates each stored DOS category independently at 200, while
+    // its front-figure/current-figure calculation still consumes the full sum:
+    // `Reference docs/DOS reconstructed/R6.2f.evidence.md`, *BU_ApplyDamage rejects inert
+    // inputs before changing any unit state*.
     next.regularDamage = Math.min(200,
       next.regularDamage + Math.max(0, outcome.normalDamage || 0));
     next.irreversibleDamage = Math.min(200,
@@ -409,7 +404,9 @@ function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
         const fearA = subA.consumesFear ? pendingFear[subA.source + 'FearDist'] : null;
         const fearB = subB.consumesFear ? pendingFear[subB.source + 'FearDist'] : null;
         // PerformMeleeAttack calls the initiating attack (and its Haste repeat) before
-        // it calls the counter, although all pending damage is dealt afterwards.  Resolve
+        // it calls the counter, and every such call precedes all three tail Dealdamage
+        // calls (`Reference docs/Caster binary/Combat.PerformAttacks.R5.2d.evidence.md`),
+        // so all pending damage is dealt afterwards.  Resolve
         // subB's in-call healing first so the counter sees A's revised HP/bonus-HP state;
         // neither attack may see the other's still-pending damage.
         // PerformMeleeAttack invokes every selected melee slot even when its target
@@ -422,8 +419,11 @@ function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
           if (outcomeB.probability < 1e-15) continue;
           if (path.aState && path.aState.engine === 'dos') {
             // DOS main melee and counterattack execute from one frozen battle-unit
-            // snapshot. Each call may revise its own source state internally, but
-            // neither call observes the other's healing or still-pending damage.
+            // snapshot: each of BU_AttackTarget's nine strike calls transfers its result
+            // into one of the parent's two directional damage arrays rather than into the
+            // record (`Reference docs/DOS reconstructed/D39.evidence.md`, *ABI, callers, and
+            // output routing*). Each call may revise its own source state internally, but
+            // neither observes the other's healing or still-pending damage.
             const capA = healingStateRemainingHp(path.aState);
             const outA = subA.compute(bAlive, aAlive, capA, fearA,
               { sourceState: path.bState });
@@ -684,9 +684,10 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
       const bAliveL = aliveCount(ctx.b, cumB);
       const capA = ctx.aRemHP - cumA;
       const capB = ctx.bRemHP - cumB;
-      // CoM 1 reads hits - front_figure_damage directly from the battle-unit record.
-      // Damage accumulated earlier in this exchange (for example, Thrown) is still only
-      // in the pending damage arrays, so it does not affect the First Strike cutoff.
+      // CoM 1 reads hits - front_figure_damage directly from the battle-unit record, and the
+      // timing is load-bearing: damage accumulated earlier in this exchange (Thrown, say) is
+      // still only in the pending damage arrays, so it does not affect the First Strike cutoff.
+      // `Reference docs/MoM binary analysis.md`, *First Strike's 24-HP cutoff and Haste repeats*.
       const fsApplies = !ctx.isCoM1Only || woundedTopFigHP(ctx.bRemHP, ctx.b.hp) <= 24;
       if (fsApplies) {
         const fsOut = computes.fsStrike(aAliveL, bAliveL, capB, null,
@@ -754,7 +755,7 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
 // CoM1 fallthrough: simultaneous melee+counter (single strike via fsStrike compute, no Haste 2nd).
 //   computes:   { fsStrike, secondStrike, aStrikeNoFear, counter, fallthroughCounter }
 //   ctx:        { a, b, aRemHP, bRemHP, isCoM1Only, coupleKa, aPFear }
-// coupleKa: for the legacy shared-sample path, sample k_a once and use the SAME k_a
+// coupleKa: for the DOS shared-sample path, sample k_a once and use the SAME k_a
 // for both FS strike and 2nd strike. Modern callers leave this false because every
 // ApplyAttack call samples Cause Fear independently.
 // Returns { joint, postFsJoint, fsMarginal, secondMarginal, counterMarginal, lifeStealEV_a, lifeStealEV_b }.
@@ -770,9 +771,11 @@ function applyFsBlockHasteCoupledWithHealing(joint, computes, ctx) {
       for (const path of joint[cumA][cumB].values()) {
         const fsApplies = !ctx.isCoM1Only || dosTopFigureRemainingHp(path.bState) <= 24;
         if (!fsApplies) {
-          // CoM 6.08 falls through to one simultaneous main/counter exchange.
-          // Both calls read the frozen pre-exchange records, while each keeps its
-          // own in-call Life Steal transition before pending damage is committed.
+          // CoM 6.08 falls through to one simultaneous main/counter exchange: Haste repeats
+          // the counter-attack in both MoM builds but not in CoM 1 (`Reference docs/MoM binary
+          // analysis.md`, *First Strike's 24-HP cutoff and Haste repeats*). Both calls read
+          // the frozen pre-exchange records, while each keeps its own in-call Life Steal
+          // transition before pending damage is committed.
           const aAlive = healingStateAlive(path.aState);
           const bAlive = healingStateAlive(path.bState);
           const capA = healingStateRemainingHp(path.aState);

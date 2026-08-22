@@ -61,42 +61,41 @@ function baseStatSteps(ctx) {
       } }),
     // The modern record's common `hitchance` has no DOS counterpart: the DOS record stores one
     // threshold per attack and nothing above them, so this seed is modern-only and the DOS melee
-    // threshold is `base:baseMelee` below.
+    // threshold is part of `base:baseThresholds` below. That difference in cited versions is why
+    // this stays a step of its own: a scope row is per `phase:id`, so a field the DOS record does
+    // not have cannot ride along inside a five-version step.
     // PROVENANCE[baseHitChance]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
     statStep({ id: 'baseHitChance', sourceId: 'baseHitChance',
       sourceLabel: 'Base To Hit', phase: 'base', writes: ['toHit'],
       when: () => baseHitChance !== 0,
       apply: u => { u.toHit += baseHitChance; } }),
-    // PROVENANCE[baseMelee]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
-    statStep({ id: 'baseMelee', sourceId: 'baseToHitMelee',
-      sourceLabel: 'Base melee To Hit', phase: 'base', writes: ['toHitMelee'],
-      when: () => (isCoM2 ? baseHitMelee : baseToHitMod) !== 0,
-      apply: u => { u.toHitMelee += isCoM2 ? baseHitMelee : baseToHitMod; } }),
+    // The record's stored per-attack To-Hit thresholds and its To Block are one cited block,
+    // seeded together: one citation, one chain position, and `writes` names the fields it
+    // reaches (SPEC.md, *The step model*).
     // One card modifier per secondary threshold the record has: three in the modern engines,
     // one shared value in the DOS engines. The modern branch writes each per-kind field its own
     // card value and the DOS-shaped compatibility slot the modifier of whatever kind stands in
     // it, which is the same `kindAt` question every other writer of that slot asks.
-    // PROVENANCE[baseRtb]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
-    statStep({ id: 'baseRtb', sourceId: 'baseToHitRtb',
-      sourceLabel: 'Base ranged/Thrown/Breath To Hit', phase: 'base',
-      writes: secondaryHitFields,
-      when: () => (isCoM2
-        ? Object.values(modernSecondaryHitMod).some(value => value !== 0)
-        : baseToHitRtbMod !== 0),
+    // PROVENANCE[baseThresholds]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
+    statStep({ id: 'baseThresholds', sourceId: 'baseThresholds',
+      sourceLabel: 'Base To Hit / To Block', phase: 'base',
+      writes: ['toHitMelee', ...secondaryHitFields, 'toBlk'],
+      when: () => (isCoM2 ? baseHitMelee : baseToHitMod) !== 0
+        || (isCoM2
+          ? Object.values(modernSecondaryHitMod).some(value => value !== 0)
+          : baseToHitRtbMod !== 0)
+        || baseToBlkMod !== 0,
       apply: u => {
+        u.toHitMelee += isCoM2 ? baseHitMelee : baseToHitMod;
         if (isCoM2) {
           for (const target of secondaryHitTargets) {
             u[target.field] += modernSecondaryHitMod[target.kindAt(u)];
           }
-          return;
+        } else {
+          for (const field of secondaryHitFields) u[field] += baseToHitRtbMod;
         }
-        for (const field of secondaryHitFields) u[field] += baseToHitRtbMod;
+        u.toBlk += baseToBlkMod;
       } }),
-    // PROVENANCE[baseBlock]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
-    statStep({ id: 'baseBlock', sourceId: 'baseToBlock',
-      sourceLabel: 'Base To Block', phase: 'base', writes: ['toBlk'],
-      when: () => baseToBlkMod !== 0,
-      apply: u => { u.toBlk += baseToBlkMod; } }),
     // CoM1's Zombies constructor starts the live To Block field at -1. This is an
     // identity-sourced write, but it belongs on the calculated stat sequence so its
     // effect is attributed to To Block rather than to the Special unit control.
@@ -1004,6 +1003,11 @@ function magicCalcBinaryStatSteps(ctx) {
           if (weaknessBinaryHits(u, c)) u[c.strengthField] -= weaknessPenalty;
         }
       } }),
+    // The DOS block tests only `> 0` per slot: `unitcalc.c` 131:0x8F155 adds 2 to the shared
+    // slot with no mutation test of any kind. A Chaos Channels fire breath is nevertheless
+    // excluded in both MoM builds, by order alone — the fire-breath block *assigns* that slot
+    // at 0x8F720, after the constructor's Chaos Surge at 0x8F113, discarding this bonus. CoM 1
+    // calls `BU_Apply_Specials` first (com1:0x8F0E8), so there the bonus lands on top and keeps.
     // PROVENANCE[chaosSurge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8aac79f44ffe2fbae619cb5d | Reference docs/DOS reconstructed/unitcalc.c@span:28:ef6419306ce4c0b275103ee1 | Reference docs/DOS reconstructed/unitcalc.c@span:29:0f32c183c37c88a243ddb6cf | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:bc81b31ab5f15a3717465711
     statStep({ id: 'chaosSurge', phase: 'c',
       writes: ['res', 'atk', ...strengthFields, 'gaze', 'doomGaze'],
@@ -1017,9 +1021,7 @@ function magicCalcBinaryStatSteps(ctx) {
             if (u[c.rangedTypeField] !== 'none'
                 || (slotHasBreath(u, c) && u[c.strengthField] > 0))
               u[c.strengthField] += chaosSurgeRtbBonus;
-          } else if (u[c.strengthField] > 0
-              && !(c.ccFireBreathGranted && c.ccDosBreathEligible
-                && version.startsWith('mom'))) {
+          } else if (u[c.strengthField] > 0) {
             u[c.strengthField] += chaosSurgeRtbBonus;
           }
         }
@@ -1322,8 +1324,8 @@ function magicCalcScriptStatSteps(ctx) {
           if (!weaknessBinaryHits(u, c) && slotHasBreath(u, c)) u[c.strengthField] -= weaknessPenalty;
         }
       } }),
-    // PROVENANCE[trueSight:ranged]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
-    statStep({ id: 'trueSight:ranged', sourceId: 'trueSight', sourceLabel: 'True Sight',
+    // PROVENANCE[trueSight]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
+    statStep({ id: 'trueSight', sourceId: 'trueSight', sourceLabel: 'True Sight',
       phase: 'd', writes: secondaryHitFieldsFor(['ranged']), when: () => trueSightRangedToHitBonus !== 0,
       apply: u => {
         for (const target of secondaryHitTargets) {
@@ -1550,8 +1552,8 @@ function postHookStatSteps(ctx) {
       apply: u => { u.toHit = Math.max(10, Math.min(100, u.toHit)); } }),
     // DOS stores one effective threshold per attack and clamps those final thresholds
     // directly. Its To Block floor remains 10%; modern defendchance has no region-e clamp.
-    // PROVENANCE[legacyClamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/DOS reconstructed/combat.c@span:21:f6ae6f3564fbf6300c289918
-    statStep({ id: 'legacyClamp', sourceId: 'statClamp', sourceLabel: 'Stat clamp',
+    // PROVENANCE[dosClamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:20:cb4fa9e7501e8b1aefe9a152 | Reference docs/DOS reconstructed/combat.c@span:21:f6ae6f3564fbf6300c289918
+    statStep({ id: 'dosClamp', sourceId: 'statClamp', sourceLabel: 'Stat clamp',
       phase: 'e', writes: ['toHitMelee', ...secondaryHitFields, 'toBlk'], when: () => !isCoM2,
       apply: u => {
         u.toHitMelee = Math.max(10 - u.toHit, Math.min(100 - u.toHit, u.toHitMelee));
@@ -1563,7 +1565,7 @@ function postHookStatSteps(ctx) {
     // The recompute's final floor, over the stat record and — in the modern engines only — the
     // per-attack To Hit offsets. The two touch disjoint fields, so the modern half is a branch
     // inside one step rather than a second id: this step is `SCOPE_ALL` and the To Hit clamp
-    // has no DOS counterpart, which `e:legacyClamp` above covers instead.
+    // has no DOS counterpart, which `e:dosClamp` above covers instead.
     // PROVENANCE[clamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:264ed04fa725139a19a9de7d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:f42794b5fb78038c35722afa | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
     statStep({ id: 'clamp', phase: 'e',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'gaze', 'doomGaze',

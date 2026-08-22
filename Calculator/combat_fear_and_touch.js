@@ -3,16 +3,17 @@
 // convolution machinery that turns repeated touch attacks into outcome distributions.
 
 // --- Cause Fear ---
-// Probability of a single figure failing its fear resistance roll.
-// MoM: no resistance modifier. CoM/CoM2: -3 resistance modifier.
-// Death Immunity skips the roll outright rather than granting resistance. In CoM2/Warlord,
-// this direct gate reads the persistent BaseUnits record; calculated Death Immunity still
-// proceeds to the roll. The older engines use their effective ability record here.
-// `defRes` already carries every resistance write its version's engine makes: the modern caller
-// has run GetEffectiveResistance, including Magic Immunity's assignment to 100, and the DOS
-// caller has run Combat_Effective_Resistance, whose Magic Immunity and Righteousness +30 are
-// steps of that transform. Cause Fear is the one consumer that reaches the roll with a
-// magic-immune target, so the bonus decides it where the touch/gaze group's skips never fire.
+// Probability of a single figure failing its fear resistance roll. The DOS side — the save
+// modifier each build pushes, the Death Immunity rejection, and why Magic Immunity nullifies
+// fear as a resistance bonus rather than as a skip — is `Reference docs/MoM binary analysis.md`,
+// *Cause Fear direction and resistance modifier*. CoM2/Warlord differ in reading the persistent
+// BaseUnits record for the Death Immunity gate; calculated Death Immunity still proceeds to the
+// roll, where the older engines use their effective ability record.
+// `defRes` arrives carrying every resistance write its version's engine makes — the modern
+// caller has run GetEffectiveResistance, the DOS caller Combat_Effective_Resistance — so this
+// function adds only the save modifier. Cause Fear is the one consumer that reaches the roll
+// with a magic-immune target, which is why that bonus decides it where the touch and gaze
+// group's outright skips never fire.
 function fearFailProb(defRes, defAbilities, version, baseDeathImmunity) {
   const isCoM = version && version.startsWith('com');
   const isModern = version && version.startsWith('com2');
@@ -92,9 +93,11 @@ function addWeightedFearSamples(target, samples, weight) {
   for (let i = 0; i < actual.length; i++) addWeightedDist(target[i], actual[i], weight);
 }
 
-// v1.31 bug: attacker self-fears based on defender's resistance rolls.
-// Defender's figures each roll; each fail fears one attacker figure.
-// Returns dist[k] = P(k attacker figures are unfeared).
+// v1.31 bug: attacker self-fears based on defender's resistance rolls. Defender's figures each
+// roll; each fail fears one attacker figure. Returns dist[k] = P(k attacker figures unfeared).
+// The bug is the caller's argument order, not the helper's, and CP 1.60 fixes it by swapping the
+// two pushes: `Reference docs/MoM binary analysis.md`, *Cause Fear direction and resistance
+// modifier*.
 function calcFearBugDist(atkFigs, defFigs, pFear) {
   if (atkFigs <= 0) return [1];
   if (pFear <= 0 || defFigs <= 0) {
@@ -247,8 +250,11 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
   }
   addDamage(p.immDist);
 
-  // ApplyAttack tests all routed result categories only after the riders above. The shipped
-  // Warlord constants are independent inputs to target damage and Combatheal.
+  // ApplyAttack tests Bloodsucker only after the riders above, then adds its damage to the
+  // result and passes its healing separately to Combatheal — `Reference docs/Caster binary/
+  // Combat.ApplyAttack.R5.2c.evidence.md`, the `$005B3216..$005B327B` block. The two shipped
+  // magnitudes are independent INI inputs, `BloodsuckerDamage` and `BloodsuckerHealing`
+  // (`Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI`).
   const bloodsucker = p.version === 'com2_warlord_1.5.12.7' && p.bloodsucker
     ? { damage: 2, healing: 2 } : null;
   if (bloodsucker) {
@@ -297,7 +303,9 @@ function repeatTouchAttack(first, baseDist, cap, atkFigs, spec) {
     // Legacy Haste self-convolved two identical target-capped attacks. Modern callers of
     // this helper are sequentially dealt channels, so their second ApplyAttack reads the
     // exact remaining target and revised source-healing state. Modern melee is instead
-    // expanded in calcMeleeTouchOutcome because its damage remains pending.
+    // expanded in calcMeleeTouchOutcome, because its damage stays pending until the tail
+    // `Dealdamage` calls that every `ApplyAttack` precedes (`Reference docs/Caster binary/
+    // Combat.PerformAttacks.R5.2d.evidence.md`).
     const remaining = statefulCombatHealing ? Math.max(0, cap - prior.damage) : cap;
     const next = convolveTouchAttacks(baseDist, remaining, atkFigs,
       { ...spec, sourceState: statefulCombatHealing ? prior.state : null });
@@ -455,7 +463,8 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
     const repeatedOutcomes = [];
     const repeatFearedDist = [];
     for (const prior of firstOutcomes) {
-      // Both modern Hasted melee ApplyAttack calls precede Dealdamage. The second
+      // Both modern Hasted melee ApplyAttack calls precede all three tail Dealdamage calls
+      // (`Reference docs/Caster binary/Combat.PerformAttacks.R5.2d.evidence.md`). The second
       // therefore reads the same target snapshot even though it sees the source's
       // exact first-call healing outcome.
       const remaining = remHP;

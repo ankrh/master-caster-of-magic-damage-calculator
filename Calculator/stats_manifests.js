@@ -1,6 +1,13 @@
 // --- Unit Stat Derivation: the per-version execution chain ---
 // No DOM dependencies. Read by deriveUnitStats (stats.js) and resolveIdentityConversions
 // (stats_identity.js) through statChain().
+//
+// Every bare address in this file is a position, and its home is one of three documents, named
+// once here rather than beside each chain: `Reference docs/DOS reconstructed/unitcalc.c` and the
+// evidence files its README routes to for the `0x8F…`/`0x90…` offsets, `Reference docs/Caster
+// binary/CoM2 binary - unit recalculation.md` for the modern region maps, and the Warlord script
+// source for the two CAS files' top-level order. What positions those sources fix, and what is
+// inherited from authoring order instead, is `TRANSCRIBED_PHASES` and `DEDUCED_POSITIONS` below.
 
 // One ordered chain per engine version, `base` through `e`, is the single mechanism that orders
 // a derivation. There is no second one: array order no longer decides anything, and a step whose
@@ -46,9 +53,10 @@
 // `phase:id` unique across the two (`c:mysticSurge` and `c:mysticSurge:race`).
 
 // Which positions the evidence fixes, stated once rather than per chain. Regions `b`, `c` and `d`
-// are transcribed — the compiled region-c address map, and the top-level order of UnitCalcPre.CAS
-// and UnitCalc.CAS. `base`, `a` and `e` are inherited from the order the steps happen to be
-// authored in and stay provisional until sourced.
+// are transcribed — the compiled region-`c` address map in `Reference docs/Caster binary/CoM2
+// binary - unit recalculation.md`, and the top-level order of `UnitCalcPre.CAS` and
+// `UnitCalc.CAS` under `Reference docs/Script source/Warlord 1.5.12.7/`. `base`, `a` and `e` are
+// inherited from the order the steps happen to be authored in and stay provisional until sourced.
 const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
 
 // Individual positions inside a transcribed region that the map does not actually give.
@@ -56,10 +64,11 @@ const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
 // their blocks in the order the chains carry, but the conversions head the region by the
 // convention above rather than sitting at those blocks' offsets.
 //
-// The DOS builds no longer share that list. `unitcalc.c`'s `BU_Apply_Specials` gives every one
-// of their realm writes an address, so each sits at the offset of its own block and is
-// transcribed, not deduced. Only `c:raiseDead` stays inherited there: it is a combat-spell
-// write from `combat.c`, not a block of this routine, and nothing orders it against them.
+// The DOS builds no longer share that list. `BU_Apply_Specials` (`Reference docs/DOS
+// reconstructed/unitcalc.c`) gives every one of their realm writes an address, so each sits at
+// the offset of its own block and is transcribed, not deduced. Only `c:raiseDead` stays
+// inherited there: it is a combat-spell write from `combat.c`, not a block of this routine, and
+// nothing orders it against them.
 const DEDUCED_IDENTITY_C_POSITIONS = [
   'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust',
   'c:blackChannels:race', 'c:undead', 'c:mysticSurge:race', 'c:raiseDead',
@@ -101,7 +110,7 @@ function versionChain(version, keys) {
 // demon-skin armor 0x8F6FE, demon wings 0x8F71B and fire breath 0x8F738. A unit holding both
 // Black Channels and a Chaos Channels mutation therefore finishes Chaos, not Death.
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
-  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'base:stat:base', 'base:baseThresholds',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
   'c:holyWeapon', 'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
@@ -116,11 +125,11 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   // assigns the shared slot a second time, after the node aura, Black Prayer and Mind Storm.
   'c:chaosChannels:fireBreath:recompute',
   'c:warpAttack', 'c:warpDefense',
-  'c:warpResist', 'c:shatter', 'c:charmOfLife', 'e:legacyClamp', 'e:clamp',
+  'c:warpResist', 'c:shatter', 'c:charmOfLife', 'e:dosClamp', 'e:clamp',
 ]);
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
-  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'base:stat:base', 'base:baseThresholds',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
   'c:undead', 'c:blackChannels', 'c:blackChannels:race',
@@ -131,13 +140,12 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
   'c:holyWeapon', 'c:nodeAura', 'c:highPrayer',
   'c:prayer', 'c:trueLight', 'c:darkness', 'c:metalFires', 'c:warpReality', 'c:blackPrayer',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
-  'c:shatter', 'c:charmOfLife', 'e:legacyClamp', 'e:clamp',
+  'c:shatter', 'c:charmOfLife', 'e:dosClamp', 'e:clamp',
 ]);
 
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
   'base:zombies', 'base:constructCatapult', 'base:summonBranch', 'base:stat:base',
-  'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
-  'base:zombies:toBlock', 'a:holyBonus', 'a:resistanceToAll',
+  'base:baseThresholds', 'base:zombies:toBlock', 'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit',
   // CoM 1 reorders `BU_Apply_Specials` around its own repurposed enchantment slots: Endurance
   // 0x8F439, demon wings 0x8F46F, fire breath 0x8F48C, Blood Lust 0x8F49A, Undead 0x8F4BC and
@@ -157,11 +165,11 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   'c:vertigo', 'c:weakness', 'c:mindStorm',
   'c:warpAttack', 'c:warpDefense', 'c:warpResist', 'c:shatter', 'c:darkness', 'c:supremeLight',
   'c:realmWard', 'c:tactician', 'c:eternalNight:enemyResistance', 'c:charmOfLife',
-  'e:legacyClamp', 'e:clamp',
+  'e:dosClamp', 'e:clamp',
 ]);
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
-  'base:stat:base', 'base:baseHitChance', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath', 'c:destiny:race',
   'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust', 'c:undead',
@@ -183,7 +191,7 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
-  'base:stat:base', 'base:baseHitChance', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
   'base:armorclad', 'base:artificer', 'base:rebuild', 'base:malnourished', 'base:spiritLink',
   'base:altarOfTheMoon', 'base:militaryWorkshop', 'base:lightningBlade:breath',
   'base:poolOfRepentance', 'base:dragonMound', 'base:ludusAgoge', 'base:motherFungus',
@@ -217,7 +225,7 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'c:breakthrough:combatSummoned', 'c:warpReality', 'c:blackPrayer', 'c:darkness', 'c:guardian',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
   'c:shatter', 'c:spellWard', 'c:tactician', 'd:mechanicalExpert', 'd:weakness',
-  'd:trueSight:ranged', 'd:flameBlade', 'd:berserkWarlord', 'd:rust', 'd:hurricane',
+  'd:trueSight', 'd:flameBlade', 'd:berserkWarlord', 'd:rust', 'd:hurricane',
   'd:favoredTerrain', 'd:colossalStrength', 'd:vampirism:transfer', 'd:shadowStrike:thrown',
   'd:spiritLink', 'd:psychoForce', 'd:pneumaField', 'd:energyCannonThreshold',
   'd:blazeOfGlory', 'd:beatOfSwiftness', 'd:hierophany', 'e:modernClampCommon', 'e:clamp',

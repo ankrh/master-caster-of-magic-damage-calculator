@@ -7,10 +7,6 @@ import json
 COM2_INPUT = "CoM2 units.json"
 OUTPUT = "CoM2 unit roster.md"
 
-RANGED_TYPE = {
-    "magic_c": "Magic(C)", "magic_n": "Magic(N)", "magic_s": "Magic(S)",
-    "missile": "Missile", "rock": "Rock",
-}
 BREATH_TYPE = {"thrown": "Thrown", "fire": "Fire", "lightning": "Lightning"}
 
 # Ability flag → display label (order matters for display)
@@ -129,10 +125,21 @@ def fmt(val):
 
 
 def ranged_str(u):
+    """Render the Ranged cell from the record's own token.
+
+    `ranged_type` already holds the display spelling -- `tools/ranged_types.py` writes it for the
+    modern rosters and `parse_tweaker_unit_data.py` for the DOS ones -- so this transcribes it
+    instead of translating it through a second table here.
+    """
     v = u.get("ranged", 0)
     if not v:
         return "-"
-    t = RANGED_TYPE.get(u.get("ranged_type", ""), "?")
+    t = u.get("ranged_type")
+    if not t:
+        raise ValueError(
+            f"{u.get('name', u.get('ini_name', '?'))}: ranged={v} with no ranged_type. "
+            "A record stating a ranged attack states its projectile class too."
+        )
     return f"{v} ({t})"
 
 

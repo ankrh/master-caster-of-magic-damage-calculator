@@ -6,6 +6,160 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-22
 
+- **T12 — the two dead lookup tables are gone, and the CoM2 roster's Ranged column names its
+  projectile again.** `RACE_NAMES` (`Calculator/data.js`) had no reader: an uncapped scan of the
+  whole repo including ignored directories returns 14 lines — the definition, the backlog row, and
+  the two roster generators' own separate `RACE_NAMES` tables, which are the live home. Nor is it
+  reachable indirectly: a top-level `const` is a property of neither `window` nor the Node vm
+  context, and the suite's one `eval` (`tests/fail-loud-f113.spec.js`) names none of it.
+  `ui_units.js`'s `raceOrder` is the calculator's own live race list and is untouched.
+  `RANGED_TYPE` (`tools/generate_com2_unit_roster.py`) is **deleted rather than respelled**: the
+  `ranged_type` field already holds the display spelling `tools/ranged_types.py`
+  ([F112](#2026-08-21)) and `parse_tweaker_unit_data.py` write, so a second map here could only be
+  an identity map. **The row's drift claim was understated and is corrected here:** the table's
+  five lowercase keys match *nothing* any of the four roster JSONs carry — `Missile`, `Boulder`,
+  `Magic`, `Magic-lightning` for the modern pair, those plus `Magic(C)`/`(N)`/`(S)` and three
+  `Gaze(...)` for the DOS pair — and a miss rendered `?`, not the raw token, so **all 78** ranged
+  cells in `Unit rosters/CoM2 unit roster.md` read `N (?)`. Regeneration moves exactly those 78
+  lines and only their Ranged column, `N (?)` → `N (<token>)` with `N` unchanged: 46 `Magic`,
+  23 `Missile`, 6 `Boulder`, 3 `Magic-lightning`, which is the JSON's own histogram. The `?`
+  default is now a raise, per `SPEC.md`, *Out-of-range values stop the run*. **One adjacent defect
+  was filed, not fixed:** [T15](./BACKLOG.md) — a third `RANGED_TYPE` copy in
+  `tools/generate_mom_com2_unit_comparison.py` with the same dead keys, and `breath_str` in both
+  Markdown tools reading `breath`/`breath_type`, keys no roster JSON has, which leaves the
+  Breath/Thrown column `-` for all 194 CoM2 units. Checks: `node tools/node_unit_checks.js`
+  14336/14336; `npm run provenance` 268 formulas, 268 verified, 0 UNVERIFIED; `npm test` **129
+  passed, 1 failed** — `tests/persistence.spec.js:24`, filed as [F149](./BACKLOG.md) and shown
+  independent of this round by reproducing it 3 of 5 times with `Calculator/data.js` restored to
+  `HEAD`. **This round did not land green.**
+
+- **T11 — the Chaos Surge fire-breath carve-out is gone; write order produces the exclusion.**
+  `c:chaosSurge`'s DOS arm skipped a slot matching `ccFireBreathGranted && ccDosBreathEligible &&
+  version.startsWith('mom')`. The engine makes no such test: `unitcalc.c` 131:0x8F142-0x8F165 is
+  `if (bu->ranged > 0) bu->ranged += 2` per slot, and the Chaos Channels fire-breath block at
+  131:0x8F720 *assigns* `bu->ranged = 2` on the mutation bit alone, after the constructor's Chaos
+  Surge at 0x8F113 — so both MoM builds exclude the bonus by order, while CoM 1 calls
+  `BU_Apply_Specials` first (com1:0x8F0E8) and keeps it. The arm is now `u[strengthField] > 0`
+  alone and that fact lives in the comment beside the step. **Premise held, measured** as zero
+  differing cases and zero field differences over 15,480 derivations
+  (`tools/derivation_equivalence.js`, `tools/derivation_equivalence_diff.js`) and over a further
+  288,000 targeted ones crossing all five versions with the eight slot types, base strengths 0-4,
+  the gaze family, three realms, Chaos Surge 0/1/3, two levels, ten slot-writing mixins and Chaos
+  Channels on and off. 760 of the targeted cases move the **step trace** only, and toward the
+  engine: `c:chaosSurge` now shows the +2 it makes and `c:chaosChannels:fireBreath` the assignment
+  that discards it. No derived number moves anywhere, which is why no preset holds this and none
+  was invented. Neither flag lost a reader — `ccFireBreathGranted` keeps `stats.js:990`, `:1030`
+  and `ccGrantsThisSlot` (`:1249`), `ccDosBreathEligible` keeps `:876` and `:1251` — and no
+  document described the carve-out: `SPEC.md` does not name Chaos Surge, and the control tooltip
+  states the outcome, which is unchanged.
+  **Checks.** `node tools/node_unit_checks.js` 14336/14336; `npm run provenance` 268 formulas,
+  268 verified, 0 UNVERIFIED; `npm test` 130 passed, 0 failed.
+- **T10 — the three To-Hit/To-Block seeds are one step, and only one of the two named qualifiers
+  was one.** **(a) Decision, recorded in [SPEC.md](./SPEC.md), *The step model*: a per-field source
+  label is not a reason to keep a split step.** Each To-Hit and To-Block quantity is projected into
+  its own `modifierTraces` entry and rendered against its own output element (`ui_card.js`), so two
+  fields of one step never stand side by side in one tooltip and the field half of a label only
+  restates the output it hangs under. `base:baseMelee`, `base:baseRtb` and `base:baseBlock` are
+  therefore one step, `base:baseThresholds`, labelled `Base To Hit / To Block` — the union of the
+  three `writes`, the `or` of the three gates, all three halves in one `apply`. `base:baseHitChance`
+  stays separate on the opposite ground: a scope row is per `phase:id`, and its citation covers two
+  versions where the merged one covers five, so a field the DOS record does not have cannot ride
+  along. **(b)** `d:trueSight:ranged` → `d:trueSight`; **`base:survivalInstinctToBlock` keeps its
+  name — the row's premise for it is falsified.** `ToBlock` is not a field qualifier the step author
+  added: it is the enchantment key itself (`enchantments.js`, `survivalInstinctToBlock`, a Warlord
+  numeric control for normal units), which is what SPEC's "an id is the effect a player selects"
+  asks for. It also has a sibling the row says it lacks — `c:survivalInstinct`, a separate bool
+  control for fantastic creatures with its own citation — so stripping the suffix would assert the
+  `c:weakness`/`d:weakness` shape (one effect, two regions) about two different controls.
+  Both anchors moved through `node tools/rebind_provenance_anchors.js --write` with hashes
+  unchanged (`a9d2d7ce1dec…` for all three merged seeds, `83c4a882bd6e…` for True Sight), so both
+  are identity moves and not re-reviews. Two assertions naming the old `sourceId`
+  (`tools/unit_checks/step_traces.js`, `tests/modifier-traces.spec.js`) were re-aimed at
+  `baseThresholds`; `tests/f20-source-order.spec.js`'s independent Warlord `d` transcription took
+  the True Sight rename.
+  **Arithmetic is unchanged in all five versions**, measured as zero differing cases and zero field
+  differences across 15,480 derivations (`tools/derivation_equivalence.js`,
+  `tools/derivation_equivalence_diff.js`). The node check total fell 14,387 → 14,336; the 51 are
+  fully attributed to parameterized sweeps losing entities, not to lost coverage — 50 in
+  `runCanonicalVersionScopeChecks` (2 scope rows × 10, 10 chain entries × 2, 2 `PROVENANCE` ids × 5)
+  and 1 in `runIdentityChecks`, whose `unitType` sweep counts `writes: [...]` literals. Earlier
+  entries naming the pre-merge ids ([M13](#2026-08-20), F125 above) record them as they stood then.
+  **Checks.** `node tools/node_unit_checks.js` 14336/14336; `npm run provenance` 268 formulas,
+  268 verified, 0 UNVERIFIED (270 before: the merge retired two); `npm test` 130 passed, 0 failed.
+
+- **T9 — the "DOS versions" `legacy*` identifiers are `dos*`; six of the row's ten named
+  identifiers were a different sense.** Renamed: `legacyThrown` → `dosThrown` and the two gaze
+  label maps → `dosAttackerGazeLabels`/`dosDefenderGazeLabels` (`combat.js`); the step, its
+  chain entries and its citation `e:legacyClamp`/`PROVENANCE[legacyClamp]` → `e:dosClamp`/
+  `PROVENANCE[dosClamp]` (`stats_sequence.js`, `steps.js`, `stats_manifests.js`, trace id
+  `chance:dosClamp`); the DOS-sense comments in `combat_state.js` and `combat_phases.js`;
+  `charmedPoisonMoM`'s `desc`; `dosResistance`/`highDos`/`lowDos` in `tools/unit_checks/`; and the
+  `legacy` locals and report keys naming the three DOS versions in six `tests/*.spec.js` files.
+  `dos` was already the repository's term — `SCOPE_DOS`, `usesDosCombatHealing`,
+  `dosPairAsModernChannels` — so no new vocabulary was introduced. The anchor moved through
+  `node tools/rebind_provenance_anchors.js --write`; its hash is unchanged
+  (`e18d529db829…`), so this is an identity move and not a re-review. Earlier entries naming
+  `legacyClamp` ([M13](#2026-08-20)) record the id as it stood then.
+
+  **Premise, re-measured and falsified.** The row's census was lexical rather than by sense:
+  exhaustively, **288** occurrences in **49 files**, and `[Ll]egacy` is itself not exhaustive —
+  it misses the all-caps `LEGACY_HIT_FIELD` and `LEGACY_PAGE_STATE_KEY`, so only a
+  case-insensitive sweep counts. Just **4** of the 10 identifiers the row named mean "the DOS
+  versions": `legacyUnitTypeFromIdentity`, `legacyBaseRace` and `legacyType` are the
+  [M7](#2026-08-20) `unitType` projection the row itself excluded, `legacyLightDark` is the
+  superseded `enchLightDark` selector, and `legacyApply` is a step's prior `apply` function. The
+  row's `Calculator/`-only footprint was also wrong in both directions: over half the DOS-sense
+  work is in `tests/` and `tools/unit_checks/`, and `Calculator/*.md` carries **no** DOS-sense
+  occurrence at all — `SPEC.md`'s four are the shared slot, the `unitType` token and the v1 blob.
+
+  **Left alone, by sense, and why.** The shared attack slot key `legacy` is permanent in all five
+  versions (`SPEC.md`, *Deliberate deviations*) and is a string key in a designed vocabulary, so
+  it carries the same wrong implication but is a separate decision: [T14](./BACKLOG.md), preferred
+  after [F127](./BACKLOG.md). The `unitType` compatibility projection, the v1 state and
+  preset-format readers, the `ui_matrix.js` clipboard fallback and `legacyApply` are not the DOS
+  sense and keep their names.
+
+  **One defect found and filed.** `legacyLifeStealBenefit`'s consuming arm in
+  `collapseTouchOutcomes` is unreachable in all five versions — [F148](./BACKLOG.md).
+
+  **Checks.** `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas,
+  270 verified, 0 UNVERIFIED; `npm test` 130 passed, 0 failed.
+
+- **T13 — the drift classes are measured, and three of the seven are non-empty.**
+  `tools/control_write_census.js` kept reporting 3 split statements; **all three are over-reports
+  and 0 are defects.** `setIdentityControlsFromLegacy` and `setIdentityControlsFromUnit` write no
+  control of their own, so scoring them asked whether an argument-shaping wrapper states stats;
+  `applyUnit` and `setUnit` leave only loadout, battlefield context and the `Unit` selector that
+  drove the call, which [F136](#2026-08-22) settled deliberately; and `applyFullState` restores
+  every control through `getElementById(<variable>)`, a shape the census could neither resolve nor
+  report. The census now looks through pure delegators to the call sites that stand for a
+  statement, reports that write shape (**12 unresolved writes, previously 0**), and lists a call
+  site holding one as unjudged rather than scoring a floor as a statement.
+  **A latent scanner defect fell out of extracting the shared lexer.** `blank()` decided
+  regex-vs-division on the preceding character alone, so `return /[",\r\n]/.test(text)` in
+  `ui_matrix.js` read as a division and blanked to the next quote: **3,082 characters and 7 named
+  functions of `ui_matrix.js` were invisible** to the committed census, and `lexSanity` did not
+  catch it because the wipe took the braces with it. `js_lexical_scan.js` now tests the preceding
+  *token*. Recovering that region is what let the new sweep reproduce F132 at its full three
+  copies, which is the check that it measures the right thing.
+  **Non-empty, now filed:** [F145](./BACKLOG.md) 22 duplicate predicates over 611 compound tests,
+  [F146](./BACKLOG.md) 7 roster facts with two decoders, [F147](./BACKLOG.md) 6 write-only
+  derivation outputs over 51 abilities-map names.
+  **Empty by measurement, recorded here so the class is not re-opened by nobody having looked:**
+  split statements 0 defects of 3 reported; `deriveUnitStats` argument parity 0 of 43 keys (the 4
+  divergent modern channel modifiers default to the 0 the card supplies); dead `<option>` values 0
+  of 129; ability and enchantment `calcKey`s unread by a `data-scope="core"` source 0 of 152; call
+  sites a comment calls a no-op 0 of 24 comment hits. The one dead-member axis that is not empty —
+  4 of 208 flat-vocabulary members — is folded into F147 rather than filed twice.
+  Two roster columns nothing reads (`moves`, `upkeep`) were measured and deliberately not filed as
+  calculator work — they are generator payload; `ammo` is unread by design (`stats.js:866`) and
+  `cost` is read through a computed key (`ui_units.js:99`).
+  `tools/js_lexical_scan.js` is the one home for the lexer, `tools/drift_class_sweep.js` the four
+  class modes, and the census now takes its file list from `tools/calculator_sources.js` instead of
+  a private regex. Both are diagnostics, outside `npm test`, and every mode prints what it could
+  not see: these scans are lexical, so a count of 0 is 0 on that axis and never a proof of absence.
+  Checks: `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas, 270
+  verified, 0 UNVERIFIED. No `Calculator/` source changed, so `npm test` was not run.
 - **D41 — the three DOS builds' battle-unit setup routine is fully reconstructed.**
   **The extent premise held; the copy premise did not.** The common far routine is exactly
   `[0x8EAB9,0x8EDFD)`, ending at the `retf` immediately before `BU_Construct`, but it does not

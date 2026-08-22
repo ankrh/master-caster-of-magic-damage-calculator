@@ -578,8 +578,10 @@ function immolationBlocksRanged(version) {
 // and gaze phases, BEFORE the melee damage + counter-attack.
 // Targets only the attacker (A) - the unit passing through the wall.
 // Does not fire in ranged combat (attacker shoots from outside the wall).
-// Magic Immunity raises defense to 50 in MoM and 100 in CoM 1; modern DamageSpell exits before
-// rolling. Fire Immunity and Righteousness also raise defense to 50/100. Large Shield and AP apply.
+// Which immunities stop it, and which defence terms apply, are the spell path's defence
+// descriptor rather than this strength function's: the `immolation` arm of `dosDefenseForAttack`
+// and of `computeCasterDefenseForAttack` (`combat_effects.js`), cited where each is written.
+// They are not uniform across builds — CoM 1 has no Righteousness step at all.
 // Warlord: hits a single figure at strength 12 instead of every figure at 10.
 // Delivered as a Fireball effect (spell 96); Fireball's area flag is what makes the attack land
 // on every figure, and Warlord's removal of that flag is what reduces it to one.

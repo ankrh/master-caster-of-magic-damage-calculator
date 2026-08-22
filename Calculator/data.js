@@ -1,12 +1,5 @@
 // --- Constants ---
 
-const RACE_NAMES = {
-  0: 'Barbarian', 1: 'Beastmen', 2: 'Dark Elf', 3: 'Draconian', 4: 'Dwarf',
-  5: 'Gnoll', 6: 'Halfling', 7: 'High Elf', 8: 'High Men', 9: 'Klackon',
-  10: 'Lizardman', 11: 'Nomad', 12: 'Orc', 13: 'Troll', 14: 'Special',
-  15: 'Arcane', 16: 'Nature', 17: 'Sorcery', 18: 'Chaos', 19: 'Life', 20: 'Death',
-};
-
 // Normalized ranged type from unit DB display strings.
 //
 // The two engine families classify a projectile differently, so their rosters speak different

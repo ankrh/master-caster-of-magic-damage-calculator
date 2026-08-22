@@ -37,6 +37,9 @@ function resolveCombat(a, b, opts) {
   // MoM:  -20% To Hit and -1 Defense.
   // CoM:  -30% To Hit and -10% To Block (no defense-die penalty).
   // CoM2: -25% To Hit and -7% To Block (no defense-die penalty).
+  // The DOS pair is `Reference docs/MoM binary analysis.md`, *Combat-effect stat writes*, where
+  // the defensive half is a live-stat write; the modern pair is `Reference docs/Caster binary/
+  // CoM2 binary - unit recalculation.md`, the `+0x0B4D6` row.
   // Neither Illusion Immunity nor Magic Immunity negates Vertigo — we assume it was cast before those immunities were applied.
   const {
     isCoM,
@@ -51,7 +54,10 @@ function resolveCombat(a, b, opts) {
   } = buildVertigoContext(a, b, ver);
 
   // Blur: pre-defense hit negation. Applies to melee, counter, ranged, thrown/breath,
-  // and gaze hidden ranged component. Does NOT apply to doom damage or special/spell damage.
+  // and gaze hidden ranged component. Does NOT apply to doom damage or special/spell damage —
+  // the DOS automatic-damage arm jumps past blur, the defense roll and Invulnerability together
+  // (`Reference docs/MoM binary analysis.md`, *Blur*; modern equivalent in `Reference docs/
+  // Caster binary/CoM2 binary - combat flow.md`).
   // CoM2/Warlord fix tactical defender Card B's army-wide Blur for the entire displayed
   // exchange, including B's counterattack. Unit-owned Invisibility and source Illusion
   // Immunity still follow each call's target/source direction. Older engines use the current
@@ -70,7 +76,8 @@ function resolveCombat(a, b, opts) {
 
   // Haste repeats melee, thrown/breath, and (most) ranged attacks. Modern Caster also
   // repeats each initiating gaze and samples Cause Fear inside each melee ApplyAttack.
-  // Wall of Fire never repeats. Counter-attacks repeat in MoM but not in CoM/CoM2.
+  // Wall of Fire never repeats. Counter-attacks repeat in MoM but not in CoM/CoM2:
+  // `Reference docs/MoM binary analysis.md`, *First Strike's 24-HP cutoff and Haste repeats*.
   const aHaste = hasAbil(a.abilities, 'haste');
   const bHaste = hasAbil(b.abilities, 'haste');
   const isCoMVer = ver && ver.startsWith('com');
@@ -122,6 +129,10 @@ function resolveCombat(a, b, opts) {
   // defense roll, including overflow chains and multi-figure area damage). Applies to melee,
   // ranged, thrown, breath, immolation, wall of fire, and the gaze physical ranged component.
   // Does NOT apply to resist-based effects (poison, stoning, life steal, death gaze) or Doom.
+  // `Reference docs/MoM binary analysis.md` for the DOS subtraction after each defense roll and
+  // the automatic-damage skip; `Reference docs/Caster binary/CoM2 binary - combat flow.md` for
+  // the modern per-figure repeat. The 2 is hard-coded in the DOS builds but a loaded constant in
+  // the modern ones — `InvulnerabilityDamagereduction`, 2 in both shipped `MODDING.INI` files.
   const aInvulnBonus = hasAbil(a.abilities, 'invulnerability') ? 2 : 0;
   const bInvulnBonus = hasAbil(b.abilities, 'invulnerability') ? 2 : 0;
 
@@ -139,6 +150,8 @@ function resolveCombat(a, b, opts) {
   // Cause Fear: reduces opponent's effective melee + touch-attack figures.
   // Fires before the melee exchange. MoM has no resistance modifier; CoM/CoM2 is -3.
   // v1.31 bugs: (1) defending Fear doesn't work; (2) attacker's Fear also self-fears attacker.
+  // Both bugs are the caller's argument order and both are confined to 1.31:
+  // `Reference docs/MoM binary analysis.md`, *Cause Fear direction and resistance modifier*.
   const aFear = !isRanged && hasAbil(a.abilities, 'fear');
   const bFear = !isRanged && hasAbil(b.abilities, 'fear');
   const bPFear = aFear
@@ -172,9 +185,9 @@ function resolveCombat(a, b, opts) {
   // computes the exchange it is given.
   // Black Sleep also prevents all outgoing attacks.
   const breathExists = ver === 'mom_1.31' ? a.rtb > 0 : (a.baseRtb > 0 || a.rtb > 0);
-  const legacyThrown = !isRanged && a.thrownType !== 'none' && breathExists && !aBlackSleep;
+  const dosThrown = !isRanged && a.thrownType !== 'none' && breathExists && !aBlackSleep;
   const modernThrown = isCoM2 && !isRanged ? modernAttackChannels(a) : null;
-  const hasThrown = modernThrown ? modernThrown.length > 0 : legacyThrown;
+  const hasThrown = modernThrown ? modernThrown.length > 0 : dosThrown;
 
   const {
     aToBlockConventional,
@@ -200,6 +213,8 @@ function resolveCombat(a, b, opts) {
   // Uses the same defense chain as immolation against A, and the same immunities.
   // FirewallEffect tests the calculated unit record. Both modern builds skip the effect for
   // Teleporting or Merging attackers; the older engines retain their independent behavior.
+  // Strength, To Hit, area shape and this eligibility gate are the four `PROVENANCE[wallOfFire*]`
+  // anchors in `combat_special_attacks.js`.
   const wallOfFireActive = !!opts.wallOfFire && !isRanged
     && wallOfFireEligible(ver, a.abilities);
   const wofStr = wallOfFireActive ? wallOfFireStr(ver) : 0;
@@ -292,8 +307,9 @@ function resolveCombat(a, b, opts) {
     // lost merely because it is absent from the unit's common ability record.
     const aLifeStealOnT = aLifeStealModT !== null;
 
-    // DOS BU_ProcessAttack gazes can carry common roster riders; modern gaze types 6-8
-    // construct no touch-rider parameters (gazeTouchParams enforces that split).
+    // DOS BU_ProcessAttack gazes can carry common roster riders; modern ApplyAttack attack
+    // types 6-8 jump past all six rider blocks, so no touch-rider parameters are constructed
+    // (`gazeTouchParams`, `combat_phases.js`, which carries the citation and enforces the split).
     const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, exorciseFail: aExorciseFailG, destructionFail: aDestructionFailG, lifeStealMod: aLifeStealModG,
             poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, exorciseWith: aExorciseWithGaze, destructionWith: aDestructionWithGaze, lifeStealWith: aLifeStealWithGaze }
       = gazeTouchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, aGazeActiveP, aBlackSleep, opts.version);
@@ -636,7 +652,8 @@ function resolveCombat(a, b, opts) {
     const thrownPhases = modernThrown
       ? modernThrown.map(channel => {
           // Caster.exe admits ApplyAttack types 2 (melee) and 5 (Thrown) to the same Blood
-          // Lust doubling block. Fire/Lightning Breath use their own types and stay unchanged.
+          // Lust doubling block (`Reference docs/Caster binary/CoM2 binary - combat flow.md`,
+          // `0x5B214E..0x5B21BA`). Fire/Lightning Breath use their own types and stay unchanged.
           const strength = channel.key === 'thrown'
             ? bloodLustMeleeAttack(a, b, channel.strength)
             : channel.strength;
@@ -648,7 +665,7 @@ function resolveCombat(a, b, opts) {
       : [{
           attacker: a,
           type: a.thrownType,
-          ...buildThrown(a, legacyThrown, a.thrownType,
+          ...buildThrown(a, dosThrown, a.thrownType,
             touchRecordForPhase(ver, a.thrownType)),
         }];
 
@@ -744,7 +761,7 @@ function resolveCombat(a, b, opts) {
         defDestroyPct: 0 });
     };
 
-    const legacyAttackerGazeLabels = {
+    const dosAttackerGazeLabels = {
       stoningGaze: aStoningGazeActiveP,
       deathGaze: aDeathGazeActiveP,
       doomGaze: aGazeDoomStrP > 0,
@@ -757,7 +774,7 @@ function resolveCombat(a, b, opts) {
       lifeSteal: aLifeStealWithGaze,
       immolation: aImmWithGaze,
     };
-    const legacyDefenderGazeLabels = {
+    const dosDefenderGazeLabels = {
       stoningGaze: bStoningGazeActiveP,
       deathGaze: bDeathGazeActiveP,
       doomGaze: bGazeDoomStrP > 0,
@@ -785,8 +802,8 @@ function resolveCombat(a, b, opts) {
       applyThrownPhases();
     } else {
       applyThrownPhases();
-      applyAttackerGazePhase(aGazePhase, legacyAttackerGazeLabels);
-      applyDefenderGazePhase(bGazePhase, legacyDefenderGazeLabels);
+      applyAttackerGazePhase(aGazePhase, dosAttackerGazeLabels);
+      applyDefenderGazePhase(bGazePhase, dosDefenderGazeLabels);
       applyWallOfFirePhase();
     }
 
@@ -1127,6 +1144,7 @@ function resolveCombat(a, b, opts) {
     // Touch attacks accompanying ranged use the general + ranged attack-flag records.
     // Warlord's manual describes a magical-ranged exclusion, but the dispatcher has
     // no blanket type gate; represented spells instead move or clear record values.
+    // The conflict is recorded in `Reference docs/Source discrepancies.md` §14.
     const rangedTouchFires = touchAttackFires(
       rangedAttacker.rtb, rangedAttacker.baseRtb, opts.version);
     const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, destructionFail: aDestructionFailR, lifeStealMod: aLifeStealModR }

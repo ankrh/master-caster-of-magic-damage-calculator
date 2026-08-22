@@ -304,6 +304,15 @@ whose stat block and To-Hit block carry citations of their own (`c:weapon` besid
 scope table all key on `phase:id` alike, so two writes of one effect stay distinct without a
 qualifier.
 
+**A per-field source label is not a reason to keep a split step.** A merged step carries one
+label, and that costs nothing a reader can see: each To-Hit and To-Block quantity is projected
+into its own trace, so two fields of one step never stand side by side in one tooltip, and a label
+naming the field only restates the output it already hangs under. The record's stored per-attack
+To-Hit thresholds and its To Block are therefore one step, `base:baseThresholds`, labelled
+`Base To Hit / To Block`. What does split a seed is a **narrower citation**: the modern common
+`hitchance` field keeps `base:baseHitChance` because a scope row is per `phase:id`, so a field
+three of the five engines have no record for cannot ride along inside a five-version step.
+
 A bonus normally never conjures an attack slot the unit does not have, so an ability step skips a
 write to a dead slot. Whether the melee slot is live is the **permanent** record's melee field,
 read through `ctx.base` — which every compiled melee-presence gate tests and which the `base`

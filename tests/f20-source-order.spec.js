@@ -112,7 +112,7 @@ const F20_SOURCE_ANCHORS = {
       'warpReality', 'blackPrayer', 'darkness', 'guardian', 'vertigo',
       'weakness', 'warpAttack', 'warpDefense', 'warpResist',
       'shatter', 'spellWard', 'tactician'],
-    d: ['mechanicalExpert', 'weakness', 'trueSight:ranged',
+    d: ['mechanicalExpert', 'weakness', 'trueSight',
       'flameBlade', 'berserkWarlord', 'rust', 'hurricane',
       'favoredTerrain', 'colossalStrength', 'vampirism:transfer', 'shadowStrike:thrown',
       'psychoForce', 'pneumaField', 'energyCannonThreshold', 'blazeOfGlory',

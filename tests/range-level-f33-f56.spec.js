@@ -56,7 +56,7 @@ test('F33 exempts CoM2 and Warlord heroes from physical ranged distance penaltie
           customNormalPenalty: customNormal.rtbDistPenalty,
         };
       }),
-      legacy: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => ({
+      dos: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => ({
         version, direct: direct(version),
       })),
       distanceTooltip: document.querySelector('#rangedDistLabel label').dataset.tooltip,
@@ -84,9 +84,9 @@ test('F33 exempts CoM2 and Warlord heroes from physical ranged distance penaltie
     expect(result.customHeroPenalty, result.version).toBe(0);
     expect(result.customNormalPenalty, result.version).toBe(-22);
   }
-  expect(report.legacy[0].direct.heroMissile).toBe(-20);
-  expect(report.legacy[1].direct.heroMissile).toBe(-20);
-  expect(report.legacy[2].direct.heroMissile).toBe(0);
+  expect(report.dos[0].direct.heroMissile).toBe(-20);
+  expect(report.dos[1].direct.heroMissile).toBe(-20);
+  expect(report.dos[2].direct.heroMissile).toBe(0);
   expect(report.distanceTooltip).toContain('Heroes ignore distance penalties');
   expect(report.distanceTooltip).toContain('CoM 2 & Warlord');
   expectNoConsoleErrors(errors);
@@ -155,7 +155,7 @@ test('F56 leaves every modern gaze field out of the level bonus step', async ({ 
     });
     return {
       modern,
-      legacy: {
+      dos: {
         momNormal: momNormal.effectiveGazeRanged,
         momElite: momElite.effectiveGazeRanged,
         cpNormal: cpNormal.effectiveGazeRanged,
@@ -182,9 +182,9 @@ test('F56 leaves every modern gaze field out of the level bonus step', async ({ 
     expect(result.fireBreathStrength, result.version).toBe(3);
     expect(result.lightningBreathStrength, result.version).toBe(3);
   }
-  expect(report.legacy.momElite).toBeGreaterThan(report.legacy.momNormal);
-  expect(report.legacy.cpElite).toBeGreaterThan(report.legacy.cpNormal);
-  expect(report.legacy.comElite).toBeGreaterThan(report.legacy.comNormal);
+  expect(report.dos.momElite).toBeGreaterThan(report.dos.momNormal);
+  expect(report.dos.cpElite).toBeGreaterThan(report.dos.cpNormal);
+  expect(report.dos.comElite).toBeGreaterThan(report.dos.comNormal);
   for (const tooltip of Object.values(report.gazeTooltips)) {
     expect(tooltip).toContain('Level does not modify this independent gaze field');
   }

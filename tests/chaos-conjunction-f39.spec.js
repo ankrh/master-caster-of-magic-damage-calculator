@@ -62,7 +62,7 @@ test('F39 scales every modern Immolation firing from strength 10 to 13 exactly o
         hastedExpected: shifted(convolve(activeImmolation, activeImmolation), 2),
       };
     });
-    const legacy = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
+    const dos = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => {
       const inactive = run(version, { immolation: true }, {}, false);
       const active = run(version, { immolation: true }, {}, true);
       return {
@@ -72,7 +72,7 @@ test('F39 scales every modern Immolation firing from strength 10 to 13 exactly o
         active: trim(active.totalDmgToB),
       };
     });
-    return { modern, legacy };
+    return { modern, dos };
   });
 
   for (const row of report.modern) {
@@ -87,7 +87,7 @@ test('F39 scales every modern Immolation firing from strength 10 to 13 exactly o
     expect(row.expectations.hasted).toBeCloseTo(9.8, 12);
     expect(row.active).not.toEqual(row.inactive);
   }
-  for (const row of report.legacy) {
+  for (const row of report.dos) {
     expect(row.strengths).toEqual([row.version === 'com_6.08' ? 10 : 4,
       row.version === 'com_6.08' ? 10 : 4]);
     expect(row.active).toEqual(row.inactive);
