@@ -472,6 +472,11 @@ function updateTypeVisibility() {
   const modern = version.startsWith('com2');
   document.querySelectorAll('.dos-special-attack').forEach(el => el.classList.toggle('version-hidden', modern));
   document.querySelectorAll('.modern-attack').forEach(el => el.classList.toggle('version-hidden', !modern));
+  // The two engine families keep different To-Hit records: DOS one melee threshold plus one
+  // shared secondary threshold, modern one common `hitchance` plus four channel modifiers
+  // (Units.RecalculateUnits.pas:203-219). The card shows the record the version has.
+  document.querySelectorAll('.dos-chance').forEach(el => el.classList.toggle('version-hidden', modern));
+  document.querySelectorAll('.modern-chance').forEach(el => el.classList.toggle('version-hidden', !modern));
   document.querySelectorAll('.modern-special').forEach(el => el.classList.toggle('version-hidden', !modern));
   updateModernSpecialDuplicates(modern);
   updateDosSpecialDuplicates(!modern);

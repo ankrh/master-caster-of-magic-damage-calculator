@@ -9,7 +9,7 @@ test('R9-G1c preserves late-transform source gates, arithmetic, order, and UI st
       identity: createCustomUnitIdentity(version, {
         baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
       }),
-      abilities: {}, level: 'normal', weapon: 'normal', armor: 'none',
+      abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
       figs: 1, atk: 1, rtb: 0, rtbType: 'none',
       def: 1, res: 3, hp: 10, dmg: 0,
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,

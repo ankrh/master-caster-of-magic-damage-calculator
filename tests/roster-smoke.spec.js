@@ -116,6 +116,80 @@ for (const version of VERSIONS) {
   });
 }
 
+// F121: the card and the matrix build a roster unit's modern attack channels from the same
+// reader, so a record that states no attack reaches `deriveUnitStats` as four empty fields on
+// both paths. That is what the ungated channel-creating engine writes need to land on, and it
+// used to hold on the card only — the matrix passed `null` and silently created nothing.
+// `SPEC.md`, *UI contract*: matrix rows enter the same boundary as the card.
+for (const version of VERSIONS.filter(v => v.startsWith('com2'))) {
+  test(`card and matrix read one modern attack record (${version})`, async ({ page }) => {
+    const errors = await openCalculator(page);
+    await setValue(page, 'gameVersion', version);
+
+    const report = await page.evaluate(() => {
+      const version = document.getElementById('gameVersion').value;
+      const db = unitDatabases[version] || [];
+      const picker = unitComboboxData['a'] || [];
+      const units = picker.map(entry => db.find(unit => String(unit.id) === entry.id));
+      const CHANNELS = ['ranged', 'thrown', 'fireBreath', 'lightningBreath'];
+      const isEmpty = record => CHANNELS.every(key => !record[key]);
+
+      // Every roster record states all four fields, whatever the unit carries.
+      const badShape = units.filter(unit => {
+        const record = predefinedModernAttacks(unit, version);
+        return !record || JSON.stringify(Object.keys(record)) !== JSON.stringify(CHANNELS);
+      }).map(unit => unit.name);
+      const empty = units.filter(unit => isEmpty(predefinedModernAttacks(unit, version)));
+
+      // The card writes the record into its fields and reads it back; the two must round-trip.
+      const pick = id => {
+        const hidden = document.getElementById('aUnit');
+        hidden.value = String(id);
+        hidden.dispatchEvent(new Event('change'));
+      };
+      const sample = [empty[0], units.find(u => (u.ranged || 0) === 0 && u.ranged_type
+        && u.ranged_type !== 'none'), units.find(u => (u.ranged || 0) > 0),
+      units.find(u => (u.thrown || 0) > 0)].filter(Boolean);
+      const roundTripBad = [];
+      for (const unit of sample) {
+        pick(unit.id);
+        const card = JSON.stringify(modernCardAttacks('a'));
+        const roster = JSON.stringify(predefinedModernAttacks(unit, version));
+        if (card !== roster) roundTripBad.push({ name: unit.name, card, roster });
+      }
+
+      // The end-to-end half, on a record that states no attack: Focus Magic's no-attack arm
+      // creates the record's Ranged field at strength 3 with a magical projectile type
+      // (`Units.RecalculateUnits.pas:884-910`, arm 2). Both paths must land it.
+      const zero = empty[0];
+      pick(zero.id);
+      const focus = document.getElementById('aAbil_focusMagic');
+      focus.checked = true;
+      focus.dispatchEvent(new Event('change'));
+      const shape = channels => Object.fromEntries(
+        Object.entries(channels || {}).map(([key, c]) => [key, `${c.strength}/${c.type}`]));
+      return {
+        version, picked: units.length, empty: empty.length, badShape, roundTripBad,
+        zeroName: zero.name,
+        cardChannels: shape(readUnitStats('a').modernAttacks),
+        matrixChannels: shape(
+          buildMatrixAttackerStats(zero, { focusMagic: true }, 'melee').modernAttacks),
+      };
+    });
+
+    expect(report.badShape, 'every modern roster record states all four attack fields').toEqual([]);
+    // Guards the assertions below against a roster that stopped shipping the case they test.
+    expect(report.empty, `${version} ships units whose record states no attack`).toBeGreaterThan(0);
+    expect(report.roundTripBad, 'the card round-trips the roster record unchanged').toEqual([]);
+    expect(report.cardChannels, `${report.zeroName}: Focus Magic creates Ranged 3 on the card`)
+      .toEqual({ ranged: '3/magic' });
+    expect(report.matrixChannels, `${report.zeroName}: and the same channel in the matrix`)
+      .toEqual(report.cardChannels);
+
+    expectNoConsoleErrors(errors);
+  });
+}
+
 test('a predefined preset cannot replace roster-owned identity with synthetic fields', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {

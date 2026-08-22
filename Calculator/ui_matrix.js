@@ -134,30 +134,30 @@ function predefinedUnitRtbType(unit) {
   return normalized;
 }
 
-// Caster.exe keeps these attacks in separate fields. The visible card still uses its
-// legacy RTB projection until R4.1, but carry the lossless records through state now so
-// derivation and the later resolver never need to recover a discarded attack.
-function predefinedModernAttacks(unit) {
-  const parse = value => Math.max(0, parseInt(value, 10) || 0);
-  const ranged = parse(unit.ranged);
-  const thrown = parse(unit.thrown);
-  const fireBreath = parse(unit.fire_breath);
-  const lightningBreath = parse(unit.lightning_breath);
-  // The Ranged record exists when its projectile type is set, whatever its strength
-  // (`SPEC.md`, *Attack channels on the card*): `UNITS.INI [362]` Wanderer ships
-  // `RangedType=30` with `Ranged=0`, and the engine writes gated on the permanent type land
-  // on it. `thrown_breath_type` is the other slot's projection and never names this record,
-  // so the type is read from `ranged_type` alone.
-  const rangedType = predefinedUnitRtbType(
-    { id: unit.id, name: unit.name, ranged_type: unit.ranged_type });
-  const hasRanged = ranged > 0 || rangedType !== 'none';
-  if (!hasRanged && !thrown && !fireBreath && !lightningBreath) return null;
-  return {
-    ranged: hasRanged ? { strength: ranged, type: rangedType } : null,
-    thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
-    fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
-    lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,
-  };
+// Caster.exe keeps these attacks in separate fields, so a roster record states all four. The
+// card and the matrix both read a roster unit through here and hand the result to the same
+// `deriveUnitStats` boundary (`SPEC.md`, *UI contract*), and `modernAttackRecord` is where the
+// shape they share is decided — including the empty case, which is a record with four empty
+// fields rather than no record. Off the modern versions there is no such record at all, which
+// is the answer `modernCardAttacks` gives for the same version.
+function predefinedModernAttacks(unit, version) {
+  if (typeof version !== 'string') {
+    throw new Error(
+      `predefinedModernAttacks: no game version for roster record `
+      + `${JSON.stringify(unit && (unit.name || unit.id))}; the modern record exists only in the `
+      + `CoM2/Warlord versions, so the caller must say which version it is reading.`);
+  }
+  if (!version.startsWith('com2')) return null;
+  return modernAttackRecord({
+    ranged: unit.ranged,
+    // `thrown_breath_type` is the shared slot's projection and never names this record, so the
+    // type is read from `ranged_type` alone.
+    rangedType: predefinedUnitRtbType(
+      { id: unit.id, name: unit.name, ranged_type: unit.ranged_type }),
+    thrown: unit.thrown,
+    fireBreath: unit.fire_breath,
+    lightningBreath: unit.lightning_breath,
+  });
 }
 
 function matrixRealmClassForUnitType(unitType) {
@@ -186,7 +186,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     figs: unit.figures || 1,
     atk: unit.melee,
     rtb: predefinedUnitRtb(unit),
-    modernAttacks: predefinedModernAttacks(unit),
+    modernAttacks: predefinedModernAttacks(unit, version),
     def: unit.defense,
     res: unit.resist,
     hp: unit.hp,
@@ -195,8 +195,12 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
     undeadDamage: 0,
     baseBonusHp: 0,
     noHealing: false,
-    toHitMod: unit.to_hit || 0,
-    toHitRtbMod: unit.to_hit || 0,
+    // `UNITS.INI` defines one `Hit=` per record and no per-channel key, so it seeds the DOS
+    // pair and the modern common `hitchance` alike; the four modern channel modifiers have no
+    // roster source.
+    ...(version.startsWith('com2')
+      ? { hitChance: unit.to_hit || 0 }
+      : { toHitMod: unit.to_hit || 0, toHitRtbMod: unit.to_hit || 0 }),
     toBlkMod: unit.to_block || 0,
     cityWalls: matrixSideSetting(prefix, 'cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),
@@ -272,8 +276,16 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     undeadDamage: 0,
     baseBonusHp: 0,
     noHealing: false,
-    toHitMod: el(prefix + 'ToHitMod').value,
-    toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
+    ...(version.startsWith('com2') ? {
+      hitChance: el(prefix + 'HitChance').value,
+      hitMelee: el(prefix + 'HitMelee').value,
+      hitRanged: el(prefix + 'HitRanged').value,
+      hitThrown: el(prefix + 'HitThrown').value,
+      hitBreath: el(prefix + 'HitBreath').value,
+    } : {
+      toHitMod: el(prefix + 'ToHitMod').value,
+      toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
+    }),
     toBlkMod: el(prefix + 'ToBlkMod').value,
     cityWalls: matrixSideSetting(prefix, 'cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),
@@ -615,7 +627,9 @@ function applyMatrixCellToMain(attackerIndex, defenderIndex) {
     if (levelEl  && !levelEl.disabled)  levelEl.value  = level;
     if (weaponEl) weaponEl.value = weapon;
     if (armorEl)  armorEl.value  = armor;
-    if (unitBaseStats[prefix]) resetCardToRosterBase(prefix);
+    // A roster cell has already stated the card through `updateUnitLock` → `applyUnit` above,
+    // and the selected-unit row (`unitId == null`) is the card as it stands, which must not be
+    // reset to the roster record it was edited away from (F136).
 
     document.getElementById(prefix + 'Dmg').value = matrixSideSetting(prefix, 'damageTaken');
 

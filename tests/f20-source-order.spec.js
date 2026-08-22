@@ -24,7 +24,7 @@ const F20_PROBE_ABILITIES = {
   outlanderBallisticsTraining: true, nausea: true, uphillBattle: true, soulFlay: true,
   eternalNight: true, greatUnbinding: true, plague: true, goblinPox: true, luckyStar: true,
   disheartenProphecy: true, wallOfFireGarrison: true, godsPlayDices: true,
-  mechanical: true, mechanicalExpert: true, trueSight: true, flameBladeWarlord: true,
+  mechanical: true, mechanicalExpert: true, trueSight: true,
   berserkWarlord: true, rust: true, hurricane: true, favoredTerrain: true,
   colossalStrength: true, vampirism: true, shadowStrike: true, psychoForce: true,
   pneumaField: true, energyBeamWeapons: true, blazeOfGlory: true, beatOfSwiftness: true,
@@ -163,7 +163,7 @@ test('F20 covers every represented b/c/d step in source order for all five versi
             baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
           }),
       figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
-      level: 'normal', weapon: 'normal', armor: 'none',
+      level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
       cityWalls: 'none', nodeAura: 'life', chaosSurge: 1,
       guidingBeaconAura: 2, divineBarrierAura: 2, soulLinkerAura: 2,
@@ -266,7 +266,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
         baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
       }),
       figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
-      level: 'normal', weapon: 'normal', armor: 'none',
+      level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
       cityWalls: 'none', nodeAura: 'none', abilities: { destiny: true },
     };
@@ -322,7 +322,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
         baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
       }),
       figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
-      level: 'normal', weapon: 'normal', armor: 'none',
+      level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
       cityWalls: 'none', nodeAura: 'none', abilities: {},
     });
@@ -339,7 +339,7 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
     const version = 'com2_warlord_1.5.12.7';
     const base = {
       prefix: 'a', version, figs: 1, atk: 5, rtb: 4, rtbType: 'missile',
-      def: 6, res: 8, hp: 7, level: 'normal', weapon: 'normal', armor: 'none',
+      def: 6, res: 8, hp: 7, level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, cityWalls: 'none', nodeAura: 'none',
     };
     const channeler = deriveUnitStats({

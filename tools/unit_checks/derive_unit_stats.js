@@ -184,7 +184,7 @@ function runDeriveUnitStatsChecks(ctx) {
 
   const flameBladeAfterWarp = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
-    abilities: { flameBladeWarlord: true, warpAttack: true },
+    abilities: { flameBlade: true, warpAttack: true },
     modernAttacks: { fireBreath: { strength: 2, type: 'fire' } },
   }));
   assertEqual(flameBladeAfterWarp.modernAttacks.fireBreath.strength, 2,
@@ -195,7 +195,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Warlord combat Flame Blade Fire Breath trace follows Warp in region d');
 
   const flameBladeCreatesFireBreath = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', abilities: { flameBladeWarlord: true },
+    version: 'com2_warlord_1.5.12.7', abilities: { flameBlade: true },
     modernAttacks: {},
   }));
   assertEqual(flameBladeCreatesFireBreath.modernAttacks.fireBreath.strength, 1,
@@ -203,6 +203,50 @@ function runDeriveUnitStatsChecks(ctx) {
   assert(flameBladeCreatesFireBreath.modernAttacks.fireBreath.modifierTrace.entries
     .some(entry => entry.source.id === 'flameBlade'),
   'Created Flame Blade Fire Breath retains its region-d modifier trace');
+
+  // F118: one Flame Blade input, whichever control supplies it. Warlord's arcane unit ability
+  // and the wizard spell of the other four builds set the same record flag and run the same
+  // block, so they share `calcKey: 'flameBlade'` (`enchantments.js`) and neither version's
+  // control can reach a build that hides it. The Warlord amounts are the ability's own — +3
+  // melee, +2 missile/Thrown, +1 Fire Breath, and the magic-weapon upgrade — not the +3 melee
+  // alone that a base-game spell input used to produce here.
+  const warlordBladeInput = {
+    version: 'com2_warlord_1.5.12.7', atk: 5,
+    modernAttacks: { ranged: { strength: 4, type: 'missile' },
+      thrown: { strength: 3, type: 'thrown' }, fireBreath: { strength: 2, type: 'fire' } },
+  };
+  const warlordBlade = ctx.deriveUnitStats(baseUnitInput({
+    ...warlordBladeInput, abilities: { flameBlade: true },
+  }));
+  assertEqual(warlordBlade.atk, 8, 'The Warlord Flame Blade input adds its +3 melee');
+  assertEqual(warlordBlade.modernAttacks.ranged.strength, 6,
+    'The Warlord Flame Blade input adds its +2 to a missile Ranged channel');
+  assertEqual(warlordBlade.modernAttacks.thrown.strength, 5,
+    'The Warlord Flame Blade input adds its +2 to Thrown');
+  assertEqual(warlordBlade.modernAttacks.fireBreath.strength, 3,
+    'The Warlord Flame Blade input adds its +1 Fire Breath');
+  assertEqual(warlordBlade.weapon, 'magic',
+    'The Warlord Flame Blade input upgrades a normal weapon to magic');
+  // The control key is not a second derivation input: nothing reads it.
+  const warlordBladeStaleKey = ctx.deriveUnitStats(baseUnitInput({
+    ...warlordBladeInput, abilities: { flameBladeWarlord: true },
+  }));
+  const warlordBladeOff = ctx.deriveUnitStats(baseUnitInput({ ...warlordBladeInput }));
+  assertEqual(warlordBladeStaleKey.atk, warlordBladeOff.atk,
+    'No `flameBladeWarlord` derivation input survives the merge');
+  assertEqual(warlordBladeStaleKey.weapon, warlordBladeOff.weapon,
+    'No `flameBladeWarlord` derivation input reaches the weapon upgrade');
+  // CoM2 keeps the spell's own arithmetic on the shared key: +3 melee and +2 missile, no
+  // Thrown and no Fire Breath (`unitcalc.c` com1:0x8F596-0x8F59B nopped the Thrown test, and
+  // the Fire Breath write is the Warlord-only region-`d` step).
+  const com2Blade = ctx.deriveUnitStats(baseUnitInput({
+    ...warlordBladeInput, version: 'com2_1.05.11', abilities: { flameBlade: true },
+  }));
+  assertEqual(com2Blade.atk, 8, 'CoM2 Flame Blade adds its +3 melee');
+  assertEqual(com2Blade.modernAttacks.ranged.strength, 6, 'CoM2 Flame Blade adds +2 to missile');
+  assertEqual(com2Blade.modernAttacks.thrown.strength, 3, 'CoM2 Flame Blade reaches no Thrown');
+  assertEqual(com2Blade.modernAttacks.fireBreath.strength, 2,
+    'CoM2 Flame Blade reaches no Fire Breath');
 
   const metalFiresFantastic = ctx.deriveUnitStats(baseUnitInput({
     version: 'mom_1.31', unitType: 'fantastic_chaos', atk: 2, rtb: 3,
@@ -383,11 +427,11 @@ function runDeriveUnitStatsChecks(ctx) {
   // (`com1FlameBeforeFocus`); Warlord sees the converted attack.
   const warlordBladeConverted = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
-    abilities: { flameBladeWarlord: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
+    abilities: { flameBlade: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
   }));
   const warlordBladeNative = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
-    abilities: { flameBladeWarlord: true }, rtbType: 'magic', rtb: 2,
+    abilities: { flameBlade: true }, rtbType: 'magic', rtb: 2,
   }));
   assertEqual(warlordBladeConverted.rtb, warlordBladeNative.rtb,
     'The Warlord blade treats a Focus-converted attack as a native magical one');

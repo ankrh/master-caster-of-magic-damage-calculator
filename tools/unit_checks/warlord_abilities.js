@@ -76,7 +76,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     def: wanderer.defense,
     res: wanderer.resist,
     hp: wanderer.hp,
-    toHitMod: wanderer.to_hit,
+    hitChance: wanderer.to_hit,
     abilities: {
       channeler: true,
       marionetteBaseSkill: 90,
@@ -553,8 +553,8 @@ function runWarlordUnitAbilityChecks(ctx) {
   const aimedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'missile',
     rtb: 5,
-    toHitMod: 10,
-    toHitRtbMod: 20,
+    hitChance: 10,
+    hitRanged: 10, hitThrown: 10, hitBreath: 10,
     abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
   }));
   assertEqual(aimedEnergyCannon.abilities.energyCannonDestruction, -3,
@@ -670,7 +670,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // normally cast Hurricane. Read all three off one unit, so a penalty landing on the wrong
   // field cannot pass by being right for the channel that happens to be derived.
   const hurricaneChannels = ctx.deriveUnitStats(warlordUnit({
-    atk: 2, toHitRtbMod: 70, hurricane: true,
+    atk: 2, hitRanged: 70, hitThrown: 70, hitBreath: 70, hurricane: true,
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
       thrown: { strength: 4, type: 'thrown' },
@@ -687,7 +687,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Hurricane leaves the melee To-Hit modifier alone');
 
   const hurricaneLightningBreath = ctx.deriveUnitStats(warlordUnit({
-    atk: 2, toHitRtbMod: 70, hurricane: true,
+    atk: 2, hitRanged: 70, hitThrown: 70, hitBreath: 70, hurricane: true,
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
       lightningBreath: { strength: 4, type: 'lightning' },

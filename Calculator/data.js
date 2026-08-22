@@ -109,6 +109,10 @@ const UNIT_NAME_ALIASES = {
 const UNIT_DEFAULTS = {
   figs: 1, atk: 0, rtbType: 'none', rtb: 0,
   def: 0, res: 0,
+  // The DOS pair (`toHitMod` melee, `toHitRtbMod` shared secondary) and the modern record's
+  // five fields (`hitChance` common, plus one modifier per To-Hit field) are separate
+  // vocabularies; a fixture states the one its version has.
   toHitMod: 0, toHitRtbMod: 0, cityWalls: 'none',
+  hitChance: 0, hitMelee: 0, hitRanged: 0, hitThrown: 0, hitBreath: 0,
   toBlkMod: 0, hp: 1, dmg: 0, weapon: 'normal', armor: 'normal', level: 'normal', unitType: 'normal', abilities: {},
 };

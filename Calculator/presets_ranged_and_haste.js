@@ -118,7 +118,7 @@ definePresets({
   distPenaltyCoM2_6: {
     desc: 'CoM2 1.05.11: range 6 → −10% − 3%×(6−4) = −16% → 84% effective',
     version: V_COM2,
-    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:1, hp:10 },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 6,
     expected: { dmgToA: 0, dmgToB: 0.840 },
@@ -134,7 +134,7 @@ definePresets({
   distPenaltyCoM2_16: {
     desc: 'CoM2 1.05.11: range 16 → −10% − 3%×(16−4) = −46% → 54% effective',
     version: V_COM2,
-    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:1, hp:10 },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 16,
     expected: { dmgToA: 0, dmgToB: 0.540 },
@@ -177,7 +177,7 @@ definePresets({
   lightningResistCancelsAPLightningBoltRangedCoM2: {
     desc: 'Lightning Resist vs id-30 ranged (CoM2): magical-lightning ranged 4 (100% hit) + AP vs def 4 (100% block) — AP cancelled, def stays 4, 4−4=0',
     version: V_COM2,
-    a: { atk:0, rtbType:'magic_lightning', rtb:4, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, rtbType:'magic_lightning', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -185,7 +185,7 @@ definePresets({
   lightningResistKeepsAPMagicRangedCoM2: {
     desc: 'Lightning Resist boundary (CoM2): a plain magical ranged 4 is not id 30, so AP still halves def 4→2 — 4−2=2. The exclusion is the rule under test: `islightning` keys on the projectile id, not on magical-ness',
     version: V_COM2,
-    a: { atk:0, rtbType:'magic', rtb:4, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, rtbType:'magic', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -193,7 +193,7 @@ definePresets({
   lightningResistCancelsAPLightningBoltRangedWarlord: {
     desc: 'Lightning Resist vs id-30 ranged (Warlord): magical-lightning ranged 4 (100% hit) + AP vs def 4 (100% block) — AP cancelled, def stays 4, 4−4=0',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'magic_lightning', rtb:4, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, rtbType:'magic_lightning', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -201,7 +201,7 @@ definePresets({
   lightningResistKeepsAPMagicRangedWarlord: {
     desc: 'Lightning Resist boundary (Warlord): a plain magical ranged 4 is not id 30, so AP still halves def 4→2 — 4−2=2. The exclusion is the rule under test: `islightning` keys on the projectile id, not on magical-ness',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'magic', rtb:4, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, rtbType:'magic', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -218,42 +218,42 @@ definePresets({
   experienceChampionMeleeCoM2: {
     desc: 'Champion melee (CoM2): +3 attack. base 2 + 3 = 5 → 5 dmg at 100% hit vs def 0',
     version: V_COM2,
-    a: { atk:2, toHitMod:70, hp:10, level:'champion' },
+    a: { atk:2, hitChance:70, hp:10, level:'champion' },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   experienceChampionMeleeWarlord: {
     desc: 'Champion melee (Warlord): +4 attack (vs CoM2 +3). base 2 + 4 = 6 → 6 dmg at 100% hit vs def 0',
     version: V_WARLORD,
-    a: { atk:2, toHitMod:70, hp:10, level:'champion' },
+    a: { atk:2, hitChance:70, hp:10, level:'champion' },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   experienceUltraEliteThrownCoM2: {
     desc: 'Ultra Elite thrown (CoM2): +1 thrown (melee +3 same both versions). melee 1+3=4 + thrown 1+1=2 = 6 dmg at 100% hit vs def 0',
     version: V_COM2,
-    a: { atk:1, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, hp:10, level:'ultra_elite' },
+    a: { atk:1, rtbType:'thrown', rtb:1, hitChance:70, hp:10, level:'ultra_elite' },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   experienceUltraEliteThrownWarlord: {
     desc: 'Ultra Elite thrown (Warlord): +2 thrown (vs CoM2 +1; melee +3 same). melee 1+3=4 + thrown 1+2=3 = 7 dmg at 100% hit vs def 0',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'thrown', rtb:1, toHitMod:70, toHitRtbMod:70, hp:10, level:'ultra_elite' },
+    a: { atk:1, rtbType:'thrown', rtb:1, hitChance:70, hp:10, level:'ultra_elite' },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   experienceChampionDefenseCoM2: {
     desc: 'Champion defense (CoM2): +3 armor. atk 10 at 100% block vs def 3 → 7 dmg',
     version: V_COM2,
-    a: { atk:10, toHitMod:70, hp:10 },
+    a: { atk:10, hitChance:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:30, level:'champion' },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   experienceChampionDefenseWarlord: {
     desc: 'Champion defense (Warlord): +5 armor (vs CoM2 +3). atk 10 at 100% block vs def 5 → 5 dmg',
     version: V_WARLORD,
-    a: { atk:10, toHitMod:70, hp:10 },
+    a: { atk:10, hitChance:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:30, level:'champion' },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
@@ -277,14 +277,14 @@ definePresets({
   experienceChampionHpCoM2: {
     desc: 'Champion HP (CoM2): +2 hp → single figure pool 1+2=3. 20 melee overwhelms def, dmg caps at pool → 3',
     version: V_COM2,
-    a: { atk:20, toHitMod:70, hp:10 },
+    a: { atk:20, hitChance:70, hp:10 },
     b: { atk:0, def:0, hp:1, level:'champion' },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   experienceChampionHpWarlord: {
     desc: 'Champion HP (Warlord): +1 hp (vs CoM2 +2) → single figure pool 1+1=2. 20 melee overwhelms def, dmg caps at pool → 2',
     version: V_WARLORD,
-    a: { atk:20, toHitMod:70, hp:10 },
+    a: { atk:20, hitChance:70, hp:10 },
     b: { atk:0, def:0, hp:1, level:'champion' },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
@@ -298,7 +298,7 @@ definePresets({
     desc: 'The ranged level bonus is gated on the permanent ranged *type*, with no strength test: a record carrying a magical ranged type at strength 0 finishes Champion on the CoM2 MagicRanged column, 0 + 3 = 3, so the ladder creates the attack. UNITS.INI ships one such record (Warlord [362] Wanderer, RangedType=30 with Ranged=0). The same card at level normal deals 0.',
     version: V_COM2,
     a: { figs:1, atk:0, modernAttacks: { ranged: { strength: 0, type: 'magic' } },
-      level:'champion', toHitRtbMod:70, hp:10 },
+      level:'champion', hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -307,7 +307,7 @@ definePresets({
     desc: 'The same zero-strength typed ranged record under Warlord, whose MagicRanged column gives Champion 4 where CoM2 gives 3: 0 + 4 = 4. The same card at level normal deals 0.',
     version: V_WARLORD,
     a: { figs:1, atk:0, modernAttacks: { ranged: { strength: 0, type: 'magic' } },
-      level:'champion', toHitRtbMod:70, hp:10 },
+      level:'champion', hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -315,7 +315,7 @@ definePresets({
   levelThrownGateBaseRecordWarlord: {
     desc: 'Explosive Reform writes `SETSTAT(U,SThrown,0,...)` (UnitCalcPre.CAS:1071) — record selector 0, the calculated record — so `BaseUnits[i].thrown` is still zero when the normal arm reads it and the Thrown ladder adds nothing. One figure gives Thrown 7, and Champion melee is 5 + 4 = 9, for 16.0. Reading the calculated field instead would carry the Thrown to 9, for 18.0.',
     version: V_WARLORD,
-    a: { figs:1, atk:5, level:'champion', toHitMod:70, toHitRtbMod:70, hp:10,
+    a: { figs:1, atk:5, level:'champion', hitChance:70, hp:10,
       abilities: { outlanderWizard: true, explosive: true } },
     b: { atk:0, def:0, hp:30 },
     expected: { dmgToA: 0, dmgToB: 16.000 },
@@ -323,7 +323,7 @@ definePresets({
   levelThrownGateHeroCalculatedWarlord: {
     desc: 'The paired hero case: the hero arm tests the *calculated* Thrown field, so the same Explosive Reform grant does take the Champion Thrown step — Thrown 7 + 2 = 9 beside melee 9, for 18.0 where the normal arm gives 16.0. The +2 comes from the [Normal] ladder because the separate nine-step [Hero] progression is not modelled (D27/F41); what this pair fixes is which record each arm reads.',
     version: V_WARLORD,
-    a: { figs:1, atk:5, level:'champion', unitType:'hero', toHitMod:70, toHitRtbMod:70, hp:10,
+    a: { figs:1, atk:5, level:'champion', unitType:'hero', hitChance:70, hp:10,
       abilities: { outlanderWizard: true, explosive: true } },
     b: { atk:0, def:0, hp:30 },
     expected: { dmgToA: 0, dmgToB: 18.000 },
@@ -344,7 +344,7 @@ definePresets({
   stoningTouchRangedMissileCoM2: {
     desc: 'Stoning Touch on ranged missile (CoM2): rtb 1 fully blocked, stoningTouch -3 vs Res 5 fires per arrow → pFail 0.8 × 10 hp = 8.0',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -352,7 +352,7 @@ definePresets({
   stoningTouchRangedMissileWarlord: {
     desc: 'Global Stoning Touch on ranged missile (Warlord): rtb 1 fully blocked, Stoning -3 vs Res 5 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -360,7 +360,7 @@ definePresets({
   stoningTouchRangedMagicCoM2: {
     desc: 'Stoning Touch on magical ranged (CoM2): magic rtb 1 fully blocked, stoningTouch -3 vs Res 5 fires → 8.0',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:1, toHitRtbMod:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -368,7 +368,7 @@ definePresets({
   stoningTouchRangedMagicWarlord: {
     desc: 'Global Stoning Touch on magical ranged (Warlord): magic rtb 1 fully blocked, Stoning -3 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, toHitRtbMod:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -376,7 +376,7 @@ definePresets({
   deathTouchRangedMissileCoM2: {
     desc: 'Death Touch on ranged missile (CoM2): rtb 1 fully blocked, deathTouch -3 vs Res 5 fires per arrow → pFail 0.8 × 10 hp = 8.0',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -384,7 +384,7 @@ definePresets({
   deathTouchRangedMissileWarlord: {
     desc: 'Global Death Touch on ranged missile (Warlord): rtb 1 fully blocked, Death Touch -3 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -392,7 +392,7 @@ definePresets({
   deathTouchRangedMagicCoM2: {
     desc: 'Death Touch on magical ranged (CoM2): magic rtb 1 fully blocked, deathTouch -3 vs Res 5 fires → 8.0',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:1, toHitRtbMod:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -400,7 +400,7 @@ definePresets({
   deathTouchRangedMagicWarlord: {
     desc: 'Global Death Touch on magical ranged (Warlord): magic rtb 1 fully blocked, Death Touch -3 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, toHitRtbMod:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -408,7 +408,7 @@ definePresets({
   focusMagicMovesStoningOffRangedWarlord: {
     desc: 'Focus Magic moves global Stoning Touch -3 to melee/Thrown: magic 1 becomes 4 but is fully blocked by def 4; ranged touch no longer fires → 0',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, toHitRtbMod:70, hp:10, abilities: { focusMagic: true, stoningTouch: -3 } },
+    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true, stoningTouch: -3 } },
     b: { def:4, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.000 },
@@ -416,14 +416,14 @@ definePresets({
   focusMagicMovesDeathOffBreathWarlord: {
     desc: 'Focus Magic moves global Death Touch -3 to melee/Thrown: fire breath 1 becomes 4 but is fully blocked by def 4; Breath uses general flags and has no touch → 0',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'fire', rtb:1, toHitRtbMod:70, hp:10, abilities: { focusMagic: true, deathTouch: -3 } },
+    a: { atk:0, rtbType:'fire', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true, deathTouch: -3 } },
     b: { def:4, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.000 },
   },
   stoningTouchMultipleModernChannelsWarlord: {
     desc: 'Global Stoning Touch joins both modern attack calls: Lightning Breath 1 and Chaos Channels Fire Breath 4 are fully blocked, while two Stoning -3 attempts vs Res 5 average 16.0 damage.',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'lightning', rtb:1, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true, stoningTouch: -3 } },
+    a: { atk:0, rtbType:'lightning', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true, stoningTouch: -3 } },
     b: { figs:4, def:20, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 16.000 },
   },
@@ -460,7 +460,7 @@ definePresets({
   charmedPoisonCoM2: {
     desc: 'Charmed is a roll-only assignment to Resistance 100, even for realm-less Poison: melee is blocked and all four Poison rolls succeed.',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
+    a: { atk:1, hitChance:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:0, hp:10, unitType:'hero', abilities: { charmed: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
@@ -613,6 +613,55 @@ definePresets({
     b: { atk:0, def:0, hp:20, unitType:'normal', abilities: { stoningImmunity: true, weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 5 },
   },
+  // The hidden component is the shared `.ranged` byte, and the recompute floors that byte once
+  // with an ungated `if (bu->ranged < 0) bu->ranged = 0` (131:0x90B2F 160:= com1:0x90B54). A
+  // gaze template shipping strength 0 — Gorgons and Night Stalker both do — therefore keeps
+  // whatever an earlier write put in the byte, and the delivery path reads that same byte
+  // (`attack_strength = bu->ranged`, 131:0x99B0B). The pair below raises it two different ways.
+  hiddenGazeLevelLadderNeedsStrength: {
+    desc: 'Exclusion the engine makes: every ranged step of MoM\'s level ladder is `if (bu->ranged > 0) bu->ranged++` — 131:0x8FA8E, 0x8FAD4, 0x8FB21 on the six-step normal ladder and 0x8F8FB, 0x8F935, 0x8F961, 0x8F994, 0x8F9C7 on the nine-step hero one — so Champion\'s +3 never reaches a gaze template that ships strength 0, and 1.31\'s effective-strength gaze test then suppresses the gaze outright: 0. `doomGazeLevelLadderMoM` is the positive twin, where the same ladder does reach a gaze whose byte carries strength. Applying the ladder ungated, as the gaze arm did before F135, gives 3.',
+    a: { rtbType:'gaze_stoning', rtb:0, atk:0, hp:10, level:'champion', toHitRtbMod:70, abilities: {  } },
+    b: { atk:0, def:0, res:50, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  // One byte, one gate (F135). Each preset below names the test its own block makes on
+  // `bu->ranged`, and each is red against the static `baseGazeRanged > 0` gate the gaze arm
+  // carried before.
+  hiddenGazeTakesBlackChannelsTypeGate: {
+    desc: 'Black Channels writes the shared byte under `if (bu->ranged_type != RAT_NONE) bu->ranged += 1` (131:0x8F437) — the -1 sentinel, not a strength test — so a stoning-gaze template shipping strength 0 reaches 1 and the terminal floor keeps it: 1 hidden damage at 100% To Hit vs Defense 0. Res 50 puts the petrify roll out of reach; melee stays 0 because the card carries no melee attack. Asking the byte\'s strength instead of its type gives 0.',
+    a: { rtbType:'gaze_stoning', rtb:0, atk:0, hp:10, toHitRtbMod:70, abilities: { blackChannels: true } },
+    b: { atk:0, def:0, res:50, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1 },
+  },
+  hiddenGazeTakesBlackPrayerUngatedCoM: {
+    desc: 'CoM 1: Focus Magic\'s arm 1 raises the strength-0 gaze template\'s shared byte to 3 (com1:0x8F82D), then Black Prayer\'s `bu->ranged--` (com1:0x9054A) reaches it with no strength or type test at all, leaving 2 hidden damage at 100% To Hit vs Defense 0. Res 50 puts the petrify roll out of reach. The two views of that one byte disagreed before F135 — the decrement reached the ranged projection and not the gaze one — for 3.',
+    version: V_COM,
+    a: { rtbType:'gaze_stoning', rtb:0, atk:0, hp:10, toHitRtbMod:70, abilities: { focusMagic: true, blackPrayer: true } },
+    b: { atk:0, def:0, res:50, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2 },
+  },
+  hiddenGazeMindStormFlooredCoM: {
+    desc: 'CoM 1: Focus Magic raises the same strength-0 gaze template to 3, then Mind Storm\'s unconditional `bu->ranged -= 5` (com1:0x906D1) drives that one byte to -2 and the terminal floor (com1:0x90B54) settles it at 0, so nothing is delivered. Before F135 the decrement missed the gaze view and 3 was delivered.',
+    version: V_COM,
+    a: { rtbType:'gaze_stoning', rtb:0, atk:0, hp:10, toHitRtbMod:70, abilities: { focusMagic: true, mindStorm: true } },
+    b: { atk:0, def:0, res:50, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  holyBonusNeedsRangedStrengthCoM: {
+    desc: 'Exclusion the engine makes: CoM 1\'s Holy Bonus ranged half is `if (bu->ranged > 0) bu->ranged += cl` (com1:0x900E8), a live-strength test on the shared byte and not a type test, so a Missile record carrying a projectile type at strength 0 takes nothing and fires for 0. Treating any typed slot as live, as the general dead-slot rule does, hands it Holy Bonus 2 for 2.',
+    version: V_COM,
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:0, atk:0, hp:10, abilities: { holyBonus: 2 } },
+    b: { atk:0, def:0, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  hiddenGazeKeepsFocusMagicRaiseCoM: {
+    desc: 'CoM 1: Focus Magic\'s arm 1 admits a gaze template with no strength test (com1:0x8F825, +3 at com1:0x8F82D), so a stoning gaze shipping strength 0 — Gorgons on the shipped roster — reaches 3, and the terminal floor keeps it for 3 hidden damage at 100% To Hit vs Defense 0. Res 50 puts the petrify roll out of reach. Reading the template\'s base strength at the floor throws the +3 away for 0, which is also what removing Focus Magic gives.',
+    version: V_COM,
+    a: { rtbType:'gaze_stoning', rtb:0, atk:0, hp:10, toHitRtbMod:70, abilities: { focusMagic: true } },
+    b: { atk:0, def:0, res:50, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3 },
+  },
   // Doom Gaze is ranged_type 104, whose damage is the shared strength slot, and 104 runs the
   // stoning and death kill loops as well. Res 10 makes every kill save succeed (effective
   // res >= 10 is a certain pass), which isolates the doom damage; doomGazeChaosSpawn below is
@@ -640,6 +689,32 @@ definePresets({
     a: { rtbType:'gaze_multiple', rtb:4, hp:10, abilities: { stoningGaze: -4, deathGaze: -4 } },
     b: { figs:4, res:12, hp:5 },
     expected: { dmgToA: 0, dmgToB: 11.133 },
+  },
+  // The doom damage's figure bound is the sharpest MoM/CoM2 divergence in the gaze block, so the
+  // three presets below are one paired set: the DOS builds assign `hits = attack_strength` inside
+  // BU_ProcessAttack's per-attacker-figure loop, while CoM2/Warlord call ApplyAttack with a
+  // literal 1 for Doom Gaze alone. Res 10 suppresses 104's kill rolls and the 50 hp defender
+  // keeps the cap out of the measurement, so the number is the doom total and nothing else.
+  doomGazePerAttackerFigureMoM: {
+    desc: 'Doom Gaze is delivered once per ATTACKING figure in MoM 1.31: 3 figs x strength 4 = 12. One figure would be 4, which is what the same fixture reports on CoM2.',
+    version: V_MOM_131,
+    a: { rtbType:'gaze_multiple', rtb:4, figs:3, hp:10 },
+    b: { def:10, res:10, hp:50 },
+    expected: { dmgToA: 0, dmgToB: 12 },
+  },
+  doomGazePerAttackerFigureCoM: {
+    desc: 'CoM 6.08 shares MoM\'s per-figure doom delivery — its automatic-damage arm sits at the same 0x9A1E6 site inside the same loop — so 3 figs x strength 4 = 12 here too. CoM 1 reaches the arm through its own marker test, which the Multiple Gaze setup always sets, so the full strength is taken rather than the halved one.',
+    version: V_COM,
+    a: { rtbType:'gaze_multiple', rtb:4, figs:3, hp:10 },
+    b: { def:10, res:10, hp:50 },
+    expected: { dmgToA: 0, dmgToB: 12 },
+  },
+  doomGazeOncePerAttackCoM2: {
+    desc: 'CoM2 passes a literal figure count of 1 for Doom Gaze, so the same 3-figure gazer at strength 4 deals 4, not the 12 the DOS members of this set report. The two kill-roll gazes beside it do pass LivingFigures, which is why this is a Doom-Gaze-only difference.',
+    version: V_COM2,
+    a: { figs:3, hp:10, abilities: { doomGaze: 4 } },
+    b: { def:10, res:10, hp:50 },
+    expected: { dmgToA: 0, dmgToB: 4 },
   },
   lifeStealBasic: {
     desc: 'Life Steal: 1 atk (100% blocked) + Life Steal -3 vs Res 5 — effective res 2, E[dmg] = sum(1..8)/10 = 3.6',
@@ -760,8 +835,8 @@ definePresets({
   firstStrikeCapCoM2: {
     desc: 'First Strike cap removed (CoM2): A (atk 30) kills B (30hp) before counter — dmgToA=0',
     version: V_COM2,
-    a: { atk:30, toHitMod:70, hp:10, abilities: { firstStrike: true } },
-    b: { atk:6, toHitMod:70, hp:30 },
+    a: { atk:30, hitChance:70, hp:10, abilities: { firstStrike: true } },
+    b: { atk:6, hitChance:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 30 },
   },
   firstStrikeCapIgnoresThrownCoM: {
@@ -774,8 +849,8 @@ definePresets({
   firstStrikeCapRemovedThrownCoM2: {
     desc: 'CoM2: no 24-HP First Strike cutoff after the same 6-damage Thrown attack',
     version: V_COM2,
-    a: { atk:30, rtbType:'thrown', rtb:6, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { firstStrike: true } },
-    b: { atk:1, toHitMod:70, hp:30 },
+    a: { atk:30, rtbType:'thrown', rtb:6, hitChance:70, hp:10, abilities: { firstStrike: true } },
+    b: { atk:1, hitChance:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 30 },
   },
 
@@ -905,7 +980,7 @@ definePresets({
   chaosSurgeMeleeCoM2: {
     desc: 'Chaos Surge (CoM2): Chaos creature gains +3 melee from one copy. atk 1 -> 4',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos' },
+    a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -913,7 +988,7 @@ definePresets({
   chaosSurgeRangedCoM2: {
     desc: 'Chaos Surge (CoM2): Chaos creature gains +2 ranged from one copy. missile 1 -> 3',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, toHitRtbMod:70, hp:10, unitType:'fantastic_chaos' },
+    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     chaosSurge: 1,
@@ -922,7 +997,7 @@ definePresets({
   chaosSurgeBreathCoM2: {
     desc: 'Chaos Surge (CoM2): Chaos creature gains +2 breath from one copy. fire breath 1 -> 3, plus 1 melee',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, rtbType:'fire', rtb:1, toHitRtbMod:70, hp:10, unitType:'fantastic_chaos' },
+    a: { atk:1, hitChance:70, rtbType:'fire', rtb:1, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -930,7 +1005,7 @@ definePresets({
   chaosSurgeResistanceCoM2: {
     desc: 'Chaos Surge (CoM2): Chaos creature gains +2 resistance from one copy. Poison 4 vs res 5 -> 7',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, hp:10, abilities: { poison:4 } },
+    a: { atk:1, hitChance:70, hp:10, abilities: { poison:4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_chaos' },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 1.600 },
@@ -938,7 +1013,7 @@ definePresets({
   chaosSurgeStackingCoM2: {
     desc: 'Chaos Surge (CoM2): subsequent copies add +1 melee each, so 3 copies = +5 melee, not +9. atk 1 -> 6',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos' },
+    a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     chaosSurge: 3,
     expected: { dmgToA: 0, dmgToB: 6.000 },
@@ -946,7 +1021,7 @@ definePresets({
   chaosSurgeNonChaosNoBonusCoM2: {
     desc: 'Chaos Surge (CoM2): non-Chaos unit gets no bonus. atk 1 stays 1',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_nature' },
+    a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_nature' },
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -1027,7 +1102,7 @@ definePresets({
   chaosSurgeThrownCoM2: {
     desc: 'Chaos Surge (CoM2): thrown is not boosted. thrown stays 1 plus melee 1 -> 4',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, hp:10, unitType:'fantastic_chaos' },
+    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:1, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -1065,15 +1140,15 @@ definePresets({
   trueLightDeathVsLifeWarlord: {
     desc: 'True Light (Warlord): re-enabled in Warlord. Death atk6→5/def2→1, Life atk6→7/def2→3, 100% hit/block: A=7-1=6, B=5-3=2',
     version: V_WARLORD,
-    a: { figs:1, atk:6, def:2, res:5, hp:10, toHitMod:70, toBlkMod:70, unitType:'fantastic_death' },
-    b: { figs:1, atk:6, def:2, res:5, hp:10, toHitMod:70, toBlkMod:70, unitType:'fantastic_life' },
+    a: { figs:1, atk:6, def:2, res:5, hp:10, hitChance:70, toBlkMod:70, unitType:'fantastic_death' },
+    b: { figs:1, atk:6, def:2, res:5, hp:10, hitChance:70, toBlkMod:70, unitType:'fantastic_life' },
     trueLight: true,
     expected: { dmgToA: 6.000, dmgToB: 2.000 },
   },
   trueLightWarlordIllusionToHit: {
     desc: 'True Light (Warlord): illusion attacker takes -10% To Hit (all units). Normal 4atk, illusion (def→0), 100%→90% to hit',
     version: V_WARLORD,
-    a: { figs:1, atk:4, toHitMod:70, res:5, hp:10, unitType:'normal', abilities: { illusion: true } },
+    a: { figs:1, atk:4, hitChance:70, res:5, hp:10, unitType:'normal', abilities: { illusion: true } },
     b: { figs:1, atk:0, res:5, hp:10, unitType:'normal' },
     trueLight: true,
     expected: { dmgToA: 0, dmgToB: 3.600 },
@@ -1081,7 +1156,7 @@ definePresets({
   sanctifyTrueLightWarlord: {
     desc: 'Sanctify (Warlord): sanctified normal unit becomes life-realm, so True Light gives +1. atk5->6 vs def2, 100% hit/block: 6-2=4 (unsanctified normal would stay 5 -> 3)',
     version: V_WARLORD,
-    a: { figs:1, atk:5, res:5, hp:10, toHitMod:70, unitType:'normal', abilities: { sanctify: true } },
+    a: { figs:1, atk:5, res:5, hp:10, hitChance:70, unitType:'normal', abilities: { sanctify: true } },
     b: { figs:1, atk:0, def:2, res:5, hp:10, toBlkMod:70, unitType:'normal' },
     trueLight: true,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -1089,7 +1164,7 @@ definePresets({
   sanctifyClergyFantasticWarlord: {
     desc: 'Sanctify (Warlord): clergy becomes Life Fantastic before the standing EncMagic rule, so its attacks bypass Weapon Immunity. atk6+TL=7 vs def2, 100% hit/block: 7-2=5. Non-clergy stays non-fantastic without EncMagic, so WI would add +10 def -> 0.',
     version: V_WARLORD,
-    a: { figs:1, atk:6, res:5, hp:10, toHitMod:70, weapon:'normal', unitType:'normal', abilities: { sanctify: true, clergy: true } },
+    a: { figs:1, atk:6, res:5, hp:10, hitChance:70, weapon:'normal', unitType:'normal', abilities: { sanctify: true, clergy: true } },
     b: { figs:1, atk:0, def:2, res:5, hp:10, toBlkMod:70, unitType:'normal', abilities: { weaponImmunity: true } },
     trueLight: true,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -1125,21 +1200,21 @@ definePresets({
   eternalNightDoubleDarknessCoM2: {
     desc: 'Eternal Night (CoM2): Death unit gets doubled Darkness attack bonus. atk 1 -> 3',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_death', abilities: { eternalNight: true } },
+    a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_death', abilities: { eternalNight: true } },
     b: { atk:0, hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   eternalNightEnemyLifeResistanceCoM2: {
     desc: 'Eternal Night (CoM2): enemy Life unit gets Darkness -1 res and enemy -1 res. Poison 4 vs res 5 -> 3 gives 3.2',
     version: V_COM2,
-    a: { atk:1, toHitMod:70, hp:10, abilities: { eternalNight: true, poison:4 } },
+    a: { atk:1, hitChance:70, hp:10, abilities: { eternalNight: true, poison:4 } },
     b: { def:3, toBlkMod:70, res:5, hp:10, unitType:'fantastic_life' },
     expected: { dmgToA: 0, dmgToB: 3.200 },
   },
   eternalNightEnemyPoorSightWarlord: {
     desc: 'Eternal Night (Warlord): enemy non-Death unit gets -2 ranged attack strength ("poor vision"). Missile rtb 4 - 2 = 2 at 100% hit vs def 0 = 2 dmg',
     version: V_WARLORD,
-    a: { toHitRtbMod:70, rtbType:'missile', rtb:4, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:4, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -1147,7 +1222,7 @@ definePresets({
   eternalNightMagicRangedWarlord: {
     desc: 'Eternal Night (Warlord): -2 ranged penalty also applies to magic ranged. Magic ranged rtb 4 - 2 = 2 at 100% hit vs def 0 = 2 dmg',
     version: V_WARLORD,
-    a: { toHitRtbMod:70, rtbType:'magic', rtb:4, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'magic', rtb:4, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -1155,7 +1230,7 @@ definePresets({
   eternalNightDeathUnitNoPoorSightWarlord: {
     desc: 'Eternal Night (Warlord): Death-realm unit is NOT affected by the -2 ranged penalty. Missile rtb 4 + doubled Darkness +2 = 6 × 100% hit vs def 0 = 6 dmg',
     version: V_WARLORD,
-    a: { toHitRtbMod:70, rtbType:'missile', rtb:4, hp:10, unitType:'fantastic_death' },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:4, hp:10, unitType:'fantastic_death' },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 6.000 },
@@ -1163,7 +1238,7 @@ definePresets({
   eternalNightThrownUnaffectedWarlord: {
     desc: 'Eternal Night (Warlord): -2 ranged penalty does not apply to thrown. Melee 1 + thrown 3 at 100% hit vs def 0 = 4 dmg',
     version: V_WARLORD,
-    a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10 },
+    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:3, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },

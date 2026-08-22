@@ -12,8 +12,8 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
     }),
     figs: 1, atk: 5, def: 6, res: 8, hp: 7,
     rtb: 4, rtbType: 'missile',
-    level: 'elite', weapon: 'mithril', armor: 'none',
-    toHitMod: 5, toHitRtbMod: 0, toBlkMod: 0,
+    level: 'elite', weapon: 'mithril', armor: 'normal',
+    hitMelee: 5, toBlkMod: 0,
     abilities: { lucky: true, highPrayer: true, warpAttack: true, vertigo: true },
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
@@ -64,7 +64,7 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
       baseRace: 'High Men', baseFantastic: false,
     }),
     figs: 1, atk: 4, def: 3, res: 5, hp: 6,
-    rtb: 0, rtbType: 'none', level: 'normal', weapon: 'normal', armor: 'none',
+    rtb: 0, rtbType: 'none', level: 'normal', weapon: 'normal', armor: 'normal',
     abilities: {
       highPrayer: false, warpAttack: false, holyBonus: 0,
       combatSummoned: true, // display name alone does not establish the retained template
@@ -88,21 +88,21 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
       prefix: 'a', version,
       identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
       figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
-      level: 'normal', weapon: 'normal', armor: 'none', abilities: {},
-      toHitMod: -50, toHitRtbMod: -40, toBlkMod: -40,
+      level: 'normal', weapon: 'normal', armor: 'normal', abilities: {},
+      hitChance: -50, hitRanged: 10, hitThrown: 10, hitBreath: 10, toBlkMod: -40,
       }),
       orderedClamp: deriveUnitStats({
         prefix: 'a', version,
         identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
         figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
-        level: 'normal', weapon: 'normal', armor: 'none', abilities: {},
-        toHitMod: -50, toHitRtbMod: 100, toBlkMod: 0,
+        level: 'normal', weapon: 'normal', armor: 'normal', abilities: {},
+        hitChance: -50, hitRanged: 150, hitThrown: 150, hitBreath: 150, toBlkMod: 0,
       }),
       sourceOrdered: version.startsWith('com2_warlord') ? deriveUnitStats({
         prefix: 'a', version,
         identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
         figs: 1, atk: 5, rtb: 5, rtbType: 'missile', def: 5, res: 6, hp: 5,
-        level: 'normal', weapon: 'normal', armor: 'none',
+        level: 'normal', weapon: 'normal', armor: 'normal',
         abilities: { plague: true, vertigo: true, berserkWarlord: true },
         toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
         warpReality: true, hurricane: true,
@@ -117,7 +117,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
     const ids = orderedClamp.statTrace.map(entry => entry.id);
     expect(ids.indexOf('modernClampCommon')).toBeGreaterThanOrEqual(0);
     expect(ids.indexOf('modernClampCommon')).toBeLessThan(ids.indexOf('clamp'));
-    expect(report.modifierTraces.toHitRanged.entries.at(-1)).toMatchObject({
+    expect(report.modifierTraces.toHitShared.entries.at(-1)).toMatchObject({
       id: 'chance:modernClampCommon', from: -10, to: 20,
     });
   }
@@ -145,7 +145,7 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
     const base = {
-      prefix: 'a', figs: 1, level: 'normal', weapon: 'normal', armor: 'none',
+      prefix: 'a', figs: 1, level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
     };
     return {
@@ -200,7 +200,10 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
   await setValue(page, 'aBaseRace', 'High Men');
   await setValue(page, 'aBaseFantastic', false);
   await setValue(page, 'aAtk', '3');
-  await setValue(page, 'aToHitMod', '5');
+  // Warlord carries the modern To Hit record: a common `hitchance` plus one modifier per
+  // To-Hit field. The melee row resolves the two together, so state both.
+  await setValue(page, 'aHitChance', '0');
+  await setValue(page, 'aHitMelee', '5');
   await setValue(page, 'aAbil_highPrayer', true);
 
   // Defender: exercise the same ordinary output on the opposite card plus one of the
@@ -225,10 +228,13 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
     'Editable base: 3\nWeapon (phase c): 3 → 4'
       + '\nHigh Prayer (phase c): 4 → 6\nDisplayed result: 6');
 
-  await expect(page.locator('#aToHitMeleeMod')).toHaveText('45%');
-  await expect(page.locator('#aToHitMeleeMod')).toHaveAttribute('data-tooltip',
+  await expect(page.locator('#aHitMeleeDisp')).toHaveText('45%');
+  await expect(page.locator('#aHitMeleeDisp')).toHaveAttribute('data-tooltip',
     'Editable base: 30%\nBase melee To Hit (phase base): 30% → 35%'
       + '\nHigh Prayer (phase c): 35% → 45%\nDisplayed result: 45%');
+  // The common row shows that field alone, so the melee-only modifier above is absent from
+  // it while the write High Prayer makes to the common field appears in both.
+  await expect(page.locator('#aHitChanceDisp')).toHaveText('40%');
   await expect(page.locator('#aRaceMod')).toHaveText('Life');
   await expect(page.locator('#aRaceMod')).toHaveAttribute('data-tooltip',
     'Editable base: High Men\nChosen (phase a): High Men → Life\nDisplayed result: Life');

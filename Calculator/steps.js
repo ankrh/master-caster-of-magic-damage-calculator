@@ -74,6 +74,7 @@ const ENGINE_VERSIONS = Object.freeze([
 const SCOPE_ALL = ENGINE_VERSIONS;
 const SCOPE_DOS = Object.freeze(['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']);
 const SCOPE_MOM = Object.freeze(['mom_1.31', 'mom_cp_1.60.00']);
+const SCOPE_MOM_1_31 = Object.freeze(['mom_1.31']);
 const SCOPE_MOM_MODERN = Object.freeze([
   'mom_1.31', 'mom_cp_1.60.00', 'com2_1.05.11', 'com2_warlord_1.5.12.7',
 ]);
@@ -93,6 +94,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:armorclad': SCOPE_WARLORD,
   'base:artificer': SCOPE_WARLORD,
   'base:baseBlock': SCOPE_ALL,
+  'base:baseHitChance': SCOPE_MODERN,
   'base:baseMelee': SCOPE_ALL,
   'base:baseRtb': SCOPE_ALL,
   'base:dragonMound': SCOPE_WARLORD,
@@ -182,6 +184,9 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:chaosChannels:armor': SCOPE_ALL,
   'c:chaosChannels:armor:race': SCOPE_ALL,
   'c:chaosChannels:fireBreath': SCOPE_DOS,
+  // 1.31 alone passes the mutations byte to the recompute's second `BU_Apply_Specials` call,
+  // so it alone re-assigns the shared slot there (F106).
+  'c:chaosChannels:fireBreath:recompute': SCOPE_MOM_1_31,
   'c:chaosChannels:fireBreath:race': SCOPE_DOS,
   'c:chaosChannels:flight': SCOPE_ALL,
   'c:chaosSurge': SCOPE_ALL,

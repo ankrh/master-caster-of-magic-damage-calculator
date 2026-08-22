@@ -184,8 +184,10 @@ attacker's figure count. The *hidden conventional component* is rolled once per 
 figure. Getting those two bounds backwards is the classic error here. The hidden component exists
 only in the DOS engines, which pack a gaze into the same strength/type slot they use for ranged,
 thrown and breath; CoM2 and Warlord carry independent gaze fields with no attack-strength slot, so
-there is no hidden component to model for them. A gaze's realm follows its type, not the
-attacker's, and that realm is what the defence specials key off.
+there is no hidden component to model for them. Doom damage takes the **attacking**-figure bound
+in the DOS engines, where it is that same slot delivered rather than rolled, and a fixed bound of
+one in CoM2 and Warlord, whose Doom Gaze is a field of its own. A gaze's realm follows its type,
+not the attacker's, and that realm is what the defence specials key off.
 
 **Combat unit state.** In addition to total Damage Taken, unit state carries Irrecoverable/
 Irreversible Damage and Undeath Damage; modern builds also carry Base Bonus HP per figure and No
@@ -303,16 +305,31 @@ scope table all key on `phase:id` alike, so two writes of one effect stay distin
 qualifier.
 
 A bonus normally never conjures an attack slot the unit does not have, so an ability step skips a
-write to a dead slot. Source-backed exceptions exist; each is marked at its step rather than
-folded into the general rule.
+write to a dead slot. Whether the melee slot is live is the **permanent** record's melee field,
+read through `ctx.base` — which every compiled melee-presence gate tests and which the `base`
+phase, not the card's input, settles. Source-backed exceptions exist; each is marked at its step
+rather than folded into the general rule.
+
+**A step may name its own block's gate instead of that rule.** The dead-slot rule is an
+abstraction over what the engines actually test, and where a block's own test is transcribed the
+step names it and the abstraction does not apply. Naming one is the stronger claim and needs the
+address; the general rule is what a step falls back to.
 
 Two engines reach the secondary-attack slot differently, so a step's `apply` names which gate it
 writes through:
 
-- **`rtb`** — the DOS engines' shared slot. One write reaches conventional ranged, Thrown, Breath
-  and both gaze strengths alike.
+- **`rtb`** — the DOS engines' shared slot under the dead-slot rule. One write reaches conventional
+  ranged, Thrown, Breath and both gaze strengths alike.
+- **`rangedTyped` / `rangedStrength` / `rangedUngated`** — that same shared slot under one block's
+  own transcribed test on it: the `ranged_type` sentinel, the byte's live strength, or no test at
+  all. One byte holds the ranged strength and both gaze strengths in the DOS record, so each of
+  these writes the strength field and the record's gaze mirrors of it together — one field, one
+  gate. Which gaze mirrors a record carries is the same type fact the region-`e` floor asks, not a
+  strength test: a gaze template shipping strength 0 still has its gaze.
 - **`ranged`** — the modern engines' conventional ranged attack *only*. Thrown, both Breaths and
   the gazes are separate fields there, so a bonus written to `ranged` never reaches them.
+- **`doomGazeField`** — the modern engines' independent Doom Gaze field, which is a view of no
+  attack slot and takes a write only from a block that names it.
 
 ### Phases
 
@@ -434,7 +451,10 @@ nothing selected records.
 
 `modifierTraces` is the per-output projection consumed by the UI: one entry per calculated output
 with `{base, entries, result}`, where every entry carries its source, phase and running
-`{from, to}` values. Percentage traces use displayed percentage points. Race and Fantastic use
+`{from, to}` values. Percentage traces use displayed percentage points. A version contributes only
+the To-Hit projections its record has, so the key set itself says which record produced them: the
+DOS shared secondary threshold, or the modern common field and one projection per **hitchance
+field** rather than per output channel. Race and Fantastic use
 their editable base identity and calculated live identity; each modern attack channel retains its
 own strength projection. Permanent writes that prepare the base record before the scratch-record
 sequence are captured at their own application sites, so the later base seed is not presented as
@@ -518,16 +538,17 @@ the calculator does instead, and why.
   the current exchange, not the persistent armies. Army-side, garrison, city and node eligibility
   must be carried by explicit context and must never be inferred from the `a`/`b` prefix.
   Card-prefix gates are valid only for genuinely exchange-role behavior.
-- **DOS Doom Gaze is modelled unscaled by figure count.** The DOS engines deliver its automatic
-  damage inside the per-attacker-figure loop and therefore scale it; CoM2 and Warlord pass a
-  literal figure count of 1 and deal it once. The calculator models the unscaled form for every
-  version. No predefined roster reaches the difference — the only Multiple Gaze unit in either DOS
-  roster has one figure. Reachability through a Custom unit is open under
-  [F60](./BACKLOG.md) (`combat_special_attacks.js:183-187`).
 - **MoM 1.31's hero magical-ranged repeat is modelled as the common case.** 1.31's gate recognises
   only the Caster unit flags, so a hero falls through to the ammunition branch and gets no repeat;
   CP 1.60 added the missing hero test. The real 1.31 gate reads an unrelated battle-unit slot and
   can flip either way, so the modelled outcome is the common one, not the guaranteed one.
+- **Chaos Channels' doubled armor bonus is folded into one write.** MoM 1.31 passes the mutations
+  byte whole to both `BU_Apply_Specials` calls, so the demon-skin block adds its `+3` twice — once
+  at the constructor and again in the recompute, immediately before Warp Creature. The calculator
+  makes one `+6` write at the constructor position, because every write between the two calls is an
+  addition and the only Defense clamp is terminal, so the folded total is exact in every reachable
+  state. The fire-breath block of the same second pass is *not* folded: it assigns the shared
+  secondary slot rather than adding to it, so it carries a chain position of its own.
 - **A repeated attack is assumed to be available.** Mana and ammunition are outside the one-round
   model, so where the engine gates a repeat on a mana or ammunition reserve, the calculator assumes
   the reserve suffices.
@@ -622,6 +643,13 @@ Loaded runtime constants are cited from the tables that own them rather than res
   controls; `#swapBtn` exchanges them.
 - Result panels show, per side, the damage distribution and the chance the unit is
   destroyed; the melee breakdown grid shows one row per phase in resolution order.
+- **The ranged-mode control follows the attacker's derived ranged attack.** It is available only
+  while the attacker's *derived* record carries a conventional ranged attack, and any edit that
+  leaves the derivation without one clears and disables it in the same interaction, before the
+  exchange is resolved — so a ticked control never resolves as melee. This is normalization of a
+  card the user is still editing, not a fallback: no value is invented, the withdrawal is visible
+  on the control itself, and *Out-of-range values stop the run* therefore does not apply. The
+  ranged matrix states the same rule by omitting an attacker that has no ranged attack.
 - **Matrix mode** computes attacker-vs-whole-roster ratios in Web Workers. Custom and roster
   rows enter the same identity-aware `deriveUnitStats` boundary as the main card. The main
   thread sends those fully derived, identity-dependent stat records to the workers; workers
@@ -633,8 +661,13 @@ Loaded runtime constants are cited from the tables that own them rather than res
   also exactly the set that stays editable when a predefined unit locks the stat fields.
 - The stat fields hold **pre-level** values. Experience level is applied downstream as an
   ordinary transform step, so no code path may write a level bonus into a card field.
-  Changing Level on a Custom unit preserves every editable card stat and base-identity control;
-  only the downstream effective-stat transform changes.
+  Changing Level preserves every editable card stat and base-identity control, on a Custom and a
+  predefined selection alike; only the downstream effective-stat transform changes.
+- **Selecting a predefined unit is the one statement of its roster record on the card**, and
+  states all of it: the stat fields, figures, the To Hit and To Block fields, the shared attack
+  slot and the modern attack channels. No other path restates part of that record, so a card
+  deliberately holding values the record never gave it — what persistence restores, and what the
+  matrix's own row is built from — is never half-reverted.
   Effective values appear only in the modifier column. That column shows one final modified
   number; it does not reproduce the games' plain/gold or grey/gold presentation tiers.
 - Hovering a final modified value shows the complete chain that produced it: the editable base,
@@ -686,14 +719,35 @@ projecting them into a common shape:
 - **The modern cards expose independent Ranged, Thrown, Fire Breath and Lightning Breath records**,
   plus roster-bound gaze and touch save modifiers and their To Defend value, each an independent
   field. The modern resolver consumes those named records, so coexisting roster attacks are neither
-  projected into one card field nor discarded.
+  projected into one card field nor discarded. The shared slot stays on the modern card but is
+  hidden and has no spelling for the modern-only projectile tokens, so `magic` and
+  `magic_lightning` are stated by the Ranged selector alone and the card's writers project onto the
+  slot rather than leaving it holding a token it cannot offer.
 - **The Ranged record exists when its projectile type is set, whatever its strength**, on the card
   and in `deriveUnitStats` input alike: the roster ships a typed record with no strength, and the
   engine writes gated on the permanent type land on it. Thrown and both Breath fields carry no type
   of their own, so for them strength is the only statement of existence. A channel the walk leaves
   at or below zero strength is still absent from the output.
+- **A modern record that states no attack is four empty channels, never a missing record.** The
+  four strengths are fields of `unitT`, so every modern unit has all four and an ungated engine
+  write can create the channel it names. Supplying no record at all is a different statement — the
+  unit's version has no such record — and only the DOS versions make it. Every reader of a modern
+  record therefore states all four channels, which is what keeps the card and the matrix on one
+  boundary rather than agreeing only for the units a roster happens to ship.
+- **Each card carries its version's To Hit record and only that one.** The DOS card keeps one melee
+  threshold and one shared secondary threshold, matching a record that stores a threshold per attack
+  and nothing above them. The modern card keeps the five fields `Caster.exe` holds — the common
+  `hitchance`, plus `hitchancemelee`, `hitchanceranged`, `hitchancethrown` and the single
+  `hitchancebreath` that serves both breath strengths — as one common value and four modifiers at
+  zero. Naming the other family's field halts the run rather than writing a control nothing reads.
+- **Every one of those fields carries a displayed projection, and each modifier row resolves the
+  threshold the roll compares against**: the common value plus that row's own modifier, carrying
+  the ranged distance penalty and the resolution-time 10..100 bound. One breath row answers for
+  Fire and Lightning Breath alike, because one record field does. The common row shows that field
+  alone against 30, so a write to it appears there and inside every modifier row.
 - Modern roster To Hit and To Block values are percentage-point deltas above the common base shown
-  on the card; an omitted field means the default. The DOS rosters have no per-template To Block
+  on the card; an omitted field means the default. One `Hit=` per record seeds the common field and
+  the four modifiers have no roster source. The DOS rosters have no per-template To Block
   field, so their cards retain the ordinary zero delta.
 - Maximum ammunition remains outside the card and the one-round model.
 
@@ -745,6 +799,13 @@ lives in [CLAUDE.md](./CLAUDE.md).
   over `localStorage` on load.
 - Restoring is order-safe: version first (which repopulates rosters and ability panels), then
   roster/source identity, then editable controls, then locking and visibility.
+- **An id this build no longer has is ignored; a *value* its control no longer offers halts the
+  restore** (*Out-of-range values stop the run*), because the assignment would otherwise leave the
+  control blank and the page would re-persist the blank. Retiring an option therefore obliges the
+  build either to accept that older states stop, or to state a migration for the retired value —
+  `RENAMED_GAME_VERSIONS` is the precedent, for version ids. Two option sets are version-scoped
+  rather than retired and keep their own clamp: an unknown roster selection becomes Custom, and a
+  special unit the selected version does not allow becomes none.
 - A corrupt local blob degrades to clean defaults and is discarded so it cannot throw on every
   reload. A corrupt share blob is stripped and falls back to the recipient's local state.
 

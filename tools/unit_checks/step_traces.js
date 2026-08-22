@@ -113,7 +113,9 @@ function runModifierTraceChecks(ctx) {
     hp: 7,
     level: 'elite',
     weapon: 'mithril',
-    toHitMod: 5,
+    // A modern fixture states the record's own To-Hit fields; the DOS pair is a different
+    // record shape (`SPEC.md`, *Attack channels on the card*).
+    hitMelee: 5,
     abilities: { lucky: true, highPrayer: true, warpAttack: true, vertigo: true },
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
@@ -241,7 +243,8 @@ function runModifierTraceChecks(ctx) {
 
   const rangedDistanceTraceUnit = ctx.deriveUnitStats(baseUnitInput({
     prefix: 'a', version: 'com2_1.05.11',
-    rtb: 4, rtbType: 'missile', rangedCheck: true, rangedDist: 4,
+    modernAttacks: { ranged: { strength: 4, type: 'missile' } },
+    rangedCheck: true, rangedDist: 4,
   }));
   const distanceEntry = rangedDistanceTraceUnit.modifierTraces.toHitRanged.entries
     .find(t => t.id === 'chance:distancePenalty');
@@ -264,7 +267,7 @@ function runModifierTraceChecks(ctx) {
     'The initial To Block clamp records the floor when it changes the running value');
 
   const cappedPlague = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', toHitMod: -20,
+    version: 'com2_warlord_1.5.12.7', hitChance: -20,
     abilities: { plague: true },
   }));
   const cappedSources = cappedPlague.modifierTraces.toHitMelee.entries.map(t => t.id);
@@ -278,7 +281,7 @@ function runModifierTraceChecks(ctx) {
   for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
     const twoStage = ctx.deriveUnitStats(baseUnitInput({
       version, rtb: 1, rtbType: 'missile',
-      toHitMod: -50, toHitRtbMod: -40, toBlkMod: -40,
+      hitChance: -50, hitRanged: 10, hitThrown: 10, hitBreath: 10, toBlkMod: -40,
     }));
     assertClose(twoStage.toHitMelee, 0.1,
       `${version}: common Hit is clamped to ten percent before channel modifiers`);
@@ -293,7 +296,8 @@ function runModifierTraceChecks(ctx) {
       'chance:toBlockProbabilityBound',
       `${version}: only the DefenseRoll probability projection bounds signed To Defend`);
     const orderedClamp = ctx.deriveUnitStats(baseUnitInput({
-      version, rtb: 1, rtbType: 'missile', toHitMod: -50, toHitRtbMod: 100,
+      version, rtb: 1, rtbType: 'missile',
+      hitChance: -50, hitRanged: 150, hitThrown: 150, hitBreath: 150,
     }));
     const commonClamp = orderedClamp.statTrace.findIndex(t => t.id === 'modernClampCommon');
     const channelClamp = orderedClamp.statTrace.findIndex(t => t.id === 'clamp');

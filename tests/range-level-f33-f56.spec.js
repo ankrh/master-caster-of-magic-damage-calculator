@@ -16,7 +16,7 @@ test('F33 exempts CoM2 and Warlord heroes from physical ranged distance penaltie
       normalBreath: distancePenalty(8, 'fire', false, version, false),
     });
     const derive = (version, unitType, identity) => deriveUnitStats({
-      prefix: 'a', version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'none',
+      prefix: 'a', version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
       rtbType: 'missile', unitType, figs: 1, atk: 1, rtb: 10, def: 0, res: 5, hp: 10,
       dmg: 0, toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, cityWalls: 'none',
       nodeAura: 'none', trueLight: false, darkness: false, rangedCheck: true, rangedDist: 8,
@@ -97,7 +97,7 @@ test('F56 leaves every modern gaze field out of the level bonus step', async ({ 
   const report = await page.evaluate(() => {
     const derive = (version, level, overrides = {}) => deriveUnitStats({
       prefix: 'a', version, abilities: { stoningGaze: -3, deathGaze: -2, doomGaze: 4 },
-      level, weapon: 'normal', armor: 'none', rtbType: 'none', unitType: 'normal',
+      level, weapon: 'normal', armor: 'normal', rtbType: 'none', unitType: 'normal',
       figs: 1, atk: 1, rtb: 0, modernAttacks: {}, def: 0, res: 5, hp: 10, dmg: 0,
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, cityWalls: 'none', nodeAura: 'none',
       trueLight: false, darkness: false, rangedCheck: false, rangedDist: 1,

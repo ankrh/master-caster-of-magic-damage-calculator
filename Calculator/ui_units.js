@@ -51,10 +51,15 @@ function populateUnitDropdown(selectId, units) {
     'Beastmen', 'Dark Elf', 'Draconian', 'Dwarven', 'Troll',
     'Xuanyuan', 'Rakhshasa', 'Hawkmen', 'Goblin',
   ];
+  // `Special` is race id 14 in the engine's own race table (`UNITS.INI`, `Race=`), sitting
+  // between the named races and the realm ids the realm categories come from, and both roster
+  // generators read it through that table rather than through the realm one. It is therefore a
+  // non-race, non-realm bucket and belongs beside `Other`, after the races and before `Generic`.
   const categoryOrder = [
     'Heroes',
     ...raceOrder,
     'Other',
+    'Special',
     'Generic',
     'Life', 'Death', 'Chaos',
     'Nature', 'Sorcery', 'Arcane',
@@ -68,6 +73,23 @@ function populateUnitDropdown(selectId, units) {
     const cat = CAT_NORMALIZE[u.category] || u.category;
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(u);
+  }
+
+  // A bucket `categoryOrder` does not name used to be skipped by the emit loop below, which
+  // removed its units from this combobox and from the matrix rows built off the same flat list,
+  // with nothing raised — `SPEC.md`, *Out-of-range values stop the run*. The DOS roster's
+  // category is the source's race column copied verbatim (`tools/parse_tweaker_unit_data.py`),
+  // so this is the only place an unenumerated category is checked at all.
+  const unordered = Object.keys(groups).filter(cat => !categoryOrder.includes(cat));
+  if (unordered.length) {
+    const version = document.getElementById('gameVersion').value;
+    const detail = unordered
+      .map(cat => `'${cat}' (${groups[cat].map(u => `[${u.id}] ${u.name}`).join(', ')})`)
+      .join('; ');
+    throw new Error(
+      `populateUnitDropdown: roster category ${detail} of the '${version}' roster is named by no `
+      + `entry in categoryOrder, so #${selectId} would omit those units silently `
+      + `(expected one of ${categoryOrder.join(', ')}).`);
   }
 
   const flatList = [];
@@ -206,7 +228,7 @@ function setRosterUnitRecords(prefix, unit, version) {
   unitBaseStats[prefix] = {
     atk: unit.melee, def: unit.defense, res: unit.resist, hp: unit.hp,
     rtb: predefinedUnitRtb(unit),
-    modernAttacks: predefinedModernAttacks(unit),
+    modernAttacks: predefinedModernAttacks(unit, version),
     toHitMod: unit.to_hit || 0,
     generic: unit.category === 'Generic',
   };
@@ -412,6 +434,35 @@ function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdenti
   updateSpecialUnitDerivedEffects(prefix);
 }
 
+// The one shape every reader of a modern attack record produces. `unitT` holds the four
+// strengths as fixed fields — `ranged` +0x24, `thrown` +0x2C, `firebreath` +0x30,
+// `lightningbreath` +0x34 (`Reference docs/Caster binary/CoM2 binary - unit recalculation.md`,
+// the record layout) — so **every** modern record has all four, and a record that states no
+// attack is four empty fields rather than no record. That distinction is the whole of it: a
+// reader returning `null` for the empty case tells `deriveUnitStats` the caller supplied no
+// modern record at all, and the ungated engine writes that create a channel then have nothing
+// to land on. The card reader and the roster reader below both return this, so the card and the
+// matrix agree by construction rather than by which units the roster happens to ship (F121).
+function modernAttackRecord(fields) {
+  const number = value => Math.max(0, parseInt(value, 10) || 0);
+  const ranged = number(fields.ranged);
+  const thrown = number(fields.thrown);
+  const fireBreath = number(fields.fireBreath);
+  const lightningBreath = number(fields.lightningBreath);
+  // The Ranged record's existence is stated by its projectile type, not by its strength: the
+  // record ships with a type and no strength (Warlord [362] Wanderer), and the engine writes
+  // that read the permanent type land on it regardless. The Thrown and Breath fields have no
+  // type of their own, so for them strength is the only statement of existence
+  // (`SPEC.md`, *Attack channels on the card*).
+  const rangedType = fields.rangedType || 'none';
+  return {
+    ranged: (ranged || rangedType !== 'none') ? { strength: ranged, type: rangedType } : null,
+    thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
+    fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
+    lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,
+  };
+}
+
 // CoM2/Warlord keep four conventional attack channels.  The card owns the editable
 // boundary: a roster selection writes its source values here, while a custom modern
 // unit reads the same named fields.  The old RTB pair remains exclusively for the
@@ -419,22 +470,14 @@ function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdenti
 function modernCardAttacks(prefix) {
   const version = document.getElementById('gameVersion').value;
   if (!version.startsWith('com2')) return null;
-  const number = suffix => Math.max(0, parseInt(document.getElementById(prefix + suffix).value, 10) || 0);
-  const ranged = number('ModernRanged');
-  const thrown = number('ModernThrown');
-  const fireBreath = number('ModernFireBreath');
-  const lightningBreath = number('ModernLightningBreath');
-  // The Ranged record's existence is stated by its type selector, not by its strength: the
-  // record ships with a projectile type and no strength (Warlord [362] Wanderer), and the
-  // engine writes that read the permanent type land on it regardless. The Thrown and Breath
-  // fields have no type of their own, so for them strength is the only statement of existence.
-  const rangedType = document.getElementById(prefix + 'ModernRangedType').value;
-  return {
-    ranged: (ranged || rangedType !== 'none') ? { strength: ranged, type: rangedType } : null,
-    thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
-    fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
-    lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,
-  };
+  const value = suffix => document.getElementById(prefix + suffix).value;
+  return modernAttackRecord({
+    ranged: value('ModernRanged'),
+    rangedType: value('ModernRangedType'),
+    thrown: value('ModernThrown'),
+    fireBreath: value('ModernFireBreath'),
+    lightningBreath: value('ModernLightningBreath'),
+  });
 }
 
 function applyModernAttackFields(prefix, attacks) {
@@ -483,13 +526,33 @@ function applyUnit(prefix, unitIndex) {
   setIdentityControlsFromUnit(prefix, unit, version);
   populateSpecialUnitOptions(prefix, version, specialUnitForRoster(version, unit));
 
+  // The card's whole roster statement, in one block. Nothing here applies a level bonus: the
+  // card holds pre-level stats and the level ladder is an ordinary transform step in
+  // deriveUnitStats (`stats_sequence.js`, statStep 'level'), so a level change re-states
+  // nothing (F136).
+  const base = unitBaseStats[prefix];
+  document.getElementById(prefix + 'Atk').value = base.atk;
+  document.getElementById(prefix + 'Rtb').value = base.rtb;
+  document.getElementById(prefix + 'Def').value = base.def;
+  document.getElementById(prefix + 'Res').value = base.res;
+  document.getElementById(prefix + 'HP').value = base.hp;
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
-  document.getElementById(prefix + 'ToHitRtbMod').value = unit.to_hit || 0;
-  // Both modern roster chance fields use the card's percentage-point delta above 30%.
+  // `UNITS.INI` defines one `Hit=` per record and no per-channel key. That one value seeds the
+  // DOS melee threshold, the DOS shared secondary threshold and, in the modern engines, the
+  // record's one common `hitchance`; the four modern channel modifiers have no roster source
+  // and reset to 0.
+  document.getElementById(prefix + 'ToHitMod').value = base.toHitMod;
+  document.getElementById(prefix + 'ToHitRtbMod').value = base.toHitMod;
+  document.getElementById(prefix + 'HitChance').value = base.toHitMod;
+  for (const field of ['HitMelee', 'HitRanged', 'HitThrown', 'HitBreath']) {
+    document.getElementById(prefix + field).value = 0;
+  }
+  // Modern roster To Block uses the card's percentage-point delta above 30%.
   document.getElementById(prefix + 'ToBlkMod').value = unit.to_block || 0;
   document.getElementById(prefix + 'Dmg').value = 0;
-  document.getElementById(prefix + 'RtbType').value = predefinedUnitRtbType(unit);
-  applyModernAttackFields(prefix, unitBaseStats[prefix].modernAttacks);
+  setSharedSlotRangedType(prefix, predefinedUnitRtbType(unit),
+    `Roster record ${JSON.stringify(unit.name || unit.id)}`);
+  applyModernAttackFields(prefix, base.modernAttacks);
 
   syncLegacyUnitTypeControl(prefix, legacyUnitTypeFromIdentity(unitIdentity[prefix]));
 
@@ -503,7 +566,6 @@ function applyUnit(prefix, unitIndex) {
   // which parsed the flag-only tokens as 0/1.
   syncDosSpecialCard(prefix, unit.spec_att_attrib);
   if (dosSpecialIsActive(version)) syncDosSpecialAbilities(prefix);
-  resetCardToRosterBase(prefix);
   markUnitInnateLocks(prefix, abilValues);
   updateSpecialUnitDerivedEffects(prefix);
 
@@ -512,7 +574,7 @@ function applyUnit(prefix, unitIndex) {
 
 // applyValues=false is the state-restore path: rebuild the JS-side unit records and all
 // lock styling for the current selection WITHOUT writing any field values, which on
-// restore may be hand-edited (applyUnit/resetCardToRosterBase would clobber them).
+// restore may be hand-edited (applyUnit would clobber them).
 function updateUnitLock(prefix, applyValues = true) {
   const sel = document.getElementById(prefix + 'Unit');
   const fields = sel.closest('.panel').querySelector('.panel-fields');

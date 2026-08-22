@@ -15,7 +15,8 @@ function runPhaseChecks(ctx) {
   }));
   for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
     const attacker = ctx.deriveUnitStats(baseUnitInput({
-      version, atk: 0, def: 0, hp: 10, toHitRtbMod: 70, unitType: 'normal',
+      version, atk: 0, def: 0, hp: 10, unitType: 'normal',
+      hitRanged: 70, hitThrown: 70, hitBreath: 70,
       abilities: { bloodLust: true, doomGaze: 4 },
       modernAttacks: {
         thrown: { strength: 3, type: 'thrown' },
@@ -40,7 +41,7 @@ function runPhaseChecks(ctx) {
     }),
   }));
   const fantasticAttacker = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', atk: 1, def: 0, hp: 10, toHitMod: 70, toHitRtbMod: 70,
+    version: 'com2_1.05.11', atk: 1, def: 0, hp: 10, hitChance: 70,
     abilities: { bloodLust: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   }));
@@ -63,7 +64,8 @@ function runPhaseChecks(ctx) {
 
   for (const type of ['missile', 'magic']) {
     const rangedAttacker = ctx.deriveUnitStats(baseUnitInput({
-      version: 'com2_1.05.11', atk: 0, def: 0, hp: 10, toHitRtbMod: 70,
+      version: 'com2_1.05.11', atk: 0, def: 0, hp: 10,
+      hitRanged: 70, hitThrown: 70, hitBreath: 70,
       abilities: { bloodLust: true },
       modernAttacks: { ranged: { strength: 3, type } },
     }));
@@ -77,7 +79,7 @@ function runPhaseChecks(ctx) {
   // RTB projection. Three deterministic coexisting channels produce three separate attacks.
   const modernChannels = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', atk: 1, rtb: 0, rtbType: 'none', def: 0, hp: 10,
-    toHitRtbMod: 70,
+    hitRanged: 70, hitThrown: 70, hitBreath: 70,
     modernAttacks: {
       thrown: { strength: 1, type: 'thrown' },
       fireBreath: { strength: 1, type: 'fire' },
@@ -113,7 +115,8 @@ function runPhaseChecks(ctx) {
     const attacker = ctx.deriveUnitStats(baseUnitInput({
       version: 'com2_warlord_1.5.12.7', figs: unit.figures, atk: unit.melee,
       rtb: projection.strength, rtbType: projection.type, def: unit.defense,
-      res: unit.resist, hp: unit.hp, toHitRtbMod: 70, modernAttacks: records,
+      res: unit.resist, hp: unit.hp, modernAttacks: records,
+      hitRanged: 70, hitThrown: 70, hitBreath: 70,
     }));
     const expectedKeys = Object.keys(records).filter(key => records[key]);
     assertEqual(Object.keys(attacker.modernAttacks).length, expectedKeys.length,

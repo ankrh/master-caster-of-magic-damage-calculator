@@ -79,6 +79,12 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
   channels come from its record. The gaze and touch fields are not channels: they are DOS
   shared-slot values, and a CoM2/Warlord fixture states them through `abilities`. A `rtbType` the
   pair cannot project throws rather than contributing nothing.
+- **A fixture states its version's To Hit record and only that one.** DOS fixtures use `toHitMod`
+  and `toHitRtbMod`; CoM2/Warlord fixtures use `hitChance` and the four modifiers `hitMelee`,
+  `hitRanged`, `hitThrown` and `hitBreath`, all defaulting to 0. `applyPreset` throws on the other
+  family's field rather than writing a hidden control nothing reads. State a modifier wherever a
+  channel is present **or acquired during derivation** — an effect-created Thrown or Breath reads
+  the modifier just as a roster one does.
 - A preset naming a roster unit (`aUnitName`/`bUnitName`) must resolve in the version it runs in:
   `applyPreset` throws rather than falling back to the fixture's custom stat block, which would
   compute a different unit under the same expectation.
@@ -115,7 +121,7 @@ whatever shape the step has. Where a claim has no observable consequence at all,
 
 ## Tests
 
-Cost sets the cadence. `node tools/node_unit_checks.js` is ~7s and `npm run provenance` ~6s;
+Cost sets the cadence. `node tools/node_unit_checks.js` is ~11s and `npm run provenance` ~6s;
 `npm test` is ~2.7 minutes of the user's wall clock, and the user waits through it.
 
 ```powershell

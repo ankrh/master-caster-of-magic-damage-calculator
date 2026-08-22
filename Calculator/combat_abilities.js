@@ -86,6 +86,13 @@ function weaponBonus(type) {
   }
 }
 
+// The option set of the `#aArmor`/`#bArmor` controls and of `MATRIX_ARMOR_OPTIONS`, kept beside
+// the weapon set because the two are one loadout. Armour has no bonus table: the whole of its
+// effect is `armor === 'orihalcon'` in `stats.js`, a positive predicate that reads every other
+// spelling as an ordinary suit rather than raising. This is the membership test that read is
+// guarded by (`SPEC.md`, *Out-of-range values stop the run*).
+const ARMOR_MATERIALS = Object.freeze(['normal', 'orihalcon']);
+
 // The six rungs of the experience ladder: the option set of the Unit Level control and of
 // `MATRIX_LEVEL_OPTIONS`. Membership is tested before `getLevelBonuses`' switches so `normal` --
 // level 1, Recruit -- keeps the zero row in each `default:` arm, while a seventh value stops the
@@ -454,7 +461,11 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // `slot` names which of the record's gates the engine's own test corresponds to. These are gate
 // names, not field names — several of them reach the same field and differ only in what the
 // engine tested before writing it:
-//   melee           the melee attack field
+//   melee           `B.attack > 0`: the **permanent** record's melee field carrying strength,
+//                   which is what every compiled melee-presence test reads
+//                   (Units.RecalculateUnits.pas:466, :543, :637, :2530). The base phase settles
+//                   that record, so the derivation supplies this one as a predicate over the run
+//                   context and it is called rather than read (F133)
 //   rtb             every secondary strength field the derivation carries: the DOS engines'
 //                   one shared `.ranged` slot, or one per modern attack channel
 //   ranged          `Caster.exe`'s narrow `unitT.ranged` — the conventional ranged attack only,
@@ -465,8 +476,17 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 //                   and every gaze field
 //   persistentRanged  `B.ranged > 0`: the permanent record's Ranged field carrying strength,
 //                   tested without regard to what the calculated record holds
-//   gaze            the two gaze strengths, which are fields of the DOS engines' shared
-//                   `.ranged` slot and independent fields in the modern ones
+//   doomGazeField   the modern record's independent Doom Gaze field, which is not a view of any
+//                   attack slot and takes a write only from a block that names it
+// and three that name the **DOS shared `.ranged` byte** by the test their own block makes on it.
+// One byte carries conventional ranged, Thrown, Breath and a gaze there, so each of these writes
+// the slot's strength field **and** the record's gaze mirrors of it (`channel.gazeMirrors`) —
+// one field, one gate (F135):
+//   rangedTyped     `bu->ranged_type != RAT_NONE`, the -1 sentinel and not a strength test, so a
+//                   gaze template shipping strength 0 takes the write
+//   rangedStrength  `bu->ranged > 0`, the byte's live strength at the block's own position
+//   rangedUngated   no gate at all: the write reaches the byte whatever stands in it, and the
+//                   region-`e` floor settles the result
 // `whereStrength` is an optional extra test on the slot's live strength, for the blocks that
 // make one (the aura pass's own `if U.ranged > 0`).
 //
@@ -474,15 +494,15 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // record strength field: the DOS engines run one, the modern engines one per attack channel.
 // Each slot carries its own `slots` gates and its own type fields, so one write lands on every
 // field the engine writes and on no other.
+const DOS_SHARED_SLOT_GATES = ['rangedTyped', 'rangedStrength', 'rangedUngated'];
 function addToSlot(u, ctx, slot, value, whereStrength) {
   const slots = (ctx && ctx.slots) || null;
   if (slot === 'melee') {
-    if (!slots || slots.melee) u.atk += value;
+    if (!slots || slots.melee(ctx)) u.atk += value;
     return;
   }
-  if (slot === 'gaze') {
-    if (!slots || slots.gaze) u.gaze += value;
-    if (!slots || slots.doomGaze) u.doomGaze += value;
+  if (slot === 'doomGazeField') {
+    if (!slots || slots.doomGazeField) u.doomGaze += value;
     return;
   }
   const channels = (ctx && ctx.channels)
@@ -492,13 +512,19 @@ function addToSlot(u, ctx, slot, value, whereStrength) {
     if (!slotGateAdmits(u, channel, slot)) continue;
     if (whereStrength && !whereStrength(u[channel.strengthField])) continue;
     u[channel.strengthField] += value;
+    // Only the three shared-byte gates carry the gaze mirrors with them. The modern gates name
+    // record fields that hold no gaze, so a write through one of those reaches no gaze.
+    if (!DOS_SHARED_SLOT_GATES.includes(slot)) continue;
+    for (const mirror of channel.gazeMirrors || []) u[mirror] += value;
   }
 }
 
 // The secondary-strength gates, resolved against the record the sequence is mutating rather than
 // predicted once before the walk (M14). Only `persistentRanged` is not a live read: it is
 // `B.ranged > 0`, a fact of the permanent record, which answers the same at every position and so
-// stays on the slot. A slot with no gates at all — a caller that supplied none — admits every
+// stays on the slot. `rtb` is the general dead-slot abstraction; the three DOS shared-byte gates
+// below transcribe one block's own test instead, which is what a gaze record needs because its
+// presence is a type fact and its strength may be empty. A slot with no gates at all — a caller that supplied none — admits every
 // write, which is the shape the DOS-shaped fallback channel above relies on.
 function slotGateAdmits(u, channel, gate) {
   if (gate === 'rangedField') return isRangedFieldSlot(u, channel);
@@ -511,7 +537,28 @@ function slotGateAdmits(u, channel, gate) {
   // each reaches its field while that field still stands empty and typeless, and the region-`e`
   // clamp settles the result. Being one of those two fields is all this gate asks (F100).
   if (gate === 'rangedOrThrown') return isModernRangedOrThrownSlot(u, channel);
+  // The three DOS shared-byte gates, each the test its own block makes on `bu->ranged` (F135).
+  // `rangedUngated` has no test: `bu->ranged--` at Black Prayer (131:0x907F0, com1:0x9054A) and
+  // `bu->ranged -= 5` at Mind Storm (131:0x9095E, com1:0x906D1) are unconditional stores, and the
+  // terminal floor settles what they leave behind.
+  if (gate === 'rangedUngated') return true;
+  // `bu->ranged > 0` — the live byte, which is CoM 1's Holy Bonus block (com1:0x900E8).
+  if (gate === 'rangedStrength') return u[channel.strengthField] > 0;
+  if (gate === 'rangedTyped') return dosSharedSlotTyped(u, channel);
   throw new Error(`unknown slot gate ${gate}`);
+}
+
+// `bu->ranged_type != RAT_NONE` — Black Channels (131:0x8F437), CoM 1's Animated (com1:0x8F4EB)
+// and CoM 1's Tactician hero grant (`> RAT_NONE`, com1:0x90AEC). `RAT_NONE` is the -1 sentinel,
+// so **every** type passes, the three gaze types (raw 103/104/105) included, and a Gorgon shipping
+// `Gaze(Stoning)` at Ranged 0 takes the write with its strength still empty. The calculator holds
+// a gaze type in neither of the slot's two type fields — `GAZE_TYPES` is not in `RANGED_TYPES` or
+// `THROWN_TYPES` (`data.js`) — so the record's gaze fact is the third term.
+function dosSharedSlotTyped(u, channel) {
+  if (!channel) return true;
+  return u[channel.rangedTypeField] !== 'none'
+    || u[channel.thrownTypeField] !== 'none'
+    || (!channel.isCoM2 && channel.gazeType !== 'none');
 }
 
 // A slot is **alive** when the record shows an attack standing in it: a type that names one, or
@@ -623,10 +670,13 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
           addToSlot(u, ctx, 'persistentRanged', hb);
         } });
     } else if (isCoMPlus) {
+      // CoM 1's ranged half is `if (bu->ranged > 0) bu->ranged += cl` (com1:0x900E8), a live
+      // strength test on the one shared byte — so it reaches a gaze only once that byte carries
+      // strength. MoM and CP have no ranged half at all (131:0x900C5 writes melee alone).
       abilityStep('holyBonus', 'a', { writes: ['atk', 'def', 'res', ...rtbWrites],
         apply: (u, ctx) => {
           addToSlot(u, ctx, 'melee', hb); u.def += hb; u.res += hb;
-          addToSlot(u, ctx, 'rtb', hb); addToSlot(u, ctx, 'gaze', hb);
+          addToSlot(u, ctx, 'rangedStrength', hb);
         } });
     } else {
       abilityStep('holyBonus', 'a', { writes: ['atk', 'def', 'res'],
@@ -644,11 +694,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       writes: ['atk', 'def', ...(isCoM1 ? rtbWrites : attackWrites), 'toHit'],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1); u.def += 1;
-        addToSlot(u, ctx, 'rtb', 1);
-        // CoM 1 writes the one shared slot, so the gaze strengths in it move too; the modern
-        // block writes ranged, Thrown and both Breaths separately and leaves the independent
-        // gaze fields alone.
-        if (isCoM1) addToSlot(u, ctx, 'gaze', 1);
+        // CoM 1 writes the one shared byte under `if (bu->ranged_type != RAT_NONE)`
+        // (com1:0x8F4EB), so the gaze strengths in it move with it and a strength-0 gaze
+        // template still takes the +1. The modern block writes ranged, Thrown and both Breaths
+        // separately and leaves the independent gaze fields alone.
+        if (isCoM1) addToSlot(u, ctx, 'rangedTyped', 1);
+        else addToSlot(u, ctx, 'rtb', 1);
         u.toHit += 10;
       } });
   }
@@ -747,7 +798,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     abilityStep('luckyStar', 'b', { writes: ['atk', 'def', 'res', ...rtbWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 1;
-        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'gaze', 1);
+        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'doomGazeField', 1);
       } });
   }
 
@@ -790,10 +841,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       writes: ['atk', 'def', 'res', ...(isModern ? attackWrites : rtbWrites)],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', -1); u.def -= 1; u.res -= 2;
-        addToSlot(u, ctx, 'rtb', -1);
-        // The DOS engines keep both gaze strengths in the shared slot this write reaches; the
-        // modern engines hold them in fields of their own that this block does not touch.
-        if (!isModern) addToSlot(u, ctx, 'gaze', -1);
+        // `bu->ranged--` is an unconditional store in every DOS build (131:0x907F0, com1:0x9054A)
+        // — no strength test and no type test — so it reaches the one shared byte whatever
+        // stands in it, gaze strengths included, and the region-`e` floor settles the result.
+        // The modern engines hold the gazes in fields of their own that this block never names.
+        if (isModern) addToSlot(u, ctx, 'rtb', -1);
+        else addToSlot(u, ctx, 'rangedUngated', -1);
       } });
   }
 
@@ -811,7 +864,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     abilityStep('innerPower', 'c', { writes: ['atk', 'def', 'res', ...rtbWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 3); u.def += 2; u.res += 2;
-        addToSlot(u, ctx, 'rtb', 3); addToSlot(u, ctx, 'gaze', 3);
+        addToSlot(u, ctx, 'rtb', 3); addToSlot(u, ctx, 'doomGazeField', 3);
       } });
   }
 
@@ -860,7 +913,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // this builder never receives. What stays here is the enchantment Flame Blade supersedes:
   // the engine's Metal Fires block will not fire while `UE_FLAME_BLADE` is set.
   const warlordBlade = version && version.startsWith('com2_warlord')
-    && (hasAbil(abilities, 'flameBladeWarlord') || hasAbil(abilities, 'fieryBlade'));
+    && hasAbil(abilities, 'fieryBlade');
   if (!(hasAbil(abilities, 'flameBlade') || warlordBlade)
     && hasAbil(abilities, 'metalFires') && !identityPredicates.liveFantastic) {
     // One compiled block, one step. `unitcalc.c` 131:0x9065F is the whole of Metal Fires, and
@@ -960,7 +1013,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       writes: ['atk', 'def', 'res', 'hp', ...rtbWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 2); u.def += 1; u.res += 1; u.hp += 1;
-        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'gaze', 1);
+        // `if (bu->ranged_type != RAT_NONE) bu->ranged += 1` (131:0x8F437) — the -1 sentinel and
+        // not a strength test, so a gaze template shipping strength 0 takes the +1 on the one
+        // shared byte.
+        addToSlot(u, ctx, 'rangedTyped', 1);
       } });
   }
 
@@ -992,7 +1048,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
         if (isModern) {
           addToSlot(u, ctx, 'rangedOrThrown', -5);
         } else {
-          addToSlot(u, ctx, 'rtb', -5); addToSlot(u, ctx, 'gaze', -5);
+          // `bu->ranged -= 5` is unconditional in both DOS families (131:0x9095E, com1:0x906D1),
+          // so it reaches the one shared byte with no strength or type test and the region-`e`
+          // floor settles the result.
+          addToSlot(u, ctx, 'rangedUngated', -5);
         }
       } });
   }
@@ -1054,7 +1113,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
         apply: (u, ctx) => {
           addToSlot(u, ctx, 'melee', 2); u.def += 2; u.res += 2;
           if (isCoM1) {
-            addToSlot(u, ctx, 'rtb', 2); addToSlot(u, ctx, 'gaze', 2);
+            // `if (bu->ranged_type > RAT_NONE) bu->ranged += 2` (com1:0x90AEC) — the sentinel
+            // test again, so the one shared byte takes it whatever type stands there.
+            addToSlot(u, ctx, 'rangedTyped', 2);
           } else {
             addToSlot(u, ctx, 'ranged', 2, strength => strength > 0);
           }
@@ -1133,7 +1194,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...rtbWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 2;
-        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'gaze', 1);
+        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'doomGazeField', 1);
       } });
   }
 

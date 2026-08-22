@@ -4,6 +4,525 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-22
+
+- **F136 — the card's roster statement now has one home: `applyUnit`.** `resetCardToRosterBase`
+  (`ui_card.js`) is gone; its seven writes (`Atk`, `Rtb`, `Def`, `Res`, `HP`, `ToHitMod`,
+  `HitChance`) are an inlined block in `applyUnit` beside the nine it already made, and its three
+  other call sites — both level-change handlers in `ui.js` and `applyMatrixCellToMain` in
+  `ui_matrix.js` — are deleted, leaving `applyUnit` the only caller. The record's one `Hit=` now
+  reaches `ToHitMod`, `ToHitRtbMod` and `HitChance` from the single `base.toHitMod` expression, and
+  `applyModernAttackFields` is called once instead of twice with the same argument.
+  **The row's three measurements were re-taken against the current tree, after F123, F133 and
+  F135 landed. (a) held, with larger counts:** the level-change reset was inert over 1,098 roster
+  units and 6,148 level changes across all five versions — every level option of every unit,
+  driven through the real `aLevel` handler — changing no control value, with 0 console errors (the
+  row's 907/3,943 were stale). **(c) held and was stronger:** on a card restored by `applyFullState`
+  holding values its record never gave it, a level change reverted 11 fields and left 7, not the
+  row's 9 and 5, in both `mom_1.31` and `com2_warlord_1.5.12.7`. **(b) held, but its stated reason
+  is incomplete.** By measurement the matrix's second call diffed nothing, because every rendered
+  cell names a roster unit and so has already run the whole statement through
+  `updateUnitLock` → `applyUnit`. The `unitId == null` branch, where the reset would have run
+  alone and clobbered the card, is unreachable — `buildMatrixCache` appends the selected-unit row
+  and column but publishes index lists built before the append, so no cell renders them. That is
+  filed as **F140**, not fixed here: it is a design question about what the matrix should show,
+  with no cited source to settle it.
+  **Nothing derived moved:** `tools/derivation_equivalence.js` is byte-identical across the change
+  (15,480 derivations, all five versions, sha256 `eacacec5…`), and the change touches only
+  page-scope sources. `tools/control_write_census.js` drops from 6 split-statement findings to 3,
+  with every finding naming this pair gone. `SPEC.md`, *UI contract* now states the level rule for
+  any selection rather than only for Custom, and says the roster record is stated exactly once.
+  Coverage: `tests/roster-statement-f136.spec.js`, whose level-change tests fail against the
+  unfixed code with exactly the 11 reverted fields. **One existing assertion encoded the retired
+  behavior and was re-aimed, not dropped:** `tests/custom-level-f42.spec.js`'s second test
+  asserted that a level change put the roster melee value back over a hand edit on a predefined
+  selection. It now asserts the whole card survives — eight fields, not the one it looked at —
+  that identity stays locked, and that the level still reaches the derivation; it fails against
+  the unfixed code too.
+
+- **F135 — the DOS shared `.ranged` byte now takes one gate per writing block, and the gaze
+  strengths follow it instead of carrying a second, static gate of their own.** **The row's
+  premise held exactly** against the tree as F133 left it: `com_6.08`, `gaze_stoning` at strength
+  0, Focus Magic + Black Prayer still derived `rtb 2` beside `gaze 3`. **Its proposed fix did
+  not.** Merging the gaze arm onto the `rtb` arm's `isLiveSlot` would have made the two views
+  agree while leaving both wrong, because three of the six DOS blocks test the record's
+  **type** sentinel and not its strength — `if (bu->ranged_type != RAT_NONE)` at Black Channels
+  (131:0x8F437) and CoM 1's Animated (com1:0x8F4EB), and `> RAT_NONE` at CoM 1's Tactician hero
+  grant (com1:0x90AEC) — so a Gorgon shipping `Gaze(Stoning)` at Ranged 0 takes those writes with
+  its strength still empty, and `isLiveSlot` says that slot is dead.
+  **Decision: per-site gates (option C of three offered).** Each of the six DOS
+  `addToSlot(…, 'gaze', …)` sites now names its own block's test on the one byte —
+  `rangedTyped` for the three above, `rangedStrength` for CoM 1's Holy Bonus
+  (`if (bu->ranged > 0)`, com1:0x900E8), `rangedUngated` for Black Prayer (`bu->ranged--`,
+  131:0x907F0, com1:0x9054A) and Mind Storm (`bu->ranged -= 5`, 131:0x9095E, com1:0x906D1), both
+  unconditional stores the terminal floor settles. `slots.gaze`/`slots.doomGaze` are retired: what
+  survives is `channel.gazeMirrors`, which gaze accumulators are views of that record's byte, and
+  that is the same **type** fact the region-`e` floor already asks (F122). A write admitted by one
+  of the three gates reaches the strength field and its mirrors together — one field, one gate.
+  `SPEC.md`, *The step model* now states that a step may name its block's own gate in place of the
+  dead-slot rule. **Merging onto `isLiveSlot` was rejected** for the reason above; **a full
+  retirement of `isLiveSlot` was rejected** as out of proportion — it stays the general rule, and
+  after this change its `rtb` gate has exactly three callers left, all modern, all named in F139.
+  **Folded in, at the user's decision rather than under the adjacent-defect bound:** the DOS gaze
+  level ladder (`stats_sequence.js`) applied `gazeLvlMod`/`doomGazeLvlMod` ungated while the
+  ranged arm beside it was gated. Every ranged step of both MoM ladders is
+  `if (bu->ranged > 0) bu->ranged++` — 131:0x8FA8E, 0x8FAD4, 0x8FB21 on the six-step normal ladder
+  and 0x8F8FB, 0x8F935, 0x8F961, 0x8F994, 0x8F9C7 on the nine-step hero one — and CoM 1's table
+  walk `continue`s the `dx == 1` field when the byte is `<= 0` (com1:0x8FAB2), so a strength-0
+  gaze template takes no ladder step. **This corrects a landed F122 expectation.** F122 read the
+  absence of a *type* gate as the absence of any gate and recorded
+  `hiddenGazeKeepsLevelLadderRaise` (MoM Champion, strength-0 gaze, 3). That preset is now
+  `hiddenGazeLevelLadderNeedsStrength` and expects 0; `doomGazeLevelLadderMoM` (`gaze_multiple` at
+  strength 4, Champion, 7) is the positive twin and is unmoved. F122's other preset,
+  `hiddenGazeKeepsFocusMagicRaiseCoM`, stands: CoM 1's Focus Magic arm 1 genuinely has no strength
+  test (com1:0x8F825, +3 at com1:0x8F82D).
+  **Measurement.** 83,160 `deriveUnitStats` inputs over five versions × 14 shared-slot types ×
+  three strengths × three levels × three unit types × 22 ability environments × two node auras,
+  current build against one whose three edited files are reverse-patched to their pre-F135 bodies:
+  **3,014 move — 934 `mom_1.31`, 934 `mom_cp_1.60.00`, 1,146 `com_6.08`, and 0 in `com2_1.05.11`
+  and 0 in `com2_warlord_1.5.12.7`**, as the row's scope requires. Nothing throws on either build,
+  and the only output fields that move are `rtb`, the gaze strength and the Doom Gaze strength.
+  Two classes move on records that carry no gaze: the type sentinel correctly denies Black
+  Channels a typeless record with strength (`rtbType 'none'`, strength 1: `rtb` 2 → 1, since
+  `bu->ranged_type` is the -1 sentinel there), and a DOS card carrying the `doomGaze` **ability**
+  with no gaze in its shared slot no longer takes shared-byte writes into a field the engine does
+  not have.
+  **Coverage.** Five presets, each browser-measured through `applyPreset` and confirmed red
+  against the unfixed bodies, one per gate class:
+  `hiddenGazeTakesBlackChannelsTypeGate` (`rangedTyped`, 1 against 0),
+  `holyBonusNeedsRangedStrengthCoM` (`rangedStrength`, 0 against 2 — the exclusion
+  `if (bu->ranged > 0)` makes on a Missile record at strength 0),
+  `hiddenGazeTakesBlackPrayerUngatedCoM` (`rangedUngated` and the row's own case, 2 against 3),
+  `hiddenGazeMindStormFlooredCoM` (`rangedUngated` past zero, 0 against 3) and
+  `hiddenGazeLevelLadderNeedsStrength` (the ladder, 0 against 3).
+  **Filed:** F139 — the three modern callers left on the `rtb` gate (Lucky Star, Inner Power,
+  Artificer) write attack channels and the independent Doom Gaze field their cited sources never
+  name. Not folded in because every number it moves is in a version this row required to be
+  verified unchanged.
+- **F123 — a restored control value the build no longer offers halts the restore instead of
+  blanking the control.** **The premise held, with one clause of it stale.** Measured on the
+  current tree: a saved `com2_1.05.11` blob naming `aModernRangedType: 'magic_c'` restored the page
+  with that select at `""` (`selectedIndex -1`), no console output, and `collectState()` re-saving
+  the `""` — so the blank propagated into the next save and any share link cut from it; the DOS
+  half (`aRtbType: 'beam'` in `com_6.08`) behaved identically with `rtb` left at 5. The row's stated
+  consequence, a Ranged record typed `''`, is no longer what follows: F133's `modernAttackRecord`
+  coerces `'' -> 'none'`, so the record read `{strength: 5, type: 'none'}` — a strength-5 ranged
+  attack of no projectile class, silent in the same way.
+  **Decision: validate at the restore boundary and fail loud** (`SPEC.md`, *Out-of-range values
+  stop the run*, and the new *Persistence and sharing* clause). `assertRestoredValuesAreOffered`
+  (`ui_state.js`) checks every `<select>` value in the blob against its control's options before
+  `applyFullState` assigns anything, and names each offender with the set that was expected.
+  `tryApplyState` already documented this exact case as one that would throw, so the recovery it
+  describes — clean defaults, a console report, and discarding the blob — now actually runs. The
+  check is general rather than a list of F93's four tokens, so the *next* option removal is loud
+  too.
+  **The stated migration was rejected on the evidence.** Three of the four retired values have no
+  single successor: pre-F93 `magic_c` covered both projectile id 30, today's `magic_lightning`, and
+  ids 31/33/36, today's `magic` (`tools/ranged_types.py`, before and after F93), and F124 made
+  those two tokens differ in derived damage — so a migration would guess, and could move a number.
+  `beam` on the DOS shared-slot select has no successor in any vocabulary, since the DOS engines
+  have the real realm table and no beam projectile. Where a successor *is* citable, the guard is
+  what forces the migration to be written rather than skipped.
+  **Scope.** The `SpecialUnit` pair is checked against the build's whole `SPECIAL_UNIT_DEFS`
+  vocabulary rather than the live option list, so a retired key halts while the existing
+  version-scoped clamp to `none` is untouched; `gameVersion` and the roster selects keep their own
+  handling.
+  **Folded in, because the guard is unfounded without it: the page was writing an unofferable
+  value itself.** The shared-slot select has no spelling for the modern-only projectile tokens, and
+  both writers assigned one blind — `applyPreset` from a fixture's `rtbType` and `applyUnit` from a
+  roster record's ranged type (Warlord [362] Wanderer is `magic`). Measured across all 1058
+  presets, **42 left `#aRtbType` blank**, and `collectState()` on such a state threw inside
+  `getDefaultIds`' restore. Both now go through `setSharedSlotRangedType` (`ui_card.js`), the
+  writer counterpart of the existing `sharedSlotRangedType` reader: it writes the token when the
+  slot offers it, projects a modern-only token onto `none` — which is what that reader already
+  prefers the modern selector for — and throws on a token neither family has.
+  **No derived number moves.** Five versions x {shipped defaults, a custom pair driving every
+  attack channel the version has, that state through a full save-restore round trip} is
+  byte-identical with the guard present and removed; and the full preset sweep, all 1058 presets
+  across all five versions, is byte-identical with the writers reverted and with them fixed
+  (**42 blank selects before, 0 after**).
+  **Coverage.** Three cases in `tests/persistence.spec.js`, each confirmed red against the unfixed
+  code. Two, one per engine family, seed a saved blob naming a retired token and assert the
+  reloaded page's `collectState()` equals the fresh-page blob and that the console report names the
+  control and the value — unfixed, the page restored the saved version with a blank select and
+  reported nothing. The third asserts no `#calcMain` select is left with `selectedIndex -1` after a
+  `magic`-typed fixture and after the Wanderer roster record, and that `collectState()` does not
+  throw.
+  **Filed:** F138 — the two substitutions this change deliberately left standing. An unmappable
+  version id still falls back to `DEFAULT_GAME_VERSION`, which reinterprets every other id in the
+  blob under a different rule set, and `populateSpecialUnitOptions` still clamps an unrecognised
+  special-unit key to `none` outside the restore path. Both are documented existing decisions, so
+  changing them is a decision with no cited source rather than a transcription — the
+  adjacent-defect bound's second clause.
+  Checks: `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas, 270
+  verified, 0 UNVERIFIED; `npm test` 122 passed.
+- **F133 — every melee-presence gate now reads the permanent record through `ctx.base`, not the
+  card's `atk` input.** **The row's premise held exactly.** A Warlord custom unit at `atk 0` with
+  Natural Selection: Coal traced `base:naturalSelection:coal` writing `atk 0 -> 1` and `e:clamp`
+  writing `atk 1 -> 0`; Ludus/Agoge (`1`), Mother Fungus (`2`) and an Altar of the Sun Holy Mother
+  (`1`) each traced the same pair, and the same unit with a magic weapon showed `hitchancemelee`
+  +10 beside melee 0, which is the symptom F120 exposed.
+  **Decision: read the permanent record, which is `ctx.base`.** `CreateUnit.CAS` writes `SAttack`
+  at `ABase` ungated on the field's current value (`:346`, `:360`, `:448`, `:552`, and `:616` for
+  the Malnourished `-1`), and every compiled melee-presence test reads that record —
+  `if BaseUnits[i].attack > 0` at `applynodeaura` (`Units.RecalculateUnits.pas:466`), the level
+  ladder (`:543`), `ApplyMagicWeapons` (`:637`) and the Holy Bonus aura (`:2530`). Those writes are
+  already `base`-phase steps, so `SPEC.md`, *The step model*, already names `ctx.base` as what a
+  later region reads, and `c:weapon`'s `weaponMeleeOpen` already reads it (F120). `hasMeleeAttack`
+  became the predicate `hasMeleeAttackAt(runCtx)`, keeping the two live-creation exceptions
+  (Marionette, True Light) as terms of their own, and `ctx.slots.melee` became that predicate so
+  the aura pass's `addToSlot(u, ctx, 'melee', …)` asks it too. **Naming the four grants in the
+  predicate was rejected** — it copies the base sequence's arithmetic into a second place, and
+  `SPEC.md` calls the permanent record "not a snapshot of convenience". **Recording the current
+  reading as a deliberate deviation was rejected** because the aura and node-aura gates are cited
+  `B.attack > 0` transcriptions, so the old reading was wrong there, not a modelling choice.
+  **Folded in under the adjacent-defect bound:** `modernNodeBaseMelee` (`stats.js`), the node
+  aura's own melee gate, carried the identical defect one variable away — its comment already said
+  "persistent BaseUnits.attack" while the code read `calcBaseAtk`. It is cited
+  (`Units.RecalculateUnits.pas:466`, whose decode note calls out that this gate alone reads
+  `BaseUnits`), it moves nothing outside the item's version scope, and it has its own preset. It is
+  now the step's own `runCtx.base.atk > 0` read and the variable is gone.
+  **Measurement.** 217,600 `deriveUnitStats` inputs over five versions x 34 ability environments x
+  five races x two names x four melee strengths x four unit types x two weapon materials x two node
+  auras x two levels, current build against one whose two predicates are substituted back to the
+  card's input: **1,520 cases move, all of them in `com2_warlord_1.5.12.7`; `mom_1.31`,
+  `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11` move 0**, as the row's scope requires. A second
+  340,200-input sweep exercising the six realm races, four node auras, five attack-slot types and
+  three levels reports the same split — 1,535 moved, again all Warlord. Only the five Warlord
+  permanent melee writers reach it, so no other version has a base-phase melee write to read.
+  **Coverage.** Four presets, each browser-measured through `applyPreset` and confirmed red against
+  the unfixed predicate: `naturalSelectionCoalCreatesMeleeWarlord` (`dmgToA` 1.000 against 0.000),
+  `naturalSelectionCoalOpensHolyBonusWarlord` and `naturalSelectionCoalOpensNodeAuraWarlord` (3.000
+  against 0.000), and `malnourishedClosesMeleeSlotWarlord` (`dmgToB` 0.000 against 2.000), which
+  holds the other direction: a permanent record driven to 0 shuts the slot, and that exclusion is
+  the rule under test. The node-aura preset discriminates the folded-in half on its own — with the
+  aura gate alone left unfixed it measures 1.000, not 3.000. The three Coal presets put the granted
+  unit on the **defending** card because F137 below blocks the attacking one. Two existing presets
+  changed number as a consequence and were re-expected: `ludusAgogeResistanceWarlord` and
+  `ludusAgogeHpWarlord` both give their Orc defender a permanent melee 1 it did not have, so each
+  now counterattacks for `dmgToA` 0.300.
+  **Filed:** F137 — `resolveCombat`'s melee-initiation guard (`combat.js`) is the same defect one
+  layer out: outside `mom_1.31` it admits the exchange on `a.baseAtk`, the card input, so a Warlord
+  attacker whose melee exists only because `CreateUnit.CAS` granted it cannot start a melee
+  exchange at all even though its derived melee is now correct. Not folded in because the guard
+  carries no `PROVENANCE` citation on either arm, so correcting which record it reads is not a
+  transcription — the adjacent-defect bound's second clause.
+  Checks: `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas, 270
+  verified, 0 UNVERIFIED; `npm test` 119 passed.
+- **F122 — the DOS gaze strengths now take the same floor as the shared slot they are views of,
+  and the engine keeps no zero test of its own.** The row's premise held exactly against the code
+  as F60/F106/F125/F116/F117/F118/F119/F120/F121 left it: on a `com_6.08` `gaze_stoning` template
+  at strength 0 with Focus Magic, `c:focusMagic` writes `gaze 0 -> 3` and `rtb 0 -> 3`, then
+  `e:clamp` writes `gaze 3 -> 0` and leaves `rtb` at 3, and Night Stalker (`Gaze(Death)`) and
+  Gorgons (`Gaze(Stoning)`) both still ship `Ranged 0` on the shipped roster. F60's DOS gaze
+  delivery change does not interact: it scales the *hidden component* by attacking figures and
+  reads the same strength this floor decides.
+  **The row's two candidate rules were both wrong, and reading the delivery path is what settled
+  it.** The recompute's terminal floor is one ungated `if (bu->ranged < 0) bu->ranged = 0` over one
+  field (`unitcalc.c` 131:0x90B2F 160:= com1:0x90B54), with no base-value test and no
+  slot-presence test beside it, and the delivery path reads that same byte —
+  `attack_strength = (int8_t)bu->ranged` (`combat.c` 131:0x99B0B 160:= com1:0x99AF1), which the
+  automatic-damage arm at `0x9A1E6` hands over whole for type 104 and `CMB_AttackRoll` rolls for
+  103 and 105. So the engine keeps no separate zero test. But `isLiveSlot` is not the answer
+  either: a gaze's presence in the DOS record is a **type** fact, and MoM's level routine
+  increments the byte with no `ranged_type` gate at all, so a strength-0 gaze template at Champion
+  reaches `bu->ranged = 3` with `rtb`'s own live predicate still false. The floor now asks the type
+  — `hasGazeRangedSlot` / `hasDoomGazeSlot` (`stats.js`) — and floors at 0, which is what the one
+  field does. The same predicate replaced `baseDoomGaze > 0` on the DOS Doom-damage projection into
+  `combatAbilities`, so a type-104 record no longer lets the raw ability input through when its
+  strength is not positive — `dosGazeAbilityValues` already states that the byte contributes
+  nothing there.
+  **Measurement.** 87,360 `deriveUnitStats` inputs per run over every `rtbType` token x four
+  strengths x six levels x thirteen co-ability environments x four battlefield states: 4,376 move,
+  1,556 in `mom_1.31`, 1,556 in `mom_cp_1.60.00` and 1,264 in `com_6.08`, and **0 in
+  `com2_1.05.11` and `com2_warlord_1.5.12.7`**, as the row's scope requires. Every moved case is a
+  gaze type at strength 0 or below; only `gaze`, `doomGaze` and the projected Doom-damage ability
+  move. The control-surface digest moves 0 of 15,480 — its shapes carry no zero-strength gaze,
+  which is where the defect lived. Two presets hold the two ways the byte gets raised,
+  `hiddenGazeKeepsLevelLadderRaise` (MoM Champion, the ladder) and
+  `hiddenGazeKeepsFocusMagicRaiseCoM` (CoM 1 Focus Magic arm 1), both confirmed red against the
+  unfixed body (0 against an expected 3) and green after; no other preset moved, out of 1,054.
+  The ladder half of that reading was wrong and F135 above corrects it: the MoM ladder has no
+  *type* gate but does test the byte's strength, so that preset is now
+  `hiddenGazeLevelLadderNeedsStrength` and expects 0.
+  **Nothing was folded in.** The fix made a second defect observable and it is filed as
+  [F135](./BACKLOG.md): `addToSlot`'s gaze arm gates on a static `baseGazeRanged > 0` where the
+  `rtb` arm beside it at the same call sites asks `isLiveSlot`, so the same `com_6.08` template
+  with Focus Magic and Black Prayer now derives `rtb 2` beside `gaze 3`. Merging those gates needs
+  each of the ten call sites' engine blocks read, which fails the adjacent-defect bound.
+  [F133](./BACKLOG.md) is the other open `e:clamp` record-read question and wants different lines
+  — the melee arm's `hasMeleeAttack`, not the gaze arms — so the two are independent.
+
+- **F121 — the card and the matrix now read a roster unit's modern attack record through one
+  reader, and its "unreachable today" premise was false.** The row claimed only heroes reach a
+  record that states no attack, and that `populateUnitDropdown`'s `category === 'Heroes'` drop
+  therefore hides the divergence. **Measured 2026-08-22 against the code as
+  F60/F106/F125/F116/F117/F118/F119/F120 left it: 84 of the 159 CoM2 picker units and 135 of the
+  296 Warlord ones state no attack** — every melee-only unit does, Gnoll Spearmen through Minotaurs
+  — so the divergence was reachable from any matrix row with a channel-creating enchantment ticked,
+  all of which are `source: 'enchantment'` and so reach every roster row. The row's five named
+  effects were also short: `flameBlade`, `shadowStrike`, `dragonMound` and the Marionette pair seed
+  channels too. Its measurement unit, the Warlord Wanderer, is a hero and was never in the picker.
+  **The engine decides which reader is right.** `unitT` holds the four strengths as fixed fields —
+  `ranged` +0x24, `thrown` +0x2C, `firebreath` +0x30, `lightningbreath` +0x34 ([CoM2 binary - unit
+  recalculation.md](../Reference%20docs/Caster%20binary/CoM2%20binary%20-%20unit%20recalculation.md),
+  record layout) — so a record with no attack is four empty fields, not the absence of a record,
+  and the card's reading was the faithful one. `modernAttackRecord` (`ui_units.js`) is now the one
+  place that shape is decided; `modernCardAttacks` and `predefinedModernAttacks` both return it,
+  the latter taking the version so that `null` means only *this version has no modern record* — the
+  same answer the card gives off CoM2/Warlord.
+  **What moved, measured over every roster unit of all five versions under nine effect states.**
+  Melee: 144 of 344 Warlord rows under Flame Blade, which had no legacy-slot arm to hide behind
+  (Beastmen Swordsmen 7.151 → 7.119, the card's answer). Ranged: 99 Warlord rows under Lightning
+  Blade, where the legacy slot was being delivered as a conventional volley (0.148 → 0). Nothing
+  moved in `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` or `com2_1.05.11`. Focus Magic and Chaos
+  Channels changed the derived record on both modern versions without moving a number, because
+  their writes also landed on the DOS-shaped shared slot — the reads [F127](./BACKLOG.md) owns,
+  which this change deliberately does not touch. Verified in the browser: for all 455 modern picker
+  units the two readers now return identical records, and on the Beastmen Swordsmen the card and
+  the matrix derive the same channel and the same mean under Focus Magic, Flame Blade, Chaos
+  Channels and Lightning Blade. `tests/roster-smoke.spec.js` carries the guard.
+
+- **F120 — the material block's melee half now makes each engine's own melee-presence test.**
+  Both halves of the row's premise held against the code as F60/F106/F125/F116/F117/F118/F119 left
+  it: `unitcalc.c` still wraps `bu->melee += quality - 1`, `Gold_Melee` and `melee_tohit++` in
+  `if (bu->melee > 0)` (131:0x8F041, 160:0x8F053, com1:0x8F03A), and `c:weapon` (`stats.js`,
+  `weaponStatSteps`) still wrote `u.atk += wpn.atk` unconditionally while its To-Hit half made the
+  test. Its third clause — *"a zero-strength melee slot therefore takes a bonus the engine
+  withholds"* — is **half falsified**: `e:clamp` already discards the phantom melee for a unit whose
+  card melee is 0, so the bonus is invisible in the ordinary case and only escapes where a later
+  step reads it. The escapes are what moved.
+  **The modern engine does make the same test, on the other record.** `ApplyMagicWeapons` wraps
+  `hitchancemelee`, `attack` and `attackbonus` in `if BaseUnits[i].attack > 0`
+  (Units.RecalculateUnits.pas:637-642, $00598F43), under that file's own note that all
+  material-presence and melee-presence tests there read `BaseUnits`. So the fix is all five
+  versions, as one predicate over two records: `weaponMeleeOpen` reads live `u.atk` on the DOS arm
+  and the permanent `runCtx.base.atk` on the modern one, and both halves of the block share it —
+  which also retired the To-Hit half's `u.atk - wpn.atk > 0` reconstruction of the pre-write value,
+  now provably equal to `u.atk > 0` because the strength write only ever adds where that was
+  already positive. Defense stays outside the gate in both engines.
+  **The permanent-record read is load-bearing, not a refinement.** The To-Hit half previously read
+  `inputBaseAtk`, the card field, and the measurement showed that disagrees with the engine in both
+  directions on Warlord, where `CreateUnit.CAS` writes melee into `ABase`: Malnourished (−1) leaves
+  a card melee of 1 with a permanent 0, and Natural Selection: Coal (+1) the reverse.
+  **Measurement.** 1,110,980 derivations before and after — 587,520 solo (5 versions x 8 attack
+  shapes x 3 identities x 2 levels x base melee 0/1/4 x 4 materials x each of 203 ability keys
+  alone, plus a no-ability baseline), 410,060 ability-pair, and 113,400 over the non-ability
+  inputs. **334 + 1204 + 1292 cases move**, every one of them carrying a weapon material, none of
+  them above base melee 1 in the sweep that varied it, **through five ability keys and no others:**
+  `com_6.08` Supreme Light (the one CoM 1 effect that widens the terminal slot clamp for a
+  melee-less unit), and Warlord `blazeOfGlory`, `shadowStrike`, `coal` and `malnourished`.
+  `mom_1.31`, `mom_cp_1.60.00` and `com2_1.05.11` do not move at all. No shipped roster template
+  reaches it: the moving Warlord keys are all Custom-card enchantments.
+  **Coverage.** Two presets, browser-measured through `applyPreset` and confirmed red against the
+  unfixed code: `weaponMaterialDosMeleeGateIsLiveRecordCoM1` (2.000 against 4.000) and
+  `weaponMaterialMeleeGateReadsPermanentRecordWarlord` (4.000 against 6.000). The second
+  discriminates all three candidate readings — no gate and a gate on the card's melee input both
+  measure 6.000, checked by evaluating each variant in the page. No Node assertion was added: the
+  damage numbers bind the claim and an `atk === 2` check would restate the implementation.
+  **Nothing was folded in. Filed:** F133 — `e:clamp`'s `hasMeleeAttack` reads the card's melee
+  input too, so a Warlord unit whose melee exists only because `CreateUnit.CAS` granted it derives
+  melee 0; F120 makes that visible from the other side, since such a unit now takes the material's
+  `hitchancemelee` beside a zeroed melee strength. Not folded because the slot zeroing is the
+  calculator's convention with no cited engine source, which fails the adjacent-defect bound's
+  second clause. Checks: `node tools/node_unit_checks.js` 14387/14387; `npm run provenance`
+  270 formulas, 270 verified, 0 UNVERIFIED; browser `runTests()` 1052/1052; `npm test` 116 passed.
+- **F119 — the card cannot hold a ticked Ranged it does not run, so neither a halt nor a new
+  notice was warranted.** **The row's premise is falsified.** It reported the fallback in
+  `recalculate` (`ui.js:229-232`, still exactly as described) and never looked at
+  `updateTypeVisibility` (`ui_abilities.js:546-554`, in place since `07c272a`), which recomputes
+  the *same* predicate off the same `readUnitStats('a')` and, when it fails, clears the box,
+  disables it and greys its label. All 13 `recalculate()` call sites are preceded by it, and
+  nothing between the two reads writes a control value. Measured in the browser over seven removal
+  routes — zeroing the DOS strength, retyping the shared slot to `none`/gaze/Thrown, switching to
+  either modern version, emptying the modern Ranged channel, selecting a ranged-less roster unit —
+  the tick
+  never survives: it is withdrawn in the same interaction, visibly, and the damage moves with it
+  (3.640 ranged → 2.429 melee on the DOS case). So the row's *"no error and no visible change of
+  state"* is wrong on the second half, and its worked example is stale too:
+  `weaponMaterialDosMissileHasNoStrengthGateMoM` now resolves **ranged** for 2.000 with the box
+  ticked and enabled, because F109 gave it a real Missile 2. **Decision: this is normalization of a
+  card the user is still editing, not a fallback**, so *Out-of-range values stop the run* does not
+  reach it — nothing is invented, and the withdrawal is on the control itself. That squares with
+  F112/F116/F117, which stop where an input the UI cannot produce would otherwise be replaced by an
+  invented value, and with F118, which left a control inert rather than halting where the UI
+  already prevents the bad state. **Recorded** as a `SPEC.md` UI-contract rule, the only change
+  made; the ranged matrix's equivalent (omit an attacker with no ranged attack,
+  `ui_matrix.js:441-445`) is stated in the same bullet. No code, preset or test change, so no
+  behavior moved.
+- **Folded in:** nothing. **Filed:** F131 — the one place the mismatch is reachable is
+  `applyPreset`: of 1050 presets, 243 state `rangedCheck: true` and 3 resolve melee, all three with
+  provably inert `rangedCheck`/`rangedDist` (removing them, or distance 20, moves neither number),
+  which makes `blazeOfGloryThrownTakesNoDistancePenaltyWarlord` vacuous on the distance penalty it
+  is named for. F132 — the predicate has three copies and the `ui.js` one is unreachable.
+- **F118 — Flame Blade is one derivation input again, whichever control supplies it.** Premise
+  re-measured against the code as F60/F106/F125/F116/F117 left it, and it held exactly: a
+  `com2_warlord_1.5.12.7` derivation with `flameBlade` set finished melee **8** from a base 5
+  while Ranged 4, Thrown 3, Fire Breath 2 and `weapon: normal` all declined; `enchantments.js:34`
+  still carried `exceptVersions: ['com2_warlord_']`; and `abilityVersionGated` still hides the
+  control there. **Shape chosen: route the Warlord control to the one key**, not an `!isWarlord`
+  term on the melee gate. The two controls are one effect — an arcane unit ability in Warlord, the
+  wizard spell elsewhere — setting one record flag and running the one block `PROVENANCE[flameBlade]`
+  cites for all five builds, and they are disjoint by version, which is exactly the shape
+  `disciplineWarlord` → `discipline` already uses beside it. A version term on the step would have
+  said Warlord's engine makes no such write, which is false. `flameBladeWarlord` therefore takes
+  `calcKey: 'flameBlade'`, `warlordCombatFlameBlade` (`stats.js`) reads the merged key, and the
+  step's melee gate reads `nonWarlordFlameBlade` like its strength half. In Warlord the one input
+  now yields the ability's own +3 melee, +2 missile/Thrown, +1 Fire Breath and magic weapon.
+  **Verified:** `tools/derivation_equivalence.js`, 15,480 derivations, 248 differing cases — and
+  every one of them sets a Flame Blade control: 43 per non-Warlord version, all of them cases
+  setting `flameBladeWarlord`, a control those four builds do not have, and 76 in Warlord, of which
+  33 are the `flameBlade` input's real arithmetic and 43 only rename the echoed key. No reachable
+  input moves outside `com2_warlord_1.5.12.7`. **No preset can cover this and none was added** —
+  the UI clears a version-gated control, the F111 wall — so the coverage is 11 assertions in
+  `tools/unit_checks/derive_unit_stats.js`; 6 fail against the unfixed code. No `SPEC.md` change:
+  *Versions* and *Version scope* already state the rule and the several-controls-one-`calcKey`
+  mechanism.
+- **Folded in:** nothing. **Filed:** F130, with the survey the row's second question asked for.
+  `tools/hidden_control_leak_sweep.js` enumerates every (`calcKey`, version) pair whose every
+  naming control is version-hidden and measures both tiers: after this change **485** such pairs,
+  of which **1** moves a derived stat (`rulerOfUnderworld` in `com_6.08`) and **10** move a
+  `resolveCombat` number over four keys (`eldritchWeapon`, `bloodLust`, `mysticSurge`,
+  `rulerOfUnderworld`). So the answer to "does every hidden control need the same guard" is:
+  four do, three of them only at resolution time where no derivation-layer guard can see them —
+  and fixing any moves a number in a version outside this row's scope, which is why they are
+  filed rather than folded.
+
+- **F117 — the version-scope sweep now names real projectile tokens, and a stated armor quality
+  outside the option set stops the run.** Premise re-measured against the code as F125 left it.
+  **(a)** held with one correction: the `rtbTypes` list did carry `ranged`, `stoning`, `death` and
+  `doom`, which name nothing in either vocabulary, and did omit the seven `#aRtbType` options the
+  row lists plus `magic_lightning` — but **not** `boulder`, which the list already held. Eight
+  tokens were missing, not nine. **(b)** the true call-site count is **37**, not ~40: 35 `'none'`,
+  one `'plate'` and one `'mithril'`, across 12 `tests/*.spec.js`, `tools/unit_checks/assertions.js`,
+  `tools/bench_derive_unit_stats.js` and `tools/derivation_equivalence.js`. **Spelling:** `normal`,
+  the option both `#aArmor`/`#bArmor` and `MATRIX_ARMOR_OPTIONS` define as the no-material member,
+  and the value the ineligible-unit gate already substitutes. **Stop:** yes. `deriveUnitStats`
+  checks the stated value against `ARMOR_MATERIALS` (`combat_abilities.js`, beside
+  `WEAPON_MATERIALS`) *before* the MoM/hero/loadout gate rather than after, because that gate
+  discards the input in exactly the cases a caller is most likely to have got wrong; an absent
+  field stays the control's default, as it is for the City walls position beside it. **The sweep
+  list is now derived** from `RANGED_TYPES`/`THROWN_TYPES`/`GAZE_TYPES` rather than transcribed, so
+  a widened vocabulary reaches it without an edit — 14 tokens, 4400 → 6160 derivations, and all
+  three emptiness inventories stayed empty, so the widening surfaced **no** out-of-scope step.
+  Two harnesses that named the armor axis now exercise it: `derivation_equivalence.js`'s `gear`
+  env and the bench's equipped CoM2 case take `orihalcon`. **All five versions verified unchanged:**
+  with only the spellings and the stop in place, `tools/derivation_equivalence.js` reports 0
+  differing cases over 15,480 derivations; flipping `gear` to `orihalcon` afterwards moves 312
+  cases, all of them Orihalcon's own +1 Resistance and +2 magic ranged (and the Warlord Life Steal
+  modifier that reads Resistance), in `com_6.08`/`com2_1.05.11`/`com2_warlord_1.5.12.7` only — MoM
+  has no armor quality and shows none. **The reintroduction check is bindable and bound:**
+  `tests/fail-loud-f113.spec.js` gains a twelfth case handing `armor: 'plate'` to
+  `deriveUnitStats`, requiring a throw that names the value. No `SPEC.md` change: this applies
+  *Out-of-range values stop the run* at one more site.
+- **Folded in:** nothing. **Filed:** F129 — the sweep's shared slot is still empty (`rtb: 0`), so
+  the corrected token list gains no applied step by itself; a positive strength adds six Warlord
+  writes and strength 0 uniquely keeps one, but sweeping both takes the check from ~11s to ~20s,
+  which is a cadence decision rather than a defect.
+
+- **F116 — the two Warlord `Special` units reach both pickers, and an unordered bucket now
+  throws.** Premise re-measured over all four rosters: `populateUnitDropdown`'s `categoryOrder`
+  still dropped an unnamed bucket silently, `Special` was still the only unnamed one, and its two
+  members still passed the `CreateOutpost`/`Floating Island` exclusions. **The row's ids were
+  wrong** — the records are `[218] Ballista` and `[257] Fire Galley` in `units_warlord.js` and in
+  `UNITS.INI`; 36 and 54 name nothing. `Race=14` held. **Placement:** `Special` is race id 14 in
+  the engine's own race table, between the named races and the realm ids, and both modern
+  generators read it through that table rather than the realm one, so it is a non-race, non-realm
+  bucket and sits beside `Other`, after the races and before `Generic` — which is where it renders,
+  between Goblin and the Generic block, on the card combobox and on both matrix axes.
+  **Fail-loud:** the emit loop now throws on a bucket `categoryOrder` does not name, naming the
+  category, its units, the roster version and the expected set, per `SPEC.md`, *Out-of-range values
+  stop the run*. This is the only place an unenumerated category is checked at all: the DOS roster's
+  category is the source's race column copied verbatim (`tools/parse_tweaker_unit_data.py`), unlike
+  the modern generators, which raise on an unmapped `Race=`. Verified in the browser: Warlord's
+  pickers go 294 → 296 units on both sides and both matrix axes, the other four rosters stay at
+  148/148/156/159 with unchanged category lists, and both units select cleanly onto the card
+  (Ballista melee 0, ranged 8 missile, To Hit 50; Fire Galley melee 14, ranged 11, fire breath 8)
+  with no console errors. `roster-smoke.spec.js` iterates the picker's own flat list, so it now
+  covers both units without an edit. No `SPEC.md` change: the picker's grouping is not specified
+  there, and the throw applies an existing rule.
+- **Folded in:** nothing. **Filed:** F128 — `categoryOrder`'s `Other` entry, which no roster in any
+  of the four can produce and which the new throw therefore makes an unsatisfiable enumeration
+  member.
+
+- **F125 — the modern card now carries the record's five To Hit fields, each with its own
+  displayed projection.** Premise re-measured first and held: `ui_card.js:434`, `stats.js:1787`,
+  `stats_sequence.js:69-77` and `combat_phases.js:366` were all where the row said, and the
+  disputed preset-side count re-derived to **187**, not 183 — the committed census is
+  `tools/preset_attack_notation_sweep.js` (1086 modern custom sides: 187 DOS pair, 2
+  `modernAttacks`, 897 with no secondary attack; both failure classes empty; 196 sides carrying a
+  non-zero `toHitRtbMod`, 175 of them beside a pair). **Landed:** `com2*` cards replace the
+  `#aToHitMod`/`#aToHitRtbMod` pair with the record's own five — the common `hitchance`
+  keeping the `30% +` prefix, plus `hitchancemelee`, `hitchanceranged`, `hitchancethrown` and the
+  one `hitchancebreath` that serves both breath strengths — while DOS keeps its pair unchanged.
+  Each of the five carries a `.mod-val` projection, and the four modifier rows resolve the
+  threshold the roll compares against, carrying the ranged distance penalty and the 10..100
+  attack-roll bound; that is one `buildChanceProjection` per hitchance field rather than per
+  output channel, so one breath row answers for both breath channels. The worked example the row
+  filed is fixed: missile Ranged 5 + Thrown 5 with Holy Weapon now reads 50/50/40 across the
+  ranged, thrown and breath rows against the single 40% row it showed before, and retyping Ranged
+  to `magic` shows ranged 40% beside thrown 50%. `base:baseHitChance` is a new modern-only seed
+  step; `baseRtb`'s `baseToHitRtbMod - baseToHitMod` compensation is gone; `modifierTraces`
+  renames the legacy row to `toHitShared` and adds `toHitCommon`/`toHitRanged`/`toHitThrown`/
+  `toHitBreath` for modern only. Passing a version's foreign To Hit field now halts
+  `deriveUnitStats` and `applyPreset` instead of writing a control nothing reads, and the roster
+  `Hit=` seeds the common field. All 378 + 196 modern preset sides were restated in the five
+  fields. **Not landed, and refiled as F127:** the row's claim that the attack half was “notation
+  debt rather than a live defect” is false. Migrating the 187 pair-sides to `modernAttacks` and
+  diffing every preset through browser `runTests()` moved 24 of 1050 presets, 19 to zero damage,
+  because the modern melee-initiation guard, `breathExists`, Focus Magic's and Lightning Blade's
+  slot lists and the Alumni/Energy Cannon/permanent-ranged reads all consult the DOS-shaped shared
+  slot rather than the four channels. That half was reverted; the same before/after diff over all
+  1050 presets moves **nothing** for what did land.
+
+- **F106 — MoM 1.31's second `BU_Apply_Specials` call now has a chain position of its own.** The
+  premise held on re-measurement: the two callers are still 131:0x8F2A2 and 131:0x90A1D, 1.31 still
+  passes `mutations` whole where CP 1.60 and CoM 1 pass 0 (`unitcalc.c`), and the three Chaos
+  Channels blocks still sit at one position in `CHAIN_MOM_1_31`. **The work the row asked for
+  first, done exhaustively:** of the ten writes the recompute makes to the shared slot ahead of
+  0x90A1D, only three can reach a unit the fire-breath block admits — the Chaos node aura
+  (0x8FF97), Black Prayer (0x907F0) and Mind Storm (0x9095E). Leadership (0x90075) and Weakness
+  (0x90925) are excluded by the race and projectile-class gates, True Light and Darkness
+  (0x903F7/0x9048B/0x90542/0x905D5) by their `rt_Life`/`rt_Death` tests, and Metal Fires (0x906FC)
+  by its missile-or-Thrown type test — all four because the mutation itself writes `race = rt_Chaos`
+  and `ranged_type = RAT_FIRE_BREATH`, and nothing between the two calls writes either field back.
+  Prayer, which the row named, writes no attack strength at all. **Decision: model the second
+  position**, because the fold is lossy in a state a user can select. Measured on `mom_1.31` before
+  the change: a Chaos-node CC breather derived slot 4, Black Prayer 1 and Mind Storm 0, where the
+  engine re-assigns 2 in all three; after it, 2 in all three, with `mom_cp_1.60.00` (4) and
+  `com_6.08` (6) unmoved. `c:chaosChannels:fireBreath:recompute` is the new `mom_1.31`-only step,
+  chained between `c:mindStorm` and `c:warpAttack`; its gate and write are the same block as
+  `c:chaosChannels:fireBreath`, stated once. The armor half stays folded as one `+6` and is now
+  recorded in `SPEC.md`, *Deliberate deviations*: every write between the two calls is an addition
+  and the only Defense clamp is terminal, so the fold is exact — unfolding it would instead expose
+  the modelled `c:berserk` `def = 0` shortcut, which stands in for the engine's never-observable
+  `−20`. Held by the version-difference pair `ccFireBreathRepeatsAtRecompute131` (5.000, 7.000
+  against the unfixed code) and `ccFireBreathRecomputeFixedCP` (7.000), identical but for `version:`.
+- **Folded in:** nothing; nothing was filed.
+- **F60 — the DOS engines' per-figure Doom Gaze delivery is now modelled, and the deviation is
+  retired.** Both open questions resolved against the sources. (1) Reachable: `#aRtbType` offers
+  `gaze_multiple` on the DOS card and `#aFigs` accepts 1–9 on a Custom unit, so a multi-figure
+  Doom Gaze is one selection away even though Chaos Spawn, the only `Gaze(Multiple)` unit in
+  either DOS roster, has one figure. (2) CoM 6.08 does share the delivery: the automatic-damage
+  arm and the enclosing per-attacker-figure loop are annotated `com1:=` throughout
+  (`combat.c`, `0x9A1E6`–`0x9A204` inside the loop closed at `0x9A576`), and CoM 1 reaches the
+  full-strength arm through its own inverted marker test, which the type-104 setup at `0x99B37`
+  always sets. `buildGazeDist` therefore takes a `doomFigs` argument — the gazer's living figures
+  from the two DOS call sites, 1 in CoM2/Warlord, matching the literal `1` those engines pass at
+  `0x5B3858`/`0x5B3982`. Measured: a 3-figure strength-4 gazer deals 12 in `mom_1.31`,
+  `mom_cp_1.60.00` and `com_6.08` where it dealt 4, and still 4 in `com2_1.05.11` and
+  `com2_warlord_1.5.12.7`; every existing doom preset uses the one-figure default and is
+  unmoved. Three presets carry the pair — `doomGazePerAttackerFigureMoM`,
+  `doomGazePerAttackerFigureCoM`, `doomGazeOncePerAttackCoM2`. `SPEC.md` loses the deliberate
+  deviation and states the third bound beside the other two under *Gaze structure*.
+
+- **F114 retired into [F125](./BACKLOG.md) with no separate work.** Migrating the modern preset
+  sides off the DOS-shaped `rtb`/`rtbType` pair cannot be separated from replacing the card's two
+  To Hit controls with the record's five: both rewrite the same modern fixture sides, and F114's
+  closing question — whether `applyPreset` should reject a DOS-style field on a `com2*` fixture —
+  is the same rule for both notations. F125 carries F114's measurements, its cost argument and that
+  question in full. The ID is retired, not reused.
+
 ## 2026-08-21
 
 - **D37 — reconstructed CoM 6.08's complete post-combat result materialization routine; no
@@ -418,8 +937,8 @@ pre-2026-08-10 narratives remain recoverable from git history.
   nothing and the preset was correct only through its `abilities: { doomGaze: 2 }`. The pair is off
   that fixture, its paired `focusMagicDoomGazeCoM` desc now says the two halves state the same unit
   in each engine's own notation rather than sharing a fixture, and the function throws naming the
-  type, the strength and the notations that can carry it. No number moved. The 183 remaining modern
-  sides still written with the DOS pair are [F114](./BACKLOG.md).
+  type, the strength and the notations that can carry it. No number moved. The remaining modern
+  sides still written with the DOS pair are [F125](./BACKLOG.md).
 
 - **F112 — the projectile-id map is complete, versioned, and stops on an id it does not know.**
   `RangedType.INI` classifies by flag: ids 10–14 carry neither `IsMagic` nor `IsMissile` and are

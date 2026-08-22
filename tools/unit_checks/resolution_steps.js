@@ -344,7 +344,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     ['Wraith Form', derive({ abilities: { wraithForm: true } }), true],
     ['Ruler of Underworld', derive({ abilities: { rulerOfUnderworld: true } }), true],
     ['Blazing March', derive({ abilities: { blazingMarch: true } }), true],
-    ['Warlord Flame Blade', deriveWarlord({ abilities: { flameBladeWarlord: true } }), true],
+    ['Warlord Flame Blade', deriveWarlord({ abilities: { flameBlade: true } }), true],
     ['Warlord Fiery Blade', deriveWarlord({ abilities: { fieryBlade: true } }), true],
     ['Warlord Fiery Fury', deriveWarlord({ abilities: { fieryFury: true } }), true],
     ['Warlord Wall of Fire garrison', deriveWarlord({ abilities: { wallOfFireBoost: true } }), true],

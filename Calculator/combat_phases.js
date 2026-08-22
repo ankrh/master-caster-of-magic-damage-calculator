@@ -886,8 +886,10 @@ function buildAttackerGazePhase(active, params) {
         return sequenceTouchApplyAttacks(steps, cap,
           context.sourceState || combatHealStateFromUnit(a));
       }
+      // DOS only — the modern branch returned above. The DOS doom assignment sits inside the
+      // per-attacker-figure loop, so it is delivered once per living gazer figure.
       let dist = buildGazeDist(a, b, sAlive, tAlive, cap, aStoningGazeFailP, aDeathGazeFailP, aGazeDoomStrP, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
-        isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, bBlackSleep, bToBlockVsAAll, aMinDamageFromHits);
+        isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined, bBlackSleep, bToBlockVsAAll, aMinDamageFromHits, sAlive);
       const aImmGDist = (aImmWithGaze && tAlive > 0)
         ? calcDamageSpellDist(tAlive, immStr, a.toHitImmolation, bDefForImm,
           bToBlockVsAAll, b.hp, cap, bInvulnBonus, aMinDamageFromHits,
@@ -1008,8 +1010,9 @@ function buildDefenderGazePhase(active, params) {
         return sequenceTouchApplyAttacks(steps, cap,
           context.sourceState || combatHealStateFromUnit(b));
       }
+      // DOS only — the modern branch returned above; `sAlive` is the gazing defender's figures.
       let dist = buildGazeDist(b, a, sAlive, tAlive, cap, bStoningGazeFailP, bDeathGazeFailP, bGazeDoomStrP, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy,
-        isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined, aBlackSleep, aToBlockVsBAll, bMinDamageFromHits);
+        isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined, aBlackSleep, aToBlockVsBAll, bMinDamageFromHits, sAlive);
       const bImmGDist = (bImmWithGaze && tAlive > 0)
         ? calcDamageSpellDist(tAlive, immStr, b.toHitImmolation, aDefForImm,
           aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits,

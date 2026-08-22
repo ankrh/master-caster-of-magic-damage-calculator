@@ -324,8 +324,20 @@ function runCanonicalVersionScopeChecks(ctx) {
   for (const [key, values] of probes) everyAbility[key] = values[0];
   const unitTypes = ['normal', 'hero', 'fantastic_life', 'fantastic_death', 'fantastic_chaos',
     'fantastic_nature', 'fantastic_sorcery', 'fantastic_arcane'];
-  const rtbTypes = ['none', 'ranged', 'thrown', 'fire', 'lightning', 'stoning', 'death', 'doom',
-    'boulder', 'magic'];
+  // Every token the DOS-shaped shared slot can carry, read from the vocabularies themselves so
+  // the sweep follows a widened one without an edit here. That is `none` plus the three record
+  // fields the token can name — `RANGED_TYPES` (both engine families' projectile sets, which is
+  // where the modern card's `magic`/`magic_lightning` enter through `sharedSlotRangedType`),
+  // `THROWN_TYPES` and `GAZE_TYPES`. The list was transcribed and held `ranged`, `stoning`,
+  // `death` and `doom`, which name nothing in any vocabulary, while omitting eight tokens a card
+  // really sends: the reads are positive `includes` predicates rather than lookups, so every
+  // invented token swept as an empty slot and the axis was largely unvisited (F117).
+  const rtbTypes = ['none',
+    ...evalInContext(ctx, 'RANGED_TYPES'),
+    ...evalInContext(ctx, 'THROWN_TYPES'),
+    ...evalInContext(ctx, 'GAZE_TYPES')];
+  // `baseUnitInput` leaves the slot's strength at 0, which is why the corrected token list is
+  // necessary but not sufficient: F129 carries the separate strength axis and its cost.
   const globals = [{}, { trueLight: true }, { darkness: true }, { warpReality: true },
     { enemyEternalNight: true, eternalNight: true }, { hurricane: true },
     // `'3'` is the intact-wall position. The list carried `'normal'` — a weapon/armor
@@ -374,7 +386,8 @@ function runCanonicalVersionScopeChecks(ctx) {
       // worklist from `statExecutionTrace` alone, and the figure and chance sequences carried
       // out-of-scope members it could not see.
       const projections = result.modifierTraces || {};
-      for (const name of ['figures', 'toHitMelee', 'toHitRanged', 'toBlock']) {
+      for (const name of ['figures', 'toHitCommon', 'toHitMelee', 'toHitShared',
+        'toHitRanged', 'toHitThrown', 'toHitBreath', 'toBlock']) {
         for (const event of (projections[name] && projections[name].entries) || []) {
           visitedKeys.add(`${event.phase}:${event.id}`);
           if (name !== 'figures' && !event.id.startsWith('chance:')) {

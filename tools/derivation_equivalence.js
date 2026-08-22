@@ -119,8 +119,11 @@ const SHAPES = [
 const ENVS = [
   { name: 'plain', over: {} },
   { name: 'level', over: { level: 'elite' } },
-  { name: 'gear', over: { weapon: 'mithril', armor: 'plate' } },
-  { name: 'adamantium', over: { weapon: 'adamantium', armor: 'none' } },
+  // `orihalcon` is the Armor Type control's only non-normal value, so it is what makes `gear`
+  // an armour env at all. This carried `'plate'` and the row below `'none'`, neither an option
+  // of that control, so both read as an ordinary suit and the axis was never exercised (F117).
+  { name: 'gear', over: { weapon: 'mithril', armor: 'orihalcon' } },
+  { name: 'adamantium', over: { weapon: 'adamantium', armor: 'normal' } },
   { name: 'node-dark', over: { nodeAura: 'chaos', darkness: true } },
   { name: 'truelight-warp', over: { trueLight: true, warpReality: true } },
   { name: 'enemy-night', over: { enemyEternalNight: true } },
@@ -139,7 +142,7 @@ function baseInput(version, over) {
     abilities: {},
     level: 'normal',
     weapon: 'normal',
-    armor: 'none',
+    armor: 'normal',
     rtbType: 'none',
     unitType: 'normal',
     figs: 6,

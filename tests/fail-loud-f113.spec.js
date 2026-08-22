@@ -25,6 +25,14 @@ const CASES = [
     "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'legendary',"
     + " weapon: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"
     + " def: 0, res: 0, hp: 1 })", 'legendary'],
+  // F117: the harnesses spelled this field `none`, `plate` and `mithril` at 37 call sites and
+  // got the `normal` row from a positive `=== 'orihalcon'` predicate. `armor` is absent from the
+  // other cases here on purpose: an omitted field is the control's own default, and only a
+  // stated value outside the set stops the run.
+  ['deriveUnitStats: unknown armor quality',
+    "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
+    + " weapon: 'normal', armor: 'plate', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1,"
+    + " rtb: 0, def: 0, res: 0, hp: 1 })", 'plate'],
   ['deriveUnitStats: unknown city-walls position',
     "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
     + " weapon: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"

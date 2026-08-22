@@ -52,6 +52,11 @@ function resetUnitFields(prefix) {
   document.getElementById(prefix + 'Res').value = s.res;
   document.getElementById(prefix + 'ToHitMod').value = s.toHitMod;
   document.getElementById(prefix + 'ToHitRtbMod').value = s.toHitRtbMod;
+  document.getElementById(prefix + 'HitChance').value = s.hitChance;
+  document.getElementById(prefix + 'HitMelee').value = s.hitMelee;
+  document.getElementById(prefix + 'HitRanged').value = s.hitRanged;
+  document.getElementById(prefix + 'HitThrown').value = s.hitThrown;
+  document.getElementById(prefix + 'HitBreath').value = s.hitBreath;
   document.getElementById(prefix + 'ToBlkMod').value = s.toBlkMod;
   document.getElementById(prefix + 'HP').value = s.hp;
   document.getElementById(prefix + 'CityWalls').value = s.cityWalls;
@@ -127,7 +132,7 @@ function swapAttackerDefender() {
   aUnitSel.value = bUnitSel.value;
   bUnitSel.value = tmp;
 
-  const simpleFields = ['Figs', 'Atk', 'RtbType', 'Rtb', 'ModernRangedType', 'ModernRanged', 'ModernThrown', 'ModernFireBreath', 'ModernLightningBreath', 'ToHitMod', 'ToHitRtbMod', 'ToBlkMod', 'Def', 'Res', 'HP', 'Dmg', 'Level', 'Weapon', 'Armor'];
+  const simpleFields = ['Figs', 'Atk', 'RtbType', 'Rtb', 'ModernRangedType', 'ModernRanged', 'ModernThrown', 'ModernFireBreath', 'ModernLightningBreath', 'ToHitMod', 'ToHitRtbMod', 'HitChance', 'HitMelee', 'HitRanged', 'HitThrown', 'HitBreath', 'ToBlkMod', 'Def', 'Res', 'HP', 'Dmg', 'Level', 'Weapon', 'Armor'];
   for (const f of simpleFields) {
     const aEl = document.getElementById('a' + f);
     const bEl = document.getElementById('b' + f);
@@ -309,6 +314,31 @@ function dosPairAsModernChannels(s) {
     + `or a typed Ranged record at strength 0 needs \`modernAttacks\`.`);
 }
 
+// The two engine families keep different To Hit records — the DOS melee/shared pair against the
+// modern common `hitchance` and its four channel modifiers — and a fixture states the one its
+// version has. Naming the other family's field wrote a hidden control nothing reads, and that
+// silent no-op is what let the modern To-Hit projection gap survive unnoticed, so it halts the
+// run instead (`SPEC.md`, *Out-of-range values stop the run*).
+//
+// The attack channels are deliberately not covered here: the DOS-shaped `rtb`/`rtbType` pair is
+// still a sanctioned modern fixture notation (`CLAUDE.md`, *Presets*), because the modern record
+// keeps the shared slot beside its four channels and modern engine code still reads it (F127).
+const DOS_TO_HIT_FIXTURE_FIELDS = ['toHitMod', 'toHitRtbMod'];
+const MODERN_TO_HIT_FIXTURE_FIELDS = ['hitChance', 'hitMelee', 'hitRanged', 'hitThrown',
+  'hitBreath'];
+
+function assertFixtureToHitMatchesRecord(name, prefix, side, version) {
+  const modern = version.startsWith('com2');
+  const foreign = (modern ? DOS_TO_HIT_FIXTURE_FIELDS : MODERN_TO_HIT_FIXTURE_FIELDS)
+    .filter(field => Object.prototype.hasOwnProperty.call(side, field));
+  if (foreign.length === 0) return;
+  throw new Error(
+    `Preset '${name}' side ${prefix}: ${version} carries the ${modern ? 'modern' : 'DOS'} To Hit `
+    + `record, so ${foreign.join(', ')} name${foreign.length === 1 ? 's' : ''} no card field it `
+    + `has and nothing would read the value. `
+    + `Expected ${(modern ? MODERN_TO_HIT_FIXTURE_FIELDS : DOS_TO_HIT_FIXTURE_FIELDS).join(', ')}.`);
+}
+
 function applyPreset(name) {
   const preset = PRESETS[name];
   // Every caller — the TEST_TREE buttons and runTests — names a key `definePresets` merged.
@@ -349,11 +379,13 @@ function applyPreset(name) {
     };
   }
   function setUnit(prefix, u) {
+    assertFixtureToHitMatchesRecord(name, prefix, u,
+      document.getElementById('gameVersion').value);
     const s = { ...UNIT_DEFAULTS, ...u };
     const identity = presetIdentity(s);
     document.getElementById(prefix + 'Figs').value = s.figs;
     document.getElementById(prefix + 'Atk').value = s.atk;
-    document.getElementById(prefix + 'RtbType').value = s.rtbType;
+    setSharedSlotRangedType(prefix, s.rtbType, `Preset '${name}' side ${prefix}`);
     document.getElementById(prefix + 'Rtb').value = s.rtb;
     // A CoM2/Warlord fixture states the card's four named channels either directly, through
     // `modernAttacks`, or through the older DOS-shaped `rtb` pair, which projects onto exactly
@@ -366,6 +398,11 @@ function applyPreset(name) {
     document.getElementById(prefix + 'Res').value = s.res;
     document.getElementById(prefix + 'ToHitMod').value = s.toHitMod;
     document.getElementById(prefix + 'ToHitRtbMod').value = s.toHitRtbMod;
+    document.getElementById(prefix + 'HitChance').value = s.hitChance;
+    document.getElementById(prefix + 'HitMelee').value = s.hitMelee;
+    document.getElementById(prefix + 'HitRanged').value = s.hitRanged;
+    document.getElementById(prefix + 'HitThrown').value = s.hitThrown;
+    document.getElementById(prefix + 'HitBreath').value = s.hitBreath;
     document.getElementById(prefix + 'ToBlkMod').value = s.toBlkMod;
     document.getElementById(prefix + 'HP').value = s.hp;
     document.getElementById(prefix + 'CityWalls').value = s.cityWalls;
@@ -549,6 +586,42 @@ function collectFullState() {
   };
 }
 
+// A restored value its control no longer offers halts the restore. `el.value = x` with no
+// matching `<option>` clears the selection instead of failing, so the page came back with a
+// blank control the user never chose and re-persisted the blank on the next save; readers keyed
+// on the control carried on with it — `modernCardAttacks` (`ui_units.js`) asks the ranged select
+// whether the Ranged record exists at all. Halting is the contract (`SPEC.md`, *Out-of-range
+// values stop the run*), and `tryApplyState` already turns a throw here into clean defaults, a
+// console report and discarding the offending blob. F93 retired four projectile tokens and any
+// later option removal makes more, so the check is general rather than a list of them: a build
+// that wants a retired value carried forward states the migration, as `RENAMED_GAME_VERSIONS`
+// does for version ids.
+//
+// `gameVersion` (`normalizeGameVersion`) and `aUnit`/`bUnit` (roster selection) are restored by
+// their own code above. The `SpecialUnit` pair's option set is version-scoped and rebuilt after
+// the assignment loop, so its keys are checked against this build's whole vocabulary: a key the
+// build retired halts, while one this version simply disallows keeps its existing clamp.
+function assertRestoredValuesAreOffered(ids) {
+  const offenders = [];
+  for (const [id, val] of Object.entries(ids || {})) {
+    if (id === 'gameVersion' || id === 'aUnit' || id === 'bUnit') continue;
+    const el = document.getElementById(id);
+    if (!el || el.tagName !== 'SELECT') continue;
+    const value = String(val);
+    const offered = (id === 'aSpecialUnit' || id === 'bSpecialUnit')
+      ? ['none', ...SPECIAL_UNIT_DEFS.map(def => def.key)]
+      : Array.from(el.options).map(opt => opt.value);
+    if (offered.includes(value)) continue;
+    offenders.push(`#${id}='${value}' (offered: ${offered.join(', ')})`);
+  }
+  if (offenders.length) {
+    throw new TypeError(
+      `Saved page state names ${offenders.length} control value${offenders.length === 1 ? '' : 's'} `
+      + `this build no longer offers: ${offenders.join('; ')}. `
+      + `The option was removed without a migration for states that still carry it.`);
+  }
+}
+
 // Apply a full id->value map. Order is load-bearing (same lesson as applyPreset): version
 // first (repopulates dropdowns + ability panels), then JS-side identity, then every control
 // value (skip-missing for forward-compat), then visibility.
@@ -594,6 +667,7 @@ function applyFullState(blob) {
       unitBaseStats[prefix] = { ...(unitBaseStats[prefix] || {}), generic: wantGeneric };
     }
     if (blob.ids) {
+      assertRestoredValuesAreOffered(blob.ids);
       for (const [id, val] of Object.entries(blob.ids)) {
         if (id === 'gameVersion' || id === 'aUnit' || id === 'bUnit') continue;
         const el = document.getElementById(id);

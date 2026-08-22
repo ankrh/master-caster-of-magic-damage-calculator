@@ -193,15 +193,40 @@
       <label class="modern-attack version-hidden" for="aModernLightningBreath" data-tooltip="CoM2 &amp; Warlord: independent Lightning Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Lightning attack.&#10;Can coexist with Ranged, Thrown, and Fire Breath.">Lightning Breath</label>
       <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="aModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="aModernLightningBreathMod"></span>
 
-      <label for="aToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
-      <span class="prefix">30% +</span>
-      <input type="number" id="aToHitMod" min="-20" max="70" value="0">
-      <span class="mod-val" id="aToHitMeleeMod"></span>
+      <label class="dos-chance" for="aToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
+      <span class="prefix dos-chance">30% +</span>
+      <input class="dos-chance" type="number" id="aToHitMod" min="-20" max="70" value="0">
+      <span class="mod-val dos-chance" id="aToHitMeleeMod"></span>
 
-      <label for="aToHitRtbMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (ranged/thrown/breath).">To hit rng/thr/breath</label>
-      <span class="prefix">30% +</span>
-      <input type="number" id="aToHitRtbMod" min="-20" max="70" value="0">
-      <span class="mod-val" id="aToHitRtbModDisp"></span>
+      <label class="dos-chance" for="aToHitRtbMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (ranged/thrown/breath).">To hit rng/thr/breath</label>
+      <span class="prefix dos-chance">30% +</span>
+      <input class="dos-chance" type="number" id="aToHitRtbMod" min="-20" max="70" value="0">
+      <span class="mod-val dos-chance" id="aToHitRtbModDisp"></span>
+
+      <label class="modern-chance version-hidden" for="aHitChance" data-tooltip="CoM2 &amp; Warlord: the record's one common to-hit chance.&#10;Base 30% + this value.&#10;Every attack adds its own channel modifier below to it.">To hit</label>
+      <span class="prefix modern-chance version-hidden">30% +</span>
+      <input class="modern-chance version-hidden" type="number" id="aHitChance" min="-20" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="aHitChanceDisp"></span>
+
+      <label class="modern-chance version-hidden" for="aHitMelee" data-tooltip="CoM2 &amp; Warlord: melee to-hit modifier.&#10;Added to the common chance for melee attacks only.">To hit melee</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="aHitMelee" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="aHitMeleeDisp"></span>
+
+      <label class="modern-chance version-hidden" for="aHitRanged" data-tooltip="CoM2 &amp; Warlord: ranged to-hit modifier.&#10;Added to the common chance for the conventional Ranged channel only.&#10;The range distance penalty applies on top of the total.">To hit ranged</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="aHitRanged" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="aHitRangedDisp"></span>
+
+      <label class="modern-chance version-hidden" for="aHitThrown" data-tooltip="CoM2 &amp; Warlord: thrown to-hit modifier.&#10;Added to the common chance for the Thrown channel only.">To hit thrown</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="aHitThrown" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="aHitThrownDisp"></span>
+
+      <label class="modern-chance version-hidden" for="aHitBreath" data-tooltip="CoM2 &amp; Warlord: breath to-hit modifier.&#10;One record field serves Fire Breath and Lightning Breath alike.&#10;Added to the common chance for both breath channels.">To hit breath</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="aHitBreath" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="aHitBreathDisp"></span>
 
       <label for="aToBlkMod" data-tooltip="Base 30% + modifier = chance per defense die to perform a block.">To block</label>
       <span class="prefix">30% +</span>
@@ -367,15 +392,40 @@
       <label class="modern-attack version-hidden" for="bModernLightningBreath" data-tooltip="CoM2 &amp; Warlord: independent Lightning Breath channel.&#10;Strength is dice per figure.&#10;Fires in the melee engagement and is a Lightning attack.&#10;Can coexist with Ranged, Thrown, and Fire Breath.">Lightning Breath</label>
       <span class="modern-attack version-hidden"></span><input class="modern-attack version-hidden" type="number" id="bModernLightningBreath" min="0" max="50" value="0"><span class="mod-val modern-attack version-hidden" id="bModernLightningBreathMod"></span>
 
-      <label for="bToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
-      <span class="prefix">30% +</span>
-      <input type="number" id="bToHitMod" min="-20" max="70" value="0">
-      <span class="mod-val" id="bToHitMeleeMod"></span>
+      <label class="dos-chance" for="bToHitMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (melee).">To hit melee</label>
+      <span class="prefix dos-chance">30% +</span>
+      <input class="dos-chance" type="number" id="bToHitMod" min="-20" max="70" value="0">
+      <span class="mod-val dos-chance" id="bToHitMeleeMod"></span>
 
-      <label for="bToHitRtbMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (ranged/thrown/breath).">To hit rng/thr/breath</label>
-      <span class="prefix">30% +</span>
-      <input type="number" id="bToHitRtbMod" min="-20" max="70" value="0">
-      <span class="mod-val" id="bToHitRtbModDisp"></span>
+      <label class="dos-chance" for="bToHitRtbMod" data-tooltip="Base 30% + modifier = chance per die to score a hit (ranged/thrown/breath).">To hit rng/thr/breath</label>
+      <span class="prefix dos-chance">30% +</span>
+      <input class="dos-chance" type="number" id="bToHitRtbMod" min="-20" max="70" value="0">
+      <span class="mod-val dos-chance" id="bToHitRtbModDisp"></span>
+
+      <label class="modern-chance version-hidden" for="bHitChance" data-tooltip="CoM2 &amp; Warlord: the record's one common to-hit chance.&#10;Base 30% + this value.&#10;Every attack adds its own channel modifier below to it.">To hit</label>
+      <span class="prefix modern-chance version-hidden">30% +</span>
+      <input class="modern-chance version-hidden" type="number" id="bHitChance" min="-20" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="bHitChanceDisp"></span>
+
+      <label class="modern-chance version-hidden" for="bHitMelee" data-tooltip="CoM2 &amp; Warlord: melee to-hit modifier.&#10;Added to the common chance for melee attacks only.">To hit melee</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="bHitMelee" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="bHitMeleeDisp"></span>
+
+      <label class="modern-chance version-hidden" for="bHitRanged" data-tooltip="CoM2 &amp; Warlord: ranged to-hit modifier.&#10;Added to the common chance for the conventional Ranged channel only.&#10;The range distance penalty applies on top of the total.">To hit ranged</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="bHitRanged" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="bHitRangedDisp"></span>
+
+      <label class="modern-chance version-hidden" for="bHitThrown" data-tooltip="CoM2 &amp; Warlord: thrown to-hit modifier.&#10;Added to the common chance for the Thrown channel only.">To hit thrown</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="bHitThrown" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="bHitThrownDisp"></span>
+
+      <label class="modern-chance version-hidden" for="bHitBreath" data-tooltip="CoM2 &amp; Warlord: breath to-hit modifier.&#10;One record field serves Fire Breath and Lightning Breath alike.&#10;Added to the common chance for both breath channels.">To hit breath</label>
+      <span class="modern-chance version-hidden"></span>
+      <input class="modern-chance version-hidden" type="number" id="bHitBreath" min="-70" max="70" value="0">
+      <span class="mod-val modern-chance version-hidden" id="bHitBreathDisp"></span>
 
       <label for="bToBlkMod" data-tooltip="Base 30% + modifier = chance per defense die to perform a block.">To block</label>
       <span class="prefix">30% +</span>

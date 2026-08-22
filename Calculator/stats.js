@@ -82,7 +82,10 @@ function deriveUnitStats(input) {
   // Warlord: Rebuild makes the unit Mechanical; Artificer retort then grants
   // Magic Weapons (+10% To Hit, bypass Weapon Immunity) to that unit.
   const isWarlord = version.startsWith('com2_warlord');
-  const warlordCombatFlameBlade = isWarlord && !!abilities.flameBladeWarlord;
+  // One `flameBlade` input, two controls: the wizard spell everywhere but Warlord, the arcane
+  // unit ability in Warlord (`enchantments.js`). The version decides which arithmetic the shared
+  // block does, so the input carries no version of its own.
+  const warlordCombatFlameBlade = isWarlord && !!abilities.flameBlade;
   const effectiveMechanical = !!abilities.mechanical
     || (isWarlord && !!abilities.rebuild);
   const artificerMagicWeapon = isWarlord
@@ -156,9 +159,20 @@ function deriveUnitStats(input) {
   const weapon = rustActive ? 'normal' : weaponPreRust;
   const wpn = weaponBonus(weapon);
   // Armor quality: CoM/CoM2/Warlord only (doesn't exist in MoM), and unlike
-  // weapons, heroes get none either.
+  // weapons, heroes get none either. The stated value is checked *before* that gate rather than
+  // after it: the gate discards the input for MoM, for heroes and for every ineligible unit, so a
+  // check on the gated result would accept anything in exactly the cases the caller is most
+  // likely to have got wrong. An absent field is the control's own default, as it is for the
+  // City walls position below.
+  const armorInput = input.armor === undefined || input.armor === null
+    ? 'normal' : String(input.armor);
+  if (!ARMOR_MATERIALS.includes(armorInput)) {
+    throw new Error(
+      `deriveUnitStats: armor quality '${armorInput}' is not one of ${ARMOR_MATERIALS.join('/')}, `
+      + `the option set of the Armor Type control and of MATRIX_ARMOR_OPTIONS.`);
+  }
   const armorExists = !version.startsWith('mom_');
-  const armor = (armorExists && loadoutEligible && !isHero) ? input.armor : 'normal';
+  const armor = (armorExists && loadoutEligible && !isHero) ? armorInput : 'normal';
 
   // Military Workshop (Warlord, XuanYuan building): upgrades any normal unit trained,
   // garrisoned in, or fighting from the city — not race-gated, per the "any defending units
@@ -260,9 +274,38 @@ function deriveUnitStats(input) {
   const calcBaseDef = inputBaseDef;
   const calcBaseRes = inputBaseRes;
   const calcBaseHP = inputBaseHP;
+  // The DOS record keeps one melee threshold and one shared secondary threshold, so its card
+  // states exactly those two.
   const baseToHitMod = parseInt(input.toHitMod) || 0;
   const baseToHitRtbMod = parseInt(input.toHitRtbMod) || 0;
   const baseToBlkMod = parseInt(input.toBlkMod) || 0;
+  // The modern record keeps five: one common `hitchance` plus `hitchancemelee`,
+  // `hitchanceranged`, `hitchancethrown` and the single `hitchancebreath` that serves both
+  // breath strengths (Units.RecalculateUnits.pas:203-219). That is a different record shape,
+  // not a projection of the DOS pair, so the card states each field on its own.
+  //
+  // A field the active version's record does not have would be written by a caller and read by
+  // nothing, which is the silent no-op this split exists to end (`SPEC.md`, *Out-of-range values
+  // stop the run*). Zero is indistinguishable from absent, so only a value that would have meant
+  // something halts the run.
+  const DOS_HIT_INPUTS = ['toHitMod', 'toHitRtbMod'];
+  const MODERN_HIT_INPUTS = ['hitChance', 'hitMelee', 'hitRanged', 'hitThrown', 'hitBreath'];
+  const foreignHitInputs = (isCoM2 ? DOS_HIT_INPUTS : MODERN_HIT_INPUTS)
+    .filter(field => (parseInt(input[field]) || 0) !== 0);
+  if (foreignHitInputs.length > 0) {
+    throw new Error(
+      `deriveUnitStats: ${version} carries the `
+      + `${isCoM2 ? 'modern' : 'DOS'} To Hit record, so ${foreignHitInputs.join(', ')} `
+      + `name${foreignHitInputs.length === 1 ? 's' : ''} no field it has. `
+      + `Expected ${(isCoM2 ? MODERN_HIT_INPUTS : DOS_HIT_INPUTS).join(', ')}.`);
+  }
+  const baseHitChance = parseInt(input.hitChance) || 0;
+  const baseHitMelee = parseInt(input.hitMelee) || 0;
+  const modernSecondaryHitMod = {
+    ranged: parseInt(input.hitRanged) || 0,
+    thrown: parseInt(input.hitThrown) || 0,
+    breath: parseInt(input.hitBreath) || 0,
+  };
 
   // Focus Magic: CoM/CoM2-only. In CoM2, magical ranged, doom gaze, and breath get +3.
   // In CoM, doom gaze is not mentioned, so only magical ranged and breath are boosted.
@@ -309,10 +352,6 @@ function deriveUnitStats(input) {
   const nodeAuraVal = input.nodeAura;
   const unitRealm = realmOfUnitType(unitTypeVal, identity);
   const nodeAuraActive = unitRealm !== null && nodeAuraVal !== 'none' && unitRealm === nodeAuraVal;
-  // `applynodeaura` gates melee on persistent BaseUnits.attack, not on the live subtotal.
-  // Its other attack gates read the live conventional Ranged and two Breath fields; Thrown
-  // is an independent modern field and is absent from the complete helper body.
-  const modernNodeBaseMelee = isCoM2 && calcBaseAtk > 0;
   const darkForceActive = isCoM2 && !!abilities.darkForce;
   // The compiled city/node package requires membership in the defending army. The card prefix
   // instead records who initiates this particular exchange, so the per-unit control carries the
@@ -588,15 +627,31 @@ function deriveUnitStats(input) {
   // and no def-zeroing.
   const classicBerserk = !!(abilities && abilities.berserk) && version.startsWith('mom');
   const warlordBerserk = !!(abilities && abilities.berserkWarlord) && isWarlord;
-  // A unit whose base melee strength is 0 has no melee attack at all, so melee bonuses are
+  // A unit whose melee strength is 0 has no melee attack at all, so melee bonuses are
   // discarded rather than conjuring one. Blaze of Glory is the exception the model has to
   // allow for: its armor-to-melee transfer lands even on such a unit. The ranged slot has
   // the same gate, widened by Bombs&Grenades, which grants a thrown attack outright.
+  //
+  // **Which record the strength is read from is the permanent one, `ctx.base`, not the card's
+  // `atk` input** (F133). Every melee-presence test `Caster.exe` makes is `BaseUnits[i].attack`
+  // — the Holy Bonus aura (Units.RecalculateUnits.pas:2530), `applynodeaura` ($005971C3, :466),
+  // the level ladder (:543) and `ApplyMagicWeapons` ($00598F43, :637) — and
+  // `CreateUnit.CAS` writes `SAttack` at `ABase` before the recalculation copies that record,
+  // ungated on the field's current value: Ludus/Agoge (:346), an Altar of the Sun Holy Mother
+  // (:360), Mother Fungus (:448), a Coal site (:552) and the Malnourished penalty (:616). Those
+  // writes are `base`-phase steps here, so the record as that phase leaves it is what a later
+  // region reads (SPEC.md, *The step model*). The card's input is that record only before the
+  // base phase runs, which is why this is a predicate over the run context rather than a boolean
+  // captured beside it — the same read `c:weapon`'s `weaponMeleeOpen` already makes.
+  //
   // Warlord True Light writes SAttack unconditionally. A matching Life unit therefore gains
   // strength-1 melee even when the persistent attack field was zero; unlike an ordinary
-  // attack bonus, this source-backed write creates the live attack.
+  // attack bonus, this source-backed write creates the live attack. Marionette's region-`b`
+  // grant is the same kind of exception. Both are calculated-record writes made after the base
+  // phase, so they stay terms of their own rather than permanent-record reads.
   const trueLightCreatesMelee = isWarlord && hasTrueLight && trueLightAtkBonus > 0;
-  const hasMeleeAttack = calcBaseAtk > 0 || marionetteAttackBonus > 0 || trueLightCreatesMelee;
+  const hasMeleeAttackAt = runCtx => runCtx.base.atk > 0
+    || marionetteAttackBonus > 0 || trueLightCreatesMelee;
 
   // Chaos Surge: affects Chaos creatures only.
   // MoM and CoM 1 both write the shared ranged slot unconditionally on attack type, so
@@ -1014,7 +1069,6 @@ function deriveUnitStats(input) {
     ranged: 'toHitRanged', thrown: 'toHitThrown', breath: 'toHitBreath',
   };
   const LEGACY_HIT_FIELD = 'toHitRtb';
-  const hasModernChannels = channelContexts.length > 0;
   recordContext.secondaryHitField = LEGACY_HIT_FIELD;
   // Which of the three modifiers a modern channel reads is pure record structure: `SRanged`
   // reads `hitchanceranged`, `SThrown` reads `hitchancethrown`, and the two breath fields share
@@ -1028,10 +1082,11 @@ function deriveUnitStats(input) {
   }
   // What a writer declares is what attributes it to a channel (steps.js, STAT_CHANNEL_FIELDS),
   // so a write the engine makes for Ranged and Thrown alone names those two fields and no others.
-  // The record carries all three whenever it has channels, exactly as the engine does, whether or
-  // not this unit happens to own an attack of that kind.
+  // A modern record carries all three, exactly as the engine's does, whether or not this unit
+  // happens to own an attack of that kind — which is also what lets the card state a modifier for
+  // a channel an effect has yet to create.
   const secondaryHitFieldsFor = kinds => [LEGACY_HIT_FIELD,
-    ...(hasModernChannels ? kinds.map(kind => SECONDARY_HIT_FIELD_BY_KIND[kind]) : [])];
+    ...(isCoM2 ? kinds.map(kind => SECONDARY_HIT_FIELD_BY_KIND[kind]) : [])];
   const secondaryHitFields = secondaryHitFieldsFor(SECONDARY_HIT_KINDS);
   // The DOS-shaped shared slot keeps **one** threshold where the modern record keeps three, so
   // which half of a gated writer it consults is settled by what stands in the slot at that
@@ -1155,6 +1210,20 @@ function deriveUnitStats(input) {
   const baseDoomGaze = gazeDisabled ? 0
     : (!isCoM2 && recordContext.gazeType === 'gaze_multiple'
       ? recordContext.calcBaseRtb : (effectiveAbilities.doomGaze || 0));
+  // Whether a gaze *stands in* the record, which is not the same question as what strength it
+  // carries. In the DOS record one `.ranged` byte holds conventional ranged, Thrown, Breath or a
+  // gaze, and what says a gaze stands there is the record's **type** — RAT 103/104/105 — not the
+  // strength beside it: Gorgons ship `Gaze(Stoning)` at Ranged 0 and have the gaze, with only its
+  // hidden conventional component empty. So the region-`e` floor asks the type, and the seeded
+  // strength decides nothing (F122). The modern engines carry an independent Doom Gaze field with
+  // no type of its own, so there strength is the only statement of existence and this is exactly
+  // `baseDoomGaze > 0`.
+  const hasGazeRangedSlot = !gazeDisabled
+    && (recordContext.gazeType === 'gaze_stoning' || recordContext.gazeType === 'gaze_death')
+    && !isCoM2;
+  const hasDoomGazeSlot = !gazeDisabled
+    && ((!isCoM2 && recordContext.gazeType === 'gaze_multiple')
+      || (effectiveAbilities.doomGaze || 0) > 0);
   // Focus Magic's ranged branch reads the record's Thrown field and writes its Ranged one, so the
   // two ends of `U.ranged := U.thrown` are slot identities. The DOS-shaped shared slot is both at
   // once, which is why the branch is a retype in place there; a modern record with no Thrown
@@ -1266,6 +1335,20 @@ function deriveUnitStats(input) {
     }
     return 0;
   };
+  // The melee half of the block is gated on a melee attack existing, in both engine families —
+  // but each reads a different record, so the gate is one test over two records rather than one
+  // value. DOS tests the **calculated** record in front of it: `if (bu->melee > 0)` wraps
+  // `bu->melee += quality - 1`, `Gold_Melee` and `melee_tohit++` (`unitcalc.c`, 131:0x8F041,
+  // 160:0x8F053, com1:0x8F03A). `ApplyMagicWeapons` tests the **permanent** one:
+  // `if BaseUnits[i].attack > 0` wraps `hitchancemelee`, `attack` and `attackbonus`
+  // (Units.RecalculateUnits.pas:637-642, $00598F43), under that file's own note that all
+  // material-presence and melee-presence tests there read `BaseUnits`. The permanent record is
+  // `runCtx.base`, not the card's input: `CreateUnit.CAS` writes melee into it before the
+  // recalculation copies it, so a Warlord unit recruited Malnourished, or trained at a
+  // Ludus/Agoge, a Coal site or an Altar of the Sun, enters `ApplyMagicWeapons` with a
+  // `BaseUnits.attack` its card never stated. Defense is outside both gates in both engines,
+  // which is why it stays unconditional below.
+  const weaponMeleeOpen = (u, runCtx) => (isCoM2 ? runCtx.base.atk > 0 : u.atk > 0);
   // PROVENANCE[weapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:bc81a9f3b6ba3703d596d756 | Reference docs/DOS reconstructed/unitcalc.c@span:15:9b957c6ff1d6ae8d9afca04b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:eae87788c081c49037f75656 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:2cc8f80e45e1482ee9229fd8 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:06ea8c358024e0163de78588 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
   // Both engines gate the whole material block on the material itself: `if EncMagic or
   // EncMithril or EncAdamant` at $00598D91, and `if (quality > 0)` over
@@ -1275,8 +1358,9 @@ function deriveUnitStats(input) {
   const weaponStatSteps = [
     statStep({ id: 'weapon', phase: 'c', writes: ['def', 'atk', ...strengthFields],
       when: () => hasWeaponMaterial,
-      apply: u => {
-        u.def += wpn.def; u.atk += wpn.atk;
+      apply: (u, runCtx) => {
+        u.def += wpn.def;
+        if (weaponMeleeOpen(u, runCtx)) u.atk += wpn.atk;
         // Ranged/Thrown/Breath strength. The modern `ranged` channel answers for `SRanged` even
         // while it is typeless, so the branch is chosen by which record field the slot is, not
         // by whether that field currently names an attack.
@@ -1309,17 +1393,21 @@ function deriveUnitStats(input) {
         }
       } }),
     // One To-Hit write. The halves keep separate gates because the engine's are separate — melee
-    // on a positive melee attack, each secondary slot on its own material write — so they fold
-    // into the `apply`. `weaponHitWrite` reads only strength fields, which the melee half does
-    // not touch, so evaluating both gates at this one position is what the two steps did.
+    // on `weaponMeleeOpen`, the same melee-presence test the strength half above makes, each
+    // secondary slot on its own material write — so they fold into the `apply`. `weaponHitWrite`
+    // reads only strength fields, which the melee half does not touch, so evaluating both gates
+    // at this one position is what the two steps did. The DOS half reads live `u.atk` here
+    // rather than the pre-write value: `c:weapon` immediately precedes this entry in all five
+    // chains and now adds to melee only where that value was already positive, so the two
+    // positions cannot disagree.
     // PROVENANCE[weapon:toHit]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:c4c0e22bb79483f8e5729dfb | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:8365c7617ed27a3bba5164a3 | Reference docs/DOS reconstructed/unitcalc.c@span:34:beda653e161112c68e8cdff3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:444355c621ef17cc85a05318 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:55a524751c4be78ffea17562 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
     statStep({ id: 'weapon:toHit', sourceId: 'weapon', sourceLabel: 'Weapon material',
       phase: 'c', writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
-      when: u => hasWeaponMaterial
-        && ((wpn.toHit !== 0 && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0))
+      when: (u, runCtx) => hasWeaponMaterial
+        && ((wpn.toHit !== 0 && weaponMeleeOpen(u, runCtx))
           || secondaryHitTargets.some(target => weaponHitWrite(u, target) !== 0)),
-      apply: u => {
-        if (wpn.toHit !== 0 && (isCoM2 ? inputBaseAtk > 0 : u.atk - wpn.atk > 0)) {
+      apply: (u, runCtx) => {
+        if (wpn.toHit !== 0 && weaponMeleeOpen(u, runCtx)) {
           u.toHitMelee += wpn.toHit;
         }
         for (const target of secondaryHitTargets) {
@@ -1373,9 +1461,11 @@ function deriveUnitStats(input) {
   const bladeMeleeBonus = isCoMVersion ? 3 : 2;
   const flameBladeStep = statStep({
     id: 'flameBlade', phase: 'c', writes: ['atk', ...strengthFields],
-    when: () => hasWarlordBlade || !!abilities.flameBlade,
-    apply: u => {
-      if (hasMeleeAttack) u.atk += bladeMeleeBonus;
+    when: () => hasWarlordBlade || nonWarlordFlameBlade,
+    // `runCtx`, not `context`: the loop below reuses that name for this file's per-channel
+    // derivation context, while the runner passes the sequence context carrying `base`.
+    apply: (u, runCtx) => {
+      if (hasMeleeAttackAt(runCtx)) u.atk += bladeMeleeBonus;
       for (const context of derivationContexts) {
         const liveRangedType = u[context.rangedTypeField];
         const liveThrownType = u[context.thrownTypeField];
@@ -1428,6 +1518,7 @@ function deriveUnitStats(input) {
     abilByPhase, abilities, altarOfTheMoon,
     altarOfTheSun, altarOfTheSunHolyMother, armor, badMoonActive, baseDoomGaze, baseGazeRanged,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod,
+    baseHitChance, baseHitMelee, modernSecondaryHitMod,
     blazeOfGloryActive, bombsGrenades,
     calcBaseAtk, calcBaseDef, calcBaseHP, calcBaseRes,
     ccFireBreathStrength, ccIndependentChannels,
@@ -1445,9 +1536,9 @@ function deriveUnitStats(input) {
     fieryFuryRtbWrite, focusMagicBranchSlots, poxHostIsGoblin, shadowStrikeActive,
     soulFlayLevels, warlordFlameBladeOwnsSlot, weaknessBinaryHits, weaknessPenalty,
     flameBladeStep, focusMagicActive,
-    gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod,
+    gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod, hasGazeRangedSlot, hasDoomGazeSlot,
     goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod, goodMoonActive,
-    greatUnbindingActive, hasDarkness, hasMeleeAttack,
+    greatUnbindingActive, hasDarkness, hasMeleeAttackAt,
     hasPermanentRangedStat, heavenlyLightActive, heavenlyLightMeleeToHitAt,
     heavenlyLightThrownToHit,
     holyArmorActive, hurricaneActive, hwMeleeToHit, identity,
@@ -1457,7 +1548,7 @@ function deriveUnitStats(input) {
     ludusAgoge, lvl,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
     marionetteStrayed,
-    modernNodeBaseMelee, motherFungus,
+    motherFungus,
     naturalSelectionCoal, naturalSelectionIron, naturalSelectionNightshade,
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount,
@@ -1484,7 +1575,9 @@ function deriveUnitStats(input) {
   const applicableRawStatSteps = filterStepsToVersionScope(rawStatSteps, version);
   const statSteps = orderStatStepsBySource(applicableRawStatSteps, statChain(version));
   // `slots` carries the gates that are **not** position-dependent, so a slot can hold them.
-  // `melee` and the two gaze fields are record-level, and `persistentRanged` is the aura pass's
+  // `melee` is the permanent record's `B.attack > 0`, which
+  // the base phase settles, so it is the predicate over the run context rather than a boolean
+  // (F133). `persistentRanged` is the aura pass's
   // `B.ranged > 0` (Units.RecalculateUnits.pas:2535, :2599): the **permanent** record's Ranged
   // field carrying strength, with no test of what type stands in it and none of what the
   // calculated record now holds. Which slot that field is, is record structure — the modern
@@ -1504,14 +1597,25 @@ function deriveUnitStats(input) {
   // stat trace with those applied live-field changes so the affected race/fantastic outputs have
   // one trace alongside the numeric stat sequence; no-op identity steps were already omitted by
   // runStatSteps.
+  //
+  // The two gaze strengths are no longer gates of their own. In the DOS engines they are *views*
+  // of the shared `.ranged` byte, so whether a write reaches them is the writing block's own test
+  // on that byte and nothing else — `slots.gaze`/`slots.doomGaze` were a second, static gate on
+  // one engine field and are retired (F135). What survives is which mirrors of the byte the
+  // **record** carries, which is the same type fact the region-`e` floor asks
+  // (`hasGazeRangedSlot`/`hasDoomGazeSlot`, F122), and it belongs to the slot that holds the byte.
+  // `doomGazeField` is a different thing: the modern engines' independent Doom Gaze field, which
+  // is a view of no attack slot and takes a write only from a block that names it.
   for (const context of derivationContexts) {
     context.slots = {
-      melee: hasMeleeAttack,
+      melee: hasMeleeAttackAt,
       persistentRanged: context.isChannelSlot
         ? (context.channelKey === 'ranged' && context.baseStrength > 0)
         : context.hasPermanentRangedStat,
-      gaze: baseGazeRanged > 0, doomGaze: baseDoomGaze > 0,
+      doomGazeField: hasDoomGazeSlot,
     };
+    context.gazeMirrors = (context.isChannelSlot || isCoM2) ? []
+      : [...(hasGazeRangedSlot ? ['gaze'] : []), ...(hasDoomGazeSlot ? ['doomGaze'] : [])];
   }
   const statTrace = [...identityConversion.trace, ...basePreparationTrace];
   for (let traceOrder = 0; traceOrder < statTrace.length; traceOrder++) {
@@ -1550,7 +1654,10 @@ function deriveUnitStats(input) {
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...pneumaAbilities, negateFirstStrike: true }
     : pneumaAbilities;
-  const shapedGazeAbilities = !isCoM2 && baseDoomGaze > 0
+  // DOS Doom damage is the shared strength slot, so the resolver's `doomGaze` value is the
+  // derived one. The projection asks the same existence question the region-`e` floor asks
+  // (F122): a type-104 record at strength 0 an earlier step raised carries the raised value.
+  const shapedGazeAbilities = !isCoM2 && hasDoomGazeSlot
     ? { ...combatAbilitiesBase, doomGaze: effectiveDoomGaze }
     : combatAbilitiesBase;
   let combatAbilities = gazeDisabled
@@ -1570,7 +1677,8 @@ function deriveUnitStats(input) {
 
   // Compatibility breakdowns retained for the card. The authoritative values now come
   // directly from the ordered record above.
-  const meleeToHitBonus = statUnit.toHit + statUnit.toHitMelee - 30 - baseToHitMod;
+  const meleeToHitBonus = statUnit.toHit + statUnit.toHitMelee - 30
+    - (isCoM2 ? baseHitChance + baseHitMelee : baseToHitMod);
 
   // Caster.exe does not clamp defendchance during recalculation; Random(100) threshold
   // comparison naturally bounds the effective probability to 0..100.
@@ -1645,7 +1753,13 @@ function deriveUnitStats(input) {
   // the roll changes one without the other. One projection per derivation slot: each reads the
   // secondary modifier its own channel reads, which is what lets a single walk answer for the
   // legacy slot and every modern channel alike.
-  const chanceFields = { melee: 'toHitMelee', rtb: 'toHitRtb', block: 'toBlock' };
+  // The ledger's own accumulator names. `common` is the record's `hitchance` seen alone, which
+  // is what the card's base To-Hit row shows; `melee` and `rtb` are resolved thresholds — the
+  // common value plus the modifier the projection's context names — and only those two are what
+  // AttackRoll compares, so only those two take the resolution-time bound below.
+  const chanceFields = {
+    common: 'toHitCommon', melee: 'toHitMelee', rtb: 'toHitRtb', block: 'toBlock',
+  };
   const allHitFields = [chanceFields.melee, chanceFields.rtb];
   // Distance penalty (attacker ranged only). This is a resolution-time projection, not a
   // recalculation write, so it reads the **finished** record: the projectile type standing in
@@ -1690,6 +1804,7 @@ function deriveUnitStats(input) {
       const rtbHitDelta = commonHitDelta
         + (event.changes[context.secondaryHitField]
           ? event.changes[context.secondaryHitField].delta : 0);
+      deltas[chanceFields.common] = commonHitDelta;
       deltas[chanceFields.melee] = meleeHitDelta;
       deltas[chanceFields.rtb] = rtbHitDelta;
       if (event.changes.toBlk) deltas[chanceFields.block] = event.changes.toBlk.delta;
@@ -1742,7 +1857,7 @@ function deriveUnitStats(input) {
     // Most of this sequence is projected from the stat ledger, so its entries inherit their
     // canonical scope from the step they project (steps.js, resolveStepVersionScope).
     const chanceUnit = runStatSteps(filterStepsToVersionScope(chanceSteps, version), {
-      toHitMelee: 30, toHitRtb: 30, toBlock: 30,
+      toHitCommon: 30, toHitMelee: 30, toHitRtb: 30, toBlock: 30,
     }, { version, trace: chanceTrace });
     return { chanceTrace, chanceUnit };
   }
@@ -1751,6 +1866,29 @@ function deriveUnitStats(input) {
   const chanceTrace = recordChance.chanceTrace;
   const chanceUnit = recordChance.chanceUnit;
   const rtbDistPenalty = distancePenaltyFor(recordContext);
+  // One projection per **hitchance field**, not per output channel: `hitchancebreath` serves
+  // both breath strengths, so one breath row answers for Fire and Lightning alike, and a field
+  // the unit owns no attack for still resolves — the card states the modifier whether or not a
+  // channel is standing in front of it. Only the conventional Ranged channel is charged a range
+  // distance penalty, and that penalty reads the *finished* projectile type, so the ranged row
+  // borrows that channel's own type field; a row with no such field is never a missile or a
+  // boulder, which is what `distancePenaltyFor` asks.
+  const modernHitFieldChance = {};
+  if (isCoM2) {
+    for (const kind of SECONDARY_HIT_KINDS) {
+      const field = SECONDARY_HIT_FIELD_BY_KIND[kind];
+      const owner = channelContexts.find(context => context.secondaryHitField === field);
+      modernHitFieldChance[kind] = buildChanceProjection({
+        secondaryHitField: field,
+        rangedTypeField: kind === 'ranged' && owner ? owner.rangedTypeField : null,
+      });
+    }
+  }
+  const modernHitFieldTrace = kind => {
+    const projected = modernHitFieldChance[kind];
+    return projected ? projectStatTrace(projected.chanceTrace, chanceFields.rtb, 30,
+      projected.chanceUnit.toHitRtb, { unit: 'percent' }) : undefined;
+  };
   // These assignments make the traced execution path authoritative.  Focused tests assert
   // parity with the existing formulas across the full preset suite.
   const toHitMelee = chanceUnit.toHitMelee / 100;
@@ -1784,8 +1922,20 @@ function deriveUnitStats(input) {
     doomGaze: projectStatTrace(statTrace, 'doomGaze', baseDoomGaze, effectiveDoomGaze),
     toHitMelee: projectStatTrace(chanceTrace, chanceFields.melee, 30,
       chanceUnit.toHitMelee, { unit: 'percent' }),
-    toHitRanged: projectStatTrace(chanceTrace, chanceFields.rtb, 30,
+    // `toHitShared` is the DOS engines' one shared secondary threshold. A version keeps only
+    // the projections its record has, so a DOS result carries no modern channel row and a
+    // modern result no empty one: the keys themselves say which record is in front of you.
+    toHitShared: projectStatTrace(chanceTrace, chanceFields.rtb, 30,
       chanceUnit.toHitRtb, { unit: 'percent' }),
+    // `toHitCommon` is the modern record's common field alone against 30; the three per-kind
+    // rows are its own modifiers, each resolved against that common value.
+    ...(isCoM2 ? {
+      toHitCommon: projectStatTrace(chanceTrace, chanceFields.common, 30,
+        chanceUnit.toHitCommon, { unit: 'percent' }),
+      toHitRanged: modernHitFieldTrace('ranged'),
+      toHitThrown: modernHitFieldTrace('thrown'),
+      toHitBreath: modernHitFieldTrace('breath'),
+    } : {}),
     toBlock: projectStatTrace(chanceTrace, chanceFields.block, 30,
       chanceUnit.toBlock, { unit: 'percent' }),
     race: projectStatTrace(identityConversion.trace, 'race', identity.baseRace, identity.race),
@@ -1799,7 +1949,7 @@ function deriveUnitStats(input) {
   }, finalDef, displayDef);
 
   const toHitMeleeHasModifiers = modifierTraces.toHitMelee.entries.length > 0;
-  const toHitRtbHasModifiers = modifierTraces.toHitRanged.entries.length > 0;
+  const toHitRtbHasModifiers = modifierTraces.toHitShared.entries.length > 0;
   const toBlockHasModifiers = modifierTraces.toBlock.entries.length > 0;
 
   const totalDamage = Math.max(0, parseInt(input.dmg) || 0);

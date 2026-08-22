@@ -35,6 +35,22 @@ function sharedSlotRangedType(prefix) {
     ? modernValue : dosValue;
 }
 
+// The writer counterpart. A modern-only projectile token has no spelling in the shared-slot
+// select, so assigning one left the control holding a value no `<option>` offers — the blank the
+// restore boundary now rejects (`ui_state.js`, `assertRestoredValuesAreOffered`). The modern card
+// states those through its own selector, which the reader above prefers over this slot anyway. A
+// token neither family has is a caller error rather than something to write blank.
+function setSharedSlotRangedType(prefix, token, source) {
+  const slot = document.getElementById(prefix + 'RtbType');
+  const offered = Array.from(slot.options).map(opt => opt.value);
+  if (offered.includes(token)) { slot.value = token; return; }
+  const modern = document.getElementById('gameVersion').value.startsWith('com2');
+  if (modern && MODERN_RANGED_TYPES.includes(token)) { slot.value = 'none'; return; }
+  throw new Error(
+    `${source}: attack type '${token}' names no type the shared slot offers (${offered.join(', ')})`
+    + (modern ? ` and none the modern selector offers (${MODERN_RANGED_TYPES.join(', ')}).` : '.'));
+}
+
 // Read DOM inputs and compute all effective stats for a unit.
 // Returns a stat object suitable for both display and resolveCombat.
 function readUnitStats(prefix, overrides) {
@@ -68,8 +84,18 @@ function readUnitStats(prefix, overrides) {
     undeadDamage: 0,
     baseBonusHp: 0,
     noHealing: false,
-    toHitMod: el(prefix + 'ToHitMod').value,
-    toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
+    // The card states the To Hit record its version has, and only that one: the DOS melee /
+    // shared-secondary pair, or the modern common `hitchance` plus its four channel modifiers.
+    ...(el('gameVersion').value.startsWith('com2') ? {
+      hitChance: el(prefix + 'HitChance').value,
+      hitMelee: el(prefix + 'HitMelee').value,
+      hitRanged: el(prefix + 'HitRanged').value,
+      hitThrown: el(prefix + 'HitThrown').value,
+      hitBreath: el(prefix + 'HitBreath').value,
+    } : {
+      toHitMod: el(prefix + 'ToHitMod').value,
+      toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
+    }),
     toBlkMod: el(prefix + 'ToBlkMod').value,
     cityWalls: el(prefix + 'CityWalls').value,
     nodeAura: el('nodeAura').value,
@@ -430,8 +456,15 @@ function updateModifiedDisplay(prefix, stats) {
   showTrace(prefix + 'ResMod', traces.resistance);
   showTrace(prefix + 'HPMod', traces.hits);
 
+  // The DOS rows project the shared secondary threshold; the modern rows project the record's
+  // five To-Hit fields, each channel row resolving the common value plus its own modifier.
   showTrace(prefix + 'ToHitMeleeMod', traces.toHitMelee);
-  showTrace(prefix + 'ToHitRtbModDisp', traces.toHitRanged);
+  showTrace(prefix + 'ToHitRtbModDisp', traces.toHitShared);
+  showTrace(prefix + 'HitChanceDisp', traces.toHitCommon);
+  showTrace(prefix + 'HitMeleeDisp', traces.toHitMelee);
+  showTrace(prefix + 'HitRangedDisp', traces.toHitRanged);
+  showTrace(prefix + 'HitThrownDisp', traces.toHitThrown);
+  showTrace(prefix + 'HitBreathDisp', traces.toHitBreath);
   showTrace(prefix + 'ToBlkModDisp', traces.toBlock);
 
   const modernTraces = traces.modernAttacks || {};
@@ -445,24 +478,3 @@ function updateModifiedDisplay(prefix, stats) {
     showTrace(prefix + id, modernTraces[key]);
   }
 }
-
-// --- Level Bonuses ---
-
-// Reset the stat fields to the roster unit's base values. Nothing here applies a level
-// bonus: the card holds pre-level stats, and the level ladder is an ordinary transform
-// step in deriveUnitStats (`stats_sequence.js`, statStep 'level'). Guarded on base.atk because a
-// custom unit's record may hold only the `generic` flag (see applyFullState), not base stats.
-function resetCardToRosterBase(prefix) {
-  const unit = document.getElementById(prefix + 'Unit');
-  if (!unit || unit.value === 'custom') return;
-  const base = unitBaseStats[prefix];
-  if (!base || base.atk === undefined) return;
-  document.getElementById(prefix + 'Atk').value = base.atk;
-  document.getElementById(prefix + 'Rtb').value = base.rtb;
-  document.getElementById(prefix + 'Def').value = base.def;
-  document.getElementById(prefix + 'Res').value = base.res;
-  document.getElementById(prefix + 'HP').value = base.hp;
-  document.getElementById(prefix + 'ToHitMod').value = base.toHitMod;
-  applyModernAttackFields(prefix, base.modernAttacks);
-}
-

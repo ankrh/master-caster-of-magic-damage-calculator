@@ -20,7 +20,7 @@ function unitInput(overrides = {}) {
     abilities: {},
     level: 'normal',
     weapon: 'normal',
-    armor: 'none',
+    armor: 'normal',
     rtbType: 'none',
     unitType: 'normal',
     figs: 6,
@@ -56,7 +56,9 @@ const CASES = [
     unitType: 'fantastic_death',
   })],
   ['CoM2 ranged, levelled and equipped', unitInput({
-    level: 'champion', weapon: 'adamantium', armor: 'mithril',
+    // `orihalcon` is the Armor Type control's only non-normal value; this case carried
+    // `'mithril'`, a weapon material, so the equipped case measured no armour branch (F117).
+    level: 'champion', weapon: 'adamantium', armor: 'orihalcon',
     rtbType: 'missile', rtb: 4, rangedCheck: true, rangedDist: 7,
     abilities: { holyWeapon: true, lionheart: true, prayer: true, holyArmor: true },
   })],

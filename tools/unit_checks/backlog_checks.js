@@ -137,7 +137,7 @@ function runF19Checks(ctx) {
   assertClose(soulLinked.toBlock, 0.35, 'F19 Soul Linker raises Fantastic To Block');
   const cappedSoulLinker = modern({
     baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
-    toHitMod: 70, abilities: { soulLinkerAura: 99 },
+    hitChance: 70, abilities: { soulLinkerAura: 99 },
   });
   assertClose(cappedSoulLinker.toHitMelee, 1,
     'F19 late Soul Linker To Hit observes AttackRoll\'s natural 100% probability bound');
@@ -365,7 +365,7 @@ function runF23Checks(ctx) {
   const fearedChance = (version, abilities) => {
     const feared = ctx.deriveUnitStats(baseUnitInput({
       version, prefix: 'a', figs: 1, atk: 5, def: 0, res: 5, hp: 10,
-      toHitMod: 70, abilities,
+      hitChance: 70, abilities,
     }));
     const fearSource = ctx.deriveUnitStats(baseUnitInput({
       version, prefix: 'b', figs: 1, atk: 1, def: 0, res: 5, hp: 20,
@@ -640,7 +640,7 @@ function runR9G1eChecks(ctx) {
         }));
         assertClose(physical.toHitRtb, 0.4,
           `R9-G1e ${version} ${weapon} material adds 10% to ${rtbType}`);
-        assert(physical.modifierTraces.toHitRanged.entries
+        assert(physical.modifierTraces.toHitShared.entries
           .some(entry => entry.source.id === 'weapon'),
         `R9-G1e ${version} ${weapon} ${rtbType} trace attributes the material write`);
       }

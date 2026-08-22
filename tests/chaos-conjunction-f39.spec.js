@@ -24,10 +24,11 @@ test('F39 scales every modern Immolation firing from strength 10 to 13 exactly o
       prefix,
       version,
       abilities,
-      level: 'normal', weapon: 'normal', armor: 'none', rtbType: 'none',
+      level: 'normal', weapon: 'normal', armor: 'normal', rtbType: 'none',
       unitType: 'normal', figs: 1, atk: 1, rtb: 0, modernAttacks: {},
       def: 0, res: 10, hp: 100, dmg: 0,
-      toHitMod: 70, toHitRtbMod: 70, toBlkMod: -30,
+      ...(version.startsWith('com2') ? { hitChance: 70 } : { toHitMod: 70, toHitRtbMod: 70 }),
+      toBlkMod: -30,
       cityWalls: 'none', nodeAura: 'none', trueLight: false, darkness: false,
       rangedCheck: false, rangedDist: 1,
     });
@@ -122,10 +123,11 @@ test('F39 leaves Wall of Fire unchanged and keeps DOS state hidden and inert', a
       return trim(out);
     };
     const makeUnit = (version, prefix) => deriveUnitStats({
-      prefix, version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'none',
+      prefix, version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
       rtbType: 'none', unitType: 'normal', figs: 3, atk: prefix === 'a' ? 1 : 0,
       rtb: 0, modernAttacks: {}, def: 0, res: 10, hp: 5, dmg: 0,
-      toHitMod: 70, toHitRtbMod: 70, toBlkMod: -30,
+      ...(version.startsWith('com2') ? { hitChance: 70 } : { toHitMod: 70, toHitRtbMod: 70 }),
+      toBlkMod: -30,
       cityWalls: 'none', nodeAura: 'none', trueLight: false, darkness: false,
       rangedCheck: false, rangedDist: 1,
     });
@@ -218,10 +220,11 @@ test('F39 combat-global state persists and shares, survives Swap, and crosses th
     const opts = matrixCombatOptions('melee');
     const makeUnit = (prefix, abilities = {}) => deriveUnitStats({
       prefix, version: opts.version, abilities,
-      level: 'normal', weapon: 'normal', armor: 'none', rtbType: 'none',
+      level: 'normal', weapon: 'normal', armor: 'normal', rtbType: 'none',
       unitType: 'normal', figs: 1, atk: 1, rtb: 0, modernAttacks: {},
       def: 0, res: 10, hp: 100, dmg: 0,
-      toHitMod: 70, toHitRtbMod: 70, toBlkMod: -30,
+      ...(opts.version.startsWith('com2') ? { hitChance: 70 } : { toHitMod: 70, toHitRtbMod: 70 }),
+      toBlkMod: -30,
       cityWalls: 'none', nodeAura: 'none', trueLight: false, darkness: false,
       rangedCheck: false, rangedDist: 1,
     });

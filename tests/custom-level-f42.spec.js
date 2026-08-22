@@ -32,7 +32,12 @@ test('F42 Custom Level changes preserve pre-level card stats and base identity i
       modernFireBreath: document.getElementById(prefix + 'ModernFireBreath').value,
       modernLightningBreath: document.getElementById(prefix + 'ModernLightningBreath').value,
       toHit: document.getElementById(prefix + 'ToHitMod').value,
-      toHitRanged: document.getElementById(prefix + 'ToHitRtbMod').value,
+      toHitShared: document.getElementById(prefix + 'ToHitRtbMod').value,
+      hitChance: document.getElementById(prefix + 'HitChance').value,
+      hitMelee: document.getElementById(prefix + 'HitMelee').value,
+      hitRanged: document.getElementById(prefix + 'HitRanged').value,
+      hitThrown: document.getElementById(prefix + 'HitThrown').value,
+      hitBreath: document.getElementById(prefix + 'HitBreath').value,
       toBlock: document.getElementById(prefix + 'ToBlkMod').value,
       defense: document.getElementById(prefix + 'Def').value,
       resistance: document.getElementById(prefix + 'Res').value,
@@ -46,7 +51,8 @@ test('F42 Custom Level changes preserve pre-level card stats and base identity i
       change('gameVersion', version);
 
       // Seed the cache with an actual roster record, then restore a Custom state over it.
-      // The old Level handler read this stale record and copied it back onto the card.
+      // The F42-era Level handler read this stale record and copied it back onto the card;
+      // since F136 (HISTORY.md) no level handler writes a card field at all.
       const roster = (unitDatabases[version] || []).find(unit => unit.category !== 'Heroes');
       change('aUnit', roster.id);
       applyState({
@@ -126,25 +132,55 @@ test('F42 Custom Level changes preserve pre-level card stats and base identity i
   expectNoConsoleErrors(errors);
 });
 
-test('F42 leaves predefined roster Level behavior and locking intact', async ({ page }) => {
+// A predefined selection keeps its identity locking across a Level change, and — since F136
+// (HISTORY.md) — keeps its card as well. This test used to assert the opposite for the one
+// field it looked at: that the level handler put the roster's melee value back over a hand
+// edit. It did, but only for the seven fields the removed half wrote, leaving figures, To
+// Block and the four channel To Hit modifiers edited, so the card ended up neither the
+// record nor what the user had. `SPEC.md`, *UI contract* now states the whole record once,
+// when the unit is selected, and never in part.
+test('F42 leaves predefined roster Level locking intact and the card untouched', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
+    // A normal unit, not the fantastic default: only normal units take the experience ladder,
+    // and the derived check below has to be able to move.
+    const version = document.getElementById('gameVersion').value;
+    const normal = (unitDatabases[version] || [])
+      .find(u => u.category !== 'Heroes' && !u.baseFantastic);
+    const unitEl = document.getElementById('aUnit');
+    unitEl.value = String(normal.id);
+    unitEl.dispatchEvent(new Event('change'));
+
     const level = document.getElementById('aLevel');
-    const rosterAttack = unitBaseStats.a.atk;
-    document.getElementById('aAtk').value = '99';
+    const rosterAttack = String(unitBaseStats.a.atk);
+    const fields = ['Atk', 'Figs', 'Def', 'Res', 'HP', 'ToHitMod', 'ToHitRtbMod', 'ToBlkMod'];
+    const read = () => Object.fromEntries(
+      fields.map(f => [f, document.getElementById('a' + f).value]));
+    // Away from the record but well clear of the terminal stat clamp, so the level bonus
+    // below has room to show in the derived value.
+    document.getElementById('aAtk').value = String(Number(rosterAttack) + 5);
+    const edited = read();
+    const effectiveBefore = readUnitStats('a').atk;
     level.value = 'elite';
     level.dispatchEvent(new Event('change'));
     return {
       selection: document.getElementById('aUnit').value,
-      attack: document.getElementById('aAtk').value,
-      rosterAttack: String(rosterAttack),
+      rosterAttack,
+      edited,
+      after: read(),
+      effectiveBefore,
+      effectiveAfter: readUnitStats('a').atk,
       identityDisabled: ['aBaseHero', 'aBaseFantastic', 'aBaseRace', 'aSpecialUnit']
         .every(id => document.getElementById(id).disabled),
     };
   });
 
   expect(report.selection).not.toBe('custom');
-  expect(report.attack).toBe(report.rosterAttack);
+  // The edit really moved the card away from the record, so preserving it is a claim.
+  expect(report.edited.Atk).not.toBe(report.rosterAttack);
+  expect(report.after).toEqual(report.edited);
+  // The level still reaches the derivation; it simply never writes back to the card.
+  expect(report.effectiveAfter).toBeGreaterThan(report.effectiveBefore);
   expect(report.identityDisabled).toBe(true);
   expectNoConsoleErrors(errors);
 });

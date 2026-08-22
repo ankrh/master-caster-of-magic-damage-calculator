@@ -260,7 +260,9 @@ test('special options and ordered live realm overrides preserve base identity', 
         isHero: false, baseRace: 'Dwarf', baseFantastic: false, specialUnit,
       }),
       figs: 1, atk: 1, def: 0, res: 5, hp: 10, rtb: 9, rtbType: 'boulder',
-      weapon: 'normal', armor: 'normal', level: 'normal', toHitRtbMod: 70,
+      weapon: 'normal', armor: 'normal', level: 'normal',
+      ...(version.startsWith('com2')
+        ? { hitRanged: 70, hitThrown: 70, hitBreath: 70 } : { toHitRtbMod: 70 }),
     });
     const derive = (version, special, abilities) => deriveUnitStats(input(version, special, abilities));
     const options = {

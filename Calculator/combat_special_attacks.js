@@ -249,7 +249,15 @@ function gazeRealm(atkAbilities) {
 // kill loops sit *before* that loop and are bounded by the **defender's** figure count
 // (0x99E0C stoning, 0x99EAB death), so they resolve once per attack — hence `defAlive`
 // below but `atkAlive` above.
-function buildGazeDist(atk, def, atkAlive, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, conventionalAsDoom = false, defToBlockOverride = null, minDamageFromHits = null) {
+//
+// `doomFigs` is the count the doom damage is delivered over, and the two engine families
+// differ. The DOS builds assign `hits = attack_strength` for ranged type 104 inside that same
+// per-figure loop (0x9A1E6 -> 0x9A204, annotated `com1:=` throughout, so CoM 1 shares the
+// site), which makes their doom damage scale with the gazer's figure count; the caller passes
+// the gazer's living figures. CoM2 and Warlord instead call `ApplyAttack` with a literal `1`
+// for Doom Gaze alone (0x5B3858 attacker, 0x5B3982 retaliation) while both kill-roll gazes
+// pass `LivingFigures(au)`, so their doom lands once and the caller passes 1.
+function buildGazeDist(atk, def, atkAlive, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, conventionalAsDoom = false, defToBlockOverride = null, minDamageFromHits = null, doomFigs = 1) {
   if (defAlive <= 0 || defRemHP <= 0) return [1];
   let dist = [1];
   const defStat = (defDefStat != null) ? defDefStat : def.def;
@@ -260,11 +268,9 @@ function buildGazeDist(atk, def, atkAlive, defAlive, defRemHP, stoningFail, deat
       ? calcDoomDist(gazeFigs, atk.effectiveGazeRanged, defRemHP)
       : calcTotalDamageDist(gazeFigs, atk.effectiveGazeRanged, atk.toHitRtb, defStat, defToBlock, def.hp, defRemHP, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, minDamageFromHits);
   }
-  // Doom Gaze: exact damage, no rolls, no immunities
+  // Doom Gaze: exact damage, no rolls, no immunities, delivered `doomFigs` times.
   if (doomStr > 0) {
-    const doomDist = new Array(Math.min(doomStr, defRemHP) + 1).fill(0);
-    doomDist[Math.min(doomStr, defRemHP)] = 1;
-    dist = convolveDists(dist, doomDist, defRemHP);
+    dist = convolveDists(dist, calcDoomDist(Math.max(1, doomFigs), doomStr, defRemHP), defRemHP);
   }
   // Stoning- and death-gaze kill rolls. A figure dies if it fails *either* roll,
   // and can only die once, so the two are combined into a single joint per-figure

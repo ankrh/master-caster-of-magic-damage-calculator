@@ -365,13 +365,13 @@ document.getElementById('bUnit').addEventListener('change', () => {
 initUnitCombobox('a');
 initUnitCombobox('b');
 
+// The level ladder is an ordinary transform step in deriveUnitStats, so a level change
+// re-states no card field: these handlers only refresh and recalculate (F136).
 document.getElementById('aLevel').addEventListener('change', () => {
-  resetCardToRosterBase('a');
   refreshAbilityFieldVisibility();
   recalculate();
 });
 document.getElementById('bLevel').addEventListener('change', () => {
-  resetCardToRosterBase('b');
   refreshAbilityFieldVisibility();
   recalculate();
 });

@@ -110,7 +110,12 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   'c:chaosChannels:fireBreath', 'c:chaosChannels:fireBreath:race',
   'c:lionheart', 'c:holyArmor', 'c:berserk', 'c:nodeAura',
   'c:highPrayer', 'c:prayer', 'c:trueLight', 'c:darkness', 'c:metalFires', 'c:warpReality',
-  'c:blackPrayer', 'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense',
+  'c:blackPrayer', 'c:vertigo', 'c:weakness', 'c:mindStorm',
+  // The recompute's second `BU_Apply_Specials` call, 131:0x90A1D, immediately before Warp
+  // Creature at 0x90A2E. 1.31 alone passes the mutations byte there, so its fire-breath block
+  // assigns the shared slot a second time, after the node aura, Black Prayer and Mind Storm.
+  'c:chaosChannels:fireBreath:recompute',
+  'c:warpAttack', 'c:warpDefense',
   'c:warpResist', 'c:shatter', 'c:charmOfLife', 'e:legacyClamp', 'e:clamp',
 ]);
 
@@ -156,7 +161,7 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 ]);
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
-  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'base:stat:base', 'base:baseHitChance', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath', 'c:destiny:race',
   'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust', 'c:undead',
@@ -178,7 +183,7 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
-  'base:stat:base', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
+  'base:stat:base', 'base:baseHitChance', 'base:baseMelee', 'base:baseRtb', 'base:baseBlock',
   'base:armorclad', 'base:artificer', 'base:rebuild', 'base:malnourished', 'base:spiritLink',
   'base:altarOfTheMoon', 'base:militaryWorkshop', 'base:lightningBlade:breath',
   'base:poolOfRepentance', 'base:dragonMound', 'base:ludusAgoge', 'base:motherFungus',
