@@ -653,6 +653,23 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
+  artificerSkipsThrownAndBreathWarlord: {
+    desc: 'Exclusion the engine makes: the Artificer retort names four stats and the four movement fields, and `SRanged` is the only attack among them (CreateUnit.CAS:38-47). Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. A grant reaching every channel, as this block made before F139, gives 4 + 6 = 10.000.',
+    version: V_WARLORD,
+    a: { atk:0, modernAttacks: { thrown: { strength: 3, type: 'thrown' },
+      fireBreath: { strength: 5, type: 'fire' } },
+    hitRanged:70, hitThrown:70, hitBreath:70, hp:10,
+    abilities: { artificer: true, mechanical: true } },
+    b: { def:0, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  artificerDoomGazeUnchangedWarlord: {
+    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Artificer block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the pre-F139 write gave 6.000.',
+    version: V_WARLORD,
+    a: { atk:0, hp:10, abilities: { artificer: true, mechanical: true, doomGaze: 5 } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
 
   // --- Mechanical Expert ---
   mechanicalExpertToHitWarlord: {
@@ -859,6 +876,30 @@ definePresets({
     a: { atk:3, hitChance:70, hp:10 },
     b: { atk:0, def:1, toBlkMod:70, hp:10, abilities: { luckyStar: true } },
     expected: { dmgToA: 0, dmgToB: 1.0 },
+  },
+  luckyStarAuraRangedWarlord: {
+    desc: 'Lucky Star aura (Warlord): the block\'s one attack-channel write is `SETSTAT(U,SRanged,0,…+1)` (UnitCalcPre.CAS:1616), the conventional-ranged field. missile 2 → 3 at 100% hit vs def 0 → 3.000; without the enchantment, 2.000.',
+    version: V_WARLORD,
+    a: { atk:0, rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { luckyStar: true } },
+    b: { def:0, hp:30 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  luckyStarAuraSkipsThrownAndBreathWarlord: {
+    desc: 'Exclusion the engine makes: the Lucky Star aura writes `SAttack`, `SRanged`, `SDefense`, `SResist` and their four bonus mirrors and nothing else (UnitCalcPre.CAS:1614-1621), so Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. A grant reaching every channel, as this block made before F139, gives 4 + 6 = 10.000.',
+    version: V_WARLORD,
+    a: { atk:0, modernAttacks: { thrown: { strength: 3, type: 'thrown' },
+      fireBreath: { strength: 5, type: 'fire' } },
+    hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { luckyStar: true } },
+    b: { def:0, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  luckyStarDoomGazeUnchangedWarlord: {
+    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Lucky Star block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the pre-F139 write gave 6.000.',
+    version: V_WARLORD,
+    a: { atk:0, hp:10, abilities: { luckyStar: true, doomGaze: 5 } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   rallyResistanceWarlord: {
     desc: 'Rally (Warlord): grants +2 Resistance. Poison 7 vs base res 5 + Rally +2 = res 7, CoM −1 poison penalty → effective 6, pFail 40%, E[dmg] = 2.8 (without Rally, res 5 −1 = 4 → pFail 60% → 4.2)',

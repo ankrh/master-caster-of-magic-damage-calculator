@@ -1,6 +1,6 @@
-// Numeric presets. Righteousness and the Death curses (Black Sleep through Vertigo), Undead and
-// Animate Dead, Lionheart and Dispel Evil, the Warlord Outlander abilities, and the
-// derivation order.
+// Numeric presets. Righteousness and the Death curses (Black Sleep through Vertigo) with the
+// melee-exchange admission fixtures beside them, Undead and Animate Dead, Lionheart and Dispel
+// Evil, the Warlord Outlander abilities, and the derivation order.
 definePresets({
   // --- Righteousness ---
   righteousnessMagicChaos: {
@@ -131,6 +131,41 @@ definePresets({
     b: { def:0, hp:10, abilities: { blackSleep: true, missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+
+  // --- Melee-exchange admission (the contrast to Black Sleep's refusal above) ---
+  // Attack strength admits nothing: `BU_AttackTarget`'s melee entry has no strength gate in any
+  // DOS build and `PerformMeleeAttack` calls both the melee attack and the counterattack
+  // unconditionally, so a card with no melee, no shared secondary and no gaze still engages and
+  // still takes the counterattack. Baseline scenarios: they configure no ability to ablate, and
+  // the number under test is the counterattack that arrives at all.
+  zeroMeleeAttackerStillCounteredMoM131: {
+    desc: 'Zero-strength melee attacker (MoM 1.31): the exchange is still admitted, so the defender counterattacks for 3 (1 fig, 100% hit) vs def 0 → dmgToA 3.0, while the attacker deals 0 (a whole-exchange strength guard would make both 0.0)',
+    version: V_MOM_131,
+    a: { atk:0, hp:20 },
+    b: { atk:3, def:0, toHitMod:70, hp:20 },
+    expected: { dmgToA: 3.000, dmgToB: 0.000 },
+  },
+  zeroMeleeAttackerStillCounteredMoM160: {
+    desc: 'The same in MoM CP 1.60, which patches BU_ProcessAttack’s own zero-strength abort out entirely (0x99ED2, 7F→EB): dmgToA 3.0, dmgToB 0.0',
+    version: V_MOM_CP,
+    a: { atk:0, hp:20 },
+    b: { atk:3, def:0, toHitMod:70, hp:20 },
+    expected: { dmgToA: 3.000, dmgToB: 0.000 },
+  },
+  zeroMeleeAttackerStillCounteredCoM: {
+    desc: 'The same in CoM 1 6.08, which carries CP 1.60’s patched abort: dmgToA 3.0, dmgToB 0.0',
+    version: V_COM,
+    a: { atk:0, hp:20 },
+    b: { atk:3, def:0, toHitMod:70, hp:20 },
+    expected: { dmgToA: 3.000, dmgToB: 0.000 },
+  },
+  zeroMeleeAttackerStillCounteredCoM2: {
+    desc: 'The same in CoM2 1.05.11, where ApplyAttack leaves early only on figs <= 0 and PerformMeleeAttack’s counterattack call is unconditional: dmgToA 3.0, dmgToB 0.0',
+    version: V_COM2,
+    a: { atk:0, hp:20 },
+    b: { atk:3, def:0, hitChance:70, hp:20 },
+    expected: { dmgToA: 3.000, dmgToB: 0.000 },
   },
 
   // --- CoM 1 side maxima and Realm Ward ---

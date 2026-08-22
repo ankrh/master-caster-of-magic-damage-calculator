@@ -597,10 +597,12 @@ function collectFullState() {
 // that wants a retired value carried forward states the migration, as `RENAMED_GAME_VERSIONS`
 // does for version ids.
 //
-// `gameVersion` (`normalizeGameVersion`) and `aUnit`/`bUnit` (roster selection) are restored by
-// their own code above. The `SpecialUnit` pair's option set is version-scoped and rebuilt after
-// the assignment loop, so its keys are checked against this build's whole vocabulary: a key the
-// build retired halts, while one this version simply disallows keeps its existing clamp.
+// `gameVersion` (`applyState`) and `aUnit`/`bUnit` (roster selection) are restored by their own
+// code above. The `SpecialUnit` pair's option set is version-scoped and rebuilt after the
+// assignment loop, so its keys are checked against this build's whole vocabulary: a key the
+// build retired halts, while one this version simply disallows keeps its existing clamp. The v2
+// identity record carries the same key on its own and is checked where it is read
+// (`specialUnitAllowed`, `ui_units.js`), so neither carrier can smuggle one past the other.
 function assertRestoredValuesAreOffered(ids) {
   const offenders = [];
   for (const [id, val] of Object.entries(ids || {})) {
@@ -813,6 +815,19 @@ function migrateRetiredControlIds(ids, fallbackVersion = '') {
 function applyState(blob) {
   if (!blob || ![1, PAGE_STATE_VERSION].includes(blob.v)) {
     throw new TypeError('Unsupported page-state version');
+  }
+  // A saved id this build neither offers nor renames halts, for the same reason an unofferable
+  // control value does (`SPEC.md`, *Out-of-range values stop the run*) and more so: the version
+  // selects which default set the blob's diff expands against, so substituting one reinterprets
+  // every other id in the state under a rule set the user never chose. Carrying an id forward is
+  // `RENAMED_GAME_VERSIONS`' job. A blob that names no version at all is a different case — a
+  // legacy v1 payload with nothing to be out of range — and keeps the fallback below.
+  const savedVersion = blob.ids && blob.ids.gameVersion;
+  if (savedVersion && !normalizeGameVersion(savedVersion)) {
+    throw new TypeError(
+      `Saved page state names gameVersion='${savedVersion}', which this build neither offers `
+      + `(${Array.from(document.getElementById('gameVersion').options).map(o => o.value).join(', ')}) `
+      + `nor renames. Restoring it under another version would reinterpret every other saved value.`);
   }
   const version = (blob.ids && normalizeGameVersion(blob.ids.gameVersion))
     || loadPersistedGameVersion() || DEFAULT_GAME_VERSION;

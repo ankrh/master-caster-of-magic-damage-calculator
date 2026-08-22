@@ -251,23 +251,30 @@ function resolveCombat(a, b, opts) {
   });
 
   if (!isRanged) {
-    // Guard: can A initiate melee combat at all?
-    // MoM 1.31: requires effective atk > 0, effective rtb > 0, or an active gaze.
-    // Other versions: uses base (pre-modifier) atk/rtb values; gaze fires regardless of effective value.
-    const aCanInitiateMelee = ver === 'mom_1.31'
-      ? (a.atk > 0 || a.rtb > 0 || aGazeActiveP)
-      : ((a.baseAtk || 0) > 0 || (a.baseRtb || 0) > 0 || aGazeActiveP);
-    if (!aCanInitiateMelee) {
-      return {
-        phases: null,
-        totalDmgToA: [1], totalDmgToB: [1],
-        aLifeStealDist: null, bLifeStealDist: null,
-        aPostCombatStateMean: initialCombatHealingStateMeans(a),
-        bPostCombatStateMean: initialCombatHealingStateMeans(b),
-        aRemHP, aHP: aTotalHP, aAlive,
-        bRemHP, bHP: bTotalHP, bAlive,
-      };
-    }
+    // There is deliberately no melee-initiation guard here: no build admits or refuses the
+    // exchange on the initiating card's attack strength, so a zero-melee attacker still engages
+    // and still gets counterattacked.
+    //   - DOS: `BU_AttackTarget`'s melee entry has "no strength gate in any build"
+    //     (`Reference docs/MoM binary analysis.md`, *The zero-attack-strength abort, and what it
+    //     takes down with it*, the `BU_AttackTarget` gate table). Its sole call site is
+    //     unconditional, and the melee strength it reads at `0x9AE4B` only picks the
+    //     ranged-versus-melee mode (`DOS reconstructed/R6.2a.evidence.md`, *Call-site
+    //     admission*). In the body, the ordinary melee dispatch (`131:0x99939`) is reached with
+    //     no strength test and the counterattack (`131:0x99823`) is gated only on defender Black
+    //     Sleep (`131:0x9975E`) and `Figs > 0` (`131:0x99803`) — `DOS reconstructed/combat.c`,
+    //     `BU_AttackTarget`.
+    //   - Modern: `PerformMeleeAttack` calls the main melee `ApplyAttack(au, du, ATmelee, …)` at
+    //     `$005B3B4B` and the counterattack `ApplyAttack(du, au, ATmelee, …, counter=True)` at
+    //     `$005B3B93` unconditionally, and `ApplyAttack` leaves early only on `figs <= 0`
+    //     (`$005B19D9`) — `Caster binary/Combat.PerformAttacks.pas`,
+    //     `Caster binary/Combat.ApplyAttack.pas`.
+    // The only real melee-strength test in any build is MoM 1.31's `BU_ProcessAttack` abort at
+    // `0x99ED2`, which discards a single attack call whose strength is 0 and which CP 1.60 and
+    // CoM 1 patch (`7F` -> `EB`) to an unconditional jump; it is per call, never per exchange,
+    // so it cannot withhold the defender's counterattack, and `touchAttackFires` already carries
+    // it. The same section also settles which record such a test would read: "There is no 'base'
+    // attack strength at combat time" — `.melee`/`.ranged` hold the live, already-debuffed values
+    // — so neither a permanent record nor the card's `atk` input belongs in a melee gate here.
 
     // Touch attack params: melee-phase activation.
     const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, exorciseFail: aExorciseFailM, destructionFail: aDestructionFailM, lifeStealMod: aLifeStealModM }

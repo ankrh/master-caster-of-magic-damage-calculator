@@ -90,22 +90,30 @@ test('Reset returns state to a truly-fresh-page blob', async ({ browser, context
   await dirtyCtx.close();
 });
 
-// Seed a saved blob that is valid except for one control value, then reload through the real
+// Seed a saved blob that is valid except for the named fields, then reload through the real
 // init path. The blob is written from an init script so the outgoing page's debounced save
-// cannot race it.
-async function reloadWithSavedValue(page, version, edits, retiredId, retiredValue) {
+// cannot race it. `mutation` names control ids (`ids`) and/or per-side identity fields
+// (`identity`) — the two carriers a v2 blob restores state through.
+async function reloadWithSavedBlob(page, version, edits, mutation) {
   await setValue(page, 'gameVersion', version);
   for (const [id, value] of Object.entries(edits)) await setValue(page, id, value);
-  const blob = await page.evaluate(([id, value]) => {
+  const blob = await page.evaluate((m) => {
     const seed = collectState();
-    seed.ids[id] = value;
+    Object.assign(seed.ids, m.ids || {});
+    for (const [prefix, fields] of Object.entries(m.identity || {})) {
+      Object.assign(seed.identity[prefix], fields);
+    }
     return seed;
-  }, [retiredId, retiredValue]);
+  }, mutation);
   await page.addInitScript((seed) => {
     try { localStorage.setItem('pageState_v2', JSON.stringify(seed)); } catch (e) {}
   }, blob);
   await page.reload();
   await page.waitForFunction(() => typeof window.collectState === 'function');
+}
+
+function reloadWithSavedValue(page, version, edits, retiredId, retiredValue) {
+  return reloadWithSavedBlob(page, version, edits, { ids: { [retiredId]: retiredValue } });
 }
 
 // A saved state naming an option the build has since removed must halt, not restore a control
@@ -181,5 +189,82 @@ test('retired Warlord version ids migrate to 1.5.12.7', async ({ page }) => {
     'com2_warlord_1.5.12.7',
     'com2_warlord_1.5.12.7',
   ]);
+  expectNoConsoleErrors(errors);
+});
+
+// F138 (1). A saved version id this build neither offers nor renames used to fall back to
+// DEFAULT_GAME_VERSION, and the blob's default-diff was then expanded against that version's
+// defaults — so every other id came back under a rule set the user never selected. That is a
+// wider substitution than the single control value F123 stopped, and it halts for the same
+// reason (SPEC.md, *Out-of-range values stop the run*).
+test('a saved version id this build neither offers nor renames halts the restore', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const errors = await openPersistent(page);
+  const fresh = await page.evaluate(() => collectState());
+
+  await reloadWithSavedBlob(page, 'com2_1.05.11', { aAtk: '11' },
+    { ids: { gameVersion: 'com2_0.9.0' } });
+
+  const restored = await page.evaluate(() => collectState());
+  expect(restored).toEqual(fresh);
+  const reported = errors.join('\n');
+  expect(reported).toContain('gameVersion');
+  expect(reported).toContain('com2_0.9.0');
+  // And the offending blob is discarded, so it cannot re-throw on every reload.
+  const stored = await page.evaluate(() => localStorage.getItem('pageState_v2'));
+  expect(stored === null || !stored.includes('com2_0.9.0')).toBe(true);
+
+  await context.close();
+});
+
+// F138 (2). The v2 identity record is the carrier `applyFullState` actually prefers for the
+// special-unit selector, and F123's offered-value check only reads the `ids` copy. A key this
+// build does not define reached `populateSpecialUnitOptions` and became `none` with nothing
+// raised.
+test('a saved special-unit key this build does not define halts the restore', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const errors = await openPersistent(page);
+  const fresh = await page.evaluate(() => collectState());
+
+  await reloadWithSavedBlob(page, 'com2_1.05.11', { aUnit: 'custom', aAtk: '11' },
+    { identity: { a: { specialUnit: 'juggernaut' } } });
+
+  const restored = await page.evaluate(() => collectState());
+  expect(restored).toEqual(fresh);
+  const reported = errors.join('\n');
+  expect(reported).toContain('juggernaut');
+
+  await context.close();
+});
+
+// The other half of the same decision: a key this build *does* define, in a version that does
+// not allow it, keeps its version-scoped clamp to `none`. Retirement and version scope are
+// different things, and only the first is out of range.
+test('an undefined special-unit key throws while a version-disallowed one still clamps', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const result = await page.evaluate(() => {
+    document.getElementById('gameVersion').value = 'com2_1.05.11';
+    onVersionChange();
+    populateSpecialUnitOptions('a', 'com2_1.05.11', 'chosen');
+    const allowed = document.getElementById('aSpecialUnit').value;
+    // MoM has no special-unit templates at all, so a known key clamps rather than halting.
+    populateSpecialUnitOptions('a', 'mom_1.31', 'chosen');
+    const clamped = document.getElementById('aSpecialUnit').value;
+    let threw = null;
+    try {
+      populateSpecialUnitOptions('a', 'com2_1.05.11', 'juggernaut');
+    } catch (err) { threw = String(err.message || err); }
+    let identityThrew = null;
+    try {
+      setIdentityControls('a', { baseRace: 'Dwarf', specialUnit: 'juggernaut' });
+    } catch (err) { identityThrew = String(err.message || err); }
+    return { allowed, clamped, threw, identityThrew };
+  });
+  expect(result.allowed).toBe('chosen');
+  expect(result.clamped).toBe('none');
+  expect(result.threw).toContain('juggernaut');
+  expect(result.identityThrew).toContain('juggernaut');
   expectNoConsoleErrors(errors);
 });

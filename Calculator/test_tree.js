@@ -174,6 +174,8 @@ const TEST_TREE = [
           'artificerMechanicalResistanceWarlord',
           'artificerMagicWeaponBypassesWIWarlord',
           'artificerNoBonusForNonMechanicalWarlord',
+          'artificerSkipsThrownAndBreathWarlord',
+          'artificerDoomGazeUnchangedWarlord',
         ],
       },
       {
@@ -584,6 +586,8 @@ const TEST_TREE = [
           'innerPowerDefenseCoM2',
           'innerPowerResistanceCoM2',
           'innerPowerNoTraitNoBonusCoM2',
+          'innerPowerBreathNotThrownCoM2',
+          'innerPowerDoomGazeUnchangedCoM2',
         ],
       },
       {
@@ -649,6 +653,9 @@ const TEST_TREE = [
           'luckyStarEnchantedUnitWarlord',
           'luckyStarAuraResistanceWarlord',
           'luckyStarAuraArmorWarlord',
+          'luckyStarAuraRangedWarlord',
+          'luckyStarAuraSkipsThrownAndBreathWarlord',
+          'luckyStarDoomGazeUnchangedWarlord',
         ],
       },
       {
@@ -731,6 +738,7 @@ const TEST_TREE = [
           'naturalSelectionCoalCreatesMeleeWarlord',
           'naturalSelectionCoalOpensHolyBonusWarlord',
           'naturalSelectionCoalOpensNodeAuraWarlord',
+          'naturalSelectionCoalAttacksWarlord',
           'naturalSelectionIronWarlord',
           'naturalSelectionWildGameWarlord',
           'naturalSelectionWildGameMagicRangedWarlord',
@@ -1153,6 +1161,7 @@ const TEST_TREE = [
       { name: 'Weakness', keys: ['weaknessThrownNotAffected131', 'weaknessThrownFixed160', 'weaknessMeleePenaltyMoM', 'weaknessMeleePenaltyCoM2', 'weaknessBoulderNotAffectedMoM', 'weaknessBoulderPenaltyCoM', 'weaknessMagicRangedNotAffectedMoM', 'weaknessMagicRangedPenaltyCoM', 'weaknessBreathNotAffectedCoM2', 'weaknessBreathPenaltyWarlord'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityThrown131', 'weaponImmunityThrownPatched', 'weaponImmunityMelee', 'weaponImmunityCom2Melee', 'weaponImmunityCom2Melee', 'weaponImmunityWarlordMelee', 'weaponImmunityGeneric131', 'weaponImmunityGenericPatched', 'weaponImmunityGenericCatapult131', 'weaponImmunityGenericCatapultPatched'] },
       { name: 'Wraith Form', keys: ['wraithFormBypassesWIMoM', 'wraithFormBypassesWICoM2'] },
+      { name: 'Zero-strength melee attacker', keys: ['zeroMeleeAttackerStillCounteredMoM131', 'zeroMeleeAttackerStillCounteredMoM160', 'zeroMeleeAttackerStillCounteredCoM', 'zeroMeleeAttackerStillCounteredCoM2', 'naturalSelectionCoalAttacksWarlord'] },
     ],
   },
 ];

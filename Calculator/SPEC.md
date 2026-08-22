@@ -799,13 +799,20 @@ lives in [CLAUDE.md](./CLAUDE.md).
   over `localStorage` on load.
 - Restoring is order-safe: version first (which repopulates rosters and ability panels), then
   roster/source identity, then editable controls, then locking and visibility.
-- **An id this build no longer has is ignored; a *value* its control no longer offers halts the
+- **An id this build no longer has is ignored; a *value* this build no longer has halts the
   restore** (*Out-of-range values stop the run*), because the assignment would otherwise leave the
   control blank and the page would re-persist the blank. Retiring an option therefore obliges the
   build either to accept that older states stop, or to state a migration for the retired value —
-  `RENAMED_GAME_VERSIONS` is the precedent, for version ids. Two option sets are version-scoped
-  rather than retired and keep their own clamp: an unknown roster selection becomes Custom, and a
-  special unit the selected version does not allow becomes none.
+  `RENAMED_GAME_VERSIONS` is the precedent, for version ids. It covers a `<select>` value its
+  option list does not offer; a special-unit key no version defines, on both carriers that hold
+  one — the control value and the v2 identity record; and a saved `gameVersion` this build
+  neither offers nor renames, which halts rather than falling back because the version chooses
+  the default set the blob's diff expands against, so substituting one would reinterpret every
+  other saved id under a rule set the user never chose. Version scope is not retirement and keeps
+  its clamp: an unknown roster selection becomes Custom, and a defined special unit the selected
+  version does not allow becomes none. A blob naming no version at all is a legacy v1 payload
+  rather than an out-of-range value, and still falls back to the persisted version and then the
+  default.
 - A corrupt local blob degrades to clean defaults and is discarded so it cannot throw on every
   reload. A corrupt share blob is stripped and falls back to the recipient's local state.
 

@@ -931,6 +931,23 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
+  innerPowerBreathNotThrownCoM2: {
+    desc: 'Exclusion the engine makes: the block\'s three secondary writes are `U.ranged`, `U.firebreath` and `U.lightningbreath`, each on its own `> 0` test, and its decode note says in as many words that it does not alter Thrown (Units.RecalculateUnits.pas:1877-1884). Fire Breath 5 → 8 while Thrown 3 stays 3, so 3 + 8 = 11.000 at 100% hit vs def 0. A grant reaching every channel, as this block made before F139, gives 6 + 8 = 14.000.',
+    version: V_COM2,
+    a: { atk:0, modernAttacks: { thrown: { strength: 3, type: 'thrown' },
+      fireBreath: { strength: 5, type: 'fire' } },
+    hitRanged:70, hitThrown:70, hitBreath:70, hp:10,
+    abilities: { innerPower: true, fireImmunity: true } },
+    b: { def:0, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 11.000 },
+  },
+  innerPowerDoomGazeUnchangedCoM2: {
+    desc: 'Exclusion the engine makes: `U.doomgaze` is an independent record field named by no line of the Inner Power block (Units.RecalculateUnits.pas:1866-1885). Doom Gaze 5 still deals 5.000; the pre-F139 write gave 8.000.',
+    version: V_COM2,
+    a: { atk:0, hp:10, abilities: { innerPower: true, fireImmunity: true, doomGaze: 5 } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
 
   // --- Orihalcon ---
   orihalconMagicRangedBonusCoM2: {

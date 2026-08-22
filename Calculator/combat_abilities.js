@@ -474,6 +474,8 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 //                   against the record at the writing step's own position (`isRangedFieldSlot`)
 //   rangedOrThrown  Caster.exe's conventional-ranged and Thrown fields, excluding both Breaths
 //                   and every gaze field
+//   rangedOrBreath  Caster.exe's conventional-ranged and two Breath fields, excluding Thrown and
+//                   every gaze field
 //   persistentRanged  `B.ranged > 0`: the permanent record's Ranged field carrying strength,
 //                   tested without regard to what the calculated record holds
 //   doomGazeField   the modern record's independent Doom Gaze field, which is not a view of any
@@ -537,6 +539,11 @@ function slotGateAdmits(u, channel, gate) {
   // each reaches its field while that field still stands empty and typeless, and the region-`e`
   // clamp settles the result. Being one of those two fields is all this gate asks (F100).
   if (gate === 'rangedOrThrown') return isModernRangedOrThrownSlot(u, channel);
+  // `if U.ranged > 0`, `if U.firebreath > 0` and `if U.lightningbreath > 0` — three named record
+  // fields, each carrying its own strength test, and Thrown named by none of them
+  // (Units.RecalculateUnits.pas:1877-1884). Which field a slot is, is record structure; the
+  // per-field strength test is the caller's `whereStrength` (F139).
+  if (gate === 'rangedOrBreath') return isModernSecondarySlot(u, channel);
   // The three DOS shared-byte gates, each the test its own block makes on `bu->ranged` (F135).
   // `rangedUngated` has no test: `bu->ranged--` at Black Prayer (131:0x907F0, com1:0x9054A) and
   // `bu->ranged -= 5` at Mind Storm (131:0x9095E, com1:0x906D1) are unconditional stores, and the
@@ -793,12 +800,18 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // reaches only the enchanted unit, so it is the plain `lucky` control, not this one.
   // The 1.5.12.7 script is the fixed army-wide form; `Reference docs/Source discrepancies.md`
   // §10 records the earlier build's enchanted-unit-only bug.
+  //
+  // The block names four stats and their four bonus mirrors and nothing else: `SAttack`,
+  // `SRanged`, `SDefense` and `SResist` (UnitCalcPre.CAS:1614-1621). `SRanged` is the record's
+  // conventional-ranged field, written with no test of what stands in it, so the write is the
+  // `rangedField` gate ungated; Thrown, both Breaths and `SDoomGaze` are named by no line of the
+  // block and take nothing (F139).
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'luckyStar')) {
     // PROVENANCE[luckyStar]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:2cd8ef385c4ba4e42016a04d
-    abilityStep('luckyStar', 'b', { writes: ['atk', 'def', 'res', ...rtbWrites],
+    abilityStep('luckyStar', 'b', { writes: ['atk', 'def', 'res', ...attackWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 1;
-        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'doomGazeField', 1);
+        addToSlot(u, ctx, 'rangedField', 1);
       } });
   }
 
@@ -859,12 +872,18 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // resolved by innerPowerActiveForUnit so the checkbox can remain visible without
   // affecting other units.
   // Phase c: UnitCalcPre.CAS:1743-1749 grants only Mountaineer — the stat bonuses are binary.
+  //
+  // The block writes Resistance and Defense unconditionally and then makes three separate
+  // strength tests (Units.RecalculateUnits.pas:1866-1885): melee on the **permanent** record's
+  // `B.attack > 0`, which is the `melee` gate, and then `U.ranged`, `U.firebreath` and
+  // `U.lightningbreath`, each on its own live `> 0`. Its decode note says in as many words that
+  // it does not alter Thrown, and no line names `U.doomgaze`, so neither takes a write (F139).
   if (hasAbil(abilities, 'innerPower')) {
     // PROVENANCE[innerPower]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:cb6a5d278f05325e495f0d20
-    abilityStep('innerPower', 'c', { writes: ['atk', 'def', 'res', ...rtbWrites],
+    abilityStep('innerPower', 'c', { writes: ['atk', 'def', 'res', ...attackWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 3); u.def += 2; u.res += 2;
-        addToSlot(u, ctx, 'rtb', 3); addToSlot(u, ctx, 'doomGazeField', 3);
+        addToSlot(u, ctx, 'rangedOrBreath', 3, strength => strength > 0);
       } });
   }
 
@@ -1189,12 +1208,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     abilityStep('magitekEngine', 'b', { writes: ['toBlk'], apply: u => { u.toBlk += 20; } });
   }
 
+  // The Artificer retort's permanent write set is `SAttack`, `SRanged`, `SDefense`, `SResist` and
+  // the four movement stats, all on record selector 1 (CreateUnit.CAS:38-47). `SRanged` is the
+  // record's conventional-ranged field, written with no test of what stands in it, so the write
+  // is the `rangedField` gate ungated; Thrown, both Breaths and `SDoomGaze` are named by no line
+  // of the block and take nothing. The movement stats are outside the calculator's record (F139).
   if (isWarlord && hasAbil(abilities, 'artificer') && hasAbil(abilities, 'mechanical')) {
     // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
-    abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...rtbWrites],
+    abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...attackWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 2;
-        addToSlot(u, ctx, 'rtb', 1); addToSlot(u, ctx, 'doomGazeField', 1);
+        addToSlot(u, ctx, 'rangedField', 1);
       } });
   }
 

@@ -6,6 +6,132 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-22
 
+- **F138 — both state-boundary substitutions now halt; version scope keeps its clamp.**
+  **The premise held on the behaviour and overstated one caller.** Measured against the unchanged
+  code: a saved CoM2 blob whose `ids.gameVersion` read `com2_0.9.0` came back as `mom_1.31`
+  carrying the CoM2 state's `aAtk 11`, with nothing on the console — the whole diff expanded
+  against another version's defaults. An unrecognised special-unit key restored as `none`, also
+  silently. What the row overstated is the preset half: no fixture in any `presets_*.js` supplies
+  `specialUnit` at all (exhaustive grep for `specialUnit\s*:` across the repo — every literal is
+  `none`, `golem`, `chosen`, `zombies` or `catapult`), so `applyPreset` is a reachable caller of
+  the clamp, not a current one. The live gap is elsewhere and larger: `applyFullState` prefers the
+  **v2 identity record** for the selector's value, and F123's offered-value check reads only the
+  `ids` copy, so the carrier that actually decides the control was unchecked.
+  **Decision: halt on both, keep the version clamp.** A version id this build neither offers nor
+  renames chooses the default set every other saved id is expanded against, so substituting one is
+  the widest silent reinterpretation in the state boundary; a key no version defines can only come
+  from a vocabulary the build has since changed. `tryApplyState` already turns both throws into
+  clean defaults, a console report and a discarded blob. A key that is defined but disallowed in
+  the selected version is version scope, not retirement — the version select really moves a
+  `chosen` card to MoM — and still clamps, as does an unknown roster selection. A blob naming no
+  version at all is a legacy v1 payload rather than an out-of-range value and keeps its fallback.
+  **No derived number moves.** `tools/derivation_equivalence.js`, 15,480 derivations across all
+  five versions, is byte-identical with both files at `HEAD` and with the change (24,756,635 bytes
+  either way) — expected, since both files are `data-scope="page"` and outside that context; the
+  page-level measurement is the full preset suite in `npm test`.
+  **Coverage.** Three cases in `tests/persistence.spec.js`, each confirmed red first. Two seed a
+  saved blob through the real init path — one naming the unofferable version id, one naming an
+  undefined special-unit key **in the identity record only** — and assert the page returns clean
+  defaults and the console report names the offending value. The third pins the retained
+  boundary: `chosen` under CoM2 stays, `chosen` under MoM clamps to `none`, and an undefined key
+  throws from both `populateSpecialUnitOptions` and `setIdentityControls`. Both new stops also
+  join the reintroduction registry in `tests/fail-loud-f113.spec.js`, which is red with either
+  file at `HEAD`.
+  Checks: `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas, 270
+  verified, 0 UNVERIFIED; `npm test` 130 passed.
+- **F139 — the three modern stat blocks now write exactly the fields their cited sources name.**
+  **The premise held on every number and failed on one count.** Re-opened all five cited lines and
+  re-measured the three blocks on a unit carrying Ranged 4, Thrown 3, Fire Breath 5, Lightning
+  Breath 6 and Doom Gaze 6: Lucky Star moved Thrown 3→4, both Breaths and Doom Gaze 6→7; Inner
+  Power moved Thrown 3→6 and Doom Gaze 6→9; Artificer moved Thrown, both Breaths and Doom Gaze
+  6→7 — the row's figures exactly, and all three inert in `com2_1.05.11` for Lucky Star and
+  Artificer, which are Warlord-scoped. **What was wrong:** the row said the `rtb` gate had
+  "exactly three callers left". It has **five** — `animated`'s modern arm and `blackPrayer`'s
+  modern arm are the other two, both deliberately cited as reaching every channel and no gaze.
+  Three callers is the count that also wrote `doomGazeField`, which is the set the row named.
+  **Corrected write sets.** Lucky Star: `SAttack`, `SRanged`, `SDefense`, `SResist` and their four
+  bonus mirrors, and nothing else (`UnitCalcPre.CAS:1614-1621`), so its channel write is the
+  `rangedField` gate ungated. Artificer: the same four stats plus the four movement fields the
+  calculator's record does not carry, all on record selector 1 (`CreateUnit.CAS:38-47`), so the
+  same gate. Inner Power: Resistance and Defense unconditionally, melee on the **permanent**
+  record's `B.attack > 0`, then `U.ranged`, `U.firebreath` and `U.lightningbreath` each on its own
+  live `> 0` (`Units.RecalculateUnits.pas:1866-1885`, whose decode note says in as many words that
+  it does not alter Thrown). That third set is a new gate, `rangedOrBreath`, over the existing
+  `isModernSecondarySlot` predicate, with the per-field strength test supplied as `whereStrength`.
+  No block names `SDoomGaze` (`MASTER.CAS:1047`); `UnitCalc.CAS:1487` remains the only script
+  write to it, a zeroing.
+  **Measurement.** `tools/derivation_equivalence.js`, 15,480 derivations, current build against
+  the pre-F139 `combat_abilities.js`: **0 move in `mom_1.31`, 0 in `mom_cp_1.60.00` and 0 in
+  `com_6.08`** (3,096 cases each), 4 in `com2_1.05.11` and 36 in `com2_warlord_1.5.12.7`. Every
+  moved value is a removed increment on a Thrown, Breath or Doom Gaze field; nothing rose.
+  **Coverage.** Seven presets. Six are the exclusions, each confirmed red against the unfixed
+  bodies in one run and green after: `luckyStarAuraSkipsThrownAndBreathWarlord` and
+  `artificerSkipsThrownAndBreathWarlord` (8.000 against 10.000),
+  `innerPowerBreathNotThrownCoM2` (11.000 against 14.000 — it binds the retained Breath write and
+  the dropped Thrown one in one number), and `luckyStarDoomGazeUnchangedWarlord`,
+  `artificerDoomGazeUnchangedWarlord` (5.000 against 6.000) and `innerPowerDoomGazeUnchangedCoM2`
+  (5.000 against 8.000). The seventh, `luckyStarAuraRangedWarlord`, binds the write the block does
+  make — `SRanged` 2 → 3 — and is green in both states; its control is removal of the enchantment
+  (2.000), which is what the preset contract asks for. Artificer's and Inner Power's Ranged halves
+  were already bound.
+  `SPEC.md` is unchanged: what an individual enchantment writes is owned by its `PROVENANCE`
+  citation, and the four slot gates SPEC names are unaffected.
+  **Nothing was folded in. Filed:** F142 — the two CAS-scripted blocks write `SAttack` with no
+  test at all, while the calculator applies the general dead-slot `melee` gate to them, so a
+  Warlord unit at base melee 0 takes +1 in the script and 0 here; it is a question about every
+  CAS-scripted melee write, not these two. F143 — the `doomGazeField` gate now has no caller.
+  Checks: `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas, 270
+  verified, 0 UNVERIFIED; `npm test` 127 passed.
+- **F137 — the melee-initiation guard is gone; no build gates the exchange on attack strength.**
+  **The row's premise held as a measurement and failed as a diagnosis.** The repro reproduced
+  exactly: a Warlord custom card at `atk 0` with Natural Selection: Coal derives melee 1 while
+  `baseAtk` stays 0, so `resolveCombat` short-circuited to the identity distribution (`dmgToA`/
+  `dmgToB` both 0.000) while the same unit as defender counterattacked for 1. But the row asked
+  *which record* the guard should read, and the sources answer that no build has the guard at all.
+  **Decision: delete it.** `BU_AttackTarget`'s melee entry carries "no strength gate in any build"
+  (`MoM binary analysis.md`, *The zero-attack-strength abort, and what it takes down with it*, the
+  `BU_AttackTarget` gate table); its sole call site is unconditional and the melee strength it
+  reads at `0x9AE4B` only selects ranged-versus-melee mode (`R6.2a.evidence.md`, *Call-site
+  admission*); the ordinary melee dispatch (`131:0x99939`) is reached untested and the
+  counterattack (`131:0x99823`) is gated only on defender Black Sleep and `Figs > 0`
+  (`DOS reconstructed/combat.c`). `PerformMeleeAttack` calls the main melee `ApplyAttack` at
+  `$005B3B4B` and the counterattack at `$005B3B93` unconditionally, and `ApplyAttack` exits early
+  only on `figs <= 0` at `$005B19D9` (`Combat.PerformAttacks.pas`, `Combat.ApplyAttack.pas`). The
+  one real melee-strength test is MoM 1.31's per-call `BU_ProcessAttack` abort at `0x99ED2`, which
+  CP 1.60 and CoM 1 patch out (`7F` -> `EB`) and which `touchAttackFires` already carries; being
+  per call, it never withholds the counterattack. The same section settles the record question the
+  row asked: "There is no 'base' attack strength at combat time" — so neither the permanent record
+  nor the card input belonged in a melee gate, and applying F133's answer here would have been
+  wrong. The citation is a prose comment at the site rather than a `PROVENANCE` anchor: the audit
+  binds anchors to formula sites, the deletion removes the site, and `combat.js` carries no anchors
+  for this class of control-flow claim today.
+  **The row's declared calculator scope was wrong and is corrected here.** It expected only
+  `com2_warlord_1.5.12.7` to move. Deleting the guard moves all five: over a 39,600-input melee
+  sweep (five versions x three melee strengths x two secondary strengths x three secondary types
+  x eleven attacker ability sets x two defender strengths x five defender ability sets x Wall of
+  Fire on/off x two unit types), **756 `mom_1.31`, 870 `mom_cp_1.60.00`, 780 `com_6.08`, 672
+  `com2_1.05.11` and 708 `com2_warlord_1.5.12.7` cases change**, with 0 errors. The moved cases are
+  the counterattack, defender gaze, defender Immolation and Wall of Fire that the short-circuit was
+  suppressing — every one of them gated on the defender's own record, not the attacker's strength.
+  **No existing preset moved:** with the guard removed and before the new fixtures were added, the
+  1,062-preset browser suite passed unchanged, so nothing had to be re-expected. One preset stopped
+  being vacuous: `immolationAtkZeroNoFire` (MoM 1.31, attacker `atk 0`) never reached the melee
+  branch before and now genuinely exercises `touchAttackFires`.
+  **Coverage.** Five presets, each confirmed red against the unfixed guard (all five measured
+  0.000/0.000) and green after: `zeroMeleeAttackerStillCounteredMoM131`, `...MoM160`, `...CoM` and
+  `...CoM2` each expect `dmgToA` 3.000 / `dmgToB` 0.000, and `naturalSelectionCoalAttacksWarlord`
+  puts F133's Coal unit on the **attacking** card for `dmgToB` 1.000 / `dmgToA` 5.000 (without
+  Coal, `dmgToB` 0.000). The four sit beside the Black Sleep initiation fixtures, which are the
+  contrast: a declared calculator boundary really does refuse the exchange, attack strength does
+  not; the Coal one joins the Natural Selection group.
+  **Nothing was folded in. Filed:** F141 — `touchAttackFires`'s modern arm is the same unsourced
+  record read one layer down, and `ApplyAttack`'s riders are gated on attack type and immunities
+  alone; a Warlord Coal attacker delivers no Stoning Touch (`dmgToB` 1.000 against 20.000). Not
+  folded in because settling it needs its own citation for each arm, which fails the
+  adjacent-defect bound's second clause. `SPEC.md` is unchanged: it never specified an
+  exchange-admission gate.
+  Checks: `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas, 270
+  verified, 0 UNVERIFIED; `npm test` 127 passed.
 - **F136 — the card's roster statement now has one home: `applyUnit`.** `resetCardToRosterBase`
   (`ui_card.js`) is gone; its seven writes (`Atk`, `Rtb`, `Def`, `Res`, `HP`, `ToHitMod`,
   `HitChance`) are an inlined block in `applyUnit` beside the nine it already made, and its three
@@ -62,7 +188,9 @@ pre-2026-08-10 narratives remain recoverable from git history.
   `SPEC.md`, *The step model* now states that a step may name its block's own gate in place of the
   dead-slot rule. **Merging onto `isLiveSlot` was rejected** for the reason above; **a full
   retirement of `isLiveSlot` was rejected** as out of proportion — it stays the general rule, and
-  after this change its `rtb` gate has exactly three callers left, all modern, all named in F139.
+  after this change its `rtb` gate has five callers left, all modern. (F139 above corrects this
+  line's original count of three: three was the number that also wrote `doomGazeField`, and taking
+  those off the gate left two.)
   **Folded in, at the user's decision rather than under the adjacent-defect bound:** the DOS gaze
   level ladder (`stats_sequence.js`) applied `gazeLvlMod`/`doomGazeLvlMod` ungated while the
   ranged arm beside it was gated. Every ranged step of both MoM ladders is
@@ -197,7 +325,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   holds the other direction: a permanent record driven to 0 shuts the slot, and that exclusion is
   the rule under test. The node-aura preset discriminates the folded-in half on its own — with the
   aura gate alone left unfixed it measures 1.000, not 3.000. The three Coal presets put the granted
-  unit on the **defending** card because F137 below blocks the attacking one. Two existing presets
+  unit on the **defending** card because F137 then blocked the attacking one. Two existing presets
   changed number as a consequence and were re-expected: `ludusAgogeResistanceWarlord` and
   `ludusAgogeHpWarlord` both give their Orc defender a permanent melee 1 it did not have, so each
   now counterattacks for `dmgToA` 0.300.

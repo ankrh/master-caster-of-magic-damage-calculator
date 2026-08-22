@@ -788,6 +788,13 @@ definePresets({
     nodeAura: 'nature',
     expected: { dmgToA: 3.000, dmgToB: 3.000 },
   },
+  naturalSelectionCoalAttacksWarlord: {
+    desc: 'The same Coal-created melee on the *attacking* card, which no melee-initiation guard may refuse: the exchange is admitted regardless of attack strength, so melee 0 + 1 = 1 (1 fig, 100% hit) vs def 0 → dmgToB 1.0, and the defender still counterattacks for 5 (without Coal the attacker deals 0.0 and only the counterattack lands)',
+    version: V_WARLORD,
+    a: { figs:1, atk:0, def:0, toBlkMod:70, hitChance:70, hp:20, abilities: { coal: true } },
+    b: { figs:1, atk:5, hitChance:70, hp:30 },
+    expected: { dmgToA: 5.000, dmgToB: 1.000 },
+  },
   naturalSelectionIronWarlord: {
     desc: 'Natural Selection Iron (Warlord): +1 armor on defender. armor 4 + 1 = 5 (100% block) fully blocks atk 5 → 0.0 (without Iron, def 4 lets 1 leak → 1.0)',
     version: V_WARLORD,

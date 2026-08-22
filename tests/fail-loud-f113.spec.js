@@ -52,6 +52,13 @@ const CASES = [
   ['globalEnchantmentAllowedForVersion: control with no version rule',
     "globalEnchantmentAllowedForVersion('noSuchEnchantmentF113', 'com2_1.05.11')",
     'noSuchEnchantmentF113'],
+  // F138: the two state-boundary reads that used to answer with a plausible substitute. A key no
+  // version defines is retirement, not version scope — a *defined* key the selected version
+  // disallows still clamps to `none`, which `tests/persistence.spec.js` pins.
+  ['specialUnitAllowed: special-unit key no version defines',
+    "specialUnitAllowed('com2_1.05.11', 'juggernautF138')", 'juggernautF138'],
+  ['applyState: saved version id this build neither offers nor renames',
+    "applyState({ v: 2, ids: { gameVersion: 'com2_0.9.0' } })", 'com2_0.9.0'],
 ];
 
 test('out-of-range values stop the run instead of being replaced', async ({ page }) => {
