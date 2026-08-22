@@ -6,6 +6,27 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-22
 
+- **D41 — the three DOS builds' battle-unit setup routine is fully reconstructed.**
+  **The extent premise held; the copy premise did not.** The common far routine is exactly
+  `[0x8EAB9,0x8EDFD)`, ending at the `retf` immediately before `BU_Construct`, but it does not
+  copy the permanent unit record. `_UNITS[unit_idx].type` only selects the source: `_fmemcpy`
+  imports 0x24 bytes beginning at `unit_types[type].Melee`, over-copying the next type record's
+  name word into `Combat_Effects` and immediately clearing it. `D41.evidence.md` owns the extent,
+  ledgers, byte inventories and build differences; `unitcalc.c` now owns the shared source body.
+  The reconstruction also closes the load-bearing Focus Magic gap from F108: CoM 1 floors copied
+  ammunition at 4 from the persistent enchantment before the constructor, then applies its two
+  raw hero-template ammunition formulas. CP and CoM clamp a depleted record to one surviving
+  figure and `hits-1` front damage, while 1.31 leaves the calculated nonpositive figure count;
+  CoM additionally initializes `Grey_Hits`, clears the imported Move-Flags high byte, overwrites
+  the imported `Attribs_2` high byte from its unchecked nine-entry Level table, and conditionally
+  imports current movement for the active battle-unit pointer. Two independent Sol High
+  derivations agreed on the bytes; the Opus review found six precision/vocabulary issues in the
+  merge, all incorporated, with no semantic disagreement. **No calculator number moves** in
+  `mom_1.31`, `mom_cp_1.60.00` or `com_6.08`; this is evidence/source reconstruction only.
+  Checks: `verify_dos_derivation.py` over `[0x8EAB9,0x8EDFD)` passed all three builds — 13/14/22
+  contiguous rows, 6/7/16 conditional jumps, 3 calls each, 34/36/37 named writes, zero gaps,
+  parent mismatches or unaccounted elements; `npm run provenance` 270 formulas, 270 verified,
+  0 UNVERIFIED, 23 tooling assertions.
 - **F138 — both state-boundary substitutions now halt; version scope keeps its clamp.**
   **The premise held on the behaviour and overstated one caller.** Measured against the unchanged
   code: a saved CoM2 blob whose `ids.gameVersion` read `com2_0.9.0` came back as `mom_1.31`

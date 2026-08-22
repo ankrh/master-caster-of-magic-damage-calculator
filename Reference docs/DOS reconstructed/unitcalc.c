@@ -10,7 +10,8 @@
  *                 R6.1g item powers, recompute hit points and CoM movement;
  *                 R6.1h item attack-special helper;
  *                 R6.5c overland Unit_Moves2; R9-G1a-R3 Zombies type-table Abilities binding;
- *                 B9 overland Create_Unit; F6 Apply_Chaos_Channels
+ *                 B9 overland Create_Unit; F6 Apply_Chaos_Channels;
+ *                 D41 Load_Battle_Unit
  */
 
 #include "MOM_DAT.h"
@@ -139,6 +140,7 @@
 
 /* BATTLE_UNIT melee/ranged attack-attribute fields (16-bit). */
 #define ATT_ARMOR_PIERCING        0x0001
+#define ATT_POISON                0x0004
 #define ATT_LIFE_STEAL            0x0008
 #define ATT_DOOM_DAMAGE           0x0010
 #define ATT_DESTRUCTION           0x0020
@@ -190,6 +192,15 @@
 #define COM1_CATAPULT_MAGIC_WP    9
 /* Signed slot sentinel used by _UNITS[].Hero_Slot. */
 #define HERO_SLOT_NONE            (-1)
+
+/* D41 Load_Battle_Unit constants and field-specific sentinels. */
+#define BATTLE_UNIT_TYPE_COPY_BYTES       0x24
+#define BATTLE_DAMAGE_KIND_COUNT          3
+#define COM1_FOCUS_MAGIC_AMMO_FLOOR       4
+#define PLAYER_NONE                      (-1)
+#define BU_GREY_HITS_UNINITIALIZED       (-1)
+#define BU_PICTURE_UNASSIGNED            (-1)
+#define BU_TARGET_NONE                   (-1)
 
 /* _combat_node_type values as paired by this routine with BATTLE_UNIT.race. */
 #define CMB_NODE_SORCERY          0
@@ -302,6 +313,8 @@
 #define it_Shield                       7
 
 /* Hero-template ability word at record +0x02. */
+#define HSA_UNKNOWN_AMMO_00000004        0x00000004UL
+#define HSA_UNKNOWN_AMMO_00000020        0x00000020UL
 #define HSA_BLADEMASTER                  0x00000040UL
 #define HSA_BLADEMASTER2                 0x00000080UL
 #define HSA_MIGHT                        0x00008000UL
@@ -314,6 +327,9 @@
 #define HSA_AGILITY                      0x80000000UL
 #define HA_CONSTITUTION                 0x1000
 #define HA_SUPER_CONSTITUTION           0x2000
+#define COM1_HERO_AMMO_FACTOR_04             2
+#define COM1_HERO_AMMO_FACTOR_20             3
+#define COM1_HERO_AMMO_DIVISOR                4
 
 #define UA_LARGESHIELD                  0x0002
 #define ITEM_SLOT_EMPTY                 (-1)
@@ -323,6 +339,7 @@
 #define BU_OFF_MOVE_FLAGS_HI      0x17
 #define BU_OFF_ATTRIBS_1_LO       0x18
 #define BU_OFF_ATTRIBS_1_HI       0x19
+#define ITEM_EMBED_SPELL_COUNT_LOW_OFFSET 0x2C
 
 /* MoM 1.31's unindexed Chaos Surge read: player 0's byte, repeated inside the player loop. */
 #define PLAYER0_CHAOS_SURGE_ADDR  0xA356
@@ -1958,6 +1975,295 @@ int16_t __far Battle_Unit_Moves2(int16_t bu_idx)
     return moves2;                              /* com1:0x9F2CE */
 }                                               /* retf com1:0x9F2D3 */
 #endif
+
+/* ===========================================================================================
+ * Load_Battle_Unit(unit_idx, bu) — unit-type import and battle-record setup.             [D41]
+ *
+ * Common raw extent [0x8EAB9,0x8EDFD), ending at the retf immediately before
+ * BU_Construct. The permanent unit supplies the type selector; _fmemcpy imports 0x24 bytes
+ * beginning at unit_types[type].Melee, then Combat_Effects clears the two-byte over-copy.
+ * Complete ledgers, dependency closure and build differences are in D41.evidence.md.
+ * =========================================================================================== */
+
+#if BUILD == COM1
+/* Raw table at com1:0x8DD5B..0x8DD64, read through cs:0x018B with unchecked signed Level. */
+static const uint8_t com1_unknown_1b_by_level[9] = {
+    0x0A, 0x0D, 0x11, 0x15, 0x1C, 0x24, 0x2C, 0x37, 0x42
+};
+#endif
+
+void __far Load_Battle_Unit(int16_t unit_idx, struct s_BATTLE_UNIT __far *bu)
+{
+    int16_t item_charges;
+    int16_t i;
+
+    /* Select `unit_types[_UNITS[unit_idx].type].Melee`, then copy 0x24 bytes.
+       The two-byte over-copy into `Combat_Effects` is deliberately represented and immediately
+       cleared below. 131:0x8EAC1,0x8EAD5,0x8EAEA 160:= com1:= */
+    _fmemcpy(bu, &unit_types[_UNITS[unit_idx].type].Melee,
+             BATTLE_UNIT_TYPE_COPY_BYTES);
+
+    /* 131:0x8EAF5 160:= com1:= */
+    bu->Combat_Effects = 0;
+    /* 131:0x8EAFE 160:= com1:0x8EAFB */
+    bu->melee_tohit = 0;
+    /* 131:0x8EB06 160:= com1:0x8EB00 */
+    bu->ranged_tohit = 0;
+    /* 131:0x8EB0E 160:= com1:0x8EB05 */
+    bu->tohit = 0;
+    /* 131:0x8EB16 160:= com1:0x8EB0A */
+    bu->toblock = 0;
+    /* 131:0x8EB1E 160:= com1:0x8EB0F */
+    bu->Weapon_Plus1 = 0;
+    /* 131:0x8EB26 160:= com1:0x8EB14 */
+    bu->melee_attack_attributes = 0;
+    /* 131:0x8EB2F 160:= com1:0x8EB1A */
+    bu->ranged_attack_attributes = 0;
+    /* two word stores, high then low; 131:0x8EB38,0x8EB3E 160:=
+       com1:0x8EB20,0x8EB26 */
+    bu->item_enchantments = 0;
+    /* 131:0x8EB47 160:= com1:0x8EB2C */
+    bu->Extra_Hits = 0;
+    /* 131:0x8EB4F 160:= com1:0x8EB31 */
+    bu->unit_idx = unit_idx;
+    /* 131:0x8EB56 160:= com1:0x8EB35 */
+    bu->Web_HP = 0;
+
+#if BUILD == COM1
+    /* Word stores coalesce adjacent bytes but zero the same named fields.
+       com1:0x8EB3A,0x8EB40,0x8EB46,0x8EB4C,0x8EB52 */
+    bu->Gold_Melee = bu->Gold_Ranged = bu->Gold_Defense = bu->Gold_Resist = 0;
+    bu->Gold_Hits = bu->Grey_Melee = bu->Grey_Ranged = bu->Grey_Defense = 0;
+    bu->Grey_Resist = 0;
+    /* Unlike both MoM builds, CoM initializes this cache/sentinel byte. com1:0x8EB57 */
+    bu->Grey_Hits = BU_GREY_HITS_UNINITIALIZED;
+    /* com1:0x8EB67 */
+    bu->bufpi = BU_PICTURE_UNASSIGNED;
+    /* com1:0x8EB6D */
+    bu->status = bus_Active;
+
+    /* AL=owner and AH=Level are preserved together across the following CoM-only block.
+       com1:0x8EB72,0x8EB7E,0x8EB82,0x8EB86 */
+    {
+        int8_t owner = _UNITS[unit_idx].owner_idx;
+        int8_t level = _UNITS[unit_idx].Level;
+
+        /* Persistent enchantments, not the transient battle-unit enchantment field.
+           `cmp ammo,4 / jg` is signed; values <=4, including 4, are stored as 4.
+           com1:0x8EB87 je 0x8EBA0, com1:0x8EB94 jg 0x8EBA0,
+           com1:0x8EB9B */
+        if (_UNITS[unit_idx].enchantments & UE_FOCUS_MAGIC) {
+            if (bu->ammo <= COM1_FOCUS_MAGIC_AMMO_FLOOR)
+                bu->ammo = COM1_FOCUS_MAGIC_AMMO_FLOOR;
+        }
+
+        /* Signed Hero_Slot and owner admission. Neither indexes the owned-hero slot here: owner
+           and the unit type select the immutable `_HEROES2` template.
+           com1:0x8EBA2 jle 0x8EC00, com1:0x8EBAF,
+           com1:0x8EBB3 jle 0x8EC00, com1:0x8EBC2 */
+        if (_UNITS[unit_idx].Hero_Slot > HERO_SLOT_NONE && owner > PLAYER_NONE) {
+            uint32_t abilities = _HEROES2[owner]->heroes[_UNITS[unit_idx].type].abilities;
+            int16_t factor = 0;
+
+            /* The first bit wins if both are set. Branches land at the shared arithmetic or the
+               factor increment. com1:0x8EBD0 jne 0x8EBE3,
+               com1:0x8EBD7 jne 0x8EBE2 */
+            if (abilities & HSA_UNKNOWN_AMMO_00000004)
+                factor = COM1_HERO_AMMO_FACTOR_04;
+            else if (abilities & HSA_UNKNOWN_AMMO_00000020)
+                factor = COM1_HERO_AMMO_FACTOR_20;
+
+            if (factor != 0) {
+                /* Full signed arithmetic idiom: `mov al,Level; cbw; inc ax; imul cx;
+                   mov cx,4; idiv cx`. com1:0x8EBE5,0x8EBE9,0x8EBEA,0x8EBEB,
+                   com1:0x8EBED,0x8EBF0 */
+                int16_t ammo_bonus = (int16_t)((((int32_t)level + 1) * factor)
+                                   / COM1_HERO_AMMO_DIVISOR);
+                /* Signed `cmp bu->ammo,0 / jle 0x8EC00`; 8-bit add may wrap.
+                   com1:0x8EBF5,0x8EBFA,0x8EBFC */
+                if (bu->ammo > 0)
+                    bu->ammo = (int8_t)(bu->ammo + ammo_bonus);
+            }
+        }
+
+        /* Pop the preserved owner/Level word. com1:0x8EC00,0x8EC03,0x8EC04 */
+        bu->controller_idx = owner;
+        /* CoM retains the copied low Move_Flags byte but clears its high byte. com1:0x8EC08 */
+        *((uint8_t __far *)bu + BU_OFF_MOVE_FLAGS_HI) = 0;
+        /* Signed Level is an unchecked index into cs:0x018B; values 0..8 map to the quoted table.
+           This discards the high byte of the unit type's imported Attribs_2 word. No reader of
+           battle-unit +0x1B was located, so the table values remain semantically UNKNOWN.
+           com1:0x8EC0D,0x8EC12, com1:0x8EC17; table com1:0x8DD5B */
+        bu->Unused_1Bh = com1_unknown_1b_by_level[level];
+    }
+#else
+    /* 131:0x8EB5E,0x8EB66,0x8EB6E,0x8EB76,0x8EB7E 160:= com1:— */
+    bu->Gold_Melee = bu->Gold_Ranged = bu->Gold_Defense = bu->Gold_Resist = 0;
+    bu->Gold_Hits = 0;
+    /* 131:0x8EB86,0x8EB8E,0x8EB96,0x8EB9E 160:= com1:— */
+    bu->Grey_Melee = bu->Grey_Ranged = bu->Grey_Defense = bu->Grey_Resist = 0;
+    /* Grey_Hits is not written in mom131 or mom160. */
+    /* 131:0x8EBA6 160:= com1:— */
+    bu->bufpi = BU_PICTURE_UNASSIGNED;
+    /* 131:0x8EBAF 160:= com1:— */
+    bu->status = bus_Active;
+    /* 131:0x8EBB4,0x8EBC0,0x8EBC7 160:= com1:— */
+    bu->controller_idx = _UNITS[unit_idx].owner_idx;
+#endif
+
+    /* Exactly three byte stores. The initial jump enters at the test; the `jl` at the end returns
+       to the body. 131:0x8EBCB,0x8EBCD,0x8EBCF,0x8EBD4,0x8EBDD
+       160:= com1:0x8EC1C,0x8EC1E,0x8EC20,0x8EC25,0x8EC2E */
+    for (i = 0; i < BATTLE_DAMAGE_KIND_COUNT; ++i)
+        bu->damage[i] = 0;
+
+    /* High word then low word. 131:0x8EBE2,0x8EBE8 160:=
+       com1:0x8EC33,0x8EC39 */
+    bu->enchantments = 0;
+    /* 131:0x8EBF1 160:= com1:0x8EC3F */
+    bu->Suppression = 0;
+    /* 131:0x8EBF9 160:= com1:0x8EC44 */
+    bu->mana_max = 0;
+    /* 131:0x8EC01 160:= com1:0x8EC49 */
+    bu->Item_Charges = 0;
+    /* 131:0x8EC09 160:= com1:0x8EC4E */
+    bu->target_battle_unit_idx = BU_TARGET_NONE;
+    /* 131:0x8EC11 160:= com1:0x8EC53 */
+    bu->Poison_Strength = 0;
+
+    /* Far callee returns the signed/byte upkeep in AL. 131:0x8EC16,0x8EC17,0x8EC20
+       160:= com1:0x8EC58,0x8EC59,0x8EC62 */
+    bu->upkeep = (int8_t)Unit_Upkeep_0x961F3(unit_idx);
+
+    /* The first `je` skips the complete poison block to the constructor setup.
+       131:0x8EC27 je 0x8EC4F 160:= com1:0x8EC69 je 0x8EC91 */
+    if (bu->attack_attributes & ATT_POISON) {
+        /* 131:0x8EC32,0x8EC39 160:= com1:0x8EC74,0x8EC7B */
+        bu->Poison_Strength = bu->Spec_Att_Attrib;
+        /* Multi Gaze preserves Spec_Att_Attrib; all other poison-bearing types clear it.
+           131:0x8EC40 je 0x8EC4F,0x8EC4A 160:=
+           com1:0x8EC82 je 0x8EC91,0x8EC8C */
+        if (bu->ranged_type != RAT_MULTIPLE_GAZE)
+            bu->Spec_Att_Attrib = 0;
+    }
+
+    /* Arguments are the far bu pointer; `push cs` makes the near call a far call compatible with
+       the constructor's retf. 131:0x8EC4F,0x8EC52,0x8EC56,0x8EC57
+       160:= com1:0x8EC91,0x8EC94,0x8EC98,0x8EC99 */
+    BU_Construct(bu);
+
+    /* 131:0x8EC5C,0x8EC5F,0x8EC66 160:= com1:0x8EC9E,0x8ECA1,0x8ECA5 */
+    bu->mana = bu->mana_max;
+
+#if BUILD == COM1
+    /* CoM snapshots both permanent bytes while `_UNITS` is live. com1:0x8ECA9,0x8ECB5,
+       com1:0x8ECB9,0x8ECC0 */
+    {
+        int8_t damage = _UNITS[unit_idx].Damage;
+        int8_t moves2_max = _UNITS[unit_idx].moves2_max;
+        int8_t q, r;
+        bu->damage[0] = (uint8_t)damage;
+
+        /* Two compares form far-pointer equality; either `jne` lands at division.
+           com1:0x8ECC4,0x8ECC7 jne 0x8ECDA,
+           com1:0x8ECCD,0x8ECD0 jne 0x8ECDA,com1:0x8ECD6 */
+        if (bu == global_battle_unit)
+            bu->movement_points = moves2_max;
+
+        /* `mov al,damage; cbw; idiv byte [bu+0x10]`: signed 16-by-signed-8 division,
+           quotient AL, remainder AH. com1:0x8ECDA,0x8ECDC,0x8ECDD */
+        q = (int8_t)(damage / bu->hits);
+        r = (int8_t)(damage % bu->hits);
+        /* com1:0x8ECE1 */
+        bu->front_figure_damage = r;
+        /* com1:0x8ECE5,0x8ECE9,0x8ECEB */
+        bu->Cur_Figures = (int8_t)(bu->Max_Figures - q);
+        /* Signed `cmp dl,0 / jg 0x8ED03`; clamp inherited from CP.
+           com1:0x8ECEF,0x8ECF2,0x8ECF4,0x8ECF9,0x8ECFD,0x8ECFF */
+        if (bu->Cur_Figures <= 0) {
+            bu->Cur_Figures = 1;
+            bu->front_figure_damage = (int8_t)(bu->hits - 1);
+        }
+    }
+#else
+    /* 131:0x8EC6A,0x8EC76,0x8EC7D 160:= com1:— */
+    bu->damage[0] = (uint8_t)_UNITS[unit_idx].Damage;
+    /* Two complete signed divide idioms, each `cbw / cwd / idiv bx`.
+       131:0x8EC81,0x8EC8D,0x8EC91,0x8EC96,0x8EC9A,0x8EC9E,0x8EC9F
+       160:= com1:— */
+    bu->front_figure_damage = (int8_t)(_UNITS[unit_idx].Damage % bu->hits);
+    /* 131:0x8ECA8,0x8ECB4,0x8ECB8,0x8ECBD,0x8ECC1,0x8ECC5,0x8ECC6,
+       131:0x8ECCB,0x8ECCF,0x8ECD4 160:= com1:— */
+    bu->Cur_Figures = (int8_t)(bu->Max_Figures - (_UNITS[unit_idx].Damage / bu->hits));
+#if BUILD == CP160
+    /* Signed `cmp dl,0 / jg 0x8ECEC`. 131:—
+       160:0x8ECD8,0x8ECDB,0x8ECDD,0x8ECE2,0x8ECE6,0x8ECE8 com1:— */
+    if (bu->Cur_Figures <= 0) {
+        bu->Cur_Figures = 1;
+        bu->front_figure_damage = (int8_t)(bu->hits - 1);
+    }
+#endif
+#endif
+
+    /* 131 executes these as separate loads/stores; CP and CoM keep `es:bx=bu` and coalesce the
+       zero value. Address annotations cite each actual write sequence. */
+    /* 131:0x8ECDB 160:0x8ECFF com1:0x8ED30 */
+    bu->Atk_FigLoss = 0;
+    /* 131:0x8ECE4 160:0x8ED05 com1:0x8ED34 */
+    bu->Confusion_State = 0;
+    /* 131:0x8ECEC 160:0x8ED0A com1:0x8ED38 */
+    bu->gibs = 0;
+    /* Duplicate executable store retained. 131:0x8ECF5,0x8ECFE
+       160:0x8ED10,0x8ED16 com1:0x8ED3C,0x8ED40 */
+    bu->Unknown_5A = 0;
+    bu->Unknown_5A = 0;
+    /* 131:0x8ED07 160:0x8ED1C com1:0x8ED44 */
+    bu->Melee_Anim = 0;
+    /* 131:0x8ED10 160:0x8ED22 com1:0x8ED48 */
+    bu->outline_magic_realm = 0;
+    /* 131:0x8ED19 160:0x8ED28 com1:0x8ED4C */
+    bu->move_anim_ctr = 0;
+    /* 131:0x8ED22 160:0x8ED2E com1:0x8ED50 */
+    bu->Moving = 0;
+    /* 131:0x8ED2B 160:0x8ED34 com1:0x8ED54 */
+    bu->action = 0;
+    /* 131:0x8ED34 160:0x8ED3A com1:0x8ED58 */
+    bu->Always_Animate = 0;
+    /* 131:0x8ED3D 160:0x8ED40 com1:0x8ED5C */
+    bu->Image_Effect = 0;
+    /* 131:0x8ED46 160:= com1:0x8ED60 */
+    bu->Move_Bob = 0;
+
+    /* Signed Hero_Slot test. Failure goes directly to the epilogue.
+       131:0x8ED4C,0x8ED58,0x8ED5D jg 0x8ED62 / jmp 0x8EDF7
+       160:= com1:0x8ED64,0x8ED70,0x8ED75 jg 0x8ED7A / jmp 0x8EDF7 */
+    if (_UNITS[unit_idx].Hero_Slot > HERO_SLOT_NONE) {
+        /* Signed item-index admission. 131:0x8ED62..0x8ED92,0x8ED97 jle 0x8EDE2
+           160:= com1:0x8ED7A..0x8ED92,0x8ED97 jle 0x8EDE2 */
+        if (players[_UNITS[unit_idx].owner_idx]
+                   .Heroes[_UNITS[unit_idx].Hero_Slot].Items[0] > ITEM_SLOT_EMPTY) {
+            /* Recomputed owner/Hero_Slot/item expression, item stride 0x32, signed byte load.
+               131:0x8ED99..0x8EDDD 160:= com1:= */
+            item_charges = (int8_t)*(
+                (uint8_t __far *)&_ITEMS[
+                    players[_UNITS[unit_idx].owner_idx]
+                           .Heroes[_UNITS[unit_idx].Hero_Slot].Items[0]
+                ] + ITEM_EMBED_SPELL_COUNT_LOW_OFFSET
+            );
+        } else {
+            /* 131:0x8EDE2 160:= com1:= */
+            item_charges = 0;
+        }
+        /* Signed local comparison; nonpositive values leave the initial zero intact.
+           131:0x8EDE7,0x8EDEB jle 0x8EDF7,0x8EDED,0x8EDF3
+           160:= com1:= */
+        if (item_charges > 0)
+            bu->Item_Charges = (int8_t)item_charges;
+    }
+
+    /* Far epilogue and return. 131:0x8EDF7,0x8EDFC 160:= com1:= */
+    return;
+}
 
 /* ===========================================================================================
  * BU_Construct(bu) — battle-unit constructor across all three DOS builds.             [R6.1b]

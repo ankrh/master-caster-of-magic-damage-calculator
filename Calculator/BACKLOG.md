@@ -40,40 +40,33 @@ dependents, not unrelated later rows.
 | 5 | **F126** | F126 | Settle whether the DOS per-channel attack-attribute masks need a calculator input at all. |
 | 6 | **F127** | F127 | Stop the modern engine reading the DOS-shaped shared attack slot, then retire the DOS pair from modern fixtures. |
 | 7 | **F134** | F134 | Settle the intermittent trace-overlay tooltip failure that reddens a full `npm test` run. |
-| 8 | **D41** | D41 | Reconstruct the CoM 6.08 battle-unit setup routine that runs before the constructor. |
-| 9 | **T8** | T8 | Low priority: give the unsourced engine claims in the code a citation or an evidence home. |
-| 10 | **T9** | T9 | Low priority: rename the `legacy*` DOS identifiers; no behavior change. |
-| 11 | **T10** | T10 | Low priority: retire the three To-Hit seed steps’ split and the two leftover field qualifiers. |
-| 12 | **T11** | T11 | Low priority: drop the Chaos Surge carve-out the corrected fire-breath position made inert. |
-| 13 | **T12** | T12 | Low priority: delete the two dead lookup tables the fail-loud sweep found. |
-| 14 | **F143** | F143 | Low priority: settle the `doomGazeField` slot gate, which no caller reaches. |
-| 15 | **F144** | F144 | Low priority: settle the core identity boundary’s undefined special-unit key, which no UI path can reach. |
-| 16 | **F132** | F132 | Low priority: give the has-ranged-attack predicate one home; the `ui.js` copy is unreachable. |
-| 17 | **F128** | F128 | Low priority: settle the picker's `Other` category, which no roster can produce. |
-| 18 | **F140** | F140 | Low priority: settle the matrix row and column built for the card itself that no cell renders. |
-| 19 | **F129** | F129 | Low priority: give the version-scope sweep’s shared attack slot a strength, or record why not. |
-| 20 | **F115** | F115 | Low priority: name the 44 Warlord spell ids the roster still renders as `Spell#N`. |
-| 21 | **F131** | F131 | Low priority: re-aim the vacuous Blaze of Glory distance-penalty fixture, then settle whether a preset may state a ranged mode the engine denies. |
-| 22 | **F68** | F68 | Low priority: triage the 20 MoM 1.31 presets whose positive claim no named feature moves. |
-| 23 | **F69** | F69 | Low priority: the same class for CP 1.60 and CoM 6.08 (9 presets). |
-| 24 | **F70** | F70 | Low priority: the same class for CoM2 and Warlord (14 presets). |
-| 25 | **F71** | F71 | Low priority: triage the 33 DOS presets where one named feature is inert and another is not. |
-| 26 | **F72** | F72 | Low priority: the same class for Warlord (30 presets). |
-| 27 | **F73** | F73 | Low priority: the same class for CoM2 (22 presets). |
-| 28 | **F74** | F74 | Low priority: confirm the 59 MoM/CP negative claims against the settled policy. |
-| 29 | **F75** | F75 | Low priority: confirm the 45 Warlord/CoM2/CoM 1 negative claims, including the Land Linking pair. |
-| 30 | **F76** | F76 | Low priority: triage the 37 negative claims with one live and one inert named feature. |
-| 31 | **F77** | F77 | Low priority: bind the 43 presets whose key names no feature they configure. |
-| 32 | **F78** | F78 | Low priority: confirm the 25 presets with nothing ablatable are baseline scenarios. |
-| 33 | **F79** | F79 | Low priority: run the sweep’s `--interactions` pass and read the 26 ordering-named presets. |
-| 34 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
-| 35 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
-
-## Evidence-source prerequisites
-
-| ID | Required source artifact | Cost | Method / evidence |
-|---|---|---|---|
-| D41 | Reconstruct the CoM 6.08 battle-unit setup routine `[0x8EAB9,0x8EDFD)` — the far routine (`retf` at `0x8EDFC`, immediately before the constructor's `push bp`) that zeroes the combat fields, copies the permanent record and calls the battle-unit constructor at `0x8EC99` — into `Reference docs/DOS reconstructed/unitcalc.c`, and confirm that extent. It lies outside both R6.1a's `BU_Apply_Specials` extent and R6.1b's constructor extent, so nothing reconstructs it today, yet it decides the entry state every one of those blocks reads. One of its writes is already decoded and load-bearing: the CoM 1-only `bu->ammo = max(bu->ammo, 4)` for a Focus Magic unit at `0x8EB87..0x8EB9F`, which is why `unitcalc.c`'s `if (bu->ammo > 0)` gate needs no calculator model ([R6.1a evidence](../Reference%20docs/DOS%20reconstructed/R6.1a.evidence.md), *FocusMagic's `ammo > 0` gate is vacuous*). Versions: evidence/builds — MoM 1.31, MoM CP 1.60 and CoM 6.08 `WIZARDS.EXE`; calculator — no change expected. | small | **Method 4:** byte decode of the ammunition block and of the `0x8EC99` call recorded in [R6.1a evidence](../Reference%20docs/DOS%20reconstructed/R6.1a.evidence.md); filed 2026-08-21 from the [F108](./HISTORY.md) implementation, which cited the bytes rather than writing a body |
+| 8 | **T8** | T8 | Low priority: give the unsourced engine claims in the code a citation or an evidence home. |
+| 9 | **T9** | T9 | Low priority: rename the `legacy*` DOS identifiers; no behavior change. |
+| 10 | **T10** | T10 | Low priority: retire the three To-Hit seed steps’ split and the two leftover field qualifiers. |
+| 11 | **T11** | T11 | Low priority: drop the Chaos Surge carve-out the corrected fire-breath position made inert. |
+| 12 | **T12** | T12 | Low priority: delete the two dead lookup tables the fail-loud sweep found. |
+| 13 | **F143** | F143 | Low priority: settle the `doomGazeField` slot gate, which no caller reaches. |
+| 14 | **F144** | F144 | Low priority: settle the core identity boundary’s undefined special-unit key, which no UI path can reach. |
+| 15 | **F132** | F132 | Low priority: give the has-ranged-attack predicate one home; the `ui.js` copy is unreachable. |
+| 16 | **F128** | F128 | Low priority: settle the picker's `Other` category, which no roster can produce. |
+| 17 | **F140** | F140 | Low priority: settle the matrix row and column built for the card itself that no cell renders. |
+| 18 | **F129** | F129 | Low priority: give the version-scope sweep’s shared attack slot a strength, or record why not. |
+| 19 | **F115** | F115 | Low priority: name the 44 Warlord spell ids the roster still renders as `Spell#N`. |
+| 20 | **F131** | F131 | Low priority: re-aim the vacuous Blaze of Glory distance-penalty fixture, then settle whether a preset may state a ranged mode the engine denies. |
+| 21 | **F68** | F68 | Low priority: triage the 20 MoM 1.31 presets whose positive claim no named feature moves. |
+| 22 | **F69** | F69 | Low priority: the same class for CP 1.60 and CoM 6.08 (9 presets). |
+| 23 | **F70** | F70 | Low priority: the same class for CoM2 and Warlord (14 presets). |
+| 24 | **F71** | F71 | Low priority: triage the 33 DOS presets where one named feature is inert and another is not. |
+| 25 | **F72** | F72 | Low priority: the same class for Warlord (30 presets). |
+| 26 | **F73** | F73 | Low priority: the same class for CoM2 (22 presets). |
+| 27 | **F74** | F74 | Low priority: confirm the 59 MoM/CP negative claims against the settled policy. |
+| 28 | **F75** | F75 | Low priority: confirm the 45 Warlord/CoM2/CoM 1 negative claims, including the Land Linking pair. |
+| 29 | **F76** | F76 | Low priority: triage the 37 negative claims with one live and one inert named feature. |
+| 30 | **F77** | F77 | Low priority: bind the 43 presets whose key names no feature they configure. |
+| 31 | **F78** | F78 | Low priority: confirm the 25 presets with nothing ablatable are baseline scenarios. |
+| 32 | **F79** | F79 | Low priority: run the sweep’s `--interactions` pass and read the 26 ordering-named presets. |
+| 33 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
+| 34 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
 
 ## Confirmed and suspected defects
 
