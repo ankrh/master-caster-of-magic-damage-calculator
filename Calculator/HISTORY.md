@@ -4,6 +4,52 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-23
+
+- **F141 - the modern touch-rider gate no longer reads the card's base channel, because no engine
+  reads one.** `touchAttackFires` (`combat_special_attacks.js`) returned `(baseAtk || 0) > 0` for
+  `com2_1.05.11` and `com2_warlord_1.5.12.7`; `Caster.exe` makes no such test at any layer.
+  `ApplyAttack` leaves early only on `figs <= 0` (`$005B19D9`) and each of its six rider blocks is
+  gated on the attack type, the attacker's rider flags and the defender's immunities alone
+  (`$005B2994..$005B2E6F`); `PerformMeleeAttack` issues both melee calls unconditionally and gates
+  Thrown and Breath on the **calculated** `Units[au].thrown|firebreath|lightningbreath > 0`, while
+  `PerformRangedAttack` gates only on `ammo > 0`. Of the row's three candidates the evidence forces
+  **`true`**: the calculated-channel test is the phase-admission gate the calculator already
+  carries in `modernAttackChannels`, and no per-call strength test exists to replace it with. The
+  predicate now takes `(effectiveAtk, version)` - the base parameter is gone, so no caller can
+  reintroduce a card read - and it carries `PROVENANCE[touchDispatcherAdmission]`, the anchor the
+  row said was missing, citing all five versions from `combat.c`, `Combat.ApplyAttack.pas` and
+  `Combat.PerformAttacks.pas`. The three DOS arms are unchanged and were measured unchanged.
+  `buildThrown`'s `isCoM2 ||` short-circuit is deleted as redundant.
+  **Folded in, because the predicate change forced it:** Immolation's phase table. Its three rules
+  lived in three places (`immolationBlocksRanged`, a `!isCoM2` gaze idiom, and the thrown gate's
+  reuse of `touchAttackFires`), and the comment on the first was already stale about gaze. They are
+  now one `immolationFiresInPhase(version, phase)` carrying the citation. That fixes a live defect:
+  `Caster.exe` runs Immolation under a single `at = ATmelee` test (`$005B24D8..$005B253A`), so
+  modern Thrown carried it only through the base-channel gate, and flipping that gate to `true`
+  would have made it unconditional. The ranged and gaze arms are behaviour-identical.
+  **Numbers moved, all Warlord and all within the row's declared scope.** Six existing presets
+  encoded the removed gate and were re-expected from the engine model, not from the new output:
+  `focusMagicMovesDeathOffBreathWarlord` 0 -> 8.000 (the melee call carries the Focus-Magic-moved
+  Death Touch; a Breath that carried it too would give 9.6, so the Breath exclusion is still what
+  the number measures), `stoningTouchMultipleModernChannelsWarlord` 16.000 -> 24.000 (three rider
+  attempts, not two; melee alone is 8.0), `revenantDeathTouchOnThrownWarlord` 5.000 -> 7.500
+  (Thrown and melee both roll Death 0 vs Res 5), `revenantGrantsUndeadImmunityWarlord` `dmgToA`
+  0 -> 10.000 and `venomGrantsPoisonImmunityWarlord` `dmgToA` 0 -> 1.000 (each defender's own
+  rider now rides its unconditional counterattack at melee 0; both subjects are `dmgToB` 0, which
+  is unchanged), and `upgradedExplosiveFireWarlord` 15.000 -> 16.000 (Blackpowder Poison rides the
+  melee call as well; its "dropping Explosive" note is re-measured at 9.0).
+  **Coverage.** Three new presets, each confirmed red before the change and green after:
+  `stoningTouchMeleeAtkZeroCoM2` and `...Warlord` (card `atk 0`, Stoning -7 vs Res 0 -> 10.000
+  where the unfixed gate gave 0), and `immolationNotThrownCoM2` (7.000 where the unfixed gate gave
+  10.000, the missing 3.0 being the Thrown Immolation volley the engine never fires). A fourth,
+  `stoningTouchMeleeAtkZeroMoM`, holds the MoM 1.31 arm at 0.000 - the abort really is an
+  exclusion the engine makes - and pairs the three in a new version-difference subgroup.
+  `SPEC.md` is unchanged: it specifies no attack-strength gate for touch riders.
+  **Checks.** `node tools/node_unit_checks.js` 14336/0 and `npm run provenance` 269 formulas, 0
+  UNVERIFIED, both green; the full 1,078-preset browser suite was run headlessly and passed with
+  no page errors. The round's single `npm test` is deferred to the end of the ten-package run.
+
 ## 2026-08-22
 
 - **T12 — the two dead lookup tables are gone, and the CoM2 roster's Ranged column names its

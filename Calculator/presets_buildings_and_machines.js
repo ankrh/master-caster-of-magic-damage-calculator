@@ -602,11 +602,13 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.800 },
   },
   venomGrantsPoisonImmunityWarlord: {
-    desc: 'Venom (Warlord): grants Poison Immunity. A Venom defender is immune → attacker Poison 4 negated → 0; melee 1 vs def 1 (100% block) → 0 (without immunity, Poison 4 vs res 5 → 4 × 0.6 = 2.4)',
+    desc: 'Venom (Warlord): grants Poison Immunity. A Venom defender is immune → attacker Poison 4 negated → 0; melee 1 vs def 1 (100% block) → 0 (without immunity, Poison 4 vs res 5 → 4 × 0.6 = 2.4). '
+        + 'The subject is that dmgToB stays 0; dmgToA is the Poison 1 Venom also grants the defender, riding its '
+        + 'unconditional counterattack at melee 0 against Res 0 for 1.0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 4 } },
     b: { atk:0, def:1, toBlkMod:70, res:5, hp:10, abilities: { venom: true } },
-    expected: { dmgToA: 0, dmgToB: 0.000 },
+    expected: { dmgToA: 1.000, dmgToB: 0.000 },
   },
 
   // --- Artificer ---

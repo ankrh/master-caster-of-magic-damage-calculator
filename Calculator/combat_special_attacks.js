@@ -468,14 +468,25 @@ function lifeStealEffective(defRes, defAbilities, modifier) {
   return modifier;
 }
 
-// Check whether BU_ProcessAttack reaches its touch dispatcher for a selected attack call.
-// MoM 1.31 returns when that call's live strength is 0. CP 1.60 and CoM 1 patch the
-// conditional jump to an unconditional jump, so a call that was already admitted still
-// dispatches touches at 0 strength. Modern callers retain their represented base-channel gate.
-function touchAttackFires(effectiveAtk, baseAtk, version) {
-  if (version === 'mom_1.31') return effectiveAtk > 0;
-  if (version === 'mom_cp_1.60.00' || version === 'com_6.08') return true;
-  return (baseAtk || 0) > 0;
+// Whether one selected attack call reaches its touch-rider dispatcher.
+//
+// DOS `BU_ProcessAttack` aborts a call whose *live* strength is 0 just before the dispatcher.
+// MoM 1.31 keeps that abort; CP 1.60 and CoM 1 overwrite its conditional jump with `EB 03`, an
+// unconditional jump past it, so an already-admitted call still dispatches riders at 0 strength.
+//
+// `Caster.exe` tests no strength at all, base or calculated. `ApplyAttack` leaves early only on
+// `figs <= 0` ($005B19D9), and each of its six rider blocks is gated on the attack type, the
+// attacker's rider flags and the defender's immunities alone ($005B2994..$005B2E6F). The
+// per-channel test the modern engine does make lives in the caller and reads the *calculated*
+// value: `PerformMeleeAttack` issues its melee calls unconditionally and gates Thrown and Breath
+// on `Units[au].thrown|firebreath|lightningbreath > 0`, while `PerformRangedAttack` gates only on
+// `ammo > 0`. The calculator carries that channel gate where the engine does — at phase admission,
+// in `modernAttackChannels` (`combat_phases.js`) — so the modern arm here is unconditional, and no
+// arm reads the card's base value.
+// STAT-FORMULA[touchDispatcherAdmission]
+// PROVENANCE[touchDispatcherAdmission]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:21:cab055592de9a7dcacc5683e | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:12:925a0ecea8452d215c0226e1 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:27:136dbc9a5a7d34e8fd32dfda | Reference docs/Caster binary/Combat.PerformAttacks.pas@span:36:da1652787ca5b24382ba9800
+function touchAttackFires(effectiveAtk, version) {
+  return version === 'mom_1.31' ? effectiveAtk > 0 : true;
 }
 
 // Check whether a gaze attack fires for a given unit.
@@ -564,10 +575,16 @@ function immolationStr(version, chaosConjunction = false) {
   return modern && chaosConjunction ? Math.trunc(base * 1.34) : base;
 }
 
-// After 1.50 patch (and CoM/CoM2), immolation no longer accompanies ranged attacks.
-// Thrown, breath, gaze, and melee still fire in all versions.
-function immolationBlocksRanged(version) {
-  return version !== 'mom_1.31';
+// Which attack phases carry Immolation — the single home for that table.
+// `Caster.exe` runs it under one attack-type test, `Units[au].immolation and (at = ATmelee)`
+// ($005B24D8..$005B253A, `Reference docs/Caster binary/Combat.ApplyAttack.pas`), so the modern
+// Thrown, Breath, Ranged and Gaze calls all skip it. DOS `BU_ProcessAttack` makes no attack-type
+// test: melee, thrown, breath and gaze all carry Immolation in every build, and ranged carries it
+// only in MoM 1.31, the 1.50 patch having removed it there.
+// Reaching the melee call is a separate question, owned by `touchAttackFires` above.
+function immolationFiresInPhase(version, phase) {
+  if (version && version.startsWith('com2_')) return phase === 'melee';
+  return phase !== 'ranged' || version === 'mom_1.31';
 }
 
 // --- Wall of Fire ---

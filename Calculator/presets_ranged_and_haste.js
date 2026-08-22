@@ -414,18 +414,24 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.000 },
   },
   focusMagicMovesDeathOffBreathWarlord: {
-    desc: 'Focus Magic moves global Death Touch -3 to melee/Thrown: fire breath 1 becomes 4 but is fully blocked by def 4; Breath uses general flags and has no touch → 0',
+    desc: 'Focus Magic moves global Death Touch -3 to melee/Thrown: fire breath 1 becomes 4 but is fully blocked '
+        + 'by def 4, and Breath reads only general flags, so the touch rides the unconditional melee call alone '
+        + '- one Death -3 attempt vs Res 5, pFail 0.8 x 10 hp = 8.0. A Breath that carried it too would make two '
+        + 'attempts, 1 - 0.2^2 = 0.96 x 10 = 9.6, so the Breath exclusion is what the number measures.',
     version: V_WARLORD,
     a: { atk:0, rtbType:'fire', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true, deathTouch: -3 } },
     b: { def:4, toBlkMod:70, res:5, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 0.000 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   stoningTouchMultipleModernChannelsWarlord: {
-    desc: 'Global Stoning Touch joins both modern attack calls: Lightning Breath 1 and Chaos Channels Fire Breath 4 are fully blocked, while two Stoning -3 attempts vs Res 5 average 16.0 damage.',
+    desc: 'Global Stoning Touch joins every attack call: Lightning Breath 1 and Chaos Channels Fire Breath 4 are '
+        + 'fully blocked, and the melee call runs unconditionally at melee 0, so three Stoning -3 attempts vs '
+        + 'Res 5 average 3 x 0.8 = 2.4 kills x 10 hp = 24.0. Without the two breath channels the melee call '
+        + 'alone gives 8.0.',
     version: V_WARLORD,
     a: { atk:0, rtbType:'lightning', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true, stoningTouch: -3 } },
     b: { figs:4, def:20, toBlkMod:70, res:5, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 16.000 },
+    expected: { dmgToA: 0, dmgToB: 24.000 },
   },
   poisonTouchBasic: {
     desc: 'Poison Touch: 1 atk (100% blocked) + Poison 4 vs Res 5 — 4 rolls × 50% fail = 2.0',
@@ -522,6 +528,29 @@ definePresets({
     a: { figs:4, atk:1, toHitMod:70, hp:5, abilities: { stoningTouch: -1 } },
     b: { figs:4, def:1, toBlkMod:70, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 12.000 },
+  },
+  stoningTouchMeleeAtkZeroMoM: {
+    desc: 'Touch riders at melee strength 0 (MoM 1.31): BU_ProcessAttack aborts the call before its '
+        + 'rider dispatcher, so Stoning -7 vs Res 0 never rolls. The exclusion is the rule under test.',
+    version: V_MOM_131,
+    a: { atk:0, toHitMod:70, hp:10, abilities: { stoningTouch: -7 } },
+    b: { def:0, res:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  stoningTouchMeleeAtkZeroCoM2: {
+    desc: 'Touch riders at melee strength 0 (CoM2): ApplyAttack is issued unconditionally and its riders '
+        + 'test no strength, so Stoning -7 vs Res 0 kills the 10 HP figure with 0 physical damage → 10.0',
+    version: V_COM2,
+    a: { atk:0, hitChance:70, hp:10, abilities: { stoningTouch: -7 } },
+    b: { def:0, res:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
+  stoningTouchMeleeAtkZeroWarlord: {
+    desc: 'Touch riders at melee strength 0 (Warlord): the same unconditional melee call → 10.0',
+    version: V_WARLORD,
+    a: { atk:0, hitChance:70, hp:10, abilities: { stoningTouch: -7 } },
+    b: { def:0, res:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
   },
   stoningGazeBasic: {
     desc: 'Stoning Gaze: Gaze -3 + 1 ranged vs 1 fig Res 5, 10 hp — stoning 8.0 + physical 0.06 = 8.06',

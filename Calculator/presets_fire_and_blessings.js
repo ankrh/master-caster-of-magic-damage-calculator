@@ -147,6 +147,14 @@ definePresets({
     b: { def:0, hp:20 },
     expected: { dmgToB: 6.400 },
   },
+  immolationNotThrownCoM2: {
+    desc: 'Immolation is melee-only in CoM2: ApplyAttack runs it under `at = ATmelee`, so the Thrown call '
+        + 'carries none — thrown 3@100% + melee 1@100% + one immolation(10)@30% = 7.0',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:3, hp:10, abilities: { immolation: true } },
+    b: { def:0, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
   immolationCoMStrength10: {
     desc: 'Immolation Strength (CoM): strength 10 — 1atk 100% + imm(10)@30% vs 0def 20HP → 1 + 3 = 4',
     version: V_COM,

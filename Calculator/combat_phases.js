@@ -94,7 +94,7 @@ function touchParams(self, other, otherResM, otherResDeath, otherResStoning, oth
 // Touch-attack parameters for `self` striking `other` in melee.
 function meleeTouchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver) {
   return touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver,
-    touchAttackFires(self.atk, self.baseAtk, ver), touchRecordForPhase(ver, 'melee'));
+    touchAttackFires(self.atk, ver), touchRecordForPhase(ver, 'melee'));
 }
 
 // Touch-attack parameters for `self` firing alongside its gaze phase against `other`.

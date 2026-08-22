@@ -298,7 +298,7 @@ function resolveCombat(a, b, opts) {
       = meleeTouchParams(b, a, aResM, aResDeath, aResStoning, aResPoison, opts.version);
 
     // Touch attack params: thrown-phase activation (for thrown/breath).
-    const aTouchWithThrown = !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
+    const aTouchWithThrown = !aBlackSleep && touchAttackFires(a.rtb, opts.version);
     const { poisonStr: aPoisonStrT, poisonFail: aPoisonFailT, stoningFail: aStoningFailT, deathTouchFail: aDeathTouchFailT, dispelEvilFail: aDispelEvilFailT, exorciseFail: aExorciseFailT, destructionFail: aDestructionFailT, lifeStealMod: aLifeStealModT }
       = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version,
         aTouchWithThrown, touchRecordForPhase(ver, a.thrownType));
@@ -324,11 +324,12 @@ function resolveCombat(a, b, opts) {
       = gazeKillProbs(b, bStoningGazeActiveP, bDeathGazeActiveP, a, aResDeath, aResStoning);
 
     // Immolation activation per phase.
-    const aImmWithThrown = aHasImm && !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
-    const aImmWithGaze   = !isCoM2 && aHasImm && aGazeActiveP;
-    const bImmWithGaze   = !isCoM2 && bHasImm && bGazeActiveP;
-    const aImmWithMelee  = aHasImm && !aBlackSleep && touchAttackFires(a.atk, a.baseAtk, opts.version);
-    const bImmWithMelee  = bHasImm && !bBlackSleep && touchAttackFires(b.atk, b.baseAtk, opts.version);
+    const aImmWithThrown = aHasImm && !aBlackSleep && immolationFiresInPhase(ver, 'thrown')
+      && touchAttackFires(a.rtb, opts.version);
+    const aImmWithGaze   = immolationFiresInPhase(ver, 'gaze') && aHasImm && aGazeActiveP;
+    const bImmWithGaze   = immolationFiresInPhase(ver, 'gaze') && bHasImm && bGazeActiveP;
+    const aImmWithMelee  = aHasImm && !aBlackSleep && touchAttackFires(a.atk, opts.version);
+    const bImmWithMelee  = bHasImm && !bBlackSleep && touchAttackFires(b.atk, opts.version);
 
     // Compatibility fallback for an unknown external version. Every supported build
     // uses the correlated state path and derives its displayed marginal from execution.
@@ -613,7 +614,7 @@ function resolveCombat(a, b, opts) {
     // runs each independently-derived channel (`Combat.PerformAttacks.pas` $005B399B..$005B3A9E).
     const buildThrown = (attacker, active, type, touchRecord) => {
       const touchActive = active && !aBlackSleep
-        && (isCoM2 || touchAttackFires(attacker.rtb, attacker.baseRtb, opts.version));
+        && touchAttackFires(attacker.rtb, opts.version);
       const touch = touchParams(attacker, b, bResM, bResDeath, bResStoning, bResPoison,
         opts.version, touchActive, touchRecord);
       return {
@@ -1145,12 +1146,11 @@ function resolveCombat(a, b, opts) {
     // Warlord's manual describes a magical-ranged exclusion, but the dispatcher has
     // no blanket type gate; represented spells instead move or clear record values.
     // The conflict is recorded in `Reference docs/Source discrepancies.md` §14.
-    const rangedTouchFires = touchAttackFires(
-      rangedAttacker.rtb, rangedAttacker.baseRtb, opts.version);
+    const rangedTouchFires = touchAttackFires(rangedAttacker.rtb, opts.version);
     const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, destructionFail: aDestructionFailR, lifeStealMod: aLifeStealModR }
       = touchParams(rangedAttacker, b, bResM, bResDeath, bResStoning, bResPoison,
         opts.version, rangedTouchFires, touchRecordForPhase(ver, 'ranged'));
-    const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver) && rangedTouchFires;
+    const aImmWithRanged = aHasImm && immolationFiresInPhase(ver, 'ranged') && rangedTouchFires;
     const aImmDistR = (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0)
       ? calcDamageSpellDist(bAlive, immStr, a.toHitImmolation, bDefForImm,
         bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits,

@@ -372,11 +372,14 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   revenantDeathTouchOnThrownWarlord: {
-    desc: 'Revenant writes Death Touch 0 to melee flags, which Caster.exe also uses for Thrown: thrown 1 fully blocked by def 1, Death Touch averages 5.0.',
+    desc: 'Revenant writes Death Touch 0 to melee flags, which Caster.exe also uses for Thrown: thrown 1 is fully '
+        + 'blocked by def 1, and the Thrown call and the unconditional melee call each make one Death 0 attempt '
+        + 'vs Res 5, so 1 - 0.5^2 = 0.75 x 10 hp = 7.5. Without the Thrown record sharing only melee would roll, '
+        + 'for 5.0.',
     version: V_WARLORD,
     a: { atk:0, rtbType:'thrown', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { revenant: true } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 7.500 },
   },
   revenantDeathTouchNotRangedWarlord: {
     desc: 'Revenant clears the general/ranged Death Touch records: magic 1 fully blocked by def 1 and the melee-only Death Touch does not join the ranged attack → 0.',
@@ -394,11 +397,13 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   revenantGrantsUndeadImmunityWarlord: {
-    desc: 'Revenant makes defender undead → Death Touch immune. Atk 1 (100% blocked by def 1) + attacker Death Touch -3 vs Res 5 → 0 (immune). Without undead it would be (10−5−3)/10 × 10 = 2.0.',
+    desc: 'Revenant makes defender undead → Death Touch immune. Atk 1 (100% blocked by def 1) + attacker Death Touch -3 vs Res 5 → 0 (immune). Without undead it would be (10−5−3)/10 × 10 = 2.0. '
+        + 'The subject is that dmgToB stays 0; dmgToA is the defender\'s own Revenant Death Touch 0, which rides '
+        + 'its unconditional counterattack at melee 0 against Res 0 and kills the attacking figure for 10.0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { revenant: true } },
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 10.000, dmgToB: 0 },
   },
   // --- Exorcise (Warlord touch: resist-or-banish vs fantastic units) ---
   exorciseFantasticWarlord: {

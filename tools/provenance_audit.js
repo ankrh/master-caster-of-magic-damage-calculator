@@ -81,6 +81,7 @@ const directFunctionIds = new Map([
   ['supernaturalMinDamageForHits', 'supernaturalMinimumDamage'],
   ['distancePenalty', 'distancePenalty'],
   ['applyRage', 'rageEffectiveAttack'],
+  ['touchAttackFires', 'touchDispatcherAdmission'],
   ['dosGazeAbilityValues', 'dosGazeTypeContention'],
   ['dosSpecialAbilityValues', 'dosSharedSpecialByte'],
   ['immolationStr', 'immolationStrength'],
