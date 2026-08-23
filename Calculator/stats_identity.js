@@ -7,16 +7,49 @@
 // calculation fields. R8.2 supplies the base fields directly from the UI; ordered conversions
 // belong to R8.3. Keeping construction here makes every caller, including Matrix and Node
 // checks, enter derivation through the same model.
+// The special-unit vocabulary has one home, here, and both scopes read it from this table: the
+// identity boundary below validates against it, and the page builds the `Special unit` selector
+// and its version scope from the same rows (`populateSpecialUnitOptions` and
+// `specialUnitAllowed`, `ui_units.js`). It lives in `data-scope="core"` because the boundary that
+// has to reject an undefined key runs without a DOM, and a second list beside that boundary would
+// be a copy that drifts.
+const SPECIAL_UNIT_DEFS = [
+  { key: 'golem', label: 'Golem', versions: ['com_', 'com2_'] },
+  { key: 'chosen', label: 'Chosen / Avatar', versions: ['com2_'] },
+  { key: 'zombies', label: 'Zombies', versions: ['com_6.08'] },
+  { key: 'catapult', label: 'Catapult', versions: ['com_6.08'] },
+];
+
+// Absent and `none` both state "no special unit"; anything else must name a defined key. A key
+// this build does not define is out of range and halts (`SPEC.md`, *Out-of-range values stop the
+// run*): every consumer is an equality test against one of the four keys, so carrying an unknown
+// one derives an ordinary unit and reports nothing — exactly the silent inertness the rule
+// forbids. Whether a *defined* key is allowed in the selected version is the separate question of
+// version scope, and still clamps (`specialUnitAllowed`, `ui_units.js`).
+function specialUnitDef(key, context) {
+  if (!key || key === 'none') return null;
+  const def = SPECIAL_UNIT_DEFS.find(item => item.key === key);
+  if (!def) {
+    throw new TypeError(
+      `${context || 'Special unit'} names '${key}', which this build does not define `
+      + `(offered: none, ${SPECIAL_UNIT_DEFS.map(item => item.key).join(', ')}). `
+      + `Retiring a key obliges the build to state a migration for states that still carry it.`);
+  }
+  return def;
+}
+
 function createUnitIdentity(values = {}) {
   const integerOrNull = value => Number.isInteger(value) ? value : null;
+  const version = typeof values.version === 'string' && values.version ? values.version : null;
   return {
-    version: typeof values.version === 'string' && values.version ? values.version : null,
+    version,
     templateId: integerOrNull(values.templateId),
     heroTypeId: integerOrNull(values.heroTypeId),
     isHero: !!values.isHero,
     baseRace: typeof values.baseRace === 'string' ? values.baseRace : '',
     baseFantastic: !!values.baseFantastic,
-    specialUnit: typeof values.specialUnit === 'string' ? values.specialUnit : 'none',
+    specialUnit: specialUnitDef(values.specialUnit,
+      `Unit identity for ${version || 'an unstated version'}`) ? values.specialUnit : 'none',
   };
 }
 

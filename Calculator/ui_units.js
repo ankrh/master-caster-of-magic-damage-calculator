@@ -244,29 +244,17 @@ function customBaseRaceForUnitType(unitType) {
   return match ? match[1][0].toUpperCase() + match[1].slice(1) : '';
 }
 
-const SPECIAL_UNIT_DEFS = [
-  { key: 'golem', label: 'Golem', versions: ['com_', 'com2_'] },
-  { key: 'chosen', label: 'Chosen / Avatar', versions: ['com2_'] },
-  { key: 'zombies', label: 'Zombies', versions: ['com_6.08'] },
-  { key: 'catapult', label: 'Catapult', versions: ['com_6.08'] },
-];
-
 // Two different questions used to share one `false`. A key this build does not define is out of
 // range and halts (`SPEC.md`, *Out-of-range values stop the run*): it can only come from a state
 // blob, share link or fixture written against a vocabulary this build has since changed, and
-// answering `none` restores a unit whose special template the caller did state. A key that is
-// defined but not allowed in the selected version is version scope, not retirement — the version
-// select really can move a `chosen` card to MoM — so that one still clamps.
+// answering `none` restores a unit whose special template the caller did state. That check and
+// the vocabulary it reads are `specialUnitDef` and `SPECIAL_UNIT_DEFS` (`stats_identity.js`), so
+// the page and the core identity boundary share one list. A key that is defined but not allowed
+// in the selected version is version scope, not retirement — the version select really can move a
+// `chosen` card to MoM — so that one still clamps, and that question is the page's own.
 function specialUnitAllowed(version, key, context) {
-  if (!key || key === 'none') return true;
-  const def = SPECIAL_UNIT_DEFS.find(item => item.key === key);
-  if (!def) {
-    throw new TypeError(
-      `${context || 'Special unit'} names '${key}', which this build does not define `
-      + `(offered: none, ${SPECIAL_UNIT_DEFS.map(item => item.key).join(', ')}). `
-      + `Retiring a key obliges the build to state a migration for states that still carry it.`);
-  }
-  return def.versions.some(prefix => version.startsWith(prefix));
+  const def = specialUnitDef(key, context);
+  return def ? def.versions.some(prefix => version.startsWith(prefix)) : true;
 }
 
 function specialUnitForRoster(version, unit) {

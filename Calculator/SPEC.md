@@ -262,6 +262,13 @@ unit` selector exposes named exceptions without exposing numeric template or her
 roster units populate and lock all identity controls. A named special-unit effect is shown at its
 ordinary point of use.
 
+**The special-unit vocabulary is one list in the computation layer, and the identity boundary
+halts on a key outside it.** Every consumer is an equality test against a defined key, so an
+undefined one would derive an ordinary unit and report nothing (*Out-of-range values stop the
+run*); the page builds the selector and its version scope from the same list, so neither scope can
+offer or accept a key the other does not know. Version scope keeps its clamp: a defined key the
+selected version disallows becomes `none`.
+
 ### Order
 
 Order is load-bearing:

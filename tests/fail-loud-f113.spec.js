@@ -44,6 +44,15 @@ const CASES = [
     "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
     + " weapon: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"
     + " def: 0, res: 0, hp: 1 })", 'modernAttacks'],
+  // F144: the core half of the F138 boundary. Every consumer of `identity.specialUnit` is an
+  // equality test against one of the four defined keys, so an undefined one used to derive an
+  // ordinary unit and report nothing; `createUnitIdentity` now reads the same
+  // `SPECIAL_UNIT_DEFS` the page's selector is built from.
+  ['createUnitIdentity: special-unit key no version defines',
+    "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
+    + " weapon: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"
+    + " modernAttacks: {}, def: 0, res: 0, hp: 1,"
+    + " identity: { specialUnit: 'juggernautF144' } })", 'juggernautF144'],
   ['versionChain: version with no deduced-position list',
     "versionChain('com3_0.0.0', ['base:stat:base'])", 'com3_0.0.0'],
   ['normalizeDosCombatHealState: missing version',

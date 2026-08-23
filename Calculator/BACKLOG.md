@@ -38,33 +38,32 @@ dependents, not unrelated later rows.
 | 3 | **F159** | F159 | Rule on what "same implementation in all versions" means, then scope the 43 unasserted all-version keys. |
 | 4 | **T8** | T8 | Low priority: continue the citation triage — 181 unsourced blocks remain, now concentrated in `steps.js`, `combat.js` and `combat_special_attacks.js`. |
 | 5 | **F160** | F160 | Low priority: delete the 11 surviving arms of the superseded capped-drain Life Steal model outside the touch convolution, which no version reaches. |
-| 6 | **F144** | F144 | Low priority: settle the core identity boundary’s undefined special-unit key, which no UI path can reach. |
-| 7 | **F132** | F132 | Low priority: give the has-ranged-attack predicate one home; the `ui.js` copy is unreachable. |
-| 8 | **F145** | F145 | Low priority: triage the 22 predicates written in more than one place, and settle whether version membership gets a named home. |
-| 9 | **F153** | F153 | Low priority: give the modern gaze rider exclusion one home; it is implemented twice in series and neither copy is ablatable alone. |
-| 10 | **F146** | F146 | Low priority: give the seven roster facts the card and the matrix decode separately one reader each. |
-| 11 | **F128** | F128 | Low priority: settle the picker's `Other` category, which no roster can produce. |
-| 12 | **F140** | F140 | Low priority: settle the matrix row and column built for the card itself that no cell renders. |
-| 13 | **F147** | F147 | Low priority: settle the six values the derivation writes that nothing reads. |
-| 14 | **F129** | F129 | Low priority: give the version-scope sweep’s shared attack slot a strength, or record why not. |
-| 15 | **F115** | F115 | Low priority: name the 44 Warlord spell ids the roster still renders as `Spell#N`. |
-| 16 | **T15** | T15 | Low priority: fix the Markdown roster tools' drift from the roster JSON — the third `RANGED_TYPE` copy and the empty Breath/Thrown column. |
-| 17 | **F131** | F131 | Low priority: re-aim the vacuous Blaze of Glory distance-penalty fixture, then settle whether a preset may state a ranged mode the engine denies. |
-| 18 | **F68** | F68 | Low priority: triage the 20 MoM 1.31 presets whose positive claim no named feature moves. |
-| 19 | **F69** | F69 | Low priority: the same class for CP 1.60 and CoM 6.08 (9 presets). |
-| 20 | **F70** | F70 | Low priority: the same class for CoM2 and Warlord (14 presets). |
-| 21 | **F71** | F71 | Low priority: triage the 33 DOS presets where one named feature is inert and another is not. |
-| 22 | **F72** | F72 | Low priority: the same class for Warlord (30 presets). |
-| 23 | **F73** | F73 | Low priority: the same class for CoM2 (22 presets). |
-| 24 | **F74** | F74 | Low priority: confirm the 59 MoM/CP negative claims against the settled policy. |
-| 25 | **F75** | F75 | Low priority: confirm the 45 Warlord/CoM2/CoM 1 negative claims, including the Land Linking pair. |
-| 26 | **F76** | F76 | Low priority: triage the 37 negative claims with one live and one inert named feature. |
-| 27 | **F77** | F77 | Low priority: bind the 43 presets whose key names no feature they configure. |
-| 28 | **F78** | F78 | Low priority: confirm the 25 presets with nothing ablatable are baseline scenarios. |
-| 29 | **F79** | F79 | Low priority: run the sweep’s `--interactions` pass and read the 26 ordering-named presets. |
-| 30 | **F151** | F151 | Low priority: compute a version's default-state map without resetting and restoring the live page. |
-| 31 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
-| 32 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
+| 6 | **F132** | F132 | Low priority: give the has-ranged-attack predicate one home; the `ui.js` copy is unreachable. |
+| 7 | **F145** | F145 | Low priority: triage the 22 predicates written in more than one place, and settle whether version membership gets a named home. |
+| 8 | **F153** | F153 | Low priority: give the modern gaze rider exclusion one home; it is implemented twice in series and neither copy is ablatable alone. |
+| 9 | **F146** | F146 | Low priority: give the seven roster facts the card and the matrix decode separately one reader each. |
+| 10 | **F128** | F128 | Low priority: settle the picker's `Other` category, which no roster can produce. |
+| 11 | **F140** | F140 | Low priority: settle the matrix row and column built for the card itself that no cell renders. |
+| 12 | **F147** | F147 | Low priority: settle the six values the derivation writes that nothing reads. |
+| 13 | **F129** | F129 | Low priority: give the version-scope sweep’s shared attack slot a strength, or record why not. |
+| 14 | **F115** | F115 | Low priority: name the 44 Warlord spell ids the roster still renders as `Spell#N`. |
+| 15 | **T15** | T15 | Low priority: fix the Markdown roster tools' drift from the roster JSON — the third `RANGED_TYPE` copy and the empty Breath/Thrown column. |
+| 16 | **F131** | F131 | Low priority: re-aim the vacuous Blaze of Glory distance-penalty fixture, then settle whether a preset may state a ranged mode the engine denies. |
+| 17 | **F68** | F68 | Low priority: triage the 20 MoM 1.31 presets whose positive claim no named feature moves. |
+| 18 | **F69** | F69 | Low priority: the same class for CP 1.60 and CoM 6.08 (9 presets). |
+| 19 | **F70** | F70 | Low priority: the same class for CoM2 and Warlord (14 presets). |
+| 20 | **F71** | F71 | Low priority: triage the 33 DOS presets where one named feature is inert and another is not. |
+| 21 | **F72** | F72 | Low priority: the same class for Warlord (30 presets). |
+| 22 | **F73** | F73 | Low priority: the same class for CoM2 (22 presets). |
+| 23 | **F74** | F74 | Low priority: confirm the 59 MoM/CP negative claims against the settled policy. |
+| 24 | **F75** | F75 | Low priority: confirm the 45 Warlord/CoM2/CoM 1 negative claims, including the Land Linking pair. |
+| 25 | **F76** | F76 | Low priority: triage the 37 negative claims with one live and one inert named feature. |
+| 26 | **F77** | F77 | Low priority: bind the 43 presets whose key names no feature they configure. |
+| 27 | **F78** | F78 | Low priority: confirm the 25 presets with nothing ablatable are baseline scenarios. |
+| 28 | **F79** | F79 | Low priority: run the sweep’s `--interactions` pass and read the 26 ordering-named presets. |
+| 29 | **F151** | F151 | Low priority: compute a version's default-state map without resetting and restoring the live page. |
+| 30 | **F41** | F41 | Add engine-specific hero progression as one standalone large change. |
+| 31 | **M3** | M3 | After F41, implement the hero-only older-engine Destruction path. |
 
 ## Confirmed and suspected defects
 
@@ -91,7 +90,6 @@ dependents, not unrelated later rows.
 | F131 | **A preset may state `rangedCheck: true` for an attacker whose derivation leaves no ranged attack, and `applyPreset` normalizes it to melee without saying so.** Measured 2026-08-22 over all 1050 presets: 243 state it and **3** resolve melee — `blazeOfGloryThrownTakesNoDistancePenaltyWarlord`, `focusMagicDoomGazeCoM` and `supremeLightSkipsZeroedRangedCoM2` — because Blaze of Glory, Focus Magic and Supreme Light each leave the Ranged field empty, and `refreshAbilityFieldVisibility` clears the box before `recalculate` reads it. In all three the `rangedCheck`/`rangedDist` fields are **inert**: removing them, or raising the distance to 20, moves neither number (8.000 / 5.000 / 0.000 unchanged), while the control `weaponMaterialDosMissileHasNoStrengthGateMoM` moves 2.000 → 5.000 when its own tick is removed. One of the three is thereby vacuous on its named axis: `blazeOfGloryThrownTakesNoDistancePenaltyWarlord` claims the distance penalty follows the attack Blaze of Glory leaves behind and states `rangedDist: 6`, but `distancePenaltyFor` (`stats.js:1712`) returns 0 on `!input.rangedCheck` before it reads the finished type, so the “−16% if the pre-sequence missile type were read” counterfactual in its `desc` cannot fire and the fixture does not discriminate its own rule; it needs re-aiming onto a case where the penalty is observable. Then decide the boundary: `applyPreset` could stop on the combination — [F125](./HISTORY.md) stops on a fixture field the version's record cannot read, and these three fields cost nothing to drop — or a fixture may legitimately state a ranged mode the engine denies, as [F118](./HISTORY.md) left version-hidden controls inert rather than halting. Versions: evidence/builds — not applicable; calculator — `com_6.08`, `com2_1.05.11` and `com2_warlord_1.5.12.7` for the three fixtures, all five for the boundary decision. | small | filed 2026-08-22 from the [F119](./HISTORY.md) measurement, which owns the numbers |
 | F151 | **`getDefaultIds` builds a version’s default-state map by resetting the live page and restoring it, so every DOM observer sees a spurious full reset.** The dance (`ui_state.js`) sets `_restoring`, calls `resetCalculatorState(version)` — which ends in `recalculate()` against foreign state — snapshots the result, then `applyFullState(saved)`. Its comment claims the dance never disturbs what the user sees; it does disturb it transiently, and an observer that latches the transient keeps the wrong state after the restore. [F134](./HISTORY.md) fixed the one latch found — the tooltip controller dropped its hover owner permanently — at the observer. The structural alternative, surfaced there and not taken, is to derive a version’s defaults without touching the live DOM, from the same definitions `resetCalculatorState` reads or in a detached document, which removes the class instead of each instance. The cost is that reset path’s breadth: unit-dropdown population, per-version control visibility and default-unit selection exist only as live-DOM mutations today. Versions: evidence/builds — not applicable; calculator — all, page state only; no number moves. | medium | `ui_state.js` `getDefaultIds`, `resetCalculatorState`; found by [F134](./HISTORY.md) |
 | F140 | **The matrix computes a row and a column for the card itself, then never renders them.** `buildMatrixCache` (`ui_matrix.js`) appends `selectedMatrixUnitRow('a')` and `selectedMatrixUnitRow('b')` to `attackers` and `defenders`, so the workers resolve the card's own attacker row against every defender and every attacker against the card's own defender. It then publishes `allAttackerIndexes` and `allDefenderIndexes` from `allAttackers`/`allDefenders` — the lists **before** the append — and `currentMatrixView` renders only those, so the appended row and column reach no cell. Measured 2026-08-22 with a 12-unit trimmed `mom_1.31` roster: `matrixCache.rows.length` is 13 and no `td.matrix-cell[data-atk-idx="12"]` exists. Two consequences: the extra combat resolution is discarded, and the `info.unitId != null` guard in `applyMatrixCellToMain` has an unreachable false branch — the one path that could apply a cell computed from the card as it stands. Settle which was intended: show the selected unit as its own row and column (the append already builds the labels through `selectedUnitLabel`), or drop the append and the guard branch with it. Versions: evidence/builds — not applicable; calculator — all five, matrix view only, no derived number moves. | small | filed 2026-08-22 from the [F136](./HISTORY.md) implementation, which removed the card-clobbering write that branch reached; `ui_matrix.js` `buildMatrixCache`, `currentMatrixView`, `applyMatrixCellToMain` |
-| F144 | **The core identity boundary still accepts a special-unit key no version defines.** [F138](./HISTORY.md) made the page halt on one, but `createUnitIdentity` (`stats_identity.js`) keeps any string it is handed and every consumer is an equality test against one of the four defined keys — `golem` (`stats.js`), `zombies` (`stats.js`, `stats_identity.js`, `stats_sequence.js`), `chosen` and `catapult` (`stats_identity.js`) — so `deriveUnitStats` with `identity.specialUnit` set to an undefined key returned a plain unit and no error when measured 2026-08-22, which is the silent inertness [SPEC.md](./SPEC.md), *Out-of-range values stop the run*, forbids. Only Node harnesses reach it today; the UI cannot. Not folded into F138: the vocabulary `SPECIAL_UNIT_DEFS` lives in `ui_units.js`, which is `data-scope="page"`, so the core has nothing to check against and the fix is a source move plus a fail-loud read rather than a local guard. Versions: evidence/builds — not applicable; calculator — all five, derivation input boundary; no number moves. | small | filed 2026-08-22 from the [F138](./HISTORY.md) implementation; `stats_identity.js` `createUnitIdentity`, `ui_units.js` `SPECIAL_UNIT_DEFS` |
 | F41 | Add engine-specific hero progression: the DOS eight-threshold ladders and template-ability formulas (including CoM's Blademaster divisors, mana table and Lucky rewrite), plus the modern nine-step hero table. Decide how the current six-entry level control exposes them. | large | R6.1f evidence, hero ladders and abilities; CoM2 tables, level bonuses; `combat_abilities.js:43-78` |
 
 ## Modelling work

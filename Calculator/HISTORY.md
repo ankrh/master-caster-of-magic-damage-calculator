@@ -6,6 +6,39 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-24
 
+- **F144 — the special-unit vocabulary has one home, and the core identity boundary halts on a key
+  outside it.** **Premise held, with one omission in the row's consumer list.** Measured against
+  the unchanged code: `deriveUnitStats` on `com2_1.05.11` with `identity.specialUnit` set to
+  `juggernautF144` returned an ordinary unit — `atk` unchanged, the key kept verbatim on the
+  calculated identity — and threw nothing, as did `GOLEM`; `SPECIAL_UNIT_DEFS` and
+  `specialUnitAllowed` were both absent from the headless core context, and the vocabulary is
+  still exactly `golem`, `chosen`, `zombies`, `catapult`. What the row under-counted is the
+  consumer list: alongside the five core equality tests it names, `loadoutLockState`
+  (`ui_abilities.js`) tests `=== 'zombies'` on both its custom and its roster arm, so the page
+  reads the key too.
+  **The move.** `SPECIAL_UNIT_DEFS` and the defined-key check now live in `stats_identity.js`
+  (`data-scope="core"`), beside the boundary that has to reject an undefined key without a DOM.
+  `createUnitIdentity` validates through `specialUnitDef`; `specialUnitAllowed` (`ui_units.js`)
+  delegates to the same function and keeps only the version-scope question, which still clamps;
+  `populateSpecialUnitOptions` and `assertRestoredValuesAreOffered` read the same table they
+  already read. One list, both scopes, and no manifest change — the definition moved between two
+  sources that already exist in the scopes it needs.
+  **The halt** names the value, the record's version and the offered set: `Unit identity for
+  com2_1.05.11 names 'juggernautF144', which this build does not define (offered: none, golem,
+  chosen, zombies, catapult). Retiring a key obliges the build to state a migration for states
+  that still carry it.` Two smaller substitutions went with it: an empty string is now the
+  "no special unit" statement rather than a kept `''`, and a non-string truthy value throws
+  instead of becoming `none`.
+  **No number moves.** `tools/derivation_equivalence.js`, 15,480 derivations across all five
+  versions, is byte-identical with the two files at `HEAD` and with the change (25,146,638 bytes
+  either way) — expected, since only a key no consumer matches changes outcome.
+  **Coverage.** One case in `tests/fail-loud-f113.spec.js`, the reintroduction registry, driving
+  the halt through `deriveUnitStats` with an identity record rather than through the page.
+  **Checks.** `node tools/node_unit_checks.js` 14385/14385, 0 failures; `npm run provenance` 271
+  formulas, 271 verified, 0 UNVERIFIED, 23 tooling assertions; the 12 spec files naming
+  `specialUnit`, `SPECIAL_UNIT_DEFS`, `createUnitIdentity` or one of the four keys, 54 passed,
+  0 failed.
+
 - **F143 — the `doomGazeField` slot gate is deleted, not re-wired.** **Premise held on the count
   and was stale on two clauses.** No caller: `addToSlot` is file-local to `combat_abilities.js`
   with no export, and its 32 call sites — the complete set, enumerated uncapped — all pass a
