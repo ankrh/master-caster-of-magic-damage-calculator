@@ -43,7 +43,7 @@ definePresets({
   landLinkingFantasticBreathCoM2: {
     desc: 'Land Linking (CoM2): fantastic creature gets +2 breath and melee. fire breath 2 to 4, melee 1 to 3, for 7 damage',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:2, hp:10, unitType: 'fantastic_nature', abilities: { landLinking: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:2, type:'fire' } }, hp:10, unitType: 'fantastic_nature', abilities: { landLinking: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
@@ -72,7 +72,7 @@ definePresets({
   landLinkingRangedCoM2: {
     desc: 'Land Linking (CoM2): fantastic creature does not get +2 ranged attack. missile 2 stays 2',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType: 'fantastic_nature', abilities: { landLinking: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType: 'fantastic_nature', abilities: { landLinking: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -165,7 +165,7 @@ definePresets({
   misleadMisfortuneNormalRangedCoM2: {
     desc: 'Mislead/Misfortune (CoM2): affected normal unit loses 1 ranged attack, so missile 2 becomes 1 → 1 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { mislead: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { mislead: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -226,7 +226,7 @@ definePresets({
   supernaturalFormulaCoM2: {
     desc: 'Supernatural (CoM2): the blocked-attack minimum is Round(hits × 34 / 100), not round(hits/3). Magic Immunity sets effectiveDefense to 100, so all 28 magic ranged hits are blocked and only the minimum lands: Round(28 × 34/100) = 10, where round(28/3) would give 9. A fully-blocked melee probe can no longer discriminate the two: F32/F34\'s defense-dice cap (Combat.ResolutionHelpers.pas:159-171) holds blocked hits to 15 or fewer, where the formulas agree, and the Defense input is UI-capped at 50. Without Supernatural the same attack deals ~0.',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:28, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supernatural: true } },
+    a: { modernAttacks: { ranged: { strength:28, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supernatural: true } },
     b: { toBlkMod:70, hp:20, abilities: { magicImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 10.000 },
@@ -234,7 +234,7 @@ definePresets({
   supernaturalMagicImmunityRangedCoM2: {
     desc: 'Supernatural (CoM2): magic ranged 6 reduced by Magic Immunity still deals the 1/3 minimum = 2 dmg',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:6, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supernatural: true } },
+    a: { modernAttacks: { ranged: { strength:6, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supernatural: true } },
     b: { toBlkMod:70, hp:10, abilities: { magicImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -242,7 +242,7 @@ definePresets({
   supernaturalFireBreathFireImmunityCoM2: {
     desc: 'Supernatural (CoM2): fire breath 6 reduced by Fire Immunity still deals the 1/3 minimum = 2 dmg',
     version: V_COM2,
-    a: { atk:1, rtbType:'fire', rtb:6, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supernatural: true } },
+    a: { atk:1, modernAttacks: { fireBreath: { strength:6, type:'fire' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supernatural: true } },
     b: { def:1, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
@@ -449,7 +449,7 @@ definePresets({
   heavenlyLightRangedCoM2: {
     desc: 'Heavenly Light (CoM 2) on an eligible normal unit: +1 conventional ranged strength and +10% Ranged To Hit → missile 3 at 40% = 1.200. Without the enchantment this is missile 2 at 30% = 0.600.',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hp:10, abilities: { heavenlyLight: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hp:10, abilities: { heavenlyLight: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.200 },
@@ -457,7 +457,7 @@ definePresets({
   heavenlyLightNotBreathCoM2: {
     desc: 'Channel boundary: Units.RecalculateUnits.pas:1451-1454 writes Ranged and Thrown only, and the strength bonus reads the conventional Ranged field, so a Fire Breath unit gains neither — breath 2 at 30% = 0.600, the same as without the enchantment. A leak into the Breath To Hit modifier gives 0.800; one into the Breath strength gives 0.900. Paired with heavenlyLightRangedCoM2, which is the same unit with a missile attack.',
     version: V_COM2,
-    a: { rtbType:'fire', rtb:2, hp:10, abilities: { heavenlyLight: true } },
+    a: { modernAttacks: { fireBreath: { strength:2, type:'fire' } }, hp:10, abilities: { heavenlyLight: true } },
     b: { hp:10 },
     rangedCheck: false,
     expected: { dmgToA: 0, dmgToB: 0.600 },
@@ -504,7 +504,7 @@ definePresets({
   ccFireBreathSeparatesThrownWarlord: {
     desc: 'Record fields: `Caster.exe` $00599F3E adds 4 to the Fire Breath field and writes no other attack, so a Thrown unit finishes with two attacks rather than one boosted one. Hurricane separates them by channel — UnitCalc.CAS:558,569-571 takes 20 points off Thrown and 30 off Breath — so from a 100% base the Thrown 2 fires at 80% and the granted Fire Breath 4 at 70%: 1.6 + 2.8 = 4.400. A grant landing on the Thrown field instead leaves one attack of 6 (4.200 as Breath, 4.800 as Thrown), and a lost Breath field leaves the Thrown alone at 1.600.',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'thrown', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true } },
+    a: { atk:0, modernAttacks: { thrown: { strength:2, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
     hurricane: true,
     expected: { dmgToA: 0, dmgToB: 4.400 },
@@ -512,7 +512,7 @@ definePresets({
   weaponToHitReadsOwnRangedChannelWarlord: {
     desc: 'ApplyMagicWeapons (Units.RecalculateUnits.pas:639-662) gates `hitchanceranged` on the record\'s own `rangedtype` and `hitchancethrown` on the record\'s Thrown field, so the Ranged modifier is decided by the Ranged channel even while the unit also carries the Thrown attack Bombs & Grenades creates. Magic weapon on missile 3: 3 at 40% = 1.200. Without the material this is 0.900. Paired with weaponToHitSkipsMagicRangedChannelWarlord, the same unit with a magical ranged type.',
     version: V_WARLORD,
-    a: { atk:1, weapon:'magic', rtbType:'missile', rtb:3, hp:10,
+    a: { atk:1, weapon:'magic', modernAttacks: { ranged: { strength:3, type:'missile' } }, hp:10,
       abilities: { outlanderWizard: true, explosive: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
@@ -521,7 +521,7 @@ definePresets({
   weaponToHitSkipsMagicRangedChannelWarlord: {
     desc: 'Channel boundary: the same unit with a magical ranged attack. `Ismagicalranged` holds, so ApplyMagicWeapons withholds the material To Hit modifier from the Ranged channel and the attack stays at 30% — 3 at 30% = 0.900, the same as with no weapon material at all. That inertness is the rule under test, and it is not general: its missile pair reaches 1.200 from the same material, and reading this gate from the Thrown channel Bombs & Grenades created, whose own material gate passes, would reach 1.200 here too.',
     version: V_WARLORD,
-    a: { atk:1, weapon:'magic', rtbType:'magic', rtb:3, hp:10,
+    a: { atk:1, weapon:'magic', modernAttacks: { ranged: { strength:3, type:'magic' } }, hp:10,
       abilities: { outlanderWizard: true, explosive: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
@@ -720,7 +720,7 @@ definePresets({
   flameBladeThrownNotBoostedCoM2: {
     desc: 'CoM2 Flame Blade does NOT boost thrown (helptext: missile only): melee 1+3=4, thrown 1 (unchanged), 100% hit vs 0 def → E[dmg]=5.0',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:1, hp:10, abilities: { flameBlade: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10, abilities: { flameBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
@@ -735,7 +735,7 @@ definePresets({
   flameBladeMissileWarlord: {
     desc: 'Warlord Flame Blade +2 missile: 1 rtb + FB → 3 rtb, 100% hit vs 0 def → E[dmg]=3.0',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { flameBladeWarlord: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { flameBladeWarlord: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -743,7 +743,7 @@ definePresets({
   flameBladeBoulderWarlord: {
     desc: 'Warlord Flame Blade does NOT boost boulder (helptext: rock bonus belongs to Fiery Fury): 1 rtb, 100% hit vs 0 def → E[dmg]=1.0',
     version: V_WARLORD,
-    a: { rtbType:'boulder', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { flameBladeWarlord: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { flameBladeWarlord: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -751,14 +751,14 @@ definePresets({
   flameBladeThrownWarlord: {
     desc: 'Warlord Flame Blade: +3 melee and +2 thrown, plus the unconditional SFireBreath += 1 at UnitCalc.CAS:330-333 that creates a strength-1 fire breath from the empty breath field. atk 1+3=4, thrown 1+2=3, created breath 1, all at 100% hit → E[dmg]=8.0. Without the ability the same unit deals 2.0.',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:1, hp:10, abilities: { flameBladeWarlord: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10, abilities: { flameBladeWarlord: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   flameBladeFireBreathWarlord: {
     desc: 'Warlord Flame Blade +1 fire breath: 1 + FB → 2 breath, 100% hit + melee atk 1+3=4 → E[dmg]=6.0',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:1, hp:10, abilities: { flameBladeWarlord: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hp:10, abilities: { flameBladeWarlord: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
@@ -779,7 +779,7 @@ definePresets({
   fieryBladeNoFireBreathWarlord: {
     desc: 'Warlord Lava Smelter Fiery Blade does NOT add fire breath: breath stays 1 while melee is 1+3=4 → E[dmg]=5.0',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:1, hp:10, race:'Dwarf', abilities: { lavaSmelterFieryBlade: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hp:10, race:'Dwarf', abilities: { lavaSmelterFieryBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
@@ -793,7 +793,7 @@ definePresets({
   fieryFuryMissileWarlord: {
     desc: 'Warlord Fiery Fury +2 missile (regular unit): 1 rtb + FF → 3 rtb, 100% hit vs 0 def → E[dmg]=3.0',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { fieryFury: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { fieryFury: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -801,7 +801,7 @@ definePresets({
   fieryFuryBoulderWarlord: {
     desc: 'Warlord Fiery Fury +2 boulder (regular unit): 1 rtb + FF → 3 rtb, 100% hit vs 0 def → E[dmg]=3.0',
     version: V_WARLORD,
-    a: { rtbType:'boulder', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { fieryFury: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { fieryFury: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -809,14 +809,14 @@ definePresets({
   fieryFuryThrownWarlord: {
     desc: 'Warlord Fiery Fury: +3 melee + +2 thrown (regular). atk 1+3=4, thrown 1+2=3 → E[dmg]=7.0',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:1, hp:10, abilities: { fieryFury: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10, abilities: { fieryFury: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   fieryFuryNoBreathBonusWarlord: {
     desc: 'Warlord Fiery Fury does NOT boost fire breath (elemental). breath 1 + 0 = 1, melee 1+3=4 → E[dmg]=5.0',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:1, hp:10, abilities: { fieryFury: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hp:10, abilities: { fieryFury: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
@@ -891,7 +891,7 @@ definePresets({
   spiritLinkBlessNoBonusWarlord: {
     desc: "Spirit Link: spirit-linked fantastic_chaos missile attacker grants the enemy no anti-Chaos Bless bonus. missile 10 vs def 0 → 10.0 (vs 3.0 with Bless's +7)",
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType: 'fantastic_chaos', abilities: { spiritLink: true } },
+    a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType: 'fantastic_chaos', abilities: { spiritLink: true } },
     b: { def:0, toBlkMod:70, res:5, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 10.000 },
@@ -989,7 +989,7 @@ definePresets({
     // Thrown, Gaze or Lightning Breath". CoM2's channels are independent, so both fire.
     desc: 'Chaos Channels in CoM2 adds Fire Breath alongside an existing Lightning Breath: melee 1 + lightning 5 + fire 4 = 10',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'lightning', rtb:5, hp:10, abilities: { ccFireBreath: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { lightningBreath: { strength:5, type:'lightning' } }, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
   },
@@ -1030,14 +1030,14 @@ definePresets({
   ccFireBreathAddsToExistingCoM2: {
     desc: 'CC Fire Breath vs existing fire breath (CoM2): adds. melee 1 + fire breath (3+4) = 8 dmg',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:3, hp:10, abilities: { ccFireBreath: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   ccFireBreathAddsToExistingWarlord: {
     desc: 'CC Fire Breath vs existing fire breath (Warlord): adds, identically to CoM2. melee 1 + fire breath (3+4) = 8 dmg',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:3, hp:10, abilities: { ccFireBreath: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },

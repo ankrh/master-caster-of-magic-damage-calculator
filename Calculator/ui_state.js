@@ -289,54 +289,32 @@ function onVersionChange() {
 
 const PRESET_VERSIONS = {};
 
-// The DOS-shaped `rtb`/`rtbType` fixture pair names one attack, so it projects onto whichever
-// single modern channel its type selects. It cannot state a second channel beside that one, nor
-// a Ranged record that carries a projectile type at strength 0 — a fixture needing either says
-// so with `modernAttacks` instead.
+// **A fixture states its version's own unit record and only that one.** The two engine families
+// keep different attack and To Hit records — the DOS shared `rtb`/`rtbType` slot and its
+// melee/shared To Hit pair against the modern record's four named channels and its common
+// `hitchance` with four channel modifiers — and naming the other family's field wrote a hidden
+// control nothing reads. That silent no-op is what let the modern To-Hit projection gap survive
+// unnoticed, so it halts the run instead (`SPEC.md`, *Out-of-range values stop the run*).
 //
-// A type with no modern channel throws rather than returning nothing (`SPEC.md`, *Out-of-range
-// values stop the run*). The gaze and touch types are the live case: they are DOS shared-slot
-// values, and the modern card holds them in their own fields, so a fixture naming one here was
-// silently contributing no channel at all while looking as though it did. The projectile list is
-// the modern one: a fixture running in a modern version states the modern card's vocabulary, so a
-// DOS realm token here is a fixture error rather than something to project onto `magic`.
-function dosPairAsModernChannels(s) {
-  const strength = Number(s.rtb) || 0;
-  if (strength <= 0) return null;
-  if (MODERN_RANGED_TYPES.includes(s.rtbType)) return { ranged: { strength, type: s.rtbType } };
-  if (s.rtbType === 'thrown') return { thrown: { strength, type: 'thrown' } };
-  if (s.rtbType === 'fire') return { fireBreath: { strength, type: 'fire' } };
-  if (s.rtbType === 'lightning') return { lightningBreath: { strength, type: 'lightning' } };
-  throw new Error(
-    `Preset fixture: rtbType '${s.rtbType}' with rtb ${strength} names no modern attack channel. `
-    + `The DOS pair projects onto ${MODERN_RANGED_TYPES.join('/')} (Ranged), thrown, fire or lightning. `
-    + `Gaze and touch values belong in \`abilities\` on a CoM2/Warlord fixture; a second channel `
-    + `or a typed Ranged record at strength 0 needs \`modernAttacks\`.`);
-}
+// The attack channels joined this reject in F127. A modern fixture used to be allowed to state
+// one channel through the DOS pair, which `applyPreset` projected onto the card; what that also
+// did was fill the modern record's legacy shared slot, and the modern reads that still consulted
+// it answered from a field `Caster.exe` does not have. With every fixture stating `modernAttacks`
+// the slot stays empty in a modern run, so such a read has nothing to find.
+const DOS_ONLY_FIXTURE_FIELDS = ['toHitMod', 'toHitRtbMod', 'rtb', 'rtbType'];
+const MODERN_ONLY_FIXTURE_FIELDS = ['hitChance', 'hitMelee', 'hitRanged', 'hitThrown',
+  'hitBreath', 'modernAttacks'];
 
-// The two engine families keep different To Hit records — the DOS melee/shared pair against the
-// modern common `hitchance` and its four channel modifiers — and a fixture states the one its
-// version has. Naming the other family's field wrote a hidden control nothing reads, and that
-// silent no-op is what let the modern To-Hit projection gap survive unnoticed, so it halts the
-// run instead (`SPEC.md`, *Out-of-range values stop the run*).
-//
-// The attack channels are deliberately not covered here: the DOS-shaped `rtb`/`rtbType` pair is
-// still a sanctioned modern fixture notation (`CLAUDE.md`, *Presets*), because the modern record
-// keeps the shared slot beside its four channels and modern engine code still reads it (F127).
-const DOS_TO_HIT_FIXTURE_FIELDS = ['toHitMod', 'toHitRtbMod'];
-const MODERN_TO_HIT_FIXTURE_FIELDS = ['hitChance', 'hitMelee', 'hitRanged', 'hitThrown',
-  'hitBreath'];
-
-function assertFixtureToHitMatchesRecord(name, prefix, side, version) {
+function assertFixtureMatchesVersionRecord(name, prefix, side, version) {
   const modern = version.startsWith('com2');
-  const foreign = (modern ? DOS_TO_HIT_FIXTURE_FIELDS : MODERN_TO_HIT_FIXTURE_FIELDS)
+  const foreign = (modern ? DOS_ONLY_FIXTURE_FIELDS : MODERN_ONLY_FIXTURE_FIELDS)
     .filter(field => Object.prototype.hasOwnProperty.call(side, field));
   if (foreign.length === 0) return;
   throw new Error(
-    `Preset '${name}' side ${prefix}: ${version} carries the ${modern ? 'modern' : 'DOS'} To Hit `
+    `Preset '${name}' side ${prefix}: ${version} carries the ${modern ? 'modern' : 'DOS'} unit `
     + `record, so ${foreign.join(', ')} name${foreign.length === 1 ? 's' : ''} no card field it `
     + `has and nothing would read the value. `
-    + `Expected ${(modern ? MODERN_TO_HIT_FIXTURE_FIELDS : DOS_TO_HIT_FIXTURE_FIELDS).join(', ')}.`);
+    + `Expected ${(modern ? MODERN_ONLY_FIXTURE_FIELDS : DOS_ONLY_FIXTURE_FIELDS).join(', ')}.`);
 }
 
 function applyPreset(name) {
@@ -379,7 +357,7 @@ function applyPreset(name) {
     };
   }
   function setUnit(prefix, u) {
-    assertFixtureToHitMatchesRecord(name, prefix, u,
+    assertFixtureMatchesVersionRecord(name, prefix, u,
       document.getElementById('gameVersion').value);
     const s = { ...UNIT_DEFAULTS, ...u };
     const identity = presetIdentity(s);
@@ -387,12 +365,11 @@ function applyPreset(name) {
     document.getElementById(prefix + 'Atk').value = s.atk;
     setSharedSlotRangedType(prefix, s.rtbType, `Preset '${name}' side ${prefix}`);
     document.getElementById(prefix + 'Rtb').value = s.rtb;
-    // A CoM2/Warlord fixture states the card's four named channels either directly, through
-    // `modernAttacks`, or through the older DOS-shaped `rtb` pair, which projects onto exactly
-    // one of them. Either way the statement is complete: an unnamed channel is empty.
-    // Ordinary UI reads never consult the hidden DOS controls in modern versions.
+    // A CoM2/Warlord fixture states the card's four named channels through `modernAttacks`, and
+    // that statement is complete: an unnamed channel is empty. The DOS shared slot keeps the
+    // defaults above, which is what a modern record holds for a field its version has not got.
     if (document.getElementById('gameVersion').value.startsWith('com2')) {
-      applyModernAttackFields(prefix, s.modernAttacks || dosPairAsModernChannels(s));
+      applyModernAttackFields(prefix, s.modernAttacks);
     }
     document.getElementById(prefix + 'Def').value = s.def;
     document.getElementById(prefix + 'Res').value = s.res;

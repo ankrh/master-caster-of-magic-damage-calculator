@@ -832,18 +832,13 @@ function deriveUnitStats(input) {
     // CreateUnit.CAS city/resource gates read the permanent unit record before later
     // enchantment-driven channel conversions can create or replace an attack.
     const hasPermanentRangedStat = inputSlotRtb > 0 && RANGED_TYPES.includes(rtbTypeRaw);
-    // Alumni of Academy is a permanent +2-figure write made when a unit is trained.
-    // Academy is Halfling-only, so the UI condition is race-gated. The script admits
-    // Halfling Rocs (type 221, their Fantastic Stable unit) unconditionally; its other
-    // branch requires an innate magical ranged attack and rejects Mechanical units. That gate is
-    // `GetStat(U,SRangedType,1) > 29` (`CreateUnit.CAS:462-464`), the whole magical band — which
-    // includes Warlord's own id 40, beam energy. Naming three realm tokens excluded it; the
-    // modern vocabulary's `magic`/`magic_lightning` are exactly ids 30-38 and 40, so the
-    // predicate is the band.
-    const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
-      && unitRace === 'Halfling' && !isHero
-      && (unitName.endsWith('Rocs')
-        || (!abilities.mechanical && inputSlotRtb > 0 && isMagicalRangedType(rtbTypeRaw)));
+    // The field half of Alumni of Academy's gate: the permanent Ranged field carrying a strength
+    // in the magical band — `GetStat(U,SRangedType,1) > 29` (`CreateUnit.CAS:462-464`), the whole
+    // band, which includes Warlord's own id 40, beam energy. Naming three realm tokens excluded
+    // it; the modern vocabulary's `magic`/`magic_lightning` are exactly ids 30-38 and 40, so the
+    // predicate is the band. The rest of the gate reads no field and is assembled beside the
+    // slot that holds this one (`rangedFieldContext`).
+    const permanentMagicalRangedField = inputSlotRtb > 0 && isMagicalRangedType(rtbTypeRaw);
 
     // What `base:stat:base` seeds, the chain's first entry: the permanent record's identity
     // alone. The Marionette realm retype is `SETSTAT(U,SRangedType,0,…)` — record selector `0`,
@@ -861,7 +856,11 @@ function deriveUnitStats(input) {
     // writes it reads have been assembled.
     const energyCannon = isWarlord && !!abilities.energyBeamWeapons
       && !!abilities.powerEngine && hasPermanentRangedStat;
-    const energyCannonOwnsThisSlot = !isChannelSlot || channelKey === 'ranged';
+    // The conversion reads and writes `SRanged`, so the slot that takes it is the one holding
+    // the record's Ranged field: the `ranged` channel in the modern record, the shared slot in
+    // the DOS ones. It is the same field the record-level gate below resolves, and the two have
+    // to name one slot or the +50% strength and the Destruction rider disagree (F127).
+    const energyCannonOwnsThisSlot = isCoM2 ? channelKey === 'ranged' : !isChannelSlot;
 
     // The Chaos Channels fire-breath write — `a:` in the modern builds, `c:` in the DOS ones.
     // The version-specific admission gate reads the permanent record; whether the slot is free
@@ -930,13 +929,13 @@ function deriveUnitStats(input) {
       rtbTypeRaw, gazeType,
       baseSequenceRangedType, baseSequenceThrownType,
       permanentRangedType, permanentThrownType,
-      calcBaseRtb, hasPermanentRangedStat,
+      calcBaseRtb, hasPermanentRangedStat, permanentMagicalRangedField,
       marionetteRangedSlot, marionetteOwnsThisRangedSlot,
       blackpowder, blackpowderGrantsAP, blackpowderBasePoison, venom, venomBasePoison,
       blackpowderSelectedPhysicalRanged, blackpowderSelectedThrown,
       blackpowderSelectedFireBreath, blackpowderUpgradesToBoulder,
       ccFireBreathGranted, ccDosBreathEligible, ccOwnsThisSlot,
-      alumniOfAcademy, energyCannon, energyCannonOwnsThisSlot,
+      energyCannon, energyCannonOwnsThisSlot,
       naturalSelectionWildGameActive, upgradedExplosive, dosGazeStrength,
     };
   }
@@ -1102,6 +1101,34 @@ function deriveUnitStats(input) {
     contexts: derivationContexts.filter(context => context.secondaryHitField === field),
   }));
 
+  // Which slot holds the record's **Ranged** field is record structure, not a choice: in
+  // `Caster.exe` it is `SRanged`, the modern record's own `ranged` channel, and in the DOS
+  // engines it is the shared slot, whose one value stands for Ranged only while its permanent
+  // type is a conventional ranged one. The two `CreateUnit.CAS` city gates below read that
+  // field on the permanent record, so they resolve it here rather than from the modern card's
+  // legacy projection, which `Caster.exe` has no field for at all (F127). A modern record with
+  // no Ranged field has nothing for either gate to read, which a null context is.
+  const rangedFieldContext = isCoM2
+    ? (channelContexts.find(context => context.channelKey === 'ranged') || null)
+    : recordContext;
+  // Alumni of Academy is a permanent +2-figure write made when a unit is trained. Academy is
+  // Halfling-only, so the condition is race-gated; the script admits Halfling Rocs (type 221,
+  // their Fantastic Stable unit) unconditionally, and that branch reads no field, so it survives
+  // a record with no Ranged field. The other branch rejects Mechanical units and reads the field
+  // (`permanentMagicalRangedField` above).
+  const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
+    && unitRace === 'Halfling' && !isHero
+    && (unitName.endsWith('Rocs')
+      || (!abilities.mechanical
+        && !!rangedFieldContext && rangedFieldContext.permanentMagicalRangedField));
+  const energyCannon = isWarlord && !!abilities.energyBeamWeapons && !!abilities.powerEngine
+    && !!rangedFieldContext && rangedFieldContext.hasPermanentRangedStat;
+  // `UnitCalc.CAS:1435-1443` reads the unit's To-Hit plus its **Ranged** To-Hit, which is the
+  // record field `hitchanceranged` — the modifier the Ranged field is read with, and therefore
+  // the one belonging to the slot that holds it. Reading the shared slot's `toHitRtb` answered
+  // from the DOS record instead (F127). Only meaningful where `energyCannon` gates the step on.
+  const energyCannonHitField = (rangedFieldContext || recordContext).secondaryHitField;
+
   const effectiveAbilities = {
     ...abilities,
     ...(altarOfTheMoon ? { rage: true, poisonImmunity: true } : {}),
@@ -1112,7 +1139,7 @@ function deriveUnitStats(input) {
     ...(recordContext.blackpowder ? { poison: recordContext.blackpowderBasePoison + 1 } : {}),
     ...(recordContext.blackpowder ? { blackpowder: true } : {}),
     ...(bombsGrenades ? { wallCrusher: true } : {}),
-    ...(recordContext.energyCannon ? { energyCannon: true } : {}),
+    ...(energyCannon ? { energyCannon: true } : {}),
     ...(motherFungus ? { poison: (abilities.poison || 0) + 1 } : {}),
     ...(recordContext.venom
       ? { poison: recordContext.venomBasePoison + 1, poisonImmunity: true } : {}),
@@ -1275,8 +1302,6 @@ function deriveUnitStats(input) {
     : makeSecondaryHitPick(heavenlyLightMaterialTail, heavenlyLightThrownToHit);
   const holyWeaponHitPick = makeSecondaryHitPick(hwActive,
     hwActive && version !== 'mom_1.31' ? 10 : 0);
-  const alumniOfAcademy = recordContext.alumniOfAcademy;
-  const energyCannon = recordContext.energyCannon;
   const hasPermanentRangedStat = recordContext.hasPermanentRangedStat;
   const existingLifeSteal = effectiveAbilities.lifeSteal;
 
@@ -1522,7 +1547,7 @@ function deriveUnitStats(input) {
     com1GuidingBeaconAura, com1SoulLinkerAura, darkForceActive, darknessAtkBonus,
     darknessDefBonus, darknessResBonus, destinyActive, disciplineActive, disciplineAtkMod,
     disciplineDefMod, doomGazeLvlMod, dosTrueLightStep, dragonMound,
-    enduranceActive, enduranceDefMod, enduranceHpMod, energyCannon,
+    enduranceActive, enduranceDefMod, enduranceHpMod, energyCannon, energyCannonHitField,
     baseFigs, ccGrantsThisSlot, eternalNightEnemyResPenalty, ffMeleeBonus, ffRegularBonus,
     lightningBladeSlots,
     fieryFuryRtbWrite, focusMagicBranchSlots, poxHostIsGoblin, shadowStrikeActive,

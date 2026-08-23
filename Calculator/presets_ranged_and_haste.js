@@ -118,7 +118,7 @@ definePresets({
   distPenaltyCoM2_6: {
     desc: 'CoM2 1.05.11: range 6 → −10% − 3%×(6−4) = −16% → 84% effective',
     version: V_COM2,
-    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:1, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10 },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 6,
     expected: { dmgToA: 0, dmgToB: 0.840 },
@@ -134,7 +134,7 @@ definePresets({
   distPenaltyCoM2_16: {
     desc: 'CoM2 1.05.11: range 16 → −10% − 3%×(16−4) = −46% → 54% effective',
     version: V_COM2,
-    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:1, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10 },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 16,
     expected: { dmgToA: 0, dmgToB: 0.540 },
@@ -177,7 +177,7 @@ definePresets({
   lightningResistCancelsAPLightningBoltRangedCoM2: {
     desc: 'Lightning Resist vs id-30 ranged (CoM2): magical-lightning ranged 4 (100% hit) + AP vs def 4 (100% block) — AP cancelled, def stays 4, 4−4=0',
     version: V_COM2,
-    a: { atk:0, rtbType:'magic_lightning', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, modernAttacks: { ranged: { strength:4, type:'magic_lightning' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -185,7 +185,7 @@ definePresets({
   lightningResistKeepsAPMagicRangedCoM2: {
     desc: 'Lightning Resist boundary (CoM2): a plain magical ranged 4 is not id 30, so AP still halves def 4→2 — 4−2=2. The exclusion is the rule under test: `islightning` keys on the projectile id, not on magical-ness',
     version: V_COM2,
-    a: { atk:0, rtbType:'magic', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, modernAttacks: { ranged: { strength:4, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -193,7 +193,7 @@ definePresets({
   lightningResistCancelsAPLightningBoltRangedWarlord: {
     desc: 'Lightning Resist vs id-30 ranged (Warlord): magical-lightning ranged 4 (100% hit) + AP vs def 4 (100% block) — AP cancelled, def stays 4, 4−4=0',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'magic_lightning', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, modernAttacks: { ranged: { strength:4, type:'magic_lightning' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -201,7 +201,7 @@ definePresets({
   lightningResistKeepsAPMagicRangedWarlord: {
     desc: 'Lightning Resist boundary (Warlord): a plain magical ranged 4 is not id 30, so AP still halves def 4→2 — 4−2=2. The exclusion is the rule under test: `islightning` keys on the projectile id, not on magical-ness',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'magic', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
+    a: { atk:0, modernAttacks: { ranged: { strength:4, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -232,14 +232,14 @@ definePresets({
   experienceUltraEliteThrownCoM2: {
     desc: 'Ultra Elite thrown (CoM2): +1 thrown (melee +3 same both versions). melee 1+3=4 + thrown 1+1=2 = 6 dmg at 100% hit vs def 0',
     version: V_COM2,
-    a: { atk:1, rtbType:'thrown', rtb:1, hitChance:70, hp:10, level:'ultra_elite' },
+    a: { atk:1, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hitChance:70, hp:10, level:'ultra_elite' },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   experienceUltraEliteThrownWarlord: {
     desc: 'Ultra Elite thrown (Warlord): +2 thrown (vs CoM2 +1; melee +3 same). melee 1+3=4 + thrown 1+2=3 = 7 dmg at 100% hit vs def 0',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'thrown', rtb:1, hitChance:70, hp:10, level:'ultra_elite' },
+    a: { atk:1, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hitChance:70, hp:10, level:'ultra_elite' },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
@@ -344,7 +344,7 @@ definePresets({
   stoningTouchRangedMissileCoM2: {
     desc: 'Stoning Touch on ranged missile (CoM2): rtb 1 fully blocked, stoningTouch -3 vs Res 5 fires per arrow → pFail 0.8 × 10 hp = 8.0',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -352,7 +352,7 @@ definePresets({
   stoningTouchRangedMissileWarlord: {
     desc: 'Global Stoning Touch on ranged missile (Warlord): rtb 1 fully blocked, Stoning -3 vs Res 5 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -360,7 +360,7 @@ definePresets({
   stoningTouchRangedMagicCoM2: {
     desc: 'Stoning Touch on magical ranged (CoM2): magic rtb 1 fully blocked, stoningTouch -3 vs Res 5 fires → 8.0',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -368,7 +368,7 @@ definePresets({
   stoningTouchRangedMagicWarlord: {
     desc: 'Global Stoning Touch on magical ranged (Warlord): magic rtb 1 fully blocked, Stoning -3 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -376,7 +376,7 @@ definePresets({
   deathTouchRangedMissileCoM2: {
     desc: 'Death Touch on ranged missile (CoM2): rtb 1 fully blocked, deathTouch -3 vs Res 5 fires per arrow → pFail 0.8 × 10 hp = 8.0',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -384,7 +384,7 @@ definePresets({
   deathTouchRangedMissileWarlord: {
     desc: 'Global Death Touch on ranged missile (Warlord): rtb 1 fully blocked, Death Touch -3 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -392,7 +392,7 @@ definePresets({
   deathTouchRangedMagicCoM2: {
     desc: 'Death Touch on magical ranged (CoM2): magic rtb 1 fully blocked, deathTouch -3 vs Res 5 fires → 8.0',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -400,7 +400,7 @@ definePresets({
   deathTouchRangedMagicWarlord: {
     desc: 'Global Death Touch on magical ranged (Warlord): magic rtb 1 fully blocked, Death Touch -3 fires → 8.0',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -408,7 +408,7 @@ definePresets({
   focusMagicMovesStoningOffRangedWarlord: {
     desc: 'Focus Magic moves global Stoning Touch -3 to melee/Thrown: magic 1 becomes 4 but is fully blocked by def 4; ranged touch no longer fires → 0',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true, stoningTouch: -3 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true, stoningTouch: -3 } },
     b: { def:4, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.000 },
@@ -419,7 +419,7 @@ definePresets({
         + '- one Death -3 attempt vs Res 5, pFail 0.8 x 10 hp = 8.0. A Breath that carried it too would make two '
         + 'attempts, 1 - 0.2^2 = 0.96 x 10 = 9.6, so the Breath exclusion is what the number measures.',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'fire', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true, deathTouch: -3 } },
+    a: { atk:0, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true, deathTouch: -3 } },
     b: { def:4, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
@@ -429,7 +429,7 @@ definePresets({
         + 'Res 5 average 3 x 0.8 = 2.4 kills x 10 hp = 24.0. Without the two breath channels the melee call '
         + 'alone gives 8.0.',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'lightning', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true, stoningTouch: -3 } },
+    a: { atk:0, modernAttacks: { lightningBreath: { strength:1, type:'lightning' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true, stoningTouch: -3 } },
     b: { figs:4, def:20, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 24.000 },
   },
@@ -878,7 +878,7 @@ definePresets({
   firstStrikeCapRemovedThrownCoM2: {
     desc: 'CoM2: no 24-HP First Strike cutoff after the same 6-damage Thrown attack',
     version: V_COM2,
-    a: { atk:30, rtbType:'thrown', rtb:6, hitChance:70, hp:10, abilities: { firstStrike: true } },
+    a: { atk:30, modernAttacks: { thrown: { strength:6, type:'thrown' } }, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:1, hitChance:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 30 },
   },
@@ -1017,7 +1017,7 @@ definePresets({
   chaosSurgeRangedCoM2: {
     desc: 'Chaos Surge (CoM2): Chaos creature gains +2 ranged from one copy. missile 1 -> 3',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType:'fantastic_chaos' },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     chaosSurge: 1,
@@ -1026,7 +1026,7 @@ definePresets({
   chaosSurgeBreathCoM2: {
     desc: 'Chaos Surge (CoM2): Chaos creature gains +2 breath from one copy. fire breath 1 -> 3, plus 1 melee',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:1, hp:10, unitType:'fantastic_chaos' },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -1131,7 +1131,7 @@ definePresets({
   chaosSurgeThrownCoM2: {
     desc: 'Chaos Surge (CoM2): thrown is not boosted. thrown stays 1 plus melee 1 -> 4',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:1, hp:10, unitType:'fantastic_chaos' },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -1243,7 +1243,7 @@ definePresets({
   eternalNightEnemyPoorSightWarlord: {
     desc: 'Eternal Night (Warlord): enemy non-Death unit gets -2 ranged attack strength ("poor vision"). Missile rtb 4 - 2 = 2 at 100% hit vs def 0 = 2 dmg',
     version: V_WARLORD,
-    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:4, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:4, type:'missile' } }, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -1251,7 +1251,7 @@ definePresets({
   eternalNightMagicRangedWarlord: {
     desc: 'Eternal Night (Warlord): -2 ranged penalty also applies to magic ranged. Magic ranged rtb 4 - 2 = 2 at 100% hit vs def 0 = 2 dmg',
     version: V_WARLORD,
-    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'magic', rtb:4, hp:10 },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:4, type:'magic' } }, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -1259,7 +1259,7 @@ definePresets({
   eternalNightDeathUnitNoPoorSightWarlord: {
     desc: 'Eternal Night (Warlord): Death-realm unit is NOT affected by the -2 ranged penalty. Missile rtb 4 + doubled Darkness +2 = 6 × 100% hit vs def 0 = 6 dmg',
     version: V_WARLORD,
-    a: { hitRanged:70, hitThrown:70, hitBreath:70, rtbType:'missile', rtb:4, hp:10, unitType:'fantastic_death' },
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:4, type:'missile' } }, hp:10, unitType:'fantastic_death' },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 6.000 },
@@ -1267,7 +1267,7 @@ definePresets({
   eternalNightThrownUnaffectedWarlord: {
     desc: 'Eternal Night (Warlord): -2 ranged penalty does not apply to thrown. Melee 1 + thrown 3 at 100% hit vs def 0 = 4 dmg',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:3, hp:10 },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:3, type:'thrown' } }, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },

@@ -151,7 +151,7 @@ definePresets({
     desc: 'Immolation is melee-only in CoM2: ApplyAttack runs it under `at = ATmelee`, so the Thrown call '
         + 'carries none — thrown 3@100% + melee 1@100% + one immolation(10)@30% = 7.0',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:3, hp:10, abilities: { immolation: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:3, type:'thrown' } }, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
@@ -296,7 +296,7 @@ definePresets({
     desc: 'Garrison boost now covers boulder physical ranged: A boulder 5→6 @100% vs B def 0 → 6.0 to B (5.0 without boulder coverage)',
     version: V_WARLORD,
     rangedCheck: true, rangedDist: 1,
-    a: { rtbType:'boulder', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
+    a: { modernAttacks: { ranged: { strength:5, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
     b: { atk:0, toBlkMod:70, def:0, hp:20 },
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
   },
@@ -408,7 +408,7 @@ definePresets({
   hurricaneRanged: {
     desc: 'Hurricane: missile 1 atk gets -20% to hit (30%→10%) vs 0 def → 0.1 dmg',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hp:10 },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10 },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     hurricane: true,
@@ -417,7 +417,7 @@ definePresets({
   hurricaneBreath: {
     desc: 'Hurricane: fire breath 1 atk gets -30% to hit (30%→10%, floored) vs 0 def → 0.1 dmg. Without Hurricane breath would hit at 30% → 0.3, so the breath-specific penalty is exercised.',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'fire', rtb:1, hp:10 },
+    a: { atk:1, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hp:10 },
     b: { hp:10 },
     rangedCheck: false,
     hurricane: true,
@@ -434,7 +434,7 @@ definePresets({
   hurricanePenaltySizeRanged: {
     desc: 'Hurricane’s ranged penalty is 20 points, not 30: missile 2 at 100% to hit drops to 80% → 1.6 dmg. Paired with hurricanePenaltySizeBreath, which starts from the same 100% and lands on 70%. The 30%-base presets above cannot tell the two penalties apart because both floor at 10%. Without Hurricane this is 2.0.',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     hurricane: true,
@@ -443,7 +443,7 @@ definePresets({
   hurricanePenaltySizeBreath: {
     desc: 'Hurricane’s breath penalty is 30 points: fire breath 2 at 100% to hit drops to 70% → 1.4, plus 1 melee at an untouched 30% → 1.7 dmg. Paired with hurricanePenaltySizeRanged: same base, 10 points further down because Fire and Lightning Breath read the separate breath modifier. Without Hurricane this is 2.3.',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'fire', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { atk:1, modernAttacks: { fireBreath: { strength:2, type:'fire' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { hp:10 },
     rangedCheck: false,
     hurricane: true,
@@ -634,7 +634,7 @@ definePresets({
   blessBreathBonusCoM2: {
     desc: 'CoM2 Bless gives NO def bonus vs a magical ranged unit attack: its defense half is gated on a positive spell ID and ApplyAttack passes 0 for every unit channel. 7 hits − 0 = 7 dmg (MoM blocks 3, and a +5 here would leave 2)',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:7, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:7, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -656,7 +656,7 @@ definePresets({
   blessBreathBonusWarlord: {
     desc: 'Warlord Bless gives NO def bonus vs a magical ranged unit attack: the same positive-spell-ID gate excludes every ApplyAttack unit channel. 7 hits − 0 = 7 dmg (a +7 here would leave 0)',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:7, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:7, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -767,14 +767,14 @@ definePresets({
   resistElementsFireBreathCoM2: {
     desc: 'CoM2 Resist Elements +4 def vs Fire Breath: 5 breath vs def 4 → 1 dmg + 1 melee = 2 total',
     version: V_COM2,
-    a: { atk:1, rtbType:'fire', rtb:5, hitChance:70, hp:10 },
+    a: { atk:1, modernAttacks: { fireBreath: { strength:5, type:'fire' } }, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   resistElementsMagicRangedCoM2: {
     desc: 'CoM2 Resist Elements +4 def vs magic ranged: 5 hits vs def 4 → 1 dmg. The modern engine attaches no realm to a projectile, so this one case is the CoM2 endpoint of both MoM contrasts beside it: +4 against `resistElementsMagicC`\'s +3, and applying at all where `resistElementsNotVsMagicSMoM`\'s Sorcery arm is excluded.',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:5, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -782,7 +782,7 @@ definePresets({
   elemArmorMagicRangedCoM2: {
     desc: 'CoM2 Elemental Armor +12 def vs magic ranged: 5 hits vs def 12 → 0 dmg, where MoM\'s `elemArmorNotVsMagicS` takes nothing on the Sorcery realm its table has and the modern engine does not.',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:5, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },

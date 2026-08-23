@@ -522,13 +522,15 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(temporalDrive.def, 4, 'Temporal-Gravity Drive immunity gates Mind Storm defense penalty');
   assertEqual(temporalDrive.res, 4, 'Temporal-Gravity Drive immunity gates Mind Storm resistance penalty');
 
+  // Energy Cannon reads and writes the record's Ranged field, which in `Caster.exe` is
+  // `SRanged` — the modern record's `ranged` channel — so the fixture states that channel and
+  // the assertions read it (F127).
   const energyCannon = ctx.deriveUnitStats(warlordUnit({
-    rtbType: 'missile',
-    rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
     abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
   }));
-  assertEqual(energyCannon.rangedType, 'magic', 'Energy Cannon converts the projectile to id 40, beam energy');
-  assertEqual(energyCannon.rtb, 7, 'Energy Cannon adds floor(50% base ranged strength)');
+  assertEqual(energyCannon.modernAttacks.ranged.type, 'magic', 'Energy Cannon converts the projectile to id 40, beam energy');
+  assertEqual(energyCannon.modernAttacks.ranged.strength, 7, 'Energy Cannon adds floor(50% base ranged strength)');
   assertEqual(energyCannon.abilities.energyCannonDestruction, -2,
     'Energy Cannon derives ranged-record Destruction from 30% ranged To-Hit');
   assertEqual(energyCannon.abilities.destruction, undefined,
@@ -540,7 +542,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Energy Cannon leaves the independent global Destruction channel absent');
 
   const normalizedEnergyCannonWithGeneral = ctx.normalizeCombatUnit(ctx.deriveUnitStats(warlordUnit({
-    rtbType: 'missile', rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
     abilities: {
       destruction: 0, mechanical: true, heatPowerEngine: true, energyBeamWeapons: true,
     },
@@ -551,8 +553,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Energy Cannon keeps its derived ranged Destruction beside independent general Destruction');
 
   const aimedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
-    rtbType: 'missile',
-    rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
     hitChance: 10,
     hitRanged: 10, hitThrown: 10, hitBreath: 10,
     abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
@@ -564,8 +565,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Energy Cannon records its source-ordered pre-region-e chance snapshot');
 
   const upgradedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
-    rtbType: 'missile',
-    rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
     abilities: {
       heatPowerEngine: true,
       energyBeamWeapons: true,
@@ -576,18 +576,18 @@ function runWarlordUnitAbilityChecks(ctx) {
     },
   }));
   assertEqual(
-    upgradedEnergyCannon.rtb,
+    upgradedEnergyCannon.modernAttacks.ranged.strength,
     12,
     'Energy Cannon scales earlier permanent Artificer and Blackpowder writes: (5+1+2)+floor(8/2)',
   );
 
   const noRangedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
-    rtbType: 'none', rtb: 0,
+    modernAttacks: { ranged: null, thrown: null, fireBreath: null, lightningBreath: null },
     abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
   }));
   assertEqual(!!noRangedEnergyCannon.abilities.energyCannon, false,
     'Energy Cannon inference requires positive permanent conventional Ranged');
-  assertEqual(noRangedEnergyCannon.rtb, 0,
+  assertEqual(noRangedEnergyCannon.modernAttacks.ranged, undefined,
     'Energy Cannon does not invent ranged strength without permanent conventional Ranged');
 
   const dragonMoundCreatesBreath = ctx.deriveUnitStats(warlordUnit({

@@ -5,7 +5,7 @@ definePresets({
   hillfortMissileWarlord: {
     desc: 'Hillfort Missile Immunity (Warlord): missile 3 (100% hit) vs def 2 raised to 50 → 0',
     version: V_WARLORD,
-    a: { rtbType: 'missile', rtb: 3, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
+    a: { modernAttacks: { ranged: { strength:3, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
     b: { def: 2, toBlkMod: 70, hp: 10, abilities: { hillfort: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -98,7 +98,7 @@ definePresets({
   rageRangedPreCombatLossWarlord: {
     desc: 'Rage (Warlord) ranged, pre-combat losses: 6-fig unit at 3 dmg (hp 1) → 3 figs alive, 3 lost → +3 ranged. rtb 1+3=4, 3 figs × 4 at 100% hit vs def 0 → 12 dmg',
     version: V_WARLORD,
-    a: { figs:6, rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:1, dmg:3, abilities: { rage: true } },
+    a: { figs:6, modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:1, dmg:3, abilities: { rage: true } },
     b: { atk:0, def:0, hp:30 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 12.000 },
@@ -115,7 +115,7 @@ definePresets({
   altarOfTheMoonRangedWarlord: {
     desc: 'Altar of the Moon (Warlord): ranged unit gains +2 Ranged Attack. rtb 1+2=3, 100% hit vs def 0 → 3 dmg (single full-health fig → Rage adds 0)',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, race:'Gnoll', abilities: { altarOfTheMoon: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, race:'Gnoll', abilities: { altarOfTheMoon: true } },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -144,7 +144,7 @@ definePresets({
   altarOfTheMoonNonGnollWarlord: {
     desc: 'Altar of the Moon (Warlord): a non-Gnoll unit gets no bonus. Ranged rtb 1 (100% hit) vs def 0 → 1 dmg (a Gnoll would gain +2 Ranged → 3)',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { altarOfTheMoon: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { altarOfTheMoon: true } },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -198,7 +198,7 @@ definePresets({
   alumniOfAcademyMagicRangedWarlord: {
     desc: 'Academy (Warlord): a 6-figure Halfling magical-ranged unit gains a flat +2 figures. 1 ranged × 8 figs at 100% hit vs def 0 → 8 dmg (without Academy, 6)',
     version: V_WARLORD,
-    a: { figs:6, rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'Halfling', name:'Halfling Shamans', abilities: { alumniOfAcademy: true } },
+    a: { figs:6, modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'Halfling', name:'Halfling Shamans', abilities: { alumniOfAcademy: true } },
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -206,7 +206,7 @@ definePresets({
   alumniOfAcademyMechanicalExcludedWarlord: {
     desc: 'Academy (Warlord): Mechanical excludes the magical-ranged branch. 1 ranged × 6 figs at 100% hit vs def 0 → 6 dmg (a non-Mechanical unit would deal 8)',
     version: V_WARLORD,
-    a: { figs:6, rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'Halfling', name:'Mechanical Shamans', abilities: { alumniOfAcademy: true, mechanical: true } },
+    a: { figs:6, modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'Halfling', name:'Mechanical Shamans', abilities: { alumniOfAcademy: true, mechanical: true } },
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 6.000 },
@@ -214,7 +214,7 @@ definePresets({
   alumniOfAcademyLightningBoltWarlord: {
     desc: 'Academy (Warlord): the gate is `GetStat(U,SRangedType,1)>29` (CreateUnit.CAS:462-464) — the whole magical band, not an enumeration of realms — so the id-30 lightning-bolt projectile is inside it exactly as any other magical id is. 1 ranged × 8 figs at 100% hit vs def 0 → 8 dmg (without Academy, 6). Missile Immunity on the target is the control that the projectile is classed magical rather than physical: it blocks nothing here.',
     version: V_WARLORD,
-    a: { figs:6, rtbType:'magic_lightning', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'Halfling', name:'Halfling Stormcallers', abilities: { alumniOfAcademy: true } },
+    a: { figs:6, modernAttacks: { ranged: { strength:1, type:'magic_lightning' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'Halfling', name:'Halfling Stormcallers', abilities: { alumniOfAcademy: true } },
     b: { atk:0, def:0, hp:20, abilities: { missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -229,7 +229,7 @@ definePresets({
   alumniOfAcademyNonHalflingExcludedWarlord: {
     desc: 'Academy (Warlord): non-Halfling magical-ranged units cannot use the racial building. 1 ranged × 4 figs at 100% hit vs def 0 → 4 dmg (a Halfling would deal 6)',
     version: V_WARLORD,
-    a: { figs:4, rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'High Men', name:'High Men Magicians', abilities: { alumniOfAcademy: true } },
+    a: { figs:4, modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:2, race:'High Men', name:'High Men Magicians', abilities: { alumniOfAcademy: true } },
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -239,7 +239,7 @@ definePresets({
   dragonMoundFireBreathWarlord: {
     desc: 'Dragon Mound (Warlord): a Draconian unit with Fire Breath gains +2. Melee 1 vs def 1 (100% block) → 0; breath 2+2=4 (100% hit) vs def 1 (100% block) → 4−1 = 3 (without Dragon Mound, breath 2 → 2−1 = 1)',
     version: V_WARLORD,
-    a: { figs:1, atk:1, hitChance:70, rtbType:'fire', rtb:2, hp:10, race:'Draconian', abilities: { dragonMound: true } },
+    a: { figs:1, atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:2, type:'fire' } }, hp:10, race:'Draconian', abilities: { dragonMound: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
@@ -260,14 +260,14 @@ definePresets({
   dragonMoundNonDraconianWarlord: {
     desc: 'Dragon Mound (Warlord): no Draconian tag → no bonus. Breath 2 (100% hit) vs def 0 → 2; melee 1 vs def 0 → 1; total 3 (a Draconian would get +2 breath and +1 armor → breath 4, but here def 0 means armor is moot; the point is breath stays 2)',
     version: V_WARLORD,
-    a: { figs:1, atk:1, hitChance:70, rtbType:'fire', rtb:2, hp:10, abilities: { dragonMound: true } },
+    a: { figs:1, atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:2, type:'fire' } }, hp:10, abilities: { dragonMound: true } },
     b: { atk:0, def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   dragonMoundThrownNotBoostedWarlord: {
     desc: 'Dragon Mound (Warlord): the +2 creates Fire Breath and does not boost existing Thrown. Melee 1 vs def 1 (100% block) → 0; unboosted Thrown 2 and created Fire Breath 2 each deal 1 → total 2',
     version: V_WARLORD,
-    a: { figs:1, atk:1, hitChance:70, rtbType:'thrown', rtb:2, hp:10, race:'Draconian', abilities: { dragonMound: true } },
+    a: { figs:1, atk:1, hitChance:70, modernAttacks: { thrown: { strength:2, type:'thrown' } }, hp:10, race:'Draconian', abilities: { dragonMound: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
@@ -285,7 +285,7 @@ definePresets({
   lavaSmelterMissileImmunityWarlord: {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Missile Immunity. Missile rtb 10 (100% hit) vs def 0 → MI raises def to 100, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterMissileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -293,7 +293,7 @@ definePresets({
   lavaSmelterResistElemWarlord: {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Resist Elements. Magic ranged rtb 6 (100% hit) vs def 0 → +4 = 4, 100% block → 2 dmg (without the grant, def 0 → 6 dmg)',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:6, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:6, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterResistElements: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -301,7 +301,7 @@ definePresets({
   lavaSmelterElementalArmorWarlord: {
     desc: 'Lava Smelter (Warlord): a Dwarf unit gains Elemental Armor. Magic ranged rtb 10 (100% hit) vs def 0 → +12 = 12, 100% block → all blocked → 0 (without the grant, def 0 → 10 dmg)',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:10, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, race:'Dwarf', abilities: { lavaSmelterElementalArmor: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -337,7 +337,7 @@ definePresets({
   lavaSmelterProtectionsStackWarlord: {
     desc: 'Lava Smelter (Warlord): Resist Elements and Elemental Armor stack as two independent Inc writes (Combat.ResolutionHelpers.pas:191-195). Magic ranged 20 meets 4 + 12 = 16 Defense, but DefenseRoll (:159-171) rolls only dice 1-15 at the rolled chance and caps the rest at 30% (ToDefendCap 15, ToDefendCappedValue 30), so 15 × 1.0 + 1 × 0.3 = 15.3 is blocked → 4.7. The cap makes a cap-free re-size impossible here, since 4 + 12 always exceeds 15. Elemental Armor alone deals 8.0, Resist Elements alone 16.0.',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:20, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:20, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:30, abilities: {
       lavaSmelterResistElements: true,
       lavaSmelterElementalArmor: true,
@@ -350,7 +350,7 @@ definePresets({
   lightningBladeConvertsThrownWarlord: {
     desc: 'Lightning Blade (Warlord): innate Thrown 4 becomes Lightning Breath 5 (Thrown +1, Armor Piercing). Melee atk 1 vs def 4 (100% block) → 0; breath 5 with AP halves def 4→2 → 5−2 = 3 (without conversion, plain thrown 4 vs def 4 → 0)',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:4, hp:10, abilities: { lightningBlade: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:4, type:'thrown' } }, hp:10, abilities: { lightningBlade: true } },
     b: { atk:0, def:4, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
@@ -425,7 +425,7 @@ definePresets({
   motherFungusToDefendWarlord: {
     desc: 'Mother Fungus (Warlord): a Goblin unit gains +10% To Defend. Boulder 10 (100% hit) vs a Goblin defender, def 5, base 30%+10% = 40% block → 10 − 5×0.4 = 8.0 (without the grant, 30% block → 10 − 5×0.3 = 8.5). Ranged so no melee counter; the defender Attack/Poison grants only affect the (absent) counterattack',
     version: V_WARLORD,
-    a: { rtbType:'boulder', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
+    a: { modernAttacks: { ranged: { strength:10, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
     b: { atk:0, def:5, toBlkMod:0, res:20, hp:20, race:'Goblin', abilities: { motherFungus: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -499,7 +499,7 @@ definePresets({
   sanctaBasilicaCrusaderLuckyWarlord: {
     desc: 'Sancta Basilica (Warlord): a High Men Crusader gains Lucky (+10% To Block). Boulder 10 (100% hit) vs def 5, base 30%+10% = 40% block → 10 − 5×0.4 = 8.0 (without Lucky, 30% block → 8.5). Ranged so no melee counter',
     version: V_WARLORD,
-    a: { rtbType:'boulder', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
+    a: { modernAttacks: { ranged: { strength:10, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
     b: { atk:0, def:5, toBlkMod:0, hp:20, race:'High Men', name:'Crusaders', abilities: { sanctaBasilica: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -542,7 +542,7 @@ definePresets({
   militaryWorkshopArmorPiercingWarlord: {
     desc: 'Military Workshop (Warlord): a physical-ranged unit gains Armor Piercing. Boulder 10 (100% hit) vs def 8 (100% block) → AP halves def to 4 → 10−4 = 6 (without the grant, def 8 → 2). Defender is Poison-Immune to isolate from the +1 Poison grant',
     version: V_WARLORD,
-    a: { rtbType:'boulder', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { militaryWorkshop: true } },
+    a: { modernAttacks: { ranged: { strength:10, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { militaryWorkshop: true } },
     b: { atk:0, def:8, toBlkMod:70, hp:20, abilities: { poisonImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 6.000 },
@@ -550,7 +550,7 @@ definePresets({
   militaryWorkshopDoomGetsStrengthNotAPWarlord: {
     desc: 'Military Workshop (Warlord): a Doom-attack unit gets +2 strength instead of Armor Piercing (Doom already ignores armor). Boulder Doom 5+2 = 7 strength → CoM Doom deals floor(7/2) = 3, def 8 ignored (without the grant, floor(5/2) = 2). Defender Poison-Immune',
     version: V_WARLORD,
-    a: { rtbType:'boulder', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { doom: true, militaryWorkshop: true } },
+    a: { modernAttacks: { ranged: { strength:5, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { doom: true, militaryWorkshop: true } },
     b: { atk:0, def:8, toBlkMod:70, hp:20, abilities: { poisonImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -558,14 +558,14 @@ definePresets({
   militaryWorkshopFireBreathWarlord: {
     desc: 'Military Workshop (Warlord): a Fire Breath unit gains +4 breath strength. Fire breath 6+4 = 10 (100% hit) vs def 3 (100% block) → 10−3 = 7 (without the grant, 6 → 3). Defender Poison-Immune to isolate the breath bonus',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'fire', rtb:6, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { militaryWorkshop: true } },
+    a: { atk:1, modernAttacks: { fireBreath: { strength:6, type:'fire' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { militaryWorkshop: true } },
     b: { atk:0, def:3, toBlkMod:70, hp:20, abilities: { poisonImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   militaryWorkshopProjectileUpgradeWarlord: {
     desc: 'Military Workshop (Warlord): a small physical (missile) projectile upgrades to heavy (boulder), bypassing Missile Immunity. Missile 10 vs a Missile-Immune defender → without the grant, def raised to 100 → all blocked → 0. With the grant the boulder ignores Missile Immunity → def 0 → 10 damage. Defender also Poison-Immune',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { militaryWorkshop: true } },
+    a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { militaryWorkshop: true } },
     b: { atk:0, def:0, toBlkMod:70, hp:20, abilities: { missileImmunity: true, poisonImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 10.000 },
@@ -580,7 +580,7 @@ definePresets({
   militaryWorkshopHeroExcludedWarlord: {
     desc: 'Military Workshop (Warlord): a hero is excluded — no Armor Piercing and no +1 Poison. Boulder 10 (100% hit) vs def 8 (100% block) → 10−8 = 2 (a normal unit would deal 6 plus poison). No Poison Immunity on the defender, so an erroneous poison grant would also surface',
     version: V_WARLORD,
-    a: { rtbType:'boulder', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, unitType:'hero', hp:20, abilities: { militaryWorkshop: true } },
+    a: { modernAttacks: { ranged: { strength:10, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, unitType:'hero', hp:20, abilities: { militaryWorkshop: true } },
     b: { atk:0, def:8, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -622,7 +622,7 @@ definePresets({
   artificerMechanicalRangedWarlord: {
     desc: 'Artificer (Warlord): mechanical unit gets +1 ranged. missile 1 → 2, 100% hit → 2 dmg',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { artificer: true, mechanical: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { artificer: true, mechanical: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -723,7 +723,7 @@ definePresets({
   rebuildArmorPiercingWarlord: {
     desc: 'Rebuild (Warlord): grants Armor Piercing. Missile rtb 2 100% hit vs def 3 100% block → AP halves def to 1 → 1 dmg (Rebuild +2 melee does not affect ranged attack)',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rebuild: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rebuild: true } },
     b: { def:3, toBlkMod:70, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -738,7 +738,7 @@ definePresets({
   colossalStrengthPhysicalRangedWarlord: {
     desc: 'Colossal Strength (Warlord): physical ranged gains +1 + 40% of base. Base missile 10 → 15. 100% hit, def 2 blocks 2 → E[dmg] = 13 (without Colossal Strength, 10 − 2 = 8)',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true } },
+    a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true } },
     b: { def:2, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 13 },
@@ -746,14 +746,14 @@ definePresets({
   colossalStrengthThrownWarlord: {
     desc: 'Colossal Strength (Warlord): thrown gains +1 + 40% of base. Base thrown 10 → 15. 100% hit, def 2 blocks 2 → E[dmg] = 13 (without Colossal Strength, 10 − 2 = 8)',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'thrown', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true } },
+    a: { atk:1, modernAttacks: { thrown: { strength:10, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true } },
     b: { def:2, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 13 },
   },
   colossalStrengthMagicRangedNoBonusWarlord: {
     desc: 'Colossal Strength (Warlord): magic ranged is not physical ranged, so it gets no bonus. Base magic 10, 100% hit, def 2 blocks 2 → E[dmg] = 8 (unchanged by Colossal Strength)',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true } },
+    a: { modernAttacks: { ranged: { strength:10, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true } },
     b: { def:2, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8 },
@@ -775,7 +775,7 @@ definePresets({
   colossalStrengthScalesBuffedRangedWarlord: {
     desc: 'Colossal Strength (Warlord) scales current physical ranged, not base. Base missile 10 + Lionheart +3 (non-magic ranged) = 13 → +1+floor(0.4×13)=+6 → 19. 100% hit, def 2 blocks 2 → E[dmg] = 17 (if it scaled base instead: 10+3+5 = 18 → 16)',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true, lionheart: true } },
+    a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { colossalStrength: true, lionheart: true } },
     b: { def:2, toBlkMod:70, hp:30 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 17 },
@@ -790,7 +790,7 @@ definePresets({
   rustPhysicalRangedPenaltyWarlord: {
     desc: 'Rust (Warlord): −3 to physical ranged (missile). Missile 10 → 7, 100% hit, def 0 → E[dmg] = 7 (without Rust, 10)',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'missile', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rust: true } },
+    a: { atk:0, modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rust: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7 },
@@ -798,7 +798,7 @@ definePresets({
   rustBoulderRangedPenaltyWarlord: {
     desc: 'Rust (Warlord): −3 to physical ranged (boulder). Boulder 10 → 7, 100% hit, def 0 → E[dmg] = 7 (without Rust, 10)',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'boulder', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rust: true } },
+    a: { atk:0, modernAttacks: { ranged: { strength:10, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rust: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7 },
@@ -813,14 +813,14 @@ definePresets({
   rustEliminatesThrownWarlord: {
     desc: 'Rust (Warlord): thrown attack eliminated. Thrown 10 (no melee), 100% hit, def 0 → with Rust no thrown phase → E[dmg] = 0 (without Rust, thrown lands → 10)',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'thrown', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rust: true } },
+    a: { atk:0, modernAttacks: { thrown: { strength:10, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { rust: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   rustEliminatesLargeShieldWarlord: {
     desc: 'Rust (Warlord): Large Shield eliminated on the cursed defender. Missile 10 vs def 0; Large Shield would add +2 vs ranged → with Rust shield gone, def 0 → E[dmg] = 10 (without Rust, def 2 → 8)',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:10, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:20, abilities: { rust: true, largeShield: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 10 },
@@ -900,7 +900,7 @@ definePresets({
   luckyStarAuraRangedWarlord: {
     desc: 'Lucky Star aura (Warlord): the block\'s one attack-channel write is `SETSTAT(U,SRanged,0,…+1)` (UnitCalcPre.CAS:1616), the conventional-ranged field. missile 2 → 3 at 100% hit vs def 0 → 3.000; without the enchantment, 2.000.',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { luckyStar: true } },
+    a: { atk:0, modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { luckyStar: true } },
     b: { def:0, hp:30 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -938,14 +938,14 @@ definePresets({
   insulationFireImmunityWarlord: {
     desc: 'Insulation (Warlord): grants Fire Immunity. Fire Breath 5 (100% hit) vs Insulation def → blocked (FI def 50); melee 5 (100% hit) vs def 2 → 3 dmg (without Insulation, breath 5 vs def 2 = 3 + melee 3 = 6)',
     version: V_WARLORD,
-    a: { atk:5, rtbType:'fire', rtb:5, hitChance:70, hp:10 },
+    a: { atk:5, modernAttacks: { fireBreath: { strength:5, type:'fire' } }, hitChance:70, hp:10 },
     b: { atk:0, def:2, toBlkMod:70, hp:10, abilities: { insulation: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   insulationLightningResistWarlord: {
     desc: 'Insulation (Warlord): grants Lightning Resist, cancelling Lightning Breath AP. Breath 2 (100% hit) vs def 2 (100% block) → AP cancelled, 2−2 = 0 (without Insulation, lightning is AP → def 2 halved to 1, 2−1 = 1)',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'lightning', rtb:2, hp:10 },
+    a: { atk:1, hitChance:70, modernAttacks: { lightningBreath: { strength:2, type:'lightning' } }, hp:10 },
     b: { atk:0, def:2, toBlkMod:70, hp:10, abilities: { insulation: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },

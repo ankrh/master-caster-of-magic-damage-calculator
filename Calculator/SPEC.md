@@ -618,9 +618,13 @@ the calculator does instead, and why.
 - **The modern record carries a fifth secondary-attack slot the engine does not have.** `Caster.exe`
   holds Ranged, Thrown, Fire Breath and Lightning Breath as named fields of one unit record, and the
   calculator's modern record carries those four and derives them in one walk. Beside them it keeps
-  the DOS engines' shared `.ranged` slot, because the card's legacy secondary value and the
-  DOS-shaped preset fixtures still read it. That shared-slot shape is faithful to the DOS engines
-  and stays. Nothing else is added: Focus Magic's `U.ranged := U.thrown` and Lightning Blade's
+  the DOS engines' shared `.ranged` slot, because the card's legacy secondary value still reads it.
+  That shared-slot shape is faithful to the DOS engines and stays. **In a modern version it is a
+  display projection, and a read that decides behaviour resolves the named field instead.** Which
+  slot holds a field is record structure, not a choice: the `ranged` channel is `SRanged`, while the
+  shared slot is the Ranged field only while its permanent type is a conventional ranged one. Every
+  reader of a modern record states all four channels, so a modern read has no shared slot to fall
+  back to. Nothing else is added: Focus Magic's `U.ranged := U.thrown` and Lightning Blade's
   `SLightningBreath := SThrown + 1` are field moves between two of the four, as the engine makes
   them, so the Thrown field they empty is free for Shadow Strike's later grant without a sixth
   accumulator.

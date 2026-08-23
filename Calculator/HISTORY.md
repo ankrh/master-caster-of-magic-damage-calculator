@@ -6,6 +6,33 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F127 - a CoM2/Warlord fixture now states its attack channels with `modernAttacks` alone, and
+  the record-level Warlord gates read the record's Ranged field instead of the legacy slot.** The
+  row's premise was re-measured first and is substantially falsified: repeating its experiment -
+  migrating every pair-side and diffing all 1080 rendered presets - moved **4 presets, not 24 of
+  1050**. Cause (a), the melee-initiation guard, no longer exists (F142 retired it); cause (b),
+  `breathExists`, is unreachable for CoM2 because `hasThrown` comes from `modernAttackChannels`;
+  and the Focus Magic half of cause (c) moves nothing. What did move was cause (c)'s Warlord half:
+  `alumniOfAcademy` and `energyCannon` were taken off `recordContext`. Both gates read the
+  **permanent record's Ranged field** - Alumni of Academy tests its projectile type
+  (`GetStat(U,SRangedType,1) > 29`, `CreateUnit.CAS:462-464`) and Energy Cannon its Max Ammo, which
+  `SPEC.md` infers from that same field - and which slot holds that field is record structure: in
+  `Caster.exe` it is `SRanged`, the modern `ranged` channel, and in the DOS engines it is the shared
+  slot. Both now resolve it per version, `energyCannonThreshold` reads `hitchanceranged`
+  (`UnitCalc.CAS:1435-1443`) rather than the legacy `toHitRtb`, and the conversion's +50% strength
+  write follows the same slot so it cannot disagree with its Destruction rider. With that in place
+  the migration moved **nothing**: all 189 pair-sides became `modernAttacks`, `rtb`/`rtbType` were
+  dropped, and the census reports 195 `modernAttacks` sides and 0 pair-sides over 1124 modern custom
+  sides. `dosPairAsModernChannels` is retired and `applyPreset`'s reject
+  (`assertFixtureMatchesVersionRecord`) now covers the attack record in both directions, so a modern
+  fixture naming `rtb`/`rtbType` and a DOS one naming `modernAttacks` both halt. The Lightning Blade
+  finding was re-measured too and is real but differently shaped: the write lands on the legacy slot
+  as `thrownType: 'lightning'`, not as a conventional ranged volley. That arm and the `combat.js`
+  fallbacks behind it survive only for callers that supply no `modernAttacks` at all - over 9000
+  such calls from `tools/unit_checks` alone - so they are filed as F150 rather than folded in.
+  Verified with `node tools/node_unit_checks.js` (14374 assertions), `npm run provenance` (271
+  formulas) and the browser preset suite (1080/1080) before and after.
+
 - **F126 - the DOS per-channel attack-attribute masks need no calculator input, because no unit
   record can set one.** The row's first half is settled without an `LBX` read, and the answer is
   structural rather than statistical. `Load_Battle_Unit` imports `0x24` bytes from

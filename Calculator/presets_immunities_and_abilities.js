@@ -79,7 +79,7 @@ definePresets({
   weaponImmunityAfterMissileImmunityCoM2: {
     desc: 'EffectiveDefense order: Missile Immunity replaces the accumulated defense with 100, then Weapon Immunity adds 8. Modern defense rolls only the first 15 dice at To Block and the rest at 30%, so 108 defense blocks 15 + 93×0.3 = 42.9 of 70 missile hits → 27.1; the 100-final chain blocks 40.5 and leaks 29.5.',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:70, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:70, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:70, abilities: { missileImmunity: true, weaponImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 27.100 },
@@ -323,7 +323,7 @@ definePresets({
   trueSightRangedToHitWarlord: {
     desc: 'True Sight (Warlord): ranged 1 at base 30% + True Sight 5% To-Hit vs def 0 → E[dmg] = 0.35 (without True Sight, 0.30)',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, hp:10, abilities: { trueSight: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hp:10, abilities: { trueSight: true } },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.350 },
@@ -331,7 +331,7 @@ definePresets({
   trueSightBreathUnaffectedWarlord: {
     desc: 'True Sight (Warlord) writes SToRanged only: melee 1 and fire breath 1 both stay at 30% → 0.3 + 0.3 = 0.6. If the bonus reached the Breath channel the breath would hit at 35% and give 0.650.',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'fire', rtb:1, hp:10, abilities: { trueSight: true } },
+    a: { atk:1, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hp:10, abilities: { trueSight: true } },
     b: { hp:10 },
     rangedCheck: false,
     expected: { dmgToA: 0, dmgToB: 0.600 },
@@ -339,7 +339,7 @@ definePresets({
   trueSightThrownUnaffectedWarlord: {
     desc: 'True Sight (Warlord) writes SToRanged only: melee 1 and thrown 1 both stay at 30% → 0.3 + 0.3 = 0.6. If the bonus reached the Thrown channel the thrown attack would hit at 35% and give 0.650.',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'thrown', rtb:1, hp:10, abilities: { trueSight: true } },
+    a: { atk:1, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10, abilities: { trueSight: true } },
     b: { hp:10 },
     rangedCheck: false,
     expected: { dmgToA: 0, dmgToB: 0.600 },
@@ -361,7 +361,7 @@ definePresets({
   eyeOfHeavenTrueSightToHitWarlord: {
     desc: 'Eye of Heaven (Warlord): grants True Sight, so ranged 1 at base 30% + 5% To-Hit vs def 0 → E[dmg] = 0.35 (without Eye of Heaven, 0.30)',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:1, hp:10, abilities: { eyeOfHeaven: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hp:10, abilities: { eyeOfHeaven: true } },
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.350 },
@@ -538,7 +538,7 @@ definePresets({
   holyBonusRangedCoM2: {
     desc: 'Holy Bonus Ranged (CoM2): HB boosts ranged atk. rtb 1 + HB 2 → 3 hits, 100% hit vs 0 def → 3 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { holyBonus: 2 } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { holyBonus: 2 } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -555,7 +555,7 @@ definePresets({
   supremeLightCasterRangedCoM2: {
     desc: 'Supreme Light (CoM2): Caster unit gains +2 ranged. rtb 1 → 3, 100% hit vs 0 def → 3 dmg',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supremeLight: true, caster: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { supremeLight: true, caster: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -609,7 +609,7 @@ definePresets({
   overlandDisciplineDefenseNormalCoM2: {
     desc: 'Overland Discipline (CoM2): normal unit gets +1 defense. 2 missile atk at 100% vs def 1 at 100% block → 1 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { discipline: 'overland' } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -617,7 +617,7 @@ definePresets({
   overlandDisciplineDefenseRegularCoM2: {
     desc: 'Overland Discipline (CoM2): Regular+ gets another +1 defense. 3 missile atk at 100% vs def 2 at 100% block → 1 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:3, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    a: { modernAttacks: { ranged: { strength:3, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, level:'regular', abilities: { discipline: 'overland' } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -632,7 +632,7 @@ definePresets({
   overlandDisciplineVeteranMissileCoM2: {
     desc: 'Overland Discipline (CoM2): Veteran+ gets +1 non-magical ranged. missile 1 + veteran 2 + discipline 1 = 4 → 4 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, level:'veteran', abilities: { discipline: 'overland' } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, level:'veteran', abilities: { discipline: 'overland' } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -640,7 +640,7 @@ definePresets({
   overlandDisciplineVeteranMagicRangedNoBonusCoM2: {
     desc: 'Overland Discipline (CoM2): Veteran+ does not boost magical ranged. magic 1 + veteran 2 = 3, not 4',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, level:'veteran', abilities: { discipline: 'overland' } },
+    a: { modernAttacks: { ranged: { strength:1, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, level:'veteran', abilities: { discipline: 'overland' } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -671,7 +671,7 @@ definePresets({
   destinyRangedDoublesBaseCoM2: {
     desc: 'Destiny (CoM2): doubles base ranged attack strength. missile 2 becomes 4',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -679,21 +679,21 @@ definePresets({
   destinyFireBreathDoublesCoM2: {
     desc: 'Destiny (CoM2): the doubling reaches Fire Breath ($0059A51F), which the modern engine keeps in its own channel rather than in the ranged field. Melee 0 isolates the breath: strength 3 doubles to 6 at 100% hit vs def 0; without Destiny the same setup deals 3.0. The 30 HP defender keeps both values clear of the HP pool.',
     version: V_COM2,
-    a: { atk:0, rtbType:'fire', rtb:3, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
+    a: { atk:0, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
     b: { def:0, hp:30 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   destinyLightningBreathDoublesCoM2: {
     desc: 'Destiny (CoM2): the doubling reaches Lightning Breath ($0059A559), a channel independent of both ranged and Fire Breath. Melee 0 isolates the breath: strength 4 doubles to 8 at 100% hit vs def 0; without Destiny 4.0. The 30 HP defender keeps both values clear of the HP pool.',
     version: V_COM2,
-    a: { atk:0, rtbType:'lightning', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
+    a: { atk:0, modernAttacks: { lightningBreath: { strength:4, type:'lightning' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
     b: { def:0, hp:30 },
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   destinyThrownDoublesCoM2: {
     desc: 'Destiny (CoM2): the doubling reaches Thrown ($0059A593), the last of the six doubled attack/HP fields. Melee 0 isolates the Thrown attack: strength 5 doubles to 10 at 100% hit vs def 0; without Destiny 5.0. The 30 HP defender keeps both values clear of the HP pool.',
     version: V_COM2,
-    a: { atk:0, rtbType:'thrown', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
+    a: { atk:0, modernAttacks: { thrown: { strength:5, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { destiny: true } },
     b: { def:0, hp:30 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
   },
@@ -716,7 +716,7 @@ definePresets({
   focusMagicMagicRangedCoM2: {
     desc: 'Focus Magic (CoM2): magical ranged gets +3. magic 4 → 7, 100% hit vs 0 def → 7.0',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
+    a: { modernAttacks: { ranged: { strength:4, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -724,7 +724,7 @@ definePresets({
   focusMagicMagicalRangedIgnoresLiveStrengthWarlord: {
     desc: 'Focus Magic (Warlord): the magical-ranged +3 is the fourth arm of the ranged branch ($0059AAA3), reached on `B.ranged <> 0` and a magical `B.rangedtype` — both permanent-record reads, and the arm makes no live-strength test of its own (Units.RecalculateUnits.pas:874-909). Plague is region `b`, so its −3 has already driven the magic 2 to −1 by the time the branch runs; the arm still adds 3, and the region-`e` clamp settles it at 2. Ranged mode at 100% To Hit → 2.0. Gating the +3 on live strength instead loses the attack outright for 0.0, and removing Focus Magic does exactly that.',
     version: V_WARLORD,
-    a: { rtbType:'magic', rtb:2, hitRanged:80, hitThrown:80, hitBreath:80, hp:10,
+    a: { modernAttacks: { ranged: { strength:2, type:'magic' } }, hitRanged:80, hitThrown:80, hitBreath:80, hp:10,
       abilities: { focusMagic: true, plague: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
@@ -733,14 +733,14 @@ definePresets({
   focusMagicBreathCoM2: {
     desc: 'Focus Magic (CoM2): breath gets +3. fire breath 2 → 5 plus melee 1 → 6.0',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:2, hp:10, abilities: { focusMagic: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:2, type:'fire' } }, hp:10, abilities: { focusMagic: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   focusMagicConvertsMissileCoM2: {
     desc: 'Focus Magic (CoM2): missile 5 converts to magic 5, bypassing Missile Immunity → 5.0',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
+    a: { modernAttacks: { ranged: { strength:5, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10, abilities: { missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -748,7 +748,7 @@ definePresets({
   focusMagicPreservesLowMissileCoM2: {
     desc: 'Focus Magic (CoM2): missile 1 converts to magic at the same strength, bypassing Missile Immunity → 1.0. Raising it to the CoM 1 minimum of 3 would deal 3.0; failing to convert it would deal 0.',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10, abilities: { missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -756,7 +756,7 @@ definePresets({
   focusMagicConvertsThrownCoM2: {
     desc: 'Focus Magic (CoM2): thrown 5 converts to magic 5, so ranged mode uses a magical ranged attack and bypasses Missile Immunity → 5.0',
     version: V_COM2,
-    a: { rtbType:'thrown', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
+    a: { modernAttacks: { thrown: { strength:5, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { focusMagic: true } },
     b: { hp:10, abilities: { missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -905,7 +905,7 @@ definePresets({
   innerPowerLightningResistRangedCoM2: {
     desc: 'Inner Power (CoM2): Lightning Resist unit gets +3 to magical ranged, so magic 2 becomes 5 → 5 dmg',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { innerPower: true, lightningResist: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { innerPower: true, lightningResist: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -953,7 +953,7 @@ definePresets({
   orihalconMagicRangedBonusCoM2: {
     desc: 'Orihalcon (CoM2): magical ranged gets +2 strength, so magic 2 becomes 4 → 4 dmg',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, armor:'orihalcon' },
+    a: { modernAttacks: { ranged: { strength:2, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, armor:'orihalcon' },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -968,7 +968,7 @@ definePresets({
   orihalconNoMissileBonusCoM2: {
     desc: 'Orihalcon (CoM2): non-magical missile ranged gets no +2 attack bonus, so missile 2 stays 2 → 2 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, armor:'orihalcon' },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, armor:'orihalcon' },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -976,7 +976,7 @@ definePresets({
   orihalconFocusMagicConvertedCoM2: {
     desc: 'Orihalcon (CoM2): Focus Magic preserves missile strength 2 while converting it to magic, then Orihalcon adds +2 → 4 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, armor:'orihalcon', abilities: { focusMagic: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, armor:'orihalcon', abilities: { focusMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -993,7 +993,7 @@ definePresets({
   reinforceMagicMagicRangedCoM2: {
     desc: 'Reinforce Magic (CoM2): magical ranged gets +2 strength, so magic 2 becomes 4 → 4 dmg',
     version: V_COM2,
-    a: { rtbType:'magic', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { reinforceMagic: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { reinforceMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -1001,7 +1001,7 @@ definePresets({
   reinforceMagicMissileNoBonusCoM2: {
     desc: 'Reinforce Magic (CoM2): non-magical missile ranged gets no +2 attack bonus, so missile 2 stays 2 → 2 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { reinforceMagic: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { reinforceMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
@@ -1009,7 +1009,7 @@ definePresets({
   reinforceMagicFocusConvertedCoM2: {
     desc: 'Reinforce Magic (CoM2): Focus Magic preserves missile strength 2 while converting it to magic, then Reinforce Magic adds +2 → 4 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { reinforceMagic: true, focusMagic: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { reinforceMagic: true, focusMagic: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -1072,7 +1072,7 @@ definePresets({
   tacticianHeroRangedCoM2: {
     desc: 'Tactician (CoM2): hero gets +2 to ranged attack strength. missile 1 becomes 3 → 3 dmg',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType: 'hero', abilities: { tactician: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType: 'hero', abilities: { tactician: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -1080,7 +1080,7 @@ definePresets({
   tacticianHeroThrownUnchangedCoM2: {
     desc: 'Tactician (CoM2) writes only conventional ranged: a hero\'s Thrown 1 stays 1 instead of receiving +2.',
     version: V_COM2,
-    a: { atk:0, rtbType:'thrown', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10,
+    a: { atk:0, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10,
       unitType:'hero', abilities: { tactician: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -1183,7 +1183,7 @@ definePresets({
   fortificationRangedWarlord: {
     desc: 'Fortification Ranged (Warlord): missile 4 (100% hit) vs def 1+3=4 (100% block) → 0',
     version: V_WARLORD,
-    a: { rtbType: 'missile', rtb: 4, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
+    a: { modernAttacks: { ranged: { strength:4, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
     b: { def: 1, toBlkMod: 70, hp: 10, abilities: { fortification: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
@@ -1191,7 +1191,7 @@ definePresets({
   fortificationBreathWarlord: {
     desc: 'Fortification Breath (Warlord): fire breath 4 (100% hit) vs def 1+3=4 (100% block) → 0; melee 1 vs def 1 → 0',
     version: V_WARLORD,
-    a: { atk: 1, hitChance:70, rtbType: 'fire', rtb: 4, hp: 10 },
+    a: { atk: 1, hitChance:70, modernAttacks: { fireBreath: { strength:4, type:'fire' } }, hp: 10 },
     b: { atk: 0, def: 1, toBlkMod: 70, hp: 10, abilities: { fortification: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
@@ -1199,7 +1199,7 @@ definePresets({
   fortificationLargeShieldUpgradeWarlord: {
     desc: 'Fortification on a unit that already has Large Shield grants Missile Immunity instead: missile 12 (100% hit) vs def raised to 100 → 0 (would be 12−5=7 with only Large Shield)',
     version: V_WARLORD,
-    a: { rtbType: 'missile', rtb: 12, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
+    a: { modernAttacks: { ranged: { strength:12, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
     b: { def: 2, toBlkMod: 70, hp: 20, abilities: { largeShield: true, fortification: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },

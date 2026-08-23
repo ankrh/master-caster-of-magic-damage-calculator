@@ -2,8 +2,8 @@
 
 // Preset attack-notation sweep — the census behind Calculator/BACKLOG.md, F125.
 //
-// A CoM2/Warlord fixture states its attack channels either with the DOS-shaped `rtb`/`rtbType`
-// pair or with `modernAttacks` (Calculator/CLAUDE.md, *Presets*). This walks every preset,
+// A CoM2/Warlord fixture states its attack channels with `modernAttacks` and nothing else
+// (Calculator/CLAUDE.md, *Presets*). This walks every preset,
 // resolves the version it actually runs in the way `applyPreset` does — `preset.version` first,
 // then the TEST_TREE group's `version` — and reports, per modern unit side, which notation it
 // uses and which To Hit fields it sets.
@@ -44,8 +44,9 @@ function resolvedVersion(key) {
   return preset.version || groupVersion[key] || '';
 }
 
-// The DOS pair projects onto exactly one modern channel; these are the seven `rtbType` values
-// `dosPairAsModernChannels` accepts (ui_state.js).
+// The seven `rtbType` values the retired DOS-pair projection accepted. `dosPair` is now a
+// contract violation rather than a notation — `applyPreset` throws on one (F127) — so the class
+// is kept only to report it, and the projectable/unprojectable split with it.
 const PROJECTABLE = new Set([...MODERN_RANGED_TYPES, 'thrown', 'fire', 'lightning']);
 
 const classes = {

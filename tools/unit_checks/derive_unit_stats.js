@@ -910,8 +910,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { alumniOfAcademy: true },
     race: 'Halfling',
     name: 'Halfling Shamans',
-    rtbType: 'magic',
-    rtb: 3,
+    modernAttacks: { ranged: { strength: 3, type: 'magic' } },
     figs: 6,
   }));
   assertEqual(academyMagicRanged.figs, 8, 'Academy gives a Halfling magical-ranged unit +2 figures');
@@ -921,8 +920,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { alumniOfAcademy: true, mechanical: true },
     race: 'Halfling',
     name: 'Mechanical Shamans',
-    rtbType: 'magic',
-    rtb: 3,
+    modernAttacks: { ranged: { strength: 3, type: 'magic' } },
     figs: 6,
   }));
   assertEqual(academyMechanical.figs, 6, 'Academy excludes Mechanical magical-ranged units');
@@ -941,8 +939,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { alumniOfAcademy: true },
     race: 'High Men',
     name: 'High Men Magicians',
-    rtbType: 'magic',
-    rtb: 3,
+    modernAttacks: { ranged: { strength: 3, type: 'magic' } },
     figs: 4,
   }));
   assertEqual(academyOtherRace.figs, 4, 'Academy is inert outside the Halfling race');

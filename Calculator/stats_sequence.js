@@ -1305,7 +1305,7 @@ function makeSecondaryHitPick(active, thrownValue) {
 function magicCalcScriptStatSteps(ctx) {
   const {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
-    colossalStrength, energyCannon,
+    colossalStrength, energyCannon, energyCannonHitField,
     hurricaneActive, isWarlord, levelRank,
     pneumaFieldActive, psychoForceActive, rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
@@ -1463,7 +1463,7 @@ function magicCalcScriptStatSteps(ctx) {
       sourceLabel: 'Energy Cannon', phase: 'd', writes: ['energyCannonToHit'],
       when: () => energyCannon,
       apply: u => {
-        u.energyCannonToHit = Math.min(100, u.toHit + u[recordContext.secondaryHitField]);
+        u.energyCannonToHit = Math.min(100, u.toHit + u[energyCannonHitField]);
       } }),
     // The three effects that close `UnitCalc.CAS`, in its own line order: Blaze of Glory
     // (:1490), Beat of Swiftness (:1509), Hierophany (:1555). All three follow Colossal

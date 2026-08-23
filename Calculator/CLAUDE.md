@@ -70,21 +70,18 @@ breaks. Do not add “informational only” or “not implemented” hedges to a
   owns the browser's grouping. These are `data-scope="page"`: the page is the only consumer.
 - A preset must appear in `TEST_TREE`, and every `TEST_TREE` key must name a preset;
   `node tools/node_unit_checks.js` asserts both directions. Keep ability-named groups alphabetical.
-- A CoM2/Warlord fixture states a unit's attack channels either with the DOS-shaped `rtb`/`rtbType`
-  pair, which projects onto the one channel its type names, or with
-  `modernAttacks: { ranged: { strength, type }, thrown, fireBreath, lightningBreath }`, which states
-  all four. Use `modernAttacks` where the pair cannot say what is meant: a channel beside another,
-  or a Ranged record carrying a projectile type at strength 0. Either form is the complete
-  statement — an unnamed channel is empty — and neither applies to a roster-selected unit, whose
-  channels come from its record. The gaze and touch fields are not channels: they are DOS
-  shared-slot values, and a CoM2/Warlord fixture states them through `abilities`. A `rtbType` the
-  pair cannot project throws rather than contributing nothing.
-- **A fixture states its version's To Hit record and only that one.** DOS fixtures use `toHitMod`
-  and `toHitRtbMod`; CoM2/Warlord fixtures use `hitChance` and the four modifiers `hitMelee`,
-  `hitRanged`, `hitThrown` and `hitBreath`, all defaulting to 0. `applyPreset` throws on the other
-  family's field rather than writing a hidden control nothing reads. State a modifier wherever a
-  channel is present **or acquired during derivation** — an effect-created Thrown or Breath reads
-  the modifier just as a roster one does.
+- **A fixture states its version's unit record and only that one.** DOS fixtures use the shared
+  `rtb`/`rtbType` slot with `toHitMod` and `toHitRtbMod`; CoM2/Warlord fixtures use
+  `modernAttacks: { ranged: { strength, type }, thrown, fireBreath, lightningBreath }` with
+  `hitChance` and the four modifiers `hitMelee`, `hitRanged`, `hitThrown` and `hitBreath`, all
+  defaulting to 0. `applyPreset` throws on the other family's field rather than writing a hidden
+  control nothing reads. Neither attack form applies to a roster-selected unit, whose channels
+  come from its record.
+- `modernAttacks` is the complete statement: an unnamed channel is empty. The gaze and touch
+  fields are not channels — they are DOS shared-slot values, and a CoM2/Warlord fixture states
+  them through `abilities`. State a To Hit modifier wherever a channel is present **or acquired
+  during derivation** — an effect-created Thrown or Breath reads the modifier just as a roster
+  one does.
 - A preset naming a roster unit (`aUnitName`/`bUnitName`) must resolve in the version it runs in:
   `applyPreset` throws rather than falling back to the fixture's custom stat block, which would
   compute a different unit under the same expectation.

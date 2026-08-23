@@ -423,14 +423,14 @@ definePresets({
   weaknessBreathNotAffectedCoM2: {
     desc: 'Weakness breath (CoM2): base melee 1 reduced to 0 by Weakness (−3) still initiates the sequence; fire breath 5 NOT reduced — 5 rtb 100% vs 0 def → 5 dmg (breath would not fire if base melee were 0)',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:5, hp:10, abilities: { weakness: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:5, type:'fire' } }, hp:10, abilities: { weakness: true } },
     b: { def:0, toBlkMod:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   weaknessBreathPenaltyWarlord: {
     desc: 'Weakness breath (Warlord): base melee 1 reduced to 0 by Weakness (−3) still initiates the sequence; fire breath 5 − 3 = 2 — 2 rtb 100% vs 0 def → 2 dmg',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, rtbType:'fire', rtb:5, hp:10, abilities: { weakness: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:5, type:'fire' } }, hp:10, abilities: { weakness: true } },
     b: { def:0, toBlkMod:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
@@ -496,7 +496,7 @@ definePresets({
   vertigoRangedHitCoM2: {
     desc: 'CoM2 Vertigo: -25% To Hit on ranged attacks. Both To Hit fields are lifted by 20, putting the common hitchance field at 50 so the penalty is subtracted above the 10% floor the modern clamp applies to that field before the per-channel sum (Units.RecalculateUnits.pas:2456-2480): 50 - 25 = 25, so missile 1 vs 0 def → 0.25 dmg; without Vertigo the same shot deals 0.5. Left at the default 30 the floor absorbs MoM\'s -20, CoM2\'s -25 and CoM 1\'s -30 alike and all three print 0.3. Probability is the subject here, so the +70% determinism convention deliberately does not apply.',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitChance:20, hp:10, abilities: { vertigo: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitChance:20, hp:10, abilities: { vertigo: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.250 },
@@ -637,7 +637,7 @@ definePresets({
   animatedBreathBonusCoM2: {
     desc: 'Animated grants +1 thrown strength in CoM2: 1 thrown → 2, 100% hit vs 0 def → 2.0, against 1.0 without it. Base melee is 0 so the thrown channel is measured alone, and the defender holds 10 hit points: at the earlier 1 melee against a 2 HP defender the pool clipped 3 to 2 and printed the same 2.0 with the bonus removed.',
     version: V_COM2,
-    a: { atk:0, rtbType:'thrown', rtb:1, hitChance:70, hp:10, abilities: { animated: true } },
+    a: { atk:0, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hitChance:70, hp:10, abilities: { animated: true } },
     b: { def:0, hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
@@ -681,7 +681,7 @@ definePresets({
   blazingMarchMissileIgnoresWICoM2: {
     desc: 'Blazing March +3 missile and magical weapons in CoM2: missile 2 → 5, Weapon Immunity does not apply, defender still blocks 2 → 3.0',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
     b: { def:2, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -689,7 +689,7 @@ definePresets({
   blazingMarchFlameBladeStacksCoM2: {
     desc: 'Blazing March stacks with Flame Blade in CoM2: missile 1 +3 +2 = 6 → 6.0',
     version: V_COM2,
-    a: { rtbType:'missile', rtb:1, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true, flameBlade: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true, flameBlade: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 6.000 },
@@ -697,21 +697,21 @@ definePresets({
   blazingMarchThrownWarlord: {
     desc: 'Blazing March +3 thrown in Warlord: thrown 2 → 5, 100% hit vs 0 def → 5.0 (defender dies on thrown, no melee)',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'thrown', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
+    a: { atk:1, modernAttacks: { thrown: { strength:2, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
     b: { hp:5 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   blazingMarchThrownIgnoresWIWarlord: {
     desc: 'Blazing March in Warlord upgrades thrown to magical: thrown 2 +3 = 5, Weapon Immunity does not apply, defender still blocks 2 → 3.0',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'thrown', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
+    a: { atk:1, modernAttacks: { thrown: { strength:2, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
     b: { def:2, toBlkMod:70, hp:3, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   blazingMarchThrownNotBoostedCoM2: {
     desc: 'Blazing March does not boost CoM2 Thrown strength, but its unit-wide EncMagic still bypasses Weapon Immunity: thrown 2 → 2 damage.',
     version: V_COM2,
-    a: { atk:1, rtbType:'thrown', rtb:2, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
+    a: { atk:1, modernAttacks: { thrown: { strength:2, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { blazingMarch: true } },
     b: { def:0, toBlkMod:70, hp:2, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
@@ -799,7 +799,7 @@ definePresets({
   lionheartThrownCoM2: {
     desc: 'Lionheart does not boost thrown in CoM2: thrown stays 3 + melee 1+3=4 → 7.0',
     version: V_COM2,
-    a: { atk:1, hitChance:70, rtbType:'thrown', rtb:3, hp:10, abilities: { lionheart: true } },
+    a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:3, type:'thrown' } }, hp:10, abilities: { lionheart: true } },
     b: { def:0, hp:100 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
@@ -886,7 +886,7 @@ definePresets({
   blackpowderMissileWarlord: {
     desc: 'Rocketry derives Blackpowder: missile becomes heavy and gains AP; rtb 4 vs def 2 deals 3 physical, Poison 1 adds 1 → 4.0.',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { outlanderWizard: true, rocketry: true } },
+    a: { modernAttacks: { ranged: { strength:4, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { outlanderWizard: true, rocketry: true } },
     b: { def:2, toBlkMod:70, hp:20, abilities: { missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
@@ -908,14 +908,14 @@ definePresets({
   upgradedExplosiveFireWarlord: {
     desc: 'Rocketry + Explosive derives Upgraded Explosive: the Blackpowder branch (UnitCalcPre.CAS:1074-1077) doubles Fire Breath 3+4 to 14, and Blackpowder Poison rides both that call and the unconditional melee call for 16.0. Base melee 0 keeps the separate Explosive Thrown grant at :1066-1080 shut — that one is gated on base melee > 0 or Flying — so the doubling is measured alone. Dropping Explosive leaves 9.0; dropping Rocketry leaves 3.0. The earlier 20.0 reading was the 20 HP defender capping a 25.0 total that included the Thrown channel, not a measurement of the doubling.',
     version: V_WARLORD,
-    a: { atk:0, rtbType:'fire', rtb:3, hitChance:70, hp:10, abilities: { outlanderWizard: true, rocketry: true, explosive: true } },
+    a: { atk:0, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hitChance:70, hp:10, abilities: { outlanderWizard: true, rocketry: true, explosive: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 16.000 },
   },
   trueLightSkipsExplosiveChannelsWarlord: {
     desc: 'True Light\'s Life branch (UnitCalcPre.CAS:1507-1536) writes only SAttack, SRanged, SDefense and SResist (plus a To Hit penalty for illusion attacks), never breath or thrown, so neither channel Explosive produced can be touched by it and no ordering between the two can change a number. Sanctify makes this normal unit Life; Fire Breath 3+4 doubles to 14, Explosive adds Thrown %I(8 - figures/2) = 7, melee is 1 + True Light 1 = 2, and Blackpowder Poison rides all three attacks: 26.0. A True Light that also wrote breath and thrown would deal 28.0. Dropping Explosive leaves 11.0.',
     version: V_WARLORD,
-    a: { atk:1, rtbType:'fire', rtb:3, hitChance:70, hp:10,
+    a: { atk:1, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, sanctify: true, rocketry: true, explosive: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     trueLight: true,
@@ -931,7 +931,7 @@ definePresets({
   energyWeaponryRangedUnaffectedWarlord: {
     desc: 'Energy Weaponry is melee-only: ranged 5 remains conventional and deals 5 at 100% hit vs def 0.',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { outlanderWizard: true, energyBeamWeapons: true } },
+    a: { modernAttacks: { ranged: { strength:5, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { outlanderWizard: true, energyBeamWeapons: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
@@ -939,7 +939,7 @@ definePresets({
   energyCannonDoomWarlord: {
     desc: 'Energy Cannon: ranged 5 gains floor(50%)=2, then Beam Doom deals floor(7/2)=3; Magic Immunity blocks Destruction but not Beam Doom.',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { outlanderWizard: true, mechanical: true, heatPowerEngine: true, energyBeamWeapons: true } },
+    a: { modernAttacks: { ranged: { strength:5, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { outlanderWizard: true, mechanical: true, heatPowerEngine: true, energyBeamWeapons: true } },
     b: { def:20, toBlkMod:70, res:5, hp:20, abilities: { magicImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -947,7 +947,7 @@ definePresets({
   energyCannonDestructionWarlord: {
     desc: 'Energy Cannon at 30% Ranged To-Hit grants Destruction -2. Beam strength 1 halves to 0; Res 5→3 gives 70% whole-unit kill for 7.0 EV.',
     version: V_WARLORD,
-    a: { rtbType:'missile', rtb:1, hp:10, abilities: { outlanderWizard: true, mechanical: true, heatPowerEngine: true, energyBeamWeapons: true } },
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10, abilities: { outlanderWizard: true, mechanical: true, heatPowerEngine: true, energyBeamWeapons: true } },
     b: { def:20, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
@@ -1029,7 +1029,7 @@ definePresets({
   holyBonusSkipsThrownCoM2: {
     desc: 'The Holy Bonus aura writes Caster.exe\'s narrow ranged field, so a Thrown attack takes none of it. Melee 1 + 4 = 5 is fully blocked by 5 defense; thrown stays 6 for 6 − 5 = 1 (writing the shared ranged slot would make it 10, for 5).',
     version: V_COM2,
-    a: { figs:1, atk:1, rtbType:'thrown', rtb:6, hitChance:70, hp:20,
+    a: { figs:1, atk:1, modernAttacks: { thrown: { strength:6, type:'thrown' } }, hitChance:70, hp:20,
       abilities: { holyBonus: 4 } },
     b: { figs:1, atk:0, def:5, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
@@ -1045,7 +1045,7 @@ definePresets({
   holyBonusReachesMissileCoM2: {
     desc: 'Control for the Thrown case: a conventional ranged attack does take the Holy Bonus aura. Missile 6 + 4 = 10 − 2 def = 8.',
     version: V_COM2,
-    a: { figs:1, atk:0, rtbType:'missile', rtb:6, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { holyBonus: 4 } },
+    a: { figs:1, atk:0, modernAttacks: { ranged: { strength:6, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, abilities: { holyBonus: 4 } },
     b: { figs:1, atk:0, def:2, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8.000 },
@@ -1053,7 +1053,7 @@ definePresets({
   supremeLightReadsWarpedResistanceCoM2: {
     desc: 'Supreme Light is the last write of region e and reads Resistance live, so Warp Resist having zeroed it leaves defense += floor(0/3) = 0: missile 8 − 3 def = 5 (reading the unwarped Resistance 12 would give 1).',
     version: V_COM2,
-    a: { figs:1, atk:0, rtbType:'missile', rtb:8, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
+    a: { figs:1, atk:0, modernAttacks: { ranged: { strength:8, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
     b: { figs:1, atk:0, def:3, res:12, toBlkMod:70, hp:20, unitType:'fantastic_life',
       abilities: { supremeLight: true, warpResist: true } },
     rangedCheck: true, rangedDist: 1,
@@ -1062,7 +1062,7 @@ definePresets({
   supremeLightUnwarpedResistanceCoM2: {
     desc: 'Control for the Warp Resist case: with Resistance intact at 12, Supreme Light adds floor(12/3) = 4 defense. Missile 8 − 7 def = 1.',
     version: V_COM2,
-    a: { figs:1, atk:0, rtbType:'missile', rtb:8, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
+    a: { figs:1, atk:0, modernAttacks: { ranged: { strength:8, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20 },
     b: { figs:1, atk:0, def:3, res:12, toBlkMod:70, hp:20, unitType:'fantastic_life',
       abilities: { supremeLight: true } },
     rangedCheck: true, rangedDist: 1,
@@ -1080,7 +1080,7 @@ definePresets({
   supremeLightSkipsZeroedRangedCoM2: {
     desc: 'Supreme Light\'s ranged half is a live strength test, `if U.ranged > 0` (:2632), not a type test, so a magic ranged 5 that Mind Storm\'s −5 and the region-e clamp have left at zero takes no +2 and the attack stays gone: 0 damage (the six-name type test it replaced added 2 to the emptied field, for 2). The absence is the rule under test. Mind Storm is the live half — without it the same unit deals 5 + 2 = 7, which is `supremeLightCasterRangedCoM2`\'s claim at another size.',
     version: V_COM2,
-    a: { figs:1, atk:0, rtbType:'magic', rtb:5, hitRanged:70, hitThrown:70, hitBreath:70, hp:20,
+    a: { figs:1, atk:0, modernAttacks: { ranged: { strength:5, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20,
       abilities: { supremeLight: true, mindStorm: true } },
     b: { figs:1, atk:0, def:0, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
@@ -1089,7 +1089,7 @@ definePresets({
   guidingBeaconSkipsBlazedRangedWarlord: {
     desc: 'Guiding Beacon reads `U.ranged` where the aura runs (:2543), after region d, so Blaze of Glory having emptied the Ranged field leaves it nothing to add to: Focus Magic takes the Thrown 4 into conventional Ranged, Blaze of Glory moves it back onto the Thrown field, and the surviving Thrown 4 against the 2 defense its Armor Piercing halves to 1 gives 3 (reading the pre-sequence type instead applies the aura\'s +3, for 6).',
     version: V_WARLORD,
-    a: { figs:1, atk:0, rtbType:'thrown', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:20,
+    a: { figs:1, atk:0, modernAttacks: { thrown: { strength:4, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20,
       abilities: { focusMagic: true, blazeOfGlory: true, guidingBeaconAura: 3 } },
     b: { figs:1, atk:0, def:2, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -1097,7 +1097,7 @@ definePresets({
   supremeLightSkipsBlazedRangedWarlord: {
     desc: 'The same emptied Ranged field for Supreme Light: its +2 is gated on the live `U.ranged > 0` at the end of region e, so after Blaze of Glory has moved the Focus-converted attack onto the Thrown field the bonus is not made — Thrown 4 against the 2 defense Blaze of Glory\'s Armor Piercing halves to 1 gives 3 (a precomputed type test still sees the conventional Ranged identity and adds 2, for 5).',
     version: V_WARLORD,
-    a: { figs:1, atk:0, rtbType:'thrown', rtb:4, hitRanged:70, hitThrown:70, hitBreath:70, hp:20,
+    a: { figs:1, atk:0, modernAttacks: { thrown: { strength:4, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20,
       abilities: { focusMagic: true, blazeOfGlory: true, supremeLight: true } },
     b: { figs:1, atk:0, def:2, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
@@ -1105,7 +1105,7 @@ definePresets({
   levelBonusAfterUpgradedExplosiveWarlord: {
     desc: 'The level ladder is @Units@ApplyLevelBonus in region c, so Upgraded Explosive\'s end-of-region-b doubling cannot see it: fire breath 4 + 4 workshop = 8, doubled to 16, then +2 champion = 18. Base melee 0 keeps Explosive\'s independent Thrown grant (UnitCalcPre.CAS:1066-1080, gated on base melee > 0 or Flying) shut, so only the breath is in play; the 0 + 4 champion melee is fully blocked by 5 defense, leaving 18 − 5 = 13 (doubling the levelled value would make the breath 20, for 15). At level normal the same unit deals 11. The defender is Poison Immune so the Military Workshop poison rider does not add to the total.',
     version: V_WARLORD,
-    a: { figs:1, atk:0, rtbType:'fire', rtb:4, level:'champion', hitChance:70, hp:20,
+    a: { figs:1, atk:0, modernAttacks: { fireBreath: { strength:4, type:'fire' } }, level:'champion', hitChance:70, hp:20,
       abilities: { outlanderWizard: true, explosive: true, militaryWorkshop: true } },
     b: { figs:1, atk:0, def:5, toBlkMod:70, hp:30, abilities: { poisonImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 13.000 },
