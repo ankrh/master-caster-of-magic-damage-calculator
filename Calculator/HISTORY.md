@@ -6,6 +6,31 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F152 — `modern-riders.spec.js` F25 re-expected: F141’s model is right, and the assertion it
+  broke had never tested the rule it is named for.** Re-read from the sources rather than from
+  F141’s summary. `ApplyAttack` leaves early only on `figs <= 0` ($005B19D9, and again at
+  $005B297F); its rider loop is gated `if not (at in [ATDoomGaze, ATDeathGaze, ATStoningGaze])`,
+  and each of the six blocks tests the attacker’s rider flags and the defender’s immunities alone
+  — no strength, base or calculated. `PerformMeleeAttack` then issues `ApplyAttack(au, du,
+  ATmelee, LivingFigures(au), ...)` unconditionally, where Thrown and Breath are gated `> 0` and
+  Ranged on `ammo > 0`. So a 0-attack gaze attacker still makes a melee call and still runs the
+  riders there, which is the direction of the failure: F141’s more permissive gate let the melee
+  call carry the riders, the melee phase gained damage, and the old total-damage equality flipped
+  true to false. The exclusion F25 is named for lives in the gaze phase, not in
+  `touchAttackFires`, and F141 never touched it. Two further defects surfaced. The fixture’s
+  `stoningGaze: 9` and `deathGaze: 9` were the wrong sign — these are signed resistance
+  modifiers where negative is stronger, and the CoM2 roster carries `Stoning Gaze=-3/-4` and
+  `Death Gaze=-3/-4` against the positive-damage `Doom Gaze=4` — so four of the six modern rows
+  ran an inert gaze and compared no damage against no damage; that assertion would have passed
+  with the gaze rule deleted. And the rule is implemented twice in series, so neither copy is
+  individually ablatable: filed as F153. The rows now read the gaze *call* rather than the combat
+  total, assert it is unchanged by the riders, and carry both halves of the control the old shape
+  lacked — the gaze must resolve something, and the same riders must visibly move the melee call.
+  Confirmed by ablation: with both suppression copies lifted the new assertion fails where the old
+  one passed. F141’s six re-expected Warlord presets did not move. Verified with
+  `node tools/node_unit_checks.js` (14374 assertions), `npm run provenance` (271 formulas), the
+  1080-preset browser suite, and `tests/modern-riders.spec.js` 2/2.
+
 - **F134 — the trace overlay keeps its hover owner across a page-wide reset, so a
   stationary-pointer tooltip refreshes instead of staying hidden.** The row’s premise held and
   reproduced exactly, but neither cause it proposed was right. A scratch probe isolated it in two

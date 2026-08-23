@@ -41,9 +41,14 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
       exorcise: -1,
       destruction: 0,
     };
+    // Stoning and Death Gaze carry a *signed resistance modifier*, negative being stronger
+    // (`effectiveRes = defRes + modifier`); the CoM2 roster states `Stoning Gaze=-3`,
+    // `Stoning Gaze=-4`, `Death Gaze=-3` and `Death Gaze=-4`. Doom Gaze is a positive damage
+    // value instead (`Doom Gaze=4`). A positive Stoning/Death value raises the defender's
+    // resistance and silences the gaze outright, which is what these cases used to do.
     const gazeCases = [
-      ['Stoning Gaze', { stoningGaze: 9 }],
-      ['Death Gaze', { deathGaze: 9 }],
+      ['Stoning Gaze', { stoningGaze: -3 }],
+      ['Death Gaze', { deathGaze: -3 }],
       ['Doom Gaze', { doomGaze: 3 }],
     ];
     const modern = [];
@@ -62,11 +67,24 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
         const opts = { version, isRanged: false, wallOfFire: false, distance: 1 };
         const baseline = resolveCombat(plain, target, opts);
         const actual = resolveCombat(withRiders, target, opts);
-        const gazeRow = actual.phases.find(phase => phase.label.includes(name));
+        const gazeOf = result => result.phases.find(phase => phase.label.includes(name));
+        const meleeOf = result => result.phases.find(phase => phase.label.startsWith('Melee'));
+        const samePhase = (x, y) => JSON.stringify(x.defDist) === JSON.stringify(y.defDist)
+          && x.defDestroyPct === y.defDestroyPct;
+        const gazeRow = gazeOf(actual);
         modern.push({
           version,
           name,
-          sameDamage: JSON.stringify(actual.totalDmgToB) === JSON.stringify(baseline.totalDmgToB),
+          // The rule itself, read off the gaze call rather than off the combat total: attack
+          // types 6..8 jump past all six rider blocks, so adding the riders cannot move what
+          // the gaze call does.
+          gazeUnchanged: samePhase(gazeOf(baseline), gazeOf(actual)),
+          // Both halves of the control that the old total-damage comparison lacked. The gaze
+          // must actually resolve something, or `gazeUnchanged` is an equality between two
+          // empty distributions; and the same six riders must visibly move the melee call
+          // against this same defender, or they are inert for reasons of their own.
+          gazeLive: gazeOf(baseline).defDist[0] < 1 || gazeOf(baseline).defDestroyPct > 0,
+          meleeMoved: !samePhase(meleeOf(baseline), meleeOf(actual)),
           label: gazeRow && gazeRow.label,
           healing: actual.aLifeStealExpected,
           sum: actual.totalDmgToB.reduce((total, probability) => total + probability, 0),
@@ -148,11 +166,19 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
     };
   });
 
+  // `ApplyAttack` leaves early only on `figs <= 0` ($005B19D9, and again at $005B297F) and its
+  // six rider blocks test the attack type, the attacker's rider flags and the defender's
+  // immunities alone -- no strength, base or calculated. `PerformMeleeAttack` then issues its
+  // melee `ApplyAttack` unconditionally, unlike Thrown and Breath (`> 0`) and Ranged
+  // (`ammo > 0`). So a 0-attack gaze attacker still makes a melee call and still runs the
+  // riders there: the exclusion is the gaze call's alone, and is asserted as such below.
   expect(report.modern).toHaveLength(6);
   for (const row of report.modern) {
-    expect(row.sameDamage, `${row.version} ${row.name} damage`).toBe(true);
+    expect(row.gazeUnchanged, `${row.version} ${row.name} gaze call`).toBe(true);
+    expect(row.gazeLive, `${row.version} ${row.name} gaze resolves something`).toBe(true);
+    expect(row.meleeMoved, `${row.version} ${row.name} riders live on the melee call`).toBe(true);
     expect(row.label).toBe(`Attacker ${row.name}`);
-    expect(row.healing).toBe(0);
+    expect(row.healing).toBeGreaterThan(0);
     expect(row.sum).toBeCloseTo(1, 12);
   }
   expect(report.rangedChanged).toBe(true);
