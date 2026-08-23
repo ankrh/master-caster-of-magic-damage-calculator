@@ -6,6 +6,41 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F155 — the intermittent page-load timeout stayed unreproduced; the harness got a margin fix
+  and a diagnosis.** Two of the row's supporting claims were false. With `workers: 1` Playwright
+  runs files in path order, so `tests/chaos-conjunction-f39.spec.js:4` is test **4 of 130** —
+  immediately after `blur-global.spec.js`, about 10 s in — not the spec following the CPU-bound
+  `presets.spec.js`, which is test 86; and "every resource returned 200" excludes nothing, because
+  `SimpleHTTPRequestHandler` writes its status line before the body and a connection never
+  accepted logs no line at all. **It did not reproduce** in ~344 page loads: two full suites, 14
+  fresh `blur-global`+`chaos-conjunction` runs and 30 tests under six busy cores. Three candidates
+  are excluded by measurement — CPU starvation (with six cores busy the wait after `page.goto`
+  stayed ≤ 347 ms over 35 loads), ephemeral-port exhaustion (TIME_WAIT peaked near 4 000 of the
+  16 384-port Windows range) and network stalls on a healthy run (5 879 new connections, connect
+  p99 3 ms, max 5 ms). Since `page.goto` resolves on `load` and `collectState` is a top-level
+  declaration in a classic blocking script, the symptom can only be a script that never executed.
+  **The one marginality found is the dev server's connection model, and the change to it is a
+  margin fix, not a proven cause.** `tools/nocache_server.py` ran HTTP/1.0 with no keep-alive —
+  one TCP connection per resource, 5 879 per suite run — into a 5-deep accept queue, while Chrome
+  opens six connections per host. Lowering the backlog locates the cliff between 3 and 5: at 1,
+  connects stall 507–1 007 ms on `ui_state.js`, `ui.js` and `ui_matrix.js`; at 3, 25 of 1 410
+  stall over 200 ms; at the shipped 5, none of 5 879 do. A SYN dropped past Windows' retry limit
+  fails the fetch outright, which is the missing-script shape — but that never happened at
+  backlog 5 under measurement, so the mechanism is capable and thin-margin rather than
+  demonstrated. The handler now sets `protocol_version = 'HTTP/1.1'` with `timeout = 5`, taking a
+  30-test segment from 1 410 new connections to 147 and from 60 s to 34–37 s; the full suite is
+  unchanged at 3.3 m, because page loads are only ~20 s of it. The idle keep-alive close that
+  `BaseHTTPRequestHandler` reports through `log_error` is suppressed by name, so the run log keeps
+  no false lead. **So a recurrence explains itself**, `openCalculator` now waits 15 s rather than
+  the whole test timeout and, on expiry, reports `document.readyState`, `typeof collectState`, the
+  response count, every failed request with its `net::` error, the console errors and a
+  `requestAnimationFrame` liveness probe. Verified by routing an abort onto `ui_state.js`: the
+  report names that file and `net::ERR_FAILED`, `readyState: complete` and `collectState:
+  undefined`. Checks: `node tools/node_unit_checks.js` 14385/14385, 0 failures; `npm run
+  provenance` 271 formulas, 271 verified, 0 UNVERIFIED; `npm test` 130 passed, 3.3 m — run before
+  the log suppression, which moves no test and was re-checked with the 30-test segment, 30 passed
+  and no non-200 line in the server log.
+
 - **F130 (round three, partial) — the re-measurement found seven leaks the sweep had scored
   inert, and three are closed.** The row asked for 34 mechanical scope entries. Re-running the
   instrumentation — rebuilt from `tools/js_lexical_scan.js`, reproducing the first pass's 399
