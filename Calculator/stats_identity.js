@@ -384,9 +384,12 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // Curses that bypass Magic Immunity per the source are NOT gated: Black Prayer, Eternal
 // Night's Darkness malus, and Hierophany. Black Prayer and Darkness are both named on the
 // bypass list in `Reference docs/MoM source - Fandom site/Magic Immunity.md`, *Immunity to
-// Harmful Spells / Exceptions*. Hierophany's cast handler in
-// `Reference docs/Script source/Warlord 1.5.12.7/COSpell.CAS` lines 400-413 runs a Resistance
-// roll and makes no Magic Immunity test at all, and the Warlord manual v1.5.12.7 changelog
+// Harmful Spells / Exceptions*. Hierophany carries `NonMagic=True` on its spell record —
+// `Reference docs/Script source/Warlord 1.5.12.7/spells.ini` [239], the flag that file's own
+// legend (line 620) defines as "The spell is not blocked by Magic Immunity. (by default, spells
+// are blocked by Magic Immunity)". Its cast handler in
+// `Reference docs/Script source/Warlord 1.5.12.7/COSpell.CAS` lines 400-413 agrees, running a
+// Resistance roll with no Magic Immunity test, and the Warlord manual v1.5.12.7 changelog
 // records "Spell Hierophany now works properly against magic immunity".
 // Mislead/Liability are deliberately absent: the spell's resist roll and Death/Illusion
 // "no effect" clause gate only the single targeted unit, but the Misfortune/Jinx debuff
@@ -454,9 +457,9 @@ function applyPillarOfFaithGrant(abilities, version) {
 // Large Shield effect. If the unit already has Large Shield, it receives Missile Immunity
 // instead. The tactical write is `Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS`
 // lines 1069-1075 — gated on `ISBUILT(C,BMoats)`, the defending side, and the city-area
-// coordinate box. The manual v1.5.12.7 states the same rule:
-// "Friendly units receive bonus equivalent to Large Shield if they stay inside the city wall
-// area. If the unit already have Large Shield, unit will receive Missile Immunity instead."
+// coordinate box. The version-matched helptext states the same rule on one line:
+// "If the friendly unit already has Large Shield ability, the unit receives Missile Immunity
+// bonus instead" (`Unit rosters/Warlord mod unit data/HELP.TXT:1678`).
 // The +4 Defense variant in `UnitCalcPre.CAS` lines 1822-1826 is *strategic* combat and is
 // deliberately not modelled. Folded in here so the largeShield/missileImmunity defense
 // bonuses flow through every downstream combat read.

@@ -32,11 +32,18 @@ pre-2026-08-10 narratives remain recoverable from git history.
   gate comment to the `PROVENANCE` anchor on the step that makes the write, which sat outside the
   eight-line window; the rest are new reads of `unitcalc.c`, `Units.RecalculateUnits.pas`, the
   Warlord `.CAS` sources, the version-matched helptext and the roster JSONs. **Three findings.**
-  (1) The `"-2 Ranged Attack power"` quotation the previous round would have called fabricated
-  **is genuine**, at `Unit rosters/Warlord mod unit data/HELP.TXT:5768`; it only looked invented
-  because `Reference docs/` alone was searched. Every quotation in `stats.js` is now machine-checked
-  as a literal substring of a file under either root, and two this round introduced were withdrawn
-  for reflowing their source instead of quoting it. (2) The gaze-existence block's worked example
+  (1) **One of the 2026-08-23 round's two "fabricated quotations" was not fabricated, and that
+  finding is withdrawn.** `"If the friendly unit already has Large Shield ability, the unit
+  receives Missile Immunity bonus instead"` is verbatim at
+  `Unit rosters/Warlord mod unit data/HELP.TXT:1678` — that round searched `Reference docs/` alone,
+  and the version-matched helptext lives under `Unit rosters/`. `applyFortificationGrant`
+  (`stats_identity.js`) carries the line again, in place of the manual quotation that replaced it,
+  which was genuine but broken across two `<span>`s. The second claim stands, re-verified rather
+  than inherited: `"Cannot be blocked by … Magic Immunity"` occurs under neither root and could not,
+  being written with an elision — though its claim is sound and now better sourced than before, on
+  Hierophany's `NonMagic=True` spell record (`spells.ini` [239]). Every quotation in `stats.js` is
+  machine-checked, and two this round introduced were withdrawn for reflowing their source instead
+  of quoting it. (2) The gaze-existence block's worked example
   was version-wrong — Gorgons ship `Ranged 0` in CoM 6.08 but `Ranged 1` in both MoM builds — so the
   comment now names the build; the rule and the code were right. (3) The race gate on the Warlord
   race-exclusive buildings is the calculator's own, not the script's: `CreateUnit.CAS` tests
@@ -45,6 +52,17 @@ pre-2026-08-10 narratives remain recoverable from git history.
   rewritten to the corrected baseline; next scope is `combat.js` and `combat_special_attacks.js`.
   Verified with `node tools/node_unit_checks.js` (14385 passed) and `npm run provenance`
   (271 formulas, 0 UNVERIFIED); comment-only, no behavior change.
+
+- **`tools/comment_quotation_check.js` — the quotation check is a tool now, after two rounds of
+  errors in both directions.** It extracts every quoted span from a source's comment blocks, using
+  the census's own block definition so a quotation wrapped across comment lines is tested whole,
+  and looks for it under `Reference docs/` **and** `Unit rosters/` — the pair the routing table
+  names, whose separation caused the false accusation above. Three verdicts: EXACT; REFLOW, found
+  only after normalizing whitespace or stripping HTML tags, which is what the `<span>`-broken
+  manuals need; and MISSING. **MISSING is a prompt to read the block, not a verdict**, since no
+  scan distinguishes an attributed quotation from a scare-quote or a `…` elision — so it exits 0
+  unless given `--strict`. `stats.js` passes `--strict`; twelve MISSING lines stand elsewhere and
+  are inventoried in the T8 row for the rounds that will triage those files.
 
 ## 2026-08-23
 
