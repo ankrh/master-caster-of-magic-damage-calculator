@@ -6,6 +6,30 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F134 — the trace overlay keeps its hover owner across a page-wide reset, so a
+  stationary-pointer tooltip refreshes instead of staying hidden.** The row’s premise held and
+  reproduced exactly, but neither cause it proposed was right. A scratch probe isolated it in two
+  runs: with the pointer stationary and a 400 ms gap after the hover the test failed, `#tt` at
+  `display:none` carrying the row’s quoted pre-update text; warming the version’s default-state
+  cache before the hover, same pointer state and same gap, passed. So no `mousemove` is involved,
+  and a programmatic `recalculate()` does preserve the hover owner. The cause is the 250 ms
+  debounced `scheduleSaveState`: against a cold cache its `collectState()` calls `getDefaultIds`,
+  which resets the page to the version’s defaults — ending in a `recalculate()` that leaves
+  `#aAtkMod` with no trace — snapshots, then restores. `showTrace` deletes `data-tooltip` and calls
+  `refreshVisibleTooltipForElement`, and `renderActiveTooltip`’s no-text branch ran `hideTooltip()`,
+  which also nulls `activeTooltip`. The restore returned the trace but the owner was gone, so no
+  later refresh could re-show it. `ui.js` now separates dismissing — the pointer left, hide and drop
+  the owner — from concealing — the owner is still under the pointer with nothing to say, hide only
+  — and only the refresh path conceals. The test no longer leaves the reset to timing: it waits on
+  the debounced write, then requires the overlay to have survived it, so the reset falls inside the
+  assertion rather than beside it. Measured with one command both ways, `--repeat-each=5`: 5 of 5
+  failed before, 5 of 5 passed after. The structural alternative — deriving a version’s defaults
+  without touching the live DOM, which ends the whole class of latched transients rather than this
+  one observer — was not taken and is filed as F151. Verified with `node tools/node_unit_checks.js`
+  (14374 assertions), `npm run provenance` (271 formulas) and `npm test` (130 tests, 129 passed,
+  4.5m); its one failure is `modern-riders.spec.js` F25, which reproduces with this change stashed
+  and bisects to F141, filed as F152.
+
 - **F127 - a CoM2/Warlord fixture now states its attack channels with `modernAttacks` alone, and
   the record-level Warlord gates read the record's Ranged field instead of the legacy slot.** The
   row's premise was re-measured first and is substantially falsified: repeating its experiment -

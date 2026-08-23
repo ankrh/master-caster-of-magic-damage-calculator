@@ -572,9 +572,19 @@ initStateFromSources();
   // tooltip there while real mice keep hover behavior on hybrid devices.
   let lastTouchAt = 0;
 
+  // Dismiss: the pointer no longer owns a tooltip-bearing element, so drop the owner too.
   function hideTooltip() {
     tip.style.display = 'none';
     activeTooltip = null;
+  }
+
+  // Conceal: the owner is still under the pointer but currently has nothing to say. Keep it,
+  // because a calculated output loses its trace transiently whenever the page is rewritten
+  // against foreign state and restored (getDefaultIds' default-state snapshot, applyState).
+  // Dropping the owner there is permanent: with the pointer stationary no further mousemove
+  // arrives, so no later refresh can re-show the overlay.
+  function concealTooltip() {
+    tip.style.display = 'none';
   }
 
   function positionTooltipAtPointer(x, y) {
@@ -599,7 +609,7 @@ initStateFromSources();
   function renderActiveTooltip() {
     const el = activeTooltip && activeTooltip.el;
     const text = el && el.dataset && el.dataset.tooltip;
-    if (!text) { hideTooltip(); return; }
+    if (!text) { concealTooltip(); return; }
     tip.textContent = text;
     tip.style.display = 'block';
     if (activeTooltip.mode === 'pointer') {

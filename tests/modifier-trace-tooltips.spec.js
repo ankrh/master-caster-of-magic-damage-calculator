@@ -107,6 +107,15 @@ test('visible trace refreshes and hides while the pointer remains stationary', a
   await expect(tip).toHaveText(initial);
   expect(initial).not.toContain('Lionheart (phase');
 
+  // The debounced save builds this version's default-state cache by resetting the whole page
+  // to defaults, snapshotting, and restoring — so the traced output loses and regains its
+  // tooltip with the pointer stationary. Wait for the write that follows it, then require the
+  // overlay to have survived: the reset used to drop the hover owner permanently (F134).
+  await page.waitForFunction(() =>
+    typeof PAGE_STATE_KEY === 'string' && localStorage.getItem(PAGE_STATE_KEY) !== null);
+  await expect(tip).toBeVisible();
+  await expect(tip).toHaveText(initial);
+
   // Recalculate without another pointer action. The visible overlay must track the same owner.
   await page.evaluate(() => {
     document.getElementById('aAbil_lionheart').checked = true;
