@@ -779,9 +779,10 @@ projecting them into a common shape:
 - **A modern record that states no attack is four empty channels, never a missing record.** The
   four strengths are fields of `unitT`, so every modern unit has all four and an ungated engine
   write can create the channel it names. Supplying no record at all is a different statement — the
-  unit's version has no such record — and only the DOS versions make it. Every reader of a modern
+  unit's version has no such record — and only the DOS versions make it. Every caller of a modern
   record therefore states all four channels, which is what keeps the card and the matrix on one
-  boundary rather than agreeing only for the units a roster happens to ship.
+  boundary rather than agreeing only for the units a roster happens to ship; `deriveUnitStats`
+  halts on a modern input that supplies none rather than reading the DOS shared slot instead.
 - **Each card carries its version's To Hit record and only that one.** The DOS card keeps one melee
   threshold and one shared secondary threshold, matching a record that stores a threshold per attack
   and nothing above them. The modern card keeps the five fields `Caster.exe` holds — the common

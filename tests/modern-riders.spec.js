@@ -20,7 +20,11 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
       res: 0,
       hp: 10,
       dmg: 0,
-      ...(version.startsWith('com2') ? { hitChance: 70 } : { toHitMod: 70, toHitRtbMod: 70 }),
+      // A CoM2/Warlord record states its attacks on all four channels and its To Hit on the
+      // modern fields; the DOS record states the shared pair (`SPEC.md`, *Attack channels on
+      // the card*).
+      ...(version.startsWith('com2')
+        ? { hitChance: 70, modernAttacks: {} } : { toHitMod: 70, toHitRtbMod: 70 }),
       toBlkMod: 70,
       cityWalls: 'none',
       nodeAura: 'none',
@@ -211,7 +215,11 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
       res: 0,
       hp: 10,
       dmg: 0,
-      ...(version.startsWith('com2') ? { hitChance: 70 } : { toHitMod: 70, toHitRtbMod: 70 }),
+      // A CoM2/Warlord record states its attacks on all four channels and its To Hit on the
+      // modern fields; the DOS record states the shared pair (`SPEC.md`, *Attack channels on
+      // the card*).
+      ...(version.startsWith('com2')
+        ? { hitChance: 70, modernAttacks: {} } : { toHitMod: 70, toHitRtbMod: 70 }),
       toBlkMod: 70,
       cityWalls: 'none',
       nodeAura: 'none',

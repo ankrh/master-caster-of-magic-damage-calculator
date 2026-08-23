@@ -156,7 +156,7 @@ test('F54/F55 keep base-CoM2 summon identities out of Warlord', async ({ page })
   const report = await page.evaluate(() => {
     const simple = (identity, abilities) => deriveUnitStats({
       prefix: 'a', version: 'com2_warlord_1.5.12.7', identity, abilities,
-      figs: 1, atk: 1, rtb: 0, rtbType: 'none', def: 0, res: 0, hp: 10,
+      figs: 1, atk: 1, rtb: 0, rtbType: 'none', modernAttacks: {}, def: 0, res: 0, hp: 10,
       weapon: 'normal', level: 'normal',
     });
     const construct = simple(createUnitIdentity({
@@ -192,7 +192,7 @@ test('M6 merges all Lava Smelter grants and stacks both elemental protections', 
     };
     const derive = (unitType) => deriveUnitStats({
       prefix: 'b', version, unitType, abilities,
-      figs: 1, atk: 1, rtb: 0, rtbType: 'none', def: 0, res: 0, hp: 20,
+      figs: 1, atk: 1, rtb: 0, rtbType: 'none', modernAttacks: {}, def: 0, res: 0, hp: 20,
       weapon: 'normal', level: 'normal',
     });
     const normal = derive('normal');

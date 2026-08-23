@@ -60,6 +60,7 @@ const CASES = [
     // `'mithril'`, a weapon material, so the equipped case measured no armour branch (F117).
     level: 'champion', weapon: 'adamantium', armor: 'orihalcon',
     rtbType: 'missile', rtb: 4, rangedCheck: true, rangedDist: 7,
+    modernAttacks: { ranged: { strength: 4, type: 'missile' } },
     abilities: { holyWeapon: true, lionheart: true, prayer: true, holyArmor: true },
   })],
   ['Warlord kitchen sink', unitInput({
@@ -67,6 +68,7 @@ const CASES = [
     race: 'Orc', name: 'Orc Swordsmen',
     level: 'veteran', weapon: 'magic', armor: 'orihalcon',
     rtbType: 'thrown', rtb: 3,
+    modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
     abilities: {
       colossalStrength: true, shadowStrike: true, luckyStar: true, rally: true,
       ludusAgoge: true, plague: true, soulFlay: true, beatOfSwiftness: true,
@@ -77,6 +79,7 @@ const CASES = [
   ['Warlord Outlander reforms', unitInput({
     version: 'com2_warlord_1.5.12.7',
     rtbType: 'missile', rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
     abilities: {
       outlanderWizard: true, armorcladReform: true, heatPowerEngine: true,
       magitekEngineering: true, temporalEngineering: true, sailing: true,

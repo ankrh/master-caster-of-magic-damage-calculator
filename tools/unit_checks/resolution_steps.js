@@ -298,6 +298,11 @@ function runModernWeaponImmunityMappingChecks(ctx) {
   const derive = overrides => ctx.deriveUnitStats(baseUnitInput({ version: com2, ...overrides }));
   const deriveWarlord = overrides => ctx.deriveUnitStats(baseUnitInput({ version: warlord, ...overrides }));
   const identity = (version, values) => ctx.createUnitIdentity({ version, ...values });
+  // A modern probe states the record's own Ranged channel beside the shared slot the card keeps
+  // as its projection (`SPEC.md`, *Attack channels on the card*).
+  const rangedProbe = type => ({
+    rtb: 2, rtbType: type, modernAttacks: { ranged: { strength: 2, type } },
+  });
 
   const chosen = derive({
     identity: identity(com2, { templateId: 34, isHero: true, baseRace: 'Dwarf',
@@ -383,13 +388,16 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     'Spirit-linked physical melee still bypasses Weapon Immunity through persisted EncMagic');
 
   const blazingThrown = derive({
-    atk: 0, rtb: 2, rtbType: 'thrown', abilities: { blazingMarch: true },
+    atk: 0, rtb: 2, rtbType: 'thrown',
+    modernAttacks: { thrown: { strength: 2, type: 'thrown' } },
+    abilities: { blazingMarch: true },
   });
   assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, blazingThrown, com2, 0, 'thrown'), 0,
     'CoM2 Blazing March EncMagic reaches Thrown even though the strength bonus does not');
 
   const magicRanged = derive({
     atk: 0, rtb: 2, rtbType: 'magic',
+    modernAttacks: { ranged: { strength: 2, type: 'magic' } },
   });
   assertEqual(magicRanged.encMagic, false,
     'Innate magical ranged type does not invent the unit-level EncMagic flag');
@@ -397,11 +405,13 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     'ApplyAttack magicranged independently bypasses Weapon Immunity');
 
   const attackLocalMagicCases = [
-    ['Magical ranged', derive({ rtb: 2, rtbType: 'magic' }), 'ranged'],
-    ['Magical lightning ranged', derive({ rtb: 2, rtbType: 'magic_lightning' }), 'ranged'],
-    ['Warlord beam-energy ranged', deriveWarlord({ rtb: 2, rtbType: 'magic' }), 'ranged'],
-    ['Fire Breath', derive({ rtb: 2, rtbType: 'fire' }), 'thrown'],
-    ['Lightning Breath', derive({ rtb: 2, rtbType: 'lightning' }), 'thrown'],
+    ['Magical ranged', derive(rangedProbe('magic')), 'ranged'],
+    ['Magical lightning ranged', derive(rangedProbe('magic_lightning')), 'ranged'],
+    ['Warlord beam-energy ranged', deriveWarlord(rangedProbe('magic')), 'ranged'],
+    ['Fire Breath', derive({ rtb: 2, rtbType: 'fire',
+      modernAttacks: { fireBreath: { strength: 2, type: 'fire' } } }), 'thrown'],
+    ['Lightning Breath', derive({ rtb: 2, rtbType: 'lightning',
+      modernAttacks: { lightningBreath: { strength: 2, type: 'lightning' } } }), 'thrown'],
     ['Doom Gaze', derive({ abilities: { doomGaze: 2 } }), 'gaze'],
     ['Death Gaze', derive({ abilities: { deathGaze: 0 } }), 'gaze'],
     ['Stoning Gaze', derive({ abilities: { stoningGaze: 0 } }), 'gaze'],
@@ -412,9 +422,10 @@ function runModernWeaponImmunityMappingChecks(ctx) {
   }
 
   const attackLocalPhysicalCases = [
-    ['physical missile ranged', derive({ rtb: 2, rtbType: 'missile' }), 'ranged'],
-    ['physical boulder ranged', derive({ rtb: 2, rtbType: 'boulder' }), 'ranged'],
-    ['Thrown', derive({ rtb: 2, rtbType: 'thrown' }), 'thrown'],
+    ['physical missile ranged', derive(rangedProbe('missile')), 'ranged'],
+    ['physical boulder ranged', derive(rangedProbe('boulder')), 'ranged'],
+    ['Thrown', derive({ rtb: 2, rtbType: 'thrown',
+      modernAttacks: { thrown: { strength: 2, type: 'thrown' } } }), 'thrown'],
   ];
   for (const [label, attacker, attackType] of attackLocalPhysicalCases) {
     assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, attacker, com2, 0, attackType), 8,
@@ -446,6 +457,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     const attacker = ctx.deriveUnitStats(baseUnitInput({
       version, figs: record.figures, atk: record.melee, def: record.defense,
       res: record.resist, hp: record.hp, rtb: record.ranged, rtbType: 'magic_lightning',
+      modernAttacks: { ranged: { strength: record.ranged, type: 'magic_lightning' } },
       abilities: { armorPiercing: true },
     }));
     assertEqual(ctx.computeCasterDefenseForAttack(lightningResistTarget, attacker, version, 0, 'ranged'), 8,
@@ -455,6 +467,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     const magicAttacker = ctx.deriveUnitStats(baseUnitInput({
       version, figs: record.figures, atk: record.melee, def: record.defense,
       res: record.resist, hp: record.hp, rtb: record.ranged, rtbType: 'magic',
+      modernAttacks: { ranged: { strength: record.ranged, type: 'magic' } },
       abilities: { armorPiercing: true },
     }));
     assertEqual(ctx.computeCasterDefenseForAttack(lightningResistTarget, magicAttacker, version, 0, 'ranged'), 4,

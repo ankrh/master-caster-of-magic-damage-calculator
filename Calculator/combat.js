@@ -1122,7 +1122,9 @@ function resolveCombat(a, b, opts) {
         bRemHP, bHP: bTotalHP, bAlive,
       };
     }
-    const rangedChannel = isCoM2 && a.modernAttacks && a.modernAttacks.ranged;
+    // A modern attacker always carries the record, so the volley reads the Ranged channel rather
+    // than the DOS-shaped shared slot (`SPEC.md`, *Attack channels on the card*).
+    const rangedChannel = isCoM2 && a.modernAttacks.ranged;
     const rangedAttacker = rangedChannel ? modernAttackUnit(a, { key: 'ranged', ...rangedChannel }) : a;
     const rangedDefense = rangedChannel
       ? computeCasterDefenseForAttack(b, rangedAttacker, ver, bVertigoDefPenalty, 'ranged')

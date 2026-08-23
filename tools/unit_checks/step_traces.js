@@ -201,6 +201,7 @@ function runModifierTraceChecks(ctx) {
 
     const postThresholdOrder = ctx.deriveUnitStats(baseUnitInput({
       version, def: 6, hp: 8, armor: 'orihalcon', rtb: 2, rtbType: 'magic',
+      modernAttacks: { ranged: { strength: 2, type: 'magic' } },
       abilities: {
         holyArmor: true, holyWeapon: true, highPrayer: true,
         reinforceMagic: true, charmOfLife: true, weakness: true,
@@ -222,6 +223,7 @@ function runModifierTraceChecks(ctx) {
     }
     const physicalLaterOrder = ctx.deriveUnitStats(baseUnitInput({
       version, def: 6, hp: 8, rtb: 2, rtbType: 'missile',
+      modernAttacks: { ranged: { strength: 2, type: 'missile' } },
       abilities: {
         holyArmor: true, holyWeapon: true,
         charmOfLife: true, blazingMarch: true, weakness: true,
@@ -281,6 +283,7 @@ function runModifierTraceChecks(ctx) {
   for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
     const twoStage = ctx.deriveUnitStats(baseUnitInput({
       version, rtb: 1, rtbType: 'missile',
+      modernAttacks: { ranged: { strength: 1, type: 'missile' } },
       hitChance: -50, hitRanged: 10, hitThrown: 10, hitBreath: 10, toBlkMod: -40,
     }));
     assertClose(twoStage.toHitMelee, 0.1,
@@ -297,6 +300,7 @@ function runModifierTraceChecks(ctx) {
       `${version}: only the DefenseRoll probability projection bounds signed To Defend`);
     const orderedClamp = ctx.deriveUnitStats(baseUnitInput({
       version, rtb: 1, rtbType: 'missile',
+      modernAttacks: { ranged: { strength: 1, type: 'missile' } },
       hitChance: -50, hitRanged: 150, hitThrown: 150, hitBreath: 150,
     }));
     const commonClamp = orderedClamp.statTrace.findIndex(t => t.id === 'modernClampCommon');
@@ -335,6 +339,7 @@ function runModifierTraceChecks(ctx) {
     abilities: { destiny: true },
     level: 'champion',
     rtbType: 'missile',
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     atk: 3, rtb: 2, def: 1, res: 4, hp: 2,
   }));
   const destinyWrites = [
@@ -355,23 +360,26 @@ function runModifierTraceChecks(ctx) {
     assertEqual(trace.result, to, `Destiny ${field} trace reaches the derived result`);
   }
 
+  // Each of these three creates an attack on a unit whose record states none. The record they
+  // create it on is the modern one, so the write is attributed to the channel it names rather
+  // than to the card's shared projection.
   const permanentSourceCases = [
     [
-      'Chaos Channels', 'chaosChannels:fireBreath',
+      'Chaos Channels', 'chaosChannels:fireBreath', 'fireBreath',
       baseUnitInput({ version: 'com2_1.05.11', abilities: { ccFireBreath: true } }), 0, 4,
     ],
     [
-      'Lightning Blade', 'lightningBlade:breath',
+      'Lightning Blade', 'lightningBlade:breath', 'lightningBreath',
       baseUnitInput({ version: 'com2_warlord_1.5.12.7', abilities: { lightningBlade: true } }), 0, 1,
     ],
     [
-      'Focus Magic', 'focusMagic',
+      'Focus Magic', 'focusMagic', 'ranged',
       baseUnitInput({ version: 'com2_1.05.11', abilities: { focusMagic: true } }), 0, 3,
     ],
   ];
-  for (const [label, sourceId, input, from, to] of permanentSourceCases) {
-    const trace = ctx.deriveUnitStats(input).modifierTraces.sharedAttack;
-    assertEqual(trace.entries[0].source.id, sourceId, `${label} owns its ordered shared-attack write`);
+  for (const [label, sourceId, channel, input, from, to] of permanentSourceCases) {
+    const trace = ctx.deriveUnitStats(input).modifierTraces.modernAttacks[channel];
+    assertEqual(trace.entries[0].source.id, sourceId, `${label} owns its ordered ${channel} write`);
     assertEqual(trace.entries[0].from, from, `${label} records the editable running value`);
     assertEqual(trace.entries[0].to, to, `${label} records the ordered running value`);
   }
@@ -379,6 +387,7 @@ function runModifierTraceChecks(ctx) {
   const destinyAfterPermanent = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7', race: 'Goblin',
     atk: 3, rtb: 2, rtbType: 'missile',
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     abilities: { motherFungus: true, destiny: true },
   }));
   assertEqual(destinyAfterPermanent.atk, 10,
@@ -391,6 +400,7 @@ function runModifierTraceChecks(ctx) {
 
   const destinyAfterEarlyHook = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7', atk: 3, rtb: 2, rtbType: 'missile',
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     abilities: { luckyStar: true, destiny: true },
   }));
   assertEqual(destinyAfterEarlyHook.atk, 8,
@@ -509,6 +519,7 @@ function runModifierTraceChecks(ctx) {
     version: 'com2_warlord_1.5.12.7',
     abilities: { vampirism: true },
     atk: 3, rtb: 5, rtbType: 'thrown',
+    modernAttacks: { thrown: { strength: 5, type: 'thrown' } },
   }));
   for (const [field, from, to] of [['melee', 3, 5], ['sharedAttack', 5, 1]]) {
     const entry = tracedVampirism.modifierTraces[field].entries[0];

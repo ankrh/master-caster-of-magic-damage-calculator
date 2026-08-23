@@ -163,6 +163,10 @@ test('F20 covers every represented b/c/d step in source order for all five versi
             baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
           }),
       figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
+      // A CoM2/Warlord record states the attack on its own channel; the DOS versions state the
+      // same attack on the shared slot (`SPEC.md`, *Attack channels on the card*).
+      ...(version.startsWith('com2')
+        ? { modernAttacks: { ranged: { strength: 4, type: 'missile' } } } : {}),
       level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
       cityWalls: 'none', nodeAura: 'life', chaosSurge: 1,
@@ -266,6 +270,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
         baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
       }),
       figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
+      modernAttacks: { ranged: { strength: 4, type: 'missile' } },
       level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
       cityWalls: 'none', nodeAura: 'none', abilities: { destiny: true },
@@ -278,6 +283,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
         baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
       }),
       rtbType: 'thrown',
+      modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
       abilities: { rust: true },
     });
     return {
@@ -300,7 +306,11 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
   expect(destinyEvents[0].status).toBe('applied');
   const destinyTrace = report.destiny.statTrace.filter(event => event.id === 'destiny');
   expect(destinyTrace).toHaveLength(1);
-  expect(Object.keys(destinyTrace[0].changes).sort()).toEqual(['atk', 'def', 'hp', 'res', 'rtb']);
+  // The modern record carries the Ranged channel's own strength field beside the card's shared
+  // projection, so Destiny's one atomic write covers both (`SPEC.md`, *Attack channels on the
+  // card*).
+  expect(Object.keys(destinyTrace[0].changes).sort())
+    .toEqual(['atk', 'def', 'hp', 'res', 'rtb', 'rtbRanged']);
   expect(report.destiny.statExecutionTrace.length).toBeGreaterThan(report.destiny.statTrace.length);
   expect(report.destiny.enumerable).toBe(false);
 
@@ -312,8 +322,10 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
   expect(rustTrace).toHaveLength(1);
   // `SETSTAT(U,SAttack,…)` and `SETSTAT(U,SThrown,0,0)` are two writes of one Rust block
   // (`UnitCalc.CAS:493-503`); the type clear beside the emptied Thrown strength is the model's
-  // stand-in for Warlord storing no Thrown type. One trace entry carries all three.
-  expect(Object.keys(rustTrace[0].changes)).toEqual(['atk', 'rtb', 'thrownType']);
+  // stand-in for Warlord storing no Thrown type. One trace entry carries all of it — the modern
+  // record's Thrown channel fields as well as the card's shared projection of them.
+  expect(Object.keys(rustTrace[0].changes))
+    .toEqual(['atk', 'rtb', 'rtbThrown', 'thrownType', 'thrownTypeThrown']);
 
   const inactive = await page.evaluate(() => {
     const report = deriveUnitStats({
@@ -322,6 +334,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
         baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
       }),
       figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
+      modernAttacks: { ranged: { strength: 4, type: 'missile' } },
       level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
       cityWalls: 'none', nodeAura: 'none', abilities: {},
@@ -339,6 +352,7 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
     const version = 'com2_warlord_1.5.12.7';
     const base = {
       prefix: 'a', version, figs: 1, atk: 5, rtb: 4, rtbType: 'missile',
+      modernAttacks: { ranged: { strength: 4, type: 'missile' } },
       def: 6, res: 8, hp: 7, level: 'normal', weapon: 'normal', armor: 'normal',
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, cityWalls: 'none', nodeAura: 'none',
     };

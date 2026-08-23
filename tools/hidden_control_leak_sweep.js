@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { loadCalculatorContext, repoRoot } = require('./calculator_sources');
+const { modernRecordForSharedSlot } = require('./unit_checks/assertions');
 
 const ctx = loadCalculatorContext();
 // `abilityVersionGated` is the single home for "does this def exist in this version"
@@ -74,9 +75,15 @@ const IDENTITIES = [
   { name: 'hero', over: { unitType: 'hero' } },
 ];
 
+// A CoM2/Warlord shape states the record that version has: the four named channels, with the
+// shared slot beside them as the card's projection (`unit_checks/assertions.js`,
+// `modernRecordForSharedSlot`). A shape that already names `modernAttacks` keeps its own.
 function baseInput(prefix, version, over) {
-  const resolved = over.rtbType === MAGICAL_RANGED
+  const typed = over.rtbType === MAGICAL_RANGED
     ? { ...over, rtbType: version.startsWith('com2') ? 'magic' : 'magic_s' } : over;
+  const resolved = version.startsWith('com2') && !typed.modernAttacks
+    ? { ...typed, modernAttacks: modernRecordForSharedSlot(ctx, typed.rtbType, typed.rtb) }
+    : typed;
   return {
     prefix, version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
     rtbType: 'none', unitType: 'normal', figs: 6, atk: 6, rtb: 0, def: 4, res: 6, hp: 4, dmg: 0,

@@ -2,7 +2,9 @@
 
 'use strict';
 
-const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
+const {
+  evalInContext, assert, assertEqual, assertClose, baseUnitInput, modernRecordForSharedSlot,
+} = require('./assertions');
 
 function runF19Checks(ctx) {
   const modern = overrides => ctx.deriveUnitStats(baseUnitInput({
@@ -567,6 +569,8 @@ function runF50F51F53Checks(ctx) {
     const inert = ctx.deriveUnitStats(baseUnitInput({
       version, baseFantastic: true, baseRace: 'Chaos', unitType: 'fantastic_chaos',
       rtb: 3, rtbType: 'missile', def: 6, res: 7,
+      ...(version.startsWith('com2')
+        ? { modernAttacks: { ranged: { strength: 3, type: 'missile' } } } : {}),
       abilities: {
         realmWard: 'chaos', guidingBeaconAura: 0,
         divineBarrierAura: 0, soulLinkerAura: 0,
@@ -593,6 +597,7 @@ function runF50F51F53Checks(ctx) {
     const unchangedModern = ctx.deriveUnitStats(baseUnitInput({
       version, baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
       rtb: 3, rtbType: 'missile', def: 6,
+      modernAttacks: { ranged: { strength: 3, type: 'missile' } },
       abilities: {
         guidingBeaconAura: 5, divineBarrierAura: 5, soulLinkerAura: 5,
       },
@@ -637,6 +642,8 @@ function runR9G1eChecks(ctx) {
       for (const rtbType of ['missile', 'boulder', 'thrown']) {
         const physical = ctx.deriveUnitStats(baseUnitInput({
           version, weapon, rtb: 2, rtbType,
+          ...(version.startsWith('com2')
+            ? { modernAttacks: modernRecordForSharedSlot(ctx, rtbType, 2) } : {}),
         }));
         assertClose(physical.toHitRtb, 0.4,
           `R9-G1e ${version} ${weapon} material adds 10% to ${rtbType}`);
@@ -651,6 +658,8 @@ function runR9G1eChecks(ctx) {
       for (const rtbType of [magicalToken, 'fire', 'lightning', 'stoning_gaze']) {
         const excluded = ctx.deriveUnitStats(baseUnitInput({
           version, weapon, rtb: 2, rtbType,
+          ...(version.startsWith('com2')
+            ? { modernAttacks: modernRecordForSharedSlot(ctx, rtbType, 2) } : {}),
         }));
         assertClose(excluded.toHitRtb, 0.3,
           `R9-G1e ${version} ${weapon} material excludes ${rtbType}`);
@@ -665,6 +674,7 @@ function runR9G1eChecks(ctx) {
     'R9-G1e DOS material Thrown gate is type-only even at zero strength');
   const modernZeroThrown = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', weapon: 'mithril', rtb: 0, rtbType: 'thrown',
+    modernAttacks: {},
   }));
   assertClose(modernZeroThrown.toHitRtb, 0.3,
     'R9-G1e modern material Thrown gate requires positive current strength');
@@ -672,12 +682,14 @@ function runR9G1eChecks(ctx) {
     'R9-G1e modern zero-strength Thrown reports no applied material bonus');
   const modernZeroRanged = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', weapon: 'mithril', rtb: 0, rtbType: 'missile',
+    modernAttacks: { ranged: { strength: 0, type: 'missile' } },
   }));
   assertClose(modernZeroRanged.toHitRtb, 0.4,
     'R9-G1e modern non-magical Ranged material gate has no strength test');
   const createdModernThrown = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7', weapon: 'mithril', atk: 1,
-    rtb: 0, rtbType: 'none', abilities: { outlanderWizard: true, explosive: true },
+    rtb: 0, rtbType: 'none', modernAttacks: {},
+    abilities: { outlanderWizard: true, explosive: true },
   }));
   assertClose(createdModernThrown.toHitRtb, 0.4,
     'R9-G1e modern material gate reads a Thrown field created before ApplyMagicWeapons');

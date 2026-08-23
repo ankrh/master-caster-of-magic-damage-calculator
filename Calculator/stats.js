@@ -8,6 +8,18 @@
 function deriveUnitStats(input) {
   const prefix = input.prefix;
   const version = input.version;
+  // A CoM2/Warlord record that states no attack is four empty channels, never a missing record:
+  // the four strengths are fields of `unitT`, so every modern unit has all four and an ungated
+  // engine write can create the channel it names (`SPEC.md`, *Attack channels on the card*).
+  // Supplying no record at all is a different statement — the unit's version has no such record
+  // — and only the DOS versions make it, so a modern input without one halts rather than falling
+  // back to the DOS-shaped shared slot (`SPEC.md`, *Out-of-range values stop the run*).
+  if (version && version.startsWith('com2') && !input.modernAttacks) {
+    throw new Error(`deriveUnitStats: ${version} is a modern engine, whose unit record states its `
+      + 'attacks on the four modernAttacks channels (ranged, thrown, fireBreath, '
+      + `lightningBreath); the input for side ${JSON.stringify(input.prefix)} supplied none. A `
+      + 'record that states no attack is `modernAttacks: {}`, not a missing one.');
+  }
   const identity = initializeUnitIdentity(input);
   const baseUnitType = legacyUnitTypeFromIdentity(identity);
   const isHero = !!identity.isHero;
@@ -1266,18 +1278,13 @@ function deriveUnitStats(input) {
   }
   // `SETSTAT(U,SLightningBreath,1,GetStat(U,SThrown,1)+1)` then `SETSTAT(U,SThrown,1,0)`
   // (CreateUnit.CAS:294-299) is a move out of the record's Thrown field, so its two ends are slot
-  // identities: the modern record's Lightning Breath and Thrown channels. The DOS-shaped shared
-  // slot is both at once, so there the write is made in place — and only where the shared value
-  // is free of a conventional ranged attack, which the step reads at its own position.
+  // identities: the modern record's Lightning Breath and Thrown channels. `lightningBladeAbil` is
+  // Warlord-only and seeds the destination channel above, so both ends always exist.
   const lightningBladeSlots = [];
   if (lightningBladeAbil) {
     const breathChannel = channelContexts.find(c => c.channelKey === 'lightningBreath');
-    if (breathChannel) {
-      lightningBladeSlots.push({ target: breathChannel,
-        source: channelContexts.find(c => c.channelKey === 'thrown') || breathChannel });
-    } else if (!input.modernAttacks) {
-      lightningBladeSlots.push({ target: recordContext, source: recordContext });
-    }
+    lightningBladeSlots.push({ target: breathChannel,
+      source: channelContexts.find(c => c.channelKey === 'thrown') || breathChannel });
   }
   // Chaos Channels' admission gate is the permanent record; whether the slot is free for the
   // write is the block's own live read.

@@ -276,6 +276,8 @@ function runDeriveUnitStatsChecks(ctx) {
   for (const version of ['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7']) {
     const metalFiresCoM = ctx.deriveUnitStats(baseUnitInput({
       version, atk: 2, rtb: 3, rtbType: 'missile', abilities: { metalFires: true },
+      ...(version.startsWith('com2')
+        ? { modernAttacks: { ranged: { strength: 3, type: 'missile' } } } : {}),
     }));
     assertEqual(metalFiresCoM.atk, 2, `${version} builds no Metal Fires melee write`);
     assertEqual(metalFiresCoM.rtb, 3, `${version} builds no Metal Fires ranged/Thrown write`);
@@ -318,6 +320,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { destiny: true },
     level: 'champion',
     rtbType: 'missile',
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     figs: 2,
     atk: 3,
     rtb: 2,
@@ -352,6 +355,7 @@ function runDeriveUnitStatsChecks(ctx) {
   const ludusRanged = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7', race: 'Orc',
     abilities: { ludusAgoge: true }, rtbType: 'missile', rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
   assertEqual(ludusRanged.rtb, 6,
     'Ludus Agoge preserves the executing script ranged +1 write');
@@ -359,6 +363,7 @@ function runDeriveUnitStatsChecks(ctx) {
   const motherFungusRanged = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7', race: 'Goblin',
     abilities: { motherFungus: true }, rtbType: 'missile', rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
   assertEqual(motherFungusRanged.rtb, 7,
     'Mother Fungus preserves the executing script ranged +2 write');
@@ -393,24 +398,31 @@ function runDeriveUnitStatsChecks(ctx) {
   // the CoM2 binary's region `c`, and no Warlord script writes it (`UnitCalcPre.CAS` and
   // `UnitCalc.CAS` name Discipline and Blazing March only to set flags, Orihalcon not at all),
   // so the two engines must also answer alike.
+  // Both engines here are modern, so each probe states the record's Ranged channel; the shared
+  // slot stays beside it as the card's projection (`SPEC.md`, *Attack channels on the card*).
+  const channelFor = (type, overrides) => ({
+    modernAttacks: { ranged: { strength: overrides.rtb || 0, type } },
+  });
   const convertedVsNative = (label, overrides) => {
     for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
       const converted = ctx.deriveUnitStats(baseUnitInput({
-        version, rtbType: 'missile', ...overrides,
+        version, rtbType: 'missile', ...overrides, ...channelFor('missile', overrides),
         abilities: { ...(overrides.abilities || {}), focusMagic: true },
       }));
       const native = ctx.deriveUnitStats(baseUnitInput({
-        version, rtbType: 'magic', ...overrides,
+        version, rtbType: 'magic', ...overrides, ...channelFor('magic', overrides),
       }));
       assertEqual(converted.rtb, native.rtb,
         `${label} treats a Focus-converted attack as a native magical one (${version})`);
     }
     const warlord = ctx.deriveUnitStats(baseUnitInput({
       version: 'com2_warlord_1.5.12.7', rtbType: 'missile', ...overrides,
+      ...channelFor('missile', overrides),
       abilities: { ...(overrides.abilities || {}), focusMagic: true },
     }));
     const coM2 = ctx.deriveUnitStats(baseUnitInput({
       version: 'com2_1.05.11', rtbType: 'missile', ...overrides,
+      ...channelFor('missile', overrides),
       abilities: { ...(overrides.abilities || {}), focusMagic: true },
     }));
     assertEqual(warlord.rtb, coM2.rtb,
@@ -428,10 +440,12 @@ function runDeriveUnitStatsChecks(ctx) {
   const warlordBladeConverted = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { flameBlade: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
   }));
   const warlordBladeNative = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { flameBlade: true }, rtbType: 'magic', rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'magic' } },
   }));
   assertEqual(warlordBladeConverted.rtb, warlordBladeNative.rtb,
     'The Warlord blade treats a Focus-converted attack as a native magical one');
@@ -439,6 +453,7 @@ function runDeriveUnitStatsChecks(ctx) {
   const fieryFuryBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { fieryFury: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
   }));
   assertEqual(fieryFuryBeforeFocus.rtb, 4,
     'Fiery Fury tests missile ranged before the later Warlord Focus Magic conversion');
@@ -679,6 +694,7 @@ function runDeriveUnitStatsChecks(ctx) {
   const wildGameDoesNotFollowFocus = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7',
     abilities: { wildGame: true, focusMagic: true }, rtbType: 'thrown', rtb: 2,
+    modernAttacks: { thrown: { strength: 2, type: 'thrown' } },
   }));
   assertEqual(wildGameDoesNotFollowFocus.rtb, 2,
     'Wild Game reads the saved conventional-ranged field rather than Focus-converted Thrown');
@@ -707,6 +723,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { focusMagic: true },
     rtbType: 'missile',
     rtb: 1,
+    modernAttacks: { ranged: { strength: 1, type: 'missile' } },
   }));
   assertEqual(focusMagicLowStrength.rangedType, 'magic',
     'Modern Focus Magic converts a low-strength physical ranged attack');
@@ -730,6 +747,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { focusMagic: true, warpAttack: true },
     rtbType: 'magic',
     rtb: 5,
+    modernAttacks: { ranged: { strength: 5, type: 'magic' } },
   }));
   assertEqual(warlordFocusBeforeWarp.rtb, 4,
     'Warlord compiled Focus Magic adds 3 before Warp Attack halves the strength');
@@ -739,6 +757,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { mindStorm: true, warpAttack: true },
     rtbType: 'missile',
     rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
   }));
   const modernNegativeWarpEntry = modernNegativeWarp.modifierTraces.sharedAttack.entries
     .find(entry => entry.source.id === 'warpAttack');
@@ -774,10 +793,11 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { lightningBlade: true },
     rtbType: 'thrown',
     rtb: 4,
+    modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
   }));
-  assertEqual(lightningBladeThrown.thrownType, 'lightning',
+  assert(!lightningBladeThrown.modernAttacks.thrown,
     'Lightning Blade converts the represented Thrown channel to Lightning Breath');
-  assertEqual(lightningBladeThrown.rtb, 5,
+  assertEqual(lightningBladeThrown.modernAttacks.lightningBreath.strength, 5,
     'Lightning Blade writes Lightning Breath at Thrown + 1 strength');
 
   // Nature Link (Warlord rename of Land Linking) maps to the landLinking calcKey.
@@ -817,6 +837,7 @@ function runDeriveUnitStatsChecks(ctx) {
     version: 'com2_warlord_1.5.12.7',
     abilities: { luckyStar: true },
     rtbType: 'missile',
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     atk: 2, rtb: 2, def: 2, res: 2,
   }));
   assertEqual(luckyStar.atk, 3, 'Lucky Star aura gives every friendly unit +1 melee');
@@ -881,6 +902,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { trueSight: true },
     rtbType: 'magic',
     rtb: 1,
+    modernAttacks: { ranged: { strength: 1, type: 'magic' } },
   }));
   assertEqual(trueSight.abilities.illusionImmunity, true, 'True Sight grants Illusion Immunity');
   assertClose(trueSight.toHitMelee, 0.3, 'True Sight does not boost melee To-Hit');
@@ -891,6 +913,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { eyeOfHeaven: true },
     rtbType: 'magic',
     rtb: 1,
+    modernAttacks: { ranged: { strength: 1, type: 'magic' } },
   }));
   assertClose(eyeOfHeavenTrueSight.toHitRtb, 0.35, 'Eye of Heaven grants the True Sight To-Hit bonus');
 
@@ -901,6 +924,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { eyeOfHeaven: true },
     rtbType: 'fire',
     rtb: 1,
+    modernAttacks: { fireBreath: { strength: 1, type: 'fire' } },
   }));
   assertClose(eyeOfHeavenBreath.toHitRtb, 0.3,
     'True Sight writes SToRanged only, so Fire Breath To-Hit is unchanged');
@@ -948,6 +972,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { innerPower: true, fireImmunity: true },
     rtbType: 'fire',
     rtb: 1,
+    modernAttacks: { fireBreath: { strength: 1, type: 'fire' } },
   }));
   assertEqual(innerPower.atk, 4, 'Inner Power eligible unit gains melee attack');
   assertEqual(innerPower.rtb, 4, 'Inner Power eligible unit gains breath attack');
@@ -959,6 +984,7 @@ function runDeriveUnitStatsChecks(ctx) {
     abilities: { innerPower: true },
     rtbType: 'fire',
     rtb: 1,
+    modernAttacks: { fireBreath: { strength: 1, type: 'fire' } },
   }));
   assertEqual(ineligibleInnerPower.atk, 1, 'Inner Power ineligible unit does not gain melee attack');
   assertEqual(ineligibleInnerPower.abilities.innerPower, false, 'Inner Power is disabled for ineligible units');
@@ -998,6 +1024,7 @@ function runDeriveUnitStatsChecks(ctx) {
     atk: 4,
     rtbType: 'missile',
     rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     def: 3,
     res: 5,
     darkness: true,
@@ -1099,6 +1126,7 @@ function runDeriveUnitStatsChecks(ctx) {
     atk: 4,
     rtbType: 'missile',
     rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     def: 3,
     res: 5,
     eternalNight: true,

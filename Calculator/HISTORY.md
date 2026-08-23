@@ -6,6 +6,32 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F150 — `deriveUnitStats` now halts on a modern input that supplies no `modernAttacks`, and
+  the three shared-slot fallbacks behind it are gone.** The premise held on re-measurement: all
+  three arms stood where the row said, and the resolver accepted a modern input without a record.
+  The row's cost estimate did not: `tools/unit_checks` makes **6435** such calls, not "over 9000",
+  from **155 lexical call sites** in 11 files, of which **59 sites (5579 calls)** also stated a
+  shared-slot attack that had to be re-stated as the channel it means. The `tests/` population the
+  row called unmeasured is **16 tests in 9 spec files**, measured by running a probe halt over the
+  17 candidate specs. Three callers outside `npm test` needed the same migration:
+  `tools/derivation_equivalence.js`, `tools/hidden_control_leak_sweep.js` and
+  `tools/bench_derive_unit_stats.js`. `baseUnitInput` (`unit_checks/assertions.js`) now states the
+  empty modern record for a modern probe that names no attack, and **throws** where one names a
+  shared-slot attack without saying which channel it means, so no site can silently under-state;
+  the four version-parameterised sweeps share one projection, `modernRecordForSharedSlot`, rather
+  than three copies. Five assertions moved to the channel the write now lands on: the three
+  permanent-source cases (`step_traces.js` — Chaos Channels, Lightning Blade and Focus Magic now
+  attribute to `modernAttacks.fireBreath`/`.lightningBreath`/`.ranged` instead of the shared
+  ledger), the Warlord Blackpowder/Bombs/Explosive block (`warlord_abilities.js`), and
+  `lightningBladeThrown` (`derive_unit_stats.js`); F20's two atomic-write key lists gained the
+  record's own channel fields (`rtbRanged`; `rtbThrown` and `thrownTypeThrown`), which is the
+  atomicity claim getting wider rather than weaker. The Lightning Blade arm turned out to be
+  unreachable rather than merely uncalled — `lightningBladeAbil` is Warlord-only and seeds its own
+  destination channel — so it was deleted outright rather than re-gated on version. The halt has
+  its own case in `tests/fail-loud-f113.spec.js`. Verified with `node tools/node_unit_checks.js`
+  (14385 assertions), `npm run provenance` (271 formulas, 0 UNVERIFIED), `npm test` (130/130,
+  2.5m, including the 1080-preset browser suite), and the three out-of-suite tools re-run green.
+
 - **F130 retired — the two open dispositions were rulings, and they are now in `SPEC.md`.** The
   user ruled that both classes the re-measurement isolated already satisfy *Versions* invariant 4,
   and that neither gets code. A read whose only consumer is an `abilityStep(...)` with a cited

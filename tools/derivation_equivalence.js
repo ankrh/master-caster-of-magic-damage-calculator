@@ -15,6 +15,7 @@
 const fs = require('fs');
 const vm = require('vm');
 const { loadCalculatorContext } = require('./calculator_sources');
+const { modernRecordForSharedSlot } = require('./unit_checks/assertions');
 
 const ctx = loadCalculatorContext();
 // The sources declare with `const`, which never lands on the vm global, so every calculator
@@ -133,9 +134,15 @@ const ENVS = [
   { name: 'chaos-channels', over: { chaosChannels: 'demonWings' } },
 ];
 
+// A CoM2/Warlord case states the record that version has: the four named channels, with the
+// shared slot beside them as the card's projection (`unit_checks/assertions.js`,
+// `modernRecordForSharedSlot`). A case that already names `modernAttacks` keeps its own.
 function baseInput(version, over) {
-  const resolved = over.rtbType === MAGICAL_RANGED
+  const typed = over.rtbType === MAGICAL_RANGED
     ? { ...over, rtbType: version.startsWith('com2') ? 'magic' : 'magic_s' } : over;
+  const resolved = version.startsWith('com2') && !typed.modernAttacks
+    ? { ...typed, modernAttacks: modernRecordForSharedSlot(ctx, typed.rtbType, typed.rtb) }
+    : typed;
   return {
     prefix: 'a',
     version,

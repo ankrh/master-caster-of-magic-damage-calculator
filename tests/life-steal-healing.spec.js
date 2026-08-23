@@ -50,7 +50,7 @@ test('F28 raw Life Steal stays uncapped and repeated calls convolve exact heal s
     const makeUnit = (prefix, overrides = {}) => deriveUnitStats({
       prefix, version: 'com2_1.05.11', abilities: {}, level: 'normal',
       weapon: 'normal', armor: 'normal', rtbType: 'none', unitType: 'normal',
-      figs: 1, atk: 0, rtb: 0, def: 0, res: 0, hp: 10, dmg: 0,
+      figs: 1, atk: 0, rtb: 0, modernAttacks: {}, def: 0, res: 0, hp: 10, dmg: 0,
       hitChance: 70, toBlkMod: 70, cityWalls: 'none',
       nodeAura: 'none', wallOfFire: false, trueLight: false, darkness: false,
       rangedCheck: false, rangedDist: 1, ...overrides,
@@ -421,7 +421,7 @@ test('combat-state categories are output means rather than advanced starting inp
     const makeUnit = (prefix, overrides = {}) => deriveUnitStats({
       prefix, version: 'com2_1.05.11', abilities: {}, level: 'normal',
       weapon: 'normal', armor: 'normal', rtbType: 'none', unitType: 'normal',
-      figs: 1, atk: 1, rtb: 0, def: 0, res: 0, hp: 10, dmg: 0,
+      figs: 1, atk: 1, rtb: 0, modernAttacks: {}, def: 0, res: 0, hp: 10, dmg: 0,
       irrecoverableDamage: 0, undeadDamage: 0, baseBonusHp: 0, noHealing: false,
       hitChance: 70, toBlkMod: 0, cityWalls: 'none',
       nodeAura: 'none', wallOfFire: false, trueLight: false, darkness: false,

@@ -102,7 +102,8 @@ function runDerivationStageChecks(ctx) {
 
     const afterClamp = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, atk: 0, def: 0, res: 0,
-      rtb: 1, rtbType: 'missile', abilities: { mindStorm: true, mislead: true },
+      rtb: 1, rtbType: 'missile', modernAttacks: { ranged: { strength: 1, type: 'missile' } },
+      abilities: { mindStorm: true, mislead: true },
     }));
     assertEqual(afterClamp.atk, -1,
       `${modernVersion}: Misfortune subtracts melee after the terminal zero clamp`);
@@ -119,7 +120,8 @@ function runDerivationStageChecks(ctx) {
 
     const beforeSupremeLight = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, atk: 1, def: 1, res: 3,
-      rtb: 1, rtbType: 'magic', abilities: { mislead: true, supremeLight: true },
+      rtb: 1, rtbType: 'magic', modernAttacks: { ranged: { strength: 1, type: 'magic' } },
+      abilities: { mislead: true, supremeLight: true },
     }));
     const supremeIndex = beforeSupremeLight.statTrace
       .findIndex(entry => entry.id === 'supremeLight');
@@ -159,7 +161,8 @@ function runDerivationStageChecks(ctx) {
 
     const hero = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, unitType: 'hero', atk: 2, def: 2, res: 2,
-      rtb: 2, rtbType: 'missile', abilities: { mislead: true },
+      rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
+      abilities: { mislead: true },
     }));
     assertEqual(hero.atk, 1,
       `${modernVersion}: an eligible live non-Fantastic hero receives Misfortune`);
@@ -167,14 +170,16 @@ function runDerivationStageChecks(ctx) {
       `${modernVersion}: an eligible hero emits the atomic Misfortune trace event`);
 
     const thrown = ctx.deriveUnitStats(baseUnitInput({
-      version: modernVersion, rtb: 2, rtbType: 'thrown', abilities: { mislead: true },
+      version: modernVersion, rtb: 2, rtbType: 'thrown',
+      modernAttacks: { thrown: { strength: 2, type: 'thrown' } }, abilities: { mislead: true },
     }));
     assertEqual(thrown.rtb, 2,
       `${modernVersion}: Misfortune does not subtract from the independent Thrown channel`);
 
     const fantastic = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, unitType: 'normal', atk: 2, def: 2, res: 2,
-      rtb: 2, rtbType: 'missile', abilities: { combatSummoned: true, mislead: true },
+      rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
+      abilities: { combatSummoned: true, mislead: true },
     }));
     assertEqual(fantastic.identity.fantastic, true,
       `${modernVersion}: the test subject becomes Fantastic before the aura gate`);
@@ -185,7 +190,8 @@ function runDerivationStageChecks(ctx) {
   }
   const linkedMisfortune = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_nature', atk: 2, def: 2, res: 2,
-    rtb: 2, rtbType: 'missile', abilities: { spiritLink: true, mislead: true },
+    rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
+    abilities: { spiritLink: true, mislead: true },
   }));
   assertEqual(linkedMisfortune.identity.fantastic, false,
     'Warlord Spirit Link clears Fantastic before the Misfortune aura gate');

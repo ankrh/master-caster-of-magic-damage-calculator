@@ -9,6 +9,7 @@ const { calculatorFiles, readProvenanceComments } = require('../provenance_audit
 const { repoRoot } = require('../calculator_sources');
 const {
   evalInContext, assert, assertEqual, baseUnitInput, assertSameKeyList,
+  modernRecordForSharedSlot,
 } = require('./assertions');
 
 // `Calculator/steps.js` STEP_VERSION_SCOPES is the single home for which engines make a
@@ -383,6 +384,12 @@ function runCanonicalVersionScopeChecks(ctx) {
     { cityWalls: '3' }, { nodeAura: 'chaos' }, { chaosSurge: true }, { poxHost: true },
     { rangedCheck: true, rangedDist: 5 }];
 
+  // The sweep's axis is (shape x version), so its shared-slot token has to be stated as the
+  // record the version really has (`assertions.js`, `modernRecordForSharedSlot`).
+  const sweepInput = fields => baseUnitInput(fields.version.startsWith('com2')
+    ? { ...fields, modernAttacks: modernRecordForSharedSlot(ctx, fields.rtbType, fields.rtb) }
+    : fields);
+
   const visitedKeys = new Set();
   // M13's namespace rule, observed rather than declared: every entry of the To-Hit/To-Block
   // ledger is `chance:`-prefixed and no entry of the stat sequence is, so a projected key can
@@ -439,16 +446,16 @@ function runCanonicalVersionScopeChecks(ctx) {
         for (const rtbType of rtbTypes) {
           // `orihalcon` is the armor control's only non-normal value; passing a weapon quality
           // such as `magic` here would name the armor axis without exercising it.
-          record(baseUnitInput({ ...globalState, version, abilities: { ...everyAbility },
+          record(sweepInput({ ...globalState, version, abilities: { ...everyAbility },
             unitType, rtbType, level: 'elite', weapon: 'magic', armor: 'orihalcon', dmg: 2 }));
         }
       }
     }
     for (const [key, values] of probes) {
       for (const value of values) {
-        record(baseUnitInput({ version, abilities: { [key]: value },
+        record(sweepInput({ version, abilities: { [key]: value },
           unitType: 'normal', rtbType: 'ranged', level: 'elite' }));
-        record(baseUnitInput({ version, abilities: { [key]: value },
+        record(sweepInput({ version, abilities: { [key]: value },
           unitType: 'fantastic_chaos', rtbType: 'thrown', level: 'elite' }));
       }
     }

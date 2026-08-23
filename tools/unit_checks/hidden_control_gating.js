@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { repoRoot } = require('../calculator_sources');
-const { assert, assertSameKeyList } = require('./assertions');
+const { assert, assertSameKeyList, modernRecordForSharedSlot } = require('./assertions');
 
 // Derived-stat leaks that exist today, each with the read that causes it. This list is the
 // worklist, not an exemption: an entry leaves when its read is gated, and the check fails if a
@@ -64,9 +64,16 @@ function digest(value) {
   return out;
 }
 
-function baseInput(version, over) {
-  const resolved = over.rtbType === MAGICAL_RANGED
+// The sweep's axis is (control, version, identity, shape), so each shape has to be stated in the
+// record the version really has: the DOS shared slot, or — for CoM2/Warlord — the same attack on
+// the modern record's own channel, with the shared slot kept as the card's projection of it
+// (`assertions.js`, `modernRecordForSharedSlot`).
+function baseInput(ctx, version, over) {
+  const typed = over.rtbType === MAGICAL_RANGED
     ? { ...over, rtbType: version.startsWith('com2') ? 'magic' : 'magic_s' } : over;
+  const resolved = version.startsWith('com2')
+    ? { ...typed, modernAttacks: modernRecordForSharedSlot(ctx, typed.rtbType, typed.rtb) }
+    : typed;
   return {
     prefix: 'a', version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
     rtbType: 'none', unitType: 'normal', figs: 6, atk: 6, rtb: 0, def: 4, res: 6, hp: 4, dmg: 0,
@@ -137,7 +144,7 @@ function runHiddenControlGatingChecks(ctx) {
           const derive = abilities => {
             try {
               const { abilities: echo, ...rest } = deriveUnitStats(
-                Object.assign(baseInput(version, over), { abilities }));
+                Object.assign(baseInput(ctx, version, over), { abilities }));
               return JSON.stringify(digest(rest));
             } catch (err) { return 'THREW: ' + err.message; }
           };

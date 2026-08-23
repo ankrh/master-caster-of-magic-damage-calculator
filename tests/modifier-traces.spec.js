@@ -64,7 +64,8 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
       baseRace: 'High Men', baseFantastic: false,
     }),
     figs: 1, atk: 4, def: 3, res: 5, hp: 6,
-    rtb: 0, rtbType: 'none', level: 'normal', weapon: 'normal', armor: 'normal',
+    rtb: 0, rtbType: 'none', modernAttacks: {},
+    level: 'normal', weapon: 'normal', armor: 'normal',
     abilities: {
       highPrayer: false, warpAttack: false, holyBonus: 0,
       combatSummoned: true, // display name alone does not establish the retained template
@@ -88,6 +89,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
       prefix: 'a', version,
       identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
       figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
+      modernAttacks: { ranged: { strength: 1, type: 'missile' } },
       level: 'normal', weapon: 'normal', armor: 'normal', abilities: {},
       hitChance: -50, hitRanged: 10, hitThrown: 10, hitBreath: 10, toBlkMod: -40,
       }),
@@ -95,6 +97,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
         prefix: 'a', version,
         identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
         figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
+        modernAttacks: { ranged: { strength: 1, type: 'missile' } },
         level: 'normal', weapon: 'normal', armor: 'normal', abilities: {},
         hitChance: -50, hitRanged: 150, hitThrown: 150, hitBreath: 150, toBlkMod: 0,
       }),
@@ -102,6 +105,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
         prefix: 'a', version,
         identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
         figs: 1, atk: 5, rtb: 5, rtbType: 'missile', def: 5, res: 6, hp: 5,
+        modernAttacks: { ranged: { strength: 5, type: 'missile' } },
         level: 'normal', weapon: 'normal', armor: 'normal',
         abilities: { plague: true, vertigo: true, berserkWarlord: true },
         toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
@@ -152,6 +156,7 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
       destiny: deriveUnitStats({
         ...base, version: 'com2_1.05.11',
         atk: 3, rtb: 2, rtbType: 'missile', def: 1, res: 4, hp: 2,
+        modernAttacks: { ranged: { strength: 2, type: 'missile' } },
         abilities: { destiny: true },
       }),
       shadowStrike: deriveUnitStats({

@@ -384,8 +384,10 @@ function modernAttackUnit(unit, channel) {
   });
 }
 
+// The secondary channels of a CoM2/Warlord record, in resolution order. Every modern unit has
+// the record — `deriveUnitStats` halts on an input without one — so there is no absent-record
+// arm here: a unit with no secondary attack answers with an empty list, not a missing one.
 function modernAttackChannels(unit) {
-  if (!unit.modernAttacks) return null;
   return ['lightningBreath', 'fireBreath', 'thrown'].map(key => {
     const attack = unit.modernAttacks[key];
     return attack && attack.strength > 0 ? { key, ...attack } : null;

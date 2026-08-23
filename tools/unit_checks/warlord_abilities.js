@@ -8,8 +8,13 @@ const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = requi
 
 function runWarlordUnitAbilityChecks(ctx) {
   const version = 'com2_warlord_1.5.12.7';
+  // A modern record that states no attack is four empty channels, never a missing record
+  // (`SPEC.md`, *Attack channels on the card*), so the Warlord default states the empty record
+  // beside the empty shared slot `baseUnitInput` already supplies. A check that wants a channel
+  // overrides this with the channels it means.
   const warlordUnit = (overrides = {}) => baseUnitInput({
     version,
+    modernAttacks: {},
     ...overrides,
     abilities: { outlanderWizard: true, ...(overrides.abilities || {}) },
   });
@@ -216,6 +221,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const offVersion = ctx.deriveUnitStats(baseUnitInput({
     ...marionetteUnit().identity,
     version: 'com2_1.05.11',
+    modernAttacks: {},
     identity: { ...wandererIdentity, version: 'com2_1.05.11' },
     unitType: 'hero',
     abilities: { channeler: true, marionetteBaseSkill: 90 },
@@ -379,6 +385,7 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const noOutlanderArmorclad = ctx.deriveUnitStats(baseUnitInput({
     version,
+    modernAttacks: {},
     def: 1,
     abilities: { mechanical: true, armorcladReform: true },
   }));
@@ -390,6 +397,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     hp: 4,
     rtbType: 'missile',
     rtb: 1,
+    modernAttacks: { ranged: { strength: 1, type: 'missile' } },
     abilities: {
       sapiens: true,
       xenopsychology: true,
@@ -425,6 +433,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     def: 1,
     rtbType: 'missile',
     rtb: 3,
+    modernAttacks: { ranged: { strength: 3, type: 'missile' } },
     abilities: {
       mechanical: true,
       armorclad: true,
@@ -438,33 +447,41 @@ function runWarlordUnitAbilityChecks(ctx) {
     },
   }));
   assertEqual(staleDerivedInputs.def, 1, 'Derived Armorclad/Battle Armor inputs are ignored');
-  assertEqual(staleDerivedInputs.rangedType, 'missile', 'Derived Blackpowder/Energy Cannon inputs are ignored');
+  assertEqual(staleDerivedInputs.modernAttacks.ranged.type, 'missile',
+    'Derived Blackpowder/Energy Cannon inputs are ignored');
   assertEqual(staleDerivedInputs.abilities.powerEngine || false, false, 'Derived Power Engine input is ignored');
   assertEqual(staleDerivedInputs.abilities.lifeSteal == null, true, 'Derived Pneuma Field input is ignored');
 
   const blackpowderMissile = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'missile',
     rtb: 3,
+    modernAttacks: { ranged: { strength: 3, type: 'missile' } },
     abilities: { rocketry: true },
   }));
-  assertEqual(blackpowderMissile.rangedType, 'boulder', 'Blackpowder converts missile to heavy projectile');
-  assertEqual(blackpowderMissile.rtb, 3, 'Blackpowder AP grant does not also add ranged strength');
+  assertEqual(blackpowderMissile.modernAttacks.ranged.type, 'boulder',
+    'Blackpowder converts missile to heavy projectile');
+  assertEqual(blackpowderMissile.modernAttacks.ranged.strength, 3,
+    'Blackpowder AP grant does not also add ranged strength');
   assertEqual(blackpowderMissile.abilities.armorPiercing, true, 'Blackpowder grants Armor Piercing');
   assertEqual(blackpowderMissile.abilities.poison, 1, 'Blackpowder grants Poison 1');
 
   const blackpowderThrownAP = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'thrown',
     rtb: 3,
+    modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
     abilities: { rocketry: true, armorPiercing: true },
   }));
-  assertEqual(blackpowderThrownAP.rtb, 7, 'Blackpowder gives existing-AP Thrown +4 strength');
+  assertEqual(blackpowderThrownAP.modernAttacks.thrown.strength, 7,
+    'Blackpowder gives existing-AP Thrown +4 strength');
 
   const blackpowderFire = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'fire',
     rtb: 3,
+    modernAttacks: { fireBreath: { strength: 3, type: 'fire' } },
     abilities: { rocketry: true },
   }));
-  assertEqual(blackpowderFire.rtb, 7, 'Blackpowder gives Fire Breath +4 strength');
+  assertEqual(blackpowderFire.modernAttacks.fireBreath.strength, 7,
+    'Blackpowder gives Fire Breath +4 strength');
 
   const bombs = ctx.deriveUnitStats(warlordUnit({
     figs: 4,
@@ -472,39 +489,46 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtb: 0,
     abilities: { explosive: true },
   }));
-  assertEqual(bombs.thrownType, 'thrown', 'Bombs&Grenades grants a Thrown attack');
-  assertEqual(bombs.rtb, 6, 'Bombs&Grenades uses floor(8 - max figures / 2)');
+  assertEqual(bombs.modernAttacks.thrown.type, 'thrown', 'Bombs&Grenades grants a Thrown attack');
+  assertEqual(bombs.modernAttacks.thrown.strength, 6,
+    'Bombs&Grenades uses floor(8 - max figures / 2)');
   assertEqual(bombs.abilities.wallCrusher, true, 'Bombs&Grenades grants Wall Crusher');
 
   const bombsAdditive = ctx.deriveUnitStats(warlordUnit({
     figs: 4,
     rtbType: 'thrown',
     rtb: 2,
+    modernAttacks: { thrown: { strength: 2, type: 'thrown' } },
     abilities: { explosive: true },
   }));
-  assertEqual(bombsAdditive.rtb, 8, 'Bombs&Grenades adds to existing Thrown');
+  assertEqual(bombsAdditive.modernAttacks.thrown.strength, 8,
+    'Bombs&Grenades adds to existing Thrown');
 
   const upgradedRanged = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'missile',
     rtb: 3,
+    modernAttacks: { ranged: { strength: 3, type: 'missile' } },
     abilities: { rocketry: true, explosive: true },
   }));
-  assertEqual(upgradedRanged.rtb, 5, 'Upgraded Explosive gives ranged +2');
+  assertEqual(upgradedRanged.modernAttacks.ranged.strength, 5, 'Upgraded Explosive gives ranged +2');
 
   const upgradedFire = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'fire',
     rtb: 3,
+    modernAttacks: { fireBreath: { strength: 3, type: 'fire' } },
     abilities: { rocketry: true, explosive: true },
   }));
-  assertEqual(upgradedFire.rtb, 14, 'Explosive doubles Blackpowder-upgraded Fire Breath');
+  assertEqual(upgradedFire.modernAttacks.fireBreath.strength, 14,
+    'Explosive doubles Blackpowder-upgraded Fire Breath');
 
   const upgradedFireBeforeTrueLight = ctx.deriveUnitStats(warlordUnit({
     rtbType: 'fire',
     rtb: 3,
+    modernAttacks: { fireBreath: { strength: 3, type: 'fire' } },
     trueLight: true,
     abilities: { sanctify: true, rocketry: true, explosive: true },
   }));
-  assertEqual(upgradedFireBeforeTrueLight.rtb, 14,
+  assertEqual(upgradedFireBeforeTrueLight.modernAttacks.fireBreath.strength, 14,
     'Warlord True Light leaves the doubled independent Fire Breath channel unchanged');
 
   const temporalDrive = ctx.deriveUnitStats(warlordUnit({
@@ -719,6 +743,7 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const scoringOptionsInertOutsideWarlord = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11',
+    modernAttacks: {},
     res: 5,
     abilities: { uphillBattle: true, godsPlayDices: 2 },
   }));

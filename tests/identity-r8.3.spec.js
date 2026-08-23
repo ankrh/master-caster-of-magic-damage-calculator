@@ -18,6 +18,9 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
       prefix: 'a', version, identity, abilities,
       figs: 1, atk: 1, def: 0, res: 0, hp: 10,
       rtb: 0, rtbType: 'none', weapon: 'normal', level: 'normal',
+      // A CoM2/Warlord record states all four channels (`SPEC.md`, *Attack channels on the
+      // card*); `extra` states the ones a case gives the unit.
+      ...(version.startsWith('com2') ? { modernAttacks: {} } : {}),
       ...extra,
     });
     const derive = (input) => deriveUnitStats(input);
@@ -31,7 +34,8 @@ test('R8.3 keeps base identity while applying modern live conversions in order',
     const construct = derive(simple('com2_1.05.11', createUnitIdentity({
       version: 'com2_1.05.11', templateId: 37, isHero: false,
       baseRace: 'Special', baseFantastic: false, specialUnit: 'none',
-    }), { combatSummoned: true }, { rtb: 9, rtbType: 'boulder' }));
+    }), { combatSummoned: true }, { rtb: 9, rtbType: 'boulder',
+      modernAttacks: { ranged: { strength: 9, type: 'boulder' } } }));
     const paladins = derive(simple('com2_1.05.11', createUnitIdentity({
       version: 'com2_1.05.11', templateId: 113, isHero: false,
       baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',

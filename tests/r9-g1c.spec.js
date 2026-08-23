@@ -15,6 +15,9 @@ test('R9-G1c preserves late-transform source gates, arithmetic, order, and UI st
       toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
       cityWalls: 'none', nodeAura: 'none', trueLight: false, darkness: false,
       rangedCheck: false, rangedDist: 1,
+      // A CoM2/Warlord record states all four channels; stating none is the DOS statement
+      // (`SPEC.md`, *Attack channels on the card*).
+      ...(version.startsWith('com2') ? { modernAttacks: {} } : {}),
       ...overrides,
     });
     const warlord = 'com2_warlord_1.5.12.7';
@@ -24,6 +27,7 @@ test('R9-G1c preserves late-transform source gates, arithmetic, order, and UI st
     }));
     const convertedThrown = deriveUnitStats(input(warlord, {
       abilities: { wildGame: true, focusMagic: true }, rtb: 2, rtbType: 'thrown',
+      modernAttacks: { thrown: { strength: 2, type: 'thrown' } },
     }));
     const nightshade = deriveUnitStats(input(warlord, {
       abilities: { powerMinerals: 2, nightshade: 3 },
@@ -51,6 +55,7 @@ test('R9-G1c preserves late-transform source gates, arithmetic, order, and UI st
     }));
     const modernOrder = deriveUnitStats(input('com2_1.05.11', {
       rtb: 1, rtbType: 'missile', weapon: 'mithril',
+      modernAttacks: { ranged: { strength: 1, type: 'missile' } },
       abilities: { focusMagic: true },
     }));
 

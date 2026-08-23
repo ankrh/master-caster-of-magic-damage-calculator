@@ -43,7 +43,27 @@ function assertDistSumsToOne(dist, message) {
 // engine-version predicate is exact somewhere (Calculator/steps.js ENGINE_VERSIONS, and the
 // `version === 'com2_1.05.11'` tests in combat_fear_and_touch.js / combat_phases.js), so a
 // synthetic string silently probes a build that does not exist.
+// A CoM2/Warlord record states its attacks on the four named `modernAttacks` channels, and a
+// record that states no attack is four empty channels, never a missing record (`SPEC.md`,
+// *Attack channels on the card*). The default probe unit states no attack, so a modern probe gets
+// the empty record beside the empty shared slot. A probe that does state one through the DOS
+// shared slot has to say which channel it means: the projection is not derivable here — the same
+// slot carries conventional ranged, Thrown, both Breath strengths and the gazes, and on a modern
+// record the gazes are not channels at all — so an unstated one halts rather than being guessed
+// (`SPEC.md`, *Out-of-range values stop the run*).
 function baseUnitInput(overrides = {}) {
+  const version = overrides.version || 'com2_1.05.11';
+  const statesSharedAttack = (Number(overrides.rtb) || 0) > 0
+    || (overrides.rtbType && overrides.rtbType !== 'none');
+  if (version.startsWith('com2') && !('modernAttacks' in overrides)) {
+    if (statesSharedAttack) {
+      throw new Error(`baseUnitInput: ${version} probe states the shared slot as `
+        + `${JSON.stringify(overrides.rtbType || 'none')} at strength ${overrides.rtb || 0} but `
+        + 'names no modernAttacks channel. State the record\'s ranged, thrown, fireBreath or '
+        + 'lightningBreath channel, or `modernAttacks: {}` where the slot carries a gaze.');
+    }
+    overrides = { ...overrides, modernAttacks: {} };
+  }
   return {
     prefix: 'a',
     version: 'com2_1.05.11',
@@ -95,6 +115,30 @@ function assertSameKeyList(actual, expected, message) {
   }
 }
 
+// The one home for "this probe's shared-slot attack, stated as the record a CoM2/Warlord unit
+// really has". A sweep whose axis is (shape x version) cannot state the modern record literally
+// at each site, so the projection is written once here rather than per suite: the slot's token
+// names the record field — `RANGED_TYPES` the Ranged channel, `thrown`/`fire`/`lightning` the
+// Thrown and the two Breath ones — while a gaze token names no channel at all, because a modern
+// unit's gazes are stated through `abilities`. The Ranged channel exists at zero strength (its
+// projectile type is what states it) and the other three do not (`SPEC.md`, *Attack channels on
+// the card*). Probes that name one attack outright state `modernAttacks` at the call site
+// instead; this is only for the version-parameterised sweeps.
+const rangedTokenCache = new Map();
+function modernRecordForSharedSlot(ctx, rtbType, rtb) {
+  if (!rangedTokenCache.has(ctx)) {
+    rangedTokenCache.set(ctx, new Set(evalInContext(ctx, 'RANGED_TYPES')));
+  }
+  const strength = Number(rtb) || 0;
+  const type = rtbType || 'none';
+  if (rangedTokenCache.get(ctx).has(type)) return { ranged: { strength, type } };
+  if (strength <= 0) return {};
+  if (type === 'thrown') return { thrown: { strength, type } };
+  if (type === 'fire') return { fireBreath: { strength, type } };
+  if (type === 'lightning') return { lightningBreath: { strength, type } };
+  return {};
+}
+
 // A primitive export would freeze at zero, so the total is read through a function.
 function assertionTotal() {
   return assertionCount;
@@ -102,5 +146,5 @@ function assertionTotal() {
 
 module.exports = {
   assert, assertClose, assertDistSumsToOne, assertEqual, assertionTotal, assertSameKeyList,
-  baseUnitInput, evalInContext,
+  baseUnitInput, evalInContext, modernRecordForSharedSlot,
 };
