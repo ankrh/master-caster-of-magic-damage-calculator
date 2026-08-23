@@ -6,6 +6,22 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F149 — the intermittent persistence-reload failure was the test's wait condition, not a lost
+  write.** `tests/persistence.spec.js:24` waited on `!!localStorage.getItem('pageState_v2')`, which
+  any earlier debounced write satisfies. Measured directly: with a 400 ms stall injected after the
+  `gameVersion` step, the blob at that point holds `{ gameVersion }` alone — the observed failure
+  diff exactly — and the existence wait returns on it, so the reload restores it. The same probe
+  showed the app writing the complete seven-id blob 250 ms after the last change with no further
+  input, so nothing is lost; the reload merely preceded it, and the app side is unchanged. The wait
+  now decodes the blob and requires its ids to equal the ones just collected, which still fails on a
+  genuinely lost write by timing out. `tests/share-link.spec.js` builds its link synchronously and
+  has no wait of this shape; the one in `tests/modifier-trace-tooltips.spec.js` wants any write and
+  restores nothing, so both were left alone. Rates measured identically on the deterministic stall
+  harness: existence wait 5 of 5 failing, content wait 0 of 5; `tests/persistence.spec.js` under
+  `--repeat-each=5 --workers=1` was 0 of 5 before and after, the idle machine not reproducing it.
+  Checks: `node tools/node_unit_checks.js` 14374/14374; `npm run provenance` 271 formulas, 271
+  verified, 0 UNVERIFIED; `npm test` 130 passed.
+
 - **F152 — `modern-riders.spec.js` F25 re-expected: F141’s model is right, and the assertion it
   broke had never tested the rule it is named for.** Re-read from the sources rather than from
   F141’s summary. `ApplyAttack` leaves early only on `figs <= 0` ($005B19D9, and again at
@@ -261,7 +277,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   Markdown tools reading `breath`/`breath_type`, keys no roster JSON has, which leaves the
   Breath/Thrown column `-` for all 194 CoM2 units. Checks: `node tools/node_unit_checks.js`
   14336/14336; `npm run provenance` 268 formulas, 268 verified, 0 UNVERIFIED; `npm test` **129
-  passed, 1 failed** — `tests/persistence.spec.js:24`, filed as [F149](./BACKLOG.md) and shown
+  passed, 1 failed** — `tests/persistence.spec.js:24`, filed as [F149](./HISTORY.md) and shown
   independent of this round by reproducing it 3 of 5 times with `Calculator/data.js` restored to
   `HEAD`. **This round did not land green.**
 

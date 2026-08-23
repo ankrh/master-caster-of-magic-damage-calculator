@@ -37,8 +37,21 @@ test('page state survives a reload via localStorage', async ({ browser }) => {
 
   const state = await page.evaluate(() => collectState());
 
-  // Wait for the debounced save (~250ms) to land in localStorage.
-  await page.waitForFunction(() => !!localStorage.getItem('pageState_v2'));
+  // Wait for the debounced save (~250ms) to land *this* state in localStorage. Waiting on the
+  // blob's existence alone returns on any earlier write: the debounce runs 250ms after the last
+  // change, so a stall during setup lands a blob holding only the ids set so far, and the reload
+  // below would restore that instead of the state under test. Requiring the stored ids to equal
+  // the ones just collected still fails if a write is genuinely lost — the wait times out.
+  await page.waitForFunction((expected) => {
+    const raw = localStorage.getItem('pageState_v2');
+    if (!raw) return false;
+    let ids;
+    try {
+      ids = JSON.parse(raw.charAt(0) === '{' ? raw : lzDecode(raw)).ids;
+    } catch (err) { return false; }
+    const canon = (o) => JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]]));
+    return canon(ids) === canon(expected);
+  }, state.ids);
 
   // Real reload: the persistent opener never installed a localStorage-clearing
   // init script, so the blob is read back on load.
