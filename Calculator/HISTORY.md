@@ -4,6 +4,48 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-24
+
+- **T16 — the comment census now reads an executable address as a citation, and the T8 baseline
+  moved 23 blocks.** `tools/comment_citation_census.js`'s `POINTER` test recognised an evidence
+  path, an anchor id, `SPEC.md` and a `.c`/`.pas`/`.CAS`/`.INI` source but no address, so blocks
+  citing the evidence class the root `CLAUDE.md` ranks *above* prose counted unsourced. The row's
+  two named notations turned out to under-describe what the code actually cites: alongside
+  `131:0x9A051` and `$005B19D9` the sources use bare `0x8F881`, engine-prefixed `com1:0x90609` and
+  `+0x0BA3C` module offsets, so the test is width-based — `0x` plus 5 or 6 hex digits, or `$` plus
+  6 to 8 — every mask in these files being 4 digits or fewer (`0xff`, `0x0800`) or a zero-padded 8
+  (`0x00200000`). That reclassifies **exactly the 23 blocks the row predicted**, 286 unsourced to
+  263. **Scope added beyond the row, deliberately:** the same test could not see `Unit rosters/`
+  either, though the routing table names it beside `Reference docs/` as a home of version-matched
+  manuals, helptext and `UNITS.INI`. Folded in here rather than filed, because T16 exists to move
+  the baseline once; it reclassified **no existing block**, so the 263 figure is the address fix
+  alone and the `Unit rosters/` half only affects citations added from now on.
+
+- **T8, third round — `stats.js` triaged in full, and its code-documentation share is a quarter,
+  not three quarters.** All 109 unsourced blocks read rather than sampled. **27 document the
+  calculator's own machinery** — the file header, naming choices, the trace and execution ledger,
+  slot identity, the chance projection — and correctly name no source; the other **82 stated an
+  engine fact** and now carry one. That is 25% code-doc against `steps.js`'s 77% last round, which
+  settles that the headline count's looseness is a per-file property of what the file is for:
+  `stats.js` is where every effect's eligibility gate lives. After: `stats.js` 131 pointer / 27
+  unsourced, repository total 633 / 207 / 245 / **181 unsourced (59.4 KB)**. Most citations route a
+  gate comment to the `PROVENANCE` anchor on the step that makes the write, which sat outside the
+  eight-line window; the rest are new reads of `unitcalc.c`, `Units.RecalculateUnits.pas`, the
+  Warlord `.CAS` sources, the version-matched helptext and the roster JSONs. **Three findings.**
+  (1) The `"-2 Ranged Attack power"` quotation the previous round would have called fabricated
+  **is genuine**, at `Unit rosters/Warlord mod unit data/HELP.TXT:5768`; it only looked invented
+  because `Reference docs/` alone was searched. Every quotation in `stats.js` is now machine-checked
+  as a literal substring of a file under either root, and two this round introduced were withdrawn
+  for reflowing their source instead of quoting it. (2) The gaze-existence block's worked example
+  was version-wrong — Gorgons ship `Ranged 0` in CoM 6.08 but `Ranged 1` in both MoM builds — so the
+  comment now names the build; the rule and the code were right. (3) The race gate on the Warlord
+  race-exclusive buildings is the calculator's own, not the script's: `CreateUnit.CAS` tests
+  `ISBUILT(C,B<building>)` and race decides which city may hold the building. Recorded in the
+  comment rather than filed, since the calculator models no city. **T8 stays open** with its row
+  rewritten to the corrected baseline; next scope is `combat.js` and `combat_special_attacks.js`.
+  Verified with `node tools/node_unit_checks.js` (14385 passed) and `npm run provenance`
+  (271 formulas, 0 UNVERIFIED); comment-only, no behavior change.
+
 ## 2026-08-23
 
 - **F156 — the `e:clamp` secondary-slot zeroing is gone; the row's premise held on the sources

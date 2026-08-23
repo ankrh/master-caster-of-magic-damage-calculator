@@ -23,8 +23,9 @@
 //   * **anchored** — a citation line falls within `WINDOW` lines of it, above its first line or
 //     below its last. `npm run provenance` hashes that citation, so the claim is checked.
 //   * **pointer** — no anchor in range, but the prose names where the claim lives: a
-//     `Reference docs/` path, an anchor id, `SPEC.md`, or a `BACKLOG.md` question. A reader can
-//     check it; the audit still cannot.
+//     `Reference docs/` path, an anchor id, `SPEC.md`, a `BACKLOG.md` question, or an executable
+//     address the root `CLAUDE.md` ranks above prose. A reader can check it; the audit still
+//     cannot.
 //   * **unsourced** — neither. This count is an upper bound on the real gap: a block that
 //     documents the code rather than the engine names no source because it needs none, and no
 //     scan can tell those apart from an unsupported engine claim. Reading decides.
@@ -46,8 +47,21 @@ const CITATION_LINE = /^\s*(?:\/\/|\*)?\s*(?:PROVENANCE\[[^\]]+\]:|STAT-FORMULA\
 // A prose pointer: names the home of the claim without being an audited anchor — an evidence
 // path, an anchor id, a project document, or a source file the routing table in the root
 // `CLAUDE.md` covers (the DOS reconstruction's `.c`, the Caster `.pas`, a `.CAS` script, an
-// `.INI` table).
-const POINTER = /Reference docs\/|SPEC\.md|BACKLOG\.md|PROVENANCE\[|STAT-FORMULA\[|\.(?:pas|CAS|INI|c)\b/;
+// `.INI` table). `Unit rosters/` counts alongside `Reference docs/`: that routing table names
+// both as homes of the version-matched manuals and helptext, and `UNITS.INI` roster data lives
+// only there.
+//
+// A bare executable address is one too, and the strongest of them: the routing table ranks an
+// address-backed reconstruction above prose, and an address is checkable in the binary without
+// naming the file it was read from. Two notations are cited here — DOS `0x8F881`, whether bare,
+// segment-prefixed (`131:0x9A051`) or engine-prefixed (`com1:0x90609`), and Caster/Pascal
+// `$005B19D9`, absolute or as a `+0x0BA3C` module offset. Width separates an address from a
+// bitmask: every address cited in these sources is 5 or 6 hex digits, while every mask is 4 or
+// fewer (`0xff`, `0x0800`) or a zero-padded 8 (`0x00200000`).
+const ADDRESS = /\b0x[0-9A-Fa-f]{5,6}\b|\$[0-9A-Fa-f]{6,8}\b/;
+const POINTER = new RegExp(
+  [/Reference docs\/|Unit rosters\/|SPEC\.md|BACKLOG\.md|PROVENANCE\[|STAT-FORMULA\[|\.(?:pas|CAS|INI|c)\b/.source,
+    ADDRESS.source].join('|'));
 
 // The twelve formula-bearing sources: `provenance_audit.js`'s `calculatorFiles`, which owns
 // "which sources carry source-authored stat formulas", plus the two that order them —

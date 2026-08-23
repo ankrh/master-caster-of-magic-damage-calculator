@@ -30,18 +30,28 @@ function deriveUnitStats(input) {
   const isCoM2 = version.startsWith('com2');
   const suppliedAbilities = { ...(input.abilities || {}) };
   // ApplyAttack's modern Cause Fear setup reads Death Immunity from BaseUnits rather than
-  // the recalculated Units record. Preserve the raw/intrinsic bit before buildings, items,
+  // the recalculated Units record: the immunity test at 0x5B1D1C reads displacement
+  // `BaseUnits + 0xC7` (`Reference docs/Caster binary/CoM2 binary - combat flow.md`, *Cause Fear
+  // uses a base-record immunity gate*). Preserve the raw/intrinsic bit before buildings, items,
   // enchantments, and unit-state normalization can grant calculated Death Immunity.
   const baseDeathImmunity = !!suppliedAbilities.deathImmunity;
-  // Golem's constructor write is intrinsic and must survive direct calculator/Matrix calls,
-  // even when the DOM-derived Elements control is not present in the caller's ability map.
+  // Golem's Resist Elements is a hard-coded unit-type rule, not a `UNITS.INI` ability: region `a`
+  // grants it on base `unittype` 81 (`Caster.exe` 0x599E31, `Reference docs/Caster binary/CoM2
+  // binary - unit recalculation.md`, *Golems intrinsically receive Resist Elements in compiled
+  // code*), and CoM 1 does the same on `COM1_UT_GOLEM` (`unitcalc.c`, com1:0x8EE40). It must survive
+  // direct calculator/Matrix calls, even when the DOM-derived Elements control is not present in
+  // the caller's ability map.
   if ((isCoM2 || isCoM1) && identity.specialUnit === 'golem') {
     suppliedAbilities.elemArmor = 'resistElements';
   }
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
   // Lava Smelter folds its granted ability in here so every downstream read sees it.
-  // Race-exclusive building enchantments gate on the unit's intrinsic race/name, supplied
-  // by the caller from the selected roster unit. Custom (hand-entered) units carry neither,
+  // Race-exclusive building enchantments gate on the unit's intrinsic race/name, supplied by the
+  // caller from the selected roster unit. The script itself tests only `ISBUILT(C,B<building>)`
+  // on the training city (`CreateUnit.CAS`); the race is what decides which city can hold the
+  // building at all, so the race test here stands in for a city model the calculator does not
+  // have. Where a script block narrows further it does so by `STypeID`, whose ids are
+  // `Unit rosters/Warlord mod unit data/UNITS.INI`. Custom (hand-entered) units carry neither,
   // so building buffs are inert on them. The display name may be race-prefixed for some
   // units and not others, so name exceptions match with endsWith (always gated by race).
   const unitRace = identity.race;
@@ -77,22 +87,29 @@ function deriveUnitStats(input) {
   const marionetteStrayed = !!(marionette && marionette.state === 'strayed');
   const marionetteAttackBonus = marionetteOwned ? marionette.attackBonus : 0;
   const marionetteDefenseBonus = marionetteOwned ? marionette.defenseBonus : 0;
-  // Caster.exe's standing Fantastic -> EncMagic write runs in compiled region c. Warlord
-  // Spirit Link first asserts Fantastic in UnitCalcPre (phase b), so the standing rule sees
-  // it even for a calculator-reachable custom input that was not fantastic beforehand. The
-  // late UnitCalc hook (phase d) then clears Fantastic without clearing the derived flag.
+  // Caster.exe's standing `if U.Fantastic then U.EnchantmentFlags[EncMagic] := True` runs in
+  // compiled region c (Units.RecalculateUnits.pas:1813-1815, $005A1217). Warlord Spirit Link
+  // first asserts Fantastic in phase b — `SETSTAT(U,AFantastic,0,1)` (UnitCalcPre.CAS:30) — so
+  // the standing rule sees it even for a calculator-reachable custom input that was not
+  // fantastic beforehand. The late hook `IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN
+  // { SETSTAT(U,AFantastic,0,0); }` (UnitCalc.CAS:1306, phase d) then clears Fantastic without
+  // clearing the derived flag.
   const fantasticAtModernEncMagicRule = isFantasticLive
     || (version.startsWith('com2_warlord') && !!abilities.spiritLink);
   const loadoutEligible = !isFantasticBase && !destinyActive;
-  // Spirit Link (Warlord): grants a fantastic creature sentience so it can earn
-  // experience levels. It does NOT grant weapon/armor loadout, so only level
-  // eligibility is widened — weapon and armor below stay gated on loadoutEligible.
+  // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
+  // to earn experience" (`Unit rosters/Warlord mod unit data/HELP.TXT:6324`). Nothing in that
+  // description or in the script grants weapon/armor loadout, so only level eligibility is
+  // widened — weapon and armor below stay gated on loadoutEligible.
   const levelEligible = loadoutEligible
     || (version.startsWith('com2_warlord') && !!abilities.spiritLink && !destinyActive);
   const level = levelEligible ? input.level : 'normal';
   const lvl = getLevelBonuses(level, version);
-  // Warlord: Rebuild makes the unit Mechanical; Artificer retort then grants
-  // Magic Weapons (+10% To Hit, bypass Weapon Immunity) to that unit.
+  // Warlord: Rebuild writes `SCustomAttribute` 1 — Mechanical (`MASTER.CAS:1132`) — for a normal
+  // unit (`OLSpell.CAS:279`) and for a hero (`UnitCalcPre.CAS:685`) alike, so the flag carries no
+  // hero exclusion here. Artificer then gates on that same `GetStat(U,SCustomAttribute,1)=1`
+  // and sets `EncMagic` (`CreateUnit.CAS:38-39`), which is Magic Weapons: +10% To Hit and the
+  // Weapon Immunity bypass. Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
   const isWarlord = version.startsWith('com2_warlord');
   // One `flameBlade` input, two controls: the wizard spell everywhere but Warlord, the arcane
   // unit ability in Warlord (`enchantments.js`). The version decides which arithmetic the shared
@@ -105,17 +122,22 @@ function deriveUnitStats(input) {
   // Altar of the Moon (Warlord, Gnoll building): Gnoll units trained here gain Rage and
   // Poison Immunity; ranged units also gain +2 Ranged Attack. The granted abilities are
   // folded into effectiveAbilities below; the ranged bonus is added to the rtb total.
-  // Gated on the Gnoll race — non-Gnoll units and heroes gain nothing.
+  // Gated on the Gnoll race — non-Gnoll units and heroes gain nothing. What the building writes
+  // is `PROVENANCE[altarOfTheMoon]` (`stats_sequence.js`), from `CreateUnit.CAS`.
   const altarOfTheMoon = isWarlord && !!abilities.altarOfTheMoon
     && baseUnitRace === 'Gnoll' && !isHero;
-  // Unit-specific Altar of the Moon grants: Gnoll Hunters gain Poison 2; Gnoll
-  // Witchdoctors gain Life Steal -1 which replaces their Poison. Applied via effectiveAbilities below.
+  // Unit-specific Altar of the Moon grants, two mutually exclusive `STypeID` branches
+  // (`CreateUnit.CAS:382-390`): 210 Hunters take `SETSTAT(U,AFPoison,1,2,1)`, and 203
+  // Witchdoctors take `AFPoison` 100 plus `AFLifeSteal` -1. 100 is the scripts' no-poison
+  // sentinel — every `AFPoison` increment reads `<>100` and restarts at 1 — so that branch
+  // removes the poison rather than raising it. Applied via effectiveAbilities below.
   const altarHunter = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Hunters');
   const altarWitchdoctor = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Witchdoctors');
   // Altar of the Sun (Warlord, Hawkmen building): Hawkmen units trained here gain +1
   // Figure, except Holy Mother who gains +1 Melee instead. Gated on the Hawkmen race —
   // heroes are excluded and gain nothing. Only these unit bonuses are modelled; the
-  // defending-city High Prayer buff is not.
+  // defending-city High Prayer buff is not. The two writes are
+  // `PROVENANCE[altarOfTheSun:holyMother]` and `PROVENANCE[altarOfTheSun:figures]`.
   const altarOfTheSunEligible = isWarlord
     && !!abilities.altarOfTheSun && baseUnitRace === 'Hawkmen' && !isHero;
   const altarOfTheSunHolyMother = altarOfTheSunEligible && unitName.endsWith('Holy Mother');
@@ -124,54 +146,76 @@ function deriveUnitStats(input) {
   // (folded into def below) and, for units that already have a Fire Breath attack, +2 Fire
   // Breath. Like the Military Workshop breath bonus, it boosts an existing fire breath rather
   // than granting one to melee-only units. Gated on the Draconian race — non-Draconian
-  // units and heroes gain nothing, matching the in-game race-exclusive building.
+  // units and heroes gain nothing, matching the in-game race-exclusive building. The writes are
+  // `PROVENANCE[dragonMound]` (`stats_sequence.js`).
   const dragonMound = isWarlord
     && !!abilities.dragonMound && baseUnitRace === 'Draconian' && !isHero;
   // Ludus Agoge (Warlord, Orc building): Orc units trained here gain +1 Attack (melee, folded
   // into atk below), +1 Resistance, and +1 HP. Legionary units gain +1 Movement instead — not
   // modelled here — so they receive no stat bonus. Gated on the Orc race — non-Orc units,
-  // Legionaries, and heroes gain nothing, matching the in-game race-exclusive building.
+  // Legionaries, and heroes gain nothing, matching the in-game race-exclusive building. The
+  // writes are `PROVENANCE[ludusAgoge]` (`stats_sequence.js`), which also carries the +1 ranged
+  // strength the building's prose description omits.
   const ludusAgoge = isWarlord
     && !!abilities.ludusAgoge && baseUnitRace === 'Orc' && !unitName.endsWith('Legionary') && !isHero;
   // Mother Fungus (Warlord, Goblin building): Goblin units trained here gain +2 Attack (melee,
   // folded into atk below), +10% To Defend (folded into toBlock below), and Poison 1 (boosts an
   // existing poison attack, or grants Poison 1 if it has none). The ×2 Spellcharge bonus is not
   // modelled. Gated on the Goblin race — non-Goblin units and heroes gain nothing, matching the
-  // in-game race-exclusive building.
+  // in-game race-exclusive building. The writes are `PROVENANCE[motherFungus]`
+  // (`stats_sequence.js`).
   const motherFungus = isWarlord
     && !!abilities.motherFungus && baseUnitRace === 'Goblin' && !isHero;
   // Pool of Repentance (Warlord, Rakhshasa building): Rakhshasa units trained here gain +1 Armor
   // (folded into defBase below) and +1 Resistance (folded into res below). Gated on the Rakhshasa
-  // race — non-Rakhshasa units and heroes gain nothing, matching the in-game race-exclusive building.
+  // race — non-Rakhshasa units and heroes gain nothing, matching the in-game race-exclusive
+  // building. The writes are `PROVENANCE[poolOfRepentance]` (`stats_sequence.js`).
   const poolOfRepentance = isWarlord
     && !!abilities.poolOfRepentance && baseUnitRace === 'Rakhshasa' && !isHero;
   // Sancta Basilica (Warlord, High Men building): +3 Resistance for every High Men unit trained
-  // here (folded into res below). The unit-specific Sanctify / Lucky / Magic Immunity grants are
-  // applied earlier via applySanctaBasilicaGrant. Gated on the High Men race; heroes gain nothing.
+  // here (folded into res below). The write is `PROVENANCE[sanctaBasilica]` (`stats_sequence.js`).
+  // The unit-specific Sanctify / Lucky / Magic Immunity grants are applied earlier via
+  // applySanctaBasilicaGrant, whose KNOWN DEFECT note (`stats_identity.js`) records that the
+  // Sanctify half disagrees with `CreateUnit.CAS` — `BACKLOG.md` Q30. Gated on the High Men race;
+  // heroes gain nothing.
   const sanctaBasilica = isWarlord
     && !!abilities.sanctaBasilica && baseUnitRace === 'High Men' && !isHero;
-  // Rust (Warlord Chaos common combat curse): permanently strips magic/orihalcon weapons
-  // (the unit reverts to regular weapons), −3 melee attack (applied in combat_abilities.js), and
-  // eliminates thrown attacks and Large Shield for the rest of combat (below).
-  // Rust targets an enemy regular (non-fantastic) unit; fantastic creatures are immune.
+  // Rust (Warlord Chaos common combat curse): the unit "loses Magical weapons their bonuses and
+  // permanent enchantments permanently", takes "-3 to its Melee and Physical Ranged Attack" and
+  // loses "Thrown Attack and Large Shield abilities until the end of combat"
+  // (`Unit rosters/Warlord mod unit data/HELP.TXT:2782`), whose "Target: enemy regular unit"
+  // line is the fantastic exclusion. The melee half is in combat_abilities.js and the ranged
+  // half is `PROVENANCE[rust:ranged]` below.
   const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust)
     && !isFantasticLive;
-  // Zombies are the one fantastic unit affected by weapon quality: a unit raised as
-  // Zombies keeps its magic/mithril/adamantium weapons (a known game quirk), so weapon
-  // eligibility gets a Zombies exception while armor and level stay fantastic-gated.
+  // The material block has no Fantastic gate in either engine family: it reads
+  // `_UNITS[si].mutations & UM_WEAPON_QUALITY_MASK` and nothing else (`unitcalc.c`,
+  // 131:0x8F02A / com1:0x8F024). The `!isFantasticBase` gate below is the UI's — a fantastic
+  // creature is never equipped — and Zombies is the one case where it is wrong, because a unit
+  // raised as Zombies is a converted normal unit whose persistent mutations survive: CoM 1's
+  // Zombies constructor patch writes `toblock` alone (`R6.1b.evidence.md`, com1:0x8EE28-0x8EE31).
+  // So weapon eligibility gets a Zombies exception while armor and level stay fantastic-gated.
   const weaponEligible = loadoutEligible || identity.specialUnit === 'zombies' || unitName === 'Zombies';
-  // CoM1's Catapult constructor writes weapon quality 9 only for the combat-summoned
-  // Construct Catapult path. That is a direct Magic Weapons write: it gives the Boulder
-  // channel +10% To Hit and lets it bypass Weapon Immunity, while an ordinary Catapult
-  // remains a normal, non-fantastic siege unit.
+  // CoM 1's Catapult constructor writes `_UNITS[si].mutations = 1` for type 0x25 with `wp == 9`
+  // (com1:0x8EEA4-0x8EEAF), and the weapon-quality read at com1:0x8F024 re-reads the record, so
+  // the unit takes quality 1 immediately (`Reference docs/DOS reconstructed/R6.1b.evidence.md`,
+  // *CoM 1 has three unit-type constructor patches*). `wp == 9` is the combat-summoned Construct
+  // Catapult path alone. That is a direct Magic Weapons write: it gives the Boulder channel +10%
+  // To Hit and lets it bypass Weapon Immunity, while an ordinary Catapult remains a normal,
+  // non-fantastic siege unit.
   const constructCatapult = isCoM1 && identityConversion.isConstructCatapult;
   const weaponInput = constructCatapult ? 'normal' : (weaponEligible ? input.weapon : 'normal');
   const weaponPreRust = constructCatapult ? 'magic'
     : (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
   const weapon = rustActive ? 'normal' : weaponPreRust;
   const wpn = weaponBonus(weapon);
-  // Armor quality: CoM/CoM2/Warlord only (doesn't exist in MoM), and unlike
-  // weapons, heroes get none either. The stated value is checked *before* that gate rather than
+  // Armor quality: CoM/CoM2/Warlord only — `PROVENANCE[orihalcon]` (`stats_sequence.js`) carries
+  // no MoM build, because Orihalcon is CoM 1's repurposing of the enchantment slot MoM spends on
+  // Giant Strength (`unitcalc.c`, `UE_ORIHALCON = UE_GIANT_STRENGTH`, com1:0x8F853, inside a
+  // `BUILD == COM1` arm), so neither MoM build has the block. The `!isHero` term is
+  // the control's, not the engine's: the compiled block gates on `EncOrihalcon` alone
+  // (Units.RecalculateUnits.pas:1784, $005A0E4B), and a hero's equipment is items rather than an
+  // armour material. The stated value is checked *before* that gate rather than
   // after it: the gate discards the input for MoM, for heroes and for every ineligible unit, so a
   // check on the gated result would accept anything in exactly the cases the caller is most
   // likely to have got wrong. An absent field is the control's own default, as it is for the
@@ -209,7 +253,8 @@ function deriveUnitStats(input) {
   // live Fantastic flag.
   const baseNormalTrainingUnit = !isHero && !isFantasticBase;
 
-  // Bombs&Grenades can coexist with another ranged/breath attack in the game.
+  // Bombs&Grenades writes the independent Thrown field with no coexistence test, so it can stand
+  // beside another ranged or breath attack — `PROVENANCE[bombsGrenades]` (`stats_sequence.js`).
   // The calculator's single RTB slot represents it directly when that slot is
   // empty, and adds it normally when the selected attack is already Thrown.
   const explosiveEligible = isWarlord && !!abilities.explosive
@@ -219,12 +264,14 @@ function deriveUnitStats(input) {
 
   const baseDoomGazeWithBlazingEyes = blazingEyesDoomGazeForUnit(abilities, unitTypeVal, version);
 
-  // Chaos Channels (Fire Breath option): version-sensitive strength and admission.
-  // Apply_Chaos_Channels reads the DOS unit type's signed base ranged value and shared attack
-  // type before choosing the mutation. MoM 1.31 admits values <= 3; CP 1.60 and CoM 1 admit
-  // only values <= 0. Every DOS build additionally requires type None or Thrown, so Gaze and
-  // either Breath type cannot coexist with a Chaos Channels Fire Breath in the shared slot.
-  // Once admitted, BU_Apply_Specials assigns strength 2 in both MoM builds and 4 in CoM 1.
+  // Chaos Channels (Fire Breath option): version-sensitive strength and admission, all four DOS
+  // facts from `Reference docs/DOS reconstructed/unitcalc.c`. `Apply_Chaos_Channels` reads the
+  // unit *type* table's signed ranged value and shared attack type before choosing the mutation
+  // (131:0xA4E4A): MoM 1.31 rejects `ranged > 3`, CP 1.60 and CoM 1 reject `ranged > 0`
+  // (0xA4E4F), and every build additionally rejects a `ranged_type` that is neither `RAT_NONE`
+  // nor `RAT_THROWN` (0xA4E60/0xA4E71), so Gaze and either Breath type cannot coexist with a
+  // Chaos Channels Fire Breath in the shared slot. Once admitted, `BU_Apply_Specials` *assigns*
+  // `bu->ranged` — 2 in both MoM builds (131:0x8F728) and 4 in CoM 1 (com1:0x8F47C).
   // CoM2/Warlord instead have independent channels and add 4 to Fire Breath.
   const ccFireBreathAbil = !!abilities.ccFireBreath;
   // Chaos Channels *adds* a Fire Breath; it never removes another attack. `Caster.exe`
@@ -243,9 +290,10 @@ function deriveUnitStats(input) {
   const ccFireBreathStrength = version.startsWith('com') ? 4 : 2;
 
   // Lightning Blade (Warlord): the Altar of Storm writes Lightning Breath = Thrown + 1, then
-  // clears Thrown. Without Thrown it assigns strength 1 even beside another independent attack;
-  // with Thrown it preserves that channel's earlier permanent bonuses and adds one. The resulting
-  // Lightning Breath is innate and gains veterancy level bonuses.
+  // clears Thrown — `PROVENANCE[lightningBlade:breath]` (`stats_sequence.js`), from
+  // `CreateUnit.CAS:294-299`. Without Thrown it assigns strength 1 even beside another
+  // independent attack; with Thrown it preserves that channel's earlier permanent bonuses and
+  // adds one. The resulting Lightning Breath is innate and gains veterancy level bonuses.
   const lightningBladeAbil = version.startsWith('com2_warlord') && !!abilities.lightningBlade
     && baseNormalTrainingUnit;
 
@@ -285,8 +333,9 @@ function deriveUnitStats(input) {
   const calcBaseDef = inputBaseDef;
   const calcBaseRes = inputBaseRes;
   const calcBaseHP = inputBaseHP;
-  // The DOS record keeps one melee threshold and one shared secondary threshold, so its card
-  // states exactly those two.
+  // The DOS record keeps one melee threshold and one shared secondary threshold — `melee_tohit`
+  // and `ranged_tohit`, the pair the constructor zeroes together at 131:0x8EE48/0x8EE53
+  // (`unitcalc.c`) — so its card states exactly those two.
   const baseToHitMod = parseInt(input.toHitMod) || 0;
   const baseToHitRtbMod = parseInt(input.toHitRtbMod) || 0;
   const baseToBlkMod = parseInt(input.toBlkMod) || 0;
@@ -322,14 +371,21 @@ function deriveUnitStats(input) {
   // In CoM, doom gaze is not mentioned, so only magical ranged and breath are boosted.
   // Otherwise, a thrown or physical ranged (missile/boulder) attack is converted
   // into Sorcery magical ranged, with a minimum strength of 3. If nothing qualifies,
-  // the unit gains strength-3 Sorcery magical ranged. (All versions convert boulder:
-  // CoM1 lists "missile", Warlord lists "Physical Ranged" — boulder is physical ranged.)
+  // the unit gains strength-3 Sorcery magical ranged. (All versions convert boulder. CoM 1's
+  // helptext narrows the conversion to "its existing thrown or missile attack"
+  // (`Reference docs/CoM helptext.txt:328`), while Warlord's lists "Physical Ranged Attack
+  // converts to Magical at the same strength or 3"
+  // (`Unit rosters/Warlord mod unit data/HELP.TXT:5273`) — and boulder is physical ranged.)
+  // The writes are `PROVENANCE[focusMagic]` (`stats_sequence.js`), whose version list is the
+  // CoM/CoM2-only scope.
   const focusMagicActive = !!(abilities && abilities.focusMagic) && version.startsWith('com');
   // Warlord Vampirism reads all three independent source fields at one region-d position and
-  // truncates their combined total once. Under one walk that is a plain cross-channel read at
-  // the step's own position; the four strength fields all stand at their region-d values there.
+  // truncates their combined total once — `PROVENANCE[vampirism:transfer]` (`stats_sequence.js`).
+  // Under one walk that is a plain cross-channel read at the step's own position; the four
+  // strength fields all stand at their region-d values there.
   const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
-  // Warlord Shadow Strike: adds a Thrown attack at 1 + 1/3 of live melee strength (truncated).
+  // Warlord Shadow Strike: adds a Thrown attack at 1 + 1/3 of live melee strength (truncated) —
+  // `PROVENANCE[shadowStrike:thrown]` (`stats_sequence.js`), from `UnitCalc.CAS:1262-1266`.
   // A unit that already has a Thrown attack instead gains the same amount. It executes after
   // Colossal Strength and Vampirism, so both earlier live melee writes feed it; the leading +1
   // creates Thrown even at zero melee. Because Thrown is a separate pre-melee
@@ -341,11 +397,17 @@ function deriveUnitStats(input) {
   // `SRangedPenalty` bookkeeping write). Breath attacks are not "Ranged" and are untouched.
   // The Armor→Melee transfer, Armor Piercing grant, and First Strike loss are handled below.
   // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
+  // The transfer is `PROVENANCE[blazeOfGlory]` (`stats_sequence.js`), from `UnitCalc.CAS:1494`.
   const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
     && version.startsWith('com2_warlord') && !isHero;
 
-  // Per-card wall position. Combat resolution admits this bonus only when the incoming
-  // attacker is outside; card A/B exchange role and persistent army ownership are irrelevant.
+  // Per-card wall position. Combat resolution admits this bonus only when the incoming attacker
+  // is outside; card A/B exchange role and persistent army ownership are irrelevant.
+  // `@Combat@ApplyAttack` requires a wall, the defender inside it and the attacker outside it
+  // (0x5B27AC-0x5B27D3), then passes `CityWallDefBonus`/`CityWallBrokenDefBonus` as
+  // `EffectiveDefense`'s `extradef` (`Reference docs/Caster binary/CoM2 binary - resolution
+  // helpers.md`, *City Walls is `extradef`, not a RecalculateUnits write*) — so it is a
+  // per-attack value, not a recalculation write, which is why nothing below reads it.
   const cwVal = input.cityWalls === undefined || input.cityWalls === null
     ? 'none' : String(input.cityWalls);
   const cityWallBonus = cwVal === 'none' ? 0 : cwVal === '1' ? 1 : cwVal === '3' ? 3 : null;
@@ -368,14 +430,16 @@ function deriveUnitStats(input) {
   // instead records who initiates this particular exchange, so the per-unit control carries the
   // army/location eligibility and must work from either card. CoM 1's own block gates on the
   // defending side and a non-zero city-enchantment byte, which is a city-combat condition; that
-  // eligibility is likewise the control's, not a card role.
+  // eligibility is likewise the control's, not a card role. The package itself is
+  // `PROVENANCE[heavenlyLight]` (`stats_sequence.js`).
   const heavenlyLightActive = (isCoM1 || isCoM2) && !!abilities.heavenlyLight;
   const badMoonActive = isCoM2 && !!abilities.badMoon && !isFantasticBase;
   const goodMoonActive = isCoM2 && !!abilities.goodMoon && !isFantasticBase;
   const natureConjunctionActive = isCoM2 && !!abilities.natureConjunction
     && isFantasticBase;
-  // Spell Ward is region-c logic. In Warlord it therefore reads the current
-  // Fantastic flag before region-d Spirit Link can clear that flag.
+  // Spell Ward is region-c logic — `PROVENANCE[spellWard]` (`stats_sequence.js`). In Warlord it
+  // therefore reads the current Fantastic flag before the region-d Spirit Link hook
+  // (`UnitCalc.CAS:1306`) can clear that flag.
   const spellWardActive = isCoM2 && fantasticAtModernEncMagicRule
     && abilities.spellWard && abilities.spellWard !== 'none'
     && abilities.spellWard === unitRealm;
@@ -404,6 +468,8 @@ function deriveUnitStats(input) {
   // Eternal Night is side-owned but makes Darkness global. CoM2 only doubles that
   // Darkness atk/def swing; CoM keeps the normal Darkness values.
   // Eternal Night also gives enemy non-Death units -1 resistance in CoM/CoM2.
+  // The three writes are `PROVENANCE[darkness]`, `PROVENANCE[trueLight]` and
+  // `PROVENANCE[eternalNight:enemyResistance]` (`stats_sequence.js`).
   const legacyLightDarkVal = input.enchLightDark || 'none';
   const isCoMVersion = version.startsWith('com');
   const ownEternalNight = !!(abilities && abilities.eternalNight) || !!input.eternalNight;
@@ -412,19 +478,24 @@ function deriveUnitStats(input) {
   // Enemy Eye of Heaven strips this unit's gaze attacks (the opponent gains True Sight).
   const enemyEyeOfHeaven = !!input.enemyEyeOfHeaven;
   const hasDarkness = !!input.darkness || legacyLightDarkVal === 'darkness' || hasAnyEternalNight;
-  // True Light was removed in CoM 1 & 2, but Warlord re-introduces it as a Life
-  // common combat enchantment — so enable it for MoM (non-CoM) and Warlord only.
+  // True Light was removed in CoM 1 & 2 — CoM 1 reuses its combat-enchantment slot for Supreme
+  // Light (`unitcalc.c`, `CE_SUPREME_LIGHT_ATTACKER = CE_TRUE_LIGHT_ATTACKER`) — but Warlord
+  // re-introduces it as a "Life Common - Combat Enchantment"
+  // (`Unit rosters/Warlord mod unit data/HELP.TXT:3199`), so enable it for MoM and Warlord only.
   const hasTrueLight = (!!input.trueLight || legacyLightDarkVal === 'trueLight') && (!isCoMVersion || isWarlord);
-  // Modern Eternal Night sets the Death-package loop count to two. The Life branch is
-  // outside that loop and still executes exactly once; DOS Darkness is never doubled.
+  // Modern Eternal Night sets the Death-package loop count to two: any wizard holding
+  // `GEEternalNight` raises `k` from 1 to 2 and the Death branch applies its attack/Defense
+  // package `k` times, while the Life (race 19) branch and Resistance sit outside that loop and
+  // run once (Units.RecalculateUnits.pas:2163-2185). DOS Darkness has no such multiplier.
   const darknessAtkDefMagnitude = hasDarkness
     ? (hasAnyEternalNight && isCoM2 && unitRealm === 'death' ? 2 : 1)
     : 0;
   const darknessResMagnitude = hasDarkness ? 1 : 0;
   const eternalNightEnemyResPenalty = enemyEternalNight && isCoMVersion && unitRealm !== 'death' ? -1 : 0;
-  // Warlord Eternal Night ("Poor Vision"): enemy non-Death units suffer -2 to ranged
-  // attack strength (missile/boulder and magic ranged). Thrown and breath are
-  // short-range and not affected. (Per helptext: "-2 Ranged Attack power".)
+  // Warlord Eternal Night ("Poor Vision"): "All non-Death creatures get -2 Ranged Attack power
+  // as long as Eternal Night is in effect" (`Unit rosters/Warlord mod unit data/HELP.TXT:5768`),
+  // so missile/boulder and magic ranged take it while Thrown and breath — short-range, not
+  // "Ranged" — do not. The write is `PROVENANCE[eternalNight:poorVision]` (`stats_sequence.js`).
   const warlordEternalNightActive = enemyEternalNight && isWarlord && unitRealm !== 'death';
   let darknessAtkBonus = 0;
   let darknessDefBonus = 0;
@@ -451,12 +522,14 @@ function deriveUnitStats(input) {
   // Lionheart: version-dependent HP bonus (+3 in MoM; floor(8/figs) in CoM/CoM2).
   // RTB bonus (+3) applies to non-magical ranged (missile/boulder) in all versions.
   // Thrown gets the bonus only in MoM; CoM/CoM2/Warlord drop the thrown bonus.
+  // The write is `PROVENANCE[lionheart]` (`stats_sequence.js`), which carries all five builds.
   const lionheartActive = !!(abilities && abilities.lionheart);
   const lionheartHpMod = lionheartActive
     ? (version.startsWith('mom') ? 3 : Math.floor(8 / baseFigs))
     : 0;
   // Endurance: CoM gives +2 defense; CoM2 instead gives +4 total HP split evenly
-  // between figures, with a minimum of +1 HP per figure.
+  // between figures, with a minimum of +1 HP per figure. The write is `PROVENANCE[endurance]`
+  // (`stats_sequence.js`); the +4 is the configured `EnduranceHpBonus`, not a literal.
   const enduranceActive = !!(abilities && abilities.endurance);
   const enduranceDefMod = enduranceActive && version.startsWith('com_') ? 2 : 0;
   const enduranceHpMod = enduranceActive && version.startsWith('com2')
@@ -491,7 +564,8 @@ function deriveUnitStats(input) {
   // or heroes. Penalises stats by −1 melee, −1 ranged, −2 armor and −2 resistance per
   // experience level of the target. Experience level counts Recruit (the calculator's "normal")
   // as level 1, so the multiplier is levelRank + 1: Recruit −1/−1/−2/−2, Elite −4/−4/−8/−8.
-  // Fantastic creatures are not valid targets and take no penalty.
+  // Fantastic creatures are not valid targets and take no penalty. The write is
+  // `PROVENANCE[soulFlay]` (`stats_sequence.js`).
   const soulFlayActive = version.startsWith('com2_warlord')
     && !!(abilities && abilities.soulFlay)
     && !isFantasticBase;
@@ -506,15 +580,18 @@ function deriveUnitStats(input) {
   // any affected unit (no fantastic exclusion). The To-Hit penalty is applied below. The
   // script writes `SRanged`, the conventional ranged field, so the penalty lands on the
   // ranged channel only; Warlord's independent Thrown and Breath fields are untouched.
+  // The write is `PROVENANCE[plague]` (`stats_sequence.js`).
   const plagueActive = version.startsWith('com2_warlord') && !!(abilities && abilities.plague);
 
   // Pox Host (Warlord global combat debuff): a Goblin Poxbearer unit present on the
   // battlefield spreads Goblin Pox to every unit, with the effect varying by race.
   // Goblin units suffer −1 attack, −1 ranged, −1 armor (no resistance penalty); non-Goblin
   // units suffer −3 attack, −3 ranged, −3 armor, −1 resistance. No To-Hit penalty, unlike
-  // Plague. The Warlord manual instead gives −1/−3 resistance; the script's branches settle it,
-  // and agree with the in-game helptext (GOBLIN POX spell and POX HOST UA). Read from the
-  // global toggle; the unit's race (empty on custom units) determines which branch applies.
+  // Plague. The Warlord manual instead gives −1/−3 resistance; the script's branches settle it
+  // (`PROVENANCE[goblinPox]`, `stats_sequence.js`) and agree with the in-game helptext: "all
+  // Goblin units suffer -1 Attack, and -1 Armor, while all non-Goblin units suffer -3 Attack,
+  // -3 Armor, and -1 Resistance" (`Unit rosters/Warlord mod unit data/HELP.TXT:6428`, POX HOST).
+  // Read from the global toggle; the unit's race (empty on custom units) picks the branch.
   const poxHostActive = version.startsWith('com2_warlord') && !!input.poxHost;
   const poxHostIsGoblin = unitRace === 'Goblin';
   const goblinPoxAtkMod = poxHostIsGoblin ? -1 : -3;
@@ -525,7 +602,8 @@ function deriveUnitStats(input) {
   // creatures in combat with −20% To-Hit, −20% To-Defend and −2 Resistance for the
   // rest of battle. Only fantastic creatures are affected (the Confusion half of the
   // spell is not modelled here). The To-Hit/To-Defend penalties are applied in the
-  // toHit/toBlock section below; here we handle the −2 Resistance.
+  // toHit/toBlock section below; here we handle the −2 Resistance. The write is
+  // `PROVENANCE[greatUnbinding]` (`stats_sequence.js`).
   const greatUnbindingActive = version.startsWith('com2_warlord')
     && !!(abilities && abilities.greatUnbinding)
     && isFantasticBase;
@@ -538,7 +616,10 @@ function deriveUnitStats(input) {
   //   holds the resistance bonus directly). The Resistance resources are not independent:
   //   Nightshade's later snapshot-based write replaces the Power-mineral bonus.
   // Forester is a terrain/movement perk with no combat effect, so only the +1 ranged
-  // attack from Wild game is reflected in the stats.
+  // attack from Wild game is reflected in the stats. The five writes are
+  // `PROVENANCE[naturalSelection:coal|iron|wildGame|nightshade|powerMinerals]`
+  // (`stats_sequence.js`), all from `CreateUnit.CAS`, and the Nightshade anchor is where the
+  // snapshot ordering that makes the two Resistance resources non-independent is recorded.
   const naturalSelectionEligible = isWarlord && !isFantasticBase && !isHero;
   const naturalSelectionCoal = naturalSelectionEligible && !!(abilities && abilities.coal);
   const naturalSelectionIron = naturalSelectionEligible && !!(abilities && abilities.iron);
@@ -547,7 +628,8 @@ function deriveUnitStats(input) {
   const naturalSelectionNightshade = naturalSelectionEligible
     && naturalSelectionNightshadeCount > 0;
   // Nature Link (Warlord rename of Land Linking): grants +1 resistance to any unit
-  // (normal or fantastic). The fantastic-only +2 melee/def/breath is handled with Land Linking.
+  // (normal or fantastic) — `PROVENANCE[natureLink]` (`stats_sequence.js`). The fantastic-only
+  // +2 melee/def/breath is `PROVENANCE[landLinking]` beside it.
   const natureLinkActive = isWarlord && !!(abilities && abilities.landLinking);
   const naturalSelectionPowerMineralsCount = naturalSelectionEligible
     ? Math.max(0, parseInt(abilities.powerMinerals) || 0)
@@ -557,7 +639,8 @@ function deriveUnitStats(input) {
   // Survival Instinct (Warlord addition): newly trained normal units gain a small
   // +3% to +7% To-Defend from gold-producing resources in the city's surroundings.
   // The numeric input holds that To-Defend percentage; applied to normal units only
-  // (the fantastic-creature buff is the separate survivalInstinct checkbox).
+  // (the fantastic-creature buff is the separate survivalInstinct checkbox). The write is
+  // `PROVENANCE[survivalInstinctToBlock]` (`stats_sequence.js`), from `CreateUnit.CAS`.
   const survivalInstinctToBlkBonus = isWarlord && isNormalUnitType(unitTypeVal)
     ? Math.max(0, parseInt(abilities.survivalInstinctToBlock) || 0)
     : 0;
@@ -572,16 +655,23 @@ function deriveUnitStats(input) {
   // (missile/boulder), and thrown — but not magic ranged or breath. Like Metal Fires
   // it also upgrades a normal weapon to magic (bypasses Weapon Immunity) — applied to
   // effectiveWeapon below. (The fire-line damage to attackers crossing the wall is the
-  // separate global Wall of Fire toggle, handled in combat_special_attacks.js.)
+  // separate global Wall of Fire toggle, handled in combat_special_attacks.js.) The strength
+  // write is `PROVENANCE[wallOfFire:garrison]` (`stats_sequence.js`), and the helptext states
+  // the package: "Friendly regular units gain +1 Melee Attack, +1 Physical Ranged Attack, and
+  // +1 Thrown Attack, and their attacks can ignore Weapon Immunity"
+  // (`Unit rosters/Warlord mod unit data/HELP.TXT:2761`).
   const wofDefenderBonusActive = isWarlord && !!(abilities && abilities.wallOfFireBoost)
     && isNormalUnitType(unitTypeVal);
 
-  // Flame Blade: +2 to missile and thrown rtb only (not boulder, magic).
-  // Warlord Flame Blade / Fiery Blade (per in-game helptext): +2 to missile and thrown.
+  // Flame Blade: +2 to missile and thrown rtb only (not boulder, magic) —
+  // `PROVENANCE[flameBlade]` (`stats_sequence.js`), which carries all five builds, and Warlord's
+  // helptext says the same in words: "+2 Missile-type Ranged and Thrown Attacks"
+  // (`Unit rosters/Warlord mod unit data/HELP.TXT:5300`, and :5305 for Fiery Blade).
   // Combat-cast Flame Blade's +1 Fire Breath is a separate region-d script write below;
   // neither blade boosts boulder here.
-  // Warlord Fiery Fury: +2 to missile, boulder, and thrown for regular units only;
-  // bonuses (except boulder) do not stack with Flame Blade.
+  // Warlord Fiery Fury is the wider one — "Thrown/Missile/Rock Ranged Attacks by 2" (:5885),
+  // regular units only — and the two do not stack except on that Rock/boulder arm (:5886).
+  // Its write is `PROVENANCE[fieryFury]`.
   // Flame Blade / Fiery Blade also upgrade the unit's normal weapon to magic (bypasses Weapon Immunity);
   // Fiery Fury does the same for regular units.
   const warlordFieryBlade = isWarlord && !!abilities.fieryBlade;
@@ -597,8 +687,9 @@ function deriveUnitStats(input) {
     && !isCoMVersion && !abilities.flameBlade;
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : 0;
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
-  // Fiery Fury melee +3 for regular units; non-cumulative with Flame Blade / Fiery Blade
-  // (combat_abilities.js already adds +3 melee for a Warlord blade effect).
+  // Fiery Fury melee +3 for regular units — "an increase in Melee Attacks by 3"
+  // (`Unit rosters/Warlord mod unit data/HELP.TXT:5885`) — non-cumulative with Flame Blade /
+  // Fiery Blade (combat_abilities.js already adds +3 melee for a Warlord blade effect).
   const ffMeleeBonus = ffRegularBonus && !hasWarlordBlade ? 3 : 0;
 
   // Warlord Colossal Strength: +1 + 40% (rounded down) of Melee, Physical Ranged, and
@@ -616,7 +707,9 @@ function deriveUnitStats(input) {
   const colossalScaled = (subtotal) => 1 + Math.floor(0.4 * Math.max(0, subtotal));
   const holyArmorActive = !!(abilities && abilities.holyArmor);
   // Pillar of Faith (Warlord, Life rare city enchantment): +1 Resistance per qualifying
-  // building in the training city. The script has no cap; the numeric input holds the count.
+  // building in the training city — `PROVENANCE[pillarOfFaith]` (`stats_sequence.js`), whose
+  // `CreateUnit.CAS` span is the `FAITH` accumulator. The script has no cap; the numeric input
+  // holds the count.
   const pillarOfFaithCount = isWarlord && !isFantasticBase && !isHero
     ? Math.max(0, parseInt(abilities.pillarOfFaithRes) || 0)
     : 0;
@@ -636,6 +729,8 @@ function deriveUnitStats(input) {
   // 'berserkWarlord' (Warlord Troll Medicineman buff, UI-gated to Warlord): +15% To
   // Hit, +1 combat movement (irrelevant here), and -10% To Block. No atk-doubling
   // and no def-zeroing.
+  // The two writes are `PROVENANCE[berserk]` (MoM builds only) and
+  // `PROVENANCE[berserkWarlord]` (`stats_sequence.js`), whose version lists are the split.
   const classicBerserk = !!(abilities && abilities.berserk) && version.startsWith('mom');
   const warlordBerserk = !!(abilities && abilities.berserkWarlord) && isWarlord;
   // `B.attack > 0`, the melee-presence test the **compiled** blocks make. It is a per-write
@@ -682,10 +777,12 @@ function deriveUnitStats(input) {
   // Holy Weapon: +10% To Hit on melee, missile, and boulder attacks. Also applies to thrown
   // in all versions except MoM 1.31 (bug). Does NOT affect magic ranged, fire/lightning
   // breath, or gaze attacks. Also upgrades normal weapon to magic (bypasses Weapon Immunity).
+  // The write is `PROVENANCE[holyWeapon]` (`stats_sequence.js`), which carries all five builds.
   const hwActive = !!(abilities && abilities.holyWeapon);
   const hwMeleeToHit = hwActive ? 10 : 0;
   // Rust clears the persistent material flags before recalculation, so Heavenly Light sees the
-  // post-Rust base material record rather than the pre-curse UI selection.
+  // post-Rust base material record rather than the pre-curse UI selection. The write itself is
+  // `PROVENANCE[heavenlyLight]` (`stats_sequence.js`); this is its material gate.
   //
   // Both engines read the same fact — the persistent record's weapon-quality bits — and grant the
   // threshold only where they are clear. CoM 1 states it as `cl = _UNITS[si].mutations` followed
@@ -712,17 +809,22 @@ function deriveUnitStats(input) {
     && !!(abilities.trueSight || abilities.eyeOfHeaven) ? 5 : 0;
   const weaponUpgradedByHW = hwActive && weapon === 'normal';
   // Two effects with different scopes shared one test here: Wraith Form is an all-versions
-  // enchantment whose bypass arm is CoM 1 on, while Ruler of Underworld is Caster.exe only, so
-  // `startsWith('com')` admitted it into CoM 1. Each disjunct now carries its own scope.
+  // enchantment whose bypass arm is CoM 1 on, while Ruler of Underworld is Caster.exe only —
+  // `PROVENANCE[rulerOfUnderworldEligibility]` (`combat_special_attacks.js`) carries the two
+  // modern builds alone, and its `GEKingOfUnderworld` grant is the compiled
+  // `U.EnchantmentFlags[EncWraithForm] := True` at Units.RecalculateUnits.pas:1515-1517. So
+  // `startsWith('com')` wrongly admitted it into CoM 1; each disjunct now carries its own scope.
   const wraithFormBypassesWI = weapon === 'normal'
     && !!abilities
     && ((version.startsWith('com') && !!abilities.wraithForm)
       || rulerOfUnderworldActiveForUnit(abilities, version));
-  // Warlord Wall of Fire's defender bonus mirrors Metal Fires, which also upgrades
-  // the unit's weapon to magic (bypasses Weapon Immunity) for its non-magic attacks.
+  // Warlord Wall of Fire's defender bonus mirrors Metal Fires: "their attacks can ignore Weapon
+  // Immunity" (`Unit rosters/Warlord mod unit data/HELP.TXT:2761`), for its non-magic attacks.
   const weaponUpgradedByWoF = wofDefenderBonusActive && weapon === 'normal';
-  // Note: Eldritch Weapon also upgrades a normal weapon to magic, but ONLY for the
-  // melee attack (per the MoM Eldritch Weapon page). It is therefore NOT folded into
+  // Note: Eldritch Weapon also upgrades a normal weapon to magic, but ONLY for the melee attack:
+  // its first bonus turns the enchanted unit's Melee Attack into a Magical Melee Attack, and it
+  // names no other channel (`Reference docs/MoM source - Fandom site/Eldritch Weapon.md`,
+  // *Magical Attack*). It is therefore NOT folded into
   // this global weapon type — it is applied to the melee Weapon-Immunity check only
   // (see meleeWeaponWI in combat_effects.js). Its ranged/thrown attacks stay non-magical, so
   // Weapon Immunity still raises the target's defense against them.
@@ -737,9 +839,12 @@ function deriveUnitStats(input) {
 
   // ApplyAttack passes `EncMagic or magicranged` to EffectiveDefense. Keep EncMagic as
   // calculated state instead of approximating it later from weapon quality and final unit
-  // type. Only the material grant made by ApplyMagicWeapons can be suppressed by an enemy
-  // King/Ruler of Underworld. Independent EncMagic writes survive whether they occur before
-  // that helper (hero standing and Warlord Wall of Fire) or after it.
+  // type. Only the material grant made by `ApplyMagicWeapons` can be suppressed by an enemy
+  // King/Ruler of Underworld: a rival `GEKingOfUnderworld` clears the local `b` and so skips
+  // `Units[i].EnchantmentFlags[EncMagic] := True` alone, clearing neither an existing flag nor
+  // any material stat or To-Hit write below it (Units.RecalculateUnits.pas:613-626, $00598EA7).
+  // Independent EncMagic writes therefore survive whether they occur before that helper (hero
+  // standing and Warlord Wall of Fire) or after it.
   const modernEncMagicFromMaterial = version.startsWith('com2_') && weapon !== 'normal';
   const modernEncMagicIndependentOfMaterial = version.startsWith('com2_')
     && (isHero || fantasticAtModernEncMagicRule
@@ -788,7 +893,9 @@ function deriveUnitStats(input) {
   // --- One derivation slot per record strength field (F80) ---
   //
   // `Caster.exe` holds Ranged, Thrown, Fire Breath and Lightning Breath as four named fields of
-  // one unit record, copies the record once and mutates those fields in place. One walk therefore
+  // one unit record — `U.ranged`, `U.thrown`, `U.firebreath`, `U.lightningbreath` in
+  // `Reference docs/Caster binary/Units.RecalculateUnits.pas` — copies the record once and
+  // mutates those fields in place. One walk therefore
   // derives every channel: a slot is one strength field plus the type pair and the secondary To
   // Hit modifier that field is read with (steps.js, STAT_DERIVATION_SLOTS).
   //
@@ -855,7 +962,9 @@ function deriveUnitStats(input) {
     // What `base:stat:base` seeds, the chain's first entry: the permanent record's identity
     // alone. The Marionette realm retype is `SETSTAT(U,SRangedType,0,…)` — record selector `0`,
     // the calculated record — so it is `b:marionette:rangedType` at its own position and not a
-    // seed here (F107). Wanderer's own permanent Chaos type comes from its roster record.
+    // seed here (F107), on `PROVENANCE[marionette:rangedType]` (`stats_sequence.js`) from
+    // `UnitCalcPre.CAS`. Wanderer's own permanent Chaos type comes from its roster record
+    // (`Unit rosters/Warlord mod unit data/UNITS.INI` [362]: `RangedType=30` at `Ranged=0`).
     const baseSequenceRangedType = permanentRangedType;
     const baseSequenceThrownType = permanentThrownType;
 
@@ -865,18 +974,20 @@ function deriveUnitStats(input) {
     // zero-ammo unit lacks conventional Ranged. The one-round calculator therefore infers
     // that gate from the permanent conventional-ranged snapshot and imports no ammo field.
     // Its +50% write is added to the base phase below, after the earlier permanent ranged
-    // writes it reads have been assembled.
+    // writes it reads have been assembled — `PROVENANCE[energyCannon]` (`stats_sequence.js`).
     const energyCannon = isWarlord && !!abilities.energyBeamWeapons
       && !!abilities.powerEngine && hasPermanentRangedStat;
-    // The conversion reads and writes `SRanged`, so the slot that takes it is the one holding
+    // The conversion reads and writes `SRanged` (`CreateUnit.CAS`, on the anchor above), so the
+    // slot that takes it is the one holding
     // the record's Ranged field: the `ranged` channel in the modern record, the shared slot in
     // the DOS ones. It is the same field the record-level gate below resolves, and the two have
     // to name one slot or the +50% strength and the Destruction rider disagree (F127).
     const energyCannonOwnsThisSlot = isCoM2 ? channelKey === 'ranged' : !isChannelSlot;
 
-    // The Chaos Channels fire-breath write — `a:` in the modern builds, `c:` in the DOS ones.
-    // The version-specific admission gate reads the permanent record; whether the slot is free
-    // for the write is the step's own live read.
+    // The Chaos Channels fire-breath write — `a:` in the modern builds, `c:` in the DOS ones,
+    // both on `PROVENANCE[chaosChannels:fireBreath]` (`stats_sequence.js`). The version-specific
+    // admission gate reads the permanent record; whether the slot is free for the write is the
+    // step's own live read.
     const hasGazeAttack = gazeType !== 'none'
       || abilities.stoningGaze != null
       || abilities.deathGaze != null
@@ -892,15 +1003,20 @@ function deriveUnitStats(input) {
 
     // Blackpowder-derived bonuses (see the Military Workshop / Rocketry gate above). These read
     // the permanent source fields, as the script's own gates do, and so survive later channel
-    // conversions; the missile-to-boulder projectile upgrade is made by `base:militaryWorkshop`.
+    // conversions; the missile-to-boulder projectile upgrade is made by `base:militaryWorkshop`,
+    // `PROVENANCE[militaryWorkshop]` (`stats_sequence.js`).
     // Doom attack: Armor Piercing is wasted (Doom ignores armor), so grant strength instead.
     const blackpowderGrantsAP = blackpowderPhysicalSource
       && !abilities.doom && !abilities.armorPiercing;
     // +1 Poison, applied on top of any existing poison (including the Gnoll Altar grants below).
     const blackpowderBasePoison = altarHunter ? 2 : (altarWitchdoctor ? 0 : (abilities.poison || 0));
-    // Warlord Venom enchantment: +1 Poison (boosting any existing/granted poison, or granting
-    // Poison 1 if the unit has none) plus Poison Immunity. The base it boosts mirrors the final
-    // poison precedence of the spreads below (last-wins: motherFungus > militaryWorkshop > altars).
+    // Warlord Venom enchantment: `UnitCalc.CAS:60-69` sets `APoisonImmunity` and then either
+    // restarts `AFPoison` at 1 from the 100 no-poison sentinel or increments it, so it boosts any
+    // existing or granted poison and grants Poison 1 to a unit with none — matching "Enchanted
+    // unit gains Poison Immunity and coats their weapons with deadly venom, granting +1 Poison
+    // attack rating" (`Unit rosters/Warlord mod unit data/HELP.TXT:5785`). The base it boosts
+    // mirrors the final poison precedence of the spreads below (last-wins: motherFungus >
+    // militaryWorkshop > altars).
     const venom = version.startsWith('com2_warlord') && !!(abilities && abilities.venom);
     const venomBasePoison =
         motherFungus ? (abilities.poison || 0) + 1
@@ -909,9 +1025,10 @@ function deriveUnitStats(input) {
       : altarHunter ? 2
       : (abilities.poison || 0);
 
-    // Natural Selection — Wild game snapshots the permanent conventional-ranged field
-    // before any later conversion. Read the value at the source step and keep the channel
-    // predicate separate so a converted Thrown field cannot stand in for the saved RNG field.
+    // Natural Selection — Wild game snapshots the permanent conventional-ranged field before any
+    // later conversion; the snapshot is on `PROVENANCE[naturalSelection:wildGame]`
+    // (`stats_sequence.js`). Read the value at the source step and keep the channel predicate
+    // separate so a converted Thrown field cannot stand in for the saved RNG field.
     const naturalSelectionWildGameRangedSlot = isChannelSlot
       ? channelKey === 'ranged'
       : RANGED_TYPES.includes(rtbTypeRaw);
@@ -919,6 +1036,7 @@ function deriveUnitStats(input) {
       && !!(abilities && abilities.wildGame) && naturalSelectionWildGameRangedSlot;
     // A channel field carries ranged, thrown AND breath (distinguished by its type pair), so it
     // is also what Explosive's fire-breath doubling scales — that effect has no stat of its own.
+    // The doubling is `PROVENANCE[upgradedExplosive:fireBreath]` (`stats_sequence.js`).
     const upgradedExplosive = explosiveEligible && blackpowder;
     // CreateUnit.CAS applies Energy Cannon after Artificer, Blackpowder,
     // Altar of the Moon, and Natural Selection. The +50% therefore reads those
@@ -962,8 +1080,10 @@ function deriveUnitStats(input) {
 
   // The channel slots. Each of these effects is a real engine write with no existence gate, so
   // the field it writes has to exist for the write to land — `SRanged`/`SThrown`/`SFireBreath`
-  // are fields of the record, not attacks the unit has to already own. Seeding the field here is
-  // what lets the creating step run at its own position inside the one walk.
+  // are fields of the record, not attacks the unit has to already own. Each seeding decision
+  // below names the `UnitCalc.CAS`/`UnitCalcPre.CAS`/`CreateUnit.CAS` line whose write is
+  // ungated. Seeding the field here is what lets the creating step run at its own position
+  // inside the one walk.
   const channelSlots = [];
   if (isCoM2 && input.modernAttacks) {
     const modernInputs = { ...input.modernAttacks };
@@ -997,8 +1117,9 @@ function deriveUnitStats(input) {
     if ((marionetteOwned || marionetteStrayed) && !modernInputs.ranged) {
       modernInputs.ranged = { strength: 0, type: 'none' };
     }
-    // Unconditional: the grant is `firebreath += 4` whatever else the unit carries, so the
-    // channel must exist even beside a gaze, a lightning breath or a thrown attack.
+    // Unconditional: the grant is `firebreath += 4` whatever else the unit carries
+    // (`Caster.exe` $00599F3E, above), so the channel must exist even beside a gaze, a lightning
+    // breath or a thrown attack.
     if (recordContext.ccFireBreathGranted && !modernInputs.fireBreath) {
       modernInputs.fireBreath = { strength: 0, type: 'none' };
     }
@@ -1123,7 +1244,9 @@ function deriveUnitStats(input) {
   const rangedFieldContext = isCoM2
     ? (channelContexts.find(context => context.channelKey === 'ranged') || null)
     : recordContext;
-  // Alumni of Academy is a permanent +2-figure write made when a unit is trained. Academy is
+  // Alumni of Academy is a permanent +2-figure write made when a unit is trained —
+  // `PROVENANCE[alumniOfAcademy:figures]` (`stats.js`, the figure sequence below), from
+  // `CreateUnit.CAS` and `OverlandEndTurn.CAS`. Academy is
   // Halfling-only, so the condition is race-gated; the script admits Halfling Rocs (type 221,
   // their Fantastic Stable unit) unconditionally, and that branch reads no field, so it survives
   // a record with no Ranged field. The other branch rejects Mechanical units and reads the field
@@ -1229,6 +1352,9 @@ function deriveUnitStats(input) {
   });
   // `cAfterWarp` is a second splice point inside region c, for the effects the engine writes
   // after its Warp Creature block — Tactician in every CoM engine, plus Supreme Light in CoM 1.
+  // The addresses that fix that boundary are on `afterWarp` in `combat_abilities.js`: CoM 1
+  // moved Warp to the front (0x907AA), while CoM2/Warlord run it late (+0x0BA3C) with only
+  // Tactician (+0x0C890) after it.
   const abilByPhase = {
     base: [], a: [], b: [], cBeforeHolyArmor: [], c: [], cAfterWarp: [], d: [], e: [],
   };
@@ -1238,21 +1364,27 @@ function deriveUnitStats(input) {
     abilByPhase[group].push(step);
   }
 
-  // The two gaze strengths live in the same `.ranged` slot as the DOS `rtb` value, so they are
-  // fields of the same record and are written by the same steps — with the narrower set of
-  // modifiers a gaze takes: the ability lump, node aura, Darkness/True Light, Chaos Surge and
-  // their own level ladder, but no weapon, no per-attack-type ranged bonus, and no Shatter.
+  // The two gaze strengths live in the same `.ranged` slot as the DOS `rtb` value — a gaze is a
+  // `ranged_type` of 103/104/105 on the one shared field (`unitcalc.c`, `RAT_STONING_GAZE`
+  // /`RAT_MULTIPLE_GAZE`/`RAT_DEATH_GAZE`) — so they are fields of the same record and are
+  // written by the same steps, with the narrower set of modifiers a gaze takes: the ability lump,
+  // node aura, Darkness/True Light, Chaos Surge and their own level ladder, but no weapon, no
+  // per-attack-type ranged bonus, and no Shatter.
   const baseGazeRanged = gazeDisabled ? 0 : recordContext.dosGazeStrength;
-  // DOS type 104 uses the shared strength as Doom Gaze damage. The modern engines instead
-  // carry an independent Doom Gaze field.
+  // DOS type 104 uses the shared strength as Doom Gaze damage — Automatic Damage assigns
+  // `hits = attack_strength` and jumps past both rolls (0x9A1E6 -> 0x9A204), as the gaze
+  // distribution in `combat_special_attacks.js` records. The modern engines instead carry an
+  // independent Doom Gaze field.
   const baseDoomGaze = gazeDisabled ? 0
     : (!isCoM2 && recordContext.gazeType === 'gaze_multiple'
       ? recordContext.calcBaseRtb : (effectiveAbilities.doomGaze || 0));
   // Whether a gaze *stands in* the record, which is not the same question as what strength it
   // carries. In the DOS record one `.ranged` byte holds conventional ranged, Thrown, Breath or a
   // gaze, and what says a gaze stands there is the record's **type** — RAT 103/104/105 — not the
-  // strength beside it: Gorgons ship `Gaze(Stoning)` at Ranged 0 and have the gaze, with only its
-  // hidden conventional component empty. So the region-`e` floor asks the type, and the seeded
+  // strength beside it: CoM 6.08's Gorgons ship `"ranged_type": "Gaze(Stoning)"` at `"ranged": 0`
+  // (`Unit rosters/CoM 6.08 unit data.json`) and have the gaze, with only its hidden conventional
+  // component empty — the same roster entry carries `"ranged": 1` in both MoM builds. So the
+  // region-`e` floor asks the type, and the seeded
   // strength decides nothing (F122). The modern engines carry an independent Doom Gaze field with
   // no type of its own, so there strength is the only statement of existence and this is exactly
   // `baseDoomGaze > 0`.
@@ -1263,7 +1395,8 @@ function deriveUnitStats(input) {
     && ((!isCoM2 && recordContext.gazeType === 'gaze_multiple')
       || (effectiveAbilities.doomGaze || 0) > 0);
   // Focus Magic's ranged branch reads the record's Thrown field and writes its Ranged one, so the
-  // two ends of `U.ranged := U.thrown` are slot identities. The DOS-shaped shared slot is both at
+  // two ends of `U.ranged := U.thrown` (Units.RecalculateUnits.pas:885-891) are slot identities.
+  // The DOS-shaped shared slot is both at
   // once, which is why the branch is a retype in place there; a modern record with no Thrown
   // field has no `U.thrown` to read, which a null source is.
   const focusMagicBranchSlots = [{ target: recordContext, source: recordContext }];
@@ -1295,7 +1428,8 @@ function deriveUnitStats(input) {
     && (context.channelKey ? context.channelKey === 'fireBreath'
       : u[context.thrownTypeField] === 'fire');
   // Supreme Light's eligibility is a live read of the record's ranged type at the block's own
-  // position — region `e` in CoM2/Warlord, after CoM 1's Warp block in CoM 1.
+  // position — region `e` in CoM2/Warlord, after CoM 1's Warp block in CoM 1. The write is
+  // `PROVENANCE[supremeLight]` (`stats_sequence.js`).
   const supremeLightEligibleAt = (u, context) => supremeLightActiveForUnit(
     abilities, unitTypeVal, version,
     { liveRangedType: u[context.rangedTypeField], baseRangedType: context.rtbTypeRaw });
@@ -1676,18 +1810,20 @@ function deriveUnitStats(input) {
   const effectiveDoomGaze = statUnit.doomGaze;
   const finalRangedType = statUnit[recordContext.rangedTypeField];
   const finalThrownType = statUnit[recordContext.thrownTypeField];
-  // Psycho Force and Pneuma Field are steps in `d` (see the sequence above), so their reads of
-  // Resistance happen where the engine takes them. Warp Resist having zeroed Resistance is
-  // supplied by construction, since `warpResist` is a step in `c`.
+  // Psycho Force and Pneuma Field are steps in `d` — `UnitCalc.CAS:1413-1417` and `:1419-1425`,
+  // on `PROVENANCE[psychoForce]` and `PROVENANCE[pneumaField]` (`stats_sequence.js`) — so their
+  // reads of Resistance happen where the engine takes them. Warp Resist having zeroed Resistance
+  // is supplied by construction, since `warpResist` is a step in `c`.
   const pneumaAbilities = pneumaFieldActive
     ? { ...effectiveAbilities, lifeSteal: statUnit.lifeSteal }
     : effectiveAbilities;
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...pneumaAbilities, negateFirstStrike: true }
     : pneumaAbilities;
-  // DOS Doom damage is the shared strength slot, so the resolver's `doomGaze` value is the
-  // derived one. The projection asks the same existence question the region-`e` floor asks
-  // (F122): a type-104 record at strength 0 an earlier step raised carries the raised value.
+  // DOS Doom damage is the shared strength slot — `RAT_MULTIPLE_GAZE` is a `ranged_type`, not a
+  // field of its own (`unitcalc.c`) — so the resolver's `doomGaze` value is the derived one. The
+  // projection asks the same existence question the region-`e` floor asks (F122): a type-104
+  // record at strength 0 an earlier step raised carries the raised value.
   const shapedGazeAbilities = !isCoM2 && hasDoomGazeSlot
     ? { ...combatAbilitiesBase, doomGaze: effectiveDoomGaze }
     : combatAbilitiesBase;
@@ -1702,8 +1838,10 @@ function deriveUnitStats(input) {
   // Hierophany (Warlord Life uncommon combat curse): the landed curse strips the target's
   // immunities, Lightning Resist, Negate First Strike, Merging, and Teleporting. The latter two
   // are combat-damage-relevant because FirewallEffect reads their calculated values. The
-  // half-Defense penalty is applied in the ordered record above. The calculator models only the
-  // landed outcome, so the strip is unconditional when active.
+  // half-Defense penalty is applied in the ordered record above, on `PROVENANCE[hierophany]`
+  // (`stats_sequence.js`); the strip itself is `PROVENANCE[hierophanyAbilityStrip]`
+  // (`stats_identity.js`). The calculator models only the landed outcome, so the strip is
+  // unconditional when active.
   combatAbilities = applyHierophanyAbilityStrip(combatAbilities, isWarlord);
 
   // Compatibility breakdowns retained for the card. The authoritative values now come
@@ -1711,8 +1849,9 @@ function deriveUnitStats(input) {
   const meleeToHitBonus = statUnit.toHit + statUnit.toHitMelee - 30
     - (isCoM2 ? baseHitChance + baseHitMelee : baseToHitMod);
 
-  // Caster.exe does not clamp defendchance during recalculation; Random(100) threshold
-  // comparison naturally bounds the effective probability to 0..100.
+  // Caster.exe does not clamp defendchance during recalculation; the `Random(100)` threshold
+  // comparison naturally bounds the effective probability to 0..100. That projection is
+  // `PROVENANCE[chance:toBlockProbabilityBound]` below, from `Combat.ResolutionHelpers.pas`.
   let toBlock = Math.max(0, Math.min(1, statUnit.toBlk / 100));
   if (energyCannon) {
     // UnitCalc.CAS:1435-1443 reads the unit's To-Hit + Ranged To-Hit
@@ -1732,17 +1871,20 @@ function deriveUnitStats(input) {
   let toHitImmolation = 0.3;
 
   // Warp Reality also affects Immolation's separate spell-attack chance. Common unit To Hit
-  // is already written on the ordered stat record above.
+  // is already written on the ordered stat record above, on `PROVENANCE[warpReality]`
+  // (`stats_sequence.js`).
   if (warpRealityActive && !unitIsChaos) {
     toHitImmolation = Math.max(0.1, toHitImmolation - 0.2);
   }
 
   // Hurricane (Warlord Nature rare, global): tropical storm affecting both sides.
   // -20% To Hit for ranged/thrown attacks, -30% To Hit for breath attacks.
-  // The persistent Hurricane channel write is already on the ordered stat record.
+  // The persistent Hurricane channel write is already on the ordered stat record, on
+  // `PROVENANCE[hurricane]` (`stats_sequence.js`).
 
-  // Warlord True Light: illusion attacks suffer -10% To Hit, for all units
-  // regardless of realm (this clause is Warlord-only; not present in MoM).
+  // Warlord True Light "interferes with illusions, causing non-wizard illusion units to suffer
+  // -10% To-Hit" (`Unit rosters/Warlord mod unit data/HELP.TXT:3201`) — for all units regardless
+  // of realm, and Warlord-only; MoM's block has no such clause.
   // The persistent True Light common write is already on the ordered stat record.
 
   // Vertigo: reflect the displayed penalty in the red To Hit / To Block numbers.
@@ -1764,16 +1906,19 @@ function deriveUnitStats(input) {
   // Conjuring Pact suffers -10% To Hit and -10% To Defend for the rest of combat.
   // Only the normal-unit debuff is modelled here (the fantastic-creature taming
   // branch is out of scope), so gate to Warlord and to normal units.
-  // Nausea's persistent chance writes are already on the ordered stat record.
+  // Nausea's persistent chance writes are already on the ordered stat record, on
+  // `PROVENANCE[nausea]` (`stats_sequence.js`).
 
   // Plague (Warlord combat curse): −10% To-Hit on the cursed unit (the −3/−3/−6 stat
   // penalties are folded into atk/def/res above). Goblin Pox carries no To-Hit penalty.
-  // Plague's persistent common chance write is already on the ordered stat record.
+  // Plague's persistent common chance write is already on the ordered stat record, on
+  // `PROVENANCE[plague]` (`stats_sequence.js`).
 
   // Great Unbinding (Warlord Sorcery very rare global): −20% To-Hit and −20% To-Defend
   // on opponent fantastic creatures for the rest of battle (the −2 Resistance is folded
   // into res above). Only fantastic creatures are affected.
-  // Great Unbinding's persistent common chance writes are already on the ordered record.
+  // Great Unbinding's persistent common chance writes are already on the ordered record, on
+  // `PROVENANCE[greatUnbinding]` (`stats_sequence.js`).
 
   const displayDef = (vertigoActive && !isCoMVersion) ? Math.max(0, finalDef - 1) : finalDef;
 
@@ -1898,7 +2043,8 @@ function deriveUnitStats(input) {
   const chanceUnit = recordChance.chanceUnit;
   const rtbDistPenalty = distancePenaltyFor(recordContext);
   // One projection per **hitchance field**, not per output channel: `hitchancebreath` serves
-  // both breath strengths, so one breath row answers for Fire and Lightning alike, and a field
+  // both breath strengths (Units.RecalculateUnits.pas:203-219, the record's field list), so one
+  // breath row answers for Fire and Lightning alike, and a field
   // the unit owns no attack for still resolves — the card states the modifier whether or not a
   // channel is standing in front of it. Only the conventional Ranged channel is charged a range
   // distance penalty, and that penalty reads the *finished* projectile type, so the ranged row
