@@ -6,6 +6,30 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F130 (partial) - the version-gating census, and the sweep that was understating it.** The round
+  set out to choose between per-site and structural gating; the measurement changed both the scope
+  and the source of truth. Instrumenting all 399 ability reads in the computation layer and
+  executing them — syntax cannot see gating that is transitive through a caller guard or through
+  `filterStepsToVersionScope` — found **38 reads with no version test and 4 wider than their
+  control's scope**, of which **8 move a number**, against the four the row named. Two findings
+  reshaped the item rather than closing it. First, `tools/hidden_control_leak_sweep.js` set the
+  probed key on the **attacker only**, so `rage`, which scales with figures already lost and is
+  therefore observable on the counter-attacking defender, moved four versions' numbers unreported;
+  the tool now probes both sides and reports **14** resolution leaks where it reported 10. Second,
+  the DOS engines **repurpose enchantment bits across versions** — `0x00200000` is Eldritch Weapon
+  in MoM and Mystic Surge in CoM 1 (`R6.1a.evidence.md`) — which is why CoM 1's −10pp To Block is
+  real and already correct via `mysticSurge`, and why a gate derived from a control's `subgroup`
+  would have encoded visibility as though it were implementation. The five all-five-version keys
+  whose step scope is narrower (`animated`, `combatSummoned`, `eternalNight`, `raiseDead`,
+  `trueSight`) were each checked against sources and **none is a contradiction**: a step is not the
+  only place an effect can be implemented. Landed here: the corrected sweep, and the derive tier as
+  a standing check (`tools/unit_checks/hidden_control_gating.js`, ~8s) asserting the hidden-control
+  leak set against a declared worklist, so a new leak fails the suite and a fixed one must be struck
+  from the list. The gating mechanism itself stays in **F130**, which now carries the eight reads,
+  the requirement that scope come from a cited computation-layer table rather than the def table,
+  and the blocking sub-task of authoring the two missing `PROVENANCE` anchors. Evidence:
+  [Version gating census.md](../Reference%20docs/Version%20gating%20census.md).
+
 - **F142 - script-sourced melee writes lose the dead-slot gate, and the calculator's terminal melee
   zeroing retires with it.** The row asked which way to set a per-step flag on two CAS blocks. The
   enumeration it called for settled the evidence — all 53 `SETSTAT(<unit>,SAttack,…)` writes in the

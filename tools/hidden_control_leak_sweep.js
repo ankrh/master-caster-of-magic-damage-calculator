@@ -118,11 +118,16 @@ function deriveDigest(version, over, abilities) {
 
 // One exchange against a plain opponent of the same shape with no secondary attack, melee and
 // ranged, so a hidden control reaching either resolution path shows up.
-function combatDigest(version, over, abilities, isRanged) {
+//
+// The key is probed on **both** sides, one at a time. Probing the attacker alone missed every
+// effect whose only observable is on the unit being attacked: `rage` scales with figures already
+// lost, and in these shapes it is the counter-attacking defender that loses figures first, so a
+// Warlord-only control moved four versions' numbers without this sweep reporting it (F130).
+function combatDigest(version, over, abilities, isRanged, side) {
   const attacker = baseInput('a', version, over);
-  attacker.abilities = abilities;
   const defender = baseInput('b', version,
     { ...over, modernAttacks: undefined, rtbType: 'none', rtb: 0 });
+  (side === 'b' ? defender : attacker).abilities = abilities;
   try {
     const a = deriveUnitStats(attacker);
     const b = deriveUnitStats(defender);
@@ -197,14 +202,17 @@ function run() {
     let hitCombat = null;
     for (const shape of SHAPES) {
       for (const isRanged of [false, true]) {
-        const base = combatDigest(pair.version, shape.over, {}, isRanged);
-        for (const value of pair.values) {
-          combatCases += 1;
-          const got = combatDigest(pair.version, shape.over, { [pair.calcKey]: value }, isRanged);
-          if (got !== base) {
-            hitCombat = hitCombat || {
-              ...pair, value, where: `${shape.name}/${isRanged ? 'ranged' : 'melee'}`, base, got,
-            };
+        for (const side of ['a', 'b']) {
+          const base = combatDigest(pair.version, shape.over, {}, isRanged, side);
+          for (const value of pair.values) {
+            combatCases += 1;
+            const got = combatDigest(pair.version, shape.over, { [pair.calcKey]: value }, isRanged, side);
+            if (got !== base) {
+              hitCombat = hitCombat || {
+                ...pair, value, base, got,
+                where: `${shape.name}/${isRanged ? 'ranged' : 'melee'}/${side}`,
+              };
+            }
           }
         }
       }

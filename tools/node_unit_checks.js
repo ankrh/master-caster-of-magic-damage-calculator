@@ -36,6 +36,7 @@ const {
   runF19Checks, runF23Checks, runF50F51F53Checks, runR9G1eChecks,
 } = require('./unit_checks/backlog_checks');
 const { runCanonicalVersionScopeChecks } = require('./unit_checks/version_scope');
+const { runHiddenControlGatingChecks } = require('./unit_checks/hidden_control_gating');
 
 // index.html's <script> tags are the single home for the calculator's file list and load order.
 // Reading the manifest already throws on an unclassified tag, a data-worker script the worker
@@ -106,6 +107,7 @@ function main() {
   runF50F51F53Checks(ctx);
   runR9G1eChecks(ctx);
   runCanonicalVersionScopeChecks(ctx);
+  runHiddenControlGatingChecks(ctx);
   console.log(JSON.stringify({ allPassed: true, total: assertionTotal(), failures: [] }));
 }
 

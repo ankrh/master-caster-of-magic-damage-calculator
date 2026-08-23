@@ -121,7 +121,7 @@ whatever shape the step has. Where a claim has no observable consequence at all,
 
 ## Tests
 
-Cost sets the cadence. `node tools/node_unit_checks.js` is ~11s and `npm run provenance` ~6s;
+Cost sets the cadence. `node tools/node_unit_checks.js` is ~19s and `npm run provenance` ~6s;
 `npm test` is ~2.7 minutes of the user's wall clock, and the user waits through it.
 
 ```powershell
