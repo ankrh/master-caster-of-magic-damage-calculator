@@ -374,8 +374,9 @@ writes through:
   strength test: a gaze template shipping strength 0 still has its gaze.
 - **`ranged`** — the modern engines' conventional ranged attack *only*. Thrown, both Breaths and
   the gazes are separate fields there, so a bonus written to `ranged` never reaches them.
-- **`doomGazeField`** — the modern engines' independent Doom Gaze field, which is a view of no
-  attack slot and takes a write only from a block that names it.
+
+The modern engines' independent Doom Gaze field is a view of no attack slot, so it has no gate:
+a write reaches it only from a block that names it, and such a block writes it directly (F143).
 
 ### Phases
 

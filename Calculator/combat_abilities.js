@@ -478,8 +478,6 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 //                   every gaze field
 //   persistentRanged  `B.ranged > 0`: the permanent record's Ranged field carrying strength,
 //                   tested without regard to what the calculated record holds
-//   doomGazeField   the modern record's independent Doom Gaze field, which is not a view of any
-//                   attack slot and takes a write only from a block that names it
 // and three that name the **DOS shared `.ranged` byte** by the test their own block makes on it.
 // One byte carries conventional ranged, Thrown, Breath and a gaze there, so each of these writes
 // the slot's strength field **and** the record's gaze mirrors of it (`channel.gazeMirrors`) —
@@ -496,15 +494,20 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // record strength field: the DOS engines run one, the modern engines one per attack channel.
 // Each slot carries its own `slots` gates and its own type fields, so one write lands on every
 // field the engine writes and on no other.
+//
+// The modern record's independent **Doom Gaze field** is deliberately not in that list, and this
+// function has no arm for it. It is a view of no attack slot, so no dead-slot abstraction covers
+// it and a write reaches it only from a block that names it — of which the recalculation has
+// exactly two, each written where its block is rather than through here: Focus Magic's
+// `if U.doomgaze > 0 then` ($0059A66D), a step of its own in `stats_sequence.js`, and Blazing
+// Eyes ($005A1E16), which conjures the field where it is absent — `if U.doomgaze = 0` grants 3,
+// otherwise +1 — and so is settled into the base record by `blazingEyesDoomGazeForUnit` above.
+// A `doomGazeField` argument therefore falls through to `slotGateAdmits` and throws (F143).
 const DOS_SHARED_SLOT_GATES = ['rangedTyped', 'rangedStrength', 'rangedUngated'];
 function addToSlot(u, ctx, slot, value, whereStrength) {
   const slots = (ctx && ctx.slots) || null;
   if (slot === 'melee') {
     if (!slots || slots.melee(ctx)) u.atk += value;
-    return;
-  }
-  if (slot === 'doomGazeField') {
-    if (!slots || slots.doomGazeField) u.doomGaze += value;
     return;
   }
   const channels = (ctx && ctx.channels)

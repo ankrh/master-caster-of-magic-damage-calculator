@@ -6,6 +6,40 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-24
 
+- **F143 — the `doomGazeField` slot gate is deleted, not re-wired.** **Premise held on the count
+  and was stale on two clauses.** No caller: `addToSlot` is file-local to `combat_abilities.js`
+  with no export, and its 32 call sites — the complete set, enumerated uncapped — all pass a
+  string literal, none `'doomGazeField'`. Confirmed dynamically by making the arm throw and
+  running 14,385 `node tools/node_unit_checks.js` assertions and
+  `tools/derivation_equivalence.js`'s 15,480 derivations across all five versions: nothing fired.
+  Stale: `slotGateAdmits` had no `doomGazeField` entry to remove — the gate was answered in
+  `addToSlot` before the channel loop — and **True Light does not write the modern Doom Gaze
+  field**. `SDoomGaze` occurs twice in the Warlord script set, `MASTER.CAS:1047` (the id) and
+  `UnitCalc.CAS:1487` (a zeroing), and the calculator's True Light gaze write is already
+  `!isCoM2`, i.e. the DOS shared-byte mirrors.
+  **Decision: delete.** **Routing Blazing Eyes through it was rejected** as wrong twice over: the
+  compiled block ($005A1E16) *conjures* the field — `if U.doomgaze = 0` grants 3, otherwise +1 —
+  which is the opposite of the dead-slot rule the gate encodes, and the gate's own seed
+  `hasDoomGazeSlot` is computed from `baseDoomGazeWithBlazingEyes`, so the write would have gated
+  on its own result. **Routing True Light through it was rejected** because no modern engine makes
+  that write at all. The one modern block that does read-then-add on the field, Focus Magic
+  (`if U.doomgaze > 0 then`, $0059A66D), already names its own test in `stats_sequence.js`, which
+  is what SPEC's *a step may name its own block's gate* rule asks — a second static gate over the
+  same field is exactly what F135 retired for `slots.gaze`/`slots.doomGaze`.
+  **Where the fact lives now:** the `addToSlot` comment, which states that the modern Doom Gaze
+  field is a view of no attack slot, names both blocks that write it and where each is
+  implemented, and records that a `doomGazeField` argument now falls through to `slotGateAdmits`
+  and throws. `SPEC.md`'s gate list drops the bullet and keeps one sentence saying the field has
+  no gate; the `slots.doomGazeField` seed is gone from `stats.js`, while `hasDoomGazeSlot` stays
+  for the region-`e` floor and the gaze mirrors.
+  **No number moves:** `tools/derivation_equivalence.js`, 15,480 derivations, byte-identical
+  before and after (25,146,638 bytes either way). No preset was added — there is no behavior to
+  bind, and the removed arm was unreachable.
+  **Checks.** `node tools/node_unit_checks.js` 14385/14385, 0 failures; `npm run provenance` 271
+  formulas, 271 verified, 0 UNVERIFIED; the 11 spec files naming `doomGaze`/`trueLight` 35 passed,
+  0 failed; `node tools/comment_quotation_check.js` on both edited sources unchanged from baseline
+  (`combat_abilities.js` 3 exact / 1 standing MISSING elision, `stats.js` 21 exact / 1 REFLOW).
+
 - **F154 — the capped-drain Life Steal arms in the touch convolution are gone.** Premise
   re-measured and held: `usesModernCombatHealing` and `usesDosCombatHealing` still partition
   `ENGINE_VERSIONS`, so `statefulCombatHealing` is true in all five versions, and all three named

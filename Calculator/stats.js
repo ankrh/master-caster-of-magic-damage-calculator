@@ -1769,15 +1769,14 @@ function deriveUnitStats(input) {
   // one engine field and are retired (F135). What survives is which mirrors of the byte the
   // **record** carries, which is the same type fact the region-`e` floor asks
   // (`hasGazeRangedSlot`/`hasDoomGazeSlot`, F122), and it belongs to the slot that holds the byte.
-  // `doomGazeField` is a different thing: the modern engines' independent Doom Gaze field, which
-  // is a view of no attack slot and takes a write only from a block that names it.
+  // The modern engines' independent Doom Gaze field is not a slot gate either: it is a view of no
+  // attack slot, and why no `addToSlot` write reaches it is stated there (F143).
   for (const context of derivationContexts) {
     context.slots = {
       melee: hasMeleeAttackAt,
       persistentRanged: context.isChannelSlot
         ? (context.channelKey === 'ranged' && context.baseStrength > 0)
         : context.hasPermanentRangedStat,
-      doomGazeField: hasDoomGazeSlot,
     };
     context.gazeMirrors = (context.isChannelSlot || isCoM2) ? []
       : [...(hasGazeRangedSlot ? ['gaze'] : []), ...(hasDoomGazeSlot ? ['doomGaze'] : [])];
