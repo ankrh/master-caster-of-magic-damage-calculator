@@ -138,7 +138,8 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   const isCoM1SummonBranch = isCoM1 && combatSummonedValue && !isConstructCatapult;
   // Call to Arms is the only shipped base-CoM2 combat summon for Paladins. Infer that spell
   // result from the retained Paladins template (STypeID 113) plus Combat Summoned; display names
-  // and custom units do not establish the identity.
+  // and custom units do not establish the identity. The spell itself is sourced on
+  // PROVENANCE[callToArmsPaladins] below, which lies outside this block's anchor window.
   const isCallToArmsPaladins = !!(isBaseCoM2
     && combatSummonedValue
     && sourceTemplateId === 113);
@@ -282,7 +283,8 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
 // in (a new object), or the original set unchanged when it does not apply. Merging up-front
 // — rather than into effectiveAbilities — lets the Flame Blade grant reach the weapon-upgrade
 // and stat-bonus logic, which read the raw ability set. The Wall-of-Fire siege effect is not
-// modelled here (it has its own global toggle).
+// modelled here (it has its own global toggle). Each grant is sourced on its own
+// PROVENANCE[lavaSmelter:*] anchor further down this function, outside this block's window.
 function applyLavaSmelterGrant(abilities, version, unitType) {
   if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;
   // The legacy selector branches keep old presets/share payloads readable; new UI state uses
@@ -338,6 +340,18 @@ function applyLavaSmelterGrant(abilities, version, unitType) {
 // stat modifiers, and Magic Immunity feeds the combat immunity checks. The improved Exorcise
 // grant (Clergy) and the True Light city enchantment (defending) are not modelled. Gated on the
 // High Men race; heroes gain nothing.
+//
+// KNOWN DEFECT (T8, see BACKLOG.md Q30): the Sanctify grant above is wider than the source.
+// `Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS` lines 412-441 — the block
+// PROVENANCE[sanctaBasilica] in stats_sequence.js cites for the +3 Resistance — writes the
+// per-type grants in four *mutually exclusive* STypeID branches, each ending in
+// `GOTO "ENDOFUNIQUEBUILDING"`: 108 (High Men Monks) and 231 (High Men Inquisitors) get
+// Sanctify plus improved Exorcise, 111 (Crusaders) gets Lucky *only*, and 113 (Paladins) gets
+// Magic Immunity *only*. Neither Crusaders nor Paladins receives Sanctify from this building.
+// The code and this comment both say they do. `DisAbil.CAS` lines 1036-1046 does group all
+// three under one "Sainthood" display line, which is the likely origin of the conflation, but
+// it is display only and grants no stat. Not corrected here: this round is comment-only and the
+// fix needs a preset plus a full suite run.
 function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
   if (!version || !version.startsWith('com2_warlord') || !abilities.sanctaBasilica
       || race !== 'High Men' || unitType === 'hero') return abilities;
@@ -354,15 +368,26 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
   return result;
 }
 
-// Magic Immunity hard-blocks a set of magic-based curses: the immunity grants such
-// overwhelming effective resistance/defense that these curses simply never take hold,
-// so the calculator strips them here before any downstream read (display stats,
-// effectiveAbilities, and the combatAbilities passed to resolveCombat all derive from
-// this object). Mind Storm and Vertigo are additionally blocked by Illusion Immunity,
-// including the Illusion Immunity granted by Eye of Heaven.
-// Curses that bypass Magic Immunity per the source are NOT gated: Black Prayer (on the
-// MoM bypass list), Hierophany ("Cannot be blocked by … Magic Immunity"), and Eternal
-// Night's Darkness malus (Darkness is on the MoM bypass list).
+// Magic Immunity hard-blocks a set of magic-based curses, so the calculator strips them here
+// before any downstream read (display stats, effectiveAbilities, and the combatAbilities
+// passed to resolveCombat all derive from this object). Mind Storm and Vertigo are
+// additionally blocked by Illusion Immunity, including the Illusion Immunity granted by Eye
+// of Heaven.
+// UNSOURCED (T8): the *membership* of MAGIC_IMMUNITY_GATED_CURSES is not sourced. The MoM
+// side is a categorical block on harmful spells — `Magic Immunity.md`, cited below, says a
+// Magic-Immune unit is "completely unaffected" by them, and lists the exceptions rather than
+// deriving them from a stat — so a per-curse list is a modelling choice, not a transcription,
+// and no reconstruction of the CoM2/Warlord curse handlers has been checked against it. An
+// earlier revision of this block justified the strip as the immunity granting "such
+// overwhelming effective resistance/defense that these curses simply never take hold"; that
+// mechanism is nowhere in the cited sources and has been removed rather than reworded.
+// Curses that bypass Magic Immunity per the source are NOT gated: Black Prayer, Eternal
+// Night's Darkness malus, and Hierophany. Black Prayer and Darkness are both named on the
+// bypass list in `Reference docs/MoM source - Fandom site/Magic Immunity.md`, *Immunity to
+// Harmful Spells / Exceptions*. Hierophany's cast handler in
+// `Reference docs/Script source/Warlord 1.5.12.7/COSpell.CAS` lines 400-413 runs a Resistance
+// roll and makes no Magic Immunity test at all, and the Warlord manual v1.5.12.7 changelog
+// records "Spell Hierophany now works properly against magic immunity".
 // Mislead/Liability are deliberately absent: the spell's resist roll and Death/Illusion
 // "no effect" clause gate only the single targeted unit, but the Misfortune/Jinx debuff
 // then spreads to every normal unit in the army with no per-unit immunity check — so a
@@ -395,7 +420,9 @@ function applyMagicImmunityCurseGating(abilities) {
 // Divine Protection (Warlord, Life unit enchantment): grants Lucky and Death Immunity.
 // Folded into effective abilities here so every downstream read sees them — Lucky feeds the
 // ability stat modifiers (+10% To Hit, +10% To Block, +1 Resistance) and Death Immunity feeds
-// the combat immunity checks (Death Gaze/Touch, Life Stealing, Cause Fear).
+// the combat immunity checks (Death Gaze/Touch, Life Stealing, Cause Fear). The grant is
+// `Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS` lines 874-882, which sets
+// ADeathImmunity and, when it is not already set, ALucky.
 // Lucky reaches a unit from several sources. These markers retain which stage established
 // the flag, but the resulting stat package does not execute there: Caster.exe's compiled
 // Lucky block reads the finished flag and writes Resistance/To Hit/To Defend in region c.
@@ -412,7 +439,7 @@ function applyDivineProtectionGrant(abilities, version) {
 // 20% chance to gain Lucky. The calculator models the landed outcome, so the pillarOfFaithLucky
 // toggle folds Lucky in directly (its +10% To Hit / +10% To Block / +1 Resistance flow through
 // the ability stat modifiers). The separate +Resistance per Religious Building is applied to
-// res in deriveUnitStats.
+// res in deriveUnitStats and is sourced on PROVENANCE[pillarOfFaith] in stats_sequence.js.
 function applyPillarOfFaithGrant(abilities, version) {
   if (!version || !version.startsWith('com2_warlord') || !abilities.pillarOfFaithLucky) return abilities;
   return { ...abilities, lucky: true, luckyPhaseBase: true };
@@ -420,8 +447,13 @@ function applyPillarOfFaithGrant(abilities, version) {
 
 // Fortification (Warlord, city building): all defending units inside the city walls gain a
 // Large Shield effect. If the unit already has Large Shield, it receives Missile Immunity
-// instead (helptext: "If the friendly unit already has Large Shield ability, the unit receives
-// Missile Immunity bonus instead"). Folded in here so the largeShield/missileImmunity defense
+// instead. The tactical write is `Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS`
+// lines 1069-1075 — gated on `ISBUILT(C,BMoats)`, the defending side, and the city-area
+// coordinate box. The manual v1.5.12.7 states the same rule:
+// "Friendly units receive bonus equivalent to Large Shield if they stay inside the city wall
+// area. If the unit already have Large Shield, unit will receive Missile Immunity instead."
+// The +4 Defense variant in `UnitCalcPre.CAS` lines 1822-1826 is *strategic* combat and is
+// deliberately not modelled. Folded in here so the largeShield/missileImmunity defense
 // bonuses flow through every downstream combat read.
 function applyFortificationGrant(abilities, version) {
   if (!version || !version.startsWith('com2_warlord') || !abilities.fortification) return abilities;
@@ -433,7 +465,9 @@ function applyFortificationGrant(abilities, version) {
 // Insulation (Warlord, Chaos unit enchantment): grants Fire Immunity, Cold Immunity, and
 // Lightning Resist. Folded into effective abilities here so the combat immunity checks
 // (fire breath/immolation/wall of fire defense, cold attacks, and the lightning AP negation)
-// all see them.
+// all see them. The grant is `Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS`
+// lines 850-855 — AFireImmunity, ALightningResistance, AColdImmunity, suppressed when item
+// power 37 is present.
 function applyInsulationGrant(abilities, version) {
   if (!version || !version.startsWith('com2_warlord') || !abilities.insulation) return abilities;
   return { ...abilities, fireImmunity: true, coldImmunity: true, lightningResist: true };
@@ -629,7 +663,9 @@ function applyOutlanderReformGrants(abilities, version, baseUnitType, isHero = f
     ]) delete fundamentalAbilities[key];
   }
   // Rebuild permanently writes Mechanical for non-heroes. Its hero branch is
-  // encounter-only and cannot receive overland Power Engine/Armorclad upgrades.
+  // encounter-only and cannot receive overland Power Engine/Armorclad upgrades. Sourced on
+  // PROVENANCE[rebuild] (combat_abilities.js) and PROVENANCE[rebuildEffectDerivation]
+  // (combat_effects.js), both out of this block's anchor window.
   const permanentMechanical = !!fundamentalAbilities.mechanical
     || (!!fundamentalAbilities.rebuild && !isHero);
   const armorclad = outlanderWizard && !!fundamentalAbilities.armorcladReform && permanentMechanical;

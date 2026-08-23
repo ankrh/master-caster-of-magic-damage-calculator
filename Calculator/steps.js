@@ -183,7 +183,8 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:chaosChannels:armor:race': SCOPE_ALL,
   'c:chaosChannels:fireBreath': SCOPE_DOS,
   // 1.31 alone passes the mutations byte to the recompute's second `BU_Apply_Specials` call,
-  // so it alone re-assigns the shared slot there (F106).
+  // so it alone re-assigns the shared slot there (F106). The call is 131:0x90A1D; the address
+  // and the resulting chain position are carried beside the chain entry in stats_manifests.js.
   'c:chaosChannels:fireBreath:recompute': SCOPE_MOM_1_31,
   'c:chaosChannels:fireBreath:race': SCOPE_DOS,
   'c:chaosChannels:flight': SCOPE_ALL,
@@ -236,8 +237,9 @@ const STEP_VERSION_SCOPES = Object.freeze({
   // gates the effect to CoM+ and PROVENANCE[survivalInstinctEligibility] covers com_6.08.
   'c:survivalInstinct': SCOPE_COM_PLUS,
   // One id for all three CoM engines: the chains place it after Realm Ward in CoM 1 and last in
-  // region `c` in CoM2/Warlord, which is the whole of the difference. Its PROVENANCE lives on
-  // tactician:heroDynamic / tactician:nonheroDynamic, which cover com_6.08 too.
+  // region `c` in CoM2/Warlord, which is the whole of the difference. It is sourced on
+  // PROVENANCE[tactician:heroDynamic] / PROVENANCE[tactician:nonheroDynamic], which cover
+  // com_6.08 too.
   'c:tactician': SCOPE_COM_PLUS,
   // The DOS half of True Light. PROVENANCE[trueLight] cites only the Warlord CAS block, which
   // is the separate `b:trueLight` step; the MoM region-c block has no citation yet.
