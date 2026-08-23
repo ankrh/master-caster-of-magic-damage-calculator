@@ -172,7 +172,6 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
           ? normalizeDosCombatHealState(p.sourceState)
           : normalizeCombatHealState(p.sourceState)) : null,
       rawDrain: 0, healedDamage: 0, bonusHpGain: 0, bonusHpBenefit: 0,
-      legacyLifeStealBenefit: 0,
       bloodsuckerHealed: 0,
       irrecoverableDamage: baseCategory === 'irrecoverableDamage' ? cappedDamage : 0,
       undeadDamage: baseCategory === 'undeadDamage' ? cappedDamage : 0,
@@ -193,7 +192,7 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
     outcomes = next;
   };
   if (atkFigs <= 0) {
-    return collapseTouchOutcomes(outcomes, cap, false, statefulCombatHealing);
+    return collapseTouchOutcomes(outcomes, cap, false);
   }
   if (p.poisonStr > 0 && p.poisonFail > 0) {
     addDamage(calcResistDmgDist(atkFigs * p.poisonStr, p.poisonFail, cap));
@@ -241,9 +240,7 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
           rawDrain: outcome.rawDrain + heal.rawDrain,
           healedDamage: outcome.healedDamage + heal.healedDamage,
           bonusHpGain: outcome.bonusHpGain + heal.bonusHpGain,
-          bonusHpBenefit: outcome.bonusHpBenefit + heal.bonusHpBenefit,
-          legacyLifeStealBenefit: outcome.legacyLifeStealBenefit
-            + (statefulCombatHealing ? 0 : heal.rawDrain) });
+          bonusHpBenefit: outcome.bonusHpBenefit + heal.bonusHpBenefit });
       }
     }
     outcomes = next;
@@ -271,11 +268,13 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
         bloodsuckerHealed: outcome.bloodsuckerHealed + healed.healedDamage };
     });
   }
-  return collapseTouchOutcomes(outcomes, cap, p.lifeStealMod != null,
-    statefulCombatHealing);
+  return collapseTouchOutcomes(outcomes, cap, p.lifeStealMod != null);
 }
 
-function collapseTouchOutcomes(outcomes, cap, hasLifeSteal, modernCombatHealing) {
+// Every engine version runs stateful combat healing — `usesModernCombatHealing` and
+// `usesDosCombatHealing` partition `ENGINE_VERSIONS` (`steps.js`) — so the Life Steal benefit is
+// always the healed damage plus the bonus-HP benefit the Combatheal transition recorded.
+function collapseTouchOutcomes(outcomes, cap, hasLifeSteal) {
   const dist = new Array(cap + 1).fill(0);
   for (const outcome of outcomes) dist[outcome.damage] += outcome.probability;
   const lifeStealDist = hasLifeSteal ? outcomeMetricDist(outcomes, 'rawDrain') : null;
@@ -287,16 +286,13 @@ function collapseTouchOutcomes(outcomes, cap, hasLifeSteal, modernCombatHealing)
     dist, outcomes, lifeStealDist,
     rawDrainEV: expectedDamage(lifeStealDist),
     healedDamageDist, bonusHpDist, bonusHpBenefitDist, bloodsuckerHealDist,
-    lifeStealEV: modernCombatHealing
-      ? expectedDamage(healedDamageDist) + expectedDamage(bonusHpBenefitDist)
-      : expectedDamage(outcomeMetricDist(outcomes, 'legacyLifeStealBenefit')),
+    lifeStealEV: expectedDamage(healedDamageDist) + expectedDamage(bonusHpBenefitDist),
     bonusHpEV: expectedDamage(bonusHpDist),
     bloodsuckerHealEV: expectedDamage(bloodsuckerHealDist),
   };
 }
 
 function repeatTouchAttack(first, baseDist, cap, atkFigs, spec) {
-  const modernCombatHealing = usesModernCombatHealing(spec.version);
   const statefulCombatHealing = usesStatefulCombatHealing(spec.version);
   const outcomes = [];
   for (const prior of first.outcomes) {
@@ -323,13 +319,10 @@ function repeatTouchAttack(first, baseDist, cap, atkFigs, spec) {
         healedDamage: prior.healedDamage + after.healedDamage,
         bonusHpGain: prior.bonusHpGain + after.bonusHpGain,
         bonusHpBenefit: prior.bonusHpBenefit + after.bonusHpBenefit,
-        legacyLifeStealBenefit: prior.legacyLifeStealBenefit
-          + after.legacyLifeStealBenefit,
         bloodsuckerHealed: prior.bloodsuckerHealed + after.bloodsuckerHealed });
     }
   }
-  return collapseTouchOutcomes(outcomes, cap, spec.lifeStealMod != null,
-    statefulCombatHealing);
+  return collapseTouchOutcomes(outcomes, cap, spec.lifeStealMod != null);
 }
 
 function combineModernRepeatedTouchOutcome(prior, after, probability, cap) {
@@ -344,8 +337,6 @@ function combineModernRepeatedTouchOutcome(prior, after, probability, cap) {
     healedDamage: prior.healedDamage + after.healedDamage,
     bonusHpGain: prior.bonusHpGain + after.bonusHpGain,
     bonusHpBenefit: prior.bonusHpBenefit + after.bonusHpBenefit,
-    legacyLifeStealBenefit: prior.legacyLifeStealBenefit
-      + after.legacyLifeStealBenefit,
     bloodsuckerHealed: prior.bloodsuckerHealed + after.bloodsuckerHealed,
   };
 }
@@ -386,7 +377,7 @@ function sequenceTouchApplyAttacks(steps, cap, sourceState) {
     }
     paths = next;
   }
-  return collapseTouchOutcomes(paths, cap, false, true);
+  return collapseTouchOutcomes(paths, cap, false);
 }
 
 // Compute melee + touch-attack damage distribution, weighted over possible
@@ -505,7 +496,7 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
       }
     }
     const collapsed = collapseTouchOutcomes(repeatedOutcomes, remHP,
-      lifeStealMod != null, true);
+      lifeStealMod != null);
     return { ...collapsed, damageDist: collapsed.dist,
       repeatFearedDist: repeatFearedDist.length ? repeatFearedDist : [1] };
   }

@@ -6,6 +6,27 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F148 — the Life Steal benefit metric with the unreachable consuming arm is gone.**
+  `collapseTouchOutcomes` (`combat_fear_and_touch.js`) chose between the modern benefit
+  (`healedDamage` + `bonusHpBenefit`) and `legacyLifeStealBenefit` on a fourth argument its five call
+  sites only ever passed as `statefulCombatHealing` or the literal `true`. Re-measured before acting and
+  the premise held: `usesModernCombatHealing` and `usesDosCombatHealing` partition `ENGINE_VERSIONS`
+  (`steps.js`), so the predicate is true in all five, and a version outside them cannot reach combat at
+  all because `statChain` (`stats_manifests.js`) and `normalizeDosCombatHealState` (`engine.js`) both
+  throw on one. Two further confirmations: `sequenceTouchApplyAttacks` builds path objects that carry no
+  `legacyLifeStealBenefit` field, so the deleted arm would have read `undefined` there, and the field was
+  seeded 0 and incremented by `statefulCombatHealing ? 0 : heal.rawDrain`. Deleted rather than renamed:
+  the field, its seed and three accumulation sites, the arm and the now-unused fourth parameter at all
+  five call sites. Folded in: an unused `modernCombatHealing` local in `repeatTouchAttack`, dead at `HEAD` before
+  this change. **Left in place and filed as [F154](./BACKLOG.md):** the two comments the item proposed
+  deleting still describe three surviving `!statefulCombatHealing` arms in the same two functions, so
+  removing the prose without the code would have left them unexplained.
+
+  **Checks.** `node tools/node_unit_checks.js` 14374/14374, 0 failures; `npm run provenance` 271
+  formulas, 271 verified, 0 UNVERIFIED; browser `runTests()` on the no-cache server 1080 presets,
+  `allPassed` true, 0 console errors — every preset asserts exact numbers, so no number moved.
+  `npm test` deferred to the round’s single run.
+
 - **F149 — the intermittent persistence-reload failure was the test's wait condition, not a lost
   write.** `tests/persistence.spec.js:24` waited on `!!localStorage.getItem('pageState_v2')`, which
   any earlier debounced write satisfies. Measured directly: with a 400 ms stall injected after the
@@ -368,7 +389,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   sense and keep their names.
 
   **One defect found and filed.** `legacyLifeStealBenefit`'s consuming arm in
-  `collapseTouchOutcomes` is unreachable in all five versions — [F148](./BACKLOG.md).
+  `collapseTouchOutcomes` is unreachable in all five versions — [F148](#2026-08-23).
 
   **Checks.** `node tools/node_unit_checks.js` 14387/14387; `npm run provenance` 270 formulas,
   270 verified, 0 UNVERIFIED; `npm test` 130 passed, 0 failed.
