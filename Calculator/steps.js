@@ -346,6 +346,8 @@ const STEP_VERSION_SCOPES = Object.freeze({
 // one name means one effect in every version, and the shared storage is the citation for why the
 // two are distinct rather than a reason to alias them.
 const COMBAT_VERSION_SCOPES = Object.freeze({
+  'resolution:blackChannelsEffectDerivation': SCOPE_MOM,
+  'resolution:bloodLustAbilityDerivation': SCOPE_COM_PLUS,
   'resolution:bloodLustMeleeAttack': SCOPE_COM_PLUS,
   'resolution:eldritchWeaponEligibility': SCOPE_MOM,
   'resolution:mysticSurge': SCOPE_COM_PLUS,

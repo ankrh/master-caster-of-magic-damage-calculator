@@ -6,6 +6,33 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F130 (round three, partial) — the re-measurement found seven leaks the sweep had scored
+  inert, and three are closed.** The row asked for 34 mechanical scope entries. Re-running the
+  instrumentation — rebuilt from `tools/js_lexical_scan.js`, reproducing the first pass's 399
+  sites and its 178-site/68-key all-version group exactly — found **36**, and 36 again against
+  `413b7aa`, so the 34 was a miscount rather than drift. The first pass had never written the
+  list down; the [census](../Reference%20docs/Version%20gating%20census.md) now enumerates all
+  32 that remain, by file, line and disposition. **The premise that mattered was the other one.**
+  "The sweep reports 0 and 0" was being read as "no leaks remain", but the sweep compares six
+  numbers over shapes whose defender is never Fantastic Death/Chaos and never carries Weapon
+  Immunity, and whose attacker never carries Illusion or a touch attack — so any effect keyed to
+  one of those was scored inert by construction. Probing those shapes found **seven** hidden
+  controls that move a number. Fixed here: `blackChannels` (MoM-only bit `0x00000010`, granting
+  Cold/Illusion/Poison/Death Immunity in all three CoM engines, 24 to 12 against an Illusion
+  attacker), `bloodLust` (CoM-plus bit `0x00000004`, making a MoM unit undead and so Death-immune,
+  14.39 to 12), both through new `COMBAT_VERSION_SCOPES` entries on their existing
+  `PROVENANCE` anchors; and `eyeOfHeaven`, a Warlord combat enchantment granting Illusion
+  Immunity in the four other engines and stripping Vertigo there, gated inline at `stats.js` and
+  `stats_identity.js` on `UnitCalcPre.CAS` 1839-1841 plus the absence of any `EyeOfHeaven`
+  identifier in the CoM2 1.05.11 base script set. `applyMagicImmunityCurseGating` takes a
+  `version` for that arm alone. **Left open in F130** with reproductions: `blazingMarch`,
+  `spiritLink` — the negated read the row flagged, leaking exactly as predicted and additionally
+  dead in a path `com2*` never reaches — `dispelEvil`, whose real leak is the dynamic-key
+  `placedTouchValue` read, and `destroyMechanical`, which needs two hidden keys and waits on Q29.
+  Also left open: ten of the 36 already have a cited home in `STEP_VERSION_SCOPES` and should not
+  get a second one, and eleven carry an exact version test one operand to the right of the read —
+  both are rulings for the user, not the implementer.
+
 - **T14 — the shared attack slot is keyed `shared`, not `legacy`.** The DOS engines' one
   `.ranged` field is permanent in all five versions (`SPEC.md`, *Deliberate deviations*), so the
   `legacy` key carried exactly the deprecation implication [T9](#2026-08-22) removed elsewhere;

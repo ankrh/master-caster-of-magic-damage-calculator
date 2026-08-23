@@ -51,7 +51,7 @@ function deriveUnitStats(input) {
     version),
     version),
     version),
-    version, baseUnitType, isHero, marionette && marionette.state === 'owned'));
+    version, baseUnitType, isHero, marionette && marionette.state === 'owned'), version);
   const destinyActive = destinyActiveForUnit(abilities, version);
   const identityConversion = applyOrderedIdentityConversions(identity, abilities, version, {
     isHero,
@@ -1146,7 +1146,14 @@ function deriveUnitStats(input) {
     // Rust on a fantastic creature is inert: drop it so the -3 melee in combat_abilities.js (which
     // can't see unit type) and any downstream reads treat the unit as un-rusted.
     ...((abilities && abilities.rust && !rustActive) ? { rust: false } : {}),
-    ...((abilities && (abilities.trueSight || abilities.eyeOfHeaven)) ? { illusionImmunity: true } : {}),
+    // Eye of Heaven is a Warlord combat enchantment: `UnitCalcPre.CAS` lines 1839-1841 set
+    // `EncTrueSight` on every friendly unit while `CGEyeOfHeaven` slot 1 is up, and no other
+    // supported source names it — the CoM2 1.05.11 base script set has no `EyeOfHeaven`
+    // identifier at all. The Warlord gate matches the one the +5% ranged To Hit read already
+    // carries above; without it a hidden control granted Illusion Immunity in all four other
+    // engines. True Sight itself is all-version and stays ungated.
+    ...((abilities && (abilities.trueSight || (isWarlord && abilities.eyeOfHeaven)))
+      ? { illusionImmunity: true } : {}),
     unitType: unitTypeVal,
     baseRace: identity.baseRace,
     baseFantastic: identity.baseFantastic,

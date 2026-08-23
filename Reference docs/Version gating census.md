@@ -1,6 +1,7 @@
 # Version-gating census: ability and enchantment reads in the computation layer
 
-Measured 2026-08-23 at `f19f865`. Method and findings; live work state is [F130](../Calculator/BACKLOG.md).
+First measured 2026-08-23 at `f19f865`; re-measured 2026-08-23 after the gating mechanism landed.
+Method and findings; live work state is [F130](../Calculator/BACKLOG.md).
 
 `SPEC.md`, *Versions*, invariant 4 requires an effect a version lacks to be inert in the result.
 `tests/version-gating.spec.js` asserts the UI half. This census measures the computation half.
@@ -18,10 +19,19 @@ masked. Each of the 485 (calcKey, version) pairs whose every naming control is h
 derived and resolved over the sweep's shapes, recording which sites fire. Each firing site was then
 suppressed individually to separate "executes out of scope" from "changes a number".
 
-**Limitation.** Shapes are hand-written, so "never fires" means "not in these 24 derivation shapes
-and 32 exchanges". A branch no shape reaches is invisible. `combat_effects.js:897` is the worked
-example: it is an ungated read that no shape exercises, because no shape gives the defender Weapon
-Immunity.
+**Limitation, and it is the load-bearing one.** Shapes are hand-written, so "never fires" means
+"not in these 24 derivation shapes and 32 exchanges", and — more consequentially — "does not move
+a number" means "moves none of the six numbers these shapes produce". A branch no shape reaches is
+invisible. The re-measurement below found **seven** effects the sweep called inert that move a
+number under a shape it does not build; the shapes' defender is never Fantastic Death/Chaos, never
+carries Weapon Immunity, and the attacker never carries Illusion or a touch attack, so every
+effect keyed to one of those was scored inert by construction.
+
+**Second limitation: three sites read their key dynamically** and so cannot be attributed to a
+key at all — `combat_abilities.js:720` (`abilVal(abilities, key, 0)`, the aura values),
+`combat_effects.js:242` (`PLACED_TOUCH_KEYS`) and `combat_phases.js:15` (`placedTouchValue`).
+They are counted in the 399 but appear in no group, and at least one of them leaks: see
+Dispel Evil below.
 
 ## Groups
 
@@ -32,17 +42,21 @@ Immunity.
 | C | version-scoped key, never fires outside its scope | 143 |
 | D | key whose control exists in all five versions | 178 sites / 68 keys |
 
-Of the 42 (A)+(B) sites, **8 move a number**: `combat_special_attacks.js:507` and `stats.js:704`
-(`rulerOfUnderworld`), `combat_special_attacks.js:559` (`rage`), `combat_effects.js:311`
-(`bloodLust`), `combat_phases.js:442`/`443` (`eldritchWeapon`) and `combat_phases.js:444`/`445`
-(`mysticSurge`). The other 34 fire but their value is discarded downstream.
+Of the 42 (A)+(B) sites, **8 moved one of the numbers these shapes produce**:
+`combat_special_attacks.js:507` and `stats.js:704` (`rulerOfUnderworld`),
+`combat_special_attacks.js:559` (`rage`), `combat_effects.js:311` (`bloodLust`),
+`combat_phases.js:442`/`443` (`eldritchWeapon`) and `combat_phases.js:444`/`445` (`mysticSurge`).
+The first pass recorded that the other 34 "fire but their value is discarded downstream"; the
+re-measurement below shows that is **wrong for at least four of them**, and that the group is 36
+sites rather than 34.
 
 All four (B) sites are **wider**, none narrower. This census cannot detect a narrower test — one
 suppressing a key in a version that has it — because it probes out-of-scope pairs only. Finding
 those needs the mirror-image sweep, which does not exist.
 
-`combat_effects.js:889` (`spiritLink`) is a **negated** read, `!hasAbil(...)`. A mechanical gate
-there inverts the condition instead of making it inert.
+`combat_effects.js:904` (`spiritLink`) is a **negated** read, `!hasAbil(...)`. A mechanical gate
+there inverts the condition instead of making it inert — and it is the one site the re-measurement
+found leaking in the way that warning predicted.
 
 ## The DOS engines repurpose enchantment bits across versions
 
@@ -113,7 +127,9 @@ else appeared, so the corrected tool and the instrumentation agree exactly.
 
 ## Outcome
 
-All 14 are closed. `COMBAT_VERSION_SCOPES` (`Calculator/steps.js`) now carries resolution-time
+All 14 that the sweep can see are closed, and it still reports 0 and 0 after this round's three
+further gates. That is not "no leaks remain" — see the limitation above and the seven below.
+`COMBAT_VERSION_SCOPES` (`Calculator/steps.js`) now carries resolution-time
 scope the way `STEP_VERSION_SCOPES` carries step scope, keyed `resolution:<formula id>` and
 asserted against each formula's `PROVENANCE versions=` by `tools/unit_checks/version_scope.js`.
 The eight reads are gated through `combatEffectInVersion`. Re-run after the gates:
@@ -130,5 +146,108 @@ Two anchors were authored for it, because neither effect had one:
 | `eldritchWeaponEligibility` | `mom_1.31`, `mom_cp_1.60.00` | `DOS reconstructed/unitcalc.c` 838-846 | The MoM `UE_ELDRITCH_WEAPON` block: gate on bit `0x00200000`, melee and conditional ranged attribute writes, `Weapon_Plus1` floor. CoM 1's block for the same bit is Mystic Surge's, at `unitcalc.c:1067`. |
 | `rulerOfUnderworldEligibility` | `com2_1.05.11`, `com2_warlord_1.5.12.7` | `Caster binary/Units.RecalculateUnits.pas` 1512-1517 and 621-625 | King of Underworld derives the aggregate Wraith Form flag during combat for a valid owner (`$0059EA93..$0059EB4D`), and a rival's copy suppresses only the calculated-layer `EncMagic` assignment (`$00598EA7..$00598ED9`). |
 
-The remaining 34 group-A/B reads are unconverted and stay for later rounds against the same
-mechanism.
+## Re-measurement, and the enumeration the first pass never wrote down
+
+The instrumentation was rebuilt and re-run against the post-mechanism tree. It reproduces the
+first pass exactly where the first pass is checkable — **399 sites**, and **178 sites over 68
+keys** whose control exists in all five versions — so the site definition is the same one. It
+finds **36** sites firing outside their key's scope where the first pass recorded 34; running it
+against `413b7aa`, the commit the 34 describes, also gives 36, so the two extra are a counting
+difference in the first pass, not later drift. The first pass listed none of them by file and
+line, which is why this section exists.
+
+Three were closed by gates in this round, leaving **32**:
+
+| Site | Key | Versions it fires in out of scope | What happens to the value |
+|---|---|---|---|
+| `combat_abilities.js:887` | `innerPower` | CoM 1, both MoM | step |
+| `combat_abilities.js:902` | `mislead` | CoM 1, both MoM | step |
+| `combat_abilities.js:923` | `stoneSkin` | CoM 1, CoM2, Warlord | step |
+| `combat_abilities.js:943` | `metalFires` | CoM 1, CoM2, Warlord | step |
+| `combat_abilities.js:1035` | `blackChannels` | CoM 1, CoM2, Warlord | step |
+| `combat_abilities.js:1095` | `survivalInstinct` | both MoM | step |
+| `combat_abilities.js:1107` | `guardian` | both MoM | step |
+| `combat_abilities.js:1137` | `tactician` | both MoM | step |
+| `combat_abilities.js:1173` | `favoredTerrain` | CoM 1, CoM2, both MoM | step |
+| `combat_abilities.js:1189` | `mysticSurge` | both MoM | step |
+| `stats.js:315` | `focusMagic` | both MoM | adjacent |
+| `stats.js:319` | `vampirism` | CoM 1, CoM2, both MoM | adjacent |
+| `stats.js:326` | `shadowStrike` | CoM 1, CoM2, both MoM | adjacent |
+| `stats.js:332` | `blazeOfGlory` | CoM 1, CoM2, both MoM | adjacent |
+| `stats.js:448` | `endurance` | both MoM | adjacent |
+| `stats.js:533`, `:534` | `nightshade` | CoM 1, CoM2, both MoM | adjacent |
+| `stats.js:584` | `metalFires` | CoM 1, CoM2, Warlord | adjacent |
+| `stats.js:627` | `berserk` | CoM 1, CoM2, Warlord | adjacent |
+| `stats.js:628` | `berserkWarlord` | CoM 1, CoM2, both MoM | adjacent |
+| `stats.js:1148` | `rust` | CoM 1, CoM2, both MoM | adjacent |
+| `stats.js:89` | `mechanical` | CoM 1, CoM2, both MoM | consumer |
+| `combat_phases.js:572`, `:668`, `:739`; `combat.js:678` (two), `:1169` | `bloodSucker` | CoM 1, CoM2, both MoM | consumer |
+| `combat_effects.js:904` | `spiritLink` | CoM 1, both MoM | **leak** |
+| `combat_effects.js:911` | `blazingMarch` | both MoM | **leak** |
+| `combat_phases.js:327` | `dispelEvil` | CoM2, Warlord | **leak** |
+| `combat_phases.js:592` | `destroyMechanical` | CoM 1, CoM2, both MoM | **leak**, two keys |
+
+Four dispositions, and only one of them is the per-site scope entry the first pass assumed:
+
+- **step** (10 sites). The read guards an `abilityStep(...)`; the step id already carries a cited
+  `STEP_VERSION_SCOPES` entry (`c:stoneSkin` `SCOPE_MOM`, `d:favoredTerrain` `SCOPE_WARLORD`, and
+  so on) and `filterStepsToVersionScope` drops the step before it executes. The version fact has
+  a cited home already, so a `COMBAT_VERSION_SCOPES` entry beside it would be a second copy.
+- **adjacent** (11 sites). An exact version test stands in the same expression, to the right of
+  the read: `!!(abilities && abilities.focusMagic) && version.startsWith('com')`. The read
+  "fires" only because JavaScript evaluates the left operand first. Nothing is ungated; what is
+  open is whether that test should read the cited table instead of a `startsWith` string.
+- **consumer** (7 sites). The value is carried to a consumer that makes the version test.
+  Measured inert: probing `bloodSucker` on a wounded attacker and `mechanical` on the defender
+  moves no number in any version whose control is hidden.
+- **leak** (4 sites). The value is *not* discarded, and the first pass's blanket "their value is
+  discarded downstream" is wrong for these.
+
+## Seven leaks the sweep scored inert
+
+Each was reproduced by setting the single hidden control and reading `resolveCombat`, in a shape
+the sweep does not build. Three were fixed in this round; four remain.
+
+| Effect | Hidden in | Shape that exposes it | Effect on damage | State |
+|---|---|---|---|---|
+| `blackChannels` | CoM 1, CoM2, Warlord | attacker with Illusion, or with Death Touch | 24 to 12, 14.39 to 12 | fixed |
+| `bloodLust` | both MoM | attacker with Death Touch | 14.39 to 12 | fixed |
+| `eyeOfHeaven` | CoM 1, CoM2, both MoM | attacker with Illusion; defender under Vertigo | 24 to 12; Vertigo stripped | fixed |
+| `blazingMarch` | both MoM | defender with Weapon Immunity | 0 to 12 | open |
+| `dispelEvil` | CoM 1, CoM2, Warlord | defender Fantastic Death | 12 to 23.99 | open |
+| `spiritLink` | both MoM | attacker Fantastic Death, defender Blessed | 0 to 12 | open |
+| `destroyMechanical` | CoM 1, CoM2, both MoM | defender also carrying hidden `mechanical` | 12 to 24 | open |
+
+Notes on the four that remain:
+
+- `spiritLink` is the negated read the first pass flagged as a watch item, and it behaves exactly
+  as feared: `!hasAbil(attacker.abilities, 'spiritLink')` is *not* inert when the key is set — it
+  suppresses the defender's Bless bonus. It is also **dead within its own path**:
+  `dosDefenseForAttack` is reached only when the version does not start with `com2`
+  (`computeDefenseProfile`), and Spirit Link is Warlord's (`PROVENANCE[spiritLink]
+  versions=com2_warlord_1.5.12.7`, `stats_identity.js`). Warlord's real behavior comes from the
+  `d:spiritLink` step clearing `fantastic`, which `spiritLinkBlessNoBonusWarlord` covers. So the
+  term should be deleted, not gated.
+- `dispelEvil` is a MoM-only control, and `combat_phases.js:327` reads it inside the
+  `startsWith('com2')` branch — likewise dead where it stands. Its CoM 1 leak enters elsewhere,
+  through the dynamic-key read `placedTouchValue` (`combat_phases.js:15`), which applies every
+  `PLACED_TOUCH_KEYS` entry in every version with no per-key scope.
+- `blazingMarch` needs a real gate: the control is CoM 1, CoM2 and Warlord, and
+  `dosDefenseForAttack` serves both MoM builds as well as CoM 1.
+- `destroyMechanical` needs two hidden keys at once, so the sweep's one-key-at-a-time rule cannot
+  see it by design. Its behavior is an unsourced inference (`BACKLOG.md` Q29), so no scope entry
+  can be cited for it until Q29 resolves.
+
+## What this round changed
+
+Three effects gained a cited gate:
+
+| Home | Scope | Citation |
+|---|---|---|
+| `COMBAT_VERSION_SCOPES['resolution:blackChannelsEffectDerivation']` | `SCOPE_MOM` | `PROVENANCE[blackChannelsEffectDerivation]`, `unitcalc.c` — bit `0x00000010` is Black Channels in MoM and Animated in CoM 1 |
+| `COMBAT_VERSION_SCOPES['resolution:bloodLustAbilityDerivation']` | `SCOPE_COM_PLUS` | `PROVENANCE[bloodLustAbilityDerivation]`, `unitcalc.c` / `Units.RecalculateUnits.pas` / `UnitCalc.CAS` — bit `0x00000004` is Berserk in MoM |
+| `eyeOfHeaven` reads in `stats.js` and `stats_identity.js` | Warlord | `Script source/Warlord 1.5.12.7/UnitCalcPre.CAS` 1839-1841 sets `EncTrueSight` under `CGEyeOfHeaven`; no `EyeOfHeaven` identifier exists anywhere in the CoM2 1.05.11 base script set |
+
+Eye of Heaven is a derivation-time read, not a resolution-time one, so it takes the inline
+Warlord test its sibling at `stats.js:700` already carries rather than a `resolution:` key.
+Whether the table should grow a namespace for derivation-time non-step reads is open.

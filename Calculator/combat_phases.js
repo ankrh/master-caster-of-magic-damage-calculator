@@ -180,7 +180,7 @@ function normalizeCombatUnit(unit, version) {
   normalized = applyRevenantEffects(normalized, version);
   normalized = applyAnimatedEffects(normalized, version);
   normalized = applyUndeadImmunities(normalized, version);
-  normalized = applyBlackChannelsEffects(normalized);
+  normalized = applyBlackChannelsEffects(normalized, version);
   normalized = applyRebuildEffects(normalized, version);
   normalized = applyFieryFuryEffects(normalized, version);
   normalized = applyZealEffects(normalized, version);

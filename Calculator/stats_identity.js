@@ -397,9 +397,14 @@ const MAGIC_IMMUNITY_GATED_CURSES = [
   'warpAttack', 'warpDefense', 'warpResist', 'nausea', 'temporalTwist', 'mindStorm',
 ];
 const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
-function applyMagicImmunityCurseGating(abilities) {
+// `version` is read for the Eye of Heaven arm alone: that enchantment is Warlord's, granted by
+// `Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS` lines 1839-1841 and named by
+// no other supported source, so outside Warlord it must not confer the Illusion Immunity that
+// strips Mind Storm and Vertigo here.
+function applyMagicImmunityCurseGating(abilities, version) {
   const magicImmune = !!abilities.magicImmunity;
-  const illusionImmune = !!(abilities.illusionImmunity || abilities.trueSight || abilities.eyeOfHeaven);
+  const eyeOfHeaven = !!(version && version.startsWith('com2_warlord') && abilities.eyeOfHeaven);
+  const illusionImmune = !!(abilities.illusionImmunity || abilities.trueSight || eyeOfHeaven);
   const illusionHasCurse = illusionImmune
     && ILLUSION_IMMUNITY_GATED_CURSES.some(k => abilities[k]);
   if (!magicImmune && !illusionHasCurse) return abilities;

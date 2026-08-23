@@ -89,7 +89,11 @@ function applyAnimatedEffects(unit, version) {
 // (unlike the Undead attribute, which grants only Death Immunity in v1.31).
 // STAT-FORMULA[blackChannelsEffectDerivation]
 // PROVENANCE[blackChannelsEffectDerivation]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:20:d70b30ff5120b7a9057ab7e3 | Reference docs/DOS reconstructed/unitcalc.c@span:7:641fa01e4a1f0fb71d4d0402
-function applyBlackChannelsEffects(unit) {
+function applyBlackChannelsEffects(unit, version) {
+  // Bit 0x00000010 is Black Channels in MoM and Animated in CoM 1, so the immunity grant exists
+  // in the two MoM builds only (`COMBAT_VERSION_SCOPES`, `steps.js`). Without the gate a hidden
+  // Black Channels control granted Cold/Illusion/Poison/Death Immunity in all three CoM engines.
+  if (!combatEffectInVersion('resolution:blackChannelsEffectDerivation', version)) return unit;
   if (!hasAbil(unit.abilities, 'blackChannels')) return unit;
   const extra = {
     coldImmunity: true,
@@ -192,6 +196,10 @@ function applyTemporalTwistEffects(unit, version) {
 // STAT-FORMULA[bloodLustAbilityDerivation]
 // PROVENANCE[bloodLustAbilityDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:4291d05361823ad272e4e04f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:e894ef880a35e8ad7d3f714b | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:8:32ea534d834bbcec63f4826a
 function applyBloodLustEffects(unit, version) {
+  // Bit 0x00000004 is Berserk in MoM and Blood Lust from CoM 1 on, so the undead grant does not
+  // exist in either MoM build (`COMBAT_VERSION_SCOPES`, `steps.js`). Without the gate a hidden
+  // Blood Lust control made a MoM unit undead, and with it Death-immune.
+  if (!combatEffectInVersion('resolution:bloodLustAbilityDerivation', version)) return unit;
   if (!hasAbil(unit.abilities, 'bloodLust')) return unit;
   if (version && version.startsWith('com2_warlord')) return unit;
   return Object.assign({}, unit, {
