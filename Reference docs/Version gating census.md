@@ -1,7 +1,8 @@
 # Version-gating census: ability and enchantment reads in the computation layer
 
 First measured 2026-08-23 at `f19f865`; re-measured 2026-08-23 after the gating mechanism landed.
-Method and findings; live work state is [F130](../Calculator/BACKLOG.md).
+Method and findings. F130 is retired ([HISTORY.md](../Calculator/HISTORY.md)); what is still live
+is [F157, F158 and F159](../Calculator/BACKLOG.md).
 
 `SPEC.md`, *Versions*, invariant 4 requires an effect a version lacks to be inert in the result.
 `tests/version-gating.spec.js` asserts the UI half. This census measures the computation half.
@@ -187,21 +188,21 @@ Three were closed by gates in this round, leaving **32**:
 | `combat_phases.js:327` | `dispelEvil` | CoM2, Warlord | **leak** |
 | `combat_phases.js:592` | `destroyMechanical` | CoM 1, CoM2, both MoM | **leak**, two keys |
 
-Four dispositions, and only one of them is the per-site scope entry the first pass assumed:
+Four dispositions, and only one of them is the per-site scope entry the first pass assumed. The
+first three are **settled** — [SPEC.md](../Calculator/SPEC.md), *Versions*, invariant 4 now names
+`step` and `adjacent` as satisfying it, so a later round must not re-flag them:
 
-- **step** (10 sites). The read guards an `abilityStep(...)`; the step id already carries a cited
-  `STEP_VERSION_SCOPES` entry (`c:stoneSkin` `SCOPE_MOM`, `d:favoredTerrain` `SCOPE_WARLORD`, and
-  so on) and `filterStepsToVersionScope` drops the step before it executes. The version fact has
-  a cited home already, so a `COMBAT_VERSION_SCOPES` entry beside it would be a second copy.
-- **adjacent** (11 sites). An exact version test stands in the same expression, to the right of
-  the read: `!!(abilities && abilities.focusMagic) && version.startsWith('com')`. The read
-  "fires" only because JavaScript evaluates the left operand first. Nothing is ungated; what is
-  open is whether that test should read the cited table instead of a `startsWith` string.
-- **consumer** (7 sites). The value is carried to a consumer that makes the version test.
-  Measured inert: probing `bloodSucker` on a wounded attacker and `mechanical` on the defender
+- **step** (10 sites, settled). The read guards an `abilityStep(...)`; the step id already carries
+  a cited `STEP_VERSION_SCOPES` entry (`c:stoneSkin` `SCOPE_MOM`, `d:favoredTerrain`
+  `SCOPE_WARLORD`, and so on) and `filterStepsToVersionScope` drops the step before it executes.
+- **adjacent** (11 sites, settled). An exact version test stands in the same expression, to the
+  right of the read: `!!(abilities && abilities.focusMagic) && version.startsWith('com')`. The
+  read "fires" only because JavaScript evaluates the left operand first; the expression is gated.
+- **consumer** (7 sites, settled by measurement). The value is carried to a consumer that makes
+  the version test. Probing `bloodSucker` on a wounded attacker and `mechanical` on the defender
   moves no number in any version whose control is hidden.
-- **leak** (4 sites). The value is *not* discarded, and the first pass's blanket "their value is
-  discarded downstream" is wrong for these.
+- **leak** (4 sites, open). The value is *not* discarded, and the first pass's blanket "their
+  value is discarded downstream" is wrong for these.
 
 ## Seven leaks the sweep scored inert
 

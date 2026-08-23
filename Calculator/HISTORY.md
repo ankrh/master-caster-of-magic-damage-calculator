@@ -6,6 +6,23 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F130 retired — the two open dispositions were rulings, and they are now in `SPEC.md`.** The
+  user ruled that both classes the re-measurement isolated already satisfy *Versions* invariant 4,
+  and that neither gets code. A read whose only consumer is an `abilityStep(...)` with a cited
+  `STEP_VERSION_SCOPES` entry is inert because `filterStepsToVersionScope` drops the step, and the
+  invariant is about the effect, not about whether the expression evaluates; `COMBAT_VERSION_SCOPES`
+  is for effects implemented purely in combat resolution, so an entry beside a step scope would be
+  a second home for one fact. An exact inline version test in the same expression is a gate and
+  need not become a table lookup. Both are written beside invariant 4 under the census's own
+  disposition names, `step` and `adjacent`, so a later census round does not re-flag 21 of the 32
+  remaining sites; the `consumer` class (7 sites) was already settled by measurement. What was left
+  is not the original item, so F130 leaves the backlog and its three residues are filed with their
+  evidence: **F157** the three live leaks (Blazing March gate, Spirit Link *delete* — its path is
+  unreachable for `com2*` — and Destroy Mechanical, blocked on Q29), **F158** the touch keys'
+  missing per-key scope, which is where the Dispel Evil leak actually lives, plus the three
+  dynamic-key read sites and the absent mirror-image sweep, and **F159** the 43 unasserted
+  all-version keys. Documentation only; no number moves.
+
 - **F155 — the intermittent page-load timeout stayed unreproduced; the harness got a margin fix
   and a diagnosis.** Two of the row's supporting claims were false. With `workers: 1` Playwright
   runs files in path order, so `tests/chaos-conjunction-f39.spec.js:4` is test **4 of 130** —
@@ -60,13 +77,14 @@ pre-2026-08-10 narratives remain recoverable from git history.
   Immunity in the four other engines and stripping Vertigo there, gated inline at `stats.js` and
   `stats_identity.js` on `UnitCalcPre.CAS` 1839-1841 plus the absence of any `EyeOfHeaven`
   identifier in the CoM2 1.05.11 base script set. `applyMagicImmunityCurseGating` takes a
-  `version` for that arm alone. **Left open in F130** with reproductions: `blazingMarch`,
-  `spiritLink` — the negated read the row flagged, leaking exactly as predicted and additionally
-  dead in a path `com2*` never reaches — `dispelEvil`, whose real leak is the dynamic-key
-  `placedTouchValue` read, and `destroyMechanical`, which needs two hidden keys and waits on Q29.
-  Also left open: ten of the 36 already have a cited home in `STEP_VERSION_SCOPES` and should not
-  get a second one, and eleven carry an exact version test one operand to the right of the read —
-  both are rulings for the user, not the implementer.
+  `version` for that arm alone. **Left open, with reproductions**, and filed the same day as
+  F157 and F158 when F130 retired: `blazingMarch`, `spiritLink` — the negated read the row
+  flagged, leaking exactly as predicted and additionally dead in a path `com2*` never reaches —
+  `dispelEvil`, whose real leak is the dynamic-key `placedTouchValue` read, and
+  `destroyMechanical`, which needs two hidden keys and waits on Q29. The two disposition
+  questions this round refused to decide — ten sites already scoped through
+  `STEP_VERSION_SCOPES`, eleven carrying an exact inline version test — were rulings for the
+  user, and are settled in the entry above.
 
 - **T14 — the shared attack slot is keyed `shared`, not `legacy`.** The DOS engines' one
   `.ranged` field is permanent in all five versions (`SPEC.md`, *Deliberate deviations*), so the

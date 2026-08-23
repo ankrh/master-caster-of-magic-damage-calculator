@@ -110,6 +110,18 @@ Rules:
   `mom_cp_1.60.00` share `MOM_UNITS_DATA`.
 - Abilities and enchantments not present in a version must be **hidden from the UI and
   inert in the result**. A hidden control must never influence a computation.
+  The invariant is about the *effect*, not the read: an expression may evaluate out of scope
+  provided nothing it reaches can move a number. Two shapes satisfy it and are settled, so a
+  gating census must not re-flag them (the disposition names are the census's,
+  [Version gating census.md](../Reference%20docs/Version%20gating%20census.md)):
+  - **step** — the read's only consumer is an `abilityStep(...)` whose step id carries a
+    `STEP_VERSION_SCOPES` entry. `filterStepsToVersionScope` drops the step before it executes,
+    and that entry is the fact's one cited home. `COMBAT_VERSION_SCOPES` is for effects
+    implemented purely in combat resolution, which have no step for the filter to reach; an
+    entry beside a step scope would be a second home for one fact.
+  - **adjacent** — an exact version test stands in the same expression as the read
+    (`!!(abilities && abilities.focusMagic) && version.startsWith('com')`). That is a gate.
+    It does not have to become a `COMBAT_VERSION_SCOPES` lookup.
 
 ## Computation model
 
