@@ -136,6 +136,11 @@ npm test
 - **`npm test` once, at the end of a finished implementation round.** Not after each edit, not
   before a commit that changed no code, and not to re-confirm a green run that nothing since
   could have invalidated — including a green run a subagent already reported.
+- **A change to control flow greps `tests/` for specs naming what it touched, and runs them.**
+  Independently of whether any preset can move: the presets assert damage numbers, while the
+  hand-written specs assert dispatch, ordering and exclusions, so a changed gate can leave every
+  number identical and still falsify one. Grep the identifier and the effect's name; a single
+  spec file runs in seconds.
 
 A red check is still a blocker: never skip, weaken or delete an assertion to reach green, and
 never report a task complete with one outstanding. Say which checks you ran and what they returned,
