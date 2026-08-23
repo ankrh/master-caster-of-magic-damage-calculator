@@ -298,7 +298,7 @@ const PRESET_VERSIONS = {};
 //
 // The attack channels joined this reject in F127. A modern fixture used to be allowed to state
 // one channel through the DOS pair, which `applyPreset` projected onto the card; what that also
-// did was fill the modern record's legacy shared slot, and the modern reads that still consulted
+// did was fill the modern record's shared slot, and the modern reads that still consulted
 // it answered from a field `Caster.exe` does not have. With every fixture stating `modernAttacks`
 // the slot stays empty in a modern run, so such a read has nothing to find.
 const DOS_ONLY_FIXTURE_FIELDS = ['toHitMod', 'toHitRtbMod', 'rtb', 'rtbType'];

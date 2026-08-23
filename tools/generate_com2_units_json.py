@@ -4,8 +4,8 @@ Generate a JSON file of CoM2 units from UNITS.INI.
 Fields match the MoM/CoM1 JSON schema:
   id, name, race, category, figures, hp, melee, defense, resist, moves, cost, upkeep
   templateId, heroTypeId, isHero, baseRace, baseFantastic
-  ranged, ranged_type, ammo         (legacy projection; omitted when absent)
-  thrown_breath, thrown_breath_type (legacy projection; omitted when absent)
+  ranged, ranged_type, ammo         (shared projection; omitted when absent)
+  thrown_breath, thrown_breath_type (shared projection; omitted when absent)
   thrown, fire_breath, lightning_breath (modern independent channels; omitted when absent)
   to_hit, to_block                  (percentage-point deltas above the 30% base)
   abilities                         (omitted when empty)

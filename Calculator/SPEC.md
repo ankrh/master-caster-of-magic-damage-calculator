@@ -618,7 +618,7 @@ the calculator does instead, and why.
 - **The modern record carries a fifth secondary-attack slot the engine does not have.** `Caster.exe`
   holds Ranged, Thrown, Fire Breath and Lightning Breath as named fields of one unit record, and the
   calculator's modern record carries those four and derives them in one walk. Beside them it keeps
-  the DOS engines' shared `.ranged` slot, because the card's legacy secondary value still reads it.
+  the DOS engines' shared `.ranged` slot, because the card's shared secondary value still reads it.
   That shared-slot shape is faithful to the DOS engines and stays. **In a modern version it is a
   display projection, and a read that decides behaviour resolves the named field instead.** Which
   slot holds a field is record structure, not a choice: the `ranged` channel is `SRanged`, while the

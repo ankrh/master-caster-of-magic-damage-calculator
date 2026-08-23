@@ -1313,8 +1313,8 @@ function magicCalcScriptStatSteps(ctx) {
     warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
     weaknessActive, weaknessBinaryHits, weaknessPenalty,
   } = ctx;
-  const vampirismSources = channels.filter(c => c.slotKey !== 'legacy').length > 0
-    ? channels.filter(c => c.slotKey !== 'legacy')
+  const vampirismSources = channels.filter(c => c.slotKey !== 'shared').length > 0
+    ? channels.filter(c => c.slotKey !== 'shared')
     : channels;
   const vampirismSourceValue = (u, c) =>
     (u[c.strengthField] > 0 && ['thrown', 'fire', 'lightning'].includes(u[c.thrownTypeField]))
@@ -1483,7 +1483,7 @@ function magicCalcScriptStatSteps(ctx) {
     // Thrown are separate fields — and both are always there to move between, because Focus
     // Magic and Lightning Blade move out of the Thrown field rather than spending it (F90) — so
     // the move is a real addition. Where it did not, the
-    // DOS-shaped `legacy` slot carries one shared secondary value, so the same transfer is
+    // DOS-shaped `shared` slot carries one shared secondary value, so the same transfer is
     // expressed by the channel identity alone; the strength is already in the only field there
     // is. The engine writes no ranged *type* here (`UnitCalc.CAS` never assigns `SRangedType,0`)
     // — what retires the emptied Ranged attack there is `SETSTAT(U,SAmmo,0,0)` two lines later

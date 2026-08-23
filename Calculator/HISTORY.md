@@ -6,6 +6,21 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **T14 — the shared attack slot is keyed `shared`, not `legacy`.** The DOS engines' one
+  `.ranged` field is permanent in all five versions (`SPEC.md`, *Deliberate deviations*), so the
+  `legacy` key carried exactly the deprecation implication [T9](#2026-08-22) removed elsewhere;
+  `shared` is what the surrounding code already said (`sharedAttack`, `secondaryHitField`).
+  Renamed by sense, not by pattern: 39 occurrences across `steps.js` (`STAT_DERIVATION_SLOTS`
+  key), `stats.js` (`slotKey`, `projectTraceToSlot`, `LEGACY_HIT_FIELD` → `SHARED_HIT_FIELD`),
+  `stats_sequence.js`, `ui_state.js`, `SPEC.md`, the F150 row, both roster generators'
+  docstring headers, `tools/unit_checks/{phases,derive_unit_stats}.js` and *Attack-type
+  predicate inventory*. The row's stale line numbers were re-located by uncapped search, which
+  also found four sites the row did not list (`ui_state.js`, two more `stats.js` comments, the
+  inventory's six). Left alone as other senses: `legacyUnitTypeFrom*`, `legacyLightDark`,
+  `legacyApply`, the v1 state/preset readers and the clipboard fallback. Naming only: the 1080
+  browser presets returned a byte-identical damage fingerprint before and after, and
+  regenerating both rosters left `units_com2.js` and `units_warlord.js` unchanged.
+
 - **F148 — the Life Steal benefit metric with the unreachable consuming arm is gone.**
   `collapseTouchOutcomes` (`combat_fear_and_touch.js`) chose between the modern benefit
   (`healedDamage` + `bonusHpBenefit`) and `legacyLifeStealBenefit` on a fourth argument its five call
@@ -383,8 +398,8 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
   **Left alone, by sense, and why.** The shared attack slot key `legacy` is permanent in all five
   versions (`SPEC.md`, *Deliberate deviations*) and is a string key in a designed vocabulary, so
-  it carries the same wrong implication but is a separate decision: [T14](./BACKLOG.md), preferred
-  after [F127](./BACKLOG.md). The `unitType` compatibility projection, the v1 state and
+  it carries the same wrong implication but is a separate decision: [T14](#2026-08-23), preferred
+  after [F127](#2026-08-23). The `unitType` compatibility projection, the v1 state and
   preset-format readers, the `ui_matrix.js` clipboard fallback and `legacyApply` are not the DOS
   sense and keep their names.
 

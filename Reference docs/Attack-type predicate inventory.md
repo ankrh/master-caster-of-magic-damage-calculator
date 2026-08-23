@@ -148,8 +148,8 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 | E3 | `gazeType` seed | `:745` | `dosGazeStrength`, `baseDoomGaze` | DOS shared slot only; CoM2/Warlord carry independent gaze fields | permanent | match |
 | E4 | `modernBaseHasBlackpowderChannel` | `:755-757` | Military Workshop gate | `CreateUnit.CAS` blackpowder eligibility | permanent | match |
 | E5 | `modernBaseHasPhysicalBlackpowderChannel` | `:758-760` | Military Workshop AP grant | same | permanent | match |
-| E6 | `selectedBaseHasBlackpowderChannel` | `:761-763` | same, legacy slot | same | permanent | match |
-| E7 | `selectedBaseHasPhysicalBlackpowderChannel` | `:764-766` | same, legacy slot | same | permanent | match |
+| E6 | `selectedBaseHasBlackpowderChannel` | `:761-763` | same, shared slot | same | permanent | match |
+| E7 | `selectedBaseHasPhysicalBlackpowderChannel` | `:764-766` | same, shared slot | same | permanent | match |
 | E8 | `blackpowderSelectedPhysicalRanged` | `:773-774` | `base:militaryWorkshop` | same | permanent | match |
 | E9 | `blackpowderSelectedThrown` | `:775` | `base:militaryWorkshop` | same | permanent | match |
 | E10 | `blackpowderSelectedFireBreath` | `:776` | `base:militaryWorkshop` | same | permanent | match |
@@ -162,7 +162,7 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 | E17 | `alumniOfAcademy` magical-ranged arm | `:832-836` | `base:alumniOfAcademy:figures` | `CreateUnit.CAS:462-464` Academy branch | permanent | match since [F93](../Calculator/HISTORY.md); it was **`narrow`** when this was written. The engine's gate is `GetStat(U,SRangedType,1) > 29`, the whole magical band, and the three realm tokens excluded Warlord's own id 40. Measured 2026-08-21: a Halfling 6-figure card typed `beam` derived 6 figures where the engine gives 8 |
 | E18 | `focusMagicBaseRangedPresent` | `:871-873` | `c:focusMagic` conversion arms | `B.ranged = 0` at `:892`/`:900` | permanent | `narrow` — the engine tests base *strength*; this is strength **and** type |
 | E19 | `supremeLightActiveForUnit`'s `baseRangedType` | `:947` | `e:supremeLight` | `Ismagicalranged(B.rangedtype)` at `:2622` | permanent | match |
-| E20 | `naturalSelectionWildGameRangedSlot`, legacy arm | `:1015-1017` | `base:naturalSelection:wildGame` | `CreateUnit.CAS` Wild Game snapshot | permanent | match |
+| E20 | `naturalSelectionWildGameRangedSlot`, shared arm | `:1015-1017` | `base:naturalSelection:wildGame` | `CreateUnit.CAS` Wild Game snapshot | permanent | match |
 | E21 | `dosGazeStrength` | `:1098-1099` | `base:stat:base` gaze seed | DOS shared slot; no modern counterpart | permanent | match |
 | E22 | `baseDoomGaze` gaze arm | `:1367-1368` | `base:stat:base` | same | permanent | match |
 
@@ -172,7 +172,7 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 |---|---|---|---|---|---|---|
 | E23 | Bombs & Grenades Thrown grant | `stats.js`, `bombsGrenadesGrantsThrown` | `b:bombsGrenades` | `UnitCalcPre.CAS:1071` bombs block | live since [F94](../Calculator/HISTORY.md) — applied at its own chain position, and written to the record by its own step rather than by the `base:stat:base` seed | match since [F101](../Calculator/HISTORY.md) — the slot breadth this row first called `match` was not: the grant carried no slot test and fired on every channel field standing empty at `b:bombsGrenades`, where the engine writes `SThrown` alone. It now asks `isThrownFieldSlot` |
 | E24 | `ccFireBreathActive`, modern arm | `stats.js`, after the Energy Cannon flip | `a:chaosChannels:fireBreath` | `Units.RecalculateUnits.pas` Chaos Channels breath | live since [F94](../Calculator/HISTORY.md) — the Energy Cannon flip now precedes it, as the chain does. The transposition moved no number: Energy Cannon requires a permanent conventional ranged attack, so `rangedType === 'none'` fails either way, and on the modern record the two write different channel slots | match |
-| E25 | `lightningBladeOwnsThisSlot`, legacy arm | `:804-806` | `base:lightningBlade:breath` | `CreateUnit.CAS` | live | match |
+| E25 | `lightningBladeOwnsThisSlot`, shared arm | `:804-806` | `base:lightningBlade:breath` | `CreateUnit.CAS` | live | match |
 | E26 | Energy Cannon beam write | `:847-849` | `base:energyCannon` | `CreateUnit.CAS` Energy Cannon | live | match |
 | E27 | `ffRtbMod` | `:856-858` | `b:fieryFury` | `UnitCalcPre.CAS:832-846` | live | match |
 | E28 | `bombsGrenadesRtbMod` | `:859-861` | `b:bombsGrenades` | `UnitCalcPre.CAS` bombs block | live | match |
@@ -188,7 +188,7 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 | E38 | `rangedGetsWpn` | `:943` | `c:weapon`, `c:weapon:toHit` | `not Ismagicalranged(Units[i].rangedtype)` at `:651` (I3) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
 | E39 | the material block's Thrown gate (`stats.js`, `weaponStatSteps` and `weaponHitThrown`) | — | `c:weapon`, `c:weapon:toHit` | `if Units[i].thrown > 0` at `:658` | live since [F97](../Calculator/HISTORY.md) | match since F97 — the modern arms of both writes now test the calculated Thrown strength at their own position; the slot's type test remains only to say which record field the DOS-shaped shared slot is |
 | E40 | `supremeLightEligible`'s `liveRangedType` | `:975-978` | `c:supremeLight` (CoM 1), `e:supremeLight` | `Ismagicalranged(U.rangedtype)` at `:2621` (I12) | **`stale`** for `e:supremeLight` — three region-`d` type writes lie between | match |
-| E41 | `modernConventionalRangedChannel` | `:950-951` | `c:heavenlyLight`, `c:goodMoon`, `c:natureConjunction`, `b:trueLight`/`c:trueLight`, `b:soulFlay`, `b:plague`, `b:goblinPox` | `if U.ranged > 0` at `:1546` and the matching blocks | live for channel slots (identity test); **`stale`/`early`** for the legacy slot, which uses the post-Focus type at region-`b` positions | `wrong-shape` on the legacy slot only |
+| E41 | `modernConventionalRangedChannel` | `:950-951` | `c:heavenlyLight`, `c:goodMoon`, `c:natureConjunction`, `b:trueLight`/`c:trueLight`, `b:soulFlay`, `b:plague`, `b:goblinPox` | `if U.ranged > 0` at `:1546` and the matching blocks | live for channel slots (identity test); **`stale`/`early`** for the shared slot, which uses the post-Focus type at region-`b` positions | `wrong-shape` on the shared slot only |
 | E42 | `modernRangedOrThrownChannel` | `:956-958` | `c:mindStorm` (`rangedOrThrown` slot) | Mind Storm's `Ismagicalranged`-free field writes | live for channel slots | match |
 | E43 | `modernNodeSecondaryChannel` | `:959-961` | `c:nodeAura` | `@Units@applynodeaura` current-ranged/breath gates (F18 evidence) | live for channel slots | match |
 | E44 | `blazeOfGloryFillsSlot` | `:975` | `e:clamp`, `secondaryHitKind` | record structure, not a type gate | n/a | match |

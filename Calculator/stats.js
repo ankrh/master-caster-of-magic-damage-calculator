@@ -780,18 +780,18 @@ function deriveUnitStats(input) {
   // derives every channel: a slot is one strength field plus the type pair and the secondary To
   // Hit modifier that field is read with (steps.js, STAT_DERIVATION_SLOTS).
   //
-  // The `legacy` slot is the DOS engines' shared `.ranged` slot, which carries conventional
+  // The `shared` slot is the DOS engines' shared `.ranged` slot, which carries conventional
   // ranged, Thrown, Breath and both gaze strengths in one value. The modern engines keep it as
-  // the card's legacy secondary projection (`result.rtb`), so it is a slot in every version and
+  // the card's shared secondary projection (`result.rtb`), so it is a slot in every version and
   // the four channel slots exist only where the caller supplies `modernAttacks`.
   //
   // Everything below that depends on which attack a write reaches is computed per slot; every
-  // other field of the record is written once, from the `legacy` slot's context, which is the
+  // other field of the record is written once, from the `shared` slot's context, which is the
   // record-level answer the exposed `atk`/`def`/`res`/`hp` outputs have always used.
   function buildSlotContext(slot) {
     const fields = STAT_DERIVATION_SLOTS[slot.slotKey];
     const channelKey = slot.channelKey || null;
-    const isChannelSlot = slot.slotKey !== 'legacy';
+    const isChannelSlot = slot.slotKey !== 'shared';
     const rtbTypeRaw = slot.type;
     const inputSlotRtb = Math.max(0, parseInt(slot.strength) || 0);
     const permanentRangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
@@ -940,11 +940,11 @@ function deriveUnitStats(input) {
     };
   }
 
-  // The `legacy` slot is the DOS engines' shared `.ranged` value and, in the modern engines,
-  // the card's legacy secondary projection. It carries the record-level answer for every field
+  // The `shared` slot is the DOS engines' shared `.ranged` value and, in the modern engines,
+  // the card's shared secondary projection. It carries the record-level answer for every field
   // that is not one of the four channel strengths.
   const recordContext = buildSlotContext({
-    slotKey: 'legacy', channelKey: null,
+    slotKey: 'shared', channelKey: null,
     strength: input.rtb, type: input.rtbType, baseAttacks: input.modernAttacks || null,
   });
 
@@ -1054,13 +1054,13 @@ function deriveUnitStats(input) {
   // the record stores — `hitchanceranged`, `hitchancethrown` and the one `hitchancebreath` that
   // serves both breath strengths (Units.RecalculateUnits.pas:203-219) — so a gated writer decides
   // each of them once, from the channel's own type rather than from whichever channel the
-  // derivation happens to be for. The DOS-shaped `legacy` slot keeps its own `toHitRtb`.
+  // derivation happens to be for. The DOS-shaped `shared` slot keeps its own `toHitRtb`.
   const SECONDARY_HIT_KINDS = ['ranged', 'thrown', 'breath'];
   const SECONDARY_HIT_FIELD_BY_KIND = {
     ranged: 'toHitRanged', thrown: 'toHitThrown', breath: 'toHitBreath',
   };
-  const LEGACY_HIT_FIELD = 'toHitRtb';
-  recordContext.secondaryHitField = LEGACY_HIT_FIELD;
+  const SHARED_HIT_FIELD = 'toHitRtb';
+  recordContext.secondaryHitField = SHARED_HIT_FIELD;
   // Which of the three modifiers a modern channel reads is pure record structure: `SRanged`
   // reads `hitchanceranged`, `SThrown` reads `hitchancethrown`, and the two breath fields share
   // `hitchancebreath` (Units.RecalculateUnits.pas:203-219). Every conversion is a move between
@@ -1076,7 +1076,7 @@ function deriveUnitStats(input) {
   // A modern record carries all three, exactly as the engine's does, whether or not this unit
   // happens to own an attack of that kind — which is also what lets the card state a modifier for
   // a channel an effect has yet to create.
-  const secondaryHitFieldsFor = kinds => [LEGACY_HIT_FIELD,
+  const secondaryHitFieldsFor = kinds => [SHARED_HIT_FIELD,
     ...(isCoM2 ? kinds.map(kind => SECONDARY_HIT_FIELD_BY_KIND[kind]) : [])];
   const secondaryHitFields = secondaryHitFieldsFor(SECONDARY_HIT_KINDS);
   // The DOS-shaped shared slot keeps **one** threshold where the modern record keeps three, so
@@ -1093,7 +1093,7 @@ function deriveUnitStats(input) {
   // any step's arithmetic.
   const secondaryHitTargets = secondaryHitFields.map(field => ({
     field,
-    kindAt: field === LEGACY_HIT_FIELD
+    kindAt: field === SHARED_HIT_FIELD
       ? (u => (slotHasBreath(u, recordContext) ? 'breath'
         : slotHasThrown(u, recordContext) ? 'thrown'
           : (shadowStrikeActive && isThrownFieldSlot(u, recordContext)) ? 'thrown' : 'ranged'))
@@ -1106,7 +1106,7 @@ function deriveUnitStats(input) {
   // engines it is the shared slot, whose one value stands for Ranged only while its permanent
   // type is a conventional ranged one. The two `CreateUnit.CAS` city gates below read that
   // field on the permanent record, so they resolve it here rather than from the modern card's
-  // legacy projection, which `Caster.exe` has no field for at all (F127). A modern record with
+  // shared projection, which `Caster.exe` has no field for at all (F127). A modern record with
   // no Ranged field has nothing for either gate to read, which a null context is.
   const rangedFieldContext = isCoM2
     ? (channelContexts.find(context => context.channelKey === 'ranged') || null)
@@ -1769,7 +1769,7 @@ function deriveUnitStats(input) {
   // the trace and the resolver read the same number, because nothing between recalculation and
   // the roll changes one without the other. One projection per derivation slot: each reads the
   // secondary modifier its own channel reads, which is what lets a single walk answer for the
-  // legacy slot and every modern channel alike.
+  // shared slot and every modern channel alike.
   // The ledger's own accumulator names. `common` is the record's `hitchance` seen alone, which
   // is what the card's base To-Hit row shows; `melee` and `rtb` are resolved thresholds — the
   // common value plus the modifier the projection's context names — and only those two are what
@@ -1930,7 +1930,7 @@ function deriveUnitStats(input) {
   const modifierTraces = {
     figures: projectStatTrace(figureTrace, 'figs', baseFigs, figureUnit.figs),
     melee: projectStatTrace(statTrace, 'atk', inputBaseAtk, finalAtk),
-    sharedAttack: projectStatTrace(projectTraceToSlot(statTrace, 'legacy'),
+    sharedAttack: projectStatTrace(projectTraceToSlot(statTrace, 'shared'),
       recordContext.strengthField, recordContext.baseStrength, finalRtb),
     defense: projectStatTrace(statTrace, 'def', inputBaseDef, displayDef),
     resistance: projectStatTrace(statTrace, 'res', inputBaseRes, finalRes),

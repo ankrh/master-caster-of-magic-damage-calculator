@@ -680,15 +680,15 @@ const STAT_ATTACK_CHANNELS = Object.freeze(['ranged', 'thrown', 'fireBreath', 'l
 // Glory transfer and Shadow Strike grant each supply an identity to a field that was empty, so
 // each slot answers type predicates for itself.
 //
-// `legacy` is the DOS engines' shared `.ranged` slot — one field carrying ranged, Thrown, Breath
-// and both gaze strengths alike. The modern engines keep it too, as the card's legacy secondary
+// `shared` is the DOS engines' shared `.ranged` slot — one field carrying ranged, Thrown, Breath
+// and both gaze strengths alike. The modern engines keep it too, as the card's shared secondary
 // projection (`result.rtb`), which is why it is a slot here rather than a channel.
 //
 // `extra` names the fields a slot owns beyond its strength and type pair: the DOS-shaped
-// `legacy` slot also stores its own secondary To Hit threshold, where the modern channels share
+// `shared` slot also stores its own secondary To Hit threshold, where the modern channels share
 // the record's three `hitchance<channel>` modifiers listed in `STAT_CHANNEL_FIELDS` below.
 const STAT_DERIVATION_SLOTS = Object.freeze({
-  legacy: Object.freeze({ channel: null, strength: 'rtb', rangedType: 'rangedType', thrownType: 'thrownType', extra: Object.freeze(['toHitRtb']) }),
+  shared: Object.freeze({ channel: null, strength: 'rtb', rangedType: 'rangedType', thrownType: 'thrownType', extra: Object.freeze(['toHitRtb']) }),
   ranged: Object.freeze({ channel: 'ranged', strength: 'rtbRanged', rangedType: 'rangedTypeRanged', thrownType: 'thrownTypeRanged' }),
   thrown: Object.freeze({ channel: 'thrown', strength: 'rtbThrown', rangedType: 'rangedTypeThrown', thrownType: 'thrownTypeThrown' }),
   fireBreath: Object.freeze({ channel: 'fireBreath', strength: 'rtbFireBreath', rangedType: 'rangedTypeFireBreath', thrownType: 'thrownTypeFireBreath' }),
@@ -792,7 +792,7 @@ function projectTraceToChannel(trace, channel) {
   return projectTraceByField(trace,
     field => {
       // A slot-owned field belongs to that slot's channel and to no other, so the DOS-shaped
-      // `legacy` slot's fields reach none of them.
+      // `shared` slot's fields reach none of them.
       const owner = STAT_SLOT_OF_FIELD[field];
       if (owner) return STAT_DERIVATION_SLOTS[owner].channel === channel;
       const owned = STAT_CHANNEL_FIELDS[field];
@@ -802,7 +802,7 @@ function projectTraceToChannel(trace, channel) {
 }
 
 // One derivation slot's view of the same walk. A slot is narrower than a channel: the DOS-shaped
-// `legacy` slot answers for no channel at all. Every other slot's fields drop; everything else
+// `shared` slot answers for no channel at all. Every other slot's fields drop; everything else
 // survives, so a channel's exposed `statTrace` is the events that reached *its* accumulator and
 // no other.
 function projectTraceToSlot(trace, slot) {

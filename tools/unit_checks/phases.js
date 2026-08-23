@@ -75,7 +75,7 @@ function runPhaseChecks(ctx) {
       `Modern Blood Lust does not double ${type === 'missile' ? 'physical' : 'magical'} conventional ranged`);
   }
 
-  // R3.3: Caster.exe's independent attack fields must survive the legacy card's single
+  // R3.3: Caster.exe's independent attack fields must survive the card's single shared
   // RTB projection. Three deterministic coexisting channels produce three separate attacks.
   const modernChannels = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', atk: 1, rtb: 0, rtbType: 'none', def: 0, hp: 10,

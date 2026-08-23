@@ -17,7 +17,7 @@ function runDeriveUnitStatsChecks(ctx) {
       lightningBreath: { strength: 4, type: 'lightning' },
     },
   }));
-  assertEqual(modernChannels.rtb, 7, 'The legacy RTB projection remains unchanged during R3.2');
+  assertEqual(modernChannels.rtb, 7, 'The shared RTB projection remains unchanged during R3.2');
   assertEqual(modernChannels.modernAttacks.ranged.strength, 7, 'Modern Ranged is derived independently');
   assertEqual(modernChannels.modernAttacks.thrown.strength, 3, 'Modern Thrown is derived independently');
   assertEqual(modernChannels.modernAttacks.fireBreath.strength, 5, 'Modern Fire Breath is derived independently');
