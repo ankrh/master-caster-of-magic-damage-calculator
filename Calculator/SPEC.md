@@ -45,6 +45,12 @@ in one round of combat.
   - Resistance rolls that are part of an **attack** — Poison Touch, Stoning, Death
     Gaze, Life Steal — are attack mechanics, not spell-landing mechanics, and are
     modelled exactly.
+- **Hero equipment.** The three item slots and the item-power flags they write are not an input.
+  This is what puts the DOS engines' two per-channel attack-attribute words out of reach: a
+  unit-type record cannot set a bit in either — `Load_Battle_Unit`'s import window closes before
+  them and zeroes them — so an equipped item is their only source
+  (`Reference docs/DOS reconstructed/R6.1h.evidence.md`). Every DOS attacker the calculator can
+  express therefore carries both channel words empty, which is what each consumer of one reads.
 - Multi-round combat, unit positioning, movement, morale, or army-level resolution.
 - Overland play: economy, research, diplomacy, AI.
 - Healing and regeneration between rounds, or post-combat effects. Immediate in-call

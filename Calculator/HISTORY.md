@@ -6,6 +6,29 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F126 - the DOS per-channel attack-attribute masks need no calculator input, because no unit
+  record can set one.** The row's first half is settled without an `LBX` read, and the answer is
+  structural rather than statistical. `Load_Battle_Unit` imports `0x24` bytes from
+  `&unit_types[type].Melee` into `bu+0x00..bu+0x23`, so the window closes before
+  `melee_attack_attributes` (`+0x28`) and `ranged_attack_attributes` (`+0x2A`), and it then zeroes
+  both at `131:0x8EB26`/`0x8EB2F`; only the unit-wide mask at `+0x1E` is inside it.
+  `BU_Apply_Hero_Items` zeroes the pair again at `131:0x8DBEA`/`0x8DBF3`, after which the only
+  writers in any of the three builds are `BU_Apply_Item_Attack_Specials` (equipped hero items,
+  `0x8DE54` melee / `0x8E004` ranged) and the `0x4000` Eldritch Weapon / Mystic Surge OR, which is
+  none of the four bits. All four consumers are hero-item-only, and hero equipment is not a
+  calculator input, so `SPEC.md` gains that non-goal and the consequence rather than the calculator
+  gaining a roster column or a card control. Two premise corrections: the row's "no code names it"
+  is false - `dosChannelTouchModifier` (`combat_phases.js`) already applies the Stoning Touch
+  **-1** and Death Touch **-3** exactly, asserted in `tools/unit_checks/phases.js`, and is merely
+  unreachable because `touchFlagRecords` has no DOS producer; and the always-full-strength
+  automatic-damage arm is right in **all three** builds for every expressible input, not only in
+  CoM 1, because the inner test reads the channel word. Two consumers stay unmodelled with a stated
+  reason (CoM 1 Life Steal `-2` on channel Illusionary; the MoM/CP halving), and a fifth the row did
+  not name is recorded: `Battle_Unit_Attack_Immunities` grants Illusion from the channel word at
+  `131:0x99191`/`0x99282`. Producer-side evidence is in
+  [R6.1h.evidence.md](../Reference%20docs/DOS%20reconstructed/R6.1h.evidence.md). Documentation
+  only - no calculator source changed, and all five versions are unmoved.
+
 - **F130 (round two) - resolution-time version scope gets a cited home, and the fourteen leaks
   close.** Round one measured; this built the mechanism. `COMBAT_VERSION_SCOPES` (`steps.js`) is
   to combat resolution what `STEP_VERSION_SCOPES` is to the step sequences: the single home for
