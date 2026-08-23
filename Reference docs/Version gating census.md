@@ -110,3 +110,25 @@ pairs moving a resolveCombat number: 14   (was 10)
 
 The four added are `rage` in `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11`. Nothing
 else appeared, so the corrected tool and the instrumentation agree exactly.
+
+## Outcome
+
+All 14 are closed. `COMBAT_VERSION_SCOPES` (`Calculator/steps.js`) now carries resolution-time
+scope the way `STEP_VERSION_SCOPES` carries step scope, keyed `resolution:<formula id>` and
+asserted against each formula's `PROVENANCE versions=` by `tools/unit_checks/version_scope.js`.
+The eight reads are gated through `combatEffectInVersion`. Re-run after the gates:
+
+```
+pairs moving a derived stat: 0
+pairs moving a resolveCombat number: 0
+```
+
+Two anchors were authored for it, because neither effect had one:
+
+| Formula | Versions | Cited span | Claim |
+|---|---|---|---|
+| `eldritchWeaponEligibility` | `mom_1.31`, `mom_cp_1.60.00` | `DOS reconstructed/unitcalc.c` 838-846 | The MoM `UE_ELDRITCH_WEAPON` block: gate on bit `0x00200000`, melee and conditional ranged attribute writes, `Weapon_Plus1` floor. CoM 1's block for the same bit is Mystic Surge's, at `unitcalc.c:1067`. |
+| `rulerOfUnderworldEligibility` | `com2_1.05.11`, `com2_warlord_1.5.12.7` | `Caster binary/Units.RecalculateUnits.pas` 1512-1517 and 621-625 | King of Underworld derives the aggregate Wraith Form flag during combat for a valid owner (`$0059EA93..$0059EB4D`), and a rival's copy suppresses only the calculated-layer `EncMagic` assignment (`$00598EA7..$00598ED9`). |
+
+The remaining 34 group-A/B reads are unconverted and stay for later rounds against the same
+mechanism.

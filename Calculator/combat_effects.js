@@ -128,7 +128,7 @@ function applyTacticianWarlordEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'tactician')) return unit;
   const extra = {};
   if (hasAbil(unit.abilities, 'teleporting')) extra.firstStrike = true;
-  if (hasNonCorporealEffect(unit.abilities)) extra.negateFirstStrike = true;
+  if (hasNonCorporealEffect(unit.abilities, version)) extra.negateFirstStrike = true;
   // A unit on its favored terrain gains both First Strike and Negate First Strike.
   if (hasAbil(unit.abilities, 'favoredTerrain')) {
     extra.firstStrike = true;
@@ -305,6 +305,13 @@ function applyAngelicGuardiansEffects(unit, version) {
 // PROVENANCE[bloodLustMeleeAttack]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:7:28677485bcd26d6205a27127 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:ac0c26ac4b856f2574b214d5
 // STAT-FORMULA[bloodLustMeleeAttack]
 function bloodLustMeleeAttack(atkUnit, defUnit, attackStrength = atkUnit.atk) {
+  // MoM guards bit 0x00000004 as Berserk and CoM 1 as Blood Lust, so the doubling exists only
+  // from CoM 1 on (`COMBAT_VERSION_SCOPES`, `steps.js`). `combatVersion` is written by
+  // `normalizeCombatUnit`; a unit that never passed through it is a wiring mistake, not a
+  // reason to guess a version.
+  if (!combatEffectInVersion('resolution:bloodLustMeleeAttack', atkUnit.combatVersion)) {
+    return attackStrength;
+  }
   // The final calculated unit type already reflects conversions such as Spirit Link.
   const targetIsNormal = defUnit
     && (isNormalUnitType(defUnit.unitType) || defUnit.unitType === 'hero');
@@ -596,7 +603,7 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
   const aArmorPiercing = hasAbil(attacker.abilities, 'armorPiercing');
   const aIllusion = hasAbil(attacker.abilities, 'illusion');
 
-  const wi = magicranged => hasWeaponImmunityEffect(target.abilities)
+  const wi = magicranged => hasWeaponImmunityEffect(target.abilities, version)
     && !modernAttackIsMagic(attacker, target.abilities, magicranged);
 
   let attack;
@@ -894,7 +901,7 @@ function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attac
   // Blazing March upgrades melee and missile attacks to magical weapons; Eldritch Weapon
   // upgrades the melee attack only, so a ranged or thrown attack still meets Weapon Immunity.
   const aBlazingMarch = hasAbil(attacker.abilities, 'blazingMarch');
-  const aEldritch = hasAbil(attacker.abilities, 'eldritchWeapon');
+  const aEldritch = eldritchWeaponActiveForUnit(attacker.abilities, version);
   const wi = weapon => weaponImmunityApplies(
     target.abilities, weapon, attacker.unitType, version, attacker.generic);
 

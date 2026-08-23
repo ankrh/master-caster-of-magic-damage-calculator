@@ -20,14 +20,13 @@ const { assert, assertSameKeyList } = require('./assertions');
 
 // Derived-stat leaks that exist today, each with the read that causes it. This list is the
 // worklist, not an exemption: an entry leaves when its read is gated, and the check fails if a
-// new one appears. Empty is the goal state.
+// new one appears.
 //
-// `rulerOfUnderworld` is a CoM2/Warlord enchantment, but `wraithFormBypassesWI` (`stats.js`)
-// tests `version.startsWith('com')` — one test covering two keys of different scope, since
-// `wraithForm` is genuinely all-versions — so CoM 1 upgrades a normal weapon to magic.
-const KNOWN_DERIVED_LEAKS = [
-  'com_6.08|rulerOfUnderworld',
-];
+// Empty since F130 gated `wraithFormBypassesWI` (`stats.js`), whose single
+// `version.startsWith('com')` test covered two keys of different scope — `wraithForm` is
+// genuinely all-versions, Ruler of Underworld is Caster.exe only — and so let CoM 1 upgrade a
+// normal weapon to magic. Keep it empty: an addition here needs a stated reason.
+const KNOWN_DERIVED_LEAKS = [];
 
 const MAGICAL_RANGED = '@magical';
 

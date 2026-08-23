@@ -202,7 +202,8 @@ function normalizeCombatUnit(unit, version) {
     noHealing: !!normalized.noHealing
       || hasAbil(normalized.abilities, 'undead')
       || hasAbil(normalized.abilities, 'animated')
-      || hasAbil(normalized.abilities, 'mysticSurge'),
+      || (combatEffectInVersion('resolution:mysticSurge', version)
+        && hasAbil(normalized.abilities, 'mysticSurge')),
   });
   // Angelic Guardians grants/improves Exorcise based on the finalized realm.
   const withGuardians = applyAngelicGuardiansEffects(withType, version);
@@ -436,13 +437,23 @@ function buildDefenseContext(a, b, version, aVertigoDefPenalty, bVertigoDefPenal
 
 // STAT-FORMULA[resolutionToBlockContext]
 // PROVENANCE[resolutionToBlockContext]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:988ef64cd77214c23cb77397 | Reference docs/DOS reconstructed/combat.c@span:22:f1bd863bb2e19d690ca89983 | Reference docs/DOS reconstructed/combat.c@span:17:168e451097f43626bf9c9d57 | Reference docs/DOS reconstructed/combat.c@span:13:ee0ffb0fdc5af4e30c63a285 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:12:08b392da258c1aa5831668e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:34f14a18e857be474ba8f10a | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:8:ede4f7dc06908e75ecaa412b | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:2cb725296f6895640edcf211 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:ce6c3e49e9933d68f63f9666 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:ce6c3e49e9933d68f63f9666
-function buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty, version = null) {
+function buildToBlockContext(a, b, aVertigoBlockPenalty, bVertigoBlockPenalty, version) {
+  // Both -10pp arms are version-scoped, so a missing version would silently disable both rather
+  // than gate them — the invented default this gating exists to remove.
+  if (!version) {
+    throw new Error('buildToBlockContext: version is required to scope Eldritch Weapon and '
+      + 'Mystic Surge.');
+  }
   // Eldritch Weapon: -10pp to defender's toBlock on melee, thrown, and missile ranged attacks.
   // Mystic Surge: -10pp to opponent's To Block on all conventional attacks.
-  const aEW = hasAbil(a.abilities, 'eldritchWeapon');
-  const bEW = hasAbil(b.abilities, 'eldritchWeapon');
-  const aMysticSurge = hasAbil(a.abilities, 'mysticSurge');
-  const bMysticSurge = hasAbil(b.abilities, 'mysticSurge');
+  // One engine write, two named effects: MoM's bit 0x00200000 is Eldritch Weapon and CoM 1's is
+  // Mystic Surge, so exactly one of these pairs can be live in any version and CoM 1 reaches the
+  // reduction through Mystic Surge (`COMBAT_VERSION_SCOPES`, `steps.js`).
+  const aEW = eldritchWeaponActiveForUnit(a.abilities, version);
+  const bEW = eldritchWeaponActiveForUnit(b.abilities, version);
+  const mysticSurgeLive = combatEffectInVersion('resolution:mysticSurge', version);
+  const aMysticSurge = mysticSurgeLive && hasAbil(a.abilities, 'mysticSurge');
+  const bMysticSurge = mysticSurgeLive && hasAbil(b.abilities, 'mysticSurge');
   const bToBlockConventional = Math.max(0, b.toBlock - bVertigoBlockPenalty);
   const aToBlockConventional = Math.max(0, a.toBlock - aVertigoBlockPenalty);
   const bToBlockVsAAll = aMysticSurge ? Math.max(0, bToBlockConventional - 0.10) : bToBlockConventional;

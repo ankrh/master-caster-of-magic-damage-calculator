@@ -699,9 +699,13 @@ function deriveUnitStats(input) {
   const trueSightRangedToHitBonus = isWarlord
     && !!(abilities.trueSight || abilities.eyeOfHeaven) ? 5 : 0;
   const weaponUpgradedByHW = hwActive && weapon === 'normal';
+  // Two effects with different scopes shared one test here: Wraith Form is an all-versions
+  // enchantment whose bypass arm is CoM 1 on, while Ruler of Underworld is Caster.exe only, so
+  // `startsWith('com')` admitted it into CoM 1. Each disjunct now carries its own scope.
   const wraithFormBypassesWI = weapon === 'normal'
-    && version.startsWith('com')
-    && !!(abilities && (abilities.wraithForm || abilities.rulerOfUnderworld));
+    && !!abilities
+    && ((version.startsWith('com') && !!abilities.wraithForm)
+      || rulerOfUnderworldActiveForUnit(abilities, version));
   // Warlord Wall of Fire's defender bonus mirrors Metal Fires, which also upgrades
   // the unit's weapon to magic (bypasses Weapon Immunity) for its non-magic attacks.
   const weaponUpgradedByWoF = wofDefenderBonusActive && weapon === 'normal';

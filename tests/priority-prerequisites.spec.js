@@ -16,15 +16,18 @@ test('F7 uses the moddable modern Supernatural formula with ties-to-even roundin
 test('F22 Blood Lust strength helper preserves the target gate for modern Thrown', async ({ page }) => {
   const errors = await openCalculator(page);
   const values = await page.evaluate(() => {
-    const attacker = { atk: 1, abilities: { bloodLust: true } };
+    const attacker = version => ({ atk: 1, combatVersion: version, abilities: { bloodLust: true } });
     const normal = { unitType: 'normal', abilities: {} };
     const fantastic = { unitType: 'fantastic_nature', abilities: {} };
     return {
-      thrownVsNormal: bloodLustMeleeAttack(attacker, normal, 3),
-      thrownVsFantastic: bloodLustMeleeAttack(attacker, fantastic, 3),
+      thrownVsNormal: bloodLustMeleeAttack(attacker('com2_1.05.11'), normal, 3),
+      thrownVsFantastic: bloodLustMeleeAttack(attacker('com2_1.05.11'), fantastic, 3),
+      // MoM guards bit 0x00000004 as Berserk, not Blood Lust (F130), so the doubling does not
+      // exist there and the same call returns the strength unchanged.
+      thrownVsNormalMoM: bloodLustMeleeAttack(attacker('mom_1.31'), normal, 3),
     };
   });
-  expect(values).toEqual({ thrownVsNormal: 6, thrownVsFantastic: 3 });
+  expect(values).toEqual({ thrownVsNormal: 6, thrownVsFantastic: 3, thrownVsNormalMoM: 3 });
   expectNoConsoleErrors(errors);
 });
 

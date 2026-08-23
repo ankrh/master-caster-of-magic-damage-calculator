@@ -276,6 +276,43 @@ function runCanonicalVersionScopeChecks(ctx) {
       `Evidence-coverage gap for ${id} covers the recorded versions`);
   }
 
+  // --- 3b. the resolution-time scope table (F130) ---
+  // `COMBAT_VERSION_SCOPES` is the same fact for effects implemented in combat resolution, which
+  // have no step to carry it. Its entries are keyed `resolution:<formula id>` and every one is
+  // authored together with its citation, so the bar here is **exact equality** with that
+  // formula's `PROVENANCE versions=` — not the subset-plus-declared-gaps the phase tables allow,
+  // where entries predate their citations. A new entry whose scope exceeds its evidence fails
+  // rather than being absorbed into a gap list.
+  const combatScopes = evalInContext(ctx, 'COMBAT_VERSION_SCOPES');
+  const combatKeys = Object.keys(combatScopes);
+  assert(combatKeys.length > 0, 'COMBAT_VERSION_SCOPES has entries');
+  for (const key of combatKeys) {
+    assert(key.startsWith('resolution:'),
+      `COMBAT_VERSION_SCOPES key '${key}' is keyed 'resolution:<formula id>'`);
+    const id = key.slice('resolution:'.length);
+    const provenance = provenanceVersions.get(id);
+    assert(provenance,
+      `COMBAT_VERSION_SCOPES['${key}'] names formula '${id}', which has no PROVENANCE comment`);
+    assertEqual([...combatScopes[key]].sort().join(','), [...provenance].sort().join(','),
+      `COMBAT_VERSION_SCOPES['${key}'] matches PROVENANCE[${id}] versions=`);
+    for (const version of combatScopes[key]) {
+      assert(evalInContext(ctx, 'ENGINE_VERSIONS').includes(version),
+        `COMBAT_VERSION_SCOPES['${key}'] names engine version '${version}'`);
+    }
+  }
+  // An entry nothing consults is a scope that cannot be enforced, so each id must appear in a
+  // `combatEffectInVersion` call somewhere in the computation layer.
+  const combatCallers = new Set();
+  for (const file of calculatorFiles) {
+    const text = fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8');
+    for (const match of text.matchAll(/combatEffectInVersion\(\s*'([^']+)'/g)) {
+      combatCallers.add(match[1]);
+    }
+  }
+  assertSameKeyList(combatKeys.sort(), [...combatCallers].sort(),
+    'Every COMBAT_VERSION_SCOPES entry is consulted by a combatEffectInVersion call, and every '
+    + 'call names an entry');
+
   // --- 4. scope at the call site, where no per-step predicate can see it ---
   // No step in any of the four attack-specific lists carries a version predicate. The Caster.exe
   // pair is CoM2-only because buildResistanceContext / computeDefenseProfile only reach them from

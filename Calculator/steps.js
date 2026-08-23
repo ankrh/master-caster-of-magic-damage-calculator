@@ -326,6 +326,47 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'attackSpecific:dosEffectiveResistance:righteousness': SCOPE_MOM,
 });
 
+// --- Canonical engine-version scope: resolution-time reads (F130) ---
+//
+// `STEP_VERSION_SCOPES` covers writes made by ordered steps. An effect implemented purely in
+// combat resolution has no step at all, so it had no home for the same fact and each read carried
+// its own hand-written version test — or none. This table is that home, keyed `resolution:<id>`
+// where `<id>` is the formula id whose `PROVENANCE versions=` backs it, the way the phase tables
+// are keyed `phase:id`. `tools/unit_checks/version_scope.js` asserts the two agree.
+//
+// A control's `subgroup` is NOT the source for these. It states UI visibility only (see the note
+// above), and the DOS engines make the difference load-bearing: they **repurpose enchantment
+// bits** between builds, so one bit is two named effects. `0x00200000` guards Eldritch Weapon in
+// both MoM builds and Mystic Surge in CoM 1; `0x00000004` is Berserk in MoM and Blood Lust in
+// CoM 1 (`Reference docs/DOS reconstructed/R6.1a.evidence.md`, guard-mask table). CoM 1's -10pp
+// To Block is therefore real and reached through Mystic Surge, while an Eldritch Weapon read
+// firing there is a duplicate of it. The calculator's inputs are named effects, not record bits:
+// one name means one effect in every version, and the shared storage is the citation for why the
+// two are distinct rather than a reason to alias them.
+const COMBAT_VERSION_SCOPES = Object.freeze({
+  'resolution:bloodLustMeleeAttack': SCOPE_COM_PLUS,
+  'resolution:eldritchWeaponEligibility': SCOPE_MOM,
+  'resolution:mysticSurge': SCOPE_COM_PLUS,
+  'resolution:rageEffectiveAttack': SCOPE_WARLORD,
+  'resolution:rulerOfUnderworldEligibility': SCOPE_MODERN,
+});
+
+// Scope is an upper bound, exactly as it is for steps: inside it the read still asks whether this
+// unit carries the effect; outside it the engine has no such effect and the read must not fire.
+// Throws on an unknown id rather than defaulting to "applies everywhere", which would reintroduce
+// the ungated read this table exists to remove (`SPEC.md`, *Out-of-range values stop the run*).
+function combatEffectInVersion(id, version) {
+  const scope = COMBAT_VERSION_SCOPES[id];
+  if (!scope) {
+    throw new Error(`combatEffectInVersion: '${id}' has no COMBAT_VERSION_SCOPES entry. `
+      + 'Add it with the versions its PROVENANCE names.');
+  }
+  if (!version) {
+    throw new Error(`combatEffectInVersion: '${id}' needs a version; got ${JSON.stringify(version)}.`);
+  }
+  return scope.includes(version);
+}
+
 // `chance:` is the To-Hit/To-Block ledger's namespace and nothing else's (M13): every step in
 // that ledger carries it and no step of the stat sequence does, so the two id spaces are
 // disjoint and one `phase:id` key names one step. The ledger holds the projection of each stat

@@ -502,9 +502,34 @@ function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged,
   return true;
 }
 
-function hasWeaponImmunityEffect(abilities) {
+// Ruler of Underworld is Caster.exe's King of Underworld global: during combat it derives the
+// aggregate Wraith Form flag for the owner's units, which is what carries Weapon Immunity and
+// Non-Corporeal. The DOS engines have no such global, so the effect does not exist there and the
+// control is hidden in all three — `COMBAT_VERSION_SCOPES` (`steps.js`) is the home for that fact
+// and this is its one gate.
+// STAT-FORMULA[rulerOfUnderworldEligibility]
+// PROVENANCE[rulerOfUnderworldEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:1771129697cc08c42e75f953 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:35fc242da2227f6e691cb83f
+function rulerOfUnderworldActiveForUnit(abilities, version) {
+  return combatEffectInVersion('resolution:rulerOfUnderworldEligibility', version)
+    && hasAbil(abilities, 'rulerOfUnderworld');
+}
+
+// Eldritch Weapon is guarded by enchantment bit `0x00200000` in both MoM builds. CoM 1 reuses that
+// same bit for Mystic Surge — the reconstruction records the repurposing as an explicit alias
+// (`unitcalc.c:51`, `#define UE_MYSTIC_SURGE UE_ELDRITCH_WEAPON`) and gives each build its own
+// block. So CoM 1's -10pp To Block is real and is Mystic Surge's; an Eldritch Weapon read firing
+// there would double the same engine write under a second name.
+// STAT-FORMULA[eldritchWeaponEligibility]
+// PROVENANCE[eldritchWeaponEligibility]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:aa0a43e91e01a69c33497368
+function eldritchWeaponActiveForUnit(abilities, version) {
+  return combatEffectInVersion('resolution:eldritchWeaponEligibility', version)
+    && hasAbil(abilities, 'eldritchWeapon');
+}
+
+function hasWeaponImmunityEffect(abilities, version) {
   return hasAbil(abilities, 'weaponImmunity') || hasAbil(abilities, 'invulnerability')
-      || hasAbil(abilities, 'wraithForm') || hasAbil(abilities, 'rulerOfUnderworld');
+      || hasAbil(abilities, 'wraithForm')
+      || rulerOfUnderworldActiveForUnit(abilities, version);
 }
 
 // Caster.exe passes `EncMagic or magicranged` from ApplyAttack to EffectiveDefense.
@@ -529,10 +554,10 @@ function modernAttackIsMagic(attacker, defAbilities, magicranged) {
 // (CoM2 +8, Warlord +10).
 // v1.31 bug: Generic units (Trireme, Galley, Warship, Catapult) bypass WI regardless of attack type.
 function weaponImmunityApplies(defAbilities, atkWeapon, atkUnitType, version, atkGeneric) {
-  if (!hasWeaponImmunityEffect(defAbilities)) return false;
+  if (!hasWeaponImmunityEffect(defAbilities, version)) return false;
   // Ruler of Underworld preserves Weapon Immunity against magical/mithril/adamantium
   // weapons, but still only against normal-unit attacks.
-  if (atkWeapon !== 'normal' && !hasAbil(defAbilities, 'rulerOfUnderworld')) return false;
+  if (atkWeapon !== 'normal' && !rulerOfUnderworldActiveForUnit(defAbilities, version)) return false;
   if (!isNormalUnitType(atkUnitType)) return false;
   // MoM 1.31 marks generic hulls as having a magical weapon, so they never set
   // the attack-side Weapon Immunity flag.
@@ -541,10 +566,10 @@ function weaponImmunityApplies(defAbilities, atkWeapon, atkUnitType, version, at
 }
 
 // Wraith Form and Ruler of Underworld both grant Non-Corporeal in addition to Weapon Immunity.
-function hasNonCorporealEffect(abilities) {
+function hasNonCorporealEffect(abilities, version) {
   return hasAbil(abilities, 'nonCorporeal')
       || hasAbil(abilities, 'wraithForm')
-      || hasAbil(abilities, 'rulerOfUnderworld');
+      || rulerOfUnderworldActiveForUnit(abilities, version);
 }
 
 // --- Rage (Warlord) ---
@@ -556,6 +581,7 @@ function hasNonCorporealEffect(abilities) {
 // STAT-FORMULA[rageEffectiveAttack]
 // PROVENANCE[rageEffectiveAttack]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:13:325ede6460c3b3ea9b78f8a2
 function applyRage(baseAtk, unit, aliveNow) {
+  if (!combatEffectInVersion('resolution:rageEffectiveAttack', unit.combatVersion)) return baseAtk;
   if (baseAtk <= 0 || !hasAbil(unit.abilities, 'rage')) return baseAtk;
   return baseAtk + Math.max(0, unit.figs - aliveNow);
 }

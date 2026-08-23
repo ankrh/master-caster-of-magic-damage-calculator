@@ -5,28 +5,46 @@
 
 const { assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
 
+// Eldritch Weapon and Mystic Surge are one engine write reached under two names: MoM guards bit
+// 0x00200000 as Eldritch Weapon, CoM 1 as Mystic Surge (`COMBAT_VERSION_SCOPES`, `steps.js`). No
+// version admits both, so the pair is checked once per engine rather than on one fixture carrying
+// both — which is what this check used to do, with no version passed at all.
+//
+// `com_6.08` is the CoM arm rather than `com2_1.05.11` because a `com2_` version wraps every
+// return in the capped-chance profile object, which would put `.chance` in front of every value
+// here and test the wrapper rather than the reduction.
 function runToBlockChecks(ctx) {
-  const a = {
-    toBlock: 0.4,
+  const unit = (toBlock, thrownType, rangedType) => ({
+    toBlock,
     abilities: { eldritchWeapon: true, mysticSurge: true },
-    thrownType: 'thrown',
-    rangedType: 'missile',
-  };
-  const b = {
-    toBlock: 0.5,
-    abilities: { eldritchWeapon: true, mysticSurge: true },
-    thrownType: 'none',
-    rangedType: 'none',
-  };
-  const result = ctx.buildToBlockContext(a, b, 0.05, 0.07);
-  assertClose(result.bToBlockConventional, 0.43, 'Defender conventional block applies Vertigo');
-  assertClose(result.bToBlockVsAAll, 0.33, 'Mystic Surge lowers defender block against all conventional attacks');
-  assertClose(result.bToBlockVsAMelee, 0.23, 'Eldritch Weapon lowers defender melee block');
-  assertClose(result.bToBlockVsAThrEW, 0.23, 'Eldritch Weapon lowers defender thrown block');
-  assertClose(result.bToBlockVsARangedEW, 0.23, 'Eldritch Weapon lowers defender missile block');
-  assertClose(result.aToBlockConventional, 0.35, 'Attacker conventional block applies Vertigo');
-  assertClose(result.aToBlockVsBAll, 0.25, 'Opponent Mystic Surge lowers attacker block');
-  assertClose(result.aToBlockVsBMelee, 0.15, 'Opponent Eldritch Weapon lowers attacker melee block');
+    thrownType,
+    rangedType,
+  });
+  const a = unit(0.4, 'thrown', 'missile');
+  const b = unit(0.5, 'none', 'none');
+
+  // MoM: Eldritch Weapon live, Mystic Surge inert.
+  const mom = ctx.buildToBlockContext(a, b, 0.05, 0.07, 'mom_1.31');
+  assertClose(mom.bToBlockConventional, 0.43, 'MoM defender conventional block applies Vertigo');
+  assertClose(mom.aToBlockConventional, 0.35, 'MoM attacker conventional block applies Vertigo');
+  assertClose(mom.bToBlockVsAAll, 0.43, 'MoM has no Mystic Surge, so the all-attack block is unreduced');
+  assertClose(mom.aToBlockVsBAll, 0.35, 'MoM opponent Mystic Surge is inert');
+  assertClose(mom.bToBlockVsAMelee, 0.33, 'MoM Eldritch Weapon lowers defender melee block');
+  assertClose(mom.bToBlockVsAThrEW, 0.33, 'MoM Eldritch Weapon lowers defender thrown block');
+  assertClose(mom.bToBlockVsARangedEW, 0.33, 'MoM Eldritch Weapon lowers defender missile block');
+  assertClose(mom.aToBlockVsBMelee, 0.25, 'MoM opponent Eldritch Weapon lowers attacker melee block');
+
+  // CoM 1: Mystic Surge live, Eldritch Weapon inert. The melee value still falls, because Mystic
+  // Surge reduces the all-attack block the melee value is taken from.
+  const com = ctx.buildToBlockContext(a, b, 0.05, 0.07, 'com_6.08');
+  assertClose(com.bToBlockConventional, 0.43, 'CoM 1 defender conventional block applies Vertigo');
+  assertClose(com.aToBlockConventional, 0.35, 'CoM 1 attacker conventional block applies Vertigo');
+  assertClose(com.bToBlockVsAAll, 0.33, 'CoM 1 Mystic Surge lowers defender block against all conventional attacks');
+  assertClose(com.aToBlockVsBAll, 0.25, 'CoM 1 opponent Mystic Surge lowers attacker block');
+  assertClose(com.bToBlockVsAMelee, 0.33, 'CoM 1 has no Eldritch Weapon, so melee takes no second reduction');
+  assertClose(com.bToBlockVsAThrEW, 0.33, 'CoM 1 thrown takes no Eldritch Weapon reduction');
+  assertClose(com.bToBlockVsARangedEW, 0.33, 'CoM 1 missile takes no Eldritch Weapon reduction');
+  assertClose(com.aToBlockVsBMelee, 0.25, 'CoM 1 attacker melee takes no Eldritch Weapon reduction');
 }
 
 function runDerivationStageChecks(ctx) {
