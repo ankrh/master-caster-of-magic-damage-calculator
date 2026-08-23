@@ -10,7 +10,7 @@
 // These run in the page so both scopes are reachable: the computation layer (deriveUnitStats,
 // getLevelBonuses, weaponBonus, versionChain, normalizeDosCombatHealState) and the page layer
 // (loadUnitDatabase, applyPreset, predefinedUnitRtbType, subgroupAllowedForVersion,
-// globalEnchantmentAllowedForVersion).
+// globalEnchantmentAllowedForVersion, recalculate, specialUnitAllowed, applyState).
 const { test, expect } = require('@playwright/test');
 const { openCalculator, expectNoConsoleErrors } = require('./helpers');
 
@@ -68,6 +68,18 @@ const CASES = [
   ['globalEnchantmentAllowedForVersion: control with no version rule',
     "globalEnchantmentAllowedForVersion('noSuchEnchantmentF113', 'com2_1.05.11')",
     'noSuchEnchantmentF113'],
+  // F132: the ranged-mode control is withdrawn by `updateTypeVisibility` in the same interaction
+  // as any edit that empties the attacker's ranged attack (`SPEC.md`, UI contract), so a tick that
+  // survives into `recalculate` is a state the contract forbids. It used to be absorbed by an
+  // `&& hasRangedAttack` term that silently resolved the exchange as melee. The setup below leaves
+  // the page as it found it: the guard runs before any result is rendered.
+  ['recalculate: ranged mode ticked with no conventional ranged attack',
+    "(() => { const c = document.getElementById('rangedCheck');"
+    + " if (hasConventionalRangedAttack(readUnitStats('a'))) throw new Error('F113 setup: the"
+    + " default attacker carries a conventional ranged attack, so this case cannot reach the"
+    + " guard'); c.checked = true;"
+    + " try { recalculate(); } finally { c.checked = false; } })()",
+    'no conventional ranged attack'],
   // F138: the two state-boundary reads that used to answer with a plausible substitute. A key no
   // version defines is retirement, not version scope — a *defined* key the selected version
   // disallows still clamps to `none`, which `tests/persistence.spec.js` pins.

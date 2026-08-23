@@ -438,13 +438,6 @@ function csvEscape(value) {
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-function hasMatrixRangedAttack(info) {
-  if (!info || !info.stats) return false;
-  return info.stats.modernAttacks
-    ? !!(info.stats.modernAttacks.ranged && info.stats.modernAttacks.ranged.strength > 0)
-    : info.stats.rangedType !== 'none' && info.stats.rtb > 0;
-}
-
 function matrixCombatOptions(matrixMode) {
   return {
     isRanged: matrixMode === 'ranged',
@@ -459,11 +452,11 @@ async function buildMatrixCache(attackerEnchantments, defenderEnchantments, matr
   const { version } = opts;
   const isRangedMatrix = matrixMode === 'ranged';
   const allAttackers = predefinedMatrixUnitRows('a', attackerEnchantments, matrixMode)
-    .filter(info => !isRangedMatrix || hasMatrixRangedAttack(info));
+    .filter(info => !isRangedMatrix || hasConventionalRangedAttack(info.stats));
   const allDefenders = predefinedMatrixUnitRows('b', defenderEnchantments, matrixMode);
   const selectedAttacker = selectedMatrixUnitRow('a', matrixMode);
   const selectedDefender = selectedMatrixUnitRow('b', matrixMode);
-  const attackers = (!isRangedMatrix || hasMatrixRangedAttack(selectedAttacker))
+  const attackers = (!isRangedMatrix || hasConventionalRangedAttack(selectedAttacker.stats))
     ? [...allAttackers, selectedAttacker]
     : [...allAttackers];
   const defenders = [...allDefenders, selectedDefender];

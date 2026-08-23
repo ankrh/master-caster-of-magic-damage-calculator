@@ -547,10 +547,7 @@ function updateTypeVisibility() {
     if (gLabel) gLabel.classList.toggle('disabled-field', !allowed);
   }
 
-  const aStats = readUnitStats('a');
-  const hasRanged = aStats.modernAttacks
-    ? !!(aStats.modernAttacks.ranged && aStats.modernAttacks.ranged.strength > 0)
-    : aStats.rangedType !== 'none' && aStats.rtb > 0;
+  const hasRanged = hasConventionalRangedAttack(readUnitStats('a'));
   const rangedCheckLabel = document.getElementById('rangedCheckLabel');
   const rangedCheck = document.getElementById('rangedCheck');
   const rangedDist = document.getElementById('rangedDist');

@@ -708,6 +708,10 @@ Loaded runtime constants are cited from the tables that own them rather than res
   card the user is still editing, not a fallback: no value is invented, the withdrawal is visible
   on the control itself, and *Out-of-range values stop the run* therefore does not apply. The
   ranged matrix states the same rule by omitting an attacker that has no ranged attack.
+  Resolution checks the guarantee instead of repeating it: a tick that reaches the exchange with no
+  ranged attack behind it halts, because the withdrawal has already failed by then and resolving it
+  either way — silently as melee, or as a volley from an attack the record does not have —
+  manufactures a number (*Out-of-range values stop the run*).
 - **Matrix mode** computes attacker-vs-whole-roster ratios in Web Workers. Custom and roster
   rows enter the same identity-aware `deriveUnitStats` boundary as the main card. The main
   thread sends those fully derived, identity-dependent stat records to the workers; workers

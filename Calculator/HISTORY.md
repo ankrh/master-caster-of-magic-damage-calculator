@@ -6,6 +6,48 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-24
 
+- **F132 — the has-ranged-attack predicate has one home, and the unreachable copy became the halt
+  its unreachability was evidence for.** **Premise held; every line number in it was stale and
+  there was no fourth copy.** Re-located: `ui.js:229-231`, `ui_abilities.js:551-553`,
+  `ui_matrix.js:443-445`. F119's measurement re-established rather than inherited — 13
+  `recalculate()` call sites in `Calculator/` (`ui.js` 7, `ui_state.js` 5, `ui_matrix.js` 1),
+  enumerated uncapped from the 56 repository-wide matches, and all 13 still reach
+  `updateTypeVisibility` first, five of them through `refreshAbilityFieldVisibility`. The
+  fourth-copy search covered the shape, not the three names: of the other `rtb > 0` /
+  `strength > 0` sites, `stats.js:1950` reads the *control* for the distance penalty and
+  `combat.js:1127-1139` is the core volley's own damage test, neither of which asks this question.
+  **F150 did not invalidate the predicate.** Its family discriminator is record presence, and
+  F150 is what makes that exact: `deriveUnitStats` halts on a modern input with no
+  `modernAttacks`, so a derived record carries the four channels exactly when its version is
+  modern, and the `rangedType !== 'none' && rtb > 0` arm is the DOS arm rather than a modern
+  fallback. The type test is load-bearing there — the probe's own default attacker derives
+  `rangedType 'none'` with shared-slot strength 3, a gaze.
+  **Home:** `hasConventionalRangedAttack(stats)` in `ui_card.js`, beside `readUnitStats`, whose
+  output it reads. `data-scope="page"`, so no consumer and no worker gains a source.
+  `hasMatrixRangedAttack` is gone rather than delegating: its `!info || !info.stats` arm was dead,
+  both matrix row builders always carry a derived record.
+  **Decision on the `recalculate` term: a halt, not a deletion.** The unreachable `&&` is the only
+  thing standing between a ticked control with no ranged attack behind it and a resolved exchange,
+  and by the time control reaches there the withdrawal `SPEC.md`'s UI contract promises has
+  already failed. Deleting the term was rejected because it is silent in the other direction: the
+  volley would then fire from an attack the record does not have and report zero damage, a number
+  as untraceable as the melee one the `&&` produced. Both are the fallback *Out-of-range values
+  stop the run* forbids, so it throws, naming the record fields it found. This does not disturb
+  F119's ruling that the *withdrawal* is normalization and not a fallback — that ruling covers
+  `updateTypeVisibility`, which runs before resolution; the halt covers only a state that outlives
+  it. Recorded in the `SPEC.md` UI-contract bullet.
+  **Coverage:** one case in `tests/fail-loud-f113.spec.js`, the reintroduction registry, which
+  re-ticks the control directly and requires the halt; its precondition throws a distinguishable
+  message if the default attacker ever gains a ranged attack.
+  **Nothing was folded in.** **Checks:** `node tools/node_unit_checks.js` 14385/14385;
+  `npm run provenance` 271 formulas, 271 verified, 0 UNVERIFIED, 23 tooling assertions;
+  `tests/version-gating.spec.js`, `tests/matrix-drawers.spec.js`, `tests/persistence.spec.js`,
+  `tests/share-link.spec.js`, `tests/modifier-trace-tooltips.spec.js` and
+  `tests/fail-loud-f113.spec.js` 28 passed; `tests/presets.spec.js` (every preset through
+  `applyPreset` → `recalculate`, the guard's widest exposure), `tests/result-invariants.spec.js` and
+  `tests/roster-smoke.spec.js` 12 passed; `tests/fail-loud-f113.spec.js` re-run with the new case,
+  1 passed.
+
 - **F144 — the special-unit vocabulary has one home, and the core identity boundary halts on a key
   outside it.** **Premise held, with one omission in the row's consumer list.** Measured against
   the unchanged code: `deriveUnitStats` on `com2_1.05.11` with `identity.specialUnit` set to

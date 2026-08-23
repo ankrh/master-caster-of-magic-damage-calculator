@@ -226,10 +226,22 @@ function recalculate() {
   updateModifiedDisplay('a', a);
   updateModifiedDisplay('b', b);
 
-  const hasRangedAttack = a.modernAttacks
-    ? !!(a.modernAttacks.ranged && a.modernAttacks.ranged.strength > 0)
-    : a.rangedType !== 'none' && a.rtb > 0;
-  const isRanged = document.getElementById('rangedCheck').checked && hasRangedAttack;
+  // The ranged-mode control follows the attacker's derived ranged attack: `updateTypeVisibility`
+  // withdraws it in the same interaction as any edit that leaves the derivation without one, and
+  // every `recalculate()` call site runs it first. A tick surviving to here means that withdrawal
+  // regressed, and the exchange is one line from being resolved out of a state the UI contract
+  // forbids. Both resolutions manufacture a number: as melee it silently drops what the user
+  // asked for, as ranged it fires a volley from an attack the record does not have. So it halts
+  // (`SPEC.md`, *Out-of-range values stop the run*) rather than picking one.
+  const isRanged = document.getElementById('rangedCheck').checked;
+  if (isRanged && !hasConventionalRangedAttack(a)) {
+    const carried = a.modernAttacks
+      ? `modernAttacks.ranged = ${JSON.stringify(a.modernAttacks.ranged || null)}`
+      : `shared slot type ${JSON.stringify(a.rangedType)} strength ${a.rtb}`;
+    throw new Error('recalculate: ranged mode is ticked while the attacker\'s derived record '
+      + `carries no conventional ranged attack (${carried}). The control is expected to have been `
+      + 'cleared and disabled by updateTypeVisibility before this point (SPEC.md, UI contract).');
+  }
   const version = document.getElementById('gameVersion').value;
   const wallOfFire = document.getElementById('wallOfFire').checked;
   const chaosConjunction = document.getElementById('chaosConjunction').checked;

@@ -114,6 +114,22 @@ function readUnitStats(prefix, overrides) {
   });
 }
 
+// Does this derived record carry a conventional ranged attack? One question with three askers —
+// the ranged-mode control, the ranged matrix's attacker filter and the guard at resolution
+// (`SPEC.md`, UI contract) — so it is derived once, here, beside the record's other card-level
+// reads.
+//
+// The two engine families keep the answer in different fields, and which family a record belongs
+// to is readable off the record itself: `deriveUnitStats` halts on a modern input that supplies no
+// `modernAttacks`, so a derived record carries the four channels exactly when its version is a
+// modern one. Modern reads the Ranged channel; DOS reads the shared slot, which is a conventional
+// ranged attack only while its type says so, because the same byte also carries the gazes.
+function hasConventionalRangedAttack(stats) {
+  return stats.modernAttacks
+    ? !!(stats.modernAttacks.ranged && stats.modernAttacks.ranged.strength > 0)
+    : stats.rangedType !== 'none' && stats.rtb > 0;
+}
+
 const MODERN_SPECIAL_FIELDS = [
   ['stoningGaze', 'Stoning Gaze'], ['deathGaze', 'Death Gaze'], ['doomGaze', 'Doom Gaze'],
   ['stoningTouch', 'Stoning Touch'], ['deathTouch', 'Death Touch'], ['lifeSteal', 'Life Steal'],
