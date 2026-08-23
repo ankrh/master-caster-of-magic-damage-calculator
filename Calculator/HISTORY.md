@@ -6,6 +6,28 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F156 — the `e:clamp` secondary-slot zeroing is gone; the row's premise held on the sources
+  but its scope claim was false, because the branch could not move a number.** Re-measured: the
+  clamp still wrote `u[c.strengthField] = isLiveSlot(u, c) ? Math.max(0, …) : 0` over every slot,
+  and `Units.RecalculateUnits.pas:2482-2487` is six floors of one shape — Defense, melee, Ranged,
+  Thrown, Fire Breath, Lightning Breath — matched in DOS by `if (bu->melee < 0)` and
+  `if (bu->ranged < 0)` (`unitcalc.c` 131:0x90B1F, 131:0x90B2F). `isLiveSlot` has three callers:
+  the `rtb` and `ranged` per-write gates in `slotGateAdmits`, which stay, and this one. **The
+  answer to the row's question is that the test belonged in neither place, because at the clamp it
+  was already inert.** Unlike the melee zeroing F142 removed, which read the *permanent* record,
+  `isLiveSlot` disjoins `u[strengthField] > 0` — a live read — so the zeroing branch is reachable
+  only when the strength is already ≤ 0, where the floor writes the same 0. Confirmed empirically
+  as well as by inspection: a probe throwing on any divergence between the gated and floored
+  results ran clean over 14385 `node tools/node_unit_checks.js` assertions, 12840 derivations plus
+  17120 `resolveCombat` exchanges in `tools/hidden_control_leak_sweep.js`, and 15480 derivations in
+  `tools/derivation_equivalence.js`. **No number moved, in any of the five versions**, so no preset
+  can hold the change and none was added; the claim's home is the step comment, which now cites the
+  four secondary floors beside the melee one. Which slots a record carries stays where it already
+  was — the channel construction in `stats.js` (F122, F135) — and `SPEC.md`'s *dead-slot rule*
+  paragraph is restated for all six floors rather than melee alone. Verified with
+  `node tools/node_unit_checks.js` (14385), `npm run provenance` (271 formulas, 0 UNVERIFIED),
+  `tests/modifier-traces.spec.js` (5 passed) as the spec naming the clamp, and `npm test`.
+
 - **F150 — `deriveUnitStats` now halts on a modern input that supplies no `modernAttacks`, and
   the three shared-slot fallbacks behind it are gone.** The premise held on re-measurement: all
   three arms stood where the row said, and the resolver accepted a modern input without a record.

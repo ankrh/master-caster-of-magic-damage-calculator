@@ -1550,10 +1550,10 @@ function postHookStatSteps(ctx) {
     // 0x90B41-0x90B75. The calculator keeps its own non-negative Resistance convention for the
     // resistance rolls, and its own floor of 1 HP.
     //
-    // The **secondary** slot zeroing below is the calculator's, not the engine's: a slot no
-    // write ever reached is discarded rather than conjuring an attack, and which slots a record
-    // carries is a type fact (F122, F135). Melee has no such pass — it is floored like the
-    // engine floors it, and its presence question is asked per write instead (F142).
+    // Every strength the tail names is floored and nothing more, melee and the four secondary
+    // channels alike: the recompute asks no presence question here, and neither does the
+    // calculator (F142, F156). The gaze mirrors below are the exception, and a type fact rather
+    // than a presence test (F122).
     // Caster.exe clamps the common Hit field first, then clamps each attack-specific
     // modifier against that normalized common value. Keeping these as two steps makes the
     // load-bearing order visible and preserves the channel modifier stored by the engine.
@@ -1594,17 +1594,17 @@ function postHookStatSteps(ctx) {
         u.res = Math.max(0, u.res);
         u.def = Math.max(0, u.def);
         // `if U.attack < 0 then U.attack := 0` (Units.RecalculateUnits.pas:2483) — a floor and
-        // nothing more. The calculator used to zero melee here for a unit whose permanent melee
-        // was 0, which no engine line does; whether a melee bonus lands is settled per write by
-        // the writing block's own gate, so anything still standing here was written by a block
-        // entitled to write it (F142).
+        // nothing more (F142).
         u.atk = Math.max(0, u.atk);
-        // The slot is read at the clamp's own position, so a slot an earlier step created or
-        // filled — Chaos Channels, Focus Magic, the Shadow Strike grant, the Blaze of Glory
-        // transfer — is alive here and keeps what it holds, while one nothing ever reached is
-        // discarded rather than conjuring an attack.
+        // The same four lines, in the same shape, for the record's four secondary strengths:
+        // `if U.ranged < 0 then U.ranged := 0` and its Thrown, Fire Breath and Lightning Breath
+        // neighbours (Units.RecalculateUnits.pas:2484-2487), and `if (bu->ranged < 0)
+        // bu->ranged = 0` over the DOS engines' one shared byte (131:0x90B2F, 160:= com1:0x90B54).
+        // Anything standing here was put there by a block entitled to write it, so no presence
+        // test belongs at the floor: whether a bonus lands is settled per write by the writing
+        // block's own gate, and which slots a record carries where the record is built (F156).
         for (const c of channels) {
-          u[c.strengthField] = isLiveSlot(u, c) ? Math.max(0, u[c.strengthField]) : 0;
+          u[c.strengthField] = Math.max(0, u[c.strengthField]);
         }
         u.hp = Math.max(1, u.hp);
         // The DOS gaze strengths are two views of the one `.ranged` byte the line above floors,
@@ -1628,7 +1628,8 @@ function postHookStatSteps(ctx) {
     // `if U.ranged > 0` (Units.RecalculateUnits.pas:2632), whose own comment marks that
     // difference. Neither tests a type, so the ranged half asks only which record field the
     // slot is and what strength stands in it *here*, after `d:blazeOfGlory` has emptied the
-    // Ranged field and after the region-`e` clamp has zeroed a spent one.
+    // Ranged field and after the region-`e` floor has settled a field an ungated decrement drove
+    // below zero.
     statStep({ id: 'supremeLight', phase: 'e', writes: ['def', 'atk', ...strengthFields],
       when: u => !isCoM1
         && (supremeLightEligibleAt(u, recordContext)
