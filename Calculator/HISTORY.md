@@ -6,6 +6,36 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-24
 
+- **F154 — the capped-drain Life Steal arms in the touch convolution are gone.** Premise
+  re-measured and held: `usesModernCombatHealing` and `usesDosCombatHealing` still partition
+  `ENGINE_VERSIONS`, so `statefulCombatHealing` is true in all five versions, and all three named
+  arms were still present. The step the row left open, `outcome.state`, was settled twice over.
+  **Statically**, from an uncapped enumeration of every reference to both functions:
+  `convolveTouchAttacks` has eight in-engine call sites and `repeatTouchAttack` three. The root
+  entries all build the state from
+  `usesStatefulCombatHealing(version) ? (context.sourceState || combatHealStateFromUnit(unit)) : null`,
+  and the rest forward `prior.state`, which the outcome constructor creates and only a `heal.state`
+  or a Bloodsucker `combatHealTransition` result ever replaces — each of those an object the two
+  normalizers return unconditionally, so no caller can pass a falsy state. **Dynamically**, by
+  instrumenting every arm to throw and running the 11 spec files naming the touched identifiers
+  plus the 1080-preset suite: nothing fired, and each probe was confirmed live by firing it from a
+  synthetic call.
+
+  **Two sites beyond the row's three, deliberately.** `repeatTouchAttack`'s
+  `sourceState: statefulCombatHealing ? prior.state : null` and the `statefulCombatHealing &&`
+  conjunct in `convolveTouchAttacks`' state constructor test the same always-true predicate in the
+  same two functions. Deleting only the three named arms would have kept both locals alive and left
+  `repeatTouchAttack` able to hand a null state to a `convolveTouchAttacks` that no longer has a
+  fallback for one. The `modernCombatHealing` and `statefulCombatHealing` locals went with them, as
+  did the header clause and the `Legacy Haste` comment sentence F148 left in place. `engine.js`'s
+  `calcLifeStealRawDist` now has no implementation caller; it is reached only by two
+  `tests/life-steal-healing.spec.js` expectations. **One finding filed as [F160](./BACKLOG.md):**
+  the same predicate still gates 11 dead sites in `combat.js` and `combat_phases.js`.
+
+  **Checks.** `node tools/node_unit_checks.js` 14385/14385, 0 failures; `npm run provenance` 271
+  formulas, 271 verified, 0 UNVERIFIED; the 12 spec files 42 passed, 0 failed — `presets.spec.js`
+  asserts exact damage for 1080 presets, so no number moved.
+
 - **T16 — the comment census now reads an executable address as a citation, and the T8 baseline
   moved 23 blocks.** `tools/comment_citation_census.js`'s `POINTER` test recognised an evidence
   path, an anchor id, `SPEC.md` and a `.c`/`.pas`/`.CAS`/`.INI` source but no address, so blocks

@@ -146,12 +146,10 @@ function usesStatefulCombatHealing(version) {
 }
 
 // Returns target-capped damage plus the version-appropriate Life Steal marginals.
-// Modern `outcomes` retain uncapped raw drain and Combatheal correlation for repeated
-// ApplyAttack calls such as Haste; legacy outcomes retain the former capped drain model.
+// `outcomes` retain uncapped raw drain and the Combatheal correlation that repeated
+// ApplyAttack calls such as Haste read.
 function convolveTouchAttacks(dist, cap, atkFigs, p) {
-  const modernCombatHealing = usesModernCombatHealing(p.version);
   const dosCombatHealing = usesDosCombatHealing(p.version);
-  const statefulCombatHealing = modernCombatHealing || dosCombatHealing;
   let outcomes = [];
   for (let damage = 0; damage < dist.length; damage++) {
     if (dist[damage] < 1e-15) continue;
@@ -167,7 +165,7 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
         + `${DAMAGE_CATEGORIES.join('/')}.`);
     }
     outcomes.push({ probability: dist[damage], damage: cappedDamage,
-      state: statefulCombatHealing && p.sourceState
+      state: p.sourceState
         ? (dosCombatHealing
           ? normalizeDosCombatHealState(p.sourceState)
           : normalizeCombatHealState(p.sourceState)) : null,
@@ -219,17 +217,11 @@ function convolveTouchAttacks(dist, cap, atkFigs, p) {
   if (p.lifeStealMod != null) {
     const next = [];
     for (const outcome of outcomes) {
-      const healPaths = dosCombatHealing && outcome.state
+      const healPaths = dosCombatHealing
         ? calcDosLifeStealHealOutcomes(atkFigs, p.lifeStealRes, p.lifeStealMod,
           outcome.state)
-        : modernCombatHealing && outcome.state
-          ? calcLifeStealCombatHealOutcomes(atkFigs, p.lifeStealRes, p.lifeStealMod,
-            outcome.state)
-        : (statefulCombatHealing
-          ? calcLifeStealRawDist(atkFigs, p.lifeStealRes, p.lifeStealMod)
-          : calcLifeStealDmgDist(atkFigs, p.lifeStealRes, p.lifeStealMod, cap))
-          .map((probability, rawDrain) => ({ probability, rawDrain,
-            healedDamage: 0, bonusHpGain: 0, bonusHpBenefit: 0, state: null }));
+        : calcLifeStealCombatHealOutcomes(atkFigs, p.lifeStealRes, p.lifeStealMod,
+          outcome.state);
       for (const heal of healPaths) {
         const probability = outcome.probability * heal.probability;
         if (probability < 1e-15) continue;
@@ -293,18 +285,16 @@ function collapseTouchOutcomes(outcomes, cap, hasLifeSteal) {
 }
 
 function repeatTouchAttack(first, baseDist, cap, atkFigs, spec) {
-  const statefulCombatHealing = usesStatefulCombatHealing(spec.version);
   const outcomes = [];
   for (const prior of first.outcomes) {
-    // Legacy Haste self-convolved two identical target-capped attacks. Modern callers of
-    // this helper are sequentially dealt channels, so their second ApplyAttack reads the
-    // exact remaining target and revised source-healing state. Modern melee is instead
-    // expanded in calcMeleeTouchOutcome, because its damage stays pending until the tail
-    // `Dealdamage` calls that every `ApplyAttack` precedes (`Reference docs/Caster binary/
-    // Combat.PerformAttacks.R5.2d.evidence.md`).
-    const remaining = statefulCombatHealing ? Math.max(0, cap - prior.damage) : cap;
+    // Callers of this helper are sequentially dealt channels, so their second ApplyAttack
+    // reads the exact remaining target and revised source-healing state. Modern melee is
+    // instead expanded in calcMeleeTouchOutcome, because its damage stays pending until the
+    // tail `Dealdamage` calls that every `ApplyAttack` precedes (`Reference docs/Caster
+    // binary/Combat.PerformAttacks.R5.2d.evidence.md`).
+    const remaining = Math.max(0, cap - prior.damage);
     const next = convolveTouchAttacks(baseDist, remaining, atkFigs,
-      { ...spec, sourceState: statefulCombatHealing ? prior.state : null });
+      { ...spec, sourceState: prior.state });
     for (const after of next.outcomes) {
       const probability = prior.probability * after.probability;
       if (probability < 1e-15) continue;
@@ -313,9 +303,7 @@ function repeatTouchAttack(first, baseDist, cap, atkFigs, spec) {
         irrecoverableDamage: prior.irrecoverableDamage + after.irrecoverableDamage,
         undeadDamage: prior.undeadDamage + after.undeadDamage,
         normalDamage: prior.normalDamage + after.normalDamage,
-        rawDrain: statefulCombatHealing
-          ? prior.rawDrain + after.rawDrain
-          : Math.min(cap, prior.rawDrain + after.rawDrain),
+        rawDrain: prior.rawDrain + after.rawDrain,
         healedDamage: prior.healedDamage + after.healedDamage,
         bonusHpGain: prior.bonusHpGain + after.bonusHpGain,
         bonusHpBenefit: prior.bonusHpBenefit + after.bonusHpBenefit,
