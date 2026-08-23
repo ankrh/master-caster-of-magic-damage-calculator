@@ -626,10 +626,15 @@ function deriveUnitStats(input) {
   // and no def-zeroing.
   const classicBerserk = !!(abilities && abilities.berserk) && version.startsWith('mom');
   const warlordBerserk = !!(abilities && abilities.berserkWarlord) && isWarlord;
-  // A unit whose melee strength is 0 has no melee attack at all, so melee bonuses are
-  // discarded rather than conjuring one. Blaze of Glory is the exception the model has to
-  // allow for: its armor-to-melee transfer lands even on such a unit. The ranged slot has
-  // the same gate, widened by Bombs&Grenades, which grants a thrown attack outright.
+  // `B.attack > 0`, the melee-presence test the **compiled** blocks make. It is a per-write
+  // gate and nothing else: no terminal pass consults it, because the engine has none. The
+  // recompute's melee tail is `if U.attack < 0 then U.attack := 0`
+  // (Units.RecalculateUnits.pas:2483) — a floor, not a zeroing of a unit whose permanent melee
+  // is 0 — so a write that carries no gate of its own leaves melee standing, and `e:clamp`
+  // floors it like any other field (F142). A block with no gate is therefore expressed by not
+  // asking this predicate, rather than by widening it: the Warlord CAS files gate no melee
+  // write at all, and widening the predicate for those would also un-gate every compiled block
+  // in the same run, which is what F142 measured and removed.
   //
   // **Which record the strength is read from is the permanent one, `ctx.base`, not the card's
   // `atk` input** (F133). Every melee-presence test `Caster.exe` makes is `BaseUnits[i].attack`
@@ -642,15 +647,7 @@ function deriveUnitStats(input) {
   // region reads (SPEC.md, *The step model*). The card's input is that record only before the
   // base phase runs, which is why this is a predicate over the run context rather than a boolean
   // captured beside it — the same read `c:weapon`'s `weaponMeleeOpen` already makes.
-  //
-  // Warlord True Light writes SAttack unconditionally. A matching Life unit therefore gains
-  // strength-1 melee even when the persistent attack field was zero; unlike an ordinary
-  // attack bonus, this source-backed write creates the live attack. Marionette's region-`b`
-  // grant is the same kind of exception. Both are calculated-record writes made after the base
-  // phase, so they stay terms of their own rather than permanent-record reads.
-  const trueLightCreatesMelee = isWarlord && hasTrueLight && trueLightAtkBonus > 0;
-  const hasMeleeAttackAt = runCtx => runCtx.base.atk > 0
-    || marionetteAttackBonus > 0 || trueLightCreatesMelee;
+  const hasMeleeAttackAt = runCtx => runCtx.base.atk > 0;
 
   // Chaos Surge: affects Chaos creatures only.
   // MoM and CoM 1 both write the shared ranged slot unconditionally on attack type, so

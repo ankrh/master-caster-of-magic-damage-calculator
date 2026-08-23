@@ -628,18 +628,20 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   artificerMechanicalDefenseWarlord: {
-    desc: 'Artificer (Warlord): mechanical unit gets +1 armor. 5 atk vs 0 def + Artificer → 1 shield at 100% block → 4 dmg',
+    desc: 'Artificer (Warlord): mechanical unit gets +1 armor. 5 atk vs 0 def + Artificer → 1 shield at 100% block → 4 dmg. B\'s counterattack is the F142 rule: CreateUnit.CAS:40 gates its `SAttack` write on nothing, so B\'s permanent melee 0 becomes 1, and the retort\'s Magic Weapons grant puts it at 30+10 = 40% → 0.4',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { artificer: true, mechanical: true } },
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0.400, dmgToB: 4.000 },
   },
   artificerMechanicalResistanceWarlord: {
     desc: 'Artificer (Warlord): mechanical unit gets +2 resistance — CreateUnit.CAS:43, matching manual changelog 1.4.22; the helptext still says +1 (Source discrepancies.md §6). Death Gaze vs res 5 → res 7 → pFail (10−7)/10 = 0.3 → 1 fig × 10 hp × 0.3 = 3 dmg (at the helptext +1 it would be res 6 → 4 dmg)',
     version: V_WARLORD,
     a: { hp:10, abilities: { deathGaze: 0 } },
     b: { res:5, hp:10, abilities: { artificer: true, mechanical: true } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    // B's counterattack is the F142 rule (see artificerMechanicalDefenseWarlord): melee 1 at
+    // 40% = 0.4, surviving the gaze 70% of the time → 0.28.
+    expected: { dmgToA: 0.280, dmgToB: 3.000 },
   },
   artificerMagicWeaponBypassesWIWarlord: {
     desc: 'Artificer (Warlord): mechanical attacker gets Magic Weapons → bypasses defender Weapon Immunity. atk 5 (+1 Artificer = 6, +10% to-hit from magic) vs 0 def + WI → WI bypassed, 6 dmg',
@@ -656,21 +658,21 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   artificerSkipsThrownAndBreathWarlord: {
-    desc: 'Exclusion the engine makes: the Artificer retort names four stats and the four movement fields, and `SRanged` is the only attack among them (CreateUnit.CAS:38-47). Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. A grant reaching every channel, as this block made before F139, gives 4 + 6 = 10.000.',
+    desc: 'Exclusion the engine makes: the Artificer retort names four stats and the four movement fields, and `SRanged` is the only attack among them (CreateUnit.CAS:38-47). Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. The +0.4 on top is the melee the retort does create (F142): `SAttack` at CreateUnit.CAS:40 is ungated, so permanent melee 0 becomes 1, at 30+10 = 40% with the Magic Weapons grant. A grant reaching every channel, as this block made before F139, gives 4 + 6 + 0.4 = 10.400.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { thrown: { strength: 3, type: 'thrown' },
       fireBreath: { strength: 5, type: 'fire' } },
     hitRanged:70, hitThrown:70, hitBreath:70, hp:10,
     abilities: { artificer: true, mechanical: true } },
     b: { def:0, hp:30 },
-    expected: { dmgToA: 0, dmgToB: 8.000 },
+    expected: { dmgToA: 0, dmgToB: 8.400 },
   },
   artificerDoomGazeUnchangedWarlord: {
-    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Artificer block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the pre-F139 write gave 6.000.',
+    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Artificer block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the +0.4 beside it is the melee the retort does create (F142, CreateUnit.CAS:40 ungated, 40% with Magic Weapons). The pre-F139 write gave 6.000 + 0.4.',
     version: V_WARLORD,
     a: { atk:0, hp:10, abilities: { artificer: true, mechanical: true, doomGaze: 5 } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 5.400 },
   },
 
   // --- Mechanical Expert ---
@@ -712,11 +714,11 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   rebuildArmorWarlord: {
-    desc: 'Rebuild (Warlord): +2 armor. 5 atk vs 0 def + Rebuild → 2 shields at 100% block → 3 dmg',
+    desc: 'Rebuild (Warlord): +2 armor. 5 atk vs 0 def + Rebuild → 2 shields at 100% block → 3 dmg. B\'s counterattack is the F142 rule: OLSpell.CAS:280 gates its `SAttack` write on nothing, so B\'s permanent melee 0 becomes 2, at the base 30% → 0.6',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { rebuild: true } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0.600, dmgToB: 3.000 },
   },
   rebuildArmorPiercingWarlord: {
     desc: 'Rebuild (Warlord): grants Armor Piercing. Missile rtb 2 100% hit vs def 3 100% block → AP halves def to 1 → 1 dmg (Rebuild +2 melee does not affect ranged attack)',
@@ -858,6 +860,20 @@ definePresets({
     b: { def:0, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.6 },
   },
+  luckyStarCreatesMeleeWarlord: {
+    desc: 'F142: a script melee write carries no presence gate, so it creates the attack. `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1))` (UnitCalcPre.CAS:1614) is reached on `LUCKYSTAR<>0` and no other test, and the recompute\'s melee tail is a floor, not a zeroing (Units.RecalculateUnits.pas:2483). Permanent melee 0 → 1 at base 30% vs def 0 → E[dmg] = 0.3. Under the retired dead-slot rule the bonus was discarded and this was 0.000.',
+    version: V_WARLORD,
+    a: { atk:0, hp:10, abilities: { luckyStar: true } },
+    b: { def:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0.300 },
+  },
+  luckyStarCreatedMeleeSkipsCompiledAuraWarlord: {
+    desc: 'F142, the other half: melee a script write created does not open the compiled blocks, because their gate reads the permanent record and the script wrote the calculated one. Holy Bonus 3 is `if B.attack > 0` (Units.RecalculateUnits.pas:2530) and `B.attack` is still 0, so it adds nothing to melee — 1 atk at 30% → 0.300. Implementing the ungated script write by widening the melee predicate instead, the shape F142 removed from True Light and Marionette, would open every compiled block in the same run and give 1+3 = 4 atk → 1.200. Holy Bonus still reaches Resistance (5+1+3 = 9) and Defense (0+1+3 = 4), which carry no such gate.',
+    version: V_WARLORD,
+    a: { atk:0, hp:10, abilities: { luckyStar: true, holyBonus: 3 } },
+    b: { def:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0.300 },
+  },
   luckyStarEnchantedUnitWarlord: {
     desc: 'Lucky Star (Warlord) on its enchanted unit: the aura plus the Lucky grant, which is the separate Lucky control. (1+1) atk at base 30% + Lucky 10% To-Hit vs def 0 → E[dmg] = 0.8',
     version: V_WARLORD,
@@ -870,14 +886,16 @@ definePresets({
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 6 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { luckyStar: true } },
-    expected: { dmgToA: 0, dmgToB: 3.0 },
+    // B's counterattack is the F142 rule: the aura's `SAttack` write (UnitCalcPre.CAS:1614) is
+    // ungated, so B's permanent melee 0 becomes 1, at the base 30% → 0.3.
+    expected: { dmgToA: 0.300, dmgToB: 3.0 },
   },
   luckyStarAuraArmorWarlord: {
-    desc: 'Lucky Star aura (Warlord): defender gains +1 Armor. 3 atk at 100% hit vs base def 1+1 at 100% block → 1 dmg (without the aura bonus, 2)',
+    desc: 'Lucky Star aura (Warlord): defender gains +1 Armor. 3 atk at 100% hit vs base def 1+1 at 100% block → 1 dmg (without the aura bonus, 2). B\'s 0.3 counterattack is the F142 rule: the aura\'s `SAttack` write (UnitCalcPre.CAS:1614) is ungated, so B\'s stated melee 0 becomes 1, at the base 30%',
     version: V_WARLORD,
     a: { atk:3, hitChance:70, hp:10 },
     b: { atk:0, def:1, toBlkMod:70, hp:10, abilities: { luckyStar: true } },
-    expected: { dmgToA: 0, dmgToB: 1.0 },
+    expected: { dmgToA: 0.300, dmgToB: 1.0 },
   },
   luckyStarAuraRangedWarlord: {
     desc: 'Lucky Star aura (Warlord): the block\'s one attack-channel write is `SETSTAT(U,SRanged,0,…+1)` (UnitCalcPre.CAS:1616), the conventional-ranged field. missile 2 → 3 at 100% hit vs def 0 → 3.000; without the enchantment, 2.000.',
@@ -888,20 +906,20 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   luckyStarAuraSkipsThrownAndBreathWarlord: {
-    desc: 'Exclusion the engine makes: the Lucky Star aura writes `SAttack`, `SRanged`, `SDefense`, `SResist` and their four bonus mirrors and nothing else (UnitCalcPre.CAS:1614-1621), so Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. A grant reaching every channel, as this block made before F139, gives 4 + 6 = 10.000.',
+    desc: 'Exclusion the engine makes: the Lucky Star aura writes `SAttack`, `SRanged`, `SDefense`, `SResist` and their four bonus mirrors and nothing else (UnitCalcPre.CAS:1614-1621), so Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. The +0.3 on top is the `SAttack` write itself, which is ungated (F142): melee 0 becomes 1 at the base 30%. A grant reaching every channel, as this block made before F139, gives 4 + 6 + 0.3 = 10.300.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { thrown: { strength: 3, type: 'thrown' },
       fireBreath: { strength: 5, type: 'fire' } },
     hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { luckyStar: true } },
     b: { def:0, hp:30 },
-    expected: { dmgToA: 0, dmgToB: 8.000 },
+    expected: { dmgToA: 0, dmgToB: 8.300 },
   },
   luckyStarDoomGazeUnchangedWarlord: {
-    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Lucky Star block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the pre-F139 write gave 6.000.',
+    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Lucky Star block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the +0.3 beside it is the block\'s ungated `SAttack` write (F142), melee 0 becoming 1 at the base 30%. The pre-F139 write gave 6.000 + 0.3.',
     version: V_WARLORD,
     a: { atk:0, hp:10, abilities: { luckyStar: true, doomGaze: 5 } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, dmgToB: 5.300 },
   },
   rallyResistanceWarlord: {
     desc: 'Rally (Warlord): grants +2 Resistance. Poison 7 vs base res 5 + Rally +2 = res 7, CoM −1 poison penalty → effective 6, pFail 40%, E[dmg] = 2.8 (without Rally, res 5 −1 = 4 → pFail 60% → 4.2)',
@@ -932,18 +950,18 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   rebuildDeathImmunityWarlord: {
-    desc: 'Rebuild (Warlord): grants Death Immunity. Death Gaze vs res 5 + Death Immunity → fully blocked, 0 dmg',
+    desc: 'Rebuild (Warlord): grants Death Immunity. Death Gaze vs res 5 + Death Immunity → fully blocked, 0 dmg. B\'s 0.6 counterattack is the F142 rule (see rebuildArmorWarlord): permanent melee 0 becomes 2 at 30%',
     version: V_WARLORD,
     a: { hp:10, abilities: { deathGaze: 0 } },
     b: { res:5, hp:10, abilities: { rebuild: true } },
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0.600, dmgToB: 0 },
   },
   rebuildIllusionImmunityWarlord: {
-    desc: 'Rebuild (Warlord): grants Illusion Immunity. Illusion attack vs def 6 + Rebuild → def stays 6 (not 0), 0 dmg',
+    desc: 'Rebuild (Warlord): grants Illusion Immunity. Illusion attack vs def 6 + Rebuild → def stays 6 (not 0), 0 dmg. B\'s 0.6 counterattack is the F142 rule (see rebuildArmorWarlord): permanent melee 0 becomes 2 at 30%',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10, abilities: { illusion: true } },
     b: { def:6, toBlkMod:70, hp:10, abilities: { rebuild: true } },
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0.600, dmgToB: 0 },
   },
   rebuildMakesMechanicalForArtificerWarlord: {
     desc: 'Rebuild + Artificer (Warlord): Rebuild makes the unit mechanical, so Artificer also applies. atk 1 + Rebuild(+2) + Artificer(+1) = 4, 100% hit vs 0 def → 4 dmg',

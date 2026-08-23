@@ -650,6 +650,8 @@ const TEST_TREE = [
         name: 'Lucky Star',
         keys: [
           'luckyStarAuraMeleeWarlord',
+          'luckyStarCreatesMeleeWarlord',
+          'luckyStarCreatedMeleeSkipsCompiledAuraWarlord',
           'luckyStarEnchantedUnitWarlord',
           'luckyStarAuraResistanceWarlord',
           'luckyStarAuraArmorWarlord',

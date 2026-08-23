@@ -319,6 +319,23 @@ read through `ctx.base` — which every compiled melee-presence gate tests and w
 phase, not the card's input, settles. Source-backed exceptions exist; each is marked at its step
 rather than folded into the general rule.
 
+**The dead-slot rule is a per-write gate, and melee has no terminal pass behind it.** The
+recompute's melee tail is `if U.attack < 0 then U.attack := 0`
+(`Units.RecalculateUnits.pas:2483`) — a floor, not a zeroing of a unit whose permanent melee is 0
+— so what a melee bonus does is settled entirely where it is written. A block that carries no
+presence test of its own therefore *creates* the attack: all 53 `SETSTAT(<unit>,SAttack,…)` writes
+in the Warlord 1.5.12.7 script source are ungated, and three of them gate their own secondary
+channels in the same breath (Rust `UnitCalc.CAS:495`/`:499`, Colossal Strength `:1233`/`:1235`,
+Vampirism `:1251`), so the silence on melee is deliberate. Script-sourced melee writes are modelled
+ungated for that reason; the compiled blocks that do test `B.attack > 0` keep it, per-site
+(F142).
+
+The consequence that is easy to get wrong: **an ungated write is expressed by not asking the
+predicate, never by widening it.** One predicate serves every melee gate in a run, so widening it
+for a unit un-gates the compiled blocks too — which is measurably wrong, since their gate reads
+the permanent record the script write never touched. The secondary slots keep their own terminal
+zeroing, which is a separate question about which slots a record carries (F122, F135).
+
 **A step may name its own block's gate instead of that rule.** The dead-slot rule is an
 abstraction over what the engines actually test, and where a block's own test is transcribed the
 step names it and the abstraction does not apply. Naming one is the stronger claim and needs the

@@ -625,7 +625,15 @@ function magicCalcBinaryStatSteps(ctx) {
       // `runCtx`, not `ctx`: the enclosing name is this file's derivation context, while the
       // runner passes the sequence context that carries the permanent record.
       apply: (u, runCtx) => {
-        u.res += lvl.res; u.def += lvl.def; u.atk += lvl.atk;
+        u.res += lvl.res; u.def += lvl.def;
+        // The ladder's melee step carries a presence gate in both engine families, and each
+        // reads a different record. Modern: `if BaseUnits[i].attack > 0` — the **permanent**
+        // record ($00598754..$005987F7, Units.RecalculateUnits.pas:543). DOS: `if (bu->melee > 0)
+        // bu->melee++` at every step of both ladders (131:0x8FA8E and the four steps around it),
+        // a **live** read of the battle unit being built. Until F142 neither was written here:
+        // the write was unconditional and the calculator's terminal melee zeroing swallowed it
+        // for a melee-less unit. With that pass retired the gates have to be the engine's own.
+        if (isCoM2 ? hasMeleeAttackAt(runCtx) : u.atk > 0) u.atk += lvl.atk;
         // The modern arm makes four independent secondary writes, each indexing a table of its
         // own. The normal path gates all four on the **permanent** record —
         // `BaseUnits[i].rangedtype > 0` selecting NormalMagicRanged or NormalMissileRanged by
@@ -1298,7 +1306,7 @@ function magicCalcScriptStatSteps(ctx) {
   const {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
     colossalStrength, energyCannon,
-    hasMeleeAttackAt, hurricaneActive, isWarlord, levelRank,
+    hurricaneActive, isWarlord, levelRank,
     pneumaFieldActive, psychoForceActive, rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, trueSightRangedToHitBonus, vampirismActive,
@@ -1372,8 +1380,12 @@ function magicCalcScriptStatSteps(ctx) {
     // PROVENANCE[colossalStrength]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:14:0df535b06a7a126d328bccbb
     statStep({ id: 'colossalStrength', phase: 'd', writes: ['atk', ...strengthFields],
       when: () => colossalStrength,
-      apply: (u, runCtx) => {
-        if (hasMeleeAttackAt(runCtx)) u.atk += colossalScaled(u.atk);
+      apply: u => {
+        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+CSM))` (UnitCalc.CAS:1233) carries no
+        // melee-presence test, while the two lines under it gate their own channels
+        // (`SRangedType>0 %AND <30` at :1235, `SThrown>0` at :1239) — so the block's silence on
+        // melee is deliberate, not an omission (F142).
+        u.atk += colossalScaled(u.atk);
         for (const c of channels) {
           const physicalSecondary = u[c.rangedTypeField] === 'missile'
             || u[c.rangedTypeField] === 'boulder' || u[c.thrownTypeField] === 'thrown';
@@ -1525,7 +1537,7 @@ function magicCalcScriptStatSteps(ctx) {
 // `e`: the binary's post-hook tail.
 function postHookStatSteps(ctx) {
   const {
-    abilByPhase, blazeOfGloryActive, channels, hasDoomGazeSlot, hasGazeRangedSlot,
+    abilByPhase, channels, hasDoomGazeSlot, hasGazeRangedSlot,
     hasMeleeAttackAt,
     isCoM1, isCoM2, recordContext, secondaryHitFields, strengthFields, supremeLightEligibleAt,
   } = ctx;
@@ -1538,10 +1550,10 @@ function postHookStatSteps(ctx) {
     // 0x90B41-0x90B75. The calculator keeps its own non-negative Resistance convention for the
     // resistance rolls, and its own floor of 1 HP.
     //
-    // The slot zeroing is the calculator's, not the engine's: a unit with no base melee attack
-    // has none, so bonuses that landed on the empty slot are discarded rather than conjuring
-    // one. Blaze of Glory is the exception — its armor-to-melee transfer *does* give a
-    // melee-less unit a melee attack, so it widens the slot rather than being discarded by it.
+    // The **secondary** slot zeroing below is the calculator's, not the engine's: a slot no
+    // write ever reached is discarded rather than conjuring an attack, and which slots a record
+    // carries is a type fact (F122, F135). Melee has no such pass — it is floored like the
+    // engine floors it, and its presence question is asked per write instead (F142).
     // Caster.exe clamps the common Hit field first, then clamps each attack-specific
     // modifier against that normalized common value. Keeping these as two steps makes the
     // load-bearing order visible and preserves the channel modifier stored by the engine.
@@ -1570,7 +1582,7 @@ function postHookStatSteps(ctx) {
     statStep({ id: 'clamp', phase: 'e',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'gaze', 'doomGaze',
         'toHitMelee', ...secondaryHitFields],
-      apply: (u, runCtx) => {
+      apply: u => {
         if (isCoM2) {
           const floor = 10 - u.toHit;
           const ceiling = 100 - u.toHit;
@@ -1581,9 +1593,12 @@ function postHookStatSteps(ctx) {
         }
         u.res = Math.max(0, u.res);
         u.def = Math.max(0, u.def);
-        u.atk = (hasMeleeAttackAt(runCtx) || blazeOfGloryActive
-          || (isCoM1 && supremeLightEligibleAt(u, recordContext)))
-          ? Math.max(0, u.atk) : 0;
+        // `if U.attack < 0 then U.attack := 0` (Units.RecalculateUnits.pas:2483) — a floor and
+        // nothing more. The calculator used to zero melee here for a unit whose permanent melee
+        // was 0, which no engine line does; whether a melee bonus lands is settled per write by
+        // the writing block's own gate, so anything still standing here was written by a block
+        // entitled to write it (F142).
+        u.atk = Math.max(0, u.atk);
         // The slot is read at the clamp's own position, so a slot an earlier step created or
         // filled — Chaos Channels, Focus Magic, the Shadow Strike grant, the Blaze of Glory
         // transfer — is alive here and keeps what it holds, while one nothing ever reached is

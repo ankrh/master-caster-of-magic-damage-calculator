@@ -954,18 +954,18 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   warlordPrayerStackDef: {
-    desc: 'Warlord Prayer+HP stack: atk 5 100% hit vs def 1 + HP +2 + Prayer +1 = 4, 100% block → 5−4 = 1.0 (CoM2 def 3 → 2.0)',
+    desc: 'Warlord Prayer+HP stack: atk 5 100% hit vs def 1 + HP +2 + Prayer +1 = 4, 100% block → 5−4 = 1.0 (CoM2 def 3 → 2.0). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1487) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { prayer: true, highPrayer: true } },
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0.400, dmgToB: 1.000 },
   },
   warlordPrayerStackRes: {
-    desc: 'Warlord Prayer+HP stack: Poison 5 vs base res 5 + HP +3 + Prayer +1 = res 9 (CoM2 −1 mod → eff 8), pFail 20%, poison E[dmg] = 1.0. Melee dmg = 0 (atk 1 vs def 10, all blocked). (CoM2 no stack: res 8 → eff 7 → pFail 30% → 1.5)',
+    desc: 'Warlord Prayer+HP stack: Poison 5 vs base res 5 + HP +3 + Prayer +1 = res 9 (CoM2 −1 mod → eff 8), pFail 20%, poison E[dmg] = 1.0. Melee dmg = 0 (atk 1 vs def 10, all blocked). (CoM2 no stack: res 8 → eff 7 → pFail 30% → 1.5). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1487) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 5 } },
     b: { def:10, toBlkMod:70, res:5, hp:10, abilities: { prayer: true, highPrayer: true } },
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0.400, dmgToB: 1.000 },
   },
   warlordPrayerStackToHitNoStack: {
     desc: 'Warlord Prayer+HP stack: To Hit does NOT stack. atk 1 + HP+2 + Prayer+1 = 4, base 30% + 10% (single bonus) = 40% vs 0 def → 4×0.4 = 1.6 (stacked 50% would give 2.0)',
@@ -975,11 +975,11 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.600 },
   },
   warlordPrayerStackToBlockNoStack: {
-    desc: 'Warlord Prayer+HP stack: To Block does NOT stack. atk 10 100% hit vs def 0 + HP +2 + Prayer +1 = 3, base 30% + 10% (single bonus) = 40% block → 10 − 3×0.4 = 8.80 (stacked 50% would be 8.50)',
+    desc: 'Warlord Prayer+HP stack: To Block does NOT stack. atk 10 100% hit vs def 0 + HP +2 + Prayer +1 = 3, base 30% + 10% (single bonus) = 40% block → 10 − 3×0.4 = 8.80 (stacked 50% would be 8.50). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1487) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:0, hp:20, abilities: { prayer: true, highPrayer: true } },
-    expected: { dmgToA: 0, dmgToB: 8.800 },
+    expected: { dmgToA: 0.400, dmgToB: 8.800 },
   },
   com2PrayerHpSupersedes: {
     desc: 'CoM2 Prayer+HP: HP supersedes (no stack). atk 1 + HP +2 = 3 (Prayer adds nothing), 40% hit vs 0 def → 1.2',

@@ -25,11 +25,11 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   destroyMechanicalRebuildTargetWarlord: {
-    desc: 'Destroy Mechanical (Warlord): Rebuild makes defender mechanical, triggering the one-shot. Without feature: atk 1 vs Rebuild (+2 armor) → 0–1 dmg. With feature: 10 dmg',
+    desc: 'Destroy Mechanical (Warlord): Rebuild makes defender mechanical, triggering the one-shot. Without feature: atk 1 vs Rebuild (+2 armor) → 0–1 dmg. With feature: 10 dmg. B\'s 0.6 counterattack is the F142 rule: OLSpell.CAS:280 gates its `SAttack` write on nothing, so B\'s permanent melee 0 becomes 2, at the base 30%',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { destroyMechanical: true } },
     b: { hp:10, abilities: { rebuild: true } },
-    expected: { dmgToA: 0, dmgToB: 10.000 },
+    expected: { dmgToA: 0.600, dmgToB: 10.000 },
   },
 
   // --- Land Linking ---

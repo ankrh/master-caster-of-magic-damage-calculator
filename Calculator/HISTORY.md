@@ -6,6 +6,40 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-23
 
+- **F142 - script-sourced melee writes lose the dead-slot gate, and the calculator's terminal melee
+  zeroing retires with it.** The row asked which way to set a per-step flag on two CAS blocks. The
+  enumeration it called for settled the evidence — all 53 `SETSTAT(<unit>,SAttack,…)` writes in the
+  Warlord 1.5.12.7 script source are ungated, the corpus contains exactly one melee-presence test
+  (`UnitCalcPre.CAS:1068`, which gates a *Thrown* grant), and three blocks gate their own secondary
+  channels while writing melee unconditionally in the same breath (Rust `UnitCalc.CAS:495`/`:499`,
+  Colossal Strength `:1233`/`:1235`, Vampirism `:1251`) — but it also **falsified the row's
+  framing**: the behavior did not live in the per-step flag at all. A second, unsourced copy of the
+  rule sat in `e:clamp`, zeroing melee for any unit whose permanent melee was 0, where the compiled
+  tail is `if U.attack < 0 then U.attack := 0` (`Units.RecalculateUnits.pas:2483`) — a floor. With
+  that pass in place the row's own option would have been half inert. The zeroing is gone, melee is
+  floored like the engine floors it, and the eight script-sourced melee writes (`b:luckyStar`,
+  `b:prayer`, `b:tactician`, `b`/`base:rebuild`, `base:artificer`, `base:malnourished`, `d:rust`,
+  `d:colossalStrength`) each cite the script line showing the ungated write. Compiled blocks keep
+  `B.attack > 0` per site.
+  - **Folded in, by the user's decision rather than filed:** `hasMeleeAttackAt` carried
+    `|| marionetteAttackBonus > 0 || trueLightCreatesMelee`, two holes punched to let those ungated
+    script writes create melee. One predicate serves every melee gate in a run, so the holes also
+    un-gated the compiled blocks. Measured on a permanent-melee-0 Warlord unit: True Light + Holy
+    Bonus 3 gave melee **4** where `if B.attack > 0` (`:2530`) forbids the increment and the answer
+    is 1; + High Prayer gave 3. Marionette (Wanderer, Base Skill 90, +3) gave **6** and 5 where the
+    answer is 3. Both holes come out with the mechanism that needed them; all four cases now give
+    the engine's number. It belongs to F142 because it is the same rule and the same lines.
+  - **Also required by the retirement:** `c:level`'s melee step was written unconditionally and had
+    been relying on the zeroing to suppress it. Both engines do gate it — modern
+    `if BaseUnits[i].attack > 0` (`$00598754`, `:543`), DOS `if (bu->melee > 0) bu->melee++` at every
+    step of both ladders — so each is now transcribed at the step. Nine presets (the gaze and
+    experience ladders) were red on this alone before it was written.
+  - Fifteen Warlord presets re-expected, each derived from the engine model before being compared to
+    output; two added — `luckyStarCreatesMeleeWarlord` (the rule) and
+    `luckyStarCreatedMeleeSkipsCompiledAuraWarlord` (that created melee does *not* open the compiled
+    blocks). The secondary slots keep their own terminal zeroing: which slots a record carries is a
+    separate question (F122, F135) and stays out of scope.
+
 - **F141 - the modern touch-rider gate no longer reads the card's base channel, because no engine
   reads one.** `touchAttackFires` (`combat_special_attacks.js`) returned `(baseAtk || 0) > 0` for
   `com2_1.05.11` and `com2_warlord_1.5.12.7`; `Caster.exe` makes no such test at any layer.

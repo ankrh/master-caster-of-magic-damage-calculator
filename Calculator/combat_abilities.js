@@ -810,7 +810,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // PROVENANCE[luckyStar]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:2cd8ef385c4ba4e42016a04d
     abilityStep('luckyStar', 'b', { writes: ['atk', 'def', 'res', ...attackWrites],
       apply: (u, ctx) => {
-        addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 1;
+        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1))` (UnitCalcPre.CAS:1614) is reached by
+        // a jump over the whole block on `LUCKYSTAR=0` and by no other test, so the melee write
+        // has no presence gate to transcribe (F142).
+        u.atk += 1; u.def += 1; u.res += 1;
         addToSlot(u, ctx, 'rangedField', 1);
       } });
   }
@@ -838,8 +841,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       } });
     if (hasPrayer && version && version.startsWith('com2_warlord')) {
       // PROVENANCE[prayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:cd3b7dd8d55f06aacde8812c | Reference docs/DOS reconstructed/unitcalc.c@span:19:ff7bdd24b7f56fef70abb02b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:22:b3cdb6f87df741fb103a6989
+      // `SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1))` (UnitCalcPre.CAS:1487) sits under the
+      // both-globals test alone and carries no melee-presence gate (F142). The DOS and base-CoM2
+      // Prayer blocks are compiled and keep theirs.
       abilityStep('prayer', 'b', { writes: ['atk', 'def', 'res'],
-        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 1; } });
+        apply: u => { u.atk += 1; u.def += 1; u.res += 1; } });
     }
   } else if (hasPrayer) {
     abilityStep('prayer', 'c', { writes: ['res', 'toHit', 'toBlk'],
@@ -1049,8 +1055,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase d — UnitCalc.CAS:492-504.
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'rust')) {
     // PROVENANCE[rust]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:98745d26b4fbf74694b1a932
+    // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-3))` (UnitCalc.CAS:495) is ungated, while the
+    // ranged half three lines down tests `GetStat(U,SRangedType,0)>0 %AND <30` (:499) — the same
+    // block gating one channel and not the other, so melee takes the write unconditionally and
+    // `e:clamp` floors the result (F142).
     abilityStep('rust', 'd', { writes: ['atk'],
-      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', -3); } });
+      apply: u => { u.atk -= 3; } });
   }
 
   // Mind Storm: DOS: -5 melee, -5 to the shared ranged/Thrown/Breath/Gaze slot,
@@ -1140,9 +1150,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
           }
         } });
       if (isWarlord) {
+        // The Warlord clawback `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-2))`
+        // (UnitCalcPre.CAS:762) is reached under the retort and in-combat tests only and carries
+        // no melee-presence gate; the compiled region-`c` grant above keeps `B.attack > 0` (F142).
         abilityStep('tactician', 'b', { writes: ['atk', 'def', 'res', ...attackWrites],
           apply: (u, ctx) => {
-            addToSlot(u, ctx, 'melee', -2); u.def -= 1; u.res -= 2;
+            u.atk -= 2; u.def -= 1; u.res -= 2;
             addToSlot(u, ctx, 'ranged', -2);
           } });
       }
@@ -1217,7 +1230,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
     abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...attackWrites],
       apply: (u, ctx) => {
-        addToSlot(u, ctx, 'melee', 1); u.def += 1; u.res += 2;
+        // `SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1))` (CreateUnit.CAS:40) has no
+        // melee-presence gate, and it writes the **permanent** record — so on a unit whose
+        // permanent melee was 0 it is what makes `B.attack > 0` true for every later block
+        // that asks (F142).
+        u.atk += 1; u.def += 1; u.res += 2;
         addToSlot(u, ctx, 'rangedField', 1);
       } });
   }
@@ -1239,17 +1256,23 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Heroes: UnitCalcPre.CAS:682-691 re-applies them at index 0 on every recalc — phase b.
   if (isWarlord && hasAbil(abilities, 'rebuild')) {
     // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
+    // Neither branch gates the melee write: `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2))`
+    // (UnitCalcPre.CAS:686) for the hero re-application, and
+    // `SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2)` (OLSpell.CAS:280) for the permanent
+    // non-hero write (F142).
     abilityStep('rebuild', abilVal(abilities, 'unitType', 'normal') === 'hero' ? 'b' : 'base',
       { writes: ['atk', 'def'],
-        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 2); u.def += 2; } });
+        apply: u => { u.atk += 2; u.def += 2; } });
   }
 
   // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.
   // Base stage: CreateUnit.CAS:614-618 writes both at index 1 (ABase).
   if (isWarlord && hasAbil(abilities, 'malnourished')) {
     // PROVENANCE[malnourished]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:5:66825b694152a9b945a1d0b6
+    // `SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1))` (CreateUnit.CAS:616) is ungated;
+    // a permanent melee already at 0 goes to -1 here and `e:clamp` floors it (F142).
     abilityStep('malnourished', 'base', { writes: ['atk', 'def'],
-      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', -1); u.def -= 2; } });
+      apply: u => { u.atk -= 1; u.def -= 2; } });
   }
 
   // Spirit Link (Warlord, Conjurer signature): +2 Resistance. OLSpell.CAS writes the bonus
