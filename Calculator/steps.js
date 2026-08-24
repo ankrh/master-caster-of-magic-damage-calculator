@@ -112,6 +112,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:naturalSelection:powerMinerals': SCOPE_WARLORD,
   'base:naturalSelection:wildGame': SCOPE_WARLORD,
   'base:pillarOfFaith': SCOPE_WARLORD,
+  'base:immunityCurseGating': SCOPE_ALL,
   'base:poolOfRepentance': SCOPE_WARLORD,
   'base:rebuild': SCOPE_WARLORD,
   'base:sanctaBasilica': SCOPE_WARLORD,
@@ -205,7 +206,6 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:guardian': SCOPE_COM_PLUS,
   'c:guidingBeaconAura': SCOPE_COM1,
   'c:heavenlyLight': SCOPE_COM_PLUS,
-  'c:heavenlyLight:toHit': SCOPE_COM_PLUS,
   'c:highPrayer': SCOPE_ALL,
   'c:holyArmor': SCOPE_ALL,
   'c:holyWeapon': SCOPE_ALL,
@@ -252,7 +252,6 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:warpReality': SCOPE_ALL,
   'c:weakness': SCOPE_ALL,
   'c:weapon': SCOPE_ALL,
-  'c:weapon:toHit': SCOPE_ALL,
   // --- d: magic calc, in UnitCalc.CAS ---
   'd:beatOfSwiftness': SCOPE_WARLORD,
   'd:blazeOfGlory': SCOPE_WARLORD,

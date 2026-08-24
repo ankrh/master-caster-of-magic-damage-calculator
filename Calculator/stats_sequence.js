@@ -826,10 +826,12 @@ function magicCalcBinaryStatSteps(ctx) {
     // `city_enchantments` byte and takes no node path. Its attack gates are both live and neither
     // carries a type test — `if (bu->ranged > 0)` writes the DOS shared slot whatever stands in
     // it, so a Thrown, Breath or gaze attack is raised exactly as a conventional ranged one is.
-    // PROVENANCE[heavenlyLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:e751e4e796518f15a4a77481 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:e405a407e722dce9ad79aea3
-    statStep({ id: 'heavenlyLight', phase: 'c',
+    // PROVENANCE[heavenlyLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:e751e4e796518f15a4a77481 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:e405a407e722dce9ad79aea3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
+    statStep({ id: 'heavenlyLight',
+      sourceLabel: isCoM1 ? 'Heavenly Light' : 'Heavenly Light / Guardian node', phase: 'c',
       writes: ['def', 'res', 'atk', ...strengthFields,
-        ...(isCoM1 ? ['gaze', 'doomGaze'] : [])],
+        ...(isCoM1 ? ['gaze', 'doomGaze'] : []),
+        'toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
       when: () => heavenlyLightActive,
       apply: u => {
         u.def += 1; u.res += 1;
@@ -840,28 +842,18 @@ function magicCalcBinaryStatSteps(ctx) {
           }
           if (u.gaze > 0) u.gaze += 1;
           if (u.doomGaze > 0) u.doomGaze += 1;
-          return;
+        } else {
+          if (inputBaseAtk > 0) u.atk += 1;
+          for (const c of channels) {
+            if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 1;
+          }
         }
-        if (inputBaseAtk > 0) u.atk += 1;
-        for (const c of channels) {
-          if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 1;
-        }
-      } }),
-    // One To-Hit write reaching melee and the secondary slots. Each half keeps its own gate,
-    // both read from values fixed before this step, so they fold into the `apply`. CoM 1 makes
-    // the same two writes from *inside* the strength gates above, so its halves read the live
-    // melee and the live slot strength; the material condition both share is
-    // `heavenlyLightMaterialTail` (stats.js). Reading those fields one step later is the same
-    // test: the gate above only increments where the value was already positive, so a field is
-    // positive after that step exactly when it was positive before it.
-    // PROVENANCE[heavenlyLight:toHit]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:74dcaa7c7c6760a9196277c6 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
-    statStep({ id: 'heavenlyLight:toHit', sourceId: 'heavenlyLight',
-      sourceLabel: isCoM1 ? 'Heavenly Light' : 'Heavenly Light / Guardian node', phase: 'c',
-      writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
-      when: u => heavenlyLightMeleeToHitAt(u) !== 0
-        || secondaryHitTargets.some(target =>
-          hitTargetValue(u, target, heavenlyLightHitPick) !== 0),
-      apply: u => {
+        // The To-Hit writes are the same package: CoM 1 makes them from *inside* the strength
+        // gates above, so its halves read the live melee and the live slot strength, and the
+        // modern block writes `Inc(U.hitchancethrown, 10)` beside its strength writes. Both
+        // halves share `heavenlyLightMaterialTail` (stats.js), which is why one `when` covers
+        // them. Reading the strength fields after the loop above is the same test it would be
+        // before: that loop only increments where the value was already positive.
         const meleeToHit = heavenlyLightMeleeToHitAt(u);
         if (meleeToHit !== 0) u.toHitMelee += meleeToHit;
         for (const target of secondaryHitTargets) {

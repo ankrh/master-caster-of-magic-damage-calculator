@@ -37,7 +37,9 @@ in one round of combat.
 
 - **The resistance roll that decides whether a spell lands.** The calculator assumes
   every selected curse or enchantment has already landed, and models its outcome. It
-  never rolls to see whether the target resisted the spell in the first place.
+  never rolls to see whether the target resisted the spell in the first place. The one
+  exception is an immunity that makes the roll unwinnable — see *Deliberate deviations*,
+  *An immunity strips the curses it blocks*.
 
   Two adjacent things *are* in scope and must not be confused with this:
   - Resistance **granted or imposed by an effect that has landed** — a +4 bonus against a realm,
@@ -273,14 +275,20 @@ selected version disallows becomes `none`.
 
 Order is load-bearing:
 
-1. Ability grants from buildings and enchantments fold in first, so every later read sees them.
-2. Magic-Immunity and Illusion-Immunity curse gating is applied.
-3. The ordered identity conversions are applied to live race and Fantastic fields. The compact
-   `unitType` value is projected from those live fields only after the sequence, so base and live
-   predicates remain available to later gates.
-4. Loadout and experience eligibility are decided.
-5. Stat modifiers, level bonuses, weapon/armour bonuses apply.
-6. Every stat modification is a **step** in one ordered sequence over one mutable unit record.
+1. Every stat modification is a **step** in one ordered sequence over one mutable unit record.
+2. Stat modifiers, level bonuses, weapon/armour bonuses are steps in that sequence like any other.
+
+**A write the engine makes at a position belongs at that position, not hoisted ahead of the
+sequence.** No engine has a preparatory phase: Chaos Channels' demon-skin armor increments Defense
+and assigns `U.race`/`U.Fantastic` in one block at `$0059F4A3`, `CreateUnit.CAS` writes a
+building's stat and its ability grant in one branch, and the weapon-material To-Hit tail tests
+`not B.Fantastic and not B.ishero` inside the weapon block at `$0059E2B8`. Three things still run
+before the sequence anyway — the identity conversions, the building and enchantment ability
+grants, and the loadout/experience eligibility gates. All three are departures recorded under
+*Deliberate deviations* and scheduled for removal, **not the intended design**, and nothing new
+may join them.
+The compact `unitType` value is projected from the live identity fields only after the conversions,
+so base and live predicates stay separately available to later gates.
 
 ### The step model
 
@@ -321,11 +329,13 @@ version nor the region belongs in the id: one enchantment writing in two regions
 field does not belong there either — a melee bonus and the attack-strength bonus of the same
 engine write are one step, not two. The one surviving qualifier marks an effect making **two
 separately cited engine writes** that `phase:id` cannot otherwise tell apart: two non-adjacent
-positions inside one region (`base:zombies` beside `base:zombies:toBlock`); the six `:race`
-identity conversions whose engine block also writes a stat, since the identity pre-pass and the
-stat sequence are two positions (`c:mysticSurge` beside `c:mysticSurge:race`); and the two effects
-whose stat block and To-Hit block carry citations of their own (`c:weapon` beside `c:weapon:toHit`,
-`c:heavenlyLight` beside `c:heavenlyLight:toHit`). Sequence composition, the chains and the
+positions inside one region (`base:zombies` beside `base:zombies:toBlock`, and
+`c:chaosChannels:fireBreath:recompute` for MoM 1.31's second `BU_Apply_Specials` call); and the
+six `:race` identity conversions whose engine block also writes a stat, since the pre-pass and the
+stat sequence are two positions (`c:mysticSurge` beside `c:mysticSurge:race`). **A To-Hit write is
+not a second position.** Where one block writes strength and To-Hit it is one step, whatever the
+engine's interleaving inside it — the fields are disjoint and the gates order-invariant, so the
+grouping is unobservable. Sequence composition, the chains and the
 scope table all key on `phase:id` alike, so two writes of one effect stay distinct without a
 qualifier.
 
@@ -674,10 +684,49 @@ the calculator does instead, and why.
   costs is runtime modding: an id a shipped `RangedType.INI` does not define halts roster
   generation naming the id, rather than being classified from a table the calculator would have
   had to load.
+- **An immunity strips the curses it blocks, as a step no engine makes.** No engine removes a
+  curse flag it already carries: `RecalculateUnits` has six flag clears, none a curse and none
+  gated on an immunity, and the curse blocks themselves test the flag alone. The immunity is
+  enforced where the spell lands instead — modern `GetEffectiveResistance` sets Resistance to 100
+  for a Magic-Immune target of any realm spell (`$00595BEF`), and the DOS engines add 30
+  (131:0x990AE), against a roll that cannot reach either — so an immune unit never acquires the
+  flag. The calculator has no cast order, so it assumes the immunity is the pre-existing one:
+  innate, cast overland, or cast earlier in combat. That is the common case, and the only one a
+  single ability set can represent. The strip is `base:immunityCurseGating`, an artificial step at
+  the head of every chain, so the assumption is a positioned write like any other rather than a
+  transform outside the sequence. Two limits are deliberate: Illusion Immunity's half is assumed
+  rather than cited — no reconstructed resolution path tests it against a curse, and the real gate
+  is presumed to live in the unreconstructed UI target validation and AI code — and the membership
+  of the stripped list remains a modelling choice (T8), where the engines' own criterion is that
+  the spell carries a realm.
+- **Three things run before the sequence that the engine writes at position.** One cause, three
+  instances, all scheduled for removal — the option is not that both shapes are acceptable.
+  The shared cause is the calculator's, not the engine's: `deriveUnitStats` computes its gates as
+  constants ahead of the sequence, and each hoist is what makes some of those constants valid.
+  - **Identity conversions**, `applyOrderedIdentityConversions`. Every engine writes the realm
+    inline, in the same `if` block as that block's stat writes: `Inc(U.defense, 3)` and
+    `U.race := 18; U.Fantastic := True` are one block at `$0059F4A3`, and `unitcalc.c` addresses
+    each DOS realm write at its own `BU_Apply_Specials` offset. The hoist leaves `race` and
+    `fantastic` the only fields exempt from *The step model*'s rule that a step reads a field's
+    current value at its own position, and it forces the six `:race` step ids. Inert today — every
+    engine finishes its realm writes before anything reads the running value — but that is an
+    empirical property of these five engines, checked nowhere.
+  - **Building and enchantment ability grants**, seven nested calls in `deriveUnitStats`. The
+    calculator already gives their sources chain phases: the `CreateUnit.CAS` grants' stat halves
+    are `base:` steps (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same
+    four `STypeID` branches), and Divine Protection, Insulation and Fortification cite
+    `UnitCalcPre.CAS` and `UnitCalc.CAS` — regions `b` and `d`. So one block's stat write is a
+    positioned step while its ability write is not, split by field kind rather than by evidence.
+  - **Loadout and experience eligibility**, `loadoutEligible`/`levelEligible`. The engine tests both
+    at position: `if B.Fantastic then U.level := 1` at `$0059A118`, and
+    `not B.Fantastic and not B.ishero` inside the weapon block at `$0059E2B8`. Hoisting them is
+    correct only because Destiny's mid-routine `B.Fantastic := True` at `$0059A390` is patched
+    around by a separate `destinyActive` term.
 - **Some positions inside a transcribed region are deduced rather than read.** CoM 1's Focus Magic
   position is inferred from the exhaustive list of what its recompute writes after Warp, which does
   not contain it; CoM 1's Raise Dead is a combat-spell write with nothing to order it against the
-  region-`c` blocks; and the modern identity conversions head their region by convention. Each is
+  region-`c` blocks; and the modern identity conversions head their region for the reason the entry
+  above gives, rather than sitting at their blocks' addresses. Each is
   marked `provisional` on the chain, which is what distinguishes a deduced placement from a
   transcribed one.
 

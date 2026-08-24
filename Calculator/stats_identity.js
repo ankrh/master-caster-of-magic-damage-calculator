@@ -401,33 +401,48 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
   return result;
 }
 
-// Magic Immunity hard-blocks a set of magic-based curses, so the calculator strips them here
-// before any downstream read (display stats, effectiveAbilities, and the combatAbilities
-// passed to resolveCombat all derive from this object). Mind Storm and Vertigo are
-// additionally blocked by Illusion Immunity, including the Illusion Immunity granted by Eye
-// of Heaven.
-// UNSOURCED (T8): the *membership* of MAGIC_IMMUNITY_GATED_CURSES is not sourced. The MoM
-// side is a categorical block on harmful spells — `Magic Immunity.md`, cited below, says a
-// Magic-Immune unit is "completely unaffected" by them, and lists the exceptions rather than
-// deriving them from a stat — so a per-curse list is a modelling choice, not a transcription,
-// and no reconstruction of the CoM2/Warlord curse handlers has been checked against it. An
-// earlier revision of this block justified the strip as the immunity granting "such
-// overwhelming effective resistance/defense that these curses simply never take hold"; that
-// mechanism is nowhere in the cited sources and has been removed rather than reworded.
-// Curses that bypass Magic Immunity per the source are NOT gated: Black Prayer, Eternal
-// Night's Darkness malus, and Hierophany. Black Prayer and Darkness are both named on the
-// bypass list in `Reference docs/MoM source - Fandom site/Magic Immunity.md`, *Immunity to
-// Harmful Spells / Exceptions*. Hierophany carries `NonMagic=True` on its spell record —
-// `Reference docs/Script source/Warlord 1.5.12.7/spells.ini` [239], the flag that file's own
-// legend (line 620) defines as "The spell is not blocked by Magic Immunity. (by default, spells
-// are blocked by Magic Immunity)". Its cast handler in
-// `Reference docs/Script source/Warlord 1.5.12.7/COSpell.CAS` lines 400-413 agrees, running a
-// Resistance roll with no Magic Immunity test, and the Warlord manual v1.5.12.7 changelog
-// records "Spell Hierophany now works properly against magic immunity".
-// Mislead/Liability are deliberately absent: the spell's resist roll and Death/Illusion
-// "no effect" clause gate only the single targeted unit, but the Misfortune/Jinx debuff
-// then spreads to every normal unit in the army with no per-unit immunity check — so a
-// unit suffering the debuff is not protected by any immunity.
+// An immunity strips the curses it blocks. This is an **artificial calculator step**: no engine
+// makes this write, because no engine ever has to. The immunity is enforced where the spell
+// lands, so an immune unit simply never acquires the flag, and nothing later removes one it does
+// carry (`RecalculateUnits` has six flag clears, none a curse and none gated on an immunity).
+// The calculator has no cast order, so it assumes the immunity is the pre-existing one — innate,
+// cast overland, or cast earlier in combat — which is the common case and the only one a single
+// ability set can represent. `SPEC.md`, *Deliberate deviations*, states the assumption; the step
+// is `base:immunityCurseGating`, at the head of every chain.
+// Magic Immunity's half is the cited mechanism: both engine families make the target's
+// resistance unreachable for any spell carrying a realm, so the roll cannot fail. Modern sets
+// Result := 100 against a `Random(10) + 1` roll; DOS adds 30 against a d10.
+// Illusion Immunity's half is assumed, not cited. Nothing in the reconstructed resolution path
+// tests it against a curse — `GetEffectiveResistance` reads `magicimmunity` alone, and the only
+// curse-facing Illusion Immunity test anywhere is `A32_ai_shatter_candidate` (`combat.c`, MoM
+// 1.31), an AI *targeting* heuristic that declines the target rather than rejecting a cast. We
+// assume the real gate lives in the UI's target validation and the AI code, neither of which is
+// reconstructed — the Fandom page reports exactly that asymmetry from the player side, since the
+// game refuses a Sorcery target that is Illusion-Immune while silently wasting mana on a
+// Magic-Immune one. The PROVENANCE below is therefore the Magic Immunity mechanism only.
+// Membership follows the engines' own rule, stated by `spells.ini`'s legend (line 620):
+// "NonMagic - The spell is not blocked by Magic Immunity. (by default, spells are blocked by
+// Magic Immunity)". Every listed curse's record lacks `NonMagic`, so the default blocks it.
+// Hierophany carries the flag ([239]) and is excluded; its cast handler agrees — `COSpell.CAS`
+// lines 400-413 roll Resistance with no Magic Immunity test — as does the Warlord 1.5.12.7 manual
+// changelog, "Spell Hierophany now works properly against magic immunity".
+// `nausea` is the one member the flag cannot reach: it is a `UnitCalcPre.CAS` effect with no spell
+// record at all (0 occurrences in `spells.ini`), so its membership is inferred from the effect's
+// shape rather than read.
+// Do **not** reach for `ACCurse`/`ACGlobalEffect` to decide this. That block is AI weighting for
+// strategic off-screen combat — "use these values to set the spells strength and type of effect"
+// (`spells.ini` lines 244-256) — not a resolution mechanism, and it disagrees with the flag: Mind
+// Storm and Temporal Twist carry no `ACCurse` yet are ordinary blocked curses.
+// The exclusions are the effects that make no per-unit resistance roll, so nothing ever consults
+// the immunity. Black Prayer and Eternal Night's Darkness are **combat globals, not unit
+// enchantments**: every engine gates them on a side-indexed global rather than a flag on the unit
+// — `inferred_CombatGlobals[3 - ownCG][CGBlackPrayer] > 0` and `inferred_CombatGlobals[...]
+// [CGDarkness] > 0` (`Units.RecalculateUnits.pas`), `combat_enchantments[CE_BLACK_PRAYER_*]` and
+// `[CE_DARKNESS_*]` (`unitcalc.c`). No flag is ever rolled onto the unit, which is also why their
+// spell records carry no `NonMagic`: the flag governs a roll these effects never make. Their
+// writes are `PROVENANCE[blackPrayer]` and `PROVENANCE[darkness]`. Mislead/Liability are absent
+// for the same reason at one remove — the spell's own roll gates only the targeted unit, and the
+// Misfortune/Jinx debuff then spreads to every normal unit in the army with no per-unit check.
 const MAGIC_IMMUNITY_GATED_CURSES = [
   'weakness', 'blackSleep', 'shatter', 'vertigo',
   'warpAttack', 'warpDefense', 'warpResist', 'nausea', 'temporalTwist', 'mindStorm',
@@ -437,24 +452,31 @@ const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // `Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS` lines 1839-1841 and named by
 // no other supported source, so outside Warlord it must not confer the Illusion Immunity that
 // strips Mind Storm and Vertigo here.
-function applyMagicImmunityCurseGating(abilities, version) {
-  const magicImmune = !!abilities.magicImmunity;
+// PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
+function immunityCurseGatingStep(version) {
+  return statStep({ id: 'immunityCurseGating', sourceLabel: 'Immunity', phase: 'base',
+    writes: [...MAGIC_IMMUNITY_GATED_CURSES],
+    when: u => immunityStrippedCurses(u, version).length > 0,
+    apply: (u) => {
+      for (const key of immunityStrippedCurses(u, version)) delete u[key];
+    } });
+}
+
+// One predicate for both the gate and the write, so the step cannot fire without stripping or
+// strip a key it did not declare. Illusion Immunity reaches only its own two curses.
+function immunityStrippedCurses(abilities, version) {
   const eyeOfHeaven = !!(version && version.startsWith('com2_warlord') && abilities.eyeOfHeaven);
   const illusionImmune = !!(abilities.illusionImmunity || abilities.trueSight || eyeOfHeaven);
-  const illusionHasCurse = illusionImmune
-    && ILLUSION_IMMUNITY_GATED_CURSES.some(k => abilities[k]);
-  if (!magicImmune && !illusionHasCurse) return abilities;
+  const blocked = new Set();
+  if (abilities.magicImmunity) for (const key of MAGIC_IMMUNITY_GATED_CURSES) blocked.add(key);
+  if (illusionImmune) for (const key of ILLUSION_IMMUNITY_GATED_CURSES) blocked.add(key);
+  return [...blocked].filter(key => abilities[key]);
+}
+
+function applyMagicImmunityCurseGating(abilities, version) {
+  const steps = filterStepsToVersionScope([immunityCurseGatingStep(version)], version);
   const gated = { ...abilities };
-  if (magicImmune) {
-    for (const key of MAGIC_IMMUNITY_GATED_CURSES) {
-      if (gated[key]) delete gated[key];
-    }
-  }
-  if (illusionImmune) {
-    for (const key of ILLUSION_IMMUNITY_GATED_CURSES) {
-      if (gated[key]) delete gated[key];
-    }
-  }
+  runStatSteps(orderStatStepsBySource(steps, statChain(version)), gated, { version });
   return gated;
 }
 

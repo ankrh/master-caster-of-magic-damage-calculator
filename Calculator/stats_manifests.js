@@ -1,5 +1,5 @@
 // --- Unit Stat Derivation: the per-version execution chain ---
-// No DOM dependencies. Read by deriveUnitStats (stats.js) and resolveIdentityConversions
+// No DOM dependencies. Read by deriveUnitStats (stats.js) and applyOrderedIdentityConversions
 // (stats_identity.js) through statChain().
 //
 // Every bare address in this file is a position, and its home is one of three documents, named
@@ -110,9 +110,9 @@ function versionChain(version, keys) {
 // demon-skin armor 0x8F6FE, demon wings 0x8F71B and fire breath 0x8F738. A unit holding both
 // Black Channels and a Chaos Channels mutation therefore finishes Chaos, not Death.
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
-  'base:stat:base', 'base:baseThresholds',
+  'base:immunityCurseGating', 'base:stat:base', 'base:baseThresholds',
   'a:holyBonus', 'a:resistanceToAll',
-  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
+  'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   'c:holyWeapon', 'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
   'c:stoneSkin', 'c:flameBlade', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
@@ -129,9 +129,9 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
 ]);
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
-  'base:stat:base', 'base:baseThresholds',
+  'base:immunityCurseGating', 'base:stat:base', 'base:baseThresholds',
   'a:holyBonus', 'a:resistanceToAll',
-  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit', 'c:chaosSurge',
+  'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   'c:undead', 'c:blackChannels', 'c:blackChannels:race',
   'c:ironSkin', 'c:stoneSkin', 'c:flameBlade', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
@@ -144,9 +144,10 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
 ]);
 
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
-  'base:zombies', 'base:constructCatapult', 'base:summonBranch', 'base:stat:base',
+  'base:immunityCurseGating', 'base:zombies', 'base:constructCatapult', 'base:summonBranch',
+  'base:stat:base',
   'base:baseThresholds', 'base:zombies:toBlock', 'a:holyBonus', 'a:resistanceToAll',
-  'c:level', 'c:lucky', 'c:weapon', 'c:weapon:toHit',
+  'c:level', 'c:lucky', 'c:weapon',
   // CoM 1 reorders `BU_Apply_Specials` around its own repurposed enchantment slots: Endurance
   // 0x8F439, demon wings 0x8F46F, fire breath 0x8F48C, Blood Lust 0x8F49A, Undead 0x8F4BC and
   // the Animated block 0x8F4D0, whose own realm write at 0x8F50B is the second half of
@@ -161,7 +162,7 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   'c:blazingMarch', 'c:warpReality', 'c:blackPrayer', 'c:guardian', 'c:guidingBeaconAura',
   // The relocated tail returns to 0x905BB, so Heavenly Light lands after the three aura writes
   // and before R6.1d resumes at 0x9064B.
-  'c:divineBarrierAura', 'c:soulLinkerAura', 'c:heavenlyLight', 'c:heavenlyLight:toHit',
+  'c:divineBarrierAura', 'c:soulLinkerAura', 'c:heavenlyLight',
   'c:vertigo', 'c:weakness', 'c:mindStorm',
   'c:warpAttack', 'c:warpDefense', 'c:warpResist', 'c:shatter', 'c:darkness', 'c:supremeLight',
   'c:realmWard', 'c:tactician', 'c:eternalNight:enemyResistance', 'c:charmOfLife',
@@ -169,14 +170,14 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 ]);
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
-  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
+  'base:immunityCurseGating', 'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath', 'c:destiny:race',
   'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust', 'c:undead',
   'c:mysticSurge:race', 'c:raiseDead',
   'c:destiny', 'c:level', 'c:focusMagic',
-  'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:heavenlyLight:toHit', 'c:weapon',
-  'c:weapon:toHit', 'c:endurance', 'c:discipline', 'c:chaosChannels:armor', 'c:animated',
+  'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:weapon',
+  'c:endurance', 'c:discipline', 'c:chaosChannels:armor', 'c:animated',
   'c:flameBlade', 'c:mysticSurge', 'c:lionheart', 'c:ironSkin',
   'c:landLinking', 'c:holyArmor', 'c:orihalcon', 'c:holyWeapon', 'c:chaosSurge',
   'c:survivalInstinct', 'c:innerPower', 'c:reinforceMagic',
@@ -191,7 +192,7 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
-  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
+  'base:immunityCurseGating', 'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
   'base:armorclad', 'base:artificer', 'base:rebuild', 'base:malnourished', 'base:spiritLink',
   'base:altarOfTheMoon', 'base:militaryWorkshop', 'base:lightningBlade:breath',
   'base:poolOfRepentance', 'base:dragonMound', 'base:ludusAgoge', 'base:motherFungus',
@@ -215,7 +216,7 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:undead',
   'c:mysticSurge:race', 'c:raiseDead', 'c:destiny',
   'c:level', 'c:focusMagic', 'c:lucky', 'c:darkForce', 'c:heavenlyLight',
-  'c:heavenlyLight:toHit', 'c:weapon', 'c:weapon:toHit', 'c:endurance', 'c:discipline',
+  'c:weapon', 'c:endurance', 'c:discipline',
   'c:chaosChannels:armor', 'c:animated', 'c:flameBlade', 'c:mysticSurge',
   'c:lionheart', 'c:ironSkin', 'c:landLinking', 'c:holyArmor', 'c:orihalcon',
   'c:holyWeapon', 'c:chaosSurge', 'c:survivalInstinct',

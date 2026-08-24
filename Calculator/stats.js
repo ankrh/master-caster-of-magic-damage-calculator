@@ -1460,8 +1460,8 @@ function deriveUnitStats(input) {
   // CoM 1 Focus Magic). Modern Caster calls ApplyMagicWeapons later in region c. Reuse the same
   // atomic steps at those two version-exclusive splice points.
   //
-  // `weapon:toHit` and the two To Hit tails below decide each secondary modifier from the
-  // channel that reads it: Units.RecalculateUnits.pas:639-662 gates `hitchanceranged` on the
+  // `c:weapon`'s To Hit half and the two To Hit tails below decide each secondary modifier from
+  // the channel that reads it: Units.RecalculateUnits.pas:639-662 gates `hitchanceranged` on the
   // current `rangedtype` and `hitchancethrown` on the current Thrown field, and :1451-1454 /
   // :1806-1809 do the same for Heavenly Light's material tail and Holy Weapon. Breath is
   // untouched by all three.
@@ -1521,7 +1521,9 @@ function deriveUnitStats(input) {
   // material's own magnitude, so a normal weapon is a block neither engine enters.
   const hasWeaponMaterial = weapon === 'magic' || weapon === 'mithril' || weapon === 'adamantium';
   const weaponStatSteps = [
-    statStep({ id: 'weapon', phase: 'c', writes: ['def', 'atk', ...strengthFields],
+    statStep({ id: 'weapon', phase: 'c',
+      writes: ['def', 'atk', ...strengthFields,
+        'toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
       when: () => hasWeaponMaterial,
       apply: (u, runCtx) => {
         u.def += wpn.def;
@@ -1541,37 +1543,34 @@ function deriveUnitStats(input) {
         // bu->ranged_type == RAT_THROWN` (`unitcalc.c`, 131:0x8F089/0x8F09C/0x8F0A4) — and its
         // three writes, `bu->ranged += quality - 1`, `Gold_Ranged` and `ranged_tohit++`, make no
         // strength test, so the calculator makes none either.
-        if (!materialSecondaryOpen) return;
-        for (const context of derivationContexts) {
-          const isRangedField = (context.isCoM2 && context.channelKey === 'ranged')
-            || u[context.rangedTypeField] !== 'none';
-          if (isRangedField) {
-            if (isNonMagicalRangedFieldSlot(u, context)) {
-              u[context.strengthField] += wpn.atk;
-            }
-          } else if (u[context.thrownTypeField] !== 'none') {
-            if (slotHasThrown(u, context)
-              && (!isCoM2 || u[context.strengthField] > 0)) {
-              u[context.strengthField] += wpn.atk;
+        // `materialSecondaryOpen` closes the secondary half alone. The melee To-Hit write below
+        // is outside it, which is why this is a guard around the strength loop and not an early
+        // return out of the block.
+        if (materialSecondaryOpen) {
+          for (const context of derivationContexts) {
+            const isRangedField = (context.isCoM2 && context.channelKey === 'ranged')
+              || u[context.rangedTypeField] !== 'none';
+            if (isRangedField) {
+              if (isNonMagicalRangedFieldSlot(u, context)) {
+                u[context.strengthField] += wpn.atk;
+              }
+            } else if (u[context.thrownTypeField] !== 'none') {
+              if (slotHasThrown(u, context)
+                && (!isCoM2 || u[context.strengthField] > 0)) {
+                u[context.strengthField] += wpn.atk;
+              }
             }
           }
         }
-      } }),
-    // One To-Hit write. The halves keep separate gates because the engine's are separate — melee
-    // on `weaponMeleeOpen`, the same melee-presence test the strength half above makes, each
-    // secondary slot on its own material write — so they fold into the `apply`. `weaponHitWrite`
-    // reads only strength fields, which the melee half does not touch, so evaluating both gates
-    // at this one position is what the two steps did. The DOS half reads live `u.atk` here
-    // rather than the pre-write value: `c:weapon` immediately precedes this entry in all five
-    // chains and now adds to melee only where that value was already positive, so the two
-    // positions cannot disagree.
-    // PROVENANCE[weapon:toHit]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:c4c0e22bb79483f8e5729dfb | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:8365c7617ed27a3bba5164a3 | Reference docs/DOS reconstructed/unitcalc.c@span:34:beda653e161112c68e8cdff3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:444355c621ef17cc85a05318 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:55a524751c4be78ffea17562 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
-    statStep({ id: 'weapon:toHit', sourceId: 'weapon', sourceLabel: 'Weapon material',
-      phase: 'c', writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
-      when: (u, runCtx) => hasWeaponMaterial
-        && ((wpn.toHit !== 0 && weaponMeleeOpen(u, runCtx))
-          || secondaryHitTargets.some(target => weaponHitWrite(u, target) !== 0)),
-      apply: (u, runCtx) => {
+        // The To-Hit writes belong to this same block, under the same gates. `ApplyMagicWeapons`
+        // interleaves them per channel and does not even keep one order while doing it — melee is
+        // To-Hit then strength ($00598F43, "Write order is To-Hit, strength, display bonus"),
+        // ordinary ranged is strength then To-Hit ($0059910B), Thrown is To-Hit then strength
+        // ($0059922B) — and the DOS body writes `bu->ranged += quality - 1`, `Gold_Ranged` and
+        // `ranged_tohit++` inside its one type gate. The two field sets are disjoint and every
+        // gate here is order-invariant (each strength write is a positive increment guarded by
+        // the same positivity test it would be read through), so this block's position for them
+        // is unobservable and they stay grouped rather than interleaved.
         if (wpn.toHit !== 0 && weaponMeleeOpen(u, runCtx)) {
           u.toHitMelee += wpn.toHit;
         }

@@ -6,6 +6,63 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-24
 
+- **F165 — the two `:toHit` step pairs are merged, and SPEC's justification for them was wrong.**
+  `c:weapon:toHit` and `c:heavenlyLight:toHit` are gone from all five chains, from
+  `STEP_VERSION_SCOPES` and from the F20 order anchors; 272 formulas became 270.
+  **The premise that they carried citations of their own does not hold.** Resolved to file ranges,
+  `weapon:toHit`'s five spans are subsets of `weapon`'s (`unitcalc.c` 2467-2500 inside 2459-2513;
+  `Units.RecalculateUnits.pas` 601-664 inside 595-666) plus the identical `MODDING.INI` row, so
+  `PROVENANCE[weapon]` already was the union and is unchanged. `ApplyMagicWeapons` is one
+  procedure that interleaves the two write kinds per channel and does not keep one order while
+  doing it — melee To-Hit-then-strength ($00598F43), ranged strength-then-To-Hit ($0059910B),
+  Thrown To-Hit-then-strength ($0059922B) — so the split had been running all strength writes then
+  all To-Hit writes, an order no engine uses. Heavenly Light's modern To-Hit tail ($0059E2B8) is an
+  inner `if` **nested inside** the same `if inferred_qualifies` block as its strength writes, with
+  an extra material/Fantastic/hero gate that `heavenlyLightMaterialTail` already carries; the split
+  had promoted an inner gate to a chain entry. Its merged anchor takes the union of both citation
+  sets minus the `unitcalc.c` span that was a subset of the other.
+  **Two latent bugs were introduced and caught during the merge**, both the same shape: an early
+  `return` in the strength half (`materialSecondaryOpen` in `weapon`, the CoM 1 branch in
+  `heavenlyLight`) would have swallowed the melee To-Hit write, which sits outside that gate. Each
+  became a scoped `if` instead. **Arithmetic is unchanged in all five versions**, measured as 0
+  differing cases over 15,480 derivations. Four channel-attribution assertions in
+  `tools/unit_checks/step_traces.js` were re-aimed at the merged ids and now expect the
+  channel-agnostic fields the merged step also carries; the engine claim they exist for — the
+  To-Hit write reaches Ranged and Thrown and not Breath — is unchanged and still asserted.
+  `SPEC.md`'s qualifier exception list loses the `:toHit` clause and gains the rule that a To-Hit
+  write is not a second position.
+
+- **F164 — the immunity curse strip is a chain step, and its mechanism turned out to be sourced.**
+  The strip lived outside the step vocabulary as `applyMagicImmunityCurseGating`, a pre-sequence
+  transform. It is now `base:immunityCurseGating`, at the head of all five chains, `SCOPE_ALL`,
+  composed through `statChain` like any other step; one predicate (`immunityStrippedCurses`) serves
+  both its gate and its write, so it cannot fire without stripping or strip an undeclared key.
+  **The write is artificial and stays so:** no engine removes a landed curse — `RecalculateUnits`
+  has six flag clears, none a curse and none gated on an immunity, and the curse blocks test the
+  flag alone. The immunity is enforced where the spell lands, so the calculator assumes the
+  pre-existing immunity, recorded in `SPEC.md`, *Deliberate deviations*.
+  **The mechanism is real, and the 2026-08-23 round's withdrawal of it is reversed.** Modern
+  `GetEffectiveResistance` sets Resistance to 100 for a Magic-Immune target of any realm spell
+  (`$00595BEF`) and DOS adds 30 (131:0x990AE), each against a roll that cannot reach it, so the
+  curse never lands. `PROVENANCE[immunityCurseGating]` cites both writes and both rolls; 271
+  formulas became 272. **Illusion Immunity's half stays assumed**, presumed to live in the
+  unreconstructed UI target validation and AI code: the only Illusion-Immunity-vs-curse test
+  anywhere is `A32_ai_shatter_candidate` (`combat.c`, MoM 1.31), an AI targeting heuristic.
+  **Membership is now read rather than chosen, and the block leaves T8.** `spells.ini`'s legend
+  makes blocking the default and `NonMagic=True` the exception, which sources the ten inclusions;
+  `nausea` is the one member outside the flag's reach, having no spell record at all. The
+  exclusions are sourced by mechanism: Black Prayer and Eternal Night's Darkness are combat
+  globals, not unit enchantments — every engine gates them on a side-indexed global
+  (`inferred_CombatGlobals[3 - ownCG][CGBlackPrayer]`, `combat_enchantments[CE_DARKNESS_*]`)
+  rather than a unit flag — so no per-unit roll happens and the immunity is never consulted, which
+  is why their records carry no `NonMagic` either. The list stays explicit by decision: it is a
+  calculator-side membership list, not a per-cast realm test.
+  `ACCurse`/`ACGlobalEffect` are recorded as AI weights not to be used for it.
+  **Arithmetic is unchanged in all five versions**, measured as 0 differing cases over 15,480
+  derivations (`tools/derivation_equivalence.js`). The version-scope sweep cannot observe a step
+  that writes the ability set, so it is a listed exception there and section 4a of
+  `tools/unit_checks/version_scope.js` checks it directly instead (+20 assertions).
+
 - **F132 — the has-ranged-attack predicate has one home, and the unreachable copy became the halt
   its unreachability was evidence for.** **Premise held; every line number in it was stale and
   there was no fourth copy.** Re-located: `ui.js:229-231`, `ui_abilities.js:551-553`,

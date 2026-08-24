@@ -1,5 +1,23 @@
 Read [CLAUDE.md](./CLAUDE.md) and follow the project instructions defined there.
 
+## Fidelity to the binaries, and structural change
+
+The calculator computes stats the way the engines compute them. Where the code's structure and the
+engine's control flow disagree, the engine wins — even where the calculator's shape is more
+convenient, and even where both produce the same numbers today.
+
+**The standing preference is the rewrite, not the local fix.** Propose the structural change
+whenever it would leave the code leaner, more elegant, or a more direct model of the binary;
+removing a known deviation is one such case, not the only one. Give an honest cost, but do not
+default to recommending the cheaper workaround, and do not size a rewrite pessimistically to make
+a bandaid look reasonable. If the user chooses the local fix, file what the rewrite would have been
+in `Calculator/BACKLOG.md`.
+
+Two things hide a deviation and are themselves defects: one written into `Calculator/SPEC.md` as
+though it were the intended design, and one missing from that file's *Deliberate deviations*. On
+finding a structure the engine does not have, check both before concluding it was chosen
+deliberately.
+
 ## Approval gate for checks and reviews
 
 Requests to **check, review, inspect, investigate, diagnose, or verify** are read-only.

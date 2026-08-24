@@ -730,7 +730,7 @@ function runChannelAttributionChecks(ctx) {
 
   // Units.RecalculateUnits.pas:1451-1454 writes hitchanceranged and hitchancethrown; breath is
   // untouched.
-  const heavenlyLight = eventOf('heavenlyLight:toHit');
+  const heavenlyLight = eventOf('heavenlyLight');
   assert(!!heavenlyLight, 'Heavenly Light records a To Hit write on the multi-channel unit');
   assertSameKeyList(heavenlyLight.channels, ['ranged', 'thrown'],
     'Heavenly Light attributes its To Hit write to Ranged and Thrown');
@@ -773,13 +773,14 @@ function runChannelAttributionChecks(ctx) {
   // the melee half belongs to every channel's view, exactly as a common To Hit write does.
   assert(!idsIn(projections.fireBreath).includes('trueSight'),
     'A Breath reconstruction drops the Ranged-only To Hit write');
-  assertSameKeyList(fieldsIn(projections.fireBreath, 'heavenlyLight:toHit'), ['toHitMelee'],
+  assertSameKeyList(fieldsIn(projections.fireBreath, 'heavenlyLight'),
+    ['def', 'res', 'atk', 'toHitMelee'],
     'A Breath reconstruction keeps only the channel-agnostic half of a Ranged/Thrown write');
-  assert(idsIn(projections.thrown).includes('heavenlyLight:toHit')
+  assert(idsIn(projections.thrown).includes('heavenlyLight')
       && !idsIn(projections.thrown).includes('trueSight'),
   'A Thrown reconstruction keeps Heavenly Light and drops True Sight');
-  assertSameKeyList(fieldsIn(projections.thrown, 'heavenlyLight:toHit'),
-    ['toHitMelee', 'toHitThrown'],
+  assertSameKeyList(fieldsIn(projections.thrown, 'heavenlyLight'),
+    ['def', 'res', 'atk', 'toHitMelee', 'toHitThrown'],
     'A Thrown reconstruction keeps only the Thrown half of a two-channel write');
   assertSameKeyList(
     Object.keys(projections.fireBreath.find(entry => entry.id === 'hurricane').changes),
@@ -825,9 +826,10 @@ function runChannelAttributionChecks(ctx) {
   const breathLedger = projectTraceToChannel(ledger, 'fireBreath');
   const breathLedgerIds = breathLedger.map(event => event.id);
   assert(!breathLedgerIds.includes('trueSight')
-      && !breathLedgerIds.includes('heavenlyLight:toHit')
-      && breathLedgerIds.includes('hurricane'),
-  'A Breath ledger reconstruction drops the steps whose declaration excludes Breath');
+      && breathLedgerIds.includes('hurricane')
+      && breathLedgerIds.includes('heavenlyLight'),
+  'A Breath ledger reconstruction drops the steps whose declaration excludes Breath, and keeps '
+  + 'one whose declaration reaches Breath-agnostic fields');
   assertSameKeyList(
     breathLedgerIds.filter(id => !breathLedger.find(event => event.id === id).channels),
     ledger.filter(event => !event.channels).map(event => event.id),
