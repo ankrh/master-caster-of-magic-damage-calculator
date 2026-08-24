@@ -10,6 +10,12 @@ and proposed fix first, then wait for approval before changing any file. A reque
 numbered verification-evidence items does not authorize resolving/removing those items or updating their
 supporting documents.
 
+**One exception, and it needs no approval.** When a tool or test fails because it constructs a
+state real use cannot reach — a programmatic write that skips the events the page binds, an input
+the code now requires and the harness never states — the defect is in the harness. Fix the harness
+so it exercises the real path, and say so in the report. Never soften the code it exercises to
+accommodate it, and never carry such a failure back as a decision for the user.
+
 ## Documentation discipline
 
 Every policy, status, and finding has one owning document; other documents link to it instead of

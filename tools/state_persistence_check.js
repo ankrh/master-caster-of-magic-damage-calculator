@@ -219,7 +219,10 @@ function cdpNavigate(wsUrl, url) {
 const MAIN_HARNESS = `(() => {
   const results = [];
   const log = (name, ok, detail) => results.push({ name, ok: !!ok, detail });
-  const set = (id, val) => { const el = document.getElementById(id); if (!el) return false; if (el.type === 'checkbox') el.checked = !!val; else el.value = val; return true; };
+  // Programmatic writes must dispatch, or this harness tests a page state real use cannot
+  // reach: ui.js hangs updateTypeVisibility/updateAbilityVisibility/recalculate off the
+  // change handler, so a silent write skips the normalization every real interaction runs.
+  const set = (id, val) => { const el = document.getElementById(id); if (!el) return false; if (el.type === 'checkbox') el.checked = !!val; else el.value = val; el.dispatchEvent(new Event('change', { bubbles: true })); return true; };
   const get = id => { const el = document.getElementById(id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : undefined; };
   const dist = () => (document.querySelector('#distA .dist-header')?.textContent || '') + '||' + (document.querySelector('#distB .dist-header')?.textContent || '');
   const clone = b => JSON.parse(JSON.stringify(b));
