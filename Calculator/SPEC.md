@@ -734,17 +734,17 @@ the calculator does instead, and why.
     each DOS realm write at its own `BU_Apply_Specials` offset. The hoist leaves `race` and
     `fantastic` the only fields exempt from *The step model*'s rule that a step reads a field's
     current value at its own position, and it forces the six `:race` step ids.
-    **It is not inert, and the population that has to be corrected first is enumerated rather than
+    **It is not inert, and the population that had to be corrected first was enumerated rather than
     found by accident.** `tools/identity_read_position_census.js` claims every read of the
     calculated identity in the core sources — an unclassified one halts — assigns each the chain
     entry owning the effect it gates, and decides hoisting exhaustively over the whole conversion
     set: a read at entry K is hoisted for a field exactly when some conversion of rank at or after
-    K writes that field. Of its 73 sites, 35 declare or forward a channel, 5 are post-chain combat
-    reads of the finished record, 1 is a cast-time targeting restriction, 1 arm is unreachable,
-    14 are positional replays already correct, 14 are fixed-point reads whose entry every
-    conversion precedes, and 3 are fixed-point reads whose owning entry a conversion follows.
-    `BACKLOG.md` carries those 3 as F163's prerequisites.
-    **Five rules the tranche established, each from a falsified premise.** (1) Which record a gate
+    K writes that field. Of its 70 sites, 35 declare or forward a channel, 5 are post-chain combat
+    reads of the finished record, 2 are cast-time targeting restrictions, 14 are positional replays
+    already correct and 14 are fixed-point reads whose entry every conversion precedes. **No site is
+    hoisted**, so nothing in `BACKLOG.md` precedes F163 any more; the census reproduces all sixteen
+    landed corrections and halts if it ever stops doing so.
+    **Six rules the tranche established, each from a falsified premise.** (1) Which record a gate
     wants is read off its own block, never deduced from its region: four of the landed corrections
     wanted the **permanent** record, and one was answered by *deleting* the calculator's extra live
     term rather than repositioning it — Breakthrough admits on
@@ -768,7 +768,15 @@ the calculator does instead, and why.
     asserts Fantastic at the head of the routine so the unit takes fantastic bonuses, and clears it
     at the tail so the "enchanted fantastic unit could not be targeted by fantastic-only spell"
     (`UnitCalc.CAS:1305-1306`). A read of this class is classified `targeting` rather than owned to
-    a chain entry, and the pre-pass's removal leaves it alone.
+    a chain entry, and the pre-pass's removal leaves it alone. Shatter is the second read of this
+    class: every engine's Shatter block tests the enchantment flag alone, and the "normal unit" its
+    helptext names is the spell's target class, which Warlord widens to any unit.
+    (6) **A hero test is not an identity read and must not be spelled as one.** Nothing writes the
+    hero flag during recalculation, and every block that branches on hero-ness asks for it
+    directly — `if U.ishero`, `_UNITS[].Hero_Slot >= 0`, `ISHERO(U)`. Reading it off the compact
+    `unitType` token instead let any Fantastic conversion answer the hero question, because that
+    token carries only one of the two facts at a time. Which *units* a gate covers stays a separate
+    question from which *record* it reads (F175).
     One gate went the other way — Blazing Eyes, a region-`c` block the calculator evaluated into
     the `base:stat:base` Doom Gaze seed, so its position here was *earlier* than its engine block —
     and the answer was to give the block its own chain entry, `c:blazingEyes`, not to re-read its

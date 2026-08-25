@@ -665,6 +665,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const beforeHolyArmor = { beforeHolyArmor: true };
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
   const isCoM1 = !!(version && version.startsWith('com_'));
+  // The hero flag, not the compact unit-type token. Two blocks below branch on hero-ness, and
+  // every engine spells that as a hero predicate over the unit record — `U.ishero`
+  // (Units.RecalculateUnits.pas:2417), `_UNITS[].Hero_Slot >= 0` (com1:0x90AB4), `ISHERO(U)`
+  // (UnitCalcPre.CAS:81, OLSpell.CAS:279) — never as a race or Fantastic test. Reading them off
+  // the live token instead made any Fantastic conversion answer the hero question (F187).
+  const isHeroUnit = !!identityPredicates.isHero;
 
   // Holy Bonus: +X to melee attack, defense, resistance.
   // CoM v6.05+ and CoM2: also +X to ranged attack.
@@ -1151,7 +1157,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // PROVENANCE[tactician]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:17:74a62c399fece2ea93dcbdc3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:27:69075629fb02a3678e0526aa | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:e1a9888013d858dd0217c1a9
   if (hasAbil(abilities, 'tactician') && isCoMPlus) {
     const isWarlord = version && version.startsWith('com2_warlord');
-    if (abilVal(abilities, 'unitType', 'normal') === 'hero') {
+    if (isHeroUnit) {
       abilityStep('tactician', 'c', { ...afterWarp,
         writes: ['atk', 'def', 'res', ...(isCoM1 ? rtbWrites : attackWrites)],
         apply: (u, ctx) => {
@@ -1275,7 +1281,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // (UnitCalcPre.CAS:686) for the hero re-application, and
     // `SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2)` (OLSpell.CAS:280) for the permanent
     // non-hero write (F142).
-    abilityStep('rebuild', abilVal(abilities, 'unitType', 'normal') === 'hero' ? 'b' : 'base',
+    abilityStep('rebuild', isHeroUnit ? 'b' : 'base',
       { writes: ['atk', 'def'],
         apply: u => { u.atk += 2; u.def += 2; } });
   }

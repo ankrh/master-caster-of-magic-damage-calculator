@@ -112,9 +112,12 @@ function deriveUnitStats(input) {
   const identityAtChaosSurge = applyOrderedIdentityConversions(
     identity, abilities, version, { isHero, name: unitName },
     { beforeKey: 'c:chaosSurge' }).identity;
-  const fantasticAtModernEncMagicRule = isCoM2
-    ? !!identityAtChaosSurge.fantastic
-    : isFantasticLive;
+  // No version test here. The rule is a modern block, and both consumers — `spellWardActive` and
+  // `modernEncMagicIndependentOfMaterial` — carry their own exact `com2_` test in the same
+  // expression, which is the settled adjacent form (`SPEC.md`, *Versions*). The `: isFantasticLive`
+  // arm this used to carry was therefore read by nothing, and was the last fixed-point read at
+  // this site; the positional value below is well defined in every version (F188).
+  const fantasticAtModernEncMagicRule = !!identityAtChaosSurge.fantastic;
   const loadoutEligible = !isFantasticBase && !destinyActive;
   // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
   // to earn experience" (`Unit rosters/Warlord mod unit data/HELP.TXT:6324`). Nothing in that
@@ -1521,6 +1524,10 @@ function deriveUnitStats(input) {
   const abilSteps = getAbilityStatSteps(effectiveAbilities, version, {
     baseFantastic: identity.baseFantastic,
     liveFantastic: identity.fantastic,
+    // The hero flag itself, for the two blocks that test hero-ness rather than unit type
+    // (Tactician's branch pair and Rebuild's phase choice). No conversion writes it, so it is
+    // one value for the whole derivation and needs no position (F187).
+    isHero: !!identity.isHero,
     combatSummoned: !!effectiveAbilities.combatSummoned,
     strengthFields,
   }).map(step => {

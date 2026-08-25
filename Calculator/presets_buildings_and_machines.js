@@ -720,6 +720,13 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { rebuild: true } },
     expected: { dmgToA: 0.600, dmgToB: 3.000 },
   },
+  rebuildHeroCcDefenseLionheartWarlord: {
+    desc: 'Rebuild (Warlord): the phase split is `ISHERO`, not unit type. A hero is re-applied at `b` (UnitCalcPre.CAS:682-691, inside the hero region opened at :81); a non-hero was written permanently when the spell landed (OLSpell.CAS:280), which is the base stage. Only the base write reaches the permanent record Lionheart\'s melee gate reads, so a Chaos-Channelled hero with permanent melee 0 takes Rebuild\'s +2 alone → 2 dmg. While the phase was chosen off the live unit-type token the hero took the non-hero base write, and Lionheart then added 3 more, for 5 dmg (F187).',
+    version: V_WARLORD,
+    a: { atk:0, hitChance:70, hp:10, unitType: 'hero', abilities: { rebuild: true, ccDefense: true, lionheart: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
   rebuildArmorPiercingWarlord: {
     desc: 'Rebuild (Warlord): grants Armor Piercing. Missile rtb 2 100% hit vs def 3 100% block → AP halves def to 1 → 1 dmg (Rebuild +2 melee does not affect ranged attack)',
     version: V_WARLORD,

@@ -153,10 +153,6 @@ const SITES = [
   { key: 'Calculator/stats.js#fantasticAtModernEncMagicRule#identityAtChaosSurge',
     owner: 'c:chaosSurge', record: 'positional:c:chaosSurge', trigger: null,
     effect: 'modern standing EncMagic rule', settled: 'F174/F178' },
-  { key: 'Calculator/stats.js#fantasticAtModernEncMagicRule#isFantasticLive',
-    owner: 'dead-arm', record: 'fixed-point',
-    note: 'the non-CoM2 arm; both consumers (spellWardActive, modernEncMagicIndependentOfMaterial) '
-      + 'are com2_-gated, so no version reads it' },
   { key: 'Calculator/stats.js#blazingEyesActive#identityAtChaosSurge',
     owner: 'c:blazingEyes', record: 'positional:c:chaosSurge', trigger: 'blazingEyes',
     effect: 'Blazing Eyes', settled: 'F174' },
@@ -252,13 +248,16 @@ const SITES = [
   { key: 'Calculator/stats_sequence.js#step:warpReality#unitIsChaos', owner: 'c:warpReality',
     record: 'positional:c:warpReality', trigger: { input: 'warpReality' },
     effect: 'Warp Reality', settled: 'F184' },
-  { key: 'Calculator/stats_sequence.js#step:shatter#unitTypeVal', owner: 'c:shatter',
-    record: 'fixed-point', trigger: 'shatter', effect: 'Shatter',
-    // `isWarlord || isNormalUnitType(unitTypeVal) || unitTypeVal === 'hero'` short-circuits in
-    // Warlord, the one version whose position is divergent, so no case can reach the read there.
-    // The tool does not model short-circuiting; the row states it so the verdict is not read as a
-    // movable defect.
-    unreachableWhereHoisted: true },
+  // Every engine's Shatter block tests the enchantment flag alone — A32 states the recompute
+  // consumer carries "no race, hero, or unit-type test" — so the unit-type expression is the
+  // spell's cast-time target class, not a term of the block: "Target: one normal unit" in the DOS
+  // builds (a live `BATTLE_UNIT.race < 0x0F` at human targeting), "Target: enemy normal unit" in
+  // CoM2, and "Target: enemy unit" in Warlord, which is the `isWarlord` disjunct. Targeting is
+  // evaluated against the record the recalculation leaves, so the fixed point is correct and
+  // `c:shatter` was never this read's owner (F188, on F183's rule).
+  { key: 'Calculator/stats_sequence.js#step:shatter#unitTypeVal', owner: 'targeting',
+    record: 'fixed-point', trigger: 'shatter', effect: 'Shatter target class',
+    settled: 'F188' },
 
   // --- combat_abilities.js ---------------------------------------------------------------
   { key: 'Calculator/combat_abilities.js#misleadActiveForUnit#liveFantastic', owner: 'plumbing',
@@ -273,12 +272,10 @@ const SITES = [
     effect: 'Leadership aura' },
   { key: 'Calculator/combat_abilities.js#step:metalFires#liveFantastic', owner: 'c:metalFires',
     record: 'fixed-point', trigger: 'metalFires', effect: 'Metal Fires, stat half' },
-  { key: "Calculator/combat_abilities.js#step:tactician#abilVal(abilities, 'unitType'",
-    owner: 'c:tactician', record: 'fixed-point', trigger: 'tactician',
-    effect: 'Tactician, hero branch' },
-  { key: "Calculator/combat_abilities.js#step:rebuild#abilVal(abilities, 'unitType'",
-    owner: ['base:rebuild', 'b:rebuild'], ownerPick: 'earliest', record: 'fixed-point',
-    trigger: 'rebuild', effect: 'Rebuild, hero/non-hero phase choice' },
+  // Tactician's branch pair and Rebuild's phase choice used to read the compact token here. Both
+  // blocks ask whether the unit is a hero — `U.ishero`, `_UNITS[].Hero_Slot >= 0`, `ISHERO(U)` —
+  // and the hero flag is not part of the calculated identity, so after F187 neither site reads
+  // this vocabulary at all and neither has a row.
 
   // --- stats_identity.js -----------------------------------------------------------------
   { key: 'Calculator/stats_identity.js#legacyUnitTypeFromLiveIdentity#identity.fantastic',
@@ -304,8 +301,12 @@ const SITES = [
 // ---------------------------------------------------------------------------
 // 3. Ground truth: the corrections already landed for F163. Each names the chain entry its gate
 // sits at and which comparison it turned on — 'positional' where the fixed point was replaced by
-// the record at that rank, 'permanent' where it was replaced by the base record, 'write' where
-// the finding was a missing conversion rather than a read. The oracle must reproduce each.
+// the record at that rank, 'permanent' where it was replaced by the base record, 'hero' where the
+// gate's block asks a hero question the calculator was spelling through the live token so the read
+// left this vocabulary entirely, and 'write' where the finding was a missing conversion rather
+// than a read. 'positional' and 'hero' both assert the read was hoisted at its entry — the
+// condition that made it a defect; 'permanent' asserts only that the two records are
+// distinguishable there. The oracle must reproduce each.
 const GROUND_TRUTH = [
   { id: 'F167', effect: 'the unitRace alias, five Warlord building gates', at: 'base:altarOfTheMoon',
     fields: ['race'], comparison: 'permanent', versions: ['com2_warlord_1.5.12.7'], moved: 0 },
@@ -354,6 +355,19 @@ const GROUND_TRUTH = [
   { id: 'F184', effect: 'unitIsChaos, the Warp Reality step and the Immolation To Hit read',
     at: 'c:warpReality', fields: ['race', 'fantastic'], comparison: 'positional',
     versions: ['com2_warlord_1.5.12.7'], moved: 0 },
+  // F187's two sites left the vocabulary rather than changing record: both blocks ask `ISHERO`,
+  // and the hero flag is not part of the calculated identity. `moved` is 0 for the third tranche
+  // rule's reason and for the sharpest instance of it — every case in the list is
+  // `unitType: 'normal'`, so no generated case even enters either branch. Their evidence is the
+  // four presets. The versions listed are the ones whose *position* was divergent, which is what
+  // this oracle checks; the numbers moved in CoM 1 and CoM2 too, where a Chaos Channels
+  // conversion answered the hero question at a position no conversion follows.
+  { id: 'F187', effect: 'Tactician, hero branch', at: 'c:tactician',
+    fields: ['race', 'fantastic'], comparison: 'hero',
+    versions: ['com2_warlord_1.5.12.7'], moved: 0 },
+  { id: 'F187', effect: 'Rebuild, hero/non-hero phase choice', at: 'base:rebuild',
+    fields: ['race', 'fantastic'], comparison: 'hero',
+    versions: ['com2_warlord_1.5.12.7'], moved: 0 },
 ];
 
 // What the measurement cannot see. Every earlier round on this seam under-claimed its blind
@@ -364,9 +378,12 @@ const BLIND_SPOTS = [
     + "'normal' with an empty baseRace. A gate comparing live race to a mundane race (the five "
     + 'Warlord building gates F167 repointed) and every hero branch therefore measure 0 cases '
     + 'here however wrong they are. The case counts are a floor, not a bound.',
-  'Reachability is not modelled. A read behind a version test that skips it in the one version '
-    + 'whose position diverges is still reported hoisted; c:shatter is that case and its row '
-    + 'says so, but the tool cannot find the next one by itself.',
+  'Reachability is not modelled, and nothing flags it any more. A read behind a version test that '
+    + 'skips it in the one version whose position diverges would still be reported hoisted. '
+    + 'c:shatter was the one such site and carried a marker for it; F188 found the marker was '
+    + 'answering the wrong question — the read is a targeting restriction, so reachability never '
+    + 'bore on it — and the marker went with the reclassification. A future case has no marker and '
+    + 'must be found by reading the block.',
   "A gate's owner chain entry is judgement, not measurement. The SITES table assigns it and a "
     + 'wrong assignment gives a wrong verdict in silence; only the citation beside each row '
     + 'defends it.',
@@ -386,8 +403,9 @@ const BLIND_SPOTS = [
   'Which *units* a gate covers is a different question from which *record* it reads. F175 (the '
     + 'hero exclusion in b:nausea and b:wallOfFire:garrison) is out of scope here: both sites '
     + 'already read the record their blocks read, and their defect is the isNormalUnitType '
-    + 'predicate. The two hero tests this tool does report — Rebuild and Tactician — are in '
-    + 'scope only because they spell the hero question through the live compact token.',
+    + 'predicate. Rebuild and Tactician were reported only because they spelled a hero question '
+    + 'through the live compact token; F187 gave both the hero flag, so neither is in this '
+    + 'vocabulary now and a hero test written that way again would be found the same way.',
 ];
 
 // ---------------------------------------------------------------------------
@@ -776,7 +794,8 @@ function run() {
       }
       const analysis = positionAnalysis(model, item.at, item.fields);
       if (!analysis) return { version, ok: false, detail: `${item.at} is not in this chain` };
-      const list = item.comparison === 'positional' ? analysis.hoisted : analysis.observable;
+      const list = (item.comparison === 'positional' || item.comparison === 'hero')
+        ? analysis.hoisted : analysis.observable;
       return { version, ok: list.length > 0, detail: list.join(', ') || 'none' };
     });
     return { ...item, perVersion, pass: perVersion.every(entry => entry.ok) };
@@ -831,7 +850,7 @@ function verdictFor(site, perVersion) {
       ? 'MISPLACED-REPLAY' : 'positional-ok';
   }
   if (!perVersion.some(entry => entry.hoisted.length)) return 'late-ok';
-  return site.unreachableWhereHoisted ? 'HOISTED-BUT-UNREACHABLE' : 'HOISTED';
+  return 'HOISTED';
 }
 
 function main() {
@@ -863,8 +882,7 @@ function main() {
   console.log(`${GROUND_TRUTH.length - failed} of ${GROUND_TRUTH.length} reproduced`);
 
   console.log('\n=== sites ===');
-  const order = { 'MISPLACED-REPLAY': 0, HOISTED: 1, 'HOISTED-BUT-UNREACHABLE': 2,
-    'late-ok': 3, 'positional-ok': 4 };
+  const order = { 'MISPLACED-REPLAY': 0, HOISTED: 1, 'late-ok': 2, 'positional-ok': 3 };
   const rows = findings
     .map(entry => ({ ...entry, verdict: verdictFor(entry.site, entry.perVersion) }))
     .sort((a, b) => (order[a.verdict] - order[b.verdict])

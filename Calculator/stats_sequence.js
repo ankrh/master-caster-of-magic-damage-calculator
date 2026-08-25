@@ -1255,8 +1255,21 @@ function magicCalcBinaryStatSteps(ctx) {
     // PROVENANCE[warpResist]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:4:af84302cc4211baa873b72e0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:a15539b1a7a69de6c7548391
     statStep({ id: 'warpResist', phase: 'c', writes: ['res'],
       when: () => !!(abilities && abilities.warpResist), apply: u => { u.res = 0; } }),
-    // Shatter reduces every attack strength to 1. CoM2: normal units and heroes only;
-    // Warlord: any unit.
+    // Shatter reduces every attack strength to 1. The unit-type expression below is **not** a term
+    // of this block: every engine's recalculation block tests the flag alone —
+    // `if U.EnchantmentFlags[EncShatter] then` (Units.RecalculateUnits.pas:2341) and
+    // `if (bu->Combat_Effects & BUE_SHATTER)` (unitcalc.c, 131:0x90AD1 / com1:0x907DC), of which
+    // A32 says outright that the recompute consumer carries "no race, hero, or unit-type test"
+    // (`Reference docs/DOS reconstructed/A32.evidence.md`, finding 6). It is the spell's cast-time
+    // **target class**, which differs by version: MoM/CP/CoM 1 admit only an enemy battle unit
+    // whose live `BATTLE_UNIT.race < 0x0F` (A32 finding 1, matching "Target: one normal unit",
+    // `Reference docs/CoM helptext.txt:612`) with heroes eligible because their race is mundane;
+    // CoM2 keeps "Target: enemy normal unit" (`Reference docs/CoM2 helptext.TXT:844`); and Warlord
+    // widens it to "Target: enemy unit" (`Unit rosters/Warlord mod unit data/HELP.TXT:2901`),
+    // which is the `isWarlord` disjunct. A targeting restriction has no chain position and reads
+    // the record the recalculation leaves, so the fixed point is the record it wants — the same
+    // ruling Rust's Fantastic exclusion took (`SPEC.md`, *Deliberate deviations*, rule 5; F183,
+    // F188).
     // PROVENANCE[shatter]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:23:9d5c1cf547d632005ddeebe5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:b34c35cb9bf68bf3402e6d27
     statStep({ id: 'shatter', phase: 'c', writes: ['atk', ...strengthFields],
       when: () => !!(abilities && abilities.shatter)

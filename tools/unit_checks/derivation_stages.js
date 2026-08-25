@@ -52,14 +52,17 @@ function runDerivationStageChecks(ctx) {
 
   // Phase attribution is a step's declared position, so these assert on the emitted step
   // rather than on a bucket total. `null` means the effect emitted no step at all.
-  const stepFor = (abilities, id, ver) => {
-    const steps = ctx.getAbilityStatSteps(abilities, ver || version);
+  // `deriveUnitStats` hands the builder its identity predicates separately from the ability map,
+  // and the hero flag is one of them (F187) — a probe stating a hero through `abilities.unitType`
+  // would build a state the page cannot produce. `predicates` is that third argument.
+  const stepFor = (abilities, id, ver, predicates) => {
+    const steps = ctx.getAbilityStatSteps(abilities, ver || version, predicates || {});
     const matches = steps.filter(step => step.id === id);
     assert(matches.length <= 1, `getAbilityStatSteps emits at most one '${id}' step`);
     return matches[0] || null;
   };
-  const phaseOf = (abilities, id, ver) => {
-    const step = stepFor(abilities, id, ver);
+  const phaseOf = (abilities, id, ver, predicates) => {
+    const step = stepFor(abilities, id, ver, predicates);
     return step ? step.phase : null;
   };
 
@@ -77,9 +80,9 @@ function runDerivationStageChecks(ctx) {
 
   assertEqual(phaseOf({ guardian: true }, 'guardian'), 'c',
     'The Guardian retort is region c, where +0x0B092 puts it');
-  assertEqual(phaseOf({ rebuild: true, unitType: 'normal' }, 'rebuild'), 'base',
+  assertEqual(phaseOf({ rebuild: true }, 'rebuild', version, { isHero: false }), 'base',
     'Non-hero Rebuild ABase write uses the base stage');
-  assertEqual(phaseOf({ rebuild: true, unitType: 'hero' }, 'rebuild'), 'b',
+  assertEqual(phaseOf({ rebuild: true }, 'rebuild', version, { isHero: true }), 'b',
     'Hero Rebuild is reapplied in UnitCalcPre phase b');
 
   // D23: CoM2/Warlord apply Holy Bonus and Resistance to All as region-`e` stack auras, after

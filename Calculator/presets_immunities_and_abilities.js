@@ -1104,6 +1104,27 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
+  tacticianHeroCcDefenseCoM2: {
+    desc: 'Tactician (CoM2): the branch is `if U.ishero` (Units.RecalculateUnits.pas:2417) — a hero test, not a unit-type test. Chaos Channels turns the hero into a fantastic Chaos creature and leaves the hero flag untouched, so the hero package still applies: atk 1 becomes 3 → 3 dmg. Spelling the hero question through the live unit-type token instead selected the non-hero +1 defense arm, for 1 dmg (F187).',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, unitType: 'hero', abilities: { tactician: true, ccDefense: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  tacticianHeroCcDefenseCoM: {
+    desc: 'Tactician (CoM 1): the hero arm is guarded on `_UNITS[].Hero_Slot >= 0` (com1:0x90AB4), the permanent record\'s hero slot, so a Chaos-Channelled hero keeps it: atk 1 becomes 3 → 3 dmg, against 1 dmg while the gate read the live unit-type token (F187).',
+    version: V_COM,
+    a: { atk:1, toHitMod:70, hp:10, unitType: 'hero', abilities: { tactician: true, ccDefense: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  tacticianHeroCcDefenseWarpAttackWarlord: {
+    desc: 'Tactician (Warlord): the hero grant and the region-`b` clawback net to the same +1 defense a non-hero gets, so the branch choice shows only once something between the two regions rescales the value. Warp Attack is that: melee 6 −2 at `b`, halved to 2 at `c`, +2 back after the Warp → 4 dmg. The non-hero arm the live token selected halves 6 to 3 and writes defense only, for 3 dmg (F187).',
+    version: V_WARLORD,
+    a: { atk:6, hitChance:70, hp:10, unitType: 'hero', abilities: { tactician: true, ccDefense: true, warpAttack: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
   tacticianHeroRangedCoM2: {
     desc: 'Tactician (CoM2): hero gets +2 to ranged attack strength. missile 1 becomes 3 → 3 dmg',
     version: V_COM2,

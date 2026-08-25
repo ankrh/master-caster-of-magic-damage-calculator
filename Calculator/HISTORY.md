@@ -6,6 +6,73 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-25
 
+- **F187 — Tactician's branch and Rebuild's phase now ask the hero flag, not the live unit-type
+  token.** The row's premise held on the mechanism and on both owner-chain assignments, and the
+  census re-measurement reproduced its counts exactly: `base:rebuild` #6 of the Warlord chain with
+  all thirteen conversions after it (489 of 15525 divergent, 11 with Rebuild on) and `c:tactician`
+  #123 hoisted by `d:spiritLink` alone (48 divergent, 0 with Tactician on). **One premise was
+  falsified**: the row scoped the behavior change to Warlord and asked CoM 1 and CoM2 to be
+  *verified unmoved* for Tactician. The opposite is true. Hoisting is about *position*; the defect
+  is about *which fact the token can carry*, and `legacyUnitTypeFromLiveIdentity` returns `'hero'`
+  only while live Fantastic is false, so a Chaos-Channelled hero loses the hero branch in **every**
+  CoM engine, whether or not a conversion follows the entry. CoM 1 and CoM2 move (atk 5 to 7, def 7
+  to 8, res 4 to 6 on the probe); **Warlord's Tactician numbers do not**, because its region-`b`
+  clawback takes back exactly the hero grant less one point of defence, which is the non-hero grant.
+  Every block asks the hero question directly — `if U.ishero`
+  (`Units.RecalculateUnits.pas:2417`), the hero arm guarded on `_UNITS[].Hero_Slot >= 0`
+  (com1:0x90AB4), and `ISHERO(U)` at `UnitCalcPre.CAS:81` opening the hero-only region that carries
+  Rebuild's re-application at :682-691, against `OLSpell.CAS:279`'s `IF (ISHERO(TU)=0)` for the
+  permanent write. So the fix is to ask it: `identity.isHero` reaches the builder through
+  `identityPredicates`, the channel that already carries `baseFantastic`/`liveFantastic`, and no
+  conversion writes it, so it needs no position. **Presets**, one per behavior corrected, all four
+  confirmed failing against the unfixed code in one `tests/presets.spec.js` run and passing after:
+  `tacticianHeroCcDefenseCoM2` and `tacticianHeroCcDefenseCoM` 3.000 against 1.000;
+  `tacticianHeroCcDefenseWarpAttackWarlord` 4.000 against 3.000, Warp Attack being what makes the
+  Warlord branch choice observable at all by rescaling melee between the clawback and the grant;
+  and `rebuildHeroCcDefenseLionheartWarlord` 2.000 against 5.000, since only the non-hero `base`
+  phase reaches the permanent record Lionheart's melee gate reads. **Measured**:
+  `tools/derivation_equivalence.js` moves **0 of 15525**, and the zero is forced rather than
+  informative — every case in that list is `unitType: 'normal'`, so none enters either branch. The
+  45 Tactician and 45 Rebuild cases are all non-hero and take the same arm on both sides.
+  **Harness fix, no approval needed**: `tools/unit_checks/derivation_stages.js` stated a hero
+  through `abilities.unitType` when calling `getAbilityStatSteps` directly, a state the page cannot
+  produce now that the flag arrives as a predicate; it passes `{ isHero }` instead.
+- **F188 — the two unobservable identity reads, ruled on one each way.** Neither site can move a
+  number, so the disposition had to be decided rather than measured, and the row's framing was
+  falsified on the first site. **(1) `c:shatter` is a targeting restriction, not a hoisted gate**,
+  which is neither of the two answers the row offered. Every engine's Shatter block tests the
+  enchantment flag alone — `if U.EnchantmentFlags[EncShatter]`
+  (`Units.RecalculateUnits.pas:2341`), `if (bu->Combat_Effects & BUE_SHATTER)` at 131:0x90AD1 and
+  com1:0x907DC — and [A32](../Reference%20docs/DOS%20reconstructed/A32.evidence.md) says outright
+  that the recompute consumer carries "no race, hero, or unit-type test" (finding 6). The
+  unit-type expression is the spell's target class, which differs by version: DOS human targeting
+  admits only an enemy whose live `BATTLE_UNIT.race < 0x0F` with heroes eligible because their race
+  is mundane (finding 1, and "Target: one normal unit", `CoM helptext.txt:612`); CoM2 keeps "Target:
+  enemy normal unit" (`CoM2 helptext.TXT:844`); Warlord widens it to "Target: enemy unit"
+  (`HELP.TXT:2901`), which is the `isWarlord` disjunct. So this follows F183, not F132 or F160: the
+  fixed point is the record targeting wants, no code changed, and the census row becomes
+  `owner: 'targeting'`. Reachability never bore on it, so the tool's `unreachableWhereHoisted`
+  marker and its `HOISTED-BUT-UNREACHABLE` verdict went with the reclassification, and the printed
+  blind-spot list now says plainly that nothing flags reachability any more.
+  **(2) `fantasticAtModernEncMagicRule`'s `: isFantasticLive` arm is deleted**, following F160's
+  dead-arm deletions rather than F132's halt: no contract stands behind it. The rule it models is a modern
+  block, both consumers carry their own exact `com2_` test in the same expression — the settled
+  adjacent form ([SPEC.md](./SPEC.md), *Versions*) — and the positional value the other arm already
+  computes is well defined in every version, so removing the ternary leaves no invented default and
+  retires the last fixed-point read at that site. Contrast F132, where deletion would have left an
+  invariant the UI contract states unenforced and a plausible number in its place.
+  **No preset is possible for either site and none was added**: the first read is short-circuited
+  in the only version whose position diverges and correct everywhere else, the second was read by
+  nothing at all. `tools/derivation_equivalence.js` moves 0 of 15525, as it must.
+  **Census re-run for both rows.** `node tools/identity_read_position_census.js`: **70 sites — 35
+  channel declarations or forwarding, 5 post-chain reads, 2 targeting restrictions, 14 positional
+  replays and 14 late-but-correct fixed-point reads, and no hoisted site at all.** All ground truth
+  reproduces, now 16 of 16 with F187's two entries added under a new `hero` comparison that asserts
+  the read was hoisted at its entry. F163's prerequisite population is empty.
+  **Checks for both items.** `node tools/node_unit_checks.js` 14473 assertions, 0 failures;
+  `npm run provenance` 273 formulas, 0 UNVERIFIED; the seven `tests/` specs naming identity,
+  Tactician, Rebuild, Shatter, Spell Ward and the source order, 35 passed; `npm test` 130 passed
+  (1105 presets, up from 1101) on `PLAYWRIGHT_PORT=8137`.
 - **F183 — Rust's Fantastic exclusion is a targeting restriction, so the fixed point is the record
   it wants; the row's premise was falsified and no code moved.** The row asked (1) whether a
   cast-time targeting restriction is a recalculation gate at all and (2) which record it takes, and
