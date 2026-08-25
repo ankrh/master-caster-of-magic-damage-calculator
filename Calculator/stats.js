@@ -582,11 +582,36 @@ function deriveUnitStats(input) {
     : 0;
   const darknessResMagnitude = hasDarkness ? 1 : 0;
   const eternalNightEnemyResPenalty = enemyEternalNight && isCoMVersion && unitRealm !== 'death' ? -1 : 0;
+  // The Undead enchantment flag, as the two `UnitCalcPre.CAS` blocks below read it:
+  // `GetEnchantmentFlag(U,EncUndead,0)`. It is a flag test, not a realm test, and it stands
+  // beside the realm test rather than behind it — which is why the realm read below can move to
+  // its own position without taking an Undead unit's swing away with it. Every source of the flag
+  // writes it into the *permanent* aggregate, so it is already set where region `b` reads it:
+  // the casts write index 1 (`COSpell.CAS:323,346`, `OLSpell.CAS:526`, `UnitCalc.CAS:1253`), and
+  // Animate Dead's own block persists it there as well — `B.EnchantmentFlags[EncUndead] := True`
+  // at `$0059F7D8` (`Units.RecalculateUnits.pas`), which is the same pairing `c:undead` already
+  // reads for its conversion.
+  const undeadEnchantmentFlag = hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated');
   // Warlord Eternal Night ("Poor Vision"): "All non-Death creatures get -2 Ranged Attack power
   // as long as Eternal Night is in effect" (`Unit rosters/Warlord mod unit data/HELP.TXT:5768`),
   // so missile/boulder and magic ranged take it while Thrown and breath — short-range, not
   // "Ranged" — do not. The write is `PROVENANCE[eternalNight:poorVision]` (`stats_sequence.js`).
-  const warlordEternalNightActive = enemyEternalNight && isWarlord && unitRealm !== 'death';
+  //
+  // The exemption is `(GetStat(U,SRace,0)<>RCDeath) %AND (GetEnchantmentFlag(U,EncUndead,0)=0)`
+  // (`UnitCalcPre.CAS:1343-1344`). `GetStat(U,S,0)` is the *current* record — "if B=0, it checks
+  // the current stats and abilities, if B=1 it checks the base unit" (`Reference docs/Script
+  // source/CAS reference/Scripts.TXT:266`) — so the realm is read where this region-`b` block
+  // stands, ahead of the six region-`c` conversions, and not at the pre-pass fixed point (F186).
+  const identityAtPoorVision = enemyEternalNight && isWarlord
+    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
+      { beforeKey: 'b:eternalNight:poorVision' }).identity
+    : identity;
+  const poorVisionRealm = enemyEternalNight && isWarlord
+    ? realmOfUnitType(
+      legacyUnitTypeFromLiveIdentity(identityAtPoorVision), identityAtPoorVision)
+    : unitRealm;
+  const warlordEternalNightActive = enemyEternalNight && isWarlord
+    && poorVisionRealm !== 'death' && !undeadEnchantmentFlag;
   let darknessAtkBonus = 0;
   let darknessDefBonus = 0;
   let darknessResBonus = 0;
@@ -599,13 +624,36 @@ function deriveUnitStats(input) {
     darknessDefBonus -= darknessAtkDefMagnitude;
     darknessResBonus -= darknessResMagnitude;
   }
+  // True Light reads the realm at its own block in both engine families, so it takes the record
+  // standing at its own chain entry rather than the pre-pass fixed point (F185). Warlord's block
+  // is `GetStat(U,SRace,0)` (`UnitCalcPre.CAS:1511,1523`), the *current* record by the CAS
+  // contract quoted above `identityAtPoorVision`; the DOS block is `bu->race` at 131:0x903A1 and
+  // 131:0x904EB (`unitcalc.c`), the one battle-unit record `BU_Apply_Specials` mutates in place.
+  // The two entries differ — `b:trueLight` in Warlord, `c:trueLight` in the MoM builds — and the
+  // MoM entry follows every conversion, so only Warlord moves.
+  //
+  // Warlord's Death arm carries a second term the DOS block does not have:
+  // `%OR (GetEnchantmentFlag(U,EncUndead,0)>0)`. It is what gives an Undead unit the penalty at
+  // region `b`, where `c:undead`'s realm write has not run yet.
+  const identityAtTrueLight = hasTrueLight
+    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
+      { beforeKey: isWarlord ? 'b:trueLight' : 'c:trueLight' }).identity
+    : identity;
+  const trueLightRealm = hasTrueLight
+    ? realmOfUnitType(
+      legacyUnitTypeFromLiveIdentity(identityAtTrueLight), identityAtTrueLight)
+    : unitRealm;
+  // Two independent `IF`s in both families, not an if/else, which only matters once the Undead
+  // flag is a term of its own: a Life-race unit carrying the flag takes the penalty arm *and* the
+  // bonus arm and nets zero. The realm alone can never satisfy both.
   let trueLightAtkBonus = 0;
   let trueLightDefBonus = 0;
   let trueLightResBonus = 0;
-  if (unitRealm === 'death') {
-    trueLightAtkBonus = -1; trueLightDefBonus = -1; trueLightResBonus = -1;
-  } else if (unitRealm === 'life') {
-    trueLightAtkBonus = 1; trueLightDefBonus = 1; trueLightResBonus = 1;
+  if (trueLightRealm === 'death' || (isWarlord && undeadEnchantmentFlag)) {
+    trueLightAtkBonus -= 1; trueLightDefBonus -= 1; trueLightResBonus -= 1;
+  }
+  if (trueLightRealm === 'life') {
+    trueLightAtkBonus += 1; trueLightDefBonus += 1; trueLightResBonus += 1;
   }
 
   // Effective values (level + weapon + ability + node aura + darkness/light modifiers)

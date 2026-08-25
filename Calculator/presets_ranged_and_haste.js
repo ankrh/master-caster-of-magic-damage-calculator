@@ -1206,6 +1206,14 @@ definePresets({
     trueLight: true,
     expected: { dmgToA: 0, dmgToB: 3.600 },
   },
+  trueLightReadsRealmAtItsOwnBlockWarlord: {
+    desc: 'True Light (Warlord): the Death arm reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1511, so it takes -1: atk6->5 vs def 0, 100% hit = 5. Reading the post-conversion realm would see Chaos and give nothing.',
+    version: V_WARLORD,
+    a: { figs:1, atk:6, res:5, hp:10, hitChance:70, unitType:'fantastic_death', abilities: { ccDefense: true } },
+    b: { figs:1, atk:0, def:0, res:5, hp:10, toBlkMod:70, unitType:'normal' },
+    trueLight: true,
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
   sanctifyTrueLightWarlord: {
     desc: 'Sanctify (Warlord): sanctified normal unit becomes life-realm, so True Light gives +1. atk5->6 vs def2, 100% hit/block: 6-2=4 (unsanctified normal would stay 5 -> 3)',
     version: V_WARLORD,
@@ -1287,6 +1295,14 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  eternalNightPoorVisionReadsRealmAtItsOwnBlockWarlord: {
+    desc: 'Eternal Night (Warlord): the Poor Vision exemption reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1343, so it keeps its missile rtb 4 at 100% hit vs def 0 = 4. Reading the post-conversion realm would see Chaos and charge the -2. Darkness stays at its own later region-c position, where the unit is Chaos, so it adds nothing here.',
+    version: V_WARLORD,
+    a: { figs:1, hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:4, type:'missile' } }, hp:10, unitType:'fantastic_death', abilities: { ccDefense: true } },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
+    rangedCheck: true, rangedDist: 2,
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   eternalNightThrownUnaffectedWarlord: {
     desc: 'Eternal Night (Warlord): -2 ranged penalty does not apply to thrown. Melee 1 + thrown 3 at 100% hit vs def 0 = 4 dmg',

@@ -34,7 +34,7 @@
 //      site's own rank differs from the fixed point it is handed, and the subset of those where
 //      the site's own control is also present.
 //
-// The eleven corrections already landed for F163 are the ground truth: GROUND_TRUTH below names
+// The corrections already landed for F163 are the ground truth: GROUND_TRUTH below names
 // each one's chain entry and the comparison it turned on, and the run fails loudly if the oracle
 // does not independently reproduce it.
 //
@@ -66,6 +66,10 @@ const CHANNELS = [
   { token: 'fantasticAtModernEncMagicRule', reads: ['fantastic'] },
   { token: 'chaosSurgeRealm', reads: ['race'] },
   { token: 'nauseaUnitType', reads: ['race', 'fantastic'] },
+  { token: 'identityAtTrueLight', reads: ['race', 'fantastic'] },
+  { token: 'trueLightRealm', reads: ['race'] },
+  { token: 'identityAtPoorVision', reads: ['race', 'fantastic'] },
+  { token: 'poorVisionRealm', reads: ['race'] },
   { token: 'survivalInstinctUnitType', reads: ['race', 'fantastic'] },
   { token: 'landLinkingUnitType', reads: ['race', 'fantastic'] },
   { token: 'blazingEyesActive', reads: ['race', 'fantastic'] },
@@ -86,7 +90,11 @@ const CHANNELS = [
 //   'post-chain'  the read happens after the whole recalculation, in combat resolution or on the
 //                 returned record, where the fixed point is the finished record and is correct.
 //   'dead-arm'    the expression is unreachable in every version.
-// `record` is what the site is handed today: 'fixed-point', 'positional:<key>', or 'n/a'.
+// `record` is what the site is handed today: 'fixed-point', 'positional:<key>', 'positional:owner',
+// or 'n/a'. `positional:owner` is the replay that stops at the site's *own* owner entry, which is
+// the only form available to a read whose owner differs by engine family — `b:trueLight` in
+// Warlord against `c:trueLight` in the MoM builds — since a literal key would name no entry of the
+// other family's chain.
 // `trigger` names the control that turns the effect on, used to narrow the corpus count: an
 // ability-map key, or `{ input: 'name' }` for a top-level input. `null` means the effect has no
 // single control and the narrowed count equals the divergent one.
@@ -178,15 +186,24 @@ const SITES = [
     record: 'fixed-point', trigger: null, effect: 'Darkness' },
   { key: 'Calculator/stats.js#darknessResBonus#unitRealm', owner: 'c:darkness',
     record: 'fixed-point', trigger: null, effect: 'Darkness' },
-  { key: 'Calculator/stats.js#trueLightResBonus#unitRealm', owner: ['c:trueLight', 'b:trueLight'],
-    record: 'fixed-point', trigger: { input: 'trueLight' }, effect: 'True Light' },
+  { key: 'Calculator/stats.js#trueLightRealm#identityAtTrueLight', owner: 'plumbing', record: 'n/a',
+    note: 'declares the realm channel the True Light package reads' },
+  { key: 'Calculator/stats.js#trueLightRealm#unitRealm', owner: 'plumbing', record: 'n/a',
+    note: 'the else arm, taken only when the enchantment is absent and the value is unread' },
+  { key: 'Calculator/stats.js#trueLightResBonus#trueLightRealm', owner: ['c:trueLight', 'b:trueLight'],
+    record: 'positional:owner', trigger: { input: 'trueLight' }, effect: 'True Light',
+    settled: 'F185' },
   { key: 'Calculator/stats.js#eternalNightEnemyResPenalty#unitRealm',
     owner: 'c:eternalNight:enemyResistance', record: 'fixed-point', trigger: null,
     effect: 'Eternal Night, enemy Resistance' },
-  { key: 'Calculator/stats.js#warlordEternalNightActive#unitRealm',
-    owner: 'b:eternalNight:poorVision', record: 'fixed-point',
+  { key: 'Calculator/stats.js#poorVisionRealm#identityAtPoorVision', owner: 'plumbing',
+    record: 'n/a', note: 'declares the realm channel the Poor Vision penalty reads' },
+  { key: 'Calculator/stats.js#poorVisionRealm#unitRealm', owner: 'plumbing', record: 'n/a',
+    note: 'the else arm, taken only when the enchantment is absent and the value is unread' },
+  { key: 'Calculator/stats.js#warlordEternalNightActive#poorVisionRealm',
+    owner: 'b:eternalNight:poorVision', record: 'positional:owner',
     trigger: { input: 'enemyEternalNight' },
-    effect: 'Eternal Night, Poor Vision' },
+    effect: 'Eternal Night, Poor Vision', settled: 'F186' },
   { key: 'Calculator/stats.js#metalFiresActive#identity.fantastic', owner: 'c:metalFires',
     record: 'fixed-point', trigger: 'metalFires', effect: 'Metal Fires, weapon upgrade half' },
   { key: 'Calculator/stats.js#supremeLightEligibleAt#unitTypeVal',
@@ -301,6 +318,15 @@ const GROUND_TRUTH = [
   { id: 'F179', effect: 'Breakthrough normal package', at: 'c:breakthrough:normal',
     fields: ['fantastic'], comparison: 'permanent',
     versions: ['com2_1.05.11', 'com2_warlord_1.5.12.7'], moved: 19 },
+  // F185 and F186 are the first two corrections this tool found rather than confirmed, and the
+  // first of the region-`b` class: a live *race* read hoisted by the six region-`c` conversions
+  // rather than by the Spirit Link pair. Only `c:undead` and `c:destiny:race` of those six write
+  // a realm either block tests, and each block's own Undead-flag term now answers for `c:undead`,
+  // which is why the two moved 7 and 1 cases out of the 30 and 25 narrowed ones.
+  { id: 'F185', effect: 'the True Light package', at: 'b:trueLight', fields: ['race'],
+    comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 7 },
+  { id: 'F186', effect: 'warlordEternalNightActive', at: 'b:eternalNight:poorVision',
+    fields: ['race'], comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 1 },
 ];
 
 // What the measurement cannot see. Every earlier round on this seam under-claimed its blind
@@ -749,7 +775,8 @@ function run() {
       // is at the wrong place and reports an earlier record than the block sees.
       let between = null;
       if (site.record.startsWith('positional:')) {
-        const readKey = site.record.slice('positional:'.length);
+        const named = site.record.slice('positional:'.length);
+        const readKey = named === 'owner' ? ownerKey : named;
         const readRank = model.rankOf.get(readKey);
         if (readRank === undefined) {
           throw new Error(`identity_read_position_census: ${site.key} replays before ${readKey}, `
@@ -795,7 +822,7 @@ function main() {
 
   console.log(`\n=== corpus: ${measured.cases} derivations ===`);
 
-  console.log('\n=== ground truth: the eleven F163 corrections already landed ===');
+  console.log(`\n=== ground truth: the ${GROUND_TRUTH.length} F163 corrections already landed ===`);
   let failed = 0;
   for (const item of groundTruth) {
     if (!item.pass) failed += 1;

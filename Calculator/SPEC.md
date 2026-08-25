@@ -739,12 +739,12 @@ the calculator does instead, and why.
     calculated identity in the core sources — an unclassified one halts — assigns each the chain
     entry owning the effect it gates, and decides hoisting exhaustively over the whole conversion
     set: a read at entry K is hoisted for a field exactly when some conversion of rank at or after
-    K writes that field. Of its 68 sites, 30 declare or forward a channel, 5 are post-chain combat
-    reads of the finished record, 1 arm is unreachable, 10 are positional replays already correct,
-    14 are fixed-point reads whose entry every conversion precedes, and 8 are fixed-point reads
-    whose owning entry a conversion follows. `BACKLOG.md` carries those 8 as F163's prerequisites,
+    K writes that field. Of its 72 sites, 34 declare or forward a channel, 5 are post-chain combat
+    reads of the finished record, 1 arm is unreachable, 12 are positional replays already correct,
+    14 are fixed-point reads whose entry every conversion precedes, and 6 are fixed-point reads
+    whose owning entry a conversion follows. `BACKLOG.md` carries those 6 as F163's prerequisites,
     one row per engine block.
-    **Three rules the tranche established, each from a falsified premise.** (1) Which record a gate
+    **Four rules the tranche established, each from a falsified premise.** (1) Which record a gate
     wants is read off its own block, never deduced from its region: four of the landed corrections
     wanted the **permanent** record, and one was answered by *deleting* the calculator's extra live
     term rather than repositioning it — Breakthrough admits on
@@ -756,7 +756,11 @@ the calculator does instead, and why.
     about its generated case list before it is a claim about a gate. Chaos Surge's global was the
     one input no environment set, so its gate measured zero while the defect was real; that list
     still states no base race and no hero, so a gate reading either measures zero there whatever it
-    does.
+    does. (4) A fixed-point read can be *standing in* for a term the block states separately, so
+    repositioning it alone regresses: True Light and Poor Vision both test the Undead **flag**
+    beside the realm, and the pre-pass's `c:undead` realm write had been supplying that answer at a
+    position where the engine's own realm has not changed yet. Read the whole gate, not the term
+    the census names.
     One gate went the other way — Blazing Eyes, a region-`c` block the calculator evaluated into
     the `base:stat:base` Doom Gaze seed, so its position here was *earlier* than its engine block —
     and the answer was to give the block its own chain entry, `c:blazingEyes`, not to re-read its

@@ -6,6 +6,51 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-25
 
+- **F185 — True Light reads the realm at its own block, and its Undead arm is a flag test, not a
+  realm test.** Premise re-checked before implementing: the owner-chain assignment held — the three
+  `trueLight*Bonus` terms (`stats.js`) feed nothing but `makeTrueLightStep`, which is `b:trueLight`
+  in Warlord and `c:trueLight` in the MoM builds — and so did the hoist. Reading the block settled
+  the record question the census cannot answer: Warlord's `UnitCalcPre.CAS:1506-1540` tests
+  `GetStat(U,SRace,0)`, and `GetStat(U,S,B)` with `B=0` "checks the current stats and abilities,
+  if B=1 it checks the base unit" (`Reference docs/Script source/CAS reference/Scripts.TXT:266`),
+  so it is the **calculated** record at the block, not the permanent one; the DOS block is
+  `bu->race` at 131:0x903A1 / 131:0x904EB (`unitcalc.c`), likewise the record
+  `BU_Apply_Specials` mutates in place. Both now replay the conversions ranked before their own
+  chain entry through `applyOrderedIdentityConversions(..., { beforeKey })`. Reading the block also
+  turned up two things the row did not have. Warlord's Death arm is
+  `(GetStat(U,SRace,0)=RCDeath) %OR (GetEnchantmentFlag(U,EncUndead,0)>0)`, and that flag is what
+  gives an Undead unit the penalty at region `b`, where `c:undead`'s realm write has not run — the
+  fixed-point read had been standing in for it, so a positional read without it would have been a
+  regression. And the two arms are independent `IF`s, not an if/else, so a Life-race unit carrying
+  the flag takes both and nets zero; the terms now accumulate rather than assign.
+  **Measured**: 7 of 15525 `tools/derivation_equivalence.js` cases move, all
+  `com2_warlord_1.5.12.7` — five where `c:destiny:race` converts to Life after the block
+  (`combo|69,145,215,256,795`, the +1 swing withdrawn, doubled downstream by Destiny's own step
+  where it applies) and two where `c:undead` is followed by a `No Heal` conversion that erased the
+  realm at the fixed point (`combo|41,424`, the -1 now carried by the flag term). The MoM builds
+  rank every conversion before `c:trueLight` and are unmoved. Preset
+  `trueLightReadsRealmAtItsOwnBlockWarlord`: a base-Death unit given CC:+Defense keeps the -1 at
+  its own block, atk 6 → 5, B=5; ablated it derives B=6.
+  **Checks.** `node tools/node_unit_checks.js` 14473/14473; `npm run provenance` 273 formulas, 0
+  UNVERIFIED; `tools/identity_read_position_census.js` reclassifies the site `positional-ok` and
+  reproduces 13 of 13 landed corrections.
+
+- **F186 — Eternal Night's Poor Vision exemption reads the realm at its own block, and the block
+  exempts Undead by flag.** Same shape and same citation family as F185, one block earlier:
+  `UnitCalcPre.CAS:1338-1350`. The owner-chain premise held —
+  `warlordEternalNightActive` (`stats.js`) gates nothing but `b:eternalNight:poorVision`
+  (`stats_sequence.js`). The gate is
+  `HASGLOBAL(W,GEEternalNight)=0 %AND (GetStat(U,STypeID,1)<>356) %AND (GetStat(U,SRace,0)<>RCDeath)
+  %AND (GetEnchantmentFlag(U,EncUndead,0)=0)`: the realm term is the calculated record at region
+  `b`, and the Undead term is a separate flag test the fixed-point read had been standing in for.
+  Both are implemented. **Measured**: 1 of 15525 cases moves (`combo|634`, an Undead unit whose
+  Mystic Surge conversion had erased the Death realm at the fixed point, ranged 5 → 7). Preset
+  `eternalNightPoorVisionReadsRealmAtItsOwnBlockWarlord`: a base-Death unit given CC:+Defense is
+  still Death at the block and keeps missile 4, B=4; ablated it derives B=2. **Filed, not folded**:
+  the second term, template 356 `Goblin Night Goblins`, is [F189](./BACKLOG.md) — it needs the
+  `SPECIAL_UNIT_DEFS` vocabulary this item does not touch, which fails the adjacent-defect bound's
+  first clause. **Checks.** As for F185, in the same round; `npm test` covered both.
+
 - **F163 readiness — the hoisted identity reads are enumerated instead of discovered by accident.**
   Measurement only: no calculator code changed, and none of the reads found was fixed, per the F145
   precedent that a measurement contaminated by its own fixes cannot be trusted.
