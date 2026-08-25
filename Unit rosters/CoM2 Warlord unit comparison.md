@@ -1,0 +1,667 @@
+# CoM2 / Warlord unit comparison
+
+Every unit of the CoM2 1.05.11 roster beside its Warlord 1.5.12.7 counterpart, plus the 
+units Warlord adds.
+
+## Reading the tables
+
+Units are matched by `templateId`, the `UNITS.INI` section index, so a renamed unit still 
+lines up with the slot it came from. A cell that reads `a → b` changed; a plain cell is 
+the same in both. In the Abilities column, `−X` was dropped in Warlord, `+X` was added, 
+and `X=a → X=b` changed value. The `Hero` tag is omitted — every unit in the Heroes 
+section carries it and no other unit does.
+
+`ToHit` and `ToBlk` are percentage-point deltas above the engine's 30% base, matching the 
+roster schema; `-` means the record states the base. `Thrown/Breath` lists the three 
+independent special-attack channels (`Thrown`, `Fire`, `Lightning`) rather than the 
+roster's single-slot compatibility projection, so a unit with two of them shows both. 
+`Mv` is movement points. Abilities carry the roster spelling; a `=value` is the ability's 
+own parameter, whose meaning differs per ability (strength, resistance modifier, charges).
+
+## Summary
+
+| | CoM2 1.05.11 | Warlord 1.5.12.7 |
+|---|---|---|
+| Units | 194 | 344 |
+| Heroes | 35 | 48 |
+| Distinct ability tags | 56 | 68 |
+
+Warlord keeps all 194 CoM2 slots and adds 150. Of the shared slots, 193 differ in at least one stat, ability or price; 1 is identical. 33 of them are renamed.
+
+### Units listed under a different category
+
+These appear below under their **Warlord** category, not their CoM2 one.
+
+| Unit | CoM2 | Warlord |
+|---|---|---|
+| Lizardman Carrack | Lizardman | General |
+| Manticores | Beastmen | Rakhshasa |
+| Rangers | Nomad | High Elf |
+| Water Elemental | Sorcery Creatures | Nature Creatures |
+
+### Units whose base race changed
+
+| Unit | CoM2 | Warlord |
+|---|---|---|
+| Dervish (B'Shan) | High Men | Nomad |
+| Thief (Theria) | High Men | Halfling |
+| Druid (Greyfairer) | High Men | High Elf |
+| War Monk (Taki) | High Men | Xuanyuan |
+| Warrior Mage (Reywind) | High Men | Xuanyuan |
+| Magician (Malleus) | High Men | Dwarf |
+| Assassin (Tumu) | High Men | Nomad |
+| Wind Mage (Jaer) | High Men | High Elf |
+| Ranger (Marcus) | High Men | High Elf |
+| Golden One (Aureus) → Bronze Sentinel | High Men | Xuanyuan |
+| Ninja (Shin Bo) | High Men | Dark Elf |
+| Amazon (Shalla) | High Men | Barbarian |
+| Warlock (Yramrag) | High Men | Dark Elf |
+| Unknown (Mystic X) | High Men | Lizardman |
+| Black Knight (Mortu) | High Men | Death |
+| Necromancer (Ravashack) | High Men | Death |
+| Chaos Warrior (Warrax) → Everchosen | High Men | Chaos |
+| Manticores | Beastmen | Rakhshasa |
+| Rangers | Nomad | High Elf |
+| Water Elemental | Sorcery | Nature |
+
+### Ability tags Warlord introduces
+
+`Amplifier`, `Clergy`, `Create Undead`, `DarkForce`, `Death Touch`, `DestroyMechanical`, `Egoism`, `Mechanical`, `Merging`, `No Healing`, `Rage`, `Sapiens`
+
+## Heroes
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Dwarf (Brax) → Master Engineer | 1 | 9 → 6 | 5 → 6 | 10 | 15 | - → +10% | - | - → 6 (Boulder) | - → 8 | - | 3 | 100 → 600 | 2 → 12 | Mountainwalk, +Spellcaster=Spell#260x1, +Wall Crusher |
+| Barbarian (Gunther) → Berserker | 1 | 8 → 7 | 4 → 5 | 5 → 6 | 14 | - → +20% | - | - | - | Thrown 5 | 3 → 4 | 100 → 200 | 2 → 4 | Cold Immunity, +Pathfinding |
+| Sage (Zaldron) | 1 | 1 | 4 | 6 → 7 | 10 | - → +10% | - | 10 (Magic) → 8 (Magic) | 4 | - | 3 | 200 | 3 → 5 |  |
+| Dervish (B'Shan) | 1 | 8 | 5 → 4 | 5 → 8 | 11 | - → +10% | - | 9 (Missile) → 7 (Missile) | 8 | - → Thrown 1 | 3 | 200 | 2 → 4 | +Clergy, +Healer, +Pathfinding, +Purify, +Spellcaster=Healingx1 |
+| Beastmaster (Rakir) | 1 | 7 | 5 | 6 | 12 | - → +10% | - | 9 (Missile) → 7 (Missile) | 8 | - | 3 | 200 | 4 → 5 | Forester, −Negate First Strike |
+| Bard (Valana) | 1 | 8 | 5 | 6 → 7 | 11 | - → +10% | - | - | - | - | 3 | 200 | 4 | Holy Bonus=1 |
+| Orc Archer (Bahgtru) → Centurion | 1 | 7 → 8 | 6 | 7 | 12 | - → +10% | - | 10 (Missile) → - | 8 → - | - → Thrown 4 | 3 | 200 | 4 | +Counter Immunity, +Spellcaster=Spell#271x3 |
+| Healer (Serena) | 1 | 3 | 6 | 8 → 9 | 10 | - → +10% | - | 10 (Magic) → 8 (Magic) | 6 | - | 3 | 200 | 4 | Healer |
+| Huntress (Shuri) | 1 | 4 | 5 | 5 → 6 | 12 | +5% → +15% | - | 12 (Missile) → 9 (Missile) | 8 | - | 3 | 200 | 2 → 4 | Pathfinding, +Quick Casting, +Spellcaster=Spell#283x1 |
+| Thief (Theria) | 1 | 9 | 4 | 5 | 12 | - → +10% | - | - | - | - | 4 | 500 → 400 | 8 | +Lucky, Stealth |
+| Druid (Greyfairer) | 1 | 1 | 5 | 5 → 6 | 10 → 9 | - → +20% | - | 10 (Magic) → 7 (Magic) | 4 | - | 3 | 200 | 2 → 4 | +Healer, Purify, +Spellcaster=Spell#2x2 |
+| War Monk (Taki) | 1 | 10 | 6 → 5 | 5 → 8 | 11 | - → +10% | - → +10% | - | - | - | 3 | 400 → 300 | 6 | +Clergy, +Healer, Negate First Strike, +Purify, +Spellcaster=Healingx2 |
+| Warrior Mage (Reywind) | 1 | 8 | 6 → 4 | 5 → 7 | 12 | - → +10% | - | 8 (Magic) → 6 (Magic) | 6 | - | 3 | 200 → 300 | 4 → 6 |  |
+| Magician (Malleus) | 1 | 1 | 5 | 8 → 10 | 10 | - → +10% | - | 12 (Magic) → 9 (Magic) | 6 | - | 3 | 600 | 10 → 12 | Destruction=0, Missile Immunity |
+| Assassin (Tumu) | 1 | 10 | 5 → 4 | 5 → 8 | 12 | - → +10% | - | - | - | - | 4 | 400 | 6 → 8 | First Strike, +Poison Immunity, Poison Touch=9, Stealth |
+| Wind Mage (Jaer) | 1 | 1 | 5 | 5 → 9 | 10 | - → +10% | - | 10 (Magic) → 8 (Magic) | 6 | - | 3 | 500 | 10 | Missile Immunity, Wind Walking |
+| Ranger (Marcus) | 1 | 8 → 6 | 5 | 6 → 7 | 13 → 12 | - → +20% | - | 11 (Missile) → 7 (Missile) | 8 | - | 3 | 400 | 6 → 8 | Pathfinding, Poison Immunity, +Quick Casting, +Spellcaster=Spell#283x1, +Stealth |
+| Draconian (Fang) | 1 | 10 | 5 | 6 → 8 | 13 | - → +20% | - | - | - | Fire 5 → Fire 7 | 3 → 5 | 400 | 8 | +Cause Fear, Flight |
+| Witch (Morgana) | 1 | 1 | 5 | 5 → 6 | 10 | - → +10% | - | 12 (Magic) → 9 (Magic) | 6 | - | 3 | 500 | 8 → 10 | Missile Immunity |
+| Golden One (Aureus) → Bronze Sentinel | 1 | 10 → 9 | 7 | 9 | 11 | - → +10% | - | 10 (Magic) → 8 (Magic) | 8 → 4 | - | 3 | 400 | 10 → 8 | Negate First Strike |
+| Ninja (Shin Bo) | 1 | 10 | 6 | 5 → 8 | 12 | - → +10% | - | - | - | - | 3 | 600 | 10 → 12 | Invisibility, +Poison Touch=2, +Stealth |
+| Rogue (Spyder) | 1 | 11 | 6 | 5 → 6 | 13 | - → +10% | - | - | - | - | 3 | 250 | 6 → 5 |  |
+| Amazon (Shalla) | 1 | 10 | 5 | 5 → 6 | 12 | - → +20% | - | - | - | Thrown 4 | 3 | 600 | 10 → 12 | Negate First Strike, +Pathfinding |
+| Warlock (Yramrag) | 1 | 1 | 5 | 8 → 10 | 10 | - → +10% | - | 12 (Magic-lightning) → 9 (Magic-lightning) | 6 | - | 3 | 600 | 10 → 12 | +Armor Piercing, Missile Immunity |
+| Unknown (Mystic X) | 1 | 9 | 6 | 8 → 9 | 13 | - → +10% | - | 9 (Magic) → 7 (Magic) | 6 | - | 3 | 600 | 10 → 12 | Water Walking |
+| Illusionist (Aerie) | 1 | 1 | 6 | 6 → 8 | 10 → 12 | - → +10% | - | 9 (Magic) → 7 (Magic) | 6 | - | 3 | 999 | 12 → 15 | Illusion, Missile Immunity, Quick Casting |
+| Swordsman (Deth Stryke) | 1 | 10 → 11 | 7 → 8 | 6 → 7 | 15 | - → +10% | - | - | - | - | 3 | 999 | 12 → 15 | +Negate First Strike |
+| Priestess (Elana) | 1 | 2 | 7 | 8 → 9 | 10 | - → +10% | - | 12 (Magic) → 9 (Magic) | 9 | - | 3 | 999 | 12 → 15 | +Clergy, Healer, −Negate First Strike, Purify, +Spellcaster=Healingx3 |
+| Paladin (Roland) | 1 | 11 | 7 | 6 → 11 | 13 | - → +10% | - | - | - | - | 3 | 999 | 12 → 15 | Armor Piercing, +Death Immunity, First Strike, Healer, +Holy Bonus=1, Illusion Immunity, +Large Shield, Negate First Strike, +Spellcaster=Spell#121x3 |
+| Black Knight (Mortu) | 1 | 11 → 12 | 7 → 9 | 6 → 10 | 15 | - → +10% | - | - | - | - | 3 | 999 | 12 → 15 | Armor Piercing, +Cold Immunity, Death Immunity, First Strike, +Illusion Immunity, +Large Shield, Negate First Strike, +Poison Immunity, +Spellcaster=Spell#164x2 |
+| Elven Archer (Alorra) → Arcane Archer | 1 | 5 → 4 | 8 | 8 → 10 | 11 → 10 | +10% → +20% | - | 12 (Magic) → 8 (Magic) | 8 | - | 3 | 999 | 12 → 15 | Forester |
+| Knight (Sir Harold) | 1 | 12 | 7 | 6 → 7 | 18 | - → +10% | - | - | - | - | 3 | 999 | 12 → 15 | +First Strike, +Large Shield, Negate First Strike |
+| Necromancer (Ravashack) | 1 | 1 | 7 | 8 → 9 | 10 | - → +10% | - | 11 (Magic) → 8 (Magic) | 6 | - | 3 | 999 | 12 → 15 | Death Immunity, Illusion Immunity, Life Steal=-3, Missile Immunity, −Negate First Strike |
+| Chaos Warrior (Warrax) → Everchosen | 1 | 12 | 7 | 7 | 13 | - → +10% | - | 12 (Magic-lightning) → 9 (Magic-lightning) | 6 | - | 3 | 999 | 12 → 15 | Armor Piercing, Negate First Strike |
+| Chosen (Torin) → Avatar | 1 | 12 | 8 | 12 | 13 | - → +10% | - | - | - | - | 4 | 230 | 12 → 15 | Holy Bonus=1, Negate First Strike |
+
+### Heroes — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Warmaster | 1 | 9 | 7 | 6 | 14 | +10% | - | - | - | - | 5 | 999 | 15 | Cause Fear, Counter Immunity, Pathfinding, Spellcaster=Spell#237x7 |
+| Gambler | 1 | 7 | 6 | 6 | 15 | +10% | - | 4 (Missile) | 6 | - | 3 | 777 | 7 | DarkForce, Lucky, Spellcaster=Spell#94x3, Stealth, Stoning Touch=-1 |
+| Dreamwalker | 1 | 6 | 6 | 12 | 11 | +10% | - | 8 (Magic) | 6 | - | 3 | 999 | 15 | Amplifier, Cause Fear, Flight, Illusion, Missile Immunity |
+| Steelbreaker | 1 | 8 | 6 | 10 | 12 | +10% | - | - | - | - | 3 | 300 | 6 | Armor Piercing, Egoism, Fire Immunity, Mountainwalk, Wall Crusher |
+| Grand Inquisitor | 1 | 2 | 7 | 10 | 12 | +10% | - | 8 (Magic) | 9 | - | 3 | 1400 | 20 | Clergy, Cold Immunity, Exorcise=-3, Fire Immunity, Healer, Holy Bonus=2, Missile Immunity, Purify, Spellcaster=Spell#240x9 |
+| Crone | 1 | 1 | 7 | 10 | 13 | +10% | - | 9 (Magic) | 6 | - | 3 | 1300 | 20 | Create Undead, Death Immunity, Forester, Healer, Illusion Immunity, Missile Immunity, Poison Immunity, Poison Touch=6, Purify, Spellcaster=Spell#162x15 |
+| Sagittarius | 1 | 9 | 6 | 8 | 16 | +10% | - | 10 (Missile) | 8 | Thrown 10 | 4 | 999 | 15 | Counter Immunity, First Strike, Healer, Purify, Spellcaster=Spell#130x5 |
+| Swarm Queen | 1 | 12 | 6 | 8 | 22 | +10% | - | - | - | Fire 8 | 3 | 1600 | 20 | Amplifier, Egoism, Holy Bonus=1, Negate First Strike, Poison Touch=3 |
+| Sea Lord | 1 | 13 | 9 | 12 | 24 | +10% | +10% | - | - | Lightning 8 | 3 | 1200 | 20 | Cause Fear, Fire Immunity, Poison Touch=2, Spellcaster=Spell#293x1, Water Walking |
+| War Chief | 1 | 12 | 7 | 9 | 14 | +10% | - | - | - | - | 3 | 999 | 15 | Cold Immunity, First Strike, Large Shield, Pathfinding, Regeneration=3, Spellcaster=Spell#280x3, Wall Crusher |
+| Planewalker | 1 | 2 | 6 | 10 | 10 | +10% | - | 9 (Magic) | 6 | - | 3 | 1200 | 20 | Missile Immunity, Non-Corporeal, Plane Shifting, Teleporting, Weapon Immunity, Wind Walking |
+| Elementalist | 1 | 1 | 7 | 9 | 10 | +10% | - | 10 (Magic-lightning) | 6 | Fire 14, Lightning 8 | 3 | 1200 | 20 | Amplifier, Armor Piercing, Cold Immunity, Fire Immunity, Immolation, Lightning Resist, Missile Immunity, Poison Immunity, Stoning Immunity, Water Walking |
+| Wanderer | 1 | 5 | 5 | 10 | 12 | +10% | - | 0 (Magic-lightning) | - | - | 3 | 200 | 1 | Amplifier, Stealth |
+
+## Barbarian
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Barbarian Swordsmen | 6 | 3 → 4 | 3 → 4 | 3 → 4 | 1 | +10% | - | - | - | Thrown 2 | 2 | 25 → 30 | 1 | Large Shield, Pathfinding |
+| Barbarian Bowmen | 6 | 1 | 1 → 2 | 3 → 4 | 1 | +10% → +15% | - | 3 (Missile) | 8 | - → Thrown 1 | 2 | 30 | 1 | Pathfinding |
+| Barbarian Cavalry | 4 | 5 | 2 | 3 → 4 | 3 | +10% | - | - | - | Thrown 3 | 5 | 40 | 1 → 2 | First Strike, +Pathfinding |
+| Barbarian Shaman → Barbarian Shamans | 4 | 2 | 3 | 5 → 6 | 1 | +10% | - | 3 (Magic) | 4 | - → Thrown 1 | 2 → 3 | 50 | 2 | +Clergy, Healer, Pathfinding, Purify, Spellcaster=Healingx1 |
+| Berserkers | 6 | 7 → 6 | 3 → 4 | 3 → 4 | 3 | +10% | - | - | - | Thrown 3 → Thrown 2 | 3 | 100 → 90 | 2 → 3 | Pathfinding, +Rage |
+| Barbarian Spearmen | 6 → 8 | 2 | 1 → 2 | 2 → 3 | 1 | +10% | - | - | - | Thrown 1 | 2 | 10 → 15 | 0 | +Negate First Strike, Pathfinding |
+| Gladiators | 3 → 4 | 5 → 6 | 6 | 5 → 7 | 6 → 7 | +20% | - | - | - | Thrown 4 → Thrown 5 | 3 | 120 → 175 | 3 → 6 | Large Shield, Pathfinding |
+| Spellserkers | 4 | 3 | 4 | 6 | 4 | +10% | - | - | - | Thrown 5 | 3 | 120 | 3 → 4 | Caster=20, Missile Immunity, Pathfinding |
+
+### Barbarian — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Barbarian Heavy Cavalry | 4 | 7 | 4 | 6 | 4 | +10% | - | - | - | Thrown 4 | 4 | 100 | 4 | First Strike, Pathfinding |
+| Barbarian Longships | 2 | 16 | 5 | 7 | 15 | +10% | - | 8 (Missile) | 4 | Thrown 4 | 5 | 140 | 4 | Mechanical, Sailing |
+
+## Gnoll
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Gnoll Spearmen | 6 → 8 | 4 | 1 → 2 | 3 | 1 | - | - | - | - | - | 3 | 10 → 15 | 0 | +Negate First Strike |
+| Gnoll Swordsmen | 6 | 5 → 6 | 3 → 4 | 4 | 1 | - | - | - | - | - | 3 | 25 → 30 | 1 | Large Shield |
+| Gnoll Halberdiers | 6 | 7 | 4 | 5 → 4 | 2 | - | - | - | - | - | 3 | 60 → 50 | 2 | Negate First Strike |
+| Jackal Riders | 8 | 6 → 7 | 3 → 4 | 5 → 7 | 3 → 4 | - | - | - | - | - | 4 | 150 → 190 | 2 → 6 | Cause Fear, +Pathfinding |
+| Wolf Riders | 4 | 7 | 3 | 5 | 5 | - | - | - | - | - | 5 | 80 → 70 | 2 → 3 | Pathfinding |
+
+### Gnoll — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Witchdoctors | 4 | 4 | 2 | 6 | 2 | - | - | 3 (Magic) | 4 | - | 3 | 90 | 3 | Healer, Illusion Immunity, Poison Immunity, Poison Touch=2, Purify, Spellcaster=Spell#162x2 |
+| Gnoll Hunters | 6 | 3 | 3 | 4 | 1 | +5% | - | 3 (Missile) | 8 | Thrown 1 | 3 | 40 | 2 | Pathfinding, Quick Casting, Spellcaster=Spell#283x1 |
+| Gnoll Marauders | 6 | 8 | 4 | 6 | 3 | - | - | - | - | - | 3 | 120 | 4 | First Strike, Large Shield |
+
+## Halfling
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Halfling Spearmen | 8 → 9 | 1 | 1 → 2 | 3 | 1 | - | - | - | - | - | 2 | 15 | 0 | Lucky, +Negate First Strike |
+| Halfling Swordsmen | 8 | 2 → 3 | 3 → 4 | 4 | 1 | - | - | - | - | - | 2 | 36 → 40 | 1 | Large Shield, Lucky |
+| Halfling Magicians → Halfling Magisters | 4 | 1 | 3 | 8 | 1 | - | - | 7 (Magic) | 4 → 6 | - | 3 → 2 | 150 | 3 → 5 | Caster=20, +Large Shield, Lucky, −Missile Immunity |
+| Halfling Shaman → Halfling Shamans | 4 | 1 | 3 | 6 | 1 | - | - | 3 (Magic) | 4 | - | 2 → 3 | 75 | 2 | +Clergy, Healer, Lucky, Purify, Spellcaster=Healingx1 |
+| Slingers | 8 | 1 | 1 → 2 | 4 → 5 | 1 | - | - | 4 (Missile) | 6 | - | 2 → 3 | 100 → 80 | 1 → 3 | Lucky |
+| Halfling Bowmen | 6 | 1 | 1 → 2 | 4 | 1 | - → +5% | - | 3 (Missile) | 8 | - | 2 | 30 → 40 | 1 | Lucky |
+
+### Halfling — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Halfling Scouts | 6 | 1 | 2 | 4 | 3 | - | - | - | - | - | 5 | 90 | 2 | First Strike, Lucky, Stealth |
+| Rocs | 2 | 8 | 7 | 8 | 9 | - | - | - | - | - | 6 | 280 | 8 | First Strike, Flight, Lucky, Missile Immunity |
+| Halfling Disciples | 4 | 1 | 3 | 5 | 1 | - | - | 4 (Magic) | 6 | - | 2 | 75 | 2 | Caster=14, Lucky |
+| Halfling Pioneers | 8 | 1 | 1 | 4 | 1 | - | - | 1 (Missile) | 4 | - | 3 | 65 | 1 | Lucky |
+
+## High Elf
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| High Elf Spearmen | 6 → 8 | 2 | 1 → 2 | 4 | 1 | +10% | - | - | - | - | 2 | 10 → 15 | 0 | Forester, +Negate First Strike |
+| High Elf Swordsmen | 6 | 3 → 4 | 3 → 4 | 5 | 1 | +10% | - | - | - | - | 2 | 25 → 30 | 1 | Forester, Large Shield |
+| High Elf Halberdiers | 6 | 5 | 4 | 6 → 5 | 2 | +10% | - | - | - | - | 2 | 60 → 50 | 2 | Forester, Negate First Strike |
+| High Elf Cavalry | 4 | 5 | 2 | 5 | 3 | +10% | - | - | - | - | 5 | 40 | 1 → 2 | First Strike, Forester |
+| High Elf Magicians → Druids | 4 | 1 | 3 | 9 | 1 | +10% | - | 7 (Magic) | 4 → 6 | - | 3 → 2 | 120 → 150 | 3 → 5 | Caster=20, Forester, +Healer, +Large Shield, −Missile Immunity, +Purify, +Spellcaster=Spell#2x1 |
+| Longbowmen | 6 | 1 | 2 | 5 | 1 | +10% | - | 3 (Missile) → 4 (Missile) | 8 | - | 2 | 50 | 1 → 2 | Forester, Long Range |
+| Elven Lords | 4 | 5 → 6 | 6 | 10 | 4 → 5 | +20% | - | - | - | - | 4 | 160 → 250 | 4 → 8 | Armor Piercing, First Strike, Forester, Poison Immunity |
+| Pegasi → Pegasus Riders | 4 | 4 → 7 | 4 → 5 | 8 → 9 | 4 → 5 | +10% | - | 3 (Missile) → 5 (Missile) | 8 | - | 5 | 120 → 280 | 2 → 8 | Flight, +Forester |
+| Rangers | 4 | 6 | 3 | 8 → 7 | 3 | - → +10% | - | 7 (Missile) | 6 → 8 | - | 3 | 150 → 200 | 3 → 6 | Long Range, Pathfinding, Poison Immunity, +Quick Casting, +Spellcaster=Spell#283x1, +Stealth |
+
+### High Elf — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| High Elf Heavy Cavalry | 4 | 7 | 4 | 7 | 4 | +10% | - | - | - | - | 4 | 100 | 4 | First Strike, Forester |
+| High Elf Shieldbearers | 6 | 5 | 5 | 7 | 2 | +10% | - | - | - | - | 3 | 90 | 3 | Forester, Large Shield |
+| High Elf Disciples | 4 | 2 | 3 | 6 | 1 | +10% | - | 4 (Magic) | 6 | - | 2 | 60 | 2 | Caster=14, Forester |
+| High Elf Pioneers | 6 | 1 | 1 | 5 | 1 | +10% | - | 1 (Missile) | 4 | - | 3 | 50 | 1 | Forester |
+
+## High Men
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| High Men Spearmen | 6 → 9 | 2 | 1 → 2 | 1 → 2 | 1 | - | - | - | - | - | 2 | 10 → 15 | 0 | +Negate First Strike |
+| High Men Swordsmen | 6 → 8 | 3 → 4 | 3 → 4 | 2 → 3 | 1 | - | - | - | - | - | 2 | 25 → 30 | 1 | Large Shield |
+| High Men Bowmen | 6 → 8 | 1 | 1 → 2 | 2 → 3 | 1 | - → +5% | - | 3 (Missile) | 8 | - | 2 | 30 | 1 |  |
+| High Men Cavalry | 4 → 6 | 5 | 2 | 2 → 3 | 3 | - | - | - | - | - | 5 | 40 | 1 → 2 | First Strike |
+| High Men Priests → High Men Monks | 4 → 6 | 3 → 2 | 4 → 3 | 6 → 5 | 2 → 1 | - | - | 5 (Magic) → 3 (Magic) | 4 | - | 2 | 100 → 50 | 3 → 2 | +Clergy, Healer, Purify, −Resistance to All=1, Spellcaster=Healingx1 |
+| High Men Magicians → High Men Magisters | 6 | 1 | 3 | 6 → 7 | 1 | - | - | 7 (Magic) | 4 → 6 | - | 3 → 2 | 120 | 3 → 4 | Caster=20, +Large Shield, −Missile Immunity |
+| High Men Engineers | 6 → 8 | 1 | 1 | 4 → 3 | 1 | - | - | - | - | - | 1 → 2 | 40 → 60 | 1 → 2 | +Spellcaster=Spell#82x1, Wall Crusher |
+| Crusaders | 8 → 6 | 5 → 7 | 4 → 6 | 6 → 7 | 2 → 4 | - | - | - | - | - | 2 → 3 | 60 → 170 | 2 → 5 | Large Shield, Spellcaster=Healingx1 → Spellcaster=Spell#126x1 |
+| High Men Pikemen → Pikemen | 8 | 4 | 4 | 4 → 3 | 2 | - | - | - | - | - | 2 | 75 → 60 | 2 | Armor Piercing, Negate First Strike |
+| Paladins | 4 | 6 | 5 | 8 → 11 | 5 | - | - | - | - | - | 4 | 240 → 270 | 5 → 8 | Armor Piercing, Death Immunity, First Strike, Holy Bonus=1, Illusion Immunity, +Spellcaster=Spell#121x2 |
+| Knights | 4 | 6 → 8 | 5 | 5 → 6 | 3 → 4 | - | - | - | - | - | 5 | 60 → 120 | 3 → 4 | First Strike, +Large Shield |
+
+### High Men — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Squires | 8 | 6 | 5 | 4 | 2 | - | - | - | - | - | 2 | 80 | 3 | Large Shield |
+| High Men Inquisitors | 4 | 3 | 4 | 7 | 2 | - | - | 5 (Magic) | 4 | - | 2 | 120 | 4 | Clergy, Exorcise=1, Healer, Purify, Resistance to All=1, Spellcaster=Spell#240x2 |
+| High Men Disciples | 6 | 2 | 3 | 4 | 1 | - | - | 4 (Magic) | 4 | - | 3 | 60 | 2 | Caster=14 |
+| High Men Crossbowmen | 6 | 1 | 3 | 4 | 2 | +5% | - | 5 (Missile) | 8 | - | 2 | 90 | 3 | Armor Piercing, Large Shield |
+
+## Klackon
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Klackon Spearmen | 6 → 8 | 2 | 3 → 4 | 3 | 1 | - | - | - | - | - | 2 | 10 → 15 | 0 | +Negate First Strike |
+| Klackon Swordsmen | 6 | 3 → 4 | 5 → 6 | 4 | 1 | - | - | - | - | - | 2 | 25 → 30 | 1 | Large Shield |
+| Klackon Halberdiers | 6 | 5 | 6 | 5 → 4 | 2 | - | - | - | - | - | 2 | 60 → 50 | 2 | Negate First Strike |
+| Klackon Engineers | 6 | 1 | 1 → 3 | 4 | 1 | - | - | - | - | - | 1 → 2 | 20 → 60 | 1 → 2 | +Spellcaster=Spell#82x1, Wall Crusher |
+| Stag Beetle | 1 | 15 → 17 | 7 → 6 | 7 → 8 | 20 → 22 | - | - → +10% | - | - | Fire 5 → Fire 8 | 4 | 160 → 240 | 2 → 6 |  |
+
+### Klackon — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Antlions | 4 | 6 | 7 | 6 | 4 | - | - | - | - | - | 2 | 120 | 4 | Merging |
+| Klackon Maiden Queens | 5 | 4 | 6 | 8 | 2 | - | - | - | - | - | 3 | 240 | 7 | Caster=20, Flight, Healer, Holy Bonus=1, Purify |
+| Mantises | 6 | 5 | 7 | 6 | 2 | - | - | - | - | - | 3 | 100 | 3 | First Strike, Negate First Strike |
+| Klackon Stingers | 6 | 5 | 6 | 4 | 2 | - | - | - | - | - | 2 | 70 | 2 | Negate First Strike, Poison Touch=1 |
+
+## Lizardman
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Lizardman Spearmen | 6 → 8 | 2 | 1 → 2 | 2 | 2 | - | - | - | - | - | 2 | 10 → 15 | 0 | +Negate First Strike, Water Walking |
+| Lizardman Swordsmen | 6 | 3 → 4 | 3 → 4 | 3 | 2 | - | - | - | - | - | 2 | 25 → 30 | 1 | Large Shield, Water Walking |
+| Lizardman Halberdiers → Lizardman Marines | 6 | 5 | 4 | 4 | 3 | - | - | - | - | - | 2 | 60 → 65 | 2 | +First Strike, Negate First Strike, Water Walking |
+| Javelineers | 6 | 5 | 3 → 2 | 5 | 2 | - | - | 4 (Missile) | 6 | - → Thrown 4 | 2 → 3 | 75 → 100 | 2 → 4 | +Large Shield, Water Walking |
+| Lizardman Shaman → Lizardman Shamans | 4 | 2 | 2 | 5 | 2 | - | - | 3 (Magic) | 4 | - | 2 → 3 | 60 → 50 | 2 | +Clergy, Healer, Purify, Spellcaster=Healingx1, Water Walking |
+| Dragon Turtle | 1 | 10 → 13 | 9 | 12 | 20 → 24 | - | - → +10% | - | - | Lightning 5 → Lightning 8 | 2 → 3 | 100 → 240 | 1 → 7 | Fire Immunity, Water Walking |
+
+### Lizardman — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Sea Hags | 3 | 6 | 4 | 6 | 4 | - | - | - | - | - | 3 | 120 | 4 | Caster=14, Cause Fear, First Strike, Poison Touch=2, Spellcaster=Spell#46x1, Water Walking |
+| Lizardman Bowmen | 6 | 1 | 2 | 3 | 2 | +5% | - | 3 (Missile) | 8 | - | 2 | 30 | 1 | Water Walking |
+| Lizardman Reptile Riders | 4 | 5 | 3 | 4 | 4 | - | - | - | - | - | 4 | 45 | 2 | First Strike |
+| Lizardman Shieldbearers | 6 | 5 | 5 | 5 | 3 | - | - | - | - | - | 3 | 90 | 3 | Large Shield, Water Walking |
+| Lizardman Priests | 4 | 3 | 4 | 7 | 3 | - | - | 4 (Magic) | 4 | - | 2 | 120 | 4 | Clergy, Healer, Purify, Resistance to All=1, Spellcaster=Healingx2, Water Walking |
+
+## Nomad
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Nomad Spearmen | 6 → 8 | 2 | 1 → 2 | 6 | 1 | - | - | 1 (Missile) | 4 | - | 2 | 10 → 15 | 0 | +Negate First Strike |
+| Nomad Swordsmen | 6 | 3 → 4 | 3 → 4 | 7 | 1 | - | - | 2 (Missile) | 4 | - | 2 | 25 → 30 | 1 | Large Shield |
+| Nomad Priests | 4 | 3 | 4 | 11 | 2 | - | - | 5 (Magic) → 4 (Magic) | 4 | - | 2 | 100 → 120 | 3 → 4 | +Clergy, Healer, Purify, +Resistance to All=1, Spellcaster=Healingx1 → Spellcaster=Healingx2 |
+| Nomad Magicians → Nomad Magisters | 4 | 1 | 3 | 11 | 1 | - | - | 7 (Magic) | 4 → 6 | - | 3 → 2 | 120 | 3 → 4 | Caster=20, +Large Shield, −Missile Immunity |
+| Horsebowmen | 4 | 4 → 2 | 2 | 7 | 3 | - | - | 4 (Missile) | 4 → 6 | - → Thrown 1 | 4 → 5 | 50 | 1 → 2 | First Strike |
+| Nomad Pikemen → Kardakes | 6 | 4 | 4 | 8 → 7 | 2 | - | - | - → 2 (Missile) | - → 4 | - | 2 | 75 → 80 | 2 → 3 | Armor Piercing, Negate First Strike |
+| Griffins → Griffin Riders | 2 | 9 | 5 → 6 | 8 → 9 | 10 → 12 | - → +10% | - | - | - | - | 4 | 180 → 260 | 3 → 8 | Armor Piercing, First Strike, Flight |
+
+### Nomad — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Cataphracts | 4 | 7 | 7 | 10 | 5 | - | - | 6 (Missile) | 4 | Thrown 4 | 4 | 250 | 7 | First Strike |
+| Sipahis | 4 | 5 | 5 | 9 | 4 | - | - | 5 (Missile) | 4 | Thrown 3 | 4 | 120 | 4 | First Strike |
+| Nomad Shieldbearers | 6 | 5 | 5 | 9 | 2 | - | - | 3 (Missile) | 4 | - | 3 | 90 | 3 | Large Shield |
+| Nomad Monks | 4 | 2 | 3 | 9 | 1 | - | - | 3 (Magic) | 4 | - | 2 | 50 | 2 | Clergy, Healer, Purify, Spellcaster=Healingx1 |
+| Nomad Disciples | 4 | 2 | 3 | 8 | 1 | - | - | 4 (Magic) | 6 | - | 2 | 60 | 2 | Caster=14 |
+| Nomad Pioneers | 6 | 1 | 1 | 7 | 1 | - | - | 1 (Missile) | 4 | - | 3 | 50 | 1 |  |
+| Dervishes | 4 | 2 | 3 | 8 | 3 | - | - | 3 (Missile) | 6 | Thrown 1 | 5 | 100 | 3 | Clergy, Healer, Pathfinding, Purify, Spellcaster=Healingx1 |
+
+## Orc
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Orc Horde → Orc Hoplites | 8 → 6 | 6 | 5 → 4 | 5 → 4 | 2 | - | - | - | - | - | 2 | 75 → 70 | 1 → 2 | Large Shield, Negate First Strike |
+| Orc Spearmen | 6 → 8 | 2 | 1 → 2 | 3 | 1 | - | - | - | - | - | 2 | 10 → 15 | 0 | +Negate First Strike |
+| Orc Swordsmen | 6 | 3 → 4 | 3 → 4 | 4 | 1 | - | - | - | - | - | 2 | 25 → 30 | 0 | Large Shield |
+| Orc Halberdiers → Orc Legionary | 6 → 9 | 5 → 7 | 4 → 5 | 5 → 7 | 2 → 3 | - | - | - | - | - → Thrown 1 | 2 | 60 → 240 | 0 → 5 | +Healer, +Large Shield, −Negate First Strike, +Wall Crusher |
+| Orc Bowmen | 6 | 1 | 1 → 2 | 4 | 1 | - → +5% | - | 3 (Missile) | 8 | - | 2 | 30 | 0 |  |
+| Orc Cavalry | 4 | 5 | 2 | 4 | 3 | - | - | - | - | - | 5 | 40 | 0 → 1 | First Strike |
+| Orc Shaman → Orc Shamans | 4 | 2 | 3 | 6 | 1 | - | - | 3 (Magic) | 4 | - | 2 → 3 | 50 | 0 → 1 | +Clergy, Healer, Purify, Spellcaster=Healingx1 |
+| Orc Magicians → Orc Magisters | 4 | 1 | 3 | 8 | 1 | - | - | 7 (Magic) | 4 → 6 | - | 3 → 2 | 120 | 1 → 3 | Caster=20, +Large Shield, −Missile Immunity |
+| Orc Engineers | 6 | 1 | 1 | 4 | 1 | - | - | - | - | - | 1 → 2 | 40 → 60 | 1 | +Spellcaster=Spell#82x1, Wall Crusher |
+| Wyvern Riders | 2 | 7 | 5 | 7 → 9 | 10 → 14 | - → +20% | - | - | - | - | 5 | 150 → 280 | 2 → 7 | Flight, Poison Touch=5 → Poison Touch=7 |
+
+### Orc — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Orc Heavy Cavalry | 4 | 7 | 4 | 6 | 4 | - | - | - | - | - | 4 | 100 | 3 | First Strike |
+| Orc Shieldbearers | 6 | 5 | 5 | 6 | 2 | - | - | - | - | - | 3 | 90 | 2 | Large Shield |
+| Orc Disciples | 4 | 2 | 3 | 5 | 1 | - | - | 4 (Magic) | 6 | - | 2 | 60 | 1 | Caster=14 |
+| Orc Crossbowmen | 4 | 1 | 3 | 5 | 2 | +5% | - | 5 (Missile) | 8 | - | 2 | 90 | 2 | Armor Piercing, Large Shield |
+
+## Beastmen
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Beastmen Spearmen | 6 → 8 | 3 | 1 → 2 | 3 | 2 | - | - | - | - | - | 2 | 10 → 15 | 0 | +Negate First Strike |
+| Beastmen Swordsmen | 6 | 4 → 5 | 3 → 4 | 4 | 2 | - | - | - | - | - | 2 | 25 → 30 | 1 | Large Shield |
+| Beastmen Halberdiers | 6 | 6 | 4 | 5 → 4 | 3 | - | - | - | - | - | 2 | 60 → 50 | 2 | Negate First Strike |
+| Beastmen Bowmen | 6 | 2 | 1 → 2 | 4 | 2 | - → +5% | - | 3 (Missile) | 8 | - | 2 | 30 | 1 |  |
+| Beastmen Priests → Beastmen Monks | 4 | 4 → 3 | 4 → 3 | 8 → 6 | 3 → 2 | - | - | 5 (Magic) → 3 (Magic) | 4 | - | 2 | 100 → 50 | 3 → 2 | +Clergy, Healer, Purify, Spellcaster=Healingx1 |
+| Beastmen Magicians → Beastmen Disciples | 4 | 2 → 3 | 3 | 8 → 5 | 2 | - | - | 7 (Magic) → 4 (Magic) | 4 → 6 | - | 3 → 2 | 120 → 60 | 3 → 2 | Caster=20 → Caster=14, −Missile Immunity |
+| Beastmen Engineers | 6 | 2 | 1 | 4 | 2 | - | - | - | - | - | 1 → 2 | 30 → 60 | 1 → 2 | +Spellcaster=Spell#82x1, Wall Crusher |
+| Centaurs | 4 | 5 | 3 | 5 → 6 | 4 | - | - | 5 (Missile) | 6 | - | 4 → 5 | 90 → 100 | 2 → 4 | +First Strike |
+| Minotaurs | 2 | 12 → 16 | 5 → 4 | 7 → 8 | 12 → 13 | +20% → +10% | - → +10% | - | - | - | 3 | 200 → 270 | 5 → 8 | Large Shield |
+
+### Beastmen — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Beastmen Shieldbearers | 6 | 6 | 5 | 6 | 3 | - | - | - | - | - | 3 | 90 | 3 | Large Shield |
+| Beastmen Priests | 4 | 4 | 4 | 8 | 3 | - | - | 4 (Magic) | 4 | - | 2 | 120 | 4 | Clergy, Healer, Purify, Resistance to All=1, Spellcaster=Healingx2 |
+| Beastmen Magisters | 4 | 2 | 3 | 8 | 2 | - | - | 7 (Magic) | 6 | - | 2 | 120 | 4 | Caster=20, Large Shield |
+| Beastmen Crossbowmen | 4 | 2 | 3 | 5 | 3 | +5% | - | 5 (Missile) | 8 | - | 2 | 90 | 3 | Armor Piercing, Large Shield |
+| Gugalannas | 2 | 9 | 7 | 9 | 11 | +20% | - | - | - | - | 4 | 290 | 8 | Flight, Poison Touch=1, Stoning Gaze=-1 |
+| Chironean Guards | 4 | 8 | 4 | 8 | 7 | - | - | 7 (Missile) | 6 | - | 4 | 260 | 8 | First Strike |
+
+## Dark Elf
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Dark Elf Spearmen | 6 → 8 | 2 | 1 → 2 | 5 | 1 | - | - | 1 (Magic) | 4 | - | 2 | 10 → 15 | 0 | +Negate First Strike |
+| Dark Elf Swordsmen | 6 | 3 → 4 | 3 → 4 | 6 | 1 | - | - | 2 (Magic) | 4 | - | 2 | 25 → 30 | 1 | Large Shield |
+| Dark Elf Halberdiers | 6 | 5 | 4 | 7 → 6 | 2 | - | - | 3 (Magic) → 2 (Magic) | 4 | - | 2 | 60 → 50 | 2 | +Negate First Strike |
+| Dark Elf Cavalry | 4 | 5 | 2 | 6 | 3 | - | - | 3 (Magic) | 4 | - | 5 | 40 | 1 → 2 | First Strike |
+| Dark Elf Priests | 4 | 3 | 4 | 10 | 2 | - | - | 7 (Magic) → 6 (Magic) | 4 | - | 2 | 120 | 3 → 4 | +Clergy, Healer, Purify, +Resistance to All=1, Spellcaster=Healingx1 → Spellcaster=Healingx2 |
+| Apprentices → Adepts | 6 | 1 → 2 | 2 → 4 | 6 → 7 | 1 | - | - | 3 (Magic) → 6 (Magic) | 4 → 6 | - | 2 | 40 → 90 | 1 → 3 | Caster=14 → Caster=20, Large Shield |
+| Nightblades | 6 | 5 → 6 | 4 | 7 → 8 | 3 → 4 | - | - | - | - | - | 2 → 3 | 150 → 270 | 4 → 8 | Invisibility, Poison Touch=2, +Stealth |
+| Warlocks | 4 | 1 | 4 | 9 | 1 | - | - | 9 (Magic) | 4 | - | 3 | 160 → 180 | 3 → 6 | +Large Shield, Missile Immunity, Spellcaster=Doom Boltx1 |
+| Nightmares | 2 | 8 → 6 | 4 → 6 | 12 | 8 → 9 | +20% → +10% | - | 8 (Magic) → 6 (Magic) | 4 → 6 | - | 4 | 200 → 320 | 5 → 9 | +Cause Fear, Flight, +Illusion, +Spellcaster=Spell#181x1 |
+
+### Dark Elf — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Dark Elf Shamans | 4 | 2 | 3 | 8 | 1 | - | - | 5 (Magic) | 4 | - | 3 | 50 | 2 | Clergy, Healer, Purify, Spellcaster=Healingx1 |
+| Magic Knights | 4 | 5 | 4 | 9 | 4 | - | - | 5 (Magic) | 4 | - | 4 | 120 | 4 | Caster=12, Large Shield |
+| Dark Elf Pioneers | 6 | 1 | 1 | 6 | 1 | - | - | 1 (Magic) | 4 | - | 3 | 50 | 1 |  |
+
+## Draconian
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Draconian Spearmen | 6 → 8 | 2 | 2 → 3 | 4 | 1 | - | - | - | - | Fire 1 | 2 | 10 → 15 | 0 | Flight, +Negate First Strike |
+| Draconian Swordsmen | 6 | 3 → 4 | 4 → 5 | 5 | 1 | - | - | - | - | Fire 2 | 2 | 25 → 30 | 1 | Flight, Large Shield |
+| Draconian Halberdiers | 6 | 5 | 5 | 6 → 5 | 2 | - | - | - | - | Fire 3 → Fire 2 | 2 | 60 → 50 | 2 | Flight, +Negate First Strike |
+| Draconian Bowmen | 5 → 6 | 1 | 1 → 3 | 5 | 1 | - → +5% | - | 3 (Missile) | 4 | - → Fire 1 | 2 | 40 → 35 | 1 | Flight |
+| Draconian Saints | 5 → 4 | 2 | 5 | 7 | 2 | - | - | 4 (Magic) → 5 (Magic) | 4 | - → Fire 2 | 2 | 100 → 140 | 2 → 5 | +Clergy, Flight, Healer, +Holy Bonus=1, Purify, Spellcaster=Healingx1 → Spellcaster=Healingx2 |
+| Draconian Magicians → Draconian Magisters | 4 | 1 | 4 | 9 | 1 | - | - | 7 (Magic) | 4 → 6 | - → Fire 2 | 3 → 2 | 120 | 3 → 4 | Caster=20, Flight, +Large Shield, −Missile Immunity |
+| Doom Drakes | 2 | 10 | 5 → 6 | 7 → 8 | 10 → 13 | - → +10% | - | - | - | Fire 7 | 5 | 210 → 280 | 5 → 8 | Cause Fear, Flight |
+| Air Ship | 1 | 5 | 5 | 8 | 20 | - | - | 15 (Boulder) | 10 | - | 4 | 200 | 4 → 6 | Flight, +Mechanical, +Sailing, Wall Crusher, −Wind Walking |
+
+### Draconian — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Draconian Shieldbearers | 6 | 5 | 6 | 7 | 2 | - | - | - | - | Fire 3 | 3 | 90 | 3 | Flight, Large Shield |
+| Draconian Monks | 4 | 2 | 4 | 7 | 1 | - | - | 3 (Magic) | 4 | Fire 1 | 2 | 50 | 2 | Clergy, Flight, Healer, Purify, Spellcaster=Healingx1 |
+| Draconian Disciples | 4 | 2 | 4 | 6 | 1 | - | - | 4 (Magic) | 6 | Fire 1 | 2 | 60 | 2 | Caster=14, Flight |
+
+## Dwarf
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Dwarf Swordsmen | 6 | 3 → 4 | 3 → 4 | 6 | 2 | - | - | - | - | - | 2 | 25 → 30 | 1 | Large Shield, Mountainwalk |
+| Dwarf Halberdiers | 6 | 5 | 4 | 7 | 3 | - | - | - | - | - | 2 | 60 → 50 | 2 | Mountainwalk, Negate First Strike |
+| Dwarf Engineers → Dwarf Combat Engineers | 6 → 4 | 1 | 1 → 3 | 8 | 2 | - | - | - → 6 (Boulder) | - → 8 | - | 1 → 2 | 40 → 100 | 1 → 3 | +Counter Immunity, Mountainwalk, +Spellcaster=Spell#281x1, Wall Crusher |
+| Hammerhands | 6 | 8 → 5 | 4 | 10 → 8 | 4 | - | - | - | - | - | 2 → 3 | 140 → 90 | 4 → 3 | Mountainwalk, +Wall Crusher |
+| Steam Cannon | 1 | 0 | 5 | 9 | 12 | - → +10% | - | 15 (Boulder) → 16 (Boulder) | 10 | - | 1 | 100 → 120 | 2 → 4 | Long Range, +Mechanical, Mountainwalk, Poison Immunity, Wall Crusher |
+| Golem | 1 | 14 | 7 | 15 | 20 | - → +10% | - → +10% | - | - | - | 3 → 4 | 180 → 280 | 5 → 8 | Cold Immunity, Death Immunity, Fire Immunity, +Mechanical, Poison Immunity, Stoning Immunity, Wall Crusher |
+
+### Dwarf — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Steam Tank | 1 | 2 | 9 | 12 | 14 | +30% | - | 12 (Boulder) | 8 | Fire 14 | 2 | 300 | 8 | Large Shield, Lightning Resist, Mechanical, Missile Immunity, Mountainwalk, Poison Immunity, Wall Crusher, Weapon Immunity |
+| Dwarf Crossbowmen | 4 | 1 | 3 | 7 | 3 | +5% | - | 5 (Missile) | 8 | - | 2 | 90 | 3 | Armor Piercing, Large Shield, Mountainwalk |
+| Huskarls | 6 | 6 | 6 | 10 | 5 | - | - | - | - | - | 2 | 250 | 7 | Armor Piercing, Large Shield, Mountainwalk |
+| Arquebusiers | 6 | 2 | 3 | 7 | 3 | - | - | 3 (Missile) | 4 | Thrown 5 | 2 | 65 | 2 | Cause Fear, Mountainwalk, Negate First Strike |
+| Musketeers | 6 | 3 | 5 | 7 | 4 | - | - | 5 (Missile) | 4 | Thrown 9 | 2 | 160 | 5 | Cause Fear, Mountainwalk, Negate First Strike |
+
+## Troll
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Troll Magicians → Troll Chieftains | 4 | 4 → 5 | 2 → 6 | 8 → 9 | 4 → 5 | - | - | 7 (Magic) → - | 4 → - | - | 2 → 3 | 180 → 290 | 3 → 8 | −Caster=20, +Large Shield, −Missile Immunity, +Pathfinding, Regeneration=1 → Regeneration=2, +Spellcaster=Raise Deadx2 |
+| War Trolls | 4 | 8 → 11 | 4 | 6 → 8 | 8 | - | - | - | - | - → Thrown 3 | 3 | 150 → 220 | 3 → 7 | Regeneration=1 → Regeneration=3 |
+| War Mammoths | 3 | 12 | 6 → 7 | 8 → 9 | 12 → 13 | - → +10% | - | - | - | - | 2 → 3 | 180 → 290 | 5 → 8 | Cold Immunity, First Strike, Wall Crusher |
+| Troll Spearmen | 4 → 5 | 4 → 5 | 1 → 2 | 5 → 4 | 4 | - | - | - | - | - | 2 | 15 → 30 | 0 → 1 | +Negate First Strike, Regeneration=1 |
+| Troll Swordsmen | 4 | 5 → 7 | 3 → 4 | 5 | 4 | - | - | - | - | - | 2 | 40 → 50 | 1 → 2 | Large Shield, Regeneration=1 |
+| Troll Halberdiers | 4 | 7 → 8 | 4 | 5 | 6 | - | - | - | - | - | 2 | 90 → 75 | 2 → 3 | Negate First Strike, Regeneration=1 |
+| Troll Shaman → Troll Medicinemans | 4 | 4 → 5 | 3 | 6 → 7 | 4 | - | - | 3 (Magic) | 4 | - | 2 → 3 | 80 | 2 → 3 | +Clergy, Healer, Purify, Regeneration=2, Spellcaster=Healingx1 → Spellcaster=Spell#280x1 |
+
+### Troll — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Troll Shieldbearers | 4 | 8 | 5 | 7 | 6 | - | - | - | - | - | 3 | 135 | 4 | Large Shield, Regeneration=1 |
+| Troll Rock Throwers | 4 | 4 | 2 | 5 | 3 | - | - | 3 (Boulder) | 8 | Thrown 3 | 2 | 50 | 2 | Regeneration=1, Wall Crusher |
+
+## Xuanyuan
+
+Every unit in this category is new in Warlord.
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Xuanyuan Conscripts | 9 | 2 | 1 | 3 | 1 | - | - | - | - | - | 2 | 15 | 0 | Armor Piercing, Negate First Strike |
+| Xuanyuan Firelancers | 8 | 5 | 3 | 4 | 2 | - | - | - | - | - | 2 | 65 | 2 | Cause Fear, Negate First Strike |
+| Xuanyuan Swordsmen | 8 | 4 | 3 | 4 | 1 | - | - | - | - | - | 2 | 30 | 1 | Large Shield |
+| Xuanyuan Shieldbearers | 8 | 5 | 4 | 6 | 2 | - | - | - | - | - | 3 | 90 | 3 | Large Shield |
+| Xuanyuan Dragon Guards | 2 | 8 | 9 | 8 | 13 | +10% | - | - | - | Fire 12 | 2 | 190 | 6 | Large Shield, Negate First Strike |
+| Xuanyuan Engineers | 8 | 1 | 0 | 4 | 1 | - | - | - | - | - | 2 | 60 | 2 | Spellcaster=Spell#82x1, Wall Crusher |
+| Xuanyuan Bowmen | 8 | 1 | 1 | 4 | 1 | +5% | - | 3 (Missile) | 8 | - | 2 | 30 | 1 |  |
+| Xuanyuan Crossbowmen | 6 | 1 | 2 | 5 | 2 | +5% | - | 5 (Missile) | 8 | - | 2 | 90 | 3 | Armor Piercing, Large Shield |
+| Xuanyuan Autocrossbowmen | 6 | 1 | 4 | 7 | 3 | +5% | - | 9 (Missile) | 8 | Thrown 10 | 2 | 210 | 6 | Large Shield, Negate First Strike |
+| Xuanyuan Shamans | 6 | 2 | 2 | 6 | 1 | - | - | 3 (Magic) | 4 | - | 3 | 50 | 2 | Clergy, Healer, Purify, Spellcaster=Healingx1 |
+| Xuanyuan War Monks | 6 | 5 | 4 | 8 | 3 | - | +10% | - | - | - | 3 | 120 | 4 | Clergy, Healer, Purify, Spellcaster=Healingx2 |
+| Xuanyuan Alchemists | 6 | 2 | 2 | 5 | 1 | - | - | 5 (Boulder) | 6 | - | 2 | 60 | 2 | Caster=14, Poison Touch=1, Spellcaster=Spell#88x1 |
+| Xuanyuan Elixir Alchemists | 6 | 2 | 2 | 8 | 2 | - | - | 7 (Boulder) | 6 | - | 2 | 180 | 5 | Caster=20, Poison Touch=2, Spellcaster=Spell#275x1 |
+| Xuanyuan Immortals | 3 | 8 | 2 | 10 | 8 | +10% | +10% | - | - | - | 3 | 320 | 9 | Caster=25, Cold Immunity, Fire Immunity, Flight, Lightning Resist, Missile Immunity, Spellcaster=Spell#31x1 |
+| Dragon Ship | 5 | 9 | 6 | 9 | 8 | - | - | 8 (Magic) | 10 | Fire 6 | 3 | 300 | 8 | Mechanical, Sailing |
+| Xuanyuan Cavalry | 6 | 5 | 1 | 4 | 3 | - | - | - | - | - | 5 | 40 | 2 | First Strike |
+| Xuanyuan Heavy Cavalry | 6 | 7 | 3 | 6 | 4 | - | - | - | - | - | 4 | 100 | 4 | First Strike |
+| War Wagons | 2 | 0 | 3 | 7 | 7 | +20% | - | 7 (Missile) | 10 | - | 3 | 100 | 4 | Armor Piercing, Long Range, Mechanical |
+| Dragon Horses | 4 | 10 | 5 | 9 | 6 | - | - | - | - | - | 4 | 225 | 7 | First Strike, Flight, Water Walking |
+
+## Rakhshasa
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Manticores | 3 | 7 → 9 | 3 → 5 | 8 | 6 → 8 | +10% | - | 1 (Missile) → - | 2 → - | - → Thrown 2 | 3 → 4 | 160 → 280 | 2 → 8 | +Blood Sucker, Flight, +Pathfinding, −Poison Touch=4, −Weapon Immunity |
+
+### Rakhshasa — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Rakhshasa Spearmen | 8 | 2 | 3 | 3 | 1 | - | - | - | - | - | 3 | 12 | 0 | Forester, Negate First Strike |
+| Rakhshasa Wildhunter | 6 | 5 | 4 | 4 | 2 | - | - | - | - | - | 3 | 65 | 2 | Blood Sucker, Forester, Negate First Strike |
+| Rakhshasa Swordsmen | 6 | 4 | 5 | 4 | 1 | - | - | - | - | - | 3 | 24 | 1 | Forester, Large Shield |
+| Jaguar Warriors | 6 | 5 | 6 | 6 | 2 | - | - | - | - | - | 4 | 110 | 4 | Blood Sucker, Forester, Large Shield |
+| Jungle Stalkers | 2 | 1 | 4 | 4 | 1 | - | - | 4 (Missile) | 4 | - | 3 | 60 | 2 | Doom, Forester, Poison Touch=1, Stealth |
+| Rakhshasa Monks | 4 | 2 | 4 | 6 | 1 | - | - | 3 (Magic) | 4 | - | 3 | 40 | 2 | Clergy, Forester, Healer, Purify, Spellcaster=Healingx1 |
+| Rakhshasa Blood Priests | 4 | 3 | 5 | 8 | 2 | - | - | 4 (Magic) | 4 | - | 3 | 120 | 4 | Blood Sucker, Clergy, Forester, Healer, Purify, Resistance to All=1, Spellcaster=Healingx2 |
+| Weretiger Mages | 4 | 4 | 5 | 8 | 3 | - | - | - | - | - | 3 | 100 | 4 | Blood Sucker, Caster=14, Forester, Stealth |
+| Rishi | 4 | 4 | 5 | 8 | 3 | - | - | 6 (Magic) | 6 | - | 3 | 180 | 6 | Blood Sucker, Caster=20, Forester, Illusion Immunity, Spellcaster=Spell#50x1, Stealth |
+| Ogre Lords | 3 | 11 | 10 | 8 | 7 | +10% | - | - | - | - | 3 | 280 | 8 | Blood Sucker, Forester, Negate First Strike, Spellcaster=Spell#237x1 |
+
+## Hawkmen
+
+Every unit in this category is new in Warlord.
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Sky Lantern | 1 | 1 | 3 | 7 | 12 | +20% | - | 9 (Magic-lightning) | 10 | Thrown 9 | 1 | 120 | 4 | Amplifier, Armor Piercing, Flight, Mechanical, Sailing |
+| Hawkmen Spearmen | 7 | 2 | 2 | 3 | 1 | - | - | - | - | - | 2 | 15 | 0 | First Strike, Flight, Negate First Strike |
+| Eagle Warriors | 5 | 5 | 4 | 5 | 2 | - | - | - | - | - | 4 | 65 | 2 | First Strike, Flight, Negate First Strike |
+| Hawkmen Swordsmen | 5 | 4 | 4 | 4 | 1 | - | - | - | - | - | 2 | 30 | 1 | First Strike, Flight, Large Shield |
+| Tomahawks | 5 | 5 | 5 | 6 | 3 | - | - | - | - | - | 3 | 120 | 4 | Armor Piercing, First Strike, Flight |
+| Huichilobos | 4 | 8 | 5 | 8 | 4 | - | - | - | - | Thrown 3 | 3 | 230 | 7 | Death Immunity, Fire Immunity, First Strike, Flight, Large Shield, Poison Touch=2, Spellcaster=Spell#45x1 |
+| Harpies | 5 | 1 | 2 | 4 | 1 | - | - | 3 (Missile) | 3 | Thrown 4 | 3 | 40 | 1 | First Strike, Flight |
+| Holy Mother | 1 | 0 | 4 | 15 | 10 | - | - | - | - | - | 3 | 330 | 8 | Clergy, Exorcise=-1, First Strike, Flight, Healer, Lucky, Magic Immunity, Missile Immunity, Purify, Resistance to All=3, Spellcaster=Healingx4, Supernatural, Wind Walking |
+| Hawkmen Enchantresses | 3 | 3 | 3 | 6 | 2 | - | - | - | - | - | 2 | 80 | 3 | Caster=14, First Strike, Flight, Poison Touch=3, Spellcaster=Spell#165x1 |
+| Sirens | 3 | 4 | 4 | 9 | 4 | - | - | - | - | - | 3 | 270 | 6 | Caster=20, Death Gaze=-2, First Strike, Flight, Large Shield, Missile Immunity, Poison Touch=3, Spellcaster=Spell#172x1, Stoning Touch=0 |
+
+## Goblin
+
+Every unit in this category is new in Warlord.
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Goblin Spearmen | 9 | 2 | 2 | 3 | 1 | - | -10% | - | - | - | 2 | 12 | 0 | Negate First Strike, Spellcaster=Spell#286x1 |
+| Goblin Swordsmen | 8 | 4 | 4 | 4 | 1 | - | -10% | - | - | - | 2 | 24 | 1 | Large Shield, Spellcaster=Spell#287x1 |
+| Goblin Bowmen | 8 | 1 | 2 | 4 | 1 | +5% | -10% | 3 (Missile) | 8 | - | 2 | 24 | 0 |  |
+| Hobgoblins | 8 | 5 | 4 | 4 | 2 | - | -10% | - | - | - | 3 | 40 | 2 | Negate First Strike, Spellcaster=Spell#289x1 |
+| Goblin Warboss | 1 | 7 | 5 | 7 | 10 | - | - | - | - | - | 3 | 240 | 10 | Regeneration=1 |
+| Goblin Spider Riders | 6 | 3 | 4 | 7 | 4 | - | -10% | - | - | - | 4 | 80 | 4 | Counter Immunity, Poison Touch=3, Spellcaster=Webx1 |
+| Goblin Tricksters | 4 | 1 | 7 | 7 | 3 | - | -10% | - | - | Thrown 3 | 3 | 60 | 2 | First Strike, Large Shield, Merging, Poison Touch=1, Quick Casting, Spellcaster=Spell#283x1, Wall Crusher |
+| Goblin Rabblerousers | 6 | 2 | 3 | 6 | 1 | - | -10% | 3 (Missile) | 4 | - | 3 | 65 | 2 | Resistance to All=1, Spellcaster=Spell#253x3 |
+| Goblin Hexers | 6 | 2 | 3 | 6 | 1 | - | -10% | 3 (Magic) | 6 | - | 2 | 110 | 2 | Caster=14, Illusion, Poison Touch=1, Spellcaster=Spell#230x2 |
+| Goblin Arsonists | 6 | 4 | 3 | 5 | 2 | - | -10% | - | - | Fire 5 | 2 | 60 | 2 | Spellcaster=Spell#288x1 |
+| Goblin Night Goblins | 8 | 2 | 3 | 5 | 2 | +5% | -10% | 5 (Missile) | 8 | - | 3 | 90 | 2 | Poison Touch=1, Stealth |
+| Goblin Mechaniacs | 6 | 3 | 3 | 6 | 2 | - | -10% | 6 (Boulder) | 4 | - | 2 | 90 | 3 | Spellcaster=Spell#260x1, Wall Crusher |
+| Goblin Poxbearers | 4 | 4 | 1 | 6 | 4 | - | -10% | - | - | - | 2 | 180 | 4 | Cause Fear, DarkForce, Death Immunity, Death Touch=-1, Negate First Strike, Poison Touch=5 |
+| Goblin Doom Wheels | 3 | 9 | 1 | 7 | 6 | - | -10% | - | - | - | 5 | 200 | 4 | Armor Piercing, Cause Fear, First Strike, Large Shield, Mechanical, Spellcaster=Spell#294x1 |
+| Goblin Gliders | 5 | 2 | 1 | 7 | 3 | - | -10% | - | - | Thrown 7 | 4 | 140 | 6 | Armor Piercing, First Strike, Flight, Mechanical |
+| Goblin Midget Submarine | 3 | 5 | 5 | 8 | 7 | - | -10% | 12 (Boulder) | 8 | - | 3 | 330 | 6 | Mechanical, Sailing, Spellcaster=Spell#294x1 |
+
+## Special
+
+Every unit in this category is new in Warlord.
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Ballista | 1 | 0 | 4 | 7 | 10 | +20% | - | 8 (Missile) | 10 | - | 1 | 90 | 3 | Armor Piercing, Long Range, Mechanical |
+| Fire Galley | 1 | 14 | 4 | 7 | 20 | - | - | 11 (Missile) | 4 | Fire 8 | 4 | 120 | 2 | Mechanical, Sailing |
+
+## General
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Trireme | 1 | 12 | 4 | 6 | 15 | - | - | - | - | - | 3 | 60 | 0 | +Mechanical, Sailing |
+| Galley | 1 | 14 | 4 | 7 | 20 | - | - | 10 (Missile) | 8 | - | 3 → 4 | 100 | 0 → 1 | +Mechanical, Sailing |
+| Catapult | 1 | 0 | 2 → 4 | 3 → 7 | 10 | +20% | - | 9 (Boulder) → 10 (Boulder) | 10 → 15 | - | 1 | 62 → 90 | 1 → 3 | Long Range, +Mechanical, Wall Crusher |
+| Warship | 1 | 16 → 18 | 5 | 7 → 8 | 25 → 30 | - | - | 14 (Boulder) → 15 (Boulder) | 10 | - | 4 | 140 → 200 | 0 → 5 | Long Range, +Mechanical, Sailing |
+| Lizardman Carrack | 1 | 14 | 4 | 6 | 15 | - | - | 8 (Missile) | 6 | - | 4 | 80 | 0 | +Mechanical, Sailing |
+
+## Life Creatures
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Unicorns | 4 | 6 | 4 | 7 | 8 | +20% | - | - | - | - | 4 | 210 → 190 | 4 | Fantastic, +Forester, Poison Immunity, +Purify, Resistance to All=2, Teleporting |
+| Guardian Spirit | 1 | 7 | 6 → 5 | 10 | 10 | +30% | - | - | - | - | 2 | 55 → 60 | 1 | Fantastic, +Healer, Meld, Non-Corporeal, Poison Immunity, Resistance to All=1 |
+| Angel | 1 | 18 | 9 | 11 | 27 | +20% | - | - | - | - | 5 | 360 → 310 | 8 | Caster=24, Exorcise=-1, Fantastic, Flight, Holy Bonus=1, Illusion Immunity, +Sapiens |
+| Arch Angel | 1 | 21 | 12 | 18 | 37 | +40% | - | - | - | - | 4 | 610 → 550 | 18 | Caster=29, +Exorcise=-1, Fantastic, Flight, Healer, Holy Bonus=2, Illusion Immunity, Negate First Strike, +Sapiens, +Spellcaster=Spell#239x1, Supernatural |
+| Phoenix | 1 | 20 | 6 → 7 | 10 → 12 | 32 | +20% | - | - | - | - → Fire 8 | 5 | 550 → 450 | 12 | Death Immunity, Fantastic, Fire Immunity, Flight, Healing Aura, +Immolation, Regeneration=3, Spellcaster=Raise Deadx3 |
+
+### Life Creatures — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Ethereal Knight | 1 | 11 | 9 | 16 | 21 | +40% | - | - | - | - | 4 | 240 | 12 | Armor Piercing, Death Immunity, Fantastic, First Strike, Holy Bonus=1, Illusion Immunity, Large Shield, Negate First Strike, Resistance to All=1, Sapiens, Supernatural |
+| Valkyries | 3 | 12 | 8 | 9 | 9 | +20% | - | - | - | - | 4 | 370 | 9 | Fantastic, First Strike, Flight, Resistance to All=2, Sapiens, Spellcaster=Spell#148x2, Teleporting |
+| Seraph | 1 | 21 | 12 | 18 | 77 | +40% | +20% | - | - | Fire 8 | 5 | 777 | 30 | Armor Piercing, Caster=255, Death Immunity, Exorcise=-7, Fantastic, Fire Immunity, First Strike, Flight, Healer, Healing Aura, Holy Bonus=4, Illusion Immunity, Immolation, Negate First Strike, Non-Corporeal, Poison Immunity, Quick Casting, Regeneration=3, Resistance to All=5, Sapiens, Spellcaster=Spell#148x9, Supernatural, Teleporting |
+| Simurgh | 1 | 18 | 10 | 12 | 24 | +20% | - | - | - | Lightning 10 | 4 | 340 | 3 | Amplifier, Armor Piercing, Death Immunity, Fantastic, First Strike, Flight, Healer, Illusion Immunity, Poison Immunity, Purify, Spellcaster=Healingx5 |
+
+## Death Creatures
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Skeletons | 7 | 3 | 4 | 3 | 1 | +10% | - | - | - | - | 2 | 40 → 25 | 0 | Cold Immunity, Death Immunity, Fantastic, Illusion Immunity, Missile Immunity, +No Healing, Poison Immunity, +Sapiens |
+| Ghouls | 4 | 5 | 3 | 6 | 3 | - → +10% | - | 4 (Magic) | 4 | - | 2 | 110 → 80 | 1 | Cold Immunity, +Create Undead, Death Immunity, Fantastic, Illusion Immunity, Poison Immunity, −Poison Touch=1, +Sapiens |
+| Night Stalker | 1 | 7 | 5 | 8 | 13 | +10% | - | - | - | - | 3 | 239 → 275 | 1 | Cold Immunity, Death Gaze=-3, Death Immunity, Fantastic, Illusion Immunity, Invisibility, Poison Immunity, +Sapiens, +Stealth, Weapon Immunity |
+| Werewolves | 6 | 6 → 5 | 3 | 4 → 5 | 5 | +20% | - | - | - | - | 3 | 130 → 90 | 2 | Cold Immunity, Death Immunity, Fantastic, +Forester, +Rage, +Sapiens, Weapon Immunity |
+| Demon | 1 | 14 → 16 | 5 → 6 | 7 | 12 → 13 | +10% | - | - | - | - | 2 | 238 → 150 | 3 → 4 | Caster=40, +Create Undead, Death Immunity, Fantastic, Flight, Illusion Immunity, Missile Immunity, +Sapiens, Weapon Immunity |
+| Wraiths | 4 | 10 → 8 | 6 | 8 | 8 | +20% | - | - | - | - | 5 | 360 → 250 | 5 | Cold Immunity, Death Immunity, Fantastic, Flight, Illusion Immunity, Life Steal=-3, Non-Corporeal, Poison Immunity, +Sapiens, Weapon Immunity |
+| Shadow Demons | 4 | 5 | 4 | 6 | 5 | +20% | - | 5 (Magic) | 8 | - | 2 | 240 → 175 | 4 | Cold Immunity, Death Immunity, Fantastic, Flight, Illusion Immunity, Non-Corporeal, Plane Shifting, Poison Immunity, Regeneration=2, +Sapiens, Weapon Immunity |
+| Death Knights | 4 | 12 | 9 | 10 | 8 | +30% | - | - | - | - | 5 | 550 → 420 | 8 | Armor Piercing, Cold Immunity, Death Immunity, Fantastic, First Strike, Flight, Illusion Immunity, Life Steal=-5, Negate First Strike, Non-Corporeal, Poison Immunity, +Sapiens, +Spellcaster=Spell#164x1, Supernatural, Weapon Immunity |
+| Demon Lord | 1 | 25 | 8 | 13 | 35 | +30% | - | 20 (Magic) | 8 | - | 4 | 610 → 550 | 18 | Cause Fear, Death Immunity, Fantastic, Flight, Illusion Immunity, Life Steal=-2, Missile Immunity, −Negate First Strike, Quick Casting, +Sapiens, Spellcaster=Summon Demonx3, Supernatural, Weapon Immunity |
+| Zombies | 6 | 4 → 5 | 3 | 3 | 3 | +10% | -10% → - | - | - | - | 1 → 2 | 70 → 72 | 0 | Cold Immunity, +Create Undead, Death Immunity, Fantastic, Illusion Immunity, +No Healing, +Sapiens |
+| Vampire → Vampire Lord | 1 | 20 → 13 | 10 → 11 | 6 → 9 | 25 → 19 | +20% → +36% | - | - | - | - | 4 | 329 → 395 | 10 | Blood Sucker, Cold Immunity, +Create Undead, Death Immunity, Fantastic, Flight, Illusion Immunity, +Life Steal=-2, +Negate First Strike, Poison Immunity, −Regeneration=2, +Sapiens, +Spellcaster=Spell#175x1, Weapon Immunity |
+
+### Death Creatures — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Ghost Ship | 1 | 18 | 5 | 8 | 30 | +10% | - | 15 (Boulder) | 10 | - | 4 | 220 | 4 | Cold Immunity, Death Immunity, Fantastic, Illusion Immunity, Long Range, Non-Corporeal, Poison Immunity, Sapiens, Wall Crusher, Weapon Immunity, Wind Walking |
+| Arch Demon Lord | 1 | 25 | 12 | 18 | 66 | +40% | +10% | 20 (Magic) | 8 | - | 5 | 777 | 30 | Armor Piercing, Blood Sucker, Caster=128, Cause Fear, Cold Immunity, Create Undead, Death Immunity, Fantastic, First Strike, Flight, Illusion Immunity, Life Steal=-10, Missile Immunity, Negate First Strike, Non-Corporeal, Plane Shifting, Poison Immunity, Quick Casting, Regeneration=2, Sapiens, Spellcaster=Summon Demonx3, Supernatural, Weapon Immunity, Wind Walking |
+| Arch Liches | 4 | 4 | 6 | 8 | 8 | +10% | - | 8 (Magic) | 4 | - | 3 | 360 | 8 | Caster=25, Cold Immunity, Create Undead, Death Immunity, Fantastic, Healer, Illusion Immunity, Large Shield, Life Steal=-3, Missile Immunity, Poison Immunity, Quick Casting, Resistance to All=1, Sapiens, Spellcaster=Spell#163x2 |
+
+## Chaos Creatures
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Fire Elemental | 1 | 12 → 2 | 5 | 4 | 10 → 12 | - → +10% | - | - | - | - → Fire 14 | 2 | 70 → 72 | 1 → 2 | +Cold Immunity, Fantastic, Fire Immunity, +Immolation, +Non-Corporeal, Poison Immunity, Stoning Immunity, Weapon Immunity |
+| Hell Hounds | 4 | 4 → 6 | 2 | 5 | 4 | +10% | - | - | - | Fire 4 → Fire 6 | 3 → 5 | 40 → 54 | 1 | Fantastic, +Mountainwalk |
+| Gargoyles | 4 | 5 | 9 | 9 | 4 | +10% | - | - | - | - | 3 | 130 → 100 | 1 | Fantastic, Flight, Poison Immunity, +Sapiens, Stoning Immunity |
+| Fire Giant | 1 | 18 | 5 → 8 | 7 → 9 | 18 → 25 | +10% → +20% | - | 12 (Magic) → 13 (Magic) | 3 → 4 | - | 3 | 210 → 220 | 3 → 6 | +Cold Immunity, Fantastic, Fire Immunity, +Immolation, +Large Shield, Mountainwalk, +Sapiens, −Spellcaster=Fireballx1, Wall Crusher |
+| Chaos Spawn | 1 | 1 | 8 | 12 | 22 | - | - | - | - | - | 2 | 238 → 303 | 5 → 8 | Cause Fear, Death Gaze=-4, Doom Gaze=4, Fantastic, Flight, Illusion Immunity, Poison Touch=4, Stoning Gaze=-4 |
+| Chimera | 4 | 10 | 5 | 8 | 8 | +10% | - | - | - | Fire 6 | 3 → 4 | 210 → 180 | 4 | Fantastic, Flight, +Mountainwalk |
+| Doom Bat | 1 | 16 → 12 | 7 | 10 → 8 | 30 → 24 | +20% | - | - | - | - | 6 | 360 → 150 | 7 → 3 | +Cold Immunity, Doom, Fantastic, +First Strike, Flight, Immolation, Negate First Strike |
+| Efreet | 1 | 15 | 7 | 9 | 27 | +20% | - | 18 (Magic) | 8 | - | 4 | 330 → 333 | 9 | Caster=40 → Caster=39, Fantastic, Fire Immunity, Flight, Immolation, +Sapiens |
+| Hydra | 9 | 9 | 4 | 12 | 10 | +10% | - | - | - | Fire 6 → Lightning 6 | 2 | 300 → 480 | 11 | Fantastic, +Lightning Resist, +Poison Immunity, +Poison Touch=4, Regeneration=7, Supernatural, +Water Walking |
+| Great Drake | 1 | 35 | 11 | 15 | 40 | +30% | - | - | - | Fire 35 | 4 | 550 → 500 | 15 | +Cause Fear, Fantastic, Flight, +Immolation, +Lightning Resist, +Mountainwalk, −Negate First Strike, Supernatural |
+
+### Chaos Creatures — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Lesser Chaos Lord | 5 | 10 | 10 | 16 | 14 | +30% | - | 6 (Magic) | 4 | Fire 9 | 6 | 600 | 20 | Cause Fear, Cold Immunity, Death Gaze=-4, Doom Gaze=4, Fantastic, Fire Immunity, Flight, Immolation, Lightning Resist, Poison Immunity, Poison Touch=4, Regeneration=5, Spellcaster=Spell#109x2, Stoning Gaze=-4, Stoning Immunity, Supernatural, Wall Crusher, Water Walking |
+| Great Chaos Lord | 5 | 17 | 11 | 17 | 20 | +30% | - | 9 (Magic) | 8 | Fire 15 | 6 | 777 | 30 | Caster=250, Cause Fear, Cold Immunity, Death Gaze=-6, Doom, Doom Gaze=6, Fantastic, Fire Immunity, Flight, Illusion Immunity, Immolation, Lightning Resist, Poison Immunity, Poison Touch=10, Quick Casting, Regeneration=7, Spellcaster=Spell#117x1, Stoning Gaze=-6, Stoning Immunity, Supernatural, Wall Crusher, Water Walking |
+| Fire Drake | 1 | 28 | 10 | 12 | 30 | +10% | - | - | - | Fire 21 | 4 | 390 | 10 | Fantastic, Fire Immunity, Flight, Spellcaster=Fireballx2 |
+
+## Nature Creatures
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Boars | 3 | 6 | 5 | 5 | 5 | +10% | - | - | - | - | 3 | 50 → 45 | 1 | Fantastic, Forester |
+| Water Elemental | 1 | 14 → 15 | 7 | 7 | 15 | +20% → +10% | - | 14 (Magic) → 10 (Magic) | 4 | - | 3 | 210 → 120 | 3 | Fantastic, Fire Immunity, +Non-Corporeal, Poison Immunity, Water Walking, Weapon Immunity |
+| War Bears | 3 → 2 | 7 → 9 | 5 | 6 | 7 → 10 | +10% | - | - | - | - | 3 | 85 → 65 | 1 → 2 | Fantastic, Forester |
+| Sprites | 5 | 2 | 2 | 8 | 1 | +10% | - | 4 (Magic) | 4 | - | 2 | 69 → 70 | 2 | Fantastic, Flight, Forester, +Sapiens |
+| Cockatrices | 4 | 4 | 5 | 7 | 7 | +10% | - | - | - | - | 3 | 210 → 150 | 4 | Fantastic, Flight, Stoning Touch=-4 |
+| Great Lizard | 1 | 18 | 7 | 7 | 30 | +20% | - | - | - | - | 3 | 240 → 250 | 5 | Fantastic, +Poison Touch=3, Regeneration=2, +Stealth, +Water Walking |
+| Giant Spiders | 4 | 6 | 5 | 9 | 5 | +10% | - | - | - | - | 5 | 130 → 110 | 2 | Counter Immunity, Fantastic, Poison Touch=3, Spellcaster=Webx1 → Spellcaster=Webx2 |
+| Stone Giant | 1 | 20 | 12 | 10 | 25 | +20% | - | 20 (Boulder) | 3 | - | 3 | 329 → 250 | 5 | Fantastic, Mountainwalk, Poison Immunity, +Sapiens, Stoning Immunity, Wall Crusher |
+| Colossus | 1 | 25 | 12 | 15 | 37 | +30% | - → +10% | 25 (Boulder) | 4 → 3 | - | 3 → 4 | 610 → 500 | 12 → 15 | Fantastic, First Strike, Illusion Immunity, +Lightning Resist, Pathfinding, Poison Immunity, +Sapiens, Stoning Immunity, Supernatural, Wall Crusher |
+| Gorgons | 3 | 15 → 13 | 7 | 9 | 14 → 12 | +20% | - | - | - | - | 3 | 450 → 320 | 8 | +Caster=40, Fantastic, +Sapiens, Stoning Gaze=-3, −Supernatural |
+| Earth Elemental | 1 | 25 | 4 | 8 | 30 | +10% | - | - | - | - | 1 | 237 → 150 | 5 → 4 | Fantastic, Poison Immunity, Stoning Immunity, Wall Crusher |
+| Behemoth | 1 | 25 | 15 | 13 | 42 | +20% | - | - | - | - | 3 | 450 → 480 | 12 → 14 | +Armor Piercing, −Caster=40, +Cause Fear, Fantastic, −Negate First Strike, Regeneration=3, +Stoning Gaze=-4, Supernatural, +Wall Crusher, +Water Walking |
+| Great Wyrm | 1 | 36 | 8 | 14 | 45 | +30% | - | - | - | - | 3 → 4 | 610 → 450 | 15 | Armor Piercing, Fantastic, +Merging, Negate First Strike, Poison Touch=25, Supernatural, +Water Walking |
+
+### Nature Creatures — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Killer Wasps | 9 | 2 | 7 | 6 | 1 | - | - | - | - | - | 2 | 55 | 1 | Armor Piercing, Fantastic, Flight, Missile Immunity, Negate First Strike |
+| Lesser Gaia Lord | 1 | 35 | 14 | 14 | 60 | +30% | +10% | 20 (Boulder) | 4 | - | 4 | 600 | 20 | Caster=50, Cause Fear, Fantastic, First Strike, Illusion Immunity, Lightning Resist, Merging, Missile Immunity, Negate First Strike, Pathfinding, Poison Immunity, Poison Touch=20, Quick Casting, Regeneration=2, Resistance to All=3, Spellcaster=Spell#33x1, Stoning Gaze=-4, Stoning Immunity, Supernatural, Wall Crusher, Water Walking |
+| Great Gaia Lord | 1 | 36 | 15 | 15 | 100 | +30% | +10% | 25 (Boulder) | 4 | - | 4 | 777 | 30 | Armor Piercing, Caster=255, Cause Fear, Fantastic, First Strike, Illusion Immunity, Lightning Resist, Merging, Missile Immunity, Negate First Strike, Pathfinding, Poison Immunity, Poison Touch=30, Quick Casting, Regeneration=3, Resistance to All=4, Spellcaster=Spell#33x1, Stoning Gaze=-4, Stoning Immunity, Stoning Touch=-6, Supernatural, Wall Crusher, Water Walking |
+| Sacred Ancient | 1 | 10 | 9 | 7 | 20 | +10% | - | - | - | - | 0 | 96 | 0 | Death Immunity, Fantastic, Forester, Healer, Illusion Immunity, Resistance to All=1, Spellcaster=Spell#7x3 |
+| Thunderbird | 1 | 15 | 10 | 10 | 30 | +20% | - | - | - | Lightning 25 | 4 | 350 | 7 | Fantastic, Flight, Lightning Resist, Missile Immunity, Mountainwalk |
+| Wargs | 6 | 5 | 3 | 6 | 3 | +10% | - | - | - | - | 5 | 64 | 1 | Cold Immunity, Fantastic, First Strike, Pathfinding |
+
+## Sorcery Creatures
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Phantom Beast | 1 | 18 | 0 | 6 | 25 | +10% | - | - | - | - | 2 | 70 → 105 | 3 → 2 | Death Immunity, Fantastic, Illusion, Non-Corporeal, Poison Immunity, Stoning Immunity, Water Walking |
+| Phantom Warrior → Phantom Warriors | 7 | 3 | 0 | 4 | 1 | - | - | - | - | - | 2 | 30 → 35 | 1 → 0 | Death Immunity, Fantastic, Illusion, Non-Corporeal, Poison Immunity, Stoning Immunity, Water Walking |
+| Storm Giant | 1 | 18 | 7 | 9 | 25 | +20% | - | 18 (Magic-lightning) | 5 | - | 3 | 330 | 5 | Armor Piercing, Fantastic, Lightning Resist, Missile Immunity, +Mountainwalk, +Sapiens, Wall Crusher |
+| Air Elemental | 1 | 15 | 7 | 9 | 10 | +10% | - | - | - | - | 5 | 239 → 250 | 5 | Armor Piercing, Fantastic, Flight, Invisibility, Non-Corporeal, Poison Immunity, +Stealth, Stoning Immunity, Weapon Immunity |
+| Djinn | 1 | 18 | 8 | 12 | 29 | +30% | - | 15 (Magic) | 8 | - | 4 | 450 → 395 | 9 → 10 | Caster=35 → Caster=40, Fantastic, Flight, +Sapiens, Supernatural, Teleporting, Wind Walking |
+| Sky Drake | 1 | 28 | 10 | 14 | 30 | +30% | - | - | - | Lightning 21 | 4 | 611 → 500 | 15 | Fantastic, Flight, Illusion Immunity, Lightning Resist, Magic Immunity, +Mountainwalk, −Negate First Strike, Supernatural |
+| Nagas | 3 | 5 → 4 | 4 | 7 | 5 → 4 | +10% | - | - | - | - | 3 | 85 → 65 | 2 → 1 | Fantastic, First Strike, Poison Touch=3, +Sapiens, Water Walking |
+
+### Sorcery Creatures — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Coatl | 1 | 14 | 6 | 7 | 14 | +10% | - | - | - | Lightning 7 | 4 | 150 | 3 | Caster=13, Fantastic, Flight, Forester, Lightning Resist, Poison Touch=2 |
+| Cloud Giant | 1 | 11 | 5 | 9 | 25 | +20% | - | 13 (Magic) | 5 | - | 3 | 330 | 8 | Fantastic, Flight, Illusion, Illusion Immunity, Lightning Resist, Lucky, Sapiens, Wall Crusher |
+| Lesser Aether Lord | 1 | 25 | 10 | 18 | 50 | +30% | - | - | - | Lightning 15 | 5 | 600 | 20 | Armor Piercing, Death Immunity, Fantastic, Flight, Illusion, Illusion Immunity, Lightning Resist, Magic Immunity, Missile Immunity, Non-Corporeal, Poison Immunity, Quick Casting, Spellcaster=Spell#68x3, Stoning Immunity, Supernatural, Teleporting, Water Walking, Weapon Immunity, Wind Walking |
+| Great Aether Lord | 1 | 28 | 10 | 20 | 70 | +30% | - | 18 (Magic-lightning) | 5 | Lightning 21 | 5 | 777 | 30 | Armor Piercing, Caster=255, Counter Immunity, Death Immunity, Fantastic, Flight, Illusion, Illusion Immunity, Lightning Resist, Lucky, Magic Immunity, Missile Immunity, Non-Corporeal, Poison Immunity, Poison Touch=4, Quick Casting, Spellcaster=Spell#35x1, Stoning Immunity, Supernatural, Teleporting, Water Walking, Weapon Immunity, Wind Walking |
+| Kraken | 1 | 24 | 10 | 12 | 30 | +20% | - | - | - | Thrown 12 | 3 | 310 | 8 | Fantastic, Large Shield, Water Walking |
+| Cloud Elephant | 3 | 12 | 7 | 9 | 13 | +20% | - | 18 (Magic-lightning) | 5 | - | 3 | 550 | 15 | Cold Immunity, Fantastic, First Strike, Flight, Lightning Resist, Missile Immunity, Poison Immunity, Poison Touch=4, Spellcaster=Spell#48x1, Supernatural, Wall Crusher, Water Walking, Wind Walking |
+| Sea Serpent | 1 | 36 | 8 | 14 | 60 | +30% | - | - | - | - | 4 | 450 | 15 | Fantastic, Merging, Negate First Strike, Poison Touch=25, Sailing, Stealth |
+
+## Arcane Creatures
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Magic Spirit | 1 | 5 | 4 | 8 | 10 | - | - | - | - | - | 2 | 30 | 1 | Fantastic, Meld, Non-Corporeal, Poison Immunity, Water Walking |
+
+### Arcane Creatures — new in Warlord
+
+| Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Clockwork Tinmen | 4 | 7 | 7 | 10 | 6 | +10% | - | - | - | - | 2 | 150 | 5 | Death Immunity, DestroyMechanical, Fantastic, Illusion Immunity, Mechanical, Poison Immunity, Sapiens, Spellcaster=Spell#341x1, Wall Crusher |
+
