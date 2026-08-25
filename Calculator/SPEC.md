@@ -733,35 +733,34 @@ the calculator does instead, and why.
     `U.race := 18; U.Fantastic := True` are one block at `$0059F4A3`, and `unitcalc.c` addresses
     each DOS realm write at its own `BU_Apply_Specials` offset. The hoist leaves `race` and
     `fantastic` the only fields exempt from *The step model*'s rule that a step reads a field's
-    current value at its own position, and it forces the six `:race` step ids. **It is not inert.**
-    This entry used to claim it was, on the unchecked assumption that every engine finishes its
-    realm writes before anything reads the running value; several gates sit at a chain position
-    earlier than a conversion whose result the fixed point hands them anyway. Measured over
-    `tools/derivation_equivalence.js`, giving six of those gates the reading their own block states
-    moves 41 of 15480 derivations. One gate went the other way — Blazing Eyes, a region-`c` block
-    the calculator evaluated into the `base:stat:base` Doom Gaze seed, so its position here was
-    *earlier* than its engine block — and the answer was to give the block its own chain entry,
-    `c:blazingEyes` (2026-08-24), not to re-read its gate where it stood. Every one of those numbers is a
-    correction, so they are being fixed first, as separate cited items with presets, and the
-    removal of the hoist itself follows them at no number movement. **Which record a gate wants is
-    read off its own block, never deduced from its region:** five of the six landed 2026-08-24, and
-    two of them test the *permanent* record — `IF (BASEFANTASTIC(U)>0)` — where a positional read
-    had been proposed for both. A third joined them 2026-08-25: Breakthrough's normal package
-    admits on `(not U.combatsummoned) and (not B.Fantastic)` at `$005A376D`, one term per record
-    in one test, so the fix was to **delete** the calculator's extra live term rather than
-    reposition it (F179). Reading a block therefore settles two things at once — whether a gate
-    exists at all, and which record it takes. **A positional read is only as good as the conversion list behind
-    it**, which is the second thing to check at the block: Land Linking's two blocks do read the
-    calculated record, but reading them found a conversion the sequence had no step for at all —
-    Spirit Link's region-`b` Fantastic assert, added 2026-08-24, which moved both landed gates and
-    dissolved a hand patch at a third. Adding it also made a gate the tranche had measured at zero
-    move, so the list behind a positional read is checked again whenever it grows. **A zero from
-    `tools/derivation_equivalence.js` is not by itself proof that a gate is inert:** it is a
-    differ over a generated case list, so it can only report what that list varies. Chaos Surge
-    was the case — its global was the one input no environment set, and the gate measured zero
-    while the defect was real (F178, 2026-08-25). A zero is a claim about the case list first and
-    the gate second, and a gate reading an input the list holds constant must be measured directly.
-    `BACKLOG.md` carries the per-gate figures on F163 and the gates it still depends on.
+    current value at its own position, and it forces the six `:race` step ids.
+    **It is not inert, and the population that has to be corrected first is enumerated rather than
+    found by accident.** `tools/identity_read_position_census.js` claims every read of the
+    calculated identity in the core sources — an unclassified one halts — assigns each the chain
+    entry owning the effect it gates, and decides hoisting exhaustively over the whole conversion
+    set: a read at entry K is hoisted for a field exactly when some conversion of rank at or after
+    K writes that field. Of its 68 sites, 30 declare or forward a channel, 5 are post-chain combat
+    reads of the finished record, 1 arm is unreachable, 10 are positional replays already correct,
+    14 are fixed-point reads whose entry every conversion precedes, and 8 are fixed-point reads
+    whose owning entry a conversion follows. `BACKLOG.md` carries those 8 as F163's prerequisites,
+    one row per engine block.
+    **Three rules the tranche established, each from a falsified premise.** (1) Which record a gate
+    wants is read off its own block, never deduced from its region: four of the landed corrections
+    wanted the **permanent** record, and one was answered by *deleting* the calculator's extra live
+    term rather than repositioning it — Breakthrough admits on
+    `(not U.combatsummoned) and (not B.Fantastic)` at `$005A376D`, one term per record in one test.
+    (2) A positional read is only as good as the conversion list behind it, so that list is
+    re-checked whenever it grows: reading Land Linking's blocks turned up a conversion the sequence
+    had no step for at all — Spirit Link's region-`b` Fantastic assert — and adding it made a gate
+    previously measured at zero move. (3) A zero from `tools/derivation_equivalence.js` is a claim
+    about its generated case list before it is a claim about a gate. Chaos Surge's global was the
+    one input no environment set, so its gate measured zero while the defect was real; that list
+    still states no base race and no hero, so a gate reading either measures zero there whatever it
+    does.
+    One gate went the other way — Blazing Eyes, a region-`c` block the calculator evaluated into
+    the `base:stat:base` Doom Gaze seed, so its position here was *earlier* than its engine block —
+    and the answer was to give the block its own chain entry, `c:blazingEyes`, not to re-read its
+    gate where it stood.
   - **Building and enchantment ability grants**, seven nested calls in `deriveUnitStats`. The
     calculator already gives their sources chain phases: the `CreateUnit.CAS` grants' stat halves
     are `base:` steps (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same

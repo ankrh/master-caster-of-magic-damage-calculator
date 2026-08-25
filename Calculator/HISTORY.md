@@ -6,6 +6,50 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-25
 
+- **F163 readiness — the hoisted identity reads are enumerated instead of discovered by accident.**
+  Measurement only: no calculator code changed, and none of the reads found was fixed, per the F145
+  precedent that a measurement contaminated by its own fixes cannot be trusted.
+  `tools/identity_read_position_census.js` replaces the `d:spiritLink` ablation with three parts.
+  A **channel scan** over the `data-scope="core"` sources claims every name through which the
+  calculated identity reaches a gate, attributed to its enclosing symbol by brace depth rather than
+  by line number; an unclaimed read halts the tool, so one added later cannot enter the code
+  unclassified. A **divergence oracle** discovers the identity conversions by perturbation — every
+  `ABILITY_DEFS`/`ENCHANTMENT_DEFS` control crossed with every identity axis, 5/5/10/12/13
+  conversions found per version — and then decides hoisting exhaustively: a read owned by chain
+  entry K is hoisted for a field exactly when some conversion of rank at or after K writes it. That
+  covers live **race** as well as Fantastic, and every conversion rather than one. A **corpus pass**
+  wraps the pre-pass over the `derivation_equivalence.js` case list; the unrestricted call already
+  returns an ordered trace carrying each conversion's chain rank and its `{from,to}`, so all
+  prefixes come from that one call and the whole run costs **9s**. It is a diagnostic, outside
+  `npm test` and `node tools/node_unit_checks.js`.
+  **Ground truth: 11 of 11.** The oracle independently reproduces every landed correction of the
+  tranche — F167, F169-F174, F176-F179 — and the run throws if it stops. Reproducing them
+  falsified one premise of this round's own table: F174's 8 moved cases are its *write* half, the
+  Doom Gaze grant leaving the `base:stat:base` seed, and its identity half is divergent in Warlord
+  alone, exactly as that item recorded when it said the read needed no new replay.
+  **Result: 68 sites** — 30 channel declarations or forwarding, 5 post-chain combat reads, 1 dead
+  arm, 10 positional replays already correct (with no conversion between any replay's key and its
+  block), 14 fixed-point reads that every conversion precedes, and **8 fixed-point reads whose
+  owning entry a conversion follows**. F183 is re-found
+  with no ablation at all and its single Rust case reproduced. Seven more are filed as
+  [F184-F188](./BACKLOG.md): Warp Reality's Chaos exemption at `c:warpReality` (48 divergent, 6
+  narrowed), **True Light at `b:trueLight` (390 / 30) and Eternal Night's Poor Vision at
+  `b:eternalNight:poorVision` (390 / 25) — the first reads of live *race* found, hoisted by six
+  region-`c` conversions and structurally invisible to the old probe** — the two hero tests spelled
+  through the live compact token (Tactician, Rebuild), and the two whose divergence is unobservable
+  where it occurs. All six rows precede F163 in the Priority table, which is contiguous 1-41.
+  **Blind spots, named rather than left to the next round to find**: the case list states no base
+  race and no hero, so those counts are a floor; reachability is not modelled; each site's owner
+  chain entry is judgement; the tool reports which record a site is *handed*, never which record
+  its block *reads*; a read naming no channel is invisible; write-side omissions such as F176 are
+  out of scope; and F175's question — which *units* a gate covers — is adjacent, not a member.
+  **Tooling change, no behavior change**: `tools/derivation_equivalence.js` now exports
+  `enumerateCases(context)` and guards its CLI, so the second measurement reuses the seeded draw
+  order instead of copying it. Verified byte-identical output against a pre-change run of all
+  15525 derivations.
+  **Checks.** `node tools/node_unit_checks.js` 14473/14473, 0 failures; `npm run provenance` 273
+  formulas, 0 UNVERIFIED. `npm test` not run: nothing under `Calculator/` changed.
+
 - **F179 — Breakthrough's normal package tests the permanent record, so its live Fantastic term is
   deleted.** Premise re-read at the block before implementing and it held on both halves. The
   admission test at `$005A376D..$005A3DDE` (`Units.RecalculateUnits.pas`) is

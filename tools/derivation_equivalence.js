@@ -12,6 +12,10 @@
 //
 // Each value in the written map is an **object**, so compare two runs structurally — a `!==` over
 // the parsed maps compares references and reports every case as differing.
+//
+// `enumerateCases(context)` is the case list on its own, exported so a second measurement over the
+// same control surface reuses it instead of restating the generator — the seeded draw order is
+// what makes two runs comparable, and a copy of it would drift.
 
 'use strict';
 
@@ -20,13 +24,14 @@ const vm = require('vm');
 const { loadCalculatorContext } = require('./calculator_sources');
 const { modernRecordForSharedSlot } = require('./unit_checks/assertions');
 
-const ctx = loadCalculatorContext();
+let ownContext = null;
+function defaultContext() {
+  if (!ownContext) ownContext = loadCalculatorContext();
+  return ownContext;
+}
 // The sources declare with `const`, which never lands on the vm global, so every calculator
 // binding is read by evaluating its name in the context.
-const read = expression => vm.runInContext(expression, ctx);
-
-const VERSIONS = read('ENGINE_VERSIONS');
-const deriveUnitStats = read('deriveUnitStats');
+const readFrom = (context, expression) => vm.runInContext(expression, context);
 
 // Deterministic 32-bit PRNG (mulberry32). Seeded per run so both sides enumerate identically.
 function rng(seed) {
@@ -78,8 +83,6 @@ function setControl(abilities, spec, value) {
   if (OUTLANDER_REFORMS.has(spec.calcKey)) abilities.outlanderWizard = true;
 }
 
-const abilitySpecs = controlSpecs(read('ABILITY_DEFS'));
-const enchantSpecs = controlSpecs(read('ENCHANTMENT_DEFS'));
 
 // Unit shapes: the attack-channel configuration is what most type predicates read, so the
 // spread covers an empty secondary slot, each conventional type, and a full modern channel set.
@@ -145,11 +148,11 @@ const ENVS = [
 // A CoM2/Warlord case states the record that version has: the four named channels, with the
 // shared slot beside them as the card's projection (`unit_checks/assertions.js`,
 // `modernRecordForSharedSlot`). A case that already names `modernAttacks` keeps its own.
-function baseInput(version, over) {
+function baseInput(context, version, over) {
   const typed = over.rtbType === MAGICAL_RANGED
     ? { ...over, rtbType: version.startsWith('com2') ? 'magic' : 'magic_s' } : over;
   const resolved = version.startsWith('com2') && !typed.modernAttacks
-    ? { ...typed, modernAttacks: modernRecordForSharedSlot(ctx, typed.rtbType, typed.rtb) }
+    ? { ...typed, modernAttacks: modernRecordForSharedSlot(context, typed.rtbType, typed.rtb) }
     : typed;
   return {
     prefix: 'a',
@@ -208,23 +211,13 @@ function digest(value) {
   return out;
 }
 
-function run() {
-  const results = {};
-  let cases = 0;
-  const record = (name, input) => {
-    let derived;
-    try {
-      derived = deriveUnitStats(input);
-    } catch (err) {
-      results[name] = { __throw: String(err && err.message) };
-      cases += 1;
-      return;
-    }
-    results[name] = digest(derived);
-    cases += 1;
-  };
-
-  for (const version of VERSIONS) {
+// The case list, in the order both the digest and any other measurement over the same control
+// surface must walk it. Yields `{ name, version, input }`.
+function* enumerateCases(context = defaultContext()) {
+  const versions = readFrom(context, 'ENGINE_VERSIONS');
+  const abilitySpecs = controlSpecs(readFrom(context, 'ABILITY_DEFS'));
+  const enchantSpecs = controlSpecs(readFrom(context, 'ENCHANTMENT_DEFS'));
+  for (const version of versions) {
     // 1. Every control on its own, over every shape, on the plain environment.
     for (const [kind, specs] of [['abil', abilitySpecs], ['ench', enchantSpecs]]) {
       for (const spec of specs) {
@@ -233,8 +226,8 @@ function run() {
             const over = { ...shape.over };
             over.abilities = {};
             setControl(over.abilities, spec, value);
-            record(`${version}|solo|${kind}|${spec.key}=${value}|${shape.name}`,
-              baseInput(version, over));
+            yield { name: `${version}|solo|${kind}|${spec.key}=${value}|${shape.name}`,
+              version, input: baseInput(context, version, over) };
           }
         }
       }
@@ -242,8 +235,8 @@ function run() {
     // 2. Every environment against every shape, no controls.
     for (const env of ENVS) {
       for (const shape of SHAPES) {
-        record(`${version}|env|${env.name}|${shape.name}`,
-          baseInput(version, { ...shape.over, ...env.over }));
+        yield { name: `${version}|env|${env.name}|${shape.name}`, version,
+          input: baseInput(context, version, { ...shape.over, ...env.over }) };
       }
     }
     // 3. Seeded combinations: several controls at once, so interaction order is exercised.
@@ -266,17 +259,38 @@ function run() {
         setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
       }
       over.abilities = abilities;
-      record(`${version}|combo|${i}`, baseInput(version, over));
+      yield { name: `${version}|combo|${i}`, version, input: baseInput(context, version, over) };
+    }
+  }
+}
+
+function run() {
+  const context = defaultContext();
+  const deriveUnitStats = readFrom(context, 'deriveUnitStats');
+  const results = {};
+  let cases = 0;
+  for (const testCase of enumerateCases(context)) {
+    cases += 1;
+    try {
+      results[testCase.name] = digest(deriveUnitStats(testCase.input));
+    } catch (err) {
+      results[testCase.name] = { __throw: String(err && err.message) };
     }
   }
   return { cases, results };
 }
 
-const out = process.argv[2];
-if (!out) {
-  console.error('usage: node tools/derivation_equivalence.js <out.json>');
-  process.exit(2);
+function main() {
+  const out = process.argv[2];
+  if (!out) {
+    console.error('usage: node tools/derivation_equivalence.js <out.json>');
+    process.exit(2);
+  }
+  const { cases, results } = run();
+  fs.writeFileSync(out, JSON.stringify(results, null, 0));
+  console.log(`wrote ${cases} derivations to ${out}`);
 }
-const { cases, results } = run();
-fs.writeFileSync(out, JSON.stringify(results, null, 0));
-console.log(`wrote ${cases} derivations to ${out}`);
+
+if (require.main === module) main();
+
+module.exports = { enumerateCases, digest, run };
