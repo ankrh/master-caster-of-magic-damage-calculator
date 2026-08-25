@@ -72,6 +72,19 @@ function isCreatedUndeadTarget(defUnitType, defAbilities) {
 // Touch attack. Only affects fantastic_death (created-undead penalty -9, else -4) and
 // fantastic_chaos (penalty -4). Other unit types are immune. Spirit Link strips the
 // target's fantastic status, so it cannot be affected.
+//
+// Dispel Evil and Exorcise are **one shared rider under two names**, the touch-flag counterpart
+// of the repurposed enchantment bits (`COMBAT_VERSION_SCOPES`, `steps.js`). `ATT_DISPEL_EVIL` is
+// attack flag `0x0800` in all three DOS builds (`combat.c:88`) and each build compiles its own
+// block behind it: 131 and 160 test race Chaos/Death and apply -4, -5 more for a mutated target;
+// CoM 1 tests signed race `>= RACE_FIRST_FANTASTIC` and applies -3, -3 more, and exempts Spell
+// Lock. `Caster.exe` names the rider `exorcise` in `AttackFlagsT` and has no Dispel Evil member
+// at all, so the modern engines carry only the successor. A Dispel Evil read firing outside MoM
+// is therefore the same engine write under the wrong name, exactly as an Eldritch Weapon read
+// firing in CoM 1 would be. Scope is per touch key, routed by `TOUCH_KEY_SCOPE_IDS`
+// (`combat_effects.js`); this formula id is its MoM entry.
+// STAT-FORMULA[dispelEvilTouchRider]
+// PROVENANCE[dispelEvilTouchRider]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:29:a622cfdbc42ac471b8aeb63d
 function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
   if (hasAbil(defAbilities, 'spiritLink')) return 0;
   let penalty;
@@ -91,6 +104,12 @@ function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
 // as the base penalty. `modifier` is the Exorcise strength (e.g. -1 → -1 penalty).
 // Created-undead targets suffer an additional -3 (vs Dispel Evil's additional -5).
 // Spirit Link strips the target's fantastic status, so it cannot be exorcised.
+//
+// The other half of the shared rider described above: CoM 1's block for flag `0x0800`, and the
+// `exorcise` member of `Caster.exe`'s `AttackFlagsT`, which the modern rider loop reads first of
+// the six. Neither MoM build compiles this arm, so the key is out of scope there.
+// STAT-FORMULA[exorciseTouchRider]
+// PROVENANCE[exorciseTouchRider]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:34:29a4d4421788f0f43bb2ab70 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:13:b67a607c5a672579af407603
 function exorciseFailProb(defRes, defAbilities, defUnitType, modifier, version) {
   if (hasAbil(defAbilities, 'spiritLink')) return 0;
   if (!String(defUnitType || '').startsWith('fantastic_')) return 0;
@@ -524,6 +543,22 @@ function rulerOfUnderworldActiveForUnit(abilities, version) {
 function eldritchWeaponActiveForUnit(abilities, version) {
   return combatEffectInVersion('resolution:eldritchWeaponEligibility', version)
     && hasAbil(abilities, 'eldritchWeapon');
+}
+
+// Blazing March's magic-weapon grant is CoM 1's alone among the DOS builds. Slot `0x0A` is one
+// spell with two names — `unitcalc.c:237`, `#define CE_BLAZING_MARCH_ATTACKER
+// CE_METAL_FIRES_ATTACKER` — and each engine compiles its own block for it: CoM 1's sets
+// `Weapon_Plus1` at `com1:0x9048B`, and its whole block reads `131:—  160:—`, so neither MoM
+// build contains it. MoM's block for the same slot is Metal Fires (`131:0x9065F..0x9072B`),
+// whose own `Weapon_Plus1` write the calculator already carries as `metalFiresActive`
+// (`stats.js`). A Blazing March read firing in MoM is therefore the same engine write under a
+// second name, exactly as an Eldritch Weapon read firing in CoM 1 would be. CoM2 and Warlord
+// grant it instead through the calculated `EncMagic` flag, which never reaches this DOS path.
+// STAT-FORMULA[blazingMarchMagicWeapon]
+// PROVENANCE[blazingMarchMagicWeapon]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:27:ed30ef34c9d4d2d39878f571 | Reference docs/DOS reconstructed/unitcalc.c@span:20:65ce76678d0f8928a37f1972
+function blazingMarchMagicWeaponForUnit(abilities, version) {
+  return combatEffectInVersion('resolution:blazingMarchMagicWeapon', version)
+    && hasAbil(abilities, 'blazingMarch');
 }
 
 function hasWeaponImmunityEffect(abilities, version) {

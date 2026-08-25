@@ -66,3 +66,9 @@ const ABILITY_DEFS = [
     { key: 'sapiens', label: 'Sapiens', type: 'bool', match: 'Sapiens', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Versions: Warlord\nFantastic creature capable of using Outlander technology.\nQualifies for reforms that also affect regular units.' },
   ]),
 ];
+
+// Lookup by key over the definitions above. Callers that need a def hold only its key, so the
+// scan belongs with the array rather than being re-spelled beside each asker.
+function abilityDefByKey(key) {
+  return ABILITY_DEFS.find(a => a.key === key);
+}

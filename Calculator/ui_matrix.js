@@ -165,6 +165,12 @@ function matrixRealmClassForUnitType(unitType) {
   return ['life', 'death', 'chaos', 'nature', 'sorcery', 'arcane'].includes(realm) ? `realm-${realm}` : '';
 }
 
+// Which side the ranged matrix shoots with. Only side A attacks in ranged mode, so the roster
+// row and the custom row must agree on the test; it is written once here.
+function isRangedMatrixAttacker(matrixMode, prefix) {
+  return matrixMode === 'ranged' && prefix === 'a';
+}
+
 function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
   const version = document.getElementById('gameVersion').value;
   const level  = matrixSideSetting(prefix, 'level');
@@ -172,7 +178,7 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
   const armor  = matrixSideSetting(prefix, 'armor');
   const abilities = { ...parseAbilitiesFromUnit(unit), ...appliedEnchantments };
   const enemyPrefix = prefix === 'a' ? 'b' : 'a';
-  const rangedMatrixAttacker = matrixMode === 'ranged' && prefix === 'a';
+  const rangedMatrixAttacker = isRangedMatrixAttacker(matrixMode, prefix);
   return deriveUnitStats({
     prefix,
     version,
@@ -233,7 +239,7 @@ function buildMatrixAttackerStats(unit, appliedEnchantments, matrixMode) {
 function readMatrixCustomUnitStats(prefix, matrixMode) {
   const el = id => document.getElementById(id);
   const enemyPrefix = prefix === 'a' ? 'b' : 'a';
-  const rangedMatrixAttacker = matrixMode === 'ranged' && prefix === 'a';
+  const rangedMatrixAttacker = isRangedMatrixAttacker(matrixMode, prefix);
 
   // Start with innate (source='ability') values from the DOM.
   const abilities = {};

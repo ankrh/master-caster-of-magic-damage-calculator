@@ -208,6 +208,7 @@ const TEST_TREE = [
         keys: [
           'bombsGrenadesWarlord',
           'bombsGrenadesAfterFieryFuryWarlord',
+          'bombsGrenadesAfterCombatConversionWarlord',
         ],
       },
       {
@@ -215,6 +216,8 @@ const TEST_TREE = [
         keys: [
           'nauseaMinus10ToHit',
           'nauseaMinus10ToDefend',
+          'nauseaReadsIdentityAtItsOwnBlockWarlord',
+          'nauseaSpiritLinkTakesFantasticArmWarlord',
         ],
       },
       {
@@ -257,6 +260,8 @@ const TEST_TREE = [
           'blazingEyesChaosCreatureGetsDoomGazeCoM2',
           'blazingEyesChaosCreatureUpgradesDoomGazeCoM2',
           'blazingEyesChaosChannelsEligibleCoM2',
+          'blazingEyesLandsAfterFocusMagicCoM2',
+          'chaosEmbraceLandsAfterFocusMagicWarlord',
           'blazingEyesNonChaosNoUpgradeCoM2',
         ],
       },
@@ -600,6 +605,7 @@ const TEST_TREE = [
       {
         name: 'Land Linking',
         keys: [
+          'landLinkingBeforeMysticSurgeRealmCoM',
           'landLinkingFantasticBreathCoM2',
           'landLinkingFantasticDefenseCoM2',
           'landLinkingFantasticMeleeCoM2',
@@ -752,8 +758,10 @@ const TEST_TREE = [
       {
         name: 'Nature Link',
         keys: [
+          'natureLinkBeforeSpiritLinkClearWarlord',
           'natureLinkFantasticMeleeWarlord',
           'natureLinkNormalResistanceWarlord',
+          'natureLinkSpiritLinkAssertsFantasticWarlord',
         ],
       },
       {
@@ -1004,8 +1012,10 @@ const TEST_TREE = [
         keys: [
           'survivalInstinctFantasticBonusCoM2',
           'survivalInstinctTransformedEligibleCoM2',
+          'survivalInstinctSpiritLinkAssertsFantasticWarlord',
           'survivalInstinctToBlockNormalWarlord',
           'survivalInstinctToBlockFantasticUnaffectedWarlord',
+          'survivalInstinctToBlockSurvivesCombatConversionWarlord',
         ],
       },
       {
@@ -1096,6 +1106,7 @@ const TEST_TREE = [
           'wallOfFireWarlordDefenderMetalFires',
           'wallOfFireWarlordDefenderMagicWeapon',
           'wallOfFireWarlordBoostOnAttacker',
+          'wallOfFireWarlordBoostAfterCombatConversion',
           'wallOfFireWarlordBoostBoulder',
           'wallOfFireWarlordFireLineNoBoost',
         ],

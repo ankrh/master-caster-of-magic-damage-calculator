@@ -232,10 +232,12 @@ function setRosterUnitRecords(prefix, unit, version) {
     toHitMod: unit.to_hit || 0,
     generic: unit.category === 'Generic',
   };
+  // The stored identity is the core roster identity plus a display name. It does not restate the
+  // special-unit answer: `createRosterUnitIdentity` already carries `specialUnitForRoster`'s, and
+  // a second call here was a second map that could — and did — disagree with it (F162).
   unitIdentity[prefix] = {
     ...createRosterUnitIdentity(version, unit),
     name: unit.name,
-    specialUnit: specialUnitForRoster(version, unit),
   };
 }
 
@@ -255,20 +257,6 @@ function customBaseRaceForUnitType(unitType) {
 function specialUnitAllowed(version, key, context) {
   const def = specialUnitDef(key, context);
   return def ? def.versions.some(prefix => version.startsWith(prefix)) : true;
-}
-
-function specialUnitForRoster(version, unit) {
-  if (!unit) return 'none';
-  const templateId = Number.isInteger(unit.templateId) ? unit.templateId : null;
-  if (version.startsWith('com2_') || version === 'com_6.08') {
-    if (templateId === 81) return 'golem';
-    if (templateId === 34) return 'chosen';
-  }
-  if (version === 'com_6.08') {
-    if (templateId === 174) return 'zombies';
-    if (templateId === 37) return 'catapult';
-  }
-  return 'none';
 }
 
 function identityControl(prefix, name) {

@@ -538,11 +538,23 @@ initStateFromSources();
     }
   });
 
+  // What an element has to say, and whether a point is inside a rect. Both the pointer walk and
+  // the render path ask the first; the tooltip hit test and the combobox suppression ask the
+  // second over different rects. One reader each, so a candidate one path accepts cannot be a
+  // candidate the other silently drops.
+  function tooltipTextOf(el) {
+    return el && el.dataset && el.dataset.tooltip;
+  }
+
+  function rectContainsPoint(rect, x, y) {
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  }
+
   function tooltipElementAtPoint(x, y) {
     const direct = document.elementFromPoint(x, y);
     let el = direct;
     while (el && el !== document.documentElement) {
-      if (el.dataset && el.dataset.tooltip) return el;
+      if (tooltipTextOf(el)) return el;
       el = el.parentElement;
     }
     if (direct && direct.closest && direct.closest('.modal-overlay.is-open')) return null;
@@ -554,7 +566,7 @@ initStateFromSources();
     for (let i = tooltipEls.length - 1; i >= 0; i--) {
       const candidate = tooltipEls[i];
       const rect = candidate.getBoundingClientRect();
-      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      if (rectContainsPoint(rect, x, y)) {
         // Accept when nothing is on top, or the resolved element is the candidate itself, a
         // descendant of it, or an ancestor of it. The ancestor case covers pointer-events:none
         // items (e.g. a locked unit's innate abilities), where elementFromPoint falls through
@@ -573,8 +585,7 @@ initStateFromSources();
     for (const list of lists) {
       if (list.style.display === 'none' || !list.offsetParent) continue;
       if (x === undefined) return true;
-      const r = list.getBoundingClientRect();
-      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
+      if (rectContainsPoint(list.getBoundingClientRect(), x, y)) return true;
     }
     return false;
   }
@@ -620,7 +631,7 @@ initStateFromSources();
 
   function renderActiveTooltip() {
     const el = activeTooltip && activeTooltip.el;
-    const text = el && el.dataset && el.dataset.tooltip;
+    const text = tooltipTextOf(el);
     if (!text) { concealTooltip(); return; }
     tip.textContent = text;
     tip.style.display = 'block';
@@ -639,7 +650,7 @@ initStateFromSources();
     if (Date.now() - lastTouchAt < 800) return;
     if (isComboboxOpen(e.clientX, e.clientY)) { hideTooltip(); return; }
     const el = tooltipElementAtPoint(e.clientX, e.clientY);
-    const text = el && el.dataset && el.dataset.tooltip;
+    const text = tooltipTextOf(el);
     if (text) {
       activeTooltip = { el, mode: 'pointer', x: e.clientX, y: e.clientY };
       renderActiveTooltip();

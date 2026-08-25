@@ -128,7 +128,7 @@ function applyOutcomeToHealingPath(path, side, outcome) {
 function applyOutcomeDamageToState(state, outcome) {
   const damage = Math.max(0, outcome.damage || 0);
   if (damage <= 0) return state;
-  if (state && state.engine === 'dos') {
+  if (isDosCombatHealState(state)) {
     const next = normalizeDosCombatHealState(state);
     // BU_ApplyDamage saturates each stored DOS category independently at 200, while
     // its front-figure/current-figure calculation still consumes the full sum:
@@ -157,13 +157,13 @@ function applyOutcomeDamageToState(state, outcome) {
 }
 
 function healingStateAlive(state) {
-  return state && state.engine === 'dos'
+  return isDosCombatHealState(state)
     ? dosCombatHealLivingFigures(state)
     : Math.max(0, combatHealLivingFigures(state));
 }
 
 function healingStateRemainingHp(state) {
-  if (state && state.engine === 'dos') return dosCombatHealRemainingHp(state);
+  if (isDosCombatHealState(state)) return dosCombatHealRemainingHp(state);
   const normalized = normalizeCombatHealState(state);
   return Math.max(0,
     normalized.figures * (normalized.hp + normalized.bonusHp) - normalized.totalDamage);
@@ -173,7 +173,7 @@ function healingStateRemainingHp(state) {
 // keeps DOS Irreversible Damage / Extra Hits and Caster Irrecoverable Damage / Bonus HP
 // distinct internally, but callers need one set of comparable post-combat means.
 function combatHealingStateMetrics(state) {
-  if (state && state.engine === 'dos') {
+  if (isDosCombatHealState(state)) {
     const normalized = normalizeDosCombatHealState(state);
     return {
       irreversibleDamage: normalized.irreversibleDamage,
@@ -417,7 +417,7 @@ function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
         addWeightedFearSamples(fearSamplesB, outB.fearSamples, path.probability);
         for (const outcomeB of outcomePaths(outB, path.aState)) {
           if (outcomeB.probability < 1e-15) continue;
-          if (path.aState && path.aState.engine === 'dos') {
+          if (isDosCombatHealState(path.aState)) {
             // DOS main melee and counterattack execute from one frozen battle-unit
             // snapshot: each of BU_AttackTarget's nine strike calls transfers its result
             // into one of the parent's two directional damage arrays rather than into the

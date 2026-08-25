@@ -236,17 +236,45 @@ function applyRevenantEffects(unit, version) {
   });
 }
 
+// The touch-rider vocabulary, and each rider's engine-version scope. Both facts live in one
+// table because a rider the calculator can place is a rider some engine must have: adding a key
+// without stating where it exists is what let Dispel Evil — a MoM rider — fire in CoM 1, CoM2 and
+// Warlord (F158). `null` is a stated scope, not an absent one: no engine distinguishes that
+// rider's presence, and the standing question of asserting the all-version keys is F159's.
+// A narrower scope names a `COMBAT_VERSION_SCOPES` id (`steps.js`), which is where the versions
+// and their citation live; this table only routes a key to it.
+const TOUCH_KEY_SCOPE_IDS = Object.freeze({
+  poison: null,
+  stoningTouch: null,
+  deathTouch: null,
+  dispelEvil: 'resolution:dispelEvilTouchRider',
+  exorcise: 'resolution:exorciseTouchRider',
+  destruction: null,
+  lifeSteal: null,
+});
+
 // Warlord keeps touch flags in general, melee, and ranged attack records. Unit-card
 // and roster abilities are general flags; represented spell effects can relocate or
 // overwrite them. Keep that engine detail internal so the card still has one value.
-const PLACED_TOUCH_KEYS = [
-  'poison', 'stoningTouch', 'deathTouch', 'dispelEvil', 'exorcise', 'destruction', 'lifeSteal',
-];
+const PLACED_TOUCH_KEYS = Object.freeze(Object.keys(TOUCH_KEY_SCOPE_IDS));
+
+// Whether this engine has the named touch rider at all. Throws on a key the table does not name,
+// rather than defaulting to "every version", which is the shape of the defect it closes.
+function touchKeyInVersion(key, version) {
+  if (!Object.prototype.hasOwnProperty.call(TOUCH_KEY_SCOPE_IDS, key)) {
+    throw new Error(`touchKeyInVersion: '${key}' is not a touch rider. `
+      + `Add it to TOUCH_KEY_SCOPE_IDS with the versions whose engine carries it.`);
+  }
+  const id = TOUCH_KEY_SCOPE_IDS[key];
+  return id === null || combatEffectInVersion(id, version);
+}
+
 const WARLORD_RELOCATED_TOUCH_KEYS = ['stoningTouch', 'deathTouch'];
 function applyWarlordTouchFlagPlacement(unit, version) {
   if (!version || !version.startsWith('com2_warlord')) return unit;
   const records = { global: {}, melee: {}, ranged: {} };
   for (const key of PLACED_TOUCH_KEYS) {
+    if (!touchKeyInVersion(key, version)) continue;
     if (abilDefined(unit.abilities, key)) records.global[key] = unit.abilities[key];
   }
 
@@ -650,7 +678,7 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       weaponImmunityEligible: wi(aRangedElem),
     };
   } else if (attackType === 'thrown') {
-    const aThrownElem = attacker.thrownType === 'fire' || attacker.thrownType === 'lightning';
+    const aThrownElem = isBreathThrownType(attacker.thrownType);
     attack = {
       spellId: 0,
       vertigoDefPenalty,
@@ -899,16 +927,19 @@ function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attac
   const isCoM1 = version === 'com_6.08';
   const aArmorPiercing = hasAbil(attacker.abilities, 'armorPiercing');
   const aIllusion = hasAbil(attacker.abilities, 'illusion');
-  // Spirit Link strips the attacker's fantastic targeting status, so enemy Bless gains no
-  // bonus against it.
-  const aIsDC = !hasAbil(attacker.abilities, 'spiritLink')
-    && (attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos');
+  // Spirit Link is Warlord's alone (`PROVENANCE[spiritLink]`, `stats_identity.js`), and every
+  // `com2*` version leaves this function by `computeDefenseProfile`'s first branch, so no
+  // Spirit Link term belongs here. Warlord strips the fantastic targeting status in the
+  // `d:spiritLink` step, before resolution sees the unit at all.
+  const aIsDC = attacker.unitType === 'fantastic_death' || attacker.unitType === 'fantastic_chaos';
   // The gaze's own realm, not the attacker's unit type, is what the defence specials key off.
   const aGazeRealm = gazeRealm(attacker.abilities);
   const aGazeDC = aGazeRealm === 'chaos' || aGazeRealm === 'death';
   // Blazing March upgrades melee and missile attacks to magical weapons; Eldritch Weapon
   // upgrades the melee attack only, so a ranged or thrown attack still meets Weapon Immunity.
-  const aBlazingMarch = hasAbil(attacker.abilities, 'blazingMarch');
+  // Each carries the version scope of the build whose block makes the write, because this
+  // function serves all three DOS engines and the two blocks are in different ones.
+  const aBlazingMarch = blazingMarchMagicWeaponForUnit(attacker.abilities, version);
   const aEldritch = eldritchWeaponActiveForUnit(attacker.abilities, version);
   const wi = weapon => weaponImmunityApplies(
     target.abilities, weapon, attacker.unitType, version, attacker.generic);

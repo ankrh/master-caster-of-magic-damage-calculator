@@ -235,16 +235,16 @@ The exact melee damage phase order is:
 4. attacker Lightning Breath, Fire Breath and Thrown (`$005B399B..$005B3A9E`);
 5. First Strike if admitted, then the main/Haste/counter block (`$005B3AA0..$005B3BEE`).
 
-Wall crushing sits after Wall of Fire and before the gazes but is not unit damage. This order
-disagrees with the calculator's Thrown/Breath â†’ gazes â†’ Wall of Fire pipeline; because every
-phase deals damage before the next begins, the difference changes later living-figure counts
-and is registered as F29.
+Wall crushing sits after Wall of Fire and before the gazes but is not unit damage. Because every
+phase deals damage before the next begins, this order decides later living-figure counts. The
+calculator then still ran the DOS-shaped Thrown/Breath → gazes → Wall of Fire opening for these
+builds; it was reordered to match under F29 (`Calculator/HISTORY.md`).
 
 The same Haste flag supplies repeat count two to **all three attacker gaze loops** as well as
 Lightning Breath, Fire Breath and Thrown. Defender retaliation gazes and the counterattack are
 outside those loops and remain single (`$005B3761..$005B3AA0`). This resolves D10: CoM2 and
-Warlord do not Haste the counterattack. It also exposes the calculator's explicit exclusion of
-gazes from Haste, registered as F30.
+Warlord do not Haste the counterattack. The calculator then still excluded gazes from Haste
+outright; that was corrected under F30 (`Calculator/HISTORY.md`).
 
 First Strike requires the attacker flag, absence of defender `negatefirststrike`, and
 `HpPerFigure(du) - TopFigureDamage(du) <= FirstStrikeCap`. The exact INI key is loaded through
@@ -259,9 +259,9 @@ On both paths the optional Haste attacker result and the counterattack result ar
 **before any slot is dealt**; the tail then deals them main, counter, Haste
 (`$005B3B48..$005B3BEE`). Each attacker result is a separate
 `ApplyAttack` call, and Cause Fear lives inside `ApplyAttack`; the two Hasted melee strikes
-therefore make independent Fear samples. The calculator conditions both strikes on one sampled
-active-figure count, including an explicit First-Strike/Haste coupling path. That discrepancy is
-registered as F31.
+therefore make independent Fear samples. The calculator then conditioned both strikes on one
+sampled active-figure count, including an explicit First-Strike/Haste coupling path; that was
+corrected under F31 (`Calculator/HISTORY.md`).
 
 Finally, melee increments the base attack count, spends half maximum movement using complete
 signed `div 2`, spends the signed `mod 2` remainder after the first attack, clamps remaining

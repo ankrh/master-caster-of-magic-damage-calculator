@@ -580,10 +580,19 @@ function collectFullState() {
 // build retired halts, while one this version simply disallows keeps its existing clamp. The v2
 // identity record carries the same key on its own and is checked where it is read
 // (`specialUnitAllowed`, `ui_units.js`), so neither carrier can smuggle one past the other.
+// The three controls the generic id loop must not touch: the version and the two roster
+// selectors are restored by the version/roster path above, which rebuilds every other control's
+// option set. The check and the loop skip exactly the same three, so one list states it.
+const IDS_RESTORED_BEFORE_THE_ID_LOOP = ['gameVersion', 'aUnit', 'bUnit'];
+
+function restoredBeforeTheIdLoop(id) {
+  return IDS_RESTORED_BEFORE_THE_ID_LOOP.includes(id);
+}
+
 function assertRestoredValuesAreOffered(ids) {
   const offenders = [];
   for (const [id, val] of Object.entries(ids || {})) {
-    if (id === 'gameVersion' || id === 'aUnit' || id === 'bUnit') continue;
+    if (restoredBeforeTheIdLoop(id)) continue;
     const el = document.getElementById(id);
     if (!el || el.tagName !== 'SELECT') continue;
     const value = String(val);
@@ -648,7 +657,7 @@ function applyFullState(blob) {
     if (blob.ids) {
       assertRestoredValuesAreOffered(blob.ids);
       for (const [id, val] of Object.entries(blob.ids)) {
-        if (id === 'gameVersion' || id === 'aUnit' || id === 'bUnit') continue;
+        if (restoredBeforeTheIdLoop(id)) continue;
         const el = document.getElementById(id);
         if (!el) continue; // forward-compat: ignore ids this build no longer has
         if (el.type === 'checkbox') el.checked = !!val;

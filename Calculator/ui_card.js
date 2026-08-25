@@ -136,10 +136,6 @@ const MODERN_SPECIAL_FIELDS = [
   ['poison', 'Poison Touch'], ['exorcise', 'Exorcise'], ['destruction', 'Destruction'],
 ];
 
-function modernSpecialDef(key) {
-  return ABILITY_DEFS.find(a => a.key === key);
-}
-
 // null (absent) and 0 (present, save modifier −0) are different states for the numcheck
 // entries — the engine tests `!= null` — so an unchecked box must read back as null, not 0.
 function modernSpecialValues(prefix) {
@@ -193,7 +189,7 @@ function buildModernSpecialCard(prefix) {
   fields.append(grid);
   for (const [key, label] of MODERN_SPECIAL_FIELDS) {
     const id = prefix + 'Modern_' + key;
-    const def = modernSpecialDef(key);
+    const def = abilityDefByKey(key);
     // Column 1 of each pair: the on/off checkbox (numcheck entries only) beside the label,
     // matching the ability row this replaces.
     const cell = document.createElement('span');
@@ -230,10 +226,6 @@ function buildModernSpecialCard(prefix) {
 // `combat_special_attacks.js` beside the effects it governs, with its citations. This file
 // builds the controls and marshals their state into it.
 
-function dosSpecialDef(key) {
-  return ABILITY_DEFS.find(a => a.key === key);
-}
-
 // Card -> ability controls. Each ticked consumer takes the shared magnitude with its own
 // sign; an unticked one reverts to the def's absent value, which for a numcheck is null
 // rather than 0 because the engine distinguishes the two.
@@ -242,7 +234,7 @@ function syncDosSpecialAbilities(prefix) {
   if (!magEl) return;
   const magnitude = Math.abs(parseInt(magEl.value, 10) || 0);
   for (const [key, , sign] of DOS_SPECIAL_CONSUMERS) {
-    const def = dosSpecialDef(key);
+    const def = abilityDefByKey(key);
     const chk = document.getElementById(prefix + 'DosFlag_' + key);
     if (!def || !chk) continue;
     setAbilityControlValue(prefix, def,
@@ -259,7 +251,7 @@ function syncDosSpecialCard(prefix, byte) {
   if (!magEl) return;
   let magnitude = byte == null ? null : Math.abs(byte);
   for (const [key] of DOS_SPECIAL_CONSUMERS) {
-    const def = dosSpecialDef(key);
+    const def = abilityDefByKey(key);
     const chk = document.getElementById(prefix + 'DosFlag_' + key);
     if (!def || !chk) continue;
     const val = getAbilityControlValue(prefix, def);
@@ -271,7 +263,7 @@ function syncDosSpecialCard(prefix, byte) {
   // gaze preset — must still seed the magnitude from them.
   if (magnitude === null) {
     for (const key of DOS_GAZE_KEYS) {
-      const def = dosSpecialDef(key);
+      const def = abilityDefByKey(key);
       if (!def) continue;
       const val = getAbilityControlValue(prefix, def);
       if (abilityValueIsActive(def, val)) { magnitude = Math.abs(val || 0); break; }
@@ -312,7 +304,7 @@ function dosSpecialValues(prefix, withReceived = true) {
   if (!magEl) return {};
   const consumers = [];
   for (const [key, , sign] of DOS_SPECIAL_CONSUMERS) {
-    const def = dosSpecialDef(key);
+    const def = abilityDefByKey(key);
     const chk = document.getElementById(prefix + 'DosFlag_' + key);
     if (!def || !chk) continue;
     consumers.push({
@@ -377,7 +369,7 @@ function buildDosSpecialCard(prefix) {
   }
 
   for (const [key] of DOS_SPECIAL_CONSUMERS) {
-    const def = dosSpecialDef(key);
+    const def = abilityDefByKey(key);
     if (!def) continue;
     const id = abilityControlId(prefix, def);
     for (const el of [document.getElementById(id), document.getElementById(id + '_on')]) {
@@ -389,7 +381,7 @@ function buildDosSpecialCard(prefix) {
 }
 
 function buildDosFlagCell(prefix, key, label) {
-  const def = dosSpecialDef(key);
+  const def = abilityDefByKey(key);
   const cell = document.createElement('span');
   cell.className = 'dos-special-label';
   if (def && def.tooltip) cell.dataset.tooltip = def.tooltip;

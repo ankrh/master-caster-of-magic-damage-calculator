@@ -17,7 +17,8 @@ const F20_PROBE_ABILITIES = {
   trueLight: true, blackPrayer: true, darkness: true, warpReality: true, vertigo: true,
   weakness: true, mindStorm: true, warpAttack: true, warpDefense: true, warpResist: true,
   shatter: true, guardian: true, survivalInstinct: true, reinforceMagic: true,
-  innerPower: true, blazingMarch: true, charmOfLife: true, badMoon: true, goodMoon: true,
+  innerPower: true, blazingEyes: true, blazingMarch: true, charmOfLife: true,
+  badMoon: true, goodMoon: true,
   natureConjunction: true, tactician: true, spellWard: 'life', metalFires: true,
   rebuild: true, fieryFury: true, outlanderXenoveterinary: true,
   outlanderXenopsychology: true, outlanderRadio: true,
@@ -85,7 +86,7 @@ const F20_SOURCE_ANCHORS = {
       'chaosChannels:armor', 'animated', 'flameBlade',
       'mysticSurge', 'lionheart', 'ironSkin', 'landLinking',
       'holyArmor', 'orihalcon', 'holyWeapon',
-      'chaosSurge', 'survivalInstinct', 'reinforceMagic',
+      'chaosSurge', 'survivalInstinct', 'blazingEyes', 'reinforceMagic',
       'eternalNight:enemyResistance', 'charmOfLife',
       'nodeAura', 'badMoon', 'goodMoon', 'natureConjunction', 'highPrayer',
       'blazingMarch', 'warpReality', 'blackPrayer',
@@ -106,7 +107,7 @@ const F20_SOURCE_ANCHORS = {
       'flameBlade', 'mysticSurge', 'lionheart',
       'ironSkin', 'landLinking',
       'holyArmor', 'orihalcon', 'holyWeapon',
-      'chaosSurge', 'survivalInstinct', 'reinforceMagic',
+      'chaosSurge', 'survivalInstinct', 'blazingEyes', 'reinforceMagic',
       'eternalNight:enemyResistance', 'charmOfLife', 'nodeAura', 'badMoon', 'goodMoon',
       'natureConjunction', 'highPrayer', 'blazingMarch',
       'warpReality', 'blackPrayer', 'darkness', 'guardian', 'vertigo',
@@ -371,6 +372,15 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
       }),
       abilities: { spiritLink: true },
     });
+    // A unit that is not fantastic to begin with records both Spirit Link writes: the region-b
+    // assert has something to change, where the fantastic fixture above makes it a traceless no-op.
+    const spiritLinkNormal = deriveUnitStats({
+      ...base,
+      identity: createCustomUnitIdentity(version, {
+        baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
+      }),
+      abilities: { spiritLink: true },
+    });
     const pick = (unit, id) => unit.statTrace.find(event => event.id === id) || null;
     return {
       chain: statChain(version).map(entry => ({ ...entry })),
@@ -378,6 +388,9 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
       channelerEvent: pick(channeler, 'marionetteChanneler'),
       channelerLedgerIds: channeler.statExecutionTrace.map(event => event.id),
       spiritLinkEvent: pick(spiritLink, 'spiritLink'),
+      spiritLinkNormalEvents: spiritLinkNormal.statTrace
+        .filter(event => event.id === 'spiritLink' && 'fantastic' in event.changes)
+        .map(event => ({ phase: event.phase, changes: event.changes })),
       firstStatPhaseD: spiritLink.statTrace
         .filter(event => event.phase === 'd' && event.id !== 'spiritLink')
         .map(event => event.traceOrder),
@@ -390,6 +403,11 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   const d = phaseIds(report.chain, 'd');
   expect(b.filter(id => id === 'marionetteChanneler')).toHaveLength(1);
   expect(b.indexOf('marionetteChanneler')).toBe(b.indexOf('marionette:stats') - 1);
+  // UnitCalcPre.CAS writes Fantastic for Spirit Link at :30 and for a Channeler's Marionette at
+  // :94, so Spirit Link heads the region.
+  expect(b.filter(id => id === 'spiritLink')).toHaveLength(1);
+  expect(b.indexOf('spiritLink')).toBe(0);
+  expect(b.indexOf('spiritLink')).toBeLessThan(b.indexOf('marionetteChanneler'));
   expect(d.filter(id => id === 'spiritLink')).toHaveLength(1);
   expect(d.indexOf('spiritLink')).toBeGreaterThan(d.indexOf('shadowStrike:thrown'));
   expect(d.indexOf('spiritLink')).toBeLessThan(d.indexOf('psychoForce'));
@@ -412,6 +430,13 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   // The complete stat ledger stays one-to-one with the stat sequence; the identity pre-pass
   // is its own sequence and does not inject events into it.
   expect(report.channelerLedgerIds).not.toContain('marionetteChanneler');
+
+  // Both of Spirit Link's writes reach the trace, in the region order the two CAS files give
+  // them: assert at UnitCalcPre.CAS:30, clear at UnitCalc.CAS:1306.
+  expect(report.spiritLinkNormalEvents).toEqual([
+    { phase: 'b', changes: { fantastic: { from: false, to: true } } },
+    { phase: 'd', changes: { fantastic: { from: true, to: false } } },
+  ]);
 
   expect(report.spiritLinkEvent).not.toBeNull();
   expect(report.spiritLinkEvent.phase).toBe('d');

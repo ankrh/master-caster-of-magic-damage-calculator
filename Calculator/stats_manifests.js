@@ -40,13 +40,16 @@
 // each is listed as a deduced position below. The DOS chains and the CAS hooks are transcribed
 // instead, because both give real positions: `unitcalc.c` addresses every DOS realm write inside
 // `BU_Apply_Specials`, so each of those entries sits at its own block's offset; and
+// `b:spiritLink` at UnitCalcPre.CAS:30, the first represented write of that file;
 // `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the
 // `marionette:stats` attack writes; `fieryFury:race` at UnitCalcPre.CAS:834, the THEN arm of the
 // same `IF` whose ELSE arm is `b:fieryFury`; `sanctify` at UnitCalcPre.CAS:1249; and
-// `spiritLink` at UnitCalc.CAS:1306, between Shadow Strike and Psycho Force. Spirit Link is the
-// one place where the calculator's execution position and its source rank disagree: it runs in
-// the pre-pass, because live Fantastic gates the whole derivation, while the engine writes it
-// late in region d.
+// `d:spiritLink` at UnitCalc.CAS:1306, between Shadow Strike and Psycho Force. Spirit Link writes
+// Fantastic twice, asserting it in b and clearing it in d, so the two entries bracket every other
+// conversion and every gate that reads the running record. Both are also the one place where the
+// calculator's execution position and its source rank disagree: they run in the pre-pass, because
+// live Fantastic gates the whole derivation, while the engine makes the second write late in
+// region d.
 //
 // One engine block can reach both sequences — Mystic Surge writes Defense, Resistance and the
 // realm in one region-`c` block — so six identity conversions carry a `:race` qualifier to keep
@@ -180,7 +183,7 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   'c:endurance', 'c:discipline', 'c:chaosChannels:armor', 'c:animated',
   'c:flameBlade', 'c:mysticSurge', 'c:lionheart', 'c:ironSkin',
   'c:landLinking', 'c:holyArmor', 'c:orihalcon', 'c:holyWeapon', 'c:chaosSurge',
-  'c:survivalInstinct', 'c:innerPower', 'c:reinforceMagic',
+  'c:survivalInstinct', 'c:innerPower', 'c:blazingEyes', 'c:reinforceMagic',
   'c:eternalNight:enemyResistance', 'c:charmOfLife', 'c:nodeAura',
   'c:badMoon', 'c:goodMoon', 'c:natureConjunction', 'c:highPrayer', 'c:prayer', 'c:blazingMarch',
   'c:breakthrough:normal', 'c:breakthrough:noncorporeal', 'c:breakthrough:combatSummoned',
@@ -202,7 +205,7 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'base:naturalSelection:coal', 'base:naturalSelection:iron', 'base:pillarOfFaith',
   'base:energyCannon', 'base:survivalInstinctToBlock', 'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
-  'a:chaosChannels:fireBreath', 'b:marionetteChanneler', 'b:marionette:stats',
+  'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',
   'b:marionette:rangedType', 'b:marionette:ascensionRangedType',
   'b:marionette:strayedTransmute', 'b:rebuild', 'b:tactician', 'b:fieryFury:race',
   'b:fieryFury', 'b:natureLink',
@@ -220,7 +223,8 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'c:chaosChannels:armor', 'c:animated', 'c:flameBlade', 'c:mysticSurge',
   'c:lionheart', 'c:ironSkin', 'c:landLinking', 'c:holyArmor', 'c:orihalcon',
   'c:holyWeapon', 'c:chaosSurge', 'c:survivalInstinct',
-  'c:innerPower', 'c:reinforceMagic', 'c:eternalNight:enemyResistance', 'c:charmOfLife',
+  'c:innerPower', 'c:blazingEyes', 'c:reinforceMagic',
+  'c:eternalNight:enemyResistance', 'c:charmOfLife',
   'c:nodeAura', 'c:badMoon', 'c:goodMoon', 'c:natureConjunction', 'c:highPrayer', 'c:prayer',
   'c:blazingMarch', 'c:breakthrough:normal', 'c:breakthrough:noncorporeal',
   'c:breakthrough:combatSummoned', 'c:warpReality', 'c:blackPrayer', 'c:darkness', 'c:guardian',

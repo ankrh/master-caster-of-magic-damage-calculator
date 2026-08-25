@@ -53,7 +53,17 @@ function createUnitIdentity(values = {}) {
   };
 }
 
-function specialUnitForRosterIdentity(version, unit) {
+// The roster template → special-unit map, and the only reader of that question: the page takes
+// both the stored identity and the `Special unit` selector's preselection from here, so no second
+// copy can disagree about which roster unit is an exception.
+// A template earns a key only where the version's *engine* makes the exception — not merely where
+// the version's roster holds that template. CoM 6.08 does have the Chosen at template 34
+// (`Unit rosters/CoM 6.08 unit data.txt`, row 34, race Life), but its engine has no Chosen block:
+// `Reference docs/DOS reconstructed/unitcalc.c` hardcodes only `COM1_UT_CATAPULT` 0x25,
+// `COM1_UT_GOLEM` 0x51 and `COM1_UT_ZOMBIES` 0xAE. The conversion is CoM2's alone — a
+// configured-global block at `Units.RecalculateUnits.pas` $0059F747..$0059F7D8 reading
+// MODDING.INI `ChosenUnitID=34` — so `chosen` is `com2_` here and in `SPECIAL_UNIT_DEFS`.
+function specialUnitForRoster(version, unit) {
   const templateId = unit && unit.templateId;
   if (version && version.startsWith('com2_')) {
     if (templateId === 81) return 'golem';
@@ -75,7 +85,7 @@ function createRosterUnitIdentity(version, unit) {
     isHero: !!(unit && unit.isHero),
     baseRace: unit && unit.baseRace,
     baseFantastic: !!(unit && unit.baseFantastic),
-    specialUnit: specialUnitForRosterIdentity(version, unit),
+    specialUnit: specialUnitForRoster(version, unit),
   });
 }
 
@@ -156,7 +166,14 @@ function legacyUnitTypeFromLiveIdentity(identity) {
 // also writes a stat, and the calculator runs identity in a separate pre-pass: `c:mysticSurge`
 // and `c:mysticSurge:race` are the two positions one region-`c` block reaches here. This is the
 // same surviving qualifier `base:zombies:toBlock` uses, for the same reason.
-function applyOrderedIdentityConversions(identity, abilities, version, meta = {}) {
+//
+// `options.beforeKey` names a chain entry and stops the pre-pass short of it, returning the live
+// identity as the conversions ranked *before* that position leave it. That is the calculated
+// record a step at that position actually reads; the unrestricted fixed point is not, and handing
+// a step the fixed point is the deviation F163 removes. Only a gate whose own block reads the
+// calculated record needs this — a block reading the permanent record takes `identity.baseRace` /
+// `identity.baseFantastic` directly instead.
+function applyOrderedIdentityConversions(identity, abilities, version, meta = {}, options = {}) {
   const live = { ...identity, race: identity.baseRace, fantastic: identity.baseFantastic };
   const sourceTemplateId = identity.templateId;
   const trace = [];
@@ -180,6 +197,11 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   // and `ISHERO(U)` are base-record predicates in UnitCalcPre.CAS.
   const baseFantastic = !!identity.baseFantastic;
   const isHero = typeof meta.isHero === 'boolean' ? meta.isHero : !!identity.isHero;
+  // One predicate for Spirit Link's two conversions: both blocks gate on the same
+  // `GetEnchantmentFlag(U,EncSpiritLink,1)`, and neither tests the unit's realm or Fantastic
+  // state, so the pair is a set/clear of one flag rather than two separately conditioned writes.
+  const spiritLinkActive = !!(version && version.startsWith('com2_warlord'))
+    && !!(abilities && abilities.spiritLink);
 
   const identitySteps = [
     // PROVENANCE[zombies]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:3ed9fd7025a17d7041e72be8
@@ -227,6 +249,14 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
       sourceLabel: 'Chaos Channels', phase, writes: ['race', 'fantastic'],
       when: () => !!abilVal(abilities, 'ccFireBreath', false),
       apply: u => { u.race = 'Chaos'; u.fantastic = true; } })),
+    // Spirit Link's first write, and the head of region `b`: `SETSTAT(U,AFantastic,0,1)` at
+    // `UnitCalcPre.CAS:30`, record selector `0` — the calculated record — with no test of the
+    // unit's own Fantastic state above it. The region-`d` `spiritLink` step below clears the same
+    // field, so the two are a fixed point only at the end of the derivation; every read between
+    // them takes a Fantastic unit. Both share `PROVENANCE[spiritLink]`, cited at that step.
+    statStep({ id: 'spiritLink', phase: 'b', writes: ['fantastic'],
+      when: () => spiritLinkActive,
+      apply: u => { u.fantastic = true; } }),
     // PROVENANCE[marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
     statStep({ id: 'marionetteChanneler', phase: 'b', writes: ['fantastic'],
       when: () => version === MARIONETTE_VERSION
@@ -294,9 +324,10 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
       writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'raiseDead'),
       apply: u => { u.race = 'No Heal'; u.fantastic = true; } }),
-    // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:1:15d81b9f3b72c934c9219502 | Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
+    // Spirit Link's second write, clearing what `b:spiritLink` asserted.
+    // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:344debdbb9d0f10a4e4b26a1 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:1:15d81b9f3b72c934c9219502 | Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
     statStep({ id: 'spiritLink', phase: 'd', writes: ['fantastic'],
-      when: () => !!(version && version.startsWith('com2_warlord')) && !!(abilities && abilities.spiritLink),
+      when: () => spiritLinkActive,
       apply: u => { u.fantastic = false; } }),
   ];
   // F20: identity writes in b or d are represented CAS writes like any other, so they go
@@ -305,8 +336,20 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   // filters the stat sequence, so an identity conversion an engine does not make is absent
   // rather than present with a false predicate.
   const applicableIdentitySteps = filterStepsToVersionScope(identitySteps, version);
-  runStatSteps(orderStatStepsBySource(applicableIdentitySteps, statChain(version)),
-    live, { version, base: identity, trace });
+  const chain = statChain(version);
+  let ordered = orderStatStepsBySource(applicableIdentitySteps, chain);
+  if (options.beforeKey) {
+    const rank = chain.findIndex(entry => entry.key === options.beforeKey);
+    // A key no chain entry names would silently truncate to the whole sequence or to nothing,
+    // which is the invented default `SPEC.md`, *Out-of-range values stop the run*, forbids.
+    if (rank < 0) {
+      throw new Error(
+        `applyOrderedIdentityConversions: beforeKey '${options.beforeKey}' names no entry of `
+        + `the ${version} execution chain.`);
+    }
+    ordered = ordered.filter(step => step.sourceOrder < rank);
+  }
+  runStatSteps(ordered, live, { version, base: identity, trace });
   return { identity: live, trace, isConstructCatapult };
 }
 

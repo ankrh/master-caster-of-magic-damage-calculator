@@ -118,12 +118,34 @@ Rules:
   [Version gating census.md](../Reference%20docs/Version%20gating%20census.md)):
   - **step** — the read's only consumer is an `abilityStep(...)` whose step id carries a
     `STEP_VERSION_SCOPES` entry. `filterStepsToVersionScope` drops the step before it executes,
-    and that entry is the fact's one cited home. `COMBAT_VERSION_SCOPES` is for effects
-    implemented purely in combat resolution, which have no step for the filter to reach; an
-    entry beside a step scope would be a second home for one fact.
+    and that entry is the fact's one cited home. A `COMBAT_VERSION_SCOPES` entry restating that
+    same write's scope would be a second home for one fact; an entry naming a *different* engine
+    write of the same named effect, with its own citation and its own version set, is not
+    (`resolution:blazingMarchMagicWeapon` is CoM 1's `Weapon_Plus1` block, beside the
+    `c:blazingMarch` attack bonus at `SCOPE_COM_PLUS`).
   - **adjacent** — an exact version test stands in the same expression as the read
     (`!!(abilities && abilities.focusMagic) && version.startsWith('com')`). That is a gate.
     It does not have to become a `COMBAT_VERSION_SCOPES` lookup.
+
+  Which of the two remaining homes a gate takes is decided by **whether an exact version test can
+  stand in the same expression as the read**, not by derivation-time versus resolution-time
+  (settled by F157). A derivation-time read is lexically inside `deriveUnitStats`, where `version`
+  is a local binding, so the adjacent form is always available and is checkable without leaving
+  the line — `metalFiresActive` (`stats.js`) and Eye of Heaven (`stats.js:700`) both take it.
+  A read inside a helper shared by several engines has no version literal in reach —
+  `dosDefenseForAttack` serves all three DOS builds, and its melee arm needs *two* different
+  scopes in one expression — so the fact needs a named, cited home. That is what
+  `COMBAT_VERSION_SCOPES` is; its `resolution:` prefix does not acquire a `derivation:` sibling.
+
+  A read whose **key** is a variable takes neither shape: one expression stands for every key it
+  can receive, so no version test on that line can be right for all of them, and no source scan can
+  even say which effect it reads. Such a read needs a **per-key** routing table, mapping each key
+  the site can receive either to a `COMBAT_VERSION_SCOPES` id or to a stated `null` meaning no
+  engine distinguishes that key's presence. `TOUCH_KEY_SCOPE_IDS` (`combat_effects.js`) is the one
+  today, for the seven touch riders; its key list is asserted against `PLACED_TOUCH_KEYS`, so a
+  rider cannot be added without stating its scope, and `touchKeyInVersion` throws on a key the
+  table does not name rather than assuming every version. The scope and its citation still live in
+  `COMBAT_VERSION_SCOPES`; the routing table only says which id a key takes.
 
 ## Computation model
 
@@ -269,7 +291,10 @@ halts on a key outside it.** Every consumer is an equality test against a define
 undefined one would derive an ordinary unit and report nothing (*Out-of-range values stop the
 run*); the page builds the selector and its version scope from the same list, so neither scope can
 offer or accept a key the other does not know. Version scope keeps its clamp: a defined key the
-selected version disallows becomes `none`.
+selected version disallows becomes `none`. Which roster template carries which key is one function
+in the same layer, so the stored identity and the selector cannot disagree about it; a template
+earns a key in the versions whose engine makes the exception, not in every version whose roster
+holds that template.
 
 ### Order
 
@@ -708,9 +733,30 @@ the calculator does instead, and why.
     `U.race := 18; U.Fantastic := True` are one block at `$0059F4A3`, and `unitcalc.c` addresses
     each DOS realm write at its own `BU_Apply_Specials` offset. The hoist leaves `race` and
     `fantastic` the only fields exempt from *The step model*'s rule that a step reads a field's
-    current value at its own position, and it forces the six `:race` step ids. Inert today — every
-    engine finishes its realm writes before anything reads the running value — but that is an
-    empirical property of these five engines, checked nowhere.
+    current value at its own position, and it forces the six `:race` step ids. **It is not inert.**
+    This entry used to claim it was, on the unchecked assumption that every engine finishes its
+    realm writes before anything reads the running value; several gates sit at a chain position
+    earlier than a conversion whose result the fixed point hands them anyway. Measured over
+    `tools/derivation_equivalence.js`, giving six of those gates the reading their own block states
+    moves 41 of 15480 derivations. One gate went the other way — Blazing Eyes, a region-`c` block
+    the calculator evaluated into the `base:stat:base` Doom Gaze seed, so its position here was
+    *earlier* than its engine block — and the answer was to give the block its own chain entry,
+    `c:blazingEyes` (2026-08-24), not to re-read its gate where it stood. Every one of those numbers is a
+    correction, so they are being fixed first, as separate cited items with presets, and the
+    removal of the hoist itself follows them at no number movement. **Which record a gate wants is
+    read off its own block, never deduced from its region:** five of the six landed 2026-08-24, and
+    two of them test the *permanent* record — `IF (BASEFANTASTIC(U)>0)` — where a positional read
+    had been proposed for both. **A positional read is only as good as the conversion list behind
+    it**, which is the second thing to check at the block: Land Linking's two blocks do read the
+    calculated record, but reading them found a conversion the sequence had no step for at all —
+    Spirit Link's region-`b` Fantastic assert, added 2026-08-24, which moved both landed gates and
+    dissolved a hand patch at a third. Adding it also made a gate the tranche had measured at zero
+    move, so the list behind a positional read is checked again whenever it grows. **A zero from
+    `tools/derivation_equivalence.js` is not by itself proof that a gate is inert:** the tool builds
+    its cases from `ABILITY_DEFS`/`ENCHANTMENT_DEFS` and holds the matrix globals — `chaosSurge`,
+    `nodeAura`, `cityWalls`, `trueLight`, `darkness`, `enemyEternalNight` — at their defaults, so a
+    gate reading one of them measures zero whatever it does. `BACKLOG.md` carries the per-gate
+    figures on F163 and the gates it still depends on.
   - **Building and enchantment ability grants**, seven nested calls in `deriveUnitStats`. The
     calculator already gives their sources chain phases: the `CreateUnit.CAS` grants' stat halves
     are `base:` steps (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same

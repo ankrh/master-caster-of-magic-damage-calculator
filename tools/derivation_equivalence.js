@@ -9,6 +9,9 @@
 // The case list is generated from ABILITY_DEFS/ENCHANTMENT_DEFS rather than written out, so a
 // control added later is covered without editing this file. Combination cases use a seeded
 // generator: the same seed yields the same cases on both sides of a comparison.
+//
+// Each value in the written map is an **object**, so compare two runs structurally — a `!==` over
+// the parsed maps compares references and reports every case as differing.
 
 'use strict';
 

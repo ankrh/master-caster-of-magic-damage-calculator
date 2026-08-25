@@ -274,13 +274,20 @@ function calcResistDmgDist(numRolls, pFail, cap) {
   return dist;
 }
 
-// Compute life-steal damage distribution.
+// The closed-form Life Steal drain distribution: N independent d10 rolls, convolved.
 // Each attacking figure forces a single d10 roll on the target.
 // effective_res = defRes + modifier (modifier is typically negative).
 // If roll > effective_res: damage = roll - effective_res.
 // If roll ≤ effective_res: no damage.
 // Blocked by Death Immunity, Magic Immunity, effective_res ≥ 10 (checked by caller).
 // Returns damage distribution array where dist[d] = P(exactly d total damage).
+//
+// No longer a step in the resolution pipeline: every version runs the correlated outcome
+// enumeration in `combat_fear_and_touch.js` and derives its displayed marginal from execution
+// (F160 deleted the last caller). What the pair keeps is the other job — the independent
+// reference model `tests/life-steal-healing.spec.js` measures that enumeration against, so a
+// stateful path that convolved its repeated ApplyAttack calls wrongly could not agree with it.
+// It stays in a `data-scope="core"` source because the browser spec calls it by name.
 function calcLifeStealDmgDist(numFigs, defRes, modifier, cap) {
   if (numFigs <= 0) return [1];
   const effRes = defRes + modifier;
@@ -399,8 +406,15 @@ function combatHealTransition(inputState, requestedAmount, overheal, isregen) {
   return { state, healedDamage, bonusHpGain, bonusHpBenefit };
 }
 
+// Which of the two combat-heal records a state is. `normalizeDosCombatHealState` stamps
+// `engine: 'dos'` and nothing else writes the tag, so this file owns the question; every
+// reader that has to pick between the DOS and Caster record asks it here.
+function isDosCombatHealState(state) {
+  return !!(state && state.engine === 'dos');
+}
+
 function combatHealStateKey(state) {
-  if (state && state.engine === 'dos') {
+  if (isDosCombatHealState(state)) {
     return ['dos', state.version, state.figures, state.baseHp, state.extraHits,
       state.currentFigures, state.frontFigureDamage, state.regularDamage,
       state.undeadDamage, state.irreversibleDamage].join(',');

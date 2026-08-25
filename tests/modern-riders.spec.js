@@ -137,19 +137,30 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
       { version: dosVersion, isRanged: false, wallOfFire: false, distance: 1 });
     const dosGaze = dos.phases.find(phase => phase.label.includes('Gaze'));
 
-    // F25's frozen ApplyAttack evidence skips exactly the six named riders. Dispel Evil is
-    // a separate pre-existing calculator effect and must not be swept into that gate.
-    const modernDispelAttacker = makeUnit(version, 'a', {
-      abilities: { doomGaze: 1, dispelEvil: true },
+    // F25's frozen ApplyAttack evidence skips exactly the six riders `AttackFlagsT` declares
+    // (`Caster binary/Combat.ApplyAttack.pas`). Dispel Evil is not one of them and is not a
+    // seventh: the record has no such member, and `0x0800` is MoM's name for the flag CoM 1 and
+    // Caster read as Exorcise (`PROVENANCE[dispelEvilTouchRider]`). So the same attacker rides
+    // its gaze in MoM and carries nothing at all in CoM2 (F158) — the pair, not one half, is
+    // what shows the modern exclusion is scoped to riders that engine actually has.
+    const dispelPair = ['mom_cp_1.60.00', 'com2_1.05.11'].map(dispelVersion => {
+      const attacker = makeUnit(dispelVersion, 'a', dispelVersion.startsWith('com2')
+        ? { abilities: { doomGaze: 1, dispelEvil: true } }
+        : { rtb: 1, rtbType: 'gaze_death', abilities: { dispelEvil: true } });
+      const target = makeUnit(dispelVersion, 'b', {
+        res: 0,
+        hp: 10,
+        unitType: 'fantastic_chaos',
+      });
+      const result = resolveCombat(attacker, target,
+        { version: dispelVersion, isRanged: false, wallOfFire: false, distance: 1 });
+      return {
+        version: dispelVersion,
+        gazeLabel: (result.phases.find(phase => phase.label.includes('Gaze')) || {}).label,
+        anyDispelLabel: result.phases.some(phase => phase.label.includes('Dispel Evil')),
+        killProbability: result.totalDmgToB[10],
+      };
     });
-    const modernDispelTarget = makeUnit(version, 'b', {
-      res: 0,
-      hp: 10,
-      unitType: 'fantastic_chaos',
-    });
-    const modernDispel = resolveCombat(modernDispelAttacker, modernDispelTarget,
-      { version, isRanged: false, wallOfFire: false, distance: 1 });
-    const modernDispelGaze = modernDispel.phases.find(phase => phase.label.includes('Gaze'));
 
     const riderTooltips = ['stoningTouch', 'deathTouch', 'lifeSteal', 'poison', 'exorcise', 'destruction']
       .map(key => ABILITY_DEFS.find(def => def.key === key).tooltip);
@@ -159,10 +170,7 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
       rangedChanged: JSON.stringify(richRanged.totalDmgToB) !== JSON.stringify(baseRanged.totalDmgToB),
       rangedHealing: richRanged.aLifeStealExpected,
       dos: { label: dosGaze && dosGaze.label, killProbability: dos.totalDmgToB[10] },
-      modernDispel: {
-        label: modernDispelGaze && modernDispelGaze.label,
-        killProbability: modernDispel.totalDmgToB[10],
-      },
+      dispelPair,
       tooltipsExcludeModernGaze: riderTooltips.every(tooltip =>
         tooltip.includes('never on Gaze')
           || tooltip.includes('Does not fire on Stoning, Death, or Doom Gaze')),
@@ -189,8 +197,14 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
   expect(report.rangedHealing).toBeGreaterThan(0);
   expect(report.dos.label).toContain('Stoning Touch');
   expect(report.dos.killProbability).toBeCloseTo(1, 12);
-  expect(report.modernDispel.label).toContain('Dispel Evil');
-  expect(report.modernDispel.killProbability).toBeCloseTo(1, 12);
+  const [momDispel, com2Dispel] = report.dispelPair;
+  expect(momDispel.version).toBe('mom_cp_1.60.00');
+  expect(momDispel.gazeLabel).toContain('Dispel Evil');
+  expect(momDispel.killProbability).toBeCloseTo(1, 12);
+  expect(com2Dispel.version).toBe('com2_1.05.11');
+  expect(com2Dispel.gazeLabel).toBe('Attacker Doom Gaze');
+  expect(com2Dispel.anyDispelLabel).toBe(false);
+  expect(com2Dispel.killProbability).toBeCloseTo(0, 12);
   expect(report.tooltipsExcludeModernGaze).toBe(true);
   expect(report.tooltipsHaveNoStaleLimitation).toBe(true);
   expectNoConsoleErrors(errors);

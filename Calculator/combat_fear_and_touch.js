@@ -141,10 +141,6 @@ function usesDosCombatHealing(version) {
     || version === 'com_6.08';
 }
 
-function usesStatefulCombatHealing(version) {
-  return usesModernCombatHealing(version) || usesDosCombatHealing(version);
-}
-
 // Returns target-capped damage plus the version-appropriate Life Steal marginals.
 // `outcomes` retain uncapped raw drain and the Combatheal correlation that repeated
 // ApplyAttack calls such as Haste read.
@@ -489,15 +485,6 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
       repeatFearedDist: repeatFearedDist.length ? repeatFearedDist : [1] };
   }
   return { damageDist: result, lifeStealEV, outcomes };
-}
-
-function repeatDist(dist, times, cap) {
-  if (!dist || times <= 0) return null;
-  let result = [1];
-  for (let i = 0; i < times; i++) {
-    result = convolveDists(result, dist, cap);
-  }
-  return result;
 }
 
 function expectedDamage(dist) {

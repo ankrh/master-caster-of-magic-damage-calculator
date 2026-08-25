@@ -292,6 +292,14 @@ definePresets({
     b: { atk:0, toBlkMod:70, def:0, hp:20 },
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
   },
+  wallOfFireWarlordBoostAfterCombatConversion: {
+    desc: 'The block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1638) — the permanent record — so a combat conversion cannot withdraw the garrison bonus. Raise Dead makes A an unaligned fantastic creature during combat and the +1 melee stands: 5 -> 6 vs B def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker. Gating on the converted identity instead dropped the bonus and left 5.0.',
+    version: V_WARLORD,
+    a: { atk:5, hitChance:70, def:0, hp:10,
+      abilities: { wallOfFireBoost: true, raiseDead: true } },
+    b: { atk:0, toBlkMod:70, def:0, hp:20 },
+    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+  },
   wallOfFireWarlordBoostBoulder: {
     desc: 'Garrison boost now covers boulder physical ranged: A boulder 5→6 @100% vs B def 0 → 6.0 to B (5.0 without boulder coverage)',
     version: V_WARLORD,

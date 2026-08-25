@@ -4,7 +4,397 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-25
+
+- **F145 half one — ten duplicated predicates given one reader each; 21 groups to 11.**
+  Sweep re-run standalone before any edit: 21 groups over 612 compound tests, against the row's
+  22 over 611. Both figures were off — the 22 was measured over 609, and only F132's group had
+  closed since; F162's roster-to-special-unit map is a *maps* group and never appeared in this
+  class. Merged, each to the layer owning its receiver: the DOS combat-heal tag to `engine.js`,
+  which stamps `engine: 'dos'` and owns both heal records (6 sites); the breath thrown-type list
+  and the shared-slot channel default to `combat_abilities.js`, which owns the channel vocabulary
+  and `addToSlot`; the by-key scan over `ABILITY_DEFS` to `abilities.js`, collapsing
+  `modernSpecialDef` and `dosSpecialDef`, which had identical bodies, into one reader for all
+  seven call sites; the step-id validity rule to `steps.js`, with both entry points keeping their
+  own diagnostic; and five page facts to their own files — the ability source filter, the three
+  ids restored before the generic id loop, the ranged-matrix attacker test, and `ui.js`'s
+  point-in-rect and tooltip-text reads. No behavior change intended and none observed.
+  Equivalence established per group by exhaustive truth table over each replaced expression's
+  full input domain, run against the shipped text of the merged readers rather than a retyped
+  copy: 101 cases for the five core-layer merges, 212 for the page-layer ones, 0 differences.
+  Half two, version membership, is unimplemented and stays in `BACKLOG.md` as a decision: the
+  re-measurement found 218 open-coded tests in 17 sources re-deriving by string prefix the
+  exact-member `SCOPE_*` sets `steps.js` already owns and already halts on.
+- **T8 round 5 — `combat.js` citation triage, in full.** All 34 multi-line prose blocks read;
+  21 unsourced to 4 (5.1 KB to 0.9 KB); repository total 180 to 163 unsourced on this round,
+  and 263 to 163 across the session's five rounds.
+  The four survivors are genuine calculator machinery. Three findings. The Cause Fear block
+  located Magic Immunity's resistance bonus in `fearFailProb`, which does not contain it — the
+  bonus is a step of the resistance transform (`PROVENANCE[dosEffectiveResistance:magicImmunity]`,
+  `PROVENANCE[effectiveResistance:magicImmunity]`), and the comment was also wrong that the modern
+  builds add 30 rather than assigning 100. The Black Sleep early return claimed as engine behavior
+  a suppression of incoming Wall of Fire, retaliation and counterattack that no build performs;
+  the engine half (`ApplyAttack` `$005B19C4`) and the calculator's own boundary are now separated.
+  `Reference docs/Caster binary/CoM2 binary - combat flow.md` still registered F29, F30 and F31 as
+  live calculator discrepancies although all three have landed, and carried double-encoded mojibake
+  in the same sentences; corrected to past tense pointing here. Comments and documentation only —
+  no behavior change, and both code corrections were comment-side with the code already right.
+
+- **F162 — the roster-to-special-unit map has one reader, in the layer that owns the receiver.**
+  **Premise held, and the divergence really is template 34 alone.** Both functions were still where
+  the row said (`stats_identity.js:56`, `ui_units.js:260`). Compared entry by entry over all 1098
+  roster rows in all five versions, the two maps differ on exactly one: `com_6.08` template 34
+  (Chosen), `chosen` in the page copy and `none` in the core one. The remaining behavioral
+  differences between the copies — the page's `!unit` guard and `Number.isInteger` coercion — cannot
+  separate them, because `tools/unit_checks/identity.js` already asserts an integer `templateId` on
+  every roster row of every version.
+  **The ruling: `com2_` is right, and not because it is narrower.** CoM 6.08 does have the Chosen at
+  template 34 — `Unit rosters/CoM 6.08 unit data.txt` row 34, race `Life`, `Holy Bonus` — so the page
+  copy was not wrong about what the unit is. It was wrong that the *engine* makes an exception for it.
+  The CoM 6.08 engine's only hardcoded template checks are `COM1_UT_CATAPULT` 0x25, `COM1_UT_GOLEM`
+  0x51 and `COM1_UT_ZOMBIES` 0xAE (`Reference docs/DOS reconstructed/unitcalc.c`), which are exactly
+  the three the core map already assigned; there is no Chosen block. The conversion is CoM2's alone,
+  a configured-global block at `Units.RecalculateUnits.pas` $0059F747..$0059F7D8 reading MODDING.INI
+  `ChosenUnitID=34`. So a template earns a key where the version's engine makes the exception, not
+  where its roster holds the template — which is the fact the merged function now states.
+  **The move.** The page copy is deleted and `specialUnitForRosterIdentity` loses the suffix it only
+  ever had to avoid the collision, staying in `stats_identity.js` (`data-scope="core"`, not in the
+  worker bundle) beside `SPECIAL_UNIT_DEFS` and the F144 boundary: the receiver is `identity.specialUnit`,
+  a core field, and per the F132 precedent a shared predicate lives with the layer owning the receiver
+  rather than with an asker. `setRosterUnitRecords` no longer restates the answer either — it spreads
+  `createRosterUnitIdentity`, which already carries it — so the page has stopped asking the map for
+  the identity it stores and only asks it to preselect the `Special unit` control.
+  **"Inert today" survived checking, measured rather than inherited.** An uncapped search finds one
+  `=== 'chosen'` in the whole calculator (`stats_identity.js`, the `a:chosen` step, gated `isModern`);
+  `persistedIdentity` takes the control's clamped value, so `chosen` never crossed the persistence
+  boundary. Deriving the CoM 6.08 Chosen with `specialUnit: 'chosen'` against `'none'` over 220 cases
+  — all controls off, then each `ABILITY_DEFS`/`ENCHANTMENT_DEFS` key on alone — differs in exactly
+  one value, the echoed `identity.specialUnit` itself; every stat, trace and identity field is
+  identical. No number moves, so no preset: the regression guard is that only one function is left.
+  **Checks.** `node tools/node_unit_checks.js` 14472/14472, 0 failures; `npm run provenance` 273
+  formulas, 273 verified, 0 UNVERIFIED; `npm test` 130 passed.
+
+- **F160 — the superseded capped-drain Life Steal model is gone, and with it its predicate.**
+  **Premise held, with one correction.** All 11 sites were still present and `usesStatefulCombatHealing`
+  is still true in all five versions, but the row's "the rest are dead `: null` / `: 0` arms" does not
+  describe `combat.js:674`, which is an always-true `&&` conjunct rather than a ternary arm; the line
+  numbers had also drifted about ten lines in `combat_phases.js`. **Unreachability, per site.** Every
+  one of the 11 was instrumented to throw on the false arm and to count the true arm, then driven
+  through the 1091-preset browser suite and 11 hand-written spec files: **0 false takes and a non-zero
+  true count at every site** — `combat_phases.js` 197/585/681/752/818/952/1075 at 2802/241/1480/12275/5114/57/73
+  and `combat.js` 341/353/674/1172 at 1112/1112/1112/286 — so no site is dead merely because the suite
+  never reaches it. The two `combat.js` blocks went with the `aLifeStealOnT` local and the
+  `exactARawDist || aLifeStealDistP` fallbacks that read them, and `repeatDist`
+  (`combat_fear_and_touch.js`) went too, its only caller having been the deleted block. The removed
+  comment called the model a "compatibility fallback for an unknown external version", which is the
+  shape `SPEC.md`, *Out-of-range values stop the run* forbids — so the deletion needs no `SPEC.md`
+  change and removes a deviation from it.
+  **Disposition of the two helpers: both keep a home, in a changed role.** `calcLifeStealDmgDist` and
+  `calcLifeStealRawDist` (`engine.js`) are no longer steps in the resolution pipeline, but they are
+  the independent closed-form reference — N convolved d10 rolls — that
+  `tests/life-steal-healing.spec.js` measures the correlated outcome enumeration against at two
+  points, so a stateful path that convolved its repeated ApplyAttack calls wrongly could not agree
+  with them. The comment now says which job they do and why they stay in a `data-scope="core"` source.
+  **Checks.** `node tools/node_unit_checks.js` 14472/14472, 0 failures; `npm run provenance` 273
+  formulas, 273 verified, 0 UNVERIFIED; the 13 control-flow spec files 52 passed, 0 failed.
+
+- **F161 — the R9-G1e gaze exclusion is asserted for the first time, and re-aimed to the versions
+  that can hold one.** **Premise held**: an uncapped repo-wide search found `'stoning_gaze'` exactly
+  once outside the backlog row, and `GAZE_TYPES` is `gaze_stoning`/`gaze_multiple`/`gaze_death` as
+  stated. **A spelling fix alone was not enough.** Measured, the old token left the shared slot
+  holding no attack at all (`effectiveGazeRanged` 0), whereas `gaze_stoning` gives the three DOS
+  versions a real gaze in it (2). The modern record has no shared slot: it states gazes as
+  independent ability fields the material block never writes, and its `rtbType` names nothing — so
+  the CoM2/Warlord arm asserted nothing under either token, and the `dos-special-attack` control that
+  would set one is hidden there. The axis is therefore now DOS-only, reads `GAZE_TYPES` out of
+  `data.js` rather than restating it — so a non-gaze token cannot be swept vacuously again — and
+  checks the shared strength as well as the shared threshold.
+  **Both directions.** Against a build deliberately broken to let the material into a gaze slot, the
+  corrected axis fails (`mom_1.31 magic material excludes gaze_stoning: expected 0.3, got 0.4`, and
+  strength 2 → 3); the **old token still passes that same broken build** at 0.3/2, which is the
+  vacuity, demonstrated rather than argued. Net +39 assertions, 14433 → 14472.
+  **Filed, not folded in** ([F181](./BACKLOG.md)): `deriveUnitStats` accepted the unrecognised
+  `rtbType` silently instead of halting, which is what let the typo survive; the fix is in `stats.js`,
+  which this item does not touch.
+
+- **F158 — the touch riders get a per-key version scope, and the census gets a checked-in tool.**
+  **Premise held and grew.** Re-measured against a 1-figure 12 HP pair at 100% To Hit and To Block,
+  attacker's only ability the probed key, defender Fantastic Death: `dispelEvil` moved damage
+  **0 → 9.6** and destroy **0 → 0.8** in `com_6.08`, `com2_1.05.11` and `com2_warlord_1.5.12.7`,
+  where the UI hides it. The row's "12 to 23.99" is the same effect in a shape whose melee also
+  lands. The **mirror leak was not in the row**: `exorcise` is hidden in both MoM builds and moved
+  the identical 0 → 9.6 there, because Dispel Evil and Exorcise are one shared rider under two
+  names — `ATT_DISPEL_EVIL` is attack flag `0x0800` in all three DOS builds (`combat.c:88`) with a
+  different block compiled behind it per build, and `Caster.exe`'s `AttackFlagsT` declares an
+  `exorcise` member and no Dispel Evil one. Fixing one without the other would have written a scope
+  entry for half a fact, so both are in.
+  **The mechanism.** `TOUCH_KEY_SCOPE_IDS` (`combat_effects.js`) states a scope for every touch
+  rider, routing each key either to a `COMBAT_VERSION_SCOPES` id or to an explicit `null` meaning
+  no engine distinguishes it; `PLACED_TOUCH_KEYS` is now derived from it, so a rider cannot be
+  added without stating its scope, and `touchKeyInVersion` throws on a key the table does not name.
+  `placedTouchValue` (`combat_phases.js`) and the Warlord placement loop consult it. Two anchors
+  carry the versions and their citations: `PROVENANCE[dispelEvilTouchRider]` `SCOPE_MOM` and
+  `PROVENANCE[exorciseTouchRider]` `SCOPE_COM_PLUS`. `SPEC.md`, *Versions*, invariant 4 gains the
+  per-key routing table as a third settled shape, for a read whose **key** is a variable and where
+  neither `step` nor `adjacent` can apply.
+  The dead `dispelEvil` read inside the `startsWith('com2')` branch of `buildResistanceContext` is
+  deleted, as the row asked; it was never the leak.
+  **One assertion was corrected, not weakened.** `tests/modern-riders.spec.js` asserted that a CoM2
+  attacker's Dispel Evil rides its Doom Gaze — the leak, written down as F25's claim that the
+  modern exclusion covers exactly six riders and must not sweep up a seventh. There is no seventh:
+  the record has no such member. The probe is now a version pair — the same attacker rides its
+  gaze in MoM CP and carries nothing at all in CoM2 — which keeps F25's coverage and states
+  something true.
+  **Instrumentation.** `tools/ability_read_census.js` is the census, checked in this time: it
+  rewrites each read to `__REC(idx, <key>, <expression>)` and records the key **at call time**, so
+  the three dynamic-key sites the two earlier rounds could attribute to no key are attributed like
+  any other. Attribution went from **3 sites in no group to 0**: 392 read sites, 389 with a literal
+  key, 3 dynamic, 3 of 3 attributed. Replaying the same site definition against `1d9ff65` and
+  `a5079a0` gives 392 too, so the earlier rounds' **399 is not reproducible** and the census now
+  says so rather than carrying it. `tools/narrow_control_scope_sweep.js` is the mirror-image sweep
+  the census recorded as missing; its first run is [F180](./BACKLOG.md).
+  No preset can fail before and pass after — the UI clears a version-gated control — so the
+  evidence is the reproduction, the scope-table agreement check, and the corrected spec probe.
+
 ## 2026-08-24
+
+- **F177 — Survival Instinct's Fantastic gate reads the calculated record at its own position.**
+  **Premise held, re-measured rather than inherited.** The block is
+  `if U.Fantastic and (U.owner <> 15) and Wizards[U.owner].GlobalEnchantments[GESurvivalInstinct]`
+  at $005A1664..$005A18AA (`Units.RecalculateUnits.pas`), and CoM 1's is
+  `bu->race >= RACE_FIRST_FANTASTIC` at com1:0x8F27F (`unitcalc.c`) — both the running unit, not
+  `BASEFANTASTIC`, so the positional reading the row proposed is the one the blocks state and the
+  permanent-record path was not taken. `survivalInstinctEligible` (`stats.js`) now replays the
+  conversions ranked before `c:survivalInstinct` through the existing
+  `applyOrderedIdentityConversions(..., { beforeKey })`, exactly as `landLinkingUnitType` does.
+  Re-measured over `tools/derivation_equivalence.js`: **2 Warlord cases, 22 field differences**,
+  both a Spirit-Linked unit that `b:spiritLink` alone made Fantastic; CoM 1 and base CoM2 rank
+  every conversion ahead of the block and are unmoved.
+  `survivalInstinctSpiritLinkAssertsFantasticWarlord` binds it — 0.3 before, 0.4 after, and it was
+  the only failure of the 1091 presets when run against the unfixed gate.
+  **The round's second job falsified F163's readiness.** Sweeping the remaining hoisted reads for
+  movement rather than assuming the row, two gates survive and are filed: **F178**, Chaos Surge
+  reading `bu->race == rt_Chaos` at 131:0x8F138 — before `BU_Apply_Specials` writes that race — so
+  a Chaos-Channelled MoM 1.31 / CP 1.60 unit reports melee 7 where its own position gives 5; and
+  **F179**, Breakthrough's normal package, whose block admits on `not B.Fantastic` while the
+  calculator adds a `liveFantastic` term the block has no counterpart for (3 Warlord cases in the
+  digest, plus base CoM2). Both were filed rather than folded in: each moves a version outside this
+  item's declared `com2_warlord_1.5.12.7` calculator scope, failing the adjacent-defect bound's
+  fourth clause. Nothing else was folded in. The sweep also found that the digest holds the matrix
+  globals at their defaults, so its zeros say nothing about a gate reading one — recorded in
+  `SPEC.md`, *Deliberate deviations*, because F163's own bar rests on that tool.
+- **F167 — the `unitRace` alias of the base race is deleted.** **Premise held on all three
+  claims.** `initializeUnitIdentity` (`stats_identity.js`) returns `race: base.baseRace`
+  unconditionally, `applyOrderedIdentityConversions` builds a fresh `live` object rather than
+  mutating the one passed in, and nothing between the two declarations touched `identity.race` —
+  so `unitRace` was exactly `baseUnitRace`, and only the `Object.assign(identity, …)` after the
+  conversions ever diverged them. An uncapped repository grep confirmed the consumer count at
+  **five**, all in `stats.js`: `applySanctaBasilicaGrant`'s `race` argument, `altarHunter`,
+  `altarWitchdoctor`, `poxHostIsGoblin`, `alumniOfAcademy`.
+  **Every consumer wants the base race, read off its own block rather than deduced from its
+  region.** Goblin Pox is the only one of the five whose block reads a race field at all, and it
+  reads `GETSTAT(U,SRace,1)` — index 1, the permanent slot — while Specialist's Mastery four lines
+  below it reads `GETSTAT(U,SRace,0)`, so the two slots are distinguished at that point in
+  `UnitCalcPre.CAS` and this block takes the permanent one. The other four read **no** race: the
+  Altar of the Moon, Sancta Basilica and Academy blocks gate on `ISBUILT`/`BUILDINGSOWNED` plus
+  `GetStat(U,STypeID,1)` alone (`CreateUnit.CAS`, `OverlandEndTurn.CAS`), and the calculator's race
+  test is its documented stand-in for the training-city model it does not have — a permanent-record
+  property by construction, since those files run at train and upgrade time.
+  **Shape.** `const unitRace` is gone; the five reads take `baseUnitRace`, and the comment above
+  the declaration now states why no live race may reach them.
+  **Movement**: **0 differences of 15480** derivations across the five versions
+  (`tools/derivation_equivalence.js`), as the row predicted; the comparator was checked against a
+  seeded perturbation first, since the tool's digest values are objects and a reference comparison
+  silently reports every case as differing.
+  **Nothing folded in.** Noted, not filed: with the reads repointed, `altarHunter` and
+  `altarWitchdoctor` test `baseUnitRace === 'Gnoll'` a second time inside `altarOfTheMoon`, which
+  already requires it. It is a doubled predicate of [F145](./BACKLOG.md)'s class, not a defect —
+  no number can move, so no preset can bind it, and the adjacent-defect bound files rather than
+  folds it.
+  **Checks.** `node tools/node_unit_checks.js` 14421/14421, 0 failures; `npm run provenance` 271
+  formulas, 271 verified, 0 UNVERIFIED, 23 tooling assertions; the 14 spec files naming
+  `baseRace`/`identity.race`/`goblinPox`/`alumniOfAcademy` or a gated race 61 passed, 0 failed;
+  `npm test` 130 passed (1090 presets), on
+  `PLAYWRIGHT_PORT=8137` because a process outside this session holds 8080. `SPEC.md` needed no
+  change: the pre-pass deviation and its "read the record off the block" rule both still stand,
+  and a deleted alias is not a deviation to record.
+
+- **F174 — Blazing Eyes writes at its own address, `c:blazingEyes`.** **The row's premise held on
+  structure and was falsified on "expected to move no number".** The block is region `c`
+  ($005A1E16..$005A1F12, `Units.RecalculateUnits.pas:1887-1897`): `if IsChaosUnit(i) then ... if
+  U.doomgaze = 0 then Inc(U.doomgaze, 3) else Inc(U.doomgaze, 1)` — both the gate and the read are
+  of the **calculated** record, read off the block, and the neighbours that place it are Inner
+  Power ($005A1957..$005A1E16) and Reinforce Magic ($005A1F12). The calculator instead evaluated it
+  into the `base:stat:base` Doom Gaze seed, which put it *ahead* of two region-`c` blocks that read
+  the same field: Focus Magic's `if U.doomgaze > 0` ($0059A66D) and Chaos Surge ($005A1271). Chaos
+  Surge writes no Doom Gaze in the modern engines, so **Focus Magic was the live defect** — it was
+  boosting a gaze the later block conjures, giving a Chaos creature with both 6 instead of 3.
+  The row's flagged clause was confirmed rather than assumed: the DOS Chaos Channels admission gate
+  `hasGazeAttack` is reached only through `ccDosBreathEligible`, whose sole caller short-circuits on
+  `ccIndependentChannels` (true in both `com2_` builds), so no Blazing Eyes grant can stand there;
+  its Doom Gaze term now reads the record value.
+  **Shape.** `blazingEyesDoomGazeForUnit` is gone from `combat_abilities.js`; the write is one
+  `statStep({ id: 'blazingEyes', phase: 'c', writes: ['doomGaze'] })` carrying
+  `PROVENANCE[blazingEyes]` (the same anchor, renamed in the manifest), placed between
+  `c:innerPower` and `c:reinforceMagic` in both modern chains with `SCOPE_MODERN`. The identity read
+  costs **no new replay**: `c:blazingEyes` is later in region `c` than `c:chaosSurge` with no
+  identity conversion of either modern chain between them, so it shares the existing
+  `beforeKey: 'c:chaosSurge'` result, now captured as `modernIdentityAtChaosSurge` for its three
+  consumers.
+  **Folded in, under the adjacent-defect bound:** the region-`e` Doom Gaze floor. Its modern arm
+  read `hasDoomGazeSlot`, i.e. `baseDoomGaze > 0` — a tautology while the grant sat in the seed, and
+  one that would have discarded the field this step conjures. The modern tail names no Doom Gaze
+  field at all (its floor list is Defense, melee, Ranged, Thrown and the two Breaths,
+  `Units.RecalculateUnits.pas:2482-2487`) and the modern field carries no type, so the modern arm
+  now answers only Eye of Heaven's zeroing; `doomGazeFloorKeeps` carries both readings and
+  `hasDoomGazeSlot` is a DOS fact. It is in code the item already touches, cited, bound by the same
+  presets, and moves no number outside `com2_*`, measured.
+  **Filed, not folded:** BACKLOG Q31 — `IsChaosUnit` is the gate of *both* this block and Chaos
+  Surge, and the calculator reads it two ways (`unitType === 'fantastic_chaos'` here,
+  `unitRealm === 'chaos'` there). The helper is not reconstructed, so neither reading has a
+  citation; this change kept the existing one.
+  **Movement**: 8 of 15480 derivations (`tools/derivation_equivalence.js`) — 4 `com2_1.05.11`, 4
+  `com2_warlord_1.5.12.7`, the same count the row predicted and the same class, every one a
+  `blazingEyes` combo on a unit Chaos Channels converts (`ccDefense` ×3, `ccFireBreath` ×1). In all
+  eight only `baseDoomGaze` and `abilities.doomGaze` moved, 3 → 0: `effectiveDoomGaze` is unchanged,
+  so the grant still lands and is now attributed to a step instead of being reported as the record's
+  base. The sweep reaches no case combining Blazing Eyes with Focus Magic on a Chaos identity, so
+  the ordering correction is bound by preset instead.
+  **Presets**: `blazingEyesLandsAfterFocusMagicCoM2` and `chaosEmbraceLandsAfterFocusMagicWarlord`,
+  both 3.000 against the 6.000 the unfixed code gives; confirmed by ablating the step and re-seeding
+  the grant, where `tests/presets.spec.js` failed on exactly those two of 1090.
+  **F163 consequence**: the counter-case is closed. The remaining obstacles to its 0-difference bar
+  are F177 and F167.
+  **Checks.** `node tools/node_unit_checks.js` 14421/14421, 0 failures; `npm run provenance` 271
+  formulas, 271 verified, 0 UNVERIFIED, 23 tooling assertions; the 13 spec files naming
+  `blazingEyes`/`doomGaze`/`chaosChannels`/`focusMagic`/`statChain`/`sourceOrder` 57 passed, 0
+  failed; `npm test` 130 passed (1090 presets), on `PLAYWRIGHT_PORT=8137` because a process
+  outside this session holds 8080.
+
+- **F176 — Spirit Link's region-`b` Fantastic assert is now a conversion.** Premise held on every
+  claim. `UnitCalcPre.CAS:28-30` gates on `GetEnchantmentFlag(U,EncSpiritLink,1)` and then writes
+  `SETSTAT(U,AFantastic,0,1)` with no test of the unit's own Fantastic state — record selector `0`,
+  the **calculated** record (`Scripts.TXT`, `SETSTAT U,S,B,V`), read off the block rather than
+  deduced from the region — and `UnitCalc.CAS:1306` clears the same field under the same gate, so
+  the two share one predicate. `b:spiritLink` heads region `b` in the Warlord chain: line 30 against
+  `b:marionetteChanneler`'s line 94, which the row's claimed neighbour confirms, and it is the first
+  represented write of that file. The fixed point is unmoved, as the row said — `d` runs last and
+  clears — and the digest agrees: no case's final identity moved. **Movement**: 2 of 15480
+  derivations (`tools/derivation_equivalence.js`), both `com2_warlord_1.5.12.7`, one per gate the row
+  named — `b:nausea` taking the creature-binding arm instead of −10% To Hit / To Defend, and
+  `c:landLinking` granting its fantastic bonuses. Two presets,
+  `nauseaSpiritLinkTakesFantasticArmWarlord` (0.1 → 0) and
+  `natureLinkSpiritLinkAssertsFantasticWarlord` (1.0 → 3.0), both confirmed failing against the
+  ablated conversion — 2 of 1088, no other preset moved — and passing after; `f20-source-order`
+  gained the transcription that Spirit Link precedes the Marionette write and that both of its
+  writes reach the trace. **The hand patch dissolved.** `fantasticAtModernEncMagicRule` (`stats.js`)
+  no longer names Spirit Link: the standing `if U.Fantastic then EncMagic := True` is its own
+  region-`c` block at $005A1217..$005A1271, between Holy Weapon and Chaos Surge, so it now reads
+  `beforeKey: 'c:chaosSurge'` — 0 differences against the hand-listed exception it replaces, at
+  ~6% mean derivation cost (`tools/bench_derive_unit_stats.js`, 491 → 521 µs/call) for the extra
+  replay F163 retires. **One adjacent defect filed, not folded in ([F177](./BACKLOG.md)):** the new
+  conversion turns F163's measured 0 differences at `c:survivalInstinct` into 2, which fails the
+  bound's second clause — that block has not been read, and two gates in the same tranche turned
+  out to test the permanent record. The hero-exclusion defect in `b:nausea`'s own predicate is
+  already F175.
+
+- **F173 — Land Linking's Fantastic test now reads the identity at its own chain position.**
+  Premise held on both arms, and both blocks read the **calculated** record rather than the
+  permanent one. CoM 1 tests `bu->race >= RACE_FIRST_FANTASTIC` at com1:0x8F765 on the single
+  battle-unit record `BU_Apply_Specials` mutates in place: the demon-skin armor realm write at
+  com1:0x8F757 above it is visible, Mystic Surge's at com1:0x8F79E below it is not.
+  `Caster.exe` tests `if U.Fantastic`, and the melee gate three lines down the same block tests
+  `B.attack > 0`, so the U/B choice is deliberate; the conversion that follows in Warlord is
+  `d:spiritLink`, which *clears* Fantastic. `landLinkingEligible` (`stats.js`) now takes the
+  identity `applyOrderedIdentityConversions`'s `beforeKey: 'c:landLinking'` returns — the mechanism
+  F170 added, reused rather than duplicated — computed only when the enchantment is present.
+  **Movement**: `tools/derivation_equivalence.js` over 15480 derivations moves 7 cases, every one
+  attributed to this gate — 5 `com_6.08` (Land Linking with Mystic Surge ×3 or Raise Dead ×2, all
+  losing the bonus) and 2 `com2_warlord_1.5.12.7` (Spirit Link over a `c:undead` or
+  `c:mysticSurge:race` conversion, both gaining it); `com2_1.05.11` moves 0, as its whole conversion
+  set heads region `c`. Two presets, `landLinkingBeforeMysticSurgeRealmCoM` (3.0 → 1.0) and
+  `natureLinkBeforeSpiritLinkClearWarlord` (1.0 → 3.0), both confirmed failing against the ablated
+  gate — 2 of 1086, no other preset moved — and passing after. **One adjacent defect was filed, not
+  folded in:** `UnitCalcPre.CAS:30` writes `SETSTAT(U,AFantastic,0,1)` for any Spirit-Linked unit,
+  and the identity sequence had only the clearing half. It failed the bound's first clause — a new
+  conversion and a new chain entry, not the gate this item touches — and its own movement needed
+  separate attribution. Landed the same day as F176 above.
+
+- **F169, F170, F171, F172 — the four Warlord gates the identity pre-pass was answering for.**
+  Each read the fixed point `applyOrderedIdentityConversions` resolves before any stat write, where
+  its own block reads something narrower. Two of the four premises held and two were falsified by
+  re-reading the blocks. **F169** `survivalInstinctToBlkBonus` now reads the **base** identity:
+  `CreateUnit.CAS:524-525` writes `SToDefend` on record `ABase` for a unit a city produced, and the
+  block carries no identity test at all — the restriction to a trained normal unit is the routine,
+  not the block — so a combat conversion cannot reach it. Premise held; 11 cases. **F170**
+  `b:nausea` now reads the running identity at its own chain position: the branch is `IF FANTASTIC(U)`
+  (`UnitCalcPre.CAS:1123`), the calculated record, and region `b` runs before region `c` and 126
+  lines before `b:sanctify`. Premise held; 9 cases. **F171** `wofDefenderBonusActive` reads the
+  **base** identity, not a positional one — **premise falsified**: the block skips on
+  `IF (BASEFANTASTIC(U)>0)` (`UnitCalcPre.CAS:1638`), the permanent record, so the row's "same
+  reading F170 does" was wrong and the count rose from 5 to 6. **F172** `explosiveEligible` likewise
+  reads base — **premise falsified**: the enclosing gate is
+  `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14) THEN { GOTO "NOTSAPIENS"; }`
+  (`:1062-1064`), both terms on the permanent record, which the sibling grants under the same label
+  already read through `firstFourEligible` (`stats_identity.js`); the count rose from 5 to 9.
+  **Movement**: `tools/derivation_equivalence.js` over 15480 derivations moves 34 cases, every one
+  `com2_warlord_1.5.12.7`, and all 34 are attributed — F169 11, F170 9, F171 6, F172 9, with one
+  case carrying both nausea and the garrison bonus. Nothing else moved. The one new mechanism is
+  `applyOrderedIdentityConversions`'s `beforeKey` option (`stats_identity.js`), which stops the
+  pre-pass short of a named chain entry and returns the identity as the conversions ranked before it
+  leave it; only F170 needs it, it runs only when the curse is present, and [F163](./BACKLOG.md)
+  retires it. Four presets, each differing from a verified sibling by one pure identity conversion
+  (Raise Dead) and reproducing that sibling's number:
+  `survivalInstinctToBlockSurvivesCombatConversionWarlord` (7.0 → 3.0),
+  `nauseaReadsIdentityAtItsOwnBlockWarlord` (0 → 0.1),
+  `wallOfFireWarlordBoostAfterCombatConversion` (5.0 → 6.0) and
+  `bombsGrenadesAfterCombatConversionWarlord` (4.0 → 28.0); all four confirmed failing against the
+  ablated gates and passing after. **One adjacent defect was filed, not folded in
+  ([F175](./BACKLOG.md)).** `b:nausea` and `b:wallOfFire:garrison` gate through `isNormalUnitType`,
+  which excludes heroes, and neither block tests for one. It fails no clause of the bound, but it is
+  the separate question of which *units* a gate covers rather than which *record* it reads, and
+  folding it in would have moved cases this round's measurement could not attribute — the more so
+  because `derivation_equivalence.js` builds every case with `unitType: 'normal'` and would have
+  reported 0 for it.
+
+- **F157, two of three — the Blazing March gate and the Spirit Link deletion.** Both leaks
+  reproduced against `resolveCombat` with a 1-figure 12 HP pair at 100% To Hit and To Block:
+  Blazing March moved MoM melee 0 → 6 and MoM missile 0 → 6 through a Weapon-Immune defender,
+  Spirit Link moved MoM melee 0 → 3 by suppressing a Blessed defender's bonus against a Fantastic
+  Death attacker. Both are 0 → 0 after; CoM 1, CoM2 and Warlord are unchanged at every probe.
+  **The row's two premises about Blazing March were both wrong.** It has an anchor already —
+  `PROVENANCE[blazingMarch]` (`stats_sequence.js`, `com_6.08` + the two modern) for the attack
+  bonus — and the gate the resolution-time read needs is **CoM 1 alone**, not "CoM 1 on". Slot
+  `0x0A` is one spell under two names (`unitcalc.c:237`), and each engine compiles its own block:
+  CoM 1's sets `Weapon_Plus1` at `com1:0x9048B`, MoM's block for the same slot is Metal Fires
+  (`131:0x9065F..0x9072B`) whose grant `metalFiresActive` (`stats.js`) already carries, and CoM2
+  and Warlord grant it through calculated `EncMagic`, which never enters `dosDefenseForAttack`.
+  So a Blazing March read firing in MoM was the same engine write under a second name — the
+  Eldritch Weapon/Mystic Surge shape, one line away in the same expression. New anchor
+  `PROVENANCE[blazingMarchMagicWeapon]` and `COMBAT_VERSION_SCOPES['resolution:blazingMarchMagicWeapon']`
+  = `SCOPE_COM1`, both cited to that block; 270 formulas became 271. Spirit Link's term was
+  deleted, not gated: `computeDefenseProfile` sends every `com2*` version to
+  `computeCasterDefenseProfile` before `dosDefenseForAttack` is reached, verified by re-reading
+  the branch and by the measurement, and Warlord's real behavior is the `d:spiritLink` step.
+  **The namespace question is settled: `COMBAT_VERSION_SCOPES` stays one `resolution:` namespace.**
+  The discriminator is whether an exact version test can stand in the read's own expression, not
+  derivation versus resolution — a derivation-time read has `version` as a local binding and takes
+  the **adjacent** shape, while a helper shared by three engines has no version literal in reach
+  and needs a named cited home. Recorded in `SPEC.md`, *Versions*, invariant 4.
+  **Member (3), Destroy Mechanical, stays open on Q29** and keeps the F157 row alone: 6 → 12 in
+  all four versions whose control is hidden, but its three modelled restrictions are unsourced
+  inferences, so a scope entry would give an invented rule a citation-shaped home.
+  **One adjacent defect was found and filed, not folded in ([F168](./BACKLOG.md)).** Checking the
+  claim that Spirit Link's other reads are inert showed they are not: `dispelEvilFailProb` and
+  `exorciseFailProb` (`combat_special_attacks.js:76`, `:95`) return 0 on a defender's `spiritLink`
+  with no version test, so a hidden key makes the target immune — measured 12 → 6 damage and
+  destroy 1 → 0 in `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11`. Two of the
+  adjacent-defect bound's four clauses fail: no preset can reach it, and it moves numbers in two
+  versions outside this row's declared scope. The census's 32-site table listed only
+  `combat_effects.js:904` for this key, so its leak enumeration is incomplete for the same reason
+  its shapes missed the seven — no shape gives the attacker a touch attack against a Fantastic
+  defender. No preset can fail before and pass after for any of this, since the UI clears a
+  version-gated control; the evidence is the reproduction plus the scope-table agreement check.
 
 - **F165 — the two `:toHit` step pairs are merged, and SPEC's justification for them was wrong.**
   `c:weapon:toHit` and `c:heavenlyLight:toHit` are gone from all five chains, from

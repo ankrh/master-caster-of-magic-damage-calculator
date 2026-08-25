@@ -11,7 +11,13 @@
 // `touchFlagRecords` is an internal normalized representation. When present it owns
 // placement; record values are already effective calculator values. The ordinary card and
 // every DOS roster ability remain common flags and therefore use the ability fallback.
-function placedTouchValue(self, key, record) {
+//
+// The key comes from the caller, so this one read stands for all seven riders and no per-site
+// version test can express their differing scopes. `touchKeyInVersion` (`combat_effects.js`) is
+// that scope, per key: without it a MoM-only Dispel Evil fired in CoM 1, CoM2 and Warlord and a
+// CoM-plus Exorcise fired in both MoM builds, through the ability fallback below (F158).
+function placedTouchValue(self, key, record, ver) {
+  if (!touchKeyInVersion(key, ver)) return null;
   const fallback = abilDefined(self.abilities, key) ? self.abilities[key] : null;
   if (!self.touchFlagRecords) return fallback;
   const records = self.touchFlagRecords;
@@ -57,18 +63,18 @@ function touchRecordForPhase(ver, phase) {
 }
 
 function touchParams(self, other, otherResM, otherResDeath, otherResStoning, otherResPoison, ver, fires, record = 'global') {
-  const poison = placedTouchValue(self, 'poison', record);
+  const poison = placedTouchValue(self, 'poison', record, ver);
   const poisonStr = fires && poison != null ? poison : 0;
-  const stoningTouchBase = placedTouchValue(self, 'stoningTouch', record);
-  const deathTouchBase = placedTouchValue(self, 'deathTouch', record);
+  const stoningTouchBase = placedTouchValue(self, 'stoningTouch', record, ver);
+  const deathTouchBase = placedTouchValue(self, 'deathTouch', record, ver);
   const stoningTouch = stoningTouchBase == null ? null
     : stoningTouchBase + dosChannelTouchModifier(self, 'stoningTouch', record, ver);
   const deathTouch = deathTouchBase == null ? null
     : deathTouchBase + dosChannelTouchModifier(self, 'deathTouch', record, ver);
-  const dispelEvil = placedTouchValue(self, 'dispelEvil', record);
-  const exorcise = placedTouchValue(self, 'exorcise', record);
-  const destruction = placedTouchValue(self, 'destruction', record);
-  const lifeSteal = placedTouchValue(self, 'lifeSteal', record);
+  const dispelEvil = placedTouchValue(self, 'dispelEvil', record, ver);
+  const exorcise = placedTouchValue(self, 'exorcise', record, ver);
+  const destruction = placedTouchValue(self, 'destruction', record, ver);
+  const lifeSteal = placedTouchValue(self, 'lifeSteal', record, ver);
   return {
     poisonStr,
     poisonFail:     poisonStr > 0 ? poisonFailProb(otherResPoison, other.abilities, ver) : 0,
@@ -108,8 +114,9 @@ function gazeTouchParams(self, other, otherResM, otherResDeath, otherResStoning,
     ver, true, touchRecordForPhase(ver, 'gaze'));
   // The unsigned two-step range idiom admits exactly attack types 6..8 and sends them past all
   // six rider blocks, which every other type executes in order: `Reference docs/Caster binary/
-  // Combat.ApplyAttack.R5.2c.evidence.md`. Dispel Evil is a separate calculator effect and
-  // retains its prior routing.
+  // Combat.ApplyAttack.R5.2c.evidence.md`. Dispel Evil is not a seventh rider to exclude — it is
+  // MoM's name for the flag Caster reads as Exorcise, out of scope here (`TOUCH_KEY_SCOPE_IDS`,
+  // `combat_effects.js`), and so already 0 — and it rides the DOS gaze call unchanged.
   const poisonStr = modernGazeSkipsRiders ? 0 : touch.poisonStr;
   const poisonFail = modernGazeSkipsRiders ? 0 : touch.poisonFail;
   const stoningFail = modernGazeSkipsRiders ? 0 : touch.stoningFail;
@@ -187,12 +194,10 @@ function normalizeCombatUnit(unit, version) {
   normalized = applyTemporalTwistEffects(normalized, version);
   normalized = applyTacticianWarlordEffects(normalized, version);
   normalized = applyDoomUAHalving(normalized, version);
-  const carriesExtraHits = usesStatefulCombatHealing(version);
   const extraHitsCap = version === 'com_6.08' || (version && version.startsWith('com2_'))
     ? 90 : 255;
-  const modernBonusHp = carriesExtraHits
-    ? Math.min(extraHitsCap,
-      Math.max(0, Math.trunc(Number(normalized.baseBonusHp) || 0))) : 0;
+  const modernBonusHp = Math.min(extraHitsCap,
+    Math.max(0, Math.trunc(Number(normalized.baseBonusHp) || 0)));
   const withType = Object.assign({}, normalized, {
     combatVersion: version,
     baseDeathImmunity,
@@ -324,7 +329,10 @@ function remainingUnitState(unit) {
 function buildResistanceContext(a, b, version) {
   if (version && version.startsWith('com2')) {
     const needsAgainst = source => ({
-      magic: hasAbil(source.abilities, 'dispelEvil') || abilDefined(source.abilities, 'exorcise'),
+      // Exorcise alone: this arm is `startsWith('com2')`, and Dispel Evil is MoM's name for the
+      // same rider (`TOUCH_KEY_SCOPE_IDS`, `combat_effects.js`), so a `dispelEvil` term here
+      // could only name an effect these engines do not have.
+      magic: abilDefined(source.abilities, 'exorcise'),
       death: hasAbil(source.abilities, 'fear')
         || abilDefined(source.abilities, 'deathTouch')
         || abilDefined(source.abilities, 'deathGaze')
@@ -572,8 +580,7 @@ function buildThrownPhase(active, params) {
         lifeStealMod: aLifeStealModT, lifeStealRes: bResDeath,
         immDist: aImmTDist,
         bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
-        sourceState: usesStatefulCombatHealing(version)
-          ? (context.sourceState || combatHealStateFromUnit(a)) : null,
+        sourceState: context.sourceState || combatHealStateFromUnit(a),
         version,
       };
       let t = convolveTouchAttacks(dist, cap, sAlive, touchSpec);
@@ -668,8 +675,7 @@ function buildMeleePhase(params) {
         aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, aHaste,
         isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
         aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'), version,
-        usesStatefulCombatHealing(version)
-          ? (context.sourceState || combatHealStateFromUnit(a)) : null,
+        context.sourceState || combatHealStateFromUnit(a),
         isCoM2 ? aFearProbability : null);
       return { ...o, dist: o.damageDist,
         fearSamples: aHaste
@@ -739,8 +745,7 @@ function buildCounterPhase(params) {
         bImmMDist, aInvulnBonus, aBlurChance, blurBuggy, bCounterHaste,
         isCoM2 ? woundedTopFigHP(cap, a.hp) : undefined,
         bMinDamageFromHits, hasAbil(b.abilities, 'bloodSucker'), version,
-        usesStatefulCombatHealing(version)
-          ? (context.sourceState || combatHealStateFromUnit(b)) : null);
+        context.sourceState || combatHealStateFromUnit(b));
       return { ...o, dist: o.damageDist, fearSamples: [fearedDist] };
     },
   };
@@ -805,8 +810,7 @@ function buildFirstStrikeComputes(params) {
       aImmMDist, bInvulnBonus, bBlurChance, blurBuggy, false /* doubleStrike */,
       isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined,
       aMinDamageFromHits, hasAbil(a.abilities, 'bloodSucker'), version,
-      usesStatefulCombatHealing(version)
-        ? (context.sourceState || combatHealStateFromUnit(a)) : null);
+      context.sourceState || combatHealStateFromUnit(a));
     return { ...o, dist: o.damageDist, fearSamples: [fearedDist] };
   };
 
@@ -939,8 +943,7 @@ function buildAttackerGazePhase(active, params) {
         lifeStealMod: aLifeStealWithGaze ? aLifeStealModG : null, lifeStealRes: bResDeath,
         immDist: aImmGDist,
         bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
-        sourceState: usesStatefulCombatHealing(version)
-          ? (context.sourceState || combatHealStateFromUnit(a)) : null,
+        sourceState: context.sourceState || combatHealStateFromUnit(a),
         version,
       });
       return t;
@@ -1062,8 +1065,7 @@ function buildDefenderGazePhase(active, params) {
         lifeStealMod: bLifeStealWithGaze ? bLifeStealModG : null, lifeStealRes: aResDeath,
         immDist: bImmGDist,
         bloodsucker: hasAbil(b.abilities, 'bloodSucker'),
-        sourceState: usesStatefulCombatHealing(version)
-          ? (context.sourceState || combatHealStateFromUnit(b)) : null,
+        sourceState: context.sourceState || combatHealStateFromUnit(b),
         version,
       });
       return t;

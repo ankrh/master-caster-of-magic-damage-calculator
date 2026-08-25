@@ -303,7 +303,17 @@ function runCanonicalVersionScopeChecks(ctx) {
   }
   // An entry nothing consults is a scope that cannot be enforced, so each id must appear in a
   // `combatEffectInVersion` call somewhere in the computation layer.
-  const combatCallers = new Set();
+  //
+  // One caller passes its id in a variable: `touchKeyInVersion` (`combat_effects.js`) routes each
+  // touch rider through `TOUCH_KEY_SCOPE_IDS`, because the rider's key is itself a variable at
+  // every read site and one literal call per key would put the routing in seven places. That
+  // table is the literal here, so it is read rather than grepped, and its key list is asserted
+  // against `PLACED_TOUCH_KEYS` so a rider cannot be added without stating its scope (F158).
+  const touchScopeIds = evalInContext(ctx, 'TOUCH_KEY_SCOPE_IDS');
+  assertSameKeyList(Object.keys(touchScopeIds).sort(),
+    [...evalInContext(ctx, 'PLACED_TOUCH_KEYS')].sort(),
+    'TOUCH_KEY_SCOPE_IDS states a scope for exactly the placed touch riders');
+  const combatCallers = new Set(Object.values(touchScopeIds).filter(id => id !== null));
   for (const file of calculatorFiles) {
     const text = fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8');
     for (const match of text.matchAll(/combatEffectInVersion\(\s*'([^']+)'/g)) {

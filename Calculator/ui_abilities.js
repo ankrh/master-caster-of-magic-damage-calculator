@@ -308,9 +308,16 @@ function getAbilityControlValue(prefix, abil) {
   return parseInt(el.value) || 0;
 }
 
+// The optional `source` narrowing the bulk apply/clear pair shares: an absent filter admits
+// every def, a present one admits only its own source. One rule, so the pair cannot drift into
+// applying over a wider set than it clears.
+function abilitySourceExcluded(abil, sourceFilter) {
+  return !!sourceFilter && abil.source !== sourceFilter;
+}
+
 function applyAbilities(prefix, abilValues, sourceFilter) {
   for (const abil of abilityUiDefs()) {
-    if (sourceFilter && abil.source !== sourceFilter) continue;
+    if (abilitySourceExcluded(abil, sourceFilter)) continue;
     const val = abilValues[abil.key];
     setAbilityControlValue(prefix, abil, val);
   }
@@ -318,7 +325,7 @@ function applyAbilities(prefix, abilValues, sourceFilter) {
 
 function clearAbilities(prefix, sourceFilter) {
   for (const abil of abilityUiDefs()) {
-    if (sourceFilter && abil.source !== sourceFilter) continue;
+    if (abilitySourceExcluded(abil, sourceFilter)) continue;
     const defaultValue = abil.type === 'select' ? abil.options[0][0]
       : abil.type === 'numcheck' ? null
       : abil.type === 'bool' ? false

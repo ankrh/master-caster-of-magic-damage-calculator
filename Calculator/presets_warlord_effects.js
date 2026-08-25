@@ -66,6 +66,20 @@ definePresets({
     b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true } },
     expected: { dmgToA: 0, dmgToB: 0.100 },
   },
+  nauseaReadsIdentityAtItsOwnBlockWarlord: {
+    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS:1123, read where that block stands. Region b runs before region c, so Raise Dead — a region-c conversion — has not made the defender fantastic yet, and the ELSE arm still applies: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. Reading the pre-pass fixed point instead saw a fantastic creature, took the creature-binding arm and left 0.',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10 },
+    b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true, raiseDead: true } },
+    expected: { dmgToA: 0, dmgToB: 0.100 },
+  },
+  nauseaSpiritLinkTakesFantasticArmWarlord: {
+    desc: 'Spirit Link asserts Fantastic at UnitCalcPre.CAS:30, ahead of the Conjuring Pact branch at :1123 in the same file, so the defender is fantastic where that branch reads it and takes the creature-binding arm instead of the -10% To Defend: def=1 blocks at a full 100% and takes 0, against the 0.1 of the sibling nauseaMinus10ToDefend. Only the region-d clear was modelled before, so the ELSE arm applied.',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10 },
+    b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true, spiritLink: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
 
   // --- Magic Immunity curse gating ---
   // Magic Immunity (and, for Mind Storm, Illusion Immunity) hard-blocks these
@@ -859,6 +873,14 @@ definePresets({
     a: { figs:1, atk:10, hitChance:70, hp:20 },
     b: { def:10, hp:20, unitType:'fantastic_chaos', abilities: { survivalInstinctToBlock: 40 } },
     expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
+  survivalInstinctToBlockSurvivesCombatConversionWarlord: {
+    desc: 'The write is `SETSTAT(U,SToDefend,ABase,…)` in CreateUnit.CAS:524-525 — a permanent training-time write on a unit the city produced, so the only identity it can read is the permanent one. Raise Dead makes the defender an unaligned fantastic creature during combat, and the bonus its city gave it stands: +40% still raises To Block from 30% to 70%, so atk 10 (1 fig, 100% hit) vs def 10 deals 10 x (1 - 0.70) = 3.0, the same as the sibling survivalInstinctToBlockNormalWarlord. Gating on the combat-converted identity instead dropped the bonus and gave 7.0.',
+    version: V_WARLORD,
+    a: { figs:1, atk:10, hitChance:70, hp:20 },
+    b: { def:10, hp:20, unitType:'normal',
+      abilities: { survivalInstinctToBlock: 40, raiseDead: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
   },
 
   // --- Hierophany (Warlord Life curse: halves Defense, strips all immunities / Lightning Resist / Negate First Strike) ---

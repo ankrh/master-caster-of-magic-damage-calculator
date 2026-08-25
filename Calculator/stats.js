@@ -54,7 +54,12 @@ function deriveUnitStats(input) {
   // `Unit rosters/Warlord mod unit data/UNITS.INI`. Custom (hand-entered) units carry neither,
   // so building buffs are inert on them. The display name may be race-prefixed for some
   // units and not others, so name exceptions match with endsWith (always gated by race).
-  const unitRace = identity.race;
+  // `identity.baseRace` is the permanent record's race, and it is the only race any of these
+  // gates may read: each is either a `CreateUnit.CAS`/`OverlandEndTurn.CAS` training gate — which
+  // runs before combat recalculation exists — or, for Goblin Pox, a block whose own read is
+  // `GETSTAT(U,SRace,1)`, index 1, the permanent slot. Reading the live `identity.race` would let
+  // a realm conversion (Undead, Chaos Channels, Sanctify, Destiny) answer a permanent-record
+  // question with `Life`/`Death`.
   const baseUnitRace = identity.baseRace;
   const unitName = input.name || '';
   const marionetteDerivation = deriveMarionettePackage(
@@ -68,7 +73,7 @@ function deriveUnitStats(input) {
     applyDivineProtectionGrant(
       applySanctaBasilicaGrant(
         applyLavaSmelterGrant(marionetteDerivation.abilities, version, baseUnitType),
-        version, isHero ? 'hero' : baseUnitType, unitRace, unitName),
+        version, isHero ? 'hero' : baseUnitType, baseUnitRace, unitName),
       version),
     version),
     version),
@@ -87,15 +92,26 @@ function deriveUnitStats(input) {
   const marionetteStrayed = !!(marionette && marionette.state === 'strayed');
   const marionetteAttackBonus = marionetteOwned ? marionette.attackBonus : 0;
   const marionetteDefenseBonus = marionetteOwned ? marionette.defenseBonus : 0;
-  // Caster.exe's standing `if U.Fantastic then U.EnchantmentFlags[EncMagic] := True` runs in
-  // compiled region c (Units.RecalculateUnits.pas:1813-1815, $005A1217). Warlord Spirit Link
-  // first asserts Fantastic in phase b — `SETSTAT(U,AFantastic,0,1)` (UnitCalcPre.CAS:30) — so
-  // the standing rule sees it even for a calculator-reachable custom input that was not
-  // fantastic beforehand. The late hook `IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN
-  // { SETSTAT(U,AFantastic,0,0); }` (UnitCalc.CAS:1306, phase d) then clears Fantastic without
-  // clearing the derived flag.
-  const fantasticAtModernEncMagicRule = isFantasticLive
-    || (version.startsWith('com2_warlord') && !!abilities.spiritLink);
+  // Caster.exe's standing `if U.Fantastic then U.EnchantmentFlags[EncMagic] := True` is a
+  // region-`c` block of its own, $005A1217..$005A1271 (Units.RecalculateUnits.pas:1813-1815). It
+  // reads the *calculated* record where it stands: between the Holy Weapon channel block that
+  // ends at $005A1217 and the Chaos Surge block that begins at $005A1271, which makes
+  // `c:chaosSurge` the chain entry it sits immediately before. So replay the conversions ranked
+  // before that entry rather than take the pre-pass fixed point, which would additionally answer
+  // for `d:spiritLink` — Spirit Link asserts Fantastic at `b:spiritLink` (UnitCalcPre.CAS:30) and
+  // clears it again at `d:spiritLink` (UnitCalc.CAS:1306), and this rule stands between the two.
+  // `c:spellWard` below reads the same value: it is later in the chain, and no identity
+  // conversion lies between the two entries. Blazing Eyes' `IsChaosUnit` gate ($005A1E16) takes
+  // the same replay for the same reason — later still in region `c`, with no identity conversion
+  // of either modern chain between `c:chaosSurge` and `c:blazingEyes` (F174). F163's removal of
+  // the pre-pass retires this replay.
+  const modernIdentityAtChaosSurge = isCoM2
+    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
+      { beforeKey: 'c:chaosSurge' }).identity
+    : null;
+  const fantasticAtModernEncMagicRule = isCoM2
+    ? !!modernIdentityAtChaosSurge.fantastic
+    : isFantasticLive;
   const loadoutEligible = !isFantasticBase && !destinyActive;
   // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
   // to earn experience" (`Unit rosters/Warlord mod unit data/HELP.TXT:6324`). Nothing in that
@@ -111,6 +127,18 @@ function deriveUnitStats(input) {
   // and sets `EncMagic` (`CreateUnit.CAS:38-39`), which is Magic Weapons: +10% To Hit and the
   // Weapon Immunity bypass. Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
   const isWarlord = version.startsWith('com2_warlord');
+  // Conjuring Pact's nausea branch is `IF FANTASTIC(U)` at `UnitCalcPre.CAS:1123` — the
+  // *calculated* record, read where that block stands. Region `b` runs before region `c`
+  // (`SPEC.md`, *Phases*), so `c:undead`, `c:destiny:race`, `c:mysticSurge:race`, `c:raiseDead`
+  // and the Chaos Channels pair have not run, and `b:sanctify` at `:1249` is still 126 lines
+  // ahead. The pre-pass's fixed point answers for all of them, so replay the conversions ranked
+  // before `b:nausea` instead of reading it. Computed only when the curse is present: this is a
+  // second pass over the conversions, and F163's removal of the pre-pass retires it.
+  const nauseaUnitType = (isWarlord && !!abilities.nausea)
+    ? legacyUnitTypeFromLiveIdentity(applyOrderedIdentityConversions(
+      identity, abilities, version, { isHero, name: unitName },
+      { beforeKey: 'b:nausea' }).identity)
+    : unitTypeVal;
   // One `flameBlade` input, two controls: the wizard spell everywhere but Warlord, the arcane
   // unit ability in Warlord (`enchantments.js`). The version decides which arithmetic the shared
   // block does, so the input carries no version of its own.
@@ -131,8 +159,8 @@ function deriveUnitStats(input) {
   // Witchdoctors take `AFPoison` 100 plus `AFLifeSteal` -1. 100 is the scripts' no-poison
   // sentinel — every `AFPoison` increment reads `<>100` and restarts at 1 — so that branch
   // removes the poison rather than raising it. Applied via effectiveAbilities below.
-  const altarHunter = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Hunters');
-  const altarWitchdoctor = altarOfTheMoon && unitRace === 'Gnoll' && unitName.endsWith('Witchdoctors');
+  const altarHunter = altarOfTheMoon && baseUnitRace === 'Gnoll' && unitName.endsWith('Hunters');
+  const altarWitchdoctor = altarOfTheMoon && baseUnitRace === 'Gnoll' && unitName.endsWith('Witchdoctors');
   // Altar of the Sun (Warlord, Hawkmen building): Hawkmen units trained here gain +1
   // Figure, except Holy Mother who gains +1 Melee instead. Gated on the Hawkmen race —
   // heroes are excluded and gain nothing. Only these unit bonuses are modelled; the
@@ -257,12 +285,25 @@ function deriveUnitStats(input) {
   // beside another ranged or breath attack — `PROVENANCE[bombsGrenades]` (`stats_sequence.js`).
   // The calculator's single RTB slot represents it directly when that slot is
   // empty, and adds it normally when the selected attack is already Thrown.
+  // The gate is the block's own `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14)
+  // THEN { GOTO "NOTSAPIENS"; }` (`UnitCalcPre.CAS:1062-1064`) — both terms read the **permanent**
+  // record, so a combat conversion to Fantastic cannot close it. The same `NOTSAPIENS` label also
+  // encloses Ballistics Training, Xenopsychology and Radio, whose `firstFourEligible`
+  // (`stats_identity.js`) already reads the base field.
   const explosiveEligible = isWarlord && !!abilities.explosive
-    && (!isFantasticLive || !!abilities.sapiens);
+    && (!isFantasticBase || !!abilities.sapiens);
   const bombsGrenades = explosiveEligible
     && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
 
-  const baseDoomGazeWithBlazingEyes = blazingEyesDoomGazeForUnit(abilities, unitTypeVal, version);
+  // Blazing Eyes' block ($005A1E16..$005A1F12) is region `c`, so its `IsChaosUnit` gate reads the
+  // calculated record at that position rather than the pre-pass fixed point. The write itself is
+  // `c:blazingEyes` (`stats_sequence.js`), where the Doom Gaze field it conjures or raises is
+  // read at the same position. The Chaos test keeps the compact-token reading the block has
+  // always had here; that `IsChaosUnit` is also Chaos Surge's gate, where the calculator spells
+  // it `unitRealm === 'chaos'`, is BACKLOG Q31.
+  const blazingEyesActive = isCoM2 && !!abilities.blazingEyes
+    && legacyUnitTypeFromLiveIdentity(modernIdentityAtChaosSurge) === 'fantastic_chaos';
+  const baseDoomGazeStat = abilVal(abilities, 'doomGaze', 0);
 
   // Chaos Channels (Fire Breath option): version-sensitive strength and admission, all four DOS
   // facts from `Reference docs/DOS reconstructed/unitcalc.c`. `Apply_Chaos_Channels` reads the
@@ -417,8 +458,43 @@ function deriveUnitStats(input) {
       + `of the City walls control and of MATRIX_CITY_WALL_OPTIONS.`);
   }
 
-  const survivalInstinctEligible = survivalInstinctActiveForUnit(abilities, unitTypeVal, version);
-  const landLinkingEligible = landLinkingActiveForUnit(abilities, unitTypeVal, version);
+  // Survival Instinct's Fantastic test reads the *calculated* record at its own block, in both
+  // engine families. `Caster.exe` tests `if U.Fantastic and (U.owner <> 15) and ...` at
+  // $005A1664..$005A18AA (`Units.RecalculateUnits.pas`), the running unit — not `BASEFANTASTIC`,
+  // which is what `b:wallOfFire:garrison` and `b:bombsGrenades` turned out to take (F170, F172).
+  // CoM 1 tests `bu->race >= RACE_FIRST_FANTASTIC` at com1:0x8F27F (`unitcalc.c`), on the one
+  // battle-unit record the routine mutates in place. So both take the running identity at
+  // `c:survivalInstinct` rather than the pre-pass fixed point. In Warlord that excludes
+  // `d:spiritLink`'s clearing write, leaving the Fantastic `b:spiritLink` asserts; CoM 1 and base
+  // CoM2 rank every conversion ahead of the block, so they are unmoved. Computed only when the
+  // enchantment is present, like `landLinkingUnitType` below; F163's removal of the pre-pass
+  // retires it.
+  const survivalInstinctUnitType = ((isCoM1 || isCoM2)
+    && !!(abilities && abilities.survivalInstinct))
+    ? legacyUnitTypeFromLiveIdentity(applyOrderedIdentityConversions(
+      identity, abilities, version, { isHero, name: unitName },
+      { beforeKey: 'c:survivalInstinct' }).identity)
+    : unitTypeVal;
+  const survivalInstinctEligible = survivalInstinctActiveForUnit(
+    abilities, survivalInstinctUnitType, version);
+  // Land Linking's Fantastic test reads the *calculated* record at its own block, in both
+  // engine families. CoM 1 tests `bu->race >= RACE_FIRST_FANTASTIC` at com1:0x8F765, on the one
+  // battle-unit record `BU_Apply_Specials` mutates in place — the demon-skin armor write at
+  // com1:0x8F757 immediately above it is visible, Mystic Surge's `bu->race` write at com1:0x8F79E
+  // below it is not. `Caster.exe` tests `if U.Fantastic`, and the melee gate three lines later in
+  // the same block tests `B.attack > 0`, so the U/B choice there is deliberate rather than
+  // incidental (`SPEC.md`, *The step model*). Neither reads the permanent record, so both take the
+  // running identity at `c:landLinking` rather than the pre-pass fixed point: in CoM 1 that
+  // excludes `c:mysticSurge:race` and `c:raiseDead`, and in Warlord it excludes `d:spiritLink`'s
+  // clearing write. Base CoM2 ranks every conversion ahead of the block, so it is unmoved.
+  // Computed only when the enchantment is present, like `nauseaUnitType` above; F163's removal of
+  // the pre-pass retires it.
+  const landLinkingUnitType = ((isCoM1 || isCoM2) && !!(abilities && abilities.landLinking))
+    ? legacyUnitTypeFromLiveIdentity(applyOrderedIdentityConversions(
+      identity, abilities, version, { isHero, name: unitName },
+      { beforeKey: 'c:landLinking' }).identity)
+    : unitTypeVal;
+  const landLinkingEligible = landLinkingActiveForUnit(abilities, landLinkingUnitType, version);
   const innerPowerEligible = innerPowerActiveForUnit(abilities, version);
   const misleadEligible = misleadActiveForUnit(abilities, identity.fantastic, version);
 
@@ -591,9 +667,12 @@ function deriveUnitStats(input) {
   // (`PROVENANCE[goblinPox]`, `stats_sequence.js`) and agree with the in-game helptext: "all
   // Goblin units suffer -1 Attack, and -1 Armor, while all non-Goblin units suffer -3 Attack,
   // -3 Armor, and -1 Resistance" (`Unit rosters/Warlord mod unit data/HELP.TXT:6428`, POX HOST).
-  // Read from the global toggle; the unit's race (empty on custom units) picks the branch.
+  // Read from the global toggle; the race picks the branch. The block's own read is
+  // `GETSTAT(U,SRace,1)` — index 1, the permanent record — while the Specialist's Mastery block
+  // immediately below it reads `GETSTAT(U,SRace,0)`, so the two slots are distinguished at this
+  // point in the file and this one takes the base race (empty on custom units).
   const poxHostActive = version.startsWith('com2_warlord') && !!input.poxHost;
-  const poxHostIsGoblin = unitRace === 'Goblin';
+  const poxHostIsGoblin = baseUnitRace === 'Goblin';
   const goblinPoxAtkMod = poxHostIsGoblin ? -1 : -3;
   const goblinPoxDefMod = poxHostIsGoblin ? -1 : -3;
   const goblinPoxResMod = poxHostIsGoblin ? 0 : -1;
@@ -641,7 +720,12 @@ function deriveUnitStats(input) {
   // The numeric input holds that To-Defend percentage; applied to normal units only
   // (the fantastic-creature buff is the separate survivalInstinct checkbox). The write is
   // `PROVENANCE[survivalInstinctToBlock]` (`stats_sequence.js`), from `CreateUnit.CAS`.
-  const survivalInstinctToBlkBonus = isWarlord && isNormalUnitType(unitTypeVal)
+  // `CreateUnit.CAS:524-525` writes `SToDefend` on record `ABase` when a city produces the unit,
+  // and its own block carries no identity test — the restriction to a trained normal unit is the
+  // routine, not the block. So the gate reads the **base** identity: this is a permanent
+  // training-time write, made before combat, and no later conversion is visible to it. A unit
+  // Chaos Channels, Sanctify, Undead or Destiny converts in combat keeps what its city gave it.
+  const survivalInstinctToBlkBonus = isWarlord && isNormalUnitType(baseUnitType)
     ? Math.max(0, parseInt(abilities.survivalInstinctToBlock) || 0)
     : 0;
 
@@ -660,8 +744,11 @@ function deriveUnitStats(input) {
   // the package: "Friendly regular units gain +1 Melee Attack, +1 Physical Ranged Attack, and
   // +1 Thrown Attack, and their attacks can ignore Weapon Immunity"
   // (`Unit rosters/Warlord mod unit data/HELP.TXT:2761`).
+  // The eligibility term is the block's own `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOWALLOFFIRE"; }`
+  // (`UnitCalcPre.CAS:1638`) — the **permanent** record, so a combat conversion to Fantastic does
+  // not withdraw the garrison bonus, and Spirit Link clearing live Fantastic does not confer it.
   const wofDefenderBonusActive = isWarlord && !!(abilities && abilities.wallOfFireBoost)
-    && isNormalUnitType(unitTypeVal);
+    && isNormalUnitType(baseUnitType);
 
   // Flame Blade: +2 to missile and thrown rtb only (not boulder, magic) —
   // `PROVENANCE[flameBlade]` (`stats_sequence.js`), which carries all five builds, and Warlord's
@@ -988,10 +1075,13 @@ function deriveUnitStats(input) {
     // both on `PROVENANCE[chaosChannels:fireBreath]` (`stats_sequence.js`). The version-specific
     // admission gate reads the permanent record; whether the slot is free for the write is the
     // step's own live read.
+    // The Doom Gaze term is the record's own value: Blazing Eyes is a CoM2-only region-`c` write
+    // (`c:blazingEyes`), and this admission gate is reached only when `ccIndependentChannels` is
+    // false, i.e. in the three DOS builds, so no Blazing Eyes grant can be standing here (F174).
     const hasGazeAttack = gazeType !== 'none'
       || abilities.stoningGaze != null
       || abilities.deathGaze != null
-      || baseDoomGazeWithBlazingEyes > 0;
+      || baseDoomGazeStat > 0;
     const ccDosBaseRanged = inputSlotRtb;
     const ccDosBreathEligible = (rtbTypeRaw === 'none' || rtbTypeRaw === 'thrown')
       && !hasGazeAttack && ccDosBaseRanged <= ccDosBaseRangedMax;
@@ -1252,7 +1342,7 @@ function deriveUnitStats(input) {
   // a record with no Ranged field. The other branch rejects Mechanical units and reads the field
   // (`permanentMagicalRangedField` above).
   const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
-    && unitRace === 'Halfling' && !isHero
+    && baseUnitRace === 'Halfling' && !isHero
     && (unitName.endsWith('Rocs')
       || (!abilities.mechanical
         && !!rangedFieldContext && rangedFieldContext.permanentMagicalRangedField));
@@ -1295,7 +1385,7 @@ function deriveUnitStats(input) {
     liveRace: identity.race,
     liveFantastic: identity.fantastic,
     mechanical: effectiveMechanical,
-    doomGaze: baseDoomGazeWithBlazingEyes,
+    doomGaze: baseDoomGazeStat,
     innerPower: innerPowerEligible ? abilities.innerPower : false,
     mislead: misleadEligible ? abilities.mislead : false,
     supernatural: ((abilities && abilities.supernatural) || destinyActive),
@@ -1386,14 +1476,17 @@ function deriveUnitStats(input) {
   // component empty — the same roster entry carries `"ranged": 1` in both MoM builds. So the
   // region-`e` floor asks the type, and the seeded
   // strength decides nothing (F122). The modern engines carry an independent Doom Gaze field with
-  // no type of its own, so there strength is the only statement of existence and this is exactly
-  // `baseDoomGaze > 0`.
+  // no type of its own, so no such slot question exists there — and their tail makes no Doom Gaze
+  // write at all, its floor list being Defense, melee, Ranged, Thrown and the two Breaths
+  // (Units.RecalculateUnits.pas:2482-2487). `hasDoomGazeSlot` is therefore a DOS fact; the modern
+  // arm of the floor answers only Eye of Heaven's zeroing (F174).
   const hasGazeRangedSlot = !gazeDisabled
     && (recordContext.gazeType === 'gaze_stoning' || recordContext.gazeType === 'gaze_death')
     && !isCoM2;
   const hasDoomGazeSlot = !gazeDisabled
     && ((!isCoM2 && recordContext.gazeType === 'gaze_multiple')
-      || (effectiveAbilities.doomGaze || 0) > 0);
+      || baseDoomGazeStat > 0);
+  const doomGazeFloorKeeps = isCoM2 ? !gazeDisabled : hasDoomGazeSlot;
   // Focus Magic's ranged branch reads the record's Thrown field and writes its Ranged one, so the
   // two ends of `U.ranged := U.thrown` (Units.RecalculateUnits.pas:885-891) are slot identities.
   // The DOS-shaped shared slot is both at
@@ -1700,7 +1793,8 @@ function deriveUnitStats(input) {
     fieryFuryRtbWrite, focusMagicBranchSlots, poxHostIsGoblin, shadowStrikeActive,
     soulFlayLevels, warlordFlameBladeOwnsSlot, weaknessBinaryHits, weaknessPenalty,
     flameBladeStep, focusMagicActive,
-    gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod, hasGazeRangedSlot, hasDoomGazeSlot,
+    gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod, hasGazeRangedSlot, doomGazeFloorKeeps,
+    blazingEyesActive,
     goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod, goodMoonActive,
     greatUnbindingActive, hasDarkness, hasMeleeAttackAt,
     hasPermanentRangedStat, heavenlyLightActive, heavenlyLightMeleeToHitAt,
@@ -1716,7 +1810,7 @@ function deriveUnitStats(input) {
     naturalSelectionCoal, naturalSelectionIron, naturalSelectionNightshade,
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount,
-    natureConjunctionActive, natureLinkActive, nodeAuraActive,
+    natureConjunctionActive, natureLinkActive, nauseaUnitType, nodeAuraActive,
     orihalconActive, outlanderRtbToHitBonus, pillarOfFaith, pillarOfFaithCount, plagueActive,
     pneumaFieldActive, poolOfRepentance, poxHostActive, psychoForceActive,
     realmWardActive, sanctaBasilica,

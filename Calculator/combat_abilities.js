@@ -226,9 +226,15 @@ function slotHasThrown(u, channel) {
   return u[channel.thrownTypeField] === 'thrown';
 }
 
-function slotHasBreath(u, channel) {
-  const thrownType = u[channel.thrownTypeField];
+// The two breath elements a thrown-type field can name, beside the magical-ranged vocabulary
+// above: the same list decides whether a slot carries a Breath and whether a Thrown attack is
+// elemental, so it is one fact about the type token and is named once here.
+function isBreathThrownType(thrownType) {
   return thrownType === 'fire' || thrownType === 'lightning';
+}
+
+function slotHasBreath(u, channel) {
+  return isBreathThrownType(u[channel.thrownTypeField]);
 }
 
 // The record's two independent Breath *fields*, which `U.firebreath > 0` and
@@ -299,6 +305,9 @@ function supremeLightActiveForUnit(abilities, unitType, version, rangedContext =
     || isMagicalRangedType(rangedContext.baseRangedType);
 }
 
+// `unitType` is the *calculated* record as it stands at `c:survivalInstinct`, not the pre-pass
+// fixed point: both blocks read the running unit (`bu->race`, `U.Fantastic`), and the caller
+// supplies it (`stats.js`, `survivalInstinctUnitType`).
 // PROVENANCE[survivalInstinctEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:392fb79051e1dfb503869c27 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:b1ed625810a6547724965296
 // STAT-FORMULA[survivalInstinctEligibility]
 function survivalInstinctActiveForUnit(abilities, unitType, version) {
@@ -307,6 +316,9 @@ function survivalInstinctActiveForUnit(abilities, unitType, version) {
   return !!unitType && unitType.startsWith('fantastic_');
 }
 
+// `unitType` is the *calculated* record as it stands at `c:landLinking`, not the pre-pass fixed
+// point: both blocks read the running unit (`bu->race`, `U.Fantastic`), and the caller supplies it
+// (`stats.js`, `landLinkingUnitType`).
 // PROVENANCE[landLinkingEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:233068cc98f57fe5ee4a9d3f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
 // STAT-FORMULA[landLinkingEligibility]
 function landLinkingActiveForUnit(abilities, unitType, version) {
@@ -320,15 +332,6 @@ function landLinkingActiveForUnit(abilities, unitType, version) {
 function innerPowerActiveForUnit(abilities, version) {
   if (!version || !version.startsWith('com2_') || !hasAbil(abilities, 'innerPower')) return false;
   return hasAbil(abilities, 'fireImmunity') || hasAbil(abilities, 'lightningResist');
-}
-
-// PROVENANCE[blazingEyesDoomGaze]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:c4d9140bdc468735df396fa7
-// STAT-FORMULA[blazingEyesDoomGaze]
-function blazingEyesDoomGazeForUnit(abilities, unitType, version) {
-  const baseDoomGaze = abilVal(abilities, 'doomGaze', 0);
-  if (!version || !version.startsWith('com2_') || !hasAbil(abilities, 'blazingEyes')) return baseDoomGaze;
-  if (unitType !== 'fantastic_chaos') return baseDoomGaze;
-  return baseDoomGaze > 0 ? baseDoomGaze + 1 : 3;
 }
 
 // PROVENANCE[misleadEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:f8b72704f1366630a616f50f
@@ -499,20 +502,29 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // function has no arm for it. It is a view of no attack slot, so no dead-slot abstraction covers
 // it and a write reaches it only from a block that names it — of which the recalculation has
 // exactly two, each written where its block is rather than through here: Focus Magic's
-// `if U.doomgaze > 0 then` ($0059A66D), a step of its own in `stats_sequence.js`, and Blazing
-// Eyes ($005A1E16), which conjures the field where it is absent — `if U.doomgaze = 0` grants 3,
-// otherwise +1 — and so is settled into the base record by `blazingEyesDoomGazeForUnit` above.
+// `if U.doomgaze > 0 then` ($0059A66D) and Blazing Eyes ($005A1E16), which conjures the field
+// where it is absent — `if U.doomgaze = 0` grants 3, otherwise +1. Both are steps of their own in
+// `stats_sequence.js` (`c:focusMagic`, `c:blazingEyes`).
 // A `doomGazeField` argument therefore falls through to `slotGateAdmits` and throws (F143).
 const DOS_SHARED_SLOT_GATES = ['rangedTyped', 'rangedStrength', 'rangedUngated'];
+
+// The channel list a step writes through. A context that names none is a DOS record, whose one
+// shared slot stands for ranged, Thrown, Breath and the gazes at once — so the fallback is that
+// slot's field triple. Every step that walks channels itself takes the list from here, so the
+// DOS shape is stated once rather than re-spelled beside each walk.
+function contextChannels(ctx) {
+  return (ctx && ctx.channels)
+    || [{ strengthField: 'rtb', rangedTypeField: 'rangedType', thrownTypeField: 'thrownType',
+      slots: (ctx && ctx.slots) || null }];
+}
+
 function addToSlot(u, ctx, slot, value, whereStrength) {
   const slots = (ctx && ctx.slots) || null;
   if (slot === 'melee') {
     if (!slots || slots.melee(ctx)) u.atk += value;
     return;
   }
-  const channels = (ctx && ctx.channels)
-    || [{ strengthField: 'rtb', rangedTypeField: 'rangedType', thrownTypeField: 'thrownType',
-      slots }];
+  const channels = contextChannels(ctx);
   for (const channel of channels) {
     if (!slotGateAdmits(u, channel, slot)) continue;
     if (whereStrength && !whereStrength(u[channel.strengthField])) continue;
@@ -956,11 +968,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     abilityStep('metalFires', 'c', { ...beforeHolyArmor, writes: ['atk', ...attackWrites],
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1);
-        const slots = ctx && ctx.slots;
-        const channels = (ctx && ctx.channels)
-          || [{ strengthField: 'rtb', rangedTypeField: 'rangedType',
-            thrownTypeField: 'thrownType', slots }];
-        for (const channel of channels) {
+        for (const channel of contextChannels(ctx)) {
           if (u[channel.rangedTypeField] === 'missile'
             || u[channel.thrownTypeField] === 'thrown') {
             u[channel.strengthField] += 1;

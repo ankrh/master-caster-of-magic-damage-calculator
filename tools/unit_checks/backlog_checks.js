@@ -655,7 +655,7 @@ function runR9G1eChecks(ctx) {
       // Each family's own magical token: the DOS engines keep the realm their
       // `Battle_Unit_Attack_Magic_Realm` table really has, the modern ones do not.
       const magicalToken = version.startsWith('com2') ? 'magic' : 'magic_c';
-      for (const rtbType of [magicalToken, 'fire', 'lightning', 'stoning_gaze']) {
+      for (const rtbType of [magicalToken, 'fire', 'lightning']) {
         const excluded = ctx.deriveUnitStats(baseUnitInput({
           version, weapon, rtb: 2, rtbType,
           ...(version.startsWith('com2')
@@ -663,6 +663,23 @@ function runR9G1eChecks(ctx) {
         }));
         assertClose(excluded.toHitRtb, 0.3,
           `R9-G1e ${version} ${weapon} material excludes ${rtbType}`);
+      }
+
+      // The gaze exclusion is a DOS-only claim. Only the shared slot can hold a gaze, so only
+      // there do a threshold and a strength exist that the material block could have reached;
+      // the modern record states its gazes as independent ability fields the block never
+      // writes, and its `rtbType` names nothing at all. The axis reads `GAZE_TYPES` rather
+      // than restating it, so a token that is not a gaze cannot be swept here vacuously.
+      if (!version.startsWith('com2')) {
+        for (const gazeType of evalInContext(ctx, 'GAZE_TYPES')) {
+          const gazed = ctx.deriveUnitStats(baseUnitInput({
+            version, weapon, rtb: 2, rtbType: gazeType,
+          }));
+          assertClose(gazed.toHitRtb, 0.3,
+            `R9-G1e ${version} ${weapon} material excludes ${gazeType}`);
+          assertEqual(gazed.rtb, 2,
+            `R9-G1e ${version} ${weapon} material adds no strength to ${gazeType}`);
+        }
       }
     }
   }

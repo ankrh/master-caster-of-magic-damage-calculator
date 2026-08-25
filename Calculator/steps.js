@@ -162,6 +162,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:rally': SCOPE_WARLORD,
   'b:rebuild': SCOPE_WARLORD,
   'b:soulFlay': SCOPE_WARLORD,
+  'b:spiritLink': SCOPE_WARLORD,
   'b:tactician': SCOPE_WARLORD,
   'b:trueLight': SCOPE_WARLORD,
   'b:upgradedExplosive:fireBreath': SCOPE_WARLORD,
@@ -175,6 +176,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:blackChannels': SCOPE_MOM,
   'c:blackChannels:race': SCOPE_MOM,
   'c:blackPrayer': SCOPE_ALL,
+  'c:blazingEyes': SCOPE_MODERN,
   'c:blazingMarch': SCOPE_COM_PLUS,
   'c:bloodLust': SCOPE_COM1_COM2,
   'c:breakthrough:combatSummoned': SCOPE_MODERN,
@@ -335,6 +337,12 @@ const STEP_VERSION_SCOPES = Object.freeze({
 // where `<id>` is the formula id whose `PROVENANCE versions=` backs it, the way the phase tables
 // are keyed `phase:id`. `tools/unit_checks/version_scope.js` asserts the two agree.
 //
+// It stays one namespace. A read the derivation makes can always put an exact version test in its
+// own expression, because `version` is a local binding there — the **adjacent** shape in
+// `SPEC.md`, *Versions*, invariant 4 — so a `derivation:` sibling would only add indirection to a
+// gate a reader can already check on the line. This table is for a read inside a helper shared by
+// several engines, which has no version literal in reach.
+//
 // A control's `subgroup` is NOT the source for these. It states UI visibility only (see the note
 // above), and the DOS engines make the difference load-bearing: they **repurpose enchantment
 // bits** between builds, so one bit is two named effects. `0x00200000` guards Eldritch Weapon in
@@ -346,9 +354,12 @@ const STEP_VERSION_SCOPES = Object.freeze({
 // two are distinct rather than a reason to alias them.
 const COMBAT_VERSION_SCOPES = Object.freeze({
   'resolution:blackChannelsEffectDerivation': SCOPE_MOM,
+  'resolution:blazingMarchMagicWeapon': SCOPE_COM1,
   'resolution:bloodLustAbilityDerivation': SCOPE_COM_PLUS,
   'resolution:bloodLustMeleeAttack': SCOPE_COM_PLUS,
+  'resolution:dispelEvilTouchRider': SCOPE_MOM,
   'resolution:eldritchWeaponEligibility': SCOPE_MOM,
+  'resolution:exorciseTouchRider': SCOPE_COM_PLUS,
   'resolution:mysticSurge': SCOPE_COM_PLUS,
   'resolution:rageEffectiveAttack': SCOPE_WARLORD,
   'resolution:rulerOfUnderworldEligibility': SCOPE_MODERN,
@@ -502,12 +513,19 @@ function statStep(step) {
 // enchantment writing in two regions of one engine (`c:weakness` and Warlord's `d:weakness`) is
 // two distinct writes of one effect, and the phase is what separates them. Every trace event
 // carries its phase, so a consumer reading the ledger sees the same distinction.
+// What makes a step identifiable at all. Both the order assertion and the composer reject a step
+// that fails it, with their own diagnostics; the rule itself is stated once so tightening it
+// cannot leave one entry point admitting what the other rejects.
+function stepHasId(step) {
+  return !!(step && typeof step.id === 'string' && step.id);
+}
+
 function assertStatStepOrder(steps) {
   let rank = -1;
   let previous = null;
   const seen = new Set();
   for (const step of steps) {
-    if (!step || typeof step.id !== 'string' || !step.id) {
+    if (!stepHasId(step)) {
       throw new Error('stat step has no id');
     }
     if (!Object.prototype.hasOwnProperty.call(STEP_PHASE_RANK, step.phase)) {
@@ -578,7 +596,7 @@ function orderStatStepsBySource(steps, chain) {
   assertStatChain(chain);
   const emitted = new Map();
   for (const step of steps) {
-    if (!step || typeof step.id !== 'string' || !step.id) {
+    if (!stepHasId(step)) {
       throw new Error('the composer received a step without an id');
     }
     const key = stepVersionScopeKey(step);

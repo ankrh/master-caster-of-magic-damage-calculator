@@ -319,7 +319,7 @@ function precalcScriptStatSteps(ctx) {
     fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
     greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
-    marionetteStrayed, natureLinkActive, outlanderRtbToHitBonus,
+    marionetteStrayed, natureLinkActive, nauseaUnitType, outlanderRtbToHitBonus,
     plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields, secondaryHitFields,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayLevels, soulFlayResMod,
     strengthFields, thrownTypeFields, unitTypeVal,
@@ -429,10 +429,13 @@ function precalcScriptStatSteps(ctx) {
         u.res += 1; u.toHit += 10; u.toBlk += 10;
       } }),
     // Conjuring Pact and Uphill Battle immediately follow the Outlander block.
+    // The branch is `IF FANTASTIC(U)`, the calculated record read at this block. `nauseaUnitType`
+    // (`stats.js`) is that record — the conversions ranked before `b:nausea`, not the pre-pass's
+    // fixed point, which would answer for region `c` and for `b:sanctify` 126 lines below.
     // PROVENANCE[nausea]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:c7ec21b771edb6cb9bd17645
     statStep({ id: 'nausea', sourceId: 'nausea', sourceLabel: 'Conjuring Pact nausea',
       phase: 'b', writes: ['toHit', 'toBlk'],
-      when: () => isWarlord && !!abilities.nausea && isNormalUnitType(unitTypeVal),
+      when: () => isWarlord && !!abilities.nausea && isNormalUnitType(nauseaUnitType),
       apply: u => { u.toHit -= 10; u.toBlk -= 10; } }),
     // PROVENANCE[uphillBattle]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:233a5a25490ae7a59c17106e
     statStep({ id: 'uphillBattle', sourceId: 'uphillBattle', sourceLabel: 'Uphill Battle',
@@ -567,7 +570,7 @@ function precalcScriptStatSteps(ctx) {
 // `c`: magic calc, in the binary, including the Warp Creature block.
 function magicCalcBinaryStatSteps(ctx) {
   const {
-    abilByPhase, abilities, badMoonActive, channels,
+    abilByPhase, abilities, badMoonActive, blazingEyesActive, channels,
     chaosSurgeCount, chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus,
     charmOfLifeActive, classicBerserk, com1DivineBarrierAura, com1SoulLinkerAura,
     com1GuidingBeaconAura, darkForceActive, darknessAtkBonus, darknessDefBonus, darknessResBonus,
@@ -965,6 +968,18 @@ function magicCalcBinaryStatSteps(ctx) {
     ...(!isWarlord && !isCoM2 && !isCoM1 ? [dosTrueLightStep] : []),
     // These hand-written steps and live reads are also later region-c sites. Keep their source
     // order at this boundary; F20 owns exhaustive ordering against the remaining ability spread.
+    // Blazing Eyes ($005A1E16..$005A1F12, Units.RecalculateUnits.pas:1887-1897), between Inner
+    // Power and Reinforce Magic. `if U.doomgaze = 0 then Inc(U.doomgaze, 3) else Inc(U.doomgaze,
+    // 1)` reads and writes the *calculated* field at this position, which is what puts it after
+    // Focus Magic's `if U.doomgaze > 0` ($0059A66D) and after Chaos Surge ($005A1271): neither of
+    // those sees a Doom Gaze this block conjures. Its `IsChaosUnit(i)` gate is a calculated-record
+    // read too, resolved at this position by `blazingEyesActive` (`stats.js`). One copy: the
+    // engine repeats the block per active Blazing Eyes across wizards and the calculator's
+    // control is a single boolean, as the Chaos Embrace/Blazing Eyes tooltips state.
+    // PROVENANCE[blazingEyes]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:c4d9140bdc468735df396fa7
+    statStep({ id: 'blazingEyes', phase: 'c', writes: ['doomGaze'],
+      when: () => blazingEyesActive,
+      apply: u => { u.doomGaze += u.doomGaze === 0 ? 3 : 1; } }),
     // PROVENANCE[reinforceMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:c46cf0a067fb9eff1afc4064
     statStep({ id: 'reinforceMagic', phase: 'c', writes: ['res', ...strengthFields],
       when: () => !!(abilities && abilities.reinforceMagic),
@@ -1529,7 +1544,7 @@ function magicCalcScriptStatSteps(ctx) {
 // `e`: the binary's post-hook tail.
 function postHookStatSteps(ctx) {
   const {
-    abilByPhase, channels, hasDoomGazeSlot, hasGazeRangedSlot,
+    abilByPhase, channels, doomGazeFloorKeeps, hasGazeRangedSlot,
     hasMeleeAttackAt,
     isCoM1, isCoM2, recordContext, secondaryHitFields, strengthFields, supremeLightEligibleAt,
   } = ctx;
@@ -1607,8 +1622,13 @@ function postHookStatSteps(ctx) {
         // ask is whether a gaze stands in the record at all, and that is a **type** fact
         // (`hasGazeRangedSlot`/`hasDoomGazeSlot`, stats.js): a strength-0 gaze template an
         // earlier step raised keeps what it holds, exactly as the slot beside it does (F122).
+        // The modern tail names no Doom Gaze field at all — its floor list is Defense, melee,
+        // Ranged, Thrown and the two Breaths (Units.RecalculateUnits.pas:2482-2487) — and the
+        // modern field carries no type, so there is no slot fact for the modern arm to ask. What
+        // it does still answer is Eye of Heaven's zeroing, and `doomGazeFloorKeeps` (stats.js) is
+        // the one term that carries both readings (F174).
         u.gaze = hasGazeRangedSlot ? Math.max(0, u.gaze) : 0;
-        u.doomGaze = hasDoomGazeSlot ? Math.max(0, u.doomGaze) : 0;
+        u.doomGaze = doomGazeFloorKeeps ? Math.max(0, u.doomGaze) : 0;
       } }),
     // The aura pass: Holy Bonus (type 1), Resistance to All (type 3), and Misfortune (type 10).
     ...abilByPhase.e,

@@ -1,8 +1,16 @@
 # Version-gating census: ability and enchantment reads in the computation layer
 
-First measured 2026-08-23 at `f19f865`; re-measured 2026-08-23 after the gating mechanism landed.
-Method and findings. F130 is retired ([HISTORY.md](../Calculator/HISTORY.md)); what is still live
-is [F157, F158 and F159](../Calculator/BACKLOG.md).
+First measured 2026-08-23 at `f19f865`; re-measured 2026-08-23 after the gating mechanism landed,
+and again 2026-08-25 by a checked-in tool. Method and findings. F130 is retired
+([HISTORY.md](../Calculator/HISTORY.md)); what is still live is
+[F157, F159, F168 and F180](../Calculator/BACKLOG.md).
+
+**The instrumentation is `tools/ability_read_census.js` from 2026-08-25 on.** The first two rounds
+rebuilt it ad hoc and discarded it, so their site totals could not be re-derived — and they cannot
+be: replaying the checked-in site definition (the same four read forms this document names) against
+`1d9ff65` and `a5079a0`, the commits the **399** describes, gives **392**. Treat 399 as unreproducible
+rather than as a measurement of a wider tree. The mirror-image sweep this document called missing is
+`tools/narrow_control_scope_sweep.js`, also from 2026-08-25.
 
 `SPEC.md`, *Versions*, invariant 4 requires an effect a version lacks to be inert in the result.
 `tests/version-gating.spec.js` asserts the UI half. This census measures the computation half.
@@ -14,9 +22,11 @@ top of the enclosing function, a caller that only runs on one engine path, or
 `filterStepsToVersionScope` dropping the step before it executes. So the census is executed, not read.
 
 Every ability/enchantment read in `combat*.js`, `stats.js`, `stats_identity.js` and
-`stats_sequence.js` was rewritten to `__REC(idx, <expression>)` — 399 sites, covering `hasAbil`,
-`abilVal`, `abilDefined`, `X.abilities.key` and bare `abilities.key`, with comments and strings
-masked. Each of the 485 (calcKey, version) pairs whose every naming control is hidden was then
+`stats_sequence.js` is rewritten to `__REC(idx, <key>, <expression>)` — 392 sites, covering
+`hasAbil`, `abilVal`, `abilDefined`, `X.abilities.key` and bare `abilities.key`, with comments and
+strings masked (the first two rounds reported 399 for the same four forms; see above). The `<key>`
+argument is what makes a dynamic-key site attributable, and it is why the record is per key rather
+than per site. Each of the 485 (calcKey, version) pairs whose every naming control is hidden was then
 derived and resolved over the sweep's shapes, recording which sites fire. Each firing site was then
 suppressed individually to separate "executes out of scope" from "changes a number".
 
@@ -28,11 +38,20 @@ number under a shape it does not build; the shapes' defender is never Fantastic 
 carries Weapon Immunity, and the attacker never carries Illusion or a touch attack, so every
 effect keyed to one of those was scored inert by construction.
 
-**Second limitation: three sites read their key dynamically** and so cannot be attributed to a
-key at all — `combat_abilities.js:720` (`abilVal(abilities, key, 0)`, the aura values),
-`combat_effects.js:242` (`PLACED_TOUCH_KEYS`) and `combat_phases.js:15` (`placedTouchValue`).
-They are counted in the 399 but appear in no group, and at least one of them leaks: see
-Dispel Evil below.
+**Second limitation, closed 2026-08-25 (F158): three sites read their key dynamically.** A source
+scan attributes them to no key, so the first two rounds counted them in the site total and listed
+them in no group — and one of them was leaking the whole time. `tools/ability_read_census.js` now
+records the key at call time, so all three are attributed:
+
+| Site | Form | Keys it receives |
+|---|---|---|
+| `combat_abilities.js` `auraValue` | `abilVal(abilities, key, 0)` | `divineBarrierAura`, `guidingBeaconAura`, `leadershipAura`, `prayermasterAura`, `soulLinkerAura` |
+| `combat_effects.js` `applyWarlordTouchFlagPlacement` | `abilDefined(unit.abilities, key)` | the six riders Warlord places: `deathTouch`, `destruction`, `exorcise`, `lifeSteal`, `poison`, `stoningTouch` |
+| `combat_phases.js` `placedTouchValue` | `abilDefined(self.abilities, key)` | all seven, `dispelEvil` included — it reaches the MoM builds and no others |
+
+Run of 2026-08-25 against the post-F158 tree: **392 read sites**, 389 with a literal key, **3**
+taking their key from a variable, **3 of 3 attributed at runtime, 0 attributed to no key**. 40 sites
+no shape reached, and 204 distinct keys read.
 
 ## Groups
 
@@ -52,8 +71,27 @@ re-measurement below shows that is **wrong for at least four of them**, and that
 sites rather than 34.
 
 All four (B) sites are **wider**, none narrower. This census cannot detect a narrower test — one
-suppressing a key in a version that has it — because it probes out-of-scope pairs only. Finding
-those needs the mirror-image sweep, which does not exist.
+suppressing a key in a version that has it — because it probes out-of-scope pairs only.
+
+**The mirror-image sweep now exists: `tools/narrow_control_scope_sweep.js` (F158).** It asks the
+complementary question of every key the UI offers in two or more versions: does setting it move a
+number in each version whose control is *visible*? First run, 2026-08-25, over 108 such keys, 435
+visible (calcKey, version) pairs and 21696 exchanges:
+
+```
+keys live in every visible version:                                62
+keys inert in every visible version (shape gap, not a gate):       36
+keys live in some visible versions and silent in others:           10
+  of those, a scope table already names the key:                    5
+unexplained splits:                                                 5
+```
+
+The five unexplained are `bless`, `ccFireBreath`, `destruction`, `immolation` and `supernatural`;
+their triage is [F180](../Calculator/BACKLOG.md). A split is not by itself a defect — the engines
+may really differ — but nothing in the repo says so for these five, which is the same gap F159
+records for the all-version keys, seen from the other side. `destruction` is the sharpest: its
+control has no version restriction at all, while its effect moves a number only in CoM2 and
+Warlord, which is what its own tooltip says.
 
 `combat_effects.js:904` (`spiritLink`) is a **negated** read, `!hasAbil(...)`. A mechanical gate
 there inverts the condition instead of making it inert — and it is the one site the re-measurement
@@ -149,9 +187,11 @@ Two anchors were authored for it, because neither effect had one:
 
 ## Re-measurement, and the enumeration the first pass never wrote down
 
-The instrumentation was rebuilt and re-run against the post-mechanism tree. It reproduces the
-first pass exactly where the first pass is checkable — **399 sites**, and **178 sites over 68
-keys** whose control exists in all five versions — so the site definition is the same one. It
+The instrumentation was rebuilt and re-run against the post-mechanism tree. It reported the same
+**399 sites** as the first pass and **178 sites over 68 keys** whose control exists in all five
+versions, and was read at the time as confirming the site definition. The checked-in tool gives
+**392** for those same commits (see above), so the agreement was between two discarded builds of
+one instrument, not a reproduction. It
 finds **36** sites firing outside their key's scope where the first pass recorded 34; running it
 against `413b7aa`, the commit the 34 describes, also gives 36, so the two extra are a counting
 difference in the first pass, not later drift. The first pass listed none of them by file and
@@ -183,9 +223,9 @@ Three were closed by gates in this round, leaving **32**:
 | `stats.js:1148` | `rust` | CoM 1, CoM2, both MoM | adjacent |
 | `stats.js:89` | `mechanical` | CoM 1, CoM2, both MoM | consumer |
 | `combat_phases.js:572`, `:668`, `:739`; `combat.js:678` (two), `:1169` | `bloodSucker` | CoM 1, CoM2, both MoM | consumer |
-| `combat_effects.js:904` | `spiritLink` | CoM 1, both MoM | **leak** |
-| `combat_effects.js:911` | `blazingMarch` | both MoM | **leak** |
-| `combat_phases.js:327` | `dispelEvil` | CoM2, Warlord | **leak** |
+| `combat_effects.js:904` | `spiritLink` | CoM 1, both MoM | leak, **deleted** (F157) |
+| `combat_effects.js:911` | `blazingMarch` | both MoM | leak, **gated** (F157) |
+| `combat_phases.js:327` | `dispelEvil` | CoM2, Warlord | dead read, **deleted** (F158) |
 | `combat_phases.js:592` | `destroyMechanical` | CoM 1, CoM2, both MoM | **leak**, two keys |
 
 Four dispositions, and only one of them is the per-site scope entry the first pass assumed. The
@@ -201,40 +241,83 @@ first three are **settled** — [SPEC.md](../Calculator/SPEC.md), *Versions*, in
 - **consumer** (7 sites, settled by measurement). The value is carried to a consumer that makes
   the version test. Probing `bloodSucker` on a wounded attacker and `mechanical` on the defender
   moves no number in any version whose control is hidden.
-- **leak** (4 sites, open). The value is *not* discarded, and the first pass's blanket "their
-  value is discarded downstream" is wrong for these.
+- **leak** (4 sites, one open). The value is *not* discarded, and the first pass's blanket "their
+  value is discarded downstream" is wrong for these. The `dispelEvil` row was never the leak — it
+  was dead where it stood, and F158 deleted it; the real one was the dynamic-key read this table
+  could not list at all.
 
-## Seven leaks the sweep scored inert
+## Eight leaks the sweep scored inert
 
 Each was reproduced by setting the single hidden control and reading `resolveCombat`, in a shape
-the sweep does not build. Three were fixed in this round; four remain.
+the sweep does not build. Three were fixed in the F130 round, two more in F157 and two in F158;
+one remains, `destroyMechanical` (F157, blocked on Q29).
+
+**Eight is not the total, and the same blind spot is why.** F157 found a ninth while checking
+whether Spirit Link's other reads were inert: `dispelEvilFailProb` and `exorciseFailProb`
+return 0 on a defender's `spiritLink` with no version test, moving damage 12 → 6 and destroy 1 → 0
+in the four versions that lack the enchantment (`BACKLOG.md` F168). Neither site appears in the
+32-site table above, because no sweep shape gives the attacker a touch attack against a Fantastic
+defender. F158's `exorcise` was found the same way — by probing the mirror of a known leak, not by
+any sweep. **Treat both enumerations as lower bounds** until a shape generator replaces the
+hand-written list; the two new tools narrow the blind spot in one direction each and neither
+removes it.
 
 | Effect | Hidden in | Shape that exposes it | Effect on damage | State |
 |---|---|---|---|---|
 | `blackChannels` | CoM 1, CoM2, Warlord | attacker with Illusion, or with Death Touch | 24 to 12, 14.39 to 12 | fixed |
 | `bloodLust` | both MoM | attacker with Death Touch | 14.39 to 12 | fixed |
 | `eyeOfHeaven` | CoM 1, CoM2, both MoM | attacker with Illusion; defender under Vertigo | 24 to 12; Vertigo stripped | fixed |
-| `blazingMarch` | both MoM | defender with Weapon Immunity | 0 to 12 | open |
-| `dispelEvil` | CoM 1, CoM2, Warlord | defender Fantastic Death | 12 to 23.99 | open |
-| `spiritLink` | both MoM | attacker Fantastic Death, defender Blessed | 0 to 12 | open |
-| `destroyMechanical` | CoM 1, CoM2, both MoM | defender also carrying hidden `mechanical` | 12 to 24 | open |
+| `blazingMarch` | both MoM | defender with Weapon Immunity | 0 to 6 melee, 0 to 6 missile | fixed |
+| `dispelEvil` | CoM 1, CoM2, Warlord | defender Fantastic Death | 0 to 9.6 | fixed |
+| `exorcise` | both MoM | defender Fantastic Death | 0 to 9.6 | fixed |
+| `spiritLink` | both MoM | attacker Fantastic Death, defender Blessed | 0 to 3 | fixed |
+| `destroyMechanical` | CoM 1, CoM2, both MoM | defender also carrying hidden `mechanical` | 6 to 12 | open |
 
-Notes on the four that remain:
+`exorcise` is the eighth, found by F158 while reproducing the seventh, and it is the same defect
+seen from the other side: the two are one shared rider under two names, so an ungated
+`placedTouchValue` fired each in the versions that carry the other. Both were re-measured
+2026-08-25 against a 1-figure 12 HP pair at 100% To Hit and To Block, attacker's only ability the
+probed key, defender Fantastic Death: **0 to 9.6** damage and 0 to 0.8 destroy chance, `dispelEvil`
+in CoM 1, CoM2 and Warlord and `exorcise` in both MoM builds. The physical baseline is 0 there, so
+the whole movement is the rider. The earlier 12-to-23.99 for `dispelEvil` is the same effect in a
+shape whose melee also lands.
 
-- `spiritLink` is the negated read the first pass flagged as a watch item, and it behaves exactly
+The Blazing March, Spirit Link and Destroy Mechanical figures were re-measured 2026-08-24 (F157)
+against a 1-figure 12 HP pair at 100% To Hit and To Block; the earlier 0-to-12, 0-to-12 and
+12-to-24 came from a shape twice the size and are the same effects.
+
+Notes on the four:
+
+- `spiritLink` is the negated read the first pass flagged as a watch item, and it behaved exactly
   as feared: `!hasAbil(attacker.abilities, 'spiritLink')` is *not* inert when the key is set — it
-  suppresses the defender's Bless bonus. It is also **dead within its own path**:
+  suppressed the defender's Bless bonus. It was also **dead within its own path**:
   `dosDefenseForAttack` is reached only when the version does not start with `com2`
   (`computeDefenseProfile`), and Spirit Link is Warlord's (`PROVENANCE[spiritLink]
   versions=com2_warlord_1.5.12.7`, `stats_identity.js`). Warlord's real behavior comes from the
-  `d:spiritLink` step clearing `fantastic`, which `spiritLinkBlessNoBonusWarlord` covers. So the
-  term should be deleted, not gated.
-- `dispelEvil` is a MoM-only control, and `combat_phases.js:327` reads it inside the
-  `startsWith('com2')` branch — likewise dead where it stands. Its CoM 1 leak enters elsewhere,
-  through the dynamic-key read `placedTouchValue` (`combat_phases.js:15`), which applies every
-  `PLACED_TOUCH_KEYS` entry in every version with no per-key scope.
-- `blazingMarch` needs a real gate: the control is CoM 1, CoM2 and Warlord, and
-  `dosDefenseForAttack` serves both MoM builds as well as CoM 1.
+  `d:spiritLink` step clearing `fantastic`, which `spiritLinkBlessNoBonusWarlord` covers. **F157
+  deleted the term.**
+- `dispelEvil` is a MoM-only control, and `combat_phases.js:327` read it inside the
+  `startsWith('com2')` branch — likewise dead where it stood, and **F158 deleted it**. The leak
+  entered elsewhere, through the dynamic-key read `placedTouchValue`, which applied every touch
+  rider in every version with no per-key scope. **F158 gave the riders one:**
+  `TOUCH_KEY_SCOPE_IDS` (`combat_effects.js`) routes each key either to a `COMBAT_VERSION_SCOPES`
+  id or to a stated `null`, and `touchKeyInVersion` throws on a key it does not name. Two new
+  anchors carry the versions — `PROVENANCE[dispelEvilTouchRider]` `SCOPE_MOM` and
+  `PROVENANCE[exorciseTouchRider]` `SCOPE_COM_PLUS` (`combat_special_attacks.js`) — on the same
+  repurposed-storage evidence as the enchantment bits above: `ATT_DISPEL_EVIL` is attack flag
+  `0x0800` in all three DOS builds (`combat.c:88`) and each build compiles its own block behind
+  it, while `Caster.exe`'s `AttackFlagsT` declares an `exorcise` member and no Dispel Evil one.
+- `blazingMarch` needed a real gate, because `dosDefenseForAttack` serves both MoM builds as well
+  as CoM 1. **F157 gated it, and the scope is CoM 1 alone, not the control's three versions.**
+  Slot `0x0A` is one spell under two names (`unitcalc.c:237`) and each engine compiles its own
+  block: CoM 1's sets `Weapon_Plus1` at `com1:0x9048B` while MoM's block for the same slot is
+  Metal Fires (`131:0x9065F..0x9072B`), whose grant the calculator already carries as
+  `metalFiresActive` (`stats.js`). CoM2 and Warlord grant it through the calculated `EncMagic`
+  flag and never enter this DOS path. New anchor `PROVENANCE[blazingMarchMagicWeapon]`
+  (`combat_special_attacks.js`) and scope `resolution:blazingMarchMagicWeapon` = `SCOPE_COM1`.
+  Note this sits beside the pre-existing `PROVENANCE[blazingMarch]` (`stats_sequence.js`,
+  `versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7`) for the attack bonus: two engine
+  writes of one named effect, with different scopes, so two anchors.
 - `destroyMechanical` needs two hidden keys at once, so the sweep's one-key-at-a-time rule cannot
   see it by design. Its behavior is an unsourced inference (`BACKLOG.md` Q29), so no scope entry
   can be cited for it until Q29 resolves.
@@ -251,4 +334,14 @@ Three effects gained a cited gate:
 
 Eye of Heaven is a derivation-time read, not a resolution-time one, so it takes the inline
 Warlord test its sibling at `stats.js:700` already carries rather than a `resolution:` key.
-Whether the table should grow a namespace for derivation-time non-step reads is open.
+
+**Whether the table should grow a namespace for derivation-time non-step reads was settled by
+F157: no.** The discriminator is not derivation versus resolution but whether an exact version
+test can stand in the same expression as the read — the **adjacent** shape, `SPEC.md`, *Versions*,
+invariant 4. A derivation-time read is lexically inside `deriveUnitStats`, where `version` is a
+local binding, so that form is always available and is checkable without leaving the line
+(`metalFiresActive`, Eye of Heaven). A read inside a helper shared by several engines has no
+version literal in reach: `dosDefenseForAttack` serves all three DOS builds, and its melee arm
+needs two *different* scopes in one expression (`blazingMarchMagicWeapon` CoM 1,
+`eldritchWeaponEligibility` MoM). That is what `COMBAT_VERSION_SCOPES` is for, and a
+`derivation:` sibling would only add indirection to gates a reader can already check in place.

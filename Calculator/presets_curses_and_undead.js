@@ -905,6 +905,14 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:50 },
     expected: { dmgToA: 0, dmgToB: 40.000 },
   },
+  bombsGrenadesAfterCombatConversionWarlord: {
+    desc: 'The enclosing gate is `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14) THEN { GOTO "NOTSAPIENS"; }` (UnitCalcPre.CAS:1062-1064) — both terms read the permanent record, as the sibling grants under the same label already do (firstFourEligible, stats_identity.js). Raise Dead makes the unit fantastic during combat and the grant still lands: Thrown 6 plus melee 1 over 4 figures at 100% hit = 28.0, the same as the sibling bombsGrenadesWarlord. Reading the combat-converted identity instead withheld the whole Thrown channel and left melee alone at 4.0.',
+    version: V_WARLORD,
+    a: { figs:4, atk:1, hitChance:70, hp:10,
+      abilities: { outlanderWizard: true, explosive: true, raiseDead: true } },
+    b: { def:0, toBlkMod:70, hp:50 },
+    expected: { dmgToA: 0, dmgToB: 28.000 },
+  },
   upgradedExplosiveFireWarlord: {
     desc: 'Rocketry + Explosive derives Upgraded Explosive: the Blackpowder branch (UnitCalcPre.CAS:1074-1077) doubles Fire Breath 3+4 to 14, and Blackpowder Poison rides both that call and the unconditional melee call for 16.0. Base melee 0 keeps the separate Explosive Thrown grant at :1066-1080 shut — that one is gated on base melee > 0 or Flying — so the doubling is measured alone. Dropping Explosive leaves 9.0; dropping Rocketry leaves 3.0. The earlier 20.0 reading was the 20 HP defender capping a 25.0 total that included the Thrown channel, not a measurement of the doubling.',
     version: V_WARLORD,

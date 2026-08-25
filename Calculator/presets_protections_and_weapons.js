@@ -33,6 +33,13 @@ definePresets({
   },
 
   // --- Land Linking ---
+  landLinkingBeforeMysticSurgeRealmCoM: {
+    desc: 'Land Linking (CoM 1): the block tests the running `bu->race` at com1:0x8F765, and Mystic Surge writes the unaligned-fantastic realm below it at com1:0x8F79E, so a unit made fantastic only by Mystic Surge gets no +2 melee. atk 1 stays 1. The exclusion is the rule under test',
+    version: V_COM,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { landLinking: true, mysticSurge: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
   landLinkingFantasticMeleeCoM2: {
     desc: 'Land Linking (CoM2): fantastic creature gets +2 melee. atk 1 to 3, 100% hit vs 0 def gives 3 dmg',
     version: V_COM2,
@@ -79,6 +86,20 @@ definePresets({
   },
 
   // --- Nature Link (Warlord rename of Land Linking) ---
+  natureLinkBeforeSpiritLinkClearWarlord: {
+    desc: 'Nature Link (Warlord): the region-c block tests `U.Fantastic`, and Spirit Link clears it only in the late hook (UnitCalc.CAS:1306, region d), so a Mystic-Surged unit still gets the +2 melee there. atk 1 to 3 for 3 dmg',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10, abilities: { natureLink: true, mysticSurge: true, spiritLink: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  natureLinkSpiritLinkAssertsFantasticWarlord: {
+    desc: 'Spirit Link on an otherwise non-fantastic unit: `SETSTAT(U,AFantastic,0,1)` at UnitCalcPre.CAS:30 asserts Fantastic in region b, and the region-c Nature Link block reads that record, so the +2 melee applies. atk 1 to 3 for 3 dmg, against the 1 the same unit deals without Spirit Link. The clearing write at UnitCalc.CAS:1306 is region d, past both blocks.',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10, abilities: { natureLink: true, spiritLink: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
   natureLinkFantasticMeleeWarlord: {
     desc: 'Nature Link (Warlord): fantastic creature still gets the Land Linking +2 melee. atk 1 to 3, 100% hit vs 0 def gives 3 dmg',
     version: V_WARLORD,
