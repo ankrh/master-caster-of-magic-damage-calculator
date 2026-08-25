@@ -73,7 +73,7 @@ const TEST_TREE = [
       { name: 'Vertigo', keys: ['vertigoMeleeHitMoM', 'vertigoRangedHitMoM', 'vertigoDefenseMoM', 'vertigoImmolationDefenseMoM', 'vertigoWallOfFireDefenseMoM'] },
       { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireMultiFig', 'wallOfFireMagicImmunity', 'wallOfFireRighteousness', 'wallOfFireFireImmunity', 'wallOfFireNotRanged', 'wallOfFireAfterThrown', 'wallOfFireAfterGazeCounter', 'wallOfFireAfterThrownAndGaze', 'wallOfFireBilateralGaze'] },
       { name: 'Warp Creature', keys: ['warpAttackMelee', 'warpAttackNotRangedMoM', 'warpDefenseHalfMoM', 'warpResistSetsToZero', 'warpResistMagicSurvives'] },
-      { name: 'Warp Reality', keys: ['warpRealityBasic', 'warpRealityChaosExempt', 'warpRealityChaosChannelsExempt', 'warpRealityMagicImmunityNotExempt', 'warpRealityBothSides', 'warpRealityFloorAt10', 'warpRealityRanged'] },
+      { name: 'Warp Reality', keys: ['warpRealityBasic', 'warpRealityChaosExempt', 'warpRealityChaosChannelsExempt', 'warpRealityChaosExemptAtBlockWarlord', 'warpRealityChaosExemptAtBlockImmolationWarlord', 'warpRealityMagicImmunityNotExempt', 'warpRealityBothSides', 'warpRealityFloorAt10', 'warpRealityRanged'] },
       { name: 'Weakness', keys: ['weaknessMeleePenalty', 'weaknessMissileRangedPenalty', 'weaknessThrownNotAffected131', 'weaknessBoulderNotAffected'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityMelee', 'weaponImmunityMagicWeapon', 'weaponImmunityFantastic', 'weaponImmunityHero', 'weaponImmunityCounter', 'weaponImmunityThrown131', 'weaponImmunityRangedMissile', 'weaponImmunityRangedMagic'] },
       { name: 'Wraith Form', keys: ['wraithFormGrantsWeaponImmunity', 'wraithFormBypassesWIMoM'] },
@@ -912,6 +912,7 @@ const TEST_TREE = [
           'rustEliminatesThrownWarlord',
           'rustEliminatesLargeShieldWarlord',
           'rustFantasticUnaffectedWarlord',
+          'rustAppliesToSpiritLinkedFantasticWarlord',
         ],
       },
       {

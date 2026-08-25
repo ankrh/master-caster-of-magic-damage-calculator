@@ -217,6 +217,26 @@ function deriveUnitStats(input) {
   // (`Unit rosters/Warlord mod unit data/HELP.TXT:2782`), whose "Target: enemy regular unit"
   // line is the fantastic exclusion. The melee half is in combat_abilities.js and the ranged
   // half is `PROVENANCE[rust:ranged]` below.
+  //
+  // The exclusion is a **targeting** restriction, not a term of the block, and it is read at the
+  // record the recalculation *leaves* (F183). Three facts settle that. (a) The recalculation
+  // block, `UnitCalc.CAS:492-503`, is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone and makes
+  // no Fantastic test of either record, so there is no block term to position. (b) The helptext's
+  // Target lines spell "regular", "Fantastic" and "non-hero" as three separate words — "enemy
+  // regular non-hero unit" and "friendly non-hero regular unit" both occur — so "regular" is the
+  // non-Fantastic class and a hero is targetable. (c) Targeting reads the *finished* calculated
+  // record, which is what the pre-pass fixed point is. Spirit Link states it outright: it asserts
+  // `SETSTAT(U,AFantastic,0,1)` at the head of the routine to "allow unit to get bonus and penalty
+  // of fantastic and non-fantastic" (`UnitCalcPre.CAS:25-28`) and clears it again at the tail so
+  // the "enchanted fantastic unit could not be targeted by fantastic-only spell"
+  // (`UnitCalc.CAS:1305-1306`). The engine manipulates the recalculated flag *in order to* change
+  // targetability, so a targeting predicate is a function of the record after every conversion —
+  // and a Spirit-Linked Fantastic unit is a legal Rust target, which the fixed point reports and
+  // the record at `d:rust` (chain rank 129, ahead of `d:spiritLink` at 135) would not.
+  // The same reading covers this constant's two other consumers, the weapon material below and
+  // the Large Shield strip, and it is why F163's removal of the pre-pass leaves this read alone.
+  // `tools/identity_read_position_census.js` classifies it `targeting` for that reason rather
+  // than owning it to `d:rust`.
   const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust)
     && !isFantasticLive;
   // The material block has no Fantastic gate in either engine family: it reads
@@ -1032,7 +1052,31 @@ function deriveUnitStats(input) {
   const psychoForceActive = isWarlord && !!(abilities && abilities.psychoForce);
   const pneumaFieldActive = isWarlord && !!(abilities && abilities.pneumaField);
   const warpRealityActive = !!input.warpReality;
-  const unitIsChaos = unitTypeVal === 'fantastic_chaos';
+  // Warp Reality's exemption is read at its own block in both engine families, so it takes the
+  // record standing at `c:warpReality` rather than the pre-pass fixed point (F184). The modern
+  // block is `(ownCG or oppCG) and (not IsChaosUnit(i))` at $005A3E33..$005A3ED0
+  // (`Units.RecalculateUnits.pas`), and the helper takes the *calculated* record — the one stated
+  // fact about it, from the Spell Ward chain in
+  // `Reference docs/Caster binary/CoM2 binary - unit recalculation.md`; the DOS block is
+  // `bu->race != rt_Chaos` at 131:0x9077A and com1:0x904DF (`unitcalc.c`), the one battle-unit
+  // record `BU_Apply_Specials` mutates in place. The block states **no second unit-side term**:
+  // its other two terms are the attacker-side and defender-side combat-global reads, which are
+  // `warpRealityActive`. Only Warlord moves — `c:warpReality` follows every conversion of the
+  // other four chains, and in Warlord `d:spiritLink` still follows it, so a Spirit-Linked Chaos
+  // unit is Fantastic where the block stands and the exemption is no longer withheld from it.
+  //
+  // *Which* predicate `IsChaosUnit` computes is a separate, unsettled question — BACKLOG Q31 —
+  // and this positioning does not answer it: the DOS block transcribed above tests the realm
+  // alone, where the calculator spells the modern one as the compact `fantastic_chaos` token here
+  // and as the realm alone at Chaos Surge. Both readings exempt the Spirit-Linked Chaos unit once
+  // the record is positional, which is why the position is answerable without Q31.
+  const identityAtWarpReality = warpRealityActive
+    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
+      { beforeKey: 'c:warpReality' }).identity
+    : identity;
+  const unitIsChaos = warpRealityActive
+    ? legacyUnitTypeFromLiveIdentity(identityAtWarpReality) === 'fantastic_chaos'
+    : unitTypeVal === 'fantastic_chaos';
   const hurricaneActive = !!input.hurricane;
   const vertigoActive = !!(abilities && abilities.vertigo)
     && !(abilities && (abilities.illusionImmunity || abilities.magicImmunity));
@@ -2026,7 +2070,8 @@ function deriveUnitStats(input) {
 
   // Warp Reality also affects Immolation's separate spell-attack chance. Common unit To Hit
   // is already written on the ordered stat record above, on `PROVENANCE[warpReality]`
-  // (`stats_sequence.js`).
+  // (`stats_sequence.js`). This is the block's second consumer, so it takes the same record the
+  // block reads — `unitIsChaos` above, replayed to `c:warpReality` (F184).
   if (warpRealityActive && !unitIsChaos) {
     toHitImmolation = Math.max(0.1, toHitImmolation - 0.2);
   }

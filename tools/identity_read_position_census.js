@@ -70,6 +70,7 @@ const CHANNELS = [
   { token: 'trueLightRealm', reads: ['race'] },
   { token: 'identityAtPoorVision', reads: ['race', 'fantastic'] },
   { token: 'poorVisionRealm', reads: ['race'] },
+  { token: 'identityAtWarpReality', reads: ['race', 'fantastic'] },
   { token: 'survivalInstinctUnitType', reads: ['race', 'fantastic'] },
   { token: 'landLinkingUnitType', reads: ['race', 'fantastic'] },
   { token: 'blazingEyesActive', reads: ['race', 'fantastic'] },
@@ -89,6 +90,13 @@ const CHANNELS = [
 //   'plumbing'    the read declares or forwards a channel and gates nothing.
 //   'post-chain'  the read happens after the whole recalculation, in combat resolution or on the
 //                 returned record, where the fixed point is the finished record and is correct.
+//   'targeting'   the read models a *cast-time targeting* restriction rather than a term of any
+//                 block, so it has no owning chain entry: the engine evaluates targetability
+//                 against the record the recalculation leaves, which is what the fixed point is.
+//                 Spirit Link is the citation — it asserts Fantastic at UnitCalcPre.CAS:25-28 so
+//                 the unit takes fantastic bonuses, and clears it at UnitCalc.CAS:1305-1306 so the
+//                 "enchanted fantastic unit could not be targeted by fantastic-only spell". A row
+//                 takes this value only where the block it feeds makes no such test of its own.
 //   'dead-arm'    the expression is unreachable in every version.
 // `record` is what the site is handed today: 'fixed-point', 'positional:<key>', 'positional:owner',
 // or 'n/a'. `positional:owner` is the replay that stops at the site's *own* owner entry, which is
@@ -106,6 +114,8 @@ const SITES = [
     note: 'declares the channel' },
   { key: 'Calculator/stats.js#unitRealm#unitTypeVal', owner: 'plumbing', record: 'n/a',
     note: 'declares the realm channel' },
+  { key: 'Calculator/stats.js#unitIsChaos#identityAtWarpReality', owner: 'plumbing', record: 'n/a',
+    note: 'declares the Chaos channel from the replay at c:warpReality' },
   { key: 'Calculator/stats.js#unitIsChaos#unitTypeVal', owner: 'plumbing', record: 'n/a',
     note: 'declares the Chaos channel' },
   { key: 'Calculator/stats.js#nauseaUnitType#unitTypeVal', owner: 'plumbing', record: 'n/a',
@@ -170,8 +180,14 @@ const SITES = [
     effect: 'Spell Ward (Fantastic half)', settled: 'F163 tranche' },
 
   // --- stats.js: fixed-point reads that gate a positioned effect ------------------------
-  { key: 'Calculator/stats.js#rustActive#isFantasticLive', owner: 'd:rust', record: 'fixed-point',
-    trigger: 'rust', effect: 'Rust', filed: 'F183' },
+  // Rust's `UnitCalc.CAS:492-503` block is gated on the enchantment flag alone and makes no
+  // Fantastic test of either record, so this term is not a gate of that block at all: it is the
+  // helptext's "Target: enemy regular unit" restriction, evaluated where the engine evaluates
+  // targeting — against the record the recalculation leaves. The fixed point is that record, so
+  // the read is correct and `d:rust` was never its owner (F183).
+  { key: 'Calculator/stats.js#rustActive#isFantasticLive', owner: 'targeting',
+    record: 'fixed-point', trigger: 'rust', effect: 'Rust targeting restriction',
+    settled: 'F183' },
   { key: 'Calculator/stats.js#misleadEligible#identity.fantastic', owner: 'e:mislead',
     record: 'fixed-point', trigger: 'mislead', effect: 'Mislead' },
   { key: 'Calculator/stats.js#nodeAuraActive#unitRealm', owner: 'c:nodeAura',
@@ -210,8 +226,8 @@ const SITES = [
     owner: ['e:supremeLight', 'c:supremeLight'], record: 'fixed-point', trigger: 'supremeLight',
     effect: 'Supreme Light' },
   { key: 'Calculator/stats.js#toHitImmolation#unitIsChaos', owner: 'c:warpReality',
-    record: 'fixed-point', trigger: { input: 'warpReality' },
-    effect: 'Warp Reality, Immolation To Hit' },
+    record: 'positional:c:warpReality', trigger: { input: 'warpReality' },
+    effect: 'Warp Reality, Immolation To Hit', settled: 'F184' },
 
   // --- stats_sequence.js ----------------------------------------------------------------
   { key: 'Calculator/stats_sequence.js#precalcScriptStatSteps#nauseaUnitType', owner: 'plumbing',
@@ -234,7 +250,8 @@ const SITES = [
     owner: 'c:soulLinkerAura', record: 'fixed-point', trigger: 'soulLinkerAura',
     effect: 'Soul Linker aura (CoM 1)' },
   { key: 'Calculator/stats_sequence.js#step:warpReality#unitIsChaos', owner: 'c:warpReality',
-    record: 'fixed-point', trigger: { input: 'warpReality' }, effect: 'Warp Reality' },
+    record: 'positional:c:warpReality', trigger: { input: 'warpReality' },
+    effect: 'Warp Reality', settled: 'F184' },
   { key: 'Calculator/stats_sequence.js#step:shatter#unitTypeVal', owner: 'c:shatter',
     record: 'fixed-point', trigger: 'shatter', effect: 'Shatter',
     // `isWarlord || isNormalUnitType(unitTypeVal) || unitTypeVal === 'hero'` short-circuits in
@@ -327,6 +344,16 @@ const GROUND_TRUTH = [
     comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 7 },
   { id: 'F186', effect: 'warlordEternalNightActive', at: 'b:eternalNight:poorVision',
     fields: ['race'], comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 1 },
+  // F184's `moved` is 0 for the reason the third tranche rule states: the corpus has 3105 Warlord
+  // cases, 6 with Warp Reality and Spirit Link and 6 with Warp Reality and a Chaos Channels flag,
+  // but **0 with all three** — and with no base race in the case list, Chaos Channels is the only
+  // route to a live Chaos realm, so no generated case can tell the two records apart. The
+  // correction's evidence is its two presets. Its sibling F183 has no row here on purpose: that
+  // read turned out not to be a hoisting defect at all but a targeting restriction, and the
+  // `targeting` classification is what records it.
+  { id: 'F184', effect: 'unitIsChaos, the Warp Reality step and the Immolation To Hit read',
+    at: 'c:warpReality', fields: ['race', 'fantastic'], comparison: 'positional',
+    versions: ['com2_warlord_1.5.12.7'], moved: 0 },
 ];
 
 // What the measurement cannot see. Every earlier round on this seam under-claimed its blind
@@ -638,7 +665,7 @@ function measureCorpus(models) {
   };
 
   const gated = SITES.filter(site => typeof site.owner === 'string'
-    ? !['plumbing', 'post-chain', 'dead-arm'].includes(site.owner) : true);
+    ? !['plumbing', 'post-chain', 'targeting', 'dead-arm'].includes(site.owner) : true);
 
   let currentInput = null;
   const triggerPresent = (site, abilities) => {
@@ -759,7 +786,7 @@ function run() {
   const findings = [];
   for (const site of SITES) {
     if (typeof site.owner === 'string'
-      && ['plumbing', 'post-chain', 'dead-arm'].includes(site.owner)) continue;
+      && ['plumbing', 'post-chain', 'targeting', 'dead-arm'].includes(site.owner)) continue;
     const perVersion = [];
     for (const version of VERSIONS) {
       const model = models.get(version);
@@ -842,7 +869,7 @@ function main() {
     .map(entry => ({ ...entry, verdict: verdictFor(entry.site, entry.perVersion) }))
     .sort((a, b) => (order[a.verdict] - order[b.verdict])
       || a.site.key.localeCompare(b.site.key));
-  const tally = { plumbing: 0, 'post-chain': 0, 'dead-arm': 0 };
+  const tally = { plumbing: 0, 'post-chain': 0, targeting: 0, 'dead-arm': 0 };
   for (const site of SITES) {
     if (typeof site.owner === 'string' && site.owner in tally) tally[site.owner] += 1;
   }

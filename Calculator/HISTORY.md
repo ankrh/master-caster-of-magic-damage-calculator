@@ -6,6 +6,56 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-25
 
+- **F183 — Rust's Fantastic exclusion is a targeting restriction, so the fixed point is the record
+  it wants; the row's premise was falsified and no code moved.** The row asked (1) whether a
+  cast-time targeting restriction is a recalculation gate at all and (2) which record it takes, and
+  called the census's `d:rust` owner assignment settled. Reading the block settles both against the
+  row. `UnitCalc.CAS:492-503` is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone and makes **no**
+  Fantastic test of either record, so there is no block term to position — the census's owner
+  assignment was the falsified premise, not the read. The exclusion is the helptext's "Target:
+  enemy regular unit" (`HELP.TXT:2782`), and that file's Target lines spell "regular", "Fantastic"
+  and "non-hero" as three separate words — "enemy regular non-hero unit" and "friendly non-hero
+  regular unit" both occur — so it is a non-Fantastic class test that admits heroes, which is what
+  `rustActive` already asks. **Spirit Link is the citation for the record**, and it states the rule
+  outright: the engine asserts `SETSTAT(U,AFantastic,0,1)` at the head of the routine to "allow
+  unit to get bonus and penalty of fantastic and non-fantastic" (`UnitCalcPre.CAS:25-28`) and
+  clears it again at the tail so the "enchanted fantastic unit could not be targeted by
+  fantastic-only spell" (`UnitCalc.CAS:1305-1306`). Targetability is therefore a function of the
+  record the recalculation *leaves* — the fixed point — and a spirit-linked Fantastic creature is a
+  legal Rust target, which the fixed point reports and the record at `d:rust` (#129, ahead of
+  `d:spiritLink` #135) would not. So the correction is to the classification, not the code:
+  `tools/identity_read_position_census.js` gains a `targeting` owner class and the site leaves the
+  hoisted population, taking F163's prerequisite count from 6 sites to 3. **Preset**:
+  `rustAppliesToSpiritLinkedFantasticWarlord` pins the ruling — 10 melee, Rust −3, 100% hit,
+  def 0 → 7.000 — and fails at 10.000 when the read is repositioned to `d:rust`, which is the
+  change the row proposed. No number moved, so `tools/derivation_equivalence.js` is 0 of 15525 by
+  construction. Filed while landing it: [F191](./BACKLOG.md), Rust's two independent resistance
+  rolls driven by one control.
+- **F184 — Warp Reality's Chaos exemption reads the record at its own block.** Premise re-checked
+  and it held in full, owner-chain assignment included: `unitIsChaos` (`stats.js`) feeds nothing
+  but the ordered step `c:warpReality` and the Immolation To Hit read, both of which are that one
+  block's consumers; the census re-measured `c:warpReality` at #111 of the Warlord chain against
+  `d:spiritLink` #135, 48 of 15525 divergent and 6 with the input on, and 0 in the other four
+  versions. The block is compiled in every version and no Warlord script overwrites it:
+  `(ownCG or oppCG) and (not IsChaosUnit(i))` → `Dec(U.hitchance, 20)` at $005A3E33..$005A3ED0
+  (`Units.RecalculateUnits.pas`), and `bu->race != rt_Chaos` → `bu->tohit -= 2` at 131:0x9077A and
+  com1:0x904DF (`unitcalc.c`). Both take the **calculated** record — the one `BU_Apply_Specials`
+  mutates in place, and for the modern helper the one stated fact about it (the Spell Ward chain,
+  `CoM2 binary - unit recalculation.md`). Checked for the fourth tranche rule and the block states
+  **no** second unit-side term: its other two terms are the two sides' combat-global reads, which
+  are `warpRealityActive`. Both sites now read a `{ beforeKey: 'c:warpReality' }` replay.
+  **Measured**: `tools/derivation_equivalence.js` moves **0 of 15525**, and the zero is the third
+  tranche rule rather than a claim about the gate — of 3105 Warlord cases, 6 carry Warp Reality
+  with Spirit Link and 6 carry it with a Chaos Channels flag, but **none carries all three**, and
+  with no base race in the case list Chaos Channels is the only route to a live Chaos realm.
+  **Presets**, one per consumer, both on a spirit-linked `fantastic_chaos` attacker under Warp
+  Reality: `warpRealityChaosExemptAtBlockWarlord` 0.300 against 0.100, and
+  `warpRealityChaosExemptAtBlockImmolationWarlord` 3.000 against 1.000 on a melee-less attacker so
+  it binds the second expression alone. Two things the block reading turned up and this item did
+  **not** implement: the DOS transcription tests the realm alone where the calculator spells the
+  modern predicate as `fantastic_chaos`, which extends [Q31](./BACKLOG.md) to four call sites and
+  would move numbers outside this item's Warlord scope; and Warp Reality's Immolation arm has no
+  source in the modern engine at all, filed as [F190](./BACKLOG.md).
 - **F185 — True Light reads the realm at its own block, and its Undead arm is a flag test, not a
   realm test.** Premise re-checked before implementing: the owner-chain assignment held — the three
   `trueLight*Bonus` terms (`stats.js`) feed nothing but `makeTrueLightStep`, which is `b:trueLight`

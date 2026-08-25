@@ -832,6 +832,13 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10 },
   },
+  rustAppliesToSpiritLinkedFantasticWarlord: {
+    desc: 'Rust’s "regular unit" exclusion is a targeting restriction, and targeting reads the record the recalculation leaves: Spirit Link clears Fantastic at the tail of UnitCalc.CAS (:1305-1306) precisely so the unit "could not be targeted by fantastic-only spell", so a spirit-linked Chaos creature is a legal Rust target and takes the −3. Base atk 10 → 7, 100% hit, def 0 → 7 (without Rust, 10; reading the record at `d:rust` instead — chain #129, ahead of `d:spiritLink` #135 — would see Fantastic and give 10).',
+    version: V_WARLORD,
+    a: { unitType:'fantastic_chaos', atk:10, hitChance:70, hp:10, abilities: { rust: true, spiritLink: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 7 },
+  },
   divineProtectionLuckyToHitWarlord: {
     desc: 'Divine Protection (Warlord): grants Lucky. 1 atk, base 30% + Lucky +10% = 40% hit vs 0 def → E[dmg] = 0.4 (without Divine Protection, 30% → 0.3)',
     version: V_WARLORD,

@@ -404,6 +404,22 @@ definePresets({
     warpReality: true,
     expected: { dmgToA: 0, dmgToB: 0.100 },
   },
+  warpRealityChaosExemptAtBlockWarlord: {
+    desc: 'Warp Reality reads its Chaos exemption at its own block, not at the end of the identity pre-pass. Spirit Link asserts Fantastic at region b (UnitCalcPre.CAS:25-28) and clears it again at region d (UnitCalc.CAS:1305-1306), and `c:warpReality` is #111 of the Warlord chain against `d:spiritLink` #135 — so a spirit-linked Chaos creature is still Chaos where the block stands and keeps its 30% to hit: 1 atk vs 0 def → 0.3. Reading the pre-pass fixed point instead sees normal_chaos, applies the -20% and gives 0.1.',
+    version: V_WARLORD,
+    a: { atk:1, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true } },
+    b: { hp:10 },
+    warpReality: true,
+    expected: { dmgToA: 0, dmgToB: 0.300 },
+  },
+  warpRealityChaosExemptAtBlockImmolationWarlord: {
+    desc: 'The same positional read at Warp Reality’s second consumer, the separate Immolation spell-attack chance. The attacker has no melee strength, so the only damage is Immolation 10 at its own To Hit: exempt → 30% → 3.0, against 1.0 if the exemption is taken from the pre-pass fixed point and the -20% applies. Paired with warpRealityChaosExemptAtBlockWarlord because the two consumers are separate expressions.',
+    version: V_WARLORD,
+    a: { atk:0, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true, immolation: true } },
+    b: { hp:10 },
+    warpReality: true,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
   warpRealityRanged: {
     desc: 'Warp Reality vs ranged: missile 1 atk, 30%→10% to hit vs 0 def → 0.1 dmg',
     a: { rtbType:'missile', rtb:1, hp:10 },
