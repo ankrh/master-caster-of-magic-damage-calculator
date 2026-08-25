@@ -1,6 +1,6 @@
 // --- Unit Stat Derivation: the per-version execution chain ---
-// No DOM dependencies. Read by deriveUnitStats (stats.js) and applyOrderedIdentityConversions
-// (stats_identity.js) through statChain().
+// No DOM dependencies. Read by deriveUnitStats (stats.js) and by the targeting projection in
+// stats_identity.js through statChain().
 //
 // Every bare address in this file is a position, and its home is one of three documents, named
 // once here rather than beside each chain: `Reference docs/DOS reconstructed/unitcalc.c` and the
@@ -28,32 +28,22 @@
 // non-decreasing phase order, so an entry filed under the wrong region shows up as a chain that
 // is out of order.
 //
-// Both derivation sequences walk the same chain — the stat sequence and the ordered identity
-// conversions — so an identity write is accounted for exactly once too, and cannot reach the
-// trace from a sequence no chain covers. Their ranks are comparable only within one sequence:
-// the identity pre-pass runs entirely before the stat sequence, which is earlier than the chain
-// rank one of its entries carries (`d:spiritLink`).
+// One sequence walks the chain, and an identity conversion is one of its steps, so an identity
+// write is accounted for exactly once and its rank is comparable with every other write's.
+// Every conversion sits at its own block's address: `unitcalc.c` addresses every DOS realm write
+// inside `BU_Apply_Specials`; `Units.RecalculateUnits.pas` addresses the modern ones; and the CAS
+// hooks give `b:spiritLink` at UnitCalcPre.CAS:30, the first represented write of that file,
+// `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the `marionette:stats` attack
+// writes, `fieryFury:race` at UnitCalcPre.CAS:834, the THEN arm of the same `IF` whose ELSE arm is
+// `b:fieryFury`, `sanctify` at UnitCalcPre.CAS:1249, and `d:spiritLink` at UnitCalc.CAS:1306,
+// between Shadow Strike and Psycho Force. Spirit Link writes Fantastic twice, asserting it in b
+// and clearing it in d, so the two entries bracket every conversion between them and every gate
+// that reads the running record there takes a Fantastic unit.
 //
-// An identity conversion runs in the pre-pass, before any stat write, so its rank relative to the
-// stat writes beside it decides nothing — only its rank against the other conversions does. In the
-// modern chains that leaves the region-`c` conversions heading their region by convention, and
-// each is listed as a deduced position below. The DOS chains and the CAS hooks are transcribed
-// instead, because both give real positions: `unitcalc.c` addresses every DOS realm write inside
-// `BU_Apply_Specials`, so each of those entries sits at its own block's offset; and
-// `b:spiritLink` at UnitCalcPre.CAS:30, the first represented write of that file;
-// `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the
-// `marionette:stats` attack writes; `fieryFury:race` at UnitCalcPre.CAS:834, the THEN arm of the
-// same `IF` whose ELSE arm is `b:fieryFury`; `sanctify` at UnitCalcPre.CAS:1249; and
-// `d:spiritLink` at UnitCalc.CAS:1306, between Shadow Strike and Psycho Force. Spirit Link writes
-// Fantastic twice, asserting it in b and clearing it in d, so the two entries bracket every other
-// conversion and every gate that reads the running record. Both are also the one place where the
-// calculator's execution position and its source rank disagree: they run in the pre-pass, because
-// live Fantastic gates the whole derivation, while the engine makes the second write late in
-// region d.
-//
-// One engine block can reach both sequences — Mystic Surge writes Defense, Resistance and the
-// realm in one region-`c` block — so six identity conversions carry a `:race` qualifier to keep
-// `phase:id` unique across the two (`c:mysticSurge` and `c:mysticSurge:race`).
+// Five identity conversions carry a `:race` qualifier. Three are separately gated writes of one
+// effect and would need the qualifier under any shape; two — `c:chaosChannels:armor:race` and
+// `c:blackChannels:race` — sit chain-adjacent to the stat step of the same block and are split for
+// a reason of the calculator's, recorded in `SPEC.md`, *Deliberate deviations*.
 
 // Which positions the evidence fixes, stated once rather than per chain. Regions `b`, `c` and `d`
 // are transcribed — the compiled region-`c` address map in `Reference docs/Caster binary/CoM2
@@ -63,19 +53,21 @@
 const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
 
 // Individual positions inside a transcribed region that the map does not actually give.
-// The modern region-`c` identity conversions are all here: `Units.RecalculateUnits.pas` puts
-// their blocks in the order the chains carry, but the conversions head the region by the
-// convention above rather than sitting at those blocks' offsets.
+// Only `c:raiseDead` is left, in every version that has it: it is a combat-spell write — from
+// `combat.c` in the DOS builds and `Spells.InitializeCombatSpellcasting.pas` in the modern ones —
+// not a block of this routine, so nothing orders it against the blocks around it.
 //
-// The DOS builds no longer share that list. `BU_Apply_Specials` (`Reference docs/DOS
-// reconstructed/unitcalc.c`) gives every one of their realm writes an address, so each sits at
-// the offset of its own block and is transcribed, not deduced. Only `c:raiseDead` stays
-// inherited there: it is a combat-spell write from `combat.c`, not a block of this routine, and
-// nothing orders it against them.
-const DEDUCED_IDENTITY_C_POSITIONS = [
-  'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust',
-  'c:blackChannels:race', 'c:undead', 'c:mysticSurge:race', 'c:raiseDead',
-];
+// Every other identity conversion now sits at its own block's offset. The DOS builds always did:
+// `BU_Apply_Specials` (`Reference docs/DOS reconstructed/unitcalc.c`) addresses each of their
+// realm writes. The modern conversions used to head region `c` by convention, because the
+// calculator ran them in a pre-pass whose only meaningful order was the conversions' order among
+// themselves; with the pre-pass gone (F163) they are ordinary steps and take the addresses
+// `Units.RecalculateUnits.pas` gives them — Chaos Channels flight $0059F330, its armor block
+// $0059F4A3, Blood Lust $0059F5DC, Animated $0059F7D8, the aggregate Undead normalization
+// $0059FBD0, and the No Heal conversion $005A0420 immediately after the Mystic Surge block whose
+// flag reaches it. Destiny's identity write is not in region `c` at all: it writes the
+// *permanent* record (`B.race`, `B.Fantastic` at $0059A390) and is `base:destiny`.
+const DEDUCED_IDENTITY_C_POSITIONS = ['c:raiseDead'];
 const DEDUCED_POSITIONS = Object.freeze({
   'mom_1.31': [],
   'mom_cp_1.60.00': [],
@@ -159,7 +151,7 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   'c:chaosChannels:fireBreath:race', 'c:bloodLust', 'c:undead',
   'c:animated', 'c:flameBlade', 'c:lionheart',
   'c:ironSkin', 'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:landLinking',
-  'c:mysticSurge:race', 'c:mysticSurge', 'c:raiseDead', 'c:holyArmor',
+  'c:mysticSurge', 'c:mysticSurge:race', 'c:raiseDead', 'c:holyArmor',
   'c:focusMagic', 'c:orihalcon', 'c:holyWeapon',
   'c:chaosSurge', 'c:survivalInstinct', 'c:nodeAura', 'c:highPrayer', 'c:prayer',
   'c:blazingMarch', 'c:warpReality', 'c:blackPrayer', 'c:guardian', 'c:guidingBeaconAura',
@@ -174,14 +166,16 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   'base:immunityCurseGating', 'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
+  'base:destiny',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
-  'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath', 'c:destiny:race',
-  'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust', 'c:undead',
-  'c:mysticSurge:race', 'c:raiseDead',
+  'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath',
   'c:destiny', 'c:level', 'c:focusMagic',
   'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:weapon',
-  'c:endurance', 'c:discipline', 'c:chaosChannels:armor', 'c:animated',
-  'c:flameBlade', 'c:mysticSurge', 'c:lionheart', 'c:ironSkin',
+  'c:endurance', 'c:discipline', 'c:chaosChannels:flight',
+  'c:chaosChannels:armor', 'c:chaosChannels:armor:race',
+  'c:bloodLust', 'c:animated', 'c:undead',
+  'c:flameBlade', 'c:mysticSurge', 'c:mysticSurge:race', 'c:raiseDead', 'c:lionheart',
+  'c:ironSkin',
   'c:landLinking', 'c:holyArmor', 'c:orihalcon', 'c:holyWeapon', 'c:chaosSurge',
   'c:survivalInstinct', 'c:innerPower', 'c:blazingEyes', 'c:reinforceMagic',
   'c:eternalNight:enemyResistance', 'c:charmOfLife', 'c:nodeAura',
@@ -203,7 +197,8 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'base:sanctaBasilica', 'base:naturalSelection:powerMinerals',
   'base:naturalSelection:nightshade', 'base:naturalSelection:wildGame',
   'base:naturalSelection:coal', 'base:naturalSelection:iron', 'base:pillarOfFaith',
-  'base:energyCannon', 'base:survivalInstinctToBlock', 'a:combatSummoned', 'a:chosen',
+  'base:energyCannon', 'base:survivalInstinctToBlock', 'base:destiny',
+  'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',
   'b:marionette:rangedType', 'b:marionette:ascensionRangedType',
@@ -216,11 +211,11 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'b:eternalNight:poorVision',
   'b:greatUnbinding', 'b:prayer', 'b:rally', 'b:trueLight', 'b:plague', 'b:goblinPox',
   'b:luckyStar', 'b:disheartenProphecy', 'b:wallOfFire:garrison', 'b:godsPlayDices',
-  'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:undead',
-  'c:mysticSurge:race', 'c:raiseDead', 'c:destiny',
+  'c:destiny',
   'c:level', 'c:focusMagic', 'c:lucky', 'c:darkForce', 'c:heavenlyLight',
-  'c:weapon', 'c:endurance', 'c:discipline',
-  'c:chaosChannels:armor', 'c:animated', 'c:flameBlade', 'c:mysticSurge',
+  'c:weapon', 'c:endurance', 'c:discipline', 'c:chaosChannels:flight',
+  'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:animated', 'c:undead',
+  'c:flameBlade', 'c:mysticSurge', 'c:mysticSurge:race', 'c:raiseDead',
   'c:lionheart', 'c:ironSkin', 'c:landLinking', 'c:holyArmor', 'c:orihalcon',
   'c:holyWeapon', 'c:chaosSurge', 'c:survivalInstinct',
   'c:innerPower', 'c:blazingEyes', 'c:reinforceMagic',

@@ -1059,7 +1059,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.400 },
   },
   survivalInstinctSpiritLinkAssertsFantasticWarlord: {
-    desc: 'Survival Instinct (Warlord) on a Spirit-Linked normal unit: the block tests the calculated record, `if U.Fantastic` at $005A1664 (Units.RecalculateUnits.pas), and Spirit Link asserts Fantastic in region b at UnitCalcPre.CAS:30, so the +10% To Hit applies where it stands — atk 1 at base 30% becomes 40% → 0.4 dmg, against the 0.3 the same unit deals without Spirit Link. Reading the pre-pass fixed point instead answered for the region-d clearing write at UnitCalc.CAS:1306, which is past this block, and gave 0.3.',
+    desc: 'Survival Instinct (Warlord) on a Spirit-Linked normal unit: the block tests the calculated record, `if U.Fantastic` at $005A1664 (Units.RecalculateUnits.pas), and Spirit Link asserts Fantastic in region b at UnitCalcPre.CAS:30, so the +10% To Hit applies where it stands — atk 1 at base 30% becomes 40% → 0.4 dmg, against the 0.3 the same unit deals without Spirit Link. Reading the record the recalculation leaves instead answered for the region-d clearing write at UnitCalc.CAS:1306, which is past this block, and gave 0.3.',
     version: V_WARLORD,
     a: { atk:1, hp:10, unitType: 'normal', abilities: { survivalInstinct: true, spiritLink: true } },
     b: { hp:10 },

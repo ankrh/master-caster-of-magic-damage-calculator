@@ -244,7 +244,7 @@ test('F20 covers every represented b/c/d step in source order for all five versi
       expect(statTrace.some(event => skippedKeys.has(`${event.phase}:${event.id}`)),
         `${label} sparse skipped projection`).toBe(false);
 
-      // The public trace merges the identity pre-pass with the stat sequence, so it is the
+      // The public trace carries the identity conversions beside every other write, so it is the
       // place a represented b/c/d write could escape a manifest by living in another sequence.
       const tracedRepresented = statTrace.filter(event => ['b', 'c', 'd'].includes(event.phase));
       expect(tracedRepresented.every(event => chainKeys.includes(`${event.phase}:${event.id}`)),
@@ -302,10 +302,16 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
     };
   });
 
-  const destinyEvents = report.destiny.statExecutionTrace.filter(event => event.id === 'destiny');
+  // Destiny makes two writes at two positions and `phase:id` is what separates them: the
+  // permanent `B.race`/`B.Fantastic` transformation at $0059A390 is `base:destiny`, and the
+  // calculated-record package at $0059A471..$0059A633 — the atomic multi-field write these
+  // assertions are about — is `c:destiny`.
+  const destinyEvents = report.destiny.statExecutionTrace
+    .filter(event => event.id === 'destiny' && event.phase === 'c');
   expect(destinyEvents).toHaveLength(1);
   expect(destinyEvents[0].status).toBe('applied');
-  const destinyTrace = report.destiny.statTrace.filter(event => event.id === 'destiny');
+  const destinyTrace = report.destiny.statTrace
+    .filter(event => event.id === 'destiny' && event.phase === 'c');
   expect(destinyTrace).toHaveLength(1);
   // The modern record carries the Ranged channel's own strength field beside the card's shared
   // projection, so Destiny's one atomic write covers both (`SPEC.md`, *Attack channels on the
@@ -387,13 +393,16 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
       baseChain: statChain('com2_1.05.11').map(entry => ({ ...entry })),
       channelerEvent: pick(channeler, 'marionetteChanneler'),
       channelerLedgerIds: channeler.statExecutionTrace.map(event => event.id),
-      spiritLinkEvent: pick(spiritLink, 'spiritLink'),
+      // Three steps carry the id `spiritLink` — the Warlord `base:` stat write and the two
+      // identity writes — so this names the phase as well.
+      spiritLinkEvent: spiritLink.statTrace
+        .find(event => event.id === 'spiritLink' && event.phase === 'd') || null,
       spiritLinkNormalEvents: spiritLinkNormal.statTrace
         .filter(event => event.id === 'spiritLink' && 'fantastic' in event.changes)
         .map(event => ({ phase: event.phase, changes: event.changes })),
-      firstStatPhaseD: spiritLink.statTrace
+      otherStatPhaseD: spiritLink.statTrace
         .filter(event => event.phase === 'd' && event.id !== 'spiritLink')
-        .map(event => event.traceOrder),
+        .map(event => ({ traceOrder: event.traceOrder, sourceOrder: event.sourceOrder })),
     };
   });
 
@@ -427,9 +436,9 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   expect(report.channelerEvent.sourceOrder)
     .toBe(report.chain.findIndex(entry => entry.key === 'b:marionetteChanneler'));
   expect(report.channelerEvent.changes.fantastic).toEqual({ from: false, to: true });
-  // The complete stat ledger stays one-to-one with the stat sequence; the identity pre-pass
-  // is its own sequence and does not inject events into it.
-  expect(report.channelerLedgerIds).not.toContain('marionetteChanneler');
+  // The complete stat ledger stays one-to-one with the stat sequence, and an identity
+  // conversion is a step of that sequence like any other, so it is in the ledger (F163).
+  expect(report.channelerLedgerIds).toContain('marionetteChanneler');
 
   // Both of Spirit Link's writes reach the trace, in the region order the two CAS files give
   // them: assert at UnitCalcPre.CAS:30, clear at UnitCalc.CAS:1306.
@@ -443,9 +452,12 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   expect(report.spiritLinkEvent.sourceOrder)
     .toBe(report.chain.findIndex(entry => entry.key === 'd:spiritLink'));
   expect(report.spiritLinkEvent.changes.fantastic).toEqual({ from: true, to: false });
-  // Documented divergence: the pre-pass executes this write ahead of every region-d stat
-  // write even though UnitCalc.CAS:1306 puts its source rank late in d.
-  expect(report.firstStatPhaseD.every(order => order > report.spiritLinkEvent.traceOrder))
+  // The clearing write executes where UnitCalc.CAS:1306 puts it: after every region-d write
+  // the chain ranks ahead of it, and before every one it ranks behind. The divergence this
+  // used to record — the pre-pass running it ahead of all of them — is gone with the pre-pass.
+  const spiritLinkRank = report.chain.findIndex(entry => entry.key === 'd:spiritLink');
+  expect(report.otherStatPhaseD.every(event =>
+    (event.sourceOrder < spiritLinkRank) === (event.traceOrder < report.spiritLinkEvent.traceOrder)))
     .toBe(true);
   expectNoConsoleErrors(errors);
 });

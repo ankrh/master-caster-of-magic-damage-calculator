@@ -6,6 +6,115 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-25
 
+- **F163: the identity pre-pass is gone, and the identity conversions are steps of the one
+  sequence.** `applyOrderedIdentityConversions` resolved live `race` and `Fantastic` to a fixed
+  point before any stat write, which left those two the only fields exempt from *The step model*'s
+  rule that a step reads a field's current value at its own position. They are now ordinary record
+  fields: `identityConversionSteps` (`stats_identity.js`) returns the conversions as steps,
+  `deriveUnitStats` splices them into `rawStatSteps`, and one `orderStatStepsBySource` walk over
+  one chain orders every write. The user set aside the tranche's 0-difference bar and asked for the
+  removal plus the fallout, which is what this is. **All seven positional replays are gone with
+  it** — `c:chaosSurge`, `b:nausea`, `c:survivalInstinct`, `c:landLinking`,
+  `b:eternalNight:poorVision`, `b:trueLight`/`c:trueLight` and `c:warpReality` — and so is the
+  `beforeKey` option each existed for: every one is now an ordinary read of `u.race`/`u.fantastic`
+  inside the step that makes the write. Roughly thirty gates that were constants computed ahead of
+  the sequence became functions of the running record, including `nodeAuraActive`,
+  `spellWardActive`, `realmWardActive`, `misleadEligible`, `survivalInstinctEligible`,
+  `landLinkingEligible`, `blazingEyesActive`, `chaosSurgeCount` and its three magnitudes, the
+  Darkness and True Light magnitudes, `eternalNightEnemyResPenalty`, `warlordEternalNightActive`,
+  `unitIsChaos` and `supremeLightEligibleAt`.
+- **`EncDestiny` was the one design decision in the item, and it went the way the evidence points:
+  Destiny gets a real `base`-phase write of the permanent record.** `Units.RecalculateUnits.pas`
+  at `$0059A35E..$0059A633` writes `B.race := 19; B.Fantastic := True;
+  B.attackflags.supernatural := True; B.experience := 0; B.level := 1` and only then the six `U.*`
+  multipliers — the identity half is to **`BaseUnits`**, not to the calculated record, so within one
+  recalculation `U.race` is untouched and every later recalculation seeds its calculated record
+  from the transformed base. The calculator derives the landed steady state (`SPEC.md`, *Deliberate
+  deviations*), so that permanent write stands before the pipeline: `base:destiny`, chained after
+  the `CreateUnit.CAS` training-time base steps. `c:destiny:race` is gone and `c:destiny` keeps the
+  calculated package, the two distinguished by phase like `b:trueLight`/`c:trueLight`. **That is
+  what dissolves both hoists.** `loadoutEligible` and `levelEligible` no longer patch a
+  `destinyActive` term onto the two `B.Fantastic` gates — `if B.Fantastic then U.level := 1` at
+  `$0059A118` and `not B.Fantastic and not B.ishero` at `$0059E2B8`; they read the permanent record
+  as the `base` phase leaves it, and the run asserts after the sequence that `ctx.base.fantastic`
+  agrees. Spirit Link's level widening keeps its own `!destinyActive` term, which is not the same
+  fact: Destiny zeroes experience and sets level 1 itself (`$0059A417`, `$0059A445`), where a
+  base-Fantastic unit is exactly the case the helptext widens for. Substituting the permanent flag
+  there was wrong and `spiritLinkGrantsLevelBonusWarlord` caught it inside the round.
+- **The modern chains lost their region-`c` convention.** The conversions used to head region `c`
+  because the pre-pass's only meaningful order was the conversions' order among themselves; they
+  now sit at the addresses `Units.RecalculateUnits.pas` gives them — Chaos Channels flight
+  `$0059F330`, its armor block `$0059F4A3`, Blood Lust `$0059F5DC`, Animated `$0059F7D8`, the
+  aggregate Undead normalization `$0059FBD0`, the No Heal conversion `$005A0420`.
+  `DEDUCED_IDENTITY_C_POSITIONS` is `['c:raiseDead']`, the combat-spell write with no block of this
+  routine to order it against, exactly as the row predicted. **Repositioning them moved no number.**
+- **The row's "six `:race` ids collapse into their stat siblings" is falsified, and five stay.**
+  Three are separately gated writes that `phase:id` could not tell apart under any shape:
+  `c:mysticSurge:race` is the No Heal normalization block at `$005A0420`, gated on `EncNoHeal` and
+  shared with Raise Dead, not the Mystic Surge block at `$005A016D`; `b:fieryFury:race` is the THEN
+  arm of the one `IF (BASEFANTASTIC(U))` whose ELSE arm is `b:fieryFury`; and the Chaos Channels
+  breath block writes its realm whenever the mutation is present while the calculator's strength
+  half asks additionally whether a channel slot is free. `c:destiny:race` collapsed by *phase*,
+  not by merging. The remaining two — `c:chaosChannels:armor:race` and `c:blackChannels:race` —
+  are one block each in the address map and would merge on the evidence; they stay split for a
+  reason of the calculator's, now its own entry in `SPEC.md`, *Deliberate deviations*: the
+  derivation has to be able to ask what identity the recalculation **leaves** without running the
+  stat sequence, because Rust's target class is settled before the sequence is even built, and that
+  projection is exact only while every conversion writes `race` and `fantastic` and nothing else.
+  `tools/unit_checks/identity.js` asserts the property the projection rests on.
+- **Movement: 40 of 52575 derivations move a number, and every one carries Destiny.** Measured with
+  `tools/derivation_equivalence.js` against a pristine `HEAD` checkout: 2 `com2_1.05.11` and 38
+  `com2_warlord_1.5.12.7`, and the whole of it is the `base:destiny` relocation — in CoM2 the
+  finished realm flips from Life to Chaos because the region-`a` Chaos Channels breath write now
+  lands *after* Destiny's permanent one, and in Warlord the unit is a Life creature throughout
+  region `b`, so True Light and its neighbours read the realm Destiny left. Nothing else moved: the
+  seven replays, the thirty positional gates, the chain repositioning and the two eligibility gates
+  are all 0. A further 3247 cases differ only in the returned ability map, where `mislead`,
+  `survivalInstinct` and `landLinking` now state the enchantment the unit carries instead of being
+  pre-gated by an eligibility that is a step predicate now; no reader consumes them and no number
+  moves.
+- **Two presets, each failing before and passing after, confirmed by running
+  `tests/presets.spec.js` against the unchanged code with the new fixtures in place.**
+  `ccFireBreathOverridesDestinyCoM2` is the old `destinyOverridesCCFireBreathCoM2` re-aimed: it
+  asserted the defect, and its own `desc` already named 1.403 as the counterfactual, which is the
+  number the corrected precedence produces (before 0.387).
+  `trueLightSeesDestinysPermanentLifeRealmWarlord` is new and covers the Warlord half: True Light's
+  region-`b` block reads `GetStat(U,SRace,0)` at `UnitCalcPre.CAS:1511` and finds the Life realm
+  Destiny's permanent write left, +1 melee before the region-`c` doubling, 12 against 10.
+- **The census is retired and its two durable jobs moved into the Node suite.**
+  `tools/identity_read_position_census.js` measured one thing — whether a read was handed the fixed
+  point rather than the record at its own chain rank — and that structure no longer exists, so its
+  hoisting verdict has no subject. `tools/unit_checks/identity_record_choice.js` replaces it inside
+  `node tools/node_unit_checks.js` with the two claims that outlive it. (1) The three named values
+  that still carry the calculated identity across the sequence boundary — the record the
+  recalculation leaves, its compact projection, and the rank sample the two result-field facts need
+  — are declared per occurrence, and an undeclared one halts; that is the census's channel scan,
+  now in a suite rather than a diagnostic. (2) **Each of the nineteen landed corrections names the
+  preset that holds it**, and the check asserts the preset exists and is reachable from `TEST_TREE`,
+  so `npm test` evaluates all nineteen every run. The census reproduced sixteen through an oracle
+  that cannot survive the structure it measured; the presets are the binding that can, and they
+  were each correction's evidence in the first place.
+- **Two harness assertions encoded the removed shape and were corrected, not weakened.**
+  `f20-source-order.spec.js` asserted that the ledger does *not* contain `marionetteChanneler`,
+  "the identity pre-pass is its own sequence and does not inject events into it" — the deviation
+  itself, now flipped; and its "documented divergence" that the pre-pass ran `d:spiritLink` ahead
+  of every region-`d` write is replaced by the claim the chain now makes, that the write lands
+  between the entries ranked before and after it. Three lookups needed a phase beside the id
+  because `base:destiny` and `base:spiritLink` now share a trace with their namesakes.
+- **Two engine facts are still published as result fields rather than record fields**, so neither
+  can be read inside its own step: the standing modern `if U.Fantastic then EncMagic := True` at
+  `$005A1217` and Warp Reality's Immolation To Hit arm. Both take a sample of the record at their
+  block's own chain rank instead — taken immediately before the first step at or after that rank,
+  which is the instant the block would run at — and both samples are declared cross-boundary reads.
+- **What is left open**, filed on [F192](./BACKLOG.md): `b:fieryFury:race`,
+  `b:wallOfFire:garrison` and `b:bombsGrenades` read `identity.baseFantastic`, the record as the
+  unit was **trained**, where `ctx.base` — the record the `base` phase leaves — now also carries
+  Destiny's permanent write. All three blocks are region `b`, after it, so the engine's reading
+  probably wants `ctx.base`; which of the two each block asks for is a source reading this round
+  did not make, and it would move numbers under Destiny. F193 is folded into F192 with it: the
+  reachability marker it would have added belonged to the retired tool, and the question survives
+  as something to state while reading each gate.
+
 - **The equivalence corpus states a permanent identity, and three recorded numbers moved when it
   did.** `tools/derivation_equivalence.js` built every case as `unitType: 'normal'` with an empty
   base race, so its 0 differences were also a claim that no hero and no mundane race was ever

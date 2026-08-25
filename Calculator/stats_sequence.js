@@ -319,10 +319,10 @@ function precalcScriptStatSteps(ctx) {
     fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
     greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
-    marionetteStrayed, natureLinkActive, nauseaUnitType, outlanderRtbToHitBonus,
+    marionetteStrayed, natureLinkActive, outlanderRtbToHitBonus,
     plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields, secondaryHitFields,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayLevels, soulFlayResMod,
-    strengthFields, thrownTypeFields, unitTypeVal,
+    strengthFields, thrownTypeFields, unitTypeAt,
     uphillBattleActive, warlordEternalNightActive, warlordTrueLightStep,
     wofDefenderBonusActive,
   } = ctx;
@@ -429,13 +429,13 @@ function precalcScriptStatSteps(ctx) {
         u.res += 1; u.toHit += 10; u.toBlk += 10;
       } }),
     // Conjuring Pact and Uphill Battle immediately follow the Outlander block.
-    // The branch is `IF FANTASTIC(U)`, the calculated record read at this block. `nauseaUnitType`
-    // (`stats.js`) is that record — the conversions ranked before `b:nausea`, not the pre-pass's
-    // fixed point, which would answer for region `c` and for `b:sanctify` 126 lines below.
+    // The branch is `IF FANTASTIC(U)`, the calculated record read at this block. `unitTypeAt`
+    // (`stats.js`) is that record — what the conversions ranked before `b:nausea` leave, which
+    // is not what region `c` or `b:sanctify` 126 lines below would give.
     // PROVENANCE[nausea]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:c7ec21b771edb6cb9bd17645
     statStep({ id: 'nausea', sourceId: 'nausea', sourceLabel: 'Conjuring Pact nausea',
       phase: 'b', writes: ['toHit', 'toBlk'],
-      when: () => isWarlord && !!abilities.nausea && isNormalUnitType(nauseaUnitType),
+      when: u => isWarlord && !!abilities.nausea && isNormalUnitType(unitTypeAt(u)),
       apply: u => { u.toHit -= 10; u.toBlk -= 10; } }),
     // PROVENANCE[uphillBattle]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:233a5a25490ae7a59c17106e
     statStep({ id: 'uphillBattle', sourceId: 'uphillBattle', sourceLabel: 'Uphill Battle',
@@ -465,7 +465,7 @@ function precalcScriptStatSteps(ctx) {
       } }),
     // PROVENANCE[eternalNight:poorVision]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:714df04471d1c63eb32e3964
     statStep({ id: 'eternalNight:poorVision', phase: 'b', writes: strengthFields,
-      when: () => warlordEternalNightActive,
+      when: u => warlordEternalNightActive(u),
       apply: u => {
         for (const c of channels) {
           if (slotHasPhysicalRanged(u, c) || slotHasMagicalRanged(u, c)) u[c.strengthField] -= 2;
@@ -587,7 +587,7 @@ function magicCalcBinaryStatSteps(ctx) {
     natureConjunctionActive, nodeAuraActive, orihalconActive,
     rangedTypeFields, realmWardActive, secondaryHitTargets, secondaryHitFields, spellWardActive,
     recordContext, secondaryHitFieldsFor, strengthFields, supremeLightEligibleAt,
-    thrownTypeFields, unitIsChaos, unitTypeVal, version,
+    finishedUnitType, thrownTypeFields, unitIsChaos, version,
     vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warpRealityActive, weaknessBinaryHits,
     weaknessPenalty, weaponStatSteps,
   } = ctx;
@@ -892,7 +892,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // CoM/CoM2 Land Linking boosts melee and breath only.
     // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:3fa8c2fabf80e91cf859f9b0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
     statStep({ id: 'landLinking', phase: 'c', writes: ['atk', 'def', ...strengthFields],
-      when: () => landLinkingEligible,
+      when: u => landLinkingEligible(u),
       apply: (u, runCtx) => {
         if (hasMeleeAttackAt(runCtx)) u.atk += 2;
         u.def += 2;
@@ -978,7 +978,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // control is a single boolean, as the Chaos Embrace/Blazing Eyes tooltips state.
     // PROVENANCE[blazingEyes]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:c4d9140bdc468735df396fa7
     statStep({ id: 'blazingEyes', phase: 'c', writes: ['doomGaze'],
-      when: () => blazingEyesActive,
+      when: u => blazingEyesActive(u),
       apply: u => { u.doomGaze += u.doomGaze === 0 ? 3 : 1; } }),
     // PROVENANCE[reinforceMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:c46cf0a067fb9eff1afc4064
     statStep({ id: 'reinforceMagic', phase: 'c', writes: ['res', ...strengthFields],
@@ -1032,23 +1032,23 @@ function magicCalcBinaryStatSteps(ctx) {
     // PROVENANCE[chaosSurge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8aac79f44ffe2fbae619cb5d | Reference docs/DOS reconstructed/unitcalc.c@span:28:ef6419306ce4c0b275103ee1 | Reference docs/DOS reconstructed/unitcalc.c@span:29:0f32c183c37c88a243ddb6cf | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:bc81b31ab5f15a3717465711
     statStep({ id: 'chaosSurge', phase: 'c',
       writes: ['res', 'atk', ...strengthFields, 'gaze', 'doomGaze'],
-      when: () => chaosSurgeCount > 0,
+      when: u => chaosSurgeCount(u) > 0,
       apply: (u, runCtx) => {
-        u.res += chaosSurgeResBonus;
+        u.res += chaosSurgeResBonus(u);
         if ((isCoM2 && hasMeleeAttackAt(runCtx)) || (!isCoM2 && u.atk > 0))
-          u.atk += chaosSurgeMeleeBonus;
+          u.atk += chaosSurgeMeleeBonus(u);
         for (const c of channels) {
           if (isCoM2) {
             if (u[c.rangedTypeField] !== 'none'
                 || (slotHasBreath(u, c) && u[c.strengthField] > 0))
-              u[c.strengthField] += chaosSurgeRtbBonus;
+              u[c.strengthField] += chaosSurgeRtbBonus(u);
           } else if (u[c.strengthField] > 0) {
-            u[c.strengthField] += chaosSurgeRtbBonus;
+            u[c.strengthField] += chaosSurgeRtbBonus(u);
           }
         }
         if (!isCoM2) {
-          if (u.gaze > 0) u.gaze += chaosSurgeRtbBonus;
-          if (u.doomGaze > 0) u.doomGaze += chaosSurgeRtbBonus;
+          if (u.gaze > 0) u.gaze += chaosSurgeRtbBonus(u);
+          if (u.doomGaze > 0) u.doomGaze += chaosSurgeRtbBonus(u);
         }
       } }),
     // Berserk doubles melee and sets defence to 0 absolutely. MoM-only. Its position is
@@ -1067,8 +1067,8 @@ function magicCalcBinaryStatSteps(ctx) {
     // (0x90B31) rather than before the Darkness block; each version's chain places it.
     // PROVENANCE[eternalNight:enemyResistance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:3810e1c47b8eb421a7ebb24f | Reference docs/DOS reconstructed/unitcalc.c@span:17:72658795c2f8899328df83db
     statStep({ id: 'eternalNight:enemyResistance', phase: 'c', writes: ['res'],
-      when: () => eternalNightEnemyResPenalty !== 0,
-      apply: u => { u.res += eternalNightEnemyResPenalty; } }),
+      when: u => eternalNightEnemyResPenalty(u) !== 0,
+      apply: u => { u.res += eternalNightEnemyResPenalty(u); } }),
     // The DOS recompute writes the same +2 package near the head of region c. Caster.exe
     // dispatches its native node aura after the global-enchantment block and before the Moon
     // events/combat globals. The melee gate reads persistent BaseUnits.attack — `ctx.base`, the
@@ -1077,7 +1077,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // PROVENANCE[nodeAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:31:548c2c98c01394a296fa188a
     statStep({ id: 'nodeAura', phase: 'c',
       writes: ['res', 'def', 'atk', ...strengthFields, 'gaze', 'doomGaze'],
-      when: () => nodeAuraActive,
+      when: u => nodeAuraActive(u),
       apply: (u, runCtx) => {
         u.res += 2; u.def += 2;
         if (!isCoM2) {
@@ -1117,7 +1117,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // PROVENANCE[soulLinkerAura]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:ddbd60d42c3858e92689d2e8 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:044e08011083c94abc942c1b
     statStep({ id: 'soulLinkerAura', sourceId: 'soulLinkerAura',
       sourceLabel: 'Soul Linker aura', phase: 'c', writes: ['toHit', 'toBlk'],
-      when: () => com1SoulLinkerAura > 0 && identity.fantastic,
+      when: u => com1SoulLinkerAura > 0 && !!u.fantastic,
       apply: u => {
         u.toHit += Math.ceil(com1SoulLinkerAura / 2);
         u.toBlk += Math.floor(com1SoulLinkerAura / 2);
@@ -1157,24 +1157,28 @@ function magicCalcBinaryStatSteps(ctx) {
       writes: ['res', 'def', 'atk', ...strengthFields, 'gaze', 'doomGaze'],
       when: () => hasDarkness,
       apply: u => {
+        // The realm each magnitude is drawn from is read here, at this block's own position.
+        const atk = darknessAtkBonus(u);
+        const def = darknessDefBonus(u);
+        const res = darknessResBonus(u);
         if (isCoM2) {
-          if (darknessResBonus > 0 || u.res > 0) u.res += darknessResBonus;
-          if (darknessDefBonus > 0 || u.def > 0) u.def += darknessDefBonus;
-          if (u.atk > 0) u.atk += darknessAtkBonus;
+          if (res > 0 || u.res > 0) u.res += res;
+          if (def > 0 || u.def > 0) u.def += def;
+          if (u.atk > 0) u.atk += atk;
           for (const c of channels) {
-            if (u[c.strengthField] > 0) u[c.strengthField] += darknessAtkBonus;
+            if (u[c.strengthField] > 0) u[c.strengthField] += atk;
           }
         } else {
-          u.res += darknessResBonus;
-          u.def += darknessDefBonus;
-          if (darknessAtkBonus < 0 || u.atk > 0) u.atk += darknessAtkBonus;
+          u.res += res;
+          u.def += def;
+          if (atk < 0 || u.atk > 0) u.atk += atk;
           for (const c of channels) {
-            if (darknessAtkBonus < 0 || u[c.strengthField] > 0) {
-              u[c.strengthField] += darknessAtkBonus;
+            if (atk < 0 || u[c.strengthField] > 0) {
+              u[c.strengthField] += atk;
             }
           }
-          if (darknessAtkBonus < 0 || u.gaze > 0) u.gaze += darknessAtkBonus;
-          if (darknessAtkBonus < 0 || u.doomGaze > 0) u.doomGaze += darknessAtkBonus;
+          if (atk < 0 || u.gaze > 0) u.gaze += atk;
+          if (atk < 0 || u.doomGaze > 0) u.doomGaze += atk;
         }
       } }),
 
@@ -1182,7 +1186,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // Their signed common Hit/To Defend values must therefore reach the region-e clamp in order.
     // PROVENANCE[warpReality]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:e5f3d5a32258982e16c67cb1 | Reference docs/DOS reconstructed/unitcalc.c@span:5:b56d82758c8a1388b292e2a1 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:5536c22c25f21fbaeed04a18
     statStep({ id: 'warpReality', sourceId: 'warpReality', sourceLabel: 'Warp Reality',
-      phase: 'c', writes: ['toHit'], when: () => warpRealityActive && !unitIsChaos,
+      phase: 'c', writes: ['toHit'], when: u => warpRealityActive && !unitIsChaos(u),
       apply: u => { u.toHit -= 20; } }),
     // PROVENANCE[vertigo]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:988ef64cd77214c23cb77397 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:a8adaeabe8e52ff5c76f42d2
     statStep({ id: 'vertigo', sourceId: 'vertigo', sourceLabel: 'Vertigo',
@@ -1267,13 +1271,13 @@ function magicCalcBinaryStatSteps(ctx) {
     // CoM2 keeps "Target: enemy normal unit" (`Reference docs/CoM2 helptext.TXT:844`); and Warlord
     // widens it to "Target: enemy unit" (`Unit rosters/Warlord mod unit data/HELP.TXT:2901`),
     // which is the `isWarlord` disjunct. A targeting restriction has no chain position and reads
-    // the record the recalculation leaves, so the fixed point is the record it wants — the same
+    // the record the recalculation leaves, so `finishedUnitType` is the record it wants — the same
     // ruling Rust's Fantastic exclusion took (`SPEC.md`, *Deliberate deviations*, rule 5; F183,
     // F188).
     // PROVENANCE[shatter]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:23:9d5c1cf547d632005ddeebe5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:b34c35cb9bf68bf3402e6d27
     statStep({ id: 'shatter', phase: 'c', writes: ['atk', ...strengthFields],
       when: () => !!(abilities && abilities.shatter)
-        && (isWarlord || isNormalUnitType(unitTypeVal) || unitTypeVal === 'hero'),
+        && (isWarlord || isNormalUnitType(finishedUnitType) || finishedUnitType === 'hero'),
       apply: u => {
         if (u.atk > 0) u.atk = 1;
         for (const c of channels) {
@@ -1298,12 +1302,12 @@ function magicCalcBinaryStatSteps(ctx) {
       } }),
     // PROVENANCE[realmWard]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:5cd2715b00a3b65a8943c24e
     statStep({ id: 'realmWard', phase: 'c', writes: ['toHit', 'def', 'res'],
-      when: () => realmWardActive,
+      when: u => realmWardActive(u),
       apply: u => { u.toHit -= 20; u.def -= 3; u.res -= 3; } }),
     // Spell Ward follows Terror and the Warp/Shatter tail, before Tactician.
     // PROVENANCE[spellWard]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:f2d06ed57305602954b1a140
     statStep({ id: 'spellWard', phase: 'c', writes: ['toHit', 'def', 'res'],
-      when: () => spellWardActive,
+      when: u => spellWardActive(u),
       apply: u => { u.toHit -= 20; u.def -= 3; u.res -= 3; } }),
     // Tactician, for every CoM engine: CoM 1 at 0x90AB4, CoM2/Warlord at +0x0C890.
     ...abilByPhase.cAfterWarp,

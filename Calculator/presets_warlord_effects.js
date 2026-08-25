@@ -67,7 +67,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.100 },
   },
   nauseaReadsIdentityAtItsOwnBlockWarlord: {
-    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS:1123, read where that block stands. Region b runs before region c, so Raise Dead — a region-c conversion — has not made the defender fantastic yet, and the ELSE arm still applies: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. Reading the pre-pass fixed point instead saw a fantastic creature, took the creature-binding arm and left 0.',
+    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS:1123, read where that block stands. Region b runs before region c, so Raise Dead — a region-c conversion — has not made the defender fantastic yet, and the ELSE arm still applies: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. Reading the record the recalculation leaves instead saw a fantastic creature, took the creature-binding arm and left 0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true, raiseDead: true } },

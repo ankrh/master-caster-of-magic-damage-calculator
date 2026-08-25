@@ -394,8 +394,12 @@ function runModifierTraceChecks(ctx) {
     'Destiny doubles melee after the permanent Mother Fungus write');
   assertEqual(destinyAfterPermanent.rtb, 8,
     'Destiny doubles ranged after the permanent Mother Fungus write');
-  const destinyOrderedIds = destinyAfterPermanent.statTrace.map(entry => entry.id);
-  assert(destinyOrderedIds.indexOf('motherFungus') < destinyOrderedIds.indexOf('destiny'),
+  // Destiny makes two writes at two positions: `base:destiny`, the permanent `B.race` /
+  // `B.Fantastic` transformation, and `c:destiny`, the calculated-record package these checks
+  // are about. `phase:id` is what tells them apart (`SPEC.md`, *The step model*).
+  const destinyOrderedIds = destinyAfterPermanent.statTrace
+    .map(entry => `${entry.phase}:${entry.id}`);
+  assert(destinyOrderedIds.indexOf('base:motherFungus') < destinyOrderedIds.indexOf('c:destiny'),
     'Destiny follows every permanent base write in the ordered trace');
 
   const destinyAfterEarlyHook = ctx.deriveUnitStats(baseUnitInput({
@@ -407,8 +411,8 @@ function runModifierTraceChecks(ctx) {
     'Destiny doubles the phase-b Lucky Star melee write at its compiled position');
   assertEqual(destinyAfterEarlyHook.rtb, 6,
     'Destiny doubles the phase-b Lucky Star ranged write at its compiled position');
-  const earlyHookIds = destinyAfterEarlyHook.statTrace.map(entry => entry.id);
-  assert(earlyHookIds.indexOf('luckyStar') < earlyHookIds.indexOf('destiny'),
+  const earlyHookIds = destinyAfterEarlyHook.statTrace.map(entry => `${entry.phase}:${entry.id}`);
+  assert(earlyHookIds.indexOf('b:luckyStar') < earlyHookIds.indexOf('c:destiny'),
     'Destiny follows UnitCalcPre and precedes later phase-c transforms');
 
   const destinyChannels = ctx.deriveUnitStats(baseUnitInput({
@@ -830,9 +834,11 @@ function runChannelAttributionChecks(ctx) {
       && breathLedgerIds.includes('heavenlyLight'),
   'A Breath ledger reconstruction drops the steps whose declaration excludes Breath, and keeps '
   + 'one whose declaration reaches Breath-agnostic fields');
+  // Compared over the events themselves, not by id: three steps share the id `spiritLink` at
+  // three positions (`base:`, `b:` and `d:`), so a lookup by id alone answers for the wrong one.
   assertSameKeyList(
-    breathLedgerIds.filter(id => !breathLedger.find(event => event.id === id).channels),
-    ledger.filter(event => !event.channels).map(event => event.id),
+    breathLedger.filter(event => !event.channels).map(event => `${event.phase}:${event.id}`),
+    ledger.filter(event => !event.channels).map(event => `${event.phase}:${event.id}`),
     'A ledger reconstruction keeps every channel-agnostic step');
   assert(breathLedger.every((event, index) => event.traceOrder === index),
     'A ledger reconstruction is renumbered over its survivors');

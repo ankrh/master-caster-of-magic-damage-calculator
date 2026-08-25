@@ -1214,6 +1214,14 @@ definePresets({
     trueLight: true,
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
+  trueLightSeesDestinysPermanentLifeRealmWarlord: {
+    desc: 'True Light (Warlord): Destiny/Apotheosis writes the *permanent* record — `B.race := 19; B.Fantastic := True` at $0059A390 — so the unit is already a Life creature when the region-b True Light block reads `GetStat(U,SRace,0)` at UnitCalcPre.CAS:1511. True Light adds +1 (atk 5→6) and the region-c Destiny package then doubles the live value to 12; 100% hit vs def 0 = 12. Treating the realm write as a region-c write of the calculated record leaves True Light inert here and gives 10.',
+    version: V_WARLORD,
+    a: { figs:1, atk:5, res:5, hp:20, hitChance:70, unitType:'normal', abilities: { apotheosis: true } },
+    b: { figs:1, atk:0, def:0, res:5, hp:20, toBlkMod:70, unitType:'normal' },
+    trueLight: true,
+    expected: { dmgToA: 0, dmgToB: 12.000 },
+  },
   sanctifyTrueLightWarlord: {
     desc: 'Sanctify (Warlord): sanctified normal unit becomes life-realm, so True Light gives +1. atk5->6 vs def2, 100% hit/block: 6-2=4 (unsanctified normal would stay 5 -> 3)',
     version: V_WARLORD,

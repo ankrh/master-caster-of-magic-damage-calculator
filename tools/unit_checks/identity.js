@@ -38,28 +38,33 @@ function unitTypeTokenAgreesWithIdentity(token, identity) {
   return token === 'normal' && !identity.fantastic && !TOKEN_RACES.includes(identity.race);
 }
 
-// M7: the ordered identity conversions write the live `race`/`fantastic` fields, and the compact
-// `unitType` token is projected from those fields after the sequence. These are the structural
+// M7: the identity conversions write the live `race`/`fantastic` fields, and the compact
+// `unitType` token is projected from those fields wherever it is needed.
+//
+// F163 adds a second bound to the same list, and it is load-bearing rather than stylistic: every
+// conversion writes *only* those two fields, which is what makes `targetingIdentity` — the
+// projection the two cast-time targeting predicates and the post-chain reads take — computable
+// without running the stat sequence. These are the structural
 // bounds that stop an effect rule from drifting back onto the compatibility projection — a
 // conversion that read or wrote the token would fuse realm and Fantastic again, which is what
 // forced Sanctify's realm-less `hero` special case before the split.
 function runIdentityProjectionChecks(ctx) {
   const identitySource = calculatorSource('Calculator/stats_identity.js');
-  const conversionsStart = identitySource.indexOf('function applyOrderedIdentityConversions(');
-  assert(conversionsStart >= 0, 'The ordered identity conversions are found in stats_identity.js');
+  const conversionsStart = identitySource.indexOf('function identityConversionSteps(');
+  assert(conversionsStart >= 0, 'The identity conversions are found in stats_identity.js');
   const conversionsEnd = identitySource.indexOf('\nfunction ', conversionsStart + 1);
   const conversions = identitySource.slice(conversionsStart,
     conversionsEnd === -1 ? identitySource.length : conversionsEnd);
   assert(!/unitType/.test(conversions),
-    'No ordered identity conversion reads or writes the compact unitType token');
+    'No identity conversion reads or writes the compact unitType token');
   const declaredWrites = [...conversions.matchAll(/writes:\s*\[([^\]]*)\]/g)]
     .map(match => match[1].split(',').map(value => value.trim().replace(/^'|'$/g, ''))
       .filter(Boolean));
   assert(declaredWrites.length >= 11,
-    'The identity pre-pass is a list of individually declared steps, not one merged write');
+    'The identity conversions are individually declared steps, not one merged write');
   for (const writes of declaredWrites) {
     assertEqual(writes.filter(field => field !== 'race' && field !== 'fantastic').join(','), '',
-      'Every ordered identity conversion writes only the live race and Fantastic fields');
+      'Every identity conversion writes only the live race and Fantastic fields');
   }
 
   const phasesSource = calculatorSource('Calculator/combat_phases.js');

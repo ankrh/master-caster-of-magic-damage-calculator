@@ -305,9 +305,8 @@ function supremeLightActiveForUnit(abilities, unitType, version, rangedContext =
     || isMagicalRangedType(rangedContext.baseRangedType);
 }
 
-// `unitType` is the *calculated* record as it stands at `c:survivalInstinct`, not the pre-pass
-// fixed point: both blocks read the running unit (`bu->race`, `U.Fantastic`), and the caller
-// supplies it (`stats.js`, `survivalInstinctUnitType`).
+// `unitType` is the *calculated* record as it stands at `c:survivalInstinct`: both blocks read
+// the running unit (`bu->race`, `U.Fantastic`), and the step's own `when` supplies it.
 // PROVENANCE[survivalInstinctEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:392fb79051e1dfb503869c27 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:b1ed625810a6547724965296
 // STAT-FORMULA[survivalInstinctEligibility]
 function survivalInstinctActiveForUnit(abilities, unitType, version) {
@@ -316,9 +315,8 @@ function survivalInstinctActiveForUnit(abilities, unitType, version) {
   return !!unitType && unitType.startsWith('fantastic_');
 }
 
-// `unitType` is the *calculated* record as it stands at `c:landLinking`, not the pre-pass fixed
-// point: both blocks read the running unit (`bu->race`, `U.Fantastic`), and the caller supplies it
-// (`stats.js`, `landLinkingUnitType`).
+// `unitType` is the *calculated* record as it stands at `c:landLinking`: both blocks read the
+// running unit (`bu->race`, `U.Fantastic`), and the step's own `when` supplies it.
 // PROVENANCE[landLinkingEligibility]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:10:233068cc98f57fe5ee4a9d3f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
 // STAT-FORMULA[landLinkingEligibility]
 function landLinkingActiveForUnit(abilities, unitType, version) {
@@ -671,6 +669,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // (UnitCalcPre.CAS:81, OLSpell.CAS:279) — never as a race or Fantastic test. Reading them off
   // the live token instead made any Fantastic conversion answer the hero question (F187).
   const isHeroUnit = !!identityPredicates.isHero;
+  // The two eligibility predicates that read the *calculated* identity. The caller supplies them
+  // as functions of the running record, so each is answered where its own block stands (F163).
+  const misleadEligibleAt = identityPredicates.misleadEligible || (() => true);
+  const survivalInstinctEligibleAt = identityPredicates.survivalInstinctEligible || (() => true);
 
   // Holy Bonus: +X to melee attack, defense, resistance.
   // CoM v6.05+ and CoM2: also +X to ranged attack.
@@ -770,15 +772,18 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   }
 
   const soulLinkerAura = isModern ? auraValue('soulLinkerAura') : 0;
-  if (soulLinkerAura > 0 && identityPredicates.liveFantastic) {
+  if (soulLinkerAura > 0) {
+    // The Fantastic test is the block's own, read where the block stands (F163).
     abilityStep('soulLinkerAura', 'e', { writes: ['toHit', 'toBlk'],
+      when: u => !!u.fantastic,
       apply: u => { u.toHit += soulLinkerAura; u.toBlk += soulLinkerAura; } });
   }
 
   const leadershipAura = isModern ? auraValue('leadershipAura') : 0;
-  if (leadershipAura > 0 && !identityPredicates.liveFantastic) {
+  if (leadershipAura > 0) {
     // PROVENANCE[leadershipAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:1ec384f5af2fc785c3b46a8e
     abilityStep('leadershipAura', 'e', { writes: ['atk', ...attackWrites],
+      when: u => !u.fantastic,
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', leadershipAura);
         const slots = ctx && ctx.slots;
@@ -923,6 +928,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   if (hasAbil(abilities, 'mislead')) {
     // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:bc3d65175e46c59dd1bcbd1f
     abilityStep('mislead', 'e', { writes: ['atk', 'def', 'res', ...attackWrites],
+      when: u => misleadEligibleAt(u),
       apply: (u, ctx) => {
         // The melee write has no slot gate here: the engine's four writes are atomic and it
         // tests the persistent ranged slot only.
@@ -961,7 +967,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const warlordBlade = version && version.startsWith('com2_warlord')
     && hasAbil(abilities, 'fieryBlade');
   if (!(hasAbil(abilities, 'flameBlade') || warlordBlade)
-    && hasAbil(abilities, 'metalFires') && !identityPredicates.liveFantastic) {
+    && hasAbil(abilities, 'metalFires')) {
     // One compiled block, one step. `unitcalc.c` 131:0x9065F is the whole of Metal Fires, and
     // its `!FANTASTIC && !FLAME_BLADE` branch makes three writes: melee at 0x906C1, the
     // missile/Thrown strength at 0x906FC, and `Weapon_Plus1 = 1` at 0x90723. The first two are
@@ -972,6 +978,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // The block is compiled into MoM 1.31 and CP 1.60 alone, which is `SCOPE_MOM` (`steps.js`).
     // PROVENANCE[metalFires]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8c88e810ad0fd6705c30bb95
     abilityStep('metalFires', 'c', { ...beforeHolyArmor, writes: ['atk', ...attackWrites],
+      when: u => !u.fantastic,
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1);
         for (const channel of contextChannels(ctx)) {
@@ -1116,6 +1123,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   if (hasAbil(abilities, 'survivalInstinct')) {
     // PROVENANCE[survivalInstinct]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:b1ed625810a6547724965296
     abilityStep('survivalInstinct', 'c', { writes: ['def', 'res', 'toHit'],
+      when: u => survivalInstinctEligibleAt(u),
       apply: u => { u.def += 1; u.res += 2; u.toHit += 10; } });
   }
 
@@ -1203,9 +1211,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // builder never receives. UnitCalcPre.CAS:889 is the separate Nature Link upgrade
   // (+1 resistance), not this bonus.
 
-  // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is the
-  // ordered identity step `c:mysticSurge:race` and the -10% To Block is in resolveCombat
-  // (MODDING.INI MysticSurgeToDefPenalty=10, both versions).
+  // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is the separate
+  // No Heal normalization block at $005A0420, `c:mysticSurge:race`, which Raise Dead also
+  // reaches; the -10% To Block is in resolveCombat (MODDING.INI MysticSurgeToDefPenalty=10,
+  // both versions).
   // Phase c — SpellMysticSurge.CAS sets enchantment flags only; no stat application.
   if (hasAbil(abilities, 'mysticSurge')) {
     // PROVENANCE[mysticSurge]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:de8c9dc3bc0bf7ec94ba9028

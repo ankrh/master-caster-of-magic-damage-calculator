@@ -95,6 +95,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:artificer': SCOPE_WARLORD,
   'base:baseHitChance': SCOPE_MODERN,
   'base:baseThresholds': SCOPE_ALL,
+  'base:destiny': SCOPE_MODERN,
   'base:dragonMound': SCOPE_WARLORD,
   'base:energyCannon': SCOPE_WARLORD,
   'base:constructCatapult': SCOPE_COM1,
@@ -174,21 +175,21 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:badMoon': SCOPE_MODERN,
   'c:berserk': SCOPE_MOM,
   'c:blackChannels': SCOPE_MOM,
-  'c:blackChannels:race': SCOPE_MOM,
   'c:blackPrayer': SCOPE_ALL,
   'c:blazingEyes': SCOPE_MODERN,
   'c:blazingMarch': SCOPE_COM_PLUS,
+  'c:blackChannels:race': SCOPE_MOM,
   'c:bloodLust': SCOPE_COM1_COM2,
   'c:breakthrough:combatSummoned': SCOPE_MODERN,
   'c:breakthrough:noncorporeal': SCOPE_MODERN,
   'c:breakthrough:normal': SCOPE_MODERN,
   'c:chaosChannels:armor': SCOPE_ALL,
-  'c:chaosChannels:armor:race': SCOPE_ALL,
   'c:chaosChannels:fireBreath': SCOPE_DOS,
   // 1.31 alone passes the mutations byte to the recompute's second `BU_Apply_Specials` call,
   // so it alone re-assigns the shared slot there (F106). The call is 131:0x90A1D; the address
   // and the resulting chain position are carried beside the chain entry in stats_manifests.js.
   'c:chaosChannels:fireBreath:recompute': SCOPE_MOM_1_31,
+  'c:chaosChannels:armor:race': SCOPE_ALL,
   'c:chaosChannels:fireBreath:race': SCOPE_DOS,
   'c:chaosChannels:flight': SCOPE_ALL,
   'c:chaosSurge': SCOPE_ALL,
@@ -196,7 +197,6 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:darkForce': SCOPE_MODERN,
   'c:darkness': SCOPE_ALL,
   'c:destiny': SCOPE_MODERN,
-  'c:destiny:race': SCOPE_MODERN,
   'c:discipline': SCOPE_MODERN,
   'c:divineBarrierAura': SCOPE_COM1,
   'c:endurance': SCOPE_COM_PLUS,
@@ -220,13 +220,13 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:metalFires': SCOPE_MOM,
   'c:mindStorm': SCOPE_ALL,
   'c:mysticSurge': SCOPE_COM_PLUS,
-  'c:mysticSurge:race': SCOPE_COM_PLUS,
   'c:natureConjunction': SCOPE_MODERN,
   // Wider than PROVENANCE[nodeAura] (Caster.exe only): apply() carries an explicit `!isCoM2`
   // DOS branch for the same +2 package and the node-aura control exists in every version.
   'c:nodeAura': SCOPE_ALL,
   'c:orihalcon': SCOPE_COM_PLUS,
   'c:prayer': SCOPE_ALL,
+  'c:mysticSurge:race': SCOPE_COM_PLUS,
   'c:raiseDead': SCOPE_COM_PLUS,
   'c:realmWard': SCOPE_COM1,
   'c:reinforceMagic': SCOPE_MODERN,
@@ -1039,7 +1039,7 @@ function assertStatTraceOrder(trace, options = {}) {
       throw new Error(`trace event ${event.id} records no changes`);
     }
     // Channel attribution is part of what makes a trace well formed, and a sparse trace is
-    // assembled from several producers — the identity pre-pass, the permanent-write pass, the
+    // assembled from several producers — the permanent-write pass, the
     // sequence runner — plus whatever a channel projection rebuilds. Deriving the expectation
     // from the changed fields here, and from the step's declaration in the complete case,
     // keeps every producer answerable to the same registry.

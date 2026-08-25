@@ -155,36 +155,48 @@ function legacyUnitTypeFromLiveIdentity(identity) {
   return 'fantastic_' + (realm || 'arcane');   // Fantastic + a mundane race: BACKLOG Q28
 }
 
-// Identity conversions write the live race and Fantastic fields directly. The compact
-// `unitType` token is projected from those fields only after the sequence, so no conversion
-// reads or writes it and the base predicates stay available to later gates. The source
-// identity and editable base predicates remain intact; this sequence mutates only the fresh
-// live fields used by later stat gates. The template/name checks here correspond to
-// execution-time reads in the modern/DOS constructors and are not persisted UI state.
-//
-// Six conversions carry a `:race` qualifier because the engine block that writes the realm
-// also writes a stat, and the calculator runs identity in a separate pre-pass: `c:mysticSurge`
-// and `c:mysticSurge:race` are the two positions one region-`c` block reaches here. This is the
-// same surviving qualifier `base:zombies:toBlock` uses, for the same reason.
-//
-// `options.beforeKey` names a chain entry and stops the pre-pass short of it, returning the live
-// identity as the conversions ranked *before* that position leave it. That is the calculated
-// record a step at that position actually reads; the unrestricted fixed point is not, and handing
-// a step the fixed point is the deviation F163 removes. Only a gate whose own block reads the
-// calculated record needs this — a block reading the permanent record takes `identity.baseRace` /
-// `identity.baseFantastic` directly instead.
-function applyOrderedIdentityConversions(identity, abilities, version, meta = {}, options = {}) {
-  const live = { ...identity, race: identity.baseRace, fantastic: identity.baseFantastic };
+// Whether this unit is the combat-summoned Construct Catapult, which both `base:constructCatapult`
+// and `a:constructCatapult` gate on and which `deriveUnitStats` reads separately for CoM 1's
+// weapon-quality patch. One predicate, so the conversion and the patch cannot disagree.
+function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
   const sourceTemplateId = identity.templateId;
-  const trace = [];
+  const isCoM1 = version === 'com_6.08';
+  const isBaseCoM2 = !!(version && version.startsWith('com2_')
+    && !version.startsWith('com2_warlord'));
+  return !!(!!(abilities && abilities.combatSummoned)
+    && !meta.isHero
+    && ((isBaseCoM2 && sourceTemplateId === 37)
+      || (isCoM1 && (sourceTemplateId === 37 || identity.specialUnit === 'catapult'))));
+}
+
+// The identity conversions, as steps of the one derivation sequence. They write the record's
+// `race` and `fantastic` fields at their own chain positions, exactly like every other step:
+// there is no identity pre-pass and no fixed point, so a gate that reads the calculated identity
+// reads whatever stands in the record where that gate runs (F163). The compact `unitType` token
+// is projected from those two fields wherever it is needed, so no conversion reads or writes it
+// and the permanent predicates stay separately available. The source identity and the editable
+// base predicates remain intact; a conversion mutates only the two live fields.
+//
+// **This list is complete: every write of `race` or `fantastic` the derivation makes is here,
+// and no step here writes anything else.** That is what lets `targetingIdentity` below run the
+// conversions out without running the stat sequence, which two cast-time targeting predicates
+// need (F183, F188). It is the reason five conversions still carry a `:race` qualifier where the
+// engine block also writes a stat, and `SPEC.md`, *Deliberate deviations*, records it as such.
+// Three of the five are separately gated anyway, so only two are a grouping the evidence would
+// merge: `b:fieryFury:race` is the THEN arm of the one `IF (BASEFANTASTIC(U))` whose ELSE arm is
+// `b:fieryFury`; the Chaos Channels breath block writes its realm whenever the mutation is
+// present while the calculator's strength half additionally asks whether a channel slot is free;
+// and `c:mysticSurge:race` is the *separate* No Heal normalization block at $005A0420, gated on
+// `U.CombatEnchantmentFlags[EncNoHeal]` rather than on `EncMysticSurge`, which Raise Dead reaches
+// too. `c:chaosChannels:armor:race` ($0059F4A3, 0x8F6FE) and `c:blackChannels:race` (0x8F4A1) are
+// the two the address map puts inside their stat block, and each is chain-adjacent to it.
+function identityConversionSteps(identity, abilities, version, meta = {}) {
+  const sourceTemplateId = identity.templateId;
   const isCoM1 = version === 'com_6.08';
   const isModern = version && version.startsWith('com2_');
   const isBaseCoM2 = isModern && !version.startsWith('com2_warlord');
   const combatSummonedValue = !!(abilities && abilities.combatSummoned);
-  const isConstructCatapult = !!(combatSummonedValue
-    && !meta.isHero
-    && ((isBaseCoM2 && sourceTemplateId === 37)
-      || (isCoM1 && (sourceTemplateId === 37 || identity.specialUnit === 'catapult'))));
+  const isConstructCatapult = isConstructCatapultUnit(identity, abilities, version, meta);
   const isCoM1SummonBranch = isCoM1 && combatSummonedValue && !isConstructCatapult;
   // Call to Arms is the only shipped base-CoM2 combat summon for Paladins. Infer that spell
   // result from the retained Paladins template (STypeID 113) plus Combat Summoned; display names
@@ -203,7 +215,25 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
   const spiritLinkActive = !!(version && version.startsWith('com2_warlord'))
     && !!(abilities && abilities.spiritLink);
 
-  const identitySteps = [
+  return [
+    // Destiny's identity write is a **permanent**-record write, which is why it is a `base` step
+    // and not a region-`c` one beside the calculated package `c:destiny` carries. The block at
+    // $0059A35E..$0059A633 runs `B.race := 19; B.Fantastic := True;
+    // B.attackflags.supernatural := True; B.experience := 0; B.level := 1` and only then the six
+    // `U.*` multipliers, so the realm and Fantastic survive into `BaseUnits` and every later
+    // recalculation seeds its calculated record from them. The calculator derives the landed
+    // steady state (`SPEC.md`, *Deliberate deviations*), so the permanent write stands before the
+    // pipeline. That is what retires the separate `destinyActive` term the loadout and level
+    // gates used to carry: the record the base phase leaves is exactly what
+    // `if B.Fantastic then U.level := 1` ($0059A118) and the weapon block's
+    // `not B.Fantastic and not B.ishero` ($0059E2B8) read (F163). It is chained after the
+    // `CreateUnit.CAS` training-time base steps, which state the record as the unit was built.
+    // Both halves share `PROVENANCE[destiny]`, cited at `c:destiny` (`stats_sequence.js`): one
+    // span, $0059A35E..$0059A633, carries the permanent writes and the calculated package alike.
+    statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'base',
+      writes: ['race', 'fantastic'],
+      when: () => destinyActiveForUnit(abilities, version),
+      apply: u => { u.race = 'Life'; u.fantastic = true; } }),
     // PROVENANCE[zombies]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:3ed9fd7025a17d7041e72be8
     statStep({ id: 'zombies', phase: 'base', writes: ['fantastic'],
       when: () => isCoM1 && identity.specialUnit === 'zombies',
@@ -280,11 +310,6 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
         u.race = 'Life';
         if (hasAbil(abilities, 'clergy') && !isHero) u.fantastic = true;
       } }),
-    // PROVENANCE[destiny:race]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
-    statStep({ id: 'destiny:race', sourceId: 'destiny', sourceLabel: 'Destiny', phase: 'c',
-      writes: ['race', 'fantastic'],
-      when: () => destinyActiveForUnit(abilities, version),
-      apply: u => { u.race = 'Life'; u.fantastic = true; } }),
     // PROVENANCE[chaosChannels:flight]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:2ae7951f1bbf4272fb3fb151 | Reference docs/DOS reconstructed/unitcalc.c@span:6:e09942f2ee9f377d85168241 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:11:81ed5af7fe4aa5e7b8bcf958
     statStep({ id: 'chaosChannels:flight',
       sourceLabel: 'Chaos Channels', phase: 'c', writes: ['race', 'fantastic'],
@@ -314,6 +339,9 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
     statStep({ id: 'undead', sourceLabel: 'Undead', phase: 'c', writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated'),
       apply: u => { u.race = 'Death'; u.fantastic = true; } }),
+    // The No Heal normalization block, $005A0420..$005A04A9 — `if U.CombatEnchantmentFlags`
+    // `[EncNoHeal] then U.race := 21; U.Fantastic := True`, immediately after the Mystic Surge
+    // block that derives the flag. A separate block with a separate gate, so a separate step.
     // PROVENANCE[mysticSurge:race]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49
     statStep({ id: 'mysticSurge:race', sourceId: 'mysticSurge', sourceLabel: 'Mystic Surge',
       phase: 'c', writes: ['race', 'fantastic'],
@@ -330,27 +358,27 @@ function applyOrderedIdentityConversions(identity, abilities, version, meta = {}
       when: () => spiritLinkActive,
       apply: u => { u.fantastic = false; } }),
   ];
-  // F20: identity writes in b or d are represented CAS writes like any other, so they go
-  // through the same manifest walk. That is what stops one from being added later and never
-  // reaching a manifest. The canonical version scope filters this sequence exactly as it
-  // filters the stat sequence, so an identity conversion an engine does not make is absent
-  // rather than present with a false predicate.
-  const applicableIdentitySteps = filterStepsToVersionScope(identitySteps, version);
-  const chain = statChain(version);
-  let ordered = orderStatStepsBySource(applicableIdentitySteps, chain);
-  if (options.beforeKey) {
-    const rank = chain.findIndex(entry => entry.key === options.beforeKey);
-    // A key no chain entry names would silently truncate to the whole sequence or to nothing,
-    // which is the invented default `SPEC.md`, *Out-of-range values stop the run*, forbids.
-    if (rank < 0) {
-      throw new Error(
-        `applyOrderedIdentityConversions: beforeKey '${options.beforeKey}' names no entry of `
-        + `the ${version} execution chain.`);
-    }
-    ordered = ordered.filter(step => step.sourceOrder < rank);
-  }
-  runStatSteps(ordered, live, { version, base: identity, trace });
-  return { identity: live, trace, isConstructCatapult };
+}
+
+// The identity this recalculation *leaves*, which is what a **cast-time targeting** predicate is
+// evaluated against — not a term of any block, so it has no chain position of its own (F183,
+// F188). Spirit Link is the citation and states the mechanism outright: it asserts Fantastic at
+// the head of the routine so the unit takes fantastic bonuses (`UnitCalcPre.CAS:25-28`) and
+// clears it at the tail so the "enchanted fantastic unit could not be targeted by fantastic-only
+// spell" (`UnitCalc.CAS:1305-1306`). The engine manipulates the recalculated flag *in order to*
+// change targetability, so the answer is the whole conversion list run out.
+//
+// This is a projection of the one conversion list, not a second list, and it is exact: no
+// conversion's gate reads a stat, so running the conversions alone leaves the same `race` and
+// `fantastic` the full sequence does. The calculator has no previous recalculation to read, so
+// the record this derivation leaves stands in for the one the cast was made against.
+function targetingIdentity(identity, abilities, version, meta = {}) {
+  const live = { ...identity, race: identity.baseRace, fantastic: identity.baseFantastic };
+  const steps = filterStepsToVersionScope(
+    identityConversionSteps(identity, abilities, version, meta), version);
+  runStatSteps(orderStatStepsBySource(steps, statChain(version)), live,
+    { version, base: identity });
+  return live;
 }
 
 // Lava Smelter (Warlord): five independent flags record the permanent mineral-pair grants already

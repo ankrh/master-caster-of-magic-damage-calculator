@@ -25,8 +25,7 @@
 // what makes two runs comparable, and a copy of it would drift.
 //
 // Cost: 52575 derivations, ~26s, up from 15525 and ~10s before the identity axis. It is a
-// diagnostic run per item, not part of any suite; `tools/identity_read_position_census.js` walks
-// the same list and costs about the same again.
+// diagnostic run per item, not part of any suite.
 
 'use strict';
 

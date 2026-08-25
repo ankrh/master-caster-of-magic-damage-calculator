@@ -405,7 +405,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.100 },
   },
   warpRealityChaosExemptAtBlockWarlord: {
-    desc: 'Warp Reality reads its Chaos exemption at its own block, not at the end of the identity pre-pass. Spirit Link asserts Fantastic at region b (UnitCalcPre.CAS:25-28) and clears it again at region d (UnitCalc.CAS:1305-1306), and `c:warpReality` is #111 of the Warlord chain against `d:spiritLink` #135 — so a spirit-linked Chaos creature is still Chaos where the block stands and keeps its 30% to hit: 1 atk vs 0 def → 0.3. Reading the pre-pass fixed point instead sees normal_chaos, applies the -20% and gives 0.1.',
+    desc: 'Warp Reality reads its Chaos exemption at its own block, not against the record the recalculation leaves. Spirit Link asserts Fantastic at region b (UnitCalcPre.CAS:25-28) and clears it again at region d (UnitCalc.CAS:1305-1306), and `c:warpReality` is #111 of the Warlord chain against `d:spiritLink` #135 — so a spirit-linked Chaos creature is still Chaos where the block stands and keeps its 30% to hit: 1 atk vs 0 def → 0.3. Reading the record the recalculation leaves instead sees normal_chaos, applies the -20% and gives 0.1.',
     version: V_WARLORD,
     a: { atk:1, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true } },
     b: { hp:10 },
@@ -413,7 +413,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
   warpRealityChaosExemptAtBlockImmolationWarlord: {
-    desc: 'The same positional read at Warp Reality’s second consumer, the separate Immolation spell-attack chance. The attacker has no melee strength, so the only damage is Immolation 10 at its own To Hit: exempt → 30% → 3.0, against 1.0 if the exemption is taken from the pre-pass fixed point and the -20% applies. Paired with warpRealityChaosExemptAtBlockWarlord because the two consumers are separate expressions.',
+    desc: 'The same positional read at Warp Reality’s second consumer, the separate Immolation spell-attack chance. The attacker has no melee strength, so the only damage is Immolation 10 at its own To Hit: exempt → 30% → 3.0, against 1.0 if the exemption is taken from the record the recalculation leaves and the -20% applies. Paired with warpRealityChaosExemptAtBlockWarlord because the two consumers are separate expressions.',
     version: V_WARLORD,
     a: { atk:0, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true, immolation: true } },
     b: { hp:10 },
@@ -474,13 +474,13 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.700 },
   },
 
-  destinyOverridesCCFireBreathCoM2: {
-    desc: 'Type precedence (CoM2): Chaos Channels Fire Breath is applied before Destiny, so the final type is Life and Warp Reality penalizes both channels. Destiny doubles more than melee and HP — it also doubles fire breath ($0059A51F), lightning breath ($0059A559) and thrown ($0059A593) — so the Chaos Channels breath 4 doubles to 8 and its Supernatural minimum rides alongside the doubled melee → 0.387 dmg. Dropping Destiny gives 0.300; reversing the type precedence would give 1.403.',
+  ccFireBreathOverridesDestinyCoM2: {
+    desc: 'Realm precedence (CoM2): Destiny writes the *permanent* record — `B.race := 19; B.Fantastic := True` at $0059A390 — not the calculated one, so it stands before this recalculation rather than inside region c, and the Chaos Channels Fire Breath realm write at $00599EE8 lands after it. The finished realm is therefore Chaos, Warp Reality exempts the unit, and the doubled channels keep their To Hit → 1.403 dmg. Destiny still doubles more than melee and HP: fire breath ($0059A51F), lightning breath ($0059A559) and thrown ($0059A593) too, so the Chaos Channels breath 4 doubles to 8. Dropping Destiny gives 0.300; treating its realm write as a region-c write of the calculated record gives 0.387.',
     version: V_COM2,
     a: { atk:1, hp:10, abilities: { destiny: true, ccFireBreath: true } },
     b: { hp:10, abilities: { fireImmunity: true } },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.387 },
+    expected: { dmgToA: 0, dmgToB: 1.403 },
   },
   ccDefenseOverridesDestinyCoM2: {
     desc: 'Type precedence (CoM2): Chaos Channels Defense is applied after Destiny, so final type is Chaos. Destiny still doubles melee to 2, and Warp Reality is ignored → 0.6 dmg',

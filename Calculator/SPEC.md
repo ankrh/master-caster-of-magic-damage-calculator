@@ -264,14 +264,14 @@ citations and Node coverage.
 
 Each unit carries a version-scoped **source identity** (`templateId`, `heroTypeId`) separately from
 its editable **base identity** (`isHero`, `baseRace`, `baseFantastic`). Predefined roster units
-retain their source IDs; custom units use null IDs. Every derivation creates a fresh **calculated
-identity** whose live `race` and `fantastic` values start from the corresponding base fields, and a
-version-scoped identity sequence then rewrites those live fields.
+retain their source IDs; custom units use null IDs. Every derivation seeds a **calculated
+identity** — the record's `race` and `fantastic` fields — from the corresponding base fields, and
+the version-scoped identity conversions rewrite them at their own positions in the one sequence.
 
 Template-based states such as Chosen or Golem are **predicates derived when needed, never persisted
 booleans**. Display names are never engine predicates. Identity writes are version/template gated;
-no-op identity writes are omitted from the trace, and the rest are seeded into the same ordered
-trace as the affected calculated outputs, while source and base identity fields remain
+a no-op identity write is omitted from the trace like any other, and the rest stand in the one
+ordered trace beside the numeric writes, while source and base identity fields remain
 controls/metadata.
 
 **Every identity conversion is one atomic step writing `race`/`fantastic`, and the compact
@@ -307,13 +307,21 @@ Order is load-bearing:
 sequence.** No engine has a preparatory phase: Chaos Channels' demon-skin armor increments Defense
 and assigns `U.race`/`U.Fantastic` in one block at `$0059F4A3`, `CreateUnit.CAS` writes a
 building's stat and its ability grant in one branch, and the weapon-material To-Hit tail tests
-`not B.Fantastic and not B.ishero` inside the weapon block at `$0059E2B8`. Three things still run
-before the sequence anyway — the identity conversions, the building and enchantment ability
-grants, and the loadout/experience eligibility gates. All three are departures recorded under
-*Deliberate deviations* and scheduled for removal, **not the intended design**, and nothing new
-may join them.
-The compact `unitType` value is projected from the live identity fields only after the conversions,
-so base and live predicates stay separately available to later gates.
+`not B.Fantastic and not B.ishero` inside the weapon block at `$0059E2B8`. One thing still runs
+before the sequence anyway — the building and enchantment ability grants — and it is a departure
+recorded under *Deliberate deviations* and scheduled for removal, **not the intended design**;
+nothing new may join it.
+
+**`race` and `fantastic` are ordinary record fields.** The identity conversions are steps of the
+one sequence at their own chain positions, so a gate reading the calculated identity reads
+whatever stands in the record where that gate runs, exactly as it reads `u.res`. Three named
+values carry the identity across the sequence boundary and no others may: the record the
+recalculation *leaves*, for combat resolution and for the two cast-time targeting classes; its
+compact projection; and a sample taken at a named chain rank, for the two engine facts the
+derivation publishes as result fields rather than record fields. Each occurrence is declared, and
+an undeclared one halts (`tools/unit_checks/identity_record_choice.js`).
+The compact `unitType` value is projected from the live identity fields wherever a reader still
+takes the token, so base and live predicates stay separately available to every gate.
 
 ### The step model
 
@@ -340,6 +348,31 @@ the record as that phase leaves it *is* the permanent record for everything afte
 region reads it through `ctx.base`. A step that reads it says so; every other read is the live
 field at the step's own position.
 
+**Which record a gate reads is read off its own block, never deduced from its region.** Four
+things follow, each of which a wrong reading has already cost numbers.
+- A block that tests the permanent record takes it however late it stands; a block that tests the
+  calculated one takes the record at its own position however early. Both records are live at every
+  position, and one block can test both — Breakthrough admits on
+  `(not U.combatsummoned) and (not B.Fantastic)` at `$005A376D`, one term per record in one test.
+- **A live read can be standing in for a term the block states separately**, so read the whole
+  gate rather than the term alone. True Light and Poor Vision both test the Undead **flag** beside
+  the realm, and the flag is what gives an Undead unit its arm at a region-`b` position where the
+  realm has not been converted yet.
+- **A term whose engine counterpart is a cast-time *targeting* restriction has no position, and
+  the record it wants is the one the recalculation leaves.** Rust's and Shatter's blocks test their
+  enchantment flag alone, so the "regular unit" each helptext names is the spell's target class,
+  not a term of any block. Spirit Link is the citation and states the mechanism outright: it
+  asserts Fantastic at the head of the routine so the unit takes fantastic bonuses, and clears it
+  at the tail so the "enchanted fantastic unit could not be targeted by fantastic-only spell"
+  (`UnitCalc.CAS:1305-1306`) — the engine manipulates the recalculated flag *in order to* change
+  targetability.
+- **A hero test is not an identity read and must not be spelled as one.** Nothing writes the hero
+  flag during recalculation, and every block that branches on hero-ness asks for it directly —
+  `if U.ishero`, `_UNITS[].Hero_Slot >= 0`, `ISHERO(U)`. Reading it off the compact `unitType`
+  token instead lets any Fantastic conversion answer the hero question, because that token carries
+  only one of the two facts at a time. Which *units* a gate covers stays a separate question from
+  which *record* it reads.
+
 `getAbilityStatSteps()` emits one step per ability or enchantment that writes a stat, and
 `deriveUnitStats` splices those into the sequence region by region. Nothing is bucketed or summed
 on the way in, so an ordering finding lands as a step move. An effect whose attack-strength half
@@ -356,8 +389,14 @@ engine write are one step, not two. The one surviving qualifier marks an effect 
 separately cited engine writes** that `phase:id` cannot otherwise tell apart: two non-adjacent
 positions inside one region (`base:zombies` beside `base:zombies:toBlock`, and
 `c:chaosChannels:fireBreath:recompute` for MoM 1.31's second `BU_Apply_Specials` call); and the
-six `:race` identity conversions whose engine block also writes a stat, since the pre-pass and the
-stat sequence are two positions (`c:mysticSurge` beside `c:mysticSurge:race`). **A To-Hit write is
+five `:race` identity conversions, each of which is a separate write of the same effect rather
+than the same write seen twice — `c:mysticSurge:race` is the No Heal normalization block at
+`$005A0420`, gated on `EncNoHeal` and shared with Raise Dead, where `c:mysticSurge` is the block
+at `$005A016D`; `b:fieryFury:race` is the THEN arm of the one `IF (BASEFANTASTIC(U))` whose ELSE
+arm is `b:fieryFury`; the Chaos Channels breath block writes its realm whenever the mutation is
+present while the calculator's strength half asks additionally whether a channel slot is free; and
+`c:chaosChannels:armor:race` and `c:blackChannels:race` are chain-adjacent to their stat siblings
+for a reason of the calculator's, recorded under *Deliberate deviations*. **A To-Hit write is
 not a second position.** Where one block writes strength and To-Hit it is one step, whatever the
 engine's interleaving inside it — the fields are disjoint and the gates order-invariant, so the
 grouping is unobservable. Sequence composition, the chains and the
@@ -466,10 +505,8 @@ as such rather than inheriting the region's claim.
 Each version's chain is written out in full, including the parts two versions currently share. A
 chain is what one engine does, and reading it should not mean assembling it from fragments.
 
-Both derivation sequences walk the same chain — the stat sequence and the ordered identity
-conversions — so an identity write is accounted for exactly once too. Ranks are comparable only
-within one sequence: the identity pre-pass runs before the stat sequence, so a late-ranked identity
-write can still execute early.
+One sequence walks the chain, and an identity conversion is one of its steps, so an identity
+write is accounted for exactly once and its rank is comparable with every other write's.
 
 The `attackSpecific` lists stay outside the chain. Each transcribes a separate compiled routine
 run on a scratch copy and keyed by an incoming attack, not a write the recalculation makes, and
@@ -724,86 +761,32 @@ the calculator does instead, and why.
   is presumed to live in the unreconstructed UI target validation and AI code — and the membership
   of the stripped list remains a modelling choice (T8), where the engines' own criterion is that
   the spell carries a realm.
-- **Three things run before the sequence that the engine writes at position.** One cause, three
-  instances, all scheduled for removal — the option is not that both shapes are acceptable.
-  The shared cause is the calculator's, not the engine's: `deriveUnitStats` computes its gates as
-  constants ahead of the sequence, and each hoist is what makes some of those constants valid.
-  - **Identity conversions**, `applyOrderedIdentityConversions`. Every engine writes the realm
-    inline, in the same `if` block as that block's stat writes: `Inc(U.defense, 3)` and
-    `U.race := 18; U.Fantastic := True` are one block at `$0059F4A3`, and `unitcalc.c` addresses
-    each DOS realm write at its own `BU_Apply_Specials` offset. The hoist leaves `race` and
-    `fantastic` the only fields exempt from *The step model*'s rule that a step reads a field's
-    current value at its own position, and it forces the six `:race` step ids.
-    **It is not inert, and the population that had to be corrected first was enumerated rather than
-    found by accident.** `tools/identity_read_position_census.js` claims every read of the
-    calculated identity in the core sources — an unclassified one halts — assigns each the chain
-    entry owning the effect it gates, and decides hoisting exhaustively over the whole conversion
-    set: a read at entry K is hoisted for a field exactly when some conversion of rank at or after
-    K writes that field. Of its 70 sites, 35 declare or forward a channel, 5 are post-chain combat
-    reads of the finished record, 2 are cast-time targeting restrictions, 14 are positional replays
-    already correct and 14 are fixed-point reads whose entry every conversion precedes. **No site is
-    hoisted**; the census reproduces all sixteen landed corrections and halts if it ever stops doing
-    so. Position is not the whole prerequisite, though: F192 and F193 still precede F163 in
-    `BACKLOG.md`, for the two questions the census prints that it does not answer — which record
-    each late-but-correct read's own block wants, and whether a gate is reachable in the version
-    whose position diverges.
-    **Six rules the tranche established, each from a falsified premise.** (1) Which record a gate
-    wants is read off its own block, never deduced from its region: four of the landed corrections
-    wanted the **permanent** record, and one was answered by *deleting* the calculator's extra live
-    term rather than repositioning it — Breakthrough admits on
-    `(not U.combatsummoned) and (not B.Fantastic)` at `$005A376D`, one term per record in one test.
-    (2) A positional read is only as good as the conversion list behind it, so that list is
-    re-checked whenever it grows: reading Land Linking's blocks turned up a conversion the sequence
-    had no step for at all — Spirit Link's region-`b` Fantastic assert — and adding it made a gate
-    previously measured at zero move. (3) A zero from `tools/derivation_equivalence.js` is a claim
-    about its generated case list before it is a claim about a gate. Chaos Surge's global was the
-    one input no environment set, so its gate measured zero while the defect was real; the list
-    then stated no base race and no hero, so F187 measured zero there while moving real numbers in
-    three versions. The list has since gained a permanent-identity axis — a hero and a base race
-    across the whole of it, eighteen further identities in combination cases — and F187 measures 34
-    and F175 64. Widening it also exposed a conversion the census's own oracle had never
-    discovered, because that conversion wrote the value the only Fantastic axis already held. What
-    the list still does not state is stated in the tool, beside the axis. (4) A fixed-point read can be *standing in* for a term the block states separately, so
-    repositioning it alone regresses: True Light and Poor Vision both test the Undead **flag**
-    beside the realm, and the pre-pass's `c:undead` realm write had been supplying that answer at a
-    position where the engine's own realm has not changed yet. Read the whole gate, not the term
-    the census names. (5) **A term whose engine counterpart is a cast-time *targeting* restriction
-    has no chain position, and the fixed point is the record it wants.** Rust's block tests the
-    enchantment flag alone, so its Fantastic exclusion is not a term of any block; it is the
-    helptext's target class, and the engine evaluates targetability against the record the
-    recalculation *leaves*. Spirit Link is the citation and states the mechanism outright — it
-    asserts Fantastic at the head of the routine so the unit takes fantastic bonuses, and clears it
-    at the tail so the "enchanted fantastic unit could not be targeted by fantastic-only spell"
-    (`UnitCalc.CAS:1305-1306`). A read of this class is classified `targeting` rather than owned to
-    a chain entry, and the pre-pass's removal leaves it alone. Shatter is the second read of this
-    class: every engine's Shatter block tests the enchantment flag alone, and the "normal unit" its
-    helptext names is the spell's target class, which Warlord widens to any unit.
-    (6) **A hero test is not an identity read and must not be spelled as one.** Nothing writes the
-    hero flag during recalculation, and every block that branches on hero-ness asks for it
-    directly — `if U.ishero`, `_UNITS[].Hero_Slot >= 0`, `ISHERO(U)`. Reading it off the compact
-    `unitType` token instead let any Fantastic conversion answer the hero question, because that
-    token carries only one of the two facts at a time. Which *units* a gate covers stays a separate
-    question from which *record* it reads (F175).
-    One gate went the other way — Blazing Eyes, a region-`c` block the calculator evaluated into
-    the `base:stat:base` Doom Gaze seed, so its position here was *earlier* than its engine block —
-    and the answer was to give the block its own chain entry, `c:blazingEyes`, not to re-read its
-    gate where it stood.
-  - **Building and enchantment ability grants**, seven nested calls in `deriveUnitStats`. The
-    calculator already gives their sources chain phases: the `CreateUnit.CAS` grants' stat halves
-    are `base:` steps (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same
-    four `STypeID` branches), and Divine Protection, Insulation and Fortification cite
-    `UnitCalcPre.CAS` and `UnitCalc.CAS` — regions `b` and `d`. So one block's stat write is a
-    positioned step while its ability write is not, split by field kind rather than by evidence.
-  - **Loadout and experience eligibility**, `loadoutEligible`/`levelEligible`. The engine tests both
-    at position: `if B.Fantastic then U.level := 1` at `$0059A118`, and
-    `not B.Fantastic and not B.ishero` inside the weapon block at `$0059E2B8`. Hoisting them is
-    correct only because Destiny's mid-routine `B.Fantastic := True` at `$0059A390` is patched
-    around by a separate `destinyActive` term.
+- **The building and enchantment ability grants run before the sequence, where the engine writes
+  them at position.** Seven nested calls in `deriveUnitStats`. The calculator already gives their
+  sources chain phases: the `CreateUnit.CAS` grants' stat halves are `base:` steps
+  (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same four `STypeID`
+  branches), and Divine Protection, Insulation and Fortification cite `UnitCalcPre.CAS` and
+  `UnitCalc.CAS` — regions `b` and `d`. So one block's stat write is a positioned step while its
+  ability write is not, split by field kind rather than by evidence. The cause is the calculator's,
+  not the engine's: `deriveUnitStats` computes its gates as constants ahead of the sequence, and
+  the hoist is what makes some of those constants valid. Scheduled for removal (F166); the option
+  is not that both shapes are acceptable.
+- **An identity conversion is its own step even where its engine block also writes a stat.** The
+  address map puts Chaos Channels' demon-skin realm write inside the block that increments Defense
+  (`$0059F4A3`, 0x8F6FE) and Black Channels' at the end of its own block (0x8F4A1), so *One
+  sequence, one record* would merge each pair into one step. They stay separate for a reason of the
+  calculator's: the derivation has to be able to ask what identity the recalculation **leaves**
+  without running the stat sequence, because two cast-time targeting classes and the post-chain
+  reads take that record and the earliest of them is settled before the sequence is even built.
+  That query is a projection of the one conversion list, and it is exact only while every step in
+  that list writes `race` and `fantastic` and nothing else — which is what the two `:race` ids buy.
+  `tools/unit_checks/identity.js` asserts the property the projection rests on. Each pair is
+  chain-adjacent, so no number can depend on the split; the three other `:race` ids are separately
+  gated and are not this deviation.
 - **Some positions inside a transcribed region are deduced rather than read.** CoM 1's Focus Magic
   position is inferred from the exhaustive list of what its recompute writes after Warp, which does
   not contain it; CoM 1's Raise Dead is a combat-spell write with nothing to order it against the
-  region-`c` blocks; and the modern identity conversions head their region for the reason the entry
-  above gives, rather than sitting at their blocks' addresses. Each is
+  region-`c` blocks — the same is true of its modern counterpart. Each is
   marked `provisional` on the chain, which is what distinguishes a deduced placement from a
   transcribed one.
 

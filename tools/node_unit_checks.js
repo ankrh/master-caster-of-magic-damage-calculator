@@ -22,6 +22,9 @@ const {
 } = require('./unit_checks/assertions');
 const { runAbilityInputChecks } = require('./unit_checks/ability_inputs');
 const { runIdentityChecks } = require('./unit_checks/identity');
+const {
+  runCrossBoundaryIdentityReadChecks, runLandedCorrectionChecks,
+} = require('./unit_checks/identity_record_choice');
 const { runDeriveUnitStatsChecks } = require('./unit_checks/derive_unit_stats');
 const { runToBlockChecks, runDerivationStageChecks } = require('./unit_checks/derivation_stages');
 const { runWarlordUnitAbilityChecks } = require('./unit_checks/warlord_abilities');
@@ -76,6 +79,7 @@ function runPresetGroupingChecks() {
     }
   };
   collect(evalInContext(context, 'TEST_TREE'));
+  runLandedCorrectionChecks(presetKeys, treeKeys);
   const ungrouped = [...presetKeys].filter(key => !treeKeys.has(key)).sort();
   const orphaned = [...treeKeys].filter(key => !presetKeys.has(key)).sort();
   assert(ungrouped.length === 0 && orphaned.length === 0,
@@ -86,6 +90,7 @@ function runPresetGroupingChecks() {
 
 function main() {
   runSourceManifestChecks();
+  runCrossBoundaryIdentityReadChecks();
   runPresetGroupingChecks();
   const ctx = loadCalculatorContext();
   // Every deriveUnitStats call below runs the step runner's write check (steps.js).

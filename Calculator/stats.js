@@ -80,49 +80,59 @@ function deriveUnitStats(input) {
     version),
     version, baseUnitType, isHero, marionette && marionette.state === 'owned'), version);
   const destinyActive = destinyActiveForUnit(abilities, version);
-  const identityConversion = applyOrderedIdentityConversions(identity, abilities, version, {
-    isHero,
-    name: unitName,
-  });
-  Object.assign(identity, identityConversion.identity);
-  const unitTypeRaw = legacyUnitTypeFromLiveIdentity(identity);
-  const unitTypeVal = unitTypeRaw;
-  const isFantasticLive = !!identity.fantastic;
+  // The identity conversions are steps of the one sequence, spliced in below and ordered by the
+  // execution chain like every other write, so `race` and `fantastic` are fields of the running
+  // record and a gate reads whatever stands in them at its own position (F163). There is no
+  // pre-pass and no fixed point handed to a gate; the three shapes a read can take are the live
+  // record at the reading step (`unitTypeAt` and friends), the permanent record
+  // (`identity.baseRace` / `identity.baseFantastic`, or `ctx.base` for a permanent write the
+  // pipeline itself makes), and the record the recalculation *leaves*.
+  const identityMeta = { isHero, name: unitName };
+  const identityConversions = identityConversionSteps(identity, abilities, version, identityMeta);
+  // The record the recalculation leaves. Two classes of read want it and no other does: the
+  // post-chain reads, where combat resolution is handed the finished unit, and the two cast-time
+  // *targeting* predicates (F183, F188). It is a projection of the same conversion list the
+  // sequence runs — exact because no conversion's gate reads a stat — and the sequence asserts
+  // below that the two agree, so the claim is checked rather than stated.
+  const finishedIdentity = targetingIdentity(identity, abilities, version, identityMeta);
+  const finishedUnitType = legacyUnitTypeFromLiveIdentity(finishedIdentity);
+  // The calculated identity as it stands at a step's own position. `u` is the sequence record,
+  // which carries `race` and `fantastic` like any other field.
+  const identityAt = u => ({ ...identity, race: u.race, fantastic: u.fantastic });
+  const unitTypeAt = u => legacyUnitTypeFromLiveIdentity(identityAt(u));
+  const unitRealmAt = u => realmOfUnitType(unitTypeAt(u), identityAt(u));
   const marionetteOwned = !!(marionette && marionette.state === 'owned');
   const marionetteStrayed = !!(marionette && marionette.state === 'strayed');
   const marionetteAttackBonus = marionetteOwned ? marionette.attackBonus : 0;
   const marionetteDefenseBonus = marionetteOwned ? marionette.defenseBonus : 0;
   // Caster.exe's standing `if U.Fantastic then U.EnchantmentFlags[EncMagic] := True` is a
-  // region-`c` block of its own, $005A1217..$005A1271 (Units.RecalculateUnits.pas:1813-1815). It
-  // reads the *calculated* record where it stands: between the Holy Weapon channel block that
+  // region-`c` block of its own, $005A1217..$005A1271 (Units.RecalculateUnits.pas:1813-1815),
+  // reading the *calculated* record where it stands: between the Holy Weapon channel block that
   // ends at $005A1217 and the Chaos Surge block that begins at $005A1271, which makes
-  // `c:chaosSurge` the chain entry it sits immediately before. So replay the conversions ranked
-  // before that entry rather than take the pre-pass fixed point, which would additionally answer
-  // for `d:spiritLink` — Spirit Link asserts Fantastic at `b:spiritLink` (UnitCalcPre.CAS:30) and
-  // clears it again at `d:spiritLink` (UnitCalc.CAS:1306), and this rule stands between the two.
-  // `c:spellWard` below reads the same value: it is later in the chain, and no identity
-  // conversion lies between the two entries. Blazing Eyes' `IsChaosUnit` gate ($005A1E16) takes
-  // the same replay for the same reason — later still in region `c`, with no identity conversion
-  // of either modern chain between `c:chaosSurge` and `c:blazingEyes` (F174). F163's removal of
-  // the pre-pass retires this replay.
+  // `c:chaosSurge` the chain entry it sits immediately before. `c:spellWard` reads the same rule
+  // later in region c, and Blazing Eyes' `IsChaosUnit` gate ($005A1E16) later still (F174, F178).
+  // Each is now an ordinary positional read of the record at its own step.
   //
-  // The Chaos Surge block itself reads this same value, in every version, which is why the replay
-  // is not restricted to the modern builds: `chaosSurgeRealm` below takes its realm from it. See
-  // `PROVENANCE[chaosSurge]` (`stats_sequence.js`) for the addresses (F178).
-  const identityAtChaosSurge = applyOrderedIdentityConversions(
-    identity, abilities, version, { isHero, name: unitName },
-    { beforeKey: 'c:chaosSurge' }).identity;
-  // No version test here. The rule is a modern block, and both consumers — `spellWardActive` and
-  // `modernEncMagicIndependentOfMaterial` — carry their own exact `com2_` test in the same
-  // expression, which is the settled adjacent form (`SPEC.md`, *Versions*). The `: isFantasticLive`
-  // arm this used to carry was therefore read by nothing, and was the last fixed-point read at
-  // this site; the positional value below is well defined in every version (F188).
-  const fantasticAtModernEncMagicRule = !!identityAtChaosSurge.fantastic;
-  const loadoutEligible = !isFantasticBase && !destinyActive;
+  // No version test here. The rule is a modern block, and both consumers carry their own exact
+  // `com2_` test in the same expression, which is the settled adjacent form (`SPEC.md`,
+  // *Versions*) (F188).
+  const fantasticAtModernEncMagicRule = u => !!u.fantastic;
+  // The **permanent** record's Fantastic flag as the `base` phase leaves it. Two gates read it,
+  // each at a position after that phase: `if B.Fantastic then U.level := 1` at $0059A118 and the
+  // weapon block's `not B.Fantastic and not B.ishero` at $0059E2B8. `base:destiny` is the one
+  // permanent identity write the pipeline itself makes — `B.race := 19; B.Fantastic := True` at
+  // $0059A390 — so it, and nothing else, separates this value from the unit's own
+  // `identity.baseFantastic`. It used to be spelled as a `destinyActive` term patched onto each
+  // gate; now it is the record, and the sequence asserts below that `ctx.base` agrees (F163).
+  const permanentFantastic = isFantasticBase || destinyActive;
+  const loadoutEligible = !permanentFantastic;
   // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
   // to earn experience" (`Unit rosters/Warlord mod unit data/HELP.TXT:6324`). Nothing in that
   // description or in the script grants weapon/armor loadout, so only level eligibility is
-  // widened — weapon and armor below stay gated on loadoutEligible.
+  // widened — weapon and armor below stay gated on loadoutEligible. The widening covers a
+  // base-Fantastic unit, which is the case the helptext is about, and excludes Destiny alone,
+  // because Destiny's own permanent write zeroes experience and sets level 1 ($0059A417,
+  // $0059A445) rather than merely making the unit Fantastic.
   const levelEligible = loadoutEligible
     || (version.startsWith('com2_warlord') && !!abilities.spiritLink && !destinyActive);
   const level = levelEligible ? input.level : 'normal';
@@ -133,18 +143,6 @@ function deriveUnitStats(input) {
   // and sets `EncMagic` (`CreateUnit.CAS:38-39`), which is Magic Weapons: +10% To Hit and the
   // Weapon Immunity bypass. Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
   const isWarlord = version.startsWith('com2_warlord');
-  // Conjuring Pact's nausea branch is `IF FANTASTIC(U)` at `UnitCalcPre.CAS:1123` — the
-  // *calculated* record, read where that block stands. Region `b` runs before region `c`
-  // (`SPEC.md`, *Phases*), so `c:undead`, `c:destiny:race`, `c:mysticSurge:race`, `c:raiseDead`
-  // and the Chaos Channels pair have not run, and `b:sanctify` at `:1249` is still 126 lines
-  // ahead. The pre-pass's fixed point answers for all of them, so replay the conversions ranked
-  // before `b:nausea` instead of reading it. Computed only when the curse is present: this is a
-  // second pass over the conversions, and F163's removal of the pre-pass retires it.
-  const nauseaUnitType = (isWarlord && !!abilities.nausea)
-    ? legacyUnitTypeFromLiveIdentity(applyOrderedIdentityConversions(
-      identity, abilities, version, { isHero, name: unitName },
-      { beforeKey: 'b:nausea' }).identity)
-    : unitTypeVal;
   // One `flameBlade` input, two controls: the wizard spell everywhere but Warlord, the arcane
   // unit ability in Warlord (`enchantments.js`). The version decides which arithmetic the shared
   // block does, so the input carries no version of its own.
@@ -228,20 +226,20 @@ function deriveUnitStats(input) {
   // Target lines spell "regular", "Fantastic" and "non-hero" as three separate words — "enemy
   // regular non-hero unit" and "friendly non-hero regular unit" both occur — so "regular" is the
   // non-Fantastic class and a hero is targetable. (c) Targeting reads the *finished* calculated
-  // record, which is what the pre-pass fixed point is. Spirit Link states it outright: it asserts
+  // record, which is what `finishedIdentity` is. Spirit Link states it outright: it asserts
   // `SETSTAT(U,AFantastic,0,1)` at the head of the routine to "allow unit to get bonus and penalty
   // of fantastic and non-fantastic" (`UnitCalcPre.CAS:25-28`) and clears it again at the tail so
   // the "enchanted fantastic unit could not be targeted by fantastic-only spell"
   // (`UnitCalc.CAS:1305-1306`). The engine manipulates the recalculated flag *in order to* change
   // targetability, so a targeting predicate is a function of the record after every conversion —
-  // and a Spirit-Linked Fantastic unit is a legal Rust target, which the fixed point reports and
+  // and a Spirit-Linked Fantastic unit is a legal Rust target, which that record reports and
   // the record at `d:rust` (chain rank 129, ahead of `d:spiritLink` at 135) would not.
   // The same reading covers this constant's two other consumers, the weapon material below and
-  // the Large Shield strip, and it is why F163's removal of the pre-pass leaves this read alone.
-  // `tools/identity_read_position_census.js` classifies it `targeting` for that reason rather
-  // than owning it to `d:rust`.
+  // the Large Shield strip, which is why the read is `finishedIdentity` and not the record at
+  // `d:rust`. `tools/unit_checks/identity_record_choice.js` declares it as one of the three
+  // reads taken outside a step, for that reason rather than by owning it to a chain entry.
   const rustActive = version.startsWith('com2_warlord') && !!(abilities && abilities.rust)
-    && !isFantasticLive;
+    && !finishedIdentity.fantastic;
   // The material block has no Fantastic gate in either engine family: it reads
   // `_UNITS[si].mutations & UM_WEAPON_QUALITY_MASK` and nothing else (`unitcalc.c`,
   // 131:0x8F02A / com1:0x8F024). The `!isFantasticBase` gate below is the UI's — a fantastic
@@ -257,7 +255,8 @@ function deriveUnitStats(input) {
   // Catapult path alone. That is a direct Magic Weapons write: it gives the Boulder channel +10%
   // To Hit and lets it bypass Weapon Immunity, while an ordinary Catapult remains a normal,
   // non-fantastic siege unit.
-  const constructCatapult = isCoM1 && identityConversion.isConstructCatapult;
+  const constructCatapult = isCoM1
+    && isConstructCatapultUnit(identity, abilities, version, identityMeta);
   const weaponInput = constructCatapult ? 'normal' : (weaponEligible ? input.weapon : 'normal');
   const weaponPreRust = constructCatapult ? 'magic'
     : (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
@@ -322,13 +321,13 @@ function deriveUnitStats(input) {
     && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
 
   // Blazing Eyes' block ($005A1E16..$005A1F12) is region `c`, so its `IsChaosUnit` gate reads the
-  // calculated record at that position rather than the pre-pass fixed point. The write itself is
+  // calculated record at that position. The write itself is
   // `c:blazingEyes` (`stats_sequence.js`), where the Doom Gaze field it conjures or raises is
   // read at the same position. The Chaos test keeps the compact-token reading the block has
   // always had here; that `IsChaosUnit` is also Chaos Surge's gate, where the calculator spells
   // it `chaosSurgeRealm === 'chaos'` over this same positional identity, is BACKLOG Q31.
-  const blazingEyesActive = isCoM2 && !!abilities.blazingEyes
-    && legacyUnitTypeFromLiveIdentity(identityAtChaosSurge) === 'fantastic_chaos';
+  const blazingEyesActive = u => isCoM2 && !!abilities.blazingEyes
+    && unitTypeAt(u) === 'fantastic_chaos';
   const baseDoomGazeStat = abilVal(abilities, 'doomGaze', 0);
 
   // Chaos Channels (Fire Breath option): version-sensitive strength and admission, all four DOS
@@ -490,19 +489,11 @@ function deriveUnitStats(input) {
   // which is what `b:wallOfFire:garrison` and `b:bombsGrenades` turned out to take (F170, F172).
   // CoM 1 tests `bu->race >= RACE_FIRST_FANTASTIC` at com1:0x8F27F (`unitcalc.c`), on the one
   // battle-unit record the routine mutates in place. So both take the running identity at
-  // `c:survivalInstinct` rather than the pre-pass fixed point. In Warlord that excludes
+  // `c:survivalInstinct`. In Warlord that excludes
   // `d:spiritLink`'s clearing write, leaving the Fantastic `b:spiritLink` asserts; CoM 1 and base
-  // CoM2 rank every conversion ahead of the block, so they are unmoved. Computed only when the
-  // enchantment is present, like `landLinkingUnitType` below; F163's removal of the pre-pass
-  // retires it.
-  const survivalInstinctUnitType = ((isCoM1 || isCoM2)
-    && !!(abilities && abilities.survivalInstinct))
-    ? legacyUnitTypeFromLiveIdentity(applyOrderedIdentityConversions(
-      identity, abilities, version, { isHero, name: unitName },
-      { beforeKey: 'c:survivalInstinct' }).identity)
-    : unitTypeVal;
-  const survivalInstinctEligible = survivalInstinctActiveForUnit(
-    abilities, survivalInstinctUnitType, version);
+  // CoM2 rank every conversion ahead of the block, so they are unmoved.
+  const survivalInstinctEligible = u => survivalInstinctActiveForUnit(
+    abilities, unitTypeAt(u), version);
   // Land Linking's Fantastic test reads the *calculated* record at its own block, in both
   // engine families. CoM 1 tests `bu->race >= RACE_FIRST_FANTASTIC` at com1:0x8F765, on the one
   // battle-unit record `BU_Apply_Specials` mutates in place — the demon-skin armor write at
@@ -510,23 +501,18 @@ function deriveUnitStats(input) {
   // below it is not. `Caster.exe` tests `if U.Fantastic`, and the melee gate three lines later in
   // the same block tests `B.attack > 0`, so the U/B choice there is deliberate rather than
   // incidental (`SPEC.md`, *The step model*). Neither reads the permanent record, so both take the
-  // running identity at `c:landLinking` rather than the pre-pass fixed point: in CoM 1 that
+  // running identity at `c:landLinking`: in CoM 1 that
   // excludes `c:mysticSurge:race` and `c:raiseDead`, and in Warlord it excludes `d:spiritLink`'s
   // clearing write. Base CoM2 ranks every conversion ahead of the block, so it is unmoved.
-  // Computed only when the enchantment is present, like `nauseaUnitType` above; F163's removal of
-  // the pre-pass retires it.
-  const landLinkingUnitType = ((isCoM1 || isCoM2) && !!(abilities && abilities.landLinking))
-    ? legacyUnitTypeFromLiveIdentity(applyOrderedIdentityConversions(
-      identity, abilities, version, { isHero, name: unitName },
-      { beforeKey: 'c:landLinking' }).identity)
-    : unitTypeVal;
-  const landLinkingEligible = landLinkingActiveForUnit(abilities, landLinkingUnitType, version);
+  const landLinkingEligible = u => landLinkingActiveForUnit(abilities, unitTypeAt(u), version);
   const innerPowerEligible = innerPowerActiveForUnit(abilities, version);
-  const misleadEligible = misleadActiveForUnit(abilities, identity.fantastic, version);
+  const misleadEligible = u => misleadActiveForUnit(abilities, u.fantastic, version);
 
   const nodeAuraVal = input.nodeAura;
-  const unitRealm = realmOfUnitType(unitTypeVal, identity);
-  const nodeAuraActive = unitRealm !== null && nodeAuraVal !== 'none' && unitRealm === nodeAuraVal;
+  const nodeAuraActive = u => {
+    const realm = unitRealmAt(u);
+    return realm !== null && nodeAuraVal !== 'none' && realm === nodeAuraVal;
+  };
   const darkForceActive = isCoM2 && !!abilities.darkForce;
   // The compiled city/node package requires membership in the defending army. The card prefix
   // instead records who initiates this particular exchange, so the per-unit control carries the
@@ -542,12 +528,12 @@ function deriveUnitStats(input) {
   // Spell Ward is region-c logic — `PROVENANCE[spellWard]` (`stats_sequence.js`). In Warlord it
   // therefore reads the current Fantastic flag before the region-d Spirit Link hook
   // (`UnitCalc.CAS:1306`) can clear that flag.
-  const spellWardActive = isCoM2 && fantasticAtModernEncMagicRule
+  const spellWardActive = u => !!(isCoM2 && fantasticAtModernEncMagicRule(u)
     && abilities.spellWard && abilities.spellWard !== 'none'
-    && abilities.spellWard === unitRealm;
-  const realmWardActive = isCoM1 && identity.fantastic
+    && abilities.spellWard === unitRealmAt(u));
+  const realmWardActive = u => !!(isCoM1 && u.fantastic
     && abilities.realmWard && abilities.realmWard !== 'none'
-    && abilities.realmWard === unitRealm;
+    && abilities.realmWard === unitRealmAt(u));
   const com1AuraValue = key => isCoM1
     ? Math.max(0, parseInt(abilities[key], 10) || 0) : 0;
   const com1GuidingBeaconAura = com1AuraValue('guidingBeaconAura');
@@ -559,21 +545,20 @@ function deriveUnitStats(input) {
   // 160:0x8F2A2 (`unitcalc.c`, `BU_Construct`). So a Chaos-Channelled or Black-Channelled MoM unit
   // is not yet Chaos here and collects nothing. CoM 1 calls `BU_Apply_Specials` first, at
   // com1:0x8F0E8, ahead of its own block at com1:0x8F110, and both modern chains rank every
-  // conversion ahead of `c:chaosSurge`, so those three read exactly what the fixed point would
-  // have given them. Reading the chain position rather than branching on version is what makes
+  // conversion ahead of `c:chaosSurge`, so those three read exactly what the finished record
+  // would have given them. Reading the chain position rather than branching on version is what makes
   // that a measurement instead of an assumption (F178).
-  const chaosSurgeRealm = realmOfUnitType(
-    legacyUnitTypeFromLiveIdentity(identityAtChaosSurge), identityAtChaosSurge);
-  const chaosSurgeCount = chaosSurgeRealm === 'chaos'
+  const chaosSurgeCount = u => unitRealmAt(u) === 'chaos'
     ? Math.max(0, parseInt(input.chaosSurge) || 0)
     : 0;
-  const chaosSurgeMeleeBonus = chaosSurgeCount > 0
-    ? (version.startsWith('mom') ? 2 : 3 + (chaosSurgeCount - 1))
+  const chaosSurgeMeleeBonus = u => chaosSurgeCount(u) > 0
+    ? (version.startsWith('mom') ? 2 : 3 + (chaosSurgeCount(u) - 1))
     : 0;
-  const chaosSurgeRtbBonus = chaosSurgeCount > 0
-    ? (version.startsWith('mom') ? 2 : 1 + chaosSurgeCount)
+  const chaosSurgeRtbBonus = u => chaosSurgeCount(u) > 0
+    ? (version.startsWith('mom') ? 2 : 1 + chaosSurgeCount(u))
     : 0;
-  const chaosSurgeResBonus = chaosSurgeCount > 0 && version.startsWith('com') ? 1 + chaosSurgeCount : 0;
+  const chaosSurgeResBonus = u => chaosSurgeCount(u) > 0 && version.startsWith('com')
+    ? 1 + chaosSurgeCount(u) : 0;
 
   // Darkness / True Light: +/- to atk (non-spell), def, res for Death/Life fantastic units.
   // Darkness: +Death, -Life. True Light: +Life, -Death. Both can be active.
@@ -600,11 +585,12 @@ function deriveUnitStats(input) {
   // `GEEternalNight` raises `k` from 1 to 2 and the Death branch applies its attack/Defense
   // package `k` times, while the Life (race 19) branch and Resistance sit outside that loop and
   // run once (Units.RecalculateUnits.pas:2163-2185). DOS Darkness has no such multiplier.
-  const darknessAtkDefMagnitude = hasDarkness
-    ? (hasAnyEternalNight && isCoM2 && unitRealm === 'death' ? 2 : 1)
+  const darknessAtkDefMagnitude = u => hasDarkness
+    ? (hasAnyEternalNight && isCoM2 && unitRealmAt(u) === 'death' ? 2 : 1)
     : 0;
   const darknessResMagnitude = hasDarkness ? 1 : 0;
-  const eternalNightEnemyResPenalty = enemyEternalNight && isCoMVersion && unitRealm !== 'death' ? -1 : 0;
+  const eternalNightEnemyResPenalty = u => enemyEternalNight && isCoMVersion
+    && unitRealmAt(u) !== 'death' ? -1 : 0;
   // The Undead enchantment flag, as the two `UnitCalcPre.CAS` blocks below read it:
   // `GetEnchantmentFlag(U,EncUndead,0)`. It is a flag test, not a realm test, and it stands
   // beside the realm test rather than behind it — which is why the realm read below can move to
@@ -624,31 +610,27 @@ function deriveUnitStats(input) {
   // (`UnitCalcPre.CAS:1343-1344`). `GetStat(U,S,0)` is the *current* record — "if B=0, it checks
   // the current stats and abilities, if B=1 it checks the base unit" (`Reference docs/Script
   // source/CAS reference/Scripts.TXT:266`) — so the realm is read where this region-`b` block
-  // stands, ahead of the six region-`c` conversions, and not at the pre-pass fixed point (F186).
-  const identityAtPoorVision = enemyEternalNight && isWarlord
-    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
-      { beforeKey: 'b:eternalNight:poorVision' }).identity
-    : identity;
-  const poorVisionRealm = enemyEternalNight && isWarlord
-    ? realmOfUnitType(
-      legacyUnitTypeFromLiveIdentity(identityAtPoorVision), identityAtPoorVision)
-    : unitRealm;
-  const warlordEternalNightActive = enemyEternalNight && isWarlord
-    && poorVisionRealm !== 'death' && !undeadEnchantmentFlag;
-  let darknessAtkBonus = 0;
-  let darknessDefBonus = 0;
-  let darknessResBonus = 0;
-  if (unitRealm === 'death') {
-    darknessAtkBonus += darknessAtkDefMagnitude;
-    darknessDefBonus += darknessAtkDefMagnitude;
-    darknessResBonus += darknessResMagnitude;
-  } else if (unitRealm === 'life') {
-    darknessAtkBonus -= darknessAtkDefMagnitude;
-    darknessDefBonus -= darknessAtkDefMagnitude;
-    darknessResBonus -= darknessResMagnitude;
-  }
+  // stands, ahead of the region-`c` conversions (F186).
+  const warlordEternalNightActive = u => !!(enemyEternalNight && isWarlord
+    && unitRealmAt(u) !== 'death' && !undeadEnchantmentFlag);
+  // The realm is read once per call, at the reading step's own position.
+  const darknessBonuses = (u) => {
+    const realm = unitRealmAt(u);
+    if (realm === 'death') {
+      return { atk: darknessAtkDefMagnitude(u), def: darknessAtkDefMagnitude(u),
+        res: darknessResMagnitude };
+    }
+    if (realm === 'life') {
+      return { atk: -darknessAtkDefMagnitude(u), def: -darknessAtkDefMagnitude(u),
+        res: -darknessResMagnitude };
+    }
+    return { atk: 0, def: 0, res: 0 };
+  };
+  const darknessAtkBonus = u => darknessBonuses(u).atk;
+  const darknessDefBonus = u => darknessBonuses(u).def;
+  const darknessResBonus = u => darknessBonuses(u).res;
   // True Light reads the realm at its own block in both engine families, so it takes the record
-  // standing at its own chain entry rather than the pre-pass fixed point (F185). Warlord's block
+  // standing at its own chain entry (F185). Warlord's block
   // is `GetStat(U,SRace,0)` (`UnitCalcPre.CAS:1511,1523`), the *current* record by the CAS
   // contract quoted above `identityAtPoorVision`; the DOS block is `bu->race` at 131:0x903A1 and
   // 131:0x904EB (`unitcalc.c`), the one battle-unit record `BU_Apply_Specials` mutates in place.
@@ -658,26 +640,16 @@ function deriveUnitStats(input) {
   // Warlord's Death arm carries a second term the DOS block does not have:
   // `%OR (GetEnchantmentFlag(U,EncUndead,0)>0)`. It is what gives an Undead unit the penalty at
   // region `b`, where `c:undead`'s realm write has not run yet.
-  const identityAtTrueLight = hasTrueLight
-    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
-      { beforeKey: isWarlord ? 'b:trueLight' : 'c:trueLight' }).identity
-    : identity;
-  const trueLightRealm = hasTrueLight
-    ? realmOfUnitType(
-      legacyUnitTypeFromLiveIdentity(identityAtTrueLight), identityAtTrueLight)
-    : unitRealm;
   // Two independent `IF`s in both families, not an if/else, which only matters once the Undead
   // flag is a term of its own: a Life-race unit carrying the flag takes the penalty arm *and* the
   // bonus arm and nets zero. The realm alone can never satisfy both.
-  let trueLightAtkBonus = 0;
-  let trueLightDefBonus = 0;
-  let trueLightResBonus = 0;
-  if (trueLightRealm === 'death' || (isWarlord && undeadEnchantmentFlag)) {
-    trueLightAtkBonus -= 1; trueLightDefBonus -= 1; trueLightResBonus -= 1;
-  }
-  if (trueLightRealm === 'life') {
-    trueLightAtkBonus += 1; trueLightDefBonus += 1; trueLightResBonus += 1;
-  }
+  const trueLightBonuses = (u) => {
+    const realm = unitRealmAt(u);
+    let value = 0;
+    if (realm === 'death' || (isWarlord && undeadEnchantmentFlag)) value -= 1;
+    if (realm === 'life') value += 1;
+    return value;
+  };
 
   // Effective values (level + weapon + ability + node aura + darkness/light modifiers)
   // Lionheart: version-dependent HP bonus (+3 in MoM; floor(8/figs) in CoM/CoM2).
@@ -855,7 +827,7 @@ function deriveUnitStats(input) {
   // melee halves are the `c:metalFires` step (`combat_abilities.js`), which `SCOPE_MOM` keeps
   // out of the CoM engines; the weapon upgrade is not a step, so it carries the same version
   // test here. The engine's `!(ench & UE_FLAME_BLADE)` non-stacking gate is the last term.
-  const metalFiresActive = !!abilities.metalFires && !identity.fantastic
+  const metalFiresActive = !!abilities.metalFires && !finishedIdentity.fantastic
     && !isCoMVersion && !abilities.flameBlade;
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : 0;
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
@@ -1018,12 +990,14 @@ function deriveUnitStats(input) {
   // Independent EncMagic writes therefore survive whether they occur before that helper (hero
   // standing and Warlord Wall of Fire) or after it.
   const modernEncMagicFromMaterial = version.startsWith('com2_') && weapon !== 'normal';
-  const modernEncMagicIndependentOfMaterial = version.startsWith('com2_')
-    && (isHero || fantasticAtModernEncMagicRule
+  // The flag is published as a result field rather than carried on the record, so its Fantastic
+  // arm is read off the record at the block's own chain rank — captured during the run below —
+  // instead of at any other position. Everything else in the disjunction is position-independent.
+  const modernEncMagicOtherTerms = version.startsWith('com2_')
+    && (isHero
       || nonWarlordFlameBlade || hasWarlordBlade || ffRegularBonus || hwActive
       || !!abilities.wraithForm || !!abilities.rulerOfUnderworld
       || !!abilities.blazingMarch || wofDefenderBonusActive || heavenlyLightActive);
-  const modernEncMagic = modernEncMagicFromMaterial || modernEncMagicIndependentOfMaterial;
 
   // Eye of Heaven is the only effect that switches a gaze off: `UnitCalc.CAS:1483` zeroes
   // `SStoningGaze`/`SDeathGaze`/`SDoomGaze` and nothing else in any source does.
@@ -1056,7 +1030,7 @@ function deriveUnitStats(input) {
   const pneumaFieldActive = isWarlord && !!(abilities && abilities.pneumaField);
   const warpRealityActive = !!input.warpReality;
   // Warp Reality's exemption is read at its own block in both engine families, so it takes the
-  // record standing at `c:warpReality` rather than the pre-pass fixed point (F184). The modern
+  // record standing at `c:warpReality` (F184). The modern
   // block is `(ownCG or oppCG) and (not IsChaosUnit(i))` at $005A3E33..$005A3ED0
   // (`Units.RecalculateUnits.pas`), and the helper takes the *calculated* record — the one stated
   // fact about it, from the Spell Ward chain in
@@ -1073,13 +1047,7 @@ function deriveUnitStats(input) {
   // alone, where the calculator spells the modern one as the compact `fantastic_chaos` token here
   // and as the realm alone at Chaos Surge. Both readings exempt the Spirit-Linked Chaos unit once
   // the record is positional, which is why the position is answerable without Q31.
-  const identityAtWarpReality = warpRealityActive
-    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
-      { beforeKey: 'c:warpReality' }).identity
-    : identity;
-  const unitIsChaos = warpRealityActive
-    ? legacyUnitTypeFromLiveIdentity(identityAtWarpReality) === 'fantastic_chaos'
-    : unitTypeVal === 'fantastic_chaos';
+  const unitIsChaos = u => unitTypeAt(u) === 'fantastic_chaos';
   const hurricaneActive = !!input.hurricane;
   const vertigoActive = !!(abilities && abilities.vertigo)
     && !(abilities && (abilities.illusionImmunity || abilities.magicImmunity));
@@ -1488,22 +1456,24 @@ function deriveUnitStats(input) {
     // engines. True Sight itself is all-version and stays ungated.
     ...((abilities && (abilities.trueSight || (isWarlord && abilities.eyeOfHeaven)))
       ? { illusionImmunity: true } : {}),
-    unitType: unitTypeVal,
+    // The finished record: combat resolution is handed the unit the recalculation leaves, so
+    // these three are the post-chain projection and not a read at any block's position.
+    unitType: finishedUnitType,
     baseRace: identity.baseRace,
     baseFantastic: identity.baseFantastic,
-    liveRace: identity.race,
-    liveFantastic: identity.fantastic,
+    liveRace: finishedIdentity.race,
+    liveFantastic: finishedIdentity.fantastic,
     mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeStat,
     innerPower: innerPowerEligible ? abilities.innerPower : false,
-    mislead: misleadEligible ? abilities.mislead : false,
+    mislead: abilities.mislead || false,
     supernatural: ((abilities && abilities.supernatural) || destinyActive),
-    supremeLight: supremeLightActiveForUnit(abilities, unitTypeVal, version, {
+    supremeLight: supremeLightActiveForUnit(abilities, finishedUnitType, version, {
       liveRangedType: recordContext.baseSequenceRangedType,
       baseRangedType: recordContext.rtbTypeRaw,
     }) ? abilities.supremeLight : false,
-    survivalInstinct: survivalInstinctEligible ? abilities.survivalInstinct : false,
-    landLinking: landLinkingEligible ? abilities.landLinking : false,
+    survivalInstinct: abilities.survivalInstinct || false,
+    landLinking: abilities.landLinking || false,
   };
   // The ranged subformula remains an internal part of Rust's one atomic engine write; it is not
   // inserted into the execution list as a second step.
@@ -1523,7 +1493,11 @@ function deriveUnitStats(input) {
   // can be spliced into the sequence below where that region runs.
   const abilSteps = getAbilityStatSteps(effectiveAbilities, version, {
     baseFantastic: identity.baseFantastic,
-    liveFantastic: identity.fantastic,
+    // The two eligibility predicates whose block reads the *calculated* identity. They are
+    // functions of the running record, so each answers at its own step's position rather than
+    // deciding, before the sequence, whether the step exists at all (F163).
+    misleadEligible,
+    survivalInstinctEligible,
     // The hero flag itself, for the two blocks that test hero-ness rather than unit type
     // (Tactician's branch pair and Rebuild's phase choice). No conversion writes it, so it is
     // one value for the whole derivation and needs no position (F187).
@@ -1637,7 +1611,7 @@ function deriveUnitStats(input) {
   // position — region `e` in CoM2/Warlord, after CoM 1's Warp block in CoM 1. The write is
   // `PROVENANCE[supremeLight]` (`stats_sequence.js`).
   const supremeLightEligibleAt = (u, context) => supremeLightActiveForUnit(
-    abilities, unitTypeVal, version,
+    abilities, unitTypeAt(u), version,
     { liveRangedType: u[context.rangedTypeField], baseRangedType: context.rtbTypeRaw });
   // Heavenly Light's material tail and Holy Weapon write the same two secondary thresholds, on
   // the same two gates, so one factory states both (stats_sequence.js).
@@ -1865,15 +1839,16 @@ function deriveUnitStats(input) {
     writes: ['res', 'def', 'atk', ...strengthFields, 'gaze', 'doomGaze', 'toHit'],
     when: () => hasTrueLight,
     apply: u => {
-      u.res += trueLightResBonus; u.def += trueLightDefBonus;
-      u.atk += trueLightAtkBonus;
+      const bonus = trueLightBonuses(u);
+      u.res += bonus; u.def += bonus;
+      u.atk += bonus;
       for (const context of derivationContexts) {
         if (!isCoM2 || isConventionalRangedSlot(u, context)) {
-          u[context.strengthField] += trueLightAtkBonus;
+          u[context.strengthField] += bonus;
         }
       }
       if (!isCoM2) {
-        u.gaze += trueLightAtkBonus; u.doomGaze += trueLightAtkBonus;
+        u.gaze += bonus; u.doomGaze += bonus;
       }
       if (isWarlord && !!abilities.illusion) u.toHit -= 10;
     },
@@ -1923,13 +1898,14 @@ function deriveUnitStats(input) {
     naturalSelectionCoal, naturalSelectionIron, naturalSelectionNightshade,
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount,
-    natureConjunctionActive, natureLinkActive, nauseaUnitType, nodeAuraActive,
+    natureConjunctionActive, natureLinkActive, nodeAuraActive,
     orihalconActive, outlanderRtbToHitBonus, pillarOfFaith, pillarOfFaithCount, plagueActive,
     pneumaFieldActive, poolOfRepentance, poxHostActive, psychoForceActive,
     realmWardActive, sanctaBasilica,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayResMod,
     heavenlyLightHitPick, holyWeaponHitPick, spellWardActive, supremeLightEligibleAt,
-    survivalInstinctToBlkBonus, trueSightRangedToHitBonus, unitIsChaos, unitTypeVal,
+    survivalInstinctToBlkBonus, trueSightRangedToHitBonus, unitIsChaos, unitTypeAt,
+    finishedUnitType,
     uphillBattleActive, vampirismActive,
     version, vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warlordBerserk,
     warlordCombatFlameBlade, warlordEternalNightActive, warlordTrueLightStep,
@@ -1943,8 +1919,50 @@ function deriveUnitStats(input) {
   // subsumes the Warlord-hook filter this line used to carry — UnitCalcPre/UnitCalc steps are
   // scoped to Warlord, so the DOS and base-CoM2 sequences drop them along with every other
   // region's out-of-scope write.
-  const applicableRawStatSteps = filterStepsToVersionScope(rawStatSteps, version);
+  // The identity conversions join the same list: they are ordinary steps writing two ordinary
+  // fields, filtered by the same version scope and ordered by the same chain (F163).
+  const applicableRawStatSteps = filterStepsToVersionScope(
+    [...rawStatSteps, ...identityConversions], version);
   const statSteps = orderStatStepsBySource(applicableRawStatSteps, statChain(version));
+  // Two calculated facts the derivation publishes as **result fields** rather than as record
+  // fields, each of which the engine writes or reads at a position: `if U.Fantastic then
+  // U.EnchantmentFlags[EncMagic] := True` at $005A1217, immediately before the Chaos Surge block
+  // (F188), and the Immolation To Hit arm of Warp Reality, which re-evaluates that block's own
+  // Chaos exemption (F184; whether the arm has any source at all is BACKLOG F190). A fact the
+  // record does not carry cannot be read at its own step, so the identity is *sampled* at the
+  // block's chain rank instead: immediately before the first step at or after that rank, which
+  // is the instant the block itself would run at. Everything else that reads the calculated
+  // identity does so from the record inside its own step.
+  const identitySamples = new Map();
+  const sampledStatSteps = (() => {
+    const chain = statChain(version);
+    const wrapped = new Map();
+    for (const key of ['c:chaosSurge', 'c:warpReality']) {
+      const rank = chain.findIndex(entry => entry.key === key);
+      // A key no chain entry names would sample silently at the wrong place.
+      if (rank < 0) throw new Error(`deriveUnitStats: ${version} has no chain entry ${key}`);
+      identitySamples.set(key, null);
+      const step = statSteps.find(candidate => candidate.sourceOrder >= rank);
+      if (!step) continue;
+      if (!wrapped.has(step)) wrapped.set(step, []);
+      wrapped.get(step).push(key);
+    }
+    return statSteps.map((step) => {
+      const keys = wrapped.get(step);
+      if (!keys) return step;
+      const when = step.when;
+      return { ...step,
+        when: (u, runCtx) => {
+          for (const key of keys) {
+            if (identitySamples.get(key) === null) identitySamples.set(key, identityAt(u));
+          }
+          return when ? when(u, runCtx) : true;
+        } };
+    });
+  })();
+  // A sample whose rank no emitted step reaches is the finished record: nothing after that rank
+  // writes anything, identity included.
+  const identityAtRank = (key) => identitySamples.get(key) || finishedIdentity;
   // `slots` carries the gates that are **not** position-dependent, so a slot can hold them.
   // `melee` is the permanent record's `B.attack > 0`, which
   // the base phase settles, so it is the predicate over the run context rather than a boolean
@@ -1987,14 +2005,17 @@ function deriveUnitStats(input) {
     context.gazeMirrors = (context.isChannelSlot || isCoM2) ? []
       : [...(hasGazeRangedSlot ? ['gaze'] : []), ...(hasDoomGazeSlot ? ['doomGaze'] : [])];
   }
-  const statTrace = [...identityConversion.trace, ...basePreparationTrace];
+  const statTrace = [...basePreparationTrace];
   for (let traceOrder = 0; traceOrder < statTrace.length; traceOrder++) {
     statTrace[traceOrder].traceOrder = traceOrder;
   }
   const statExecutionLedger = createStatExecutionTraceLedger();
   const statRecord = { res: 0, def: 0, atk: 0, hp: 0, gaze: 0, doomGaze: 0,
     toHit: 30, toHitMelee: 0, toBlk: 30, energyCannonToHit: null,
-    lifeSteal: existingLifeSteal };
+    lifeSteal: existingLifeSteal,
+    // The calculated identity is part of the record, seeded from the permanent one. Every
+    // conversion is a positioned write to these two fields (F163).
+    race: identity.baseRace, fantastic: identity.baseFantastic };
   for (const context of derivationContexts) {
     statRecord[context.strengthField] = 0;
     statRecord[context.rangedTypeField] = 'none';
@@ -2003,13 +2024,46 @@ function deriveUnitStats(input) {
   // Two record shapes: the modern engines separate Ranged, Thrown and Breath modifiers,
   // the DOS engines keep one shared secondary slot. See `secondaryHitTargets` above.
   for (const field of secondaryHitFields) statRecord[field] = 0;
-  const statUnit = runStatSteps(statSteps, statRecord,
-    { version,
-      trace: statTrace,
-      executionTrace: statExecutionLedger,
-      assertExecutionTraceOrder: true,
-      channels: derivationContexts,
-      slots: recordContext.slots });
+  const statRunContext = { version,
+    trace: statTrace,
+    executionTrace: statExecutionLedger,
+    assertExecutionTraceOrder: true,
+    channels: derivationContexts,
+    slots: recordContext.slots };
+  const statUnit = runStatSteps(sampledStatSteps, statRecord, statRunContext);
+  const modernEncMagicIndependentOfMaterial = modernEncMagicOtherTerms
+    || (version.startsWith('com2_') && !!identityAtRank('c:chaosSurge').fantastic);
+  const modernEncMagic = modernEncMagicFromMaterial || modernEncMagicIndependentOfMaterial;
+  // Warp Reality's Immolation arm, at the same block's rank as the step's own exemption.
+  const unitIsChaosAtWarpReality =
+    legacyUnitTypeFromLiveIdentity(identityAtRank('c:warpReality')) === 'fantastic_chaos';
+  // Two claims this function makes before the sequence runs, both checkable once it has, and
+  // both silent defects if they ever drift (`SPEC.md`, *Out-of-range values stop the run*).
+  // (1) `finishedIdentity` is the record the recalculation leaves — the projection is exact
+  // only while no conversion's gate reads a stat. (2) `permanentFantastic` is the permanent
+  // record's Fantastic flag as the `base` phase leaves it, which is what the loadout and level
+  // gates read at their own positions.
+  if (statUnit.race !== finishedIdentity.race
+      || !!statUnit.fantastic !== !!finishedIdentity.fantastic) {
+    throw new Error(
+      `deriveUnitStats: the identity projection disagrees with the sequence for ${version} `
+      + `(projected ${finishedIdentity.race}/${finishedIdentity.fantastic}, `
+      + `sequence ${statUnit.race}/${statUnit.fantastic}). A conversion whose gate reads a stat `
+      + 'would break the projection targeting and the post-chain reads depend on.');
+  }
+  // The second claim is checked in the modern builds alone, which are the only ones the two
+  // gates belong to and the only ones whose base phase writes the *permanent* identity.
+  // CoM 1's three base-phase conversions — Zombies, Construct Catapult and the summon branch —
+  // are creation-time writes to the *calculated* record that happen to sit in that phase, so
+  // `ctx.base` there is not a statement about the permanent one. Nothing reads it.
+  const baseRecord = statRunContext.base;
+  if (isCoM2 && baseRecord && !!baseRecord.fantastic !== permanentFantastic) {
+    throw new Error(
+      `deriveUnitStats: the permanent Fantastic flag the base phase leaves (${baseRecord.fantastic}) `
+      + `disagrees with the loadout and level gates' value (${permanentFantastic}) for ${version}.`);
+  }
+  identity.race = statUnit.race;
+  identity.fantastic = !!statUnit.fantastic;
   const hp = statUnit.hp;
   const effectiveGazeRanged = statUnit.gaze;
   const effectiveDoomGaze = statUnit.doomGaze;
@@ -2078,8 +2132,8 @@ function deriveUnitStats(input) {
   // Warp Reality also affects Immolation's separate spell-attack chance. Common unit To Hit
   // is already written on the ordered stat record above, on `PROVENANCE[warpReality]`
   // (`stats_sequence.js`). This is the block's second consumer, so it takes the same record the
-  // block reads — `unitIsChaos` above, replayed to `c:warpReality` (F184).
-  if (warpRealityActive && !unitIsChaos) {
+  // block reads — the identity sampled at the `c:warpReality` chain rank (F184).
+  if (warpRealityActive && !unitIsChaosAtWarpReality) {
     toHitImmolation = Math.max(0.1, toHitImmolation - 0.2);
   }
 
@@ -2321,8 +2375,10 @@ function deriveUnitStats(input) {
     } : {}),
     toBlock: projectStatTrace(chanceTrace, chanceFields.block, 30,
       chanceUnit.toBlock, { unit: 'percent' }),
-    race: projectStatTrace(identityConversion.trace, 'race', identity.baseRace, identity.race),
-    fantastic: projectStatTrace(identityConversion.trace, 'fantastic',
+    // The conversions are steps of the one sequence, so their trace entries are in `statTrace`
+    // beside every other write rather than in a pre-pass trace of their own (F163).
+    race: projectStatTrace(statTrace, 'race', identity.baseRace, identity.race),
+    fantastic: projectStatTrace(statTrace, 'fantastic',
       identity.baseFantastic, identity.fantastic),
     modernAttacks: {},
   };
@@ -2370,12 +2426,15 @@ function deriveUnitStats(input) {
     toBlockHasModifiers,
     // Effective values (for calculation)
     figs: figureUnit.figs,
-    atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, isHero, generic: !!input.generic,
+    atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged, baseDoomGaze, weapon: effectiveWeapon, unitType: finishedUnitType, isHero, generic: !!input.generic,
     encMagic: modernEncMagic,
     encMagicIndependentOfMaterial: modernEncMagicIndependentOfMaterial,
     baseDeathImmunity,
     identity,
-    identityTrace: identityConversion.trace,
+    // The identity conversions no longer have a trace of their own: they are steps of the one
+    // sequence, so `identityTrace` is the projection of `statTrace` onto the two identity fields.
+    identityTrace: statTrace.filter(event => event.changes
+      && ('race' in event.changes || 'fantastic' in event.changes)),
     statTrace,
     modifierTraces,
     dmg: totalDamage,

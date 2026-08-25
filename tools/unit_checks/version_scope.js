@@ -192,10 +192,10 @@ function runCanonicalVersionScopeChecks(ctx) {
   // sitting at the offsets their blocks occupy. The DOS builds take theirs from the addresses
   // `unitcalc.c` gives every realm write in `BU_Apply_Specials`, so only Raise Dead — a
   // combat-spell write from `combat.c` that routine never makes — stays inherited there.
-  const deducedIdentityC = [
-    'c:destiny:race', 'c:chaosChannels:flight', 'c:chaosChannels:armor:race', 'c:bloodLust',
-    'c:blackChannels:race', 'c:undead', 'c:mysticSurge:race', 'c:raiseDead',
-  ];
+  // Raise Dead is a combat-spell write with no block of the recalculation routine to order it
+  // against. Every other identity conversion sits at its own block's address, in every version
+  // (F163); the modern ones used to head region `c` by convention while the pre-pass ran them.
+  const deducedIdentityC = ['c:raiseDead'];
   const deducedInsideTranscribedRegion = {
     'mom_1.31': [],
     'mom_cp_1.60.00': [],
@@ -460,7 +460,7 @@ function runCanonicalVersionScopeChecks(ctx) {
         if (!scopeOf(event).includes(version)) changed.add(`${event.phase}:${event.id}`);
       }
       // deriveUnitStats runs four sequences, not one. The stat sequence's complete ledger is
-      // read above; the figure sequence, the identity pre-pass and the To-Hit/To-Block ledger
+      // read above; the figure sequence and the To-Hit/To-Block ledger
       // keep their own traces, which the result exposes only as projections. Read those too, so
       // the invariant covers every sequence rather than the largest one — stage 1 measured its
       // worklist from `statExecutionTrace` alone, and the figure and chance sequences carried
@@ -529,16 +529,6 @@ function runCanonicalVersionScopeChecks(ctx) {
     // the steps that changed `figs`, and neither Warlord building's race/name prerequisite is
     // built by the swept template-less custom unit.
     'base:altarOfTheSun:figures', 'base:alumniOfAcademy:figures',
-    // Identity conversions appear only in the sparse identity trace, so they are invisible
-    // here unless they change race/Fantastic for the swept template-less custom unit.
-    'a:callToArmsPaladins', 'a:chosen', 'a:constructCatapult',
-    'b:marionetteChanneler', 'base:constructCatapult',
-    'base:zombies',
-    // Fiery Fury's realm write fires only on a base-Fantastic unit, and the sweep's only
-    // base-Fantastic shapes are already Chaos by the time it runs — either from their own
-    // `fantastic_chaos` identity or from the region-`a` Chaos Channels write — so the step
-    // applies and changes nothing.
-    'b:fieryFury:race',
     // A write behind a prerequisite the sweep does not build: the Outlander armorclad reform.
     'b:battleArmor',
     // The immunity curse strip runs over the ability set, not the unit record, so it appears in
