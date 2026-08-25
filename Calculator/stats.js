@@ -105,12 +105,15 @@ function deriveUnitStats(input) {
   // the same replay for the same reason — later still in region `c`, with no identity conversion
   // of either modern chain between `c:chaosSurge` and `c:blazingEyes` (F174). F163's removal of
   // the pre-pass retires this replay.
-  const modernIdentityAtChaosSurge = isCoM2
-    ? applyOrderedIdentityConversions(identity, abilities, version, { isHero, name: unitName },
-      { beforeKey: 'c:chaosSurge' }).identity
-    : null;
+  //
+  // The Chaos Surge block itself reads this same value, in every version, which is why the replay
+  // is not restricted to the modern builds: `chaosSurgeRealm` below takes its realm from it. See
+  // `PROVENANCE[chaosSurge]` (`stats_sequence.js`) for the addresses (F178).
+  const identityAtChaosSurge = applyOrderedIdentityConversions(
+    identity, abilities, version, { isHero, name: unitName },
+    { beforeKey: 'c:chaosSurge' }).identity;
   const fantasticAtModernEncMagicRule = isCoM2
-    ? !!modernIdentityAtChaosSurge.fantastic
+    ? !!identityAtChaosSurge.fantastic
     : isFantasticLive;
   const loadoutEligible = !isFantasticBase && !destinyActive;
   // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
@@ -300,9 +303,9 @@ function deriveUnitStats(input) {
   // `c:blazingEyes` (`stats_sequence.js`), where the Doom Gaze field it conjures or raises is
   // read at the same position. The Chaos test keeps the compact-token reading the block has
   // always had here; that `IsChaosUnit` is also Chaos Surge's gate, where the calculator spells
-  // it `unitRealm === 'chaos'`, is BACKLOG Q31.
+  // it `chaosSurgeRealm === 'chaos'` over this same positional identity, is BACKLOG Q31.
   const blazingEyesActive = isCoM2 && !!abilities.blazingEyes
-    && legacyUnitTypeFromLiveIdentity(modernIdentityAtChaosSurge) === 'fantastic_chaos';
+    && legacyUnitTypeFromLiveIdentity(identityAtChaosSurge) === 'fantastic_chaos';
   const baseDoomGazeStat = abilVal(abilities, 'doomGaze', 0);
 
   // Chaos Channels (Fire Breath option): version-sensitive strength and admission, all four DOS
@@ -527,7 +530,18 @@ function deriveUnitStats(input) {
   const com1GuidingBeaconAura = com1AuraValue('guidingBeaconAura');
   const com1DivineBarrierAura = com1AuraValue('divineBarrierAura');
   const com1SoulLinkerAura = com1AuraValue('soulLinkerAura');
-  const chaosSurgeCount = unitRealm === 'chaos'
+  // Chaos Surge tests the calculated record at its own block, and both MoM builds make the test
+  // *before* the routine's only realm writes: `bu->race == rt_Chaos` at 131:0x8F138 / 160:0x8F138,
+  // with the single `BU_Apply_Specials` call that carries every realm write at 131:0x8F2A2 /
+  // 160:0x8F2A2 (`unitcalc.c`, `BU_Construct`). So a Chaos-Channelled or Black-Channelled MoM unit
+  // is not yet Chaos here and collects nothing. CoM 1 calls `BU_Apply_Specials` first, at
+  // com1:0x8F0E8, ahead of its own block at com1:0x8F110, and both modern chains rank every
+  // conversion ahead of `c:chaosSurge`, so those three read exactly what the fixed point would
+  // have given them. Reading the chain position rather than branching on version is what makes
+  // that a measurement instead of an assumption (F178).
+  const chaosSurgeRealm = realmOfUnitType(
+    legacyUnitTypeFromLiveIdentity(identityAtChaosSurge), identityAtChaosSurge);
+  const chaosSurgeCount = chaosSurgeRealm === 'chaos'
     ? Math.max(0, parseInt(input.chaosSurge) || 0)
     : 0;
   const chaosSurgeMeleeBonus = chaosSurgeCount > 0

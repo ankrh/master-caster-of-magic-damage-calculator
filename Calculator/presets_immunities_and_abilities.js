@@ -590,6 +590,20 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
+  breakthroughLiveFantasticStillNormalCoM2: {
+    desc: 'Breakthrough (CoM2) admits the normal package on the permanent record: Chaos Channels makes the attacker live-Fantastic over a non-Fantastic base, and the block tests `not B.Fantastic`, so the +1 melee still lands. atk 1 becomes 2 → 2.0 dmg',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, abilities: { breakthrough: 'melee', ccDefense: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  breakthroughLiveFantasticStillNormalWarlord: {
+    desc: 'Breakthrough (Warlord) admits the normal package on the permanent record: Chaos Channels makes the attacker live-Fantastic over a non-Fantastic base, and the block tests `not B.Fantastic`, so the +1 melee still lands. atk 1 becomes 2 → 2.0 dmg',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10, abilities: { breakthrough: 'melee', ccDefense: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
   breakthroughMeleeDefDefenseCoM2: {
     desc: 'Breakthrough (CoM2) derives its normal package from identity: the exceptional +def label cannot override a normal unit, so defense stays 0 and 1 hit deals 1 damage.',
     version: V_COM2,

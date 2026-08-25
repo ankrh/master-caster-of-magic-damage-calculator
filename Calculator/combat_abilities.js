@@ -998,11 +998,15 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     const combatSummoned = identityPredicates.combatSummoned != null
       ? !!identityPredicates.combatSummoned : !!abilities.combatSummoned;
     const nonCorporeal = !!abilities.nonCorporeal;
-    // The executable derives three independent packages from direct predicates. The normal
-    // package excludes base-Fantastic and combat-summoned units; the other two may stack.
-    const liveFantastic = identityPredicates.liveFantastic != null
-      ? !!identityPredicates.liveFantastic : !!abilities.liveFantastic;
-    if (!combatSummoned && !baseFantastic && !liveFantastic) {
+    // The executable derives three independent packages from direct predicates, and they are
+    // structurally independent: a Noncorporeal combat summon takes the second and the third.
+    // The normal package's admission is `(not U.combatsummoned) and (not B.Fantastic)`
+    // ($005A376D..$005A3DDE) — the summoned term reads the calculated record, the Fantastic
+    // term the **permanent** one, the same `B.` selector as the `B.attack > 0` melee gate
+    // inside the package. There is no live-Fantastic term at the block, so a unit converted
+    // to Fantastic mid-pipeline (Chaos Channels, Undead, Blood Lust, Spirit Link) keeps the
+    // normal package (F179).
+    if (!combatSummoned && !baseFantastic) {
       // PROVENANCE[breakthrough:normal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:3ca5011dcfb4738952b30067 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09
       abilityStep('breakthrough:normal', 'c', { writes: ['atk'],
         apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); } });

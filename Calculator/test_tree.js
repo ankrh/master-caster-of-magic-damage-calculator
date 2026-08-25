@@ -17,7 +17,7 @@ const TEST_TREE = [
       { name: 'Breath', keys: ['fireBreathBasic', 'lightningBreathBasic'] },
       { name: 'Cause Fear', keys: ['fearBasic', 'fearDefenderNoop', 'fearDeathImmune', 'fearMagicImmune', 'fearNotRanged', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseOverridesBlackChannelsMoM', 'ccFireBreathBasic', 'ccFireBreathAfterLevelMoM', 'ccFireBreathReplacesThrown', 'ccFireBreathVsFireImmunity', 'ccBypassWeaponImmunity', 'ccNodeAuraChaos'] },
-      { name: 'Chaos Surge', keys: ['chaosSurgeMeleeMoM', 'chaosSurgeRangedMoM', 'chaosSurgeThrownMoM', 'chaosSurgeDoomGazeMoM', 'chaosSurgeNoResistanceMoM', 'chaosSurgeStackingMoM', 'chaosSurgeChaosChannelsBreathMoM'] },
+      { name: 'Chaos Surge', keys: ['chaosSurgeMeleeMoM', 'chaosSurgeRangedMoM', 'chaosSurgeThrownMoM', 'chaosSurgeDoomGazeMoM', 'chaosSurgeNoResistanceMoM', 'chaosSurgeStackingMoM', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsArmorMoM'] },
       { name: 'Charm of Life', keys: ['charmOfLifeHpLow', 'charmOfLifeHpHigh', 'charmOfLifeReadsLiveHpCoM2'] },
       { name: 'Combined gaze', keys: ['combinedStoningDeathGaze'] },
       { name: 'Hidden gaze attack', keys: ['hiddenGazePerAttackerFigure', 'hiddenGazeStoningKillsPerDefenderFigure', 'hiddenGazeIgnoresWeaponImmunity', 'hiddenGazeLevelLadderNeedsStrength', 'hiddenGazeKeepsFocusMagicRaiseCoM', 'hiddenGazeTakesBlackChannelsTypeGate', 'hiddenGazeTakesBlackPrayerUngatedCoM', 'hiddenGazeMindStormFlooredCoM', 'holyBonusNeedsRangedStrengthCoM'] },
@@ -315,6 +315,8 @@ const TEST_TREE = [
       {
         name: 'Breakthrough',
         keys: [
+          'breakthroughLiveFantasticStillNormalCoM2',
+          'breakthroughLiveFantasticStillNormalWarlord',
           'breakthroughMeleeCoM2',
           'breakthroughMeleeDefAttackCoM2',
           'breakthroughMeleeDefDefenseCoM2',
@@ -1139,7 +1141,7 @@ const TEST_TREE = [
       { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurCoM2CounterOwnSide', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM2', 'blurPlusInvisCoM2v2', 'blurPlusInvisWarlord'] },
       { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderPenaltyCoM2', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathAfterLevelMoM', 'ccFireBreathCoM', 'ccFireBreathReplacesThrown', 'ccFireBreathRejectsPositiveThrownCP', 'ccFireBreathRepeatsAtRecompute131', 'ccFireBreathRecomputeFixedCP', 'ccFireBreathCoexistsWithLightningCoM2', 'ccFireBreathCoexistsWithGazeCoM2', 'ccFireBreathAddsToExistingCoM2', 'ccFireBreathAddsToExistingWarlord'] },
-      { name: 'Chaos Surge', keys: ['chaosSurgeThrownCoM', 'chaosSurgeThrownCoM2', 'chaosSurgeDoomGazeCoM', 'chaosSurgeDoomGazeCoM2', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsBreathCoM'] },
+      { name: 'Chaos Surge', keys: ['chaosSurgeThrownCoM', 'chaosSurgeThrownCoM2', 'chaosSurgeDoomGazeCoM', 'chaosSurgeDoomGazeCoM2', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsBreathCoM', 'chaosSurgeChaosChannelsArmorMoM', 'chaosSurgeChaosChannelsArmorCP', 'chaosSurgeChaosChannelsArmorCoM'] },
       { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
       { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsNotVsMagicSMoM', 'resistElementsMagicRangedCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorMagicRangedCoM2'] },
       { name: 'Endurance', keys: ['enduranceEffectCoM', 'enduranceEffectCoM2'] },

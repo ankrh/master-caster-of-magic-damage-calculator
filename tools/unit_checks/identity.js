@@ -315,8 +315,13 @@ function runIdentityChecks(ctx) {
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 34,
       isHero: true, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen' }),
   }));
-  assert(!breakthroughChosen.statTrace.some(t => t.id === 'breakthrough:normal'),
-    'Live-Fantastic Chosen does not receive the normal Breakthrough package');
+  // The block at $005A376D..$005A3DDE admits the normal package on `(not U.combatsummoned) and
+  // (not B.Fantastic)`, so the Fantastic term is the **permanent** record. The Chosen are live
+  // Fantastic over a non-Fantastic base and therefore still take the package (F179).
+  assertEqual(breakthroughChosen.identity.fantastic, true,
+    'Chosen convert to live Fantastic over a non-Fantastic base');
+  assert(breakthroughChosen.statTrace.some(t => t.id === 'breakthrough:normal'),
+    'Live-Fantastic Chosen still receive the normal Breakthrough package, which tests the permanent record');
   const breakthroughSummoned = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', abilities: { breakthrough: 'melee', combatSummoned: true }, atk: 2, def: 2,
   }));

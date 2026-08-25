@@ -1023,6 +1023,12 @@ function magicCalcBinaryStatSteps(ctx) {
     // excluded in both MoM builds, by order alone — the fire-breath block *assigns* that slot
     // at 0x8F720, after the constructor's Chaos Surge at 0x8F113, discarding this bonus. CoM 1
     // calls `BU_Apply_Specials` first (com1:0x8F0E8), so there the bonus lands on top and keeps.
+    // **That same order settles the realm gate, not only the slot.** Every realm write of this
+    // routine is inside `BU_Apply_Specials`, so the MoM builds' `bu->race == rt_Chaos` at
+    // 131:0x8F138 / 160:0x8F138 runs ahead of all of them and no conversion has happened yet:
+    // a Chaos-Channelled MoM unit is not Chaos here and collects nothing at all, breath or melee.
+    // `chaosSurgeCount` (`stats.js`) reads that position through the `c:chaosSurge` chain rank,
+    // which is why CoM 1 and the modern builds are unmoved (F178).
     // PROVENANCE[chaosSurge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8aac79f44ffe2fbae619cb5d | Reference docs/DOS reconstructed/unitcalc.c@span:28:ef6419306ce4c0b275103ee1 | Reference docs/DOS reconstructed/unitcalc.c@span:29:0f32c183c37c88a243ddb6cf | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:bc81b31ab5f15a3717465711
     statStep({ id: 'chaosSurge', phase: 'c',
       writes: ['res', 'atk', ...strengthFields, 'gaze', 'doomGaze'],

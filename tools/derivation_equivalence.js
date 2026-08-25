@@ -135,6 +135,11 @@ const ENVS = [
   // option, so the env produced bonus 0 and never exercised the axis (F113).
   { name: 'walls-ranged', over: { cityWalls: '3', rangedCheck: true, rangedDist: 3 } },
   { name: 'chaos-channels', over: { chaosChannels: 'demonWings' } },
+  // `chaosSurge` was the one matrix global this list never varied, so every gate reading it
+  // measured 0 whatever it did — which is how F178's defect passed this tool at 0 differences.
+  // An env carries only top-level inputs, because the combination pass below overwrites
+  // `over.abilities`; the conversions this global's gate reads come from that pass (F178).
+  { name: 'chaos-surge', over: { chaosSurge: 1 } },
 ];
 
 // A CoM2/Warlord case states the record that version has: the four named channels, with the
@@ -170,6 +175,7 @@ function baseInput(version, over) {
     trueLight: false,
     darkness: false,
     enemyEternalNight: false,
+    chaosSurge: 0,
     rangedCheck: false,
     rangedDist: 1,
     warpReality: false,

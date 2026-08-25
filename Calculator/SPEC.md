@@ -746,17 +746,22 @@ the calculator does instead, and why.
     removal of the hoist itself follows them at no number movement. **Which record a gate wants is
     read off its own block, never deduced from its region:** five of the six landed 2026-08-24, and
     two of them test the *permanent* record — `IF (BASEFANTASTIC(U)>0)` — where a positional read
-    had been proposed for both. **A positional read is only as good as the conversion list behind
+    had been proposed for both. A third joined them 2026-08-25: Breakthrough's normal package
+    admits on `(not U.combatsummoned) and (not B.Fantastic)` at `$005A376D`, one term per record
+    in one test, so the fix was to **delete** the calculator's extra live term rather than
+    reposition it (F179). Reading a block therefore settles two things at once — whether a gate
+    exists at all, and which record it takes. **A positional read is only as good as the conversion list behind
     it**, which is the second thing to check at the block: Land Linking's two blocks do read the
     calculated record, but reading them found a conversion the sequence had no step for at all —
     Spirit Link's region-`b` Fantastic assert, added 2026-08-24, which moved both landed gates and
     dissolved a hand patch at a third. Adding it also made a gate the tranche had measured at zero
     move, so the list behind a positional read is checked again whenever it grows. **A zero from
-    `tools/derivation_equivalence.js` is not by itself proof that a gate is inert:** the tool builds
-    its cases from `ABILITY_DEFS`/`ENCHANTMENT_DEFS` and holds the matrix globals — `chaosSurge`,
-    `nodeAura`, `cityWalls`, `trueLight`, `darkness`, `enemyEternalNight` — at their defaults, so a
-    gate reading one of them measures zero whatever it does. `BACKLOG.md` carries the per-gate
-    figures on F163 and the gates it still depends on.
+    `tools/derivation_equivalence.js` is not by itself proof that a gate is inert:** it is a
+    differ over a generated case list, so it can only report what that list varies. Chaos Surge
+    was the case — its global was the one input no environment set, and the gate measured zero
+    while the defect was real (F178, 2026-08-25). A zero is a claim about the case list first and
+    the gate second, and a gate reading an input the list holds constant must be measured directly.
+    `BACKLOG.md` carries the per-gate figures on F163 and the gates it still depends on.
   - **Building and enchantment ability grants**, seven nested calls in `deriveUnitStats`. The
     calculator already gives their sources chain phases: the `CreateUnit.CAS` grants' stat halves
     are `base:` steps (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same

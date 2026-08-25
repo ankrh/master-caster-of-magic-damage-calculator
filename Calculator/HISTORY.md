@@ -6,6 +6,59 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-25
 
+- **F179 — Breakthrough's normal package tests the permanent record, so its live Fantastic term is
+  deleted.** Premise re-read at the block before implementing and it held on both halves. The
+  admission test at `$005A376D..$005A3DDE` (`Units.RecalculateUnits.pas`) is
+  `((not ((U.ranged > 0) and (U.ammo > 0))) or (BreakthroughAffectRanged > 0)) and
+  (not U.combatsummoned) and (not B.Fantastic)`: the summoned term reads the calculated record,
+  the Fantastic term the **permanent** one — the same `B.` selector as the `B.attack > 0` melee
+  gate inside the package — and no clause of the block reads live Fantastic. The Warlord script
+  supplies no counterpart either: `UnitCalcPre.CAS:776-782` only sets the `CGBreakthrough` combat
+  global through the Chaos Conduit item power, and `MODDING.INI` carries the six magnitudes.
+  `deriveAbilityEffects` (`combat_abilities.js`) had required `!combatSummoned && !baseFantastic
+  && !liveFantastic`; the third term is gone. Third gate of the [F163](./BACKLOG.md) tranche to
+  turn out to read the permanent record, after `b:wallOfFire:garrison` and `b:bombsGrenades`.
+  Moves **19 of 15525** derivations (`tools/derivation_equivalence.js`), 11 `com2_1.05.11` and 8
+  `com2_warlord_1.5.12.7`, every one attributed: each carries Breakthrough plus a conversion that
+  makes the unit live-Fantastic over a non-Fantastic base — Undead 8, Destiny 4, Mystic Surge 4,
+  Chaos Channels 3. The three CoM2 cases with no Warlord twin are explained rather than left open:
+  `combo|152` and `|183` carry Spirit Link, whose Warlord-only `d:spiritLink` clears Fantastic so
+  the old fixed-point read already admitted them, and `combo|728` carries Shatter, which in Warlord
+  applies to any unit and clamps melee back to 1 downstream of `c:breakthrough:normal`. Presets
+  `breakthroughLiveFantasticStillNormalCoM2` and `...Warlord` bind both arms and were the only two
+  of 1096 to fail with the term restored. **One assertion corrected, not weakened:**
+  `tools/unit_checks/identity.js` asserted that a live-Fantastic Chosen does *not* receive the
+  normal package — an expectation taken from the implementation rather than the block — and now
+  asserts the block's reading.
+- **F178 — Chaos Surge reads the realm its own block sees, which in the MoM builds is nothing yet.**
+  Premise re-checked at the source before implementing and it held: in `BU_Construct` (`unitcalc.c`)
+  the realm test is `bu->race == rt_Chaos` at 131:0x8F138 / 160:0x8F138 and the sole
+  `BU_Apply_Specials` call is at 131:0x8F2A2 / 160:0x8F2A2, while CoM 1 calls it first at
+  com1:0x8F0E8, ahead of its own block at com1:0x8F110. Every `bu->race` write in the file is
+  inside `BU_Apply_Specials` (0x8F3E4..0x8F79E), so the MoM test is read off its own block as
+  taking the calculated record at a point where no conversion has run — not deduced from its
+  region. `chaosSurgeCount` (`stats.js`) took `unitRealm`, the pre-pass fixed point; it now takes
+  the `beforeKey: 'c:chaosSurge'` positional identity, which the modern EncMagic rule already
+  computed and which is now computed once for all five versions rather than for CoM2 alone.
+  Reproduced before the change: a MoM 1.31 / CP 1.60 unit with Chaos Channels demon-skin armor
+  and one Chaos Surge reported melee 7 at base melee 5; it reports 5 after.
+  Three presets added — `chaosSurgeChaosChannelsArmorMoM`, `...CP` and `...CoM` — and
+  `chaosSurgeChaosChannelsBreathMoM` corrected from 5.000 to 3.000, since the ordering that
+  excluded its breath excludes its melee for the same reason. Ablation confirmed the before-state:
+  exactly those three MoM/CP presets failed at 5, 7 and 7, and the CoM 1 companion passed unchanged.
+  **Folded in, per the row's declared scope:** `tools/derivation_equivalence.js` gained a
+  `chaos-surge` env and an explicit `chaosSurge: 0` default. It had reported 0 differences for this
+  defect; it now measures 24 of 15525, 12 `mom_1.31` and 12 `mom_cp_1.60.00` and none in the other
+  three versions — which is also the scope check the adjacent-defect bound asks for, measured
+  rather than assumed. The recorded reason for that blind spot was wrong: four `ENVS` entries
+  already varied `nodeAura`, `darkness`, `trueLight`, `enemyEternalNight` and `cityWalls`, and
+  `chaosSurge` alone was never varied. Corrected on F163 and in `SPEC.md`.
+  **F163 is not one item away.** Re-running the `d:spiritLink` ablation with F178 in place moves 10
+  of 15525 on a numeric stat, of which 3 carry Breakthrough (F179), 5 carry Mislead — legitimately,
+  since `e:mislead` ranks after `d:spiritLink` — and 2 are unattributed. F182 filed: the tool's
+  `chaos-channels` env sets `chaosChannels`, an input nothing in `Calculator/` reads, making it the
+  third dead axis in that list.
+
 - **F145 half one — ten duplicated predicates given one reader each; 21 groups to 11.**
   Sweep re-run standalone before any edit: 21 groups over 612 compound tests, against the row's
   22 over 611. Both figures were off — the 22 was measured over 609, and only F132's group had
