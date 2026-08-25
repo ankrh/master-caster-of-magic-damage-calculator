@@ -300,6 +300,14 @@ definePresets({
     b: { atk:0, toBlkMod:70, def:0, hp:20 },
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
   },
+  wallOfFireGarrisonSkipsApotheosisPermanentFantasticWarlord: {
+    desc: 'The garrison block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1638), the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits, where every later recalculation reads it. So the enchanted unit is Fantastic to this gate and takes no garrison bonus. Negative claim, the absence being the rule under test: melee 5 doubled by Apotheosis is 10 at 100% hit vs def 0 → 10.0. Reading the training-time flag instead added the +1 before the doubling, for 12.0; the sibling wallOfFireWarlordBoostOnAttacker without Apotheosis still measures the +1 at 6.0.',
+    version: V_WARLORD,
+    a: { atk:5, hitChance:70, def:0, hp:10,
+      abilities: { wallOfFireBoost: true, apotheosis: true } },
+    b: { atk:0, toBlkMod:70, def:0, hp:30 },
+    expected: { dmgToA: 0.000, dmgToB: 10.000 },
+  },
   wallOfFireWarlordBoostBoulder: {
     desc: 'Garrison boost now covers boulder physical ranged: A boulder 5→6 @100% vs B def 0 → 6.0 to B (5.0 without boulder coverage)',
     version: V_WARLORD,
@@ -1065,6 +1073,13 @@ definePresets({
     a: { atk:0, hp:10, abilities: { blackPrayer: true, doomGaze: 5 } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  fieryFuryApotheosisTakesBaseFantasticArmWarlord: {
+    desc: 'Fiery Fury branches once, on `IF (BASEFANTASTIC(U))` (UnitCalcPre.CAS:834), and that is the permanent record: Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits. So a unit trained as a regular one takes the THEN arm — First Strike and the Chaos realm — instead of the regular-unit package. A kills B (melee 5 doubled to 10 vs 8 HP) before B can counter, so B deals 0. Taking the ELSE arm instead gave +3 melee before the doubling, 16 rather than 10 and no First Strike, so B still countered — 5 melee at the default 30% block against the +4 Defense Apotheosis gives A, for 3.8. Both arms cap dmgToB at B\'s 8 HP, which is why the discriminating number is dmgToA.',
+    version: V_WARLORD,
+    a: { atk:5, hitChance:70, hp:10, abilities: { fieryFury: true, apotheosis: true } },
+    b: { atk:5, hitChance:70, def:0, hp:8 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   fieryFuryUsesBaseFantasticForFirstStrikeWarlord: {
     desc: 'Fiery Fury uses BASEFANTASTIC: a base regular Combat Summoned unit receives the +3 regular-unit melee package but not First Strike, so B still counters for 5. A live-Fantastic gate would incorrectly prevent the counter.',

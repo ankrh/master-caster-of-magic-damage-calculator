@@ -346,7 +346,12 @@ convenience.** The engines keep `BaseUnits` beside the calculated record and eac
 site which one it tests, so the model keeps both. Every permanent write is a `base`-phase step, so
 the record as that phase leaves it *is* the permanent record for everything after it, and a later
 region reads it through `ctx.base`. A step that reads it says so; every other read is the live
-field at the step's own position.
+field at the step's own position. **"Everything after it" is not an intra-pass claim.** A permanent
+write persists into `BaseUnits`, and the calculator derives the landed steady state, so a permanent
+read takes it even where the engine makes the write later in the same recalculation than the region
+doing the reading — Destiny writes `B.Fantastic := True` at `$0059A390`, after the `UnitCalcPre.CAS`
+hook at `$0059A002` whose region-`b` blocks read `BASEFANTASTIC(U)`, and every recalculation from
+the next one on sees it there (F192).
 
 **Which record a gate reads is read off its own block, never deduced from its region.** Four
 things follow, each of which a wrong reading has already cost numbers.

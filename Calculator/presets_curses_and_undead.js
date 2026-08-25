@@ -913,6 +913,14 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:50 },
     expected: { dmgToA: 0, dmgToB: 28.000 },
   },
+  bombsGrenadesSkipsApotheosisPermanentFantasticWarlord: {
+    desc: 'The `NOTSAPIENS` gate reads `BASEFANTASTIC(U)`, which is the base unit data "before applying continuous effects such as buffs or curses" (CAS reference, Scripts.TXT:286) — the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390, which persists into BaseUnits and every later recalculation. So a unit given Apotheosis is Fantastic to this gate and loses the whole grant. Negative claim, and the absence is the rule under test: melee 1 doubled by Apotheosis is 2 over 4 figures at 100% hit vs def 0 → 8.0. Reading the training-time flag instead granted Thrown 6, which Apotheosis then doubled to 12, for (2 + 12) x 4 = 56.0. The `SMultiLabel = 14` (Sapiens) arm is the exemption that keeps the grant open for a base-Fantastic unit and is unaffected.',
+    version: V_WARLORD,
+    a: { figs:4, atk:1, hitChance:70, hp:10,
+      abilities: { outlanderWizard: true, explosive: true, apotheosis: true } },
+    b: { def:0, toBlkMod:70, hp:60 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
   upgradedExplosiveFireWarlord: {
     desc: 'Rocketry + Explosive derives Upgraded Explosive: the Blackpowder branch (UnitCalcPre.CAS:1074-1077) doubles Fire Breath 3+4 to 14, and Blackpowder Poison rides both that call and the unconditional melee call for 16.0. Base melee 0 keeps the separate Explosive Thrown grant at :1066-1080 shut — that one is gated on base melee > 0 or Flying — so the doubling is measured alone. Dropping Explosive leaves 9.0; dropping Rocketry leaves 3.0. The earlier 20.0 reading was the 20 HP defender capping a 25.0 total that included the Thrown channel, not a measurement of the doubling.',
     version: V_WARLORD,

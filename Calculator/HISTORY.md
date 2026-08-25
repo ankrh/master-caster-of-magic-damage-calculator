@@ -4,6 +4,78 @@ Short index of completed calculator work. Behavior lives in `SPEC.md`; implement
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.
 
+## 2026-08-26
+
+- **F192: the fourteen identity gates that had never been read against their own blocks are read,
+  and six of them wanted the permanent record.** Population (a), the gates whose block was
+  unread, **all agree with the code**, and every one of the blocks tests the calculated record at
+  its own position: the two aura arms `if U.Fantastic` / `if not U.Fantastic`
+  (`Units.RecalculateUnits.pas:2562`, `:2576`) for Soul Linker and Leadership and their CoM 1
+  counterpart `bu->Abilities & UA_FANTASTIC` at com1:0x90BC0 (`unitcalc.c`); Misfortune's
+  `if not U.Fantastic` at `:2591`, which is Mislead's block; Metal Fires'
+  `!(bu->Abilities & UA_FANTASTIC)` at 131:0x9069A; Darkness' `U.race = 19` / `IsDeathUnit(i)`
+  (`:2175`, `:2201`) and `bu->race == rt_Life` / `rt_Death` at com1:0x9084F / 0x908F0; Eternal
+  Night's `not IsDeathUnit(i)` (`:1928`) and `bu->race != rt_Death` at com1:0x90B2A; the node-aura
+  dispatch's `U.race = 16` / `= 17` / `IsChaosUnit(i)` (`:1958-1965`); Realm Ward's
+  `bu->race != rt_Fantastic_No_Realm && bu->race > RACE_FIRST_FANTASTIC` at com1:0x90A64; Spell Ward's five realm arms at
+  `$005A5D36`; and Supreme Light's `U.race = RCLife` (`:2623`) / `bu->race == rt_Life` at
+  com1:0x909DB. **Reachability, stated rather than inferred:** `c:metalFires` is `SCOPE_MOM`,
+  `c:soulLinkerAura`/`c:realmWard`/`c:supremeLight` `SCOPE_COM1`, `e:soulLinkerAura`/
+  `e:leadershipAura`/`e:mislead`/`c:spellWard` `SCOPE_MODERN`, `c:eternalNight:enemyResistance`
+  `SCOPE_COM_PLUS`, `c:darkness`/`c:nodeAura` all five.
+- **`metalFiresActive` is the one (a) gate that reads a post-chain sample, and it is equivalent
+  where it is reachable.** The block's own test is positional, and the weapon upgrade is a result
+  field that cannot be a step, so it takes `finishedIdentity`. Measured rather than assumed:
+  `c:metalFires` is rank 30 of 44 in the MoM 1.31 chain and 30 of 43 in CP 1.60, and no identity
+  conversion ranks after it in either — the entries that follow are the Warps, the curses, Shatter
+  and the clamps. Its declared cross-boundary row stands.
+- **Population (b) and the fourth case: `BASEFANTASTIC(U)` and `B.Fantastic` are the record the
+  `base` phase leaves, Destiny's permanent write included.** `BASEFANTASTIC(U)` is the base unit
+  data "before applying continuous effects such as buffs or curses"
+  (`Reference docs/Script source/CAS reference/Scripts.TXT:286`) and `base:destiny` writes
+  `B.Fantastic := True` at `$0059A390` into `BaseUnits`, so `b:fieryFury:race` (`UnitCalcPre.CAS:834`),
+  `b:wallOfFire:garrison` (`:1638`) and `b:bombsGrenades` (`:1062-1064`) now read it, as do the three
+  astronomical events, whose gates are `not B.Fantastic` at `$005A273C` and `$005A285E` and
+  `B.Fantastic` at `$005A2BB6` — the `B.` selector standing beside `U.*` siblings in the same
+  stretch. **The row's stated reason was falsified and the conclusion survives it.** The row said
+  the three region-`b` blocks "are region `b`, after that write"; they are not. The
+  `UnitCalcPre.CAS` hook runs at `$0059A002..$0059A02C`, **before** the Destiny block at
+  `$0059A35E`. What carries the reading is the steady state: the write is to `BaseUnits` and every
+  later recalculation sees it, which is the deviation `SPEC.md` already records — now stated
+  explicitly in *The step model* so the next reader does not re-derive it.
+- **A fourth site moved with the gate rather than being left behind.** Fiery Fury's THEN arm is two
+  writes, the Chaos conversion and `SETSTAT(U,AFirstStrike,0,1)` at `UnitCalcPre.CAS:836`, and the
+  First Strike half lives in `applyFieryFuryEffects` (`combat_effects.js`). Leaving it on the
+  training-time flag would have given a Destiny unit the conversion without the First Strike beside
+  it, so it takes the same record.
+- **Movement: 76 of 52575 derivations, 33 `com2_1.05.11` and 43 `com2_warlord_1.5.12.7`, and every
+  one carries Destiny/Apotheosis** (`tools/derivation_equivalence.js` against a pristine `HEAD`).
+  Attributed: Nature Conjunction 36, Bad Moon 22, Good Moon 14, Fiery Fury 8, Explosive 5, Wall of
+  Fire garrison 3, with overlaps. Nothing without the enchantment moved.
+- **Six presets, each confirmed failing against the unfixed gates and passing after**, and each
+  added to `LANDED_CORRECTIONS` (`tools/unit_checks/identity_record_choice.js`) so `npm test`
+  keeps them: `badMoonSkipsDestinyPermanentFantasticCoM2` (6.0 against 12.0),
+  `goodMoonSkipsDestinyPermanentFantasticCoM2` (2.0 against 3.0),
+  `natureConjunctionSeesDestinyPermanentFantasticCoM2` (4.0 against 2.0),
+  `bombsGrenadesSkipsApotheosisPermanentFantasticWarlord` (8.0 against 56.0),
+  `wallOfFireGarrisonSkipsApotheosisPermanentFantasticWarlord` (10.0 against 12.0) and
+  `fieryFuryApotheosisTakesBaseFantasticArmWarlord` (dmgToA 0 against 3.8). The first two, the
+  fourth and the fifth are negative claims whose absence is the rule under test, and each `desc`
+  says so; the first two reproduce a verified Destiny sibling's number exactly.
+- **One harness assertion corrected, not weakened.** `runF19Checks`
+  (`tools/unit_checks/backlog_checks.js`) asserted that a base-normal unit given Destiny still
+  takes Bad Moon and Good Moon and not Nature Conjunction — an expectation read off the
+  implementation rather than off the blocks. It now asserts the blocks' reading and keeps the
+  live-record half (Spell Ward and Soul Linker fire, Leadership does not) unchanged.
+- **Two adjacent defects filed, not folded in ([F194](./BACKLOG.md), [F195](./BACKLOG.md)).** F194:
+  the Outlander reform grants under the *same* `NOTSAPIENS` gate still decode a training-time
+  `baseUnitType` string, so one script gate is now modelled two ways — it is the hoisted-grant
+  population [F166](./BACKLOG.md) owns, which is the bound's first clause. F195: Spell Ward carries
+  a live-Fantastic term its block does not have, which is the F175 class and is blocked on Q31,
+  since two of the block's five arms are `IsDeathUnit`/`IsChaosUnit`.
+  **Checks.** `node tools/node_unit_checks.js` 14542/14542, 0 failures; `npm run provenance` 272
+  formulas, 0 UNVERIFIED; `npm test` green (see below).
+
 ## 2026-08-25
 
 - **F163: the identity pre-pass is gone, and the identity conversions are steps of the one
@@ -106,7 +178,7 @@ pre-2026-08-10 narratives remain recoverable from git history.
   `$005A1217` and Warp Reality's Immolation To Hit arm. Both take a sample of the record at their
   block's own chain rank instead — taken immediately before the first step at or after that rank,
   which is the instant the block would run at — and both samples are declared cross-boundary reads.
-- **What is left open**, filed on [F192](./BACKLOG.md): `b:fieryFury:race`,
+- **What is left open**, filed on [F192](./HISTORY.md): `b:fieryFury:race`,
   `b:wallOfFire:garrison` and `b:bombsGrenades` read `identity.baseFantastic`, the record as the
   unit was **trained**, where `ctx.base` — the record the `base` phase leaves — now also carries
   Destiny's permanent write. All three blocks are region `b`, after it, so the engine's reading

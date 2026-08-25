@@ -147,6 +147,10 @@ function applyTacticianWarlordEffects(unit, version) {
 // Warlord Fiery Fury (Chaos unit enchantment): when cast on a base-Fantastic creature,
 // grants First Strike. (Base non-Fantastic units instead get stat bonuses — stepped in stats_sequence.js.
 // The realm conversion to Chaos is the ordered identity step `b:fieryFury:race`.)
+// This is the second half of that one `IF (BASEFANTASTIC(U))` THEN arm, so it takes the same
+// **permanent** record the conversion does: the base unit data as the `base` phase leaves it,
+// Destiny's `B.Fantastic := True` at $0059A390 included (F192). Splitting the two halves across
+// two records would give a Destiny unit the Chaos conversion without the First Strike beside it.
 // STAT-FORMULA[fieryFuryAbilityDerivation]
 // PROVENANCE[fieryFuryAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:14:28f3f207149034b0e805f4b5
 function applyFieryFuryEffects(unit, version) {
@@ -157,7 +161,7 @@ function applyFieryFuryEffects(unit, version) {
     : typeof unit.abilities.baseFantastic === 'boolean'
       ? unit.abilities.baseFantastic
       : (unit.unitType || '').startsWith('fantastic_');
-  if (!baseFantastic) return unit;
+  if (!baseFantastic && !destinyActiveForUnit(unit.abilities, version)) return unit;
   return Object.assign({}, unit, {
     abilities: Object.assign({}, unit.abilities, { firstStrike: true }),
   });

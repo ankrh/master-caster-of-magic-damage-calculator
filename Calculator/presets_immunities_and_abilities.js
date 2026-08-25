@@ -718,6 +718,27 @@ definePresets({
     b: { res:3, hp:10, abilities: { destiny: true } },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
+  badMoonSkipsDestinyPermanentFantasticCoM2: {
+    desc: 'Bad Moon tests the **permanent** record — `(inferred_BadMoon_State <> 0) and B.incombat and (not B.Fantastic)` at $005A273C (Units.RecalculateUnits.pas), the `B.` selector beside `U.*` siblings — and Destiny writes `B.Fantastic := True` at $0059A390, so the enchanted unit is outside the event. Negative claim, and the absence is the rule under test: the fixture reproduces its verified sibling destinyResistanceAndHpCoM2 exactly, res 3 + 4 = 7 and hp 10 → 20 giving Death Gaze 6.0. Reading the training-time flag instead let Bad Moon take 3 Resistance off, for res 4 and 12.0.',
+    version: V_COM2,
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:3, hp:10, abilities: { destiny: true, badMoon: true } },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  goodMoonSkipsDestinyPermanentFantasticCoM2: {
+    desc: 'Good Moon tests the same permanent flag — `(inferred_GoodMoon_State <> 0) and (not B.Fantastic)` at $005A285E — so Destiny\'s `B.Fantastic := True` closes it. Negative claim, the absence being the rule under test: melee 1 doubled by Destiny is 2 at 100% hit vs def 0 → 2.0, the number the verified sibling destinyMeleeRemovesLevelsCoM2 measures. Reading the training-time flag instead added Good Moon\'s +1 to the doubled melee for 3.0.',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, abilities: { destiny: true, goodMoon: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  natureConjunctionSeesDestinyPermanentFantasticCoM2: {
+    desc: 'Nature Conjunction is the positive arm of the same permanent test — `(inferred_NatureConjunction_State <> 0) and B.Fantastic` at $005A2BB6 — so Destiny\'s permanent write admits a unit trained as a regular one. `c:destiny` doubles melee 1 to 2 and the event then adds its +2 (the block\'s own `if U.attack > 0` reads the doubled value), for 4 at 100% hit vs def 0 → 4.0. Reading the training-time flag instead left the event inert at 2.0.',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, abilities: { destiny: true, natureConjunction: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
   destinyAfterLuckyStarWarlord: {
     desc: 'Ordered Apotheosis (Warlord): Warlord renames Destiny to Apotheosis, so the Apotheosis control is the one that reaches this version — the CoM2-named Destiny control is hidden here and selecting it would leave Lucky Star running alone. Lucky Star adds +1 melee in UnitCalcPre, then Apotheosis doubles the live 3+1 to 8. At 100% hit vs def 0 → 8.0; without it 4.0, and applying the doubling before the hook would deal 7.0.',
     version: V_WARLORD,

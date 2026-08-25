@@ -312,11 +312,15 @@ function deriveUnitStats(input) {
   // empty, and adds it normally when the selected attack is already Thrown.
   // The gate is the block's own `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14)
   // THEN { GOTO "NOTSAPIENS"; }` (`UnitCalcPre.CAS:1062-1064`) — both terms read the **permanent**
-  // record, so a combat conversion to Fantastic cannot close it. The same `NOTSAPIENS` label also
-  // encloses Ballistics Training, Xenopsychology and Radio, whose `firstFourEligible`
-  // (`stats_identity.js`) already reads the base field.
+  // record, so a combat conversion to Fantastic cannot close it. `BASEFANTASTIC(U)` is the base
+  // unit data "before applying continuous effects such as buffs or curses"
+  // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`), which is the record the
+  // `base` phase leaves — Destiny's `B.Fantastic := True` at $0059A390 included, since that write
+  // is to `BaseUnits` and persists into every later recalculation (F192). The same `NOTSAPIENS`
+  // label also encloses Ballistics Training, Xenopsychology and Radio, whose `firstFourEligible`
+  // (`stats_identity.js`) still reads the training-time field alone.
   const explosiveEligible = isWarlord && !!abilities.explosive
-    && (!isFantasticBase || !!abilities.sapiens);
+    && (!permanentFantastic || !!abilities.sapiens);
   const bombsGrenades = explosiveEligible
     && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
 
@@ -521,10 +525,17 @@ function deriveUnitStats(input) {
   // eligibility is likewise the control's, not a card role. The package itself is
   // `PROVENANCE[heavenlyLight]` (`stats_sequence.js`).
   const heavenlyLightActive = (isCoM1 || isCoM2) && !!abilities.heavenlyLight;
-  const badMoonActive = isCoM2 && !!abilities.badMoon && !isFantasticBase;
-  const goodMoonActive = isCoM2 && !!abilities.goodMoon && !isFantasticBase;
+  // The three astronomical events each test `B.Fantastic`, the **permanent** record, not the
+  // unit as it was trained: `not B.Fantastic` at $005A273C (Bad Moon) and $005A285E (Good Moon),
+  // `B.Fantastic` at $005A2BB6 (Nature Conjunction), all three in
+  // `Units.RecalculateUnits.pas`. Their sibling gates in the same stretch read `U.*`, so the `B.`
+  // selector is deliberate. `permanentFantastic` is the record the `base` phase leaves
+  // (`SPEC.md`, *The step model*), which is what separates this from `identity.baseFantastic`:
+  // Destiny writes `B.Fantastic := True` at $0059A390 (F192).
+  const badMoonActive = isCoM2 && !!abilities.badMoon && !permanentFantastic;
+  const goodMoonActive = isCoM2 && !!abilities.goodMoon && !permanentFantastic;
   const natureConjunctionActive = isCoM2 && !!abilities.natureConjunction
-    && isFantasticBase;
+    && permanentFantastic;
   // Spell Ward is region-c logic — `PROVENANCE[spellWard]` (`stats_sequence.js`). In Warlord it
   // therefore reads the current Fantastic flag before the region-d Spirit Link hook
   // (`UnitCalc.CAS:1306`) can clear that flag.
@@ -804,8 +815,11 @@ function deriveUnitStats(input) {
   // The eligibility term is the block's own `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOWALLOFFIRE"; }`
   // (`UnitCalcPre.CAS:1638`) — the **permanent** record, so a combat conversion to Fantastic does
   // not withdraw the garrison bonus, and Spirit Link clearing live Fantastic does not confer it.
+  // That record is the one the `base` phase leaves, so Destiny's permanent `B.Fantastic := True`
+  // ($0059A390) withdraws it (F192). The hero exclusion is the calculator's, not the block's,
+  // and is BACKLOG F175.
   const wofDefenderBonusActive = isWarlord && !!(abilities && abilities.wallOfFireBoost)
-    && isNormalUnitType(baseUnitType);
+    && !isHero && !permanentFantastic;
 
   // Flame Blade: +2 to missile and thrown rtb only (not boulder, magic) —
   // `PROVENANCE[flameBlade]` (`stats_sequence.js`), which carries all five builds, and Warlord's
@@ -827,10 +841,18 @@ function deriveUnitStats(input) {
   // melee halves are the `c:metalFires` step (`combat_abilities.js`), which `SCOPE_MOM` keeps
   // out of the CoM engines; the weapon upgrade is not a step, so it carries the same version
   // test here. The engine's `!(ench & UE_FLAME_BLADE)` non-stacking gate is the last term.
+  // The block's Fantastic test is `!(bu->Abilities & UA_FANTASTIC)` at 131:0x9069A, the calculated
+  // record at the block's own position, and the upgrade is a result field that cannot be a step,
+  // so it takes `finishedIdentity`. The two agree wherever this is reachable: `c:metalFires` is
+  // rank 30 of 44 in the MoM 1.31 chain and 30 of 43 in CP 1.60, and no identity conversion ranks
+  // after it in either (F192).
   const metalFiresActive = !!abilities.metalFires && !finishedIdentity.fantastic
     && !isCoMVersion && !abilities.flameBlade;
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : 0;
-  const ffRegularBonus = isWarlord && !!abilities.fieryFury && !isFantasticBase;
+  // The ELSE arm of Fiery Fury's one `IF (BASEFANTASTIC(U))` (`UnitCalcPre.CAS:834`), whose THEN
+  // arm is `b:fieryFury:race` (`stats_identity.js`). `BASEFANTASTIC` is the permanent record as
+  // the `base` phase leaves it, Destiny's write included (F192).
+  const ffRegularBonus = isWarlord && !!abilities.fieryFury && !permanentFantastic;
   // Fiery Fury melee +3 for regular units — "an increase in Melee Attacks by 3"
   // (`Unit rosters/Warlord mod unit data/HELP.TXT:5885`) — non-cumulative with Flame Blade /
   // Fiery Blade (combat_abilities.js already adds +3 melee for a Warlord blade effect).

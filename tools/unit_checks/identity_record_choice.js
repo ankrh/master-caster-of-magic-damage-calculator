@@ -17,13 +17,13 @@
 //     which is the property the census's channel scan gave and the reason a new unpositioned read
 //     cannot enter the code unnoticed (`SPEC.md`, *Out-of-range values stop the run*).
 //
-// (2) **The nineteen landed corrections keep a named regression.** The census reproduced sixteen
-//     of them through its own oracle and threw if it ever stopped; that check cannot survive the
+// (2) **The landed record-choice corrections keep a named regression.** The census reproduced
+//     sixteen through its own oracle and threw if it ever stopped; that check cannot survive the
 //     structure it measured. What replaces it is the binding each correction already has: a
 //     preset whose expected damage came from the source reading, not from running the code
 //     (`Calculator/CLAUDE.md`, *What an assertion has to be bound to*). This asserts that every
 //     correction still names one, that the preset exists, and that it is reachable from
-//     `TEST_TREE` — so `npm test` evaluates all nineteen every run and a deletion is loud.
+//     `TEST_TREE` — so `npm test` evaluates all twenty-five every run and a deletion is loud.
 
 'use strict';
 
@@ -135,7 +135,7 @@ function runCrossBoundaryIdentityReadChecks() {
   }
 }
 
-// --- (2) The nineteen landed corrections, and where each is asserted ---------------------------
+// --- (2) The landed corrections, and where each is asserted -----------------------------------
 //
 // `at` is the chain entry or gate the correction settled; `record` is which record it turned out
 // to want — `positional` (the calculated record where the block stands), `permanent` (the base
@@ -181,6 +181,18 @@ const LANDED_CORRECTIONS = [
     preset: 'rebuildHeroCcDefenseLionheartWarlord' },
   { id: 'F188', at: "Shatter's target class", record: 'finished',
     preset: 'magicImmunityGatesShatter' },
+  { id: 'F192', at: 'c:badMoon', record: 'permanent',
+    preset: 'badMoonSkipsDestinyPermanentFantasticCoM2' },
+  { id: 'F192', at: 'c:goodMoon', record: 'permanent',
+    preset: 'goodMoonSkipsDestinyPermanentFantasticCoM2' },
+  { id: 'F192', at: 'c:natureConjunction', record: 'permanent',
+    preset: 'natureConjunctionSeesDestinyPermanentFantasticCoM2' },
+  { id: 'F192', at: 'b:bombsGrenades', record: 'permanent',
+    preset: 'bombsGrenadesSkipsApotheosisPermanentFantasticWarlord' },
+  { id: 'F192', at: 'b:wallOfFire:garrison', record: 'permanent',
+    preset: 'wallOfFireGarrisonSkipsApotheosisPermanentFantasticWarlord' },
+  { id: 'F192', at: 'b:fieryFury:race and its First Strike half', record: 'permanent',
+    preset: 'fieryFuryApotheosisTakesBaseFantasticArmWarlord' },
 ];
 
 // The three record choices are the whole vocabulary a gate has, so a row naming a fourth would be
@@ -194,7 +206,7 @@ function runLandedCorrectionChecks(presetKeys, treeKeys) {
       + `${[...RECORD_CHOICES].join(', ')}`);
     assert(presetKeys.has(entry.preset),
       `${entry.id} (${entry.at}) names a preset that still exists: ${entry.preset}. `
-      + 'The nineteen identity-record corrections of the F163 tranche are asserted only by these '
+      + 'The identity-record corrections of the F163 tranche and of F192 are asserted only by these '
       + 'presets, so one going missing takes the correction\'s regression with it');
     assert(treeKeys.has(entry.preset),
       `${entry.id}'s preset ${entry.preset} is reachable from TEST_TREE, so npm test runs it`);

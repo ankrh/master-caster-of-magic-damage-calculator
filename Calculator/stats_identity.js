@@ -206,8 +206,13 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     && combatSummonedValue
     && sourceTemplateId === 113);
   // Fiery Fury and Sanctify read the permanent record, not the running one: `BASEFANTASTIC(U)`
-  // and `ISHERO(U)` are base-record predicates in UnitCalcPre.CAS.
-  const baseFantastic = !!identity.baseFantastic;
+  // and `ISHERO(U)` are base-record predicates in UnitCalcPre.CAS. `BASEFANTASTIC(U)` is the base
+  // unit data "before applying continuous effects such as buffs or curses"
+  // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`) — the record the `base` phase
+  // leaves, so `base:destiny`'s `B.Fantastic := True` ($0059A390) is in it, and the unit's own
+  // training-time flag is not the whole of it (F192).
+  const permanentFantastic = !!identity.baseFantastic
+    || destinyActiveForUnit(abilities, version);
   const isHero = typeof meta.isHero === 'boolean' ? meta.isHero : !!identity.isHero;
   // One predicate for Spirit Link's two conversions: both blocks gate on the same
   // `GetEnchantmentFlag(U,EncSpiritLink,1)`, and neither tests the unit's realm or Fantastic
@@ -297,7 +302,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // PROVENANCE[fieryFury:race]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7
     statStep({ id: 'fieryFury:race', sourceId: 'fieryFury', sourceLabel: 'Fiery Fury',
       phase: 'b', writes: ['race', 'fantastic'],
-      when: () => hasAbil(abilities, 'fieryFury') && baseFantastic,
+      when: () => hasAbil(abilities, 'fieryFury') && permanentFantastic,
       apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
     // Sanctify writes the Life realm unconditionally; its separate Fantastic write is gated on
     // a non-hero clergy unit. Two writes, not the three-branch compact-token approximation the

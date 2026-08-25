@@ -178,12 +178,15 @@ function runF19Checks(ctx) {
       spellWard: 'life', soulLinkerAura: 5, leadershipAura: 7,
     },
   });
+  // Destiny's identity write is to `BaseUnits` ($0059A390), so it moves the **permanent** record
+  // as well as the calculated one. The three astronomical events read `B.Fantastic` and therefore
+  // change arms with it; the live-record gates change with the calculated flag (F192).
   const baseNormalMadeFantasticIds = baseNormalMadeFantastic.statTrace.map(event => event.id);
-  for (const expectedId of ['badMoon', 'goodMoon', 'spellWard', 'soulLinkerAura']) {
+  for (const expectedId of ['natureConjunction', 'spellWard', 'soulLinkerAura']) {
     assert(baseNormalMadeFantasticIds.includes(expectedId),
       `F19 ${expectedId} observes its required base/live predicate after Destiny`);
   }
-  for (const excludedId of ['natureConjunction', 'leadershipAura']) {
+  for (const excludedId of ['badMoon', 'goodMoon', 'leadershipAura']) {
     assert(!baseNormalMadeFantasticIds.includes(excludedId),
       `F19 ${excludedId} rejects the opposite base/live predicate after Destiny`);
   }
