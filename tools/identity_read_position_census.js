@@ -38,7 +38,8 @@
 // each one's chain entry and the comparison it turned on, and the run fails loudly if the oracle
 // does not independently reproduce it.
 //
-// Cost: one corpus derivation pass, about the same as `tools/derivation_equivalence.js`. It is a
+// Cost: one corpus derivation pass, about the same as `tools/derivation_equivalence.js` — ~25s
+// since the identity axis widened that corpus to 52575 cases, from ~11s at 15525. It is a
 // diagnostic like `tools/preset_vacuity_sweep.js`, not part of `npm test` or
 // `node tools/node_unit_checks.js`.
 
@@ -307,6 +308,13 @@ const SITES = [
 // than a read. 'positional' and 'hero' both assert the read was hoisted at its entry — the
 // condition that made it a defect; 'permanent' asserts only that the two records are
 // distinguishable there. The oracle must reproduce each.
+//
+// `moved` is prose, not an assertion: the digest count the correction was recorded with. Every one
+// of them was measured against the 15525-case corpus that stated no hero and no base race, and the
+// identity axis added 2026-08-25 raises all of them. Four have been re-measured against the
+// widened 52575-case list by ablating the landed change; each carries both numbers. The rest still
+// carry their original figure alone, and F185 is the reason to distrust an unre-measured one:
+// its recorded 7 was 8, and the pair's recorded "8 of 15525" was 9.
 const GROUND_TRUTH = [
   { id: 'F167', effect: 'the unitRace alias, five Warlord building gates', at: 'base:altarOfTheMoon',
     fields: ['race'], comparison: 'permanent', versions: ['com2_warlord_1.5.12.7'], moved: 0 },
@@ -332,52 +340,75 @@ const GROUND_TRUTH = [
   { id: 'F177', effect: 'survivalInstinctUnitType', at: 'c:survivalInstinct', fields: ['fantastic'],
     comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 2 },
   { id: 'F178', effect: 'chaosSurgeRealm', at: 'c:chaosSurge', fields: ['race'],
-    comparison: 'positional', versions: ['mom_1.31', 'mom_cp_1.60.00'], moved: 24 },
+    comparison: 'positional', versions: ['mom_1.31', 'mom_cp_1.60.00'], moved: 24, movedWide: 108 },
   { id: 'F179', effect: 'Breakthrough normal package', at: 'c:breakthrough:normal',
     fields: ['fantastic'], comparison: 'permanent',
     versions: ['com2_1.05.11', 'com2_warlord_1.5.12.7'], moved: 19 },
   // F185 and F186 are the first two corrections this tool found rather than confirmed, and the
   // first of the region-`b` class: a live *race* read hoisted by the six region-`c` conversions
   // rather than by the Spirit Link pair. Only `c:undead` and `c:destiny:race` of those six write
-  // a realm either block tests, and each block's own Undead-flag term now answers for `c:undead`,
-  // which is why the two moved 7 and 1 cases out of the 30 and 25 narrowed ones.
+  // a realm either block tests, and each block's own Undead-flag term now answers for `c:undead`.
+  //
+  // Re-measured 2026-08-25 by rebuilding the corpus at the landing commit and its parent: the pair
+  // moves **9** of the 15525 cases it was measured over, not the 8 recorded, and the split is 8/1
+  // rather than 7/1, disjoint. Each half was then ablated separately on the widened list. The
+  // separation matters for one further reason: reverting only the *positional read* of each half
+  // moves 6 and **0** cases, so F186's whole recorded movement is its block's own Undead-flag
+  // term, not the repositioning — SPEC.md rule (4) in its sharpest form.
   { id: 'F185', effect: 'the True Light package', at: 'b:trueLight', fields: ['race'],
-    comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 7 },
+    comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 8, movedWide: 36 },
   { id: 'F186', effect: 'warlordEternalNightActive', at: 'b:eternalNight:poorVision',
-    fields: ['race'], comparison: 'positional', versions: ['com2_warlord_1.5.12.7'], moved: 1 },
-  // F184's `moved` is 0 for the reason the third tranche rule states: the corpus has 3105 Warlord
-  // cases, 6 with Warp Reality and Spirit Link and 6 with Warp Reality and a Chaos Channels flag,
-  // but **0 with all three** — and with no base race in the case list, Chaos Channels is the only
-  // route to a live Chaos realm, so no generated case can tell the two records apart. The
-  // correction's evidence is its two presets. Its sibling F183 has no row here on purpose: that
+    fields: ['race'], comparison: 'positional', versions: ['com2_warlord_1.5.12.7'],
+    moved: 1, movedWide: 4 },
+  // F184's `moved` is 0 for the reason the third tranche rule states, and stays 0 on the widened
+  // list — re-measured 2026-08-25 by ablating the positional read. The corpus now has 10515
+  // Warlord cases: 388 carry Warp Reality, of which 22 also carry Spirit Link and 30 a Chaos
+  // Channels flag, but **0 carry a Chaos realm and Spirit Link together**, by either route — 62
+  // cases state a permanently-Chaos Fantastic record and 7 of those carry Warp Reality, none with
+  // Spirit Link. So no generated case can still tell the two records apart, and the correction's
+  // evidence remains its two presets. Its sibling F183 has no row here on purpose: that
   // read turned out not to be a hoisting defect at all but a targeting restriction, and the
   // `targeting` classification is what records it.
   { id: 'F184', effect: 'unitIsChaos, the Warp Reality step and the Immolation To Hit read',
     at: 'c:warpReality', fields: ['race', 'fantastic'], comparison: 'positional',
-    versions: ['com2_warlord_1.5.12.7'], moved: 0 },
+    versions: ['com2_warlord_1.5.12.7'], moved: 0, movedWide: 0 },
   // F187's two sites left the vocabulary rather than changing record: both blocks ask `ISHERO`,
-  // and the hero flag is not part of the calculated identity. `moved` is 0 for the third tranche
-  // rule's reason and for the sharpest instance of it — every case in the list is
-  // `unitType: 'normal'`, so no generated case even enters either branch. Their evidence is the
-  // four presets. The versions listed are the ones whose *position* was divergent, which is what
-  // this oracle checks; the numbers moved in CoM 1 and CoM2 too, where a Chaos Channels
-  // conversion answered the hero question at a position no conversion follows.
+  // and the hero flag is not part of the calculated identity. `moved` was 0 for the third tranche
+  // rule's reason and for the sharpest instance of it — every case in the list was
+  // `unitType: 'normal'`, so no generated case even entered either branch, and the evidence had to
+  // be four presets. The identity axis is the direct answer to that: Tactician now moves 34 cases,
+  // 0 of them in the old raceless-custom segment, across the three versions the item named — 13
+  // CoM 1, 15 CoM2, 6 Warlord. Rebuild stays 0 even widened, because its defect is a *phase*
+  // choice and nothing between `base` and `b` scales the +2/+2 it moves; its evidence is still its
+  // presets. The versions listed are the ones whose *position* was divergent, which is what this
+  // oracle checks.
   { id: 'F187', effect: 'Tactician, hero branch', at: 'c:tactician',
     fields: ['race', 'fantastic'], comparison: 'hero',
-    versions: ['com2_warlord_1.5.12.7'], moved: 0 },
+    versions: ['com2_warlord_1.5.12.7'], moved: 0, movedWide: 34 },
   { id: 'F187', effect: 'Rebuild, hero/non-hero phase choice', at: 'base:rebuild',
     fields: ['race', 'fantastic'], comparison: 'hero',
-    versions: ['com2_warlord_1.5.12.7'], moved: 0 },
+    versions: ['com2_warlord_1.5.12.7'], moved: 0, movedWide: 0 },
 ];
 
 // What the measurement cannot see. Every earlier round on this seam under-claimed its blind
 // spots and was falsified within one round; these are printed with the report so a reader cannot
 // take the site list for the whole population.
 const BLIND_SPOTS = [
-  'The corpus states no base race and no hero: every derivation_equivalence case is unitType '
-    + "'normal' with an empty baseRace. A gate comparing live race to a mundane race (the five "
-    + 'Warlord building gates F167 repointed) and every hero branch therefore measure 0 cases '
-    + 'here however wrong they are. The case counts are a floor, not a bound.',
+  'The case counts are a floor, not a bound, and the floor moved on 2026-08-25. The corpus now '
+    + 'states three permanent identities across the whole list — a raceless custom unit, a High '
+    + 'Men non-hero and a High Men hero — and eighteen more in combination cases only. So a gate '
+    + 'comparing live race to a mundane race, and every hero branch, is now reached: F187 went '
+    + 'from 0 of 15525 to 34 of 52575, and F175 from 0 to 64. What is still not reached: those '
+    + 'eighteen identities against a solo control or a bare environment; the unit *name*, which '
+    + 'the unit-specific building branches test with endsWith; roster-selected units; and the '
+    + "defending side's identity, since every case derives side `a`.",
+  'A conversion whose write equals the value the identity axis already holds is invisible to the '
+    + 'oracle, because discovery reads the trace and collectStepChanges (Calculator/steps.js) '
+    + 'records only fields a step moved. b:fieryFury:race was undiscovered for exactly that '
+    + "reason — the basis's only base-Fantastic axis stated race 'Chaos', which is what that "
+    + 'conversion writes — until the widened corpus reached it and the guard below threw. '
+    + 'The guard is the protection, not the basis; a conversion the corpus never reaches either '
+    + 'is still invisible and unguarded.',
   'Reachability is not modelled, and nothing flags it any more. A read behind a version test that '
     + 'skips it in the one version whose position diverges would still be reported hoisted. '
     + 'c:shatter was the one such site and carried a marker for it; F188 found the marker was '
@@ -403,7 +434,9 @@ const BLIND_SPOTS = [
   'Which *units* a gate covers is a different question from which *record* it reads. F175 (the '
     + 'hero exclusion in b:nausea and b:wallOfFire:garrison) is out of scope here: both sites '
     + 'already read the record their blocks read, and their defect is the isNormalUnitType '
-    + 'predicate. Rebuild and Tactician were reported only because they spelled a hero question '
+    + 'predicate. It is no longer invisible to the *digest*, though — with a hero in the case '
+    + 'list it measures 64 cases, 35 nausea and 30 garrison, one shared. '
+    + 'Rebuild and Tactician were reported only because they spelled a hero question '
     + 'through the live compact token; F187 gave both the hero flag, so neither is in this '
     + 'vocabulary now and a hero test written that way again would be found the same way.',
 ];
@@ -578,6 +611,16 @@ function identityAxes() {
   axes.push({ name: 'hero', over: { isHero: true } });
   axes.push({ name: 'heroType:48', over: { isHero: true, heroTypeId: 48 } });
   axes.push({ name: 'baseFantastic', over: { baseFantastic: true, baseRace: 'Chaos' } });
+  // A conversion is discovered from its *trace*, and `collectStepChanges` (`Calculator/steps.js`)
+  // records only fields a step actually moved — so a conversion writing the value the axis
+  // already holds is invisible. The axis above states `Chaos`, and Fiery Fury's THEN arm
+  // (`b:fieryFury:race`, gated on `BASEFANTASTIC(U)`) writes exactly `race = 'Chaos'` and
+  // `fantastic = true`: on that axis it changed nothing and the whole conversion went undiscovered,
+  // which the widened corpus caught through the incompleteness guard below. Repeat the axis on a
+  // race no conversion writes — the conversions write Life, Death, Chaos, Nature and No Heal —
+  // so every race write is observable while the permanent record is still Fantastic.
+  axes.push({ name: 'baseFantastic:mundane',
+    over: { baseFantastic: true, baseRace: 'High Men' } });
   return axes.map(axis => ({ name: axis.name, identity: { ...base, ...axis.over } }));
 }
 

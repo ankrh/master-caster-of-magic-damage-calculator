@@ -10,12 +10,23 @@
 // control added later is covered without editing this file. Combination cases use a seeded
 // generator: the same seed yields the same cases on both sides of a comparison.
 //
+// A case states a **permanent identity** as well as a control set and a unit shape. It did not
+// until 2026-08-25: every case was `unitType: 'normal'` with an empty base race, so a gate
+// comparing live race to a *mundane* race and every hero branch measured 0 differences however wrong
+// they were. F187 moved atk 5->7, def 7->8 and res 4->6 in three versions while this tool
+// reported 0 of 15525; a hand probe caught it. `IDENTITIES` and `ROAMING_IDENTITIES` below say
+// exactly what the widened list reaches and what it still does not.
+//
 // Each value in the written map is an **object**, so compare two runs structurally — a `!==` over
 // the parsed maps compares references and reports every case as differing.
 //
 // `enumerateCases(context)` is the case list on its own, exported so a second measurement over the
 // same control surface reuses it instead of restating the generator — the seeded draw order is
 // what makes two runs comparable, and a copy of it would drift.
+//
+// Cost: 52575 derivations, ~26s, up from 15525 and ~10s before the identity axis. It is a
+// diagnostic run per item, not part of any suite; `tools/identity_read_position_census.js` walks
+// the same list and costs about the same again.
 
 'use strict';
 
@@ -145,6 +156,74 @@ const ENVS = [
   { name: 'chaos-surge', over: { chaosSurge: 1 } },
 ];
 
+// The permanent identity a case states. `initializeUnitIdentity` (`stats_identity.js`) reads
+// `input.identity` in preference to the legacy `unitType`/`race` tokens, so a row that names one
+// states the whole base record: hero flag, base race, base Fantastic, special unit, and the two
+// source ids.
+//
+// `custom` is the record every case of this tool carried before the axis existed — a raceless,
+// non-hero, non-Fantastic custom unit — reproduced through the same legacy tokens, so its names and
+// digests are unchanged and an old run still diffs against a new one on those keys. The other two
+// rows are the axis F187 showed was missing. They cross the whole list: every solo control, every
+// environment, and the *same* seeded combination draws, because the generator is reseeded per
+// identity so the three rows differ in the base record and nothing else.
+const IDENTITIES = [
+  { name: 'custom', over: {} },
+  { name: 'race', identity: { isHero: false, baseRace: 'High Men', baseFantastic: false } },
+  { name: 'hero', identity: { isHero: true, baseRace: 'High Men', baseFantastic: false } },
+];
+
+// A full cross-product over every identity worth stating would cost more than this tool can be
+// run interactively for, so the rest of the identity surface is reached through combinations
+// only: one extra seeded block per version, drawing its identity from this pool as well as its
+// shape, environment and controls. What that buys and what it does not:
+//
+//   REACHED, in combination cases only — the six race-gated Warlord building grants other than
+//   Sancta Basilica (`altarOfTheMoon` needs a Gnoll, `dragonMound` a Draconian, ...), a permanent
+//   Fantastic record, a Fantastic hero, the four special units, and the six templates the
+//   identity conversions branch on.
+//   NOT REACHED — those eighteen identities against a *solo* control or a bare environment, so a
+//   defect that needs one of them plus exactly one control is only found if the draw happens to
+//   pair them. NOT REACHED at all — the unit *name*, which the unit-specific building branches
+//   test with `endsWith` (Hunters, Witchdoctors, Holy Mother, Legionary); roster-selected units;
+//   and the defending side's identity, since every case derives side `a`.
+const ROAMING_IDENTITIES = [
+  ...IDENTITIES,
+  ...['Gnoll', 'Hawkmen', 'Draconian', 'Orc', 'Goblin', 'Rakhshasa'].map(baseRace => ({
+    name: `race:${baseRace}`, identity: { isHero: false, baseRace, baseFantastic: false },
+  })),
+  { name: 'baseFantastic',
+    identity: { isHero: false, baseRace: 'Chaos', baseFantastic: true } },
+  { name: 'hero-fantastic',
+    identity: { isHero: true, baseRace: 'Death', baseFantastic: true } },
+  // `specialUnit` is version-scoped in the UI but not at the identity boundary, so each key is
+  // stated in every version and inert where that version has no block for it.
+  ...['golem', 'chosen', 'zombies', 'catapult'].map(specialUnit => ({
+    name: `special:${specialUnit}`,
+    identity: { isHero: false, baseRace: 'High Men', baseFantastic: false, specialUnit },
+  })),
+  // The template ids the identity conversions branch on: 37 Catapult, 54 and 113 the CoM 1 and
+  // base-CoM2 summon branches, 34 Chosen, 81 Golem, 174 Zombies.
+  ...[34, 37, 54, 81, 113, 174].map(templateId => ({
+    name: `template:${templateId}`,
+    identity: { isHero: false, baseRace: 'High Men', baseFantastic: false, templateId },
+  })),
+  // The Marionette channeler conversion is the one gated on a hero *type* rather than the flag.
+  { name: 'heroType:48',
+    identity: { isHero: true, baseRace: 'High Men', baseFantastic: false, heroTypeId: 48 } },
+];
+
+// Cases in the roaming block, per version. Sized so each pool row is drawn about sixty times per
+// version; raising it is the cheapest way to deepen identity coverage if a defect needs it.
+const ROAMING_CASES = 1200;
+
+// The base record a row states, resolved for the version under test.
+function identityOver(identity, version) {
+  if (!identity.identity) return identity.over || {};
+  return { identity: { templateId: null, heroTypeId: null, specialUnit: 'none',
+    ...identity.identity, version } };
+}
+
 // A CoM2/Warlord case states the record that version has: the four named channels, with the
 // shared slot beside them as the card's projection (`unit_checks/assertions.js`,
 // `modernRecordForSharedSlot`). A case that already names `modernAttacks` keeps its own.
@@ -217,49 +296,76 @@ function* enumerateCases(context = defaultContext()) {
   const versions = readFrom(context, 'ENGINE_VERSIONS');
   const abilitySpecs = controlSpecs(readFrom(context, 'ABILITY_DEFS'));
   const enchantSpecs = controlSpecs(readFrom(context, 'ENCHANTMENT_DEFS'));
+  // Both lists write the one map, so a shared `calcKey` picked twice keeps the later value
+  // rather than being counted in two places, which is what the UI's merge does for the controls
+  // that collapse onto one key. The draw order — six abilities, then six enchantments, each a
+  // spec index followed by a value index — is what makes two runs comparable, so it is one
+  // function rather than a copy in each combination block.
+  const drawControls = (random) => {
+    const abilities = {};
+    const pick = 6;
+    for (let n = 0; n < pick; n += 1) {
+      const spec = abilitySpecs[Math.floor(random() * abilitySpecs.length)];
+      setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
+    }
+    for (let n = 0; n < pick; n += 1) {
+      const spec = enchantSpecs[Math.floor(random() * enchantSpecs.length)];
+      setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
+    }
+    return abilities;
+  };
   for (const version of versions) {
-    // 1. Every control on its own, over every shape, on the plain environment.
-    for (const [kind, specs] of [['abil', abilitySpecs], ['ench', enchantSpecs]]) {
-      for (const spec of specs) {
-        for (const value of spec.values) {
-          for (const shape of SHAPES) {
-            const over = { ...shape.over };
-            over.abilities = {};
-            setControl(over.abilities, spec, value);
-            yield { name: `${version}|solo|${kind}|${spec.key}=${value}|${shape.name}`,
-              version, input: baseInput(context, version, over) };
+    for (const row of IDENTITIES) {
+      const idOver = identityOver(row, version);
+      // `custom` carries no tag, so the case names and digests this tool produced before the
+      // identity axis existed are unchanged and still diff against a new run.
+      const tag = row.name === 'custom' ? '' : `|id:${row.name}`;
+      // 1. Every control on its own, over every shape, on the plain environment.
+      for (const [kind, specs] of [['abil', abilitySpecs], ['ench', enchantSpecs]]) {
+        for (const spec of specs) {
+          for (const value of spec.values) {
+            for (const shape of SHAPES) {
+              const over = { ...shape.over, ...idOver };
+              over.abilities = {};
+              setControl(over.abilities, spec, value);
+              yield { name: `${version}|solo|${kind}|${spec.key}=${value}|${shape.name}${tag}`,
+                version, input: baseInput(context, version, over) };
+            }
           }
         }
       }
-    }
-    // 2. Every environment against every shape, no controls.
-    for (const env of ENVS) {
-      for (const shape of SHAPES) {
-        yield { name: `${version}|env|${env.name}|${shape.name}`, version,
-          input: baseInput(context, version, { ...shape.over, ...env.over }) };
+      // 2. Every environment against every shape, no controls.
+      for (const env of ENVS) {
+        for (const shape of SHAPES) {
+          yield { name: `${version}|env|${env.name}|${shape.name}${tag}`, version,
+            input: baseInput(context, version, { ...shape.over, ...env.over, ...idOver }) };
+        }
+      }
+      // 3. Seeded combinations: several controls at once, so interaction order is exercised.
+      // Reseeded per identity, so the three rows draw the same shape, environment and controls
+      // and differ in the base record alone — a controlled comparison rather than three
+      // unrelated samples, and `custom|combo|N` is the case that name always meant.
+      const random = rng(0x5EED);
+      for (let i = 0; i < 900; i += 1) {
+        const shape = SHAPES[Math.floor(random() * SHAPES.length)];
+        const env = ENVS[Math.floor(random() * ENVS.length)];
+        const abilities = drawControls(random);
+        yield { name: `${version}|combo|${i}${tag}`, version,
+          input: baseInput(context, version,
+            { ...shape.over, ...env.over, ...idOver, abilities }) };
       }
     }
-    // 3. Seeded combinations: several controls at once, so interaction order is exercised.
-    const random = rng(0x5EED);
-    for (let i = 0; i < 900; i += 1) {
-      const shape = SHAPES[Math.floor(random() * SHAPES.length)];
-      const env = ENVS[Math.floor(random() * ENVS.length)];
-      const abilities = {};
-      const over = { ...shape.over, ...env.over };
-      const pick = 6;
-      // Both lists write the one map, so a shared `calcKey` picked twice keeps the later
-      // value rather than being counted in two places, which is what the UI's merge does
-      // for the controls that collapse onto one key.
-      for (let n = 0; n < pick; n += 1) {
-        const spec = abilitySpecs[Math.floor(random() * abilitySpecs.length)];
-        setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
-      }
-      for (let n = 0; n < pick; n += 1) {
-        const spec = enchantSpecs[Math.floor(random() * enchantSpecs.length)];
-        setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
-      }
-      over.abilities = abilities;
-      yield { name: `${version}|combo|${i}`, version, input: baseInput(context, version, over) };
+    // 4. The roaming-identity block: the rest of the identity surface, in combination only.
+    // Its own seed, because it draws an identity between the environment and the controls.
+    const roaming = rng(0x1DEA);
+    for (let i = 0; i < ROAMING_CASES; i += 1) {
+      const shape = SHAPES[Math.floor(roaming() * SHAPES.length)];
+      const env = ENVS[Math.floor(roaming() * ENVS.length)];
+      const row = ROAMING_IDENTITIES[Math.floor(roaming() * ROAMING_IDENTITIES.length)];
+      const abilities = drawControls(roaming);
+      yield { name: `${version}|combo-id|${i}|${row.name}`, version,
+        input: baseInput(context, version,
+          { ...shape.over, ...env.over, ...identityOver(row, version), abilities }) };
     }
   }
 }
@@ -293,4 +399,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { enumerateCases, digest, run };
+module.exports = { enumerateCases, digest, run, IDENTITIES, ROAMING_IDENTITIES };

@@ -742,8 +742,11 @@ the calculator does instead, and why.
     K writes that field. Of its 70 sites, 35 declare or forward a channel, 5 are post-chain combat
     reads of the finished record, 2 are cast-time targeting restrictions, 14 are positional replays
     already correct and 14 are fixed-point reads whose entry every conversion precedes. **No site is
-    hoisted**, so nothing in `BACKLOG.md` precedes F163 any more; the census reproduces all sixteen
-    landed corrections and halts if it ever stops doing so.
+    hoisted**; the census reproduces all sixteen landed corrections and halts if it ever stops doing
+    so. Position is not the whole prerequisite, though: F192 and F193 still precede F163 in
+    `BACKLOG.md`, for the two questions the census prints that it does not answer — which record
+    each late-but-correct read's own block wants, and whether a gate is reachable in the version
+    whose position diverges.
     **Six rules the tranche established, each from a falsified premise.** (1) Which record a gate
     wants is read off its own block, never deduced from its region: four of the landed corrections
     wanted the **permanent** record, and one was answered by *deleting* the calculator's extra live
@@ -754,9 +757,13 @@ the calculator does instead, and why.
     had no step for at all — Spirit Link's region-`b` Fantastic assert — and adding it made a gate
     previously measured at zero move. (3) A zero from `tools/derivation_equivalence.js` is a claim
     about its generated case list before it is a claim about a gate. Chaos Surge's global was the
-    one input no environment set, so its gate measured zero while the defect was real; that list
-    still states no base race and no hero, so a gate reading either measures zero there whatever it
-    does. (4) A fixed-point read can be *standing in* for a term the block states separately, so
+    one input no environment set, so its gate measured zero while the defect was real; the list
+    then stated no base race and no hero, so F187 measured zero there while moving real numbers in
+    three versions. The list has since gained a permanent-identity axis — a hero and a base race
+    across the whole of it, eighteen further identities in combination cases — and F187 measures 34
+    and F175 64. Widening it also exposed a conversion the census's own oracle had never
+    discovered, because that conversion wrote the value the only Fantastic axis already held. What
+    the list still does not state is stated in the tool, beside the axis. (4) A fixed-point read can be *standing in* for a term the block states separately, so
     repositioning it alone regresses: True Light and Poor Vision both test the Undead **flag**
     beside the realm, and the pre-pass's `c:undead` realm write had been supplying that answer at a
     position where the engine's own realm has not changed yet. Read the whole gate, not the term

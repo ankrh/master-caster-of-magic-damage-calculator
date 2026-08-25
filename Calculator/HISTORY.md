@@ -6,6 +6,51 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-25
 
+- **The equivalence corpus states a permanent identity, and three recorded numbers moved when it
+  did.** `tools/derivation_equivalence.js` built every case as `unitType: 'normal'` with an empty
+  base race, so its 0 differences were also a claim that no hero and no mundane race was ever
+  tested. It now carries an identity axis: three identities across the whole list — the raceless
+  custom unit, a High Men non-hero, a High Men hero — and eighteen more (six race-gated Warlord
+  building races, a Fantastic record, a Fantastic hero, four special units, six templates, one hero
+  type) drawn in one extra combination block per version. **52575 derivations, ~26s**, from 15525
+  and ~10s; the census walks the same list and costs about the same again, ~25s from ~11s. Both
+  stay diagnostics outside `npm test`, so no suite gained a second and the check cadence in
+  `CLAUDE.md`, *Tests*, is unchanged. The pre-existing 15525 cases are byte-identical across the change
+  — names unchanged and the combination generator reseeded per identity, so the three rows draw the
+  same shape, environment and controls and differ in the base record alone. What the axis does not
+  reach is stated beside it: the eighteen roaming identities against a solo control or a bare
+  environment, the unit *name* the building branches test with `endsWith`, roster units, and the
+  defending side. **Re-baselined by ablation:** F187's Tactician site moves 34 cases where it moved
+  0 — 13 CoM 1, 15 CoM2, 6 Warlord, none in the old segment, which is the hand probe reproduced;
+  F175 moves 64 where it moved 0; F178 108 where it moved 24 in the old segment, still exactly 24
+  there; F184 stays 0, and the corpus now says why in its own numbers (10515 Warlord cases, 388
+  with Warp Reality, 0 with a Chaos realm and Spirit Link together by either route). F187's Rebuild
+  site stays 0 even widened: its defect is a phase choice and nothing between `base` and `b` scales
+  the +2/+2 it moves. **Two recorded figures were wrong.** Rebuilding the corpus at F185/F186's
+  landing commit and its parent shows the pair moves **9** of 15525, not the 8 recorded, split 8/1
+  rather than 7/1 and disjoint. Reverting only each half's *positional read* moves 6 and 0, so
+  F186's entire recorded movement is its block's own Undead-flag term rather than the
+  repositioning — `SPEC.md` rule (4) in its sharpest form.
+- **A harness defect in the census, found by the widened corpus and fixed with it.** The
+  incompleteness guard threw: the corpus reached `b:fieryFury:race` in Warlord, which the oracle's
+  perturbation basis had never fired. Cause: conversions are discovered from the trace, and
+  `collectStepChanges` (`steps.js`) records only fields a step *moved*, so a conversion writing the
+  value the axis already holds is invisible — the basis's only base-Fantastic axis stated race
+  `Chaos`, which is exactly what Fiery Fury's THEN arm writes. The basis gains a second
+  base-Fantastic axis on a race no conversion writes. Warlord's conversion set is 14, not 13, and
+  the hoisting verdict has been computed over an incomplete set until now. It changed no verdict:
+  **70 sites, 35 plumbing, 5 post-chain, 2 targeting, 14 late-ok, 14 positional-ok, none hoisted,
+  16 of 16 ground truth**. Nor could the corpus widening alone have changed one — verdicts come
+  from the oracle's conversion ranks, not from the case list — which is why the basis fix, not the
+  corpus, was the part of this round that could have moved a site.
+- **F192 and F193 filed, and both precede F163.** The census prints two limits that bear directly
+  on F163's bar and neither is closed: it reports which record a site is *handed*, never which
+  record its block *reads*, leaving the 14 late-but-correct sites unread against their blocks
+  (F192, and the widened corpus puts the permanent/calculated distinguishability at up to 1985
+  cases per site, from 473); and reachability is unmodelled and unflagged since F188 retired the
+  one marker (F193). F163's row now says what its 0 is worth: a real claim about heroes, base races
+  and the conversion set, still consistent with a late-ok read that wants the permanent record or a
+  gate its divergent version never runs.
 - **F187 — Tactician's branch and Rebuild's phase now ask the hero flag, not the live unit-type
   token.** The row's premise held on the mechanism and on both owner-chain assignments, and the
   census re-measurement reproduced its counts exactly: `base:rebuild` #6 of the Warlord chain with
@@ -141,7 +186,8 @@ pre-2026-08-10 narratives remain recoverable from git history.
   regression. And the two arms are independent `IF`s, not an if/else, so a Life-race unit carrying
   the flag takes both and nets zero; the terms now accumulate rather than assign.
   **Measured**: 7 of 15525 `tools/derivation_equivalence.js` cases move, all
-  `com2_warlord_1.5.12.7` — five where `c:destiny:race` converts to Life after the block
+  `com2_warlord_1.5.12.7` — corrected on re-measurement to **8**, and the pair's 8 to 9; see the
+  identity-axis entry at the head of this day — five where `c:destiny:race` converts to Life after the block
   (`combo|69,145,215,256,795`, the +1 swing withdrawn, doubled downstream by Destiny's own step
   where it applies) and two where `c:undead` is followed by a `No Heal` conversion that erased the
   realm at the fixed point (`combo|41,424`, the -1 now carried by the flag term). The MoM builds
@@ -161,7 +207,9 @@ pre-2026-08-10 narratives remain recoverable from git history.
   %AND (GetEnchantmentFlag(U,EncUndead,0)=0)`: the realm term is the calculated record at region
   `b`, and the Undead term is a separate flag test the fixed-point read had been standing in for.
   Both are implemented. **Measured**: 1 of 15525 cases moves (`combo|634`, an Undead unit whose
-  Mystic Surge conversion had erased the Death realm at the fixed point, ranged 5 → 7). Preset
+  Mystic Surge conversion had erased the Death realm at the fixed point, ranged 5 → 7) — and
+  re-measurement attributes that case to the **flag** term alone: ablating only the positional read
+  moves 0, because neither record is Death there. Preset
   `eternalNightPoorVisionReadsRealmAtItsOwnBlockWarlord`: a base-Death unit given CC:+Defense is
   still Death at the block and keeps missile 4, B=4; ablated it derives B=2. **Filed, not folded**:
   the second term, template 356 `Goblin Night Goblins`, is [F189](./BACKLOG.md) — it needs the
