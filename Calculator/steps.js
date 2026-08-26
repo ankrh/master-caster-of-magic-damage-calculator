@@ -159,6 +159,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:goblinPox': SCOPE_WARLORD,
   'b:godsPlayDices': SCOPE_WARLORD,
   'b:greatUnbinding': SCOPE_WARLORD,
+  'b:insulation': SCOPE_WARLORD,
   'b:fieryFury:race': SCOPE_WARLORD,
   'b:marionetteChanneler': SCOPE_WARLORD,
   'b:luckyStar': SCOPE_WARLORD,

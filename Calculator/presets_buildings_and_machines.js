@@ -971,6 +971,13 @@ definePresets({
     b: { atk:0, def:2, toBlkMod:70, hp:10, abilities: { insulation: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
+  insulationEnablesInnerPowerWarlord: {
+    desc: "Insulation (Warlord) makes a unit Inner Power eligible. Inner Power's own test is `(U.Fireimmunity or U.lightningresist)` on the **calculated** record at $005A1957 — \"current Fire Immunity or Lightning Resistance\", its decode note — and `b:insulation` (`UnitCalcPre.CAS:851-855`) writes both flags in the earlier region, so `c:innerPower` sees them and grants +3 melee: atk 1 becomes 4 → 4 dmg. Without Insulation the unit is ineligible and deals 1 (F200).",
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10, abilities: { innerPower: true, insulation: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
   rebuildDeathImmunityWarlord: {
     desc: 'Rebuild (Warlord): grants Death Immunity. Death Gaze vs res 5 + Death Immunity → fully blocked, 0 dmg. B\'s 0.6 counterattack is the F142 rule (see rebuildArmorWarlord): permanent melee 0 becomes 2 at 30%',
     version: V_WARLORD,

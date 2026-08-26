@@ -82,13 +82,11 @@ function deriveUnitStats(input) {
   // the permanent and ability grants it still makes, and the six phase-`b` steps whose write the
   // calculator used to reach through an invented ability label (F198).
   const outlanderDerivation = applyOutlanderReformGrants(
-    applyInsulationGrant(
     applyPillarOfFaithGrant(
       applySanctaBasilicaGrant(
         applyLavaSmelterGrant(marionetteDerivation.abilities, version, baseUnitType),
         version, isHero ? 'hero' : baseUnitType, baseUnitRace, unitName),
       version),
-    version),
     version, permanentFantastic, isHero);
   const outlanderReform = outlanderDerivation.reform;
   // The curse strip is no longer folded in here: the ten flags it clears are fields of the
@@ -532,7 +530,9 @@ function deriveUnitStats(input) {
   // excludes `c:mysticSurge:race` and `c:raiseDead`, and in Warlord it excludes `d:spiritLink`'s
   // clearing write. Base CoM2 ranks every conversion ahead of the block, so it is unmoved.
   const landLinkingEligible = u => landLinkingActiveForUnit(abilities, unitTypeAt(u), version);
-  const innerPowerEligible = innerPowerActiveForUnit(abilities, version);
+  // Inner Power's eligibility has no constant here any more: its block tests the *calculated*
+  // record's Fire Immunity and Lightning Resist, so it is `c:innerPower`'s own `when`
+  // (`combat_abilities.js`) and answers after `b:insulation` has written both (F200).
   const misleadEligible = u => misleadActiveForUnit(abilities, u.fantastic, version);
 
   const nodeAuraVal = input.nodeAura;
@@ -1474,6 +1474,10 @@ function deriveUnitStats(input) {
   // `rustActive` — `d:rust`'s own `when` — already carries at the one place `SPEC.md`, *The step
   // model* puts it. Nothing reads the published flag, so emission is a superset and the `when` is
   // the gate (`SPEC.md`, *Version scope*).
+  //
+  // Inner Power's suppression went the same way with F200's Insulation stage, but as a gate
+  // rather than a drop: `c:innerPower` had no `when`, so suppressing the published key *was* the
+  // eligibility test. The test is now the step's own, over the record `b:insulation` writes.
   const effectiveAbilities = {
     ...abilities,
     unitType: finishedUnitType,
@@ -1488,12 +1492,11 @@ function deriveUnitStats(input) {
     // field and the chain runs cast-time writes after training-time ones (F203). BACKLOG F208.
     mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeStat,
-    // Inner Power's eligibility gate and its published value are one thing, not two: nothing
-    // gives `c:innerPower` a `when`, so this suppression is what stops the step firing on an
-    // ineligible unit. It moves with the emission half, which reads `fireImmunity` and
-    // `lightningResist` as pre-sequence constants and is what F200 stage 2 needs off the record
-    // before Insulation can take a position (F201 stage 2's ruling, BACKLOG F200).
-    innerPower: innerPowerEligible ? abilities.innerPower : false,
+    // Inner Power joins the three passthroughs below: `c:innerPower` carries the eligibility as
+    // its own `when` now, reading `fireImmunity` and `lightningResist` off the record where its
+    // block does, so the published key is the raw flag and the suppression that used to stand
+    // here is gone (F200).
+    innerPower: abilities.innerPower || false,
     mislead: abilities.mislead || false,
     // Supreme Light's own steps carry this same predicate as their `when`, so this is a published
     // normalization only, with no reader in `combat_*.js` — the class the inert-Rust drop
@@ -2160,13 +2163,14 @@ function deriveUnitStats(input) {
     ...Object.fromEntries(MAGIC_IMMUNITY_GATED_CURSES.map(key => [key, statUnit[key]])) };
   // The building and enchantment ability grants that are positioned writes read back the same
   // way: the record is where Divine Protection's Death Immunity, Magitek Engine's and
-  // Fortification's Large Shield, Fortification's Missile Immunity and Rust's clear of it live
-  // (F200), and where the Altar of the Moon, Military Workshop, Mother Fungus, Venom, Energy
-  // Cannon, Bombs & Grenades and Blaze of Glory ability writes live now (F201). So the published
-  // set takes all of them from the record the sequence leaves.
+  // Fortification's Large Shield, Fortification's Missile Immunity, Rust's clear of it and
+  // Insulation's Fire Immunity, Lightning Resist and Cold Immunity live (F200), and where the
+  // Altar of the Moon, Military Workshop, Mother Fungus, Venom, Energy Cannon, Bombs & Grenades
+  // and Blaze of Glory ability writes live now (F201). So the published set takes all of them
+  // from the record the sequence leaves.
   // A key the ability set never carried stays absent rather than being published as `false`:
   // absence and `false` are the same to every reader (`hasAbil`), and writing the whole list out
-  // would put eleven keys on every unit of all five versions to say nothing. So the record's
+  // would put seventeen keys on every unit of all five versions to say nothing. So the record's
   // value is written back where it says something — the flag stands set, or the set already
   // stated it. The two value fields take the same rule against `null`, so a `poison` of 0 — the
   // Witchdoctor branch's spelling of the scripts' 100 sentinel — is published rather than

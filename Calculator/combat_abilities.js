@@ -325,11 +325,17 @@ function landLinkingActiveForUnit(abilities, unitType, version) {
   return !!unitType && unitType.startsWith('fantastic_');
 }
 
+// `(U.Fireimmunity or U.lightningresist)` — the **calculated** record, at the block's own
+// position, and the decode note beside it says "current Fire Immunity or Lightning Resistance"
+// in as many words. So this is a read of the running record rather than of the ability set, and
+// it is `c:innerPower`'s `when`: `b:insulation` writes both flags in the earlier region, and a
+// pre-sequence constant answered from before that write (F200). The other two terms of the old
+// constant moved to where they belong — the version test is the `c:innerPower` scope row
+// (`steps.js`), and the enchantment's own presence is the step's emission gate.
 // PROVENANCE[innerPowerEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:63976f145f718df520e80186
 // STAT-FORMULA[innerPowerEligibility]
-function innerPowerActiveForUnit(abilities, version) {
-  if (!version || !version.startsWith('com2_') || !hasAbil(abilities, 'innerPower')) return false;
-  return hasAbil(abilities, 'fireImmunity') || hasAbil(abilities, 'lightningResist');
+function innerPowerActiveForUnit(record) {
+  return !!record.fireImmunity || !!record.lightningResist;
 }
 
 // PROVENANCE[misleadEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:f8b72704f1366630a616f50f
@@ -818,9 +824,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // is the compiled `+0x044C7` block in region c and does not stack regardless of flag source.
   // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:bf74c9101f80f286adb7d2a0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:761ca75657bf39dc15095e55
   // Creation/enchantment sources establish ALucky earlier, but the chance/stat write itself
-  // is the compiled Lucky block in region c for every engine. Four grant hoists can write the
-  // flag, so the block reads it off the record at its own position rather than from the
-  // pre-sequence ability set; emission is unconditional (F202).
+  // is the compiled Lucky block in region c for every engine. Three grant hoists and one
+  // positioned step (`b:divineProtection`) can write the flag, so the block reads it off the
+  // record at its own position rather than from the pre-sequence ability set; emission is
+  // unconditional (F202, F200).
   abilityStep('lucky', 'c', { ...beforeHolyArmor, writes: ['res', 'toHit', 'toBlk'],
     when: u => !!u.lucky,
     apply: u => { u.res += 1; u.toHit += 10; u.toBlk += 10; } });
@@ -906,9 +913,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // `reinforceMagic:ranged` step in stats_sequence.js.
 
   // Inner Power: CoM2 global enchantment. Units with Fire Immunity or Lightning Resist
-  // gain +3 to all attack strengths, +2 defense, and +2 resistance. Eligibility is
-  // resolved by innerPowerActiveForUnit so the checkbox can remain visible without
-  // affecting other units.
+  // gain +3 to all attack strengths, +2 defense, and +2 resistance. Emission is the enchantment
+  // alone — a superset, as scope and emission are upper bounds (`SPEC.md`, *Version scope*) —
+  // and `innerPowerActiveForUnit` is the gate, answered on the record at this step's own rank so
+  // that `b:insulation`'s Fire Immunity and Lightning Resist count (F200).
   // Phase c: UnitCalcPre.CAS:1743-1749 grants only Mountaineer — the stat bonuses are binary.
   //
   // The block writes Resistance and Defense unconditionally and then makes three separate
@@ -919,6 +927,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   if (hasAbil(abilities, 'innerPower')) {
     // PROVENANCE[innerPower]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:cb6a5d278f05325e495f0d20
     abilityStep('innerPower', 'c', { writes: ['atk', 'def', 'res', ...attackWrites],
+      when: u => innerPowerActiveForUnit(u),
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 3); u.def += 2; u.res += 2;
         addToSlot(u, ctx, 'rangedOrBreath', 3, strength => strength > 0);

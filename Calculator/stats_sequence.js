@@ -604,6 +604,23 @@ function precalcScriptStatSteps(ctx) {
       phase: 'b', writes: ['res', 'toHit', 'toBlk'],
       when: () => greatUnbindingActive,
       apply: u => { u.res -= 2; u.toHit -= 20; u.toBlk -= 20; } }),
+    // Insulation (Warlord, Chaos unit enchantment): `AFireImmunity`, `ALightningResistance` and
+    // `AColdImmunity`, one block, three writes, no stat half — which is why it had no chain entry
+    // before (F200). The block's second gate is `GETITEMPOWER(U,37)=0`; the calculator models no
+    // items, so only the enchantment term is represented, as at `b:divineProtection` below.
+    // The rank matters because the eligibility test of `c:innerPower` reads two of these three
+    // flags off the **calculated** record at its own block — `(U.Fireimmunity or
+    // U.lightningresist)`, $005A1957, whose decode note says "current" in as many words — so
+    // region `b` writing them ahead of region `c` is what makes an Insulated unit eligible.
+    // PROVENANCE[insulation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:4c2d834bb77922471b95e545
+    statStep({ id: 'insulation', sourceId: 'insulation', sourceLabel: 'Insulation',
+      phase: 'b', writes: ['fireImmunity', 'lightningResist', 'coldImmunity'],
+      when: () => isWarlord && !!abilities.insulation,
+      apply: u => {
+        u.fireImmunity = true;
+        u.lightningResist = true;
+        u.coldImmunity = true;
+      } }),
     // Divine Protection (Warlord, Life unit enchantment): `ADeathImmunity` unconditionally, and
     // `ALucky` only where the calculated flag is still 0 — `IF GETSTAT(U,ALucky,0)=0`, selector
     // `0`, so the test is the record standing at this block and not the permanent one. The item

@@ -260,7 +260,7 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',
   'b:marionette:rangedType', 'b:marionette:ascensionRangedType',
   'b:marionette:strayedTransmute', 'b:rebuild', 'b:tactician', 'b:fieryFury:race',
-  'b:fieryFury', 'b:divineProtection', 'b:natureLink',
+  'b:fieryFury', 'b:insulation', 'b:divineProtection', 'b:natureLink',
   'b:outlanderXenoveterinary', 'b:magitekEngine', 'b:bombsGrenades',
   'b:upgradedExplosive:ranged', 'b:upgradedExplosive:fireBreath',
   'b:outlanderBallisticsTraining', 'b:outlanderXenopsychology', 'b:outlanderRadio',

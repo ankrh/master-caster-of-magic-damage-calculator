@@ -1,5 +1,50 @@
 # Calculator work history
 
+## 2026-08-26 — F200 (stage 2): Insulation takes a position, and Inner Power's gate goes with it
+
+`b:insulation` is a new step with a new hashed-span anchor: `UnitCalcPre.CAS:851-855`, three
+ability-flag writes and no stat half — `AFireImmunity`, `ALightningResistance`, `AColdImmunity` —
+ranked between `b:fieryFury` and `b:divineProtection`, which is the file order. The block's second
+gate, `GETITEMPOWER(U,37)=0`, is not represented: the calculator models no items, as at
+`b:divineProtection`. `applyInsulationGrant` is gone; `fireImmunity`, `lightningResist` and
+`coldImmunity` are `statRecord` fields (`POSITIONED_GRANT_WRITES`), seeded from the pre-grant
+ability set and read back after the chain.
+
+**The blocker's ruling was confirmed from the source, not inherited.** Inner Power's eligibility is
+`(U.Fireimmunity or U.lightningresist)` at `$005A1957` — the **calculated** record, and the decode
+note beside the block says "current Fire Immunity or Lightning Resistance" in as many words. So it
+is a read at the block's own position, which makes it `c:innerPower`'s `when` and not a
+pre-sequence constant. F201 stage 2's ruling that the gate and the published value are one thing
+holds exactly: `c:innerPower` had no `when`, so `effectiveAbilities.innerPower`'s
+`eligible ? control : false` *was* the gate. The old constant's three terms each went where they
+belong — the version test is the step's `SCOPE_MODERN` row (`steps.js`), the enchantment's presence
+is the emission gate, and the flag disjunction is `innerPowerActiveForUnit`, now a record predicate
+keeping `PROVENANCE[innerPowerEligibility]`. `innerPower` joins `mislead`, `survivalInstinct` and
+`landLinking` as a fourth `x || false` passthrough in the merge.
+
+**Measurement: 811 of 52440 derivations differ against pristine `HEAD`, and every one is the same
+field** — `abilities.innerPower: false -> true`, one field per case, no stat, chance or damage value
+in any version. 537 are the three DOS builds, where the control is version-hidden and the published
+key now carries it raw; 274 are CoM2 and Warlord cases with the control on and neither flag present
+at `c:innerPower`, where the step is skipped by its `when` instead of never emitted. No `combat_*.js`
+line reads `innerPower` at all; the three flags it gates on have six `combat_effects.js` readers,
+all of them post-chain, which the read-back serves.
+
+**Preset**: `insulationEnablesInnerPowerWarlord` — the guard for the regression positioning
+Insulation alone would have caused, +3 melee on an Insulated unit, 4 against 1 without Insulation.
+
+**One harness assertion was re-aimed, not deleted.**
+`tools/unit_checks/derive_unit_stats.js`'s `'Inner Power is disabled for ineligible units'` asserted
+the published key, which now carries the raw flag. It became the three stat assertions mirroring the
+eligible unit's — breath, Defense, Resistance — beside the `atk` line that was already there.
+
+**The row's stage-2 shape held on every point re-measured**: `UnitCalcPre.CAS:851-855`,
+`combat_abilities.js:330-333`, `c:innerPower` carrying no `when`, and the published-value move. Two
+things it did not state: `coldImmunity` has no positioned reader, so it is a write-side field only,
+and the `Reference docs/Caster binary/Units.RecalculateUnits.pas` decode note is what settles the
+calculated-record reading. `SPEC.md`'s hoist deviation is corrected — five hoists, and the
+region-`b` example is now the Marionette package, whose stat half is `b:marionette:stats`.
+
 ## 2026-08-26 — F201 (stage 2): the merge's last two normalizations, and what the projection is
 
 True Sight's implication of Illusion Immunity is **not** a normalization: every one of the five

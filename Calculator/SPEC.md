@@ -814,27 +814,30 @@ the calculator does instead, and why.
   of the stripped list remains a modelling choice (T8), where the engines' own criterion is that
   the spell carries a realm.
 - **Some building and enchantment ability grants still run before the sequence, where the engine
-  writes them at position.** Six hoists are left in `deriveUnitStats`: `deriveMarionettePackage`
-  and five nested calls — `applyLavaSmelterGrant`, `applySanctaBasilicaGrant`,
-  `applyPillarOfFaithGrant`, `applyInsulationGrant` and `applyOutlanderReformGrants`. The
-  calculator already gives their sources chain phases: the `CreateUnit.CAS` grants' stat halves
-  are `base:` steps (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same
-  four `STypeID` branches), and Insulation cites `UnitCalcPre.CAS` — region `b`. So one block's
-  stat write is a positioned step while its ability write is not, split by field kind rather than
-  by evidence. The cause is the calculator's, not the engine's: `deriveUnitStats` computes its
-  gates as constants ahead of the sequence, and the hoist is what makes some of those constants
-  valid. Scheduled for removal (F200); the option is not that both shapes are acceptable.
-  The seventh hoist, the `effectiveAbilities` merge, carries **one** grant: Divine Protection and
-  Fortification took positions with F200, and Altar of the Moon, Military Workshop, Mother Fungus,
-  Venom, Energy Cannon, Bombs & Grenades, Blaze of Glory, Destiny's Supernatural and Eye of
-  Heaven's True Sight with F201. What is left there is the finished-record projection, Rebuild's
-  Mechanical conversion — positionable, but at a rank that moves a number, so its ruling is F208 —
-  and two published-value normalizations no engine block makes: Inner Power's eligibility
-  suppression, which is also the gate `c:innerPower` has no `when` for and so belongs to F200's
-  Insulation stage, and Supreme Light's, which has no reader at all (F207). The inert-Rust drop
-  went with F201 rather than taking a position: no engine block clears the enchantment flag, and
-  the Fantastic exclusion it stood for is a cast-time targeting class already carried by
-  `d:rust`'s own `when`.
+  writes them at position.** Five hoists are left in `deriveUnitStats`: `deriveMarionettePackage`
+  and four nested calls — `applyLavaSmelterGrant`, `applySanctaBasilicaGrant`,
+  `applyPillarOfFaithGrant` and `applyOutlanderReformGrants`. The calculator already gives their
+  sources chain phases: the `CreateUnit.CAS` grants' stat halves are `base:` steps
+  (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same four `STypeID`
+  branches), and the Marionette package's stat half is `b:marionette:stats`, cited to
+  `UnitCalcPre.CAS` — region `b` — beside the book-count ability grants the hoist still makes. So
+  one block's stat write is a positioned step while its ability write is not, split by field kind
+  rather than by evidence. The cause is the calculator's, not the engine's: `deriveUnitStats`
+  computes its gates as constants ahead of the sequence, and the hoist is what makes some of
+  those constants valid. Scheduled for removal (F200); the option is not that both shapes are
+  acceptable.
+  The sixth hoist, the `effectiveAbilities` merge, carries **one** grant: Divine Protection,
+  Fortification and Insulation took positions with F200, and Altar of the Moon, Military Workshop,
+  Mother Fungus, Venom, Energy Cannon, Bombs & Grenades, Blaze of Glory, Destiny's Supernatural
+  and Eye of Heaven's True Sight with F201. What is left there is the finished-record projection,
+  Rebuild's Mechanical conversion — positionable, but at a rank that moves a number, so its ruling
+  is F208 — and one published-value normalization no engine block makes, Supreme Light's, which
+  has no reader at all (F207). Two others left with the rounds that could account for them: the
+  inert-Rust drop was deleted with F201 rather than positioned, because no engine block clears the
+  enchantment flag and the Fantastic exclusion it stood for is a cast-time targeting class already
+  carried by `d:rust`'s own `when`; and Inner Power's eligibility suppression was the gate
+  `c:innerPower` had no `when` for, so F200's Insulation stage made it that step's own record read
+  rather than a normalization of the published key.
 - **An identity conversion is its own step even where its engine block also writes a stat.** The
   address map puts Chaos Channels' demon-skin realm write inside the block that increments Defense
   (`$0059F4A3`, 0x8F6FE) and Black Channels' at the end of its own block (0x8F4A1), so *One

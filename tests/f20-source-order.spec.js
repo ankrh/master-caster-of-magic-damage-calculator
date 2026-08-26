@@ -29,7 +29,7 @@ const F20_PROBE_ABILITIES = {
   colossalStrength: true, vampirism: true, shadowStrike: true, psychoForce: true,
   pneumaField: true, energyBeamWeapons: true, blazeOfGlory: true, beatOfSwiftness: true,
   hierophany: true, channeler: true, militaryWorkshop: true, rocketry: true,
-  divineProtection: true, fortification: true, venom: true,
+  insulation: true, divineProtection: true, fortification: true, venom: true,
 };
 
 // Independent source-order anchors from the checked-in DOS ledgers and CoM2 region map.
@@ -100,7 +100,7 @@ const F20_SOURCE_ANCHORS = {
   },
   'com2_warlord_1.5.12.7': {
     b: ['marionette:stats', 'marionette:rangedType',
-      'fieryFury', 'divineProtection', 'natureLink', 'outlanderXenoveterinary',
+      'fieryFury', 'insulation', 'divineProtection', 'natureLink', 'outlanderXenoveterinary',
       'bombsGrenades', 'upgradedExplosive:ranged', 'upgradedExplosive:fireBreath',
       'outlanderBallisticsTraining', 'outlanderXenopsychology', 'outlanderRadio',
       'nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',

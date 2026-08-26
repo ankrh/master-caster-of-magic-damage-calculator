@@ -412,6 +412,8 @@ const POSITIONED_GRANT_FIELDS = [
                   //   ->  `base:artificer`, `d:mechanicalExpert`
   'rebuild',      // deriveMarionettePackage  ->  `base:rebuild` / `b:rebuild`
   'trueSight',    // `b:eyeOfHeaven`  ->  `c:trueSight`, `d:trueSight`
+  'fireImmunity',    // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
+  'lightningResist', // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
   'psychoForce',  // applyOutlanderReformGrants  ->  `d:psychoForce`
   'pneumaField',  // applyOutlanderReformGrants  ->  `d:pneumaField`
   'illusion',     // deriveMarionettePackage  ->  the Illusion malus inside `b:trueLight`
@@ -424,10 +426,11 @@ const POSITIONED_GRANT_FIELDS = [
 // gates on. A key here is one no hoist writes any more, so the record is its only carrier and the
 // post-chain read-back is what hands it to combat resolution.
 //
-// Two keys are in both lists, because a positioned write of theirs also has a positioned reader:
+// Four keys are in both lists, because a positioned write of theirs also has a positioned reader:
 // `lucky` (`b:divineProtection` writes it, `c:lucky` reads it, and combat resolution reads the
-// finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty) and `trueSight`
-// (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it).
+// finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty), `trueSight`
+// (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it), and `fireImmunity` and
+// `lightningResist` (`b:insulation` writes them, `c:innerPower`'s eligibility test reads them).
 const POSITIONED_GRANT_WRITES = [
   'largeShield',      // `b:magitekEngine`, `d:rust` (clear), `d:fortification`
   'missileImmunity',  // `d:fortification`'s already-shielded arm
@@ -443,6 +446,9 @@ const POSITIONED_GRANT_WRITES = [
   'supernatural',     // `base:destiny:supernatural` — `B.attackflags.supernatural := True`
   'trueSight',        // `b:eyeOfHeaven`
   'illusionImmunity', // `c:trueSight`
+  'fireImmunity',     // `b:insulation`
+  'lightningResist',  // `b:insulation`
+  'coldImmunity',     // `b:insulation`
 ];
 
 // The same move for the two ability fields that carry a **value** rather than a flag. They are
@@ -651,16 +657,8 @@ function applyPillarOfFaithGrant(abilities, version) {
 // Fortification's grant is `d:fortification` (`stats_sequence.js`), a positioned write whose
 // already-shielded test reads the record at its own rank (F200).
 
-// Insulation (Warlord, Chaos unit enchantment): grants Fire Immunity, Cold Immunity, and
-// Lightning Resist. Folded into effective abilities here so the combat immunity checks
-// (fire breath/immolation/wall of fire defense, cold attacks, and the lightning AP negation)
-// all see them. The grant is `Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS`
-// lines 850-855 — AFireImmunity, ALightningResistance, AColdImmunity, suppressed when item
-// power 37 is present.
-function applyInsulationGrant(abilities, version) {
-  if (!version || !version.startsWith('com2_warlord') || !abilities.insulation) return abilities;
-  return { ...abilities, fireImmunity: true, coldImmunity: true, lightningResist: true };
-}
+// Insulation's grant is `b:insulation` (`stats_sequence.js`), a positioned write to the record's
+// `fireImmunity`, `lightningResist` and `coldImmunity` fields (F200).
 
 const MARIONETTE_VERSION = 'com2_warlord_1.5.12.7';
 const MARIONETTE_HERO_TYPE_ID = 48;

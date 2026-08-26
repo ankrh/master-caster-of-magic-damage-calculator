@@ -604,6 +604,7 @@ const TEST_TREE = [
         keys: [
           'insulationFireImmunityWarlord',
           'insulationLightningResistWarlord',
+          'insulationEnablesInnerPowerWarlord',
         ],
       },
       {

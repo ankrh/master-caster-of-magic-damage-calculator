@@ -987,7 +987,13 @@ function runDeriveUnitStatsChecks(ctx) {
     modernAttacks: { fireBreath: { strength: 1, type: 'fire' } },
   }));
   assertEqual(ineligibleInnerPower.atk, 1, 'Inner Power ineligible unit does not gain melee attack');
-  assertEqual(ineligibleInnerPower.abilities.innerPower, false, 'Inner Power is disabled for ineligible units');
+  // Re-aimed from the published `abilities.innerPower` onto the stats the block writes. The
+  // eligibility test is `c:innerPower`'s own `when` now rather than a suppression of the
+  // published key, so the key carries the raw enchantment flag and the consequence to assert is
+  // the one the four lines above state for the eligible unit (F200).
+  assertEqual(ineligibleInnerPower.rtb, 1, 'Inner Power ineligible unit does not gain breath attack');
+  assertEqual(ineligibleInnerPower.def, 1, 'Inner Power ineligible unit does not gain defense');
+  assertEqual(ineligibleInnerPower.res, 1, 'Inner Power ineligible unit does not gain resistance');
 
   const holyWeaponThrown = ctx.deriveUnitStats(baseUnitInput({
     version: 'mom_cp_1.60.00',
