@@ -210,6 +210,7 @@ const TEST_TREE = [
           'bombsGrenadesWarlord',
           'bombsGrenadesAfterFieryFuryWarlord',
           'bombsGrenadesAfterCombatConversionWarlord',
+          'bombsGrenadesReadsPermanentMeleeAfterRebuildWarlord',
           'bombsGrenadesSkipsApotheosisPermanentFantasticWarlord',
         ],
       },

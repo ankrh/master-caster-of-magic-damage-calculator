@@ -334,8 +334,27 @@ function deriveUnitStats(input) {
   // gate through `outlanderReform.sapiensEligible` — one home for one script test (F198).
   const explosiveEligible = isWarlord && !!abilities.explosive
     && outlanderReform.sapiensEligible;
-  const bombsGrenades = explosiveEligible
-    && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
+  // The write's own gate, `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)`
+  // (`UnitCalcPre.CAS:1068-1069`). Record selector `1` is "the base unit", not the calculated one
+  // (`Reference docs/Script source/CAS reference/Scripts.TXT:270`), so both terms read the
+  // **permanent** record — which is the record the `base` phase leaves, `ctx.base`, not the card's
+  // melee input: `base:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS:280`) and
+  // `base:artificer` `+1` (`CreateUnit.CAS:40`), both permanently and both before region `b`, so a
+  // unit whose roster melee is 0 can still satisfy this gate (F202).
+  //
+  // `AFlying` needs no such treatment and stays the pre-sequence flag. Only two lines in the
+  // corpus write it at selector 1 — `CreateUnit.CAS:687` and `OverlandEndTurn.CAS:654`, the
+  // Anti-Gravity Drive branch this file's `temporalGravityDrive` grant carries — and both are
+  // permanent writes that set flags and movement alone, with no stat delta, so neither earns a
+  // step (`SPEC.md`, *Phases*). Every other `AFlying` write in the corpus is selector 0, the
+  // calculated record this gate does not read.
+  const bombsGrenadesFlying = !!abilities.flying;
+  const bombsGrenadesActive = (u, ctx) => explosiveEligible
+    && (ctx.base.atk > 0 || bombsGrenadesFlying);
+  // Whether the record carries a Thrown field at all is a structural question answered before the
+  // sequence, so it takes the widest state in which this block can write one: the gate above is
+  // resolved at the step's own rank, and seeding a field is not a write.
+  const bombsGrenadesCanWriteThrown = explosiveEligible;
 
   // Blazing Eyes' block ($005A1E16..$005A1F12) is region `c`, so its `IsChaosUnit` gate reads the
   // calculated record at that position. The write itself is
@@ -716,6 +735,13 @@ function deriveUnitStats(input) {
       `deriveUnitStats: experience level '${level}' is not one of `
       + `${LEVEL_LADDER.join('/')}, the option set of the Unit Level control.`);
   }
+  // A pre-sequence constant on purpose, and not a record field. `EncDiscipline` is written at
+  // `CreateUnit.CAS:661` (`ABase`) and `OverlandEndTurn.CAS:452` (selector 1) — the permanent
+  // record, and neither line carries a stat delta, so neither earns a step (`SPEC.md`, *Phases*).
+  // Nothing else in the corpus writes the flag: `UnitCalcPre.CAS:858` reads it and writes
+  // `EncDisciplineOld`. So no step can move this value and a record field would restate the
+  // constant rather than position it — the Outlander Military Drilling grant included, which is
+  // that same permanent write (`stats_identity.js`) (F202).
   const disciplineVal = version.startsWith('com2') ? ((abilities && abilities.discipline) || 'none') : 'none';
   const disciplineActive = disciplineVal === 'overland' || disciplineVal === 'combat';
   const combatDisciplineNegatesFirstStrike = disciplineVal === 'combat' && levelRank >= 3;
@@ -851,6 +877,15 @@ function deriveUnitStats(input) {
   // Its write is `PROVENANCE[fieryFury]`.
   // Flame Blade / Fiery Blade also upgrade the unit's normal weapon to magic (bypasses Weapon Immunity);
   // Fiery Fury does the same for regular units.
+  // Read here rather than at a rank, for both of this file's reasons at once. The Lava Smelter
+  // grant is `SETENCHANTMENTFLAG(U,EncFlameBlade,ABase,1)` (`CreateUnit.CAS:496`) and
+  // `…,1,1)` (`OverlandEndTurn.CAS:551`) — permanent writes, and that whole block writes five
+  // flags and no stat, so it earns no step (`SPEC.md`, *Phases*) and no step can move the value.
+  // And the upgrade it feeds through `hasWarlordBlade` is the weapon material, a **result** field
+  // that cannot be a record field, exactly as `artificerMagicWeapon` above and Metal Fires' own
+  // upgrade below are. `c:metalFires`'s non-stacking gate takes `u.fieryBlade` off the record
+  // because it is a step; `hasWarlordBlade` gates a step *and* the result field, and since the
+  // result half can never move, moving the step half alone would spell one fact twice (F202).
   const warlordFieryBlade = isWarlord && !!abilities.fieryBlade;
   const hasWarlordBlade = warlordCombatFlameBlade || warlordFieryBlade;
   const nonWarlordFlameBlade = !!abilities.flameBlade && !isWarlord;
@@ -1184,6 +1219,17 @@ function deriveUnitStats(input) {
     // that gate from the permanent conventional-ranged snapshot and imports no ammo field.
     // Its +50% write is added to the base phase below, after the earlier permanent ranged
     // writes it reads have been assembled — `PROVENANCE[energyCannon]` (`stats_sequence.js`).
+    //
+    // Both ability terms are pre-sequence constants on purpose. `energyBeamWeapons` is
+    // `SPELLSTATE(W,STMagitekBeamWeapon)=2`, the wizard's research state and no unit field at
+    // all. `powerEngine` is `EncPowerEngine` on the **permanent** record — the term this block's
+    // second route reads directly (`OverlandEndTurn.CAS:664`) and the one its first route states
+    // as the enclosing `SPELLSTATE(W,STHeatPowerEngine)=2` plus `GetStat(U,SCustomAttribute,1)<>1`
+    // (`CreateUnit.CAS:675-691`). That flag is written only at `CreateUnit.CAS:679` (`ABase`) and
+    // `OverlandEndTurn.CAS:417` (selector 1), and neither line carries a stat delta the record
+    // holds — the four writes beside them are movement, which is outside it (F139) — so neither
+    // earns a step (`SPEC.md`, *Phases*). No step can move either value, so a record field would
+    // restate the constant rather than position it (F202).
     const energyCannon = isWarlord && !!abilities.energyBeamWeapons
       && !!abilities.powerEngine && hasPermanentRangedStat;
     // The conversion reads and writes `SRanged` (`CreateUnit.CAS`, on the anchor above), so the
@@ -1286,8 +1332,11 @@ function deriveUnitStats(input) {
     // ranged or Breath field already present. `SETSTAT(U,SThrown,0,…)` (UnitCalcPre.CAS:1071)
     // names the calculated record, so the field is seeded empty and typeless like the Shadow
     // Strike and Blaze of Glory fields below, and `b:bombsGrenades` supplies its identity at
-    // its own position rather than the permanent record carrying a region-`b` write.
-    if ((bombsGrenades || shadowStrikeActive) && !modernInputs.thrown) {
+    // its own position rather than the permanent record carrying a region-`b` write. The term
+    // is the block's eligibility alone, not its write gate: that gate reads the permanent melee
+    // the `base` phase leaves and is therefore resolved at the step's own rank, so the field has
+    // to stand ready wherever the block can reach it (F202).
+    if ((bombsGrenadesCanWriteThrown || shadowStrikeActive) && !modernInputs.thrown) {
       modernInputs.thrown = { strength: 0, type: 'none' };
     }
     // Focus Magic always executes its ranged branch, and every arm of it writes `U.ranged`
@@ -1450,6 +1499,8 @@ function deriveUnitStats(input) {
     && (unitName.endsWith('Rocs')
       || (!abilities.mechanical
         && !!rangedFieldContext && rangedFieldContext.permanentMagicalRangedField));
+  // The record-level half of the same gate the slot contexts assemble above; why both ability
+  // terms stay pre-sequence constants is stated there (F202).
   const energyCannon = isWarlord && !!abilities.energyBeamWeapons && !!abilities.powerEngine
     && !!rangedFieldContext && rangedFieldContext.hasPermanentRangedStat;
   // `UnitCalc.CAS:1435-1443` reads the unit's To-Hit plus its **Ranged** To-Hit, which is the
@@ -1920,7 +1971,7 @@ function deriveUnitStats(input) {
     altarOfTheSun, altarOfTheSunHolyMother, armor, badMoonActive, baseDoomGaze, baseGazeRanged,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod,
     baseHitChance, baseHitMelee, modernSecondaryHitMod,
-    blazeOfGloryActive, bombsGrenades,
+    blazeOfGloryActive, bombsGrenadesActive,
     calcBaseAtk, calcBaseDef, calcBaseHP, calcBaseRes,
     ccFireBreathStrength, ccIndependentChannels,
     chaosSurgeCount, chaosSurgeMeleeBonus, chaosSurgeResBonus,
@@ -2085,7 +2136,8 @@ function deriveUnitStats(input) {
     // The grantable ability keys some step reads, on the record for the same reason and seeded
     // the same way (F202). A grant hoist can write any of them, so a step that took one as a
     // pre-sequence constant would answer from the wrong position once [F200] gives that grant a
-    // rank. Nothing writes one mid-sequence yet, so the seed is the value every reader saw before.
+    // rank — which five of them already have, so the seed is the state the chain's head finds
+    // rather than the value every reader takes.
     ...Object.fromEntries(POSITIONED_GRANT_FIELDS
       .map(key => [key, !!effectiveAbilities[key]])),
     // The keys a positioned grant step *writes*, seeded the same way. These are the ones no hoist

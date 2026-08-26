@@ -541,6 +541,13 @@ does need a step, which is all 19 Warlord entries. All four training-time writes
 `CreateUnit.CAS` are the flag-or-level kind, so that version's empty training group is correct
 rather than unchecked.
 
+**The reader takes the same rule.** A key written only that way has no step that can move it, so a
+gate on it is a pre-sequence constant and putting it on the record would restate the constant
+instead of positioning it. Which permanent grants are of that kind is read off the block, not off
+the grant's name: Sancta Basilica's `EncSanctify` sits beside a `SResist` delta in the same block
+and is therefore a field of a step, while Lava Smelter, Heat Power Engine, Anti-Gravity Drive and
+Military Drilling each write flags alone (F202).
+
 ### The execution chain
 
 One ordered chain per engine version, `base` through `e`, is the single mechanism that orders a
@@ -836,7 +843,11 @@ the calculator does instead, and why.
   rather than by evidence. The cause is the calculator's, not the engine's: `deriveUnitStats`
   computes its gates as constants ahead of the sequence, and the hoist is what makes some of
   those constants valid. Scheduled for removal (F200); the option is not that both shapes are
-  acceptable.
+  acceptable. **Two of the five are narrower than that reads**, measured under F202: every write
+  `applyLavaSmelterGrant` makes (`CreateUnit.CAS:492-496`) and every remaining one
+  `applyOutlanderReformGrants` makes is a permanent flag with no stat delta beside it, which earns
+  no step at all under *Phases* above — so what those two leave behind is a derivation of
+  base-record state, not a hoisted position. Sancta Basilica's grants are the positioned kind.
   The sixth hoist, the `effectiveAbilities` merge, carries **no** grant any more: Divine
   Protection, Fortification and Insulation took positions with F200, Altar of the Moon, Military
   Workshop, Mother Fungus, Venom, Energy Cannon, Bombs & Grenades, Blaze of Glory, Destiny's

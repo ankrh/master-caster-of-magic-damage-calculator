@@ -315,6 +315,21 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // Sanctify writes the Life realm unconditionally; its separate Fantastic write is gated on
     // a non-hero clergy unit. Two writes, not the three-branch compact-token approximation the
     // realm-less `hero` token used to force.
+    //
+    // The `sanctify` gate is the one grantable-ability read F202 left standing that a positioned
+    // grant really can move, and it cannot move under F202 alone. Sancta Basilica's block writes
+    // `SETSTAT(U,SResist,1,+3)` and then `SETENCHANTMENTFLAG(U,EncSanctify,ABase,1)` in two of its
+    // four `STypeID` branches (`CreateUnit.CAS:414-419`), so unlike the flag-only permanent grants
+    // — Lava Smelter's, Heat Power Engine's, Anti-Gravity Drive's, Military Drilling's, each of
+    // which earns no step (`SPEC.md`, *Phases*) — this one carries a stat delta and is already
+    // `base:sanctaBasilica`. F200 stage 3 widens that step onto these branches, at which point the
+    // flag is a positioned write and this gate must read the record. What blocks doing it here is
+    // `targetingIdentity` below: it replays the conversion list alone on a scratch record and does
+    // not run `base:sanctaBasilica`, so a record read would make the projection disagree with the
+    // sequence exactly when the building grants the flag. Seeding the scratch record from the
+    // ability set does not close that gap — the sequence's value would be the seed *plus* the
+    // positioned write. The choice between widening the projection to replay the `base` grants and
+    // keeping the gate pre-sequence belongs to F200 stage 3, which makes the write.
     // PROVENANCE[sanctify]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
     statStep({ id: 'sanctify', sourceLabel: 'Sanctify', phase: 'b',
       writes: ['race', 'fantastic'],
@@ -396,13 +411,22 @@ function targetingIdentity(identity, abilities, version, meta = {}) {
 
 // The ability keys a grant hoist can write that some step then reads. Each is a field of
 // `statRecord`, seeded from the effective ability set, so the step that reads it asks the record
-// at its own position instead of taking the ability as a pre-sequence constant (F202). Nothing
-// writes one of these mid-sequence yet, which is why this stage moves no number; it is what
-// [F200] needs, because once a grant is a positioned write a reader that took the key as a
-// constant would answer from the wrong rank.
+// at its own position instead of taking the ability as a pre-sequence constant (F202). This is
+// what a positioned grant needs: five of the keys below already carry one — `lucky`, `trueSight`,
+// `fireImmunity`, `lightningResist` and `mechanical`, listed as such further down — and a reader
+// that took any of them as a constant would answer from the wrong rank.
 //
 // Membership is "granted by a hoist **and** read by a step", not the whole grantable set: a key
 // no step reads needs no field, and a read that is itself part of a hoist moves with that hoist.
+//
+// Two further exclusions closed F202 rather than adding a field (stage 2). A key whose grant is a
+// **permanent write carrying no stat delta** earns no step at all (`SPEC.md`, *Phases*), so no
+// step can ever move it and a field would restate a constant: that is `fieryBlade`'s Lava Smelter
+// grant, `powerEngine`'s, `flying`'s and `discipline`'s, each ruled at its own read in `stats.js`.
+// (`fieryBlade` keeps the field it took in stage 1 — `c:metalFires` reads it off the record — but
+// nothing writes it and nothing will.) And a key whose only readers are **result** fields, the
+// weapon material among them, has nowhere to take a rank: `SPEC.md`, *The step model*, gives the
+// finished record to those, and `artificerMagicWeapon` and Metal Fires' upgrade already do.
 const POSITIONED_GRANT_FIELDS = [
   'lucky',        // applySanctaBasilicaGrant, applyPillarOfFaithGrant,
                   // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`

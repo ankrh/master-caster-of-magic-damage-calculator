@@ -921,6 +921,14 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:50 },
     expected: { dmgToA: 0, dmgToB: 28.000 },
   },
+  bombsGrenadesReadsPermanentMeleeAfterRebuildWarlord: {
+    desc: 'The write gate is `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)` (UnitCalcPre.CAS:1068-1069). Record selector 1 is the base unit (CAS reference, Scripts.TXT:270), so the melee term is the permanent record the `base` phase leaves, not the card\'s input: Rebuild writes `SETSTAT(TU,SAttack,1,…+2)` permanently at OLSpell.CAS:280, before region `b` runs. A 4-figure unit with roster melee 0 therefore reaches the grant — melee 2 and Thrown floor(8 - 4/2) = 6 over 4 figures at 100% hit against 0 Defense = (2 + 6) x 4 = 32.0. Reading the card\'s melee input instead withheld the whole Thrown channel and left Rebuild\'s melee alone at 8.0; dropping Rebuild leaves 0.0, since the unit then has neither melee nor the grant.',
+    version: V_WARLORD,
+    a: { figs:4, atk:0, hitChance:70, hp:10,
+      abilities: { outlanderWizard: true, explosive: true, rebuild: true } },
+    b: { def:0, toBlkMod:70, hp:50 },
+    expected: { dmgToA: 0, dmgToB: 32.000 },
+  },
   bombsGrenadesSkipsApotheosisPermanentFantasticWarlord: {
     desc: 'The `NOTSAPIENS` gate reads `BASEFANTASTIC(U)`, which is the base unit data "before applying continuous effects such as buffs or curses" (CAS reference, Scripts.TXT:286) — the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390, which persists into BaseUnits and every later recalculation. So a unit given Apotheosis is Fantastic to this gate and loses the whole grant. Negative claim, and the absence is the rule under test: melee 1 doubled by Apotheosis is 2 over 4 figures at 100% hit vs def 0 → 8.0. Reading the training-time flag instead granted Thrown 6, which Apotheosis then doubled to 12, for (2 + 12) x 4 = 56.0. The `SMultiLabel = 14` (Sapiens) arm is the exemption that keeps the grant open for a base-Fantastic unit and is unaffected.',
     version: V_WARLORD,

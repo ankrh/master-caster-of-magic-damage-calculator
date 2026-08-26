@@ -369,7 +369,7 @@ function precalcBinaryStatSteps(ctx) {
 // `b`: precalc, in UnitCalcPre.CAS (Warlord only).
 function precalcScriptStatSteps(ctx) {
   const {
-    abilByPhase, abilities, baseFigs, bombsGrenades, channels, ffMeleeBonus, ffRegularBonus,
+    abilByPhase, abilities, baseFigs, bombsGrenadesActive, channels, ffMeleeBonus, ffRegularBonus,
     fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
     greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
@@ -543,7 +543,7 @@ function precalcScriptStatSteps(ctx) {
     // Magic branch need standing by for their own writes is exactly that (F101).
     statStep({ id: 'bombsGrenades', phase: 'b',
       writes: [...strengthFields, ...thrownTypeFields, 'wallCrusher'],
-      when: () => bombsGrenades,
+      when: (u, ctx) => bombsGrenadesActive(u, ctx),
       apply: u => {
         // `SETSTAT(U,AWallCrusher,0,1)` (`:1072`), the second line of the same `IF`, inside the
         // reviewed span already cited. It lands at this rank rather than ahead of the

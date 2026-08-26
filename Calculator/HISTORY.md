@@ -1,5 +1,51 @@
 # Calculator work history
 
+## 2026-08-26 — F202 stage 2: four of the five remaining grant reads have no rank to take
+
+**F202 closes.** Stage 1 put nine grantable-ability reads on the sequence record; stage 2 re-measured
+the five the row had left and ruled that four of them are already right, for one reason with one
+source. Their grants are **permanent writes carrying no stat delta**, and `SPEC.md`, *Phases*, has
+said since F203 that such a write earns no step. No step can move those values, so a record field
+would restate a pre-sequence constant instead of positioning it. The blocks:
+Lava Smelter (`CreateUnit.CAS:492-496`, five flags, no stat) for `fieryBlade`; Heat Power Engine
+(`:679`, `OverlandEndTurn.CAS:417`) for `powerEngine`, whose sibling `energyBeamWeapons` is a
+`SPELLSTATE` research term and no unit field at all; Anti-Gravity Drive (`:685-689`,
+`OverlandEndTurn.CAS:649-657`) for `flying`; Military Drilling (`:661`, `OverlandEndTurn.CAS:452`)
+for `discipline`. `fieryBlade` has a second, independent reason already used twice in `stats.js`:
+its dominant consumer is the weapon material, a **result** field that cannot be a record field.
+Each ruling is recorded at its own read, and the reader's half of the rule is now stated in
+`SPEC.md`, *Phases*, so the next agent does not re-derive it.
+
+**The fifth is `sanctify`, and it was handed to F200 stage 3 rather than decided here.** Sancta
+Basilica's block is the one that writes a stat delta beside its flag — `SETSTAT(U,SResist,1,+3)`
+then `SETENCHANTMENTFLAG(U,EncSanctify,ABase,1)` in two of four `STypeID` branches
+(`CreateUnit.CAS:414-419`) — so that grant really will take a rank. It cannot take one under F202
+alone: `targetingIdentity` replays the conversion list on a scratch record and never runs
+`base:sanctaBasilica`, so a record read would make the projection disagree with the sequence exactly
+when the building grants the flag, and seeding the scratch record does not close the gap. The two
+alternatives and the recommendation are in the F200 row; the bind is stated at the conversion.
+
+**One defect found and folded in, on the same expression as the `flying` ruling.** `b:bombsGrenades`
+reads `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)` (`UnitCalcPre.CAS:1068-1069`).
+Record selector 1 is the base unit (`Scripts.TXT:270`), so the melee term is the permanent record
+the `base` phase leaves — and the calculator read the card's melee input instead, which misses
+`base:rebuild`'s permanent `+2` (`OLSpell.CAS:280`) and `base:artificer`'s `+1`
+(`CreateUnit.CAS:40`). The gate is `ctx.base.atk` now, resolved at the step's own rank; the
+Thrown field's pre-sequence seeding widened to the block's eligibility alone, since seeding a field
+is not a write. `bombsGrenadesReadsPermanentMeleeAfterRebuildWarlord` is the control: a 4-figure
+roster-melee-0 unit with Rebuild deals 32.0 where it dealt 8.0, and 0.0 without Rebuild.
+
+**Measurement: 0 of 52440 derivations differ against pristine `HEAD`**, all five versions — the
+correction is outside the sweep's reach, which seeds every case at melee 1. `node
+tools/node_unit_checks.js` 14643 assertions, `npm run provenance` 277 formulas 0 UNVERIFIED, and
+`npm test` all green.
+
+**Compatibility layers still standing** (none added, none removed): `applyLavaSmelterGrant`'s
+`legacy` selector arm; `applyOutlanderReformGrants`' `DERIVED_OUTLANDER_STATE_KEYS` input strip; the
+`curseGatedAbilities` → `grantedAbilities` → `combatAbilitiesBase` → `shapedGazeAbilities`
+projection, unchanged this round; and `applyHierophanyAbilityStrip`, still clearing 13 keys after
+the chain although `d:hierophany` has a position, 6 of them not record fields.
+
 ## 2026-08-26 — F208: a training-time gate does not see a cast-time permanent write
 
 **The user ruled.** Rebuild's Mechanical grant was the last write left in the `effectiveAbilities`
