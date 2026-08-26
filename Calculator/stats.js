@@ -149,6 +149,10 @@ function deriveUnitStats(input) {
   // hero exclusion here. Artificer then gates on that same `GetStat(U,SCustomAttribute,1)=1`
   // and sets `EncMagic` (`CreateUnit.CAS:38-39`), which is Magic Weapons: +10% To Hit and the
   // Weapon Immunity bypass. Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
+  // This disjunction is the last grant the `effectiveAbilities` merge still makes, and the one
+  // thing F201 could not retire without moving a number: Rebuild's write is cast-time and
+  // Artificer's read is training-time, so positioning it changes who takes the retort's package.
+  // The ruling is BACKLOG F208.
   const isWarlord = version.startsWith('com2_warlord');
   // One `flameBlade` input, two controls: the wizard spell everywhere but Warlord, the arcane
   // unit ability in Warlord (`enchantments.js`). The version decides which arithmetic the shared
@@ -986,11 +990,6 @@ function deriveUnitStats(input) {
   const heavenlyLightThrownToHit = heavenlyLightMaterialTail ? 10 : 0;
   const outlanderRtbToHitBonus = outlanderReform.ballisticsTraining ? 20 : 0;
   const uphillBattlePct = uphillBattleActive ? 10 : 0;
-  // UnitCalc.CAS:326-328 writes `SToRanged` alone, so the bonus reaches the Ranged channel
-  // only and never Thrown or either Breath. No ranged-type test: the script writes the
-  // modifier whatever the type, magical ranged included.
-  const trueSightRangedToHitBonus = isWarlord
-    && !!(abilities.trueSight || abilities.eyeOfHeaven) ? 5 : 0;
   const weaponUpgradedByHW = hwActive && weapon === 'normal';
   // Two effects with different scopes shared one test here: Wraith Form is an all-versions
   // enchantment whose bypass arm is CoM 1 on, while Ruler of Underworld is Caster.exe only —
@@ -1457,42 +1456,49 @@ function deriveUnitStats(input) {
   // from the DOS record instead (F127). Only meaningful where `energyCannon` gates the step on.
   const energyCannonHitField = (rangedFieldContext || recordContext).secondaryHitField;
 
-  // The nine ability keys the eleven merged spreads here used to write are positioned steps now:
-  // `base:altarOfTheMoon` (Rage, Poison Immunity, and the Hunter/Witchdoctor poison
-  // and Life Steal branches), `base:militaryWorkshop` (Blackpowder, its poison increment and
-  // Armor Piercing), `base:motherFungus` and `d:venom` (their own poison increments),
-  // `base:energyCannon`, `b:bombsGrenades` (Wall Crusher) and `d:blazeOfGlory` (Armor Piercing,
-  // and the First Strike clear). Each writes a `statRecord` field at its own block's rank and is
-  // read back after the chain, which is what let the hand-written poison precedence go: the
-  // sequence orders the increments (F201).
+  // Every ability write this merge used to make is a positioned step now, and what is left is the
+  // finished-record projection `SPEC.md`, *The step model* blesses: the record the recalculation
+  // **leaves**, which combat resolution is handed and which no block reads at a position.
+  //
+  // The grants that left: `base:altarOfTheMoon` (Rage, Poison Immunity, and the
+  // Hunter/Witchdoctor poison and Life Steal branches), `base:militaryWorkshop` (Blackpowder, its
+  // poison increment and Armor Piercing), `base:motherFungus` and `d:venom` (their own poison
+  // increments), `base:energyCannon`, `b:bombsGrenades` (Wall Crusher) and `d:blazeOfGlory`
+  // (Armor Piercing, and the First Strike clear) with stage 1; then `base:rebuild` / `b:rebuild`
+  // (Mechanical), `base:destiny` (Supernatural), and `b:eyeOfHeaven` (True Sight) →
+  // `c:trueSight` (Illusion Immunity) with stage 2. Each writes a `statRecord` field at its own
+  // block's rank and is read back after the chain.
+  //
+  // The inert-Rust drop went with them, deleted rather than positioned: no engine block clears
+  // `EncRust`, and the Fantastic exclusion it stood for is a cast-time *targeting* class, which
+  // `rustActive` — `d:rust`'s own `when` — already carries at the one place `SPEC.md`, *The step
+  // model* puts it. Nothing reads the published flag, so emission is a superset and the `when` is
+  // the gate (`SPEC.md`, *Version scope*).
   const effectiveAbilities = {
     ...abilities,
-    // Rust on a fantastic creature is inert: drop it so the -3 melee in combat_abilities.js (which
-    // can't see unit type) and any downstream reads treat the unit as un-rusted.
-    ...((abilities && abilities.rust && !rustActive) ? { rust: false } : {}),
-    // Eye of Heaven is a Warlord combat enchantment: `UnitCalcPre.CAS` lines 1839-1841 set
-    // `EncTrueSight` on every friendly unit while `CGEyeOfHeaven` slot 1 is up, and no other
-    // supported source names it — the CoM2 1.05.11 base script set has no `EyeOfHeaven`
-    // identifier at all. The Warlord gate matches the one the +5% ranged To Hit read already
-    // carries above; without it a hidden control granted Illusion Immunity in all four other
-    // engines. True Sight itself is all-version and stays ungated.
-    ...((abilities && (abilities.trueSight || (isWarlord && abilities.eyeOfHeaven)))
-      ? { illusionImmunity: true } : {}),
-    // The finished record: combat resolution is handed the unit the recalculation leaves, so
-    // these thirteen are the post-chain projection and not a read at any block's position.
-    // What is left of this merge, once the nine grants above became steps, is that projection
-    // plus the two normalizations under it — neither of which any engine block makes, and both
-    // of which need their own ruling (F201 stage 2).
     unitType: finishedUnitType,
     baseRace: identity.baseRace,
     baseFantastic: identity.baseFantastic,
     liveRace: finishedIdentity.race,
     liveFantastic: finishedIdentity.fantastic,
+    // The one grant left in this merge, and the only one of the thirteen keys F201 could not
+    // retire: Rebuild's `SCustomAttribute` 1 (`OLSpell.CAS:279`, `UnitCalcPre.CAS:685`). It is a
+    // positionable write with two existing homes — `base:rebuild` and `b:rebuild` — but taking
+    // them moves a number, because `base:artificer` is a training-time read of the same base
+    // field and the chain runs cast-time writes after training-time ones (F203). BACKLOG F208.
     mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeStat,
+    // Inner Power's eligibility gate and its published value are one thing, not two: nothing
+    // gives `c:innerPower` a `when`, so this suppression is what stops the step firing on an
+    // ineligible unit. It moves with the emission half, which reads `fireImmunity` and
+    // `lightningResist` as pre-sequence constants and is what F200 stage 2 needs off the record
+    // before Insulation can take a position (F201 stage 2's ruling, BACKLOG F200).
     innerPower: innerPowerEligible ? abilities.innerPower : false,
     mislead: abilities.mislead || false,
-    supernatural: ((abilities && abilities.supernatural) || destinyActive),
+    // Supreme Light's own steps carry this same predicate as their `when`, so this is a published
+    // normalization only, with no reader in `combat_*.js` — the class the inert-Rust drop
+    // belonged to (F201 stage 2 filed it as F207 rather than folding a second published-value
+    // change into this round).
     supremeLight: supremeLightActiveForUnit(abilities, finishedUnitType, version, {
       liveRangedType: recordContext.baseSequenceRangedType,
       baseRangedType: recordContext.rtbTypeRaw,
@@ -1506,6 +1512,11 @@ function deriveUnitStats(input) {
   // relative to a grant that writes one of these four, and taking the finished set is what makes
   // its answer independent of where such a grant lands (F199). Declared as a cross-boundary read
   // in `tools/unit_checks/identity_record_choice.js`, which halts on an undeclared occurrence.
+  // `trueSight` and `eyeOfHeaven` are separate terms here rather than folded into
+  // `illusionImmunity`, and that is what lets the implication between them be the positioned
+  // write it is in every engine — `c:trueSight`, which cannot have run when this set is built
+  // (F201). The strip's answer is the same either way, because `immunityStrippedCurses`
+  // (`stats_identity.js`) tests all three.
   const finishedImmunities = {
     magicImmunity: !!effectiveAbilities.magicImmunity,
     illusionImmunity: !!effectiveAbilities.illusionImmunity,
@@ -1950,7 +1961,7 @@ function deriveUnitStats(input) {
     realmWardActive, sanctaBasilica,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayResMod,
     heavenlyLightHitPick, holyWeaponHitPick, spellWardActive, supremeLightEligibleAt,
-    survivalInstinctToBlkBonus, trueSightRangedToHitBonus, unitIsChaos, unitTypeAt,
+    survivalInstinctToBlkBonus, unitIsChaos, unitTypeAt,
     finishedUnitType,
     uphillBattleActive, vampirismActive,
     venomActive,

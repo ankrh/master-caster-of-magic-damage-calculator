@@ -235,6 +235,12 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // `CreateUnit.CAS` training-time base steps, which state the record as the unit was built.
     // Both halves share `PROVENANCE[destiny]`, cited at `c:destiny` (`stats_sequence.js`): one
     // span, $0059A35E..$0059A633, carries the permanent writes and the calculated package alike.
+    // `B.attackflags.supernatural := True` at $0059A3EB is the third permanent write of that same
+    // block, and it is `base:destiny:supernatural` (`stats_sequence.js`) rather than a field of
+    // this step: a conversion that wrote a third field would cost `targetingIdentity` its
+    // exactness, which is the deviation *An identity conversion is its own step even where its
+    // engine block also writes a stat* already records for Chaos Channels and Black Channels. The
+    // two entries are chain-adjacent, so no number can depend on the split (F201).
     statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'base',
       writes: ['race', 'fantastic'],
       when: () => destinyActiveForUnit(abilities, version),
@@ -402,9 +408,10 @@ const POSITIONED_GRANT_FIELDS = [
                   // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`
   'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
   'armorclad',    // applyOutlanderReformGrants  ->  `base:armorclad`
-  'mechanical',   // effectiveAbilities (Rebuild's conversion)  ->  `base:artificer`,
-                  // `d:mechanicalExpert`
+  'mechanical',   // effectiveAbilities (Rebuild's conversion, BACKLOG F208)
+                  //   ->  `base:artificer`, `d:mechanicalExpert`
   'rebuild',      // deriveMarionettePackage  ->  `base:rebuild` / `b:rebuild`
+  'trueSight',    // `b:eyeOfHeaven`  ->  `c:trueSight`, `d:trueSight`
   'psychoForce',  // applyOutlanderReformGrants  ->  `d:psychoForce`
   'pneumaField',  // applyOutlanderReformGrants  ->  `d:pneumaField`
   'illusion',     // deriveMarionettePackage  ->  the Illusion malus inside `b:trueLight`
@@ -417,8 +424,10 @@ const POSITIONED_GRANT_FIELDS = [
 // gates on. A key here is one no hoist writes any more, so the record is its only carrier and the
 // post-chain read-back is what hands it to combat resolution.
 //
-// `lucky` is in both lists: `c:lucky` reads it at its own rank and combat resolution reads the
-// finished value (`combat_phases.js`, MoM 1.31's enemy melee penalty).
+// Two keys are in both lists, because a positioned write of theirs also has a positioned reader:
+// `lucky` (`b:divineProtection` writes it, `c:lucky` reads it, and combat resolution reads the
+// finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty) and `trueSight`
+// (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it).
 const POSITIONED_GRANT_WRITES = [
   'largeShield',      // `b:magitekEngine`, `d:rust` (clear), `d:fortification`
   'missileImmunity',  // `d:fortification`'s already-shielded arm
@@ -431,6 +440,9 @@ const POSITIONED_GRANT_WRITES = [
   'energyCannon',     // `base:energyCannon`
   'wallCrusher',      // `b:bombsGrenades`
   'firstStrike',      // `d:blazeOfGlory` (clear)
+  'supernatural',     // `base:destiny:supernatural` — `B.attackflags.supernatural := True`
+  'trueSight',        // `b:eyeOfHeaven`
+  'illusionImmunity', // `c:trueSight`
 ];
 
 // The same move for the two ability fields that carry a **value** rather than a flag. They are

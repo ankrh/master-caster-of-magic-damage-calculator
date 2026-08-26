@@ -109,6 +109,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:baseHitChance': SCOPE_MODERN,
   'base:baseThresholds': SCOPE_ALL,
   'base:destiny': SCOPE_MODERN,
+  'base:destiny:supernatural': SCOPE_MODERN,
   'base:dragonMound': SCOPE_WARLORD,
   'base:energyCannon': SCOPE_WARLORD,
   'base:constructCatapult': SCOPE_COM1,
@@ -153,6 +154,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:disheartenProphecy': SCOPE_WARLORD,
   'b:divineProtection': SCOPE_WARLORD,
   'b:eternalNight:poorVision': SCOPE_WARLORD,
+  'b:eyeOfHeaven': SCOPE_WARLORD,
   'b:fieryFury': SCOPE_WARLORD,
   'b:goblinPox': SCOPE_WARLORD,
   'b:godsPlayDices': SCOPE_WARLORD,
@@ -259,6 +261,9 @@ const STEP_VERSION_SCOPES = Object.freeze({
   // The DOS half of True Light. PROVENANCE[trueLight] cites only the Warlord CAS block, which
   // is the separate `b:trueLight` step; the MoM region-c block has no citation yet.
   'c:trueLight': SCOPE_MOM,
+  // True Sight's Illusion Immunity write. Every engine makes it in region `c`; Warlord's
+  // `d:trueSight` is its separate script write of ranged To Hit, and the two share a citation.
+  'c:trueSight': SCOPE_ALL,
   'c:undead': SCOPE_ALL,
   'c:warpAttack': SCOPE_ALL,
   'c:warpDefense': SCOPE_ALL,
@@ -1113,8 +1118,13 @@ function assertStatTraceOrder(trace, options = {}) {
     if (!event || typeof event.id !== 'string' || !event.id) {
       throw new Error(`trace event ${index} has no id`);
     }
-    if (seen.has(event.id)) throw new Error(`trace event id ${event.id} is repeated`);
-    seen.add(event.id);
+    // Keyed `phase:id`, the key the chain and the scope table use: one effect may make two
+    // separately cited writes in two regions of one engine and both may fire in one pass —
+    // `c:trueSight` sets Illusion Immunity and `d:trueSight` adds ranged To Hit (`SPEC.md`,
+    // *The step model*). A repeated `phase:id` is still a bug, because that is one position.
+    const eventKey = `${event.phase}:${event.id}`;
+    if (seen.has(eventKey)) throw new Error(`trace event id ${eventKey} is repeated`);
+    seen.add(eventKey);
     if (event.traceOrder !== index) {
       throw new Error(`trace event ${event.id} has trace order ${event.traceOrder}, expected ${index}`);
     }

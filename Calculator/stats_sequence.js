@@ -51,6 +51,18 @@ function baseStatSteps(ctx) {
     // blocks are cleared before anything reads them. Its citation and the reason it may read the
     // finished immunity set are at `immunityCurseGatingStep` (`stats_identity.js`).
     immunityCurseGatingStep(version, finishedImmunities),
+    // Destiny's third permanent write, beside the `B.race` / `B.Fantastic` pair `base:destiny`
+    // makes — one block, $0059A35E..$0059A633, whose permanent half runs in executable order.
+    // It is a separate id because the identity conversion must keep writing `race` and
+    // `fantastic` and nothing else, which is what makes `targetingIdentity` exact without
+    // running the sequence (`SPEC.md`, *Deliberate deviations*); the two are chain-adjacent, so
+    // no number can depend on the split. Combat resolution reads the finished flag, and this is
+    // where the merged `supernatural || destinyActive` constant used to state it (F201).
+    // PROVENANCE[destiny:supernatural]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
+    statStep({ id: 'destiny:supernatural', sourceId: 'destiny', sourceLabel: 'Destiny',
+      phase: 'base', writes: ['supernatural'],
+      when: () => destinyActiveForUnit(abilities, version),
+      apply: u => { u.supernatural = true; } }),
     // PROVENANCE[stat:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:bbaf5fb67bb1734c03725bf1 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e0f87a5a92f98f34754862e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:37555b7dcbc4b5de6fb91420
     statStep({ id: 'stat:base', phase: 'base',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'gaze', 'doomGaze',
@@ -630,6 +642,19 @@ function precalcScriptStatSteps(ctx) {
       // none of them.
       when: () => godsPlayDicesResMod !== 0,
       apply: u => { u.res += godsPlayDicesResMod; } }),
+    // Eye of Heaven is a Warlord combat enchantment and its whole represented effect on the
+    // enchanted side is one flag write: `SETENCHANTMENTFLAG(U,EncTrueSight,0,1)` for every
+    // friendly unit while `CGEyeOfHeaven` slot 1 is up. It is the last block of region `b`,
+    // immediately before the combat `HALT`, and two later blocks read what it leaves —
+    // `c:trueSight`'s Illusion Immunity and `d:trueSight`'s +5% ranged To Hit. No other supported
+    // source names the enchantment: the CoM2 1.05.11 base script set has no `EyeOfHeaven`
+    // identifier at all, which is why the step is Warlord-scoped while True Sight itself is not.
+    // The enemy gaze half is combat resolution's, not a write to this unit.
+    // PROVENANCE[eyeOfHeaven]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:6:f97cc6ea721d5f75291b8e43
+    statStep({ id: 'eyeOfHeaven', sourceId: 'eyeOfHeaven', sourceLabel: 'Eye of Heaven',
+      phase: 'b', writes: ['trueSight'],
+      when: () => isWarlord && !!abilities.eyeOfHeaven,
+      apply: u => { u.trueSight = true; } }),
   ];
 }
 
@@ -930,6 +955,23 @@ function magicCalcBinaryStatSteps(ctx) {
         }
       } }),
     ...(isCoM2 ? weaponStatSteps : []),
+    // True Sight sets Illusion Immunity, and every one of the five engines makes that write as a
+    // block of region `c` rather than as a property of the flag: `if U.EnchantmentFlags`
+    // `[EncTrueSight] then U.illusionimmunity := True` at $0059E810..$0059E86A, between
+    // `ApplyMagicWeapons` ($0059E4AD, `c:weapon`) and Endurance ($0059EC03); and
+    // `if (ench & UE_TRUE_SIGHT) bu->Attribs_1 |= USA_IMMUNITY_ILLUSION` inside
+    // `BU_Apply_Specials` at 131:0x8F338 / 160:= — ahead of Undead 0x8F3DC and Black Channels
+    // 0x8F3FA — and at com1:0x8F335, where that routine is called before Chaos Surge and so
+    // stands ahead of CoM 1's Endurance at 0x8F439. The same id's `d:trueSight` is Warlord's
+    // separate script write of ranged To Hit; both are covered by this citation.
+    // The Eye of Heaven arm is not a second term of this gate: that enchantment sets
+    // `EncTrueSight` itself at `b:eyeOfHeaven`, and this block reads the flag the record carries
+    // at its own rank (F201).
+    // PROVENANCE[trueSight]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:3:ab6658debac3b3919bf52ecd | Reference docs/DOS reconstructed/unitcalc.c@span:1:b33bb019c9f493fb83dacbed | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:3:7ed2253998ce93313ee2e86e | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
+    statStep({ id: 'trueSight', sourceId: 'trueSight', sourceLabel: 'True Sight',
+      phase: 'c', writes: ['illusionImmunity'],
+      when: u => !!u.trueSight,
+      apply: u => { u.illusionImmunity = true; } }),
     ...abilByPhase.cBeforeHolyArmor,
     // The DOS half of the Chaos Channels fire-breath write, beside the demon-skin armor and
     // demon-wings blocks it shares `BU_Apply_Specials` with. Its modern counterpart is the
@@ -1405,7 +1447,7 @@ function magicCalcScriptStatSteps(ctx) {
     hurricaneActive, isWarlord, levelRank,
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
-    shadowStrikeActive, trueSightRangedToHitBonus, vampirismActive,
+    shadowStrikeActive, vampirismActive,
     venomActive, warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
     weaknessBinaryHits, weaknessPenalty,
   } = ctx;
@@ -1444,12 +1486,16 @@ function magicCalcScriptStatSteps(ctx) {
           if (!weaknessBinaryHits(u, c) && slotHasBreath(u, c)) u[c.strengthField] -= weaknessPenalty;
         }
       } }),
-    // PROVENANCE[trueSight]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
+    // `UnitCalc.CAS:326` gates on `GETENCHANTMENTFLAG(U,EncTrueSight,0)` — the **calculated**
+    // record — and `b:eyeOfHeaven` sets that flag at the very end of region `b`, which is the
+    // crossing the CoM2 region map states outright ("Eye of Heaven's friendly True Sight grant
+    // crosses the hook boundary deliberately"). So the gate is a record read at this step's own
+    // rank rather than a constant naming both enchantments (F201).
     statStep({ id: 'trueSight', sourceId: 'trueSight', sourceLabel: 'True Sight',
-      phase: 'd', writes: secondaryHitFieldsFor(['ranged']), when: () => trueSightRangedToHitBonus !== 0,
+      phase: 'd', writes: secondaryHitFieldsFor(['ranged']), when: u => !!u.trueSight,
       apply: u => {
         for (const target of secondaryHitTargets) {
-          if (target.kindAt(u) === 'ranged') u[target.field] += trueSightRangedToHitBonus;
+          if (target.kindAt(u) === 'ranged') u[target.field] += 5;
         }
       } }),
     // Combat-cast Flame Blade's script-only point is Fire Breath, not the selected shared

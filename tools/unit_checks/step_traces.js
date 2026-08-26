@@ -741,8 +741,10 @@ function runChannelAttributionChecks(ctx) {
   assert(!Object.prototype.hasOwnProperty.call(heavenlyLight.changes, 'toHitBreath'),
     'Heavenly Light leaves the Breath To Hit field alone');
 
-  // UnitCalc.CAS:326-328 writes SToRanged alone.
-  const trueSight = eventOf('trueSight');
+  // UnitCalc.CAS:326-328 writes SToRanged alone. Keyed `phase:id`, because True Sight makes two
+  // writes at two positions: `c:trueSight` sets Illusion Immunity in every engine and this
+  // Warlord-only `d:trueSight` is the To Hit half (F201).
+  const trueSight = walk.find(entry => entry.id === 'trueSight' && entry.phase === 'd');
   assert(!!trueSight, 'True Sight records a To Hit write on the multi-channel unit');
   assertSameKeyList(trueSight.channels, ['ranged'],
     'True Sight attributes its To Hit write to Ranged alone');
@@ -768,6 +770,10 @@ function runChannelAttributionChecks(ctx) {
   }
 
   const idsIn = trace => trace.map(entry => entry.id);
+  // Keyed `phase:id` where an effect writes at two positions: `c:trueSight` sets Illusion
+  // Immunity in every engine and is channel-agnostic, so every reconstruction keeps it, while
+  // `d:trueSight` is the Warlord Ranged-only To Hit write these assertions are about (F201).
+  const keysIn = trace => trace.map(entry => `${entry.phase}:${entry.id}`);
   const fieldsIn = (trace, id) => {
     const entry = trace.find(item => item.id === id);
     return entry ? Object.keys(entry.changes) : [];
@@ -775,13 +781,13 @@ function runChannelAttributionChecks(ctx) {
   // Heavenly Light writes melee and the Ranged/Thrown secondaries in one step, so what a
   // reconstruction drops is the *fields* that belong to other channels, not the whole entry:
   // the melee half belongs to every channel's view, exactly as a common To Hit write does.
-  assert(!idsIn(projections.fireBreath).includes('trueSight'),
+  assert(!keysIn(projections.fireBreath).includes('d:trueSight'),
     'A Breath reconstruction drops the Ranged-only To Hit write');
   assertSameKeyList(fieldsIn(projections.fireBreath, 'heavenlyLight'),
     ['def', 'res', 'atk', 'toHitMelee'],
     'A Breath reconstruction keeps only the channel-agnostic half of a Ranged/Thrown write');
   assert(idsIn(projections.thrown).includes('heavenlyLight')
-      && !idsIn(projections.thrown).includes('trueSight'),
+      && !keysIn(projections.thrown).includes('d:trueSight'),
   'A Thrown reconstruction keeps Heavenly Light and drops True Sight');
   assertSameKeyList(fieldsIn(projections.thrown, 'heavenlyLight'),
     ['def', 'res', 'atk', 'toHitMelee', 'toHitThrown'],
@@ -818,7 +824,7 @@ function runChannelAttributionChecks(ctx) {
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
   const skippedTrueSight = withoutTrueSight.statExecutionTrace
-    .find(event => event.id === 'trueSight');
+    .find(event => event.id === 'trueSight' && event.phase === 'd');
   assert(!!skippedTrueSight && skippedTrueSight.status === 'skipped',
     'The ledger still visits True Sight when its predicate is false');
   assertSameKeyList(skippedTrueSight.channels, ['ranged'],
@@ -828,10 +834,10 @@ function runChannelAttributionChecks(ctx) {
   // but no changes and is therefore kept or dropped whole.
   const ledger = multiChannel.statExecutionTrace;
   const breathLedger = projectTraceToChannel(ledger, 'fireBreath');
-  const breathLedgerIds = breathLedger.map(event => event.id);
-  assert(!breathLedgerIds.includes('trueSight')
-      && breathLedgerIds.includes('hurricane')
-      && breathLedgerIds.includes('heavenlyLight'),
+  const breathLedgerIds = breathLedger.map(event => `${event.phase}:${event.id}`);
+  assert(!breathLedgerIds.includes('d:trueSight')
+      && breathLedgerIds.includes('d:hurricane')
+      && breathLedgerIds.includes('c:heavenlyLight'),
   'A Breath ledger reconstruction drops the steps whose declaration excludes Breath, and keeps '
   + 'one whose declaration reaches Breath-agnostic fields');
   // Compared over the events themselves, not by id: three steps share the id `spiritLink` at

@@ -131,7 +131,10 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   ...baseWrites('artificial', ['immunityCurseGating']),
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
-  'c:holyWeapon', 'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
+  // `BU_Apply_Specials` opens with Water Walking 0x8F31D and True Sight 0x8F338; Chaos Surge
+  // (0x8F113) and 1.31's inline Holy Weapon (0x8F1A8) are both ahead of the 0x8F2A2 call.
+  'c:holyWeapon', 'c:trueSight',
+  'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
   'c:stoneSkin', 'c:flameBlade', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
   'c:chaosChannels:fireBreath', 'c:chaosChannels:fireBreath:race',
@@ -151,6 +154,9 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
   ...baseWrites('artificial', ['immunityCurseGating']),
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
+  // CP moved Holy Weapon into `BU_Apply_Specials`' relocated tail, so it lands late; True Sight
+  // stays at the routine's head, 0x8F338.
+  'c:trueSight',
   'c:undead', 'c:blackChannels', 'c:blackChannels:race',
   'c:ironSkin', 'c:stoneSkin', 'c:flameBlade', 'c:giantStrength',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:chaosChannels:flight',
@@ -171,6 +177,9 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   ...baseWrites('artificial', ['immunityCurseGating']),
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon',
+  // CoM 1 calls `BU_Apply_Specials` at 0x8F0E8, before Chaos Surge, and True Sight is its third
+  // block (com1:0x8F335) — ahead of everything below.
+  'c:trueSight',
   // CoM 1 reorders `BU_Apply_Specials` around its own repurposed enchantment slots: Endurance
   // 0x8F439, demon wings 0x8F46F, fire breath 0x8F48C, Blood Lust 0x8F49A, Undead 0x8F4BC and
   // the Animated block 0x8F4D0, whose own realm write at 0x8F50B is the second half of
@@ -195,14 +204,17 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   // F203 ordering: template initialization, then the permanent writes, then the artificial strip.
   // `base:destiny` is the per-pass permanent write — idempotent, which is what lets it hold this
-  // head position as well as `c:destiny`.
+  // head position as well as `c:destiny`. `base:destiny:supernatural` is the same block's third
+  // permanent write, chain-adjacent because the conversion keeps writing `race`/`fantastic` alone.
   ...baseWrites('template', ['stat:base', 'baseHitChance', 'baseThresholds']),
-  ...baseWrites('perPass', ['destiny']),
+  ...baseWrites('perPass', ['destiny', 'destiny:supernatural']),
   ...baseWrites('artificial', ['immunityCurseGating']),
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath',
   'c:destiny', 'c:level', 'c:focusMagic',
   'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:weapon',
+  // $0059E810, between `ApplyMagicWeapons` ($0059E4AD) and Endurance ($0059EC03).
+  'c:trueSight',
   'c:endurance', 'c:discipline', 'c:chaosChannels:flight',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race',
   'c:bloodLust', 'c:animated', 'c:undead',
@@ -240,8 +252,8 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   // Resistance has two entrances too — `OLSpell.CAS:185` and the Mystic Surge random grant at
   // `SpellMysticSurge.CAS:57` — and one position for the same reason.
   ...baseWrites('cast', ['rebuild', 'spiritLink']),
-  // The per-pass permanent write, idempotent, and then the artificial strip.
-  ...baseWrites('perPass', ['destiny']),
+  // The per-pass permanent writes, idempotent, and then the artificial strip.
+  ...baseWrites('perPass', ['destiny', 'destiny:supernatural']),
   ...baseWrites('artificial', ['immunityCurseGating']),
   'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
@@ -256,9 +268,15 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'b:eternalNight:poorVision',
   'b:greatUnbinding', 'b:prayer', 'b:rally', 'b:trueLight', 'b:plague', 'b:goblinPox',
   'b:luckyStar', 'b:disheartenProphecy', 'b:wallOfFire:garrison', 'b:godsPlayDices',
+  // `UnitCalcPre.CAS:1839-1842`, the last block of region `b`, immediately before the combat
+  // `HALT` — the grant the CoM2 region map records as crossing the hook boundary deliberately.
+  'b:eyeOfHeaven',
   'c:destiny',
   'c:level', 'c:focusMagic', 'c:lucky', 'c:darkForce', 'c:heavenlyLight',
-  'c:weapon', 'c:endurance', 'c:discipline', 'c:chaosChannels:flight',
+  'c:weapon',
+  // $0059E810, between `ApplyMagicWeapons` ($0059E4AD) and Endurance ($0059EC03).
+  'c:trueSight',
+  'c:endurance', 'c:discipline', 'c:chaosChannels:flight',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:animated', 'c:undead',
   'c:flameBlade', 'c:mysticSurge', 'c:mysticSurge:race', 'c:raiseDead',
   'c:lionheart', 'c:ironSkin', 'c:landLinking', 'c:holyArmor', 'c:orihalcon',

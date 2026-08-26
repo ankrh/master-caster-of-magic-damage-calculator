@@ -392,8 +392,10 @@ version nor the region belongs in the id: one enchantment writing in two regions
 field does not belong there either — a melee bonus and the attack-strength bonus of the same
 engine write are one step, not two. The one surviving qualifier marks an effect making **two
 separately cited engine writes** that `phase:id` cannot otherwise tell apart: two non-adjacent
-positions inside one region (`base:zombies` beside `base:zombies:toBlock`, and
-`c:chaosChannels:fireBreath:recompute` for MoM 1.31's second `BU_Apply_Specials` call); and the
+positions inside one region (`c:chaosChannels:fireBreath:recompute`, MoM 1.31's second
+`BU_Apply_Specials` call); `base:destiny:supernatural`, the third permanent write of the block
+whose other two are the `base:destiny` conversion, split for the same reason the conversions below
+are and chain-adjacent to it; and the
 five `:race` identity conversions, each of which is a separate write of the same effect rather
 than the same write seen twice — `c:mysticSurge:race` is the No Heal normalization block at
 `$005A0420`, gated on `EncNoHeal` and shared with Raise Dead, where `c:mysticSurge` is the block
@@ -821,12 +823,18 @@ the calculator does instead, and why.
   stat write is a positioned step while its ability write is not, split by field kind rather than
   by evidence. The cause is the calculator's, not the engine's: `deriveUnitStats` computes its
   gates as constants ahead of the sequence, and the hoist is what makes some of those constants
-  valid. Scheduled for removal (F200, F201); the option is not that both shapes are acceptable.
-  The seventh hoist, the `effectiveAbilities` merge, no longer carries a grant: Divine Protection
-  and Fortification took positions with F200, and Altar of the Moon, Military Workshop, Mother
-  Fungus, Venom, Energy Cannon, Bombs & Grenades and Blaze of Glory with F201. What is left in
-  that merge is the finished-record projection, plus two normalizations no engine block makes —
-  the inert-Rust drop and True Sight's implication of Illusion Immunity — which are F201 stage 2.
+  valid. Scheduled for removal (F200); the option is not that both shapes are acceptable.
+  The seventh hoist, the `effectiveAbilities` merge, carries **one** grant: Divine Protection and
+  Fortification took positions with F200, and Altar of the Moon, Military Workshop, Mother Fungus,
+  Venom, Energy Cannon, Bombs & Grenades, Blaze of Glory, Destiny's Supernatural and Eye of
+  Heaven's True Sight with F201. What is left there is the finished-record projection, Rebuild's
+  Mechanical conversion — positionable, but at a rank that moves a number, so its ruling is F208 —
+  and two published-value normalizations no engine block makes: Inner Power's eligibility
+  suppression, which is also the gate `c:innerPower` has no `when` for and so belongs to F200's
+  Insulation stage, and Supreme Light's, which has no reader at all (F207). The inert-Rust drop
+  went with F201 rather than taking a position: no engine block clears the enchantment flag, and
+  the Fantastic exclusion it stood for is a cast-time targeting class already carried by
+  `d:rust`'s own `when`.
 - **An identity conversion is its own step even where its engine block also writes a stat.** The
   address map puts Chaos Channels' demon-skin realm write inside the block that increments Defense
   (`$0059F4A3`, 0x8F6FE) and Black Channels' at the end of its own block (0x8F4A1), so *One
@@ -836,6 +844,9 @@ the calculator does instead, and why.
   reads take that record and the earliest of them is settled before the sequence is even built.
   That query is a projection of the one conversion list, and it is exact only while every step in
   that list writes `race` and `fantastic` and nothing else — which is what the two `:race` ids buy.
+  Destiny is the third case and the same bound produces it: its permanent block writes
+  `B.attackflags.supernatural` beside `B.race` and `B.Fantastic` ($0059A3EB), so that flag is
+  `base:destiny:supernatural` rather than a field of the conversion (F201).
   `tools/unit_checks/identity.js` asserts the property the projection rests on. Each pair is
   chain-adjacent, so no number can depend on the split; the three other `:race` ids are separately
   gated and are not this deviation.

@@ -1308,11 +1308,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Rebuild (Warlord): +2 melee and +2 armor. Mechanical flag, Death/Illusion
   // Immunity, and Armor Piercing are granted in normalizeCombatUnit.
   // The two unit classes are handled by deliberately ISHERO-complementary code, in
-  // different phases. Non-heroes: OLSpell.CAS:260-267 writes both stats at index 1
+  // different phases. Non-heroes: OLSpell.CAS:273-286 writes both stats at index 1
   // (ABase) when the spell is cast, so it is baked into the base stage.
   // Heroes: UnitCalcPre.CAS:682-691 re-applies them at index 0 on every recalc — phase b.
   // The Marionette Wanderer's strayed branch grants Rebuild, so the flag is a record field read
   // here rather than a pre-sequence constant (F202).
+  // **Not positioned here:** the same two blocks write `SCustomAttribute` 1 — Mechanical
+  // (`MASTER.CAS:1132`) — at `OLSpell.CAS:279` and `UnitCalcPre.CAS:685`, which is the grant
+  // `effectiveAbilities.mechanical` still merges ahead of the sequence. Making it a field of this
+  // step moves a number: `base:artificer` is a training-time write and this one is cast-time, so
+  // a unit made Mechanical by Rebuild would stop taking Artificer's package — which contradicts
+  // `rebuildMakesMechanicalForArtificerWarlord`. The ruling is BACKLOG F208.
   if (isWarlord) {
     // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
     // Neither branch gates the melee write: `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2))`

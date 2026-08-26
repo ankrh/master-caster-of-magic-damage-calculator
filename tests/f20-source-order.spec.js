@@ -24,7 +24,7 @@ const F20_PROBE_ABILITIES = {
   nausea: true, uphillBattle: true, soulFlay: true,
   eternalNight: true, greatUnbinding: true, plague: true, goblinPox: true, luckyStar: true,
   disheartenProphecy: true, wallOfFireGarrison: true, godsPlayDices: true,
-  mechanical: true, mechanicalExpert: true, trueSight: true,
+  mechanical: true, mechanicalExpert: true, trueSight: true, eyeOfHeaven: true,
   berserkWarlord: true, rust: true, hurricane: true, favoredTerrain: true,
   colossalStrength: true, vampirism: true, shadowStrike: true, psychoForce: true,
   pneumaField: true, energyBeamWeapons: true, blazeOfGlory: true, beatOfSwiftness: true,
@@ -44,7 +44,10 @@ const F20_PROBE_ABILITIES = {
 // version scope now filters out before composition.
 const F20_SOURCE_ANCHORS = {
   'mom_1.31': {
-    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'holyWeapon',
+    // True Sight is the second block of `BU_Apply_Specials` (131:0x8F338); Chaos Surge
+    // (0x8F113) and 1.31's inline Holy Weapon (0x8F1A8) are ahead of the 0x8F2A2 call, and
+    // Black Channels (0x8F3FA) is behind it.
+    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'holyWeapon', 'trueSight',
       'blackChannels', 'ironSkin', 'flameBlade', 'giantStrength',
       'chaosChannels:armor', 'lionheart', 'holyArmor',
       'berserk', 'nodeAura', 'highPrayer', 'trueLight', 'darkness',
@@ -52,7 +55,9 @@ const F20_SOURCE_ANCHORS = {
       'warpAttack', 'warpDefense', 'warpResist', 'shatter'],
   },
   'mom_cp_1.60.00': {
-    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'blackChannels', 'ironSkin',
+    // CP moved Holy Weapon into the relocated `BU_Apply_Specials` tail; True Sight stays at
+    // the routine's head, 0x8F338.
+    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'trueSight', 'blackChannels', 'ironSkin',
       'flameBlade', 'giantStrength',
       'chaosChannels:armor', 'lionheart', 'holyArmor',
       'berserk', 'holyWeapon', 'nodeAura',
@@ -64,7 +69,7 @@ const F20_SOURCE_ANCHORS = {
     // CoM 1's BU_Apply_Specials layout: Lionheart com1:0x8F660, Iron Skin 0x8F71F, the
     // Chaos Channels armor mutation 0x8F735, Land Link 0x8F75C, then Mystic Surge's
     // stat-writing half 0x8F795, then Holy Armor 0x8F7C1.
-    c: ['level', 'lucky', 'weapon', 'endurance', 'animated',
+    c: ['level', 'lucky', 'weapon', 'trueSight', 'endurance', 'animated',
       'flameBlade', 'lionheart',
       'ironSkin', 'chaosChannels:armor',
       'landLinking', 'mysticSurge',
@@ -82,7 +87,7 @@ const F20_SOURCE_ANCHORS = {
   'com2_1.05.11': {
     c: ['level', 'focusMagic', 'lucky', 'darkForce',
       'heavenlyLight',
-      'weapon', 'endurance', 'discipline',
+      'weapon', 'trueSight', 'endurance', 'discipline',
       'chaosChannels:armor', 'animated', 'flameBlade',
       'mysticSurge', 'lionheart', 'ironSkin', 'landLinking',
       'holyArmor', 'orihalcon', 'holyWeapon',
@@ -100,10 +105,11 @@ const F20_SOURCE_ANCHORS = {
       'outlanderBallisticsTraining', 'outlanderXenopsychology', 'outlanderRadio',
       'nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
       'greatUnbinding', 'prayer', 'trueLight', 'plague', 'goblinPox',
-      'luckyStar', 'disheartenProphecy', 'wallOfFire:garrison', 'godsPlayDices'],
+      'luckyStar', 'disheartenProphecy', 'wallOfFire:garrison', 'godsPlayDices',
+      'eyeOfHeaven'],
     c: ['level', 'focusMagic', 'lucky', 'darkForce',
       'heavenlyLight',
-      'weapon', 'endurance', 'discipline', 'chaosChannels:armor', 'animated',
+      'weapon', 'trueSight', 'endurance', 'discipline', 'chaosChannels:armor', 'animated',
       'flameBlade', 'mysticSurge', 'lionheart',
       'ironSkin', 'landLinking',
       'holyArmor', 'orihalcon', 'holyWeapon',

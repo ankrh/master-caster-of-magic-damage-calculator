@@ -1,5 +1,110 @@
 # Calculator work history
 
+## 2026-08-26 — F201 (stage 2): the merge's last two normalizations, and what the projection is
+
+True Sight's implication of Illusion Immunity is **not** a normalization: every one of the five
+engines makes it as a block of region `c`, and the row's "no engine block makes this either" is
+falsified. `c:trueSight` is a new all-version step —
+`if U.EnchantmentFlags[EncTrueSight] then U.illusionimmunity := True` at `$0059E810..$0059E86A`
+(between `ApplyMagicWeapons` `$0059E4AD` and Endurance `$0059EC03`), and
+`if (ench & UE_TRUE_SIGHT) bu->Attribs_1 |= USA_IMMUNITY_ILLUSION` inside `BU_Apply_Specials` at
+131:0x8F338 / 160:= and com1:0x8F335. **`b:eyeOfHeaven` is a second new step**, Warlord only:
+`SETENCHANTMENTFLAG(U,EncTrueSight,0,1)` at `UnitCalcPre.CAS:1839-1842`, the last block of region
+`b`, which is the crossing the CoM2 region map records outright — so Eye of Heaven grants the flag
+and `c:trueSight` and `d:trueSight` both read it off the record at their own ranks. `d:trueSight`'s
++5% ranged To Hit stopped being a constant naming both enchantments and became
+`when: u => !!u.trueSight`; the two share one citation, now covering all five versions.
+
+**The inert-Rust drop is deleted, not positioned.** No engine block clears `EncRust` —
+`UnitCalc.CAS:493` gates on `GETENCHANTMENTFLAG(U,EncRust,0)` alone — and the Fantastic exclusion
+the drop stood for is a cast-time *targeting* class, which `rustActive` already carries as
+`d:rust`'s own `when` (`SPEC.md`, *The step model*). Its only reader was the emission gate at
+`combat_abilities.js:1091`, which `stats.js` overrides with that same `when`, so emission becomes a
+superset and the `when` stays the gate. Exhaustive census: no `combat_*.js` line reads the key.
+
+**The thirteen projection keys: eleven are the projection, one is a grant, one is a gate.**
+`unitType`, `baseRace`, `baseFantastic`, `liveRace`, `liveFantastic` and `doomGaze` are record
+projections; `mislead`, `survivalInstinct` and `landLinking` are `x || false` passthroughs whose
+steps carry their own eligibility. **`supernatural` was a grant in disguise and took a position:**
+Destiny's block writes `B.attackflags.supernatural := True` at `$0059A3EB` beside the `B.race` and
+`B.Fantastic` writes, so `base:destiny:supernatural` is a new chain entry adjacent to
+`base:destiny`. It is a separate id rather than a third field of the conversion because
+`targetingIdentity` is exact only while every conversion writes `race` and `fantastic` and nothing
+else — `tools/unit_checks/identity.js` proved that by failing when the field was added, and
+`SPEC.md` now records Destiny beside Chaos Channels and Black Channels under the same deviation.
+
+**Two keys did not move, and each is filed rather than left implicit.** `innerPower`'s
+`eligible ? control : false` is not a projection at all: `c:innerPower` carries no `when`, so the
+suppression **is** the eligibility gate. Gate and published value are one thing and move together
+with F200 stage 2, whose row now carries the ruling and the shape — that unblocks it.
+`supremeLight`'s suppression is the real twin of the Rust drop, with no reader anywhere, and is
+[F207](./BACKLOG.md); it was not folded in rather than move a second published value in one round.
+
+**One ruling was deliberately not made: [F208](./BACKLOG.md).** `mechanical` is a grant in
+disguise too — Rebuild's `SCustomAttribute` 1 at `OLSpell.CAS:279` (permanent, non-hero) and
+`UnitCalcPre.CAS:685` (calculated, hero), both already inside `PROVENANCE[rebuild]`'s spans, both
+with an existing step at exactly that position. It was implemented, measured and **reverted**:
+`base:rebuild` is the `cast` kind and `base:artificer` the `training` kind, F203 ordered training
+first, so positioning it makes a Rebuilt unit stop taking Artificer's package — five cases of
+52440, all Warlord, contradicting the standing preset `rebuildMakesMechanicalForArtificerWarlord`.
+The row carries the three alternatives, the measurement and the engine's own display/stat
+divergence at `DisAbil.CAS:840`. F202 stage 2's Academy item is the same question and is answered
+there, which is why F208 now precedes F202 in the queue.
+
+**Measurement: 49514 of 52440 derivations differ against pristine `HEAD`, none of them a number.**
+Zero cases differ in any field outside `abilities`. Three classes, each accounted for:
+`abilities.supernatural: false to undefined` (49395), the read-back rule F200 set, since the record
+publishes a flag only where it says something; `abilities.rust: false to true` (749), the deleted
+drop; `abilities.trueSight: undefined to true` (146), the flag `b:eyeOfHeaven` now writes as the
+engine does. `abilities.illusionImmunity` does not appear: the positioned write reproduces the
+merge exactly. Exhaustive censuses confirm the only readers of the three keys are `hasAbil` call
+sites, to which absence and `false` are identical.
+
+**The row's premise, re-measured.** The merge is at `stats.js:1477`, not `:1467` — it moves every
+round. Of F202 stage 2's "six reads that move with F201 stage 2", **one moved and it was not on the
+list**: `trueSight`. `flying` (`:344`) and `powerEngine` (`:1451`) stopped feeding the merge when
+stage 1 deleted the `wallCrusher` and `energyCannon` spreads and are now ordinary F202 emission
+gates, each paired with a sibling read inside the record-context construction; the two
+`innerPowerActiveForUnit` reads (`combat_abilities.js:331-332`) belong to F200 stage 2;
+`mechanical`/`rebuild` (`:161-162`) are F208. F202's row was corrected accordingly.
+
+`assertStatTraceOrder` (`steps.js`) rejected a repeated bare `id`; it keys on `phase:id` now, which
+is what the chain and the scope table key on and what `SPEC.md`, *The step model* says an effect
+writing in two regions of one engine needs. `tools/unit_checks/step_traces.js` and
+`tests/f20-source-order.spec.js` disambiguate `c:trueSight` from `d:trueSight` the same way; the
+f20 independent transcription gained `trueSight` in all five region-`c` lists and `eyeOfHeaven` at
+the end of Warlord's `b`, each placed from the address map rather than from the chain.
+
+**A stale name corrected in passing:** `SPEC.md`, *The step model* still cited `base:zombies` beside
+`base:zombies:toBlock` as a surviving qualifier pair; F203 deleted `base:zombies`.
+
+**Both protected texts were corrected again, not deleted.** `SPEC.md`, *Deliberate deviations* now
+says the merge carries **one** grant, names Rebuild's Mechanical as F208 and the two published-value
+normalizations as F200 stage 2 and F207, and records that the Rust drop went rather than took a
+position. The `stats_identity.js` plumbing comment naming `hasWarlordBlade`'s weapon-material
+upgrade is untouched and still true — this stage moved nothing in the Lava Smelter path.
+
+F201 is removed from the backlog: every remainder in the merge is owned by F200 stage 2, F207 or
+F208.
+
+**Compatibility layers met, none removed.** (1) `applyLavaSmelterGrant`'s `legacy` selector arm
+translates the retired `lavaSmelter` select into the five booleans, bridging old presets and share
+payloads; migrating stored state retires it. (2) `applyOutlanderReformGrants` deletes
+`DERIVED_OUTLANDER_STATE_KEYS` and the fifteen reform keys from its input, a guard against stale
+saved state and callers that bypass the prerequisites; versioned persistence retires it. (3) The
+`curseGatedAbilities` to `grantedAbilities` to `combatAbilitiesBase` to `shapedGazeAbilities`
+projection in `stats.js` hands the finished record back to combat resolution as an ability map; it
+retires when combat resolution takes the record. (4) `applyHierophanyAbilityStrip` still clears
+`poisonImmunity` and `illusionImmunity` after the chain although `d:hierophany` has a position and
+its engine counterpart at `UnitCalc.CAS:1563` is inside region `d`, after `d:blazeOfGlory`'s
+`:1505` — so it is positionable. This stage made `illusionImmunity` a record field, which is half of
+what positioning that strip needs; the other half is the rest of the six flags.
+
+**Checks.** `node tools/node_unit_checks.js` 14631/14631, 0 failures; `npm run provenance` 276
+formulas, 0 UNVERIFIED; `tests/f20-source-order.spec.js` 4 passed;
+`tests/version-gating.spec.js` + `tests/identity.spec.js` + `tests/phase-order-f29.spec.js` +
+`tests/result-invariants.spec.js` 17 passed; `npm test` green.
+
 ## 2026-08-26 — F201 (stage 1): the `effectiveAbilities` grants take positions
 
 Nine ability keys, written by eleven conditional spreads in the `effectiveAbilities` merge, are
