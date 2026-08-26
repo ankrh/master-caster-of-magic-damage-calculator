@@ -157,10 +157,11 @@ pre-2026-08-10 narratives remain recoverable from git history.
   takes Bad Moon and Good Moon and not Nature Conjunction — an expectation read off the
   implementation rather than off the blocks. It now asserts the blocks' reading and keeps the
   live-record half (Spell Ward and Soul Linker fire, Leadership does not) unchanged.
-- **Two adjacent defects filed, not folded in ([F194](./BACKLOG.md), [F195](./BACKLOG.md)).** F194:
+- **Two adjacent defects filed, not folded in (F194, since folded into [F198](./BACKLOG.md);
+  [F195](./BACKLOG.md)).** F194:
   the Outlander reform grants under the *same* `NOTSAPIENS` gate still decode a training-time
   `baseUnitType` string, so one script gate is now modelled two ways — it is the hoisted-grant
-  population [F166](./BACKLOG.md) owns, which is the bound's first clause. F195: Spell Ward carries
+  population [F198](./BACKLOG.md) owns, which is the bound's first clause. F195: Spell Ward carries
   a live-Fantastic term its block does not have, which is the F175 class and is blocked on Q31,
   since two of the block's five arms are `IsDeathUnit`/`IsChaosUnit`.
   **Checks.** `node tools/node_unit_checks.js` 14542/14542, 0 failures; `npm run provenance` 272

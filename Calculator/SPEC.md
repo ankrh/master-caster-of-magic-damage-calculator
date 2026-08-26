@@ -774,7 +774,7 @@ the calculator does instead, and why.
   `UnitCalc.CAS` — regions `b` and `d`. So one block's stat write is a positioned step while its
   ability write is not, split by field kind rather than by evidence. The cause is the calculator's,
   not the engine's: `deriveUnitStats` computes its gates as constants ahead of the sequence, and
-  the hoist is what makes some of those constants valid. Scheduled for removal (F166); the option
+  the hoist is what makes some of those constants valid. Scheduled for removal (F201); the option
   is not that both shapes are acceptable.
 - **An identity conversion is its own step even where its engine block also writes a stat.** The
   address map puts Chaos Channels' demon-skin realm write inside the block that increments Defense
