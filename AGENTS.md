@@ -18,6 +18,21 @@ though it were the intended design, and one missing from that file's *Deliberate
 finding a structure the engine does not have, check both before concluding it was chosen
 deliberately.
 
+## Compatibility layers are never silent
+
+A compatibility layer is any code that exists to keep an older or foreign shape working rather than
+to model an engine: a legacy token translated at a boundary, a fallback for a field the current code
+requires, a shim for a caller that has not migrated, a projection kept beside the real record.
+
+**Surface every one you encounter, every time, whether or not you added it.** Name it in the report
+for the round you met it in, say what it is bridging and what would retire it. This holds when the
+layer is load-bearing, when it is someone else's, and when it is unrelated to the task — meeting one
+is enough. Silence lets a temporary bridge age into apparent design, which is the same defect as a
+deviation written into `Calculator/SPEC.md` as though it were intended.
+
+Do not remove one as a side errand: report it, and file it unless the user asks for its removal in
+the same round.
+
 ## Approval gate for checks and reviews
 
 Requests to **check, review, inspect, investigate, diagnose, or verify** are read-only.
