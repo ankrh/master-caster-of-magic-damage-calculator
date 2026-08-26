@@ -529,31 +529,33 @@ const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // no other supported source, so outside Warlord it must not confer the Illusion Immunity that
 // strips Mind Storm and Vertigo here.
 // PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
-function immunityCurseGatingStep(version) {
+// The ten curse flags are fields of the sequence record, and this is the step that clears them —
+// `base:immunityCurseGating`, the head of every chain. It reads the curse flags positionally, like
+// any other step, and takes its **immunity** half from `finishedImmunities`, the set the
+// recalculation leaves. That split is the ruling F199 implements: the step is artificial, so no
+// source fixes its position relative to a grant that writes an immunity, and reading the finished
+// set makes its answer independent of where such a grant lands (F164, and F166's stage (ii)).
+// `finishedImmunities` is a declared cross-boundary read — the shape F163 gave `targetingIdentity`
+// — and `tools/unit_checks/identity_record_choice.js` halts on an occurrence no row there claims.
+function immunityCurseGatingStep(version, finishedImmunities) {
   return statStep({ id: 'immunityCurseGating', sourceLabel: 'Immunity', phase: 'base',
     writes: [...MAGIC_IMMUNITY_GATED_CURSES],
-    when: u => immunityStrippedCurses(u, version).length > 0,
+    when: u => immunityStrippedCurses(u, version, finishedImmunities).length > 0,
     apply: (u) => {
-      for (const key of immunityStrippedCurses(u, version)) delete u[key];
+      for (const key of immunityStrippedCurses(u, version, finishedImmunities)) u[key] = false;
     } });
 }
 
 // One predicate for both the gate and the write, so the step cannot fire without stripping or
 // strip a key it did not declare. Illusion Immunity reaches only its own two curses.
-function immunityStrippedCurses(abilities, version) {
-  const eyeOfHeaven = !!(version && version.startsWith('com2_warlord') && abilities.eyeOfHeaven);
-  const illusionImmune = !!(abilities.illusionImmunity || abilities.trueSight || eyeOfHeaven);
+// `record` supplies the curse flags at the step's own position; `immunities` is the finished set.
+function immunityStrippedCurses(record, version, immunities) {
+  const eyeOfHeaven = !!(version && version.startsWith('com2_warlord') && immunities.eyeOfHeaven);
+  const illusionImmune = !!(immunities.illusionImmunity || immunities.trueSight || eyeOfHeaven);
   const blocked = new Set();
-  if (abilities.magicImmunity) for (const key of MAGIC_IMMUNITY_GATED_CURSES) blocked.add(key);
+  if (immunities.magicImmunity) for (const key of MAGIC_IMMUNITY_GATED_CURSES) blocked.add(key);
   if (illusionImmune) for (const key of ILLUSION_IMMUNITY_GATED_CURSES) blocked.add(key);
-  return [...blocked].filter(key => abilities[key]);
-}
-
-function applyMagicImmunityCurseGating(abilities, version) {
-  const steps = filterStepsToVersionScope([immunityCurseGatingStep(version)], version);
-  const gated = { ...abilities };
-  runStatSteps(orderStatStepsBySource(steps, statChain(version)), gated, { version });
-  return gated;
+  return [...blocked].filter(key => record[key]);
 }
 
 // Divine Protection (Warlord, Life unit enchantment): grants Lucky and Death Immunity.

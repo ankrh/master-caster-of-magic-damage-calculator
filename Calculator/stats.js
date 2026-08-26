@@ -95,7 +95,10 @@ function deriveUnitStats(input) {
     version),
     version, permanentFantastic, isHero);
   const outlanderReform = outlanderDerivation.reform;
-  const abilities = applyMagicImmunityCurseGating(outlanderDerivation.abilities, version);
+  // The curse strip is no longer folded in here: the ten flags it clears are fields of the
+  // sequence record, and `base:immunityCurseGating` clears them at the head of the chain like any
+  // other write (F199). So this is the granted ability set, curses and all.
+  const abilities = outlanderDerivation.abilities;
   // The identity conversions are steps of the one sequence, spliced in below and ordered by the
   // execution chain like every other write, so `race` and `fantastic` are fields of the running
   // record and a gate reads whatever stands in them at its own position (F163). There is no
@@ -945,8 +948,9 @@ function deriveUnitStats(input) {
   // The three branches are mutually exclusive and fall in different phases: ranged and
   // thrown are binary (phase c), while the Warlord breath penalty is phase d. They are
   // kept as separate terms so each lands in the right accumulator.
-  const weaknessActive = !!(abilities && abilities.weakness);
-  const weaknessPenalty = weaknessActive ? (isCoMVersion ? 3 : 2) : 0;
+  // The magnitude alone. Whether Weakness lands is `u.weakness` at each of the two steps' own
+  // positions, which is what the curse strip at the head of the chain has already answered.
+  const weaknessPenalty = isCoMVersion ? 3 : 2;
 
   // Holy Weapon: +10% To Hit on melee, missile, and boulder attacks. Also applies to thrown
   // in all versions except MoM 1.31 (bug). Does NOT affect magic ranged, fire/lightning
@@ -1049,7 +1053,9 @@ function deriveUnitStats(input) {
   // ranged, thrown and breath. Darkness lands after the halving, as it does for the ranged
   // stat below. MoM's Warp Attack touches melee only. CoM2/Warlord's separate gaze fields
   // are untouched by all three compiled Warp blocks (CoM2 analysis, *The Warp blocks*).
-  const gazeWarpHalves = isCoM1 && !!(abilities && abilities.warpAttack);
+  // CoM 1 only, and read inside `c:warpAttack`'s own `apply`, so whether Warp Attack lands is
+  // already settled by that step's gate: this is the branch within it, not a second copy of it.
+  const gazeWarpHalves = isCoM1;
 
   // Psycho Force and Pneuma Field are the two Magitek effects that read Resistance rather than
   // writing it. Both are region `d` — UnitCalc.CAS:1413-1417 and :1419-1425 — so their gates are
@@ -1077,8 +1083,11 @@ function deriveUnitStats(input) {
   // the record is positional, which is why the position is answerable without Q31.
   const unitIsChaos = u => unitTypeAt(u) === 'fantastic_chaos';
   const hurricaneActive = !!input.hurricane;
-  const vertigoActive = !!(abilities && abilities.vertigo)
-    && !(abilities && (abilities.illusionImmunity || abilities.magicImmunity));
+  // The immunity half used to be restated here beside the flag. It is not a term of the block —
+  // `Units.RecalculateUnits.pas:2341`-style curse blocks test their flag alone — and it was a
+  // second home for what `base:immunityCurseGating` already does, whose Illusion arm is the wider
+  // of the two (it also reaches True Sight and Eye of Heaven). The flag at this step's own
+  // position is the whole gate (F199).
   const vertigoHitPenalty = isCoM2 ? 0.25 : (isCoMVersion ? 0.3 : 0.2);
   const vertigoBlockPenalty = isCoM2 ? 0.07 : (isCoMVersion ? 0.1 : 0);
 
@@ -1502,6 +1511,18 @@ function deriveUnitStats(input) {
     }) ? abilities.supremeLight : false,
     survivalInstinct: abilities.survivalInstinct || false,
     landLinking: abilities.landLinking || false,
+  };
+  // The immunity set the recalculation leaves, and the only value `base:immunityCurseGating` reads
+  // that is not a field of the record at its own position. The strip is artificial — no engine
+  // makes the write (`SPEC.md`, *Deliberate deviations*) — so no source fixes its position
+  // relative to a grant that writes one of these four, and taking the finished set is what makes
+  // its answer independent of where such a grant lands (F199). Declared as a cross-boundary read
+  // in `tools/unit_checks/identity_record_choice.js`, which halts on an undeclared occurrence.
+  const finishedImmunities = {
+    magicImmunity: !!effectiveAbilities.magicImmunity,
+    illusionImmunity: !!effectiveAbilities.illusionImmunity,
+    trueSight: !!effectiveAbilities.trueSight,
+    eyeOfHeaven: !!effectiveAbilities.eyeOfHeaven,
   };
   // The ranged subformula remains an internal part of Rust's one atomic engine write; it is not
   // inserted into the execution list as a second step.
@@ -1939,9 +1960,10 @@ function deriveUnitStats(input) {
     survivalInstinctToBlkBonus, trueSightRangedToHitBonus, unitIsChaos, unitTypeAt,
     finishedUnitType,
     uphillBattleActive, vampirismActive,
-    version, vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warlordBerserk,
+    version, vertigoBlockPenalty, vertigoHitPenalty, warlordBerserk,
     warlordCombatFlameBlade, warlordEternalNightActive, warlordTrueLightStep,
-    warpRealityActive, weaknessActive, weaponStatSteps, wofDefenderBonusActive,
+    warpRealityActive, weaponStatSteps, wofDefenderBonusActive,
+    finishedImmunities,
   });
   // The raw assembly intentionally keeps the implementation fragments close to their formulas.
   // F20 performs one explicit manifest walk here so the executed list is source ordered, every
@@ -2045,6 +2067,11 @@ function deriveUnitStats(input) {
   const statRecord = { res: 0, def: 0, atk: 0, hp: 0, gaze: 0, doomGaze: 0,
     toHit: 30, toHitMelee: 0, toBlk: 30, energyCannonToHit: null,
     lifeSteal: existingLifeSteal,
+    // The ten curse flags an immunity can block are record fields, so the artificial strip is a
+    // positioned write and every curse gate is an ordinary read at its own step (F199). Seeded
+    // from the effective ability set, which is the state the strip finds at the head of the chain.
+    ...Object.fromEntries(MAGIC_IMMUNITY_GATED_CURSES
+      .map(key => [key, !!effectiveAbilities[key]])),
     // The calculated identity is part of the record, seeded from the permanent one. Every
     // conversion is a positioned write to these two fields (F163).
     race: identity.baseRace, fantastic: identity.baseFantastic };
@@ -2105,9 +2132,14 @@ function deriveUnitStats(input) {
   // on `PROVENANCE[psychoForce]` and `PROVENANCE[pneumaField]` (`stats_sequence.js`) — so their
   // reads of Resistance happen where the engine takes them. Warp Resist having zeroed Resistance
   // is supplied by construction, since `warpResist` is a step in `c`.
+  // The curse flags combat resolution reads — Black Sleep, Temporal Twist, Vertigo and Mind Storm
+  // among them — are record fields now, so the published set takes them from the record the
+  // sequence leaves rather than from the pre-strip ability map (F199).
+  const curseGatedAbilities = { ...effectiveAbilities,
+    ...Object.fromEntries(MAGIC_IMMUNITY_GATED_CURSES.map(key => [key, statUnit[key]])) };
   const pneumaAbilities = pneumaFieldActive
-    ? { ...effectiveAbilities, lifeSteal: statUnit.lifeSteal }
-    : effectiveAbilities;
+    ? { ...curseGatedAbilities, lifeSteal: statUnit.lifeSteal }
+    : curseGatedAbilities;
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...pneumaAbilities, negateFirstStrike: true }
     : pneumaAbilities;
@@ -2212,7 +2244,7 @@ function deriveUnitStats(input) {
   // Great Unbinding's persistent common chance writes are already on the ordered record, on
   // `PROVENANCE[greatUnbinding]` (`stats_sequence.js`).
 
-  const displayDef = (vertigoActive && !isCoMVersion) ? Math.max(0, finalDef - 1) : finalDef;
+  const displayDef = (!!statUnit.vertigo && !isCoMVersion) ? Math.max(0, finalDef - 1) : finalDef;
 
   // Chance trace. To Hit and To Block already execute on the authoritative ordered `statSteps`
   // record. Project those recorded deltas into a percentage-point resolution trace so every

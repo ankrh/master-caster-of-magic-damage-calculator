@@ -13,6 +13,60 @@ pre-2026-08-10 narratives remain recoverable from git history.
   to [F201](./BACKLOG.md), the stage that retires the deviation. **F194 was folded into F198**
   rather than kept separate: its correction sits inside the very expressions stage (i) rewrites.
 
+- **F199: the immunity curse strip is a positioned step of the one sequence, and it reads the
+  finished immunity set as a declared cross-boundary value.** **Stage (ii) was larger than its row
+  said and is split**: the row asked for the ability fields on the record *and* the declared
+  finished-immunity read. This is the second half plus the ten fields it needs; the remaining 27
+  grantable-ability reads are [F202](./BACKLOG.md), measured rather than estimated —
+  `stats.js` 16, `stats_identity.js` 6, `combat_abilities.js` 4, `stats_sequence.js` 1.
+- **What changed.** `applyMagicImmunityCurseGating` is gone. The ten flags in
+  `MAGIC_IMMUNITY_GATED_CURSES` are fields of `statRecord`, seeded from the effective ability set,
+  and `base:immunityCurseGating` — already the head of every chain in `stats_manifests.js` — is now
+  an ordinary member of `baseStatSteps` that clears them there. Ten gates became positional reads:
+  the two `weakness` steps, `vertigo`, `warpAttack`, `warpDefense`, `warpResist`, `shatter`,
+  `nausea` and the `mindStorm` ability step, whose *emission* stays a superset of the ability set
+  with the record flag as its gate (`SPEC.md`, *Version scope*). Combat resolution takes the ten
+  from the record the sequence leaves, beside `lifeSteal`.
+- **The immunity half is the part that needed the ruling, and it is the only value the step reads
+  across the boundary.** The strip is artificial — no engine makes the write (`SPEC.md`,
+  *Deliberate deviations*) — so no source fixes its position relative to a grant that writes Magic
+  Immunity, Illusion Immunity, True Sight or Eye of Heaven. It therefore takes `finishedImmunities`,
+  the set the recalculation leaves, which makes its answer independent of where such a grant lands
+  once [F200](./BACKLOG.md) positions them. That is a declared cross-boundary read in the shape
+  [F163](./HISTORY.md) gave `targetingIdentity`: `tools/unit_checks/identity_record_choice.js` now
+  carries a fourth token and halts on an occurrence no row there claims.
+- **Two second homes for one rule are gone with it.** `vertigoActive` restated
+  `!(illusionImmunity || magicImmunity)` beside the flag — not a term of any curse block, and the
+  narrower of the two, since the strip's Illusion arm also reaches True Sight and Eye of Heaven.
+  `weaknessActive` collapsed into the magnitude `weaknessPenalty`, and `gazeWarpHalves` into the
+  version test it always was, both of them re-asking inside a step the question that step's own
+  gate had already answered.
+- **Measurement: 0 substantive differences of 52440** (`tools/derivation_equivalence.js` against a
+  pristine `HEAD`). Every case differs in exactly one respect and it is not a number: the ten curse
+  keys are now always present as booleans where the strip used to `delete` them, so a blocked curse
+  reads `false` instead of being absent. Truthiness is identical in all 52440.
+- **The two hand-probes are the real check, because the corpus is blind to the grant/strip
+  combination, and both are byte-identical before and after.** Warlord High Men **Paladins** with
+  Sancta Basilica + Weakness keeps melee **6** (Weakness alone takes it to 3, so the strip is live),
+  and a Warlord **Marionette Channeler** with three Life books + Mind Storm keeps atk 5, def 5 and
+  res 10 (one Life book instead of three lets Mind Storm land for atk 2, def 0, res 5). **Both now
+  have presets**, which is what stops the corpus being blind:
+  `sanctaBasilicaMagicImmunityStripsWeaknessWarlord` (6.0, against 3.0 without the grant) and
+  `marionetteIllusionImmunityStripsMindStormWarlord` (2.0, against 0.8 without the Life books).
+  Every fixture in the *Magic Immunity curse gating* group before these stated its immunity as an
+  input, so none of them said what happens when the immunity is granted during the derivation.
+- **One harness block re-aimed at the real path.** `tools/unit_checks/version_scope.js` section 4a
+  called `applyMagicImmunityCurseGating` directly and asserted `hasOwnProperty`; it now drives
+  `deriveUnitStats` and reads the published set, which is the only path a page can take. The step
+  leaves that file's sweep-exception list with it: the sweep composes it like any other write now,
+  and the list's exact-equality assertion is what proves that rather than a claim here.
+- The `SPEC.md`, *Deliberate deviations* sentence "The strip is `base:immunityCurseGating`, an
+  artificial step at the head of every chain, so the assumption is a positioned write like any
+  other rather than a transform outside the sequence" was written ahead of the code and is now
+  literally true; no edit was needed.
+  **Checks.** `node tools/node_unit_checks.js` 14557/14557, 0 failures; `npm run provenance` 272
+  formulas, 0 UNVERIFIED; `npm test` green.
+
 - **F198 (stage (i)): the six invented Outlander labels are gone, and each is now the `when` of the
   step the chain already had.** `EncBattleArmor` and `EncMagitek` occur in none of the 38 `.CAS`
   files, and `battleArmor`, `magitekEngine`, `outlanderBallisticsTraining`,

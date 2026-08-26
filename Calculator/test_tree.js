@@ -235,6 +235,8 @@ const TEST_TREE = [
           'illusionImmunityGatesVertigo',
           'magicImmunityGatesNausea',
           'magicImmunityGatesTemporalTwist',
+          'sanctaBasilicaMagicImmunityStripsWeaknessWarlord',
+          'marionetteIllusionImmunityStripsMindStormWarlord',
           'blackPrayerBypassesMagicImmunity',
         ],
       },

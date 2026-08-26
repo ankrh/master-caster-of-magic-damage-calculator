@@ -11,9 +11,10 @@
 //
 // Two of its jobs outlive it, and both are here rather than in a diagnostic outside the suites.
 //
-// (1) **The reads that are still taken outside a step must each be declared.** Three named values
-//     carry the calculated identity across the sequence boundary, and every one of them is a
-//     deliberate exception with a citation. An occurrence of one that no row below claims halts,
+// (1) **The reads that are still taken outside a step must each be declared.** Four named values
+//     carry a calculated fact across the sequence boundary — three the calculated identity, one
+//     the finished immunity set — and every one of them is a deliberate exception with a
+//     citation. An occurrence of one that no row below claims halts,
 //     which is the property the census's channel scan gave and the reason a new unpositioned read
 //     cannot enter the code unnoticed (`SPEC.md`, *Out-of-range values stop the run*).
 //
@@ -81,6 +82,21 @@ const CROSS_BOUNDARY_READS = [
       'Calculator/stats.js#identityAtRank',
       'Calculator/stats.js#modernEncMagicIndependentOfMaterial',
       'Calculator/stats.js#unitIsChaosAtWarpReality',
+    ],
+  },
+  {
+    token: 'finishedImmunities',
+    why: 'The immunity set the recalculation leaves. `base:immunityCurseGating` is an artificial '
+      + 'step — no engine removes a curse flag it already carries (`SPEC.md`, *Deliberate '
+      + 'deviations*) — so no source fixes its position relative to a grant that writes one of '
+      + 'these four immunities, and taking the finished set is what makes its answer independent '
+      + 'of where such a grant lands (F164, F199). The curse flags it clears are ordinary record '
+      + 'fields read at its own position; only the immunity half crosses the boundary.',
+    sites: [
+      'Calculator/stats.js#finishedImmunities',   // the declaration
+      'Calculator/stats.js#rawStatSteps',         // handed to the sequence builder
+      'Calculator/stats_sequence.js#baseStatSteps',
+      'Calculator/stats_identity.js#immunityCurseGatingStep',
     ],
   },
 ];

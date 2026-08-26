@@ -1100,11 +1100,15 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // -5 defense, -5 resistance. CoM2/Warlord: -3 melee, -5 conventional ranged and
   // Thrown only, -5 defense, -5 resistance; both Breath fields and all gazes are separate.
   // Phase c: UnitCalcPre.CAS:1221-1223 only mirrors the combat flag to overland.
+  // Mind Storm is one of the ten curse flags `base:immunityCurseGating` can clear, so emission
+  // reads the ability set — a superset — and the flag on the record at this step's own position
+  // is the gate (`SPEC.md`, *Version scope*; F199).
   if (hasAbil(abilities, 'mindStorm')) {
     // PROVENANCE[mindStorm]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:5aef6d0a81b854a2f8a97a63 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:b93fe4b2bed30f6662144a8f
     const mindStormMelee = version && version.startsWith('com') ? -3 : -5;
     abilityStep('mindStorm', 'c', {
       writes: ['atk', 'def', 'res', ...(isModern ? attackWrites : rtbWrites)],
+      when: u => !!u.mindStorm,
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', mindStormMelee); u.def -= 5; u.res -= 5;
         if (isModern) {

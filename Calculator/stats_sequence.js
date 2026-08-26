@@ -43,9 +43,13 @@ function baseStatSteps(ctx) {
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount, pillarOfFaith, pillarOfFaithCount, poolOfRepentance,
     rangedTypeFields, sanctaBasilica, secondaryHitFields, strengthFields,
-    survivalInstinctToBlkBonus, thrownTypeFields,
+    survivalInstinctToBlkBonus, thrownTypeFields, version, finishedImmunities,
   } = ctx;
   return [
+    // The head of every chain, and the one step no engine makes: the curse flags an immunity
+    // blocks are cleared before anything reads them. Its citation and the reason it may read the
+    // finished immunity set are at `immunityCurseGatingStep` (`stats_identity.js`).
+    immunityCurseGatingStep(version, finishedImmunities),
     // PROVENANCE[stat:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:bbaf5fb67bb1734c03725bf1 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e0f87a5a92f98f34754862e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:37555b7dcbc4b5de6fb91420
     statStep({ id: 'stat:base', phase: 'base',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'gaze', 'doomGaze',
@@ -441,7 +445,7 @@ function precalcScriptStatSteps(ctx) {
     // PROVENANCE[nausea]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:c7ec21b771edb6cb9bd17645
     statStep({ id: 'nausea', sourceId: 'nausea', sourceLabel: 'Conjuring Pact nausea',
       phase: 'b', writes: ['toHit', 'toBlk'],
-      when: u => isWarlord && !!abilities.nausea && isNormalUnitType(unitTypeAt(u)),
+      when: u => isWarlord && !!u.nausea && isNormalUnitType(unitTypeAt(u)),
       apply: u => { u.toHit -= 10; u.toBlk -= 10; } }),
     // PROVENANCE[uphillBattle]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:233a5a25490ae7a59c17106e
     statStep({ id: 'uphillBattle', sourceId: 'uphillBattle', sourceLabel: 'Uphill Battle',
@@ -594,7 +598,7 @@ function magicCalcBinaryStatSteps(ctx) {
     rangedTypeFields, realmWardActive, secondaryHitTargets, secondaryHitFields, spellWardActive,
     recordContext, secondaryHitFieldsFor, strengthFields, supremeLightEligibleAt,
     finishedUnitType, thrownTypeFields, unitIsChaos, version,
-    vertigoActive, vertigoBlockPenalty, vertigoHitPenalty, warpRealityActive, weaknessBinaryHits,
+    vertigoBlockPenalty, vertigoHitPenalty, warpRealityActive, weaknessBinaryHits,
     weaknessPenalty, weaponStatSteps,
   } = ctx;
   // A gated secondary To Hit write is decided by the channel that reads the modifier — the
@@ -1017,7 +1021,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // chooses its own branch and carries the same magnitude.
     // PROVENANCE[weakness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:51bb7b42de5195f9edf69a86 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:e4cfc8d10fb6c6beee42bb6f | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:a64ed4008bd0ec13a817f841
     statStep({ id: 'weakness', phase: 'c', writes: ['atk', ...strengthFields],
-      when: () => !!(abilities && abilities.weakness),
+      when: u => !!u.weakness,
       apply: (u, runCtx) => {
         if (hasMeleeAttackAt(runCtx)) u.atk += version.startsWith('com') ? -3 : -2;
         for (const c of channels) {
@@ -1196,7 +1200,7 @@ function magicCalcBinaryStatSteps(ctx) {
       apply: u => { u.toHit -= 20; } }),
     // PROVENANCE[vertigo]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:988ef64cd77214c23cb77397 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:a8adaeabe8e52ff5c76f42d2
     statStep({ id: 'vertigo', sourceId: 'vertigo', sourceLabel: 'Vertigo',
-      phase: 'c', writes: ['toHit', 'toBlk'], when: () => vertigoActive,
+      phase: 'c', writes: ['toHit', 'toBlk'], when: u => !!u.vertigo,
       apply: u => {
         u.toHit -= vertigoHitPenalty * 100;
         u.toBlk -= vertigoBlockPenalty * 100;
@@ -1238,7 +1242,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // PROVENANCE[warpAttack]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:94df6310cdbc37d8f35f6897 | Reference docs/DOS reconstructed/unitcalc.c@span:10:7afd072fad52d77073116162 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:feb1881464c0e2f5a90f9f97
     statStep({ id: 'warpAttack', phase: 'c',
       writes: ['atk', ...strengthFields, 'gaze', 'doomGaze'],
-      when: () => !!(abilities && abilities.warpAttack),
+      when: u => !!u.warpAttack,
       apply: u => {
         u.atk = isCoM2 ? Math.trunc(u.atk / 2) : Math.floor(u.atk / 2);
         if (isCoMVersion) {
@@ -1257,14 +1261,14 @@ function magicCalcBinaryStatSteps(ctx) {
       } }),
     // PROVENANCE[warpDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:20:4ade353524404839658c2a92 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:f4bf3085892f0c76764a91bc
     statStep({ id: 'warpDefense', phase: 'c', writes: ['def'],
-      when: () => !!(abilities && abilities.warpDefense),
+      when: u => !!u.warpDefense,
       apply: u => {
         u.def = isCoM1 ? Math.trunc(u.def / 3)
           : Math.floor(u.def / (isCoMVersion ? 3 : 2));
       } }),
     // PROVENANCE[warpResist]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:4:af84302cc4211baa873b72e0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:a15539b1a7a69de6c7548391
     statStep({ id: 'warpResist', phase: 'c', writes: ['res'],
-      when: () => !!(abilities && abilities.warpResist), apply: u => { u.res = 0; } }),
+      when: u => !!u.warpResist, apply: u => { u.res = 0; } }),
     // Shatter reduces every attack strength to 1. The unit-type expression below is **not** a term
     // of this block: every engine's recalculation block tests the flag alone —
     // `if U.EnchantmentFlags[EncShatter] then` (Units.RecalculateUnits.pas:2341) and
@@ -1282,7 +1286,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // F188).
     // PROVENANCE[shatter]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:23:9d5c1cf547d632005ddeebe5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:b34c35cb9bf68bf3402e6d27
     statStep({ id: 'shatter', phase: 'c', writes: ['atk', ...strengthFields],
-      when: () => !!(abilities && abilities.shatter)
+      when: u => !!u.shatter
         && (isWarlord || isNormalUnitType(finishedUnitType) || finishedUnitType === 'hero'),
       apply: u => {
         if (u.atk > 0) u.atk = 1;
@@ -1347,7 +1351,7 @@ function magicCalcScriptStatSteps(ctx) {
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, trueSightRangedToHitBonus, vampirismActive,
     warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
-    weaknessActive, weaknessBinaryHits, weaknessPenalty,
+    weaknessBinaryHits, weaknessPenalty,
   } = ctx;
   const vampirismSources = channels.filter(c => c.slotKey !== 'shared').length > 0
     ? channels.filter(c => c.slotKey !== 'shared')
@@ -1360,7 +1364,7 @@ function magicCalcScriptStatSteps(ctx) {
     // the first represented phase-d chance writer.
     ...abilByPhase.d.filter(step => step.id === 'mechanicalExpert'),
     statStep({ id: 'weakness', phase: 'd', writes: strengthFields,
-      when: () => weaknessActive,
+      when: u => !!u.weakness,
       apply: u => {
         // Warlord's script half, which reaches the two Breath fields the compiled block leaves
         // alone — and only where that block made no write to this slot.

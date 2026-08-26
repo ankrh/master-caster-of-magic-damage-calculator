@@ -366,29 +366,25 @@ function runCanonicalVersionScopeChecks(ctx) {
   try { ctx.effectiveResistance(dosTarget, 'mom_1.31', 'chaos'); } catch (error) { dosThrew = true; }
   assert(dosThrew, 'Calling GetEffectiveResistance with a DOS version is caught by the call-site check');
 
-  // --- 4a. the immunity curse strip, which the sweep cannot see ---
-  // It writes the ability set rather than the unit record, so it reaches neither the stat ledger
-  // nor the identity trace and is listed as an exception in section 6. Checked here instead: the
-  // step composes through every version's chain (an absent chain entry would throw), and it
-  // strips exactly the curses the immunity present blocks. Eye of Heaven is Warlord-only, which
-  // is the one arm that must differ by version.
-  const gateCurses = evalInContext(ctx, 'applyMagicImmunityCurseGating');
+  // --- 4a. the immunity curse strip, per version ---
+  // Since F199 it is `base:immunityCurseGating`, an ordinary step at the head of every chain
+  // writing ten record fields, so the sweep in section 6 reaches it like any other write. What
+  // the sweep cannot say is *which* curses each immunity blocks, so that is checked here — through
+  // `deriveUnitStats`, which is the only path a page can take. Eye of Heaven is Warlord-only,
+  // which is the one arm that must differ by version.
+  const curseGated = (abilities, version) =>
+    ctx.deriveUnitStats(baseUnitInput({ version, abilities })).abilities;
   for (const version of engineVersions) {
-    assertEqual(Object.prototype.hasOwnProperty.call(
-      gateCurses({ magicImmunity: true, vertigo: true, weakness: true }, version), 'vertigo'),
+    assertEqual(!!curseGated({ magicImmunity: true, vertigo: true, weakness: true }, version).vertigo,
       false, `Magic Immunity strips Vertigo in ${version}`);
-    assertEqual(Object.prototype.hasOwnProperty.call(
-      gateCurses({ magicImmunity: true, blackPrayer: true }, version), 'blackPrayer'),
+    assertEqual(!!curseGated({ magicImmunity: true, blackPrayer: true }, version).blackPrayer,
       true, `Magic Immunity leaves the bypass list alone in ${version}`);
-    assertEqual(Object.prototype.hasOwnProperty.call(
-      gateCurses({ trueSight: true, mindStorm: true, weakness: true }, version), 'mindStorm'),
+    assertEqual(!!curseGated({ trueSight: true, mindStorm: true, weakness: true }, version).mindStorm,
       false, `Illusion Immunity strips Mind Storm in ${version}`);
-    assertEqual(Object.prototype.hasOwnProperty.call(
-      gateCurses({ trueSight: true, mindStorm: true, weakness: true }, version), 'weakness'),
+    assertEqual(!!curseGated({ trueSight: true, mindStorm: true, weakness: true }, version).weakness,
       true, `Illusion Immunity reaches only its own two curses in ${version}`);
     const warlord = version === 'com2_warlord_1.5.12.7';
-    assertEqual(Object.prototype.hasOwnProperty.call(
-      gateCurses({ eyeOfHeaven: true, vertigo: true }, version), 'vertigo'),
+    assertEqual(!!curseGated({ eyeOfHeaven: true, vertigo: true }, version).vertigo,
       !warlord, `Eye of Heaven confers Illusion Immunity only in Warlord (${version})`);
   }
 
@@ -531,9 +527,6 @@ function runCanonicalVersionScopeChecks(ctx) {
     'base:altarOfTheSun:figures', 'base:alumniOfAcademy:figures',
     // A write behind a prerequisite the sweep does not build: the Outlander armorclad reform.
     'b:battleArmor',
-    // The immunity curse strip runs over the ability set, not the unit record, so it appears in
-    // neither the stat ledger nor the identity trace. Section 4a below checks it directly.
-    'base:immunityCurseGating',
   ];
   const unreachedByTheSweep = [...new Set(unreachedByTheSweepEntries)].sort();
   const orphans = scopeKeys.filter(key => !visitedKeys.has(key)).sort();
