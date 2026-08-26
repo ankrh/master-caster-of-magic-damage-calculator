@@ -992,11 +992,11 @@ definePresets({
     b: { def:6, toBlkMod:70, hp:10, abilities: { rebuild: true } },
     expected: { dmgToA: 0.600, dmgToB: 0 },
   },
-  rebuildMakesMechanicalForArtificerWarlord: {
-    desc: 'Rebuild + Artificer (Warlord): Rebuild makes the unit mechanical, so Artificer also applies. atk 1 + Rebuild(+2) + Artificer(+1) = 4, 100% hit vs 0 def → 4 dmg',
+  rebuildMechanicalTooLateForArtificerWarlord: {
+    desc: 'Exclusion the engine makes, by rank: Rebuild writes Mechanical (`SCustomAttribute` 1) permanently at OLSpell.CAS:279 when the spell is cast, but the Artificer retort reads that same permanent flag at CreateUnit.CAS:38, which runs once when the city builds the unit — and Rebuild is cast on a unit that already exists, so the retort never sees it. atk 1 + Rebuild(+2) = 3, 100% hit vs 0 def → 3 dmg; the retort\'s +1 melee and its Magic Weapons grant both stay away (they would give 4). Later readers do see the write: `mechanicalExpertRebuildMakesMechanicalWarlord` is the same unit taking Mechanical Expert\'s +20% To Hit from region d. The engine displays the retort\'s ability lines on a Rebuilt unit anyway — DisAbil.CAS:840 and :846 recompute them from the base record every draw — which is display and AI only.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { rebuild: true, artificer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
   },
 });

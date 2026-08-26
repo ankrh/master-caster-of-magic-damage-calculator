@@ -1,5 +1,58 @@
 # Calculator work history
 
+## 2026-08-26 — F208: a training-time gate does not see a cast-time permanent write
+
+**The user ruled.** Rebuild's Mechanical grant was the last write left in the `effectiveAbilities`
+merge, and it was left there because positioning it moves numbers. The ruling was option (a) of the
+row: **position it and accept the correction.** `SETSTAT(TU,SCustomAttribute,1,1)`
+(`OLSpell.CAS:279`, permanent, non-hero) and `SETSTAT(U,SCustomAttribute,0,1)`
+(`UnitCalcPre.CAS:685`, calculated, hero) are fields of `base:rebuild` / `b:rebuild` now —
+`SCustomAttribute` 1 is Mechanical, `MASTER.CAS:1132`. Both lines already stood inside
+`PROVENANCE[rebuild]`'s reviewed spans, re-resolved here as `OLSpell.CAS:273-285` and
+`UnitCalcPre.CAS:683-690`, so **no new anchor was needed**. `mechanical` joins
+`POSITIONED_GRANT_WRITES` beside its existing `POSITIONED_GRANT_FIELDS` entry, and the merge now
+carries no grant at all.
+
+**What the ruling says, and where it is recorded.** A training-time gate reads the permanent record
+as the city left it, so it cannot see a write the spell made later on a unit that already existed.
+Artificer's `GetStat(U,SCustomAttribute,1)=1` (`CreateUnit.CAS:38`) and Academy's `<>1` (`:465`)
+therefore miss Rebuild's flag, while `d:mechanicalExpert`, four regions later, takes it. That is a
+fact about the model rather than about Rebuild, so it is in `SPEC.md`, *Phases*, beside F203's
+five-kind ordering: "applied at the head of the chain" means applied for the steps standing after
+the write, not for every step alike.
+
+**Why the opposite intuition is common.** `DisAbil.CAS:840` and `:846` recompute the "Artificer
+Upgrade" and "Magical Weapon" **ability lines** from the base record every time the unit is drawn,
+so a Rebuilt unit under Artificer *displays* both although the stat write never ran again.
+`DisAbil.CAS` is display and AI only (`Calculator/CLAUDE.md`, *Step authoring*).
+
+**Measurement: 5 of 52440 derivations move a number, all `com2_warlord_1.5.12.7`** — the count the
+row filed, re-measured against pristine `HEAD` after three intervening commits and unchanged. One
+direct Artificer×Rebuild control draw in three identity variants, and two Marionette Wanderers
+(`heroType:48`) whose strayed branch grants Rebuild. Each loses +1 melee, +1 Defense, +2 Resistance;
+the two Wanderers also lose +1 ranged and the Magic Weapons upgrade (`weapon: magic -> normal`,
++10% To Hit), which the direct draw's adamantium gear was already outranking and whose ranged slot
+it had none of. The other 49649 differing cases are one field, `abilities.mechanical: false ->
+undefined`: the published key is the read-back rule's now, and a key the ability set never carried
+stays absent rather than being published as `false`. Every case that published `true` still does.
+
+**The preset was rewritten, which is not a weakened assertion.**
+`rebuildMakesMechanicalForArtificerWarlord` asserted the behavior the user has now ruled wrong; it is
+`rebuildMechanicalTooLateForArtificerWarlord`, expecting 3.000 where it expected 4.000, and its
+`desc` states the rank exclusion and the display divergence. It was run against pre-change code and
+failed there — `B=4 (expected 3)`, the only failure of 1121 — so it is still a regression test.
+`mechanicalExpertRebuildMakesMechanicalWarlord` is the positive control that the write does land.
+
+**F202's Academy item is settled here, and struck from that row.** `CreateUnit.CAS:465` /
+`OverlandEndTurn.CAS:606` gate on the permanent record at a training-time rank, and the only
+mid-sequence write to `mechanical` is the strictly later cast-time one, so the raw flag *is* the
+record value at that rank; the figure sequence is its own record besides, which no write reaches. A
+record field there would restate the constant, not position it. The Magic Weapons half of the
+Artificer retort takes the same reasoning and stays a constant for a second reason: it is a
+**result** field, the weapon material, which cannot be a record field.
+`applyOutlanderReformGrants`' own `permanentMechanical` keeps its Rebuild disjunction and is out of
+scope — its gate is `OverlandEndTurn.CAS:411`, a per-turn pass that does see a cast-time write.
+
 ## 2026-08-26 — F200 (stage 2): Insulation takes a position, and Inner Power's gate goes with it
 
 `b:insulation` is a new step with a new hashed-span anchor: `UnitCalcPre.CAS:851-855`, three

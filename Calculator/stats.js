@@ -142,24 +142,20 @@ function deriveUnitStats(input) {
     || (version.startsWith('com2_warlord') && !!abilities.spiritLink && !destinyActive);
   const level = levelEligible ? input.level : 'normal';
   const lvl = getLevelBonuses(level, version);
-  // Warlord: Rebuild writes `SCustomAttribute` 1 — Mechanical (`MASTER.CAS:1132`) — for a normal
-  // unit (`OLSpell.CAS:279`) and for a hero (`UnitCalcPre.CAS:685`) alike, so the flag carries no
-  // hero exclusion here. Artificer then gates on that same `GetStat(U,SCustomAttribute,1)=1`
-  // and sets `EncMagic` (`CreateUnit.CAS:38-39`), which is Magic Weapons: +10% To Hit and the
-  // Weapon Immunity bypass. Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
-  // This disjunction is the last grant the `effectiveAbilities` merge still makes, and the one
-  // thing F201 could not retire without moving a number: Rebuild's write is cast-time and
-  // Artificer's read is training-time, so positioning it changes who takes the retort's package.
-  // The ruling is BACKLOG F208.
   const isWarlord = version.startsWith('com2_warlord');
   // One `flameBlade` input, two controls: the wizard spell everywhere but Warlord, the arcane
   // unit ability in Warlord (`enchantments.js`). The version decides which arithmetic the shared
   // block does, so the input carries no version of its own.
   const warlordCombatFlameBlade = isWarlord && !!abilities.flameBlade;
-  const effectiveMechanical = !!abilities.mechanical
-    || (isWarlord && !!abilities.rebuild);
+  // The Magic Weapons half of the Artificer retort: `SETENCHANTMENTFLAG(U,EncMagic,1,1)`
+  // (`CreateUnit.CAS:39`), gated with the stat half on `GetStat(U,SCustomAttribute,1)=1` at `:38`.
+  // It is +10% To Hit and the Weapon Immunity bypass, and it is a **result** field — the weapon
+  // material — so it cannot be a record field and is read here rather than at a rank. The raw
+  // flag is what the record holds at that rank: `base:artificer` is a training-time write and the
+  // only mid-sequence write to `mechanical` is `base:rebuild`'s, which is cast-time and therefore
+  // strictly later (F208). Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
   const artificerMagicWeapon = isWarlord
-    && !!abilities.artificer && effectiveMechanical;
+    && !!abilities.artificer && !!abilities.mechanical;
   // Altar of the Moon (Warlord, Gnoll building): Gnoll units trained here gain Rage and
   // Poison Immunity; ranged units also gain +2 Ranged Attack. The granted abilities are
   // folded into effectiveAbilities below; the ranged bonus is added to the rtb total.
@@ -1443,6 +1439,12 @@ function deriveUnitStats(input) {
   // their Fantastic Stable unit) unconditionally, and that branch reads no field, so it survives
   // a record with no Ranged field. The other branch rejects Mechanical units and reads the field
   // (`permanentMagicalRangedField` above).
+  // `GetStat(U,SCustomAttribute,1)<>1` (`CreateUnit.CAS:465`, `OverlandEndTurn.CAS:606`) is the
+  // permanent record at a training-time rank, so it takes the raw flag, not the value Rebuild's
+  // cast-time write leaves: `base:alumniOfAcademy:figures` is a training-time write and
+  // `base:rebuild`, the only mid-sequence write to `mechanical`, is cast-time and therefore
+  // strictly later (F208, F202). The figure sequence is its own record and no write in it
+  // reaches `mechanical`, so a record field here would restate this constant, not position it.
   const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
     && baseUnitRace === 'Halfling' && !isHero
     && (unitName.endsWith('Rocs')
@@ -1464,9 +1466,10 @@ function deriveUnitStats(input) {
   // Hunter/Witchdoctor poison and Life Steal branches), `base:militaryWorkshop` (Blackpowder, its
   // poison increment and Armor Piercing), `base:motherFungus` and `d:venom` (their own poison
   // increments), `base:energyCannon`, `b:bombsGrenades` (Wall Crusher) and `d:blazeOfGlory`
-  // (Armor Piercing, and the First Strike clear) with stage 1; then `base:rebuild` / `b:rebuild`
-  // (Mechanical), `base:destiny` (Supernatural), and `b:eyeOfHeaven` (True Sight) →
-  // `c:trueSight` (Illusion Immunity) with stage 2. Each writes a `statRecord` field at its own
+  // (Armor Piercing, and the First Strike clear) with stage 1; then `base:destiny`
+  // (Supernatural) and `b:eyeOfHeaven` (True Sight) → `c:trueSight` (Illusion Immunity) with
+  // stage 2; and last `base:rebuild` / `b:rebuild` (Mechanical) with F208, which was the only
+  // one of the thirteen keys that moved a number. Each writes a `statRecord` field at its own
   // block's rank and is read back after the chain.
   //
   // The inert-Rust drop went with them, deleted rather than positioned: no engine block clears
@@ -1485,12 +1488,6 @@ function deriveUnitStats(input) {
     baseFantastic: identity.baseFantastic,
     liveRace: finishedIdentity.race,
     liveFantastic: finishedIdentity.fantastic,
-    // The one grant left in this merge, and the only one of the thirteen keys F201 could not
-    // retire: Rebuild's `SCustomAttribute` 1 (`OLSpell.CAS:279`, `UnitCalcPre.CAS:685`). It is a
-    // positionable write with two existing homes — `base:rebuild` and `b:rebuild` — but taking
-    // them moves a number, because `base:artificer` is a training-time read of the same base
-    // field and the chain runs cast-time writes after training-time ones (F203). BACKLOG F208.
-    mechanical: effectiveMechanical,
     doomGaze: baseDoomGazeStat,
     // Inner Power joins the three passthroughs below: `c:innerPower` carries the eligibility as
     // its own `when` now, reading `fireImmunity` and `lightningResist` off the record where its

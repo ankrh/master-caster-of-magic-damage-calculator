@@ -495,6 +495,14 @@ immunity strip, which has no engine position of its own. The calculator derives 
 state, so a permanent write is modelled as already applied at the head of the chain. Every `base`
 chain entry names its kind, so composition enforces this order instead of a comment describing it.
 
+**That order is observable, because what a gate reads is the permanent record as it stood at the
+gate's own rank.** A training-time gate reads the record the city left, so a cast-time write —
+made later, on a unit that already exists — is not there for it: Artificer's
+`GetStat(U,SCustomAttribute,1)=1` (`CreateUnit.CAS:38`) and Academy's `<>1` (`:465`) both miss the
+Mechanical flag Rebuild writes at `OLSpell.CAS:279`, while `d:mechanicalExpert`, four regions
+later, takes it. "Applied at the head of the chain" therefore means applied for the steps standing
+after it, not for every step alike (F208).
+
 **A permanent step may occupy both the head position and its engine position only if it is
 idempotent.** `Units[i] := BaseUnits[i]` ($00599A8D) resets the calculated record every pass while
 `BaseUnits` is never reset, so a per-pass permanent write must be idempotent or the base record
@@ -517,7 +525,10 @@ writes its `+6` Defense at `CreateUnit.CAS:702-703` when the city builds the uni
 `OverlandEndTurn.CAS:608-609`, guarded on `SMultiLabel` at `:577`; Spirit Link's `+2` Resistance at
 `OLSpell.CAS:185` and the Mystic Surge random grant `SpellMysticSurge.CAS:57`. Every route of
 each is pre-combat and no `base` step between them reads the fields it writes, so the record is the
-same whichever ran, and the step takes the earliest route's position.
+same whichever ran, and the step takes the earliest route's position. Academy is the one case where
+the two routes could give different answers — `OverlandEndTurn.CAS:606` runs every turn and so
+would see a Mechanical flag a later Rebuild wrote — and the single position settles it at the
+training-time one (F208).
 
 **A training-time write earns a step only when it writes a stat delta.** One that sets a flag or a
 level in the base record needs none: the calculator's control *is* that base-record state, and the
@@ -826,12 +837,12 @@ the calculator does instead, and why.
   computes its gates as constants ahead of the sequence, and the hoist is what makes some of
   those constants valid. Scheduled for removal (F200); the option is not that both shapes are
   acceptable.
-  The sixth hoist, the `effectiveAbilities` merge, carries **one** grant: Divine Protection,
-  Fortification and Insulation took positions with F200, and Altar of the Moon, Military Workshop,
-  Mother Fungus, Venom, Energy Cannon, Bombs & Grenades, Blaze of Glory, Destiny's Supernatural
-  and Eye of Heaven's True Sight with F201. What is left there is the finished-record projection,
-  Rebuild's Mechanical conversion — positionable, but at a rank that moves a number, so its ruling
-  is F208 — and one published-value normalization no engine block makes, Supreme Light's, which
+  The sixth hoist, the `effectiveAbilities` merge, carries **no** grant any more: Divine
+  Protection, Fortification and Insulation took positions with F200, Altar of the Moon, Military
+  Workshop, Mother Fungus, Venom, Energy Cannon, Bombs & Grenades, Blaze of Glory, Destiny's
+  Supernatural and Eye of Heaven's True Sight with F201, and Rebuild's Mechanical conversion —
+  the one that moved a number — with F208. What is left there is the finished-record projection
+  and one published-value normalization no engine block makes, Supreme Light's, which
   has no reader at all (F207). Two others left with the rounds that could account for them: the
   inert-Rust drop was deleted with F201 rather than positioned, because no engine block clears the
   enchantment flag and the Fantastic exclusion it stood for is a cast-time targeting class already

@@ -1244,7 +1244,6 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Artificer retort (Warlord): mechanical units gain +1 melee, +1 ranged,
   // +1 armor, +1 resistance. Magic Weapons component handled in stats.js.
-  // Rebuild's mechanical conversion is propagated via effectiveAbilities in stats.js.
   // Base stage: CreateUnit.CAS:37-48 writes these at index 1 (ABase) when the unit is
   // built, so they are part of the base before the encounter-time pipeline starts.
   // Resistance is +2, not the +1 the helptext states — the script is right and the helptext is
@@ -1288,8 +1287,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // record's conventional-ranged field, written with no test of what stands in it, so the write
   // is the `rangedField` gate ungated; Thrown, both Breaths and `SDoomGaze` are named by no line
   // of the block and take nothing. The movement stats are outside the calculator's record (F139).
-  // Rebuild's conversion supplies the Mechanical flag, so this block reads it off the record at
-  // its own position (F202).
+  // The block's own gate is `GetStat(U,SCustomAttribute,1)=1` (`CreateUnit.CAS:38`) — the
+  // permanent Mechanical flag — so it is a record read at this step's position (F202). That rank
+  // is what settles the Rebuild case: `CreateUnit.CAS` runs once, when the city builds the unit,
+  // and Rebuild is cast on a unit that already exists, so this gate never saw the later
+  // `base:rebuild` write and a Rebuilt unit takes no part of the retort's package (F208).
   if (isWarlord && hasAbil(abilities, 'artificer')) {
     // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
     abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...attackWrites],
@@ -1314,20 +1316,20 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       apply: u => { u.toHit += 20; u.toBlk += 10; } });
   }
 
-  // Rebuild (Warlord): +2 melee and +2 armor. Mechanical flag, Death/Illusion
-  // Immunity, and Armor Piercing are granted in normalizeCombatUnit.
+  // Rebuild (Warlord): +2 melee, +2 armor and the Mechanical flag. Death/Illusion Immunity and
+  // Armor Piercing are granted in normalizeCombatUnit.
   // The two unit classes are handled by deliberately ISHERO-complementary code, in
   // different phases. Non-heroes: OLSpell.CAS:273-286 writes both stats at index 1
   // (ABase) when the spell is cast, so it is baked into the base stage.
   // Heroes: UnitCalcPre.CAS:682-691 re-applies them at index 0 on every recalc — phase b.
   // The Marionette Wanderer's strayed branch grants Rebuild, so the flag is a record field read
   // here rather than a pre-sequence constant (F202).
-  // **Not positioned here:** the same two blocks write `SCustomAttribute` 1 — Mechanical
-  // (`MASTER.CAS:1132`) — at `OLSpell.CAS:279` and `UnitCalcPre.CAS:685`, which is the grant
-  // `effectiveAbilities.mechanical` still merges ahead of the sequence. Making it a field of this
-  // step moves a number: `base:artificer` is a training-time write and this one is cast-time, so
-  // a unit made Mechanical by Rebuild would stop taking Artificer's package — which contradicts
-  // `rebuildMakesMechanicalForArtificerWarlord`. The ruling is BACKLOG F208.
+  // `SCustomAttribute` 1 is Mechanical (`MASTER.CAS:1132`), written at `OLSpell.CAS:279` on the
+  // permanent record and at `UnitCalcPre.CAS:685` on the calculated one — one line of each
+  // branch, inside this step's own reviewed spans, so it is a field of this write and needs no
+  // anchor of its own. Its position is the whole content of the F208 ruling: this is a cast-time
+  // write and `base:artificer` a training-time one, so the retort's gate cannot see it, while
+  // `d:mechanicalExpert`, four regions later, can (`SPEC.md`, *Phases*).
   if (isWarlord) {
     // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
     // Neither branch gates the melee write: `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2))`
@@ -1335,9 +1337,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // `SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2)` (OLSpell.CAS:280) for the permanent
     // non-hero write (F142).
     abilityStep('rebuild', isHeroUnit ? 'b' : 'base',
-      { writes: ['atk', 'def'],
+      { writes: ['atk', 'def', 'mechanical'],
         when: u => !!u.rebuild,
-        apply: u => { u.atk += 2; u.def += 2; } });
+        apply: u => { u.atk += 2; u.def += 2; u.mechanical = true; } });
   }
 
   // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.

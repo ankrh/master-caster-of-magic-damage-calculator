@@ -878,7 +878,7 @@ const TEST_TREE = [
           'rebuildHeroCcDefenseLionheartWarlord',
           'rebuildDeathImmunityWarlord',
           'rebuildIllusionImmunityWarlord',
-          'rebuildMakesMechanicalForArtificerWarlord',
+          'rebuildMechanicalTooLateForArtificerWarlord',
         ],
       },
       {

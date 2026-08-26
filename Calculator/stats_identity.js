@@ -408,8 +408,7 @@ const POSITIONED_GRANT_FIELDS = [
                   // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`
   'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
   'armorclad',    // applyOutlanderReformGrants  ->  `base:armorclad`
-  'mechanical',   // effectiveAbilities (Rebuild's conversion, BACKLOG F208)
-                  //   ->  `base:artificer`, `d:mechanicalExpert`
+  'mechanical',   // `base:rebuild` / `b:rebuild`  ->  `base:artificer`, `d:mechanicalExpert`
   'rebuild',      // deriveMarionettePackage  ->  `base:rebuild` / `b:rebuild`
   'trueSight',    // `b:eyeOfHeaven`  ->  `c:trueSight`, `d:trueSight`
   'fireImmunity',    // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
@@ -426,11 +425,14 @@ const POSITIONED_GRANT_FIELDS = [
 // gates on. A key here is one no hoist writes any more, so the record is its only carrier and the
 // post-chain read-back is what hands it to combat resolution.
 //
-// Four keys are in both lists, because a positioned write of theirs also has a positioned reader:
+// Five keys are in both lists, because a positioned write of theirs also has a positioned reader:
 // `lucky` (`b:divineProtection` writes it, `c:lucky` reads it, and combat resolution reads the
 // finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty), `trueSight`
-// (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it), and `fireImmunity` and
-// `lightningResist` (`b:insulation` writes them, `c:innerPower`'s eligibility test reads them).
+// (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it), `fireImmunity` and
+// `lightningResist` (`b:insulation` writes them, `c:innerPower`'s eligibility test reads them),
+// and `mechanical` (`base:rebuild` / `b:rebuild` write it, `base:artificer` and
+// `d:mechanicalExpert` read it — and take opposite answers, because the writes are cast-time and
+// the retort's read is training-time, F208).
 const POSITIONED_GRANT_WRITES = [
   'largeShield',      // `b:magitekEngine`, `d:rust` (clear), `d:fortification`
   'missileImmunity',  // `d:fortification`'s already-shielded arm
@@ -443,6 +445,7 @@ const POSITIONED_GRANT_WRITES = [
   'energyCannon',     // `base:energyCannon`
   'wallCrusher',      // `b:bombsGrenades`
   'firstStrike',      // `d:blazeOfGlory` (clear)
+  'mechanical',       // `base:rebuild` / `b:rebuild` — `SETSTAT(…,SCustomAttribute,…,1)`
   'supernatural',     // `base:destiny:supernatural` — `B.attackflags.supernatural := True`
   'trueSight',        // `b:eyeOfHeaven`
   'illusionImmunity', // `c:trueSight`
