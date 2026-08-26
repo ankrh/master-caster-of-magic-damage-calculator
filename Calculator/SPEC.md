@@ -487,17 +487,46 @@ not after.
 
 **`base` is ordered, and its order is not arbitrary.** The phase holds five kinds of write and the
 chain runs them in this order: template initialization; training-time writes (`CreateUnit.CAS`,
-one-shot when the city builds the unit); cast-time permanent writes (`OLSpell.CAS`, one-shot when
-the spell landed); per-pass permanent writes; and last the artificial immunity strip, which has no
-engine position of its own. The calculator derives the landed steady state, so a permanent write is
-modelled as already applied at the head of the chain.
+one-shot when the city builds the unit); cast-time permanent writes (`OLSpell.CAS` and the other
+grant sites, one-shot when the spell landed); per-pass permanent writes; and last the artificial
+immunity strip, which has no engine position of its own. The calculator derives the landed steady
+state, so a permanent write is modelled as already applied at the head of the chain. Every `base`
+chain entry names its kind, so composition enforces this order instead of a comment describing it.
 
 **A permanent step may occupy both the head position and its engine position only if it is
 idempotent.** `Units[i] := BaseUnits[i]` ($00599A8D) resets the calculated record every pass while
 `BaseUnits` is never reset, so a per-pass permanent write must be idempotent or the base record
 drifts without bound — Destiny's five writes are all assignments for that reason. Every accumulating
 permanent write is one-shot instead, and a one-shot step that also held an in-chain position would
-apply its delta twice.
+apply its delta twice. Composition rejects that pair rather than trusting the classification: a
+one-shot `base` step and a step of the same id at a non-base position may not write a field in
+common. It is the *emitted* pair that decides it, not the chain, because sharing an id is normal —
+`b:spiritLink` and `d:spiritLink` stand beside the one-shot `base:spiritLink` but write `fantastic`,
+not its permanent `res`, and `base:rebuild` and `b:rebuild` are the same `+2/+2` at the position
+each branch makes it, non-hero permanent against hero re-application, so exactly one is ever
+emitted.
+
+**One write reached by several guarded routes is one step at one position.** Where an effect has
+more than one entrance and each site is guarded on the marker the others set, the delta lands once
+however the unit got there: `phase:id` names the write and the citation names every route. Armorclad
+writes its `+6` Defense at `CreateUnit.CAS:702-703` when the city builds the unit and at
+`OverlandEndTurn.CAS:428-429` for a unit that predates the reform, the second guarded on
+`EncArmorClad` at `:425`; Academy's `+2` figures the same way at `CreateUnit.CAS:467-468` and
+`OverlandEndTurn.CAS:608-609`, guarded on `SMultiLabel` at `:577`; Spirit Link's `+2` Resistance at
+`OLSpell.CAS:185` and the Mystic Surge random grant `SpellMysticSurge.CAS:57`. Every route of
+each is pre-combat and no `base` step between them reads the fields it writes, so the record is the
+same whichever ran, and the step takes the earliest route's position.
+
+**A training-time write earns a step only when it writes a stat delta.** One that sets a flag or a
+level in the base record needs none: the calculator's control *is* that base-record state, and the
+per-pass consumer stands at its own engine position reading the permanent record there.
+`ApplyMagicWeapons` (`Units.RecalculateUnits.pas` $00598D91, called at $0059E4AD) is the worked
+example — it reads `BaseUnits[i].EnchantmentFlags[EncMagic|EncMithril|EncAdamant]`, not the merged
+aggregate, which is why the merge's deliberate `Units[i].EnchantmentFlags[EncMagic] := False` at
+$00599B30 does not touch the material bonus. A stat delta cannot be stated as an input and therefore
+does need a step, which is all 19 Warlord entries. All four training-time writes in base CoM2's own
+`CreateUnit.CAS` are the flag-or-level kind, so that version's empty training group is correct
+rather than unchecked.
 
 ### The execution chain
 
@@ -509,7 +538,7 @@ it may not repair an unordered list with a generic sort or silently discard an u
 entries a run does not emit are skipped without complaint — a step is version- or
 predicate-exclusive — but the reverse is an error.
 
-A chain entry states three things. Its **key** is `phase:id`, the same key the version scope uses,
+A chain entry states three things, and a `base` entry a fourth. Its **key** is `phase:id`, the same key the version scope uses,
 so position and scope are keyed alike and two engines writing one effect from different regions
 stay distinct. Its **phase** is the provenance label above; it orders nothing, but a chain is
 authored in non-decreasing phase order, so an entry filed under the wrong region shows up as a
@@ -519,7 +548,9 @@ regions `b`, `c` and `d` come from the compiled address map and the CAS files an
 until sourced. Named entries inside a transcribed region can still be deduced — the modern
 region-`c` identity conversions head their region by convention rather than at their blocks'
 addresses, where the DOS ones sit at the offsets the address map gives them — and each is listed
-as such rather than inheriting the region's claim.
+as such rather than inheriting the region's claim. A `base` entry states a fourth thing, its
+**kind** — which of the five kinds of permanent write it is, per *The step model* — and no other
+entry may.
 
 Each version's chain is written out in full, including the parts two versions currently share. A
 chain is what one engine does, and reading it should not mean assembling it from fragments.

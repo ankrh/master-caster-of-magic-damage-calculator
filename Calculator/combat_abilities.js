@@ -1241,11 +1241,17 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Resistance is +2, not the +1 the helptext states — the script is right and the helptext is
   // stale. See `Reference docs/Source discrepancies.md` §6.
   const isWarlord = version && version.startsWith('com2_warlord');
-  // Armorclad is a permanent mechanical hull upgrade. CreateUnit.CAS:702-703
-  // and OverlandEndTurn.CAS:405-406/428-429 write +6 Defense to ABase. The Outlander reform block
+  // Armorclad is a permanent mechanical hull upgrade, +6 Defense written to ABase. Two routes
+  // reach it and both are cited: `CreateUnit.CAS:702-703` when the city builds the unit, and the
+  // `OverlandEndTurn.CAS` upgrade protocol at :428-429 for a unit that predates the reform. The
+  // second is guarded on the marker the first sets — `IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0)
+  // THEN { GOTO "NOTARMORCLAD"; }` (:425) — so the +6 lands once however the unit got there, which
+  // is why one step at one position states both (F203). The block's third site, Xenoveterinary's
+  // Fantastic route at :404-406, is not modelled and its control says so.
+  // The Outlander reform block
   // grants the flag, so it is a record field read here rather than a pre-sequence constant (F202).
   if (isWarlord) {
-    // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:4:f33e8912a11fbfe562941d50
+    // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:4:f33e8912a11fbfe562941d50 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:7:37971f89b0a249ec2951a825
     abilityStep('armorclad', 'base', { writes: ['def'],
       when: u => !!u.armorclad, apply: u => { u.def += 6; } });
   }

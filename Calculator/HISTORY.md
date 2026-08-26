@@ -43,6 +43,47 @@ map and not the record; it retires when combat resolution takes the record.
 `npm run provenance` 271 formulas, 0 UNVERIFIED; `tests/f20-source-order.spec.js` +
 `tests/marionette.spec.js` 9 passed; `tests/version-gating.spec.js` 8 passed; `npm test` green.
 
+## 2026-08-26 — F203 (stages A and B): the base write kinds become the chain's own enforcement
+
+The five kinds stage 1 put in the `base` phase were a comment above a list of keys. Each `base`
+chain entry now names its kind through `baseWrites()` (`stats_manifests.js`), `versionChain` refuses
+an untagged `base:` key, and `assertStatChain` rejects a chain whose base kinds run out of order or
+whose non-base entry claims one. **Stage B's rule is enforced where both facts are in hand**: the
+composer rejects a one-shot `base` step standing beside a step of the same id at a non-base position
+that writes a field in common, since its delta would land twice. The chain alone cannot decide it —
+`b:spiritLink`/`d:spiritLink` share an id with the one-shot `base:spiritLink` but write `fantastic`,
+not its `res`, and `base:rebuild`/`b:rebuild` are the same `+2/+2` at the position each branch makes
+it, so exactly one is emitted — which is why the check reads the emitted pair and its `writes`.
+Proved to fire: emitting `rebuild` at both positions throws `step base:rebuild is a one-shot
+permanent write and b:rebuild writes atk, def as well, so the delta would land twice`, and
+`tests/f20-source-order.spec.js` carries seven cases, three of them the permitted shapes.
+
+**Stage A: a hybrid is one write with two entrances, not two positions.** Each `OverlandEndTurn.CAS`
+site is guarded on the marker the `CreateUnit.CAS` route sets — `EncArmorClad` at `:425` for
+Armorclad, `SMultiLabel` at `:577` for Academy — so the delta lands once however the unit got there.
+Both keep their single training-time position, and no `base` step between the routes reads `def` or
+`figs`, so the record is the same whichever route ran. Spirit Link has the same shape at
+`OLSpell.CAS:185` and `SpellMysticSurge.CAS:57`.
+
+**The row's premise held for one hybrid, not both.** `alumniOfAcademy:figures` does cite both files;
+`armorclad` cited `CreateUnit.CAS` alone while the comment beside it asserted the
+`OverlandEndTurn.CAS` write. The citation now carries `OverlandEndTurn.CAS:424-430`, the mechanical
+route with its guard, and `armorclad`'s reviewed anchor was rebound (`8daf800bc2ab` →
+`e8a658c32233`). The block's third site, Xenoveterinary's Fantastic route at `:404-406`, stays
+unmodelled and its control already says so.
+
+`SPEC.md`, *The step model*, gains the multi-route rule and the flag-versus-delta criterion the row
+asked for; *The execution chain* records the base entry's fourth fact.
+
+**Found and filed, not fixed:** the training group is not in `CreateUnit.CAS` line order — it runs
+`artificer` (:37), `malnourished` (:614), `armorclad` (:700), `altarOfTheMoon` (:372) and so on —
+so the segment stays `provisional` where the script would source it (F204).
+
+**Checks.** `node tools/node_unit_checks.js` 14546/14546, 0 failures; `npm run provenance` 271
+formulas, 0 UNVERIFIED; `tests/f20-source-order.spec.js` + `tests/version-gating.spec.js` 12 passed;
+`npm test` green. `tools/derivation_equivalence.js` against pristine `HEAD`: **0 of 52440 differ**,
+as a structural round should.
+
 ## 2026-08-26 — F203 (stage 1): the `base` phase gets its five orderings, and `base:zombies` goes
 
 The chain now runs `base` in the order the engine implies: template initialization, training-time
@@ -87,8 +128,7 @@ Measured on the real path instead — a base-Fantastic unit named `Zombies` with
 takes melee 4 with adamantium where it took 6, in all five versions; a CoM 1 unit with
 `specialUnit: 'zombies'` still takes 6, which is the roster case and is unchanged.
 
-Remaining F203 stages: the `armorclad` / `alumniOfAcademy:figures` hybrids, and
-enforcing the idempotence classification rather than trusting it.
+The hybrids and the enforcement of the classification landed the same day, in the entry above.
 
 Short index of completed calculator work. Behavior lives in `SPEC.md`; implementation evidence
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed

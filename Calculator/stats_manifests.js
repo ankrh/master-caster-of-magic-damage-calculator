@@ -78,7 +78,20 @@ const DEDUCED_POSITIONS = Object.freeze({
   'com2_warlord_1.5.12.7': DEDUCED_IDENTITY_C_POSITIONS,
 });
 
-function versionChain(version, keys) {
+// The `base` phase holds five kinds of write (`BASE_WRITE_KINDS`, `steps.js`), and a chain runs
+// them in that order. Each chain states the kind beside the keys rather than in a second table, so
+// there is nothing to keep in sync: `baseWrites` tags them, `versionChain` refuses an untagged
+// `base:` key, and `assertStatChain` enforces the order and the one-shot rule.
+function baseWrites(kind, ids) {
+  if (!Object.prototype.hasOwnProperty.call(BASE_WRITE_KIND_RANK, kind)) {
+    throw new Error(
+      `baseWrites: unknown base write kind '${kind}' `
+      + `(expected one of ${BASE_WRITE_KINDS.join(', ')}).`);
+  }
+  return ids.map(id => ({ key: `base:${id}`, baseKind: kind }));
+}
+
+function versionChain(version, entries) {
   // Every version names its own deduced-position list, including the two MoM builds whose
   // list is empty. A version with no entry would silently get an empty set and mark its whole
   // chain transcribed (`SPEC.md`, *Out-of-range values stop the run*).
@@ -88,14 +101,21 @@ function versionChain(version, keys) {
       + `(expected one of ${Object.keys(DEDUCED_POSITIONS).join(', ')}).`);
   }
   const deduced = new Set(DEDUCED_POSITIONS[version]);
-  return Object.freeze(keys.map(key => {
+  return Object.freeze(entries.map(entry => {
+    const tagged = typeof entry !== 'string';
+    const key = tagged ? entry.key : entry;
     const cut = key.indexOf(':');
     const phase = key.slice(0, cut);
+    if (tagged !== (phase === 'base')) {
+      throw new Error(`versionChain: ${version} entry '${key}' must name its base write kind `
+        + 'through baseWrites(), and only a base entry may');
+    }
     return Object.freeze({
       key,
       phase,
       id: key.slice(cut + 1),
       provisional: !TRANSCRIBED_PHASES.has(phase) || deduced.has(key),
+      ...(phase === 'base' ? { baseKind: entry.baseKind } : {}),
     });
   }));
 }
@@ -107,7 +127,8 @@ function versionChain(version, keys) {
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   // Template initialization, then the artificial strip. F203: the strip used to stand ahead of
   // `base:stat:base`, i.e. before the record it reads was seeded.
-  'base:stat:base', 'base:baseThresholds', 'base:immunityCurseGating',
+  ...baseWrites('template', ['stat:base', 'baseThresholds']),
+  ...baseWrites('artificial', ['immunityCurseGating']),
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   'c:holyWeapon', 'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
@@ -126,7 +147,8 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
 ]);
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
-  'base:stat:base', 'base:baseThresholds', 'base:immunityCurseGating',
+  ...baseWrites('template', ['stat:base', 'baseThresholds']),
+  ...baseWrites('artificial', ['immunityCurseGating']),
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   'c:undead', 'c:blackChannels', 'c:blackChannels:race',
@@ -144,8 +166,9 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   // Template initialization and the construction patches that ride with it, then the artificial
   // strip (F203). `base:zombies` is gone: the Fantastic bit is the unit-type table's own
   // `UA_FANTASTIC` at file com1:0x2AED2, which the roster already states.
-  'base:stat:base', 'base:baseThresholds', 'base:zombies:toBlock',
-  'base:constructCatapult', 'base:summonBranch', 'base:immunityCurseGating',
+  ...baseWrites('template', ['stat:base', 'baseThresholds', 'zombies:toBlock',
+    'constructCatapult', 'summonBranch']),
+  ...baseWrites('artificial', ['immunityCurseGating']),
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon',
   // CoM 1 reorders `BU_Apply_Specials` around its own repurposed enchantment slots: Endurance
@@ -173,8 +196,9 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   // F203 ordering: template initialization, then the permanent writes, then the artificial strip.
   // `base:destiny` is the per-pass permanent write — idempotent, which is what lets it hold this
   // head position as well as `c:destiny`.
-  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
-  'base:destiny', 'base:immunityCurseGating',
+  ...baseWrites('template', ['stat:base', 'baseHitChance', 'baseThresholds']),
+  ...baseWrites('perPass', ['destiny']),
+  ...baseWrites('artificial', ['immunityCurseGating']),
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath',
   'c:destiny', 'c:level', 'c:focusMagic',
@@ -197,24 +221,28 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
-  // F203 ordering. (1) Template initialization.
-  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
-  // (2) Training-time writes: every one cites `CreateUnit.CAS`, fires once when the city builds
-  // the unit, and accumulates — so none of these may also hold an in-chain position.
-  // `armorclad` and `alumniOfAcademy:figures` additionally cite `OverlandEndTurn.CAS`; both of
-  // those writes are pre-combat too, so the hybrid affects their label, not their position.
-  'base:artificer', 'base:malnourished', 'base:armorclad',
-  'base:altarOfTheMoon', 'base:militaryWorkshop', 'base:lightningBlade:breath',
-  'base:poolOfRepentance', 'base:dragonMound', 'base:ludusAgoge', 'base:motherFungus',
-  'base:altarOfTheSun:holyMother', 'base:altarOfTheSun:figures', 'base:alumniOfAcademy:figures',
-  'base:sanctaBasilica', 'base:naturalSelection:powerMinerals',
-  'base:naturalSelection:nightshade', 'base:naturalSelection:wildGame',
-  'base:naturalSelection:coal', 'base:naturalSelection:iron', 'base:pillarOfFaith',
-  'base:energyCannon', 'base:survivalInstinctToBlock',
-  // (3) Cast-time permanent writes: one-shot, applied when the overland spell landed.
-  'base:rebuild', 'base:spiritLink',
-  // (4) The per-pass permanent write, idempotent, and then the artificial strip.
-  'base:destiny', 'base:immunityCurseGating',
+  // F203 ordering, enforced by the kinds rather than described by this comment.
+  ...baseWrites('template', ['stat:base', 'baseHitChance', 'baseThresholds']),
+  // Training-time writes: every one cites `CreateUnit.CAS` and fires once, when the city built
+  // the unit. `armorclad` and `alumniOfAcademy:figures` are reached by a second route as well —
+  // the `OverlandEndTurn.CAS` upgrade protocol, whose site each script guards on the marker the
+  // other route sets (`EncArmorClad` at :425, `SMultiLabel` at :577). One write, two entrances,
+  // so one position: the training-time one the unit takes when it is built (F203).
+  ...baseWrites('training', ['artificer', 'malnourished', 'armorclad',
+    'altarOfTheMoon', 'militaryWorkshop', 'lightningBlade:breath',
+    'poolOfRepentance', 'dragonMound', 'ludusAgoge', 'motherFungus',
+    'altarOfTheSun:holyMother', 'altarOfTheSun:figures', 'alumniOfAcademy:figures',
+    'sanctaBasilica', 'naturalSelection:powerMinerals',
+    'naturalSelection:nightshade', 'naturalSelection:wildGame',
+    'naturalSelection:coal', 'naturalSelection:iron', 'pillarOfFaith',
+    'energyCannon', 'survivalInstinctToBlock']),
+  // Cast-time permanent writes: one-shot, applied when the spell landed. Spirit Link's +2
+  // Resistance has two entrances too — `OLSpell.CAS:185` and the Mystic Surge random grant at
+  // `SpellMysticSurge.CAS:57` — and one position for the same reason.
+  ...baseWrites('cast', ['rebuild', 'spiritLink']),
+  // The per-pass permanent write, idempotent, and then the artificial strip.
+  ...baseWrites('perPass', ['destiny']),
+  ...baseWrites('artificial', ['immunityCurseGating']),
   'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',

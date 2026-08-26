@@ -38,6 +38,19 @@ const HALT = Object.freeze({ halt: true });
 const STEP_PHASES = ['base', 'a', 'b', 'c', 'd', 'e', 'attackSpecific'];
 const STEP_PHASE_RANK = STEP_PHASES.reduce((rank, phase, i) => (rank[phase] = i, rank), {});
 
+// The `base` phase holds five kinds of write, and the chain runs them in this order (SPEC.md,
+// *The step model*). Every `base` chain entry names its kind, so the ordering is enforced rather
+// than described, and a new base step cannot be filed without saying which kind it is.
+//   template    the record as the unit template ships it, plus the construction patches
+//   training    one-shot, when the city built the unit    (CreateUnit.CAS)
+//   cast        one-shot, when the spell landed           (OLSpell.CAS and the other grant sites)
+//   perPass     re-made by every recalculation, therefore necessarily idempotent
+//   artificial  a step no engine makes, positioned so the assumption is a write like any other
+const BASE_WRITE_KINDS = ['template', 'training', 'cast', 'perPass', 'artificial'];
+const BASE_WRITE_KIND_RANK = BASE_WRITE_KINDS.reduce((rank, kind, i) => (rank[kind] = i, rank), {});
+// The two kinds the engine writes once and never re-makes. Their delta has to land exactly once.
+const ONE_SHOT_BASE_WRITE_KINDS = new Set(['training', 'cast']);
+
 // --- Canonical engine-version scope (M9) ---
 //
 // Phase says *where* in an engine a write happens; scope says *which engines make it at all*.
@@ -563,6 +576,7 @@ function assertStatChain(chain) {
   if (validatedChains.has(chain)) return chain;
   const seen = new Set();
   let rank = -1;
+  let baseKindRank = -1;
   for (const entry of chain) {
     if (!entry || typeof entry.key !== 'string' || !entry.key) {
       throw new Error('execution chain has an entry without a key');
@@ -575,6 +589,21 @@ function assertStatChain(chain) {
     }
     if (typeof entry.provisional !== 'boolean') {
       throw new Error(`execution chain entry ${entry.key} does not say whether its position is provisional`);
+    }
+    if (entry.phase === 'base') {
+      if (!Object.prototype.hasOwnProperty.call(BASE_WRITE_KIND_RANK, entry.baseKind)) {
+        throw new Error(
+          `execution chain entry ${entry.key} has unknown base write kind ${entry.baseKind}`);
+      }
+      const kindRank = BASE_WRITE_KIND_RANK[entry.baseKind];
+      if (kindRank < baseKindRank) {
+        throw new Error(`execution chain entry ${entry.key} (${entry.baseKind}) `
+          + 'is declared after a later base write kind');
+      }
+      baseKindRank = kindRank;
+    } else if (entry.baseKind !== undefined) {
+      throw new Error(
+        `execution chain entry ${entry.key} is not a base write but names a base write kind`);
     }
     if (seen.has(entry.key)) throw new Error(`execution chain repeats ${entry.key}`);
     seen.add(entry.key);
@@ -590,6 +619,61 @@ function assertStatChain(chain) {
   return chain;
 }
 
+// A one-shot permanent write may not land twice.
+//
+// A `base` step is the calculator's model of a write the engine already made before the
+// recalculation copies `Units[i] := BaseUnits[i]` ($00599A8D). That copy reseeds the calculated
+// record every pass while `BaseUnits` is never reset, so a `perPass` write has to be idempotent
+// and may stand at both the head position and its engine position; a `training` or `cast` write
+// fires once in the engine's whole history of the unit, and a second in-chain position writing
+// the same field would apply its delta twice (SPEC.md, *The step model*).
+//
+// The chain alone cannot decide it, for two reasons the current chains show. `b:spiritLink` and
+// `d:spiritLink` share an id with the one-shot `base:spiritLink` but write `fantastic`, not the
+// permanent `res`; and `base:rebuild` and `b:rebuild` are the same +2/+2 write at the position
+// each branch makes it — non-hero permanent against hero re-application — so exactly one of them
+// is ever emitted. What decides a violation is therefore the emitted pair and its fields.
+const chainContestedPermanentIds = new WeakMap();
+function contestedPermanentIds(chain) {
+  const cached = chainContestedPermanentIds.get(chain);
+  if (cached) return cached;
+  const oneShot = new Map();
+  for (const entry of chain) {
+    if (entry.phase === 'base' && ONE_SHOT_BASE_WRITE_KINDS.has(entry.baseKind)) {
+      oneShot.set(entry.id, entry.key);
+    }
+  }
+  const contested = new Map();
+  for (const entry of chain) {
+    if (entry.phase === 'base' || !oneShot.has(entry.id)) continue;
+    if (!contested.has(entry.id)) {
+      contested.set(entry.id, { baseKey: oneShot.get(entry.id), keys: [] });
+    }
+    contested.get(entry.id).keys.push(entry.key);
+  }
+  chainContestedPermanentIds.set(chain, contested);
+  return contested;
+}
+
+function assertPermanentWritesLandOnce(emitted, chain) {
+  const contested = contestedPermanentIds(chain);
+  if (contested.size === 0) return;
+  for (const [, { baseKey, keys }] of contested) {
+    const permanent = emitted.get(baseKey);
+    if (!permanent) continue;
+    const written = new Set(permanent.writes || []);
+    for (const key of keys) {
+      const other = emitted.get(key);
+      if (!other) continue;
+      const shared = (other.writes || []).filter(field => written.has(field));
+      if (shared.length > 0) {
+        throw new Error(`step ${baseKey} is a one-shot permanent write and ${key} writes `
+          + `${shared.join(', ')} as well, so the delta would land twice`);
+      }
+    }
+  }
+}
+
 function orderStatStepsBySource(steps, chain) {
   if (!Array.isArray(steps)) throw new Error('the composer received no step list');
   assertStatChain(chain);
@@ -602,6 +686,7 @@ function orderStatStepsBySource(steps, chain) {
     if (emitted.has(key)) throw new Error(`step ${key} is represented twice`);
     emitted.set(key, step);
   }
+  assertPermanentWritesLandOnce(emitted, chain);
   const ordered = [];
   for (let sourceOrder = 0; sourceOrder < chain.length; sourceOrder++) {
     const entry = chain[sourceOrder];

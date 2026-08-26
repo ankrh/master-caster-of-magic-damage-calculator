@@ -52,6 +52,10 @@ enchantment", "trained in the city") does not. Classify by, in order:
 Steps 1–3 are checkable, which is the point; only step 4 is judgment, and it is the exception.
 Routing to each source corpus is in the root [CLAUDE.md](../CLAUDE.md).
 
+A `base` entry additionally names which of the five kinds of permanent write it is, through
+`baseWrites()` in the chain; composition rejects one that does not, and rejects a one-shot write
+that also holds an in-chain position writing the same field (`SPEC.md`, *The step model*).
+
 A deduced *position* is marked on the chain entry, not the step: the `provisional` flag belongs to
 the segment that carries the order. The `base`, `a` and `e` segments are provisional as a whole
 today; promoting one entry means splitting its segment and citing the address map that sources it.
