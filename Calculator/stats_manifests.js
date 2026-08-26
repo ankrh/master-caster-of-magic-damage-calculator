@@ -105,7 +105,9 @@ function versionChain(version, keys) {
 // demon-skin armor 0x8F6FE, demon wings 0x8F71B and fire breath 0x8F738. A unit holding both
 // Black Channels and a Chaos Channels mutation therefore finishes Chaos, not Death.
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
-  'base:immunityCurseGating', 'base:stat:base', 'base:baseThresholds',
+  // Template initialization, then the artificial strip. F203: the strip used to stand ahead of
+  // `base:stat:base`, i.e. before the record it reads was seeded.
+  'base:stat:base', 'base:baseThresholds', 'base:immunityCurseGating',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   'c:holyWeapon', 'c:undead', 'c:blackChannels', 'c:blackChannels:race', 'c:ironSkin',
@@ -124,7 +126,7 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
 ]);
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
-  'base:immunityCurseGating', 'base:stat:base', 'base:baseThresholds',
+  'base:stat:base', 'base:baseThresholds', 'base:immunityCurseGating',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   'c:undead', 'c:blackChannels', 'c:blackChannels:race',
@@ -139,9 +141,12 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
 ]);
 
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
-  'base:immunityCurseGating', 'base:zombies', 'base:constructCatapult', 'base:summonBranch',
-  'base:stat:base',
-  'base:baseThresholds', 'base:zombies:toBlock', 'a:holyBonus', 'a:resistanceToAll',
+  // Template initialization and the construction patches that ride with it, then the artificial
+  // strip (F203). `base:zombies` is gone: the Fantastic bit is the unit-type table's own
+  // `UA_FANTASTIC` at file com1:0x2AED2, which the roster already states.
+  'base:stat:base', 'base:baseThresholds', 'base:zombies:toBlock',
+  'base:constructCatapult', 'base:summonBranch', 'base:immunityCurseGating',
+  'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon',
   // CoM 1 reorders `BU_Apply_Specials` around its own repurposed enchantment slots: Endurance
   // 0x8F439, demon wings 0x8F46F, fire breath 0x8F48C, Blood Lust 0x8F49A, Undead 0x8F4BC and
@@ -165,8 +170,11 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 ]);
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
-  'base:immunityCurseGating', 'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
-  'base:destiny',
+  // F203 ordering: template initialization, then the permanent writes, then the artificial strip.
+  // `base:destiny` is the per-pass permanent write — idempotent, which is what lets it hold this
+  // head position as well as `c:destiny`.
+  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
+  'base:destiny', 'base:immunityCurseGating',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath',
   'c:destiny', 'c:level', 'c:focusMagic',
@@ -189,15 +197,24 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
-  'base:immunityCurseGating', 'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
-  'base:armorclad', 'base:artificer', 'base:rebuild', 'base:malnourished', 'base:spiritLink',
+  // F203 ordering. (1) Template initialization.
+  'base:stat:base', 'base:baseHitChance', 'base:baseThresholds',
+  // (2) Training-time writes: every one cites `CreateUnit.CAS`, fires once when the city builds
+  // the unit, and accumulates — so none of these may also hold an in-chain position.
+  // `armorclad` and `alumniOfAcademy:figures` additionally cite `OverlandEndTurn.CAS`; both of
+  // those writes are pre-combat too, so the hybrid affects their label, not their position.
+  'base:artificer', 'base:malnourished', 'base:armorclad',
   'base:altarOfTheMoon', 'base:militaryWorkshop', 'base:lightningBlade:breath',
   'base:poolOfRepentance', 'base:dragonMound', 'base:ludusAgoge', 'base:motherFungus',
   'base:altarOfTheSun:holyMother', 'base:altarOfTheSun:figures', 'base:alumniOfAcademy:figures',
   'base:sanctaBasilica', 'base:naturalSelection:powerMinerals',
   'base:naturalSelection:nightshade', 'base:naturalSelection:wildGame',
   'base:naturalSelection:coal', 'base:naturalSelection:iron', 'base:pillarOfFaith',
-  'base:energyCannon', 'base:survivalInstinctToBlock', 'base:destiny',
+  'base:energyCannon', 'base:survivalInstinctToBlock',
+  // (3) Cast-time permanent writes: one-shot, applied when the overland spell landed.
+  'base:rebuild', 'base:spiritLink',
+  // (4) The per-pass permanent write, idempotent, and then the artificial strip.
+  'base:destiny', 'base:immunityCurseGating',
   'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',

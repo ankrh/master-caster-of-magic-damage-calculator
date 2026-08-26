@@ -1,5 +1,37 @@
 # Calculator work history
 
+## 2026-08-26 — F203 (stage 1): the `base` phase gets its five orderings, and `base:zombies` goes
+
+The chain now runs `base` in the order the engine implies: template initialization, training-time
+writes (`CreateUnit.CAS`), cast-time permanent writes (`OLSpell.CAS`), the per-pass permanent write,
+then the artificial immunity strip. `base:immunityCurseGating` previously stood **first in every
+chain**, ahead of `base:stat:base`, so the strip ran before the record it reads was seeded; it now
+stands last in the phase, which [F199](#) left free by giving it the declared finished-immunity read.
+
+`base:zombies` is deleted rather than merged with `base:zombies:toBlock`. CoM 1's Zombies are
+Fantastic because the unit-type table says so — `COM1_UT_ZOMBIES_ABILITIES` is
+`UA_FANTASTIC | UA_CREATE_UNDEAD`, raw `0x0081` at file `com1:0x2AED2`, copied wholesale by
+construction — and `units_com.js` already carries that as `baseFantastic` on templateId 174. The
+step was therefore a no-op for every roster unit, and for a custom unit it let the special-unit
+selector override the Fantastic control the user had set, which is the behaviour the deletion
+removes. `base:zombies:toBlock` stays: `bu->toblock--` at `com1:0x8EE31` is a real construction
+patch. **44 of 52440 derivations move, every one `com_6.08` with the zombies special option on a
+non-Fantastic custom unit.**
+
+`tests/identity-r8.4.spec.js:254` asserted the removed override — a custom Dwarf with
+`baseFantastic: false` becoming Fantastic from the selector alone. The assertion stated the old rule,
+so it was inverted rather than the code softened to meet it.
+
+`SPEC.md`, *The step model*, records the ordering and the invariant it rests on: **a permanent step
+may occupy both the head position and its engine position only if it is idempotent**, because
+`Units[i] := BaseUnits[i]` resets the calculated record every pass while `BaseUnits` is never reset.
+
+Checked while landing: Mystic Surge needs no head position — every write in
+`Units.RecalculateUnits.pas` `$005A016D..$005A04A9` targets `U`, including the
+`U.race := 21; U.Fantastic := True` the Warlord manual calls "becomes fantastic". `c:mysticSurge:race`
+is correctly placed. Remaining F203 stages: the `armorclad` / `alumniOfAcademy:figures` hybrids, and
+enforcing the idempotence classification rather than trusting it.
+
 Short index of completed calculator work. Behavior lives in `SPEC.md`; implementation evidence
 lives under `Reference docs/`; benchmark comparisons live in `DUAL-AGENT-BENCHMARK.md`. Detailed
 pre-2026-08-10 narratives remain recoverable from git history.

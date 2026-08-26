@@ -239,10 +239,12 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
       writes: ['race', 'fantastic'],
       when: () => destinyActiveForUnit(abilities, version),
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // PROVENANCE[zombies]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:25:3ed9fd7025a17d7041e72be8
-    statStep({ id: 'zombies', phase: 'base', writes: ['fantastic'],
-      when: () => isCoM1 && identity.specialUnit === 'zombies',
-      apply: u => { u.fantastic = true; } }),
+    // No `base:zombies` step. CoM 1's Zombies are Fantastic because the unit-type table says so —
+    // `COM1_UT_ZOMBIES_ABILITIES` is `UA_FANTASTIC | UA_CREATE_UNDEAD`, raw `0x0081` at file
+    // `com1:0x2AED2`, which construction copies wholesale. That is template data, and
+    // `units_com.js` already carries it as `baseFantastic` on templateId 174. A step re-asserting
+    // it was a no-op for every roster unit, and for a custom unit it let the special-unit selector
+    // override the Fantastic control the user had set. The roster owns the fact (F203).
     // PROVENANCE[constructCatapult]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16 | Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:22d4847c5bd5843526ea3fc0 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:14:0c00ef951862849e15604add | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:18:0dad2f766ea1e74b0aa62aa1
     statStep({ id: 'constructCatapult', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1 && isConstructCatapult,

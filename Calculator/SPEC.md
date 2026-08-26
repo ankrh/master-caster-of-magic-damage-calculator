@@ -485,6 +485,20 @@ have no b or d at all** — every modifier in those versions is a or c. The cons
 to get wrong: **b runs before c**, so a Warlord early-pass effect lands *before* base-game spells,
 not after.
 
+**`base` is ordered, and its order is not arbitrary.** The phase holds five kinds of write and the
+chain runs them in this order: template initialization; training-time writes (`CreateUnit.CAS`,
+one-shot when the city builds the unit); cast-time permanent writes (`OLSpell.CAS`, one-shot when
+the spell landed); per-pass permanent writes; and last the artificial immunity strip, which has no
+engine position of its own. The calculator derives the landed steady state, so a permanent write is
+modelled as already applied at the head of the chain.
+
+**A permanent step may occupy both the head position and its engine position only if it is
+idempotent.** `Units[i] := BaseUnits[i]` ($00599A8D) resets the calculated record every pass while
+`BaseUnits` is never reset, so a per-pass permanent write must be idempotent or the base record
+drifts without bound — Destiny's five writes are all assignments for that reason. Every accumulating
+permanent write is one-shot instead, and a one-shot step that also held an in-chain position would
+apply its delta twice.
+
 ### The execution chain
 
 One ordered chain per engine version, `base` through `e`, is the single mechanism that orders a

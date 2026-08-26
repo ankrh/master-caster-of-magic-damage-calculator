@@ -297,7 +297,10 @@ test('special options and ordered live realm overrides preserve base identity', 
       baseRace: 'Dwarf', baseFantastic: false });
   }
   expect(report.options.comGolem.abilities.elemArmor).toBe('resistElements');
-  expect(report.options.comZombies.identity.fantastic).toBe(true);
+  // The Zombies special option must NOT override the Fantastic control: this unit is a custom
+  // Dwarf with `baseFantastic: false`, and CoM 1's Zombies are Fantastic only because the
+  // unit-type table says so, which the roster already states (F203).
+  expect(report.options.comZombies.identity.fantastic).toBe(false);
   expect(report.options.modernChosen.identity).toMatchObject({ race: 'Life', fantastic: true });
   expect(report.options.warlordChosen.identity).toMatchObject({ race: 'Life', fantastic: true });
   expect(report.catapult.ordinary.identity).toMatchObject({ race: 'Dwarf', fantastic: false });

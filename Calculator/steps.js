@@ -100,7 +100,6 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'base:energyCannon': SCOPE_WARLORD,
   'base:constructCatapult': SCOPE_COM1,
   'base:summonBranch': SCOPE_COM1,
-  'base:zombies': SCOPE_COM1,
   'base:zombies:toBlock': SCOPE_COM1,
   'base:lightningBlade:breath': SCOPE_WARLORD,
   'base:ludusAgoge': SCOPE_WARLORD,
