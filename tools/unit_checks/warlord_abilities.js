@@ -113,8 +113,6 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Focus Magic empty-base overwrite replaces the Marionette retype with shot type 34');
   assertEqual(ownedMarionette.hp, 15,
     'Channeler Fantastic write makes Wanderer eligible for live-Fantastic Xenoveterinary');
-  assertEqual(ownedMarionette.abilities.outlanderXenoveterinary, true,
-    'Xenoveterinary derived label is present on a Channeler-owned Marionette');
   assertEqual(ownedMarionette.marionette.spell, 'Web',
     'Unascended Nature Marionette receives Web');
   assertEqual(ownedMarionette.marionette.charges, 3,
@@ -152,8 +150,9 @@ function runWarlordUnitAbilityChecks(ctx) {
   assert(strayedTraceIds.indexOf('marionette:strayedTransmute')
       < strayedTraceIds.indexOf('rebuild'),
   'Strayed Transmute Equipment stats precede Rebuild');
-  assertEqual(!!strayedMarionette.abilities.outlanderXenoveterinary, false,
-    'Strayed normal Wanderer is not Xenoveterinary-eligible');
+  assert(!strayedTraceIds.includes('outlanderXenoveterinary'),
+    'Strayed normal Wanderer is not Xenoveterinary-eligible: the block reads the calculated '
+    + 'Fantastic flag at its own position, and the strayed branch never writes it');
 
   const ascendedSpells = {
     nature: ['Ice Bolt', 'Water Elemental'],

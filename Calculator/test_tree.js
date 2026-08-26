@@ -163,6 +163,7 @@ const TEST_TREE = [
         keys: [
           'armorcladArmorWarlord',
           'battleArmorWarlord',
+          'battleArmorSkipsApotheosisPermanentFantasticWarlord',
         ],
       },
       {
@@ -445,6 +446,7 @@ const TEST_TREE = [
         keys: [
           'energyWeaponryMeleeWarlord',
           'energyWeaponryRangedUnaffectedWarlord',
+          'energyWeaponrySkipsApotheosisPermanentFantasticWarlord',
         ],
       },
       {
@@ -699,6 +701,13 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Military Drilling',
+        keys: [
+          'militaryDrillingDefenseWarlord',
+          'militaryDrillingSkipsApotheosisPermanentFantasticWarlord',
+        ],
+      },
+      {
         name: 'Military Workshop',
         keys: [
           'militaryWorkshopArmorPiercingWarlord',
@@ -825,6 +834,13 @@ const TEST_TREE = [
         name: 'Psycho Force',
         keys: [
           'psychoForceWarlord',
+        ],
+      },
+      {
+        name: 'Radio',
+        keys: [
+          'radioToHitWarlord',
+          'radioSkipsApotheosisPermanentFantasticWarlord',
         ],
       },
       {
@@ -1125,6 +1141,12 @@ const TEST_TREE = [
           'warpDefenseSignedBeforeSupremeLightCoM',
           'warpDefenseSignedBeforeTacticianCoM',
           'shatterBeforeSupremeLightCoM',
+        ],
+      },
+      {
+        name: 'Xenoveterinary',
+        keys: [
+          'xenoveterinaryReadsFantasticAtItsOwnBlockWarlord',
         ],
       },
       {

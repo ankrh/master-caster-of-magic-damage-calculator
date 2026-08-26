@@ -756,31 +756,43 @@ function deriveMarionettePackage(identity, abilities, version) {
 }
 
 // Outlander controls expose the researched reform/building conditions, not their
-// derived labels. Fold permanent unit upgrades and combat-only labels in before
-// curse gating so downstream mechanics see a single calculated state.
+// derived labels. Fold permanent unit upgrades in before curse gating so downstream
+// mechanics see a single calculated state.
 const DERIVED_OUTLANDER_STATE_KEYS = [
   'armorclad',
-  'battleArmor',
   'blackpowder',
   'bombsGrenades',
   'energyCannon',
   'energyCannonDestruction',
   'energyWeaponry',
-  'magitekEngine',
   'pneumaField',
   'powerEngine',
   'psychoForce',
   'temporalGravityDrive',
   'upgradedExplosive',
-  'outlanderBallisticsTraining',
-  'outlanderRadio',
-  'outlanderXenopsychology',
-  'outlanderXenoveterinary',
 ];
 
-function applyOutlanderReformGrants(abilities, version, baseUnitType, isHero = false,
-  channelerMarionette = false) {
-  if (!version || !version.startsWith('com2_warlord')) return abilities;
+// The reform block's eligibility gates, for the versions that have no Outlander reforms at all.
+const NO_OUTLANDER_REFORM = Object.freeze({
+  sapiensEligible: false, battleArmor: false, magitekEngine: false,
+  ballisticsTraining: false, xenopsychology: false, radio: false, xenoveterinary: false,
+});
+
+// Returns the granted ability set **and** the block's eligibility record. Six of the states this
+// used to derive were ability labels no engine flag stands behind — `EncBattleArmor` and
+// `EncMagitek` occur nowhere in the 38 `.CAS` files — and each was only ever the `when` of a step
+// the chain already has, so they are `reform` fields read by those predicates instead of keys
+// merged into the unit's abilities (F198).
+//
+// Every `BASEFANTASTIC(U)` here is the **permanent** record: the base unit data "before applying
+// continuous effects such as buffs or curses" (`Reference docs/Script source/CAS reference/
+// Scripts.TXT:286`), which carries Destiny's `B.Fantastic := True` at $0059A390 (F192). The one
+// live-Fantastic gate in the block is Xenoveterinary's `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1040`),
+// and that term is not here: it is the positional `when` of `b:outlanderXenoveterinary`.
+function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHero = false) {
+  if (!version || !version.startsWith('com2_warlord')) {
+    return { abilities, reform: NO_OUTLANDER_REFORM };
+  }
 
   // These names are outputs, never accepted inputs. Besides keeping the UI to one
   // source of truth, stripping them here prevents stale saved state or a caller from
@@ -788,7 +800,7 @@ function applyOutlanderReformGrants(abilities, version, baseUnitType, isHero = f
   const fundamentalAbilities = { ...abilities };
   for (const key of DERIVED_OUTLANDER_STATE_KEYS) delete fundamentalAbilities[key];
 
-  const baseFantastic = String(baseUnitType || '').startsWith('fantastic_');
+  const baseFantastic = !!permanentFantastic;
   const outlanderWizard = !!fundamentalAbilities.outlanderWizard;
   // All reform spell states are owned by Outlander wizards. Keep their raw controls in
   // the UI state, but remove them from the effective unit state when the owner is not
@@ -808,58 +820,69 @@ function applyOutlanderReformGrants(abilities, version, baseUnitType, isHero = f
   const permanentMechanical = !!fundamentalAbilities.mechanical
     || (!!fundamentalAbilities.rebuild && !isHero);
   const armorclad = outlanderWizard && !!fundamentalAbilities.armorcladReform && permanentMechanical;
+  // `UnitCalcPre.CAS:1104` closes the whole tail on `BASEFANTASTIC(U)>0`, and the +3 branch at
+  // `:1109-1113` restates it beside `EncArmorClad` index 1 and `SCustomAttribute` index 1 — three
+  // permanent-record terms in one test.
   const battleArmor = outlanderWizard && !!fundamentalAbilities.armorcladReform
     && !baseFantastic && !permanentMechanical;
   const powerEngine = outlanderWizard && !!fundamentalAbilities.heatPowerEngine && permanentMechanical;
-  // UnitCalc.CAS evaluates left-to-right: non-fantastic non-mechanical units,
+  // `UnitCalc.CAS:1406-1408` evaluates left-to-right: non-fantastic non-mechanical units,
   // heroes, and Armorclad mechanical units pass; fantastic units do not.
   const outlanderSoldier = outlanderWizard && !baseFantastic && (!permanentMechanical || armorclad);
-  const firstFourEligible = outlanderWizard && (!baseFantastic || !!fundamentalAbilities.sapiens);
+  // The `NOTSAPIENS` gate, `UnitCalcPre.CAS:1062-1064`. `b:bombsGrenades` reads the same one.
+  const sapiensEligible = outlanderWizard
+    && (!baseFantastic || !!fundamentalAbilities.sapiens);
   const temporalDrive = powerEngine && !!fundamentalAbilities.temporalEngineering;
   const temporalGravityDrive = temporalDrive && !!fundamentalAbilities.sailing;
+  // `UnitCalcPre.CAS:1050-1052`: the block's own gate is the *calculated* `EncPowerEngine` flag,
+  // which no region-`b` write reaches before this point, so the derived permanent state answers it.
   const magitekEngine = powerEngine && !!fundamentalAbilities.magitekEngineering;
+  // `OverlandEndTurn.CAS:446`, the fourth site of the same permanent-record term.
   const militaryDrilling = outlanderWizard && !baseFantastic && !!fundamentalAbilities.militaryDrilling;
 
   return {
-    ...fundamentalAbilities,
-    ...(armorclad ? { armorclad: true } : {}),
-    ...(battleArmor ? { battleArmor: true } : {}),
-    ...(powerEngine ? { powerEngine: true } : {}),
-    ...(magitekEngine ? { magitekEngine: true, largeShield: true } : {}),
-    ...(temporalDrive ? { haste: true } : {}),
-    ...(temporalGravityDrive
-      ? { temporalGravityDrive: true, flying: true, illusionImmunity: true }
-      : {}),
-    ...(outlanderSoldier && fundamentalAbilities.energyBeamWeapons
-      ? { energyWeaponry: true }
-      : {}),
-    ...(outlanderSoldier && fundamentalAbilities.psychoConverter
-      ? { psychoForce: true }
-      : {}),
-    ...(outlanderSoldier && fundamentalAbilities.pneumaReactor
-      ? { pneumaField: true }
-      : {}),
-    ...(firstFourEligible && fundamentalAbilities.ballisticsTraining
-      ? { outlanderBallisticsTraining: true }
-      : {}),
-    ...(firstFourEligible && fundamentalAbilities.xenopsychology
-      ? { outlanderXenopsychology: true }
-      : {}),
-    ...(firstFourEligible && fundamentalAbilities.radio
-      ? { outlanderRadio: true }
-      : {}),
-    ...(outlanderWizard && (baseFantastic || channelerMarionette) && fundamentalAbilities.xenoveterinary
-      ? { outlanderXenoveterinary: true }
-      : {}),
-    // Despite both prose sources naming Battle Armor, the executing scripts grant Resist
-    // Magic only alongside the permanent EncArmorClad flag (CreateUnit.CAS:704-705 and
-    // OverlandEndTurn.CAS:436-442). The transient +3 Battle Armor branch has no such grant.
-    ...(outlanderWizard && fundamentalAbilities.magitekScience && armorclad
-      ? { resistMagic: true }
-      : {}),
-    ...(militaryDrilling
-      ? { discipline: fundamentalAbilities.discipline === 'combat' ? 'combat' : 'overland' }
-      : {}),
+    abilities: {
+      ...fundamentalAbilities,
+      ...(armorclad ? { armorclad: true } : {}),
+      ...(powerEngine ? { powerEngine: true } : {}),
+      // Large Shield is the block's second write, `SETSTAT(U,ALargeShield,0,1)` at
+      // `UnitCalcPre.CAS:1057`, beside the To-Defend one `b:magitekEngine` makes. It stays a
+      // grant until F200 positions it.
+      ...(magitekEngine ? { largeShield: true } : {}),
+      ...(temporalDrive ? { haste: true } : {}),
+      ...(temporalGravityDrive
+        ? { temporalGravityDrive: true, flying: true, illusionImmunity: true }
+        : {}),
+      ...(outlanderSoldier && fundamentalAbilities.energyBeamWeapons
+        ? { energyWeaponry: true }
+        : {}),
+      ...(outlanderSoldier && fundamentalAbilities.psychoConverter
+        ? { psychoForce: true }
+        : {}),
+      ...(outlanderSoldier && fundamentalAbilities.pneumaReactor
+        ? { pneumaField: true }
+        : {}),
+      // Despite both prose sources naming Battle Armor, the executing scripts grant Resist
+      // Magic only alongside the permanent EncArmorClad flag (CreateUnit.CAS:704-705 and
+      // OverlandEndTurn.CAS:436-442). The transient +3 Battle Armor branch has no such grant.
+      ...(outlanderWizard && fundamentalAbilities.magitekScience && armorclad
+        ? { resistMagic: true }
+        : {}),
+      ...(militaryDrilling
+        ? { discipline: fundamentalAbilities.discipline === 'combat' ? 'combat' : 'overland' }
+        : {}),
+    },
+    reform: {
+      sapiensEligible,
+      battleArmor,
+      magitekEngine,
+      ballisticsTraining: sapiensEligible && !!fundamentalAbilities.ballisticsTraining,
+      xenopsychology: sapiensEligible && !!fundamentalAbilities.xenopsychology,
+      radio: sapiensEligible && !!fundamentalAbilities.radio,
+      // The research state alone. `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1040`) is the calculated
+      // record at region `b`, so it is the step's own `when` and not a term here (F198).
+      xenoveterinary: outlanderWizard && !!fundamentalAbilities.xenoveterinary,
+    },
   };
 }
 

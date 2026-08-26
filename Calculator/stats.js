@@ -65,8 +65,23 @@ function deriveUnitStats(input) {
   const marionetteDerivation = deriveMarionettePackage(
     identity, markIntrinsicLucky(suppliedAbilities), version);
   const marionette = marionetteDerivation.package;
-  const abilities = applyMagicImmunityCurseGating(
-    applyOutlanderReformGrants(
+  // The **permanent** record's Fantastic flag as the `base` phase leaves it. Two gates read it,
+  // each at a position after that phase: `if B.Fantastic then U.level := 1` at $0059A118 and the
+  // weapon block's `not B.Fantastic and not B.ishero` at $0059E2B8. `base:destiny` is the one
+  // permanent identity write the pipeline itself makes — `B.race := 19; B.Fantastic := True` at
+  // $0059A390 — so it, and nothing else, separates this value from the unit's own
+  // `identity.baseFantastic`. It used to be spelled as a `destinyActive` term patched onto each
+  // gate; now it is the record, and the sequence asserts below that `ctx.base` agrees (F163).
+  // It is read off the supplied abilities rather than the granted ones because the Outlander
+  // reform gates below need it: `destinyActiveForUnit` reads the `destiny` key alone, which no
+  // grant and no curse strip writes, and the `ctx.base` check at the tail is what makes that a
+  // measured claim rather than a stated one (F198).
+  const destinyActive = destinyActiveForUnit(suppliedAbilities, version);
+  const permanentFantastic = isFantasticBase || destinyActive;
+  // The Outlander reform block's own eligibility gates, computed once and read by two consumers:
+  // the permanent and ability grants it still makes, and the six phase-`b` steps whose write the
+  // calculator used to reach through an invented ability label (F198).
+  const outlanderDerivation = applyOutlanderReformGrants(
     applyFortificationGrant(
     applyInsulationGrant(
     applyPillarOfFaithGrant(
@@ -78,8 +93,9 @@ function deriveUnitStats(input) {
     version),
     version),
     version),
-    version, baseUnitType, isHero, marionette && marionette.state === 'owned'), version);
-  const destinyActive = destinyActiveForUnit(abilities, version);
+    version, permanentFantastic, isHero);
+  const outlanderReform = outlanderDerivation.reform;
+  const abilities = applyMagicImmunityCurseGating(outlanderDerivation.abilities, version);
   // The identity conversions are steps of the one sequence, spliced in below and ordered by the
   // execution chain like every other write, so `race` and `fantastic` are fields of the running
   // record and a gate reads whatever stands in them at its own position (F163). There is no
@@ -117,14 +133,6 @@ function deriveUnitStats(input) {
   // `com2_` test in the same expression, which is the settled adjacent form (`SPEC.md`,
   // *Versions*) (F188).
   const fantasticAtModernEncMagicRule = u => !!u.fantastic;
-  // The **permanent** record's Fantastic flag as the `base` phase leaves it. Two gates read it,
-  // each at a position after that phase: `if B.Fantastic then U.level := 1` at $0059A118 and the
-  // weapon block's `not B.Fantastic and not B.ishero` at $0059E2B8. `base:destiny` is the one
-  // permanent identity write the pipeline itself makes — `B.race := 19; B.Fantastic := True` at
-  // $0059A390 — so it, and nothing else, separates this value from the unit's own
-  // `identity.baseFantastic`. It used to be spelled as a `destinyActive` term patched onto each
-  // gate; now it is the record, and the sequence asserts below that `ctx.base` agrees (F163).
-  const permanentFantastic = isFantasticBase || destinyActive;
   const loadoutEligible = !permanentFantastic;
   // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
   // to earn experience" (`Unit rosters/Warlord mod unit data/HELP.TXT:6324`). Nothing in that
@@ -317,10 +325,10 @@ function deriveUnitStats(input) {
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`), which is the record the
   // `base` phase leaves — Destiny's `B.Fantastic := True` at $0059A390 included, since that write
   // is to `BaseUnits` and persists into every later recalculation (F192). The same `NOTSAPIENS`
-  // label also encloses Ballistics Training, Xenopsychology and Radio, whose `firstFourEligible`
-  // (`stats_identity.js`) still reads the training-time field alone.
+  // label also encloses Ballistics Training, Xenopsychology and Radio, which take the identical
+  // gate through `outlanderReform.sapiensEligible` — one home for one script test (F198).
   const explosiveEligible = isWarlord && !!abilities.explosive
-    && (!permanentFantastic || !!abilities.sapiens);
+    && outlanderReform.sapiensEligible;
   const bombsGrenades = explosiveEligible
     && ((parseInt(input.atk) || 0) > 0 || !!abilities.flying);
 
@@ -964,9 +972,7 @@ function deriveUnitStats(input) {
   const heavenlyLightMeleeToHitAt = u => (heavenlyLightMaterialTail
     && (isCoM1 ? u.atk > 0 : inputBaseAtk > 0)) ? 10 : 0;
   const heavenlyLightThrownToHit = heavenlyLightMaterialTail ? 10 : 0;
-  const outlanderToHitBonus = (abilities.outlanderXenoveterinary ? 10 : 0)
-    + (abilities.outlanderRadio ? 10 : 0);
-  const outlanderRtbToHitBonus = abilities.outlanderBallisticsTraining ? 20 : 0;
+  const outlanderRtbToHitBonus = outlanderReform.ballisticsTraining ? 20 : 0;
   const uphillBattlePct = uphillBattleActive ? 10 : 0;
   // UnitCalc.CAS:326-328 writes `SToRanged` alone, so the bonus reaches the Ranged channel
   // only and never Thrown or either Breath. No ranged-type test: the script writes the
@@ -1525,6 +1531,9 @@ function deriveUnitStats(input) {
     // one value for the whole derivation and needs no position (F187).
     isHero: !!identity.isHero,
     combatSummoned: !!effectiveAbilities.combatSummoned,
+    // The Outlander reform block's eligibility record: the gate of `b:battleArmor` and
+    // `b:magitekEngine`, neither of which has an ability key any more (F198).
+    outlanderReform,
     strengthFields,
   }).map(step => {
     if (step.id !== 'rust') return step;
@@ -1921,7 +1930,8 @@ function deriveUnitStats(input) {
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount,
     natureConjunctionActive, natureLinkActive, nodeAuraActive,
-    orihalconActive, outlanderRtbToHitBonus, pillarOfFaith, pillarOfFaithCount, plagueActive,
+    orihalconActive, outlanderReform, outlanderRtbToHitBonus,
+    pillarOfFaith, pillarOfFaithCount, plagueActive,
     pneumaFieldActive, poolOfRepentance, poxHostActive, psychoForceActive,
     realmWardActive, sanctaBasilica,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayResMod,

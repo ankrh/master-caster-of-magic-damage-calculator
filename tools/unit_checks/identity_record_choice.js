@@ -193,6 +193,16 @@ const LANDED_CORRECTIONS = [
     preset: 'wallOfFireGarrisonSkipsApotheosisPermanentFantasticWarlord' },
   { id: 'F192', at: 'b:fieryFury:race and its First Strike half', record: 'permanent',
     preset: 'fieryFuryApotheosisTakesBaseFantasticArmWarlord' },
+  { id: 'F198', at: "the `NOTSAPIENS` gate over Ballistics Training, Xenopsychology and Radio",
+    record: 'permanent', preset: 'radioSkipsApotheosisPermanentFantasticWarlord' },
+  { id: 'F198', at: 'b:battleArmor', record: 'permanent',
+    preset: 'battleArmorSkipsApotheosisPermanentFantasticWarlord' },
+  { id: 'F198', at: 'the Outlander-soldier gate at UnitCalc.CAS:1406-1408', record: 'permanent',
+    preset: 'energyWeaponrySkipsApotheosisPermanentFantasticWarlord' },
+  { id: 'F198', at: "Military Drilling's permanent Discipline grant", record: 'permanent',
+    preset: 'militaryDrillingSkipsApotheosisPermanentFantasticWarlord' },
+  { id: 'F198', at: 'b:outlanderXenoveterinary', record: 'positional',
+    preset: 'xenoveterinaryReadsFantasticAtItsOwnBlockWarlord' },
 ];
 
 // The three record choices are the whole vocabulary a gate has, so a row naming a fourth would be

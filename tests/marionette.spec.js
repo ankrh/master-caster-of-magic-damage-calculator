@@ -22,7 +22,6 @@ test('Wanderer Channeler package derives through UI and share state', async ({ p
       hp: stats.hp,
       ranged: stats.modernAttacks.ranged,
       package: stats.marionette,
-      xenoveterinary: stats.abilities.outlanderXenoveterinary,
       lifeSteal: stats.abilities.lifeSteal,
       state: collectState(),
     };
@@ -36,7 +35,6 @@ test('Wanderer Channeler package derives through UI and share state', async ({ p
     state: 'owned', primary: 'death', spell: 'Syphon Life', charges: 2,
     attackBonus: 3, defenseBonus: 1,
   });
-  expect(report.xenoveterinary).toBe(true);
   expect(report.lifeSteal).toBe(-1);
 
   const shareUrl = await page.evaluate(

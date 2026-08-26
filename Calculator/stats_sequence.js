@@ -319,7 +319,7 @@ function precalcScriptStatSteps(ctx) {
     fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
     greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
-    marionetteStrayed, natureLinkActive, outlanderRtbToHitBonus,
+    marionetteStrayed, natureLinkActive, outlanderReform, outlanderRtbToHitBonus,
     plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields, secondaryHitFields,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayLevels, soulFlayResMod,
     strengthFields, thrownTypeFields, unitTypeAt,
@@ -399,10 +399,16 @@ function precalcScriptStatSteps(ctx) {
     // Xenoveterinary's +25% (minimum +1) reads SHP at the head of the early pass
     // (UnitCalcPre.CAS:1038-1049), so it precedes every other phase-b HP write and does not
     // compound Lionheart, Endurance or Charm of Life, which are `c`.
+    // The block's own gate is `IF FANTASTIC(U)` (`:1040`) — record selector-free, the
+    // **calculated** record at this position, and the one live-Fantastic test in the whole
+    // Outlander block, whose other four gates are `BASEFANTASTIC(U)`. So a unit made Fantastic
+    // earlier in the chain takes it: Spirit Link's `b:spiritLink`, the Channeler's
+    // `b:marionetteChanneler` (which is what the old `channelerMarionette` special case stood in
+    // for) and Apotheosis' `base:destiny` alike (F198).
     // PROVENANCE[outlanderXenoveterinary]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:8b96540daf4a2128b20b0aeb
     statStep({ id: 'outlanderXenoveterinary', sourceId: 'outlanderXenoveterinary',
       sourceLabel: 'Xenoveterinary', phase: 'b', writes: ['hp', 'toHit'],
-      when: () => !!abilities.outlanderXenoveterinary,
+      when: u => outlanderReform.xenoveterinary && !!u.fantastic,
       apply: u => {
         u.hp += Math.max(1, Math.floor(Math.max(0, u.hp) / 4));
         u.toHit += 10;
@@ -421,11 +427,11 @@ function precalcScriptStatSteps(ctx) {
       } }),
     // PROVENANCE[outlanderXenopsychology]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:60edcb4df0146e08c59fd67d
     statStep({ id: 'outlanderXenopsychology', phase: 'b', writes: ['res'],
-      when: () => !!abilities.outlanderXenopsychology, apply: u => { u.res += 1; } }),
+      when: () => outlanderReform.xenopsychology, apply: u => { u.res += 1; } }),
     // PROVENANCE[outlanderRadio]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:183cd9022f9df0e2b6d9514f
     statStep({ id: 'outlanderRadio', sourceId: 'outlanderRadio', sourceLabel: 'Radio',
       phase: 'b', writes: ['res', 'toHit', 'toBlk'],
-      when: () => !!abilities.outlanderRadio, apply: u => {
+      when: () => outlanderReform.radio, apply: u => {
         u.res += 1; u.toHit += 10; u.toBlk += 10;
       } }),
     // Conjuring Pact and Uphill Battle immediately follow the Outlander block.

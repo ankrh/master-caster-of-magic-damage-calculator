@@ -169,7 +169,6 @@ test('reform controls stay editable and affect predefined Warlord units', async 
   // Derived labels are calculated internally, not exposed as competing UI state.
   const derivedStates = [
     'armorclad',
-    'battleArmor',
     'blackpowder',
     'bombsGrenades',
     'energyCannon',
@@ -179,10 +178,6 @@ test('reform controls stay editable and affect predefined Warlord units', async 
     'psychoForce',
     'temporalGravityDrive',
     'upgradedExplosive',
-    'outlanderBallisticsTraining',
-    'outlanderRadio',
-    'outlanderXenopsychology',
-    'outlanderXenoveterinary',
   ];
   for (const key of derivedStates) {
     await expect(page.locator(`#aAbil_${key}`)).toHaveCount(0);

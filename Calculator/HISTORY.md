@@ -6,6 +6,75 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-26
 
+- **F166 is retired as a row and split into its four landable stages, F198-F201.** The row already
+  named four stages and carried one cost, one `Versions` scope and one dependency slot for all of
+  them, which is not something a queue can order. Each stage is now its own row with the
+  measurements and citations it needs; `SPEC.md`'s "Scheduled for removal" pointer moves from F166
+  to [F201](./BACKLOG.md), the stage that retires the deviation. **F194 was folded into F198**
+  rather than kept separate: its correction sits inside the very expressions stage (i) rewrites.
+
+- **F198 (stage (i)): the six invented Outlander labels are gone, and each is now the `when` of the
+  step the chain already had.** `EncBattleArmor` and `EncMagitek` occur in none of the 38 `.CAS`
+  files, and `battleArmor`, `magitekEngine`, `outlanderBallisticsTraining`,
+  `outlanderXenopsychology`, `outlanderRadio` and `outlanderXenoveterinary` were never anything but
+  the gate of `b:battleArmor`, `b:magitekEngine` and the four `b:outlander*` steps. They no longer
+  enter the ability map: `applyOutlanderReformGrants` (`stats_identity.js`) returns
+  `{ abilities, reform }` — the shape `deriveMarionettePackage` beside it already had — and the
+  `reform` record is read by those six predicates, by `getAbilityStatSteps` through
+  `identityPredicates`, and by `explosiveEligible`. **Emission versus firing was the design question
+  the row left open, and the row's own proposal is what `SPEC.md`, *Version scope* says**: scope and
+  emission are upper bounds while `when` is the gate, so the four `stats_sequence.js` steps keep
+  their unconditional emission and take a predicate, and the two `combat_abilities.js` steps keep
+  the file's emission-gated idiom.
+- **[F194](./BACKLOG.md) folded in: four `BASEFANTASTIC(U)` sites take the permanent record, and the
+  fifth gate in the same block is the opposite reading.** `firstFourEligible` (now
+  `sapiensEligible`), `battleArmor`, `outlanderSoldier` and `militaryDrilling` decoded a
+  training-time `String(baseUnitType).startsWith('fantastic_')`; their blocks are
+  `UnitCalcPre.CAS:1062-1064` and `:1104`/`:1110`, `UnitCalc.CAS:1406-1408` and
+  `OverlandEndTurn.CAS:446`, every one of them `BASEFANTASTIC(U)` — the record the `base` phase
+  leaves, Destiny's `B.Fantastic := True` at `$0059A390` included ([F192](./HISTORY.md)). The
+  `NOXENOVET` gate at `:1040` is `IF FANTASTIC(U)`, the **calculated** record at region `b`, so
+  `b:outlanderXenoveterinary` is now `when: u => …&& u.fantastic` and its `channelerMarionette`
+  special case dissolves into `b:marionetteChanneler`, which is the chain entry that was standing in
+  for it. `permanentFantastic` moved above the grant chain to make this possible; the `ctx.base`
+  check at the tail of `deriveUnitStats` already asserts that value against the sequence, so the
+  earlier read is checked rather than stated.
+- **Two adjacent cleanups, both inside the rewritten expressions.** `outlanderToHitBonus`
+  (`stats.js`) was dead — one occurrence repo-wide, its own definition, while the +10 To Hit it
+  computed is written by the two steps themselves — and is deleted. `explosiveEligible` restated the
+  `NOTSAPIENS` gate a second time and now reads `outlanderReform.sapiensEligible`, so one script
+  test has one home.
+- **Measurement: 609 of 52440 derivations differ** (`tools/derivation_equivalence.js` against a
+  pristine `HEAD`), and the split is the point. **517 are the six retired keys leaving the published
+  ability map** and move no number. **92 are substantive, all `com2_warlord_1.5.12.7`, and every one
+  is attributed to a cited block**: 38 the Outlander-soldier gate (`UnitCalc.CAS:1406-1408`), 25
+  Xenoveterinary *gained* by a unit made Fantastic before its block (`UnitCalcPre.CAS:1040`), 9
+  Ballistics Training, 7 Radio and 2 Xenopsychology withheld under `NOTSAPIENS`, 8 Battle Armor
+  withheld (`:1104`/`:1110`) and 5 Military Drilling Discipline withheld
+  (`OverlandEndTurn.CAS:446`), with overlaps. Nothing outside Warlord moved, and 0 cases were left
+  unattributed.
+- **Five presets, each confirmed failing against the unfixed gates and passing after**, and each
+  added to `LANDED_CORRECTIONS` (`tools/unit_checks/identity_record_choice.js`):
+  `radioSkipsApotheosisPermanentFantasticWarlord` (6.0 against 8.0),
+  `battleArmorSkipsApotheosisPermanentFantasticWarlord` (5.0 against 2.0),
+  `energyWeaponrySkipsApotheosisPermanentFantasticWarlord` (15.0 against 10.0),
+  `militaryDrillingSkipsApotheosisPermanentFantasticWarlord` (5.0 against 4.0) and
+  `xenoveterinaryReadsFantasticAtItsOwnBlockWarlord` (4.0 against 3.0). The first four are negative
+  claims whose absence is the rule under test and each `desc` says so. **Two more presets close a
+  coverage gap the item exposed:** `b:outlanderRadio` and Military Drilling's Discipline had **no**
+  preset at all, so `radioToHitWarlord` (4.0) and `militaryDrillingDefenseWarlord` (8.0) give each
+  its first positive regression.
+- **Three harness assertions re-aimed at what the code still has, not weakened.** Two in
+  `tools/unit_checks/warlord_abilities.js` asserted the retired `outlanderXenoveterinary` label on a
+  Marionette; one was redundant with the `hp` and trace-order assertions beside it and is gone, and
+  the strayed one now asserts the step's absence from the trace. `tests/marionette.spec.js` read the
+  same label beside the `hp: 15` that is the effect's real consequence. `tests/version-gating.spec.js`
+  and `tests/f20-source-order.spec.js` stop naming five keys and four keys that no longer exist.
+- The `SPEC.md`, *Deliberate deviations* entry stays: it is retired by
+  [F201](./BACKLOG.md), not by this stage.
+  **Checks.** `node tools/node_unit_checks.js` 14557/14557, 0 failures; `npm run provenance` 272
+  formulas, 0 UNVERIFIED; `npm test` green.
+
 - **F168 — the two Spirit Link touch-immunity terms are deleted, not gated, because the fact they
   encode already has a home.** **Premise re-measured and half of it corrected.** The line numbers
   hold (`combat_special_attacks.js:88` and `:113`) and both anchors are where the row says. The
@@ -157,11 +226,11 @@ pre-2026-08-10 narratives remain recoverable from git history.
   takes Bad Moon and Good Moon and not Nature Conjunction — an expectation read off the
   implementation rather than off the blocks. It now asserts the blocks' reading and keeps the
   live-record half (Spell Ward and Soul Linker fire, Leadership does not) unchanged.
-- **Two adjacent defects filed, not folded in (F194, since folded into [F198](./BACKLOG.md);
+- **Two adjacent defects filed, not folded in (F194, since folded into [F198](./HISTORY.md);
   [F195](./BACKLOG.md)).** F194:
   the Outlander reform grants under the *same* `NOTSAPIENS` gate still decode a training-time
   `baseUnitType` string, so one script gate is now modelled two ways — it is the hoisted-grant
-  population [F198](./BACKLOG.md) owns, which is the bound's first clause. F195: Spell Ward carries
+  population [F198](./HISTORY.md) owns, which is the bound's first clause. F195: Spell Ward carries
   a live-Fantastic term its block does not have, which is the F175 class and is blocked on Q31,
   since two of the block's five arms are `IsDeathUnit`/`IsChaosUnit`.
   **Checks.** `node tools/node_unit_checks.js` 14542/14542, 0 failures; `npm run provenance` 272

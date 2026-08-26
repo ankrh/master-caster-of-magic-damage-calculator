@@ -673,6 +673,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // as functions of the running record, so each is answered where its own block stands (F163).
   const misleadEligibleAt = identityPredicates.misleadEligible || (() => true);
   const survivalInstinctEligibleAt = identityPredicates.survivalInstinctEligible || (() => true);
+  // The Outlander reform block's eligibility record (`applyOutlanderReformGrants`,
+  // `stats_identity.js`). Battle Armor and Magitek Engine are two of the six states the
+  // calculator used to carry as ability labels with no engine flag behind them, so each is the
+  // gate of the step below rather than a key on the unit's ability map (F198).
+  const outlanderReform = identityPredicates.outlanderReform || {};
 
   // Holy Bonus: +X to melee attack, defense, resistance.
   // CoM v6.05+ and CoM2: also +X to ranged attack.
@@ -1239,14 +1244,14 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Battle Armor is the in-combat regular non-mechanical branch of the
   // Armorclad reform. UnitCalcPre.CAS:1106-1113 applies +3 Defense.
-  if (isWarlord && hasAbil(abilities, 'battleArmor')) {
+  if (isWarlord && outlanderReform.battleArmor) {
     // PROVENANCE[battleArmor]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:c7c2d7da26a07332de4fa4f3
     abilityStep('battleArmor', 'b', { writes: ['def'], apply: u => { u.def += 3; } });
   }
 
-  // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units.
-  // The reform grant helper has already derived `magitekEngine` and Large Shield.
-  if (isWarlord && hasAbil(abilities, 'magitekEngine')) {
+  // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units. The block's Large
+  // Shield write is still a grant the reform helper makes; this is its To-Defend half.
+  if (isWarlord && outlanderReform.magitekEngine) {
     // PROVENANCE[magitekEngine]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:d96a238f19276a8e5adea472
     abilityStep('magitekEngine', 'b', { writes: ['toBlk'], apply: u => { u.toBlk += 20; } });
   }
