@@ -590,24 +590,6 @@ function buildThrownPhase(active, params) {
   };
 }
 
-// Destroy Mechanical (Warlord, Clockwork Tinmen): the summon "could destroy any mechanical unit
-// in 1 hit with its special ability" — `Reference docs/Warlord manual v1.5.12.7.html`, the
-// 1.5.12.0 unit entry, and the only source that states the effect at all. No Warlord script and
-// no `Caster.exe` reconstruction names it, so the three restrictions modelled here — melee only,
-// a usable melee strike (atk > 0; sAlive > 0 is the caller's), and firing on the counter-attack
-// — are unsourced inferences. See `BACKLOG.md` Q29.
-function destroyMechanicalApplies(attacker, defender, atk) {
-  return atk > 0
-    && hasAbil(attacker.abilities, 'destroyMechanical')
-    && hasAbil(defender.abilities, 'mechanical');
-}
-
-function deterministicKillDist(cap) {
-  const d = new Array(cap + 1).fill(0);
-  d[cap] = 1;
-  return d;
-}
-
 function buildMeleePhase(params) {
   const {
     a,
@@ -659,10 +641,6 @@ function buildMeleePhase(params) {
         fearSamples: aHaste
           ? [firstFearedDist, firstFearedDist]
           : [firstFearedDist] };
-      }
-      if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
-        return { dist: deterministicKillDist(cap), lifeStealEV: 0,
-          fearSamples: aHaste ? [firstFearedDist, firstFearedDist] : [firstFearedDist] };
       }
       const aImmMDist = (aImmWithMelee && tAlive > 0)
         ? calcDamageSpellDist(tAlive, immStr, a.toHitImmolation, bDefForImm,
@@ -730,10 +708,6 @@ function buildCounterPhase(params) {
       if (sAlive <= 0 || cap <= 0 || (isCoM2 && bBlackSleep)) {
         return { dist: [1], lifeStealEV: 0, fearSamples: [fearedDist] };
       }
-      if (destroyMechanicalApplies(b, a, bBlackSleep ? 0 : bMeleeAtkVsA)) {
-        return { dist: deterministicKillDist(cap), lifeStealEV: 0,
-          fearSamples: [fearedDist] };
-      }
       const bImmMDist = (bImmWithMelee && tAlive > 0)
         ? calcDamageSpellDist(tAlive, immStr, b.toHitImmolation, aDefForImm,
           aToBlockVsBAll, a.hp, cap, aInvulnBonus, bMinDamageFromHits,
@@ -794,10 +768,6 @@ function buildFirstStrikeComputes(params) {
     const fearedDist = aBlackSleep ? [1] : fearedCountDist(fearDist, sAlive);
     if (sAlive <= 0 || cap <= 0 || (isCoM2 && aBlackSleep)) {
       return { dist: [1], lifeStealEV: 0, fearSamples: [fearedDist] };
-    }
-    if (destroyMechanicalApplies(a, b, aBlackSleep ? 0 : aMeleeAtkVsB)) {
-      return { dist: deterministicKillDist(cap), lifeStealEV: 0,
-        fearSamples: [fearedDist] };
     }
     const aImmMDist = (aImmWithMelee && tAlive > 0)
       ? calcDamageSpellDist(tAlive, immStr, a.toHitImmolation, bDefForImm,

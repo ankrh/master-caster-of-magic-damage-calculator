@@ -226,7 +226,7 @@ Three were closed by gates in this round, leaving **32**:
 | `combat_effects.js:904` | `spiritLink` | CoM 1, both MoM | leak, **deleted** (F157) |
 | `combat_effects.js:911` | `blazingMarch` | both MoM | leak, **gated** (F157) |
 | `combat_phases.js:327` | `dispelEvil` | CoM2, Warlord | dead read, **deleted** (F158) |
-| `combat_phases.js:592` | `destroyMechanical` | CoM 1, CoM2, both MoM | **leak**, two keys |
+| `combat_phases.js:592` | `destroyMechanical` | CoM 1, CoM2, both MoM | leak, **effect deleted** (F157) |
 
 Four dispositions, and only one of them is the per-site scope entry the first pass assumed. The
 first three are **settled** — [SPEC.md](../Calculator/SPEC.md), *Versions*, invariant 4 now names
@@ -241,16 +241,18 @@ first three are **settled** — [SPEC.md](../Calculator/SPEC.md), *Versions*, in
 - **consumer** (7 sites, settled by measurement). The value is carried to a consumer that makes
   the version test. Probing `bloodSucker` on a wounded attacker and `mechanical` on the defender
   moves no number in any version whose control is hidden.
-- **leak** (4 sites, one open). The value is *not* discarded, and the first pass's blanket "their
+- **leak** (4 sites, all closed). The value is *not* discarded, and the first pass's blanket "their
   value is discarded downstream" is wrong for these. The `dispelEvil` row was never the leak — it
   was dead where it stood, and F158 deleted it; the real one was the dynamic-key read this table
-  could not list at all.
+  could not list at all. The `destroyMechanical` row closed a fourth way again: the modelled effect
+  turned out not to exist in any engine, so F157 deleted it rather than scoping it.
 
 ## Eight leaks the sweep scored inert
 
 Each was reproduced by setting the single hidden control and reading `resolveCombat`, in a shape
 the sweep does not build. Three were fixed in the F130 round, two more in F157 and two in F158;
-one remains, `destroyMechanical` (F157, blocked on Q29).
+the eighth, `destroyMechanical`, was **deleted** in the 2026-08-26 F157 round — the effect it
+leaked has no engine behind it (`HISTORY.md`, F157).
 
 **Eight is not the total, and the same blind spot is why.** F157 found a ninth while checking
 whether Spirit Link's other reads were inert: `dispelEvilFailProb` and `exorciseFailProb`
@@ -271,7 +273,7 @@ removes it.
 | `dispelEvil` | CoM 1, CoM2, Warlord | defender Fantastic Death | 0 to 9.6 | fixed |
 | `exorcise` | both MoM | defender Fantastic Death | 0 to 9.6 | fixed |
 | `spiritLink` | both MoM | attacker Fantastic Death, defender Blessed | 0 to 3 | fixed |
-| `destroyMechanical` | CoM 1, CoM2, both MoM | defender also carrying hidden `mechanical` | 6 to 12 | open |
+| `destroyMechanical` | CoM 1, CoM2, both MoM | defender also carrying hidden `mechanical` | 6 to 12 | deleted |
 
 `exorcise` is the eighth, found by F158 while reproducing the seventh, and it is the same defect
 seen from the other side: the two are one shared rider under two names, so an ungated
@@ -318,9 +320,12 @@ Notes on the four:
   Note this sits beside the pre-existing `PROVENANCE[blazingMarch]` (`stats_sequence.js`,
   `versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7`) for the attack bonus: two engine
   writes of one named effect, with different scopes, so two anchors.
-- `destroyMechanical` needs two hidden keys at once, so the sweep's one-key-at-a-time rule cannot
-  see it by design. Its behavior is an unsourced inference (`BACKLOG.md` Q29), so no scope entry
-  can be cited for it until Q29 resolves.
+- `destroyMechanical` needed two hidden keys at once, so the sweep's one-key-at-a-time rule could
+  not see it by design. It never got a scope entry: Q29 found that the modelled melee rider does
+  not exist in any engine — the real Warlord mechanic is the **Sabotage** combat spell
+  (`COSpell.CAS:832-838`), which is a targeted cast, not an attack rider, and which
+  `spells.ini[340]` ships `Disabled=True`. **F157 deleted the effect**, closing the leak in all
+  four versions by removal (`HISTORY.md`, F157).
 
 ## What this round changed
 

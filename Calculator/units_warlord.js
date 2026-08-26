@@ -9496,8 +9496,7 @@ const WARLORD_UNITS_DATA = {
       "Fantastic",
       "Spellcaster=Spell#341x1",
       "Sapiens",
-      "Mechanical",
-      "DestroyMechanical"
+      "Mechanical"
     ],
     "category": "Arcane Creatures",
     "moves": 2,

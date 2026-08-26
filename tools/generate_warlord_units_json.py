@@ -385,11 +385,6 @@ def ini_unit_to_record(u):
     elif custom19 == '2':
         abilities.append('Clergy')
 
-    # Clockwork Tinmen: scripted passive on their attack that permanently
-    # destroys any Mechanical opponent in a single hit (DESC.INI spell 340).
-    if u.get('Name', '').strip() == 'Clockwork Tinmen':
-        abilities.append('DestroyMechanical')
-
     # Race-exclusive building enchantments (Dragon Mound, Lava Smelter, Altar of the
     # Sun, Altar of the Moon, Ludus Agoge) gate on the unit's intrinsic race/name in the
     # calculator engine — no identity ability tags are emitted here. See deriveUnitStats.

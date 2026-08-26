@@ -6,6 +6,53 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-26
 
+- **F157, the last member — Destroy Mechanical is deleted, because Q29 found the effect does not
+  exist.** Q29 asked which of the predicate's three restrictions were sourced. The answer is that
+  none of the *effect* is: the modelled melee rider has no engine behind it in any of the five
+  versions, so the leak in `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` and `com2_1.05.11` closes by
+  removal rather than by a scope entry — the shape this same item used for the
+  `dosDefenseForAttack` term on 2026-08-24. **Two independent defects, both re-verified before
+  acting.** (1) **The real Warlord mechanic is the Sabotage combat spell, not an attack rider.**
+  `COSpell.CAS:832-838` is a cast handler: `IF (SP<>SDisruption) THEN { GOTO "NOTSABOTAGE"; }`
+  then `IF (GETSTAT(TU,SCustomAttribute,1)=1) THEN { DEALCOMBATDAMAGE (TU,0,0,999); }`, where
+  `SP` is the spell cast and `TU` is `SpellTargetUnit` (`MASTER.CAS:362` `SDisruption = 340`;
+  `:1132` custom attribute 1 = Mechanical). All three modelled restrictions are therefore false —
+  it is a targeted cast, not melee; the only predicate is the target's Mechanical tag, with no
+  attack-strength term; and nothing gives it a counter-attack path. `HELP.TXT:4497-4502` states
+  the same shape in prose. The structural check agrees independently:
+  `Caster binary/CoM2 binary - combat flow.md:128-163` enumerates `ApplyAttack`'s riders
+  exhaustively over `$005B2994..$005B32BC` and finds **six** — Exorcise, Stoning Touch, Death
+  Touch, Life Steal, Destruction, Poison — with no instant-kill seventh. (2) **The Clockwork
+  Tinmen do not carry Sabotage.** `UNITS.INI[363]` has `Spellability=341`, which is **Lucky
+  Star**; `Spellability=340` appears on no unit in the roster, and the index has no offset
+  (Master Engineer 260 = Construct Catapult, Druid 2 = Resist Elements, Doom Wheels 294 = Big Red
+  Button). `tools/generate_warlord_units_json.py` hardcoded `DestroyMechanical` onto the unit by
+  name anyway, citing "DESC.INI spell 340", and the generated record carried the contradiction in
+  the open — `"Spellcaster=Spell#341x1"` beside `"DestroyMechanical"`.
+  **And `spells.ini[340]` ships `Disabled=True`.** That is the stronger statement and should not
+  be lost behind "the calculator modelled it wrongly": even a unit that *did* carry spell 340
+  could not cast it in Warlord 1.5.12.7, so the Tinmen have no destroy-mechanical capability in
+  any form — not a mis-shaped one. Deleted: `destroyMechanicalApplies` and its three call sites
+  plus the now-unused `deterministicKillDist` (`combat_phases.js`), the `destroyMechanical`
+  `ABILITY_DEFS` entry and the Destroy Mechanical clause from the `mechanical` tooltip
+  (`abilities.js`), the four presets and their `TEST_TREE` group, and the generator hardcode —
+  after which regenerating left exactly the one Tinmen ability line changed in `units_warlord.js`
+  and `Warlord mod units.json`. The `mechanical` key itself stays: its other two readers
+  (`combat_abilities.js` Artificer and Mechanical Expert) both carry an `isWarlord` test.
+  `tools/derivation_equivalence.js` is a `deriveUnitStats` digest and this effect lived in combat
+  resolution, so no derived number could move; the measured movement is only the case list
+  shrinking with the removed control. **The Q29 reading is the durable value and now has two
+  homes:** `Reference docs/Source discrepancies.md` §15 owns the source conflict (manual,
+  helptext, roster, spell table), and the census records the leak as closed by deletion.
+  **Filed, not implemented ([F196](./BACKLOG.md)):** the one genuinely in-scope Tinmen script
+  effect is that type id 363 counts as an engineer for the Mechanical Expert +20%/+10% buff
+  (`UnitCalc.CAS:274-300`), which the calculator represents as a manual tick with the eight
+  qualifying template ids written down nowhere. The other two are out of scope by `SPEC.md`,
+  *Scope* — Sabotage is active spellcasting off a charge, and the mechanical repair
+  (`CombatEndTurn.CAS:37-50`) is an end-turn heal. T8's unsourced-quotation count is one lower
+  and was already stale by one: 12 before, 11 after, and its enumeration had omitted
+  `stats.js:615`.
+
 - **F192: the fourteen identity gates that had never been read against their own blocks are read,
   and six of them wanted the permanent record.** Population (a), the gates whose block was
   unread, **all agree with the code**, and every one of the blocks tests the calculated record at

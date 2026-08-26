@@ -37,6 +37,7 @@ file shows.
 | 12 | Magitek Science — Battle Armor eligibility | manual and helptext include Battle Armor | resolved (script) |
 | 13 | Blaze of Glory — enchantment Armor survival | helptext says non-base Armor remains | resolved (script) |
 | 14 | Stoning/Death Touch — magical-ranged delivery | manual and helptext state a blanket exclusion | resolved (script/dispatcher record placement) |
+| 15 | Clockwork Tinmen — destroying mechanical units | manual, helptext *and* the calculator; the roster and the spell table disagree with all three | resolved (roster/spell table) |
 
 The table's `Status` column records the durable **source-resolution outcome**, not project work
 state. Any calculator or documentation follow-up is tracked only in `Calculator/BACKLOG.md`.
@@ -390,6 +391,44 @@ under **F8**.
 both physical and magical ranged. Focus Magic moves an existing touch to melee/Thrown only.
 Revenant independently writes Death Touch 0 to that same melee/Thrown record. The manual and
 helptext overgeneralize the Focus Magic-style placement into a blanket magical-ranged rule.
+
+## 15. Clockwork Tinmen — the destroy-mechanical ability is a disabled spell they do not carry
+
+- **Manual** p. entry for the 1.5.12.0 summon: the unit *"ables to destroy any mechanical unit
+  in single hit with its special ability"*.
+- **Helptext** `#UA Clockwork Tinmen`: they carry *"mechanical critters that could be using for
+  sabotage enemy's mechanical unit effectively in combat"*. `#Spell SABOTAGE` states the
+  mechanic itself: *"Unit Ability - Instant Combat, Target: enemy unit … If the target unit is
+  mechanical, the target is irrecoverably destroyed."*
+- **Script** `COSpell.CAS:832-838`: the only implementation is a **combat-spell cast handler**.
+  `IF (SP<>SDisruption) THEN { GOTO "NOTSABOTAGE"; }`, then
+  `IF (GETSTAT(TU,SCustomAttribute,1)=1) THEN { DEALCOMBATDAMAGE (TU,0,0,999); }`. `SP` is the
+  spell cast and `TU` is `SpellTargetUnit`; `MASTER.CAS:362` fixes `SDisruption = 340`, and
+  `MASTER.CAS:1132` defines custom attribute `1` as Mechanical. The single predicate is the
+  target's Mechanical tag — there is no attack, no melee test, no attack-strength test and no
+  counter-attack path. Its non-mechanical fallback is a strength-10, 60%-to-hit attack roll.
+- **Spell table** `spells.ini[340]`: `Name=Sabotage`, `Category=5`, `NonMagic=True`,
+  **`Disabled=True`**.
+- **Roster** `Unit rosters/Warlord mod unit data/UNITS.INI[363]` (Clockwork Tinmen):
+  `Spellability=341`, which `spells.ini[341]` names **Lucky Star**. `Spellability=340` appears on
+  no unit in the roster. The index carries no offset — Master Engineer 260 = Construct Catapult,
+  Druid 2 = Resist Elements, Doom Wheels 294 = Big Red Button.
+
+**Resolved in favour of the roster and the spell table, against all three prose sources.** Two
+independent facts each defeat the described ability: the Tinmen are given Lucky Star rather than
+Sabotage, and Sabotage is disabled in the shipped spell table, so no unit in Warlord 1.5.12.7 can
+destroy a mechanical unit this way. The mechanic that *is* written down is an active spell cast
+against a chosen target, which `Calculator/SPEC.md`, *Scope*, excludes along with all charge
+consumption; it is not an attack rider under any reading.
+
+The calculator was the fourth source in this disagreement and the only one that executed: it
+modelled a melee-attack rider with three invented restrictions (melee only, attacker
+`atk > 0`, and firing on the counter-attack), and its Warlord roster hardcoded a
+`DestroyMechanical` tag onto the Tinmen against `Spellability=341`. Both were deleted
+(`Calculator/HISTORY.md`, F157). The structural confirmation is independent of the scripts:
+`Caster binary/CoM2 binary - combat flow.md` enumerates `ApplyAttack`'s riders exhaustively over
+`$005B2994..$005B32BC` and finds **six** — Exorcise, Stoning Touch, Death Touch, Life Steal,
+Destruction, Poison — with no instant-kill seventh.
 
 ## Script checks with no calculator discrepancy
 

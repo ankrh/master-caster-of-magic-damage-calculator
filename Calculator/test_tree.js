@@ -377,15 +377,6 @@ const TEST_TREE = [
         ],
       },
       {
-        name: 'Destroy Mechanical',
-        keys: [
-          'destroyMechanicalMeleeOneShotWarlord',
-          'destroyMechanicalCounterAttackWarlord',
-          'destroyMechanicalNoEffectOnNonMechanicalWarlord',
-          'destroyMechanicalRebuildTargetWarlord',
-        ],
-      },
-      {
         name: 'Destruction',
         keys: [
           'destructionWholeUnitCoM2',
