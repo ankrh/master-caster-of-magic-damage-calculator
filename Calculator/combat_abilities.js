@@ -1263,11 +1263,15 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     abilityStep('battleArmor', 'b', { writes: ['def'], apply: u => { u.def += 3; } });
   }
 
-  // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units. The block's Large
-  // Shield write is still a grant the reform helper makes; this is its To-Defend half.
+  // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units. One block, four writes
+  // — two movement stats the calculator has no record for, `SToDefend` +20, and
+  // `SETSTAT(U,ALargeShield,0,1)` at `:1058` — so the ability write is a field of this step and
+  // not a pre-sequence grant. That is what puts it at a rank the region-`d` Fortification block
+  // can read (F200).
   if (isWarlord && outlanderReform.magitekEngine) {
     // PROVENANCE[magitekEngine]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:d96a238f19276a8e5adea472
-    abilityStep('magitekEngine', 'b', { writes: ['toBlk'], apply: u => { u.toBlk += 20; } });
+    abilityStep('magitekEngine', 'b', { writes: ['toBlk', 'largeShield'],
+      apply: u => { u.toBlk += 20; u.largeShield = true; } });
   }
 
   // The Artificer retort's permanent write set is `SAttack`, `SRanged`, `SDefense`, `SResist` and

@@ -526,6 +526,8 @@ const TEST_TREE = [
           'fortificationRangedWarlord',
           'fortificationBreathWarlord',
           'fortificationLargeShieldUpgradeWarlord',
+          'fortificationSeesMagitekLargeShieldWarlord',
+          'fortificationRestoresRustedLargeShieldWarlord',
         ],
       },
       {

@@ -1281,4 +1281,23 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
   },
+  fortificationSeesMagitekLargeShieldWarlord: {
+    desc: "Fortification's already-shielded test is `GETSTAT(U,ALargeShield,0)` — the calculated record at `UnitCalc.CAS:1074` — and Magitek Engineering set that same flag back in `UnitCalcPre.CAS:1058`, region `b`. So a Power Engine unit inside the walls takes the Missile Immunity arm: missile 12 vs an immune defender is 0. Applying Fortification ahead of the reform grants instead answered from before the region-`b` write and gave plain Large Shield, for 12−(2+3)=7 (F200).",
+    version: V_WARLORD,
+    a: { modernAttacks: { ranged: { strength:12, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
+    b: { def: 2, toBlkMod: 70, hp: 20,
+      abilities: { outlanderWizard: true, mechanical: true, heatPowerEngine: true,
+        magitekEngineering: true, fortification: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  fortificationRestoresRustedLargeShieldWarlord: {
+    desc: "Rust clears the flag with `SETSTAT(U,ALargeShield,0,0)` at `UnitCalc.CAS:498` and Fortification reads it 576 lines later at `:1074`, so the shielded unit ends the block with plain Large Shield rather than Missile Immunity: missile 12 vs def 2+3 blocked at 100% is 7. With the clear taken after the chain instead, Fortification saw the innate shield, granted Missile Immunity, and the strip then removed the shield too, for 0 (F200).",
+    version: V_WARLORD,
+    a: { modernAttacks: { ranged: { strength:12, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
+    b: { def: 2, toBlkMod: 70, hp: 20,
+      abilities: { largeShield: true, rust: true, fortification: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 7.000 },
+  },
 });

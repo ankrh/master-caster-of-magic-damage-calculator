@@ -1,5 +1,72 @@
 # Calculator work history
 
+## 2026-08-26 — F200 (stage 1): the Large Shield chain and Divine Protection take positions
+
+Four writes to two ability flags now happen where their blocks stand instead of in a pre-sequence
+grant. `d:fortification` (`UnitCalc.CAS:1069-1075`) and `b:divineProtection`
+(`UnitCalcPre.CAS:873-883`) are new steps with new hashed-span anchors, replacing
+`applyFortificationGrant` and `applyDivineProtectionGrant`. `b:magitekEngine` gained
+`SETSTAT(U,ALargeShield,0,1)` (`:1058`) and `d:rust` gained `SETSTAT(U,ALargeShield,0,0)`
+(`:498`) — both lines already inside those steps' own reviewed spans, so neither anchor moved.
+`largeShield`, `missileImmunity`, `deathImmunity` and `lucky` are `statRecord` fields
+(`POSITIONED_GRANT_WRITES`, `stats_identity.js`), seeded from the pre-grant ability set and read
+back into the published set after the chain — the shape F199 gave the ten curse flags, one layer
+out. A key the ability set never carried stays absent rather than being published as `false`.
+
+**Two corrections, each with a preset that fails before and passes after.**
+`fortificationSeesMagitekLargeShieldWarlord`: Fortification's already-shielded test is
+`GETSTAT(U,ALargeShield,0)` at `:1074` — selector `0`, the calculated record — and Magitek
+Engineering set that flag in region `b`, so a Power Engine unit inside the walls takes the Missile
+Immunity arm. Applying Fortification ahead of the reform grants answered from before the
+region-`b` write and gave plain Large Shield (12−5=7 instead of 0).
+`fortificationRestoresRustedLargeShieldWarlord`: Rust clears the same flag 576 lines earlier at
+`:498`, so Fortification grants Large Shield back rather than Missile Immunity (0 → 7). The Rust
+half was folded in under `AGENTS.md`'s adjacent-defect bound: it is the post-chain strip of the
+very field this item makes a record field, its line is inside `d:rust`'s existing reviewed span,
+it has a preset, and it moves no number outside `com2_warlord_1.5.12.7`.
+
+**Measurement: 176 differing cases of 52440** (`tools/derivation_equivalence.js` against a
+pristine `HEAD`). 5 are `abilities.largeShield: false → true`, every one a Warlord
+Rust×Fortification pair — the correction above. The other 171 are
+`abilities.luckyPhaseB: true → undefined` on Divine Protection units: the marker the deleted grant
+used to set. No stat, chance or damage field moved in any version, and the Magitek×Fortification
+case is not in the digest's sample.
+
+**The row's stated Divine Protection correction is falsified.** It said the calculator sets
+`luckyPhaseB` unconditionally where `UnitCalcPre.CAS:882` sets `ALucky` only when it is 0, and
+that the marker is what *Lucky is resolved per-unit* (`SPEC.md`) reads. The block is at `:881`,
+and the marker is read by no line of `Calculator/` — non-stacking is already structural, since
+`c:lucky` is one step gated `when: u => !!u.lucky`. So the step makes the write conditional
+because the block does, not because a number depends on it, and no preset can prove it. The three
+surviving markers and the deviation entry that describes them are F205.
+
+Two other cited line numbers were off by one and are corrected at the sites that carry them:
+Magitek Engine's Large Shield write is `UnitCalcPre.CAS:1058`, and the Outlander-soldier gate is
+`UnitCalc.CAS:1405-1407`. The row's "0 chain entries" count for `divineProtection`, `insulation`,
+`fortification` and `lavaSmelter` held exactly.
+
+`tests/f20-source-order.spec.js`'s independent transcription gained `divineProtection` (between
+`fieryFury` and `natureLink`) and `fortification` (between `favoredTerrain` and
+`colossalStrength`), plus the two probe controls that make them fire.
+`tools/unit_checks/identity_record_choice.js` gained both corrections as landed rows, so the two
+presets cannot be deleted silently.
+
+**Stages 2-4 remain** and are stated in `BACKLOG.md`: Insulation, which first needs
+`c:innerPower`'s eligibility read off the record; the Sancta Basilica and Pillar of Faith ability
+halves; and the rest of the Outlander grants.
+
+**Compatibility layers met, none removed.** (1) `applyLavaSmelterGrant`'s `legacy` selector arm
+translates the retired `lavaSmelter` select into the five booleans, bridging old presets and share
+payloads; migrating stored state retires it. (2) `applyOutlanderReformGrants` deletes
+`DERIVED_OUTLANDER_STATE_KEYS` and the fifteen reform keys from its input, guarding against stale
+saved state and callers that bypass the prerequisites; versioned persistence retires it. (3) The
+`curseGatedAbilities` → `grantedAbilities` → `pneumaAbilities` → `combatAbilitiesBase` →
+`shapedGazeAbilities` chain in `stats.js` projects the finished record back into an ability map
+because combat resolution reads a map and not the record; this round added a link to it. It
+retires when combat resolution takes the record. (4) `applyHierophanyAbilityStrip` still clears
+six of these flags after the chain although `d:hierophany` has a position; positioning the strip
+retires it.
+
 ## 2026-08-26 — F202 (stage 1): nine grantable-ability gates become positional reads
 
 `getAbilityStatSteps` decided whether a step *exists* by reading an ability as a pre-sequence

@@ -398,8 +398,8 @@ function targetingIdentity(identity, abilities, version, meta = {}) {
 // Membership is "granted by a hoist **and** read by a step", not the whole grantable set: a key
 // no step reads needs no field, and a read that is itself part of a hoist moves with that hoist.
 const POSITIONED_GRANT_FIELDS = [
-  'lucky',        // applySanctaBasilicaGrant, applyDivineProtectionGrant, applyPillarOfFaithGrant,
-                  // deriveMarionettePackage  ->  `c:lucky`
+  'lucky',        // applySanctaBasilicaGrant, applyPillarOfFaithGrant,
+                  // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`
   'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
   'armorclad',    // applyOutlanderReformGrants  ->  `base:armorclad`
   'mechanical',   // effectiveAbilities (Rebuild's conversion)  ->  `base:artificer`,
@@ -408,6 +408,22 @@ const POSITIONED_GRANT_FIELDS = [
   'psychoForce',  // applyOutlanderReformGrants  ->  `d:psychoForce`
   'pneumaField',  // applyOutlanderReformGrants  ->  `d:pneumaField`
   'illusion',     // deriveMarionettePackage  ->  the Illusion malus inside `b:trueLight`
+];
+
+// The ability keys a **positioned grant step** writes. Each is a record field seeded from the
+// pre-grant ability set, written at the rank its own engine block has, and read back into the
+// published ability set after the chain — the shape F199 gave the ten curse flags, one layer out
+// (F200). `POSITIONED_GRANT_FIELDS` above is the read side of the same move: a key some step
+// gates on. A key here is one no hoist writes any more, so the record is its only carrier and the
+// post-chain read-back is what hands it to combat resolution.
+//
+// `lucky` is in both lists: `c:lucky` reads it at its own rank and combat resolution reads the
+// finished value (`combat_phases.js`, MoM 1.31's enemy melee penalty).
+const POSITIONED_GRANT_WRITES = [
+  'largeShield',      // `b:magitekEngine`, `d:rust` (clear), `d:fortification`
+  'missileImmunity',  // `d:fortification`'s already-shielded arm
+  'deathImmunity',    // `b:divineProtection`
+  'lucky',            // `b:divineProtection`
 ];
 
 // Lava Smelter (Warlord): five independent flags record the permanent mineral-pair grants already
@@ -582,22 +598,13 @@ function immunityStrippedCurses(record, version, immunities) {
   return [...blocked].filter(key => record[key]);
 }
 
-// Divine Protection (Warlord, Life unit enchantment): grants Lucky and Death Immunity.
-// Folded into effective abilities here so every downstream read sees them — Lucky feeds the
-// ability stat modifiers (+10% To Hit, +10% To Block, +1 Resistance) and Death Immunity feeds
-// the combat immunity checks (Death Gaze/Touch, Life Stealing, Cause Fear). The grant is
-// `Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS` lines 874-882, which sets
-// ADeathImmunity and, when it is not already set, ALucky.
+// Divine Protection's grant is `b:divineProtection` (`stats_sequence.js`), a positioned write to
+// the record's `deathImmunity` and `lucky` fields (F200).
 // Lucky reaches a unit from several sources. These markers retain which stage established
 // the flag, but the resulting stat package does not execute there: Caster.exe's compiled
 // Lucky block reads the finished flag and writes Resistance/To Hit/To Defend in region c.
 function markIntrinsicLucky(abilities) {
   return abilities && abilities.lucky ? { ...abilities, luckyPhaseA: true } : abilities;
-}
-
-function applyDivineProtectionGrant(abilities, version) {
-  if (!version || !version.startsWith('com2_warlord') || !abilities || !abilities.divineProtection) return abilities;
-  return { ...abilities, lucky: true, luckyPhaseB: true, deathImmunity: true };
 }
 
 // Pillar of Faith (Warlord, Life rare city enchantment): units trained in the city have a
@@ -610,22 +617,8 @@ function applyPillarOfFaithGrant(abilities, version) {
   return { ...abilities, lucky: true, luckyPhaseBase: true };
 }
 
-// Fortification (Warlord, city building): all defending units inside the city walls gain a
-// Large Shield effect. If the unit already has Large Shield, it receives Missile Immunity
-// instead. The tactical write is `Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS`
-// lines 1069-1075 — gated on `ISBUILT(C,BMoats)`, the defending side, and the city-area
-// coordinate box. The version-matched helptext states the same rule on one line:
-// "If the friendly unit already has Large Shield ability, the unit receives Missile Immunity
-// bonus instead" (`Unit rosters/Warlord mod unit data/HELP.TXT:1678`).
-// The +4 Defense variant in `UnitCalcPre.CAS` lines 1822-1826 is *strategic* combat and is
-// deliberately not modelled. Folded in here so the largeShield/missileImmunity defense
-// bonuses flow through every downstream combat read.
-function applyFortificationGrant(abilities, version) {
-  if (!version || !version.startsWith('com2_warlord') || !abilities.fortification) return abilities;
-  return abilities.largeShield
-    ? { ...abilities, missileImmunity: true }
-    : { ...abilities, largeShield: true };
-}
+// Fortification's grant is `d:fortification` (`stats_sequence.js`), a positioned write whose
+// already-shielded test reads the record at its own rank (F200).
 
 // Insulation (Warlord, Chaos unit enchantment): grants Fire Immunity, Cold Immunity, and
 // Lightning Resist. Folded into effective abilities here so the combat immunity checks
@@ -847,12 +840,12 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
     || (!!fundamentalAbilities.rebuild && !isHero);
   const armorclad = outlanderWizard && !!fundamentalAbilities.armorcladReform && permanentMechanical;
   // `UnitCalcPre.CAS:1104` closes the whole tail on `BASEFANTASTIC(U)>0`, and the +3 branch at
-  // `:1109-1113` restates it beside `EncArmorClad` index 1 and `SCustomAttribute` index 1 — three
+  // `:1108-1114` restates it beside `EncArmorClad` index 1 and `SCustomAttribute` index 1 — three
   // permanent-record terms in one test.
   const battleArmor = outlanderWizard && !!fundamentalAbilities.armorcladReform
     && !baseFantastic && !permanentMechanical;
   const powerEngine = outlanderWizard && !!fundamentalAbilities.heatPowerEngine && permanentMechanical;
-  // `UnitCalc.CAS:1406-1408` evaluates left-to-right: non-fantastic non-mechanical units,
+  // `UnitCalc.CAS:1405-1407` evaluates left-to-right: non-fantastic non-mechanical units,
   // heroes, and Armorclad mechanical units pass; fantastic units do not.
   const outlanderSoldier = outlanderWizard && !baseFantastic && (!permanentMechanical || armorclad);
   // The `NOTSAPIENS` gate, `UnitCalcPre.CAS:1062-1064`. `b:bombsGrenades` reads the same one.
@@ -860,7 +853,7 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
     && (!baseFantastic || !!fundamentalAbilities.sapiens);
   const temporalDrive = powerEngine && !!fundamentalAbilities.temporalEngineering;
   const temporalGravityDrive = temporalDrive && !!fundamentalAbilities.sailing;
-  // `UnitCalcPre.CAS:1050-1052`: the block's own gate is the *calculated* `EncPowerEngine` flag,
+  // `UnitCalcPre.CAS:1051-1053`: the block's own gate is the *calculated* `EncPowerEngine` flag,
   // which no region-`b` write reaches before this point, so the derived permanent state answers it.
   const magitekEngine = powerEngine && !!fundamentalAbilities.magitekEngineering;
   // `OverlandEndTurn.CAS:446`, the fourth site of the same permanent-record term.
@@ -871,10 +864,10 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
       ...fundamentalAbilities,
       ...(armorclad ? { armorclad: true } : {}),
       ...(powerEngine ? { powerEngine: true } : {}),
-      // Large Shield is the block's second write, `SETSTAT(U,ALargeShield,0,1)` at
-      // `UnitCalcPre.CAS:1057`, beside the To-Defend one `b:magitekEngine` makes. It stays a
-      // grant until F200 positions it.
-      ...(magitekEngine ? { largeShield: true } : {}),
+      // Large Shield is no longer granted here. It is the block's fourth write,
+      // `SETSTAT(U,ALargeShield,0,1)` at `UnitCalcPre.CAS:1058`, inside the same reviewed span as
+      // the To-Defend one, so it is a second field of `b:magitekEngine` and lands at that rank —
+      // which is what lets the region-`d` Fortification block see it (F200).
       ...(temporalDrive ? { haste: true } : {}),
       ...(temporalGravityDrive
         ? { temporalGravityDrive: true, flying: true, illusionImmunity: true }

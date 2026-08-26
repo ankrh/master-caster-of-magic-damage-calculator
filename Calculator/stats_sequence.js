@@ -550,6 +550,20 @@ function precalcScriptStatSteps(ctx) {
       phase: 'b', writes: ['res', 'toHit', 'toBlk'],
       when: () => greatUnbindingActive,
       apply: u => { u.res -= 2; u.toHit -= 20; u.toBlk -= 20; } }),
+    // Divine Protection (Warlord, Life unit enchantment): `ADeathImmunity` unconditionally, and
+    // `ALucky` only where the calculated flag is still 0 — `IF GETSTAT(U,ALucky,0)=0`, selector
+    // `0`, so the test is the record standing at this block and not the permanent one. The item
+    // power 52 arm re-asserts the enchantment flag and grants nothing; the calculator models no
+    // items, so the step is the ELSE arm. Both writes are ability flags with no stat half, which
+    // is why this block had no chain entry before (F200).
+    // PROVENANCE[divineProtection]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:a64dfa2d27c03c7d5ad7dc3c
+    statStep({ id: 'divineProtection', sourceId: 'divineProtection',
+      sourceLabel: 'Divine Protection', phase: 'b', writes: ['deathImmunity', 'lucky'],
+      when: () => isWarlord && !!abilities.divineProtection,
+      apply: u => {
+        u.deathImmunity = true;
+        if (!u.lucky) u.lucky = true;
+      } }),
     // PROVENANCE[natureLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:8d549c3c9d2b586869606d77
     statStep({ id: 'natureLink', phase: 'b', writes: ['res'],
       when: () => natureLinkActive, apply: u => { u.res += 1; } }),
@@ -1413,6 +1427,24 @@ function magicCalcScriptStatSteps(ctx) {
       } }),
     // Favored Terrain is later in the same script, after Hurricane.
     ...abilByPhase.d.filter(step => step.id === 'favoredTerrain'),
+    // Fortification (Warlord, city building): the defending units inside the city area gain Large
+    // Shield, or Missile Immunity where they already have it. The already-shielded test is
+    // `GETSTAT(U,ALargeShield,0)` — selector `0`, the *calculated* record — so it reads what
+    // stands at this block's own rank, 576 lines after Rust clears the same flag at `:498` and
+    // well after Magitek Engine sets it in `UnitCalcPre.CAS`. Modelling it as a pre-sequence
+    // grant answered from before both (F200).
+    // The block's other three gates are the city model the calculator does not have —
+    // `ISBUILT(C,BMoats)`, the defending side `W=D`, and the city-area coordinate box — which is
+    // what the single `fortification` control stands for. The +4 Defense variant at
+    // `UnitCalcPre.CAS:1822-1826` is *strategic* combat and is deliberately not modelled.
+    // PROVENANCE[fortification]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:7:9e084676ba841f9385a766b0
+    statStep({ id: 'fortification', sourceId: 'fortification', sourceLabel: 'Fortification',
+      phase: 'd', writes: ['largeShield', 'missileImmunity'],
+      when: () => isWarlord && !!abilities.fortification,
+      apply: u => {
+        if (u.largeShield) u.missileImmunity = true;
+        else u.largeShield = true;
+      } }),
     // Colossal Strength scales the attack as it stands at its own position in `d`
     // (UnitCalc.CAS:1227-1243 reads GetStat there), so everything before it in the file
     // scales and everything after does not. Under the buckets its input was a named subtotal;

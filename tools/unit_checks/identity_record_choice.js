@@ -213,12 +213,16 @@ const LANDED_CORRECTIONS = [
     record: 'permanent', preset: 'radioSkipsApotheosisPermanentFantasticWarlord' },
   { id: 'F198', at: 'b:battleArmor', record: 'permanent',
     preset: 'battleArmorSkipsApotheosisPermanentFantasticWarlord' },
-  { id: 'F198', at: 'the Outlander-soldier gate at UnitCalc.CAS:1406-1408', record: 'permanent',
+  { id: 'F198', at: 'the Outlander-soldier gate at UnitCalc.CAS:1405-1407', record: 'permanent',
     preset: 'energyWeaponrySkipsApotheosisPermanentFantasticWarlord' },
   { id: 'F198', at: "Military Drilling's permanent Discipline grant", record: 'permanent',
     preset: 'militaryDrillingSkipsApotheosisPermanentFantasticWarlord' },
   { id: 'F198', at: 'b:outlanderXenoveterinary', record: 'positional',
     preset: 'xenoveterinaryReadsFantasticAtItsOwnBlockWarlord' },
+  { id: 'F200', at: "d:fortification's already-shielded test, against b:magitekEngine",
+    record: 'positional', preset: 'fortificationSeesMagitekLargeShieldWarlord' },
+  { id: 'F200', at: "d:fortification's already-shielded test, against d:rust's clear",
+    record: 'positional', preset: 'fortificationRestoresRustedLargeShieldWarlord' },
 ];
 
 // The three record choices are the whole vocabulary a gate has, so a row naming a fourth would be

@@ -82,16 +82,12 @@ function deriveUnitStats(input) {
   // the permanent and ability grants it still makes, and the six phase-`b` steps whose write the
   // calculator used to reach through an invented ability label (F198).
   const outlanderDerivation = applyOutlanderReformGrants(
-    applyFortificationGrant(
     applyInsulationGrant(
     applyPillarOfFaithGrant(
-    applyDivineProtectionGrant(
       applySanctaBasilicaGrant(
         applyLavaSmelterGrant(marionetteDerivation.abilities, version, baseUnitType),
         version, isHero ? 'hero' : baseUnitType, baseUnitRace, unitName),
       version),
-    version),
-    version),
     version),
     version, permanentFantastic, isHero);
   const outlanderReform = outlanderDerivation.reform;
@@ -244,7 +240,7 @@ function deriveUnitStats(input) {
   // (`UnitCalc.CAS:1305-1306`). The engine manipulates the recalculated flag *in order to* change
   // targetability, so a targeting predicate is a function of the record after every conversion —
   // and a Spirit-Linked Fantastic unit is a legal Rust target, which that record reports and
-  // the record at `d:rust` (chain rank 129, ahead of `d:spiritLink` at 135) would not.
+  // the record at `d:rust` (chain rank 130, ahead of `d:spiritLink` at 137) would not.
   // The same reading covers this constant's two other consumers, the weapon material below and
   // the Large Shield strip, which is why the read is `finishedIdentity` and not the record at
   // `d:rust`. `tools/unit_checks/identity_record_choice.js` declares it as one of the three
@@ -1568,11 +1564,15 @@ function deriveUnitStats(input) {
     const legacyApply = step.apply;
     return {
       ...step,
-      writes: ['atk', ...strengthFields, ...thrownTypeFields],
+      writes: ['atk', 'largeShield', ...strengthFields, ...thrownTypeFields],
       when: () => rustActive,
       apply: (u, context) => {
         legacyApply(u, context);
         rustRangedStep.apply(u, context);
+        // `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:498`), the fourth line of the same block
+        // and inside the same reviewed span. It is a positioned write because a later block
+        // reads what it leaves: Fortification at `:1074` (F200).
+        u.largeShield = false;
         // `SETSTAT(U,SThrown,0,0)` empties the Thrown *strength*; the type clear beside it is
         // this model's stand-in for the field being empty, since Warlord stores no Thrown type.
         // The strength write is load-bearing rather than cosmetic: Blaze of Glory's positioned
@@ -2087,6 +2087,11 @@ function deriveUnitStats(input) {
     // rank. Nothing writes one mid-sequence yet, so the seed is the value every reader saw before.
     ...Object.fromEntries(POSITIONED_GRANT_FIELDS
       .map(key => [key, !!effectiveAbilities[key]])),
+    // The keys a positioned grant step *writes*, seeded the same way. These are the ones no hoist
+    // merges any more, so the record is their only carrier and `grantedAbilities` below reads
+    // them back out for combat resolution (F200).
+    ...Object.fromEntries(POSITIONED_GRANT_WRITES
+      .map(key => [key, !!effectiveAbilities[key]])),
     // The calculated identity is part of the record, seeded from the permanent one. Every
     // conversion is a positioned write to these two fields (F163).
     race: identity.baseRace, fantastic: identity.baseFantastic };
@@ -2152,11 +2157,23 @@ function deriveUnitStats(input) {
   // sequence leaves rather than from the pre-strip ability map (F199).
   const curseGatedAbilities = { ...effectiveAbilities,
     ...Object.fromEntries(MAGIC_IMMUNITY_GATED_CURSES.map(key => [key, statUnit[key]])) };
+  // The building and enchantment ability grants that are positioned writes read back the same
+  // way: the record is where Divine Protection's Death Immunity, Magitek Engine's and
+  // Fortification's Large Shield, Fortification's Missile Immunity and Rust's clear of it now
+  // live, so the published set takes them from the record the sequence leaves (F200).
+  // A key the ability set never carried stays absent rather than being published as `false`:
+  // absence and `false` are the same to every reader (`hasAbil`), and writing the whole list out
+  // would put four keys on every unit of all five versions to say nothing. So the record's value
+  // is written back where it says something — the flag stands set, or the set already stated it.
+  const grantedAbilities = { ...curseGatedAbilities };
+  for (const key of POSITIONED_GRANT_WRITES) {
+    if (statUnit[key] || key in curseGatedAbilities) grantedAbilities[key] = statUnit[key];
+  }
   // Pneuma Field's own flag is a record field now, so the post-chain read takes it from the
   // record the sequence leaves, beside the Life Steal value that step wrote (F202).
   const pneumaAbilities = statUnit.pneumaField
-    ? { ...curseGatedAbilities, lifeSteal: statUnit.lifeSteal }
-    : curseGatedAbilities;
+    ? { ...grantedAbilities, lifeSteal: statUnit.lifeSteal }
+    : grantedAbilities;
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...pneumaAbilities, negateFirstStrike: true }
     : pneumaAbilities;
@@ -2170,10 +2187,10 @@ function deriveUnitStats(input) {
   let combatAbilities = gazeDisabled
     ? { ...shapedGazeAbilities, stoningGaze: null, deathGaze: null, doomGaze: 0 }
     : shapedGazeAbilities;
-  // Rust eliminates Large Shield for the rest of combat.
-  if (rustActive && combatAbilities.largeShield) {
-    combatAbilities = { ...combatAbilities, largeShield: false };
-  }
+  // Rust's `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:498`) is a field of `d:rust` now, inside
+  // that step's own reviewed span, so the clear happens at rank 130 rather than after the chain.
+  // What that buys is the block 576 lines below it: `d:fortification` reads the calculated
+  // `ALargeShield` the clear left and grants Large Shield back (F200).
 
   // Hierophany (Warlord Life uncommon combat curse): the landed curse strips the target's
   // immunities, Lightning Resist, Negate First Strike, Merging, and Teleporting. The latter two
