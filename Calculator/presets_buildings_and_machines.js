@@ -437,6 +437,14 @@ definePresets({
     b: { atk:0, def:3, toBlkMod:70, res:1, hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
+  militaryWorkshopAndMotherFungusPoisonStackWarlord: {
+    desc: 'Military Workshop x Mother Fungus (Warlord): the two poison grants stack. Both blocks make the same `<>100` increment on the permanent AFPoison field — `CreateUnit.CAS:256` and `:455` — each reading the value it raises, so a Goblin unit with both takes Poison 2, not 1. Boulder 1+2 = 3 (100% hit) vs def 8 halved to 4 by the Workshop’s Armor Piercing (100% block) → 0 physical, so only the poison shows: 2 x (11−5)/10 = 1.2 (with one grant overwriting the other, Poison 1 → 0.6)',
+    version: V_WARLORD,
+    a: { modernAttacks: { ranged: { strength:1, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20, race:'Goblin', abilities: { militaryWorkshop: true, motherFungus: true } },
+    b: { atk:0, def:8, toBlkMod:70, res:5, hp:20 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
   motherFungusNonGoblinWarlord: {
     desc: 'Mother Fungus (Warlord): a non-Goblin unit gets no bonus. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a Goblin would gain +2 Attack → 5). No poison grant applies, so the defender needs no Poison Immunity',
     version: V_WARLORD,

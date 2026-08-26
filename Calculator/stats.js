@@ -480,11 +480,15 @@ function deriveUnitStats(input) {
   // Warlord Blaze of Glory: the unit's whole Ranged strength is added to the Thrown field and
   // the Ranged field is emptied (Ammo goes with it; the model tracks neither Ammo nor the
   // `SRangedPenalty` bookkeeping write). Breath attacks are not "Ranged" and are untouched.
-  // The Armor→Melee transfer, Armor Piercing grant, and First Strike loss are handled below.
+  // The Armor→Melee transfer, the Armor Piercing grant and the First Strike loss are all fields
+  // of the one step now, at the block's own rank (F201).
   // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
   // The transfer is `PROVENANCE[blazeOfGlory]` (`stats_sequence.js`), from `UnitCalc.CAS:1494`.
   const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
     && version.startsWith('com2_warlord') && !isHero;
+  // Warlord Venom enchantment, `PROVENANCE[venom]` (`stats_sequence.js`): the gate of `d:venom`,
+  // whose two writes are the Poison Immunity flag and the `<>100` poison increment.
+  const venomActive = isWarlord && !!(abilities && abilities.venom);
 
   // Per-card wall position. Combat resolution admits this bonus only when the incoming attacker
   // is outside; card A/B exchange role and persistent army ownership are irrelevant.
@@ -1140,6 +1144,12 @@ function deriveUnitStats(input) {
         || permanentThrownType === 'thrown');
     const blackpowderEligibleAttack = modernBaseAttacks
       ? modernBaseHasBlackpowderChannel : selectedBaseHasBlackpowderChannel;
+    // Blackpowder-derived facts (see the Military Workshop / Rocketry gate above). These read
+    // the permanent source fields, as the script's own gates do, and so survive later channel
+    // conversions. What the upgrade then *writes* — the missile-to-boulder projectile change,
+    // the `<>100` poison increment, the Blackpowder flag and the Armor Piercing grant — is all
+    // `base:militaryWorkshop`, `PROVENANCE[militaryWorkshop]` (`stats_sequence.js`), at that
+    // block's own rank (F201).
     const blackpowder = blackpowderSource
       && baseNormalTrainingUnit && blackpowderEligibleAttack;
     const blackpowderPhysicalSource = blackpowder && (modernBaseAttacks
@@ -1208,30 +1218,6 @@ function deriveUnitStats(input) {
     // land in whichever channel this slot derives and overwrite it.
     const ccOwnsThisSlot = !channelKey || channelKey === 'fireBreath';
 
-    // Blackpowder-derived bonuses (see the Military Workshop / Rocketry gate above). These read
-    // the permanent source fields, as the script's own gates do, and so survive later channel
-    // conversions; the missile-to-boulder projectile upgrade is made by `base:militaryWorkshop`,
-    // `PROVENANCE[militaryWorkshop]` (`stats_sequence.js`).
-    // Doom attack: Armor Piercing is wasted (Doom ignores armor), so grant strength instead.
-    const blackpowderGrantsAP = blackpowderPhysicalSource
-      && !abilities.doom && !abilities.armorPiercing;
-    // +1 Poison, applied on top of any existing poison (including the Gnoll Altar grants below).
-    const blackpowderBasePoison = altarHunter ? 2 : (altarWitchdoctor ? 0 : (abilities.poison || 0));
-    // Warlord Venom enchantment: `UnitCalc.CAS:60-69` sets `APoisonImmunity` and then either
-    // restarts `AFPoison` at 1 from the 100 no-poison sentinel or increments it, so it boosts any
-    // existing or granted poison and grants Poison 1 to a unit with none — matching "Enchanted
-    // unit gains Poison Immunity and coats their weapons with deadly venom, granting +1 Poison
-    // attack rating" (`Unit rosters/Warlord mod unit data/HELP.TXT:5785`). The base it boosts
-    // mirrors the final poison precedence of the spreads below (last-wins: motherFungus >
-    // militaryWorkshop > altars).
-    const venom = version.startsWith('com2_warlord') && !!(abilities && abilities.venom);
-    const venomBasePoison =
-        motherFungus ? (abilities.poison || 0) + 1
-      : blackpowder ? blackpowderBasePoison + 1
-      : altarWitchdoctor ? 0
-      : altarHunter ? 2
-      : (abilities.poison || 0);
-
     // Natural Selection — Wild game snapshots the permanent conventional-ranged field before any
     // later conversion; the snapshot is on `PROVENANCE[naturalSelection:wildGame]`
     // (`stats_sequence.js`). Read the value at the source step and keep the channel predicate
@@ -1268,7 +1254,7 @@ function deriveUnitStats(input) {
       permanentRangedType, permanentThrownType,
       calcBaseRtb, hasPermanentRangedStat, permanentMagicalRangedField,
       marionetteRangedSlot, marionetteOwnsThisRangedSlot,
-      blackpowder, blackpowderGrantsAP, blackpowderBasePoison, venom, venomBasePoison,
+      blackpowder, blackpowderPhysicalSource,
       blackpowderSelectedPhysicalRanged, blackpowderSelectedThrown,
       blackpowderSelectedFireBreath, blackpowderUpgradesToBoulder,
       ccFireBreathGranted, ccDosBreathEligible, ccOwnsThisSlot,
@@ -1471,20 +1457,16 @@ function deriveUnitStats(input) {
   // from the DOS record instead (F127). Only meaningful where `energyCannon` gates the step on.
   const energyCannonHitField = (rangedFieldContext || recordContext).secondaryHitField;
 
+  // The nine ability keys the eleven merged spreads here used to write are positioned steps now:
+  // `base:altarOfTheMoon` (Rage, Poison Immunity, and the Hunter/Witchdoctor poison
+  // and Life Steal branches), `base:militaryWorkshop` (Blackpowder, its poison increment and
+  // Armor Piercing), `base:motherFungus` and `d:venom` (their own poison increments),
+  // `base:energyCannon`, `b:bombsGrenades` (Wall Crusher) and `d:blazeOfGlory` (Armor Piercing,
+  // and the First Strike clear). Each writes a `statRecord` field at its own block's rank and is
+  // read back after the chain, which is what let the hand-written poison precedence go: the
+  // sequence orders the increments (F201).
   const effectiveAbilities = {
     ...abilities,
-    ...(altarOfTheMoon ? { rage: true, poisonImmunity: true } : {}),
-    ...(altarHunter ? { poison: 2 } : {}),
-    ...(altarWitchdoctor ? { lifeSteal: -1, poison: 0 } : {}),
-    ...(recordContext.blackpowderGrantsAP ? { armorPiercing: true } : {}),
-    ...(blazeOfGloryActive ? { armorPiercing: true, firstStrike: false } : {}),
-    ...(recordContext.blackpowder ? { poison: recordContext.blackpowderBasePoison + 1 } : {}),
-    ...(recordContext.blackpowder ? { blackpowder: true } : {}),
-    ...(bombsGrenades ? { wallCrusher: true } : {}),
-    ...(energyCannon ? { energyCannon: true } : {}),
-    ...(motherFungus ? { poison: (abilities.poison || 0) + 1 } : {}),
-    ...(recordContext.venom
-      ? { poison: recordContext.venomBasePoison + 1, poisonImmunity: true } : {}),
     // Rust on a fantastic creature is inert: drop it so the -3 melee in combat_abilities.js (which
     // can't see unit type) and any downstream reads treat the unit as un-rusted.
     ...((abilities && abilities.rust && !rustActive) ? { rust: false } : {}),
@@ -1497,7 +1479,10 @@ function deriveUnitStats(input) {
     ...((abilities && (abilities.trueSight || (isWarlord && abilities.eyeOfHeaven)))
       ? { illusionImmunity: true } : {}),
     // The finished record: combat resolution is handed the unit the recalculation leaves, so
-    // these three are the post-chain projection and not a read at any block's position.
+    // these thirteen are the post-chain projection and not a read at any block's position.
+    // What is left of this merge, once the nine grants above became steps, is that projection
+    // plus the two normalizations under it — neither of which any engine block makes, and both
+    // of which need their own ruling (F201 stage 2).
     unitType: finishedUnitType,
     baseRace: identity.baseRace,
     baseFantastic: identity.baseFantastic,
@@ -1690,7 +1675,6 @@ function deriveUnitStats(input) {
   const holyWeaponHitPick = makeSecondaryHitPick(hwActive,
     hwActive && version !== 'mom_1.31' ? 10 : 0);
   const hasPermanentRangedStat = recordContext.hasPermanentRangedStat;
-  const existingLifeSteal = effectiveAbilities.lifeSteal;
 
   // --- Steps spliced into the sequence (R1) at more than one position ---
   // Built here rather than in stats_sequence.js because each reads the locals above; the
@@ -1921,7 +1905,7 @@ function deriveUnitStats(input) {
   // they read is handed over explicitly, so a section states its own inputs instead of
   // depending on everything this function happens to have in scope.
   const rawStatSteps = buildRawStatSteps({
-    abilByPhase, abilities, altarOfTheMoon,
+    abilByPhase, abilities, altarHunter, altarOfTheMoon, altarWitchdoctor,
     altarOfTheSun, altarOfTheSunHolyMother, armor, badMoonActive, baseDoomGaze, baseGazeRanged,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod,
     baseHitChance, baseHitMelee, modernSecondaryHitMod,
@@ -1969,6 +1953,7 @@ function deriveUnitStats(input) {
     survivalInstinctToBlkBonus, trueSightRangedToHitBonus, unitIsChaos, unitTypeAt,
     finishedUnitType,
     uphillBattleActive, vampirismActive,
+    venomActive,
     version, vertigoBlockPenalty, vertigoHitPenalty, warlordBerserk,
     warlordCombatFlameBlade, warlordEternalNightActive, warlordTrueLightStep,
     warpRealityActive, weaponStatSteps, wofDefenderBonusActive,
@@ -2075,7 +2060,12 @@ function deriveUnitStats(input) {
   const statExecutionLedger = createStatExecutionTraceLedger();
   const statRecord = { res: 0, def: 0, atk: 0, hp: 0, gaze: 0, doomGaze: 0,
     toHit: 30, toHitMelee: 0, toBlk: 30, energyCannonToHit: null,
-    lifeSteal: existingLifeSteal,
+    // The two ability fields that carry a value rather than a flag, seeded verbatim (F201).
+    // `lifeSteal` is on the record because Pneuma Field's `SETSTAT(U,AFLifeSteal,…)` is a write to
+    // a unit field at a position, like any other, and `poison` because four blocks in a row make
+    // the script's `<>100` increment on it.
+    ...Object.fromEntries(POSITIONED_GRANT_VALUE_WRITES
+      .map(key => [key, effectiveAbilities[key]])),
     // The ten curse flags an immunity can block are record fields, so the artificial strip is a
     // positioned write and every curse gate is an ordinary read at its own step (F199). Seeded
     // from the effective ability set, which is the state the strip finds at the head of the chain.
@@ -2159,24 +2149,27 @@ function deriveUnitStats(input) {
     ...Object.fromEntries(MAGIC_IMMUNITY_GATED_CURSES.map(key => [key, statUnit[key]])) };
   // The building and enchantment ability grants that are positioned writes read back the same
   // way: the record is where Divine Protection's Death Immunity, Magitek Engine's and
-  // Fortification's Large Shield, Fortification's Missile Immunity and Rust's clear of it now
-  // live, so the published set takes them from the record the sequence leaves (F200).
+  // Fortification's Large Shield, Fortification's Missile Immunity and Rust's clear of it live
+  // (F200), and where the Altar of the Moon, Military Workshop, Mother Fungus, Venom, Energy
+  // Cannon, Bombs & Grenades and Blaze of Glory ability writes live now (F201). So the published
+  // set takes all of them from the record the sequence leaves.
   // A key the ability set never carried stays absent rather than being published as `false`:
   // absence and `false` are the same to every reader (`hasAbil`), and writing the whole list out
-  // would put four keys on every unit of all five versions to say nothing. So the record's value
-  // is written back where it says something — the flag stands set, or the set already stated it.
+  // would put eleven keys on every unit of all five versions to say nothing. So the record's
+  // value is written back where it says something — the flag stands set, or the set already
+  // stated it. The two value fields take the same rule against `null`, so a `poison` of 0 — the
+  // Witchdoctor branch's spelling of the scripts' 100 sentinel — is published rather than
+  // dropped.
   const grantedAbilities = { ...curseGatedAbilities };
   for (const key of POSITIONED_GRANT_WRITES) {
     if (statUnit[key] || key in curseGatedAbilities) grantedAbilities[key] = statUnit[key];
   }
-  // Pneuma Field's own flag is a record field now, so the post-chain read takes it from the
-  // record the sequence leaves, beside the Life Steal value that step wrote (F202).
-  const pneumaAbilities = statUnit.pneumaField
-    ? { ...grantedAbilities, lifeSteal: statUnit.lifeSteal }
-    : grantedAbilities;
+  for (const key of POSITIONED_GRANT_VALUE_WRITES) {
+    if (statUnit[key] != null || key in curseGatedAbilities) grantedAbilities[key] = statUnit[key];
+  }
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
-    ? { ...pneumaAbilities, negateFirstStrike: true }
-    : pneumaAbilities;
+    ? { ...grantedAbilities, negateFirstStrike: true }
+    : grantedAbilities;
   // DOS Doom damage is the shared strength slot — `RAT_MULTIPLE_GAZE` is a `ranged_type`, not a
   // field of its own (`unitcalc.c`) — so the resolver's `doomGaze` value is the derived one. The
   // projection asks the same existence question the region-`e` floor asks (F122): a type-104

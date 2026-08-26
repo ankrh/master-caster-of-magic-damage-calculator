@@ -424,15 +424,34 @@ const POSITIONED_GRANT_WRITES = [
   'missileImmunity',  // `d:fortification`'s already-shielded arm
   'deathImmunity',    // `b:divineProtection`
   'lucky',            // `b:divineProtection`
+  'rage',             // `base:altarOfTheMoon`
+  'poisonImmunity',   // `base:altarOfTheMoon`, `d:venom`
+  'blackpowder',      // `base:militaryWorkshop`
+  'armorPiercing',    // `base:militaryWorkshop`, `d:blazeOfGlory`
+  'energyCannon',     // `base:energyCannon`
+  'wallCrusher',      // `b:bombsGrenades`
+  'firstStrike',      // `d:blazeOfGlory` (clear)
 ];
+
+// The same move for the two ability fields that carry a **value** rather than a flag. They are
+// seeded verbatim instead of through `!!`, and read back on the same rule, so an absent key stays
+// absent. `poison` is written by four positioned steps in a row — `base:altarOfTheMoon`'s two
+// `STypeID` branches assign it, then `base:militaryWorkshop`, `base:motherFungus` and `d:venom`
+// each make the script's `<>100` increment — and the chain is what orders them; the merge that
+// used to do this restated their precedence by hand and lost one increment (F201). `lifeSteal` is
+// written by `base:altarOfTheMoon`'s Witchdoctor branch and by `d:pneumaField`.
+const POSITIONED_GRANT_VALUE_WRITES = ['poison', 'lifeSteal'];
 
 // Lava Smelter (Warlord): five independent flags record the permanent mineral-pair grants already
 // carried by the unit. New Dwarf units receive them when trained; Upgrade & Retrain can apply
 // them later to any existing non-fantastic unit. Returns the ability set with every grant merged
-// in (a new object), or the original set unchanged when it does not apply. Merging up-front
-// — rather than into effectiveAbilities — lets the Flame Blade grant reach the weapon-upgrade
-// and stat-bonus logic, which read the raw ability set. The Wall-of-Fire siege effect is not
-// modelled here (it has its own global toggle). Each grant is sourced on its own
+// in (a new object), or the original set unchanged when it does not apply. The grant is still
+// merged up-front because one reader has no position to take it at: `hasWarlordBlade`
+// (`stats.js`) turns the Fiery Blade flag into the magic-weapon upgrade and the +2 blade bonus,
+// and the upgrade is a **result** field rather than a record field, computed well before the
+// sequence is built. `c:metalFires`'s non-stacking gate, the other reader, already takes it off
+// the record (`fieryBlade` in `POSITIONED_GRANT_FIELDS` above, F202). The Wall-of-Fire siege
+// effect is not modelled here (it has its own global toggle). Each grant is sourced on its own
 // PROVENANCE[lavaSmelter:*] anchor further down this function, outside this block's window.
 function applyLavaSmelterGrant(abilities, version, unitType) {
   if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;

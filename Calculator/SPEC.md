@@ -811,16 +811,22 @@ the calculator does instead, and why.
   is presumed to live in the unreconstructed UI target validation and AI code — and the membership
   of the stripped list remains a modelling choice (T8), where the engines' own criterion is that
   the spell carries a realm.
-- **The building and enchantment ability grants run before the sequence, where the engine writes
-  them at position.** Seven nested calls in `deriveUnitStats`. The calculator already gives their
-  sources chain phases: the `CreateUnit.CAS` grants' stat halves are `base:` steps
-  (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same four `STypeID`
-  branches), and Divine Protection, Insulation and Fortification cite `UnitCalcPre.CAS` and
-  `UnitCalc.CAS` — regions `b` and `d`. So one block's stat write is a positioned step while its
-  ability write is not, split by field kind rather than by evidence. The cause is the calculator's,
-  not the engine's: `deriveUnitStats` computes its gates as constants ahead of the sequence, and
-  the hoist is what makes some of those constants valid. Scheduled for removal (F201); the option
-  is not that both shapes are acceptable.
+- **Some building and enchantment ability grants still run before the sequence, where the engine
+  writes them at position.** Six hoists are left in `deriveUnitStats`: `deriveMarionettePackage`
+  and five nested calls — `applyLavaSmelterGrant`, `applySanctaBasilicaGrant`,
+  `applyPillarOfFaithGrant`, `applyInsulationGrant` and `applyOutlanderReformGrants`. The
+  calculator already gives their sources chain phases: the `CreateUnit.CAS` grants' stat halves
+  are `base:` steps (`base:sanctaBasilica` beside Sancta Basilica's ability grants, from the same
+  four `STypeID` branches), and Insulation cites `UnitCalcPre.CAS` — region `b`. So one block's
+  stat write is a positioned step while its ability write is not, split by field kind rather than
+  by evidence. The cause is the calculator's, not the engine's: `deriveUnitStats` computes its
+  gates as constants ahead of the sequence, and the hoist is what makes some of those constants
+  valid. Scheduled for removal (F200, F201); the option is not that both shapes are acceptable.
+  The seventh hoist, the `effectiveAbilities` merge, no longer carries a grant: Divine Protection
+  and Fortification took positions with F200, and Altar of the Moon, Military Workshop, Mother
+  Fungus, Venom, Energy Cannon, Bombs & Grenades and Blaze of Glory with F201. What is left in
+  that merge is the finished-record projection, plus two normalizations no engine block makes —
+  the inert-Rust drop and True Sight's implication of Illusion Immunity — which are F201 stage 2.
 - **An identity conversion is its own step even where its engine block also writes a stat.** The
   address map puts Chaos Channels' demon-skin realm write inside the block that increments Defense
   (`$0059F4A3`, 0x8F6FE) and Black Channels' at the end of its own block (0x8F4A1), so *One

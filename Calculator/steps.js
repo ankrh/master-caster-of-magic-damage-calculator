@@ -286,6 +286,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'd:rust': SCOPE_WARLORD,
   'd:shadowStrike:thrown': SCOPE_WARLORD,
   'd:vampirism:transfer': SCOPE_WARLORD,
+  'd:venom': SCOPE_WARLORD,
   'd:weakness': SCOPE_WARLORD,
   // --- e: the binary's post-hook tail ---
   'e:clamp': SCOPE_ALL,

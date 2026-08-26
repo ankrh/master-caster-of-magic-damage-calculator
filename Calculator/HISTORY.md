@@ -1,5 +1,69 @@
 # Calculator work history
 
+## 2026-08-26 — F201 (stage 1): the `effectiveAbilities` grants take positions
+
+Nine ability keys, written by eleven conditional spreads in the `effectiveAbilities` merge, are
+positioned writes now. `base:altarOfTheMoon` gained `SRage`, `APoisonImmunity` and the two
+mutually exclusive `STypeID` branches — Hunters' `AFPoison` 2, Witchdoctors' 100-sentinel clear
+and `AFLifeSteal` −1 (`CreateUnit.CAS:372-390`, reviewed span widened from `:372-381`).
+`base:militaryWorkshop` gained `SBlackpowderUpgrade`, the `AFPoison` increment and the
+`AFArmorPiercing` grant (`:255-262`), all already inside its span. `base:motherFungus` gained its
+own increment (`:455`), `base:energyCannon` the `AFDoom` flag the calculator publishes as
+`energyCannon` (`:695`), and `b:bombsGrenades` `AWallCrusher` (`UnitCalcPre.CAS:1072`).
+`d:blazeOfGlory` gained `AFArmorPiercing` and the `AFirstStrike` clear (`UnitCalc.CAS:1504-1505`,
+span widened from `:1490-1501`). **`d:venom` is a new step** with a new hashed-span anchor at
+`UnitCalc.CAS:60-70`, first in region `d` — its two writes had no chain entry at all while they
+were merged ahead of the sequence.
+
+Eleven keys are `POSITIONED_GRANT_WRITES`; `poison` and `lifeSteal` are the new
+`POSITIONED_GRANT_VALUE_WRITES` (`stats_identity.js`), seeded verbatim rather than through `!!` and
+read back against `null` so a `poison` of 0 — the calculator's spelling of the scripts' 100
+no-poison sentinel — is published rather than dropped. `pneumaAbilities` is gone: `lifeSteal` now
+takes the same read-back as every other record-carried ability field, instead of being published
+only when Pneuma Field happened to fire.
+
+**One correction, with `militaryWorkshopAndMotherFungusPoisonStackWarlord`, which fails before and
+passes after.** Military Workshop's poison grant (`:256`) and Mother Fungus's (`:455`) are the same
+`IF (AFPoison<>100) THEN +1 ELSE 1` statement on the permanent record, each reading the field it
+raises, so they stack: a Goblin unit with both takes Poison 2 (1.2 damage at Res 5), where the
+merge's last-wins spread left Poison 1 (0.6). Measured on pristine `HEAD` before the change.
+The hand-written `venomBasePoison` precedence ladder — "motherFungus > militaryWorkshop > altars",
+which existed only to restate the spreads' order — is gone with it: the chain orders the
+increments.
+
+98 of 52440 derivations differ against pristine `HEAD`, all one class — `abilities.firstStrike`
+goes from an explicit `false` to absent on a Blaze of Glory unit that never had First Strike, which
+is F200's read-back rule (absence and `false` are the same to every reader, `hasAbil`, and nothing
+in `Calculator/`, `tools/` or `tests/` distinguishes them). No stat, chance or damage field moved
+in any version, in any case.
+
+**The row's premise was re-measured and three claims were corrected in landing.** The hoist
+population is seven, not nine — `72f38ef` deleted two of them. The merge is at `stats.js:1467`,
+not `:1457`. And it held eleven spreads writing nine keys, not "roughly fifteen further ability
+writes": the other thirteen entries are the finished-record projection, not grants.
+
+**Both protected texts were corrected rather than deleted, because the shape is only partly
+retired.** `SPEC.md`, *Deliberate deviations* said "Seven nested calls" and named Divine
+Protection, Insulation and Fortification as the script-cited grants; it now says six hoists, names
+Insulation alone, and records that the `effectiveAbilities` merge no longer carries a grant. The
+`stats_identity.js` plumbing comment claimed the up-front merge exists so the Flame Blade grant can
+reach "the weapon-upgrade and stat-bonus logic, which read the raw ability set"; that is still
+true of exactly one reader, `hasWarlordBlade`'s magic-weapon upgrade, which is a **result** field
+and not a record field, and the comment now says so and points at `fieryBlade`'s existing
+`POSITIONED_GRANT_FIELDS` entry for the other reader.
+
+Five of F202 stage 2's seventeen reads landed here and are struck from its row: the
+`blackpowderGrantsAP` `armorPiercing` read, the four `poison` reads, and separately the
+`base:militaryWorkshop` `armorPiercing` test, which is a record read at its own rank now.
+F200 stage 2's blocker is **not** settled — `innerPowerActiveForUnit` was not touched.
+Filed [F206](./BACKLOG.md): Blaze of Glory's `AWallCrusher` at `:1503`, inside the newly widened
+span, is a third ability write the calculator does not model; no preset can bind it because
+nothing reads `wallCrusher`, so the adjacent-defect bound files it rather than folding it in.
+
+Stage 2 is what is left in the merge: the inert-Rust drop, True Sight's implication of Illusion
+Immunity — neither of which any engine block makes — and the thirteen finished-record projection
+keys.
+
 ## 2026-08-26 — F200 (stage 1): the Large Shield chain and Divine Protection take positions
 
 Four writes to two ability flags now happen where their blocks stand instead of in a pre-sequence

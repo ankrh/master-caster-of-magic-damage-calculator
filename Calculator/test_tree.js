@@ -728,6 +728,7 @@ const TEST_TREE = [
           'motherFungusAttackWarlord',
           'motherFungusToDefendWarlord',
           'motherFungusPoisonWarlord',
+          'militaryWorkshopAndMotherFungusPoisonStackWarlord',
           'motherFungusNonGoblinWarlord',
           'motherFungusHeroExcludedWarlord',
         ],

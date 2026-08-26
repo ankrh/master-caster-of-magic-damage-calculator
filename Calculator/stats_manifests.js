@@ -269,7 +269,10 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'c:blazingMarch', 'c:breakthrough:normal', 'c:breakthrough:noncorporeal',
   'c:breakthrough:combatSummoned', 'c:warpReality', 'c:blackPrayer', 'c:darkness', 'c:guardian',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
-  'c:shatter', 'c:spellWard', 'c:tactician', 'd:mechanicalExpert', 'd:weakness',
+  'c:shatter', 'c:spellWard', 'c:tactician',
+  // `UnitCalc.CAS:60-70`, ahead of every other represented write of that file.
+  'd:venom',
+  'd:mechanicalExpert', 'd:weakness',
   'd:trueSight', 'd:flameBlade', 'd:berserkWarlord', 'd:rust', 'd:hurricane',
   'd:favoredTerrain', 'd:fortification', 'd:colossalStrength', 'd:vampirism:transfer',
   'd:shadowStrike:thrown',

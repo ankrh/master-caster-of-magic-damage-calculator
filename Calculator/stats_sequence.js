@@ -34,7 +34,8 @@
 // `base`: the raw stats, and the writes the engines make permanently before the encounter.
 function baseStatSteps(ctx) {
   const {
-    abilities, abilByPhase, altarOfTheMoon, altarOfTheSunHolyMother, baseDoomGaze, baseGazeRanged,
+    abilities, abilByPhase, altarHunter, altarOfTheMoon, altarOfTheSunHolyMother, altarWitchdoctor,
+    baseDoomGaze, baseGazeRanged,
     baseHitChance, baseHitMelee, modernSecondaryHitMod, secondaryHitTargets,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod, calcBaseAtk, calcBaseDef, calcBaseHP,
     calcBaseRes, channels, dragonMound, identity, isCoM1, isCoM2, lightningBladeSlots,
@@ -42,7 +43,7 @@ function baseStatSteps(ctx) {
     naturalSelectionCoal, naturalSelectionIron, naturalSelectionNightshade,
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount, pillarOfFaith, pillarOfFaithCount, poolOfRepentance,
-    rangedTypeFields, sanctaBasilica, secondaryHitFields, strengthFields,
+    rangedTypeFields, recordContext, sanctaBasilica, secondaryHitFields, strengthFields,
     survivalInstinctToBlkBonus, thrownTypeFields, version, finishedImmunities,
   } = ctx;
   return [
@@ -111,29 +112,56 @@ function baseStatSteps(ctx) {
       // is percentage points, so one engine step is ten percentage points.
       apply: u => { u.toBlk -= 10; } }),
     ...abilByPhase.base,
-    // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:10:6f667006e3c7a79f7c8a4862
+    // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:19:a2b79ed52f498dfddaa861b8
     // The Resistance point reaches every trained unit, not only a ranged one; the ranged
-    // half carries its own slot gate.
-    statStep({ id: 'altarOfTheMoon', phase: 'base', writes: ['res', ...strengthFields],
+    // half carries its own slot gate. `SRage` and `APoisonImmunity` (`:375`, `:378`) and the
+    // two mutually exclusive `STypeID` branches that follow (`:382-390`) are writes of this same
+    // block, so they land at its rank instead of being merged ahead of the sequence (F201). The
+    // reviewed span was widened from `:372-381` to `:372-390` to cover the two branches.
+    // Rage is a counter in the script (`SRage + 1`) and a flag here, which is the calculator's
+    // one-figure model of it; nothing reads a Rage above 1.
+    statStep({ id: 'altarOfTheMoon', phase: 'base',
+      writes: ['res', ...strengthFields, 'rage', 'poisonImmunity', 'poison', 'lifeSteal'],
       when: () => altarOfTheMoon,
       apply: u => {
         u.res += 1;
+        u.rage = true;
+        u.poisonImmunity = true;
         for (const c of channels) {
           if (c.hasPermanentRangedStat) u[c.strengthField] += 2;
         }
+        // 100 is the scripts' no-poison sentinel — every `AFPoison` increment reads `<>100` and
+        // restarts at 1 — so the Witchdoctor branch removes the poison rather than raising it.
+        // The calculator spells the sentinel as 0, which is what its own readers treat as none.
+        if (altarHunter) u.poison = 2;
+        else if (altarWitchdoctor) { u.poison = 0; u.lifeSteal = -1; }
       } }),
     // PROVENANCE[militaryWorkshop]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:24:ab44f1ca0fc9eab7723b232b
     // The missile-to-boulder projectile upgrade is made here, at the block's own position,
     // rather than seeded into the base record: `base:stat:base` is the chain's first entry and
     // carries the permanent identity alone.
     statStep({ id: 'militaryWorkshop', phase: 'base',
-      writes: [...strengthFields, ...rangedTypeFields],
+      writes: [...strengthFields, ...rangedTypeFields, 'blackpowder', 'poison', 'armorPiercing'],
       when: () => channels.some(c => c.blackpowder),
       apply: u => {
+        // `SETSTAT(U,SBlackpowderUpgrade,1,1)` (`:255`) and the `AFPoison` increment beside it
+        // (`:256`) are writes of this block, at this rank (F201). The increment reads the field
+        // it raises, so it stacks with Mother Fungus's identical one at `:455` rather than
+        // being overwritten by it.
+        u.blackpowder = true;
+        u.poison = (u.poison || 0) + 1;
         // Doom or Armor Piercing means the block grants strength instead of the piercing flag:
         // +4 on Thrown, +2 on a physical ranged attack. Fire Breath takes +4 either way. All
         // three read the permanent record's channel, which is what the script's gates read.
-        const grantsStrength = !!abilities.doom || !!abilities.armorPiercing;
+        // The `AFArmorPiercing`/`AFDoom` test at `:261` is `GetStat(…,1)`, the permanent record,
+        // and it is read here at the block's own rank: no earlier chain entry writes either
+        // field, so this is the same answer the pre-sequence constant gave (F201).
+        const grantsStrength = !!abilities.doom || !!u.armorPiercing;
+        // The piercing flag is a record-level write, not a per-channel one: the script's own
+        // test is `SThrown > 0 %OR (SRanged > 0 %AND SRangedType < 30)` over the whole permanent
+        // record (`:257-259`), which is what the shared slot's `blackpowderPhysicalSource`
+        // carries.
+        const grantsPiercing = !grantsStrength && recordContext.blackpowderPhysicalSource;
         for (const c of channels) {
           if (!c.blackpowder) continue;
           if (grantsStrength && c.blackpowderSelectedThrown) u[c.strengthField] += 4;
@@ -141,6 +169,9 @@ function baseStatSteps(ctx) {
           if (c.blackpowderSelectedFireBreath) u[c.strengthField] += 4;
           if (c.blackpowderUpgradesToBoulder) u[c.rangedTypeField] = 'boulder';
         }
+        // Doom ignores armor, so the block spends the flag on strength there instead; that
+        // branch is the `grantsStrength` arm above.
+        if (grantsPiercing) u.armorPiercing = true;
       } }),
     // Lightning Blade follows Military Workshop in CreateUnit.CAS. It assigns rather than adds
     // when no Thrown source exists, so an older Lightning Breath is replaced by strength 1.
@@ -201,7 +232,7 @@ function baseStatSteps(ctx) {
       } }),
     // PROVENANCE[motherFungus]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:13:5feb79a87ed503bfc3388e6a
     statStep({ id: 'motherFungus', sourceId: 'motherFungus', sourceLabel: 'Mother Fungus',
-      phase: 'base', writes: ['atk', ...strengthFields, 'toBlk'],
+      phase: 'base', writes: ['atk', ...strengthFields, 'toBlk', 'poison'],
       when: () => motherFungus,
       apply: u => {
         u.atk += 2;
@@ -209,6 +240,9 @@ function baseStatSteps(ctx) {
           if (c.hasPermanentRangedStat) u[c.strengthField] += 2;
         }
         u.toBlk += 10;
+        // `:455`, the same `<>100` increment Military Workshop makes at `:256`. Both read the
+        // field they raise, so a Goblin unit with both takes +2 (F201).
+        u.poison = (u.poison || 0) + 1;
       } }),
     // PROVENANCE[altarOfTheSun:holyMother]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
     statStep({ id: 'altarOfTheSun:holyMother', phase: 'base', writes: ['atk'],
@@ -250,9 +284,13 @@ function baseStatSteps(ctx) {
     // +50% reads every earlier permanent ranged contribution in this sequence.
     // PROVENANCE[energyCannon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:40a6858a207fd2460b6df58e
     statStep({ id: 'energyCannon', phase: 'base',
-      writes: [...strengthFields, ...rangedTypeFields],
+      writes: [...strengthFields, ...rangedTypeFields, 'energyCannon'],
       when: () => channels.some(c => c.energyCannon && c.energyCannonOwnsThisSlot),
       apply: u => {
+        // `SETSTAT(U,AFDoom,1,1,3)` beside the conversion (`CreateUnit.CAS:695`) is what makes
+        // the converted attack a Doom one; `energyCannon` is the calculator's label for that
+        // write, and combat resolution reads it off the finished record (F201).
+        u.energyCannon = true;
         for (const c of channels) {
           if (!c.energyCannon || !c.energyCannonOwnsThisSlot) continue;
           u[c.strengthField] += Math.floor(Math.max(0, u[c.strengthField]) / 2);
@@ -492,9 +530,13 @@ function precalcScriptStatSteps(ctx) {
     // empty and typeless here — the `SRanged` field the Blaze of Glory transfer and the Focus
     // Magic branch need standing by for their own writes is exactly that (F101).
     statStep({ id: 'bombsGrenades', phase: 'b',
-      writes: [...strengthFields, ...thrownTypeFields],
+      writes: [...strengthFields, ...thrownTypeFields, 'wallCrusher'],
       when: () => bombsGrenades,
       apply: u => {
+        // `SETSTAT(U,AWallCrusher,0,1)` (`:1072`), the second line of the same `IF`, inside the
+        // reviewed span already cited. It lands at this rank rather than ahead of the
+        // sequence (F201).
+        u.wallCrusher = true;
         const grant = Math.max(0, Math.floor(8 - baseFigs / 2));
         for (const c of channels) {
           if (isThrownFieldSlot(u, c)) u[c.thrownTypeField] = 'thrown';
@@ -1364,7 +1406,7 @@ function magicCalcScriptStatSteps(ctx) {
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, trueSightRangedToHitBonus, vampirismActive,
-    warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
+    venomActive, warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
     weaknessBinaryHits, weaknessPenalty,
   } = ctx;
   const vampirismSources = channels.filter(c => c.slotKey !== 'shared').length > 0
@@ -1374,6 +1416,22 @@ function magicCalcScriptStatSteps(ctx) {
     (u[c.strengthField] > 0 && ['thrown', 'fire', 'lightning'].includes(u[c.thrownTypeField]))
       ? u[c.strengthField] : 0;
   return [
+    // Venom (Warlord Nature unit enchantment): `APoisonImmunity`, then the `<>100` poison
+    // increment. Both writes use record selector `0`, the calculated record, so the value the
+    // increment raises is what stands here — after the `CreateUnit.CAS` building grants of the
+    // `base` phase and before anything later in `UnitCalc.CAS`. It had no chain entry while its
+    // two writes were merged ahead of the sequence, which is what made the pre-sequence merge
+    // restate their precedence by hand (F201). The prose is "Enchanted unit gains Poison
+    // Immunity and coats their weapons with deadly venom, granting +1 Poison attack rating"
+    // (`Unit rosters/Warlord mod unit data/HELP.TXT:5785`).
+    // PROVENANCE[venom]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:11:ea8bdedab4ef0568fc60f20b
+    statStep({ id: 'venom', sourceId: 'venom', sourceLabel: 'Venom', phase: 'd',
+      writes: ['poisonImmunity', 'poison'],
+      when: () => venomActive,
+      apply: u => {
+        u.poisonImmunity = true;
+        u.poison = (u.poison || 0) + 1;
+      } }),
     // UnitCalc.CAS line order is load-bearing for the chance record. Mechanical Expert is
     // the first represented phase-d chance writer.
     ...abilByPhase.d.filter(step => step.id === 'mechanicalExpert'),
@@ -1561,11 +1619,19 @@ function magicCalcScriptStatSteps(ctx) {
     // — what retires the emptied Ranged attack there is `SETSTAT(U,SAmmo,0,0)` two lines later
     // (`:1502`), which the calculator does not model, so clearing the type is this model's
     // stand-in for that and keeps later region-`e` ranged writes off the emptied field.
-    // PROVENANCE[blazeOfGlory]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:12:e27e857d1cda6919711e5456
+    // The reviewed span was widened from `:1490-1501` to `:1490-1505` to cover the block's two
+    // ability writes, `SETSTAT(U,AFArmorPiercing,0,1,1)` at `:1504` and
+    // `SETSTAT(U,AFirstStrike,0,0)` at `:1505`, which land at this rank now instead of being
+    // merged ahead of the sequence (F201). The third, `SETSTAT(U,AWallCrusher,0,1)` at `:1503`,
+    // is not modelled at all — filed as F206.
+    // PROVENANCE[blazeOfGlory]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:16:6cabb4119ac66a1204ea795e
     statStep({ id: 'blazeOfGlory', phase: 'd',
-      writes: ['def', 'atk', ...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
+      writes: ['def', 'atk', ...strengthFields, ...rangedTypeFields, ...thrownTypeFields,
+        'armorPiercing', 'firstStrike'],
       when: () => blazeOfGloryActive,
       apply: u => {
+        u.armorPiercing = true;
+        u.firstStrike = false;
         u.atk += u.def;
         u.def = 0;
         // `GetStat(U,SRanged,0)` names the record's Ranged field, not an attack the unit owns,
