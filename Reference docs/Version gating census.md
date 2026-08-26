@@ -3,7 +3,7 @@
 First measured 2026-08-23 at `f19f865`; re-measured 2026-08-23 after the gating mechanism landed,
 and again 2026-08-25 by a checked-in tool. Method and findings. F130 is retired
 ([HISTORY.md](../Calculator/HISTORY.md)); what is still live is
-[F157, F159, F168 and F180](../Calculator/BACKLOG.md).
+[F159 and F180](../Calculator/BACKLOG.md).
 
 **The instrumentation is `tools/ability_read_census.js` from 2026-08-25 on.** The first two rounds
 rebuilt it ad hoc and discarded it, so their site totals could not be re-derived — and they cannot
@@ -247,22 +247,25 @@ first three are **settled** — [SPEC.md](../Calculator/SPEC.md), *Versions*, in
   could not list at all. The `destroyMechanical` row closed a fourth way again: the modelled effect
   turned out not to exist in any engine, so F157 deleted it rather than scoping it.
 
-## Eight leaks the sweep scored inert
+## Nine leaks the sweep scored inert
 
 Each was reproduced by setting the single hidden control and reading `resolveCombat`, in a shape
 the sweep does not build. Three were fixed in the F130 round, two more in F157 and two in F158;
 the eighth, `destroyMechanical`, was **deleted** in the 2026-08-26 F157 round — the effect it
-leaked has no engine behind it (`HISTORY.md`, F157).
+leaked has no engine behind it (`HISTORY.md`, F157) — and the ninth, the **defender** side of
+`spiritLink`, was deleted the same way in the F168 round.
 
-**Eight is not the total, and the same blind spot is why.** F157 found a ninth while checking
-whether Spirit Link's other reads were inert: `dispelEvilFailProb` and `exorciseFailProb`
-return 0 on a defender's `spiritLink` with no version test, moving damage 12 → 6 and destroy 1 → 0
-in the four versions that lack the enchantment (`BACKLOG.md` F168). Neither site appears in the
-32-site table above, because no sweep shape gives the attacker a touch attack against a Fantastic
-defender. F158's `exorcise` was found the same way — by probing the mirror of a known leak, not by
-any sweep. **Treat both enumerations as lower bounds** until a shape generator replaces the
-hand-written list; the two new tools narrow the blind spot in one direction each and neither
-removes it.
+**Nine is not the total, and the same blind spot is why.** Each of the last three was found by
+hand, by probing the mirror of a known leak: F158's `exorcise` from `dispelEvil`, and F157's ninth
+from asking whether Spirit Link's *other* reads were inert. Neither of the ninth's two sites was
+ever in the 36-site enumeration above — both sat in the census tool's "no shape reached" bucket,
+because no shape in either sweep gives the attacker a resist-or-banish touch rider and the
+defender a Fantastic identity. Measured, not inferred: `tools/ability_read_census.js` reports
+387 sites and 39 unreached at `4626019`, and 385 and 37 once F168 deleted exactly those two. **Treat both enumerations as lower bounds** until a shape generator
+replaces the hand-written list. `tools/unit_checks/hidden_control_gating.js` now builds that one
+missing shape as a standing check — attacker carrying Dispel Evil and Exorcise, defender
+`fantastic_death`, the hidden key probed on the **defender** — which closes the blind spot for
+this shape and for no other.
 
 | Effect | Hidden in | Shape that exposes it | Effect on damage | State |
 |---|---|---|---|---|
@@ -274,6 +277,7 @@ removes it.
 | `exorcise` | both MoM | defender Fantastic Death | 0 to 9.6 | fixed |
 | `spiritLink` | both MoM | attacker Fantastic Death, defender Blessed | 0 to 3 | fixed |
 | `destroyMechanical` | CoM 1, CoM2, both MoM | defender also carrying hidden `mechanical` | 6 to 12 | deleted |
+| `spiritLink` (defender) | CoM 1, CoM2, both MoM | defender Fantastic Death, attacker with Dispel Evil / Exorcise | 12 to 1 | deleted |
 
 `exorcise` is the eighth, found by F158 while reproducing the seventh, and it is the same defect
 seen from the other side: the two are one shared rider under two names, so an ungated
@@ -288,7 +292,7 @@ The Blazing March, Spirit Link and Destroy Mechanical figures were re-measured 2
 against a 1-figure 12 HP pair at 100% To Hit and To Block; the earlier 0-to-12, 0-to-12 and
 12-to-24 came from a shape twice the size and are the same effects.
 
-Notes on the four:
+Notes on the five:
 
 - `spiritLink` is the negated read the first pass flagged as a watch item, and it behaved exactly
   as feared: `!hasAbil(attacker.abilities, 'spiritLink')` is *not* inert when the key is set — it
@@ -326,6 +330,17 @@ Notes on the four:
   (`COSpell.CAS:832-838`), which is a targeted cast, not an attack rider, and which
   `spells.ini[340]` ships `Disabled=True`. **F157 deleted the effect**, closing the leak in all
   four versions by removal (`HISTORY.md`, F157).
+- `spiritLink` on the **defender** is the ninth, and the second reading of a key already in this
+  table: `dispelEvilFailProb` and `exorciseFailProb` (`combat_special_attacks.js`) each opened with
+  `if (hasAbil(defAbilities, 'spiritLink')) return 0;` and no version test, so the hidden key
+  turned the rider off outright. Re-measured 2026-08-26 against a 1-figure 12 HP pair at 100% To
+  Hit and To Block, defender `fantastic_death` at Resistance 3 and the attacker's melee 1: damage
+  **12 to 1** and destroy **1 to 0**, in `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` and
+  `com2_1.05.11`. (F157's 12-to-6 is the same effect in a shape whose melee lands harder.) It
+  needed no gate: Warlord's `d:spiritLink` clears the calculated `Fantastic` flag and is the last
+  write of that field in the chain, so a spirit-linked target reaches both functions projected as
+  `normal_*` and falls out on each one's own unit-type test. The term was a second copy of that
+  write, and **F168 deleted both**, measured to leave Warlord's numbers unmoved.
 
 ## What this round changed
 

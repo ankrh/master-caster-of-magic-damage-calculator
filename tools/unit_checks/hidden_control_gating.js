@@ -2,9 +2,11 @@
 // affect the result. `tests/version-gating.spec.js` asserts the UI half; this asserts the
 // derivation half, which no suite covered before (F130).
 //
-// This is the derive tier of `tools/hidden_control_leak_sweep.js` — the same 485 hidden
+// The first half is the derive tier of `tools/hidden_control_leak_sweep.js` — the same hidden
 // (calcKey, version) pairs over the same shapes, comparing the derived stat record minus the
 // `abilities` echo. The sweep's combat tier stays out of the suite at ~50s; this tier is ~8s.
+// The second half adds the one **combat** shape neither sweep builds (F168), for a cost too
+// small to measure: it is one exchange per pair rather than the sweep's dozens.
 //
 // No preset can reach these inputs, because `updateTypeVisibility` clears a version-gated
 // control before anything reads it. That is why the regression evidence here is a sweep rather
@@ -27,6 +29,10 @@ const { assert, assertSameKeyList, modernRecordForSharedSlot } = require('./asse
 // genuinely all-versions, Ruler of Underworld is Caster.exe only — and so let CoM 1 upgrade a
 // normal weapon to magic. Keep it empty: an addition here needs a stated reason.
 const KNOWN_DERIVED_LEAKS = [];
+
+// The same worklist for the one **combat** shape below. Empty since F168 deleted the two
+// defender-side `spiritLink` reads in `dispelEvilFailProb` and `exorciseFailProb`.
+const KNOWN_TOUCH_RIDER_LEAKS = [];
 
 const MAGICAL_RANGED = '@magical';
 
@@ -165,6 +171,60 @@ function runHiddenControlGatingChecks(ctx) {
     'Version-hidden controls moving a derived stat match the declared worklist '
     + '(SPEC.md, Versions, invariant 4). A new entry is a regression; a missing one means a '
     + 'gate landed and its KNOWN_DERIVED_LEAKS entry should be deleted');
+
+  // --- The one shape neither sweep builds (F168) ---
+  //
+  // Every shape above and in `hidden_control_leak_sweep.js` gives both units a conventional
+  // attack and leaves the defender `normal`/`fantastic`/`hero` with no realm, so no probe ever
+  // put a **resist-or-banish touch rider** in front of a **Fantastic defender**. That is the
+  // blind spot that hid `dispelEvil`, `exorcise` and then the two defender-side `spiritLink`
+  // reads, each found by hand rather than by a sweep (`Version gating census.md`). This adds the
+  // shape, and probes the hidden key on the **defender**, which is the side these riders read.
+  //
+  // The attacker carries both rider names at once; `touchKeyInVersion` (`combat_effects.js`)
+  // decides which the engine has, so this does not restate `TOUCH_KEY_SCOPE_IDS`.
+  const resolveCombat = read('resolveCombat');
+  const mean = dist => (dist || []).reduce((sum, p, i) => sum + p * i, 0);
+  const touchFound = [];
+  for (const version of versions) {
+    const modern = version.startsWith('com2');
+    // Each side states its own version's To Hit record and only that one: `deriveUnitStats`
+    // halts on a non-zero field the active record has not got.
+    const toHit = modern ? { hitChance: 100 } : { toHitMod: 70 };
+    const unit = (prefix, over) => Object.assign(baseInput(ctx, version, {
+      rtbType: 'none', rtb: 0, figs: 1, atk: 1, def: 0, res: 3, hp: 12,
+      toBlkMod: 70, ...toHit, ...over,
+    }), { prefix });
+    // The attacker never carries the probed key, so it is derived once per version.
+    const a = deriveUnitStats(unit('a', {
+      unitType: 'normal', res: 6, abilities: { dispelEvil: true, exorcise: -4 },
+    }));
+    const exchange = defenderAbilities => {
+      try {
+        const b = deriveUnitStats(unit('b', {
+          unitType: 'fantastic_death', abilities: defenderAbilities,
+        }));
+        const result = resolveCombat(a, b,
+          { isRanged: false, version, wallOfFire: false, chaosConjunction: false });
+        return JSON.stringify([Number(mean(result.totalDmgToB).toFixed(9)),
+          Number((result.bDestroyPct || 0).toFixed(9))]);
+      } catch (err) { return 'THREW: ' + err.message; }
+    };
+    const baseline = exchange({});
+    for (const [calcKey, defs] of byCalcKey) {
+      if (!defs.every(def => abilityVersionGated(def, version))) continue;
+      for (const def of defs) {
+        for (const value of valuesFor(def)) {
+          if (exchange({ [calcKey]: value }) !== baseline) {
+            touchFound.push(`${version}|${calcKey}`);
+          }
+        }
+      }
+    }
+  }
+  assertSameKeyList([...new Set(touchFound)].sort(), [...KNOWN_TOUCH_RIDER_LEAKS].sort(),
+    'Version-hidden controls on a Fantastic defender move nothing against an attacker carrying '
+    + 'Dispel Evil / Exorcise (SPEC.md, Versions, invariant 4)');
 }
 
 module.exports = { runHiddenControlGatingChecks };

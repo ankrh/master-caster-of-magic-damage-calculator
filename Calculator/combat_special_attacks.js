@@ -53,6 +53,16 @@ function deathTouchFailProb(defRes, defAbilities, modifier) {
 // positive `penalty` is the total Resistance reduction on the target. Magic Immunity
 // skips the roll outright; a final effective Resistance >= 10 is also immune.
 // The realm-targeting and penalty values differ per effect (see callers below).
+//
+// **Neither caller tests the defender's Spirit Link, and neither may.** Spirit Link is Warlord's
+// alone (`PROVENANCE[spiritLink]`, `stats_identity.js`), and the engine's write is a derivation
+// one: `UnitCalc.CAS:1305-1306` clears the calculated `Fantastic` flag at the tail of the
+// recalculation, which the `d:spiritLink` step models and which is the last write of that field
+// in the Warlord chain. A spirit-linked target therefore reaches these functions projected as
+// `normal_*` and falls out on each caller's own unit-type test, with nothing left for a second
+// test to do. A defender-side `spiritLink` read here was that second copy, and because the key
+// exists in no other engine it turned the rider off outright in `mom_1.31`, `mom_cp_1.60.00`,
+// `com_6.08` and `com2_1.05.11` (`SPEC.md`, *Versions*, invariant 4; F168 deleted both).
 function fantasticResistKillFailProb(defRes, defAbilities, penalty) {
   if (hasAbil(defAbilities, 'magicImmunity')) return 0;
   const effectiveRes = defRes - penalty;
@@ -70,8 +80,7 @@ function isCreatedUndeadTarget(defUnitType, defAbilities) {
 
 // --- Dispel Evil ---
 // Touch attack. Only affects fantastic_death (created-undead penalty -9, else -4) and
-// fantastic_chaos (penalty -4). Other unit types are immune. Spirit Link strips the
-// target's fantastic status, so it cannot be affected.
+// fantastic_chaos (penalty -4). Other unit types are immune.
 //
 // Dispel Evil and Exorcise are **one shared rider under two names**, the touch-flag counterpart
 // of the repurposed enchantment bits (`COMBAT_VERSION_SCOPES`, `steps.js`). `ATT_DISPEL_EVIL` is
@@ -86,7 +95,6 @@ function isCreatedUndeadTarget(defUnitType, defAbilities) {
 // STAT-FORMULA[dispelEvilTouchRider]
 // PROVENANCE[dispelEvilTouchRider]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:29:a622cfdbc42ac471b8aeb63d
 function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
-  if (hasAbil(defAbilities, 'spiritLink')) return 0;
   let penalty;
   if (isCreatedUndeadTarget(defUnitType, defAbilities)) {
     penalty = 9;
@@ -103,7 +111,6 @@ function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
 // creatures of ANY realm (not just Death/Chaos), and uses the ability's own strength
 // as the base penalty. `modifier` is the Exorcise strength (e.g. -1 → -1 penalty).
 // Created-undead targets suffer an additional -3 (vs Dispel Evil's additional -5).
-// Spirit Link strips the target's fantastic status, so it cannot be exorcised.
 //
 // The other half of the shared rider described above: CoM 1's block for flag `0x0800`, and the
 // `exorcise` member of `Caster.exe`'s `AttackFlagsT`, which the modern rider loop reads first of
@@ -111,7 +118,6 @@ function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
 // STAT-FORMULA[exorciseTouchRider]
 // PROVENANCE[exorciseTouchRider]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:34:29a4d4421788f0f43bb2ab70 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:13:b67a607c5a672579af407603
 function exorciseFailProb(defRes, defAbilities, defUnitType, modifier, version) {
-  if (hasAbil(defAbilities, 'spiritLink')) return 0;
   if (!String(defUnitType || '').startsWith('fantastic_')) return 0;
   // CoM 6.08's common 0x0800 flag retains the executable-table name Dispel Evil,
   // but the version-specific consumer ignores Spec_Att_Attrib and uses literal -3.

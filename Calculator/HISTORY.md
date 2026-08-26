@@ -6,6 +6,49 @@ pre-2026-08-10 narratives remain recoverable from git history.
 
 ## 2026-08-26
 
+- **F168 — the two Spirit Link touch-immunity terms are deleted, not gated, because the fact they
+  encode already has a home.** **Premise re-measured and half of it corrected.** The line numbers
+  hold (`combat_special_attacks.js:88` and `:113`) and both anchors are where the row says. The
+  leak reproduces: with a 1-figure 12 HP pair at 100% To Hit and To Block, defender
+  `fantastic_death` at Resistance 3 and the attacker's melee 1, a defender's hidden `spiritLink`
+  moved damage **12 → 1** and destroy **1 → 0** in `mom_1.31`, `mom_cp_1.60.00`, `com_6.08` and
+  `com2_1.05.11` — Dispel Evil in the two MoM builds, Exorcise in the other two, and Exorcise
+  against `fantastic_nature` alongside `fantastic_death`. (The row's 12 → 6 is the same effect in
+  a shape whose melee lands harder.) **What the row got wrong is the prescription.** It asked for a
+  defender-side gate because "these two sites are reachable in every version"; the sites are, but
+  the *term* is redundant inside its own scope. Spirit Link is Warlord's alone, and Warlord's
+  engine write is a derivation one — `UnitCalc.CAS:1305-1306` clears the calculated `Fantastic`
+  flag at the tail of the recalculation so the unit "could not be targeted by fantastic-only
+  spell". `d:spiritLink` models it and is the **last** write of that field in the Warlord chain
+  (rank 135 of 152; every other `fantastic` write is `base`/`a`/`b`/`c`), so a spirit-linked target
+  is projected `normal_*` and falls out on each function's own unit-type test with nothing left for
+  a second test to do. **So the shared-predicate question answers itself: neither site needs a
+  predicate, shared or otherwise.** A `COMBAT_VERSION_SCOPES` entry would have been a second home
+  for one fact — the shape F157 rejected for `dosDefenseForAttack`, reached by a different
+  route. Both terms deleted; the shared `fantasticResistKillFailProb` header now carries the one
+  statement of why neither may come back.
+  **Measured, not argued.** Warlord's Exorcise still moves 12 → 1 against a spirit-linked
+  `fantastic_death` and `fantastic_nature` after the deletion, and the four leaking versions now
+  move nothing. `tools/derivation_equivalence.js` reports **0 of 52440** differences against
+  `4626019`, which is the expected result rather than a null one: that tool digests
+  `deriveUnitStats` and this change is resolution-time, so the movement measurement is the
+  `resolveCombat` probe.
+  **The missing sweep shape is now a standing check.** No preset can reach the leak —
+  `refreshAbilityFieldVisibility` clears a version-gated control inside `applyPreset` — so the
+  evidence is a new block in `tools/unit_checks/hidden_control_gating.js`: attacker carrying both
+  rider names at once (`touchKeyInVersion` decides which the engine has, so the check does not
+  restate `TOUCH_KEY_SCOPE_IDS`), defender `fantastic_death`, and every version-hidden key probed
+  on the **defender**. Reinstating either deleted line makes it fail naming exactly
+  `com2_1.05.11|spiritLink`, `com_6.08|spiritLink`, `mom_1.31|spiritLink` and
+  `mom_cp_1.60.00|spiritLink`. It costs nothing measurable: `node tools/node_unit_checks.js` is
+  29.1s at `4626019` and 27.6s after. `spiritLinkExorciseImmuneWarlord` gains force from the same
+  deletion — it could previously pass for either of two reasons and can now pass only through
+  `d:spiritLink`.
+  `Reference docs/Version gating census.md` corrected: the "eight leaks" section is now nine, the
+  ninth's two sites are recorded as never having been in the 36-site enumeration (they sat in the
+  census tool's "no shape reached" bucket), and the blind-spot paragraph names the shape the new
+  check closes. Its live-item list still named F157, closed earlier today; fixed in the same pass.
+
 - **F157, the last member — Destroy Mechanical is deleted, because Q29 found the effect does not
   exist.** Q29 asked which of the predicate's three restrictions were sourced. The answer is that
   none of the *effect* is: the modelled melee rider has no engine behind it in any of the five
