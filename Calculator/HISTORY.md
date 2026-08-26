@@ -1,5 +1,48 @@
 # Calculator work history
 
+## 2026-08-26 — F202 (stage 1): nine grantable-ability gates become positional reads
+
+`getAbilityStatSteps` decided whether a step *exists* by reading an ability as a pre-sequence
+constant. Nine such reads are now `when: u => …` over a `statRecord` field, seeded from the
+effective ability set exactly as `lifeSteal` and the ten curse flags are (F199):
+`c:lucky`, `c:metalFires`'s non-stacking Fiery Blade gate, `base:armorclad`, `base:artificer` and
+`d:mechanicalExpert` on `mechanical`, `base:rebuild`/`b:rebuild`, `d:psychoForce`, `d:pneumaField`,
+and the Illusion To-Hit malus inside `b:trueLight`. `POSITIONED_GRANT_FIELDS` (`stats_identity.js`)
+is the list; membership is "granted by a hoist **and** read by a step", not the whole grantable set.
+Emission is now a superset — `c:lucky` is emitted for every unit in every version, `base:armorclad`
+and `base:rebuild`/`b:rebuild` for every Warlord unit — with the record flag as the gate
+(`SPEC.md`, *Version scope*). `psychoForceActive` and `pneumaFieldActive` are gone from the
+`stats_sequence.js` context; Pneuma Field's post-chain Life Steal read takes `statUnit.pneumaField`.
+
+**Measurement: 0 substantive differences of 52440** (`tools/derivation_equivalence.js` against a
+pristine `HEAD`, structurally compared) — not one case differs in any respect, because the seed is
+the value every reader already saw and nothing writes these fields mid-sequence yet.
+
+**The row's premise was corrected rather than implemented.** Its "27 further reads / `stats.js` 16,
+`stats_identity.js` 6, `combat_abilities.js` 4, `stats_sequence.js` 1" reproduces under no single
+definition: the `stats_identity.js` 6 counts reads *inside* the grant hoists, which move with F200
+and F201, while the other three counts exclude them. Under one stated definition — a read of a key
+one of the nine hoists can grant, in those four files, counting `abilities.<key>`,
+`<anything>Abilities.<key>` and the three accessors alike — the population was **35**: 9 landed here,
+9 are not defects, and the 17 that remain are stage 2, each blocked on a ruling the row now names.
+`tools/ability_read_census.js` is the instrument; it reports 26 such sites now.
+
+`tools/unit_checks/derivation_stages.js`'s emission-order assertion was updated, not weakened: it
+states which steps `getAbilityStatSteps` emits in source order, and three more are emitted now.
+
+**Compatibility layers met, none removed.** (1) `applyLavaSmelterGrant`'s `legacy` selector arm
+translates the retired `lavaSmelter` select into the five booleans, bridging old presets and share
+payloads; migrating stored state retires it. (2) `applyOutlanderReformGrants` deletes
+`DERIVED_OUTLANDER_STATE_KEYS` and the fifteen reform keys from its input, a guard against stale
+saved state and callers that bypass the prerequisites; versioned persistence retires it. (3) The
+`curseGatedAbilities` → `pneumaAbilities` → `combatAbilitiesBase` → `shapedGazeAbilities` chain in
+`stats.js` projects the finished record back into an ability map because combat resolution reads a
+map and not the record; it retires when combat resolution takes the record.
+
+**Checks.** `node tools/node_unit_checks.js` 14546/14546, 0 failures (the same total as `HEAD`);
+`npm run provenance` 271 formulas, 0 UNVERIFIED; `tests/f20-source-order.spec.js` +
+`tests/marionette.spec.js` 9 passed; `tests/version-gating.spec.js` 8 passed; `npm test` green.
+
 ## 2026-08-26 — F203 (stage 1): the `base` phase gets its five orderings, and `base:zombies` goes
 
 The chain now runs `base` in the order the engine implies: template initialization, training-time

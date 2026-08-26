@@ -816,13 +816,14 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // The v1.31 enemy melee penalty (-10% To Hit) is applied in resolveCombat.
   // Permanent and early-hook sources establish the Lucky ability flag. The actual stat write
   // is the compiled `+0x044C7` block in region c and does not stack regardless of flag source.
-  if (hasAbil(abilities, 'lucky')) {
-    // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:bf74c9101f80f286adb7d2a0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:761ca75657bf39dc15095e55
-    // Creation/enchantment sources establish ALucky earlier, but the chance/stat write itself
-    // is the compiled Lucky block in region c for every engine.
-    abilityStep('lucky', 'c', { ...beforeHolyArmor, writes: ['res', 'toHit', 'toBlk'],
-      apply: u => { u.res += 1; u.toHit += 10; u.toBlk += 10; } });
-  }
+  // PROVENANCE[lucky]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:bf74c9101f80f286adb7d2a0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:761ca75657bf39dc15095e55
+  // Creation/enchantment sources establish ALucky earlier, but the chance/stat write itself
+  // is the compiled Lucky block in region c for every engine. Four grant hoists can write the
+  // flag, so the block reads it off the record at its own position rather than from the
+  // pre-sequence ability set; emission is unconditional (F202).
+  abilityStep('lucky', 'c', { ...beforeHolyArmor, writes: ['res', 'toHit', 'toBlk'],
+    when: u => !!u.lucky,
+    apply: u => { u.res += 1; u.toHit += 10; u.toBlk += 10; } });
 
   // Lucky Star's aura: while any friendly unit in the combat carries the enchantment, every
   // friendly unit — the enchanted one included — gets phase-b +1 melee/ranged/armor/resistance
@@ -969,10 +970,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // the `c:flameBlade` step in stats.js — its strength half needs the per-channel type tests
   // this builder never receives. What stays here is the enchantment Flame Blade supersedes:
   // the engine's Metal Fires block will not fire while `UE_FLAME_BLADE` is set.
-  const warlordBlade = version && version.startsWith('com2_warlord')
-    && hasAbil(abilities, 'fieryBlade');
-  if (!(hasAbil(abilities, 'flameBlade') || warlordBlade)
-    && hasAbil(abilities, 'metalFires')) {
+  // Fiery Blade is a Lava Smelter grant, so the non-stacking gate reads it off the record at this
+  // block's own position rather than as a pre-sequence constant (F202).
+  const isWarlordVersion = !!(version && version.startsWith('com2_warlord'));
+  if (hasAbil(abilities, 'metalFires')) {
     // One compiled block, one step. `unitcalc.c` 131:0x9065F is the whole of Metal Fires, and
     // its `!FANTASTIC && !FLAME_BLADE` branch makes three writes: melee at 0x906C1, the
     // missile/Thrown strength at 0x906FC, and `Weapon_Plus1 = 1` at 0x90723. The first two are
@@ -983,7 +984,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // The block is compiled into MoM 1.31 and CP 1.60 alone, which is `SCOPE_MOM` (`steps.js`).
     // PROVENANCE[metalFires]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8c88e810ad0fd6705c30bb95
     abilityStep('metalFires', 'c', { ...beforeHolyArmor, writes: ['atk', ...attackWrites],
-      when: u => !u.fantastic,
+      when: u => !u.fantastic
+        && !(hasAbil(abilities, 'flameBlade') || (isWarlordVersion && !!u.fieryBlade)),
       apply: (u, ctx) => {
         addToSlot(u, ctx, 'melee', 1);
         for (const channel of contextChannels(ctx)) {
@@ -1240,10 +1242,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // stale. See `Reference docs/Source discrepancies.md` §6.
   const isWarlord = version && version.startsWith('com2_warlord');
   // Armorclad is a permanent mechanical hull upgrade. CreateUnit.CAS:702-703
-  // and OverlandEndTurn.CAS:405-406/428-429 write +6 Defense to ABase.
-  if (isWarlord && hasAbil(abilities, 'armorclad')) {
+  // and OverlandEndTurn.CAS:405-406/428-429 write +6 Defense to ABase. The Outlander reform block
+  // grants the flag, so it is a record field read here rather than a pre-sequence constant (F202).
+  if (isWarlord) {
     // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:4:f33e8912a11fbfe562941d50
-    abilityStep('armorclad', 'base', { writes: ['def'], apply: u => { u.def += 6; } });
+    abilityStep('armorclad', 'base', { writes: ['def'],
+      when: u => !!u.armorclad, apply: u => { u.def += 6; } });
   }
 
   // Battle Armor is the in-combat regular non-mechanical branch of the
@@ -1265,9 +1269,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // record's conventional-ranged field, written with no test of what stands in it, so the write
   // is the `rangedField` gate ungated; Thrown, both Breaths and `SDoomGaze` are named by no line
   // of the block and take nothing. The movement stats are outside the calculator's record (F139).
-  if (isWarlord && hasAbil(abilities, 'artificer') && hasAbil(abilities, 'mechanical')) {
+  // Rebuild's conversion supplies the Mechanical flag, so this block reads it off the record at
+  // its own position (F202).
+  if (isWarlord && hasAbil(abilities, 'artificer')) {
     // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
     abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...attackWrites],
+      when: u => !!u.mechanical,
       apply: (u, ctx) => {
         // `SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1))` (CreateUnit.CAS:40) has no
         // melee-presence gate, and it writes the **permanent** record — so on a unit whose
@@ -1281,9 +1288,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Mechanical Expert (Warlord): an Engineer/Combat Engineer in the stack carries this
   // perk, granting mechanical units +20% To Hit and +10% To Defend.
   // Phase d — UnitCalc.CAS:275-309.
-  if (isWarlord && hasAbil(abilities, 'mechanicalExpert') && hasAbil(abilities, 'mechanical')) {
+  if (isWarlord && hasAbil(abilities, 'mechanicalExpert')) {
     // PROVENANCE[mechanicalExpert]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:31:5cf138553247cd4344245e09
     abilityStep('mechanicalExpert', 'd', { writes: ['toHit', 'toBlk'],
+      when: u => !!u.mechanical,
       apply: u => { u.toHit += 20; u.toBlk += 10; } });
   }
 
@@ -1293,7 +1301,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // different phases. Non-heroes: OLSpell.CAS:260-267 writes both stats at index 1
   // (ABase) when the spell is cast, so it is baked into the base stage.
   // Heroes: UnitCalcPre.CAS:682-691 re-applies them at index 0 on every recalc — phase b.
-  if (isWarlord && hasAbil(abilities, 'rebuild')) {
+  // The Marionette Wanderer's strayed branch grants Rebuild, so the flag is a record field read
+  // here rather than a pre-sequence constant (F202).
+  if (isWarlord) {
     // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
     // Neither branch gates the melee write: `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2))`
     // (UnitCalcPre.CAS:686) for the hero re-application, and
@@ -1301,6 +1311,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // non-hero write (F142).
     abilityStep('rebuild', isHeroUnit ? 'b' : 'base',
       { writes: ['atk', 'def'],
+        when: u => !!u.rebuild,
         apply: u => { u.atk += 2; u.def += 2; } });
   }
 

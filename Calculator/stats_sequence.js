@@ -1347,7 +1347,7 @@ function magicCalcScriptStatSteps(ctx) {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
     colossalStrength, energyCannon, energyCannonHitField,
     hurricaneActive, isWarlord, levelRank,
-    pneumaFieldActive, psychoForceActive, rangedTypeFields, recordContext, secondaryHitFieldsFor,
+    rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, trueSightRangedToHitBonus, vampirismActive,
     warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
@@ -1483,7 +1483,7 @@ function magicCalcScriptStatSteps(ctx) {
     // PROVENANCE[psychoForce]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:f3235558e9ec7dbd4427844b
     statStep({ id: 'psychoForce', sourceId: 'psychoForce', sourceLabel: 'Psycho Force',
       phase: 'd', writes: ['toHit', 'toBlk'],
-      when: () => psychoForceActive,
+      when: u => !!u.psychoForce,
       apply: u => {
         const psyche = Math.trunc(u.res * levelRank / 2);
         u.toHit += psyche;
@@ -1491,7 +1491,7 @@ function magicCalcScriptStatSteps(ctx) {
       } }),
     // PROVENANCE[pneumaField]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:7:7f0a838eb82f6cc67584d242
     statStep({ id: 'pneumaField', phase: 'd', writes: ['lifeSteal'],
-      when: () => pneumaFieldActive,
+      when: u => !!u.pneumaField,
       apply: u => {
         const drain = Math.trunc(u.res / 2);
         u.lifeSteal = (u.lifeSteal != null && u.lifeSteal <= 0) ? u.lifeSteal - drain : -drain;

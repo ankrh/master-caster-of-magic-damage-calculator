@@ -1066,10 +1066,9 @@ function deriveUnitStats(input) {
   const gazeWarpHalves = isCoM1;
 
   // Psycho Force and Pneuma Field are the two Magitek effects that read Resistance rather than
-  // writing it. Both are region `d` — UnitCalc.CAS:1413-1417 and :1419-1425 — so their gates are
-  // resolved here and the reads happen at that position in the sequence below.
-  const psychoForceActive = isWarlord && !!(abilities && abilities.psychoForce);
-  const pneumaFieldActive = isWarlord && !!(abilities && abilities.pneumaField);
+  // writing it. Both are region `d` — UnitCalc.CAS:1413-1417 and :1419-1425 — and both flags are
+  // Outlander reform grants, so each is a record field the step reads at its own position; the
+  // version half is the step's scope (`SCOPE_WARLORD`) and needs no term here (F202).
   const warpRealityActive = !!input.warpReality;
   // Warp Reality's exemption is read at its own block in both engine families, so it takes the
   // record standing at `c:warpReality` (F184). The modern
@@ -1910,7 +1909,9 @@ function deriveUnitStats(input) {
       if (!isCoM2) {
         u.gaze += bonus; u.doomGaze += bonus;
       }
-      if (isWarlord && !!abilities.illusion) u.toHit -= 10;
+      // The Marionette's Sorcery ascension grants Illusion, so the malus reads the flag off the
+      // record at this block's own position rather than as a pre-sequence constant (F202).
+      if (isWarlord && !!u.illusion) u.toHit -= 10;
     },
   });
   const warlordTrueLightStep = makeTrueLightStep('b');
@@ -1961,7 +1962,7 @@ function deriveUnitStats(input) {
     natureConjunctionActive, natureLinkActive, nodeAuraActive,
     orihalconActive, outlanderReform, outlanderRtbToHitBonus,
     pillarOfFaith, pillarOfFaithCount, plagueActive,
-    pneumaFieldActive, poolOfRepentance, poxHostActive, psychoForceActive,
+    poolOfRepentance, poxHostActive,
     realmWardActive, sanctaBasilica,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayResMod,
     heavenlyLightHitPick, holyWeaponHitPick, spellWardActive, supremeLightEligibleAt,
@@ -2080,6 +2081,12 @@ function deriveUnitStats(input) {
     // from the effective ability set, which is the state the strip finds at the head of the chain.
     ...Object.fromEntries(MAGIC_IMMUNITY_GATED_CURSES
       .map(key => [key, !!effectiveAbilities[key]])),
+    // The grantable ability keys some step reads, on the record for the same reason and seeded
+    // the same way (F202). A grant hoist can write any of them, so a step that took one as a
+    // pre-sequence constant would answer from the wrong position once [F200] gives that grant a
+    // rank. Nothing writes one mid-sequence yet, so the seed is the value every reader saw before.
+    ...Object.fromEntries(POSITIONED_GRANT_FIELDS
+      .map(key => [key, !!effectiveAbilities[key]])),
     // The calculated identity is part of the record, seeded from the permanent one. Every
     // conversion is a positioned write to these two fields (F163).
     race: identity.baseRace, fantastic: identity.baseFantastic };
@@ -2145,7 +2152,9 @@ function deriveUnitStats(input) {
   // sequence leaves rather than from the pre-strip ability map (F199).
   const curseGatedAbilities = { ...effectiveAbilities,
     ...Object.fromEntries(MAGIC_IMMUNITY_GATED_CURSES.map(key => [key, statUnit[key]])) };
-  const pneumaAbilities = pneumaFieldActive
+  // Pneuma Field's own flag is a record field now, so the post-chain read takes it from the
+  // record the sequence leaves, beside the Life Steal value that step wrote (F202).
+  const pneumaAbilities = statUnit.pneumaField
     ? { ...curseGatedAbilities, lifeSteal: statUnit.lifeSteal }
     : curseGatedAbilities;
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike

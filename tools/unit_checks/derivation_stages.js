@@ -237,11 +237,14 @@ function runDerivationStageChecks(ctx) {
   assert(Object.keys(byPhase).every(phase => phases.includes(phase)),
     'Every emitted step carries a known phase');
   // Emission is in source order, which is *not* phase order — Artificer is `base` and comes
-  // last. Partitioning by phase is therefore the caller's job, not something to be assumed.
+  // near the end. Partitioning by phase is therefore the caller's job, not something to be
+  // assumed. `lucky`, `armorclad` and `rebuild` appear without being asked for: each reads a
+  // grantable flag off the record at its own position, so emission is a superset and the `when`
+  // is the gate (F202).
   assertEqual(mixed.map(step => step.id).join(','),
-    'holyBonus,prayer,rust,favoredTerrain,artificer',
+    'holyBonus,lucky,prayer,rust,favoredTerrain,armorclad,artificer,rebuild',
     'Steps are emitted in source order, which the caller partitions by phase');
-  assertEqual(mixed.map(step => step.phase).join(','), 'e,c,d,d,base',
+  assertEqual(mixed.map(step => step.phase).join(','), 'e,c,c,d,d,base,base,base',
     'Emission order is not phase order');
 }
 

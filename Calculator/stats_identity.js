@@ -388,6 +388,28 @@ function targetingIdentity(identity, abilities, version, meta = {}) {
   return live;
 }
 
+// The ability keys a grant hoist can write that some step then reads. Each is a field of
+// `statRecord`, seeded from the effective ability set, so the step that reads it asks the record
+// at its own position instead of taking the ability as a pre-sequence constant (F202). Nothing
+// writes one of these mid-sequence yet, which is why this stage moves no number; it is what
+// [F200] needs, because once a grant is a positioned write a reader that took the key as a
+// constant would answer from the wrong rank.
+//
+// Membership is "granted by a hoist **and** read by a step", not the whole grantable set: a key
+// no step reads needs no field, and a read that is itself part of a hoist moves with that hoist.
+const POSITIONED_GRANT_FIELDS = [
+  'lucky',        // applySanctaBasilicaGrant, applyDivineProtectionGrant, applyPillarOfFaithGrant,
+                  // deriveMarionettePackage  ->  `c:lucky`
+  'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
+  'armorclad',    // applyOutlanderReformGrants  ->  `base:armorclad`
+  'mechanical',   // effectiveAbilities (Rebuild's conversion)  ->  `base:artificer`,
+                  // `d:mechanicalExpert`
+  'rebuild',      // deriveMarionettePackage  ->  `base:rebuild` / `b:rebuild`
+  'psychoForce',  // applyOutlanderReformGrants  ->  `d:psychoForce`
+  'pneumaField',  // applyOutlanderReformGrants  ->  `d:pneumaField`
+  'illusion',     // deriveMarionettePackage  ->  the Illusion malus inside `b:trueLight`
+];
+
 // Lava Smelter (Warlord): five independent flags record the permanent mineral-pair grants already
 // carried by the unit. New Dwarf units receive them when trained; Upgrade & Retrain can apply
 // them later to any existing non-fantastic unit. Returns the ability set with every grant merged
