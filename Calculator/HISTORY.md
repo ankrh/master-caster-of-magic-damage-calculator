@@ -29,7 +29,22 @@ may occupy both the head position and its engine position only if it is idempote
 Checked while landing: Mystic Surge needs no head position — every write in
 `Units.RecalculateUnits.pas` `$005A016D..$005A04A9` targets `U`, including the
 `U.race := 21; U.Fantastic := True` the Warlord manual calls "becomes fantastic". `c:mysticSurge:race`
-is correctly placed. Remaining F203 stages: the `armorclad` / `alumniOfAcademy:figures` hybrids, and
+is correctly placed. `weaponEligible` also loses its `unitName === 'Zombies'` term. The exception it widened is CoM 1's
+alone: the in-place conversion that leaves the weapon-quality mutations in place is
+`UNIT(...)->type = UNITTYPE_ZOMBIES` at `com1:0x9C460` (`combat.c`), and every line of that block is
+annotated `131:— 160:—`, so MoM 1.31 and CP 1.60 have no such conversion. CoM2 and Warlord summon
+Zombies rather than converting — `SZombies` is a summon, the Warlord corpus makes **no**
+`SETSTAT(…,STypeID,…)` write in any of its 38 files, and Zombie Mastery there is a stat buff
+(`UnitCalcPre.CAS:898`) — so a summoned unit has no prior mutations to keep. The term therefore gave
+four versions an exception no source supports, and it read a display string where the identity
+record owns the answer. `specialUnit` was already scoped to `com_6.08` and needed no change.
+
+**The digest cannot see this**: 0 of 52440 differ, because no case in the corpus is named `Zombies`.
+Measured on the real path instead — a base-Fantastic unit named `Zombies` with `specialUnit: 'none'`
+takes melee 4 with adamantium where it took 6, in all five versions; a CoM 1 unit with
+`specialUnit: 'zombies'` still takes 6, which is the roster case and is unchanged.
+
+Remaining F203 stages: the `armorclad` / `alumniOfAcademy:figures` hybrids, and
 enforcing the idempotence classification rather than trusting it.
 
 Short index of completed calculator work. Behavior lives in `SPEC.md`; implementation evidence

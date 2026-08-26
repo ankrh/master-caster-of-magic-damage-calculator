@@ -258,7 +258,15 @@ function deriveUnitStats(input) {
   // raised as Zombies is a converted normal unit whose persistent mutations survive: CoM 1's
   // Zombies constructor patch writes `toblock` alone (`R6.1b.evidence.md`, com1:0x8EE28-0x8EE31).
   // So weapon eligibility gets a Zombies exception while armor and level stay fantastic-gated.
-  const weaponEligible = loadoutEligible || identity.specialUnit === 'zombies' || unitName === 'Zombies';
+  // **CoM 1 alone**, which is what `specialUnit` already scopes. The conversion that leaves the
+  // mutations in place is `UNIT(...)->type = UNITTYPE_ZOMBIES` at com1:0x9C460 (`combat.c`), and
+  // its whole block is annotated `131:— 160:—`: MoM 1.31 and CP 1.60 have no such conversion.
+  // CoM2 and Warlord summon Zombies instead — `SZombies` is a summon and the Warlord corpus makes
+  // no `SETSTAT(…,STypeID,…)` write at all — so a summoned unit has no prior mutations to keep,
+  // and Zombie Mastery there is a stat buff (`UnitCalcPre.CAS:898`), not a conversion. A
+  // `unitName === 'Zombies'` term used to widen this to all five versions; it was a display string
+  // standing in for the identity record, and no source supports the four it added (F203).
+  const weaponEligible = loadoutEligible || identity.specialUnit === 'zombies';
   // CoM 1's Catapult constructor writes `_UNITS[si].mutations = 1` for type 0x25 with `wp == 9`
   // (com1:0x8EEA4-0x8EEAF), and the weapon-quality read at com1:0x8F024 re-reads the record, so
   // the unit takes quality 1 immediately (`Reference docs/DOS reconstructed/R6.1b.evidence.md`,
