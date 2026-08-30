@@ -4,6 +4,67 @@
 
 # Journal
 
+## 2026-08-30 — F196: the eight ids behind Mechanical Expert get names
+
+The gate, re-read at `Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS:275-305`:
+
+- Recipient gate `:276` is `GETSTAT(U,SCustomAttribute,1)<>1` — the **permanent** Mechanical flag.
+- The scan `:278-300` walks `UNITONTILE` over `NMAXCOMBAT`, drops units whose `GETSTAT(UOT,SOwner,0)`
+  is not `W`, and counts one when `GETHEAB(UOT,HAMechanicalMaster)>0` or `GETSTAT(UOT,STypeID,1)`
+  is 52, 78, 110, 117, 144, 292, 357 or 363. Both reads are the **base** record.
+- `:302-305` then writes `SToHit+20` and `SToDefend+10` on record 0, once, if `ENGINEERS>0`.
+
+Names, cross-checked between `Unit rosters/Warlord mod unit data/UNITS.INI` (section index = STypeID;
+[358] is Poxbearers, matching the Goblin Pox test at `:258`) and `Calculator/units_warlord.js`, which
+race-prefixes the same records. The two agree:
+
+| id | UNITS.INI `Name` (Race) | roster name |
+|---|---|---|
+| 52 | Engineers (1) | Beastmen Engineers |
+| 78 | Combat Engineers (4) | Dwarf Combat Engineers |
+| 110 | Engineers (8) | High Men Engineers |
+| 117 | Engineers (9) | Klackon Engineers |
+| 144 | Engineers (12) | Orc Engineers |
+| 292 | Engineers (22) | Xuanyuan Engineers |
+| 357 | Mechaniacs (25) | Goblin Mechaniacs |
+| 363 | Clockwork Tinmen (15) | Clockwork Tinmen |
+
+Five share the bare name "Engineers", so the tooltip carries the race word and folds the five into
+one clause: "Beastmen, High Men, Klackon, Orc, or Xuanyuan Engineers". That is what made all eight
+fit inside the style guide's 75-character lines without dropping any.
+
+**Rebuild does not set the tick.** The first draft said a Rebuilt unit "takes the bonus but does not
+itself set this". The reviewer caught the first half: for a **hero**, Rebuild writes
+`SCustomAttribute` at record **0** (`UnitCalcPre.CAS:685`), while the recipient gate at
+`UnitCalc.CAS:276` reads record **1** — so a Rebuilt hero gets nothing from the script. Only the
+non-hero branch (`OLSpell.CAS:279`) writes record 1. The tooltip now claims only the presence half,
+which holds for both: Rebuild changes no `STypeID` and grants no `HAMechanicalMaster`.
+
+The calculator disagrees with the script here and it was left alone — see *Left open* below.
+
+**Two things found while checking that the Mechanical flag itself is described** (item step 4). It is
+user-visible: `abilities.js` `mechanical` is a checkbox with `match: 'Mechanical'`, auto-ticked from
+the roster ability string. Its tooltip said Artificer grants "+1 melee/ranged/armor/resistance";
+`CreateUnit.CAS:43` writes `GetStat(U,SResist,1)+2`. Corrected, along with the Magic Weapons half
+(`:39`), and "To Defend" aligned to "To Block" (16 uses to 5 across the two def files).
+
+Unfixed, and reported instead because it is outside F196: the `artificer` control's tooltip ends
+"In-game helptext says +1 resistance; the script grants +2." This repo's
+`Unit rosters/Warlord mod unit data/HELP.TXT:216` and `:6332` both say **+2**, and
+`Reference docs/Source discrepancies.md:31` records the helptext as corrected in v1.5.12.6.2 — but
+`:191` of that same doc still says the tooltip "notes the divergence". Two stale claims, one fact.
+
+`tests/mechanical-expert-f196.spec.js` (scaffolding) resolves the eight ids out of the live roster
+and asserts each resolved name's words appear in the tooltip, so a roster rename fails there rather
+than leaving the tooltip quietly wrong. `tools/derivation_equivalence.js`: byte-identical against a
+worktree at the parent commit, 0 of 52,440.
+
+**Left open.** `d:mechanicalExpert`'s gate is `when: u => !!u.mechanical` — the live flag — while
+`UnitCalc.CAS:276` reads the permanent one. For non-heroes the two agree, because `base:rebuild`
+writes the permanent record. For heroes `b:rebuild` writes only record 0, so the calculator grants a
+Rebuilt hero +20%/+10% that the script would not. Not fixed: it is a behaviour change, not a tooltip.
+No fixture covers a Rebuilt hero either way.
+
 ## 2026-08-30 — F211: the Bless gate is right, the tooltip was wrong in three versions
 
 F211 offered a fork: narrow the tooltip to Immolation, or establish the modern `effectiveDefense:bless`

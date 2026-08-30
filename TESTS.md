@@ -324,3 +324,15 @@ or fail. Do not add them here.
 - Tag: regression
 - Anchor: R9-G1c
 - Checks: late-transform source gates, arithmetic, order and UI state are preserved.
+
+## mechanical-expert-f196
+
+- Command: `npx playwright test tests/mechanical-expert-f196.spec.js`
+- Tag: scaffolding
+- Anchor: —
+- Checks: the eight `STypeID`s that satisfy Mechanical Expert's friendly-side presence gate
+  (`UnitCalc.CAS:286-293`) each resolve in the live Warlord roster and are named in the
+  `mechanicalExpert` tooltip, along with the `HAMechanicalMaster` disjunct and the disclosure
+  that the scan itself is not derived. Also holds the tooltip to the style guide's 75-character
+  line limit. Names are read out of the roster by id, so a roster rename fails here rather than
+  leaving the tooltip silently stale.

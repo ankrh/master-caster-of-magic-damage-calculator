@@ -1306,9 +1306,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       } });
   }
 
-  // Mechanical Expert (Warlord): an Engineer/Combat Engineer in the stack carries this
-  // perk, granting mechanical units +20% To Hit and +10% To Defend.
-  // Phase d — UnitCalc.CAS:275-309.
+  // Mechanical Expert (Warlord): with an engineer or mechanic anywhere on the friendly side,
+  // every friendly Mechanical unit gains +20% To Hit and +10% To Defend.
+  // Phase d — UnitCalc.CAS:275-309. The scan at :278-300 counts a unit when it carries
+  // `HAMechanicalMaster` or its permanent `STypeID` is one of eight (:286-293); that scan is
+  // outside the one-attacker-one-defender scope, so this control asserts the presence rather
+  // than deriving it, and the eight are named in the tooltip instead (F196).
   if (isWarlord && hasAbil(abilities, 'mechanicalExpert')) {
     // PROVENANCE[mechanicalExpert]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:31:5cf138553247cd4344245e09
     abilityStep('mechanicalExpert', 'd', { writes: ['toHit', 'toBlk'],
