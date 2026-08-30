@@ -10,73 +10,87 @@ subtask appears here before any subtask that depends on it.
 
 | # | Subtask | Next outcome |
 |---|---|---|
-| 1 | **F214** | Two `CoM2`-named fixtures stop claiming a version they do not run. |
-| 2 | **Q32** | Settle whether CoM 2 Bless protects against breath and gaze; the helptext contradicts the gate F211 shipped. |
-| 3 | **F191** | Rule on whether Rust's material-strip-only state is worth exposing. |
-| 4 | **Q31** | Settle what `IsChaosUnit` tests — four calculator sites answer it differently. |
-| 5 | **F195** | Spell Ward's live-Fantastic term goes. Needs Q31. |
-| 6 | **F210** | The `base` phase splits into the four SPEC names. |
-| 7 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
-| 8 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
-| 9 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
-| 10 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
-| 11 | **F207** | The last published-value suppression that gates nothing goes. |
-| 12 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
-| 13 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
-| 14 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 15 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 16 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 17 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
-| 18 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
-| 19 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
-| 20 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
-| 21 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 22 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 23 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 24 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 25 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
-| 26 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
-| 27 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
-| 28 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
-| 29 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
-| 30 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
-| 31 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
-| 32 | **F153** | The modern gaze rider exclusion gets one home. |
-| 33 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
-| 34 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
-| 35 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
-| 36 | **F151** | A version's default-state map is built without resetting the live page. |
-| 37 | **F128** | The `Other` unit category no roster can fill goes. |
-| 38 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
-| 39 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
-| 40 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
-| 41 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
-| 42 | **F41.1** | The DOS eight-threshold hero ladders. |
-| 43 | **F41.2** | The DOS template-ability formulas. |
-| 44 | **F41.3** | The modern nine-step hero table. |
-| 45 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
-| 46 | **M3** | The DOS Destruction path. Needs F41. |
-| 47 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
-| 48 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
-| 49 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
-| 50 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
-| 51 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
-| 52 | **Q15** | Whether compiled code ever consumes `unitT.savemodifier`. |
-| 53 | **Q18** | What CoM 1's unit-type ceiling of `0x97` selects. F49 left it unmodelled pending this. |
-| 54 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
-| 55 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
-| 56 | **Q25** | The R6.1h shared-source rendering disagreement at `0x8E5C6`. |
-| 57 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
-| 58 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
-| 59 | **H1** | Contact Seravy about the Blur bug. |
+| 1 | **F221** | The vacuity sweep stops leaving a dev server on port 8080, which costs every later run a restart. |
+| 2 | **F217.1** | Night Goblins gain the +10 To Hit / +10 To Defend their Darkness block grants. |
+| 3 | **F217.2** | Great Unbinding stops reaching the spirit-linked units its gate exempts. |
+| 4 | **F217.3** | A Rebuilt hero stops taking the Mechanical Expert bonus the script withholds. |
+| 5 | **F214** | Six fixture names stop claiming a version or a channel they do not run, and `spiritLinkBlessNoBonusWarlord` is re-aimed. |
+| 6 | **Q32** | Settle whether CoM 2 Bless protects against breath and gaze; the helptext contradicts the gate F211 shipped. |
+| 7 | **F219.1** | The Node aura tooltip and its realm-only gate stop disagreeing. |
+| 8 | **F219.2** | Two surviving records of a closed Artificer divergence go. |
+| 9 | **F220** | Destruction's resistance attempt moves to the chaos bucket the binary passes. |
+| 10 | **F218.1** | Rule on how the calculator expresses an intact wall segment. |
+| 11 | **F218.2** | Wall Crusher gets its resolver, across all five writers. Needs F218.1. |
+| 12 | **F191** | Rule on whether Rust's material-strip-only state is worth exposing. |
+| 13 | **Q31** | Settle what `IsChaosUnit` tests — four calculator sites answer it differently. |
+| 14 | **F195** | Spell Ward's live-Fantastic term goes. Needs Q31. |
+| 15 | **F210** | The `base` phase splits into the four SPEC names. |
+| 16 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
+| 17 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
+| 18 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
+| 19 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
+| 20 | **F207** | The last published-value suppression that gates nothing goes. |
+| 21 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
+| 22 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
+| 23 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 24 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 25 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 26 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
+| 27 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
+| 28 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
+| 29 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
+| 30 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 31 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 32 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 33 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 34 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
+| 35 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
+| 36 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
+| 37 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
+| 38 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
+| 39 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
+| 40 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
+| 41 | **F153** | The modern gaze rider exclusion gets one home. |
+| 42 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
+| 43 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
+| 44 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
+| 45 | **F151** | A version's default-state map is built without resetting the live page. |
+| 46 | **F128** | The `Other` unit category no roster can fill goes. |
+| 47 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
+| 48 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
+| 49 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
+| 50 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
+| 51 | **F41.1** | The DOS eight-threshold hero ladders. |
+| 52 | **F41.2** | The DOS template-ability formulas. |
+| 53 | **F41.3** | The modern nine-step hero table. |
+| 54 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
+| 55 | **M3** | The DOS Destruction path. Needs F41. |
+| 56 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
+| 57 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
+| 58 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
+| 59 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
+| 60 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
+| 61 | **Q15** | Whether compiled code ever consumes `unitT.savemodifier`. |
+| 62 | **Q18** | What CoM 1's unit-type ceiling of `0x97` selects. F49 left it unmodelled pending this. |
+| 63 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
+| 64 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
+| 65 | **Q25** | The R6.1h shared-source rendering disagreement at `0x8E5C6`. |
+| 66 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
+| 67 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
+| 68 | **H1** | Contact Seravy about the Blur bug. |
 
-Rows 1–3 are the standalone defects: each is wrong behaviour today, each is one prompt, and none
-depends on the structural work below it. Row 4 sits with them because F211 has already shipped a
-user-visible narrowing on the reading it re-opens. The deprecated backlog ordered the phase
-refactor first; this does not, because F210 blocks only F209 and F200.
+Rows 1–11 are the standalone work: each is wrong or missing today, each is one prompt, and none
+depends on the structural work below it. Rows 2–4 move numbers; row 11 needs row 10's ruling
+first. Row 6 sits with them because F211 has already shipped a user-visible narrowing on the
+reading it re-opens. The deprecated backlog ordered the phase refactor first; this does not,
+because F210 blocks only F209 and F200.
 
 F211–F216 were filed 2026-08-30 from the T2.11–T2.23 run, which found them while reading fixtures
 against the code. Each is verified against source and none makes a test red.
+
+F217–F221 were filed 2026-08-30 from the F175–F212 run, which found them while reading gates and
+tooltips against their scripts, and F214 was widened in the same pass. Each is verified against
+source. F217.1, F217.2 and F217.3 move numbers; the rest make no test red.
 
 ## T2 — Adjudicate the non-discriminating presets and declare the result
 
@@ -301,7 +315,7 @@ those "part of an attack". Rust is a cast curse, so one control meaning both lan
 behaviour, not a deviation. The only open part is whether the strip-only state is worth exposing
 anyway. Warlord.
 
-### F214 — Two fixtures named `CoM2` resolve to `com_6.08`
+### F214 — Fixture names that claim a version or a channel the fixture does not run
 
 `blurInvisCoM2` ([presets_protections_and_weapons.js:1428](Calculator/presets_protections_and_weapons.js:1428))
 and `blurPlusInvisCoM2` (`:1439`) both carry `version: V_COM`, which is `com_6.08`
@@ -314,6 +328,111 @@ Both fixtures are sound and both carry `keep` declarations from T2.20, whose rea
 mismatch so a reader is not misled. Renaming is the fix; the keys also appear in `test_tree.js`, so
 the rename has a second site. Check whether the `CoM2` suffix is a legacy family label used
 elsewhere in this cluster before settling on new names.
+
+Four more of the same class, found 2026-08-30 in the F211 run. `blessBreathBonusMoM`,
+`blessBreathBonusCoM`, `blessBreathBonusCoM2` and `blessBreathBonusWarlord` are each named for a
+breath bonus and **none of them drives a breath attack** — all four are magical-ranged cards, the
+modern pair through `modernAttacks: { ranged: { strength: 7, type: 'magic' } }` — and what they
+assert is that Bless gives *no* bonus. `blessFireBreathDef*` are the real breath fixtures. Rename in
+the same pass; these keys also have a second site in `test_tree.js`.
+
+`spiritLinkBlessNoBonusWarlord` joins the item here because nothing else owns it. Its `desc` claims
+"3.0 with Bless's +7", a number no supported missile configuration can produce, which T2.20 left
+open as a re-aim rather than a wording fix; F211 carries the gate evidence for why the number is
+unreachable. `Reference docs/Version gating census.md:297-303` repeats that fixture's coverage claim
+and goes stale in the same motion.
+
+### F217 — Three Warlord gates disagree with their script, and each moves numbers
+
+Filed 2026-08-30 from the F175–F212 run. Each was hit by the agent working an adjacent item, each
+was verified against the script by that agent and by its GPT reviewer, and none was in that item's
+scope. Three subtasks; they share a class and nothing else, so none blocks another.
+
+**F217.1 — Night Goblins gain nothing from Darkness.** `UnitCalc.CAS:359-368` is
+`IF (GetStat(U,STypeID,1)<>356) THEN GOTO "NOTNIGHTGOBLIN"`, then, if `ETERNALNIGHTCOUNT>0` or
+either `HASCOMBATGLOBAL(W,CGDarkness,1|2)`, `SToHit += 10` and `SToDefend += 10`. Unmodelled: under
+Eternal Night the unit should be at 45% To Hit, not 35%. This is a second permanent-record read of
+the template id F189 wired to the `nightGoblins` special-unit key, so the gate term already exists
+and is the inverse of the one F189 added. `eternalNightNightGoblinsExemptWarlord`'s `desc` already
+names this block — its 14.000 becomes 18.000 when the block lands, so the fixture fails loudly
+rather than drifting. Warlord.
+
+**F217.2 — Great Unbinding has no Spirit Link exemption.** `UnitCalcPre.CAS:1352` is
+`IF (HASGLOBAL(W,GEGreatUnbinding)) %OR (GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0) THEN { GOTO
+"NOTUNBINDING"; }` — a spirit-linked unit is exempt outright. `greatUnbindingActive` (`stats.js`)
+carries no Spirit Link term, so the calculator applies −20% To Hit / −20% To Defend / −2 where
+Warlord applies nothing. The same gate's eligibility term is also narrower than the script's: the
+script reads `FANTASTIC(U)` plus the Undead flag and three Chaos-Channels flags, the calculator
+reads `isFantasticBase` alone. Both halves in one prompt. Warlord.
+
+**F217.3 — a Rebuilt hero takes a bonus the script withholds.** `d:mechanicalExpert` gates on
+`u.mechanical`, the live flag; `UnitCalc.CAS:276` reads `GETSTAT(U,SCustomAttribute,1)`, the
+permanent one. Non-heroes agree, because `base:rebuild` writes the permanent record
+(`OLSpell.CAS:278-285`, inside `ISHERO(TU)=0`). Heroes do not: the hero branch at
+`UnitCalcPre.CAS:685` writes record 0 only, so the calculator grants +20% To Hit / +10% To Defend
+that the script does not. No fixture covers a Rebuilt hero either way. Settle whether the gate takes
+the permanent read or whether `b:rebuild` writes the wrong record — those are not the same fix.
+Warlord.
+
+### F218 — Wall Crusher breaks the wall the defender stands behind, and nothing models it
+
+Two subtasks; the second needs the first.
+
+The engine acts inside the single mouse click the calculator scopes itself to.
+`Combat.PerformAttacks.pas:91-92` (`PerformRangedAttack`) and `:146-147` (`PerformMeleeAttack`) call
+`CrushWall(au)` → `destroywall(BaseUnits[du].cox, BaseUnits[du].coy)` **before any `ApplyAttack`**,
+and `destroywall` turns wall state 1 (intact) into 2 (broken)
+(`Combat.AttackAndWallHelpers.pas:326`). The calculator reads that state at
+[combat_effects.js:722](Calculator/combat_effects.js:722) and `:1071-1077` from the per-side
+`cityWalls` input, so a Wall-Crusher attacker should drop an intact defender's +3 to +1 and does not.
+
+**F218.1 — rule on how an intact wall segment is expressed.** This is the blocker, and it is a
+decision rather than a reading. `destroywall` acts on the segment the *defender's coordinates*
+select: a defender on an intact segment loses the bonus, one in the inner area keeps +3 with no
+segment to break, and one `cityWalls` input conflates them. Either the input gains a way to say
+which, or the calculator states an approximation as a deliberate deviation. Positioning is out of
+scope, which is exactly why this needs a ruling and not a model.
+
+**F218.2 — give Wall Crusher its resolver.** Needs F218.1. Five writers, not one: `d:blazeOfGlory`
+(F206), `b:bombsGrenades`, Marionette, `d:breakthrough` — whose corporeal tier sets the flag in the
+engine (`Reference docs/Caster binary/CoM2 binary - unit recalculation.md:990`) and makes no write in
+the calculator — and intrinsic roster Wall Crusher, which is not parsed into an ability at all: 15
+records in `units_com2.js` and 34 in `units_warlord.js` carry the string and `abilities.js` has no
+definition for it. Three tooltips describe the same flag three ways today — `blazeOfGlory` discloses
+"wall breaking", `explosive` says "plus Wall Crusher" with no disclosure, and `breakthrough` says
+"Not modeled: Wall Crusher", which stops being true when this lands. Unify them in the same pass.
+
+### F219 — Two tooltips state something their source contradicts
+
+Two subtasks, unrelated except in class.
+
+**F219.1 — the Node aura tooltip and its gate disagree.** [index.html:85](index.html:85) says the
+aura applies to "Fantastic units of the node's realm"; `nodeAuraActive` (`stats.js`) tests the realm
+alone, so a `normal_nature` unit takes it. One of the two is wrong. Settle which against the block
+rather than assuming the tooltip is the outlier — F211 is the worked precedent for that shape, and
+the answer may move numbers. `@Map@NodeAuraType` is one of the four sites **Q31** lists as answering
+`IsChaosUnit` differently, so check whether Q31 settles this first.
+
+**F219.2 — two records of a closed Artificer divergence.** The `artificer` tooltip
+([enchantments.js:131](Calculator/enchantments.js:131)) ends "In-game helptext says +1 resistance;
+the script grants +2." Both shipped copies say **+2** (`Unit rosters/Warlord mod unit data/HELP.TXT`
+lines 216 and 6332), and `Reference docs/Source discrepancies.md:31` records the helptext as
+corrected in v1.5.12.6.2 — while `:191` of that same document still asserts the tooltip notes the
+divergence. The tooltip clause and the `:191` claim both go. Confirm against the shipped helptext,
+not against the doc.
+
+### F220 — Destruction is routed through the death realm bucket
+
+[abilities.js:21](Calculator/abilities.js:21) describes Destruction as a "Chaos-realm resistance
+attempt" and the binary agrees — `Combat.ApplyAttack.pas:521` passes `inferred_ChaosRealm`. The
+calculator routes it through the **death** bucket instead (`buildResistanceContext`,
+[combat_phases.js:329](Calculator/combat_phases.js:329)).
+
+It is numerically inert everywhere it can fire today: Bless, Magic Immunity and Resist Magic all
+treat chaos and death alike, Resist Elements is nature-only in the modern gate, and Destruction does
+not fire in the DOS builds, where MoM's `elementalRealms: ['chaos','nature']` would tell the two
+apart. So this is a latent trap rather than a defect with a number, and the item is to move the
+routing before something reads the realm.
 
 ## Version scoping
 
@@ -466,6 +585,13 @@ controls are the `ccDefense`, `ccFlight` and `ccFireBreath` booleans. An env is 
 case, so a dead one spends a share of the 3900 combinations per version on a duplicate of `plain`.
 Decide whether an env may carry abilities at all — the combination pass overwrites `over.abilities`
 today, so it cannot — then either drop the entry or give the pass a way to merge one.
+
+### F221 — The vacuity sweep leaves its dev server running
+
+`tools/preset_vacuity_sweep.js` never reaches a kill on its success path, so the
+`tools/nocache_server.py` it starts survives on port 8080 and the next Playwright run dies with
+`http://127.0.0.1:8080/ is already used`. Four agents in the F175–F212 run hit this and killed the
+process by hand. `startServer` and its child handling are the site.
 
 ### T8 — Give the code's unsourced engine claims a citation or an evidence home
 
