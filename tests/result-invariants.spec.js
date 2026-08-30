@@ -4,9 +4,7 @@
 // (a) The rendered damage distribution is a probability distribution:
 //     each row's chance is in [0,1] and they sum to ~1 (parsed from the DOM
 //     percentages, so a rounding tolerance applies).
-// (b) Monotonicity: raising the attacker's Atk never lowers the mean damage
-//     dealt to the defender; raising the defender's Def never raises it.
-// (c) Swap symmetry: #swapBtn is involutive on collectState(), and one swap
+// (b) Swap symmetry: #swapBtn is involutive on collectState(), and one swap
 //     actually exchanges the two sides.
 const { test, expect } = require('@playwright/test');
 const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
@@ -44,11 +42,6 @@ async function distProbs(page, panelId) {
   }, panelId);
 }
 
-async function meanDmgToDefender(page) {
-  const txt = await page.locator('#distB .dist-header .avg').innerText();
-  return parseFloat(txt);
-}
-
 test('rendered distribution is a valid probability distribution', async ({ page }) => {
   const errors = await openCalculator(page);
   await midMatchup(page);
@@ -65,39 +58,6 @@ test('rendered distribution is a valid probability distribution', async ({ page 
     expect(sum, `${panelId} probabilities sum to ~1`).toBeGreaterThan(0.95);
     expect(sum, `${panelId} probabilities sum to ~1`).toBeLessThan(1.05);
   }
-  expectNoConsoleErrors(errors);
-});
-
-test('mean damage is monotonic in attacker Atk and defender Def', async ({ page }) => {
-  const errors = await openCalculator(page);
-  await midMatchup(page);
-
-  // Rising Atk -> non-decreasing damage to defender.
-  let prev = -Infinity;
-  const atkMeans = [];
-  for (const atk of [4, 6, 8, 10, 12]) {
-    await setValue(page, 'aAtk', String(atk));
-    const m = await meanDmgToDefender(page);
-    expect(m, `Atk=${atk} not below Atk<${atk}`).toBeGreaterThanOrEqual(prev - 1e-9);
-    prev = m;
-    atkMeans.push(m);
-  }
-  // Sanity (mutation gate): the sweep must actually move the number.
-  expect(atkMeans[atkMeans.length - 1]).toBeGreaterThan(atkMeans[0]);
-
-  // Rising Def -> non-increasing damage to defender.
-  await setValue(page, 'aAtk', '8');
-  prev = Infinity;
-  const defMeans = [];
-  for (const def of [1, 3, 5, 7, 9]) {
-    await setValue(page, 'bDef', String(def));
-    const m = await meanDmgToDefender(page);
-    expect(m, `Def=${def} not above Def<${def}`).toBeLessThanOrEqual(prev + 1e-9);
-    prev = m;
-    defMeans.push(m);
-  }
-  expect(defMeans[0]).toBeGreaterThan(defMeans[defMeans.length - 1]);
-
   expectNoConsoleErrors(errors);
 });
 

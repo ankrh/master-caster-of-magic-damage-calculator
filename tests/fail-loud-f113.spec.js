@@ -1,4 +1,4 @@
-// The reintroduction check for `SPEC.md`, *Out-of-range values stop the run*.
+// The reintroduction check for `SPEC.md`, *Architecture*, the fail-loud rule.
 //
 // Each case hands one converted site a value outside the set that site's sources define, and
 // requires the call to throw. Replacing any of those stops with a fallback — a plausible member

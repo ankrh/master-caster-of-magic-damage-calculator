@@ -25,6 +25,10 @@ definePresets({
     a: { atk:4, toHitMod:70, hp:10 },
     b: { def:0, hp:10, abilities: { berserk: true, ironSkin: true } },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'b.ability.ironSkin':
+        'Keep, and the absence is the rule under test. Berserk writes an absolute `u.def = 0` (stats_sequence.js:1186) and `c:ironSkin` stands ahead of `c:berserk` in the MoM 1.31 chain (stats_manifests.js:137 and :141), so Iron Skin\'s +5 at combat_abilities.js:964 is overwritten rather than added and cannot reach the block roll. Berserk is the live half. berserkSetsDefToZero is the nearest control at the same 4.0, but not a one-value sibling: it carries b.def 5 in place of the Iron Skin grant.',
+    },
   },
 
   // --- Warlord Berserk: +15% To Hit, -10% To Block, no atk doubling, no def-zero ---
@@ -79,6 +83,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true, spiritLink: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'b.ability.nausea':
+        'Keep, and the absence is the rule under test. `b:spiritLink` stands ahead of `b:nausea` in the Warlord chain (stats_manifests.js:260 and :267), so the defender is already Fantastic in the record `b:nausea`\'s own gate reads — `isNormalUnitType(unitTypeAt(u))` at stats_sequence.js:498 — and the -10% To Hit / To Defend never lands. nauseaMinus10ToDefend differs only in b.abilities.spiritLink and pins 0.100 against this 0; Spirit Link is the live half.',
+    },
   },
 
   // --- Magic Immunity curse gating ---
@@ -91,6 +99,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, weakness: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.weakness':
+        'Keep, and the absence is the rule under test. `weakness` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the curse the fixture configures is gone before any step could read it. Magic Immunity is the live half — ablating it lets Weakness land and the melee falls to 7.',
+    },
   },
   magicImmunityGatesBlackSleep: {
     desc: 'Magic Immunity blocks Black Sleep: defender rolls normally (ungated = max damage). atk 10 @ 30% hit vs def 0 → 3.0 (ungated 10)',
@@ -98,6 +110,10 @@ definePresets({
     a: { atk:10, hp:10 },
     b: { def:0, hp:20, abilities: { magicImmunity: true, blackSleep: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'b.ability.blackSleep':
+        'Keep, and the absence is the rule under test. `blackSleep` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the defender rolls normally instead of taking doom-style assigned damage. Magic Immunity is the live half. version-dead is literally true and uninformative: this is the only preset in Calculator/presets_*.js that runs blackSleep at com2_1.05.11 — the eight in presets_curses_and_undead.js all sit under TEST_TREE\'s mom_1.31 group (test_tree.js:8, :14) — so CoM2\'s positive Black Sleep behaviour is unasserted.',
+    },
   },
   magicImmunityGatesShatter: {
     desc: 'Magic Immunity blocks Shatter: melee stays 10 (ungated → 1). 100% hit vs def 0 → 10',
@@ -105,6 +121,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, shatter: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.shatter':
+        'Keep, and the absence is the rule under test. `shatter` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the melee is never capped at 1. Magic Immunity is the live half. version-dead is literally true and uninformative: this is the only preset in Calculator/presets_*.js that runs shatter at com2_1.05.11 — the one other, shatterBeforeSupremeLightCoM, is com_6.08 — so CoM2\'s positive Shatter behaviour is unasserted.',
+    },
   },
   magicImmunityGatesVertigo: {
     desc: 'Magic Immunity blocks Vertigo: To Hit stays 100% (ungated −25% → 75%). atk 10 vs def 0 → 10 (ungated 7.5)',
@@ -112,6 +132,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, vertigo: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.vertigo':
+        'Keep, and the absence is the rule under test. `vertigo` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the -25% To Hit never lands. Magic Immunity is the live half — ablating it drops the hit chance to 75% and the total to 7.5.',
+    },
   },
   magicImmunityGatesWarpAttack: {
     desc: 'Magic Immunity blocks Warp Creature (attack): melee stays 10 (ungated halved → 5). 100% hit vs def 0 → 10',
@@ -119,6 +143,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, warpAttack: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.warpAttack':
+        'Keep, and the absence is the rule under test. `warpAttack` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the melee halving never runs. Magic Immunity is the live half — ablating it halves the melee to 5.',
+    },
   },
   magicImmunityGatesMindStorm: {
     desc: 'Magic Immunity blocks Mind Storm: melee stays 10 (ungated −3 → 7). 100% hit vs def 0 → 10',
@@ -126,6 +154,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, mindStorm: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.mindStorm':
+        'Keep, and the absence is the rule under test. `mindStorm` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the -3 melee never lands. Magic Immunity is the live half — ablating it drops the melee to 7. illusionImmunityGatesMindStorm is the Illusion arm of the same strip, reached through the separate ILLUSION_IMMUNITY_GATED_CURSES list at stats_identity.js:630.',
+    },
   },
   illusionImmunityGatesMindStorm: {
     desc: 'Illusion Immunity blocks Mind Storm: melee stays 10 (ungated −3 → 7). 100% hit vs def 0 → 10',
@@ -133,6 +165,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { illusionImmunity: true, mindStorm: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.mindStorm':
+        'Keep, and the absence is the rule under test. `mindStorm` is one of the two members of ILLUSION_IMMUNITY_GATED_CURSES (stats_identity.js:630), which `immunityStrippedCurses` unions in whenever `illusionImmunity`, `trueSight` or Warlord\'s Eye of Heaven is present (stats_identity.js:656-662). The set it reads is the finished one: `immunityCurseGatingStep` passes `finishedImmunities` into both the gate and the write (stats_identity.js:647 and :649), and the comment at :655 states that split. So `base:immunityCurseGating` clears the flag and the -3 melee never lands. Illusion Immunity is the live half — ablating it drops the melee to 7.',
+    },
   },
   illusionImmunityGatesVertigo: {
     desc: 'Illusion Immunity blocks Vertigo: To Hit stays 100% (ungated −25% → 75%). atk 10 vs def 0 → 10 (ungated 7.5)',
@@ -140,6 +176,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { illusionImmunity: true, vertigo: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.vertigo':
+        'Keep, and the absence is the rule under test. `vertigo` is the other member of ILLUSION_IMMUNITY_GATED_CURSES (stats_identity.js:630), so `base:immunityCurseGating` clears the flag through the Illusion arm at stats_identity.js:658-661 and the -25% To Hit never lands. Illusion Immunity is the live half — ablating it drops the hit chance to 75% and the total to 7.5.',
+    },
   },
   magicImmunityGatesNausea: {
     desc: 'Magic Immunity blocks Nausea: To Hit stays 100% (ungated −10% → 90%). atk 10 vs def 0 → 10 (ungated 9)',
@@ -147,6 +187,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, nausea: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.nausea':
+        'Keep, and the absence is the rule under test. `nausea` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `b:nausea`\'s -10% To Hit (stats_sequence.js:498-499) never fires. Magic Immunity is the live half — ablating it drops the hit chance to 90% and the total to 9. This is the one member whose gating is inferred rather than read: the comment at stats_identity.js:609-611 records that nausea is a UnitCalcPre.CAS effect with no spells.ini record, so no `NonMagic` flag decides it.',
+    },
   },
   magicImmunityGatesTemporalTwist: {
     desc: 'Magic Immunity blocks Temporal Twist: First Strike preserved, so A kills B before retaliation (ungated dmgToA=5)',
@@ -154,6 +198,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, firstStrike: true, temporalTwist: true } },
     b: { atk:5, hitChance:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.temporalTwist':
+        'Keep, and the absence is the rule under test. `temporalTwist` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `applyTemporalTwistEffects` then finds nothing to act on (combat_effects.js:188-195), leaving First Strike in place. Magic Immunity is the live half — ablating it lets the strip delete firstStrike and B retaliates for dmgToA 5.',
+    },
   },
   // The corpus was blind to the grant/strip combination: every fixture above states its immunity
   // directly, so none of them says what happens when the immunity is *granted* during the
@@ -165,6 +213,10 @@ definePresets({
       abilities: { sanctaBasilica: true, weakness: true } },
     b: { def:0, toBlkMod:70, hp:60 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'a.ability.weakness':
+        'Keep, and the absence is the rule under test. `weakness` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), and `immunityStrippedCurses` takes its immunity half from `finishedImmunities` — the set the recalculation leaves — rather than from the record at the step\'s own rank (stats_identity.js:644-651, :656-662), so a granted Magic Immunity strips the curse just as an input one does. That the curse is gone by the time anything reads it is the assertion; Sancta Basilica is the live half, at melee 6 against the ungated 3.',
+    },
   },
   marionetteIllusionImmunityStripsMindStormWarlord: {
     desc: 'The Illusion Immunity arm of the same gate, also as a grant: a Channeler-owned Marionette with three Life books receives Illusion Immunity from the book package, and the strip reads the finished immunity set, so Mind Storm never lands. The Wanderer keeps melee 5 at its roster 40% To Hit for 2.0; dropping the Life books lets Mind Storm land for melee 2 and 0.8, so both named features are live.',
@@ -174,6 +226,10 @@ definePresets({
       marionetteLifeBooks: 3, mindStorm: true } },
     b: { def:0, toBlkMod:70, hp:60 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.mindStorm':
+        'Keep, and the absence is the rule under test. `mindStorm` is a member of ILLUSION_IMMUNITY_GATED_CURSES (stats_identity.js:630) and `immunityCurseGatingStep` passes `finishedImmunities` — the set the recalculation leaves — into both the gate and the write rather than reading the record at its own rank (stats_identity.js:644-651, with the split stated in the comment at :655 and the union logic at :656-662), so an Illusion Immunity arriving from the Marionette book package strips the curse exactly as a stated one would. That the curse never lands is the assertion; the grant chain is the live half, at melee 5 against the ungated 2.',
+    },
   },
   blackPrayerBypassesMagicImmunity: {
     desc: 'Black Prayer is NOT gated by Magic Immunity (on the MoM bypass list): melee 10 still −1 → 9 vs def 0 at 100% hit',
@@ -181,6 +237,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { magicImmunity: true, blackPrayer: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 9.000 },
+    vacuity: {
+      'a.ability.magicImmunity':
+        'Keep, and the absence is the rule under test. `blackPrayer` is deliberately not a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` has nothing to clear and the immunity moves no number. The comment above the list gives the mechanism (stats_identity.js:616-625): Black Prayer is a combat global gated on a side-indexed global rather than a flag on the unit, so no per-unit resistance roll is ever made for the immunity to close. Black Prayer is the live half at melee 10 -> 9.',
+    },
   },
 
   // --- Blood Lust ---
@@ -197,6 +257,10 @@ definePresets({
     a: { atk:3, hitChance:70, hp:10, unitType:'normal', abilities: { bloodLust: true } },
     b: { hp:10, unitType:'hero' },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'b.unitType=hero':
+        'Keep, and the absence is the rule under test. The sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), which is the claim itself: `bloodLustMeleeAttack` tests `isNormalUnitType(defUnit.unitType) || defUnit.unitType === \'hero\'` (combat_effects.js:356-357), so hero and normal are meant to answer alike and no ablation can separate them. The arm is still load-bearing — `isNormalUnitType` excludes heroes (combat_abilities.js:373-376), so dropping the `=== \'hero\'` half turns this 6.000 into 3.000. Blood Lust is the live half.',
+    },
   },
   bloodLustDoublesThrownCoM2: {
     desc: 'Blood Lust (CoM2): Thrown 3 doubles to 6 vs a normal 6-HP target and kills it before melee. Without the Thrown doubling, Thrown 3 + doubled melee 2 would deal only 5',
@@ -211,6 +275,12 @@ definePresets({
     a: { atk:0, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { bloodLust: true } },
     b: { def:0, toBlkMod:70, hp:10, unitType:'normal' },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Blood Lust does not reach the breath channel, so the only feature the fixture adds cannot move the breath 3.',
+      'a.ability.bloodLust':
+        'Keep, and the absence is the rule under test. The doubling is applied per pre-melee channel and only where `channel.key === \'thrown\'` (combat.js:675-677); Fire Breath rides its own channel and keeps `channel.strength` untouched, so Blood Lust has no breath effect to remove. bloodLustDoublesThrownCoM2 runs the same version and ability with a thrown channel and pins the doubling at 6.000, though it is not a one-value sibling — it differs in a.atk, the channel, the To Hit fields and b.hp.',
+    },
   },
   bloodLustThrownCoM1MeleeOnly: {
     desc: 'CoM 1 Blood Lust remains melee-only: melee 1 doubles to 2 while Thrown 3 stays 3, for 5 total damage',
@@ -232,6 +302,10 @@ definePresets({
     a: { atk:1, modernAttacks: { thrown: { strength:3, type:'thrown' } }, hitChance:70, hp:10, unitType:'normal', abilities: { bloodLust: true } },
     b: { def:0, hp:20, unitType:'fantastic_nature' },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'a.ability.bloodLust':
+        'Keep, and the absence is the rule under test. `targetIsNormal` is false for a fantastic defender (combat_effects.js:356-358), so `bloodLustMeleeAttack` returns the strength unchanged on both the melee and the thrown call and Blood Lust has nothing to remove. bloodLustThrownCoM2 differs only in b.unitType and pins 8.000 against this 4.000; b.unitType is the live half.',
+    },
   },
   bloodLustThrownWarlord: {
     desc: 'Warlord Blood Lust doubles melee 1 and Thrown 3 against a non-Fantastic target, for 8 total damage',
@@ -254,6 +328,12 @@ definePresets({
     b: { hp:10, unitType:'normal' },
     rangedCheck: true,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Blood Lust does not reach the conventional ranged channel, so the only feature the fixture adds cannot move the missile 3.',
+      'a.ability.bloodLust':
+        'Keep, and the absence is the rule under test. `bloodLustMeleeAttack` has three call sites in Calculator/: the melee pair at combat.js:28-29, and the pre-melee channel loop at combat.js:676, which reaches it only where `channel.key === \'thrown\'` (combat.js:675). The conventional ranged phase calls none of them, so Blood Lust has no ranged strength to double and nothing to remove. bloodLustMagicalRangedUndoubledWarlord makes the same claim at the other modern engine; it is not a one-value sibling, differing in `version` and in the ranged `type`.',
+    },
   },
   bloodLustMagicalRangedUndoubledWarlord: {
     desc: 'Warlord Blood Lust leaves magical ranged undoubled: a magical shot of 3 stays 3.0 where the doubling would make it 6.0. The attack type token is the modern `magic` — the spelled-out magic_sorcery this preset used before is in no type list, so the unit had no attack at all and the preset could never fail.',
@@ -262,6 +342,12 @@ definePresets({
     b: { hp:10, unitType:'normal' },
     rangedCheck: true,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Warlord Blood Lust does not reach the conventional ranged channel, so the only feature the fixture adds cannot move the magical shot of 3.',
+      'a.ability.bloodLust':
+        'Keep, and the absence is the rule under test. `bloodLustMeleeAttack` has three call sites in Calculator/: the melee pair at combat.js:28-29, and the pre-melee channel loop at combat.js:676, which reaches it only where `channel.key === \'thrown\'` (combat.js:675). The conventional ranged phase calls none of them, and the version scope is not what withholds the doubling here — `resolution:bloodLustMeleeAttack` is SCOPE_COM_PLUS (steps.js:380), so Warlord is inside it. bloodLustPhysicalRangedUndoubledCoM2 makes the same claim at CoM2; it is not a one-value sibling, differing in `version` and in the ranged `type`.',
+    },
   },
   bloodLustDoomGazeUndoubledCoM2: {
     desc: 'CoM2 Blood Lust leaves Doom Gaze undoubled: gaze 3 + doubled melee 1 to 2 = 5.0',
@@ -276,6 +362,10 @@ definePresets({
     a: { atk:3, toHitMod:70, hp:10, unitType:'normal', abilities: { bloodLust: true } },
     b: { hp:10, unitType:'fantastic_nature' },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.bloodLust':
+        'Keep, and the absence is the rule under test. `targetIsNormal` is false for a fantastic defender, so `bloodLustMeleeAttack` returns the strength unchanged (combat_effects.js:356-358) and Blood Lust has nothing to remove. bloodLustDoublesVsNormalCoM differs only in b.unitType and pins 6.000 against this 3.000; b.unitType is the live half.',
+    },
   },
   bloodLustFantasticBecomesDeathRealmCoM2: {
     desc: 'Blood Lust converts a fantastic_chaos unit into Death realm in CoM2: Darkness gives +1 atk to Death units, so atk 1 → 2, doubled to 4 vs normal → 4.0',
@@ -291,6 +381,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10, unitType:'normal', abilities: { bloodLust: true } },
     b: { def:2, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 9.400 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test. `c:bloodLust` writes `u.fantastic = true` (stats_identity.js:357) and stands ahead of `c:chaosSurge` in the CoM2 chain (stats_manifests.js:220 and :223), so the Fantastic arm of EncMagic, which is read off the record at that rank, is set (stats.js:2167-2168). `modernAttackIsMagic` then answers true (combat_special_attacks.js:585), the melee eligibility `wi(false)` is false (combat_effects.js:646-647 and :656), and `effectiveDefense:weaponImmunity` never adds its bonus (combat_effects.js:474, amount at :499). The defender\'s Weapon Immunity therefore has no defense to contribute. bloodLustDoesNotBypassWeaponImmunityWarlord differs only in `version` and pins 6.400 against this 9.400; Blood Lust is the live half.',
+    },
   },
   bloodLustVulnerableToExorciseCoM2: {
     desc: 'Blood Lust makes a normal unit a created-undead fantastic Death unit in CoM2, so Exorcise can target it: −6 plus the created-undead −3 leaves res 12 at effective 3, so pFail=0.7 and 1 attacking figure vs a 2-figure target gives E[banish]=7 plus 1 physical → 8.0',
@@ -305,6 +399,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { exorcise: -6 } },
     b: { figs:2, def:0, res:12, hp:10, unitType:'normal', abilities: { bloodLust: true } },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that neither half can act. Warlord Blood Lust leaves the defender a normal unit, so the Exorcise the attacker carries has no fantastic target, and the 1.000 is the bare melee hit that remains.',
+      'b.ability.bloodLust':
+        'Keep, and the absence is the rule under test. `c:bloodLust` is scoped SCOPE_COM1_COM2 (steps.js:198, the scope itself at steps.js:97), so it appears only in the CoM 1 and CoM2 chains (stats_manifests.js:188 and :220) and never runs here; `applyBloodLustEffects` likewise returns the unit untouched on a Warlord version before it can add the `undead` flag (combat_effects.js:208). The defender stays non-fantastic and `exorciseFailProb` returns 0 on its unit-type gate (combat_special_attacks.js:121). bloodLustVulnerableToExorciseCoM2 differs only in `version` and pins 8.000 against this 1.000.',
+    },
   },
   bloodLustDoesNotBypassWeaponImmunityWarlord: {
     desc: 'Warlord: Bloodlust attacker stays normal, so Weapon Immunity DOES apply (+10 def). atk 5 doubled to 10 vs effective def 12 (2+10), 100% hit, 30% block → 10 - 12*0.3 = 6.4',
@@ -323,6 +423,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10, abilities: { bloodSucker: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact. The fixture\'s one candidate is the `bloodSucker` ability, whose terms are its key and its label \'Blood Sucker\' (tools/preset_vacuity_sweep.js:260; abilities.js:59); both tokenise to \'blood sucker\', while the preset key tokenises to \'bloodsucker basic melee warlord\', where the ability is one unsplittable token, so `containsRun` cannot match it (tools/preset_vacuity_sweep.js:40-47 and :49-59, read at :428). The candidate itself is live: the block adds its 2 to any outcome whose damage is above zero (combat_fear_and_touch.js:243-244, :247, :252).',
+    },
   },
   bloodsuckerMultiFigCapWarlord: {
     desc: 'Bloodsucker cap: 4 figs each atk 1 (100% hit, def 0) = 4 base dmg, +2 BS once (not 4×2). Total 6.0.',
@@ -330,6 +434,10 @@ definePresets({
     a: { figs:4, atk:1, hitChance:70, hp:3, abilities: { bloodSucker: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact: `containsRun` looks for \'blood sucker\', the tokens of both terms the one candidate offers (tools/preset_vacuity_sweep.js:260; label at abilities.js:59), and the key tokenises to \'bloodsucker multi fig cap warlord\', in which the ability is one unsplittable token (tools/preset_vacuity_sweep.js:40-47, :49-59, :428). The candidate is live, and the fixture pins the once-per-call rule: the block maps over the finished outcome list of a single ApplyAttack (combat_fear_and_touch.js:245-257), so four attacking figures still add 2 once rather than 4x2. bloodsuckerBasicMeleeWarlord is the one-figure control at the same 2, differing in a.figs, a.atk and a.hp.',
+    },
   },
   bloodsuckerArmorBlocksAllNoTriggerWarlord: {
     desc: 'Bloodsucker requires ≥1 dmg through armor: 1 fig atk 1 (100% hit) vs def 5 (100% block) → 0 base dmg, no trigger. Total 0.',
@@ -337,6 +445,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { bloodSucker: true } },
     b: { def:5, toBlkMod:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the trigger guard `if (outcome.damage <= 0) return outcome;` (combat_fear_and_touch.js:247) is the assertion itself, so with the armor blocking every point the one feature the fixture adds cannot move the zero.',
+      'name-binds-nothing':
+        'Keep, and the absence is the rule under test. A tokenisation artefact as well: `containsRun` looks for \'blood sucker\', the tokens of both terms the one candidate offers (tools/preset_vacuity_sweep.js:260; label at abilities.js:59), and the key tokenises to \'bloodsucker armor blocks all no trigger warlord\', where the ability is one unsplittable token (tools/preset_vacuity_sweep.js:40-47, :49-59, :428). bloodsuckerBasicMeleeWarlord is the positive arm at 7.000; it differs in a.atk, b.def and b.hp.',
+    },
   },
   bloodsuckerThrownMeleeDoubleTriggerWarlord: {
     desc: 'Bloodsucker fires per phase: 1 fig thrown 1 + melee 1 (both 100% hit, def 0) → thrown 1+2 + melee 1+2 = 6.0.',
@@ -344,6 +458,10 @@ definePresets({
     a: { atk:1, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hitChance:70, hp:10, abilities: { bloodSucker: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact: `containsRun` looks for \'blood sucker\', the tokens of both terms the one candidate offers (tools/preset_vacuity_sweep.js:260; label at abilities.js:59), and the key tokenises to \'bloodsucker thrown melee double trigger warlord\', in which the ability is one unsplittable token (tools/preset_vacuity_sweep.js:40-47, :49-59, :428). The candidate is live, and the fixture pins the per-phase multiplicity: the Thrown phase and the melee phase each pass the flag into their own touch call (combat_phases.js:582 in buildThrownPhase and :655 in buildMeleePhase), so the 2 is added twice.',
+    },
   },
   bloodsuckerHasteDoublesWarlord: {
     desc: 'Bloodsucker with Haste: each of two melee strikes is a separate trigger. 1 fig atk 1, def 0, hasted: (1+2) + (1+2) = 6.0.',
@@ -359,6 +477,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact: `containsRun` looks for \'blood sucker\', the tokens of both terms the one candidate offers (tools/preset_vacuity_sweep.js:260; label at abilities.js:59), and the key tokenises to \'bloodsucker ranged warlord\', in which the ability is one unsplittable token (tools/preset_vacuity_sweep.js:40-47, :49-59, :428). The candidate is live, and the fixture pins the ranged channel: the ranged touch spec carries the flag at combat.js:1204, so the 2 lands on a missile shot as well as in melee.',
+    },
   },
   bloodsuckerCapAtRemHPWarlord: {
     desc: 'Bloodsucker +2 capped at target remaining HP: atk 5 vs hp 6 (no figs lost) → base 5 capped to 5; BS would push to 7 but capped to 6.',
@@ -366,6 +488,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10, abilities: { bloodSucker: true } },
     b: { def:0, toBlkMod:70, hp:6 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact: `containsRun` looks for \'blood sucker\', the tokens of both terms the one candidate offers (tools/preset_vacuity_sweep.js:260; label at abilities.js:59), and the key tokenises to \'bloodsucker cap at rem hp warlord\', in which the ability is one unsplittable token (tools/preset_vacuity_sweep.js:40-47, :49-59, :428). The candidate is live, and the fixture pins the overkill clamp: the block adds its damage as `Math.min(cap, outcome.damage + bloodsucker.damage)` (combat_fear_and_touch.js:252), so 5 + 2 renders as the target\'s remaining 6.',
+    },
   },
   bloodsuckerCounterAttackWarlord: {
     desc: 'Bloodsucker fires on counter-attack: defender (BS) counters with atk 3 → 3 base + 2 BS = 5 to attacker. Attacker atk 1 deals 1 to defender (no BS).',
@@ -373,6 +499,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, def:0, toBlkMod:70 },
     b: { atk:3, hitChance:70, def:0, toBlkMod:70, hp:20, abilities: { bloodSucker: true } },
     expected: { dmgToA: 5.000, dmgToB: 1.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact: `containsRun` looks for \'blood sucker\', the tokens of both terms the one candidate offers (tools/preset_vacuity_sweep.js:260; label at abilities.js:59), and the key tokenises to \'bloodsucker counter attack warlord\', in which the ability is one unsplittable token (tools/preset_vacuity_sweep.js:40-47, :49-59, :428). The candidate is live, and the fixture pins the side: buildCounterPhase reads the defender\'s own flag (combat_phases.js:721), so the 2 rides B\'s counterattack for dmgToA 5.000 while A\'s melee, which carries no Blood Sucker, stays at dmgToB 1.000.',
+    },
   },
 
   // --- Vampirism (Warlord enchantment: grants undead + Blood Sucker, thrown/breath → melee) ---
@@ -422,6 +552,12 @@ definePresets({
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the melee-only Death Touch does not join a ranged attack, and the magic 1 is fully blocked by def 1, so the one feature the fixture adds cannot move the zero.',
+      'a.ability.revenant':
+        'Keep, and the absence is the rule under test. Revenant\'s placement deletes the general and ranged copies of the flag and writes it to the melee record alone (combat_effects.js:288-290). A ranged phase asks for the \'ranged\' record (combat_phases.js:60), `placedTouchValue` finds neither a global nor a ranged entry and returns null (combat_phases.js:29), and `touchParams` then leaves `deathTouchFail` at 0 on its `deathTouch != null` guard (combat_phases.js:83). revenantDeathTouchOnThrownWarlord is the positive arm at 7.500, where Warlord Thrown is redirected to the melee record (combat_phases.js:61); it is not a one-value sibling, differing in a.atk, in the channel, and in the rangedCheck/rangedDist pair.',
+    },
   },
   revenantOverwritesStrongerDeathTouchWarlord: {
     desc: 'Revenant unconditionally replaces intrinsic Death Touch -3 with melee Death Touch 0: fully blocked melee averages 5.0, not the intrinsic 8.0.',
@@ -429,6 +565,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { revenant: true, deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'a.ability.deathTouch':
+        'Keep, and the absence is the rule under test. `applyRevenantEffects` writes `deathTouch: 0` over the ability map unconditionally (combat_effects.js:239), and the placement then deletes the general copy the intrinsic -3 would have been written to and sets the melee record to 0 (combat_effects.js:282, :288, :290), so the -3 can never reach `touchParams`. That the ablation changes nothing is the assertion: revenantGrantsDeathTouchWarlord differs only in a.abilities.deathTouch and pins the same 5.000. The discriminating control is Revenant itself, which the sweep measures as live — remove it and the intrinsic -3 survives into the melee call.',
+    },
   },
   revenantGrantsUndeadImmunityWarlord: {
     desc: 'Revenant makes defender undead → Death Touch immune. Atk 1 (100% blocked by def 1) + attacker Death Touch -3 vs Res 5 → 0 (immune). Without undead it would be (10−5−3)/10 × 10 = 2.0. '
@@ -453,6 +593,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { exorcise: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Exorcise cannot touch a non-fantastic defender, and the melee 1 is fully blocked by def 1, so the one feature the fixture adds cannot move the zero.',
+      'a.ability.exorcise':
+        'Keep, and the absence is the rule under test. `exorciseFailProb` returns 0 on its first line for any defender whose unit type does not begin `fantastic_` (combat_special_attacks.js:121), and this fixture leaves b.unitType at the default \'normal\' (UNIT_DEFAULTS, data.js:110), so there is no banish roll for the ablation to remove. exorciseFantasticWarlord differs only in b.unitType and pins 8.000 against this 0; b.unitType is the live half.',
+    },
   },
   exorciseUndeadExtraPenaltyWarlord: {
     desc: 'Exorcise (like Dispel Evil) hits created-undead with an additional -3: Exorcise 0 vs an undead (fantastic_death) defender Res 5 → effRes 5-3=2 → pFail 0.8 × 10 = 8.0. A non-undead fantastic defender would be effRes 5 → 0.5 × 10 = 5.0.',
@@ -491,6 +637,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { destruction: 0 } },
     b: { figs:4, def:1, toBlkMod:70, res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.destruction':
+        'Keep, and the absence is the rule under test. `destructionFailProb` returns 0 as soon as the defender carries Magic Immunity (combat_special_attacks.js:147), before the modifier is read at all, so the Destruction the fixture arms has no roll left for the ablation to remove; the comment at :140-142 records the deliberate asymmetry, that Death and Stoning Immunity do not apply to a Chaos-realm touch but Magic Immunity does. Magic Immunity is the live half. destructionWholeUnitCoM2 differs only in b.abilities.magicImmunity and pins 20.000 against this 0.',
+    },
   },
   destructionHighResistanceCoM2: {
     desc: 'Destruction 0 vs Res 10: effRes 10 is never failed → 0 (Res 5 would give 20.0).',
@@ -498,6 +648,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { destruction: 0 } },
     b: { figs:4, def:1, toBlkMod:70, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: at effective Res 10 no Destruction roll can fail, so the result is 0 whatever save modifier the fixture sets, and the melee 1 is fully blocked by def 1.',
+      'a.ability.destruction':
+        'Keep, and the absence is the rule under test. The discriminator is b.res, which is not an ablatable feature: `destructionFailProb` returns 0 once `effectiveRes >= 10` (combat_special_attacks.js:149), and res 10 with modifier 0 reaches exactly that. destructionWholeUnitCoM2 differs only in b.res and pins 20.000 against this 0.',
+    },
   },
   destructionRangedMagicCoM2: {
     desc: 'Destruction fires on magical ranged (CoM2): one attacker figure makes one attempt at effRes 5, so pFail 0.5 x the 40-HP target = 20.0.',
@@ -535,6 +691,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { destruction: 0 } },
     b: { figs:4, def:1, toBlkMod:70, res:5, hp:10, abilities: { deathImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 20.000 },
+    vacuity: {
+      'b.ability.deathImmunity':
+        'Keep, and the absence is the rule under test. `destructionFailProb` tests only the engine version, Magic Immunity and the effective resistance (combat_special_attacks.js:145-151); it has no Death Immunity arm, unlike the next function down, `deathGazeFailProb`, which skips its roll on `deathImmunity` at combat_special_attacks.js:157. Destruction is the live half. destructionWholeUnitCoM2 differs only in b.abilities.deathImmunity and pins the same 20.000, which is the assertion. The `version-dead` label is literally true and uninformative: this is the only preset in Calculator/presets_*.js that configures deathImmunity at com2_1.05.11. The seven others are all named in subs of TEST_TREE\'s mom_1.31 group, whose version is set at test_tree.js:5-8 and whose membership lists carry them at test_tree.js:15 (two), :18, :25, :26, :52 and :60, so CoM2\'s positive Death Immunity behaviour is unasserted.',
+    },
   },
   destructionNotInMoM: {
     desc: 'Destruction does not exist in MoM: same setup as destructionWholeUnitCoM2 under MoM 1.31 → 0 (20.0 in CoM2).',
@@ -542,6 +702,12 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { destruction: 0 } },
     b: { figs:4, def:1, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that MoM has no Destruction at all, and the melee 1 is fully blocked by def 1, so the one feature the fixture adds cannot move the zero.',
+      'a.ability.destruction':
+        'Keep, and the absence is the rule under test. `destructionFailProb` returns 0 for any version whose id does not begin `com2_` (combat_special_attacks.js:146), ahead of both the Magic Immunity test and the resistance read, so at mom_1.31 there is no roll left for the ablation to remove. The discriminator is the version, which is not an ablatable feature. destructionWholeUnitCoM2 is the positive arm at 20.000; it is not a one-value sibling, differing in the version and in the to-hit control that version offers (hitChance in place of toHitMod). The `version-dead` label is literally true and uninformative: this is the only preset in Calculator/presets_*.js that configures the ability at mom_1.31, every other fixture that sets it standing in the CoM2/Warlord block at presets_warlord_effects.js:613-696.',
+    },
   },
   // --- Angelic Guardians (Warlord global: grants/improves Exorcise on friendly units) ---
   angelicGuardiansGrantsExorciseRegularWarlord: {
@@ -571,6 +737,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_chaos', abilities: { angelicGuardians: true } },
     b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.angelicGuardians':
+        'Keep, and the absence is the rule under test. With no Exorcise already on the record, `applyAngelicGuardiansEffects` takes its else arm and returns the unit untouched whenever the base record is Fantastic and the current realm is not Life (combat_effects.js:337). A fixture that states `unitType: \'fantastic_chaos\'` and no identity gets `baseFantastic` true (stats_identity.js:136) and realm \'chaos\' (combat_abilities.js:364), so the enchantment writes nothing and the ablation has nothing to take away. a.unitType=fantastic_chaos is the live half, which the sweep measures: angelicGuardiansGrantsExorciseRegularWarlord differs only in carrying no a.unitType at all — defaulting to \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362), which is also the value the ablation writes (tools/preset_vacuity_sweep.js:204, assigned at :300) — and pins 5.000 against this 0.',
+    },
   },
   angelicGuardiansImprovesExistingExorciseOnChaosWarlord: {
     desc: 'Angelic Guardians improves an existing Exorcise even on a non-Life fantastic unit: Chaos Exorcise -1 becomes -3, so Res 5 fails 80% of the time for 8.0 expected damage. Without the improvement it would deal 6.0.',
@@ -715,6 +885,10 @@ definePresets({
     a: { atk:8, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact. The fixture\'s one candidate is the top-level `poxHost` flag, whose terms are the field name and its value (tools/preset_vacuity_sweep.js:290), so `containsRun` looks for \'pox host\'; the key tokenises to \'goblin pox non goblin melee warlord\', which spells the effect by its in-game name and never puts \'host\' after \'pox\' (tools/preset_vacuity_sweep.js:40-47, :49-59). The candidate is live — it is the only one the fixture offers and the sweep reports no `every-feature-inert` — and it is what takes melee 8 to 5: `goblinPoxAtkMod` is -3 for a non-Goblin (stats.js:789) and `b:goblinPox` adds it to `u.atk` (stats_sequence.js:595). goblinPoxGoblinMilderWarlord differs only in carrying a.race \'Goblin\' and pins 7.000.',
+    },
   },
   goblinPoxNonGoblinArmorWarlord: {
     desc: 'Pox Host (Warlord) on a non-Goblin defender: armor 3 − 3 = 0, so thrown 3 (100% hit/block) passes a defenseless target → 3.0 (without Pox Host, def 3 blocks all → 0.0). Pox Host is a global, so both sides take it; the attack uses Thrown, the one channel the script leaves alone, which keeps the attack strength at 3 and isolates the armor rule. A conventional missile would be reduced to 0 and print 0.0.',
@@ -723,6 +897,10 @@ definePresets({
     a: { atk:0, modernAttacks: { thrown: { strength:3, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:3, toBlkMod:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. The same tokenisation artefact: the one candidate is the top-level `poxHost` flag, whose terms are the field name and its value (tools/preset_vacuity_sweep.js:290), while the key tokenises to \'goblin pox non goblin armor warlord\', in which \'host\' never follows \'pox\' (tools/preset_vacuity_sweep.js:40-47, :49-59). The candidate is live — the fixture offers no other and the sweep reports no `every-feature-inert` — and this is the fixture that pins the channel split: `b:goblinPox` takes `goblinPoxDefMod` -3 off the defender\'s armor (stats.js:790, written at stats_sequence.js:595) while its strength arm reaches only a slot `isConventionalRangedSlot` admits, which for a channel record is `channelKey === \'ranged\'` alone (combat_abilities.js:258, applied at stats_sequence.js:599), so the attacker\'s Thrown 3 arrives undiminished.',
+    },
   },
   goblinPoxNonGoblinRangedWarlord: {
     desc: 'Pox Host (Warlord) on a non-Goblin missile attacker: SRanged 8 − 3 = 5, 100% hit vs def 0 → 5.0 (no To Hit penalty, unlike Plague). Without the ranged write it would be 8.0.',
@@ -732,6 +910,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. The same tokenisation artefact: the one candidate is the top-level `poxHost` flag, whose terms are the field name and its value (tools/preset_vacuity_sweep.js:290), and the key tokenises to \'goblin pox non goblin ranged warlord\', where \'host\' never follows \'pox\' (tools/preset_vacuity_sweep.js:40-47, :49-59). The candidate is live — the fixture offers no other and the sweep reports no `every-feature-inert` — and it is what takes the missile 8 to 5: the non-Goblin branch subtracts 3 from every conventional ranged slot (stats_sequence.js:599). goblinPoxGoblinRangedMilderWarlord differs only in carrying a.race \'Goblin\' and pins 7.000.',
+    },
   },
   goblinPoxNonGoblinResistanceWarlord: {
     desc: 'Pox Host (Warlord) on a non-Goblin defender: resistance 5 − 1 = 4 (helptext: non-Goblins take −1 resistance). Death Touch 0 vs res 4 → pFail (10−4)/10 = 0.6 × 10 hp = 6.0. Melee atk 1 fully blocked by armor 4−3=1. (Without Pox Host, res 5 → pFail 0.5 → 5.0; the manual −3 would give res 2 → 8.0)',
@@ -740,6 +922,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { deathTouch: 0 } },
     b: { def:4, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact, and here neither candidate is named. `poxHost`\'s terms are the top-level field name and its value (tools/preset_vacuity_sweep.js:290), so `containsRun` looks for \'pox host\'; Death Touch\'s are its key and its label \'Death Touch\' (tools/preset_vacuity_sweep.js:260; abilities.js:9), so it looks for \'death touch\'. The key tokenises to \'goblin pox non goblin resistance warlord\' and carries neither run (tools/preset_vacuity_sweep.js:40-47, :49-59). The fixture pins the resistance asymmetry, the one of the three stat mods whose Goblin branch is zero rather than -1: `goblinPoxResMod` is -1 for a non-Goblin and 0 for a Goblin (stats.js:791), beside -1/-3 for melee and armor (stats.js:789-790), all written at stats_sequence.js:595. goblinPoxGoblinResistanceWarlord differs only in carrying b.race \'Goblin\' and pins 5.000 against this 6.000.',
+    },
   },
   goblinPoxGoblinMilderWarlord: {
     desc: 'Pox Host (Warlord) on a GOBLIN attacker: only −1 melee (not −3). melee 8 − 1 = 7, 100% hit vs def 0 → 7.0 (without Pox Host, 8.0; if it wrongly used the non-Goblin −3 it would be 5.0)',
@@ -795,6 +981,12 @@ definePresets({
     a: { figs:1, atk:10, hitChance:70, hp:10, unitType:'normal', abilities: { greatUnbinding: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Great Unbinding does not reach a non-fantastic unit, so the one feature the fixture adds cannot move the melee 10.',
+      'a.ability.greatUnbinding':
+        'Keep, and the absence is the rule under test. `greatUnbindingActive` requires `isFantasticBase` (stats.js:801), which reads `identity.baseFantastic` (stats.js:26); this fixture states `unitType: \'normal\'`, so that flag is false (stats_identity.js:136) and the step\'s three writes never run (stats_sequence.js:606). The discriminator is a.unitType, which cannot be an ablation candidate here because it is already stated at the value the sweep would ablate it to, and a field equal to its default is skipped (tools/preset_vacuity_sweep.js:204 and :268). greatUnbindingToHitWarlord differs only in a.unitType \'fantastic_chaos\' and pins 8.000 against this 10.000.',
+    },
   },
 
   // --- Natural Selection (Warlord Nature global: recruitment bonuses from city resources) ---
@@ -863,6 +1055,12 @@ definePresets({
     a: { atk:1, modernAttacks: { thrown: { strength:7, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { wildGame: true } },
     b: { def:2, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Wild game does not reach the Thrown channel, so the one feature the fixture adds cannot move the thrown 7 less the defender\'s armor 2.',
+      'a.ability.wildGame':
+        'Keep, and the absence is the rule under test. `naturalSelectionWildGameActive` is gated on `naturalSelectionWildGameRangedSlot`, which for a channel record is `channelKey === \'ranged\'` and nothing else (stats.js:1266-1270), and the step increments only a channel carrying that flag (stats_sequence.js:283), so the fixture\'s Thrown field is out of the write\'s reach and the ablation has nothing to take away. naturalSelectionWildGameWarlord is the positive arm on the conventional ranged channel at 6.000 and naturalSelectionWildGameMagicRangedWarlord the magical one at the same 6.000; neither is a one-value sibling of this fixture.',
+    },
   },
   naturalSelectionNightshadeWarlord: {
     desc: 'Natural Selection Nightshade (Warlord): +1 Resistance on defender. res 4 + 1 = 5. Death Touch 0 vs res 5 → pFail (10−5)/10 = 0.5 × 10 hp = 5.0 (without Nightshade, res 4 → 0.6 → 6.0). Melee atk 1 fully blocked by armor 4.',
@@ -893,6 +1091,10 @@ definePresets({
     a: { figs:1, atk:10, hitChance:70, hp:20 },
     b: { def:10, hp:20, unitType:'fantastic_chaos', abilities: { survivalInstinctToBlock: 40 } },
     expected: { dmgToA: 0, dmgToB: 7.000 },
+    vacuity: {
+      'b.ability.survivalInstinctToBlock':
+        'Keep, and the absence is the rule under test. `survivalInstinctToBlkBonus` is gated on `isNormalUnitType(baseUnitType)` (stats.js:841) — the *base* identity, because `CreateUnit.CAS:524-525` makes this a permanent training-time write, as the comment at stats.js:836-840 sets out. The fixture\'s `unitType: \'fantastic_chaos\'` makes `baseFantastic` true (stats_identity.js:136) and so `baseUnitType` \'fantastic_chaos\' (stats.js:24; stats_identity.js:112-118), leaving the bonus 0 and the step\'s `u.toBlk +=` a no-op (stats_sequence.js:318). b.unitType=fantastic_chaos is the live half — it is the fixture\'s only other candidate and the sweep reports no `every-feature-inert` — and survivalInstinctToBlockNormalWarlord differs only in b.unitType \'normal\', pinning 3.000 against this 7.000.',
+    },
   },
   survivalInstinctToBlockSurvivesCombatConversionWarlord: {
     desc: 'The write is `SETSTAT(U,SToDefend,ABase,…)` in CreateUnit.CAS:524-525 — a permanent training-time write on a unit the city produced, so the only identity it can read is the permanent one. Raise Dead makes the defender an unaligned fantastic creature during combat, and the bonus its city gave it stands: +40% still raises To Block from 30% to 70%, so atk 10 (1 fig, 100% hit) vs def 10 deals 10 x (1 - 0.70) = 3.0, the same as the sibling survivalInstinctToBlockNormalWarlord. Gating on the combat-converted identity instead dropped the bonus and gave 7.0.',
@@ -917,6 +1119,10 @@ definePresets({
     a: { atk:8, hitChance:70, hp:10, unitType:'normal', weapon:'normal' },
     b: { def:0, toBlkMod:70, hp:20, unitType:'normal', abilities: { weaponImmunity: true, hierophany: true } },
     expected: { dmgToA: 0, dmgToB: 8.000 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test. `applyHierophanyAbilityStrip` assigns `weaponImmunity: false` unconditionally on a cursed Warlord unit (stats_identity.js:972); it runs on `combatAbilities` (stats.js:2259), which is the ability map the finished unit carries out of derivation (stats.js:2609). So the flag the fixture states is already gone where the melee arm reads it (`wi(false)` at combat_effects.js:656, reading the target\'s abilities at :647), and the Warlord Weapon Immunity bonus of 10 (combat_effects.js:499) is never added to the effective defense (:474). Hierophany is the live half, which the sweep measures: it is the fixture\'s other named candidate and is not reported inert.',
+    },
   },
   hierophanyStripsMagicImmunityWarlord: {
     desc: 'Hierophany (Warlord) strips Magic Immunity: sorcery magic ranged is no longer blocked. rtb 3 (100% hit/block) vs def 0 → 3.0 (with Magic Immunity intact, def is raised to 50 → 0.0)',
@@ -925,6 +1131,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true, hierophany: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'b.ability.magicImmunity':
+        'Keep, and the absence is the rule under test. The same strip assigns `magicImmunity: false` (stats_identity.js:974) on `combatAbilities` (stats.js:2259), the ability map the finished unit carries out of derivation (stats.js:2609), so the step that would set `u.effectiveDefense = 100` on a magic-immune target (combat_effects.js:469) finds no flag to read — its eligibility term is satisfied here, the ranged branch setting `magicImmunityEligible` from the magical ranged type at combat_effects.js:680. Hierophany is the live half, which the sweep measures: it is the fixture\'s other named candidate and is not reported inert.',
+    },
   },
 
   // --- Pillar of Faith (Warlord Life city enchantment: 20% Lucky grant, +1 Resistance per Religious Building) ---
@@ -941,6 +1151,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { pillarOfFaithRes: 3 } },
     expected: { dmgToA: 0, dmgToB: 1.200 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact. Both terms the Pillar of Faith candidate offers — its key `pillarOfFaithRes` and its label \'Pillar of Faith: +Res\' (tools/preset_vacuity_sweep.js:260; enchantments.js:122) — tokenise to \'pillar of faith res\', while the key tokenises to \'pillar of faith resistance warlord\', so `containsRun` matches the first three tokens and breaks on the fourth (tools/preset_vacuity_sweep.js:40-47, :49-59). The other candidate, Poison Touch, is not named either: its terms are its key and the label \'Poison Touch\' (abilities.js:12), neither of which appears in the key. The fixture pins the per-building sum: the count is read whole with a lower bound only (stats.js:934) and added whole to resistance (stats_sequence.js:294), so 3 buildings give +3.',
+    },
   },
   pillarOfFaithResistanceUncappedWarlord: {
     desc: 'Pillar of Faith has no script-side cap: 12 qualifying buildings → +12 res. Poison 10 (CoM −1) vs res 0+12=12 → immune → 0.0 (an artificial +8 cap would produce 3.0 damage)',
@@ -948,6 +1162,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 10 } },
     b: { def:1, toBlkMod:70, res:0, hp:20, abilities: { pillarOfFaithRes: 12 } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. The same tokenisation artefact: both of the candidate\'s terms reduce to \'pillar of faith res\' (tools/preset_vacuity_sweep.js:260; enchantments.js:122) while the key reads \'pillar of faith resistance uncapped warlord\' (tools/preset_vacuity_sweep.js:40-47, :49-59), and Poison Touch is not named either (abilities.js:12). The absence the key claims is in the code rather than in the fixture, and it is what the number asserts: `Math.max(0, parseInt(...) || 0)` bounds the count below and not above (stats.js:934) and the whole of it is added to resistance (stats_sequence.js:294), so 12 buildings give +12 and `poisonFailProb` returns 0 on `effectiveRes >= 10` (combat_special_attacks.js:18) after the CoM save modifier of 1 has been taken off.',
+    },
   },
 
   // --- Blaze of Glory (Warlord Chaos enchantment: Armor→Melee, Defense→0, Ranged→Thrown, +Armor Piercing, −First Strike) ---
@@ -1000,6 +1218,10 @@ definePresets({
       abilities: { blazeOfGlory: true, weakness: true, lionheart: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'a.ability.blazeOfGlory':
+        'Keep, and the absence is the rule under test: the transfer carrying nothing is what the 6.000 asserts. `d:blazeOfGlory` adds the record\'s Ranged field into the Thrown field (stats_sequence.js:1713), and that field stands at exactly 0 here — `c:lionheart` puts +3 on a Ranged slot that is still typeless, which `isNonMagicalRangedFieldSlot` admits (stats_sequence.js:1046-1048; combat_abilities.js:271-272), and `c:weakness` takes the same 3 back off it (stats_sequence.js:1143, magnitude at stats.js:996, the slot admitted through `isRangedFieldSlot` at stats.js:1881 and combat_abilities.js:646), in that order and both ahead of the transfer in the Warlord chain (stats_manifests.js:282, :289, :298). The block\'s other writes have nothing to act on either: a.def is 0, so `u.atk += u.def` and `u.def = 0` change nothing (stats_sequence.js:1698-1699); the Armor Piercing the block grants (:1696) reaches a defender armor already at 0, and the halving it drives is `u.effectiveDefense = Math.floor(u.effectiveDefense / 2)` on the assignment line of `effectiveDefense:armorPiercing` (combat_effects.js:453, the step spanning :452-455); and the fixture carries no First Strike to clear (:1697). Weakness is the live half, which the sweep measures.',
+    },
   },
   blazeOfGloryCarriesMindStormRangedPenaltyWarlord: {
     desc: 'Mind Storm\'s Dec(U.ranged, 5) is ungated in the same way (Units.RecalculateUnits.pas:2281-2295), so an empty typeless Ranged field stands at -5 when Blaze of Glory adds it into Thrown (UnitCalc.CAS:1494-1500). Melee 9-3 = 6 with an armor of 5-5 = 0 to carry, plus thrown 12-5 = 7 taking the -5 → 2 → 8.0. (Without Mind Storm, melee 9+5 = 14 plus thrown 12 → 26.0; gating the ranged arm on a live slot leaves the transfer nothing to carry and gives thrown 7 → 13.0.)',
@@ -1054,6 +1276,10 @@ definePresets({
     a: { unitType:'hero', atk:2, def:6, hitChance:70, hp:10, abilities: { blazeOfGlory: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.blazeOfGlory':
+        'Keep, and the absence is the rule under test. `blazeOfGloryActive` requires `!isHero` (stats.js:505), and `unitType: \'hero\'` sets that flag (stats_identity.js:134), so the step\'s `when` is false (stats_sequence.js:1694) and none of the Armor Piercing grant, the First Strike clear, the Armor-into-Melee move or the Ranged-into-Thrown transfer runs (stats_sequence.js:1696-1699 and :1713). a.unitType=hero is the live half, which the sweep measures: blazeOfGloryArmorToMeleeWarlord differs only in carrying no a.unitType at all — defaulting to \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362), which is also the value the ablation writes (tools/preset_vacuity_sweep.js:204, assigned at :300) — and pins 8.000 against this 2.000.',
+    },
   },
 
   // --- Black Channels ---
@@ -1093,6 +1319,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { blackChannels: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.poison':
+        'Keep, and the absence is the rule under test. `applyBlackChannelsEffects` writes `poisonImmunity: true` onto the defender (combat_effects.js:101) behind a version gate it reads through `combatEffectInVersion` (:96); that gate\'s scope is `COMBAT_VERSION_SCOPES`, which maps `resolution:blackChannelsEffectDerivation` to `SCOPE_MOM` (steps.js:377), and `SCOPE_MOM` names its two members outright, `mom_1.31` and `mom_cp_1.60.00` (steps.js:89). And `poisonFailProb` returns 0 on that flag before the resistance is read at all (combat_special_attacks.js:15), so the Poison Touch 4 the fixture arms makes no roll for the ablation to remove; the melee 1 is separately stopped by the defender\'s armor at a full 100% To Block. b.ability.blackChannels is the live half, which the sweep measures.',
+    },
   },
   blackChannelsDeathImmune: {
     desc: 'Black Channels grants Death Immunity: Cause Fear does not affect BC unit → 3 atk land (minus BC +1 def at 30% block → E[dmg]=2.7)',

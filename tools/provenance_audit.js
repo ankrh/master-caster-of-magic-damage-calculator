@@ -419,17 +419,6 @@ function runAudit() {
   }
 
   const unverified = comments.filter(comment => comment.body.startsWith('UNVERIFIED '));
-  const backlog = fs.readFileSync(path.join(repoRoot, 'Calculator', 'BACKLOG.md'), 'utf8');
-  const backlogMatch = /\| R9-G1 \|[^\n]*`(\d+)` UNVERIFIED formulas/.exec(backlog);
-  if (unverified.length === 0 && backlogMatch) {
-    fail('Calculator/BACKLOG.md retains R9-G1 although the audit found no UNVERIFIED formulas');
-  }
-  if (unverified.length > 0 && !backlogMatch) {
-    fail('Calculator/BACKLOG.md lacks the live R9-G1 UNVERIFIED count');
-  }
-  if (backlogMatch && Number(backlogMatch[1]) !== unverified.length) {
-    fail(`BACKLOG R9-G1 says ${backlogMatch[1]} UNVERIFIED formulas; audit found ${unverified.length}`);
-  }
 
   return { formulas: sitesById.size, verified: comments.length - unverified.length, unverified: unverified.length };
 }

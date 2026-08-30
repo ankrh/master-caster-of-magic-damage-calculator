@@ -58,22 +58,65 @@ function containsRun(haystack, needle) {
   return false;
 }
 
+// --- The fixture's own verdict -----------------------------------------------------------
 // A preset whose claim is an exclusion ("Fire Immunity does NOT apply to thrown") is expected to be
-// ablation-inert: removing the ability changes nothing, and that is the assertion. The sweep cannot
-// tell such a preset from a broken one by arithmetic alone, so it separates them by wording and
-// reports the two buckets apart instead of pretending the distinction is measured.
-const NEGATION_KEY_TOKENS = new Set([
-  'no', 'not', 'never', 'none', 'noop', 'unaffected', 'unchanged', 'excludes', 'without',
-  'ignores', 'ignored', 'blocks', 'blocked', 'negates', 'immune', 'exempt', 'skips',
+// ablation-inert: removing the ability changes nothing, and that is the assertion. Arithmetic
+// cannot tell such a preset from a broken one, and neither can wording -- the regex this replaced
+// was measured wrong on 6 of a 12-preset sample, missing every genuine absence claim in it.
+//
+// So the fixture says. `vacuity` is a flat map from one of this sweep's own findings to the reason
+// an adjudicator settled it: the key is either a preset-level bucket name (`no-ablatable-feature`,
+// `every-feature-inert`, `name-binds-nothing`) or the candidate id of an inert named feature
+// (`a.ability.longRange`, `a.unitType=hero`, `combat.chaosSurge`). A declared finding is cleared
+// and not reported; an undeclared one is reported as before. A bare candidate id clears only the
+// two findings that say the feature moves nothing; `roster-shadowed` and `hp-cap-hides` name a
+// defect rather than a deliberate absence and are cleared only in full, as `declarationKeyFor`
+// below sets out.
+//
+// It fails loud in both directions. A newly inert feature has no declaration, so it surfaces. A
+// declaration that no longer matches any finding is reported as `stale-declaration`, so a fixture
+// cannot go on claiming to have settled something the sweep has stopped seeing.
+const PRESET_LEVEL_BUCKETS = new Set([
+  'no-ablatable-feature', 'every-feature-inert', 'name-binds-nothing',
 ]);
-const NEGATION_DESC_PATTERNS = [
-  /\bdoes\s+not\b/i, /\bno\s+effect\b/i, /\bnot\s+applied\b/i, /\bunchanged\b/i,
-  /\bunaffected\b/i, /\bno\s+bonus\b/i, /\bnever\b/i, /\bnot\s+affected\b/i,
-];
 
-function looksNegative(key, desc) {
-  if (camelTokens(key).some(token => NEGATION_KEY_TOKENS.has(token))) return true;
-  return NEGATION_DESC_PATTERNS.some(re => re.test(desc || ''));
+function readVacuityDeclaration(key, preset) {
+  const declared = preset.vacuity;
+  if (declared === undefined) return {};
+  if (declared === null || typeof declared !== 'object' || Array.isArray(declared)) {
+    throw new Error(`preset_vacuity_sweep: preset '${key}' has a 'vacuity' that is not an object.`);
+  }
+  for (const [finding, reason] of Object.entries(declared)) {
+    if (typeof reason !== 'string' || !reason.trim()) {
+      throw new Error(
+        `preset_vacuity_sweep: preset '${key}' declares '${finding}' with no reason. `
+        + `Every 'vacuity' entry states why the finding is settled.`);
+    }
+  }
+  return declared;
+}
+
+// The finding a declaration key would have to name to clear this bucket. Preset-level buckets are
+// their own name.
+//
+// `named-feature-inert` and `version-dead` are cleared by the bare candidate id. Both say the same
+// thing about this preset -- the named feature moves no number -- and which of the two the sweep
+// picks depends on the rest of the version's presets rather than on this one, so one adjudicated
+// reason covers either.
+//
+// `roster-shadowed` and `hp-cap-hides` are not that claim. The first says the ability is written
+// and then overwritten before the calculation ever sees it; the second says the cap-lift control
+// moved the number once the pool was deep enough to hold the difference. Both are defects rather
+// than deliberate absences, so each is cleared only by a declaration naming it in full, and a
+// reason written about arithmetic inertness cannot silence one that appears later.
+const INERTNESS_BUCKETS = ['named-feature-inert', 'version-dead'];
+
+function declarationKeyFor(bucket) {
+  if (PRESET_LEVEL_BUCKETS.has(bucket)) return bucket;
+  for (const prefix of INERTNESS_BUCKETS) {
+    if (bucket.startsWith(`${prefix}:`)) return bucket.slice(prefix.length + 1);
+  }
+  return bucket;
 }
 
 // --- Structural detectors (no browser) ---------------------------------------------------
@@ -380,7 +423,6 @@ async function startServer() {
 // --- Reporting ---------------------------------------------------------------------------
 function classify(key, preset, sweep, liveByVersionFeature, version) {
   const keyTokens = camelTokens(key);
-  const negative = looksNegative(key, preset.desc);
   const named = [];
   for (const candidate of sweep.candidates) {
     const isNamed = candidate.terms.some(term => containsRun(keyTokens, camelTokens(term)));
@@ -403,10 +445,27 @@ function classify(key, preset, sweep, liveByVersionFeature, version) {
     if (candidate.rosterShadowed) buckets.push(`roster-shadowed:${candidate.id}`);
     else if (freed.has(candidate.id)) buckets.push(`hp-cap-hides:${candidate.id}`);
     else if (versionDead) buckets.push(`version-dead:${candidate.id}`);
-    else if (negative) buckets.push(`negative-claim-inert:${candidate.id}`);
     else buckets.push(`named-feature-inert:${candidate.id}`);
   }
-  return { key, version, negative, buckets, named: named.map(c => c.id), candidates: sweep.candidates.length };
+
+  // The fixture's verdict, applied last: a declared finding is settled and drops out, an
+  // undeclared one stands, and a declaration nothing matched is itself a finding.
+  const declared = readVacuityDeclaration(key, preset);
+  const matched = new Set();
+  const open = [];
+  for (const bucket of buckets) {
+    const declarationKey = declarationKeyFor(bucket);
+    if (Object.prototype.hasOwnProperty.call(declared, declarationKey)) matched.add(declarationKey);
+    else open.push(bucket);
+  }
+  for (const finding of Object.keys(declared)) {
+    if (!matched.has(finding)) open.push(`stale-declaration:${finding}`);
+  }
+
+  return {
+    key, version, buckets: open, cleared: [...matched],
+    named: named.map(c => c.id), candidates: sweep.candidates.length,
+  };
 }
 
 function parseArgs(argv) {

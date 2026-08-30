@@ -59,7 +59,7 @@ const TEST_TREE = [
       { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch'] },
       { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'magicImmunityPoisonTouch', 'poisonHighRes', 'charmedPoisonMoM', 'poisonRanged', 'poisonThrown', 'chaosSpawnPoisonGazeMom'] },
       { name: 'Prayer', keys: ['prayerToHit', 'prayerToHitRanged', 'prayerToBlock', 'prayerResistance', 'prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyNotRanged131'] },
-      { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'magicImmunityMagicRanged', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose', 'longRangeMidRange'] },
+      { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'magicImmunityMagicRanged', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose'] },
       { name: 'Resist Magic', keys: ['resistMagicBlocks', 'resistMagicNotPoison'] },
       { name: 'Resistance to All', keys: ['resistanceToAllBasic', 'resistanceToAllCap', 'holyBonusPlusResistanceToAll'] },
       { name: 'Righteousness', keys: ['righteousnessMagicChaos', 'righteousnessMagicNatureNotBlocked', 'righteousnessFireBreath', 'righteousnessLightningBreath', 'righteousnessPhysicalThrownNotBlocked', 'righteousnessMissileNotBlocked', 'righteousnessCauseFear', 'righteousnessLifeSteal', 'righteousnessLifeStealDrain', 'righteousnessLifeStealDrain160', 'righteousnessDeathGaze', 'righteousnessStoningGazeNotBlocked', 'immolationRighteousness', 'wallOfFireRighteousness'] },

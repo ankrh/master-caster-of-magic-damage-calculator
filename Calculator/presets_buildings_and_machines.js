@@ -16,6 +16,12 @@ definePresets({
     a: { atk: 3, hitChance:70, hp: 10 },
     b: { atk: 0, def: 2, toBlkMod: 70, hp: 10, abilities: { hillfort: true } },
     expected: { dmgToA: 0, dmgToB: 1 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Hillfort does not reach a melee attack, so the only feature the fixture adds cannot move the number.',
+      'b.ability.hillfort':
+        'Keep, and the absence is the rule under test. Hillfort is Missile Immunity under another name (`calcKey: \'missileImmunity\'`, enchantments.js:138, resolved at ui_abilities.js:21), and the immunity write at combat_effects.js:470 is gated on `ctx.isMissile`, which only the ranged arm of computeCasterDefenseForAttack sets (combat_effects.js:681). The melee arm builds no such field at all (combat_effects.js:650-657), so def 2 stands and 3 - 2 = 1. hillfortMissileWarlord is the positive arm at 0 against this 1; it is not a one-value sibling, since it also swaps the melee attack for a missile one and sets rangedCheck and rangedDist.',
+    },
   },
 
   // --- Planewalking ---
@@ -34,6 +40,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { firstStrike: true, temporalTwist: true } },
     b: { atk:5, hitChance:70, hp:10 },
     expected: { dmgToA: 5.000, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep. Inert as a consequence of the assertion: applyTemporalTwistEffects deletes `firstStrike` outright (combat_effects.js:191), so with the Twist on there is no flag left for the melee gate to read (combat.js:85-87) and removing it from the fixture as well changes nothing. a.ability.temporalTwist is the live half - ablating it lets the First Strike stand, A kills B before the counter, and dmgToA goes from 5.000 to 0.',
+    },
   },
   temporalTwistStripsNegateFirstStrikeWarlord: {
     desc: "Temporal Twist strips Negate First Strike: B loses NFS, so A's First Strike kills B before counter (dmgToA=0)",
@@ -41,6 +51,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, hitChance:70, hp:10, abilities: { negateFirstStrike: true, temporalTwist: true } },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'b.ability.negateFirstStrike':
+        'Keep, and the absence is the rule under test: applyTemporalTwistEffects deletes `negateFirstStrike` (combat_effects.js:192) before the melee gate reads it (combat.js:85-87), so B enters the exchange without the flag and removing it from the fixture changes nothing. a.ability.firstStrike and b.ability.temporalTwist are both live here. version-dead is literally true and uninformative. No Warlord fixture *configures* the ability directly - the only other preset that does is `negateFirstStrike` in presets_ranged_and_haste.js:1078, which sits in the artificial MoM 1.31 group (test_tree.js:5-8, 36). Its effect is asserted in Warlord all the same, through the grants that write the flag: tacticianNonCorporealNegateFirstStrikeWarlord, tacticianWraithFormNegateFirstStrikeWarlord, tacticianRulerNegateFirstStrikeWarlord and favoredTerrainTacticianNegateFirstStrikeWarlord (presets_immunities_and_abilities.js:1271-1334), plus temporalTwistTacticianRestoresNonCorporealNegateWarlord and zealGrantsNegateFirstStrikeWarlord in this file.',
+    },
   },
   temporalTwistStripsTeleportingWarlord: {
     desc: 'Temporal Twist strips Teleporting: Tactician no longer grants First Strike, so B retaliates. 5 hits vs 1 shield (Tactician +1 def) at 100% block → 4 dmg',
@@ -48,6 +62,10 @@ definePresets({
     a: { atk:10, def:0, hitChance:70, toBlkMod:70, hp:10, abilities: { tactician: true, teleporting: true, temporalTwist: true } },
     b: { atk:5, hitChance:70, hp:10 },
     expected: { dmgToA: 4.000, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.teleporting':
+        'Keep, and the absence is the rule under test: applyTemporalTwistEffects deletes `teleporting` (combat_effects.js:193), and normalizeCombatUnit runs the strip before the Tactician block (combat_phases.js:194-195), so Tactician\'s teleporting arm at combat_effects.js:134 finds nothing and grants no First Strike. A carrying the flag or not carrying it therefore reach the same exchange. a.ability.temporalTwist is live here. planewalkingTacticianFirstStrikeWarlord runs the same Tactician grant with Teleporting intact and pins dmgToA 0 against this 4.000; it is not a one-value sibling - it reaches Teleporting through Planewalking and sets no def or toBlkMod.',
+    },
   },
   temporalTwistTacticianRestoresNonCorporealNegateWarlord: {
     desc: 'Temporal Twist clears Negate First Strike before the later Tactician step restores it from Non-Corporeal, so B survives A\'s First Strike and retaliates for 5. B\'s own Tactician also gives it +1 Defense (Units.RecalculateUnits.pas:2409-2435 grants non-heroes exactly +1), rolled here at 100% block, so A\'s 10 hits deal 9. B\'s 9 HP is load-bearing: at 10 the control that drops Non-Corporeal leaves B alive and countering too, and side A would not move.',
@@ -55,6 +73,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, hitChance:70, hp:9, toBlkMod:70, abilities: { tactician: true, nonCorporeal: true, temporalTwist: true } },
     expected: { dmgToA: 5.000, dmgToB: 9.000 },
+    vacuity: {
+      'b.ability.temporalTwist':
+        'Keep, and the absence is the rule under test: the strip is inert precisely because the later block restores what it took, and that is the ordering claim. normalizeCombatUnit runs applyTemporalTwistEffects and then applyTacticianWarlordEffects (combat_phases.js:194-195), so the delete at combat_effects.js:192 is followed by the non-corporeal arm rewriting `negateFirstStrike` at combat_effects.js:135 and B ends the derivation with the flag either way. Swap the two and B loses it: A\'s First Strike takes B\'s 9 HP before the counter and dmgToA becomes 0 rather than 5.000. The fixture\'s other three candidates - b.tactician, b.nonCorporeal and a.firstStrike - are all live.',
+    },
   },
   temporalTwistTacticianRestoresFavoredTerrainStrikesWarlord: {
     desc: 'Temporal Twist clears strike flags before the later Tactician Favored Terrain branch restores both; A kills B by First Strike and takes no counter damage.',
@@ -62,6 +84,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { tactician: true, favoredTerrain: true, temporalTwist: true } },
     b: { atk:5, hitChance:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.temporalTwist':
+        'Keep, and the absence is the rule under test: the strip is inert precisely because the later block restores what it took, and that is the ordering claim. normalizeCombatUnit runs applyTemporalTwistEffects and then applyTacticianWarlordEffects (combat_phases.js:194-195), so the deletes at combat_effects.js:191-192 are followed by the favored-terrain arm rewriting both strike flags at combat_effects.js:137-140 and A keeps First Strike either way. Swap the two and A loses it, B survives to counter, and dmgToA becomes 5 rather than 0. a.ability.tactician and a.ability.favoredTerrain are both live here.',
+    },
   },
 
   // --- Zeal ---
@@ -78,6 +104,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, hitChance:70, hp:10, abilities: { zeal: true } },
     expected: { dmgToA: 5.000, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep. Inert as a consequence of the assertion: B\'s Zeal grants Negate First Strike (combat_effects.js:178), the melee gate is `aFirstStrike && !bNegateFirstStrike` (combat.js:85-87), and a negated First Strike yields the same simultaneous exchange as no First Strike at all - so removing it changes nothing. The same shape is already declared on `negateFirstStrike` in presets_ranged_and_haste.js:1083-1085. b.ability.zeal is the live half: ablating it lets A\'s First Strike stand and dmgToA goes to 0. That delta is attributable to the Negate alone - the gate reads no `firstStrike` on the defender, so Zeal\'s other grant cannot be what moves the number here, and zealGrantsFirstStrikeWarlord pins that other grant separately.',
+    },
   },
   zealStrippedByTemporalTwistWarlord: {
     desc: 'Temporal Twist strips Zeal-granted First Strike: A loses FS, B retaliates simultaneously (dmgToA=5)',
@@ -85,6 +115,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { zeal: true, temporalTwist: true } },
     b: { atk:5, hitChance:70, hp:10 },
     expected: { dmgToA: 5.000, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.zeal':
+        'Keep, and the absence is the rule under test: the grant happens and is then taken away, which is an ordering claim. normalizeCombatUnit runs applyZealEffects before applyTemporalTwistEffects (combat_phases.js:193-194), and the strip deletes exactly the two flags Zeal writes (combat_effects.js:178 against 191-192), so A ends with neither and dropping Zeal from the fixture changes nothing. a.ability.temporalTwist is the live half, and zealGrantsFirstStrikeWarlord differs only in a.abilities.temporalTwist and pins dmgToA 0 against this 5.000.',
+    },
   },
 
   // --- Rage ---
@@ -133,6 +167,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 4 } },
     b: { atk:0, def:1, toBlkMod:70, res:5, hp:10, race:'Gnoll', abilities: { altarOfTheMoon: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.poison':
+        'Keep. Inert as a consequence of the assertion: `base:altarOfTheMoon` writes poisonImmunity (stats_sequence.js:135-141, from `SETSTAT(U,APoisonImmunity,1,1)` at CreateUnit.CAS:378), and poisonFailProb returns 0 outright for an immune defender rather than modifying the roll (combat_special_attacks.js:13-19), so the poison strength has no roll left to size. b.ability.altarOfTheMoon is the live half - ablating it removes the immunity and the poison lands.',
+    },
   },
   altarOfTheMoonResistanceWarlord: {
     desc: 'Altar of the Moon (Warlord): +1 Resistance. Defender res 4 +1 = 5; incoming Life Steal −3 → effective res 2 → E = sum(1..8)/10 = 3.6 (without the +1, res 4 → eff 1 → 4.5)',
@@ -148,6 +186,12 @@ definePresets({
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Altar\'s writes do not reach a non-Gnoll unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.altarOfTheMoon':
+        'Keep, and the absence is the rule under test: eligibility carries `baseUnitRace === \'Gnoll\'` (stats.js:164-165). That race term is the calculator\'s own, and stats.js:159-163 is where it is stated - the Altar is the Gnoll city\'s race-exclusive building, so only Gnolls are trained under it. The script gates on the city instead and has no race test of its own: CreateUnit.CAS:373 reads `ISBUILT(C,BAltarOfTheMoon)`, which presupposes a Gnoll city, and the writes at :375-380 are then unconditional apart from the `SRanged>0` test on the +2. The calculator has no city, so it asks the unit. With the race term false the whole `base:altarOfTheMoon` step is skipped and its +2 to every permanent ranged slot (stats_sequence.js:135-144) never lands. altarOfTheMoonRangedWarlord differs only in a.race and pins 3.000 against this 1.000.',
+    },
   },
   altarOfTheMoonHunterPoisonWarlord: {
     desc: 'Altar of the Moon (Warlord): G. Hunters gain Poison 2. Melee atk 1 vs def 1 at 100% block → 0; Poison 2 (1 fig) vs res 5 (CoM2 −1 → eff 4, pFail 0.6) → E = 2 × 0.6 = 1.2 (without the Hunters tag, Altar grants no Poison → 0)',
@@ -178,6 +222,12 @@ definePresets({
     a: { figs:2, atk:2, hitChance:70, hp:5, abilities: { altarOfTheSun: true } },
     b: { atk:0, def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Altar\'s figure bonus does not reach a non-Hawkmen unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.altarOfTheSun':
+        'Keep, and the absence is the rule under test: eligibility carries `baseUnitRace === \'Hawkmen\'` (stats.js:178-179). That race term is the calculator\'s own, and stats.js:173-177 is where it is stated - the Altar is the Hawkmen city\'s race-exclusive building, so only Hawkmen are trained under it. The script gates on the city instead and has no race test of its own: CreateUnit.CAS:356 reads `ISBUILT(C,BAltarOfTheSun)`, which presupposes a Hawkmen city, and the branches at :359-365 then key on unit type alone - `STypeID=323` for the Holy Mother\'s +1 attack, `STypeID<>44` for the +1 figure. The calculator has no city, so it asks the unit. With the race term false the `altarOfTheSun:figures` step never fires (stats.js:2493-2495) and the attacker stays at 2 figures. altarOfTheSunFigureWarlord differs only in a.race and pins 6.000 against this 4.000.',
+    },
   },
   altarOfTheSunHolyMotherMeleeWarlord: {
     desc: 'Altar of the Sun (Warlord): Holy Mother gains +1 Melee instead of a figure. 1-fig attacker stays at 1 fig; atk 2+1 × 1 fig at 100% hit vs def 0 → 3 dmg (without the Altar, atk 2 → 2)',
@@ -192,6 +242,10 @@ definePresets({
     a: { figs:1, atk:2, hitChance:70, hp:5, unitType:'hero', race:'Hawkmen', abilities: { altarOfTheSun: true } },
     b: { atk:0, def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.altarOfTheSun':
+        'Keep, and the absence is the rule under test: the hero term of the same eligibility expression (`&& !isHero`, stats.js:178-179) closes the building to a Hawkmen hero, so the `altarOfTheSun:figures` step never fires (stats.js:2493-2495) and the flag moves nothing. a.unitType=hero is the live half - dropping the hero marker lets the +1 figure land and doubles the melee total from 2.000 to 4. No one-value sibling exists: altarOfTheSunFigureWarlord also differs in a.figs, and altarOfTheSunHolyMotherMeleeWarlord in a.name.',
+    },
   },
 
   // --- Alumni of Academy ---
@@ -210,6 +264,10 @@ definePresets({
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'a.ability.alumniOfAcademy':
+        'Keep, and the absence is the rule under test: the magical-ranged branch of the Academy gate carries `!abilities.mechanical` (stats.js:1497-1501), which is the calculator\'s reading of `GetStat(U,SCustomAttribute,1)<>1` at CreateUnit.CAS:465, and the unit does not end in \'Rocs\' so it cannot take the other branch either. The `alumniOfAcademy:figures` step therefore never fires (stats.js:2497-2499) and the flag moves nothing. a.ability.mechanical is the live half - ablating it lets the +2 figures land, which is alumniOfAcademyMagicRangedWarlord\'s 8.000 against this 6.000. Those two are not one-value siblings: they also differ in a.name, which this gate reads only as `endsWith(\'Rocs\')`.',
+    },
   },
   alumniOfAcademyLightningBoltWarlord: {
     desc: 'Academy (Warlord): the gate is `GetStat(U,SRangedType,1)>29` (CreateUnit.CAS:462-464) — the whole magical band, not an enumeration of realms — so the id-30 lightning-bolt projectile is inside it exactly as any other magical id is. 1 ranged × 8 figs at 100% hit vs def 0 → 8 dmg (without Academy, 6). Missile Immunity on the target is the control that the projectile is classed magical rather than physical: it blocks nothing here.',
@@ -233,6 +291,12 @@ definePresets({
     b: { atk:0, def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Academy is closed to a non-Halfling unit, so neither the Academy flag nor the race the fixture gives it can move the number.',
+      'a.ability.alumniOfAcademy':
+        'Keep, and the absence is the rule under test: the gate is race-first, `baseUnitRace === \'Halfling\'` (stats.js:1497-1498). That race term is the calculator\'s own - the Academy is the Halfling city\'s race-exclusive building, so only Halflings are trained under it. The script gates on the city instead and has no race test of its own: CreateUnit.CAS:461 reads `ISBUILT(C,BAcademy)`, which presupposes a Halfling city, and the condition at :462-465 is then unit-level only - `STypeID=221` for the Rocs, or `SRanged>0` and `SRangedType>29` and `SCustomAttribute<>1` for the magical-ranged branch. The calculator has no city, so it asks the unit. With the race term false a High Men magical-ranged unit reaches neither branch and the `alumniOfAcademy:figures` step never fires (stats.js:2497-2499). alumniOfAcademyMagicRangedWarlord is the Halfling arm of that same magical-ranged branch, 6 figures carried to 8; it is not a one-value sibling, since it also differs in a.figs and a.name.',
+    },
   },
 
   // --- Dragon Mound ---
@@ -256,6 +320,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, unitType:'hero', race:'Draconian', abilities: { dragonMound: true } },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'b.ability.dragonMound':
+        'Keep, and the absence is the rule under test: the `!isHero` term of the eligibility expression (stats.js:188-189) closes Dragon Mound to a Draconian hero, so the `base:dragonMound` step never fires (stats_sequence.js:222) and the +1 Defense at stats_sequence.js:224 never lands. That hero term is the calculator\'s own, and stats.js:182-187 is where it is stated. The script carries no unit-level hero test anywhere in the unique-building region: CreateUnit.CAS:320 gates on `ISBUILT(C,BDragonMound)`, `RACE` in that file is `CITYRACE(C)` (CreateUnit.CAS:6) rather than the unit\'s race, and the writes at :323-324 are unconditional apart from the `AFlying` movement branch at :325. The calculator has no city, so it asks the unit. b.unitType=hero is the live half, and dragonMoundArmorWarlord differs only in b.unitType and pins 4.000 against this 5.000.',
+    },
   },
   dragonMoundNonDraconianWarlord: {
     desc: 'Dragon Mound (Warlord): no Draconian tag → no bonus. Breath 2 (100% hit) vs def 0 → 2; melee 1 vs def 0 → 1; total 3 (a Draconian would get +2 breath and +1 armor → breath 4, but here def 0 means armor is moot; the point is breath stays 2)',
@@ -263,6 +331,12 @@ definePresets({
     a: { figs:1, atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:2, type:'fire' } }, hp:10, abilities: { dragonMound: true } },
     b: { atk:0, def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Dragon Mound\'s writes do not reach a non-Draconian unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.dragonMound':
+        'Keep, and the absence is the rule under test: eligibility carries `baseUnitRace === \'Draconian\'` (stats.js:188-189). That race term is the calculator\'s own, and stats.js:182-187 is where it is stated - the Mound is the Draconian city\'s race-exclusive building, so only Draconians are trained under it. The script gates on the city instead and has no race test of its own: CreateUnit.CAS:320 reads `ISBUILT(C,BDragonMound)`, `RACE` there is `CITYRACE(C)` (:6), and the writes at :323-324 are unconditional apart from the `AFlying` movement branch at :325. The calculator has no city, so it asks the unit. With the race term false the `base:dragonMound` step is skipped (stats_sequence.js:222), so neither the +1 Defense (:224) nor the +2 to the fire-breath channel (:227-231) lands. dragonMoundFireBreathWarlord is the Draconian arm of the same writes but is not a numeric contrast to this fixture: it also raises b.def to 1 and reaches the same 3.000 by a different route, breath 2+2 = 4 less one shield with the melee 1 fully blocked.',
+    },
   },
   dragonMoundThrownNotBoostedWarlord: {
     desc: 'Dragon Mound (Warlord): the +2 creates Fire Breath and does not boost existing Thrown. Melee 1 vs def 1 (100% block) → 0; unboosted Thrown 2 and created Fire Breath 2 each deal 1 → total 2',
@@ -319,6 +393,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { lavaSmelterWeaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep, and the absence is the rule under test. The key names the retrain path and the absence of a race, and an absent field is not a candidate: b carries no `race` at all, which is the assertion itself. So containsRun looks for \'lava smelter weapon immunity\' and \'lava smelter weapon imm\' against \'lava smelter upgrade retrain non dwarf warlord\' and finds neither, while the one candidate the fixture does have, b.ability.lavaSmelterWeaponImmunity, is live. The gate under test is applyLavaSmelterGrant (stats_identity.js:501-502), which tests only the version and `unitType.startsWith(\'fantastic_\')` and carries no race term. The retrain path agrees: OverlandEndTurn.CAS:523 gates on `BUILDINGSOWNED(W,BLavaSmelter,0)`, a wizard-level ownership test rather than the unit\'s own city, and the Weapon Immunity write at :527 asks only for Mithril and Adamantium. lavaSmelterWeaponImmunityWarlord differs only in b.race and expects the same 0; that pair is what a race term added here would break.',
+    },
   },
   lavaSmelterUpgradeRetrainHeroWarlord: {
     desc: 'Lava Smelter + Upgrade & Retrain (Warlord): an existing hero can carry Weapon Immunity. Normal melee atk 10 (100% hit) vs WI +10 defense, 100% block → 0 dmg',
@@ -326,6 +404,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, unitType:'hero', abilities: { lavaSmelterWeaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'b.unitType=hero':
+        'Keep, and the absence is the rule under test: the claim is that the Lava Smelter grants are *not* closed to heroes, so the hero marker is expected to move nothing. applyLavaSmelterGrant tests only the version and `unitType.startsWith(\'fantastic_\')` (stats_identity.js:501-502) - there is no hero term to remove - so a hero carries Weapon Immunity exactly as any other retrained unit does. The retrain path agrees: OverlandEndTurn.CAS:446 skips the block on `BASEFANTASTIC(U)` alone, and no `ISHERO` test stands between that block\'s gate at :389 and the mineral grants at :523-545; the file\'s only `ISHERO` gate, :132, belongs to the separate Military Workshop / Caravanserai garrison upgrade that ends at :208. Ablating the marker assigns `unitType: \'normal\'` (tools/preset_vacuity_sweep.js:204, written at :300), which semantically matches lavaSmelterUpgradeRetrainNonDwarfWarlord rather than reproducing it: that fixture omits the field, and setUnit merges an omitted `unitType` to the same \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362). It expects the same 0. b.ability.lavaSmelterWeaponImmunity is the live half, and lavaSmelterFantasticExcludedWarlord differs only in b.unitType and pins 10.000 against this 0.',
+    },
   },
   lavaSmelterFantasticExcludedWarlord: {
     desc: 'Lava Smelter + Upgrade & Retrain (Warlord): fantastic creatures are excluded. Normal melee atk 10 (100% hit) vs def 0 → 10 dmg',
@@ -333,6 +415,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, unitType:'fantastic_chaos', abilities: { lavaSmelterWeaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A tokenisation artefact - containsRun looks for \'unit type\' and \'fantastic chaos\' and the key says \'lava smelter fantastic excluded warlord\', so the class name in the key cannot span the concrete realm value the fixture has to pick for the control. The feature the key means is live all the same: b.unitType=fantastic_chaos is what applyLavaSmelterGrant refuses on (`unitType.startsWith(\'fantastic_\')`, stats_identity.js:502), the calculator\'s reading of `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDERUPGRADE"; }` at OverlandEndTurn.CAS:446, which sits upstream of the mineral grants at :523-545. Ablating it assigns `unitType: \'normal\'` (tools/preset_vacuity_sweep.js:204, written at :300), which semantically matches lavaSmelterUpgradeRetrainNonDwarfWarlord rather than reproducing it: that fixture omits the field, and setUnit merges an omitted `unitType` to the same \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362). It expects 0 against this 10.000. The other candidate, b.ability.lavaSmelterWeaponImmunity, is inert here by that same refusal, but the key does not name it so it raises no finding of its own.',
+    },
   },
   lavaSmelterProtectionsStackWarlord: {
     desc: 'Lava Smelter (Warlord): Resist Elements and Elemental Armor stack as two independent Inc writes (Combat.ResolutionHelpers.pas:191-195). Magic ranged 20 meets 4 + 12 = 16 Defense, but DefenseRoll (:159-171) rolls only dice 1-15 at the rolled chance and caps the rest at 30% (ToDefendCap 15, ToDefendCappedValue 30), so 15 × 1.0 + 1 × 0.3 = 15.3 is blocked → 4.7. The cap makes a cap-free re-size impossible here, since 4 + 12 always exceeds 15. Elemental Armor alone deals 8.0, Resist Elements alone 16.0.',
@@ -344,6 +430,10 @@ definePresets({
     } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.700 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A tokenisation artefact - containsRun looks for \'lava smelter resist elements\' / \'lava smelter resist elem\' and \'lava smelter elemental armor\' / \'lava smelter elem armor\', and the key says \'lava smelter protections stack warlord\'. The key names the interaction rather than either operand, and the sweep binds one candidate at a time, so a stacking claim can have no single named candidate. Both operands are live: they are two separate writes to effectiveDefense with independent gates, +4 at combat_effects.js:438-440 and +12 at :442-444, so ablating either leaves the other\'s write standing. This is the only fixture in the preset set that puts both effects on one unit - every other carrier is either a single lavaSmelter flag or the legacy single-valued `elemArmor` selector.',
+    },
   },
 
   // --- Lightning Blade ---
@@ -393,6 +483,12 @@ definePresets({
     a: { atk:4, hitChance:70, hp:10, abilities: { ludusAgoge: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Agoge\'s writes do not reach a non-Orc unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.ludusAgoge':
+        'Keep, and the absence is the rule under test: eligibility carries `baseUnitRace === \'Orc\'` (stats.js:196-197). That race term is the calculator\'s own, and stats.js:190-195 is where it is stated - the Agoge is the Orc city\'s race-exclusive building, so only Orcs are trained under it. The script gates on the city instead and has no race test of its own: CreateUnit.CAS:336 reads `ISBUILT(C,BAgoge)=0`, `RACE` there is `CITYRACE(C)` (:6), the branch at :339 keys on `STypeID` alone, and the stat writes at :346-349 ask only `SRanged>0` for the ranged half. The calculator has no city, so it asks the unit. With the race term false the `base:ludusAgoge` step is skipped (stats_sequence.js:237) and the +1 Attack at :239 never lands. ludusAgogeAttackWarlord differs only in a.race and pins 4.000 against this 3.000.',
+    },
   },
   ludusAgogeLegionaryExcludedWarlord: {
     desc: 'Ludus Agoge (Warlord): a Legionary gains +1 Movement instead (not modelled), so no stat bonus. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a non-Legionary Orc would gain +1 Attack → 4)',
@@ -400,6 +496,12 @@ definePresets({
     a: { atk:4, hitChance:70, hp:10, race:'Orc', name:'Orc Legionary', abilities: { ludusAgoge: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that a Legionary takes the movement branch instead of the stat branch, so neither the building flag nor the Orc race the fixture gives it can move the number.',
+      'a.ability.ludusAgoge':
+        'Keep, and the absence is the rule under test. Unlike the race and hero terms next to it, this exclusion is the script\'s own: `GetStat(U,STypeID,1)=139` at CreateUnit.CAS:339 sends the unit into the movement writes at :340-343 and out at :344, so the ELSE at :345-350 carrying +1 Attack, +1 Resistance, +1 HP and the conditional +1 ranged is never reached. Type 139 is `Name=Legionary` (`Unit rosters/Warlord mod unit data/UNITS.INI`:3876-3878), which the calculator reads as `!unitName.endsWith(\'Legionary\')` (stats.js:196-197). Movement is out of scope (CLAUDE.md, *Out of scope*), so that branch models as no stat write at all and the `base:ludusAgoge` step is skipped entirely (stats_sequence.js:237). ludusAgogeAttackWarlord differs only in a.name and pins 4.000 against this 3.000.',
+    },
   },
   ludusAgogeHeroExcludedWarlord: {
     desc: 'Ludus Agoge (Warlord): an Orc hero is excluded — no bonus. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a non-hero Orc would gain +1 Attack → 4)',
@@ -407,6 +509,10 @@ definePresets({
     a: { atk:4, hitChance:70, unitType:'hero', hp:10, race:'Orc', abilities: { ludusAgoge: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.ludusAgoge':
+        'Keep, and the absence is the rule under test: the `!isHero` term of the same eligibility expression (stats.js:196-197) closes the Agoge to an Orc hero, so the `base:ludusAgoge` step never fires (stats_sequence.js:237) and the +1 Attack at :239 never lands. That hero term is the calculator\'s own, stated at stats.js:190-195; CreateUnit.CAS carries no unit-level hero test in the unique-building region, and `RACE` there is `CITYRACE(C)` (:6), the city\'s race rather than the unit\'s. a.unitType=hero is the live half, and ludusAgogeAttackWarlord differs only in a.unitType and pins 4.000 against this 3.000.',
+    },
   },
 
   // --- Mother Fungus ---
@@ -451,6 +557,12 @@ definePresets({
     a: { atk:4, hitChance:70, hp:10, abilities: { motherFungus: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Mother Fungus\'s writes do not reach a non-Goblin unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.motherFungus':
+        'Keep, and the absence is the rule under test: eligibility carries `baseUnitRace === \'Goblin\'` (stats.js:204-205). That race term is the calculator\'s own, and stats.js:198-203 is where it is stated - the Fungus is the Goblin city\'s race-exclusive building, so only Goblins are trained under it. The script gates on the city instead and has no race test of its own: CreateUnit.CAS:444 reads `ISBUILT(C,BMotherFungus)=0`, `RACE` there is `CITYRACE(C)` (:6), and the writes at :447-455 are unconditional apart from the `SRanged>0`, `SSpellCharges>0` and `AFPoison<>100` tests at :449, :452 and :455. The calculator has no city, so it asks the unit. With the race term false the `base:motherFungus` step is skipped (stats_sequence.js:248), so neither the +2 Attack (:250), the +10% To Defend (:254) nor the Poison increment (:257) lands - which is why this fixture, unlike the Goblin arm, needs no Poison Immunity on the defender. motherFungusAttackWarlord is that Goblin arm at 5.000 against this 3.000; it is not a one-value sibling, since it also gives b poisonImmunity to keep the always-on poison grant out of its total.',
+    },
   },
   motherFungusHeroExcludedWarlord: {
     desc: 'Mother Fungus (Warlord): a Goblin hero is excluded — no Attack and no Poison grant. Melee 4 (100% hit) vs def 1 (100% block) → 3 (a non-hero Goblin would deal 5 plus poison). No Poison Immunity on the defender, so an erroneous poison grant would also surface',
@@ -458,6 +570,10 @@ definePresets({
     a: { atk:4, hitChance:70, unitType:'hero', hp:10, race:'Goblin', abilities: { motherFungus: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.motherFungus':
+        'Keep, and the absence is the rule under test: the `!isHero` term of the same eligibility expression (stats.js:204-205) closes the building to a Goblin hero, so the `base:motherFungus` step never fires (stats_sequence.js:248) and neither the +2 Attack (:250) nor the Poison increment (:257) lands. The defender deliberately carries no Poison Immunity, so an erroneous poison grant would surface in the total rather than be absorbed. That hero term is the calculator\'s own, stated at stats.js:198-203; CreateUnit.CAS carries no unit-level hero test in the unique-building region, and `RACE` there is `CITYRACE(C)` (:6). a.unitType=hero is the live half. motherFungusAttackWarlord is the non-hero arm at 5.000 against this 3.000; it is not a one-value sibling, since it also gives b poisonImmunity.',
+    },
   },
 
   // --- Pool of Repentance ---
@@ -483,6 +599,12 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { poolOfRepentance: true } },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Pool\'s writes do not reach a non-Rakhshasa unit, so the only feature the fixture adds cannot move the number.',
+      'b.ability.poolOfRepentance':
+        'Keep, and the absence is the rule under test: eligibility carries `baseUnitRace === \'Rakhshasa\'` (stats.js:210-211). That race term is the calculator\'s own, and stats.js:206-209 is where it is stated - the Pool is the Rakhshasa city\'s race-exclusive building, so only Rakhshasa are trained under it. The script gates on the city instead and has no race test of its own: CreateUnit.CAS:312 reads `ISBUILT(C,BPoolOfRepentance)`, `RACE` there is `CITYRACE(C)` (:6), and the two writes at :314-315 are unconditional. The calculator has no city, so it asks the unit. With the race term false the `base:poolOfRepentance` step is skipped (stats_sequence.js:217) and the `u.def += 1` at :218 never lands. poolOfRepentanceArmorWarlord differs only in b.race and pins 4.000 against this 5.000.',
+    },
   },
   poolOfRepentanceHeroExcludedWarlord: {
     desc: 'Pool of Repentance (Warlord): a Rakhshasa hero is excluded — no +1 Armor. atk 5 (100% hit) vs def 0 → 5 dmg (a non-hero Rakhshasa would gain +1 Armor → 4 dmg)',
@@ -490,6 +612,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, unitType:'hero', race:'Rakhshasa', abilities: { poolOfRepentance: true } },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'b.ability.poolOfRepentance':
+        'Keep, and the absence is the rule under test: the `!isHero` term of the same eligibility expression (stats.js:210-211) closes the Pool to a Rakhshasa hero, so the `base:poolOfRepentance` step never fires (stats_sequence.js:217) and the `u.def += 1` at :218 never lands. That hero term is the calculator\'s own, stated at stats.js:206-209; CreateUnit.CAS carries no unit-level hero test in the unique-building region, and `RACE` there is `CITYRACE(C)` (:6), the city\'s race rather than the unit\'s. b.unitType=hero is the live half, and poolOfRepentanceArmorWarlord differs only in b.unitType and pins 4.000 against this 5.000.',
+    },
   },
 
   // --- Sancta Basilica ---
@@ -532,6 +658,10 @@ definePresets({
     a: { hp:10, abilities: { deathGaze: 0 } },
     b: { res:7, hp:10, abilities: { sanctaBasilica: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'b.ability.sanctaBasilica':
+        'Keep, and the absence is the rule under test: eligibility carries `baseUnitRace === \'High Men\'` (stats.js:219). That race term is the calculator\'s own, and stats.js:212-217 is where it is stated - the Basilica is the High Men city\'s race-exclusive building, so only High Men are trained under it. The script gates on the city instead, and the Basilica block carries no unit-race test of its own: CreateUnit.CAS:413 reads `ISBUILT(C,BBasilica)=0`, `RACE` there is `CITYRACE(C)` (:6), the +3 Resistance at :415 is unconditional, and the four branches under it (:416-437) key on `STypeID` alone. That negative is block-level, not file-level: CreateUnit.CAS:78 does test the unit\'s own `SRace`, in the separate generic-to-racial conversion. The calculator has no city, so it asks the unit. With the race term false the `base:sanctaBasilica` step is skipped (stats_sequence.js:263) and the `u.res += 3` at :264 never lands. applySanctaBasilicaGrant refuses on the same term (stats_identity.js:569-570), so the Sanctify / Lucky / Magic Immunity half is never reached and its KNOWN DEFECT note (stats_identity.js:557-567) is out of scope here. a.ability.deathGaze is the live half - it is the probe the Resistance is read through. sanctaBasilicaResistanceWarlord differs only by carrying `race:\'High Men\'` on b and pins 0 against this 3.000.',
+    },
   },
   sanctaBasilicaHeroExcludedWarlord: {
     desc: 'Sancta Basilica (Warlord): a High Men hero is excluded — no +3 Resistance. Death Gaze vs res 7 → P = 0.3 × 10 HP = 3.0 dmg (a non-hero High Men unit would reach res 10 → 0 dmg)',
@@ -539,6 +669,10 @@ definePresets({
     a: { hp:10, abilities: { deathGaze: 0 } },
     b: { res:7, hp:10, unitType:'hero', race:'High Men', abilities: { sanctaBasilica: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'b.ability.sanctaBasilica':
+        'Keep, and the absence is the rule under test: the `!isHero` term of the same eligibility expression (stats.js:219) closes the Basilica to a High Men hero, so the `base:sanctaBasilica` step never fires (stats_sequence.js:263) and the `u.res += 3` at :264 never lands; applySanctaBasilicaGrant refuses on the same term (stats_identity.js:570). That hero term is the calculator\'s own, stated at stats.js:212-217. CreateUnit.CAS contains no `ISHERO` at all - a file-wide negative, checked case-insensitively over the whole file - so there is no unit-level hero test to model. The race side is a block-level negative and is claimed only as one: the Basilica block gates on `ISBUILT(C,BBasilica)=0` (:413), writes +3 Resistance unconditionally (:415), and branches on `STypeID` alone (:416-437), with `RACE` in that file being `CITYRACE(C)` (:6), the city\'s race rather than the unit\'s. The file does read the unit\'s own race elsewhere - `GETSTAT(U,SRace,1)` at :78, in the generic-to-racial conversion - but not in this block. b.unitType=hero is the live half - dropping the hero marker lets the +3 land, res 7 reaches 10 and the Death Gaze scores nothing. sanctaBasilicaResistanceWarlord differs only by not carrying `unitType:\'hero\'` on b and pins 0 against this 3.000.',
+    },
   },
 
   // --- Military Workshop ---
@@ -584,6 +718,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { militaryWorkshop: true } },
     b: { atk:0, def:1, toBlkMod:70, res:1, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Blackpowder upgrade does not reach a melee-only unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.militaryWorkshop':
+        'Keep, and the absence is the rule under test. Unlike the hero term beside it, this exclusion is the script\'s own: the Workshop block\'s inner gate is `(SRanged>0 %AND SRangedType<30) %OR SThrown>0 %OR SFireBreath>0` (CreateUnit.CAS:251-253), so a unit with none of the three reaches neither the `SBlackpowderUpgrade` write at :255 nor the `AFPoison` increment at :256. The calculator carries it as `blackpowderEligibleAttack` (stats.js:1175-1176), a term of `blackpowder` (stats.js:1183-1184); A states no `modernAttacks` at all, so no channel is marked and `base:militaryWorkshop`\'s `when` is false (stats_sequence.js:157). The poison half is asserted too: the defender is deliberately left at res 1 with no Poison Immunity, where an erroneous +1 Poison grant would score a full 1.0 (poisonFailProb, combat_special_attacks.js:19) instead of this 0. militaryWorkshopArmorPiercingWarlord is the eligible arm at 6.000, but it is not a numeric contrast to this fixture: it swaps the melee attack for a boulder and gives b def 8 and Poison Immunity.',
+    },
   },
   militaryWorkshopHeroExcludedWarlord: {
     desc: 'Military Workshop (Warlord): a hero is excluded — no Armor Piercing and no +1 Poison. Boulder 10 (100% hit) vs def 8 (100% block) → 10−8 = 2 (a normal unit would deal 6 plus poison). No Poison Immunity on the defender, so an erroneous poison grant would also surface',
@@ -592,6 +732,10 @@ definePresets({
     b: { atk:0, def:8, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.militaryWorkshop':
+        'Keep, and the absence is the rule under test: `baseNormalTrainingUnit` is `!isHero && !isFantasticBase` (stats.js:320) and it is a term of `blackpowder` (stats.js:1183-1184), so on a hero no channel is marked, `base:militaryWorkshop`\'s `when` is false (stats_sequence.js:157), and neither the Armor Piercing grant nor the `<>100` poison increment lands. That hero term is the calculator\'s own, stated at stats.js:299-305 from the changelog\'s "base normal units" wording (`Reference docs/Warlord manual v1.5.12.7.html`). The script makes no hero test: CreateUnit.CAS contains no `ISHERO` anywhere, checked case-insensitively over the whole file. Its Workshop block gates only on the city or Rocketry (:247-249) and then on the attack-presence test at :251-253, and carries no unit-race term either - a block-level negative, since the file does test the unit\'s own `SRace` at :78, in the generic-to-racial conversion. a.unitType=hero is the live half. The defender deliberately carries no Poison Immunity, so an erroneous poison grant would surface in the total rather than be absorbed. militaryWorkshopArmorPiercingWarlord is the normal-unit arm at 6.000 against this 2.000; it is not a one-value sibling, since it also gives b Poison Immunity.',
+    },
   },
 
   // --- Venom (Warlord enchantment) ---
@@ -617,6 +761,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 4 } },
     b: { atk:0, def:1, toBlkMod:70, res:5, hp:10, abilities: { venom: true } },
     expected: { dmgToA: 1.000, dmgToB: 0.000 },
+    vacuity: {
+      'a.ability.poison':
+        'Keep. Inert as a consequence of the assertion: `d:venom` writes `u.poisonImmunity = true` (stats_sequence.js:1491), and poisonFailProb returns 0 outright for an immune defender rather than modifying the roll (combat_special_attacks.js:15), so the attacker\'s poison strength has no roll left to size and any value of it reaches the same 0. b.ability.venom is the live half - ablating it removes the immunity and the poison lands. dmgToA is untouched by this ablation: the 1.000 is the Poison 1 the same step grants B (stats_sequence.js:1492), riding B\'s counterattack.',
+    },
   },
 
   // --- Artificer ---
@@ -664,6 +812,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { artificer: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Artificer retort reaches no non-Mechanical unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.artificer':
+        'Keep, and the absence is the rule under test: `base:artificer` is gated on the Mechanical flag standing in the record at its own rank, `when: u => !!u.mechanical` (combat_abilities.js:1298), the calculator\'s reading of `GetStat(U,SCustomAttribute,1)=1` at CreateUnit.CAS:38. With no Mechanical the step never fires, so the `u.atk += 1; u.def += 1; u.res += 2;` at combat_abilities.js:1304 and the +1 ranged at :1305 all stay away. The Magic Weapons half is closed by its own gate rather than by that one: `artificerMagicWeapon` reads both raw input flags (stats.js:157-158), so the `weaponPreRust` ternary that would have promoted it (stats.js:274-275) leaves the weapon normal and the attack keeps its base To Hit. artificerMechanicalMeleeWarlord differs only in a.abilities.mechanical and pins 2.000 against this 1.000.',
+    },
   },
   artificerSkipsThrownAndBreathWarlord: {
     desc: 'Exclusion the engine makes: the Artificer retort names four stats and the four movement fields, and `SRanged` is the only attack among them (CreateUnit.CAS:38-47). Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. The +0.4 on top is the melee the retort does create (F142): `SAttack` at CreateUnit.CAS:40 is ungated, so permanent melee 0 becomes 1, at 30+10 = 40% with the Magic Weapons grant. A grant reaching every channel, as this block made before F139, gives 4 + 6 + 0.4 = 10.400.',
@@ -704,6 +858,12 @@ definePresets({
     a: { atk:10, hp:10, abilities: { mechanicalExpert: true } },
     b: { def:0, hp:20 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Mechanical Expert reaches no non-Mechanical unit, so the only feature the fixture adds cannot move the number.',
+      'a.ability.mechanicalExpert':
+        'Keep, and the absence is the rule under test: `d:mechanicalExpert` is gated on the Mechanical flag in the record, `when: u => !!u.mechanical` (combat_abilities.js:1315), so with no Mechanical the `u.toHit += 20; u.toBlk += 10;` at :1316 never runs and the attack keeps the base 30% To Hit. mechanicalExpertToHitWarlord differs only in a.abilities.mechanical and pins 5.000 against this 3.000.',
+    },
   },
   mechanicalExpertRebuildMakesMechanicalWarlord: {
     desc: 'Rebuild + Mechanical Expert (Warlord): Rebuild makes the unit mechanical, so +20% To Hit applies. atk 10 + Rebuild(+2) = 12 at 50% vs 0 def → 6 dmg',
@@ -734,6 +894,12 @@ definePresets({
     a: { atk:0, hitChance:70, hp:10, unitType: 'hero', abilities: { rebuild: true, ccDefense: true, lionheart: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.lionheart':
+        'Keep, and the absence is the rule under test: Lionheart is the probe the phase choice is read through, and its melee arm is `if (hasMeleeAttackAt(runCtx)) u.atk += 3` (stats_sequence.js:1044) over the permanent record - `runCtx.base.atk > 0` (stats.js:977), the record frozen when the last base-phase step leaves it (steps.js:746). Rebuild on a hero is a phase-`b` step (`isHeroUnit ? \'b\' : \'base\'`, combat_abilities.js:1339), so its `u.atk += 2` (:1342) never reaches that record, the base melee stays 0 and the arm is closed. Its other writes cannot surface here either: nothing rolls against A\'s Resistance, A states no ranged or thrown channel, and B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103) so A\'s hit points are never scored against. Take the base branch instead, as the retired unit-type phase choice did, and the arm opens for +3 and the total goes from 2.000 to 5. a.ability.rebuild and a.unitType=hero are both live.',
+      'a.ability.ccDefense':
+        'Keep, and the absence is the rule under test: the claim is that the phase split reads hero-ness and not the live unit-type token, so Chaos Channels is expected to move nothing. Its two writes are the +3 Defense at combat_abilities.js:1072, which nothing scores against because B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103), and the conversion to a fantastic Chaos creature at stats_identity.js:350 - the token under test. The phase choice reads `isHeroUnit`, `!!identityPredicates.isHero` (combat_abilities.js:677, argued at :672-676), supplied once as `!!identity.isHero` (stats.js:1603) because no conversion writes that flag (stats.js:1600-1602). So the hero keeps the phase-`b` re-application whether or not it is Chaos-Channelled. a.ability.lionheart is the detector that would report a regression here.',
+    },
   },
   rebuildArmorPiercingWarlord: {
     desc: 'Rebuild (Warlord): grants Armor Piercing. Missile rtb 2 100% hit vs def 3 100% block → AP halves def to 1 → 1 dmg (Rebuild +2 melee does not affect ranged attack)',
@@ -772,6 +938,12 @@ definePresets({
     b: { def:2, toBlkMod:70, hp:20 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 8 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Colossal Strength does not reach a magical ranged attack, so the only feature the fixture adds cannot move the number.',
+      'a.ability.colossalStrength':
+        'Keep, and the absence is the rule under test: the block\'s secondary arm admits physical channels only - `physicalSecondary` is missile, boulder or thrown (stats_sequence.js:1583-1584), the calculator\'s reading of the script\'s own `SRangedType>0 %AND <30` gate at UnitCalc.CAS:1235 and the `SThrown>0` gate at :1239 - so a `magic` ranged type fails it and the `u[c.strengthField] += colossalScaled(...)` at stats_sequence.js:1586 never runs. The melee line above it is ungated (stats_sequence.js:1581, from `SETSTAT(U,SAttack,0,…+CSM)` at UnitCalc.CAS:1233) and does raise A\'s melee from 0 to 1, but one point of melee cannot pass the defender\'s 2 Defense at full block, so it reaches no total either. colossalStrengthPhysicalRangedWarlord differs only in the ranged `type` - `missile` against this `magic` - and pins 13 against this 8.',
+    },
   },
   colossalStrengthScalesBuffedMeleeWarlord: {
     desc: 'Colossal Strength (Warlord) scales CURRENT melee, not base (UnitCalc.CAS:1227-1243 reads GetStat(U,SAttack,0) in phase d). Base atk 10 + Lionheart +3 = 13 → +1+floor(0.4×13)=+6 → 19. 100% hit, def 2 blocks 2 → E[dmg] = 17 (if it scaled base instead: 10+3+5 = 18 → 16)',
@@ -824,6 +996,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, weapon: 'magic', abilities: { rust: true } },
     b: { def:0, toBlkMod:70, hp:20, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.weapon=magic':
+        'Keep, and the absence is the rule under test: the material the calculation uses is `rustActive ? \'normal\' : weaponPreRust` (stats.js:276), so with Rust standing the magic weapon is already gone and stating it on the card or not reaches the same material - which is what the fixture asserts. Ablating it assigns `weapon: \'normal\'` (tools/preset_vacuity_sweep.js:203, written at :300), exactly what the strip leaves. a.ability.rust is the live half: ablating it lets `magic` stand, and with it the Weapon Immunity bypass, so the number moves off 0.',
+    },
   },
   rustEliminatesThrownWarlord: {
     desc: 'Rust (Warlord): thrown attack eliminated. Thrown 10 (no melee), 100% hit, def 0 → with Rust no thrown phase → E[dmg] = 0 (without Rust, thrown lands → 10)',
@@ -839,6 +1015,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:20, abilities: { rust: true, largeShield: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 10 },
+    vacuity: {
+      'b.ability.largeShield':
+        'Keep, and the absence is the rule under test: `d:rust` clears the flag with `u.largeShield = false` (stats.js:1622), the calculator\'s reading of `SETSTAT(U,ALargeShield,0,0)` at UnitCalc.CAS:498. The ranged Defense bonus is read from the calculated abilities at combat_effects.js:436, which by then sees no Large Shield, so the `u.effectiveDefense += 3` at :435 never fires and stating the ability or not reaches the same Defense. b.ability.rust is the live half. The clear is positioned rather than final, which is a separate claim held elsewhere: fortificationRestoresRustedLargeShieldWarlord (presets_immunities_and_abilities.js) is the fixture where a later block reads what the clear left and grants Large Shield back.',
+    },
   },
   rustFantasticUnaffectedWarlord: {
     desc: 'Rust targets a regular (non-fantastic) unit, so a fantastic creature is unaffected: no −3 melee. Fantastic atk 10 → stays 10, 1 fig, 100% hit, def 0 → 10 (if wrongly applied, 7).',
@@ -846,6 +1026,10 @@ definePresets({
     a: { unitType:'fantastic_chaos', atk:10, hitChance:70, hp:10, abilities: { rust: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 10 },
+    vacuity: {
+      'a.ability.rust':
+        'Keep, and the absence is the rule under test: `rustActive` carries `!finishedIdentity.fantastic` (stats.js:246-247), so on a fantastic creature the curse is inactive and every half of it closes at once - the -3 melee (combat_abilities.js:1107, from `SETSTAT(U,SAttack,0,…-3)` at UnitCalc.CAS:495), the weapon strip (stats.js:276), the Large Shield clear (stats.js:1622) and the Thrown clear (stats.js:1628-1632). The exclusion is a targeting restriction read at the finished record rather than at the step\'s own rank, which stats.js:227-245 states and the script supports: its Rust block is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone (UnitCalc.CAS:493) and makes no Fantastic test of either record. a.unitType=fantastic_chaos is the live half. rustMeleePenaltyWarlord is this fixture without that field and pins 7 against this 10; ablation assigns `unitType: \'normal\'` (tools/preset_vacuity_sweep.js:204, written at :300), which semantically matches it rather than reproducing it, since that fixture omits the field and setUnit merges an omitted `unitType` to the same \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362). rustAppliesToSpiritLinkedFantasticWarlord adds only `spiritLink` to a.abilities and reaches 7 by clearing the Fantastic flag that targeting read sees.',
+    },
   },
   rustAppliesToSpiritLinkedFantasticWarlord: {
     desc: 'Rust’s "regular unit" exclusion is a targeting restriction, and targeting reads the record the recalculation leaves: Spirit Link clears Fantastic at the tail of UnitCalc.CAS (:1305-1306) precisely so the unit "could not be targeted by fantastic-only spell", so a spirit-linked Chaos creature is a legal Rust target and takes the −3. Base atk 10 → 7, 100% hit, def 0 → 7 (without Rust, 10; reading the record at `d:rust` instead — chain #129, ahead of `d:spiritLink` #135 — would see Fantastic and give 10).',
@@ -991,6 +1175,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10, abilities: { illusion: true } },
     b: { def:6, toBlkMod:70, hp:10, abilities: { rebuild: true } },
     expected: { dmgToA: 0.600, dmgToB: 0 },
+    vacuity: {
+      'a.ability.illusion':
+        'Keep, and the absence is the rule under test: the illusion write is `u.effectiveDefense = 0` (combat_effects.js:431), gated on `ctx.illusion && !hasAbil(u.abilities, \'illusionImmunity\')` (:432), and applyRebuildEffects hands the defender `illusionImmunity: true` (combat_effects.js:120). With the immunity standing the gate is closed, so the attack is scored against the defender\'s full Defense exactly as an ordinary one would be and removing it from the fixture changes nothing. b.ability.rebuild is the live half, and it moves both numbers: the immunity goes with it and the Defense collapses to 0, while B also loses the ungated `u.atk += 2` (combat_abilities.js:1342) that its 0.600 counterattack is made of.',
+    },
   },
   rebuildMechanicalTooLateForArtificerWarlord: {
     desc: 'Exclusion the engine makes, by rank: Rebuild writes Mechanical (`SCustomAttribute` 1) permanently at OLSpell.CAS:279 when the spell is cast, but the Artificer retort reads that same permanent flag at CreateUnit.CAS:38, which runs once when the city builds the unit — and Rebuild is cast on a unit that already exists, so the retort never sees it. atk 1 + Rebuild(+2) = 3, 100% hit vs 0 def → 3 dmg; the retort\'s +1 melee and its Magic Weapons grant both stay away (they would give 4). Later readers do see the write: `mechanicalExpertRebuildMakesMechanicalWarlord` is the same unit taking Mechanical Expert\'s +20% To Hit from region d. The engine displays the retort\'s ability lines on a Rebuilt unit anyway — DisAbil.CAS:840 and :846 recompute them from the base record every draw — which is display and AI only.',
@@ -998,5 +1186,9 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { rebuild: true, artificer: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.artificer':
+        'Keep, and the absence is the rule under test - the claim is exactly that the retort cannot see the flag Rebuild writes. `base:artificer` reads the record at its own rank (`when: u => !!u.mechanical`, combat_abilities.js:1298), from `GetStat(U,SCustomAttribute,1)=1` at CreateUnit.CAS:38, and the chain places `base:artificer` among the training-time writes (stats_manifests.js:243) while `base:rebuild`, whose apply sets `u.mechanical = true` (combat_abilities.js:1342), is cast-time and strictly later (stats_manifests.js:254). The gate therefore reads false and the retort\'s `u.atk += 1; u.def += 1; u.res += 2;` (:1304) and +1 ranged (:1305) all stay away. Its Magic Weapons half is closed by a second, independent guard, so a change to the rank alone would not move this number: `artificerMagicWeapon` reads the two raw input flags (stats.js:157-158) and this fixture states no `mechanical`. a.ability.rebuild is the live half. mechanicalExpertRebuildMakesMechanicalWarlord is the later reader that does see the write, four regions on.',
+    },
   },
 });

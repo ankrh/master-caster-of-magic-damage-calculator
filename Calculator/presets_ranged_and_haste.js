@@ -7,6 +7,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 9,
     expected: { dmgToA: 0, dmgToB: 0.700 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rtbType, which candidates() does not enumerate. It is the missile arm of the gate at combat_abilities.js:428; rangedMagicBasic differs only in rtbType and pins 1.000.',
+    },
   },
   rangedBoulderBasic: {
     desc: 'Ranged Boulder: 100% base to hit, range 9 → 70% effective (−30% penalty)',
@@ -14,6 +18,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 9,
     expected: { dmgToA: 0, dmgToB: 0.700 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rtbType, which candidates() does not enumerate. It is the boulder arm of the gate at combat_abilities.js:428; rangedMagicBasic differs only in rtbType and pins 1.000. longRangeBoulder also carries boulder, so this is not the only fixture that would catch the arm being dropped.',
+    },
   },
   rangedMagicBasic: {
     desc: 'Ranged Magic: 100% base to hit, range 9 → 100% effective (no distance penalty)',
@@ -21,6 +29,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 9,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep, and the absence is the subject. The discriminator is rtbType, which candidates() does not enumerate. Magic ranged fails the missile/boulder gate at combat_abilities.js:428 and takes no distance penalty at all; rangedMissileBasic and rangedBoulderBasic differ only in rtbType and pin 0.700.',
+    },
   },
   magicImmunityMagicRanged: {
     desc: 'Magic Immunity vs sorcery magic ranged: def raised to 50 → rtb 3 fully blocked → 0 dmg',
@@ -49,13 +61,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 1.000 },
-  },
-  longRangeMidRange: {
-    desc: 'Long Range at range 3-5: penalty is already −10%, Long Range has no further effect',
-    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10, abilities: { longRange: true } },
-    b: { hp:10 },
-    rangedCheck: true, rangedDist: 5,
-    expected: { dmgToA: 0, dmgToB: 0.900 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction. At range 2 the MoM ladder gives -10 * floor(2/3) = 0, so the cap has nothing to clamp and the assertion is that the value stays at 1.000.',
+      'a.ability.longRange':
+        'Keep, and the only fixture that pins the cap at combat_abilities.js:438 as conditional. Written flat as `if (longRange) penalty = -10` it returns 0.900 here; longRangeMissile is unmoved by that error, and longRangeMidRange, which was also unmoved by it, was deleted as redundant under T2.',
+    },
   },
   // --- Ranged distance penalty version differences ---
   distPenaltyMoM3: {
@@ -65,6 +76,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 3,
     expected: { dmgToA: 0, dmgToB: 0.900 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the MoM 3-tile divisor at combat_abilities.js:436 at its first step; distPenaltyMoM12 differs only in rangedDist and pins 0.600.',
+    },
   },
   distPenaltyMoM12: {
     desc: 'MoM 1.60: range 12 → −40% penalty → 60% effective (uncapped per-3-tile penalty)',
@@ -73,6 +88,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 12,
     expected: { dmgToA: 0, dmgToB: 0.600 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the MoM ladder as uncapped at four steps (combat_abilities.js:436); distPenaltyMoM3 differs only in rangedDist and pins 0.900.',
+    },
   },
   distPenaltyCoM3: {
     desc: 'CoM 6.08: range 3 → no penalty (threshold is 4 tiles) → 100% effective',
@@ -81,6 +100,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 3,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the CoM threshold as 4 rather than MoM\'s 3 (combat_abilities.js:434): floor(3/4) = 0, so range 3 costs nothing. distPenaltyCoM6, CoM12 and CoM16 differ only in rangedDist and pin 0.900, 0.700 and 0.600.',
+    },
   },
   distPenaltyCoM12: {
     desc: 'CoM 6.08: range 12 → −30% penalty → 70% effective (per-4-tile penalty)',
@@ -89,6 +112,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 12,
     expected: { dmgToA: 0, dmgToB: 0.700 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the CoM ladder\'s third step (combat_abilities.js:434); its three rangedDist siblings pin 1.000, 0.900 and 0.600.',
+    },
   },
   distPenaltyHeroMoM12: {
     desc: 'MoM 1.60: hero archer at range 12 → −40% penalty → 60% effective (no hero exemption)',
@@ -97,6 +124,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 12,
     expected: { dmgToA: 0, dmgToB: 0.600 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by design: MoM grants no hero exemption, so the hero takes the full -40. distPenaltyMoM12 differs only in a.unitType and pins the same 0.600.',
+      'a.unitType=hero':
+        'Keep, and the absence is the rule under test. The exemption at combat_abilities.js:429 is gated on version.startsWith(\'com\'), and this is its MoM arm. distPenaltyHeroCoM12 is the positive arm: the same fixture in CoM pins 1.000 against distPenaltyCoM12\'s 0.700. version-dead is expected here - no other mom_cp_1.60.00 preset makes hero move a number.',
+    },
   },
   distPenaltyHeroCoM12: {
     desc: 'CoM 6.08: hero archer at range 12 → no penalty at all → 100% effective '
@@ -114,6 +147,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 6,
     expected: { dmgToA: 0, dmgToB: 0.900 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the CoM ladder\'s first step (combat_abilities.js:434); its three rangedDist siblings pin 1.000, 0.700 and 0.600.',
+    },
   },
   distPenaltyCoM2_6: {
     desc: 'CoM2 1.05.11: range 6 → −10% − 3%×(6−4) = −16% → 84% effective',
@@ -122,6 +159,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 6,
     expected: { dmgToA: 0, dmgToB: 0.840 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the CoM2 ladder as -10 - 3*(d-4) rather than a per-tier step (combat_abilities.js:432); distPenaltyCoM2_16 differs only in rangedDist and pins 0.540, and the two together fix both the intercept and the slope.',
+    },
   },
   distPenaltyCoM16: {
     desc: 'CoM 6.08: range 16 → −40% penalty → 60% effective (uncapped per-4-tile penalty)',
@@ -130,6 +171,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 16,
     expected: { dmgToA: 0, dmgToB: 0.600 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the CoM ladder as uncapped at four steps (combat_abilities.js:434); its three rangedDist siblings pin 1.000, 0.900 and 0.700.',
+    },
   },
   distPenaltyCoM2_16: {
     desc: 'CoM2 1.05.11: range 16 → −10% − 3%×(16−4) = −46% → 54% effective',
@@ -138,6 +183,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 16,
     expected: { dmgToA: 0, dmgToB: 0.540 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rangedDist, which candidates() does not enumerate. The far end of the CoM2 ladder (combat_abilities.js:432), and with distPenaltyCoM2_6 it fixes both the intercept and the slope.',
+    },
   },
 
   thrownBasic: {
@@ -145,18 +194,30 @@ definePresets({
     a: { atk:1, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:1 },
     b: { atk:1, toHitMod:70, def:0, hp:1 },
     expected: { dmgToA: 0, dmgToB: 1 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rtbType, which candidates() does not enumerate. dmgToA 0 is the claim: the thrown channel resolves before melee, so B dies without ever countering. Lose the channel and B survives to counter for 1.',
+    },
   },
   fireBreathBasic: {
     desc: 'Fire Breath: 100% to hit breath, B dies before melee/counter fires',
     a: { atk:1, rtbType:'fire', rtb:1, toHitRtbMod:70, def:0, hp:1 },
     b: { atk:1, toHitMod:70, def:0, hp:1 },
     expected: { dmgToA: 0, dmgToB: 1 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rtbType, which candidates() does not enumerate. thrownBasic differs only in rtbType and pins the same 0/1, which is the assertion: fire breath resolves on the same pre-melee channel as thrown. Lose the channel and B survives to counter for 1.',
+    },
   },
   lightningBreathBasic: {
     desc: 'Lightning Breath: 100% to hit breath, B dies despite 1 defense (lightning is AP)',
     a: { atk:1, rtbType:'lightning', rtb:1, toHitRtbMod:70, def:0, hp:1 },
     b: { atk:1, toHitMod:70, def:1, toBlkMod:70, hp:1 },
     expected: { dmgToA: 0, dmgToB: 1 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is rtbType, which candidates() does not enumerate. B holds def 1 at a 100% block chance, so a non-AP breath 1 deals 0 and B counters; lightning\'s own AP arm at combat_effects.js:997 halves def to 0 for the kill. No one-value sibling exists - fireBreathBasic differs in b.def and b.toBlkMod as well.',
+    },
   },
   lightningResistCancelsAP: {
     desc: 'Lightning Resist cancels AP: breath 2 (100% hit) vs def 2 (100% block) — AP cancelled, 2−2=0',
@@ -169,6 +230,10 @@ definePresets({
     a: { atk:1, toHitMod:70, rtbType:'lightning', rtb:2, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:2, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     expected: { dmgToA: 0, dmgToB: 1 },
+    vacuity: {
+      'b.ability.lightningResist':
+        'Keep, and the absence is the rule under test. combat_effects.js:996-997 makes the thrown path\'s AP `aArmorPiercing || (isLightning && !lightningResist)`, so Lightning Resist cancels only the lightning-derived arm and the ability\'s own AP survives. lightningResistCancelsAP differs only in a.abilities.armorPiercing and pins 0; armorPiercingLightningNoDoubleHalve differs only in this ability and pins the same 1, which is the control.',
+    },
   },
   // `Combat.ApplyAttack.pas:230-231` sets `islightning` on the modern conventional ranged path
   // from the projectile id — `rangedtype = 30`, the lightning bolt — and Lightning Resist then
@@ -189,6 +254,10 @@ definePresets({
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'b.ability.lightningResist':
+        'Keep, and the absence is the rule under test. On the modern ranged path `isLightning` is `rangedType === \'magic_lightning\'` alone (combat_effects.js:679), so a plain magical ranged is not lightning and effectiveDefense:armorPiercing still halves. lightningResistCancelsAPLightningBoltRangedCoM2 differs only in the ranged type and pins 0.',
+    },
   },
   lightningResistCancelsAPLightningBoltRangedWarlord: {
     desc: 'Lightning Resist vs id-30 ranged (Warlord): magical-lightning ranged 4 (100% hit) + AP vs def 4 (100% block) — AP cancelled, def stays 4, 4−4=0',
@@ -205,6 +274,10 @@ definePresets({
     b: { atk:0, def:4, toBlkMod:70, hp:10, abilities: { lightningResist: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'b.ability.lightningResist':
+        'Keep, and the absence is the rule under test. On the modern ranged path `isLightning` is `rangedType === \'magic_lightning\'` alone (combat_effects.js:679), so a plain magical ranged is not lightning and effectiveDefense:armorPiercing still halves. lightningResistCancelsAPLightningBoltRangedWarlord differs only in the ranged type and pins 0.',
+    },
   },
   levelWeaponBonus: {
     desc: 'Level+Weapon Bonus: Champion+Adamantium (base 1atk/2def/1hp) matches defender with equivalent effective stats',
@@ -336,6 +409,10 @@ definePresets({
     b: { atk:0, def:0, hp:50 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A tokenisation artefact, not a defect: the key names the roster record and its RangedType, neither of which candidates() enumerates, and the one feature it does enumerate is live - ablating a.level=champion moves 3.0 to 0.8.',
+    },
   },
 
   // --- Warlord source-record placement for Stoning Touch and Death Touch ---
@@ -450,18 +527,32 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { poisonImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.poison':
+        'Keep. Inert as a consequence of the assertion rather than despite it: Poison Immunity zeroes the poison term, so removing the poison as well cannot move an already-zero result. The immunity is the live half - ablating it returns poisonTouchBasic\'s 2.0, and poisonTouchBasic differs only in that ability.',
+    },
   },
   magicImmunityPoisonTouch: {
     desc: 'Magic Immunity does NOT block poison (poison is not a magical effect): 4 rolls × Res 5 (50% fail) = 2.0; melee blocked by def 1',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'b.ability.magicImmunity':
+        'Keep, and the absence is the rule under test: poison is realm-less, so Magic Immunity does not reach it. poisonTouchBasic differs only in this ability and pins the same 2.0, which is the control; the poison half is live at delta 2.',
+    },
   },
   poisonHighRes: {
     desc: 'Poison vs High Res: 1 atk (100% blocked) + Poison 4 vs Res 10 — immune',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: at Res 10 no poison roll can fail, so the result is 0 whatever the poison strength.',
+      'a.ability.poison':
+        'Keep. The discriminator is b.res, which candidates() does not enumerate: poisonTouchBasic differs only in b.res 10 -> 5 and pins 2.0. The absence is the subject - Resistance at or above the strength closes the roll.',
+    },
   },
   charmedPoisonCoM2: {
     desc: 'Charmed is a roll-only assignment to Resistance 100, even for realm-less Poison: melee is blocked and all four Poison rolls succeed.',
@@ -469,6 +560,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:0, hp:10, unitType:'hero', abilities: { charmed: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.poison':
+        'Keep. Inert as a consequence of the assertion: Charmed\'s roll-only assignment to Resistance 100 closes every poison save, so the poison strength cannot move a zero. Both live halves carry the claim - ablating b.abilities.charmed or b.unitType=hero returns 4.0.',
+    },
   },
   charmedPoisonMoM: {
     desc: 'DOS Charmed gives a hero +30 Resistance for rolls, including realm-less Poison.',
@@ -476,6 +571,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:0, hp:10, unitType:'hero', abilities: { charmed: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.poison':
+        'Keep. Inert as a consequence of the assertion: DOS Charmed\'s +30 Resistance for rolls closes every poison save, so the poison strength cannot move a zero. Both live halves carry the claim - ablating b.abilities.charmed or b.unitType=hero returns 4.0.',
+    },
   },
   poisonRanged: {
     desc: 'Poison + Ranged: 1 missile 100% hit + Poison 2 vs 0 def Res 5 — 1.0 ranged + 1.0 poison',
@@ -498,6 +597,10 @@ definePresets({
     b: { atk:0, figs:1, def:50, toBlkMod:70, res:5, hp:100,
       abilities: { stoningImmunity: true, deathImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A tokenisation artefact: the key names the roster record, its Poison 4 and its Multiple Gaze, none of which candidates() reaches through aUnitName. All three features it does enumerate are live - weakness at delta 2, and each immunity at delta 84.6.',
+    },
   },
   stoningTouchBasic: {
     desc: 'Stoning Touch: 1 atk (100% blocked) + Stoning -3 vs Res 5 — pFail 80%, E[dmg] = 0.8 × 10 = 8.0',
@@ -522,12 +625,22 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { stoningTouch: -3 } },
     b: { def:1, toBlkMod:70, res:13, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: Res 13 against a -3 modifier leaves effective Res 10, so no petrify roll can fail and the result is 0 whatever the modifier.',
+      'name-binds-nothing':
+        'Keep. The discriminator is b.res, which candidates() does not enumerate: stoningTouchBasic differs only in b.res 13 -> 5 and pins 8.0. The absence is the subject.',
+    },
   },
   stoningMultiFig: {
     desc: 'Stoning Multi-fig: 4 figs, Stoning -1 vs Res 5, 4 figs 5hp — pFail 60%, E[kills]=2.4, E[dmg]=12.0',
     a: { figs:4, atk:1, toHitMod:70, hp:5, abilities: { stoningTouch: -1 } },
     b: { figs:4, def:1, toBlkMod:70, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 12.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact - containsRun looks for \'stoning touch\' and the key says \'stoning multi fig\'. The feature is live at delta 12, and the discriminators the key does name, a.figs and b.figs, are outside candidates().',
+    },
   },
   stoningTouchMeleeAtkZeroMoM: {
     desc: 'Touch riders at melee strength 0 (MoM 1.31): BU_ProcessAttack aborts the call before its '
@@ -536,6 +649,12 @@ definePresets({
     a: { atk:0, toHitMod:70, hp:10, abilities: { stoningTouch: -7 } },
     b: { def:0, res:0, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: with the melee call aborted there is no rider dispatch at all, so nothing the fixture configures can move the zero.',
+      'a.ability.stoningTouch':
+        'Keep, and the absence is the rule under test. The discriminator is a.atk 0 together with the version: BU_ProcessAttack aborts before its rider dispatcher in MoM 1.31, and the CoM2 and Warlord twins stoningTouchMeleeAtkZeroCoM2/Warlord run the same card to 10.0 because ApplyAttack is issued unconditionally there.',
+    },
   },
   stoningTouchMeleeAtkZeroCoM2: {
     desc: 'Touch riders at melee strength 0 (CoM2): ApplyAttack is issued unconditionally and its riders '
@@ -575,12 +694,20 @@ definePresets({
     a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0.300 },
+    vacuity: {
+      'a.ability.stoningGaze':
+        'Keep. Inert as a consequence of the assertion: Stoning Immunity removes the kill roll, leaving only the hidden physical gaze 0.300, which the gaze modifier does not size. The immunity is the live half - stoningGazeBasic differs only in that ability and pins 8.060.',
+    },
   },
   stoningGazeMagicImmunity: {
     desc: 'Magic Immunity vs stoning gaze: MI blocks physical gaze (def 50) AND skips the stoning roll → 0 dmg',
     a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.stoningGaze':
+        'Keep. Inert as a consequence of the assertion, and a stronger one than stoningGazeImmunity\'s: Magic Immunity removes the kill roll and raises Defense to 50, so even the hidden physical component is blocked and the modifier has nothing left to size. The immunity is live at delta 8.06.',
+    },
   },
   deathGazeBasic: {
     desc: 'Death Gaze: Gaze -3 + 1 ranged vs 1 fig Res 5, 10 hp — death 8.0 + physical 0.06 = 8.06',
@@ -599,48 +726,84 @@ definePresets({
     a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { deathImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0.300 },
+    vacuity: {
+      'a.ability.deathGaze':
+        'Keep. Inert as a consequence of the assertion: Death Immunity removes the kill roll, leaving only the hidden physical gaze 0.300, which the gaze modifier does not size. The immunity is live at delta 7.76.',
+    },
   },
   deathGazeMagicImmunity: {
     desc: 'Magic Immunity blocks Death Gaze kill AND physical gaze ranged (def set to 50) — 0 dmg',
     a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.deathGaze':
+        'Keep. Inert as a consequence of the assertion: Magic Immunity removes the kill roll and raises Defense to 50, so the hidden physical component goes too and the modifier has nothing left to size. The immunity is live at delta 8.06.',
+    },
   },
   deathGazeStoningImmunityNotBlocked: {
     desc: 'Stoning Immunity does NOT block Death Gaze — full effect (8.0 + 0.06)',
     a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:5, hp:10, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 8.060 },
+    vacuity: {
+      'b.ability.stoningImmunity':
+        'Keep, and the absence is the rule under test: the two kill loops take separate immunities, so Stoning Immunity does not reach a death gaze. deathGazeBasic differs only in this ability and pins the same 8.060, which is the control; the gaze half is live at delta 2.91.',
+    },
   },
   deathGazeHighRes: {
     desc: 'Death Gaze vs High Res: Death Gaze -3 vs Res 13 (effective 10) — kill blocked, physical 0.3 (unreduced)',
     a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { res:13, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.300 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: Res 13 against a -3 modifier leaves effective Res 10, so no kill roll can fail and only the hidden physical 0.300 remains.',
+      'a.ability.deathGaze':
+        'Keep. The discriminator is b.res, which candidates() does not enumerate: deathGazeBasic differs only in b.res 13 -> 5 and pins 8.060. The absence is the subject, and 0.300 rather than 0 is the second half of the claim - a blocked kill does not reduce the physical component.',
+    },
   },
   combinedStoningDeathGaze: {
     desc: 'Chaos-Spawn-style combined gaze: type 104, strength 1, special value 3 vs Res 5, 10 hp — each kill roll 80% fail, so 1−(1−0.8)(1−0.8)=0.96 chance of 10 dmg. Type 104 delivers its strength as doom damage rather than rolling it, so the other 4% takes exactly 1: 0.96×10 + 0.04×1 = 9.64.',
     a: { rtbType:'gaze_multiple', rtb:1, hp:10, abilities: { stoningGaze: -3, deathGaze: -3 } },
     b: { res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 9.640 },
+    vacuity: {
+      'every-feature-inert':
+        'Not a defect of the fixture but of one-at-a-time ablation. dosGazeAbilityValues (combat_special_attacks.js:210-211) derives both stoningGaze and deathGaze from the one shared modifier and the rangedType, so the two entries are two views of one byte: remove either and the other still supplies the magnitude. Removing both does move the number - the --interactions probe reports the pair as non-additive.',
+      'a.ability.deathGaze':
+        'Keep. Same shared byte. The discriminator is rtbType gaze_multiple, which candidates() does not enumerate: it is type 104, the only type that runs both kill loops and the only one that delivers its strength as doom damage rather than rolling it.',
+    },
   },
   hiddenGazePerAttackerFigure: {
     desc: 'The hidden gaze component is rolled once per ATTACKING figure (it sits inside BU_ProcessAttack\'s per-figure loop): 4 figs × 3 str × 100% hit vs Defense 0 = 12. Would be 3 if it fired only once.',
     a: { rtbType:'gaze_stoning', rtb:3, figs:4, atk:0, hp:10, toHitRtbMod:70, abilities: {  } },
     b: { atk:0, def:0, hp:20, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 12 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. The discriminators are a.figs and a.rtb, which candidates() does not enumerate - 4 figures at strength 3 is the 12, and the claim is that it would be 3 if the hidden component fired once per attack. The one feature enumerated, b.abilities.stoningImmunity, is live at delta 8 and is there to isolate the hidden component from the kill rolls.',
+    },
   },
   hiddenGazeStoningKillsPerDefenderFigure: {
     desc: 'The kill rolls, by contrast, are once per DEFENDING figure and resolve once per attack regardless of attacker figures. 2 attacker figs vs 4 defender figs × 5 hp; Stoning −5 vs Res 5 → effRes 0, every figure dies = 20 (the physical 2 is absorbed by the cap). Scaling kills by the attacker instead would kill only 2 figures → 12.',
     a: { rtbType:'gaze_stoning', rtb:1, figs:2, atk:0, hp:10, toHitRtbMod:70, abilities: { stoningGaze: -5 } },
     b: { figs:4, atk:0, def:0, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 20 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact - containsRun looks for \'stoning gaze\' and the key says \'gaze stoning\'. The feature is live at delta 8.125, and the figure counts the key does name are outside candidates().',
+    },
   },
   hiddenGazeIgnoresWeaponImmunity: {
     desc: 'Weapon Immunity can never apply to a gaze — the immunity-mask builder admits bit 0x100 only for ranged_type/10 < 3, and gaze is 103-105. Normal-unit attacker with a normal weapon vs Weapon Immunity: still the full 5, not the Defense-10 floor.',
     a: { rtbType:'gaze_stoning', rtb:5, atk:0, hp:10, toHitRtbMod:70, unitType:'normal', abilities: {  } },
     b: { atk:0, def:0, hp:20, unitType:'normal', abilities: { stoningImmunity: true, weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 5 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: the immunity-mask builder admits the Weapon bit only for ranged_type/10 < 3 and gaze is 103-105, so Weapon Immunity can never reach a gaze. The other half is live - ablating b.abilities.stoningImmunity moves 5 to 20, which shows the fixture is otherwise wired up.',
+    },
   },
   // The hidden component is the shared `.ranged` byte, and the recompute floors that byte once
   // with an ungated `if (bu->ranged < 0) bu->ranged = 0` (131:0x90B2F 160:= com1:0x90B54). A
@@ -652,6 +815,12 @@ definePresets({
     a: { rtbType:'gaze_stoning', rtb:0, atk:0, hp:10, level:'champion', toHitRtbMod:70, abilities: {  } },
     b: { atk:0, def:0, res:50, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the level ladder never reaches this record, so no level the fixture sets can move the zero.',
+      'a.level=champion':
+        'Keep, and the absence is the rule under test. Every ranged step of MoM\'s ladder is gated `if (bu->ranged > 0)`, so Champion\'s +3 never reaches a gaze template shipping strength 0 and 1.31\'s effective-strength gaze test then suppresses the gaze outright. doomGazeLevelLadderMoM is the positive twin, where the same ladder does reach a gaze whose byte carries strength; run the ladder ungated and this fixture returns 3.',
+    },
   },
   // One byte, one gate (F135). Each preset below names the test its own block makes on
   // `bu->ranged`, and each is red against the static `baseGazeRanged > 0` gate the gaze arm
@@ -683,6 +852,12 @@ definePresets({
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the record is not live enough for the bonus to attach, so nothing the fixture configures can move the zero.',
+      'a.ability.holyBonus':
+        'Keep, and the absence is the rule under test. CoM 1\'s Holy Bonus ranged half is `if (bu->ranged > 0) bu->ranged += cl` (com1:0x900E8), a live-strength test on the shared byte rather than a type test, so a Missile record typed at strength 0 takes nothing. Treating any typed slot as live, as the general dead-slot rule does, hands it Holy Bonus 2 and returns 2.',
+    },
   },
   hiddenGazeKeepsFocusMagicRaiseCoM: {
     desc: 'CoM 1: Focus Magic\'s arm 1 admits a gaze template with no strength test (com1:0x8F825, +3 at com1:0x8F82D), so a stoning gaze shipping strength 0 — Gorgons on the shipped roster — reaches 3, and the terminal floor keeps it for 3 hidden damage at 100% To Hit vs Defense 0. Res 50 puts the petrify roll out of reach. Reading the template\'s base strength at the floor throws the +3 away for 0, which is also what removing Focus Magic gives.',
@@ -700,24 +875,44 @@ definePresets({
     a: { rtbType:'gaze_multiple', rtb:4, hp:10 },
     b: { def:10, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 4 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminators are rtbType and rtb, which candidates() does not enumerate: type 104 delivers its shared strength as exact doom damage with no roll and no Defense subtraction, and doomGazeKill differs only in a.rtb 4 -> 12 and pins 10. Res 10 and def 10 are there to suppress the kill rolls and the physical component so the doom total is the only thing measured.',
+    },
   },
   doomGazeMagicImmunity: {
     desc: 'Doom Gaze 4 vs Magic Immune 10 hp — doom gaze ignores Magic Immunity, exact 4 damage.',
     a: { rtbType:'gaze_multiple', rtb:4, hp:10 },
     b: { def:10, res:10, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 4 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Magic Immunity has nothing to act on here, so the one feature the fixture adds to doomGazeBasic cannot move the number.',
+      'b.ability.magicImmunity':
+        'Keep, and the absence is the rule under test: doom damage is assigned rather than rolled, so Magic Immunity has no roll to close and no Defense term to raise against it. doomGazeBasic differs only in this ability and pins the same 4, which is the control.',
+    },
   },
   doomGazeKill: {
     desc: 'Doom Gaze 12 vs 10 hp — exact 10 damage (capped at total HP), kills the unit.',
     a: { rtbType:'gaze_multiple', rtb:12, hp:10 },
     b: { def:10, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 10 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminator is a.rtb, which candidates() does not enumerate: strength 12 against a 10 HP pool pins the cap, and doomGazeBasic differs only in a.rtb 12 -> 4 and pins 4. The expectation sits at the pool by design - the cap is the subject - so the structural expectationsAtHpCap flag is expected here.',
+    },
   },
   doomGazeChaosSpawn: {
     desc: 'Chaos Spawn gaze suite: type 104 with strength 4 and special value 4 — doom exact 4; stoning/death each 20% per figure at the shared -4, combined into one joint kill roll (a figure dies once if it fails either), so pKill = 1 - 0.8*0.8 = 0.36.',
     a: { rtbType:'gaze_multiple', rtb:4, hp:10, abilities: { stoningGaze: -4, deathGaze: -4 } },
     b: { figs:4, res:12, hp:5 },
     expected: { dmgToA: 0, dmgToB: 11.133 },
+    vacuity: {
+      'every-feature-inert':
+        'Not a defect of the fixture but of one-at-a-time ablation. dosGazeAbilityValues (combat_special_attacks.js:210-211) derives stoningGaze and deathGaze from the one shared modifier and the rangedType, so the two entries are two views of one byte and removing either leaves the other supplying the magnitude.',
+      'name-binds-nothing':
+        'Keep. The discriminators are rtbType gaze_multiple, rtb, b.figs and b.res, none of which candidates() enumerates. It is the paired kill-roll test to doomGazeBasic\'s isolated doom damage: the same type 104, with Res 12 low enough that the shared -4 leaves a 20% failure per loop and the two loops join into one 0.36 kill chance per figure.',
+    },
   },
   // The doom damage's figure bound is the sharpest MoM/CoM2 divergence in the gaze block, so the
   // three presets below are one paired set: the DOS builds assign `hits = attack_strength` inside
@@ -730,6 +925,10 @@ definePresets({
     a: { rtbType:'gaze_multiple', rtb:4, figs:3, hp:10 },
     b: { def:10, res:10, hp:50 },
     expected: { dmgToA: 0, dmgToB: 12 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminators are a.figs and the version, which candidates() does not enumerate. It is one of a three-preset set: the DOS builds assign hits = attack_strength inside BU_ProcessAttack\'s per-attacker-figure loop, so 3 figures deal 12, and doomGazeOncePerAttackCoM2 runs the same shape to 4 because CoM2 passes a literal figure count of 1.',
+    },
   },
   doomGazePerAttackerFigureCoM: {
     desc: 'CoM 6.08 shares MoM\'s per-figure doom delivery — its automatic-damage arm sits at the same 0x9A1E6 site inside the same loop — so 3 figs x strength 4 = 12 here too. CoM 1 reaches the arm through its own marker test, which the Multiple Gaze setup always sets, so the full strength is taken rather than the halved one.',
@@ -737,6 +936,10 @@ definePresets({
     a: { rtbType:'gaze_multiple', rtb:4, figs:3, hp:10 },
     b: { def:10, res:10, hp:50 },
     expected: { dmgToA: 0, dmgToB: 12 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. The discriminators are a.figs and the version, which candidates() does not enumerate. It is the CoM 1 member of the same three-preset set, and it carries its own claim beyond doomGazePerAttackerFigureMoM\'s: CoM 1 reaches the automatic-damage arm through a marker test the Multiple Gaze setup always sets, so the full strength is taken rather than the halved one.',
+    },
   },
   doomGazeOncePerAttackCoM2: {
     desc: 'CoM2 passes a literal figure count of 1 for Doom Gaze, so the same 3-figure gazer at strength 4 deals 4, not the 12 the DOS members of this set report. The two kill-roll gazes beside it do pass LivingFigures, which is why this is a Doom-Gaze-only difference.',
@@ -756,18 +959,32 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { lifeSteal: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { deathImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.lifeSteal':
+        'Keep. Inert as a consequence of the assertion rather than despite it: Death Immunity closes the drain, so the drain\'s own modifier cannot move an already-zero result. The immunity is the live half at delta 3.6, which is lifeStealBasic\'s number.',
+    },
   },
   lifeStealMagicImmune: {
     desc: 'Life Steal vs Magic Immunity: Life Steal -3 vs Magic Immune — no damage',
     a: { atk:1, toHitMod:70, hp:10, abilities: { lifeSteal: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.lifeSteal':
+        'Keep. Inert as a consequence of the assertion: Magic Immunity closes the drain, so its modifier cannot move a zero. The immunity is the live half at delta 3.6, which is lifeStealBasic\'s number.',
+    },
   },
   lifeStealHighRes: {
     desc: 'Life Steal vs High Res: Life Steal -3 vs Res 13 (effective 10) — immune',
     a: { atk:1, toHitMod:70, hp:10, abilities: { lifeSteal: -3 } },
     b: { def:1, toBlkMod:70, res:13, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: Res 13 against a -3 modifier leaves effective Res 10, which no drain roll can beat, so the result is 0 whatever the modifier.',
+      'a.ability.lifeSteal':
+        'Keep. The discriminator is b.res, which candidates() does not enumerate; lifeStealNegativeRes and lifeStealNoMod are the same shape at Res 0 and modifier 0. The absence is the subject - Resistance at or above the reach of the roll closes it.',
+    },
   },
   lifeStealNoMod: {
     desc: 'Life Steal 0 modifier vs Res 5: E[dmg] = sum(1..5)/10 = 1.5',
@@ -792,24 +1009,42 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { deathImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.deathTouch':
+        'Keep. Inert as a consequence of the assertion: Death Immunity closes the kill roll, so its modifier cannot move a zero. deathTouchBasic differs only in this immunity and pins 8.0, and ablating the immunity here returns that same 8.0.',
+    },
   },
   deathTouchMagicImmune: {
     desc: 'Death Touch vs Magic Immunity: Death Touch -3 vs Magic Immune — no damage',
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.deathTouch':
+        'Keep. Inert as a consequence of the assertion: Magic Immunity closes the kill roll, so its modifier cannot move a zero. The immunity is the live half at delta 8, which is deathTouchBasic\'s number.',
+    },
   },
   deathTouchHighRes: {
     desc: 'Death Touch vs High Res: Death Touch -3 vs Res 13 (effective 10) — immune',
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:13, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: Res 13 against a -3 modifier leaves effective Res 10, so no kill roll can fail and the result is 0 whatever the modifier.',
+      'a.ability.deathTouch':
+        'Keep. The discriminator is b.res, which candidates() does not enumerate: deathTouchBasic differs only in b.res 13 -> 5 and pins 8.0. The absence is the subject.',
+    },
   },
   deathTouchStoningImmunityNotBlocked: {
     desc: 'Stoning Immunity does NOT block Death Touch — full effect 8.0',
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 8.000 },
+    vacuity: {
+      'b.ability.stoningImmunity':
+        'Keep, and the absence is the rule under test: the petrify and death kill loops take separate immunities, so Stoning Immunity does not reach Death Touch. deathTouchBasic differs only in this ability and pins the same 8.0, which is the control; the touch half is live at delta 8.',
+    },
   },
   deathTouchMultiFig: {
     desc: 'Death Touch Multi-fig: 4 figs, Death Touch -1 vs Res 5, 4 figs 5hp — pFail 60%, E[kills]=2.4, E[dmg]=12.0',
@@ -822,6 +1057,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { deathTouch: -3 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { righteousness: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.deathTouch':
+        'Keep. Inert as a consequence of the assertion: Righteousness puts effective Resistance at 32, out of reach of any roll, so the touch modifier cannot move a zero. deathTouchBasic differs only in Righteousness and pins 8.0, and ablating it here returns that same 8.0.',
+    },
   },
   firstStrikeKillsBeforeCounter: {
     desc: 'First Strike: 1-fig A (atk 10, 100% hit) kills 1-fig B (10hp) before B can counter — dmgToA=0',
@@ -834,6 +1073,10 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, toHitMod:70, hp:10, abilities: { negateFirstStrike: true } },
     expected: { dmgToA: 5, dmgToB: 10 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep. Inert as a consequence of the assertion: Negate First Strike cancels it, so with both on the exchange is simultaneous and removing First Strike as well changes nothing. firstStrikeKillsBeforeCounter differs only in the negation and pins dmgToA 0, and ablating the negation here returns that same 0.',
+    },
   },
   firstStrikeMultiFig: {
     desc: 'First Strike Multi-fig: A (4 figs × 1 atk, 100% hit) kills 1 B fig, B (2→1 figs × 2 atk) counters for 2',
@@ -846,6 +1089,12 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:2, toHitMod:70, hp:10 },
     expected: { dmgToA: 2, dmgToB: 1 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that with no figure killed the exchange is indistinguishable from a simultaneous one, so nothing the fixture configures can move it.',
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test. First Strike only matters through a figure that dies before it can counter; A\'s 1 attack cannot kill B\'s 10 HP figure, so B counters for its full 2 exactly as it would without the ability. firstStrikeKillsBeforeCounter is the positive arm at atk 10.',
+    },
   },
   firstStrikeIgnoredOnRanged: {
     desc: 'First Strike has no effect on ranged attacks (no counter exists anyway)',
@@ -853,6 +1102,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: a ranged attack draws no counter, so there is no counter for First Strike to pre-empt and nothing the fixture configures can move the result.',
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test. The discriminator is rtbType, which candidates() does not enumerate - the same ability on the melee path is what firstStrikeKillsBeforeCounter measures.',
+    },
   },
   firstStrikeCapCoM: {
     desc: 'First Strike cap (CoM): B top figure has 30hp (>24) so FS is simultaneous — B counters with all 6 atk despite dying',
@@ -860,6 +1115,12 @@ definePresets({
     a: { atk:30, toHitMod:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:6, toHitMod:70, hp:30 },
     expected: { dmgToA: 6, dmgToB: 30 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the CoM cap suspends First Strike for this fixture, so the ability has no effect left to remove.',
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test. B\'s top figure holds 30 HP, above CoM\'s 24 cutoff, so First Strike is simultaneous and B counters with all 6 despite dying. firstStrikeCapCoM2 runs the same card in CoM2, where the cap is gone, and pins dmgToA 0. version-dead is expected - firstStrikeCapIgnoresThrownCoM is the only other com_6.08 First Strike preset and it asserts the same suspension.',
+    },
   },
   firstStrikeCapCoM2: {
     desc: 'First Strike cap removed (CoM2): A (atk 30) kills B (30hp) before counter — dmgToA=0',
@@ -874,6 +1135,12 @@ definePresets({
     a: { atk:30, rtbType:'thrown', rtb:6, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:1, toHitMod:70, hp:30 },
     expected: { dmgToA: 1, dmgToB: 30 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the CoM cap suspends First Strike for this fixture, so the ability has no effect left to remove.',
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test. The cutoff reads the top figure\'s HP at the start of the exchange, so the 6 pending Thrown damage does not drop the 30-HP figure under CoM\'s 24 and B still counters for 1. firstStrikeCapRemovedThrownCoM2 runs the same shape in CoM2, where the cap is gone, and pins dmgToA 0. version-dead is expected - firstStrikeCapCoM is the only other com_6.08 First Strike preset and it asserts the same suspension.',
+    },
   },
   firstStrikeCapRemovedThrownCoM2: {
     desc: 'CoM2: no 24-HP First Strike cutoff after the same 6-damage Thrown attack',
@@ -919,6 +1186,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.haste':
+        'Keep, and the absence is the rule under test: the claim is that Haste does not repeat this attack, so ablating Haste is expected to leave the single 1.0 standing. The live half is a.unitType=hero at delta 1, which is the gate combat.js:1225 actually tests, and hasteMagicRangedHeroRepeatsMoM160 runs the same card in CP 1.60 to 2.0.',
+    },
   },
   hasteMagicRangedHeroRepeatsMoM160: {
     desc: 'MoM CP 1.60 added the missing hero test, so the same hero\'s magical ranged attack is repeated → 2.0 damage',
@@ -927,6 +1198,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.unitType=hero':
+        'Keep. Inert as a consequence of the assertion: CP 1.60 added the missing hero test, so a hero is repeated exactly like a non-hero and removing the hero-ness cannot move the number - that sameness is the claim. Haste is the live half at delta 1, and hasteMagicRangedHeroNoRepeatMoM131 is the 1.31 arm at 1.0.',
+    },
   },
   hasteThrownDoubles: {
     desc: 'Haste doubles thrown (+ hasted melee): thrown 2 + melee 2 → 4.0 total damage',
@@ -939,6 +1214,10 @@ definePresets({
     a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { haste: true, stoningGaze: -3 } },
     b: { res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.060 },
+    vacuity: {
+      'a.ability.haste':
+        'Keep, and the absence is the rule under test: Haste does not repeat a gaze, so the result equals stoningGazeBasic\'s 8.060 with or without it. The gaze half is live at delta 2.91, which shows the fixture is otherwise wired up.',
+    },
   },
   hasteCounterDoublesMoM: {
     desc: 'MoM: Hasted defender doubles counter-attack → 2.0 damage to A',
@@ -953,12 +1232,22 @@ definePresets({
     a: { atk:1, toHitMod:70, def:0, hp:20 },
     b: { atk:1, toHitMod:70, def:0, hp:20, abilities: { haste: true } },
     expected: { dmgToA: 1.000, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that CoM 1 does not repeat the counter, so the only feature the fixture adds to a plain exchange cannot move it.',
+      'b.ability.haste':
+        'Keep, and the absence is the rule under test. CoM 1 replaces MoM\'s counter-repeat block with an unconditional jump at 0x99849, so a hasted defender counters once. hasteCounterDoublesMoM is the MoM arm of the same card at dmgToA 2.0. version-dead is expected - this is the only com_6.08 preset that puts Haste on the defender.',
+    },
   },
   hasteFirstStrikeSecondConcurrent: {
     desc: 'FS+Haste: 1st strike deals 1 to B (survives) → 2nd strike + counter simultaneous → A=1, B=2',
     a: { atk:1, toHitMod:70, def:0, hp:10, abilities: { firstStrike: true, haste: true } },
     b: { atk:1, toHitMod:70, def:0, hp:10 },
     expected: { dmgToA: 1.000, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test: A\'s first strike does not kill B, so the second strike and B\'s counter resolve together and the totals match a First-Strike-less exchange. The ordering claim is the point - the counter is not deferred behind both hasted strikes - and Haste is the live half at delta 1.',
+    },
   },
   hasteComplexThrownDefenderGaze: {
     desc: 'Haste FS+Thrown vs Hasted Gaze: WoF, Imm, Fear, Poison (MoM 1.31)',
@@ -1005,6 +1294,12 @@ definePresets({
     b: { figs:1, def:0, res:0, hp:10 },
     nodeAura: 'nature',
     expected: { dmgToA: 0, dmgToB: 1.200 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the assertion is that no bonus is granted, and every ablation available also grants no bonus - dropping the realm makes the unit non-Fantastic, dropping the aura makes the node neutral.',
+      'combat.nodeAura':
+        'Keep, and the absence is the rule under test: the aura only pays a unit of its own realm. nodeAuraChaos differs only in nodeAura nature -> chaos and pins 1.800 against this 1.200.',
+    },
   },
   chaosSurgeMeleeCoM2: {
     desc: 'Chaos Surge (CoM2): Chaos creature gains +3 melee from one copy. atk 1 -> 4',
@@ -1054,6 +1349,12 @@ definePresets({
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the assertion is that no bonus is granted, and both ablations available also grant none - dropping the realm makes the unit non-Fantastic, dropping the surge removes the source.',
+      'combat.chaosSurge':
+        'Keep, and the absence is the rule under test: the surge pays only Chaos creatures. chaosSurgeMeleeCoM2 is the same card at unitType fantastic_chaos and pins 7.000 against this 1.000.',
+    },
   },
   chaosSurgeMeleeMoM: {
     desc: 'Chaos Surge (MoM): Chaos creature gains +2 melee from one copy. atk 1 -> 3',
@@ -1095,6 +1396,10 @@ definePresets({
     b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_chaos' },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'combat.chaosSurge':
+        'Keep, and the absence is the rule under test: MoM\'s surge has no resistance arm, so the poison saves are unchanged. chaosSurgeResistanceCoM2 is the same shape in CoM2, where the +2 Resistance exists, and pins 1.600 against this 2.000. The poison half is live at delta 2.',
+    },
   },
   chaosSurgeStackingMoM: {
     desc: 'Chaos Surge (MoM): multiple copies do not stack. three copies still make atk 1 -> 3',
@@ -1111,6 +1416,10 @@ definePresets({
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'combat.chaosSurge':
+        'Keep, and the absence is the rule under test - an ordering exclusion, not incidental inertness. The realm test at 131:0x8F138 runs before every Chaos Channels realm write inside the BU_Apply_Specials call at 131:0x8F2A2, so the surge sees a non-Chaos unit. chaosSurgeChaosChannelsBreathCoM runs the same card in CoM 1, which orders the two the other way, and pins 10.000 against this 3.000. The breath half is live at delta 2.',
+    },
   },
   chaosSurgeChaosChannelsBreathCoM: {
     desc: 'Chaos Surge (CoM 1): Chaos Channels Fire Breath IS boosted (the constructor runs Chaos Surge after BU_Apply_Specials, unlike MoM). melee 1 -> 4, breath 4 -> 6',
@@ -1127,6 +1436,12 @@ definePresets({
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the surge cannot see the realm Chaos Channels grants, so neither the grant nor the surge alone can move the melee 5.',
+      'combat.chaosSurge':
+        'Keep, and the absence is the rule under test - the same ordering exclusion as chaosSurgeChaosChannelsBreathMoM, on the demon-skin armor arm that makes the unit Chaos at 131:0x8F6FE. chaosSurgeChaosChannelsArmorCoM runs the same card in CoM 1 and pins 8.000; chaosSurgeMeleeMoM shows a base-Chaos unit does take the +2.',
+    },
   },
   chaosSurgeChaosChannelsArmorCP: {
     desc: 'Chaos Surge (CP 1.60): same ordering as 1.31 — realm test 160:0x8F138, realm writes inside the BU_Apply_Specials call at 160:0x8F2A2 — so melee 5 stays 5. The armor fix that separates CP from 1.31 touches Defense, not this gate.',
@@ -1135,6 +1450,12 @@ definePresets({
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the surge cannot see the realm Chaos Channels grants, so neither the grant nor the surge alone can move the melee 5.',
+      'combat.chaosSurge':
+        'Keep, and the absence is the rule under test: CP 1.60 keeps 1.31\'s ordering - realm test at 160:0x8F138, realm writes inside the BU_Apply_Specials call at 160:0x8F2A2 - and the CP armor fix touches Defense, not this gate. chaosSurgeChaosChannelsArmorCoM pins 8.000 on the same card in CoM 1. version-dead is literally true and uninformative here: this is the only mom_cp_1.60.00 preset that configures chaosSurge at all, so CP\'s positive melee bonus is unasserted.',
+    },
   },
   chaosSurgeChaosChannelsArmorCoM: {
     desc: 'Chaos Surge (CoM 1): the same fixture is boosted, because CoM 1 calls BU_Apply_Specials at com1:0x8F0E8 before its Chaos Surge block at com1:0x8F110. melee 5 -> 8',
@@ -1175,6 +1496,10 @@ definePresets({
     b: { hp:10 },
     chaosSurge: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'combat.chaosSurge':
+        'Keep, and the absence is the rule under test: the surge\'s melee arm does not reach Doom Gaze. chaosSurgeMeleeCoM2 is the same realm and surge on a melee card and pins 7.000, so the surge is otherwise live in this version. The gaze half is live at delta 4.',
+    },
   },
   darknessDeathVsLife: {
     desc: 'Darkness: Death 4atk/3def→5/4, Life 4atk/3def→3/2, mirror match',
@@ -1251,6 +1576,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { eternalNight: true, poison:4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.eternalNight':
+        'Keep, and the absence is the rule under test: MoM\'s Eternal Night carries no enemy-only Resistance penalty, so the poison saves are unchanged at 2.000. The poison half is live at delta 2.',
+    },
   },
   eternalNightDarknessCoM: {
     desc: 'Eternal Night (CoM): Death unit gets normal Darkness melee bonus, not doubled. atk 1 -> 2',
@@ -1311,6 +1640,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     rangedCheck: true, rangedDist: 2,
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'b.ability.eternalNight':
+        'Keep. Inert as a consequence of the assertion: the claim is that this attacker is exempt from the Poor Vision penalty, so removing the source of the penalty is expected to leave the 4 standing. The exemption is measured by the live halves - ablating a.unitType=fantastic_death charges the -2 and returns 2, which is exactly the reading of the post-conversion realm the fixture rules out.',
+    },
   },
   eternalNightThrownUnaffectedWarlord: {
     desc: 'Eternal Night (Warlord): -2 ranged penalty does not apply to thrown. Melee 1 + thrown 3 at 100% hit vs def 0 = 4 dmg',
@@ -1318,6 +1651,12 @@ definePresets({
     a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:3, type:'thrown' } }, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the penalty never reaches a thrown attack, so the only feature the fixture adds cannot move the total.',
+      'b.ability.eternalNight':
+        'Keep, and the absence is the rule under test: the -2 is a ranged penalty and the thrown channel is outside it, so melee 1 + thrown 3 stays 4 with or without Eternal Night.',
+    },
   },
   armorPiercingMelee: {
     desc: 'Armor Piercing Melee: 2 atk 100% hit vs def 3 100% block — AP halves and rounds down def to 1, dmg=1',
@@ -1343,6 +1682,12 @@ definePresets({
     a: { atk:1, toHitMod:70, rtbType:'lightning', rtb:2, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:2, toBlkMod:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the second source of Armor Piercing adds nothing, so removing it leaves the number where it was.',
+      'a.ability.armorPiercing':
+        'Keep, and the absence is the rule under test: Lightning Breath already carries Armor Piercing on the thrown path (combat_effects.js:996-997), so the ability is a second source of one flag and Defense is halved once, not twice. Halving twice would take def 2 to 0 and return 2 rather than 1. lightningResistKeepsAbilityAP differs only by adding b.lightningResist and pins the same 1, which is that fixture\'s control.',
+    },
   },
   armorPiercingDefenderCounter: {
     desc: 'Defender Armor Piercing: A 1 atk blocked by B def 1; B 2 atk counter halves A def 2→1, dmg=1',

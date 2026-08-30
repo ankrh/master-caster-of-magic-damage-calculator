@@ -14,18 +14,30 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10, weapon: 'magic' },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 10 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: a non-normal weapon fails the test at combat_special_attacks.js:601, so no Weapon Immunity marker is set and the floor of 10 at combat_effects.js:826 never runs. a.weapon=magic is the live half - ablating it restores exactly weaponImmunityMelee\'s card, which pins 0 against this 10.',
+    },
   },
   weaponImmunityFantastic: {
     desc: 'Weapon Immunity bypassed by fantastic unit: 10 hits vs 0 def → full damage',
     a: { atk:10, toHitMod:70, hp:10, unitType: 'fantastic_chaos' },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 10 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: the marker is offered only against a Normal-type attacker (combat_special_attacks.js:602), so a fantastic attacker never sets it and the floor of 10 at combat_effects.js:826 never runs. The unit type is the live half - ablating it restores exactly weaponImmunityMelee\'s card, which pins 0 against this 10.',
+    },
   },
   weaponImmunityHero: {
     desc: 'Weapon Immunity bypassed by hero: 10 hits vs 0 def → full damage',
     a: { atk:10, toHitMod:70, hp:10, unitType: 'hero' },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 10 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: a hero is not a Normal-type attacker, so the same test at combat_special_attacks.js:602 that weaponImmunityFantastic takes on the fantastic side refuses the marker here and the floor of 10 never runs. a.unitType=hero is the live half - ablating it restores exactly weaponImmunityMelee\'s card, which pins 0 against this 10.',
+    },
   },
   weaponImmunityCounter: {
     desc: 'Weapon Immunity on attacker: A has WI (def 0→10), B normal counter 10 atk all blocked',
@@ -53,6 +65,12 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 10 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Weapon Immunity does not reach a magic ranged attack, so the only feature the fixture adds cannot move the number. The discriminator is a.rtbType, which candidates() does not enumerate.',
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: the ranged branch offers the marker only for a physical shot - missile or boulder (combat_effects.js:964, 983) - and magic_c is neither. weaponImmunityRangedMissile differs only in a.rtbType and pins 0 against this 10.',
+    },
   },
   // --- Weapon Immunity (version-specific) ---
   weaponImmunityThrownPatched: {
@@ -90,6 +108,12 @@ definePresets({
     aUnitName: 'Trireme',
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 1.800 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that a generic hull bypasses Weapon Immunity in 1.31, so the only feature the fixture adds cannot move the number. The discriminator is aUnitName, which candidates() does not reach.',
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: 1.31 marks generic hulls as carrying a magical weapon, so the marker is refused at combat_special_attacks.js:605 and the floor of 10 at combat_effects.js:826 never runs. weaponImmunityGenericPatched is the same card in CP 1.60, where that gate is gone, and pins 0 against this 1.800.',
+    },
   },
   weaponImmunityGenericPatched: {
     desc: 'Weapon Immunity vs Generic unit (MoM CP 1.60): fix — WI applies, def 0→10, 100% block → 0 dmg',
@@ -105,6 +129,12 @@ definePresets({
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that a generic hull bypasses Weapon Immunity in 1.31 on the ranged path too, so the only feature the fixture adds cannot move the number. The discriminator is aUnitName, which candidates() does not reach.',
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: a boulder is a physical shot and passes the ranged branch\'s own test (combat_effects.js:964, 983), so it is the generic gate at combat_special_attacks.js:605 alone that refuses the marker here. weaponImmunityGenericCatapultPatched is the same card in CP 1.60, where that gate is gone, and pins 0 against this 3.000.',
+    },
   },
   weaponImmunityGenericCatapultPatched: {
     desc: 'Weapon Immunity vs Generic Catapult boulder (MoM CP 1.60): fix — WI applies, def 0→10, 100% block → 0 dmg',
@@ -129,6 +159,12 @@ definePresets({
     b: { def:2, toBlkMod:70, hp:10, abilities: { missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Missile Immunity does not cover a boulder, so the only feature the fixture adds cannot move the number. The discriminator is a.rtbType, which candidates() does not enumerate.',
+      'b.ability.missileImmunity':
+        'Keep, and the absence is the rule under test: the immunity mask reads missileAttack, which the ranged branch sets from rangedType === \'missile\' alone (combat_effects.js:963, 980), so a boulder never opens the missile arm at combat_effects.js:781 and the defense stays at its own 2. missileImmunityMissile differs only in a.rtbType and pins 0 against this 1.000.',
+    },
   },
   missileImmunityMagic: {
     desc: 'Missile Immunity does NOT apply to magic ranged: def stays 0, 3 atk 100% hit → 3 dmg',
@@ -136,12 +172,24 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Missile Immunity does not cover a magic ranged attack, so the only feature the fixture adds cannot move the number. The discriminator is a.rtbType, which candidates() does not enumerate.',
+      'b.ability.missileImmunity':
+        'Keep, and the absence is the rule under test: magic_c is not a missile, so missileAttack stays false (combat_effects.js:963, 980) and the mask arm at combat_effects.js:781 never opens. missileImmunityMissile is the positive arm at the same shot strength, though not a one-value sibling - it also sets b.def 2.',
+    },
   },
   missileImmunityMelee: {
     desc: 'Missile Immunity does NOT apply to melee: def stays 0, 3 atk 100% hit → 3 dmg',
     a: { atk:3, toHitMod:70, hp:10, abilities: {} },
     b: { def:0, toBlkMod:70, hp:10, abilities: { missileImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Missile Immunity does not reach a melee attack, so the only feature the fixture adds cannot move the number. The discriminator is that the attacker has melee only, which candidates() does not enumerate.',
+      'b.ability.missileImmunity':
+        'Keep, and the absence is the rule under test: the mask is gated on isRanged before it looks at any immunity bit (combat_effects.js:780), and the melee branch builds a descriptor that sets neither isRanged nor missileAttack (combat_effects.js:952-961). missileImmunityMissile is the positive arm, though not a one-value sibling - it also sets b.def 2.',
+    },
   },
   missileImmunityArmorPiercing: {
     desc: 'Missile Immunity after Armor Piercing: AP halves first, then MI raises to 50 → all blocked',
@@ -158,6 +206,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:20, abilities: { weaponImmunity: true, missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'b.ability.missileImmunity':
+        'Keep, and the absence is the rule under test: 1.31 runs immunityMask before weaponImmunityMark (combat_effects.js:846-847), and both write the single defenseSpecial slot, so the Weapon marker replaces the Missile one and the immunity\'s 50 is never cashed in - what is left is the floor of 10 (combat_effects.js:853). The immunity has to be on the card for the overwrite to be what is measured. missileImmunityWIOverwriteFixed is the same card in CP 1.60, which orders the two writes the other way (combat_effects.js:860-861), and pins 0 against this 5.000.',
+    },
   },
   missileImmunityWIOverwriteFixed: {
     desc: 'WI+MI vs Missile (MoM CP 1.60): fix — MI wins, def=50. 15 hits all blocked',
@@ -174,6 +226,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:20, abilities: { wraithForm: true, missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'b.ability.missileImmunity':
+        'Keep, and the absence is the rule under test: Wraith Form carries the Weapon Immunity effect (combat_special_attacks.js:570-573), so 1.31\'s marker order (combat_effects.js:846-847) clobbers the Missile marker here exactly as a written-out Weapon Immunity does, and the immunity has to be present for that to be what is measured. missileImmunityWIOverwrite131 differs only in that ability and pins the same 5.000, which is the control.',
+    },
   },
   missileImmunityInvulnerabilityOverwrite131: {
     desc: 'Invulnerability WI+MI vs Missile (MoM 1.31): WI overwrites MI, def=10; Invulnerability absorbs 2 of 5 damage',
@@ -182,6 +238,10 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:20, abilities: { invulnerability: true, missileImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'b.ability.missileImmunity':
+        'Keep, and the absence is the rule under test: Invulnerability carries the Weapon Immunity effect (combat_special_attacks.js:570-573), so 1.31\'s marker order (combat_effects.js:846-847) clobbers the Missile marker as it does for a written-out Weapon Immunity, and the immunity has to be present for that to be what is measured. missileImmunityWIOverwrite131 differs only in that ability and pins 5.000; the 2 between them is Invulnerability\'s own absorption, which is the second half of this fixture.',
+    },
   },
   missileImmunityGenericKeepsMI131: {
     desc: 'WI+MI vs Generic missile (MoM 1.31): Generic bypasses WI, so MI remains def=50 and blocks the shot',
@@ -220,12 +280,24 @@ definePresets({
     a: { atk:3, toHitMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Fire Immunity does not reach a melee attack, so the only feature the fixture adds cannot move the number. The discriminator is that the attacker has melee only, which candidates() does not enumerate.',
+      'b.ability.fireImmunity':
+        'Keep, and the absence is the rule under test: the mask is gated on isRanged before it looks at any immunity bit (combat_effects.js:780), and the melee branch sets neither isRanged nor fireAttack (combat_effects.js:952-961). fireImmunityFireBreath is the positive arm and carries the same contrast inside one card - its breath is blocked while its melee lands against the defender\'s own 2.',
+    },
   },
   fireImmunityNotThrown: {
     desc: 'Fire Immunity does NOT apply to thrown: def stays 0, 1+3 thrown+melee 100% hit → 4 dmg',
     a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Fire Immunity does not reach a physical Thrown attack, so the only feature the fixture adds cannot move the number. The discriminator is a.rtbType, which candidates() does not enumerate.',
+      'b.ability.fireImmunity':
+        'Keep, and the absence is the rule under test: the thrown branch sets fireAttack only for a fire breath (combat_effects.js:987, 998), so a plain Thrown leaves the fire arm of the mask (combat_effects.js:782) shut and both the thrown 3 and the melee 1 land. fireImmunityFireBreath is the positive arm, though not a one-value sibling - it also differs in the attack strengths and in b.def.',
+    },
   },
   fireImmunityNotMissile: {
     desc: 'Fire Immunity does NOT apply to missile ranged: def stays 0, 3 atk 100% hit → 3 dmg',
@@ -233,18 +305,32 @@ definePresets({
     b: { def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Fire Immunity does not reach a missile, so the only feature the fixture adds cannot move the number. The discriminator is a.rtbType, which candidates() does not enumerate.',
+      'b.ability.fireImmunity':
+        'Keep, and the absence is the rule under test: the ranged branch never sets fireAttack at all (combat_effects.js:971-984), so a missile can only open the mask\'s missile arm, never the fire arm at combat_effects.js:782. missileImmunityMissile shoots the identical attacker into the arm that does open and pins 0, though it is not a one-value sibling - it also sets b.def 2.',
+    },
   },
   fireImmunityAfterArmorPiercing: {
     desc: 'Fire Immunity after Armor Piercing: AP halves def 6→3, then Fire Immunity assigns 50, so breath 70 deals 20. The assignment is absolute, not a raise — measured, a defender at def 6, 60 or 100 all end at 50 — so removing Armor Piercing leaves 20 as well, and no fixture can make its presence move this number. What the size does prove is the order: Armor Piercing applied *after* Fire Immunity would halve the 50 and the same breath would deal 45, which is what the same shot deals against a plain def 25. The earlier 5-strength breath against a 10 HP defender printed 0 under both orders and could not fail. Armor Piercing is live in the same setup without Fire Immunity: 67 against 64.',
     a: { atk:0, rtbType:'fire', rtb:70, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
     b: { atk:0, def:6, toBlkMod:70, hp:200, abilities: { fireImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 20.000 },
+    vacuity: {
+      'a.ability.armorPiercing':
+        'Keep, and the absence is the rule under test: the Fire Immunity marker is cashed in by an outright assignment, u.effectiveDefense = ctx.defenseSpecialValue (combat_effects.js:834), and 1.31 runs that step after the halving at combat_effects.js:822 - the list orders armorPiercing at combat_effects.js:852 ahead of defenseSpecial at 854. Whatever Armor Piercing wrote is discarded, so on any card where the marker is set its presence cannot move the number. The size is what pins that order: halving the assigned 50 instead would leave 25 and let the 70-strength breath deal 45.',
+    },
   },
   fireImmunityIllusionOverrides: {
     desc: 'Illusion overrides Fire Immunity: FI sets def to 50, then Illusion sets to 0 → full breath damage',
     a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { illusion: true } },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'b.ability.fireImmunity':
+        'Keep, and the absence is the rule under test: the Illusion step zeroes the defense and stops the sequence - u.effectiveDefense = 0; return HALT (combat_effects.js:768), which runStatSteps breaks on (steps.js:750) - and every DOS list places it ahead of the immunity mask (combat_effects.js:844 before 846, :858 before 861, :872 before 875), so Fire Immunity never reaches a write of its own. The immunity has to be on the card for the override to be what is measured; a.ability.illusion is the live half.',
+    },
   },
 
   // --- Cause Fear (v1.31 buggy behavior) ---
@@ -261,18 +347,32 @@ definePresets({
     a: { atk:5, toHitMod:70, hp:10, res:5 },
     b: { atk:5, toHitMod:70, hp:10, def:0, res:5, abilities: { fear: true } },
     expected: { dmgToA: 5.000, dmgToB: 5.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that a defending unit\'s Cause Fear does nothing in this build, so the only feature the fixture adds cannot move the number. The discriminator is the version, which candidates() does not enumerate.',
+      'b.ability.fear':
+        'Keep, and the absence is the rule under test: aFearedByB is bFear && opts.version !== \'mom_1.31\' (combat.js:190), so B\'s Cause Fear is silenced in this build and only the phase row survives it (combat.js:193). The expectation is what catches a build that let it through: A carries Resistance 5, so a live defender fear would fail its roll half the time and cut the 5.000 A deals.',
+    },
   },
   fearDeathImmune: {
     desc: 'Cause Fear vs Death Immunity: fear blocked, both do 5 dmg normally',
     a: { atk:5, toHitMod:70, hp:10, abilities: { fear: true } },
     b: { atk:5, toHitMod:70, hp:10, def:0, abilities: { deathImmunity: true } },
     expected: { dmgToA: 5.000, dmgToB: 5.000 },
+    vacuity: {
+      'a.ability.fear':
+        'Keep, and the absence is the rule under test: fearFailProb returns 0 for a Death-Immune target before any roll (combat_fear_and_touch.js:24), so A\'s Cause Fear moves nothing. It also leaves A itself unfeared, because 1.31\'s self-fear bug arms only while that probability is positive (combat.js:191) - which is what the 5.000 on the attacker side pins. b.ability.deathImmunity is the live half.',
+    },
   },
   fearMagicImmune: {
     desc: 'Cause Fear vs Magic Immunity: fear blocked, both do 5 dmg normally',
     a: { atk:5, toHitMod:70, hp:10, abilities: { fear: true } },
     b: { atk:5, toHitMod:70, hp:10, def:0, abilities: { magicImmunity: true } },
     expected: { dmgToA: 5.000, dmgToB: 5.000 },
+    vacuity: {
+      'a.ability.fear':
+        'Keep, and the absence is the rule under test: Magic Immunity is never tested inside fearFailProb; it arrives as the +30 on the death-realm resistance (combat_effects.js:540, in this build\'s list at combat_effects.js:572), which clears the effectiveRes >= 10 return (combat_fear_and_touch.js:26). So A\'s Cause Fear moves nothing, and with that probability at zero the 1.31 self-fear bug does not arm either (combat.js:191) - the 5.000 on the attacker side is that second half. b.ability.magicImmunity is the live half.',
+    },
   },
   fearNotRanged: {
     desc: 'Cause Fear does not apply to ranged attacks: 5 missile 100% hit → 5 dmg',
@@ -280,6 +380,12 @@ definePresets({
     b: { def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Cause Fear does not reach a ranged exchange, so the only feature the fixture adds cannot move the number. The discriminator is rangedCheck, which candidates() does not enumerate.',
+      'a.ability.fear':
+        'Keep, and the absence is the rule under test: both Cause Fear reads are gated on !isRanged (combat.js:173-174), so a ranged exchange never computes a fear probability at all and the missile 5 stands undiminished. fearBasic is the positive arm in the same build, though not a one-value sibling - it is a four-figure melee card.',
+    },
   },
 
   // --- Illusion ---
@@ -313,12 +419,20 @@ definePresets({
     a: { atk:5, hp:10, abilities: { illusion: true } },
     b: { def:6, hp:10, abilities: { illusionImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0.449 },
+    vacuity: {
+      'a.ability.illusion':
+        'Keep, and the absence is the rule under test: the Illusion step is gated on the target not carrying Illusion Immunity (combat_effects.js:769), so the zeroing at combat_effects.js:768 never runs and the defender keeps its own 6. illusionMelee is the same card without the immunity and pins 1.500 against this 0.449.',
+    },
   },
   trueSightNegatesIllusion: {
     desc: 'True Sight grants Illusion Immunity: 5 atk 100% hit vs def 6 + True Sight 100% block → def stays 6, 0 dmg (would be 5 if True Sight didn\'t grant immunity)',
     a: { atk:5, toHitMod:70, hp:10, abilities: { illusion: true } },
     b: { def:6, toBlkMod:70, hp:10, abilities: { trueSight: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.illusion':
+        'Keep, and the absence is the rule under test: True Sight sets Illusion Immunity in region c - u.illusionImmunity = true (stats_sequence.js:991) - and the Illusion step is gated on the target not carrying it (combat_effects.js:769), so the zeroing at combat_effects.js:768 never runs and the defender keeps its own 6 behind a 100% To Block. What this card adds over illusionImmunityNegates is the grant rather than the gate; b.ability.trueSight is the live half.',
+    },
   },
   trueSightRangedToHitWarlord: {
     desc: 'True Sight (Warlord): ranged 1 at base 30% + True Sight 5% To-Hit vs def 0 → E[dmg] = 0.35 (without True Sight, 0.30)',
@@ -335,6 +449,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: false,
     expected: { dmgToA: 0, dmgToB: 0.600 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Warlord\'s True Sight bonus does not reach the Breath channel, so the only feature the fixture adds cannot move the number. The discriminator is which channels the attacker owns, which candidates() does not enumerate.',
+      'a.ability.trueSight':
+        'Keep, and the absence is the rule under test: d:trueSight adds its 5 only where the target field\'s kind is ranged (stats_sequence.js:1515), and a Fire Breath channel takes the breath kind (stats.js:1439-1442), whose field is toHitBreath (stats.js:1429-1430) - a field kindAt reports as breath rather than ranged (stats.js:1470); the step names no melee field at all. So both attacks on this card stay at 30%. The expectation is what catches a bonus that reached the breath - it would hit at 35% and give 0.650.',
+    },
   },
   trueSightThrownUnaffectedWarlord: {
     desc: 'True Sight (Warlord) writes SToRanged only: melee 1 and thrown 1 both stay at 30% → 0.3 + 0.3 = 0.6. If the bonus reached the Thrown channel the thrown attack would hit at 35% and give 0.650.',
@@ -343,6 +463,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: false,
     expected: { dmgToA: 0, dmgToB: 0.600 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Warlord\'s True Sight bonus does not reach the Thrown channel, so the only feature the fixture adds cannot move the number. The discriminator is which channels the attacker owns, which candidates() does not enumerate.',
+      'a.ability.trueSight':
+        'Keep, and the absence is the rule under test: d:trueSight adds its 5 only where the target field\'s kind is ranged (stats_sequence.js:1515), and a Thrown channel takes the thrown kind (stats.js:1439-1442), whose field is toHitThrown (stats.js:1429-1430) - a field kindAt reports as thrown rather than ranged (stats.js:1470); the step names no melee field at all. So both attacks on this card stay at 30%. The expectation is what catches a bonus that reached the thrown attack - it would hit at 35% and give 0.650.',
+    },
   },
   eyeOfHeavenNegatesIllusion: {
     desc: 'Eye of Heaven grants Illusion Immunity to its own unit: 5 atk 100% hit vs def 6 + Eye of Heaven 100% block → def stays 6, 0 dmg (would be 5 if illusion still ignored armor)',
@@ -350,6 +476,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10, abilities: { illusion: true } },
     b: { def:6, toBlkMod:70, hp:10, abilities: { eyeOfHeaven: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.illusion':
+        'Keep, and the absence is the rule under test: Eye of Heaven\'s whole write on its own unit is the True Sight flag - u.trueSight = true (stats_sequence.js:674) - which c:trueSight turns into Illusion Immunity (stats_sequence.js:991); the modern Illusion step is gated on the target not carrying that immunity (combat_effects.js:432), so its zeroing and HALT (combat_effects.js:431) never run and the defender keeps its own 6. b.ability.eyeOfHeaven is the live half.',
+    },
   },
   eyeOfHeavenDisablesEnemyGaze: {
     desc: 'Eye of Heaven on the defender strips the attacker\'s gaze: Doom Gaze 5 disabled → 0 dmg (would be 5 without Eye of Heaven)',
@@ -386,6 +516,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10, abilities: { illusion: true } },
     b: { def:3, toBlkMod:70, hp:10, cityWalls: '3' },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'b.cityWalls=3':
+        'Keep, and the absence is the rule under test: CoM2 takes City Walls as EffectiveDefense extra defense, folded into the seed at combat_effects.js:428 from the value supplied at combat_effects.js:723, and the very next step assigns u.effectiveDefense = 0 and returns HALT (combat_effects.js:431). The walls are discarded with the base Defense rather than surviving it. illusionCityWalls is the same card in the DOS engine - the only other difference is that build\'s own To Hit control, toHitMod in place of hitChance - and pins 2.000, because there the bonus is added after the whole sequence has run (combat_effects.js:1074).',
+    },
   },
   cityWallsAfterWarpDefenseCoM2: {
     desc: 'City Walls is EffectiveDefense extra defense, not a unit stat: Warp Defense first reduces Armor 9 to 3, then intact walls add 3 → 6. Eight hits at 100% block deal 2 (adding walls before Warp would leave 4 and deal 4).',
@@ -427,12 +561,20 @@ definePresets({
     a: { atk:5, toHitMod:70, hp:10, abilities: { illusion: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: the Illusion step zeroes the defense and stops the sequence (combat_effects.js:768, broken on at steps.js:750), and every DOS list places it ahead of the Weapon Immunity marker (combat_effects.js:844 before 847, :858 before 860, :872 before 874), so the marker is never set and the floor at combat_effects.js:826 never runs. The immunity has to be on the card for the override to be what is measured; a.ability.illusion is the live half.',
+    },
   },
   illusionDoesNotOverrideImmolationDefense: {
     desc: 'Illusion does not affect Immolation defense: melee ignores def for 1 dmg, but Immolation 4 vs def 4 at 100% block is fully blocked',
     a: { atk:1, toHitMod:70, hp:10, abilities: { illusion: true, immolation: true } },
     b: { def:4, toBlkMod:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.immolation':
+        'Keep, and the absence is the rule under test: the spell path builds its own descriptor with no illusion term (combat_effects.js:1027-1037), so ctx.illusion is false for the Immolation defense and the zeroing at combat_effects.js:768 is skipped; Immolation\'s strength 4 in this build (combat_special_attacks.js:641) then meets the defender\'s own Defense 4 at 100% To Block and none of it lands. Contributing zero is the claim, so ablating it cannot move a number - the 1.000 is the melee that Illusion does reach, and an Illusion that reached the spell path would make it 5.000.',
+    },
   },
 
   // --- Invisibility ---
@@ -455,6 +597,10 @@ definePresets({
     b: { def:0, hp:10, abilities: { invisibility: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.500 },
+    vacuity: {
+      'b.ability.invisibility':
+        'Keep, and the absence is the rule under test: an attacker carrying Illusion Immunity satisfies aCanSeeB whatever the defender has (combat_phases.js:276), so the ranged early return at combat.js:1147 is not taken and the MoM To Hit penalty is not applied (combat_phases.js:278). Invisibility has to be on the card for that to be what is measured. invisibilityRangedBlocked is the same card without the attacker\'s immunity and pins 0 against this 1.500.',
+    },
   },
   invisibilityCounter: {
     desc: 'Invisible attacker: B counter gets −10% to hit penalty. A: 1×0.3=0.3; B counter: 5×0.2=1.0',
@@ -467,12 +613,20 @@ definePresets({
     a: { atk:5, hp:10, abilities: { illusionImmunity: true } },
     b: { def:0, hp:10, abilities: { invisibility: true } },
     expected: { dmgToA: 0, dmgToB: 1.500 },
+    vacuity: {
+      'b.ability.invisibility':
+        'Keep, and the absence is the rule under test: an attacker carrying Illusion Immunity satisfies aCanSeeB (combat_phases.js:276), so the ten-point melee penalty at combat_phases.js:280 is skipped and the attack stays at its base 30%. invisibilityMelee is the same card without the attacker\'s immunity and pins 1.000 against this 1.500.',
+    },
   },
   invisibilityDoomIgnores: {
     desc: 'Doom bypasses to-hit so invisibility penalty is irrelevant: floor(5/2) = 2 damage',
     a: { atk:5, hp:10, abilities: { doom: true } },
     b: { def:5, toBlkMod:70, hp:10, abilities: { invisibility: true } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'b.ability.invisibility':
+        'Keep, and the absence is the rule under test: the penalty is genuinely applied here - 1.31 is not the CoM branch, so the gate at combat_phases.js:278 opens and the attacker\'s melee To Hit drops ten points at combat_phases.js:280 - but a Doom attack builds its distribution from calcDoomDist(k, atk, remHP) at combat_fear_and_touch.js:414, which is handed no To Hit at all. doomDamageMelee is the same card without b.abilities.invisibility, in the same version group of the tree, and pins the same 2.000; the equality is the claim.',
+    },
   },
 
   // --- Doom Damage ---
@@ -534,6 +688,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that MoM\'s Holy Bonus has no ranged half at all, so the only feature the fixture adds cannot move the number. The discriminator is the version, which the sweep resolves for the fixture rather than enumerating as a candidate.',
+      'a.ability.holyBonus':
+        'Keep, and the absence is the rule under test: MoM falls to the third arm of the Holy Bonus block (combat_abilities.js:723), whose apply writes melee, Defense and Resistance and nothing else (combat_abilities.js:724). It has no counterpart to CoM 1\'s rangedStrength write at combat_abilities.js:720 or CoM2\'s persistentRanged write at combat_abilities.js:711, so the missile keeps its base 1. The three writes the arm does make are unobservable on this card: the attacker has no melee attack, and the defender never strikes, so its Defense and Resistance are never read.',
+    },
   },
   holyBonusRangedCoM2: {
     desc: 'Holy Bonus Ranged (CoM2): HB boosts ranged atk. rtb 1 + HB 2 → 3 hits, 100% hit vs 0 def → 3 dmg',
@@ -573,6 +733,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { supremeLight: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that a plain normal unit meets none of Supreme Light\'s eligibility arms, so the only feature the fixture adds cannot move the number. The discriminator is what the card omits - a Life realm, a Caster flag, a magical ranged type - and candidates() enumerates only what a fixture sets.',
+      'a.ability.supremeLight':
+        'Keep, and the absence is the rule under test: the CoM2 return asks for a magical live ranged type, a fantastic_life or normal_life unit type, the Caster flag, or a magical base ranged type (combat_abilities.js:301-305), and this attacker answers no to all four. The step\'s own `when` is that predicate over the record and every channel (stats_sequence.js:1840-1842), so neither the melee +2 at stats_sequence.js:1846 nor the per-channel +2 at stats_sequence.js:1851 ever runs and the attack stays at 1.',
+    },
   },
 
   // --- Breakthrough ---
@@ -610,6 +776,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10 },
     b: { def:0, hp:10, abilities: { breakthrough: 'meleeDef' } },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the `+1mel/+1def` label cannot hand a permanent normal unit the defense half, so the only feature the fixture adds cannot move the number. The discriminator is the defender\'s identity - not combat-summoned, not permanently Fantastic, not Non-Corporeal - which is what the card omits rather than sets.',
+      'b.ability.breakthrough':
+        'Keep, and the absence is the rule under test: the selector value is read only to decide that Breakthrough is present at all (combat_abilities.js:1024); which package is granted is derived from identity, and the +1 defense belongs to the Non-Corporeal and combat-summoned packages alone (combat_abilities.js:1046, 1051). This defender is neither, so it takes the normal package (combat_abilities.js:1038), whose single write is the melee +1 at combat_abilities.js:1041 - and that write passes the melee slot gate at combat_abilities.js:528, which is `runCtx.base.atk > 0` (stats.js:977), a test a defender with no attack fails. Defense therefore stays 0 and the one hit deals 1.',
+    },
   },
 
   // --- Combat Discipline / Overland Discipline ---
@@ -619,6 +791,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { firstStrike: true, illusion: true } },
     b: { atk:2, hitChance:70, hp:10, level:'elite', abilities: { discipline: 'combat' } },
     expected: { dmgToA: 5.000, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test: Combat Discipline at level rank 3 or better sets combatDisciplineNegatesFirstStrike (stats.js:747), which puts negateFirstStrike onto the unit\'s combat ability set (stats.js:2235), and the exchange grants the pre-emptive strike only while the defender lacks that flag (combat.js:87). So the attacker\'s First Strike is cancelled and both sides trade, which is why dmgToA is not 0. It has to be on the card for the cancellation to be what is measured. b.ability.discipline and b.level=elite are the two live halves - stats.js:747 needs both.',
+    },
   },
   overlandDisciplineDefenseNormalCoM2: {
     desc: 'Overland Discipline (CoM2): normal unit gets +1 defense. 2 missile atk at 100% vs def 1 at 100% block → 1 dmg',
@@ -658,6 +834,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.discipline':
+        'Keep, and the absence is the rule under test: the Discipline step\'s ranged half is `if (isNonMagicalRangedFieldSlot(u, c)) u[c.strengthField] += 1` (stats_sequence.js:1008), and for a modern Ranged channel that predicate resolves to `!isMagicalRangedType(...)` (combat_abilities.js:271-272), so a magic-typed shot is refused and the attack stays at base 1 plus veteran 2. The step\'s other writes are Defense and melee on the attacker (stats_sequence.js:1005), and a ranged-only exchange against a defender that never strikes can show neither. a.level=veteran is the live half twice over: it is the +2 inside the 3, and it is the `levelRank >= 2` gate at stats_sequence.js:1006 that admits the ranged half at all.',
+    },
   },
 
   // --- Destiny ---
@@ -724,6 +904,10 @@ definePresets({
     a: { hp:10, abilities: { deathGaze: 0 } },
     b: { res:3, hp:10, abilities: { destiny: true, badMoon: true } },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+    vacuity: {
+      'b.ability.badMoon':
+        'Keep, and the absence is the rule under test: Destiny is one of the two things that make permanentFantastic true (stats.js:80), and badMoonActive carries `&& !permanentFantastic` (stats.js:573), so the step\'s `when` refuses it and the -3 Resistance is never written (stats_sequence.js:1253-1254). Bad Moon has to be on the card for that exclusion to be what is measured. destinyResistanceAndHpCoM2 is the same card without b.abilities.badMoon and pins the same 6.000; b.ability.destiny is the live half, at +4 Resistance and doubled HP (stats_sequence.js:725).',
+    },
   },
   goodMoonSkipsDestinyPermanentFantasticCoM2: {
     desc: 'Good Moon tests the same permanent flag — `(inferred_GoodMoon_State <> 0) and (not B.Fantastic)` at $005A285E — so Destiny\'s `B.Fantastic := True` closes it. Negative claim, the absence being the rule under test: melee 1 doubled by Destiny is 2 at 100% hit vs def 0 → 2.0, the number the verified sibling destinyMeleeRemovesLevelsCoM2 measures. Reading the training-time flag instead added Good Moon\'s +1 to the doubled melee for 3.0.',
@@ -821,6 +1005,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.level=champion':
+        'Keep, and the absence is the rule under test: the CoM2 arm of the level ladder selects its ranged table from `base[c.rangedTypeField]` (stats_sequence.js:786, 791) and gates its melee step on hasMeleeAttackAt (stats_sequence.js:747) - both reads of the permanent record, which runStatSteps freezes when the base phase ends (steps.js:746). Focus Magic writes only the calculated record - this fixture takes the creation arm, `u[target.strengthField] = 3` with its type pair (stats_sequence.js:915-917) - so an attack-less unit\'s created field is outside every arm of the ladder. The ladder\'s remaining writes cannot show either: its Resistance, Defense and HP land on an attacker nothing strikes, and its To Hit step cannot raise a shot the card already fires at 100%. Note the number does not in fact turn on the two steps\' order (level at stats_sequence.js:733, Focus Magic at :848) - the gates read `base`, which no region-c step can move.',
+    },
   },
   focusMagicDoomGazeBoostCoM2: {
     desc: 'Focus Magic (CoM2): doom gaze gets +3. doom gaze 4 → 7 exact damage',
@@ -844,6 +1032,10 @@ definePresets({
     b: { def:0, res:50, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'a.ability.doomGaze':
+        'Keep: the gaze is the subject, but a DOS record spells its strength in the shared ranged slot rather than in the ability row - for a gaze_multiple type baseDoomGaze is recordContext.calcBaseRtb (stats.js:1661-1663), and it is that derived value which is published back onto the combat abilities (stats.js:2241-2242), so the ability entry is overwritten before anything reads it. a.rtbType=gaze_multiple with a.rtb 2 is the live spelling here, and candidates() enumerates neither field. a.ability.focusMagic is the live half.',
+    },
   },
   focusMagicDoomGazeCoM2: {
     desc: 'Focus Magic (CoM2): the doomgaze +3 test ($0059A66D) and the ranged-creation branch ($0059A790) are independent tests that both run (Units.RecalculateUnits.pas:873-910), so a doom-gaze unit gains the strength-3 magic ranged attack as well. Ranged mode at 100% To Hit fires that attack and the gaze does not, for 3.0 — against the 5.0 the CoM 1 member of this pair reports for the same unit, whose single branch spends itself on the gaze and creates nothing. Without Focus Magic there is no ranged attack, the exchange falls back to melee and the bare gaze deals 2.0. The gaze half alone is focusMagicDoomGazeBoostCoM2.',
@@ -853,6 +1045,10 @@ definePresets({
     b: { def:0, res:50, hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.doomGaze':
+        'Keep, and the absence is the rule under test: CoM2 runs the gaze clause `if (u.doomGaze > 0) u.doomGaze += 3` (stats_sequence.js:879) and the four-way ranged branch (stats_sequence.js:898-922) as independent tests, so carrying a doom gaze costs the unit nothing - it still takes the created strength-3 magic ranged attack. The raised gaze itself cannot appear in this number, because the gaze phase is `!isRanged && aGazeActiveP` (combat.js:296) and the fixture measures a ranged exchange; that invisibility is exactly what makes the 3.0 a statement about the branch. CoM 1 is the contrast - its arm 1 takes the +3 and `continue`s past the creation (stats_sequence.js:863-869) - and focusMagicDoomGazeCoM is that engine on the same unit.',
+    },
   },
   focusMagicDoomGazeRangedBranchCoM2: {
     desc: 'The other half of the same independence: a doom-gaze-only CoM2 unit still gets Focus Magic\'s created strength-3 magic ranged attack ($0059A790), so the +3 gaze clause does not consume it. Ranged mode at 100% hit → 3.0; without Focus Magic the unit has no ranged attack, the exchange falls back to melee and only the bare gaze lands, for 2.0.',
@@ -927,6 +1123,10 @@ definePresets({
     a: { hp:10, unitType:'fantastic_chaos', abilities: { blazingEyes: true, focusMagic: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.focusMagic':
+        'Keep, and the absence is the rule under test: Focus Magic\'s doom-gaze clause is `if (u.doomGaze > 0) u.doomGaze += 3` (stats_sequence.js:879), and Blazing Eyes conjures the field later in the same region with `u.doomGaze += u.doomGaze === 0 ? 3 : 1` (stats_sequence.js:1107), so at Focus Magic\'s position there is no gaze to find and the unit ends at 3. Focus Magic\'s other product, the created strength-3 magic ranged attack, cannot fire either: this is melee mode and the ranged phase is `ranged: isRanged` (combat.js:293). a.ability.blazingEyes and a.unitType=fantastic_chaos are the live halves - the grant needs both, `isCoM2 && abilities.blazingEyes && unitTypeAt(u) === \'fantastic_chaos\'` (stats.js:365-366).',
+    },
   },
   chaosEmbraceLandsAfterFocusMagicWarlord: {
     desc: 'The Warlord arm of the same order: Chaos Embrace is Blazing Eyes renamed, writes the same $005A1E16 block, and still lands after Focus Magic ($0059A66D), so the conjured Doom Gaze 3 deals 3 exact damage rather than the 6 a base-seeded grant would have reached.',
@@ -934,6 +1134,10 @@ definePresets({
     a: { hp:10, unitType:'fantastic_chaos', abilities: { chaosEmbrace: true, focusMagic: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.focusMagic':
+        'Keep, and the absence is the rule under test: Chaos Embrace is the Warlord name for the same write - its control carries `calcKey: \'blazingEyes\'` (enchantments.js:102) - so the conjuring at stats_sequence.js:1107 again lands after Focus Magic\'s `if (u.doomGaze > 0) u.doomGaze += 3` (stats_sequence.js:879) and finds no gaze to raise; the unit ends at 3. Melee mode, so the created strength-3 magic ranged attack does not fire either (combat.js:293). a.ability.chaosEmbrace and a.unitType=fantastic_chaos are the live halves, on the same two-term gate (stats.js:365-366).',
+    },
   },
   blazingEyesNonChaosNoUpgradeCoM2: {
     desc: 'Blazing Eyes (CoM2): non-Chaos creature with Doom Gaze 4 does not get the +1 bonus, so it stays at 4 damage',
@@ -941,6 +1145,10 @@ definePresets({
     a: { hp:10, unitType:'fantastic_nature', abilities: { blazingEyes: true, doomGaze: 4 } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'a.ability.blazingEyes':
+        'Keep, and the absence is the rule under test: the grant carries `isCoM2 && !!abilities.blazingEyes && unitTypeAt(u) === \'fantastic_chaos\'` (stats.js:365-366) over the live identity (stats.js:115), so a Nature creature never reaches `u.doomGaze += u.doomGaze === 0 ? 3 : 1` (stats_sequence.js:1107) and the gaze stays at the 4 the card gave it. blazingEyesChaosCreatureUpgradesDoomGazeCoM2 differs only in a.unitType and pins 5.000 against this 4.000. Note the unit-type field cannot be measured live here either: ablation rewrites it to \'normal\' (tools/preset_vacuity_sweep.js:204, :300), which is equally outside the Chaos gate. a.ability.doomGaze is the live half - it is the only damage on the card.',
+    },
   },
 
   // --- Inner Power ---
@@ -979,6 +1187,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { innerPower: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Inner Power grants nothing to a unit carrying neither Fire Immunity nor Lightning Resist, so the only feature the fixture adds cannot move the number. The discriminator is the *absence* of those two flags, and candidates() enumerates only what a preset configures (tools/preset_vacuity_sweep.js:250-293).',
+      'a.ability.innerPower':
+        'Keep, and the absence is the rule under test: the step\'s `when` is `innerPowerActiveForUnit` (combat_abilities.js:930), which is `!!record.fireImmunity || !!record.lightningResist` read on the record at this step\'s own rank (combat_abilities.js:337-339). With neither flag set the `apply` never runs, so the +3 melee at combat_abilities.js:932 is not written and atk 1 stays 1. innerPowerFireImmunityMeleeCoM2 is this card with `fireImmunity` added to the same ability map and pins 4.000 against this 1.000.',
+    },
   },
   innerPowerBreathNotThrownCoM2: {
     desc: 'Exclusion the engine makes: the block\'s three secondary writes are `U.ranged`, `U.firebreath` and `U.lightningbreath`, each on its own `> 0` test, and its decode note says in as many words that it does not alter Thrown (Units.RecalculateUnits.pas:1877-1884). Fire Breath 5 → 8 while Thrown 3 stays 3, so 3 + 8 = 11.000 at 100% hit vs def 0. A grant reaching every channel, as this block made before F139, gives 6 + 8 = 14.000.',
@@ -996,6 +1210,10 @@ definePresets({
     a: { atk:0, hp:10, abilities: { innerPower: true, fireImmunity: true, doomGaze: 5 } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'a.ability.innerPower':
+        'Keep, and the absence is the rule under test: the block\'s `apply` names melee, Defense, Resistance and the `rangedOrBreath` slot (combat_abilities.js:932-933), and that slot gate is `isModernSecondarySlot`, which admits the ranged, fireBreath and lightningBreath channels (combat_abilities.js:279-285) - no gaze among them. The step also declares `attackWrites`, the strength fields alone (combat_abilities.js:929), rather than the `rtbWrites` shape that carries `gaze` and `doomGaze` beside them (combat_abilities.js:657-658), so `u.doomGaze` is outside its write set and the gaze stays at 5. The card is built so nothing else the block writes can surface: base melee is 0, so the melee gate `hasMeleeAttackAt`, `runCtx.base.atk > 0` (stats.js:977, consulted at combat_abilities.js:528), refuses the +3; and B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103), so A\'s Defense and Resistance are never scored against. This is melee mode, so the gaze does fire - `aGaze: !isRanged && aGazeActiveP` (combat.js:296). a.ability.doomGaze is the live half.',
+    },
   },
 
   // --- Orihalcon ---
@@ -1021,6 +1239,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Orihalcon\'s +2 does not reach a non-magical shot, so the only feature the fixture adds cannot move the number. The discriminator is the type inside a.modernAttacks.ranged, which candidates() does not enumerate - it reaches the ability maps, the seven UNIT_FIELD_DEFAULTS fields, the identity fields and the top-level combat fields (tools/preset_vacuity_sweep.js:250-293).',
+      'a.armor=orihalcon':
+        'Keep, and the absence is the rule under test: the strength write is gated on `slotHasMagicalRanged(u, c)` (stats_sequence.js:1071), which is `isMagicalRangedType(u[channel.rangedTypeField])` (combat_abilities.js:221-222), and that predicate lists the five magic tokens with \'missile\' among none of them (combat_abilities.js:202-205). The step\'s other write, `u.res += 1` (stats_sequence.js:1069), cannot show on this card: B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103) and no phase rolls against A\'s Resistance. The armor token gates that one step, `orihalconActive` being `armor === \'orihalcon\'` (stats.js:846). orihalconMagicRangedBonusCoM2 differs only in the ranged type and pins 4.000 against this 2.000.',
+    },
   },
   orihalconFocusMagicConvertedCoM2: {
     desc: 'Orihalcon (CoM2): Focus Magic preserves missile strength 2 while converting it to magic, then Orihalcon adds +2 → 4 dmg',
@@ -1054,6 +1278,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Reinforce Magic\'s +2 does not reach a non-magical shot, so the only feature the fixture adds cannot move the number. The discriminator is the type inside a.modernAttacks.ranged, which candidates() does not enumerate (tools/preset_vacuity_sweep.js:250-293).',
+      'a.ability.reinforceMagic':
+        'Keep, and the absence is the rule under test: the strength write is gated on `slotHasMagicalRanged(u, c)` (stats_sequence.js:1114), which reads the slot\'s live ranged type through `isMagicalRangedType` (combat_abilities.js:221-222), and \'missile\' is not one of the five magic tokens that predicate lists (combat_abilities.js:202-205). The step\'s unconditional `u.res += 2` (stats_sequence.js:1112) cannot show on this card: B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103) and no phase rolls against A\'s Resistance. reinforceMagicMagicRangedCoM2 differs only in the ranged type and pins 4.000 against this 2.000.',
+    },
   },
   reinforceMagicFocusConvertedCoM2: {
     desc: 'Reinforce Magic (CoM2): Focus Magic preserves missile strength 2 while converting it to magic, then Reinforce Magic adds +2 → 4 dmg',
@@ -1131,6 +1361,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, unitType: 'hero', abilities: { tactician: true, ccDefense: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.ccDefense':
+        'Keep, and the absence is the rule under test: the claim is that a Chaos Channels conversion must not change which Tactician arm runs, so the spell is expected to move nothing. The branch reads `isHeroUnit` (combat_abilities.js:1188), which is `!!identityPredicates.isHero` (combat_abilities.js:677), handed in once as `!!identity.isHero` (stats.js:1603) and set at the input boundary from `input.unitType === \'hero\'` (stats_identity.js:134). The ccDefense control has two stat-affecting emission sites in `Calculator/`: the +3 Defense at combat_abilities.js:1068-1072, which nothing scores against because B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103), and the identity step whose declared `writes` are `[\'race\', \'fantastic\']` (stats_identity.js:347-350) - the token under test, and not the hero flag. So the hero arm\'s `addToSlot(u, ctx, \'melee\', 2)` (combat_abilities.js:1192) runs either way and atk 1 ends at 3. a.ability.tactician and a.unitType=hero are the live halves: without the retort no step writes the +2, and the non-hero arm writes Defense alone (combat_abilities.js:1212-1213), leaving 1.',
+    },
   },
   tacticianHeroCcDefenseCoM: {
     desc: 'Tactician (CoM 1): the hero arm is guarded on `_UNITS[].Hero_Slot >= 0` (com1:0x90AB4), the permanent record\'s hero slot, so a Chaos-Channelled hero keeps it: atk 1 becomes 3 → 3 dmg, against 1 dmg while the gate read the live unit-type token (F187).',
@@ -1138,6 +1372,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, unitType: 'hero', abilities: { tactician: true, ccDefense: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.ccDefense':
+        'Keep, and the absence is the rule under test: the CoM 1 arm takes the same branch test the CoM2 member of this pair does - `isHeroUnit` (combat_abilities.js:1188), `!!identityPredicates.isHero` (combat_abilities.js:677), set from `input.unitType === \'hero\'` at the input boundary (stats_identity.js:134) - and the version chooses only which secondary shape the arm writes through (`rangedTyped`, combat_abilities.js:1196). Chaos Channels cannot reach that flag: its two stat-affecting emission sites in `Calculator/` are the +3 Defense at combat_abilities.js:1068-1072, unscored here because B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103), and the identity step declaring `writes: [\'race\', \'fantastic\']` (stats_identity.js:347-350). So `addToSlot(u, ctx, \'melee\', 2)` (combat_abilities.js:1192) runs and atk 1 ends at 3; the arm\'s ranged half writes nothing because A\'s shared slot carries no type and no gaze, which is what `dosSharedSlotTyped` asks (combat_abilities.js:583-588). a.ability.tactician and a.unitType=hero are the live halves - the non-hero arm writes Defense alone (combat_abilities.js:1212-1213), leaving 1.',
+    },
   },
   tacticianHeroCcDefenseWarpAttackWarlord: {
     desc: 'Tactician (Warlord): the hero grant and the region-`b` clawback net to the same +1 defense a non-hero gets, so the branch choice shows only once something between the two regions rescales the value. Warp Attack is that: melee 6 −2 at `b`, halved to 2 at `c`, +2 back after the Warp → 4 dmg. The non-hero arm the live token selected halves 6 to 3 and writes defense only, for 3 dmg (F187).',
@@ -1145,6 +1383,10 @@ definePresets({
     a: { atk:6, hitChance:70, hp:10, unitType: 'hero', abilities: { tactician: true, ccDefense: true, warpAttack: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'a.ability.ccDefense':
+        'Keep, and the absence is the rule under test: the branch test is again `isHeroUnit` (combat_abilities.js:1188), `!!identityPredicates.isHero` (combat_abilities.js:677) from `input.unitType === \'hero\'` (stats_identity.js:134), and Chaos Channels writes neither term - its two stat-affecting emission sites in `Calculator/` are the +3 Defense at combat_abilities.js:1068-1072, unscored here because B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103), and the identity step declaring `writes: [\'race\', \'fantastic\']` (stats_identity.js:347-350). What makes the branch visible on this card is the rescaling between the hero path\'s two halves: `b:tactician`\'s `u.atk -= 2` (combat_abilities.js:1205-1207) runs first, Warp Attack halves in region `c` (stats_sequence.js:1362), and the region-`c` grant\'s `addToSlot(u, ctx, \'melee\', 2)` (combat_abilities.js:1192) is spliced after it - the Warlord manifest order `b:tactician` (stats_manifests.js:262), `c:warpAttack` (:289), `c:tactician` (:290). That is unchanged by the conversion, so 6 stays 4. a.ability.tactician, a.ability.warpAttack and a.unitType=hero are the live halves; the non-hero arm writes Defense alone (combat_abilities.js:1212-1213) and halves 6 to 3.',
+    },
   },
   tacticianHeroRangedCoM2: {
     desc: 'Tactician (CoM2): hero gets +2 to ranged attack strength. missile 1 becomes 3 → 3 dmg',
@@ -1161,6 +1403,14 @@ definePresets({
       unitType:'hero', abilities: { tactician: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the hero package\'s +2 does not reach a Thrown channel, so neither feature the fixture adds can move the number. The discriminator is the thrown entry in a.modernAttacks, which candidates() does not enumerate (tools/preset_vacuity_sweep.js:250-293).',
+      'a.ability.tactician':
+        'Keep, and the absence is the rule under test: the hero arm\'s secondary write is `addToSlot(u, ctx, \'ranged\', 2, strength => strength > 0)` (combat_abilities.js:1198), and the `ranged` gate is `isLiveSlot(u, channel) && u[channel.rangedTypeField] !== \'none\'` (combat_abilities.js:555). The thrown channel\'s ranged-type field is `rangedTypeThrown` (steps.js:805), and a `type: \'thrown\'` attack leaves it at \'none\' because the token is a THROWN_TYPES member and lands in the thrown-type field instead (stats.js:1154-1155), so the gate refuses and Thrown 1 stays 1. The arm\'s other writes cannot show either: the melee +2 is refused by `hasMeleeAttackAt`, `runCtx.base.atk > 0` (stats.js:977, consulted at combat_abilities.js:528) with base melee 0, and A\'s Defense and Resistance are never scored against because B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103).',
+      'a.unitType=hero':
+        'Keep, and the absence is the rule under test: the hero flag is what selects the arm whose exclusion is being measured (`isHeroUnit`, combat_abilities.js:1188, from `input.unitType === \'hero\'`, stats_identity.js:134), so it has to stand on the card for the +2 to be attempted at all - but ablating it only substitutes the non-hero arm, whose single write is `u.def += 1` (combat_abilities.js:1213), and nothing scores against A\'s Defense here. Either arm leaves Thrown at 1.',
+    },
   },
   tacticianHeroDefenseCoM2: {
     desc: 'Tactician (CoM2): hero gets +2 defense. 5 hits vs 2 shields at 100% block → 3 dmg',
@@ -1182,6 +1432,10 @@ definePresets({
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, unitType: 'hero', abilities: { tactician: true } },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'b.unitType=hero':
+        'Keep, and the absence is the rule under test: Warlord reaches its flat +1 by subtracting from the compiled hero grant rather than replacing it, so the hero path is `u.def += 2` in region `c` (combat_abilities.js:1192) with `u.def -= 1` in region `b` (combat_abilities.js:1205-1207), while the non-hero path is the single `u.def += 1` (combat_abilities.js:1213). The two nets agree, which is what this version\'s Tactician tooltip states in as many words (enchantments.js:62), so hero-ness cannot move the number here. What the 4.000 does pin is that net: drop the clawback and the hero stands at Defense 2, blocking 2 of the 5 hits for 3.000. tacticianHeroDefenseCoM2 is this card with only `version` changed and pins exactly that 3.000, where the hero grant stands unreduced. b.ability.tactician is the live half.',
+    },
   },
   tacticianTeleportingFirstStrikeWarlord: {
     desc: 'Tactician (Warlord): teleporting unit gains First Strike — kills B before B can counter',
@@ -1196,6 +1450,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, hitChance:70, hp:9, toBlkMod:70, abilities: { tactician: true, nonCorporeal: true } },
     expected: { dmgToA: 5.000, dmgToB: 9.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test: the exchange takes the First Strike path only on `!isRanged && hasAbil(a.abilities, \'firstStrike\') && !hasAbil(b.abilities, \'negateFirstStrike\')` (combat.js:85-87, branch at :889), so a negated First Strike and an absent one make that term false the same way and ablating A\'s flag cannot move anything - that equivalence is the claim. The 5.000 to A is what witnesses it: A\'s 10 at 100% takes B\'s whole 9-point pool, so on the First Strike path B is gone before the counter and dmgToA is 0. Both of B\'s features are live halves: `applyTacticianWarlordEffects` returns before writing anything without the retort (combat_effects.js:132) and reaches `negateFirstStrike` only through `hasNonCorporealEffect` (combat_effects.js:135), whose first term is `nonCorporeal` (combat_special_attacks.js:610-613).',
+    },
   },
   tacticianWraithFormNegateFirstStrikeWarlord: {
     desc: 'Tactician (Warlord): Wraith Form unit gains Negate First Strike — B survives to retaliate (dmgToA=5)',
@@ -1203,6 +1461,10 @@ definePresets({
     a: { atk:12, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, hitChance:70, hp:1, toBlkMod:70, abilities: { tactician: true, wraithForm: true } },
     expected: { dmgToA: 5.000, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test: `hasFirstStrike` is `!isRanged && hasAbil(a.abilities, \'firstStrike\') && !hasAbil(b.abilities, \'negateFirstStrike\')` (combat.js:85-87, branch at :889), so the negation and an absent flag close the same term and A\'s First Strike is expected to move nothing - that is the claim. The 5.000 to A carries it: A\'s 12 at 100% empties B\'s 1-point pool, so on the First Strike path the counter never happens and dmgToA is 0. This member pins the second term of `hasNonCorporealEffect`, `wraithForm` (combat_special_attacks.js:610-613), read by `applyTacticianWarlordEffects` at combat_effects.js:135 under the retort guard at :132; b.ability.tactician and b.ability.wraithForm are the live halves.',
+    },
   },
   tacticianRulerNegateFirstStrikeWarlord: {
     desc: 'Tactician (Warlord): Ruler of Underworld unit gains Negate First Strike — B survives to retaliate (dmgToA=5)',
@@ -1210,6 +1472,10 @@ definePresets({
     a: { atk:12, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, hitChance:70, hp:1, toBlkMod:70, abilities: { tactician: true, rulerOfUnderworld: true } },
     expected: { dmgToA: 5.000, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test: `hasFirstStrike` is `!isRanged && hasAbil(a.abilities, \'firstStrike\') && !hasAbil(b.abilities, \'negateFirstStrike\')` (combat.js:85-87, branch at :889), so the negation makes that term false exactly as an absent flag would and ablating A\'s First Strike cannot move the number - the claim itself. The 5.000 to A witnesses it: A\'s 12 at 100% empties B\'s 1-point pool, so on the First Strike path there is no counter and dmgToA is 0. This member pins the third term of `hasNonCorporealEffect`, `rulerOfUnderworldActiveForUnit` (combat_special_attacks.js:613), which carries a version gate of its own (:537-539) beside the ability test; b.ability.tactician is the live half at the retort guard `applyTacticianWarlordEffects` makes (combat_effects.js:132).',
+    },
   },
 
   // --- Favored Terrain ---
@@ -1254,6 +1520,10 @@ definePresets({
     a: { atk:20, hitChance:70, hp:10, abilities: { firstStrike: true } },
     b: { atk:5, hitChance:70, hp:10, toBlkMod:70, abilities: { favoredTerrain: true, tactician: true } },
     expected: { dmgToA: 5.000, dmgToB: 10.000 },
+    vacuity: {
+      'a.ability.firstStrike':
+        'Keep, and the absence is the rule under test: `hasFirstStrike` is `!isRanged && hasAbil(a.abilities, \'firstStrike\') && !hasAbil(b.abilities, \'negateFirstStrike\')` (combat.js:85-87, branch at :889), so A\'s flag and its negation cancel to the same path and the ablation is expected to be inert. The claim rides on dmgToA, not dmgToB: the doubled terrain bonus puts B at Defense 2 (`u.def += 1 * mult` with `mult` 2 under the retort, combat_abilities.js:1223, 1226), which still leaves A\'s 20 enough to take the whole 10-point pool, so dmgToB is at the pool either way while the 5.000 to A is what a lost negation would drop to 0. This member pins the favoredTerrain arm, which grants both flags together (combat_effects.js:137-140) rather than going through `hasNonCorporealEffect`; b.ability.favoredTerrain and b.ability.tactician are the live halves, the retort being the function\'s own guard (combat_effects.js:132).',
+    },
   },
 
   // --- Fortification ---
@@ -1299,5 +1569,9 @@ definePresets({
       abilities: { largeShield: true, rust: true, fortification: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 7.000 },
+    vacuity: {
+      'b.ability.largeShield':
+        'Keep, and the absence is the rule under test: `d:rust` clears the flag with `u.largeShield = false` (stats.js:1622) and `d:fortification` reads what stands there - `if (u.largeShield) u.missileImmunity = true; else u.largeShield = true;` (stats_sequence.js:1566-1567) - with the Warlord manifest putting `d:rust` (stats_manifests.js:294) ahead of `d:fortification` (:295). So the innate shield is already gone at the read, and the card with it and the card without it both end holding plain Large Shield, worth +3 effective Defense against the shot (combat_effects.js:434-436): 12 - (2+3) = 7. The shield still has to stand on the card, because it is the thing the two orderings disagree about - answer Fortification from before the clear and the innate shield selects the Missile Immunity arm instead, for 0. fortificationLargeShieldUpgradeWarlord is this card without `rust` and pins that 0. b.ability.rust is the live half.',
+    },
   },
 });

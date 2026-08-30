@@ -9,6 +9,14 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { landLinking: true, mysticSurge: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the CoM 1 order denies this unit the Land Linking package, so neither of the two abilities the fixture adds can move the number. Mystic Surge\'s own writes land where nothing reads them - its +2 Defence and -2 Resistance sit on the attacker in a one-way exchange, and its opponent To Defend reduction has no defence dice to act on against a Defence-0 target.',
+      'a.ability.landLinking':
+        'Keep, and the absence is the rule under test: the +2 melee is gated on the *calculated* Fantastic identity (stats.js:547, combat_abilities.js:325), and the CoM 1 chain ranks `c:landLinking` ahead of `c:mysticSurge:race` (stats_manifests.js:190-191), so the conversion at stats_identity.js:377 is not yet visible. Swap those two rows and the unit is fantastic at the block, taking atk 1 -> 3 for 3.000. version-dead is expected: this and landLinkingRangedCoM are the only two com_6.08 presets that configure the key, and both are absence claims.',
+      'a.ability.mysticSurge':
+        'Keep. Inert as a consequence of the assertion: Mystic Surge is here only to make the unit fantastic *after* the block that would have used it, so by construction it moves nothing. version-dead follows - this is the only com_6.08 preset in the suite that configures Mystic Surge, its other four appearances being mysticSurgeDefenseBonusCoM2, mysticSurgeResistPenaltyCoM2, mysticSurgeFantasticAndToDefendCoM2 and mysticSurgeOverridesUndeadCoM2, all com2_1.05.11, plus natureLinkBeforeSpiritLinkClearWarlord.',
+    },
   },
   landLinkingFantasticMeleeCoM2: {
     desc: 'Land Linking (CoM2): fantastic creature gets +2 melee. atk 1 to 3, 100% hit vs 0 def gives 3 dmg',
@@ -37,6 +45,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { landLinking: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that a normal unit is outside Land Linking\'s eligibility altogether, so the only feature the fixture adds cannot move the number.',
+      'a.ability.landLinking':
+        'Keep, and the absence is the rule under test: eligibility is `unitType.startsWith(\'fantastic_\')` and nothing else (combat_abilities.js:322-326), so CoM 2 grants a normal unit no combat stat. landLinkingFantasticMeleeCoM2 is this card with `unitType: \'fantastic_nature\'` added and nothing else changed, and pins 3.000 against this 1.000. The Warlord rename is where a normal unit does gain something - the +1 Resistance written by `b:natureLink` (stats_sequence.js:638-640) that natureLinkNormalResistanceWarlord pins - and that arm is deliberately absent in CoM 2.',
+    },
   },
   landLinkingRangedCoM: {
     desc: 'Land Linking (CoM): fantastic creature does not get +2 ranged attack. missile 2 stays 2',
@@ -45,6 +59,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Land Linking package never reaches a ranged slot, so neither the enchantment nor the fantastic unitType that admits it can move a missile number.',
+      'a.ability.landLinking':
+        'Keep, and the absence is the rule under test: the block\'s attack-strength half is gated on `slotHasBreath` (stats_sequence.js:1024-1028), so a Missile slot is outside it, and the melee half has no melee attack to take. Drop the breath test and missile 2 becomes 4 for 4.000. version-dead is expected: this and landLinkingBeforeMysticSurgeRealmCoM are the only two com_6.08 presets that configure the key, both absence claims, so CoM 1 has no positive Land Linking fixture at all.',
+    },
   },
   landLinkingRangedCoM2: {
     desc: 'Land Linking (CoM2): fantastic creature does not get +2 ranged attack. missile 2 stays 2',
@@ -53,6 +73,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the Land Linking package never reaches a ranged slot, so neither the enchantment nor the fantastic unitType that admits it can move a missile number.',
+      'a.ability.landLinking':
+        'Keep, and the absence is the rule under test: the attack-strength half is gated on `slotHasBreath` (stats_sequence.js:1024-1028), so the modern Ranged channel is outside it. Its two positive arms are landLinkingFantasticBreathCoM2, where the same +2 does reach a Fire Breath channel for 7.000, and landLinkingFantasticMeleeCoM2 for the melee half at 3.000; drop the breath test here and missile 2 becomes 4 for 4.000.',
+    },
   },
 
   // --- Nature Link (Warlord rename of Land Linking) ---
@@ -62,6 +88,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { natureLink: true, mysticSurge: true, spiritLink: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.spiritLink':
+        'Keep, and the absence is the rule under test: Spirit Link makes two writes to the same field - `b:spiritLink` asserting Fantastic (stats_identity.js:300-302) and `d:spiritLink` clearing it (stats_identity.js:385-387) - and the claim is that the clear lands too late to take the +2 melee back. Ablating the enchantment removes both writes, so it can never show that; the chain position is what does. `d:spiritLink` follows `c:landLinking` (stats_manifests.js:282, :297), and ranking it ahead clears the Fantastic Mystic Surge wrote before the block reads it, dropping this to 1.000. natureLinkSpiritLinkAssertsFantasticWarlord is this card without Mystic Surge, where the b-write is the only source of Fantastic and Spirit Link is the live half.',
+    },
   },
   natureLinkSpiritLinkAssertsFantasticWarlord: {
     desc: 'Spirit Link on an otherwise non-fantastic unit: `SETSTAT(U,AFantastic,0,1)` at UnitCalcPre.CAS:30 asserts Fantastic in region b, and the region-c Nature Link block reads that record, so the +2 melee applies. atk 1 to 3 for 3 dmg, against the 1 the same unit deals without Spirit Link. The clearing write at UnitCalc.CAS:1306 is region d, past both blocks.',
@@ -181,6 +211,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, unitType:'hero', abilities: { mislead: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.000 },
+    vacuity: {
+      'a.unitType=hero':
+        'Keep, and the absence is the rule under test: the eligibility gate is `!liveFantastic` and nothing else (combat_abilities.js:343-346), so a hero takes the same four penalties a normal unit does. misleadMisfortuneNormalMeleeCoM2 is this fixture with the unitType line removed and pins the same 0.000, which is the control; add a hero exemption to the gate and atk 1 survives for 1.000. Mislead is the live half.',
+    },
   },
 
   // --- Mystic Surge ---
@@ -213,6 +247,12 @@ definePresets({
     a: { atk:9, toHitMod:70, hp:10, abilities: { supernatural: true } },
     b: { def:9, toBlkMod:70, hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that CoM 1 preserves the roster trait but runs no live test on it, so the only feature the fixture adds cannot move the number.',
+      'a.ability.supernatural':
+        'Keep, and the absence is the rule under test: the version test is made twice, independently. `supernaturalMinDamageFn` returns no callback outside `com2_` (combat_abilities.js:408), and `supernaturalMinDamageForHits` computes the minimum only for `com2_` and otherwise returns 0 (combat_abilities.js:399-404), so CoM 1 has no blocked-attack minimum and all 9 blocked hits deal 0. Widening either guard alone still leaves this at 0; widen both and the same fixture reads Round(9 x 34/100) = 3 for 3.000. version-dead is expected - this is the only com_6.08 preset that configures Supernatural, its three live arms all being com2_1.05.11: supernaturalFormulaCoM2, supernaturalMagicImmunityRangedCoM2 and supernaturalFireBreathFireImmunityCoM2.',
+    },
   },
   supernaturalFormulaCoM2: {
     desc: 'Supernatural (CoM2): the blocked-attack minimum is Round(hits × 34 / 100), not round(hits/3). Magic Immunity sets effectiveDefense to 100, so all 28 magic ranged hits are blocked and only the minimum lands: Round(28 × 34/100) = 10, where round(28/3) would give 9. A fully-blocked melee probe can no longer discriminate the two: F32/F34\'s defense-dice cap (Combat.ResolutionHelpers.pas:159-171) holds blocked hits to 15 or fewer, where the formulas agree, and the Defense input is UI-capped at 50. Without Supernatural the same attack deals ~0.',
@@ -270,6 +310,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { resistMagic: true } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'b.ability.resistMagic':
+        'Keep, and the absence is the rule under test: the +5 is gated on `ctx.realm !== null` (combat_effects.js:560-562), and Poison is the realm-less roll, passed as null at combat_phases.js:374-375. Drop that term and res 5 + 5 = 10 puts Poison 4 out of reach for 0. resistMagicBlocks is the same defender against a realm-carrying Stoning Touch and pins 3.000, so the write itself is live in this version. Poison is the live half here.',
+    },
   },
 
   // --- Stone Skin / Iron Skin ---
@@ -290,6 +334,10 @@ definePresets({
     a: { atk:5, toHitMod:70, hp:10 },
     b: { hp:10, abilities: { ironSkin: true, stoneSkin: true } },
     expected: { dmgToA: 0, dmgToB: 3.500 },
+    vacuity: {
+      'b.ability.stoneSkin':
+        'Keep, and the absence is the rule under test: the two writes are one `if` / `else if` (combat_abilities.js:961-969), so Iron Skin supersedes Stone Skin rather than stacking with it. ironSkinDef is this fixture with Stone Skin removed and pins the same 3.500, which is the control; make them independent writes and def 6 drops this to 3.200. The +1 is not inert in general - holyArmorStacksWithStoneSkin has it stack with Holy Armor for def 3.',
+    },
   },
 
   // --- Invulnerability ---
@@ -330,6 +378,10 @@ definePresets({
     a: { atk:6, hp:10, abilities: { doom: true } },
     b: { hp:10, abilities: { invulnerability: true } },
     expected: { dmgToA: 0, dmgToB: 3 },
+    vacuity: {
+      'b.ability.invulnerability':
+        'Keep, and the absence is the rule under test: the -2 is an argument to `calcTotalDamageDist`, and the doom arm beside it calls `calcDoomDist` with neither a defence roll nor a reduction to pass (combat_fear_and_touch.js:411-417). Route the doom arm through the same reduction and floor(6/2) = 3 becomes 1. invulnerabilityMelee is the same defender against a conventional melee 5 and pins 3.000 against the 5 it would otherwise take, so the write is live in this version. Doom is the live half here.',
+    },
   },
   invulnerabilityMultiFigOverflow: {
     desc: 'Invulnerability -2 fires on each fresh defense roll during overflow. 5 atk 100% hit vs 3-fig hp=2: fig1 takes 2 (5-2=3, dies, excess 1), fig2 takes max(0,1-2)=0 → total 2 (vs 5 without invuln)',
@@ -407,6 +459,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.300 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Holy Weapon reaches no part of a magical ranged attack, and the fixture leaves it nothing else to touch - the card carries no melee for the To Hit half, and the defender no Weapon Immunity for the bypass - so the only feature the fixture adds cannot move the number.',
+      'a.ability.holyWeapon':
+        'Keep, and the absence is the rule under test: the secondary threshold is picked per channel, and its ranged arm is gated on `isNonMagicalRangedFieldSlot` (stats_sequence.js:1450-1457, wired at stats.js:1737-1738), so a magic_c type takes nothing. holyWeaponMissile and holyWeaponBoulder are this card with only rtbType changed and both pin 0.400 against this 0.300, the difference being the +10% this fixture denies.',
+    },
   },
   holyWeaponNotFireBreath: {
     desc: 'Holy Weapon does NOT boost fire breath: melee 1 @ 40% + fire rtb 1 @ 30% = 0.4+0.3=0.7',
@@ -452,6 +510,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: false,
     expected: { dmgToA: 0, dmgToB: 0.600 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the CoM 2 block writes the Ranged and Thrown channels only, so on a Fire Breath card the enchantment has no channel left to reach; its +1 Defence and +1 Resistance sit on the attacker in a one-way exchange, and its melee arm reads a base melee this card does not have.',
+      'a.ability.heavenlyLight':
+        'Keep, and the absence is the rule under test: the modern strength half is gated on `isConventionalRangedSlot` (stats_sequence.js:956-960), and the To Hit half answers for kinds ranged and thrown only, returning 0 for anything else (stats_sequence.js:1450-1457). heavenlyLightRangedCoM2 is the same card with a missile Ranged channel instead and pins 1.200; the 0.800 and 0.900 the desc names are what a Breath arm on either half would give here.',
+    },
   },
   heavenlyLightMeleeCoM: {
     desc: 'Heavenly Light (CoM 1), the defender-side city block at com1:0x905BB: a positive melee attack gains +1, and a unit carrying no weapon material also gains +10% melee To Hit → 3 at 40% = 1.200. Without the enchantment this is 2 at 30% = 0.600.',
@@ -517,6 +581,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.900 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction. The material To Hit is withheld by the magical-ranged gate, which is the claim; the Outlander pair is present to give the fixture a second material gate - the Thrown one, which passes - on a channel the ranged exchange never fires, and the asserted 0.900 is exactly ranged 3 at 30% with nothing else in it.',
+      'a.weapon=magic':
+        'Keep, and the absence is the rule under test: ApplyMagicWeapons\' Ranged To Hit write is gated on `isNonMagicalRangedFieldSlot` (stats.js:1765-1766), and the modern branch answers the Ranged field from that gate alone rather than summing both halves the way the DOS shared slot does (stats.js:1777-1785), so a magical ranged type keeps its 30%. weaponToHitReadsOwnRangedChannelWarlord is this fixture with the ranged type changed from magic to missile and nothing else, and pins 1.200.',
+    },
   },
   weaponMaterialRangedHasNoStrengthGateWarlord: {
     desc: 'ApplyMagicWeapons writes `Inc(Units[i].ranged, j)` inside `if not Ismagicalranged(Units[i].rangedtype)` with no positive-strength gate at all (Units.RecalculateUnits.pas:648-656), and `Ismagicalranged` is False for a zero ranged type (:2968-2975), so the adamantium +2 lands on the `SRanged` field of a unit that owns no ranged attack. Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS:1494-1500): melee 3 + 2 material + 2 for the Armor the material gave = 7, beside a new Thrown 2 → 9.0. (Gating that write on the slot\'s input strength leaves nothing to transfer, for 7.0; without Blaze of Glory melee 5 and Armor 2 stay where they are, for 5.0; without the material, melee 3 → 3.0.)',
@@ -566,6 +636,10 @@ definePresets({
       toHitMod:70, toHitRtbMod:70, abilities: { supremeLight: true } },
     b: { atk:0, def:0, toBlkMod:70, hp:40 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.weapon=adamantium':
+        'Keep, and the absence is the rule under test: the DOS melee half is gated on the *calculated* record, `u.atk > 0` (stats.js:1801), and this card enters the block with melee 0, so the material is withheld and only Supreme Light\'s +2 lands. Drop the gate and the material\'s +2 joins it for 4.000. The material\'s other two arms are deliberately out of reach here - its Defence write is on the attacker in a one-way exchange, and the DOS secondary body admits Missile, Boulder and Thrown only, not the magic_s slot this card carries. weaponMaterialDosThrownHasNoStrengthGateCoM1 is the same engine with melee 3 > 0, where the material\'s +2 melee does land.',
+    },
   },
   weaponMaterialMeleeGateReadsPermanentRecordWarlord: {
     desc: 'The modern engine makes the same melee-presence test on the *permanent* record instead: `if BaseUnits[i].attack > 0` wraps `hitchancemelee`, `attack` and `attackbonus` (Units.RecalculateUnits.pas:637-642). Malnourished writes its −1 melee into ABase at `CreateUnit.CAS:614-618`, so this card\'s melee 1 enters ApplyMagicWeapons as a permanent 0 and adamantium is withheld: melee 1 − 1 = 0, then Blaze of Glory moves the whole armour — 4 − 2 Malnourished + 2 adamantium = 4 — onto it, for 4.0. This fixture separates all three readings of the gate: no gate at all, or a gate on the card\'s own melee input, both leave the +2 in place for 6.0. (Without the material, armour 2 alone gives 2.0.) The Ranged record is typed magical at strength 0 so `Ismagicalranged` withholds the material\'s secondary write, leaving Blaze of Glory nothing to transfer — otherwise this fixture would also carry weaponMaterialRangedHasNoStrengthGateWarlord\'s Thrown 2 and state two rules at once.',
@@ -599,6 +673,10 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10, abilities: { wraithForm: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
+    vacuity: {
+      'a.ability.wraithForm':
+        'Keep, and the absence is the rule under test: the bypass disjunct is gated on `version.startsWith(\'com\')` (stats.js:1031-1034), so MoM 1.31 leaves the weapon normal and enemy Weapon Immunity still raises the defence. wraithFormBypassesWICoM2 is the same card in CoM 2 and pins 10.000, which is what widening that version test would give here. The enchantment is not dead in this version - its defensive half is live at combat_special_attacks.js:571-572, which wraithFormGrantsWeaponImmunity pins. Weapon Immunity is the live half here.',
+    },
   },
   wraithFormBypassesWICoM2: {
     desc: 'Wraith Form offense in CoM2: unit attacks as though it had magic weapons, bypassing enemy WI',
@@ -620,6 +698,10 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, weapon: 'magic' },
     b: { def:0, toBlkMod:70, hp:20, abilities: { rulerOfUnderworld: true } },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.weapon=magic':
+        'Keep, and the absence is the rule under test: the claim is that a material-only Magic Weapon grant cannot bypass a Ruler of Underworld defender, so the material has to be inert. `modernAttackIsMagic` answers a Ruler-of-Underworld defender from `encMagicIndependentOfMaterial` alone (combat_special_attacks.js:582-584), and this attacker\'s only EncMagic source is the material (`modernEncMagicFromMaterial`, stats.js:1062; none of the independent terms enumerated beside it at stats.js:1066-1070 is present on this card), so the attack stays non-magical either way, `wi` holds (combat_effects.js:646-647) and CoM 2\'s +8 (combat_effects.js:499) leaves 10 - 8 = 2.000. Delete that Ruler branch and the helper falls through to `encMagic` (combat_special_attacks.js:585), the material is admitted and this reads 10.000. version-dead is arithmetic rather than a second finding: this is the only com2_1.05.11 preset in the suite that sets a weapon material on either side.',
+    },
   },
 
   // --- Metal Fires / Flame Blade / Fiery Blade ---
@@ -634,6 +716,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { metalFires: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.metalFires':
+        'Keep, and the absence is the rule under test: `c:metalFires` is gated on `!u.fantastic` (combat_abilities.js:996), so a Fantastic card takes neither the melee +1 (combat_abilities.js:999) nor the secondary +1 (combat_abilities.js:1003), and ablating the enchantment must leave 1.000. The live candidate is the unitType: metalFiresMelee is this fixture with `unitType: \'fantastic_chaos\'` removed and nothing else changed, and pins 2.000. The block states the same exclusion a second time for the magic-weapon upgrade (`metalFiresActive`, stats.js:903), but that arm cannot move this number - the defender has no Weapon Immunity.',
+    },
   },
   metalFiresFantasticMissileUnaffected: {
     desc: 'Metal Fires does not boost a Fantastic unit\'s missile attack: strength 1 stays 1.',
@@ -642,6 +728,10 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.metalFires':
+        'Keep, and the absence is the rule under test: the same `!u.fantastic` gate (combat_abilities.js:996) withholds the whole block, so the secondary write that would admit a `missile` slot (combat_abilities.js:1001-1003) never runs and ablating the enchantment must leave 1.000. metalFiresMissile is this fixture with `unitType: \'fantastic_chaos\'` removed and nothing else changed, and pins 2.000; the unitType is the live candidate.',
+    },
   },
   metalFiresFantasticThrownUnaffected: {
     desc: 'Metal Fires does not boost a Fantastic unit\'s melee or Thrown attacks: strength 1 + 1 deals 2.',
@@ -649,6 +739,10 @@ definePresets({
       unitType:'fantastic_chaos', abilities: { metalFires: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.metalFires':
+        'Keep, and the absence is the rule under test: the `!u.fantastic` gate (combat_abilities.js:996) withholds both halves at once, so melee 1 and Thrown 1 each stay where they are and ablating the enchantment must leave 2.000. metalFiresThrown is this fixture with `unitType: \'fantastic_chaos\'` removed and nothing else changed, and pins 4.000 - the two-channel spread is what separates this fixture from metalFiresFantasticUnaffected and metalFiresFantasticMissileUnaffected, which pin the halves singly.',
+    },
   },
   metalFiresMissile: {
     desc: 'Metal Fires +1 missile: base 1 + MF → 2 rtb, 100% hit vs 0 def → E[dmg]=2.0',
@@ -663,6 +757,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the enchantment is the only feature the fixture configures, and the claim is that it does not reach a boulder slot.',
+      'a.ability.metalFires':
+        'Keep, and the absence is the rule under test: this card is not Fantastic, so `c:metalFires` does fire (combat_abilities.js:996), but its secondary write admits `missile` and `thrown` alone (combat_abilities.js:1001-1002) and boulder is neither. The melee half beside it (combat_abilities.js:999) writes into an `atk` left at the default 0 (UNIT_DEFAULTS, data.js:103) on a fixture that resolves a range-1 ranged exchange, so only that type test can move a number here. Widen it to boulder and the attack becomes 1 + 1 for 2.000, which metalFiresMissile - this fixture with `rtbType: \'missile\'` in place of `\'boulder\'` and nothing else changed - pins.',
+    },
   },
   metalFiresThrown: {
     desc: 'Metal Fires +1 thrown: atk 1+1=2, thrown 1+1=2, 100% hit vs 0 def → E[dmg]=4.0 (thrown+melee)',
@@ -700,6 +800,10 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { flameBlade: true, metalFires: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.metalFires':
+        'Keep, and the absence is the rule under test: `c:metalFires` will not fire while Flame Blade is on the card - `!(hasAbil(abilities, \'flameBlade\') || ...)` (combat_abilities.js:997) - so only Flame Blade\'s +2 lands and the melee stays 3. Drop that disjunct and Metal Fires\' +1 joins it for 4.000. flameBladeMelee is this fixture without Metal Fires and pins the same 3.000; metalFiresMelee is this fixture without Flame Blade and pins 2.000, so the pair brackets the non-stacking from both sides. `metalFiresActive` states the same exclusion again for the magic-weapon upgrade (stats.js:904), but that arm cannot move this number - the defender has no Weapon Immunity.',
+    },
   },
   flameBladeMeleeCoM2: {
     desc: 'CoM2 Flame Blade +3 melee: 1 atk + FB → 4 atk, 100% hit vs 0 def → E[dmg]=4.0',
@@ -738,6 +842,12 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the enchantment is the only feature the fixture configures, and the claim is that it does not reach a boulder channel.',
+      'a.ability.flameBladeWarlord':
+        'Keep, and the absence is the rule under test: the phase-c blade step admits `missile` and `thrown` alone on its Warlord arm (stats.js:1923), so a boulder Ranged channel takes nothing. Its melee half is gated on a melee attack existing (stats.js:1917) and this card\'s `atk` is the default 0 (UNIT_DEFAULTS, data.js:103), and the region-d +1 (stats_sequence.js:1522-1530) lands on the Fire Breath channel - that is what `warlordFlameBladeOwnsSlot` selects (stats.js:1713-1715) - which a range-1 ranged exchange never fires - so the type test is the only thing left that could move the number. Widen it to boulder and the attack becomes 1 + 2 for 3.000, which flameBladeMissileWarlord - this fixture with `type: \'missile\'` in place of `\'boulder\'` and nothing else changed - pins. fieryFuryBoulderWarlord is the same card with Fiery Fury in place of Flame Blade, and reaches 3.000 on a boulder because that effect\'s test is the wider `slotHasPhysicalRanged` (stats.js:1907-1908).',
+    },
   },
   flameBladeThrownWarlord: {
     desc: 'Warlord Flame Blade: +3 melee and +2 thrown, plus the unconditional SFireBreath += 1 at UnitCalc.CAS:330-333 that creates a strength-1 fire breath from the empty breath field. atk 1+3=4, thrown 1+2=3, created breath 1, all at 100% hit → E[dmg]=8.0. Without the ability the same unit deals 2.0.',
@@ -766,6 +876,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, race:'Dwarf', abilities: { lavaSmelterFieryBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. The gap is in the naming, not the fixture: the control is registered as `lavaSmelterFieryBlade`, label "Lava Smelter: Fiery Blade" (enchantments.js:110), and the sweep binds a feature only when the whole token run `lava smelter fiery blade` appears in the key, while this key names the effect without its Lava Smelter source. The feature is live all the same - the grant sets `fieryBlade` (stats_identity.js:538), `hasWarlordBlade` picks it up (stats.js:889-890) and the phase-c blade step adds the modern melee bonus of 3 (stats.js:1910, :1917), taking atk 1 to 4. The other candidate, `race: \'Dwarf\'`, is not read by that grant: `applyLavaSmelterGrant`\'s admission test is the version and the base unitType (stats_identity.js:501-502, the caller passing `baseUnitType` at stats.js:87), and its body reads the five Lava Smelter ability flags and the legacy selector (stats_identity.js:505-510). No race test appears in the function.',
+    },
   },
   fieryBladeNoFireBreathWarlord: {
     desc: 'Warlord Lava Smelter Fiery Blade does NOT add fire breath: breath stays 1 while melee is 1+3=4 → E[dmg]=5.0',
@@ -773,6 +887,10 @@ definePresets({
     a: { atk:1, hitChance:70, modernAttacks: { fireBreath: { strength:1, type:'fire' } }, hp:10, race:'Dwarf', abilities: { lavaSmelterFieryBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. Same naming gap as fieryBladeMeleeWarlord - the control is `lavaSmelterFieryBlade` / "Lava Smelter: Fiery Blade" (enchantments.js:110) and the key names only the effect, so no candidate\'s token run appears in it. The claim itself is live and negative at once: the +1 Fire Breath is a region-d write gated on `warlordCombatFlameBlade` (stats_sequence.js:1524), which is `isWarlord && !!abilities.flameBlade` (stats.js:149) and so reads the combat-cast enchantment rather than the Lava Smelter grant, leaving breath 1 beside the melee 1 + 3 that the phase-c step does land (stats.js:1910, :1917). Widen that gate to the grant and this reads 6.000, which flameBladeFireBreathWarlord pins - it is this card with the combat-cast Flame Blade in place of the grant and no `race` field. Ablating the grant clears `fieryBlade` (stats_identity.js:538) and with it `hasWarlordBlade` (stats.js:889-890), which is the blade step\'s own gate (stats.js:1913), so the melee +3 goes and the candidate is not inert.',
+    },
   },
   fieryFuryMeleeWarlord: {
     desc: 'Warlord Fiery Fury +3 melee (regular unit): 1 atk + FF → 4 atk, 100% hit vs 0 def → E[dmg]=4.0',
@@ -817,6 +935,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_nature', abilities: { fieryFury: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.fieryFury':
+        'Keep, and the absence is the rule under test: the stat package is the ELSE arm of Fiery Fury\'s one base-Fantastic test - `ffRegularBonus = isWarlord && !!abilities.fieryFury && !permanentFantastic` (stats.js:909) - and it gates both the phase-b write (stats_sequence.js:509-510) and `ffMeleeBonus` (stats.js:913), so a base-Fantastic card takes nothing and ablating the enchantment must leave 1.000. The THEN arm is not dead in this version, it simply has nothing to act on here: its First Strike (combat_effects.js:164-167) faces a defender with no attack, and its Chaos realm (stats_identity.js:311-314) has no Chaos Surge to feed, this fixture setting none. Drop `!permanentFantastic` and atk 1 becomes 4 for 4.000, which fieryFuryMeleeWarlord - this fixture with `unitType: \'fantastic_nature\'` removed and nothing else changed - pins.',
+    },
   },
   fieryFuryFantasticFirstStrike: {
     desc: 'Warlord Fiery Fury on fantastic gives First Strike: A kills B before B can swing. atk 5 + FS, B atk 5 no FS, B has 5 HP → A wins unscathed → dmgToA=0, dmgToB=5.0',
@@ -840,6 +962,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_death', abilities: { fieryFury: true, undead: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.fieryFury':
+        'Keep. Both of the enchantment\'s arms are already answered on this card, so ablating it cannot move the number: the stat package needs `!permanentFantastic` (stats.js:909) and this unit is base-Fantastic, while the Chaos realm its THEN arm writes at `b:fieryFury:race` (stats_identity.js:311-314) is overwritten by `c:undead`\'s `u.race = \'Death\'` (stats_identity.js:367-369), which ranks after it (stats_manifests.js:262, :280), so `chaosSurgeCount` finds no Chaos realm and returns 0 (stats.js:600-602). The live half is the Undead flag, which is what the fixture measures. Rank `b:fieryFury:race` after `c:undead` and the Chaos Surge melee bonus lands for 4.000 - the value fieryFuryFantasticChaosConversion pins on a base-Fantastic card that does reach the Chaos realm, differing from this one in two fields: `unitType` fantastic_nature rather than fantastic_death, and no `undead`.',
+    },
   },
   fieryFurySanctifyNoChaosConversionWarlord: {
     desc: 'Sanctify overrides Fiery Fury\'s Chaos write from a different source line (UnitCalcPre.CAS:1249) than the Undead normalization does: the unit ends Life rather than Chaos, so Chaos Surge does not reach it and atk stays 1 → E[dmg]=1.0. Dropping Sanctify gives 4.0.',
@@ -848,6 +974,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_nature', abilities: { fieryFury: true, sanctify: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.fieryFury':
+        'Keep. Same shape as fieryFuryUndeadNoChaosConversion, with the override coming from the other source: the stat package needs `!permanentFantastic` (stats.js:909) and this unit is base-Fantastic, while the Chaos realm `b:fieryFury:race` writes (stats_identity.js:311-314) is replaced by `b:sanctify`\'s `u.race = \'Life\'` (stats_identity.js:338), which ranks later inside the same region (stats_manifests.js:262, :267), so `chaosSurgeCount` returns 0 (stats.js:600-602). Ablating Fiery Fury changes neither answer; Sanctify is the live half, and fieryFuryFantasticChaosConversion is this fixture with Sanctify removed and nothing else changed, pinning 4.000.',
+    },
   },
   fieryFuryFieryBladeNoStack: {
     desc: 'Warlord Fiery Fury + Fiery Blade: shared bonuses do NOT stack (melee stays +3, missile +2). atk 1+3=4 → E[dmg]=4.0',
@@ -855,6 +985,12 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, race:'Dwarf', abilities: { fieryFury: true, lavaSmelterFieryBlade: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction, and the inertness is the whole assertion: the claim is that the two sources supply one +3 melee between them, so removing either has to leave 4.000. The third candidate, `race: \'Dwarf\'`, is not read by the Lava Smelter grant: `applyLavaSmelterGrant`\'s admission test is the version and the base unitType (stats_identity.js:501-502, the caller passing `baseUnitType` at stats.js:87), and its body reads the five Lava Smelter ability flags and the legacy selector (stats_identity.js:505-510). No race test appears in the function.',
+      'a.ability.fieryFury':
+        'Keep, and the absence is the rule under test: with a Warlord blade on the card `ffMeleeBonus` is forced to 0 by `ffRegularBonus && !hasWarlordBlade` (stats.js:913), and the whole +3 comes from the phase-c blade step instead (stats.js:1910, :1917), so ablating Fiery Fury leaves 4.000 - and ablating the Fiery Blade grant also leaves 4.000, because `ffMeleeBonus` then becomes 3. Drop the `!hasWarlordBlade` term and the two stack for 7.000. fieryFuryMeleeWarlord and fieryBladeMeleeWarlord each pin the single-source 4.000 this fixture has to match.',
+    },
   },
   fieryFuryWeaponImmunityBypass: {
     desc: 'Warlord Fiery Fury bypasses Weapon Immunity (effective weapon → magic). atk 4+3=7 hits WI 10 def 0+10=10 normally but bypass leaves def 0 → E[dmg]=7.0',
@@ -862,6 +998,10 @@ definePresets({
     a: { atk:4, hitChance:70, hp:10, abilities: { fieryFury: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 7.000 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: the defender\'s flag has to be unable to add anything, or there is no bypass. `ffRegularBonus` is one of `modernEncMagicOtherTerms`\' disjuncts (stats.js:1066-1068), so `modernAttackIsMagic` is true (combat_special_attacks.js:585), `wi` is false (combat_effects.js:646-647) and no Weapon Immunity bonus is ever added - the melee 4 + 3 lands whole. Remove that disjunct and Warlord\'s +10 (combat_effects.js:499) meets a 7-strength attack against Defence 0, the same pairing rustStripsMagicWeaponWarlord asserts at 0.000. Fiery Fury is the live candidate.',
+    },
   },
 
   // --- Spirit Link (Warlord, Conjurer signature) ---
@@ -871,6 +1011,10 @@ definePresets({
     a: { atk:1, hitChance:70, hp:10, abilities: { exorcise: -4 } },
     b: { figs:2, def:0, res:5, hp:10, unitType: 'fantastic_death', abilities: { spiritLink: true } },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.exorcise':
+        'Keep, and the absence is the rule under test: `exorciseFailProb` returns 0 on its first line for any defender whose unit type does not begin `fantastic_` (combat_special_attacks.js:121), and the type it is handed is the finished one (combat_phases.js:88 passes `other.unitType`, which is `finishedUnitType`, stats.js:2584). `d:spiritLink` clears Fantastic at the tail of the derivation (stats_identity.js:385-387), which is the identity a cast-time targeting predicate reads (stats_identity.js:391-395), and `legacyUnitTypeFromLiveIdentity` then answers `normal_death` (stats_identity.js:154), so there is no banish roll for the ablation to remove and only the physical melee 1 lands. Spirit Link is the live half: without it the base fantastic_death survives to that read and the -4 fires.',
+    },
   },
   spiritLinkWeaponImmunityBypassWarlord: {
     desc: 'Spirit Link: phase c grants magical attacks while the unit is still fantastic; phase d then clears Fantastic without clearing EncMagic. The spirit-linked attacker therefore still bypasses Weapon Immunity and deals 10.0.',
@@ -878,6 +1022,14 @@ definePresets({
     a: { atk:10, hitChance:70, hp:10, unitType: 'fantastic_chaos', abilities: { spiritLink: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is about *when* the EncMagic flag is read, and no feature the fixture could give up moves that read. The attacker is Fantastic where the flag is taken either way - it is base-Fantastic through `unitType`, and dropping that to normal leaves `b:spiritLink`\'s own assertion (stats_identity.js:302) standing in its place - so both attacker-side candidates leave 10.000, and the defender\'s Weapon Immunity has nothing to add once the flag is set.',
+      'a.ability.spiritLink':
+        'Keep, and the ordering is the rule under test: EncMagic\'s Fantastic arm is read off the record standing at `c:chaosSurge` (stats.js:2167, folded into the flag at :2168), and `d:spiritLink`\'s clearing write (stats_identity.js:387) is ranked past it (stats_manifests.js:283 then :297), so `modernAttackIsMagic` answers from a Fantastic unit (combat_special_attacks.js:585). Ablating the enchantment removes the clear along with the assertion and can never show that; the rank is what does. Take the flag from the finished identity instead and the attack is no longer magical, `wi(false)` holds (combat_effects.js:646-647, :656) and Warlord\'s +10 (combat_effects.js:499, added at :474) meets a 10-strength attack against Defence 0 at a 100% block chance. Spirit Link is not the source of the Fantastic this read finds, only of the later clear; spiritLinkExorciseImmuneWarlord is where the same `d:spiritLink` write is the live half.',
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: the defender\'s flag has to be unable to add anything, or there is no bypass. `modernAttackIsMagic` is true, so `wi` is false (combat_effects.js:646-647) and `effectiveDefense:weaponImmunity` never fires (combat_effects.js:474-475), leaving the melee 10 whole. Removing the flag reaches the same 10.000 through the other term of that conjunction instead, `hasWeaponImmunityEffect` answering false (combat_special_attacks.js:570-574).',
+    },
   },
   spiritLinkBlessNoBonusWarlord: {
     desc: "Spirit Link: spirit-linked fantastic_chaos missile attacker grants the enemy no anti-Chaos Bless bonus. missile 10 vs def 0 → 10.0 (vs 3.0 with Bless's +7)",
@@ -913,6 +1065,10 @@ definePresets({
     a: { atk:7, toHitMod:70, hp:10 },
     b: { toBlkMod:70, hp:10, abilities: { ccDefense: true } },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact - the version suffix carries no capital to break on, so camelTokens splits the key into `cc`/`defense131` and the candidate\'s `cc`/`defense` is not a contiguous run inside it. The feature is live: the bug is `version === \'mom_1.31\' ? 6 : 3` (combat_abilities.js:1070), written at :1072, and ccDefenseFixed is this fixture with `version` alone changed to CP 1.60, pinning the patched 4.000 against this 1.000.',
+    },
   },
   ccDefenseFixed: {
     desc: 'Chaos Channels Defense (CP 1.60): +3 def (Insecticide fix) → 7 atk 100% hit, def 0+3=3, 100% block → 4 dmg',
@@ -1000,12 +1156,20 @@ definePresets({
     a: { atk:1, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10, abilities: { fireImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.ccFireBreath':
+        'Keep. Inert as a consequence of the assertion: Fire Immunity has already closed the channel the grant writes, so removing the grant cannot move the number. The grant sets the shared slot\'s type to `fire` (stats_sequence.js:351) at the MoM strength 2 (stats.js:392), the defender\'s immunity then raises the blanket marker on any fire-typed ranged attack (combat_effects.js:779, gated at :780-782), and the tail step cashes that in as Defence 50 (combat_effects.js:834, value at :906) - the breath contributes 0 either way and only the melee 1 lands. Fire Immunity is the live half: ccFireBreathBasic states the same two units without it (spelling `version: V_MOM_131` where this fixture inherits mom_1.31 from its group) and pins 3.000.',
+    },
   },
   ccBypassWeaponImmunity: {
     desc: 'CC unit attacks Weapon Immune: CC makes unit fantastic_chaos, so WI does not apply → 3 dmg',
     a: { atk:3, toHitMod:70, hp:10, abilities: { ccDefense: true } },
     b: { hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'b.ability.weaponImmunity':
+        'Keep, and the absence is the rule under test: the defender\'s flag has to be unable to add anything, or there is no bypass. `weaponImmunityApplies` refuses a non-normal attacker outright (combat_special_attacks.js:602), and `c:chaosChannels:armor:race` has made this attacker a Chaos fantastic creature (stats_identity.js:350), so `dosEffectiveDefense:weaponImmunityMark` never fires (combat_effects.js:785-786) and 1.31\'s floor of 10 (combat_effects.js:826) never runs - Defence stays 0 and the melee 3 lands whole. Removing the flag reaches the same 3.000 by the function\'s first line instead (combat_special_attacks.js:598). Chaos Channels is the live half here; its own +6 Defence lands on the attacker, which never has to defend on this card.',
+    },
   },
   ccNodeAuraChaos: {
     desc: 'CC unit benefits from Chaos Node aura: +2 atk. 1 atk + CC (fantastic_chaos) + chaos node aura → 3 atk, 100% hit → 3 dmg',
@@ -1073,6 +1237,12 @@ definePresets({
     b: { hp:10, abilities: { lucky: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.300 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that the 1.31 enemy penalty is melee-only, and the defender\'s Lucky is the only feature the fixture adds. Its own three writes (combat_abilities.js:833) have nothing to act on here either - the defender never attacks, its Defence 0 rolls no blocking dice, and the fixture makes no resistance roll.',
+      'b.ability.lucky':
+        'Keep, and the absence is the rule under test: the 1.31 block writes the opponent\'s `toHitMelee` and nothing else (combat_phases.js:255), where the Invisibility block below it writes `toHitMelee` and `toHitRtb` together (combat_phases.js:280-281), so a missile attacker is outside it and the 30% base To Hit stands. Give the block the shared secondary slot as well and this reads 0.200 - the value its melee twin luckyEnemyMeleePenalty131 pins against the same Lucky defender.',
+    },
   },
   luckyEnemyPenaltyRemovedPatched: {
     desc: 'Lucky Enemy Melee Penalty (MoM CP 1.60): fix — enemy penalty removed. 1 atk 30% vs Lucky → still 0.3',
@@ -1080,6 +1250,12 @@ definePresets({
     a: { atk:1, hp:10 },
     b: { hp:10, abilities: { lucky: true } },
     expected: { dmgToA: 0, dmgToB: 0.300 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that CP 1.60 removed the enemy penalty, so the defender\'s Lucky has to move nothing. Its own three writes (combat_abilities.js:833) have nothing to act on here either - the defender never attacks, its Defence 0 rolls no blocking dice, and the fixture makes no resistance roll.',
+      'b.ability.lucky':
+        'Keep, and the absence is the fix under test: the whole enemy-penalty block sits inside `if (version === \'mom_1.31\')` (combat_phases.js:253), so no CP 1.60 attacker takes the -10 written at :255 and the 30% base To Hit stands. luckyEnemyMeleePenalty131 is this fixture with `version` alone changed and pins 0.200. version-dead is a coverage fact rather than a second claim: this is the only mom_cp_1.60.00 preset in the suite that configures `lucky`, the other seven being luckyToHit, luckyToHitRanged, luckyToBlock, luckyResistance, luckyEnemyMeleePenalty131 and luckyEnemyPenaltyNotRanged131 on mom_1.31 and luckyStarEnchantedUnitWarlord on Warlord.',
+    },
   },
 
   // --- Defense Rollover (wounded top figure) ---
@@ -1089,6 +1265,10 @@ definePresets({
     a: { figs: 1, atk: 3, toHitMod: 70, def: 0, hp: 20 },
     b: { figs: 2, hp: 2, dmg: 1, def: 1, toBlkMod: 70, atk: 0 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep. Nothing to ablate by construction, because the rule is a numeric state rather than a feature: the fixture states only figs/atk/toHitMod/def/hp/dmg/toBlkMod, and none of those is an ability, one of `candidates()`\' unit or identity fields, or a combat global (tools/preset_vacuity_sweep.js:196-206, enumerated at :256-292). What decides the number is `b`\'s `dmg: 1` against a 2x2 pool. The DOS engines are handed no top-figure threshold - `isCoM2 ? woundedTopFigHP(cap, b.hp) : undefined` (combat_phases.js:654, and again at :565, :720 and :781 for the other channels and the other side) - so the chain rolls over at the full 2 HP (engine.js:116-119): 3 hits less 1 block is exactly 2, the boundary is reached with nothing left to carry, and the total is 2. defRolloverWoundedCoM2 states the same units on CoM 2, with `hitChance` for `toHitMod` as ui_state.js:304-306 requires, and pins 1.000.',
+    },
   },
   defRolloverWoundedCoM2: {
     desc: 'CoM2: top fig wounded (1/2 HP); rollover at topFigHP=1, excess hits fresh defense roll → blocked → E=1.000',
@@ -1096,6 +1276,10 @@ definePresets({
     a: { figs: 1, atk: 3, hitChance:70, def: 0, hp: 20 },
     b: { figs: 2, hp: 2, dmg: 1, def: 1, toBlkMod: 70, atk: 0 },
     expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'no-ablatable-feature':
+        'Keep, and nothing to ablate for the same reason as its DOS half defRolloverWoundedCoM: the fixture states only numeric fields, none of which `candidates()` enumerates (tools/preset_vacuity_sweep.js:196-206, :256-292). Here `isCoM2` supplies the threshold (combat_phases.js:654), `woundedTopFigHP` of the defender\'s remaining 3 HP over 2 HP per figure is 1 (combat_abilities.js:54), and the shallower first boundary sends the excess into a fresh Defence roll (engine.js:132, chained at :139-146) which a 100% block chance takes - 1.000 against the DOS 2.000.',
+    },
   },
 
   // --- Predefined unit matchups (MoM 1.31) ---
@@ -1113,6 +1297,12 @@ definePresets({
     a: { atk:4, toHitMod:70, hp:10 },
     b: { atk:0, def:1, toBlkMod:70, hp:10, abilities: { largeShield: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that Large Shield is a ranged-only bonus, so the only feature the fixture adds cannot move the 3.',
+      'b.ability.largeShield':
+        'Keep, and the absence is the rule under test: `dosEffectiveDefense:largeShield` is gated on `ctx.isRanged` (combat_effects.js:773), and the melee descriptor is the one branch of `dosDefenseForAttack` that never sets that flag (combat_effects.js:955-961), so Defence stays 1 and 4 - 1 = 3. Drop the `isRanged` term and MoM\'s +2 (combat_effects.js:904) makes it 4 - 3 = 1, which is what its ranged twin largeShieldRangedMissile pins against the same Defence-1 Large Shield defender.',
+    },
   },
   largeShieldThrown: {
     desc: 'Large Shield Thrown: thrown 4 (100% hit) vs def 1+2=3 (100% block) → 4−3=1; melee 1 vs def 1 (no LS) → 0',
@@ -1181,6 +1371,10 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10 },
     b: { def:0, hp:100, abilities: { blur: true, illusionImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'b.ability.blur':
+        'Keep. Inert as a consequence of the assertion: the claim is that 1.31 lets the defender\'s own Illusion Immunity switch its Blur off, so the Blur has to be worth nothing. `getBlurChance` picks the 10% rate (combat_effects.js:24, :27) and then returns 0 because the 1.31 branch tests the *defender\'s* flag (combat_effects.js:40-41), leaving all 10 hits to land. Illusion Immunity is the live half. Delete that branch and the test falls to the attacker, who carries none, so the Blur survives - blurIllImmDefenderFixed is this fixture with `version` alone changed to CP 1.60 and pins 9.000, the round 9 rather than blurBasicMoM131\'s 9.083 because `blurBuggy` is 1.31-only (combat.js:71).',
+    },
   },
   blurIllImmAtkBugV131: {
     desc: 'Blur v1.31 bug: attacker illusionImmunity does NOT disable blur (checked on wrong unit) — E[dmg]≈9.083',
@@ -1195,6 +1389,10 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10, abilities: { illusionImmunity: true } },
     b: { def:0, hp:100, abilities: { blur: true } },
     expected: { dmgToA: 0, dmgToB: 10.000 },
+    vacuity: {
+      'b.ability.blur':
+        'Keep. Inert as a consequence of the assertion: the claim is that CP 1.60 reads Illusion Immunity on the attacker, which is where this fixture puts it, so the defender\'s Blur has to be worth nothing. `getBlurChance` picks the 10% rate (combat_effects.js:24, :27) and then returns 0 on the non-1.31 branch (combat_effects.js:42-43). The attacker\'s Illusion Immunity is the live half; blurIllImmAtkBugV131 is this fixture with `version` alone changed to 1.31, where the same flag is read on the wrong unit and the Blur survives at 9.083.',
+    },
   },
   blurIllImmDefenderFixed: {
     desc: 'Blur v1.60 fixed: defender illusionImmunity does NOT disable their own blur (correct unit checked) — E[dmg]=9.0',
@@ -1209,6 +1407,10 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10, abilities: { doom: true } },
     b: { def:0, hp:100, abilities: { blur: true } },
     expected: { dmgToA: 0, dmgToB: 5.000 },
+    vacuity: {
+      'b.ability.blur':
+        'Keep, and the absence is the rule under test: a Doom strike never reaches the Blur filter. `calcMeleeTouchOutcome` routes it to `calcDoomDist` (combat_fear_and_touch.js:413-414), which takes neither To Hit nor blur and returns the exact total (combat_special_attacks.js:313-317); only the ordinary branch below passes `blurChance` on (combat_fear_and_touch.js:416). The 10% is computed for this defender and then never consulted, and the number is `applyDoomUAHalving`\'s floor(10 / 2) (combat_phases.js:169). Doom is the live half: blurBasicMoM131 is this fixture with it removed and pins 9.083.',
+    },
   },
   invisToHitMoM: {
     desc: 'Invisibility in MoM: −10% to-hit penalty (no blur-equivalent): 10 atk 90% hit, def 0 → E[dmg]=9.0',
@@ -1216,6 +1418,10 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10 },
     b: { def:0, hp:100, abilities: { invisibility: true } },
     expected: { dmgToA: 0, dmgToB: 9.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. A pure tokenisation artefact - the key abbreviates the ability, so camelTokens gives `invis`/`to`/`hit`/`mo`/`m` while the candidate\'s only terms are its key and label, `invisibility` and `Invisibility` (enchantments.js:40). The feature is live: on a MoM build `invisGivesBlur` is false (combat_effects.js:26), so Invisibility acts only as the -10 percentage points written at combat_phases.js:280, gated on `!invisIsCoM` at :278, taking a capped 100% To Hit to 90% for 9.000 where a visible defender takes the full 10.',
+    },
   },
   blurInvisCoM2: {
     desc: 'Invisibility grants Blur-equivalent in CoM (20%, no to-hit penalty): 10 atk 100% hit → E[dmg]=8.0',
@@ -1223,6 +1429,10 @@ definePresets({
     a: { atk:10, toHitMod:70, hp:10 },
     b: { def:0, hp:100, abilities: { invisibility: true } },
     expected: { dmgToA: 0, dmgToB: 8.000 },
+    vacuity: {
+      'name-binds-nothing':
+        'Keep. The same tokenisation artefact - camelTokens gives `blur`/`invis`/`co`/`m2` against the candidate\'s `invisibility`/`Invisibility` (enchantments.js:40), and the key\'s `blur` names the modelled effect rather than a second feature, since the fixture sets no Blur. The feature is live, and this is the other side of invisToHitMoM: `invisGivesBlur` is true for a `com` version (combat_effects.js:19, :26), so Invisibility alone takes the 20% rate (combat_effects.js:27, :35-36) while the MoM To-Hit penalty is skipped (combat_phases.js:273, :278), giving 8.000 where MoM gives 9.000. The `CoM2` suffix is this cluster\'s loose name for the CoM family and not the version: like blurPlusInvisCoM2 the fixture runs on com_6.08, and blurPlusInvisCoM2v2 carries the actual CoM 2 arm.',
+    },
   },
   blurPlusInvisCoM2: {
     desc: 'Blur + Invisibility CoM combined 30% (no to-hit penalty): 10 atk 100% hit → E[dmg]=7.0',
