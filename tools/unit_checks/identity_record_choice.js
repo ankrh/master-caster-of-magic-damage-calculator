@@ -24,7 +24,7 @@
 //     preset whose expected damage came from the source reading, not from running the code
 //     (`Calculator/CLAUDE.md`, *What an assertion has to be bound to*). This asserts that every
 //     correction still names one, that the preset exists, and that it is reachable from
-//     `TEST_TREE` — so `npm test` evaluates all twenty-five every run and a deletion is loud.
+//     `TEST_TREE` — so `npm test` evaluates every one of them each run and a deletion is loud.
 
 'use strict';
 
@@ -53,8 +53,9 @@ const CROSS_BOUNDARY_READS = [
       'Calculator/stats.js#effectiveAbilities',      // liveRace/liveFantastic for combat
       'Calculator/stats.js#identityAtRank',          // the fallback when no step reaches the rank
       // The sequence's own agreement check, which is what makes the projection's exactness a
-      // measured claim rather than a stated one.
-      'Calculator/stats.js#unitIsChaosAtWarpReality',
+      // measured claim rather than a stated one. It sits directly under `const statUnit`, which
+      // is the record it checks the projection against.
+      'Calculator/stats.js#statUnit',
     ],
   },
   {
@@ -73,15 +74,15 @@ const CROSS_BOUNDARY_READS = [
   },
   {
     token: 'identityAtRank',
-    why: 'Two engine facts the derivation publishes as **result fields** rather than as record '
-      + 'fields, so neither can be read inside its own step: the standing modern EncMagic rule at '
-      + "$005A1217 (F188) and Warp Reality's Immolation To Hit arm (F184, and BACKLOG F190 on "
-      + 'whether that arm has a source at all). The record is sampled at the block\'s own chain '
-      + 'rank instead.',
+    why: 'One engine fact the derivation publishes as a **result field** rather than as a record '
+      + 'field, so it cannot be read inside its own step: the standing modern EncMagic rule at '
+      + "$005A1217 (F188). The record is sampled at the block's own chain rank instead. Warp "
+      + "Reality's Immolation To Hit arm was the second such read; F190 deleted it — the modern "
+      + 'damage-spell roll takes `SpellTable[sp].hitchance`, never `U.hitchance` — and the '
+      + '`c:warpReality` sample went with it.',
     sites: [
       'Calculator/stats.js#identityAtRank',
       'Calculator/stats.js#modernEncMagicIndependentOfMaterial',
-      'Calculator/stats.js#unitIsChaosAtWarpReality',
     ],
   },
   {
@@ -183,10 +184,10 @@ const LANDED_CORRECTIONS = [
     preset: 'breakthroughLiveFantasticStillNormalCoM2' },
   { id: 'F183', at: "Rust's target class", record: 'finished',
     preset: 'rustAppliesToSpiritLinkedFantasticWarlord' },
+  // F184's second row, "Warp Reality's Immolation To Hit arm", stood here. F190 deleted the arm,
+  // so there is no longer a second read to fix a record for.
   { id: 'F184', at: 'c:warpReality', record: 'positional',
     preset: 'warpRealityChaosExemptAtBlockWarlord' },
-  { id: 'F184', at: "Warp Reality's Immolation To Hit arm", record: 'positional',
-    preset: 'warpRealityChaosExemptAtBlockImmolationWarlord' },
   { id: 'F185', at: 'b:trueLight / c:trueLight', record: 'positional',
     preset: 'trueLightReadsRealmAtItsOwnBlockWarlord' },
   { id: 'F186', at: 'b:eternalNight:poorVision', record: 'positional',

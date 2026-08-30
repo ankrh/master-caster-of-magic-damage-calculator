@@ -565,20 +565,35 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.300 },
     vacuity: {
       'combat.warpReality':
-        'Keep, and the absence is the rule under test: the exemption holds, so the -20% is never charged. The claim is positional - c:warpReality is #111 of the Warlord chain against d:spiritLink #135, so the block reads a still-Chaos record even though the recalculation later leaves normal_chaos. The realm is the live half at delta 0.2, and a.abilities.spiritLink is inert exactly because its clearing of Fantastic comes too late to be seen. Reading the record the recalculation leaves gives 0.100. version-dead holds across Warlord - the only two presets configuring warpReality are this one and warpRealityChaosExemptAtBlockImmolationWarlord, both exemption claims. TASKS F190 is open against the second consumer those two exercise.',
+        'Keep, and the absence is the rule under test: the exemption holds, so the -20% is never charged. The claim is positional - c:warpReality is #111 of the Warlord chain against d:spiritLink #135, so the block reads a still-Chaos record even though the recalculation later leaves normal_chaos. The realm is the live half at delta 0.2, and a.abilities.spiritLink is inert exactly because its clearing of Fantastic comes too late to be seen. Reading the record the recalculation leaves gives 0.100. version-dead holds across Warlord - the two Warlord presets configuring warpReality are this one and warpRealityDoesNotReachImmolationWarlord, and both deliberately make the key inert: this one because the Chaos exemption holds, that one because Immolation does not read a unit To Hit field. The Immolation fixture this one used to be paired with went with F190, which deleted the unsourced Immolation To Hit arm the pair shared.',
     },
   },
-  warpRealityChaosExemptAtBlockImmolationWarlord: {
-    desc: 'The same positional read at Warp Reality’s second consumer, the separate Immolation spell-attack chance. The attacker has no melee strength, so the only damage is Immolation 10 at its own To Hit: exempt → 30% → 3.0, against 1.0 if the exemption is taken from the record the recalculation leaves and the -20% applies. Paired with warpRealityChaosExemptAtBlockWarlord because the two consumers are separate expressions.',
+  // `warpRealityChaosExemptAtBlockImmolationWarlord` stood here. Its subject was Warp Reality's
+  // second consumer, the Immolation To Hit arm, which F190 deleted for having no source: the
+  // modern damage-spell roll reads `SpellTable[sp].hitchance`, not `U.hitchance`. Its own T2
+  // vacuity declaration said the fixture goes with the arm, and it has. The *unit* To Hit half of
+  // the same positional claim is still asserted, by `warpRealityChaosExemptAtBlockWarlord` above.
+  // What follows is the assertion F190 put in its place: the deletion moved 1816 derivations, and
+  // nothing else pinned the value it moved them to.
+  warpRealityDoesNotReachImmolationWarlord: {
+    desc: 'Warp Reality does not reach Immolation. Its write is `Dec(U.hitchance,20)`, and the melee Immolation delivered by `DamageSpell` (Combat.ApplyAttack.pas:378-383, SImmolation = 99) rolls `AttackRoll(str, SpellTable[sp].hitchance)` at $005C1696..$005C16FF — the spell table\'s chance, never the unit\'s. Spell 99 sets no HitChance in either spells.ini, so it takes the documented 30% default. The attacker is non-Chaos, so the unit-side −20% is charged in full and has no melee strength to charge it against: Immolation 10 at 30% vs 0 def → 3.0. Charging the −20% to Immolation as well would give 1.0.',
     version: V_WARLORD,
-    a: { atk:0, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true, immolation: true } },
+    a: { atk:0, hp:10, abilities: { immolation: true } },
     b: { hp:10 },
     warpReality: true,
     expected: { dmgToA: 0, dmgToB: 3.000 },
     vacuity: {
       'combat.warpReality':
-        'Keep, and the absence is the rule under test, at Warp Reality\'s second consumer: the separate Immolation spell-attack chance. The attacker has no melee strength, so the exempt 30% on Immolation 10 is the whole 3.0; taking the exemption from the record the recalculation leaves gives 1.0. Immolation is live at delta 3 and the realm at delta 2. Paired with warpRealityChaosExemptAtBlockWarlord because the two consumers are separate expressions. a.abilities.spiritLink is inert for the same positional reason. Note TASKS F190 is open on whether this second consumer, the unsourced Immolation To Hit arm, survives at all; if it goes, this fixture goes with it.',
+        'Keep, and the absence is the rule under test: Warp Reality is charged against this attacker (it is not Chaos and takes no exemption) and still moves nothing, because Immolation reads SpellTable[99].hitchance rather than U.hitchance. Ablation-inert is the assertion. Charging it would give 1.000, which is what the deleted F190 arm did. a.ability.immolation is the live half at delta 3.',
     },
+  },
+  warpRealityDoesNotReachImmolationMoM: {
+    desc: 'The DOS engines separate the two halves of the same claim in one fixture. `BU_ProcessAttack` hands Immolation to `Apply_Battle_Unit_Damage_From_Spell` (far target 0388:0039 = 0x87036, combat.c:2596), whose roll is `CMB_AttackRoll(attack_strength, 0)` at 131:0x87239, identical in CP 1.60 and CoM 1: the to-hit argument is a literal zero, so `bu->tohit -= 2` (131:0x9079D) cannot reach it. So the melee half takes the −20% and the Immolation half does not — 1 atk at 30%→10% = 0.1, plus Immolation 4 at an unmoved 30% = 1.2, total 1.3. The deleted F190 arm charged the −20% twice and gave 0.1 + 0.4 = 0.5.',
+    version: V_MOM_131,
+    a: { atk:1, hp:10, abilities: { immolation: true } },
+    b: { def:0, hp:10 },
+    warpReality: true,
+    expected: { dmgToA: 0, dmgToB: 1.300 },
   },
   warpRealityRanged: {
     desc: 'Warp Reality vs ranged: missile 1 atk, 30%→10% to hit vs 0 def → 0.1 dmg',

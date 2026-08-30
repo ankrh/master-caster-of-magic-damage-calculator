@@ -4,6 +4,69 @@
 
 # Journal
 
+## 2026-08-30 — F190: Warp Reality's Immolation To Hit arm goes, and the flat 30% is sourced
+
+`deriveUnitStats` set `toHitImmolation = 0.3` and then re-charged Warp Reality's -20% against it,
+two lines under its own comment saying Immolation ignores all modifiers. Verified against the
+sources rather than the item text:
+
+- Melee Immolation is delivered by `DamageSpell` — `Combat.ApplyAttack.pas:378-383`, with
+  `SImmolation = 99` at `:83`.
+- `DamageSpell`'s per-attack roll is
+  `dam := AttackRoll(str, SpellTable[sp].hitchance) - DefenseRoll(def, Units[u].defendchance)` at
+  `$005C1696..$005C16FF` (`Spells.DamageSpells.pas:197-198`). The attack half reads the *spell
+  table*; only the defense half reads a unit field. No unit-side To Hit writer can reach it.
+- Spell 99 sets no `HitChance` in either `spells.ini` (base `:1899-1916`, Warlord `:2218-2235`),
+  and the file's own key list gives the default: "HitChance - chance to hit, defaults to 30%"
+  (base `:332`, Warlord `:614`). Warlord's copy sets `HitChance` on ~20 other spells, so the
+  absence on 99 is a choice, not an unused key.
+
+Warp Reality's own write is the unit's hitchance — `Dec(U.hitchance,20)` at
+`$005A3E33..$005A3ED0`, `bu->tohit -= 2` at 131:0x9079D and com1:0x90502 (the addresses the item
+text and `stats_sequence.js` give, 131:0x9077A and com1:0x904DF, are the *gate*, not the write;
+that is what those comments claim, so nothing there is wrong) — and that half is untouched, still
+on `PROVENANCE[warpReality]` in `stats_sequence.js`.
+
+**The user ruled** delete the arm and file the DOS half as its own item. Three dead values went
+with it: `unitIsChaosAtWarpReality`, the `'c:warpReality'` identity sample (the arm was its only
+reader, so `identitySamples` is now `c:chaosSurge` alone), and the F184 `LANDED_CORRECTIONS` row
+naming the arm. The identity-projection agreement check moved two lines up, to sit directly under
+`const statUnit`; that is only so the cross-boundary scanner attributes it to a symbol that means
+something, and the two `modernEncMagic*` bindings it displaced moved below it (they are first read
+~400 lines later).
+
+`tools/derivation_equivalence.js`: 1816 of 52440 derivations move, all five versions, and the only
+field that changes is `toHitImmolation` 0.1 -> 0.3.
+
+`warpRealityChaosExemptAtBlockImmolationWarlord` was dropped, which is what its own T2 vacuity
+declaration said should happen if the arm went. Its positional claim survives in
+`warpRealityChaosExemptAtBlockWarlord`, which asserts the *unit* To Hit half. In its place,
+`warpRealityDoesNotReachImmolationWarlord` pins the new value: a non-Chaos Warlord attacker with
+no melee strength, Warp Reality charged in full, Immolation 10 at 30% -> 3.0 (the arm gave 1.0).
+It is ablation-inert on `combat.warpReality` by design and declares that.
+`warpRealityDoesNotReachImmolationMoM` pins the DOS half: 1 atk at 30%->10% = 0.1 plus Immolation 4
+at an unmoved 30% = 1.2, total 1.3 (the arm gave 0.5). Both of its candidates are ablation-live, so
+it needs no declaration. `tools/preset_vacuity_sweep.js --only warpReality` reports 0 findings over
+all ten.
+
+**The DOS half turned out to be already answered, and no item was filed.** The item text called
+`BU_ProcessAttack`'s Immolation delivery an unreconstructed overlay, and it is not. `combat.c:4080`
+calls `overlay_0388_0039(SPELL_FIREBALL, ...)` at `:4355`/`:4364`/`:4382`, and `0388:0039` resolves
+to `0x87036`, which `R6.version-differences.md:286` lists as a reconstructed spell-damage builder
+and which `combat.c:2596` holds under the name `Apply_Battle_Unit_Damage_From_Spell` — same file,
+same signature, declared as an `extern` far stub at `:330` only because the call crosses an overlay
+boundary. Its per-attack roll is `CMB_AttackRoll(attack_strength, 0)` at 131:0x87239, marked
+identical in CP 1.60 and CoM 1. The to-hit argument is a literal zero; the attacker's `bu->tohit`
+is neither passed nor read, and Wall of Fire shares the routine and the literal. So the flat 30% is
+sourced in all five versions, not three, and there is nothing left to reconstruct. Codex found this
+in the Method A review round, against a premise I had taken from the item text without checking.
+The user had pre-approved filing one TASKS row for the DOS question; the row was written, then
+withdrawn when the premise failed. `Calculator/stats.js` now carries the DOS citation beside the
+modern one.
+
+The Warp Reality tooltip (`index.html:63`) was checked and needed nothing: it promises
+"-20% To Hit (melee, ranged, thrown, breath)" and never mentioned Immolation.
+
 ## 2026-08-30 — F189: Night Goblins take a special-unit key, and the Poor Vision gate reads it
 
 The Warlord Eternal Night gate at `UnitCalcPre.CAS:1340-1344` has four terms. F186 landed the
@@ -441,8 +504,9 @@ rather than making each reader hunt for it.
   `ccFireBreath` and `immolation` do **not**, meaning some preset in those versions does move them.
   The two sweeps measure different populations, so this is a discrepancy to reconcile when F180
   runs, not proof either is wrong.
-- `combat.warpReality` is version-dead in Warlord, carried by exactly the two fixtures F190 names
-  as needing re-aiming or dropping if the Immolation arm goes.
+- `combat.warpReality` is version-dead in Warlord. F190 has since run: the Immolation arm went, its
+  fixture with it, and two replacements arrived — a Warlord absence fixture (still inert, declared)
+  and a MoM one that is ablation-live. Re-measure before trusting the version-dead line.
 - The one version-difference subgroup whose members share a single expectation is
   `{landLinkingRangedCoM, landLinkingRangedCoM2}` at `0/2` — what F75 recorded.
 

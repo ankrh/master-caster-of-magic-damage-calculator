@@ -2045,20 +2045,21 @@ function deriveUnitStats(input) {
   const applicableRawStatSteps = filterStepsToVersionScope(
     [...rawStatSteps, ...identityConversions], version);
   const statSteps = orderStatStepsBySource(applicableRawStatSteps, statChain(version));
-  // Two calculated facts the derivation publishes as **result fields** rather than as record
-  // fields, each of which the engine writes or reads at a position: `if U.Fantastic then
+  // One calculated fact the derivation publishes as a **result field** rather than as a record
+  // field, and which the engine writes at a position: `if U.Fantastic then
   // U.EnchantmentFlags[EncMagic] := True` at $005A1217, immediately before the Chaos Surge block
-  // (F188), and the Immolation To Hit arm of Warp Reality, which re-evaluates that block's own
-  // Chaos exemption (F184; whether the arm has any source at all is BACKLOG F190). A fact the
-  // record does not carry cannot be read at its own step, so the identity is *sampled* at the
-  // block's chain rank instead: immediately before the first step at or after that rank, which
-  // is the instant the block itself would run at. Everything else that reads the calculated
-  // identity does so from the record inside its own step.
+  // (F188). A fact the record does not carry cannot be read at its own step, so the identity is
+  // *sampled* at the block's chain rank instead: immediately before the first step at or after
+  // that rank, which is the instant the block itself would run at. Everything else that reads the
+  // calculated identity does so from the record inside its own step. Warp Reality was the second
+  // such sample, for an Immolation To Hit arm that had no source; F190 deleted the arm, and the
+  // sample with it — Warp Reality's one surviving write is `c:warpReality`, an ordinary step that
+  // reads the record at its own position.
   const identitySamples = new Map();
   const sampledStatSteps = (() => {
     const chain = statChain(version);
     const wrapped = new Map();
-    for (const key of ['c:chaosSurge', 'c:warpReality']) {
+    for (const key of ['c:chaosSurge']) {
       const rank = chain.findIndex(entry => entry.key === key);
       // A key no chain entry names would sample silently at the wrong place.
       if (rank < 0) throw new Error(`deriveUnitStats: ${version} has no chain entry ${key}`);
@@ -2174,12 +2175,6 @@ function deriveUnitStats(input) {
     channels: derivationContexts,
     slots: recordContext.slots };
   const statUnit = runStatSteps(sampledStatSteps, statRecord, statRunContext);
-  const modernEncMagicIndependentOfMaterial = modernEncMagicOtherTerms
-    || (version.startsWith('com2_') && !!identityAtRank('c:chaosSurge').fantastic);
-  const modernEncMagic = modernEncMagicFromMaterial || modernEncMagicIndependentOfMaterial;
-  // Warp Reality's Immolation arm, at the same block's rank as the step's own exemption.
-  const unitIsChaosAtWarpReality =
-    legacyUnitTypeFromLiveIdentity(identityAtRank('c:warpReality')) === 'fantastic_chaos';
   // Two claims this function makes before the sequence runs, both checkable once it has, and
   // both silent defects if they ever drift (`SPEC.md`, *Out-of-range values stop the run*).
   // (1) `finishedIdentity` is the record the recalculation leaves — the projection is exact
@@ -2205,6 +2200,9 @@ function deriveUnitStats(input) {
       `deriveUnitStats: the permanent Fantastic flag the base phase leaves (${baseRecord.fantastic}) `
       + `disagrees with the loadout and level gates' value (${permanentFantastic}) for ${version}.`);
   }
+  const modernEncMagicIndependentOfMaterial = modernEncMagicOtherTerms
+    || (version.startsWith('com2_') && !!identityAtRank('c:chaosSurge').fantastic);
+  const modernEncMagic = modernEncMagicFromMaterial || modernEncMagicIndependentOfMaterial;
   identity.race = statUnit.race;
   identity.fantastic = !!statUnit.fantastic;
   const hp = statUnit.hp;
@@ -2292,16 +2290,28 @@ function deriveUnitStats(input) {
       : -destructionPenalty;
     combatAbilities = { ...combatAbilities, energyCannonDestruction: energyDestruction };
   }
-  // Immolation To Hit: always base 30%, ignoring all modifiers (it's a spell attack)
-  let toHitImmolation = 0.3;
-
-  // Warp Reality also affects Immolation's separate spell-attack chance. Common unit To Hit
-  // is already written on the ordered stat record above, on `PROVENANCE[warpReality]`
-  // (`stats_sequence.js`). This is the block's second consumer, so it takes the same record the
-  // block reads — the identity sampled at the `c:warpReality` chain rank (F184).
-  if (warpRealityActive && !unitIsChaosAtWarpReality) {
-    toHitImmolation = Math.max(0.1, toHitImmolation - 0.2);
-  }
+  // Immolation To Hit: 30%, and no unit-side modifier reaches it, because the roll does not read
+  // a unit field at all. Immolation is delivered by `DamageSpell`
+  // (`Combat.ApplyAttack.pas:378-383`, `SImmolation = 99`), whose per-attack roll is
+  // `AttackRoll(str, SpellTable[sp].hitchance)` at `$005C1696..$005C16FF`
+  // (`Reference docs/Caster binary/Spells.DamageSpells.pas`) — the *spell table's* hitchance, not
+  // `U.hitchance`. Spell 99 sets no `HitChance` in either `spells.ini` copy (CoM2 1.05.11 base
+  // `:1899-1916`, Warlord 1.5.12.7 `:2218-2235`), and the file's own key list documents the
+  // default: "HitChance - chance to hit, defaults to 30%" (base `:332`, Warlord `:614`).
+  // The DOS engines reach the same answer through the neutral to-hit argument. `BU_ProcessAttack`
+  // hands melee Immolation to `Apply_Battle_Unit_Damage_From_Spell` (the far target `0388:0039`,
+  // `0x87036`; `Reference docs/DOS reconstructed/combat.c:2596`) — call sequences
+  // 131:0x99D5E..0x99D70, 160:0x99D5E..0x99D70 and com1:0x99D50..0x99D70 — and that routine's
+  // per-attack roll is `CMB_AttackRoll(attack_strength, 0)` at 131:0x87239, identical in all
+  // three builds. The to-hit argument is a literal zero — the same argument an unmodified attack
+  // passes, which is this calculator's 30% everywhere — so the attacker's `bu->tohit` is neither
+  // passed nor read. Wall of Fire shares the routine and the literal.
+  // So the unit-side To Hit writers stop at the melee/ranged/thrown/breath channels in every
+  // version. Warp Reality is one of them — `Dec(U.hitchance,20)` and `bu->tohit -= 2` at
+  // 131:0x9079D and com1:0x90502 — and its write is on the ordered stat record above, on
+  // `PROVENANCE[warpReality]` (`stats_sequence.js`). F190 deleted the second copy of it that
+  // used to be re-applied here.
+  const toHitImmolation = 0.3;
 
   // Hurricane (Warlord Nature rare, global): tropical storm affecting both sides.
   // -20% To Hit for ranged/thrown attacks, -30% To Hit for breath attacks.
