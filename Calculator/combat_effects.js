@@ -461,7 +461,9 @@ const EFFECTIVE_DEFENSE_STEPS = [
       // over all 10,584,041 bytes) and no such member in the 62-strong `@Sharedconstants@Enc*`
       // enumeration, and the six assignments run back to back to $00596813 with the Weapon
       // Immunity tail at $0059681A leaving no gap for a seventh. The modern engine's Chaos/Death
-      // realm term is `EncBless`, keyed on `SpellTable[spellid].Realm` in GetEffectiveResistance.
+      // realm term is `EncBless`: keyed here on `SpellTable[spellid].Realm`
+      // (`Combat.ResolutionHelpers.pas:197-200`), and in GetEffectiveResistance on the caller's
+      // own realm argument (`:125-126`).
       if (hasAbil(u.abilities, 'fireImmunity') && ctx.fireSpell) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'fireImmunity') && ctx.isFire) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'coldImmunity') && ctx.coldSpell) u.effectiveDefense = 100;

@@ -963,7 +963,9 @@ Chaos/Death melee, fire and lightning breath, Immolation, Death Gaze, and four *
 projectiles — no physical ranged, no Thrown.
 
 The calculator's Bless scope was corrected against this on 2026-07-27. CoM2 and Warlord are
-`Caster.exe` and keep the wider scope pending **D6**.
+`Caster.exe`, and **D6** closed their half the other way: `ApplyAttack` passes spell ID 0, so no
+unit attack reaches `EffectiveDefense`'s Bless term at all there — only a spell caller with a real
+Chaos/Death spell ID does (`Caster binary/CoM2 binary - resolution helpers.md`, *D6*).
 
 ### Touch-effect immunities are skips, not resistance bonuses (resolved 2026-07-27)
 

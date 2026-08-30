@@ -4,6 +4,59 @@
 
 # Journal
 
+## 2026-08-30 — F211: the Bless gate is right, the tooltip was wrong in three versions
+
+F211 offered a fork: narrow the tooltip to Immolation, or establish the modern `effectiveDefense:bless`
+gate is wrong and fix the code. The binary settles it for the gate.
+
+`Combat.ResolutionHelpers.pas:197-200` — `EffectiveDefense`'s Bless term is
+`EncBless and ismagic2 and (spellid > 0) and (SpellTable[spellid].Realm in [Chaos, Death])`.
+`Combat.ApplyAttack.pas:446-457` is the only call site for a unit attack and passes the literal `0`
+for `spellid` in every `at` case — melee, ranged, thrown, both breaths, all three gazes. So no unit
+channel can satisfy `spellid > 0`, whatever `ismagic2` says (breath and gaze both set
+`magicranged := True` and still get nothing). The only positive-`spellid` caller is
+`Spells.DamageSpells.pas:169`, reached from `ApplyAttack`'s own `DamageSpell(du, SImmolation, ...)`.
+The calculator's gate (`combat_effects.js`, `effectiveDefense:bless`) reproduces that clause term for
+term, and `tests/defense-cap-bless-f32-f34.spec.js` ("F34 keeps Bless Defense spell-only in both
+modern versions") already asserts it across all four unit channels.
+
+So the tooltip was the outlier, and the change is tooltip text plus one code comment.
+`tools/derivation_equivalence.js` output is byte-identical before and after (52,440 derivations).
+
+Three corrections, not one:
+
+- **CoM 2 / Warlord.** Old text promised breath, magical Chaos ranged, and thrown/physical ranged
+  from Chaos/Death creatures. None of those reach the gate. What does: Immolation
+  (`spellId: 99`) and Wall of Fire, which `combat.js` routes through the same `aDefForImm` channel
+  (`combat.js:299`, `:441`). Both are `Realm=3` = Chaos in both `SPELLS.INI` files
+  ([99] Immolation, [87] Wall of Fire; `Chaos = 3` at `Combat.ResolutionHelpers.pas:49`).
+- **MoM 1.31 / 1.60.** The listed five channels are right against `dosDefenseForAttack`, but the
+  list omitted Wall of Fire, which shares the `blessEligible: !isCoM1` immolation descriptor.
+- **CoM 1.** Same omission on the exclusion side; the old "not to … any ranged attack" is now
+  "not to melee, thrown, ranged, Immolation, or Wall of Fire".
+
+The resistance half needed nothing: `buildResistanceContext` (`combat_phases.js`) puts Cause Fear,
+Death Touch, Death Gaze, Destruction and Life Steal in the death-realm bucket and the Bless gate is
+chaos-or-death, so the tooltip's five are exactly the set. Exorcise/Dispel Evil (life), Stoning
+(nature) and Poison (null realm) correctly get nothing.
+
+Also corrected: the `effectiveDefense:immunities` comment claimed `EncBless` is "keyed on
+`SpellTable[spellid].Realm` in GetEffectiveResistance". It is keyed on `SpellTable[spellid].Realm`
+in `EffectiveDefense` (`:197-200`) and on the caller's `realm` argument in `GetEffectiveResistance`
+(`:125-126`). Two functions conflated; the comment now names both.
+
+Left open, not touched:
+
+- The `blessBreathBonus*` family (`MoM`, `CoM`, `CoM2`, `Warlord`) is misnamed: all four fixtures
+  drive a **magical ranged** attack, not breath. `blessFireBreathDef*` are the actual breath cards.
+  Same class as F214 (fixtures whose names claim something they do not run), but not in F214's list.
+- `abilities.js:21` (Destruction) says "Chaos-realm resistance attempt". The binary agrees —
+  `Combat.ApplyAttack.pas:521` passes `inferred_ChaosRealm` — but the calculator routes Destruction
+  through the **death** bucket (`combat_phases.js`, `bResDeath`). Numerically inert in CoM2/Warlord
+  (Bless, Magic Immunity and Resist Magic all treat chaos and death alike, and Resist Elements is
+  nature-only), and Destruction does not fire in the DOS builds where MoM's elemental resistance arm
+  would tell the two realms apart. Unfiled.
+
 ## 2026-08-30 — F197: Spirit Link's tooltip re-derived, not just renamed
 
 The item was "the tooltip names Dispel Evil, which is MoM-only; the rider Warlord has is Exorcise".
