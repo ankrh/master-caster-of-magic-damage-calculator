@@ -1645,6 +1645,26 @@ definePresets({
         'Keep. Inert as a consequence of the assertion: the claim is that this attacker is exempt from the Poor Vision penalty, so removing the source of the penalty is expected to leave the 4 standing. The exemption is measured by the live halves - ablating a.unitType=fantastic_death charges the -2 and returns 2, which is exactly the reading of the post-conversion realm the fixture rules out.',
     },
   },
+  eternalNightNightGoblinsExemptWarlord: {
+    desc: 'Eternal Night (Warlord): Goblin Night Goblins, template 356, are named by the Poor Vision gate itself — `(GetStat(U,STypeID,1)<>356)`, UnitCalcPre.CAS:1341 — so they keep the full Missile 5 the roster gives them. 8 figures x strength 5 = 40 dice at the record\'s 30+5 = 35% To Hit, against defense 0 (no block dice), = 14.000. Taking the -2 would leave strength 3, 24 dice, 8.400. The defender carries Poison Immunity because the roster record also has Poison Touch=1, which would add 8 guaranteed points on top of the number under test. The 35% is the To Hit the record itself carries: the other engine block on template 356, UnitCalc.CAS:359-368, gives it +10 To Hit and +10 To Defend under Eternal Night or Darkness and is not modelled, so this number will move to 18.000 when that block lands.',
+    version: V_WARLORD,
+    aUnitName: 'Goblin Night Goblins',
+    b: { figs:9, def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true, poisonImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 14.000 },
+    vacuity: {
+      'b.ability.eternalNight':
+        'Keep. Inert as a consequence of the assertion: the claim is that this attacker is the one unit the Poor Vision gate names as exempt, so removing the source of the penalty is expected to leave the 14.000 standing. The exemption is measured against eternalNightGoblinBowmenNotExemptWarlord, which differs only in aUnitName - a Goblin missile unit the gate does not name - and pins 2.800, the penalised reading. Dropping the template term from the gate returns 8.400 here.',
+    },
+  },
+  eternalNightGoblinBowmenNotExemptWarlord: {
+    desc: 'Eternal Night (Warlord): the control for the template-356 exemption. Goblin Bowmen, template 348, are Goblins with a Missile attack and are not named by the gate, so strength 3 - 2 = 1. 8 figures x strength 1 = 8 dice at the record\'s 30+5 = 35% To Hit, against defense 0, = 2.800. Without the penalty it would be 24 dice, 8.400. The defender is the same record as in eternalNightNightGoblinsExemptWarlord, Poison Immunity included, so the two fixtures differ only in aUnitName.',
+    version: V_WARLORD,
+    aUnitName: 'Goblin Bowmen',
+    b: { figs:9, def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true, poisonImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 2.800 },
+  },
   eternalNightThrownUnaffectedWarlord: {
     desc: 'Eternal Night (Warlord): -2 ranged penalty does not apply to thrown. Melee 1 + thrown 3 at 100% hit vs def 0 = 4 dmg',
     version: V_WARLORD,

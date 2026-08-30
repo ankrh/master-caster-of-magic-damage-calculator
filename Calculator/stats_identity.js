@@ -18,11 +18,12 @@ const SPECIAL_UNIT_DEFS = [
   { key: 'chosen', label: 'Chosen / Avatar', versions: ['com2_'] },
   { key: 'zombies', label: 'Zombies', versions: ['com_6.08'] },
   { key: 'catapult', label: 'Catapult', versions: ['com_6.08'] },
+  { key: 'nightGoblins', label: 'Night Goblins', versions: ['com2_warlord'] },
 ];
 
 // Absent and `none` both state "no special unit"; anything else must name a defined key. A key
 // this build does not define is out of range and halts (`SPEC.md`, *Out-of-range values stop the
-// run*): every consumer is an equality test against one of the four keys, so carrying an unknown
+// run*): every consumer is an equality test against one of the defined keys, so carrying an unknown
 // one derives an ordinary unit and reports nothing — exactly the silent inertness the rule
 // forbids. Whether a *defined* key is allowed in the selected version is the separate question of
 // version scope, and still clamps (`specialUnitAllowed`, `ui_units.js`).
@@ -63,11 +64,29 @@ function createUnitIdentity(values = {}) {
 // `COM1_UT_GOLEM` 0x51 and `COM1_UT_ZOMBIES` 0xAE. The conversion is CoM2's alone — a
 // configured-global block at `Units.RecalculateUnits.pas` $0059F747..$0059F7D8 reading
 // MODDING.INI `ChosenUnitID=34` — so `chosen` is `com2_` here and in `SPECIAL_UNIT_DEFS`.
+//
+// `nightGoblins` is Warlord template 356, Goblin Night Goblins, and it earns a key on the same
+// test: Warlord's engine names the template. The naming site is Eternal Night's Poor Vision gate,
+// `(GetStat(U,STypeID,1)<>356)` at `UnitCalcPre.CAS:1341` — the second of that gate's four terms —
+// so a Night Goblin unit keeps its Ranged strength where every other non-Death, non-Undead unit
+// loses 2 (F189). `GetStat(U,S,1)` is the *base* unit — "if B=0, it checks the current stats and
+// abilities, if B=1 it checks the base unit" (`Reference docs/Script source/CAS
+// reference/Scripts.TXT:266`) — which is the permanent record this key already stands for: a
+// conversion mutates only the live `race`/`fantastic` fields and never `specialUnit`, so no live
+// conversion can defeat the exemption. The exception is Warlord's alone; base CoM2 has no such
+// term, hence `com2_warlord` rather than `com2_` in `SPECIAL_UNIT_DEFS`.
+//
+// This is the first key whose engine site is a *negative term inside another effect's gate*
+// rather than a block of its own. The table's stated test is unchanged — the engine, not the
+// roster, makes the exception — but it is the reason the label names the unit and not an effect.
 function specialUnitForRoster(version, unit) {
   const templateId = unit && unit.templateId;
   if (version && version.startsWith('com2_')) {
     if (templateId === 81) return 'golem';
     if (templateId === 34) return 'chosen';
+  }
+  if (version && version.startsWith('com2_warlord')) {
+    if (templateId === 356) return 'nightGoblins';
   }
   if (version === 'com_6.08') {
     if (templateId === 81) return 'golem';

@@ -4,6 +4,57 @@
 
 # Journal
 
+## 2026-08-30 — F189: Night Goblins take a special-unit key, and the Poor Vision gate reads it
+
+The Warlord Eternal Night gate at `UnitCalcPre.CAS:1340-1344` has four terms. F186 landed the
+realm and Undead-flag terms; the template term `(GetStat(U,STypeID,1)<>356)` at `:1341` was
+unimplemented, so Warlord template 356 — Goblin Night Goblins, Missile 5 — took a -2 the block
+exempts it from.
+
+Verified against the sources rather than the item text: the span at `UnitCalcPre.CAS:1337-1346` is
+the one the step's existing `PROVENANCE[eternalNight:poorVision]` citation already covers, so no
+citation moved. `Scripts.TXT:266` fixes the record argument — "if B=0, it checks the current stats
+and abilities, if B=1 it checks the base unit" — so the template term is a permanent read while
+the realm term beside it is positional. `Calculator/units_warlord.js` confirms 356 is
+`Goblin Night Goblins`, 8 figures, Missile strength 5, `to_hit` 5.
+
+**The user ruled** that a template-id exception belongs in `SPECIAL_UNIT_DEFS`
+(`Calculator/stats_identity.js`) rather than as a bare `templateId === 356` read at the gate, on
+the ground that every template-id exception should live in one table, and accepted that the key
+becomes user-visible in the `Special unit` selector. Implemented as `nightGoblins` /
+"Night Goblins" / `versions: ['com2_warlord']`, with the roster arm in `specialUnitForRoster`.
+
+The read is permanent by construction, not by position: `identity.specialUnit` is set once at
+identity construction and no conversion writes it, so nothing in region `c` can defeat the
+exemption — the distinction F175 turned on one gate over.
+
+Presets: `eternalNightNightGoblinsExemptWarlord` (roster attacker, 8 x 5 = 40 dice at 30+5 = 35%
+against defense 0 = 14.000) and its control `eternalNightGoblinBowmenNotExemptWarlord` (Goblin
+Bowmen, template 348, penalised to strength 1, 8 dice = 2.800). Both defenders carry Poison
+Immunity: the Night Goblins record also has `Poison Touch=1`, which added exactly 8 guaranteed
+points and confounded the number under test — the first measurement came back 22.000, not 14.000.
+
+**Noted, not fixed.** A comment in `Calculator/stats.js` referred to `identityAtPoorVision`, a
+symbol that does not exist; it names the block this change edits, so it was repointed at
+`warlordEternalNightActive` in the same pass.
+
+Left open: the table's stated test ("a template earns a key only where the version's *engine*
+makes the exception") covers this key, but it is the first whose engine site is a negative term
+inside another effect's gate rather than a block of its own. Recorded in the comment above
+`specialUnitForRoster`; no contract change proposed.
+
+**Template 356 has four engine sites in Warlord, not one.** `UnitCalcPre.CAS:1341` is F189's.
+`UnitCalc.CAS:359-368` is a second, **unmodelled** block: "Night Goblin gain bonus from Darkness or
+Eternal Night", `+10` To Hit and `+10` To Defend when `ETERNALNIGHTCOUNT>0` or either Darkness
+combat global is up — also a `GetStat(U,STypeID,1)` permanent read. The other two are display only:
+`DisAbil.CAS:481` prints the ability line "Night Vision" for the unit, `DisAbil.CAS:1287` mirrors
+the Poor Vision gate for its own line, and `DisAbil.CAS:3420` prints the unit name "Night Goblins",
+which is where the key's label comes from. So the item's framing — "a roster exemption with no
+other engine consequence" — is not what the scripts show, which strengthens rather than weakens the
+ruling to give it a key. The unmodelled `+10/+10` block is named in
+`eternalNightNightGoblinsExemptWarlord`'s `desc`: it is why that fixture's 14.000 becomes 18.000
+once the block lands. Not filed; needs the user's approval to become a TASKS item.
+
 ## 2026-08-30 — F175: the two Warlord hero exclusions go
 
 Both gates now carry their block's own test and nothing else.

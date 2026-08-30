@@ -655,12 +655,21 @@ function deriveUnitStats(input) {
   // so missile/boulder and magic ranged take it while Thrown and breath — short-range, not
   // "Ranged" — do not. The write is `PROVENANCE[eternalNight:poorVision]` (`stats_sequence.js`).
   //
-  // The exemption is `(GetStat(U,SRace,0)<>RCDeath) %AND (GetEnchantmentFlag(U,EncUndead,0)=0)`
-  // (`UnitCalcPre.CAS:1343-1344`). `GetStat(U,S,0)` is the *current* record — "if B=0, it checks
-  // the current stats and abilities, if B=1 it checks the base unit" (`Reference docs/Script
-  // source/CAS reference/Scripts.TXT:266`) — so the realm is read where this region-`b` block
-  // stands, ahead of the region-`c` conversions (F186).
+  // The exemption is `(GetStat(U,STypeID,1)<>356) %AND (GetStat(U,SRace,0)<>RCDeath) %AND
+  // (GetEnchantmentFlag(U,EncUndead,0)=0)` (`UnitCalcPre.CAS:1341-1344`). `GetStat(U,S,0)` is the
+  // *current* record — "if B=0, it checks the current stats and abilities, if B=1 it checks the
+  // base unit" (`Reference docs/Script source/CAS reference/Scripts.TXT:266`) — so the realm is
+  // read where this region-`b` block stands, ahead of the region-`c` conversions (F186).
+  //
+  // The template term takes the other record: `GetStat(U,STypeID,1)` reads the **base** unit, so
+  // it is a permanent-record read and no live conversion can defeat it. Template 356 is Warlord's
+  // Goblin Night Goblins (`Calculator/units_warlord.js`, Missile 5), and it carries the
+  // `nightGoblins` special-unit key so the one table of template-id exceptions stays the only
+  // place a template id is named (`SPECIAL_UNIT_DEFS`, `stats_identity.js`). `identity` is the
+  // permanent record and `specialUnit` is never written by a conversion, which is what makes this
+  // read permanent by construction rather than by position (F189).
   const warlordEternalNightActive = u => !!(enemyEternalNight && isWarlord
+    && identity.specialUnit !== 'nightGoblins'
     && unitRealmAt(u) !== 'death' && !undeadEnchantmentFlag);
   // The realm is read once per call, at the reading step's own position.
   const darknessBonuses = (u) => {
@@ -681,7 +690,7 @@ function deriveUnitStats(input) {
   // True Light reads the realm at its own block in both engine families, so it takes the record
   // standing at its own chain entry (F185). Warlord's block
   // is `GetStat(U,SRace,0)` (`UnitCalcPre.CAS:1511,1523`), the *current* record by the CAS
-  // contract quoted above `identityAtPoorVision`; the DOS block is `bu->race` at 131:0x903A1 and
+  // contract quoted above `warlordEternalNightActive`; the DOS block is `bu->race` at 131:0x903A1 and
   // 131:0x904EB (`unitcalc.c`), the one battle-unit record `BU_Apply_Specials` mutates in place.
   // The two entries differ — `b:trueLight` in Warlord, `c:trueLight` in the MoM builds — and the
   // MoM entry follows every conversion, so only Warlord moves.

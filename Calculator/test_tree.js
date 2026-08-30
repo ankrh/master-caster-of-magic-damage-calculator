@@ -472,6 +472,8 @@ const TEST_TREE = [
           'eternalNightMagicRangedWarlord',
           'eternalNightDeathUnitNoPoorSightWarlord',
           'eternalNightPoorVisionReadsRealmAtItsOwnBlockWarlord',
+          'eternalNightNightGoblinsExemptWarlord',
+          'eternalNightGoblinBowmenNotExemptWarlord',
           'eternalNightThrownUnaffectedWarlord',
         ],
       },

@@ -191,6 +191,11 @@ const LANDED_CORRECTIONS = [
     preset: 'trueLightReadsRealmAtItsOwnBlockWarlord' },
   { id: 'F186', at: 'b:eternalNight:poorVision', record: 'positional',
     preset: 'eternalNightPoorVisionReadsRealmAtItsOwnBlockWarlord' },
+  // The same gate's other record. Its realm term is `GetStat(U,SRace,0)`, the current record; its
+  // template term is `GetStat(U,STypeID,1)`, the base one. `specialUnit` carries the template
+  // answer and no conversion writes it, so the read is permanent by construction.
+  { id: 'F189', at: "b:eternalNight:poorVision's template-356 exemption", record: 'permanent',
+    preset: 'eternalNightNightGoblinsExemptWarlord' },
   { id: 'F187', at: 'c:tactician', record: 'hero',
     preset: 'tacticianHeroCcDefenseWarpAttackWarlord' },
   { id: 'F187', at: 'base:rebuild', record: 'hero',

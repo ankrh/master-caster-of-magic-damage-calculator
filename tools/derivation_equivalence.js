@@ -179,9 +179,9 @@ const IDENTITIES = [
 //
 //   REACHED, in combination cases only — the six race-gated Warlord building grants other than
 //   Sancta Basilica (`altarOfTheMoon` needs a Gnoll, `dragonMound` a Draconian, ...), a permanent
-//   Fantastic record, a Fantastic hero, the four special units, and the six templates the
+//   Fantastic record, a Fantastic hero, every `SPECIAL_UNIT_DEFS` key, and the six templates the
 //   identity conversions branch on.
-//   NOT REACHED — those eighteen identities against a *solo* control or a bare environment, so a
+//   NOT REACHED — those extra identities against a *solo* control or a bare environment, so a
 //   defect that needs one of them plus exactly one control is only found if the draw happens to
 //   pair them. NOT REACHED at all — the unit *name*, which the unit-specific building branches
 //   test with `endsWith` (Hunters, Witchdoctors, Holy Mother, Legionary); roster-selected units;
@@ -197,7 +197,7 @@ const ROAMING_IDENTITIES = [
     identity: { isHero: true, baseRace: 'Death', baseFantastic: true } },
   // `specialUnit` is version-scoped in the UI but not at the identity boundary, so each key is
   // stated in every version and inert where that version has no block for it.
-  ...['golem', 'chosen', 'zombies', 'catapult'].map(specialUnit => ({
+  ...['golem', 'chosen', 'zombies', 'catapult', 'nightGoblins'].map(specialUnit => ({
     name: `special:${specialUnit}`,
     identity: { isHero: false, baseRace: 'High Men', baseFantastic: false, specialUnit },
   })),
