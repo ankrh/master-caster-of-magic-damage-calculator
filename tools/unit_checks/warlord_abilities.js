@@ -258,6 +258,19 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Blaze of Glory transfers current Armor, including Iron Skin, to melee');
   assertEqual(blazeWithIronSkin.def, 0,
     'Blaze of Glory zeroes current Armor instead of reconstructing enchantment Armor');
+  // `UnitCalc.CAS:1503`, the first of the block's three ability writes. Wall Crusher reaches no
+  // resolver in this model, so the finished ability set is where the grant is observable; the
+  // identical `b:bombsGrenades` grant is asserted the same way below.
+  assertEqual(blazeWithIronSkin.abilities.wallCrusher, true,
+    'Blaze of Glory grants Wall Crusher');
+  assertEqual(blazeWithIronSkin.abilities.armorPiercing, true,
+    'Blaze of Glory grants Armor Piercing beside it');
+
+  const blazeHeroNoGrant = ctx.deriveUnitStats(warlordUnit({
+    unitType: 'hero', atk: 4, def: 5, abilities: { blazeOfGlory: true },
+  }));
+  assert(!blazeHeroNoGrant.abilities.wallCrusher,
+    'The hero exclusion keeps the Wall Crusher grant off as well');
 
   // The same block's channel write is `SThrown := SThrown + SRanged`, so a unit carrying both
   // fields finishes with one Thrown attack at the summed strength. The preset fixture format

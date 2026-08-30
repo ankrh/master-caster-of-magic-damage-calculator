@@ -486,7 +486,7 @@ const POSITIONED_GRANT_WRITES = [
   'blackpowder',      // `base:militaryWorkshop`
   'armorPiercing',    // `base:militaryWorkshop`, `d:blazeOfGlory`
   'energyCannon',     // `base:energyCannon`
-  'wallCrusher',      // `b:bombsGrenades`
+  'wallCrusher',      // `b:bombsGrenades`, `d:blazeOfGlory`
   'firstStrike',      // `d:blazeOfGlory` (clear)
   'mechanical',       // `base:rebuild` / `b:rebuild` — `SETSTAT(…,SCustomAttribute,…,1)`
   'supernatural',     // `base:destiny:supernatural` — `B.attackflags.supernatural := True`

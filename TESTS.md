@@ -97,7 +97,7 @@ or fail. Do not add them here.
 - Tag: scaffolding
 - Anchor: —
 - Checks: `deriveUnitStats` and the engine/combat helpers in isolation, headless, in a `vm` context
-  built from `index.html`'s script manifest. 14,643 assertions across 13 families. It cannot
+  built from `index.html`'s script manifest. 14,646 assertions across 13 families. It cannot
   evaluate presets: that path runs through the DOM.
 - Runtime: ~49s.
 

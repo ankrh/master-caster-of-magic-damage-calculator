@@ -1686,17 +1686,26 @@ function magicCalcScriptStatSteps(ctx) {
     // — what retires the emptied Ranged attack there is `SETSTAT(U,SAmmo,0,0)` two lines later
     // (`:1502`), which the calculator does not model, so clearing the type is this model's
     // stand-in for that and keeps later region-`e` ranged writes off the emptied field.
-    // The reviewed span was widened from `:1490-1501` to `:1490-1505` to cover the block's two
-    // ability writes, `SETSTAT(U,AFArmorPiercing,0,1,1)` at `:1504` and
-    // `SETSTAT(U,AFirstStrike,0,0)` at `:1505`, which land at this rank now instead of being
-    // merged ahead of the sequence (F201). The third, `SETSTAT(U,AWallCrusher,0,1)` at `:1503`,
-    // is not modelled at all — filed as F206.
+    // The reviewed span was widened from `:1490-1501` to `:1490-1505` to cover the block's three
+    // ability writes, in script order `SETSTAT(U,AWallCrusher,0,1)` at `:1503`,
+    // `SETSTAT(U,AFArmorPiercing,0,1,1)` at `:1504` and `SETSTAT(U,AFirstStrike,0,0)` at `:1505`,
+    // which land at this rank now instead of being merged ahead of the sequence (F201, F206).
+    // Wall Crusher reaches no resolver here, the same as `b:bombsGrenades`'s grant of the same
+    // flag: the engine's consequence is `CrushWall` -> `destroywall` at the top of
+    // `PerformMeleeAttack`/`PerformRangedAttack` (`Combat.PerformAttacks.pas:91-92`, `:146-147`),
+    // and `destroywall` turns state 1 into state 2 for the one wall slot the *defender's combat
+    // coordinates* map to (`Combat.AttackAndWallHelpers.pas:326`). This model has no coordinates:
+    // its City Walls input is one per-side bonus that does not distinguish a unit standing on an
+    // intact segment from one in the inner area, so there is nothing here to name the slot the
+    // engine would break. The write is made because the block makes it, and it is published on
+    // the finished ability set.
     // PROVENANCE[blazeOfGlory]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:16:6cabb4119ac66a1204ea795e
     statStep({ id: 'blazeOfGlory', phase: 'd',
       writes: ['def', 'atk', ...strengthFields, ...rangedTypeFields, ...thrownTypeFields,
-        'armorPiercing', 'firstStrike'],
+        'wallCrusher', 'armorPiercing', 'firstStrike'],
       when: () => blazeOfGloryActive,
       apply: u => {
+        u.wallCrusher = true;
         u.armorPiercing = true;
         u.firstStrike = false;
         u.atk += u.def;

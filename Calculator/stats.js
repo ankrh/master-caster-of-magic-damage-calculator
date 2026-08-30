@@ -497,8 +497,8 @@ function deriveUnitStats(input) {
   // Warlord Blaze of Glory: the unit's whole Ranged strength is added to the Thrown field and
   // the Ranged field is emptied (Ammo goes with it; the model tracks neither Ammo nor the
   // `SRangedPenalty` bookkeeping write). Breath attacks are not "Ranged" and are untouched.
-  // The Armor→Melee transfer, the Armor Piercing grant and the First Strike loss are all fields
-  // of the one step now, at the block's own rank (F201).
+  // The Armor→Melee transfer, the Armor Piercing and Wall Crusher grants and the First Strike
+  // loss are all fields of the one step now, at the block's own rank (F201, F206).
   // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
   // The transfer is `PROVENANCE[blazeOfGlory]` (`stats_sequence.js`), from `UnitCalc.CAS:1494`.
   const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
@@ -1527,8 +1527,8 @@ function deriveUnitStats(input) {
   // The grants that left: `base:altarOfTheMoon` (Rage, Poison Immunity, and the
   // Hunter/Witchdoctor poison and Life Steal branches), `base:militaryWorkshop` (Blackpowder, its
   // poison increment and Armor Piercing), `base:motherFungus` and `d:venom` (their own poison
-  // increments), `base:energyCannon`, `b:bombsGrenades` (Wall Crusher) and `d:blazeOfGlory`
-  // (Armor Piercing, and the First Strike clear) with stage 1; then `base:destiny`
+  // increments), `base:energyCannon`, `b:bombsGrenades` and `d:blazeOfGlory` (both Wall Crusher,
+  // F206 for the second; Armor Piercing; First Strike clear) with stage 1; then `base:destiny`
   // (Supernatural) and `b:eyeOfHeaven` (True Sight) → `c:trueSight` (Illusion Immunity) with
   // stage 2; and last `base:rebuild` / `b:rebuild` (Mechanical) with F208, which was the only
   // one of the thirteen keys that moved a number. Each writes a `statRecord` field at its own

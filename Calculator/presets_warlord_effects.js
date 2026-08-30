@@ -1180,7 +1180,7 @@ definePresets({
     },
   },
 
-  // --- Blaze of Glory (Warlord Chaos enchantment: Armor→Melee, Defense→0, Ranged→Thrown, +Armor Piercing, −First Strike) ---
+  // --- Blaze of Glory (Warlord Chaos enchantment: Armor→Melee, Defense→0, Ranged→Thrown, +Armor Piercing, +Wall Crusher, −First Strike) ---
   blazeOfGloryArmorToMeleeWarlord: {
     desc: 'Blaze of Glory: Melee gains the unit\'s full Armor. Melee 2, Armor 6 → melee 2+6=8, 100% hit vs def 0 → 8.0. (Without Blaze, melee 2 → 2.0.)',
     version: V_WARLORD,
@@ -1232,7 +1232,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 6.000 },
     vacuity: {
       'a.ability.blazeOfGlory':
-        'Keep, and the absence is the rule under test: the transfer carrying nothing is what the 6.000 asserts. `d:blazeOfGlory` adds the record\'s Ranged field into the Thrown field (stats_sequence.js:1713), and that field stands at exactly 0 here — `c:lionheart` puts +3 on a Ranged slot that is still typeless, which `isNonMagicalRangedFieldSlot` admits (stats_sequence.js:1046-1048; combat_abilities.js:271-272), and `c:weakness` takes the same 3 back off it (stats_sequence.js:1143, magnitude at stats.js:996, the slot admitted through `isRangedFieldSlot` at stats.js:1881 and combat_abilities.js:646), in that order and both ahead of the transfer in the Warlord chain (stats_manifests.js:282, :289, :298). The block\'s other writes have nothing to act on either: a.def is 0, so `u.atk += u.def` and `u.def = 0` change nothing (stats_sequence.js:1698-1699); the Armor Piercing the block grants (:1696) reaches a defender armor already at 0, and the halving it drives is `u.effectiveDefense = Math.floor(u.effectiveDefense / 2)` on the assignment line of `effectiveDefense:armorPiercing` (combat_effects.js:453, the step spanning :452-455); and the fixture carries no First Strike to clear (:1697). Weakness is the live half, which the sweep measures.',
+        'Keep, and the absence is the rule under test: the transfer carrying nothing is what the 6.000 asserts. `d:blazeOfGlory` adds the record\'s Ranged field into the Thrown field (stats_sequence.js:1726), and that field stands at exactly 0 here — `c:lionheart` puts +3 on a Ranged slot that is still typeless, which `isNonMagicalRangedFieldSlot` admits (stats_sequence.js:1046-1048; combat_abilities.js:271-272), and `c:weakness` takes the same 3 back off it (stats_sequence.js:1143, magnitude at stats.js:996, the slot admitted through `isRangedFieldSlot` at stats.js:1881 and combat_abilities.js:646), in that order and both ahead of the transfer in the Warlord chain (stats_manifests.js:282, :289, :298). The block\'s other writes have nothing to act on either: a.def is 0, so `u.atk += u.def` and `u.def = 0` change nothing (stats_sequence.js:1711-1712); the Wall Crusher the block grants (:1708) reaches no resolver in any fixture, since wall breaking is unmodelled (F206); the Armor Piercing the block grants (:1709) reaches a defender armor already at 0, and the halving it drives is `u.effectiveDefense = Math.floor(u.effectiveDefense / 2)` on the assignment line of `effectiveDefense:armorPiercing` (combat_effects.js:453, the step spanning :452-455); and the fixture carries no First Strike to clear (:1710). Weakness is the live half, which the sweep measures.',
     },
   },
   blazeOfGloryCarriesMindStormRangedPenaltyWarlord: {
@@ -1290,7 +1290,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 2.000 },
     vacuity: {
       'a.ability.blazeOfGlory':
-        'Keep, and the absence is the rule under test. `blazeOfGloryActive` requires `!isHero` (stats.js:505), and `unitType: \'hero\'` sets that flag (stats_identity.js:134), so the step\'s `when` is false (stats_sequence.js:1694) and none of the Armor Piercing grant, the First Strike clear, the Armor-into-Melee move or the Ranged-into-Thrown transfer runs (stats_sequence.js:1696-1699 and :1713). a.unitType=hero is the live half, which the sweep measures: blazeOfGloryArmorToMeleeWarlord differs only in carrying no a.unitType at all — defaulting to \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362), which is also the value the ablation writes (tools/preset_vacuity_sweep.js:204, assigned at :300) — and pins 8.000 against this 2.000.',
+        'Keep, and the absence is the rule under test. `blazeOfGloryActive` requires `!isHero` (stats.js:505), and `unitType: \'hero\'` sets that flag (stats_identity.js:134), so the step\'s `when` is false (stats_sequence.js:1706) and none of the Wall Crusher and Armor Piercing grants, the First Strike clear, the Armor-into-Melee move or the Ranged-into-Thrown transfer runs (stats_sequence.js:1708-1712 and :1726). a.unitType=hero is the live half, which the sweep measures: blazeOfGloryArmorToMeleeWarlord differs only in carrying no a.unitType at all — defaulting to \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362), which is also the value the ablation writes (tools/preset_vacuity_sweep.js:204, assigned at :300) — and pins 8.000 against this 2.000.',
     },
   },
 

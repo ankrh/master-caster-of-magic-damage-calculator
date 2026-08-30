@@ -4,6 +4,66 @@
 
 # Journal
 
+## 2026-08-30 — F206: Blaze of Glory makes its Wall Crusher grant
+
+`d:blazeOfGlory` now writes `u.wallCrusher = true` as the first of the block's three ability
+writes, matching `UnitCalc.CAS:1503` ahead of `:1504` (Armor Piercing) and `:1505` (First Strike).
+The item text says the Wall Crusher write sits *between* those two; it does not, it sits before
+both.
+
+No provenance change was needed. `PROVENANCE[blazeOfGlory]` cites
+`UnitCalc.CAS@span:16:6cabb4119ac66a1204ea795e`; recomputing the sha256-prefix index the way
+`tools/provenance_audit.js` builds it resolves that uniquely to lines 1490-1505, so `:1503` was
+already inside the reviewed span. The reviewer re-derived the same range independently.
+
+### The open question: does Wall Crusher deserve a resolver consequence
+
+Nothing in `Calculator/` reads the finished `wallCrusher` flag — the only occurrences are the two
+writes (`b:bombsGrenades`, now `d:blazeOfGlory`), the `POSITIONED_GRANT_WRITES` entry and the
+Marionette Chaos-ascension display label. The roster strings "Wall Crusher" in `units_com2.js`
+(15) and `units_warlord.js` (34) are never decoded into an ability either: `abilities.js` has no
+definition for it, and roster parsing only consumes definitions.
+
+But it is **not** out of scope, and calling it a dead field would be wrong. In CoM2/Warlord the
+engine's consequence lands inside one mouse click:
+
+- `Combat.PerformAttacks.pas:91-92` (`PerformRangedAttack`) and `:146-147` (`PerformMeleeAttack`)
+  call `CrushWall(au)` and then `destroywall(BaseUnits[du].cox, BaseUnits[du].coy)` **before** any
+  `ApplyAttack` in that call.
+- `CrushWall` requires the calculated Wall Crusher flag and rejects an attacker whose owner is the
+  combat defender owner (`Combat.AttackAndWallHelpers.pas:204`).
+- `destroywall` turns wall state 1 (intact) into state 2 (broken) for the slot the defender's
+  coordinates map to (`:326`), and `Combat.CallClosure.R5.2i.audit.md:100` records that this
+  applies "before the attack later queries the wall state for extra Defense".
+- The calculator reads exactly that value at `combat_effects.js:722-723` and `:1071-1077`, from a
+  per-side `cityWalls` input of `'none' | '1' | '3'`.
+
+So a Wall-Crusher attacker should see an intact defender's +3 drop to +1 for the rest of the click.
+What blocks a one-line fix is that `destroywall` acts on the wall slot the defender's *coordinates*
+select: a defender standing on an intact segment loses the bonus, a defender in the inner area
+keeps +3 with no segment to break. The calculator's City Walls input conflates both (`index.html`
+documents the option as "Inside"), so implementing this needs either a new "on an intact wall
+segment" input or an approximation the user approves. Left as follow-on; F206 asked only for the
+positioned write.
+
+### Test mechanism
+
+Presets assert `dmgToA`/`dmgToB` only, so an inert flag cannot be asserted by one. The grant is
+asserted in `tools/unit_checks/warlord_abilities.js`, beside the existing
+`assertEqual(bombs.abilities.wallCrusher, true, …)` for the identical `b:bombsGrenades` grant, plus
+a hero negative. 14,643 -> 14,646 assertions.
+
+`tools/derivation_equivalence.js`: 102 of 52,440 derivations move, all `com2_warlord_1.5.12.7`, and
+the only field that changes is `abilities.wallCrusher` undefined -> true. No number moved.
+`tools/preset_vacuity_sweep.js --only blazeOfGlory`: 13 presets swept, 0 findings, so no `vacuity`
+declaration was needed.
+
+Tooltip: "Not modeled: ammo loss, Wall Crusher." became "Grants Armor Piercing and Wall Crusher,
+and loses First Strike. / Not modeled: ammo loss, wall breaking." The reviewer was right that
+naming the grant without that disclosure over-promises against the *modelled effect* contract.
+The sibling `explosive` tooltip still says "plus Wall Crusher" with no disclosure and `breakthrough`
+still says "Not modeled: Wall Crusher" — three phrasings for one flag, left alone as outside F206.
+
 ## 2026-08-30 — F190: Warp Reality's Immolation To Hit arm goes, and the flat 30% is sourced
 
 `deriveUnitStats` set `toHitImmolation = 0.3` and then re-charged Warp Reality's -20% against it,

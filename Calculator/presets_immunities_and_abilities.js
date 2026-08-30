@@ -737,7 +737,7 @@ definePresets({
       'every-feature-inert':
         'Inert by construction: the claim is that a plain normal unit meets none of Supreme Light\'s eligibility arms, so the only feature the fixture adds cannot move the number. The discriminator is what the card omits - a Life realm, a Caster flag, a magical ranged type - and candidates() enumerates only what a fixture sets.',
       'a.ability.supremeLight':
-        'Keep, and the absence is the rule under test: the CoM2 return asks for a magical live ranged type, a fantastic_life or normal_life unit type, the Caster flag, or a magical base ranged type (combat_abilities.js:301-305), and this attacker answers no to all four. The step\'s own `when` is that predicate over the record and every channel (stats_sequence.js:1840-1842), so neither the melee +2 at stats_sequence.js:1846 nor the per-channel +2 at stats_sequence.js:1851 ever runs and the attack stays at 1.',
+        'Keep, and the absence is the rule under test: the CoM2 return asks for a magical live ranged type, a fantastic_life or normal_life unit type, the Caster flag, or a magical base ranged type (combat_abilities.js:301-305), and this attacker answers no to all four. The step\'s own `when` is that predicate over the record and every channel (stats_sequence.js:1853-1855), so neither the melee +2 at stats_sequence.js:1859 nor the per-channel +2 at stats_sequence.js:1864 ever runs and the attack stays at 1.',
     },
   },
 
