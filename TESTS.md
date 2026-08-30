@@ -279,7 +279,8 @@ or fail. Do not add them here.
 - Tag: regression
 - Anchor: F43
 - Checks: CoM common `0x0800` maps to the literal Exorcise consumer; the two DOS names are gated and
-  the other four version mechanics are left intact.
+  the other four version mechanics are left intact; and no control hidden in both MoM builds but
+  live in a modern one names Dispel Evil in its tooltip, `spiritLink` naming Exorcise (F197).
 
 ## life-steal-healing
 

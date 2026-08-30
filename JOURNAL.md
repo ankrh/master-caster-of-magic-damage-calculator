@@ -4,6 +4,70 @@
 
 # Journal
 
+## 2026-08-30 — F197: Spirit Link's tooltip re-derived, not just renamed
+
+The item was "the tooltip names Dispel Evil, which is MoM-only; the rider Warlord has is Exorcise".
+That much is right — `AttackFlagsT` (`Reference docs/Caster binary/Combat.ApplyAttack.pas:98-104`)
+declares `exorcise` and no Dispel Evil member, and `subgroup: 'Warlord only'` resolves to Warlord
+alone (`ui_abilities.js:352`). But the rest of the old tooltip did not survive checking either.
+
+Method: derive a Warlord unit with and without `spiritLink`, once per enchantment/ability def in
+`ABILITY_DEFS + ENCHANTMENT_DEFS` plus the non-ability inputs, over eight base identities
+(mundane-race normal, normal at each of five races, three fantastic realms), diffing every scalar
+field. What actually moves:
+
+- Gained while the b-write stands (`b:spiritLink` is the head of region `b`, everything below it
+  reads a Fantastic unit): the fantastic-creature halves of Nature Link, Survival Instinct and
+  Xenoveterinary; `b:nausea` suppressed (its gate is `!u.fantastic`); Chaos Embrace on a Chaos-race
+  unit; Warp Reality's penalty escaped on a Chaos-race unit; a matching Spell Ward now bites; and
+  the modern EncMagic Fantastic rule, which is what makes the attacks bypass Weapon Immunity.
+- Lost or gained once `d:spiritLink` has cleared it (`e:*` and resolution): Exorcise cannot banish
+  it, the level control opens (but not under Apotheosis — `levelEligible` excludes `destinyActive`,
+  `stats.js:138-143`), Liability and Rust reach it, an enemy's Blood Lust doubles against it, and
+  `e:leadershipAura` replaces `e:soulLinkerAura`.
+
+The old tooltip's list "Node Aura, Darkness/True Light, Land Linking, Survival Instinct, Supreme
+Light" was wrong on three of five. Node Aura (`stats.js:554-558`), Darkness and True Light
+(`:676`, `:705`) and Supreme Light (`combat_abilities.js:290-306`) gate on the unit's **realm**,
+and Spirit Link writes `fantastic` only — the realm is untouched, so none of them moves either way.
+For a mundane-race unit the b-write does make the realm read `arcane` (Q28's path through
+`legacyUnitTypeFromLiveIdentity`), but the Node aura control offers only chaos/nature/sorcery, so
+still nothing moves. Supreme Light's `def` does move by +1 for a Life-race unit — that is
+`floor(res/3)` reading the +2 Resistance, not the flag. Same for Pneuma Field's `trunc(res/2)`.
+
+"Grants no enemy Bless bonus" is not a modelled effect at all: the modern
+`effectiveDefense:bless` step needs `spellId > 0` with a chaos/death realm
+(`combat_effects.js:448-451`) and every modern unit-attack descriptor passes `spellId: 0`
+(`:652`, `:661`, `:687`, `:699`), while the resistance arm keys on the rider's realm, not the
+attacker's. Nothing about the attacker's Fantastic status can reach Bless in Warlord. That is
+F211's evidence; the `bless` tooltip and `spiritLinkBlessNoBonusWarlord` were left alone.
+
+The new text states the rule ("anything read in between / afterwards") rather than a closed list,
+because the list is not closable: every gate that reads the running identity between the two
+writes is a member, and two of the candidates (`unitIsChaos`, Spell Ward's live-Fantastic term)
+are exactly what Q31 and F195 have not settled.
+
+Left open, found while doing this and **not** fixed:
+
+- **Great Unbinding is exempt for a Spirit-Linked unit in the script and is not in the calculator.**
+  `UnitCalcPre.CAS:1352` is `IF (HASGLOBAL(W,GEGreatUnbinding)) %OR
+  (GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0) THEN { GOTO "NOTUNBINDING"; }`. `greatUnbindingActive`
+  (`stats.js:808-810`) has no Spirit Link term, so a base-Fantastic Spirit-Linked unit takes
+  −20%/−20%/−2 in the calculator and none in Warlord. The same gate's eligibility term also differs:
+  the script reads `FANTASTIC(U)` plus the Undead and three Chaos-Channels enchantment flags, the
+  calculator reads `isFantasticBase` alone. Moves numbers; needs its own item.
+- **The Spirit Link helptext promises Sapiens, the script does not write it.** `HELP.TXT:4538` says
+  "gains Sapiens and sentience"; `UnitCalcPre.CAS:28-30` sets `AFantastic` and nothing else. Under
+  *Source routing* the script wins, so the tooltip says nothing about it — but if it were granted,
+  the `NOTSAPIENS` gate (`UnitCalcPre.CAS:1062-1064`) would re-open Radio, Xenopsychology,
+  Ballistics Training and Bombs & Grenades for a base-Fantastic unit, which is a real difference.
+- **The Node aura control's own tooltip says "Fantastic units of the node's realm"**
+  (`index.html:85`) but `nodeAuraActive` (`stats.js:554-558`) tests the realm alone, so a
+  `normal_nature` unit takes the aura. One of the two is wrong; not read further.
+- `Reference docs/Version gating census.md:297-304` still says Warlord's Spirit Link Bless
+  behaviour is "covered" by `spiritLinkBlessNoBonusWarlord`. It is not — see the Bless paragraph
+  above. F211/the fixture re-aim own it.
+
 ## 2026-08-30 — F206: Blaze of Glory makes its Wall Crusher grant
 
 `d:blazeOfGlory` now writes `u.wallCrusher = true` as the first of the block's three ability

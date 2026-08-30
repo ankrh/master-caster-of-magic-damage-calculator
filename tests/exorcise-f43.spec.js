@@ -154,9 +154,22 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
       versionSelect.value = version;
       return [version, matrixPropertyCandidates('b').some(def => def.key === 'spellLock')];
     }));
+    // A control the MoM builds hide names the MoM rider only by mistake: `AttackFlagsT` has an
+    // `exorcise` member and no Dispel Evil one, so no modern-only control can face Dispel Evil
+    // (F197 — the `spiritLink` tooltip did). A control visible in MoM as well may legitimately
+    // name both riders, so the filter is "hidden in both MoM builds, live in either modern one".
+    const modernOnlyNamingDispelEvil = abilityUiDefs()
+      .filter(def => (!abilityVersionGated(def, 'com2_1.05.11')
+          || !abilityVersionGated(def, 'com2_warlord_1.5.12.7'))
+        && abilityVersionGated(def, 'mom_1.31')
+        && abilityVersionGated(def, 'mom_cp_1.60.00')
+        && /Dispel Evil/.test(def.tooltip || ''))
+      .map(def => def.source + ':' + def.key);
     return {
       gates,
       matrixSpellLock,
+      modernOnlyNamingDispelEvil,
+      spiritLinkTooltip: ENCHANTMENT_DEFS.find(def => def.key === 'spiritLink').tooltip,
       unaffected: {
         mom131Dispel: dispelEvilFailProb(5, {}, 'fantastic_chaos'),
         cp160Dispel: dispelEvilFailProb(5, {}, 'fantastic_death'),
@@ -187,5 +200,7 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
     com2Exorcise: 0.6,
     warlordExorcise: 0.6,
   });
+  expect(report.modernOnlyNamingDispelEvil).toEqual([]);
+  expect(report.spiritLinkTooltip).toContain('Exorcise');
   expectNoConsoleErrors(errors);
 });
