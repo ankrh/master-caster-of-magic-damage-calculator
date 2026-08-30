@@ -164,6 +164,27 @@ definePresets({
         'Keep. The discriminator is rangedDist, which candidates() does not enumerate. Pins the CoM2 ladder as -10 - 3*(d-4) rather than a per-tier step (combat_abilities.js:432); distPenaltyCoM2_16 differs only in rangedDist and pins 0.540, and the two together fix both the intercept and the slope.',
     },
   },
+  // Which projectile type the penalty asks about: the finished one, not the permanent one. F131
+  // re-aimed this from Blaze of Glory, whose transfer empties the Ranged field and so withdraws
+  // ranged mode before any type is read; Focus Magic is the retype that leaves the attack live.
+  focusMagicRetypeSkipsDistancePenaltyCoM2: {
+    desc: 'The distance penalty is a resolution-time read of the **finished** projectile type '
+      + '(distancePenaltyFor, stats.js). Focus Magic finds a live conventional Ranged attack '
+      + 'whose permanent type is not already magical and retypes it in place to shot type 34, '
+      + 'IsMagic (Units.RecalculateUnits.pas:873-910, `c:focusMagic`), leaving strength 1 in a '
+      + 'Ranged field that is neither missile nor boulder — so nothing is charged at range 6 and '
+      + 'the volley lands at 30+70 = 100% for 1.0. distPenaltyCoM2_6 is the same unit without '
+      + 'Focus Magic: still a missile at range 6, and it pays CoM2\'s −10 − 3×(6−4) = −16% for '
+      + '0.840. Reading the permanent type here charges the retyped attack that same −16%, for '
+      + '0.840; strength, To Hit and distance are the same in both, so the 0.16 is the type read '
+      + 'alone.',
+    version: V_COM2,
+    a: { hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10,
+      abilities: { focusMagic: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 6,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
   distPenaltyCoM16: {
     desc: 'CoM 6.08: range 16 → −40% penalty → 60% effective (uncapped per-4-tile penalty)',
     version: V_COM,
@@ -850,7 +871,11 @@ definePresets({
     version: V_COM,
     a: { toHitRtbMod:70, rtbType:'missile', rtb:0, atk:0, hp:10, abilities: { holyBonus: 2 } },
     b: { atk:0, def:0, hp:10 },
-    rangedCheck: true, rangedDist: 1,
+    // The tick is the measuring instrument, not a configuration slip: a typed slot left at
+    // strength 0 carries no conventional ranged attack, so the page withdraws ranged mode and the
+    // exchange is melee for 0. Hand the slot the Holy Bonus 2 this fixture says it must not take
+    // and the withdrawal stops: the control is kept, the volley fires and the number is 2.
+    rangedCheck: true, rangedDist: 1, rangedModeWithdrawn: true,
     expected: { dmgToA: 0, dmgToB: 0 },
     vacuity: {
       'every-feature-inert':

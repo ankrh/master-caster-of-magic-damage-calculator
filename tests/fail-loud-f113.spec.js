@@ -119,6 +119,52 @@ const CASES = [
     + " guard'); c.checked = true;"
     + " try { recalculate(); } finally { c.checked = false; } })()",
     'no conventional ranged attack'],
+  // F131: the fixture-side half of the same boundary. The F132 guard above can only fire if the
+  // tick survives `updateTypeVisibility`, and for a preset it never does — the withdrawal runs
+  // between `applyPreset` writing the control and `recalculate` reading it, so a fixture stating
+  // `rangedCheck: true` on a record with no conventional ranged attack quietly measured a melee
+  // exchange. Four presets were in that state, one of them vacuous on the axis its name claimed.
+  ['applyPreset: rangedCheck the page withdraws, undeclared',
+    "(() => { PRESETS.__f131Undeclared = { version: 'com2_1.05.11',"
+    + " a: { hitRanged: 70, hitThrown: 70, hitBreath: 70, modernAttacks: {}, hp: 10 },"
+    + " b: { hp: 10 }, rangedCheck: true, rangedDist: 1 };"
+    + " try { applyPreset('__f131Undeclared'); }"
+    + " finally { delete PRESETS.__f131Undeclared; } })()", 'rangedModeWithdrawn'],
+  // And in the other direction, so the declaration cannot outlive the withdrawal it describes:
+  // this attacker keeps its Ranged attack, so the control is kept and the claim is stale.
+  ['applyPreset: rangedModeWithdrawn declared where the control was kept',
+    "(() => { PRESETS.__f131Stale = { version: 'com2_1.05.11',"
+    + " a: { hitRanged: 70, hitThrown: 70, hitBreath: 70,"
+    + " modernAttacks: { ranged: { strength: 1, type: 'missile' } }, hp: 10 },"
+    + " b: { hp: 10 }, rangedCheck: true, rangedDist: 1, rangedModeWithdrawn: true };"
+    + " try { applyPreset('__f131Stale'); }"
+    + " finally { delete PRESETS.__f131Stale; } })()", '__f131Stale'],
+  // The exemption the sweep's ablation probes take is the caller's — `applyPreset(name, {origin})`
+  // — and not a field of the fixture, so a preset cannot authorise itself past the boundary. This
+  // is the same preset as the undeclared case with an invented exemption field added: it must
+  // still halt, which it can only do if fixture data grants nothing.
+  ['applyPreset: a fixture cannot exempt itself from the ranged-mode assertion',
+    "(() => { PRESETS.__f131SelfExempt = { version: 'com2_1.05.11',"
+    + " a: { hitRanged: 70, hitThrown: 70, hitBreath: 70, modernAttacks: {}, hp: 10 },"
+    + " b: { hp: 10 }, rangedCheck: true, rangedDist: 1, derivedFixture: true,"
+    + " origin: 'ablation-probe' };"
+    + " try { applyPreset('__f131SelfExempt'); }"
+    + " finally { delete PRESETS.__f131SelfExempt; } })()", '__f131SelfExempt'],
+  // And the declaration itself is a value in a defined set, not a truthiness test: `'false'` would
+  // otherwise read as a live claim and clear the very finding it is supposed to state.
+  ['applyPreset: rangedModeWithdrawn holding a value outside its set',
+    "(() => { PRESETS.__f131BadFlag = { version: 'com2_1.05.11',"
+    + " a: { hitRanged: 70, hitThrown: 70, hitBreath: 70, modernAttacks: {}, hp: 10 },"
+    + " b: { hp: 10 }, rangedCheck: true, rangedDist: 1, rangedModeWithdrawn: 'false' };"
+    + " try { applyPreset('__f131BadFlag'); }"
+    + " finally { delete PRESETS.__f131BadFlag; } })()", '"false"'],
+  // The caller context is a set too, so a harness cannot invent one.
+  ['applyPreset: caller origin this build does not define',
+    "(() => { PRESETS.__f131BadOrigin = { version: 'com2_1.05.11',"
+    + " a: { hitRanged: 70, hitThrown: 70, hitBreath: 70, modernAttacks: {}, hp: 10 },"
+    + " b: { hp: 10 } };"
+    + " try { applyPreset('__f131BadOrigin', { origin: 'whatever' }); }"
+    + " finally { delete PRESETS.__f131BadOrigin; } })()", 'whatever'],
   // F138: the two state-boundary reads that used to answer with a plausible substitute. A key no
   // version defines is retirement, not version scope — a *defined* key the selected version
   // disallows still clamps to `none`, which `tests/persistence.spec.js` pins.

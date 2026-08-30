@@ -4,6 +4,60 @@
 
 # Journal
 
+## 2026-08-30 — F131: the withdrawn ranged-mode tick is declared, and the Blaze of Glory distance fixture is re-aimed
+
+**The item's mechanism was imprecise, and it mattered.** F131 said the affected presets "leave the
+Ranged field empty". They do not. `updateTypeVisibility` (`ui_abilities.js`) gates `#rangedCheck`
+on `hasConventionalRangedAttack(readUnitStats('a'))`, and `readUnitStats` returns the **derived**
+record. Two of the four state a Ranged strength on the card and an effect under test then removes
+it — Blaze of Glory moves Ranged onto Thrown, Mind Storm zeroes it.
+
+**Four, not three.** Measured through the real page (`applyPreset` on every preset with
+`rangedCheck: true`, 250 of 1126): `holyBonusNeedsRangedStrengthCoM` joined the three the item
+names. It was filed earlier in this same run, which is why the item's count was short.
+
+**The field is inert in the number and load-bearing in the counterfactual.** Removing
+`rangedCheck`/`rangedDist` moved no measured number in any of the four. But hand the fixture the
+value it says must not appear and the two answers separate:
+
+| Fixture, counterfactual record | with the tick | without it |
+|---|---|---|
+| `holyBonusNeedsRangedStrengthCoM`, Ranged 2 | 2 | 0 |
+| `supremeLightSkipsZeroedRangedCoM2`, net Ranged 2 | 2 | 0 |
+
+So deleting the field would have left both fixtures green against the regression they exist to
+catch. They keep the tick and declare `rangedModeWithdrawn: true` instead;
+`focusMagicDoomGazeCoM` does the same, its `desc` having always described the fall-back to melee.
+None of the three had a stat, an ability or an expectation touched, so the `vacuity` keep reasons
+T2.07 and T2.16 settled still read true.
+
+**Blaze of Glory can never be observed on this axis.** It empties the Ranged field
+(`UnitCalc.CAS:1494-1500`) and no later step puts a conventional ranged attack back, so ranged mode
+is always withdrawn and `distancePenaltyFor` answers 0 at `!input.rangedCheck` before it reads any
+type. The fixture's counterfactual could not fire in either direction — vacuous, not merely weak.
+`c:focusMagic` is the write that *is* observable: it retypes a live missile in place to the IsMagic
+shot type with the strength intact, so the control is kept. Measured at range 6: **1.000** with
+Focus Magic against **0.840** without, which is `distPenaltyCoM2_6` unchanged. That pair is the
+re-aimed `focusMagicRetypeSkipsDistancePenaltyCoM2`. The comment above `distancePenaltyFor` named
+`d:blazeOfGlory` as the write that separates finished type from permanent; corrected.
+
+**The blast radius was the sweep, not the suite.** `tools/preset_vacuity_sweep.js` drives its
+ablated variants through `applyPreset`, and an ablation can itself be what removes the ranged
+attack — the first run after the halt landed died on `__vacuitySweepProbe__`. The exemption went
+into the fixture first (`derivedFixture: true`) and the GPT review was right that this is a fixture
+authorising itself past the boundary: `runTests` hands authored presets to the same function. It is
+now `applyPreset(name, { origin })`, a caller statement over a closed set, with the sweep the one
+caller that passes `'ablation-probe'`. `rangedModeWithdrawn` takes `true` or absence and halts on
+anything else, so a truthy `'false'` cannot clear the finding it is supposed to state.
+
+**Nothing moved.** `npm test` 130/130, `npm run provenance` 277/277, `node_unit_checks` 14646/0,
+sweep 10 findings before and after with identical buckets, `derivation_equivalence` 52440
+derivations.
+
+`TESTS.md`'s presets entry had "103 of 1125 `desc` fields"; the corpus is 1126 and already was
+before this item (F175/F189 added presets earlier in the run). Denominator corrected; the
+numerator 103 was not recomputed, because the regex that produced it is not recorded anywhere.
+
 ## 2026-08-30 — F181: an unrecognised slot attack type halts, and it caught an F117 straggler
 
 `buildSlotContext` (`Calculator/stats.js`) read the slot's token through three positive

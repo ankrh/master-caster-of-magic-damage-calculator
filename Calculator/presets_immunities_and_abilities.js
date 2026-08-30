@@ -1030,7 +1030,12 @@ definePresets({
     a: { rtbType:'gaze_multiple', rtb:2, toHitRtbMod:70, hp:10,
       abilities: { focusMagic: true, doomGaze: 2 } },
     b: { def:0, res:50, hp:10 },
-    rangedCheck: true, rangedDist: 1,
+    // "Ranged mode falls back to melee" is the page withdrawing the control, and the tick is what
+    // makes that observable: arm 1 creates no ranged attack, so the record carries none and
+    // updateTypeVisibility clears the box, leaving the gaze phase's `!isRanged` gate open for 5.
+    // On arm 3 the slot holds a created attack, the control is kept, the volley fires instead of
+    // the gaze and the number is 3.
+    rangedCheck: true, rangedDist: 1, rangedModeWithdrawn: true,
     expected: { dmgToA: 0, dmgToB: 5.000 },
     vacuity: {
       'a.ability.doomGaze':

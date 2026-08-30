@@ -317,11 +317,89 @@ function assertFixtureMatchesVersionRecord(name, prefix, side, version) {
     + `Expected ${(modern ? MODERN_ONLY_FIXTURE_FIELDS : DOS_ONLY_FIXTURE_FIELDS).join(', ')}.`);
 }
 
-function applyPreset(name) {
+// Ranged mode is a control the page withdraws on its own: `updateTypeVisibility` clears and
+// disables `#rangedCheck` whenever the attacker's *derived* record carries no conventional ranged
+// attack, and `recalculate` halts if a tick ever survives that withdrawal (`ui.js`, the F132
+// guard). For a live user the withdrawal is the page working — ticking Blaze of Glory empties the
+// Ranged field and takes ranged mode with it — so nothing here belongs in the shared path.
+//
+// A fixture is the other case. It states the controls it wants and then asserts a number, so a
+// `rangedCheck: true` the page withdraws means the fixture measured a melee exchange under a
+// ranged label and nothing said so: the preset's own statement was normalised away between
+// `applyPreset` and `recalculate` (`CLAUDE.md`, *Architecture*, the fail-loud rule). F131 found four
+// such fixtures, one of them vacuous on the axis its name claimed.
+//
+// The withdrawal is nonetheless a real assertion for a fixture whose subject is an attack an
+// effect empties or refuses to make live: with the tick in place a regression that leaves the
+// Ranged field live keeps ranged mode, fires the volley and moves the number, and without it the
+// same regression is invisible (measured: `holyBonusNeedsRangedStrengthCoM` 0 → 2 with the tick,
+// 0 → 0 without). So the fixture declares it — `rangedModeWithdrawn: true` — rather than dropping
+// the tick and the discriminator with it. Undeclared withdrawal halts, and so does a declaration
+// the page did not act on, so the claim cannot go stale in either direction.
+//
+// A harness that mutates a fixture and re-measures it is the one caller this cannot speak for: an
+// ablation may itself be what leaves the attacker without a ranged attack, and that delta is the
+// measurement. That exemption is the **caller's**, passed as `applyPreset(name, { origin })`, and
+// deliberately not a field of the fixture: a preset that could name its own exemption would be a
+// fixture authorising itself past the boundary this exists to hold
+// (`tools/preset_vacuity_sweep.js` is the one caller that passes it). The authored preset an
+// ablation was derived from still takes the assertion on its own baseline pass.
+const PRESET_ORIGINS = ['authored', 'ablation-probe'];
+
+function assertPresetRangedMode(name, preset, origin) {
+  if (!PRESET_ORIGINS.includes(origin)) {
+    throw new Error(
+      `applyPreset('${name}'): origin ${JSON.stringify(origin)} names no caller context this `
+      + `build defines (offered: ${PRESET_ORIGINS.join(', ')}).`);
+  }
+  if (origin === 'ablation-probe') return;
+  // `true` or absent, and nothing else. A truthy-coerced declaration would let `'false'` clear the
+  // finding it is supposed to state, which is the same silence the halt below exists to break.
+  if (Object.prototype.hasOwnProperty.call(preset, 'rangedModeWithdrawn')
+      && preset.rangedModeWithdrawn !== true) {
+    throw new Error(
+      `Preset '${name}': rangedModeWithdrawn is `
+      + `${JSON.stringify(preset.rangedModeWithdrawn)}, and the only value it takes is true. `
+      + `A fixture that does not assert the withdrawal omits the field.`);
+  }
+  const declared = !!preset.rangedCheck;
+  const held = document.getElementById('rangedCheck').checked;
+  const withdrawalClaimed = preset.rangedModeWithdrawn === true;
+  if (declared && !held && !withdrawalClaimed) {
+    // Name the record that lost the control, the way the F132 guard in `ui.js` does: the
+    // fixture's stated Ranged field is often not the one standing here, because an effect the
+    // fixture configures is what emptied it.
+    const a = readUnitStats('a');
+    const carried = a.modernAttacks
+      ? `modernAttacks.ranged = ${JSON.stringify(a.modernAttacks.ranged || null)}`
+      : `shared slot type ${JSON.stringify(a.rangedType)} strength ${a.rtb}`;
+    throw new Error(
+      `Preset '${name}': rangedCheck: true, but side a's derived record carries no conventional `
+      + `ranged attack (${carried}), so updateTypeVisibility withdrew the control and the fixture `
+      + `resolved a melee exchange under a ranged label. A valid configuration leaves side a a `
+      + `finished Ranged strength above 0, or drops rangedCheck, or states `
+      + `rangedModeWithdrawn: true where the withdrawal is what the fixture asserts.`);
+  }
+  if (withdrawalClaimed && (held || !declared)) {
+    throw new Error(
+      `Preset '${name}': rangedModeWithdrawn: true, but ${declared
+        ? 'the attacker\'s derived record still carries a conventional ranged attack and the '
+          + 'control was kept'
+        : 'the fixture states no rangedCheck: true for it to be withdrawn'}. `
+      + `The declaration asserts that a stated rangedCheck: true is withdrawn; drop it, or state `
+      + `the rangedCheck: true it is about.`);
+  }
+}
+
+// `origin` is the caller's own statement of what it is applying: `authored` for a key of the
+// merged `PRESETS` corpus — the TEST_TREE buttons, `runTests`, and the specs that install a
+// synthetic fixture to drive one path — and `ablation-probe` for a harness variant derived from
+// one of those. It reaches `assertPresetRangedMode` and nothing else.
+function applyPreset(name, { origin = 'authored' } = {}) {
   const preset = PRESETS[name];
-  // Every caller — the TEST_TREE buttons and runTests — names a key `definePresets` merged.
-  // Returning silently left the button inert and the suite one assertion short with nothing
-  // reporting it (`SPEC.md`, *Out-of-range values stop the run*).
+  // Every caller names a key that is in `PRESETS` when the call is made, whether `definePresets`
+  // merged it or a harness installed it. Returning silently left the button inert and the suite
+  // one assertion short with nothing reporting it (`CLAUDE.md`, *Architecture*, the fail-loud rule).
   if (!preset) {
     throw new Error(`applyPreset: '${name}' is not a key of PRESETS.`);
   }
@@ -482,6 +560,7 @@ function applyPreset(name) {
   document.getElementById('hurricane').checked = preset.hurricane || false;
   document.getElementById('poxHost').checked = preset.poxHost || false;
   refreshAbilityFieldVisibility();
+  assertPresetRangedMode(name, preset, origin);
   recalculate();
 }
 

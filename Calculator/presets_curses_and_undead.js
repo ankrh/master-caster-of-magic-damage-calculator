@@ -1369,7 +1369,11 @@ definePresets({
     a: { figs:1, atk:0, modernAttacks: { ranged: { strength:5, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:20,
       abilities: { supremeLight: true, mindStorm: true } },
     b: { figs:1, atk:0, def:0, toBlkMod:70, hp:20 },
-    rangedCheck: true, rangedDist: 1,
+    // The tick is the measuring instrument: the emptied Ranged field carries no conventional
+    // ranged attack, so the page withdraws ranged mode and the exchange is melee for 0. Let the
+    // +2 land on the emptied field and the withdrawal stops — the control is kept, the volley
+    // fires and the number is 2, which is the regression this fixture exists to catch.
+    rangedCheck: true, rangedDist: 1, rangedModeWithdrawn: true,
     expected: { dmgToA: 0, dmgToB: 0 },
     vacuity: {
       'a.ability.supremeLight':

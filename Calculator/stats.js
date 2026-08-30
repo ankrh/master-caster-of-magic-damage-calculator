@@ -2402,10 +2402,16 @@ function deriveUnitStats(input) {
   // Distance penalty (attacker ranged only). This is a resolution-time projection, not a
   // recalculation write, so it reads the **finished** record: the projectile type standing in
   // this slot's Ranged field after the whole sequence has run, rather than the type standing in it
-  // at any writing step's own position. Only the post-`c:focusMagic` type writes can separate the
-  // two, and Warlord's `d:blazeOfGlory` is the one that does: it empties the Ranged
-  // field and moves its strength onto Thrown (`UnitCalc.CAS:1494-1500`), so the surviving attack
-  // is Thrown, fires in the melee engagement, and has no range to be penalised for.
+  // at any writing step's own position. The separation is observable wherever a type write leaves
+  // the attack live: `c:focusMagic` retypes a live missile in place to the IsMagic shot type
+  // (`stats_sequence.js`), and `base:energyCannon` does the same for Warlord's Beam conversion, so
+  // the finished field is neither missile nor boulder while the permanent one was — measured by
+  // `focusMagicRetypeSkipsDistancePenaltyCoM2` against `distPenaltyCoM2_6`. Warlord's
+  // `d:blazeOfGlory` is *not* one of those cases, though it also retypes: it empties the Ranged
+  // field onto Thrown (`UnitCalc.CAS:1494-1500`), the finished record then carries no conventional
+  // ranged attack at all, and the page withdraws ranged mode before this projection is reached
+  // (`updateTypeVisibility`, `ui_abilities.js`), so the `!input.rangedCheck` line below answers
+  // first and no type is read (F131).
   // This is a *type* read, not the field-identity question `isRangedFieldSlot` answers: the curve
   // itself differs between missile and boulder, and a Ranged field standing typeless is a field
   // with no projectile, so both tests have to come from the same finished type.

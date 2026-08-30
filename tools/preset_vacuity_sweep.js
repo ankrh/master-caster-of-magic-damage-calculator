@@ -232,9 +232,16 @@ function installSweep() {
   }
 
   function measureFixture(fixture) {
+    // A variant, not an authored fixture. `applyPreset` asserts that a fixture's stated
+    // `rangedCheck: true` is the one the page kept (`assertPresetRangedMode`, ui_state.js), and an
+    // ablation is exactly the operation that can invalidate it: remove the feature that makes the
+    // attacker's Ranged attack live and the control is withdrawn, which is a delta the sweep is
+    // here to measure rather than a fixture defect. The exemption is stated here, by the caller,
+    // because a fixture that could state it would be authorising itself. The authored presets go
+    // through `measureKey` and do take the assertion.
     PRESETS[PROBE_KEY] = fixture;
     try {
-      applyPreset(PROBE_KEY);
+      applyPreset(PROBE_KEY, { origin: 'ablation-probe' });
       return readAverages();
     } finally {
       delete PRESETS[PROBE_KEY];

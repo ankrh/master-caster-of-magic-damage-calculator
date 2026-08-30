@@ -33,7 +33,7 @@ or fail. Do not add them here.
   source of truth, and each preset is one instance of that claim. The per-effect evidence is the
   `PROVENANCE` citation on the step the preset exercises, checked by `npm run provenance`; the
   preset's `desc` states the arithmetic that citation implies. That preset-to-step link is
-  conceptual, not machine-checked — 103 of 1125 `desc` fields quote a source address inline.
+  conceptual, not machine-checked — 103 of 1126 `desc` fields quote a source address inline.
 - Runtime: well past the 30s default; one page load drives every preset.
 
 ## result-invariants

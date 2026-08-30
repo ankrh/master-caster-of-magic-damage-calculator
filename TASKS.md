@@ -10,70 +10,69 @@ subtask appears here before any subtask that depends on it.
 
 | # | Subtask | Next outcome |
 |---|---|---|
-| 1 | **F131** | The vacuous Blaze of Glory distance fixture is re-aimed and `applyPreset` stops on the bad combination. |
-| 2 | **F212** | Five preset `desc` fields stop stating a number or a cause the code contradicts. |
-| 3 | **F214** | Two `CoM2`-named fixtures stop claiming a version they do not run. |
-| 4 | **Q32** | Settle whether CoM 2 Bless protects against breath and gaze; the helptext contradicts the gate F211 shipped. |
-| 5 | **F191** | Rule on whether Rust's material-strip-only state is worth exposing. |
-| 6 | **Q31** | Settle what `IsChaosUnit` tests — four calculator sites answer it differently. |
-| 7 | **F195** | Spell Ward's live-Fantastic term goes. Needs Q31. |
-| 8 | **F210** | The `base` phase splits into the four SPEC names. |
-| 9 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
-| 10 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
-| 11 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
-| 12 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
-| 13 | **F207** | The last published-value suppression that gates nothing goes. |
-| 14 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
-| 15 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
-| 16 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 17 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 18 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 19 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
-| 20 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
-| 21 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
-| 22 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
-| 23 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 24 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 25 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 26 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 27 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
-| 28 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
-| 29 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
-| 30 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
-| 31 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
-| 32 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
-| 33 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
-| 34 | **F153** | The modern gaze rider exclusion gets one home. |
-| 35 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
-| 36 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
-| 37 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
-| 38 | **F151** | A version's default-state map is built without resetting the live page. |
-| 39 | **F128** | The `Other` unit category no roster can fill goes. |
-| 40 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
-| 41 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
-| 42 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
-| 43 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
-| 44 | **F41.1** | The DOS eight-threshold hero ladders. |
-| 45 | **F41.2** | The DOS template-ability formulas. |
-| 46 | **F41.3** | The modern nine-step hero table. |
-| 47 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
-| 48 | **M3** | The DOS Destruction path. Needs F41. |
-| 49 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
-| 50 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
-| 51 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
-| 52 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
-| 53 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
-| 54 | **Q15** | Whether compiled code ever consumes `unitT.savemodifier`. |
-| 55 | **Q18** | What CoM 1's unit-type ceiling of `0x97` selects. F49 left it unmodelled pending this. |
-| 56 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
-| 57 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
-| 58 | **Q25** | The R6.1h shared-source rendering disagreement at `0x8E5C6`. |
-| 59 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
-| 60 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
-| 61 | **H1** | Contact Seravy about the Blur bug. |
+| 1 | **F212** | Five preset `desc` fields stop stating a number or a cause the code contradicts. |
+| 2 | **F214** | Two `CoM2`-named fixtures stop claiming a version they do not run. |
+| 3 | **Q32** | Settle whether CoM 2 Bless protects against breath and gaze; the helptext contradicts the gate F211 shipped. |
+| 4 | **F191** | Rule on whether Rust's material-strip-only state is worth exposing. |
+| 5 | **Q31** | Settle what `IsChaosUnit` tests — four calculator sites answer it differently. |
+| 6 | **F195** | Spell Ward's live-Fantastic term goes. Needs Q31. |
+| 7 | **F210** | The `base` phase splits into the four SPEC names. |
+| 8 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
+| 9 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
+| 10 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
+| 11 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
+| 12 | **F207** | The last published-value suppression that gates nothing goes. |
+| 13 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
+| 14 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
+| 15 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 16 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 17 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 18 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
+| 19 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
+| 20 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
+| 21 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
+| 22 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 23 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 24 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 25 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 26 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
+| 27 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
+| 28 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
+| 29 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
+| 30 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
+| 31 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
+| 32 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
+| 33 | **F153** | The modern gaze rider exclusion gets one home. |
+| 34 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
+| 35 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
+| 36 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
+| 37 | **F151** | A version's default-state map is built without resetting the live page. |
+| 38 | **F128** | The `Other` unit category no roster can fill goes. |
+| 39 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
+| 40 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
+| 41 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
+| 42 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
+| 43 | **F41.1** | The DOS eight-threshold hero ladders. |
+| 44 | **F41.2** | The DOS template-ability formulas. |
+| 45 | **F41.3** | The modern nine-step hero table. |
+| 46 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
+| 47 | **M3** | The DOS Destruction path. Needs F41. |
+| 48 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
+| 49 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
+| 50 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
+| 51 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
+| 52 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
+| 53 | **Q15** | Whether compiled code ever consumes `unitT.savemodifier`. |
+| 54 | **Q18** | What CoM 1's unit-type ceiling of `0x97` selects. F49 left it unmodelled pending this. |
+| 55 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
+| 56 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
+| 57 | **Q25** | The R6.1h shared-source rendering disagreement at `0x8E5C6`. |
+| 58 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
+| 59 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
+| 60 | **H1** | Contact Seravy about the Blur bug. |
 
-Rows 1–4 are the standalone defects: each is wrong behaviour today, each is one prompt, and none
-depends on the structural work below it. Row 5 sits with them because F211 has already shipped a
+Rows 1–3 are the standalone defects: each is wrong behaviour today, each is one prompt, and none
+depends on the structural work below it. Row 4 sits with them because F211 has already shipped a
 user-visible narrowing on the reading it re-opens. The deprecated backlog ordered the phase
 refactor first; this does not, because F210 blocks only F209 and F200.
 
@@ -302,25 +301,6 @@ which only the engine's own −5 roll sets. The calculator drives both halves of
 those "part of an attack". Rust is a cast curse, so one control meaning both landed is the specified
 behaviour, not a deviation. The only open part is whether the strip-only state is worth exposing
 anyway. Warlord.
-
-### F131 — Re-aim the vacuous Blaze of Glory distance-penalty fixture
-
-Of 1050 presets, 243 state `rangedCheck: true` and 3 resolve melee —
-`blazeOfGloryThrownTakesNoDistancePenaltyWarlord`, `focusMagicDoomGazeCoM` and
-`supremeLightSkipsZeroedRangedCoM2` — because each leaves the Ranged field empty and
-`refreshAbilityFieldVisibility` clears the box before `recalculate` reads it. In all three the
-`rangedCheck`/`rangedDist` fields are inert.
-
-`blazeOfGloryThrownTakesNoDistancePenaltyWarlord` is vacuous on its named axis: `distancePenaltyFor`
-(`stats.js:1712`) returns 0 on `!input.rangedCheck` before it reads the finished type, so its own
-counterfactual cannot fire. Re-aim it onto a case where the penalty is observable. **The boundary is
-settled by SPEC's fail-loud rule**: `applyPreset` should stop on the combination rather than
-normalising it silently.
-
-Two of the three now carry `keep` declarations — `focusMagicDoomGazeCoM` from T2.16 and
-`supremeLightSkipsZeroedRangedCoM2` from T2.07 — written about the gaze and ranged behaviour rather
-than about `rangedCheck`, so neither contradicts this item. Re-check the reason either one carries
-before touching it: a `vacuity` reason is inherited as settled.
 
 ### F212 — Five preset `desc` fields state a number or a cause the code contradicts
 
