@@ -469,7 +469,15 @@ function modernCardAttacks(prefix) {
   });
 }
 
-function applyModernAttackFields(prefix, attacks) {
+// The writer counterpart to `modernCardAttacks`, and the modern card's half of the boundary
+// `setSharedSlotRangedType` (`ui_card.js`) already holds for the DOS shared slot. The projectile
+// is assigned to a `<select>`, so a token the control does not offer left it holding `''` and
+// `modernAttackRecord` read that back as `'none'` — the caller's statement erased, one layer
+// before `deriveUnitStats`'s own vocabulary boundary could see it. That put the halt F181 added
+// out of reach of the producer the item was filed about: a fixture typo in a preset's
+// `modernAttacks`. So the token is checked here, against the control's own option list, with the
+// caller's source named (F181).
+function applyModernAttackFields(prefix, attacks, source) {
   const channels = attacks || {};
   const set = (suffix, channel) => {
     const el = document.getElementById(prefix + suffix);
@@ -480,7 +488,16 @@ function applyModernAttackFields(prefix, attacks) {
   set('ModernFireBreath', channels.fireBreath);
   set('ModernLightningBreath', channels.lightningBreath);
   const type = document.getElementById(prefix + 'ModernRangedType');
-  if (type) type.value = channels.ranged ? channels.ranged.type : 'none';
+  if (!type) return;
+  const token = channels.ranged ? channels.ranged.type : 'none';
+  const offered = Array.from(type.options).map(opt => opt.value);
+  if (!offered.includes(token)) {
+    throw new TypeError(
+      `${source || 'applyModernAttackFields'}: the modern Ranged channel states projectile type `
+      + `${JSON.stringify(token)}, which names no type the control offers `
+      + `(${offered.join(', ')}). A channel with no projectile states 'none'.`);
+  }
+  type.value = token;
 }
 
 function clearUnitInnateLocks(prefix) {
@@ -541,7 +558,8 @@ function applyUnit(prefix, unitIndex) {
   document.getElementById(prefix + 'Dmg').value = 0;
   setSharedSlotRangedType(prefix, predefinedUnitRtbType(unit),
     `Roster record ${JSON.stringify(unit.name || unit.id)}`);
-  applyModernAttackFields(prefix, base.modernAttacks);
+  applyModernAttackFields(prefix, base.modernAttacks,
+    `Roster record ${JSON.stringify(unit.name || unit.id)}`);
 
   syncLegacyUnitTypeControl(prefix, legacyUnitTypeFromIdentity(unitIdentity[prefix]));
 

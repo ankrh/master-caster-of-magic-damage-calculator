@@ -1139,6 +1139,27 @@ function deriveUnitStats(input) {
   const vertigoHitPenalty = isCoM2 ? 0.25 : (isCoMVersion ? 0.3 : 0.2);
   const vertigoBlockPenalty = isCoM2 ? 0.07 : (isCoMVersion ? 0.1 : 0);
 
+  // The record's own vocabulary boundary. `buildSlotContext` reads a slot's token through three
+  // positive `includes` predicates over `RANGED_TYPES`, `THROWN_TYPES` and `GAZE_TYPES`, so a
+  // token no vocabulary defines answers `none` to all three and the slot derives with no attack
+  // in it — the silent inertness the fail-loud rule forbids (`CLAUDE.md`, *Architecture*), and
+  // the shape that let F161's `'stoning_gaze'` typo pass a negative assertion vacuously. `none`
+  // is the one token that legitimately states no attack, in every version and on both the shared
+  // slot and a seeded modern channel; anything else stops the run (F181).
+  //
+  // Written once and called twice, because the channel loop below drops an empty untyped channel
+  // before `buildSlotContext` ever sees it: `{ strength: 0, type: '' }` and a channel with no
+  // `type` at all would otherwise be filtered out rather than rejected, which is the same silence
+  // one layer earlier. An empty channel states `{ strength: 0, type: 'none' }`.
+  function assertSlotAttackType(type, where) {
+    if (SLOT_ATTACK_TYPES.includes(type)) return type;
+    throw new TypeError(
+      `deriveUnitStats: ${where} of side ${JSON.stringify(prefix)}, `
+      + `${JSON.stringify(input.name || 'a custom unit')} in ${version}, states attack type `
+      + `${JSON.stringify(type)}, which names no channel type this build defines `
+      + `(offered: ${SLOT_ATTACK_TYPES.join(', ')}). A slot with no attack states 'none'.`);
+  }
+
   // --- One derivation slot per record strength field (F80) ---
   //
   // `Caster.exe` holds Ranged, Thrown, Fire Breath and Lightning Breath as four named fields of
@@ -1160,7 +1181,8 @@ function deriveUnitStats(input) {
     const fields = STAT_DERIVATION_SLOTS[slot.slotKey];
     const channelKey = slot.channelKey || null;
     const isChannelSlot = slot.slotKey !== 'shared';
-    const rtbTypeRaw = slot.type;
+    const rtbTypeRaw = assertSlotAttackType(slot.type,
+      `the ${slot.slotKey} slot${channelKey ? ` (channel ${channelKey})` : ''}`);
     const inputSlotRtb = Math.max(0, parseInt(slot.strength) || 0);
     const permanentRangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
     const permanentThrownType = THROWN_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
@@ -1417,6 +1439,9 @@ function deriveUnitStats(input) {
       // that read the permanent type — `ApplyLevelBonus`'s ranged gate is
       // `BaseUnits[i].rangedtype > 0` with no strength test (Units.RecalculateUnits.pas:548-571)
       // — need the field present to land on. Only a typeless empty channel is dropped.
+      // A channel the caller supplied states its type before the drop test reads it, so an
+      // untyped or misspelled empty channel is rejected rather than filtered out (F181).
+      if (attack) assertSlotAttackType(attack.type, `the ${channelKey} channel of modernAttacks`);
       const typedField = !!(attack && attack.type && attack.type !== 'none');
       if (!attack || (attack.strength <= 0 && channelKey !== 'thrown' && !seeded && !typedField)) continue;
       channelSlots.push({

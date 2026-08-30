@@ -47,7 +47,7 @@ function resetUnitFields(prefix) {
   document.getElementById(prefix + 'Atk').value = s.atk;
   document.getElementById(prefix + 'RtbType').value = s.rtbType;
   document.getElementById(prefix + 'Rtb').value = s.rtb;
-  applyModernAttackFields(prefix, null);
+  applyModernAttackFields(prefix, null, 'Default card state');
   document.getElementById(prefix + 'Def').value = s.def;
   document.getElementById(prefix + 'Res').value = s.res;
   document.getElementById(prefix + 'ToHitMod').value = s.toHitMod;
@@ -369,7 +369,7 @@ function applyPreset(name) {
     // that statement is complete: an unnamed channel is empty. The DOS shared slot keeps the
     // defaults above, which is what a modern record holds for a field its version has not got.
     if (document.getElementById('gameVersion').value.startsWith('com2')) {
-      applyModernAttackFields(prefix, s.modernAttacks);
+      applyModernAttackFields(prefix, s.modernAttacks, `Preset '${name}' side ${prefix}`);
     }
     document.getElementById(prefix + 'Def').value = s.def;
     document.getElementById(prefix + 'Res').value = s.res;

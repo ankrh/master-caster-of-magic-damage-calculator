@@ -44,6 +44,45 @@ const CASES = [
     "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
     + " weapon: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"
     + " def: 0, res: 0, hp: 1 })", 'modernAttacks'],
+  // F181: the three slot-type reads in `buildSlotContext` are positive `includes` predicates over
+  // `RANGED_TYPES`, `THROWN_TYPES` and `GAZE_TYPES`, so a token no vocabulary defines used to
+  // answer `none` to all three and derive a slot with no attack in it. `'stoning_gaze'` is the
+  // real typo that shape hid — it inverts `gaze_stoning` — and it passed a negative assertion
+  // vacuously for as long as it did. `'none'` is the one token that states no attack, so it is
+  // absent from the offending set rather than a fallback the run may reach.
+  ['deriveUnitStats: shared-slot attack type no vocabulary defines',
+    "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
+    + " weapon: 'normal', rtbType: 'stoning_gaze', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"
+    + " modernAttacks: {}, def: 0, res: 0, hp: 1 })", 'stoning_gaze'],
+  // The same boundary reached through a modern channel rather than the shared slot: the channel
+  // slots take their type from the `modernAttacks` record, so both call sites of
+  // `buildSlotContext` have to stop rather than only the record-level one.
+  ['deriveUnitStats: modern channel attack type no vocabulary defines',
+    "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
+    + " weapon: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"
+    + " modernAttacks: { ranged: { strength: 4, type: 'magic_i' } },"
+    + " def: 0, res: 0, hp: 1 })", 'magic_i'],
+  // An empty channel is dropped before `buildSlotContext` sees it, so the type has to be checked
+  // where the caller supplies it. `{ strength: 0, type: '' }` used to be filtered out rather than
+  // rejected, which is the same silence one layer earlier; `{ strength: 0, type: 'none' }` is the
+  // spelling that legitimately states an empty channel and still derives.
+  ['deriveUnitStats: supplied empty modern channel with no attack type',
+    "deriveUnitStats({ prefix: 'a', version: 'com2_1.05.11', abilities: {}, level: 'normal',"
+    + " weapon: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 1, rtb: 0,"
+    + " modernAttacks: { ranged: { strength: 0, type: '' } },"
+    + " def: 0, res: 0, hp: 1 })", '""'],
+  // The page-layer half. `applyModernAttackFields` assigns the projectile to a `<select>`, so a
+  // token the control does not offer left it holding `''` and `modernAttackRecord` read that back
+  // as `'none'` — the caller's statement erased one layer before the computation boundary could
+  // see it, which is exactly the producer F181 was filed about (a fixture typo in a preset's
+  // `modernAttacks`). It leaves the page as it found it: the throw precedes the write.
+  ['applyModernAttackFields: modern projectile the control does not offer',
+    "(() => { const v = document.getElementById('gameVersion');"
+    + " const was = v.value; if (!was.startsWith('com2')) { v.value = 'com2_1.05.11';"
+    + " onVersionChange(); }"
+    + " try { applyModernAttackFields('a', { ranged: { strength: 4, type: 'magic_i' } },"
+    + " 'F113 probe'); }"
+    + " finally { if (v.value !== was) { v.value = was; onVersionChange(); } } })()", 'magic_i'],
   // F144: the core half of the F138 boundary. Every consumer of `identity.specialUnit` is an
   // equality test against one of the defined keys, so an undefined one used to derive an
   // ordinary unit and report nothing; `createUnitIdentity` now reads the same

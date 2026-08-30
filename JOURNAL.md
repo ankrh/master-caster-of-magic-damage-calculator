@@ -4,6 +4,73 @@
 
 # Journal
 
+## 2026-08-30 — F181: an unrecognised slot attack type halts, and it caught an F117 straggler
+
+`buildSlotContext` (`Calculator/stats.js`) read the slot's token through three positive
+`includes` predicates over `RANGED_TYPES`, `THROWN_TYPES` and `GAZE_TYPES`, so a token no
+vocabulary defines answered `none` to all three and the slot derived with no attack in it.
+
+**Scoping was measured, not reasoned.** A temporary census in `buildSlotContext` recorded every
+value reaching `slot.type`, then two runs:
+
+- Browser (every preset via `runTests()`, every roster unit on both sides in all five versions,
+  every `<option>` of `#*RtbType` and `#*ModernRangedType`): **empty**. No `''`, `null`,
+  `undefined` or stray token ever arrives from the page.
+- Node (`tools/node_unit_checks.js`): exactly one offender, `'ranged'`, **1085 times**, from
+  `tools/unit_checks/version_scope.js`.
+
+So the legal "no attack" token is `'none'` alone. The item's open question — what a modern record
+with no shared slot carries — has no separate answer: `sharedSlotRangedType` (`ui_card.js`) falls
+through to the `#*RtbType` select whose default `<option>` is `none`, `modernAttackRecord`
+(`ui_units.js`) seeds a typeless channel as `'none'`, and `predefinedUnitRtbType` (`ui_matrix.js`)
+returns `'none'`. The blank the `ui_card.js` comment still describes was already closed by
+`setSharedSlotRangedType`'s throw and the modern branch of the reader.
+
+`SLOT_ATTACK_TYPES` in `data.js` is the union plus `none`; `version_scope.js` now reads its sweep
+axis from it instead of re-deriving the same union, so the two cannot drift.
+
+**The straggler.** `version_scope.js`'s ability-probe pair passed `rtbType: 'ranged'`, which names
+nothing in any vocabulary. F117 corrected exactly this class in the token *list* above it — its
+comment names `ranged`, `stoning`, `death` and `doom` — and missed this pair, so 1085 probes swept
+a typeless slot. Now `'missile'`, pairing with the sibling `'thrown'` probe. The corrected axis
+still passes: `node_unit_checks.js` reports the same 14646 assertions, all green.
+
+**Nothing moved.** `tools/derivation_equivalence.js` before-vs-after: 0 differing cases of 52440.
+`npm test` 130/130, `npm run provenance` 277/277, `tools/preset_vacuity_sweep.js` completed with 0
+baseline disagreements (the sweep ablates ability flags only, never `rtbType`, so the halt cannot
+reach its findings).
+
+**Not a duplicate of the page layer.** `assertRestoredValuesAreOffered` (`ui_state.js`) and
+`setSharedSlotRangedType` (`ui_card.js`) answer "is this a value the *control* offers" — a
+version-agnostic option list that excludes `magic`/`magic_lightning`, which the computation must
+accept. The new halt answers "is this a token the *derivation vocabulary* defines". Two questions,
+two homes, the same split the existing `specialUnitAllowed` (page) / `specialUnitDef` (core) pair
+already has.
+
+**F161's `'stoning_gaze'` was already fixed** — `tools/unit_checks/backlog_checks.js:468` reads
+`gaze_stoning`, and the token appears nowhere in the repo outside `TASKS.md`. It survives as the
+literal handed to the new `tests/fail-loud-f113.spec.js` case, so the shape that hid it is now
+pinned by the typo that exposed it.
+
+**The review found two more of the same shape, both fixed.**
+
+- `applyModernAttackFields` (`ui_units.js`) assigned the modern projectile straight to a
+  `<select>`, so a token the control does not offer left it holding `''` and `modernAttackRecord`
+  read that back as `'none'`. Reproduced: `{ ranged: { strength: 4, type: 'magic_i' } }` derived
+  without throwing and without a ranged channel. That put the new halt out of reach of the exact
+  producer the item was filed about — a fixture typo in a preset's `modernAttacks`. It now checks
+  the token against the control's own option list and names the caller, which is the boundary
+  `setSharedSlotRangedType` already held for the DOS shared slot one line earlier in `applyPreset`.
+- The channel loop's drop test read `attack.type` before anything validated it, so
+  `{ strength: 0, type: '' }` and a channel with no `type` were *filtered out* rather than
+  rejected. The vocabulary check is now a named helper called from both the loop and
+  `buildSlotContext`.
+
+**Left open.** 68 comments across `Calculator/*.js` cite `SPEC.md`, a file that no longer exists;
+the specification moved into `CLAUDE.md`. The new comment cites `CLAUDE.md`, so the file is now
+mixed. `Reference docs/Attack-type predicate inventory.md` carries `stats.js` line numbers from
+2026-08-20 that had already drifted before this change.
+
 ## 2026-08-30 — F196: the eight ids behind Mechanical Expert get names
 
 The gate, re-read at `Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS:275-305`:

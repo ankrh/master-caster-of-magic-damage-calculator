@@ -394,18 +394,14 @@ function runCanonicalVersionScopeChecks(ctx) {
   for (const [key, values] of probes) everyAbility[key] = values[0];
   const unitTypes = ['normal', 'hero', 'fantastic_life', 'fantastic_death', 'fantastic_chaos',
     'fantastic_nature', 'fantastic_sorcery', 'fantastic_arcane'];
-  // Every token the DOS-shaped shared slot can carry, read from the vocabularies themselves so
-  // the sweep follows a widened one without an edit here. That is `none` plus the three record
-  // fields the token can name — `RANGED_TYPES` (both engine families' projectile sets, which is
-  // where the modern card's `magic`/`magic_lightning` enter through `sharedSlotRangedType`),
-  // `THROWN_TYPES` and `GAZE_TYPES`. The list was transcribed and held `ranged`, `stoning`,
-  // `death` and `doom`, which name nothing in any vocabulary, while omitting eight tokens a card
-  // really sends: the reads are positive `includes` predicates rather than lookups, so every
-  // invented token swept as an empty slot and the axis was largely unvisited (F117).
-  const rtbTypes = ['none',
-    ...evalInContext(ctx, 'RANGED_TYPES'),
-    ...evalInContext(ctx, 'THROWN_TYPES'),
-    ...evalInContext(ctx, 'GAZE_TYPES')];
+  // Every token the DOS-shaped shared slot can carry, read from `SLOT_ATTACK_TYPES` (`data.js`)
+  // — the vocabulary's own home — so the sweep follows a widened one without an edit here. The
+  // list was transcribed and held `ranged`, `stoning`, `death` and `doom`, which name nothing in
+  // any vocabulary, while omitting eight tokens a card really sends: the reads were positive
+  // `includes` predicates rather than lookups, so every invented token swept as an empty slot and
+  // the axis was largely unvisited (F117). `buildSlotContext` now halts on such a token (F181),
+  // so a transcribed list cannot silently go inert again.
+  const rtbTypes = evalInContext(ctx, 'SLOT_ATTACK_TYPES');
   // `baseUnitInput` leaves the slot's strength at 0, which is why the corrected token list is
   // necessary but not sufficient: F129 carries the separate strength axis and its cost.
   const globals = [{}, { trueLight: true }, { darkness: true }, { warpReality: true },
@@ -485,8 +481,12 @@ function runCanonicalVersionScopeChecks(ctx) {
     }
     for (const [key, values] of probes) {
       for (const value of values) {
+        // `missile` is the conventional ranged projectile both engine families spell, paired
+        // with the `thrown` probe below. This pair read `ranged`, an F117 straggler the token
+        // list's own correction missed: it names nothing in any vocabulary, so all 1085 of these
+        // probes swept a typeless slot. `buildSlotContext`'s halt (F181) is what surfaced it.
         record(sweepInput({ version, abilities: { [key]: value },
-          unitType: 'normal', rtbType: 'ranged', level: 'elite' }));
+          unitType: 'normal', rtbType: 'missile', level: 'elite' }));
         record(sweepInput({ version, abilities: { [key]: value },
           unitType: 'fantastic_chaos', rtbType: 'thrown', level: 'elite' }));
       }

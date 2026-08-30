@@ -31,6 +31,16 @@ const RANGED_TYPES = [...MODERN_RANGED_TYPES,
 const THROWN_TYPES = ['thrown', 'fire', 'lightning'];
 const GAZE_TYPES = ['gaze_stoning', 'gaze_multiple', 'gaze_death'];
 
+// Everything a derivation slot's `type` may say, which is the three vocabularies above plus the
+// one token that states no attack at all. `none` is that token in every version: the DOS card's
+// shared slot offers it as an `<option>`, `modernAttackRecord` seeds a typeless modern channel
+// with it, and `predefinedUnitRtbType` returns it for a roster record with no projectile — so a
+// modern record with no shared slot is spelled `none` like any other, not blank and not absent.
+// `buildSlotContext` (`stats.js`) validates against this, and the version-scope sweep
+// (`tools/unit_checks/version_scope.js`) enumerates its axis from it, so neither carries a
+// transcribed copy that can drift from the vocabularies.
+const SLOT_ATTACK_TYPES = ['none', ...RANGED_TYPES, ...THROWN_TYPES, ...GAZE_TYPES];
+
 // --- Definition layout helpers ---
 // ABILITY_DEFS (abilities.js) and ENCHANTMENT_DEFS (enchantments.js) are authored through
 // these; see Calculator/CLAUDE.md for the column order each one has to produce.
