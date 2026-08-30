@@ -516,7 +516,7 @@ const TEST_TREE = [
           'focusMagicConvertsThrownCoM2',
           'focusMagicDoomGazeBoostCoM2',
           'focusMagicDoomGazeRangedBranchCoM2',
-          'focusMagicCreationAfterLevelCoM2',
+          'focusMagicCreatedRangedNoLevelBonusCoM2',
           'focusMagicFollowsLionheartCoM',
           'focusMagicGrantsRangedCoM2',
           'focusMagicMagicRangedCoM2',

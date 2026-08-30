@@ -4,6 +4,71 @@
 
 # Journal
 
+## 2026-08-30 — F212: five fixture `desc` fields corrected, and the ordering fixture renamed
+
+All five of the item's readings held against the code, and two of the three wrong numbers turn out
+to be **DOS values carried into Warlord fixtures**.
+
+- Large Shield is `+3` in the modern engines (`effectiveDefense:largeShield`,
+  `Calculator/combat_effects.js`). `+2` is the MoM/CP value; the version split is already recorded
+  at `Reference docs/DOS reconstructed/R6.version-differences.md`, C33.
+  `rustEliminatesLargeShieldWarlord` carried the DOS number *and its counterfactual*: the sweep's
+  ablation of `b.ability.rust` measures dmgToB 7, not the 8 the `desc` claimed.
+  `fortificationRestoresRustedLargeShieldWarlord` had `12−(2+3)=7` right all along.
+- Magic Immunity raises modern effective Defense to `100` (`effectiveDefense:immunities`). The DOS
+  path writes a symbolic `defenseSpecial = 'full'` and never a 50 at all; `50` is manual prose
+  (`Reference docs/MoM binary analysis.md`).
+- Both grant fixtures closed with "so both named features are live", which the sweep contradicts:
+  `a.ability.weakness` and `a.ability.mindStorm` both ablate at delta 0. The halves that move the
+  number are `a.ability.sanctaBasilica` (6 → 3) and `a.ability.marionetteLifeBooks` (2.0 → 0.8) —
+  and it is the Life books, not `channeler`, which ablates to 2.4.
+
+**Row 5's mechanism was verified before the rename, because the rename depends on it.**
+`hasMeleeAttackAt` is `runCtx => runCtx.base.atk > 0` (`Calculator/stats.js`); the CoM2 ranged,
+Thrown and Breath arms of the `level` step read `base[...]` (`Calculator/stats_sequence.js`); and
+`runStatSteps` reassigns `context.base` only for a step whose `phase` is `base`
+(`Calculator/steps.js`). The `focusMagic` step is phase `c` and writes only `u`. So the two
+region-`c` steps are order-independent on this card and the old key claimed an ordering the code
+does not have. `focusMagicCreationAfterLevelCoM2` → `focusMagicCreatedRangedNoLevelBonusCoM2`; the
+key had exactly two sites (its preset file and `Calculator/test_tree.js`) and no other reader
+anywhere in the repo. The new key deliberately keeps a `level` token: that is what binds the
+`a.level=champion` candidate to the key in the sweep (`camelTokens`/`containsRun`,
+`tools/preset_vacuity_sweep.js`), so its `vacuity` declaration stays non-stale — confirmed by the
+after-sweep, which reports the renamed fixture with `a.level=champion` inert and no finding.
+
+**`TESTS.md`'s numerator was settled by recount, not by patch.** It said "103 of 1126". The figure
+entered the file as "101 of 1122" (commit `3c67338`) and was hand-incremented since. No rule
+reproduces 103: `<file>:<line>` alone gives 88, a binary address alone 71, either 146. Recorded as
+**146 of 1126** with the regex written beside it so the next agent recounts instead of
+incrementing.
+
+The GPT reviewer independently measured **144** from the same sentence, which is the best argument
+for recording the rule: its 87 for the file-location half is exactly this count with the `c`
+extension dropped, and `combat.c`/`unitcalc.c` are the DOS reconstruction filenames, so `c` has to
+stay in. (Its 70 for the address half is one below the 71 measured here and could not be
+reproduced under any variation of the threshold.) The recorded rule is now a single regex and says
+to test the **evaluated** `PRESETS` object rather than the file text.
+
+Left open, none of it filed:
+
+1. **SSOT overlap between `desc` and `vacuity`.** Three of the five fixtures now state the
+   inertness in the `desc` *and* in the `vacuity` reason, and `focusMagicCreatedRanged…`'s reason
+   still carries an aside correcting an ordering claim that the key and `desc` no longer make. I
+   edited only the `desc` side. A defensible split is: `desc` owns what the fixture asserts and the
+   arithmetic; `vacuity` owns the mechanism and its citations, and must stand alone because the
+   sweep prints it without the `desc`. Under that split the three reasons' closing sentences
+   ("…is the assertion; X is the live half, at melee 6 against the ungated 3") are the redundant
+   copies. Not touched: `vacuity` reasons are inherited as settled.
+2. **`vacuity` line citations have drifted and nothing checks them.**
+   `focusMagicCreatedRangedNoLevelBonusCoM2`'s reason cites `stats_sequence.js:733/747/786/791/848/915-917`;
+   the real lines are `737/751/790/794-795/852/919-921`, a uniform +4. The reviewer found the same
+   in two more of the five: `rustEliminatesLargeShieldWarlord`'s reason cites `stats.js:1622` for
+   the Large Shield clear, now `:1658`, and
+   `sanctaBasilicaMagicImmunityStripsWeaknessWarlord`'s cites old positions for the curse lists and
+   the finished-immunity logic. `PROVENANCE` citations are machine-checked; `vacuity` and `desc`
+   citations are not, and the drift is repo-wide rather than anything F212 created.
+3. `spiritLinkBlessNoBonusWarlord` was excluded from F212 by the item and stays untouched.
+
 ## 2026-08-30 — F131: the withdrawn ranged-mode tick is declared, and the Blaze of Glory distance fixture is re-aimed
 
 **The item's mechanism was imprecise, and it mattered.** F131 said the affected presets "leave the
@@ -513,10 +578,6 @@ The `wallOfFireBoost` tooltip said "Defending regular units" / "Applies to norma
 was rewritten — that wording came from `HELP.TXT:2761`, prose the script outranks. The `nausea`
 tooltip already promised only "Does not affect fantastic creatures or units with Magic Immunity",
 which the change makes exactly true rather than merely incomplete.
-
-Left open: `TESTS.md`'s *presets* entry still says "101 of 1122 `desc` fields quote a source address
-inline". The 1122 was already one behind before this item and is now two; the 101 was not
-re-measured, so the whole sentence needs one census rather than a patch.
 
 ## 2026-08-30 — `longRangeMidRange` deleted, T2 closed
 

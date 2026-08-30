@@ -33,7 +33,11 @@ or fail. Do not add them here.
   source of truth, and each preset is one instance of that claim. The per-effect evidence is the
   `PROVENANCE` citation on the step the preset exercises, checked by `npm run provenance`; the
   preset's `desc` states the arithmetic that citation implies. That preset-to-step link is
-  conceptual, not machine-checked — 103 of 1126 `desc` fields quote a source address inline.
+  conceptual, not machine-checked — 146 of 1126 `desc` fields name a game-source location inline.
+  Recount that under the rule rather than incrementing it: test each `desc` of the **evaluated**
+  `PRESETS` object (not the file text) against
+  `/[\w./\\-]+\.(?:CAS|INI|pas|c|EXE):\d+|0x[0-9A-Fa-f]{4,}|\$[0-9A-Fa-f]{6,}/i`. The `c` extension
+  is load-bearing — `combat.c` and `unitcalc.c` are the DOS reconstruction filenames.
 - Runtime: well past the 30s default; one page load drives every preset.
 
 ## result-invariants

@@ -1009,7 +1009,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   rustEliminatesLargeShieldWarlord: {
-    desc: 'Rust (Warlord): Large Shield eliminated on the cursed defender. Missile 10 vs def 0; Large Shield would add +2 vs ranged → with Rust shield gone, def 0 → E[dmg] = 10 (without Rust, def 2 → 8)',
+    desc: 'Rust (Warlord): Large Shield eliminated on the cursed defender. Missile 10 vs def 0; Large Shield would add +3 vs ranged → with Rust shield gone, def 0 → E[dmg] = 10 (without Rust, def 3 → 7)',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:20, abilities: { rust: true, largeShield: true } },

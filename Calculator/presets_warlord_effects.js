@@ -219,7 +219,7 @@ definePresets({
   // directly, so none of them says what happens when the immunity is *granted* during the
   // derivation. These two do, one per grant that reaches the strip's own gates (F199).
   sanctaBasilicaMagicImmunityStripsWeaknessWarlord: {
-    desc: 'The Magic Immunity that gates the curse strip can be a grant rather than an input: Sancta Basilica gives a High Men Paladin Magic Immunity (CreateUnit.CAS:412-441), and `base:immunityCurseGating` reads the immunity set the recalculation leaves, so Weakness is stripped whatever position the grant takes. Melee 6 at 100% hit against Armor 0 is 6.0; dropping Sancta Basilica lets Weakness land for melee 3 and 3.0, so both named features are live.',
+    desc: 'The Magic Immunity that gates the curse strip can be a grant rather than an input: Sancta Basilica gives a High Men Paladin Magic Immunity (CreateUnit.CAS:412-441), and `base:immunityCurseGating` reads the immunity set the recalculation leaves, so Weakness is stripped whatever position the grant takes. Melee 6 at 100% hit against Armor 0 is 6.0, the undiminished attack: the stated Weakness never reaches it, and that inertness is what the fixture asserts. Sancta Basilica is the half that moves the number — drop it and Weakness lands for melee 6−3 and 3.0.',
     version: V_WARLORD,
     a: { figs:1, atk:6, hitChance:70, hp:10, race:'High Men', name:'Paladins',
       abilities: { sanctaBasilica: true, weakness: true } },
@@ -231,7 +231,7 @@ definePresets({
     },
   },
   marionetteIllusionImmunityStripsMindStormWarlord: {
-    desc: 'The Illusion Immunity arm of the same gate, also as a grant: a Channeler-owned Marionette with three Life books receives Illusion Immunity from the book package, and the strip reads the finished immunity set, so Mind Storm never lands. The Wanderer keeps melee 5 at its roster 40% To Hit for 2.0; dropping the Life books lets Mind Storm land for melee 2 and 0.8, so both named features are live.',
+    desc: 'The Illusion Immunity arm of the same gate, also as a grant: a Channeler-owned Marionette with three Life books receives Illusion Immunity from the book package, and the strip reads the finished immunity set, so Mind Storm never lands. The Wanderer keeps melee 5 at its roster 40% To Hit for 2.0, the undiminished attack: the stated Mind Storm never reaches it, and that inertness is what the fixture asserts. The Life-book grant is the half that moves the number — drop it and Mind Storm lands for melee 5−3 and 0.8.',
     version: V_WARLORD,
     aUnitName: 'Wanderer',
     a: { abilities: { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'life',
@@ -1137,7 +1137,7 @@ definePresets({
     },
   },
   hierophanyStripsMagicImmunityWarlord: {
-    desc: 'Hierophany (Warlord) strips Magic Immunity: sorcery magic ranged is no longer blocked. rtb 3 (100% hit/block) vs def 0 → 3.0 (with Magic Immunity intact, def is raised to 50 → 0.0)',
+    desc: 'Hierophany (Warlord) strips Magic Immunity: sorcery magic ranged is no longer blocked. rtb 3 (100% hit/block) vs def 0 → 3.0 (with Magic Immunity intact, def is raised to 100 → 0.0)',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:3, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true, hierophany: true } },

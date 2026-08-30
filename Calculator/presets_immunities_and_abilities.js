@@ -997,8 +997,8 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 0.900 },
   },
-  focusMagicCreationAfterLevelCoM2: {
-    desc: 'Ordered Focus Magic (CoM2): Champion on an attack-less unit resolves before Focus creates strength-3 magic ranged, so the new field gets no level bonus. At 100% hit → 3.0',
+  focusMagicCreatedRangedNoLevelBonusCoM2: {
+    desc: 'Focus Magic (CoM2): the level ladder does not reach an attack Focus Magic created. An attack-less unit takes the creation arm and ends holding strength-3 magic ranged, and every attack gate the CoM2 ladder applies to a normal unit reads the permanent record, where this unit has no attack of any kind — so Champion rank adds nothing to the created field. (The hero path is the one that tests the calculated Thrown and Breath instead, and this unit is not a hero.) 3 at 100% hit → 3.0, and the same card at Normal rank reaches the same 3.0. That the rank never reaches the created attack is the assertion.',
     version: V_COM2,
     a: { atk:0, level:'champion', hitRanged:70, hitThrown:70, hitBreath:70, hp:10,
       abilities: { focusMagic: true } },
