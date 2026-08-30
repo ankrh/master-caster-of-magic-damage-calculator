@@ -221,6 +221,7 @@ const TEST_TREE = [
           'nauseaMinus10ToDefend',
           'nauseaReadsIdentityAtItsOwnBlockWarlord',
           'nauseaSpiritLinkTakesFantasticArmWarlord',
+          'nauseaReachesHeroWarlord',
         ],
       },
       {
@@ -1134,6 +1135,7 @@ const TEST_TREE = [
           'wallOfFireWarlordBoostOnAttacker',
           'wallOfFireWarlordBoostAfterCombatConversion',
           'wallOfFireGarrisonSkipsApotheosisPermanentFantasticWarlord',
+          'wallOfFireGarrisonReachesHeroWarlord',
           'wallOfFireWarlordBoostBoulder',
           'wallOfFireWarlordFireLineNoBoost',
         ],

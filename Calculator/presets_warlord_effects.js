@@ -85,7 +85,19 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
     vacuity: {
       'b.ability.nausea':
-        'Keep, and the absence is the rule under test. `b:spiritLink` stands ahead of `b:nausea` in the Warlord chain (stats_manifests.js:260 and :267), so the defender is already Fantastic in the record `b:nausea`\'s own gate reads — `isNormalUnitType(unitTypeAt(u))` at stats_sequence.js:498 — and the -10% To Hit / To Defend never lands. nauseaMinus10ToDefend differs only in b.abilities.spiritLink and pins 0.100 against this 0; Spirit Link is the live half.',
+        'Keep, and the absence is the rule under test. `b:spiritLink` stands ahead of `b:nausea` in the Warlord chain (stats_manifests.js:260 and :267), so the defender is already Fantastic in the record `b:nausea`\'s own gate reads — `!u.fantastic` at stats_sequence.js:502 — and the -10% To Hit / To Defend never lands. nauseaMinus10ToDefend differs only in b.abilities.spiritLink and pins 0.100 against this 0; Spirit Link is the live half.',
+    },
+  },
+
+  nauseaReachesHeroWarlord: {
+    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS:1123 and the -10% To Hit / To Defend pair is its ELSE arm, which the block hands to every unit it does not send to creature binding — a hero included, there being no hero test anywhere in the block. So a hero defender takes the penalty exactly as a normal one does: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. The gate used to read isNormalUnitType(unitTypeAt(u)), which is false for `hero` as well as for Fantastic, and left 0 (F175).',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10 },
+    b: { def:1, toBlkMod:70, hp:20, unitType:'hero', abilities: { nausea: true } },
+    expected: { dmgToA: 0, dmgToB: 0.100 },
+    vacuity: {
+      'b.unitType=hero':
+        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The ELSE arm of `IF FANTASTIC(U)` (UnitCalcPre.CAS:1123) carries no hero test, so the gate is `!u.fantastic` (stats_sequence.js:502) and admits both; no ablation between the two can move a number. b.ability.nausea is the live half, and nauseaMinus10ToDefend pins the same 0.100 on the normal identity.',
     },
   },
 
@@ -189,7 +201,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.nausea':
-        'Keep, and the absence is the rule under test. `nausea` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `b:nausea`\'s -10% To Hit (stats_sequence.js:498-499) never fires. Magic Immunity is the live half — ablating it drops the hit chance to 90% and the total to 9. This is the one member whose gating is inferred rather than read: the comment at stats_identity.js:609-611 records that nausea is a UnitCalcPre.CAS effect with no spells.ini record, so no `NonMagic` flag decides it.',
+        'Keep, and the absence is the rule under test. `nausea` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `b:nausea`\'s -10% To Hit (stats_sequence.js:500-503) never fires. Magic Immunity is the live half — ablating it drops the hit chance to 90% and the total to 9. This is the one member whose gating is inferred rather than read: the comment at stats_identity.js:609-611 records that nausea is a UnitCalcPre.CAS effect with no spells.ini record, so no `NonMagic` flag decides it.',
     },
   },
   magicImmunityGatesTemporalTwist: {

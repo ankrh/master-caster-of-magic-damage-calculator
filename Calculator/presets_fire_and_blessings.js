@@ -412,6 +412,18 @@ definePresets({
         'Keep, and the absence is the rule under test: Apotheosis writes B.Fantastic into the permanent record the garrison gate at UnitCalcPre.CAS:1638 reads, so the unit is Fantastic to that gate and takes no bonus. Apotheosis is the live half at delta 4; reading the training-time flag instead added the +1 before the doubling, for 12.0, and wallOfFireWarlordBoostOnAttacker measures the +1 without Apotheosis at 6.0.',
     },
   },
+  wallOfFireGarrisonReachesHeroWarlord: {
+    desc: 'The garrison block skips only on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1638) and has no hero arm of its own, so a hero takes the +1 melee like any other non-Fantastic unit: 5 -> 6 at 100% hit vs def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker on a normal identity. The gate used to carry a `!isHero` term taken from the helptext\'s "regular units" — prose, which the script outranks — and left 5.0 (F175).',
+    version: V_WARLORD,
+    a: { atk:5, hitChance:70, def:0, hp:10, unitType:'hero',
+      abilities: { wallOfFireBoost: true } },
+    b: { atk:0, toBlkMod:70, def:0, hp:20 },
+    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+    vacuity: {
+      'a.unitType=hero':
+        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS:1638), so the gate is `!permanentFantastic` (stats.js:868) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
+    },
+  },
   wallOfFireWarlordBoostBoulder: {
     desc: 'Garrison boost now covers boulder physical ranged: A boulder 5→6 @100% vs B def 0 → 6.0 to B (5.0 without boulder coverage)',
     version: V_WARLORD,

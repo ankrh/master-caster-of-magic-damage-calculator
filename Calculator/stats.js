@@ -846,25 +846,27 @@ function deriveUnitStats(input) {
   const orihalconActive = armor === 'orihalcon';
 
   // Wall of Fire garrison boost (Warlord): the city enchantment grants +1 to all
-  // defending normal-unit non-magic attacks, mirroring the original game's Metal
+  // defending non-Fantastic non-magic attacks, mirroring the original game's Metal
   // Fires. Modelled as a per-unit enchantment so it can apply to whichever side is
-  // the garrison; gated to normal units only. Covers melee, physical ranged
+  // the garrison. Covers melee, physical ranged
   // (missile/boulder), and thrown — but not magic ranged or breath. Like Metal Fires
   // it also upgrades a normal weapon to magic (bypasses Weapon Immunity) — applied to
   // effectiveWeapon below. (The fire-line damage to attackers crossing the wall is the
   // separate global Wall of Fire toggle, handled in combat_special_attacks.js.) The strength
-  // write is `PROVENANCE[wallOfFire:garrison]` (`stats_sequence.js`), and the helptext states
-  // the package: "Friendly regular units gain +1 Melee Attack, +1 Physical Ranged Attack, and
-  // +1 Thrown Attack, and their attacks can ignore Weapon Immunity"
-  // (`Unit rosters/Warlord mod unit data/HELP.TXT:2761`).
+  // write is `PROVENANCE[wallOfFire:garrison]` (`stats_sequence.js`).
   // The eligibility term is the block's own `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOWALLOFFIRE"; }`
   // (`UnitCalcPre.CAS:1638`) — the **permanent** record, so a combat conversion to Fantastic does
   // not withdraw the garrison bonus, and Spirit Link clearing live Fantastic does not confer it.
   // That record is the one the `base` phase leaves, so Destiny's permanent `B.Fantastic := True`
-  // ($0059A390) withdraws it (F192). The hero exclusion is the calculator's, not the block's,
-  // and is BACKLOG F175.
+  // ($0059A390) withdraws it (F192).
+  // That single test is the whole gate: the block has no hero arm, so a Warlord hero garrisoning
+  // the city takes the package like any other non-Fantastic unit. The `!isHero` term this line
+  // used to carry was the calculator's own, read off the helptext's "Friendly regular units gain
+  // +1 Melee Attack, +1 Physical Ranged Attack, and +1 Thrown Attack, and their attacks can
+  // ignore Weapon Immunity" (`Unit rosters/Warlord mod unit data/HELP.TXT:2761`) — prose, which
+  // the script outranks (CLAUDE.md, *Source routing*) (F175).
   const wofDefenderBonusActive = isWarlord && !!(abilities && abilities.wallOfFireBoost)
-    && !isHero && !permanentFantastic;
+    && !permanentFantastic;
 
   // Flame Blade: +2 to missile and thrown rtb only (not boulder, magic) —
   // `PROVENANCE[flameBlade]` (`stats_sequence.js`), which carries all five builds, and Warlord's
@@ -2012,7 +2014,7 @@ function deriveUnitStats(input) {
     realmWardActive, sanctaBasilica,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayResMod,
     heavenlyLightHitPick, holyWeaponHitPick, spellWardActive, supremeLightEligibleAt,
-    survivalInstinctToBlkBonus, unitIsChaos, unitTypeAt,
+    survivalInstinctToBlkBonus, unitIsChaos,
     finishedUnitType,
     uphillBattleActive, vampirismActive,
     venomActive,
@@ -2319,8 +2321,9 @@ function deriveUnitStats(input) {
 
   // Conjuring Pact nausea (Warlord Conjurer retort): a non-fantastic unit struck by
   // Conjuring Pact suffers -10% To Hit and -10% To Defend for the rest of combat.
-  // Only the normal-unit debuff is modelled here (the fantastic-creature taming
-  // branch is out of scope), so gate to Warlord and to normal units.
+  // Only the ELSE arm is modelled here (the fantastic-creature taming branch is out of
+  // scope), so the gate is Warlord and a non-Fantastic calculated record — heroes
+  // included, the block carrying no hero test.
   // Nausea's persistent chance writes are already on the ordered stat record, on
   // `PROVENANCE[nausea]` (`stats_sequence.js`).
 

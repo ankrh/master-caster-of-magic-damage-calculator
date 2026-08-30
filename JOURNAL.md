@@ -4,6 +4,47 @@
 
 # Journal
 
+## 2026-08-30 — F175: the two Warlord hero exclusions go
+
+Both gates now carry their block's own test and nothing else.
+
+- `b:nausea` (`Calculator/stats_sequence.js:502`): `isNormalUnitType(unitTypeAt(u))` →
+  `!u.fantastic`. The branch is `IF FANTASTIC(U)` at `UnitCalcPre.CAS:1123` and the −10% To Hit /
+  −10% To Defend pair is the **ELSE** arm at :1125-1128, read at that block's own position, so it
+  reaches every unit not sent to `SETCOMBATENCHANTMENTFLAG(U,EncCreatureBinding,…)`.
+- `wofDefenderBonusActive` (`Calculator/stats.js:868`): the `!isHero` term dropped, leaving
+  `!permanentFantastic`. The block's only skip is `IF (BASEFANTASTIC(U)>0)` at
+  `UnitCalcPre.CAS:1638`.
+
+The two Fantastic tests stay distinct on purpose: `FANTASTIC(U)` is the calculated record and
+`BASEFANTASTIC(U)` the permanent one, so Spirit Link clearing live Fantastic still does not confer
+the garrison bonus and Raise Dead still does not withdraw it.
+
+`unitTypeAt` fell out of `stats_sequence.js` entirely with the nausea rewrite, so it left that
+file's destructure and the ctx object in `stats.js`; it is still read five times inside `stats.js`.
+
+Measured with `tools/derivation_equivalence.js` before/after: **64 of 52440 derivations moved**, all
+`com2_warlord_1.5.12.7`, all `id:hero` — 9 solo `nausea` cases, 9 solo `wallOfFireBoost` cases, 46
+combination cases. The item recorded 64 of 52575 on 2026-08-25; the moved count is identical and the
+case total drifted because the control surface changed since it was filed.
+
+Two presets are the assertion, one per site: `nauseaReachesHeroWarlord`
+(`presets_warlord_effects.js`, 0.100 where the old gate gave 0) and
+`wallOfFireGarrisonReachesHeroWarlord` (`presets_fire_and_blessings.js`, 6.000 where the old gate
+gave 5.000). Each declares `vacuity` for its own `unitType=hero` candidate, because the sweep
+ablates hero → normal and *that inertness is the claim*: the blocks are asserted to answer the two
+identities alike, so no ablation between them can move a number. Sweep after: 1123 swept, no finding
+names either preset, no `stale-declaration`.
+
+The `wallOfFireBoost` tooltip said "Defending regular units" / "Applies to normal units only" and
+was rewritten — that wording came from `HELP.TXT:2761`, prose the script outranks. The `nausea`
+tooltip already promised only "Does not affect fantastic creatures or units with Magic Immunity",
+which the change makes exactly true rather than merely incomplete.
+
+Left open: `TESTS.md`'s *presets* entry still says "101 of 1122 `desc` fields quote a source address
+inline". The 1122 was already one behind before this item and is now two; the 101 was not
+re-measured, so the whole sentence needs one census rather than a patch.
+
 ## 2026-08-30 — `longRangeMidRange` deleted, T2 closed
 
 Settled as **delete** and executed, which was the last of the 389 without a verdict. Removed from

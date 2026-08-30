@@ -376,7 +376,7 @@ function precalcScriptStatSteps(ctx) {
     marionetteStrayed, natureLinkActive, outlanderReform, outlanderRtbToHitBonus,
     plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields, secondaryHitFields,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayLevels, soulFlayResMod,
-    strengthFields, thrownTypeFields, unitTypeAt,
+    strengthFields, thrownTypeFields,
     uphillBattleActive, warlordEternalNightActive, warlordTrueLightStep,
     wofDefenderBonusActive,
   } = ctx;
@@ -489,13 +489,17 @@ function precalcScriptStatSteps(ctx) {
         u.res += 1; u.toHit += 10; u.toBlk += 10;
       } }),
     // Conjuring Pact and Uphill Battle immediately follow the Outlander block.
-    // The branch is `IF FANTASTIC(U)`, the calculated record read at this block. `unitTypeAt`
-    // (`stats.js`) is that record — what the conversions ranked before `b:nausea` leave, which
-    // is not what region `c` or `b:sanctify` 126 lines below would give.
+    // The branch is `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1123`), the calculated record read at
+    // this block: `u.fantastic` is that record — what the conversions ranked before `b:nausea`
+    // leave, which is not what region `c` or `b:sanctify` 126 lines below would give.
+    // The −10% pair is the **ELSE** arm, so it reaches every unit the branch does not send to
+    // `SETCOMBATENCHANTMENTFLAG(U,EncCreatureBinding,…)` — a hero included, the block carrying no
+    // hero test of its own. The gate used to read `isNormalUnitType(unitTypeAt(u))`, which is
+    // false for `hero` as well as for Fantastic, and so withheld the arm from heroes (F175).
     // PROVENANCE[nausea]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:c7ec21b771edb6cb9bd17645
     statStep({ id: 'nausea', sourceId: 'nausea', sourceLabel: 'Conjuring Pact nausea',
       phase: 'b', writes: ['toHit', 'toBlk'],
-      when: u => isWarlord && !!u.nausea && isNormalUnitType(unitTypeAt(u)),
+      when: u => isWarlord && !!u.nausea && !u.fantastic,
       apply: u => { u.toHit -= 10; u.toBlk -= 10; } }),
     // PROVENANCE[uphillBattle]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:233a5a25490ae7a59c17106e
     statStep({ id: 'uphillBattle', sourceId: 'uphillBattle', sourceLabel: 'Uphill Battle',
