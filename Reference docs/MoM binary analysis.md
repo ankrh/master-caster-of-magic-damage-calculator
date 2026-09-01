@@ -221,6 +221,24 @@ evidence-scope readings are in `DOS reconstructed/R9-G1a-R3.evidence.md`.
 Verified: Claude 2026-08-09; Codex 2026-08-09, independent. The executable result is undisputed;
 Q26 records only whether the extended raw-data corroboration belongs inside this narrow item.
 
+### CoM 1 unit-type table extent and realm boundary (resolved 2026-09-01)
+
+The CoM 1 table is 198 rows, `0x00`–`0xC5` (`Nagas`); `0xC6` decodes as unrelated data. Record
+`+0x0D` is the race/realm byte — `0x00`–`0x0E` normal races, then `0x0F` Arcane, `0x10` Nature,
+`0x11` Sorcery, `0x12` Chaos, `0x13` Life, `0x14` Death. Every row from `0x98` (`Boars`, Nature)
+through `0xC5` carries a realm; every row below it carries a normal race except `0x22` `Chosen`
+(Life). So the normal/fantastic cut is at `0x98`, and `0x97` is the last of CoM 1's six `Settlers`
+rows (`0x2C`, `0x35`, `0x49`, `0x64`, `0x7D`, `0x97`). MoM 1.31 puts the same cut at `0x9A`: its
+`0x98`/`0x99` are `War Trolls`/`War Mammoths`, race `0x0D`. The engine has an exact predicate for
+the same question — `unit_types[type].race < 0x0F`, at `com1:0x5FD12` and `0x60900` — which the
+`0x97` type ceiling (R6.1a, Q18) does not use.
+
+The alignment is fixed by `Unit rosters/CoM 6.08 unit data.txt`, whose `Nr` column *is* this index
+— `Nr` 150/151/152 are `Troll Shaman`/`Settlers`/`Boars`, matching the decoded rows `0x96`/`0x97`/
+`0x98`, and all six `Settlers` rows land on the six binary `Settlers` indices. `templateId` in the
+CoM 1 roster JSON and in `Calculator/units_com.js` is that same `Nr`. The `roster id = record
+index + 1` convention above is a `units_mom.js` fact and does not carry over to CoM 1.
+
 ### Combat-loaded identity and picture slots (resolved 2026-08-09)
 
 R9-G1a-R1 reconstructed `BU_UnitLoadToBattle` across all three DOS builds. The merged body is in
@@ -362,9 +380,9 @@ inventories, counts, merge findings and dual-derivation provenance are in
   `0x0400`, named Power Drain by the executable's table. A qualifying Divine Protection item
   therefore retains the old attack-special side effect in addition to its CoM defensive effects.
 
-Verified: Claude 2026-08-07; Codex 2026-08-07, independent. The only surviving review
-disagreement is how to render the build-specific input name in shared C; Q25 records it and does
-not affect the byte or mechanic findings.
+Verified: Claude 2026-08-07; Codex 2026-08-07, independent. The one review disagreement, how to
+render the build-specific input name in shared C, was settled by Q25 on 2026-09-01 and never
+affected the byte or mechanic findings.
 
 ### Battle-unit stat recompute, first half (resolved 2026-08-06)
 

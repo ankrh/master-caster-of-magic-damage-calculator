@@ -83,7 +83,7 @@ definePresets({
 
   // --- Nature Link (Warlord rename of Land Linking) ---
   natureLinkBeforeSpiritLinkClearWarlord: {
-    desc: 'Nature Link (Warlord): the region-c block tests `U.Fantastic`, and Spirit Link clears it only in the late hook (UnitCalc.CAS:1306, region d), so a Mystic-Surged unit still gets the +2 melee there. atk 1 to 3 for 3 dmg',
+    desc: 'Nature Link (Warlord): the region-c block tests `U.Fantastic`, and Spirit Link clears it only in the late hook (UnitCalc.CAS:1298, region d), so a Mystic-Surged unit still gets the +2 melee there. atk 1 to 3 for 3 dmg',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { natureLink: true, mysticSurge: true, spiritLink: true } },
     b: { hp:10 },
@@ -94,7 +94,7 @@ definePresets({
     },
   },
   natureLinkSpiritLinkAssertsFantasticWarlord: {
-    desc: 'Spirit Link on an otherwise non-fantastic unit: `SETSTAT(U,AFantastic,0,1)` at UnitCalcPre.CAS:30 asserts Fantastic in region b, and the region-c Nature Link block reads that record, so the +2 melee applies. atk 1 to 3 for 3 dmg, against the 1 the same unit deals without Spirit Link. The clearing write at UnitCalc.CAS:1306 is region d, past both blocks.',
+    desc: 'Spirit Link on an otherwise non-fantastic unit: `SETSTAT(U,AFantastic,0,1)` at UnitCalcPre.CAS:30 asserts Fantastic in region b, and the region-c Nature Link block reads that record, so the +2 melee applies. atk 1 to 3 for 3 dmg, against the 1 the same unit deals without Spirit Link. The clearing write at UnitCalc.CAS:1298 is region d, past both blocks.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { natureLink: true, spiritLink: true } },
     b: { hp:10 },
@@ -557,7 +557,7 @@ definePresets({
 
   // --- Channel fields on the modern record (F80) ---
   ccFireBreathSeparatesThrownWarlord: {
-    desc: 'Record fields: `Caster.exe` $00599F3E adds 4 to the Fire Breath field and writes no other attack, so a Thrown unit finishes with two attacks rather than one boosted one. Hurricane separates them by channel — UnitCalc.CAS:558,569-571 takes 20 points off Thrown and 30 off Breath — so from a 100% base the Thrown 2 fires at 80% and the granted Fire Breath 4 at 70%: 1.6 + 2.8 = 4.400. A grant landing on the Thrown field instead leaves one attack of 6 (4.200 as Breath, 4.800 as Thrown), and a lost Breath field leaves the Thrown alone at 1.600.',
+    desc: 'Record fields: `Caster.exe` $00599F3E adds 4 to the Fire Breath field and writes no other attack, so a Thrown unit finishes with two attacks rather than one boosted one. Hurricane separates them by channel — UnitCalc.CAS:550,569-571 takes 20 points off Thrown and 30 off Breath — so from a 100% base the Thrown 2 fires at 80% and the granted Fire Breath 4 at 70%: 1.6 + 2.8 = 4.400. A grant landing on the Thrown field instead leaves one attack of 6 (4.200 as Breath, 4.800 as Thrown), and a lost Breath field leaves the Thrown alone at 1.600.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { thrown: { strength:2, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
@@ -589,7 +589,7 @@ definePresets({
     },
   },
   weaponMaterialRangedHasNoStrengthGateWarlord: {
-    desc: 'ApplyMagicWeapons writes `Inc(Units[i].ranged, j)` inside `if not Ismagicalranged(Units[i].rangedtype)` with no positive-strength gate at all (Units.RecalculateUnits.pas:648-656), and `Ismagicalranged` is False for a zero ranged type (:2968-2975), so the adamantium +2 lands on the `SRanged` field of a unit that owns no ranged attack. Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS:1494-1500): melee 3 + 2 material + 2 for the Armor the material gave = 7, beside a new Thrown 2 → 9.0. (Gating that write on the slot\'s input strength leaves nothing to transfer, for 7.0; without Blaze of Glory melee 5 and Armor 2 stay where they are, for 5.0; without the material, melee 3 → 3.0.)',
+    desc: 'ApplyMagicWeapons writes `Inc(Units[i].ranged, j)` inside `if not Ismagicalranged(Units[i].rangedtype)` with no positive-strength gate at all (Units.RecalculateUnits.pas:648-656), and `Ismagicalranged` is False for a zero ranged type (:2968-2975), so the adamantium +2 lands on the `SRanged` field of a unit that owns no ranged attack. Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS:1486-1492): melee 3 + 2 material + 2 for the Armor the material gave = 7, beside a new Thrown 2 → 9.0. (Gating that write on the slot\'s input strength leaves nothing to transfer, for 7.0; without Blaze of Glory melee 5 and Armor 2 stay where they are, for 5.0; without the material, melee 3 → 3.0.)',
     version: V_WARLORD,
     a: { atk:3, def:0, hitChance:70, hp:10, weapon:'adamantium',
       abilities: { blazeOfGlory: true } },
@@ -820,7 +820,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   flameBladeMeleeWarlord: {
-    desc: 'Warlord Flame Blade +3 melee: 1 atk + FB → 4 atk at 100% hit vs 0 def. Combat-cast Flame Blade also does an unconditional SFireBreath += 1 (UnitCalc.CAS:330-333), creating a strength-1 fire breath on a unit that had none; at the default 30% breath To Hit that adds 0.3 → E[dmg]=4.3. Without the ability the same unit deals 1.0.',
+    desc: 'Warlord Flame Blade +3 melee: 1 atk + FB → 4 atk at 100% hit vs 0 def. Combat-cast Flame Blade also does an unconditional SFireBreath += 1 (UnitCalc.CAS:332-335), creating a strength-1 fire breath on a unit that had none; at the default 30% breath To Hit that adds 0.3 → E[dmg]=4.3. Without the ability the same unit deals 1.0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hitRanged:-70, hitThrown:-70, hitBreath:-70, hp:10,
       abilities: { flameBladeWarlord: true } },
@@ -850,7 +850,7 @@ definePresets({
     },
   },
   flameBladeThrownWarlord: {
-    desc: 'Warlord Flame Blade: +3 melee and +2 thrown, plus the unconditional SFireBreath += 1 at UnitCalc.CAS:330-333 that creates a strength-1 fire breath from the empty breath field. atk 1+3=4, thrown 1+2=3, created breath 1, all at 100% hit → E[dmg]=8.0. Without the ability the same unit deals 2.0.',
+    desc: 'Warlord Flame Blade: +3 melee and +2 thrown, plus the unconditional SFireBreath += 1 at UnitCalc.CAS:332-335 that creates a strength-1 fire breath from the empty breath field. atk 1+3=4, thrown 1+2=3, created breath 1, all at 100% hit → E[dmg]=8.0. Without the ability the same unit deals 2.0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10, abilities: { flameBladeWarlord: true } },
     b: { hp:10 },
@@ -968,7 +968,7 @@ definePresets({
     },
   },
   fieryFurySanctifyNoChaosConversionWarlord: {
-    desc: 'Sanctify overrides Fiery Fury\'s Chaos write from a different source line (UnitCalcPre.CAS:1249) than the Undead normalization does: the unit ends Life rather than Chaos, so Chaos Surge does not reach it and atk stays 1 → E[dmg]=1.0. Dropping Sanctify gives 4.0.',
+    desc: 'Sanctify overrides Fiery Fury\'s Chaos write from a different source line (UnitCalcPre.CAS:1260) than the Undead normalization does: the unit ends Life rather than Chaos, so Chaos Surge does not reach it and atk stays 1 → E[dmg]=1.0. Dropping Sanctify gives 4.0.',
     version: V_WARLORD,
     chaosSurge: 1,
     a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_nature', abilities: { fieryFury: true, sanctify: true } },
@@ -1032,7 +1032,7 @@ definePresets({
     },
   },
   spiritLinkBlessNoBonusWarlord: {
-    desc: "Spirit Link: spirit-linked fantastic_chaos missile attacker grants the enemy no anti-Chaos Bless bonus. missile 10 vs def 0 → 10.0 (vs 3.0 with Bless's +7)",
+    desc: 'Spirit Link: a spirit-linked fantastic_chaos missile attacker grants the enemy no anti-Chaos Bless bonus, and neither does any other Warlord unit attack. The defence half needs magicImmunityEligible && spellId > 0 with a Chaos or Death realm (combat_effects.js:448-450) and every unit-attack descriptor passes spellId: 0 (:654, :663, :689, :701), so no missile configuration can reach it — Immolation (:709-717) is the one modern channel that does, and Spirit Link does not participate there. missile 10 vs def 0 → 10.0.',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:10, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType: 'fantastic_chaos', abilities: { spiritLink: true } },
     b: { def:0, toBlkMod:70, res:5, hp:10, abilities: { bless: true } },
@@ -1423,7 +1423,7 @@ definePresets({
         'Keep. A pure tokenisation artefact - the key abbreviates the ability, so camelTokens gives `invis`/`to`/`hit`/`mo`/`m` while the candidate\'s only terms are its key and label, `invisibility` and `Invisibility` (enchantments.js:40). The feature is live: on a MoM build `invisGivesBlur` is false (combat_effects.js:26), so Invisibility acts only as the -10 percentage points written at combat_phases.js:280, gated on `!invisIsCoM` at :278, taking a capped 100% To Hit to 90% for 9.000 where a visible defender takes the full 10.',
     },
   },
-  blurInvisCoM2: {
+  blurInvisCoM: {
     desc: 'Invisibility grants Blur-equivalent in CoM (20%, no to-hit penalty): 10 atk 100% hit → E[dmg]=8.0',
     version: V_COM,
     a: { atk:10, toHitMod:70, hp:10 },
@@ -1431,10 +1431,10 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.000 },
     vacuity: {
       'name-binds-nothing':
-        'Keep. The same tokenisation artefact - camelTokens gives `blur`/`invis`/`co`/`m2` against the candidate\'s `invisibility`/`Invisibility` (enchantments.js:40), and the key\'s `blur` names the modelled effect rather than a second feature, since the fixture sets no Blur. The feature is live, and this is the other side of invisToHitMoM: `invisGivesBlur` is true for a `com` version (combat_effects.js:19, :26), so Invisibility alone takes the 20% rate (combat_effects.js:27, :35-36) while the MoM To-Hit penalty is skipped (combat_phases.js:273, :278), giving 8.000 where MoM gives 9.000. The `CoM2` suffix is this cluster\'s loose name for the CoM family and not the version: like blurPlusInvisCoM2 the fixture runs on com_6.08, and blurPlusInvisCoM2v2 carries the actual CoM 2 arm.',
+        'Keep. The same tokenisation artefact - camelTokens gives `blur`/`invis`/`co`/`m` against the candidate\'s `invisibility`/`Invisibility` (enchantments.js:40), and the key\'s `blur` names the modelled effect rather than a second feature, since the fixture sets no Blur. The feature is live, and this is the other side of invisToHitMoM: `invisGivesBlur` is true for a `com` version (combat_effects.js:19, :26), so Invisibility alone takes the 20% rate (combat_effects.js:27, :35-36) while the MoM To-Hit penalty is skipped (combat_phases.js:273, :278), giving 8.000 where MoM gives 9.000. The `CoM` suffix is com_6.08, matching the fixture\'s `version`; blurPlusInvisCoM is the same version\'s Blur+Invisibility arm and blurPlusInvisCoM2v2 the actual CoM 2 one.',
     },
   },
-  blurPlusInvisCoM2: {
+  blurPlusInvisCoM: {
     desc: 'Blur + Invisibility CoM combined 30% (no to-hit penalty): 10 atk 100% hit → E[dmg]=7.0',
     version: V_COM,
     a: { atk:10, toHitMod:70, hp:10 },

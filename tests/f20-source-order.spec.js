@@ -6,7 +6,7 @@ const F20_VERSIONS = [
   'mom_cp_1.60.00',
   'com_6.08',
   'com2_1.05.11',
-  'com2_warlord_1.5.12.7',
+  'com2_warlord_1.5.12.9',
 ];
 
 const F20_PROBE_ABILITIES = {
@@ -98,12 +98,12 @@ const F20_SOURCE_ANCHORS = {
       'darkness', 'guardian', 'vertigo', 'weakness',
       'warpAttack', 'warpDefense', 'warpResist', 'shatter', 'spellWard', 'tactician'],
   },
-  'com2_warlord_1.5.12.7': {
+  'com2_warlord_1.5.12.9': {
     b: ['marionette:stats', 'marionette:rangedType',
       'fieryFury', 'insulation', 'divineProtection', 'natureLink', 'outlanderXenoveterinary',
       'bombsGrenades', 'upgradedExplosive:ranged', 'upgradedExplosive:fireBreath',
       'outlanderBallisticsTraining', 'outlanderXenopsychology', 'outlanderRadio',
-      'nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
+      'berserkWarlord', 'nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
       'greatUnbinding', 'prayer', 'trueLight', 'plague', 'goblinPox',
       'luckyStar', 'disheartenProphecy', 'wallOfFire:garrison', 'godsPlayDices',
       'eyeOfHeaven'],
@@ -120,7 +120,7 @@ const F20_SOURCE_ANCHORS = {
       'weakness', 'warpAttack', 'warpDefense', 'warpResist',
       'shatter', 'spellWard', 'tactician'],
     d: ['venom', 'mechanicalExpert', 'weakness', 'trueSight',
-      'flameBlade', 'berserkWarlord', 'rust', 'hurricane',
+      'flameBlade', 'rust', 'hurricane',
       'favoredTerrain', 'fortification', 'colossalStrength', 'vampirism:transfer',
       'shadowStrike:thrown',
       'psychoForce', 'pneumaField', 'energyCannonThreshold', 'blazeOfGlory',
@@ -129,21 +129,21 @@ const F20_SOURCE_ANCHORS = {
 };
 
 const F20_WARLORD_NORMAL_ANCHORS = {
-  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'],
-  b: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].b
+  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'],
+  b: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'].b
     .filter(id => id !== 'marionette:stats' && id !== 'marionette:rangedType'),
-  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].d
+  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'].d
     .filter(id => id !== 'rust'),
 };
 
 const F20_WARLORD_MARIONETTE_ANCHORS = {
-  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'],
-  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.7'].d
+  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'],
+  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'].d
     .filter(id => id !== 'rust'),
 };
 
 function f20Anchors(version, scenario) {
-  if (version !== 'com2_warlord_1.5.12.7') return F20_SOURCE_ANCHORS[version];
+  if (version !== 'com2_warlord_1.5.12.9') return F20_SOURCE_ANCHORS[version];
   return scenario === 'marionette'
     ? F20_WARLORD_MARIONETTE_ANCHORS
     : F20_WARLORD_NORMAL_ANCHORS;
@@ -162,7 +162,7 @@ test('F20 covers every represented b/c/d step in source order for all five versi
   const reports = await page.evaluate(({ versions, probeAbilities }) => {
     const makeInput = (version, scenario) => ({
       prefix: 'a', version,
-      identity: version === 'com2_warlord_1.5.12.7' && scenario === 'marionette'
+      identity: version === 'com2_warlord_1.5.12.9' && scenario === 'marionette'
         ? createUnitIdentity({
             version, heroTypeId: 48, isHero: true, baseRace: 'High Men',
             baseFantastic: false, specialUnit: 'none',
@@ -182,7 +182,7 @@ test('F20 covers every represented b/c/d step in source order for all five versi
       realmWard: 'life', abilities: { ...probeAbilities },
     });
     return Object.fromEntries(versions.map(version => {
-      const scenarios = version === 'com2_warlord_1.5.12.7'
+      const scenarios = version === 'com2_warlord_1.5.12.9'
         ? ['normal', 'marionette'] : ['default'];
       return [version, Object.fromEntries(scenarios.map(scenario => {
         const report = deriveUnitStats(makeInput(version, scenario));
@@ -259,7 +259,7 @@ test('F20 covers every represented b/c/d step in source order for all five versi
       expect(tracedRepresented.every(event => Number.isInteger(event.sourceOrder)),
         `${label} public trace source annotations`).toBe(true);
 
-      if (version !== 'com2_warlord_1.5.12.7') {
+      if (version !== 'com2_warlord_1.5.12.9') {
         expect(represented.some(event => event.phase === 'b' || event.phase === 'd'), label).toBe(false);
         expect(tracedRepresented.some(event => event.phase === 'b' || event.phase === 'd'),
           `${label} public trace has no Warlord-hook write`).toBe(false);
@@ -286,8 +286,8 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
     const destinyReport = deriveUnitStats(input);
     const rustReport = deriveUnitStats({
       ...input,
-      version: 'com2_warlord_1.5.12.7',
-      identity: createCustomUnitIdentity('com2_warlord_1.5.12.7', {
+      version: 'com2_warlord_1.5.12.9',
+      identity: createCustomUnitIdentity('com2_warlord_1.5.12.9', {
         baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
       }),
       rtbType: 'thrown',
@@ -303,7 +303,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
       rust: {
         statExecutionTrace: rustReport.statExecutionTrace,
         statTrace: rustReport.statTrace,
-        rustChainRank: statChain('com2_warlord_1.5.12.7')
+        rustChainRank: statChain('com2_warlord_1.5.12.9')
           .findIndex(entry => entry.key === 'd:rust'),
       },
     };
@@ -363,7 +363,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
 test('F20 accounts for the Warlord identity writes that land in b and d', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
-    const version = 'com2_warlord_1.5.12.7';
+    const version = 'com2_warlord_1.5.12.9';
     const base = {
       prefix: 'a', version, figs: 1, atk: 5, rtb: 4, rtbType: 'missile',
       modernAttacks: { ranged: { strength: 4, type: 'missile' } },

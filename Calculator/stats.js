@@ -114,22 +114,95 @@ function deriveUnitStats(input) {
   const identityAt = u => ({ ...identity, race: u.race, fantastic: u.fantastic });
   const unitTypeAt = u => legacyUnitTypeFromLiveIdentity(identityAt(u));
   const unitRealmAt = u => realmOfUnitType(unitTypeAt(u), identityAt(u));
+  // The Undead enchantment flag as the region-`b` `UnitCalcPre.CAS` blocks further down read it:
+  // `GetEnchantmentFlag(U,EncUndead,0)`. It is a flag test, not a realm test, and it stands
+  // beside the realm test rather than behind it — which is why those realm reads can move to
+  // their own position without taking an Undead unit's swing away with them. The sources that
+  // reach region `b` write the flag into the *permanent* aggregate, so it is already set there:
+  // the casts write index 1 (`COSpell.CAS!POWEROFDEATH!-3 "SETENCHANTMENTFLAG(TU,EncUndead,1,1)"`
+  // and `OLSpell.CAS!NOTVAMPIRISM!-5 "SETENCHANTMENTFLAG(TU,EncUndead,1,1)"`),
+  // and Animate Dead's own block persists it there as well — `B.EnchantmentFlags[EncUndead] :=
+  // True` at `$0059F7D8` (`Units.RecalculateUnits.pas`), which is the same pairing `c:undead`
+  // already reads for its conversion. It is resolved here rather than beside that first consumer
+  // because the realm-membership reader below starts from it.
+  const undeadEnchantmentFlag = hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated');
+  // The same flag as the region-`c` classifier helpers read it, which is a later position and a
+  // wider set. Three compiled blocks set `EncUndead` before the first helper call at $005A1274:
+  // Blood Lust ($0059F600, which sets the flag and then writes `RCDeath` at $0059F68A), Animated
+  // ($0059F7FC) and the shared Undead normalization ($0059FBF4) (`Q31.evidence.md`, *Why the
+  // recovery clause exists*). Blood Lust is the one this adds, and it is base CoM2's alone:
+  // Warlord's `UnitCalc.CAS` recasts the spell as Frenzy and sets `EncBloodLust` only afterwards,
+  // so the compiled block never sees the flag there (`PROVENANCE[bloodLust]`,
+  // `stats_identity.js`). Blood Lust is also the block Q31's ladder names as destroying a Chaos
+  // Channels `RCChaos` write, so it is exactly what the recovery arm below exists to undo.
+  //
+  // Warlord's Vampirism and Revenant also write `EncUndead`, at index 1
+  // (`UnitCalc.CAS!NOVAMPIRISM!-7 "SETENCHANTMENTFLAG(U,EncUndead,1,1)"`,
+  // `COSpell.CAS~"IF (SP=SRevenant) THEN {"+1 "SETENCHANTMENTFLAG(TU,EncUndead,1,1)"`),
+  // and are deliberately **not** folded in here:
+  // `UnitCalcPre.CAS~"SPELLSTATE(W,SDeathMastery)=2"` spells `EncUndead`,
+  // `EncRevenant` and `EncVampirism` as three separate disjuncts, so the script's own author does
+  // not treat either as implying the flag at the position that block reads. The index-1 writes
+  // argue the other way and the point is open, not settled here: deciding it would move Warlord's
+  // Eternal Night and True Light as well, which is a correction with its own evidence rather than
+  // part of F224.
+  const encUndeadAtClassifier = undeadEnchantmentFlag
+    || (isCoM2 && !version.startsWith('com2_warlord') && hasAbil(abilities, 'bloodLust'));
+  // `ChaosChannel(u)` at $005950B4 is `EncCCArmor or EncCCFlight or EncCCBreath`
+  // (`Q31.evidence.md`) — three enchantment flags and no realm term. Like `EncUndead` above it is
+  // a flag read rather than a record read, so it has no chain position of its own. The same three
+  // flags are written out at `greatUnbindingActive` below, for the same reason.
+  const chaosChannelFlag = hasAbil(abilities, 'ccDefense')
+    || hasAbil(abilities, 'ccFlight') || hasAbil(abilities, 'ccFireBreath');
+  // Realm membership as a **set**, which is what the modern engine's two classifier helpers make
+  // it. `race` is one scalar and holds only the last conversion the recalculation ladder made,
+  // but `Caster.exe` classifies with two helpers that each recover a realm that scalar can no
+  // longer state:
+  //   `IsChaosUnit(u)` = `(race = RCChaos) or (ChaosChannel(u) and EncUndead)`   $00594FE4
+  //   `IsDeathUnit(u)` = `(race = RCDeath) or (ChaosChannel(u) and EncUndead)`   $0059504C
+  // (`Q31.evidence.md`). The second arm is the same expression in both, so a Chaos-Channelled
+  // Undead unit answers True to *both* classifiers at once. No scalar can say that, and that is
+  // why membership is a set here rather than one more spelling of `unitRealmAt` (F224).
+  //
+  // The set widens by exactly the two realms those two helpers name, and by nothing else. It is
+  // deliberately not "every realm a later conversion overwrote": Life is overwritten by the same
+  // ladder and no helper recovers it — Spell Ward's Life arm still compares `U.race` directly
+  // (`Q31.evidence.md:171-172`) — so the recovery arm is a property of these two helpers, not of
+  // conversion. Neither helper tests Fantastic, so neither does this.
+  //
+  // Modern only, and the version term sits here rather than at each consumer: the DOS engines
+  // have no classifier at all and `unitcalc.c` spells every realm test `bu->race`.
+  //
+  // Only a consumer whose block *calls* one of the two helpers reads this; a block that compares
+  // `U.race` keeps `unitRealmAt` and must not acquire the recovery arm.
+  // `Reference docs/Modern realm test inventory.md` is the ruling table for which is which.
+  const helperRealmRecovery = isCoM2 && chaosChannelFlag && encUndeadAtClassifier;
+  const realmMembershipAt = (u) => {
+    const realms = new Set();
+    const scalar = unitRealmAt(u);
+    if (scalar) realms.add(scalar);
+    if (helperRealmRecovery) { realms.add('chaos'); realms.add('death'); }
+    return realms;
+  };
+  // The two classifiers name two realms and no others, so this reader answers about two realms and
+  // no others. A block testing any other realm compares `U.race` and reads `unitRealmAt`; routing
+  // one through here would be the over-generalisation the inventory's Life case rules out, and a
+  // misspelt token would answer False everywhere and leave the consumer silently inert, which is
+  // the shape the fail-loud rule forbids (`SPEC.md`, *Out-of-range values stop the run*).
+  const unitInRealmAt = (u, realm) => {
+    if (realm !== 'chaos' && realm !== 'death') {
+      throw new TypeError(
+        `Realm membership was asked about ${JSON.stringify(realm)}. The engine's two classifiers `
+        + 'name only chaos (IsChaosUnit, $00594FE4) and death (IsDeathUnit, $0059504C); every '
+        + 'other realm test in the modern chain is a scalar U.race compare and reads unitRealmAt '
+        + '(Reference docs/Modern realm test inventory.md).');
+    }
+    return realmMembershipAt(u).has(realm);
+  };
   const marionetteOwned = !!(marionette && marionette.state === 'owned');
   const marionetteStrayed = !!(marionette && marionette.state === 'strayed');
   const marionetteAttackBonus = marionetteOwned ? marionette.attackBonus : 0;
   const marionetteDefenseBonus = marionetteOwned ? marionette.defenseBonus : 0;
-  // Caster.exe's standing `if U.Fantastic then U.EnchantmentFlags[EncMagic] := True` is a
-  // region-`c` block of its own, $005A1217..$005A1271 (Units.RecalculateUnits.pas:1813-1815),
-  // reading the *calculated* record where it stands: between the Holy Weapon channel block that
-  // ends at $005A1217 and the Chaos Surge block that begins at $005A1271, which makes
-  // `c:chaosSurge` the chain entry it sits immediately before. `c:spellWard` reads the same rule
-  // later in region c, and Blazing Eyes' `IsChaosUnit` gate ($005A1E16) later still (F174, F178).
-  // Each is now an ordinary positional read of the record at its own step.
-  //
-  // No version test here. The rule is a modern block, and both consumers carry their own exact
-  // `com2_` test in the same expression, which is the settled adjacent form (`SPEC.md`,
-  // *Versions*) (F188).
-  const fantasticAtModernEncMagicRule = u => !!u.fantastic;
   const loadoutEligible = !permanentFantastic;
   // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
   // to earn experience" (`Unit rosters/Warlord mod unit data/HELP.TXT:6324`). Nothing in that
@@ -226,7 +299,7 @@ function deriveUnitStats(input) {
   //
   // The exclusion is a **targeting** restriction, not a term of the block, and it is read at the
   // record the recalculation *leaves* (F183). Three facts settle that. (a) The recalculation
-  // block, `UnitCalc.CAS:492-503`, is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone and makes
+  // block, `UnitCalc.CAS:484-495`, is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone and makes
   // no Fantastic test of either record, so there is no block term to position. (b) The helptext's
   // Target lines spell "regular", "Fantastic" and "non-hero" as three separate words — "enemy
   // regular non-hero unit" and "friendly non-hero regular unit" both occur — so "regular" is the
@@ -235,7 +308,7 @@ function deriveUnitStats(input) {
   // `SETSTAT(U,AFantastic,0,1)` at the head of the routine to "allow unit to get bonus and penalty
   // of fantastic and non-fantastic" (`UnitCalcPre.CAS:25-28`) and clears it again at the tail so
   // the "enchanted fantastic unit could not be targeted by fantastic-only spell"
-  // (`UnitCalc.CAS:1305-1306`). The engine manipulates the recalculated flag *in order to* change
+  // (`UnitCalc.CAS:1297-1298`). The engine manipulates the recalculated flag *in order to* change
   // targetability, so a targeting predicate is a function of the record after every conversion —
   // and a Spirit-Linked Fantastic unit is a legal Rust target, which that record reports and
   // the record at `d:rust` (chain rank 130, ahead of `d:spiritLink` at 137) would not.
@@ -305,7 +378,7 @@ function deriveUnitStats(input) {
   // (`base:militaryWorkshop`, `stats_sequence.js`) and the Blackpowder gate further down.
   //
   // The magnitudes are patch history, and the changelog in
-  // `Reference docs/Warlord manual v1.5.12.7.html` is what records them: the missile-to-boulder
+  // `Reference docs/Warlord manual v1.5.12.9.html` is what records them: the missile-to-boulder
   // projectile upgrade is the original 1.5.4.1 effect; 1.5.7.4 replaced a flat +2 physical
   // ranged / +4 Thrown with Armor Piercing and raised Fire Breath from +2 to +4; 1.5.9.5 gave a
   // Doom attack that strength back rather than the Armor Piercing Doom already makes redundant.
@@ -338,7 +411,7 @@ function deriveUnitStats(input) {
   // (`UnitCalcPre.CAS:1068-1069`). Record selector `1` is "the base unit", not the calculated one
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:270`), so both terms read the
   // **permanent** record — which is the record the `base` phase leaves, `ctx.base`, not the card's
-  // melee input: `base:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS:280`) and
+  // melee input: `base:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS:588`) and
   // `base:artificer` `+1` (`CreateUnit.CAS:40`), both permanently and both before region `b`, so a
   // unit whose roster melee is 0 can still satisfy this gate (F202).
   //
@@ -359,11 +432,16 @@ function deriveUnitStats(input) {
   // Blazing Eyes' block ($005A1E16..$005A1F12) is region `c`, so its `IsChaosUnit` gate reads the
   // calculated record at that position. The write itself is
   // `c:blazingEyes` (`stats_sequence.js`), where the Doom Gaze field it conjures or raises is
-  // read at the same position. The Chaos test keeps the compact-token reading the block has
-  // always had here; that `IsChaosUnit` is also Chaos Surge's gate, where the calculator spells
-  // it `chaosSurgeRealm === 'chaos'` over this same positional identity, is BACKLOG Q31.
+  // read at the same position. Q31 settles what the gate computes: `IsChaosUnit` is
+  // `(race = RCChaos) or (ChaosChannel(u) and EncUndead)` (`Q31.evidence.md`), which tests no
+  // Fantastic flag and recovers the `RCChaos` a later Undead conversion overwrote. Both halves
+  // are `unitInRealmAt`, the membership reader above: the compact `fantastic_chaos` token that
+  // used to stand here was narrower on the Fantastic term and on the recovery arm alike, and
+  // Chaos Surge and Warp Reality's exemption — the same helper over this same positional
+  // identity — now spell the test the one way. `Reference docs/Modern realm test inventory.md`
+  // rules this consumer H2, helper form (F224.2a).
   const blazingEyesActive = u => isCoM2 && !!abilities.blazingEyes
-    && unitTypeAt(u) === 'fantastic_chaos';
+    && unitInRealmAt(u, 'chaos');
   const baseDoomGazeStat = abilVal(abilities, 'doomGaze', 0);
 
   // Chaos Channels (Fire Breath option): version-sensitive strength and admission, all four DOS
@@ -487,7 +565,7 @@ function deriveUnitStats(input) {
   // strength fields all stand at their region-d values there.
   const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
   // Warlord Shadow Strike: adds a Thrown attack at 1 + 1/3 of live melee strength (truncated) —
-  // `PROVENANCE[shadowStrike:thrown]` (`stats_sequence.js`), from `UnitCalc.CAS:1262-1266`.
+  // `PROVENANCE[shadowStrike:thrown]` (`stats_sequence.js`), from `UnitCalc.CAS:1254-1258`.
   // A unit that already has a Thrown attack instead gains the same amount. It executes after
   // Colossal Strength and Vampirism, so both earlier live melee writes feed it; the leading +1
   // creates Thrown even at zero melee. Because Thrown is a separate pre-melee
@@ -500,7 +578,7 @@ function deriveUnitStats(input) {
   // The Armor→Melee transfer, the Armor Piercing and Wall Crusher grants and the First Strike
   // loss are all fields of the one step now, at the block's own rank (F201, F206).
   // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
-  // The transfer is `PROVENANCE[blazeOfGlory]` (`stats_sequence.js`), from `UnitCalc.CAS:1494`.
+  // The transfer is `PROVENANCE[blazeOfGlory]` (`stats_sequence.js`), from `UnitCalc.CAS:1486`.
   const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
     && version.startsWith('com2_warlord') && !isHero;
   // Warlord Venom enchantment, `PROVENANCE[venom]` (`stats_sequence.js`): the gate of `d:venom`,
@@ -574,12 +652,28 @@ function deriveUnitStats(input) {
   const goodMoonActive = isCoM2 && !!abilities.goodMoon && !permanentFantastic;
   const natureConjunctionActive = isCoM2 && !!abilities.natureConjunction
     && permanentFantastic;
-  // Spell Ward is region-c logic — `PROVENANCE[spellWard]` (`stats_sequence.js`). In Warlord it
-  // therefore reads the current Fantastic flag before the region-d Spirit Link hook
-  // (`UnitCalc.CAS:1306`) can clear that flag.
-  const spellWardActive = u => !!(isCoM2 && fantasticAtModernEncMagicRule(u)
+  // The ward block, $005A5D36..$005A607F, is a settlement-index guard over five realm arms and
+  // nothing else: `U.race = 16` (Nature), `U.race = 19` (Life), `IsDeathUnit(i)`, `IsChaosUnit(i)`
+  // and `U.race = 17` (Sorcery), each paired with its own city byte. No arm tests Fantastic, and
+  // Q31 settles that the two classifiers do not either — `IsChaosUnit` is
+  // `(race = RCChaos) or (ChaosChannel and EncUndead)` and `IsDeathUnit` its `RCDeath` twin
+  // (`Q31.evidence.md`). So no arm carries a Fantastic condition, and the live-Fantastic term that
+  // used to stand here excluded every unit the engine gives a realm without making it Fantastic —
+  // a realm-tagged hero (Torin, Mortu, Ravashack, Everchosen, Avatar) and a Sanctified non-clergy
+  // unit — and is gone (F195). Node Aura's block, $005A25F0, is the same shape and was corrected
+  // the same way.
+  //
+  // The realm compared here is the calculated one at the step's own position, and it is a scalar.
+  // That is narrower than the block: Q31's `ChaosChannel and EncUndead` arm makes a
+  // Chaos-Channelled undead unit answer *both* classifiers, where `unitRealmAt` can only say
+  // `death`, so a Chaos ward under-fires against it. Independent of the term removed here, and
+  // shared with every other consumer of the scalar realm.
+  const spellWardActive = u => !!(isCoM2
     && abilities.spellWard && abilities.spellWard !== 'none'
     && abilities.spellWard === unitRealmAt(u));
+  // CoM 1's ward keeps its Fantastic term, and not by omission: its own block
+  // (`unitcalc.c:3966-3975`) requires a fantastic realm race and excludes the no-realm value,
+  // which is a different test from the modern block above (F195).
   const realmWardActive = u => !!(isCoM1 && u.fantastic
     && abilities.realmWard && abilities.realmWard !== 'none'
     && abilities.realmWard === unitRealmAt(u));
@@ -597,7 +691,14 @@ function deriveUnitStats(input) {
   // conversion ahead of `c:chaosSurge`, so those three read exactly what the finished record
   // would have given them. Reading the chain position rather than branching on version is what makes
   // that a measurement instead of an assumption (F178).
-  const chaosSurgeCount = u => unitRealmAt(u) === 'chaos'
+  //
+  // *Which* record answers `Chaos` is the membership reader's question, not this block's. The
+  // modern block calls `IsChaosUnit(i)` at $005A1274, so a Chaos-Channelled Undead unit is Chaos
+  // here through the helper's `ChaosChannel(u) and EncUndead` arm even though `c:undead`
+  // overwrote the scalar the Chaos Channels step wrote. DOS has no helper and `unitInRealmAt`
+  // carries no recovery arm there, so the three DOS builds keep the plain realm compare.
+  // `Reference docs/Modern realm test inventory.md` rules this consumer H1 (F224.2a).
+  const chaosSurgeCount = u => unitInRealmAt(u, 'chaos')
     ? Math.max(0, parseInt(input.chaosSurge) || 0)
     : 0;
   const chaosSurgeMeleeBonus = u => chaosSurgeCount(u) > 0
@@ -640,23 +741,13 @@ function deriveUnitStats(input) {
   const darknessResMagnitude = hasDarkness ? 1 : 0;
   const eternalNightEnemyResPenalty = u => enemyEternalNight && isCoMVersion
     && unitRealmAt(u) !== 'death' ? -1 : 0;
-  // The Undead enchantment flag, as the two `UnitCalcPre.CAS` blocks below read it:
-  // `GetEnchantmentFlag(U,EncUndead,0)`. It is a flag test, not a realm test, and it stands
-  // beside the realm test rather than behind it — which is why the realm read below can move to
-  // its own position without taking an Undead unit's swing away with it. Every source of the flag
-  // writes it into the *permanent* aggregate, so it is already set where region `b` reads it:
-  // the casts write index 1 (`COSpell.CAS:323,346`, `OLSpell.CAS:526`, `UnitCalc.CAS:1253`), and
-  // Animate Dead's own block persists it there as well — `B.EnchantmentFlags[EncUndead] := True`
-  // at `$0059F7D8` (`Units.RecalculateUnits.pas`), which is the same pairing `c:undead` already
-  // reads for its conversion.
-  const undeadEnchantmentFlag = hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated');
   // Warlord Eternal Night ("Poor Vision"): "All non-Death creatures get -2 Ranged Attack power
   // as long as Eternal Night is in effect" (`Unit rosters/Warlord mod unit data/HELP.TXT:5768`),
   // so missile/boulder and magic ranged take it while Thrown and breath — short-range, not
   // "Ranged" — do not. The write is `PROVENANCE[eternalNight:poorVision]` (`stats_sequence.js`).
   //
   // The exemption is `(GetStat(U,STypeID,1)<>356) %AND (GetStat(U,SRace,0)<>RCDeath) %AND
-  // (GetEnchantmentFlag(U,EncUndead,0)=0)` (`UnitCalcPre.CAS:1341-1344`). `GetStat(U,S,0)` is the
+  // (GetEnchantmentFlag(U,EncUndead,0)=0)` (`UnitCalcPre.CAS:1352-1355`). `GetStat(U,S,0)` is the
   // *current* record — "if B=0, it checks the current stats and abilities, if B=1 it checks the
   // base unit" (`Reference docs/Script source/CAS reference/Scripts.TXT:266`) — so the realm is
   // read where this region-`b` block stands, ahead of the region-`c` conversions (F186).
@@ -689,7 +780,7 @@ function deriveUnitStats(input) {
   const darknessResBonus = u => darknessBonuses(u).res;
   // True Light reads the realm at its own block in both engine families, so it takes the record
   // standing at its own chain entry (F185). Warlord's block
-  // is `GetStat(U,SRace,0)` (`UnitCalcPre.CAS:1511,1523`), the *current* record by the CAS
+  // is `GetStat(U,SRace,0)` (`UnitCalcPre.CAS:1522,1523`), the *current* record by the CAS
   // contract quoted above `warlordEternalNightActive`; the DOS block is `bu->race` at 131:0x903A1 and
   // 131:0x904EB (`unitcalc.c`), the one battle-unit record `BU_Apply_Specials` mutates in place.
   // The two entries differ — `b:trueLight` in Warlord, `c:trueLight` in the MoM builds — and the
@@ -800,14 +891,35 @@ function deriveUnitStats(input) {
   const goblinPoxResMod = poxHostIsGoblin ? 0 : -1;
 
   // Great Unbinding (Warlord Sorcery very rare global): debuffs opponent fantastic
-  // creatures in combat with −20% To-Hit, −20% To-Defend and −2 Resistance for the
-  // rest of battle. Only fantastic creatures are affected (the Confusion half of the
-  // spell is not modelled here). The To-Hit/To-Defend penalties are applied in the
+  // units in combat with −20% To-Hit, −20% To-Defend and −2 Resistance for the
+  // rest of battle (the Confusion half of the spell is not modelled here). The To-Hit/To-Defend penalties are applied in the
   // toHit/toBlock section below; here we handle the −2 Resistance. The write is
   // `PROVENANCE[greatUnbinding]` (`stats_sequence.js`).
-  const greatUnbindingActive = version.startsWith('com2_warlord')
+  //
+  // The block's two gates are `UnitCalcPre.CAS:1362-1382` (F217.2). The first is an outright
+  // exemption: `IF (HASGLOBAL(W,GEGreatUnbinding)) %OR (GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0)
+  // THEN { GOTO "NOTUNBINDING"; }` — a Spirit-Linked unit takes nothing at all. The `HASGLOBAL(W,…)`
+  // half has no calculator counterpart: the control models the *opponent's* cast reaching this
+  // unit, which is the second gate `HASGLOBAL(OPPONENT,GEGreatUnbinding)`, and the page has no
+  // separate "this unit's own wizard also cast it" input.
+  //
+  // The second gate is the eligibility disjunction, and it is wider than Fantastic: `FANTASTIC(U)`
+  // — a live read at this point in region `b`, so a unit made Fantastic earlier in the chain
+  // counts — plus `EncUndead`, the three Chaos-Channels flags, `EncNecromancy`, `EncRevenant` and
+  // `EncVampirism`. `EncNecromancy` has no calculator input and so has no term here; every other
+  // flag does. The Chaos-Channels terms are not redundant with `FANTASTIC(U)` in the script and
+  // are written out for the same reason here.
+  const greatUnbindingCast = isWarlord
     && !!(abilities && abilities.greatUnbinding)
-    && isFantasticBase;
+    && !hasAbil(abilities, 'spiritLink');
+  const greatUnbindingActive = u => greatUnbindingCast
+    && (!!u.fantastic
+      || undeadEnchantmentFlag
+      || hasAbil(abilities, 'ccDefense')
+      || hasAbil(abilities, 'ccFireBreath')
+      || hasAbil(abilities, 'ccFlight')
+      || hasAbil(abilities, 'revenant')
+      || hasAbil(abilities, 'vampirism'));
 
   // Natural Selection (Warlord Nature common global): units trained in a city gain
   // bonuses from resources in the city's surroundings. The inputs expose each resource
@@ -864,7 +976,7 @@ function deriveUnitStats(input) {
   // separate global Wall of Fire toggle, handled in combat_special_attacks.js.) The strength
   // write is `PROVENANCE[wallOfFire:garrison]` (`stats_sequence.js`).
   // The eligibility term is the block's own `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOWALLOFFIRE"; }`
-  // (`UnitCalcPre.CAS:1638`) — the **permanent** record, so a combat conversion to Fantastic does
+  // (`UnitCalcPre.CAS:1649`) — the **permanent** record, so a combat conversion to Fantastic does
   // not withdraw the garrison bonus, and Spirit Link clearing live Fantastic does not confer it.
   // That record is the one the `base` phase leaves, so Destiny's permanent `B.Fantastic := True`
   // ($0059A390) withdraws it (F192).
@@ -927,7 +1039,7 @@ function deriveUnitStats(input) {
   // Thrown attack strength. Breath and magic ranged are not "physical ranged" and do not
   // qualify.
   //
-  // UnitCalc.CAS:1227-1243 computes `1 + %I(GetStat(U,SAttack,0)*4/10)` from the attack as
+  // UnitCalc.CAS:1219-1235 computes `1 + %I(GetStat(U,SAttack,0)*4/10)` from the attack as
   // it stands in phase d — not from the base — so the bonus scales everything phases a-c
   // applied, plus the phase-d terms that precede it in the file: Rust (:500-512), Focus
   // Magic (:83, :515) and Weakness's breath penalty (:317-323). Those are every phase-d
@@ -1030,7 +1142,6 @@ function deriveUnitStats(input) {
   const heavenlyLightMeleeToHitAt = u => (heavenlyLightMaterialTail
     && (isCoM1 ? u.atk > 0 : inputBaseAtk > 0)) ? 10 : 0;
   const heavenlyLightThrownToHit = heavenlyLightMaterialTail ? 10 : 0;
-  const outlanderRtbToHitBonus = outlanderReform.ballisticsTraining ? 20 : 0;
   const uphillBattlePct = uphillBattleActive ? 10 : 0;
   const weaponUpgradedByHW = hwActive && weapon === 'normal';
   // Two effects with different scopes shared one test here: Wraith Form is an all-versions
@@ -1080,7 +1191,7 @@ function deriveUnitStats(input) {
       || !!abilities.wraithForm || !!abilities.rulerOfUnderworld
       || !!abilities.blazingMarch || wofDefenderBonusActive || heavenlyLightActive);
 
-  // Eye of Heaven is the only effect that switches a gaze off: `UnitCalc.CAS:1483` zeroes
+  // Eye of Heaven is the only effect that switches a gaze off: `UnitCalc.CAS:1475` zeroes
   // `SStoningGaze`/`SDeathGaze`/`SDoomGaze` and nothing else in any source does.
   const gazeDisabled = enemyEyeOfHeaven;
   // A gaze's strength lives in the same `.ranged` slot Chaos Surge writes, so MoM and
@@ -1107,7 +1218,7 @@ function deriveUnitStats(input) {
   const gazeWarpHalves = isCoM1;
 
   // Psycho Force and Pneuma Field are the two Magitek effects that read Resistance rather than
-  // writing it. Both are region `d` — UnitCalc.CAS:1413-1417 and :1419-1425 — and both flags are
+  // writing it. Both are region `d` — UnitCalc.CAS:1405-1409 and :1419-1425 — and both flags are
   // Outlander reform grants, so each is a record field the step reads at its own position; the
   // version half is the step's scope (`SCOPE_WARLORD`) and needs no term here (F202).
   const warpRealityActive = !!input.warpReality;
@@ -1124,12 +1235,26 @@ function deriveUnitStats(input) {
   // other four chains, and in Warlord `d:spiritLink` still follows it, so a Spirit-Linked Chaos
   // unit is Fantastic where the block stands and the exemption is no longer withheld from it.
   //
-  // *Which* predicate `IsChaosUnit` computes is a separate, unsettled question — BACKLOG Q31 —
-  // and this positioning does not answer it: the DOS block transcribed above tests the realm
-  // alone, where the calculator spells the modern one as the compact `fantastic_chaos` token here
-  // and as the realm alone at Chaos Surge. Both readings exempt the Spirit-Linked Chaos unit once
-  // the record is positional, which is why the position is answerable without Q31.
-  const unitIsChaos = u => unitTypeAt(u) === 'fantastic_chaos';
+  // *Which* predicate `IsChaosUnit` computes is a separate question, and Q31 answers it:
+  // `(race = RCChaos) or (ChaosChannel(u) and EncUndead)` (`Q31.evidence.md`). It tests no
+  // Fantastic flag, so the compact `fantastic_chaos` token spelled here is narrower than the
+  // block, and it carries no recovery arm, so a Chaos-Channelled undead unit is wrongly denied
+  // the exemption. The recovery half is modern-only — the DOS block transcribed above really does
+  // test the realm alone — but the Fantastic half is not: the compact token is narrower than
+  // `bu->race != rt_Chaos` too. `Reference docs/Modern realm test inventory.md` rules this a
+  // helper-form consumer; the collapse itself is F224.2. The positioning below is independent of
+  // all that: both readings exempt the Spirit-Linked Chaos unit once the record is positional.
+  //
+  // The modern half is the membership reader: `IsChaosUnit` tests no Fantastic flag, so the
+  // compact token is dropped, and its `ChaosChannel(u) and EncUndead` arm restores the exemption
+  // to a Chaos-Channelled Undead unit whose scalar `c:undead` overwrote. The DOS half is left as
+  // it stands: those engines have no helper, so there is no recovery arm to route, and shedding
+  // the Fantastic term there is a separate correction the inventory records against `bu->race !=
+  // rt_Chaos` (131:0x9077A) rather than part of this collapse.
+  // `Reference docs/Modern realm test inventory.md` rules the modern half H5 (F224.2a).
+  const unitIsChaos = u => (isCoM2
+    ? unitInRealmAt(u, 'chaos')
+    : unitTypeAt(u) === 'fantastic_chaos');
   const hurricaneActive = !!input.hurricane;
   // The immunity half used to be restated here beside the flag. It is not a term of the block —
   // `Units.RecalculateUnits.pas:2341`-style curse blocks test their flag alone — and it was a
@@ -1354,10 +1479,10 @@ function deriveUnitStats(input) {
   const channelSlots = [];
   if (isCoM2 && input.modernAttacks) {
     const modernInputs = { ...input.modernAttacks };
-    // `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS:1262-1266) has no existence gate, so
+    // `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS:1254-1258) has no existence gate, so
     // the Thrown field has to exist for the positioned grant to land on it. Seeded empty and
     // typeless, exactly as the Blaze of Glory transfer's field is: nothing before
-    // `UnitCalc.CAS:1262` may see a Thrown channel the grant has not yet created, and the step
+    // `UnitCalc.CAS:1254` may see a Thrown channel the grant has not yet created, and the step
     // itself supplies the identity. Focus Magic needs no second accumulator beside it any more:
     // `U.ranged := U.thrown; U.thrown := 0` (Units.RecalculateUnits.pas:885-891) is a real field
     // move, so it leaves this one field free for the grant (F90).
@@ -1410,14 +1535,14 @@ function deriveUnitStats(input) {
       modernInputs.lightningBreath = { strength: 0, type: 'none' };
       if (!modernInputs.thrown) modernInputs.thrown = { strength: 0, type: 'none' };
     }
-    // `SThrown := SThrown + SRanged` (UnitCalc.CAS:1499) has no existence gate either, so the
+    // `SThrown := SThrown + SRanged` (UnitCalc.CAS:1491) has no existence gate either, so the
     // Thrown field has to exist for the positioned transfer to land on it. It is seeded empty
-    // and typeless: nothing before `UnitCalc.CAS:1490` may see a Thrown channel that the
+    // and typeless: nothing before `UnitCalc.CAS:1482` may see a Thrown channel that the
     // transfer has not yet created, and the step itself supplies the identity.
     if (blazeOfGloryActive && !modernInputs.thrown) {
       modernInputs.thrown = { strength: 0, type: 'none' };
     }
-    // `BLAZETHROWN = GetStat(U,SRanged,0)` (UnitCalc.CAS:1494-1500) reads the Ranged *field*
+    // `BLAZETHROWN = GetStat(U,SRanged,0)` (UnitCalc.CAS:1486-1492) reads the Ranged *field*
     // with no type or strength gate, and the region-`c` writes it carries have none either:
     // `not Ismagicalranged(U.rangedtype)` passes on a zero ranged type, so Lionheart (`:1730`),
     // Discipline at level 3 (`:1554`) and the weapon material (`:651`) all land on `SRanged`
@@ -1488,7 +1613,7 @@ function deriveUnitStats(input) {
   // The DOS-shaped shared slot keeps **one** threshold where the modern record keeps three, so
   // which half of a gated writer it consults is settled by what stands in the slot at that
   // writer's own position: a breath, Thrown, or a conventional ranged attack. An empty slot reads
-  // the Ranged half — `SToRanged` is written with no presence gate (UnitCalc.CAS:326-328), so the
+  // the Ranged half — `SToRanged` is written with no presence gate (UnitCalc.CAS:328-330), so the
   // record holds that modifier on a unit with no secondary attack to spend it on.
   //
   // The one thing this projection cannot read from the record in front of it: the Shadow Strike
@@ -1539,7 +1664,7 @@ function deriveUnitStats(input) {
   // terms stay pre-sequence constants is stated there (F202).
   const energyCannon = isWarlord && !!abilities.energyBeamWeapons && !!abilities.powerEngine
     && !!rangedFieldContext && rangedFieldContext.hasPermanentRangedStat;
-  // `UnitCalc.CAS:1435-1443` reads the unit's To-Hit plus its **Ranged** To-Hit, which is the
+  // `UnitCalc.CAS:1427-1435` reads the unit's To-Hit plus its **Ranged** To-Hit, which is the
   // record field `hitchanceranged` — the modifier the Ranged field is read with, and therefore
   // the one belonging to the slot that holds it. Reading the shared slot's `toHitRtb` answered
   // from the DOS record instead (F127). Only meaningful where `energyCannon` gates the step on.
@@ -1612,7 +1737,7 @@ function deriveUnitStats(input) {
   };
   // The ranged subformula remains an internal part of Rust's one atomic engine write; it is not
   // inserted into the execution list as a second step.
-  // PROVENANCE[rust:ranged]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:98745d26b4fbf74694b1a932
+  // PROVENANCE[rust:ranged]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:10:98745d26b4fbf74694b1a932
   const rustRangedStep = statStep({ id: 'rust:ranged', phase: 'd', writes: strengthFields,
     when: () => rustActive,
     apply: u => {
@@ -1652,14 +1777,14 @@ function deriveUnitStats(input) {
       apply: (u, context) => {
         legacyApply(u, context);
         rustRangedStep.apply(u, context);
-        // `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:498`), the fourth line of the same block
+        // `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:490`), the fourth line of the same block
         // and inside the same reviewed span. It is a positioned write because a later block
         // reads what it leaves: Fortification at `:1074` (F200).
         u.largeShield = false;
         // `SETSTAT(U,SThrown,0,0)` empties the Thrown *strength*; the type clear beside it is
         // this model's stand-in for the field being empty, since Warlord stores no Thrown type.
         // The strength write is load-bearing rather than cosmetic: Blaze of Glory's positioned
-        // transfer adds the Ranged field onto whatever stands in Thrown at `UnitCalc.CAS:1490`,
+        // transfer adds the Ranged field onto whatever stands in Thrown at `UnitCalc.CAS:1482`,
         // and Rust (`:493`) runs first.
         for (const slot of derivationContexts) {
           if (u[slot.thrownTypeField] !== 'thrown') continue;
@@ -1835,7 +1960,7 @@ function deriveUnitStats(input) {
   // `BaseUnits.attack` its card never stated. Defense is outside both gates in both engines,
   // which is why it stays unconditional below.
   const weaponMeleeOpen = (u, runCtx) => (isCoM2 ? runCtx.base.atk > 0 : u.atk > 0);
-  // PROVENANCE[weapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:bc81a9f3b6ba3703d596d756 | Reference docs/DOS reconstructed/unitcalc.c@span:15:9b957c6ff1d6ae8d9afca04b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:eae87788c081c49037f75656 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:2cc8f80e45e1482ee9229fd8 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:06ea8c358024e0163de78588 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:7171af67ce10b8422e044eff
+  // PROVENANCE[weapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:40:bc81a9f3b6ba3703d596d756 | Reference docs/DOS reconstructed/unitcalc.c@span:15:9b957c6ff1d6ae8d9afca04b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:40:eae87788c081c49037f75656 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:2cc8f80e45e1482ee9229fd8 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:06ea8c358024e0163de78588 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:7171af67ce10b8422e044eff | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:7171af67ce10b8422e044eff
   // Both engines gate the whole material block on the material itself: `if EncMagic or
   // EncMithril or EncAdamant` at $00598D91, and `if (quality > 0)` over
   // `mutations & UM_WEAPON_QUALITY_MASK` in every DOS build. Everything inside is the
@@ -1936,7 +2061,7 @@ function deriveUnitStats(input) {
   // `$0059FE47..$005A00E7` — so the melee bonus and the attack-strength bonus are one write,
   // not two effects. The halves keep their own gates because the engine's are separate: melee
   // on a melee attack existing, each secondary slot on its own type test.
-  // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:549122cfd5e672f77f13100e | Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:98daf6b1cfd836c4a184f151 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
+  // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:4:549122cfd5e672f77f13100e | Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:98daf6b1cfd836c4a184f151 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:3:d7cdec7c168e641613b36c19
   // `b:fieryFury` (`UnitCalcPre.CAS:832-846`) adds 2 to a physical ranged or Thrown field. The
   // blade step below subtracts what that block wrote, so both ask the same live test — each at
   // its own position, which agree wherever the blade's own narrower gate fires.
@@ -1974,7 +2099,7 @@ function deriveUnitStats(input) {
   // Warlord True Light is its own UnitCalcPre.CAS block (:1507-1540), after Rally and before
   // Plague. The DOS builds execute their distinct True Light block after Prayer and before
   // Darkness in region c. Keep both as one atomic multi-field write at their engine phase.
-  // PROVENANCE[trueLight]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:30:307377331fcb02be6a7a1275
+  // PROVENANCE[trueLight]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:30:307377331fcb02be6a7a1275
   const makeTrueLightStep = phase => statStep({
     id: 'trueLight', sourceId: 'trueLight', sourceLabel: 'True Light', phase,
     writes: ['res', 'def', 'atk', ...strengthFields, 'gaze', 'doomGaze', 'toHit'],
@@ -2042,7 +2167,7 @@ function deriveUnitStats(input) {
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount,
     natureConjunctionActive, natureLinkActive, nodeAuraActive,
-    orihalconActive, outlanderReform, outlanderRtbToHitBonus,
+    orihalconActive, outlanderReform,
     pillarOfFaith, pillarOfFaithCount, plagueActive,
     poolOfRepentance, poxHostActive,
     realmWardActive, sanctaBasilica,
@@ -2072,8 +2197,12 @@ function deriveUnitStats(input) {
   const statSteps = orderStatStepsBySource(applicableRawStatSteps, statChain(version));
   // One calculated fact the derivation publishes as a **result field** rather than as a record
   // field, and which the engine writes at a position: `if U.Fantastic then
-  // U.EnchantmentFlags[EncMagic] := True` at $005A1217, immediately before the Chaos Surge block
-  // (F188). A fact the record does not carry cannot be read at its own step, so the identity is
+  // U.EnchantmentFlags[EncMagic] := True`, a region-`c` block of its own at
+  // $005A1217..$005A1271 (Units.RecalculateUnits.pas:1813-1815), between the Holy Weapon channel
+  // block that ends at $005A1217 and the Chaos Surge block that begins at $005A1271 — which makes
+  // `c:chaosSurge` the chain entry it sits immediately before (F188). This is now the rule's only
+  // consumer: F195 removed the second one from Spell Ward, whose block tests realm alone.
+  // A fact the record does not carry cannot be read at its own step, so the identity is
   // *sampled* at the block's chain rank instead: immediately before the first step at or after
   // that rank, which is the instant the block itself would run at. Everything else that reads the
   // calculated identity does so from the record inside its own step. Warp Reality was the second
@@ -2235,7 +2364,7 @@ function deriveUnitStats(input) {
   const effectiveDoomGaze = statUnit.doomGaze;
   const finalRangedType = statUnit[recordContext.rangedTypeField];
   const finalThrownType = statUnit[recordContext.thrownTypeField];
-  // Psycho Force and Pneuma Field are steps in `d` — `UnitCalc.CAS:1413-1417` and `:1419-1425`,
+  // Psycho Force and Pneuma Field are steps in `d` — `UnitCalc.CAS:1405-1409` and `:1419-1425`,
   // on `PROVENANCE[psychoForce]` and `PROVENANCE[pneumaField]` (`stats_sequence.js`) — so their
   // reads of Resistance happen where the engine takes them. Warp Resist having zeroed Resistance
   // is supplied by construction, since `warpResist` is a step in `c`.
@@ -2278,7 +2407,7 @@ function deriveUnitStats(input) {
   let combatAbilities = gazeDisabled
     ? { ...shapedGazeAbilities, stoningGaze: null, deathGaze: null, doomGaze: 0 }
     : shapedGazeAbilities;
-  // Rust's `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:498`) is a field of `d:rust` now, inside
+  // Rust's `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:490`) is a field of `d:rust` now, inside
   // that step's own reviewed span, so the clear happens at rank 130 rather than after the chain.
   // What that buys is the block 576 lines below it: `d:fortification` reads the calculated
   // `ALargeShield` the clear left and grants Large Shield back (F200).
@@ -2302,7 +2431,7 @@ function deriveUnitStats(input) {
   // `PROVENANCE[chance:toBlockProbabilityBound]` below, from `Combat.ResolutionHelpers.pas`.
   let toBlock = Math.max(0, Math.min(1, statUnit.toBlk / 100));
   if (energyCannon) {
-    // UnitCalc.CAS:1435-1443 reads the unit's To-Hit + Ranged To-Hit
+    // UnitCalc.CAS:1427-1435 reads the unit's To-Hit + Ranged To-Hit
     // stats, capped at 100. Attack-distance and battlefield penalties are
     // applied later and do not change the permanent Destruction modifier.
     const destructionPenalty = Math.trunc(statUnit.energyCannonToHit / 15);
@@ -2377,8 +2506,8 @@ function deriveUnitStats(input) {
   // `PROVENANCE[plague]` (`stats_sequence.js`).
 
   // Great Unbinding (Warlord Sorcery very rare global): −20% To-Hit and −20% To-Defend
-  // on opponent fantastic creatures for the rest of battle (the −2 Resistance is folded
-  // into res above). Only fantastic creatures are affected.
+  // on the eligible opponent units for the rest of battle (the −2 Resistance is folded
+  // into res above). The eligibility disjunction is stated at `greatUnbindingActive` above.
   // Great Unbinding's persistent common chance writes are already on the ordered record, on
   // `PROVENANCE[greatUnbinding]` (`stats_sequence.js`).
 
@@ -2408,7 +2537,7 @@ function deriveUnitStats(input) {
   // the finished field is neither missile nor boulder while the permanent one was — measured by
   // `focusMagicRetypeSkipsDistancePenaltyCoM2` against `distPenaltyCoM2_6`. Warlord's
   // `d:blazeOfGlory` is *not* one of those cases, though it also retypes: it empties the Ranged
-  // field onto Thrown (`UnitCalc.CAS:1494-1500`), the finished record then carries no conventional
+  // field onto Thrown (`UnitCalc.CAS:1486-1492`), the finished record then carries no conventional
   // ranged attack at all, and the page withdraws ranged mode before this projection is reached
   // (`updateTypeVisibility`, `ui_abilities.js`), so the `!input.rangedCheck` line below answers
   // first and no type is read (F131).
@@ -2462,14 +2591,14 @@ function deriveUnitStats(input) {
       addChanceContribution(projectedId,
         event.source, event.phase, event.order, deltas, `${event.phase}:${event.id}`);
     }
-    // PROVENANCE[chance:distancePenalty]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:28:4d6d2024c9551eae456f2bbf | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:b13db6265b2feaabf81fb261 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:6:791acb631b8f903c2812da35 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:6:791acb631b8f903c2812da35
+    // PROVENANCE[chance:distancePenalty]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:28:4d6d2024c9551eae456f2bbf | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:b13db6265b2feaabf81fb261 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:6:791acb631b8f903c2812da35 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:6:791acb631b8f903c2812da35
     addChanceDelta('chance:distancePenalty', { id: 'distancePenalty', label: 'Range distance' },
       'attackSpecific', -100, [chanceFields.rtb], distancePenaltyFor(context));
 
     // Contribution order is the order the writes execute, in every version. A projection
     // re-presents the ordered ledger; it does not re-sequence it.
     // STAT-FORMULA[chance:dynamicProjection]
-    // PROVENANCE[chance:dynamicProjection]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:8afd898f274ed76b7474ccfc | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:5d84b2c3857f747269473386 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:013e80fc5cd1dea733651726
+    // PROVENANCE[chance:dynamicProjection]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:8afd898f274ed76b7474ccfc | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:5d84b2c3857f747269473386 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:10:013e80fc5cd1dea733651726
     const chanceSteps = chanceContributions.map(item => statStep({
       id: item.id, sourceId: item.source.id, sourceLabel: item.source.label,
       phase: item.phase, writes: Object.keys(item.deltas),
@@ -2482,7 +2611,7 @@ function deriveUnitStats(input) {
       // AttackRoll floors To Hit at 10, then compares Random(100) directly with the supplied
       // threshold. The late aura pass can raise the already-clamped record above 100, and range
       // penalties are applied after recalculation, so project the actual comparison boundary here.
-      // PROVENANCE[chance:attackRollProbabilityBound]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:9:a1152c71125049b18e8745a4
+      // PROVENANCE[chance:attackRollProbabilityBound]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:9:a1152c71125049b18e8745a4
       statStep({ id: 'chance:attackRollProbabilityBound', sourceId: 'attackRoll',
         sourceLabel: 'Attack-roll threshold', phase: 'attackSpecific', writes: allHitFields,
         when: () => isCoM2, apply: u => {
@@ -2491,7 +2620,7 @@ function deriveUnitStats(input) {
       // DefenseRoll compares Random(100), whose output is 0..99, directly against the
       // signed record value. Project that comparison to the calculator's To-Block probability
       // without pretending Caster.exe wrote a region-e To-Defend clamp.
-      // PROVENANCE[chance:toBlockProbabilityBound]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:12:08b392da258c1aa5831668e7
+      // PROVENANCE[chance:toBlockProbabilityBound]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:12:08b392da258c1aa5831668e7
       statStep({ id: 'chance:toBlockProbabilityBound', sourceId: 'defenseRoll',
         sourceLabel: 'Defense-roll threshold', phase: 'attackSpecific', writes: [chanceFields.block],
         when: () => isCoM2, apply: u => {
@@ -2542,11 +2671,11 @@ function deriveUnitStats(input) {
 
   const figureTrace = [];
   const figureSteps = [
-    // PROVENANCE[altarOfTheSun:figures]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
+    // PROVENANCE[altarOfTheSun:figures]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
     statStep({ id: 'altarOfTheSun:figures', sourceId: 'altarOfTheSun',
       sourceLabel: 'Altar of the Sun', phase: 'base', writes: ['figs'],
       when: () => altarOfTheSun, apply: u => { u.figs += 1; } }),
-    // PROVENANCE[alumniOfAcademy:figures]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:10:848b52c34c24d8642625dae6 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:18:55478fbb88ad8926f0ce7c78
+    // PROVENANCE[alumniOfAcademy:figures]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:10:848b52c34c24d8642625dae6 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:18:55478fbb88ad8926f0ce7c78
     statStep({ id: 'alumniOfAcademy:figures', sourceId: 'alumniOfAcademy',
       sourceLabel: 'Academy', phase: 'base', writes: ['figs'],
       when: () => alumniOfAcademy, apply: u => { u.figs += 2; } }),

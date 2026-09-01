@@ -5,7 +5,7 @@ const { openCalculator, expectNoConsoleErrors } = require('./helpers');
 async function configureTracedCards(page) {
   await page.evaluate(() => {
     const version = document.getElementById('gameVersion');
-    version.value = 'com2_warlord_1.5.12.7';
+    version.value = 'com2_warlord_1.5.12.9';
     version.dispatchEvent(new Event('change', { bubbles: true }));
     // Warm this version's default-state cache before configuring the cards. Otherwise the
     // delayed persistence hook can build the cache mid-assertion, briefly resetting the DOM.
@@ -136,5 +136,92 @@ test('visible trace refreshes and hides while the pointer remains stationary', a
   await expect(output).not.toHaveAttribute('data-tooltip', /.+/);
   await expect(tip).toBeHidden();
 
+  expectNoConsoleErrors(errors);
+});
+
+// F222.5: the same presentation, on the per-rider histograms inside a phase row. Each rider's
+// name span carries the chain of the effective resistance or effective defense that produced
+// its number, and a resistance chain is headed by the realm its roll named — because one
+// defender has one effective resistance per realm its attacker's riders name, and this matchup
+// has four of them standing at once.
+// No authored preset puts four riders on one attacker, so the fixture is installed through the
+// harness door `applyPreset` already documents and applied by the app's own driver, which is
+// what keeps a renamed or version-gated control failing here rather than being bypassed.
+async function configureRiderCards(page) {
+  await page.evaluate(() => {
+    PRESETS.f222_5RiderChains = {
+      desc: 'F222.5: four rider realms of one defender inside one attack.',
+      version: 'com2_1.05.11',
+      a: { atk: 4, hitChance: 70, hp: 10, figs: 1,
+        abilities: { stoningTouch: -3, deathTouch: -2, destruction: -1, poison: 1 } },
+      b: { figs: 2, def: 4, toBlkMod: 0, res: 8, hp: 6, cityWalls: '3',
+        abilities: { bless: true, resistMagic: true, elemArmor: 'resistElements' } },
+      expected: { dmgToA: 0, dmgToB: 0 },
+    };
+    applyPreset('f222_5RiderChains');
+  });
+}
+
+async function riderChainTooltips(page) {
+  return page.evaluate(() => Object.fromEntries(
+    [...document.querySelectorAll('#breakdownGrid .rider-panel')].map(panel => [
+      panel.dataset.riderKey + '|' + panel.dataset.riderSide,
+      (panel.querySelector('.rider-name') || {}).dataset.tooltip,
+    ])));
+}
+
+test('each rider histogram carries its chain, headed by the realm its roll named', async ({ page }) => {
+  const errors = await openCalculator(page);
+  await configureRiderCards(page);
+  const chains = await riderChainTooltips(page);
+
+  // Four realms of one defender inside one attack, and they are not one figure under four
+  // names: Resist Elements answers Nature, Bless and Resist Magic answer Death and Chaos,
+  // and the realm-less Poison roll takes none of them.
+  expect(chains['stoningTouch|def']).toContain('Effective Resistance (defender) vs Nature');
+  expect(chains['stoningTouch|def']).toContain('Resist Elements (phase attackSpecific): 8 → 12');
+  expect(chains['stoningTouch|def']).toContain('Resist Magic (phase attackSpecific): 12 → 17');
+  expect(chains['deathTouch|def']).toContain('Effective Resistance (defender) vs Death');
+  expect(chains['deathTouch|def']).toContain('Bless (phase attackSpecific): 8 → 13');
+  expect(chains['destruction|def']).toContain('Effective Resistance (defender) vs Chaos');
+  expect(chains['poison|def']).toContain('Effective Resistance (defender), realm-less roll');
+  // Two of the four answer the same figure and one of the others does not, which is exactly
+  // why the header has to name the realm: 18 under "Death" and 18 under "Chaos" are two
+  // different questions, and 17 under "Nature" is a third.
+  expect(chains['deathTouch|def']).toContain('Displayed result: 18');
+  expect(chains['destruction|def']).toContain('Displayed result: 18');
+
+  // The bookends R7.4 renders everywhere else, on a rider chain too.
+  expect(chains['stoningTouch|def']).toContain('Editable base: 8');
+  expect(chains['stoningTouch|def']).toContain('Displayed result: 17');
+  expect(chains['poison|def'].split('\n')).toContain('Editable base: 8');
+  expect(chains['poison|def'].split('\n')).toContain('Displayed result: 8');
+
+  // The base-roll slot is scored against Defense, not resistance, and says so — with the
+  // City Walls the modern EffectiveDefense seed folds in named as its own transform rather
+  // than hidden inside the base.
+  expect(chains['melee|def']).toContain('Effective Defense (defender)');
+  expect(chains['melee|def']).not.toContain('Effective Resistance');
+  expect(chains['melee|def']).toContain('Editable base: 4');
+  expect(chains['melee|def']).toContain('City Walls (phase attackSpecific): 4 → 7');
+  expect(chains['melee|def']).toContain('Displayed result: 7');
+
+  // And the chain the reader sees on hover is the one the attribute carries.
+  const name = page.locator('#breakdownGrid .rider-panel[data-rider-key="stoningTouch"] .rider-name');
+  await name.scrollIntoViewIfNeeded();
+  await name.hover();
+  await expect(page.locator('#tt')).toHaveText(chains['stoningTouch|def']);
+
+  expectNoConsoleErrors(errors);
+});
+
+test('a rider that cannot land keeps its chain, which is what makes the zero readable', async ({ page }) => {
+  const errors = await openCalculator(page);
+  // stoningHighRes: Stoning -3 against Res 13 leaves 10, which no petrify roll can fail. The
+  // rider draws with all its mass at 0 (R5), and its chain names the figure it had to beat.
+  await page.evaluate(() => { applyPreset('stoningHighRes'); });
+  const chains = await riderChainTooltips(page);
+  expect(chains['stoningTouch|def']).toContain('Effective Resistance (defender) vs Nature');
+  expect(chains['stoningTouch|def']).toContain('Displayed result: 13');
   expectNoConsoleErrors(errors);
 });

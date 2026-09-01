@@ -80,7 +80,7 @@ const ONE_SHOT_BASE_WRITE_KINDS = new Set(['training', 'cast']);
 // Every derivation sequence is filtered through `filterStepsToVersionScope` before it is
 // composed, so this table decides membership rather than merely describing it.
 const ENGINE_VERSIONS = Object.freeze([
-  'mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7',
+  'mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.9',
 ]);
 
 // Named version sets. Every set names its exact members: family labels alone are not a scope.
@@ -89,14 +89,14 @@ const SCOPE_DOS = Object.freeze(['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']);
 const SCOPE_MOM = Object.freeze(['mom_1.31', 'mom_cp_1.60.00']);
 const SCOPE_MOM_1_31 = Object.freeze(['mom_1.31']);
 const SCOPE_MOM_MODERN = Object.freeze([
-  'mom_1.31', 'mom_cp_1.60.00', 'com2_1.05.11', 'com2_warlord_1.5.12.7',
+  'mom_1.31', 'mom_cp_1.60.00', 'com2_1.05.11', 'com2_warlord_1.5.12.9',
 ]);
 const SCOPE_COM1 = Object.freeze(['com_6.08']);
-const SCOPE_COM_PLUS = Object.freeze(['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7']);
+const SCOPE_COM_PLUS = Object.freeze(['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.9']);
 // CoM 1 and base CoM2 only: Warlord replaces the effect rather than omitting it.
 const SCOPE_COM1_COM2 = Object.freeze(['com_6.08', 'com2_1.05.11']);
-const SCOPE_MODERN = Object.freeze(['com2_1.05.11', 'com2_warlord_1.5.12.7']);
-const SCOPE_WARLORD = Object.freeze(['com2_warlord_1.5.12.7']);
+const SCOPE_MODERN = Object.freeze(['com2_1.05.11', 'com2_warlord_1.5.12.9']);
+const SCOPE_WARLORD = Object.freeze(['com2_warlord_1.5.12.9']);
 
 const STEP_VERSION_SCOPES = Object.freeze({
   // --- base: permanent ABase writes made before the encounter ---
@@ -149,6 +149,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'a:resistanceToAll': SCOPE_DOS,
   // --- b: precalc, in UnitCalcPre.CAS ---
   'b:battleArmor': SCOPE_WARLORD,
+  'b:berserkWarlord': SCOPE_WARLORD,
   'b:bombsGrenades': SCOPE_WARLORD,
   'b:nausea': SCOPE_WARLORD,
   'b:disheartenProphecy': SCOPE_WARLORD,
@@ -276,7 +277,6 @@ const STEP_VERSION_SCOPES = Object.freeze({
   // --- d: magic calc, in UnitCalc.CAS ---
   'd:beatOfSwiftness': SCOPE_WARLORD,
   'd:blazeOfGlory': SCOPE_WARLORD,
-  'd:berserkWarlord': SCOPE_WARLORD,
   'd:energyCannonThreshold': SCOPE_WARLORD,
   'd:hurricane': SCOPE_WARLORD,
   'd:trueSight': SCOPE_WARLORD,
@@ -287,6 +287,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'd:hierophany': SCOPE_WARLORD,
   'd:spiritLink': SCOPE_WARLORD,
   'd:mechanicalExpert': SCOPE_WARLORD,
+  'd:nightGoblinsNightVision': SCOPE_WARLORD,
   'd:pneumaField': SCOPE_WARLORD,
   'd:psychoForce': SCOPE_WARLORD,
   'd:rust': SCOPE_WARLORD,
@@ -348,6 +349,28 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'attackSpecific:dosEffectiveResistance:magicImmunity': SCOPE_DOS,
   'attackSpecific:dosEffectiveResistance:resistMagic': SCOPE_DOS,
   'attackSpecific:dosEffectiveResistance:righteousness': SCOPE_MOM,
+  // --- attackSpecific: the per-rider resistance queries (F223) ---
+  // The scope of a rider-query step is the engine family whose list holds it, not which build
+  // names the rider: every engine in the family makes the call, and whether this unit carries
+  // the rider is the step's `when`, read off values `touchKeyInVersion` has already scoped.
+  'attackSpecific:touchRiderResistance:lifeRider': SCOPE_MODERN,
+  'attackSpecific:touchRiderResistance:stoningTouch': SCOPE_MODERN,
+  'attackSpecific:touchRiderResistance:deathTouch': SCOPE_MODERN,
+  'attackSpecific:touchRiderResistance:lifeSteal': SCOPE_MODERN,
+  'attackSpecific:touchRiderResistance:destruction': SCOPE_MODERN,
+  'attackSpecific:touchRiderResistance:poison': SCOPE_MODERN,
+  'attackSpecific:fearRiderResistance:fear': SCOPE_MODERN,
+  'attackSpecific:gazeKillResistance:deathGaze': SCOPE_MODERN,
+  'attackSpecific:gazeKillResistance:stoningGaze': SCOPE_MODERN,
+  'attackSpecific:dosTouchRiderResistance:lifeRider': SCOPE_DOS,
+  'attackSpecific:dosTouchRiderResistance:stoningTouch': SCOPE_DOS,
+  'attackSpecific:dosTouchRiderResistance:deathTouch': SCOPE_DOS,
+  'attackSpecific:dosTouchRiderResistance:lifeSteal': SCOPE_DOS,
+  'attackSpecific:dosTouchRiderResistance:destruction': SCOPE_DOS,
+  'attackSpecific:dosTouchRiderResistance:poison': SCOPE_DOS,
+  'attackSpecific:dosFearRiderResistance:fear': SCOPE_DOS,
+  'attackSpecific:dosGazeKillResistance:stoningGaze': SCOPE_DOS,
+  'attackSpecific:dosGazeKillResistance:deathGaze': SCOPE_DOS,
 });
 
 // --- Canonical engine-version scope: resolution-time reads (F130) ---
@@ -457,10 +480,10 @@ function filterStepsToVersionScope(steps, version) {
 }
 
 // The membership check. Scope also hides at call sites — the six EFFECTIVE_RESISTANCE_STEPS
-// carry no predicate and are CoM2-only solely because the `startsWith('com2')` branch of
-// buildResistanceContext is the only path that reaches them, and the DOS lists are keyed by
-// version rather than gated — so membership has to be checkable where steps enter a sequence,
-// not only inside their predicates.
+// carry no predicate and are CoM2-only solely because the modern arm of `resistanceQueries` is
+// the only path that reaches them, and the DOS lists are keyed by version rather than gated —
+// so membership has to be checkable where steps enter a sequence, not only inside their
+// predicates.
 // Returns the steps this version's engine does not contain, in sequence order.
 function sequenceVersionScopeViolations(steps, version) {
   const violations = [];
@@ -1185,16 +1208,24 @@ function assertStatTraceOrder(trace, options = {}) {
 // to appear as their own preceding source events, making that seed a no-op relative to the
 // projected running value and therefore invisible. Normalizing the seed's `from` to the running
 // value keeps the chain continuous and makes a missed permanent-write attribution testable.
+//
+// `options.baseId` names that seeding step for a sequence that seeds under another id — the two
+// attack-specific sequences seed from the record's own Resistance or Defense rather than from
+// zero (`effectiveResistance:base` and its three siblings, `combat_effects.js`). A seed that
+// writes nothing but the supplied base is then a no-op and drops out; a seed that writes more
+// than the base — City Walls into EffectiveDefense, the DOS Vertigo subtraction — stays in the
+// chain as the transform it is.
 function projectStatTrace(trace, field, base, result, options = {}) {
   const entries = [];
   let running = base;
+  const baseId = options.baseId || 'stat:base';
   const ignoredIds = new Set(options.ignoreIds || []);
 
   for (const event of trace || []) {
     if (ignoredIds.has(event.id) || !event.changes
         || !Object.prototype.hasOwnProperty.call(event.changes, field)) continue;
     const change = event.changes[field];
-    const from = event.id === 'stat:base' ? running : change.from;
+    const from = event.id === baseId ? running : change.from;
     const to = change.to;
     if (from === to) continue;
     entries.push({

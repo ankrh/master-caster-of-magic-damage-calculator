@@ -1122,6 +1122,17 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
+  blazingEyesReachesChaosChannelsUndeadCoM2: {
+    desc: 'Blazing Eyes (CoM2) still reaches a Chaos-Channelled unit that a later Undead conversion re-tagged Death. The block at $005A1E16 gates on `IsChaosUnit(i)`, which is `(race = RCChaos) or (ChaosChannel(u) and EncUndead)` at $00594FE4, so the second arm recovers the Chaos realm `c:chaosChannels:armor:race` wrote and `c:undead` overwrote. The conjured Doom Gaze 3 is the card\'s only attack, for 3 exact damage -> 3.000. Reading the compact `fantastic_chaos` token instead sees fantastic_death, conjures no gaze, and gives 0.000 - and that token is narrower on a second count as well, since `IsChaosUnit` tests no Fantastic flag.',
+    version: V_COM2,
+    a: { hp:10, abilities: { blazingEyes: true, ccDefense: true, undead: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.undead':
+        'Keep, and the absence is the rule under test: the claim is that the Undead conversion does not cost this unit the Doom Gaze, so ablating Undead has to leave the same 3.000 - it removes the very overwrite the recovery arm exists to undo. Both other features are live at delta 3: without a.ability.ccDefense there is no Chaos realm to recover, and without a.ability.blazingEyes there is no block.',
+    },
+  },
   blazingEyesLandsAfterFocusMagicCoM2: {
     desc: 'Blazing Eyes is a region-c block at $005A1E16, later than Focus Magic\'s doom-gaze clause `if U.doomgaze > 0` at $0059A66D, so a Doom Gaze this block conjures is not one Focus Magic can find: the Chaos creature ends at Doom Gaze 3 and deals 3 exact damage. Melee mode, so Focus Magic\'s separately created magic ranged attack does not fire. Removing Blazing Eyes leaves no gaze and 0; removing Focus Magic leaves the same 3, which is the point. Before F174 the grant was folded into the base seed, Focus Magic saw it there, and the unit dealt 6.',
     version: V_COM2,
@@ -1315,7 +1326,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.400 },
   },
   survivalInstinctSpiritLinkAssertsFantasticWarlord: {
-    desc: 'Survival Instinct (Warlord) on a Spirit-Linked normal unit: the block tests the calculated record, `if U.Fantastic` at $005A1664 (Units.RecalculateUnits.pas), and Spirit Link asserts Fantastic in region b at UnitCalcPre.CAS:30, so the +10% To Hit applies where it stands — atk 1 at base 30% becomes 40% → 0.4 dmg, against the 0.3 the same unit deals without Spirit Link. Reading the record the recalculation leaves instead answered for the region-d clearing write at UnitCalc.CAS:1306, which is past this block, and gave 0.3.',
+    desc: 'Survival Instinct (Warlord) on a Spirit-Linked normal unit: the block tests the calculated record, `if U.Fantastic` at $005A1664 (Units.RecalculateUnits.pas), and Spirit Link asserts Fantastic in region b at UnitCalcPre.CAS:30, so the +10% To Hit applies where it stands — atk 1 at base 30% becomes 40% → 0.4 dmg, against the 0.3 the same unit deals without Spirit Link. Reading the record the recalculation leaves instead answered for the region-d clearing write at UnitCalc.CAS:1298, which is past this block, and gave 0.3.',
     version: V_WARLORD,
     a: { atk:1, hp:10, unitType: 'normal', abilities: { survivalInstinct: true, spiritLink: true } },
     b: { hp:10 },
@@ -1557,7 +1568,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   fortificationSeesMagitekLargeShieldWarlord: {
-    desc: "Fortification's already-shielded test is `GETSTAT(U,ALargeShield,0)` — the calculated record at `UnitCalc.CAS:1074` — and Magitek Engineering set that same flag back in `UnitCalcPre.CAS:1058`, region `b`. So a Power Engine unit inside the walls takes the Missile Immunity arm: missile 12 vs an immune defender is 0. Applying Fortification ahead of the reform grants instead answered from before the region-`b` write and gave plain Large Shield, for 12−(2+3)=7 (F200).",
+    desc: "Fortification's already-shielded test is `GETSTAT(U,ALargeShield,0)` — the calculated record at `UnitCalc.CAS:1066` — and Magitek Engineering set that same flag back in `UnitCalcPre.CAS:1058`, region `b`. So a Power Engine unit inside the walls takes the Missile Immunity arm: missile 12 vs an immune defender is 0. Applying Fortification ahead of the reform grants instead answered from before the region-`b` write and gave plain Large Shield, for 12−(2+3)=7 (F200).",
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:12, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
     b: { def: 2, toBlkMod: 70, hp: 20,
@@ -1567,7 +1578,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   fortificationRestoresRustedLargeShieldWarlord: {
-    desc: "Rust clears the flag with `SETSTAT(U,ALargeShield,0,0)` at `UnitCalc.CAS:498` and Fortification reads it 576 lines later at `:1074`, so the shielded unit ends the block with plain Large Shield rather than Missile Immunity: missile 12 vs def 2+3 blocked at 100% is 7. With the clear taken after the chain instead, Fortification saw the innate shield, granted Missile Immunity, and the strip then removed the shield too, for 0 (F200).",
+    desc: "Rust clears the flag with `SETSTAT(U,ALargeShield,0,0)` at `UnitCalc.CAS:490` and Fortification reads it 576 lines later at `:1074`, so the shielded unit ends the block with plain Large Shield rather than Missile Immunity: missile 12 vs def 2+3 blocked at 100% is 7. With the clear taken after the chain instead, Fortification saw the innate shield, granted Missile Immunity, and the strip then removed the shield too, for 0 (F200).",
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:12, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
     b: { def: 2, toBlkMod: 70, hp: 20,

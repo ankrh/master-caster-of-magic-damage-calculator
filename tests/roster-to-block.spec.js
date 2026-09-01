@@ -6,7 +6,8 @@ test('F21 loads modern roster To Defend deltas into the card and derivation', as
 
   const versions = [
     ['com2_1.05.11', { '-10': 1 }],
-    ['com2_warlord_1.5.12.7', { '-10': 15, 10: 12, 20: 1 }],
+    // The 40 is Aerial Support Drones (ToDefend=70), the unit 1.5.12.9 added to the roster.
+    ['com2_warlord_1.5.12.9', { '-10': 15, 10: 12, 20: 1, 40: 1 }],
   ];
   for (const [version, expectedDeltaCounts] of versions) {
     await setValue(page, 'gameVersion', version);
@@ -58,7 +59,7 @@ test('F21 loads modern roster To Defend deltas into the card and derivation', as
 
 test('F21 matrix roster rows use each unit To Defend instead of the card value', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
 
   const report = await page.evaluate(() => {
     const units = unitDatabases[document.getElementById('gameVersion').value];
@@ -87,7 +88,7 @@ test('F21 matrix roster rows use each unit To Defend instead of the card value',
 
 test('F21 preserves non-default roster controls through swap/state and leaves DOS at zero delta', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aUnit', '346'); // 20% = -10 delta
   await setValue(page, 'bUnit', '286'); // 50% = +20 delta
 

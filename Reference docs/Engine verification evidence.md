@@ -12,7 +12,7 @@ Resolved findings belong in `MoM binary analysis.md`, the modern subsystem docum
 repeated here.
 
 Calculator version IDs are `mom_1.31`, `mom_cp_1.60.00`, `com_6.08`, `com2_1.05.11`, and
-`com2_warlord_1.5.12.7`. Binary identities, paths, and address-drift notes live in the DOS
+`com2_warlord_1.5.12.9`. Binary identities, paths, and address-drift notes live in the DOS
 analysis and the modern analysis index.
 
 ## A. DOS version-branch claims

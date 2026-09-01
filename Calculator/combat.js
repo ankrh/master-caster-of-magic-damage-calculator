@@ -22,6 +22,10 @@
 function resolveCombat(a, b, opts) {
   const isRanged = opts.isRanged;
   const ver = opts.version;
+  // The rider histograms' hover chains are collected by the queries that compute the figures,
+  // so they cost a trace array per query and are asked for only by the caller that renders
+  // them. The matrix draws no histogram and does not ask (`Calculator/ui_matrix.js`).
+  const wantChains = !!opts.riderChains;
 
   a = normalizeCombatUnit(a, ver);
   b = normalizeCombatUnit(b, ver);
@@ -154,17 +158,6 @@ function resolveCombat(a, b, opts) {
   const aInvulnBonus = hasAbil(a.abilities, 'invulnerability') ? 2 : 0;
   const bInvulnBonus = hasAbil(b.abilities, 'invulnerability') ? 2 : 0;
 
-  const {
-    bResM,
-    aResM,
-    bResDeath,
-    aResDeath,
-    bResStoning,
-    aResStoning,
-    bResPoison,
-    aResPoison,
-  } = buildResistanceContext(a, b, ver);
-
   // Cause Fear: reduces opponent's effective melee + touch-attack figures.
   // Fires before the melee exchange. MoM has no resistance modifier; CoM/CoM2 is -3.
   // v1.31 bugs: (1) defending Fear doesn't work; (2) attacker's Fear also self-fears attacker.
@@ -172,15 +165,19 @@ function resolveCombat(a, b, opts) {
   // `Reference docs/MoM binary analysis.md`, *Cause Fear direction and resistance modifier*.
   const aFear = !isRanged && hasAbil(a.abilities, 'fear');
   const bFear = !isRanged && hasAbil(b.abilities, 'fear');
+  // Each direction asks its own Death-realm query, at the rider that makes it
+  // (`fearRiderResistance:fear`, `combat_effects.js`).
+  const bResFear = resistanceQueries('fear', b, ver, { fear: aFear }).fearRes;
+  const aResFear = resistanceQueries('fear', a, ver, { fear: bFear }).fearRes;
   const bPFear = aFear
-    ? fearFailProb(bResDeath, b.abilities, opts.version, b.baseDeathImmunity) : 0; // A's fear on B
+    ? fearFailProb(bResFear, b.abilities, opts.version, b.baseDeathImmunity) : 0; // A's fear on B
   const aPFear = bFear
-    ? fearFailProb(aResDeath, a.abilities, opts.version, a.baseDeathImmunity) : 0; // B's fear on A
+    ? fearFailProb(aResFear, a.abilities, opts.version, a.baseDeathImmunity) : 0; // B's fear on A
   // Phase always shows when either unit has Cause Fear; an immune defender shows it with 0
   // feared figures. The two immunities reach that zero by different routes, and only one of
   // them is in `fearFailProb`: Death Immunity is its early return, while Magic Immunity is
-  // never tested there at all. Magic Immunity arrives already folded into `aResDeath`/
-  // `bResDeath` by the resistance transform — `+30` in the DOS builds
+  // never tested there at all. Magic Immunity arrives already folded into `aResFear`/
+  // `bResFear` by the resistance transform — `+30` in the DOS builds
   // (`PROVENANCE[dosEffectiveResistance:magicImmunity]`) and an assignment to 100 in the modern
   // ones (`PROVENANCE[effectiveResistance:magicImmunity]`, both `combat_effects.js`) — which
   // clears `fearFailProb`'s `>= 10` threshold. That split is the rule in `SPEC.md`,
@@ -288,6 +285,7 @@ function resolveCombat(a, b, opts) {
     aDefVsB,
     aDefForGaze,
     aDefForImm,
+    defChains,
   } = buildDefenseContext(a, b, ver, aVertigoDefPenalty, bVertigoDefPenalty, {
     melee: !isRanged,
     ranged: isRanged,
@@ -297,7 +295,7 @@ function resolveCombat(a, b, opts) {
     bGaze: !isRanged && bGazeActiveP,
     aImmolation: !isRanged && aHasImm,
     bImmolation: wallOfFireActive || (!isRanged && bHasImm),
-  });
+  }, wantChains);
 
   if (!isRanged) {
     // There is deliberately no melee-initiation guard here: no build admits or refuses the
@@ -326,16 +324,10 @@ function resolveCombat(a, b, opts) {
     // — so neither a permanent record nor the card's `atk` input belongs in a melee gate here.
 
     // Touch attack params: melee-phase activation.
-    const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, exorciseFail: aExorciseFailM, destructionFail: aDestructionFailM, lifeStealMod: aLifeStealModM }
-      = meleeTouchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version);
-    const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, deathTouchFail: bDeathTouchFailM, dispelEvilFail: bDispelEvilFailM, exorciseFail: bExorciseFailM, destructionFail: bDestructionFailM, lifeStealMod: bLifeStealModM }
-      = meleeTouchParams(b, a, aResM, aResDeath, aResStoning, aResPoison, opts.version);
-
-    // Touch attack params: thrown-phase activation (for thrown/breath).
-    const aTouchWithThrown = !aBlackSleep && touchAttackFires(a.rtb, opts.version);
-    const { poisonStr: aPoisonStrT, poisonFail: aPoisonFailT, stoningFail: aStoningFailT, deathTouchFail: aDeathTouchFailT, dispelEvilFail: aDispelEvilFailT, exorciseFail: aExorciseFailT, destructionFail: aDestructionFailT, lifeStealMod: aLifeStealModT }
-      = touchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, opts.version,
-        aTouchWithThrown, touchRecordForPhase(ver, a.thrownType));
+    const { poisonStr: aPoisonStrM, poisonFail: aPoisonFailM, stoningFail: aStoningFailM, deathTouchFail: aDeathTouchFailM, dispelEvilFail: aDispelEvilFailM, exorciseFail: aExorciseFailM, destructionFail: aDestructionFailM, lifeStealMod: aLifeStealModM, lifeStealRes: aLifeStealResM, placed: aTouchPlacedM, chains: aTouchChainsM }
+      = touchParams(a, b, opts.version, touchAttackFires(a.atk, opts.version), touchRecordForPhase(ver, 'melee'), wantChains);
+    const { poisonStr: bPoisonStrM, poisonFail: bPoisonFailM, stoningFail: bStoningFailM, deathTouchFail: bDeathTouchFailM, dispelEvilFail: bDispelEvilFailM, exorciseFail: bExorciseFailM, destructionFail: bDestructionFailM, lifeStealMod: bLifeStealModM, lifeStealRes: bLifeStealResM, placed: bTouchPlacedM, chains: bTouchChainsM }
+      = touchParams(b, a, opts.version, touchAttackFires(b.atk, opts.version), touchRecordForPhase(ver, 'melee'), wantChains);
 
     // DOS BU_ProcessAttack gazes can carry common roster riders; modern ApplyAttack attack
     // types 6-8 jump past all six rider blocks, so no touch-rider parameters are constructed.
@@ -343,17 +335,19 @@ function resolveCombat(a, b, opts) {
     // unsigned two-step range idiom that admits exactly those types:
     // `Reference docs/Caster binary/Combat.ApplyAttack.R5.2c.evidence.md`.
     const { poisonStr: aPoisonStrG_raw, poisonFail: aPoisonFailG, stoningFail: aStoningFailG, deathTouchFail: aDeathTouchFailG, dispelEvilFail: aDispelEvilFailG, exorciseFail: aExorciseFailG, destructionFail: aDestructionFailG, lifeStealMod: aLifeStealModG,
-            poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, exorciseWith: aExorciseWithGaze, destructionWith: aDestructionWithGaze, lifeStealWith: aLifeStealWithGaze }
-      = gazeTouchParams(a, b, bResM, bResDeath, bResStoning, bResPoison, aGazeActiveP, aBlackSleep, opts.version);
+            poisonWith: aPoisonWithGaze, stoningWith: aStoningWithGaze, deathTouchWith: aDeathTouchWithGaze, dispelEvilWith: aDispelEvilWithGaze, exorciseWith: aExorciseWithGaze, destructionWith: aDestructionWithGaze, lifeStealWith: aLifeStealWithGaze, lifeStealRes: aLifeStealResG, placed: aTouchPlacedG, chains: aTouchChainsG }
+      = gazeTouchParams(a, b, aGazeActiveP, aBlackSleep, opts.version, wantChains);
     const { poisonStr: bPoisonStrG_raw, poisonFail: bPoisonFailG, stoningFail: bStoningFailG, deathTouchFail: bDeathTouchFailG, dispelEvilFail: bDispelEvilFailG, exorciseFail: bExorciseFailG, destructionFail: bDestructionFailG, lifeStealMod: bLifeStealModG,
-            poisonWith: bPoisonWithGaze, stoningWith: bStoningWithGaze, deathTouchWith: bDeathTouchWithGaze, dispelEvilWith: bDispelEvilWithGaze, exorciseWith: bExorciseWithGaze, destructionWith: bDestructionWithGaze, lifeStealWith: bLifeStealWithGaze }
-      = gazeTouchParams(b, a, aResM, aResDeath, aResStoning, aResPoison, bGazeActiveP, bBlackSleep, opts.version);
+            poisonWith: bPoisonWithGaze, stoningWith: bStoningWithGaze, deathTouchWith: bDeathTouchWithGaze, dispelEvilWith: bDispelEvilWithGaze, exorciseWith: bExorciseWithGaze, destructionWith: bDestructionWithGaze, lifeStealWith: bLifeStealWithGaze, lifeStealRes: bLifeStealResG, placed: bTouchPlacedG, chains: bTouchChainsG }
+      = gazeTouchParams(b, a, bGazeActiveP, bBlackSleep, opts.version, wantChains);
 
     // Gaze kill-roll probabilities (needed by buildGazeDist).
-    const { stoningFail: aStoningGazeFailP, deathFail: aDeathGazeFailP }
-      = gazeKillProbs(a, aStoningGazeActiveP, aDeathGazeActiveP, b, bResDeath, bResStoning);
-    const { stoningFail: bStoningGazeFailP, deathFail: bDeathGazeFailP }
-      = gazeKillProbs(b, bStoningGazeActiveP, bDeathGazeActiveP, a, aResDeath, aResStoning);
+    const { stoningFail: aStoningGazeFailP, deathFail: aDeathGazeFailP,
+            chains: aGazeKillChains }
+      = gazeKillProbs(a, aStoningGazeActiveP, aDeathGazeActiveP, b, ver, wantChains);
+    const { stoningFail: bStoningGazeFailP, deathFail: bDeathGazeFailP,
+            chains: bGazeKillChains }
+      = gazeKillProbs(b, bStoningGazeActiveP, bDeathGazeActiveP, a, ver, wantChains);
 
     // Immolation activation per phase.
     const aImmWithThrown = aHasImm && !aBlackSleep && immolationFiresInPhase(ver, 'thrown')
@@ -400,7 +394,8 @@ function resolveCombat(a, b, opts) {
       aExorciseFailM,
       aDestructionFailM,
       aLifeStealModM,
-      bResDeath,
+      lifeStealRes: aLifeStealResM,
+      aTouchPlacedM,
       bBlurChance,
       blurBuggy,
       aHaste,
@@ -431,7 +426,8 @@ function resolveCombat(a, b, opts) {
       bExorciseFailM,
       bDestructionFailM,
       bLifeStealModM,
-      aResDeath,
+      lifeStealRes: bLifeStealResM,
+      bTouchPlacedM,
       aBlurChance,
       blurBuggy,
       bCounterHaste,
@@ -491,11 +487,12 @@ function resolveCombat(a, b, opts) {
       aDispelEvilFailG,
       aExorciseWithGaze,
       aDestructionWithGaze,
+      aTouchPlacedG,
       aExorciseFailG,
       aDestructionFailG,
       aLifeStealWithGaze,
       aLifeStealModG,
-      bResDeath,
+      lifeStealRes: aLifeStealResG,
       version: ver,
     };
 
@@ -529,11 +526,12 @@ function resolveCombat(a, b, opts) {
       bDispelEvilFailG,
       bExorciseWithGaze,
       bDestructionWithGaze,
+      bTouchPlacedG,
       bExorciseFailG,
       bDestructionFailG,
       bLifeStealWithGaze,
       bLifeStealModG,
-      aResDeath,
+      lifeStealRes: bLifeStealResG,
       version: ver,
     };
 
@@ -632,17 +630,26 @@ function resolveCombat(a, b, opts) {
     const buildThrown = (attacker, active, type, touchRecord) => {
       const touchActive = active && !aBlackSleep
         && touchAttackFires(attacker.rtb, opts.version);
-      const touch = touchParams(attacker, b, bResM, bResDeath, bResStoning, bResPoison,
-        opts.version, touchActive, touchRecord);
+      const touch = touchParams(attacker, b, opts.version, touchActive, touchRecord, wantChains);
+      // Caster.exe scores each derived channel against its own EffectiveDefense call, so the
+      // chain a modern Thrown/Breath row shows is that call's, not the shared context entry.
+      const thrownDefSink = isCoM2 && wantChains ? {} : null;
+      const thrownDef = isCoM2
+        ? computeCasterDefenseForAttack(b, attacker, ver, bVertigoDefPenalty, 'thrown',
+          thrownDefSink)
+        : bDefForThrown;
       return {
         touch,
+        thrownDefChain: isCoM2
+          ? (thrownDefSink ? thrownDefSink.chain : null)
+          : defChains.bDefForThrown,
         phase: buildThrownPhase(active, {
           a: attacker,
           b,
           aDoomsB,
           aBlackSleep,
           aToHitRtbVert: isCoM2 ? attacker.toHitRtb : aToHitRtbVert,
-          bDefForThrown: isCoM2 ? computeCasterDefenseForAttack(b, attacker, ver, bVertigoDefPenalty, 'thrown') : bDefForThrown,
+          bDefForThrown: thrownDef,
           bToBlockVsAThrEW: isCoM2 ? buildToBlockContext(attacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty, ver).bToBlockVsAThrEW : bToBlockVsAThrEW,
           bInvulnBonus,
           bBlurChance,
@@ -661,7 +668,8 @@ function resolveCombat(a, b, opts) {
           aExorciseFailT: touch.exorciseFail,
           aDestructionFailT: touch.destructionFail,
           aLifeStealModT: touch.lifeStealMod,
-          bResDeath,
+          lifeStealRes: touch.lifeStealRes,
+          aTouchPlacedT: touch.placed,
           aHaste,
           version: ver,
         }),
@@ -703,7 +711,13 @@ function resolveCombat(a, b, opts) {
         || touch.destructionFail > 0)
       || aDispelEvilWithGaze || bDispelEvilWithGaze
       || aExorciseWithGaze || bExorciseWithGaze
-      || aDestructionWithGaze || bDestructionWithGaze);
+      || aDestructionWithGaze || bDestructionWithGaze
+      // A DOS gaze carries the touch group, so a Stoning Touch placed on the ranged record
+      // reaches the irrecoverable bucket without any melee or thrown placement to announce it
+      // (`BU_ProcessAttack` merges the ranged flag record into every non-melee call). Without
+      // this term the joint carries no per-path damage state for that exchange and the
+      // post-combat composition reports the wound as wholly regular.
+      || aStoningWithGaze || bStoningWithGaze);
     let joint = makeJoint2D(aRemHP, bRemHP,
       trackModernHealing ? { a, b } : null);
     let lifeStealEV_a = 0, lifeStealEV_b = 0;
@@ -712,7 +726,8 @@ function resolveCombat(a, b, opts) {
     const pendingFear = { aFearDist: null, bFearDist: null };
 
     const applyThrownPhases = () => {
-      for (const { attacker: channelAttacker, type: channelType, phase: thrownPhase, touch } of thrownPhases) {
+      for (const { attacker: channelAttacker, type: channelType, phase: thrownPhase, touch,
+        thrownDefChain } of thrownPhases) {
         if (!thrownPhase) continue;
         const r = applyDamagePhase(joint, thrownPhase, pendingFear, { a: channelAttacker, b }, bRemHP);
         joint = r.joint;
@@ -734,9 +749,38 @@ function resolveCombat(a, b, opts) {
           atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: r.marginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
           atkDestroyPct: 0,
+          attackLabels: { def: thrownAttackName(channelType, aHaste && channelAttacker.rtb > 0) },
+          riders: phaseRiderRows(r, 'def', 'atk',
+            rowRiderChains(touch.chains, aDoomsB ? null : thrownDefChain, bImmChain)),
           defDestroyPct: jointDestroyedProbability(joint, 'b', bMargAtThrown, bRemHP) });
       }
     };
+
+    // A modern gaze row is one `ApplyAttack` call and names one kill roll; a DOS row names
+    // both when the unit has both. The row's own label flags are the activity gate the phase
+    // was built from, so reading them here cannot show a chain for a roll this row's call did
+    // not make.
+    const gazeKillChainsForRow = (chains, labelParams) => [
+      labelParams.stoningGaze ? chains.stoningGaze : null,
+      labelParams.deathGaze ? chains.deathGaze : null,
+    ];
+
+    // Only a gaze's conventional component is scored against Defense, and the target's Black
+    // Sleep turns that component into Doom damage — for the whole DOS row, whose builder passes
+    // the flag down once, and among the modern rows for the Doom Gaze call alone, which is the
+    // only modern gaze step that passes it (`combat_phases.js`, the gaze phase builders).
+    // `gazeConsultsDefense` (`combat_special_attacks.js`) is the rule itself.
+    const gazeDefenseChainForRow = (gazer, targetSleep, chain, labelParams) =>
+      (gazeConsultsDefense(gazer, targetSleep && (!isCoM2 || !!labelParams.doomGaze))
+        ? chain : null);
+
+    // Immolation is a spell cast: the modern engine returns before reading Defense on Magic
+    // Immunity, and Black Sleep turns it into Doom damage, so neither arm was scored against
+    // one (`damageSpellConsultsDefense`, `combat_special_attacks.js`).
+    const bImmChain = damageSpellConsultsDefense(ver, b.abilities)
+      ? defChains.bDefForImm : null;
+    const aImmChain = damageSpellConsultsDefense(ver, a.abilities)
+      ? defChains.aDefForImm : null;
 
     const applyAttackerGazePhase = (phase, labelParams) => {
       if (!phase) return;
@@ -749,6 +793,11 @@ function resolveCombat(a, b, opts) {
         atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: r.marginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
         atkDestroyPct: 0,
+        attackLabels: { def: gazeLabel(labelParams.stoningGaze, labelParams.deathGaze, labelParams.doomGaze) },
+        riders: phaseRiderRows(r, 'def', 'atk',
+          rowRiderChains(aTouchChainsG,
+            gazeDefenseChainForRow(a, bBlackSleep, defChains.bDefForGaze, labelParams),
+            bImmChain, gazeKillChainsForRow(aGazeKillChains, labelParams))),
         defDestroyPct: jointDestroyedProbability(joint, 'b', bMargAtAGz, bRemHP) });
     };
 
@@ -763,6 +812,11 @@ function resolveCombat(a, b, opts) {
       breakdown.push({ label: bGzLabel,
         atkDist: r.marginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
+        attackLabels: { atk: gazeLabel(labelParams.stoningGaze, labelParams.deathGaze, labelParams.doomGaze) },
+        riders: phaseRiderRows(r, 'atk', 'def',
+          rowRiderChains(bTouchChainsG,
+            gazeDefenseChainForRow(b, aBlackSleep, defChains.aDefForGaze, labelParams),
+            aImmChain, gazeKillChainsForRow(bGazeKillChains, labelParams))),
         atkDestroyPct: jointDestroyedProbability(joint, 'a', aMargAtBGz, aRemHP),
         defDestroyPct: jointDestroyedProbability(joint, 'b', bMargAtBGz, bRemHP) });
     };
@@ -775,6 +829,11 @@ function resolveCombat(a, b, opts) {
       breakdown.push({ label: 'Wall of Fire',
         atkDist: r.marginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
+        // Wall of Fire is not an `ApplyAttack` call, so it places no riders and `phaseRiderRows`
+        // returns an empty array; the name is stated anyway so the row cannot be the one that
+        // has a `melee` slot and nothing to call it.
+        attackLabels: { atk: 'Wall of Fire' },
+        riders: phaseRiderRows(r, 'atk', 'def'),
         atkDestroyPct: jointDestroyedProbability(joint, 'a', aMargAtWof, aRemHP),
         defDestroyPct: 0 });
     };
@@ -935,7 +994,8 @@ function resolveCombat(a, b, opts) {
         aExorciseFailM,
         aDestructionFailM,
         aLifeStealModM,
-        bResDeath,
+        lifeStealRes: aLifeStealResM,
+        aTouchPlacedM,
         bBlurChance,
         blurBuggy,
         isCoM2,
@@ -980,6 +1040,9 @@ function resolveCombat(a, b, opts) {
       breakdown.push({ label: fsLabel,
         atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: fsResult.fsMarginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
+        attackLabels: { def: FIRST_STRIKE_ATTACK_NAME },
+        riders: phaseRiderRows(fsResult.fsRiders, 'def', 'atk',
+          rowRiderChains(aTouchChainsM, aMeleeDoomsB ? null : defChains.bDefVsA, bImmChain)),
         atkDestroyPct: jointDestroyedProbability(fsResult.postFsJoint, 'a', aMargPostFS, aRemHP),
         defDestroyPct: jointDestroyedProbability(fsResult.postFsJoint, 'b', bMargPostFS, bRemHP) });
 
@@ -1021,6 +1084,12 @@ function resolveCombat(a, b, opts) {
         breakdown.push({ label,
           atkDist: fsResult.counterMarginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: fsResult.secondMarginal, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
+          attackLabels: { def: secondStrikeAttackName(true), atk: counterAttackName(bCounterHaste) },
+          riders: [...phaseRiderRows(fsResult.secondRiders, 'def', 'atk',
+            rowRiderChains(aTouchChainsM, aMeleeDoomsB ? null : defChains.bDefVsA, bImmChain)),
+          ...phaseRiderRows(fsResult.counterRiders, 'atk', 'def',
+            rowRiderChains(bTouchChainsM, bMeleeDoomsA ? null : defChains.aDefVsB,
+              aImmChain))],
           atkDestroyPct: jointDestroyedProbability(joint, 'a', totalDmgToAFs, aRemHP),
           defDestroyPct: jointDestroyedProbability(joint, 'b', totalDmgToBFs, bRemHP) });
       } else {
@@ -1038,6 +1107,9 @@ function resolveCombat(a, b, opts) {
         breakdown.push({ label: counterLabel,
           atkDist: fsResult.counterMarginal, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
+          attackLabels: { atk: counterAttackName(bCounterHaste) },
+          riders: phaseRiderRows(fsResult.counterRiders, 'atk', 'def',
+            rowRiderChains(bTouchChainsM, bMeleeDoomsA ? null : defChains.aDefVsB, aImmChain)),
           atkDestroyPct: jointDestroyedProbability(joint, 'a', totalDmgToAFs, aRemHP),
           defDestroyPct: jointDestroyedProbability(joint, 'b', totalDmgToBFs, bRemHP) });
       }
@@ -1071,8 +1143,19 @@ function resolveCombat(a, b, opts) {
 
       const totalDmgToANF = marginalA(joint);
       const totalDmgToBNF = marginalB(joint);
-      // Melee+counter row appears when there's a preceding row OR Haste is in play.
-      if (breakdown.length > 0 || aHaste || bCounterHaste) {
+      // A Doom slot is not scored against Defense at all (`calcDoomDist`), so its base-roll
+      // histogram carries no defense chain rather than one that explained nothing.
+      const meleeRiderRows = [...phaseRiderRows(pair.ridersB, 'def', 'atk',
+        rowRiderChains(aTouchChainsM, aMeleeDoomsB ? null : defChains.bDefVsA, bImmChain)),
+      ...phaseRiderRows(pair.ridersA, 'atk', 'def',
+        rowRiderChains(bTouchChainsM, bMeleeDoomsA ? null : defChains.aDefVsB, aImmChain))];
+      // Melee+counter row appears when there's a preceding row, Haste is in play, or a rider
+      // fired inside the exchange. A row carrying nothing but the two base-roll slots repeats
+      // the totals the page already shows; a row carrying a rider does not, and that rider's
+      // histogram has nowhere else to go (`CLAUDE.md`, *Input/output contract*) — a plain
+      // unhasted melee is exactly the exchange that otherwise emits no phase row at all.
+      const meleeCarriesRider = meleeRiderRows.some(rider => rider.key !== 'melee');
+      if (breakdown.length > 0 || aHaste || bCounterHaste || meleeCarriesRider) {
         const meleeLabel = meleeBreakdownLabel({
           hasted: aHaste,
           counterHasted: bCounterHaste,
@@ -1088,6 +1171,8 @@ function resolveCombat(a, b, opts) {
         breakdown.push({ label: meleeLabel,
           atkDist: pair.marginalA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: pair.marginalB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive,
+          attackLabels: { def: meleeAttackName(aHaste), atk: counterAttackName(bCounterHaste) },
+          riders: meleeRiderRows,
           atkDestroyPct: jointDestroyedProbability(joint, 'a', totalDmgToANF, aRemHP),
           defDestroyPct: jointDestroyedProbability(joint, 'b', totalDmgToBNF, bRemHP) });
       }
@@ -1131,8 +1216,10 @@ function resolveCombat(a, b, opts) {
       bHealedDamageDist: exactBHealedDist,
       bBonusHpDist: exactBBonusDist,
       bAppliedHealingBenefitDist: exactBBenefitDist,
-      aPostCombatStateMean: jointCombatHealingStateMeans(joint, 'a', a),
-      bPostCombatStateMean: jointCombatHealingStateMeans(joint, 'b', b),
+      aPostCombatStateMean: jointCombatHealingStateMeans(joint, 'a', a,
+        expectedDamage(totalDmgToA)),
+      bPostCombatStateMean: jointCombatHealingStateMeans(joint, 'b', b,
+        expectedDamage(totalDmgToB)),
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };
@@ -1158,9 +1245,14 @@ function resolveCombat(a, b, opts) {
     // than the DOS-shaped shared slot (`SPEC.md`, *Attack channels on the card*).
     const rangedChannel = isCoM2 && a.modernAttacks.ranged;
     const rangedAttacker = rangedChannel ? modernAttackUnit(a, { key: 'ranged', ...rangedChannel }) : a;
+    const rangedDefSink = rangedChannel && wantChains ? {} : null;
     const rangedDefense = rangedChannel
-      ? computeCasterDefenseForAttack(b, rangedAttacker, ver, bVertigoDefPenalty, 'ranged')
+      ? computeCasterDefenseForAttack(b, rangedAttacker, ver, bVertigoDefPenalty, 'ranged',
+        rangedDefSink)
       : bDefVsARanged;
+    const rangedDefChain = rangedChannel
+      ? (rangedDefSink ? rangedDefSink.chain : null)
+      : defChains.bDefVsARanged;
     const rangedToBlock = rangedChannel
       ? buildToBlockContext(rangedAttacker, b, aVertigoBlockPenalty, bVertigoBlockPenalty, ver).bToBlockVsARangedEW
       : bToBlockVsARangedEW;
@@ -1170,10 +1262,10 @@ function resolveCombat(a, b, opts) {
     // pre-combat casualties contribute and aAlive is constant through the volley.
     const aRtbRanged = applyRage(rangedAttacker.rtb, rangedAttacker, aAlive);
     let dmgToB = aAlive > 0 && bRemHP > 0 && rangedAttacker.rtb > 0 && !aBlackSleep
-      ? (aRangedDoomsB ? calcDoomDist(aAlive, aRtbRanged, bRemHP)
+      ? (aRangedDoomsB ? calcDoomDist(aAlive, aRtbRanged)
                  : calcTotalDamageDist(aAlive, aRtbRanged,
                      isCoM2 ? rangedAttacker.toHitRtb : aToHitRtbVert,
-                     rangedDefense, rangedToBlock, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
+                     rangedDefense, rangedToBlock, b.hp, bInvulnBonus, bBlurChance, blurBuggy,
                      isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined, aMinDamageFromHits))
       : [1];
 
@@ -1182,13 +1274,13 @@ function resolveCombat(a, b, opts) {
     // no blanket type gate; represented spells instead move or clear record values.
     // The conflict is recorded in `Reference docs/Source discrepancies.md` §14.
     const rangedTouchFires = touchAttackFires(rangedAttacker.rtb, opts.version);
-    const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, destructionFail: aDestructionFailR, lifeStealMod: aLifeStealModR }
-      = touchParams(rangedAttacker, b, bResM, bResDeath, bResStoning, bResPoison,
-        opts.version, rangedTouchFires, touchRecordForPhase(ver, 'ranged'));
+    const { poisonStr: aPoisonStrR, poisonFail: aPoisonFailR, stoningFail: aStoningFailR, deathTouchFail: aDeathTouchFailR, dispelEvilFail: aDispelEvilFailR, exorciseFail: aExorciseFailR, destructionFail: aDestructionFailR, lifeStealMod: aLifeStealModR, lifeStealRes: aLifeStealResR, placed: aTouchPlacedR, chains: aTouchChainsR }
+      = touchParams(rangedAttacker, b, opts.version, rangedTouchFires,
+        touchRecordForPhase(ver, 'ranged'), wantChains);
     const aImmWithRanged = aHasImm && immolationFiresInPhase(ver, 'ranged') && rangedTouchFires;
     const aImmDistR = (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0)
       ? calcDamageSpellDist(bAlive, immStr, a.toHitImmolation, bDefForImm,
-        bToBlockVsAAll, b.hp, bRemHP, bInvulnBonus, aMinDamageFromHits,
+        bToBlockVsAAll, b.hp, bInvulnBonus, aMinDamageFromHits,
         woundedTopFigHP(bRemHP, b.hp), ver, b.abilities)
       : null;
     const rangedTouchSpec = {
@@ -1199,13 +1291,14 @@ function resolveCombat(a, b, opts) {
       exorciseFail: aExorciseFailR,
       destructionFail: aDestructionFailR,
       targetHP: b.hp,
-      lifeStealMod: aLifeStealModR, lifeStealRes: bResDeath,
+      lifeStealMod: aLifeStealModR, lifeStealRes: aLifeStealResR,
+      placed: aTouchPlacedR,
       immDist: aImmDistR,
       bloodsucker: hasAbil(a.abilities, 'bloodSucker'),
       sourceState: combatHealStateFromUnit(a),
       version: ver,
     };
-    let tR = convolveTouchAttacks(dmgToB, bRemHP, aAlive, rangedTouchSpec);
+    let tR = convolveTouchAttacks(dmgToB, aAlive, rangedTouchSpec);
 
     // Haste doubles ranged attacks, including mana-pool magical ranged from Caster
     // *units* (Djinn, Efreet). The DOS engines require 7 mana in 1.31 or 6 in CP 1.60
@@ -1230,15 +1323,26 @@ function resolveCombat(a, b, opts) {
     const hasteDoublesRanged = aHaste && rangedAttacker.rtb > 0 && aAlive > 0 && bRemHP > 0
       && !momHeroManaRanged;
     if (hasteDoublesRanged) {
-      tR = repeatTouchAttack(tR, dmgToB, bRemHP, aAlive, rangedTouchSpec);
+      tR = repeatTouchAttack(tR, dmgToB, aAlive, rangedTouchSpec);
     }
-    dmgToB = tR.dist;
+    // The volley has no joint traversal to clip its published total, so it clips here, at the
+    // same boundary and against the same figure: the HP B had entering the volley.
+    dmgToB = clipDistAtRemainingHp(tR.dist, bRemHP);
     const aLifeStealDistR = tR.lifeStealDist;
     const aLifeStealExpectedR = tR.lifeStealEV;
     const rangedStateMeans = rangedCombatHealingStateMeans(tR.outcomes, a, b);
 
     return {
       phases: null,
+      // The ranged volley resolves without a joint, so its rider marginals are read straight
+      // off the same outcome accumulators the joint traversal would have walked. `attackLabels`
+      // names the `melee` base-roll slot for the UI, the same way a breakdown row does.
+      // Same two spell-path arms as the melee rows above: an Immolation the engine returns
+      // from, or turns into Doom damage, was scored against no Defense.
+      riders: phaseRiderRows(touchOutcomeRiders(tR), 'def', 'atk',
+        rowRiderChains(aTouchChainsR, aRangedDoomsB ? null : rangedDefChain,
+          damageSpellConsultsDefense(ver, b.abilities) ? defChains.bDefForImm : null)),
+      attackLabels: { def: hasteDoublesRanged ? 'Hasted Ranged' : 'Ranged' },
       totalDmgToA: [1],
       totalDmgToB: dmgToB,
       aLifeStealDist: aLifeStealDistR,

@@ -2,6 +2,39 @@
 // Touch and gaze kill probabilities, gaze/damage-spell distributions, phase breakdown
 // labels, Life Steal, and the immunity/Immolation/Wall of Fire defense helpers.
 
+// --- Rider reachability ---
+// Whether the engine reaches a rider's resistance roll at all. Each `*FailProb` below answers 0
+// for two different reasons — the block was skipped outright, or the roll was made and cannot
+// succeed — and the resolver has to tell them apart: a skipped block emits no histogram, while a
+// roll that cannot succeed emits one with all its mass at 0 (`CLAUDE.md`, *Input/output
+// contract*). Each predicate is named once here and read by both the probability beside it and
+// the placement map `touchParams` builds (`combat_phases.js`), so the two cannot drift.
+//
+// One predicate serves both engine families because both spell the same test, in different
+// places. Caster.exe repeats `not Units[du].magicimmunity` inside each rider's own condition
+// (`Combat.ApplyAttack.pas:477`, `:491`, `:499`, `:507`, `:519`) and omits it from Poison's
+// (`:526`). The DOS builds hoist it: `!(Attribs_1 & USA_IMMUNITY_MAGIC)` at `131:0x99F67` opens
+// the whole rider group and its false arm jumps to `0x9A1E6`, past Dispel Evil, Stoning Touch,
+// Death Touch, Life Steal and Destruction together, which is why the individual DOS blocks at
+// `0x9A010` and `0x9A094` carry only their own Stoning/Death immunity test. DOS Poison sits
+// outside that gate at `0x9A2D8`, behind `USA_IMMUNITY_POISON` alone. `Reference docs/DOS
+// reconstructed/combat.c`. That answers the question the F223 run left open.
+function poisonReachesRoll(defAbilities) {
+  return !hasAbil(defAbilities, 'poisonImmunity');
+}
+
+function stoningTouchReachesRoll(defAbilities) {
+  return !hasAbil(defAbilities, 'stoningImmunity') && !hasAbil(defAbilities, 'magicImmunity');
+}
+
+function deathTouchReachesRoll(defAbilities) {
+  return !hasAbil(defAbilities, 'deathImmunity') && !hasAbil(defAbilities, 'magicImmunity');
+}
+
+function lifeStealReachesRoll(defAbilities) {
+  return !hasAbil(defAbilities, 'deathImmunity') && !hasAbil(defAbilities, 'magicImmunity');
+}
+
 // --- Poison Touch ---
 // Compute probability of failing a single poison resistance roll.
 // MoM: d10, success if roll ≤ Resistance. pFail = max(0, (10 - res) / 10).
@@ -12,7 +45,7 @@
 // excludes Righteousness, Elemental Armor, Resist Elements, Bless and Resist Magic.
 function poisonFailProb(defRes, defAbilities, version) {
   const isCoM = version && version.startsWith('com');
-  if (hasAbil(defAbilities, 'poisonImmunity')) return 0;
+  if (!poisonReachesRoll(defAbilities)) return 0;
   const penalty = isCoM ? 1 : 0;
   const effectiveRes = defRes - penalty;
   if (effectiveRes >= 10) return 0;
@@ -27,7 +60,7 @@ function poisonFailProb(defRes, defAbilities, version) {
 // resistance — Magic Immunity via a gate that jumps past the whole touch/gaze group.
 // Righteousness does not apply: the realm is Nature, and Righteousness covers Chaos and Death.
 function stoningFailProb(defRes, defAbilities, modifier) {
-  if (hasAbil(defAbilities, 'stoningImmunity') || hasAbil(defAbilities, 'magicImmunity')) return 0;
+  if (!stoningTouchReachesRoll(defAbilities)) return 0;
   const effectiveRes = defRes + modifier;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
@@ -41,7 +74,7 @@ function stoningFailProb(defRes, defAbilities, modifier) {
 // Each attacking figure makes one resistance roll on the target; a failed roll kills
 // one defender figure.
 function deathTouchFailProb(defRes, defAbilities, modifier) {
-  if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) return 0;
+  if (!deathTouchReachesRoll(defAbilities)) return 0;
   const effectiveRes = defRes + modifier;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
@@ -56,15 +89,16 @@ function deathTouchFailProb(defRes, defAbilities, modifier) {
 //
 // **Neither caller tests the defender's Spirit Link, and neither may.** Spirit Link is Warlord's
 // alone (`PROVENANCE[spiritLink]`, `stats_identity.js`), and the engine's write is a derivation
-// one: `UnitCalc.CAS:1305-1306` clears the calculated `Fantastic` flag at the tail of the
+// one: `UnitCalc.CAS:1297-1298` clears the calculated `Fantastic` flag at the tail of the
 // recalculation, which the `d:spiritLink` step models and which is the last write of that field
 // in the Warlord chain. A spirit-linked target therefore reaches these functions projected as
 // `normal_*` and falls out on each caller's own unit-type test, with nothing left for a second
 // test to do. A defender-side `spiritLink` read here was that second copy, and because the key
 // exists in no other engine it turned the rider off outright in `mom_1.31`, `mom_cp_1.60.00`,
 // `com_6.08` and `com2_1.05.11` (`SPEC.md`, *Versions*, invariant 4; F168 deleted both).
+// Magic Immunity is not tested here: it belongs to the two callers' reachability predicates,
+// `dispelEvilReachesRoll` and `exorciseReachesRoll`, which both run before this.
 function fantasticResistKillFailProb(defRes, defAbilities, penalty) {
-  if (hasAbil(defAbilities, 'magicImmunity')) return 0;
   const effectiveRes = defRes - penalty;
   if (effectiveRes >= 10) return 0;
   return Math.min(1, Math.max(0, (10 - effectiveRes) / 10));
@@ -76,6 +110,19 @@ function fantasticResistKillFailProb(defRes, defAbilities, penalty) {
 function isCreatedUndeadTarget(defUnitType, defAbilities) {
   return defUnitType === 'fantastic_death'
     && (hasAbil(defAbilities, 'undead') || hasAbil(defAbilities, 'animated'));
+}
+
+// The Dispel Evil block's own eligibility: the DOS arms test the target's race before they
+// roll, so a target outside it is not "resisted", the rider is never dispatched at all.
+function dispelEvilPenalty(defUnitType, defAbilities) {
+  if (isCreatedUndeadTarget(defUnitType, defAbilities)) return 9;
+  if (defUnitType === 'fantastic_death' || defUnitType === 'fantastic_chaos') return 4;
+  return null;
+}
+
+function dispelEvilReachesRoll(defAbilities, defUnitType) {
+  return dispelEvilPenalty(defUnitType, defAbilities) !== null
+    && !hasAbil(defAbilities, 'magicImmunity');
 }
 
 // --- Dispel Evil ---
@@ -95,15 +142,18 @@ function isCreatedUndeadTarget(defUnitType, defAbilities) {
 // STAT-FORMULA[dispelEvilTouchRider]
 // PROVENANCE[dispelEvilTouchRider]: VERIFIED versions=mom_1.31,mom_cp_1.60.00; sources=Reference docs/DOS reconstructed/combat.c@span:29:a622cfdbc42ac471b8aeb63d
 function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
-  let penalty;
-  if (isCreatedUndeadTarget(defUnitType, defAbilities)) {
-    penalty = 9;
-  } else if (defUnitType === 'fantastic_death' || defUnitType === 'fantastic_chaos') {
-    penalty = 4;
-  } else {
-    return 0;
-  }
-  return fantasticResistKillFailProb(defRes, defAbilities, penalty);
+  if (!dispelEvilReachesRoll(defAbilities, defUnitType)) return 0;
+  return fantasticResistKillFailProb(defRes, defAbilities,
+    dispelEvilPenalty(defUnitType, defAbilities));
+}
+
+// CoM 6.08's common 0x0800 flag retains the executable-table name Dispel Evil, but the
+// version-specific consumer ignores Spec_Att_Attrib and uses literal -3. Its persistent-unit
+// Spell Lock bit skips the resistance call altogether.
+function exorciseReachesRoll(defAbilities, defUnitType, version) {
+  if (!String(defUnitType || '').startsWith('fantastic_')) return false;
+  if (version === 'com_6.08' && hasAbil(defAbilities, 'spellLock')) return false;
+  return !hasAbil(defAbilities, 'magicImmunity');
 }
 
 // --- Exorcise (CoM-era successor to Dispel Evil) ---
@@ -116,25 +166,27 @@ function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
 // `exorcise` member of `Caster.exe`'s `AttackFlagsT`, which the modern rider loop reads first of
 // the six. Neither MoM build compiles this arm, so the key is out of scope there.
 // STAT-FORMULA[exorciseTouchRider]
-// PROVENANCE[exorciseTouchRider]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:34:29a4d4421788f0f43bb2ab70 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:13:b67a607c5a672579af407603
+// PROVENANCE[exorciseTouchRider]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:34:29a4d4421788f0f43bb2ab70 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:13:b67a607c5a672579af407603
 function exorciseFailProb(defRes, defAbilities, defUnitType, modifier, version) {
-  if (!String(defUnitType || '').startsWith('fantastic_')) return 0;
-  // CoM 6.08's common 0x0800 flag retains the executable-table name Dispel Evil,
-  // but the version-specific consumer ignores Spec_Att_Attrib and uses literal -3.
-  // Its persistent-unit Spell Lock bit skips the resistance call altogether.
-  if (version === 'com_6.08' && hasAbil(defAbilities, 'spellLock')) return 0;
+  if (!exorciseReachesRoll(defAbilities, defUnitType, version)) return 0;
   const basePenalty = version === 'com_6.08' ? 3 : -modifier;
   const penalty = basePenalty + (isCreatedUndeadTarget(defUnitType, defAbilities) ? 3 : 0);
   return fantasticResistKillFailProb(defRes, defAbilities, penalty);
 }
 
+function destructionReachesRoll(defAbilities, version) {
+  return destructionInVersion(version) && !hasAbil(defAbilities, 'magicImmunity');
+}
+
 // --- Destruction ---
 // CoM2 and Warlord only. Each surviving attacking figure makes one resistance-roll
-// attempt inside ApplyAttack's figure loop. Any failed attempt assigns 150 to the
-// engine's destruction result bucket, which destroys the whole target unit after the
-// calculator's remaining-HP cap; repeated failures do not add or multiply that 150.
+// attempt inside ApplyAttack's figure loop. A failed attempt runs `Result.field_00 := 150`
+// — an assignment of a flat constant, not an `Inc` and not the target's remaining HP — so
+// repeated failures neither add nor multiply, and whatever Exorcise and Stoning Touch had
+// already put in that bucket is discarded (`Combat.ApplyAttack.pas`, the `$005B2DC2` write).
 // Treated as a Chaos-realm attack, so Bless protects: callers pass the Bless-boosted
-// resistance (the same `ResDeath` figure the engine uses for Death/Chaos effects).
+// Chaos-realm resistance (`ResChaos`), the realm `Combat.ApplyAttack.pas:521` hands the
+// roll as `inferred_ChaosRealm`.
 // Righteousness is deliberately absent — it is MoM-only, and Destruction is CoM2/Warlord-only,
 // so the two can never meet; a Righteousness branch here would be dead code.
 // Death Immunity and Stoning Immunity do NOT apply — the realm is Chaos, not Death. Magic
@@ -142,9 +194,25 @@ function exorciseFailProb(defRes, defAbilities, defUnitType, modifier, version) 
 // to stop on a magical ranged attack, and Destruction is not among them.
 // The stored value is a resistance modifier in the same sense as Stoning/Death Touch
 // (negative = penalty); the roster ships Destruction=0, i.e. an unmodified roll.
+// Which engines the calculator rolls the rider in. `TOUCH_KEY_SCOPE_IDS` scopes Dispel Evil and
+// Exorcise because their *placement* differs by build; Destruction is placed everywhere the
+// ability is set, so its version test lives here, beside the roll, and the placement map reads
+// the same predicate rather than restating it.
+//
+// The scope is the calculator's, not the engines'. All three DOS builds compile an
+// `ATT_DESTRUCTION` block — `Reference docs/DOS reconstructed/combat.c`, the `0x9A19E` block,
+// which adds the target's `hits` in MoM/CP and a flat 100 in CoM 1 — but the only writer of the
+// flag is `BU_Apply_Item_Attack_Specials` (`unitcalc.c`, `IP_DESTRUCTION` at `131:0x8E550`), an
+// item power. Hero equipment is deferred by SPEC, so no DOS unit the calculator can build
+// carries the flag, and the DOS arm is unmodelled rather than absent (TASKS `M3`, blocked by
+// F41). Widening this predicate before that lands would draw a Destruction panel no DOS
+// matchup can reach.
+function destructionInVersion(version) {
+  return !!(version && version.startsWith('com2_'));
+}
+
 function destructionFailProb(defRes, defAbilities, modifier, version) {
-  if (!version || !version.startsWith('com2_')) return 0;
-  if (hasAbil(defAbilities, 'magicImmunity')) return 0;
+  if (!destructionReachesRoll(defAbilities, version)) return 0;
   const effectiveRes = defRes + modifier;
   if (effectiveRes >= 10) return 0;
   return Math.min(1, Math.max(0, (10 - effectiveRes) / 10));
@@ -153,8 +221,12 @@ function destructionFailProb(defRes, defAbilities, modifier, version) {
 // --- Death Gaze ---
 // Same roll mechanics as Stoning Gaze. Death Immunity and Magic Immunity each skip the
 // roll outright; Righteousness' +30 is already inside `defRes`.
+// The skip pair is the same two immunities the Death-realm touch block tests, so
+// `deathTouchReachesRoll` above is its one home rather than this block carrying a second copy.
+// The hover chain a gaze histogram shows reads the same predicate, so the probability and the
+// chain cannot disagree about whether the roll happened (F222.5).
 function deathGazeFailProb(defRes, defAbilities, modifier) {
-  if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) return 0;
+  if (!deathTouchReachesRoll(defAbilities)) return 0;
   const effectiveRes = defRes + modifier;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
@@ -282,6 +354,14 @@ function gazeRealm(atkAbilities) {
 // the gazer's living figures. CoM2 and Warlord instead call `ApplyAttack` with a literal `1`
 // for Doom Gaze alone (0x5B3858 attacker, 0x5B3982 retaliation) while both kill-roll gazes
 // pass `LivingFigures(au)`, so their doom lands once and the caller passes 1.
+// The only part of a gaze that is scored against the target's Defense is its conventional
+// component, and Black Sleep turns even that into Doom damage. Read by the builder below and by
+// the hover chain a gaze row's base-roll histogram shows: a pure kill or Doom gaze consults no
+// Defense at all, so it must not claim it was scored against one (F222.5).
+function gazeConsultsDefense(atk, conventionalAsDoom) {
+  return (atk.effectiveGazeRanged || 0) > 0 && !conventionalAsDoom;
+}
+
 function buildGazeDist(atk, def, atkAlive, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, conventionalAsDoom = false, defToBlockOverride = null, minDamageFromHits = null, doomFigs = 1) {
   if (defAlive <= 0 || defRemHP <= 0) return [1];
   let dist = [1];
@@ -289,29 +369,53 @@ function buildGazeDist(atk, def, atkAlive, defAlive, defRemHP, stoningFail, deat
   const defToBlock = (defToBlockOverride != null) ? defToBlockOverride : def.toBlock;
   if (atk.effectiveGazeRanged > 0) {
     const gazeFigs = Math.max(1, atkAlive);
-    dist = conventionalAsDoom
-      ? calcDoomDist(gazeFigs, atk.effectiveGazeRanged, defRemHP)
-      : calcTotalDamageDist(gazeFigs, atk.effectiveGazeRanged, atk.toHitRtb, defStat, defToBlock, def.hp, defRemHP, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, minDamageFromHits);
+    dist = gazeConsultsDefense(atk, conventionalAsDoom)
+      ? calcTotalDamageDist(gazeFigs, atk.effectiveGazeRanged, atk.toHitRtb, defStat, defToBlock, def.hp, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, minDamageFromHits)
+      : calcDoomDist(gazeFigs, atk.effectiveGazeRanged);
   }
   // Doom Gaze: exact damage, no rolls, no immunities, delivered `doomFigs` times.
   if (doomStr > 0) {
-    dist = convolveDists(dist, calcDoomDist(Math.max(1, doomFigs), doomStr, defRemHP), defRemHP);
+    dist = convolveDists(dist, calcDoomDist(Math.max(1, doomFigs), doomStr));
   }
-  // Stoning- and death-gaze kill rolls. A figure dies if it fails *either* roll,
-  // and can only die once, so the two are combined into a single joint per-figure
-  // kill probability rather than convolved independently (which would double-count
-  // a figure that fails both — only Chaos Spawn carries both gazes at once).
-  if (stoningFail > 0 || deathFail > 0) {
-    const jointFail = 1 - (1 - stoningFail) * (1 - deathFail);
-    dist = convolveDists(dist, calcFigureKillDmgDist(defAlive, jointFail, def.hp, defRemHP), defRemHP);
+  // Stoning- and death-gaze kill rolls, convolved **independently**. The two DOS loops are
+  // sequential and mutually blind: both iterate `0 .. Cur_Figures-1` over an unchanging
+  // `Cur_Figures` (0x99E07 and 0x99EA6 re-read `es:[bx+0xd]`, which nothing between 0x99D97
+  // and 0x99EAE writes) and neither identifies a figure, so a figure that fails both rolls is
+  // charged twice — `hits` into `local_damage[2]` from the stoning loop at 0x99D73-0x99E0F and
+  // `hits` into `local_damage[0]` from the death loop at 0x99E11-0x99EAE. It is not only a
+  // bucket split: `BU_ApplyDamage` derives `figures_lost` from the sum of the three buckets
+  // (`total / bu->hits`, 0x8747E) and clamps only in overkill (0x874D3), so the second charge
+  // raises expected kills across the normal range too. The joint per-figure probability this
+  // replaced was true of the figure count and false of the damage record, which is what the
+  // calculator publishes (`Reference docs/DOS reconstructed/F225.1 gaze kill adjudication.md`).
+  //
+  // A modern gaze is its own `ApplyAttack` call and passes one of the two as 0, so this
+  // degenerates to a single kill roll there. The DOS caller passes `stoningFail` as 0 and
+  // routes that loop through the rider channel instead, because it is the one part of the gaze
+  // that writes the irreversible bucket (`combat.c:4419`).
+  if (stoningFail > 0) {
+    dist = convolveDists(dist, buildGazeKillDist(def, defAlive, defRemHP, stoningFail));
+  }
+  if (deathFail > 0) {
+    dist = convolveDists(dist, buildGazeKillDist(def, defAlive, defRemHP, deathFail));
   }
   return dist;
 }
 
+// One gaze kill loop's damage: one resistance roll per *defending* figure, each failure
+// charging that figure's full `hits`. Split out of `buildGazeDist` so the DOS stoning loop can
+// be convolved into its own damage bucket and its own histogram while the death loop stays on
+// the gaze's base distribution.
+function buildGazeKillDist(def, defAlive, defRemHP, fail) {
+  if (defAlive <= 0 || defRemHP <= 0) return [1];
+  return calcFigureKillDmgDist(defAlive, fail, def.hp);
+}
+
 // Build a deterministic doom damage distribution.
-// Doom damage skips attack rolls and defense rolls: total = figs * str, capped at maxDmg.
-function calcDoomDist(figs, str, maxDmg) {
-  const totalDmg = Math.min(figs * str, maxDmg);
+// Doom damage skips attack rolls and defense rolls: total = figs * str. Nothing truncates it
+// inside the phase (`CLAUDE.md`, *Architecture*), so the total is exact even past the target.
+function calcDoomDist(figs, str) {
+  const totalDmg = Math.max(0, figs * str);
   const dist = new Array(totalDmg + 1).fill(0);
   dist[totalDmg] = 1;
   return dist;
@@ -321,7 +425,7 @@ function calcDoomDist(figs, str, maxDmg) {
 // The tests are strictly ordered and mutually exclusive, so one positive record gains exactly
 // one point even if more than one field is positive. A wholly non-positive record is unchanged.
 // STAT-FORMULA[applyDamageSpellAmplifier]
-// PROVENANCE[applyDamageSpellAmplifier]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
+// PROVENANCE[applyDamageSpellAmplifier]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
 function applyDamageSpellAmplifier(damageRecord, amplified) {
   const adjusted = {
     normal: damageRecord.normal,
@@ -335,29 +439,45 @@ function applyDamageSpellAmplifier(damageRecord, amplified) {
   return adjusted;
 }
 
+// Which arm of the spell path a cast takes. The modern engine returns before reading Defense
+// on Magic Immunity, and Black Sleep turns the spell into Doom damage, which reads no Defense
+// either; only `rolled` scores against one. Dispatched on by `calcDamageSpellDist` below, and
+// read by the hover chain an Immolation histogram shows so the two cannot disagree (F222.5).
+function damageSpellArm(version, targetAbilities, nonmagic = false) {
+  if (!(version && version.startsWith('com2_'))) return 'rolled';
+  if (hasAbil(targetAbilities, 'magicImmunity') && !nonmagic) return 'immune';
+  if (hasAbil(targetAbilities, 'blackSleep')) return 'doom';
+  return 'rolled';
+}
+
+function damageSpellConsultsDefense(version, targetAbilities, nonmagic = false) {
+  return damageSpellArm(version, targetAbilities, nonmagic) === 'rolled';
+}
+
 // Shared direct-spell damage path for Immolation and Wall of Fire. The modern engine exits
 // on Magic Immunity before inspecting Black Sleep. Black Sleep then turns the spell into Doom
 // damage. Modern Area iterations use a full HP-per-figure cap. A non-Area spell instead uses the
 // ordinary attack spill loop: the wounded top figure supplies the first boundary, and every
 // crossed boundary rerolls Defense and reapplies Invulnerability before the remainder continues.
 // STAT-FORMULA[damageSpellResolution]
-// PROVENANCE[damageSpellResolution]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:8:678a9503cf9c8ef4b13b7642 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:23:c169d74794484ec3c2d57202 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:34:6c7e183574c858090c5884e5 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
-function calcDamageSpellDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap,
+// PROVENANCE[damageSpellResolution]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:8:678a9503cf9c8ef4b13b7642 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:23:c169d74794484ec3c2d57202 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:34:6c7e183574c858090c5884e5 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
+function calcDamageSpellDist(targetFigs, atkStr, toHit, defStr, toBlock, hp,
   invulnBonus, minDamageFromHits, topFigHP, version, targetAbilities,
   area = true, nonmagic = false, amplified = false) {
   const modern = !!(version && version.startsWith('com2_'));
-  if (modern && hasAbil(targetAbilities, 'magicImmunity') && !nonmagic) return [1];
+  const arm = damageSpellArm(version, targetAbilities, nonmagic);
+  if (arm === 'immune') return [1];
   let dist;
-  if (modern && hasAbil(targetAbilities, 'blackSleep')) {
+  if (arm === 'doom') {
     dist = area
-      ? calcDoomDist(targetFigs, Math.min(atkStr, hp), cap)
-      : calcDoomDist(1, atkStr, cap);
+      ? calcDoomDist(targetFigs, Math.min(atkStr, hp))
+      : calcDoomDist(1, atkStr);
   } else if (area) {
     const areaTopFigHP = modern ? undefined : topFigHP;
-    dist = calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap,
+    dist = calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp,
       invulnBonus, minDamageFromHits, areaTopFigHP);
   } else {
-    dist = calcTotalDamageDist(1, atkStr, toHit, defStr, toBlock, hp, cap,
+    dist = calcTotalDamageDist(1, atkStr, toHit, defStr, toBlock, hp,
       invulnBonus, 0, false, topFigHP, minDamageFromHits);
   }
 
@@ -365,19 +485,49 @@ function calcDamageSpellDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap
   // adjustment explicit here so this total-damage projection uses ApplyDamageSpell's exact
   // normal -> irrecoverable -> undead priority instead of an equivalent but category-blind shift.
   if (!amplified) return dist;
-  const adjusted = new Array(cap + 1).fill(0);
+  const adjusted = new Array(dist.length + 1).fill(0);
   for (let damage = 0; damage < dist.length; damage++) {
     if (dist[damage] < 1e-15) continue;
     const damageRecord = applyDamageSpellAmplifier(
       { normal: damage, irrec: 0, undead: 0 }, amplified,
     );
-    const adjustedDamage = damageRecord.normal + damageRecord.irrec + damageRecord.undead;
-    adjusted[Math.min(cap, adjustedDamage)] += dist[damage];
+    adjusted[damageRecord.normal + damageRecord.irrec + damageRecord.undead] += dist[damage];
   }
   return adjusted;
 }
 
-// Phase label for a gaze attack given which gaze types are active.
+// --- Attack names ---
+// The name of the ordinary attack roll a phase makes. `melee` is the base-roll slot in every
+// phase (`TOUCH_RIDER_KEYS`, combat_fear_and_touch.js), so the slot holds the gaze's own damage
+// in a gaze row and the Thrown or Breath roll in a Thrown row; the UI labels it with the row's
+// own attack rather than printing "Melee" there. A row that resolves two directions at once
+// (melee + counter, 2nd strike + counter) names one attack per side, which is why these are
+// per-side names and not one string. The phase-label builders below compose their `label` out of
+// the same functions, so the row heading and the rider panel inside it cannot drift apart.
+function thrownAttackName(thrownType, hasted) {
+  const name = thrownType === 'thrown' ? 'Thrown'
+             : thrownType === 'fire' ? 'Fire Breath'
+             : 'Lightning Breath';
+  return hasted ? 'Hasted ' + name : name;
+}
+
+const FIRST_STRIKE_ATTACK_NAME = 'First Strike';
+
+function meleeAttackName(hasted) {
+  return hasted ? 'Hasted Melee' : 'Melee';
+}
+
+function secondStrikeAttackName(hasted) {
+  return hasted ? 'Hasted 2nd Strike' : '2nd Strike';
+}
+
+function counterAttackName(hasted) {
+  return hasted ? 'Hasted Counter-attack' : 'Counter-attack';
+}
+
+// Phase label for a gaze attack given which gaze types are active. Also the gaze row's attack
+// name: the side prefix is added by `gazePhaseLabel`, and a rider panel sits in a column that
+// already states its side.
 function gazeLabel(stoning, death, doom) {
   const count = (stoning ? 1 : 0) + (death ? 1 : 0) + (doom ? 1 : 0);
   if (count > 1) return 'Gaze Attack';
@@ -423,11 +573,8 @@ function thrownPhaseLabel(params) {
     lifeSteal,
     immolation,
   } = params;
-  let label = thrownType === 'thrown' ? 'Thrown'
-            : thrownType === 'fire' ? 'Fire Breath'
-            : 'Lightning Breath';
-  if (hasted) label = 'Hasted ' + label;
-  return appendBreakdownTouchLabels(label, { poisonTouch, stoningTouch, deathTouch, dispelEvil, exorcise, destruction, lifeSteal, immolation });
+  return appendBreakdownTouchLabels(thrownAttackName(thrownType, hasted),
+    { poisonTouch, stoningTouch, deathTouch, dispelEvil, exorcise, destruction, lifeSteal, immolation });
 }
 
 function gazePhaseLabel(side, params) {
@@ -457,25 +604,25 @@ function gazePhaseLabel(side, params) {
 }
 
 function firstStrikeBreakdownLabel(params) {
-  return appendBreakdownTouchLabels('First Strike', params);
+  return appendBreakdownTouchLabels(FIRST_STRIKE_ATTACK_NAME, params);
 }
 
 function secondStrikeCounterBreakdownLabel(params) {
   const { counterHasted, ...touchParams } = params;
-  let label = appendBreakdownTouchLabels('Hasted 2nd Strike', touchParams);
-  label += counterHasted ? ' + Hasted Counter-attack' : ' + Counter-attack';
+  let label = appendBreakdownTouchLabels(secondStrikeAttackName(true), touchParams);
+  label += ' + ' + counterAttackName(counterHasted);
   return label;
 }
 
 function counterBreakdownLabel(params) {
   const { counterHasted, ...touchParams } = params;
-  return appendBreakdownTouchLabels(counterHasted ? 'Hasted Counter-attack' : 'Counter-attack', touchParams);
+  return appendBreakdownTouchLabels(counterAttackName(counterHasted), touchParams);
 }
 
 function meleeBreakdownLabel(params) {
   const { hasted, counterHasted, ...touchParams } = params;
-  let label = appendBreakdownTouchLabels(hasted ? 'Hasted Melee' : 'Melee', touchParams);
-  label += counterHasted ? ' + Hasted Counter-attack' : ' + Counter-attack';
+  let label = appendBreakdownTouchLabels(meleeAttackName(hasted), touchParams);
+  label += ' + ' + counterAttackName(counterHasted);
   return label;
 }
 
@@ -487,7 +634,7 @@ function meleeBreakdownLabel(params) {
 // margin over, so a bonus applied only to this test would be spent as damage.
 // The lifeSteal value is the resistance penalty (e.g. -3 means target's res is penalized by 3).
 function lifeStealEffective(defRes, defAbilities, modifier) {
-  if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) return null;
+  if (!lifeStealReachesRoll(defAbilities)) return null;
   const effRes = defRes + modifier;
   if (effRes >= 10) return null;
   return modifier;
@@ -509,7 +656,7 @@ function lifeStealEffective(defRes, defAbilities, modifier) {
 // in `modernAttackChannels` (`combat_phases.js`) — so the modern arm here is unconditional, and no
 // arm reads the card's base value.
 // STAT-FORMULA[touchDispatcherAdmission]
-// PROVENANCE[touchDispatcherAdmission]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:21:cab055592de9a7dcacc5683e | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:12:925a0ecea8452d215c0226e1 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:27:136dbc9a5a7d34e8fd32dfda | Reference docs/Caster binary/Combat.PerformAttacks.pas@span:36:da1652787ca5b24382ba9800
+// PROVENANCE[touchDispatcherAdmission]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:21:cab055592de9a7dcacc5683e | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:12:925a0ecea8452d215c0226e1 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:27:136dbc9a5a7d34e8fd32dfda | Reference docs/Caster binary/Combat.PerformAttacks.pas@span:36:da1652787ca5b24382ba9800
 function touchAttackFires(effectiveAtk, version) {
   return version === 'mom_1.31' ? effectiveAtk > 0 : true;
 }
@@ -533,7 +680,7 @@ function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, baseGazeRanged,
 // control is hidden in all three — `COMBAT_VERSION_SCOPES` (`steps.js`) is the home for that fact
 // and this is its one gate.
 // STAT-FORMULA[rulerOfUnderworldEligibility]
-// PROVENANCE[rulerOfUnderworldEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:1771129697cc08c42e75f953 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:35fc242da2227f6e691cb83f
+// PROVENANCE[rulerOfUnderworldEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:1771129697cc08c42e75f953 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:35fc242da2227f6e691cb83f
 function rulerOfUnderworldActiveForUnit(abilities, version) {
   return combatEffectInVersion('resolution:rulerOfUnderworldEligibility', version)
     && hasAbil(abilities, 'rulerOfUnderworld');
@@ -620,7 +767,7 @@ function hasNonCorporealEffect(abilities, version) {
 // combat — the alive count passed in already reflects cumulative in-combat damage.
 // Only boosts an attack that already exists (base strength > 0); never creates one.
 // STAT-FORMULA[rageEffectiveAttack]
-// PROVENANCE[rageEffectiveAttack]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:13:325ede6460c3b3ea9b78f8a2
+// PROVENANCE[rageEffectiveAttack]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:325ede6460c3b3ea9b78f8a2
 function applyRage(baseAtk, unit, aliveNow) {
   if (!combatEffectInVersion('resolution:rageEffectiveAttack', unit.combatVersion)) return baseAtk;
   if (baseAtk <= 0 || !hasAbil(unit.abilities, 'rage')) return baseAtk;
@@ -635,7 +782,7 @@ function applyRage(baseAtk, unit, aliveNow) {
 // was established is `Reference docs/MoM binary analysis.md`, *Immolation and Wall of Fire are
 // both Fireball*.
 // STAT-FORMULA[immolationStrength]
-// PROVENANCE[immolationStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:38:88b87d43f6f27bfce4600ec3 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:6:61977524faa49301ba9b8fa3 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:3:d7f972d281da4e1635757ec7 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1
+// PROVENANCE[immolationStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:38:88b87d43f6f27bfce4600ec3 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:6:61977524faa49301ba9b8fa3 | Reference docs/Caster binary/Spells.DamageSpells.pas@span:3:d7f972d281da4e1635757ec7 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/spells.ini@span:3:5caa7f065c55dac1ccd2d5c1
 function immolationStr(version, chaosConjunction = false) {
   const modern = !!(version && version.startsWith('com2_'));
   const base = (version && (version.startsWith('com_') || modern)) ? 10 : 4;
@@ -673,7 +820,7 @@ function immolationFiresInPhase(version, phase) {
 // *Immolation and Wall of Fire are both Fireball*; `Reference docs/CoM2 data tables.md`,
 // *Wall of Fire*.
 // STAT-FORMULA[wallOfFireStrength]
-// PROVENANCE[wallOfFireStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:7:ff40688656520f07bf1f3557 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/DOS reconstructed/spelldat.c@span:30:33d3c975302b2b73b0595bca | TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI@span:17:760d893e17440a46164523c2
+// PROVENANCE[wallOfFireStrength]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:7:ff40688656520f07bf1f3557 | Reference docs/DOS reconstructed/combat.c@span:9:932433dee123be7e2cfc4a2c | Reference docs/DOS reconstructed/spelldat.c@span:30:33d3c975302b2b73b0595bca | TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/SPELLS.INI@span:17:760d893e17440a46164523c2
 function wallOfFireStr(version) {
   if (version && version.startsWith('com2_warlord')) return 12;
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
@@ -682,21 +829,21 @@ function wallOfFireStr(version) {
 
 // Wall of Fire To Hit: standard 30% spell To Hit, except Warlord raises it to 60%.
 // STAT-FORMULA[wallOfFireToHit]
-// PROVENANCE[wallOfFireToHit]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI@span:17:760d893e17440a46164523c2
+// PROVENANCE[wallOfFireToHit]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/SPELLS.INI@span:17:760d893e17440a46164523c2
 function wallOfFireToHit(version) {
   return (version && version.startsWith('com2_warlord')) ? 0.6 : 0.3;
 }
 
 // Warlord removes Wall of Fire's Area flag, selecting one ordinary spill-capable attack.
 // STAT-FORMULA[wallOfFireAreaShape]
-// PROVENANCE[wallOfFireAreaShape]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/SPELLS.INI@span:17:760d893e17440a46164523c2
+// PROVENANCE[wallOfFireAreaShape]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=TABLE=Reference docs/Script source/CoM2 1.05.11 base/SPELLS.INI@span:12:85344419a06ccdd501b45c67 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/SPELLS.INI@span:17:760d893e17440a46164523c2
 function wallOfFireSingleFigure(version) {
   return !!(version && version.startsWith('com2_warlord'));
 }
 
 // FirewallEffect reads the calculated Teleporting/Merging fields through HasTeleMerge.
 // STAT-FORMULA[wallOfFireEligibility]
-// PROVENANCE[wallOfFireEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.CallClosureHelpers.pas@span:6:39bf9c419009b48c27e6c076
+// PROVENANCE[wallOfFireEligibility]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.CallClosureHelpers.pas@span:6:39bf9c419009b48c27e6c076
 function wallOfFireEligible(version, attackerAbilities) {
   return !(version && version.startsWith('com2_')
     && (hasAbil(attackerAbilities, 'teleporting') || hasAbil(attackerAbilities, 'merging')));
@@ -705,7 +852,7 @@ function wallOfFireEligible(version, attackerAbilities) {
 // The two-card projection treats Card B as the present opposing-owner unit in AmplifiedDamage's
 // combat scan. Copies do not stack because this result is Boolean.
 // STAT-FORMULA[wallOfFireAmplifierProjection]
-// PROVENANCE[wallOfFireAmplifierProjection]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
+// PROVENANCE[wallOfFireAmplifierProjection]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Spells.DamageSpells.pas@span:10:7409aeb6eaa969da9307bc69 | Reference docs/Caster binary/Combat.AmplifiedDamage.pas@span:26:1f64b59e444155839ce664c8
 function wallOfFireAmplified(version, opposingAbilities) {
   return !!(version && version.startsWith('com2_warlord_'))
     && hasAbil(opposingAbilities, 'amplifier');

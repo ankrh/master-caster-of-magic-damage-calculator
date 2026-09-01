@@ -693,19 +693,19 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
   },
   stoningGazeBasic: {
-    desc: 'Stoning Gaze: Gaze -3 + 1 ranged vs 1 fig Res 5, 10 hp — stoning 8.0 + physical 0.06 = 8.06',
+    desc: 'Stoning Gaze: Gaze -3 + 1 ranged vs 1 fig Res 5, 10 hp — stoning 0.8×10 = 8.0 plus the physical 1 at 30% = 0.3, clipped at the 10 HP pool, = 8.06',
     a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -3 } },
     b: { res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 8.060 },
   },
   stoningGazeMultiFig: {
-    desc: 'Stoning Gaze Multi-fig: Gaze -1 + 1 ranged vs 4 figs Res 5, 5hp — stoning 12.0 + physical ~0.26',
+    desc: 'Stoning Gaze Multi-fig: Gaze -1 + 1 ranged vs 4 figs Res 5, 5hp — stoning 4×0.6×5 = 12.0 plus the physical 0.3, clipped at the 20 HP pool, = 12.261',
     a: { rtbType:'gaze_stoning', rtb:1, hp:10, abilities: { stoningGaze: -1 } },
     b: { figs:4, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 12.261 },
   },
   stoningGazeBilateral: {
-    desc: 'Bilateral Gaze: both -3 + 1 ranged, Res 5 — A gaze 8.06; B gaze (if B survives) 1.612',
+    desc: 'Bilateral Gaze: both -3 + 1 ranged, Res 5 — A gaze 8.06; B gaze fires on B\'s 20% survival for 0.2×8.06 = 1.612',
     a: { rtbType:'gaze_stoning', rtb:1, hp:10, res:5, abilities: { stoningGaze: -3 } },
     b: { rtbType:'gaze_stoning', rtb:1, hp:10, res:5, abilities: { stoningGaze: -3 } },
     expected: { dmgToA: 1.612, dmgToB: 8.060 },
@@ -785,7 +785,7 @@ definePresets({
     },
   },
   combinedStoningDeathGaze: {
-    desc: 'Chaos-Spawn-style combined gaze: type 104, strength 1, special value 3 vs Res 5, 10 hp — each kill roll 80% fail, so 1−(1−0.8)(1−0.8)=0.96 chance of 10 dmg. Type 104 delivers its strength as doom damage rather than rolling it, so the other 4% takes exactly 1: 0.96×10 + 0.04×1 = 9.64.',
+    desc: 'Chaos-Spawn-style combined gaze: type 104, strength 1, special value 3 vs Res 5, 10 hp — effective Res 2, so each kill roll fails 80% of the time. The two loops are independent and both charge the figure\'s full 10 hp, into different buckets (F225.1), so the phase-internal total is 1 + 10·S + 10·D with S,D ~ Bernoulli(0.8): 1 at p=0.04, 11 at p=0.32, 21 at p=0.64, expectation 1 + 8 + 8 = 17, split irreversible 8 / regular 9. Published clipped at the 10 HP pool: 0.04×1 + 0.96×10 = 9.640. NOT a guard on the double charge — the clip absorbs it, and a one-charge-per-figure model publishes the same 9.640. combinedStoningDeathGazeUnclipped below is the fixture that pins it.',
     a: { rtbType:'gaze_multiple', rtb:1, hp:10, abilities: { stoningGaze: -3, deathGaze: -3 } },
     b: { res:5, hp:10 },
     expected: { dmgToA: 0, dmgToB: 9.640 },
@@ -794,6 +794,18 @@ definePresets({
         'Not a defect of the fixture but of one-at-a-time ablation. dosGazeAbilityValues (combat_special_attacks.js:210-211) derives both stoningGaze and deathGaze from the one shared modifier and the rangedType, so the two entries are two views of one byte: remove either and the other still supplies the magnitude. Removing both does move the number - the --interactions probe reports the pair as non-additive.',
       'a.ability.deathGaze':
         'Keep. Same shared byte. The discriminator is rtbType gaze_multiple, which candidates() does not enumerate: it is type 104, the only type that runs both kill loops and the only one that delivers its strength as doom damage rather than rolling it.',
+    },
+  },
+  combinedStoningDeathGazeUnclipped: {
+    desc: 'The guard on the double charge (F225.2): the same combined type-104 gaze as combinedStoningDeathGaze, moved to a pool the clip cannot hide it in. Special value 3 vs Res 12 leaves effective Res 9, so each loop fails 10% per defending figure, and 8 figures × 10 hp is an 80 HP pool. Both loops run 0..Cur_Figures−1 over the same unreduced 8, so S,D ~ Binomial(8, 0.1) independently: the stoning loop charges 10·S into irreversible (mean 8) and the death loop 10·D into regular, alongside the doom 1 (mean 9). Total 1 + 10·(S+D) with S+D ~ Binomial(16, 0.1) = 1 + 16 = 17.000; only 6.1e-5 of the mass reaches the 80 pool, costing 0.000125. One charge per figure — 1−0.9² = 0.19 per figure, 8 × 0.19 × 10 + 1 — would publish 16.20.',
+    a: { rtbType:'gaze_multiple', rtb:1, hp:10, abilities: { stoningGaze: -3, deathGaze: -3 } },
+    b: { figs:8, res:12, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 17.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Not a defect of the fixture but of one-at-a-time ablation, exactly as on combinedStoningDeathGaze. dosGazeAbilityValues (combat_special_attacks.js) derives both stoningGaze and deathGaze from the one shared modifier and the rangedType, so the two entries are two views of one byte: remove either and the other still supplies the magnitude.',
+      'a.ability.deathGaze':
+        'Keep. Same shared byte. The discriminators are rtbType gaze_multiple, b.figs and b.res, none of which candidates() enumerates: the claim is that both kill loops charge over the same unreduced figure count, and it is only readable in a pool the clip does not reach.',
     },
   },
   hiddenGazePerAttackerFigure: {
@@ -807,13 +819,13 @@ definePresets({
     },
   },
   hiddenGazeStoningKillsPerDefenderFigure: {
-    desc: 'The kill rolls, by contrast, are once per DEFENDING figure and resolve once per attack regardless of attacker figures. 2 attacker figs vs 4 defender figs × 5 hp; Stoning −5 vs Res 5 → effRes 0, every figure dies = 20 (the physical 2 is absorbed by the cap). Scaling kills by the attacker instead would kill only 2 figures → 12.',
+    desc: 'The kill rolls, by contrast, are once per DEFENDING figure and resolve once per attack regardless of attacker figures. 2 attacker figs vs 4 defender figs × 5 hp; Stoning −5 vs Res 5 → effRes 0, every figure dies = 20, and the physical 2 rides on top inside the phase; the published total clips at the 20 HP pool = 20. Scaling kills by the attacker instead would kill only 2 figures → 12.',
     a: { rtbType:'gaze_stoning', rtb:1, figs:2, atk:0, hp:10, toHitRtbMod:70, abilities: { stoningGaze: -5 } },
     b: { figs:4, atk:0, def:0, res:5, hp:5 },
     expected: { dmgToA: 0, dmgToB: 20 },
     vacuity: {
       'name-binds-nothing':
-        'Keep. A pure tokenisation artefact - containsRun looks for \'stoning gaze\' and the key says \'gaze stoning\'. The feature is live at delta 8.125, and the figure counts the key does name are outside candidates().',
+        'Keep. A pure tokenisation artefact - containsRun looks for \'stoning gaze\' and the key says \'gaze stoning\'. The feature is live, and the figure counts the key does name are outside candidates().',
     },
   },
   hiddenGazeIgnoresWeaponImmunity: {
@@ -918,25 +930,25 @@ definePresets({
     },
   },
   doomGazeKill: {
-    desc: 'Doom Gaze 12 vs 10 hp — exact 10 damage (capped at total HP), kills the unit.',
+    desc: 'Doom Gaze 12 vs 10 hp — exact 12 damage inside the phase, which kills the unit; the published total clips at the 10 HP pool.',
     a: { rtbType:'gaze_multiple', rtb:12, hp:10 },
     b: { def:10, res:10, hp:10 },
     expected: { dmgToA: 0, dmgToB: 10 },
     vacuity: {
       'no-ablatable-feature':
-        'Keep. The discriminator is a.rtb, which candidates() does not enumerate: strength 12 against a 10 HP pool pins the cap, and doomGazeBasic differs only in a.rtb 12 -> 4 and pins 4. The expectation sits at the pool by design - the cap is the subject - so the structural expectationsAtHpCap flag is expected here.',
+        'Keep. The discriminator is a.rtb, which candidates() does not enumerate: strength 12 against a 10 HP pool is the overkill case, and doomGazeBasic differs only in a.rtb 12 -> 4 and pins 4. The phase publishes its total clipped at the pool, so the expectation sits at 10.',
     },
   },
   doomGazeChaosSpawn: {
-    desc: 'Chaos Spawn gaze suite: type 104 with strength 4 and special value 4 — doom exact 4; stoning/death each 20% per figure at the shared -4, combined into one joint kill roll (a figure dies once if it fails either), so pKill = 1 - 0.8*0.8 = 0.36.',
+    desc: 'Chaos Spawn gaze suite: type 104 with strength 4 and special value 4 — doom exact 4; effective Res 8, so stoning and death each fail 20% per defending figure. The two loops are sequential and mutually blind, both bounded by the same unreduced 4 figures, so a figure failing both is charged twice (F225.1): S,D ~ Binomial(4, 0.2) independently, 5·S into irreversible (mean 4) and 4 + 5·D into regular (mean 8). Total 4 + 5·N with N = S + D ~ Binomial(8, 0.2): 4 at 0.16777, 9 at 0.33554, 14 at 0.29360, 19 at 0.14680, and 0.05628 of the mass at 24 or more, published clipped at the 20 HP pool. E = 11.716.',
     a: { rtbType:'gaze_multiple', rtb:4, hp:10, abilities: { stoningGaze: -4, deathGaze: -4 } },
     b: { figs:4, res:12, hp:5 },
-    expected: { dmgToA: 0, dmgToB: 11.133 },
+    expected: { dmgToA: 0, dmgToB: 11.716 },
     vacuity: {
       'every-feature-inert':
         'Not a defect of the fixture but of one-at-a-time ablation. dosGazeAbilityValues (combat_special_attacks.js:210-211) derives stoningGaze and deathGaze from the one shared modifier and the rangedType, so the two entries are two views of one byte and removing either leaves the other supplying the magnitude.',
       'name-binds-nothing':
-        'Keep. The discriminators are rtbType gaze_multiple, rtb, b.figs and b.res, none of which candidates() enumerates. It is the paired kill-roll test to doomGazeBasic\'s isolated doom damage: the same type 104, with Res 12 low enough that the shared -4 leaves a 20% failure per loop and the two loops join into one 0.36 kill chance per figure.',
+        'Keep. The discriminators are rtbType gaze_multiple, rtb, b.figs and b.res, none of which candidates() enumerates. It is the paired kill-roll test to doomGazeBasic\'s isolated doom damage: the same type 104, with Res 12 low enough that the shared -4 leaves a 20% failure per loop, and the two loops charging independently over the same four figures.',
     },
   },
   // The doom damage's figure bound is the sharpest MoM/CoM2 divergence in the gaze block, so the
@@ -1241,7 +1253,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.060 },
     vacuity: {
       'a.ability.haste':
-        'Keep, and the absence is the rule under test: Haste does not repeat a gaze, so the result equals stoningGazeBasic\'s 8.060 with or without it. The gaze half is live at delta 2.91, which shows the fixture is otherwise wired up.',
+        'Keep, and the absence is the rule under test: Haste does not repeat a gaze, so the result equals stoningGazeBasic\'s 8.060 with or without it. The gaze half is live, which shows the fixture is otherwise wired up.',
     },
   },
   hasteCounterDoublesMoM: {
@@ -1311,6 +1323,21 @@ definePresets({
     a: { figs:1, atk:4, def:2, res:5, hp:10, unitType:'fantastic_chaos' },
     b: { figs:1, def:0, res:0, hp:10 },
     nodeAura: 'chaos',
+    expected: { dmgToA: 0, dmgToB: 1.800 },
+  },
+  nodeAuraNonFantastic: {
+    desc: 'Node Aura reaches a non-Fantastic unit of the node realm: the block gates on race alone. MoM 1.31 unitcalc.c:3336-3344 tests bu->race == rt_Chaos with no Fantastic term (131:0x8FF42), and CoM2 Units.RecalculateUnits.pas $005A25F0 dispatches on race 16/17 and IsChaosUnit alike. Chaos-race non-Fantastic 4atk/2def in a Chaos node -> 6 atk, 30% hit -> 1.800',
+    a: { figs:1, atk:4, def:2, res:5, hp:10, identity: { baseFantastic:false, baseRace:'Chaos' } },
+    b: { figs:1, def:0, res:0, hp:10 },
+    nodeAura: 'chaos',
+    expected: { dmgToA: 0, dmgToB: 1.800 },
+  },
+  nodeAuraNonFantasticNatureCoM2: {
+    desc: 'Node Aura reaches a non-Fantastic unit in CoM 2: the Nature arm is a plain race test. Units.RecalculateUnits.pas $005A25F0 dispatches `1: if U.race = 16`, with no Fantastic term. Nature-race non-Fantastic 4 atk in a Nature node -> 6 atk, 30% hit -> 1.800',
+    version: V_COM2,
+    a: { figs:1, atk:4, def:2, res:5, hp:10, identity: { baseFantastic:false, baseRace:'Nature' } },
+    b: { figs:1, def:0, res:0, hp:10 },
+    nodeAura: 'nature',
     expected: { dmgToA: 0, dmgToB: 1.800 },
   },
   nodeAuraNoMatch: {
@@ -1557,7 +1584,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.600 },
   },
   trueLightReadsRealmAtItsOwnBlockWarlord: {
-    desc: 'True Light (Warlord): the Death arm reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1511, so it takes -1: atk6->5 vs def 0, 100% hit = 5. Reading the post-conversion realm would see Chaos and give nothing.',
+    desc: 'True Light (Warlord): the Death arm reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1522, so it takes -1: atk6->5 vs def 0, 100% hit = 5. Reading the post-conversion realm would see Chaos and give nothing.',
     version: V_WARLORD,
     a: { figs:1, atk:6, res:5, hp:10, hitChance:70, unitType:'fantastic_death', abilities: { ccDefense: true } },
     b: { figs:1, atk:0, def:0, res:5, hp:10, toBlkMod:70, unitType:'normal' },
@@ -1565,7 +1592,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   trueLightSeesDestinysPermanentLifeRealmWarlord: {
-    desc: 'True Light (Warlord): Destiny/Apotheosis writes the *permanent* record — `B.race := 19; B.Fantastic := True` at $0059A390 — so the unit is already a Life creature when the region-b True Light block reads `GetStat(U,SRace,0)` at UnitCalcPre.CAS:1511. True Light adds +1 (atk 5→6) and the region-c Destiny package then doubles the live value to 12; 100% hit vs def 0 = 12. Treating the realm write as a region-c write of the calculated record leaves True Light inert here and gives 10.',
+    desc: 'True Light (Warlord): Destiny/Apotheosis writes the *permanent* record — `B.race := 19; B.Fantastic := True` at $0059A390 — so the unit is already a Life creature when the region-b True Light block reads `GetStat(U,SRace,0)` at UnitCalcPre.CAS:1522. True Light adds +1 (atk 5→6) and the region-c Destiny package then doubles the live value to 12; 100% hit vs def 0 = 12. Treating the realm write as a region-c write of the calculated record leaves True Light inert here and gives 10.',
     version: V_WARLORD,
     a: { figs:1, atk:5, res:5, hp:20, hitChance:70, unitType:'normal', abilities: { apotheosis: true } },
     b: { figs:1, atk:0, def:0, res:5, hp:20, toBlkMod:70, unitType:'normal' },
@@ -1659,7 +1686,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   eternalNightPoorVisionReadsRealmAtItsOwnBlockWarlord: {
-    desc: 'Eternal Night (Warlord): the Poor Vision exemption reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1343, so it keeps its missile rtb 4 at 100% hit vs def 0 = 4. Reading the post-conversion realm would see Chaos and charge the -2. Darkness stays at its own later region-c position, where the unit is Chaos, so it adds nothing here.',
+    desc: 'Eternal Night (Warlord): the Poor Vision exemption reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1354, so it keeps its missile rtb 4 at 100% hit vs def 0 = 4. Reading the post-conversion realm would see Chaos and charge the -2. Darkness stays at its own later region-c position, where the unit is Chaos, so it adds nothing here.',
     version: V_WARLORD,
     a: { figs:1, hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:4, type:'missile' } }, hp:10, unitType:'fantastic_death', abilities: { ccDefense: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
@@ -1671,16 +1698,12 @@ definePresets({
     },
   },
   eternalNightNightGoblinsExemptWarlord: {
-    desc: 'Eternal Night (Warlord): Goblin Night Goblins, template 356, are named by the Poor Vision gate itself — `(GetStat(U,STypeID,1)<>356)`, UnitCalcPre.CAS:1341 — so they keep the full Missile 5 the roster gives them. 8 figures x strength 5 = 40 dice at the record\'s 30+5 = 35% To Hit, against defense 0 (no block dice), = 14.000. Taking the -2 would leave strength 3, 24 dice, 8.400. The defender carries Poison Immunity because the roster record also has Poison Touch=1, which would add 8 guaranteed points on top of the number under test. The 35% is the To Hit the record itself carries: the other engine block on template 356, UnitCalc.CAS:359-368, gives it +10 To Hit and +10 To Defend under Eternal Night or Darkness and is not modelled, so this number will move to 18.000 when that block lands.',
+    desc: 'Eternal Night (Warlord): Goblin Night Goblins, template 356, are named by the Poor Vision gate itself — `(GetStat(U,STypeID,1)<>356)`, UnitCalcPre.CAS:1352 — so they keep the full Missile 5 the roster gives them. 8 figures x strength 5 = 40 dice at 30+5+10 = 45% To Hit, against defense 0 (no block dice), = 18.000. Taking the -2 would leave strength 3, 24 dice, 10.800. The defender carries Poison Immunity because the roster record also has Poison Touch=1, which would add 8 guaranteed points on top of the number under test. The +10 is the second engine block on template 356, UnitCalc.CAS:351-360, which gives template 356 +10 To Hit and +10 To Defend under Eternal Night or Darkness; without it the record\'s own 35% would give 14.000.',
     version: V_WARLORD,
     aUnitName: 'Goblin Night Goblins',
     b: { figs:9, def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true, poisonImmunity: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 14.000 },
-    vacuity: {
-      'b.ability.eternalNight':
-        'Keep. Inert as a consequence of the assertion: the claim is that this attacker is the one unit the Poor Vision gate names as exempt, so removing the source of the penalty is expected to leave the 14.000 standing. The exemption is measured against eternalNightGoblinBowmenNotExemptWarlord, which differs only in aUnitName - a Goblin missile unit the gate does not name - and pins 2.800, the penalised reading. Dropping the template term from the gate returns 8.400 here.',
-    },
+    expected: { dmgToA: 0, dmgToB: 18.000 },
   },
   eternalNightGoblinBowmenNotExemptWarlord: {
     desc: 'Eternal Night (Warlord): the control for the template-356 exemption. Goblin Bowmen, template 348, are Goblins with a Missile attack and are not named by the gate, so strength 3 - 2 = 1. 8 figures x strength 1 = 8 dice at the record\'s 30+5 = 35% To Hit, against defense 0, = 2.800. Without the penalty it would be 24 dice, 8.400. The defender is the same record as in eternalNightNightGoblinsExemptWarlord, Poison Immunity included, so the two fixtures differ only in aUnitName.',

@@ -3,7 +3,7 @@ const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers')
 
 test('Wanderer Channeler package derives through UI and share state', async ({ page, context }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aUnit', '362');
   await setValue(page, 'aAbil_channeler', true);
   await setValue(page, 'aAbil_marionetteBaseSkill', '90');
@@ -65,7 +65,7 @@ test('Marionette controls are exact-version gated', async ({ page }) => {
   for (const key of ids) {
     await expect(page.locator(`#aAbilities [data-abil-key="${key}"]`)).toHaveClass(/abil-version-gated/);
   }
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   for (const key of ids) {
     await expect(page.locator(`#aAbilities [data-abil-key="${key}"]`)).not.toHaveClass(/abil-version-gated/);
   }
@@ -74,7 +74,7 @@ test('Marionette controls are exact-version gated', async ({ page }) => {
 
 test('Wanderer without Channeler receives the strayed persistent package', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aUnit', '362');
 
   const report = await page.evaluate(() => {
@@ -107,11 +107,11 @@ test('Wanderer without Channeler receives the strayed persistent package', async
 // the card control it populates are now the single home for it.
 test('Wanderer roster Ranged record is the source of its permanent ranged type', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aUnit', '362');
 
   const strayed = await page.evaluate(() => {
-    const record = (unitDatabases['com2_warlord_1.5.12.7'] || []).find(u => u.id === 362);
+    const record = (unitDatabases['com2_warlord_1.5.12.9'] || []).find(u => u.id === 362);
     const stats = readUnitStats('a');
     return {
       rosterRanged: record.ranged,
@@ -161,7 +161,7 @@ test('Wanderer roster Ranged record is the source of its permanent ranged type',
 // primary arm's id 31 already stands for.
 test('An ascended Chaos Marionette takes the ascension block\'s own projectile retype', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aUnit', '362');
   await setValue(page, 'aAbil_channeler', true);
   await setValue(page, 'aAbil_marionetteBaseSkill', '90');

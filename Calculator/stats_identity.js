@@ -67,7 +67,7 @@ function createUnitIdentity(values = {}) {
 //
 // `nightGoblins` is Warlord template 356, Goblin Night Goblins, and it earns a key on the same
 // test: Warlord's engine names the template. The naming site is Eternal Night's Poor Vision gate,
-// `(GetStat(U,STypeID,1)<>356)` at `UnitCalcPre.CAS:1341` — the second of that gate's four terms —
+// `(GetStat(U,STypeID,1)<>356)` at `UnitCalcPre.CAS:1352` — the second of that gate's four terms —
 // so a Night Goblin unit keeps its Ranged strength where every other non-Death, non-Undead unit
 // loses 2 (F189). `GetStat(U,S,1)` is the *base* unit — "if B=0, it checks the current stats and
 // abilities, if B=1 it checks the base unit" (`Reference docs/Script source/CAS
@@ -270,7 +270,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // `units_com.js` already carries it as `baseFantastic` on templateId 174. A step re-asserting
     // it was a no-op for every roster unit, and for a custom unit it let the special-unit selector
     // override the Fantastic control the user had set. The roster owns the fact (F203).
-    // PROVENANCE[constructCatapult]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16 | Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:22d4847c5bd5843526ea3fc0 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:14:0c00ef951862849e15604add | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:18:0dad2f766ea1e74b0aa62aa1
+    // PROVENANCE[constructCatapult]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16 | Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:22d4847c5bd5843526ea3fc0 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/spells.ini@span:14:0c00ef951862849e15604add | TABLE=Reference docs/Script source/Warlord 1.5.12.9/spells.ini@span:18:0dad2f766ea1e74b0aa62aa1
     statStep({ id: 'constructCatapult', phase: 'base', writes: ['race', 'fantastic'],
       when: () => isCoM1 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
@@ -282,18 +282,18 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
         if (sourceTemplateId === 54) u.race = 'Nature';
         u.fantastic = true;
       } }),
-    // PROVENANCE[combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:3:8b5b382b46651d5d1ddfb014
+    // PROVENANCE[combatSummoned]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:3:8b5b382b46651d5d1ddfb014
     statStep({ id: 'combatSummoned', phase: 'a', writes: ['fantastic'],
       when: () => isModern && combatSummonedValue,
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:c9d9c1b29c14707318605a05 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936
+    // PROVENANCE[chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:c9d9c1b29c14707318605a05 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936
     statStep({ id: 'chosen', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isModern && identity.specialUnit === 'chosen',
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
     statStep({ id: 'constructCatapult', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isBaseCoM2 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
-    // PROVENANCE[callToArmsPaladins]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:fff6a55971377c87264d2e0d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/spells.ini@span:13:5f2ec3d006ad08bc02189c7b
+    // PROVENANCE[callToArmsPaladins]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:fff6a55971377c87264d2e0d | TABLE=Reference docs/Script source/Warlord 1.5.12.9/spells.ini@span:13:5f2ec3d006ad08bc02189c7b
     statStep({ id: 'callToArmsPaladins', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isBaseCoM2 && isCallToArmsPaladins,
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
@@ -305,7 +305,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // Both MoM builds set the realm alone — a race at or above the first fantastic value is
     // fantastic there whether or not `UA_FANTASTIC` is set (`unitcalc.c`, the
     // `bu->race >= RACE_FIRST_FANTASTIC` test) — so writing both fields here matches all five.
-    // PROVENANCE[chaosChannels:fireBreath:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
+    // PROVENANCE[chaosChannels:fireBreath:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
     ...['a', 'c'].map(phase => statStep({
       id: 'chaosChannels:fireBreath:race', sourceId: 'chaosChannels:fireBreath',
       sourceLabel: 'Chaos Channels', phase, writes: ['race', 'fantastic'],
@@ -319,14 +319,14 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     statStep({ id: 'spiritLink', phase: 'b', writes: ['fantastic'],
       when: () => spiritLinkActive,
       apply: u => { u.fantastic = true; } }),
-    // PROVENANCE[marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
+    // PROVENANCE[marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
     statStep({ id: 'marionetteChanneler', phase: 'b', writes: ['fantastic'],
       when: () => version === MARIONETTE_VERSION
         && identity.heroTypeId === MARIONETTE_HERO_TYPE_ID
         && !!(abilities && abilities.channeler),
       apply: u => { u.fantastic = true; } }),
     // The THEN arm of Fiery Fury's one `IF (BASEFANTASTIC(U))`; `b:fieryFury` is its ELSE arm.
-    // PROVENANCE[fieryFury:race]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7
+    // PROVENANCE[fieryFury:race]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7
     statStep({ id: 'fieryFury:race', sourceId: 'fieryFury', sourceLabel: 'Fiery Fury',
       phase: 'b', writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'fieryFury') && permanentFantastic,
@@ -349,7 +349,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // ability set does not close that gap — the sequence's value would be the seed *plus* the
     // positioned write. The choice between widening the projection to replay the `base` grants and
     // keeping the gate pre-sequence belongs to F200 stage 3, which makes the write.
-    // PROVENANCE[sanctify]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
+    // PROVENANCE[sanctify]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
     statStep({ id: 'sanctify', sourceLabel: 'Sanctify', phase: 'b',
       writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'sanctify'),
@@ -357,19 +357,19 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
         u.race = 'Life';
         if (hasAbil(abilities, 'clergy') && !isHero) u.fantastic = true;
       } }),
-    // PROVENANCE[chaosChannels:flight]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:2ae7951f1bbf4272fb3fb151 | Reference docs/DOS reconstructed/unitcalc.c@span:6:e09942f2ee9f377d85168241 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:11:81ed5af7fe4aa5e7b8bcf958
+    // PROVENANCE[chaosChannels:flight]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:2ae7951f1bbf4272fb3fb151 | Reference docs/DOS reconstructed/unitcalc.c@span:6:e09942f2ee9f377d85168241 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:11:81ed5af7fe4aa5e7b8bcf958
     statStep({ id: 'chaosChannels:flight',
       sourceLabel: 'Chaos Channels', phase: 'c', writes: ['race', 'fantastic'],
       when: () => !!abilVal(abilities, 'ccFlight', false),
       apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
-    // PROVENANCE[chaosChannels:armor:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:bd2b6b86ac7fbcc85505a039 | Reference docs/DOS reconstructed/unitcalc.c@span:6:2202b972a2c87abe05bad467 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:490bf1c3cfe8b5827cde324a
+    // PROVENANCE[chaosChannels:armor:race]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:bd2b6b86ac7fbcc85505a039 | Reference docs/DOS reconstructed/unitcalc.c@span:6:2202b972a2c87abe05bad467 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:490bf1c3cfe8b5827cde324a
     statStep({ id: 'chaosChannels:armor:race', sourceId: 'chaosChannels:armor',
       sourceLabel: 'Chaos Channels', phase: 'c', writes: ['race', 'fantastic'],
       when: () => !!abilVal(abilities, 'ccDefense', false),
       apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
     // Warlord is out of scope rather than gated: `UnitCalc.CAS` recasts the spell as Frenzy and
     // sets `EncBloodLust` only afterwards, so the compiled region-`c` block never sees the flag.
-    // PROVENANCE[bloodLust]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:43a34010d4b8c511782d0586 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:13:ef98ab4f1bd2277cbd5fb59a | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a
+    // PROVENANCE[bloodLust]: VERIFIED versions=com_6.08,com2_1.05.11; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:43a34010d4b8c511782d0586 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:13:ef98ab4f1bd2277cbd5fb59a | Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:10:22628deef93aef7a52582f1a
     statStep({ id: 'bloodLust', sourceLabel: 'Blood Lust', phase: 'c',
       writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'bloodLust'),
@@ -382,25 +382,25 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // One conversion for both controls: CoM 1's Animated block writes the Death realm itself,
     // and `Caster.exe`'s Animated block sets `EncUndead` for the aggregate normalization that
     // follows it. `c:animated` carries the same block's stat half.
-    // PROVENANCE[undead]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:e9bb34d05b36853748045d37 | Reference docs/DOS reconstructed/unitcalc.c@span:8:204c1ca5e5884733de92e687 | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d
+    // PROVENANCE[undead]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:e9bb34d05b36853748045d37 | Reference docs/DOS reconstructed/unitcalc.c@span:8:204c1ca5e5884733de92e687 | Reference docs/DOS reconstructed/unitcalc.c@span:19:6f6aeaf7cbc23a280cd7996e | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:b7e9d476a7f9ec33bbaca56c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:53a2c4bd769924b58f286c8d
     statStep({ id: 'undead', sourceLabel: 'Undead', phase: 'c', writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'undead') || hasAbil(abilities, 'animated'),
       apply: u => { u.race = 'Death'; u.fantastic = true; } }),
     // The No Heal normalization block, $005A0420..$005A04A9 — `if U.CombatEnchantmentFlags`
     // `[EncNoHeal] then U.race := 21; U.Fantastic := True`, immediately after the Mystic Surge
     // block that derives the flag. A separate block with a separate gate, so a separate step.
-    // PROVENANCE[mysticSurge:race]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49
+    // PROVENANCE[mysticSurge:race]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49
     statStep({ id: 'mysticSurge:race', sourceId: 'mysticSurge', sourceLabel: 'Mystic Surge',
       phase: 'c', writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'mysticSurge'),
       apply: u => { u.race = 'No Heal'; u.fantastic = true; } }),
-    // PROVENANCE[raiseDead]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90
+    // PROVENANCE[raiseDead]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90
     statStep({ id: 'raiseDead', sourceLabel: 'Raise Dead', phase: 'c',
       writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'raiseDead'),
       apply: u => { u.race = 'No Heal'; u.fantastic = true; } }),
     // Spirit Link's second write, clearing what `b:spiritLink` asserted.
-    // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:344debdbb9d0f10a4e4b26a1 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:1:15d81b9f3b72c934c9219502 | Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
+    // PROVENANCE[spiritLink]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:344debdbb9d0f10a4e4b26a1 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:1:15d81b9f3b72c934c9219502 | Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
     statStep({ id: 'spiritLink', phase: 'd', writes: ['fantastic'],
       when: () => spiritLinkActive,
       apply: u => { u.fantastic = false; } }),
@@ -412,7 +412,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
 // F188). Spirit Link is the citation and states the mechanism outright: it asserts Fantastic at
 // the head of the routine so the unit takes fantastic bonuses (`UnitCalcPre.CAS:25-28`) and
 // clears it at the tail so the "enchanted fantastic unit could not be targeted by fantastic-only
-// spell" (`UnitCalc.CAS:1305-1306`). The engine manipulates the recalculated flag *in order to*
+// spell" (`UnitCalc.CAS:1297-1298`). The engine manipulates the recalculated flag *in order to*
 // change targetability, so the answer is the whole conversion list run out.
 //
 // This is a projection of the one conversion list, not a second list, and it is exact: no
@@ -451,7 +451,8 @@ const POSITIONED_GRANT_FIELDS = [
                   // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`
   'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
   'armorclad',    // applyOutlanderReformGrants  ->  `base:armorclad`
-  'mechanical',   // `base:rebuild` / `b:rebuild`  ->  `base:artificer`, `d:mechanicalExpert`
+  'mechanical',   // `base:rebuild` (non-hero only, F217.3)  ->  `base:artificer`,
+                  // `d:mechanicalExpert`
   'rebuild',      // deriveMarionettePackage  ->  `base:rebuild` / `b:rebuild`
   'trueSight',    // `b:eyeOfHeaven`  ->  `c:trueSight`, `d:trueSight`
   'fireImmunity',    // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
@@ -473,8 +474,9 @@ const POSITIONED_GRANT_FIELDS = [
 // finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty), `trueSight`
 // (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it), `fireImmunity` and
 // `lightningResist` (`b:insulation` writes them, `c:innerPower`'s eligibility test reads them),
-// and `mechanical` (`base:rebuild` / `b:rebuild` write it, `base:artificer` and
-// `d:mechanicalExpert` read it — and take opposite answers, because the writes are cast-time and
+// and `mechanical` (`base:rebuild` writes it — the hero-branch `b:rebuild` does not, because its
+// script line writes the calculated record and every reader asks for the permanent one, F217.3 —
+// while `base:artificer` and `d:mechanicalExpert` read it — and take opposite answers, because the writes are cast-time and
 // the retort's read is training-time, F208).
 const POSITIONED_GRANT_WRITES = [
   'largeShield',      // `b:magitekEngine`, `d:rust` (clear), `d:fortification`
@@ -488,7 +490,8 @@ const POSITIONED_GRANT_WRITES = [
   'energyCannon',     // `base:energyCannon`
   'wallCrusher',      // `b:bombsGrenades`, `d:blazeOfGlory`
   'firstStrike',      // `d:blazeOfGlory` (clear)
-  'mechanical',       // `base:rebuild` / `b:rebuild` — `SETSTAT(…,SCustomAttribute,…,1)`
+  'mechanical',       // `base:rebuild` — `SETSTAT(TU,SCustomAttribute,1,1)`; the hero
+                      // branch writes selector 0, which nothing reads (F217.3)
   'supernatural',     // `base:destiny:supernatural` — `B.attackflags.supernatural := True`
   'trueSight',        // `b:eyeOfHeaven`
   'illusionImmunity', // `c:trueSight`
@@ -541,19 +544,19 @@ function applyLavaSmelterGrant(abilities, version, unitType) {
   for (const grant of grants) {
     switch (grant) {
       // STAT-FORMULA[lavaSmelter:weaponImmunity]
-      // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:20:6b832639e6e0656624d526f2 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:5:19b52f5f80442e39e3d39683
+      // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:20:6b832639e6e0656624d526f2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:5:19b52f5f80442e39e3d39683
       case 'weaponImmunity': merged.weaponImmunity = true; break;
       // STAT-FORMULA[lavaSmelter:missileImmunity]
-      // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:21:b4b1a5faba3c07399d273ecc | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:11:d560f73eb0a27ed8c05f0521
+      // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:21:b4b1a5faba3c07399d273ecc | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:11:d560f73eb0a27ed8c05f0521
       case 'missileImmunity': merged.missileImmunity = true; break;
       // STAT-FORMULA[lavaSmelter:resistElementsAlias]
-      // PROVENANCE[lavaSmelter:resistElementsAlias]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:c5d736809b27903ec0e40f87 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:69075b87f644f18cbdb1c64a | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:c99051561c61668cea94903d
+      // PROVENANCE[lavaSmelter:resistElementsAlias]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:c5d736809b27903ec0e40f87 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:69075b87f644f18cbdb1c64a | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:c99051561c61668cea94903d
       case 'resistElements': merged.resistElements = true; break;
       // STAT-FORMULA[lavaSmelter:elementalProtection]
-      // PROVENANCE[lavaSmelter:elementalProtection]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:95c224910389756ff6f69515 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:473b9eac9397f92d8022c2cd
+      // PROVENANCE[lavaSmelter:elementalProtection]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:95c224910389756ff6f69515 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:473b9eac9397f92d8022c2cd
       case 'elementalArmor': merged.elementalArmor = true; break;
       // STAT-FORMULA[lavaSmelter:flameBlade]
-      // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:24:03c7f203c08a93035f9d5921 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.7/OverlandEndTurn.CAS@span:29:9803f0d614b7957485b50536
+      // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:24:03c7f203c08a93035f9d5921 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:29:9803f0d614b7957485b50536
       case 'fieryBlade': merged.fieryBlade = true; break;
       // A grant added to the list above without a case here would be dropped in silence.
       default: throw new Error(
@@ -574,7 +577,7 @@ function applyLavaSmelterGrant(abilities, version, unitType) {
 // High Men race; heroes gain nothing.
 //
 // KNOWN DEFECT (T8, see BACKLOG.md Q30): the Sanctify grant above is wider than the source.
-// `Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS` lines 412-441 — the block
+// `Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS` lines 412-441 — the block
 // PROVENANCE[sanctaBasilica] in stats_sequence.js cites for the +3 Resistance — writes the
 // per-type grants in four *mutually exclusive* STypeID branches, each ending in
 // `GOTO "ENDOFUNIQUEBUILDING"`: 108 (High Men Monks) and 231 (High Men Inquisitors) get
@@ -648,10 +651,10 @@ const MAGIC_IMMUNITY_GATED_CURSES = [
 ];
 const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // `version` is read for the Eye of Heaven arm alone: that enchantment is Warlord's, granted by
-// `Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS` lines 1839-1841 and named by
+// `Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS` lines 1839-1841 and named by
 // no other supported source, so outside Warlord it must not confer the Illusion Immunity that
 // strips Mind Storm and Vertigo here.
-// PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
+// PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
 // The ten curse flags are fields of the sequence record, and this is the step that clears them —
 // `base:immunityCurseGating`, the head of every chain. It reads the curse flags positionally, like
 // any other step, and takes its **immunity** half from `finishedImmunities`, the set the
@@ -706,7 +709,7 @@ function applyPillarOfFaithGrant(abilities, version) {
 // Insulation's grant is `b:insulation` (`stats_sequence.js`), a positioned write to the record's
 // `fireImmunity`, `lightningResist` and `coldImmunity` fields (F200).
 
-const MARIONETTE_VERSION = 'com2_warlord_1.5.12.7';
+const MARIONETTE_VERSION = 'com2_warlord_1.5.12.9';
 const MARIONETTE_HERO_TYPE_ID = 48;
 const MARIONETTE_REALMS = ['nature', 'sorcery', 'chaos', 'life', 'death'];
 // The projectile retype the owned branch writes, by primary realm: ids 37, 34, 31, 35 and 33
@@ -742,7 +745,7 @@ function marionetteBookCount(abilities, realm) {
 // branch alone — the realm retype value `b:marionette:rangedType` writes. It carries no permanent
 // ranged type: the Wanderer's own is `UNITS.INI [362] RangedType=30`, read from the roster record.
 // STAT-FORMULA[marionettePackage]
-// PROVENANCE[marionettePackage]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:39:58a1f4eccd319a76072204a6 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:40:278fa1f3acca365b536cf823 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:19:55ebed8c65ed05b617bc2a17 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:37:2a33b53fd826bd83bed71132 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:40:53a8e746ffb95d09d43c6694 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:31:0485f6bca9517d221d1400be | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:31:8e93c3479df43f3aa01d74ab
+// PROVENANCE[marionettePackage]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:39:58a1f4eccd319a76072204a6 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:40:278fa1f3acca365b536cf823 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:19:55ebed8c65ed05b617bc2a17 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:37:2a33b53fd826bd83bed71132 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:40:53a8e746ffb95d09d43c6694 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:31:0485f6bca9517d221d1400be | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:31:8e93c3479df43f3aa01d74ab
 function deriveMarionettePackage(identity, abilities, version) {
   if (version !== MARIONETTE_VERSION || identity.heroTypeId !== MARIONETTE_HERO_TYPE_ID) {
     return { abilities, package: null };
@@ -920,7 +923,7 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
   const battleArmor = outlanderWizard && !!fundamentalAbilities.armorcladReform
     && !baseFantastic && !permanentMechanical;
   const powerEngine = outlanderWizard && !!fundamentalAbilities.heatPowerEngine && permanentMechanical;
-  // `UnitCalc.CAS:1405-1407` evaluates left-to-right: non-fantastic non-mechanical units,
+  // `UnitCalc.CAS:1397-1399` evaluates left-to-right: non-fantastic non-mechanical units,
   // heroes, and Armorclad mechanical units pass; fantastic units do not.
   const outlanderSoldier = outlanderWizard && !baseFantastic && (!permanentMechanical || armorclad);
   // The `NOTSAPIENS` gate, `UnitCalcPre.CAS:1062-1064`. `b:bombsGrenades` reads the same one.
@@ -983,7 +986,7 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
 // Hierophany's calculated ability writes run with its Defense write and remove both movement
 // flags consumed by FirewallEffect, in addition to the modeled combat immunities.
 // STAT-FORMULA[hierophanyAbilityStrip]
-// PROVENANCE[hierophanyAbilityStrip]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:23:cffe3872cfdacaf6f0361e5a
+// PROVENANCE[hierophanyAbilityStrip]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:23:cffe3872cfdacaf6f0361e5a
 function applyHierophanyAbilityStrip(combatAbilities, isWarlord) {
   if (!isWarlord || !combatAbilities.hierophany) return combatAbilities;
   return {

@@ -30,7 +30,7 @@ the executable's generic summon flow with the loaded `SPELLS.INI` row:
 - CoM2 spell 153 is Call to Arms, `Realm=4`, `SummonedUnit=113`
   (`Script source/CoM2 1.05.11 base/SPELLS.INI:2689-2702`).
 - Warlord replaces enabled slot 12 with Water Elemental, still `Realm=1` but
-  `SummonedUnit=158` (`Script source/Warlord 1.5.12.7/SPELLS.INI:901-915`). Its separate
+  `SummonedUnit=158` (`Script source/Warlord 1.5.12.9/SPELLS.INI:901-915`). Its separate
   template-37 Construct Catapult row 260 is `Realm=6`, custom, and disabled
   (`SPELLS.INI:4666-4683`).
 - Warlord replaces slot 153 with Spirit of Chivalry, `Realm=4`, `SummonedUnit=211`

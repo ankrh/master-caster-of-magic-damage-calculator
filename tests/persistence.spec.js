@@ -83,7 +83,7 @@ test('Reset returns state to a truly-fresh-page blob', async ({ browser, context
   const page = await dirtyCtx.newPage();
   const errors = await openPersistent(page);
 
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aAtk', '13');
   await setValue(page, 'bRes', '9');
   await setValue(page, 'aAbil_firstStrike', true);
@@ -198,9 +198,9 @@ test('retired Warlord version ids migrate to 1.5.12.7', async ({ page }) => {
     'com2_warlord_1.5.12.6.2',
   ].map(normalizeGameVersion));
   expect(mapped).toEqual([
-    'com2_warlord_1.5.12.7',
-    'com2_warlord_1.5.12.7',
-    'com2_warlord_1.5.12.7',
+    'com2_warlord_1.5.12.9',
+    'com2_warlord_1.5.12.9',
+    'com2_warlord_1.5.12.9',
   ]);
   expectNoConsoleErrors(errors);
 });

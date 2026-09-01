@@ -25,7 +25,7 @@ test('F33 exempts CoM2 and Warlord heroes from physical ranged distance penaltie
         ? { ranged: { strength: 10, type: 'missile' } } : undefined,
     });
     return {
-      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => {
+      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => {
         const roster = version === 'com2_1.05.11' ? COM2_UNITS_DATA : WARLORD_UNITS_DATA;
         const units = Object.values(roster);
         const physical = unit => unit.ranged_type === 'Missile' || unit.ranged_type === 'Boulder';
@@ -103,7 +103,7 @@ test('F56 leaves every modern gaze field out of the level bonus step', async ({ 
       trueLight: false, darkness: false, rangedCheck: false, rangedDist: 1,
       ...overrides,
     });
-    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => {
+    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => {
       const elite = derive(version, 'elite');
       const levelStep = elite.statTrace.find(entry => entry.id === 'level');
       const conventional = derive(version, 'elite', {

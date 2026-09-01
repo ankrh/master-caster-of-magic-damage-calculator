@@ -16,7 +16,7 @@ test('F196 names every unit that satisfies Mechanical Expert\'s presence gate', 
   const errors = await openCalculator(page);
 
   const report = await page.evaluate((ids) => {
-    const roster = loadUnitDatabase('com2_warlord_1.5.12.7');
+    const roster = loadUnitDatabase('com2_warlord_1.5.12.9');
     const def = ENCHANTMENT_DEFS.find(d => d.key === 'mechanicalExpert');
     return {
       tooltip: def ? def.tooltip : null,

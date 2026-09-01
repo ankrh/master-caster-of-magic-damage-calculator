@@ -48,7 +48,7 @@ function runToBlockChecks(ctx) {
 }
 
 function runDerivationStageChecks(ctx) {
-  const version = 'com2_warlord_1.5.12.7';
+  const version = 'com2_warlord_1.5.12.9';
 
   // Phase attribution is a step's declared position, so these assert on the emitted step
   // rather than on a bucket total. `null` means the effect emitted no step at all.
@@ -74,7 +74,7 @@ function runDerivationStageChecks(ctx) {
     'Lucky Star / Divine Protection establish the flag before the compiled region-c stat write');
 
   // The four magnitudes are proved by damage instead — `artificerMechanical*Warlord`, whose
-  // resistance case is written against the script's +2 rather than the helptext's +1.
+  // resistance case is written against the script's +2.
   assertEqual(phaseOf({ artificer: true, mechanical: true }, 'artificer'), 'base',
     'Artificer ABase writes use the base stage');
 
@@ -96,7 +96,7 @@ function runDerivationStageChecks(ctx) {
     'MoM has no aura pass and keeps Holy Bonus in phase a');
   assertEqual(phaseOf({ resistanceToAll: 2 }, 'resistanceToAll'), 'e',
     'Resistance to All feeds the region-e Prayermaster aura');
-  for (const modernVersion of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const modernVersion of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const misfortune = stepFor({ mislead: true }, 'mislead', modernVersion);
     assertEqual(misfortune.phase, 'e',
       `${modernVersion}: Misfortune is aura type 10 in the region-e aura pass`);
@@ -192,7 +192,7 @@ function runDerivationStageChecks(ctx) {
       `${modernVersion}: an ineligible Fantastic unit emits no Misfortune trace event`);
   }
   const linkedMisfortune = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_nature', atk: 2, def: 2, res: 2,
+    version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 2, def: 2, res: 2,
     rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     abilities: { spiritLink: true, mislead: true },
   }));

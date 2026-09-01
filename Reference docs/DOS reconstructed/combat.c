@@ -974,7 +974,7 @@ void __far Sort_Battle_Unit_Indices_By_Movement_Points(int16_t *indices,
 #define UE_REGENERATION_LOW                  0x00000040UL
 #define UE_MYSTIC_SURGE                      0x00200000UL
 #define RACE_ARCANE_BOUND                    0x0F
-#define UNITTYPE_MAGIC_SPIRIT_BOUND          0x97
+#define COM1_UNITTYPE_NORMAL_CEILING         0x97 /* R6.1a, Q18 */
 #define UNITTYPE_GARGOYLES                   0x9C
 #define UNITTYPE_ZOMBIES                     0xAE
 #define NEUTRAL_PLAYER                       5
@@ -1474,8 +1474,8 @@ reprocess_overflow:
             /* 131:—  160:—  com1:0x9D254 */ LAIR(COMBAT_ENV_INDEX)->guard2_unit_type = UNITTYPE_GARGOYLES;
         }
         /* 131:—  160:—  com1:0x9D267 */
-        if (undead > 0 && LAIR(COMBAT_ENV_INDEX)->guard1_unit_type >= UNITTYPE_MAGIC_SPIRIT_BOUND &&
-            LAIR(COMBAT_ENV_INDEX)->guard2_unit_type >= UNITTYPE_MAGIC_SPIRIT_BOUND)
+        if (undead > 0 && LAIR(COMBAT_ENV_INDEX)->guard1_unit_type >= COM1_UNITTYPE_NORMAL_CEILING &&
+            LAIR(COMBAT_ENV_INDEX)->guard2_unit_type >= COM1_UNITTYPE_NORMAL_CEILING)
             /* 131:—  160:—  com1:0x9D297 */ undead = 0;
     }
 
@@ -1504,7 +1504,7 @@ reprocess_overflow:
     /* 131:—  160:—  com1:0x9D367 */
     for (i = 0; i < COMBAT_UNIT_COUNT; ++i)
         /* 131:—  160:—  com1:0x9D36C */
-        if (BU(i)->status == BUS_ACTIVE && UNIT(BU(i)->unit_idx)->type < UNITTYPE_MAGIC_SPIRIT_BOUND &&
+        if (BU(i)->status == BUS_ACTIVE && UNIT(BU(i)->unit_idx)->type < COM1_UNITTYPE_NORMAL_CEILING &&
             /* 0x9D385 loads BU race into CL but no later instruction consumes it. */
             !(UNIT(BU(i)->unit_idx)->mutations & UM_UNDEAD) &&
             BU(i)->controller_idx == (uint8_t)winner)

@@ -1,0 +1,1173 @@
+: INPUT - SP - The spell being cast.
+	W - The player casting the spell.
+	SpellTargetCity,SpellTargetPlane,SpellTargetX,SpellTargetY,
+	SpellTargetUnit,SpellTargetPlayer - The target of the spell. Only the variable(s) applicable for the spell's targeting type are set.
+  OUTPUT - None 
+  Please note that existing spell effects are hardcoded. To change them, create a duplicate of the spell and code the new effect in this script.
+  :
+
+TU=SpellTargetUnit;
+TC=SpellTargetCity;
+TP=CITYOWNER(SpellTargetCity);
+
+: defined freshly summoned unit ID :
+SU=MAXUNIT();
+
+
+: spell casting count during Time Stop :
+IF HASGLOBAL(W,GETimeStop)
+THEN {
+ MASTERVARSET TSSPELLCOUNTING = TSSPELLCOUNTING + 1;
+} ELSE {
+ MASTERVARSET TIMESTOPCOUNT = 0;
+ MASTERVARSET TSSPELLCOUNTING = 0;
+ MASTERVARSET TSTURNCOUNTING = 0;
+}
+
+IF (SP<>SSpellofReturn) THEN { GOTO "NOTSPELLOFRETURN"; }
+
+ IF SCORINGOPTION(SDemonKingsCastle) THEN {
+  SETBUILDINGSTATE(TC,BCityWalls,1);
+  SETBUILDINGSTATE(TC,BMoats,1);
+  SETBUILDINGSTATE(TC,BHillfort,1);
+  SETBUILDINGSTATE(TC,BBaray,1);
+  SETBUILDINGSTATE(TC,BHiveNetwork,1);
+  SETBUILDINGSTATE(TC,BTreeOfLife,1);
+ }
+
+  FOR P=1 TO 2;
+  FOR X=0 TO PLANESIZEX(P);
+  FOR Y=0 TO PLANESIZEY(P);
+
+   IF (CITYONTILE(P,X,Y)<>TC) THEN { GOTO "NOTTARGETCITY"; }
+
+    SETWIZARDDATA(W,WDFortressX,X);
+    SETWIZARDDATA(W,WDFortressY,Y);
+    SETWIZARDDATA(W,WDFortressP,P);
+
+    IF SCORINGOPTION(SDemonKingsCastle)
+     %AND ((GETTERRAIN(X,Y,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X,Y,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X,Y,P))<>LTRiver)
+    THEN {
+     SETTERRAIN(X,Y,P,LTVolcano);
+    }
+
+   !NOTTARGETCITY!
+
+  NEXT Y;
+  NEXT X;
+  NEXT P;
+  GOTO "ENDOFOLSPELL";
+
+!NOTSPELLOFRETURN!
+
+IF (SP=SStasis) %AND HASGLOBAL(W,GEDomainOfEnchanter) THEN {
+ SETENCHANTMENTFLAG(TU,EncStasisOverland,1,1);
+ GOTO "ENDOFOLSPELL";
+}
+
+IF (SPELLSTATE(W,STattooMagic)<>2) THEN { GOTO "NOPERMENCHANT"; }
+
+ IF (SP=SResistElements) THEN {
+  SETENCHANTMENTFLAG(TU,EncResistElements,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncResistElements,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SWaterWalking) THEN {
+  SETENCHANTMENTFLAG(TU,EncWaterWalking,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncWaterWalking,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SResistMagic) THEN {
+  SETENCHANTMENTFLAG(TU,EncResistMagic,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncResistMagic,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SGuardianWind) THEN {
+  SETENCHANTMENTFLAG(TU,EncGuardianWind,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncGuardianWind,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SFieryFury) THEN {
+  SETENCHANTMENTFLAG(TU,EncFieryFury,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncFieryFury,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SBless) THEN {
+  SETENCHANTMENTFLAG(TU,EncBless,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncBless,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SHolyWeapon) THEN {
+  SETENCHANTMENTFLAG(TU,EncHolyWeapon,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncHolyWeapon,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SHolyArmor) THEN {
+  SETENCHANTMENTFLAG(TU,EncDummyArmor,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncHolyArmor,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SHeroism) THEN {
+  SETENCHANTMENTFLAG(TU,EncHeroism,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncHeroism,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SCloakofFear) THEN {
+  SETENCHANTMENTFLAG(TU,EncCloakofFear,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncCloakofFear,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=SWraithForm) THEN {
+  SETENCHANTMENTFLAG(TU,EncWraithForm,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncWraithForm,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+ IF (SP=STacticalDrill) THEN {
+  SETENCHANTMENTFLAG(TU,EncDiscipline,1,1);
+  SETOLENCHANTMENTFLAG(TU,EncDisciplineOld,1,0);
+  GOTO "ENDOFOLSPELL";
+ }
+
+!NOPERMENCHANT!
+
+IF (SP<>SMarionetteSummon) THEN { GOTO "NOTMARIONETTE"; }
+
+ SETWIZARDDATA(W,WDMarionette,1);
+ SETSPELLDATA(W,SMarionetteSummon,0);
+
+ HEROES=0;
+
+ FOR U=1 TO MAXUNIT();
+
+  IF (GETSTAT(U,SOwner,0)=W)
+   %AND ISHERO(U)
+  THEN {
+   HEROES=HEROES+1;
+  }
+
+ NEXT U;
+
+ IF (HEROES>6) THEN {
+  DEALCOMBATDAMAGE(MAXUNIT(),999,0,0);
+  SETWIZARDDATA(W,WDMarionette,2);
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTMARIONETTE!
+
+IF (SP<>SResurrection) THEN { GOTO "NOTRESURRECTION"; }
+
+ IF (GETSTAT( MAXUNIT(),STypeID,1 )=362) THEN {
+  SETWIZARDDATA(W,WDMarionette,1);
+  SETSPELLDATA(W,SMarionetteSummon,0);
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTRESURRECTION!
+
+IF (SP<>STAirSupportDoctrine) THEN { GOTO "NOTAIRSUPPORT"; }
+
+ SETENCHANTMENTFLAG(NEWU,EncSpiritLink,1,1);
+ IF BASEFANTASTIC(NEWU) THEN {
+  SETSTAT(NEWU,AFantastic,1,0);
+  SETSTAT(NEWU,ALevel,1,1);
+ }
+
+ : new effect of Artificer retort, mechanical units gain magic weapon, +1 resistance, and land mechanical units get +1 movement :
+ IF RETORT(W,Artificer) %AND (GetStat(NEWU,SCustomAttribute,1)=1) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncMagic,1,1);
+  SETSTAT(NEWU,SAttack,1,(GetStat(NEWU,SAttack,0)+1));
+  SETSTAT(NEWU,SRanged,1,(GetStat(NEWU,SRanged,1)+1));
+  SETSTAT(NEWU,SDefense,1,(GetStat(NEWU,SDefense,1)+1));
+  SETSTAT(NEWU,SResist,1,(GetStat(NEWU,SResist,1)+2));
+  SETSTAT(NEWU,SOLMaxMoves,1,(GetStat(NEWU,SOLMaxMoves,1)+2));
+  SETSTAT(NEWU,SOLMovesLeft,1,(GetStat(NEWU,SOLMovesLeft,1)+2));
+  SETSTAT(NEWU,SCombatMaxMoves,1,(GetStat(NEWU,SCombatMaxMoves,1)+2));
+  SETSTAT(NEWU,SCombatMovesLeft,1,(GetStat(NEWU,SCombatMovesLeft,1)+2));
+ }
+
+ IF HASGLOBAL(W,GEEnlightenment)
+  %OR (SPELLSTATE(W,STMilitaryDrilling)=2)
+ THEN { 
+  SETENCHANTMENTFLAG(NEWU,EncDiscipline,1,1);
+ }
+
+ IF (SPELLSTATE(W,STHeatPowerEngine)=2) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncPowerEngine,1,1);
+  SETSTAT(NEWU,SOLMaxMoves,1,(GetStat(NEWU,SOLMaxMoves,1)+2));
+  SETSTAT(NEWU,SCombatMaxMoves,1,(GetStat(NEWU,SCombatMaxMoves,1)+2));
+ }
+
+ IF (SPELLSTATE(W,STArmorClad)=2) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncArmorClad,1,1);
+  SETSTAT(NEWU,SDefense,1,(GetStat(NEWU,SDefense,1)+6));
+  IF (SPELLSTATE(W,STMagitekMaterialScience)=2) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncResistMagic,1,1);
+  }
+ }
+
+ IF (SPELLSTATE(W,STRocketry)=2) THEN {
+  SETSTAT(NEWU,SBlackpowderUpgrade,1,1);
+  IF (GetStat(NEWU,AFPoison,1,1)<>100) THEN { SETSTAT(NEWU,AFPoison,1,(GetStat(NEWU,AFPoison,1,1))+1,1); } ELSE { SETSTAT(NEWU,AFPoison,1,1,1); }
+  IF (GetStat(NEWU,AFArmorPiercing,1,1)=0) %AND (GetStat(NEWU,AFDoom,1,1)=0) THEN {
+   SETSTAT(NEWU,AFArmorPiercing,1,1,1);
+  } ELSE {
+   IF (GetStat(NEWU,SRanged,1)>0) THEN { SETSTAT(NEWU,SRanged,1,(GetStat(NEWU,SRanged,1)+2)); }
+   IF (GetStat(NEWU,SThrown,1)>0) THEN { SETSTAT(NEWU,SThrown,1,(GetStat(NEWU,SThrown,1)+4)); }
+  }
+ }
+
+ : Mariner Mastery bonus is removable by end turn script if global enchantment is removed :
+ : all units originally have have sail movement :
+ IF (HASGLOBAL(W,GEMarinerMastery)=0) THEN { GOTO "NOOUTLANDERMARINERMASTERY"; }
+  IF (GetStat(NEWU,SMMastery,1)>0) %OR (GetStat(NEWU,ASailing,1)=0) THEN { GOTO "NOOUTLANDERMARINERMASTERY"; }
+
+   SETSTAT(NEWU,SOLMaxMoves,1,(GetStat(NEWU,SOLMaxMoves,1)+4));
+   SETSTAT(NEWU,SOLMovesLeft,1,(GetStat(NEWU,SOLMovesLeft,1)+4));
+   SETSTAT(NEWU,SCombatMaxMoves,1,(GetStat(NEWU,SCombatMaxMoves,1)+4));
+   SETSTAT(NEWU,SCombatMovesLeft,1,(GetStat(NEWU,SCombatMovesLeft,1)+4));
+   SETSTAT(NEWU,SMMastery,1,1);
+
+ !NOOUTLANDERMARINERMASTERY!
+
+ HQ=CITYONTILE( GETWIZARDDATA(W,WDFortressP),GETWIZARDDATA(W,WDFortressX),GETWIZARDDATA(W,WDFortressY) );
+
+ IF BANISHED(W) %OR (HQ=0) %OR ( (HQ>0) %AND (CITYENCHANT(HQ,CEEvilPresence)>-1) ) THEN { GOTO "NOHQ"; }
+
+  IF (CITYENCHANT(HQ,CEMagicPerimeter)>-1) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncMagic,1,1);
+  }
+
+  LOGISTIC=0;
+  OWNMITHRIL=0;
+  OWNADAMANTIUM=0;
+  OWNORIHALCON=0;
+  OWNCRYSX=0;
+
+  IF (SPELLSTATE(W,STStrategicLogistic)=2) THEN {
+   LOGISTIC=1;
+
+   FOR I=1 TO MAXCITY();
+
+    IF (CITYOWNER(I)=W) THEN {
+     OWNMITHRIL=OWNMITHRIL+OREINRANGE(I,OreMithril);
+     OWNADAMANTIUM=OWNADAMANTIUM+OREINRANGE(I,OreAdamantium);
+     OWNORIHALCON=OWNORIHALCON+OREINRANGE(I,OreOrihalcon);
+     OWNCRYSX=OWNCRYSX+OREINRANGE(I,OreCrysx);
+    }
+
+   NEXT I;
+
+  } ELSE {
+   OWNMITHRIL=OWNMITHRIL+OREINRANGE(HQ,OreMithril);
+   OWNADAMANTIUM=OWNADAMANTIUM+OREINRANGE(HQ,OreAdamantium);
+   OWNORIHALCON=OWNORIHALCON+OREINRANGE(HQ,OreOrihalcon);
+   OWNCRYSX=OWNCRYSX+OREINRANGE(HQ,OreCrysx);
+  }
+
+  IF (ISBUILT(HQ,BAlchemistguild)=0)
+   %AND ( (LOGISTIC=0) %OR (BUILDINGSOWNED(W,BAlchemistguild,0)=0) )
+  THEN { GOTO "NOOUTLANDERWEAPON"; }
+
+   SETENCHANTMENTFLAG(NEWU,EncMagic,1,1);
+
+   ORELEVEL=0;
+   IF (OWNMITHRIL>0) THEN { ORELEVEL=1; }
+   IF (OWNADAMANTIUM>0) THEN { ORELEVEL=2; }
+   IF (BUILDINGSOWNED(W,BLavaSmelter,0)>0) THEN { ORELEVEL=ORELEVEL+1; }
+   IF (BUILDINGSOWNED(W,BAlchemistGuild,CESorcererStone)>0) THEN { ORELEVEL=ORELEVEL+1; }
+
+   IF ( (ORELEVEL>2) %OR (OWNORIHALCON>0) )
+    %AND (GETENCHANTMENTFLAG(NEWU,EncOrihalcon,1)=0)
+   THEN {
+    SETENCHANTMENTFLAG(NEWU,EncOrihalcon,1,1);
+    : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+    IF GETENCHANTMENTFLAG(NEWU,EncAdamant,ABase)
+     %AND GETENCHANTMENTFLAG(NEWU,EncOrihalcon,ABase)
+    THEN {
+     SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1);
+    }
+   }
+   IF (GETENCHANTMENTFLAG(NEWU,EncAdamant,1)>0) THEN { GOTO "NOOUTLANDERWEAPON"; }
+    IF (ORELEVEL>1) THEN {
+     SETENCHANTMENTFLAG(NEWU,EncAdamant,1,1);
+     IF (GETENCHANTMENTFLAG(NEWU,EncMithril,1)>0) THEN {
+      SETENCHANTMENTFLAG(NEWU,EncMithril,1,0);
+     }
+     : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+     IF GETENCHANTMENTFLAG(NEWU,EncAdamant,1)
+      %AND GETENCHANTMENTFLAG(NEWU,EncOrihalcon,1)
+     THEN {
+      SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1); 
+     }
+    } ELSE {
+     IF (GETENCHANTMENTFLAG(NEWU,EncMithril,1)>0) THEN { GOTO "NOOUTLANDERWEAPON"; }
+      IF (ORELEVEL=1) THEN {
+       SETENCHANTMENTFLAG(NEWU,EncMithril,1,1);
+      }
+    }
+
+  !NOOUTLANDERWEAPON!
+
+  : Effect of Pillar of Faith, unit has chance 20% to get lucky upon unit creation :
+  IF (CITYENCHANT(HQ,CEPillarOfFaith)=-1) THEN { GOTO "NOPILLAROFFAITH"; }
+   FAITH=0
+   LUCK=RND(5)+1;
+   RESIST=GETSTAT(NEWU,SResist,1);
+
+   IF CITYENCHANT(HQ,CEHeavenlyLight)>-1 THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BShrine) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BParthenon) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BWitchesConvent) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BCathedral) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BTemple) THEN { FAITH=FAITH+1; }
+   IF HASGLOBAL(W,GEKingOfUnderworld) %AND ISBUILT(HQ,BOracle) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BAltarOfStorm) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BAltarOfTheSun) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BAltarOfTheMoon) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BBasilica) THEN { FAITH=FAITH+1; }
+   SETSTAT(NEWU,SPowerOfFaith,1,FAITH);
+   SETSTAT(NEWU,SResist,1,RESIST+FAITH);
+   IF (GETSTAT(NEWU,ALucky,1)=0) %AND (LUCK=5) THEN { 
+    SETSTAT(NEWU,ALucky,1,1);
+   }
+
+  !NOPILLAROFFAITH!
+
+  : New effect of Nature Embrace, Animist's Guild enchant unit with Resist Elements (not permanent) :
+  IF HASGLOBAL(W,GECallTheWild) %AND ISBUILT(HQ,BAnimistGuild) THEN {
+   IF (SPELLSTATE(W,STattooMagic)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncResistElements,ABase,1);
+   } ELSE {
+    SETOLENCHANTMENTFLAG(NEWU,EncResistElements,ABase,1);
+   }
+  }
+
+  : New effect of Consecration, Temple/Cathedral enchant unit with Bless (not permanent) :
+  IF (CITYENCHANT(HQ,CEConsecration)>-1)
+   %AND ( (ISBUILT(HQ,BCathedral)) %OR (ISBUILT(HQ,BTemple)) )
+  THEN {
+   IF (SPELLSTATE(W,STattooMagic)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncBless,1,1);
+   } ELSE {
+    SETOLENCHANTMENTFLAG(NEWU,EncBless,1,1);
+   }
+  }
+
+  : New effect of Crusade allow city with armorer guild + cathedral/temple to give permanent holy armor enchantment) :
+  IF HASGLOBAL(W,GECrusade) %AND ISBUILT(HQ,BArmorerGuild)
+   %AND ( (ISBUILT(HQ,BCathedral)) %OR (ISBUILT(HQ,BTemple)) )
+  THEN {
+   IF (SPELLSTATE(W,STattooMagic)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncDummyArmor,1,1);
+   } ELSE {
+    SETOLENCHANTMENTFLAG(NEWU,EncHolyArmor,1,1);
+   }
+  }
+
+  IF ( (ISBUILT(HQ,BLavaSmelter)=0) )
+   %AND ( (LOGISTIC=0) %OR (BUILDINGSOWNED(W,BLavaSmelter,0)=0) )
+  THEN { GOTO "NOLAVASMELTER"; }
+
+   IF (GETSTAT(NEWU,AWeaponImmunity,1)>0) THEN { GOTO "OUTLANDERSKIPWEAPONIMMUNE"; }
+
+    IF (OWNMITHRIL>0) %AND (OWNADAMANTIUM>0) THEN { SETSTAT(NEWU,AWeaponImmunity,1,1); }
+
+   !OUTLANDERSKIPWEAPONIMMUNE!
+
+   IF (GETSTAT(NEWU,AMissileImmunity,1)>0) THEN { GOTO "OUTLANDERSKIPMISSILEIMMUNE"; }
+
+    IF (OWNMITHRIL>0) %AND (OWNCRYSX>0) THEN { SETSTAT(NEWU,AMissileImmunity,1,1); }
+
+   !OUTLANDERSKIPMISSILEIMMUNE!
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncResistElements,1)>0) THEN { GOTO "OUTLANDERSKIPRESISTELEMENT"; }
+
+    IF (OWNMITHRIL>0) %AND (OWNORIHALCON>0) THEN { SETENCHANTMENTFLAG(NEWU,EncResistElements,1,1); }
+
+   !OUTLANDERSKIPRESISTELEMENT!
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncElementalArmor,1)>0) THEN { GOTO "OUTLANDERSKIPELEMENTALARMOR"; }
+
+    IF (OWNADAMANTIUM>0) %AND (OWNORIHALCON>0) THEN { SETENCHANTMENTFLAG(NEWU,EncElementalArmor,1,1); }
+
+   !OUTLANDERSKIPELEMENTALARMOR!
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncFlameBlade,1)>0) THEN { GOTO "OUTLANDERSKIPFLAMEBLADE"; }
+
+    IF (OWNADAMANTIUM>0) %AND (OWNCRYSX>0) THEN { SETENCHANTMENTFLAG(NEWU,EncFlameBlade,1,1); }
+
+   !OUTLANDERSKIPFLAMEBLADE!
+
+  !NOLAVASMELTER!
+
+  : Outlander unit gains Mariner from Baray through upgrade protocol :
+  IF ( (ISBUILT(HQ,BBaray)=0) )
+   %AND ( (LOGISTIC=0) %OR (BUILDINGSOWNED(W,BBaray,0)=0) )
+  THEN { GOTO "NOOUTLANDERBARAY"; }
+
+   IF (GETSTAT(NEWU,SMariner,1)=0) THEN {
+    SETSTAT(NEWU,SMariner,1,1)
+   }
+
+  !NOOUTLANDERBARAY!
+
+  : Effect of Chaos' Blessing and/or Doom Mastery :
+  IF (CITYENCHANT(HQ,CEChaosBless)>-1) %AND (HASGLOBAL(W,GEDoomMastery)) THEN { 
+   SETENCHANTMENTFLAG(NEWU,EncCCBreath,1,1);
+   SETENCHANTMENTFLAG(NEWU,EncCCArmor,1,1);
+   SETENCHANTMENTFLAG(NEWU,EncCCFlight,1,1);
+   :Apply chaos channel:
+   APPLYCHAOSCHANNEL NEWU;
+  } ELSE {
+   IF (CITYENCHANT(HQ,CEChaosBless)>-1) %OR (HASGLOBAL(W,GEDoomMastery)) THEN { APPLYCHAOSCHANNEL(NEWU); }
+  }
+
+  : == Unit bonus as unit's veterancy == :
+  : Altar of Battle/War College/Barracks's unit veterancy :
+  IF CITYENCHANT(HQ,CEAltarofBattle)>-1 THEN {
+   SETSTAT(NEWU,ALevel,1,4);
+  } ELSE { 
+   IF ISBUILT(HQ,BWarCollege) THEN {
+    SETSTAT(NEWU,ALevel,1,3); 
+   } ELSE {
+    IF ISBUILT(HQ,BBarracks) THEN { SETSTAT(NEWU,ALevel,1,2); }
+   }
+  }
+
+  : special, unit from Necropolis becomes Undead :
+  IF (CITYENCHANT(HQ,CENecropolis)>-1) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncUndead,1,1);
+   SETENCHANTMENTFLAG(NEWU,EncWraithForm,1,1);
+   IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncFrenzy,1,1);
+   }
+  }
+
+ !NOHQ!
+
+ IF (SPELLSTATE(W,STMagitekAntiGravityDrive)<>2) THEN { GOTO "NOANTIGRAVITY"; }
+
+  IF (GETENCHANTMENTFLAG(NEWU,EncPowerEngine,1)>0) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncHaste,ABase,1);
+   IF (GETSTAT(NEWU,ASailing,1)>0) THEN {
+    SETSTAT(NEWU,AFlying,1,1);
+    SETSTAT(NEWU,AIllusionImmunity,1,1);
+   }
+  }
+
+ !NOANTIGRAVITY!
+
+ IF (SPELLSTATE(W,STMagitekBeamWeapon)<>2) THEN { GOTO "NOBEAMCANNON"; }
+  IF (GETSTAT(NEWU,SRangedType,1)=40) THEN { GOTO "NOBEAMCANNON"; }
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncPowerEngine,1)>0)
+    %AND (GETSTAT(NEWU,SMaxAmmo,1)>0)
+   THEN {
+    SETSTAT(NEWU,SRangedType,1,40);
+    SETSTAT(NEWU,SRanged,1,GETSTAT(NEWU,SRanged,1)+%I(GETSTAT(NEWU,SRanged,1)/2));
+    SETSTAT(NEWU,AFDoom,1,1,3);
+   }
+
+ !NOBEAMCANNON!
+
+!NOTAIRSUPPORT!
+
+IF (SP<>SSpiritLink) THEN { GOTO "NOTSENTIENTGRANTING"; }
+
+ SETOLENCHANTMENTFLAG(TU,EncSpiritLink,1,0);
+ SETENCHANTMENTFLAG(TU,EncSpiritLink,1,1);
+ SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));
+ IF BASEFANTASTIC(TU) THEN {
+  SETSTAT(TU,SMultiLabel,1,14);
+  SETSTAT(TU,AFantastic,1,0);
+  SETSTAT(TU,ALevel,1,1);
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTSENTIENTGRANTING!
+
+IF (SP<>SDivineJudgement) THEN { GOTO "NOTDIVINEJUDGEMENT"; }
+
+ :SETGLOBAL(TP,GECultRetribution,1);:
+
+ FOR U=1 TO MAXUNIT();
+
+  IF (GETSTAT(U,SOwner,1)<>TP) THEN { GOTO "NOTDIVINETARGET"; }
+   IF (GETSTAT(U,AMagicImmunity,0)>0) THEN { GOTO "NOTDIVINETARGET"; }
+
+    : using resistance roll :
+    FIRSTROLL=RND(10);
+    SECONDROLL=RND(10);
+    DEDUCT=0;
+    IF (GETENCHANTMENTFLAG(U,EncInvulnerability,0)) THEN { DEDUCT=2; }
+    JDAMAGE=( ( (GETSTAT(U,SHP,1))*(GETSTAT(U,SFigures,1)) ) - DEDUCT );
+    JRESIST=(GETSTAT(U,SResist,0)-1);
+    IF ( (JRESIST)<(FIRSTROLL) )
+     %OR ( ((HASGLOBAL(W,GEFateMastery))>0) %AND ( (JRESIST)<(SECONDROLL) ) )
+    THEN {
+     DEALCOMBATDAMAGE(U,JDAMAGE,0,0);
+     GOTO "NOTDIVINETARGET";
+    }
+
+  !NOTDIVINETARGET!
+
+ NEXT U;
+
+ : remove city enchantment dummy :
+ SETCITYENCHANTOWNER(TC,CEDummy,-1)
+
+ GOTO "ENDOFOLSPELL";
+
+!NOTDIVINEJUDGEMENT!
+
+IF (SP<>SDenoucement) THEN { GOTO "NOTDENOUCEMENT"; }
+
+ IF (TP=NeutralPlayerID) THEN { GOTO "NOTDENOUCEMENTTARGET"; }
+
+  FOR I=0 TO NOFWIZARDS();
+
+   IF (I=W) THEN { GOTO "NOTEFFECTDENOUCEMENT"; }
+
+    DRWI=GETDIPVAR(TP,I,1)-30;
+    HRWI=GETDIPVAR(TP,I,7)-10;
+
+    IF (DRWI<-100) THEN { DRWI=-100; }
+    IF (HRWI<-100) THEN { HRWI=-100; }
+
+    SETDIPVAR(TP,I,1,DRWI);
+    SETDIPVAR(TP,I,7,HRWI);
+
+   !NOTEFFECTDENOUCEMENT!
+
+  NEXT I;
+
+ !NOTDENOUCEMENTTARGET!
+
+ : remove city enchantment dummy :
+ SETCITYENCHANTOWNER(TC,CEDummy,-1)
+
+ GOTO "ENDOFOLSPELL";
+
+!NOTDENOUCEMENT!
+
+IF (SP<>SWallOfStone) THEN { GOTO "NOTWALLOFSTONE"; }
+
+ SETBUILDINGSTATE(TC,BCityWalls,1);
+ GOTO "ENDOFOLSPELL";
+
+!NOTWALLOFSTONE!
+
+IF (SP<>SMarkOfConqueror) THEN { GOTO "NOTMARKOFCONQUEROR"; }
+
+ SETBUILDINGSTATE(TC,BWarlordHold,1);
+ GOTO "ENDOFOLSPELL";
+
+!NOTMARKOFCONQUEROR!
+
+IF (SP<>SRebuild) THEN { GOTO "NOTREBUILD"; }
+
+ SETOLENCHANTMENTFLAG(TU,EncRebuild,1,0);
+ SETENCHANTMENTFLAG(TU,EncRebuild,1,1);
+
+ IF (ISHERO(TU)=0) THEN {
+  SETSTAT(TU,SCustomAttribute,1,1);
+  SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);
+  SETSTAT(TU,SDefense,1,GETSTAT(TU,SDefense,1)+2);
+  SETSTAT(TU,AFArmorPiercing,1,1,1);
+  SETSTAT(TU,AIllusionImmunity,1,1);
+  SETSTAT(TU,ADeathImmunity,1,1);
+ }
+
+ GOTO "ENDOFOLSPELL";
+
+!NOTREBUILD!
+
+: Recall to Fortress :
+IF (SP<>SStrategicRecall) THEN { GOTO "NORECALL"; }
+
+ FP=GETWIZARDDATA(W,WDFortressP);
+ FX=GETWIZARDDATA(W,WDFortressX);
+ FY=GETWIZARDDATA(W,WDFortressY);
+ RC=CITYONTILE(FP,FX,FY);
+ SEA=0;
+ IF (GETSTAT(SpellTargetUnit,ASailing,0)>0)
+  %OR (GETSTAT(SpellTargetUnit,AFlying,0)>0)
+  %OR (GETSTAT(SpellTargetUnit,ANoncorporeal,0)>0)
+  %OR (GETSTAT(SpellTargetUnit,AWaterwalking,0)>0)
+ THEN { SEA=1; }
+
+ IF (GARRISON(RC)<9) THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY);
+  GOTO "NORECALL";
+ }
+ R1=NOFUNITSONTILE(FP,FX+1,FY+1);
+ U1=UNITONTILE(FP,FX+1,FY+1,1);
+ TERRAIN1=GETTERRAIN(FX+1,FY+1,FP);
+ IF ( (TERRAIN1>3) %OR (SEA>0) )
+  %AND ( (R1=0) %OR ( (R1<9) %AND (GETSTAT(U1,SOwner,0)=W) ) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX+1);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY+1);
+  GOTO "NORECALL";
+ }
+ R2=NOFUNITSONTILE(FP,FX+1,FY);
+ U2=UNITONTILE(FP,FX+1,FY,1);
+ TERRAIN2=GETTERRAIN(FX+1,FY,FP);
+ IF ( (TERRAIN2>3) %OR (SEA>0) )
+  %AND (R2=0) %OR ( (R2<9) %AND (GETSTAT(U2,SOwner,0)=W) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX+1);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY);
+  GOTO "NORECALL";
+ }
+ R3=NOFUNITSONTILE(FP,FX+1,FY-1);
+ U3=UNITONTILE(FP,FX+1,FY-1,1);
+ TERRAIN3=GETTERRAIN(FX+1,FY-1,FP);
+ IF ( (TERRAIN3>3) %OR (SEA>0) )
+  %AND (R3=0) %OR ( (R3<9) %AND (GETSTAT(U3,SOwner,0)=W) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX+1);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY-1);
+  GOTO "NORECALL";
+ }
+ R4=NOFUNITSONTILE(FP,FX,FY-1);
+ U4=UNITONTILE(FP,FX,FY-1,1);
+ TERRAIN4=GETTERRAIN(FX,FY-1,FP);
+ IF ( (TERRAIN4>3) %OR (SEA>0) )
+  %AND (R4=0) %OR ( (R4<9) %AND (GETSTAT(U4,SOwner,0)=W) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY-1);
+  GOTO "NORECALL";
+ }
+ R5=NOFUNITSONTILE(FP,FX-1,FY-1);
+ U5=UNITONTILE(FP,FX-1,FY-1,1);
+ TERRAIN5=GETTERRAIN(FX-1,FY-1,FP);
+ IF ( (TERRAIN5>3) %OR (SEA>0) )
+  %AND (R5=0) %OR ( (R5<9) %AND (GETSTAT(U5,SOwner,0)=W) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX-1);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY-1);
+  GOTO "NORECALL";
+ }
+ R6=NOFUNITSONTILE(FP,FX-1,FY);
+ U6=UNITONTILE(FP,FX-1,FY,1);
+ TERRAIN6=GETTERRAIN(FX-1,FY,FP);
+ IF ( (TERRAIN6>3) %OR (SEA>0) )
+  %AND (R6=0) %OR ( (R6<9) %AND (GETSTAT(U6,SOwner,0)=W) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX-1);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY);
+  GOTO "NORECALL";
+ }
+ R7=NOFUNITSONTILE(FP,FX-1,FY+1);
+ U7=UNITONTILE(FP,FX-1,FY+1,1);
+ TERRAIN7=GETTERRAIN(FX-1,FY+1,FP);
+ IF ( (TERRAIN7>3) %OR (SEA>0) )
+  %AND (R7=0) %OR ( (R7<9) %AND (GETSTAT(U7,SOwner,0)=W) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX-1);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY+1);
+  GOTO "NORECALL";
+ }
+ R8=NOFUNITSONTILE(FP,FX,FY+1);
+ U8=UNITONTILE(FP,FX,FY+1,1);
+ TERRAIN8=GETTERRAIN(FX,FY+1,FP);
+ IF ( (TERRAIN8>3) %OR (SEA>0) )
+  %AND (R8=0) %OR ( (R8<9) %AND (GETSTAT(U8,SOwner,0)=W) )
+ THEN {
+  SETSTAT(SpellTargetUnit,SPlane,1,FP);
+  SETSTAT(SpellTargetUnit,SOLX,1,FX);
+  SETSTAT(SpellTargetUnit,SOLY,1,FY+1);
+ }
+
+!NORECALL!
+
+IF (SP<>SRaiseVolcano) THEN { GOTO "NOTRAISEVOLCANO"; }
+
+ OWNNEARBYCITY=0;
+ P=SpellTargetPlane;
+
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,P+2)>0) THEN { GOTO "NOTRAISEVOLCANO"; }
+
+  FOR X=SpellTargetX-2 TO SpellTargetX+2;
+  FOR Y=SpellTargetY-2 TO SpellTargetY+2;
+
+   IF ( CITYONTILE(P,X,Y) > 0 ) THEN { GOTO "NOTCITYNEARVOLCANO"; }
+
+    IF ( CITYOWNER(CITYONTILE(P,X,Y)) = W ) THEN { OWNNEARBYCITY=OWNNEARBYCITY+1; }
+
+   !NOTCITYNEARVOLCANO!
+
+  NEXT Y;
+  NEXT X;
+
+  IF (OWNNEARBYCITY=0) THEN { GOTO "NOTRAISEVOLCANO"; }
+
+  ORE=RND(500);
+
+  : none >150 :
+  IF (ORE>150) THEN { GOTO "NOTRAISEVOLCANO"; }
+
+   : Orihalcon 1-2 :
+   IF (ORE>0) %AND (ORE<3) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,5);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Adamantium 3-10 :
+   IF (ORE>2) %AND (ORE<11) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,3);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Mithril 11-20 :
+   IF (ORE>10) %AND (ORE<21) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,4);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Gold 21-40 :
+   IF (ORE>20) %AND (ORE<41) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,9);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Silver 41-60 :
+   IF (ORE>40) %AND (ORE<61) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,8);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Coal 61-80 :
+   IF (ORE>60) %AND (ORE<81) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,7);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Iron 81-100 :
+   IF (ORE>80) %AND (ORE<101) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,6);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Gem 101-120 :
+   IF (ORE>100) %AND (ORE<121) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,10);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Quork 121-140 :
+   IF (ORE>120) %AND (ORE<141) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,12);
+    GOTO "NOTRAISEVOLCANO";
+   }
+   : Crysx 141-150 :
+   IF (ORE>140) %AND (ORE<151) THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,P+2,11);
+    GOTO "NOTRAISEVOLCANO";
+   }
+
+ GOTO "ENDOFOLSPELL";
+
+!NOTRAISEVOLCANO!
+
+IF (SP<>STimeStop) THEN { GOTO "NOTTIMESTOP"; }
+
+ MASTERVARSET TIMESTOPCOUNT = 1;
+ MASTERVARSET TSSPELLCOUNTING = 1;
+ MASTERVARSET TSTURNCOUNTING = 1;
+ GOTO "ENDOFOLSPELL";
+
+!NOTTIMESTOP!
+
+: new effect of Doom Mastery, chaos channel give all 3 effects :
+IF (SP<>SChaosChannels) THEN { GOTO "NOTCHAOSCHANNELS"; }
+
+ IF (HASGLOBAL(W,GEDoomMastery) THEN {
+  SETENCHANTMENTFLAG(TU,EncCCArmor,1,1);
+  SETENCHANTMENTFLAG(TU,EncCCFlight,1,1);
+  SETENCHANTMENTFLAG(TU,EncCCBreath,1,1);
+  GOTO "ENDOFOLSPELL";
+ } ELSE {
+  IF GETOLENCHANTMENTFLAG(TU,EncCCArmor,1) THEN { SETENCHANTMENTFLAG(TU,EncCCArmor,1,1); }
+  IF GETOLENCHANTMENTFLAG(TU,EncCCFlight,1) THEN { SETENCHANTMENTFLAG(TU,EncCCFlight,1,1); }
+  IF GETOLENCHANTMENTFLAG(TU,EncCCBreath,1) THEN { SETENCHANTMENTFLAG(TU,EncCCBreath,1,1); }
+  GOTO "ENDOFOLSPELL";
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTCHAOSCHANNELS!
+
+IF (SP<>STransmuteEquipment) THEN { GOTO "NOTTRANSMUTEEQUIPMENT"; }
+
+ SETOLENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,0);
+ SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,1);
+ IF ((ISHERO(TU))=0) THEN {
+  SETENCHANTMENTFLAG(TU,EncMagic,1,1);
+  SETENCHANTMENTFLAG(TU,EncAdamant,1,1);
+  SETENCHANTMENTFLAG(TU,EncOrihalcon,1,1);
+  GOTO "ENDOFOLSPELL";
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTTRANSMUTEEQUIPMENT!
+
+: Vampirism effect of turn undead move here :
+IF (SP<>SVampirism) THEN { GOTO "NOTVAMPIRISM"; }
+
+ SETENCHANTMENTFLAG(TU,EncUndead,1,1);
+ SETOLENCHANTMENTFLAG(TU,EncVampirism,1,0);
+ SETENCHANTMENTFLAG(TU,EncVampirism,1,1);
+ GOTO "ENDOFOLSPELL";
+
+!NOTVAMPIRISM!
+
+IF (SP<>SFloatingIsland) THEN { GOTO "NOTFLOATINGISLAND"; }
+
+ IF (HASGLOBAL(W,GEMarinerMastery)=1) THEN {
+  SETSTAT(SU,SOLMaxMoves,1,(GetStat(SU,SOLMaxMoves,1)+4));
+  SETSTAT(SU,SOLMovesLeft,1,(GetStat(SU,SOLMovesLeft,1)+4));
+  SETSTAT(SU,SCombatMaxMoves,1,(GetStat(SU,SCombatMaxMoves,1)+4));
+  SETSTAT(SU,SCombatMovesLeft,1,(GetStat(SU,SCombatMovesLeft,1)+4));
+  SETSTAT(SU,SMMastery,1,1);
+  GOTO "ENDOFOLSPELL";
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTFLOATINGISLAND!
+
+IF (SP<>SEarthElemental) THEN { GOTO "NOTEARTHELEMENTAL"; }
+
+ P=GetStat(SU,SPlane,1);
+ OX=GetStat(SU,SOLX,1);
+ OY=GetStat(SU,SOLY,1);
+ OLT=GETTERRAIN(OX,OY,P);
+ OLR=GETTERRAIN(OX,OY,P+2);
+
+ IF (OLR=OreAdamantium) THEN {
+  SETENCHANTMENTFLAG(SU,EncAdamant,1,1);
+ }
+ IF (OLR=OreMithril) THEN {
+  SETENCHANTMENTFLAG(SU,EncMithril,1,1);
+ }
+ IF (OLR=OreOrihalcon) THEN {
+  SETENCHANTMENTFLAG(SU,EncOrihalcon,1,1);
+ }
+ IF (OLR=OreIron) THEN {
+  SETENCHANTMENTFLAG(SU,EncIronSkin,1,1);
+ }
+ IF (OLR=OreCoal) THEN {
+  SETENCHANTMENTFLAG(SU,EncImmolation,1,1);
+ }
+ IF (OLR=OreNightshade) THEN {
+  SETSTAT(SU,SResist,1,(GETSTAT(SU,SResist,1))+3 );
+ }
+ IF (OLR=OreCrysx) THEN {
+  SETSTAT(SU,SResist,1,(GETSTAT(SU,SResist,1))+2 );
+ }
+ IF (OLR=OreQuork) THEN {
+  SETSTAT(SU,SResist,1,(GETSTAT(SU,SResist,1))+1 );
+ }
+ IF (OLT=LTGrassland) THEN {
+  SETSTAT(SU,SResist,1,(GETSTAT(SU,SResist,1))+4 );
+ }
+ IF (OLT<LTGrassland) THEN {
+  SETSTAT(SU,AFireImmunity,1,1 );
+ }
+ IF (OLT=LTTundra) THEN {
+  SETSTAT(SU,AColdImmunity,1,1 );
+ }
+ IF (OLT=LTForest)
+  %OR (OLT=LTNatureNode)
+ THEN {
+  SETSTAT(SU,SCustomAttribute,1,3 );
+ }
+ IF (OLT=LTMountain)
+  %OR (OLT=LTVolcano)
+  %OR (OLT=LTHill)
+  %OR (OLT=LTChaosNode)
+ THEN {
+  SETSTAT(SU,SDefense,1,(GETSTAT(SU,SDefense,1))+3 );
+ }
+ IF (OLT=LTDesert) THEN {
+  SETSTAT(SU,ANoncorporeal,1,1 );
+ }
+ IF (OLT=LTSwamp)
+  %OR (OLT=LTRiver)
+  %OR (OLT=LTRiverStart)
+  %OR (OLT=LTSorceryNode)
+ THEN {
+  SETSTAT(SU,SDefense,1,(GETSTAT(SU,SDefense,1))-2 );
+  SETSTAT(SU,AMerging,1,1 );
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTEARTHELEMENTAL!
+
+IF (SP<>SBlizzard) THEN { GOTO "NOTBLIZZARD"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)<>2) THEN { GOTO "NOPHYSICSBLIZZARD"; }
+  FOR U=1 TO MAXUNIT();
+ 
+   OLX=(GetStat(U,SOLX,1));
+   OLY=(GetStat(U,SOLY,1));
+   PLANE=(GetStat(U,SPlane,1));
+
+   IF (OLX=SpellTargetX)
+    %AND (OLY=SpellTargetY)
+    %AND (PLANE=SpellTargetPlane)
+   THEN {
+    IF (GETSTAT(U,AColdImmunity,0)=0) THEN {
+     ATTACK=%I(12*0.5);
+     HIT=30;
+     DAMAGE=0;
+     DEFEND=( GetStat(U,SToDefend,0) );
+     ARMOR=( GetStat(U,SDefense,0) );
+      IF (GETENCHANTMENTFLAG(U,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+      IF (GETENCHANTMENTFLAG(U,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+      IF (GETENCHANTMENTFLAG(U,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+     : Armor piercing attack :
+     ARMOR=%I(ARMOR/2);
+
+     : Make attack roll for 10 damage at 60% to-hit :
+     LOOP{
+      IF (ATTACK>0) THEN {
+       ATTACK=(ATTACK-1);
+       PERCENT=(RND(100));
+       IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+      }
+     }ENDLP (ATTACK=0);
+
+     : Make defense roll with armor and to-defend :
+     IF (DAMAGE>0) THEN { 
+      LOOP{
+       IF (ARMOR>0) THEN {
+        ARMOR=(ARMOR-1);
+        PERCENT=(RND(100));
+        IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+       }
+      }ENDLP (ARMOR=0);
+      DEALCOMBATDAMAGE(U,DAMAGE,0,0);
+     }
+    }
+   }
+   
+  NEXT;
+
+ !NOPHYSICSBLIZZARD!
+
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTGrassland)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTDesert)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTSwamp)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTForest)
+ THEN {
+  SETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane,LTTundra);
+  GOTO "ENDOFOLSPELL";
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTBLIZZARD!
+
+IF (SP<>SFireStorm) THEN { GOTO "NOTFIRESTORM"; }
+
+ IF (HASGLOBAL(W,GEMeteorStorm)=0) THEN { GOTO "NOMETEORFIRESTORM"; }
+  FOR U=1 TO MAXUNIT();
+ 
+   OLX=(GetStat(U,SOLX,1));
+   OLY=(GetStat(U,SOLY,1));
+   PLANE=(GetStat(U,SPlane,1));
+
+   IF (OLX=SpellTargetX)
+    %AND (OLY=SpellTargetY)
+    %AND (PLANE=SpellTargetPlane)
+   THEN {
+    IF (GETSTAT(U,AFireImmunity,0)=0)
+     %AND (GETSTAT(U,AMagicImmunity,0)=0)
+    THEN {
+     FIGURE=(GetStat(U,SFigures,1)) - %I( GETDAMAGE(U,0)/GetStat(U,SHP,0) );
+     ATTACK=%I( (14*0.75) * FIGURE );
+     HIT=30;
+     DAMAGE=0;
+     DEFEND=( GetStat(U,SToDefend,0) );
+     ARMOR=( GetStat(U,SDefense,0) );
+      IF (GETENCHANTMENTFLAG(U,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+      IF (GETENCHANTMENTFLAG(U,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+      IF (GETENCHANTMENTFLAG(U,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+     : Make attack roll for 10 damage at 60% to-hit :
+     LOOP{
+      IF (ATTACK>0) THEN {
+       ATTACK=(ATTACK-1);
+       PERCENT=(RND(100));
+       IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+      }
+     }ENDLP (ATTACK=0);
+
+     : Make defense roll with armor and to-defend :
+     IF (DAMAGE>0) THEN { 
+      LOOP{
+       IF (ARMOR>0) THEN {
+        ARMOR=(ARMOR-1);
+        PERCENT=(RND(100));
+        IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+       }
+      }ENDLP (ARMOR=0);
+      DEALCOMBATDAMAGE(U,DAMAGE,0,0);
+     }
+    }
+   }
+   
+  NEXT;
+
+ !NOMETEORFIRESTORM!
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)<>2) THEN { GOTO "NOPHYSICSFIRESTORM"; }
+  FOR U=1 TO MAXUNIT();
+ 
+   OLX=(GetStat(U,SOLX,1));
+   OLY=(GetStat(U,SOLY,1));
+   PLANE=(GetStat(U,SPlane,1));
+
+   IF (OLX=SpellTargetX)
+    %AND (OLY=SpellTargetY)
+    %AND (PLANE=SpellTargetPlane)
+   THEN {
+    IF (GETSTAT(U,AFireImmunity,0)=0) THEN {
+     FIGURE=(GetStat(U,SFigures,1)) - %I( GETDAMAGE(U,0)/GetStat(U,SHP,0) );
+     ATTACK=%I( (14*0.5) * FIGURE );
+     HIT=30;
+     DAMAGE=0;
+     DEFEND=( GetStat(U,SToDefend,0) );
+     ARMOR=( GetStat(U,SDefense,0) );
+      IF (GETENCHANTMENTFLAG(U,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+      IF (GETENCHANTMENTFLAG(U,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+      IF (GETENCHANTMENTFLAG(U,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+     : Make attack roll for 10 damage at 60% to-hit :
+     LOOP{
+      IF (ATTACK>0) THEN {
+       ATTACK=(ATTACK-1);
+       PERCENT=(RND(100));
+       IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+      }
+     }ENDLP (ATTACK=0);
+
+     : Make defense roll with armor and to-defend :
+     IF (DAMAGE>0) THEN { 
+      LOOP{
+       IF (ARMOR>0) THEN {
+        ARMOR=(ARMOR-1);
+        PERCENT=(RND(100));
+        IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+       }
+      }ENDLP (ARMOR=0);
+      DEALCOMBATDAMAGE(U,DAMAGE,0,0);
+     }
+    }
+   }
+   
+  NEXT;
+
+ !NOPHYSICSFIRESTORM!
+
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTGrassland)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTSwamp)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTForest)
+ THEN {
+  SETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane,LTDesert);
+  IF (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane)=LTDesert) THEN {
+   CHANCE=RND(100);
+   IF (CHANCE=99)
+    %AND (GETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane+2)=0)
+   THEN {
+    SETTERRAIN(SpellTargetX,SpellTargetY,SpellTargetPlane+2,OreGems);
+    GOTO "ENDOFOLSPELL";
+   }
+   GOTO "ENDOFOLSPELL";
+  }
+  GOTO "ENDOFOLSPELL";
+ }
+ GOTO "ENDOFOLSPELL";
+
+!NOTFIRESTORM!
+
+IF (SP=SArmageddon) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SDoomsday) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SBlazingEyes) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SEternalNight) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SEvilOmens) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SDarkestHour) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SDivineOrder) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SDisjunction) THEN { GOTO "GLOBALCOUNT"; }
+
+IF (SP=SIceAge) THEN { GOTO "GLOBALCOUNT"; }
+
+HALT;
+
+!GLOBALCOUNT!
+
+: Global enchantment counting :
+NOFGEDDON=0;
+NOFDOOMS=0;
+NOFCHAOSEM=0;
+NOFNIGHT=0;
+NOFOMENS=0;
+NOFDARKEST=0;
+NOFDIVORDER=0;
+NOFTIMESTOP=0;
+NOFICEAGE=0;
+
+ FOR I=0 TO NOFWIZARDS();
+  IF HASGLOBAL(I,GEArmageddon) THEN { NOFGEDDON=NOFGEDDON+1; }
+  IF HASGLOBAL(I,GEDoomsday) THEN { NOFDOOMS=NOFDOOMS+1; }
+  IF HASGLOBAL(I,GEBlazingEyes) THEN { NOFCHAOSEM=NOFCHAOSEM+1; }
+  IF HASGLOBAL(I,GEEternalNight) THEN { NOFNIGHT=NOFNIGHT+1; }
+  IF HASGLOBAL(I,GEEvilOmens) THEN { NOFOMENS=NOFOMENS+1; }
+  IF HASGLOBAL(I,GEDarkestHour) THEN { NOFDARKEST=NOFDARKEST+1; }
+  IF HASGLOBAL(I,GEDivineOrder) THEN { NOFDIVORDER=NOFDIVORDER+1; }
+  IF HASGLOBAL(I,GETimeStop) THEN { NOFTIMESTOP=NOFTIMESTOP+1; }
+  IF HASGLOBAL(I,GEIceAge) THEN { NOFICEAGE=NOFICEAGE+1; }
+ NEXT;
+
+ MASTERVARSET ARMAGEDDONCOUNT = NOFGEDDON;
+ MASTERVARSET DOOMSDAYCOUNT = NOFDOOMS;
+ MASTERVARSET CHAOSEMBRACECOUNT = NOFCHAOSEM;
+ MASTERVARSET ETERNALNIGHTCOUNT = NOFNIGHT;
+ MASTERVARSET EVILOMENCOUNT = NOFOMENS;
+ MASTERVARSET DARKESTHOURCOUNT = NOFDARKEST;
+ MASTERVARSET DIVINEORDERCOUNT = NOFDIVORDER;
+ MASTERVARSET ICEAGECOUNT = NOFICEAGE;
+
+ IF (TIMESTOPCOUNT=0) THEN {
+  MASTERVARSET TIMESTOPCOUNT = 0;
+  MASTERVARSET TSSPELLCOUNTING = 0;
+  MASTERVARSET TSTURNCOUNTING = 0;
+ }
+ GOTO "ENDOFOLSPELL";
+
+!ENDOFOLSPELL!
+
+HALT;

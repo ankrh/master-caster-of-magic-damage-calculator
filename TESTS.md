@@ -4,7 +4,7 @@
 # Test registry — Master/Caster of Magic damage calculator
 
 Everything under `tests/` runs in the browser through `npm test`; a single file runs with
-`npx playwright test tests/<file>`. The two Node suites are not in `npm test` and run on their own.
+`npx playwright test tests/<file>`. The three Node suites are not in `npm test` and run on their own.
 
 Other `tools/*.js` scripts are diagnostics and censuses, not suites: they report, they do not pass
 or fail. Do not add them here.
@@ -33,7 +33,7 @@ or fail. Do not add them here.
   source of truth, and each preset is one instance of that claim. The per-effect evidence is the
   `PROVENANCE` citation on the step the preset exercises, checked by `npm run provenance`; the
   preset's `desc` states the arithmetic that citation implies. That preset-to-step link is
-  conceptual, not machine-checked — 146 of 1126 `desc` fields name a game-source location inline.
+  conceptual, not machine-checked — 154 of 1132 `desc` fields name a game-source location inline.
   Recount that under the rule rather than incrementing it: test each `desc` of the **evaluated**
   `PRESETS` object (not the file text) against
   `/[\w./\\-]+\.(?:CAS|INI|pas|c|EXE):\d+|0x[0-9A-Fa-f]{4,}|\$[0-9A-Fa-f]{6,}/i`. The `c` extension
@@ -84,7 +84,9 @@ or fail. Do not add them here.
 - Command: `npx playwright test tests/modifier-trace-tooltips.spec.js`
 - Tag: spec
 - Anchor: CLAUDE.md *Input/output contract*, the hover-chain paragraph
-- Checks: R7.4 presentation of those traces in the tooltip.
+- Checks: R7.4 presentation of those traces in the tooltip, and the same presentation on the
+  per-rider histograms' effective-resistance / effective-defense chains (F222.5), including that
+  the chain's header names the realm its roll asked.
 
 ## provenance
 
@@ -95,15 +97,40 @@ or fail. Do not add them here.
 - Checks: every `PROVENANCE[id]` comment is VERIFIED or UNVERIFIED, matches its reviewed anchor, and
   leaves no stale manifest entry.
 
+## cas-citations
+
+- Command: `node tools/cas_citation_audit.js`
+- Tag: scaffolding
+- Anchor: —
+- Checks: every citation into a shipped `.CAS` script resolves against
+  `Reference docs/Script source/<set>/`, under the grammar in `Reference docs/CAS citation
+  grammar.md`. Label and text anchors must find their landmark, land inside the file and satisfy
+  the statement assertion an offset obliges them to carry; a line number must be inside the file;
+  a `@span` must sit on a `// PROVENANCE[id]:` comment line, which is what makes
+  `npm run provenance` responsible for resolving it. A citation-bearing source the tool classifies
+  neither in scope nor out fails, and so does a `.CAS` glued to a locator the grammar does not
+  define.
+  **Green today, red on regression.** A line-number citation is deprecated rather than failing —
+  389 of them exist and F227.3-.6 convert them — so the suite holds one ceiling per script and
+  fails when a new one is written. `--strict` zeroes every ceiling and is what F227.6 runs to
+  prove the clean state; it is red until then, by design, and is not the registered command. When
+  the last ceiling reaches 0 the registered command enforces the clean state by itself.
+- Runtime: ~1s.
+
 ## node-unit-checks
 
 - Command: `node tools/node_unit_checks.js`
 - Tag: scaffolding
 - Anchor: —
 - Checks: `deriveUnitStats` and the engine/combat helpers in isolation, headless, in a `vm` context
-  built from `index.html`'s script manifest. 14,646 assertions across 13 families. It cannot
-  evaluate presets: that path runs through the DOM.
-- Runtime: ~49s.
+  built from `index.html`'s script manifest. 16,002 assertions across 13 families, including the
+  per-rider phase histograms F222.2 and F222.3 emit and the effective-resistance /
+  effective-defense chains F222.5 hangs on them, for all five engines, plus INV-1 on every
+  distribution a phase publishes and the rider/total partition on a set that cannot overkill.
+  It also places every rider that writes a non-normal damage bucket and asserts that category
+  reaches the post-combat composition, which is the check that catches a rider missing from the
+  joint's damage-tracking gate. It cannot evaluate presets: that path runs through the DOM.
+- Runtime: ~80s.
 
 ## persistence
 
@@ -128,6 +155,18 @@ or fail. Do not add them here.
 - Checks: the enchantment checkbox block is sorted non-realm → arcane → life → death → chaos →
   nature → sorcery for every version, and reflows when version-hidden items drop out.
 
+## rider-histograms-f222
+
+- Command: `npx playwright test tests/rider-histograms-f222.spec.js`
+- Tag: scaffolding
+- Anchor: —
+- Checks: the rendering half of the per-rider histograms — R5's omission-versus-all-zero
+  distinction in the DOM, the `melee` base-roll slot named after its own phase (Thrown / Melee /
+  Counter-attack), Life Steal's healing kept off the shared target-HP axis, each rider drawn in
+  the column of the unit whose HP it is (asserted by geometry, not by class name), a rider-less
+  phase drawing no band, and the band stacking to one column with no page overflow at 375px. Never a
+  damage number: the histograms' contents are `node-unit-checks`' business.
+
 ## mobile-layout
 
 - Command: `npx playwright test tests/mobile-layout.spec.js`
@@ -141,8 +180,9 @@ or fail. Do not add them here.
 - Command: `npx playwright test tests/touch-tooltips.spec.js`
 - Tag: scaffolding
 - Anchor: —
-- Checks: long-press shows and tap dismisses a tooltip; inputs are ≥16px at phone widths so iOS does
-  not zoom on focus.
+- Checks: long-press shows and tap dismisses a tooltip, on an ordinary control, on a calculated
+  output's chain, and on a rider histogram's chain inside a scrolling panel; inputs are ≥16px at
+  phone widths so iOS does not zoom on focus.
 
 ## matrix-drawers
 
@@ -302,7 +342,7 @@ or fail. Do not add them here.
 - Tag: regression
 - Anchor: F25, F26
 - Checks: every modern gaze type is excluded from the shared touch-rider dispatcher; Destruction uses
-  independent surviving-figure attempts with capped exact PMFs.
+  independent surviving-figure attempts, each success assigning the engine's flat 150.
 
 ## priority-prerequisites
 

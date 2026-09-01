@@ -9,7 +9,7 @@ test('Blur stays on both cards in every version and retired global controls are 
     'mom_cp_1.60.00',
     'com_6.08',
     'com2_1.05.11',
-    'com2_warlord_1.5.12.7',
+    'com2_warlord_1.5.12.9',
   ]) {
     await setValue(page, 'gameVersion', version);
     await expect(page.locator('#aAbil_blur')).toBeEnabled();
@@ -51,7 +51,7 @@ test('modern uses tactical defender Card B Blur for both directions; DOS uses ea
     return {
       modernOnlyA: means('com2_1.05.11', true, false),
       modernOnlyB: means('com2_1.05.11', false, true),
-      warlordOnlyB: means('com2_warlord_1.5.12.7', false, true),
+      warlordOnlyB: means('com2_warlord_1.5.12.9', false, true),
       dosOnlyA: means('com_6.08', true, false),
       dosOnlyB: means('com_6.08', false, true),
       hiddenOptions: (() => {
@@ -84,7 +84,7 @@ test('modern uses tactical defender Card B Blur for both directions; DOS uses ea
 
 test('card Blur persists, swaps naturally, and migrates retired page and matrix state', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aAbil_blur', true);
   await setValue(page, 'bAbil_blur', false);
 
@@ -119,8 +119,8 @@ test('card Blur persists, swaps naturally, and migrates retired page and matrix 
       combatTurnSide: 'defender',
       combatAttackerBlur: true,
       combatDefenderBlur: false,
-    }, 'com2_warlord_1.5.12.7');
-    localStorage.setItem(GAME_VERSION_STORAGE_KEY, 'com2_warlord_1.5.12.7');
+    }, 'com2_warlord_1.5.12.9');
+    localStorage.setItem(GAME_VERSION_STORAGE_KEY, 'com2_warlord_1.5.12.9');
     applyState({
       v: 1,
       ids: {
@@ -142,7 +142,7 @@ test('card Blur persists, swaps naturally, and migrates retired page and matrix 
   expect(migratedPage.defenderInitiates).toMatchObject({ aAbil_blur: false, bAbil_blur: true });
   expect(migratedPage.fallbackVersion).toMatchObject({ aAbil_blur: false, bAbil_blur: true });
   expect(migratedPage.restoredFallbackBlob).toEqual({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     a: false,
     b: true,
   });

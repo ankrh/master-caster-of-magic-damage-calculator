@@ -78,7 +78,7 @@ const V_MOM_131 = 'mom_1.31';
 const V_MOM_CP  = 'mom_cp_1.60.00';
 const V_COM     = 'com_6.08';
 const V_COM2    = 'com2_1.05.11';
-const V_WARLORD = 'com2_warlord_1.5.12.7';
+const V_WARLORD = 'com2_warlord_1.5.12.9';
 
 // --- Version -> Unit Data mapping ---
 // Each *_UNITS_DATA const is defined in its own units_<version>.js file

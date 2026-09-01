@@ -185,8 +185,8 @@
 #define COM1_UT_ZOMBIES_ABILITIES (UA_FANTASTIC | UA_CREATE_UNDEAD) /* raw 0x0081; DS:0x019C + 0xAE*0x24 + 0x1E = file com1:0x2AED2 (`81 00`) */
 #define COM1_UT_ANGEL             0xB1
 #define COM1_UT_DJINN             0xC3
-#define COM1_HOLY_ARMS_TYPE_CEILING 0x97 /* selected set remains an R6.1a open question */
-#define COM1_LEVEL_TYPE_CEILING   0x97 /* R6.1f unsigned gate in BU_Apply_Level_Bonus */
+#define COM1_UNITTYPE_NORMAL_CEILING 0x97 /* unsigned; admits every non-fantastic row except
+                                        0x97 Settlers. R6.1a, Q18 */
 #define COM1_LEVEL_TABLE_ROWS     5
 #define COM1_LEVEL_TABLE_STRIDE   7
 #define COM1_CATAPULT_MAGIC_WP    9
@@ -1166,7 +1166,7 @@ relocated_tail:
  * ------------------------------------------------------------------------------------------- */
 relocated_tail:
     /* unsigned: com1:0x8F172 is `73 1E` (jae), unlike the signed `jl` at com1:0x8F827 */
-    if ((uint8_t)_UNITS[bu->unit_idx].type < COM1_HOLY_ARMS_TYPE_CEILING) { /* com1:0x8F16C, com1:0x8F170 */
+    if ((uint8_t)_UNITS[bu->unit_idx].type < COM1_UNITTYPE_NORMAL_CEILING) { /* com1:0x8F16C, com1:0x8F170 */
         if (players[bu->controller_idx].holy_arms > 0)/* com1:0x8F183 */
             bu->enchantments |= UE_HOLY_WEAPON;       /* com1:0x8F18D */
     }
@@ -1469,10 +1469,10 @@ void __far BU_Apply_Item_Powers(int16_t item, struct s_BATTLE_UNIT __far *bu)
  * attack-attribute word. All three builds are byte-identical over [0x8E4C4,0x8E668).
  *
  * The raw 0x01000000 input is Power Drain in MoM and the repurposed Divine Protection slot in
- * CoM 1. Claude and Codex differed only on whether that build-specific naming belongs at this
- * statement or at a symbolic alias. The merged body uses the alias above so the one shared
- * executable statement remains one source statement; R6.1h.evidence.md marks the representation
- * disputed and Q25 retains both readings.
+ * CoM 1. Q25 settled that a name-only build difference belongs at the alias, not the
+ * statement, so the one shared executable statement remains one source statement, and the
+ * `#if BUILD` directives stay an index of real divergence. See README.md, *One source,
+ * three builds*.
  * =========================================================================================== */
 void __far BU_Apply_Item_Attack_Specials(uint16_t __far *attrs, int16_t item)
 {
@@ -2794,7 +2794,7 @@ void __far BU_Apply_Level_Bonus(int16_t unit_idx, struct s_BATTLE_UNIT __far *bu
      || (bu->enchantments & UE_HEROISM)) {
         cx = 3;                                             /* 131:—  160:—  com1:0x8F8B3 */
         /* Unsigned compare.   131:—  160:—  com1:0x8F8B6, jump 0x8F8BB -> 0x8F8DB */
-        if (_UNITS[di].type < COM1_LEVEL_TYPE_CEILING) {
+        if (_UNITS[di].type < COM1_UNITTYPE_NORMAL_CEILING) {
             /* `cbw` then owner * 0x4C8.   131:—  160:—  com1:0x8F8BD, 0x8F8C1, 0x8F8C2 */
             owner = _UNITS[di].owner_idx;
             /* [bx-0x60D1].   131:—  160:—  com1:0x8F8CA, jump 0x8F8CF -> 0x8F8D2 */
@@ -2812,7 +2812,7 @@ void __far BU_Apply_Level_Bonus(int16_t unit_idx, struct s_BATTLE_UNIT __far *bu
         _UNITS[di].Level = (int8_t)si;
     /* Unsigned compare; below the ceiling the write-back is skipped entirely.
        131:—  160:—  com1:0x8F8E3, jump 0x8F8E8 -> 0x8F8F2 */
-    } else if (_UNITS[di].type >= COM1_LEVEL_TYPE_CEILING) {
+    } else if (_UNITS[di].type >= COM1_UNITTYPE_NORMAL_CEILING) {
         si = 0;                                             /* 131:—  160:—  com1:0x8F8EA */
         /* The same two instructions as the branch above, reached by fallthrough.
            131:—  160:—  com1:0x8F8EC, 0x8F8EE */
@@ -3640,7 +3640,7 @@ com1_reentry_0x905BB:
         && battlefield->city_enchantments[CITY_ENCHANT_HEAVENLY_LIGHT] != 0) {
                                                         /* raw battlefield +0x1593; 131:—  160:—  com1:0x905C8 -> 0x905D6/0x9064B */
         cl = _UNITS[si].mutations;                      /* 131:—  160:—  com1:0x905D6 */
-        if (_UNITS[si].type >= COM1_HOLY_ARMS_TYPE_CEILING)
+        if (_UNITS[si].type >= COM1_UNITTYPE_NORMAL_CEILING)
                                                         /* 131:—  160:—  com1:0x905E7 -> 0x905F0 */
             cl = UM_MAGIC_WEAPONS;                      /* 131:—  160:—  com1:0x905EE */
         if (bu->melee > 0) {                           /* 131:—  160:—  com1:0x905F3 -> 0x90609 */

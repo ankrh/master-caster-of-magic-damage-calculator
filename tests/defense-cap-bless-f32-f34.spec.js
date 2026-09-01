@@ -53,7 +53,7 @@ test('F32 splits modern defense dice after die 15 and leaves boundaries unchange
       ...overrides,
     });
 
-    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => {
+    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => {
       const attacker = makeUnit(version, 'a', {
         rtb: 20,
         rtbType: 'missile',
@@ -139,7 +139,7 @@ test('F34 keeps Bless Defense spell-only in both modern versions', async ({ page
       breath: { unitType: 'fantastic_chaos', rangedType: 'none', thrownType: 'fire', abilities: {} },
       gaze: { unitType: 'fantastic_death', rangedType: 'none', thrownType: 'none', abilities: { deathGaze: -2 } },
     };
-    return ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => ({
+    return ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => ({
       version,
       unitChannels: Object.entries(channels).map(([name, attacker]) => {
         const attackType = name === 'breath' ? 'thrown' : name;

@@ -43,7 +43,7 @@ async function handEditCard(page, prefix, value) {
   }, [prefix, CARD_FIELDS, value]);
 }
 
-for (const version of ['mom_1.31', 'com2_warlord_1.5.12.7']) {
+for (const version of ['mom_1.31', 'com2_warlord_1.5.12.9']) {
   test(`changing Level restates no card field on a roster unit (${version})`, async ({ page }) => {
     const errors = await openCalculator(page);
     await setValue(page, 'gameVersion', version);

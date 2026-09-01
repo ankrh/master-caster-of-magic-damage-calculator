@@ -35,7 +35,7 @@
 // hooks give `b:spiritLink` at UnitCalcPre.CAS:30, the first represented write of that file,
 // `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the `marionette:stats` attack
 // writes, `fieryFury:race` at UnitCalcPre.CAS:834, the THEN arm of the same `IF` whose ELSE arm is
-// `b:fieryFury`, `sanctify` at UnitCalcPre.CAS:1249, and `d:spiritLink` at UnitCalc.CAS:1306,
+// `b:fieryFury`, `sanctify` at UnitCalcPre.CAS:1260, and `d:spiritLink` at UnitCalc.CAS:1298,
 // between Shadow Strike and Psycho Force. Spirit Link writes Fantastic twice, asserting it in b
 // and clearing it in d, so the two entries bracket every conversion between them and every gate
 // that reads the running record there takes a Fantastic unit.
@@ -48,7 +48,7 @@
 // Which positions the evidence fixes, stated once rather than per chain. Regions `b`, `c` and `d`
 // are transcribed — the compiled region-`c` address map in `Reference docs/Caster binary/CoM2
 // binary - unit recalculation.md`, and the top-level order of `UnitCalcPre.CAS` and
-// `UnitCalc.CAS` under `Reference docs/Script source/Warlord 1.5.12.7/`. `base`, `a` and `e` are
+// `UnitCalc.CAS` under `Reference docs/Script source/Warlord 1.5.12.9/`. `base`, `a` and `e` are
 // inherited from the order the steps happen to be authored in and stay provisional until sourced.
 const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
 
@@ -75,7 +75,7 @@ const DEDUCED_POSITIONS = Object.freeze({
   // writes after Warp, which does not contain it. Both halves share that one deduced position.
   'com_6.08': ['c:focusMagic', 'c:raiseDead'],
   'com2_1.05.11': DEDUCED_IDENTITY_C_POSITIONS,
-  'com2_warlord_1.5.12.7': DEDUCED_IDENTITY_C_POSITIONS,
+  'com2_warlord_1.5.12.9': DEDUCED_IDENTITY_C_POSITIONS,
 });
 
 // The `base` phase holds five kinds of write (`BASE_WRITE_KINDS`, `steps.js`), and a chain runs
@@ -232,7 +232,7 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   'e:mislead', 'e:supremeLight',
 ]);
 
-const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
+const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   // F203 ordering, enforced by the kinds rather than described by this comment.
   ...baseWrites('template', ['stat:base', 'baseHitChance', 'baseThresholds']),
   // Training-time writes: every one cites `CreateUnit.CAS` and fires once, when the city built
@@ -264,11 +264,11 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'b:outlanderXenoveterinary', 'b:magitekEngine', 'b:bombsGrenades',
   'b:upgradedExplosive:ranged', 'b:upgradedExplosive:fireBreath',
   'b:outlanderBallisticsTraining', 'b:outlanderXenopsychology', 'b:outlanderRadio',
-  'b:battleArmor', 'b:nausea', 'b:uphillBattle', 'b:soulFlay', 'b:sanctify',
+  'b:battleArmor', 'b:berserkWarlord', 'b:nausea', 'b:uphillBattle', 'b:soulFlay', 'b:sanctify',
   'b:eternalNight:poorVision',
   'b:greatUnbinding', 'b:prayer', 'b:rally', 'b:trueLight', 'b:plague', 'b:goblinPox',
   'b:luckyStar', 'b:disheartenProphecy', 'b:wallOfFire:garrison', 'b:godsPlayDices',
-  // `UnitCalcPre.CAS:1839-1842`, the last block of region `b`, immediately before the combat
+  // `UnitCalcPre.CAS:1850-1853`, the last block of region `b`, immediately before the combat
   // `HALT` — the grant the CoM2 region map records as crossing the hook boundary deliberately.
   'b:eyeOfHeaven',
   'c:destiny',
@@ -288,10 +288,11 @@ const CHAIN_COM2_WARLORD_1_5_12_7 = versionChain('com2_warlord_1.5.12.7', [
   'c:breakthrough:combatSummoned', 'c:warpReality', 'c:blackPrayer', 'c:darkness', 'c:guardian',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
   'c:shatter', 'c:spellWard', 'c:tactician',
-  // `UnitCalc.CAS:60-70`, ahead of every other represented write of that file.
+  // `UnitCalc.CAS:62-72`, ahead of every other represented write of that file.
   'd:venom',
   'd:mechanicalExpert', 'd:weakness',
-  'd:trueSight', 'd:flameBlade', 'd:berserkWarlord', 'd:rust', 'd:hurricane',
+  // `UnitCalc.CAS:350-360`, between combat Flame Blade (`:333`) and Rust (`:498`).
+  'd:trueSight', 'd:flameBlade', 'd:nightGoblinsNightVision', 'd:rust', 'd:hurricane',
   'd:favoredTerrain', 'd:fortification', 'd:colossalStrength', 'd:vampirism:transfer',
   'd:shadowStrike:thrown',
   'd:spiritLink', 'd:psychoForce', 'd:pneumaField', 'd:energyCannonThreshold',
@@ -305,7 +306,7 @@ const STAT_CHAINS = Object.freeze({
   'mom_cp_1.60.00': CHAIN_MOM_CP_1_60,
   'com_6.08': CHAIN_COM_6_08,
   'com2_1.05.11': CHAIN_COM2_1_05_11,
-  'com2_warlord_1.5.12.7': CHAIN_COM2_WARLORD_1_5_12_7,
+  'com2_warlord_1.5.12.9': CHAIN_COM2_WARLORD_1_5_12_9,
 });
 
 // The chain of one version, in execution order. Built once at load, so a derivation looks its

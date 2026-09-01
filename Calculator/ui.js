@@ -39,8 +39,13 @@ function renderDistPanel(container, title, dist, hp, numFigs, opts) {
 
   // Compute destruction chance (damage >= total remaining HP).
   // opts.pDestroy overrides with a pre-computed cumulative value (used by phase panels).
+  // opts.showDestroy === false suppresses the line entirely: a rider panel plots one
+  // contributor to its phase's total, and "destroyed" is a property of the total, stated once
+  // by the phase panel above it.
   let destroyPct = '';
-  if (opts && opts.pDestroy != null) {
+  if (opts && opts.showDestroy === false) {
+    destroyPct = '';
+  } else if (opts && opts.pDestroy != null) {
     destroyPct = `<br>${formatPct(opts.pDestroy)} destroyed`;
   } else if (numFigs > 0 && hp > 0) {
     const totalRemHP = firstFigRem + (numFigs - 1) * hp;
@@ -91,12 +96,244 @@ function renderDistPanel(container, title, dist, hp, numFigs, opts) {
     const rowRect = meanRow.getBoundingClientRect();
     scrollEl.scrollTop += rowRect.top - scrollRect.top - scrollEl.clientHeight / 2 + meanRow.offsetHeight / 2;
   }
+  // A panel that scrolls opens centred on its mean, so bins above and below the window are
+  // off-screen. Reachable by wheel or drag, but not by keyboard unless the container itself can
+  // take focus (WCAG 2.1.1). Only a container that actually overflows becomes a tab stop, so a
+  // panel whose whole distribution fits adds none; the label is the panel's own title, so a
+  // screen reader announces which histogram the focus landed in.
+  if (scrollEl) {
+    const overflows = scrollEl.scrollHeight > scrollEl.clientHeight + 1;
+    if (overflows) {
+      scrollEl.tabIndex = 0;
+      const heading = container.querySelector('.dist-header');
+      scrollEl.setAttribute('aria-label',
+        (heading ? heading.textContent : title).replace(/\s+/g, ' ').trim());
+    } else {
+      scrollEl.removeAttribute('tabindex');
+      scrollEl.removeAttribute('aria-label');
+    }
+  }
+}
+
+// --- Per-rider histograms ---
+// One histogram per rider that contributes damage inside a combat phase, in that phase's row
+// (`CLAUDE.md`, *Input/output contract*). The resolver emits `phase.riders` as
+// `[{ key, side, quantity, dist }]`; this layer only labels and draws it.
+//
+// `melee` is deliberately absent from the map: it is the base-roll slot in every phase, so its
+// name is the row's own attack and comes from `phase.attackLabels[side]` — "Gaze" in a gaze row,
+// "Thrown" in a Thrown row, "Counter-attack" for the counter half of a simultaneous row.
+const RIDER_LABELS = Object.freeze({
+  immolation: 'Immolation',
+  stoningGaze: 'Stoning Gaze',
+  exorcise: 'Exorcise',
+  dispelEvil: 'Dispel Evil',
+  stoningTouch: 'Stoning Touch',
+  deathTouch: 'Death Touch',
+  lifeSteal: 'Life Steal drain',
+  destruction: 'Destruction',
+  poison: 'Poison Touch',
+  bloodsucker: 'Blood Sucker',
+  lifeStealHeal: 'Life Steal healing',
+  bloodsuckerHeal: 'Blood Sucker healing',
+});
+
+const RIDER_SIDE_NAMES = Object.freeze({ atk: 'attacker', def: 'defender' });
+
+// --- The chain a rider histogram shows on hover (F222.5) ---
+//
+// The resolver hands each rider the chain records the queries that produced its number built,
+// in the order those queries were made (`rowRiderChains`, `combat_phases.js`). This layer only
+// heads and formats them, with `formatTraceTooltip` (`ui_card.js`) — the same formatter the
+// card's calculated values use, so the two presentations cannot drift.
+//
+// A resistance chain is headed by the realm its roll named. One target has as many
+// simultaneously valid effective resistances inside one attack as its attacker has active
+// riders — Life for Dispel Evil / Exorcise, Nature for Stoning Touch, Death for Death Touch and
+// Life Steal, Chaos for Destruction, and no realm at all for Poison — so without the realm the
+// reader cannot tell which of them a chain answered.
+const CHAIN_REALM_NAMES = Object.freeze({
+  nature: 'Nature',
+  sorcery: 'Sorcery',
+  chaos: 'Chaos',
+  life: 'Life',
+  death: 'Death',
+});
+
+function riderChainHeading(record, subject) {
+  if (record.quantity === 'defense') return `Effective Defense (${subject})`;
+  if (record.quantity !== 'resistance') {
+    throw new Error(`renderRiderPanels: chain record names quantity `
+      + `${JSON.stringify(record.quantity)}; expected resistance or defense.`);
+  }
+  // The Poison loop passes realm 0, so no realm-conditional term of the query reaches it. That
+  // is a different figure from any of the named realms and says so.
+  if (record.realm === null) {
+    return `Effective Resistance (${subject}), realm-less roll`;
+  }
+  const realm = CHAIN_REALM_NAMES[record.realm];
+  if (!realm) {
+    throw new Error(`renderRiderPanels: chain record names realm `
+      + `${JSON.stringify(record.realm)}; expected one of `
+      + `${Object.keys(CHAIN_REALM_NAMES).join(', ')}, or null.`);
+  }
+  return `Effective Resistance (${subject}) vs ${realm}`;
+}
+
+// A rider whose roll is made but cannot succeed still draws, with all its mass at 0
+// (`CLAUDE.md`, *Input/output contract*), and it shows the same chain any other rider does:
+// the chain is what makes the zero readable, since it is the figure the roll had to beat.
+function riderChainTooltip(title, chains, subject) {
+  const blocks = (chains || []).map(record =>
+    riderChainHeading(record, subject) + '\n' + formatTraceTooltip(record.trace));
+  if (!blocks.length) {
+    // Blood Sucker deals a flat amount after the per-figure loop and a Doom slot is not scored
+    // against Defense, so neither has a figure to explain. Stated rather than left blank: an
+    // empty hover reads as a defect.
+    blocks.push('This slot is scored against neither an effective resistance nor an '
+      + 'effective defense.');
+  }
+  return [title, ...blocks].join('\n\n');
+}
+
+// A rider key with no display name, or a `melee` slot in a row that named no attack, is a
+// resolver/UI mismatch rather than a value the reader can interpret, so it halts naming the
+// offending key (`CLAUDE.md`, *Architecture*, the fail-loud rule).
+function riderDisplayName(row, rider) {
+  if (rider.key !== 'melee') {
+    const label = RIDER_LABELS[rider.key];
+    if (!label) {
+      throw new Error(`renderRiderPanels: no display name for rider key ${JSON.stringify(rider.key)} `
+        + `in row ${JSON.stringify(row.label)}. Expected one of `
+        + `${Object.keys(RIDER_LABELS).join(', ')}, or melee.`);
+    }
+    return label;
+  }
+  const named = row.attackLabels && row.attackLabels[rider.side];
+  if (!named) {
+    throw new Error(`renderRiderPanels: row ${JSON.stringify(row.label)} carries a melee base-roll `
+      + `slot on side ${JSON.stringify(rider.side)} but its attackLabels names no attack for that `
+      + 'side. The resolver states one attack name per side that rolls (Calculator/combat.js).');
+  }
+  return named;
+}
+
+// The lead figure's remaining HP, which is what makes the figure-kill ticks land on the real
+// thresholds when the target started the exchange already damaged. `remHP` and `perFig` are the
+// row's own numbers; figures killed is read off the HP axis rather than emitted as a second
+// quantity (`CLAUDE.md`, *Input/output contract*).
+function leadFigureRemainingHp(remHP, perFig, figs) {
+  if (!(figs > 0) || !(perFig > 0)) return perFig;
+  const lead = remHP - (figs - 1) * perFig;
+  return lead > 0 && lead <= perFig ? lead : perFig;
+}
+
+// R5, as the reader sees it: a rider whose gate is false for this matchup is not in `riders` and
+// draws nothing; a rider that is gated on but cannot land is in `riders` and draws with all its
+// mass at 0. Nothing here may hide an all-zero panel — that would make "immune" and "absent"
+// indistinguishable.
+// A damage histogram belongs under the unit whose HP it is about, the same way the two phase
+// panels above it do — the left column is the attacker, the right the defender. `rider.side` is
+// already that unit (the phase's target for damage, its source for a healing rider), so the
+// band is two columns rather than one wrapping run, and a side with no riders still holds its
+// column so the other stays under its own unit.
+function renderRiderPanels(container, row, riders) {
+  if (!riders || !riders.length) return;
+
+  const band = document.createElement('div');
+  band.className = 'breakdown-rider-band';
+  container.appendChild(band);
+
+  const caption = document.createElement('div');
+  caption.className = 'breakdown-rider-caption';
+  caption.textContent = `Riders (${riders.length})`;
+  band.appendChild(caption);
+
+  const columns = document.createElement('div');
+  columns.className = 'breakdown-rider-columns';
+  band.appendChild(columns);
+
+  const sideColumns = {};
+  for (const side of ['atk', 'def']) {
+    const column = document.createElement('div');
+    column.className = 'breakdown-rider-column';
+    columns.appendChild(column);
+    sideColumns[side] = column;
+  }
+
+  const riderChains = [];
+  for (const rider of riders) {
+    const panel = document.createElement('div');
+    panel.className = 'dist-panel rider-panel';
+    // F222.5 hangs the effective-resistance / effective-defense hover chain on these three
+    // attributes plus the `.rider-name` span in the header renderDistPanel writes.
+    panel.dataset.riderKey = rider.key;
+    panel.dataset.riderSide = rider.side;
+    panel.dataset.riderQuantity = rider.quantity;
+
+    const name = riderDisplayName(row, rider);
+    const target = RIDER_SIDE_NAMES[rider.side];
+    if (!target) {
+      throw new Error(`renderRiderPanels: rider ${JSON.stringify(rider.key)} names side `
+        + `${JSON.stringify(rider.side)}; expected atk or def.`);
+    }
+    sideColumns[rider.side].appendChild(panel);
+    const title = `<span class="rider-name">${name}</span> <span class="rider-target">&rarr; ${target}</span>`;
+    // Hung on the name span rather than the panel so the hover target is the rider's own label
+    // and not the whole histogram, which already scrolls and takes focus.
+    // The chain's subject is the unit the rolls were made against, which is not the panel's
+    // own column for Life Steal's healing.
+    const chainSubject = RIDER_SIDE_NAMES[rider.chainSubject] || target;
+    riderChains.push({ panel,
+      text: riderChainTooltip(`${name} → ${target}`, rider.chains, chainSubject) });
+
+    if (rider.quantity === 'sourceHp') {
+      // Off the shared target-HP axis: this is HP restored on the unit that dealt the rider,
+      // not damage, so it carries no figure-kill ticks and no target HP denominator.
+      renderDistPanel(panel, title, rider.dist, 0, 0,
+        { barColor: '#4fd18b', colHeader: 'Healed' });
+      continue;
+    }
+    if (rider.quantity !== 'targetHp') {
+      throw new Error(`renderRiderPanels: rider ${JSON.stringify(rider.key)} names quantity `
+        + `${JSON.stringify(rider.quantity)}; expected targetHp or sourceHp.`);
+    }
+    const perFig = rider.side === 'atk' ? row.atkHPper : row.defHPper;
+    const figs = rider.side === 'atk' ? row.atkFigs : row.defFigs;
+    const remHP = rider.side === 'atk' ? row.atkHP : row.defHP;
+    renderDistPanel(panel, title, rider.dist, perFig, figs, {
+      barColor: '#f0c030',
+      showSkulls: true,
+      showDestroy: false,
+      firstFigRem: leadFigureRemainingHp(remHP, perFig, figs),
+    });
+  }
+
+  // `renderDistPanel` writes the header, so the name span exists only now. A panel whose header
+  // was rendered without one is a contract break between the two functions, not a rider with
+  // nothing to say, so it halts.
+  for (const { panel, text } of riderChains) {
+    const nameSpan = panel.querySelector('.dist-header .rider-name');
+    if (!nameSpan) {
+      throw new Error('renderRiderPanels: a rider panel header carries no .rider-name span to '
+        + 'hang its chain on. renderDistPanel is expected to render the supplied title markup.');
+    }
+    nameSpan.dataset.tooltip = text;
+  }
 }
 
 function renderBreakdownGrid(phases) {
   const grid = document.getElementById('breakdownGrid');
   grid.innerHTML = '';
-  if (!phases || phases.length <= 1) return;
+  if (!phases) return;
+  // A single-phase breakdown used to be suppressed because its two panels repeat the totals
+  // above it. That is still true of its two panels, but no longer of the row: a rider histogram
+  // has no other home in the page (`CLAUDE.md`, *Input/output contract*), so a lone row that
+  // carries one is drawn. `melee` is the base-roll slot every row has, so it is not what makes
+  // a row worth drawing on its own.
+  const carriesRider = phases.some(
+    phase => (phase.riders || []).some(rider => rider.key !== 'melee'));
+  if (phases.length <= 1 && !carriesRider) return;
 
   const breakdownOpts = { barColor: '#f0c030' };
 
@@ -130,16 +367,49 @@ function renderBreakdownGrid(phases) {
     panels.appendChild(panelB);
 
     if (phase.mode === 'feared') {
+      // A feared row removes attacking figures and writes to no damage bucket, so it carries no
+      // `riders` key at all; its own two panels are the whole story.
       const fearOpts = { barColor: '#c080ff', colHeader: 'Feared' };
       renderDistPanel(panelA, 'Attacker figs feared', phase.atkDist, 0, 0, fearOpts);
       renderDistPanel(panelB, 'Defender figs feared', phase.defDist, 0, 0, fearOpts);
     } else {
-      const atkOpts = phase.atkDestroyPct != null ? { ...breakdownOpts, pDestroy: phase.atkDestroyPct } : breakdownOpts;
-      const defOpts = phase.defDestroyPct != null ? { ...breakdownOpts, pDestroy: phase.defDestroyPct } : breakdownOpts;
+      // The lead figure's remaining HP is what the "% HP" denominator and the figure-kill ticks
+      // are measured against, on the phase panels and the rider panels beneath them alike.
+      const atkLead = leadFigureRemainingHp(phase.atkHP, phase.atkHPper, phase.atkFigs);
+      const defLead = leadFigureRemainingHp(phase.defHP, phase.defHPper, phase.defFigs);
+      const atkOpts = { ...breakdownOpts, firstFigRem: atkLead,
+        ...(phase.atkDestroyPct != null ? { pDestroy: phase.atkDestroyPct } : {}) };
+      const defOpts = { ...breakdownOpts, firstFigRem: defLead,
+        ...(phase.defDestroyPct != null ? { pDestroy: phase.defDestroyPct } : {}) };
       renderDistPanel(panelA, 'Mean damage to attacker', phase.atkDist, phase.atkHPper, phase.atkFigs, atkOpts);
       renderDistPanel(panelB, 'Mean damage to defender', phase.defDist, phase.defHPper, phase.defFigs, defOpts);
+      renderRiderPanels(row, phase, phase.riders);
     }
   }
+}
+
+// The ranged volley resolves without a joint, so it has no phase rows at all (`phases: null`)
+// and carries its riders at the top level. They are the only riders in that combat, so they get
+// the breakdown grid to themselves rather than a phase row inside it.
+function renderRangedRiderGrid(result) {
+  const grid = document.getElementById('breakdownGrid');
+  if (!result.riders || !result.riders.length) return;
+
+  const heading = document.createElement('div');
+  heading.className = 'breakdown-heading';
+  heading.textContent = 'Rider breakdown';
+  grid.appendChild(heading);
+
+  const row = document.createElement('div');
+  row.className = 'breakdown-phase-row first-phase';
+  grid.appendChild(row);
+
+  renderRiderPanels(row, {
+    label: 'Ranged volley',
+    attackLabels: result.attackLabels,
+    atkHP: result.aRemHP, atkHPper: result.aHP, atkFigs: result.aAlive,
+    defHP: result.bRemHP, defHPper: result.bHP, defFigs: result.bAlive,
+  }, result.riders);
 }
 
 // --- Life Steal Summary ---
@@ -155,7 +425,7 @@ function renderLifeStealSummary(result, version) {
     ? result.bLifeStealExpected
     : distExpectedValue(result.bLifeStealDist);
   const modernCombatHealing = version === 'com2_1.05.11'
-    || version === 'com2_warlord_1.5.12.7';
+    || version === 'com2_warlord_1.5.12.9';
   const aRaw = result.aLifeStealRawExpected != null
     ? result.aLifeStealRawExpected : distExpectedValue(result.aLifeStealRawDist || result.aLifeStealDist);
   const bRaw = result.bLifeStealRawExpected != null
@@ -182,20 +452,60 @@ function renderLifeStealSummary(result, version) {
   el.innerHTML = html;
 }
 
+// What the three damage categories are worth to a reader is their proportions, not their
+// magnitudes: `Combatheal` subtracts Irrecoverable damage out of the healable total before it
+// heals anything and never decrements it, and removes plain normal damage before undead
+// damage (`Combat.DamageHandling.pas:80-95`). So the split says how much of a wound is
+// permanent, how much is healed last, and how much is ordinary — which a surviving unit has
+// and the raw magnitudes state badly, because the engine's accumulators are uncapped and a
+// single Destruction success books 150 against a unit that can hold 40.
+//
+// The shares are a ratio of means over the accumulated categories, which are what the record
+// holds. For a unit that survives they are also a share of the damage the panel above shows,
+// because nothing was capped; the two diverge only on overkill.
+// Rounded to one decimal independently, three shares of a third each print as 33.3 and the
+// column reads 99.9%. The largest share absorbs the residue instead, so the three always show
+// as a whole: it is the one least distorted by carrying it.
+function combatDamageShares(values) {
+  const keys = ['regularDamage', 'undeadDamage', 'irreversibleDamage'];
+  const total = keys.reduce((sum, key) => sum + values[key], 0);
+  if (total <= 0) return null;
+  const rounded = {};
+  for (const key of keys) rounded[key] = Math.round((values[key] / total) * 1000) / 10;
+  const largest = keys.reduce((best, key) =>
+    values[key] > values[best] ? key : best, keys[0]);
+  rounded[largest] = Math.round(
+    (100 - keys.filter(key => key !== largest)
+      .reduce((sum, key) => sum + rounded[key], 0)) * 10) / 10;
+  return rounded;
+}
+
 function renderCombatStateSummary(container, prefix, mean, version) {
-  const values = mean || { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
+  const values = { irreversibleDamage: 0, undeadDamage: 0, regularDamage: 0, extraHits: 0,
+    ...(mean || {}) };
   const modern = version.startsWith('com2');
-  const categoryLabel = modern ? 'Irrecoverable damage' : 'Irreversible damage';
+  const categoryLabel = modern ? 'Irrecoverable' : 'Irreversible';
   const bonusLabel = modern ? 'Bonus HP / figure' : 'Extra Hits / figure';
   const previous = container.querySelector('#' + prefix + 'CombatStateSummary');
   if (previous) previous.remove();
   const summary = document.createElement('div');
   summary.id = prefix + 'CombatStateSummary';
   summary.className = 'combat-state-summary';
+  const shares = combatDamageShares(values);
+  const share = key => `<strong data-metric="${key}">`
+    + `${shares[key].toFixed(1)}%</strong>`;
+  const rows = shares
+    ? `
+    <div><span>Regular</span>${share('regularDamage')}</div>
+    <div><span>Undeath</span>${share('undeadDamage')}</div>
+    <div><span>${categoryLabel}</span>${share('irreversibleDamage')}</div>`
+    // No damage stands on the record, so there is no composition to state; saying 0% of each
+    // would read as a measurement rather than as an absence. It says "remaining" because the
+    // record is the state after healing: an exchange can deal damage and then heal all of it
+    // away, and "damage taken: none" beside a positive damage figure would contradict it.
+    : '<div><span>Damage remaining</span><strong data-metric="none">none</strong></div>';
   summary.innerHTML = `
-    <div class="combat-state-heading">Mean post-combat state</div>
-    <div><span>${categoryLabel}</span><strong data-metric="irreversibleDamage">${values.irreversibleDamage.toFixed(3)}</strong></div>
-    <div><span>Undeath damage</span><strong data-metric="undeadDamage">${values.undeadDamage.toFixed(3)}</strong></div>
+    <div class="combat-state-heading">Post-combat damage by type</div>${rows}
     <div><span>${bonusLabel}</span><strong data-metric="extraHits">${values.extraHits.toFixed(3)}</strong></div>`;
   container.appendChild(summary);
 }
@@ -251,12 +561,16 @@ function recalculate() {
     version,
     wallOfFire,
     chaosConjunction,
+    // The card draws the rider histograms, so it asks the queries for the chains that produced
+    // their numbers. The matrix draws none and does not ask.
+    riderChains: true,
   });
 
   const aFirstFigRem = a.hp > 0 && a.dmg % a.hp !== 0 ? a.hp - (a.dmg % a.hp) : a.hp;
   const bFirstFigRem = b.hp > 0 && b.dmg % b.hp !== 0 ? b.hp - (b.dmg % b.hp) : b.hp;
 
   renderBreakdownGrid(result.phases);
+  if (!result.phases) renderRangedRiderGrid(result);
   renderDistPanel(document.getElementById('distA'), 'Mean damage to attacker', result.totalDmgToA, result.aHP, result.aAlive,
     { showSkulls: true, firstFigRem: aFirstFigRem, pDestroy: result.aDestroyPct });
   renderDistPanel(document.getElementById('distB'), 'Mean damage to defender', result.totalDmgToB, result.bHP, result.bAlive,

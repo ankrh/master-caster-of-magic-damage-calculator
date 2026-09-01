@@ -25,7 +25,7 @@
     <option value="mom_cp_1.60.00">MoM CP 1.60</option>
     <option value="com_6.08">CoM 6.08</option>
     <option value="com2_1.05.11">CoM2 1.05.11</option>
-    <option value="com2_warlord_1.5.12.7">Warlord 1.5.12.7</option>
+    <option value="com2_warlord_1.5.12.9">Warlord 1.5.12.9</option>
   </select>
   <button id="swapBtn" class="swap-btn" title="Swap attacker and defender">&#8644; Swap attacker and defender</button>
   <button id="resetBtn" class="reset-btn" type="button" title="Reset calculator to the default state">Reset</button>
@@ -63,7 +63,7 @@
     <label class="check-label" data-tooltip="Non-Chaos units: &#8722;20% To Hit (melee, ranged, thrown, breath).&#10;Chaos units (including via Chaos Channels) are unaffected.">
       <input type="checkbox" id="warpReality"> <span class="realm-chaos">Warp Reality</span>
     </label>
-    <label class="check-label" data-tooltip="Versions: CoM 2 1.05.11 &amp; Warlord 1.5.12.7&#10;Combat-global state affecting both sides.&#10;Immolation only: &times;1.34, then truncation (strength 10&#8594;13).&#10;Does not affect Wall of Fire.">
+    <label class="check-label" data-tooltip="Versions: CoM 2 1.05.11 &amp; Warlord 1.5.12.9&#10;Combat-global state affecting both sides.&#10;Immolation only: &times;1.34, then truncation (strength 10&#8594;13).&#10;Does not affect Wall of Fire.">
       <input type="checkbox" id="chaosConjunction"> <span class="realm-chaos">Chaos Conjunction</span>
     </label>
     <label class="check-label" data-tooltip="Versions: Warlord&#10;Affects both sides.&#10;&#8722;20% To Hit for ranged and thrown attacks.&#10;&#8722;30% To Hit for breath attacks.&#10;Melee is unaffected.&#10;Not modeled: prevents flying; extra copies stack at half strength.">
@@ -82,7 +82,7 @@
       <label for="rangedDist" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;CoM 1, CoM 2 &amp; Warlord: Heroes ignore distance penalties.&#10;MoM 1.31 &amp; 1.60: &#8722;10% per full 3 tiles.&#10;CoM 1: &#8722;10% per full 4 tiles.&#10;CoM 2 &amp; Warlord: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">Ranged attack distance:</label>
       <input type="number" id="rangedDist" min="1" max="99" value="1" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;CoM 1, CoM 2 &amp; Warlord: Heroes ignore distance penalties.&#10;MoM 1.31 &amp; 1.60: &#8722;10% per full 3 tiles.&#10;CoM 1: &#8722;10% per full 4 tiles.&#10;CoM 2 &amp; Warlord: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">
     </span>
-    <label class="abil-check" data-tooltip="Fantastic units of the node's realm:&#10;+2 to all attack strengths, defense, and resistance.">Node aura:
+    <label class="abil-check" data-tooltip="Applies to units of the node's realm, Fantastic or not.&#10;MoM 1.31 &amp; 1.60 and CoM 1: +2 melee, ranged, defense and resistance.&#10;CoM 2 &amp; Warlord: +2 defense, resistance, melee, ranged and each breath.">Node aura:
       <select id="nodeAura" class="enchant-row-select">
         <option value="none" selected>None</option>
         <option value="chaos">Chaos</option>

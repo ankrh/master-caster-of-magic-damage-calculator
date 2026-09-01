@@ -37,7 +37,7 @@ test('F30 repeats each initiating modern gaze under Haste and leaves retaliation
     const countLabel = (result, label) => (result.phases || [])
       .filter(phase => phase.label === label).length;
 
-    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => {
+    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => {
       const target = makeUnit(version, 'b');
       const gazeResult = gaze => resolveCombat(makeUnit(version, 'a', {
         abilities: { haste: true, ...gaze },
@@ -165,7 +165,7 @@ test('F31 samples Cause Fear independently for both modern Hasted melee calls', 
     }), { version, isRanged: false, wallOfFire: false, distance: 1 });
 
     return {
-      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.7'].flatMap(version =>
+      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.9'].flatMap(version =>
         [false, true].map(firstStrike => ({
           version,
           firstStrike,
@@ -207,7 +207,7 @@ test('F31 samples Cause Fear independently for both modern Hasted melee calls', 
 test('F31 keeps modern Haste healing correlated while melee damage remains pending', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
-    const version = 'com2_warlord_1.5.12.7';
+    const version = 'com2_warlord_1.5.12.9';
     const makeUnit = (prefix, overrides = {}) => deriveUnitStats({
       prefix,
       version,
@@ -271,7 +271,7 @@ test('F31 keeps modern Haste healing correlated while melee damage remains pendi
 test('F31 keeps the defender snapshot frozen across pending Hasted melee calls', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
-    const version = 'com2_warlord_1.5.12.7';
+    const version = 'com2_warlord_1.5.12.9';
     const makeUnit = (prefix, overrides = {}) => deriveUnitStats({
       prefix,
       version,
@@ -382,7 +382,7 @@ test('F58 shows one Cause Fear distribution for every modern melee ApplyAttack c
     const fearRows = result => (result.phases || [])
       .filter(phase => phase.mode === 'feared')
       .map(phase => ({ label: phase.label, atkDist: phase.atkDist, defDist: phase.defDist }));
-    const uiResult = run('com2_warlord_1.5.12.7', false);
+    const uiResult = run('com2_warlord_1.5.12.9', false);
     renderBreakdownGrid(uiResult.phases);
     const uiRows = [...document.querySelectorAll('#breakdownGrid .breakdown-phase-row')]
       .filter(row => row.querySelector('.breakdown-phase-label').textContent.includes('Cause Fear'))
@@ -392,7 +392,7 @@ test('F58 shows one Cause Fear distribution for every modern melee ApplyAttack c
         columns: [...row.querySelectorAll('thead th:first-child')].map(header => header.textContent),
       }));
     return {
-      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.7'].flatMap(version =>
+      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.9'].flatMap(version =>
         [false, true].flatMap(firstStrike => [false, true].map(haste => ({
           version, firstStrike, haste,
           rows: fearRows(run(version, firstStrike, haste)),
@@ -473,7 +473,7 @@ test('F58 preserves exact modern fear PMFs through dead targets, Black Sleep, an
       makeUnit(version, 'a', a), makeUnit(version, 'b', b),
       { version, isRanged: false, wallOfFire: false, distance: 1 },
     ));
-    const version = 'com2_warlord_1.5.12.7';
+    const version = 'com2_warlord_1.5.12.9';
     return {
       // Two Hasted Doom Gazes kill B before the selected main/Haste/counter calls.
       deadTarget: run(version,

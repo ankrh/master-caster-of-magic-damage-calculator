@@ -25,6 +25,6 @@ __pycache__/
 # Reference docs/Script source/ and Unit rosters/
 Raw install files/
 
-# Item-scoped cross-agent derivation/review scratch; see DERIVATION-REVIEW-PROTOCOL.md
+# Item-scoped cross-agent derivation/review scratch; see CLAUDE.md, Method B
 .reviews/
 .derivations/

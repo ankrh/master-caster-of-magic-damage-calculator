@@ -5,13 +5,14 @@ test('F36 Warlord Wall of Fire spills across figure boundaries with fresh defens
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
     const referenceNonAreaSpell = ({ atkStr, toHit, defStr, toBlock, hp,
-      topFigHP, invulnBonus, cap }) => {
+      topFigHP, invulnBonus }) => {
       const hits = binomialPMF(atkStr, toHit);
       const blocks = defenseBlockPMF(defStr, toBlock);
-      const out = new Array(cap + 1).fill(0);
+      // Nothing truncates a phase, so the axis runs to the spell's own maximum.
+      const out = new Array(atkStr + 1).fill(0);
       const crossBoundaries = (remainder, booked, boundaryHP, probability) => {
         if (remainder <= boundaryHP) {
-          out[Math.min(cap, booked + remainder)] += probability;
+          out[booked + remainder] += probability;
           return;
         }
         const nextRemainder = remainder - boundaryHP;
@@ -49,13 +50,13 @@ test('F36 Warlord Wall of Fire spills across figure boundaries with fresh defens
       aInvulnBonus: 0,
       aAbilities: {},
       amplifiedDamage: false,
-      version: 'com2_warlord_1.5.12.7',
+      version: 'com2_warlord_1.5.12.9',
       ...overrides,
     }).compute(1, Math.ceil(cap / (overrides.aHP || 5)), cap).dist;
 
     const makeUnit = (prefix, abilities = {}) => deriveUnitStats({
       prefix,
-      version: 'com2_warlord_1.5.12.7',
+      version: 'com2_warlord_1.5.12.9',
       abilities,
       level: 'normal', weapon: 'normal', armor: 'normal', rtbType: 'none',
       unitType: 'normal', figs: 3, atk: prefix === 'a' ? 1 : 0, rtb: 0,
@@ -66,14 +67,14 @@ test('F36 Warlord Wall of Fire spills across figure boundaries with fresh defens
     });
     const integrated = defenderAbilities => resolveCombat(
       makeUnit('a'), makeUnit('b', defenderAbilities), {
-        version: 'com2_warlord_1.5.12.7', isRanged: false,
+        version: 'com2_warlord_1.5.12.9', isRanged: false,
         wallOfFire: true, distance: 1,
       },
     ).totalDmgToA;
 
     const probabilisticParams = {
       atkStr: 12, toHit: 0.6, defStr: 3, toBlock: 0.4,
-      hp: 5, topFigHP: 3, invulnBonus: 2, cap: 17,
+      hp: 5, topFigHP: 3, invulnBonus: 2,
     };
     return {
       woundedTop: wall({}, 13),
@@ -100,8 +101,8 @@ test('F36 Warlord Wall of Fire spills across figure boundaries with fresh defens
       probabilistic: calcDamageSpellDist(
         1, probabilisticParams.atkStr, probabilisticParams.toHit,
         probabilisticParams.defStr, probabilisticParams.toBlock,
-        probabilisticParams.hp, probabilisticParams.cap, probabilisticParams.invulnBonus,
-        null, probabilisticParams.topFigHP, 'com2_warlord_1.5.12.7', {}, false,
+        probabilisticParams.hp, probabilisticParams.invulnBonus,
+        null, probabilisticParams.topFigHP, 'com2_warlord_1.5.12.9', {}, false,
       ),
       probabilisticReference: referenceNonAreaSpell(probabilisticParams),
       fullTopReference: referenceNonAreaSpell({ ...probabilisticParams, topFigHP: 5 }),
@@ -191,7 +192,7 @@ test('F40 uses calculated Teleporting and Merging independently in both modern e
         sources: (result.phases || []).map(phase => phase.source),
       };
     };
-    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => ({
+    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => ({
       version,
       plain: resolve(version, {}),
       teleporting: resolve(version, { teleporting: true }),
@@ -202,19 +203,19 @@ test('F40 uses calculated Teleporting and Merging independently in both modern e
       teleporting: resolve(version, { teleporting: true }),
       merging: resolve(version, { merging: true }),
     }));
-    const twistTeleport = makeUnit('com2_warlord_1.5.12.7', 'a', {
+    const twistTeleport = makeUnit('com2_warlord_1.5.12.9', 'a', {
       teleporting: true,
       temporalTwist: true,
     });
-    const twistMerging = makeUnit('com2_warlord_1.5.12.7', 'a', {
+    const twistMerging = makeUnit('com2_warlord_1.5.12.9', 'a', {
       merging: true,
       temporalTwist: true,
     });
-    const hierophanyTeleport = makeUnit('com2_warlord_1.5.12.7', 'a', {
+    const hierophanyTeleport = makeUnit('com2_warlord_1.5.12.9', 'a', {
       teleporting: true,
       hierophany: true,
     });
-    const hierophanyMerging = makeUnit('com2_warlord_1.5.12.7', 'a', {
+    const hierophanyMerging = makeUnit('com2_warlord_1.5.12.9', 'a', {
       merging: true,
       hierophany: true,
     });
@@ -228,17 +229,17 @@ test('F40 uses calculated Teleporting and Merging independently in both modern e
         hierophanyMerging: hierophanyMerging.abilities,
       },
       calculatedCombat: {
-        twistTeleport: resolveCombat(twistTeleport, makeUnit('com2_warlord_1.5.12.7', 'b'), {
-          version: 'com2_warlord_1.5.12.7', isRanged: false, wallOfFire: true, distance: 1,
+        twistTeleport: resolveCombat(twistTeleport, makeUnit('com2_warlord_1.5.12.9', 'b'), {
+          version: 'com2_warlord_1.5.12.9', isRanged: false, wallOfFire: true, distance: 1,
         }).totalDmgToA,
-        twistMerging: resolveCombat(twistMerging, makeUnit('com2_warlord_1.5.12.7', 'b'), {
-          version: 'com2_warlord_1.5.12.7', isRanged: false, wallOfFire: true, distance: 1,
+        twistMerging: resolveCombat(twistMerging, makeUnit('com2_warlord_1.5.12.9', 'b'), {
+          version: 'com2_warlord_1.5.12.9', isRanged: false, wallOfFire: true, distance: 1,
         }).totalDmgToA,
-        hierophanyTeleport: resolveCombat(hierophanyTeleport, makeUnit('com2_warlord_1.5.12.7', 'b'), {
-          version: 'com2_warlord_1.5.12.7', isRanged: false, wallOfFire: true, distance: 1,
+        hierophanyTeleport: resolveCombat(hierophanyTeleport, makeUnit('com2_warlord_1.5.12.9', 'b'), {
+          version: 'com2_warlord_1.5.12.9', isRanged: false, wallOfFire: true, distance: 1,
         }).totalDmgToA,
-        hierophanyMerging: resolveCombat(hierophanyMerging, makeUnit('com2_warlord_1.5.12.7', 'b'), {
-          version: 'com2_warlord_1.5.12.7', isRanged: false, wallOfFire: true, distance: 1,
+        hierophanyMerging: resolveCombat(hierophanyMerging, makeUnit('com2_warlord_1.5.12.9', 'b'), {
+          version: 'com2_warlord_1.5.12.9', isRanged: false, wallOfFire: true, distance: 1,
         }).totalDmgToA,
       },
     };
@@ -273,7 +274,7 @@ test('F40 uses calculated Teleporting and Merging independently in both modern e
 
 test('F40 roster, custom, state, swap, and matrix paths keep the controls separate', async ({ page }) => {
   const errors = await openCalculator(page);
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     await setValue(page, 'gameVersion', version);
     const roster = await page.evaluate(() => {
       const units = unitDatabases[document.getElementById('gameVersion').value];
@@ -318,7 +319,7 @@ test('F40 roster, custom, state, swap, and matrix paths keep the controls separa
     }
   }
 
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aUnit', 'custom');
   await setValue(page, 'bUnit', 'custom');
   await setValue(page, 'aAbil_teleporting', true);

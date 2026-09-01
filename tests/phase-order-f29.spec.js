@@ -34,7 +34,7 @@ test('F29 orders every modern opening phase and recomputes casualties before lat
     const mean = dist => dist.reduce(
       (sum, probability, damage) => sum + probability * damage, 0);
 
-    return ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => {
+    return ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => {
       const allAttacker = makeUnit(version, 'a', {
         figs: 2,
         atk: 1,

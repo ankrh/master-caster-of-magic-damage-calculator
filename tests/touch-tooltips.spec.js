@@ -78,3 +78,29 @@ test('long-press exposes the same modifier chain from a calculated output', asyn
   await expect(page.locator('#tt')).toBeVisible();
   expectNoConsoleErrors(errors);
 });
+
+test('long-press exposes a rider histogram\'s effective-resistance chain', async ({ page }) => {
+  const errors = await openCalculator(page);
+  // The rider chains hang on a span inside a scrolling histogram, which is the one place a
+  // touch tooltip could be lost to the panel's own scroll handling rather than shown.
+  await page.evaluate(() => { applyPreset('stoningTouchBasic'); });
+  const target = '#breakdownGrid .rider-panel[data-rider-key="stoningTouch"] .rider-name';
+  await page.locator(target).scrollIntoViewIfNeeded();
+  const expected = await page.locator(target).getAttribute('data-tooltip');
+  expect(expected).toContain('Effective Resistance (defender) vs Nature');
+  expect(expected).toContain('Editable base:');
+  expect(expected).toContain('Displayed result:');
+
+  await touch(page, target, 'touchstart');
+  await page.waitForTimeout(700);
+  await expect(page.locator('#tt')).toBeVisible();
+  await expect(page.locator('#tt')).toHaveText(expected);
+  await touch(page, target, 'touchend');
+  await expect(page.locator('#tt')).toBeVisible();
+
+  // A tap elsewhere dismisses it, as it does for every other tooltip.
+  await touch(page, 'h1', 'touchstart');
+  await touch(page, 'h1', 'touchend');
+  await expect(page.locator('#tt')).toBeHidden();
+  expectNoConsoleErrors(errors);
+});

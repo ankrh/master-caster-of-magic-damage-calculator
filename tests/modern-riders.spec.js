@@ -56,7 +56,7 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
       ['Doom Gaze', { doomGaze: 3 }],
     ];
     const modern = [];
-    for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+    for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
       const target = makeUnit(version, 'b', {
         figs: 4,
         res: 5,
@@ -158,7 +158,10 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
         version: dispelVersion,
         gazeLabel: (result.phases.find(phase => phase.label.includes('Gaze')) || {}).label,
         anyDispelLabel: result.phases.some(phase => phase.label.includes('Dispel Evil')),
-        killProbability: result.totalDmgToB[10],
+        // The published total clips at the target's remaining HP, so a gaze that kills a
+        // 10-HP target lands all of its mass at 10: the kill claim is that top bin.
+        killProbability: result.totalDmgToB.reduce(
+          (sum, p, damage) => (damage >= 10 ? sum + p : sum), 0),
       };
     });
 
@@ -169,7 +172,9 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
       modern,
       rangedChanged: JSON.stringify(richRanged.totalDmgToB) !== JSON.stringify(baseRanged.totalDmgToB),
       rangedHealing: richRanged.aLifeStealExpected,
-      dos: { label: dosGaze && dosGaze.label, killProbability: dos.totalDmgToB[10] },
+      dos: { label: dosGaze && dosGaze.label,
+        killProbability: dos.totalDmgToB.reduce(
+          (sum, p, damage) => (damage >= 10 ? sum + p : sum), 0) },
       dispelPair,
       tooltipsExcludeModernGaze: riderTooltips.every(tooltip =>
         tooltip.includes('never on Gaze')
@@ -210,7 +215,7 @@ test('F25 excludes every modern gaze type from the shared touch-rider dispatcher
   expectNoConsoleErrors(errors);
 });
 
-test('F26 uses independent surviving-figure Destruction attempts with capped exact PMFs', async ({ page }) => {
+test('F26 uses independent surviving-figure Destruction attempts with a flat 150 payload', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(async () => {
     const makeUnit = (version, prefix, overrides = {}) => deriveUnitStats({
@@ -247,7 +252,7 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
       ...overrides,
     });
     const version = 'com2_1.05.11';
-    const one = convolveTouchAttacks([1], 40, 1, {
+    const one = convolveTouchAttacks([1], 1, {
       poisonStr: 0,
       poisonFail: 0,
       stoningFail: 0,
@@ -259,7 +264,7 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
       lifeStealMod: null,
       lifeStealRes: 0,
     }).dist;
-    const four = convolveTouchAttacks([1], 40, 4, {
+    const four = convolveTouchAttacks([1], 4, {
       poisonStr: 0,
       poisonFail: 0,
       stoningFail: 0,
@@ -304,7 +309,8 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
     };
 
     // Production matrix workers import the same resolver. Four ranged figures give
-    // P(any Destruction failure)=0.9375, hence a 0.9375 damage/HP ratio.
+    // P(any Destruction failure)=0.9375, and the flat 150 each failure deals is published
+    // clipped at the target's 40 HP, so the damage/HP ratio is 0.9375 x 40 / 40 = 0.9375.
     const rangedAttacker = makeUnit(version, 'a', {
       figs: 4,
       rtb: 1,
@@ -333,16 +339,21 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
     URL.revokeObjectURL(url);
 
     return {
-      one: { zero: one[0], cap: one[40], sum: one.reduce((a, b) => a + b, 0), length: one.length },
-      four: { zero: four[0], cap: four[40], sum: four.reduce((a, b) => a + b, 0), length: four.length },
+      one: { zero: one[0], payload: one[150], sum: one.reduce((a, b) => a + b, 0), length: one.length },
+      four: { zero: four[0], payload: four[150], sum: four.reduce((a, b) => a + b, 0), length: four.length },
+      // The published total clips at the target's remaining HP, so the flat 150 the rider
+      // deals inside the phase arrives in the last bin rather than at index 150.
       survivorDependent: {
         zero: survivorDependent.totalDmgToB[0],
-        cap: survivorDependent.totalDmgToB[40],
+        payload: survivorDependent.totalDmgToB[survivorDependent.bRemHP],
+        top: survivorDependent.totalDmgToB.length - 1,
+        remHP: survivorDependent.bRemHP,
         sum: survivorDependent.totalDmgToB.reduce((a, b) => a + b, 0),
       },
       hasted: {
         zero: hasted.totalDmgToB[0],
-        cap: hasted.totalDmgToB[40],
+        payload: hasted.totalDmgToB[hasted.bRemHP],
+        top: hasted.totalDmgToB.length - 1,
         sum: hasted.totalDmgToB.reduce((a, b) => a + b, 0),
       },
       immune,
@@ -352,16 +363,24 @@ test('F26 uses independent surviving-figure Destruction attempts with capped exa
     };
   });
 
-  expect(report.one).toEqual({ zero: 0.5, cap: 0.5, sum: 1, length: 41 });
+  // `Result.field_00 := 150` is an assignment of a flat constant, not the target's remaining
+  // HP and not an `Inc`, so a success deals 150 whatever the target has left
+  // (`Reference docs/Caster binary/Combat.ApplyAttack.pas`, the `$005B2DC2` write). That is
+  // what `convolveTouchAttacks` produces inside the phase; what the phase publishes is the
+  // same mass clipped at the 4 x 10 = 40 HP the target had entering it.
+  expect(report.one).toEqual({ zero: 0.5, payload: 0.5, sum: 1, length: 151 });
   expect(report.four.zero).toBeCloseTo(0.0625, 12);
-  expect(report.four.cap).toBeCloseTo(0.9375, 12);
+  expect(report.four.payload).toBeCloseTo(0.9375, 12);
   expect(report.four.sum).toBeCloseTo(1, 12);
-  expect(report.four.length).toBe(41);
+  expect(report.four.length).toBe(151);
+  expect(report.survivorDependent.remHP).toBe(40);
+  expect(report.survivorDependent.top).toBe(40);
   expect(report.survivorDependent.zero).toBeCloseTo(0.5625, 12);
-  expect(report.survivorDependent.cap).toBeCloseTo(0.4375, 12);
+  expect(report.survivorDependent.payload).toBeCloseTo(0.4375, 12);
   expect(report.survivorDependent.sum).toBeCloseTo(1, 12);
+  expect(report.hasted.top).toBe(40);
   expect(report.hasted.zero).toBeCloseTo(0.390625, 12);
-  expect(report.hasted.cap).toBeCloseTo(0.609375, 12);
+  expect(report.hasted.payload).toBeCloseTo(0.609375, 12);
   expect(report.hasted.sum).toBeCloseTo(1, 12);
   expect(report.immune).toBe(0);
   expect(report.gated).toEqual({ mom: 0, cp: 0, com: 0 });

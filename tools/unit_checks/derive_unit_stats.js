@@ -7,7 +7,7 @@ const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = requi
 
 function runDeriveUnitStatsChecks(ctx) {
   const modernChannels = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     rtbType: 'missile',
     rtb: 7,
     modernAttacks: {
@@ -103,7 +103,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Modern Tactician does not restore Ranged when the post-Warp live field remains negative');
 
   const trueLightChannels = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_life', trueLight: true,
+    version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_life', trueLight: true,
     abilities: { doomGaze: 6 }, modernAttacks: modernAttackInput,
   }));
   assertEqual(trueLightChannels.modernAttacks.ranged.strength, 8,
@@ -118,7 +118,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Warlord True Light leaves Doom Gaze unchanged');
 
   const trueLightCreatesMelee = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_life', atk: 0,
+    version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_life', atk: 0,
     trueLight: true, modernAttacks: {},
   }));
   assertEqual(trueLightCreatesMelee.atk, 1,
@@ -149,8 +149,8 @@ function runDeriveUnitStatsChecks(ctx) {
     'Modern node aura does not create any independent secondary attack field from zero');
 
   const nodeAuraUsesBaseMelee = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'hero', atk: 1, nodeAura: 'chaos',
-    identity: { version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+    version: 'com2_warlord_1.5.12.9', unitType: 'hero', atk: 1, nodeAura: 'chaos',
+    identity: { version: 'com2_warlord_1.5.12.9', templateId: null, heroTypeId: null,
       isHero: true, baseRace: 'Chaos', baseFantastic: false, specialUnit: 'none' },
     abilities: { soulFlay: true },
   }));
@@ -158,8 +158,8 @@ function runDeriveUnitStatsChecks(ctx) {
     'Modern node aura uses positive persistent melee after Soul Flay makes live melee zero');
 
   const nodeAuraDoesNotUseCreatedMelee = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'hero', atk: 0, nodeAura: 'life',
-    identity: { version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+    version: 'com2_warlord_1.5.12.9', unitType: 'hero', atk: 0, nodeAura: 'life',
+    identity: { version: 'com2_warlord_1.5.12.9', templateId: null, heroTypeId: null,
       isHero: true, baseRace: 'Life', baseFantastic: false, specialUnit: 'none' },
     trueLight: true,
   }));
@@ -183,7 +183,7 @@ function runDeriveUnitStatsChecks(ctx) {
   'F18 modifier trace orders node aura, Mind Storm, Warp, and Tactician');
 
   const flameBladeAfterWarp = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { flameBlade: true, warpAttack: true },
     modernAttacks: { fireBreath: { strength: 2, type: 'fire' } },
   }));
@@ -195,7 +195,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Warlord combat Flame Blade Fire Breath trace follows Warp in region d');
 
   const flameBladeCreatesFireBreath = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', abilities: { flameBlade: true },
+    version: 'com2_warlord_1.5.12.9', abilities: { flameBlade: true },
     modernAttacks: {},
   }));
   assertEqual(flameBladeCreatesFireBreath.modernAttacks.fireBreath.strength, 1,
@@ -211,7 +211,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // melee, +2 missile/Thrown, +1 Fire Breath, and the magic-weapon upgrade — not the +3 melee
   // alone that a base-game spell input used to produce here.
   const warlordBladeInput = {
-    version: 'com2_warlord_1.5.12.7', atk: 5,
+    version: 'com2_warlord_1.5.12.9', atk: 5,
     modernAttacks: { ranged: { strength: 4, type: 'missile' },
       thrown: { strength: 3, type: 'thrown' }, fireBreath: { strength: 2, type: 'fire' } },
   };
@@ -273,7 +273,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(metalFiresMoM.atk, 3, 'MoM Metal Fires adds its +1 melee');
   assertEqual(metalFiresMoM.rtb, 4, 'MoM Metal Fires adds its +1 missile strength');
   assertEqual(metalFiresMoM.weapon, 'magic', 'MoM Metal Fires upgrades a normal weapon to magic');
-  for (const version of ['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const metalFiresCoM = ctx.deriveUnitStats(baseUnitInput({
       version, atk: 2, rtb: 3, rtbType: 'missile', abilities: { metalFires: true },
       ...(version.startsWith('com2')
@@ -302,7 +302,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'CoM2 Metal Fires reaches no modern Thrown channel');
 
   const modernBlackpowder = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { outlanderWizard: true, rocketry: true, armorPiercing: true },
     rtbType: 'missile',
     rtb: 5,
@@ -353,7 +353,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Charm of Life reads live HP after Endurance and Lionheart (7 + 4 + 8 + trunc(19 / 4))');
 
   const ludusRanged = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', race: 'Orc',
+    version: 'com2_warlord_1.5.12.9', race: 'Orc',
     abilities: { ludusAgoge: true }, rtbType: 'missile', rtb: 5,
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
@@ -361,7 +361,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Ludus Agoge preserves the executing script ranged +1 write');
 
   const motherFungusRanged = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', race: 'Goblin',
+    version: 'com2_warlord_1.5.12.9', race: 'Goblin',
     abilities: { motherFungus: true }, rtbType: 'missile', rtb: 5,
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
@@ -369,21 +369,21 @@ function runDeriveUnitStatsChecks(ctx) {
     'Mother Fungus preserves the executing script ranged +2 write');
 
   const altarMoonBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', race: 'Gnoll',
+    version: 'com2_warlord_1.5.12.9', race: 'Gnoll',
     abilities: { altarOfTheMoon: true, focusMagic: true }, rtbType: 'none', rtb: 0,
   }));
   assertEqual(altarMoonBeforeFocus.rtb, 3,
     'Altar of the Moon does not treat the later Focus Magic ranged creation as permanent ranged');
 
   const ludusBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', race: 'Orc',
+    version: 'com2_warlord_1.5.12.9', race: 'Orc',
     abilities: { ludusAgoge: true, focusMagic: true }, rtbType: 'none', rtb: 0,
   }));
   assertEqual(ludusBeforeFocus.rtb, 3,
     'Ludus Agoge does not treat the later Focus Magic ranged creation as permanent ranged');
 
   const motherFungusBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', race: 'Goblin',
+    version: 'com2_warlord_1.5.12.9', race: 'Goblin',
     abilities: { motherFungus: true, focusMagic: true }, rtbType: 'none', rtb: 0,
   }));
   assertEqual(motherFungusBeforeFocus.rtb, 3,
@@ -404,7 +404,7 @@ function runDeriveUnitStatsChecks(ctx) {
     modernAttacks: { ranged: { strength: overrides.rtb || 0, type } },
   });
   const convertedVsNative = (label, overrides) => {
-    for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+    for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
       const converted = ctx.deriveUnitStats(baseUnitInput({
         version, rtbType: 'missile', ...overrides, ...channelFor('missile', overrides),
         abilities: { ...(overrides.abilities || {}), focusMagic: true },
@@ -416,7 +416,7 @@ function runDeriveUnitStatsChecks(ctx) {
         `${label} treats a Focus-converted attack as a native magical one (${version})`);
     }
     const warlord = ctx.deriveUnitStats(baseUnitInput({
-      version: 'com2_warlord_1.5.12.7', rtbType: 'missile', ...overrides,
+      version: 'com2_warlord_1.5.12.9', rtbType: 'missile', ...overrides,
       ...channelFor('missile', overrides),
       abilities: { ...(overrides.abilities || {}), focusMagic: true },
     }));
@@ -438,12 +438,12 @@ function runDeriveUnitStatsChecks(ctx) {
   // difference is the step's position, not a gate. CoM 1 keeps its bonus below
   // (`com1FlameBeforeFocus`); Warlord sees the converted attack.
   const warlordBladeConverted = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { flameBlade: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
   }));
   const warlordBladeNative = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { flameBlade: true }, rtbType: 'magic', rtb: 2,
     modernAttacks: { ranged: { strength: 2, type: 'magic' } },
   }));
@@ -451,7 +451,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'The Warlord blade treats a Focus-converted attack as a native magical one');
 
   const fieryFuryBeforeFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { fieryFury: true, focusMagic: true }, rtbType: 'missile', rtb: 2,
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
   }));
@@ -459,28 +459,28 @@ function runDeriveUnitStatsChecks(ctx) {
     'Fiery Fury tests missile ranged before the later Warlord Focus Magic conversion');
 
   const ludusUsesBaseRace = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', race: 'Orc', atk: 1,
+    version: 'com2_warlord_1.5.12.9', race: 'Orc', atk: 1,
     abilities: { ludusAgoge: true, ccFireBreath: true },
   }));
   assertEqual(ludusUsesBaseRace.atk, 2,
     'Permanent recruitment gates retain base race after Chaos Channels changes live identity');
 
   const naturalSelectionUsesBaseType = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 1,
+    version: 'com2_warlord_1.5.12.9', atk: 1,
     abilities: { coal: true, ccFireBreath: true },
   }));
   assertEqual(naturalSelectionUsesBaseType.atk, 2,
     'Natural Selection retains normal base-unit eligibility after Chaos Channels');
 
   const pillarUsesBaseType = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', res: 1,
+    version: 'com2_warlord_1.5.12.9', res: 1,
     abilities: { pillarOfFaithRes: 2, ccFireBreath: true },
   }));
   assertEqual(pillarUsesBaseType.res, 3,
     'Pillar of Faith retains normal base-unit eligibility after Chaos Channels');
 
   const fieryFuryUsesBaseType = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 1,
+    version: 'com2_warlord_1.5.12.9', atk: 1,
     abilities: { fieryFury: true, ccFireBreath: true },
   }));
   assertEqual(fieryFuryUsesBaseType.atk, 4,
@@ -578,7 +578,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(ccPatchedSignedNegative.thrownType, 'fire',
     'CP 1.60 replaces an admitted negative Thrown slot with Fire Breath 2');
 
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const ccModernBesideRanged = ctx.deriveUnitStats(baseUnitInput({
       version, rtb: 7, rtbType: 'missile',
       abilities: { ccFireBreath: true, stoningGaze: -3 },
@@ -602,9 +602,9 @@ function runDeriveUnitStatsChecks(ctx) {
   }
 
   const fieryFuryBeforeRaiseDead = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_nature',
+    version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature',
     identity: {
-      version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+      version: 'com2_warlord_1.5.12.9', templateId: null, heroTypeId: null,
       isHero: false, baseRace: 'Nature', baseFantastic: true, specialUnit: 'none',
     },
     abilities: { fieryFury: true, raiseDead: true },
@@ -613,9 +613,9 @@ function runDeriveUnitStatsChecks(ctx) {
     'Raise Dead No-Heal conversion runs after Warlord Fiery Fury identity conversion');
 
   const fieryFuryBeforeMysticSurge = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'fantastic_nature',
+    version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature',
     identity: {
-      version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+      version: 'com2_warlord_1.5.12.9', templateId: null, heroTypeId: null,
       isHero: false, baseRace: 'Nature', baseFantastic: true, specialUnit: 'none',
     },
     abilities: { fieryFury: true, mysticSurge: true },
@@ -624,23 +624,23 @@ function runDeriveUnitStatsChecks(ctx) {
     'Mystic Surge No-Heal conversion runs after Warlord Fiery Fury identity conversion');
 
   const sanctifyRetainsLiveFantastic = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { combatSummoned: true, sanctify: true },
   }));
   assertEqual(sanctifyRetainsLiveFantastic.unitType, 'fantastic_life',
     'Sanctify writes Life without clearing a non-clergy unit already made Fantastic');
 
   const sanctifyBeforeRaiseDead = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { sanctify: true, clergy: true, raiseDead: true },
   }));
   assertEqual(sanctifyBeforeRaiseDead.unitType, 'fantastic_unaligned',
     'Raise Dead No-Heal conversion runs after Warlord Sanctify identity writes');
 
   const sanctifiedClergyHero = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', unitType: 'hero', atk: 1, trueLight: true,
+    version: 'com2_warlord_1.5.12.9', unitType: 'hero', atk: 1, trueLight: true,
     identity: {
-      version: 'com2_warlord_1.5.12.7', templateId: null, heroTypeId: null,
+      version: 'com2_warlord_1.5.12.9', templateId: null, heroTypeId: null,
       isHero: true, baseRace: 'High Men', baseFantastic: false, specialUnit: 'none',
     },
     abilities: { sanctify: true, clergy: true },
@@ -671,28 +671,28 @@ function runDeriveUnitStatsChecks(ctx) {
   'Modern Supernatural rounds a 25.5 tie to the even integer 26');
 
   const uncappedPillar = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { pillarOfFaithRes: 10 }, res: 1,
   }));
   assertEqual(uncappedPillar.res, 11,
     'Pillar of Faith uses the executing script building count without an artificial cap');
 
   const naturalSelectionOverwrite = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { powerMinerals: 2, nightshade: 1 }, res: 3,
   }));
   assertEqual(naturalSelectionOverwrite.res, 4,
     'Natural Selection Nightshade overwrites the earlier Power-mineral resistance write');
 
   const naturalSelectionCount = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { powerMinerals: 2, nightshade: 3 }, res: 3,
   }));
   assertEqual(naturalSelectionCount.res, 6,
     'Natural Selection adds the full Nightshade count from the saved Resistance snapshot');
 
   const wildGameDoesNotFollowFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { wildGame: true, focusMagic: true }, rtbType: 'thrown', rtb: 2,
     modernAttacks: { thrown: { strength: 2, type: 'thrown' } },
   }));
@@ -734,7 +734,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // `B.rangedtype` and carrying no live-strength test (Units.RecalculateUnits.pas:903-907), so a
   // region-`b` penalty that has already driven the field below zero does not withhold it.
   const focusMagicUnderPlague = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { focusMagic: true, plague: true },
     rtbType: 'magic', rtb: 2,
     modernAttacks: { ranged: { strength: 2, type: 'magic' } },
@@ -743,7 +743,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Focus Magic adds three to a permanently magical ranged attack a phase-b penalty drove below zero');
 
   const warlordFocusBeforeWarp = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { focusMagic: true, warpAttack: true },
     rtbType: 'magic',
     rtb: 5,
@@ -767,14 +767,14 @@ function runDeriveUnitStatsChecks(ctx) {
     'Modern Warp Attack uses signed truncate-toward-zero division');
 
   const beatFiveDefense = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { beatOfSwiftness: true },
     def: 5,
   }));
   assertEqual(beatFiveDefense.def, 5,
     'Beat of Swiftness rounds a 0.5 defense reduction to even');
   const beatTwentyFiveDefense = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { beatOfSwiftness: true },
     def: 25,
   }));
@@ -789,7 +789,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Beat of Swiftness is inert outside Warlord even when supplied as a raw hidden input');
 
   const lightningBladeThrown = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { lightningBlade: true },
     rtbType: 'thrown',
     rtb: 4,
@@ -803,7 +803,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // Nature Link (Warlord rename of Land Linking) maps to the landLinking calcKey.
   // Fantastic units get the Land Linking melee/def bonus AND the Warlord +1 resistance.
   const natureLinkFantastic = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { landLinking: true },
     unitType: 'fantastic_nature',
     atk: 1, def: 1, res: 1,
@@ -814,7 +814,7 @@ function runDeriveUnitStatsChecks(ctx) {
 
   // Normal units get only the +1 resistance, not the fantastic-only melee/def bonus.
   const natureLinkNormal = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { landLinking: true },
     unitType: 'normal',
     atk: 1, def: 1, res: 1,
@@ -834,7 +834,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(landLinkingCoM2.res, 1, 'Land Linking (CoM2) grants no resistance bonus');
 
   const luckyStar = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { luckyStar: true },
     rtbType: 'missile',
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
@@ -849,7 +849,7 @@ function runDeriveUnitStatsChecks(ctx) {
 
   // Only the enchanted unit gains Lucky, expressed with the ordinary `lucky` control.
   const luckyStarTarget = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { luckyStar: true, lucky: true },
     atk: 2, def: 2, res: 2,
   }));
@@ -862,7 +862,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // afterwards, so a Holy Bonus aura must not feed either effect. Both are Outlander-soldier
   // reforms, so the inputs are the wizard retort plus the reform, never the derived label.
   const psychoForceInput = overrides => baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     level: 'veteran',
     atk: 1, def: 1, res: 4, hp: 1,
     ...overrides,
@@ -898,7 +898,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Warp Resist zeroes resistance in region c, so Pneuma Field drains nothing');
 
   const trueSight = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { trueSight: true },
     rtbType: 'magic',
     rtb: 1,
@@ -909,7 +909,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertClose(trueSight.toHitRtb, 0.35, 'True Sight gives +5% ranged To-Hit in Warlord');
 
   const eyeOfHeavenTrueSight = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { eyeOfHeaven: true },
     rtbType: 'magic',
     rtb: 1,
@@ -920,7 +920,7 @@ function runDeriveUnitStatsChecks(ctx) {
   // UnitCalc.CAS:326-328 writes SToRanged alone. The engine record carries hitchancethrown and
   // hitchancebreath as separate fields, so neither receives the bonus.
   const eyeOfHeavenBreath = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { eyeOfHeaven: true },
     rtbType: 'fire',
     rtb: 1,
@@ -930,7 +930,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'True Sight writes SToRanged only, so Fire Breath To-Hit is unchanged');
 
   const academyMagicRanged = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { alumniOfAcademy: true },
     race: 'Halfling',
     name: 'Halfling Shamans',
@@ -940,7 +940,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(academyMagicRanged.figs, 8, 'Academy gives a Halfling magical-ranged unit +2 figures');
 
   const academyMechanical = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { alumniOfAcademy: true, mechanical: true },
     race: 'Halfling',
     name: 'Mechanical Shamans',
@@ -950,7 +950,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(academyMechanical.figs, 6, 'Academy excludes Mechanical magical-ranged units');
 
   const academyRocs = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { alumniOfAcademy: true },
     race: 'Halfling',
     name: 'Halfling Rocs',
@@ -959,7 +959,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(academyRocs.figs, 4, 'Academy gives Halfling Rocs +2 figures');
 
   const academyOtherRace = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { alumniOfAcademy: true },
     race: 'High Men',
     name: 'High Men Magicians',
@@ -1062,7 +1062,7 @@ function runDeriveUnitStatsChecks(ctx) {
     'Modern Darkness does not subtract from zero Life attack, defense, or resistance channels');
 
   const modernChaosSurgeKeepsBaseMeleeGate = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     unitType: 'fantastic_chaos',
     abilities: { blazeOfGlory: true },
     chaosSurge: 1,

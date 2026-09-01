@@ -403,42 +403,46 @@ function buildDosFlagCell(prefix, key, label) {
 // output's dynamic trace.
 let refreshVisibleTooltipForElement = () => {};
 
+// R7.4's chain presentation. These three sit at module scope because two callers render the
+// same ordered chain in the same form: the card's final calculated values here, and the
+// per-rider histograms' effective-resistance / effective-defense chains (`renderRiderPanels`,
+// `ui.js`). One formatter, so the two cannot drift.
+function formatTraceValue(value, trace) {
+  if (trace && trace.unit === 'percent') return String(value) + '%';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (value === '' || value === null || value === undefined) return 'None / unaligned';
+  return String(value);
+}
+
+function formatTraceSource(entry) {
+  const source = entry.source || {};
+  const raw = source.label || source.id || entry.id;
+  if (source.label && source.label !== source.id) return source.label;
+  return String(raw)
+    .replace(/:/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function formatTraceTooltip(trace) {
+  const lines = ['Editable base: ' + formatTraceValue(trace.base, trace)];
+  for (const entry of trace.entries) {
+    lines.push(formatTraceSource(entry) + ' (phase ' + entry.phase + '): '
+      + formatTraceValue(entry.from, trace) + ' → ' + formatTraceValue(entry.to, trace));
+  }
+  lines.push('Displayed result: ' + formatTraceValue(trace.result, trace));
+  return lines.join('\n');
+}
+
 // Show one final calculated value next to each editable base stat. R7.3's projection is
 // authoritative for both the displayed result and its explanation: the UI only formats the
 // existing ordered chain and never rebuilds modifier mechanics from controls.
 function updateModifiedDisplay(prefix, stats) {
   const s = stats || readUnitStats(prefix);
   const traces = s.modifierTraces || {};
-
-  function formatTraceValue(value, trace) {
-    if (trace && trace.unit === 'percent') return String(value) + '%';
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (value === '' || value === null || value === undefined) return 'None / unaligned';
-    return String(value);
-  }
-
-  function formatTraceSource(entry) {
-    const source = entry.source || {};
-    const raw = source.label || source.id || entry.id;
-    if (source.label && source.label !== source.id) return source.label;
-    return String(raw)
-      .replace(/:/g, ' ')
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .split(/\s+/)
-      .filter(Boolean)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
-  function formatTraceTooltip(trace) {
-    const lines = ['Editable base: ' + formatTraceValue(trace.base, trace)];
-    for (const entry of trace.entries) {
-      lines.push(formatTraceSource(entry) + ' (phase ' + entry.phase + '): '
-        + formatTraceValue(entry.from, trace) + ' → ' + formatTraceValue(entry.to, trace));
-    }
-    lines.push('Displayed result: ' + formatTraceValue(trace.result, trace));
-    return lines.join('\n');
-  }
 
   function showTrace(id, trace) {
     const el = document.getElementById(id);

@@ -172,12 +172,19 @@ function healingStateRemainingHp(state) {
 // Stable presentation boundary for the version-specific healing records. The resolver
 // keeps DOS Irreversible Damage / Extra Hits and Caster Irrecoverable Damage / Bonus HP
 // distinct internally, but callers need one set of comparable post-combat means.
+//
+// The three damage categories partition the record's total, which is why `regularDamage` is
+// derived on the modern side rather than stored: `normalizeCombatHealState` already clamps
+// irrecoverable to the total and undead to what is left, so the remainder is the normal
+// damage `Combatheal` computes as `Totaldamage - Irrecoverabledamage - Undeaddamage`
+// (`Combat.DamageHandling.pas:80,84`). The DOS record stores its own regular byte.
 function combatHealingStateMetrics(state) {
   if (isDosCombatHealState(state)) {
     const normalized = normalizeDosCombatHealState(state);
     return {
       irreversibleDamage: normalized.irreversibleDamage,
       undeadDamage: normalized.undeadDamage,
+      regularDamage: normalized.regularDamage,
       extraHits: normalized.extraHits,
     };
   }
@@ -185,6 +192,8 @@ function combatHealingStateMetrics(state) {
   return {
     irreversibleDamage: normalized.irrecoverableDamage,
     undeadDamage: normalized.undeadDamage,
+    regularDamage: Math.max(0, normalized.totalDamage
+      - normalized.irrecoverableDamage - normalized.undeadDamage),
     extraHits: normalized.bonusHp,
   };
 }
@@ -193,16 +202,36 @@ function initialCombatHealingStateMeans(unit) {
   return combatHealingStateMetrics(combatHealStateFromUnit(unit));
 }
 
-function jointCombatHealingStateMeans(joint, side, unit) {
-  if (!joint.healingPaths) return initialCombatHealingStateMeans(unit);
-  const means = { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
+// `meanDamageTaken` is only read when the joint carries no healing paths, and it is booked as
+// regular damage. That rests on `trackModernHealing` (`combat.js`) naming every rider that can
+// write a non-normal category, which is checked by `runRiderHistogramChecks` rather than
+// asserted here — a missed rider does not fail, it silently reports a partly permanent wound
+// as wholly regular.
+//
+// One category escapes it and is a known gap rather than an oversight: Create Undead routes the
+// whole ordinary attack roll into the undead bucket
+// (`Combat.ApplyAttack.pas:624`, `$005B31FA`), and the calculator omits the flag entirely
+// (`applyVampirismEffects`, `combat_effects.js`) on the reasoning that it moved no displayed
+// number. This readout is that number, so the omission is now visible and wants a ruling.
+//
+// The value is the published (capped) mean, while the composition's denominator is the
+// accumulated categories. The two differ only when the target starts with non-regular damage,
+// which no control exposes (`CLAUDE.md`, *Deliberate deviations*), so no reachable state
+// weights them against each other.
+function jointCombatHealingStateMeans(joint, side, unit, meanDamageTaken = 0) {
+  if (!joint.healingPaths) {
+    const initial = initialCombatHealingStateMeans(unit);
+    return { ...initial,
+      regularDamage: initial.regularDamage + Math.max(0, meanDamageTaken) };
+  }
+  const means = { irreversibleDamage: 0, undeadDamage: 0, regularDamage: 0, extraHits: 0 };
   for (const row of joint) {
     for (const cell of row) {
       for (const path of cell.values()) {
         const metrics = combatHealingStateMetrics(path[side + 'State']);
-        means.irreversibleDamage += path.probability * metrics.irreversibleDamage;
-        means.undeadDamage += path.probability * metrics.undeadDamage;
-        means.extraHits += path.probability * metrics.extraHits;
+        for (const key of Object.keys(means)) {
+          means[key] += path.probability * metrics[key];
+        }
       }
     }
   }
@@ -210,8 +239,10 @@ function jointCombatHealingStateMeans(joint, side, unit) {
 }
 
 function rangedCombatHealingStateMeans(outcomes, sourceUnit, targetUnit) {
-  const sourceMeans = { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
-  const targetMeans = { irreversibleDamage: 0, undeadDamage: 0, extraHits: 0 };
+  const sourceMeans = { irreversibleDamage: 0, undeadDamage: 0, regularDamage: 0,
+    extraHits: 0 };
+  const targetMeans = { irreversibleDamage: 0, undeadDamage: 0, regularDamage: 0,
+    extraHits: 0 };
   const sourceInitial = combatHealStateFromUnit(sourceUnit);
   const targetInitial = combatHealStateFromUnit(targetUnit);
   for (const outcome of outcomes || []) {
@@ -281,15 +312,135 @@ function jointDestroyedProbability(joint, side, fallbackDist, remainingHp) {
   return probability;
 }
 
+// Damage is not truncated *inside* a phase — the rider accumulators, the three category
+// accumulators and the healing state all carry the engine's uncapped figures, which is what makes
+// per-rider attribution order-independent (`CLAUDE.md`, *Architecture*). What a phase publishes is
+// capped: a phase-total histogram, and the cumulative total built from it, must not run past the
+// HP the target had entering the phase, because no reader can act on damage the unit cannot take.
+// So the clip lands here, on the way out, and nowhere earlier.
+function shownDamage(damage, cap) {
+  return Math.min(Math.max(0, damage || 0), Math.max(0, cap || 0));
+}
+
+// Fold every bin past `remHP` into `remHP` itself. Used where a total is published without
+// having passed through the joint traversal that would already have clipped it.
+function clipDistAtRemainingHp(dist, remHP) {
+  if (!dist || dist.length - 1 <= remHP) return dist;
+  const clipped = dist.slice(0, remHP + 1);
+  for (let d = remHP + 1; d < dist.length; d++) clipped[remHP] += dist[d];
+  return clipped;
+}
+
 function addDistProbability(dist, value, probability) {
   const index = Math.max(0, Math.trunc(Number(value) || 0));
   while (dist.length <= index) dist.push(0);
   dist[index] += probability;
 }
 
+// --- Per-rider phase marginals ---
+// A rider histogram is a marginal read of the joint, never a distribution computed on its own
+// and convolved back in (`CLAUDE.md`, *Input/output contract*). Each outcome path already
+// carries one uncapped HP accumulator per rider (`convolveTouchAttacks`), so the marginal is
+// accumulated in the same traversal, and weighted by the same probability, that the phase's
+// total-damage `marginal` uses. Presence is carried separately from value: a rider the matchup
+// does not place emits no key, while a placed rider that cannot land emits with all mass at 0.
+function newRiderTally() {
+  return { targetPresent: [], sourcePresent: [], target: new Map(), source: new Map() };
+}
+
+function addRiderMap(map, riders, probability) {
+  if (!riders) return;
+  for (const key of Object.keys(riders)) {
+    let dist = map.get(key);
+    if (!dist) { dist = [0]; map.set(key, dist); }
+    addDistProbability(dist, riders[key], probability);
+  }
+}
+
+// Record what one phase output places, before any of its outcomes are walked, so a rider that
+// is gated on but landed with probability zero still gets a key.
+function tallyRiderPresence(tally, out) {
+  if (!tally || !out) return;
+  tally.targetPresent = unionRidersPresent(tally.targetPresent, out.ridersPresent);
+  tally.sourcePresent = unionSourceRidersPresent(tally.sourcePresent, out.sourceRidersPresent);
+}
+
+function tallyRiderOutcome(tally, outcome, probability) {
+  if (!tally || !outcome) return;
+  addRiderMap(tally.target, outcome.riders, probability);
+  addRiderMap(tally.source, outcome.sourceRiders, probability);
+}
+
+// Walk a phase output's outcomes for their rider values alone, for the blocks that fold the
+// output through its `dist` rather than through `outcomePaths`.
+function tallyRiderOut(tally, out, weight) {
+  if (!tally || !out) return;
+  tallyRiderPresence(tally, out);
+  if (!out.outcomes) return;
+  for (const outcome of out.outcomes) {
+    tallyRiderOutcome(tally, outcome, weight * outcome.probability);
+  }
+}
+
+// INV-1: a path that skipped the phase entirely carries no rider accumulator, so its mass is
+// folded in at 0 rather than dropped.
+function finishRiderTally(tally) {
+  const build = (present, map) => {
+    const dists = {};
+    for (const key of present) {
+      const dist = map.get(key) || [0];
+      let total = 0;
+      for (const value of dist) total += value;
+      if (1 - total > 1e-12) dist[0] += 1 - total;
+      dists[key] = dist;
+    }
+    return { present, dists };
+  };
+  return {
+    targetRiders: build(tally.targetPresent, tally.target),
+    sourceRiders: build(tally.sourcePresent, tally.source),
+  };
+}
+
+// One breakdown row's rider records, in engine order. `side` names the panel column the
+// histogram belongs under and `quantity` its axis: `targetHp` is the shared HP axis every
+// damage rider plots on, `sourceHp` is the separate axis Life Steal's healing needs
+// (`CLAUDE.md`, *Input/output contract*). Figures killed is derived from `targetHp`, not
+// emitted. A row is emitted per placed rider and for no other, so an absent panel means the
+// matchup does not place that rider rather than that it rolled zero.
+//
+// `chains` is this direction's rider id -> chain records map, built by the queries that
+// computed the figures the rolls used (`touchParams` / `gazeKillProbs` / `buildDefenseContext`,
+// `combat_phases.js`). It is attached rather than looked up later so the histogram and its
+// explanation come out of one traversal; a direction whose caller asked for no chains leaves
+// the field absent on every row.
+function phaseRiderRows(riders, targetSide, sourceSide, chains = null) {
+  if (!riders) return [];
+  const rows = [];
+  // Every chain on this row is about the same unit: the one the rolls are made against and
+  // the one whose Defense the attack is scored against, which is this direction's target. That
+  // is `side` for most riders but not for Life Steal's healing, whose histogram is plotted on
+  // the source, so the subject is stated rather than inferred from the panel column.
+  const withChain = row => {
+    const record = chains && chains[row.key];
+    return record && record.length
+      ? { ...row, chains: record, chainSubject: targetSide } : row;
+  };
+  for (const key of riders.targetRiders.present) {
+    rows.push(withChain({ key, side: targetSide, quantity: 'targetHp',
+      dist: riders.targetRiders.dists[key] }));
+  }
+  for (const key of riders.sourceRiders.present) {
+    rows.push(withChain({ key, side: sourceSide, quantity: 'sourceHp',
+      dist: riders.sourceRiders.dists[key] }));
+  }
+  return rows;
+}
+
 function applyDamagePhaseWithHealing(joint, phase, pendingFear, units, targetTotalRemHP) {
   const newJoint = emptyJointLike(joint);
-  const marginal = new Array(targetTotalRemHP + 1).fill(0);
+  const marginal = [0];
+  const riderTally = newRiderTally();
   let lifeStealEV = 0;
   for (let cumA = 0; cumA < joint.length; cumA++) {
     for (let cumB = 0; cumB < joint[0].length; cumB++) {
@@ -311,27 +462,30 @@ function applyDamagePhaseWithHealing(joint, phase, pendingFear, units, targetTot
         }
         const fearDist = phase.consumesFear ? pendingFear[phase.source + 'FearDist'] : null;
         const out = phase.compute(sourceAlive, targetAlive, cap, fearDist, { sourceState });
+        tallyRiderPresence(riderTally, out);
         for (const outcome of outcomePaths(out, sourceState)) {
           const probability = path.probability * outcome.probability;
           if (probability < 1e-15) continue;
+          tallyRiderOutcome(riderTally, outcome, probability);
+          const shown = shownDamage(outcome.damage, cap);
           let nextPath = applyOutcomeToHealingPath(path, phase.source, outcome);
           nextPath = { ...nextPath, probability,
             [phase.target + 'DamageTaken']:
-              nextPath[phase.target + 'DamageTaken'] + outcome.damage,
+              nextPath[phase.target + 'DamageTaken'] + shown,
             [phase.target + 'State']: applyOutcomeDamageToState(
               nextPath[phase.target + 'State'], outcome) };
-          const newTargetCum = Math.min(targetCum + outcome.damage, targetTotalRemHP);
+          const newTargetCum = Math.min(targetCum + shown, targetTotalRemHP);
           const newCumA = phase.target === 'a' ? newTargetCum : cumA;
           const newCumB = phase.target === 'b' ? newTargetCum : cumB;
           addHealingPath(newJoint[newCumA][newCumB], nextPath);
-          addDistProbability(marginal, outcome.damage, probability);
+          addDistProbability(marginal, shown, probability);
           lifeStealEV += probability
             * ((outcome.healedDamage || 0) + (outcome.bonusHpBenefit || 0));
         }
       }
     }
   }
-  return { joint: newJoint, marginal, lifeStealEV };
+  return { joint: newJoint, marginal, lifeStealEV, ...finishRiderTally(riderTally) };
 }
 
 // Apply a damage phase to a 2D joint state.
@@ -346,7 +500,8 @@ function applyDamagePhase(joint, phase, pendingFear, units, targetTotalRemHP) {
     return applyDamagePhaseWithHealing(joint, phase, pendingFear, units, targetTotalRemHP);
   }
   const newJoint = emptyJointLike(joint);
-  const marginal = new Array(targetTotalRemHP + 1).fill(0);
+  const marginal = [0];
+  const riderTally = newRiderTally();
   let lifeStealEV = 0;
   const aDim = joint.length, bDim = joint[0].length;
   const sourceUnit = phase.source === 'a' ? units.a : units.b;
@@ -370,19 +525,21 @@ function applyDamagePhase(joint, phase, pendingFear, units, targetTotalRemHP) {
       const sourceCumDamage = phase.source === 'a' ? cumA : cumB;
       const out = phase.compute(sourceAlive, targetAlive, cap, fearDist,
         { sourceState: combatHealStateFromUnit(sourceUnit, sourceCumDamage) });
+      tallyRiderOut(riderTally, out, p);
       const dist = out.dist;
       for (let d = 0; d < dist.length; d++) {
         const pp = p * dist[d];
         if (pp < 1e-15) continue;
-        const newTargetCum = Math.min(targetCum + d, targetTotalRemHP);
+        const shown = shownDamage(d, cap);
+        const newTargetCum = Math.min(targetCum + shown, targetTotalRemHP);
         if (phase.target === 'a') newJoint[newTargetCum][cumB] += pp;
         else newJoint[cumA][newTargetCum] += pp;
-        marginal[Math.min(d, targetTotalRemHP)] += pp;
+        addDistProbability(marginal, shown, pp);
       }
       lifeStealEV += p * (out.lifeStealEV || 0);
     }
   }
-  return { joint: newJoint, marginal, lifeStealEV };
+  return { joint: newJoint, marginal, lifeStealEV, ...finishRiderTally(riderTally) };
 }
 
 // Apply a simultaneous pair of damage phases (counter B→A, 2nd-strike A→B) reading
@@ -391,8 +548,10 @@ function applyDamagePhase(joint, phase, pendingFear, units, targetTotalRemHP) {
 function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
                                           aTotalRemHP, bTotalRemHP) {
   const newJoint = emptyJointLike(joint);
-  const marginalA = new Array(aTotalRemHP + 1).fill(0);
-  const marginalB = new Array(bTotalRemHP + 1).fill(0);
+  const marginalA = [0];
+  const marginalB = [0];
+  const riderTallyA = newRiderTally();
+  const riderTallyB = newRiderTally();
   const fearSamplesA = [], fearSamplesB = [];
   let lifeStealEV_a = 0, lifeStealEV_b = 0;
   for (let cumA = 0; cumA < joint.length; cumA++) {
@@ -415,8 +574,11 @@ function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
         const outB = subB.compute(aAlive, bAlive, capB, fearB,
           { sourceState: path.aState });
         addWeightedFearSamples(fearSamplesB, outB.fearSamples, path.probability);
+        tallyRiderPresence(riderTallyB, outB);
         for (const outcomeB of outcomePaths(outB, path.aState)) {
           if (outcomeB.probability < 1e-15) continue;
+          tallyRiderOutcome(riderTallyB, outcomeB,
+            path.probability * outcomeB.probability);
           if (isDosCombatHealState(path.aState)) {
             // DOS main melee and counterattack execute from one frozen battle-unit
             // snapshot: each of BU_AttackTarget's nine strike calls transfers its result
@@ -429,25 +591,29 @@ function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
               { sourceState: path.bState });
             addWeightedFearSamples(fearSamplesA, outA.fearSamples,
               path.probability * outcomeB.probability);
+            tallyRiderPresence(riderTallyA, outA);
             for (const outcomeA of outcomePaths(outA, path.bState)) {
               const probability = path.probability
                 * outcomeB.probability * outcomeA.probability;
               if (probability < 1e-15) continue;
+              tallyRiderOutcome(riderTallyA, outcomeA, probability);
+              const shownA = shownDamage(outcomeA.damage, capA);
+              const shownB = shownDamage(outcomeB.damage, capB);
               let nextPath = applyOutcomeToHealingPath(path, 'a', outcomeB);
               nextPath = applyOutcomeToHealingPath(nextPath, 'b', outcomeA);
               nextPath = {
                 ...nextPath,
                 probability,
-                aDamageTaken: nextPath.aDamageTaken + outcomeA.damage,
-                bDamageTaken: nextPath.bDamageTaken + outcomeB.damage,
+                aDamageTaken: nextPath.aDamageTaken + shownA,
+                bDamageTaken: nextPath.bDamageTaken + shownB,
                 aState: applyOutcomeDamageToState(nextPath.aState, outcomeA),
                 bState: applyOutcomeDamageToState(nextPath.bState, outcomeB),
               };
-              const newCumA = Math.min(cumA + outcomeA.damage, aTotalRemHP);
-              const newCumB = Math.min(cumB + outcomeB.damage, bTotalRemHP);
+              const newCumA = Math.min(cumA + shownA, aTotalRemHP);
+              const newCumB = Math.min(cumB + shownB, bTotalRemHP);
               addHealingPath(newJoint[newCumA][newCumB], nextPath);
-              addDistProbability(marginalA, outcomeA.damage, probability);
-              addDistProbability(marginalB, outcomeB.damage, probability);
+              addDistProbability(marginalA, shownA, probability);
+              addDistProbability(marginalB, shownB, probability);
               lifeStealEV_a += probability * (outcomeB.healedDamage || 0);
               lifeStealEV_b += probability * (outcomeA.healedDamage || 0);
             }
@@ -460,25 +626,29 @@ function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
             { sourceState: path.bState });
           addWeightedFearSamples(fearSamplesA, outA.fearSamples,
             path.probability * outcomeB.probability);
+          tallyRiderPresence(riderTallyA, outA);
           for (const outcomeA of outcomePaths(outA, path.bState)) {
             const probability = path.probability
               * outcomeB.probability * outcomeA.probability;
             if (probability < 1e-15) continue;
+            tallyRiderOutcome(riderTallyA, outcomeA, probability);
+            const shownA = shownDamage(outcomeA.damage, capA);
+            const shownB = shownDamage(outcomeB.damage, capB);
             let nextPath = applyOutcomeToHealingPath(path, 'a', outcomeB);
             nextPath = applyOutcomeToHealingPath(nextPath, 'b', outcomeA);
             nextPath = {
               ...nextPath,
               probability,
-              aDamageTaken: nextPath.aDamageTaken + outcomeA.damage,
-              bDamageTaken: nextPath.bDamageTaken + outcomeB.damage,
+              aDamageTaken: nextPath.aDamageTaken + shownA,
+              bDamageTaken: nextPath.bDamageTaken + shownB,
               aState: applyOutcomeDamageToState(nextPath.aState, outcomeA),
               bState: applyOutcomeDamageToState(nextPath.bState, outcomeB),
             };
-            const newCumA = Math.min(cumA + outcomeA.damage, aTotalRemHP);
-            const newCumB = Math.min(cumB + outcomeB.damage, bTotalRemHP);
+            const newCumA = Math.min(cumA + shownA, aTotalRemHP);
+            const newCumB = Math.min(cumB + shownB, bTotalRemHP);
             addHealingPath(newJoint[newCumA][newCumB], nextPath);
-            addDistProbability(marginalA, outcomeA.damage, probability);
-            addDistProbability(marginalB, outcomeB.damage, probability);
+            addDistProbability(marginalA, shownA, probability);
+            addDistProbability(marginalB, shownB, probability);
             lifeStealEV_a += probability
               * ((outcomeB.healedDamage || 0) + (outcomeB.bonusHpBenefit || 0));
             lifeStealEV_b += probability
@@ -489,7 +659,8 @@ function applySimultaneousPairWithHealing(joint, subA, subB, pendingFear, units,
     }
   }
   return { joint: newJoint, marginalA, marginalB, lifeStealEV_a, lifeStealEV_b,
-    fearSamplesA, fearSamplesB };
+    fearSamplesA, fearSamplesB,
+    ridersA: finishRiderTally(riderTallyA), ridersB: finishRiderTally(riderTallyB) };
 }
 
 function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemHP, bTotalRemHP) {
@@ -498,8 +669,10 @@ function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemH
       aTotalRemHP, bTotalRemHP);
   }
   const newJoint = emptyJointLike(joint);
-  const marginalA = new Array(aTotalRemHP + 1).fill(0);   // damage to A this phase
-  const marginalB = new Array(bTotalRemHP + 1).fill(0);   // damage to B this phase
+  const marginalA = [0];   // damage to A this phase
+  const marginalB = [0];   // damage to B this phase
+  const riderTallyA = newRiderTally();
+  const riderTallyB = newRiderTally();
   const fearSamplesA = [], fearSamplesB = [];
   let lifeStealEV_a = 0, lifeStealEV_b = 0;
   const aDim = joint.length, bDim = joint[0].length;
@@ -520,6 +693,8 @@ function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemH
         { sourceState: combatHealStateFromUnit(units.a, cumA) });
       addWeightedFearSamples(fearSamplesA, outA.fearSamples, p);
       addWeightedFearSamples(fearSamplesB, outB.fearSamples, p);
+      tallyRiderOut(riderTallyA, outA, p);
+      tallyRiderOut(riderTallyB, outB, p);
       lifeStealEV_a += p * (subA.source === 'a' ? (outA.lifeStealEV || 0) : 0)
                     +  p * (subB.source === 'a' ? (outB.lifeStealEV || 0) : 0);
       lifeStealEV_b += p * (subA.source === 'b' ? (outA.lifeStealEV || 0) : 0)
@@ -527,22 +702,24 @@ function applySimultaneousPair(joint, subA, subB, pendingFear, units, aTotalRemH
       for (let dA = 0; dA < outA.dist.length; dA++) {
         const ppA = outA.dist[dA];
         if (ppA < 1e-15) continue;
-        const newCumA = Math.min(cumA + dA, aTotalRemHP);
+        const shownA = shownDamage(dA, capA);
+        const newCumA = Math.min(cumA + shownA, aTotalRemHP);
         for (let dB = 0; dB < outB.dist.length; dB++) {
           const ppB = outB.dist[dB];
           if (ppB < 1e-15) continue;
-          const newCumB = Math.min(cumB + dB, bTotalRemHP);
+          const newCumB = Math.min(cumB + shownDamage(dB, capB), bTotalRemHP);
           newJoint[newCumA][newCumB] += p * ppA * ppB;
         }
-        marginalA[Math.min(dA, aTotalRemHP)] += p * ppA;
+        addDistProbability(marginalA, shownA, p * ppA);
       }
       for (let dB = 0; dB < outB.dist.length; dB++) {
-        marginalB[Math.min(dB, bTotalRemHP)] += p * outB.dist[dB];
+        addDistProbability(marginalB, shownDamage(dB, capB), p * outB.dist[dB]);
       }
     }
   }
   return { joint: newJoint, marginalA, marginalB, lifeStealEV_a, lifeStealEV_b,
-    fearSamplesA, fearSamplesB };
+    fearSamplesA, fearSamplesB,
+    ridersA: finishRiderTally(riderTallyA), ridersB: finishRiderTally(riderTallyB) };
 }
 
 // Apply a First-Strike-no-Haste block: per cell, FS strike → counter (sequential),
@@ -570,13 +747,18 @@ function applyFsBlockNoHasteWithHealing(joint, computes, ctx) {
       counterMarginal: counter.marginal,
       lifeStealEV_a: fs.lifeStealEV,
       lifeStealEV_b: counter.lifeStealEV,
+      fsRiders: { targetRiders: fs.targetRiders, sourceRiders: fs.sourceRiders },
+      counterRiders: {
+        targetRiders: counter.targetRiders, sourceRiders: counter.sourceRiders },
     };
   }
 
   const newJoint = emptyJointLike(joint);
   const postFsJoint = emptyJointLike(joint);
-  const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
-  const counterMarginal = new Array(ctx.aRemHP + 1).fill(0);
+  const fsMarginal = [0];
+  const counterMarginal = [0];
+  const fsTally = newRiderTally();
+  const counterTally = newRiderTally();
   let lifeStealEV_a = 0, lifeStealEV_b = 0;
   for (let cumA = 0; cumA < joint.length; cumA++) {
     for (let cumB = 0; cumB < joint[0].length; cumB++) {
@@ -589,36 +771,50 @@ function applyFsBlockNoHasteWithHealing(joint, computes, ctx) {
         if (fsApplies) {
           const fsOut = computes.fsStrike(aAlive, bAlive, capB, null,
             { sourceState: path.aState });
+          tallyRiderPresence(fsTally, fsOut);
           for (const fsOutcome of outcomePaths(fsOut, path.aState)) {
             const pFs = path.probability * fsOutcome.probability;
             if (pFs < 1e-15) continue;
+            tallyRiderOutcome(fsTally, fsOutcome, pFs);
             let postFsPath = applyOutcomeToHealingPath(path, 'a', fsOutcome);
             postFsPath = { ...postFsPath, probability: pFs,
-              bDamageTaken: postFsPath.bDamageTaken + fsOutcome.damage,
+              bDamageTaken: postFsPath.bDamageTaken + shownDamage(fsOutcome.damage, capB),
               bState: applyOutcomeDamageToState(postFsPath.bState, fsOutcome) };
-            const newCumB = Math.min(cumB + fsOutcome.damage, ctx.bRemHP);
+            const newCumB = Math.min(cumB + shownDamage(fsOutcome.damage, capB), ctx.bRemHP);
             addHealingPath(postFsJoint[cumA][newCumB], postFsPath);
-            addDistProbability(fsMarginal, fsOutcome.damage, pFs);
+            addDistProbability(fsMarginal, shownDamage(fsOutcome.damage, capB), pFs);
             lifeStealEV_a += pFs
               * ((fsOutcome.healedDamage || 0) + (fsOutcome.bonusHpBenefit || 0));
 
             const bAliveAfterFs = healingStateAlive(postFsPath.bState);
-            const counterOut = capA > 0 && bAliveAfterFs > 0
-              ? computes.counter(bAliveAfterFs, aAlive, capA, null,
+            // A's own First Strike may have healed it (Life Steal, Bloodsucker), and the
+            // counter lands after that heal — `Combatheal` runs inside the strike's own
+            // `ApplyAttack` (`Combat.ApplyAttack.pas:511`; DOS `combat.c:4672`, before the
+            // counter call at `:3992`). So the counter reads the revised capacity, the way
+            // `applySimultaneousPairWithHealing` reads its counter target's revised state.
+            const capAAfterFs = healingStateRemainingHp(postFsPath.aState);
+            const aAliveAfterFs = healingStateAlive(postFsPath.aState);
+            const counterOut = capAAfterFs > 0 && bAliveAfterFs > 0
+              ? computes.counter(bAliveAfterFs, aAliveAfterFs, capAAfterFs, null,
                 { sourceState: postFsPath.bState })
               : { dist: [1], lifeStealEV: 0 };
+            tallyRiderPresence(counterTally, counterOut);
             for (const counterOutcome of outcomePaths(counterOut, postFsPath.bState)) {
               const probability = pFs * counterOutcome.probability;
               if (probability < 1e-15) continue;
+              tallyRiderOutcome(counterTally, counterOutcome, probability);
               let finalPath = applyOutcomeToHealingPath(postFsPath, 'b', counterOutcome);
               finalPath = { ...finalPath, probability,
-                aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
+                aDamageTaken: finalPath.aDamageTaken
+                  + shownDamage(counterOutcome.damage, capAAfterFs),
                 aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome) };
               addHealingPath(
-                newJoint[Math.min(cumA + counterOutcome.damage, ctx.aRemHP)][newCumB],
+                newJoint[Math.min(cumA + shownDamage(counterOutcome.damage, capAAfterFs),
+                  ctx.aRemHP)][newCumB],
                 finalPath,
               );
-              addDistProbability(counterMarginal, counterOutcome.damage, probability);
+              addDistProbability(counterMarginal,
+                shownDamage(counterOutcome.damage, capAAfterFs), probability);
               lifeStealEV_b += probability
                 * ((counterOutcome.healedDamage || 0)
                   + (counterOutcome.bonusHpBenefit || 0));
@@ -635,26 +831,31 @@ function applyFsBlockNoHasteWithHealing(joint, computes, ctx) {
             { sourceState: path.bState })
           : { dist: [1], lifeStealEV: 0 };
         addHealingPath(postFsJoint[cumA][cumB], { ...path });
+        tallyRiderPresence(fsTally, mainOut);
+        tallyRiderPresence(counterTally, counterOut);
         for (const mainOutcome of outcomePaths(mainOut, path.aState)) {
           if (mainOutcome.probability < 1e-15) continue;
+          tallyRiderOutcome(fsTally, mainOutcome,
+            path.probability * mainOutcome.probability);
           for (const counterOutcome of outcomePaths(counterOut, path.bState)) {
             const probability = path.probability * mainOutcome.probability
               * counterOutcome.probability;
             if (probability < 1e-15) continue;
+            tallyRiderOutcome(counterTally, counterOutcome, probability);
             let finalPath = applyOutcomeToHealingPath(path, 'a', mainOutcome);
             finalPath = applyOutcomeToHealingPath(finalPath, 'b', counterOutcome);
             finalPath = { ...finalPath, probability,
-              aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
-              bDamageTaken: finalPath.bDamageTaken + mainOutcome.damage,
+              aDamageTaken: finalPath.aDamageTaken + shownDamage(counterOutcome.damage, capA),
+              bDamageTaken: finalPath.bDamageTaken + shownDamage(mainOutcome.damage, capB),
               aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome),
               bState: applyOutcomeDamageToState(finalPath.bState, mainOutcome) };
             addHealingPath(
-              newJoint[Math.min(cumA + counterOutcome.damage, ctx.aRemHP)]
-                [Math.min(cumB + mainOutcome.damage, ctx.bRemHP)],
+              newJoint[Math.min(cumA + shownDamage(counterOutcome.damage, capA), ctx.aRemHP)]
+                [Math.min(cumB + shownDamage(mainOutcome.damage, capB), ctx.bRemHP)],
               finalPath,
             );
-            addDistProbability(fsMarginal, mainOutcome.damage, probability);
-            addDistProbability(counterMarginal, counterOutcome.damage, probability);
+            addDistProbability(fsMarginal, shownDamage(mainOutcome.damage, capB), probability);
+            addDistProbability(counterMarginal, shownDamage(counterOutcome.damage, capA), probability);
             lifeStealEV_a += probability
               * ((mainOutcome.healedDamage || 0) + (mainOutcome.bonusHpBenefit || 0));
             lifeStealEV_b += probability
@@ -666,15 +867,18 @@ function applyFsBlockNoHasteWithHealing(joint, computes, ctx) {
     }
   }
   return { joint: newJoint, postFsJoint, fsMarginal, counterMarginal,
-    lifeStealEV_a, lifeStealEV_b };
+    lifeStealEV_a, lifeStealEV_b,
+    fsRiders: finishRiderTally(fsTally), counterRiders: finishRiderTally(counterTally) };
 }
 
 function applyFsBlockNoHaste(joint, computes, ctx) {
   if (joint.healingPaths) return applyFsBlockNoHasteWithHealing(joint, computes, ctx);
   const newJoint = emptyJointLike(joint);
   const postFsJoint = emptyJointLike(joint);
-  const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
-  const counterMarginal = new Array(ctx.aRemHP + 1).fill(0);
+  const fsMarginal = [0];
+  const counterMarginal = [0];
+  const fsTally = newRiderTally();
+  const counterTally = newRiderTally();
   let lifeStealEV_a = 0, lifeStealEV_b = 0;
   for (let cumA = 0; cumA < joint.length; cumA++) {
     for (let cumB = 0; cumB < joint[0].length; cumB++) {
@@ -692,12 +896,13 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
       if (fsApplies) {
         const fsOut = computes.fsStrike(aAliveL, bAliveL, capB, null,
           { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
+        tallyRiderOut(fsTally, fsOut, p);
         for (let fsDmg = 0; fsDmg < fsOut.dist.length; fsDmg++) {
           const pFs = fsOut.dist[fsDmg];
           if (pFs < 1e-15) continue;
-          const newCumB = Math.min(cumB + fsDmg, ctx.bRemHP);
+          const newCumB = Math.min(cumB + shownDamage(fsDmg, capB), ctx.bRemHP);
           const bAliveAfterFS = aliveCount(ctx.b, newCumB);
-          fsMarginal[Math.min(fsDmg, ctx.bRemHP)] += p * pFs;
+          addDistProbability(fsMarginal, shownDamage(fsDmg, capB), p * pFs);
           postFsJoint[cumA][newCumB] += p * pFs;
           if (capA <= 0 || bAliveAfterFS <= 0) {
             // Counter doesn't fire — fold this mass into the counter marginal at
@@ -708,12 +913,13 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
           }
           const counterOut = computes.counter(bAliveAfterFS, aAliveL, capA, null,
             { sourceState: combatHealStateFromUnit(ctx.b, newCumB) });
+          tallyRiderOut(counterTally, counterOut, p * pFs);
           for (let cDmg = 0; cDmg < counterOut.dist.length; cDmg++) {
             const pC = counterOut.dist[cDmg];
             if (pC < 1e-15) continue;
-            const newCumA = Math.min(cumA + cDmg, ctx.aRemHP);
+            const newCumA = Math.min(cumA + shownDamage(cDmg, capA), ctx.aRemHP);
             newJoint[newCumA][newCumB] += p * pFs * pC;
-            counterMarginal[Math.min(cDmg, ctx.aRemHP)] += p * pFs * pC;
+            addDistProbability(counterMarginal, shownDamage(cDmg, capA), p * pFs * pC);
           }
           lifeStealEV_b += p * pFs * counterOut.lifeStealEV;
         }
@@ -728,27 +934,30 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
           : { dist: [1], lifeStealEV: 0 };
         // Treat post-FS state as unchanged (no FS damage applied to this cell).
         postFsJoint[cumA][cumB] += p;
+        tallyRiderOut(fsTally, mOut, p);
+        tallyRiderOut(counterTally, cOut, p);
         for (let m = 0; m < mOut.dist.length; m++) {
           const pM = mOut.dist[m];
           if (pM < 1e-15) continue;
-          fsMarginal[Math.min(m, ctx.bRemHP)] += p * pM;
+          addDistProbability(fsMarginal, shownDamage(m, capB), p * pM);
           for (let c = 0; c < cOut.dist.length; c++) {
             const pCv = cOut.dist[c];
             if (pCv < 1e-15) continue;
-            newJoint[Math.min(cumA + c, ctx.aRemHP)][Math.min(cumB + m, ctx.bRemHP)] += p * pM * pCv;
+            newJoint[Math.min(cumA + shownDamage(c, capA), ctx.aRemHP)][Math.min(cumB + shownDamage(m, capB), ctx.bRemHP)] += p * pM * pCv;
           }
         }
         for (let c = 0; c < cOut.dist.length; c++) {
           const pCv = cOut.dist[c];
           if (pCv < 1e-15) continue;
-          counterMarginal[Math.min(c, ctx.aRemHP)] += p * pCv;
+          addDistProbability(counterMarginal, shownDamage(c, capA), p * pCv);
         }
         lifeStealEV_a += p * mOut.lifeStealEV;
         lifeStealEV_b += p * cOut.lifeStealEV;
       }
     }
   }
-  return { joint: newJoint, postFsJoint, fsMarginal, counterMarginal, lifeStealEV_a, lifeStealEV_b };
+  return { joint: newJoint, postFsJoint, fsMarginal, counterMarginal, lifeStealEV_a, lifeStealEV_b,
+    fsRiders: finishRiderTally(fsTally), counterRiders: finishRiderTally(counterTally) };
 }
 
 // Apply a First-Strike-with-Haste block: FS strike → (counter + 2nd strike simultaneous).
@@ -762,9 +971,12 @@ function applyFsBlockNoHaste(joint, computes, ctx) {
 function applyFsBlockHasteCoupledWithHealing(joint, computes, ctx) {
   const newJoint = emptyJointLike(joint);
   const postFsJoint = emptyJointLike(joint);
-  const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
-  const secondMarginal = new Array(ctx.bRemHP + 1).fill(0);
-  const counterMarginal = new Array(ctx.aRemHP + 1).fill(0);
+  const fsMarginal = [0];
+  const secondMarginal = [0];
+  const counterMarginal = [0];
+  const fsTally = newRiderTally();
+  const secondTally = newRiderTally();
+  const counterTally = newRiderTally();
   let lifeStealEV_a = 0, lifeStealEV_b = 0;
   for (let cumA = 0; cumA < joint.length; cumA++) {
     for (let cumB = 0; cumB < joint[0].length; cumB++) {
@@ -787,30 +999,35 @@ function applyFsBlockHasteCoupledWithHealing(joint, computes, ctx) {
               { sourceState: path.bState })
             : { dist: [1], lifeStealEV: 0 };
           addHealingPath(postFsJoint[cumA][cumB], { ...path });
+          tallyRiderPresence(fsTally, mainOut);
+          tallyRiderPresence(counterTally, counterOut);
           for (const mainOutcome of outcomePaths(mainOut, path.aState)) {
             if (mainOutcome.probability < 1e-15) continue;
+            tallyRiderOutcome(fsTally, mainOutcome,
+              path.probability * mainOutcome.probability);
             for (const counterOutcome of outcomePaths(counterOut, path.bState)) {
               const probability = path.probability * mainOutcome.probability
                 * counterOutcome.probability;
               if (probability < 1e-15) continue;
+              tallyRiderOutcome(counterTally, counterOutcome, probability);
               let finalPath = applyOutcomeToHealingPath(path, 'a', mainOutcome);
               finalPath = applyOutcomeToHealingPath(finalPath, 'b', counterOutcome);
               finalPath = {
                 ...finalPath,
                 probability,
-                aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
-                bDamageTaken: finalPath.bDamageTaken + mainOutcome.damage,
+                aDamageTaken: finalPath.aDamageTaken + shownDamage(counterOutcome.damage, capA),
+                bDamageTaken: finalPath.bDamageTaken + shownDamage(mainOutcome.damage, capB),
                 aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome),
                 bState: applyOutcomeDamageToState(finalPath.bState, mainOutcome),
               };
               addHealingPath(
-                newJoint[Math.min(cumA + counterOutcome.damage, ctx.aRemHP)]
-                  [Math.min(cumB + mainOutcome.damage, ctx.bRemHP)],
+                newJoint[Math.min(cumA + shownDamage(counterOutcome.damage, capA), ctx.aRemHP)]
+                  [Math.min(cumB + shownDamage(mainOutcome.damage, capB), ctx.bRemHP)],
                 finalPath,
               );
-              addDistProbability(fsMarginal, mainOutcome.damage, probability);
+              addDistProbability(fsMarginal, shownDamage(mainOutcome.damage, capB), probability);
               addDistProbability(secondMarginal, 0, probability);
-              addDistProbability(counterMarginal, counterOutcome.damage, probability);
+              addDistProbability(counterMarginal, shownDamage(counterOutcome.damage, capA), probability);
               lifeStealEV_a += probability
                 * ((mainOutcome.healedDamage || 0) + (mainOutcome.bonusHpBenefit || 0));
               lifeStealEV_b += probability
@@ -830,50 +1047,66 @@ function applyFsBlockHasteCoupledWithHealing(joint, computes, ctx) {
           if (pK < 1e-15) continue;
           const fsOut = computes.aStrikeNoFear(k, bAlive, capB, null,
             { sourceState: path.aState });
+          tallyRiderPresence(fsTally, fsOut);
           for (const fsOutcome of outcomePaths(fsOut, path.aState)) {
             const pFs = path.probability * pK * fsOutcome.probability;
             if (pFs < 1e-15) continue;
+            tallyRiderOutcome(fsTally, fsOutcome, pFs);
             let postFsPath = applyOutcomeToHealingPath(path, 'a', fsOutcome);
             postFsPath = { ...postFsPath, probability: pFs,
-              bDamageTaken: postFsPath.bDamageTaken + fsOutcome.damage,
+              bDamageTaken: postFsPath.bDamageTaken + shownDamage(fsOutcome.damage, capB),
               bState: applyOutcomeDamageToState(postFsPath.bState, fsOutcome) };
-            const newCumB = Math.min(cumB + fsOutcome.damage, ctx.bRemHP);
+            const newCumB = Math.min(cumB + shownDamage(fsOutcome.damage, capB), ctx.bRemHP);
             addHealingPath(postFsJoint[cumA][newCumB], postFsPath);
-            addDistProbability(fsMarginal, fsOutcome.damage, pFs);
+            addDistProbability(fsMarginal, shownDamage(fsOutcome.damage, capB), pFs);
             lifeStealEV_a += pFs
               * ((fsOutcome.healedDamage || 0) + (fsOutcome.bonusHpBenefit || 0));
 
             const bAliveAfterFs = healingStateAlive(postFsPath.bState);
             const capBAfterFs = healingStateRemainingHp(postFsPath.bState);
-            const counterOut = capA > 0 && bAliveAfterFs > 0
-              ? computes.counter(bAliveAfterFs, aAlive, capA, null,
+            // As above: the strike's own heal lands before the counter, so A's capacity here
+            // is the revised one, not the one it entered the block with.
+            const capAAfterFs = healingStateRemainingHp(postFsPath.aState);
+            const aAliveAfterFs = healingStateAlive(postFsPath.aState);
+            const counterOut = capAAfterFs > 0 && bAliveAfterFs > 0
+              ? computes.counter(bAliveAfterFs, aAliveAfterFs, capAAfterFs, null,
                 { sourceState: postFsPath.bState })
               : { dist: [1], lifeStealEV: 0 };
             const secondOut = k > 0 && capBAfterFs > 0
               ? computes.aStrikeNoFear(k, bAliveAfterFs, capBAfterFs, null,
                 { sourceState: postFsPath.aState })
               : { dist: [1], lifeStealEV: 0 };
+            tallyRiderPresence(counterTally, counterOut);
+            tallyRiderPresence(secondTally, secondOut);
             for (const counterOutcome of outcomePaths(counterOut, postFsPath.bState)) {
               if (counterOutcome.probability < 1e-15) continue;
+              tallyRiderOutcome(counterTally, counterOutcome,
+                pFs * counterOutcome.probability);
               for (const secondOutcome of outcomePaths(secondOut, postFsPath.aState)) {
                 const probability = pFs * counterOutcome.probability
                   * secondOutcome.probability;
                 if (probability < 1e-15) continue;
+                tallyRiderOutcome(secondTally, secondOutcome, probability);
                 let finalPath = applyOutcomeToHealingPath(postFsPath, 'b', counterOutcome);
                 finalPath = applyOutcomeToHealingPath(finalPath, 'a', secondOutcome);
                 finalPath = {
                   ...finalPath,
                   probability,
-                  aDamageTaken: finalPath.aDamageTaken + counterOutcome.damage,
-                  bDamageTaken: finalPath.bDamageTaken + secondOutcome.damage,
+                  aDamageTaken: finalPath.aDamageTaken
+                    + shownDamage(counterOutcome.damage, capAAfterFs),
+                  bDamageTaken: finalPath.bDamageTaken
+                    + shownDamage(secondOutcome.damage, capBAfterFs),
                   aState: applyOutcomeDamageToState(finalPath.aState, counterOutcome),
                   bState: applyOutcomeDamageToState(finalPath.bState, secondOutcome),
                 };
-                const newCumA = Math.min(cumA + counterOutcome.damage, ctx.aRemHP);
-                const finalCumB = Math.min(newCumB + secondOutcome.damage, ctx.bRemHP);
+                const newCumA = Math.min(
+                  cumA + shownDamage(counterOutcome.damage, capAAfterFs), ctx.aRemHP);
+                const finalCumB = Math.min(
+                  newCumB + shownDamage(secondOutcome.damage, capBAfterFs), ctx.bRemHP);
                 addHealingPath(newJoint[newCumA][finalCumB], finalPath);
-                addDistProbability(counterMarginal, counterOutcome.damage, probability);
-                addDistProbability(secondMarginal, secondOutcome.damage, probability);
+                addDistProbability(counterMarginal,
+                  shownDamage(counterOutcome.damage, capAAfterFs), probability);
+                addDistProbability(secondMarginal, shownDamage(secondOutcome.damage, capBAfterFs), probability);
                 lifeStealEV_a += probability
                   * ((secondOutcome.healedDamage || 0)
                     + (secondOutcome.bonusHpBenefit || 0));
@@ -888,7 +1121,10 @@ function applyFsBlockHasteCoupledWithHealing(joint, computes, ctx) {
     }
   }
   return { joint: newJoint, postFsJoint, fsMarginal, secondMarginal,
-    counterMarginal, lifeStealEV_a, lifeStealEV_b };
+    counterMarginal, lifeStealEV_a, lifeStealEV_b,
+    fsRiders: finishRiderTally(fsTally),
+    secondRiders: finishRiderTally(secondTally),
+    counterRiders: finishRiderTally(counterTally) };
 }
 
 function applyFsBlockHasteWithHealing(joint, computes, ctx) {
@@ -914,6 +1150,9 @@ function applyFsBlockHasteWithHealing(joint, computes, ctx) {
     counterMarginal: pair.marginalA,
     lifeStealEV_a: fs.lifeStealEV + pair.lifeStealEV_a,
     lifeStealEV_b: pair.lifeStealEV_b,
+    fsRiders: { targetRiders: fs.targetRiders, sourceRiders: fs.sourceRiders },
+    secondRiders: pair.ridersB,
+    counterRiders: pair.ridersA,
   };
 }
 
@@ -921,9 +1160,12 @@ function applyFsBlockHaste(joint, computes, ctx) {
   if (joint.healingPaths) return applyFsBlockHasteWithHealing(joint, computes, ctx);
   const newJoint = emptyJointLike(joint);
   const postFsJoint = emptyJointLike(joint);
-  const fsMarginal = new Array(ctx.bRemHP + 1).fill(0);
-  const secondMarginal = new Array(ctx.bRemHP + 1).fill(0);
-  const counterMarginal = new Array(ctx.aRemHP + 1).fill(0);
+  const fsMarginal = [0];
+  const secondMarginal = [0];
+  const counterMarginal = [0];
+  const fsTally = newRiderTally();
+  const secondTally = newRiderTally();
+  const counterTally = newRiderTally();
   let lifeStealEV_a = 0, lifeStealEV_b = 0;
   for (let cumA = 0; cumA < joint.length; cumA++) {
     for (let cumB = 0; cumB < joint[0].length; cumB++) {
@@ -945,16 +1187,17 @@ function applyFsBlockHaste(joint, computes, ctx) {
             if (pK < 1e-15) continue;
             const fsOut = computes.aStrikeNoFear(k_a, bAliveL, capB, null,
               { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
+            tallyRiderOut(fsTally, fsOut, p * pK);
             const fsPaths = fsOut.outcomes || fsOut.dist.map((probability, damage) => (
               { probability, damage, state: combatHealStateFromUnit(ctx.a, cumA) }));
             for (const fsPath of fsPaths) {
               const fsDmg = fsPath.damage;
               const pFs = fsPath.probability;
               if (pFs < 1e-15) continue;
-              const newCumB = Math.min(cumB + fsDmg, ctx.bRemHP);
+              const newCumB = Math.min(cumB + shownDamage(fsDmg, capB), ctx.bRemHP);
               const bAliveAfterFS = aliveCount(ctx.b, newCumB);
               const capBAfterFS = ctx.bRemHP - newCumB;
-              fsMarginal[Math.min(fsDmg, ctx.bRemHP)] += p * pK * pFs;
+              addDistProbability(fsMarginal, shownDamage(fsDmg, capB), p * pK * pFs);
               postFsJoint[cumA][newCumB] += p * pK * pFs;
               const counterOut = (capA > 0 && bAliveAfterFS > 0)
                 ? computes.counter(bAliveAfterFS, aAliveL, capA, null,
@@ -964,20 +1207,24 @@ function applyFsBlockHaste(joint, computes, ctx) {
                 ? computes.aStrikeNoFear(k_a, bAliveAfterFS, capBAfterFS, null,
                   { sourceState: fsPath.state })
                 : { dist: [1], lifeStealEV: 0 };
+              tallyRiderOut(counterTally, counterOut, p * pK * pFs);
+              tallyRiderOut(secondTally, secondOut, p * pK * pFs);
               for (let cDmg = 0; cDmg < counterOut.dist.length; cDmg++) {
                 const pC = counterOut.dist[cDmg];
                 if (pC < 1e-15) continue;
-                const newCumA = Math.min(cumA + cDmg, ctx.aRemHP);
-                counterMarginal[Math.min(cDmg, ctx.aRemHP)] += p * pK * pFs * pC;
+                const newCumA = Math.min(cumA + shownDamage(cDmg, capA), ctx.aRemHP);
+                addDistProbability(counterMarginal, shownDamage(cDmg, capA), p * pK * pFs * pC);
                 for (let sDmg = 0; sDmg < secondOut.dist.length; sDmg++) {
                   const pS = secondOut.dist[sDmg];
                   if (pS < 1e-15) continue;
-                  const newCumBFinal = Math.min(newCumB + sDmg, ctx.bRemHP);
+                  const newCumBFinal = Math.min(newCumB + shownDamage(sDmg, capBAfterFS),
+                  ctx.bRemHP);
                   newJoint[newCumA][newCumBFinal] += p * pK * pFs * pC * pS;
                 }
               }
               for (let sDmg = 0; sDmg < secondOut.dist.length; sDmg++) {
-                secondMarginal[Math.min(sDmg, ctx.bRemHP)] += p * pK * pFs * secondOut.dist[sDmg];
+                addDistProbability(secondMarginal, shownDamage(sDmg, capBAfterFS),
+                  p * pK * pFs * secondOut.dist[sDmg]);
               }
               lifeStealEV_a += p * pK * pFs * secondOut.lifeStealEV;
               lifeStealEV_b += p * pK * pFs * counterOut.lifeStealEV;
@@ -988,16 +1235,17 @@ function applyFsBlockHaste(joint, computes, ctx) {
           // Independent (existing behavior, no coupling).
           const fsOut = computes.fsStrike(aAliveL, bAliveL, capB, null,
             { sourceState: combatHealStateFromUnit(ctx.a, cumA) });
+          tallyRiderOut(fsTally, fsOut, p);
           const fsPaths = fsOut.outcomes || fsOut.dist.map((probability, damage) => (
             { probability, damage, state: combatHealStateFromUnit(ctx.a, cumA) }));
           for (const fsPath of fsPaths) {
             const fsDmg = fsPath.damage;
             const pFs = fsPath.probability;
             if (pFs < 1e-15) continue;
-            const newCumB = Math.min(cumB + fsDmg, ctx.bRemHP);
+            const newCumB = Math.min(cumB + shownDamage(fsDmg, capB), ctx.bRemHP);
             const bAliveAfterFS = aliveCount(ctx.b, newCumB);
             const capBAfterFS = ctx.bRemHP - newCumB;
-            fsMarginal[Math.min(fsDmg, ctx.bRemHP)] += p * pFs;
+            addDistProbability(fsMarginal, shownDamage(fsDmg, capB), p * pFs);
             postFsJoint[cumA][newCumB] += p * pFs;
             const counterOut = (capA > 0 && bAliveAfterFS > 0)
               ? computes.counter(bAliveAfterFS, aAliveL, capA, null,
@@ -1007,20 +1255,23 @@ function applyFsBlockHaste(joint, computes, ctx) {
               ? computes.secondStrike(aAliveL, bAliveAfterFS, capBAfterFS, null,
                 { sourceState: fsPath.state })
               : { dist: [1], lifeStealEV: 0 };
+            tallyRiderOut(counterTally, counterOut, p * pFs);
+            tallyRiderOut(secondTally, secondOut, p * pFs);
             for (let cDmg = 0; cDmg < counterOut.dist.length; cDmg++) {
               const pC = counterOut.dist[cDmg];
               if (pC < 1e-15) continue;
-              const newCumA = Math.min(cumA + cDmg, ctx.aRemHP);
-              counterMarginal[Math.min(cDmg, ctx.aRemHP)] += p * pFs * pC;
+              const newCumA = Math.min(cumA + shownDamage(cDmg, capA), ctx.aRemHP);
+              addDistProbability(counterMarginal, shownDamage(cDmg, capA), p * pFs * pC);
               for (let sDmg = 0; sDmg < secondOut.dist.length; sDmg++) {
                 const pS = secondOut.dist[sDmg];
                 if (pS < 1e-15) continue;
-                const newCumBFinal = Math.min(newCumB + sDmg, ctx.bRemHP);
+                const newCumBFinal = Math.min(newCumB + shownDamage(sDmg, capBAfterFS),
+                  ctx.bRemHP);
                 newJoint[newCumA][newCumBFinal] += p * pFs * pC * pS;
               }
             }
             for (let sDmg = 0; sDmg < secondOut.dist.length; sDmg++) {
-              secondMarginal[Math.min(sDmg, ctx.bRemHP)] += p * pFs * secondOut.dist[sDmg];
+              addDistProbability(secondMarginal, shownDamage(sDmg, capBAfterFS), p * pFs * secondOut.dist[sDmg]);
             }
             lifeStealEV_a += p * pFs * secondOut.lifeStealEV;
             lifeStealEV_b += p * pFs * counterOut.lifeStealEV;
@@ -1036,25 +1287,35 @@ function applyFsBlockHaste(joint, computes, ctx) {
             { sourceState: combatHealStateFromUnit(ctx.b, cumB) })
           : { dist: [1], lifeStealEV: 0 };
         postFsJoint[cumA][cumB] += p;
+        // The Haste repeat does not happen on this arm, but its mass still belongs to the
+        // row it publishes: folded in at damage 0 so `secondMarginal` stays a proper PMF
+        // (INV-1), the same way the healing arm does and the way a phase folds in a cell
+        // whose target is already dead.
+        addDistProbability(secondMarginal, 0, p);
+        tallyRiderOut(fsTally, mOut, p);
+        tallyRiderOut(counterTally, cOut, p);
         for (let m = 0; m < mOut.dist.length; m++) {
           const pM = mOut.dist[m];
           if (pM < 1e-15) continue;
-          fsMarginal[Math.min(m, ctx.bRemHP)] += p * pM;
+          addDistProbability(fsMarginal, shownDamage(m, capB), p * pM);
           for (let c = 0; c < cOut.dist.length; c++) {
             const pCv = cOut.dist[c];
             if (pCv < 1e-15) continue;
-            newJoint[Math.min(cumA + c, ctx.aRemHP)][Math.min(cumB + m, ctx.bRemHP)] += p * pM * pCv;
+            newJoint[Math.min(cumA + shownDamage(c, capA), ctx.aRemHP)][Math.min(cumB + shownDamage(m, capB), ctx.bRemHP)] += p * pM * pCv;
           }
         }
         for (let c = 0; c < cOut.dist.length; c++) {
-          counterMarginal[Math.min(c, ctx.aRemHP)] += p * cOut.dist[c];
+          addDistProbability(counterMarginal, shownDamage(c, capA), p * cOut.dist[c]);
         }
         lifeStealEV_a += p * mOut.lifeStealEV;
         lifeStealEV_b += p * cOut.lifeStealEV;
       }
     }
   }
-  return { joint: newJoint, postFsJoint, fsMarginal, secondMarginal, counterMarginal, lifeStealEV_a, lifeStealEV_b };
+  return { joint: newJoint, postFsJoint, fsMarginal, secondMarginal, counterMarginal, lifeStealEV_a, lifeStealEV_b,
+    fsRiders: finishRiderTally(fsTally),
+    secondRiders: finishRiderTally(secondTally),
+    counterRiders: finishRiderTally(counterTally) };
 }
 
 // Marginalise the joint over the b-dim (returns 1D dist of cumDmgA).

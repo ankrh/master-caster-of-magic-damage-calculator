@@ -15,7 +15,7 @@ composable set. It replaces any attempt to derive mechanics from manual/helptext
 | Question | Authoritative source | Use it this way |
 |---|---|---|
 | Compiled CoM2 behavior: branches, order, arithmetic, defaults, and fields | The address-backed Pascal-like reconstruction and its evidence companions in this directory | This is the source for behavior implemented in `Caster.exe`. Follow the subsystem index below; verify an address against the binary identity in `README.md` when extending it. |
-| Warlord behavior executed by a script | `../Script source/Warlord 1.5.12.7/*.CAS` | The named script is authoritative for the behavior it executes. It can add to or overwrite the compiled layer; identify the exact read/write rather than assuming all Warlord behavior differs. |
+| Warlord behavior executed by a script | `../Script source/Warlord 1.5.12.9/*.CAS` | The named script is authoritative for the behavior it executes. It can add to or overwrite the compiled layer; identify the exact read/write rather than assuming all Warlord behavior differs. |
 | Loaded numeric settings | `MODDING.INI`, `Levelbonus.INI`, and `SPELLS.INI`, catalogued in `../CoM2 data tables.md` | A present key is the runtime value. Absence means use the compiled default, so route back to the reconstruction. The table does not determine the consumer's arithmetic or ordering. |
 | Unit roster values | The version's `UNITS.INI` under `Unit rosters/` | This is roster data, not a formula source; generated calculator datasets must derive from it. |
 

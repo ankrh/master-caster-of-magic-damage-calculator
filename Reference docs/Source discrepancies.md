@@ -11,10 +11,10 @@ mechanic questions are tracked as Q/X rows in `Calculator/BACKLOG.md`, *Open que
 specifically the evidence register for *script-vs-prose* conflicts.
 
 Sources cited:
-- **Manual** — `Warlord manual v1.5.12.7.html`, by PDF-page anchor; verify visual details
-  against `Warlord_Manual v1.5.12.7.pdf`.
+- **Manual** — `Warlord manual v1.5.12.9.html`, by PDF-page anchor; verify visual details
+  against `Warlord_Manual v1.5.12.9.pdf`.
 - **Helptext** — `Unit rosters/Warlord mod unit data/HELP.TXT`, by entry (`#Spell X` / `#UA X`).
-- **Script** — `Script source/Warlord 1.5.12.7/`, by `file:line`.
+- **Script** — `Script source/Warlord 1.5.12.9/`, by `file:line`.
 
 **The script wins on contested behaviour** — it is what executes. Two caveats:
 `MASTER.CAS`'s trailing `:comments:` are *not* script, and have been wrong every time they were
@@ -38,6 +38,7 @@ file shows.
 | 13 | Blaze of Glory — enchantment Armor survival | helptext says non-base Armor remains | resolved (script) |
 | 14 | Stoning/Death Touch — magical-ranged delivery | manual and helptext state a blanket exclusion | resolved (script/dispatcher record placement) |
 | 15 | Clockwork Tinmen — destroying mechanical units | manual, helptext *and* the calculator; the roster and the spell table disagree with all three | resolved (roster/spell table) |
+| 16 | Ballistics Training — Ranged To-Hit amount | manual (stale since v1.5.12.8) | resolved (script/helptext) |
 
 The table's `Status` column records the durable **source-resolution outcome**, not project work
 state. Any calculator or documentation follow-up is tracked only in `Calculator/BACKLOG.md`.
@@ -45,9 +46,9 @@ state. Any calculator or documentation follow-up is tracked only in `Calculator/
 Seven entries were closed by the **v1.5.12.6.2 hotfix**, which the maintainer released in response
 to this register. The calculator needed no correction for §1, §2, §3, §6 or §9 — it had followed
 the script throughout, and the prose caught up. §5 and §10 did change behaviour. Each entry below
-keeps its original evidence and records the fix at the end; the pre-hotfix files are in
-`Script source/Warlord 1.5.12.6 (superseded)/` and
-`Unit rosters/Warlord mod unit data/v1.5.12.6 (superseded)/`.
+keeps its original evidence and records the fix at the end. The pre-hotfix files are no longer
+vendored — only the current Warlord build is kept — so recover them from git history if a
+pre-hotfix line has to be re-read.
 
 ---
 
@@ -86,7 +87,7 @@ The omission was specific to this reform: the manual documents Wall Crusher gran
 deliberate silence.
 
 **Closed in v1.5.12.6.2:** both `#Spell EXPLOSIVE` and `#UA BOMBS&GRENADES` now name Wall
-Crusher. The reissued v1.5.12.7 manual remains silent.
+Crusher. The manual remains silent through v1.5.12.9.
 
 ## 3. Xenopsychology / Radio — scope excludes Sapiens summons in prose only
 
@@ -113,7 +114,7 @@ Xenopsychology and Radio were not. One gate, four reforms, inconsistent document
 condition. The code cannot treat them differently.
 
 **Closed in v1.5.12.6.2:** both helptext entries now read *"all regular units and Sapiens
-summons"*, matching Ballistics Training and the gate. The reissued v1.5.12.7 manual still
+summons"*, matching Ballistics Training and the gate. The v1.5.12.9 manual still
 uses the narrower regular-unit wording.
 
 ## 4. Magitek Engine — movement, and an ability that has no enchantment
@@ -188,8 +189,10 @@ is at index 1 (`ABase`), so it is baked into the unit's base permanently rather 
 gate adjusts resistance, so nothing compensates elsewhere.
 
 **Calculator:** applied. [combat_abilities.js](../Calculator/combat_abilities.js) `getAbilityStatSteps` grants
-+2, the `artificer` tooltip notes the divergence from the in-game helptext, and both
-`artificerMechanicalResistanceWarlord` and a `node_unit_checks.js` assertion pin the value.
++2, and the `artificerMechanicalResistanceWarlord` preset pins the magnitude by damage
+(`node_unit_checks.js` only pins Artificer's stage). The shipped helptext now agrees
+(`#Retort Artificer` and `#UA ARTIFICER UPGRADE` both say +2), so the `artificer` tooltip states
+the effect without noting a divergence.
 
 ### A separate oddity in the same block
 
@@ -416,7 +419,7 @@ helptext overgeneralize the Focus Magic-style placement into a blanket magical-r
 
 **Resolved in favour of the roster and the spell table, against all three prose sources.** Two
 independent facts each defeat the described ability: the Tinmen are given Lucky Star rather than
-Sabotage, and Sabotage is disabled in the shipped spell table, so no unit in Warlord 1.5.12.7 can
+Sabotage, and Sabotage is disabled in the shipped spell table, so no unit in Warlord 1.5.12.9 can
 destroy a mechanical unit this way. The mechanic that *is* written down is an active spell cast
 against a chosen target, which `Calculator/SPEC.md`, *Scope*, excludes along with all charge
 consumption; it is not an attack rider under any reading.
@@ -429,6 +432,51 @@ modelled a melee-attack rider with three invented restrictions (melee only, atta
 `Caster binary/CoM2 binary - combat flow.md` enumerates `ApplyAttack`'s riders exhaustively over
 `$005B2994..$005B32BC` and finds **six** — Exorcise, Stoning Touch, Death Touch, Life Steal,
 Destruction, Poison — with no instant-kill seventh.
+
+## 16. Ballistics Training — Ranged To-Hit amount
+
+- **Manual** *"In combat, all Regular units and Sapiens summons get +20% Range/Breath/Thrown
+  To-Hit."*
+- **Manual changelog**, v1.5.12.8: *"Ballistics Training is now given +10% Range To-Hit instead of
+  +20% Range To-Hit."*
+- **Helptext** `#Spell BALLISTICS TRAINING`: *"+10% Range To-Hit and + 20% Breath/Thrown To-Hit"*
+- **Script** `UnitCalcPre.CAS:1082-1088`: `SToRanged` `+10`, `SToBreath` `+20`, `SToThrown` `+20`.
+
+The manual's effect text was not updated when v1.5.12.8 split the three channels; its own change
+log contradicts it two hundred pages later. Helptext and script agree with each other and with the
+change log, so this is the manual alone.
+
+**Resolved (script).** The calculator writes 10 on Ranged and 20 on the other two
+(`b:outlanderBallisticsTraining`).
+
+## 17. Bless — defense against breath and gaze
+
+- **CoM 2 helptext** `Reference docs/CoM2 helptext.TXT:1072` (repeated `:2261`): promises the
+  defense bonus against breath, gaze and touch as well as Chaos/Death damage spells.
+- **Warlord helptext** `Unit rosters/Warlord mod unit data/HELP.TXT:3133`, `:5328`: splits the
+  sentence, keeping a byte-accurate resistance clause but softening the defense line to "all fire
+  or lightning damage types and any damage-dealing spells from Chaos and Death realms".
+- **Binary** `Caster.exe` 1.05.11: the `EncBless` defense term at `0x5966B8`-`0x596703` requires
+  `ismagic2`, `spellid > 0`, and a Chaos or Death realm. It reads no breath, fire or lightning
+  flag. Resist Elements (`0x59667D`) and Elemental Armor (`0x5966A2`), two instructions away, each
+  do `ismagic2 OR isbreath`.
+
+All four callers of `@Units@EffectiveDefense` (`0x5965C8`) were enumerated by scanning every rel32
+`E8` in `.text`: two in `@Aicombat@CombatAttackPriority` (literal 0, AI scoring only),
+`@Combat@ApplyAttack` at `0x5B292A` (literal 0, verified in the `spellid` slot by decoding the
+eight pushes), and `@Spells@DamageSpell` at `0x5C13A4` (a real `sp`). There is no second
+damage-resolving caller and no `spellid` write on the breath or gaze paths. Base CoM 2
+`MASTER.CAS` has `EncBless = 51` and no combat-defense reader; Warlord's `EncBless -> ARMOR+7`
+lines are all inside scripted damage spells that mirror the `DamageSpell` path.
+
+The *resistance* half of the helptext claim is true and is the likely origin of the error:
+`GetEffectiveResistance` takes `realm` directly, and `ApplyAttack` passes Death for Cause Fear,
+Death Gaze, Death Touch and Life Steal, and Chaos for Destruction. Warlord's `:3133` names exactly
+that set. The CoM 2 helptext welds that true clause to a false defense clause.
+
+**Resolved (binary).** Bless gives no defense against breath or gaze. The calculator's gate is
+already correct and F211's tooltip stands; nothing moved. Whether the missing `or isbreath` is an
+engine bug rather than a design choice is **H2**.
 
 ## Script checks with no calculator discrepancy
 

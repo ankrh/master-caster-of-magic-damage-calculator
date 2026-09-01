@@ -7,7 +7,7 @@ load time rather than compiling the numbers in.
 
 This is the runtime-values evidence home for the modern engine, alongside the compiled
 reconstruction indexed by `Caster binary/CoM2 binary analysis.md` and the executing Warlord
-scripts in `Script source/Warlord 1.5.12.7/`. The modern-engine source-of-truth routing table
+scripts in `Script source/Warlord 1.5.12.9/`. The modern-engine source-of-truth routing table
 lives in that binary-analysis index. Tracking for everything here lives in
 `Calculator/BACKLOG.md`.
 
@@ -18,7 +18,7 @@ script *adding* an effect the table does not describe.
 
 ## The tables
 
-Under `Reference docs/Script source/CoM2 1.05.11 base/` and `.../Warlord 1.5.12.7/`.
+Under `Reference docs/Script source/CoM2 1.05.11 base/` and `.../Warlord 1.5.12.9/`.
 
 | File | Owns |
 |---|---|
@@ -52,7 +52,7 @@ template-37 or template-113 identity gate. See
 
 The shipped `SPELLS.INI` rows therefore distinguish the two modern versions:
 
-| Slot / row | CoM2 1.05.11 | Warlord 1.5.12.7 |
+| Slot / row | CoM2 1.05.11 | Warlord 1.5.12.9 |
 |---|---|---|
 | 12 | Construct Catapult; `Realm=1`; `SummonedUnit=37` (`SPELLS.INI:614-628`) | Water Elemental; `Realm=1`; `SummonedUnit=158` (`SPELLS.INI:901-915`) |
 | 153 | Call to Arms; `Realm=4`; `SummonedUnit=113` (`SPELLS.INI:2689-2702`) | Spirit of Chivalry; `Realm=4`; `SummonedUnit=211` (`SPELLS.INI:3024-3035`) |

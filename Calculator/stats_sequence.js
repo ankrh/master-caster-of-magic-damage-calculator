@@ -58,12 +58,12 @@ function baseStatSteps(ctx) {
     // running the sequence (`SPEC.md`, *Deliberate deviations*); the two are chain-adjacent, so
     // no number can depend on the split. Combat resolution reads the finished flag, and this is
     // where the merged `supernatural || destinyActive` constant used to state it (F201).
-    // PROVENANCE[destiny:supernatural]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
+    // PROVENANCE[destiny:supernatural]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
     statStep({ id: 'destiny:supernatural', sourceId: 'destiny', sourceLabel: 'Destiny',
       phase: 'base', writes: ['supernatural'],
       when: () => destinyActiveForUnit(abilities, version),
       apply: u => { u.supernatural = true; } }),
-    // PROVENANCE[stat:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:bbaf5fb67bb1734c03725bf1 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e0f87a5a92f98f34754862e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:37555b7dcbc4b5de6fb91420
+    // PROVENANCE[stat:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:bbaf5fb67bb1734c03725bf1 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e0f87a5a92f98f34754862e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:37555b7dcbc4b5de6fb91420
     statStep({ id: 'stat:base', phase: 'base',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'gaze', 'doomGaze',
         ...rangedTypeFields, ...thrownTypeFields],
@@ -81,7 +81,7 @@ function baseStatSteps(ctx) {
     // threshold is part of `base:baseThresholds` below. That difference in cited versions is why
     // this stays a step of its own: a scope row is per `phase:id`, so a field the DOS record does
     // not have cannot ride along inside a five-version step.
-    // PROVENANCE[baseHitChance]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
+    // PROVENANCE[baseHitChance]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
     statStep({ id: 'baseHitChance', sourceId: 'baseHitChance',
       sourceLabel: 'Base To Hit', phase: 'base', writes: ['toHit'],
       when: () => baseHitChance !== 0,
@@ -93,7 +93,7 @@ function baseStatSteps(ctx) {
     // one shared value in the DOS engines. The modern branch writes each per-kind field its own
     // card value and the DOS-shaped compatibility slot the modifier of whatever kind stands in
     // it, which is the same `kindAt` question every other writer of that slot asks.
-    // PROVENANCE[baseThresholds]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
+    // PROVENANCE[baseThresholds]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:68be766c4016b25fd0a44be4 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:6fe92f163cbb9aea88131c8e
     statStep({ id: 'baseThresholds', sourceId: 'baseThresholds',
       sourceLabel: 'Base To Hit / To Block', phase: 'base',
       writes: ['toHitMelee', ...secondaryHitFields, 'toBlk'],
@@ -124,7 +124,7 @@ function baseStatSteps(ctx) {
       // is percentage points, so one engine step is ten percentage points.
       apply: u => { u.toBlk -= 10; } }),
     ...abilByPhase.base,
-    // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:19:a2b79ed52f498dfddaa861b8
+    // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:19:a2b79ed52f498dfddaa861b8
     // The Resistance point reaches every trained unit, not only a ranged one; the ranged
     // half carries its own slot gate. `SRage` and `APoisonImmunity` (`:375`, `:378`) and the
     // two mutually exclusive `STypeID` branches that follow (`:382-390`) are writes of this same
@@ -148,7 +148,7 @@ function baseStatSteps(ctx) {
         if (altarHunter) u.poison = 2;
         else if (altarWitchdoctor) { u.poison = 0; u.lifeSteal = -1; }
       } }),
-    // PROVENANCE[militaryWorkshop]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:24:ab44f1ca0fc9eab7723b232b
+    // PROVENANCE[militaryWorkshop]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:24:ab44f1ca0fc9eab7723b232b
     // The missile-to-boulder projectile upgrade is made here, at the block's own position,
     // rather than seeded into the base record: `base:stat:base` is the chain's first entry and
     // carries the permanent identity alone.
@@ -187,7 +187,7 @@ function baseStatSteps(ctx) {
       } }),
     // Lightning Blade follows Military Workshop in CreateUnit.CAS. It assigns rather than adds
     // when no Thrown source exists, so an older Lightning Breath is replaced by strength 1.
-    // PROVENANCE[lightningBlade:breath]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:6:81632d425b80bc83dc627d23
+    // PROVENANCE[lightningBlade:breath]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:6:81632d425b80bc83dc627d23
     statStep({ id: 'lightningBlade:breath', sourceLabel: 'Lightning Blade', phase: 'base',
       writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
       when: u => lightningBladeSlots.some(({ target, source }) =>
@@ -212,12 +212,12 @@ function baseStatSteps(ctx) {
           }
         }
       } }),
-    // PROVENANCE[poolOfRepentance]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:6:3e9df07e383cb9fc3cb6ec88
+    // PROVENANCE[poolOfRepentance]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:6:3e9df07e383cb9fc3cb6ec88
     statStep({ id: 'poolOfRepentance', phase: 'base', writes: ['res', 'def'],
       when: () => poolOfRepentance,
       apply: u => { u.res += 1; u.def += 1; } }),
     // Dragon Mound follows Pool of Repentance and precedes Agoge in CreateUnit.CAS.
-    // PROVENANCE[dragonMound]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:071c420ab03821e688a6e290
+    // PROVENANCE[dragonMound]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:7:071c420ab03821e688a6e290
     statStep({ id: 'dragonMound', phase: 'base', writes: ['def', ...strengthFields],
       when: () => dragonMound,
       apply: u => {
@@ -232,7 +232,7 @@ function baseStatSteps(ctx) {
       } }),
     // The executing script also adds +1 to an existing ranged-strength field, despite
     // that write being omitted from Ludus Agoge's prose description.
-    // PROVENANCE[ludusAgoge]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:16:74a31ea6126eaa0915ee33a2
+    // PROVENANCE[ludusAgoge]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:16:74a31ea6126eaa0915ee33a2
     statStep({ id: 'ludusAgoge', phase: 'base', writes: ['res', 'atk', ...strengthFields, 'hp'],
       when: () => ludusAgoge,
       apply: u => {
@@ -242,7 +242,7 @@ function baseStatSteps(ctx) {
         }
         u.hp += 1;
       } }),
-    // PROVENANCE[motherFungus]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:13:5feb79a87ed503bfc3388e6a
+    // PROVENANCE[motherFungus]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:13:5feb79a87ed503bfc3388e6a
     statStep({ id: 'motherFungus', sourceId: 'motherFungus', sourceLabel: 'Mother Fungus',
       phase: 'base', writes: ['atk', ...strengthFields, 'toBlk', 'poison'],
       when: () => motherFungus,
@@ -256,26 +256,26 @@ function baseStatSteps(ctx) {
         // field they raise, so a Goblin unit with both takes +2 (F201).
         u.poison = (u.poison || 0) + 1;
       } }),
-    // PROVENANCE[altarOfTheSun:holyMother]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
+    // PROVENANCE[altarOfTheSun:holyMother]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
     statStep({ id: 'altarOfTheSun:holyMother', phase: 'base', writes: ['atk'],
       when: () => altarOfTheSunHolyMother, apply: u => { u.atk += 1; } }),
-    // PROVENANCE[sanctaBasilica]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:4:39fc91fc980453890ebc8f7f
+    // PROVENANCE[sanctaBasilica]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:4:39fc91fc980453890ebc8f7f
     statStep({ id: 'sanctaBasilica', phase: 'base', writes: ['res'],
       when: () => sanctaBasilica, apply: u => { u.res += 3; } }),
-    // PROVENANCE[naturalSelection:powerMinerals]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:11:6612cf82e93af571954fbfad
+    // PROVENANCE[naturalSelection:powerMinerals]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:11:6612cf82e93af571954fbfad
     statStep({ id: 'naturalSelection:powerMinerals', phase: 'base', writes: ['res'],
       when: () => naturalSelectionPowerMinerals,
       apply: u => { u.res += naturalSelectionPowerMineralsCount; } }),
     // CreateUnit.CAS snapshots Resistance before either resource write, then processes
     // Nightshade second. When both are present, Nightshade replaces the Power-mineral bonus.
-    // PROVENANCE[naturalSelection:nightshade]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:18:448497300397f81837f9b5ab
+    // PROVENANCE[naturalSelection:nightshade]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:18:448497300397f81837f9b5ab
     statStep({ id: 'naturalSelection:nightshade', phase: 'base', writes: ['res'],
       when: () => naturalSelectionNightshade,
       apply: u => {
         u.res += naturalSelectionNightshadeCount - naturalSelectionPowerMineralsCount;
       } }),
     // Wild Game uses the ranged snapshot taken beside the Resistance snapshot above.
-    // PROVENANCE[naturalSelection:wildGame]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:18:448497300397f81837f9b5ab
+    // PROVENANCE[naturalSelection:wildGame]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:18:448497300397f81837f9b5ab
     statStep({ id: 'naturalSelection:wildGame', phase: 'base', writes: strengthFields,
       when: () => channels.some(c => c.naturalSelectionWildGameActive && c.hasPermanentRangedStat),
       apply: u => {
@@ -283,18 +283,18 @@ function baseStatSteps(ctx) {
           if (c.naturalSelectionWildGameActive && c.hasPermanentRangedStat) u[c.strengthField] += 1;
         }
       } }),
-    // PROVENANCE[naturalSelection:coal]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:26:cef191739c3f088137ea1ffc
+    // PROVENANCE[naturalSelection:coal]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:26:cef191739c3f088137ea1ffc
     statStep({ id: 'naturalSelection:coal', phase: 'base', writes: ['atk'],
       when: () => naturalSelectionCoal, apply: u => { u.atk += 1; } }),
-    // PROVENANCE[naturalSelection:iron]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:30:b83cb1d01140dbc56424aff9
+    // PROVENANCE[naturalSelection:iron]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:30:b83cb1d01140dbc56424aff9
     statStep({ id: 'naturalSelection:iron', phase: 'base', writes: ['def'],
       when: () => naturalSelectionIron, apply: u => { u.def += 1; } }),
-    // PROVENANCE[pillarOfFaith]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:19:80527272b0e3dd1465419cc8
+    // PROVENANCE[pillarOfFaith]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:19:80527272b0e3dd1465419cc8
     statStep({ id: 'pillarOfFaith', phase: 'base', writes: ['res'],
       when: () => pillarOfFaith, apply: u => { u.res += pillarOfFaithCount; } }),
     // Energy Cannon is the last represented CreateUnit.CAS ranged-strength write, so its
     // +50% reads every earlier permanent ranged contribution in this sequence.
-    // PROVENANCE[energyCannon]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:40a6858a207fd2460b6df58e
+    // PROVENANCE[energyCannon]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:7:40a6858a207fd2460b6df58e
     statStep({ id: 'energyCannon', phase: 'base',
       writes: [...strengthFields, ...rangedTypeFields, 'energyCannon'],
       when: () => channels.some(c => c.energyCannon && c.energyCannonOwnsThisSlot),
@@ -311,7 +311,7 @@ function baseStatSteps(ctx) {
           u[c.rangedTypeField] = 'magic';
         }
       } }),
-    // PROVENANCE[survivalInstinctToBlock]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/CreateUnit.CAS@span:7:fafe4abfecfd17491cbdbc10
+    // PROVENANCE[survivalInstinctToBlock]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:7:fafe4abfecfd17491cbdbc10
     statStep({ id: 'survivalInstinctToBlock', sourceId: 'survivalInstinctToBlock',
       sourceLabel: 'Survival Instinct', phase: 'base', writes: ['toBlk'],
       when: () => survivalInstinctToBlkBonus !== 0,
@@ -326,7 +326,7 @@ function baseStatSteps(ctx) {
 // one block past the demon wings in both, and so after everything the MoM constructor wrote
 // before it — so their write is region `c` at that address (F103). The admission gate is
 // checked before either; whether the slot is free is the step's own live read.
-// PROVENANCE[chaosChannels:fireBreath]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
+// PROVENANCE[chaosChannels:fireBreath]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:b9b73d98478711f2be56c0a9 | Reference docs/DOS reconstructed/unitcalc.c@span:7:8ee2be8fe3596d5bdc7acc0a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:c39e26f9ccd713b815403313
 function chaosChannelsFireBreathStep(ctx, phase) {
   return statStep({ id: 'chaosChannels:fireBreath', sourceId: 'chaosChannels:fireBreath',
     sourceLabel: 'Chaos Channels', phase, ...chaosChannelsFireBreathWrite(ctx) });
@@ -373,17 +373,18 @@ function precalcScriptStatSteps(ctx) {
     fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
     greatUnbindingActive, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
-    marionetteStrayed, natureLinkActive, outlanderReform, outlanderRtbToHitBonus,
-    plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields, secondaryHitFields,
+    marionetteStrayed, natureLinkActive, outlanderReform,
+    plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields,
+    secondaryHitFields, secondaryHitTargets,
     soulFlayActive, soulFlayAtkMod, soulFlayDefMod, soulFlayLevels, soulFlayResMod,
     strengthFields, thrownTypeFields,
-    uphillBattleActive, warlordEternalNightActive, warlordTrueLightStep,
+    uphillBattleActive, warlordBerserk, warlordEternalNightActive, warlordTrueLightStep,
     wofDefenderBonusActive,
   } = ctx;
   return [
     // Marionette's stat writes precede the later Outlander research block. This order is
     // observable because its Fantastic write makes Wanderer eligible for Xenoveterinary.
-    // PROVENANCE[marionette:stats]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
+    // PROVENANCE[marionette:stats]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
     statStep({ id: 'marionette:stats', sourceId: 'marionetteChanneler',
       sourceLabel: 'Marionette (Channeler)', phase: 'b',
       writes: ['atk', ...strengthFields, 'def'],
@@ -402,7 +403,7 @@ function precalcScriptStatSteps(ctx) {
     // read; Wanderer's permanent Chaos type is its roster record's own (F107). All five ids are
     // `IsMagic=Yes` and carry nothing else the modern engine reads, so all five arms write the
     // one modern token.
-    // PROVENANCE[marionette:rangedType]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:82379f8ff60b109851bbd5b7 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:febf06298a828b2584eed37d | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:bb8bbb1a6e2c70031e61f6ab | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:962023c71d4fb00d0451568f | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:1fbcb6160390109ce2cb43d6 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:558b5f33e065f62accd1690c
+    // PROVENANCE[marionette:rangedType]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:82379f8ff60b109851bbd5b7 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:febf06298a828b2584eed37d | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:bb8bbb1a6e2c70031e61f6ab | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:962023c71d4fb00d0451568f | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:1fbcb6160390109ce2cb43d6 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:558b5f33e065f62accd1690c
     statStep({ id: 'marionette:rangedType', sourceId: 'marionetteChanneler',
       sourceLabel: 'Marionette (Channeler)', phase: 'b', writes: rangedTypeFields,
       when: () => marionetteOwned,
@@ -418,7 +419,7 @@ function precalcScriptStatSteps(ctx) {
     // already carries. Id 30 is the lightning-bolt projectile and a token of its own, so this
     // is a write the primary arm's value does not stand in for. Nothing modelled writes a
     // projectile type between the two, which is why they are adjacent on the chain.
-    // PROVENANCE[marionette:ascensionRangedType]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    // PROVENANCE[marionette:ascensionRangedType]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
     statStep({ id: 'marionette:ascensionRangedType', sourceId: 'marionetteChanneler',
       sourceLabel: 'Marionette (Channeler)', phase: 'b', writes: rangedTypeFields,
       when: () => marionetteOwned && !!marionette.ascensionRangedType,
@@ -431,7 +432,7 @@ function precalcScriptStatSteps(ctx) {
       } }),
     // The strayed branch first grants Transmute Equipment; its hero augmentation block later
     // in this same hook runs before Rebuild and the Outlander research block.
-    // PROVENANCE[marionette:strayedTransmute]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:e36dada50542233ab9fda915
+    // PROVENANCE[marionette:strayedTransmute]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:e36dada50542233ab9fda915
     statStep({ id: 'marionette:strayedTransmute', sourceId: 'marionetteStrayed',
       sourceLabel: 'Marionette (strayed): Transmute Equipment', phase: 'b',
       writes: ['atk', ...strengthFields, 'def', 'res'], when: () => marionetteStrayed,
@@ -459,7 +460,7 @@ function precalcScriptStatSteps(ctx) {
     // earlier in the chain takes it: Spirit Link's `b:spiritLink`, the Channeler's
     // `b:marionetteChanneler` (which is what the old `channelerMarionette` special case stood in
     // for) and Apotheosis' `base:destiny` alike (F198).
-    // PROVENANCE[outlanderXenoveterinary]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:8b96540daf4a2128b20b0aeb
+    // PROVENANCE[outlanderXenoveterinary]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:9:8b96540daf4a2128b20b0aeb
     statStep({ id: 'outlanderXenoveterinary', sourceId: 'outlanderXenoveterinary',
       sourceLabel: 'Xenoveterinary', phase: 'b', writes: ['hp', 'toHit'],
       when: u => outlanderReform.xenoveterinary && !!u.fantastic,
@@ -471,37 +472,57 @@ function precalcScriptStatSteps(ctx) {
       && step.id !== 'tactician'),
     // The Outlander channel/common writes follow the script's own sequence:
     // Magitek Engine (ability step above), Ballistics, Xenopsychology, then Radio.
-    // PROVENANCE[outlanderBallisticsTraining]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ba5b3ebcb89e99e403fbbac4
+    // PROVENANCE[outlanderBallisticsTraining]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:7:b7c7222852277d107e841ce4
     statStep({ id: 'outlanderBallisticsTraining',
       sourceId: 'outlanderBallisticsTraining', sourceLabel: 'Ballistics Training',
       phase: 'b', writes: secondaryHitFields,
-      when: () => outlanderRtbToHitBonus !== 0,
+      when: () => outlanderReform.ballisticsTraining,
       apply: u => {
-        for (const field of secondaryHitFields) u[field] += outlanderRtbToHitBonus;
+        // The three channels no longer take one amount: 1.5.12.8 cut `SToRanged` to +10 and
+        // left `SToBreath` and `SToThrown` at +20, so the shared DOS-shaped slot has to be
+        // resolved per kind the way Hurricane's split is.
+        for (const target of secondaryHitTargets) {
+          u[target.field] += target.kindAt(u) === 'ranged' ? 10 : 20;
+        }
       } }),
-    // PROVENANCE[outlanderXenopsychology]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:3:60edcb4df0146e08c59fd67d
+    // PROVENANCE[outlanderXenopsychology]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:60edcb4df0146e08c59fd67d
     statStep({ id: 'outlanderXenopsychology', phase: 'b', writes: ['res'],
       when: () => outlanderReform.xenopsychology, apply: u => { u.res += 1; } }),
-    // PROVENANCE[outlanderRadio]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:183cd9022f9df0e2b6d9514f
+    // PROVENANCE[outlanderRadio]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:183cd9022f9df0e2b6d9514f
     statStep({ id: 'outlanderRadio', sourceId: 'outlanderRadio', sourceLabel: 'Radio',
       phase: 'b', writes: ['res', 'toHit', 'toBlk'],
       when: () => outlanderReform.radio, apply: u => {
         u.res += 1; u.toHit += 10; u.toBlk += 10;
       } }),
+    // Berserk moved out of `UnitCalc.CAS` in 1.5.12.8 and now sits here, between the Outlander
+    // block's `!NOTCOMBATOUTLANDER!` and Conjuring Pact, so its To Hit is on the record every
+    // region-c and region-d reader sees rather than arriving after them.
+    // The −10 To Block it used to carry is gone; a −1 Defense replaces it.
+    // The block's companion `SDefensePenalty +1` (stat 31) is a ledger, not a second subtraction:
+    // every writer of it pairs `SDefense -X` with `SDefensePenalty +X` for the same X — Blaze of
+    // Glory at UnitCalc.CAS:1489-1490, Beat of Swiftness at :1505-1506, Hierophany at :1553-1554 —
+    // the way that same Blaze block pairs `SRanged -X` with `SRangedPenalty X`. Helptext
+    // `#UA BERSERK` states the net as *"-1 Armor"*, so the `SDefense` half is the whole effect,
+    // and the three steps above already model their halves alone. Combat movement stays
+    // unmodelled as before.
+    // PROVENANCE[berserkWarlord]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:10:74c79ea30c7cfbcb3155f49d
+    statStep({ id: 'berserkWarlord', sourceId: 'berserkWarlord', sourceLabel: 'Berserk',
+      phase: 'b', writes: ['toHit', 'def'], when: () => warlordBerserk,
+      apply: u => { u.toHit += 15; u.def -= 1; } }),
     // Conjuring Pact and Uphill Battle immediately follow the Outlander block.
-    // The branch is `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1123`), the calculated record read at
+    // The branch is `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1134`), the calculated record read at
     // this block: `u.fantastic` is that record — what the conversions ranked before `b:nausea`
     // leave, which is not what region `c` or `b:sanctify` 126 lines below would give.
     // The −10% pair is the **ELSE** arm, so it reaches every unit the branch does not send to
     // `SETCOMBATENCHANTMENTFLAG(U,EncCreatureBinding,…)` — a hero included, the block carrying no
     // hero test of its own. The gate used to read `isNormalUnitType(unitTypeAt(u))`, which is
     // false for `hero` as well as for Fantastic, and so withheld the arm from heroes (F175).
-    // PROVENANCE[nausea]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:c7ec21b771edb6cb9bd17645
+    // PROVENANCE[nausea]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:9:c7ec21b771edb6cb9bd17645
     statStep({ id: 'nausea', sourceId: 'nausea', sourceLabel: 'Conjuring Pact nausea',
       phase: 'b', writes: ['toHit', 'toBlk'],
       when: u => isWarlord && !!u.nausea && !u.fantastic,
       apply: u => { u.toHit -= 10; u.toBlk -= 10; } }),
-    // PROVENANCE[uphillBattle]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:9:233a5a25490ae7a59c17106e
+    // PROVENANCE[uphillBattle]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:9:233a5a25490ae7a59c17106e
     statStep({ id: 'uphillBattle', sourceId: 'uphillBattle', sourceLabel: 'Uphill Battle',
       phase: 'b', writes: ['res', 'toHit', 'toBlk'],
       when: () => uphillBattleActive, apply: u => {
@@ -509,7 +530,7 @@ function precalcScriptStatSteps(ctx) {
       } }),
     // Fiery Fury: melee at UnitCalcPre.CAS:832-846, and the ranged half of what the bucket
     // model merged into one `Math.max` term — see the M4 note at `flameBladeStep`.
-    // PROVENANCE[fieryFury]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:124bc19c147f5de83f487583 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:551d408ad4d5ae821c5eaf58 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:3:d7cdec7c168e641613b36c19
+    // PROVENANCE[fieryFury]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:15:124bc19c147f5de83f487583 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:551d408ad4d5ae821c5eaf58 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:3:d7cdec7c168e641613b36c19
     statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', ...strengthFields],
       when: () => ffRegularBonus,
       apply: u => {
@@ -518,7 +539,7 @@ function precalcScriptStatSteps(ctx) {
         // field that block creates is not yet there to be read.
         for (const c of channels) u[c.strengthField] += fieryFuryRtbWrite(u, c);
       } }),
-    // PROVENANCE[wallOfFire:garrison]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:15:a221a36b384a9457291e5a8a
+    // PROVENANCE[wallOfFire:garrison]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:15:a221a36b384a9457291e5a8a
     statStep({ id: 'wallOfFire:garrison', phase: 'b', writes: ['atk', ...strengthFields],
       when: () => wofDefenderBonusActive,
       apply: u => {
@@ -527,7 +548,7 @@ function precalcScriptStatSteps(ctx) {
           if (slotHasPhysicalRanged(u, c) || slotHasThrown(u, c)) u[c.strengthField] += 1;
         }
       } }),
-    // PROVENANCE[eternalNight:poorVision]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:10:714df04471d1c63eb32e3964
+    // PROVENANCE[eternalNight:poorVision]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:10:714df04471d1c63eb32e3964
     statStep({ id: 'eternalNight:poorVision', phase: 'b', writes: strengthFields,
       when: u => warlordEternalNightActive(u),
       apply: u => {
@@ -535,7 +556,7 @@ function precalcScriptStatSteps(ctx) {
           if (slotHasPhysicalRanged(u, c) || slotHasMagicalRanged(u, c)) u[c.strengthField] -= 2;
         }
       } }),
-    // PROVENANCE[bombsGrenades]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:7:99e85b5dc6de1ad3f95908c1
+    // PROVENANCE[bombsGrenades]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:7:99e85b5dc6de1ad3f95908c1
     // `SETSTAT(U,SThrown,0,…)` writes the calculated record, not the permanent one, so the
     // Thrown field this creates does not exist before this position. The step supplies its
     // identity here — as `d:shadowStrike:thrown` does for the same field — instead of the base
@@ -559,7 +580,7 @@ function precalcScriptStatSteps(ctx) {
           if (slotHasThrown(u, c)) u[c.strengthField] += grant;
         }
       } }),
-    // PROVENANCE[upgradedExplosive:ranged]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:4:716e4812acd6432198553e28
+    // PROVENANCE[upgradedExplosive:ranged]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:716e4812acd6432198553e28
     statStep({ id: 'upgradedExplosive:ranged', phase: 'b', writes: strengthFields,
       when: u => channels.some(c => c.upgradedExplosive && u[c.rangedTypeField] !== 'none'),
       apply: u => {
@@ -570,7 +591,7 @@ function precalcScriptStatSteps(ctx) {
     // The Fire Breath write is part of the same UnitCalcPre block as the ranged write.
     // Later phase-b effects such as True Light must see, but must not be included in,
     // this doubled subtotal.
-    // PROVENANCE[upgradedExplosive:fireBreath]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:4:716e4812acd6432198553e28
+    // PROVENANCE[upgradedExplosive:fireBreath]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:716e4812acd6432198553e28
     statStep({ id: 'upgradedExplosive:fireBreath', phase: 'b', writes: strengthFields,
       when: u => channels.some(c => c.upgradedExplosive && u[c.thrownTypeField] === 'fire'),
       apply: u => {
@@ -580,7 +601,7 @@ function precalcScriptStatSteps(ctx) {
           }
         }
       } }),
-    // PROVENANCE[soulFlay]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:13:1a0ee111433e436b3c5da065
+    // PROVENANCE[soulFlay]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:1a0ee111433e436b3c5da065
     statStep({ id: 'soulFlay', phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields],
       when: () => soulFlayActive,
       apply: u => {
@@ -592,7 +613,7 @@ function precalcScriptStatSteps(ctx) {
           if (isConventionalRangedSlot(u, c)) u[c.strengthField] -= soulFlayLevels;
         }
       } }),
-    // PROVENANCE[goblinPox]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:19:4d062d7899f6c61a2403d4a4
+    // PROVENANCE[goblinPox]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:19:4d062d7899f6c61a2403d4a4
     statStep({ id: 'goblinPox', phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields],
       when: () => poxHostActive,
       apply: u => {
@@ -603,10 +624,10 @@ function precalcScriptStatSteps(ctx) {
           if (isConventionalRangedSlot(u, c)) u[c.strengthField] -= poxHostIsGoblin ? 1 : 3;
         }
       } }),
-    // PROVENANCE[greatUnbinding]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:17:51f2e6d3d15bd989ebfff7cd
+    // PROVENANCE[greatUnbinding]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:17:51f2e6d3d15bd989ebfff7cd
     statStep({ id: 'greatUnbinding', sourceId: 'greatUnbinding', sourceLabel: 'Great Unbinding',
       phase: 'b', writes: ['res', 'toHit', 'toBlk'],
-      when: () => greatUnbindingActive,
+      when: u => greatUnbindingActive(u),
       apply: u => { u.res -= 2; u.toHit -= 20; u.toBlk -= 20; } }),
     // Insulation (Warlord, Chaos unit enchantment): `AFireImmunity`, `ALightningResistance` and
     // `AColdImmunity`, one block, three writes, no stat half — which is why it had no chain entry
@@ -616,7 +637,7 @@ function precalcScriptStatSteps(ctx) {
     // flags off the **calculated** record at its own block — `(U.Fireimmunity or
     // U.lightningresist)`, $005A1957, whose decode note says "current" in as many words — so
     // region `b` writing them ahead of region `c` is what makes an Insulated unit eligible.
-    // PROVENANCE[insulation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:4c2d834bb77922471b95e545
+    // PROVENANCE[insulation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:4c2d834bb77922471b95e545
     statStep({ id: 'insulation', sourceId: 'insulation', sourceLabel: 'Insulation',
       phase: 'b', writes: ['fireImmunity', 'lightningResist', 'coldImmunity'],
       when: () => isWarlord && !!abilities.insulation,
@@ -631,7 +652,7 @@ function precalcScriptStatSteps(ctx) {
     // power 52 arm re-asserts the enchantment flag and grants nothing; the calculator models no
     // items, so the step is the ELSE arm. Both writes are ability flags with no stat half, which
     // is why this block had no chain entry before (F200).
-    // PROVENANCE[divineProtection]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:a64dfa2d27c03c7d5ad7dc3c
+    // PROVENANCE[divineProtection]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:a64dfa2d27c03c7d5ad7dc3c
     statStep({ id: 'divineProtection', sourceId: 'divineProtection',
       sourceLabel: 'Divine Protection', phase: 'b', writes: ['deathImmunity', 'lucky'],
       when: () => isWarlord && !!abilities.divineProtection,
@@ -639,11 +660,11 @@ function precalcScriptStatSteps(ctx) {
         u.deathImmunity = true;
         if (!u.lucky) u.lucky = true;
       } }),
-    // PROVENANCE[natureLink]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:5:8d549c3c9d2b586869606d77
+    // PROVENANCE[natureLink]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:8d549c3c9d2b586869606d77
     statStep({ id: 'natureLink', phase: 'b', writes: ['res'],
       when: () => natureLinkActive, apply: u => { u.res += 1; } }),
     ...(isWarlord ? [warlordTrueLightStep] : []),
-    // PROVENANCE[plague]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:11:52017a20d7efd62a9584c02a
+    // PROVENANCE[plague]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:52017a20d7efd62a9584c02a
     statStep({ id: 'plague', sourceId: 'plague', sourceLabel: 'Plague',
       phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields, 'toHit'],
       when: () => plagueActive,
@@ -656,9 +677,9 @@ function precalcScriptStatSteps(ctx) {
       } }),
     // Xenopsychology and Radio are +1 Resistance each; the rest of what they grant is To Hit
     // and To Defend, which are not in the sequence yet.
-    // PROVENANCE[godsPlayDices]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:14:34909b07ee2554c5452c485b
+    // PROVENANCE[godsPlayDices]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:14:34909b07ee2554c5452c485b
     statStep({ id: 'godsPlayDices', phase: 'b', writes: ['res'],
-      // UnitCalcPre.CAS:1699-1714 tests four separate EncDICE flags, each writing its own
+      // UnitCalcPre.CAS:1710-1725 tests four separate EncDICE flags, each writing its own
       // ±1 or ±2; the calculator's one signed control is which of them is set, and zero is
       // none of them.
       when: () => godsPlayDicesResMod !== 0,
@@ -671,7 +692,7 @@ function precalcScriptStatSteps(ctx) {
     // source names the enchantment: the CoM2 1.05.11 base script set has no `EyeOfHeaven`
     // identifier at all, which is why the step is Warlord-scoped while True Sight itself is not.
     // The enemy gaze half is combat resolution's, not a write to this unit.
-    // PROVENANCE[eyeOfHeaven]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:6:f97cc6ea721d5f75291b8e43
+    // PROVENANCE[eyeOfHeaven]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:6:f97cc6ea721d5f75291b8e43
     statStep({ id: 'eyeOfHeaven', sourceId: 'eyeOfHeaven', sourceLabel: 'Eye of Heaven',
       phase: 'b', writes: ['trueSight'],
       when: () => isWarlord && !!abilities.eyeOfHeaven,
@@ -720,7 +741,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // Destiny's persistent identity/storage writes occur here, after UnitCalcPre, and its
     // calculated-record package immediately follows. Every permanent base write plus regions
     // a and b therefore feeds the six multipliers; level and Focus Magic remain later.
-    // PROVENANCE[destiny]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
+    // PROVENANCE[destiny]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
     statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'c',
       writes: ['atk', ...strengthFields, 'def', 'res', 'hp'], when: () => destinyActive,
       apply: u => {
@@ -733,7 +754,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // in the battle-unit constructor before the material block and BU_Apply_Specials. The helper
     // and runtime-table spans below cover every represented gate and cumulative value; separate
     // hero progression remains outside this step's supported scope.
-    // PROVENANCE[level]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:11:3ebd099afdc1a9ba314313f2 | Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b | Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:ca745a122a23d618ddef5f78 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
+    // PROVENANCE[level]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:11:3ebd099afdc1a9ba314313f2 | Reference docs/DOS reconstructed/unitcalc.c@span:38:c8bc5c66456b29de687f535f | Reference docs/DOS reconstructed/unitcalc.c@span:40:cda85f7ef3216bc02ae3032b | Reference docs/DOS reconstructed/unitcalc.c@span:39:48331d18d44f1fab33f12268 | TABLE=Reference docs/DOS reconstructed/unitcalc.c@span:7:deff2f84492feaf68541f42d | Reference docs/DOS reconstructed/unitcalc.c@span:40:055f8353efb25e678c811dbd | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:ca745a122a23d618ddef5f78 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:32:729bd94fe9ce2cb9428c8f67 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:9bf061ae7a53bd811c325d52 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:37:2f0f9a3f42c55833499bb275 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/Levelbonus.INI@span:30:084e7cb2c790a6a561442fc8 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/Levelbonus.INI@span:37:6b5d3a7845cdf5334f585bbd | TABLE=Reference docs/Script source/Warlord 1.5.12.9/Levelbonus.INI@span:30:13dab7d938ce88eaff0bde1c
     statStep({ id: 'level', phase: 'c',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'toHit',
         ...(!isCoM2 ? ['gaze', 'doomGaze'] : [])],
@@ -848,7 +869,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // word, so a mid-combat cast would leave ammo alone — outside the one-round model, not a
     // deviation from it. `R6.1a.evidence.md`, *FocusMagic's `ammo > 0` gate is vacuous*, owns the
     // decode and the two places the CoM 1 prose disagrees with the binary.
-    // PROVENANCE[focusMagic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:84c8baeb7a2f577dca38e056 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:5036ba273068428523d6008e | Reference docs/DOS reconstructed/unitcalc.c@span:20:fa0079de675211a02db49173 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:afc551599f5229a3bbe362bb
+    // PROVENANCE[focusMagic]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:18:84c8baeb7a2f577dca38e056 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:38:5036ba273068428523d6008e | Reference docs/DOS reconstructed/unitcalc.c@span:20:fa0079de675211a02db49173 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:afc551599f5229a3bbe362bb
     statStep({ id: 'focusMagic', phase: 'c',
       writes: [...strengthFields, 'doomGaze', ...(isCoM1 ? ['gaze'] : []),
         ...rangedTypeFields, ...thrownTypeFields],
@@ -887,7 +908,7 @@ function magicCalcBinaryStatSteps(ctx) {
         // The four-way ranged branch. `U.ranged := U.thrown; U.thrown := 0`
         // (Units.RecalculateUnits.pas:885-891) is a **move** between two fields of the modern
         // record, which is what leaves the Thrown field free for the Shadow Strike grant at
-        // `UnitCalc.CAS:1262`. The DOS-shaped shared slot is both ends at once, so there the
+        // `UnitCalc.CAS:1254`. The DOS-shaped shared slot is both ends at once, so there the
         // move is a retype in place, its `B.ranged` read needs the permanent type pair to say
         // the one value is a conventional ranged attack at all, and it cannot hold a created
         // ranged attack beside a Breath already standing in it — the modern record's own Ranged
@@ -929,7 +950,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // Weapon material is `@Units@ApplyMagicWeapons` at +0x04B90, after the equipment loop —
     // also D25, also region c.
     // Dark Force precedes the defending-city/node package and ApplyMagicWeapons.
-    // PROVENANCE[darkForce]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:b1b6be9c34cd3728a4158aad
+    // PROVENANCE[darkForce]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:b1b6be9c34cd3728a4158aad
     statStep({ id: 'darkForce', phase: 'c', writes: ['toHit', 'toBlk'],
       when: () => darkForceActive,
       apply: u => { u.toHit += 10; u.toBlk += 10; } }),
@@ -941,7 +962,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // `city_enchantments` byte and takes no node path. Its attack gates are both live and neither
     // carries a type test — `if (bu->ranged > 0)` writes the DOS shared slot whatever stands in
     // it, so a Thrown, Breath or gaze attack is raised exactly as a conventional ranged one is.
-    // PROVENANCE[heavenlyLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:e751e4e796518f15a4a77481 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:e405a407e722dce9ad79aea3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
+    // PROVENANCE[heavenlyLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:c3d483ddd543b838c86f7998 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:e405a407e722dce9ad79aea3 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:ca247f52483258db47263f1f
     statStep({ id: 'heavenlyLight',
       sourceLabel: isCoM1 ? 'Heavenly Light' : 'Heavenly Light / Guardian node', phase: 'c',
       writes: ['def', 'res', 'atk', ...strengthFields,
@@ -988,7 +1009,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // The Eye of Heaven arm is not a second term of this gate: that enchantment sets
     // `EncTrueSight` itself at `b:eyeOfHeaven`, and this block reads the flag the record carries
     // at its own rank (F201).
-    // PROVENANCE[trueSight]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:3:ab6658debac3b3919bf52ecd | Reference docs/DOS reconstructed/unitcalc.c@span:1:b33bb019c9f493fb83dacbed | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:3:7ed2253998ce93313ee2e86e | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
+    // PROVENANCE[trueSight]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:3:ab6658debac3b3919bf52ecd | Reference docs/DOS reconstructed/unitcalc.c@span:1:b33bb019c9f493fb83dacbed | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:3:7ed2253998ce93313ee2e86e | Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:5:4e6f968fae0403b40874b647
     statStep({ id: 'trueSight', sourceId: 'trueSight', sourceLabel: 'True Sight',
       phase: 'c', writes: ['illusionImmunity'],
       when: u => !!u.trueSight,
@@ -998,11 +1019,11 @@ function magicCalcBinaryStatSteps(ctx) {
     // demon-wings blocks it shares `BU_Apply_Specials` with. Its modern counterpart is the
     // region-`a` step; the canonical version scope keeps exactly one of the two per version.
     chaosChannelsFireBreathStep(ctx, 'c'),
-    // PROVENANCE[endurance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:f1faba1a3ffce4883dce32c1 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:61c518b9d5be7ff83193cb0c | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:746a48490cec4055321bc210 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:746a48490cec4055321bc210
+    // PROVENANCE[endurance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:f1faba1a3ffce4883dce32c1 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:61c518b9d5be7ff83193cb0c | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:746a48490cec4055321bc210 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:746a48490cec4055321bc210
     statStep({ id: 'endurance', phase: 'c', writes: ['def', 'hp'],
       when: () => enduranceActive,
       apply: u => { u.def += enduranceDefMod; u.hp += enduranceHpMod; } }),
-    // PROVENANCE[discipline]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:445349dde257497d94440bc9
+    // PROVENANCE[discipline]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:445349dde257497d94440bc9
     statStep({ id: 'discipline', phase: 'c', writes: ['def', 'atk', ...strengthFields],
       when: () => disciplineActive,
       apply: u => {
@@ -1019,7 +1040,7 @@ function magicCalcBinaryStatSteps(ctx) {
     ...(!isCoM1 ? [flameBladeStep] : []),
     // One write: the flat melee/defence package and the Breath addition the same block makes.
     // CoM/CoM2 Land Linking boosts melee and breath only.
-    // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:3fa8c2fabf80e91cf859f9b0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
+    // PROVENANCE[landLinking]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:3fa8c2fabf80e91cf859f9b0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:df8d58cf51472b304559af37
     statStep({ id: 'landLinking', phase: 'c', writes: ['atk', 'def', ...strengthFields],
       when: u => landLinkingEligible(u),
       apply: (u, runCtx) => {
@@ -1041,7 +1062,7 @@ function magicCalcBinaryStatSteps(ctx) {
           if (slotHasThrown(u, c)) u[c.strengthField] += 1;
         }
       } }),
-    // PROVENANCE[lionheart]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:0e597d1ff73a00332d952e72 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:87ae0c5af5c55a4b1df9577b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:828f58debc909e639ff119f0
+    // PROVENANCE[lionheart]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:14:0e597d1ff73a00332d952e72 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:87ae0c5af5c55a4b1df9577b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:828f58debc909e639ff119f0
     statStep({ id: 'lionheart', phase: 'c', writes: ['atk', 'res', ...strengthFields, 'hp'],
       when: () => !!(abilities && abilities.lionheart),
       apply: (u, runCtx) => {
@@ -1058,7 +1079,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // this position — under the buckets that needed a named subtotal (`defBase`); here it is
     // just the field's current value. +0x07407, so it is ahead of the node aura and of every
     // curse, and its threshold does not see them.
-    // PROVENANCE[holyArmor]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:4:6281d5747830e7e40ac6cf0b | Reference docs/DOS reconstructed/unitcalc.c@span:7:b231f176981bd4242bc56846 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:45297c88e316d31043568fb9
+    // PROVENANCE[holyArmor]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:4:6281d5747830e7e40ac6cf0b | Reference docs/DOS reconstructed/unitcalc.c@span:7:b231f176981bd4242bc56846 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:45297c88e316d31043568fb9
     statStep({ id: 'holyArmor', phase: 'c',
       writes: ['def', 'toBlk'],
       when: () => holyArmorActive,
@@ -1066,7 +1087,7 @@ function magicCalcBinaryStatSteps(ctx) {
         if (isCoMVersion && u.def > 5) u.toBlk += 10;
         else u.def += 2;
       } }),
-    // PROVENANCE[orihalcon]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:edcd009b70fbdd75f5a2cbd5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:ceaf7256e4e54cba7caba1c2
+    // PROVENANCE[orihalcon]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:edcd009b70fbdd75f5a2cbd5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:ceaf7256e4e54cba7caba1c2
     statStep({ id: 'orihalcon', phase: 'c', writes: ['res', ...strengthFields],
       when: () => orihalconActive,
       apply: u => {
@@ -1078,7 +1099,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // One To-Hit write reaching melee and the secondary slots. Each half keeps its own gate —
     // melee on the enchantment alone, each secondary slot on the channel that reads the
     // modifier — and neither reads a field the other writes, so they fold into one `apply`.
-    // PROVENANCE[holyWeapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:f35bf69e3356d00f90e013ed | Reference docs/DOS reconstructed/unitcalc.c@span:14:057c7ba8762bb65c4a011e69 | Reference docs/DOS reconstructed/unitcalc.c@span:12:1acacb263828739ad9aeab50 | Reference docs/DOS reconstructed/combat.c@span:11:be24e47e7e5719d3e16efdf5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:aeee04e431949f9a5f171311
+    // PROVENANCE[holyWeapon]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:f35bf69e3356d00f90e013ed | Reference docs/DOS reconstructed/unitcalc.c@span:14:057c7ba8762bb65c4a011e69 | Reference docs/DOS reconstructed/unitcalc.c@span:12:1acacb263828739ad9aeab50 | Reference docs/DOS reconstructed/combat.c@span:11:be24e47e7e5719d3e16efdf5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:aeee04e431949f9a5f171311
     statStep({ id: 'holyWeapon', sourceId: 'holyWeapon',
       sourceLabel: 'Holy Weapon', phase: 'c',
       writes: ['toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
@@ -1105,11 +1126,11 @@ function magicCalcBinaryStatSteps(ctx) {
     // read too, resolved at this position by `blazingEyesActive` (`stats.js`). One copy: the
     // engine repeats the block per active Blazing Eyes across wizards and the calculator's
     // control is a single boolean, as the Chaos Embrace/Blazing Eyes tooltips state.
-    // PROVENANCE[blazingEyes]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:c4d9140bdc468735df396fa7
+    // PROVENANCE[blazingEyes]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:c4d9140bdc468735df396fa7
     statStep({ id: 'blazingEyes', phase: 'c', writes: ['doomGaze'],
       when: u => blazingEyesActive(u),
       apply: u => { u.doomGaze += u.doomGaze === 0 ? 3 : 1; } }),
-    // PROVENANCE[reinforceMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:c46cf0a067fb9eff1afc4064
+    // PROVENANCE[reinforceMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:c46cf0a067fb9eff1afc4064
     statStep({ id: 'reinforceMagic', phase: 'c', writes: ['res', ...strengthFields],
       when: () => !!(abilities && abilities.reinforceMagic),
       apply: u => {
@@ -1119,11 +1140,11 @@ function magicCalcBinaryStatSteps(ctx) {
         }
       } }),
     // Charm of Life reads live HP after every earlier HP writer, including Lionheart and Endurance.
-    // PROVENANCE[charmOfLife]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:bac4e9b3eab5dcd73146e126 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:95fe4413d7ef9ab38400cfb7
+    // PROVENANCE[charmOfLife]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:bac4e9b3eab5dcd73146e126 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:95fe4413d7ef9ab38400cfb7
     statStep({ id: 'charmOfLife', phase: 'c', writes: ['hp'],
       when: () => charmOfLifeActive,
       apply: u => { u.hp += Math.max(1, Math.trunc(u.hp / 4)); } }),
-    // PROVENANCE[blazingMarch]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:31:d2ba78de4b00594fb355f0e5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:88f3514b127f13fa92f35d8e | Reference docs/DOS reconstructed/unitcalc.c@span:26:19d9b3041c4cba25ac05eebb | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:22:dc7d9d2e0bc077c6e02314a1 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:4:948215fe7c75f15252145bd4 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:4:2e38314c2c8fd875465a75dd
+    // PROVENANCE[blazingMarch]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:31:d2ba78de4b00594fb355f0e5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:88f3514b127f13fa92f35d8e | Reference docs/DOS reconstructed/unitcalc.c@span:26:19d9b3041c4cba25ac05eebb | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:22:dc7d9d2e0bc077c6e02314a1 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:4:948215fe7c75f15252145bd4 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:4:2e38314c2c8fd875465a75dd
     statStep({ id: 'blazingMarch', phase: 'c', writes: ['atk', ...strengthFields],
       when: () => !!(abilities && abilities.blazingMarch),
       apply: (u, runCtx) => {
@@ -1138,7 +1159,7 @@ function magicCalcBinaryStatSteps(ctx) {
       } }),
     // The melee penalty is -3 in every CoM engine and -2 in MoM; the attack-strength half
     // chooses its own branch and carries the same magnitude.
-    // PROVENANCE[weakness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:51bb7b42de5195f9edf69a86 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:e4cfc8d10fb6c6beee42bb6f | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:a64ed4008bd0ec13a817f841
+    // PROVENANCE[weakness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:28:51bb7b42de5195f9edf69a86 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:8:e4cfc8d10fb6c6beee42bb6f | Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:5:a64ed4008bd0ec13a817f841
     statStep({ id: 'weakness', phase: 'c', writes: ['atk', ...strengthFields],
       when: u => !!u.weakness,
       apply: (u, runCtx) => {
@@ -1158,7 +1179,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // a Chaos-Channelled MoM unit is not Chaos here and collects nothing at all, breath or melee.
     // `chaosSurgeCount` (`stats.js`) reads that position through the `c:chaosSurge` chain rank,
     // which is why CoM 1 and the modern builds are unmoved (F178).
-    // PROVENANCE[chaosSurge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8aac79f44ffe2fbae619cb5d | Reference docs/DOS reconstructed/unitcalc.c@span:28:ef6419306ce4c0b275103ee1 | Reference docs/DOS reconstructed/unitcalc.c@span:29:0f32c183c37c88a243ddb6cf | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:bc81b31ab5f15a3717465711
+    // PROVENANCE[chaosSurge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:8aac79f44ffe2fbae619cb5d | Reference docs/DOS reconstructed/unitcalc.c@span:28:ef6419306ce4c0b275103ee1 | Reference docs/DOS reconstructed/unitcalc.c@span:29:0f32c183c37c88a243ddb6cf | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:bc81b31ab5f15a3717465711
     statStep({ id: 'chaosSurge', phase: 'c',
       writes: ['res', 'atk', ...strengthFields, 'gaze', 'doomGaze'],
       when: u => chaosSurgeCount(u) > 0,
@@ -1194,7 +1215,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // writes its Eternal Night penalty after Tactician, below.
     // CoM 1 makes the same write, but as the final stat write before its terminal clamp
     // (0x90B31) rather than before the Darkness block; each version's chain places it.
-    // PROVENANCE[eternalNight:enemyResistance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:3810e1c47b8eb421a7ebb24f | Reference docs/DOS reconstructed/unitcalc.c@span:17:72658795c2f8899328df83db
+    // PROVENANCE[eternalNight:enemyResistance]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:3810e1c47b8eb421a7ebb24f | Reference docs/DOS reconstructed/unitcalc.c@span:17:72658795c2f8899328df83db
     statStep({ id: 'eternalNight:enemyResistance', phase: 'c', writes: ['res'],
       when: u => eternalNightEnemyResPenalty(u) !== 0,
       apply: u => { u.res += eternalNightEnemyResPenalty(u); } }),
@@ -1203,7 +1224,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // events/combat globals. The melee gate reads persistent BaseUnits.attack — `ctx.base`, the
     // record the `base` phase leaves, not the card's input (F133); conventional Ranged and both
     // Breath gates read their current fields. Thrown and every Gaze are absent.
-    // PROVENANCE[nodeAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:31:548c2c98c01394a296fa188a
+    // PROVENANCE[nodeAura]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:31:548c2c98c01394a296fa188a
     statStep({ id: 'nodeAura', phase: 'c',
       writes: ['res', 'def', 'atk', ...strengthFields, 'gaze', 'doomGaze'],
       when: u => nodeAuraActive(u),
@@ -1226,7 +1247,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // CoM 1 jumps to this relocated side-maximum tail after its node/Guardian package and
     // returns before Heavenly Light and the curse/Warp tail. Unlike the modern aura pass, these
     // writes therefore remain visible to later reductions and the terminal clamp.
-    // PROVENANCE[guidingBeaconAura]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:438880febda217f547fcb0e5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:abd8cf46993fffbdb3811617
+    // PROVENANCE[guidingBeaconAura]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:438880febda217f547fcb0e5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:abd8cf46993fffbdb3811617
     statStep({ id: 'guidingBeaconAura', sourceId: 'guidingBeaconAura',
       sourceLabel: 'Guiding Beacon aura', phase: 'c', writes: strengthFields,
       when: () => com1GuidingBeaconAura > 0,
@@ -1238,12 +1259,12 @@ function magicCalcBinaryStatSteps(ctx) {
           }
         }
       } }),
-    // PROVENANCE[divineBarrierAura]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:d15683dae66a031390912a26 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:df43d1668aa163cfcd4ab77e
+    // PROVENANCE[divineBarrierAura]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:d15683dae66a031390912a26 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:39:df43d1668aa163cfcd4ab77e
     statStep({ id: 'divineBarrierAura', sourceId: 'divineBarrierAura',
       sourceLabel: 'Divine Barrier aura', phase: 'c', writes: ['def'],
       when: () => com1DivineBarrierAura > 0,
       apply: u => { u.def += com1DivineBarrierAura; } }),
-    // PROVENANCE[soulLinkerAura]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:ddbd60d42c3858e92689d2e8 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:044e08011083c94abc942c1b
+    // PROVENANCE[soulLinkerAura]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:ddbd60d42c3858e92689d2e8 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:044e08011083c94abc942c1b
     statStep({ id: 'soulLinkerAura', sourceId: 'soulLinkerAura',
       sourceLabel: 'Soul Linker aura', phase: 'c', writes: ['toHit', 'toBlk'],
       when: u => com1SoulLinkerAura > 0 && !!u.fantastic,
@@ -1253,10 +1274,10 @@ function magicCalcBinaryStatSteps(ctx) {
       } }),
     // The three astronomical events follow the native node aura and read base Fantastic while
     // testing attack channels on their current values.
-    // PROVENANCE[badMoon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:b777912e0cccc18e4cbd7c0a
+    // PROVENANCE[badMoon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:b777912e0cccc18e4cbd7c0a
     statStep({ id: 'badMoon', phase: 'c', writes: ['res'],
       when: () => badMoonActive, apply: u => { u.res -= 3; } }),
-    // PROVENANCE[goodMoon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:f594baaf8096788dd3657cd6
+    // PROVENANCE[goodMoon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:f594baaf8096788dd3657cd6
     statStep({ id: 'goodMoon', phase: 'c', writes: ['def', 'atk', ...strengthFields],
       when: () => goodMoonActive,
       apply: u => {
@@ -1266,7 +1287,7 @@ function magicCalcBinaryStatSteps(ctx) {
           if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 1;
         }
       } }),
-    // PROVENANCE[natureConjunction]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:4c6f881ef1f956f17e1bd803
+    // PROVENANCE[natureConjunction]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:4c6f881ef1f956f17e1bd803
     statStep({ id: 'natureConjunction', phase: 'c',
       writes: ['res', 'def', 'atk', ...strengthFields],
       when: () => natureConjunctionActive,
@@ -1277,7 +1298,7 @@ function magicCalcBinaryStatSteps(ctx) {
           if (isConventionalRangedSlot(u, c) && u[c.strengthField] > 0) u[c.strengthField] += 2;
         }
       } }),
-    // PROVENANCE[darkness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:a43a4b9b9c796ff5baa3e070 | Reference docs/DOS reconstructed/unitcalc.c@span:30:a6f103fc8632f6d1513712c0 | Reference docs/DOS reconstructed/unitcalc.c@span:8:7e6d93372e0de3d445a9db2b | Reference docs/DOS reconstructed/unitcalc.c@span:12:750dc4f6540b4d84533b2557 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:18f99324928d11bffe6f2858 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:e289006c649dcfb1c6e9a280
+    // PROVENANCE[darkness]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:30:a43a4b9b9c796ff5baa3e070 | Reference docs/DOS reconstructed/unitcalc.c@span:30:a6f103fc8632f6d1513712c0 | Reference docs/DOS reconstructed/unitcalc.c@span:8:7e6d93372e0de3d445a9db2b | Reference docs/DOS reconstructed/unitcalc.c@span:12:750dc4f6540b4d84533b2557 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:18f99324928d11bffe6f2858 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:e289006c649dcfb1c6e9a280
     // CoM 1 writes Darkness after its Warp block (0x9084C) rather than before, so its position
     // differs; each version's chain places it. The arithmetic differs too: CoM 1 lands the full
     // value on the reduced stat and touches both gazes, where CoM2 gates every field on being
@@ -1313,11 +1334,11 @@ function magicCalcBinaryStatSteps(ctx) {
 
     // Warp Reality and Vertigo are recalculation writes, not resolution-time projections.
     // Their signed common Hit/To Defend values must therefore reach the region-e clamp in order.
-    // PROVENANCE[warpReality]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:e5f3d5a32258982e16c67cb1 | Reference docs/DOS reconstructed/unitcalc.c@span:5:b56d82758c8a1388b292e2a1 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:5536c22c25f21fbaeed04a18
+    // PROVENANCE[warpReality]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:5:e5f3d5a32258982e16c67cb1 | Reference docs/DOS reconstructed/unitcalc.c@span:5:b56d82758c8a1388b292e2a1 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:5536c22c25f21fbaeed04a18
     statStep({ id: 'warpReality', sourceId: 'warpReality', sourceLabel: 'Warp Reality',
       phase: 'c', writes: ['toHit'], when: u => warpRealityActive && !unitIsChaos(u),
       apply: u => { u.toHit -= 20; } }),
-    // PROVENANCE[vertigo]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:988ef64cd77214c23cb77397 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:a8adaeabe8e52ff5c76f42d2
+    // PROVENANCE[vertigo]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:988ef64cd77214c23cb77397 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:a8adaeabe8e52ff5c76f42d2
     statStep({ id: 'vertigo', sourceId: 'vertigo', sourceLabel: 'Vertigo',
       phase: 'c', writes: ['toHit', 'toBlk'], when: u => !!u.vertigo,
       apply: u => {
@@ -1358,7 +1379,7 @@ function magicCalcBinaryStatSteps(ctx) {
     //                       +0x0C890, then the whole of `d` and the whole of `e`
     // Nothing between the previous step and here is one of CoM 1's post-Warp writes, which is
     // what lets its early Warp and MoM's late one share a position.
-    // PROVENANCE[warpAttack]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:94df6310cdbc37d8f35f6897 | Reference docs/DOS reconstructed/unitcalc.c@span:10:7afd072fad52d77073116162 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:feb1881464c0e2f5a90f9f97
+    // PROVENANCE[warpAttack]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:94df6310cdbc37d8f35f6897 | Reference docs/DOS reconstructed/unitcalc.c@span:10:7afd072fad52d77073116162 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:feb1881464c0e2f5a90f9f97
     statStep({ id: 'warpAttack', phase: 'c',
       writes: ['atk', ...strengthFields, 'gaze', 'doomGaze'],
       when: u => !!u.warpAttack,
@@ -1378,14 +1399,14 @@ function magicCalcBinaryStatSteps(ctx) {
           u.doomGaze = Math.floor(u.doomGaze / 2);
         }
       } }),
-    // PROVENANCE[warpDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:20:4ade353524404839658c2a92 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:f4bf3085892f0c76764a91bc
+    // PROVENANCE[warpDefense]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:20:4ade353524404839658c2a92 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:f4bf3085892f0c76764a91bc
     statStep({ id: 'warpDefense', phase: 'c', writes: ['def'],
       when: u => !!u.warpDefense,
       apply: u => {
         u.def = isCoM1 ? Math.trunc(u.def / 3)
           : Math.floor(u.def / (isCoMVersion ? 3 : 2));
       } }),
-    // PROVENANCE[warpResist]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:4:af84302cc4211baa873b72e0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:a15539b1a7a69de6c7548391
+    // PROVENANCE[warpResist]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:4:af84302cc4211baa873b72e0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:a15539b1a7a69de6c7548391
     statStep({ id: 'warpResist', phase: 'c', writes: ['res'],
       when: u => !!u.warpResist, apply: u => { u.res = 0; } }),
     // Shatter reduces every attack strength to 1. The unit-type expression below is **not** a term
@@ -1403,7 +1424,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // the record the recalculation leaves, so `finishedUnitType` is the record it wants — the same
     // ruling Rust's Fantastic exclusion took (`SPEC.md`, *Deliberate deviations*, rule 5; F183,
     // F188).
-    // PROVENANCE[shatter]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:23:9d5c1cf547d632005ddeebe5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:b34c35cb9bf68bf3402e6d27
+    // PROVENANCE[shatter]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:23:9d5c1cf547d632005ddeebe5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:b34c35cb9bf68bf3402e6d27
     statStep({ id: 'shatter', phase: 'c', writes: ['atk', ...strengthFields],
       when: u => !!u.shatter
         && (isWarlord || isNormalUnitType(finishedUnitType) || finishedUnitType === 'hero'),
@@ -1419,7 +1440,7 @@ function magicCalcBinaryStatSteps(ctx) {
     // on the reduced stat. Eternal Night is deliberately not folded in: it is after Tactician.
     // Q7, closed: `defense += resistance / 3` is a **live** read of the record, taken where the
     // engine takes it — after Warp Resist and Darkness, before Tactician (0x90992-0x90A53).
-    // PROVENANCE[supremeLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:b1236fda671c45bc369f8550 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:21:57c5217db1d984c019548cee
+    // PROVENANCE[supremeLight]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:b1236fda671c45bc369f8550 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:21:57c5217db1d984c019548cee
     statStep({ id: 'supremeLight', phase: 'c', writes: ['def', 'atk', ...strengthFields],
       when: u => isCoM1 && supremeLightEligibleAt(u, recordContext),
       apply: u => {
@@ -1434,7 +1455,7 @@ function magicCalcBinaryStatSteps(ctx) {
       when: u => realmWardActive(u),
       apply: u => { u.toHit -= 20; u.def -= 3; u.res -= 3; } }),
     // Spell Ward follows Terror and the Warp/Shatter tail, before Tactician.
-    // PROVENANCE[spellWard]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:f2d06ed57305602954b1a140
+    // PROVENANCE[spellWard]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:f2d06ed57305602954b1a140
     statStep({ id: 'spellWard', phase: 'c', writes: ['toHit', 'def', 'res'],
       when: u => spellWardActive(u),
       apply: u => { u.toHit -= 20; u.def -= 3; u.res -= 3; } }),
@@ -1465,11 +1486,11 @@ function magicCalcScriptStatSteps(ctx) {
   const {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
     colossalStrength, energyCannon, energyCannonHitField,
-    hurricaneActive, isWarlord, levelRank,
+    hasDarkness, hurricaneActive, identity, isWarlord, levelRank,
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, vampirismActive,
-    venomActive, warlordBerserk, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
+    venomActive, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
     weaknessBinaryHits, weaknessPenalty,
   } = ctx;
   const vampirismSources = channels.filter(c => c.slotKey !== 'shared').length > 0
@@ -1487,7 +1508,7 @@ function magicCalcScriptStatSteps(ctx) {
     // restate their precedence by hand (F201). The prose is "Enchanted unit gains Poison
     // Immunity and coats their weapons with deadly venom, granting +1 Poison attack rating"
     // (`Unit rosters/Warlord mod unit data/HELP.TXT:5785`).
-    // PROVENANCE[venom]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:11:ea8bdedab4ef0568fc60f20b
+    // PROVENANCE[venom]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:11:ea8bdedab4ef0568fc60f20b
     statStep({ id: 'venom', sourceId: 'venom', sourceLabel: 'Venom', phase: 'd',
       writes: ['poisonImmunity', 'poison'],
       when: () => venomActive,
@@ -1507,7 +1528,7 @@ function magicCalcScriptStatSteps(ctx) {
           if (!weaknessBinaryHits(u, c) && slotHasBreath(u, c)) u[c.strengthField] -= weaknessPenalty;
         }
       } }),
-    // `UnitCalc.CAS:326` gates on `GETENCHANTMENTFLAG(U,EncTrueSight,0)` — the **calculated**
+    // `UnitCalc.CAS:328` gates on `GETENCHANTMENTFLAG(U,EncTrueSight,0)` — the **calculated**
     // record — and `b:eyeOfHeaven` sets that flag at the very end of region `b`, which is the
     // crossing the CoM2 region map states outright ("Eye of Heaven's friendly True Sight grant
     // crosses the hook boundary deliberately"). So the gate is a record read at this step's own
@@ -1532,20 +1553,34 @@ function magicCalcScriptStatSteps(ctx) {
           if (warlordFlameBladeOwnsSlot(u, c)) u[c.strengthField] += 1;
         }
       } }),
-    // PROVENANCE[berserkWarlord]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:6:1f86b30d6505c657da0d1205
-    statStep({ id: 'berserkWarlord', sourceId: 'berserkWarlord', sourceLabel: 'Berserk',
-      phase: 'd', writes: ['toHit', 'toBlk'], when: () => warlordBerserk,
-      apply: u => { u.toHit += 15; u.toBlk -= 10; } }),
+    // "on the opposite, Night Goblin gain bonus from Darkness or Eternal Night"
+    // (`UnitCalc.CAS:350-360`): template 356 gets +10 To Hit and +10 To Defend whenever
+    // `ETERNALNIGHTCOUNT>0` or either side's Darkness combat global is up. `hasDarkness` is
+    // already that disjunction — plain Darkness on either side, or Eternal Night held by either
+    // wizard, which makes Darkness global.
+    //
+    // The gate is `GetStat(U,STypeID,1)`, the same *permanent*-record template read as the Poor
+    // Vision exemption at `UnitCalcPre.CAS:1352`, and it is the inverse of it: there 356 is the
+    // one template excused from a penalty, here it is the one template given a bonus. Both take
+    // the `nightGoblins` key rather than a bare template id, so the one table of template-id
+    // exceptions stays the only place a template id is named (`SPECIAL_UNIT_DEFS`,
+    // `stats_identity.js`). The block sits between combat Flame Blade (`:333`) and Rust
+    // (`:498`), which is its rank in region `d`.
+    // PROVENANCE[nightGoblinsNightVision]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:10:1619334dcc3e4d7d00947967
+    statStep({ id: 'nightGoblinsNightVision', sourceLabel: 'Night Vision', phase: 'd',
+      writes: ['toHit', 'toBlk'],
+      when: () => isWarlord && identity.specialUnit === 'nightGoblins' && hasDarkness,
+      apply: u => { u.toHit += 10; u.toBlk += 10; } }),
     ...abilByPhase.d.filter(step => step.id === 'rust'),
     // Hurricane writes all three secondary channel modifiers, at HURRICANESTR 2: −10 per
     // strength on Ranged and Thrown, −15 per strength on Breath.
-    // PROVENANCE[hurricane]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:16:06e78c928483b8a3e5c56c68
+    // PROVENANCE[hurricane]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:16:06e78c928483b8a3e5c56c68
     statStep({ id: 'hurricane', sourceId: 'hurricane', sourceLabel: 'Hurricane',
       phase: 'd', writes: secondaryHitFields,
       when: () => hurricaneActive,
       apply: u => {
         // HURRICANESTR is 2 for a normally cast Hurricane: the script seeds 1 and adds 1 for
-        // the cast level, which is the case its own comment at UnitCalc.CAS:558 states.
+        // the cast level, which is the case its own comment at UnitCalc.CAS:550 states.
         for (const target of secondaryHitTargets) {
           u[target.field] -= target.kindAt(u) === 'breath' ? 30 : 20;
         }
@@ -1561,8 +1596,8 @@ function magicCalcScriptStatSteps(ctx) {
     // The block's other three gates are the city model the calculator does not have —
     // `ISBUILT(C,BMoats)`, the defending side `W=D`, and the city-area coordinate box — which is
     // what the single `fortification` control stands for. The +4 Defense variant at
-    // `UnitCalcPre.CAS:1822-1826` is *strategic* combat and is deliberately not modelled.
-    // PROVENANCE[fortification]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:7:9e084676ba841f9385a766b0
+    // `UnitCalcPre.CAS:1833-1837` is *strategic* combat and is deliberately not modelled.
+    // PROVENANCE[fortification]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:7:9e084676ba841f9385a766b0
     statStep({ id: 'fortification', sourceId: 'fortification', sourceLabel: 'Fortification',
       phase: 'd', writes: ['largeShield', 'missileImmunity'],
       when: () => isWarlord && !!abilities.fortification,
@@ -1571,14 +1606,14 @@ function magicCalcScriptStatSteps(ctx) {
         else u.largeShield = true;
       } }),
     // Colossal Strength scales the attack as it stands at its own position in `d`
-    // (UnitCalc.CAS:1227-1243 reads GetStat there), so everything before it in the file
+    // (UnitCalc.CAS:1219-1235 reads GetStat there), so everything before it in the file
     // scales and everything after does not. Under the buckets its input was a named subtotal;
     // here it is just `u.atk`.
-    // PROVENANCE[colossalStrength]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:14:0df535b06a7a126d328bccbb
+    // PROVENANCE[colossalStrength]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:14:0df535b06a7a126d328bccbb
     statStep({ id: 'colossalStrength', phase: 'd', writes: ['atk', ...strengthFields],
       when: () => colossalStrength,
       apply: u => {
-        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+CSM))` (UnitCalc.CAS:1233) carries no
+        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+CSM))` (UnitCalc.CAS:1225) carries no
         // melee-presence test, while the two lines under it gate their own channels
         // (`SRangedType>0 %AND <30` at :1235, `SThrown>0` at :1239) — so the block's silence on
         // melee is deliberate, not an omission (F142).
@@ -1595,7 +1630,7 @@ function magicCalcScriptStatSteps(ctx) {
     // total once, adds it to melee, then resets each positive source field independently. One
     // walk reads all three fields at this position directly — the cross-channel read F80 exists
     // to make expressible.
-    // PROVENANCE[vampirism:transfer]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:14:c5d3faadcc9d84865b5f1463
+    // PROVENANCE[vampirism:transfer]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:14:c5d3faadcc9d84865b5f1463
     statStep({ id: 'vampirism:transfer', sourceId: 'vampirism:transfer',
       sourceLabel: 'Vampirism', phase: 'd',
       writes: ['atk', ...strengthFields],
@@ -1614,10 +1649,10 @@ function magicCalcScriptStatSteps(ctx) {
     // an addition to the record's Thrown field whether or not the unit owns a Thrown attack:
     // the leading `+1` creates one at zero melee. The field is seeded empty and typeless where
     // the unit has none, and this step supplies the identity, so no predicate before
-    // `UnitCalc.CAS:1262` sees a Thrown attack the grant has not yet made. It writes the
+    // `UnitCalc.CAS:1254` sees a Thrown attack the grant has not yet made. It writes the
     // independent Thrown field even when another modern attack exists; the record's separate
     // fields preserve that channel separation.
-    // PROVENANCE[shadowStrike:thrown]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:1a3b77e0b9b6ad575bde5d74
+    // PROVENANCE[shadowStrike:thrown]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:5:1a3b77e0b9b6ad575bde5d74
     statStep({ id: 'shadowStrike:thrown', sourceId: 'shadowStrike:thrown',
       sourceLabel: 'Shadow Strike', phase: 'd',
       writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
@@ -1630,14 +1665,14 @@ function magicCalcScriptStatSteps(ctx) {
           u[c.thrownTypeField] = 'thrown';
         }
       } }),
-    // Psycho Force (UnitCalc.CAS:1413-1417) and Pneuma Field (:1419-1425) both *read*
+    // Psycho Force (UnitCalc.CAS:1405-1409) and Pneuma Field (:1419-1425) both *read*
     // `GETSTAT(U,SResist,0)` — the Resistance standing at their own position in `d`. That is
     // before region `e`, so neither sees the aura pass: a Holy Bonus or Resistance to All aura
     // raises Resistance afterwards and must not feed either effect. Reading the finished record
     // instead — which is what the pre-step code did — over-applied both whenever an aura was
     // present. `%I` is the integer part, so the division truncates toward zero rather than
     // flooring, which is visible only when a curse has driven Resistance negative.
-    // PROVENANCE[psychoForce]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:f3235558e9ec7dbd4427844b
+    // PROVENANCE[psychoForce]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:4:f3235558e9ec7dbd4427844b
     statStep({ id: 'psychoForce', sourceId: 'psychoForce', sourceLabel: 'Psycho Force',
       phase: 'd', writes: ['toHit', 'toBlk'],
       when: u => !!u.psychoForce,
@@ -1646,7 +1681,7 @@ function magicCalcScriptStatSteps(ctx) {
         u.toHit += psyche;
         u.toBlk += psyche;
       } }),
-    // PROVENANCE[pneumaField]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:7:7f0a838eb82f6cc67584d242
+    // PROVENANCE[pneumaField]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:7:7f0a838eb82f6cc67584d242
     statStep({ id: 'pneumaField', phase: 'd', writes: ['lifeSteal'],
       when: u => !!u.pneumaField,
       apply: u => {
@@ -1655,7 +1690,7 @@ function magicCalcScriptStatSteps(ctx) {
       } }),
     // Energy Cannon reads the live common-plus-ranged threshold here, before region e, and
     // caps only its upper bound. Preserve that snapshot on the same ordered record.
-    // PROVENANCE[energyCannonThreshold]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:9:415a610fbab04f989880d02e
+    // PROVENANCE[energyCannonThreshold]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:9:415a610fbab04f989880d02e
     statStep({ id: 'energyCannonThreshold', sourceId: 'energyCannon',
       sourceLabel: 'Energy Cannon', phase: 'd', writes: ['energyCannonToHit'],
       when: () => energyCannon,
@@ -1699,7 +1734,7 @@ function magicCalcScriptStatSteps(ctx) {
     // intact segment from one in the inner area, so there is nothing here to name the slot the
     // engine would break. The write is made because the block makes it, and it is published on
     // the finished ability set.
-    // PROVENANCE[blazeOfGlory]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:16:6cabb4119ac66a1204ea795e
+    // PROVENANCE[blazeOfGlory]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:16:6cabb4119ac66a1204ea795e
     statStep({ id: 'blazeOfGlory', phase: 'd',
       writes: ['def', 'atk', ...strengthFields, ...rangedTypeFields, ...thrownTypeFields,
         'wallCrusher', 'armorPiercing', 'firstStrike'],
@@ -1737,11 +1772,11 @@ function magicCalcScriptStatSteps(ctx) {
           u[c.thrownTypeField] = 'thrown';
         }
       } }),
-    // PROVENANCE[beatOfSwiftness]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:6:7f8a22e8f9456e94a223b150
+    // PROVENANCE[beatOfSwiftness]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:6:7f8a22e8f9456e94a223b150
     statStep({ id: 'beatOfSwiftness', phase: 'd', writes: ['def'],
       when: () => isWarlord && !!(abilities && abilities.beatOfSwiftness),
       apply: u => { u.def -= roundTiesToEven(u.def / 10); } }),
-    // PROVENANCE[hierophany]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:8:d2bbbf57ed3ded3bf92652f9
+    // PROVENANCE[hierophany]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:8:d2bbbf57ed3ded3bf92652f9
     statStep({ id: 'hierophany', phase: 'd', writes: ['def'],
       when: () => isWarlord && !!(abilities && abilities.hierophany),
       apply: u => { u.def = Math.floor(u.def * 0.5); } }),
@@ -1771,7 +1806,7 @@ function postHookStatSteps(ctx) {
     // Caster.exe clamps the common Hit field first, then clamps each attack-specific
     // modifier against that normalized common value. Keeping these as two steps makes the
     // load-bearing order visible and preserves the channel modifier stored by the engine.
-    // PROVENANCE[modernClampCommon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
+    // PROVENANCE[modernClampCommon]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
     statStep({ id: 'modernClampCommon', sourceId: 'statClamp',
       sourceLabel: 'Stat clamp', phase: 'e', writes: ['toHit'],
       when: () => isCoM2,
@@ -1792,7 +1827,7 @@ function postHookStatSteps(ctx) {
     // per-attack To Hit offsets. The two touch disjoint fields, so the modern half is a branch
     // inside one step rather than a second id: this step is `SCOPE_ALL` and the To Hit clamp
     // has no DOS counterpart, which `e:dosClamp` above covers instead.
-    // PROVENANCE[clamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:264ed04fa725139a19a9de7d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:f42794b5fb78038c35722afa | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
+    // PROVENANCE[clamp]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:264ed04fa725139a19a9de7d | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:6:f42794b5fb78038c35722afa | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:7ab1bb7e18b0870f20ec5ada
     statStep({ id: 'clamp', phase: 'e',
       writes: ['res', 'def', 'atk', ...strengthFields, 'hp', 'gaze', 'doomGaze',
         'toHitMelee', ...secondaryHitFields],

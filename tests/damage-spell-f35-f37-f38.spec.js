@@ -5,15 +5,15 @@ test('F35 modern Area spell iterations use full HP instead of the wounded-top ca
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
     const run = version => calcDamageSpellDist(
-      2, 10, 0.5, 2, 0.5, 10, 11, 0, null, 1, version, {}, true,
+      2, 10, 0.5, 2, 0.5, 10, 0, null, 1, version, {}, true,
     );
     return {
-      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => ({
+      modern: ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => ({
         version,
         actual: run(version),
       })),
-      fullHpReference: calcAreaDamageDist(2, 10, 0.5, 2, 0.5, 10, 11, 0, null),
-      woundedReference: calcAreaDamageDist(2, 10, 0.5, 2, 0.5, 10, 11, 0, null, 1),
+      fullHpReference: calcAreaDamageDist(2, 10, 0.5, 2, 0.5, 10, 0, null),
+      woundedReference: calcAreaDamageDist(2, 10, 0.5, 2, 0.5, 10, 0, null, 1),
       dos: ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'].map(version => ({
         version,
         actual: run(version),
@@ -57,7 +57,7 @@ test('F37/F38 order modern Magic Immunity before Black Sleep Doom spell damage',
       rangedDist: 1,
       ...overrides,
     });
-    const versions = ['com2_1.05.11', 'com2_warlord_1.5.12.7'];
+    const versions = ['com2_1.05.11', 'com2_warlord_1.5.12.9'];
     const modern = versions.map(version => {
       const area = version === 'com2_1.05.11';
       const wall = abilities => buildWallOfFirePhase(true, {
@@ -105,23 +105,23 @@ test('F37/F38 order modern Magic Immunity before Black Sleep Doom spell damage',
       return {
         version,
         magicImmune: calcDamageSpellDist(
-          2, 10, 1, 0, 0, 10, 17, 0, null, 3, version,
+          2, 10, 1, 0, 0, 10, 0, null, 3, version,
           { magicImmunity: true }, true,
         ),
         magicImmuneBlackSleep: calcDamageSpellDist(
-          2, 10, 1, 0, 0, 10, 17, 0, null, 3, version,
+          2, 10, 1, 0, 0, 10, 0, null, 3, version,
           { magicImmunity: true, blackSleep: true }, true,
         ),
         nonmagicBypass: calcDamageSpellDist(
-          2, 10, 1, 0, 0, 10, 17, 0, null, 3, version,
+          2, 10, 1, 0, 0, 10, 0, null, 3, version,
           { magicImmunity: true }, true, true,
         ),
         blackSleepArea: calcDamageSpellDist(
-          2, 10, 0, 100, 1, 10, 17, 2, null, 3, version,
+          2, 10, 0, 100, 1, 10, 2, null, 3, version,
           { blackSleep: true }, true,
         ),
         blackSleepNonArea: calcDamageSpellDist(
-          1, 12, 0, 100, 1, 10, 17, 2, null, 3, version,
+          1, 12, 0, 100, 1, 10, 2, null, 3, version,
           { blackSleep: true }, false,
         ),
         wallBlackSleep: wall({ blackSleep: true }),
@@ -167,10 +167,12 @@ test('F37/F38 order modern Magic Immunity before Black Sleep Doom spell damage',
   for (const row of report.modern) {
     expect(row.magicImmune).toEqual([1]);
     expect(row.magicImmuneBlackSleep).toEqual([1]);
-    expect(row.nonmagicBypass[17]).toBe(1);
-    expect(row.blackSleepArea[17]).toBe(1);
+    // Two 10-HP figures each take the full 10 and nothing truncates the phase, so the
+    // area cases sit at 20 rather than at the caller's remaining-HP figure.
+    expect(row.nonmagicBypass[20]).toBe(1);
+    expect(row.blackSleepArea[20]).toBe(1);
     expect(row.blackSleepNonArea[12]).toBe(1);
-    expect(row.wallBlackSleep[row.version === 'com2_1.05.11' ? 17 : 12]).toBe(1);
+    expect(row.wallBlackSleep[row.version === 'com2_1.05.11' ? 20 : 12]).toBe(1);
     expect(row.wallImmune).toEqual([1]);
     expect(row.immolationBlackSleep[21]).toBe(1);
     expect(row.immolationImmune).toEqual(row.noImmolationImmune);

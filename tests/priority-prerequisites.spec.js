@@ -6,7 +6,7 @@ test('F7 uses the moddable modern Supernatural formula with ties-to-even roundin
   const values = await page.evaluate(() => ({
     tieDown: supernaturalMinDamageForHits(25, 'com2_1.05.11'),
     divergence: supernaturalMinDamageForHits(28, 'com2_1.05.11'),
-    tieUp: supernaturalMinDamageForHits(75, 'com2_warlord_1.5.12.7'),
+    tieUp: supernaturalMinDamageForHits(75, 'com2_warlord_1.5.12.9'),
     modded: supernaturalMinDamageForHits(15, 'com2_1.05.11', { starts: 5, ratio: 25 }),
   }));
   expect(values).toEqual({ tieDown: 8, divergence: 10, tieUp: 26, modded: 2 });
@@ -83,7 +83,7 @@ test('R9-G1g imports CoM Supernatural carriers but leaves their effect inactive'
     const item = control.closest('.abil-item');
     const com2Callback = supernaturalMinDamageFn({ supernatural: true }, 'com2_1.05.11');
     const warlordCallback = supernaturalMinDamageFn(
-      { supernatural: true }, 'com2_warlord_1.5.12.7');
+      { supernatural: true }, 'com2_warlord_1.5.12.9');
     return {
       carriers: Object.values(COM_UNITS_DATA)
         .filter(unit => (unit.abilities || []).includes('Supernatural'))
@@ -132,12 +132,12 @@ test('R9-G1g preserves every compiled-modern Supreme Light eligibility alternati
     });
     return {
       com2: eligible('com2_1.05.11'),
-      warlord: eligible('com2_warlord_1.5.12.7'),
+      warlord: eligible('com2_warlord_1.5.12.9'),
       warlordLightningBolt: {
         live: supremeLightActiveForUnit({ supremeLight: true }, 'normal',
-          'com2_warlord_1.5.12.7', { liveRangedType: 'magic_lightning', baseRangedType: 'missile' }),
+          'com2_warlord_1.5.12.9', { liveRangedType: 'magic_lightning', baseRangedType: 'missile' }),
         base: supremeLightActiveForUnit({ supremeLight: true }, 'normal',
-          'com2_warlord_1.5.12.7', { liveRangedType: 'missile', baseRangedType: 'magic_lightning' }),
+          'com2_warlord_1.5.12.9', { liveRangedType: 'missile', baseRangedType: 'magic_lightning' }),
       },
     };
   });
@@ -155,16 +155,16 @@ test('F54/F55 keep base-CoM2 summon identities out of Warlord', async ({ page })
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
     const simple = (identity, abilities) => deriveUnitStats({
-      prefix: 'a', version: 'com2_warlord_1.5.12.7', identity, abilities,
+      prefix: 'a', version: 'com2_warlord_1.5.12.9', identity, abilities,
       figs: 1, atk: 1, rtb: 0, rtbType: 'none', modernAttacks: {}, def: 0, res: 0, hp: 10,
       weapon: 'normal', level: 'normal',
     });
     const construct = simple(createUnitIdentity({
-      version: 'com2_warlord_1.5.12.7', templateId: 37,
+      version: 'com2_warlord_1.5.12.9', templateId: 37,
       baseRace: 'Special', baseFantastic: false,
     }), { combatSummoned: true });
     const paladins = simple(createUnitIdentity({
-      version: 'com2_warlord_1.5.12.7', templateId: 113,
+      version: 'com2_warlord_1.5.12.9', templateId: 113,
       baseRace: 'High Men', baseFantastic: false,
     }), { combatSummoned: true });
     return {
@@ -182,7 +182,7 @@ test('F54/F55 keep base-CoM2 summon identities out of Warlord', async ({ page })
 test('M6 merges all Lava Smelter grants and stacks both elemental protections', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => {
-    const version = 'com2_warlord_1.5.12.7';
+    const version = 'com2_warlord_1.5.12.9';
     const abilities = {
       lavaSmelterWeaponImmunity: true,
       lavaSmelterMissileImmunity: true,

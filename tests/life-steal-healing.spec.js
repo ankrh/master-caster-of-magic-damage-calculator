@@ -44,9 +44,10 @@ test('F28 raw Life Steal stays uncapped and repeated calls convolve exact heal s
       destructionFail: 0, targetHP: 1, lifeStealMod: -3,
       lifeStealRes: 0, immDist: null, bloodsucker: false,
       version: 'com2_1.05.11', sourceState: state };
-    const first = convolveTouchAttacks([1], 1, 2, spec);
-    const haste = repeatTouchAttack(first, [1], 1, 2, spec);
+    const first = convolveTouchAttacks([1], 2, spec);
+    const haste = repeatTouchAttack(first, [1], 2, spec);
     const expectedRaw = calcLifeStealRawDist(4, 0, -3);
+    const expectedFirstRaw = calcLifeStealRawDist(2, 0, -3);
     const makeUnit = (prefix, overrides = {}) => deriveUnitStats({
       prefix, version: 'com2_1.05.11', abilities: {}, level: 'normal',
       weapon: 'normal', armor: 'normal', rtbType: 'none', unitType: 'normal',
@@ -64,6 +65,7 @@ test('F28 raw Life Steal stays uncapped and repeated calls convolve exact heal s
     const sum = dist => dist.reduce((a, b) => a + b, 0);
     return {
       firstDamage: first.dist,
+      expectedFirstRaw,
       firstRawEV: first.rawDrainEV,
       firstRawSum: sum(first.lifeStealDist),
       hasteRaw: haste.lifeStealDist,
@@ -78,7 +80,12 @@ test('F28 raw Life Steal stays uncapped and repeated calls convolve exact heal s
     };
   });
 
-  expect(report.firstDamage[1]).toBeCloseTo(1, 12);
+  // Nothing truncates a phase, so the drain is the damage: the two distributions coincide
+  // when Life Steal is the only contributor.
+  expect(report.firstDamage).toHaveLength(report.expectedFirstRaw.length);
+  report.firstDamage.forEach((probability, i) => {
+    expect(probability).toBeCloseTo(report.expectedFirstRaw[i], 12);
+  });
   expect(report.firstRawEV).toBeCloseTo(17, 12);
   expect(report.firstRawSum).toBeCloseTo(1, 12);
   expect(report.hasteRaw).toHaveLength(report.expectedRaw.length);
@@ -87,7 +94,10 @@ test('F28 raw Life Steal stays uncapped and repeated calls convolve exact heal s
     expect(report.fsHasteRaw[i]).toBeCloseTo(report.expectedRaw[i], 12);
   });
   expect(report.fsHasteBenefit).toBeGreaterThan(0);
-  expect(report.hasteDamage[1]).toBeCloseTo(1, 12);
+  expect(report.hasteDamage).toHaveLength(report.expectedRaw.length);
+  report.hasteDamage.forEach((probability, i) => {
+    expect(probability).toBeCloseTo(report.expectedRaw[i], 12);
+  });
   expect(report.hasteSum).toBeCloseTo(1, 12);
   expect(report.hasteRawSum).toBeCloseTo(1, 12);
   expect(report.hasStateBenefits).toBe(true);
@@ -313,25 +323,25 @@ test('F27/F28 sequential modern calls retain heal state, actual figure counts, a
     const threeRolls = calcLifeStealRawDist(3, 9, 0);
 
     // Bloodsucker finalizes the positive gaze ApplyAttack and its later melee call separately.
-    const gazeBloodsucker = resolve('com2_warlord_1.5.12.7',
-      makeUnit('com2_warlord_1.5.12.7', 'a', {
+    const gazeBloodsucker = resolve('com2_warlord_1.5.12.9',
+      makeUnit('com2_warlord_1.5.12.9', 'a', {
         atk: 1, dmg: 4, abilities: { bloodSucker: true, doomGaze: 1 },
       }),
-      makeUnit('com2_warlord_1.5.12.7', 'b', { figs: 2, hp: 100 }));
-    const multiGazeBloodsucker = resolve('com2_warlord_1.5.12.7',
-      makeUnit('com2_warlord_1.5.12.7', 'a', {
+      makeUnit('com2_warlord_1.5.12.9', 'b', { figs: 2, hp: 100 }));
+    const multiGazeBloodsucker = resolve('com2_warlord_1.5.12.9',
+      makeUnit('com2_warlord_1.5.12.9', 'a', {
         atk: 1, hp: 200, dmg: 100,
         abilities: { bloodSucker: true, stoningGaze: 0, doomGaze: 1 },
       }),
-      makeUnit('com2_warlord_1.5.12.7', 'b', { figs: 2, hp: 100, res: 9 }));
+      makeUnit('com2_warlord_1.5.12.9', 'b', { figs: 2, hp: 100, res: 9 }));
 
     // The defender heals before melee. Its revised three-HP capacity must admit all
     // three later hits even though the original display cap was only one HP.
-    const healedTarget = resolve('com2_warlord_1.5.12.7',
-      makeUnit('com2_warlord_1.5.12.7', 'a', {
+    const healedTarget = resolve('com2_warlord_1.5.12.9',
+      makeUnit('com2_warlord_1.5.12.9', 'a', {
         atk: 3, hp: 100, hitChance: 100,
       }),
-      makeUnit('com2_warlord_1.5.12.7', 'b', {
+      makeUnit('com2_warlord_1.5.12.9', 'b', {
         dmg: 9, abilities: { bloodSucker: true, doomGaze: 1 },
       }));
 
@@ -371,17 +381,19 @@ test('F27 Bloodsucker finalizes once after riders with independent Warlord damag
       lifeStealRes: 0, immDist: null, bloodsucker: true,
       sourceState: { figures: 4, hp: 10, totalDamage: 5,
         irrecoverableDamage: 0, undeadDamage: 2, bonusHp: 0 } };
-    const riderOnly = convolveTouchAttacks([1], 10, 4, { ...base,
-      poisonStr: 1, poisonFail: 1, version: 'com2_warlord_1.5.12.7' });
-    const zero = convolveTouchAttacks([1], 10, 4,
-      { ...base, version: 'com2_warlord_1.5.12.7' });
-    const once = convolveTouchAttacks([0, 1], 10, 4,
-      { ...base, version: 'com2_warlord_1.5.12.7' });
-    const overkill = convolveTouchAttacks([0, 1], 1, 4,
-      { ...base, version: 'com2_warlord_1.5.12.7' });
-    const haste = repeatTouchAttack(once, [0, 1], 10, 4,
-      { ...base, version: 'com2_warlord_1.5.12.7' });
-    const baseCom2 = convolveTouchAttacks([0, 1], 10, 4,
+    const riderOnly = convolveTouchAttacks([1], 4, { ...base,
+      poisonStr: 1, poisonFail: 1, version: 'com2_warlord_1.5.12.9' });
+    const zero = convolveTouchAttacks([1], 4,
+      { ...base, version: 'com2_warlord_1.5.12.9' });
+    const once = convolveTouchAttacks([0, 1], 4,
+      { ...base, version: 'com2_warlord_1.5.12.9' });
+    // The target's remaining HP is no longer an input to the call, so a 1-HP target takes
+    // the full 1 + 2 rather than the clipped 1.
+    const overkill = convolveTouchAttacks([0, 1], 4,
+      { ...base, targetHP: 1, version: 'com2_warlord_1.5.12.9' });
+    const haste = repeatTouchAttack(once, [0, 1], 4,
+      { ...base, version: 'com2_warlord_1.5.12.9' });
+    const baseCom2 = convolveTouchAttacks([0, 1], 4,
       { ...base, version: 'com2_1.05.11' });
     return {
       riderOnly: riderOnly.dist,
@@ -399,7 +411,7 @@ test('F27 Bloodsucker finalizes once after riders with independent Warlord damag
   expect(report.zero[0]).toBeCloseTo(1, 12);
   expect(report.once[3]).toBeCloseTo(1, 12); // once per ApplyAttack, not per figure
   expect(report.onceHeal).toBeCloseTo(2, 12);
-  expect(report.overkill[1]).toBeCloseTo(1, 12);
+  expect(report.overkill[3]).toBeCloseTo(1, 12); // overkill is displayed, not clipped
   expect(report.overkillHeal).toBeCloseTo(2, 12); // target cap never clips healing input
   expect(report.haste[6]).toBeCloseTo(1, 12); // repeated call gets its own trigger
   expect(report.baseCom2[1]).toBeCloseTo(1, 12); // Bloodsucker inactive in base CoM2
@@ -461,10 +473,29 @@ test('combat-state categories are output means rather than advanced starting inp
   expect(report.lifeStealTargetMean.undeadDamage).toBeGreaterThan(0);
   expect(report.lifeStealSourceMean.extraHits).toBeGreaterThan(0);
   expect(report.stoningMean.irreversibleDamage).toBeGreaterThan(0);
-  await expect(page.locator('#aCombatStateSummary')).toContainText('Irrecoverable damage');
+  // The block states the composition of the damage on the record, not its magnitudes: the
+  // engine's accumulators are uncapped, so a magnitude reads as more damage than the unit can
+  // hold. The three categories partition the record's total, so the shares sum to 100%.
+  // A is the draining attacker against a defender with no attack, so nothing lands on it:
+  // a composition of no damage is stated as an absence, not as three zeroes. Its bonus-HP
+  // row is a magnitude and stays either way.
+  await expect(page.locator('#aCombatStateSummary')).toContainText('none');
+  await expect(page.locator('#aCombatStateSummary')).not.toContainText('%');
   await expect(page.locator('#aCombatStateSummary')).toContainText(
     report.lifeStealSourceMean.extraHits.toFixed(3));
+  const shareOf = (mean, key) => {
+    const total = mean.irreversibleDamage + mean.undeadDamage + mean.regularDamage;
+    return `${((mean[key] / total) * 100).toFixed(1)}%`;
+  };
+  await expect(page.locator('#bCombatStateSummary')).toContainText('Irrecoverable');
   await expect(page.locator('#bCombatStateSummary')).toContainText(
-    report.stoningMean.irreversibleDamage.toFixed(3));
+    shareOf(report.stoningMean, 'irreversibleDamage'));
+  // The three shares partition the record, so they sum to 100% whatever the magnitudes were.
+  const shownShares = await page.locator('#bCombatStateSummary strong')
+    .evaluateAll(nodes => nodes
+      .filter(node => node.textContent.trim().endsWith('%'))
+      .map(node => parseFloat(node.textContent)));
+  expect(shownShares).toHaveLength(3);
+  expect(shownShares.reduce((total, share) => total + share, 0)).toBeCloseTo(100, 1);
   expectNoConsoleErrors(errors);
 });

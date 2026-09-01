@@ -117,7 +117,7 @@ function runIdentityChecks(ctx) {
     ['mom_1.31', evalInContext(ctx, 'MOM_UNITS_DATA')],
     ['com_6.08', evalInContext(ctx, 'COM_UNITS_DATA')],
     ['com2_1.05.11', evalInContext(ctx, 'COM2_UNITS_DATA')],
-    ['com2_warlord_1.5.12.7', evalInContext(ctx, 'WARLORD_UNITS_DATA')],
+    ['com2_warlord_1.5.12.9', evalInContext(ctx, 'WARLORD_UNITS_DATA')],
   ];
   for (const [version, data] of rosterSets) {
     for (const unit of Object.values(data)) {
@@ -218,8 +218,8 @@ function runIdentityChecks(ctx) {
   ];
   orderedRealmAbilities.forEach((abilities, index) => {
     const unit = ctx.deriveUnitStats(baseUnitInput({
-      version: 'com2_warlord_1.5.12.7',
-      identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.7', {
+      version: 'com2_warlord_1.5.12.9',
+      identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.9', {
         baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen',
       }),
       abilities,

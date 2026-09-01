@@ -110,7 +110,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.060 },
     vacuity: {
       'b.ability.righteousness':
-        'Keep, and the absence is the rule under test: a Stoning Gaze is Nature realm, outside the Chaos/Death gate that righteousnessDeathGaze measures. stoningGazeBasic differs only in this ability and pins the same 8.060, which is the control; the gaze half is live at delta 2.91.',
+        'Keep, and the absence is the rule under test: a Stoning Gaze is Nature realm, outside the Chaos/Death gate that righteousnessDeathGaze measures. stoningGazeBasic differs only in this ability and pins the same 8.060, which is the control; the gaze half is live.',
     },
   },
 
@@ -271,6 +271,35 @@ definePresets({
     a: { atk:8, toHitMod:70, hp:10 },
     b: { atk:0, def:6, res:7, toBlkMod:70, hp:10, unitType:'fantastic_chaos', abilities: { realmWard:'chaos' } },
     expected: { dmgToA: 0, dmgToB: 5 },
+  },
+
+  // --- CoM 2 Spell Ward ---
+  spellWardFantasticCoM2: {
+    desc: 'CoM2 matching Chaos Spell Ward removes 3 Defense through the IsChaosUnit arm of the block at Units.RecalculateUnits.pas $005A5D36: def 6 becomes 3, so 8 certain hits against 3 certain blocks deal 5.',
+    version: V_COM2,
+    a: { atk:8, hitChance:70, hp:10 },
+    b: { atk:0, def:6, res:7, toBlkMod:70, hp:10, unitType:'fantastic_chaos', abilities: { spellWard:'chaos' } },
+    expected: { dmgToA: 0, dmgToB: 5 },
+  },
+  spellWardNonFantasticCoM2: {
+    desc: 'Spell Ward reaches a non-Fantastic unit of the ward realm: the block at $005A5D36 is a settlement guard over five realm arms and nothing else, and Q31 shows IsChaosUnit is `(race = RCChaos) or (ChaosChannel and EncUndead)` with no Fantastic term. Chaos-race non-Fantastic def 6 becomes 3, so 8 certain hits against 3 certain blocks deal 5.',
+    version: V_COM2,
+    a: { atk:8, hitChance:70, hp:10 },
+    b: { atk:0, def:6, res:7, toBlkMod:70, hp:10, identity: { baseFantastic:false, baseRace:'Chaos' }, abilities: { spellWard:'chaos' } },
+    expected: { dmgToA: 0, dmgToB: 5 },
+  },
+  spellWardWrongRealmCoM2: {
+    desc: 'Spell Ward is a realm test and nothing else: a Nature ward leaves the same Chaos Fantastic unit at Defense 6, so 8 certain hits against 6 certain blocks deal 2.',
+    version: V_COM2,
+    a: { atk:8, hitChance:70, hp:10 },
+    b: { atk:0, def:6, res:7, toBlkMod:70, hp:10, unitType:'fantastic_chaos', abilities: { spellWard:'nature' } },
+    expected: { dmgToA: 0, dmgToB: 2 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the assertion is that a ward of the wrong realm charges nothing, and every ablation available also charges nothing - dropping the ward leaves no ward, and dropping the Chaos realm leaves a unit no ward arm names.',
+      'b.ability.spellWard':
+        'Keep, and the absence is the rule under test: the block at $005A5D36 pairs each realm arm with its own city byte, so a Nature ward never reaches a Chaos unit. spellWardFantasticCoM2 differs only in spellWard nature -> chaos and pins 5.000 against this 2.000.',
+    },
   },
 
   // --- Warp Creature ---
@@ -637,6 +666,18 @@ definePresets({
   },
 
   // --- Undead ---
+  chaosSurgeReachesChaosChannelsUndeadCoM2: {
+    desc: 'Chaos Surge (CoM2) still pays a Chaos-Channelled unit that a later Undead conversion re-tagged Death. The block gates on `IsChaosUnit(i)` at $005A1274, and the helper is `(race = RCChaos) or (ChaosChannel(u) and EncUndead)` at $00594FE4, so the Chaos realm `c:chaosChannels:armor:race` wrote and `c:undead` then overwrote is recovered by the second arm. One copy is +3 melee in CoM2: atk 5 -> 8, 100% To Hit against Defense 0 -> 8.000. Reading the scalar realm alone sees Death, the surge pays nothing, and the card deals 5.000.',
+    version: V_COM2,
+    a: { atk:5, hitChance:70, hp:10, abilities: { ccDefense: true, undead: true } },
+    b: { hp:10 },
+    chaosSurge: 1,
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+    vacuity: {
+      'a.ability.undead':
+        'Keep, and the absence is the rule under test: the claim is that the Undead conversion does not cost this unit the surge, so ablating Undead has to leave the same 8.000 - it removes the very overwrite the recovery arm exists to undo. Both other features are live at delta 3: without a.ability.ccDefense there is no Chaos realm to recover, and without combat.chaosSurge there is no bonus.',
+    },
+  },
   undeadBypassesWeaponImmunity: {
     desc: 'Undead normal unit bypasses defender WI: unitType overridden to fantastic_death, WI does not trigger — 5 atk 100% vs def 2 → 4.4',
     version: V_MOM_CP,
@@ -1078,7 +1119,7 @@ definePresets({
     },
   },
   bombsGrenadesReadsPermanentMeleeAfterRebuildWarlord: {
-    desc: 'The write gate is `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)` (UnitCalcPre.CAS:1068-1069). Record selector 1 is the base unit (CAS reference, Scripts.TXT:270), so the melee term is the permanent record the `base` phase leaves, not the card\'s input: Rebuild writes `SETSTAT(TU,SAttack,1,…+2)` permanently at OLSpell.CAS:280, before region `b` runs. A 4-figure unit with roster melee 0 therefore reaches the grant — melee 2 and Thrown floor(8 - 4/2) = 6 over 4 figures at 100% hit against 0 Defense = (2 + 6) x 4 = 32.0. Reading the card\'s melee input instead withheld the whole Thrown channel and left Rebuild\'s melee alone at 8.0; dropping Rebuild leaves 0.0, since the unit then has neither melee nor the grant.',
+    desc: 'The write gate is `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)` (UnitCalcPre.CAS:1068-1069). Record selector 1 is the base unit (CAS reference, Scripts.TXT:270), so the melee term is the permanent record the `base` phase leaves, not the card\'s input: Rebuild writes `SETSTAT(TU,SAttack,1,…+2)` permanently at OLSpell.CAS:588, before region `b` runs. A 4-figure unit with roster melee 0 therefore reaches the grant — melee 2 and Thrown floor(8 - 4/2) = 6 over 4 figures at 100% hit against 0 Defense = (2 + 6) x 4 = 32.0. Reading the card\'s melee input instead withheld the whole Thrown channel and left Rebuild\'s melee alone at 8.0; dropping Rebuild leaves 0.0, since the unit then has neither melee nor the grant.',
     version: V_WARLORD,
     a: { figs:4, atk:0, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, explosive: true, rebuild: true } },
@@ -1101,7 +1142,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 16.000 },
   },
   trueLightSkipsExplosiveChannelsWarlord: {
-    desc: 'True Light\'s Life branch (UnitCalcPre.CAS:1507-1536) writes only SAttack, SRanged, SDefense and SResist (plus a To Hit penalty for illusion attacks), never breath or thrown, so neither channel Explosive produced can be touched by it and no ordering between the two can change a number. Sanctify makes this normal unit Life; Fire Breath 3+4 doubles to 14, Explosive adds Thrown %I(8 - figures/2) = 7, melee is 1 + True Light 1 = 2, and Blackpowder Poison rides all three attacks: 26.0. A True Light that also wrote breath and thrown would deal 28.0. Dropping Explosive leaves 11.0.',
+    desc: 'True Light\'s Life branch (UnitCalcPre.CAS:1518-1547) writes only SAttack, SRanged, SDefense and SResist (plus a To Hit penalty for illusion attacks), never breath or thrown, so neither channel Explosive produced can be touched by it and no ordering between the two can change a number. Sanctify makes this normal unit Life; Fire Breath 3+4 doubles to 14, Explosive adds Thrown %I(8 - figures/2) = 7, melee is 1 + True Light 1 = 2, and Blackpowder Poison rides all three attacks: 26.0. A True Light that also wrote breath and thrown would deal 28.0. Dropping Explosive leaves 11.0.',
     version: V_WARLORD,
     a: { atk:1, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, sanctify: true, rocketry: true, explosive: true } },
@@ -1121,7 +1162,7 @@ definePresets({
     },
   },
   energyWeaponrySkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'The Outlander-soldier gate is `IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0) %AND (GetStat(U,SCustomAttribute,1)=1) %OR (BASEFANTASTIC(U)>0) THEN { GOTO "NOTOUTLANDERSOLDIER"; }` (UnitCalc.CAS:1406-1408), whose last term is the permanent record that Apotheosis writes. Negative claim, and the absence is the rule under test: melee 10 doubled by Apotheosis is 20, and at 100% hit against Armor 5 with a 100% block chance that is 15.0, above Supernatural\'s round(20 x 0.34) = 7 floor. Reading the training-time flag instead gave the unit Energy Weaponry, whose exact Doom ignores Armor entirely and caps the attack at floor(20/2) = 10.0; the sibling energyWeaponryMeleeWarlord without Apotheosis shows the Doom conversion is otherwise live.',
+    desc: 'The Outlander-soldier gate is `IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0) %AND (GetStat(U,SCustomAttribute,1)=1) %OR (BASEFANTASTIC(U)>0) THEN { GOTO "NOTOUTLANDERSOLDIER"; }` (UnitCalc.CAS:1398-1400), whose last term is the permanent record that Apotheosis writes. Negative claim, and the absence is the rule under test: melee 10 doubled by Apotheosis is 20, and at 100% hit against Armor 5 with a 100% block chance that is 15.0, above Supernatural\'s round(20 x 0.34) = 7 floor. Reading the training-time flag instead gave the unit Energy Weaponry, whose exact Doom ignores Armor entirely and caps the attack at floor(20/2) = 10.0; the sibling energyWeaponryMeleeWarlord without Apotheosis shows the Doom conversion is otherwise live.',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, energyBeamWeapons: true, apotheosis: true } },
@@ -1155,7 +1196,7 @@ definePresets({
     },
   },
   energyCannonDestructionWarlord: {
-    desc: 'Energy Cannon at 30% Ranged To-Hit grants Destruction -2. Beam strength 1 halves to 0; Res 5→3 gives 70% whole-unit kill for 7.0 EV.',
+    desc: 'Energy Cannon at 30% Ranged To-Hit grants Destruction -2. Beam strength 1 halves to 0; Res 5→3 gives a 70% whole-unit kill, and the engine\'s flat 150 clips at the 10 HP pool for 7.0 EV.',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10, abilities: { outlanderWizard: true, mechanical: true, heatPowerEngine: true, energyBeamWeapons: true } },
     b: { def:20, toBlkMod:70, res:5, hp:10 },
@@ -1212,6 +1253,23 @@ definePresets({
     a: { atk:10, hp:10, abilities: { outlanderWizard: true, radio: true } },
     b: { def:0, toBlkMod:70, hp:60 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  ballisticsTrainingRangedWarlord: {
+    desc: 'Ballistics Training gives Ranged +10% To Hit (UnitCalcPre.CAS:1082-1088, where 1.5.12.8 cut `SToRanged` from +20 to +10): missile 1 at the bare 30% plus 10% is 0.4 against 0.3 without the reform.',
+    version: V_WARLORD,
+    a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10,
+      abilities: { outlanderWizard: true, ballisticsTraining: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0.400 },
+  },
+  ballisticsTrainingThrownWarlord: {
+    desc: 'The same block leaves `SToThrown` at +20 (UnitCalcPre.CAS:1082-1088), so the three channels no longer share one amount: Thrown 1 at the bare 30% plus 20% is 0.5, against the 0.4 its sibling ballisticsTrainingRangedWarlord gets on Ranged.',
+    version: V_WARLORD,
+    a: { atk:0, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10,
+      abilities: { outlanderWizard: true, ballisticsTraining: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 0.500 },
   },
   militaryDrillingSkipsApotheosisPermanentFantasticWarlord: {
     desc: 'Military Drilling\'s permanent Discipline is written under `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDERUPGRADE"; }` (OverlandEndTurn.CAS:446), the permanent record Apotheosis writes. Negative claim, and the absence is the rule under test: Armor 1 + Apotheosis 4 = 5, and atk 10 at 100% hit against a 100% block chance deals 10 - 5 = 5.0. Reading the training-time flag instead granted Discipline for Armor 6 and 4.0; the sibling militaryDrillingDefenseWarlord without Apotheosis shows the Discipline armor is otherwise live.',

@@ -139,7 +139,7 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
       'mom_cp_1.60.00',
       'com_6.08',
       'com2_1.05.11',
-      'com2_warlord_1.5.12.7',
+      'com2_warlord_1.5.12.9',
     ];
     const defs = Object.fromEntries(abilityUiDefs()
       .filter(def => ['dispelEvil', 'exorcise', 'spellLock'].includes(def.key))
@@ -160,7 +160,7 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
     // name both riders, so the filter is "hidden in both MoM builds, live in either modern one".
     const modernOnlyNamingDispelEvil = abilityUiDefs()
       .filter(def => (!abilityVersionGated(def, 'com2_1.05.11')
-          || !abilityVersionGated(def, 'com2_warlord_1.5.12.7'))
+          || !abilityVersionGated(def, 'com2_warlord_1.5.12.9'))
         && abilityVersionGated(def, 'mom_1.31')
         && abilityVersionGated(def, 'mom_cp_1.60.00')
         && /Dispel Evil/.test(def.tooltip || ''))
@@ -175,7 +175,7 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
         cp160Dispel: dispelEvilFailProb(5, {}, 'fantastic_death'),
         com2Exorcise: exorciseFailProb(5, {}, 'fantastic_nature', -1, 'com2_1.05.11'),
         warlordExorcise: exorciseFailProb(5, {}, 'fantastic_nature', -1,
-          'com2_warlord_1.5.12.7'),
+          'com2_warlord_1.5.12.9'),
       },
     };
   });
@@ -185,14 +185,14 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
     'mom_cp_1.60.00': { dispelEvil: false, exorcise: true, spellLock: true },
     'com_6.08': { dispelEvil: true, exorcise: false, spellLock: false },
     'com2_1.05.11': { dispelEvil: true, exorcise: false, spellLock: true },
-    'com2_warlord_1.5.12.7': { dispelEvil: true, exorcise: false, spellLock: true },
+    'com2_warlord_1.5.12.9': { dispelEvil: true, exorcise: false, spellLock: true },
   });
   expect(report.matrixSpellLock).toEqual({
     'mom_1.31': false,
     'mom_cp_1.60.00': false,
     'com_6.08': true,
     'com2_1.05.11': false,
-    'com2_warlord_1.5.12.7': false,
+    'com2_warlord_1.5.12.9': false,
   });
   expect(report.unaffected).toEqual({
     mom131Dispel: 0.9,

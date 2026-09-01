@@ -5,7 +5,7 @@ Which per-hit/touch effects fire on which attack phase, per game version.
 DOS sources: `DOS reconstructed/combat.c`, `R6.2b.evidence.md`, `R6.2c.evidence.md`,
 `MoM binary analysis.md`, and the versioned roster exports. Modern sources: `CoM2 manual.txt`,
 `CoM2 helptext.TXT`, current
-`Warlord manual v1.5.12.7.html`, `Unit rosters/Warlord mod unit data/HELP.TXT`, Warlord
+`Warlord manual v1.5.12.9.html`, `Unit rosters/Warlord mod unit data/HELP.TXT`, Warlord
 `UnitCalc.CAS:509-520`, and `Caster.exe` `@Combat@ApplyAttack` R5.2c
 (`$005B2994..$005B3295`). The executable covers both CoM2 and Warlord; Warlord's scripts can
 move flags between the global, melee and ranged `AttackFlagsT` records before that common

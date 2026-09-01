@@ -24,11 +24,11 @@ own parameter, whose meaning differs per ability (strength, resistance modifier,
 
 | | CoM2 1.05.11 | Warlord 1.5.12.7 |
 |---|---|---|
-| Units | 194 | 344 |
+| Units | 194 | 345 |
 | Heroes | 35 | 48 |
 | Distinct ability tags | 56 | 67 |
 
-Warlord keeps all 194 CoM2 slots and adds 150. Of the shared slots, 193 differ in at least one stat, ability or price; 1 is identical. 33 of them are renamed.
+Warlord keeps all 194 CoM2 slots and adds 151. Of the shared slots, 193 differ in at least one stat, ability or price; 1 is identical. 33 of them are renamed.
 
 ### Units listed under a different category
 
@@ -126,7 +126,7 @@ These appear below under their **Warlord** category, not their CoM2 one.
 | War Chief | 1 | 12 | 7 | 9 | 14 | +10% | - | - | - | - | 3 | 999 | 15 | Cold Immunity, First Strike, Large Shield, Pathfinding, Regeneration=3, Spellcaster=Spell#280x3, Wall Crusher |
 | Planewalker | 1 | 2 | 6 | 10 | 10 | +10% | - | 9 (Magic) | 6 | - | 3 | 1200 | 20 | Missile Immunity, Non-Corporeal, Plane Shifting, Teleporting, Weapon Immunity, Wind Walking |
 | Elementalist | 1 | 1 | 7 | 9 | 10 | +10% | - | 10 (Magic-lightning) | 6 | Fire 14, Lightning 8 | 3 | 1200 | 20 | Amplifier, Armor Piercing, Cold Immunity, Fire Immunity, Immolation, Lightning Resist, Missile Immunity, Poison Immunity, Stoning Immunity, Water Walking |
-| Wanderer | 1 | 5 | 5 | 10 | 12 | +10% | - | 0 (Magic-lightning) | - | - | 3 | 200 | 1 | Amplifier, Stealth |
+| Wanderer | 1 | 5 | 5 | 10 | 12 | +10% | - | 0 (Magic-lightning) | - | - | 3 | 1100 | 1 | Amplifier, Stealth |
 
 ## Barbarian
 
@@ -666,4 +666,5 @@ Every unit in this category is new in Warlord.
 | Unit | Fig | Mel | Def | Res | HP | ToHit | ToBlk | Ranged | Ammo | Thrown/Breath | Mv | Cost | Upk | Abilities |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Clockwork Tinmen | 4 | 7 | 7 | 10 | 6 | +10% | - | - | - | - | 2 | 150 | 5 | Death Immunity, Fantastic, Illusion Immunity, Mechanical, Poison Immunity, Sapiens, Spellcaster=Spell#341x1, Wall Crusher |
+| Aerial Support Drones | 3 | 2 | 3 | 11 | 3 | +10% | +40% | 9 (Boulder) | 4 | Thrown 7 | 4 | 240 | 9 | Armor Piercing, Death Immunity, Fantastic, First Strike, Flight, Illusion Immunity, Mechanical, Missile Immunity, Poison Immunity, Sailing, Sapiens, Spellcaster=Spell#294x1 |
 

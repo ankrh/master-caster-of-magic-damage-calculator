@@ -1,0 +1,1718 @@
+: INPUT - SP - The spell being cast.
+	CASTER - The caster of the spell.
+		0 or higher means a wizard is casting.
+		-1 or lower means a unit is casting. Unit ID equals (-Caster).
+		-999999 or lower means the unit's item is casting. Unit ID equals -(Caster+999999).
+	MAINCASTER - The wizard casting the spell or owning the unit who casts the spell.
+	SpellTargetCity,SpellTargetPlane,SpellTargetX,SpellTargetY,
+	SpellTargetUnit,SpellTargetPlayer - The target of the spell. Only the variable(s) applicable for the spell's targeting type are set.
+  OUTPUT - None
+  
+  Please note that existing spell effects are hardcoded. To change them, create a duplicate of the spell and code the new effect in this script.
+  
+  :
+  
+W=MAINCASTER;
+TU=SpellTargetUnit;
+A=ATTACKER();
+D=DEFENDER();
+OPPONENT=(A+D)-W;
+NEWU=MAXUNIT();
+
+: spell casting count during Time Stop :
+IF HASGLOBAL(W,GETimeStop)
+ %OR (TIMESTOPCOUNT>0)
+THEN {
+ MASTERVARSET TSSPELLCOUNTING = TSSPELLCOUNTING + 1;
+}
+
+IF (SP<SBuddingSpearmen) %OR (SP>SBuddingHobgoblins) THEN { GOTO "NOTBUDDING"; }
+
+ NU=MAXUNIT();
+
+ SETSTAT(NU,AFantastic,1,0);
+ SETSTAT(NU,SRace,1,RCGoblin);
+ SETSTAT(NU,SChargesLeft,1,0);
+
+ IF (CASTER>-999999) THEN {
+  PANDORA=RND(3);
+  SETSTAT(NU,ALevel,ABase,3);
+  SETENCHANTMENTFLAG(NU,EncMagic,1,1);
+  IF (PANDORA=0) THEN {
+   SETOLENCHANTMENTFLAG(NU,EncCCBreath,1,1);
+  } ELSE {
+   IF (PANDORA=1) THEN {
+    SETOLENCHANTMENTFLAG(NU,EncCCArmor,1,1);
+   } ELSE {
+    SETOLENCHANTMENTFLAG(NU,EncCCFlight,1,1);
+   }
+  }
+  GOTO "ENDOFCOSPELL";
+ }
+
+  OU=ABS(Caster+999999);
+
+  : check if original unit has Children of the Mother bonus or not :
+  IF GETSTAT(OU,SMultiLabel,1)=12) THEN {
+   SETSTAT(NU,SMultiLabel,1,12);
+   SETSTAT(NU,SToDefend,1,(GETSTAT(NU,SToDefend,1)+10)
+   SETSTAT(NU,SAttack,1,(GETSTAT(NU,SAttack,1)+2)
+   IF (GetStat(NU,SRanged,1)>0) THEN {
+    SETSTAT(NU,SRanged,1,(GetStat(NU,SRanged,1)+2));
+   }
+   IF (GetStat(NU,SSpellCharges,1)>0) THEN {
+    SETSTAT( NU,SSpellCharges,1,(GetStat(NU,SSpellCharges,1)*2) );
+   }
+   IF (GetStat(NU,AFPoison,1,1)<>100) THEN { SETSTAT(NU,AFPoison,1,(GetStat(NU,AFPoison,1,1))+1,1); } ELSE { SETSTAT(NU,AFPoison,1,1,1); }
+  }
+
+  : Guiled :
+  IF (GETSTAT(OU,SGuiled,1)>0) THEN {
+   SETSTAT( NU,SToDefend,1,( (GETSTAT(NU,SToDefend,ABase))+(GETSTAT(OU,SGuiled,1)) ) );
+   SETSTAT( NU,SGuiled,1,(GETSTAT(OU,SGuiled,1)) );
+  }
+
+  : Immunized :
+  IF (GETSTAT(OU,SImmunized,1)>0) THEN {
+   SETSTAT( NU,SResist,1,( (GETSTAT(NU,SResist,ABase))+(GETSTAT(OU,SImmunized,1)) ) );
+   SETSTAT( NU,SImmunized,1,(GETSTAT(OU,SImmunized,1)) );
+  }
+
+  : Nightshade :
+  IF (GETSTAT(OU,SNaturalResist,1)>0) THEN {
+   SETSTAT( NU,SResist,1,( (GETSTAT(NU,SResist,1))+(GETSTAT(OU,SNaturalResist,1)) ) );
+   SETSTAT( NU,SNaturalResist,1,(GETSTAT(OU,SNaturalResist,1)) );
+  }
+
+  : Wild Games :
+  IF (GETSTAT(OU,SHunter,1)>0) THEN {
+   SETSTAT( NU,SRanged,1,( (GETSTAT(NU,SRanged,1))+1 ) );
+   SETSTAT( NU,SHunter,1,1 );
+  }
+  IF (GETSTAT(OU,AForester,1)>0) THEN {
+   SETSTAT( NU,AForester,1,1 );
+  }
+
+  : Giant Strength :
+  IF (GETSTAT(OU,SGiantStrength,1)>0) THEN {
+   SETSTAT( NU,SAttack,1,( (GETSTAT(NU,SAttack,1))+1 ) );
+   SETSTAT( NU,SGiantStrength,1,1 );
+  }
+
+  : Tough Skin :
+  IF (GETSTAT(OU,SToughSkin,1)>0) THEN {
+   SETSTAT( NU,SDefense,1,( (GETSTAT(NU,SDefense,1))+1 ) );
+   SETSTAT( NU,SToughSkin,1,1 );
+  }
+
+  : Power of Faith :
+  IF (GETSTAT(OU,SPowerOfFaith,1)>0) THEN {
+   SETSTAT( NU,SResist,1,( (GETSTAT(NU,SResist,1))+(GETSTAT(OU,SPowerOfFaith,1)) ) );
+   SETSTAT( NU,SPowerOfFaith,1,(GETSTAT(OU,SPowerOfFaith,1)) );
+  }
+  IF (GETSTAT(OU,ALucky,1)>0) THEN {
+   SETSTAT( NU,ALucky,1,1 );
+  }
+
+  : Disciplined :
+  IF (GETENCHANTMENTFLAG(OU,EncDiscipline,1)>0) THEN { SETENCHANTMENTFLAG(NU,EncDiscipline,1,1); }
+
+  : Chaos Channels :
+  IF (GETENCHANTMENTFLAG(OU,EncCCBreath,0)>0) THEN { SETOLENCHANTMENTFLAG(NU,EncCCBreath,1,1); }
+  IF (GETENCHANTMENTFLAG(OU,EncCCArmor,0)>0) THEN { SETOLENCHANTMENTFLAG(NU,EncCCArmor,1,1); }
+  IF (GETENCHANTMENTFLAG(OU,EncCCFlight,0)>0) THEN { SETOLENCHANTMENTFLAG(NU,EncCCFlight,1,1); }
+
+  : Warp Creatures :
+  IF (GETENCHANTMENTFLAG(OU,EncWarpAttack,0)>0) THEN { SETENCHANTMENTFLAG(NU,EncWarpAttack,1,1); }
+  IF (GETENCHANTMENTFLAG(OU,EncWarpDefense,0)>0) THEN { SETENCHANTMENTFLAG(NU,EncWarpDefense,1,1); }
+  IF (GETENCHANTMENTFLAG(OU,EncWarpResist,0)>0) THEN { SETENCHANTMENTFLAG(NU,EncWarpResist,1,1); }
+
+  : transfer Undead :
+  IF (GETENCHANTMENTFLAG(OU,EncUndead,1)>0) THEN { SETENCHANTMENTFLAG(NU,EncUndead,1,1); }
+
+  : transfer Vampirism :
+  IF (GETENCHANTMENTFLAG(OU,EncVampirism,0)>0) THEN { SETENCHANTMENTFLAG(NU,EncVampirism,1,1); }
+
+  : transfer Apotheosis :
+  IF (GETENCHANTMENTFLAG(OU,EncDestiny,0)>0) THEN { SETOLENCHANTMENTFLAG(NU,EncDestiny,1,1); }
+
+  : reduce health of unit according to original host :
+  TRANSFERDAMAGE=%I( ( (GETSTAT(NU,SHP,0))*(GETSTAT(OU,SFigures,0)) )*(GETDAMAGE(OU,0))/( (GETSTAT(OU,SHP,0))*(GETSTAT(OU,SFigures,0)) ) );
+  IF (TRANSFERDAMAGE<1) THEN { GOTO "ENDOFCOSPELL"; }
+  IF ( TRANSFERDAMAGE>( ( (GETSTAT(NU,SHP,0))*(GETSTAT(OU,SFigures,0)) )-1 ) ) THEN { DEALCOMBATDAMAGE(NU,0,0,( ( (GETSTAT(NU,SHP,0))*(GETSTAT(OU,SFigures,0)) )-1 ) ); } ELSE { DEALCOMBATDAMAGE(NU,0,0,TRANSFERDAMAGE); }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTBUDDING!
+
+IF (SP<>SEarthElemental) THEN { GOTO "NOTEARTHELEMENTAL"; }
+
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreAdamantium) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncAdamant,1,1);
+ }
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreMithril) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncMithril,1,1);
+ }
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreOrihalcon) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncOrihalcon,1,1);
+ }
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreIron) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncIronSkin,1,1);
+ }
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreCoal) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncImmolation,1,1);
+ }
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreNightshade) THEN {
+  SETSTAT(NEWU,SResist,1,(GETSTAT(NEWU,SResist,1))+3 );
+ }
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreCrysx) THEN {
+  SETSTAT(NEWU,SResist,1,(GETSTAT(NEWU,SResist,1))+2 );
+ }
+ IF (GETTERRAIN(COMBATX(),COMBATY(),COMBATP()+2)=OreQuork) THEN {
+  SETSTAT(NEWU,SResist,1,(GETSTAT(NEWU,SResist,1))+1 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTGrass) THEN {
+  SETSTAT(NEWU,SResist,1,(GETSTAT(NEWU,SResist,1))+4 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTSea) THEN {
+  SETSTAT(NEWU,AFireImmunity,1,1 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTFloating) THEN {
+  SETSTAT(NEWU,ALightningResistance,1,1 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTIce) THEN {
+  SETSTAT(NEWU,AColdImmunity,1,1 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTForest)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTPine)
+ THEN {
+  SETSTAT(NEWU,SCustomAttribute,1,3 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTrock)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTRock2)
+  %OR (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTMountain)
+ THEN {
+  SETSTAT(NEWU,SDefense,1,(GETSTAT(NEWU,SDefense,1))+3 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTDesert) THEN {
+  SETSTAT(NEWU,ANoncorporeal,1,1 );
+ }
+ IF (GETTERRAIN(SpellTargetX,SpellTargetY,0)=CTSwamp) THEN {
+  SETSTAT(NEWU,SDefense,1,(GETSTAT(NEWU,SDefense,1))-2 );
+  SETSTAT(NEWU,AMerging,1,1 );
+ }
+ GOTO "ENDOFCOSPELL";
+
+!NOTEARTHELEMENTAL!
+
+IF (SP<>STAirSupportDoctrine) THEN { GOTO "NOTAIRSUPPORT"; }
+
+ SETENCHANTMENTFLAG(NEWU,EncSpiritLink,1,1);
+ IF BASEFANTASTIC(NEWU) THEN {
+  SETSTAT(NEWU,AFantastic,1,0);
+  SETSTAT(NEWU,ALevel,1,1);
+ }
+
+ : new effect of Artificer retort, mechanical units gain magic weapon, +1 resistance, and land mechanical units get +1 movement :
+ IF RETORT(W,Artificer) %AND (GetStat(NEWU,SCustomAttribute,1)=1) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncMagic,1,1);
+  SETSTAT(NEWU,SAttack,1,(GetStat(NEWU,SAttack,0)+1));
+  SETSTAT(NEWU,SRanged,1,(GetStat(NEWU,SRanged,1)+1));
+  SETSTAT(NEWU,SDefense,1,(GetStat(NEWU,SDefense,1)+1));
+  SETSTAT(NEWU,SResist,1,(GetStat(NEWU,SResist,1)+2));
+  SETSTAT(NEWU,SOLMaxMoves,1,(GetStat(NEWU,SOLMaxMoves,1)+2));
+  SETSTAT(NEWU,SOLMovesLeft,1,(GetStat(NEWU,SOLMovesLeft,1)+2));
+  SETSTAT(NEWU,SCombatMaxMoves,1,(GetStat(NEWU,SCombatMaxMoves,1)+2));
+  SETSTAT(NEWU,SCombatMovesLeft,1,(GetStat(NEWU,SCombatMovesLeft,1)+2));
+ }
+
+ IF HASGLOBAL(W,GEEnlightenment)
+  %OR (SPELLSTATE(W,STMilitaryDrilling)=2)
+ THEN { 
+  SETENCHANTMENTFLAG(NEWU,EncDiscipline,1,1);
+ }
+
+ IF (SPELLSTATE(W,STHeatPowerEngine)=2) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncPowerEngine,1,1);
+  SETSTAT(NEWU,SOLMaxMoves,1,(GetStat(NEWU,SOLMaxMoves,1)+2));
+  SETSTAT(NEWU,SCombatMaxMoves,1,(GetStat(NEWU,SCombatMaxMoves,1)+2));
+ }
+
+ IF (SPELLSTATE(W,STArmorClad)=2) THEN {
+  SETENCHANTMENTFLAG(NEWU,EncArmorClad,1,1);
+  SETSTAT(NEWU,SDefense,1,(GetStat(NEWU,SDefense,1)+6));
+  IF (SPELLSTATE(W,STMagitekMaterialScience)=2) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncResistMagic,1,1);
+  }
+ }
+
+ IF (SPELLSTATE(W,STRocketry)=2) THEN {
+  SETSTAT(NEWU,SBlackpowderUpgrade,1,1);
+  IF (GetStat(NEWU,AFPoison,1,1)<>100) THEN { SETSTAT(NEWU,AFPoison,1,(GetStat(NEWU,AFPoison,1,1))+1,1); } ELSE { SETSTAT(NEWU,AFPoison,1,1,1); }
+  IF (GetStat(NEWU,AFArmorPiercing,1,1)=0) %AND (GetStat(NEWU,AFDoom,1,1)=0) THEN {
+   SETSTAT(NEWU,AFArmorPiercing,1,1,1);
+  } ELSE {
+   IF (GetStat(NEWU,SRanged,1)>0) THEN { SETSTAT(NEWU,SRanged,1,(GetStat(NEWU,SRanged,1)+2)); }
+   IF (GetStat(NEWU,SThrown,1)>0) THEN { SETSTAT(NEWU,SThrown,1,(GetStat(NEWU,SThrown,1)+4)); }
+  }
+ }
+
+ : Mariner Mastery bonus is removable by end turn script if global enchantment is removed :
+ : all units originally have have sail movement :
+ IF (HASGLOBAL(W,GEMarinerMastery)=0) THEN { GOTO "NOOUTLANDERMARINERMASTERY"; }
+  IF (GetStat(NEWU,SMMastery,1)>0) %OR (GetStat(NEWU,ASailing,1)=0) THEN { GOTO "NOOUTLANDERMARINERMASTERY"; }
+
+   SETSTAT(NEWU,SOLMaxMoves,1,(GetStat(NEWU,SOLMaxMoves,1)+4));
+   SETSTAT(NEWU,SOLMovesLeft,1,(GetStat(NEWU,SOLMovesLeft,1)+4));
+   SETSTAT(NEWU,SCombatMaxMoves,1,(GetStat(NEWU,SCombatMaxMoves,1)+4));
+   SETSTAT(NEWU,SCombatMovesLeft,1,(GetStat(NEWU,SCombatMovesLeft,1)+4));
+   SETSTAT(NEWU,SMMastery,1,1);
+
+ !NOOUTLANDERMARINERMASTERY!
+
+ HQ=CITYONTILE( GETWIZARDDATA(W,WDFortressP),GETWIZARDDATA(W,WDFortressX),GETWIZARDDATA(W,WDFortressY) );
+
+ IF BANISHED(W) %OR (HQ=0) %OR ( (HQ>0) %AND (CITYENCHANT(HQ,CEEvilPresence)>-1) ) THEN { GOTO "NOHQ"; }
+
+  IF (CITYENCHANT(HQ,CEMagicPerimeter)>-1) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncMagic,1,1);
+  }
+
+  LOGISTIC=0;
+  OWNMITHRIL=0;
+  OWNADAMANTIUM=0;
+  OWNORIHALCON=0;
+  OWNCRYSX=0;
+
+  IF (SPELLSTATE(W,STStrategicLogistic)=2) THEN {
+   LOGISTIC=1;
+
+   FOR I=1 TO MAXCITY();
+
+    IF (CITYOWNER(I)=W) THEN {
+     OWNMITHRIL=OWNMITHRIL+OREINRANGE(I,OreMithril);
+     OWNADAMANTIUM=OWNADAMANTIUM+OREINRANGE(I,OreAdamantium);
+     OWNORIHALCON=OWNORIHALCON+OREINRANGE(I,OreOrihalcon);
+     OWNCRYSX=OWNCRYSX+OREINRANGE(I,OreCrysx);
+    }
+
+   NEXT I;
+
+  } ELSE {
+   OWNMITHRIL=OWNMITHRIL+OREINRANGE(HQ,OreMithril);
+   OWNADAMANTIUM=OWNADAMANTIUM+OREINRANGE(HQ,OreAdamantium);
+   OWNORIHALCON=OWNORIHALCON+OREINRANGE(HQ,OreOrihalcon);
+   OWNCRYSX=OWNCRYSX+OREINRANGE(HQ,OreCrysx);
+  }
+
+  IF (ISBUILT(HQ,BAlchemistguild)=0)
+   %AND ( (LOGISTIC=0) %OR (BUILDINGSOWNED(W,BAlchemistguild,0)=0) )
+  THEN { GOTO "NOOUTLANDERWEAPON"; }
+
+   SETENCHANTMENTFLAG(NEWU,EncMagic,1,1);
+
+   ORELEVEL=0;
+   IF (OWNMITHRIL>0) THEN { ORELEVEL=1; }
+   IF (OWNADAMANTIUM>0) THEN { ORELEVEL=2; }
+   IF (BUILDINGSOWNED(W,BLavaSmelter,0)>0) THEN { ORELEVEL=ORELEVEL+1; }
+   IF (BUILDINGSOWNED(W,BAlchemistGuild,CESorcererStone)>0) THEN { ORELEVEL=ORELEVEL+1; }
+
+   IF ( (ORELEVEL>2) %OR (OWNORIHALCON>0) )
+    %AND (GETENCHANTMENTFLAG(NEWU,EncOrihalcon,1)=0)
+   THEN {
+    SETENCHANTMENTFLAG(NEWU,EncOrihalcon,1,1);
+    : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+    IF GETENCHANTMENTFLAG(NEWU,EncAdamant,ABase)
+     %AND GETENCHANTMENTFLAG(NEWU,EncOrihalcon,ABase)
+    THEN {
+     SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1);
+    }
+   }
+   IF (GETENCHANTMENTFLAG(NEWU,EncAdamant,1)>0) THEN { GOTO "NOOUTLANDERWEAPON"; }
+    IF (ORELEVEL>1) THEN {
+     SETENCHANTMENTFLAG(NEWU,EncAdamant,1,1);
+     IF (GETENCHANTMENTFLAG(NEWU,EncMithril,1)>0) THEN {
+      SETENCHANTMENTFLAG(NEWU,EncMithril,1,0);
+     }
+     : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+     IF GETENCHANTMENTFLAG(NEWU,EncAdamant,1)
+      %AND GETENCHANTMENTFLAG(NEWU,EncOrihalcon,1)
+     THEN {
+      SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1); 
+     }
+    } ELSE {
+     IF (GETENCHANTMENTFLAG(NEWU,EncMithril,1)>0) THEN { GOTO "NOOUTLANDERWEAPON"; }
+      IF (ORELEVEL=1) THEN {
+       SETENCHANTMENTFLAG(NEWU,EncMithril,1,1);
+      }
+    }
+
+  !NOOUTLANDERWEAPON!
+
+  : Effect of Pillar of Faith, unit has chance 20% to get lucky upon unit creation :
+  IF (CITYENCHANT(HQ,CEPillarOfFaith)=-1) THEN { GOTO "NOPILLAROFFAITH"; }
+   FAITH=0
+   LUCK=RND(5)+1;
+   RESIST=GETSTAT(NEWU,SResist,1);
+
+   IF CITYENCHANT(HQ,CEHeavenlyLight)>-1 THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BShrine) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BParthenon) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BWitchesConvent) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BCathedral) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BTemple) THEN { FAITH=FAITH+1; }
+   IF HASGLOBAL(W,GEKingOfUnderworld) %AND ISBUILT(HQ,BOracle) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BAltarOfStorm) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BAltarOfTheSun) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BAltarOfTheMoon) THEN { FAITH=FAITH+1; }
+   IF ISBUILT(HQ,BBasilica) THEN { FAITH=FAITH+1; }
+   SETSTAT(NEWU,SPowerOfFaith,1,FAITH);
+   SETSTAT(NEWU,SResist,1,RESIST+FAITH);
+   IF (GETSTAT(NEWU,ALucky,1)=0) %AND (LUCK=5) THEN { 
+    SETSTAT(NEWU,ALucky,1,1);
+   }
+
+  !NOPILLAROFFAITH!
+
+  : New effect of Nature Embrace, Animist's Guild enchant unit with Resist Elements (not permanent) :
+  IF HASGLOBAL(W,GECallTheWild) %AND ISBUILT(HQ,BAnimistGuild) THEN {
+   IF (SPELLSTATE(W,STattooMagic)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncResistElements,ABase,1);
+   } ELSE {
+    SETOLENCHANTMENTFLAG(NEWU,EncResistElements,ABase,1);
+   }
+  }
+
+  : New effect of Consecration, Temple/Cathedral enchant unit with Bless (not permanent) :
+  IF (CITYENCHANT(HQ,CEConsecration)>-1)
+   %AND ( (ISBUILT(HQ,BCathedral)) %OR (ISBUILT(HQ,BTemple)) )
+  THEN {
+   IF (SPELLSTATE(W,STattooMagic)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncBless,1,1);
+   } ELSE {
+    SETOLENCHANTMENTFLAG(NEWU,EncBless,1,1);
+   }
+  }
+
+  : New effect of Crusade allow city with armorer guild + cathedral/temple to give permanent holy armor enchantment) :
+  IF HASGLOBAL(W,GECrusade) %AND ISBUILT(HQ,BArmorerGuild)
+   %AND ( (ISBUILT(HQ,BCathedral)) %OR (ISBUILT(HQ,BTemple)) )
+  THEN {
+   IF (SPELLSTATE(W,STattooMagic)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncDummyArmor,1,1);
+   } ELSE {
+    SETOLENCHANTMENTFLAG(NEWU,EncHolyArmor,1,1);
+   }
+  }
+
+  IF ( (ISBUILT(HQ,BLavaSmelter)=0) )
+   %AND ( (LOGISTIC=0) %OR (BUILDINGSOWNED(W,BLavaSmelter,0)=0) )
+  THEN { GOTO "NOLAVASMELTER"; }
+
+   IF (GETSTAT(NEWU,AWeaponImmunity,1)>0) THEN { GOTO "OUTLANDERSKIPWEAPONIMMUNE"; }
+
+    IF (OWNMITHRIL>0) %AND (OWNADAMANTIUM>0) THEN { SETSTAT(NEWU,AWeaponImmunity,1,1); }
+
+   !OUTLANDERSKIPWEAPONIMMUNE!
+
+   IF (GETSTAT(NEWU,AMissileImmunity,1)>0) THEN { GOTO "OUTLANDERSKIPMISSILEIMMUNE"; }
+
+    IF (OWNMITHRIL>0) %AND (OWNCRYSX>0) THEN { SETSTAT(NEWU,AMissileImmunity,1,1); }
+
+   !OUTLANDERSKIPMISSILEIMMUNE!
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncResistElements,1)>0) THEN { GOTO "OUTLANDERSKIPRESISTELEMENT"; }
+
+    IF (OWNMITHRIL>0) %AND (OWNORIHALCON>0) THEN { SETENCHANTMENTFLAG(NEWU,EncResistElements,1,1); }
+
+   !OUTLANDERSKIPRESISTELEMENT!
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncElementalArmor,1)>0) THEN { GOTO "OUTLANDERSKIPELEMENTALARMOR"; }
+
+    IF (OWNADAMANTIUM>0) %AND (OWNORIHALCON>0) THEN { SETENCHANTMENTFLAG(NEWU,EncElementalArmor,1,1); }
+
+   !OUTLANDERSKIPELEMENTALARMOR!
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncFlameBlade,1)>0) THEN { GOTO "OUTLANDERSKIPFLAMEBLADE"; }
+
+    IF (OWNADAMANTIUM>0) %AND (OWNCRYSX>0) THEN { SETENCHANTMENTFLAG(NEWU,EncFlameBlade,1,1); }
+
+   !OUTLANDERSKIPFLAMEBLADE!
+
+  !NOLAVASMELTER!
+
+  : Outlander unit gains Mariner from Baray through upgrade protocol :
+  IF ( (ISBUILT(HQ,BBaray)=0) )
+   %AND ( (LOGISTIC=0) %OR (BUILDINGSOWNED(W,BBaray,0)=0) )
+  THEN { GOTO "NOOUTLANDERBARAY"; }
+
+   IF (GETSTAT(NEWU,SMariner,1)=0) THEN {
+    SETSTAT(NEWU,SMariner,1,1)
+   }
+
+  !NOOUTLANDERBARAY!
+
+  : Effect of Chaos' Blessing and/or Doom Mastery :
+  IF (CITYENCHANT(HQ,CEChaosBless)>-1) %AND (HASGLOBAL(W,GEDoomMastery)) THEN { 
+   SETENCHANTMENTFLAG(NEWU,EncCCBreath,1,1);
+   SETENCHANTMENTFLAG(NEWU,EncCCArmor,1,1);
+   SETENCHANTMENTFLAG(NEWU,EncCCFlight,1,1);
+   :Apply chaos channel:
+   APPLYCHAOSCHANNEL NEWU;
+  } ELSE {
+   IF (CITYENCHANT(HQ,CEChaosBless)>-1) %OR (HASGLOBAL(W,GEDoomMastery)) THEN { APPLYCHAOSCHANNEL(NEWU); }
+  }
+
+  : == Unit bonus as unit's veterancy == :
+  : Altar of Battle/War College/Barracks's unit veterancy :
+  IF CITYENCHANT(HQ,CEAltarofBattle)>-1 THEN {
+   SETSTAT(NEWU,ALevel,1,4);
+  } ELSE { 
+   IF ISBUILT(HQ,BWarCollege) THEN {
+    SETSTAT(NEWU,ALevel,1,3); 
+   } ELSE {
+    IF ISBUILT(HQ,BBarracks) THEN { SETSTAT(NEWU,ALevel,1,2); }
+   }
+  }
+
+  : special, unit from Necropolis becomes Undead :
+  IF (CITYENCHANT(HQ,CENecropolis)>-1) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncUndead,1,1);
+   SETENCHANTMENTFLAG(NEWU,EncWraithForm,1,1);
+   IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {
+    SETENCHANTMENTFLAG(NEWU,EncFrenzy,1,1);
+   }
+  }
+
+ !NOHQ!
+
+ IF (SPELLSTATE(W,STMagitekAntiGravityDrive)<>2) THEN { GOTO "NOANTIGRAVITY"; }
+
+  IF (GETENCHANTMENTFLAG(NEWU,EncPowerEngine,1)>0) THEN {
+   SETENCHANTMENTFLAG(NEWU,EncHaste,ABase,1);
+   IF (GETSTAT(NEWU,ASailing,1)>0) THEN {
+    SETSTAT(NEWU,AFlying,1,1);
+    SETSTAT(NEWU,AIllusionImmunity,1,1);
+   }
+  }
+
+ !NOANTIGRAVITY!
+
+ IF (SPELLSTATE(W,STMagitekBeamWeapon)<>2) THEN { GOTO "NOBEAMCANNON"; }
+  IF (GETSTAT(NEWU,SRangedType,1)=40) THEN { GOTO "NOBEAMCANNON"; }
+
+   IF (GETENCHANTMENTFLAG(NEWU,EncPowerEngine,1)>0)
+    %AND (GETSTAT(NEWU,SMaxAmmo,1)>0)
+   THEN {
+    SETSTAT(NEWU,SRangedType,1,40);
+    SETSTAT(NEWU,SRanged,1,GETSTAT(NEWU,SRanged,1)+%I(GETSTAT(NEWU,SRanged,1)/2));
+    SETSTAT(NEWU,AFDoom,1,1,3);
+   }
+
+ !NOBEAMCANNON!
+
+!NOTAIRSUPPORT!
+
+IF (SP<>SForceOfNature) THEN { GOTO "NOTFORCEOFNATURE"; }
+
+ SETCOMBATGLOBAL(W,CGCallLightning,1,1);
+ SETCOMBATGLOBAL(W,CGEntangle,1,1);
+ SETCOMBATGLOBAL(W,CGFreezingRain,1,1);
+ SETCOMBATGLOBAL(W,CGHurricane,1,1);
+ GOTO "ENDOFCOSPELL";
+
+!NOTFORCEOFNATURE!
+
+IF (SP<>SMysteryOfSorcery) THEN { GOTO "NOTMYSTERYOFSORCERY"; }
+
+ SETCOMBATGLOBAL(W,CGBlur,1,1);
+ SETCOMBATGLOBAL(W,CGMassInvisibility,1,1);
+ SETCOMBATGLOBAL(W,CGCounterMagic,1,1);
+ SETCOMBATGLOBAL(W,CGAetherSurge,1,1);
+ SETCOMBATGLOBAL(W,CGTemporalTwist,1,1);
+ GOTO "ENDOFCOSPELL";
+
+!NOTMYSTERYOFSORCERY!
+
+IF (SP<>SConduitOfChaos) THEN { GOTO "NOTCONDUITOFCHAOS"; }
+
+ SETCOMBATGLOBAL(W,CGBlazingMarch,1,1);
+ SETCOMBATGLOBAL(W,CGWarpReality,1,1);
+ SETCOMBATGLOBAL(W,CGBreakthrough,1,1);
+ SETCOMBATGLOBAL(W,CGBeatOfSwiftness,1,1);
+ GOTO "ENDOFCOSPELL";
+
+!NOTCONDUITOFCHAOS!
+
+IF (SP<>SDayOfLife) THEN { GOTO "NOTDAYOFLIFE"; }
+
+ SETCOMBATGLOBAL(W,CGPrayer,1,1);
+ SETCOMBATGLOBAL(W,CGSupremeLight,1,1);
+ SETCOMBATGLOBAL(W,CGHighPrayer,1,1);
+ SETCOMBATGLOBAL(W,CGTrueLight,1,1);
+ SETCOMBATGLOBAL(W,CGEyeOfHeaven,1,1);
+ GOTO "ENDOFCOSPELL";
+
+!NOTDAYOFLIFE!
+
+IF (SP<>SNightOfDeath) THEN { GOTO "NOTNIGHTOFDEATH"; }
+
+ SETCOMBATGLOBAL(W,CGDarkness,1,1);
+ SETCOMBATGLOBAL(W,CGManaLeak,1,1);
+ SETCOMBATGLOBAL(W,CGTerror,1,1);
+ SETCOMBATGLOBAL(W,CGGateOfHades,1,1);
+ SETCOMBATGLOBAL(W,CGBlackPrayer,1,1);
+ GOTO "ENDOFCOSPELL";
+
+!NOTNIGHTOFDEATH!
+
+IF (SP<>SPowerOfNature) THEN { GOTO "POWEROFNATURE"; }
+
+ SETCOMBATENCHANTMENTFLAG(TU,EncResistElements,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncWaterWalking,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncLandLink,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncElementalArmor,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncIronSkin,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncRegeneration,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncVenom,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncColossalStrength,1,1);
+
+!POWEROFNATURE!
+
+IF (SP<>SPowerOfSorcery) THEN { GOTO "POWEROFSORCERY"; }
+
+ SETCOMBATENCHANTMENTFLAG(TU,EncHaste,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncResistMagic,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncGuardianWind,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncFlight,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncInvisibility,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncMagicImmunity,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncFocusMagic,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncPlanewalking,1,1);
+
+!POWEROFSORCERY!
+
+IF (SP<>SPowerOfChaos) THEN { GOTO "POWEROFCHAOS"; }
+
+ SETCOMBATENCHANTMENTFLAG(TU,EncFlameBlade,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncImmolation,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncInsulation,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncFieryFury,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncBerserk,1,1);
+ SETENCHANTMENTFLAG(TU,EncCCBreath,1,1);
+ SETENCHANTMENTFLAG(TU,EncCCFlight,1,1);
+ SETENCHANTMENTFLAG(TU,EncCCArmor,1,1);
+
+!POWEROFCHAOS!
+
+IF (SP<>SPowerOfLife) THEN { GOTO "POWEROFLIFE"; }
+
+ SETCOMBATENCHANTMENTFLAG(TU,EncEndurance,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncHolyArmor,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncHolyWeapon,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncHeroism,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncTrueSight,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncLionheart,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncInvulnerability,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncBless,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncZeal,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncDiscipline,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncDivineProtection,1,1);
+
+!POWEROFLIFE!
+
+IF (SP<>SPowerOfDeath) THEN { GOTO "POWEROFDEATH"; }
+
+ SETCOMBATENCHANTMENTFLAG(TU,EncCloakofFear,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncWraithForm,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncFrenzy,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncShadowStrike,1,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncRevenant,1,1);
+ SETENCHANTMENTFLAG(TU,EncUndead,1,1);
+ SETENCHANTMENTFLAG(TU,EncVampirism,1,1);
+
+!POWEROFDEATH!
+
+IF (SP<>SFocusMagic) THEN { GOTO "NOTFOCUSMAGIC"; }
+
+ IF GETSTAT(TU,SMaxAmmo,1)=0 THEN {
+  SETSTAT(TU,SAmmo,1,4);
+ }
+ IF (GETSTAT(TU,SMaxMP,0)>0) THEN {
+  SETSTAT(TU,SMP,1,(GETSTAT(TU,SMP,0)+15));
+ }
+ GOTO "ENDOFCOSPELL";
+
+!NOTFOCUSMAGIC!
+
+IF (SP=SSeaSerpent) THEN {
+ SETTERRAIN(SpellTargetX,SpellTargetY,0,CTSea);
+ GOTO "ENDOFCOSPELL";
+}
+
+IF (SP=SRevenant) THEN {
+ SETENCHANTMENTFLAG(TU,EncUndead,1,1);
+ GOTO "ENDOFCOSPELL";
+}
+
+IF (SP<>SPersuasiveWhisperer) THEN { GOTO "NOTPERSUASIVE"; }
+
+ : Reset blank combat global flag :
+ SETCOMBATGLOBAL(W,CGTrap,1,0);
+
+  : save penalty :
+  CHARISMA=0;
+  CASTERU=0;
+  IF (CASTER<0) %AND (CASTER>-999999) THEN { CASTERU=-CASTER; }
+  IF (CASTER<-999998) THEN { CASTERU=-(CASTER+999999); }
+
+  IF (CASTER=W) %AND (RETORT(W,Charismatic))
+   %OR ( (CASTER<0) %AND ( GETHEAB( CASTERU , HACharmed ) > 0 )
+  THEN { CHARISMA=2; }
+
+  FIRSTSAVE=0+CHARISMA;
+  SECONDSAVE=1+CHARISMA;
+
+  FOR U=1 TO MAXUNIT();
+
+   IF (INCOMBAT(U)=0) THEN { GOTO "NOTPERSUASIVEUNIT"; }
+    IF (GETSTAT(U,SOwner,1)=W) THEN { GOTO "NOTPERSUASIVEUNIT"; }
+
+     : using resistance roll :
+     FIRSTROLL=RND(10);
+     SECONDROLL=RND(10);
+     PWRESIST=(GETSTAT(U,SResist,0));
+
+     IF ( (PWRESIST-FIRSTSAVE)<(FIRSTROLL) ) THEN {
+      IF FANTASTIC(U) THEN {
+       SETCOMBATENCHANTMENTFLAG(U,EncCreatureBinding,1,1);
+       GOTO "NOTPERSUASIVEUNIT";
+      } ELSE {
+       SETCOMBATENCHANTMENTFLAG(U,EncPossession,1,1);
+       GOTO "NOTPERSUASIVEUNIT";
+      }
+     } ELSE {
+      IF ( (PWRESIST-SECONDSAVE)<(SECONDROLL) ) THEN {
+       SETCOMBATENCHANTMENTFLAG(U,EncConfusion,1,1);
+       GOTO "NOTPERSUASIVEUNIT";
+      }
+     }
+
+   !NOTPERSUASIVEUNIT!
+
+  NEXT U;
+
+  GOTO "ENDOFCOSPELL";
+
+!NOTPERSUASIVE!
+
+IF (SP<>SHierophany) THEN { GOTO "NOTHIEROPHANY"; }
+
+ : using resistance roll :
+ FIRSTROLL=RND(10);
+ SECONDROLL=RND(10);
+ HRESIST=(GETSTAT(TU,SResist,0));
+ IF (GETENCHANTMENTFLAG(TU,EncUndead,1)>0) THEN { HRESIST=((HRESIST)/3); } ELSE { HRESIST=((HRESIST)/2); }
+ IF ( (HRESIST)>(FIRSTROLL) )
+  %AND ( (HASGLOBAL(W,GEFateMastery)=0) %OR ( (HRESIST)>(SECONDROLL) ) )
+ THEN {
+  SETCOMBATENCHANTMENTFLAG(TU,EncHierophany,1,0);
+  GOTO "ENDOFCOSPELL";
+ }
+ GOTO "ENDOFCOSPELL";
+
+!NOTHIEROPHANY!
+
+: new unit curse "Rust" unit lose magical weapons and armor if unit have them :
+IF (SP<>SRust) THEN { GOTO "NOTRUST"; }
+
+ FIRSTROLL=RND(10);
+ SECONDROLL=RND(10);
+ HRESIST=(GETSTAT(TU,SResist,0)-3);
+ IF ( (HRESIST)<(FIRSTROLL) )
+  %OR ( (HASGLOBAL(W,GEFateMastery)) %AND ( (HRESIST)<(SECONDROLL) ) )
+ THEN {
+  SETENCHANTMENTFLAG(TU,EncMagic,1,0);
+  SETENCHANTMENTFLAG(TU,EncMithril,1,0);
+  SETENCHANTMENTFLAG(TU,EncAdamant,1,0);
+  SETENCHANTMENTFLAG(TU,EncOrihalcon,1,0);
+  SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,0);
+  SETENCHANTMENTFLAG(TU,EncResistElements,1,0)
+  SETENCHANTMENTFLAG(TU,EncElementalArmor,1,0)
+  SETENCHANTMENTFLAG(TU,EncFlameBlade,1,0)
+  SETENCHANTMENTFLAG(TU,EncGuardianWind,1,0)
+  GOTO "ENDOFCOSPELL";
+ }
+ GOTO "ENDOFCOSPELL";
+
+!NOTRUST!
+
+IF (SP<>SFairyDust) THEN { GOTO "NOTFAIRYDUST"; }
+
+ IF (GETSTAT(TU,AColdImmunity,0)=0) %AND (GETSTAT(TU,ANoncorporeal,0)=0) %AND (GETENCHANTMENTFLAG(TU,EncImmolation,0)=0) THEN {
+  FREEZE=RND(3);
+  IF (FREEZE>1) THEN { SETCOMBATENCHANTMENTFLAG(TU,EncFrozen,1,1); }
+ }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+  IF (GETSTAT(TU,AColdImmunity,0)=0) THEN {
+   FIGURE=(GetStat(TU,SFigures,1)) - %I( GETDAMAGE(TU,0)/GetStat(TU,SHP,0) );
+   ATTACK=%I( (6*0.5) * FIGURE );
+   HIT=30;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+    IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+   : Armor Piercing :
+   ARMOR=%I(ARMOR/2);
+
+   : Make attack roll for 10 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    DEALCOMBATDAMAGE (TU,DAMAGE,0,0);
+   }
+  }
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTFAIRYDUST!
+
+IF (SP<>SReaperSlash) THEN { GOTO "NOTREAPERSLASH"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+  IF (GETSTAT(TU,AColdImmunity,0)=0) THEN {
+
+   ATTACK=%I( 22*0.5 );
+   HIT=60;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+    IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+   : Make attack roll for 17 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+   }
+
+  }
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTREAPERSLASH!
+
+IF (SP<>SIceBolt) THEN { GOTO "NOTICEBOLT"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+  IF (GETSTAT(TU,AColdImmunity,0)=0) THEN {
+
+   ATTACK=%I( 17*0.5 );
+   HIT=60;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+
+   : Make attack roll for 17 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+   }
+
+  }
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTICEBOLT!
+
+IF (SP<>SIceComet) THEN { GOTO "NOTICECOMET"; }
+
+ CBX=(GetStat(TU,SCoX,1);
+ CBY=(GetStat(TU,SCoY,1);
+
+ FOR AU=1 TO MAXUNIT();
+
+  IF ( INCOMBAT(AU) = 0 ) THEN { GOTO "NOTFORICECOMET"; }
+
+   IF (GetStat(AU,SCoX,1)>(CBX-2))
+    %AND (GetStat(AU,SCoX,1)<(CBX+2))
+    %AND (GetStat(AU,SCoY,1)>(CBY-2))
+    %AND (GetStat(AU,SCoY,1)<(CBY+2))
+   THEN {
+    IF (GETSTAT(AU,AColdImmunity,0)=0)
+     %AND (GETSTAT(AU,ANoncorporeal,0)=0)
+     %AND (GETENCHANTMENTFLAG(AU,EncImmolation,0)=0)
+    THEN {
+     SETCOMBATENCHANTMENTFLAG(AU,EncFrozen,1,1);
+    }
+   }
+
+  !NOTFORICECOMET!
+
+ NEXT AU;
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+  IF (GETSTAT(TU,AColdImmunity,0)=0) THEN {
+   FIGURE=(GetStat(TU,SFigures,1)) - %I( GETDAMAGE(TU,0)/GetStat(TU,SHP,0) );
+   ATTACK=%I( (21*0.5) * FIGURE );
+   HIT=30;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+
+   : Make attack roll for 10 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    DEALCOMBATDAMAGE (TU,DAMAGE,0,0);
+   }
+  }
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTICECOMET!
+
+IF (SP<>SIncinerate) THEN { GOTO "NOTINCINERATE"; }
+
+ CBX=(GetStat(TU,SCoX,1);
+ CBY=(GetStat(TU,SCoY,1);
+
+ IF (GETSTAT(TU,AFireImmunity,0)=0)
+  %AND (GETSTAT(TU,AMagicImmunity,0)=0)
+ THEN {
+
+  ATTACK=18;
+  HIT=60;
+  DAMAGE=0;
+  DEFEND=( GetStat(TU,SToDefend,0) );
+  ARMOR=( GetStat(TU,SDefense,0) );
+   IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+   IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+   IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+  : Make attack roll for 18 damage at 60% to-hit :
+  LOOP{
+   IF (ATTACK>0) THEN {
+    ATTACK=(ATTACK-1);
+    PERCENT=(RND(100));
+    IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+   }
+  }ENDLP (ATTACK=0);
+
+  : Make defense roll with armor and to-defend :
+  IF (DAMAGE>0) THEN { 
+   LOOP{
+    IF (ARMOR>0) THEN {
+     ARMOR=(ARMOR-1);
+     PERCENT=(RND(100));
+     IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+    }
+   }ENDLP (ARMOR=0);
+   IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+  }
+
+ }
+
+ FOR AU=1 TO MAXUNIT();
+
+  IF ( INCOMBAT(AU) = 0 ) THEN { GOTO "NOTFORINCINERATE"; }
+
+   IF (GetStat(AU,SCoX,1)>(CBX-2))
+    %AND (GetStat(AU,SCoX,1)<(CBX+2))
+    %AND (GetStat(AU,SCoY,1)>(CBY-2))
+    %AND (GetStat(AU,SCoY,1)<(CBY+2))
+   THEN {
+
+    IF (GETSTAT(AU,AFireImmunity,0)=0) THEN {
+
+     ATTACK=18;
+     HIT=60;
+     DAMAGE=0;
+     DEFEND=( GetStat(AU,SToDefend,0) );
+     ARMOR=( GetStat(AU,SDefense,0) );
+      IF (GETENCHANTMENTFLAG(AU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+      IF (GETENCHANTMENTFLAG(AU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+      IF (GETENCHANTMENTFLAG(AU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+     : Make attack roll for 10 damage at 60% to-hit :
+     LOOP{
+      IF (ATTACK>0) THEN {
+       ATTACK=(ATTACK-1);
+       PERCENT=(RND(100));
+       IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+      }
+     }ENDLP (ATTACK=0);
+
+     : Make defense roll with armor and to-defend :
+     IF (DAMAGE>0) THEN { 
+      LOOP{
+       IF (ARMOR>0) THEN {
+        ARMOR=(ARMOR-1);
+        PERCENT=(RND(100));
+        IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+       }
+      }ENDLP (ARMOR=0);
+      IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (AU,DAMAGE,0,0); }
+     }
+
+    }
+
+   }
+
+  !NOTFORINCINERATE!
+
+ NEXT AU;
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+  IF (GETSTAT(TU,AFireImmunity,0)=0) THEN {
+
+   ATTACK=%I( (18+18)*0.5 );
+   HIT=60;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+    IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+   : Make attack roll for 18 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+   }
+
+  }
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTINCINERATE!
+
+: Install a canny trap for your foes! :
+IF (SP=SInstallTrap) THEN {
+
+ : Reset blank combat global flag :
+ SETCOMBATGLOBAL(W,CGTrap,1,0);
+
+ CBX=(GetStat(ABS(Caster+999999),SCoX,1));
+ CBY=(GetStat(ABS(Caster+999999),SCoY,1));
+ IF (MAINCASTER=D) THEN {
+  SETTERRAIN (CBX,CBY,0,GETTERRAIN(CBX,CBY,0)+12);
+  GOTO "ENDOFCOSPELL";
+ } ELSE {
+  SETTERRAIN (CBX,CBY,0,GETTERRAIN(CBX,CBY,0)+24);
+  GOTO "ENDOFCOSPELL";
+ }
+}
+
+: Disrupt now deal 10 damage with proper defense roll :
+IF (SP=SDisrupt) THEN {
+ FOR DU=1 TO MAXUNIT();
+ 
+ CBX=(GetStat(DU,SCoX,1));
+ CBY=(GetStat(DU,SCoY,1));
+
+ IF ( INCOMBAT(DU) = 0 ) THEN { GOTO "NOTFORDISRUPT"; }
+
+  IF (CBX=SpellTargetX)
+   %AND (CBY=SpellTargetY)
+   %AND ( GetStat(DU,SOwner,1)<>MAINCASTER )
+  THEN {
+   ATTACK=10;
+   HIT=60;
+   ARMOR=( GetStat(DU,SDefense,0) );
+   DEFEND=( GetStat(DU,SToDefend,0) );
+   DAMAGE=0;
+
+   : Make attack roll for 10 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    DEALCOMBATDAMAGE (DU,DAMAGE,0,0);
+   }
+  }
+
+ !NOTFORDISRUPT!
+   
+ NEXT;
+ GOTO "ENDOFCOSPELL";
+}
+
+IF (SP<>SDisruption) THEN { GOTO "NOTSABOTAGE"; }
+
+ IF (GETSTAT(TU,SCustomAttribute,1)=1) THEN {
+  DEALCOMBATDAMAGE (TU,0,0,999);
+  GOTO "ENDOFCOSPELL";
+ }
+
+ ATTACK=10;
+ HIT=60;
+ DAMAGE=0;
+ DEFEND=( GetStat(TU,SToDefend,0) );
+ ARMOR=( GetStat(TU,SDefense,0) );
+ IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+ IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+
+ : Make attack roll for 10 damage at 60% to-hit :
+ LOOP{
+  IF (ATTACK>0) THEN {
+   ATTACK=(ATTACK-1);
+   PERCENT=(RND(100));
+   IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+  }
+ }ENDLP (ATTACK=0);
+
+ : Make defense roll with armor and to-defend :
+ IF (DAMAGE>0) THEN { 
+  LOOP{
+   IF (ARMOR>0) THEN {
+    ARMOR=(ARMOR-1);
+    PERCENT=(RND(100));
+    IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+   }
+  }ENDLP (ARMOR=0);
+  IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+ }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+
+  ATTACK=%I( 10*0.5 );
+  HIT=60;
+  DAMAGE=0;
+  DEFEND=( GetStat(TU,SToDefend,0) );
+  ARMOR=( GetStat(TU,SDefense,0) );
+
+  : Make attack roll for 5 damage at 60% to-hit :
+  LOOP{
+   IF (ATTACK>0) THEN {
+    ATTACK=(ATTACK-1);
+    PERCENT=(RND(100));
+    IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+   }
+  }ENDLP (ATTACK=0);
+
+  : Make defense roll with armor and to-defend :
+  IF (DAMAGE>0) THEN { 
+   LOOP{
+    IF (ARMOR>0) THEN {
+     ARMOR=(ARMOR-1);
+     PERCENT=(RND(100));
+     IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+    }
+   }ENDLP (ARMOR=0);
+   IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+  }
+
+ }
+
+!NOTSABOTAGE!
+
+IF (SP<>SFireBolt) THEN { GOTO "NOTFIREBOLT"; }
+
+ IF (HASGLOBAL(W,GEMeteorStorm)>0) THEN {
+  IF (GETSTAT(TU,AFireImmunity,0)=0)
+   %AND (GETSTAT(TU,AMagicImmunity,0)=0)
+  THEN {
+   ATTACK=%I(12*0.75);
+   HIT=60;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+    IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+   : Make attack roll for 9 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    DEALCOMBATDAMAGE (TU,DAMAGE,0,0);
+   }
+  }
+ }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+  IF (GETSTAT(TU,AFireImmunity,0)=0) THEN {
+   ATTACK=%I(12*0.5);
+   HIT=60;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+    IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+   : Make attack roll for 6 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    DEALCOMBATDAMAGE (TU,DAMAGE,0,0);
+   }
+  }
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTFIREBOLT!
+
+IF (SP<>SFireball) THEN { GOTO "NOTFIREBALL"; }
+
+ IF (HASGLOBAL(W,GEMeteorStorm)>0) THEN {
+  IF (GETSTAT(TU,AFireImmunity,0)=0)
+   %AND (GETSTAT(TU,AMagicImmunity,0)=0)
+  THEN {
+   FIGURE=(GetStat(TU,SFigures,1)) - %I( GETDAMAGE(TU,0)/GetStat(TU,SHP,0) );
+   ATTACK=%I( (14*0.75) * FIGURE );
+   HIT=30;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+    IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+   : Make attack roll for 10 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    DEALCOMBATDAMAGE (TU,DAMAGE,0,0);
+   }
+  }
+ }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+  IF (GETSTAT(TU,AFireImmunity,0)=0) THEN {
+   FIGURE=(GetStat(TU,SFigures,1)) - %I( GETDAMAGE(TU,0)/GetStat(TU,SHP,0) );
+   ATTACK=%I( (14*0.5) * FIGURE );
+   HIT=30;
+   DAMAGE=0;
+   DEFEND=( GetStat(TU,SToDefend,0) );
+   ARMOR=( GetStat(TU,SDefense,0) );
+    IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+    IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+    IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+   : Make attack roll for 10 damage at 60% to-hit :
+   LOOP{
+    IF (ATTACK>0) THEN {
+     ATTACK=(ATTACK-1);
+     PERCENT=(RND(100));
+     IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+    }
+   }ENDLP (ATTACK=0);
+
+   : Make defense roll with armor and to-defend :
+   IF (DAMAGE>0) THEN { 
+    LOOP{
+     IF (ARMOR>0) THEN {
+      ARMOR=(ARMOR-1);
+      PERCENT=(RND(100));
+      IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+     }
+    }ENDLP (ARMOR=0);
+    DEALCOMBATDAMAGE (TU,DAMAGE,0,0);
+   }
+  }
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTFIREBALL!
+
+
+IF (SP<>SFlameStrike) THEN { GOTO "NOTFLAMESTRIKE"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)<>2) THEN { GOTO "NOPHYSICSFLAMESTRIKE"; }
+  FOR U=1 TO MAXUNIT();
+ 
+   OLX=(GetStat(U,SOLX,1));
+   OLY=(GetStat(U,SOLY,1));
+   PLANE=(GetStat(U,SPlane,1));
+   OWNER=(GetStat(U,SOwner,1));
+
+   IF ( INCOMBAT(U) = 0 ) THEN { GOTO "SKIPPHYSICSFLAMESTRIKE"; }
+   IF ( ALIVE(U) = 0 ) THEN { GOTO "SKIPPHYSICSFLAMESTRIKE"; }
+
+    IF (OWNER=OPPONENT) THEN {
+     IF (OLX=COMBATX())
+      %AND (OLY=COMBATY())
+      %AND (PLANE=COMBATP())
+     THEN {
+      IF (GETSTAT(U,AFireImmunity,0)=0) THEN {
+       ATTACK=%I( (16*0.5) );
+       HIT=60;
+       DAMAGE=0;
+       DEFEND=( GetStat(U,SToDefend,0) );
+       ARMOR=( GetStat(U,SDefense,0) );
+        IF (GETENCHANTMENTFLAG(U,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+        IF (GETENCHANTMENTFLAG(U,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+        IF (GETENCHANTMENTFLAG(U,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+
+       : Make attack roll for 10 damage at 60% to-hit :
+       LOOP{
+        IF (ATTACK>0) THEN {
+         ATTACK=(ATTACK-1);
+         PERCENT=(RND(100));
+         IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+        }
+       }ENDLP (ATTACK=0);
+
+       : Make defense roll with armor and to-defend :
+       IF (DAMAGE>0) THEN { 
+        LOOP{
+         IF (ARMOR>0) THEN {
+          ARMOR=(ARMOR-1);
+          PERCENT=(RND(100));
+          IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+         }
+        }ENDLP (ARMOR=0);
+        DEALCOMBATDAMAGE(U,DAMAGE,0,0);
+       }
+      }
+     }
+    }
+
+   !SKIPPHYSICSFLAMESTRIKE!
+
+  NEXT;
+
+ !NOPHYSICSFLAMESTRIKE!
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTFLAMESTRIKE!
+
+IF (SP<>SLightningBolt) THEN { GOTO "NOTLIGHTNINGBOLT"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+
+  ATTACK=%I( 18*0.5 );
+  HIT=60;
+  DAMAGE=0;
+  DEFEND=( GetStat(TU,SToDefend,0) );
+  ARMOR=( GetStat(TU,SDefense,0) );
+   IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+   IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+   IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+   IF ( GetStat(TU,ALightningResistance,0) = 0 ) THEN { ARMOR=%I(ARMOR/2); }
+
+  : Make attack roll for 9 damage at 60% to-hit :
+  LOOP{
+   IF (ATTACK>0) THEN {
+    ATTACK=(ATTACK-1);
+    PERCENT=(RND(100));
+    IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+   }
+  }ENDLP (ATTACK=0);
+
+  : Make defense roll with armor and to-defend :
+  IF (DAMAGE>0) THEN { 
+   LOOP{
+    IF (ARMOR>0) THEN {
+     ARMOR=(ARMOR-1);
+     PERCENT=(RND(100));
+     IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+    }
+   }ENDLP (ARMOR=0);
+   IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+  }
+
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTLIGHTNINGBOLT!
+
+IF (SP<>SChainLightning) THEN { GOTO "NOTCHAINLIGHTNING"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+
+  ATTACK=%I( 20*0.5 );
+  HIT=60;
+  DAMAGE=0;
+  DEFEND=( GetStat(TU,SToDefend,0) );
+  ARMOR=( GetStat(TU,SDefense,0) );
+   IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+   IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+   IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+   IF ( GetStat(TU,ALightningResistance,0) = 0 ) THEN { ARMOR=%I(ARMOR/2); }
+
+  : Make attack roll for 9 damage at 60% to-hit :
+  LOOP{
+   IF (ATTACK>0) THEN {
+    ATTACK=(ATTACK-1);
+    PERCENT=(RND(100));
+    IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+   }
+  }ENDLP (ATTACK=0);
+
+  : Make defense roll with armor and to-defend :
+  IF (DAMAGE>0) THEN { 
+   LOOP{
+    IF (ARMOR>0) THEN {
+     ARMOR=(ARMOR-1);
+     PERCENT=(RND(100));
+     IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+    }
+   }ENDLP (ARMOR=0);
+   IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+  }
+
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTCHAINLIGHTNING!
+
+IF (SP<>SWarpLightning) THEN { GOTO "NOTWARPLIGHTNING"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+
+  FIGURE=(GetStat(TU,SFigures,1)) - %I( GETDAMAGE(TU,0)/GetStat(TU,SHP,0) );
+  ATTACK=%I( (14*0.5) * FIGURE );
+  HIT=30;
+  DAMAGE=0;
+  DEFEND=( GetStat(TU,SToDefend,0) );
+  ARMOR=( GetStat(TU,SDefense,0) );
+   IF (GETENCHANTMENTFLAG(TU,EncResistElements,0)>0) THEN { ARMOR=ARMOR+4; }
+   IF (GETENCHANTMENTFLAG(TU,EncElementalArmor,0)>0) THEN { ARMOR=ARMOR+12; }
+   IF (GETENCHANTMENTFLAG(TU,EncBless,0)>0) THEN { ARMOR=ARMOR+7; }
+   IF ( GetStat(TU,ALightningResistance,0) = 0 ) THEN { ARMOR=%I(ARMOR/2); }
+
+  : Make attack roll for 9 damage at 60% to-hit :
+  LOOP{
+   IF (ATTACK>0) THEN {
+    ATTACK=(ATTACK-1);
+    PERCENT=(RND(100));
+    IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+   }
+  }ENDLP (ATTACK=0);
+
+  : Make defense roll with armor and to-defend :
+  IF (DAMAGE>0) THEN { 
+   LOOP{
+    IF (ARMOR>0) THEN {
+     ARMOR=(ARMOR-1);
+     PERCENT=(RND(100));
+     IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+    }
+   }ENDLP (ARMOR=0);
+   IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,DAMAGE,0,0); }
+  }
+
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTWARPLIGHTNING!
+
+IF (SP<>SCorrosiveBlast) THEN { GOTO "NOTCORROSIVEBLAST"; }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=2) THEN {
+
+  ATTACK=%I( 20*0.5 );
+  HIT=60;
+  DAMAGE=0;
+  DEFEND=( GetStat(TU,SToDefend,0) );
+  ARMOR=( GetStat(TU,SDefense,0) );
+
+  : Make attack roll for 10 damage at 60% to-hit :
+  LOOP{
+   IF (ATTACK>0) THEN {
+    ATTACK=(ATTACK-1);
+    PERCENT=(RND(100));
+    IF ( (PERCENT) < (HIT+1) ) THEN { DAMAGE=DAMAGE+1; }
+   }
+  }ENDLP (ATTACK=0);
+
+  : Make defense roll with armor and to-defend :
+  IF (DAMAGE>0) THEN { 
+   LOOP{
+    IF (ARMOR>0) THEN {
+     ARMOR=(ARMOR-1);
+     PERCENT=(RND(100));
+     IF ( PERCENT < (DEFEND+1) ) THEN { DAMAGE=(DAMAGE-1); }
+    }
+   }ENDLP (ARMOR=0);
+   IF (DAMAGE>0) THEN { DEALCOMBATDAMAGE (TU,0,0,DAMAGE); }
+  }
+
+ }
+
+ GOTO "ENDOFCOSPELL";
+
+!NOTCORROSIVEBLAST!
+
+: Self-destruction protocol :
+IF (SP<>SRedBotton) THEN { GOTO "SELFPRESERVE"; }
+
+ : Reset blank combat global flag :
+ SETCOMBATGLOBAL(W,CGTrap,1,0);
+
+ CBX=(GetStat(ABS(Caster+999999),SCoX,1));
+ CBY=(GetStat(ABS(Caster+999999),SCoY,1));
+
+ FOR AU=1 TO MAXUNIT();
+
+  IF ( INCOMBAT(AU) = 0 ) THEN { GOTO "NOTFORSELFDESTRUCT"; }
+
+   IF (GetStat(AU,SCoX,1)>(CBX-2))
+    %AND (GetStat(AU,SCoX,1)<(CBX+2))
+    %AND (GetStat(AU,SCoY,1)>(CBY-2))
+    %AND (GetStat(AU,SCoY,1)<(CBY+2))
+   THEN {
+    DEALCOMBATDAMAGE (AU,4*( (GETSTAT(AU,SFigures,0))-%I( (GETDAMAGE(AU,0))/(GETSTAT(AU,SHP,0)) ) ),0,0);
+   }
+
+  !NOTFORSELFDESTRUCT!
+
+ NEXT;
+
+ DEALCOMBATDAMAGE (ABS(Caster+999999),0,0,999);
+
+ GOTO "ENDOFCOSPELL";
+
+!SELFPRESERVE!
+
+: Tactical Retreat! :
+IF (SP<>STacticalRetreat) THEN { GOTO "RETREATISCOWARD"; }
+
+ SETCOMBATENCHANTMENTFLAG(ABS(Caster+999999),EncSupremeLightRegen,ABase,1);
+ SETCOMBATENCHANTMENTFLAG(ABS(Caster+999999),EncTacticalRetreat,ABase,1);
+ GOTO "ENDOFCOSPELL";
+
+!RETREATISCOWARD!
+
+: Tactical Retreat! :
+IF (SP<>STacticalRecall) THEN { GOTO "NORECALL"; }
+
+ SETCOMBATENCHANTMENTFLAG(TU,EncSupremeLightRegen,ABase,1);
+ SETCOMBATENCHANTMENTFLAG(TU,EncTacticalRetreat,ABase,1);
+ GOTO "ENDOFCOSPELL";
+
+!NORECALL!
+
+IF (SP<>SRaiseDead) %AND (SP<>SAnimateDead) THEN { GOTO "NOABILITYRECHECK"; }
+
+ FOR U=1 TO MAXUNIT();
+ 
+  IF ( INCOMBAT(U) = 0 ) THEN { GOTO "SKIPTHISUNIT"; }
+  IF ( ALIVE(U) = 0 ) THEN { GOTO "SKIPTHISUNIT"; }
+
+  : Counting Goblins :
+  IF (GETSTAT(U,SRace,1)=RCGoblin) THEN {
+   IF (GETSTAT(U,SOwner,0)=A) THEN { GOBLINA=GOBLINA+1; } ELSE { GOBLIND=GOBLIND+1; }
+   IF (GETSTAT(U,STypeID,1)=350) THEN {
+    IF (GETSTAT(U,SOwner,0)=A) THEN { WARBOSSA=WARBOSSA+1; } ELSE { WARBOSSD=WARBOSSD+1; }
+   }
+  }
+
+  : Counting Mechanics :
+  IF (GETSTAT(U,SHeroID,1)=1)
+   %OR (GETSTAT(U,STypeID,1)=52)
+   %OR (GETSTAT(U,STypeID,1)=78)
+   %OR (GETSTAT(U,STypeID,1)=110)
+   %OR (GETSTAT(U,STypeID,1)=117)
+   %OR (GETSTAT(U,STypeID,1)=144)
+   %OR (GETSTAT(U,STypeID,1)=292)
+   %OR (GETSTAT(U,STypeID,1)=357)
+  THEN {
+   IF (GETSTAT(U,SOwner,0)=A) THEN { ENGINEERA=ENGINEERA+1; } ELSE { ENGINEERD=ENGINEERD+1; }
+  }
+
+  : Counting Heroes :
+  IF (ISHERO(U)>0) THEN {
+   IF (GETSTAT(U,SOwner,0)=A) THEN { HEROA=HEROA+1; } ELSE { HEROD=HEROD+1; }
+  }
+
+  !SKIPTHISUNIT!
+ 
+ NEXT;
+
+ : Record counting variable :
+ IF (GOBLINA>0) THEN {
+  MASTERVARSET GOBLINCOMBATA = GOBLINA;
+  MASTERVARSET WARBOSSCOMBATA = WARBOSSA;
+ } ELSE {
+  MASTERVARSET GOBLINCOMBATA = 0;
+  MASTERVARSET WARBOSSCOMBATA = 0;
+ }
+
+ IF (GOBLIND>0) THEN {
+  MASTERVARSET GOBLINCOMBATD = GOBLIND;
+  MASTERVARSET WARBOSSCOMBATD = WARBOSSD;
+ } ELSE {
+  MASTERVARSET GOBLINCOMBATD = 0;
+  MASTERVARSET WARBOSSCOMBATD = 0;
+ }
+
+ IF (ENGINEERA>0) THEN {
+  MASTERVARSET MECHANICCOMBATA = ENGINEERA;
+ } ELSE {
+  MASTERVARSET MECHANICCOMBATA = 0;
+ }
+
+ IF (ENGINEERD>0) THEN {
+  MASTERVARSET MECHANICCOMBATD = ENGINEERD;
+ } ELSE {
+  MASTERVARSET MECHANICCOMBATD = 0;
+ }
+
+ IF (HEROA>0) THEN {
+  MASTERVARSET HEROINCOMBATA = HEROA;
+ } ELSE {
+  MASTERVARSET HEROINCOMBATA = 0;
+ }
+
+ IF (HEROD>0) THEN {
+  MASTERVARSET HEROINCOMBATD = HEROD;
+ } ELSE {
+  MASTERVARSET HEROINCOMBATD = 0;
+ }
+
+!NOABILITYRECHECK!
+
+!ENDOFCOSPELL!
+
+HALT;

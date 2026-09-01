@@ -144,11 +144,10 @@ function runResolutionStepChecks(ctx) {
   assertEqual(ctx.effectiveResistance(resistanceTarget, 'com2_1.05.11', null, false), 3,
     'Charmed is inert when GetEffectiveResistance is not serving a roll');
 
-  const dosResistance = ctx.buildResistanceContext(
-    { res: 0, unitType: 'normal', abilities: {} },
+  const dosPoisonRes = ctx.resistanceQueries('touch',
     { res: 0, unitType: 'hero', abilities: { charmed: true } },
-    'mom_1.31');
-  assertEqual(dosResistance.bResPoison, 30,
+    'mom_1.31', { poison: 1 }, true).poisonRes;
+  assertEqual(dosPoisonRes, 30,
     'DOS Charmed adds 30 Resistance to realm-less rolls for heroes');
 
   const bothElemental = {
@@ -156,16 +155,15 @@ function runResolutionStepChecks(ctx) {
     unitType: 'normal',
     abilities: { elementalArmor: true, resistElements: true },
   };
-  const plainResistanceSource = { res: 0, unitType: 'normal', abilities: {} };
   for (const version of ['mom_1.31', 'mom_cp_1.60.00']) {
-    const context = ctx.buildResistanceContext(
-      plainResistanceSource, bothElemental, version);
-    assertEqual(context.bResStoning, 10,
+    const stoningRes = ctx.resistanceQueries('touch', bothElemental, version,
+      { stoningTouch: 0 }, true).stoningTouchRes;
+    assertEqual(stoningRes, 10,
       `${version}: Elemental Armor supersedes Resist Elements on the resistance path`);
   }
-  const comResistance = ctx.buildResistanceContext(
-    plainResistanceSource, bothElemental, 'com_6.08');
-  assertEqual(comResistance.bResStoning, 4,
+  const comStoningRes = ctx.resistanceQueries('touch', bothElemental, 'com_6.08',
+    { stoningTouch: 0 }, true).stoningTouchRes;
+  assertEqual(comStoningRes, 4,
     'CoM 1 resistance ignores Elemental Armor and retains Resist Elements +4');
 
   const elementalDefenseTarget = {
@@ -266,7 +264,7 @@ function runResolutionStepChecks(ctx) {
       thrown: { strength: 5 },
       fireBreath: { strength: 3 },
     },
-  }, 'com2_warlord_1.5.12.7');
+  }, 'com2_warlord_1.5.12.9');
   assertEqual(energyDoom.atk, 2,
     'Warlord Energy Weaponry applies configured 50% Doom damage to odd melee strength');
   assertEqual(energyDoom.rtb, 3,
@@ -294,7 +292,7 @@ function runResolutionStepChecks(ctx) {
 
 function runModernWeaponImmunityMappingChecks(ctx) {
   const com2 = 'com2_1.05.11';
-  const warlord = 'com2_warlord_1.5.12.7';
+  const warlord = 'com2_warlord_1.5.12.9';
   const derive = overrides => ctx.deriveUnitStats(baseUnitInput({ version: com2, ...overrides }));
   const deriveWarlord = overrides => ctx.deriveUnitStats(baseUnitInput({ version: warlord, ...overrides }));
   const identity = (version, values) => ctx.createUnitIdentity({ version, ...values });

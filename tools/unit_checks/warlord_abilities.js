@@ -1,5 +1,5 @@
 // Warlord roster and ability checks: the script-granted packages and the unit-specific
-// building grants that only the 1.5.12.7 scripts make.
+// building grants that only the 1.5.12.9 scripts make.
 
 'use strict';
 
@@ -7,7 +7,7 @@ const vm = require('vm');
 const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
 
 function runWarlordUnitAbilityChecks(ctx) {
-  const version = 'com2_warlord_1.5.12.7';
+  const version = 'com2_warlord_1.5.12.9';
   // A modern record that states no attack is four empty channels, never a missing record
   // (`SPEC.md`, *Attack channels on the card*), so the Warlord default states the empty record
   // beside the empty shared slot `baseUnitInput` already supplies. A check that wants a channel
@@ -23,7 +23,8 @@ function runWarlordUnitAbilityChecks(ctx) {
     "Object.values(WARLORD_UNITS_DATA).filter(u => (u.abilities || []).includes('Sapiens')).length",
     ctx,
   );
-  assertEqual(sapiensCount, 31, 'Warlord roster generator emits all 31 Sapiens units');
+  // 1.5.12.9 added Aerial Support Drones [364], the 32nd: `Custom13=14` in its UNITS.INI record.
+  assertEqual(sapiensCount, 32, 'Warlord roster generator emits all 32 Sapiens units');
   // v1.5.12.6.2 added Custom13=14 to Wraiths [170] and Shadow Demons [171], closing the
   // changelog-vs-roster conflict in Source discrepancies.md §5.
   const lateSapiens = vm.runInContext(
@@ -421,7 +422,11 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(sapiensReforms.res, 3, 'Sapiens summons receive Xenopsychology and Radio resistance');
   assertEqual(sapiensReforms.hp, 5, 'Xenoveterinary adds 25% HP to fantastic Sapiens summons');
   assertClose(sapiensReforms.toHitMelee, 0.5, 'Radio and Xenoveterinary each add 10% To-Hit');
-  assertClose(sapiensReforms.toHitRtb, 0.7, 'Ballistics Training adds 20% Ranged To-Hit for Sapiens summons');
+  // 1.5.12.8 split the block's three channels: Ranged took +10, Breath and Thrown kept +20
+  // (UnitCalcPre.CAS:1082-1088). Base 30 + Radio 10 + Xenoveterinary 10 = 50 before the block.
+  assertClose(sapiensReforms.toHitRtb, 0.6, 'Ballistics Training adds 10% Ranged To-Hit for Sapiens summons');
+  assertClose(sapiensReforms.toHitThrown, 0.7, 'Ballistics Training still adds 20% Thrown To-Hit');
+  assertClose(sapiensReforms.toHitBreath, 0.7, 'Ballistics Training still adds 20% Breath To-Hit');
 
   const magitekScience = ctx.deriveUnitStats(warlordUnit({
     abilities: { mechanical: true, armorcladReform: true, magitekScience: true },

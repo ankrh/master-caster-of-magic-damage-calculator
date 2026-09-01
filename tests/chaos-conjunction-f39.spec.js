@@ -37,7 +37,7 @@ test('F39 scales every modern Immolation firing from strength 10 to 13 exactly o
       makeUnit(version, 'b', bAbilities),
       { version, isRanged: false, wallOfFire: false, chaosConjunction: active },
     );
-    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => {
+    const modern = ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => {
       const inactive = run(version, { immolation: true }, {}, false);
       const active = run(version, { immolation: true }, {}, true);
       const reverse = run(version, {}, { immolation: true }, true);
@@ -136,7 +136,7 @@ test('F39 leaves Wall of Fire unchanged and keeps DOS state hidden and inert', a
         version, isRanged: false, wallOfFire: true, chaosConjunction: active,
       },
     ).totalDmgToA;
-    return ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => {
+    return ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => {
       const inactive = trim(runWall(version, false));
       const active = trim(runWall(version, true));
       const expected = version === 'com2_1.05.11'
@@ -171,7 +171,7 @@ test('F39 leaves Wall of Fire unchanged and keeps DOS state hidden and inert', a
   }
 
   await expect(page.locator('#chaosConjunction').locator('xpath=..')).toHaveAttribute(
-    'data-tooltip', /Versions: CoM 2 1\.05\.11 & Warlord 1\.5\.12\.7/,
+    'data-tooltip', /Versions: CoM 2 1\.05\.11 & Warlord 1\.5\.12\.9/,
   );
   await expect(page.locator('#chaosConjunction').locator('xpath=..')).toHaveAttribute(
     'data-tooltip', /Immolation only: ×1\.34, then truncation \(strength 10→13\)\./,

@@ -52,7 +52,7 @@ function getBlurChance(defAbilities, atkAbilities, version, modernTacticalDefend
 // Channels inherits them there: `Reference docs/MoM binary analysis.md`, *Undead immunities
 // are a race gate in MoM, a mutation gate in CoM 1*.
 // STAT-FORMULA[undeadImmunityDerivation]
-// PROVENANCE[undeadImmunityDerivation]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:b0b100600e12a7776e6f6705 | Reference docs/DOS reconstructed/unitcalc.c@span:7:4f777961fd94cbdfe370ee1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:f913c873848cd66c2e8a77bf
+// PROVENANCE[undeadImmunityDerivation]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:b0b100600e12a7776e6f6705 | Reference docs/DOS reconstructed/unitcalc.c@span:7:4f777961fd94cbdfe370ee1c | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:f913c873848cd66c2e8a77bf
 function applyUndeadImmunities(unit, version) {
   if (!hasAbil(unit.abilities, 'undead') && !hasAbil(unit.abilities, 'animated')) return unit;
   const extra = { deathImmunity: true };
@@ -74,7 +74,7 @@ function applyUndeadImmunities(unit, version) {
 }
 
 // STAT-FORMULA[animatedEffectDerivation]
-// PROVENANCE[animatedEffectDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:16:ae07dbabe0a67cb84ddd5b15 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:808c1e69f457f734b2c8e8a8
+// PROVENANCE[animatedEffectDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:16:ae07dbabe0a67cb84ddd5b15 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:25:808c1e69f457f734b2c8e8a8
 function applyAnimatedEffects(unit, version) {
   if (!hasAbil(unit.abilities, 'animated')) return unit;
   const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
@@ -106,16 +106,22 @@ function applyBlackChannelsEffects(unit, version) {
   });
 }
 
-// Warlord Rebuild (Arcane unit enchantment): unit becomes Mechanical and gains
-// Death Immunity, Illusion Immunity, and Armor Piercing. Stat bonuses are
+// Warlord Rebuild (Arcane unit enchantment): the unit gains Death Immunity, Illusion Immunity
+// and Armor Piercing, and a non-hero also becomes Mechanical. Stat bonuses are
 // applied by getAbilityStatSteps.
+// The Mechanical flag is the one write the two branches do not share: `SETSTAT(TU,SCustomAttribute,1,1)`
+// (OLSpell.CAS:587) is inside `IF (ISHERO(TU)=0)` and writes the permanent record, while the hero
+// branch's `SETSTAT(U,SCustomAttribute,0,1)` (UnitCalcPre.CAS:685) writes the calculated record,
+// which no script line reads for value 1 (F217.3). The other three are written by both branches
+// (OLSpell.CAS:590-592, UnitCalcPre.CAS:688-690) and are ungated here.
 // STAT-FORMULA[rebuildEffectDerivation]
-// PROVENANCE[rebuildEffectDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/OLSpell.CAS@span:14:4bf7fbd36a952469a8d78b9b | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
+// PROVENANCE[rebuildEffectDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:14:4bf7fbd36a952469a8d78b9b | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
 function applyRebuildEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'rebuild')) return unit;
+  const isHero = !!(unit.isHero || unit.unitType === 'hero');
   return Object.assign({}, unit, {
     abilities: Object.assign({}, unit.abilities, {
-      mechanical: true,
+      ...(isHero ? {} : { mechanical: true }),
       deathImmunity: true,
       illusionImmunity: true,
       armorPiercing: true,
@@ -127,7 +133,7 @@ function applyRebuildEffects(unit, version) {
 // non-corporeal units (including via Wraith Form / Ruler of Underworld) gain Negate First Strike;
 // units on their favored terrain gain both First Strike and Negate First Strike.
 // STAT-FORMULA[tacticianAbilityDerivation]
-// PROVENANCE[tacticianAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:20:ad27ec0c811d3a388faf52ab | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:22:89e62a9b6d30ab5269ff1a55
+// PROVENANCE[tacticianAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:20:ad27ec0c811d3a388faf52ab | Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:22:89e62a9b6d30ab5269ff1a55
 function applyTacticianWarlordEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'tactician')) return unit;
   const extra = {};
@@ -152,7 +158,7 @@ function applyTacticianWarlordEffects(unit, version) {
 // Destiny's `B.Fantastic := True` at $0059A390 included (F192). Splitting the two halves across
 // two records would give a Destiny unit the Chaos conversion without the First Strike beside it.
 // STAT-FORMULA[fieryFuryAbilityDerivation]
-// PROVENANCE[fieryFuryAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:14:28f3f207149034b0e805f4b5
+// PROVENANCE[fieryFuryAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:14:28f3f207149034b0e805f4b5
 function applyFieryFuryEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord')) return unit;
   if (!hasAbil(unit.abilities, 'fieryFury')) return unit;
@@ -171,7 +177,7 @@ function applyFieryFuryEffects(unit, version) {
 // same flags earlier in phase b; the ordinary phase-d Zeal block skips that duplicate.
 // Both precede Temporal Twist, which can strip the granted flags.
 // STAT-FORMULA[zealAbilityDerivation]
-// PROVENANCE[zealAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:4:d530a92fb1e7f722142a627e | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:4:31ac70ff5715861521e99085
+// PROVENANCE[zealAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:4:d530a92fb1e7f722142a627e | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:31ac70ff5715861521e99085
 function applyZealEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'zeal')) return unit;
   return Object.assign({}, unit, {
@@ -184,7 +190,7 @@ function applyZealEffects(unit, version) {
 // later Tactician block, which can restore Negate First Strike from Non-Corporeal
 // or both strike flags from Favored Terrain, but cannot restore Teleporting's First Strike.
 // STAT-FORMULA[temporalTwistAbilityDerivation]
-// PROVENANCE[temporalTwistAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:5:f1f4495ca7b57ea954b01136
+// PROVENANCE[temporalTwistAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:5:f1f4495ca7b57ea954b01136
 function applyTemporalTwistEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'temporalTwist')) return unit;
   const stripped = Object.assign({}, unit.abilities);
@@ -198,7 +204,7 @@ function applyTemporalTwistEffects(unit, version) {
 // `c:bloodLust`. Warlord: Bloodlust no longer turns the unit undead
 // (only doubled melee vs normals/heroes is retained), so this becomes a no-op.
 // STAT-FORMULA[bloodLustAbilityDerivation]
-// PROVENANCE[bloodLustAbilityDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:4291d05361823ad272e4e04f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:e894ef880a35e8ad7d3f714b | Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:8:32ea534d834bbcec63f4826a
+// PROVENANCE[bloodLustAbilityDerivation]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:12:4291d05361823ad272e4e04f | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:e894ef880a35e8ad7d3f714b | Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:8:32ea534d834bbcec63f4826a
 function applyBloodLustEffects(unit, version) {
   // Bit 0x00000004 is Berserk in MoM and Blood Lust from CoM 1 on, so the undead grant does not
   // exist in either MoM build (`COMBAT_VERSION_SCOPES`, `steps.js`). Without the gate a hidden
@@ -217,7 +223,7 @@ function applyBloodLustEffects(unit, version) {
 // Its Create Undead grant only routes damage into a post-combat creation category; it does
 // not change one-round damage or Blood Sucker triggering, so this calculator omits that flag.
 // STAT-FORMULA[vampirismAbilityDerivation]
-// PROVENANCE[vampirismAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:13:6359ba6a575e608e160b3466
+// PROVENANCE[vampirismAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:13:6359ba6a575e608e160b3466
 function applyVampirismEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'vampirism')) return unit;
   return Object.assign({}, unit, {
@@ -230,7 +236,7 @@ function applyVampirismEffects(unit, version) {
 // granted `undead` flag via applyUndeadImmunities. Death Touch fires per attacking
 // figure on melee and Thrown. Regeneration has no bearing on single-combat damage.
 // STAT-FORMULA[revenantAbilityDerivation]
-// PROVENANCE[revenantAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/COSpell.CAS@span:3:6d47f9da2fa86fd972f40ae4 | Reference docs/Script source/Warlord 1.5.12.7/UnitCalcPre.CAS@span:7:76f065dbf8571714ba992fd1
+// PROVENANCE[revenantAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/COSpell.CAS@span:3:6d47f9da2fa86fd972f40ae4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:7:76f065dbf8571714ba992fd1
 function applyRevenantEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'revenant')) return unit;
   return Object.assign({}, unit, {
@@ -320,7 +326,7 @@ function applyWarlordTouchFlagPlacement(unit, version) {
 // Run after the effective unit type is finalized, so Sanctify's life-realm rewrite is
 // already reflected. The extra -3 vs created-undead defenders lives in exorciseFailProb.
 // STAT-FORMULA[angelicGuardiansAbilityDerivation]
-// PROVENANCE[angelicGuardiansAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.7; sources=Reference docs/Script source/Warlord 1.5.12.7/UnitCalc.CAS@span:9:f742373b8f5966edd2fa5c3b
+// PROVENANCE[angelicGuardiansAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:9:f742373b8f5966edd2fa5c3b
 function applyAngelicGuardiansEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'angelicGuardians')) return unit;
   const realm = realmOfUnitType(unit.unitType, unit.identity);
@@ -342,7 +348,7 @@ function applyAngelicGuardiansEffects(unit, version) {
   });
 }
 
-// PROVENANCE[bloodLustMeleeAttack]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/DOS reconstructed/combat.c@span:7:28677485bcd26d6205a27127 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:ac0c26ac4b856f2574b214d5
+// PROVENANCE[bloodLustMeleeAttack]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:7:28677485bcd26d6205a27127 | Reference docs/Caster binary/Combat.ApplyAttack.pas@span:4:ac0c26ac4b856f2574b214d5
 // STAT-FORMULA[bloodLustMeleeAttack]
 function bloodLustMeleeAttack(atkUnit, defUnit, attackStrength = atkUnit.atk) {
   // MoM guards bit 0x00000004 as Berserk and CoM 1 as Blood Lust, so the doubling exists only
@@ -364,9 +370,17 @@ function bloodLustMeleeAttack(atkUnit, defUnit, attackStrength = atkUnit.atk) {
 // is discarded after one incoming attack. They therefore never change the displayed
 // stat block. Order follows @Units@GetEffectiveResistance and
 // @Units@EffectiveDefense; see CoM2 binary analysis, "Resolution-time modifiers".
-function attackSpecificStep(id, writes, apply, when) {
+// `sourceLabel` names the game source of the write for the hover chains F222.5 hangs on the
+// rider histograms; without one the chain reads the step id, which for these two sequences
+// repeats the routine's name on every line. It is stated only where the id is not already the
+// source — the seeding steps, which fold a second term in beside the record value they read.
+function attackSpecificStep(id, writes, apply, when, sourceLabel) {
   return statStep({
     id,
+    // The chain names each write by the step's own tail: `effectiveResistance:resistMagic`
+    // reads as "Resist Magic", not as "Effective Resistance Resist Magic".
+    sourceId: id.slice(id.indexOf(':') + 1),
+    ...(sourceLabel ? { sourceLabel } : {}),
     phase: 'attackSpecific',
     writes,
     apply,
@@ -374,27 +388,63 @@ function attackSpecificStep(id, writes, apply, when) {
   });
 }
 
+// --- Chains for the two attack-specific sequences (F222.5) ---
+//
+// A rider histogram's hover chain is a projection of the trace the query it made produced. The
+// trace comes out of `runStatSteps` on the same ordered list that computed the figure the roll
+// used, so the chain is emitted by the path that computed the value rather than rebuilt from
+// the controls afterwards (`CLAUDE.md`, *Input/output contract*). Both are produced by one
+// call: a chain that could disagree with the number it explains would be a second reading.
+//
+// A resistance chain carries the realm its roll named. One target has one effective resistance
+// per realm its attacker's riders name — Bless answers Chaos and Death, Resist Elements answers
+// Nature, the realm-less Poison roll takes neither — so up to five are simultaneously valid
+// inside one attack and the reader cannot tell them apart without it.
+function resistanceChainRecord(target, realm, value, trace, baseId) {
+  return {
+    quantity: 'resistance',
+    realm: realm || null,
+    trace: projectStatTrace(trace, 'effectiveResistance', target.res, value, { baseId }),
+  };
+}
+
+function defenseChainRecord(target, value, trace, baseId) {
+  return {
+    quantity: 'defense',
+    realm: null,
+    trace: projectStatTrace(trace, 'effectiveDefense', target.def, value, { baseId }),
+  };
+}
+
+// A one-slot sink. A caller that wants the chain passes an object and reads `.chain` back; a
+// caller that passes nothing records no trace and pays nothing, which is what keeps the matrix
+// off this path.
+function fillDefenseChain(sink, target, value, trace, baseId) {
+  if (sink) sink.chain = defenseChainRecord(target, value, trace, baseId);
+  return value;
+}
+
 const EFFECTIVE_RESISTANCE_STEPS = [
-  // PROVENANCE[effectiveResistance:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
+  // PROVENANCE[effectiveResistance:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
   attackSpecificStep('effectiveResistance:base', ['effectiveResistance'],
     u => { u.effectiveResistance = u.res; }),
-  // PROVENANCE[effectiveResistance:charmed]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
+  // PROVENANCE[effectiveResistance:charmed]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:7:94e6acc42c67b18404dd8d13
   attackSpecificStep('effectiveResistance:charmed', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
     (u, ctx) => ctx.isRoll && (u.isHero || u.unitType === 'hero') && hasAbil(u.abilities, 'charmed')),
-  // PROVENANCE[effectiveResistance:magicImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc
+  // PROVENANCE[effectiveResistance:magicImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc
   attackSpecificStep('effectiveResistance:magicImmunity', ['effectiveResistance'],
     u => { u.effectiveResistance = 100; },
     (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'magicImmunity')),
-  // PROVENANCE[effectiveResistance:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:c5d736809b27903ec0e40f87 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c
+  // PROVENANCE[effectiveResistance:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:c5d736809b27903ec0e40f87 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c
   attackSpecificStep('effectiveResistance:resistElements', ['effectiveResistance'],
     u => { u.effectiveResistance += 4; },
     (u, ctx) => ctx.realm === 'nature' && hasResistElementsEffect(u.abilities)),
-  // PROVENANCE[effectiveResistance:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:8da0a27a31fedd3ba0134ffc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:139a1e53fbfbc5356d693d1d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:e9ef47259ac28c3d1c61598a
+  // PROVENANCE[effectiveResistance:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:8da0a27a31fedd3ba0134ffc | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:139a1e53fbfbc5356d693d1d | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:e9ef47259ac28c3d1c61598a
   attackSpecificStep('effectiveResistance:bless', ['effectiveResistance'],
     (u, ctx) => { u.effectiveResistance += ctx.blessBonus; },
     (u, ctx) => (ctx.realm === 'chaos' || ctx.realm === 'death') && hasAbil(u.abilities, 'bless')),
-  // PROVENANCE[effectiveResistance:resistMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:144365f7a66eeaa2a77f8a4d | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:9944e135e5c46465171e6e72 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:9944e135e5c46465171e6e72
+  // PROVENANCE[effectiveResistance:resistMagic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:144365f7a66eeaa2a77f8a4d | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:9944e135e5c46465171e6e72 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:9944e135e5c46465171e6e72
   attackSpecificStep('effectiveResistance:resistMagic', ['effectiveResistance'],
     u => { u.effectiveResistance += 5; },
     (u, ctx) => ctx.realm !== null && hasAbil(u.abilities, 'resistMagic')),
@@ -412,9 +462,9 @@ function effectiveResistance(target, version, realm, isRoll = true, trace = null
     blessBonus: version && version.startsWith('com2_warlord') ? 4 : 5,
     ...(trace ? { trace } : {}),
   };
-  // None of these steps carries a version predicate: the list is CoM2-only because the
-  // `startsWith('com2')` branch of buildResistanceContext is the only path that reaches it.
-  // That scope is therefore checkable only here, where the steps enter the sequence.
+  // None of these steps carries a version predicate: the list is CoM2-only because the modern
+  // arm of `resistanceQueries` is the only path that reaches it. That scope is therefore
+  // checkable only here, where the steps enter the sequence.
   if (statStepDebugEnabled()) {
     assertSequenceVersionScope(EFFECTIVE_RESISTANCE_STEPS, version, 'GetEffectiveResistance');
   }
@@ -423,37 +473,42 @@ function effectiveResistance(target, version, realm, isRoll = true, trace = null
 }
 
 const EFFECTIVE_DEFENSE_STEPS = [
-  // PROVENANCE[effectiveDefense:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:16:a817f716eaa0bf5bc9a83904
+  // PROVENANCE[effectiveDefense:base]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:16:a817f716eaa0bf5bc9a83904
+  // The seed reads the record's Defense and folds in `extradef`, which on this path is City
+  // Walls and nothing else (`computeCasterDefenseForAttack` below is its only writer). The
+  // chain's base is the record value, so the entry this step contributes is exactly that
+  // bonus — which is what the label names. A second `extradef` term would have to be labelled
+  // separately rather than inherit this one.
   attackSpecificStep('effectiveDefense:base', ['effectiveDefense'],
-    (u, ctx) => { u.effectiveDefense = u.def + ctx.extraDefense; }),
-  // PROVENANCE[effectiveDefense:illusion]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:73589286bdb2cf542120a0a1
+    (u, ctx) => { u.effectiveDefense = u.def + ctx.extraDefense; }, null, 'City Walls'),
+  // PROVENANCE[effectiveDefense:illusion]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:73589286bdb2cf542120a0a1
   attackSpecificStep('effectiveDefense:illusion', ['effectiveDefense'],
     u => { u.effectiveDefense = 0; return HALT; },
     (u, ctx) => ctx.illusion && !hasAbil(u.abilities, 'illusionImmunity')),
-  // PROVENANCE[effectiveDefense:largeShield]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:cad06bcca352e1e701c06cfe | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:baa485ae66a250e528069e54 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:baa485ae66a250e528069e54
+  // PROVENANCE[effectiveDefense:largeShield]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:cad06bcca352e1e701c06cfe | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:baa485ae66a250e528069e54 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:baa485ae66a250e528069e54
   attackSpecificStep('effectiveDefense:largeShield', ['effectiveDefense'],
     u => { u.effectiveDefense += 3; },
     (u, ctx) => ctx.isRanged && hasAbil(u.abilities, 'largeShield')),
-  // PROVENANCE[effectiveDefense:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:69075b87f644f18cbdb1c64a | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:c99051561c61668cea94903d | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:c99051561c61668cea94903d
+  // PROVENANCE[effectiveDefense:resistElements]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:69075b87f644f18cbdb1c64a | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:c99051561c61668cea94903d | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:c99051561c61668cea94903d
   attackSpecificStep('effectiveDefense:resistElements', ['effectiveDefense'],
     u => { u.effectiveDefense += 4; },
     (u, ctx) => ctx.elementalEligible && hasResistElementsEffect(u.abilities)),
-  // PROVENANCE[effectiveDefense:elementalArmor]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:95c224910389756ff6f69515 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:473b9eac9397f92d8022c2cd | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:473b9eac9397f92d8022c2cd
+  // PROVENANCE[effectiveDefense:elementalArmor]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:95c224910389756ff6f69515 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:473b9eac9397f92d8022c2cd | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:473b9eac9397f92d8022c2cd
   attackSpecificStep('effectiveDefense:elementalArmor', ['effectiveDefense'],
     u => { u.effectiveDefense += 12; },
     (u, ctx) => ctx.elementalEligible && hasElementalArmorEffect(u.abilities)),
-  // PROVENANCE[effectiveDefense:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:1aa8579dfe4d99fda5935346 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:db54edb1372f3254301b3b9b | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:aaec01b51dfbddfb4fb45271
+  // PROVENANCE[effectiveDefense:bless]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:1aa8579dfe4d99fda5935346 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:db54edb1372f3254301b3b9b | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:aaec01b51dfbddfb4fb45271
   attackSpecificStep('effectiveDefense:bless', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.blessBonus; },
     (u, ctx) => ctx.magicImmunityEligible && ctx.spellId > 0
       && (ctx.spellRealm === 'chaos' || ctx.spellRealm === 'death')
       && hasAbil(u.abilities, 'bless')),
-  // PROVENANCE[effectiveDefense:armorPiercing]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:d2fe7b44d5e48e4e73b98cde
+  // PROVENANCE[effectiveDefense:armorPiercing]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:4:d2fe7b44d5e48e4e73b98cde
   attackSpecificStep('effectiveDefense:armorPiercing', ['effectiveDefense'],
     u => { u.effectiveDefense = Math.floor(u.effectiveDefense / 2); },
     (u, ctx) => ctx.armorPiercing
       && !(ctx.isLightning && hasAbil(u.abilities, 'lightningResist'))),
-  // PROVENANCE[effectiveDefense:immunities]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:2f2c6876d3c7d7f5d2533b8b
+  // PROVENANCE[effectiveDefense:immunities]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:6:2f2c6876d3c7d7f5d2533b8b
   attackSpecificStep('effectiveDefense:immunities', ['effectiveDefense'],
     (u, ctx) => {
       // The six Caster.exe tests are assignments in this order, and six is the whole of them:
@@ -471,7 +526,7 @@ const EFFECTIVE_DEFENSE_STEPS = [
       if (hasAbil(u.abilities, 'magicImmunity') && ctx.magicImmunityEligible) u.effectiveDefense = 100;
       if (hasAbil(u.abilities, 'missileImmunity') && ctx.isMissile) u.effectiveDefense = 100;
     }),
-  // PROVENANCE[effectiveDefense:weaponImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.7; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:64343218ebddfe0d2454f929 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:8c99d740dfd473b21f906b13 | TABLE=Reference docs/Script source/Warlord 1.5.12.7/MODDING.INI@span:1:4c279bb027bcde85badd90e7
+  // PROVENANCE[effectiveDefense:weaponImmunity]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:64343218ebddfe0d2454f929 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:8c99d740dfd473b21f906b13 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:4c279bb027bcde85badd90e7
   attackSpecificStep('effectiveDefense:weaponImmunity', ['effectiveDefense'],
     (u, ctx) => { u.effectiveDefense += ctx.weaponImmunityBonus; },
     (u, ctx) => ctx.weaponImmunityEligible),
@@ -620,6 +675,225 @@ function dosEffectiveResistance(target, version, realm, trace = null) {
   return scratch.effectiveResistance;
 }
 
+// --- Per-roll resistance queries (F223) ---
+//
+// No engine computes a unit's resistances up front. Each block that makes a resistance roll
+// calls its own query with the realm that roll names — `ResistanceRoll` -> `GetEffectiveResistance` in
+// Caster.exe (`Reference docs/Caster binary/Combat.ResolutionHelpers.pas:110`, `:132`),
+// `Combat_Resistance_Check` -> `Combat_Effective_Resistance` in the DOS builds
+// (`Reference docs/DOS reconstructed/combat.c:2012`, `:2028`). One defender therefore has as
+// many effective resistances inside one attack as its attacker has active riders, and they
+// differ: Bless answers Chaos and Death, Resist Elements answers Nature, and the realm-less
+// Poison roll takes neither. A single accumulated figure cannot hold that, and a realm-by-side
+// cross product computed ahead of the riders is not a shape any engine has.
+//
+// So the query is a step of the roll, not of the unit. Each list below is one engine region in
+// that region's own execution order; each step names the realm its roll passes; and a step fires
+// only when the engine makes that roll, because outside that there is no call and the field must
+// stay absent rather than hold a figure nothing asked for. `ctx.values` carries what the caller
+// has already read — `placedTouchValue` for the touch group (`combat_phases.js`), the fear flag
+// and the gaze-active flags for the other two — so the gate here is the one the consumer uses,
+// and no version test is restated in it.
+//
+// Two of the three regions are riders: they run inside another attack and modify its outcome.
+// The gaze kill rolls are not, and the lists below say so in their names.
+//
+// The `lifeRider` slot is one rider block with two names: MoM calls its flag Dispel Evil, CoM 1
+// and the modern builds call the same slot Exorcise. Which name a build gives it is
+// `TOUCH_KEY_SCOPE_IDS`'s fact, carried per key through `touchKeyInVersion`; the query is one
+// Life-realm roll either way, so it is one step.
+//
+// The lists carry no version predicate, exactly as `EFFECTIVE_RESISTANCE_STEPS` does not: each
+// is reached only from its own engine family's arm of `resistanceQueries`, and that scope is
+// asserted where the steps enter the sequence.
+// Which routine a query group's steps call, and what its seeding step is called. Both are
+// properties of the engine family whose list is running, and `resistanceQueries` picks the pair
+// beside the list, so a modern list can never be run through the DOS routine.
+const MODERN_RESISTANCE_QUERY = Object.freeze({
+  run: (target, version, realm, trace) => effectiveResistance(target, version, realm, true, trace),
+  baseId: 'effectiveResistance:base',
+});
+const DOS_RESISTANCE_QUERY = Object.freeze({
+  run: (target, version, realm, trace) => dosEffectiveResistance(target, version, realm, trace),
+  baseId: 'dosEffectiveResistance:base',
+});
+
+// One rider's query, made once. The realm is named by the step, the value goes to the field the
+// step declares, and the chain — when the caller asked for one — is the projection of the trace
+// that same call produced. `ctx.chains` absent means no trace array is built at all, which is
+// what keeps the matrix off this path.
+function riderResistanceQuery(unit, ctx, field, realm) {
+  const trace = ctx.chains ? [] : null;
+  const value = ctx.query.run(ctx.target, ctx.version, realm, trace);
+  unit[field] = value;
+  if (ctx.chains) {
+    ctx.chains[field] = resistanceChainRecord(ctx.target, realm, value, trace, ctx.query.baseId);
+  }
+}
+
+const MODERN_TOUCH_RIDER_RESISTANCE_STEPS = [
+  // PROVENANCE[touchRiderResistance:lifeRider]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:14:1af4ce419d8230fdb6439ac3
+  attackSpecificStep('touchRiderResistance:lifeRider', ['lifeRiderRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'lifeRiderRes', 'life'); },
+    (u, ctx) => ctx.fires && (ctx.values.exorcise != null || !!ctx.values.dispelEvil)),
+  // PROVENANCE[touchRiderResistance:stoningTouch]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:8:cb64b9c258eb87e12d65086d
+  attackSpecificStep('touchRiderResistance:stoningTouch', ['stoningTouchRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'stoningTouchRes', 'nature'); },
+    (u, ctx) => ctx.fires && ctx.values.stoningTouch != null),
+  // PROVENANCE[touchRiderResistance:deathTouch]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:8:aecba60e93b714e0d12f9afb
+  attackSpecificStep('touchRiderResistance:deathTouch', ['deathTouchRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'deathTouchRes', 'death'); },
+    (u, ctx) => ctx.fires && ctx.values.deathTouch != null),
+  // PROVENANCE[touchRiderResistance:lifeSteal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:12:aeae4f8bac0ada5ec4543886
+  attackSpecificStep('touchRiderResistance:lifeSteal', ['lifeStealRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'lifeStealRes', 'death'); },
+    (u, ctx) => ctx.fires && ctx.values.lifeSteal != null),
+  // PROVENANCE[touchRiderResistance:destruction]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:7:5825574e953531d6ee8f33c4
+  attackSpecificStep('touchRiderResistance:destruction', ['destructionRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'destructionRes', 'chaos'); },
+    (u, ctx) => ctx.fires && ctx.values.destruction != null),
+  // The Poison loop passes realm 0, so no realm-conditional term of `GetEffectiveResistance`
+  // reaches it — not Magic Immunity, not Resist Magic, not Bless, not Resist Elements.
+  // PROVENANCE[touchRiderResistance:poison]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:17:d81123fcbac38055f6f571f9
+  attackSpecificStep('touchRiderResistance:poison', ['poisonRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'poisonRes', null); },
+    (u, ctx) => ctx.fires && (ctx.values.poison || 0) > 0),
+];
+
+// Cause Fear is its own region: it runs inside the melee arm of `ApplyAttack`, ahead of the
+// exchange, and rolls against the unit whose figures it removes — the attacker when the
+// defender carries the flag. Realm Death, fixed -3 save.
+const MODERN_FEAR_RIDER_RESISTANCE_STEPS = [
+  // PROVENANCE[fearRiderResistance:fear]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:15:a1e2224e239b0afed3d8bf61
+  attackSpecificStep('fearRiderResistance:fear', ['fearRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'fearRes', 'death'); },
+    (u, ctx) => !!ctx.values.fear),
+];
+
+// The two gaze kill rolls are a third region, ahead of the rider group and reached instead of it.
+// They ride on nothing: `PerformAttacks` deals each kill gaze as its own `ApplyAttack` call, and
+// that call's dispatch arm sets `atk := 0` (`Combat.ApplyAttack.pas:314-324`), so the per-figure
+// resistance roll is the whole call. Nothing rides on them either — attack types 6..8 jump past
+// all six touch-rider blocks.
+//
+// `ApplyAttack` lays its two blocks out Death before Stoning, but that is not an execution order:
+// `at` selects exactly one of them per call, so the order is the caller's. `PerformAttacks` deals
+// Stoning then Death, for the attacker group and again for the defender group, which is the order
+// both lists carry.
+const MODERN_GAZE_KILL_RESISTANCE_STEPS = [
+  // PROVENANCE[gazeKillResistance:stoningGaze]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:17:4e9e7df25b0d6fc581dd5439 | Reference docs/Caster binary/Combat.PerformAttacks.pas@span:28:0e3735035ab19290c735634c
+  attackSpecificStep('gazeKillResistance:stoningGaze', ['stoningGazeRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'stoningGazeRes', 'nature'); },
+    (u, ctx) => !!ctx.values.stoningGaze),
+  // PROVENANCE[gazeKillResistance:deathGaze]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ApplyAttack.pas@span:18:ddfd795741a0e9e854b8b031 | Reference docs/Caster binary/Combat.PerformAttacks.pas@span:28:0e3735035ab19290c735634c
+  attackSpecificStep('gazeKillResistance:deathGaze', ['deathGazeRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'deathGazeRes', 'death'); },
+    (u, ctx) => !!ctx.values.deathGaze),
+];
+
+// `BU_ProcessAttack` runs the same six touch riders in the same order, each with its own
+// `Combat_Resistance_Check`. The realms match Caster.exe rider for rider.
+const DOS_TOUCH_RIDER_RESISTANCE_STEPS = [
+  // PROVENANCE[dosTouchRiderResistance:lifeRider]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:24:8ab477152e0455ef995958b5 | Reference docs/DOS reconstructed/combat.c@span:36:bdb2231ea72390a1c3155fd2
+  attackSpecificStep('dosTouchRiderResistance:lifeRider', ['lifeRiderRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'lifeRiderRes', 'life'); },
+    (u, ctx) => ctx.fires && (ctx.values.exorcise != null || !!ctx.values.dispelEvil)),
+  // PROVENANCE[dosTouchRiderResistance:stoningTouch]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:18:be3dda0220c030afd07c091e
+  attackSpecificStep('dosTouchRiderResistance:stoningTouch', ['stoningTouchRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'stoningTouchRes', 'nature'); },
+    (u, ctx) => ctx.fires && ctx.values.stoningTouch != null),
+  // PROVENANCE[dosTouchRiderResistance:deathTouch]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:17:9a6dea6299656c757d809d2c
+  attackSpecificStep('dosTouchRiderResistance:deathTouch', ['deathTouchRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'deathTouchRes', 'death'); },
+    (u, ctx) => ctx.fires && ctx.values.deathTouch != null),
+  // PROVENANCE[dosTouchRiderResistance:lifeSteal]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:23:898b6c294e889a5630a37458
+  attackSpecificStep('dosTouchRiderResistance:lifeSteal', ['lifeStealRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'lifeStealRes', 'death'); },
+    (u, ctx) => ctx.fires && ctx.values.lifeSteal != null),
+  // The Chaos query is live in all three DOS builds even though no DOS rider consumes it today:
+  // `destructionFailProb` answers 0 outside `com2_`, but the realm the roll is made in is a
+  // property of the rider, not of the engine that happens to run it.
+  // PROVENANCE[dosTouchRiderResistance:destruction]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:7:2b8acc05c0fab09086d1bea7
+  attackSpecificStep('dosTouchRiderResistance:destruction', ['destructionRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'destructionRes', 'chaos'); },
+    (u, ctx) => ctx.fires && ctx.values.destruction != null),
+  // MoM and CP push realm 0; CoM 1 pushes -1 for both realm and modifier. Neither is a named
+  // realm, and `dosEffectiveResistance` gates its realm-conditional terms on `realm !== null`
+  // and on membership of `elementalRealms`, so both builds reduce to the same realm-less query.
+  // PROVENANCE[dosTouchRiderResistance:poison]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:24:8533b165e73266ae95fc8853
+  attackSpecificStep('dosTouchRiderResistance:poison', ['poisonRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'poisonRes', null); },
+    (u, ctx) => ctx.fires && (ctx.values.poison || 0) > 0),
+];
+
+const DOS_FEAR_RIDER_RESISTANCE_STEPS = [
+  // PROVENANCE[dosFearRiderResistance:fear]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:19:2227bee04b83947e54cfe777
+  attackSpecificStep('dosFearRiderResistance:fear', ['fearRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'fearRes', 'death'); },
+    (u, ctx) => !!ctx.values.fear),
+];
+
+// `BU_ProcessAttack` deals its gaze kill rolls Stoning first, then Death, in one function rather
+// than through a caller — the same order the modern list above takes. They are gated on the
+// selected attack's `ranged_type` being a gaze, so they are the gaze's own effect here too, not
+// riders on it; what does ride a DOS gaze is the touch group, because `BU_ProcessAttack` merges
+// its ranged flag record into every non-melee call.
+const DOS_GAZE_KILL_RESISTANCE_STEPS = [
+  // PROVENANCE[dosGazeKillResistance:stoningGaze]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:23:ba289a70c76622d0c1837f6e
+  attackSpecificStep('dosGazeKillResistance:stoningGaze', ['stoningGazeRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'stoningGazeRes', 'nature'); },
+    (u, ctx) => !!ctx.values.stoningGaze),
+  // PROVENANCE[dosGazeKillResistance:deathGaze]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:23:b67032bc1211a705e54c6871
+  attackSpecificStep('dosGazeKillResistance:deathGaze', ['deathGazeRes'],
+    (u, ctx) => { riderResistanceQuery(u, ctx, 'deathGazeRes', 'death'); },
+    (u, ctx) => !!ctx.values.deathGaze),
+];
+
+// One query group, asked of one target. `values` says which of the group's rolls the engine
+// makes; `fires` is the group-level gate it puts around the whole block — Caster.exe's
+// attack-type jump past the rider group for a gaze, and the per-phase touch-attack gate. A roll
+// the engine does not make leaves its field absent: nothing queried it, and no consumer may
+// read it.
+//
+// Two of the three groups are riders — they run inside another attack and modify its outcome.
+// `gazeKill` is not: each kill gaze is its own `ApplyAttack` call, dispatched by
+// `PerformAttacks` with `atk := 0`, so the per-figure resistance roll is the whole call rather
+// than something riding one. It is a group here because it is an ordered region of the engine
+// that asks the same query, not because it is a rider.
+const RESISTANCE_QUERY_GROUPS = Object.freeze({
+  touch: {
+    modern: MODERN_TOUCH_RIDER_RESISTANCE_STEPS,
+    dos: DOS_TOUCH_RIDER_RESISTANCE_STEPS,
+    label: 'touch rider resistance',
+  },
+  fear: {
+    modern: MODERN_FEAR_RIDER_RESISTANCE_STEPS,
+    dos: DOS_FEAR_RIDER_RESISTANCE_STEPS,
+    label: 'fear rider resistance',
+  },
+  gazeKill: {
+    modern: MODERN_GAZE_KILL_RESISTANCE_STEPS,
+    dos: DOS_GAZE_KILL_RESISTANCE_STEPS,
+    label: 'gaze kill resistance',
+  },
+});
+
+// `chains`, when supplied, is filled with one chain record per query the group actually made,
+// keyed by the same field the value lands on. It is an out-parameter rather than part of the
+// return value because every existing consumer reads the scratch record by field name, and
+// because a caller that does not want chains must not pay for the traces.
+function resistanceQueries(group, target, version, values, fires = true, chains = null) {
+  const entry = RESISTANCE_QUERY_GROUPS[group];
+  if (!entry) throw new Error(`resistanceQueries: unknown query group '${group}'`);
+  const modern = !!(version && version.startsWith('com2'));
+  const steps = modern ? entry.modern : entry.dos;
+  const query = modern ? MODERN_RESISTANCE_QUERY : DOS_RESISTANCE_QUERY;
+  const scratch = {};
+  if (statStepDebugEnabled()) assertSequenceVersionScope(steps, version, entry.label);
+  runStatSteps(steps, scratch, { target, version, values, fires, query, chains });
+  return scratch;
+}
+
 // --- Resistance/Defense bonuses from Elemental Armor / Resist Elements ---
 function hasResistElementsEffect(abilities) {
   return hasAbil(abilities, 'resistElements')
@@ -641,7 +915,8 @@ function elemResistBonus(unit, version) {
   return hasResistElementsEffect(unit.abilities) ? 3 : 0;
 }
 
-function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType) {
+function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType,
+  chainSink = null) {
   const aArmorPiercing = hasAbil(attacker.abilities, 'armorPiercing');
   const aIllusion = hasAbil(attacker.abilities, 'illusion');
 
@@ -724,16 +999,26 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
   if (attackType !== 'immolation' && !(attacker.cityWallBonus > 0)) {
     attack.extraDefense = target.cityWallBonus || 0;
   }
-  return effectiveDefense(target, version, attack);
+  const trace = chainSink ? [] : null;
+  return fillDefenseChain(chainSink, target,
+    effectiveDefense(target, version, attack, trace), trace, 'effectiveDefense:base');
 }
 
-function computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalty) {
+function computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalty, chains = null) {
+  const sink = key => (chains ? (chains[key] = {}) : null);
+  const defense = (attackType, key) => {
+    const slot = sink(key);
+    const value = computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty,
+      attackType, slot);
+    if (slot) chains[key] = slot.chain;
+    return value;
+  };
   return {
-    vsMelee: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'melee'),
-    vsRanged: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'ranged'),
-    vsThrown: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'thrown'),
-    vsGaze: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'gaze'),
-    vsImmolation: computeCasterDefenseForAttack(target, attacker, version, vertigoDefPenalty, 'immolation'),
+    vsMelee: defense('melee', 'vsMelee'),
+    vsRanged: defense('ranged', 'vsRanged'),
+    vsThrown: defense('thrown', 'vsThrown'),
+    vsGaze: defense('gaze', 'vsGaze'),
+    vsImmolation: defense('immolation', 'vsImmolation'),
   };
 }
 
@@ -758,13 +1043,15 @@ const DOS_DEFENSE_FULL = 'full';
 
 const DOS_DEFENSE_WRITES = {
   // PROVENANCE[dosEffectiveDefense:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:26:23dc90c22f1178554f615524
+  // Labelled for the chain by the one term it adds to the record's Defense: the DOS builds
+  // subtract Vertigo here rather than in a step of their own (see the write below).
   base: attackSpecificStep('dosEffectiveDefense:base', ['effectiveDefense', 'defenseSpecial'],
     (u, ctx) => {
       // Vertigo writes the battle-unit Defense stat directly in the DOS binaries, so the
       // separate spell-damage path sees it too; it is subtracted from the seed here.
       u.effectiveDefense = Math.max(0, u.def - ctx.vertigoDefPenalty);
       u.defenseSpecial = DOS_DEFENSE_NONE;
-    }),
+    }, null, 'Vertigo'),
   // PROVENANCE[dosEffectiveDefense:illusion]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:8:07e4721467f2127b94284e57
   illusion: attackSpecificStep('dosEffectiveDefense:illusion', ['effectiveDefense'],
     u => { u.effectiveDefense = 0; return HALT; },
@@ -929,7 +1216,8 @@ function dosEffectiveDefense(target, version, attack, trace = null) {
 // bit it would read is Shadow Attack in that build. The immunity mask (0x9921A) admits
 // the Weapon bit only for `ranged_type / 10 < 3`, or MoM 1.31's unsatisfiable `== 100` — which
 // is why 1.31 alone misses Thrown, and why no build lets Weapon Immunity reach a gaze (103-105).
-function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType) {
+function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType,
+  chainSink = null) {
   const isCoM1 = version === 'com_6.08';
   const aArmorPiercing = hasAbil(attacker.abilities, 'armorPiercing');
   const aIllusion = hasAbil(attacker.abilities, 'illusion');
@@ -1040,7 +1328,9 @@ function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attac
   } else {
     throw new Error(`Unknown DOS defense attack type: ${attackType}`);
   }
-  return dosEffectiveDefense(target, version, attack);
+  const trace = chainSink ? [] : null;
+  return fillDefenseChain(chainSink, target,
+    dosEffectiveDefense(target, version, attack, trace), trace, 'dosEffectiveDefense:base');
 }
 
 // --- Defense Profile ---
@@ -1054,29 +1344,53 @@ function dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attac
 // Returns: { vsMelee, vsRanged, vsThrown, vsGaze, vsImmolation }
 // PROVENANCE[dosEffectiveDefenseProfile]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:39:92665849702ec840ab52d0c4 | Reference docs/DOS reconstructed/combat.c@span:22:e75af0ad84433181ba29fac1 | Reference docs/DOS reconstructed/combat.c@span:39:87871cadde938ca420e0159a
 // STAT-FORMULA[dosEffectiveDefenseProfile]
-function computeDefenseProfile(target, attacker, version, vertigoDefPenalty) {
+// `chains`, when supplied, is filled with the hover chain each of the five sequences produced,
+// under the same key as its value.
+function computeDefenseProfile(target, attacker, version, vertigoDefPenalty, chains = null) {
   if (version && version.startsWith('com2')) {
-    return computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalty);
+    return computeCasterDefenseProfile(target, attacker, version, vertigoDefPenalty, chains);
   }
 
-  const defense = attackType =>
-    dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType);
-  const vsMelee = defense('melee');
-  const vsRanged = defense('ranged');
-  const vsThrown = defense('thrown');
-  const vsGaze = defense('gaze');
-  const vsImmolation = defense('immolation');
+  const defense = (attackType, key) => {
+    const slot = chains ? {} : null;
+    const value = dosDefenseForAttack(target, attacker, version, vertigoDefPenalty, attackType,
+      slot);
+    if (slot) chains[key] = slot.chain;
+    return value;
+  };
+  const vsMelee = defense('melee', 'vsMelee');
+  const vsRanged = defense('ranged', 'vsRanged');
+  const vsThrown = defense('thrown', 'vsThrown');
+  const vsGaze = defense('gaze', 'vsGaze');
+  const vsImmolation = defense('immolation', 'vsImmolation');
 
   // BU_Apply_Attack's inside-target/outside-source block follows the defense-special call, so
   // Armor Piercing, every immunity and an unresisted Illusion all resolve before this unhalved
   // addition. The separate spell-damage path never adds it, which is why Immolation is absent.
   const cityWallBonus = target.cityWallBonus > 0 && !(attacker.cityWallBonus > 0)
     ? target.cityWallBonus : 0;
+  // The bonus is applied after the sequence has run rather than by a step of it, so the chain
+  // takes it as its own final transform. One expression produces both the returned figure and
+  // the chain's last line, so the two cannot come to disagree — the same shape
+  // `appendProjectedTraceEntry` already serves for the displayed Vertigo penalty (`stats.js`).
+  // Caster.exe reaches the same total through `extradef` inside its seed, which is why only the
+  // DOS chains need this. Immolation is deliberately absent: the spell path never adds it.
+  const walled = (value, key) => {
+    const total = value + cityWallBonus;
+    const record = chains && chains[key];
+    if (record) {
+      appendProjectedTraceEntry(record.trace, {
+        id: 'dosEffectiveDefense:cityWalls', sourceId: 'cityWalls', sourceLabel: 'City Walls',
+        phase: 'attackSpecific', order: 0,
+      }, record.trace.result, total);
+    }
+    return total;
+  };
   return {
-    vsMelee: vsMelee + cityWallBonus,
-    vsRanged: vsRanged + cityWallBonus,
-    vsThrown: vsThrown + cityWallBonus,
-    vsGaze: vsGaze + cityWallBonus,
+    vsMelee: walled(vsMelee, 'vsMelee'),
+    vsRanged: walled(vsRanged, 'vsRanged'),
+    vsThrown: walled(vsThrown, 'vsThrown'),
+    vsGaze: walled(vsGaze, 'vsGaze'),
     vsImmolation,
   };
 }

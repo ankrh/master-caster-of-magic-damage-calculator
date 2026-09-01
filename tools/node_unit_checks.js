@@ -28,7 +28,9 @@ const {
 const { runDeriveUnitStatsChecks } = require('./unit_checks/derive_unit_stats');
 const { runToBlockChecks, runDerivationStageChecks } = require('./unit_checks/derivation_stages');
 const { runWarlordUnitAbilityChecks } = require('./unit_checks/warlord_abilities');
-const { runPhaseChecks } = require('./unit_checks/phases');
+const {
+  runPhaseChecks, runRiderHistogramChecks, runRiderChainChecks,
+} = require('./unit_checks/phases');
 const {
   runStatStepChecks, runModifierTraceChecks, runChannelAttributionChecks,
 } = require('./unit_checks/step_traces');
@@ -107,6 +109,8 @@ function main() {
   runWarlordUnitAbilityChecks(ctx);
   runToBlockChecks(ctx);
   runPhaseChecks(ctx);
+  runRiderHistogramChecks(ctx);
+  runRiderChainChecks(ctx);
   runF19Checks(ctx);
   runF23Checks(ctx);
   runF50F51F53Checks(ctx);

@@ -26,8 +26,8 @@ reconstruction review is recorded in `.review-of-claude.md`.
 | Size | 10,584,041 bytes |
 | Format | PE32, i386, image base `0x400000`, Delphi (Embarcadero) |
 
-The Warlord 1.5.12.7 distribution copy at
-`Raw install files/CoM2ModWarlord1.5.12.7/CoMWin1511/Caster.exe` has the same size and MD5, so it
+The Warlord 1.5.12.9 distribution copy at
+`Raw install files/CoM2ModWarlord1.5.12.9/CoMWin1511/Caster.exe` has the same size and MD5, so it
 uses this exact engine binary; Warlord's executing `.CAS` scripts remain a separate higher-priority
 layer where they overwrite compiled behavior.
 
@@ -189,3 +189,4 @@ review gates exist only in `Calculator/BACKLOG.md`.
 | R5.2l | [`Combat.AttackAndWallHelpers.pas`](./Combat.AttackAndWallHelpers.pas); [`Combat.WallStateMapping.R5.2l.evidence.md`](./Combat.WallStateMapping.R5.2l.evidence.md) | `ctws` 12-slot wall-perimeter mapping and `SetWallState` |
 | R5.2m | [`Combat.AmplifiedDamage.pas`](./Combat.AmplifiedDamage.pas); [`Combat.AmplifiedDamage.R5.2m.evidence.md`](./Combat.AmplifiedDamage.R5.2m.evidence.md) | Combat-only, non-stacking opposing-owner Amplifier predicate |
 | R9-G1a-R2 | [`Spells.CombatSummonUnit.pas`](./Spells.CombatSummonUnit.pas); [`R9-G1a-R2.evidence.md`](./R9-G1a-R2.evidence.md) | Complete combat-summon creation, identity writes, Demon Lord/Lesser Demon gate and script handoff; merged 2026-08-09 from independent Claude/Codex derivations and reciprocal byte review with no surviving disagreement |
+| Q31 | [`Q31.evidence.md`](./Q31.evidence.md) | Complete `@Units@IsChaosUnit`, `@Units@IsDeathUnit` and `@Units@ChaosChannel` (`$00594FE4..$0059511F`): the realm-plus-recovery predicate, one-based flag indexing, calculated-record proof, full caller set, and `BUG-Q31`; merged 2026-08-31 from independent Claude/GPT derivations and reciprocal review, both revising from a defect reading to the recovery reading |

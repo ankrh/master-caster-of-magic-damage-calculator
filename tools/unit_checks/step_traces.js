@@ -101,8 +101,8 @@ function runStatStepChecks(ctx) {
 
 function runModifierTraceChecks(ctx) {
   const traced = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
-    identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.7', {
+    version: 'com2_warlord_1.5.12.9',
+    identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.9', {
       baseRace: 'High Men', specialUnit: 'chosen',
     }),
     atk: 5,
@@ -158,7 +158,7 @@ function runModifierTraceChecks(ctx) {
   assert(chanceSources.indexOf('highPrayer') < chanceSources.indexOf('vertigo'),
     'Displayed To Hit trace keeps High Prayer before the later recalculation-time Vertigo write');
 
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const raisedBeforeHolyArmor = ctx.deriveUnitStats(baseUnitInput({
       version, def: 1,
       abilities: {
@@ -269,7 +269,7 @@ function runModifierTraceChecks(ctx) {
     'The initial To Block clamp records the floor when it changes the running value');
 
   const cappedPlague = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', hitChance: -20,
+    version: 'com2_warlord_1.5.12.9', hitChance: -20,
     abilities: { plague: true },
   }));
   const cappedSources = cappedPlague.modifierTraces.toHitMelee.entries.map(t => t.id);
@@ -280,7 +280,7 @@ function runModifierTraceChecks(ctx) {
   assertEqual(cappedPlague.modifierTraces.toHitMelee.result, 10,
     'The later region-e clamp restores the displayed To Hit floor');
 
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const twoStage = ctx.deriveUnitStats(baseUnitInput({
       version, rtb: 1, rtbType: 'missile',
       modernAttacks: { ranged: { strength: 1, type: 'missile' } },
@@ -310,7 +310,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const recoveringBlock = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', toBlkMod: -40,
+    version: 'com2_warlord_1.5.12.9', toBlkMod: -40,
     abilities: {
       outlanderWizard: true, mechanical: true, heatPowerEngine: true,
       magitekEngineering: true, radio: true,
@@ -370,7 +370,7 @@ function runModifierTraceChecks(ctx) {
     ],
     [
       'Lightning Blade', 'lightningBlade:breath', 'lightningBreath',
-      baseUnitInput({ version: 'com2_warlord_1.5.12.7', abilities: { lightningBlade: true } }), 0, 1,
+      baseUnitInput({ version: 'com2_warlord_1.5.12.9', abilities: { lightningBlade: true } }), 0, 1,
     ],
     [
       'Focus Magic', 'focusMagic', 'ranged',
@@ -385,7 +385,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const destinyAfterPermanent = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', race: 'Goblin',
+    version: 'com2_warlord_1.5.12.9', race: 'Goblin',
     atk: 3, rtb: 2, rtbType: 'missile',
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     abilities: { motherFungus: true, destiny: true },
@@ -403,7 +403,7 @@ function runModifierTraceChecks(ctx) {
     'Destiny follows every permanent base write in the ordered trace');
 
   const destinyAfterEarlyHook = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 3, rtb: 2, rtbType: 'missile',
+    version: 'com2_warlord_1.5.12.9', atk: 3, rtb: 2, rtbType: 'missile',
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     abilities: { luckyStar: true, destiny: true },
   }));
@@ -484,7 +484,7 @@ function runModifierTraceChecks(ctx) {
     'Focus Magic records no Doom Gaze write on a unit whose Doom Gaze field is empty');
 
   const focusedBombs = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 3,
+    version: 'com2_warlord_1.5.12.9', atk: 3,
     abilities: { outlanderWizard: true, explosive: true, focusMagic: true },
     modernAttacks: {},
   }));
@@ -500,7 +500,7 @@ function runModifierTraceChecks(ctx) {
   'The atomic modern-channel trace records phase-b creation before phase-c conversion');
 
   const focusedBombsAndBreath = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 3,
+    version: 'com2_warlord_1.5.12.9', atk: 3,
     abilities: { outlanderWizard: true, explosive: true, focusMagic: true },
     modernAttacks: { fireBreath: { strength: 2, type: 'fire' } },
   }));
@@ -520,7 +520,7 @@ function runModifierTraceChecks(ctx) {
   'A strength-preserving Focus type conversion remains visible as a phase-c channel event');
 
   const tracedVampirism = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { vampirism: true },
     atk: 3, rtb: 5, rtbType: 'thrown',
     modernAttacks: { thrown: { strength: 5, type: 'thrown' } },
@@ -533,7 +533,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const simultaneousVampirism = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { vampirism: true },
     atk: 3, rtb: 1, rtbType: 'thrown',
     modernAttacks: {
@@ -550,7 +550,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const orderedVampirism = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { colossalStrength: true, vampirism: true, shadowStrike: true },
     atk: 4, rtb: 3, rtbType: 'thrown',
     modernAttacks: {
@@ -579,7 +579,7 @@ function runModifierTraceChecks(ctx) {
   'Thrown trace orders Colossal Strength, Vampirism reset, then Shadow Strike');
 
   const focusedCoexistingVampirism = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 3, rtb: 4, rtbType: 'missile',
+    version: 'com2_warlord_1.5.12.9', atk: 3, rtb: 4, rtbType: 'missile',
     abilities: { focusMagic: true, vampirism: true },
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
@@ -614,7 +614,7 @@ function runModifierTraceChecks(ctx) {
   for (const [label, sourceAbilities, modernAttacks, expectedMelee, outputKey]
     of createdVampirismSources) {
     const created = ctx.deriveUnitStats(baseUnitInput({
-      version: 'com2_warlord_1.5.12.7', atk: 3,
+      version: 'com2_warlord_1.5.12.9', atk: 3,
       rtb: outputKey === 'lightningBreath' ? 4 : 0,
       rtbType: outputKey === 'lightningBreath' ? 'thrown' : 'none',
       abilities: { vampirism: true, ...sourceAbilities }, modernAttacks,
@@ -637,7 +637,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const shadowStrikeGrant = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7',
+    version: 'com2_warlord_1.5.12.9',
     abilities: { shadowStrike: true },
     atk: 6, rtb: 0, rtbType: 'none',
     modernAttacks: {},
@@ -661,7 +661,7 @@ function runModifierTraceChecks(ctx) {
     'Shadow Strike-created modern Thrown trace reaches channel strength');
 
   const colossalShadow = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 9,
+    version: 'com2_warlord_1.5.12.9', atk: 9,
     abilities: { colossalStrength: true, shadowStrike: true }, modernAttacks: {},
   }));
   assertEqual(colossalShadow.atk, 13,
@@ -675,7 +675,7 @@ function runModifierTraceChecks(ctx) {
   'Shadow Strike follows Colossal Strength in the phase-d channel trace');
 
   const focusAndShadow = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 9, rtb: 4, rtbType: 'thrown',
+    version: 'com2_warlord_1.5.12.9', atk: 9, rtb: 4, rtbType: 'thrown',
     abilities: { focusMagic: true, shadowStrike: true },
     modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
   }));
@@ -718,7 +718,7 @@ function runChannelAttributionChecks(ctx) {
   // One Warlord unit carrying all four channels, with three To Hit writers whose channel sets
   // differ: Heavenly Light Ranged and Thrown, True Sight Ranged alone, Hurricane all four.
   const multiChannel = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 6, rtb: 5, rtbType: 'missile', hp: 10,
+    version: 'com2_warlord_1.5.12.9', atk: 6, rtb: 5, rtbType: 'missile', hp: 10,
     abilities: { heavenlyLight: true, trueSight: true },
     hurricane: true,
     modernAttacks: {
@@ -819,7 +819,7 @@ function runChannelAttributionChecks(ctx) {
   // The complete ledger attributes from the declaration, so a predicate-skipped step still says
   // which channel it would have reached — what a per-channel execution ledger is rebuilt from.
   const withoutTrueSight = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 6, rtb: 5, rtbType: 'missile', hp: 10,
+    version: 'com2_warlord_1.5.12.9', atk: 6, rtb: 5, rtbType: 'missile', hp: 10,
     hurricane: true,
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
   }));
@@ -890,7 +890,7 @@ function runRecordFieldChecks(ctx) {
     lightningBreath: { strength: 2, type: 'lightning' },
   });
   const probe = overrides => ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 4, hp: 10, ...overrides,
+    version: 'com2_warlord_1.5.12.9', atk: 4, hp: 10, ...overrides,
   }));
   const strengths = derived => ['ranged', 'thrown', 'fireBreath', 'lightningBreath']
     .map(key => derived.modernAttacks[key].strength);

@@ -6,8 +6,8 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => deriveUnitStats({
     prefix: 'a',
-    version: 'com2_warlord_1.5.12.7',
-    identity: createCustomUnitIdentity('com2_warlord_1.5.12.7', {
+    version: 'com2_warlord_1.5.12.9',
+    identity: createCustomUnitIdentity('com2_warlord_1.5.12.9', {
       baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
     }),
     figs: 1, atk: 5, def: 6, res: 8, hp: 7,
@@ -84,7 +84,7 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
 test('F5 keeps modern common and channel chance writes on the ordered record', async ({ page }) => {
   const errors = await openCalculator(page);
   const reports = await page.evaluate(() => Object.fromEntries(
-    ['com2_1.05.11', 'com2_warlord_1.5.12.7'].map(version => [version, {
+    ['com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => [version, {
       twoStage: deriveUnitStats({
       prefix: 'a', version,
       identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
@@ -131,7 +131,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
     ['plague', 'b', 'Plague'],
     ['warpReality', 'c', 'Warp Reality'],
     ['vertigo', 'c', 'Vertigo'],
-    ['berserkWarlord', 'd', 'Berserk'],
+    ['berserkWarlord', 'b', 'Berserk'],
     ['hurricane', 'd', 'Hurricane'],
   ];
   for (const [id, phase, label] of expectedChanceSteps) {
@@ -160,7 +160,7 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
         abilities: { destiny: true },
       }),
       shadowStrike: deriveUnitStats({
-        ...base, version: 'com2_warlord_1.5.12.7',
+        ...base, version: 'com2_warlord_1.5.12.9',
         atk: 6, rtb: 0, rtbType: 'none', def: 1, res: 1, hp: 1,
         abilities: { shadowStrike: true }, modernAttacks: {},
       }),
@@ -196,7 +196,7 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
 
 test('R7.4 renders complete trace tooltips only on affected final outputs, symmetrically', async ({ page }) => {
   const errors = await openCalculator(page);
-  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.7');
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
   await setValue(page, 'aUnit', 'custom');
   await setValue(page, 'bUnit', 'custom');
 

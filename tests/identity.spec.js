@@ -171,7 +171,7 @@ test('custom identity keeps Hero and Fantastic independent, exposes all base rac
       else el.value = value;
       el.dispatchEvent(new Event('change'));
     };
-    document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.7';
+    document.getElementById('gameVersion').value = 'com2_warlord_1.5.12.9';
     onVersionChange();
     document.getElementById('aUnit').value = 'custom';
     document.getElementById('aUnit').dispatchEvent(new Event('change'));

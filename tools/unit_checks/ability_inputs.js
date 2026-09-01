@@ -76,7 +76,7 @@ function runAbilityInputChecks(ctx) {
   const misleadDef = defByKey('mislead');
   const liabilityDef = defByKey('liability');
   const deriveWarlord = abilities => ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', atk: 5, def: 4, res: 6, abilities,
+    version: 'com2_warlord_1.5.12.9', atk: 5, def: 4, res: 6, abilities,
   }));
   const neitherGrant = deriveWarlord({ mislead: mergedValue(ctx, [misleadDef, liabilityDef], [false, false]) });
   const ownGrant = deriveWarlord({ mislead: mergedValue(ctx, [misleadDef, liabilityDef], [true, false]) });
@@ -131,7 +131,7 @@ function runAbilityInputChecks(ctx) {
     'Type 104 gives both kill loops the same modifier, because there is only one byte');
 
   // --- 7. CoM2 and Warlord replaced the byte with per-effect fields ---
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const values = dosValues(ctx, {
       version, magnitude: 3, rangedType: 'gaze_multiple',
       consumers: consumerKeys.map(key => consumerEntry(ctx, key, true, undefined)),

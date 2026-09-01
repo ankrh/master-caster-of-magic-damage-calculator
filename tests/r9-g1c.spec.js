@@ -20,7 +20,7 @@ test('R9-G1c preserves late-transform source gates, arithmetic, order, and UI st
       ...(version.startsWith('com2') ? { modernAttacks: {} } : {}),
       ...overrides,
     });
-    const warlord = 'com2_warlord_1.5.12.7';
+    const warlord = 'com2_warlord_1.5.12.9';
     const ranged = deriveUnitStats(input(warlord, {
       abilities: { wildGame: true }, rtb: 2, rtbType: 'missile',
       modernAttacks: { ranged: { strength: 2, type: 'missile' } },

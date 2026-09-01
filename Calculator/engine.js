@@ -178,14 +178,15 @@ function singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, bl
   return dist;
 }
 
-// Convolve two damage distributions, capping total damage at `cap`.
-function convolveDists(a, b, cap) {
-  const result = new Array(cap + 1).fill(0);
+// Convolve two damage distributions. Nothing is truncated inside a combat phase
+// (`CLAUDE.md`, *Architecture*), so the result runs to the natural maximum both inputs allow.
+function convolveDists(a, b) {
+  const result = new Array(a.length + b.length - 1).fill(0);
   for (let i = 0; i < a.length; i++) {
     if (a[i] < 1e-15) continue;
     for (let j = 0; j < b.length; j++) {
       if (b[j] < 1e-15) continue;
-      result[Math.min(i + j, cap)] += a[i] * b[j];
+      result[i + j] += a[i] * b[j];
     }
   }
   return result;
@@ -196,16 +197,16 @@ function convolveDists(a, b, cap) {
 // blurChance/blurBuggy: Blur pre-defense hit negation passed to singleAttackDmgDist.
 // topFigHP: CoM2 wounded-top-figure rollover threshold (see singleAttackDmgDist).
 // minDamageFromHits: optional callback passed through to singleAttackDmgDist.
-function calcTotalDamageDist(atkFigs, atkStr, toHit, defStr, toBlock, hp, cap, invulnBonus, blurChance, blurBuggy, topFigHP, minDamageFromHits) {
+function calcTotalDamageDist(atkFigs, atkStr, toHit, defStr, toBlock, hp, invulnBonus, blurChance, blurBuggy, topFigHP, minDamageFromHits) {
   const single = singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, blurChance, blurBuggy, topFigHP, minDamageFromHits);
 
   let result = [1];
   let base = single;
   let n = atkFigs;
   while (n > 0) {
-    if (n & 1) result = convolveDists(result, base, cap);
+    if (n & 1) result = convolveDists(result, base);
     n >>= 1;
-    if (n > 0) base = convolveDists(base, base, cap);
+    if (n > 0) base = convolveDists(base, base);
   }
   return result;
 }
@@ -238,7 +239,7 @@ function areaPerFigureDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, m
 // topFigHP (optional): remaining HP of the wounded top figure. When supplied and
 // less than `hp`, exactly one figure is capped at topFigHP (it cannot take more
 // than its current HP) and the remaining targetFigs-1 figures are capped at full hp.
-function calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap, invulnBonus, minDamageFromHits, topFigHP) {
+function calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, invulnBonus, minDamageFromHits, topFigHP) {
   if (targetFigs <= 0 || atkStr <= 0) return [1];
   const single = areaPerFigureDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, minDamageFromHits);
   // Number of full-HP figures: all but the wounded top one when topFigHP applies.
@@ -249,12 +250,10 @@ function calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap,
   let base = single;
   let n = useTopCap ? targetFigs - 1 : targetFigs;
   while (n > 0) {
-    if (n & 1) result = convolveDists(result, base, cap);
+    if (n & 1) result = convolveDists(result, base);
     n >>= 1;
-    if (n > 0) base = convolveDists(base, base, cap);
+    if (n > 0) base = convolveDists(base, base);
   }
-  // When useTopCap and targetFigs===1, the loop body never runs; cap `result` at `cap`.
-  if (useTopCap && result.length > cap + 1) result = result.slice(0, cap + 1);
   return result;
 }
 
@@ -262,15 +261,11 @@ function calcAreaDamageDist(targetFigs, atkStr, toHit, defStr, toBlock, hp, cap,
 // Each roll is an independent Bernoulli trial: fail → 1 damage.
 // numRolls: total resistance rolls (attacking figures × strength per figure)
 // pFail: probability of failing each roll (0 to 1)
-// cap: maximum possible damage (target's remaining HP)
-function calcResistDmgDist(numRolls, pFail, cap) {
+function calcResistDmgDist(numRolls, pFail) {
   if (numRolls <= 0 || pFail <= 0) return [1];
   const pmf = binomialPMF(numRolls, Math.min(pFail, 1));
-  const maxD = Math.min(numRolls, cap);
-  const dist = new Array(maxD + 1).fill(0);
-  for (let d = 0; d <= numRolls; d++) {
-    dist[Math.min(d, maxD)] += pmf[d];
-  }
+  const dist = new Array(numRolls + 1).fill(0);
+  for (let d = 0; d <= numRolls; d++) dist[d] += pmf[d];
   return dist;
 }
 
@@ -288,7 +283,7 @@ function calcResistDmgDist(numRolls, pFail, cap) {
 // reference model `tests/life-steal-healing.spec.js` measures that enumeration against, so a
 // stateful path that convolved its repeated ApplyAttack calls wrongly could not agree with it.
 // It stays in a `data-scope="core"` source because the browser spec calls it by name.
-function calcLifeStealDmgDist(numFigs, defRes, modifier, cap) {
+function calcLifeStealDmgDist(numFigs, defRes, modifier) {
   if (numFigs <= 0) return [1];
   const effRes = defRes + modifier;
   if (effRes >= 10) return [1];
@@ -309,30 +304,17 @@ function calcLifeStealDmgDist(numFigs, defRes, modifier, cap) {
   let base = single;
   let n = numFigs;
   while (n > 0) {
-    if (n & 1) result = convolveDists(result, base, cap);
+    if (n & 1) result = convolveDists(result, base);
     n >>= 1;
-    if (n > 0) base = convolveDists(base, base, cap);
+    if (n > 0) base = convolveDists(base, base);
   }
   return result;
 }
 
-// Modern Caster keeps the resistance-roll magnitude separate from the target's
-// remaining HP. This wrapper deliberately uses the mathematical maximum rather
-// than a target cap; callers may project it into a capped damage PMF afterwards.
+// Modern Caster keeps the resistance-roll magnitude separate from the target's remaining HP,
+// and nothing truncates it (`CLAUDE.md`, *Architecture*).
 function calcLifeStealRawDist(numFigs, defRes, modifier) {
-  const effRes = defRes + modifier;
-  const maxPerFigure = Math.max(0, 10 - effRes);
-  return calcLifeStealDmgDist(numFigs, defRes, modifier,
-    Math.max(0, numFigs) * maxPerFigure);
-}
-
-function clampDamageDist(dist, cap) {
-  const out = new Array(Math.max(0, cap) + 1).fill(0);
-  for (let value = 0; value < dist.length; value++) {
-    if (dist[value] < 1e-15) continue;
-    out[Math.min(value, cap)] += dist[value];
-  }
-  return out;
+  return calcLifeStealDmgDist(numFigs, defRes, modifier);
 }
 
 // Persistent Combatheal state used by the modern Life Steal/Bloodsucker model.
@@ -644,32 +626,66 @@ function outcomeMetricDist(outcomes, key) {
 
 // Compute figure-kill damage distribution (for Stoning Touch, etc.).
 // Each roll is an independent Bernoulli trial: fail → one figure killed (= defHP damage).
+// `Inc(Result.field_00, HpPerFigure(du))` is unbounded, so the distribution runs to
+// numRolls * defHP rather than to the target's remaining HP.
 // numRolls: number of resistance rolls (one per attacking figure)
 // pFail: probability of failing each roll (0 to 1)
 // defHP: HP per defending figure (damage per kill)
-// cap: maximum possible damage (target's remaining HP)
-function calcFigureKillDmgDist(numRolls, pFail, defHP, cap) {
+function calcFigureKillDmgDist(numRolls, pFail, defHP) {
   if (numRolls <= 0 || pFail <= 0) return [1];
   const pmf = binomialPMF(numRolls, Math.min(pFail, 1));
-  const dist = new Array(cap + 1).fill(0);
-  for (let k = 0; k <= numRolls; k++) {
-    const dmg = Math.min(k * defHP, cap);
-    dist[dmg] += pmf[k];
-  }
+  const dist = new Array(numRolls * defHP + 1).fill(0);
+  for (let k = 0; k <= numRolls; k++) dist[k * defHP] += pmf[k];
   return dist;
 }
 
-// Compute a whole-unit kill damage distribution (for Destruction).
-// Destruction's caller combines the independent per-attacker-figure resistance attempts
-// into the probability that at least one fails. A failure disintegrates the entire target,
-// so the damage is its whole remaining HP rather than one figure's HP.
-// pFail: probability that the whole-unit kill occurs (0 to 1)
-// cap: target's remaining HP (the damage dealt when the roll fails)
-function calcUnitKillDmgDist(pFail, cap) {
-  if (pFail <= 0 || cap <= 0) return [1];
-  const p = Math.min(pFail, 1);
-  const dist = new Array(cap + 1).fill(0);
-  dist[0] = 1 - p;
-  dist[cap] = p;
-  return dist;
+// A Destruction success writes a flat 150 into the irrecoverable bucket, and it writes it by
+// **assignment**: `Result.field_00 := 150` at `Combat.ApplyAttack.pas:523`, not `Inc`. Every
+// irrecoverable HP the Exorcise/Dispel Evil and Stoning Touch blocks accumulated earlier in the
+// same ApplyAttack is therefore discarded, and only the rolls made by figures *after* the last
+// successful Destruction survive alongside the 150.
+const DESTRUCTION_PAYLOAD = 150;
+
+// Cross product of one Binomial(n, p) per entry of `probs`, as paths carrying a count vector.
+function crossBinomialPaths(n, probs) {
+  let paths = [{ probability: 1, counts: [] }];
+  for (const p of probs) {
+    const pmf = binomialPMF(Math.max(0, n), Math.min(Math.max(p, 0), 1));
+    const next = [];
+    for (const path of paths) {
+      for (let k = 0; k < pmf.length; k++) {
+        if (pmf[k] < 1e-15) continue;
+        next.push({ probability: path.probability * pmf[k], counts: [...path.counts, k] });
+      }
+    }
+    paths = next;
+  }
+  return paths;
+}
+
+// The joint distribution of the irrecoverable-bucket riders for one ApplyAttack, when
+// Destruction is among them. The per-figure loop runs Exorcise/Dispel Evil, then Stoning Touch,
+// then Destruction, so the last successful Destruction at figure k discards everything figures
+// 1..k contributed and the figures after k accumulate on top of the 150.
+// `keys`/`probs` are the surviving irrecoverable riders in engine order; the returned `values`
+// map is keyed by rider id and denominated in HP.
+function calcIrrecoverableRiderOutcomes(atkFigs, keys, probs, destructionFail, targetHP) {
+  const figures = Math.max(0, atkFigs);
+  const pDestruction = Math.min(Math.max(destructionFail, 0), 1);
+  const out = [];
+  const emit = (weight, survivingFigures, destroyed) => {
+    if (weight < 1e-15) return;
+    for (const path of crossBinomialPaths(survivingFigures, probs)) {
+      const probability = weight * path.probability;
+      if (probability < 1e-15) continue;
+      const values = { destruction: destroyed ? DESTRUCTION_PAYLOAD : 0 };
+      keys.forEach((key, index) => { values[key] = path.counts[index] * targetHP; });
+      out.push({ probability, values });
+    }
+  };
+  emit(Math.pow(1 - pDestruction, figures), figures, false);
+  for (let after = 0; after < figures; after++) {
+    emit(pDestruction * Math.pow(1 - pDestruction, after), after, true);
+  }
+  return out;
 }

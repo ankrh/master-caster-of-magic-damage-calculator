@@ -10,87 +10,86 @@ subtask appears here before any subtask that depends on it.
 
 | # | Subtask | Next outcome |
 |---|---|---|
-| 1 | **F221** | The vacuity sweep stops leaving a dev server on port 8080, which costs every later run a restart. |
-| 2 | **F217.1** | Night Goblins gain the +10 To Hit / +10 To Defend their Darkness block grants. |
-| 3 | **F217.2** | Great Unbinding stops reaching the spirit-linked units its gate exempts. |
-| 4 | **F217.3** | A Rebuilt hero stops taking the Mechanical Expert bonus the script withholds. |
-| 5 | **F214** | Six fixture names stop claiming a version or a channel they do not run, and `spiritLinkBlessNoBonusWarlord` is re-aimed. |
-| 6 | **Q32** | Settle whether CoM 2 Bless protects against breath and gaze; the helptext contradicts the gate F211 shipped. |
-| 7 | **F219.1** | The Node aura tooltip and its realm-only gate stop disagreeing. |
-| 8 | **F219.2** | Two surviving records of a closed Artificer divergence go. |
-| 9 | **F220** | Destruction's resistance attempt moves to the chaos bucket the binary passes. |
-| 10 | **F218.1** | Rule on how the calculator expresses an intact wall segment. |
-| 11 | **F218.2** | Wall Crusher gets its resolver, across all five writers. Needs F218.1. |
-| 12 | **F191** | Rule on whether Rust's material-strip-only state is worth exposing. |
-| 13 | **Q31** | Settle what `IsChaosUnit` tests — four calculator sites answer it differently. |
-| 14 | **F195** | Spell Ward's live-Fantastic term goes. Needs Q31. |
-| 15 | **F210** | The `base` phase splits into the four SPEC names. |
-| 16 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
-| 17 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
-| 18 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
-| 19 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
-| 20 | **F207** | The last published-value suppression that gates nothing goes. |
-| 21 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
-| 22 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
-| 23 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 24 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 25 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 26 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
-| 27 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
-| 28 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
-| 29 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
-| 30 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 31 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 32 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 33 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 34 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
-| 35 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
-| 36 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
-| 37 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
-| 38 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
-| 39 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
-| 40 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
-| 41 | **F153** | The modern gaze rider exclusion gets one home. |
-| 42 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
-| 43 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
-| 44 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
-| 45 | **F151** | A version's default-state map is built without resetting the live page. |
-| 46 | **F128** | The `Other` unit category no roster can fill goes. |
-| 47 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
-| 48 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
-| 49 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
-| 50 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
-| 51 | **F41.1** | The DOS eight-threshold hero ladders. |
-| 52 | **F41.2** | The DOS template-ability formulas. |
-| 53 | **F41.3** | The modern nine-step hero table. |
-| 54 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
-| 55 | **M3** | The DOS Destruction path. Needs F41. |
-| 56 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
-| 57 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
-| 58 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
-| 59 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
-| 60 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
-| 61 | **Q15** | Whether compiled code ever consumes `unitT.savemodifier`. |
-| 62 | **Q18** | What CoM 1's unit-type ceiling of `0x97` selects. F49 left it unmodelled pending this. |
-| 63 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
-| 64 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
-| 65 | **Q25** | The R6.1h shared-source rendering disagreement at `0x8E5C6`. |
-| 66 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
-| 67 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
-| 68 | **H1** | Contact Seravy about the Blur bug. |
+| 1 | **F227.3** | `UnitCalcPre.CAS`'s 159 citations take label anchors. |
+| 2 | **F227.4** | `UnitCalc.CAS`'s 126 citations take label anchors. |
+| 3 | **F227.5** | `CreateUnit.CAS`'s 76 citations take label anchors. |
+| 4 | **F227.6** | The remaining 72 citations across the seven smaller scripts take label anchors, and the audit runs clean. |
+| 5 | **F224.2b** | Spell Ward and Node Aura split per arm: the Chaos and Death arms take the membership reader, the Nature, Life and Sorcery arms keep their scalar `U.race` compare. |
+| 6 | **F224.2c** | Eternal Night's enemy-Resistance arm and Darkness's Death arm take the membership reader in their `com2_*` half, leaving the CoM 1 half scalar. |
+| 7 | **F226.1** | Create Undead becomes a modelled, version-scoped flag with its own immunity gate. |
+| 8 | **F226.2** | Create Undead routes the damage it colours into the undead bucket, in both engine families. Needs F226.1. |
+| 9 | **F233** | The post-combat composition states a normalisation rule for overkill cells, where uncapped riders sum past the capped published total. |
+| 10 | **F229** | Exorcise's created-undead penalty loses the `fantastic_death` term no version's block tests. |
+| 11 | **F230** | Supreme Light stops testing the compact type token, so a Life-race hero passes the gate the binary passes it on. |
+| 12 | **F231** | `unit.raceNoHeal` gains a producer or goes, and Raise Dead stops healing naturally. |
+| 13 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
+| 14 | **F234** | The DOS Warp Reality exemption sheds the Fantastic term its block does not test, keeping a scalar race compare. |
+| 15 | **F235** | Whether Warlord Vampirism and Revenant set `EncUndead` for the classifier and the Eternal Night / True Light arms is settled against the scripts. |
+| 16 | **F236.1** | CoM 1's Holy-Arms/Heavenly-Light eligibility gate is stated as a rule, with its version scope and its custom-unit discriminator settled. |
+| 17 | **F236.2** | The gate is implemented so an ineligible unit cannot carry the granted effect. Needs F236.1. |
+| 18 | **F210** | The `base` phase splits into the four SPEC names. |
+| 19 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
+| 20 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
+| 21 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
+| 22 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
+| 23 | **F207** | The last published-value suppression that gates nothing goes. |
+| 24 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
+| 25 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
+| 26 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 27 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 28 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 29 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
+| 30 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
+| 31 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
+| 32 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
+| 33 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 34 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 35 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 36 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 37 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
+| 38 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
+| 39 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
+| 40 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
+| 41 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
+| 42 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
+| 43 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
+| 44 | **F153** | The modern gaze rider exclusion gets one home. |
+| 45 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
+| 46 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
+| 47 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
+| 48 | **F151** | A version's default-state map is built without resetting the live page. |
+| 49 | **F128** | The `Other` unit category no roster can fill goes. |
+| 50 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
+| 51 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
+| 52 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
+| 53 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
+| 54 | **F41.1** | The DOS eight-threshold hero ladders. |
+| 55 | **F41.2** | The DOS template-ability formulas. |
+| 56 | **F41.3** | The modern nine-step hero table. |
+| 57 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
+| 58 | **M3** | The DOS Destruction path. Needs F41. |
+| 59 | **F228** | Who loads `Casapi.dll`, and whether its unchecked `UnitBuildingRequirement` index is a modding hazard worth recording. |
+| 60 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
+| 61 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
+| 62 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
+| 63 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
+| 64 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
+| 65 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
+| 66 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
+| 67 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
+| 68 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
+| 69 | **H1** | Contact Seravy about the Blur bug. |
+| 70 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
 
-Rows 1–11 are the standalone work: each is wrong or missing today, each is one prompt, and none
-depends on the structural work below it. Rows 2–4 move numbers; row 11 needs row 10's ruling
-first. Row 6 sits with them because F211 has already shipped a user-visible narrowing on the
-reading it re-opens. The deprecated backlog ordered the phase refactor first; this does not,
-because F210 blocks only F209 and F200.
+Rows 1–4 are F227, first because every later row that reads a Warlord script reads a citation that
+cannot currently be resolved. Rows 5–6 finish the F224 realm-predicate collapse, rows 7–8 are the
+Create Undead damage-bucket item, and row 9 the composition normalisation decision F225.1 surfaced.
+Rows 10–15 are the race and realm findings the F224 run turned up, none of which F224.2 fixes. Row 16
+onward is the standalone and structural backlog. The deprecated backlog ordered the phase refactor
+first; this does not, because F210 blocks only F209 and F200.
 
 F211–F216 were filed 2026-08-30 from the T2.11–T2.23 run, which found them while reading fixtures
 against the code. Each is verified against source and none makes a test red.
-
-F217–F221 were filed 2026-08-30 from the F175–F212 run, which found them while reading gates and
-tooltips against their scripts, and F214 was widened in the same pass. Each is verified against
-source. F217.1, F217.2 and F217.3 move numbers; the rest make no test red.
 
 ## T2 — Adjudicate the non-discriminating presets and declare the result
 
@@ -282,14 +281,251 @@ mechanism is gone from the rebuilt SPEC. Fold into F147, which is the same class
 
 ## Defects with evidence in hand
 
-### F195 — Spell Ward carries a live-Fantastic term its block does not have
+### F236 — CoM 1's unit-type eligibility gate is not modelled
 
-`spellWardActive` (`stats.js`) requires `fantasticAtModernEncMagicRule(u)` before comparing the
-ward's realm to the unit's, but the block at `$005A5D36..$005A607F` is five realm arms and nothing
-else. The term is reachable: Spirit Link clears live Fantastic at `d:spiritLink` while touching no
-race, so a spirit-linked Death or Chaos creature is warded by the block and not by the calculator.
+*Category: faithfulness.* Filed out of Q18, 2026-09-01.
 
-**Blocked on Q31** — two of the five arms are `IsDeathUnit`/`IsChaosUnit`.
+Holy Arms is a global enchantment granting Holy Weapon, and CoM 1 gates the grant on the base
+unit type: `com1:0x8F170` admits `type < 0x97`, the normal/fantastic cut (Q18, `R6.1a.evidence.md`).
+Heavenly Light's weapon-quality test at `com1:0x905E7` reads the same ceiling and, on a unit at or
+above it, forces `cl` to Magic Weapons and withholds the To Hit thresholds.
+
+The calculator models `holyWeapon` as a free boolean (`enchantments.js:17`) with no eligibility
+test, so a Fantastic unit can be given Holy Weapon — a state Holy Arms could never have produced.
+This is the pattern SPEC already applies to immunities and curses: an effect the unit could not
+have received is not silently allowed.
+
+The rule and its discriminators:
+
+- **Roster units.** `templateId < 0x97`. Across all 192 units in `Calculator/units_com.js` this
+  agrees exactly with `!baseFantastic` (highest normal 150, lowest fantastic 152, 151 absent).
+- **Custom units.** No `templateId` exists, so the Fantastic flag is the discriminator.
+- **Version scope.** Only CoM 1. All four in-attack sites are new in CoM 1, not inherited: the
+  1.31/CP `0x9A` homologs are the overland and post-combat sites. Confirm before gating that no
+  DOS build reaches an equivalent test in an attack.
+
+The `holyWeapon` control stays specifiable on every unit: gating is internal, in the manner of
+the **immunity** phase (`CLAUDE.md`, *Architecture*), which strips what the unit could not have
+received rather than preventing it being marked. The matrix depends on that — one enchantment
+applied across a filter must land on the eligible units and not the rest.
+
+Open at filing: whether Heavenly Light's withheld To Hit thresholds are a second write or fall
+out of the same gate.
+
+Subtasks: **F236.1** state the rule, its version scope and the custom-unit discriminator;
+**F236.2** implement it.
+
+### F224 — One binary predicate, three calculator spellings, and a recovery clause modelled nowhere
+
+Filed 2026-09-01 on the user's instruction, out of the F195 run. Q31 answered what
+`IsChaosUnit` computes; this is the follow-through, and two in-code comments still defer to Q31 as
+though it were open ([stats.js:352](Calculator/stats.js:352),
+[stats.js:1151](Calculator/stats.js:1151)).
+
+`IsChaosUnit` is `(race = RCChaos) or (ChaosChannel(u) and EncUndead)` — a realm test plus a
+recovery clause for the case where a later conversion overwrote the `RCChaos` the Chaos Channels
+block wrote. `IsDeathUnit` is its `RCDeath` twin. `race` is one scalar and carries only the last
+conversion; the flags still carry both facts, and the conjunction recovers the destroyed one.
+
+Three consumers of that one predicate disagree today:
+
+| Consumer | Calculator spelling | Site |
+|---|---|---|
+| Chaos Surge | `unitRealmAt(u) === 'chaos'` | [stats.js:604](Calculator/stats.js:604) |
+| Blazing Eyes / Chaos Embrace | `unitTypeAt(u) === 'fantastic_chaos'` | [stats.js:354](Calculator/stats.js:354) |
+| Warp Reality's exemption | `unitIsChaos`, the same compact token | [stats.js:1156](Calculator/stats.js:1156) |
+
+None of the three carries the recovery clause, and two of them additionally require Fantastic,
+which is the F195 defect in a second place: `IsChaosUnit` tests neither. Spell Ward's Death and
+Chaos arms go through the helpers too and have the same gap — F195 removed the Fantastic term
+there and deliberately left this. Reproduce: `ccDefense` + `undead` + `spellWard:'chaos'` is inert
+where the block fires; the Death ward on the same card fires.
+
+**Not mechanical, and the scope is not yet known.** Which consumers must honour the recovery
+clause is a per-block reading, because the arms are not uniform even inside one block: Spell Ward's
+Nature, Life and Sorcery arms compare `U.race` directly while its Death and Chaos arms call the
+helpers ($005A5D36..$005A607F), and Node Aura's block dispatches on `race = 16`/`17` and
+`IsChaosUnit` alike ($005A25F0). The DOS engines have no helper at all — Warp Reality's exemption
+is `bu->race != rt_Chaos` at 131:0x9077A — so this is a modern-only correction and the DOS
+spellings must be left alone.
+
+An exact fix needs realm membership to be a **set** rather than the scalar `unitRealmAt` returns,
+which is why this is filed rather than folded into F195.
+
+F224.1 is done: `Reference docs/Modern realm test inventory.md` is the ruling table, and the two
+stale Q31 deferrals are cleared. It found **seven** calculator consumers needing the helper form
+across eight binary call sites, past the threshold of four F224 set, so F224.2 was re-split three
+ways on 2026-09-01. Every other modern realm test, binary and `.CAS` alike, is a scalar `U.race`
+compare and keeps it.
+
+F224.2a is done. `Calculator/stats.js` carries `realmMembershipAt` / `unitInRealmAt` beside
+`unitRealmAt`: the scalar realm, plus `chaos` **and** `death` when `ChaosChannel(u) and EncUndead`
+holds, which is the arm both helpers share verbatim. Chaos Surge, Blazing Eyes / Chaos Embrace and
+Warp Reality's modern exemption route onto it, the latter two shedding the Fantastic term.
+`unitInRealmAt` throws on any realm but those two, so a scalar-form consumer cannot be routed
+through it. Blood Lust turned out to be a second `EncUndead` producer at the classifier's position
+(`$0059F600`), base CoM2 only.
+
+**F224.2b — the two mixed-arm blocks.** Needs F224.2a. Spell Ward and Node Aura each call the
+helper on some arms and compare `U.race` on others, so one calculator predicate must split per arm:
+Spell Ward's Death (`$005A5E0F`) and Chaos (`$005A5E51`) arms and Node Aura's Chaos arm
+(`$005A272B`) take the reader, while Spell Ward's Nature, Life and Sorcery arms and Node Aura's
+Nature and Sorcery arms keep the scalar compare. Note the inventory's open point before starting:
+Life *is* overwritten by ladder block 5 yet Spell Ward still compares `race` directly
+(`Q31.evidence.md:171-172`), so "realm the ladder overwrites ⇒ helper form" does not generalise.
+
+**F224.2c — the two Death-side reads.** Needs F224.2a. Eternal Night's enemy-Resistance arm
+(`$005A22D9`) and Darkness's Death arm (`$005A45EF`), plus the CoM2 Eternal Night doubling, take
+the reader in their `com2_*` half only; CoM 1's block is a `bu->race` compare and its half stays
+scalar, as does Darkness's Life arm.
+
+### F226 — Create Undead is omitted, and it colours the damage it deals
+
+Category: **faithfulness**. Filed 2026-09-01 on the user's instruction, from the same run.
+
+`applyVampirismEffects` ([combat_effects.js:223](Calculator/combat_effects.js:223)) states the
+omission and its reason: Create Undead "only routes damage into a post-combat creation category; it
+does not change one-round damage", so the calculator drops the flag. That reasoning held while
+nothing displayed the category split. The post-combat block now displays exactly that, so a Ghoul's
+melee prints `Regular 100.0%` for damage the engine books as undead.
+
+The routing is not incidental. Caster sends the **whole** ordinary attack roll to the undead bucket
+when the attacker has Create Undead and the target has neither Magic nor Death Immunity
+(`Combat.ApplyAttack.pas:624`, `$005B31FA`). DOS routes at least two damage sources the same way,
+including Poison ([combat.c:4920](Reference%20docs/DOS%20reconstructed/combat.c:4920) and
+[:4968](Reference%20docs/DOS%20reconstructed/combat.c:4968)), and carries a version difference in
+the gate: MoM 1.31 blocks on Magic Immunity alone (`USA_CREATE_UNDEAD_BLOCK_131`, raw `0x0020`)
+while CP 1.60 and CoM 1 block on Magic **or** Death Immunity (raw `0x0060`).
+
+Today `createUndead` exists only as a display grant
+([stats_identity.js:834](Calculator/stats_identity.js:834)) — no control, no `ABILITY_DEFS` entry,
+and therefore no roster import, since `ui_abilities.js` imports only abilities the defs list.
+
+**F226.1 — model the flag.** Needs no other item. Give Create Undead an `ABILITY_DEFS` entry with
+its tooltip and version gating, so it survives roster import and satisfies INV-2, and derive it
+where the engines grant it — the Warlord Vampirism grant included. Name the immunity gate once,
+with its 1.31-versus-later split, the way the `*ReachesRoll` predicates name theirs. No damage
+routing yet.
+
+**F226.2 — route the damage.** Needs F226.1. Send the damage Create Undead colours into the undead
+bucket in both families, to the extent each engine does it: the whole conventional roll on Caster,
+and each DOS site that tests the flag. Add the `createUndead` row to `nonNormalRiders` in
+`runRiderHistogramChecks`. Expect preset movement wherever an affected unit already appears, and
+expect DOS combat healing to move with it, since undead damage is healed after regular damage
+rather than alongside it.
+
+### F233 — The post-combat composition has no rule for overkill cells
+
+Category: **decision**. Filed 2026-09-01 on the user's approval, out of the F225.1 adjudication.
+
+The project CLAUDE.md's damage-phase rule says what a phase publishes is capped at the HP its target
+had entering it, while "a rider histogram is not capped, so in an overkill cell the riders bound
+their phase total rather than summing to it". The post-combat block displays a damage-type
+composition built from those uncapped riders against that capped total, and nothing states how the
+two are reconciled: in an overkill cell the buckets sum past 100% of the published figure.
+
+This is a display and normalisation decision, not a faithfulness one — the engine's own buckets are
+uncapped and the calculator is right to carry them that way. What is missing is a stated rule for
+what the composition shows when they exceed the published total: normalise to the buckets' own sum,
+clip proportionally to the published total, or show the overflow.
+
+It affects every non-normal rider, not only the gaze, which is why it is not folded into F225.2.
+F225.2 and F226.2 both push more cells into the regime by routing damage into the irreversible and
+undead buckets, so settling it before those land avoids re-reading the display twice.
+
+
+### F229 — Exorcise's created-undead penalty carries a realm term no version tests
+
+Category: **faithfulness**. Filed 2026-09-01 on the user's approval, out of the F224.1 sweep.
+
+`isCreatedUndeadTarget` ([combat_special_attacks.js:110](Calculator/combat_special_attacks.js:110),
+used at `:120` and `:174`) requires `defUnitType === 'fantastic_death'` before the extra
+Exorcise / Dispel Evil penalty applies. No block in any version puts a realm term on that clause:
+the modern gate is `EncUndead` alone (`Combat.ApplyAttack.pas:482-484`, `$005B2A85`), and all three
+DOS builds test `mutations & 0x20` alone (`com1:0x99FB7`, `131:0x99FA9`). So a created-undead unit
+whose realm is not Death loses a penalty every engine applies.
+
+Unsupported in all five versions, so this is not a modern-only correction and F224.2 does not touch
+it — it is a realm term to delete, not a predicate to collapse.
+
+### F230 — Supreme Light tests the compact type token, so Life-race heroes fail its gate
+
+Category: **faithfulness**. Filed 2026-09-01 on the user's approval, out of the F224.1 sweep.
+
+`supremeLightActiveForUnit` ([combat_abilities.js:301](Calculator/combat_abilities.js:301), called
+at [stats.js:1788](Calculator/stats.js:1788)) reads the compact type token, but the block at
+`$005A6FDF..$005A744B` compares `U.race = RCLife`. A hero whose race is Life — Torin, any Sanctified
+hero — passes the binary's test and fails the calculator's.
+
+The same F195 shape as F224, but in a **scalar-form** consumer: the block compares `U.race`, so it
+must not gain the recovery clause and no F224.2 subtask picks it up. The fix is the Fantastic term
+alone.
+
+### F231 — `unit.raceNoHeal` has no producer, and Raise Dead heals naturally
+
+Category: **faithfulness**. Filed 2026-09-01 on the user's approval, out of the F224.1 sweep.
+
+`CanHealNaturally`'s realm arm ([engine.js:336](Calculator/engine.js:336), `:355`) reads
+`unit.raceNoHeal` against the binary's `Units[u].race = RCNoHeal` (`$005ECB8B..$005ECBB9`), but
+nothing in the calculator ever writes that field. The live consequence is Raise Dead:
+[stats_identity.js:398](Calculator/stats_identity.js:398) writes race `No Heal` and no `noHealing`
+term names it, so a raised unit heals where the engine forbids it. Mystic Surge is already covered
+by `noHealing` and is not the missing case.
+
+Either give the field a producer at the Raise Dead write or delete it and route the case through
+`noHealing`; the reading decides which.
+
+### F232 — `UnitCalc.CAS:93-98` re-writes race in region `d`, and nothing models it
+
+Category: **binary reconstruction** (script reading). Filed 2026-09-01 on the user's approval, out
+of the F224.1 sweep.
+
+`UnitCalc.CAS:93-98` is a `SETSTAT(U,SRace,0,RCLife)` in region `d` — the late script hook. The
+calculator models Sanctify only as the region-`b` `b:sanctify` write. In Warlord a Sanctified unit
+that also took a region-`c` conversion would have that conversion undone by this later write, and
+the calculator has no step for it.
+
+Read the block against its guards and either give it a step in the region-`d` chain or declare it
+unreachable for the states the calculator models. Note that Warlord scripts outrank the compiled
+behaviour they overwrite, so if it fires it wins.
+
+
+### F234 — The DOS Warp Reality exemption carries a Fantastic term its block does not test
+
+Category: **faithfulness**. Filed 2026-09-01 on the user's approval, out of the F224.2a run.
+
+F224.2a routed the modern half of `unitIsChaos` ([stats.js](Calculator/stats.js)) onto the realm
+membership reader and left the DOS half on the compact `fantastic_chaos` type token, because the
+subtask was scoped modern-only. The DOS block tests no Fantastic flag: Warp Reality's exemption is
+`bu->race != rt_Chaos` at `131:0x9077A` and `com1:0x904DF`. A non-Fantastic unit whose race is Chaos
+is therefore wrongly denied the exemption in all three DOS builds.
+
+The same F195 shape as F224, and the last of that family in this consumer. The DOS engines have no
+`IsChaosUnit` helper, so this takes a **scalar** race compare and must not gain the recovery clause
+— the membership reader is the wrong tool here. `unitInRealmAt` throws on any realm but `chaos` and
+`death` precisely so this cannot be routed through it by reflex.
+
+Add a fixture per corrected build with its arithmetic in the `desc`.
+
+### F235 — Warlord Vampirism and Revenant write `EncUndead`, and nothing decides whether it counts
+
+Category: **binary reconstruction** (script reading). Filed 2026-09-01 on the user's approval, out
+of the F224.2a run.
+
+Warlord's Vampirism (`UnitCalc.CAS!NOVAMPIRISM!-7`) and Revenant (the `COSpell.CAS` Revenant arm)
+both write `EncUndead` at index 1. By this repo's reading that an index-1 write is already set at
+region `b`, both would be `EncUndead` for every later consumer — Eternal Night's Poor Vision, True
+Light, and the classifier arm F224.2a built.
+
+`UnitCalcPre.CAS~"SPELLSTATE(W,SDeathMastery)=2"` argues the other way: it spells `EncUndead`,
+`EncRevenant` and `EncVampirism` as three separate disjuncts, so the script's own author does not
+treat either as implying the flag at the position that block reads.
+
+F224.2a's review pressed for folding these into the membership reader's `EncUndead` term and the
+agent declined, on the grounds above; the question was documented in the reader's comment rather
+than decided. Settle it against the scripts. It moves existing Warlord fixtures for Eternal Night
+and True Light, so it needs its own evidence pass rather than a fold-in.
+
 
 ### F180 — Four keys live in some versions and silent in others, with nothing saying why
 
@@ -300,139 +536,6 @@ Warlord, silent in both MoM). Each needs its own source reading.
 `destruction` is **settled and not part of this**: the control is correctly shown in the DOS
 versions, where Destruction exists but is hero-only and therefore unimplemented until hero mechanics
 land (M3). Reproduce with `node tools/narrow_control_scope_sweep.js`.
-
-### F191 — Rust's two resistance rolls are one control
-
-The helptext and the script both split them: `COSpell.CAS:418-437` rolls the first at
-`GETSTAT(TU,SResist,0)-3` and on a fail clears `EncMagic`, `EncMithril`, `EncAdamant`,
-`EncOrihalcon`, `EncTransmuteEquipment`, `EncResistElements`, `EncElementalArmor`, `EncFlameBlade`
-and `EncGuardianWind` without ever setting `EncRust`; `UnitCalc.CAS:492-503` then reads `EncRust`,
-which only the engine's own −5 roll sets. The calculator drives both halves off one `rust` boolean
-(`rustActive`, `stats.js`), so "materials stripped, no stat penalty" cannot be expressed.
-
-**SPEC settles the default**: curses are assumed to have landed, and exact rolls are reserved for
-those "part of an attack". Rust is a cast curse, so one control meaning both landed is the specified
-behaviour, not a deviation. The only open part is whether the strip-only state is worth exposing
-anyway. Warlord.
-
-### F214 — Fixture names that claim a version or a channel the fixture does not run
-
-`blurInvisCoM2` ([presets_protections_and_weapons.js:1428](Calculator/presets_protections_and_weapons.js:1428))
-and `blurPlusInvisCoM2` (`:1439`) both carry `version: V_COM`, which is `com_6.08`
-([data.js:69](Calculator/data.js:69)). `blurPlusInvisCoM2v2` (`:1444`) is the actual CoM 2 arm.
-`TEST_TREE` supplies no overriding version for either Blur/Invisibility group
-([test_tree.js:1172](Calculator/test_tree.js:1172), `:1189`) and resolution prefers `preset.version`
-([ui.js:491](Calculator/ui.js:491)), so the names are the only thing wrong.
-
-Both fixtures are sound and both carry `keep` declarations from T2.20, whose reasons record the
-mismatch so a reader is not misled. Renaming is the fix; the keys also appear in `test_tree.js`, so
-the rename has a second site. Check whether the `CoM2` suffix is a legacy family label used
-elsewhere in this cluster before settling on new names.
-
-Four more of the same class, found 2026-08-30 in the F211 run. `blessBreathBonusMoM`,
-`blessBreathBonusCoM`, `blessBreathBonusCoM2` and `blessBreathBonusWarlord` are each named for a
-breath bonus and **none of them drives a breath attack** — all four are magical-ranged cards, the
-modern pair through `modernAttacks: { ranged: { strength: 7, type: 'magic' } }` — and what they
-assert is that Bless gives *no* bonus. `blessFireBreathDef*` are the real breath fixtures. Rename in
-the same pass; these keys also have a second site in `test_tree.js`.
-
-`spiritLinkBlessNoBonusWarlord` joins the item here because nothing else owns it. Its `desc` claims
-"3.0 with Bless's +7", a number no supported missile configuration can produce, which T2.20 left
-open as a re-aim rather than a wording fix; F211 carries the gate evidence for why the number is
-unreachable. `Reference docs/Version gating census.md:297-303` repeats that fixture's coverage claim
-and goes stale in the same motion.
-
-### F217 — Three Warlord gates disagree with their script, and each moves numbers
-
-Filed 2026-08-30 from the F175–F212 run. Each was hit by the agent working an adjacent item, each
-was verified against the script by that agent and by its GPT reviewer, and none was in that item's
-scope. Three subtasks; they share a class and nothing else, so none blocks another.
-
-**F217.1 — Night Goblins gain nothing from Darkness.** `UnitCalc.CAS:359-368` is
-`IF (GetStat(U,STypeID,1)<>356) THEN GOTO "NOTNIGHTGOBLIN"`, then, if `ETERNALNIGHTCOUNT>0` or
-either `HASCOMBATGLOBAL(W,CGDarkness,1|2)`, `SToHit += 10` and `SToDefend += 10`. Unmodelled: under
-Eternal Night the unit should be at 45% To Hit, not 35%. This is a second permanent-record read of
-the template id F189 wired to the `nightGoblins` special-unit key, so the gate term already exists
-and is the inverse of the one F189 added. `eternalNightNightGoblinsExemptWarlord`'s `desc` already
-names this block — its 14.000 becomes 18.000 when the block lands, so the fixture fails loudly
-rather than drifting. Warlord.
-
-**F217.2 — Great Unbinding has no Spirit Link exemption.** `UnitCalcPre.CAS:1352` is
-`IF (HASGLOBAL(W,GEGreatUnbinding)) %OR (GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0) THEN { GOTO
-"NOTUNBINDING"; }` — a spirit-linked unit is exempt outright. `greatUnbindingActive` (`stats.js`)
-carries no Spirit Link term, so the calculator applies −20% To Hit / −20% To Defend / −2 where
-Warlord applies nothing. The same gate's eligibility term is also narrower than the script's: the
-script reads `FANTASTIC(U)` plus the Undead flag and three Chaos-Channels flags, the calculator
-reads `isFantasticBase` alone. Both halves in one prompt. Warlord.
-
-**F217.3 — a Rebuilt hero takes a bonus the script withholds.** `d:mechanicalExpert` gates on
-`u.mechanical`, the live flag; `UnitCalc.CAS:276` reads `GETSTAT(U,SCustomAttribute,1)`, the
-permanent one. Non-heroes agree, because `base:rebuild` writes the permanent record
-(`OLSpell.CAS:278-285`, inside `ISHERO(TU)=0`). Heroes do not: the hero branch at
-`UnitCalcPre.CAS:685` writes record 0 only, so the calculator grants +20% To Hit / +10% To Defend
-that the script does not. No fixture covers a Rebuilt hero either way. Settle whether the gate takes
-the permanent read or whether `b:rebuild` writes the wrong record — those are not the same fix.
-Warlord.
-
-### F218 — Wall Crusher breaks the wall the defender stands behind, and nothing models it
-
-Two subtasks; the second needs the first.
-
-The engine acts inside the single mouse click the calculator scopes itself to.
-`Combat.PerformAttacks.pas:91-92` (`PerformRangedAttack`) and `:146-147` (`PerformMeleeAttack`) call
-`CrushWall(au)` → `destroywall(BaseUnits[du].cox, BaseUnits[du].coy)` **before any `ApplyAttack`**,
-and `destroywall` turns wall state 1 (intact) into 2 (broken)
-(`Combat.AttackAndWallHelpers.pas:326`). The calculator reads that state at
-[combat_effects.js:722](Calculator/combat_effects.js:722) and `:1071-1077` from the per-side
-`cityWalls` input, so a Wall-Crusher attacker should drop an intact defender's +3 to +1 and does not.
-
-**F218.1 — rule on how an intact wall segment is expressed.** This is the blocker, and it is a
-decision rather than a reading. `destroywall` acts on the segment the *defender's coordinates*
-select: a defender on an intact segment loses the bonus, one in the inner area keeps +3 with no
-segment to break, and one `cityWalls` input conflates them. Either the input gains a way to say
-which, or the calculator states an approximation as a deliberate deviation. Positioning is out of
-scope, which is exactly why this needs a ruling and not a model.
-
-**F218.2 — give Wall Crusher its resolver.** Needs F218.1. Five writers, not one: `d:blazeOfGlory`
-(F206), `b:bombsGrenades`, Marionette, `d:breakthrough` — whose corporeal tier sets the flag in the
-engine (`Reference docs/Caster binary/CoM2 binary - unit recalculation.md:990`) and makes no write in
-the calculator — and intrinsic roster Wall Crusher, which is not parsed into an ability at all: 15
-records in `units_com2.js` and 34 in `units_warlord.js` carry the string and `abilities.js` has no
-definition for it. Three tooltips describe the same flag three ways today — `blazeOfGlory` discloses
-"wall breaking", `explosive` says "plus Wall Crusher" with no disclosure, and `breakthrough` says
-"Not modeled: Wall Crusher", which stops being true when this lands. Unify them in the same pass.
-
-### F219 — Two tooltips state something their source contradicts
-
-Two subtasks, unrelated except in class.
-
-**F219.1 — the Node aura tooltip and its gate disagree.** [index.html:85](index.html:85) says the
-aura applies to "Fantastic units of the node's realm"; `nodeAuraActive` (`stats.js`) tests the realm
-alone, so a `normal_nature` unit takes it. One of the two is wrong. Settle which against the block
-rather than assuming the tooltip is the outlier — F211 is the worked precedent for that shape, and
-the answer may move numbers. `@Map@NodeAuraType` is one of the four sites **Q31** lists as answering
-`IsChaosUnit` differently, so check whether Q31 settles this first.
-
-**F219.2 — two records of a closed Artificer divergence.** The `artificer` tooltip
-([enchantments.js:131](Calculator/enchantments.js:131)) ends "In-game helptext says +1 resistance;
-the script grants +2." Both shipped copies say **+2** (`Unit rosters/Warlord mod unit data/HELP.TXT`
-lines 216 and 6332), and `Reference docs/Source discrepancies.md:31` records the helptext as
-corrected in v1.5.12.6.2 — while `:191` of that same document still asserts the tooltip notes the
-divergence. The tooltip clause and the `:191` claim both go. Confirm against the shipped helptext,
-not against the doc.
-
-### F220 — Destruction is routed through the death realm bucket
-
-[abilities.js:21](Calculator/abilities.js:21) describes Destruction as a "Chaos-realm resistance
-attempt" and the binary agrees — `Combat.ApplyAttack.pas:521` passes `inferred_ChaosRealm`. The
-calculator routes it through the **death** bucket instead (`buildResistanceContext`,
-[combat_phases.js:329](Calculator/combat_phases.js:329)).
-
-It is numerically inert everywhere it can fire today: Bless, Magic Immunity and Resist Magic all
-treat chaos and death alike, Resist Elements is nature-only in the modern gate, and Destruction does
-not fire in the DOS builds, where MoM's `elementalRealms: ['chaos','nature']` would tell the two
-apart. So this is a latent trap rather than a defect with a number, and the item is to move the
-routing before something reads the realm.
 
 ## Version scoping
 
@@ -577,6 +680,99 @@ shapes are real. Blocked on cost, not evidence: sweeping both strengths takes
 `node tools/node_unit_checks.js` from ~11s to ~20s. Choose between both strengths across the
 cross-product, the positive strength plus a compact zero-strength pass, and leaving it.
 
+### F228 — `Casapi.dll` exports an unchecked accessor that reads a never-written field
+
+*Category: documentation.* Filed out of Q15, 2026-09-01.
+
+`Casapi.dll` exports `UnitBuildingRequirement(b, i)` at RVA `0x1F5DEC` (VA `$005F5DEC`). It takes
+both arguments straight off the stack with no bounds check:
+
+```
+005F5DF0  imul eax, dword ptr [ebp+8], 0x1e1     ; b, unchecked
+005F5DF7  mov  edx, dword ptr [0x60f48c]         ; UnittableT
+005F5DFD  lea  eax, [edx+eax*4]
+005F5E00  mov  edx, dword ptr [ebp+0xc]          ; i, unchecked
+005F5E03  mov  eax, dword ptr [eax+edx*4+0x90]   ; i=0 reads savemodifier
+```
+
+`CasApi.pas:427` documents `i` as 1, 2 or 3. The engine's own bridge
+`@Castercore@UnitBuildingRequirement` (`$00648D6C`) is range-checked; this export is not. `i=0`
+returns `unitT.savemodifier`, which Q15 established is never written and whose table is
+zero-filled, so the read yields 0 rather than garbage. An out-of-range `b` is unbounded.
+
+What is not established: whether anything in the shipped distribution loads the DLL at all.
+`Caster.exe` has no export directory, does not import `Casapi.dll`, and does not contain the
+string `casapi`; no `.CAS` in either script set calls the export. So the consumer, if there is
+one, is a native program linking the DLL directly.
+
+No calculator consequence — `savemodifier` stays out of the CoM2 card field set. The value is a
+note for mod authors, so the outcome is a recorded finding, not a code change.
+
+### F227 — CAS citations are line numbers into files that get replaced
+
+*Category: documentation.*
+
+433 citations across `Reference docs/` and `Calculator/` point into the Warlord scripts by line
+number: 159 into `UnitCalcPre.CAS`, 126 into `UnitCalc.CAS`, 76 into `CreateUnit.CAS`, 72 across
+`OLSpell`, `OverlandEndTurn`, `MASTER`, `DisAbil`, `COSpell`, `CombatEndTurn` and
+`SpellMysticSurge`. The tree now ships `Warlord 1.5.12.9` and has dropped the `1.5.12.6.2` and
+`1.5.12.7` sets those citations were written against. `UnitCalcPre.CAS` went 1904 → 1915 lines and
+`UnitCalc.CAS` 1667 → 1659, so the drift is non-uniform and every citation into those two is
+suspect until re-resolved.
+
+A binary address is anchored to an immutable artifact identified by md5, so it stays checkable
+forever. A CAS line number is the one cited source that gets replaced wholesale on every mod
+release, and it is the one with no verification:
+`tools/comment_citation_census.js:49-64` accepts a `.CAS` mention as a prose pointer, which
+confirms a pointer exists and never that a line resolves.
+
+CAS supplies a better anchor in the file format. `!LABEL!` definitions are jump targets, so they
+are semantically load-bearing and survive insertions around them: 100 in `UnitCalcPre.CAS`, 95 in
+`UnitCalc.CAS`, 21 in `CreateUnit.CAS`. `:comment:` section headers are the secondary landmark.
+
+Conversion is mechanically feasible because the dropped script versions are recoverable from git
+at their original lengths, so a stale citation can be resolved against the version it was written
+for and re-anchored to the label enclosing that line.
+
+The audit suite lands as `scaffolding`; promoting it requires a proposal. It is not the same check
+as `provenance_audit.js`, which reads calculator comments and not the script set.
+
+**Rejected alternative.** Re-pinning the docs to 1.5.12.9 line numbers touches the same 433
+citations, so it costs nearly as much and leaves the failure mode intact for the next release.
+
+F227.1 and F227.2 are done. The grammar is `Reference docs/CAS citation grammar.md`, the audit is
+`tools/cas_citation_audit.js` (registered in `TESTS.md` as `cas-citations`, scaffolding), and the
+conversion map is `tools/cas_citation_map.json`, rebuilt in ~30s by
+`tools/build_cas_citation_map.js`. The audit passes today: a line citation is *deprecated* under a
+per-script ceiling, and `--strict` zeroes every ceiling as F227.6's clean-state exit. `TASKS.md` and
+`JOURNAL.md` are counted but not gated, since this body quotes stale citations as its evidence.
+
+**The population is 386, not the 433 this item was filed with** — the rest are `@span` citations or
+out-of-scope, and three were converted incidentally during the F224.2a run. Re-measure rather than
+reusing any figure written here. Of the 386: 382 clean, 1 ambiguous, 3 unconvertible. Attribution is
+per occurrence and 247 of the 386 depend on it, so each entry records what all four shipped sets
+would read at those lines.
+
+**F227.3** `UnitCalcPre.CAS`; **F227.4** `UnitCalc.CAS`; **F227.5** `CreateUnit.CAS`; **F227.6** the
+seven smaller scripts, ending with a clean `--strict` audit. Each converts its script's citations
+from the map, then lowers that script's `DEPRECATED_BUDGET` row to match.
+
+**Four occurrences the map cannot convert mechanically.** Each needs a semantic retarget — the cited
+line does not name what the citing text claims — so they are readings, not mappings:
+
+- `Calculator/stats.js:1507` -> `UnitCalcPre.CAS:87`, blank in **every** shipped set; the
+  `SETSTAT(U,SRanged,0,…)` it quotes is at shipped `:97`. (F227.3)
+- `Calculator/stats_identity.js:341` -> `CreateUnit.CAS:414-419`, range starts on a blank line; the
+  Sancta Basilica material is shipped `:417` onward. (F227.5)
+- `Calculator/presets_protections_and_weapons.js:560` -> `UnitCalc.CAS:550,569-571`, **one comma list
+  carrying line numbers from two releases**: `550` is a 1.5.12.9 number, `569-571` are 1.5.12.7's
+  (shipped 561-563). Someone re-pinned the first and not the rest. (F227.4)
+- `Calculator/presets_buildings_and_machines.js:1195` -> `DisAbil.CAS:840`, the one ambiguous case;
+  its own prose decides it for 1.5.12.7, which is what the map emits. (F227.6)
+
+Delete `tools/cas_citation_map.json` when F227.6 lands, keeping the builder: it regenerates in 30s,
+and a stale copy on disk is what turned the audit red during the F227.2 run.
+
 ### F182 — Drop or fix `derivation_equivalence.js`'s dead `chaos-channels` env
 
 The env is `{ chaosChannels: 'demonWings' }` but `input.chaosChannels` is read nowhere in
@@ -585,13 +781,6 @@ controls are the `ccDefense`, `ccFlight` and `ccFireBreath` booleans. An env is 
 case, so a dead one spends a share of the 3900 combinations per version on a duplicate of `plain`.
 Decide whether an env may carry abilities at all — the combination pass overwrites `over.abilities`
 today, so it cannot — then either drop the entry or give the pass a way to merge one.
-
-### F221 — The vacuity sweep leaves its dev server running
-
-`tools/preset_vacuity_sweep.js` never reaches a kill on its success path, so the
-`tools/nocache_server.py` it starts survives on port 8080 and the next Playwright run dies with
-`http://127.0.0.1:8080/ is already used`. Four agents in the F175–F212 run hit this and killed the
-process by hand. `startServer` and its child handling are the site.
 
 ### T8 — Give the code's unsourced engine claims a citation or an evidence home
 
@@ -707,18 +896,20 @@ Each is one prompt: read the named sources, answer, record the answer where the 
 | Q6 | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
 | Q8 | Whether Wraiths use Life Steal −4 or −3. |
 | Q12 | When "ranged" includes missile, boulder, magical, Thrown, breath or gaze, across versions and effects. |
-| Q15 | Whether compiled code ever consumes `unitT.savemodifier`. |
-| Q18 | What CoM 1's unit-type ceiling of `0x97` selects. The helptext says "normal unit" but it appears to admit four fantastic summons. Two blocks read it: the Holy Arms grant (com1:0x8F16C) and Heavenly Light's weapon-quality test (com1:0x905E7), where it forces `cl` to Magic Weapons and so withholds the To Hit thresholds. F49 left the ceiling unmodelled pending this. |
 | Q19 | CoM 1 Realm Ward helptext's −2 To Hit / −4 Defense / −4 Resistance against the executed `0x90A87..0x90A9B` writes of −2/−3/−3. |
 | Q21 | CoM 1 helptext's retained Endurance/Giant Strength powers against the manual's Teleportation/Inner Fire/Divine Protection replacements. The executed binary matches the manual's package. |
-| Q25 | The R6.1h shared-source rendering disagreement at `0x8E5C6: 25 00 01`. The mechanic is undisputed; only the source representation is. |
 | Q26 | The R9-G1a-R3 evidence-scope disagreement. The base, target address/value and constructor linkage are undisputed. |
 | Q28 | What realm a Fantastic unit with a mundane base race has. `legacyUnitTypeFromIdentity` and `legacyUnitTypeFromLiveIdentity` (`stats_identity.js:71`, `:109`) read everything outside the six realm races plus `No Heal` as `arcane`. No shipped roster reaches it, but the UI does — Fantastic + Barbarian is a legal control pair. `UNITS.INI` cannot express the pair, so the sources leave it undefined. Either source the answer, restrict the control pair, or record the `arcane` reading as a deviation. |
 | Q30 | **Code defect.** Sancta Basilica grants Sanctify to Crusaders and Paladins in `applySanctaBasilicaGrant` (`stats_identity.js`); `CreateUnit.CAS:412-441` writes four *mutually exclusive* `STypeID` branches — 108 and 231 get Sanctify plus improved Exorcise, 111 (Crusaders) gets Lucky alone, 113 (Paladins) gets Magic Immunity alone. The +3 Resistance ahead of the branches does apply to everyone trained there. `DisAbil.CAS:1036-1046` groups all three under one display line and is the likely origin of the conflation. Sanctify drives the Life-realm conversion, so the fix moves numbers. Settle with F200 stage 3. |
-| Q31 | What `@Units@IsChaosUnit` tests. The calculator answers it four ways — `realmOfUnitType`, `blazingEyesActive`, `unitIsChaos`, `nodeAuraActive`. The helper is unreconstructed. The only address-backed statement of the predicate is the DOS block Warp Reality transcribes — `bu->race != rt_Chaos` at 131:0x9077A and com1:0x904DF — which agrees with the realm-only reading. Against that, the modern routine reaches for the helper exactly where a plain race test would do: Spell Ward and `@Map@NodeAuraType` both decide Nature and Sorcery by `race` equality and Chaos by `IsChaosUnit`. **Blocks F195.** |
-| Q32 | Whether CoM 2 Bless really gives no defense against breath and gaze attacks. F211 settled the tooltip on the reading that `Combat.ApplyAttack.pas:446-457` is the only `EffectiveDefense` call for a unit attack and passes a literal `spellid := 0` in every `at` case, so the `EncBless` term at `Combat.ResolutionHelpers.pas:197-200` — which needs `spellid > 0` with a Chaos or Death realm — cannot admit breath or gaze even though both set `magicranged := True`. **The CoM 2 helptext says the opposite**, and the Warlord helptext agrees with the helptext (`Unit rosters/Warlord mod unit data/HELP.TXT:3133`, `:5328` promise defense against all fire/lightning damage). Source routing makes the binary win, which is why F211 shipped, but the conflict was never read to the bottom: re-derive the call sites rather than re-reading the reconstruction, check whether a second `EffectiveDefense` caller or a `spellid` write exists on the breath and gaze paths, and check the base CoM 2 `MASTER.CAS` for an override. If the helptext is right the gate moves numbers and `blessBreathBonusCoM2`, `blessBreathBonusWarlord` and `blessMeleeFromDeathCoM2` all change, along with F211's tooltip. Record the answer in `Reference docs/Source discrepancies.md` either way. |
 
 ## Blocked on people
+
+**H2** — Contact Seravy about the Bless defense term's missing breath flag. The `EncBless` term
+at `Caster.exe` `0x5966B8`-`0x596703` requires `spellid > 0`, so it cannot admit breath or gaze,
+while Resist Elements (`0x59667D`) and Elemental Armor (`0x5966A2`) two instructions away each do
+`ismagic2 OR isbreath`. The CoM 2 helptext describes the behaviour the missing clause would
+produce. Ask whether the omission is intended. Evidence in `Reference docs/Source
+discrepancies.md` §17, which records the resolution.
 
 **H1** — Contact Seravy about the confirmed CoM2/Warlord Blur bug: turn-relative `CGADEnemy` makes
 the opposing army's Blur reduce that army's own retaliation gazes and counterattack. Record whether

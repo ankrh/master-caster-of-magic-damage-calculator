@@ -11,7 +11,7 @@ function runF19Checks(ctx) {
     version: 'com2_1.05.11', ...overrides,
   }));
   const warlord = overrides => ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', ...overrides,
+    version: 'com2_warlord_1.5.12.9', ...overrides,
   }));
 
   const darkForce = modern({ abilities: { darkForce: true } });
@@ -122,6 +122,61 @@ function runF19Checks(ctx) {
     def: 6, res: 7, abilities: { spellWard: 'nature' },
   });
   assertEqual(wrongWard.def, 6, 'F19 nonmatching Spell Ward is inert');
+  // F195: the block at $005A5D36 is a settlement guard over five realm arms and nothing else,
+  // and Q31 shows neither classifier tests Fantastic, so the ward is a realm test alone. The
+  // reachable cases the removed term used to exclude are a realm-tagged non-Fantastic hero
+  // (Torin in base CoM2; Mortu, Ravashack, Everchosen and Avatar in Warlord) and a Sanctified
+  // non-clergy Warlord unit, whose `b:sanctify` writes the Life realm without Fantastic.
+  for (const realm of ['nature', 'sorcery', 'chaos', 'life', 'death']) {
+    const race = { nature: 'Nature', sorcery: 'Sorcery', chaos: 'Chaos', life: 'Life', death: 'Death' }[realm];
+    const nonFantasticWard = modern({
+      identity: { baseFantastic: false, baseRace: race }, unitType: 'normal',
+      def: 6, res: 7, abilities: { spellWard: realm },
+    });
+    assertEqual(nonFantasticWard.def, 3,
+      `F195 the ${realm} Spell Ward arm reaches a non-Fantastic unit of that realm`);
+    assertEqual(nonFantasticWard.res, 4,
+      `F195 the ${realm} Spell Ward arm takes Resistance from a non-Fantastic unit of that realm`);
+  }
+  const unrealmedWard = modern({
+    unitType: 'normal', def: 6, res: 7, abilities: { spellWard: 'life' },
+  });
+  assertEqual(unrealmedWard.def, 6,
+    'F195 Spell Ward is still inert against a unit the recalculation gives no realm');
+  const sanctifiedWard = warlord({
+    unitType: 'normal', def: 6, res: 7, abilities: { sanctify: true, spellWard: 'life' },
+  });
+  assertEqual(sanctifiedWard.def, 3,
+    'F195 a Sanctified non-clergy unit is Life-realmed without being Fantastic, and is warded');
+  // The block's third write. The old term suppressed all three, so a check that reads only
+  // Defense and Resistance would pass against a ward that had lost its To Hit arm.
+  const chaosWardToHit = modern({
+    identity: { baseFantastic: false, baseRace: 'Chaos' }, unitType: 'normal',
+    def: 6, res: 7, abilities: { spellWard: 'chaos' },
+  });
+  assertClose(chaosWardToHit.toHitMelee, 0.1,
+    'F195 the ward takes 20 percentage points To Hit from a non-Fantastic unit of its realm');
+  const chaosNoWardToHit = modern({
+    identity: { baseFantastic: false, baseRace: 'Chaos' }, unitType: 'normal', def: 6, res: 7,
+  });
+  assertClose(chaosNoWardToHit.toHitMelee, 0.3,
+    'F195 the same unit keeps its To Hit with no ward standing');
+  // The hero path is distinct: `legacyUnitTypeFromLiveIdentity` collapses a non-Fantastic hero to
+  // `hero`, which carries no realm, so the ward can only reach it through `realmOfUnitType`'s
+  // live-identity fallback. Torin (`units_com2.js` #34) is the base-CoM2 instance; Mortu,
+  // Ravashack, Everchosen and Avatar are the Warlord ones.
+  const lifeHeroWard = modern({
+    isHero: true, identity: { baseFantastic: false, baseRace: 'Life' },
+    def: 6, res: 7, abilities: { spellWard: 'life' },
+  });
+  assertEqual(lifeHeroWard.def, 3,
+    'F195 a realm-tagged non-Fantastic hero is warded through the live-identity realm fallback');
+  const deathHeroWard = warlord({
+    isHero: true, identity: { baseFantastic: false, baseRace: 'Death' },
+    def: 6, res: 7, abilities: { spellWard: 'death' },
+  });
+  assertEqual(deathHeroWard.def, 3,
+    'F195 the Warlord Death heroes take the IsDeathUnit arm without being Fantastic');
 
   const auraMaximum = modern({
     res: 1, def: 2, abilities: {
@@ -379,7 +434,7 @@ function runF23Checks(ctx) {
     return { feared, fearSource, chance: fearPhaseChance(feared, fearSource, version) };
   };
 
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const intrinsic = fearedChance(version, { deathImmunity: true });
     assertEqual(intrinsic.feared.baseDeathImmunity, true,
       `F23 ${version} preserves intrinsic Death Immunity on the base record`);
@@ -423,11 +478,11 @@ function runF23Checks(ctx) {
   assertClose(animated.chance, 0.8,
     'F23 CoM2 Animated-derived Death Immunity still rolls against Cause Fear');
 
-  const rebuild = fearedChance('com2_warlord_1.5.12.7', { rebuild: true });
+  const rebuild = fearedChance('com2_warlord_1.5.12.9', { rebuild: true });
   assertClose(rebuild.chance, 0.8,
     'F23 Warlord Rebuild-derived Death Immunity still rolls against Cause Fear');
 
-  const divineProtection = fearedChance('com2_warlord_1.5.12.7', {
+  const divineProtection = fearedChance('com2_warlord_1.5.12.9', {
     divineProtection: true,
   });
   assertEqual(divineProtection.feared.abilities.deathImmunity, true,
@@ -567,7 +622,7 @@ function runF50F51F53Checks(ctx) {
   'F53 CoM 1 trace preserves negative pre-Warp Defense and later Tactician ordering');
 
   for (const version of [
-    'mom_1.31', 'mom_cp_1.60.00', 'com2_1.05.11', 'com2_warlord_1.5.12.7',
+    'mom_1.31', 'mom_cp_1.60.00', 'com2_1.05.11', 'com2_warlord_1.5.12.9',
   ]) {
     const inert = ctx.deriveUnitStats(baseUnitInput({
       version, baseFantastic: true, baseRace: 'Chaos', unitType: 'fantastic_chaos',
@@ -596,7 +651,7 @@ function runF50F51F53Checks(ctx) {
     assertClose(inertAuras.toHitMelee, 0.3, `F50 side maxima are inert in ${version} To Hit`);
     assertClose(inertAuras.toBlock, 0.3, `F50 side maxima are inert in ${version} To Block`);
   }
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const unchangedModern = ctx.deriveUnitStats(baseUnitInput({
       version, baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
       rtb: 3, rtbType: 'missile', def: 6,
@@ -617,7 +672,7 @@ function runF50F51F53Checks(ctx) {
     ['mom_1.31', 9, 4],
     ['mom_cp_1.60.00', 9, 4],
     ['com2_1.05.11', 9, 3],
-    ['com2_warlord_1.5.12.7', 9, 3],
+    ['com2_warlord_1.5.12.9', 9, 3],
   ];
   for (const [version, defense, expected] of unchangedWarpCases) {
     const warped = ctx.deriveUnitStats(baseUnitInput({
@@ -630,7 +685,7 @@ function runF50F51F53Checks(ctx) {
 function runR9G1eChecks(ctx) {
   const versions = [
     'mom_1.31', 'mom_cp_1.60.00', 'com_6.08',
-    'com2_1.05.11', 'com2_warlord_1.5.12.7',
+    'com2_1.05.11', 'com2_warlord_1.5.12.9',
   ];
   const materials = ['magic', 'mithril', 'adamantium'];
   for (const version of versions) {
@@ -707,16 +762,16 @@ function runR9G1eChecks(ctx) {
   assertClose(modernZeroRanged.toHitRtb, 0.4,
     'R9-G1e modern non-magical Ranged material gate has no strength test');
   const createdModernThrown = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', weapon: 'mithril', atk: 1,
+    version: 'com2_warlord_1.5.12.9', weapon: 'mithril', atk: 1,
     rtb: 0, rtbType: 'none', modernAttacks: {},
     abilities: { outlanderWizard: true, explosive: true },
   }));
   assertClose(createdModernThrown.toHitRtb, 0.4,
     'R9-G1e modern material gate reads a Thrown field created before ApplyMagicWeapons');
   const trueLightCreatedMelee = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.7', weapon: 'mithril', atk: 0,
+    version: 'com2_warlord_1.5.12.9', weapon: 'mithril', atk: 0,
     identity: ctx.createUnitIdentity({
-      version: 'com2_warlord_1.5.12.7', baseRace: 'Life', baseFantastic: false,
+      version: 'com2_warlord_1.5.12.9', baseRace: 'Life', baseFantastic: false,
     }),
     trueLight: true,
   }));
@@ -740,7 +795,7 @@ function runR9G1eChecks(ctx) {
   assertClose(modernFocus.modernAttacks.ranged.toHit, 0.3,
     'R9-G1e modern Focus conversion is magical before ApplyMagicWeapons');
 
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.7']) {
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const thrownAttacker = ctx.deriveUnitStats(baseUnitInput({
       version, weapon: 'magic', atk: 1, def: 0, hp: 10,
       modernAttacks: { thrown: { strength: 1, type: 'thrown' } },

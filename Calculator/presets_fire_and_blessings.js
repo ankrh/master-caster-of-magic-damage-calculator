@@ -56,18 +56,26 @@ definePresets({
     },
   },
   predefChaosSpawnVsUnicorns: {
-    desc: 'Chaos Spawn vs Unicorns (MoM 1.60): multi-gaze + poison vs resistance-to-all, poison immunity',
+    desc: 'Chaos Spawn vs Unicorns (MoM 1.60): multi-gaze + poison vs resistance-to-all, poison immunity. Type 104 runs both kill loops over the same unreduced four figures, so a figure failing both is charged twice (F225.1) — the gaze publishes 22.172 of the 22.209, and the halved survivor count is what drops the retaliation.',
     version: V_MOM_CP,
     aUnitName: 'Chaos Spawn',
     bUnitName: 'Unicorns',
     // F45: the Unicorns' Resistance to All never matched its def, so this preset was scored
-    // with 0 instead of +2 despite naming the ability. At resistance 9 rather than 7, against
-    // the gaze's −4, the destroyed share falls from 68.6% to 31.6% and the surviving figures
-    // retaliate. Unticking the Res. to all consumer still reproduces the old 0.260 / 23.129.
-    expected: { dmgToA: 0.929, dmgToB: 20.805 },
+    // with 0 instead of +2 despite naming the ability. At record Resistance 9 rather than 7,
+    // against the gaze's −4, each kill loop fails on 0.5 rather than 0.7 and the destroyed
+    // share falls from 94.2% to 63.7%; the surviving figures retaliate, which is what dmgToA
+    // measures. Unticking the Res. to all consumer still reproduces the defect arm, now
+    // 0.051 / 23.814.
+    // F225.2, which moved both numbers: the stoning and death loops each roll once per
+    // defending figure over the same `Cur_Figures` 4, so S,D ~ Binomial(4, 0.5) independently
+    // and the gaze's published total is E[min(4 + 6·(S+D), 24)] = 5676/256 = 22.171875, with
+    // the melee's single point landing at 0.1029 in the 93/256 of paths the 24 HP pool has
+    // room left in — 22.209 in all. Expected surviving figures fall from 1.0 to 140/256 =
+    // 0.546875, and the retaliation is linear in them: 0.929 × 0.546875 = 0.508.
+    expected: { dmgToA: 0.508, dmgToB: 22.209 },
     vacuity: {
       'no-ablatable-feature':
-        'Keep. A roster-integration fixture and F45\'s regression: everything under test comes through aUnitName and bUnitName, which candidates() does not reach. The comment in the fixture records the number the defect produced - unticking the Resistance to All consumer still reproduces 0.260 / 23.129.',
+        'Keep. A roster-integration fixture and F45\'s regression: everything under test comes through aUnitName and bUnitName, which candidates() does not reach. The comment in the fixture records the number the defect produced - unticking the Resistance to All consumer still reproduces the defect arm, 0.051 / 23.814.',
     },
   },
 
@@ -389,7 +397,7 @@ definePresets({
     },
   },
   wallOfFireWarlordBoostAfterCombatConversion: {
-    desc: 'The block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1638) — the permanent record — so a combat conversion cannot withdraw the garrison bonus. Raise Dead makes A an unaligned fantastic creature during combat and the +1 melee stands: 5 -> 6 vs B def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker. Gating on the converted identity instead dropped the bonus and left 5.0.',
+    desc: 'The block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1649) — the permanent record — so a combat conversion cannot withdraw the garrison bonus. Raise Dead makes A an unaligned fantastic creature during combat and the +1 melee stands: 5 -> 6 vs B def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker. Gating on the converted identity instead dropped the bonus and left 5.0.',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, def:0, hp:10,
       abilities: { wallOfFireBoost: true, raiseDead: true } },
@@ -397,11 +405,11 @@ definePresets({
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
     vacuity: {
       'name-binds-nothing':
-        'Keep. The same tokenisation artefact; the boost is live at delta 1. a.abilities.raiseDead is inert on purpose and is the fixture\'s claim: the block skips on BASEFANTASTIC(U) (UnitCalcPre.CAS:1638), the permanent record, so a combat conversion cannot withdraw the bonus and the total stays at wallOfFireWarlordBoostOnAttacker\'s 6.0. Gating on the converted identity instead dropped it to 5.0.',
+        'Keep. The same tokenisation artefact; the boost is live at delta 1. a.abilities.raiseDead is inert on purpose and is the fixture\'s claim: the block skips on BASEFANTASTIC(U) (UnitCalcPre.CAS:1649), the permanent record, so a combat conversion cannot withdraw the bonus and the total stays at wallOfFireWarlordBoostOnAttacker\'s 6.0. Gating on the converted identity instead dropped it to 5.0.',
     },
   },
   wallOfFireGarrisonSkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'The garrison block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1638), the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits, where every later recalculation reads it. So the enchanted unit is Fantastic to this gate and takes no garrison bonus. Negative claim, the absence being the rule under test: melee 5 doubled by Apotheosis is 10 at 100% hit vs def 0 → 10.0. Reading the training-time flag instead added the +1 before the doubling, for 12.0; the sibling wallOfFireWarlordBoostOnAttacker without Apotheosis still measures the +1 at 6.0.',
+    desc: 'The garrison block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1649), the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits, where every later recalculation reads it. So the enchanted unit is Fantastic to this gate and takes no garrison bonus. Negative claim, the absence being the rule under test: melee 5 doubled by Apotheosis is 10 at 100% hit vs def 0 → 10.0. Reading the training-time flag instead added the +1 before the doubling, for 12.0; the sibling wallOfFireWarlordBoostOnAttacker without Apotheosis still measures the +1 at 6.0.',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, def:0, hp:10,
       abilities: { wallOfFireBoost: true, apotheosis: true } },
@@ -409,11 +417,11 @@ definePresets({
     expected: { dmgToA: 0.000, dmgToB: 10.000 },
     vacuity: {
       'a.ability.wallOfFireBoost':
-        'Keep, and the absence is the rule under test: Apotheosis writes B.Fantastic into the permanent record the garrison gate at UnitCalcPre.CAS:1638 reads, so the unit is Fantastic to that gate and takes no bonus. Apotheosis is the live half at delta 4; reading the training-time flag instead added the +1 before the doubling, for 12.0, and wallOfFireWarlordBoostOnAttacker measures the +1 without Apotheosis at 6.0.',
+        'Keep, and the absence is the rule under test: Apotheosis writes B.Fantastic into the permanent record the garrison gate at UnitCalcPre.CAS:1649 reads, so the unit is Fantastic to that gate and takes no bonus. Apotheosis is the live half at delta 4; reading the training-time flag instead added the +1 before the doubling, for 12.0, and wallOfFireWarlordBoostOnAttacker measures the +1 without Apotheosis at 6.0.',
     },
   },
   wallOfFireGarrisonReachesHeroWarlord: {
-    desc: 'The garrison block skips only on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1638) and has no hero arm of its own, so a hero takes the +1 melee like any other non-Fantastic unit: 5 -> 6 at 100% hit vs def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker on a normal identity. The gate used to carry a `!isHero` term taken from the helptext\'s "regular units" — prose, which the script outranks — and left 5.0 (F175).',
+    desc: 'The garrison block skips only on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1649) and has no hero arm of its own, so a hero takes the +1 melee like any other non-Fantastic unit: 5 -> 6 at 100% hit vs def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker on a normal identity. The gate used to carry a `!isHero` term taken from the helptext\'s "regular units" — prose, which the script outranks — and left 5.0 (F175).',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, def:0, hp:10, unitType:'hero',
       abilities: { wallOfFireBoost: true } },
@@ -421,7 +429,7 @@ definePresets({
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
     vacuity: {
       'a.unitType=hero':
-        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS:1638), so the gate is `!permanentFantastic` (stats.js:868) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
+        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS:1649), so the gate is `!permanentFantastic` (stats.js:868) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
     },
   },
   wallOfFireWarlordBoostBoulder: {
@@ -525,6 +533,20 @@ definePresets({
         'Keep, and the absence is the rule under test: Chaos Channels counts as Chaos for the exemption, so the -20% is never charged. Chaos Channels is the live half at delta 0.2, and warpRealityChaosExempt is the base-realm arm of the same claim.',
     },
   },
+  warpRealityChaosChannelsUndeadExemptCoM2: {
+    desc: 'Warp Reality (CoM2) still exempts a Chaos-Channelled attacker that a later Undead conversion re-tagged Death. The block is `(ownCG or oppCG) and (not IsChaosUnit(i))` at $005A3E33, and the helper\'s second arm, `ChaosChannel(u) and EncUndead` at $00594FE4, recovers the Chaos realm `c:undead` overwrote - so the -20% is never charged and 1 atk keeps the unmodified 30% To Hit against Defense 0 -> 0.300. The compact `fantastic_chaos` token this used to read sees fantastic_death, charges the penalty, and gives 1 atk at 10% -> 0.100.',
+    version: V_COM2,
+    a: { atk:1, hp:10, abilities: { ccDefense: true, undead: true } },
+    b: { hp:10 },
+    warpReality: true,
+    expected: { dmgToA: 0, dmgToB: 0.300 },
+    vacuity: {
+      'combat.warpReality':
+        'Keep, and the absence is the rule under test: the exemption holds, so the -20% is never charged and the 30% To Hit stands. a.ability.ccDefense is the live half at delta 0.2 - ablating it leaves a plain Death unit no arm of the helper names, and the total falls to 0.100.',
+      'a.ability.undead':
+        'Keep, and the absence is the rule under test: the claim is that the Undead conversion does not cost this attacker the exemption, so ablating Undead has to leave the same 0.300 - it removes the very overwrite the recovery arm exists to undo. warpRealityChaosChannelsExempt is this fixture without the Undead half and pins the same 0.300 in MoM 1.31, where the engine has no helper and none is needed.',
+    },
+  },
   warpRealityMagicImmunityNotExempt: {
     desc: 'Warp Reality bypasses Magic Immunity: non-chaos A with MagicImm still gets -20% to hit → 0.1 dmg',
     a: { atk:1, hp:10, abilities: { magicImmunity: true } },
@@ -557,7 +579,7 @@ definePresets({
     },
   },
   warpRealityChaosExemptAtBlockWarlord: {
-    desc: 'Warp Reality reads its Chaos exemption at its own block, not against the record the recalculation leaves. Spirit Link asserts Fantastic at region b (UnitCalcPre.CAS:25-28) and clears it again at region d (UnitCalc.CAS:1305-1306), and `c:warpReality` is #111 of the Warlord chain against `d:spiritLink` #135 — so a spirit-linked Chaos creature is still Chaos where the block stands and keeps its 30% to hit: 1 atk vs 0 def → 0.3. Reading the record the recalculation leaves instead sees normal_chaos, applies the -20% and gives 0.1.',
+    desc: 'Warp Reality reads its Chaos exemption at its own block, not against the record the recalculation leaves. Spirit Link asserts Fantastic at region b (UnitCalcPre.CAS:25-28) and clears it again at region d (UnitCalc.CAS:1297-1298), and `c:warpReality` is #111 of the Warlord chain against `d:spiritLink` #135 — so a spirit-linked Chaos creature is still Chaos where the block stands and keeps its 30% to hit: 1 atk vs 0 def → 0.3. Reading the record the recalculation leaves instead sees normal_chaos, applies the -20% and gives 0.1.',
     version: V_WARLORD,
     a: { atk:1, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true } },
     b: { hp:10 },
@@ -679,16 +701,16 @@ definePresets({
     warpReality: true,
     expected: { dmgToA: 0, dmgToB: 0.600 },
   },
-  bloodLustOverridesCCDefenseCoM2: {
-    desc: 'Type precedence (CoM2): Chaos Channels Armor/Defense is applied before Blood Lust, so final type is Death; Blood Lust still doubles melee against the normal target, and Warp Reality penalizes that doubled attack → 0.2 dmg',
+  bloodLustUndeadFlagRecoversChaosCoM2: {
+    desc: 'Blood Lust sets `EncUndead` and only then writes `RCDeath` ($0059F600, the flag first and the race at $0059F68A; Q31 ladder block 4), so the Chaos realm it overwrites on a Chaos-Channelled unit is exactly what `IsChaosUnit` recovers through its `ChaosChannel(u) and EncUndead` arm ($00594FE4). Warp Reality therefore exempts this attacker: Blood Lust doubles melee 1 to 2 against the normal target, the To Hit stays the unmodified 30%, and the pair deal 0.600. Reading the scalar realm sees Death, charges the -20%, and gives 0.200. The type precedence this fixture was named for still holds - Chaos Channels Armor writes Chaos at $0059F5A5 and Blood Lust overwrites it at $0059F68A - but it is no longer observable through Warp Reality, because a unit carrying both flags answers True to the helper whichever write landed last.',
     version: V_COM2,
     a: { atk:1, hp:10, abilities: { bloodLust: true, ccDefense: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.200 },
+    expected: { dmgToA: 0, dmgToB: 0.600 },
     vacuity: {
-      'a.ability.ccDefense':
-        'Keep, and the absence is the rule under test: CoM2 applies Chaos Channels Armor before Blood Lust, so Blood Lust wins the type and the unit ends Death rather than Chaos - which is what puts it inside Warp Reality\'s penalty. Both other features are live: bloodLust at delta 0.1 for the doubled melee, warpReality at delta 0.4 for the penalty that doubling then takes.',
+      'combat.warpReality':
+        'Keep, and the absence is the rule under test: the exemption holds, so the -20% is never charged and the 30% To Hit stands. Both unit features are live - a.ability.ccDefense at delta 0.4, because without a Chaos Channels flag the helper has no recovery arm and the penalty lands for 0.200, and a.ability.bloodLust at delta 0.3, because without it the unit is plainly Chaos and only the undoubled 1 melee swings, for 0.300.',
     },
   },
   ccDefenseOverridesBlackChannelsMoM: {
@@ -768,7 +790,7 @@ definePresets({
       'every-feature-inert':
         'Inert by construction: the claim is that CoM2\'s Bless does not reach a melee attack whatever the attacker\'s realm, so neither the realm nor the Bless can move the 5.',
       'b.ability.bless':
-        'Keep, and the absence is the rule under test: CoM2\'s Bless defense arm is gated on a spell attack (effectiveDefense:bless requires ctx.spellId > 0), which a melee attack is not. blessResistBonusCoM2 and destructionBlessCoM2 are the live CoM2 arms, at delta 5 and 20.',
+        'Keep, and the absence is the rule under test: CoM2\'s Bless defense arm is gated on a spell attack (effectiveDefense:bless requires ctx.spellId > 0), which a melee attack is not. blessResistBonusCoM2 and destructionBlessCoM2 are the live CoM2 arms, at delta 5 and 75.',
     },
   },
   blessMeleeFromChaosCoM2: {
@@ -868,7 +890,7 @@ definePresets({
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
     expected: { dmgToA: 0, dmgToB: 5.051 },
   },
-  blessBreathBonusMoM: {
+  blessMagicRangedDefMoM: {
     desc: 'MoM Bless +3 def vs Chaos magic ranged: 7 hits − 3 bless = 4 dmg',
     version: V_MOM_131,
     a: { rtbType:'magic_c', rtb:7, toHitRtbMod:70, hp:10 },
@@ -876,7 +898,7 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
-  blessBreathBonusCoM: {
+  blessMagicRangedNoDefCoM: {
     desc: 'CoM 1 Bless gives NO def bonus vs Chaos magical ranged: its defense half needs ranged_type > 39, which excludes every conventional ranged type. 7 hits − 0 = 7 dmg (4 in MoM)',
     version: V_COM,
     a: { rtbType:'magic_c', rtb:7, toHitRtbMod:70, hp:10 },
@@ -890,7 +912,7 @@ definePresets({
         'Keep, and the absence is the rule under test: the arm needs ranged_type > 39, which excludes every conventional ranged type. The MoM arm of the same card blocks 3.',
     },
   },
-  blessBreathBonusCoM2: {
+  blessMagicRangedNoDefCoM2: {
     desc: 'CoM2 Bless gives NO def bonus vs a magical ranged unit attack: its defense half is gated on a positive spell ID and ApplyAttack passes 0 for every unit channel. 7 hits − 0 = 7 dmg (MoM blocks 3, and a +5 here would leave 2)',
     version: V_COM2,
     a: { modernAttacks: { ranged: { strength:7, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
@@ -918,7 +940,7 @@ definePresets({
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
-  blessBreathBonusWarlord: {
+  blessMagicRangedNoDefWarlord: {
     desc: 'Warlord Bless gives NO def bonus vs a magical ranged unit attack: the same positive-spell-ID gate excludes every ApplyAttack unit channel. 7 hits − 0 = 7 dmg (a +7 here would leave 0)',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:7, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
@@ -1275,14 +1297,14 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   warlordPrayerStackDef: {
-    desc: 'Warlord Prayer+HP stack: atk 5 100% hit vs def 1 + HP +2 + Prayer +1 = 4, 100% block → 5−4 = 1.0 (CoM2 def 3 → 2.0). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1487) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
+    desc: 'Warlord Prayer+HP stack: atk 5 100% hit vs def 1 + HP +2 + Prayer +1 = 4, 100% block → 5−4 = 1.0 (CoM2 def 3 → 2.0). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1498) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { prayer: true, highPrayer: true } },
     expected: { dmgToA: 0.400, dmgToB: 1.000 },
   },
   warlordPrayerStackRes: {
-    desc: 'Warlord Prayer+HP stack: Poison 5 vs base res 5 + HP +3 + Prayer +1 = res 9 (CoM2 −1 mod → eff 8), pFail 20%, poison E[dmg] = 1.0. Melee dmg = 0 (atk 1 vs def 10, all blocked). (CoM2 no stack: res 8 → eff 7 → pFail 30% → 1.5). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1487) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
+    desc: 'Warlord Prayer+HP stack: Poison 5 vs base res 5 + HP +3 + Prayer +1 = res 9 (CoM2 −1 mod → eff 8), pFail 20%, poison E[dmg] = 1.0. Melee dmg = 0 (atk 1 vs def 10, all blocked). (CoM2 no stack: res 8 → eff 7 → pFail 30% → 1.5). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1498) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 5 } },
     b: { def:10, toBlkMod:70, res:5, hp:10, abilities: { prayer: true, highPrayer: true } },
@@ -1296,7 +1318,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.600 },
   },
   warlordPrayerStackToBlockNoStack: {
-    desc: 'Warlord Prayer+HP stack: To Block does NOT stack. atk 10 100% hit vs def 0 + HP +2 + Prayer +1 = 3, base 30% + 10% (single bonus) = 40% block → 10 − 3×0.4 = 8.80 (stacked 50% would be 8.50). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1487) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
+    desc: 'Warlord Prayer+HP stack: To Block does NOT stack. atk 10 100% hit vs def 0 + HP +2 + Prayer +1 = 3, base 30% + 10% (single bonus) = 40% block → 10 − 3×0.4 = 8.80 (stacked 50% would be 8.50). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1498) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:0, hp:20, abilities: { prayer: true, highPrayer: true } },

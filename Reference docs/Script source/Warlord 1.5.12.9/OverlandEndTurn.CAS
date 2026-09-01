@@ -1,0 +1,1530 @@
+: 
+INPUT - W, the player whose turn just ended.
+	This script is called before any other end-of turn effects (such as drowning or clearing dead units) is processed.
+:
+
+HEROES=0;
+
+: Global enchantment counting :
+ZERO=0;
+NOFGEDDON=0;
+NOFDOOMS=0;
+NOFCHAOSEM=0;
+NOFNIGHT=0;
+NOFOMENS=0;
+NOFDARKEST=0;
+NOFDIVORDER=0;
+NOFTIMESTOP=0;
+NOFICEAGE=0;
+
+DEBUGLOG "END OF TURN, TRIGGER SCRIPT";
+
+: inquires number of units in play :
+DEBUGLOG "TOTAL UNITS = " + STRS(MAXUNIT());
+
+ FOR I=0 TO NOFWIZARDS();
+
+  IF HASGLOBAL(I,GEArmageddon) THEN { NOFGEDDON=NOFGEDDON+1; }
+  IF HASGLOBAL(I,GEDoomsday) THEN { NOFDOOMS=NOFDOOMS+1; }
+  IF HASGLOBAL(I,GEBlazingEyes) THEN { NOFCHAOSEM=NOFCHAOSEM+1; }
+  IF HASGLOBAL(I,GEEternalNight) THEN { NOFNIGHT=NOFNIGHT+1; }
+  IF HASGLOBAL(I,GEEvilOmens) THEN { NOFOMENS=NOFOMENS+1; }
+  IF HASGLOBAL(I,GEDarkestHour) THEN { NOFDARKEST=NOFDARKEST+1; }
+  IF HASGLOBAL(I,GEDivineOrder) THEN { NOFDIVORDER=NOFDIVORDER+1; }
+  IF HASGLOBAL(I,GETimeStop) THEN { NOFTIMESTOP=NOFTIMESTOP+1; }
+  IF HASGLOBAL(I,GEIceAge) THEN { NOFICEAGE=NOFICEAGE+1; }
+
+ NEXT;
+
+ MASTERVARSET ARMAGEDDONCOUNT = NOFGEDDON;
+ MASTERVARSET DOOMSDAYCOUNT = NOFDOOMS;
+ MASTERVARSET CHAOSEMBRACECOUNT = NOFCHAOSEM;
+ MASTERVARSET ETERNALNIGHTCOUNT = NOFNIGHT;
+ MASTERVARSET EVILOMENCOUNT = NOFOMENS;
+ MASTERVARSET DARKESTHOURCOUNT = NOFDARKEST;
+ MASTERVARSET DIVINEORDERCOUNT = NOFDIVORDER;
+ MASTERVARSET ICEAGECOUNT = NOFICEAGE;
+
+IF (NOFTIMESTOP=0) THEN {
+ MASTERVARSET TIMESTOPCOUNT = ZERO;
+ MASTERVARSET TSSPELLCOUNTING = ZERO;
+ MASTERVARSET TSTURNCOUNTING = ZERO;
+}
+
+: reset City in Focus :
+IF CityInFocus>0 THEN {
+ RESET=-1;
+ MASTERVARSET CityInFocus = RESET;
+}
+
+LOGISTIC=0;
+OWNMITHRIL=0;
+OWNADAMANTIUM=0;
+OWNORIHALCON=0;
+OWNCRYSX=0;
+
+: Remove land destruction and curse if pick Everything Nice :
+IF (SCORINGOPTION(SEverythingNice)=0) THEN { GOTO "NOEVERYTHINGNICE"; }
+
+ FOR I=0 TO NOFWIZARDS();
+
+  SETSPELLDATA(I,SBlizzard,0);
+  SETSPELLDATA(I,SEarthquake,0);
+  SETSPELLDATA(I,SSeismicMastery,0);
+  SETSPELLDATA(I,SIceAge,0);
+
+  SETSPELLDATA(I,SCorruption,0);
+  SETSPELLDATA(I,SRaiseVolcano,0);
+  SETSPELLDATA(I,SFireStorm,0);
+  SETSPELLDATA(I,SChaosRift,0);
+  SETSPELLDATA(I,SMeteorStorm,0);
+  SETSPELLDATA(I,SDoomsday,0);
+  SETSPELLDATA(I,SCalltheVoid,0);
+  SETSPELLDATA(I,SArmageddon,0);
+
+  SETSPELLDATA(I,SWarpNode,0);
+  SETSPELLDATA(I,SEvilPresence,0);
+  SETSPELLDATA(I,SDrought,0);
+  SETSPELLDATA(I,SPestilence,0);
+
+  SETSPELLDATA(I,SDisillusionise,0);
+  SETSPELLDATA(I,SAetherSink,0);
+
+  SETSPELLDATA(I,SInquisition,0);
+
+ NEXT I;
+
+!NOEVERYTHINGNICE!
+
+IF (SPELLSTATE(W,STStrategicLogistic)<>2) THEN { GOTO "NOLOGISTIC"; }
+ LOGISTIC=1;
+
+ FOR I=1 TO MAXCITY();
+
+  IF (CITYOWNER(I)<>W) THEN { GOTO "NOTLINK"; }
+
+   OWNMITHRIL=OWNMITHRIL+OREINRANGE(I,OreMithril);
+   OWNADAMANTIUM=OWNADAMANTIUM+OREINRANGE(I,OreAdamantium);
+   OWNORIHALCON=OWNORIHALCON+OREINRANGE(I,OreOrihalcon);
+   OWNCRYSX=OWNCRYSX+OREINRANGE(I,OreCrysx);
+
+  !NOTLINK!
+
+ NEXT I;
+
+!NOLOGISTIC!
+
+: City Buildings regeneration script :
+CITY=0;
+
+FOR CITY=1 TO MAXCITY();
+
+ IF (CITYOWNER(CITY)<>W) THEN { GOTO "NOTGARRISON"; }
+ IF (GARRISON(CITY)=0) THEN { GOTO "NOTGARRISON"; }
+
+  IF (CITYENCHANT(CITY,CEEvilPresence)>-1) THEN { GOTO "CANTUPGRADE"; }
+  IF (ISBUILT(CITY,BMilitaryWorkshop)=0) %AND (ISBUILT(CITY,BCaravanserai)=0) THEN { GOTO "CANTUPGRADE"; }
+
+   FOR N=1 TO GARRISON(CITY);
+
+    U=UNITONTILE((GETCITYDATA(CITY,CDCOLP)),(GETCITYDATA(CITY,CDCOLX)),(GETCITYDATA(CITY,CDCOLY)),N);
+
+    IF ISHERO(U) %OR BASEFANTASTIC(U) THEN { GOTO "NOUPGRADE"; }
+
+     : Garrison without blackpowder upgrade get one from Military Workshop :
+     IF (GETSTAT(U,SBlackpowderUpgrade,1)>0) THEN { GOTO "NOMILITARYWORKSHOP"; }
+     IF (ISBUILT(CITY,BMilitaryWorkshop)=0) THEN { GOTO "NOMILITARYWORKSHOP"; }
+
+      IF ( (GetStat(U,SRanged,1)<1) %OR (GetStat(U,SRangedType,1)>29) )
+       %AND (GetStat(U,SThrown,1)=0)
+       %AND (GetStat(U,SFireBreath,1)=0)
+      THEN { GOTO "NOMILITARYWORKSHOP"; }
+
+       SETSTAT(U,SBlackpowderUpgrade,1,1);
+       IF (GetStat(U,AFPoison,1,1)<>100) THEN { SETSTAT(U,AFPoison,1,(GetStat(U,AFPoison,1,1))+1,1); } ELSE { SETSTAT(U,AFPoison,1,1,1); }
+       IF (GetStat(U,SThrown,1)>0)
+        %OR ( (GetStat(U,SRanged,1)>0) %AND (GetStat(U,SRangedType,1)<30) )
+       THEN {
+        IF (GetStat(U,SRanged,1)>0) %AND (GetStat(U,SRangedType,1)>13) %AND (GetStat(U,SRangedType,1)<30) THEN { SETSTAT(U,SRangedType,1,13); }
+        IF (GetStat(U,AFArmorPiercing,1,1)=0) %AND (GetStat(U,AFDoom,1,1)=0) THEN {
+         SETSTAT(U,AFArmorPiercing,1,1,1);
+        } ELSE {
+         IF (GetStat(U,SRanged,1)>0) THEN { SETSTAT(U,SRanged,1,(GetStat(U,SRanged,1)+2)); }
+         IF (GetStat(U,SThrown,1)>0) THEN { SETSTAT(U,SThrown,1,(GetStat(U,SThrown,1)+4)); }
+        }
+       }
+       IF (GetStat(U,SFireBreath,1)>0) THEN { SETSTAT(U,SFireBreath,1,(GetStat(U,SFireBreath,1)+4)); }
+
+     !NOMILITARYWORKSHOP!
+
+     : Caravanserai allow unit to be re-equipment :
+     IF GETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase) THEN { GOTO "NOCARAVANSERAI"; }
+     IF (ISBUILT(CITY,BCaravanserai)=0) THEN { GOTO "NOCARAVANSERAI"; }
+
+      IF ( (CITYENCHANT(CITY,CEMagicPerimeter)<0) %AND (CITYENCHANT(CITY,CESorcererStone)<0) %AND (ISBUILT(CITY,BAlchemistGuild)=0) ) %OR (CITYENCHANT(CITY,CEEvilPresence)>-1) THEN { GOTO "NOCARAVANSERAI"; }
+       IF (GETENCHANTMENTFLAG(U,EncMagic,ABase)=0) THEN {
+        SETENCHANTMENTFLAG(U,EncMagic,ABase,1);
+       }
+       IF ( (CITYENCHANT(CITY,CESorcererStone)<0) %AND (ISBUILT(CITY,BAlchemistGuild)=0) ) %OR (CITYENCHANT(CITY,CEEvilPresence)>-1) THEN { GOTO "NOCARAVANSERAI"; }
+
+        ORELEVEL=0;
+        IF (OREINRANGE(CITY,OreMithril)>0) %OR ( (LOGISTIC>0) %AND (OWNMITHRIL>0) ) THEN { ORELEVEL=1; }
+        IF (OREINRANGE(CITY,OreAdamantium)>0) %OR ( (LOGISTIC>0) %AND (OWNADAMANTIUM>0) ) THEN { ORELEVEL=2; }
+        IF (ISBUILT(CITY,BLavaSmelter)) THEN { ORELEVEL=ORELEVEL+1; }
+        IF (ISBUILT(CITY,BAlchemistGuild)) %AND (CITYENCHANT(CITY,CESorcererStone)>-1) THEN { ORELEVEL=ORELEVEL+1; }
+
+        IF ( (ORELEVEL>2) %OR (OREINRANGE(CITY,OreOrihalcon)>0) %OR ( (LOGISTIC>0) %AND (OWNORIHALCON>0) ) )
+         %AND (GETENCHANTMENTFLAG(U,EncOrihalcon,ABase)=0)
+        THEN {
+         SETENCHANTMENTFLAG(U,EncOrihalcon,ABase,1);
+         : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+         IF GETENCHANTMENTFLAG(U,EncAdamant,ABase) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,ABase) THEN {
+          SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1); 
+         }
+        }
+        IF (GETENCHANTMENTFLAG(U,EncAdamant,ABase)>0) THEN { GOTO "NOCARAVANSERAI"; }
+         IF (ORELEVEL>1) THEN {
+          SETENCHANTMENTFLAG(U,EncAdamant,ABase,1);
+          IF (GETENCHANTMENTFLAG(U,EncMithril,ABase)>0) THEN {
+           SETENCHANTMENTFLAG(U,EncMithril,ABase,0);
+          }
+          : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+          IF GETENCHANTMENTFLAG(U,EncAdamant,ABase) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,ABase) THEN {
+           SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1); 
+          }
+         } ELSE {
+          IF (GETENCHANTMENTFLAG(U,EncMithril,ABase)>0) THEN { GOTO "NOCARAVANSERAI"; }
+           IF (ORELEVEL=1) THEN {
+            SETENCHANTMENTFLAG(U,EncMithril,ABase,1);
+           }
+         }
+
+     !NOCARAVANSERAI!
+
+    !NOUPGRADE!
+
+   NEXT N;
+
+  !CANTUPGRADE!
+
+ !NOTGARRISON!
+
+ : City Buildings regeneration script :
+ IF (CITYENCHANT(CITY,CEWallOfStone)>-1) %AND (ISBUILT(CITY,BCityWalls)=0) THEN {
+  IF OVERLANDACTIVEPLAYER=CITYOWNER(CITY) THEN {
+   SETCITYENCHANTOWNER(CITY,CEWallOfStone,-1);
+  } ELSE {
+   SETBUILDINGSTATE(CITY,BCityWalls,1);
+  }
+ }
+
+ IF (CITYENCHANT(CITY,CEMarkOfConqueror)>-1) %AND (ISBUILT(CITY,BWarlordHold)=0) THEN {
+  IF OVERLANDACTIVEPLAYER=CITYOWNER(CITY) THEN {
+   SETCITYENCHANTOWNER(CITY,CEMarkOfConqueror,-1);
+  } ELSE {
+   SETBUILDINGSTATE(CITY,BWarlordHold,1);
+  }
+ }
+
+ : Mycelium regeneration script :
+ IF (CITYRACE(CITY)<>RCGoblin) THEN { GOTO "NOTGOBLINCITY"; }
+
+  IF (POPULATION(CITY)>1000) THEN {
+   : Tricksters require forest :
+   IF (TERRAININRANGE(CITY,LTGrassland)=0)
+    %AND (TERRAININRANGE(CITY,LTDesert)=0)
+    %AND (TERRAININRANGE(CITY,LTHill)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BTricksterMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BTricksterMycelium,1);
+   }
+   : Rabblerousers require river :
+   IF (TERRAININRANGE(CITY,LTRiver)=0)
+    %AND (TERRAININRANGE(CITY,LTRiverStart)=0)
+    %AND (TERRAININRANGE(CITY,LTDesert)=0)
+    %AND (TERRAININRANGE(CITY,LTSorceryNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BRabblerouserMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BRabblerouserMycelium,1);
+   }
+   : Hexers require magical node :
+   IF (TERRAININRANGE(CITY,LTChaosNode)=0)
+    %AND (TERRAININRANGE(CITY,LTNatureNode)=0)
+    %AND (TERRAININRANGE(CITY,LTSorceryNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BHexerMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BHexerMycelium,1);
+   }
+   : Arsonists require tundra or volcano or chaos node :
+   IF (TERRAININRANGE(CITY,LTTundra)=0)
+    %AND (TERRAININRANGE(CITY,LTVolcano)=0)
+    %AND (TERRAININRANGE(CITY,LTChaosNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BArsonistMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BArsonistMycelium,1);
+   }
+   : Night Goblins requires hill or mountain :
+   IF (TERRAININRANGE(CITY,LTHill)=0)
+    %AND (TERRAININRANGE(CITY,LTMountain)=0)
+    %AND (TERRAININRANGE(CITY,LTNatureNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BNightGoblinMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BNightGoblinMycelium,1);
+   }
+   : Mechaniacs requires river or mountain :
+   IF (TERRAININRANGE(CITY,LTRiver)=0)
+    %AND (TERRAININRANGE(CITY,LTRiverStart)=0)
+    %AND (TERRAININRANGE(CITY,LTMountain)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BMechaniacMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BMechaniacMycelium,1);
+   }
+   : Poxbearers require swamp or sorcery node :
+   IF (TERRAININRANGE(CITY,LTSwamp)=0)
+    %AND (TERRAININRANGE(CITY,LTSorceryNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BPoxbearerMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BPoxbearerMycelium,1);
+   }
+   : Spider Riders require swamp :
+   IF (TERRAININRANGE(CITY,LTSwamp)=0)
+    %AND (TERRAININRANGE(CITY,LTNatureNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BSpiderRiderMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BSpiderRiderMycelium,1);
+   }
+  } ELSE {
+   SETBUILDINGSTATE(CITY,BTricksterMycelium,0);
+   SETBUILDINGSTATE(CITY,BRabblerouserMycelium,0);
+   SETBUILDINGSTATE(CITY,BHexerMycelium,0);
+   SETBUILDINGSTATE(CITY,BArsonistMycelium,0);
+   SETBUILDINGSTATE(CITY,BNightGoblinMycelium,0);
+   SETBUILDINGSTATE(CITY,BMechaniacMycelium,0);
+   SETBUILDINGSTATE(CITY,BPoxbearerMycelium,0);
+   SETBUILDINGSTATE(CITY,BSpiderRiderMycelium,0);
+  }
+
+ !NOTGOBLINCITY!
+
+NEXT;
+
+IF ((Banished(W))>0)
+ %AND (GETWIZARDDATA(W,WDFortressP)<3)
+THEN {
+ SETWIZARDDATA(W,WDFortressP,3);
+}
+
+IF (HASGLOBAL(W,GEStateOfRot)=0)
+ %AND (HASGLOBAL(W,GEBlazingEyes)=0)
+ %AND (RETORT(W,Channeler)=0)
+ %AND (HASTREE(W)=0)
+ %AND (SPELLSTATE(W,STObsolescenceRearmament)<>2)
+THEN { GOTO "NOUNITPROCESS"; }
+
+ WANDERER=0;
+
+ FOR U=1 TO MAXUNIT(); 
+
+  C=CITYONTILE(U);
+
+: clear frozen flag :
+  IF (GETENCHANTMENTFLAG(U,EncFrozen,1)>0) THEN {
+   SETENCHANTMENTFLAG(U,EncFrozen,1,0);
+  }
+
+  : check wanderer :
+  IF (GETSTAT(U,STypeID,1)<>362) THEN { GOTO "NOTWANDERER"; }
+
+  IF (GETSTAT(U,SOwner,0)=W) THEN {
+   WANDERER=WANDERER+1;
+   GOTO "NOTWANDERER";
+  } ELSE {
+   IF (GETWIZARDDATA(GETSTAT(U,SOwner,0),WDMarionette)<>1) THEN {
+    SETWIZARDDATA(GETSTAT(U,SOwner,0),WDMarionette,1);
+    IF (SPELLSTATE(GETSTAT(U,SOwner,0),SMarionetteSummon)>0) THEN {
+     SETSPELLDATA(GETSTAT(U,SOwner,0),SMarionetteSummon,0);
+    }
+   }
+  }
+
+  !NOTWANDERER!
+
+: New effect of global enchantment, "State of Rot", non-undead units heal at 1 HP per turn :
+  IF (HASGLOBAL(W,GEStateOfRot)=0) THEN { GOTO "SKIPSTATEOFROT"; }
+   IF (GETSTAT(U,SOwner,0)<>W) THEN { GOTO "SKIPSTATEOFROT"; }
+
+    IF ((GETSTAT(U,ANoHealing,0))>0) THEN { OVERLANDHEAL(U,2); }
+
+  !SKIPSTATEOFROT!
+
+  IF (HASGLOBAL(W,GEBlazingEyes)=0) THEN { GOTO "SKIPCHAOSEMBRACE"; }
+   IF (C=0) THEN { GOTO "SKIPCHAOSEMBRACE"; }
+    IF (POPUNITS(C)<1) THEN { GOTO "SKIPCHAOSEMBRACE"; }
+     IF (GETSTAT(U,SOwner,0)=W) THEN { GOTO "SKIPCHAOSEMBRACE"; }
+      IF (HASGLOBAL((GetStat(U,SOwner,0)),GEBlazingEyes)>0) THEN { GOTO "SKIPCHAOSEMBRACE"; }
+
+       REBELPOP=0;
+       IF (POPUNITS(C)>0) THEN {
+        REBELPOP=POPUNITS(C) - ( (GETCITYDATA(C,CDFARMER)) + (GETCITYDATA(C,CDWORKER)) );
+       }
+       GDAMAGE=%I((1+REBELPOP)/2);
+       IF (GDAMAGE>0) THEN { DEALCOMBATDAMAGE(U,GDAMAGE,0,0); }
+
+  !SKIPCHAOSEMBRACE!
+
+  : Check unit owner is the same as turn owner :
+  IF (GETSTAT(U,SOwner,0)<>W) THEN { GOTO "NOTBELONGTOTURNOWNER"; }
+
+   IF ISHERO(U) THEN { HEROES=HEROES+1; }
+
+   : Obsolencence upgrade of units :
+   IF (SPELLSTATE(W,STObsolescenceRearmament)<>2) THEN { GOTO "SKIPOBSOLESCENCEUPGRADE"; }
+
+    IF (SPELLSTATE(W,STMagitekPneumaReactor)<>2) THEN { GOTO "NOPNEUMA"; }
+     IF (GETENCHANTMENTFLAG(U,EncUndead,1)=0) THEN { GOTO "NOPNEUMA"; }
+
+      IF (GETENCHANTMENTFLAG(U,EncFrenzy,1)=0) THEN {
+       SETENCHANTMENTFLAG(U,EncFrenzy,1,1);
+      }
+
+    !NOPNEUMA!
+
+    IF (SPELLSTATE(W,STMagitekXenoveterinary)<>2) THEN { GOTO "NOXENOVET"; }
+     IF (BASEFANTASTIC(U)=0) THEN { GOTO "NOXENOVET"; }
+      IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0) THEN { GOTO "NOXENOVET"; }
+
+       IF (SPELLSTATE(W,STArmorClad)=2) THEN {
+        SETENCHANTMENTFLAG(U,EncArmorClad,1,1);
+        SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+6));
+       }
+
+    !NOXENOVET!
+
+    IF (GetStat(U,SCustomAttribute,1)<>1) THEN { GOTO "NOMECHANICALUPGRADE"; }
+
+     : effect of Heat Power Engine, give power engine to mechanical unit :
+     IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0) THEN { GOTO "NOTENGINEADDED"; }
+
+      IF (SPELLSTATE(W,STHeatPowerEngine)=2) THEN {
+       SETENCHANTMENTFLAG(U,EncPowerEngine,1,1);
+       SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+2));
+       SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+2));
+      }
+
+     !NOTENGINEADDED!
+
+     : effect of Armorclad, give armorclad unit enchantment :
+     IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0) THEN { GOTO "NOTARMORCLAD"; }
+
+      IF (SPELLSTATE(W,STArmorClad)=2) THEN {
+       SETENCHANTMENTFLAG(U,EncArmorClad,1,1);
+       SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+6));
+      }
+
+     !NOTARMORCLAD!
+
+    !NOMECHANICALUPGRADE!
+
+    IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0) THEN { GOTO "NOMAGITEKSCI"; }
+
+     IF (SPELLSTATE(W,STMagitekMaterialScience)=2)
+      %AND (GETENCHANTMENTFLAG(U,EncResistMagic,1)=0)
+     THEN {
+      SETENCHANTMENTFLAG(U,EncResistMagic,1,1);
+     }
+
+    !NOMAGITEKSCI!
+
+    IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDERUPGRADE"; }
+
+     : New effect of Enlightenment or Military Drilling, give enchanted Discipline, permanent enchant is not possible for some reason :
+     IF (SPELLSTATE(W,STMilitaryDrilling)=2)
+      %AND (GETENCHANTMENTFLAG(U,EncDiscipline,1)=0)
+     THEN { 
+      SETENCHANTMENTFLAG(U,EncDiscipline,1,1);
+     }
+
+     : Rocketry give blackpowder upgrade :
+     IF (GETSTAT(U,SBlackpowderUpgrade,1)>0) THEN { GOTO "NOROCKETRY"; }
+     IF (SPELLSTATE(W,STRocketry)<>2) THEN { GOTO "NOROCKETRY"; }
+
+      IF ( (GetStat(U,SRanged,1)<1) %OR (GetStat(U,SRangedType,1)>29) )
+       %AND (GetStat(U,SThrown,1)=0)
+       %AND (GetStat(U,SFireBreath,1)=0)
+      THEN { GOTO "NOROCKETRY"; }
+
+       SETSTAT(U,SBlackpowderUpgrade,1,1);
+       IF (GetStat(U,AFPoison,1,1)<>100) THEN { SETSTAT(U,AFPoison,1,(GetStat(U,AFPoison,1,1))+1,1); } ELSE { SETSTAT(U,AFPoison,1,1,1); }
+        IF (GetStat(U,SThrown,1)>0)
+         %OR ( (GetStat(U,SRanged,1)>0) %AND (GetStat(U,SRangedType,1)<30) )
+        THEN {
+         IF (GetStat(U,SRanged,1)>0) %AND (GetStat(U,SRangedType,1)>13) %AND (GetStat(U,SRangedType,1)<30) THEN { SETSTAT(U,SRangedType,1,13); }
+         IF (GetStat(U,AFArmorPiercing,1,1)=0) %AND (GetStat(U,AFDoom,1,1)=0) THEN {
+          SETSTAT(U,AFArmorPiercing,1,1,1);
+         } ELSE {
+          IF (GetStat(U,SRanged,1)>0) THEN { SETSTAT(U,SRanged,1,(GetStat(U,SRanged,1)+2)); }
+          IF (GetStat(U,SThrown,1)>0) THEN { SETSTAT(U,SThrown,1,(GetStat(U,SThrown,1)+4)); }
+         }
+        }
+        IF (GetStat(U,SFireBreath,1)>0) THEN { SETSTAT(U,SFireBreath,1,(GetStat(U,SFireBreath,1)+4)); }
+
+      !NOROCKETRY!
+
+      : Reequipped weapon upgrade :
+      IF (LOGISTIC=0) THEN { GOTO "NOOUTLANDERUPGRADE"; }
+
+       IF GETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase) THEN { GOTO "NOOUTLANDERWEAPON"; }
+        IF (BUILDINGSOWNED(W,BAlchemistguild,0)=0) THEN { GOTO "NOOUTLANDERWEAPON"; }
+
+         SETENCHANTMENTFLAG(U,EncMagic,1,1);
+
+         ORELEVEL=0;
+         IF (OWNMITHRIL>0) THEN { ORELEVEL=1; }
+         IF (OWNADAMANTIUM>0) THEN { ORELEVEL=2; }
+         IF (BUILDINGSOWNED(W,BLavaSmelter,0)>0) THEN { ORELEVEL=ORELEVEL+1; }
+         IF (BUILDINGSOWNED(W,BAlchemistGuild,CESorcererStone)>0) THEN { ORELEVEL=ORELEVEL+1; }
+
+         IF ( (ORELEVEL>2) %OR (OWNORIHALCON>0) )
+          %AND (GETENCHANTMENTFLAG(U,EncOrihalcon,1)=0)
+         THEN {
+          SETENCHANTMENTFLAG(U,EncOrihalcon,1,1);
+          : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+          IF GETENCHANTMENTFLAG(U,EncAdamant,ABase) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,ABase) THEN {
+           SETENCHANTMENTFLAG(U,EncTransmuteEquipment,1,1); 
+          }
+         }
+         IF (GETENCHANTMENTFLAG(U,EncAdamant,1)>0) THEN { GOTO "NOOUTLANDERWEAPON"; }
+          IF (ORELEVEL>1) THEN {
+           SETENCHANTMENTFLAG(U,EncAdamant,1,1);
+           IF (GETENCHANTMENTFLAG(U,EncMithril,1)>0) THEN {
+            SETENCHANTMENTFLAG(U,EncMithril,1,0);
+           }
+           : give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :
+           IF GETENCHANTMENTFLAG(U,EncAdamant,1) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,1) THEN {
+            SETENCHANTMENTFLAG(U,EncTransmuteEquipment,1,1); 
+           }
+          } ELSE {
+           IF (GETENCHANTMENTFLAG(U,EncMithril,1)>0) THEN { GOTO "NOOUTLANDERWEAPON"; }
+            IF (ORELEVEL=1) THEN {
+             SETENCHANTMENTFLAG(U,EncMithril,1,1);
+            }
+          }
+
+       !NOOUTLANDERWEAPON!
+
+       IF (BUILDINGSOWNED(W,BLavaSmelter,0)=0) THEN { GOTO "NOLAVASMELTER"; }
+
+        IF (GETSTAT(U,AWeaponImmunity,1)>0) THEN { GOTO "OUTLANDERSKIPWEAPONIMMUNE"; }
+
+         IF (OWNMITHRIL>0) %AND (OWNADAMANTIUM>0) THEN { SETSTAT(U,AWeaponImmunity,1,1); }
+
+        !OUTLANDERSKIPWEAPONIMMUNE!
+
+        IF (GETSTAT(U,AMissileImmunity,1)>0) THEN { GOTO "OUTLANDERSKIPMISSILEIMMUNE"; }
+
+         IF (OWNMITHRIL>0) %AND (OWNCRYSX>0) THEN { SETSTAT(U,AMissileImmunity,1,1); }
+
+        !OUTLANDERSKIPMISSILEIMMUNE!
+
+        IF (GETENCHANTMENTFLAG(U,EncResistElements,1)>0) THEN { GOTO "OUTLANDERSKIPRESISTELEMENT"; }
+
+         IF (OWNMITHRIL>0) %AND (OWNORIHALCON>0) THEN { SETENCHANTMENTFLAG(U,EncResistElements,1,1); }
+
+        !OUTLANDERSKIPRESISTELEMENT!
+
+        IF (GETENCHANTMENTFLAG(U,EncElementalArmor,1)>0) THEN { GOTO "OUTLANDERSKIPELEMENTALARMOR"; }
+
+         IF (OWNADAMANTIUM>0) %AND (OWNORIHALCON>0) THEN { SETENCHANTMENTFLAG(U,EncElementalArmor,1,1); }
+
+        !OUTLANDERSKIPELEMENTALARMOR!
+
+        IF (GETENCHANTMENTFLAG(U,EncFlameBlade,1)>0) THEN { GOTO "OUTLANDERSKIPFLAMEBLADE"; }
+
+         IF (OWNADAMANTIUM>0) %AND (OWNCRYSX>0) THEN { SETENCHANTMENTFLAG(U,EncFlameBlade,1,1); }
+
+        !OUTLANDERSKIPFLAMEBLADE!
+
+       !NOLAVASMELTER!
+
+       : Outlander unit gains Caravan logistic from Caravaserai through upgrade protocol :
+       IF (BUILDINGSOWNED(W,BCaravanserai,0)=0) THEN { GOTO "NOOUTLANDERCARAVANSERAI"; }
+
+        IF (GETSTAT(U,SCaravanLogistic,1)=0) %AND (GetStat(U,ASailing,1)=0) THEN {
+         SETSTAT(U,SCaravanLogistic,1,1)
+         SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+4));
+         SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+4));
+        }
+
+       !NOOUTLANDERCARAVANSERAI!
+
+       : Outlander unit gains Mariner from Baray through upgrade protocol :
+       IF (BUILDINGSOWNED(W,BBaray,0)=0) THEN { GOTO "NOOUTLANDERBARAY"; }
+
+        IF (GETSTAT(U,SMariner,1)=0) THEN {
+         SETSTAT(U,SMariner,1,1)
+        }
+
+       !NOOUTLANDERBARAY!
+
+       IF (GETSTAT(U,SMultiLabel,1)>0) THEN { GOTO "NOOUTLANDERABILITYLEARNED"; }
+
+        : Outlander unit with innate thrown gains Lightning Blade from Altar of Storm through upgrade protocol :
+        IF (BUILDINGSOWNED(W,BAltarOfStorm,0)=0) THEN { GOTO "NOOUTLANDERALTAROFSTORM"; }
+
+         IF (GetStat(U,SThrown,1)>0)
+          %AND (GetStat(U,SCustomAttribute,1)<>1)
+         THEN {
+          SETSTAT(U,SMultiLabel,1,1);
+          SETSTAT(U,SLightningBreath,1,(GetStat(U,SThrown,1)+1));
+          SETSTAT(U,SThrown,1,0);
+          GOTO "NOOUTLANDERABILITYLEARNED";
+         }
+
+        !NOOUTLANDERALTAROFSTORM!
+
+        : Outlander non-mechanical magical ranged unit or fantastic stable unit gains Alumni of Academy from Academy through upgrade protocol :
+        IF (BUILDINGSOWNED(W,BAcademy,0)=0) THEN { GOTO "NOOUTLANDERACADEMY"; }
+
+         IF (GetStat(U,STypeID,1)=55)
+          %OR (GetStat(U,STypeID,1)=65)
+          %OR (GetStat(U,STypeID,1)=103)
+          %OR (GetStat(U,STypeID,1)=136)
+          %OR (GetStat(U,STypeID,1)=146)
+          %OR (GetStat(U,STypeID,1)=221)
+          %OR (GetStat(U,STypeID,1)=250)
+          %OR (GetStat(U,STypeID,1)=306)
+          %OR ( ( GETSTAT(U,SRanged,1)>0 )
+           %AND (GetStat(U,SRangedType,1)>29)
+           %AND (GetStat(U,SCustomAttribute,1)<>1) )
+         THEN {
+          SETSTAT(U,SMultiLabel,1,13);
+          SETSTAT(U,SFigures,1,(GetStat(U,SFigures,1)+2) );
+          GOTO "NOOUTLANDERABILITYLEARNED";
+         }
+
+        !NOOUTLANDERACADEMY!
+
+       !NOOUTLANDERABILITYLEARNED!
+
+       : New interaction of Archmage Tutition and Upgrade Protocol :
+       IF (SPELLSTATE(W,SArchmagesTutition)<>2) THEN { GOTO "NOTTELETUTITION"; }
+        IF (GETSTAT(U,SCustomTutition,1)>0) THEN { GOTO "NOTTELETUTITION"; }
+
+        SETSTAT(U,SCustomTutition,1,1);
+        IF (GETSTAT(U,SMaxMP,1)>0) THEN {
+         SETSTAT(U,SMaxMP,1,GETSTAT(U,SMaxMP,1)+15);
+        }
+        IF (GETSTAT(U,SSpellCharges,1)>0) THEN {
+         SETSTAT(U,SSpellCharges,1,GETSTAT(U,SSpellCharges,1)+1);
+        }
+        IF (GETSTAT(U,SRangedType,1)>29) THEN {
+         SETSTAT(U,SMaxAmmo,1,GETSTAT(U,SMaxAmmo,1)+2);
+        }
+
+       !NOTTELETUTITION!
+
+       : Mariner Mastery bonus is removable by end turn script if global enchantment is removed :
+       : all units originally have have sail movement :
+       IF (HASGLOBAL(W,GEMarinerMastery)=0) THEN { GOTO "NOOUTLANDERMARINERMASTERY"; }
+        IF (GetStat(U,SMMastery,1)>0) %OR (GetStat(U,ASailing,1)=0) THEN { GOTO "NOOUTLANDERMARINERMASTERY"; }
+
+         SETSTAT(U,SOLMaxMoves,1,(GetStat(U,SOLMaxMoves,1)+4));
+         SETSTAT(U,SOLMovesLeft,1,(GetStat(U,SOLMovesLeft,1)+4));
+         SETSTAT(U,SCombatMaxMoves,1,(GetStat(U,SCombatMaxMoves,1)+4));
+         SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+4));
+         SETSTAT(U,SMMastery,1,1);
+
+       !NOOUTLANDERMARINERMASTERY!
+
+     !NOOUTLANDERUPGRADE!
+
+     IF (SPELLSTATE(W,STMagitekAntiGravityDrive)<>2) THEN { GOTO "NOANTIGRAVITY"; }
+
+      IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0) THEN {
+       SETENCHANTMENTFLAG(U,EncHaste,ABase,1);
+       IF (GETSTAT(U,ASailing,1)>0) THEN {
+        SETSTAT(U,AFlying,1,1);
+        SETSTAT(U,AIllusionImmunity,1,1);
+       }
+      }
+
+     !NOANTIGRAVITY!
+
+     IF (SPELLSTATE(W,STMagitekBeamWeapon)<>2) THEN { GOTO "NOBEAMCANNON"; }
+      IF (GETSTAT(U,SRangedType,1)=40) THEN { GOTO "NOBEAMCANNON"; }
+
+       IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0)
+        %AND (GETSTAT(U,SMaxAmmo,1)>0)
+       THEN {
+        SETSTAT(U,SRangedType,1,40);
+        SETSTAT(U,SRanged,1,GETSTAT(U,SRanged,1)+%I(GETSTAT(U,SRanged,1)/2));
+        SETSTAT(U,AFDoom,1,1,3);
+       }
+
+     !NOBEAMCANNON!
+
+   !SKIPOBSOLESCENCEUPGRADE!
+
+  !NOTBELONGTOTURNOWNER!
+
+ NEXT U;
+
+ IF (WANDERER>0) THEN {
+  IF (GETWIZARDDATA(W,WDMarionette)<>1) THEN {
+   SETWIZARDDATA(W,WDMarionette,1);
+  }
+ } ELSE {
+  IF (GETWIZARDDATA(W,WDMarionette)=1) THEN {
+   SETWIZARDDATA(W,WDMarionette,2);
+  }
+ }
+ IF (HEROES>5) %AND (SPELLSTATE(W,SMarionetteSummon)=2) THEN {
+  SETSPELLDATA(W,SMarionetteSummon,0);
+  SETWIZARDDATA(W,WDMarionette,2);
+ }
+
+!NOUNITPROCESS!
+
+: Implement retort-specific spells :
+IF (SCORINGOPTION(SMoreThanRetort)=0) THEN { GOTO "NOMORETHANRETORT"; }
+
+ : Add spells from retort to the book :
+ IF (RETORT(W,Alchemist)=0) THEN { GOTO "NOTALCHEMISTSPELL"; }
+
+  IF (SPELLSTATE(W,SSorcererStone)=0) THEN { SETSPELLDATA(W,SSorcererStone,1); }
+
+ !NOTALCHEMISTSPELL!
+
+ IF (RETORT(W,SageMaster)=0) THEN { GOTO "NOTSAGEMASTERSPELL"; }
+
+  IF (SPELLSTATE(W,SEducationReform)=0) THEN { SETSPELLDATA(W,SEducationReform,1); }
+  IF (SPELLSTATE(W,SArcaneConference)=0) THEN { SETSPELLDATA(W,SArcaneConference,1); }
+
+ !NOTSAGEMASTERSPELL!
+
+ IF (RETORT(W,Specialist)=0) THEN { GOTO "NOTSPECIALISTSPELL"; }
+
+  IF (SPELLSTATE(W,SGaiaMastery)>1)
+   %OR (SPELLSTATE(W,SAEtherMastery)>1)
+   %OR (SPELLSTATE(W,SChaosMastery)>1)
+   %OR (SPELLSTATE(W,SLifeMastery)>1)
+   %OR (SPELLSTATE(W,SDeathMastery)>1)
+  THEN { GOTO "NOTSPECIALISTSPELL"; }
+
+   IF (PRIMARYREALM(W)=Nature)
+    %AND (SPELLSTATE(W,SGaiaMastery)=0)
+   THEN {
+    SETSPELLDATA(W,SGaiaMastery,1);
+    SETSPELLDATA(W,SAEtherMastery,0);
+    SETSPELLDATA(W,SChaosMastery,0);
+    SETSPELLDATA(W,SLifeMastery,0);
+    SETSPELLDATA(W,SDeathMastery,0);
+    GOTO "NOTSPECIALISTSPELL";
+   }
+
+   IF (PRIMARYREALM(W)=Sorcery)
+    %AND (SPELLSTATE(W,SAEtherMastery)=0)
+   THEN {
+    SETSPELLDATA(W,SGaiaMastery,0);
+    SETSPELLDATA(W,SAEtherMastery,1);
+    SETSPELLDATA(W,SChaosMastery,0);
+    SETSPELLDATA(W,SLifeMastery,0);
+    SETSPELLDATA(W,SDeathMastery,0);
+    GOTO "NOTSPECIALISTSPELL";
+   }
+
+   IF (PRIMARYREALM(W)=Chaos)
+    %AND (SPELLSTATE(W,SChaosMastery)=0)
+   THEN {
+    SETSPELLDATA(W,SGaiaMastery,0);
+    SETSPELLDATA(W,SAEtherMastery,0);
+    SETSPELLDATA(W,SChaosMastery,1);
+    SETSPELLDATA(W,SLifeMastery,0);
+    SETSPELLDATA(W,SDeathMastery,0);
+    GOTO "NOTSPECIALISTSPELL";
+   }
+
+   IF (PRIMARYREALM(W)=Life)
+    %AND (SPELLSTATE(W,SLifeMastery)=0)
+   THEN {
+    SETSPELLDATA(W,SGaiaMastery,0);
+    SETSPELLDATA(W,SAEtherMastery,0);
+    SETSPELLDATA(W,SChaosMastery,0);
+    SETSPELLDATA(W,SLifeMastery,1);
+    SETSPELLDATA(W,SDeathMastery,0);
+    GOTO "NOTSPECIALISTSPELL";
+   }
+
+   IF (PRIMARYREALM(W)=Death)
+    %AND (SPELLSTATE(W,SDeathMastery)=0)
+   THEN {
+    SETSPELLDATA(W,SGaiaMastery,0);
+    SETSPELLDATA(W,SAEtherMastery,0);
+    SETSPELLDATA(W,SChaosMastery,0);
+    SETSPELLDATA(W,SLifeMastery,0);
+    SETSPELLDATA(W,SDeathMastery,1);
+    GOTO "NOTSPECIALISTSPELL";
+   }
+
+ !NOTSPECIALISTSPELL!
+
+ IF (RETORT(W,Warlord)=0) THEN { GOTO "NOTWARLORDSPELL"; }
+
+  IF (SPELLSTATE(W,SWallOfStone)=0) THEN { SETSPELLDATA(W,SWallOfStone,1); }
+  IF (SPELLSTATE(W,SMarkOfConqueror)=0) THEN { SETSPELLDATA(W,SMarkOfConqueror,1); }
+
+ !NOTWARLORDSPELL!
+
+ IF (RETORT(W,Myrran)=0) THEN { GOTO "NOTMYRRANSPELL"; }
+
+  IF (SPELLSTATE(W,SAstralGate)=0) THEN { SETSPELLDATA(W,SAstralGate,1); }
+
+ !NOTMYRRANSPELL!
+
+ IF (RETORT(W,Tactician)=0) THEN { GOTO "NOTTACTICIANSPELL"; }
+
+  IF (SPELLSTATE(W,STacticalDrill)=0) THEN { SETSPELLDATA(W,STacticalDrill,1); }
+  IF (SPELLSTATE(W,STacticalRecall)=0) THEN { SETSPELLDATA(W,STacticalRecall,1); }
+  IF (SPELLSTATE(W,SStrategicRecall)=0) THEN { SETSPELLDATA(W,SStrategicRecall,1); }
+
+ !NOTTACTICIANSPELL!
+
+ IF (RETORT(W,Channeler)=0) THEN { GOTO "NOTCHANNELERSPELL"; }
+
+  IF (HEROES<6) %AND (GETWIZARDDATA(W,WDMarionette)<1) %AND (SPELLSTATE(W,SMarionetteSummon)=0) THEN { SETSPELLDATA(W,SMarionetteSummon,1); }
+  IF ( (HEROES>5) %OR (GETWIZARDDATA(W,WDMarionette)=1) )
+   %AND (SPELLSTATE(W,SMarionetteSummon)=2)
+  THEN {
+   SETSPELLDATA(W,SMarionetteSummon,0);
+   SETWIZARDDATA(W,WDMarionette,2);
+  }
+  IF (HEROES<6) %AND (GETWIZARDDATA(W,WDMarionette)>1) %AND (SPELLSTATE(W,SMarionetteSummon)<>2) THEN { SETSPELLDATA(W,SMarionetteSummon,2); }
+  IF (SPELLSTATE(W,SMarionetteAscension)=0) THEN { SETSPELLDATA(W,SMarionetteAscension,1); }
+
+ !NOTCHANNELERSPELL!
+
+ IF (RETORT(W,Guardian)=0) THEN { GOTO "NOTGUARDIANSPELL"; }
+
+  IF (SPELLSTATE(W,SLordLiberator)=0) THEN { SETSPELLDATA(W,SLordLiberator,1); }
+  IF (SPELLSTATE(W,SLordProtector)=0) THEN { SETSPELLDATA(W,SLordProtector,1); }
+
+ !NOTGUARDIANSPELL!
+
+ IF (RETORT(W,Procurator)=0) THEN { GOTO "NOTPROCURATORSPELL"; }
+
+  IF (SPELLSTATE(W,SEarthGate)=0) THEN { SETSPELLDATA(W,SEarthGate,1); }
+
+ !NOTPROCURATORSPELL!
+
+ IF (RETORT(W,Archmage)=0) THEN { GOTO "NOTARCHMAGESPELL"; }
+
+  IF (SPELLSTATE(W,SArchmagesTutition)=0) THEN { SETSPELLDATA(W,SArchmagesTutition,1); }
+  IF (SPELLSTATE(W,SArchmagesMentorship)=0) THEN { SETSPELLDATA(W,SArchmagesMentorship,1); }
+
+ !NOTARCHMAGESPELL!
+
+ IF (RETORT(W,Benefactor)=0) THEN { GOTO "NOTBENEFACTORSPELL"; }
+
+  IF (SPELLSTATE(W,SBountifulFestivity)=0) THEN { SETSPELLDATA(W,SBountifulFestivity,1); }
+
+ !NOTBENEFACTORSPELL!
+
+ IF (RETORT(W,CultLeader)=0) THEN { GOTO "NOTCULTLEADERSPELL"; }
+
+  IF (SPELLSTATE(W,SGospelOfEvangelism)=0) THEN { SETSPELLDATA(W,SGospelOfEvangelism,1); }
+  IF (SPELLSTATE(W,SDivineJudgement)=0) THEN { SETSPELLDATA(W,SDivineJudgement,1); }
+
+ !NOTCULTLEADERSPELL!
+
+ IF (RETORT(W,Artificer)=0) THEN { GOTO "NOTARTIFICERSPELL"; }
+
+  IF (SPELLSTATE(W,SClockworkTinmen)=0) THEN { SETSPELLDATA(W,SClockworkTinmen,1); }
+  IF (SPELLSTATE(W,SRebuild)=0) THEN { SETSPELLDATA(W,SRebuild,1); }
+  IF (SPELLSTATE(W,SClockworkFactory)=0) THEN { SETSPELLDATA(W,SClockworkFactory,1); }
+
+ !NOTARTIFICERSPELL!
+
+ IF (RETORT(W,Runemaster)=0) THEN { GOTO "NOTRUNEMASTERSPELL"; }
+
+  IF (SPELLSTATE(W,STabulaRasa)=0) THEN { SETSPELLDATA(W,STabulaRasa,1); }
+  IF (SPELLSTATE(W,SRuneFormationArray)=0) THEN { SETSPELLDATA(W,SRuneFormationArray,1); }
+  IF (SPELLSTATE(W,SForceOfNature)=0)
+   %AND (SPELLSTATE(W,SCallLightning)=2)
+   %AND (SPELLSTATE(W,SEntangle)=2)
+   %AND (SPELLSTATE(W,SFreezingRain)=2)
+   %AND (SPELLSTATE(W,SHurricane)=2)
+  THEN {
+   SETSPELLDATA(W,SForceOfNature,2);
+  }
+  IF (SPELLSTATE(W,SMysteryOfSorcery)=0)
+   %AND (SPELLSTATE(W,SBlur)=2)
+   %AND (SPELLSTATE(W,SMassInvisibility)=2)
+   %AND (SPELLSTATE(W,SCounterMagic)=2)
+   %AND (SPELLSTATE(W,SAetherSurge)=2)
+   %AND (SPELLSTATE(W,STemporalTwist)=2)
+  THEN {
+   SETSPELLDATA(W,SMysteryOfSorcery,2);
+  }
+  IF (SPELLSTATE(W,SConduitOfChaos)=0)
+   %AND (SPELLSTATE(W,SBlazingMarch)=2)
+   %AND (SPELLSTATE(W,SWarpReality)=2)
+   %AND (SPELLSTATE(W,SBreakthrough)=2)
+   %AND (SPELLSTATE(W,SBeatOfSwiftness)=2)
+  THEN {
+   SETSPELLDATA(W,SConduitOfChaos,2);
+  }
+  IF (SPELLSTATE(W,SDayOfLife)=0)
+   %AND (SPELLSTATE(W,SPrayer)=2)
+   %AND (SPELLSTATE(W,SSupremeLight)=2)
+   %AND (SPELLSTATE(W,SHighPrayer)=2)
+   %AND (SPELLSTATE(W,STrueLight)=2)
+   %AND (SPELLSTATE(W,SEyeOfHeaven)=2)
+  THEN {
+   SETSPELLDATA(W,SDayOfLife,2);
+  }
+  IF (SPELLSTATE(W,SNightOfDeath)=0)
+   %AND (SPELLSTATE(W,SDarkness)=2)
+   %AND (SPELLSTATE(W,SManaLeak)=2)
+   %AND (SPELLSTATE(W,STerror)=2)
+   %AND (SPELLSTATE(W,SGateofHades)=2)
+   %AND (SPELLSTATE(W,SBlackPrayer)=2)
+  THEN {
+   SETSPELLDATA(W,SNightOfDeath,2);
+  }
+
+ !NOTRUNEMASTERSPELL!
+
+ IF (RETORT(W,Astrologer)=0) THEN { GOTO "NOTASTROLOGERSPELL"; }
+
+  IF (SPELLSTATE(W,SLuckyStar)=0) THEN { SETSPELLDATA(W,SLuckyStar,1); }
+  IF (SPELLSTATE(W,SDisheartenProphesy)=0) THEN { SETSPELLDATA(W,SDisheartenProphesy,1); }
+
+ !NOTASTROLOGERSPELL!
+
+ IF (RETORT(W,Conjurer)=0) THEN { GOTO "NOTCONJURERSPELL"; }
+
+  IF (SPELLSTATE(W,SConjuringPact)=0) THEN { SETSPELLDATA(W,SConjuringPact,1); }
+  IF (SPELLSTATE(W,SSpiritLink)=0) THEN { SETSPELLDATA(W,SSpiritLink,1); }
+
+ !NOTCONJURERSPELL!
+
+ IF (RETORT(W,Charismatic)=0) THEN { GOTO "NOTCHARISMATICSPELL"; }
+
+  IF (SPELLSTATE(W,SRally)=0) THEN { SETSPELLDATA(W,SRally,1); }
+  IF (SPELLSTATE(W,SDenoucement)=0) THEN { SETSPELLDATA(W,SDenoucement,1); }
+  IF (SPELLSTATE(W,SPersuasiveWhisperer)=0) THEN { SETSPELLDATA(W,SPersuasiveWhisperer,1); }
+
+ !NOTCHARISMATICSPELL!
+
+ IF (RETORT(W,Enchanter)=0) THEN { GOTO "NOTENCHANTERSPELL"; }
+
+  IF (SPELLSTATE(W,STattooMagic)=0) THEN { SETSPELLDATA(W,STattooMagic,1); }
+  IF (SPELLSTATE(W,SDomainOfEnchanter)=0) THEN { SETSPELLDATA(W,SDomainOfEnchanter,1); }
+  IF (SPELLSTATE(W,SPowerOfNature)=0)
+   %AND (SPELLSTATE(W,SResistElements)=2)
+   %AND (SPELLSTATE(W,SWaterWalking)=2)
+   %AND (SPELLSTATE(W,SLandLinking)=2)
+   %AND (SPELLSTATE(W,SElementalArmor)=2)
+   %AND (SPELLSTATE(W,SIronSkin)=2)
+   %AND (SPELLSTATE(W,SRegeneration)=2)
+   %AND (SPELLSTATE(W,SColossalStrength)=2)
+   %AND (SPELLSTATE(W,SVenom)=2)
+  THEN {
+   SETSPELLDATA(W,SPowerOfNature,2);
+  }
+  IF (SPELLSTATE(W,SPowerOfSorcery)=0)
+   %AND (SPELLSTATE(W,SHaste)=2)
+   %AND (SPELLSTATE(W,SResistMagic)=2)
+   %AND (SPELLSTATE(W,SGuardianWind)=2)
+   %AND (SPELLSTATE(W,SFocusMagic)=2)
+   %AND (SPELLSTATE(W,STemporalTwist)=2)
+   %AND (SPELLSTATE(W,SFlight)=2)
+   %AND (SPELLSTATE(W,SInvisibility)=2)
+   %AND (SPELLSTATE(W,SMagicImmunity)=2)
+   %AND (SPELLSTATE(W,SPlanewalking)=2)
+  THEN {
+   SETSPELLDATA(W,SPowerOfSorcery,2);
+  }
+  IF (SPELLSTATE(W,SPowerOfChaos)=0)
+   %AND (SPELLSTATE(W,SFieryFury)=2)
+   %AND (SPELLSTATE(W,SImmolation)=2)
+   %AND (SPELLSTATE(W,SChaosChannels)=2)
+   %AND (SPELLSTATE(W,SInsulation)=2)
+  THEN {
+   SETSPELLDATA(W,SPowerOfChaos,2);
+  }
+  IF (SPELLSTATE(W,SPowerOfLife)=0)
+   %AND (SPELLSTATE(W,SBless)=2)
+   %AND (SPELLSTATE(W,SEndurance)=2)
+   %AND (SPELLSTATE(W,SHolyWeapon)=2)
+   %AND (SPELLSTATE(W,SHolyArmor)=2)
+   %AND (SPELLSTATE(W,SHeroism)=2)
+   %AND (SPELLSTATE(W,STrueSight)=2)
+   %AND (SPELLSTATE(W,SLionheart)=2)
+   %AND (SPELLSTATE(W,SInvulnerability)=2)
+   %AND (SPELLSTATE(W,SDivineProtection)=2)
+  THEN {
+   SETSPELLDATA(W,SPowerOfLife,2);
+  }
+  IF (SPELLSTATE(W,SPowerOfDeath)=0)
+   %AND (SPELLSTATE(W,SCloakofFear)=2)
+   %AND (SPELLSTATE(W,SWraithForm)=2)
+   %AND (SPELLSTATE(W,SFrenzy)=2)
+   %AND (SPELLSTATE(W,SShadowStrike)=2)
+   %AND (SPELLSTATE(W,SRevenant)=2)
+   %AND (SPELLSTATE(W,SVampirism)=2)
+  THEN {
+   SETSPELLDATA(W,SPowerOfDeath,2);
+  }
+
+ !NOTENCHANTERSPELL!
+
+!NOMORETHANRETORT!
+
+: Setting for Outlander Wizard :
+IF (GETWIZARDDATA(W,WDMuggleWizard)=0) THEN { GOTO "NOTOUTLANDERWIZARD"; }
+
+BOOKNUM=BOOKS(W,Nature)+BOOKS(W,Sorcery)+BOOKS(W,Chaos)+BOOKS(W,Life)+BOOKS(W,Death);
+
+ IF ( BOOKNUM < 1 ) THEN { GOTO "OUTLANDERNOSPELLBOOK"; }
+
+  : outlander get basic arcane spells researchable upon get their first spellbook :
+  IF (SPELLSTATE(W,SMagicSpirit)=0) THEN {
+   SETSPELLDATA(W,SMagicSpirit,1);
+  }
+  IF (SPELLSTATE(W,SDispelMagic)=0) THEN {
+   SETSPELLDATA(W,SDispelMagic,1);
+  }
+  IF (SPELLSTATE(W,SSummoningCircle)=0) THEN {
+   SETSPELLDATA(W,SSummoningCircle,1);
+  }
+  IF (SPELLSTATE(W,SHeroicHeart)=0) THEN {
+   SETSPELLDATA(W,SHeroicHeart,1);
+  }
+  IF (SPELLSTATE(W,SEnchantItem)=0) THEN {
+   SETSPELLDATA(W,SEnchantItem,1);
+  }
+
+  : outlander only get spell of mastery after has 4 spell books :
+  IF (SCORINGOPTION(SNoSecretInMastery)=0)
+   %AND ( BOOKNUM > 3 )
+   %AND (SPELLSTATE(W,SSpellofMastery)=0)
+  THEN {
+   SETSPELLDATA(W,SSpellofMastery,1);
+  }
+
+ !OUTLANDERNOSPELLBOOK!
+
+ IF (SPELLSTATE(W,STFertilizer)=0)
+  %AND (SPELLSTATE(W,STCropRotation)=2)
+  %AND (SPELLSTATE(W,STSanitationReform)=2)
+ THEN {
+  SETSPELLDATA(W,STFertilizer,1);
+ }
+
+ IF (SPELLSTATE(W,STXenopsychology)=0)
+  %AND (SPELLSTATE(W,STConscription)=2)
+  %AND (SPELLSTATE(W,STSanitationReform)=2)
+ THEN {
+  SETSPELLDATA(W,STXenopsychology,1);
+ }
+
+ IF (SPELLSTATE(W,STAdvancedMining)=0)
+  %AND (SPELLSTATE(W,STExplosive)=2)
+  %AND (SPELLSTATE(W,STSanitationReform)=2)
+ THEN {
+  SETSPELLDATA(W,STAdvancedMining,1);
+ }
+
+ IF (SPELLSTATE(W,STIndustrialization)=0)
+  %AND (SPELLSTATE(W,STHeatPowerEngine)=2)
+  %AND (SPELLSTATE(W,STAdvancedMining)=2)
+ THEN {
+  SETSPELLDATA(W,STIndustrialization,1);
+ }
+
+ IF (SPELLSTATE(W,STMeritBureaucracy)=0)
+  %AND (SPELLSTATE(W,STStandardization)=2)
+  %AND (SPELLSTATE(W,STPrintingPress)=2)
+ THEN {
+  SETSPELLDATA(W,STMeritBureaucracy,1);
+ }
+
+ IF (SPELLSTATE(W,STScientificProcess)=0)
+  %AND (SPELLSTATE(W,STBallisticsTraining)=2)
+  %AND (SPELLSTATE(W,STNursingAndSurgery)=2)
+  %AND (SPELLSTATE(W,STXenopsychology)=2)
+ THEN {
+  SETSPELLDATA(W,STScientificProcess,1);
+ }
+
+ IF (SPELLSTATE(W,STRadio)=0)
+  %AND (SPELLSTATE(W,STScientificProcess)=2)
+  %AND (SPELLSTATE(W,STIndustrialization)=2)
+ THEN {
+  SETSPELLDATA(W,STRadio,1);
+ }
+
+ IF (SPELLSTATE(W,STAirSupportDoctrine)=0)
+  %AND (SPELLSTATE(W,STRadio)=2)
+  %AND (SPELLSTATE(W,STStrategicLogistic)=2)
+ THEN {
+  SETSPELLDATA(W,STAirSupportDoctrine,1);
+ }
+
+ IF (SPELLSTATE(W,STNursingAndSurgery)=0)
+  %AND (SPELLSTATE(W,STPrintingPress)=2)
+  %AND (SPELLSTATE(W,STSanitationReform)=2)
+ THEN {
+  SETSPELLDATA(W,STNursingAndSurgery,1);
+ }
+
+ IF (SPELLSTATE(W,STStrategicLogistic)=0)
+  %AND (SPELLSTATE(W,STMeritBureaucracy)=2)
+  %AND (SPELLSTATE(W,STAdvancedMining)=2)
+ THEN {
+  SETSPELLDATA(W,STStrategicLogistic,1);
+ }
+
+ IF (SPELLSTATE(W,STObsolescenceRearmament)=0)
+  %AND (SPELLSTATE(W,STIndustrialization)=2)
+  %AND (SPELLSTATE(W,STStrategicLogistic)=2)
+ THEN {
+  SETSPELLDATA(W,STObsolescenceRearmament,1);
+ }
+
+ IF (SPELLSTATE(W,STHeatPowerEngine)=0)
+  %AND (SPELLSTATE(W,STStrategicLogistic)=2)
+  %AND (SPELLSTATE(W,STScientificProcess)=2)
+ THEN {
+  SETSPELLDATA(W,STHeatPowerEngine,1);
+ }
+
+ IF (SPELLSTATE(W,STExplosive)=0)
+  %AND (SPELLSTATE(W,STFertilizer)=2)
+  %AND (SPELLSTATE(W,STConcrete)=2)
+ THEN {
+  SETSPELLDATA(W,STExplosive,1);
+ }
+
+ IF (SPELLSTATE(W,STBallisticsTraining)=0)
+  %AND (SPELLSTATE(W,STMilitaryDrilling)=2)
+  %AND (SPELLSTATE(W,STMeritBureaucracy)=2)
+ THEN {
+  SETSPELLDATA(W,STBallisticsTraining,1);
+ }
+
+ IF (SPELLSTATE(W,STMilitaryDrilling)=0)
+  %AND (SPELLSTATE(W,STConscription)=2)
+  %AND (SPELLSTATE(W,STStandardization)=2)
+ THEN {
+  SETSPELLDATA(W,STMilitaryDrilling,1);
+ }
+
+ IF (SPELLSTATE(W,STRocketry)=0)
+  %AND (SPELLSTATE(W,STScientificProcess)=2)
+  %AND (SPELLSTATE(W,STExplosive)=2)
+ THEN {
+  SETSPELLDATA(W,STRocketry,1);
+ }
+
+ IF (SPELLSTATE(W,STArmorClad)=0)
+  %AND (SPELLSTATE(W,STAdvancedMining)=2)
+  %AND (SPELLSTATE(W,STMilitaryDrilling)=2)
+ THEN {
+  SETSPELLDATA(W,STArmorClad,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekMagicalPhysics)=0)
+  %AND (BOOKNUM>0)
+ THEN {
+  SETSPELLDATA(W,STMagitekMagicalPhysics,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekTechnoGeomancy)=0)
+  %AND (SPELLSTATE(W,STMagitekMagicalPhysics)=2)
+ THEN {
+  SETSPELLDATA(W,STMagitekTechnoGeomancy,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekMaterialScience)=0)
+  %AND (SPELLSTATE(W,STMagitekTechnoGeomancy)=2)
+  %AND (SPELLSTATE(W,STScientificProcess)=2)
+ THEN {
+  SETSPELLDATA(W,STMagitekMaterialScience,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekPowerEngine)=0)
+  %AND (SPELLSTATE(W,STMagitekMaterialScience)=2)
+  %AND (SPELLSTATE(W,STHeatPowerEngine)=2)
+ THEN {
+  SETSPELLDATA(W,STMagitekPowerEngine,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekXenoveterinary)=0)
+  %AND (SPELLSTATE(W,STMagitekMaterialScience)=2)
+  %AND (BOOKS(W,Nature)>1)
+ THEN {
+  SETSPELLDATA(W,STMagitekXenoveterinary,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekAntiGravityDrive)=0)
+  %AND (SPELLSTATE(W,STMagitekPowerEngine)=2)
+  %AND (BOOKS(W,Sorcery)>1)
+ THEN {
+  SETSPELLDATA(W,STMagitekAntiGravityDrive,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekBeamWeapon)=0)
+  %AND (SPELLSTATE(W,STMagitekPowerEngine)=2)
+  %AND (BOOKS(W,Chaos)>1)
+ THEN {
+  SETSPELLDATA(W,STMagitekBeamWeapon,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=0)
+  %AND (SPELLSTATE(W,STMagitekPowerEngine)=2)
+  %AND (BOOKS(W,Life)>1)
+ THEN {
+  SETSPELLDATA(W,STMagitekPsycheForceConverter,1);
+ }
+
+ IF (SPELLSTATE(W,STMagitekPneumaReactor)=0)
+  %AND (SPELLSTATE(W,STMagitekPowerEngine)=2)
+  %AND (BOOKS(W,Death)>1)
+ THEN {
+  SETSPELLDATA(W,STMagitekPneumaReactor,1);
+ }
+
+!NOTOUTLANDERWIZARD!
+
+: Threat Perception Script :
+: 4 levels of threat, 1=enemy only, 2=everyone without countermeasure, 3=indiscriminate, 4=indiscriminately severe :
+THREATLVL1=3*( (HASGLOBAL(W,GESeismicMastery)) + (HASGLOBAL(W,GEGreatUnbinding)) + (HASGLOBAL(W,GEDeathReckoning)) );
+THREATLVL2=5*( (HASGLOBAL(W,GECallTheWild)) + (HASGLOBAL(W,GEDivineOrder)) + (HASGLOBAL(W,GEEternalNight)) + (HASGLOBAL(W,GEKingOfUnderworld)) );
+THREATLVL3=8*( (HASGLOBAL(W,GETimeStop)) + (HASGLOBAL(W,GEBlazingEyes)) + (HASGLOBAL(W,GEEvilOmens)) + (HASGLOBAL(W,GEDarkestHour)) + (HASGLOBAL(W,GEEnlightenment)) );
+THREATLVL4=13*( (HASGLOBAL(W,GEIceAge)) + (HASGLOBAL(W,GEDoomsday)) + (HASGLOBAL(W,GEMeteorStorm)) + (HASGLOBAL(W,GEArmageddon)) );
+GLOBALTHREAT=THREATLVL1 + THREATLVL2 + THREATLVL3 + THREATLVL4;
+FAVORNATURE=(HASGLOBAL(W,GERootsofGenesis));
+FAVORCHAOS=( (HASGLOBAL(W,GEChaosSurge)) + (HASGLOBAL(W,GEBlazingEyes)) );
+FAVORLIFE=(HASGLOBAL(W,GEDivineOrder));
+FAVORDEATH=(HASGLOBAL(W,GEEternalNight));
+
+SETWIZARDDATA(W,WDGlobalThreat,GLOBALTHREAT);
+
+IF GLOBALTHREAT=0 THEN { GOTO "NOTGLOBALTHREAT"; }
+
+ FOR I=0 TO NOFWIZARDS();
+ 
+  IF (I<>W) THEN {
+ 
+   TT=GLOBALTHREAT-%I(( (BOOKS(I,1)*FAVORNATURE)+(BOOKS(I,3)*FAVORCHAOS)+(BOOKS(I,4)*FAVORLIFE)+(BOOKS(I,5)*FAVORDEATH) )/2);
+
+   IF (RETORT(W,Charismatic)=1) THEN {
+    IF (TT>0) THEN { TT=(TT/2); } ELSE { TT=(TT*2); }
+   }
+
+   IF (TT>0) THEN {
+    DRWI=(GETDIPVAR(I,W,1))-%I(TT/2);
+   } ELSE {
+    DRWI=(GETDIPVAR(I,W,1))-%I(TT/10);
+   }
+
+   IF (DRWI>100) THEN { DRWI=100; }
+   IF (DRWI<-100) THEN { DRWI=-100; }
+
+   SETDIPVAR(I,W,1,DRWI);
+   IF (TT>0) THEN {
+
+    FOR J=0 TO NOFWIZARDS();
+
+     IF (J<>W) %AND (J<>I) THEN {
+      DRIJ=(GETDIPVAR(I,J,1))+%I(TT/10);
+      IF (DRIJ>100) THEN { DRIJ=100; }
+      IF (DRIJ<-100) THEN { DRIJ=-100; }
+      SETDIPVAR(I,J,1,DRIJ);
+     }
+
+    NEXT J;
+   }
+   IF (TT>10) %AND ( (GETDIPVAR(I,W,2)<1) %OR (GETDIPVAR(I,W,2)>2) ) %AND (GETDIPVAR(I,W,3)<1) THEN {
+    IF (RND(4)=3) THEN { SETDIPVAR( I,W,3,1 ); }
+   }
+   IF (TT>20) %AND ( (GETDIPVAR(I,W,2)<1) %OR (GETDIPVAR(I,W,2)>2) ) %AND (GETDIPVAR(I,W,3)<2) THEN {
+    IF (RND(3)=2) THEN { SETDIPVAR( I,W,3,(GETDIPVAR(I,W,3)+1 ); }
+   }
+   IF (TT>30) %AND ( (GETDIPVAR(I,W,2)<1) %OR (GETDIPVAR(I,W,2)>2) ) %AND (GETDIPVAR(I,W,3)<3) THEN {
+    IF (RND(2)=1) THEN { SETDIPVAR( I,W,3,(GETDIPVAR(I,W,3)+1 ); }
+   }
+
+  }
+
+NEXT I;
+
+!NOTGLOBALTHREAT!
+
+: Overland active Turn record and Time Stop count :
+IF (TIMESTOPCOUNT>0) THEN {
+ IF HASGLOBAL(W,GETimeStop) THEN { MASTERVARSET TSTURNCOUNTING = TSTURNCOUNTING + 1; }
+} ELSE {
+ LOOP {
+  B=1;
+  IF (W=NeutralPlayerID)
+   %OR (OVERLANDACTIVEPLAYER>=NOFWIZARDS())
+  THEN {
+   MASTERVARSET OVERLANDACTIVEPLAYER = 0;
+  } ELSE {
+   MASTERVARSET OVERLANDACTIVEPLAYER = OVERLANDACTIVEPLAYER + 1;
+  }
+  IF (DEFEATED(OVERLANDACTIVEPLAYER)=0) %OR (OVERLANDACTIVEPLAYER=0) THEN { B=0; }
+ } ENDLP (B=0);
+ DEBUGLOG "OVERLAND ACTIVE SIDE = " + STRS(OVERLANDACTIVEPLAYER);
+}
+
+: process end of the month at player turn due to it is only player that always active :
+IF (W<>0) %OR (HASGLOBAL(W,GETimeStop)>0) THEN { GOTO "NOTENDOFMONTH"; }
+
+DEBUGLOG "TRIGGER END OF MONTH SCRIPT";
+
+: Remove marker global enchantment :
+ IF HASGLOBAL(0,GENatureBookFound) THEN { SETGLOBAL(0,GENatureBookFound,0); }
+ IF HASGLOBAL(0,GESorceryBookFound) THEN { SETGLOBAL(0,GESorceryBookFound,0); }
+ IF HASGLOBAL(0,GEChaosBookFound) THEN { SETGLOBAL(0,GEChaosBookFound,0); }
+ IF HASGLOBAL(0,GELifeBookFound) THEN { SETGLOBAL(0,GELifeBookFound,0); }
+ IF HASGLOBAL(0,GEDeathBookFound) THEN { SETGLOBAL(0,GEDeathBookFound,0); }
+ IF HASGLOBAL(0,GESpecialistLearned) THEN { SETGLOBAL(0,GESpecialistLearned,0); }
+
+ : FOR I=0 TO NOFWIZARDS();
+
+  IF HASGLOBAL(I,GECultRetribution) THEN { SETGLOBAL(I,GECultRetribution,0); }
+
+ NEXT I; :
+
+ DEBUGLOG "TRIGGER Mixed Stack Correction Script";
+
+ : Mixed Stack correction script :
+ FOR U=1 TO MAXUNIT();
+
+  W=GetStat(U,SOwner,1);
+  UP=GETSTAT(U,SPlane,1);
+  UX=GETSTAT(U,SOLX,1);
+  UY=GETSTAT(U,SOLY,1);
+  UA=UNITONTILE(UP,UX,UY,1);
+  C=CITYONTILE(U);
+
+  IF (C<1) THEN { GOTO "NOTCITY"; }
+
+   IF ( W = CITYOWNER(C) ) THEN { GOTO "NOTLOCATION"; }
+
+    DEBUGLOG "Unit ID with wrong ownership: " + STRS(U) + ", P=" + STRS(UP) + ", X=" + STRS(UX) + ", Y=" + STRS(UY);
+    DEBUGLOG "Previous owner: " + STRS(W) + ", " + WIZNAME(W);
+    SETSTAT( U,SOwner,1,CITYOWNER(C) );
+    DEBUGLOG "Current owner: " + STRS(CITYOWNER(C)) + ", " + WIZNAME(CITYOWNER(C));
+    GOTO "NOTLOCATION";
+
+  !NOTCITY!
+
+  IF ( U = UA ) THEN { GOTO "NOTLOCATION"; }
+
+   IF ( W = GETSTAT(UA,SOwner,1) ) THEN { GOTO "NOTLOCATION"; }
+
+    DEBUGLOG "Unit ID with wrong ownership: " + STRS(U) + ", P=" + STRS(UP) + ", X=" + STRS(UX) + ", Y=" + STRS(UY);
+    DEBUGLOG "Previous owner: " + STRS(W) + ", " + WIZNAME(W);
+    SETSTAT( U,SOwner,1,GETSTAT(UA,SOwner,1) );
+    DEBUGLOG "Current owner: " + STRS(GETSTAT(UA,SOwner,1)) + ", " + WIZNAME(GETSTAT(UA,SOwner,1));
+
+  !NOTLOCATION!
+
+ NEXT U;
+
+: at the end of the month, forest/tundra tile in vincinity of the city own by wizard casting Root of Genesis has 0.5% chance to spawn wild game and river spawn nightshade :
+: Gaia's Blessing has 10% chance of convert tundra into swamp each turn :
+ C=0;
+ FOR C=1 TO MAXCITY();
+
+  IF (ICEAGECOUNT=0) %OR ( HASGLOBAL(CITYOWNER(C),GEIceAge) > 0 ) THEN { GOTO "NOTICEAGE"; }
+
+   DEBUGLOG "TRIGGER Ice Age Conversion grassland, desert, swamp, and hill into tundra script";
+
+   P=GETCITYDATA(C,CDCOLP);
+   CONVERT=3*ICEAGECOUNT;
+
+   FOR X=(GETCITYDATA(C,CDCOLX)-2) TO (GETCITYDATA(C,CDCOLX)+2);
+   FOR Y=(GETCITYDATA(C,CDCOLY)-2) TO (GETCITYDATA(C,CDCOLY)+2);
+
+    IF ( ( GETTERRAIN( X,Y,P ) ) < LTGrassland ) THEN { GOTO "NOTTURNTUNDRA"; }
+    IF ( ( GETTERRAIN( X,Y,P ) ) > LTHill ) %AND ( ( GETTERRAIN( X,Y,P ) ) < LTDesert ) THEN { GOTO "NOTTURNTUNDRA"; }
+    IF ( ( GETTERRAIN( X,Y,P ) ) > LTSwamp ) THEN { GOTO "NOTTURNTUNDRA"; }
+
+     IF ( RND(100) > (99-CONVERT) ) THEN { SETTERRAIN(X,Y,P,LTTundra); }
+
+    !NOTTURNTUNDRA!
+
+   NEXT Y;
+   NEXT X;
+
+  !NOTICEAGE!
+
+  IF ( HASGLOBAL(CITYOWNER(C),GERootsofGenesis) = 0 ) THEN { GOTO "NOROOTSOFGENESIS"; }
+
+   DEBUGLOG "TRIGGER resource spawning from Roots of Genesis";
+
+   P=GETCITYDATA(C,CDCOLP);
+
+   FOR X=(GETCITYDATA(C,CDCOLX)-2) TO (GETCITYDATA(C,CDCOLX)+2);
+   FOR Y=(GETCITYDATA(C,CDCOLY)-2) TO (GETCITYDATA(C,CDCOLY)+2);
+
+    IF ( ( ( GETTERRAIN( X,Y,P ) ) > LTForest ) %OR ( ( GETTERRAIN( X,Y,P ) ) < LTRiver ) ) THEN { GOTO "NOTGAINRESOURCE1"; }
+
+     IF ( ( GETTERRAIN( X,Y,(P+2) ) ) > 0 ) THEN { GOTO "NOTGAINRESOURCE1"; }
+
+      RESOURCE=RND(200);
+      IF (RESOURCE<199) THEN { GOTO "NOTGAINRESOURCE1"; }
+
+       IF ( ( GETTERRAIN( X,Y,P ) ) = LTRiver ) THEN {
+        SETTERRAIN(X,Y,(P+2),OreNightshade);
+       } ELSE {
+        SETTERRAIN(X,Y,(P+2),OreWildgame);
+       }
+
+    !NOTGAINRESOURCE1!
+
+   NEXT Y;
+   NEXT X;
+
+  !NOROOTSOFGENESIS!
+
+  IF ( HASGLOBAL(CITYOWNER(C),GEIceAge) = 0 ) THEN { GOTO "NOICEAGESPAWNING"; }
+
+   DEBUGLOG "TRIGGER resource spawning from Ice Age";
+
+   P=GETCITYDATA(C,CDCOLP);
+
+   FOR X=(GETCITYDATA(C,CDCOLX)-2) TO (GETCITYDATA(C,CDCOLX)+2);
+   FOR Y=(GETCITYDATA(C,CDCOLY)-2) TO (GETCITYDATA(C,CDCOLY)+2);
+
+    IF ( ( GETTERRAIN( X,Y,P ) ) <> LTTundra ) THEN { GOTO "NOTGAINRESOURCE2"; }
+
+     IF ( ( GETTERRAIN( X,Y,(P+2) ) ) > 0 ) THEN { GOTO "NOTGAINRESOURCE2"; }
+
+      RESOURCE=RND(100);
+      IF (RESOURCE<99) THEN { GOTO "NOTGAINRESOURCE2"; }
+
+       IF ( ( GETTERRAIN( X,Y,P ) ) = LTTundra ) THEN {
+        SETTERRAIN(X,Y,(P+2),OreWildgame);
+       }
+
+    !NOTGAINRESOURCE2!
+
+   NEXT Y;
+   NEXT X;
+
+  !NOICEAGESPAWNING!
+
+  IF ( CITYENCHANT(C,CEGaiasBlessing) < 0 ) THEN { GOTO "NOTUNDRASWAMP"; }
+
+   DEBUGLOG "TRIGGER Gaia Conversion tundra into swamp script";
+
+   P=GETCITYDATA(C,CDCOLP);
+
+   FOR X=(GETCITYDATA(C,CDCOLX)-2) TO (GETCITYDATA(C,CDCOLX)+2);
+   FOR Y=(GETCITYDATA(C,CDCOLY)-2) TO (GETCITYDATA(C,CDCOLY)+2);
+
+    IF ( ( GETTERRAIN( X,Y,P ) ) <> LTTundra ) THEN { GOTO "NOTTUNDRA"; }
+
+     IF (RND(100)>89) THEN { SETTERRAIN(X,Y,P,LTSwamp); }
+
+    !NOTTUNDRA!
+
+   NEXT Y;
+   NEXT X;
+
+  !NOTUNDRASWAMP!
+
+  IF (BASETURN()<25) %OR (CLIMATE()<>CliDry) THEN { GOTO "NODRYMODIFY"; }
+
+   IF ( (CITYENCHANT(C,CEDrought)>-1) %AND (CITYENCHANT(C,CEDrought)<NeutralPlayerID) ) THEN { GOTO "NODRYMODIFY"; }
+
+    P=GETCITYDATA(C,CDCOLP);
+    ARID=TERRAININRANGE(C,LTDesert)/2;
+    ARIDSTR=RND(100);
+
+    IF (CITYENCHANT(C,CEDrought)=NeutralPlayerID) THEN {
+     IF (CITYOWNER(C)=NeutralPlayerID)
+      %OR ( ARIDSTR > 90 )
+     THEN {
+      SETCITYENCHANTOWNER(C,CEDrought,-1);
+     }
+    } ELSE {
+     IF (CITYOWNER(C)<NeutralPlayerID)
+      %AND ( ARIDSTR < ARID )
+     THEN {
+      SETCITYENCHANTOWNER(C,CEDrought,NeutralPlayerID);
+     }
+    }
+
+  !NODRYMODIFY!
+
+ NEXT C;
+
+
+: at the end of the month, 3% of corrupted land decay into wasteland :
+: at the end of the month, Volcanic climate or Armageddon active would trigger volcanic eruption in hill or mountain tile at rate 1% per turn :
+
+ DEBUGLOG "TRIGGER Corruption Decay";
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  IF ((GETTERRAIN(X,Y,P))<LTGrassland) THEN { GOTO "NOTERRAINCHANGE"; }
+  IF ((GETTERRAIN(X,Y,P))>LTForest) THEN { GOTO "NOTERRAINCHANGE"; }
+
+   IF ((GETTERRAIN(X,Y,P+4))=0) THEN { GOTO "NODECAY"; }
+    IF ( ((GETTERRAIN(X,Y,P))>LTHill) %AND ((GETTERRAIN(X,Y,P))<>LTForest) ) THEN { GOTO "NODECAY"; }
+
+     DECAY=RND(100);
+     IF (DECAY<97) THEN { GOTO "NODECAY"; }
+
+      IF ((GETTERRAIN(X,Y,P))=LTGrassland) THEN { SETTERRAIN(X,Y,P,LTDesert); }
+      IF ((GETTERRAIN(X,Y,P))=LTHill) THEN { SETTERRAIN(X,Y,P,LTMountain); }
+      IF ((GETTERRAIN(X,Y,P))=LTForest) THEN { SETTERRAIN(X,Y,P,LTSwamp); }
+
+   !NODECAY!
+
+   IF (ARMAGEDDONCOUNT=0) %AND (CLIMATE()<>CliVolcanic) THEN { GOTO "NOVOLCANICTRIGGER"; }
+
+    IF ((GETTERRAIN(X,Y,P))=LTVolcano)
+     %AND (RND(100)<3)
+    THEN {
+     SETTERRAIN(X,Y,P,LTMountain);
+     GOTO "NOVOLCANICTRIGGER";
+    }
+
+    IF ((GETTERRAIN(X,Y,P))=LTMountain)
+     %AND (RND(100)=99)
+    THEN {
+     SETTERRAIN(X,Y,P,LTVolcano);
+    }
+
+   !NOVOLCANICTRIGGER!
+
+  !NOTERRAINCHANGE!
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!NOTENDOFMONTH!
+
+DEBUGLOG "END OF END OF TURN SCRIPT";
+
+HALT;

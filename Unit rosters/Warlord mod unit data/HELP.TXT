@@ -1,9 +1,9 @@
 #Difficulty Beginner
 BEGINNER DIFFICULTY
-This difficulty level is recommended for first-time players. Players receive very large economy bonuses, while opponents play significantly worse than usual. It's recommended to use this together with the Easy Lairs, Targeting Aid, and Leave Me Alone score modifiers for an even more beginner-friendly experience.
+This difficulty level is recommended for first-time players. Players receive very large economy bonuses, while opponents play significantly worse than usual. It's recommended to use this together with the Targeting Aid, and Leave Me Alone score modifiers for an even more beginner-friendly experience.
 #Difficulty Easy
 EASY DIFFICULTY
-Players receive economy bonuses, while opponents play worse than usual. It is recommended to use the Easy Lairs, Targeting Aid, and Leave Me Alone score modifiers to further reduce difficulty if necessary.
+Players receive economy bonuses, while opponents play worse than usual. It is recommended to use the Targeting Aid, and Leave Me Alone score modifiers to further reduce difficulty if necessary.
 #Difficulty Normal
 NORMAL DIFFICULTY
 Opponents are subject to restrictions on the strategies they can use and do not receive either a bonus or penalty to resources.
@@ -1083,10 +1083,10 @@ RACE TO THE UNKNOWN
 Score Modifier: 0.80x
 All players start on the same plane as you. Towers have halved monster budgets. Plane Shift appears for research as if it were an uncommon spell and has halved casting cost. Opponents will prioritize breaking towers and researching Plane Shift higher than usual.
 Note: This setup is mutually exclusive with "World Equalizer", "Inverted Worlds", and "I Am the Boss".
-#OPT EASY LAIRS
-EASY LAIRS
-Score Modifier: 0.90x
-Lair monster and treasure budgets are halved, and monsters with a cost of 300 or higher are never included. Available high-quality treasure is also reduced.
+#OPT SAVAGE LAIRS
+SAVAGE LAIRS
+Score Modifier: 1.25x
+Lair monster and treasure budgets are 50% higher than normal.
 #OPT DUMB NEUTRALS
 DUMB NEUTRALS
 Score Modifier: 0.85x
@@ -1425,6 +1425,7 @@ Opponent fortress would receive upkeep refund from these buildings as long as it
 ZERO BOOK RULE
 Score Modifier: 1.00x
 Play by old Warlord mod's rule before version 1.5.10 with each wizard get 1 researchable Common spell of that realm at random if the wizard does not start with any book in that realm.
+Outlander wizards do not get benefit from this rule.
 #OPT MORE THAN RETORT
 MORE THAN RETORT
 Score Modifier: 1.00x
@@ -1438,8 +1439,8 @@ WIZARD OF OZ
 Score Modifier: 1.20x
 The human player is an Outlander from the world beyond mistaken by the locals as a powerful master wizard.
 Human players start as Outlander with following characteristics.
-- Starts with no book and no magic spell but retained all picked retorts and spells gain from retort.
-- Starts with Tree of Knowledge have already been researched.
+- Starts with no book and no magic spell but retained all picked retorts and retort-related spells.
+- Starts with Tree of Knowledge have already been researched and could cast ith no cost.
 - Start with 1 Overland Casting Skill and 0 Combat Casting Skill. Base casting skill is only available after gaining a spellbook and grows at half rate of normal.
 - Gains access to researchable exclusive to the Outlander.
 - Requires 4 Spell Books to able to research Spell of Mastery.
@@ -1448,8 +1449,8 @@ AMONG US...
 Score Modifier: 1.20x
 There is chance that some master wizards are mysterious outlandish identities with strange tricks.
 At least one AI wizard is designated as an Outlander with following characteristics.
-- Starts with no book and no magic spell but retained all picked retorts and spells gain from retort.
-- Starts with Tree of Knowledge have already been researched.
+- Starts with no book and no magic spell but retained all picked retorts and retort-related spells.
+- Starts with Tree of Knowledge have already been researched and could cast ith no cost.
 - Start with 1 Overland Casting Skill and 0 Combat Casting Skill. Base casting skill is only available after gaining a spellbook and grows at half rate of normal.
 - Gains access to researchable exclusive to the Outlander.
 - Requires 4 Spell Books to able to research Spell of Mastery.
@@ -2221,7 +2222,7 @@ Summons an awe-inspiring Colossus, a boulder-wielding fighting machine that poss
 *ux317.png
  ICE AGE
 Nature Very Rare - Global Enchantment
-Casting Cost: 1500+ mana
+Casting Cost: 1200+ mana
 Upkeep: 100 mana/turn
 The wizard brings forth the age of ice.
 - Weather changes to frozen climate.
@@ -2443,7 +2444,9 @@ Caster wizard's units with innate sailing movement that are trained or summoned 
 Sorcery Uncommon - Global Enchantment
 Casting Cost: 400+ mana
 Upkeep: 20 mana/turn
-The wizard enforces the social order of their empire with magic, aiding the economy and administration through their knowledge and skill. Magic markets and Wizard's Guilds in all the caster wizard's cities generate gold equal to the Power produced by these buildings.
+The wizard enforces the social order of their empire with magic, aiding the economy and administration through their knowledge and skill.
+Each cities under rule of the Wizard generate Power in percentage of their population unit, Magic Market +15%, Wizard's Guild +35%, Tree of Magic +30%, and Wizard's Archmage Retort +20%. 
+Magic markets and Wizard's Guilds in all the caster wizard's cities generate gold equal to the Power produced by these buildings.
 #Spell SPELL BLAST
 *Countered.png
  SPELL BLAST
@@ -2785,7 +2788,7 @@ A target unit must resist by a -3 penalty or the unit loses Magical weapons thei
  BERSERK
 Unit Ability - Combat Unit Enchantment
 Target: friendly unit
-Mimic magical effect by using secret concoction. Target unit gains +15% To-Hit and +1 combat Movement but suffers -10% To-Defend.
+Mimic magical effect by using secret concoction. Target unit gains +15% To-Hit and +1 combat Movement but suffers -1 Armor.
 #Spell FLAME BLADE
 *ux80.png
  FLAME BLADE
@@ -4007,8 +4010,9 @@ During banished, This spell is the only overland spell you can cast. Casting com
 *ux207.png
 TREE OF KNOWLEDGE
 Arcane Uncommon - Instant Overland
-Casting Cost: 250
+Casting Cost: 250 (0 if caster is the Outlander)
 All of the caster's cities gain the ability to build Armorer's Guild, Wizard's Guild, Maritime Guild, Fantastic Stable, Amplifying Tower, and Linking Tower, provided the city belongs to a race capable of building these buildings. Once cast, the effect is permanent and can't be canceled in any way.
+Casting cost of this spell will reduce to 0 if caster is the Outlander wizard.
 #Spell PLANE SHIFT
 *ux5.png
  PLANE SHIFT
@@ -4556,7 +4560,7 @@ Damage reputation and relationship between owner of target city and all others. 
  WHISPERING ECHO
 Arcane Very Rare - Instant Combat
 Target: all enemy units
-Casting Cost: 120 mana
+Casting Cost: 100 mana
 Charismatic's signature spell.
 Enter into the heart of all opponents in the battlefield and try to persuade them to abandon their causes. All opponent units must resist or switch side and must resist again or suffer confusion.
 If the spell is cast by Charismatic wizard or hero with Charmed ability, opponent must resist switch side at -2 and resist Confusion at -3 instead.
@@ -4794,7 +4798,7 @@ Studies of culture and psychology of races of the Twin Planes and integrate this
  SCIENTIFIC PROCESS
 Arcane Rare - Reform
 Effect trigger upon finish research
-Outlander's signature reform, must research Ballistic Training, Nursing and Surgery, and Xenopsychology to access this reform.
+Outlander's signature reform, must research Ballistics Training, Nursing and Surgery, and Xenopsychology to access this reform.
 Introducing scientific process as light of reason...but somehow also make those magicians get some interesting ideas.
 - The City generates +25% of total Research point.
 #Spell RADIO
@@ -4807,16 +4811,17 @@ Introduces mass-produced telecommunication devices that could contact land far a
 - Reduces corruption cap to 20%.
 - All cities get +20% Gold from Trade bonus.
 - In combat, all regular units and Sapiens summons under the Outlander's control gain +10% To-Hit, +10% To-Defend, +1 Resistance.
-#Spell CORPERATE CHARTER
-*ux397.png
- CORPERATE CHARTER
-Arcane Very Rare - Reform
-Effect trigger upon finish research
-Outlander's signature reform, must research Xenopsychology and Strategic Logistic to access this reform.
-Introduces concept of trade company and stock exchange to greatly expand scope of commerce.
-- All cities get +0.5% Trade bonus for each Marketplace own by the Outlander.
-- All cities get +1.0% Trade bonus for each Bank own by the Outlander.
-- All cities get +1.5% Trade bonus for each Merchant's Guild own by the Outlander.
+#Spell AIR SUPPORT DOCTRINE
+*Units\u364x3_1.png
+ AIR SUPPORT DOCTRINE
+Arcane Very Rare - Combat Summoning
+Target: Combat Tile
+Casting Cost: 80 mana
+Upkeep: 9 mana/turn
+Outlander's signature combat doctrine, must research Radio and Strategic Logistic to access this reform.
+The Outlander develops Air Support Doctrine along with sophisticate Aerial Support Drones that could be called for support in any combat on the twin planes. This requires technologies and expertise that could only be produced and operated from Outlander's fortress.
+- Outlander could summon the squadron of Air Support Drones in combat.
+- Air Support Drone's stats and ability are depending on technology and expertise that the Outlander could access.
 #Spell SANITATION REFORM
 *ux381.png
  SANITATION REFORM
@@ -4879,7 +4884,7 @@ Arcane Uncommon - Reform
 Effect trigger upon finish research
 Outlander's signature reform, must research Bureaucracy Reform and Military Drilling to access this reform.
 Adapt science of ballistics and projectiles to the environmental condition of the Twin Planes to increase fighting capability of local combatants.
-- In combat, all Regular units and Sapiens summons get +20% Range/Breath/Thrown To-Hit.
+- In combat, all Regular units and Sapiens summons get +10% Range To-Hit and + 20% Breath/Thrown To-Hit.
 #Spell CONSCRIPTION
 *ux265.png
  CONSCRIPTION
@@ -5861,7 +5866,7 @@ The unit has fallen into the water and can barely stay afloat. It cannot move in
 #UA BERSERK
 *ux227.png
  BERSERK
-In combat, enchanted unit gains +15% To-Hit and +1 Movement but suffers -10% To-Defend.
+In combat, enchanted unit gains +15% To-Hit and +1 Movement but suffers -1 Armor.
 #UA PACT EXEMPTION
 *ux228.png
  PACT EXEMPTION
@@ -5995,7 +6000,7 @@ Graduated from Halfling's Academy, the good educational environment has created 
 #UA SAPIENS
 *ux374.png
  SAPIENS
-This summon creature is could of communicate in speech and capable learning how to use complex tools and artifacts of non-magical origin.
+This summon creature is capable of communicate with speech and capable of learning how to use and operate complex tools or artifacts, includes those of non-magical origin.
 #UA ABILITY RECHARGE
 *ux53.png
  ABILITY RECHARGE
@@ -8448,8 +8453,12 @@ Cost of the Midget Submarines could be reduced by 20% in city with plenty of Quo
 The Magic Spirit is a common Arcane realm Fantastic creature. Resembling a ghost-like entity, the Magic Spirit manifests as a non-corporeal form surrounded by a glowing aura, capable of melding with Power nodes and scouting swiftly through any terrain or obstacles.
 #UA Clockwork Tinmen
 *Units\u363x3_1.png
- CLOCKWORK TINMEN
+ CLOCKWORK TINMAN
 The Clockwork Tinman is an Uncommon Arcane realm Fantastic creature uniquely created by an Artificer wizard. Created with synergy and harmony between mechanic and magic, clockwork tinmen are helping hands and industrous labour for its creator. Always work tirelessly with precision and mechanical skill, they could build road better than any dwarves engineers and repair and optimize any war machines better than the most reckless mechaniacs. They also on the field with survey mechanical critters that could be using for sabotage enemy's mechanical unit effectively in combat.
+#UA AERIAL SUPPORT DRONES
+*Units\u364x3_1.png
+ AERIAL SUPPORT DRONE
+The Aerial Support Drone is a type of combat aircraft uniquely created by an Outlander wizard. Created based on air-superiority combat aircraft from their homeworld with materials from the Twin Planes but with more sophisticate craftmanship beyond what the locals could handle at this moment. This craft could only be produced from Outlander's fortress under their supervision and called upon to support the combat at their order. The aircraft is operated by radio and artificial intelligence that currently too complex for other wizard to manipulate and could be upgraded with technology and magic the Outlander has at their disposal.
 #UA Boar
 *Units\u152x3_1.png
  BOAR

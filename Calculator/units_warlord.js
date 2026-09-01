@@ -9470,7 +9470,7 @@ const WARLORD_UNITS_DATA = {
     ],
     "category": "Heroes",
     "moves": 3,
-    "cost": 200,
+    "cost": 1100,
     "upkeep": 1
   },
   "363": {
@@ -9502,5 +9502,46 @@ const WARLORD_UNITS_DATA = {
     "moves": 2,
     "cost": 150,
     "upkeep": 5
+  },
+  "364": {
+    "id": 364,
+    "templateId": 364,
+    "heroTypeId": null,
+    "isHero": false,
+    "baseRace": "Arcane",
+    "baseFantastic": true,
+    "name": "Aerial Support Drones",
+    "race": "Arcane",
+    "figures": 3,
+    "hp": 3,
+    "melee": 2,
+    "defense": 3,
+    "resist": 11,
+    "to_block": 40,
+    "to_hit": 10,
+    "ranged": 9,
+    "ranged_type": "Boulder",
+    "ammo": 4,
+    "thrown": 7,
+    "thrown_breath": 7,
+    "thrown_breath_type": "thrown",
+    "abilities": [
+      "First Strike",
+      "Armor Piercing",
+      "Missile Immunity",
+      "Illusion Immunity",
+      "Death Immunity",
+      "Poison Immunity",
+      "Flight",
+      "Sailing",
+      "Fantastic",
+      "Spellcaster=Spell#294x1",
+      "Sapiens",
+      "Mechanical"
+    ],
+    "category": "Arcane Creatures",
+    "moves": 4,
+    "cost": 240,
+    "upkeep": 9
   }
 };

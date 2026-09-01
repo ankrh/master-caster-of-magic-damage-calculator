@@ -202,7 +202,7 @@ function runCanonicalVersionScopeChecks(ctx) {
     // CoM 1's Focus Magic position is inferred from what its recompute writes after Warp.
     'com_6.08': ['c:focusMagic', 'c:raiseDead'],
     'com2_1.05.11': deducedIdentityC,
-    'com2_warlord_1.5.12.7': deducedIdentityC,
+    'com2_warlord_1.5.12.9': deducedIdentityC,
   };
   for (const version of engineVersions) {
     const chain = statChain(version);
@@ -325,15 +325,15 @@ function runCanonicalVersionScopeChecks(ctx) {
     + 'call names an entry');
 
   // --- 4. scope at the call site, where no per-step predicate can see it ---
-  // No step in any of the four attack-specific lists carries a version predicate. The Caster.exe
-  // pair is CoM2-only because buildResistanceContext / computeDefenseProfile only reach them from
-  // their `startsWith('com2')` branch, and the DOS pair is keyed by version rather than gated, so
-  // checking membership here is the only way to see either fact.
+  // No step in any of the attack-specific lists carries a version predicate. The Caster.exe
+  // lists are CoM2-only because `resistanceQueries` / `computeDefenseProfile` only reach them from
+  // their `startsWith('com2')` branch, and the DOS lists are keyed by version rather than gated,
+  // so checking membership here is the only way to see either fact.
   const resistanceSteps = evalInContext(ctx, 'EFFECTIVE_RESISTANCE_STEPS');
   const defenseSteps = evalInContext(ctx, 'EFFECTIVE_DEFENSE_STEPS');
   const dosResistanceSteps = evalInContext(ctx, 'DOS_RESISTANCE_STEPS');
   const dosDefenseSteps = evalInContext(ctx, 'DOS_DEFENSE_STEPS');
-  const MODERN = ['com2_1.05.11', 'com2_warlord_1.5.12.7'];
+  const MODERN = ['com2_1.05.11', 'com2_warlord_1.5.12.9'];
   const DOS = ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08'];
   const assertCallSiteScope = (label, steps, inScope, outOfScope) => {
     for (const version of inScope) {
@@ -350,6 +350,13 @@ function runCanonicalVersionScopeChecks(ctx) {
   };
   assertCallSiteScope('GetEffectiveResistance', resistanceSteps, MODERN, DOS);
   assertCallSiteScope('EffectiveDefense', defenseSteps, MODERN, DOS);
+  // The per-roll query lists (F223) are the same shape: one list per engine family, reached only
+  // from that family's arm of `resistanceQueries`.
+  const queryGroups = evalInContext(ctx, 'RESISTANCE_QUERY_GROUPS');
+  for (const [group, entry] of Object.entries(queryGroups)) {
+    assertCallSiteScope(`${group} resistance queries (modern)`, entry.modern, MODERN, DOS);
+    assertCallSiteScope(`${group} resistance queries (DOS)`, entry.dos, DOS, MODERN);
+  }
   for (const version of DOS) {
     assertCallSiteScope(`Combat_Effective_Resistance(${version})`,
       dosResistanceSteps[version], [version], MODERN);
@@ -383,7 +390,7 @@ function runCanonicalVersionScopeChecks(ctx) {
       false, `Illusion Immunity strips Mind Storm in ${version}`);
     assertEqual(!!curseGated({ trueSight: true, mindStorm: true, weakness: true }, version).weakness,
       true, `Illusion Immunity reaches only its own two curses in ${version}`);
-    const warlord = version === 'com2_warlord_1.5.12.7';
+    const warlord = version === 'com2_warlord_1.5.12.9';
     assertEqual(!!curseGated({ eyeOfHeaven: true, vertigo: true }, version).vertigo,
       !warlord, `Eye of Heaven confers Illusion Immunity only in Warlord (${version})`);
   }
@@ -520,6 +527,8 @@ function runCanonicalVersionScopeChecks(ctx) {
     ...resistanceSteps.map(step => `attackSpecific:${step.id}`),
     ...defenseSteps.map(step => `attackSpecific:${step.id}`),
     ...DOS.flatMap(version => [...dosResistanceSteps[version], ...dosDefenseSteps[version]]
+      .map(step => `attackSpecific:${step.id}`)),
+    ...Object.values(queryGroups).flatMap(entry => [...entry.modern, ...entry.dos]
       .map(step => `attackSpecific:${step.id}`)),
     // The figure sequence is read through its projection above, but a projection carries only
     // the steps that changed `figs`, and neither Warlord building's race/name prerequisite is

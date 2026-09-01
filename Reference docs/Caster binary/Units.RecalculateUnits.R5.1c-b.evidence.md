@@ -69,7 +69,7 @@ $005A7076 83bcc290feffff00  cmp  dword [edx+eax*8-$170],0
 The side stride is `$32 * 8 = $190` bytes, which is exactly
 `Maxmaxcombatenchantments * 4` (`SharedConstants.pas:31`), so each side holds a 100-element
 `Integer` array and the element index behind a displacement `-$N` is `(($190 - $N) div 4) + 1`.
-For `-$170` that is **9**, and `Warlord 1.5.12.7/MASTER.CAS:941` declares `CGSupremeLight = 9`.
+For `-$170` that is **9**, and `Warlord 1.5.12.9/MASTER.CAS:941` declares `CGSupremeLight = 9`.
 The same formula resolves every other member the reconstruction reads, with none left over:
 `-$18C` → 2 `CGEntangle`, `-$184` → 4 `CGMassInvisibility`, `-$17C` → 6 `CGBlazingMarch`,
 `-$178` → 7 `CGWarpReality`, `-$174` → 8 `CGPrayer`, `-$16C` → 10 `CGHighPrayer`,

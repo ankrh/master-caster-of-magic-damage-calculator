@@ -183,7 +183,7 @@ Two anchors were authored for it, because neither effect had one:
 | Formula | Versions | Cited span | Claim |
 |---|---|---|---|
 | `eldritchWeaponEligibility` | `mom_1.31`, `mom_cp_1.60.00` | `DOS reconstructed/unitcalc.c` 838-846 | The MoM `UE_ELDRITCH_WEAPON` block: gate on bit `0x00200000`, melee and conditional ranged attribute writes, `Weapon_Plus1` floor. CoM 1's block for the same bit is Mystic Surge's, at `unitcalc.c:1067`. |
-| `rulerOfUnderworldEligibility` | `com2_1.05.11`, `com2_warlord_1.5.12.7` | `Caster binary/Units.RecalculateUnits.pas` 1512-1517 and 621-625 | King of Underworld derives the aggregate Wraith Form flag during combat for a valid owner (`$0059EA93..$0059EB4D`), and a rival's copy suppresses only the calculated-layer `EncMagic` assignment (`$00598EA7..$00598ED9`). |
+| `rulerOfUnderworldEligibility` | `com2_1.05.11`, `com2_warlord_1.5.12.9` | `Caster binary/Units.RecalculateUnits.pas` 1512-1517 and 621-625 | King of Underworld derives the aggregate Wraith Form flag during combat for a valid owner (`$0059EA93..$0059EB4D`), and a rival's copy suppresses only the calculated-layer `EncMagic` assignment (`$00598EA7..$00598ED9`). |
 
 ## Re-measurement, and the enumeration the first pass never wrote down
 
@@ -299,9 +299,11 @@ Notes on the five:
   suppressed the defender's Bless bonus. It was also **dead within its own path**:
   `dosDefenseForAttack` is reached only when the version does not start with `com2`
   (`computeDefenseProfile`), and Spirit Link is Warlord's (`PROVENANCE[spiritLink]
-  versions=com2_warlord_1.5.12.7`, `stats_identity.js`). Warlord's real behavior comes from the
-  `d:spiritLink` step clearing `fantastic`, which `spiritLinkBlessNoBonusWarlord` covers. **F157
-  deleted the term.**
+  versions=com2_warlord_1.5.12.9`, `stats_identity.js`). Warlord's real behavior comes from the
+  `d:spiritLink` step clearing `fantastic`, which `spiritLinkWeaponImmunityBypassWarlord` and
+  `spiritLinkExorciseImmuneWarlord` cover. `spiritLinkBlessNoBonusWarlord` does **not** cover it:
+  modern Bless's defence half needs `spellId > 0` and every unit-attack descriptor passes 0, so no
+  Spirit Link state can reach it (F211, F214). **F157 deleted the term.**
 - `dispelEvil` is a MoM-only control, and `combat_phases.js:327` read it inside the
   `startsWith('com2')` branch — likewise dead where it stood, and **F158 deleted it**. The leak
   entered elsewhere, through the dynamic-key read `placedTouchValue`, which applied every touch
@@ -322,7 +324,7 @@ Notes on the five:
   flag and never enter this DOS path. New anchor `PROVENANCE[blazingMarchMagicWeapon]`
   (`combat_special_attacks.js`) and scope `resolution:blazingMarchMagicWeapon` = `SCOPE_COM1`.
   Note this sits beside the pre-existing `PROVENANCE[blazingMarch]` (`stats_sequence.js`,
-  `versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.7`) for the attack bonus: two engine
+  `versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9`) for the attack bonus: two engine
   writes of one named effect, with different scopes, so two anchors.
 - `destroyMechanical` needed two hidden keys at once, so the sweep's one-key-at-a-time rule could
   not see it by design. It never got a scope entry: Q29 found that the modelled melee rider does
@@ -350,7 +352,7 @@ Three effects gained a cited gate:
 |---|---|---|
 | `COMBAT_VERSION_SCOPES['resolution:blackChannelsEffectDerivation']` | `SCOPE_MOM` | `PROVENANCE[blackChannelsEffectDerivation]`, `unitcalc.c` — bit `0x00000010` is Black Channels in MoM and Animated in CoM 1 |
 | `COMBAT_VERSION_SCOPES['resolution:bloodLustAbilityDerivation']` | `SCOPE_COM_PLUS` | `PROVENANCE[bloodLustAbilityDerivation]`, `unitcalc.c` / `Units.RecalculateUnits.pas` / `UnitCalc.CAS` — bit `0x00000004` is Berserk in MoM |
-| `eyeOfHeaven` reads in `stats.js` and `stats_identity.js` | Warlord | `Script source/Warlord 1.5.12.7/UnitCalcPre.CAS` 1839-1841 sets `EncTrueSight` under `CGEyeOfHeaven`; no `EyeOfHeaven` identifier exists anywhere in the CoM2 1.05.11 base script set |
+| `eyeOfHeaven` reads in `stats.js` and `stats_identity.js` | Warlord | `Script source/Warlord 1.5.12.9/UnitCalcPre.CAS` 1839-1841 sets `EncTrueSight` under `CGEyeOfHeaven`; no `EyeOfHeaven` identifier exists anywhere in the CoM2 1.05.11 base script set |
 
 Eye of Heaven is a derivation-time read, not a resolution-time one, so it takes the inline
 Warlord test its sibling at `stats.js:700` already carries rather than a `resolution:` key.

@@ -1,0 +1,1521 @@
+: Input - LOADED=0 if the script is triggered by starting a new game, 1 if by loading a save file :
+: Output - None :
+
+IF LOADED>0 THEN { GOTO "THISISSAVEFILE"; }
+
+: Implement old Warlord rule of free common spell at zero book here. :
+
+ IF (SCORINGOPTION(SZeroBookRule)=0) THEN { GOTO "NOZEROBOOKRULE"; }
+
+ FOR I=0 TO NOFWIZARDS();
+
+  IF (BOOKS(I,Nature)>0) THEN { GOTO "HAVENATUREBOOK"; }
+
+   FREENATURECOMMON=RND(10);
+
+    IF (FREENATURECOMMON=0) THEN { SETSPELLDATA(I,SEarthtoMud,1); }
+    IF (FREENATURECOMMON=1) THEN { SETSPELLDATA(I,SResistElements,1); }
+    IF (FREENATURECOMMON=2) THEN { SETSPELLDATA(I,SNaturesEye,1); }
+    IF (FREENATURECOMMON=3) THEN { SETSPELLDATA(I,SWildBoars,1); }
+    IF (FREENATURECOMMON=4) THEN { SETSPELLDATA(I,SWeb,1); }
+    IF (FREENATURECOMMON=5) THEN { SETSPELLDATA(I,SWarBears,1); }
+    IF (FREENATURECOMMON=6) THEN { SETSPELLDATA(I,SWaterWalking,1); }
+    IF (FREENATURECOMMON=7) THEN { SETSPELLDATA(I,SKillerWasps,1); }
+    IF (FREENATURECOMMON=8) THEN { SETSPELLDATA(I,SEarthLore,1); }
+    IF (FREENATURECOMMON=9) THEN { SETSPELLDATA(I,SNaturalSelection,1); }
+
+  !HAVENATUREBOOK!
+
+  IF (BOOKS(I,Sorcery)>0) THEN { GOTO "HAVESORCERYBOOK"; }
+
+   FREESORCERYCOMMON=RND(10);
+
+    IF (FREESORCERYCOMMON=0) THEN { SETSPELLDATA(I,SResistMagic,1); }
+    IF (FREESORCERYCOMMON=1) THEN { SETSPELLDATA(I,SAEtherSparks,1); }
+    IF (FREESORCERYCOMMON=2) THEN { SETSPELLDATA(I,SFloatingIsland,1); }
+    IF (FREESORCERYCOMMON=3) THEN { SETSPELLDATA(I,SGuardianWind,1); }
+    IF (FREESORCERYCOMMON=4) THEN { SETSPELLDATA(I,SPhantomWarriors,1); }
+    IF (FREESORCERYCOMMON=5) THEN { SETSPELLDATA(I,SBlur,1); }
+    IF (FREESORCERYCOMMON=6) THEN { SETSPELLDATA(I,SNagas,1); }
+    IF (FREESORCERYCOMMON=7) THEN { SETSPELLDATA(I,SPsionicBlast,1); }
+    IF (FREESORCERYCOMMON=8) THEN { SETSPELLDATA(I,SVertigo,1); }
+    IF (FREESORCERYCOMMON=9) THEN { SETSPELLDATA(I,SAuraofMajesty,1); }
+
+  !HAVESORCERYBOOK!
+
+  IF (BOOKS(I,Chaos)>0) THEN { GOTO "HAVECHAOSBOOK"; }
+
+   FREECHAOSCOMMON=RND(10);
+
+    IF (FREECHAOSCOMMON=0) THEN { SETSPELLDATA(I,SAnimateAmmo,1); }
+    IF (FREECHAOSCOMMON=1) THEN { SETSPELLDATA(I,SFireBolt,1); }
+    IF (FREECHAOSCOMMON=2) THEN { SETSPELLDATA(I,SHellHounds,1); }
+    IF (FREECHAOSCOMMON=3) THEN { SETSPELLDATA(I,SCorruption,1); }
+    IF (FREECHAOSCOMMON=4) THEN { SETSPELLDATA(I,SFieryFury,1); }
+    IF (FREECHAOSCOMMON=5) THEN { SETSPELLDATA(I,SWallofFire,1); }
+    IF (FREECHAOSCOMMON=6) THEN { SETSPELLDATA(I,SRust,1); }
+    IF (FREECHAOSCOMMON=7) THEN { SETSPELLDATA(I,SWarpCreature,1); }
+    IF (FREECHAOSCOMMON=8) THEN { SETSPELLDATA(I,SBreakthrough,1); }
+    IF (FREECHAOSCOMMON=9) THEN { SETSPELLDATA(I,SBlazeOfGlory,1); }
+
+  !HAVECHAOSBOOK!
+
+  IF (BOOKS(I,Life)>0) THEN { GOTO "HAVELIFEBOOK"; }
+
+   FREELIFECOMMON=RND(10);
+
+    IF (FREELIFECOMMON=0) THEN { SETSPELLDATA(I,SBless,1); }
+    IF (FREELIFECOMMON=1) THEN { SETSPELLDATA(I,SStarFires,1); }
+    IF (FREELIFECOMMON=2) THEN { SETSPELLDATA(I,SHolyWeapon,1); }
+    IF (FREELIFECOMMON=3) THEN { SETSPELLDATA(I,SHealing,1); }
+    IF (FREELIFECOMMON=4) THEN { SETSPELLDATA(I,SHolyArmor,1); }
+    IF (FREELIFECOMMON=5) THEN { SETSPELLDATA(I,SHeavenlyLight,1); }
+    IF (FREELIFECOMMON=6) THEN { SETSPELLDATA(I,SGuardianSpirit,1); }
+    IF (FREELIFECOMMON=7) THEN { SETSPELLDATA(I,SHeroism,1); }
+    IF (FREELIFECOMMON=8) THEN { SETSPELLDATA(I,SSpiritOfCommunity,1); }
+    IF (FREELIFECOMMON=9) THEN { SETSPELLDATA(I,STrueLight,1); }
+
+  !HAVELIFEBOOK!
+
+  IF (BOOKS(I,Death)>0) THEN { GOTO "HAVEDEATHBOOK"; }
+
+   FREEDEATHCOMMON=RND(10);
+
+    IF (FREEDEATHCOMMON=0) THEN { SETSPELLDATA(I,SSkeletons,1); }
+    IF (FREEDEATHCOMMON=1) THEN { SETSPELLDATA(I,SWeakness,1); }
+    IF (FREEDEATHCOMMON=2) THEN { SETSPELLDATA(I,SZombies,1); }
+    IF (FREEDEATHCOMMON=3) THEN { SETSPELLDATA(I,SCloakofFear,1); }
+    IF (FREEDEATHCOMMON=4) THEN { SETSPELLDATA(I,SBlackSleep,1); }
+    IF (FREEDEATHCOMMON=5) THEN { SETSPELLDATA(I,SGhouls,1); }
+    IF (FREEDEATHCOMMON=6) THEN { SETSPELLDATA(I,SLifeDrain,1); }
+    IF (FREEDEATHCOMMON=7) THEN { SETSPELLDATA(I,SWraithForm,1); }
+    IF (FREEDEATHCOMMON=8) THEN { SETSPELLDATA(I,SDarkness,1); }
+    IF (FREEDEATHCOMMON=9) THEN { SETSPELLDATA(I,SMislead,1); }
+
+  !HAVEDEATHBOOK!
+
+ NEXT I;
+
+!NOZEROBOOKRULE!
+
+: Return of the Ancient Master :
+: due to game would crash if research book display more than 35 pages, so I have to make it just spells you random at start :
+ IF (SCORINGOPTION(SReturnOfTheMaster)=0) THEN { GOTO "NORETURNEDMASTER"; }
+
+  FOR S=1 TO 368;
+
+   IF (SPELLSTATE(0,S)>0)
+    %AND (S<>SSpellofMastery)
+   THEN {
+    SETSPELLDATA(0,S,2);
+   }
+
+  NEXT S;
+
+ !NORETURNEDMASTER!
+
+: Muggle Wizards :
+ IF (SCORINGOPTION(SWizardOfOz)=0) THEN { GOTO "NOWIZARDOFOZ"; }
+
+  IF (SCORINGOPTION(SReturnOfTheMaster)=0) THEN {
+   SETWIZARDDATA(0,WDMuggleWizard,1);
+   SETBOOK(0,1,0);
+   SETBOOK(0,2,0);
+   SETBOOK(0,3,0);
+   SETBOOK(0,4,0);
+   SETBOOK(0,5,0);
+  }
+
+  IF (SCORINGOPTION(SReturnOfTheMaster)>0) THEN {
+   FOR S=1 TO 316;
+
+    IF (SPELLSTATE(0,S)=1) THEN { SETSPELLDATA(0,S,0); }
+
+   NEXT S;
+  } ELSE {
+   FOR S=1 TO 316;
+
+    IF (SPELLSTATE(0,S)>0) THEN { SETSPELLDATA(0,S,0); }
+
+   NEXT S;
+  }
+
+   SETSPELLDATA(0,STreeOfKnowledge,2);
+   SETSPELLDATA(0,STCropRotation,1);
+   SETSPELLDATA(0,STConcrete,1);
+   SETSPELLDATA(0,STStandardization,1);
+   SETSPELLDATA(0,STPrintingPress,1);
+   SETSPELLDATA(0,STSanitationReform,1);
+   SETSPELLDATA(0,STConscription,1);
+
+   : give back retort pre-researched spells :
+   IF RETORT(0,Benefactor) THEN { SETSPELLDATA(0,SHeroicHeart,2); }
+   IF RETORT(0,Artificer) THEN {
+    SETSPELLDATA(0,SEnchantItem,2);
+    SETSPELLDATA(0,SCreateArtifact,1);
+   }
+   IF RETORT(0,Runemaster) THEN { SETSPELLDATA(0,SDispelMagic,2); }
+   IF RETORT(0,Conjurer) THEN { SETSPELLDATA(0,SSummoningCircle,2); }
+
+ !NOWIZARDOFOZ!
+
+ IF (SCORINGOPTION(SAmongUs)=0) THEN { GOTO "NOAMONGUS"; }
+
+  OUTLANDER=0;
+
+  FOR I=1 TO NOFWIZARDS();
+
+   IF (I=NOFWIZARDS()) %AND (OUTLANDER=0) THEN {
+    SETRETORT(I,Alchemist,0);
+    SETRETORT(I,Specialist,0);
+    SETRETORT(I,Archmage,0);
+    SETRETORT(I,Runemaster,0);
+    SETRETORT(I,Astrologer,0);
+    SETRETORT(I,Enchanter,0);
+
+    RSLOT=5;
+
+    FOR R=1 TO 18;
+
+     IF (RETORT(I,R)>0) THEN { RSLOT=RSLOT-1; }
+
+    NEXT R;
+
+    IF (RSLOT>0)
+     %AND (RETORT(I,Warlord)=0)
+    THEN {
+     SETRETORT(I,Warlord,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (RETORT(I,Tactician)=0)
+    THEN {
+     SETRETORT(I,Tactician,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (RETORT(I,Guardian)=0)
+    THEN {
+     SETRETORT(I,Guardian,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (RETORT(I,CultLeader)=0)
+    THEN {
+     SETRETORT(I,CultLeader,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (RETORT(I,Benefactor)=0)
+    THEN {
+     SETRETORT(I,Benefactor,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (RETORT(I,Charismatic)=0)
+    THEN {
+     SETRETORT(I,Charismatic,1);
+     RSLOT=RSLOT-1;
+    }
+
+    GOTO "AIISMUGGLE";
+   }
+
+   IF (RETORT(I,Alchemist)>0) THEN { GOTO "AIISNOTMUGGLE"; }
+   IF (RETORT(I,Specialist)>0) THEN { GOTO "AIISNOTMUGGLE"; }
+   IF (RETORT(I,Archmage)>0) THEN { GOTO "AIISNOTMUGGLE"; }
+   IF (RETORT(I,Runemaster)>0) THEN { GOTO "AIISNOTMUGGLE"; }
+   IF (RETORT(I,Astrologer)>0) THEN { GOTO "AIISNOTMUGGLE"; }
+   IF (RETORT(I,Enchanter)>0) THEN { GOTO "AIISNOTMUGGLE"; }
+
+    OUTLANDERODD=0;
+    IF (RETORT(I,SageMaster)>0) THEN {  OUTLANDERODD=OUTLANDERODD+1; }
+    IF (RETORT(I,Warlord)>0) THEN {  OUTLANDERODD=OUTLANDERODD+2; }
+    IF (RETORT(I,Tactician)>0) THEN {  OUTLANDERODD=OUTLANDERODD+2; }
+    IF (RETORT(I,Channeler)>0) THEN {  OUTLANDERODD=OUTLANDERODD+1; }
+    IF (RETORT(I,Guardian)>0) THEN {  OUTLANDERODD=OUTLANDERODD+2; }
+    IF (RETORT(I,Procurator)>0) THEN {  OUTLANDERODD=OUTLANDERODD+1; }
+    IF (RETORT(I,Benefactor)>0) THEN {  OUTLANDERODD=OUTLANDERODD+1; }
+    IF (RETORT(I,CultLeader)>0) THEN {  OUTLANDERODD=OUTLANDERODD+1; }
+    IF (RETORT(I,Artificer)>0) THEN {  OUTLANDERODD=OUTLANDERODD+3; }
+    IF (RETORT(I,Conjurer)>0) THEN {  OUTLANDERODD=OUTLANDERODD+1; }
+    IF (RETORT(I,Charismatic)>0) THEN {  OUTLANDERODD=OUTLANDERODD+1; }
+
+    IF (OUTLANDERODD<4) THEN { GOTO "AIISNOTMUGGLE"; }
+    IF (OUTLANDERODD<RND(10)) THEN { GOTO "AIISNOTMUGGLE"; }
+
+    !AIISMUGGLE!
+
+     SETWIZARDDATA(I,WDMuggleWizard,1);
+     SETBOOK(I,1,0);
+     SETBOOK(I,2,0);
+     SETBOOK(I,3,0);
+     SETBOOK(I,4,0);
+     SETBOOK(I,5,0);
+
+     IF (OBJECTIVE(I)=Narcissist) THEN {
+      NEWOBJECTIVE=RND(5)+1;
+      SETOBJECTIVE(I,NEWOBJECTIVE);
+     }
+
+     FOR S=1 TO 316;
+
+      IF (SPELLSTATE(I,S)>0) THEN { SETSPELLDATA(I,S,0); }
+
+     NEXT S;
+
+     SETSPELLDATA(I,STreeOfKnowledge,2);
+     SETSPELLDATA(I,STCropRotation,1);
+     SETSPELLDATA(I,STConcrete,1);
+     SETSPELLDATA(I,STStandardization,1);
+     SETSPELLDATA(I,STPrintingPress,1);
+     SETSPELLDATA(I,STSanitationReform,1);
+     SETSPELLDATA(I,STConscription,1);
+
+     : give back retort pre-researched spells :
+     IF RETORT(I,Benefactor) THEN { SETSPELLDATA(I,SHeroicHeart,2); }
+     IF RETORT(I,Artificer) THEN {
+      SETSPELLDATA(I,SEnchantItem,2);
+      SETSPELLDATA(I,SCreateArtifact,1);
+     }
+     IF RETORT(I,Runemaster) THEN { SETSPELLDATA(I,SDispelMagic,2); }
+     IF RETORT(I,Conjurer) THEN { SETSPELLDATA(I,SSummoningCircle,2); }
+
+     OUTLANDER=OUTLANDER+1;
+
+   !AIISNOTMUGGLE!
+
+  NEXT I;
+
+ !NOAMONGUS!
+
+ IF (SCORINGOPTION(STheLordOfTheMagics)=0) THEN { GOTO "NOLORDOFTHEMAGICS"; }
+
+  LOOP{
+
+   LOTM=0;
+   I=RND( NOFWIZARDS() )+1;
+   IF (GETWIZARDDATA(I,WDMuggleWizard)=0)
+    %OR ( (NOFWIZARDS()=1) %AND (I=NOFWIZARDS()) )
+   THEN {
+
+    SETWIZARDDATA(I,WDMasterWizard,1);
+    SETRETORT(I,Specialist,0);
+    SETBOOK(I,1,4);
+    SETBOOK(I,2,4);
+    SETBOOK(I,3,4);
+    SETBOOK(I,4,4);
+    SETBOOK(I,5,4);
+
+    IF (PERSONALITY(I)=Aggressive)
+     %OR (PERSONALITY(I)=Lawful)
+     %OR (PERSONALITY(I)=Peaceful)
+    THEN {
+     NEWPERSONALITY=RND(3);
+     IF (NEWPERSONALITY=0) THEN { SETPERSONALITY(I,Maniacal); }
+     IF (NEWPERSONALITY=1) THEN { SETPERSONALITY(I,Ruthless); }
+     IF (NEWPERSONALITY=2) THEN { SETPERSONALITY(I,Chaotic); }
+    }
+
+    RSLOT=5;
+
+    FOR R=1 TO 18;
+
+     IF (RETORT(I,R)>0) THEN { RSLOT=RSLOT-1; }
+
+    NEXT R;
+
+    IF (RSLOT>0)
+     %AND (PERSONALITY(I)=Chaotic)
+     %AND (RETORT(I,Astrologer)=0)
+    THEN {
+     SETRETORT(I,Astrologer,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (PERSONALITY(I)=Ruthless)
+     %AND (RETORT(I,Enchanter)=0)
+    THEN {
+     SETRETORT(I,Enchanter,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (PERSONALITY(I)=Maniacal)
+     %AND (RETORT(I,Runemaster)=0)
+    THEN {
+     SETRETORT(I,Runemaster,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (OBJECTIVE(I)=Pragmatist)
+     %AND (RETORT(I,Artificer)=0)
+    THEN {
+     SETRETORT(I,Artificer,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (OBJECTIVE(I)=Theurgist)
+     %AND (RETORT(I,SageMaster)=0)
+    THEN {
+     SETRETORT(I,SageMaster,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (OBJECTIVE(I)=Militarist)
+     %AND (RETORT(I,Guardian)=0)
+    THEN {
+     SETRETORT(I,Guardian,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (OBJECTIVE(I)=Expansionist)
+     %AND (RETORT(I,Conjurer)=0)
+    THEN {
+     SETRETORT(I,Conjurer,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (OBJECTIVE(I)=Perfectionist)
+     %AND (RETORT(I,Procurator)=0)
+    THEN {
+     SETRETORT(I,Procurator,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (OBJECTIVE(I)=Narcissist)
+     %AND (RETORT(I,CultLeader)=0)
+    THEN {
+     SETRETORT(I,CultLeader,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (RETORT(I,Archmage)=0)
+    THEN {
+     SETRETORT(I,Archmage,1);
+     RSLOT=RSLOT-1;
+    }
+    IF (RSLOT>0)
+     %AND (RETORT(I,Alchemist)=0)
+    THEN {
+     SETRETORT(I,Alchemist,1);
+     RSLOT=RSLOT-1;
+    }
+
+    SETSPELLDATA(I,SEarthtoMud,2);
+    SETSPELLDATA(I,SResistElements,2);
+    SETSPELLDATA(I,SNaturesEye,2);
+    SETSPELLDATA(I,SWildBoars,2);
+    SETSPELLDATA(I,SWeb,2);
+    SETSPELLDATA(I,SWarBears,2);
+
+    FOR S=8 TO 74;
+
+     SETSPELLDATA(I,S,2);
+
+    NEXT S;
+
+    SETSPELLDATA(I,SSpellBinding,2);
+    SETSPELLDATA(I,SHaste,2);
+    SETSPELLDATA(I,SSkyDrake,2);
+    SETSPELLDATA(I,STimeStop,2);
+    SETSPELLDATA(I,SAnimateAmmo,2);
+
+    FOR S=83 TO 178;
+
+     SETSPELLDATA(I,S,2);
+
+    NEXT S;
+
+    FOR S=180 TO 198;
+
+     SETSPELLDATA(I,S,2);
+
+    NEXT S;
+
+    FOR S=200 TO 212;
+
+     SETSPELLDATA(I,S,2);
+
+    NEXT S;
+
+    SETSPELLDATA(I,SSpellofReturn,2);
+    SETSPELLDATA(I,STreeOfKnowledge,2);
+    SETSPELLDATA(I,SAbundance,2);
+    SETSPELLDATA(I,SPhilStone,2);
+    SETSPELLDATA(I,SDarkestHour,2);
+    SETSPELLDATA(I,SFateMastery,2);
+    SETSPELLDATA(I,SClairvoyance,2);
+
+    FOR S=222 TO 270;
+
+     SETSPELLDATA(I,S,2);
+
+    NEXT S;
+
+    SETSPELLDATA(I,SShatter,2);
+    SETSPELLDATA(I,STemporalTwist,2);
+    SETSPELLDATA(I,SWarpLightning,2);
+    SETSPELLDATA(I,SPowerLink,2);
+    SETSPELLDATA(I,SPillarOfFaith,2);
+    SETSPELLDATA(I,SDivineProtection,2);
+    SETSPELLDATA(I,SEyeOfHeaven,2);
+    SETSPELLDATA(I,SFreezingRain,2);
+    SETSPELLDATA(I,SCorrosiveBlast,2);
+    SETSPELLDATA(I,SFireDrake,2);
+    SETSPELLDATA(I,SCloudElephant,2);
+    SETSPELLDATA(I,SSimurgh,2);
+    SETSPELLDATA(I,SSeaSerpent,2);
+    SETSPELLDATA(I,SIceComet,2);
+    SETSPELLDATA(I,SIncinerate,2);
+    SETSPELLDATA(I,SArchLiches,2);
+    SETSPELLDATA(I,SNecropolis,2);
+
+    FOR S=301 TO 316;
+
+     SETSPELLDATA(I,S,2);
+
+    NEXT S;
+
+    SETSPELLDATA(I,SSpellofMastery,1);
+
+    LOTM=1;
+
+   }
+
+  }ENDLP (LOTM=1);
+
+ !NOLORDOFTHEMAGICS!
+
+: Implement retort-specific spells :
+ IF (SCORINGOPTION(SMoreThanRetort)=0) THEN { GOTO "NOMORETHANRETORT"; }
+
+  FOR I=0 TO NOFWIZARDS();
+
+   IF RETORT(I,Alchemist) THEN {
+    SETSPELLDATA(I,SSorcererStone,1);
+   }
+   IF RETORT(I,SageMaster) THEN {
+    SETSPELLDATA(I,SEducationReform,1);
+    SETSPELLDATA(I,SArcaneConference,1);
+   }
+   IF RETORT(I,Specialist) THEN {
+    IF (PRIMARYREALM(I)=Nature) THEN { SETSPELLDATA(I,SGaiaMastery,1); }
+    IF (PRIMARYREALM(I)=Sorcery) THEN { SETSPELLDATA(I,SAEtherMastery,1); }
+    IF (PRIMARYREALM(I)=Chaos) THEN { SETSPELLDATA(I,SChaosMastery,1); }
+    IF (PRIMARYREALM(I)=Life) THEN { SETSPELLDATA(I,SLifeMastery,1); }
+    IF (PRIMARYREALM(I)=Death) THEN { SETSPELLDATA(I,SDeathMastery,1); }
+   }
+   IF RETORT(I,Warlord) THEN {
+    SETSPELLDATA(I,SWallOfStone,1);
+    SETSPELLDATA(I,SMarkOfConqueror,1);
+   }
+   IF RETORT(I,Myrran) THEN {
+    SETSPELLDATA(I,SAstralGate,1);
+   }
+   IF RETORT(I,Tactician) THEN {
+    SETSPELLDATA(I,STacticalDrill,1);
+    SETSPELLDATA(I,STacticalRecall,1);
+    SETSPELLDATA(I,SStrategicRecall,1);
+   }
+   IF RETORT(I,Channeler) THEN {
+    SETSPELLDATA(I,SMarionetteSummon,1);
+    SETSPELLDATA(I,SMarionetteAscension,1);
+   }
+   IF RETORT(I,Guardian) THEN {
+    SETSPELLDATA(I,SLordLiberator,1);
+    SETSPELLDATA(I,SLordProtector,1);
+   }
+   IF RETORT(I,Procurator) THEN {
+    SETSPELLDATA(I,SEarthGate,1);
+   }
+   IF RETORT(I,Archmage) THEN {
+    SETSPELLDATA(I,SArchmagesTutition,1);
+    SETSPELLDATA(I,SArchmagesMentorship,1);
+   }
+   IF RETORT(I,Benefactor) THEN {
+    SETSPELLDATA(I,SBountifulFestivity,1);
+   }
+   IF RETORT(I,CultLeader) THEN {
+    SETSPELLDATA(I,SGospelOfEvangelism,1);
+    SETSPELLDATA(I,SDivineJudgement,1);
+   }
+   IF RETORT(I,Artificer) THEN {
+    SETSPELLDATA(I,SClockworkTinmen,1);
+    SETSPELLDATA(I,SRebuild,1);
+    SETSPELLDATA(I,SClockworkFactory,1);
+   }
+   IF RETORT(I,Runemaster) THEN {
+    SETSPELLDATA(I,STabulaRasa,1);
+    SETSPELLDATA(I,SRuneFormationArray,1);
+   }
+   IF RETORT(I,Astrologer) THEN {
+    SETSPELLDATA(I,SLuckyStar,1);
+    SETSPELLDATA(I,SDisheartenProphesy,1);
+   }
+   IF RETORT(I,Conjurer) THEN {
+    SETSPELLDATA(I,SConjuringPact,1);
+    SETSPELLDATA(I,SSpiritLink,1);
+   }
+   IF RETORT(I,Charismatic) THEN {
+    SETSPELLDATA(I,SRally,1);
+    SETSPELLDATA(I,SDenoucement,1);
+    SETSPELLDATA(I,SPersuasiveWhisperer,1);
+   }
+   IF RETORT(I,Enchanter) THEN {
+    SETSPELLDATA(I,STattooMagic,1);
+    SETSPELLDATA(I,SDomainOfEnchanter,1);
+   }
+
+  NEXT I;
+
+ !NOMORETHANRETORT!
+
+: Remove land destruction and curse if pick Everything Nice :
+ IF (SCORINGOPTION(SEverythingNice)=0) THEN { GOTO "NOEVERYTHINGNICE"; }
+
+  FOR I=0 TO NOFWIZARDS();
+
+   SETSPELLDATA(I,SBlizzard,0);
+   SETSPELLDATA(I,SEarthquake,0);
+   SETSPELLDATA(I,SSeismicMastery,0);
+   SETSPELLDATA(I,SIceAge,0);
+
+   SETSPELLDATA(I,SCorruption,0);
+   SETSPELLDATA(I,SRaiseVolcano,0);
+   SETSPELLDATA(I,SFireStorm,0);
+   SETSPELLDATA(I,SChaosRift,0);
+   SETSPELLDATA(I,SMeteorStorm,0);
+   SETSPELLDATA(I,SDoomsday,0);
+   SETSPELLDATA(I,SCalltheVoid,0);
+   SETSPELLDATA(I,SArmageddon,0);
+
+   SETSPELLDATA(I,SWarpNode,0);
+   SETSPELLDATA(I,SEvilPresence,0);
+   SETSPELLDATA(I,SDrought,0);
+   SETSPELLDATA(I,SPestilence,0);
+
+   SETSPELLDATA(I,SDisillusionise,0);
+   SETSPELLDATA(I,SAetherSink,0);
+
+   SETSPELLDATA(I,SInquisition,0);
+
+  NEXT I;
+
+ !NOEVERYTHINGNICE!
+
+
+: Removed Spell of Mastery if pick No Secret In Mastery :
+ IF (SCORINGOPTION(SNoSecretInMastery)=0) THEN { GOTO "NOSECRETINMASTERY"; }
+
+  FOR I=0 TO NOFWIZARDS();
+
+   SETSPELLDATA(I,SSpellofMastery,0);
+
+  NEXT I;
+
+ !NOSECRETINMASTERY!
+
+: change fortress terrain :
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  C=CITYONTILE(P,X,Y);
+
+  IF (C=0) THEN { GOTO "NOTFORTRESS"; }
+
+   IF ((ISFORTRESS(C))=0) THEN { GOTO "NOTFORTRESS"; }
+
+    IF (CITYOWNER(C)>0) THEN {
+     IF ((GETTERRAIN(X,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y,P))<>LTRiver)
+     THEN {
+      IF SCORINGOPTION(SDemonKingsCastle) THEN { SETTERRAIN(X,Y,P,LTVolcano); }
+     }
+     GOTO "NOTFORTRESS";
+    }
+
+    IF ((GETTERRAIN(X,Y,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X,Y,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X,Y,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X,Y,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X,Y,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X,Y,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X,Y,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X,Y,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X,Y,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X,Y,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X-1,Y-1,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X-1,Y-1,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X-1,Y-1,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X-1,Y-1,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X-1,Y-1,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X-1,Y-1,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X-1,Y-1,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X-1,Y-1,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X-1,Y-1,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X-1,Y-1,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X-1,Y,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X-1,Y,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X-1,Y,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X-1,Y,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X-1,Y,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X-1,Y,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X-1,Y,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X-1,Y,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X-1,Y,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X-1,Y,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X-1,Y+1,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X-1,Y+1,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X-1,Y+1,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X-1,Y+1,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X-1,Y+1,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X-1,Y+1,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X-1,Y+1,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X-1,Y+1,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X-1,Y+1,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X-1,Y+1,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X,Y-1,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X,Y-1,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X,Y-1,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X,Y-1,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X,Y-1,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X,Y-1,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X,Y-1,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X,Y-1,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X,Y-1,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X,Y-1,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X,Y+1,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X,Y+1,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X,Y+1,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X,Y+1,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X,Y+1,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X,Y+1,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X,Y+1,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X,Y+1,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X,Y+1,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X,Y+1,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X+1,Y-1,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X+1,Y-1,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X+1,Y-1,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X+1,Y-1,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X+1,Y-1,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X+1,Y-1,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X+1,Y-1,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X+1,Y-1,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X+1,Y-1,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X+1,Y-1,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X+1,Y,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X+1,Y,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X+1,Y,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X+1,Y,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X+1,Y,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X+1,Y,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X+1,Y,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X+1,Y,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X+1,Y,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X+1,Y,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+    IF ((GETTERRAIN(X+1,Y+1,P))>LTRiverMouth)
+     %AND ((GETTERRAIN(X+1,Y+1,P))<LTChaosNode)
+     %AND ((GETTERRAIN(X+1,Y+1,P))<>LTRiver)
+    THEN {
+     IF SCORINGOPTION(SCityOnTheHill) THEN { SETTERRAIN(X+1,Y+1,P,LTHill); }
+     IF SCORINGOPTION(SMountainKing) THEN { SETTERRAIN(X+1,Y+1,P,LTMountain); }
+     IF SCORINGOPTION(SMountDoom) THEN { SETTERRAIN(X+1,Y+1,P,LTVolcano); }
+     IF SCORINGOPTION(SSandPit) THEN { SETTERRAIN(X+1,Y+1,P,LTDesert); }
+     IF SCORINGOPTION(SEverglade) THEN { SETTERRAIN(X+1,Y+1,P,LTSwamp); }
+     IF SCORINGOPTION(SDisneyOnIce) THEN { SETTERRAIN(X+1,Y+1,P,LTTundra); }
+     IF SCORINGOPTION(SMagicGarden) THEN { SETTERRAIN(X+1,Y+1,P,LTForest); }
+     GOTO "NOTFORTRESS";
+    }
+
+  !NOTFORTRESS!
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+: placing wildgame on tundra :
+ WALRUS=5;
+
+  IF ((CLIMATE())=CliVolcanic)
+   %OR ((CLIMATE())=CliVolcanic)
+  THEN {
+   WALRUS=(WALRUS*3);
+  }
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=7 TO (PLANESIZEY(P)-7);
+
+  IF ( (GETTERRAIN(X,Y,P)) <> LTTundra ) THEN { GOTO "NOTTUNDRA"; }
+
+   IF ( RND(100) > (100-WALRUS) ) THEN { SETTERRAIN(X,Y,P+2,OreWildgame); }
+
+  !NOTTUNDRA!
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+: placing corruption for Post-Catalysm score choice :
+IF (SCORINGOPTION(SPostCatalysm)=0) THEN { GOTO "NOCATALYSM"; }
+
+ CLVL=6*DIFFICULTY();
+
+ FOR P=1 TO 2;
+ FOR X=0 TO PLANESIZEX(P);
+ FOR Y=0 TO PLANESIZEY(P);
+
+  IF ( (GETTERRAIN(X,Y,P)) < LTGrassland ) THEN { GOTO "NOCORRUPTION"; }
+
+   IF ( RND(100) < CLVL ) THEN { SETTERRAIN(X,Y,P+4,1); }
+
+  !NOCORRUPTION!
+
+ NEXT Y;
+ NEXT X;
+ NEXT P;
+
+!NOCATALYSM!
+
+: Score Modifier Orihalcon Fortress :
+IF (SCORINGOPTION(SOrihalconFortress)=0) THEN { GOTO "NOTORIHALCON"; }
+ I=0;
+ FOR U=1 TO MAXUNIT();
+
+: Detect owner :
+  W=(GetStat(U,SOwner,0));
+: Detect cityID :
+  C=(CITYONTILE(U));
+: Coordination :
+  X=GetStat(U,SOLX,1);
+  Y=GetStat(U,SOLY,1);
+  P=GetStat(U,SPlane,1);
+
+  IF (W>0) THEN { GOTO "NOTHUMANORIHALCON"; }
+
+   SETENCHANTMENTFLAG(U,EncMagic,ABase,1);
+   SETENCHANTMENTFLAG(U,EncOrihalcon,ABase,1);
+
+   IF (I>0) THEN { GOTO "NOTHUMANORIHALCON"; }
+
+    IF (C>0)
+     %AND (CITYOWNER(C)=0)
+     %AND ((ISFORTRESS(C))>0)
+    THEN {
+     IF ((GETTERRAIN(X,Y,P+2))=0) THEN {
+      SETTERRAIN(X,Y,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X-1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y-1,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X-1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X-1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y+1,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y-1,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y+1,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X+1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y-1,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X+1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+     IF ((GETTERRAIN(X+1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y+1,P+2,OreOrihalcon);
+      I=1;
+      GOTO "NOTHUMANORIHALCON";
+     }
+    }
+
+  !NOTHUMANORIHALCON!
+
+  NEXT U;
+
+!NOTORIHALCON!
+
+: Score Modifier Adamantium Fortress :
+IF (SCORINGOPTION(SAdamantiumFortress)=0) THEN { GOTO "NOTADAMANTIUM"; }
+ I=0;
+ FOR U=1 TO MAXUNIT();
+
+: Detect owner :
+  W=(GetStat(U,SOwner,0));
+: Detect cityID :
+  C=(CITYONTILE(U));
+: Coordination :
+  X=GetStat(U,SOLX,1);
+  Y=GetStat(U,SOLY,1);
+  P=GetStat(U,SPlane,1);
+
+  IF (W>0) THEN { GOTO "NOTHUMANADAMANTIUM"; }
+
+   SETENCHANTMENTFLAG(U,EncMagic,ABase,1);
+   SETENCHANTMENTFLAG(U,EncAdamant,ABase,1);
+
+   IF (I>0) THEN { GOTO "NOTHUMANADAMANTIUM"; }
+
+    IF (C>0)
+     %AND (CITYOWNER(C)=0)
+     %AND ((ISFORTRESS(C))>0)
+    THEN {
+     IF ((GETTERRAIN(X,Y,P+2))=0) THEN {
+      SETTERRAIN(X,Y,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X-1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y-1,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X-1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X-1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y+1,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y-1,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y+1,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X+1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y-1,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X+1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X+1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y+1,P+2,OreAdamantium);
+      I=1;
+      GOTO "NOTHUMANADAMANTIUM";
+     }
+    }
+
+  !NOTHUMANADAMANTIUM!
+
+  NEXT U;
+
+!NOTADAMANTIUM!
+
+: Score Modifier You Too, Orihalcon :
+IF (SCORINGOPTION(SYouTooOrihalcon)=0) THEN { GOTO "NOTYOUTOOORIHALCON"; }
+ FOR U=1 TO MAXUNIT();
+
+: Detect owner :
+  W=(GetStat(U,SOwner,0));
+: Detect cityID :
+  C=(CITYONTILE(U));
+: Coordination :
+  X=GetStat(U,SOLX,1);
+  Y=GetStat(U,SOLY,1);
+  P=GetStat(U,SPlane,1);
+
+  IF (W=0) %OR (W>NOFWIZARDS()) THEN { GOTO "NOTAIORIHALCON"; }
+
+   SETENCHANTMENTFLAG(U,EncMagic,ABase,1);
+   SETENCHANTMENTFLAG(U,EncOrihalcon,ABase,1);
+   IF (C>0)
+    %AND (CITYOWNER(C)>0)
+    %AND (CITYOWNER(C)<=NOFWIZARDS())
+    %AND ((ISFORTRESS(C))>0)
+   THEN {
+    SETBUILDINGSTATE(C,BAlchemistguild,1);
+
+    IF ((GETTERRAIN(X-1,Y-1,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X-1,Y,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X-1,Y+1,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X,Y-1,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X,Y,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X,Y+1,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X+1,Y-1,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X+1,Y,P+2))=OreOrihalcon)
+     %OR ((GETTERRAIN(X+1,Y+1,P+2))=OreOrihalcon)
+    THEN {
+     GOTO "NOTAIORIHALCON";
+    }
+
+     IF ((GETTERRAIN(X,Y,P+2))=0) THEN {
+      SETTERRAIN(X,Y,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X-1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y-1,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X-1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X-1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y+1,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y-1,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y+1,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X+1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y-1,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X+1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+     IF ((GETTERRAIN(X+1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y+1,P+2,OreOrihalcon);
+      GOTO "NOTAIORIHALCON";
+     }
+
+   }
+
+  !NOTAIORIHALCON!
+
+  NEXT U;
+
+!NOTYOUTOOORIHALCON!
+
+: Score Modifier You Too, Adamantium :
+IF (SCORINGOPTION(SYouTooAdamantium)=0) THEN { GOTO "NOTYOUTOOADAMANTIUM"; }
+ FOR U=1 TO MAXUNIT();
+
+: Detect owner :
+  W=(GetStat(U,SOwner,0));
+: Detect cityID :
+  C=(CITYONTILE(U));
+: Coordination :
+  X=GetStat(U,SOLX,1);
+  Y=GetStat(U,SOLY,1);
+  P=GetStat(U,SPlane,1);
+
+  IF (W=0) %OR (W>NOFWIZARDS()) THEN { GOTO "NOTAIADAMANTIUM"; }
+
+   SETENCHANTMENTFLAG(U,EncMagic,ABase,1);
+   SETENCHANTMENTFLAG(U,EncAdamant,ABase,1);
+   IF (C>0)
+    %AND (CITYOWNER(C)>0)
+    %AND (CITYOWNER(C)<=NOFWIZARDS())
+    %AND ((ISFORTRESS(C))>0)
+   THEN {
+    SETBUILDINGSTATE(C,BAlchemistguild,1);
+
+    IF ((GETTERRAIN(X-1,Y-1,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X-1,Y,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X-1,Y+1,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X,Y-1,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X,Y,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X,Y+1,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X+1,Y-1,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X+1,Y,P+2))=OreAdamantium)
+     %OR ((GETTERRAIN(X+1,Y+1,P+2))=OreAdamantium)
+    THEN {
+     GOTO "NOTAIADAMANTIUM";
+    }
+
+     IF ((GETTERRAIN(X,Y,P+2))=0) THEN {
+      SETTERRAIN(X,Y,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X-1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y-1,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X-1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X-1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X-1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X-1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X-1,Y+1,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y-1,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X,Y+1,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X+1,Y-1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y-1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y-1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y-1,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X+1,Y,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+     IF ((GETTERRAIN(X+1,Y+1,P))>LTRiverMouth)
+      %AND ((GETTERRAIN(X+1,Y+1,P))<LTChaosNode)
+      %AND ((GETTERRAIN(X+1,Y+1,P+2))=0)
+     THEN {
+      SETTERRAIN(X+1,Y+1,P+2,OreAdamantium);
+      GOTO "NOTAIADAMANTIUM";
+     }
+
+   }
+
+  !NOTAIADAMANTIUM!
+
+  NEXT U;
+
+!NOTYOUTOOADAMANTIUM!
+
+FOR C=1 TO MAXCITY();
+
+ IF (ISFORTRESS(C)=0) THEN { GOTO "NOTCITYFORTRESS"; }
+
+  IF (CITYOWNER(C)=0) THEN {
+   IF SCORINGOPTION(SNeoVenezia) THEN { SETBUILDINGSTATE(C,BBaray,1); }
+   IF SCORINGOPTION(SDoomsdayBunker) THEN { SETBUILDINGSTATE(C,BHiveNetwork,1); }
+   IF SCORINGOPTION(SWorldTree) THEN { SETBUILDINGSTATE(C,BTreeOfLife,1); }
+   IF SCORINGOPTION(SFireworkFactory) THEN { SETBUILDINGSTATE(1,BMilitaryWorkshop,1); }
+   IF SCORINGOPTION(SGrandBazaar) THEN { SETBUILDINGSTATE(C,BCaravanserai,1); }
+   IF SCORINGOPTION(SAbsoluteFortress) THEN {
+    SETBUILDINGSTATE(C,BCityWalls,1);
+    SETBUILDINGSTATE(C,BMoats,1);
+    SETBUILDINGSTATE(C,BHillfort,1);
+   }
+  } ELSE {
+   IF SCORINGOPTION(SDemonKingsCastle) THEN {
+    SETBUILDINGSTATE(C,BCityWalls,1);
+    SETBUILDINGSTATE(C,BMoats,1);
+    SETBUILDINGSTATE(C,BHillfort,1);
+    SETBUILDINGSTATE(C,BBaray,1);
+    SETBUILDINGSTATE(C,BHiveNetwork,1);
+    SETBUILDINGSTATE(C,BTreeOfLife,1);
+   }
+  }
+
+ !NOTCITYFORTRESS!
+
+NEXT C;
+
+!THISISSAVEFILE!
+
+: Script for fix unit overlap with neutral units :
+
+IF LOADED=0 THEN { GOTO "NOTRUNCHECKOWNER"; }
+
+ DEBUGLOG "TRIGGER Mixed Stack Correction Script";
+
+ : Mixed Stack correction script :
+ FOR U=1 TO MAXUNIT();
+
+  W=GetStat(U,SOwner,1);
+  UP=GETSTAT(U,SPlane,1);
+  UX=GETSTAT(U,SOLX,1);
+  UY=GETSTAT(U,SOLY,1);
+  UA=UNITONTILE(UP,UX,UY,1);
+  C=CITYONTILE(U);
+
+  IF (C<1) THEN { GOTO "NOTGARRISON"; }
+
+   IF ( W = CITYOWNER(C) ) THEN { GOTO "NOTLOCATION"; }
+
+    DEBUGLOG "Unit ID with wrong ownership: " + STRS(U) + ", P=" + STRS(UP) + ", X=" + STRS(UX) + ", Y=" + STRS(UY);
+    DEBUGLOG "Previous owner: " + STRS(W) + ", " + WIZNAME(W);
+    SETSTAT( U,SOwner,1,CITYOWNER(C) );
+    DEBUGLOG "Current owner: " + STRS(CITYOWNER(C)) + ", " + WIZNAME(CITYOWNER(C));
+    GOTO "NOTLOCATION";
+
+  !NOTGARRISON!
+
+  IF (U=UA) THEN { GOTO "NOTLOCATION"; }
+
+   IF ( W = GETSTAT(UA,SOwner,1) ) THEN { GOTO "NOTLOCATION"; }
+
+    DEBUGLOG "Unit ID with wrong ownership: " + STRS(U) + ", P=" + STRS(UP) + ", X=" + STRS(UX) + ", Y=" + STRS(UY);
+    DEBUGLOG "Previous owner: " + STRS(W) + ", " + WIZNAME(W);
+    SETSTAT( U,SOwner,1,GETSTAT(UA,SOwner,1) );
+    DEBUGLOG "Current owner: " + STRS(GETSTAT(UA,SOwner,1)) + ", " + WIZNAME(GETSTAT(UA,SOwner,1));
+
+  !NOTLOCATION!
+
+ NEXT U;
+
+!NOTRUNCHECKOWNER!
+
+:reset master variable:
+MASTERVARSET OVERLANDACTIVEPLAYER = 0;
+MASTERVARSET TACTICALCOMBAT = 0;
+MASTERVARSET COMBATACTIVESIDE = 0;
+MASTERVARSET ROCKYHILLCOMBAT = 0;
+MASTERVARSET SWAMPYRIVERCOMBAT = 0;
+MASTERVARSET WETGRASSLANDCOMBAT = 0;
+MASTERVARSET WETFORESTCOMBAT = 0;
+MASTERVARSET ICYSEACOMBAT = 0;
+MASTERVARSET ICYMOUNTAINCOMBAT = 0;
+MASTERVARSET GREENVOLCANOCOMBAT = 0;
+MASTERVARSET DEADLYVOLCANOCOMBAT = 0;
+MASTERVARSET WINTERFOREST = 0;
+MASTERVARSET CORRUPTTILECOMBAT = 0;
+MASTERVARSET MOATCOMBAT = 0;
+MASTERVARSET HILLFORTCOMBAT = 0;
+MASTERVARSET BARAYCOMBAT = 0;
+MASTERVARSET HOSTGOBLIN = 0;
+MASTERVARSET COMBATTURN = 0;
+MASTERVARSET CityInFocus = -1;
+MASTERVARSET SNEAKATTACK = 0;
+MASTERVARSET GOBLINCOMBATA = 0;
+MASTERVARSET GOBLINCOMBATD = 0;
+MASTERVARSET WARBOSSCOMBATA = 0;
+MASTERVARSET WARBOSSCOMBATD = 0;
+MASTERVARSET MECHANICCOMBATA = 0;
+MASTERVARSET MECHANICCOMBATD = 0;
+MASTERVARSET HEROINCOMBATA = 0;
+MASTERVARSET HEROINCOMBATD = 0;
+
+: Global enchantment counting :
+NOFGEDDON=0;
+NOFDOOMS=0;
+NOFCHAOSEM=0;
+NOFNIGHT=0;
+NOFOMENS=0;
+NOFDARKEST=0;
+NOFDIVORDER=0;
+NOFTIMESTOP=0;
+NOFICEAGE=0;
+
+ FOR I=0 TO NOFWIZARDS();
+  IF HASGLOBAL(I,GEArmageddon) THEN { NOFGEDDON=NOFGEDDON+1; }
+  IF HASGLOBAL(I,GEDoomsday) THEN { NOFDOOMS=NOFDOOMS+1; }
+  IF HASGLOBAL(I,GEBlazingEyes) THEN { NOFCHAOSEM=NOFCHAOSEM+1; }
+  IF HASGLOBAL(I,GEEternalNight) THEN { NOFNIGHT=NOFNIGHT+1; }
+  IF HASGLOBAL(I,GEEvilOmens) THEN { NOFOMENS=NOFOMENS+1; }
+  IF HASGLOBAL(I,GEDarkestHour) THEN { NOFDARKEST=NOFDARKEST+1; }
+  IF HASGLOBAL(I,GEDivineOrder) THEN { NOFDIVORDER=NOFDIVORDER+1; }
+  IF HASGLOBAL(I,GETimeStop) THEN { NOFTIMESTOP=NOFTIMESTOP+1; }
+  IF HASGLOBAL(I,GEIceAge) THEN { NOFICEAGE=NOFICEAGE+1; }
+ NEXT;
+
+ MASTERVARSET ARMAGEDDONCOUNT = NOFGEDDON;
+ MASTERVARSET DOOMSDAYCOUNT = NOFDOOMS;
+ MASTERVARSET CHAOSEMBRACECOUNT = NOFCHAOSEM;
+ MASTERVARSET ETERNALNIGHTCOUNT = NOFNIGHT;
+ MASTERVARSET EVILOMENCOUNT = NOFOMENS;
+ MASTERVARSET DARKESTHOURCOUNT = NOFDARKEST;
+ MASTERVARSET DIVINEORDERCOUNT = NOFDIVORDER;
+ MASTERVARSET ICEAGECOUNT = NOFICEAGE;
+
+ IF (NOFTIMESTOP=0) THEN {
+  MASTERVARSET TIMESTOPCOUNT = 0;
+  MASTERVARSET TSSPELLCOUNTING = 0;
+  MASTERVARSET TSTURNCOUNTING = 0;
+ }
+
+: City regeneration script :
+CITY=0;
+
+FOR CITY=1 TO MAXCITY();
+
+ : convert Magic Perimeter enchantment to new ID :
+ IF (CITYENCHANT(CITY,CEPhilStone)>-1) THEN {
+  SETCITYENCHANTOWNER(CITY,CEMagicPerimeter,CITYOWNER(CITY))
+  SETCITYENCHANTOWNER(CITY,CEPhilStone,-1)
+ }
+
+ IF (CITYRACE(CITY)<>RCGoblin) THEN { GOTO "NOTGOBLINCITY"; }
+
+  IF (POPULATION(CITY)>1000) THEN {
+   : Tricksters require forest :
+   IF (TERRAININRANGE(CITY,LTGrassland)=0)
+    %AND (TERRAININRANGE(CITY,LTDesert)=0)
+    %AND (TERRAININRANGE(CITY,LTHill)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BTricksterMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BTricksterMycelium,1);
+   }
+   : Rabblerousers require river :
+   IF (TERRAININRANGE(CITY,LTRiver)=0)
+    %AND (TERRAININRANGE(CITY,LTRiverStart)=0)
+    %AND (TERRAININRANGE(CITY,LTDesert)=0)
+    %AND (TERRAININRANGE(CITY,LTSorceryNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BRabblerouserMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BRabblerouserMycelium,1);
+   }
+   : Hexers require magical node :
+   IF (TERRAININRANGE(CITY,LTChaosNode)=0)
+    %AND (TERRAININRANGE(CITY,LTNatureNode)=0)
+    %AND (TERRAININRANGE(CITY,LTSorceryNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BHexerMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BHexerMycelium,1);
+   }
+   : Arsonists require tundra or volcano or chaos node :
+   IF (TERRAININRANGE(CITY,LTTundra)=0)
+    %AND (TERRAININRANGE(CITY,LTVolcano)=0)
+    %AND (TERRAININRANGE(CITY,LTChaosNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BArsonistMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BArsonistMycelium,1);
+   }
+   : Night Goblins requires hill or mountain :
+   IF (TERRAININRANGE(CITY,LTHill)=0)
+    %AND (TERRAININRANGE(CITY,LTMountain)=0)
+    %AND (TERRAININRANGE(CITY,LTNatureNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BNightGoblinMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BNightGoblinMycelium,1);
+   }
+   : Mechaniacs requires river or mountain :
+   IF (TERRAININRANGE(CITY,LTRiver)=0)
+    %AND (TERRAININRANGE(CITY,LTRiverStart)=0)
+    %AND (TERRAININRANGE(CITY,LTMountain)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BMechaniacMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BMechaniacMycelium,1);
+   }
+   : Poxbearers require swamp or sorcery node :
+   IF (TERRAININRANGE(CITY,LTSwamp)=0)
+    %AND (TERRAININRANGE(CITY,LTSorceryNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BPoxbearerMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BPoxbearerMycelium,1);
+   }
+   : Spider Riders require swamp :
+   IF (TERRAININRANGE(CITY,LTSwamp)=0)
+    %AND (TERRAININRANGE(CITY,LTNatureNode)=0)
+   THEN {
+    SETBUILDINGSTATE(CITY,BSpiderRiderMycelium,0);
+   } ELSE {
+    SETBUILDINGSTATE(CITY,BSpiderRiderMycelium,1);
+   }
+  } ELSE {
+   SETBUILDINGSTATE(CITY,BTricksterMycelium,0);
+   SETBUILDINGSTATE(CITY,BRabblerouserMycelium,0);
+   SETBUILDINGSTATE(CITY,BHexerMycelium,0);
+   SETBUILDINGSTATE(CITY,BArsonistMycelium,0);
+   SETBUILDINGSTATE(CITY,BNightGoblinMycelium,0);
+   SETBUILDINGSTATE(CITY,BMechaniacMycelium,0);
+   SETBUILDINGSTATE(CITY,BPoxbearerMycelium,0);
+   SETBUILDINGSTATE(CITY,BSpiderRiderMycelium,0);
+  }
+
+ !NOTGOBLINCITY!
+
+NEXT;
+
+: Debugging Block :
+:
+SETGLOBAL(0,GEDetectMagic,1);
+SETGLOBAL(0,GEClairvoyance,1);
+DEBUGLOG "Research: " + STRS(RESEARCHING(1)) + ", " + WIZNAME(1);
+   SETSPELLDATA(0,392,2);
+   SETSPELLDATA(0,393,2);
+   SETSPELLDATA(0,394,2);
+   SETSPELLDATA(0,395,2);
+   SETSPELLDATA(0,396,2);
+   SETSPELLDATA(0,397,2);
+   SETSPELLDATA(0,398,2);
+   SETSPELLDATA(0,399,2);
+   SETSPELLDATA(0,400,2);
+
+BNATURE=BOOKS(0,1);
+BSORCERY=BOOKS(0,2);
+BCHAOS=BOOKS(0,3);
+BLIFE=BOOKS(0,4);
+BDEATH=BOOKS(0,5);
+
+DEBUGLOG "Nature Book:" + STRS(BNATURE);
+DEBUGLOG "Sorcery Book:" + STRS(BSORCERY);
+DEBUGLOG "Chaos Book:" + STRS(BCHAOS);
+DEBUGLOG "Life Book:" + STRS(BLIFE);
+DEBUGLOG "Death Book:" + STRS(BDEATH);
+
+FOR S=1 TO 400;
+
+ SSTATUS=SPELLSTATE(0,S);
+
+ DEBUGLOG "SpellID:" + STRS(S) + ", Spell State: " + STRS(SSTATUS);
+
+NEXT S;
+
+DEBUGLOG "Retort Alchemist:" + STRS(RETORT(0,1));
+DEBUGLOG "Retort SageMaster:" + STRS(RETORT(0,2));
+DEBUGLOG "Retort Specialist:" + STRS(RETORT(0,3));
+DEBUGLOG "Retort Warlord:" + STRS(RETORT(0,4));
+DEBUGLOG "Retort Myrran:" + STRS(RETORT(0,5));
+DEBUGLOG "Retort Tactician:" + STRS(RETORT(0,6));
+DEBUGLOG "Retort Channeler:" + STRS(RETORT(0,7));
+DEBUGLOG "Retort Guardian:" + STRS(RETORT(0,8));
+DEBUGLOG "Retort Procurator:" + STRS(RETORT(0,9));
+DEBUGLOG "Retort Archmage:" + STRS(RETORT(0,10));
+DEBUGLOG "Retort Benefactor:" + STRS(RETORT(0,11));
+DEBUGLOG "Retort CultLeader:" + STRS(RETORT(0,12));
+DEBUGLOG "Retort Artificer:" + STRS(RETORT(0,13));
+DEBUGLOG "Retort Runemaster:" + STRS(RETORT(0,14));
+DEBUGLOG "Retort Astrologer:" + STRS(RETORT(0,15));
+DEBUGLOG "Retort Conjurer:" + STRS(RETORT(0,16));
+DEBUGLOG "Retort Charismatic:" + STRS(RETORT(0,17));
+DEBUGLOG "Retort Enchanter:" + STRS(RETORT(0,18));
+
+:

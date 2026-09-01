@@ -94,6 +94,26 @@ but not always: in `BU_Apply_Specials` CoM 1's copy occupies 1.31's exact `0x8F3
 before constructing its citation set. `split_dos_derivation.py` exposes the same extractor as a
 CLI when a reviewer wants to inspect the exact per-build citation list.
 
+**A build difference that is only a name goes in the `#define`, not in the code.** When builds
+repurpose one input bit and the executed bytes are identical, a statement-level `#if` would claim
+a control-flow divergence the binary does not contain — and the `#if BUILD` directives are the
+index a reader greps to find real divergence, so a naming-only entry is a false positive there.
+Define each build's semantic alias, select between them once, and leave the statement single:
+
+```c
+#define IP_POWER_DRAIN                  0x01000000UL
+#define IP_COM1_DIVINE_PROTECTION       IP_POWER_DRAIN    /* raw 0x01000000 */
+#if BUILD == COM1
+#define IP_ATTACK_SPECIAL_POWER_DRAIN_INPUT IP_COM1_DIVINE_PROTECTION
+#else
+#define IP_ATTACK_SPECIAL_POWER_DRAIN_INPUT IP_POWER_DRAIN
+#endif
+```
+
+Name the selector after the quantity that does *not* vary — here the output is `ATT_POWER_DRAIN`
+in every build, so only the input bit's name is build-specific. Settled by Q25, 2026-09-01;
+`IP_MOVEMENT_PLUS_TWO_INPUT` is the other site following it.
+
 **Do not assume a lineage ordering.** Write explicit build tests (`BUILD == CP160 || BUILD == COM1`)
 rather than `BUILD >= CP160`. CoM 1 is built on the same 1991 executable but whether it carries
 every CP 1.60 change is an empirical question — R6.3 is what settles it. An ordering comparison

@@ -23,7 +23,7 @@
 // The exit code is 0 for a completed sweep; findings are reported, not asserted. This is a
 // diagnostic sweep, not a suite: it is deliberately not wired into `npm test`.
 
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const fs = require('fs');
 const { chromium } = require('@playwright/test');
 const playwrightConfig = require('../playwright.config.js');
@@ -417,14 +417,69 @@ async function waitForServer(timeoutMs) {
   return false;
 }
 
+// The server is started through a shell, so `child` is the shell and the Python server is its
+// grandchild. `child.kill()` reaps only the shell: the server survives, holds the port, and the
+// next Playwright run dies with "http://127.0.0.1:8080/ is already used". Kill the whole tree.
+// A launcher that has already exited must not be signalled: on a sweep that runs for minutes the
+// operating system is free to reuse its pid, and taskkill /T would then take down an unrelated
+// process tree. `startServer` marks the launcher as it exits.
+function stopServer(child) {
+  if (!child || child.exitedAlready) return;
+  if (process.platform === 'win32' && child.pid) {
+    try {
+      execFileSync('taskkill', ['/F', '/T', '/PID', String(child.pid)], { stdio: 'ignore' });
+      return;
+    } catch (_) { /* already gone, or taskkill unavailable — fall through */ }
+  }
+  try {
+    // `detached: true` below puts the shell and its children in one process group.
+    if (process.platform !== 'win32' && child.pid) process.kill(-child.pid, 'SIGKILL');
+    else child.kill('SIGKILL');
+  } catch (_) { /* already gone */ }
+}
+
+// Cleanup must also run when the process leaves without unwinding the `finally` below: an
+// uncaught throw before the try block, or Ctrl+C part-way through a sweep that takes minutes.
+let activeServer = null;
+let cleanupInstalled = false;
+function installCleanup() {
+  if (cleanupInstalled) return;
+  cleanupInstalled = true;
+  const release = () => { stopServer(activeServer); activeServer = null; };
+  process.on('exit', release);
+  // 128 + signal number, the conventional status for a signal-terminated process.
+  const STATUS = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129, SIGBREAK: 149 };
+  for (const [signal, status] of Object.entries(STATUS)) {
+    process.on(signal, () => { release(); process.exit(status); });
+  }
+}
+
 async function startServer() {
   if (await serverIsUp()) return null;
-  const child = spawn(playwrightConfig.webServer.command, { shell: true, stdio: 'ignore' });
+  const child = spawn(playwrightConfig.webServer.command, {
+    shell: true, stdio: 'ignore', detached: process.platform !== 'win32',
+  });
+  child.on('exit', () => { child.exitedAlready = true; });
+  child.on('error', () => { child.exitedAlready = true; });
+  installCleanup();
+  activeServer = child;
   if (!await waitForServer(playwrightConfig.webServer.timeout || 15000)) {
-    child.kill();
+    stopServer(child);
+    activeServer = null;
     throw new Error(`preset_vacuity_sweep: no server at ${BASE_URL}`);
   }
+  if (child.exitedAlready) {
+    // Our launcher died (usually: another checkout already holds the port) and the server that
+    // answered is somebody else's. It is not ours to kill.
+    activeServer = null;
+    return null;
+  }
   return child;
+}
+
+function releaseServer(child) {
+  stopServer(child);
+  if (activeServer === child) activeServer = null;
 }
 
 // --- Reporting ---------------------------------------------------------------------------
@@ -542,12 +597,14 @@ async function main() {
   if (options.limit) keys = keys.slice(0, options.limit);
 
   const server = await startServer();
-  const browser = await chromium.launch({
-    channel: playwrightConfig.use.channel, headless: playwrightConfig.use.headless !== false,
-  });
   const consoleErrors = [];
   let report;
+  let browser = null;
   try {
+    // Inside the try: a launch failure must still release the server.
+    browser = await chromium.launch({
+      channel: playwrightConfig.use.channel, headless: playwrightConfig.use.headless !== false,
+    });
     const page = await browser.newPage();
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
     page.on('pageerror', error => consoleErrors.push(String(error)));
@@ -633,8 +690,13 @@ async function main() {
       for (const error of consoleErrors.slice(0, 20)) console.log(`  ${error}`);
     }
   } finally {
-    await browser.close();
-    if (server) server.kill();
+    // Nested, so the server is released even if closing Chromium throws — but a close failure
+    // still surfaces rather than being swallowed into a green run.
+    try {
+      if (browser) await browser.close();
+    } finally {
+      releaseServer(server);
+    }
   }
 
   if (options.out && report) fs.writeFileSync(options.out, JSON.stringify(report, null, 2));

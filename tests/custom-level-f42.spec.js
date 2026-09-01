@@ -8,7 +8,7 @@ const VERSIONS = [
   'mom_cp_1.60.00',
   'com_6.08',
   'com2_1.05.11',
-  'com2_warlord_1.5.12.7',
+  'com2_warlord_1.5.12.9',
 ];
 
 test('F42 Custom Level changes preserve pre-level card stats and base identity in every version', async ({ page }) => {

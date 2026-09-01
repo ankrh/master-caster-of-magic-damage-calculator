@@ -11,6 +11,7 @@
 | `TESTS.md` | registry | Agents maintain it. Adding or deleting a `scaffolding` suite is free; promoting one to `spec` or `regression` requires a proposal. |
 | `JOURNAL.md` | JOURNAL | Written and pruned freely. Never authoritative, and never cited as justification for a decision. |
 | `PROPOSALS.md` | channel | Agents append entries. Only the user merges, edits or deletes them. |
+| `Reference docs/**` | reference | Agents write freely. Evidence files, source transcriptions and the style guides. Not binding: a claim here is re-verified against the binaries or scripts rather than cited as authority. |
 
 ## Source routing
 
@@ -28,13 +29,14 @@ Where to start reading for a given subject:
 |---|---|
 | MoM 1.31 / 1.60 / CoM1 compiled behaviour | `Reference docs/DOS reconstructed/README.md`; `Reference docs/MoM binary analysis.md` is the broader index |
 | CoM2 / Warlord compiled behaviour | `Reference docs/Caster binary/CoM2 binary analysis.md`, whose subsystem index routes to the address-backed Pascal reconstructions |
-| Warlord scripted behaviour | `Reference docs/Script source/Warlord 1.5.12.7/` |
+| Warlord scripted behaviour | `Reference docs/Script source/Warlord 1.5.12.9/` |
 | CoM2 / Warlord constants | `Reference docs/CoM2 data tables.md`; `UNITS.INI` separately owns roster data |
 | DOS rosters | the versioned text sources under `Unit rosters/` |
 | Manuals and helptext | the version-matched files under `Reference docs/` |
 | Unresolved evidence | `Reference docs/Engine verification evidence.md` |
 | Script-versus-prose conflicts | `Reference docs/Source discrepancies.md` |
 | Tooltip wording | `Reference docs/Tooltip style guide.md` |
+| Citing a CAS location | `Reference docs/CAS citation grammar.md` |
 
 Modern sources compose: compiled code supplies the control flow, INI files supply the runtime
 constants, and Warlord scripts may add to or overwrite the result.
@@ -45,7 +47,27 @@ Every `TASKS.md` item is executed under this protocol, including items that move
 
 By default, task items should be executed in a collaboration between a Claude agent and a GPT agent. The preferred agents are Claude Opus 5 on High effort and GPT 5.6 Sol on High reasoning.
 
+A Claude agent launches a GPT reviewer or derivation agent through the global
+`~/.claude/tools/codex_agent.py`, never by typing `codex exec` directly:
+
+```
+python ~/.claude/tools/codex_agent.py --model gpt-5.6-sol --prompt <prompt file> --out .reviews/<PACKAGE>.review-of-Claude.md
+```
+
 By default, tasks should be executed according to method A. Tasks that involve source code reconstruction from the game binaries must be performed with method B. The methods run per subtask, not per item.
+
+The user may request one or more TASKS item to be performed. If multiple task items are requested, default to using sequential subagents, one for each subtask. After all requested subtasks have been executed, any code changes should be visualized in an artifact with graphical layout showing function calls and other explanatory text, with special emphasis for any features that are still scheduled for removal later in the TASKS pipeline.
+
+A report that finishes a TASKS item ends with a block titled `To close <ID>`, and nothing
+follows it. The block lists every decision required from the user as a numbered yes/no
+question with a recommendation. When nothing is required it says so explicitly.
+
+A finished TASKS item is deleted in the same change that finishes it, regardless of whether the changes have been committed.
+
+A new task proposed to the user is presented with its category: binary reconstruction, decision,
+faithfulness (calculator moved towards the binary), workaround (calculator changed in a way that is
+not binary faithful), documentation, or other. An approved item carries its category into
+`TASKS.md`.
 
 ### Shape of TASKS.md
 
@@ -59,14 +81,20 @@ T-3. **A subtask appears in the list before any subtask that depends on it.** Th
    execution order; the item bodies below it are not a queue.
 
 ### Method A:
-Perform the task implementation using the current agent, then launch another agent to review the work. If the current agent is a Claude agent, the review agent should be a GPT agent; if the running agent is a GPT agent, the review agent should be a Claude agent. The reviewer is a command-line program, not a harness subagent: `codex exec` for GPT, `claude -p` for Claude.
+Perform the task implementation using the current agent, then launch another agent to review the work. If the current agent is a Claude agent, the review agent should be a GPT agent; if the running agent is a GPT agent, the review agent should be a Claude agent.
 
-Then revise the work according to the feedback provided. One review round is sufficient. After the finished implementation, any code changes should be visualized in an artifact with graphical layout showing function calls and other explanatory text, with special emphasis for any features that are still scheduled for removal later in the TASKS pipeline.
+Then revise the work according to the feedback provided. One review round is sufficient.
 
 ### Method B:
 The current (main) agent prepares the reconstruction task and makes sure the number of instructions is no more than 1200. Otherwise, it splits the task into subunits and only proceeds with reconstructing the first subunit.
 
-Then the main agent will launch one Claude agent and one GPT agent to each perform an independent derivation of the source code — `claude -p` and `codex exec` respectively, both with write access to their own derivation file. Once both subagents have returned, it tells each agent using resumed sessions (`codex exec resume <session-id>`) to review the other agent's work and write the review into a review file. When both agents have done so, the main agent tells the agents to revise their own work according to the other agent's review. Finally, the main agent will merge the two revised derivations into a final reconstruction.
+Then the main agent will launch one Claude agent and one GPT agent to each perform an independent derivation of the source code, each with write access to its own derivation file; the GPT side goes through `~/.claude/tools/codex_agent.py --model gpt-5.6-sol --write`. The reciprocal-review round resumes the GPT session with `--resume <session-id>`; the tool prints the session id on success.
+
+Once both subagents have returned, it tells each agent using resumed sessions (`codex exec resume <session-id>`) to review the other agent's work and write the review into a review file. When both agents have done so, the main agent tells the agents to revise their own work according to the other agent's review. Finally, the main agent will merge the two revised derivations into a final reconstruction.
+
+The derivation agents are given some amount of autonomy. If they assess that other code blocks are relevant to answer the posed question, they are allowed to extend the reconstruction extent, as long as the total number of instructions remains under 1800 instructions.
+
+The revision round's inputs are the agent's own derivation, the other agent's review, and the binary. The other agent's *derivation* is not an input.
 
 | Artifact | Name | Writer |
 |---|---|---|
@@ -78,6 +106,13 @@ Then the main agent will launch one Claude agent and one GPT agent to each perfo
 | Merged evidence, CASTER.EXE | `Reference docs/Caster binary/<PACKAGE>.evidence.md` | Main agent |
 
 After the finished implementation, the reconstructed code should be visualized in an artifact with graphical layout showing function calls and other explanatory text.
+
+## Version control
+
+Work happens on `main`. There is no branching model.
+
+Commits are not per TASKS item: one commit bundles roughly 5–10 finished subtasks, fewer when the
+changes are large.
 
 ## Invariants
 
@@ -94,10 +129,13 @@ INV-6. **State round-trip.** Serialize → load → serialize is a fixpoint, and
 ## Deliberate deviations
 
 <!-- Knowing departures from the thing modelled. A deviation not listed here is a defect, not a design. -->
-Some checks for whether a unit has ammo are replaced with a check for whether the unit has an ammo based ranged type.
+At a fork between a binary-faithful implementation and one that is not, the faithful one is preferred, and the preference holds when it is the more expensive of the two. A choice made against it is a deviation and is named as one when it is proposed.
 
+- **Some checks for whether a unit has ammo are replaced with a check for whether the unit has an ammo based ranged type.**
 - **MoM 1.31's hero magical-ranged repeat is modelled as the common case.** 1.31's gate recognises only the Caster unit flags, so a hero falls through to the ammunition branch and gets no repeat; CP 1.60 added the missing hero test. The real 1.31 gate reads an unrelated battle-unit slot and can flip either way, so the modelled outcome is the common one, not the guaranteed one.
 - **Only total Damage Taken is a starting-state input.** Irrecoverable/Irreversible Damage, Undeath Damage and Bonus HP/Extra Hits are exact internal state but are not exposed on the card or matrix, which start from Regular damage with zero bonus and no explicit override.
+- **Wall Crusher is not applied to the city-wall defense bonus.** In CoM2 a Wall-Crusher attacker calls `CrushWall` before its own attack resolves, so an intact segment's +3 becomes +1 within the same click. The calculator does not model that transition.
+- **Rust's two resistance rolls are represented as a single control despite being two independent conditions in the binary.**
 
 ## Architecture
 
@@ -131,6 +169,8 @@ Each step in the sequence of calculating unit stats carries a **phase**: which r
 | **e** | the binary's post-hook tail: the clamps, the aura pass, and the effects after them |
 | **attack-specific** | not a part of calculating the unit stats shown in the UI, but steps that are conditionally run within each attack phase |
 
+Damage is also applied in phases, e.g., thrown, breath, gaze, first strike, counterattack etc. Damage is not truncated within a combat phase: the per-rider accumulators, the per-category accumulators and the combat-healing state all carry the engine's uncapped figures. What a phase publishes is capped at the HP its target had entering it, and so is the cumulative total built from those. A rider histogram is not capped, so in an overkill cell the riders bound their phase total rather than summing to it.
+
 ## Input/output contract
 
 <!-- What goes in, what comes out, and what callers may rely on. -->
@@ -142,11 +182,25 @@ Hovering a final modified value in the UI shows the complete chain that produced
 
 There is also a melee and a ranged matrix view, where the user specifies filters for which units to consider as attackers and defenders, and which enchantments and conditions are attempted applied to the attacker, defender, and globally. The matrices then show how each matchup would fare.
 
+Every enchantment and condition the selected version has is specifiable on every unit, whether or
+not that unit could have received it. Eligibility is gated internally, in the manner of the
+**immunity** phase: the effect is marked, then stripped or withheld where the engine's own test
+would have refused it. The matrix view is why the rule is this way round rather than the other —
+one enchantment is attempted applied across a whole filter, and it must land on the eligible units
+and not the rest, which a disabled control could not express. The only controls disabled are those
+a roster unit selection locks.
+
 Every ability and enchantment control carries a tooltip describing its modelled effect.
 
 The page keeps its full state in `localStorage` and restores it on reload; Reset returns the page to the state a fresh load has. A share link carries the same state in the URL fragment. On load a share link takes precedence over stored state, and it is one-shot: the fragment is dropped after import, so the recipient's later edits save to their own storage.
 
 Restoring a saved state ignores a control id this build no longer has, but halts on a value outside the set its control offers. Retiring an option therefore obliges the build either to accept that older saved states stop, or to state a migration for the retired value. A state that fails to apply is discarded rather than retried: a stored blob is removed so it cannot throw on every reload, and a share link falls back to the recipient's own stored state.
+
+Each rider that contributes damage inside a combat phase gets its own histogram in that phase's
+row, plotted in HP on one shared axis. Figures killed is a derived label, not a separate quantity.
+Cause Fear plots figures removed and Life Steal's healing plots source HP; those two are the only
+riders off the shared axis. A rider whose gate is false for the matchup is omitted; a rider that is
+gated on but lands with probability zero is drawn with all mass at 0.
 
 ## Damage calculator purpose and non-goals
 
@@ -161,7 +215,7 @@ The supported game versions are
 - MoM 1.60
 - Caster of Magic (CoM1) 6.08
 - CoM for Windows (CoM2) 1.05.11
-- Warlord 1.5.12.7
+- Warlord 1.5.12.9
 
 MoM 1.31, MoM 1.60 and CoM1 can be referred to as the "DOS versions", and CoM2 and Warlord can be referred to as "modern versions".
 

@@ -734,7 +734,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 2.000 },
     vacuity: {
       'a.ability.militaryWorkshop':
-        'Keep, and the absence is the rule under test: `baseNormalTrainingUnit` is `!isHero && !isFantasticBase` (stats.js:320) and it is a term of `blackpowder` (stats.js:1183-1184), so on a hero no channel is marked, `base:militaryWorkshop`\'s `when` is false (stats_sequence.js:157), and neither the Armor Piercing grant nor the `<>100` poison increment lands. That hero term is the calculator\'s own, stated at stats.js:299-305 from the changelog\'s "base normal units" wording (`Reference docs/Warlord manual v1.5.12.7.html`). The script makes no hero test: CreateUnit.CAS contains no `ISHERO` anywhere, checked case-insensitively over the whole file. Its Workshop block gates only on the city or Rocketry (:247-249) and then on the attack-presence test at :251-253, and carries no unit-race term either - a block-level negative, since the file does test the unit\'s own `SRace` at :78, in the generic-to-racial conversion. a.unitType=hero is the live half. The defender deliberately carries no Poison Immunity, so an erroneous poison grant would surface in the total rather than be absorbed. militaryWorkshopArmorPiercingWarlord is the normal-unit arm at 6.000 against this 2.000; it is not a one-value sibling, since it also gives b Poison Immunity.',
+        'Keep, and the absence is the rule under test: `baseNormalTrainingUnit` is `!isHero && !isFantasticBase` (stats.js:320) and it is a term of `blackpowder` (stats.js:1183-1184), so on a hero no channel is marked, `base:militaryWorkshop`\'s `when` is false (stats_sequence.js:157), and neither the Armor Piercing grant nor the `<>100` poison increment lands. That hero term is the calculator\'s own, stated at stats.js:299-305 from the changelog\'s "base normal units" wording (`Reference docs/Warlord manual v1.5.12.9.html`). The script makes no hero test: CreateUnit.CAS contains no `ISHERO` anywhere, checked case-insensitively over the whole file. Its Workshop block gates only on the city or Rocketry (:247-249) and then on the attack-presence test at :251-253, and carries no unit-race term either - a block-level negative, since the file does test the unit\'s own `SRace` at :78, in the generic-to-racial conversion. a.unitType=hero is the live half. The defender deliberately carries no Poison Immunity, so an erroneous poison grant would surface in the total rather than be absorbed. militaryWorkshopArmorPiercingWarlord is the normal-unit arm at 6.000 against this 2.000; it is not a one-value sibling, since it also gives b Poison Immunity.',
     },
   },
 
@@ -791,7 +791,7 @@ definePresets({
     expected: { dmgToA: 0.400, dmgToB: 4.000 },
   },
   artificerMechanicalResistanceWarlord: {
-    desc: 'Artificer (Warlord): mechanical unit gets +2 resistance — CreateUnit.CAS:43, matching manual changelog 1.4.22; the helptext still says +1 (Source discrepancies.md §6). Death Gaze vs res 5 → res 7 → pFail (10−7)/10 = 0.3 → 1 fig × 10 hp × 0.3 = 3 dmg (at the helptext +1 it would be res 6 → 4 dmg)',
+    desc: 'Artificer (Warlord): mechanical unit gets +2 resistance — CreateUnit.CAS:43, matching manual changelog 1.4.22 and the shipped helptext (Source discrepancies.md §6). Death Gaze vs res 5 → res 7 → pFail (10−7)/10 = 0.3 → 1 fig × 10 hp × 0.3 = 3 dmg (at +1 it would be res 6 → 4 dmg)',
     version: V_WARLORD,
     a: { hp:10, abilities: { deathGaze: 0 } },
     b: { res:5, hp:10, abilities: { artificer: true, mechanical: true } },
@@ -816,7 +816,7 @@ definePresets({
       'every-feature-inert':
         'Inert by construction: the claim is that the Artificer retort reaches no non-Mechanical unit, so the only feature the fixture adds cannot move the number.',
       'a.ability.artificer':
-        'Keep, and the absence is the rule under test: `base:artificer` is gated on the Mechanical flag standing in the record at its own rank, `when: u => !!u.mechanical` (combat_abilities.js:1298), the calculator\'s reading of `GetStat(U,SCustomAttribute,1)=1` at CreateUnit.CAS:38. With no Mechanical the step never fires, so the `u.atk += 1; u.def += 1; u.res += 2;` at combat_abilities.js:1304 and the +1 ranged at :1305 all stay away. The Magic Weapons half is closed by its own gate rather than by that one: `artificerMagicWeapon` reads both raw input flags (stats.js:157-158), so the `weaponPreRust` ternary that would have promoted it (stats.js:274-275) leaves the weapon normal and the attack keeps its base To Hit. artificerMechanicalMeleeWarlord differs only in a.abilities.mechanical and pins 2.000 against this 1.000.',
+        'Keep, and the absence is the rule under test: `base:artificer` is gated on the Mechanical flag standing in the record at its own rank, `when: u => !!u.mechanical` (combat_abilities.js:1299), the calculator\'s reading of `GetStat(U,SCustomAttribute,1)=1` at CreateUnit.CAS:38. With no Mechanical the step never fires, so the `u.atk += 1; u.def += 1; u.res += 2;` at combat_abilities.js:1304 and the +1 ranged at :1305 all stay away. The Magic Weapons half is closed by its own gate rather than by that one: `artificerMagicWeapon` reads both raw input flags (stats.js:157-158), so the `weaponPreRust` ternary that would have promoted it (stats.js:274-275) leaves the weapon normal and the attack keeps its base To Hit. artificerMechanicalMeleeWarlord differs only in a.abilities.mechanical and pins 2.000 against this 1.000.',
     },
   },
   artificerSkipsThrownAndBreathWarlord: {
@@ -830,7 +830,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.400 },
   },
   artificerDoomGazeUnchangedWarlord: {
-    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Artificer block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the +0.4 beside it is the melee the retort does create (F142, CreateUnit.CAS:40 ungated, 40% with Magic Weapons). The pre-F139 write gave 6.000 + 0.4.',
+    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Artificer block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1479. Doom Gaze 5 still deals 5.000; the +0.4 beside it is the melee the retort does create (F142, CreateUnit.CAS:40 ungated, 40% with Magic Weapons). The pre-F139 write gave 6.000 + 0.4.',
     version: V_WARLORD,
     a: { atk:0, hp:10, abilities: { artificer: true, mechanical: true, doomGaze: 5 } },
     b: { hp:10 },
@@ -862,7 +862,7 @@ definePresets({
       'every-feature-inert':
         'Inert by construction: the claim is that Mechanical Expert reaches no non-Mechanical unit, so the only feature the fixture adds cannot move the number.',
       'a.ability.mechanicalExpert':
-        'Keep, and the absence is the rule under test: `d:mechanicalExpert` is gated on the Mechanical flag in the record, `when: u => !!u.mechanical` (combat_abilities.js:1315), so with no Mechanical the `u.toHit += 20; u.toBlk += 10;` at :1316 never runs and the attack keeps the base 30% To Hit. mechanicalExpertToHitWarlord differs only in a.abilities.mechanical and pins 5.000 against this 3.000.',
+        'Keep, and the absence is the rule under test: `d:mechanicalExpert` is gated on the Mechanical flag in the record, `when: u => !!u.mechanical` (combat_abilities.js:1322), so with no Mechanical the `u.toHit += 20; u.toBlk += 10;` at :1323 never runs and the attack keeps the base 30% To Hit. mechanicalExpertToHitWarlord differs only in a.abilities.mechanical and pins 5.000 against this 3.000.',
     },
   },
   mechanicalExpertRebuildMakesMechanicalWarlord: {
@@ -871,6 +871,17 @@ definePresets({
     a: { atk:10, hp:10, abilities: { rebuild: true, mechanicalExpert: true } },
     b: { def:0, hp:30 },
     expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  mechanicalExpertRebuildHeroNoBonusWarlord: {
+    desc: 'Rebuild + Mechanical Expert on a hero (Warlord): no To Hit bonus. Rebuild\'s two branches write different records — the non-hero branch writes the permanent Mechanical flag, `SETSTAT(TU,SCustomAttribute,1,1)` (OLSpell.CAS:587, inside `IF (ISHERO(TU)=0)` at :586), while the hero branch writes the calculated one, `SETSTAT(U,SCustomAttribute,0,1)` (UnitCalcPre.CAS:685). Mechanical Expert gates on the permanent record, `IF (GETSTAT(U,SCustomAttribute,1)<>1)` (UnitCalc.CAS:278), and no script line reads selector 0 for value 1 at all, so the hero write reaches nothing. atk 10 + Rebuild(+2) = 12 at the base 30% vs 0 def → 3.6 dmg, against the 6.000 mechanicalExpertRebuildMakesMechanicalWarlord takes on the same package without the hero marker (F217.3).',
+    version: V_WARLORD,
+    a: { atk:10, hp:10, unitType:'hero', abilities: { rebuild: true, mechanicalExpert: true } },
+    b: { def:0, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 3.600 },
+    vacuity: {
+      'a.ability.mechanicalExpert':
+        'Keep, and the absence is the rule under test: the claim is exactly that Mechanical Expert does not reach a Rebuilt hero. `d:mechanicalExpert` is gated on the permanent Mechanical flag standing in the record, `when: u => !!u.mechanical` (combat_abilities.js), and `b:rebuild`\'s hero branch writes no such flag, so the `u.toHit += 20; u.toBlk += 10;` never runs and the attack keeps the base 30% To Hit. a.unitType=hero and a.ability.rebuild are both live: rebuild supplies the +2 melee that makes the total 3.600 rather than 3, and dropping the hero marker is exactly mechanicalExpertRebuildMakesMechanicalWarlord, which pins 6.000 against this 3.600.',
+    },
   },
 
   // --- Rebuild ---
@@ -882,21 +893,21 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   rebuildArmorWarlord: {
-    desc: 'Rebuild (Warlord): +2 armor. 5 atk vs 0 def + Rebuild → 2 shields at 100% block → 3 dmg. B\'s counterattack is the F142 rule: OLSpell.CAS:280 gates its `SAttack` write on nothing, so B\'s permanent melee 0 becomes 2, at the base 30% → 0.6',
+    desc: 'Rebuild (Warlord): +2 armor. 5 atk vs 0 def + Rebuild → 2 shields at 100% block → 3 dmg. B\'s counterattack is the F142 rule: OLSpell.CAS:588 gates its `SAttack` write on nothing, so B\'s permanent melee 0 becomes 2, at the base 30% → 0.6',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { rebuild: true } },
     expected: { dmgToA: 0.600, dmgToB: 3.000 },
   },
   rebuildHeroCcDefenseLionheartWarlord: {
-    desc: 'Rebuild (Warlord): the phase split is `ISHERO`, not unit type. A hero is re-applied at `b` (UnitCalcPre.CAS:682-691, inside the hero region opened at :81); a non-hero was written permanently when the spell landed (OLSpell.CAS:280), which is the base stage. Only the base write reaches the permanent record Lionheart\'s melee gate reads, so a Chaos-Channelled hero with permanent melee 0 takes Rebuild\'s +2 alone → 2 dmg. While the phase was chosen off the live unit-type token the hero took the non-hero base write, and Lionheart then added 3 more, for 5 dmg (F187).',
+    desc: 'Rebuild (Warlord): the phase split is `ISHERO`, not unit type. A hero is re-applied at `b` (UnitCalcPre.CAS:682-690, inside the hero region opened at :81); a non-hero was written permanently when the spell landed (OLSpell.CAS:588), which is the base stage. Only the base write reaches the permanent record Lionheart\'s melee gate reads, so a Chaos-Channelled hero with permanent melee 0 takes Rebuild\'s +2 alone → 2 dmg. While the phase was chosen off the live unit-type token the hero took the non-hero base write, and Lionheart then added 3 more, for 5 dmg (F187).',
     version: V_WARLORD,
     a: { atk:0, hitChance:70, hp:10, unitType: 'hero', abilities: { rebuild: true, ccDefense: true, lionheart: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
     vacuity: {
       'a.ability.lionheart':
-        'Keep, and the absence is the rule under test: Lionheart is the probe the phase choice is read through, and its melee arm is `if (hasMeleeAttackAt(runCtx)) u.atk += 3` (stats_sequence.js:1044) over the permanent record - `runCtx.base.atk > 0` (stats.js:977), the record frozen when the last base-phase step leaves it (steps.js:746). Rebuild on a hero is a phase-`b` step (`isHeroUnit ? \'b\' : \'base\'`, combat_abilities.js:1339), so its `u.atk += 2` (:1342) never reaches that record, the base melee stays 0 and the arm is closed. Its other writes cannot surface here either: nothing rolls against A\'s Resistance, A states no ranged or thrown channel, and B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103) so A\'s hit points are never scored against. Take the base branch instead, as the retired unit-type phase choice did, and the arm opens for +3 and the total goes from 2.000 to 5. a.ability.rebuild and a.unitType=hero are both live.',
+        'Keep, and the absence is the rule under test: Lionheart is the probe the phase choice is read through, and its melee arm is `if (hasMeleeAttackAt(runCtx)) u.atk += 3` (stats_sequence.js:1044) over the permanent record - `runCtx.base.atk > 0` (stats.js:977), the record frozen when the last base-phase step leaves it (steps.js:746). Rebuild on a hero is a phase-`b` step (`isHeroUnit ? \'b\' : \'base\'`, combat_abilities.js:1354), so its `u.atk += 2` (:1358) never reaches that record, the base melee stays 0 and the arm is closed. Its other writes cannot surface here either: nothing rolls against A\'s Resistance, A states no ranged or thrown channel, and B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103) so A\'s hit points are never scored against. Take the base branch instead, as the retired unit-type phase choice did, and the arm opens for +3 and the total goes from 2.000 to 5. a.ability.rebuild and a.unitType=hero are both live.',
       'a.ability.ccDefense':
         'Keep, and the absence is the rule under test: the claim is that the phase split reads hero-ness and not the live unit-type token, so Chaos Channels is expected to move nothing. Its two writes are the +3 Defense at combat_abilities.js:1072, which nothing scores against because B carries no attack (`atk` defaults to 0, UNIT_DEFAULTS, data.js:103), and the conversion to a fantastic Chaos creature at stats_identity.js:350 - the token under test. The phase choice reads `isHeroUnit`, `!!identityPredicates.isHero` (combat_abilities.js:677, argued at :672-676), supplied once as `!!identity.isHero` (stats.js:1603) because no conversion writes that flag (stats.js:1600-1602). So the hero keeps the phase-`b` re-application whether or not it is Chaos-Channelled. a.ability.lionheart is the detector that would report a regression here.',
     },
@@ -942,18 +953,18 @@ definePresets({
       'every-feature-inert':
         'Inert by construction: the claim is that Colossal Strength does not reach a magical ranged attack, so the only feature the fixture adds cannot move the number.',
       'a.ability.colossalStrength':
-        'Keep, and the absence is the rule under test: the block\'s secondary arm admits physical channels only - `physicalSecondary` is missile, boulder or thrown (stats_sequence.js:1583-1584), the calculator\'s reading of the script\'s own `SRangedType>0 %AND <30` gate at UnitCalc.CAS:1235 and the `SThrown>0` gate at :1239 - so a `magic` ranged type fails it and the `u[c.strengthField] += colossalScaled(...)` at stats_sequence.js:1586 never runs. The melee line above it is ungated (stats_sequence.js:1581, from `SETSTAT(U,SAttack,0,…+CSM)` at UnitCalc.CAS:1233) and does raise A\'s melee from 0 to 1, but one point of melee cannot pass the defender\'s 2 Defense at full block, so it reaches no total either. colossalStrengthPhysicalRangedWarlord differs only in the ranged `type` - `missile` against this `magic` - and pins 13 against this 8.',
+        'Keep, and the absence is the rule under test: the block\'s secondary arm admits physical channels only - `physicalSecondary` is missile, boulder or thrown (stats_sequence.js:1583-1584), the calculator\'s reading of the script\'s own `SRangedType>0 %AND <30` gate at UnitCalc.CAS:1227 and the `SThrown>0` gate at :1239 - so a `magic` ranged type fails it and the `u[c.strengthField] += colossalScaled(...)` at stats_sequence.js:1586 never runs. The melee line above it is ungated (stats_sequence.js:1581, from `SETSTAT(U,SAttack,0,…+CSM)` at UnitCalc.CAS:1225) and does raise A\'s melee from 0 to 1, but one point of melee cannot pass the defender\'s 2 Defense at full block, so it reaches no total either. colossalStrengthPhysicalRangedWarlord differs only in the ranged `type` - `missile` against this `magic` - and pins 13 against this 8.',
     },
   },
   colossalStrengthScalesBuffedMeleeWarlord: {
-    desc: 'Colossal Strength (Warlord) scales CURRENT melee, not base (UnitCalc.CAS:1227-1243 reads GetStat(U,SAttack,0) in phase d). Base atk 10 + Lionheart +3 = 13 → +1+floor(0.4×13)=+6 → 19. 100% hit, def 2 blocks 2 → E[dmg] = 17 (if it scaled base instead: 10+3+5 = 18 → 16)',
+    desc: 'Colossal Strength (Warlord) scales CURRENT melee, not base (UnitCalc.CAS:1219-1235 reads GetStat(U,SAttack,0) in phase d). Base atk 10 + Lionheart +3 = 13 → +1+floor(0.4×13)=+6 → 19. 100% hit, def 2 blocks 2 → E[dmg] = 17 (if it scaled base instead: 10+3+5 = 18 → 16)',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10, abilities: { colossalStrength: true, lionheart: true } },
     b: { def:2, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 17 },
   },
   colossalStrengthScalesAfterRustWarlord: {
-    desc: 'Colossal Strength (Warlord) is applied after Rust within phase d — Rust is UnitCalc.CAS:492-504, Colossal :1227, so Colossal scales the already-reduced melee. Base atk 10 − 3 = 7 → +1+floor(0.4×7)=+3 → 10. 100% hit, def 2 blocks 2 → E[dmg] = 8 (if Colossal scaled base instead: 10−3+5 = 12 → 10)',
+    desc: 'Colossal Strength (Warlord) is applied after Rust within phase d — Rust is UnitCalc.CAS:484-496, Colossal :1227, so Colossal scales the already-reduced melee. Base atk 10 − 3 = 7 → +1+floor(0.4×7)=+3 → 10. 100% hit, def 2 blocks 2 → E[dmg] = 8 (if Colossal scaled base instead: 10−3+5 = 12 → 10)',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10, abilities: { colossalStrength: true, rust: true } },
     b: { def:2, toBlkMod:70, hp:20 },
@@ -1017,7 +1028,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10 },
     vacuity: {
       'b.ability.largeShield':
-        'Keep, and the absence is the rule under test: `d:rust` clears the flag with `u.largeShield = false` (stats.js:1622), the calculator\'s reading of `SETSTAT(U,ALargeShield,0,0)` at UnitCalc.CAS:498. The ranged Defense bonus is read from the calculated abilities at combat_effects.js:436, which by then sees no Large Shield, so the `u.effectiveDefense += 3` at :435 never fires and stating the ability or not reaches the same Defense. b.ability.rust is the live half. The clear is positioned rather than final, which is a separate claim held elsewhere: fortificationRestoresRustedLargeShieldWarlord (presets_immunities_and_abilities.js) is the fixture where a later block reads what the clear left and grants Large Shield back.',
+        'Keep, and the absence is the rule under test: `d:rust` clears the flag with `u.largeShield = false` (stats.js:1622), the calculator\'s reading of `SETSTAT(U,ALargeShield,0,0)` at UnitCalc.CAS:490. The ranged Defense bonus is read from the calculated abilities at combat_effects.js:436, which by then sees no Large Shield, so the `u.effectiveDefense += 3` at :435 never fires and stating the ability or not reaches the same Defense. b.ability.rust is the live half. The clear is positioned rather than final, which is a separate claim held elsewhere: fortificationRestoresRustedLargeShieldWarlord (presets_immunities_and_abilities.js) is the fixture where a later block reads what the clear left and grants Large Shield back.',
     },
   },
   rustFantasticUnaffectedWarlord: {
@@ -1028,7 +1039,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10 },
     vacuity: {
       'a.ability.rust':
-        'Keep, and the absence is the rule under test: `rustActive` carries `!finishedIdentity.fantastic` (stats.js:246-247), so on a fantastic creature the curse is inactive and every half of it closes at once - the -3 melee (combat_abilities.js:1107, from `SETSTAT(U,SAttack,0,…-3)` at UnitCalc.CAS:495), the weapon strip (stats.js:276), the Large Shield clear (stats.js:1622) and the Thrown clear (stats.js:1628-1632). The exclusion is a targeting restriction read at the finished record rather than at the step\'s own rank, which stats.js:227-245 states and the script supports: its Rust block is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone (UnitCalc.CAS:493) and makes no Fantastic test of either record. a.unitType=fantastic_chaos is the live half. rustMeleePenaltyWarlord is this fixture without that field and pins 7 against this 10; ablation assigns `unitType: \'normal\'` (tools/preset_vacuity_sweep.js:204, written at :300), which semantically matches it rather than reproducing it, since that fixture omits the field and setUnit merges an omitted `unitType` to the same \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362). rustAppliesToSpiritLinkedFantasticWarlord adds only `spiritLink` to a.abilities and reaches 7 by clearing the Fantastic flag that targeting read sees.',
+        'Keep, and the absence is the rule under test: `rustActive` carries `!finishedIdentity.fantastic` (stats.js:246-247), so on a fantastic creature the curse is inactive and every half of it closes at once - the -3 melee (combat_abilities.js:1107, from `SETSTAT(U,SAttack,0,…-3)` at UnitCalc.CAS:487), the weapon strip (stats.js:276), the Large Shield clear (stats.js:1622) and the Thrown clear (stats.js:1628-1632). The exclusion is a targeting restriction read at the finished record rather than at the step\'s own rank, which stats.js:227-245 states and the script supports: its Rust block is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone (UnitCalc.CAS:485) and makes no Fantastic test of either record. a.unitType=fantastic_chaos is the live half. rustMeleePenaltyWarlord is this fixture without that field and pins 7 against this 10; ablation assigns `unitType: \'normal\'` (tools/preset_vacuity_sweep.js:204, written at :300), which semantically matches it rather than reproducing it, since that fixture omits the field and setUnit merges an omitted `unitType` to the same \'normal\' (UNIT_DEFAULTS, data.js:110, spread at ui_state.js:362). rustAppliesToSpiritLinkedFantasticWarlord adds only `spiritLink` to a.abilities and reaches 7 by clearing the Fantastic flag that targeting read sees.',
     },
   },
   rustAppliesToSpiritLinkedFantasticWarlord: {
@@ -1067,7 +1078,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.6 },
   },
   luckyStarCreatesMeleeWarlord: {
-    desc: 'F142: a script melee write carries no presence gate, so it creates the attack. `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1))` (UnitCalcPre.CAS:1614) is reached on `LUCKYSTAR<>0` and no other test, and the recompute\'s melee tail is a floor, not a zeroing (Units.RecalculateUnits.pas:2483). Permanent melee 0 → 1 at base 30% vs def 0 → E[dmg] = 0.3. Under the retired dead-slot rule the bonus was discarded and this was 0.000.',
+    desc: 'F142: a script melee write carries no presence gate, so it creates the attack. `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1))` (UnitCalcPre.CAS:1625) is reached on `LUCKYSTAR<>0` and no other test, and the recompute\'s melee tail is a floor, not a zeroing (Units.RecalculateUnits.pas:2483). Permanent melee 0 → 1 at base 30% vs def 0 → E[dmg] = 0.3. Under the retired dead-slot rule the bonus was discarded and this was 0.000.',
     version: V_WARLORD,
     a: { atk:0, hp:10, abilities: { luckyStar: true } },
     b: { def:0, hp:10 },
@@ -1092,19 +1103,19 @@ definePresets({
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 6 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { luckyStar: true } },
-    // B's counterattack is the F142 rule: the aura's `SAttack` write (UnitCalcPre.CAS:1614) is
+    // B's counterattack is the F142 rule: the aura's `SAttack` write (UnitCalcPre.CAS:1625) is
     // ungated, so B's permanent melee 0 becomes 1, at the base 30% → 0.3.
     expected: { dmgToA: 0.300, dmgToB: 3.0 },
   },
   luckyStarAuraArmorWarlord: {
-    desc: 'Lucky Star aura (Warlord): defender gains +1 Armor. 3 atk at 100% hit vs base def 1+1 at 100% block → 1 dmg (without the aura bonus, 2). B\'s 0.3 counterattack is the F142 rule: the aura\'s `SAttack` write (UnitCalcPre.CAS:1614) is ungated, so B\'s stated melee 0 becomes 1, at the base 30%',
+    desc: 'Lucky Star aura (Warlord): defender gains +1 Armor. 3 atk at 100% hit vs base def 1+1 at 100% block → 1 dmg (without the aura bonus, 2). B\'s 0.3 counterattack is the F142 rule: the aura\'s `SAttack` write (UnitCalcPre.CAS:1625) is ungated, so B\'s stated melee 0 becomes 1, at the base 30%',
     version: V_WARLORD,
     a: { atk:3, hitChance:70, hp:10 },
     b: { atk:0, def:1, toBlkMod:70, hp:10, abilities: { luckyStar: true } },
     expected: { dmgToA: 0.300, dmgToB: 1.0 },
   },
   luckyStarAuraRangedWarlord: {
-    desc: 'Lucky Star aura (Warlord): the block\'s one attack-channel write is `SETSTAT(U,SRanged,0,…+1)` (UnitCalcPre.CAS:1616), the conventional-ranged field. missile 2 → 3 at 100% hit vs def 0 → 3.000; without the enchantment, 2.000.',
+    desc: 'Lucky Star aura (Warlord): the block\'s one attack-channel write is `SETSTAT(U,SRanged,0,…+1)` (UnitCalcPre.CAS:1627), the conventional-ranged field. missile 2 → 3 at 100% hit vs def 0 → 3.000; without the enchantment, 2.000.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { luckyStar: true } },
     b: { def:0, hp:30 },
@@ -1112,7 +1123,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   luckyStarAuraSkipsThrownAndBreathWarlord: {
-    desc: 'Exclusion the engine makes: the Lucky Star aura writes `SAttack`, `SRanged`, `SDefense`, `SResist` and their four bonus mirrors and nothing else (UnitCalcPre.CAS:1614-1621), so Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. The +0.3 on top is the `SAttack` write itself, which is ungated (F142): melee 0 becomes 1 at the base 30%. A grant reaching every channel, as this block made before F139, gives 4 + 6 + 0.3 = 10.300.',
+    desc: 'Exclusion the engine makes: the Lucky Star aura writes `SAttack`, `SRanged`, `SDefense`, `SResist` and their four bonus mirrors and nothing else (UnitCalcPre.CAS:1625-1632), so Thrown 3 and Fire Breath 5 both stay put — 3 + 5 = 8.000 at 100% hit vs def 0. The +0.3 on top is the `SAttack` write itself, which is ungated (F142): melee 0 becomes 1 at the base 30%. A grant reaching every channel, as this block made before F139, gives 4 + 6 + 0.3 = 10.300.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { thrown: { strength: 3, type: 'thrown' },
       fireBreath: { strength: 5, type: 'fire' } },
@@ -1121,7 +1132,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.300 },
   },
   luckyStarDoomGazeUnchangedWarlord: {
-    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Lucky Star block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1487. Doom Gaze 5 still deals 5.000; the +0.3 beside it is the block\'s ungated `SAttack` write (F142), melee 0 becoming 1 at the base 30%. The pre-F139 write gave 6.000 + 0.3.',
+    desc: 'Exclusion the engine makes: `SDoomGaze` (MASTER.CAS:1047) is an independent record field that the Lucky Star block never names, and the only script write to it is a zeroing in UnitCalc.CAS:1479. Doom Gaze 5 still deals 5.000; the +0.3 beside it is the block\'s ungated `SAttack` write (F142), melee 0 becoming 1 at the base 30%. The pre-F139 write gave 6.000 + 0.3.',
     version: V_WARLORD,
     a: { atk:0, hp:10, abilities: { luckyStar: true, doomGaze: 5 } },
     b: { hp:10 },
@@ -1177,18 +1188,18 @@ definePresets({
     expected: { dmgToA: 0.600, dmgToB: 0 },
     vacuity: {
       'a.ability.illusion':
-        'Keep, and the absence is the rule under test: the illusion write is `u.effectiveDefense = 0` (combat_effects.js:431), gated on `ctx.illusion && !hasAbil(u.abilities, \'illusionImmunity\')` (:432), and applyRebuildEffects hands the defender `illusionImmunity: true` (combat_effects.js:120). With the immunity standing the gate is closed, so the attack is scored against the defender\'s full Defense exactly as an ordinary one would be and removing it from the fixture changes nothing. b.ability.rebuild is the live half, and it moves both numbers: the immunity goes with it and the Defense collapses to 0, while B also loses the ungated `u.atk += 2` (combat_abilities.js:1342) that its 0.600 counterattack is made of.',
+        'Keep, and the absence is the rule under test: the illusion write is `u.effectiveDefense = 0` (combat_effects.js:431), gated on `ctx.illusion && !hasAbil(u.abilities, \'illusionImmunity\')` (:432), and applyRebuildEffects hands the defender `illusionImmunity: true` (combat_effects.js:120). With the immunity standing the gate is closed, so the attack is scored against the defender\'s full Defense exactly as an ordinary one would be and removing it from the fixture changes nothing. b.ability.rebuild is the live half, and it moves both numbers: the immunity goes with it and the Defense collapses to 0, while B also loses the ungated `u.atk += 2` (combat_abilities.js:1359) that its 0.600 counterattack is made of.',
     },
   },
   rebuildMechanicalTooLateForArtificerWarlord: {
-    desc: 'Exclusion the engine makes, by rank: Rebuild writes Mechanical (`SCustomAttribute` 1) permanently at OLSpell.CAS:279 when the spell is cast, but the Artificer retort reads that same permanent flag at CreateUnit.CAS:38, which runs once when the city builds the unit — and Rebuild is cast on a unit that already exists, so the retort never sees it. atk 1 + Rebuild(+2) = 3, 100% hit vs 0 def → 3 dmg; the retort\'s +1 melee and its Magic Weapons grant both stay away (they would give 4). Later readers do see the write: `mechanicalExpertRebuildMakesMechanicalWarlord` is the same unit taking Mechanical Expert\'s +20% To Hit from region d. The engine displays the retort\'s ability lines on a Rebuilt unit anyway — DisAbil.CAS:840 and :846 recompute them from the base record every draw — which is display and AI only.',
+    desc: 'Exclusion the engine makes, by rank: Rebuild writes Mechanical (`SCustomAttribute` 1) permanently at OLSpell.CAS:587 when the spell is cast, but the Artificer retort reads that same permanent flag at CreateUnit.CAS:38, which runs once when the city builds the unit — and Rebuild is cast on a unit that already exists, so the retort never sees it. atk 1 + Rebuild(+2) = 3, 100% hit vs 0 def → 3 dmg; the retort\'s +1 melee and its Magic Weapons grant both stay away (they would give 4). Later readers do see the write: `mechanicalExpertRebuildMakesMechanicalWarlord` is the same unit taking Mechanical Expert\'s +20% To Hit from region d. The engine displays the retort\'s ability lines on a Rebuilt unit anyway — DisAbil.CAS:840 and :846 recompute them from the base record every draw — which is display and AI only.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { rebuild: true, artificer: true } },
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
     vacuity: {
       'a.ability.artificer':
-        'Keep, and the absence is the rule under test - the claim is exactly that the retort cannot see the flag Rebuild writes. `base:artificer` reads the record at its own rank (`when: u => !!u.mechanical`, combat_abilities.js:1298), from `GetStat(U,SCustomAttribute,1)=1` at CreateUnit.CAS:38, and the chain places `base:artificer` among the training-time writes (stats_manifests.js:243) while `base:rebuild`, whose apply sets `u.mechanical = true` (combat_abilities.js:1342), is cast-time and strictly later (stats_manifests.js:254). The gate therefore reads false and the retort\'s `u.atk += 1; u.def += 1; u.res += 2;` (:1304) and +1 ranged (:1305) all stay away. Its Magic Weapons half is closed by a second, independent guard, so a change to the rank alone would not move this number: `artificerMagicWeapon` reads the two raw input flags (stats.js:157-158) and this fixture states no `mechanical`. a.ability.rebuild is the live half. mechanicalExpertRebuildMakesMechanicalWarlord is the later reader that does see the write, four regions on.',
+        'Keep, and the absence is the rule under test - the claim is exactly that the retort cannot see the flag Rebuild writes. `base:artificer` reads the record at its own rank (`when: u => !!u.mechanical`, combat_abilities.js:1299), from `GetStat(U,SCustomAttribute,1)=1` at CreateUnit.CAS:38, and the chain places `base:artificer` among the training-time writes (stats_manifests.js:243) while `base:rebuild`, whose apply sets `u.mechanical = true` (combat_abilities.js:1359), is cast-time and strictly later (stats_manifests.js:254). The gate therefore reads false and the retort\'s `u.atk += 1; u.def += 1; u.res += 2;` (:1305) and +1 ranged (:1306) all stay away. Its Magic Weapons half is closed by a second, independent guard, so a change to the rank alone would not move this number: `artificerMagicWeapon` reads the two raw input flags (stats.js:157-158) and this fixture states no `mechanical`. a.ability.rebuild is the live half. mechanicalExpertRebuildMakesMechanicalWarlord is the later reader that does see the write, four regions on.',
     },
   },
 });

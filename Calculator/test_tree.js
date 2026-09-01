@@ -19,7 +19,7 @@ const TEST_TREE = [
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseOverridesBlackChannelsMoM', 'ccFireBreathBasic', 'ccFireBreathAfterLevelMoM', 'ccFireBreathReplacesThrown', 'ccFireBreathVsFireImmunity', 'ccBypassWeaponImmunity', 'ccNodeAuraChaos'] },
       { name: 'Chaos Surge', keys: ['chaosSurgeMeleeMoM', 'chaosSurgeRangedMoM', 'chaosSurgeThrownMoM', 'chaosSurgeDoomGazeMoM', 'chaosSurgeNoResistanceMoM', 'chaosSurgeStackingMoM', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsArmorMoM'] },
       { name: 'Charm of Life', keys: ['charmOfLifeHpLow', 'charmOfLifeHpHigh', 'charmOfLifeReadsLiveHpCoM2'] },
-      { name: 'Combined gaze', keys: ['combinedStoningDeathGaze'] },
+      { name: 'Combined gaze', keys: ['combinedStoningDeathGaze', 'combinedStoningDeathGazeUnclipped'] },
       { name: 'Hidden gaze attack', keys: ['hiddenGazePerAttackerFigure', 'hiddenGazeStoningKillsPerDefenderFigure', 'hiddenGazeIgnoresWeaponImmunity', 'hiddenGazeLevelLadderNeedsStrength', 'hiddenGazeKeepsFocusMagicRaiseCoM', 'hiddenGazeTakesBlackChannelsTypeGate', 'hiddenGazeTakesBlackPrayerUngatedCoM', 'hiddenGazeMindStormFlooredCoM', 'holyBonusNeedsRangedStrengthCoM'] },
       { name: 'Darkness / True Light', keys: ['darknessDeathVsLife', 'trueLightDeathVsLife', 'trueLightDeathVsLifeWarlord', 'trueLightWarlordIllusionToHit', 'trueLightReadsRealmAtItsOwnBlockWarlord', 'trueLightSeesDestinysPermanentLifeRealmWarlord', 'sanctifyTrueLightWarlord', 'sanctifyClergyFantasticWarlord'] },
       { name: 'Death gaze', keys: ['deathGazeBasic', 'deathGazeMultiFig', 'deathGazeDeathImmunity', 'deathGazeMagicImmunity', 'deathGazeStoningImmunityNotBlocked', 'deathGazeHighRes'] },
@@ -56,7 +56,7 @@ const TEST_TREE = [
       { name: 'Metal Fires / Flame Blade / Fiery Blade', keys: ['metalFiresMelee', 'metalFiresFantasticUnaffected', 'metalFiresFantasticMissileUnaffected', 'metalFiresFantasticThrownUnaffected', 'metalFiresMissile', 'metalFiresNotBoulder', 'metalFiresThrown', 'metalFiresWeaponUpgrade', 'flameBladeMelee', 'flameBladeMissile', 'flameBladeThrown', 'flameBladeMetalFiresNoStack', 'flameBladeMeleeCoM2', 'flameBladeThrownNotBoostedCoM2', 'flameBladeMeleeWarlord', 'flameBladeMissileWarlord', 'flameBladeBoulderWarlord', 'flameBladeThrownWarlord', 'flameBladeFireBreathWarlord', 'flameBladeCreatesFireBreathWarlord', 'fieryBladeMeleeWarlord', 'fieryBladeNoFireBreathWarlord'] },
       { name: 'Mind Storm', keys: ['mindStormMeleePenaltyMoM', 'mindStormRangedPenaltyMoM', 'mindStormDefPenaltyMoM'] },
       { name: 'Missile Immunity', keys: ['missileImmunityMissile', 'missileImmunityBoulder', 'missileImmunityMagic', 'missileImmunityMelee', 'missileImmunityArmorPiercing', 'missileImmunityWIOverwrite131', 'missileImmunityWraithFormOverwrite131', 'missileImmunityInvulnerabilityOverwrite131', 'missileImmunityGenericKeepsMI131', 'missileImmunityWIMagicWeapon'] },
-      { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch'] },
+      { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch', 'nodeAuraNonFantastic', 'nodeAuraNonFantasticNatureCoM2'] },
       { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'magicImmunityPoisonTouch', 'poisonHighRes', 'charmedPoisonMoM', 'poisonRanged', 'poisonThrown', 'chaosSpawnPoisonGazeMom'] },
       { name: 'Prayer', keys: ['prayerToHit', 'prayerToHitRanged', 'prayerToBlock', 'prayerResistance', 'prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyNotRanged131'] },
       { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'magicImmunityMagicRanged', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose'] },
@@ -73,7 +73,7 @@ const TEST_TREE = [
       { name: 'Vertigo', keys: ['vertigoMeleeHitMoM', 'vertigoRangedHitMoM', 'vertigoDefenseMoM', 'vertigoImmolationDefenseMoM', 'vertigoWallOfFireDefenseMoM'] },
       { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireMultiFig', 'wallOfFireMagicImmunity', 'wallOfFireRighteousness', 'wallOfFireFireImmunity', 'wallOfFireNotRanged', 'wallOfFireAfterThrown', 'wallOfFireAfterGazeCounter', 'wallOfFireAfterThrownAndGaze', 'wallOfFireBilateralGaze'] },
       { name: 'Warp Creature', keys: ['warpAttackMelee', 'warpAttackNotRangedMoM', 'warpDefenseHalfMoM', 'warpResistSetsToZero', 'warpResistMagicSurvives'] },
-      { name: 'Warp Reality', keys: ['warpRealityBasic', 'warpRealityChaosExempt', 'warpRealityChaosChannelsExempt', 'warpRealityChaosExemptAtBlockWarlord', 'warpRealityDoesNotReachImmolationWarlord', 'warpRealityDoesNotReachImmolationMoM', 'warpRealityMagicImmunityNotExempt', 'warpRealityBothSides', 'warpRealityFloorAt10', 'warpRealityRanged'] },
+      { name: 'Warp Reality', keys: ['warpRealityBasic', 'warpRealityChaosExempt', 'warpRealityChaosChannelsExempt', 'warpRealityChaosChannelsUndeadExemptCoM2', 'warpRealityChaosExemptAtBlockWarlord', 'warpRealityDoesNotReachImmolationWarlord', 'warpRealityDoesNotReachImmolationMoM', 'warpRealityMagicImmunityNotExempt', 'warpRealityBothSides', 'warpRealityFloorAt10', 'warpRealityRanged'] },
       { name: 'Weakness', keys: ['weaknessMeleePenalty', 'weaknessMissileRangedPenalty', 'weaknessThrownNotAffected131', 'weaknessBoulderNotAffected'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityMelee', 'weaponImmunityMagicWeapon', 'weaponImmunityFantastic', 'weaponImmunityHero', 'weaponImmunityCounter', 'weaponImmunityThrown131', 'weaponImmunityRangedMissile', 'weaponImmunityRangedMagic'] },
       { name: 'Wraith Form', keys: ['wraithFormGrantsWeaponImmunity', 'wraithFormBypassesWIMoM'] },
@@ -180,6 +180,13 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Ballistics Training (Warlord)',
+        keys: [
+          'ballisticsTrainingRangedWarlord',
+          'ballisticsTrainingThrownWarlord',
+        ],
+      },
+      {
         name: 'Beat of Swiftness (Warlord)',
         keys: [
           'beatOfSwiftnessArmorPenaltyWarlord',
@@ -189,7 +196,7 @@ const TEST_TREE = [
         name: 'Berserk (Warlord)',
         keys: [
           'berserkWarlordPlus15ToHit',
-          'berserkWarlordMinus10ToBlock',
+          'berserkWarlordArmorPenalty',
         ],
       },
       {
@@ -265,6 +272,7 @@ const TEST_TREE = [
           'blazingEyesChaosCreatureGetsDoomGazeCoM2',
           'blazingEyesChaosCreatureUpgradesDoomGazeCoM2',
           'blazingEyesChaosChannelsEligibleCoM2',
+          'blazingEyesReachesChaosChannelsUndeadCoM2',
           'blazingEyesLandsAfterFocusMagicCoM2',
           'chaosEmbraceLandsAfterFocusMagicWarlord',
           'blazingEyesNonChaosNoUpgradeCoM2',
@@ -347,6 +355,7 @@ const TEST_TREE = [
           'chaosSurgeMeleeCoM2',
           'chaosSurgeNonChaosNoBonusCoM2',
           'chaosSurgeRangedCoM2',
+          'chaosSurgeReachesChaosChannelsUndeadCoM2',
           'chaosSurgeResistanceCoM2',
           'chaosSurgeStackingCoM2',
         ],
@@ -552,6 +561,9 @@ const TEST_TREE = [
           'greatUnbindingToBlockWarlord',
           'greatUnbindingResistanceWarlord',
           'greatUnbindingNonFantasticUnaffectedWarlord',
+          'greatUnbindingSpiritLinkExemptWarlord',
+          'greatUnbindingLiveFantasticWarlord',
+          'greatUnbindingUndeadFlagWarlord',
         ],
       },
       {
@@ -706,6 +718,7 @@ const TEST_TREE = [
           'mechanicalExpertToDefendWarlord',
           'mechanicalExpertNoBonusForNonMechanicalWarlord',
           'mechanicalExpertRebuildMakesMechanicalWarlord',
+          'mechanicalExpertRebuildHeroNoBonusWarlord',
         ],
       },
       {
@@ -977,6 +990,14 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Spell Ward',
+        keys: [
+          'spellWardFantasticCoM2',
+          'spellWardNonFantasticCoM2',
+          'spellWardWrongRealmCoM2',
+        ],
+      },
+      {
         name: 'Spirit Link',
         keys: [
           'spiritLinkExorciseImmuneWarlord',
@@ -1082,7 +1103,7 @@ const TEST_TREE = [
       {
         name: 'Type precedence',
         keys: [
-          'bloodLustOverridesCCDefenseCoM2',
+          'bloodLustUndeadFlagRecoversChaosCoM2',
           'ccDefenseOverridesDestinyCoM2',
           'ccDefenseOverridesUndeadCoM1',
           'ccFireBreathOverridesDestinyCoM2',
@@ -1170,9 +1191,9 @@ const TEST_TREE = [
     ],
   },
   { name: 'Version differences tests', subs: [
-      { name: 'Bless', keys: ['blessMeleeFromDeath', 'blessMeleeFromDeathCoM2', 'blessMeleeFromChaos', 'blessMeleeFromChaosCoM2', 'blessBreathBonusMoM', 'blessBreathBonusCoM', 'blessBreathBonusCoM2', 'blessBreathBonusWarlord', 'blessFireBreathDefMoM', 'blessFireBreathDefCoM', 'blessImmolationDefMoM', 'blessImmolationDefCoM', 'blessResistBonusMoM', 'blessResistBonusCoM2', 'blessResistBonusWarlord'] },
+      { name: 'Bless', keys: ['blessMeleeFromDeath', 'blessMeleeFromDeathCoM2', 'blessMeleeFromChaos', 'blessMeleeFromChaosCoM2', 'blessMagicRangedDefMoM', 'blessMagicRangedNoDefCoM', 'blessMagicRangedNoDefCoM2', 'blessMagicRangedNoDefWarlord', 'blessFireBreathDefMoM', 'blessFireBreathDefCoM', 'blessImmolationDefMoM', 'blessImmolationDefCoM', 'blessResistBonusMoM', 'blessResistBonusCoM2', 'blessResistBonusWarlord'] },
       { name: 'Blood Lust', keys: ['bloodLustThrownCoM1MeleeOnly', 'bloodLustThrownCoM2'] },
-      { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurCoM2CounterOwnSide', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM2', 'blurPlusInvisCoM2v2', 'blurPlusInvisWarlord'] },
+      { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurCoM2CounterOwnSide', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM', 'blurPlusInvisCoM2v2', 'blurPlusInvisWarlord'] },
       { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderPenaltyCoM2', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathAfterLevelMoM', 'ccFireBreathCoM', 'ccFireBreathReplacesThrown', 'ccFireBreathRejectsPositiveThrownCP', 'ccFireBreathRepeatsAtRecompute131', 'ccFireBreathRecomputeFixedCP', 'ccFireBreathCoexistsWithLightningCoM2', 'ccFireBreathCoexistsWithGazeCoM2', 'ccFireBreathAddsToExistingCoM2', 'ccFireBreathAddsToExistingWarlord'] },
       { name: 'Chaos Surge', keys: ['chaosSurgeThrownCoM', 'chaosSurgeThrownCoM2', 'chaosSurgeDoomGazeCoM', 'chaosSurgeDoomGazeCoM2', 'chaosSurgeChaosChannelsBreathMoM', 'chaosSurgeChaosChannelsBreathCoM', 'chaosSurgeChaosChannelsArmorMoM', 'chaosSurgeChaosChannelsArmorCP', 'chaosSurgeChaosChannelsArmorCoM'] },
@@ -1189,7 +1210,7 @@ const TEST_TREE = [
       { name: 'Holy Bonus', keys: ['holyBonusRangedMoM', 'holyBonusRangedCoM2'] },
       { name: 'Holy Weapon', keys: ['holyWeaponThrownMoM', 'holyWeaponThrownPatched'] },
       { name: 'Immolation', keys: ['immolationRangedMoM', 'immolationNotRangedPatched', 'immolationNotRangedCoM', 'immolationMoMStrength', 'immolationCoMStrength10', 'immolationWithThrown', 'immolationNotThrownCoM2'] },
-      { name: 'Invisibility', keys: ['invisToHitMoM', 'blurInvisCoM2'] },
+      { name: 'Invisibility', keys: ['invisToHitMoM', 'blurInvisCoM'] },
       { name: 'Large Shield', keys: ['largeShieldRangedMissile', 'largeShieldCom2Ranged'] },
       { name: 'Land Linking', keys: ['landLinkingRangedCoM', 'landLinkingRangedCoM2'] },
       { name: 'Lionheart', keys: ['lionheartHpMoM', 'lionheartHpCoM2', 'lionheartThrownMoM', 'lionheartThrownCoM2'] },
