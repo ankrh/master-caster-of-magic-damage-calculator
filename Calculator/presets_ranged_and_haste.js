@@ -407,7 +407,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   levelThrownGateBaseRecordWarlord: {
-    desc: 'Explosive Reform writes `SETSTAT(U,SThrown,0,...)` (UnitCalcPre.CAS:1071) — record selector 0, the calculated record — so `BaseUnits[i].thrown` is still zero when the normal arm reads it and the Thrown ladder adds nothing. One figure gives Thrown 7, and Champion melee is 5 + 4 = 9, for 16.0. Reading the calculated field instead would carry the Thrown to 9, for 18.0.',
+    desc: 'Explosive Reform writes `SETSTAT(U,SThrown,0,...)` (UnitCalcPre.CAS!NOMAGITEKENGINE!+11 "SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );") — record selector 0, the calculated record — so `BaseUnits[i].thrown` is still zero when the normal arm reads it and the Thrown ladder adds nothing. One figure gives Thrown 7, and Champion melee is 5 + 4 = 9, for 16.0. Reading the calculated field instead would carry the Thrown to 9, for 18.0.',
     version: V_WARLORD,
     a: { figs:1, atk:5, level:'champion', hitChance:70, hp:10,
       abilities: { outlanderWizard: true, explosive: true } },
@@ -1560,6 +1560,30 @@ definePresets({
     darkness: true,
     expected: { dmgToA: 0.323, dmgToB: 1.033 },
   },
+  darknessDeathArmReachesChaosChannelsUndeadNoHealCoM2: {
+    desc: 'Darkness (CoM2) still pays a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal. The Death arm gates on `IsDeathUnit(i)` at $005A45EF, and the helper is `(race = RCDeath) or (ChaosChannel(u) and EncUndead)` at $0059504C, so the Death realm `c:undead` wrote and `c:raiseDead` then overwrote with No Heal is recovered by the second arm. One Darkness copy is +1 melee: atk 1 -> 2, 100% To Hit against Defense 0 -> 2.000. Reading the scalar realm alone sees No Heal, the arm pays nothing, and the card deals 1.000.',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true } },
+    b: { atk:0, hp:10 },
+    darkness: true,
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.raiseDead':
+        'Keep, and the absence is the rule under test: Raise Dead\'s No Heal write is the very overwrite the recovery arm exists to undo, so ablating it leaves the scalar saying Death and the same 2.000. The other three features are live at delta 1: without a.ability.ccDefense there is no ChaosChannel term, without a.ability.undead no EncUndead term, and without combat.darkness no block.',
+    },
+  },
+  darknessDeathArmStaysScalarChaosChannelsUndeadNoHealCoM: {
+    desc: 'Darkness (CoM 1): the control for darknessDeathArmReachesChaosChannelsUndeadNoHealCoM2. CoM 1\'s Death arm is `bu->race == rt_Death` at com1:0x908F0 and has no classifier helper, so a Chaos-Channelled Undead unit re-tagged No Heal by Raise Dead is not Death there: atk 1 stays 1, 100% To Hit against Defense 0 -> 1.000. Paying the arm would give 2.000.',
+    version: V_COM,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true } },
+    b: { atk:0, hp:10 },
+    darkness: true,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'every-feature-inert':
+        'Inert by construction: the claim is that none of the three abilities makes this unit Death in CoM 1, so the Darkness block has nothing to pay, and removing the block or any one of the abilities leaves the same 1.000.',
+    },
+  },
   trueLightDeathVsLife: {
     desc: 'True Light: Death 4atk/3def→3/2, Life 4atk/3def→5/4, mirror match',
     a: { figs:1, atk:4, def:3, res:5, hp:10, unitType:'fantastic_death' },
@@ -1584,7 +1608,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.600 },
   },
   trueLightReadsRealmAtItsOwnBlockWarlord: {
-    desc: 'True Light (Warlord): the Death arm reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1522, so it takes -1: atk6->5 vs def 0, 100% hit = 5. Reading the post-conversion realm would see Chaos and give nothing.',
+    desc: 'True Light (Warlord): the Death arm reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS!NOUPLIFTSPEECH!+7 "IF ( (GetStat(U,SRace,0)=RCDeath)", so it takes -1: atk6->5 vs def 0, 100% hit = 5. Reading the post-conversion realm would see Chaos and give nothing.',
     version: V_WARLORD,
     a: { figs:1, atk:6, res:5, hp:10, hitChance:70, unitType:'fantastic_death', abilities: { ccDefense: true } },
     b: { figs:1, atk:0, def:0, res:5, hp:10, toBlkMod:70, unitType:'normal' },
@@ -1592,7 +1616,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   trueLightSeesDestinysPermanentLifeRealmWarlord: {
-    desc: 'True Light (Warlord): Destiny/Apotheosis writes the *permanent* record — `B.race := 19; B.Fantastic := True` at $0059A390 — so the unit is already a Life creature when the region-b True Light block reads `GetStat(U,SRace,0)` at UnitCalcPre.CAS:1522. True Light adds +1 (atk 5→6) and the region-c Destiny package then doubles the live value to 12; 100% hit vs def 0 = 12. Treating the realm write as a region-c write of the calculated record leaves True Light inert here and gives 10.',
+    desc: 'True Light (Warlord): Destiny/Apotheosis writes the *permanent* record — `B.race := 19; B.Fantastic := True` at $0059A390 — so the unit is already a Life creature when the region-b True Light block reads `GetStat(U,SRace,0)` at UnitCalcPre.CAS!NOUPLIFTSPEECH!+7 "IF ( (GetStat(U,SRace,0)=RCDeath)". True Light adds +1 (atk 5→6) and the region-c Destiny package then doubles the live value to 12; 100% hit vs def 0 = 12. Treating the realm write as a region-c write of the calculated record leaves True Light inert here and gives 10.',
     version: V_WARLORD,
     a: { figs:1, atk:5, res:5, hp:20, hitChance:70, unitType:'normal', abilities: { apotheosis: true } },
     b: { figs:1, atk:0, def:0, res:5, hp:20, toBlkMod:70, unitType:'normal' },
@@ -1661,6 +1685,43 @@ definePresets({
     b: { def:3, toBlkMod:70, res:5, hp:10, unitType:'fantastic_life' },
     expected: { dmgToA: 0, dmgToB: 3.200 },
   },
+  eternalNightDoubleDarknessReachesChaosChannelsUndeadNoHealCoM2: {
+    desc: 'Eternal Night (CoM2) still doubles Darkness for a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal. The doubling is the `for j := 1 to k` loop inside the `IsDeathUnit(i)` branch at $005A45EF, so it reads the same helper as the arm, and the helper\'s `ChaosChannel(u) and EncUndead` term recovers the Death realm `c:raiseDead` overwrote with No Heal. atk 1 + 2 = 3, 100% To Hit against Defense 0 -> 3.000. Reading the scalar realm alone sees No Heal and the card deals 1.000.',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true, eternalNight: true } },
+    b: { atk:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+    vacuity: {
+      'a.ability.raiseDead':
+        'Keep, and the absence is the rule under test: Raise Dead\'s No Heal write is the overwrite the recovery arm undoes, so without it the scalar already says Death and the same 3.000 stands. The other three are live at delta 2: without a.ability.ccDefense or a.ability.undead the helper has no second arm, and without a.ability.eternalNight there is no Darkness to double.',
+    },
+  },
+  eternalNightEnemyResistanceExemptsChaosChannelsUndeadNoHealCoM2: {
+    desc: 'Eternal Night (CoM2) exempts a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal from the enemy -1 Resistance. The block gates on `not IsDeathUnit(i)` at $005A22D9, and the helper\'s `ChaosChannel(u) and EncUndead` term recovers the Death realm `c:raiseDead` overwrote with No Heal, so the unit is Death to it. The same helper then pays Darkness\'s Death arm at $005A45EF, whose Resistance sits outside the doubling loop: res 5 + 1 = 6. Poison 4 at CoM\'s -1 save: 4 x (11 - 6)/10 = 2.000. Melee 1 against Defense 1 + 3 (Chaos Channels) + 2 (doubled Darkness) at 100% To Block adds nothing. Reading the scalar realm alone charges the -1 and pays no arm: res 4, 4 x 0.7 = 2.800.',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, abilities: { eternalNight: true, poison:4 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'b.ability.raiseDead':
+        'Keep, and the absence is the rule under test: Raise Dead\'s No Heal write is the overwrite the recovery arm undoes, so without it the scalar already says Death, the unit is exempt and paid +1 res the same way, and the same 2.000 stands. The other features are live: without b.ability.ccDefense or b.ability.undead the helper has no second arm and the card returns to 2.800 (the ccDefense ablation is BUG-Q31 as written: Undead alone in the No Heal corner is not Death), without a.ability.eternalNight there is neither penalty nor Darkness (res 5, 2.400), and without a.ability.poison nothing rolls.',
+    },
+  },
+  eternalNightEnemyResistanceStaysScalarChaosChannelsUndeadNoHealCoM: {
+    desc: 'Eternal Night (CoM 1): the control for eternalNightEnemyResistanceExemptsChaosChannelsUndeadNoHealCoM2. CoM 1\'s block is `bu->race != rt_Death` at com1:0x90B2A and has no classifier helper, so a Chaos-Channelled Undead unit re-tagged No Heal by Raise Dead is not Death there and takes the -1: res 5 - 1 = 4. Its Darkness block is `bu->race == rt_Death` at com1:0x908F0 and pays nothing. Poison 4 at CoM\'s -1 save: 4 x (11 - 4)/10 = 2.800. Melee 1 against Defense 1 + 3 (Chaos Channels) at 100% To Block adds nothing. Exempting the unit would give res 5, 2.400.',
+    version: V_COM,
+    a: { atk:1, toHitMod:70, hp:10, abilities: { eternalNight: true, poison:4 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true } },
+    expected: { dmgToA: 0, dmgToB: 2.800 },
+    vacuity: {
+      'b.ability.ccDefense':
+        'Keep, and the absence is the rule under test: CoM 1 has no `ChaosChannel(u) and EncUndead` arm, so Chaos Channels cannot make this unit Death and the -1 lands either way. Its +3 Defense is behind a 100% To Block and moves nothing. The live halves are a.ability.eternalNight (delta 0.4) and a.ability.poison (delta 2.8).',
+      'b.ability.undead':
+        'Keep, and the absence is the rule under test: CoM 1 reads the scalar realm alone, so the Undead flag cannot make this unit Death and the -1 lands either way.',
+      'b.ability.raiseDead':
+        'Keep, and the absence is the rule under test: in CoM 1 the Chaos Channels armor block overrides Undead, so without Raise Dead the unit is Chaos rather than Death and still takes the -1; the fixture pins that no reading of these three abilities exempts it.',
+    },
+  },
   eternalNightEnemyPoorSightWarlord: {
     desc: 'Eternal Night (Warlord): enemy non-Death unit gets -2 ranged attack strength ("poor vision"). Missile rtb 4 - 2 = 2 at 100% hit vs def 0 = 2 dmg',
     version: V_WARLORD,
@@ -1686,7 +1747,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
   eternalNightPoorVisionReadsRealmAtItsOwnBlockWarlord: {
-    desc: 'Eternal Night (Warlord): the Poor Vision exemption reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS:1354, so it keeps its missile rtb 4 at 100% hit vs def 0 = 4. Reading the post-conversion realm would see Chaos and charge the -2. Darkness stays at its own later region-c position, where the unit is Chaos, so it adds nothing here.',
+    desc: 'Eternal Night (Warlord): the Poor Vision exemption reads the realm at its own region-b block, before Chaos Channels converts it. A base-Death unit given CC:+Defense is still Death at UnitCalcPre.CAS!NOBLOODANDIRON!+8 "%AND (GetEnchantmentFlag(U,EncUndead,0)=0)", so it keeps its missile rtb 4 at 100% hit vs def 0 = 4. Reading the post-conversion realm would see Chaos and charge the -2. Darkness stays at its own later region-c position, where the unit is Chaos, so it adds nothing here.',
     version: V_WARLORD,
     a: { figs:1, hitRanged:70, hitThrown:70, hitBreath:70, modernAttacks: { ranged: { strength:4, type:'missile' } }, hp:10, unitType:'fantastic_death', abilities: { ccDefense: true } },
     b: { def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true } },
@@ -1698,7 +1759,7 @@ definePresets({
     },
   },
   eternalNightNightGoblinsExemptWarlord: {
-    desc: 'Eternal Night (Warlord): Goblin Night Goblins, template 356, are named by the Poor Vision gate itself — `(GetStat(U,STypeID,1)<>356)`, UnitCalcPre.CAS:1352 — so they keep the full Missile 5 the roster gives them. 8 figures x strength 5 = 40 dice at 30+5+10 = 45% To Hit, against defense 0 (no block dice), = 18.000. Taking the -2 would leave strength 3, 24 dice, 10.800. The defender carries Poison Immunity because the roster record also has Poison Touch=1, which would add 8 guaranteed points on top of the number under test. The +10 is the second engine block on template 356, UnitCalc.CAS:351-360, which gives template 356 +10 To Hit and +10 To Defend under Eternal Night or Darkness; without it the record\'s own 35% would give 14.000.',
+    desc: 'Eternal Night (Warlord): Goblin Night Goblins, template 356, are named by the Poor Vision gate itself — `(GetStat(U,STypeID,1)<>356)`, UnitCalcPre.CAS!NOBLOODANDIRON!+6 "%AND (GetStat(U,STypeID,1)<>356)" — so they keep the full Missile 5 the roster gives them. 8 figures x strength 5 = 40 dice at 30+5+10 = 45% To Hit, against defense 0 (no block dice), = 18.000. Taking the -2 would leave strength 3, 24 dice, 10.800. The defender carries Poison Immunity because the roster record also has Poison Touch=1, which would add 8 guaranteed points on top of the number under test. The +10 is the second engine block on template 356, UnitCalc.CAS!NOANGELICGUARDIAN!+3..+12 "IF (GetStat(U,STypeID,1)<>356) THEN { GOTO", which gives template 356 +10 To Hit and +10 To Defend under Eternal Night or Darkness; without it the record\'s own 35% would give 14.000.',
     version: V_WARLORD,
     aUnitName: 'Goblin Night Goblins',
     b: { figs:9, def:0, toBlkMod:70, hp:10, abilities: { eternalNight: true, poisonImmunity: true } },

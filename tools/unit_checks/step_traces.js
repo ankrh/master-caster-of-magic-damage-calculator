@@ -741,7 +741,7 @@ function runChannelAttributionChecks(ctx) {
   assert(!Object.prototype.hasOwnProperty.call(heavenlyLight.changes, 'toHitBreath'),
     'Heavenly Light leaves the Breath To Hit field alone');
 
-  // UnitCalc.CAS:326-328 writes SToRanged alone. Keyed `phase:id`, because True Sight makes two
+  // UnitCalc.CAS!NOTZEAL!+3..+5 "IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0) THEN {" "}" writes SToRanged alone. Keyed `phase:id`, because True Sight makes two
   // writes at two positions: `c:trueSight` sets Illusion Immunity in every engine and this
   // Warlord-only `d:trueSight` is the To Hit half (F201).
   const trueSight = walk.find(entry => entry.id === 'trueSight' && entry.phase === 'd');
@@ -749,7 +749,7 @@ function runChannelAttributionChecks(ctx) {
   assertSameKeyList(trueSight.channels, ['ranged'],
     'True Sight attributes its To Hit write to Ranged alone');
 
-  // UnitCalc.CAS:558,569-571 writes -20 Ranged, -20 Thrown and -30 Breath, and the one breath
+  // UnitCalc.CAS!NOAETHERSURGE!+3 "IF (HASCOMBATGLOBAL(W,CGHurricane,1)=0)", UnitCalc.CAS!NOAETHERSURGE!+14..+16 "SETSTAT(U,SToBreath,0,( GetStat(U,SToBreath,0) - 15*(HURRICANESTR) ) );" "SETSTAT(U,SToRanged,0,( GetStat(U,SToRanged,0) - 10*(HURRICANESTR) ) );" writes -20 Ranged, -20 Thrown and -30 Breath, and the one breath
   // modifier serves both breath strength fields (Units.RecalculateUnits.pas:203-219).
   const hurricane = eventOf('hurricane');
   assert(!!hurricane, 'Hurricane records a To Hit write on the multi-channel unit');

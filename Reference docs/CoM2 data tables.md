@@ -13,7 +13,7 @@ lives in that binary-analysis index. Tracking for everything here lives in
 
 **Precedence.** For Warlord, a `.CAS` script still outranks a table — a script runs after the
 table is read and can overwrite the result. Nothing here has been found in that position, but the
-Warlord combat-cast Flame Blade's `+1` fire breath (`UnitCalc.CAS:331-333`) is an example of a
+Warlord combat-cast Flame Blade's `+1` fire breath (`UnitCalc.CAS!NOTZEAL!+8..+10 "IF (GETCOMBATENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN {" "}"`) is an example of a
 script *adding* an effect the table does not describe.
 
 ## The tables

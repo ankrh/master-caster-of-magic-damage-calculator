@@ -89,7 +89,7 @@ function deathTouchFailProb(defRes, defAbilities, modifier) {
 //
 // **Neither caller tests the defender's Spirit Link, and neither may.** Spirit Link is Warlord's
 // alone (`PROVENANCE[spiritLink]`, `stats_identity.js`), and the engine's write is a derivation
-// one: `UnitCalc.CAS:1297-1298` clears the calculated `Fantastic` flag at the tail of the
+// one: `UnitCalc.CAS!NOTICEAGE!+2..+3 ": Effect of Sentience, enchanted fantastic unit could not be targeted by fantastic-only spell and gain +2 resistance :" "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }"` clears the calculated `Fantastic` flag at the tail of the
 // recalculation, which the `d:spiritLink` step models and which is the last write of that field
 // in the Warlord chain. A spirit-linked target therefore reaches these functions projected as
 // `normal_*` and falls out on each caller's own unit-type test, with nothing left for a second

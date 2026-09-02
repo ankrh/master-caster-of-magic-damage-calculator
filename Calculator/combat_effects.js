@@ -110,10 +110,10 @@ function applyBlackChannelsEffects(unit, version) {
 // and Armor Piercing, and a non-hero also becomes Mechanical. Stat bonuses are
 // applied by getAbilityStatSteps.
 // The Mechanical flag is the one write the two branches do not share: `SETSTAT(TU,SCustomAttribute,1,1)`
-// (OLSpell.CAS:587) is inside `IF (ISHERO(TU)=0)` and writes the permanent record, while the hero
-// branch's `SETSTAT(U,SCustomAttribute,0,1)` (UnitCalcPre.CAS:685) writes the calculated record,
+// (OLSpell.CAS!NOTMARKOFCONQUEROR!+8 "SETSTAT(TU,SCustomAttribute,1,1);") is inside `IF (ISHERO(TU)=0)` and writes the permanent record, while the hero
+// branch's `SETSTAT(U,SCustomAttribute,0,1)` (UnitCalcPre.CAS!NOHEROAUGMENT!+5 "SETSTAT(U,SCustomAttribute,0,1);") writes the calculated record,
 // which no script line reads for value 1 (F217.3). The other three are written by both branches
-// (OLSpell.CAS:590-592, UnitCalcPre.CAS:688-690) and are ungated here.
+// (OLSpell.CAS!NOTMARKOFCONQUEROR!+11..+13 "SETSTAT(TU,AFArmorPiercing,1,1,1);" "SETSTAT(TU,ADeathImmunity,1,1);", UnitCalcPre.CAS!NOHEROAUGMENT!+8..+10 "SETSTAT(U,AFArmorPiercing,0,1,1);" "SETSTAT(U,ADeathImmunity,0,1);") and are ungated here.
 // STAT-FORMULA[rebuildEffectDerivation]
 // PROVENANCE[rebuildEffectDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:14:4bf7fbd36a952469a8d78b9b | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
 function applyRebuildEffects(unit, version) {
@@ -949,7 +949,7 @@ function computeCasterDefenseForAttack(target, attacker, version, vertigoDefPena
       // not a calculator input. Every Armor Piercing this calculator can carry is the *global*
       // record's — the roster's one `ArmorPiercing=Yes` byte, and every script grant, which write
       // `AFArmorPiercing` with flag selector 1, "Global" (`Scripts.TXT:642-643`;
-      // `CreateUnit.CAS:261` reads that same global record to ask what the template gave). That
+      // `CreateUnit.CAS!NOTGENERIC!+52 "IF (GetStat(U,AFArmorPiercing,1,1)=0) %AND (GetStat(U,AFDoom,1,1)=0) THEN {"` reads that same global record to ask what the template gave). That
       // record is `attackflags`, which `islightning` does not read, so folding it in here would
       // let Lightning Resist cancel Armor Piercing for missile, boulder and plain magic ranged
       // attacks the engine still halves.

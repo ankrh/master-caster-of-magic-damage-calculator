@@ -141,8 +141,8 @@ const ENCHANTMENT_DEFS = [
     { key: 'magitekEngineering', label: 'Magitek Engineering', type: 'bool', match: 'MagitekEngineering', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\nPower Engine units gain +20% To-Defend and Large Shield.' },
     { key: 'magitekScience', label: 'Magitek Science', type: 'bool', match: 'MagitekScience', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Outlander research reform, not a cast spell.\nArmorclad units gain Resist Magic.\nThe manual and helptext also name Battle Armor, but the script\ndoes not grant it there.' },
     { key: 'malnourished', label: 'Malnourished', type: 'bool', match: 'Malnourished', group: 'Enchantments', subgroup: 'Warlord only', tooltip: 'Versions: Warlord\n-1 melee attack, -2 armor.' },
-    // The eight `STypeID`s at UnitCalc.CAS:288-295 are named in the tooltip because the
-    // friendly-side scan around them (:278-300) is outside the one-attacker-one-defender
+    // The eight `STypeID`s at UnitCalc.CAS!NOTGOBLINCOUNT!+13..+20 "%OR (GETSTAT(UOT,STypeID,1)=52)" "%OR (GETSTAT(UOT,STypeID,1)=363)" are named in the tooltip because the
+    // friendly-side scan around them (UnitCalc.CAS!NOTGOBLINCOUNT!+5..+27 "FOR N=1 TO NMAXCOMBAT;" "NEXT N;") is outside the one-attacker-one-defender
     // scope, so this control asserts the presence instead of deriving it. The names come from
     // `Unit rosters/Warlord mod unit data/UNITS.INI` sections [52] [78] [110] [117] [144]
     // [292] [357] [363], which agree with `Calculator/units_warlord.js` (F196).

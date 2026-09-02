@@ -263,7 +263,8 @@ and the one hard-coded Golem enchantment grant rather than general stat accumula
 These two regions need no disassembly. They are the current Warlord
 `UnitCalcPre.CAS` and `UnitCalc.CAS`, respectively, and CAS executes their statements in source
 order except where an explicit `IF`, `GOTO`, loop or `HALT` changes the path. This section reads
-the shipped `Warlord 1.5.12.7` files:
+the `Warlord 1.5.12.7` files, which the tree no longer ships (recoverable from git at `2c0fd48^`),
+so its line numbers are that release's, not the shipped `Warlord 1.5.12.9` set's:
 
 | Region | File | Lines | md5 |
 |---|---|---:|---|
@@ -316,7 +317,7 @@ Several load-bearing consequences follow directly:
 - **The Doom Mastery/Domain setters run before control returns to `c`, but source order alone
   does not prove that the same pass consumes their new flags.** Doom Mastery calls
   `SETCOMBATENCHANTMENTFLAG(..., B=0, ...)`, while Domain calls
-  `SETENCHANTMENTFLAG(..., B=1, ...)` (`UnitCalcPre.CAS:1183-1243`). `Scripts.TXT:601-609`
+  `SETENCHANTMENTFLAG(..., B=1, ...)` (`UnitCalcPre.CAS!NOFIERYDARKNESS!+2..+62 ": new effect of Doom Mastery, under this GE, one warp creature get all 3 :" "!NODOMAINOFENCHANTER!"`). `Scripts.TXT:601-609`
   defines `B=0` as the current unit and `B=1` as the base unit and warns that these setters do
   not themselves trigger recalculation. Region `a` built the current aggregate before `b`, and
   the compiled Warp gates read that aggregate. Immediate consumption would therefore require
@@ -324,8 +325,8 @@ Several load-bearing consequences follow directly:
   later recalculation. The CAS files settle the call order but not that API implementation
   detail.
 - **Eye of Heaven's friendly True Sight grant crosses the hook boundary deliberately.**
-  `UnitCalcPre.CAS:1839-1842` grants `EncTrueSight` at the very end of `b`, and
-  `UnitCalc.CAS:325-328` consumes it near the front of `d` to add ranged To Hit.
+  `UnitCalcPre.CAS!ENDOFCOMBAT!+2..+5 ", all friendly units gain True Sight while enemy lose all gaze ability :" "}"` grants `EncTrueSight` at the very end of `b`, and
+  `UnitCalc.CAS!NOTZEAL!+2..+5 ": new effect of True Sight, grant +5% range to-hit in combat :" "}"` consumes it near the front of `d` to add ranged To Hit.
 - **Xenoveterinary does not simply read `base+a`.** Its HP read at lines 1040–1045 occurs
   after the entire common prefix, including earlier phase-`b` hero/item HP writes at lines
   596–616 and 650–654, but before later phase-`b` HP additions such as Elemental Master at
@@ -372,9 +373,9 @@ The exact order resolves several interactions that a phase label alone hides:
   late tactical overrides.
 - **Vampirism consumes the post-Colossal secondary attacks, then Shadow Strike follows.**
   Vampirism reads current Thrown and both Breaths, adds half their sum to melee, and reduces
-  each present source channel to 1 (`UnitCalc.CAS:1245-1258`). Shadow Strike then adds
-  `1 + floor(current melee / 3)` to that resulting Thrown value (`:1262-1266`). The heavy-unit
-  Flying conversion can add another Thrown point afterward (`:1278-1288`).
+  each present source channel to 1 (`UnitCalc.CAS!NOCOLOSSALSTRENGTH!+2..+15 ", unit becomes undead and gain bloodsuck and create undead :" "IF ((GetStat(U,SLightningBreath,0))>0) THEN { SETSTAT(U,SLightningBreath,0,1); }"`). Shadow Strike then adds
+  `1 + floor(current melee / 3)` to that resulting Thrown value (`UnitCalc.CAS!NOVAMPIRISM!+2..+6 ", gain thrown at strength half of its melee power :" "SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+STRIKE));"`). The heavy-unit
+  Flying conversion can add another Thrown point afterward (`UnitCalc.CAS!NOTDESTINY!+2..+12 ": These units could not fly due to too heavy to do so and have merging, if gain flying ability elsewhere will gain thrown 1 as replacement :" "}"`).
 - **Late overrides really are late.** Hierophany halves the already modified defense and
   clears the listed immunities/movement abilities at lines 1555–1582. Trapped then sets
   movement to zero and clears Flying at lines 1584–1598. Earlier `d` grants do not survive
@@ -1016,7 +1017,7 @@ region-`c` tests decode as follows:
 **Do not merge Darkness, True Light and Eternal Night.** Darkness is the compiled region-`c`
 block above; the Eternal Night check at `+0x089A8/+0x0A8A2` supplies its enhanced magnitude and
 the enemy non-Death Resistance penalty before that block. Warlord's True Light is instead its
-own `UnitCalcPre.CAS:1507-1540` block, after the Prayer/Rally extensions and before Plague.
+own `UnitCalcPre.CAS!NOUPLIFTSPEECH!+3..+36 "IF ((HASCOMBATGLOBAL(W,CGTrueLight,1))=0)" "IF (HASCOMBATGLOBAL(W,CGPlague,1)=0) THEN { GOTO"` block, after the Prayer/Rally extensions and before Plague.
 CoM 1's separate Eternal Night penalty is later still, after Tactician at `0x90B31` (see
 *Warp Creature runs early*). They are distinct sequence events even where their additive totals
 usually commute.
@@ -1128,7 +1129,7 @@ recorded with the rule itself in *Unit enchantment effects* above, and these thr
   *(Fixed 2026-07-29; the current contract is in `Calculator/SPEC.md`.)*
 
   **Warlord inherits these values unchanged (resolved 2026-07-29).** `EncVertigo` appears
-  exactly twice in the Warlord stat scripts, both at `UnitCalcPre.CAS:1227-1228`, and the pair is
+  exactly twice in the Warlord stat scripts, both at `UnitCalcPre.CAS!NOCHAOSEMBRACE!+32..+33 "IF GETCOMBATENCHANTMENTFLAG(U,EncVertigo,0) THEN {" "SETENCHANTMENTFLAG(U,EncVertigo,1,1);"`, and the pair is
   a flag copy from the combat layer to the unit layer — the same shape applied to Weakness, Mind
   Storm, Web, Black Sleep, Hierophany and Soul Flay in the surrounding block. No magnitude is
   written. The search is exhaustive rather than sampled: all 190 enchantment-flag calls across
@@ -1390,7 +1391,7 @@ resolution-time routines all occupy the right relative positions. The remaining 
 | Effect | Engine position/effect | Calculator state on 2026-07-30 | Consequence |
 |---|---|---|---|
 | Destiny, Chaos Channels Breath, Focus Magic conversion, Vampirism, Shadow Strike | `a`/`c`/`d`, at the exact sites above | Strength and type are still mutated in the pre-sequence `calcBase*` chain | The sequence cannot reproduce which transformations see Warp, Colossal Strength or Destiny; the single `rtb` projection named here as the common blocker is F80, with the surviving pre-sequence type flips under F81–F83 (F12 closed the ordered-transform half) |
-| Upgraded Explosive | `UnitCalcPre.CAS:1066-1078`, before Ballistics, Xenopsychology, Radio and every later combat-global/city block in `b` | `upgradedExplosive:fireBreath` is the last `b` step | Later Fire Breath additions such as True Light and Lucky Star can be doubled although the script adds them after the doubling |
+| Upgraded Explosive | `UnitCalcPre.CAS!NOMAGITEKENGINE!+6..+18 "IF (SPELLSTATE(W,STExplosive)<>2) THEN { GOTO" "}"`, before Ballistics, Xenopsychology, Radio and every later combat-global/city block in `b` | `upgradedExplosive:fireBreath` is the last `b` step | Later Fire Breath additions such as True Light and Lucky Star can be doubled although the script adds them after the doubling |
 | Misfortune (the landed result exposed as Mislead) | Aura type 10 in `e`, after `UnitCalc` and the initial clamps | `mislead`/`mislead:ranged` are in `c`, before Holy Armor, Warp and all of `d` | Warp can reduce its penalty, and Blaze of Glory can consume its Defense penalty; neither happens in the engine |
 | Holy Armor | `c` +0x07407, after the earlier unit-enchantment blocks but before the global-enchantment and combat-global blocks | Inserted after the whole `abilByPhase.c` spread | Its `Defense > 5` read incorrectly sees later effects including High Prayer, Survival Instinct, Inner Power, Black Prayer and Mind Storm |
 
@@ -1403,15 +1404,15 @@ global (High Prayer +2, Breakthrough, Black Prayer −1), Entangle, and the whol
 including Warp Defense `div 3`. Any member of the second list placed before Holy Armor flips the
 branch; none of them may be.
 | Charm of Life | `c` +0x08AE5; add 25% of the HP current there, minimum 1 | Its magnitude is precomputed from `calcBaseHP`; its step precedes the separate Endurance and Lionheart HP writes | It fails to scale level/item/Endurance/Lionheart HP already present at the binary site |
-| Warlord Vampirism | `d` `UnitCalc.CAS:1245-1258`, after Colossal Strength: add integer part of `(Thrown/2) + ((Fire Breath + Lightning Breath)/2)`, then reduce each present source channel to 1 | Runs before the sequence and uses `source strength - 1` | Both position and magnitude disagree with the executable script |
-| Warlord combat-cast Flame Blade's Fire Breath point | `d` `UnitCalc.CAS:330-333`, before Colossal Strength | Folded into the region-`c` Flame Blade secondary-attack term | Warp can halve the point even though Warlord adds it after Warp |
+| Warlord Vampirism | `d` `UnitCalc.CAS!NOCOLOSSALSTRENGTH!+2..+15 ", unit becomes undead and gain bloodsuck and create undead :" "IF ((GetStat(U,SLightningBreath,0))>0) THEN { SETSTAT(U,SLightningBreath,0,1); }"`, after Colossal Strength: add integer part of `(Thrown/2) + ((Fire Breath + Lightning Breath)/2)`, then reduce each present source channel to 1 | Runs before the sequence and uses `source strength - 1` | Both position and magnitude disagree with the executable script |
+| Warlord combat-cast Flame Blade's Fire Breath point | `d` `UnitCalc.CAS!NOTZEAL!+7..+10 ": Combat cast Flame Blade now nolonger buff rock type range attack but give fire breath+1 :" "}"`, before Colossal Strength | Folded into the region-`c` Flame Blade secondary-attack term | Warp can halve the point even though Warlord adds it after Warp |
 
 The `abilByPhase.b`, `.c` and `.d` spreads also do not preserve the mapped source order in
 general. Most displaced neighbours are additive and commute today, but the list is not
 isomorphic to `UnitCalcPre.CAS`, the region-`c` address map or `UnitCalc.CAS`, and the scaling
 cases above prove that this is not only a trace-display concern. Rust is one concrete atomicity
 violation: its melee and ranged writes are emitted by separate steps with other work allowed
-between them, although `UnitCalc.CAS:492-504` is one effect block.
+between them, although `UnitCalc.CAS!NOTCITY!+10..+22 "unit loses 1/2 of melee/physical range/thrown strength :" "!NOTRUST!"` is one effect block.
 
 ### To-Hit/To-Block writes use the derivation sequence
 

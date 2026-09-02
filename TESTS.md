@@ -33,7 +33,7 @@ or fail. Do not add them here.
   source of truth, and each preset is one instance of that claim. The per-effect evidence is the
   `PROVENANCE` citation on the step the preset exercises, checked by `npm run provenance`; the
   preset's `desc` states the arithmetic that citation implies. That preset-to-step link is
-  conceptual, not machine-checked — 154 of 1132 `desc` fields name a game-source location inline.
+  conceptual, not machine-checked — 172 of 1151 `desc` fields name a game-source location inline.
   Recount that under the rule rather than incrementing it: test each `desc` of the **evaluated**
   `PRESETS` object (not the file text) against
   `/[\w./\\-]+\.(?:CAS|INI|pas|c|EXE):\d+|0x[0-9A-Fa-f]{4,}|\$[0-9A-Fa-f]{6,}/i`. The `c` extension
@@ -105,16 +105,12 @@ or fail. Do not add them here.
 - Checks: every citation into a shipped `.CAS` script resolves against
   `Reference docs/Script source/<set>/`, under the grammar in `Reference docs/CAS citation
   grammar.md`. Label and text anchors must find their landmark, land inside the file and satisfy
-  the statement assertion an offset obliges them to carry; a line number must be inside the file;
-  a `@span` must sit on a `// PROVENANCE[id]:` comment line, which is what makes
-  `npm run provenance` responsible for resolving it. A citation-bearing source the tool classifies
-  neither in scope nor out fails, and so does a `.CAS` glued to a locator the grammar does not
-  define.
-  **Green today, red on regression.** A line-number citation is deprecated rather than failing —
-  389 of them exist and F227.3-.6 convert them — so the suite holds one ceiling per script and
-  fails when a new one is written. `--strict` zeroes every ceiling and is what F227.6 runs to
-  prove the clean state; it is red until then, by design, and is not the registered command. When
-  the last ceiling reaches 0 the registered command enforces the clean state by itself.
+  the statement assertion an offset obliges them to carry; a line-list citation (a `:N` or `:N-M`
+  locator) into any script fails, every per-script ceiling in `DEPRECATED_BUDGET` being 0 since
+  F227.6, so `--strict` (ceilings forced to 0) is the same check as the registered command; a `@span` must
+  sit on a `// PROVENANCE[id]:` comment line, which is what makes `npm run provenance`
+  responsible for resolving it. A citation-bearing source the tool classifies neither in scope
+  nor out fails, and so does a `.CAS` glued to a locator the grammar does not define.
 - Runtime: ~1s.
 
 ## node-unit-checks
@@ -375,7 +371,7 @@ or fail. Do not add them here.
 - Tag: scaffolding
 - Anchor: —
 - Checks: the eight `STypeID`s that satisfy Mechanical Expert's friendly-side presence gate
-  (`UnitCalc.CAS:286-293`) each resolve in the live Warlord roster and are named in the
+  (`UnitCalc.CAS!NOTGOBLINCOUNT!+13..+20 "%OR (GETSTAT(UOT,STypeID,1)=52)" "%OR (GETSTAT(UOT,STypeID,1)=363)"`) each resolve in the live Warlord roster and are named in the
   `mechanicalExpert` tooltip, along with the `HAMechanicalMaster` disjunct and the disclosure
   that the scan itself is not derived. Also holds the tooltip to the style guide's 75-character
   line limit. Names are read out of the roster by id, so a roster rename fails here rather than

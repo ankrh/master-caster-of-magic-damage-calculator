@@ -48,7 +48,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.800 },
   },
   berserkWarlordArmorPenalty: {
-    desc: 'Warlord Berserk on defender: -1 armor and no To Block penalty (UnitCalcPre.CAS:1120-1129, which replaced the -10% To Defend the block carried in UnitCalc.CAS before 1.5.12.8). def 10 becomes 9; atk 10 @100% hit vs 100% block → 10-9=1.0 (without it: 10-10=0). A surviving -10% To Block would move this off 1.0, so the preset pins the removal as well as the armor loss.',
+    desc: 'Warlord Berserk on defender: -1 armor and no To Block penalty (UnitCalcPre.CAS!NOTCOMBATOUTLANDER!+2..+11 ": new unit enchantment" "!NOBERSERK!", which replaced the -10% To Defend the block carried in UnitCalc.CAS before 1.5.12.8). def 10 becomes 9; atk 10 @100% hit vs 100% block → 10-9=1.0 (without it: 10-10=0). A surviving -10% To Block would move this off 1.0, so the preset pins the removal as well as the armor loss.',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:10, toBlkMod:70, hp:20, abilities: { berserkWarlord: true } },
@@ -71,14 +71,14 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.100 },
   },
   nauseaReadsIdentityAtItsOwnBlockWarlord: {
-    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS:1134, read where that block stands. Region b runs before region c, so Raise Dead — a region-c conversion — has not made the defender fantastic yet, and the ELSE arm still applies: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. Reading the record the recalculation leaves instead saw a fantastic creature, took the creature-binding arm and left 0.',
+    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS!NOBERSERK!+5 "IF FANTASTIC(U) THEN {", read where that block stands. Region b runs before region c, so Raise Dead — a region-c conversion — has not made the defender fantastic yet, and the ELSE arm still applies: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. Reading the record the recalculation leaves instead saw a fantastic creature, took the creature-binding arm and left 0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true, raiseDead: true } },
     expected: { dmgToA: 0, dmgToB: 0.100 },
   },
   nauseaSpiritLinkTakesFantasticArmWarlord: {
-    desc: 'Spirit Link asserts Fantastic at UnitCalcPre.CAS:30, ahead of the Conjuring Pact branch at :1123 in the same file, so the defender is fantastic where that branch reads it and takes the creature-binding arm instead of the -10% To Defend: def=1 blocks at a full 100% and takes 0, against the 0.1 of the sibling nauseaMinus10ToDefend. Only the region-d clear was modelled before, so the ELSE arm applied.',
+    desc: 'Spirit Link asserts Fantastic at UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);", ahead of the Conjuring Pact branch at UnitCalcPre.CAS!NOBERSERK!+5 "IF FANTASTIC(U) THEN {" in the same file, so the defender is fantastic where that branch reads it and takes the creature-binding arm instead of the -10% To Defend: def=1 blocks at a full 100% and takes 0, against the 0.1 of the sibling nauseaMinus10ToDefend. Only the region-d clear was modelled before, so the ELSE arm applied.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { nausea: true, spiritLink: true } },
@@ -90,14 +90,14 @@ definePresets({
   },
 
   nauseaReachesHeroWarlord: {
-    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS:1134 and the -10% To Hit / To Defend pair is its ELSE arm, which the block hands to every unit it does not send to creature binding — a hero included, there being no hero test anywhere in the block. So a hero defender takes the penalty exactly as a normal one does: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. The gate used to read isNormalUnitType(unitTypeAt(u)), which is false for `hero` as well as for Fantastic, and left 0 (F175).',
+    desc: 'The branch is `IF FANTASTIC(U)` at UnitCalcPre.CAS!NOBERSERK!+5 "IF FANTASTIC(U) THEN {" and the -10% To Hit / To Defend pair is its ELSE arm, which the block hands to every unit it does not send to creature binding — a hero included, there being no hero test anywhere in the block. So a hero defender takes the penalty exactly as a normal one does: def=1 at 100%-10% = 90% block against atk=1 at 100% hit gives 0.1, the same as the sibling nauseaMinus10ToDefend. The gate used to read isNormalUnitType(unitTypeAt(u)), which is false for `hero` as well as for Fantastic, and left 0 (F175).',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, unitType:'hero', abilities: { nausea: true } },
     expected: { dmgToA: 0, dmgToB: 0.100 },
     vacuity: {
       'b.unitType=hero':
-        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The ELSE arm of `IF FANTASTIC(U)` (UnitCalcPre.CAS:1134) carries no hero test, so the gate is `!u.fantastic` (stats_sequence.js:502) and admits both; no ablation between the two can move a number. b.ability.nausea is the live half, and nauseaMinus10ToDefend pins the same 0.100 on the normal identity.',
+        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The ELSE arm of `IF FANTASTIC(U)` (UnitCalcPre.CAS!NOBERSERK!+5 "IF FANTASTIC(U) THEN {") carries no hero test, so the gate is `!u.fantastic` (stats_sequence.js:502) and admits both; no ablation between the two can move a number. b.ability.nausea is the live half, and nauseaMinus10ToDefend pins the same 0.100 on the normal identity.',
     },
   },
 
@@ -219,7 +219,7 @@ definePresets({
   // directly, so none of them says what happens when the immunity is *granted* during the
   // derivation. These two do, one per grant that reaches the strip's own gates (F199).
   sanctaBasilicaMagicImmunityStripsWeaknessWarlord: {
-    desc: 'The Magic Immunity that gates the curse strip can be a grant rather than an input: Sancta Basilica gives a High Men Paladin Magic Immunity (CreateUnit.CAS:412-441), and `base:immunityCurseGating` reads the immunity set the recalculation leaves, so Weakness is stripped whatever position the grant takes. Melee 6 at 100% hit against Armor 0 is 6.0, the undiminished attack: the stated Weakness never reaches it, and that inertness is what the fixture asserts. Sancta Basilica is the half that moves the number — drop it and Weakness lands for melee 6−3 and 3.0.',
+    desc: 'The Magic Immunity that gates the curse strip can be a grant rather than an input: Sancta Basilica gives a High Men Paladin Magic Immunity (CreateUnit.CAS!NOFROSTCLUB!+2..+31 ": new effect of Sancta Basilica :" "!NOBASILICA!"), and `base:immunityCurseGating` reads the immunity set the recalculation leaves, so Weakness is stripped whatever position the grant takes. Melee 6 at 100% hit against Armor 0 is 6.0, the undiminished attack: the stated Weakness never reaches it, and that inertness is what the fixture asserts. Sancta Basilica is the half that moves the number — drop it and Weakness lands for melee 6−3 and 3.0.',
     version: V_WARLORD,
     a: { figs:1, atk:6, hitChance:70, hp:10, race:'High Men', name:'Paladins',
       abilities: { sanctaBasilica: true, weakness: true } },
@@ -797,7 +797,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 17.000 },
   },
   shadowStrikeFillsThrownFocusMagicVacatedWarlord: {
-    desc: 'Focus Magic moves the Thrown field rather than retyping it (Units.RecalculateUnits.pas:885-891), so `SThrown` stands empty when Shadow Strike reaches `UnitCalc.CAS:1254` and the grant is the whole of it. Melee 9, thrown 4: the 4 leaves for the Ranged field, the grant makes thrown 1+floor(9/3)=4, and melee mode fires melee plus thrown for 9 + 4 = 13.0. Without Focus Magic the grant lands on the untouched 4 for 9 + 8 = 17.0; without Shadow Strike the vacated field stays empty for 9.0.',
+    desc: 'Focus Magic moves the Thrown field rather than retyping it (Units.RecalculateUnits.pas:885-891), so `SThrown` stands empty when Shadow Strike reaches `UnitCalc.CAS!NOVAMPIRISM!+2 ", gain thrown at strength half of its melee power :"` and the grant is the whole of it. Melee 9, thrown 4: the 4 leaves for the Ranged field, the grant makes thrown 1+floor(9/3)=4, and melee mode fires melee plus thrown for 9 + 4 = 13.0. Without Focus Magic the grant lands on the untouched 4 for 9 + 8 = 17.0; without Shadow Strike the vacated field stays empty for 9.0.',
     version: V_WARLORD,
     a: { atk:9, modernAttacks: { thrown: { strength:4, type:'thrown' } }, hitChance:70, hp:10,
       abilities: { focusMagic: true, shadowStrike: true } },
@@ -988,7 +988,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   greatUnbindingNonFantasticUnaffectedWarlord: {
-    desc: 'Great Unbinding (Warlord) on a non-fantastic attacker carrying none of the other eligibility flags (`UnitCalcPre.CAS:1367-1374`): no effect. melee 10 (1 fig, 100% hit) vs def 0 → 10.0 (a normal unit keeps full To Hit)',
+    desc: 'Great Unbinding (Warlord) on a non-fantastic attacker carrying none of the other eligibility flags (`UnitCalcPre.CAS!NOETERNALNIGHT!+7..+14 "IF FANTASTIC(U)" "%OR (GETENCHANTMENTFLAG(U,EncVampirism,0)>0)"`): no effect. melee 10 (1 fig, 100% hit) vs def 0 → 10.0 (a normal unit keeps full To Hit)',
     version: V_WARLORD,
     a: { figs:1, atk:10, hitChance:70, hp:10, unitType:'normal', abilities: { greatUnbinding: true } },
     b: { def:0, toBlkMod:70, hp:20 },
@@ -997,11 +997,11 @@ definePresets({
       'every-feature-inert':
         'Inert by construction: the claim is that Great Unbinding does not reach a non-fantastic unit, so the one feature the fixture adds cannot move the melee 10.',
       'a.ability.greatUnbinding':
-        'Keep, and the absence is the rule under test. `greatUnbindingActive` requires one of the script\'s eligibility terms — live Fantastic, Undead, Revenant, Vampirism or a Chaos Channels flag (`UnitCalcPre.CAS:1367-1374`) — and this fixture states `unitType: \'normal\'` with none of those abilities, so the step\'s three writes never run. The discriminator is a.unitType, which cannot be an ablation candidate here because it is already stated at the value the sweep would ablate it to, and a field equal to its default is skipped (tools/preset_vacuity_sweep.js:204 and :268). greatUnbindingToHitWarlord differs only in a.unitType \'fantastic_chaos\' and pins 8.000 against this 10.000.',
+        'Keep, and the absence is the rule under test. `greatUnbindingActive` requires one of the script\'s eligibility terms — live Fantastic, Undead, Revenant, Vampirism or a Chaos Channels flag (`UnitCalcPre.CAS!NOETERNALNIGHT!+7..+14 "IF FANTASTIC(U)" "%OR (GETENCHANTMENTFLAG(U,EncVampirism,0)>0)"`) — and this fixture states `unitType: \'normal\'` with none of those abilities, so the step\'s three writes never run. The discriminator is a.unitType, which cannot be an ablation candidate here because it is already stated at the value the sweep would ablate it to, and a field equal to its default is skipped (tools/preset_vacuity_sweep.js:204 and :268). greatUnbindingToHitWarlord differs only in a.unitType \'fantastic_chaos\' and pins 8.000 against this 10.000.',
     },
   },
   greatUnbindingSpiritLinkExemptWarlord: {
-    desc: 'Great Unbinding (Warlord) on a Spirit Linked fantastic attacker: exempt outright. `UnitCalcPre.CAS:1363` leaves the block on `GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0`, so To Hit stays 100%: melee 10 (1 fig) vs def 0 → 10.0 (greatUnbindingToHitWarlord, the same fixture without Spirit Link, pins 8.0)',
+    desc: 'Great Unbinding (Warlord) on a Spirit Linked fantastic attacker: exempt outright. `UnitCalcPre.CAS!NOETERNALNIGHT!+3 "IF (HASGLOBAL(W,GEGreatUnbinding)) %OR (GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0) THEN { GOTO"` leaves the block on `GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0`, so To Hit stays 100%: melee 10 (1 fig) vs def 0 → 10.0 (greatUnbindingToHitWarlord, the same fixture without Spirit Link, pins 8.0)',
     version: V_WARLORD,
     a: { figs:1, atk:10, hitChance:70, hp:10, unitType:'fantastic_chaos', abilities: { greatUnbinding: true, spiritLink: true } },
     b: { def:0, toBlkMod:70, hp:20 },
@@ -1012,14 +1012,14 @@ definePresets({
     },
   },
   greatUnbindingLiveFantasticWarlord: {
-    desc: 'Great Unbinding (Warlord) on a Sanctified Clergy attacker with a non-fantastic base: `FANTASTIC(U)` at `UnitCalcPre.CAS:1367` is a live read, and the Sanctify block earlier in region b has already made a non-hero Clergy fantastic, so the gate admits it. To Hit 100% − 20% = 80%: melee 10 (1 fig) vs def 0 → 10 × 0.8 = 8.0 (a base-Fantastic gate would read 10.0)',
+    desc: 'Great Unbinding (Warlord) on a Sanctified Clergy attacker with a non-fantastic base: `FANTASTIC(U)` at `UnitCalcPre.CAS!NOETERNALNIGHT!+7 "IF FANTASTIC(U)"` is a live read, and the Sanctify block earlier in region b has already made a non-hero Clergy fantastic, so the gate admits it. To Hit 100% − 20% = 80%: melee 10 (1 fig) vs def 0 → 10 × 0.8 = 8.0 (a base-Fantastic gate would read 10.0)',
     version: V_WARLORD,
     a: { figs:1, atk:10, hitChance:70, hp:10, unitType:'normal', abilities: { greatUnbinding: true, sanctify: true, clergy: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   greatUnbindingUndeadFlagWarlord: {
-    desc: 'Great Unbinding (Warlord) on a non-fantastic Undead attacker: the script\'s eligibility disjunction reads `GETENCHANTMENTFLAG(U,EncUndead,0)>0` beside `FANTASTIC(U)` (`UnitCalcPre.CAS:1367-1368`), and the Undead realm write lands in region c, after this region-b block — so the flag, not the live Fantastic state, is what admits it. To Hit 100% − 20% = 80%: melee 10 (1 fig) vs def 0 → 10 × 0.8 = 8.0 (greatUnbindingNonFantasticUnaffectedWarlord, the same fixture without Undead, pins 10.0)',
+    desc: 'Great Unbinding (Warlord) on a non-fantastic Undead attacker: the script\'s eligibility disjunction reads `GETENCHANTMENTFLAG(U,EncUndead,0)>0` beside `FANTASTIC(U)` (`UnitCalcPre.CAS!NOETERNALNIGHT!+7..+8 "IF FANTASTIC(U)" "%OR (GETENCHANTMENTFLAG(U,EncUndead,0)>0)"`), and the Undead realm write lands in region c, after this region-b block — so the flag, not the live Fantastic state, is what admits it. To Hit 100% − 20% = 80%: melee 10 (1 fig) vs def 0 → 10 × 0.8 = 8.0 (greatUnbindingNonFantasticUnaffectedWarlord, the same fixture without Undead, pins 10.0)',
     version: V_WARLORD,
     a: { figs:1, atk:10, hitChance:70, hp:10, unitType:'normal', abilities: { greatUnbinding: true, undead: true } },
     b: { def:0, toBlkMod:70, hp:20 },
@@ -1130,11 +1130,11 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
     vacuity: {
       'b.ability.survivalInstinctToBlock':
-        'Keep, and the absence is the rule under test. `survivalInstinctToBlkBonus` is gated on `isNormalUnitType(baseUnitType)` (stats.js:841) — the *base* identity, because `CreateUnit.CAS:524-525` makes this a permanent training-time write, as the comment at stats.js:836-840 sets out. The fixture\'s `unitType: \'fantastic_chaos\'` makes `baseFantastic` true (stats_identity.js:136) and so `baseUnitType` \'fantastic_chaos\' (stats.js:24; stats_identity.js:112-118), leaving the bonus 0 and the step\'s `u.toBlk +=` a no-op (stats_sequence.js:318). b.unitType=fantastic_chaos is the live half — it is the fixture\'s only other candidate and the sweep reports no `every-feature-inert` — and survivalInstinctToBlockNormalWarlord differs only in b.unitType \'normal\', pinning 3.000 against this 7.000.',
+        'Keep, and the absence is the rule under test. `survivalInstinctToBlkBonus` is gated on `isNormalUnitType(baseUnitType)` (stats.js:841) — the *base* identity, because `CreateUnit.CAS!NOTARCHMAGE!+5..+6 "IF HASGLOBAL(W,GESurvivalInstinct) %AND (OREGUILED>0) THEN {" "SETSTAT(U,SToDefend,ABase,((GETSTAT(U,SToDefend,ABase))+OREGUILED));"` makes this a permanent training-time write, as the comment at stats.js:836-840 sets out. The fixture\'s `unitType: \'fantastic_chaos\'` makes `baseFantastic` true (stats_identity.js:136) and so `baseUnitType` \'fantastic_chaos\' (stats.js:24; stats_identity.js:112-118), leaving the bonus 0 and the step\'s `u.toBlk +=` a no-op (stats_sequence.js:318). b.unitType=fantastic_chaos is the live half — it is the fixture\'s only other candidate and the sweep reports no `every-feature-inert` — and survivalInstinctToBlockNormalWarlord differs only in b.unitType \'normal\', pinning 3.000 against this 7.000.',
     },
   },
   survivalInstinctToBlockSurvivesCombatConversionWarlord: {
-    desc: 'The write is `SETSTAT(U,SToDefend,ABase,…)` in CreateUnit.CAS:524-525 — a permanent training-time write on a unit the city produced, so the only identity it can read is the permanent one. Raise Dead makes the defender an unaligned fantastic creature during combat, and the bonus its city gave it stands: +40% still raises To Block from 30% to 70%, so atk 10 (1 fig, 100% hit) vs def 10 deals 10 x (1 - 0.70) = 3.0, the same as the sibling survivalInstinctToBlockNormalWarlord. Gating on the combat-converted identity instead dropped the bonus and gave 7.0.',
+    desc: 'The write is `SETSTAT(U,SToDefend,ABase,…)` in CreateUnit.CAS!NOTARCHMAGE!+5..+6 "IF HASGLOBAL(W,GESurvivalInstinct) %AND (OREGUILED>0) THEN {" "SETSTAT(U,SToDefend,ABase,((GETSTAT(U,SToDefend,ABase))+OREGUILED));" — a permanent training-time write on a unit the city produced, so the only identity it can read is the permanent one. Raise Dead makes the defender an unaligned fantastic creature during combat, and the bonus its city gave it stands: +40% still raises To Block from 30% to 70%, so atk 10 (1 fig, 100% hit) vs def 10 deals 10 x (1 - 0.70) = 3.0, the same as the sibling survivalInstinctToBlockNormalWarlord. Gating on the combat-converted identity instead dropped the bonus and gave 7.0.',
     version: V_WARLORD,
     a: { figs:1, atk:10, hitChance:70, hp:20 },
     b: { def:10, hp:20, unitType:'normal',
@@ -1228,28 +1228,28 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   blazeOfGloryFollowsRustWarlord: {
-    desc: 'Rust (UnitCalc.CAS:485) runs before Blaze of Glory (:1490), so Rust still sees a missile attack and takes its −3 before the transfer. Melee 1−3 → 0, missile 6−3=3 → thrown 3 → 3.0. (Without Rust, thrown 6 + melee 1 → 7.0; with the transfer applied first, Rust would find no missile and the thrown would be 6.)',
+    desc: 'Rust (UnitCalc.CAS!NOTCITY!+11 "IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO") runs before Blaze of Glory (UnitCalc.CAS!IMMUNETOROT!+14 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :"), so Rust still sees a missile attack and takes its −3 before the transfer. Melee 1−3 → 0, missile 6−3=3 → thrown 3 → 3.0. (Without Rust, thrown 6 + melee 1 → 7.0; with the transfer applied first, Rust would find no missile and the thrown would be 6.)',
     version: V_WARLORD,
     a: { atk:1, def:0, modernAttacks: { ranged: { strength:6, type:'missile' } }, hitChance:70, hp:10, abilities: { blazeOfGlory: true, rust: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   blazeOfGloryCarriesRangedlessLionheartWarlord: {
-    desc: 'Lionheart\'s ranged +3 is gated on not Ismagicalranged(U.rangedtype) (Units.RecalculateUnits.pas:1730), which is True for a zero ranged type (:2968-2975), so it lands on the Ranged field of a unit with no ranged attack; Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS:1486-1492). Melee 1+3 = 4 plus a new thrown 3 → 7.0. (Without Blaze, melee 4 only → 4.0; without Lionheart, melee 1 and nothing to transfer → 1.0.)',
+    desc: 'Lionheart\'s ranged +3 is gated on not Ismagicalranged(U.rangedtype) (Units.RecalculateUnits.pas:1730), which is True for a zero ranged type (:2968-2975), so it lands on the Ranged field of a unit with no ranged attack; Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"). Melee 1+3 = 4 plus a new thrown 3 → 7.0. (Without Blaze, melee 4 only → 4.0; without Lionheart, melee 1 and nothing to transfer → 1.0.)',
     version: V_WARLORD,
     a: { atk:1, def:0, hitChance:70, hp:10, abilities: { blazeOfGlory: true, lionheart: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
   blazeOfGloryCarriesWeaknessThrownPenaltyWarlord: {
-    desc: 'Weakness writes Dec(U.ranged, 3) and Dec(U.thrown, 3) with no positivity and no type gate (Units.RecalculateUnits.pas:2273-2279), so both record fields carry the penalty before Blaze of Glory adds Ranged into Thrown (UnitCalc.CAS:1486-1492): missile 7-3 = 4 arrives on a Thrown field already standing at -3 → thrown 1, beside melee 5-3 = 2 → 3.0. (Without Weakness, melee 5 plus thrown 7 → 12.0; without Blaze of Glory the missile attack does not fire in melee, leaving melee 2 → 2.0.)',
+    desc: 'Weakness writes Dec(U.ranged, 3) and Dec(U.thrown, 3) with no positivity and no type gate (Units.RecalculateUnits.pas:2273-2279), so both record fields carry the penalty before Blaze of Glory adds Ranged into Thrown (UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"): missile 7-3 = 4 arrives on a Thrown field already standing at -3 → thrown 1, beside melee 5-3 = 2 → 3.0. (Without Weakness, melee 5 plus thrown 7 → 12.0; without Blaze of Glory the missile attack does not fire in melee, leaving melee 2 → 2.0.)',
     version: V_WARLORD,
     a: { atk:5, modernAttacks: { ranged: { strength:7, type:'missile' } }, def:0, hitChance:70, hp:10, abilities: { blazeOfGlory: true, weakness: true } },
     b: { def:0, toBlkMod:70, hp:30 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   blazeOfGloryCarriesWeaknessRangedPenaltyWarlord: {
-    desc: 'Dec(U.ranged, 3) has no type gate either (Units.RecalculateUnits.pas:2273-2279), so it reaches a typeless Ranged field: Lionheart\'s own ungated +3 (:1730) puts 3 there, Weakness takes it back to 0, and Blaze of Glory transfers that 0 into Thrown (UnitCalc.CAS:1486-1492). Melee 5+3-3 = 5 plus thrown 4-3 = 1 → 6.0. (Without Weakness, melee 8 plus thrown 4+3 = 7 → 15.0; reading the ranged arm as a type predicate leaves SRanged at 3 and gives thrown 4 → 9.0.)',
+    desc: 'Dec(U.ranged, 3) has no type gate either (Units.RecalculateUnits.pas:2273-2279), so it reaches a typeless Ranged field: Lionheart\'s own ungated +3 (:1730) puts 3 there, Weakness takes it back to 0, and Blaze of Glory transfers that 0 into Thrown (UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"). Melee 5+3-3 = 5 plus thrown 4-3 = 1 → 6.0. (Without Weakness, melee 8 plus thrown 4+3 = 7 → 15.0; reading the ranged arm as a type predicate leaves SRanged at 3 and gives thrown 4 → 9.0.)',
     version: V_WARLORD,
     a: { atk:5, modernAttacks: { thrown: { strength:4, type:'thrown' } }, def:0, hitChance:70, hp:10,
       abilities: { blazeOfGlory: true, weakness: true, lionheart: true } },
@@ -1261,7 +1261,7 @@ definePresets({
     },
   },
   blazeOfGloryCarriesMindStormRangedPenaltyWarlord: {
-    desc: 'Mind Storm\'s Dec(U.ranged, 5) is ungated in the same way (Units.RecalculateUnits.pas:2281-2295), so an empty typeless Ranged field stands at -5 when Blaze of Glory adds it into Thrown (UnitCalc.CAS:1486-1492). Melee 9-3 = 6 with an armor of 5-5 = 0 to carry, plus thrown 12-5 = 7 taking the -5 → 2 → 8.0. (Without Mind Storm, melee 9+5 = 14 plus thrown 12 → 26.0; gating the ranged arm on a live slot leaves the transfer nothing to carry and gives thrown 7 → 13.0.)',
+    desc: 'Mind Storm\'s Dec(U.ranged, 5) is ungated in the same way (Units.RecalculateUnits.pas:2281-2295), so an empty typeless Ranged field stands at -5 when Blaze of Glory adds it into Thrown (UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"). Melee 9-3 = 6 with an armor of 5-5 = 0 to carry, plus thrown 12-5 = 7 taking the -5 → 2 → 8.0. (Without Mind Storm, melee 9+5 = 14 plus thrown 12 → 26.0; gating the ranged arm on a live slot leaves the transfer nothing to carry and gives thrown 7 → 13.0.)',
     version: V_WARLORD,
     a: { atk:9, modernAttacks: { thrown: { strength:12, type:'thrown' } }, def:5, hitChance:70, hp:10,
       abilities: { blazeOfGlory: true, mindStorm: true } },
@@ -1269,9 +1269,9 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   blazeOfGloryCarriesNoBombsGrenadesGrantWarlord: {
-    desc: 'SETSTAT(U,SThrown,0,GETSTAT(U,SThrown,0)+%I(8-SFigures/2)) (UnitCalcPre.CAS:1071) is one '
+    desc: 'SETSTAT(U,SThrown,0,GETSTAT(U,SThrown,0)+%I(8-SFigures/2)) (UnitCalcPre.CAS!NOMAGITEKENGINE!+11 "SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );") is one '
       + 'write to one field, so the Ranged field Blaze of Glory needs standing by for its transfer '
-      + '(UnitCalc.CAS:1486-1492) never takes a copy of the grant merely because it is empty and '
+      + '(UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));") never takes a copy of the grant merely because it is empty and '
       + 'typeless when the block runs. 1-figure melee 5 with Armor 2: Blaze moves the armor into '
       + 'melee for 7, Bombs&Grenades grants Thrown floor(8 - 1/2) = 7, and there is nothing in the '
       + 'Ranged field for the transfer to carry, so 100% hit vs def 0 gives 7 + 7 = 14.0. (Letting '
@@ -1285,7 +1285,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 14.000 },
   },
   blazeOfGloryThrownReadsHolyWeaponToHitWarlord: {
-    desc: 'Inc(U.hitchancethrown, 10) is unconditional (Units.RecalculateUnits.pas:1803-1809), so Holy Weapon\'s +10 already stands on the record\'s Thrown threshold when Blaze of Glory puts an attack there (UnitCalc.CAS:1486-1492). Melee 5 at 30+10 = 40% plus the transferred thrown 7 at the same 40% → 2.0 + 2.8 = 4.8. (Without Holy Weapon both read 30% → 3.6; without Blaze of Glory the missile does not fire in melee, leaving melee 5 at 40% → 2.0.)',
+    desc: 'Inc(U.hitchancethrown, 10) is unconditional (Units.RecalculateUnits.pas:1803-1809), so Holy Weapon\'s +10 already stands on the record\'s Thrown threshold when Blaze of Glory puts an attack there (UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"). Melee 5 at 30+10 = 40% plus the transferred thrown 7 at the same 40% → 2.0 + 2.8 = 4.8. (Without Holy Weapon both read 30% → 3.6; without Blaze of Glory the missile does not fire in melee, leaving melee 5 at 40% → 2.0.)',
     version: V_WARLORD,
     a: { atk:5, modernAttacks: { ranged: { strength:7, type:'missile' } }, def:0, hp:10, abilities: { blazeOfGlory: true, holyWeapon: true } },
     b: { def:0, toBlkMod:70, hp:30 },
@@ -1293,7 +1293,7 @@ definePresets({
   },
   // F131 removed `blazeOfGloryThrownTakesNoDistancePenaltyWarlord` from this group rather than
   // rewording it. `d:blazeOfGlory` sets `rangedType` to `none` on every ranged-field slot
-  // (`UnitCalc.CAS:1486-1492`, `stats_sequence.js`) and no later step writes a ranged type, so no
+  // (`UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"`, `stats_sequence.js`) and no later step writes a ranged type, so no
   // channel can report under the `ranged` output key (`stats.js`, the output-key rule reads the
   // resolved type). A Blaze of Glory attacker therefore never carries a conventional ranged attack
   // at the end of the sequence: the page withdraws ranged mode, `distancePenaltyFor` returns 0 on

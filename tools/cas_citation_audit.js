@@ -8,18 +8,17 @@
 // calculator and hashes reviewed excerpts. This one reads every citation-bearing source in the
 // repo and resolves it against `Reference docs/Script source/<set>/`.
 //
-// EXIT CONTRACT. A line-number citation is `deprecated`, not a failure: 433 exist repo-wide and
-// 389 of those are in scope here, and F227.3-.6 convert them. The tool is green today and red on
-// regression, held by the per-script ceilings in `DEPRECATED_BUDGET` that each of those subtasks
-// lowers. Anything the grammar can actually decide is a hard failure now: a malformed locator, an
-// anchor that does not resolve, a line number outside the file, a path prefix naming no shipped
-// script set, a `@span` nobody audits, or a citation in a source this file does not classify.
-// `--strict` zeroes every ceiling and is what F227.6 runs to prove the clean state; when the last
-// ceiling reaches 0 on its own, drop the ceilings and the flag together.
+// EXIT CONTRACT. Every in-scope citation must resolve, and a line-list citation (a `:N` or
+// `:N-M` locator) into any script fails: F227 converted every one to a label or text anchor, and
+// each per-script ceiling in `DEPRECATED_BUDGET` is 0, so plain mode and `--strict` are the same
+// check. The other hard failures are everything else the grammar can decide: a malformed
+// locator, an anchor that does not resolve, a path prefix naming no shipped script set, a `@span`
+// nobody audits, or a citation in a source this file does not classify. Out-of-scope sources are
+// counted and printed and never gate.
 //
 // Usage:
 //   node tools/cas_citation_audit.js             census + gate
-//   node tools/cas_citation_audit.js --strict    budget 0: the F227.6 exit
+//   node tools/cas_citation_audit.js --strict    every ceiling forced to 0; equal to plain mode while the rows are 0
 //   node tools/cas_citation_audit.js --list      every citation, one per line
 //   node tools/cas_citation_audit.js --list=bad  only the ones that do not resolve
 
@@ -30,23 +29,21 @@ const repoRoot = path.resolve(__dirname, '..');
 const scriptSourceRoot = path.join(repoRoot, 'Reference docs', 'Script source');
 const DEFAULT_SET = 'Warlord 1.5.12.9';
 
-// One ceiling per script, held at the in-scope counts measured on 2026-09-01, before F227.3 ran.
-// Per script rather than in aggregate so that deleting a citation from one file cannot pay for a
-// new one in another, and so that each of F227.3-.6 has an explicit exit: set its file to 0. A
-// script with no row here has a ceiling of 0, so a line citation into a newly cited script fails.
-// When every row is 0 the registered command enforces the clean state on its own and `--strict`
-// stops meaning anything; delete both then.
+// One ceiling per script, every one 0 since F227.6 closed the conversion; a script with no row
+// has a ceiling of 0 too. Kept per script so that a regression names the script it landed in,
+// and so that a future script swap can hold a deliberate, dated ceiling while its citations are
+// re-anchored — the only case in which `--strict` again differs from plain mode.
 const DEPRECATED_BUDGET = new Map([
-  ['UnitCalcPre.CAS', 151],
-  ['UnitCalc.CAS', 118],
-  ['CreateUnit.CAS', 69],
-  ['OLSpell.CAS', 14],
-  ['OverlandEndTurn.CAS', 15],
-  ['MASTER.CAS', 13],
-  ['DisAbil.CAS', 3],
-  ['COSpell.CAS', 3],
-  ['CombatEndTurn.CAS', 2],
-  ['SpellMysticSurge.CAS', 1],
+  ['UnitCalcPre.CAS', 0],
+  ['UnitCalc.CAS', 0],
+  ['CreateUnit.CAS', 0],
+  ['OLSpell.CAS', 0],
+  ['OverlandEndTurn.CAS', 0],
+  ['MASTER.CAS', 0],
+  ['DisAbil.CAS', 0],
+  ['COSpell.CAS', 0],
+  ['CombatEndTurn.CAS', 0],
+  ['SpellMysticSurge.CAS', 0],
 ]);
 // The grammar document has to show the deprecated form in order to define it, so its own
 // examples are resolved like any other citation but do not count against the budget.

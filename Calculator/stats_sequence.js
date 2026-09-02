@@ -126,10 +126,10 @@ function baseStatSteps(ctx) {
     ...abilByPhase.base,
     // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:19:a2b79ed52f498dfddaa861b8
     // The Resistance point reaches every trained unit, not only a ranged one; the ranged
-    // half carries its own slot gate. `SRage` and `APoisonImmunity` (`:375`, `:378`) and the
-    // two mutually exclusive `STypeID` branches that follow (`:382-390`) are writes of this same
+    // half carries its own slot gate. `SRage` and `APoisonImmunity` (`CreateUnit.CAS!NOALTAROFTHESUN!+6 "SETSTAT(U,SRage,1,(GetStat(U,SRage,1)+1));"`, `CreateUnit.CAS!NOALTAROFTHESUN!+8 "SETSTAT(U,APoisonImmunity,1,1);"`) and the
+    // two mutually exclusive `STypeID` branches that follow (`CreateUnit.CAS!NOALTAROFTHESUN!+12..+20 "IF (GetStat(U,STypeID,1)=210) THEN {" "}"`) are writes of this same
     // block, so they land at its rank instead of being merged ahead of the sequence (F201). The
-    // reviewed span was widened from `:372-381` to `:372-390` to cover the two branches.
+    // reviewed span was widened from `CreateUnit.CAS!NOALTAROFTHESUN!+2..+11 ": new effect of Altar of the Moon :" "}"` to `CreateUnit.CAS!NOALTAROFTHESUN!+2..+20 ": new effect of Altar of the Moon :" "}"` to cover the two branches.
     // Rage is a counter in the script (`SRage + 1`) and a flag here, which is the calculator's
     // one-figure model of it; nothing reads a Rage above 1.
     statStep({ id: 'altarOfTheMoon', phase: 'base',
@@ -156,22 +156,22 @@ function baseStatSteps(ctx) {
       writes: [...strengthFields, ...rangedTypeFields, 'blackpowder', 'poison', 'armorPiercing'],
       when: () => channels.some(c => c.blackpowder),
       apply: u => {
-        // `SETSTAT(U,SBlackpowderUpgrade,1,1)` (`:255`) and the `AFPoison` increment beside it
-        // (`:256`) are writes of this block, at this rank (F201). The increment reads the field
-        // it raises, so it stacks with Mother Fungus's identical one at `:455` rather than
+        // `SETSTAT(U,SBlackpowderUpgrade,1,1)` (`CreateUnit.CAS!NOTGENERIC!+46 "SETSTAT(U,SBlackpowderUpgrade,1,1);"`) and the `AFPoison` increment beside it
+        // (`CreateUnit.CAS!NOTGENERIC!+47 "IF (GetStat(U,AFPoison,1,1)<>100) THEN {"`) are writes of this block, at this rank (F201). The increment reads the field
+        // it raises, so it stacks with Mother Fungus's identical one at `CreateUnit.CAS!NOBASILICA!+14 "IF (GetStat(U,AFPoison,1,1)<>100) THEN {"` rather than
         // being overwritten by it.
         u.blackpowder = true;
         u.poison = (u.poison || 0) + 1;
         // Doom or Armor Piercing means the block grants strength instead of the piercing flag:
         // +4 on Thrown, +2 on a physical ranged attack. Fire Breath takes +4 either way. All
         // three read the permanent record's channel, which is what the script's gates read.
-        // The `AFArmorPiercing`/`AFDoom` test at `:261` is `GetStat(…,1)`, the permanent record,
+        // The `AFArmorPiercing`/`AFDoom` test at `CreateUnit.CAS!NOTGENERIC!+52 "IF (GetStat(U,AFArmorPiercing,1,1)=0) %AND (GetStat(U,AFDoom,1,1)=0) THEN {"` is `GetStat(…,1)`, the permanent record,
         // and it is read here at the block's own rank: no earlier chain entry writes either
         // field, so this is the same answer the pre-sequence constant gave (F201).
         const grantsStrength = !!abilities.doom || !!u.armorPiercing;
         // The piercing flag is a record-level write, not a per-channel one: the script's own
         // test is `SThrown > 0 %OR (SRanged > 0 %AND SRangedType < 30)` over the whole permanent
-        // record (`:257-259`), which is what the shared slot's `blackpowderPhysicalSource`
+        // record (`CreateUnit.CAS!NOTGENERIC!+48..+50 "IF (GetStat(U,SThrown,1)>0)" "THEN {"`), which is what the shared slot's `blackpowderPhysicalSource`
         // carries.
         const grantsPiercing = !grantsStrength && recordContext.blackpowderPhysicalSource;
         for (const c of channels) {
@@ -252,7 +252,8 @@ function baseStatSteps(ctx) {
           if (c.hasPermanentRangedStat) u[c.strengthField] += 2;
         }
         u.toBlk += 10;
-        // `:455`, the same `<>100` increment Military Workshop makes at `:256`. Both read the
+        // `CreateUnit.CAS!NOBASILICA!+14 "IF (GetStat(U,AFPoison,1,1)<>100) THEN {"`, the same `<>100` increment Military Workshop makes at
+        // `CreateUnit.CAS!NOTGENERIC!+47 "IF (GetStat(U,AFPoison,1,1)<>100) THEN {"`. Both read the
         // field they raise, so a Goblin unit with both takes +2 (F201).
         u.poison = (u.poison || 0) + 1;
       } }),
@@ -299,7 +300,7 @@ function baseStatSteps(ctx) {
       writes: [...strengthFields, ...rangedTypeFields, 'energyCannon'],
       when: () => channels.some(c => c.energyCannon && c.energyCannonOwnsThisSlot),
       apply: u => {
-        // `SETSTAT(U,AFDoom,1,1,3)` beside the conversion (`CreateUnit.CAS:695`) is what makes
+        // `SETSTAT(U,AFDoom,1,1,3)` beside the conversion (`CreateUnit.CAS!HASEVILPRESENCE!+85 "SETSTAT(U,SRanged,1,GETSTAT(U,SRanged,1)+%I(GETSTAT(U,SRanged,1)/2));"`) is what makes
         // the converted attack a Doom one; `energyCannon` is the calculator's label for that
         // write, and combat resolution reads it off the finished record (F201).
         u.energyCannon = true;
@@ -413,9 +414,9 @@ function precalcScriptStatSteps(ctx) {
         }
       } }),
     // The ascension block's own retype, a second `SETSTAT(U,SRangedType,0,…)` at a second
-    // position: the five realm arms above are `UnitCalcPre.CAS:104-176`, the twenty book-grant
+    // position: the five realm arms above are `UnitCalcPre.CAS!NOVAMPIRISM!+26..+98 "SETSTAT(U,SRangedType,0,37);" "SETSTAT(U,SRangedType,0,33);"`, the twenty book-grant
     // blocks follow, and only then does the ascension branch write `SRangedType = 30` for a
-    // Chaos primary (`:272`), beside the Wall Crusher and Armor Piercing grants the package
+    // Chaos primary (`UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+80 "SETSTAT(U,SRangedType,0,30);"`), beside the Wall Crusher and Armor Piercing grants the package
     // already carries. Id 30 is the lightning-bolt projectile and a token of its own, so this
     // is a write the primary arm's value does not stand in for. Nothing modelled writes a
     // projectile type between the two, which is why they are adjacent on the chain.
@@ -447,14 +448,14 @@ function precalcScriptStatSteps(ctx) {
     // Rebuild's hero block immediately follows Transmute Equipment and precedes
     // Xenoveterinary in UnitCalcPre.CAS.
     ...abilByPhase.b.filter(step => step.id === 'rebuild'),
-    // Warlord removes the compiled CoM2 hero package here, at UnitCalcPre.CAS:759-769,
+    // Warlord removes the compiled CoM2 hero package here, at UnitCalcPre.CAS!NOTPLANEWALKERHERO!+5..+15 ": remove old bonus for tactician :" "SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)-2));",
     // before Fiery Fury and the later Outlander/True Light blocks. The compiled grant remains
     // at the end of region c, after Warp and Shatter.
     ...abilByPhase.b.filter(step => step.id === 'tactician'),
     // Xenoveterinary's +25% (minimum +1) reads SHP at the head of the early pass
-    // (UnitCalcPre.CAS:1038-1049), so it precedes every other phase-b HP write and does not
+    // (UnitCalcPre.CAS!COMRADENOTSURVIVE!+14..+25 "IF (SPELLSTATE(W,STMagitekXenoveterinary)<>2) THEN { GOTO" "!NOXENOVET!"), so it precedes every other phase-b HP write and does not
     // compound Lionheart, Endurance or Charm of Life, which are `c`.
-    // The block's own gate is `IF FANTASTIC(U)` (`:1040`) — record selector-free, the
+    // The block's own gate is `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`) — record selector-free, the
     // **calculated** record at this position, and the one live-Fantastic test in the whole
     // Outlander block, whose other four gates are `BASEFANTASTIC(U)`. So a unit made Fantastic
     // earlier in the chain takes it: Spirit Link's `b:spiritLink`, the Channeler's
@@ -500,7 +501,7 @@ function precalcScriptStatSteps(ctx) {
     // The −10 To Block it used to carry is gone; a −1 Defense replaces it.
     // The block's companion `SDefensePenalty +1` (stat 31) is a ledger, not a second subtraction:
     // every writer of it pairs `SDefense -X` with `SDefensePenalty +X` for the same X — Blaze of
-    // Glory at UnitCalc.CAS:1489-1490, Beat of Swiftness at :1505-1506, Hierophany at :1553-1554 —
+    // Glory at UnitCalc.CAS!IMMUNETOROT!+21..+22 "SETSTAT(U,SDefense,0,((GetStat(U,SDefense,0))-BLAZEMELEE));" "SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+BLAZEMELEE));", Beat of Swiftness at UnitCalc.CAS!NOBLAZEOFGLORY!+6..+7 "SETSTAT(U,SDefense,0,((GetStat(U,SDefense,0))-RECKLESS));" "SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+RECKLESS));", Hierophany at UnitCalc.CAS!NOTCOMBATSUBMARINE!+8..+9 "SETSTAT(U,SDefense,0,((GetStat(U,SDefense,0))-EPIPHANY));" "SETSTAT(U,SDefensePenalty,0,(GetStat(U,SDefensePenalty,0)+EPIPHANY));" —
     // the way that same Blaze block pairs `SRanged -X` with `SRangedPenalty X`. Helptext
     // `#UA BERSERK` states the net as *"-1 Armor"*, so the `SDefense` half is the whole effect,
     // and the three steps above already model their halves alone. Combat movement stays
@@ -510,7 +511,7 @@ function precalcScriptStatSteps(ctx) {
       phase: 'b', writes: ['toHit', 'def'], when: () => warlordBerserk,
       apply: u => { u.toHit += 15; u.def -= 1; } }),
     // Conjuring Pact and Uphill Battle immediately follow the Outlander block.
-    // The branch is `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1134`), the calculated record read at
+    // The branch is `IF FANTASTIC(U)` (`UnitCalcPre.CAS!NOBERSERK!+5 "IF FANTASTIC(U) THEN {"`), the calculated record read at
     // this block: `u.fantastic` is that record — what the conversions ranked before `b:nausea`
     // leave, which is not what region `c` or `b:sanctify` 126 lines below would give.
     // The −10% pair is the **ELSE** arm, so it reaches every unit the branch does not send to
@@ -528,14 +529,14 @@ function precalcScriptStatSteps(ctx) {
       when: () => uphillBattleActive, apply: u => {
         u.res += 1; u.toHit += 10; u.toBlk += 10;
       } }),
-    // Fiery Fury: melee at UnitCalcPre.CAS:832-846, and the ranged half of what the bucket
+    // Fiery Fury: melee at UnitCalcPre.CAS!NOTHERO!+3..+17 "IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO", and the ranged half of what the bucket
     // model merged into one `Math.max` term — see the M4 note at `flameBladeStep`.
     // PROVENANCE[fieryFury]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:15:124bc19c147f5de83f487583 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:551d408ad4d5ae821c5eaf58 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:3:d7cdec7c168e641613b36c19
     statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', ...strengthFields],
       when: () => ffRegularBonus,
       apply: u => {
         u.atk += ffMeleeBonus;
-        // The block precedes Bombs & Grenades (`:1066-1080`) in the same file, so the Thrown
+        // The block precedes Bombs & Grenades (`UnitCalcPre.CAS!NOMAGITEKENGINE!+6..+20 "IF (SPELLSTATE(W,STExplosive)<>2) THEN { GOTO" "!NOEXPLOSIVE!"`) in the same file, so the Thrown
         // field that block creates is not yet there to be read.
         for (const c of channels) u[c.strengthField] += fieryFuryRtbWrite(u, c);
       } }),
@@ -570,7 +571,7 @@ function precalcScriptStatSteps(ctx) {
       writes: [...strengthFields, ...thrownTypeFields, 'wallCrusher'],
       when: (u, ctx) => bombsGrenadesActive(u, ctx),
       apply: u => {
-        // `SETSTAT(U,AWallCrusher,0,1)` (`:1072`), the second line of the same `IF`, inside the
+        // `SETSTAT(U,AWallCrusher,0,1)` (`UnitCalcPre.CAS!NOMAGITEKENGINE!+12 "SETSTAT(U,AWallCrusher,0,1);"`), the second line of the same `IF`, inside the
         // reviewed span already cited. It lands at this rank rather than ahead of the
         // sequence (F201).
         u.wallCrusher = true;
@@ -679,7 +680,7 @@ function precalcScriptStatSteps(ctx) {
     // and To Defend, which are not in the sequence yet.
     // PROVENANCE[godsPlayDices]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:14:34909b07ee2554c5452c485b
     statStep({ id: 'godsPlayDices', phase: 'b', writes: ['res'],
-      // UnitCalcPre.CAS:1710-1725 tests four separate EncDICE flags, each writing its own
+      // UnitCalcPre.CAS!NOTCITY!+8..+23 "IF (GetCombatEnchantmentFlag(U,EncDICE1,0)>0) THEN {" "}" tests four separate EncDICE flags, each writing its own
       // ±1 or ±2; the calculator's one signed control is which of them is set, and zero is
       // none of them.
       when: () => godsPlayDicesResMod !== 0,
@@ -908,7 +909,7 @@ function magicCalcBinaryStatSteps(ctx) {
         // The four-way ranged branch. `U.ranged := U.thrown; U.thrown := 0`
         // (Units.RecalculateUnits.pas:885-891) is a **move** between two fields of the modern
         // record, which is what leaves the Thrown field free for the Shadow Strike grant at
-        // `UnitCalc.CAS:1254`. The DOS-shaped shared slot is both ends at once, so there the
+        // `UnitCalc.CAS!NOVAMPIRISM!+2 ", gain thrown at strength half of its melee power :"`. The DOS-shaped shared slot is both ends at once, so there the
         // move is a retype in place, its `B.ranged` read needs the permanent type pair to say
         // the one value is a conventional ranged attack at all, and it cannot hold a created
         // ranged attack beside a Breath already standing in it — the modern record's own Ranged
@@ -1528,7 +1529,7 @@ function magicCalcScriptStatSteps(ctx) {
           if (!weaknessBinaryHits(u, c) && slotHasBreath(u, c)) u[c.strengthField] -= weaknessPenalty;
         }
       } }),
-    // `UnitCalc.CAS:328` gates on `GETENCHANTMENTFLAG(U,EncTrueSight,0)` — the **calculated**
+    // `UnitCalc.CAS!NOTZEAL!+3 "IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0) THEN {"` gates on `GETENCHANTMENTFLAG(U,EncTrueSight,0)` — the **calculated**
     // record — and `b:eyeOfHeaven` sets that flag at the very end of region `b`, which is the
     // crossing the CoM2 region map states outright ("Eye of Heaven's friendly True Sight grant
     // crosses the hook boundary deliberately"). So the gate is a record read at this step's own
@@ -1554,18 +1555,18 @@ function magicCalcScriptStatSteps(ctx) {
         }
       } }),
     // "on the opposite, Night Goblin gain bonus from Darkness or Eternal Night"
-    // (`UnitCalc.CAS:350-360`): template 356 gets +10 To Hit and +10 To Defend whenever
+    // (`UnitCalc.CAS!NOANGELICGUARDIAN!+2..+12 ": on the opposite, Night Goblin gain bonus from Darkness or Eternal Night :"`): template 356 gets +10 To Hit and +10 To Defend whenever
     // `ETERNALNIGHTCOUNT>0` or either side's Darkness combat global is up. `hasDarkness` is
     // already that disjunction — plain Darkness on either side, or Eternal Night held by either
     // wizard, which makes Darkness global.
     //
     // The gate is `GetStat(U,STypeID,1)`, the same *permanent*-record template read as the Poor
-    // Vision exemption at `UnitCalcPre.CAS:1352`, and it is the inverse of it: there 356 is the
+    // Vision exemption at `UnitCalcPre.CAS!NOBLOODANDIRON!+6 "%AND (GetStat(U,STypeID,1)<>356)"`, and it is the inverse of it: there 356 is the
     // one template excused from a penalty, here it is the one template given a bonus. Both take
     // the `nightGoblins` key rather than a bare template id, so the one table of template-id
     // exceptions stays the only place a template id is named (`SPECIAL_UNIT_DEFS`,
-    // `stats_identity.js`). The block sits between combat Flame Blade (`:333`) and Rust
-    // (`:498`), which is its rank in region `d`.
+    // `stats_identity.js`). The block sits between combat Flame Blade (`UnitCalc.CAS!NOTZEAL!+8 "IF (GETCOMBATENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN {"`) and Rust
+    // (`UnitCalc.CAS!NOTCITY!+11 "IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO"`), which is its rank in region `d`.
     // PROVENANCE[nightGoblinsNightVision]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:10:1619334dcc3e4d7d00947967
     statStep({ id: 'nightGoblinsNightVision', sourceLabel: 'Night Vision', phase: 'd',
       writes: ['toHit', 'toBlk'],
@@ -1580,7 +1581,7 @@ function magicCalcScriptStatSteps(ctx) {
       when: () => hurricaneActive,
       apply: u => {
         // HURRICANESTR is 2 for a normally cast Hurricane: the script seeds 1 and adds 1 for
-        // the cast level, which is the case its own comment at UnitCalc.CAS:550 states.
+        // the cast level, which is the case its own comment at UnitCalc.CAS!NOAETHERSURGE!+3 "IF (HASCOMBATGLOBAL(W,CGHurricane,1)=0)" states.
         for (const target of secondaryHitTargets) {
           u[target.field] -= target.kindAt(u) === 'breath' ? 30 : 20;
         }
@@ -1590,13 +1591,13 @@ function magicCalcScriptStatSteps(ctx) {
     // Fortification (Warlord, city building): the defending units inside the city area gain Large
     // Shield, or Missile Immunity where they already have it. The already-shielded test is
     // `GETSTAT(U,ALargeShield,0)` — selector `0`, the *calculated* record — so it reads what
-    // stands at this block's own rank, 576 lines after Rust clears the same flag at `:498` and
+    // stands at this block's own rank, 576 lines after Rust clears the same flag at `UnitCalc.CAS!NOTCITY!+16 "SETSTAT(U,ALargeShield,0,0);"` and
     // well after Magitek Engine sets it in `UnitCalcPre.CAS`. Modelling it as a pre-sequence
     // grant answered from before both (F200).
     // The block's other three gates are the city model the calculator does not have —
     // `ISBUILT(C,BMoats)`, the defending side `W=D`, and the city-area coordinate box — which is
     // what the single `fortification` control stands for. The +4 Defense variant at
-    // `UnitCalcPre.CAS:1833-1837` is *strategic* combat and is deliberately not modelled.
+    // `UnitCalcPre.CAS!NOTWATERELEMENTALAUTO!+14..+18 "IF (ISBUILT(C,BMoats)) %AND (W=D) THEN {" "}"` is *strategic* combat and is deliberately not modelled.
     // PROVENANCE[fortification]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:7:9e084676ba841f9385a766b0
     statStep({ id: 'fortification', sourceId: 'fortification', sourceLabel: 'Fortification',
       phase: 'd', writes: ['largeShield', 'missileImmunity'],
@@ -1606,16 +1607,16 @@ function magicCalcScriptStatSteps(ctx) {
         else u.largeShield = true;
       } }),
     // Colossal Strength scales the attack as it stands at its own position in `d`
-    // (UnitCalc.CAS:1219-1235 reads GetStat there), so everything before it in the file
+    // (UnitCalc.CAS!NOCOMBAT!+4..+20 ", +40% melee and non-magic range attack :" "!NOCOLOSSALSTRENGTH!" reads GetStat there), so everything before it in the file
     // scales and everything after does not. Under the buckets its input was a named subtotal;
     // here it is just `u.atk`.
     // PROVENANCE[colossalStrength]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:14:0df535b06a7a126d328bccbb
     statStep({ id: 'colossalStrength', phase: 'd', writes: ['atk', ...strengthFields],
       when: () => colossalStrength,
       apply: u => {
-        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+CSM))` (UnitCalc.CAS:1225) carries no
+        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+CSM))` (UnitCalc.CAS!NOCOMBAT!+10 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+CSM));") carries no
         // melee-presence test, while the two lines under it gate their own channels
-        // (`SRangedType>0 %AND <30` at :1235, `SThrown>0` at :1239) — so the block's silence on
+        // (`SRangedType>0 %AND <30` at UnitCalc.CAS!NOCOMBAT!+12 "IF (GetStat(U,SRangedType,0)>0) %AND (GetStat(U,SRangedType,0)<30) THEN {", `SThrown>0` at UnitCalc.CAS!NOCOMBAT!+16 "IF (GetStat(U,SThrown,0)>0) THEN {") — so the block's silence on
         // melee is deliberate, not an omission (F142).
         u.atk += colossalScaled(u.atk);
         for (const c of channels) {
@@ -1649,7 +1650,7 @@ function magicCalcScriptStatSteps(ctx) {
     // an addition to the record's Thrown field whether or not the unit owns a Thrown attack:
     // the leading `+1` creates one at zero melee. The field is seeded empty and typeless where
     // the unit has none, and this step supplies the identity, so no predicate before
-    // `UnitCalc.CAS:1254` sees a Thrown attack the grant has not yet made. It writes the
+    // `UnitCalc.CAS!NOVAMPIRISM!+2 ", gain thrown at strength half of its melee power :"` sees a Thrown attack the grant has not yet made. It writes the
     // independent Thrown field even when another modern attack exists; the record's separate
     // fields preserve that channel separation.
     // PROVENANCE[shadowStrike:thrown]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:5:1a3b77e0b9b6ad575bde5d74
@@ -1665,7 +1666,7 @@ function magicCalcScriptStatSteps(ctx) {
           u[c.thrownTypeField] = 'thrown';
         }
       } }),
-    // Psycho Force (UnitCalc.CAS:1405-1409) and Pneuma Field (:1419-1425) both *read*
+    // Psycho Force (UnitCalc.CAS!COMBATOVERRIDE!+13..+17 "IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=2) THEN {" "}") and Pneuma Field (UnitCalc.CAS!COMBATOVERRIDE!+19..+25 "IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {" "SETSTAT(U,AFLifeSteal,0,PNEUMA,1);") both *read*
     // `GETSTAT(U,SResist,0)` — the Resistance standing at their own position in `d`. That is
     // before region `e`, so neither sees the aura pass: a Holy Bonus or Resistance to All aura
     // raises Resistance afterwards and must not feed either effect. Reading the finished record
@@ -1698,7 +1699,7 @@ function magicCalcScriptStatSteps(ctx) {
         u.energyCannonToHit = Math.min(100, u.toHit + u[energyCannonHitField]);
       } }),
     // The three effects that close `UnitCalc.CAS`, in its own line order: Blaze of Glory
-    // (:1490), Beat of Swiftness (:1509), Hierophany (:1555). All three follow Colossal
+    // (UnitCalc.CAS!IMMUNETOROT!+14 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :"), Beat of Swiftness (UnitCalc.CAS!NOBLAZEOFGLORY!+2 ", all friendly units with melee more than range get +3 movement, or else get +2 :"), Hierophany (UnitCalc.CAS!NOTCOMBATSUBMARINE!+2 ": Hierophany, combat-only unit curse, unit lose half of defense and lose all of its immunities and lightning resistance :"). All three follow Colossal
     // Strength, and — now that the Warps are in `c` — all three follow those too.
     //
     // Blaze of Glory reads the unit's current Armor, adds that whole value to melee, then
@@ -1719,11 +1720,11 @@ function magicCalcScriptStatSteps(ctx) {
     // expressed by the channel identity alone; the strength is already in the only field there
     // is. The engine writes no ranged *type* here (`UnitCalc.CAS` never assigns `SRangedType,0`)
     // — what retires the emptied Ranged attack there is `SETSTAT(U,SAmmo,0,0)` two lines later
-    // (`:1502`), which the calculator does not model, so clearing the type is this model's
+    // (`UnitCalc.CAS!IMMUNETOROT!+26 "SETSTAT(U,SAmmo,0,0);"`), which the calculator does not model, so clearing the type is this model's
     // stand-in for that and keeps later region-`e` ranged writes off the emptied field.
-    // The reviewed span was widened from `:1490-1501` to `:1490-1505` to cover the block's three
-    // ability writes, in script order `SETSTAT(U,AWallCrusher,0,1)` at `:1503`,
-    // `SETSTAT(U,AFArmorPiercing,0,1,1)` at `:1504` and `SETSTAT(U,AFirstStrike,0,0)` at `:1505`,
+    // The reviewed span was widened from `UnitCalc.CAS!IMMUNETOROT!+14..+25 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :" "SETSTAT(U,SRangedPenalty,0,BLAZETHROWN);"` to `UnitCalc.CAS!IMMUNETOROT!+14..+29 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :" "SETSTAT(U,AFirstStrike,0,0);"` to cover the block's three
+    // ability writes, in script order `SETSTAT(U,AWallCrusher,0,1)` at `UnitCalc.CAS!IMMUNETOROT!+27 "SETSTAT(U,AWallCrusher,0,1);"`,
+    // `SETSTAT(U,AFArmorPiercing,0,1,1)` at `UnitCalc.CAS!IMMUNETOROT!+28 "SETSTAT(U,AFArmorPiercing,0,1,1);"` and `SETSTAT(U,AFirstStrike,0,0)` at `UnitCalc.CAS!IMMUNETOROT!+29 "SETSTAT(U,AFirstStrike,0,0);"`,
     // which land at this rank now instead of being merged ahead of the sequence (F201, F206).
     // Wall Crusher reaches no resolver here, the same as `b:bombsGrenades`'s grant of the same
     // flag: the engine's consequence is `CrushWall` -> `destroywall` at the top of

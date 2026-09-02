@@ -617,7 +617,7 @@ function isModernRangedOrThrownSlot(u, channel) {
 // `SThrown` is a field of the record, not an attack the unit owns, so which slot is that field is
 // a structural question asked of the record at the reading step's own position. The modern
 // `thrown` channel is `SThrown` until an earlier write spends it: Lightning Blade assigns
-// `SLightningBreath` and clears `SThrown` (CreateUnit.CAS:294-299), and Focus Magic moves its
+// `SLightningBreath` and clears `SThrown` (CreateUnit.CAS!NOBARAY!+10..+15 ": new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :" "ENDOFUNIQUEBUILDING"), and Focus Magic moves its
 // contents into `SRanged` (Units.RecalculateUnits.pas:885-891). Neither leaves `SThrown` behind.
 // The DOS-shaped shared slot is one value standing for conventional ranged, Thrown, Breath or a
 // gaze, so it is the Thrown field while it carries Thrown or while it stands free — which is what
@@ -672,7 +672,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // The hero flag, not the compact unit-type token. Two blocks below branch on hero-ness, and
   // every engine spells that as a hero predicate over the unit record — `U.ishero`
   // (Units.RecalculateUnits.pas:2417), `_UNITS[].Hero_Slot >= 0` (com1:0x90AB4), `ISHERO(U)`
-  // (UnitCalcPre.CAS:81, OLSpell.CAS:586) — never as a race or Fantastic test. Reading them off
+  // (UnitCalcPre.CAS!NOVAMPIRISM!+3 "IF ( ISHERO(U) = 0 ) THEN { GOTO", OLSpell.CAS!NOTMARKOFCONQUEROR!+7 "IF (ISHERO(TU)=0) THEN {") — never as a race or Fantastic test. Reading them off
   // the live token instead made any Fantastic conversion answer the hero question (F187).
   const isHeroUnit = !!identityPredicates.isHero;
   // The two eligibility predicates that read the *calculated* identity. The caller supplies them
@@ -834,14 +834,14 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Lucky Star's aura: while any friendly unit in the combat carries the enchantment, every
   // friendly unit — the enchanted one included — gets phase-b +1 melee/ranged/armor/resistance
-  // (UnitCalcPre.CAS:1020,1611-1623). Multiple copies do not stack; the scan counts them but
-  // the grant is gated on a non-zero count. The separate Lucky grant at UnitCalcPre.CAS:1158
+  // (UnitCalcPre.CAS!NOTOURHERO!+2 "IF (GETENCHANTMENTFLAG(UOT,EncLuckyStar,0)>0) THEN { LUCKYSTAR=LUCKYSTAR+1; }", UnitCalcPre.CAS!NOTGUARDIAN!+2..+14 ": Effect of Lucky Star on other friendly units :" "!NOLUCKYSTAR!"). Multiple copies do not stack; the scan counts them but
+  // the grant is gated on a non-zero count. The separate Lucky grant at UnitCalcPre.CAS!NOTUPHILL!+3 "IF GETENCHANTMENTFLAG(U,EncLuckyStar,0) THEN {"
   // reaches only the enchanted unit, so it is the plain `lucky` control, not this one.
   // The 1.5.12.7 script is the fixed army-wide form; `Reference docs/Source discrepancies.md`
   // §10 records the earlier build's enchanted-unit-only bug.
   //
   // The block names four stats and their four bonus mirrors and nothing else: `SAttack`,
-  // `SRanged`, `SDefense` and `SResist` (UnitCalcPre.CAS:1625-1632). `SRanged` is the record's
+  // `SRanged`, `SDefense` and `SResist` (UnitCalcPre.CAS!NOTGUARDIAN!+5..+12 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));" "SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));"). `SRanged` is the record's
   // conventional-ranged field, written with no test of what stands in it, so the write is the
   // `rangedField` gate ungated; Thrown, both Breaths and `SDoomGaze` are named by no line of the
   // block and take nothing (F139).
@@ -849,7 +849,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // PROVENANCE[luckyStar]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:2cd8ef385c4ba4e42016a04d
     abilityStep('luckyStar', 'b', { writes: ['atk', 'def', 'res', ...attackWrites],
       apply: (u, ctx) => {
-        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1))` (UnitCalcPre.CAS:1625) is reached by
+        // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1))` (UnitCalcPre.CAS!NOTGUARDIAN!+5 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+1));") is reached by
         // a jump over the whole block on `LUCKYSTAR=0` and by no other test, so the melee write
         // has no presence gate to transcribe (F142).
         u.atk += 1; u.def += 1; u.res += 1;
@@ -865,7 +865,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // when stacked is only +1 Melee Atk, +1 Defense, +1 Resistance.
   // The v1.31 enemy melee To Hit malus (-10%) is applied in resolveCombat.
   // Phase c for both spells' own effects (no CAS implementation); the Warlord stacking
-  // top-up is phase b — UnitCalcPre.CAS:1495-1507, gated on both globals being present.
+  // top-up is phase b — UnitCalcPre.CAS!NORAGE!+4..+16 ": Extended effect of combat enchantment" "!NOPRAYER!", gated on both globals being present.
   // MoM (0x9025C-0x9039D) and CoM 1 (0x9028x-0x9039A) implement both prayers identically,
   // including High Prayer's `jmp` past the Prayer block that makes them non-cumulative,
   // and neither writes `.ranged`. Both blocks sit *before* CoM 1's Warp Creature at
@@ -880,7 +880,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       } });
     if (hasPrayer && version && version.startsWith('com2_warlord')) {
       // PROVENANCE[prayer]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:cd3b7dd8d55f06aacde8812c | Reference docs/DOS reconstructed/unitcalc.c@span:19:ff7bdd24b7f56fef70abb02b | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:22:b3cdb6f87df741fb103a6989
-      // `SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1))` (UnitCalcPre.CAS:1498) sits under the
+      // `SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1))` (UnitCalcPre.CAS!NORAGE!+7 "SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));") sits under the
       // both-globals test alone and carries no melee-presence gate (F142). The DOS and base-CoM2
       // Prayer blocks are compiled and keep theirs.
       abilityStep('prayer', 'b', { writes: ['atk', 'def', 'res'],
@@ -917,7 +917,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // alone — a superset, as scope and emission are upper bounds (`SPEC.md`, *Version scope*) —
   // and `innerPowerActiveForUnit` is the gate, answered on the record at this step's own rank so
   // that `b:insulation`'s Fire Immunity and Lightning Resist count (F200).
-  // Phase c: UnitCalcPre.CAS:1754-1760 grants only Mountaineer — the stat bonuses are binary.
+  // Phase c: UnitCalcPre.CAS!NOTWATERELEMENTALTACTIC!+3..+9 "IF (HASGLOBAL(W,GEInnerPower)=0) THEN { GOTO" "!NOINNERPOWER!" grants only Mountaineer — the stat bonuses are binary.
   //
   // The block writes Resistance and Defense unconditionally and then makes three separate
   // strength tests (Units.RecalculateUnits.pas:1866-1885): melee on the **permanent** record's
@@ -955,8 +955,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   }
 
   // Stone Skin / Iron Skin: +1 / +5 Defense. Iron Skin supersedes Stone Skin.
-  // Both phase c. UnitCalc.CAS:6-9 looks like a Stone Skin implementation but sits inside
-  // the file's `Example - ... End of Example` header comment; UnitCalcPre.CAS:456/661 only
+  // Both phase c. UnitCalc.CAS!NOTCCBREATH!-39..-36 "If (GetEnchantmentFlag(U,EncStoneSkin,0)>0) THEN {" "}" looks like a Stone Skin implementation but sits inside
+  // the file's `Example - ... End of Example` header comment; UnitCalcPre.CAS!NOTRIGHTEOUSWARD!+20 "%AND (GETENCHANTMENTFLAG(U,EncIronSkin,1)=0)"
+  // and UnitCalcPre.CAS!NOSACRED!+4 "SETENCHANTMENTFLAG(U,EncIronSkin,0,1);" only
   // set the Iron Skin flag. Neither applies a stat.
   if (hasAbil(abilities, 'ironSkin')) {
     // PROVENANCE[ironSkin]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:7157204464b034c8f40530d5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:5:1e9389176cf9e793db19626f
@@ -1019,7 +1020,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   const breakthroughVal = version && version.startsWith('com2')
     ? abilVal(abilities, 'breakthrough', 'none')
     : 'none';
-  // Phase c: UnitCalcPre.CAS:776-782 only grants the CGBreakthrough combat global via the
+  // Phase c: UnitCalcPre.CAS!NOTTACTICIANHERO!+10 "SETCOMBATGLOBAL( W,CGBreakthrough,1,1 );" only grants the CGBreakthrough combat global via the
   // Chaos Conduit item power — the stat effect itself is binary.
   if (breakthroughVal !== 'none') {
     const baseFantastic = identityPredicates.baseFantastic != null
@@ -1055,7 +1056,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Giant Strength: +1 melee attack. +1 thrown bonus is `giantStrength:thrown` in
   // stats_sequence.js
   // (thrown only, not missile).
-  // Phase c — spell with no CAS implementation. (CreateUnit.CAS:552-554's SGiantStrength is
+  // Phase c — spell with no CAS implementation. (CreateUnit.CAS!NOTARCHMAGE!+33..+35 "SETSTAT(U,SAttack,ABase,ATK+1);" "}"'s SGiantStrength is
   // the Natural Selection coal-ore grant, a different effect, stepped in stats_sequence.js.)
 
   // Chaos Channels (Demon-Skin Armor): +6 Defense in MoM 1.31 (bug: applied twice in combat),
@@ -1091,16 +1092,16 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Weakness: -2 (MoM) or -3 (CoM/CoM2) melee attack. RTB penalty is type-specific — the
   // `c:weakness` and `d:weakness` steps in stats_sequence.js.
-  // Phase c for the melee penalty — Warlord's UnitCalc.CAS:311-317 adds only the -3 to
+  // Phase c for the melee penalty — Warlord's UnitCalc.CAS!NOTENGINEERCOUNT!+2..+8 ": Modified Weakness effect :" "!NOTWEAKNESS!" adds only the -3 to
   // fire/lightning breath (phase d, applied in stats_sequence.js).
 
   // Rust (Warlord): -3 melee attack. The matching -3 to physical ranged (missile/boulder),
   // weapon stripping, thrown removal, and Large Shield removal are handled in stats.js.
-  // Phase d — UnitCalc.CAS:484-496.
+  // Phase d — UnitCalc.CAS!NOTCITY!+10..+22 "unit loses 1/2 of melee/physical range/thrown strength :" "!NOTRUST!".
   if (version && version.startsWith('com2_warlord') && hasAbil(abilities, 'rust')) {
     // PROVENANCE[rust]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:10:98745d26b4fbf74694b1a932
-    // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-3))` (UnitCalc.CAS:487) is ungated, while the
-    // ranged half three lines down tests `GetStat(U,SRangedType,0)>0 %AND <30` (:499) — the same
+    // `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-3))` (UnitCalc.CAS!NOTCITY!+13 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-3));") is ungated, while the
+    // ranged half three lines down tests `GetStat(U,SRangedType,0)>0 %AND <30` (UnitCalc.CAS!NOTCITY!+17 "IF (GetStat(U,SRangedType,0)>0) %AND (GetStat(U,SRangedType,0)<30) THEN {") — the same
     // block gating one channel and not the other, so melee takes the write unconditionally and
     // `e:clamp` floors the result (F142).
     abilityStep('rust', 'd', { writes: ['atk'],
@@ -1110,7 +1111,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Mind Storm: DOS: -5 melee, -5 to the shared ranged/Thrown/Breath/Gaze slot,
   // -5 defense, -5 resistance. CoM2/Warlord: -3 melee, -5 conventional ranged and
   // Thrown only, -5 defense, -5 resistance; both Breath fields and all gazes are separate.
-  // Phase c: UnitCalcPre.CAS:1232-1234 only mirrors the combat flag to overland.
+  // Phase c: UnitCalcPre.CAS!NOCHAOSEMBRACE!+26..+28 "IF GETCOMBATENCHANTMENTFLAG(U,EncMindStorm,0) THEN {" "}" only mirrors the combat flag to overland.
   // Mind Storm is one of the ten curse flags `base:immunityCurseGating` can clear, so emission
   // reads the ability set — a superset — and the flag on the record at this step's own position
   // is the gate (`SPEC.md`, *Version scope*; F199).
@@ -1150,7 +1151,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Guardian retort: CoM/CoM2 units gain +1 resistance, +10% To Hit,
   // and +10% To Defend.
   // Region c at +0x0B092 ("Guardian retort while defending a settlement"), not the a the
-  // pre-map judgment gave it. UnitCalcPre.CAS:326-328 grants only a hero ability to
+  // pre-map judgment gave it. UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+133..+135 "IF RETORT(W,Guardian) THEN {" "}" grants only a hero ability to
   // Marionettes, so Warlord adds nothing and inherits the position. Nothing between a and c
   // reads Resistance, To Hit or To Defend, so this is faithful without being observable.
   if (hasAbil(abilities, 'guardian') && isCoMPlus) {
@@ -1167,7 +1168,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   //           Negate First Strike — those ability grants are applied in normalizeCombatUnit.
   //
   // Warlord reaches its flat +1 by *subtracting* from the binary's hero grant rather than
-  // replacing it: UnitCalcPre.CAS:759-771 takes back -2 atk, -2 ranged, -1 defense and
+  // replacing it: UnitCalcPre.CAS!NOTPLANEWALKERHERO!+5..+17 ": remove old bonus for tactician :" "!NOTTACTICIANHERO!" takes back -2 atk, -2 ranged, -1 defense and
   // -2 resistance from heroes in combat, which is exactly the CoM2 hero bonus less one
   // point of defense. So the hero case is the binary's grant plus a phase-b clawback. Net
   // values are unchanged either way, but the clawback runs in `b`, *before* the grant it
@@ -1200,7 +1201,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
         } });
       if (isWarlord) {
         // The Warlord clawback `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-2))`
-        // (UnitCalcPre.CAS:762) is reached under the retort and in-combat tests only and carries
+        // (UnitCalcPre.CAS!NOTPLANEWALKERHERO!+8 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)-2));") is reached under the retort and in-combat tests only and carries
         // no melee-presence gate; the compiled region-`c` grant above keeps `B.attack > 0` (F142).
         abilityStep('tactician', 'b', { writes: ['atk', 'def', 'res', ...attackWrites],
           apply: (u, ctx) => {
@@ -1218,7 +1219,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // +5% To Hit and +1 defense. With the Tactician retort the terrain bonus is
   // doubled (and Tactician also grants First Strike + Negate First Strike — see
   // applyTacticianWarlordEffects).
-  // Phase d — UnitCalc.CAS:621-663, with the doubled branch at :646-658.
+  // Phase d — UnitCalc.CAS!NOTANGLINGROOT!+2..+44 ": new bonus for Terrain bonus module, First Strike and Nagate First Strike require tactician to trigger :" "!ENDOFTACTICIANEFFECT!", with the doubled branch at UnitCalc.CAS!TACTICIANEFFECT!+2..+11 "IF ( ( (GETSTAT(U,AForester,0)>0) %AND TREE )" "}".
   if (hasAbil(abilities, 'favoredTerrain') && version && version.startsWith('com2_warlord')) {
     const mult = hasAbil(abilities, 'tactician') ? 2 : 1;
     // PROVENANCE[favoredTerrain]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:29:8a7eccc577a846564d7742f8
@@ -1228,7 +1229,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Land Linking (+2 melee, breath and defense to fantastic units) is one hand-written
   // region-c step in stats_sequence.js: its Breath half needs the per-channel mod this
-  // builder never receives. UnitCalcPre.CAS:889 is the separate Nature Link upgrade
+  // builder never receives. UnitCalcPre.CAS!NODIVINEPROTECT!+5 "IF (GetEnchantmentFlag(U,EncLandLink,0)=0) %AND (GETITEMPOWER(U,55)=0) THEN { GOTO" is the separate Nature Link upgrade
   // (+1 resistance), not this bonus.
 
   // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is the separate
@@ -1244,19 +1245,19 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Artificer retort (Warlord): mechanical units gain +1 melee, +1 ranged,
   // +1 armor, +2 resistance. Magic Weapons component handled in stats.js.
-  // Base stage: CreateUnit.CAS:37-48 writes these at index 1 (ABase) when the unit is
+  // Base stage: CreateUnit.CAS!NOLOGISTIC!+7..+18 ": new effect of Artificer retort, mechanical units gain magic weapon, +1 resistance, and land mechanical units get +1 movement :" "}" writes these at index 1 (ABase) when the unit is
   // built, so they are part of the base before the encounter-time pipeline starts.
   // Resistance is +2. The helptext was stale at +1 until v1.5.12.6.2 corrected it; the shipped
   // helptext now agrees with the script. See `Reference docs/Source discrepancies.md` §6.
-  // `CreateUnit.CAS:37`'s own comment is still stale at +1.
+  // `CreateUnit.CAS!NOLOGISTIC!+7 ": new effect of Artificer retort, mechanical units gain magic weapon, +1 resistance, and land mechanical units get +1 movement :"`'s own comment is still stale at +1.
   const isWarlord = version && version.startsWith('com2_warlord');
   // Armorclad is a permanent mechanical hull upgrade, +6 Defense written to ABase. Two routes
-  // reach it and both are cited: `CreateUnit.CAS:702-703` when the city builds the unit, and the
-  // `OverlandEndTurn.CAS` upgrade protocol at :428-429 for a unit that predates the reform. The
+  // reach it and both are cited: `CreateUnit.CAS!HASEVILPRESENCE!+92..+93 "SETENCHANTMENTFLAG(U,EncArmorClad,ABase,1);" "SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+6));"` when the city builds the unit, and the
+  // upgrade protocol at `OverlandEndTurn.CAS!NOTENGINEADDED!+6..+7 "SETENCHANTMENTFLAG(U,EncArmorClad,1,1);" "SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+6));"` for a unit that predates the reform. The
   // second is guarded on the marker the first sets — `IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0)
-  // THEN { GOTO "NOTARMORCLAD"; }` (:425) — so the +6 lands once however the unit got there, which
+  // THEN { GOTO "NOTARMORCLAD"; }` (`OverlandEndTurn.CAS!NOTENGINEADDED!+3 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0) THEN { GOTO"`) — so the +6 lands once however the unit got there, which
   // is why one step at one position states both (F203). The block's third site, Xenoveterinary's
-  // Fantastic route at :404-406, is not modelled and its control says so.
+  // Fantastic route at `OverlandEndTurn.CAS!NOPNEUMA!+6..+8 "IF (SPELLSTATE(W,STArmorClad)=2) THEN {" "SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+6));"`, is not modelled and its control says so.
   // The Outlander reform block
   // grants the flag, so it is a record field read here rather than a pre-sequence constant (F202).
   if (isWarlord) {
@@ -1266,7 +1267,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   }
 
   // Battle Armor is the in-combat regular non-mechanical branch of the
-  // Armorclad reform. UnitCalcPre.CAS:1106-1113 applies +3 Defense.
+  // Armorclad reform. UnitCalcPre.CAS!NOTSAPIENS!+4..+11 "IF (SPELLSTATE(W,STArmorClad)<>2) THEN { GOTO" "SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+3));" applies +3 Defense.
   if (isWarlord && outlanderReform.battleArmor) {
     // PROVENANCE[battleArmor]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:10:c7c2d7da26a07332de4fa4f3
     abilityStep('battleArmor', 'b', { writes: ['def'], apply: u => { u.def += 3; } });
@@ -1274,7 +1275,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units. One block, four writes
   // — two movement stats the calculator has no record for, `SToDefend` +20, and
-  // `SETSTAT(U,ALargeShield,0,1)` at `:1058` — so the ability write is a field of this step and
+  // `SETSTAT(U,ALargeShield,0,1)` at `UnitCalcPre.CAS!NOXENOVET!+9 "SETSTAT(U,ALargeShield,0,1);"` — so the ability write is a field of this step and
   // not a pre-sequence grant. That is what puts it at a rank the region-`d` Fortification block
   // can read (F200).
   if (isWarlord && outlanderReform.magitekEngine) {
@@ -1284,11 +1285,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   }
 
   // The Artificer retort's permanent write set is `SAttack`, `SRanged`, `SDefense`, `SResist` and
-  // the four movement stats, all on record selector 1 (CreateUnit.CAS:38-47). `SRanged` is the
+  // the four movement stats, all on record selector 1 (CreateUnit.CAS!NOLOGISTIC!+8..+17 "IF RETORT(W,Artificer) %AND (GetStat(U,SCustomAttribute,1)=1) THEN {" "SETSTAT(U,SCombatMovesLeft,1,(GetStat(U,SCombatMovesLeft,1)+2));"). `SRanged` is the
   // record's conventional-ranged field, written with no test of what stands in it, so the write
   // is the `rangedField` gate ungated; Thrown, both Breaths and `SDoomGaze` are named by no line
   // of the block and take nothing. The movement stats are outside the calculator's record (F139).
-  // The block's own gate is `GetStat(U,SCustomAttribute,1)=1` (`CreateUnit.CAS:38`) — the
+  // The block's own gate is `GetStat(U,SCustomAttribute,1)=1` (`CreateUnit.CAS!NOLOGISTIC!+8 "IF RETORT(W,Artificer) %AND (GetStat(U,SCustomAttribute,1)=1) THEN {"`) — the
   // permanent Mechanical flag — so it is a record read at this step's position (F202). That rank
   // is what settles the Rebuild case: `CreateUnit.CAS` runs once, when the city builds the unit,
   // and Rebuild is cast on a unit that already exists, so this gate never saw the later
@@ -1298,7 +1299,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...attackWrites],
       when: u => !!u.mechanical,
       apply: (u, ctx) => {
-        // `SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1))` (CreateUnit.CAS:40) has no
+        // `SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1))` (CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));") has no
         // melee-presence gate, and it writes the **permanent** record — so on a unit whose
         // permanent melee was 0 it is what makes `B.attack > 0` true for every later block
         // that asks (F142).
@@ -1309,11 +1310,11 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Mechanical Expert (Warlord): with an engineer or mechanic anywhere on the friendly side,
   // every friendly Mechanical unit gains +20% To Hit and +10% To Defend.
-  // Phase d — UnitCalc.CAS:277-311. The scan at :278-300 counts a unit when it carries
-  // `HAMechanicalMaster` or its permanent `STypeID` is one of eight (:286-293); that scan is
+  // Phase d — UnitCalc.CAS!NOTGOBLINCOUNT!+2..+36 ": Effect of Engineers and Mechaniacs, all mechanical units on the same side gains +20%% To-Hit and 10% To-Defend while Engineers or Mechaniacs presence in combat. :" ": Modified Weakness effect :". The scan at UnitCalc.CAS!NOTGOBLINCOUNT!+5..+27 "FOR N=1 TO NMAXCOMBAT;" "NEXT N;" counts a unit when it carries
+  // `HAMechanicalMaster` or its permanent `STypeID` is one of eight (UnitCalc.CAS!NOTGOBLINCOUNT!+13..+20 "%OR (GETSTAT(UOT,STypeID,1)=52)" "%OR (GETSTAT(UOT,STypeID,1)=363)"); that scan is
   // outside the one-attacker-one-defender scope, so this control asserts the presence rather
   // than deriving it, and the eight are named in the tooltip instead (F196).
-  // The recipient's own gate, `GETSTAT(U,SCustomAttribute,1)<>1` (UnitCalc.CAS:278), is a
+  // The recipient's own gate, `GETSTAT(U,SCustomAttribute,1)<>1` (UnitCalc.CAS!NOTGOBLINCOUNT!+3 "IF (GETSTAT(U,SCustomAttribute,1)<>1) THEN { GOTO"), is a
   // **permanent**-record read, which is what `u.mechanical` carries — so a Rebuilt hero, whose
   // Rebuild writes only the calculated record, is not Mechanical here (F217.3, see `b:rebuild`).
   if (isWarlord && hasAbil(abilities, 'mechanicalExpert')) {
@@ -1326,20 +1327,20 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Rebuild (Warlord): +2 melee, +2 armor and the Mechanical flag. Death/Illusion Immunity and
   // Armor Piercing are granted in normalizeCombatUnit.
   // The two unit classes are handled by deliberately ISHERO-complementary code, in
-  // different phases. Non-heroes: OLSpell.CAS:581-595 writes both stats at index 1
+  // different phases. Non-heroes: OLSpell.CAS!NOTMARKOFCONQUEROR!+2..+16 "IF (SP<>SRebuild) THEN { GOTO" "ENDOFOLSPELL" writes both stats at index 1
   // (ABase) when the spell is cast, so it is baked into the base stage.
-  // Heroes: UnitCalcPre.CAS:682-690 re-applies them at index 0 on every recalc — phase b.
+  // Heroes: UnitCalcPre.CAS!NOHEROAUGMENT!+2..+10 ": Hero augmentation effect of Rebuild spell :" "SETSTAT(U,ADeathImmunity,0,1);" re-applies them at index 0 on every recalc — phase b.
   // The Marionette Wanderer's strayed branch grants Rebuild, so the flag is a record field read
   // here rather than a pre-sequence constant (F202).
-  // `SCustomAttribute` 1 is Mechanical (`MASTER.CAS:1132`). Only the non-hero branch writes it:
-  // `SETSTAT(TU,SCustomAttribute,1,1)` (OLSpell.CAS:587) writes the **permanent** record, which is
+  // `SCustomAttribute` 1 is Mechanical (`MASTER.CAS~"SCustomAttribute=118;"`). Only the non-hero branch writes it:
+  // `SETSTAT(TU,SCustomAttribute,1,1)` (OLSpell.CAS!NOTMARKOFCONQUEROR!+8 "SETSTAT(TU,SCustomAttribute,1,1);") writes the **permanent** record, which is
   // the record `u.mechanical` carries and the record every Mechanical reader in the scripts asks
-  // for. The hero branch's `SETSTAT(U,SCustomAttribute,0,1)` (UnitCalcPre.CAS:685) writes the
+  // for. The hero branch's `SETSTAT(U,SCustomAttribute,0,1)` (UnitCalcPre.CAS!NOHEROAUGMENT!+5 "SETSTAT(U,SCustomAttribute,0,1);") writes the
   // calculated record instead, and no script line anywhere reads `SCustomAttribute` selector 0 for
-  // value 1 — the file's one selector-0 read, `CombatEndTurn.CAS:525`, tests value 2 (Clergy). So
+  // value 1 — the file's one selector-0 read, `CombatEndTurn.CAS!NOTTRAPTILE!+10 "IF (GETSTAT(U,SCustomAttribute,0)=2) THEN { GOTO"`, tests value 2 (Clergy). So
   // the hero write reaches no consumer and this step models none (F217.3): a Rebuilt hero is not
-  // Mechanical to `d:mechanicalExpert` (`GETSTAT(U,SCustomAttribute,1)`, UnitCalc.CAS:278), to the
-  // Mechanical Master hero bonus (:367), to the display (DisAbil.CAS:483), or to the permanent
+  // Mechanical to `d:mechanicalExpert` (`GETSTAT(U,SCustomAttribute,1)`, UnitCalc.CAS!NOTGOBLINCOUNT!+3 "IF (GETSTAT(U,SCustomAttribute,1)<>1) THEN { GOTO"), to the
+  // Mechanical Master hero bonus (UnitCalc.CAS!NOTNIGHTGOBLIN!+6 "IF (GETSTAT(U,SCustomAttribute,1)<>1) THEN { GOTO"), to the display (DisAbil.CAS!NOTCOUNTGOBLIN!-116 "IF (GETSTAT(U,SCustomAttribute,1)=1) THEN {"), or to the permanent
   // derivations, whose `permanentMechanical` already carries the same `&& !isHero`
   // (stats_identity.js:913-914).
   // Its position is the whole content of the F208 ruling: the non-hero write is a cast-time write
@@ -1348,8 +1349,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   if (isWarlord) {
     // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
     // Neither branch gates the melee write: `SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2))`
-    // (UnitCalcPre.CAS:686) for the hero re-application, and
-    // `SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2)` (OLSpell.CAS:588) for the permanent
+    // (UnitCalcPre.CAS!NOHEROAUGMENT!+6 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));") for the hero re-application, and
+    // `SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2)` (OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);") for the permanent
     // non-hero write (F142).
     abilityStep('rebuild', isHeroUnit ? 'b' : 'base',
       { writes: isHeroUnit ? ['atk', 'def'] : ['atk', 'def', 'mechanical'],
@@ -1361,10 +1362,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   }
 
   // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.
-  // Base stage: CreateUnit.CAS:614-618 writes both at index 1 (ABase).
+  // Base stage: CreateUnit.CAS!HASEVILPRESENCE!+4..+8 ": If city suffer from famine, impaired newly trained units' attack and defense :" "SETSTAT(U,SMalnourished,ABase,1);" writes both at index 1 (ABase).
   if (isWarlord && hasAbil(abilities, 'malnourished')) {
     // PROVENANCE[malnourished]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:5:66825b694152a9b945a1d0b6
-    // `SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1))` (CreateUnit.CAS:616) is ungated;
+    // `SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1))` (CreateUnit.CAS!HASEVILPRESENCE!+6 "SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1));") is ungated;
     // a permanent melee already at 0 goes to -1 here and `e:clamp` floors it (F142).
     abilityStep('malnourished', 'base', { writes: ['atk', 'def'],
       apply: u => { u.atk -= 1; u.def -= 2; } });
@@ -1380,7 +1381,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Rally (Warlord, Charismatic retort exclusive combat enchantment): all friendly
   // units gain +2 Resistance until the end of combat.
-  // Phase b — UnitCalcPre.CAS:1510-1515 (labelled "Rousing Speech" in the script).
+  // Phase b — UnitCalcPre.CAS!NOPRAYER!+3..+8 "IF (HASCOMBATGLOBAL(W,CGRally,1)=0) THEN { GOTO" "!NOUPLIFTSPEECH!" (labelled "Rousing Speech" in the script).
   if (isWarlord && hasAbil(abilities, 'rally')) {
     // PROVENANCE[rally]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:489ddb7eb9cdcfbb11f54431
     abilityStep('rally', 'b', { writes: ['res'], apply: u => { u.res += 2; } });
@@ -1389,7 +1390,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Dishearten Prophesy (Warlord, Astrologer retort exclusive city curse): garrison
   // units defending the cursed city suffer -2 Resistance in combat. Only the
   // resistance debuff is modeled (the +4 city unrest is outside this calculator).
-  // Phase b — UnitCalcPre.CAS:1641-1644.
+  // Phase b — UnitCalcPre.CAS!NOLUCKYSTAR!+7..+10 "IF (CITYENCHANT(C,CEDisheartenProphesy)>0) THEN {" "}".
   if (isWarlord && hasAbil(abilities, 'disheartenProphecy')) {
     // PROVENANCE[disheartenProphecy]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:10:dff452481f1564630c441f62
     abilityStep('disheartenProphecy', 'b', { writes: ['res'], apply: u => { u.res -= 2; } });

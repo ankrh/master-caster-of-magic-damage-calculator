@@ -125,7 +125,7 @@ test('Wanderer roster Ranged record is the source of its permanent ranged type',
   expect(strayed.rosterRanged).toBeUndefined();
   expect(strayed.rosterRangedType).toBe('Magic-lightning');
   expect(strayed.cardRangedType).toBe('magic_lightning');
-  // The strayed branch writes no ranged type (`UnitCalcPre.CAS:364-392`), so the package
+  // The strayed branch writes no ranged type (`UnitCalcPre.CAS!STRAYEDMARIONETTE!+0..+28 "!STRAYEDMARIONETTE!" "!NOLONGERSTRAYEDMARIONETTE!"`), so the package
   // projects none and the record's own type is what Transmute Equipment's +2 lands on.
   expect(strayed.package.rangedType).toBeUndefined();
   expect(strayed.ranged).toMatchObject({ strength: 2, type: 'magic_lightning' });
@@ -154,9 +154,9 @@ test('Wanderer roster Ranged record is the source of its permanent ranged type',
   expectNoConsoleErrors(errors);
 });
 
-// F93. `UnitCalcPre.CAS:269-273` writes `AWallCrusher`, `AFArmorPiercing` *and*
+// F93. `UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+77..+81 "IF (PRIMARY=3) THEN {" "}"` writes `AWallCrusher`, `AFArmorPiercing` *and*
 // `SRangedType = 30` for an ascended Chaos-primary Marionette, after the twenty book-grant
-// blocks the five realm arms at `:104-176` precede. Id 30 is the lightning-bolt projectile and a
+// blocks the five realm arms at `UnitCalcPre.CAS!NOVAMPIRISM!+26..+98 "SETSTAT(U,SRangedType,0,37);" "SETSTAT(U,SRangedType,0,33);"` precede. Id 30 is the lightning-bolt projectile and a
 // token of its own, so the ascension arm is a second region-`b` write and not something the
 // primary arm's id 31 already stands for.
 test('An ascended Chaos Marionette takes the ascension block\'s own projectile retype', async ({ page }) => {

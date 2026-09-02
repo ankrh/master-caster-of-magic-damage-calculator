@@ -83,7 +83,7 @@ definePresets({
 
   // --- Nature Link (Warlord rename of Land Linking) ---
   natureLinkBeforeSpiritLinkClearWarlord: {
-    desc: 'Nature Link (Warlord): the region-c block tests `U.Fantastic`, and Spirit Link clears it only in the late hook (UnitCalc.CAS:1298, region d), so a Mystic-Surged unit still gets the +2 melee there. atk 1 to 3 for 3 dmg',
+    desc: 'Nature Link (Warlord): the region-c block tests `U.Fantastic`, and Spirit Link clears it only in the late hook (UnitCalc.CAS!NOTICEAGE!+3 "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }", region d), so a Mystic-Surged unit still gets the +2 melee there. atk 1 to 3 for 3 dmg',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { natureLink: true, mysticSurge: true, spiritLink: true } },
     b: { hp:10 },
@@ -94,7 +94,7 @@ definePresets({
     },
   },
   natureLinkSpiritLinkAssertsFantasticWarlord: {
-    desc: 'Spirit Link on an otherwise non-fantastic unit: `SETSTAT(U,AFantastic,0,1)` at UnitCalcPre.CAS:30 asserts Fantastic in region b, and the region-c Nature Link block reads that record, so the +2 melee applies. atk 1 to 3 for 3 dmg, against the 1 the same unit deals without Spirit Link. The clearing write at UnitCalc.CAS:1298 is region d, past both blocks.',
+    desc: 'Spirit Link on an otherwise non-fantastic unit: `SETSTAT(U,AFantastic,0,1)` at UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);" asserts Fantastic in region b, and the region-c Nature Link block reads that record, so the +2 melee applies. atk 1 to 3 for 3 dmg, against the 1 the same unit deals without Spirit Link. The clearing write at UnitCalc.CAS!NOTICEAGE!+3 "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }" is region d, past both blocks.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { natureLink: true, spiritLink: true } },
     b: { hp:10 },
@@ -557,7 +557,7 @@ definePresets({
 
   // --- Channel fields on the modern record (F80) ---
   ccFireBreathSeparatesThrownWarlord: {
-    desc: 'Record fields: `Caster.exe` $00599F3E adds 4 to the Fire Breath field and writes no other attack, so a Thrown unit finishes with two attacks rather than one boosted one. Hurricane separates them by channel — UnitCalc.CAS:550,569-571 takes 20 points off Thrown and 30 off Breath — so from a 100% base the Thrown 2 fires at 80% and the granted Fire Breath 4 at 70%: 1.6 + 2.8 = 4.400. A grant landing on the Thrown field instead leaves one attack of 6 (4.200 as Breath, 4.800 as Thrown), and a lost Breath field leaves the Thrown alone at 1.600.',
+    desc: 'Record fields: `Caster.exe` $00599F3E adds 4 to the Fire Breath field and writes no other attack, so a Thrown unit finishes with two attacks rather than one boosted one. Hurricane separates them by channel — UnitCalc.CAS!NOAETHERSURGE!+3 "IF (HASCOMBATGLOBAL(W,CGHurricane,1)=0)", UnitCalc.CAS!NOAETHERSURGE!+14..+16 "SETSTAT(U,SToBreath,0,( GetStat(U,SToBreath,0) - 15*(HURRICANESTR) ) );" "SETSTAT(U,SToRanged,0,( GetStat(U,SToRanged,0) - 10*(HURRICANESTR) ) );" takes 20 points off Thrown and 30 off Breath — so from a 100% base the Thrown 2 fires at 80% and the granted Fire Breath 4 at 70%: 1.6 + 2.8 = 4.400. A grant landing on the Thrown field instead leaves one attack of 6 (4.200 as Breath, 4.800 as Thrown), and a lost Breath field leaves the Thrown alone at 1.600.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { thrown: { strength:2, type:'thrown' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, abilities: { ccFireBreath: true } },
     b: { hp:10 },
@@ -589,7 +589,7 @@ definePresets({
     },
   },
   weaponMaterialRangedHasNoStrengthGateWarlord: {
-    desc: 'ApplyMagicWeapons writes `Inc(Units[i].ranged, j)` inside `if not Ismagicalranged(Units[i].rangedtype)` with no positive-strength gate at all (Units.RecalculateUnits.pas:648-656), and `Ismagicalranged` is False for a zero ranged type (:2968-2975), so the adamantium +2 lands on the `SRanged` field of a unit that owns no ranged attack. Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS:1486-1492): melee 3 + 2 material + 2 for the Armor the material gave = 7, beside a new Thrown 2 → 9.0. (Gating that write on the slot\'s input strength leaves nothing to transfer, for 7.0; without Blaze of Glory melee 5 and Armor 2 stay where they are, for 5.0; without the material, melee 3 → 3.0.)',
+    desc: 'ApplyMagicWeapons writes `Inc(Units[i].ranged, j)` inside `if not Ismagicalranged(Units[i].rangedtype)` with no positive-strength gate at all (Units.RecalculateUnits.pas:648-656), and `Ismagicalranged` is False for a zero ranged type (:2968-2975), so the adamantium +2 lands on the `SRanged` field of a unit that owns no ranged attack. Blaze of Glory then moves that whole field into Thrown (UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"): melee 3 + 2 material + 2 for the Armor the material gave = 7, beside a new Thrown 2 → 9.0. (Gating that write on the slot\'s input strength leaves nothing to transfer, for 7.0; without Blaze of Glory melee 5 and Armor 2 stay where they are, for 5.0; without the material, melee 3 → 3.0.)',
     version: V_WARLORD,
     a: { atk:3, def:0, hitChance:70, hp:10, weapon:'adamantium',
       abilities: { blazeOfGlory: true } },
@@ -597,7 +597,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 9.000 },
   },
   weaponMaterialThrownReadsCalculatedFieldWarlord: {
-    desc: 'The Thrown half of the same block is gated on `if Units[i].thrown > 0` — the *calculated* Thrown field at ApplyMagicWeapons\' own position (Units.RecalculateUnits.pas:658-662), which region `b` has already written. Bombs & Grenades creates Thrown floor(8 − 4/2) = 6 at `UnitCalcPre.CAS:1071` on a card with no Thrown input at all, so the adamantium +2 reaches it: 4 figures at melee 1+2 = 3 and Thrown 6+2 = 8 deal (3 + 8) × 4 = 44.0. (Reading the slot\'s input strength instead withholds the material from the created attack, leaving Thrown 6 for 36.0; the sibling bombsGrenadesWarlord fixture without the material is 28.0.)',
+    desc: 'The Thrown half of the same block is gated on `if Units[i].thrown > 0` — the *calculated* Thrown field at ApplyMagicWeapons\' own position (Units.RecalculateUnits.pas:658-662), which region `b` has already written. Bombs & Grenades creates Thrown floor(8 − 4/2) = 6 at `UnitCalcPre.CAS!NOMAGITEKENGINE!+11 "SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );"` on a card with no Thrown input at all, so the adamantium +2 reaches it: 4 figures at melee 1+2 = 3 and Thrown 6+2 = 8 deal (3 + 8) × 4 = 44.0. (Reading the slot\'s input strength instead withholds the material from the created attack, leaving Thrown 6 for 36.0; the sibling bombsGrenadesWarlord fixture without the material is 28.0.)',
     version: V_WARLORD,
     a: { figs:4, atk:1, hitChance:70, hp:10, weapon:'adamantium',
       abilities: { outlanderWizard: true, explosive: true } },
@@ -642,7 +642,7 @@ definePresets({
     },
   },
   weaponMaterialMeleeGateReadsPermanentRecordWarlord: {
-    desc: 'The modern engine makes the same melee-presence test on the *permanent* record instead: `if BaseUnits[i].attack > 0` wraps `hitchancemelee`, `attack` and `attackbonus` (Units.RecalculateUnits.pas:637-642). Malnourished writes its −1 melee into ABase at `CreateUnit.CAS:614-618`, so this card\'s melee 1 enters ApplyMagicWeapons as a permanent 0 and adamantium is withheld: melee 1 − 1 = 0, then Blaze of Glory moves the whole armour — 4 − 2 Malnourished + 2 adamantium = 4 — onto it, for 4.0. This fixture separates all three readings of the gate: no gate at all, or a gate on the card\'s own melee input, both leave the +2 in place for 6.0. (Without the material, armour 2 alone gives 2.0.) The Ranged record is typed magical at strength 0 so `Ismagicalranged` withholds the material\'s secondary write, leaving Blaze of Glory nothing to transfer — otherwise this fixture would also carry weaponMaterialRangedHasNoStrengthGateWarlord\'s Thrown 2 and state two rules at once.',
+    desc: 'The modern engine makes the same melee-presence test on the *permanent* record instead: `if BaseUnits[i].attack > 0` wraps `hitchancemelee`, `attack` and `attackbonus` (Units.RecalculateUnits.pas:637-642). Malnourished writes its −1 melee into ABase at `CreateUnit.CAS!HASEVILPRESENCE!+4..+8 ": If city suffer from famine, impaired newly trained units" "SETSTAT(U,SMalnourished,ABase,1);"`, so this card\'s melee 1 enters ApplyMagicWeapons as a permanent 0 and adamantium is withheld: melee 1 − 1 = 0, then Blaze of Glory moves the whole armour — 4 − 2 Malnourished + 2 adamantium = 4 — onto it, for 4.0. This fixture separates all three readings of the gate: no gate at all, or a gate on the card\'s own melee input, both leave the +2 in place for 6.0. (Without the material, armour 2 alone gives 2.0.) The Ranged record is typed magical at strength 0 so `Ismagicalranged` withholds the material\'s secondary write, leaving Blaze of Glory nothing to transfer — otherwise this fixture would also carry weaponMaterialRangedHasNoStrengthGateWarlord\'s Thrown 2 and state two rules at once.',
     version: V_WARLORD,
     a: { figs:1, atk:1, def:4, hp:20, weapon:'adamantium', hitChance:70,
       modernAttacks: { ranged: { strength: 0, type: 'magic' } },
@@ -820,7 +820,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   flameBladeMeleeWarlord: {
-    desc: 'Warlord Flame Blade +3 melee: 1 atk + FB → 4 atk at 100% hit vs 0 def. Combat-cast Flame Blade also does an unconditional SFireBreath += 1 (UnitCalc.CAS:332-335), creating a strength-1 fire breath on a unit that had none; at the default 30% breath To Hit that adds 0.3 → E[dmg]=4.3. Without the ability the same unit deals 1.0.',
+    desc: 'Warlord Flame Blade +3 melee: 1 atk + FB → 4 atk at 100% hit vs 0 def. Combat-cast Flame Blade also does an unconditional SFireBreath += 1 (UnitCalc.CAS!NOTZEAL!+7..+10 ": Combat cast Flame Blade now nolonger buff rock type range attack but give fire breath+1 :" "}"), creating a strength-1 fire breath on a unit that had none; at the default 30% breath To Hit that adds 0.3 → E[dmg]=4.3. Without the ability the same unit deals 1.0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hitRanged:-70, hitThrown:-70, hitBreath:-70, hp:10,
       abilities: { flameBladeWarlord: true } },
@@ -850,7 +850,7 @@ definePresets({
     },
   },
   flameBladeThrownWarlord: {
-    desc: 'Warlord Flame Blade: +3 melee and +2 thrown, plus the unconditional SFireBreath += 1 at UnitCalc.CAS:332-335 that creates a strength-1 fire breath from the empty breath field. atk 1+3=4, thrown 1+2=3, created breath 1, all at 100% hit → E[dmg]=8.0. Without the ability the same unit deals 2.0.',
+    desc: 'Warlord Flame Blade: +3 melee and +2 thrown, plus the unconditional SFireBreath += 1 at UnitCalc.CAS!NOTZEAL!+7..+10 ": Combat cast Flame Blade now nolonger buff rock type range attack but give fire breath+1 :" "}" that creates a strength-1 fire breath from the empty breath field. atk 1+3=4, thrown 1+2=3, created breath 1, all at 100% hit → E[dmg]=8.0. Without the ability the same unit deals 2.0.',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10, abilities: { flameBladeWarlord: true } },
     b: { hp:10 },
@@ -956,7 +956,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   fieryFuryUndeadNoChaosConversion: {
-    desc: 'Fiery Fury\'s Chaos write applies to every base-fantastic unit and carries no undead test (UnitCalcPre.CAS:832-838); the undead exclusion comes later, from the compiled aggregate Undead normalization that forces race := 20 (Units.RecalculateUnits.pas, $0059FBD0..$0059FD93). So the Undead flag, not the Death realm, is what keeps this unit off the Chaos realm and out of Chaos Surge: atk stays 1 → E[dmg]=1.0. Dropping only the Undead flag gives 4.0, matching the sibling fieryFuryFantasticChaosConversion, so the pair brackets the rule.',
+    desc: 'Fiery Fury\'s Chaos write applies to every base-fantastic unit and carries no undead test (UnitCalcPre.CAS!NOTHERO!+3..+9 "IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO" "} ELSE {"); the undead exclusion comes later, from the compiled aggregate Undead normalization that forces race := 20 (Units.RecalculateUnits.pas, $0059FBD0..$0059FD93). So the Undead flag, not the Death realm, is what keeps this unit off the Chaos realm and out of Chaos Surge: atk stays 1 → E[dmg]=1.0. Dropping only the Undead flag gives 4.0, matching the sibling fieryFuryFantasticChaosConversion, so the pair brackets the rule.',
     version: V_WARLORD,
     chaosSurge: 1,
     a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_death', abilities: { fieryFury: true, undead: true } },
@@ -968,7 +968,7 @@ definePresets({
     },
   },
   fieryFurySanctifyNoChaosConversionWarlord: {
-    desc: 'Sanctify overrides Fiery Fury\'s Chaos write from a different source line (UnitCalcPre.CAS:1260) than the Undead normalization does: the unit ends Life rather than Chaos, so Chaos Surge does not reach it and atk stays 1 → E[dmg]=1.0. Dropping Sanctify gives 4.0.',
+    desc: 'Sanctify overrides Fiery Fury\'s Chaos write from a different source line (UnitCalcPre.CAS!NODOMAINOFENCHANTER!+6 "SETSTAT(U,SRace,0,RCLife);") than the Undead normalization does: the unit ends Life rather than Chaos, so Chaos Surge does not reach it and atk stays 1 → E[dmg]=1.0. Dropping Sanctify gives 4.0.',
     version: V_WARLORD,
     chaosSurge: 1,
     a: { atk:1, hitChance:70, hp:10, unitType:'fantastic_nature', abilities: { fieryFury: true, sanctify: true } },

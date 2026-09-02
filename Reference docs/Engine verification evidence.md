@@ -137,8 +137,8 @@ physical ranged. Nature Marionette's global Stoning Touch plus created magical r
 is no blanket magical-ranged gate.
 
 The apparent exclusion is source placement. Focus Magic moves existing general Stoning/Death
-values to melee and clears general/ranged (`UnitCalc.CAS:509-520`). Revenant clears general/ranged
-Death Touch and unconditionally writes melee value 0 (`UnitCalcPre.CAS:1757-1762`). Because Thrown
+values to melee and clears general/ranged (`UnitCalc.CAS!NOTRUST!+5..+16 ": Disable ranged touch ability when enchanted unit with focus magic :" "SETSTAT(U,AFDeathTouch,0,DEATHT,2);"`). Revenant clears general/ranged
+Death Touch and unconditionally writes melee value 0 (`UnitCalcPre.CAS!NOINNERPOWER!+8..+13 ", gain death touch 0 (melee only), regeneration 1, and permanently become undead :" "SETSTAT(U,AFDeathTouch,0,0,2);"`). Because Thrown
 uses melee flags, both spell-specific placements fire on melee and Thrown only. The contradictory
 manual/helptext statement is retained in `Source discrepancies.md`.
 

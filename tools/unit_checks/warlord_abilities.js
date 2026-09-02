@@ -259,7 +259,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Blaze of Glory transfers current Armor, including Iron Skin, to melee');
   assertEqual(blazeWithIronSkin.def, 0,
     'Blaze of Glory zeroes current Armor instead of reconstructing enchantment Armor');
-  // `UnitCalc.CAS:1503`, the first of the block's three ability writes. Wall Crusher reaches no
+  // `UnitCalc.CAS!IMMUNETOROT!+27 "SETSTAT(U,AWallCrusher,0,1);"`, the first of the block's three ability writes. Wall Crusher reaches no
   // resolver in this model, so the finished ability set is where the grant is observable; the
   // identical `b:bombsGrenades` grant is asserted the same way below.
   assertEqual(blazeWithIronSkin.abilities.wallCrusher, true,
@@ -295,8 +295,8 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(blazeBothChannels.thrown.modifierTrace.result, 8,
     'The merged Thrown strength stays reachable through its own modifier trace');
 
-  // The transfer stands at `UnitCalc.CAS:1490`, so every earlier region-d write sees the
-  // conventional Ranged identity it is written against. Rust (`:493-503`) takes its −3 off the
+  // The transfer stands at `UnitCalc.CAS!IMMUNETOROT!+14 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :"`, so every earlier region-d write sees the
+  // conventional Ranged identity it is written against. Rust (`UnitCalc.CAS!NOTCITY!+11..+21 "IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO"`) takes its −3 off the
   // missile field and empties Thrown before the transfer moves what is left.
   const blazeAfterRust = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0,
@@ -309,7 +309,7 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   // Mind Storm's `Dec(U.ranged, 5)` and `Dec(U.thrown, 5)` carry no positivity and no type gate
   // (Units.RecalculateUnits.pas:2281-2295), so both record fields hold the penalty before the
-  // transfer at `UnitCalc.CAS:1499` adds one into the other. Missile 6 arrives as 1 on a Thrown
+  // transfer at `UnitCalc.CAS!IMMUNETOROT!+23 "SETSTAT(U,SThrown,0,((GetStat(U,SThrown,0))+BLAZETHROWN));"` adds one into the other. Missile 6 arrives as 1 on a Thrown
   // field already standing at −5, so the recompute's floor leaves no attack at all; missile 12
   // arrives as 7 and finishes at 2.
   const mindStormBlaze = attacks => ctx.deriveUnitStats(warlordUnit({
@@ -322,7 +322,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Both Mind Storm writes land before Blaze of Glory sums the two fields');
 
   // The same block leaves both Breath fields untouched, and Lightning Blade has already moved
-  // the Thrown strength into `SLightningBreath` and cleared `SThrown` (CreateUnit.CAS:294-299),
+  // the Thrown strength into `SLightningBreath` and cleared `SThrown` (CreateUnit.CAS!NOBARAY!+10..+15 ": new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :" "ENDOFUNIQUEBUILDING"),
   // so the breath keeps its whole thrown+1.
   const mindStormLightningBlade = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0, modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
@@ -334,7 +334,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // The attack the transfer leaves behind is `SThrown` whichever field ends up holding it, and
   // combat reads `hitchancethrown + hitchance` for it (Combat.ApplyAttack.pas:239). Holy Weapon's
   // unconditional `Inc(U.hitchancethrown, 10)` (Units.RecalculateUnits.pas:1803-1809) therefore
-  // reaches it, while True Sight's `SToRanged` +5 (UnitCalc.CAS:326-328) and Holy Weapon's own
+  // reaches it, while True Sight's `SToRanged` +5 (UnitCalc.CAS!NOTZEAL!+3..+5 "IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0) THEN {" "}") and Holy Weapon's own
   // ranged arm — skipped here by `Ismagicalranged` — do not. Lightning Blade has spent the
   // record's Thrown field, so this is the shape where the strength stays in the Ranged slot.
   const blazeThrownThreshold = abilities => ctx.deriveUnitStats(warlordUnit({
@@ -353,8 +353,8 @@ function runWarlordUnitAbilityChecks(ctx) {
     lightningBlade: true, trueSight: true, holyWeapon: true }).ranged.toHit, 0.35,
   'Without the transfer the magical Ranged attack keeps its own True Sight threshold');
 
-  // Shadow Strike's `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS:1262-1266) stands at its
-  // own region-`d` position, before the transfer at `:1490`: melee 3 grants 1 + 3/3 = 2 onto the
+  // Shadow Strike's `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS!NOVAMPIRISM!+2..+6 ", gain thrown at strength half of its melee power :" "SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+STRIKE));") stands at its
+  // own region-`d` position, before the transfer at `UnitCalc.CAS!IMMUNETOROT!+14 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :"`: melee 3 grants 1 + 3/3 = 2 onto the
   // Thrown field's 2, and Blaze of Glory then moves the missile 6 onto the 4 standing there.
   const shadowAndBlaze = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0,
@@ -423,7 +423,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(sapiensReforms.hp, 5, 'Xenoveterinary adds 25% HP to fantastic Sapiens summons');
   assertClose(sapiensReforms.toHitMelee, 0.5, 'Radio and Xenoveterinary each add 10% To-Hit');
   // 1.5.12.8 split the block's three channels: Ranged took +10, Breath and Thrown kept +20
-  // (UnitCalcPre.CAS:1082-1088). Base 30 + Radio 10 + Xenoveterinary 10 = 50 before the block.
+  // (UnitCalcPre.CAS!NOEXPLOSIVE!+2..+8 "IF (SPELLSTATE(W,STBallisticsTraining)<>2) THEN { GOTO" "!NOBALLISTICS!"). Base 30 + Radio 10 + Xenoveterinary 10 = 50 before the block.
   assertClose(sapiensReforms.toHitRtb, 0.6, 'Ballistics Training adds 10% Ranged To-Hit for Sapiens summons');
   assertClose(sapiensReforms.toHitThrown, 0.7, 'Ballistics Training still adds 20% Thrown To-Hit');
   assertClose(sapiensReforms.toHitBreath, 0.7, 'Ballistics Training still adds 20% Breath To-Hit');
@@ -706,7 +706,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(godsPlayDicesClamped.res, 7, 'Gods Play Dices clamps its Resistance roll to +2');
 
   // The modern record separates Ranged, Thrown and Breath To Hit modifiers, and Hurricane is
-  // the effect that tells them apart: UnitCalc.CAS:569-571 subtracts 10 x HURRICANESTR from
+  // the effect that tells them apart: UnitCalc.CAS!NOAETHERSURGE!+14..+16 "SETSTAT(U,SToBreath,0,( GetStat(U,SToBreath,0) - 15*(HURRICANESTR) ) );" "SETSTAT(U,SToRanged,0,( GetStat(U,SToRanged,0) - 10*(HURRICANESTR) ) );" subtracts 10 x HURRICANESTR from
   // SToRanged and SToThrown but 15 x HURRICANESTR from SToBreath, and HURRICANESTR is 2 for a
   // normally cast Hurricane. Read all three off one unit, so a penalty landing on the wrong
   // field cannot pass by being right for the channel that happens to be derived.
@@ -749,7 +749,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertClose(lightningBladeHeavenlyLight.modernAttacks.lightningBreath.toHit, 0.3,
     'Heavenly Light writes the Thrown To-Hit field, which a Lightning Breath channel does not read');
 
-  // True Sight writes `SToRanged` with no presence gate (UnitCalc.CAS:326-328), so the record
+  // True Sight writes `SToRanged` with no presence gate (UnitCalc.CAS!NOTZEAL!+3..+5 "IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0) THEN {" "}"), so the record
   // holds the modifier even on a unit with no secondary attack to spend it on.
   const trueSightNoSecondary = ctx.deriveUnitStats(warlordUnit({
     atk: 1, rtbType: 'none', rtb: 0, modernAttacks: {},

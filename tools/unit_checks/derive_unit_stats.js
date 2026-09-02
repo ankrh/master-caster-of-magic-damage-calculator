@@ -857,7 +857,7 @@ function runDeriveUnitStatsChecks(ctx) {
   assertClose(luckyStarTarget.toHitMelee, 0.4, 'Enchanted unit gets Lucky To-Hit');
   assertClose(luckyStarTarget.toBlock, 0.4, 'Enchanted unit gets Lucky To-Block');
 
-  // Psycho Force (UnitCalc.CAS:1413-1417) and Pneuma Field (:1419-1425) read the Resistance
+  // Psycho Force (UnitCalc.CAS!COMBATOVERRIDE!+13..+17 "IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=2) THEN {" "}") and Pneuma Field (UnitCalc.CAS!COMBATOVERRIDE!+19..+25 "IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {" "SETSTAT(U,AFLifeSteal,0,PNEUMA,1);") read the Resistance
   // standing at their own position in region `d`. Region `e`'s aura pass raises Resistance
   // afterwards, so a Holy Bonus aura must not feed either effect. Both are Outlander-soldier
   // reforms, so the inputs are the wizard retort plus the reform, never the derived label.
@@ -917,7 +917,7 @@ function runDeriveUnitStatsChecks(ctx) {
   }));
   assertClose(eyeOfHeavenTrueSight.toHitRtb, 0.35, 'Eye of Heaven grants the True Sight To-Hit bonus');
 
-  // UnitCalc.CAS:326-328 writes SToRanged alone. The engine record carries hitchancethrown and
+  // UnitCalc.CAS!NOTZEAL!+3..+5 "IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0) THEN {" "}" writes SToRanged alone. The engine record carries hitchancethrown and
   // hitchancebreath as separate fields, so neither receives the bonus.
   const eyeOfHeavenBreath = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9',

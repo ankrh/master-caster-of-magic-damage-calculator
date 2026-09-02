@@ -6,7 +6,7 @@ DOS sources: `DOS reconstructed/combat.c`, `R6.2b.evidence.md`, `R6.2c.evidence.
 `MoM binary analysis.md`, and the versioned roster exports. Modern sources: `CoM2 manual.txt`,
 `CoM2 helptext.TXT`, current
 `Warlord manual v1.5.12.9.html`, `Unit rosters/Warlord mod unit data/HELP.TXT`, Warlord
-`UnitCalc.CAS:509-520`, and `Caster.exe` `@Combat@ApplyAttack` R5.2c
+`UnitCalc.CAS!NOTRUST!+5..+16 ": Disable ranged touch ability when enchanted unit with focus magic :" "SETSTAT(U,AFDeathTouch,0,DEATHT,2);"`, and `Caster.exe` `@Combat@ApplyAttack` R5.2c
 (`$005B2994..$005B3295`). The executable covers both CoM2 and Warlord; Warlord's scripts can
 move flags between the global, melee and ranged `AttackFlagsT` records before that common
 dispatcher runs.
@@ -61,13 +61,13 @@ Innate unit abilities in `UNITS.INI` enter the general flags record, so they mer
 non-Gaze attack. Great Gaia Lord (`[261]`, physical ranged type 12) and Gambler
 (`[273]`, sling/missile) are direct
 physical-ranged carriers. Nature Marionette writes Stoning Touch to the general record while also
-creating magical ranged (`UnitCalcPre.CAS:104,263`), proving magical ranged is not generically
+creating magical ranged (`UnitCalcPre.CAS!NOVAMPIRISM!+26 "SETSTAT(U,SRangedType,0,37);", UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+71 "SETSTAT(U,AFStoningTouch,0,-2,1);"`), proving magical ranged is not generically
 excluded either.
 
 Two represented spells deliberately change placement. Focus Magic saves each existing general
 Stoning/Death value, clears general and ranged, and writes the saved value to melee
-(`UnitCalc.CAS:509-520`). Revenant clears general/ranged Death Touch and writes 0 to melee
-(`UnitCalcPre.CAS:1757-1762`). `ApplyAttack` selects melee flags for both melee and Thrown, so both
+(`UnitCalc.CAS!NOTRUST!+5..+16 ": Disable ranged touch ability when enchanted unit with focus magic :" "SETSTAT(U,AFDeathTouch,0,DEATHT,2);"`). Revenant clears general/ranged Death Touch and writes 0 to melee
+(`UnitCalcPre.CAS!NOINNERPOWER!+8..+13 ", gain death touch 0 (melee only), regeneration 1, and permanently become undead :" "SETSTAT(U,AFDeathTouch,0,0,2);"`). `ApplyAttack` selects melee flags for both melee and Thrown, so both
 spells' relocated touch fires on those two attacks and not on Breath or conventional ranged.
 
 | Effect | Melee | Thrown | Breath | Ranged (physical) | Magical Ranged | Gaze |

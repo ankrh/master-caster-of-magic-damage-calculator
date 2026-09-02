@@ -397,7 +397,7 @@ definePresets({
     },
   },
   wallOfFireWarlordBoostAfterCombatConversion: {
-    desc: 'The block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1649) — the permanent record — so a combat conversion cannot withdraw the garrison bonus. Raise Dead makes A an unaligned fantastic creature during combat and the +1 melee stands: 5 -> 6 vs B def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker. Gating on the converted identity instead dropped the bonus and left 5.0.',
+    desc: 'The block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO") — the permanent record — so a combat conversion cannot withdraw the garrison bonus. Raise Dead makes A an unaligned fantastic creature during combat and the +1 melee stands: 5 -> 6 vs B def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker. Gating on the converted identity instead dropped the bonus and left 5.0.',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, def:0, hp:10,
       abilities: { wallOfFireBoost: true, raiseDead: true } },
@@ -405,11 +405,11 @@ definePresets({
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
     vacuity: {
       'name-binds-nothing':
-        'Keep. The same tokenisation artefact; the boost is live at delta 1. a.abilities.raiseDead is inert on purpose and is the fixture\'s claim: the block skips on BASEFANTASTIC(U) (UnitCalcPre.CAS:1649), the permanent record, so a combat conversion cannot withdraw the bonus and the total stays at wallOfFireWarlordBoostOnAttacker\'s 6.0. Gating on the converted identity instead dropped it to 5.0.',
+        'Keep. The same tokenisation artefact; the boost is live at delta 1. a.abilities.raiseDead is inert on purpose and is the fixture\'s claim: the block skips on BASEFANTASTIC(U) (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), the permanent record, so a combat conversion cannot withdraw the bonus and the total stays at wallOfFireWarlordBoostOnAttacker\'s 6.0. Gating on the converted identity instead dropped it to 5.0.',
     },
   },
   wallOfFireGarrisonSkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'The garrison block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1649), the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits, where every later recalculation reads it. So the enchanted unit is Fantastic to this gate and takes no garrison bonus. Negative claim, the absence being the rule under test: melee 5 doubled by Apotheosis is 10 at 100% hit vs def 0 → 10.0. Reading the training-time flag instead added the +1 before the doubling, for 12.0; the sibling wallOfFireWarlordBoostOnAttacker without Apotheosis still measures the +1 at 6.0.',
+    desc: 'The garrison block skips on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits, where every later recalculation reads it. So the enchanted unit is Fantastic to this gate and takes no garrison bonus. Negative claim, the absence being the rule under test: melee 5 doubled by Apotheosis is 10 at 100% hit vs def 0 → 10.0. Reading the training-time flag instead added the +1 before the doubling, for 12.0; the sibling wallOfFireWarlordBoostOnAttacker without Apotheosis still measures the +1 at 6.0.',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, def:0, hp:10,
       abilities: { wallOfFireBoost: true, apotheosis: true } },
@@ -417,11 +417,11 @@ definePresets({
     expected: { dmgToA: 0.000, dmgToB: 10.000 },
     vacuity: {
       'a.ability.wallOfFireBoost':
-        'Keep, and the absence is the rule under test: Apotheosis writes B.Fantastic into the permanent record the garrison gate at UnitCalcPre.CAS:1649 reads, so the unit is Fantastic to that gate and takes no bonus. Apotheosis is the live half at delta 4; reading the training-time flag instead added the +1 before the doubling, for 12.0, and wallOfFireWarlordBoostOnAttacker measures the +1 without Apotheosis at 6.0.',
+        'Keep, and the absence is the rule under test: Apotheosis writes B.Fantastic into the permanent record the garrison gate at UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO" reads, so the unit is Fantastic to that gate and takes no bonus. Apotheosis is the live half at delta 4; reading the training-time flag instead added the +1 before the doubling, for 12.0, and wallOfFireWarlordBoostOnAttacker measures the +1 without Apotheosis at 6.0.',
     },
   },
   wallOfFireGarrisonReachesHeroWarlord: {
-    desc: 'The garrison block skips only on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS:1649) and has no hero arm of its own, so a hero takes the +1 melee like any other non-Fantastic unit: 5 -> 6 at 100% hit vs def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker on a normal identity. The gate used to carry a `!isHero` term taken from the helptext\'s "regular units" — prose, which the script outranks — and left 5.0 (F175).',
+    desc: 'The garrison block skips only on `IF (BASEFANTASTIC(U)>0)` (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO") and has no hero arm of its own, so a hero takes the +1 melee like any other non-Fantastic unit: 5 -> 6 at 100% hit vs def 0 gives 6.0, the same as the sibling wallOfFireWarlordBoostOnAttacker on a normal identity. The gate used to carry a `!isHero` term taken from the helptext\'s "regular units" — prose, which the script outranks — and left 5.0 (F175).',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, def:0, hp:10, unitType:'hero',
       abilities: { wallOfFireBoost: true } },
@@ -429,7 +429,7 @@ definePresets({
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
     vacuity: {
       'a.unitType=hero':
-        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS:1649), so the gate is `!permanentFantastic` (stats.js:868) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
+        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), so the gate is `!permanentFantastic` (stats.js:868) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
     },
   },
   wallOfFireWarlordBoostBoulder: {
@@ -579,7 +579,7 @@ definePresets({
     },
   },
   warpRealityChaosExemptAtBlockWarlord: {
-    desc: 'Warp Reality reads its Chaos exemption at its own block, not against the record the recalculation leaves. Spirit Link asserts Fantastic at region b (UnitCalcPre.CAS:25-28) and clears it again at region d (UnitCalc.CAS:1297-1298), and `c:warpReality` is #111 of the Warlord chain against `d:spiritLink` #135 — so a spirit-linked Chaos creature is still Chaos where the block stands and keeps its 30% to hit: 1 atk vs 0 def → 0.3. Reading the record the recalculation leaves instead sees normal_chaos, applies the -20% and gives 0.1.',
+    desc: 'Warp Reality reads its Chaos exemption at its own block, not against the record the recalculation leaves. Spirit Link asserts Fantastic at region b (UnitCalcPre.CAS!NOSPIRITLINK!-16..-13 "IF GETENCHANTMENTFLAG(U,EncDummyArmor,1) THEN { SETOLENCHANTMENTFLAG(U,EncHolyArmor,0,1); }" "IF (GetEnchantmentFlag(U,EncSpiritLink,1)=0) THEN { GOTO") and clears it again at region d (UnitCalc.CAS!NOTICEAGE!+2..+3 ": Effect of Sentience, enchanted fantastic unit could not be targeted by fantastic-only spell and gain +2 resistance :" "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }"), and `c:warpReality` is #111 of the Warlord chain against `d:spiritLink` #135 — so a spirit-linked Chaos creature is still Chaos where the block stands and keeps its 30% to hit: 1 atk vs 0 def → 0.3. Reading the record the recalculation leaves instead sees normal_chaos, applies the -20% and gives 0.1.',
     version: V_WARLORD,
     a: { atk:1, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true } },
     b: { hp:10 },
@@ -1297,14 +1297,14 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   warlordPrayerStackDef: {
-    desc: 'Warlord Prayer+HP stack: atk 5 100% hit vs def 1 + HP +2 + Prayer +1 = 4, 100% block → 5−4 = 1.0 (CoM2 def 3 → 2.0). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1498) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
+    desc: 'Warlord Prayer+HP stack: atk 5 100% hit vs def 1 + HP +2 + Prayer +1 = 4, 100% block → 5−4 = 1.0 (CoM2 def 3 → 2.0). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS!NORAGE!+7 "SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));") is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { prayer: true, highPrayer: true } },
     expected: { dmgToA: 0.400, dmgToB: 1.000 },
   },
   warlordPrayerStackRes: {
-    desc: 'Warlord Prayer+HP stack: Poison 5 vs base res 5 + HP +3 + Prayer +1 = res 9 (CoM2 −1 mod → eff 8), pFail 20%, poison E[dmg] = 1.0. Melee dmg = 0 (atk 1 vs def 10, all blocked). (CoM2 no stack: res 8 → eff 7 → pFail 30% → 1.5). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1498) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
+    desc: 'Warlord Prayer+HP stack: Poison 5 vs base res 5 + HP +3 + Prayer +1 = res 9 (CoM2 −1 mod → eff 8), pFail 20%, poison E[dmg] = 1.0. Melee dmg = 0 (atk 1 vs def 10, all blocked). (CoM2 no stack: res 8 → eff 7 → pFail 30% → 1.5). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS!NORAGE!+7 "SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));") is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 5 } },
     b: { def:10, toBlkMod:70, res:5, hp:10, abilities: { prayer: true, highPrayer: true } },
@@ -1318,7 +1318,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.600 },
   },
   warlordPrayerStackToBlockNoStack: {
-    desc: 'Warlord Prayer+HP stack: To Block does NOT stack. atk 10 100% hit vs def 0 + HP +2 + Prayer +1 = 3, base 30% + 10% (single bonus) = 40% block → 10 − 3×0.4 = 8.80 (stacked 50% would be 8.50). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS:1498) is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
+    desc: 'Warlord Prayer+HP stack: To Block does NOT stack. atk 10 100% hit vs def 0 + HP +2 + Prayer +1 = 3, base 30% + 10% (single bonus) = 40% block → 10 − 3×0.4 = 8.80 (stacked 50% would be 8.50). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS!NORAGE!+7 "SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));") is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:0, hp:20, abilities: { prayer: true, highPrayer: true } },
@@ -1398,7 +1398,7 @@ definePresets({
     },
   },
   fieryFuryApotheosisTakesBaseFantasticArmWarlord: {
-    desc: 'Fiery Fury branches once, on `IF (BASEFANTASTIC(U))` (UnitCalcPre.CAS:834), and that is the permanent record: Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits. So a unit trained as a regular one takes the THEN arm — First Strike and the Chaos realm — instead of the regular-unit package. A kills B (melee 5 doubled to 10 vs 8 HP) before B can counter, so B deals 0. Taking the ELSE arm instead gave +3 melee before the doubling, 16 rather than 10 and no First Strike, so B still countered — 5 melee at the default 30% block against the +4 Defense Apotheosis gives A, for 3.8. Both arms cap dmgToB at B\'s 8 HP, which is why the discriminating number is dmgToA.',
+    desc: 'Fiery Fury branches once, on `IF (BASEFANTASTIC(U))` (UnitCalcPre.CAS!NOTHERO!+6 "IF (BASEFANTASTIC(U)) THEN {"), and that is the permanent record: Apotheosis writes `B.Fantastic := True` at $0059A390 into BaseUnits. So a unit trained as a regular one takes the THEN arm — First Strike and the Chaos realm — instead of the regular-unit package. A kills B (melee 5 doubled to 10 vs 8 HP) before B can counter, so B deals 0. Taking the ELSE arm instead gave +3 melee before the doubling, 16 rather than 10 and no First Strike, so B still countered — 5 melee at the default 30% block against the +4 Defense Apotheosis gives A, for 3.8. Both arms cap dmgToB at B\'s 8 HP, which is why the discriminating number is dmgToA.',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10, abilities: { fieryFury: true, apotheosis: true } },
     b: { atk:5, hitChance:70, def:0, hp:8 },

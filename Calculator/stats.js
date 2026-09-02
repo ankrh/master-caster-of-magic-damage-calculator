@@ -221,7 +221,7 @@ function deriveUnitStats(input) {
   // block does, so the input carries no version of its own.
   const warlordCombatFlameBlade = isWarlord && !!abilities.flameBlade;
   // The Magic Weapons half of the Artificer retort: `SETENCHANTMENTFLAG(U,EncMagic,1,1)`
-  // (`CreateUnit.CAS:39`), gated with the stat half on `GetStat(U,SCustomAttribute,1)=1` at `:38`.
+  // (`CreateUnit.CAS!NOLOGISTIC!+9 "SETENCHANTMENTFLAG(U,EncMagic,1,1);"`), gated with the stat half on `GetStat(U,SCustomAttribute,1)=1` at `CreateUnit.CAS!NOLOGISTIC!+8 "IF RETORT(W,Artificer) %AND (GetStat(U,SCustomAttribute,1)=1) THEN {"`.
   // It is +10% To Hit and the Weapon Immunity bypass, and it is a **result** field — the weapon
   // material — so it cannot be a record field and is read here rather than at a rank. The raw
   // flag is what the record holds at that rank: `base:artificer` is a training-time write and the
@@ -237,7 +237,7 @@ function deriveUnitStats(input) {
   const altarOfTheMoon = isWarlord && !!abilities.altarOfTheMoon
     && baseUnitRace === 'Gnoll' && !isHero;
   // Unit-specific Altar of the Moon grants, two mutually exclusive `STypeID` branches
-  // (`CreateUnit.CAS:382-390`): 210 Hunters take `SETSTAT(U,AFPoison,1,2,1)`, and 203
+  // (`CreateUnit.CAS!NOALTAROFTHESUN!+12..+20 "IF (GetStat(U,STypeID,1)=210) THEN {" "}"`): 210 Hunters take `SETSTAT(U,AFPoison,1,2,1)`, and 203
   // Witchdoctors take `AFPoison` 100 plus `AFLifeSteal` -1. 100 is the scripts' no-poison
   // sentinel — every `AFPoison` increment reads `<>100` and restarts at 1 — so that branch
   // removes the poison rather than raising it. Applied via effectiveAbilities below.
@@ -299,16 +299,16 @@ function deriveUnitStats(input) {
   //
   // The exclusion is a **targeting** restriction, not a term of the block, and it is read at the
   // record the recalculation *leaves* (F183). Three facts settle that. (a) The recalculation
-  // block, `UnitCalc.CAS:484-495`, is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone and makes
+  // block, `UnitCalc.CAS!NOTCITY!+10..+21 "unit loses 1/2 of melee/physical range/thrown strength :"`, is gated on `GETENCHANTMENTFLAG(U,EncRust,0)` alone and makes
   // no Fantastic test of either record, so there is no block term to position. (b) The helptext's
   // Target lines spell "regular", "Fantastic" and "non-hero" as three separate words — "enemy
   // regular non-hero unit" and "friendly non-hero regular unit" both occur — so "regular" is the
   // non-Fantastic class and a hero is targetable. (c) Targeting reads the *finished* calculated
   // record, which is what `finishedIdentity` is. Spirit Link states it outright: it asserts
   // `SETSTAT(U,AFantastic,0,1)` at the head of the routine to "allow unit to get bonus and penalty
-  // of fantastic and non-fantastic" (`UnitCalcPre.CAS:25-28`) and clears it again at the tail so
+  // of fantastic and non-fantastic" (`UnitCalcPre.CAS!NOSPIRITLINK!-16..-13 "IF GETENCHANTMENTFLAG(U,EncDummyArmor,1) THEN { SETOLENCHANTMENTFLAG(U,EncHolyArmor,0,1); }" "IF (GetEnchantmentFlag(U,EncSpiritLink,1)=0) THEN { GOTO"`) and clears it again at the tail so
   // the "enchanted fantastic unit could not be targeted by fantastic-only spell"
-  // (`UnitCalc.CAS:1297-1298`). The engine manipulates the recalculated flag *in order to* change
+  // (`UnitCalc.CAS!NOTICEAGE!+2..+3 ": Effect of Sentience, enchanted fantastic unit could not be targeted by fantastic-only spell and gain +2 resistance :" "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }"`). The engine manipulates the recalculated flag *in order to* change
   // targetability, so a targeting predicate is a function of the record after every conversion —
   // and a Spirit-Linked Fantastic unit is a legal Rust target, which that record reports and
   // the record at `d:rust` (chain rank 130, ahead of `d:spiritLink` at 137) would not.
@@ -330,7 +330,7 @@ function deriveUnitStats(input) {
   // its whole block is annotated `131:— 160:—`: MoM 1.31 and CP 1.60 have no such conversion.
   // CoM2 and Warlord summon Zombies instead — `SZombies` is a summon and the Warlord corpus makes
   // no `SETSTAT(…,STypeID,…)` write at all — so a summoned unit has no prior mutations to keep,
-  // and Zombie Mastery there is a stat buff (`UnitCalcPre.CAS:898`), not a conversion. A
+  // and Zombie Mastery there is a stat buff (`UnitCalcPre.CAS!NOTNATURELINK!+4 "IF (HASGLOBAL(W,GEZombieMastery)=0) THEN { GOTO"`), not a conversion. A
   // `unitName === 'Zombies'` term used to widen this to all five versions; it was a display string
   // standing in for the identity record, and no source supports the four it added (F203).
   const weaponEligible = loadoutEligible || identity.specialUnit === 'zombies';
@@ -397,7 +397,7 @@ function deriveUnitStats(input) {
   // The calculator's single RTB slot represents it directly when that slot is
   // empty, and adds it normally when the selected attack is already Thrown.
   // The gate is the block's own `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14)
-  // THEN { GOTO "NOTSAPIENS"; }` (`UnitCalcPre.CAS:1062-1064`) — both terms read the **permanent**
+  // THEN { GOTO "NOTSAPIENS"; }` (`UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO"`) — both terms read the **permanent**
   // record, so a combat conversion to Fantastic cannot close it. `BASEFANTASTIC(U)` is the base
   // unit data "before applying continuous effects such as buffs or curses"
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`), which is the record the
@@ -408,15 +408,15 @@ function deriveUnitStats(input) {
   const explosiveEligible = isWarlord && !!abilities.explosive
     && outlanderReform.sapiensEligible;
   // The write's own gate, `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)`
-  // (`UnitCalcPre.CAS:1068-1069`). Record selector `1` is "the base unit", not the calculated one
+  // (`UnitCalcPre.CAS!NOMAGITEKENGINE!+8..+9 "IF (GETSTAT(U,SAttack,1)>0)" "%OR (GETSTAT(U,AFlying,1)>0)"`). Record selector `1` is "the base unit", not the calculated one
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:270`), so both terms read the
   // **permanent** record — which is the record the `base` phase leaves, `ctx.base`, not the card's
-  // melee input: `base:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS:588`) and
-  // `base:artificer` `+1` (`CreateUnit.CAS:40`), both permanently and both before region `b`, so a
+  // melee input: `base:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);"`) and
+  // `base:artificer` `+1` (`CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));"`), both permanently and both before region `b`, so a
   // unit whose roster melee is 0 can still satisfy this gate (F202).
   //
   // `AFlying` needs no such treatment and stays the pre-sequence flag. Only two lines in the
-  // corpus write it at selector 1 — `CreateUnit.CAS:687` and `OverlandEndTurn.CAS:654`, the
+  // corpus write it at selector 1 — `CreateUnit.CAS!HASEVILPRESENCE!+77 "SETSTAT(U,AFlying,1,1);"` and `OverlandEndTurn.CAS!NOOUTLANDERUPGRADE!+7 "SETSTAT(U,AFlying,1,1);"`, the
   // Anti-Gravity Drive branch this file's `temporalGravityDrive` grant carries — and both are
   // permanent writes that set flags and movement alone, with no stat delta, so neither earns a
   // step (`SPEC.md`, *Phases*). Every other `AFlying` write in the corpus is selector 0, the
@@ -456,7 +456,7 @@ function deriveUnitStats(input) {
   const ccFireBreathAbil = !!abilities.ccFireBreath;
   // Chaos Channels *adds* a Fire Breath; it never removes another attack. `Caster.exe`
   // $00599EE8-$00599FA8 writes only `firebreath += 4`, `race := RCChaos` and `Fantastic`,
-  // and Warlord's `UnitCalc.CAS:40` touches only `SFireBreath` — neither clears a gaze,
+  // and Warlord's `UnitCalc.CAS!NOTCCBREATH!-5 "IF (GETENCHANTMENTFLAG(U,EncCCBreath,0)=0) THEN { GOTO"` touches only `SFireBreath` — neither clears a gaze,
   // thrown or lightning breath. The CoM2 manual says the same in words: it "can still add
   // Fire Breath to units that have Thrown, Gaze or Lightning Breath". So the modern engines,
   // whose attack channels are independent fields, impose no coexistence restriction at all.
@@ -471,7 +471,7 @@ function deriveUnitStats(input) {
 
   // Lightning Blade (Warlord): the Altar of Storm writes Lightning Breath = Thrown + 1, then
   // clears Thrown — `PROVENANCE[lightningBlade:breath]` (`stats_sequence.js`), from
-  // `CreateUnit.CAS:294-299`. Without Thrown it assigns strength 1 even beside another
+  // `CreateUnit.CAS!NOBARAY!+10..+15 ": new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :" "ENDOFUNIQUEBUILDING"`. Without Thrown it assigns strength 1 even beside another
   // independent attack; with Thrown it preserves that channel's earlier permanent bonuses and
   // adds one. The resulting Lightning Breath is innate and gains veterancy level bonuses.
   const lightningBladeAbil = version.startsWith('com2_warlord') && !!abilities.lightningBlade
@@ -565,7 +565,7 @@ function deriveUnitStats(input) {
   // strength fields all stand at their region-d values there.
   const vampirismActive = !!(abilities && abilities.vampirism) && version.startsWith('com2_warlord');
   // Warlord Shadow Strike: adds a Thrown attack at 1 + 1/3 of live melee strength (truncated) —
-  // `PROVENANCE[shadowStrike:thrown]` (`stats_sequence.js`), from `UnitCalc.CAS:1254-1258`.
+  // `PROVENANCE[shadowStrike:thrown]` (`stats_sequence.js`), from `UnitCalc.CAS!NOVAMPIRISM!+2..+6 ", gain thrown at strength half of its melee power :" "SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+STRIKE));"`.
   // A unit that already has a Thrown attack instead gains the same amount. It executes after
   // Colossal Strength and Vampirism, so both earlier live melee writes feed it; the leading +1
   // creates Thrown even at zero melee. Because Thrown is a separate pre-melee
@@ -578,7 +578,7 @@ function deriveUnitStats(input) {
   // The Armor→Melee transfer, the Armor Piercing and Wall Crusher grants and the First Strike
   // loss are all fields of the one step now, at the block's own rank (F201, F206).
   // Blaze of Glory targets a friendly non-hero unit (normal or fantastic); heroes are exempt.
-  // The transfer is `PROVENANCE[blazeOfGlory]` (`stats_sequence.js`), from `UnitCalc.CAS:1486`.
+  // The transfer is `PROVENANCE[blazeOfGlory]` (`stats_sequence.js`), from `UnitCalc.CAS!IMMUNETOROT!+18 "BLAZETHROWN=GetStat(U,SRanged,0);"`.
   const blazeOfGloryActive = !!(abilities && abilities.blazeOfGlory)
     && version.startsWith('com2_warlord') && !isHero;
   // Warlord Venom enchantment, `PROVENANCE[venom]` (`stats_sequence.js`): the gate of `d:venom`,
@@ -629,7 +629,17 @@ function deriveUnitStats(input) {
   const misleadEligible = u => misleadActiveForUnit(abilities, u.fantastic, version);
 
   const nodeAuraVal = input.nodeAura;
+  // The modern node block, $005A25F0..$005A273C (`Units.RecalculateUnits.pas`), is one `case`
+  // over three realm arms, and the arms are not spelt alike: `1: U.race = 16` (Nature,
+  // $005A26E9) and `2: U.race = 17` (Sorcery, $005A2721) compare the scalar, while
+  // `3: IsChaosUnit(i)` ($005A272B) calls the classifier. So the Chaos arm alone reads the
+  // membership set and can see the Chaos realm `c:undead` overwrote, and the other two keep the
+  // scalar compare and must not gain the recovery arm. `Reference docs/Modern realm test
+  // inventory.md` rules them H4 (Chaos) and S1, S2 (Nature, Sorcery) (F224.2b). The three DOS
+  // builds spell every arm `bu->race` — `bu->race == rt_Chaos` at 131:0x8FF42 (`unitcalc.c`) —
+  // and `unitInRealmAt` carries no recovery arm there, so they keep the plain compare.
   const nodeAuraActive = u => {
+    if (nodeAuraVal === 'chaos') return unitInRealmAt(u, 'chaos');
     const realm = unitRealmAt(u);
     return realm !== null && nodeAuraVal !== 'none' && realm === nodeAuraVal;
   };
@@ -663,14 +673,22 @@ function deriveUnitStats(input) {
   // unit — and is gone (F195). Node Aura's block, $005A25F0, is the same shape and was corrected
   // the same way.
   //
-  // The realm compared here is the calculated one at the step's own position, and it is a scalar.
-  // That is narrower than the block: Q31's `ChaosChannel and EncUndead` arm makes a
-  // Chaos-Channelled undead unit answer *both* classifiers, where `unitRealmAt` can only say
-  // `death`, so a Chaos ward under-fires against it. Independent of the term removed here, and
-  // shared with every other consumer of the scalar realm.
+  // The five arms are not spelt alike, and the split is per arm rather than per block: the
+  // Death arm calls `IsDeathUnit(i)` at $005A5E0F and the Chaos arm `IsChaosUnit(i)` at
+  // $005A5E51, so those two read the membership set and a Chaos-Channelled undead unit answers
+  // both wards at once; Nature (`cmp race,$10` $005A5D68), Life (`cmp race,$13` $005A5DCC) and
+  // Sorcery (`cmp race,$11` $005A5EB0) compare the scalar and keep `unitRealmAt`. Life is the
+  // arm that shows the split is the binary's and not a rule about conversion: ladder block 5
+  // overwrites Life just as later blocks overwrite Chaos, yet the Life arm stays a direct compare
+  // (`Q31.evidence.md`, the ward table's loose end), so it must not gain the recovery arm.
+  // `Reference docs/Modern realm test inventory.md` rules the arms H7, H8 and S4, S5, S6
+  // (F224.2b).
+  const spellWardArmMatches = u => (abilities.spellWard === 'death' || abilities.spellWard === 'chaos')
+    ? unitInRealmAt(u, abilities.spellWard)
+    : abilities.spellWard === unitRealmAt(u);
   const spellWardActive = u => !!(isCoM2
     && abilities.spellWard && abilities.spellWard !== 'none'
-    && abilities.spellWard === unitRealmAt(u));
+    && spellWardArmMatches(u));
   // CoM 1's ward keeps its Fantastic term, and not by omission: its own block
   // (`unitcalc.c:3966-3975`) requires a fantastic realm race and excludes the no-realm value,
   // which is a different test from the modern block above (F195).
@@ -731,23 +749,45 @@ function deriveUnitStats(input) {
   // re-introduces it as a "Life Common - Combat Enchantment"
   // (`Unit rosters/Warlord mod unit data/HELP.TXT:3199`), so enable it for MoM and Warlord only.
   const hasTrueLight = (!!input.trueLight || legacyLightDarkVal === 'trueLight') && (!isCoMVersion || isWarlord);
+  // The Death test the two blocks below share. `Caster.exe` makes it through the classifier
+  // helper rather than a `race` compare: Eternal Night's enemy-Resistance block
+  // ($005A228C..$005A238A) gates on `not IsDeathUnit(i)` at $005A22D9, and Darkness's Death arm
+  // ($005A4183..$005A4938) on `IsDeathUnit(i)` at $005A45EF — the same call the CoM2 Eternal
+  // Night doubling loops inside (`Units.RecalculateUnits.pas:1928`, `:2201`). So both take the
+  // membership reader, and with it the helper's `ChaosChannel(u) and EncUndead` arm. `EncUndead`
+  // already implies the Undead normalization's own `RCDeath` write ($0059FC26), so that arm can
+  // differ from the scalar in exactly one corner: a Chaos-Channelled Undead unit whose realm the
+  // later No Heal block overwrote with `RCNoHeal` ($005A0472) — `c:raiseDead` or
+  // `c:mysticSurge:race` here — which the scalar calls unaligned and the helper still calls Death.
+  // The same unit without Chaos Channels stays outside: that is `BUG-Q31`, the missing
+  // `EncUndead`-alone disjunct, reproduced as written (`Q31.evidence.md`, *`IsDeathUnit` — the
+  // clone, and `BUG-Q31`*).
+  //
+  // The DOS half stays the scalar: CoM 1's Eternal Night block is `bu->race != rt_Death` at
+  // com1:0x90B2A and its Darkness block `bu->race == rt_Death` at com1:0x908F0; the MoM builds'
+  // is `bu->race == rt_Death` at 131:0x904EB (`unitcalc.c`). Those engines have no helper, so
+  // there is no recovery arm to route. Darkness's Life arm is a `U.race = 19` compare in every
+  // build and keeps `unitRealmAt` below; Warlord's Poor Vision and True Light blocks write out
+  // `GetStat(U,SRace,0)` beside their own `EncUndead` term and are not this predicate.
+  // `Reference docs/Modern realm test inventory.md` rules these H3 and H6 (F224.2c).
+  const isDeathUnitAt = u => (isCoM2 ? unitInRealmAt(u, 'death') : unitRealmAt(u) === 'death');
   // Modern Eternal Night sets the Death-package loop count to two: any wizard holding
   // `GEEternalNight` raises `k` from 1 to 2 and the Death branch applies its attack/Defense
   // package `k` times, while the Life (race 19) branch and Resistance sit outside that loop and
   // run once (Units.RecalculateUnits.pas:2163-2185). DOS Darkness has no such multiplier.
   const darknessAtkDefMagnitude = u => hasDarkness
-    ? (hasAnyEternalNight && isCoM2 && unitRealmAt(u) === 'death' ? 2 : 1)
+    ? (hasAnyEternalNight && isCoM2 && isDeathUnitAt(u) ? 2 : 1)
     : 0;
   const darknessResMagnitude = hasDarkness ? 1 : 0;
   const eternalNightEnemyResPenalty = u => enemyEternalNight && isCoMVersion
-    && unitRealmAt(u) !== 'death' ? -1 : 0;
+    && !isDeathUnitAt(u) ? -1 : 0;
   // Warlord Eternal Night ("Poor Vision"): "All non-Death creatures get -2 Ranged Attack power
   // as long as Eternal Night is in effect" (`Unit rosters/Warlord mod unit data/HELP.TXT:5768`),
   // so missile/boulder and magic ranged take it while Thrown and breath — short-range, not
   // "Ranged" — do not. The write is `PROVENANCE[eternalNight:poorVision]` (`stats_sequence.js`).
   //
   // The exemption is `(GetStat(U,STypeID,1)<>356) %AND (GetStat(U,SRace,0)<>RCDeath) %AND
-  // (GetEnchantmentFlag(U,EncUndead,0)=0)` (`UnitCalcPre.CAS:1352-1355`). `GetStat(U,S,0)` is the
+  // (GetEnchantmentFlag(U,EncUndead,0)=0)` (`UnitCalcPre.CAS!NOBLOODANDIRON!+6..+9 "%AND (GetStat(U,STypeID,1)<>356)" "THEN {"`). `GetStat(U,S,0)` is the
   // *current* record — "if B=0, it checks the current stats and abilities, if B=1 it checks the
   // base unit" (`Reference docs/Script source/CAS reference/Scripts.TXT:266`) — so the realm is
   // read where this region-`b` block stands, ahead of the region-`c` conversions (F186).
@@ -762,14 +802,14 @@ function deriveUnitStats(input) {
   const warlordEternalNightActive = u => !!(enemyEternalNight && isWarlord
     && identity.specialUnit !== 'nightGoblins'
     && unitRealmAt(u) !== 'death' && !undeadEnchantmentFlag);
-  // The realm is read once per call, at the reading step's own position.
+  // Both arms read the record at the reading step's own position: the Death arm through the
+  // block's own test above, the Life arm through the scalar the block compares.
   const darknessBonuses = (u) => {
-    const realm = unitRealmAt(u);
-    if (realm === 'death') {
+    if (isDeathUnitAt(u)) {
       return { atk: darknessAtkDefMagnitude(u), def: darknessAtkDefMagnitude(u),
         res: darknessResMagnitude };
     }
-    if (realm === 'life') {
+    if (unitRealmAt(u) === 'life') {
       return { atk: -darknessAtkDefMagnitude(u), def: -darknessAtkDefMagnitude(u),
         res: -darknessResMagnitude };
     }
@@ -780,7 +820,7 @@ function deriveUnitStats(input) {
   const darknessResBonus = u => darknessBonuses(u).res;
   // True Light reads the realm at its own block in both engine families, so it takes the record
   // standing at its own chain entry (F185). Warlord's block
-  // is `GetStat(U,SRace,0)` (`UnitCalcPre.CAS:1522,1523`), the *current* record by the CAS
+  // is `GetStat(U,SRace,0)` (`UnitCalcPre.CAS!NOUPLIFTSPEECH!+7 "IF ( (GetStat(U,SRace,0)=RCDeath)", UnitCalcPre.CAS!NOUPLIFTSPEECH!+8 "%OR (GetEnchantmentFlag(U,EncUndead,0)>0) )"`), the *current* record by the CAS
   // contract quoted above `warlordEternalNightActive`; the DOS block is `bu->race` at 131:0x903A1 and
   // 131:0x904EB (`unitcalc.c`), the one battle-unit record `BU_Apply_Specials` mutates in place.
   // The two entries differ — `b:trueLight` in Warlord, `c:trueLight` in the MoM builds — and the
@@ -836,9 +876,9 @@ function deriveUnitStats(input) {
       + `${LEVEL_LADDER.join('/')}, the option set of the Unit Level control.`);
   }
   // A pre-sequence constant on purpose, and not a record field. `EncDiscipline` is written at
-  // `CreateUnit.CAS:661` (`ABase`) and `OverlandEndTurn.CAS:452` (selector 1) — the permanent
+  // `CreateUnit.CAS!HASEVILPRESENCE!+51 "SETENCHANTMENTFLAG(U,EncDiscipline,ABase,1);"` (`ABase`) and `OverlandEndTurn.CAS!NOMAGITEKSCI!+8 "SETENCHANTMENTFLAG(U,EncDiscipline,1,1);"` (selector 1) — the permanent
   // record, and neither line carries a stat delta, so neither earns a step (`SPEC.md`, *Phases*).
-  // Nothing else in the corpus writes the flag: `UnitCalcPre.CAS:858` reads it and writes
+  // Nothing else in the corpus writes the flag: `UnitCalcPre.CAS!NOFIERYFURY!+11 "IF (GetEnchantmentFlag(U,EncDiscipline,0)>0) THEN {"` reads it and writes
   // `EncDisciplineOld`. So no step can move this value and a record field would restate the
   // constant rather than position it — the Outlander Military Drilling grant included, which is
   // that same permanent write (`stats_identity.js`) (F202).
@@ -896,7 +936,7 @@ function deriveUnitStats(input) {
   // toHit/toBlock section below; here we handle the −2 Resistance. The write is
   // `PROVENANCE[greatUnbinding]` (`stats_sequence.js`).
   //
-  // The block's two gates are `UnitCalcPre.CAS:1362-1382` (F217.2). The first is an outright
+  // The block's two gates are `UnitCalcPre.CAS!NOETERNALNIGHT!+2..+22 ", All opponent fantastic creatures suffer -20% To-Hit, -20% To-Defend, -2 Resistance :" "!NOTUNBINDING!"` (F217.2). The first is an outright
   // exemption: `IF (HASGLOBAL(W,GEGreatUnbinding)) %OR (GETENCHANTMENTFLAG(U,EncSpiritLink,0)>0)
   // THEN { GOTO "NOTUNBINDING"; }` — a Spirit-Linked unit takes nothing at all. The `HASGLOBAL(W,…)`
   // half has no calculator counterpart: the control models the *opponent's* cast reaching this
@@ -954,7 +994,7 @@ function deriveUnitStats(input) {
   // The numeric input holds that To-Defend percentage; applied to normal units only
   // (the fantastic-creature buff is the separate survivalInstinct checkbox). The write is
   // `PROVENANCE[survivalInstinctToBlock]` (`stats_sequence.js`), from `CreateUnit.CAS`.
-  // `CreateUnit.CAS:524-525` writes `SToDefend` on record `ABase` when a city produces the unit,
+  // `CreateUnit.CAS!NOTARCHMAGE!+5..+6 "IF HASGLOBAL(W,GESurvivalInstinct) %AND (OREGUILED>0) THEN {" "SETSTAT(U,SToDefend,ABase,((GETSTAT(U,SToDefend,ABase))+OREGUILED));"` writes `SToDefend` on record `ABase` when a city produces the unit,
   // and its own block carries no identity test — the restriction to a trained normal unit is the
   // routine, not the block. So the gate reads the **base** identity: this is a permanent
   // training-time write, made before combat, and no later conversion is visible to it. A unit
@@ -976,7 +1016,7 @@ function deriveUnitStats(input) {
   // separate global Wall of Fire toggle, handled in combat_special_attacks.js.) The strength
   // write is `PROVENANCE[wallOfFire:garrison]` (`stats_sequence.js`).
   // The eligibility term is the block's own `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOWALLOFFIRE"; }`
-  // (`UnitCalcPre.CAS:1649`) — the **permanent** record, so a combat conversion to Fantastic does
+  // (`UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"`) — the **permanent** record, so a combat conversion to Fantastic does
   // not withdraw the garrison bonus, and Spirit Link clearing live Fantastic does not confer it.
   // That record is the one the `base` phase leaves, so Destiny's permanent `B.Fantastic := True`
   // ($0059A390) withdraws it (F192).
@@ -1001,8 +1041,8 @@ function deriveUnitStats(input) {
   // Flame Blade / Fiery Blade also upgrade the unit's normal weapon to magic (bypasses Weapon Immunity);
   // Fiery Fury does the same for regular units.
   // Read here rather than at a rank, for both of this file's reasons at once. The Lava Smelter
-  // grant is `SETENCHANTMENTFLAG(U,EncFlameBlade,ABase,1)` (`CreateUnit.CAS:496`) and
-  // `…,1,1)` (`OverlandEndTurn.CAS:551`) — permanent writes, and that whole block writes five
+  // grant is `SETENCHANTMENTFLAG(U,EncFlameBlade,ABase,1)` (`CreateUnit.CAS!NOACADEMY!+25 "IF (ACCESSADAMANTIUM>0) %AND (ACCESSCRYSX>0) THEN { SETENCHANTMENTFLAG(U,EncFlameBlade,ABase,1); }"`) and
+  // `…,1,1)` (`OverlandEndTurn.CAS!OUTLANDERSKIPELEMENTALARMOR!+4 "IF (OWNADAMANTIUM>0) %AND (OWNCRYSX>0) THEN { SETENCHANTMENTFLAG(U,EncFlameBlade,1,1); }"`) — permanent writes, and that whole block writes five
   // flags and no stat, so it earns no step (`SPEC.md`, *Phases*) and no step can move the value.
   // And the upgrade it feeds through `hasWarlordBlade` is the weapon material, a **result** field
   // that cannot be a record field, exactly as `artificerMagicWeapon` above and Metal Fires' own
@@ -1026,7 +1066,7 @@ function deriveUnitStats(input) {
   const metalFiresActive = !!abilities.metalFires && !finishedIdentity.fantastic
     && !isCoMVersion && !abilities.flameBlade;
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : 0;
-  // The ELSE arm of Fiery Fury's one `IF (BASEFANTASTIC(U))` (`UnitCalcPre.CAS:834`), whose THEN
+  // The ELSE arm of Fiery Fury's one `IF (BASEFANTASTIC(U))` (`UnitCalcPre.CAS!NOTHERO!+6 "IF (BASEFANTASTIC(U)) THEN {"`), whose THEN
   // arm is `b:fieryFury:race` (`stats_identity.js`). `BASEFANTASTIC` is the permanent record as
   // the `base` phase leaves it, Destiny's write included (F192).
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !permanentFantastic;
@@ -1039,10 +1079,10 @@ function deriveUnitStats(input) {
   // Thrown attack strength. Breath and magic ranged are not "physical ranged" and do not
   // qualify.
   //
-  // UnitCalc.CAS:1219-1235 computes `1 + %I(GetStat(U,SAttack,0)*4/10)` from the attack as
+  // UnitCalc.CAS!NOCOMBAT!+4..+20 ", +40% melee and non-magic range attack :" "!NOCOLOSSALSTRENGTH!" computes `1 + %I(GetStat(U,SAttack,0)*4/10)` from the attack as
   // it stands in phase d — not from the base — so the bonus scales everything phases a-c
-  // applied, plus the phase-d terms that precede it in the file: Rust (:500-512), Focus
-  // Magic (:83, :515) and Weakness's breath penalty (:317-323). Those are every phase-d
+  // applied, plus the phase-d terms that precede it in the file: Rust (UnitCalc.CAS!NOTCITY!+10..+22 "unit loses 1/2 of melee/physical range/thrown strength :" "!NOTRUST!"), Focus
+  // Magic (UnitCalc.CAS!NOVENOM!+5 "IF (GETENCHANTMENTFLAG(U,EncFocusMagic,0)=0) THEN { GOTO", UnitCalc.CAS!NOTRUST!+3 "IF (GETENCHANTMENTFLAG(U,EncFocusMagic,0)=0) THEN { GOTO") and Weakness's breath penalty (UnitCalc.CAS!NOTENGINEERCOUNT!+2..+8 ": Modified Weakness effect :" "!NOTWEAKNESS!"). Those are every phase-d
   // term the calculator models. As a step it simply reads `u.atk` / the channel's strength at
   // the end of region `d`, which is that subtotal by construction.
   const colossalStrength = isWarlord && !!(abilities && abilities.colossalStrength);
@@ -1091,8 +1131,11 @@ function deriveUnitStats(input) {
   // — the Holy Bonus aura (Units.RecalculateUnits.pas:2530), `applynodeaura` ($005971C3, :466),
   // the level ladder (:543) and `ApplyMagicWeapons` ($00598F43, :637) — and
   // `CreateUnit.CAS` writes `SAttack` at `ABase` before the recalculation copies that record,
-  // ungated on the field's current value: Ludus/Agoge (:346), an Altar of the Sun Holy Mother
-  // (:360), Mother Fungus (:448), a Coal site (:552) and the Malnourished penalty (:616). Those
+  // ungated on the field's current value: Ludus/Agoge (CreateUnit.CAS!NODRAGONMOUND!+13 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,1)+1));"),
+  // an Altar of the Sun Holy Mother (CreateUnit.CAS!NOAGOGE!+7 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,1)+1));"),
+  // Mother Fungus (CreateUnit.CAS!NOBASILICA!+7 "SETSTAT(U,SAttack,1,(GETSTAT(U,SAttack,1)+2)"), a Coal site
+  // (CreateUnit.CAS!NOTARCHMAGE!+33 "SETSTAT(U,SAttack,ABase,ATK+1);") and the Malnourished penalty
+  // (CreateUnit.CAS!HASEVILPRESENCE!+6 "SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1));"). Those
   // writes are `base`-phase steps here, so the record as that phase leaves it is what a later
   // region reads (SPEC.md, *The step model*). The card's input is that record only before the
   // base phase runs, which is why this is a predicate over the run context rather than a boolean
@@ -1191,7 +1234,7 @@ function deriveUnitStats(input) {
       || !!abilities.wraithForm || !!abilities.rulerOfUnderworld
       || !!abilities.blazingMarch || wofDefenderBonusActive || heavenlyLightActive);
 
-  // Eye of Heaven is the only effect that switches a gaze off: `UnitCalc.CAS:1475` zeroes
+  // Eye of Heaven is the only effect that switches a gaze off: `UnitCalc.CAS!IMMUNETOROT!+7 ", is also shut off gaze attack of opponent :"` zeroes
   // `SStoningGaze`/`SDeathGaze`/`SDoomGaze` and nothing else in any source does.
   const gazeDisabled = enemyEyeOfHeaven;
   // A gaze's strength lives in the same `.ranged` slot Chaos Surge writes, so MoM and
@@ -1218,7 +1261,7 @@ function deriveUnitStats(input) {
   const gazeWarpHalves = isCoM1;
 
   // Psycho Force and Pneuma Field are the two Magitek effects that read Resistance rather than
-  // writing it. Both are region `d` — UnitCalc.CAS:1405-1409 and :1419-1425 — and both flags are
+  // writing it. Both are region `d` — UnitCalc.CAS!COMBATOVERRIDE!+13..+17 "IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=2) THEN {" "}" and UnitCalc.CAS!COMBATOVERRIDE!+19..+25 "IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {" "SETSTAT(U,AFLifeSteal,0,PNEUMA,1);" — and both flags are
   // Outlander reform grants, so each is a record field the step reads at its own position; the
   // version half is the step's scope (`SCOPE_WARLORD`) and needs no term here (F202).
   const warpRealityActive = !!input.warpReality;
@@ -1354,7 +1397,7 @@ function deriveUnitStats(input) {
     // enchantment-driven channel conversions can create or replace an attack.
     const hasPermanentRangedStat = inputSlotRtb > 0 && RANGED_TYPES.includes(rtbTypeRaw);
     // The field half of Alumni of Academy's gate: the permanent Ranged field carrying a strength
-    // in the magical band — `GetStat(U,SRangedType,1) > 29` (`CreateUnit.CAS:462-464`), the whole
+    // in the magical band — `GetStat(U,SRangedType,1) > 29` (`CreateUnit.CAS!NOMOTHERFUNGUS!+4..+6 "IF (GetStat(U,STypeID,1)=221)" "%AND (GetStat(U,SRangedType,1)>29)"`), the whole
     // band, which includes Warlord's own id 40, beam energy. Naming three realm tokens excluded
     // it; the modern vocabulary's `magic`/`magic_lightning` are exactly ids 30-38 and 40, so the
     // predicate is the band. The rest of the gate reads no field and is assembled beside the
@@ -1381,10 +1424,10 @@ function deriveUnitStats(input) {
     // Both ability terms are pre-sequence constants on purpose. `energyBeamWeapons` is
     // `SPELLSTATE(W,STMagitekBeamWeapon)=2`, the wizard's research state and no unit field at
     // all. `powerEngine` is `EncPowerEngine` on the **permanent** record — the term this block's
-    // second route reads directly (`OverlandEndTurn.CAS:664`) and the one its first route states
+    // second route reads directly (`OverlandEndTurn.CAS!NOANTIGRAVITY!+5 "IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0)"`) and the one its first route states
     // as the enclosing `SPELLSTATE(W,STHeatPowerEngine)=2` plus `GetStat(U,SCustomAttribute,1)<>1`
-    // (`CreateUnit.CAS:675-691`). That flag is written only at `CreateUnit.CAS:679` (`ABase`) and
-    // `OverlandEndTurn.CAS:417` (selector 1), and neither line carries a stat delta the record
+    // (`CreateUnit.CAS!HASEVILPRESENCE!+65..+81 "IF (GetStat(U,SCustomAttribute,1)<>1) THEN { GOTO" "IF (SPELLSTATE(W,STMagitekBeamWeapon)=2)"`). That flag is written only at `CreateUnit.CAS!HASEVILPRESENCE!+69 "SETENCHANTMENTFLAG(U,EncPowerEngine,ABase,1);"` (`ABase`) and
+    // `OverlandEndTurn.CAS!NOXENOVET!+8 "SETENCHANTMENTFLAG(U,EncPowerEngine,1,1);"` (selector 1), and neither line carries a stat delta the record
     // holds — the four writes beside them are movement, which is outside it (F139) — so neither
     // earns a step (`SPEC.md`, *Phases*). No step can move either value, so a record field would
     // restate the constant rather than position it (F202).
@@ -1479,15 +1522,15 @@ function deriveUnitStats(input) {
   const channelSlots = [];
   if (isCoM2 && input.modernAttacks) {
     const modernInputs = { ...input.modernAttacks };
-    // `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS:1254-1258) has no existence gate, so
+    // `SThrown := SThrown + 1 + SAttack/3` (UnitCalc.CAS!NOVAMPIRISM!+2..+6 ", gain thrown at strength half of its melee power :" "SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+STRIKE));") has no existence gate, so
     // the Thrown field has to exist for the positioned grant to land on it. Seeded empty and
     // typeless, exactly as the Blaze of Glory transfer's field is: nothing before
-    // `UnitCalc.CAS:1254` may see a Thrown channel the grant has not yet created, and the step
+    // `UnitCalc.CAS!NOVAMPIRISM!+2 ", gain thrown at strength half of its melee power :"` may see a Thrown channel the grant has not yet created, and the step
     // itself supplies the identity. Focus Magic needs no second accumulator beside it any more:
     // `U.ranged := U.thrown; U.thrown := 0` (Units.RecalculateUnits.pas:885-891) is a real field
     // move, so it leaves this one field free for the grant (F90).
     // Bombs & Grenades writes the independent Thrown field regardless of any conventional
-    // ranged or Breath field already present. `SETSTAT(U,SThrown,0,…)` (UnitCalcPre.CAS:1071)
+    // ranged or Breath field already present. `SETSTAT(U,SThrown,0,…)` (UnitCalcPre.CAS!NOMAGITEKENGINE!+11 "SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );")
     // names the calculated record, so the field is seeded empty and typeless like the Shadow
     // Strike and Blaze of Glory fields below, and `b:bombsGrenades` supplies its identity at
     // its own position rather than the permanent record carrying a region-`b` write. The term
@@ -1504,7 +1547,8 @@ function deriveUnitStats(input) {
     if (focusMagicActive && !modernInputs.ranged) {
       modernInputs.ranged = { strength: 0, type: 'none' };
     }
-    // `SETSTAT(U,SRanged,0,…)` (UnitCalcPre.CAS:87, and `:412` for the strayed branch's
+    // `SETSTAT(U,SRanged,0,…)` (UnitCalcPre.CAS!NOVAMPIRISM!+19 "SETSTAT(U,SRanged,0,GETSTAT(U,SRanged,0)+MATK);",
+    // and UnitCalcPre.CAS!NOSACRED!+18 "SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2));" for the strayed branch's
     // Transmute Equipment) names the calculated record and has no existence gate, so the Ranged
     // field has to exist for the positioned writes to land on it. It is seeded empty and
     // typeless, like the Focus Magic and Blaze of Glory fields above: the permanent type is the
@@ -1528,21 +1572,21 @@ function deriveUnitStats(input) {
       modernInputs.fireBreath = { strength: 0, type: 'fire' };
     }
     // `SETSTAT(U,SLightningBreath,1,GetStat(U,SThrown,1)+1)` then `SETSTAT(U,SThrown,1,0)`
-    // (CreateUnit.CAS:294-299) assigns the independent Lightning Breath field and clears Thrown,
+    // (CreateUnit.CAS!NOBARAY!+10..+15 ": new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :" "ENDOFUNIQUEBUILDING") assigns the independent Lightning Breath field and clears Thrown,
     // so the destination has to exist whether or not the unit owns a breath — and the emptied
     // Thrown field survives as the record's Thrown field rather than being spent (F90).
     if (lightningBladeAbil) {
       modernInputs.lightningBreath = { strength: 0, type: 'none' };
       if (!modernInputs.thrown) modernInputs.thrown = { strength: 0, type: 'none' };
     }
-    // `SThrown := SThrown + SRanged` (UnitCalc.CAS:1491) has no existence gate either, so the
+    // `SThrown := SThrown + SRanged` (UnitCalc.CAS!IMMUNETOROT!+23 "SETSTAT(U,SThrown,0,((GetStat(U,SThrown,0))+BLAZETHROWN));") has no existence gate either, so the
     // Thrown field has to exist for the positioned transfer to land on it. It is seeded empty
-    // and typeless: nothing before `UnitCalc.CAS:1482` may see a Thrown channel that the
+    // and typeless: nothing before `UnitCalc.CAS!IMMUNETOROT!+14 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :"` may see a Thrown channel that the
     // transfer has not yet created, and the step itself supplies the identity.
     if (blazeOfGloryActive && !modernInputs.thrown) {
       modernInputs.thrown = { strength: 0, type: 'none' };
     }
-    // `BLAZETHROWN = GetStat(U,SRanged,0)` (UnitCalc.CAS:1486-1492) reads the Ranged *field*
+    // `BLAZETHROWN = GetStat(U,SRanged,0)` (UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));") reads the Ranged *field*
     // with no type or strength gate, and the region-`c` writes it carries have none either:
     // `not Ismagicalranged(U.rangedtype)` passes on a zero ranged type, so Lionheart (`:1730`),
     // Discipline at level 3 (`:1554`) and the weapon material (`:651`) all land on `SRanged`
@@ -1613,7 +1657,7 @@ function deriveUnitStats(input) {
   // The DOS-shaped shared slot keeps **one** threshold where the modern record keeps three, so
   // which half of a gated writer it consults is settled by what stands in the slot at that
   // writer's own position: a breath, Thrown, or a conventional ranged attack. An empty slot reads
-  // the Ranged half — `SToRanged` is written with no presence gate (UnitCalc.CAS:328-330), so the
+  // the Ranged half — `SToRanged` is written with no presence gate (UnitCalc.CAS!NOTZEAL!+3..+5 "IF (GETENCHANTMENTFLAG(U,EncTrueSight,0)>0) THEN {" "}"), so the
   // record holds that modifier on a unit with no secondary attack to spend it on.
   //
   // The one thing this projection cannot read from the record in front of it: the Shadow Strike
@@ -1649,7 +1693,7 @@ function deriveUnitStats(input) {
   // their Fantastic Stable unit) unconditionally, and that branch reads no field, so it survives
   // a record with no Ranged field. The other branch rejects Mechanical units and reads the field
   // (`permanentMagicalRangedField` above).
-  // `GetStat(U,SCustomAttribute,1)<>1` (`CreateUnit.CAS:465`, `OverlandEndTurn.CAS:606`) is the
+  // `GetStat(U,SCustomAttribute,1)<>1` (`CreateUnit.CAS!NOMOTHERFUNGUS!+7 "%AND (GetStat(U,SCustomAttribute,1)<>1) )"`, `OverlandEndTurn.CAS!NOOUTLANDERALTAROFSTORM!+15 "%AND (GetStat(U,SCustomAttribute,1)<>1) )"`) is the
   // permanent record at a training-time rank, so it takes the raw flag, not the value Rebuild's
   // cast-time write leaves: `base:alumniOfAcademy:figures` is a training-time write and
   // `base:rebuild`, the only mid-sequence write to `mechanical`, is cast-time and therefore
@@ -1664,7 +1708,7 @@ function deriveUnitStats(input) {
   // terms stay pre-sequence constants is stated there (F202).
   const energyCannon = isWarlord && !!abilities.energyBeamWeapons && !!abilities.powerEngine
     && !!rangedFieldContext && rangedFieldContext.hasPermanentRangedStat;
-  // `UnitCalc.CAS:1427-1435` reads the unit's To-Hit plus its **Ranged** To-Hit, which is the
+  // `UnitCalc.CAS!NOTOUTLANDERSOLDIER!+7..+15 "DESTRUCTION=GETSTAT(U,AFDestruction,0,3);" "SETSTAT(U,AFDestruction,0,DESTRUCTION,3);"` reads the unit's To-Hit plus its **Ranged** To-Hit, which is the
   // record field `hitchanceranged` — the modifier the Ranged field is read with, and therefore
   // the one belonging to the slot that holds it. Reading the shared slot's `toHitRtb` answered
   // from the DOS record instead (F127). Only meaningful where `energyCannon` gates the step on.
@@ -1777,15 +1821,15 @@ function deriveUnitStats(input) {
       apply: (u, context) => {
         legacyApply(u, context);
         rustRangedStep.apply(u, context);
-        // `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:490`), the fourth line of the same block
+        // `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS!NOTCITY!+16 "SETSTAT(U,ALargeShield,0,0);"`), the fourth line of the same block
         // and inside the same reviewed span. It is a positioned write because a later block
-        // reads what it leaves: Fortification at `:1074` (F200).
+        // reads what it leaves: Fortification at `UnitCalc.CAS!NOHILLFORT!+7 "IF (GETSTAT(U,ALargeShield,0)>0) THEN { SETSTAT(U,AMissileImmunity,0,1); } ELSE { SETSTAT(U,ALargeShield,0,1); }"` (F200).
         u.largeShield = false;
         // `SETSTAT(U,SThrown,0,0)` empties the Thrown *strength*; the type clear beside it is
         // this model's stand-in for the field being empty, since Warlord stores no Thrown type.
         // The strength write is load-bearing rather than cosmetic: Blaze of Glory's positioned
-        // transfer adds the Ranged field onto whatever stands in Thrown at `UnitCalc.CAS:1482`,
-        // and Rust (`:493`) runs first.
+        // transfer adds the Ranged field onto whatever stands in Thrown at `UnitCalc.CAS!IMMUNETOROT!+14 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :"`,
+        // and Rust (`UnitCalc.CAS!NOTCITY!+11 "IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO"`) runs first.
         for (const slot of derivationContexts) {
           if (u[slot.thrownTypeField] !== 'thrown') continue;
           u[slot.thrownTypeField] = 'none';
@@ -1857,7 +1901,7 @@ function deriveUnitStats(input) {
     }
   }
   // `SETSTAT(U,SLightningBreath,1,GetStat(U,SThrown,1)+1)` then `SETSTAT(U,SThrown,1,0)`
-  // (CreateUnit.CAS:294-299) is a move out of the record's Thrown field, so its two ends are slot
+  // (CreateUnit.CAS!NOBARAY!+10..+15 ": new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :" "ENDOFUNIQUEBUILDING") is a move out of the record's Thrown field, so its two ends are slot
   // identities: the modern record's Lightning Breath and Thrown channels. `lightningBladeAbil` is
   // Warlord-only and seeds the destination channel above, so both ends always exist.
   const lightningBladeSlots = [];
@@ -2050,7 +2094,7 @@ function deriveUnitStats(input) {
   // live type pair here rather than a version-selected copy of an earlier one.
   //
   // M4, resolved at R1 stage 9. The two sources fall in different regions — Fiery Fury in `b`
-  // (UnitCalcPre.CAS:832-846), the blades in `c` — and do not stack, which the bucket model
+  // (UnitCalcPre.CAS!NOTHERO!+3..+17 "IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO"), the blades in `c` — and do not stack, which the bucket model
   // could only express as a single `Math.max` booked whole to `c`. Two steps carry it now:
   // Fiery Fury writes its own bonus in `b`, and this step adds only the excess, so the total is
   // still the maximum of the two while each lands in its own region. What the excess is measured
@@ -2062,7 +2106,7 @@ function deriveUnitStats(input) {
   // not two effects. The halves keep their own gates because the engine's are separate: melee
   // on a melee attack existing, each secondary slot on its own type test.
   // PROVENANCE[flameBlade]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:4:549122cfd5e672f77f13100e | Reference docs/DOS reconstructed/unitcalc.c@span:15:f6e8770f05c1d997df898eec | Reference docs/DOS reconstructed/unitcalc.c@span:13:bf6a11bc7e2e0a1492be8f9a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:18:98daf6b1cfd836c4a184f151 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:3:a6c1282e7bba499b7b5ef5f3 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:3:d7cdec7c168e641613b36c19
-  // `b:fieryFury` (`UnitCalcPre.CAS:832-846`) adds 2 to a physical ranged or Thrown field. The
+  // `b:fieryFury` (`UnitCalcPre.CAS!NOTHERO!+3..+17 "IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO"`) adds 2 to a physical ranged or Thrown field. The
   // blade step below subtracts what that block wrote, so both ask the same live test — each at
   // its own position, which agree wherever the blade's own narrower gate fires.
   const fieryFuryRtbWrite = (u, context) => (ffRegularBonus
@@ -2096,7 +2140,7 @@ function deriveUnitStats(input) {
     },
   });
 
-  // Warlord True Light is its own UnitCalcPre.CAS block (:1507-1540), after Rally and before
+  // Warlord True Light is its own UnitCalcPre.CAS block (UnitCalcPre.CAS!NOUPLIFTSPEECH!+3..+34 "IF ((HASCOMBATGLOBAL(W,CGTrueLight,1))=0)" "!NOTRUELIGHT!"), after Rally and before
   // Plague. The DOS builds execute their distinct True Light block after Prayer and before
   // Darkness in region c. Keep both as one atomic multi-field write at their engine phase.
   // PROVENANCE[trueLight]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:30:307377331fcb02be6a7a1275
@@ -2364,7 +2408,7 @@ function deriveUnitStats(input) {
   const effectiveDoomGaze = statUnit.doomGaze;
   const finalRangedType = statUnit[recordContext.rangedTypeField];
   const finalThrownType = statUnit[recordContext.thrownTypeField];
-  // Psycho Force and Pneuma Field are steps in `d` — `UnitCalc.CAS:1405-1409` and `:1419-1425`,
+  // Psycho Force and Pneuma Field are steps in `d` — `UnitCalc.CAS!COMBATOVERRIDE!+13..+17 "IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=2) THEN {" "}"` and `UnitCalc.CAS!COMBATOVERRIDE!+19..+25 "IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {" "SETSTAT(U,AFLifeSteal,0,PNEUMA,1);"`,
   // on `PROVENANCE[psychoForce]` and `PROVENANCE[pneumaField]` (`stats_sequence.js`) — so their
   // reads of Resistance happen where the engine takes them. Warp Resist having zeroed Resistance
   // is supplied by construction, since `warpResist` is a step in `c`.
@@ -2407,7 +2451,7 @@ function deriveUnitStats(input) {
   let combatAbilities = gazeDisabled
     ? { ...shapedGazeAbilities, stoningGaze: null, deathGaze: null, doomGaze: 0 }
     : shapedGazeAbilities;
-  // Rust's `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS:490`) is a field of `d:rust` now, inside
+  // Rust's `SETSTAT(U,ALargeShield,0,0)` (`UnitCalc.CAS!NOTCITY!+16 "SETSTAT(U,ALargeShield,0,0);"`) is a field of `d:rust` now, inside
   // that step's own reviewed span, so the clear happens at rank 130 rather than after the chain.
   // What that buys is the block 576 lines below it: `d:fortification` reads the calculated
   // `ALargeShield` the clear left and grants Large Shield back (F200).
@@ -2431,7 +2475,7 @@ function deriveUnitStats(input) {
   // `PROVENANCE[chance:toBlockProbabilityBound]` below, from `Combat.ResolutionHelpers.pas`.
   let toBlock = Math.max(0, Math.min(1, statUnit.toBlk / 100));
   if (energyCannon) {
-    // UnitCalc.CAS:1427-1435 reads the unit's To-Hit + Ranged To-Hit
+    // UnitCalc.CAS!NOTOUTLANDERSOLDIER!+7..+15 "DESTRUCTION=GETSTAT(U,AFDestruction,0,3);" "SETSTAT(U,AFDestruction,0,DESTRUCTION,3);" reads the unit's To-Hit + Ranged To-Hit
     // stats, capped at 100. Attack-distance and battlefield penalties are
     // applied later and do not change the permanent Destruction modifier.
     const destructionPenalty = Math.trunc(statUnit.energyCannonToHit / 15);
@@ -2537,7 +2581,7 @@ function deriveUnitStats(input) {
   // the finished field is neither missile nor boulder while the permanent one was — measured by
   // `focusMagicRetypeSkipsDistancePenaltyCoM2` against `distPenaltyCoM2_6`. Warlord's
   // `d:blazeOfGlory` is *not* one of those cases, though it also retypes: it empties the Ranged
-  // field onto Thrown (`UnitCalc.CAS:1486-1492`), the finished record then carries no conventional
+  // field onto Thrown (`UnitCalc.CAS!IMMUNETOROT!+18..+24 "BLAZETHROWN=GetStat(U,SRanged,0);" "SETSTAT(U,SRanged,0,((GetStat(U,SRanged,0))-BLAZETHROWN));"`), the finished record then carries no conventional
   // ranged attack at all, and the page withdraws ranged mode before this projection is reached
   // (`updateTypeVisibility`, `ui_abilities.js`), so the `!input.rangedCheck` line below answers
   // first and no type is read (F131).

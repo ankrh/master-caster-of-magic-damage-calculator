@@ -301,6 +301,78 @@ definePresets({
         'Keep, and the absence is the rule under test: the block at $005A5D36 pairs each realm arm with its own city byte, so a Nature ward never reaches a Chaos unit. spellWardFantasticCoM2 differs only in spellWard nature -> chaos and pins 5.000 against this 2.000.',
     },
   },
+  // The ward block's five arms split per arm (F224.2b): Death ($005A5E0F) and Chaos ($005A5E51)
+  // call the classifiers, whose second arm `ChaosChannel(u) and EncUndead` recovers a realm the
+  // scalar `race` no longer states; Nature, Life and Sorcery compare `U.race` and recover nothing.
+  spellWardChaosReachesChaosChannelsUndeadCoM2: {
+    desc: 'The Chaos ward arm calls IsChaosUnit(i) at $005A5E51, and the helper is `(race = RCChaos) or (ChaosChannel(u) and EncUndead)` at $00594FE4, so a Chaos-Channelled unit that `c:undead` re-tagged Death is still Chaos to the ward. Defense 6 + 3 Chaos Channels armor = 9, ward -3 = 6, so 12 certain hits against 6 certain blocks deal 6.000. Reading the scalar realm alone sees Death, the ward stays shut at Defense 9, and the card deals 3.000.',
+    version: V_COM2,
+    a: { atk:12, hitChance:70, hp:10 },
+    b: { atk:0, def:6, res:9, toBlkMod:70, hp:10, abilities: { ccDefense: true, undead: true, spellWard:'chaos' } },
+    expected: { dmgToA: 0, dmgToB: 6 },
+    vacuity: {
+      'b.ability.undead':
+        'Keep, and the absence is the rule under test: the claim is that the Undead conversion does not hide this unit from the Chaos ward, so ablating Undead has to leave the same 6.000 - it removes the very overwrite the recovery arm exists to undo. b.ability.spellWard is the live feature at delta 3: without the ward Defense stays 9.',
+      'b.ability.ccDefense':
+        'Keep: Chaos Channels is the +3 armor and the Chaos realm at once, so ablating it takes away the +3 and the ward -3 it enables together and Defense lands on the same 6 by coincidence (undead alone is Death, and a Chaos ward names no Death unit). The feature is live in the predicate - spellWardChaosReachesChaosChannelsUndeadCoM2 under the old scalar reading pins 3.000 against this 6.000 - but not in the number.',
+    },
+  },
+  spellWardDeathRecoversRaisedChaosChannelsUndeadCoM2: {
+    desc: 'The Death ward arm calls IsDeathUnit(i) at $005A5E0F; the helper is at $0059504C and its second arm is the same `ChaosChannel(u) and EncUndead` as IsChaosUnit\'s, so it recovers Death after a later conversion overwrote it: Raise Dead writes race No Heal over the Death that `c:undead` wrote, the scalar realm names neither ward, and the helper still answers Death. Defense 6 + 3 Chaos Channels armor = 9, ward -3 = 6, so 12 certain hits against 6 certain blocks deal 6.000; on the scalar alone the ward stays shut at Defense 9 for 3.000.',
+    version: V_COM2,
+    a: { atk:12, hitChance:70, hp:10 },
+    b: { atk:0, def:6, res:9, toBlkMod:70, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true, spellWard:'death' } },
+    expected: { dmgToA: 0, dmgToB: 6 },
+    vacuity: {
+      'b.ability.raiseDead':
+        'Keep, and the absence is the rule under test: Raise Dead is the overwrite that takes the scalar Death away, and the claim is that the ward fires regardless, so ablating it has to leave the same 6.000 through the plain `race = RCDeath` arm. b.ability.undead and b.ability.spellWard are live at delta 3: without Undead the recovery arm has nothing to recover and Raise Dead leaves a No Heal unit no ward names, and without the ward Defense stays 9.',
+      'b.ability.ccDefense':
+        'Keep: Chaos Channels is the +3 armor and the ChaosChannel(u) term at once, so ablating it takes away the +3 and the ward -3 it enables together and Defense lands on the same 6 by coincidence (undead + Raise Dead alone is a No Heal unit the Death arm cannot recover). The feature is live in the predicate - the old scalar reading pins 3.000 against this 6.000 - but not in the number.',
+    },
+  },
+  spellWardLifeStaysScalarUnderUndeadCoM2: {
+    desc: 'The Life ward arm is a direct `cmp race,$13` at $005A5DCC, not a classifier call, so a Life unit that `c:undead` re-tagged Death is not Life to the ward even though the ladder overwrote Life exactly as it overwrites Chaos (Q31.evidence.md, the ward table\'s loose end). Defense 6 stays 6, so 8 certain hits against 6 certain blocks deal 2.000; a recovery clause on this arm would take Defense to 3 for 5.000.',
+    version: V_COM2,
+    a: { atk:8, hitChance:70, hp:10 },
+    b: { atk:0, def:6, res:7, toBlkMod:70, hp:10, unitType:'fantastic_life', abilities: { undead: true, spellWard:'life' } },
+    expected: { dmgToA: 0, dmgToB: 2 },
+    vacuity: {
+      'b.ability.spellWard':
+        'Keep, and the absence is the rule under test: the claim is that the Life arm does not recover a Life realm the Undead conversion overwrote, so removing the ward changes nothing. b.ability.undead is the live half at delta 3: without it the unit is Life again and the ward fires for 5.000.',
+      'b.unitType=fantastic_life':
+        'Keep, and the absence is the rule under test: the Life realm is what the Undead conversion overwrites, and a unit that never had it is no more Life to the scalar arm than one that lost it. Both read 2.000.',
+    },
+  },
+
+  // --- CoM 2 Node Aura, the Chaos arm (F224.2b) ---
+  // Node Aura's fixtures normally live in presets_ranged_and_haste.js; these two sit here beside
+  // Spell Ward because both blocks split the same way and were corrected in the same change.
+  nodeAuraChaosReachesChaosChannelsUndeadCoM2: {
+    desc: 'The node block at $005A25F0 dispatches its Chaos arm through IsChaosUnit(i) at $005A272B, so a Chaos-Channelled unit that `c:undead` re-tagged Death still takes the Chaos aura through the helper\'s `ChaosChannel(u) and EncUndead` arm. The CoM2 aura adds +2 melee when the base record has an attack: atk 5 -> 7, 100% To Hit against Defense 0 -> 7.000. Reading the scalar realm alone sees Death, the aura passes the unit by, and the card deals 5.000.',
+    version: V_COM2,
+    a: { atk:5, hitChance:70, hp:10, abilities: { ccDefense: true, undead: true } },
+    b: { hp:10 },
+    nodeAura: 'chaos',
+    expected: { dmgToA: 0, dmgToB: 7 },
+    vacuity: {
+      'a.ability.undead':
+        'Keep, and the absence is the rule under test: the claim is that the Undead conversion does not cost this unit the Chaos aura, so ablating Undead has to leave the same 7.000 - it removes the very overwrite the recovery arm exists to undo. Both other features are live at delta 2: without a.ability.ccDefense there is no Chaos realm to recover, and without combat.nodeAura there is no aura.',
+    },
+  },
+  nodeAuraNatureStaysScalarUnderUndeadCoM2: {
+    desc: 'The node block\'s Nature arm is `case 1: U.race = 16` at $005A26E9, a scalar compare with no classifier, so a Nature unit that `c:undead` re-tagged Death takes no Nature aura: atk 5 stays 5, 100% To Hit against Defense 0 -> 5.000. A recovery clause on this arm would make it 7.000.',
+    version: V_COM2,
+    a: { atk:5, hitChance:70, hp:10, unitType:'fantastic_nature', abilities: { undead: true } },
+    b: { hp:10 },
+    nodeAura: 'nature',
+    expected: { dmgToA: 0, dmgToB: 5 },
+    vacuity: {
+      'combat.nodeAura':
+        'Keep, and the absence is the rule under test: the claim is that the Nature arm does not recover a Nature realm the Undead conversion overwrote, so removing the aura changes nothing. a.ability.undead is the live half at delta 2: without it the unit is Nature again and the aura pays 7.000.',
+      'a.unitType=fantastic_nature':
+        'Keep, and the absence is the rule under test: the Nature realm is what the Undead conversion overwrites, and a unit that never had it is no more Nature to the scalar arm than one that lost it. Both read 5.000.',
+    },
+  },
 
   // --- Warp Creature ---
   warpAttackMelee: {
@@ -1069,7 +1141,7 @@ definePresets({
     },
   },
   battleArmorSkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'The +3 branch is closed twice by `BASEFANTASTIC(U)`: once at UnitCalcPre.CAS:1104, which skips the whole combat-Outlander tail, and again inside its own test at :1110. Both read the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390, so a unit given Apotheosis takes no Battle Armor. Negative claim, and the absence is the rule under test: Armor 1 + Apotheosis 4 = 5, and atk 10 at 100% hit against a 100% block chance deals 10 - 5 = 5.0. Reading the training-time flag instead added the +3 for Armor 8 and 2.0; the sibling battleArmorWarlord without Apotheosis shows the +3 is otherwise live.',
+    desc: 'The +3 branch is closed twice by `BASEFANTASTIC(U)`: once at UnitCalcPre.CAS!NOTSAPIENS!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO", which skips the whole combat-Outlander tail, and again inside its own test at UnitCalcPre.CAS!NOTSAPIENS!+8 "%AND (BASEFANTASTIC(U)=0)". Both read the permanent record, and Apotheosis writes `B.Fantastic := True` at $0059A390, so a unit given Apotheosis takes no Battle Armor. Negative claim, and the absence is the rule under test: Armor 1 + Apotheosis 4 = 5, and atk 10 at 100% hit against a 100% block chance deals 10 - 5 = 5.0. Reading the training-time flag instead added the +3 for Armor 8 and 2.0; the sibling battleArmorWarlord without Apotheosis shows the +3 is otherwise live.',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:60,
@@ -1100,14 +1172,14 @@ definePresets({
     },
   },
   bombsGrenadesAfterFieryFuryWarlord: {
-    desc: 'Fiery Fury (UnitCalcPre.CAS:832-846) runs before the Bombs&Grenades block (:1066-1080) in the same file, so it cannot see the Thrown field that block creates. 4-figure melee 1 unit: Fiery Fury gives +3 melee only (atk 4), Bombs&Grenades then grants Thrown floor(8 - 4/2) = 6, and 4 figures at 100% hit against 0 Defense deal (4 + 6) x 4 = 40.0. Reading the pair after the grant instead gave Fiery Fury its +2 Thrown as well, for Thrown 8 and 48.0; dropping Fiery Fury leaves the sibling bombsGrenadesWarlord fixture at 28.0, so the melee half is still live.',
+    desc: 'Fiery Fury (UnitCalcPre.CAS!NOTHERO!+3..+17 "IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO") runs before the Bombs&Grenades block (UnitCalcPre.CAS!NOMAGITEKENGINE!+6..+20 "IF (SPELLSTATE(W,STExplosive)<>2) THEN { GOTO" "!NOEXPLOSIVE!") in the same file, so it cannot see the Thrown field that block creates. 4-figure melee 1 unit: Fiery Fury gives +3 melee only (atk 4), Bombs&Grenades then grants Thrown floor(8 - 4/2) = 6, and 4 figures at 100% hit against 0 Defense deal (4 + 6) x 4 = 40.0. Reading the pair after the grant instead gave Fiery Fury its +2 Thrown as well, for Thrown 8 and 48.0; dropping Fiery Fury leaves the sibling bombsGrenadesWarlord fixture at 28.0, so the melee half is still live.',
     version: V_WARLORD,
     a: { figs:4, atk:1, hitChance:70, hp:10, abilities: { outlanderWizard: true, explosive: true, fieryFury: true } },
     b: { def:0, toBlkMod:70, hp:50 },
     expected: { dmgToA: 0, dmgToB: 40.000 },
   },
   bombsGrenadesAfterCombatConversionWarlord: {
-    desc: 'The enclosing gate is `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14) THEN { GOTO "NOTSAPIENS"; }` (UnitCalcPre.CAS:1062-1064) — both terms read the permanent record, as the sibling grants under the same label already do (firstFourEligible, stats_identity.js). Raise Dead makes the unit fantastic during combat and the grant still lands: Thrown 6 plus melee 1 over 4 figures at 100% hit = 28.0, the same as the sibling bombsGrenadesWarlord. Reading the combat-converted identity instead withheld the whole Thrown channel and left melee alone at 4.0.',
+    desc: 'The enclosing gate is `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14) THEN { GOTO "NOTSAPIENS"; }` (UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO") — both terms read the permanent record, as the sibling grants under the same label already do (firstFourEligible, stats_identity.js). Raise Dead makes the unit fantastic during combat and the grant still lands: Thrown 6 plus melee 1 over 4 figures at 100% hit = 28.0, the same as the sibling bombsGrenadesWarlord. Reading the combat-converted identity instead withheld the whole Thrown channel and left melee alone at 4.0.',
     version: V_WARLORD,
     a: { figs:4, atk:1, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, explosive: true, raiseDead: true } },
@@ -1119,7 +1191,7 @@ definePresets({
     },
   },
   bombsGrenadesReadsPermanentMeleeAfterRebuildWarlord: {
-    desc: 'The write gate is `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)` (UnitCalcPre.CAS:1068-1069). Record selector 1 is the base unit (CAS reference, Scripts.TXT:270), so the melee term is the permanent record the `base` phase leaves, not the card\'s input: Rebuild writes `SETSTAT(TU,SAttack,1,…+2)` permanently at OLSpell.CAS:588, before region `b` runs. A 4-figure unit with roster melee 0 therefore reaches the grant — melee 2 and Thrown floor(8 - 4/2) = 6 over 4 figures at 100% hit against 0 Defense = (2 + 6) x 4 = 32.0. Reading the card\'s melee input instead withheld the whole Thrown channel and left Rebuild\'s melee alone at 8.0; dropping Rebuild leaves 0.0, since the unit then has neither melee nor the grant.',
+    desc: 'The write gate is `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)` (UnitCalcPre.CAS!NOMAGITEKENGINE!+8..+9 "IF (GETSTAT(U,SAttack,1)>0)" "%OR (GETSTAT(U,AFlying,1)>0)"). Record selector 1 is the base unit (CAS reference, Scripts.TXT:270), so the melee term is the permanent record the `base` phase leaves, not the card\'s input: Rebuild writes `SETSTAT(TU,SAttack,1,…+2)` permanently at OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);", before region `b` runs. A 4-figure unit with roster melee 0 therefore reaches the grant — melee 2 and Thrown floor(8 - 4/2) = 6 over 4 figures at 100% hit against 0 Defense = (2 + 6) x 4 = 32.0. Reading the card\'s melee input instead withheld the whole Thrown channel and left Rebuild\'s melee alone at 8.0; dropping Rebuild leaves 0.0, since the unit then has neither melee nor the grant.',
     version: V_WARLORD,
     a: { figs:4, atk:0, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, explosive: true, rebuild: true } },
@@ -1135,14 +1207,14 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   upgradedExplosiveFireWarlord: {
-    desc: 'Rocketry + Explosive derives Upgraded Explosive: the Blackpowder branch (UnitCalcPre.CAS:1074-1077) doubles Fire Breath 3+4 to 14, and Blackpowder Poison rides both that call and the unconditional melee call for 16.0. Base melee 0 keeps the separate Explosive Thrown grant at :1066-1080 shut — that one is gated on base melee > 0 or Flying — so the doubling is measured alone. Dropping Explosive leaves 9.0; dropping Rocketry leaves 3.0. The earlier 20.0 reading was the 20 HP defender capping a 25.0 total that included the Thrown channel, not a measurement of the doubling.',
+    desc: 'Rocketry + Explosive derives Upgraded Explosive: the Blackpowder branch (UnitCalcPre.CAS!NOMAGITEKENGINE!+14..+17 "IF (GETSTAT(U,SBlackpowderUpgrade,1)>0) THEN {" "SETSTAT( U,SFireBreath,0,( 2*GETSTAT(U,SFireBreath,0) ) );") doubles Fire Breath 3+4 to 14, and Blackpowder Poison rides both that call and the unconditional melee call for 16.0. Base melee 0 keeps the separate Explosive Thrown grant at UnitCalcPre.CAS!NOMAGITEKENGINE!+6..+20 "IF (SPELLSTATE(W,STExplosive)<>2) THEN { GOTO" "!NOEXPLOSIVE!" shut — that one is gated on base melee > 0 or Flying — so the doubling is measured alone. Dropping Explosive leaves 9.0; dropping Rocketry leaves 3.0. The earlier 20.0 reading was the 20 HP defender capping a 25.0 total that included the Thrown channel, not a measurement of the doubling.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hitChance:70, hp:10, abilities: { outlanderWizard: true, rocketry: true, explosive: true } },
     b: { def:0, toBlkMod:70, hp:20 },
     expected: { dmgToA: 0, dmgToB: 16.000 },
   },
   trueLightSkipsExplosiveChannelsWarlord: {
-    desc: 'True Light\'s Life branch (UnitCalcPre.CAS:1518-1547) writes only SAttack, SRanged, SDefense and SResist (plus a To Hit penalty for illusion attacks), never breath or thrown, so neither channel Explosive produced can be touched by it and no ordering between the two can change a number. Sanctify makes this normal unit Life; Fire Breath 3+4 doubles to 14, Explosive adds Thrown %I(8 - figures/2) = 7, melee is 1 + True Light 1 = 2, and Blackpowder Poison rides all three attacks: 26.0. A True Light that also wrote breath and thrown would deal 28.0. Dropping Explosive leaves 11.0.',
+    desc: 'True Light\'s Life branch (UnitCalcPre.CAS!NOUPLIFTSPEECH!+3..+32 "IF ((HASCOMBATGLOBAL(W,CGTrueLight,1))=0)" "}") writes only SAttack, SRanged, SDefense and SResist (plus a To Hit penalty for illusion attacks), never breath or thrown, so neither channel Explosive produced can be touched by it and no ordering between the two can change a number. Sanctify makes this normal unit Life; Fire Breath 3+4 doubles to 14, Explosive adds Thrown %I(8 - figures/2) = 7, melee is 1 + True Light 1 = 2, and Blackpowder Poison rides all three attacks: 26.0. A True Light that also wrote breath and thrown would deal 28.0. Dropping Explosive leaves 11.0.',
     version: V_WARLORD,
     a: { atk:1, modernAttacks: { fireBreath: { strength:3, type:'fire' } }, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, sanctify: true, rocketry: true, explosive: true } },
@@ -1162,7 +1234,7 @@ definePresets({
     },
   },
   energyWeaponrySkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'The Outlander-soldier gate is `IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0) %AND (GetStat(U,SCustomAttribute,1)=1) %OR (BASEFANTASTIC(U)>0) THEN { GOTO "NOTOUTLANDERSOLDIER"; }` (UnitCalc.CAS:1398-1400), whose last term is the permanent record that Apotheosis writes. Negative claim, and the absence is the rule under test: melee 10 doubled by Apotheosis is 20, and at 100% hit against Armor 5 with a 100% block chance that is 15.0, above Supernatural\'s round(20 x 0.34) = 7 floor. Reading the training-time flag instead gave the unit Energy Weaponry, whose exact Doom ignores Armor entirely and caps the attack at floor(20/2) = 10.0; the sibling energyWeaponryMeleeWarlord without Apotheosis shows the Doom conversion is otherwise live.',
+    desc: 'The Outlander-soldier gate is `IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0) %AND (GetStat(U,SCustomAttribute,1)=1) %OR (BASEFANTASTIC(U)>0) THEN { GOTO "NOTOUTLANDERSOLDIER"; }` (UnitCalc.CAS!COMBATOVERRIDE!+5..+7 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "NOTOUTLANDERSOLDIER"), whose last term is the permanent record that Apotheosis writes. Negative claim, and the absence is the rule under test: melee 10 doubled by Apotheosis is 20, and at 100% hit against Armor 5 with a 100% block chance that is 15.0, above Supernatural\'s round(20 x 0.34) = 7 floor. Reading the training-time flag instead gave the unit Energy Weaponry, whose exact Doom ignores Armor entirely and caps the attack at floor(20/2) = 10.0; the sibling energyWeaponryMeleeWarlord without Apotheosis shows the Doom conversion is otherwise live.',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10,
       abilities: { outlanderWizard: true, energyBeamWeapons: true, apotheosis: true } },
@@ -1237,7 +1309,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
   radioSkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'Radio, Xenopsychology and Ballistics Training sit under the same `NOTSAPIENS` gate as Bombs&Grenades — `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14) THEN { GOTO "NOTSAPIENS"; }` (UnitCalcPre.CAS:1062-1064) — and both terms read the permanent record, which Apotheosis writes at $0059A390. Negative claim, and the absence is the rule under test: melee 10 doubled by Apotheosis is 20 at the bare 30% To Hit, for 6.0. Reading the training-time flag instead granted Radio\'s +10% To Hit for 40% and 8.0; the sibling radioToHitWarlord without Apotheosis shows the +10% is otherwise live.',
+    desc: 'Radio, Xenopsychology and Ballistics Training sit under the same `NOTSAPIENS` gate as Bombs&Grenades — `IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14) THEN { GOTO "NOTSAPIENS"; }` (UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO") — and both terms read the permanent record, which Apotheosis writes at $0059A390. Negative claim, and the absence is the rule under test: melee 10 doubled by Apotheosis is 20 at the bare 30% To Hit, for 6.0. Reading the training-time flag instead granted Radio\'s +10% To Hit for 40% and 8.0; the sibling radioToHitWarlord without Apotheosis shows the +10% is otherwise live.',
     version: V_WARLORD,
     a: { atk:10, hp:10, abilities: { outlanderWizard: true, radio: true, apotheosis: true } },
     b: { def:0, toBlkMod:70, hp:60 },
@@ -1248,14 +1320,14 @@ definePresets({
     },
   },
   radioToHitWarlord: {
-    desc: 'Radio gives a regular unit +10% To Hit (UnitCalcPre.CAS:1096-1101, which also writes +10% To Defend and +1 Resistance): melee 10 at the bare 30% plus 10% is 4.0 against 3.0 without the reform.',
+    desc: 'Radio gives a regular unit +10% To Hit (UnitCalcPre.CAS!NOBALLISTICS!+8..+13 "SETSTAT( U,SToHit,0,(GetStat(U,SToHit,0)+10) );", which also writes +10% To Defend and +1 Resistance): melee 10 at the bare 30% plus 10% is 4.0 against 3.0 without the reform.',
     version: V_WARLORD,
     a: { atk:10, hp:10, abilities: { outlanderWizard: true, radio: true } },
     b: { def:0, toBlkMod:70, hp:60 },
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   ballisticsTrainingRangedWarlord: {
-    desc: 'Ballistics Training gives Ranged +10% To Hit (UnitCalcPre.CAS:1082-1088, where 1.5.12.8 cut `SToRanged` from +20 to +10): missile 1 at the bare 30% plus 10% is 0.4 against 0.3 without the reform.',
+    desc: 'Ballistics Training gives Ranged +10% To Hit (UnitCalcPre.CAS!NOEXPLOSIVE!+2..+8 "IF (SPELLSTATE(W,STBallisticsTraining)<>2) THEN { GOTO" "!NOBALLISTICS!", where 1.5.12.8 cut `SToRanged` from +20 to +10): missile 1 at the bare 30% plus 10% is 0.4 against 0.3 without the reform.',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:1, type:'missile' } }, hp:10,
       abilities: { outlanderWizard: true, ballisticsTraining: true } },
@@ -1264,7 +1336,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.400 },
   },
   ballisticsTrainingThrownWarlord: {
-    desc: 'The same block leaves `SToThrown` at +20 (UnitCalcPre.CAS:1082-1088), so the three channels no longer share one amount: Thrown 1 at the bare 30% plus 20% is 0.5, against the 0.4 its sibling ballisticsTrainingRangedWarlord gets on Ranged.',
+    desc: 'The same block leaves `SToThrown` at +20 (UnitCalcPre.CAS!NOEXPLOSIVE!+2..+8 "IF (SPELLSTATE(W,STBallisticsTraining)<>2) THEN { GOTO" "!NOBALLISTICS!"), so the three channels no longer share one amount: Thrown 1 at the bare 30% plus 20% is 0.5, against the 0.4 its sibling ballisticsTrainingRangedWarlord gets on Ranged.',
     version: V_WARLORD,
     a: { atk:0, modernAttacks: { thrown: { strength:1, type:'thrown' } }, hp:10,
       abilities: { outlanderWizard: true, ballisticsTraining: true } },
@@ -1272,7 +1344,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.500 },
   },
   militaryDrillingSkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'Military Drilling\'s permanent Discipline is written under `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDERUPGRADE"; }` (OverlandEndTurn.CAS:446), the permanent record Apotheosis writes. Negative claim, and the absence is the rule under test: Armor 1 + Apotheosis 4 = 5, and atk 10 at 100% hit against a 100% block chance deals 10 - 5 = 5.0. Reading the training-time flag instead granted Discipline for Armor 6 and 4.0; the sibling militaryDrillingDefenseWarlord without Apotheosis shows the Discipline armor is otherwise live.',
+    desc: 'Military Drilling\'s permanent Discipline is written under `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDERUPGRADE"; }` (OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), the permanent record Apotheosis writes. Negative claim, and the absence is the rule under test: Armor 1 + Apotheosis 4 = 5, and atk 10 at 100% hit against a 100% block chance deals 10 - 5 = 5.0. Reading the training-time flag instead granted Discipline for Armor 6 and 4.0; the sibling militaryDrillingDefenseWarlord without Apotheosis shows the Discipline armor is otherwise live.',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:60,
@@ -1292,7 +1364,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
   xenoveterinaryReadsFantasticAtItsOwnBlockWarlord: {
-    desc: 'Xenoveterinary is the one live-Fantastic gate in the Outlander block: `IF FANTASTIC(U)` (UnitCalcPre.CAS:1040) reads the calculated record at its own position, where the four gates around it read `BASEFANTASTIC(U)`. Spirit Link asserts the calculated flag at the head of region b (`SETSTAT(U,AFantastic,0,1)`, :30) and clears it only at the tail of UnitCalc.CAS, so a spirit-linked regular unit is Fantastic here and takes the +10% To Hit: melee 10 at 30% + 10% is 4.0. Reading the training-time flag instead withheld it for 3.0; dropping Spirit Link leaves 3.0 as well, so both named features are live.',
+    desc: 'Xenoveterinary is the one live-Fantastic gate in the Outlander block: `IF FANTASTIC(U)` (UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {") reads the calculated record at its own position, where the four gates around it read `BASEFANTASTIC(U)`. Spirit Link asserts the calculated flag at the head of region b (`SETSTAT(U,AFantastic,0,1)`, UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);") and clears it only at the tail of UnitCalc.CAS, so a spirit-linked regular unit is Fantastic here and takes the +10% To Hit: melee 10 at 30% + 10% is 4.0. Reading the training-time flag instead withheld it for 3.0; dropping Spirit Link leaves 3.0 as well, so both named features are live.',
     version: V_WARLORD,
     a: { atk:10, hp:10,
       abilities: { outlanderWizard: true, xenoveterinary: true, spiritLink: true } },
@@ -1463,7 +1535,7 @@ definePresets({
     },
   },
   levelBonusAfterUpgradedExplosiveWarlord: {
-    desc: 'The level ladder is @Units@ApplyLevelBonus in region c, so Upgraded Explosive\'s end-of-region-b doubling cannot see it: fire breath 4 + 4 workshop = 8, doubled to 16, then +2 champion = 18. Base melee 0 keeps Explosive\'s independent Thrown grant (UnitCalcPre.CAS:1066-1080, gated on base melee > 0 or Flying) shut, so only the breath is in play; the 0 + 4 champion melee is fully blocked by 5 defense, leaving 18 − 5 = 13 (doubling the levelled value would make the breath 20, for 15). At level normal the same unit deals 11. The defender is Poison Immune so the Military Workshop poison rider does not add to the total.',
+    desc: 'The level ladder is @Units@ApplyLevelBonus in region c, so Upgraded Explosive\'s end-of-region-b doubling cannot see it: fire breath 4 + 4 workshop = 8, doubled to 16, then +2 champion = 18. Base melee 0 keeps Explosive\'s independent Thrown grant (UnitCalcPre.CAS!NOMAGITEKENGINE!+6..+20 "IF (SPELLSTATE(W,STExplosive)<>2) THEN { GOTO" "!NOEXPLOSIVE!", gated on base melee > 0 or Flying) shut, so only the breath is in play; the 0 + 4 champion melee is fully blocked by 5 defense, leaving 18 − 5 = 13 (doubling the levelled value would make the breath 20, for 15). At level normal the same unit deals 11. The defender is Poison Immune so the Military Workshop poison rider does not add to the total.',
     version: V_WARLORD,
     a: { figs:1, atk:0, modernAttacks: { fireBreath: { strength:4, type:'fire' } }, level:'champion', hitChance:70, hp:20,
       abilities: { outlanderWizard: true, explosive: true, militaryWorkshop: true } },

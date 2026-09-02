@@ -3,6 +3,209 @@
      See global CLAUDE.md. -->
 
 # Journal
+## 2026-09-02 — F227.6: the seven small scripts take anchors, and the audit runs clean
+
+49 line citations → 50 anchors from the map (one comma list emits two), 14 of them **text anchors**
+— `MASTER.CAS` and `SpellMysticSurge.CAS` define no labels, and each anchor was checked unique in
+the shipped file before use — 14 continuations expanded, all seven budget rows lowered to 0.
+`--strict` and plain mode are now the same green check: 554 anchors, 139 delegated, 0 unresolved or
+malformed, every one of the ten scripts at 0/0. No `@span`, no re-delimiting, no `/N`, no
+`PROVENANCE` range into any of the seven. The map is deleted; the builder still runs (`build()`
+through its export, 0 entries) and nothing outside itself names it. **F227 is closed.**
+
+Alignment 1.5.12.7 → 1.5.12.9: `MASTER`, `CombatEndTurn`, `SpellMysticSurge` shift 0 (`MASTER` 403
+changed in place); `OverlandEndTurn` shift 0 through 996, +21 after; `DisAbil` shift 0 through 355,
++5 from 357, +10 after 3464; `OLSpell` and `COSpell` shift 0 through 180 / 207, +308 after.
+1.5.12.6.2 equals 1.5.12.7 for all but `DisAbil` (+10 at 29) and `OLSpell`.
+
+`DisAbil.CAS:840`/`:846` read as 1.5.12.7 — the Artificer Upgrade gate and the Magical Weapon
+Artificer arm, where the 6.2 lines are a Magical Weapon `AddAbilityLine` and `ORELEVEL=0` — →
+`!NOLOGISTIC!+3` and `+9`, shipped 845 and 851. `OLSpell.CAS:587` is a different statement in each
+release; every citing file is 1.5.12.9-numbered and means the Rebuild Mechanical write →
+`!NOTMARKOFCONQUEROR!+8`.
+
+**The wide scan** — bare `:N` in any paragraph carrying a `.CAS` mention, plus prose "line N" —
+found stragglers across all ten scripts that the audit's heuristic never attributes: five into
+`UnitCalcPre` (`:1058`, the 1.5.12.7 True Light block `:1507-1540`, `:30`/`:94` in a spec, Eye of
+Heaven "lines 1839-1841", Lucky Star "line 1020" ×2), one into `UnitCalc` (the Sentience tail
+`:1305-1306`), `CreateUnit` "lines 412-441" and "line 40" ×2, `DisAbil` "lines 1036-1046" (text
+anchor on the section comment — no label within 200 lines), `COSpell` "line 1328", `OverlandEndTurn`
+`:425`/`:577` and "line 391". Half came from the review. Left bare on purpose: Pascal, JS, `HELP.TXT`,
+`UNITS.INI`, `spells.ini` numbers, and the inventory's `Line` column.
+
+**Left whole, as a decision:** the md5-pinned 1.5.12.7 source-order tables in
+`Reference docs/Caster binary/CoM2 binary - unit recalculation.md` §"Warlord regions b and d" —
+46 rows and six bullets. The section states its own referent, so its numbers are not stale against
+what they cite, and re-pinning is the alternative F227 rejected. Preamble corrected to say the release
+is no longer shipped and is recoverable at `2c0fd48^`. Re-deriving it against 1.5.12.9 with
+label-bounded rows is its own item, not a citation swap.
+
+Two traps worth keeping. Writing ``(`File.CAS:N`)`` in the audit's own header or in `TESTS.md` is
+itself a malformed citation to the audit — the first wording of both went red. And a `| tail` on the
+review command masked the audit's exit code, so codex started against a red tree and the harness
+timed the pipeline out; the orphaned session finished and wrote the file on its own.
+
+Method A. Review MISS 1 (self-inflicted red) and MISS 2/4 (eight prose "line N" stragglers) accepted;
+MISS 3 (convert the md5-pinned tables) rejected as above. Two gaps the audit cannot see — a locator
+followed by `/N`, and a bare `:N` or prose "line N" under a `@span` line or bare mention — are the
+one part of F227's body worth carrying forward as an item.
+
+
+## 2026-09-02 — F227.5: `CreateUnit.CAS`'s citations take label anchors
+
+69 line citations → 70 anchors from the map (one comma list emits two), 57 continuations
+expanded, budget row lowered to 0. Audit: `CreateUnit.CAS` 0/0, 49 deprecated remain across the
+seven small scripts, `--strict` red only on those. No `@span`, no re-delimiting; one statement
+shortened to a `'`-free fragment because the Malnourished header's apostrophe broke a
+single-quoted `desc:` in `presets_protections_and_weapons.js`.
+
+**Unlike `UnitCalc.CAS`, no head was re-pinned at the landing.** `2c0fd48` touched only `@span` paths
+for this script, so heads and continuations alike are 1.5.12.7 numbers. Alignment 1.5.12.7 →
+1.5.12.9 is one hunk: 1–49 shift 0, old 50 became 50–52 (the Magic Perimeter gate gained an Evil
+Presence term), 51 onward +2. 1.5.12.6.2 is identical to 1.5.12.7 here; the superseded 1.5.12.6 set
+has no `CreateUnit.CAS`.
+
+Retargets beyond the map, each hand-verified: `stats_identity.js`'s Sancta Basilica `:414-419`
+covered one `STypeID` branch where the prose says two → `!NOFROSTCLUB!+5..+14` (shipped 417–426,
+the +3 Resistance write through the second Sanctify write); `stats_sequence.js`'s `SRage` `:375` was
+off by one (old 375 is `SMultiLabel`, `SRage` is 376) → `!NOALTAROFTHESUN!+6`. The Basilica block at
+shipped lines, for Q30 and F204: 418 `STypeID=108` Monks (Sanctify, Exorcise −1), 424 `=231`
+Inquisitors (Sanctify, Exorcise −3), 430 `=111` Crusaders (Lucky), 435 `=113` Paladins (Magic
+Immunity), 440 fallthrough; Q30's `:412-441` is the old header-to-label span, shipped 414–443.
+
+**The audit's continuation heuristic has a blind spot.** It sets an antecedent only on a
+`File.CAS:N`, `!` or `~` locator, so a bare `:N` under a `@span` provenance line or after a bare
+filename mention is attributed to nothing. 28 `CreateUnit.CAS` continuations were of that shape —
+11 after mentions in `presets_buildings_and_machines.js`, 17 found only by the review in
+`stats_sequence.js` and `stats.js`. A wider any-mention scan now finds no stragglers outside the
+inventory's table columns. Left bare on purpose: three `OverlandEndTurn.CAS` lines in
+`combat_abilities.js` (F227.6's), a `UNITS.INI` range, and the table columns.
+
+Method A; codex emitted within the ceiling. Both MISS clusters accepted; nothing rejected.
+
+
+## 2026-09-02 — F227.4: `UnitCalc.CAS`'s citations take label anchors
+
+117 line citations → 119 anchors from the map (two comma lists emit two each), 42 continuations
+expanded (40 from the map's rows plus the `:333`/`:498` pair handed off from F227.3), budget row
+lowered to 0. Audit: `UnitCalc.CAS` 0/0, 118 deprecated remain across eight scripts, `--strict` red
+only on those. No `PROVENANCE sources=` range needed `@span`; provenance and rebind unmoved. One
+double-quoted `desc:` re-delimited (the Fortification fixture).
+
+**The continuations were nearly all 1.5.12.7-numbered even beside a 1.5.12.9 head.** `git log -S`
+shows the landing commit re-pinned the head citations and left the bare `:N`s. So the map's per-entry
+attribution does not transfer to an entry's continuations; each was read against both sets.
+Alignment 1.5.12.7 → 1.5.12.9 for this script: 49–334 shift +2, 335–344 gone, 345 onward shift −8.
+One `stats.js` comment (Colossal Strength) still carried 1.5.12.6-superseded numbers — Rust 500–512,
+Focus Magic 83/515, Weakness 317–323 — recoverable from `b5c97e5^`.
+
+Retargets beyond the map, each hand-verified against the shipped script: the Night Goblin
+comment's `:498` names Rust but shipped 498 is the Focus Magic header, so it anchors to Rust's gate
+(`!NOTCITY!+11` → 485); Favored Terrain's "doubled branch" `:646-658` narrowed to the IF block
+(`!TACTICIANEFFECT!+2..+11`); "Colossal `:1227`" read as the 1.5.12.7 block header (`!NOCOMBAT!+4`);
+the mixed-release `550,569-571` anchored to 550 and 561–563 (`!NOAETHERSURGE!+3` and `+14..+16`).
+Review added one: the Energy-Weaponry fixture's Outlander gate `1398-1400` was off by one from the
+three lines it quotes (→ `!COMBATOVERRIDE!+5..+7`). Left bare on purpose: `stats.js`'s `:1730`,
+`:1554`, `:651`, which are `Units.RecalculateUnits.pas` lines the audit's heuristic hangs on a CAS
+antecedent, and the inventory's table columns.
+
+Method A; codex emitted within the ceiling. Its one NIT — six blank-ending ranges (Night Goblin ×3,
+Rust ×3) carry only a first-line assertion — was not applied: that is the form the map emits and
+F227.3 kept, so changing it belongs to F227.6 uniformly or not at all.
+
+
+## 2026-09-02 — F227.3: `UnitCalcPre.CAS`'s citations take label anchors
+
+151 line citations → 158 anchors from the map (seven comma-list entries emit two each), 23
+continuations expanded (22 bare `:N` plus one `/661` the map did not see), budget row lowered to 0.
+Audit: `UnitCalcPre.CAS` 0/0, 235 deprecated remain across the nine other scripts, `--strict` red
+only on those. No `PROVENANCE` `sources=` list carried a `UnitCalcPre.CAS` line range, so nothing
+went to `@span` and no rebind was needed.
+
+The map's `sourceLine`s had drifted in three files edited since F227.2 built it (+72, +24/+61, +40
+lines); every entry was paired by citation **string and rank** within its file, none by line number,
+and none was unlocatable.
+
+Two retargets beyond the map in one comment. `stats.js`'s `UnitCalcPre.CAS:87` is blank in every
+set; the `SETSTAT(U,SRanged,0,…)` it quotes is shipped `:97` → `!NOVAMPIRISM!+19`. Its companion
+`:412` was a second bad number nobody had listed — a Righteous Ward line in every set — and the
+strayed-branch Transmute Equipment ranged write it describes is shipped `:675` → `!NOSACRED!+18`.
+Both confirmed by hand against the script.
+
+The review added four more, each a case where the anchor's quoted statement made an imprecise
+original visible: three `:834` citations whose prose names `IF (BASEFANTASTIC(U))` pointed at the
+comment line above it (→ `!NOTHERO!+6`), a Breakthrough-grant citation spanning the whole block
+(narrowed to the one write, `!NOTTACTICIANHERO!+10`), and a Guardian → Divine Barrier range that
+included the Procurator `IF` (→ `+133..+135`). Kept pending the user's yes.
+
+Two things for F227.4–.6. A citation inside a double-quoted JS `desc:` string cannot carry an
+anchor's `"` in a form the audit reads, so two strings were re-delimited to single quotes with no
+words changed. And 28 bare `:N` the audit's nearest-antecedent heuristic attributes to
+`UnitCalcPre.CAS` are misattributions — inventory table columns, and two `UnitCalc.CAS` region-`d`
+lines at `stats_sequence.js:1567-1568` (`:333`, `:498`) that F227.4's own map rows do not carry.
+Handed off in F227's body.
+
+Method A. First codex run hit the 600 s ceiling after analysis but before emitting; resumed with
+`codex exec resume <id>` and it emitted in a minute. Review caught the `/661` dangling locator,
+which neither the audit's `:N` heuristic nor its tail check sees — a candidate item.
+
+
+## 2026-09-02 — F224.2c: Eternal Night's enemy-Resistance arm and Darkness's Death arm on the reader
+
+`isDeathUnitAt` in `stats.js`: `unitInRealmAt(u, 'death')` for `com2_*`, the scalar compare for
+DOS. Drives H3 (`$005A22D9`), H6 (`$005A45EF`) and the CoM2 Eternal Night doubling. Darkness's Life
+arm, Warlord's Poor Vision (S9) and True Light (S8) are untouched — not in the diff — and F235 is
+left open exactly as F224.2a left it.
+
+The finding worth keeping: **the F224.1 reproduction card does not discriminate for these two
+consumers.** `c:undead` has already written Death before both blocks fire, so the scalar already
+says Death and before equals after on `ccDefense`+`undead`. The recovery arm differs from the
+scalar only after ladder block 8's `RCNoHeal` overwrite (`$005A0472`), which `Q31.evidence.md`
+predicts — so the discriminating card is `ccDefense`+`undead`+`raiseDead` (or `mysticSurge`). F224.2b
+found the same thing independently for the Spell Ward Death arm. The same card *without* Chaos
+Channels stays penalised, which is BUG-Q31 reproduced as written.
+
+Measured headlessly on that card (`com2_1.05.11`, atk 5 / def 6 / res 9): with enemy Eternal
+Night, res 8 → 10 and the doubled Darkness arm lands (atk 7, def 11); with Darkness alone, atk/def/res
+each +1. `com_6.08` byte-identical before and after.
+
+Five fixtures in `presets_ranged_and_haste.js`. Method A; GPT review at
+`.reviews/F224.2c.review-of-Claude.md` approved with no findings, having reproduced all five values
+headlessly and confirmed the binary's two independent `if`s versus the calculator's if/else-if is
+harmless (no modern chain can be scalar-Life and helper-Death at that block). Interrupted by a rate
+limit before the review; resumed and run foreground.
+
+
+## 2026-09-02 — F224.2b: Spell Ward and Node Aura split per arm
+
+The Death and Chaos wards and the Chaos node arm read `unitInRealmAt`; the Nature, Life and
+Sorcery wards and the Nature and Sorcery node arms keep the scalar compare, byte-for-byte. The
+split is per arm because the binary's is: Spell Ward's Death arm calls `IsDeathUnit` at
+`$005A5E0F` and its Chaos arm `IsChaosUnit` at `$005A5E51`, while its other three arms are
+`cmp race` (`$005A5D68`, `$005A5DCC`, `$005A5EB0`); Node Aura's `case 3` calls the helper at
+`$005A272B` while `case 1`/`case 2` compare the scalar. Life stays scalar on the binary's say-so —
+the Q31 loose end that the ladder overwrites Life yet the ward still compares `race` directly —
+and the code carries no "overwritten realm ⇒ helper" path.
+
+Two things worth keeping. The value-moving H7 case needs a **post-Undead overwrite** (`raiseDead`
+or `mysticSurge`) to show: without a later conversion the scalar already says Death, so the
+recovery arm changes nothing. And Chaos Channels ablation is inert in the two ward fixtures **by
+coincidence** — its +3 armor cancels the ward's −3 — which the review caught as a false vacuity
+claim; both fixtures now declare it inert-by-coincidence with the reasoning.
+
+Measured on the F224.1 card (`com2_1.05.11`, `ccDefense`+`undead`): `spellWard:'chaos'` def 9 →
+6, `nodeAura:'chaos'` atk 5 → 7 / def 9 → 11. All three DOS versions unchanged.
+
+Node Aura fixtures are parked in `presets_curses_and_undead.js` this wave because
+`presets_ranged_and_haste.js` was F224.2c's. TESTS.md's "154 of 1132" desc-citation recount is
+stale by its own regex; re-measured in the authoritative pass after the wave rather than trusting
+the agent's 144 of 1146.
+
+Method A. GPT review at `.reviews/F224.2b.review-of-Claude.md` approved the predicate and caught
+the vacuity claim; nothing rejected. Interrupted by a rate limit between review and revision;
+resumed with the review already on disk.
+
+
 ## 2026-09-01 — F227.2: the CAS citation conversion map
 
 `tools/build_cas_citation_map.js` -> `tools/cas_citation_map.json`, one entry per **occurrence**,

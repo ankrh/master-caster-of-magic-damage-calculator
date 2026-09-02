@@ -67,7 +67,7 @@ function createUnitIdentity(values = {}) {
 //
 // `nightGoblins` is Warlord template 356, Goblin Night Goblins, and it earns a key on the same
 // test: Warlord's engine names the template. The naming site is Eternal Night's Poor Vision gate,
-// `(GetStat(U,STypeID,1)<>356)` at `UnitCalcPre.CAS:1352` — the second of that gate's four terms —
+// `(GetStat(U,STypeID,1)<>356)` at `UnitCalcPre.CAS!NOBLOODANDIRON!+6 "%AND (GetStat(U,STypeID,1)<>356)"` — the second of that gate's four terms —
 // so a Night Goblin unit keeps its Ranged strength where every other non-Death, non-Undead unit
 // loses 2 (F189). `GetStat(U,S,1)` is the *base* unit — "if B=0, it checks the current stats and
 // abilities, if B=1 it checks the base unit" (`Reference docs/Script source/CAS
@@ -312,7 +312,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
       when: () => !!abilVal(abilities, 'ccFireBreath', false),
       apply: u => { u.race = 'Chaos'; u.fantastic = true; } })),
     // Spirit Link's first write, and the head of region `b`: `SETSTAT(U,AFantastic,0,1)` at
-    // `UnitCalcPre.CAS:30`, record selector `0` — the calculated record — with no test of the
+    // `UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);"`, record selector `0` — the calculated record — with no test of the
     // unit's own Fantastic state above it. The region-`d` `spiritLink` step below clears the same
     // field, so the two are a fixed point only at the end of the derivation; every read between
     // them takes a Fantastic unit. Both share `PROVENANCE[spiritLink]`, cited at that step.
@@ -338,7 +338,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // The `sanctify` gate is the one grantable-ability read F202 left standing that a positioned
     // grant really can move, and it cannot move under F202 alone. Sancta Basilica's block writes
     // `SETSTAT(U,SResist,1,+3)` and then `SETENCHANTMENTFLAG(U,EncSanctify,ABase,1)` in two of its
-    // four `STypeID` branches (`CreateUnit.CAS:414-419`), so unlike the flag-only permanent grants
+    // four `STypeID` branches (`CreateUnit.CAS!NOFROSTCLUB!+5..+14 "SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+3));" "SETENCHANTMENTFLAG(U,EncSanctify,ABase,1);"`), so unlike the flag-only permanent grants
     // — Lava Smelter's, Heat Power Engine's, Anti-Gravity Drive's, Military Drilling's, each of
     // which earns no step (`SPEC.md`, *Phases*) — this one carries a stat delta and is already
     // `base:sanctaBasilica`. F200 stage 3 widens that step onto these branches, at which point the
@@ -410,9 +410,9 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
 // The identity this recalculation *leaves*, which is what a **cast-time targeting** predicate is
 // evaluated against — not a term of any block, so it has no chain position of its own (F183,
 // F188). Spirit Link is the citation and states the mechanism outright: it asserts Fantastic at
-// the head of the routine so the unit takes fantastic bonuses (`UnitCalcPre.CAS:25-28`) and
+// the head of the routine so the unit takes fantastic bonuses (`UnitCalcPre.CAS!NOSPIRITLINK!-16..-13 "IF GETENCHANTMENTFLAG(U,EncDummyArmor,1) THEN { SETOLENCHANTMENTFLAG(U,EncHolyArmor,0,1); }" "IF (GetEnchantmentFlag(U,EncSpiritLink,1)=0) THEN { GOTO"`) and
 // clears it at the tail so the "enchanted fantastic unit could not be targeted by fantastic-only
-// spell" (`UnitCalc.CAS:1297-1298`). The engine manipulates the recalculated flag *in order to*
+// spell" (`UnitCalc.CAS!NOTICEAGE!+2..+3 ": Effect of Sentience, enchanted fantastic unit could not be targeted by fantastic-only spell and gain +2 resistance :" "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }"`). The engine manipulates the recalculated flag *in order to*
 // change targetability, so the answer is the whole conversion list run out.
 //
 // This is a projection of the one conversion list, not a second list, and it is exact: no
@@ -577,13 +577,13 @@ function applyLavaSmelterGrant(abilities, version, unitType) {
 // High Men race; heroes gain nothing.
 //
 // KNOWN DEFECT (T8, see BACKLOG.md Q30): the Sanctify grant above is wider than the source.
-// `Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS` lines 412-441 — the block
+// `Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS!NOFROSTCLUB!+2..+31 ": new effect of Sancta Basilica :" "!NOBASILICA!"` — the block
 // PROVENANCE[sanctaBasilica] in stats_sequence.js cites for the +3 Resistance — writes the
 // per-type grants in four *mutually exclusive* STypeID branches, each ending in
 // `GOTO "ENDOFUNIQUEBUILDING"`: 108 (High Men Monks) and 231 (High Men Inquisitors) get
 // Sanctify plus improved Exorcise, 111 (Crusaders) gets Lucky *only*, and 113 (Paladins) gets
 // Magic Immunity *only*. Neither Crusaders nor Paladins receives Sanctify from this building.
-// The code and this comment both say they do. `DisAbil.CAS` lines 1036-1046 does group all
+// The code and this comment both say they do. `DisAbil.CAS~": new effect of Sancta Basilica :"+1..+10 "IF (ISBUILT(CF,BBasilica)>0) THEN {" "}"` does group all
 // three under one "Sainthood" display line, which is the likely origin of the conflation, but
 // it is display only and grants no stat. Not corrected here: this round is comment-only and the
 // fix needs a preset plus a full suite run.
@@ -651,7 +651,7 @@ const MAGIC_IMMUNITY_GATED_CURSES = [
 ];
 const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // `version` is read for the Eye of Heaven arm alone: that enchantment is Warlord's, granted by
-// `Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS` lines 1839-1841 and named by
+// `Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS!ENDOFCOMBAT!+2..+4 ": New combat enchantment" "SETENCHANTMENTFLAG(U,EncTrueSight,0,1);"` and named by
 // no other supported source, so outside Warlord it must not confer the Illusion Immunity that
 // strips Mind Storm and Vertigo here.
 // PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
@@ -713,7 +713,11 @@ const MARIONETTE_VERSION = 'com2_warlord_1.5.12.9';
 const MARIONETTE_HERO_TYPE_ID = 48;
 const MARIONETTE_REALMS = ['nature', 'sorcery', 'chaos', 'life', 'death'];
 // The projectile retype the owned branch writes, by primary realm: ids 37, 34, 31, 35 and 33
-// (`UnitCalcPre.CAS:104`, `:122`, `:140`, `:158`, `:176`). Every one of them is a
+// (`UnitCalcPre.CAS!NOVAMPIRISM!+26 "SETSTAT(U,SRangedType,0,37);"`,
+// `UnitCalcPre.CAS!NOTNATUREMARIONETTESPELL!+4 "SETSTAT(U,SRangedType,0,34);"`,
+// `UnitCalcPre.CAS!NOTSORCERYMARIONETTESPELL!+4 "SETSTAT(U,SRangedType,0,31);"`,
+// `UnitCalcPre.CAS!NOTCHAOSMARIONETTESPELL!+4 "SETSTAT(U,SRangedType,0,35);"`,
+// `UnitCalcPre.CAS!NOTLIFEMARIONETTESPELL!+4 "SETSTAT(U,SRangedType,0,33);"`). Every one of them is a
 // `SETSTAT(U,SRangedType,0,…)` — record selector `0`, the calculated record — so this value is
 // what the region-`b` step `b:marionette:rangedType` writes, not part of the permanent record.
 // All five ids are `IsMagic=Yes` with nothing else the modern engine reads, so all five are the
@@ -723,7 +727,7 @@ const MARIONETTE_RANGED_TYPES = {
   nature: 'magic', sorcery: 'magic', chaos: 'magic', life: 'magic', death: 'magic',
 };
 // The ascension block's own second retype, for a Chaos primary alone: `SRangedType = 30`
-// (`UnitCalcPre.CAS:272`), beside the Wall Crusher and Armor Piercing grants of the same three
+// (`UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+80 "SETSTAT(U,SRangedType,0,30);"`), beside the Wall Crusher and Armor Piercing grants of the same three
 // lines. Id 30 is the lightning-bolt projectile, a token of its own, so this is a second write
 // at a second position — `b:marionette:ascensionRangedType`, after the book grants — and not
 // something the primary arm's value already covers.
@@ -771,7 +775,7 @@ function deriveMarionettePackage(identity, abilities, version) {
         arcaneWard: 2,
         spellLock: true,
       },
-      // The strayed branch writes no ranged type at all (`UnitCalcPre.CAS:364-392`), so the
+      // The strayed branch writes no ranged type at all (`UnitCalcPre.CAS!STRAYEDMARIONETTE!+0..+28 "!STRAYEDMARIONETTE!" "!NOLONGERSTRAYEDMARIONETTE!"`), so the
       // package projects none: the Wanderer's Chaos ranged type 30 at zero strength is its own
       // roster record's (`UNITS.INI [362]`), and Transmute Equipment's later +2 `SRanged` write
       // activates that latent channel wherever the record states it.
@@ -884,7 +888,7 @@ const NO_OUTLANDER_REFORM = Object.freeze({
 // Every `BASEFANTASTIC(U)` here is the **permanent** record: the base unit data "before applying
 // continuous effects such as buffs or curses" (`Reference docs/Script source/CAS reference/
 // Scripts.TXT:286`), which carries Destiny's `B.Fantastic := True` at $0059A390 (F192). The one
-// live-Fantastic gate in the block is Xenoveterinary's `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1040`),
+// live-Fantastic gate in the block is Xenoveterinary's `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`),
 // and that term is not here: it is the positional `when` of `b:outlanderXenoveterinary`.
 function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHero = false) {
   if (!version || !version.startsWith('com2_warlord')) {
@@ -917,24 +921,24 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
   const permanentMechanical = !!fundamentalAbilities.mechanical
     || (!!fundamentalAbilities.rebuild && !isHero);
   const armorclad = outlanderWizard && !!fundamentalAbilities.armorcladReform && permanentMechanical;
-  // `UnitCalcPre.CAS:1104` closes the whole tail on `BASEFANTASTIC(U)>0`, and the +3 branch at
-  // `:1108-1114` restates it beside `EncArmorClad` index 1 and `SCustomAttribute` index 1 — three
+  // `UnitCalcPre.CAS!NOTSAPIENS!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"` closes the whole tail on `BASEFANTASTIC(U)>0`, and the +3 branch at
+  // `UnitCalcPre.CAS!NOTSAPIENS!+6..+12 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0)" "}"` restates it beside `EncArmorClad` index 1 and `SCustomAttribute` index 1 — three
   // permanent-record terms in one test.
   const battleArmor = outlanderWizard && !!fundamentalAbilities.armorcladReform
     && !baseFantastic && !permanentMechanical;
   const powerEngine = outlanderWizard && !!fundamentalAbilities.heatPowerEngine && permanentMechanical;
-  // `UnitCalc.CAS:1397-1399` evaluates left-to-right: non-fantastic non-mechanical units,
+  // `UnitCalc.CAS!COMBATOVERRIDE!+5..+7 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "NOTOUTLANDERSOLDIER"` evaluates left-to-right: non-fantastic non-mechanical units,
   // heroes, and Armorclad mechanical units pass; fantastic units do not.
   const outlanderSoldier = outlanderWizard && !baseFantastic && (!permanentMechanical || armorclad);
-  // The `NOTSAPIENS` gate, `UnitCalcPre.CAS:1062-1064`. `b:bombsGrenades` reads the same one.
+  // The `NOTSAPIENS` gate, `UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO"`. `b:bombsGrenades` reads the same one.
   const sapiensEligible = outlanderWizard
     && (!baseFantastic || !!fundamentalAbilities.sapiens);
   const temporalDrive = powerEngine && !!fundamentalAbilities.temporalEngineering;
   const temporalGravityDrive = temporalDrive && !!fundamentalAbilities.sailing;
-  // `UnitCalcPre.CAS:1051-1053`: the block's own gate is the *calculated* `EncPowerEngine` flag,
+  // `UnitCalcPre.CAS!NOXENOVET!+2..+4 "IF (GETENCHANTMENTFLAG(U,EncPowerEngine,0)=0)" "NOMAGITEKENGINE"`: the block's own gate is the *calculated* `EncPowerEngine` flag,
   // which no region-`b` write reaches before this point, so the derived permanent state answers it.
   const magitekEngine = powerEngine && !!fundamentalAbilities.magitekEngineering;
-  // `OverlandEndTurn.CAS:446`, the fourth site of the same permanent-record term.
+  // `OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"`, the fourth site of the same permanent-record term.
   const militaryDrilling = outlanderWizard && !baseFantastic && !!fundamentalAbilities.militaryDrilling;
 
   return {
@@ -943,7 +947,7 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
       ...(armorclad ? { armorclad: true } : {}),
       ...(powerEngine ? { powerEngine: true } : {}),
       // Large Shield is no longer granted here. It is the block's fourth write,
-      // `SETSTAT(U,ALargeShield,0,1)` at `UnitCalcPre.CAS:1058`, inside the same reviewed span as
+      // `SETSTAT(U,ALargeShield,0,1)` at `UnitCalcPre.CAS!NOXENOVET!+9 "SETSTAT(U,ALargeShield,0,1);"`, inside the same reviewed span as
       // the To-Defend one, so it is a second field of `b:magitekEngine` and lands at that rank —
       // which is what lets the region-`d` Fortification block see it (F200).
       ...(temporalDrive ? { haste: true } : {}),
@@ -960,8 +964,8 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
         ? { pneumaField: true }
         : {}),
       // Despite both prose sources naming Battle Armor, the executing scripts grant Resist
-      // Magic only alongside the permanent EncArmorClad flag (CreateUnit.CAS:704-705 and
-      // OverlandEndTurn.CAS:436-442). The transient +3 Battle Armor branch has no such grant.
+      // Magic only alongside the permanent EncArmorClad flag (CreateUnit.CAS!HASEVILPRESENCE!+94..+95 "IF (SPELLSTATE(W,STMagitekMaterialScience)=2) THEN {" "SETENCHANTMENTFLAG(U,EncResistMagic,ABase,1);" and
+      // OverlandEndTurn.CAS!NOMECHANICALUPGRADE!+2..+8 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0) THEN { GOTO" "}"). The transient +3 Battle Armor branch has no such grant.
       ...(outlanderWizard && fundamentalAbilities.magitekScience && armorclad
         ? { resistMagic: true }
         : {}),
@@ -976,7 +980,7 @@ function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHe
       ballisticsTraining: sapiensEligible && !!fundamentalAbilities.ballisticsTraining,
       xenopsychology: sapiensEligible && !!fundamentalAbilities.xenopsychology,
       radio: sapiensEligible && !!fundamentalAbilities.radio,
-      // The research state alone. `IF FANTASTIC(U)` (`UnitCalcPre.CAS:1040`) is the calculated
+      // The research state alone. `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`) is the calculated
       // record at region `b`, so it is the step's own `when` and not a term here (F198).
       xenoveterinary: outlanderWizard && !!fundamentalAbilities.xenoveterinary,
     },

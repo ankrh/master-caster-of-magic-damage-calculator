@@ -1326,7 +1326,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0.400 },
   },
   survivalInstinctSpiritLinkAssertsFantasticWarlord: {
-    desc: 'Survival Instinct (Warlord) on a Spirit-Linked normal unit: the block tests the calculated record, `if U.Fantastic` at $005A1664 (Units.RecalculateUnits.pas), and Spirit Link asserts Fantastic in region b at UnitCalcPre.CAS:30, so the +10% To Hit applies where it stands — atk 1 at base 30% becomes 40% → 0.4 dmg, against the 0.3 the same unit deals without Spirit Link. Reading the record the recalculation leaves instead answered for the region-d clearing write at UnitCalc.CAS:1298, which is past this block, and gave 0.3.',
+    desc: 'Survival Instinct (Warlord) on a Spirit-Linked normal unit: the block tests the calculated record, `if U.Fantastic` at $005A1664 (Units.RecalculateUnits.pas), and Spirit Link asserts Fantastic in region b at UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);", so the +10% To Hit applies where it stands — atk 1 at base 30% becomes 40% → 0.4 dmg, against the 0.3 the same unit deals without Spirit Link. Reading the record the recalculation leaves instead answered for the region-d clearing write at UnitCalc.CAS!NOTICEAGE!+3 "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }", which is past this block, and gave 0.3.',
     version: V_WARLORD,
     a: { atk:1, hp:10, unitType: 'normal', abilities: { survivalInstinct: true, spiritLink: true } },
     b: { hp:10 },
@@ -1568,7 +1568,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   fortificationSeesMagitekLargeShieldWarlord: {
-    desc: "Fortification's already-shielded test is `GETSTAT(U,ALargeShield,0)` — the calculated record at `UnitCalc.CAS:1066` — and Magitek Engineering set that same flag back in `UnitCalcPre.CAS:1058`, region `b`. So a Power Engine unit inside the walls takes the Missile Immunity arm: missile 12 vs an immune defender is 0. Applying Fortification ahead of the reform grants instead answered from before the region-`b` write and gave plain Large Shield, for 12−(2+3)=7 (F200).",
+    desc: 'Fortification\'s already-shielded test is `GETSTAT(U,ALargeShield,0)` — the calculated record at `UnitCalc.CAS!NOHILLFORT!+7 "IF (GETSTAT(U,ALargeShield,0)>0) THEN { SETSTAT(U,AMissileImmunity,0,1); } ELSE { SETSTAT(U,ALargeShield,0,1); }"` — and Magitek Engineering set that same flag back in `UnitCalcPre.CAS!NOXENOVET!+9 "SETSTAT(U,ALargeShield,0,1);"`, region `b`. So a Power Engine unit inside the walls takes the Missile Immunity arm: missile 12 vs an immune defender is 0. Applying Fortification ahead of the reform grants instead answered from before the region-`b` write and gave plain Large Shield, for 12−(2+3)=7 (F200).',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:12, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
     b: { def: 2, toBlkMod: 70, hp: 20,
@@ -1578,7 +1578,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   fortificationRestoresRustedLargeShieldWarlord: {
-    desc: "Rust clears the flag with `SETSTAT(U,ALargeShield,0,0)` at `UnitCalc.CAS:490` and Fortification reads it 576 lines later at `:1074`, so the shielded unit ends the block with plain Large Shield rather than Missile Immunity: missile 12 vs def 2+3 blocked at 100% is 7. With the clear taken after the chain instead, Fortification saw the innate shield, granted Missile Immunity, and the strip then removed the shield too, for 0 (F200).",
+    desc: 'Rust clears the flag with `SETSTAT(U,ALargeShield,0,0)` at `UnitCalc.CAS!NOTCITY!+16 "SETSTAT(U,ALargeShield,0,0);"` and Fortification reads it 576 lines later at `UnitCalc.CAS!NOHILLFORT!+7 "IF (GETSTAT(U,ALargeShield,0)>0) THEN { SETSTAT(U,AMissileImmunity,0,1); } ELSE { SETSTAT(U,ALargeShield,0,1); }"`, so the shielded unit ends the block with plain Large Shield rather than Missile Immunity: missile 12 vs def 2+3 blocked at 100% is 7. With the clear taken after the chain instead, Fortification saw the innate shield, granted Missile Immunity, and the strip then removed the shield too, for 0 (F200).',
     version: V_WARLORD,
     a: { modernAttacks: { ranged: { strength:12, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp: 10 },
     b: { def: 2, toBlkMod: 70, hp: 20,

@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { openCalculator, expectNoConsoleErrors } = require('./helpers');
 
-// UnitCalc.CAS:278-300 scans the friendly side and counts an engineer/mechanic when the unit
+// UnitCalc.CAS!NOTGOBLINCOUNT!+5..+27 "FOR N=1 TO NMAXCOMBAT;" "NEXT N;" scans the friendly side and counts an engineer/mechanic when the unit
 // carries `HAMechanicalMaster` or its permanent `STypeID` is one of these eight. The scan is
 // outside the calculator's one-attacker-one-defender scope, so `mechanicalExpert` asserts the
 // presence instead of deriving it — which leaves the tooltip as the only place a user can learn
@@ -39,7 +39,7 @@ test('F196 names every unit that satisfies Mechanical Expert\'s presence gate', 
   });
   expect(missing).toEqual([]);
 
-  // The hero-ability disjunct at UnitCalc.CAS:285 and the disclosure that the scan itself is
+  // The hero-ability disjunct at UnitCalc.CAS!NOTGOBLINCOUNT!+12 "IF (GETHEAB(UOT,HAMechanicalMaster)>0)" and the disclosure that the scan itself is
   // not derived.
   expect(report.tooltip).toContain('Mechanical Master');
   expect(report.tooltip).toContain('Not modeled');

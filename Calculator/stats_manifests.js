@@ -32,10 +32,10 @@
 // write is accounted for exactly once and its rank is comparable with every other write's.
 // Every conversion sits at its own block's address: `unitcalc.c` addresses every DOS realm write
 // inside `BU_Apply_Specials`; `Units.RecalculateUnits.pas` addresses the modern ones; and the CAS
-// hooks give `b:spiritLink` at UnitCalcPre.CAS:30, the first represented write of that file,
-// `marionetteChanneler` at UnitCalcPre.CAS:94, one line ahead of the `marionette:stats` attack
-// writes, `fieryFury:race` at UnitCalcPre.CAS:834, the THEN arm of the same `IF` whose ELSE arm is
-// `b:fieryFury`, `sanctify` at UnitCalcPre.CAS:1260, and `d:spiritLink` at UnitCalc.CAS:1298,
+// hooks give `b:spiritLink` at UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);", the first represented write of that file,
+// `marionetteChanneler` at UnitCalcPre.CAS!NOVAMPIRISM!+16 "SETSTAT(U,AFantastic,0,1);", one line ahead of the `marionette:stats` attack
+// writes, `fieryFury:race` at UnitCalcPre.CAS!NOTHERO!+6 "IF (BASEFANTASTIC(U)) THEN {", the THEN arm of the same `IF` whose ELSE arm is
+// `b:fieryFury`, `sanctify` at UnitCalcPre.CAS!NODOMAINOFENCHANTER!+6 "SETSTAT(U,SRace,0,RCLife);", and `d:spiritLink` at UnitCalc.CAS!NOTICEAGE!+3 "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }",
 // between Shadow Strike and Psycho Force. Spirit Link writes Fantastic twice, asserting it in b
 // and clearing it in d, so the two entries bracket every conversion between them and every gate
 // that reads the running record there takes a Fantastic unit.
@@ -238,7 +238,7 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   // Training-time writes: every one cites `CreateUnit.CAS` and fires once, when the city built
   // the unit. `armorclad` and `alumniOfAcademy:figures` are reached by a second route as well —
   // the `OverlandEndTurn.CAS` upgrade protocol, whose site each script guards on the marker the
-  // other route sets (`EncArmorClad` at :425, `SMultiLabel` at :577). One write, two entrances,
+  // other route sets (`EncArmorClad` at `OverlandEndTurn.CAS!NOTENGINEADDED!+3 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0) THEN { GOTO"`, `SMultiLabel` at `OverlandEndTurn.CAS!NOOUTLANDERBARAY!+2 "IF (GETSTAT(U,SMultiLabel,1)>0) THEN { GOTO"`). One write, two entrances,
   // so one position: the training-time one the unit takes when it is built (F203).
   ...baseWrites('training', ['artificer', 'malnourished', 'armorclad',
     'altarOfTheMoon', 'militaryWorkshop', 'lightningBlade:breath',
@@ -249,8 +249,8 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
     'naturalSelection:coal', 'naturalSelection:iron', 'pillarOfFaith',
     'energyCannon', 'survivalInstinctToBlock']),
   // Cast-time permanent writes: one-shot, applied when the spell landed. Spirit Link's +2
-  // Resistance has two entrances too — `OLSpell.CAS:185` and the Mystic Surge random grant at
-  // `SpellMysticSurge.CAS:57` — and one position for the same reason.
+  // Resistance has two entrances too — `OLSpell.CAS!NOTAIRSUPPORT!+6 "SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` and the Mystic Surge random grant at
+  // `SpellMysticSurge.CAS~"SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` — and one position for the same reason.
   ...baseWrites('cast', ['rebuild', 'spiritLink']),
   // The per-pass permanent writes, idempotent, and then the artificial strip.
   ...baseWrites('perPass', ['destiny', 'destiny:supernatural']),
@@ -268,7 +268,7 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   'b:eternalNight:poorVision',
   'b:greatUnbinding', 'b:prayer', 'b:rally', 'b:trueLight', 'b:plague', 'b:goblinPox',
   'b:luckyStar', 'b:disheartenProphecy', 'b:wallOfFire:garrison', 'b:godsPlayDices',
-  // `UnitCalcPre.CAS:1850-1853`, the last block of region `b`, immediately before the combat
+  // `UnitCalcPre.CAS!ENDOFCOMBAT!+2..+5 ", all friendly units gain True Sight while enemy lose all gaze ability :" "}"`, the last block of region `b`, immediately before the combat
   // `HALT` — the grant the CoM2 region map records as crossing the hook boundary deliberately.
   'b:eyeOfHeaven',
   'c:destiny',
@@ -288,10 +288,10 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   'c:breakthrough:combatSummoned', 'c:warpReality', 'c:blackPrayer', 'c:darkness', 'c:guardian',
   'c:vertigo', 'c:weakness', 'c:mindStorm', 'c:warpAttack', 'c:warpDefense', 'c:warpResist',
   'c:shatter', 'c:spellWard', 'c:tactician',
-  // `UnitCalc.CAS:62-72`, ahead of every other represented write of that file.
+  // `UnitCalc.CAS!NOTPLANEWALK!+2..+12 ", +1 poison and gain poison immunity :" "!NOVENOM!"`, ahead of every other represented write of that file.
   'd:venom',
   'd:mechanicalExpert', 'd:weakness',
-  // `UnitCalc.CAS:350-360`, between combat Flame Blade (`:333`) and Rust (`:498`).
+  // `UnitCalc.CAS!NOANGELICGUARDIAN!+2..+12 ": on the opposite, Night Goblin gain bonus from Darkness or Eternal Night :"`, between combat Flame Blade (`UnitCalc.CAS!NOTZEAL!+8 "IF (GETCOMBATENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN {"`) and Rust (`UnitCalc.CAS!NOTCITY!+11 "IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO"`).
   'd:trueSight', 'd:flameBlade', 'd:nightGoblinsNightVision', 'd:rust', 'd:hurricane',
   'd:favoredTerrain', 'd:fortification', 'd:colossalStrength', 'd:vampirism:transfer',
   'd:shadowStrike:thrown',

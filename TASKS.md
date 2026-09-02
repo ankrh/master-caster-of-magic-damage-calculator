@@ -10,83 +10,77 @@ subtask appears here before any subtask that depends on it.
 
 | # | Subtask | Next outcome |
 |---|---|---|
-| 1 | **F227.3** | `UnitCalcPre.CAS`'s 159 citations take label anchors. |
-| 2 | **F227.4** | `UnitCalc.CAS`'s 126 citations take label anchors. |
-| 3 | **F227.5** | `CreateUnit.CAS`'s 76 citations take label anchors. |
-| 4 | **F227.6** | The remaining 72 citations across the seven smaller scripts take label anchors, and the audit runs clean. |
-| 5 | **F224.2b** | Spell Ward and Node Aura split per arm: the Chaos and Death arms take the membership reader, the Nature, Life and Sorcery arms keep their scalar `U.race` compare. |
-| 6 | **F224.2c** | Eternal Night's enemy-Resistance arm and Darkness's Death arm take the membership reader in their `com2_*` half, leaving the CoM 1 half scalar. |
-| 7 | **F226.1** | Create Undead becomes a modelled, version-scoped flag with its own immunity gate. |
-| 8 | **F226.2** | Create Undead routes the damage it colours into the undead bucket, in both engine families. Needs F226.1. |
-| 9 | **F233** | The post-combat composition states a normalisation rule for overkill cells, where uncapped riders sum past the capped published total. |
-| 10 | **F229** | Exorcise's created-undead penalty loses the `fantastic_death` term no version's block tests. |
-| 11 | **F230** | Supreme Light stops testing the compact type token, so a Life-race hero passes the gate the binary passes it on. |
-| 12 | **F231** | `unit.raceNoHeal` gains a producer or goes, and Raise Dead stops healing naturally. |
-| 13 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
-| 14 | **F234** | The DOS Warp Reality exemption sheds the Fantastic term its block does not test, keeping a scalar race compare. |
-| 15 | **F235** | Whether Warlord Vampirism and Revenant set `EncUndead` for the classifier and the Eternal Night / True Light arms is settled against the scripts. |
-| 16 | **F236.1** | CoM 1's Holy-Arms/Heavenly-Light eligibility gate is stated as a rule, with its version scope and its custom-unit discriminator settled. |
-| 17 | **F236.2** | The gate is implemented so an ineligible unit cannot carry the granted effect. Needs F236.1. |
-| 18 | **F210** | The `base` phase splits into the four SPEC names. |
-| 19 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
-| 20 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
-| 21 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
-| 22 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
-| 23 | **F207** | The last published-value suppression that gates nothing goes. |
-| 24 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
-| 25 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
-| 26 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 27 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 28 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 29 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
-| 30 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
-| 31 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
-| 32 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
-| 33 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 34 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 35 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 36 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 37 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
-| 38 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
-| 39 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
-| 40 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
-| 41 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
-| 42 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
-| 43 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
-| 44 | **F153** | The modern gaze rider exclusion gets one home. |
-| 45 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
-| 46 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
-| 47 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
-| 48 | **F151** | A version's default-state map is built without resetting the live page. |
-| 49 | **F128** | The `Other` unit category no roster can fill goes. |
-| 50 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
-| 51 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
-| 52 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
-| 53 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
-| 54 | **F41.1** | The DOS eight-threshold hero ladders. |
-| 55 | **F41.2** | The DOS template-ability formulas. |
-| 56 | **F41.3** | The modern nine-step hero table. |
-| 57 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
-| 58 | **M3** | The DOS Destruction path. Needs F41. |
-| 59 | **F228** | Who loads `Casapi.dll`, and whether its unchecked `UnitBuildingRequirement` index is a modding hazard worth recording. |
-| 60 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
-| 61 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
-| 62 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
-| 63 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
-| 64 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
-| 65 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
-| 66 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
-| 67 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
-| 68 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
-| 69 | **H1** | Contact Seravy about the Blur bug. |
-| 70 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
+| 1 | **F226.1** | Create Undead becomes a modelled, version-scoped flag with its own immunity gate. |
+| 2 | **F226.2** | Create Undead routes the damage it colours into the undead bucket, in both engine families. Needs F226.1. |
+| 3 | **F233** | The post-combat composition states a normalisation rule for overkill cells, where uncapped riders sum past the capped published total. |
+| 4 | **F229** | Exorcise's created-undead penalty loses the `fantastic_death` term no version's block tests. |
+| 5 | **F230** | Supreme Light stops testing the compact type token, so a Life-race hero passes the gate the binary passes it on. |
+| 6 | **F231** | `unit.raceNoHeal` gains a producer or goes, and Raise Dead stops healing naturally. |
+| 7 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
+| 8 | **F234** | The DOS Warp Reality exemption sheds the Fantastic term its block does not test, keeping a scalar race compare. |
+| 9 | **F235** | Whether Warlord Vampirism and Revenant set `EncUndead` for the classifier and the Eternal Night / True Light arms is settled against the scripts. |
+| 10 | **F236.1** | CoM 1's Holy-Arms/Heavenly-Light eligibility gate is stated as a rule, with its version scope and its custom-unit discriminator settled. |
+| 11 | **F236.2** | The gate is implemented so an ineligible unit cannot carry the granted effect. Needs F236.1. |
+| 12 | **F210** | The `base` phase splits into the four SPEC names. |
+| 13 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
+| 14 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
+| 15 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
+| 16 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
+| 17 | **F207** | The last published-value suppression that gates nothing goes. |
+| 18 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
+| 19 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
+| 20 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 21 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 22 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 23 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
+| 24 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
+| 25 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
+| 26 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
+| 27 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 28 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 29 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 30 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 31 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
+| 32 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
+| 33 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
+| 34 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
+| 35 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
+| 36 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
+| 37 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
+| 38 | **F153** | The modern gaze rider exclusion gets one home. |
+| 39 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
+| 40 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
+| 41 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
+| 42 | **F151** | A version's default-state map is built without resetting the live page. |
+| 43 | **F128** | The `Other` unit category no roster can fill goes. |
+| 44 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
+| 45 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
+| 46 | **F237** | The CAS audit attributes and gates a `/N` after a locator and a bare `:N` under a `@span` line or bare mention, keeping non-script numbers reported and ungated. |
+| 47 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
+| 48 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
+| 49 | **F238** | The Warlord source-order tables in `CoM2 binary - unit recalculation.md` are re-derived against 1.5.12.9 with label-bounded rows. |
+| 50 | **F41.1** | The DOS eight-threshold hero ladders. |
+| 51 | **F41.2** | The DOS template-ability formulas. |
+| 52 | **F41.3** | The modern nine-step hero table. |
+| 53 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
+| 54 | **M3** | The DOS Destruction path. Needs F41. |
+| 55 | **F228** | Who loads `Casapi.dll`, and whether its unchecked `UnitBuildingRequirement` index is a modding hazard worth recording. |
+| 56 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
+| 57 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
+| 58 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
+| 59 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
+| 60 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
+| 61 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
+| 62 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
+| 63 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
+| 64 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
+| 65 | **H1** | Contact Seravy about the Blur bug. |
+| 66 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
 
-Rows 1–4 are F227, first because every later row that reads a Warlord script reads a citation that
-cannot currently be resolved. Rows 5–6 finish the F224 realm-predicate collapse, rows 7–8 are the
-Create Undead damage-bucket item, and row 9 the composition normalisation decision F225.1 surfaced.
-Rows 10–15 are the race and realm findings the F224 run turned up, none of which F224.2 fixes. Row 16
-onward is the standalone and structural backlog. The deprecated backlog ordered the phase refactor
-first; this does not, because F210 blocks only F209 and F200.
+Rows 1–2 are the Create Undead damage-bucket item, and row 3 the composition normalisation decision
+F225.1 surfaced. Rows 4–9 are the race and realm findings the F224 run turned up, filed once the
+collapse itself was complete. Row 10 onward is the standalone and structural backlog. The deprecated backlog ordered the phase refactor first; this does not, because
+F210 blocks only F209 and F200.
 
 F211–F216 were filed 2026-08-30 from the T2.11–T2.23 run, which found them while reading fixtures
 against the code. Each is verified against source and none makes a test red.
@@ -314,70 +308,6 @@ out of the same gate.
 
 Subtasks: **F236.1** state the rule, its version scope and the custom-unit discriminator;
 **F236.2** implement it.
-
-### F224 — One binary predicate, three calculator spellings, and a recovery clause modelled nowhere
-
-Filed 2026-09-01 on the user's instruction, out of the F195 run. Q31 answered what
-`IsChaosUnit` computes; this is the follow-through, and two in-code comments still defer to Q31 as
-though it were open ([stats.js:352](Calculator/stats.js:352),
-[stats.js:1151](Calculator/stats.js:1151)).
-
-`IsChaosUnit` is `(race = RCChaos) or (ChaosChannel(u) and EncUndead)` — a realm test plus a
-recovery clause for the case where a later conversion overwrote the `RCChaos` the Chaos Channels
-block wrote. `IsDeathUnit` is its `RCDeath` twin. `race` is one scalar and carries only the last
-conversion; the flags still carry both facts, and the conjunction recovers the destroyed one.
-
-Three consumers of that one predicate disagree today:
-
-| Consumer | Calculator spelling | Site |
-|---|---|---|
-| Chaos Surge | `unitRealmAt(u) === 'chaos'` | [stats.js:604](Calculator/stats.js:604) |
-| Blazing Eyes / Chaos Embrace | `unitTypeAt(u) === 'fantastic_chaos'` | [stats.js:354](Calculator/stats.js:354) |
-| Warp Reality's exemption | `unitIsChaos`, the same compact token | [stats.js:1156](Calculator/stats.js:1156) |
-
-None of the three carries the recovery clause, and two of them additionally require Fantastic,
-which is the F195 defect in a second place: `IsChaosUnit` tests neither. Spell Ward's Death and
-Chaos arms go through the helpers too and have the same gap — F195 removed the Fantastic term
-there and deliberately left this. Reproduce: `ccDefense` + `undead` + `spellWard:'chaos'` is inert
-where the block fires; the Death ward on the same card fires.
-
-**Not mechanical, and the scope is not yet known.** Which consumers must honour the recovery
-clause is a per-block reading, because the arms are not uniform even inside one block: Spell Ward's
-Nature, Life and Sorcery arms compare `U.race` directly while its Death and Chaos arms call the
-helpers ($005A5D36..$005A607F), and Node Aura's block dispatches on `race = 16`/`17` and
-`IsChaosUnit` alike ($005A25F0). The DOS engines have no helper at all — Warp Reality's exemption
-is `bu->race != rt_Chaos` at 131:0x9077A — so this is a modern-only correction and the DOS
-spellings must be left alone.
-
-An exact fix needs realm membership to be a **set** rather than the scalar `unitRealmAt` returns,
-which is why this is filed rather than folded into F195.
-
-F224.1 is done: `Reference docs/Modern realm test inventory.md` is the ruling table, and the two
-stale Q31 deferrals are cleared. It found **seven** calculator consumers needing the helper form
-across eight binary call sites, past the threshold of four F224 set, so F224.2 was re-split three
-ways on 2026-09-01. Every other modern realm test, binary and `.CAS` alike, is a scalar `U.race`
-compare and keeps it.
-
-F224.2a is done. `Calculator/stats.js` carries `realmMembershipAt` / `unitInRealmAt` beside
-`unitRealmAt`: the scalar realm, plus `chaos` **and** `death` when `ChaosChannel(u) and EncUndead`
-holds, which is the arm both helpers share verbatim. Chaos Surge, Blazing Eyes / Chaos Embrace and
-Warp Reality's modern exemption route onto it, the latter two shedding the Fantastic term.
-`unitInRealmAt` throws on any realm but those two, so a scalar-form consumer cannot be routed
-through it. Blood Lust turned out to be a second `EncUndead` producer at the classifier's position
-(`$0059F600`), base CoM2 only.
-
-**F224.2b — the two mixed-arm blocks.** Needs F224.2a. Spell Ward and Node Aura each call the
-helper on some arms and compare `U.race` on others, so one calculator predicate must split per arm:
-Spell Ward's Death (`$005A5E0F`) and Chaos (`$005A5E51`) arms and Node Aura's Chaos arm
-(`$005A272B`) take the reader, while Spell Ward's Nature, Life and Sorcery arms and Node Aura's
-Nature and Sorcery arms keep the scalar compare. Note the inventory's open point before starting:
-Life *is* overwritten by ladder block 5 yet Spell Ward still compares `race` directly
-(`Q31.evidence.md:171-172`), so "realm the ladder overwrites ⇒ helper form" does not generalise.
-
-**F224.2c — the two Death-side reads.** Needs F224.2a. Eternal Night's enemy-Resistance arm
-(`$005A22D9`) and Darkness's Death arm (`$005A45EF`), plus the CoM2 Eternal Night doubling, take
-the reader in their `com2_*` half only; CoM 1's block is a `bu->race` compare and its half stays
-scalar, as does Darkness's Life arm.
 
 ### F226 — Create Undead is omitted, and it colours the damage it deals
 
@@ -708,71 +638,6 @@ one, is a native program linking the DLL directly.
 No calculator consequence — `savemodifier` stays out of the CoM2 card field set. The value is a
 note for mod authors, so the outcome is a recorded finding, not a code change.
 
-### F227 — CAS citations are line numbers into files that get replaced
-
-*Category: documentation.*
-
-433 citations across `Reference docs/` and `Calculator/` point into the Warlord scripts by line
-number: 159 into `UnitCalcPre.CAS`, 126 into `UnitCalc.CAS`, 76 into `CreateUnit.CAS`, 72 across
-`OLSpell`, `OverlandEndTurn`, `MASTER`, `DisAbil`, `COSpell`, `CombatEndTurn` and
-`SpellMysticSurge`. The tree now ships `Warlord 1.5.12.9` and has dropped the `1.5.12.6.2` and
-`1.5.12.7` sets those citations were written against. `UnitCalcPre.CAS` went 1904 → 1915 lines and
-`UnitCalc.CAS` 1667 → 1659, so the drift is non-uniform and every citation into those two is
-suspect until re-resolved.
-
-A binary address is anchored to an immutable artifact identified by md5, so it stays checkable
-forever. A CAS line number is the one cited source that gets replaced wholesale on every mod
-release, and it is the one with no verification:
-`tools/comment_citation_census.js:49-64` accepts a `.CAS` mention as a prose pointer, which
-confirms a pointer exists and never that a line resolves.
-
-CAS supplies a better anchor in the file format. `!LABEL!` definitions are jump targets, so they
-are semantically load-bearing and survive insertions around them: 100 in `UnitCalcPre.CAS`, 95 in
-`UnitCalc.CAS`, 21 in `CreateUnit.CAS`. `:comment:` section headers are the secondary landmark.
-
-Conversion is mechanically feasible because the dropped script versions are recoverable from git
-at their original lengths, so a stale citation can be resolved against the version it was written
-for and re-anchored to the label enclosing that line.
-
-The audit suite lands as `scaffolding`; promoting it requires a proposal. It is not the same check
-as `provenance_audit.js`, which reads calculator comments and not the script set.
-
-**Rejected alternative.** Re-pinning the docs to 1.5.12.9 line numbers touches the same 433
-citations, so it costs nearly as much and leaves the failure mode intact for the next release.
-
-F227.1 and F227.2 are done. The grammar is `Reference docs/CAS citation grammar.md`, the audit is
-`tools/cas_citation_audit.js` (registered in `TESTS.md` as `cas-citations`, scaffolding), and the
-conversion map is `tools/cas_citation_map.json`, rebuilt in ~30s by
-`tools/build_cas_citation_map.js`. The audit passes today: a line citation is *deprecated* under a
-per-script ceiling, and `--strict` zeroes every ceiling as F227.6's clean-state exit. `TASKS.md` and
-`JOURNAL.md` are counted but not gated, since this body quotes stale citations as its evidence.
-
-**The population is 386, not the 433 this item was filed with** — the rest are `@span` citations or
-out-of-scope, and three were converted incidentally during the F224.2a run. Re-measure rather than
-reusing any figure written here. Of the 386: 382 clean, 1 ambiguous, 3 unconvertible. Attribution is
-per occurrence and 247 of the 386 depend on it, so each entry records what all four shipped sets
-would read at those lines.
-
-**F227.3** `UnitCalcPre.CAS`; **F227.4** `UnitCalc.CAS`; **F227.5** `CreateUnit.CAS`; **F227.6** the
-seven smaller scripts, ending with a clean `--strict` audit. Each converts its script's citations
-from the map, then lowers that script's `DEPRECATED_BUDGET` row to match.
-
-**Four occurrences the map cannot convert mechanically.** Each needs a semantic retarget — the cited
-line does not name what the citing text claims — so they are readings, not mappings:
-
-- `Calculator/stats.js:1507` -> `UnitCalcPre.CAS:87`, blank in **every** shipped set; the
-  `SETSTAT(U,SRanged,0,…)` it quotes is at shipped `:97`. (F227.3)
-- `Calculator/stats_identity.js:341` -> `CreateUnit.CAS:414-419`, range starts on a blank line; the
-  Sancta Basilica material is shipped `:417` onward. (F227.5)
-- `Calculator/presets_protections_and_weapons.js:560` -> `UnitCalc.CAS:550,569-571`, **one comma list
-  carrying line numbers from two releases**: `550` is a 1.5.12.9 number, `569-571` are 1.5.12.7's
-  (shipped 561-563). Someone re-pinned the first and not the rest. (F227.4)
-- `Calculator/presets_buildings_and_machines.js:1195` -> `DisAbil.CAS:840`, the one ambiguous case;
-  its own prose decides it for 1.5.12.7, which is what the map emits. (F227.6)
-
-Delete `tools/cas_citation_map.json` when F227.6 lands, keeping the builder: it regenerates in 30s,
-and a stale copy on disk is what turned the audit red during the F227.2 run.
-
 ### F182 — Drop or fix `derivation_equivalence.js`'s dead `chaos-channels` env
 
 The env is `{ chaosChannels: 'demonWings' }` but `input.chaosChannels` is read nowhere in
@@ -839,6 +704,27 @@ places that will need re-reading.
 Subtasks: **F213.1** the seven race terms, which also opens the evidence entry; **F213.2** the eight
 hero terms into the same entry. Needs F213.1.
 
+### F237 — The CAS audit cannot see two shapes of stale citation
+
+Category: **other** (tooling). Filed 2026-09-02 on the user's approval, out of the F227 run.
+
+`tools/cas_citation_audit.js` gates every citation it can attribute, and F227.3–.6 found two shapes
+it cannot:
+
+- **A locator followed by `/N`.** `UnitCalcPre.CAS:456/661` converted its `:456` and left `/661`
+  dangling; neither the `:N` continuation heuristic nor the locator-tail check saw it. Found only by
+  review (F227.3).
+- **A bare `:N` or `:N-M`, or prose "line N", whose antecedent is not a locator.** The heuristic sets
+  an antecedent only on a `File.CAS:N`, `!` or `~` form, so a continuation under a
+  `File.CAS@span:…` provenance line, or after a bare `File.CAS` mention, is attributed to nothing.
+  28 `CreateUnit.CAS` continuations hid that way, 17 found only by review (F227.5); F227.6's wide
+  scan found more across the other scripts.
+
+Extend the audit so both shapes are attributed and gated: reject `/N` after any locator, and take a
+`@span` line or a bare `.CAS` mention in the same paragraph as a continuation antecedent. Keep the
+census of non-script `:N`s (Pascal, `.c`, `.INI`, table columns) reported and ungated, as the wide
+scan classified them, or the new rule will fire on every one. Registry entry stays `scaffolding`.
+
 ## Roster and documents
 
 ### F115 — Name the 44 Warlord spell ids the roster renders as `Spell#N`
@@ -864,6 +750,25 @@ is dead with it. Deciding which of those four fields the one column shows is the
 `Unit rosters/CoM2 unit roster.md` regenerates.
 
 Check whether the untracked `tools/generate_com2_warlord_unit_comparison.py` is a fourth copy.
+
+### F238 — The Warlord source-order tables are pinned to a script set the tree no longer ships
+
+Category: **documentation**. Filed 2026-09-02 on the user's approval, out of F227.6.
+
+`Reference docs/Caster binary/CoM2 binary - unit recalculation.md` §"Warlord regions b and d:
+source order" carries two `| Lines | Ordered block |` tables (46 rows) and six prose bullets whose
+line numbers are 1.5.12.7's, pinned by the section's own md5 table. F227.6 left them whole and
+corrected the preamble to say the release is no longer shipped and is recoverable at `2c0fd48^`.
+
+They are not stale against what they cite, which is why F227 did not convert them: the section
+states its referent. But they are the last script line numbers in the tree, and a reader who wants
+the order in 1.5.12.9 has to re-derive every row against the alignment tables the F227 journal
+entries record (`UnitCalcPre.CAS` shift 0 through 1084, +11 from 1119; `UnitCalc.CAS` +2 from 49, −8
+from 345).
+
+Re-derive the section against `Warlord 1.5.12.9` with each row bounded by the enclosing `!LABEL!`
+rather than a line number, so the next script swap moves nothing. This is a reading of ~50 blocks,
+not a citation swap.
 
 ## Heroes
 

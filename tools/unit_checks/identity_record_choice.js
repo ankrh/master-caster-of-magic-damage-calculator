@@ -219,7 +219,7 @@ const LANDED_CORRECTIONS = [
     record: 'permanent', preset: 'radioSkipsApotheosisPermanentFantasticWarlord' },
   { id: 'F198', at: 'b:battleArmor', record: 'permanent',
     preset: 'battleArmorSkipsApotheosisPermanentFantasticWarlord' },
-  { id: 'F198', at: 'the Outlander-soldier gate at UnitCalc.CAS:1405-1407', record: 'permanent',
+  { id: 'F198', at: 'the Outlander-soldier gate at UnitCalc.CAS!COMBATOVERRIDE!+5..+7 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "NOTOUTLANDERSOLDIER"', record: 'permanent',
     preset: 'energyWeaponrySkipsApotheosisPermanentFantasticWarlord' },
   { id: 'F198', at: "Military Drilling's permanent Discipline grant", record: 'permanent',
     preset: 'militaryDrillingSkipsApotheosisPermanentFantasticWarlord' },

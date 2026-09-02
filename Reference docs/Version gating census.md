@@ -329,7 +329,7 @@ Notes on the five:
 - `destroyMechanical` needed two hidden keys at once, so the sweep's one-key-at-a-time rule could
   not see it by design. It never got a scope entry: Q29 found that the modelled melee rider does
   not exist in any engine — the real Warlord mechanic is the **Sabotage** combat spell
-  (`COSpell.CAS:832-838`), which is a targeted cast, not an attack rider, and which
+  (`COSpell.CAS!NOTFORDISRUPT!+6..+12 "IF (SP<>SDisruption) THEN { GOTO"`), which is a targeted cast, not an attack rider, and which
   `spells.ini[340]` ships `Disabled=True`. **F157 deleted the effect**, closing the leak in all
   four versions by removal (`HISTORY.md`, F157).
 - `spiritLink` on the **defender** is the ninth, and the second reading of a key already in this

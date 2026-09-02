@@ -335,7 +335,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
   const rustTrace = report.rust.statTrace.filter(event => event.id === 'rust');
   expect(rustTrace).toHaveLength(1);
   // `SETSTAT(U,SAttack,…)` and `SETSTAT(U,SThrown,0,0)` are two writes of one Rust block
-  // (`UnitCalc.CAS:493-503`); the type clear beside the emptied Thrown strength is the model's
+  // (`UnitCalc.CAS!NOTCITY!+11..+21 "IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO"`); the type clear beside the emptied Thrown strength is the model's
   // stand-in for Warlord storing no Thrown type. One trace entry carries all of it — the modern
   // record's Thrown channel fields as well as the card's shared projection of them.
   expect(Object.keys(rustTrace[0].changes))
@@ -419,8 +419,8 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   const d = phaseIds(report.chain, 'd');
   expect(b.filter(id => id === 'marionetteChanneler')).toHaveLength(1);
   expect(b.indexOf('marionetteChanneler')).toBe(b.indexOf('marionette:stats') - 1);
-  // UnitCalcPre.CAS writes Fantastic for Spirit Link at :30 and for a Channeler's Marionette at
-  // :94, so Spirit Link heads the region.
+  // UnitCalcPre.CAS writes Fantastic for Spirit Link at UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);" and for a Channeler's Marionette at
+  // UnitCalcPre.CAS!NOVAMPIRISM!+16 "SETSTAT(U,AFantastic,0,1);", so Spirit Link heads the region.
   expect(b.filter(id => id === 'spiritLink')).toHaveLength(1);
   expect(b.indexOf('spiritLink')).toBe(0);
   expect(b.indexOf('spiritLink')).toBeLessThan(b.indexOf('marionetteChanneler'));
@@ -448,7 +448,7 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   expect(report.channelerLedgerIds).toContain('marionetteChanneler');
 
   // Both of Spirit Link's writes reach the trace, in the region order the two CAS files give
-  // them: assert at UnitCalcPre.CAS:30, clear at UnitCalc.CAS:1306.
+  // them: assert at UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);", clear at UnitCalc.CAS!NOTICEAGE!+3 "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }".
   expect(report.spiritLinkNormalEvents).toEqual([
     { phase: 'b', changes: { fantastic: { from: false, to: true } } },
     { phase: 'd', changes: { fantastic: { from: true, to: false } } },
@@ -459,7 +459,7 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   expect(report.spiritLinkEvent.sourceOrder)
     .toBe(report.chain.findIndex(entry => entry.key === 'd:spiritLink'));
   expect(report.spiritLinkEvent.changes.fantastic).toEqual({ from: true, to: false });
-  // The clearing write executes where UnitCalc.CAS:1306 puts it: after every region-d write
+  // The clearing write executes where UnitCalc.CAS!NOTICEAGE!+3 "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }" puts it: after every region-d write
   // the chain ranks ahead of it, and before every one it ranks behind. The divergence this
   // used to record — the pre-pass running it ahead of all of them — is gone with the pre-pass.
   const spiritLinkRank = report.chain.findIndex(entry => entry.key === 'd:spiritLink');

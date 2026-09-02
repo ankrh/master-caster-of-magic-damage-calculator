@@ -32,7 +32,7 @@ set; nothing outside them can need the recovery clause.
 **Script check.** No Warlord `.CAS` hook re-implements or overwrites any of the eight blocks:
 `UnitCalcPre.CAS` and `UnitCalc.CAS` contain no Chaos Surge, Blazing Eyes, Node Aura, Warp Reality,
 Spell Ward or Darkness-Death block. Warlord's realm-reading blocks are separate additions
-(`UnitCalcPre.CAS:1162-1192,1348-1360`, `UnitCalc.CAS:350-361`) and all spell the test
+(`UnitCalcPre.CAS!NOTUPHILL!+7..+37 ": Effect of Fiery Fury conjunct with Darkness :" "!NOFIERYDARKNESS!", UnitCalcPre.CAS!NOBLOODANDIRON!+2..+14 ": now Eternal night implement poor vision curse directly on non-death creature and would be removed with when nolonger have eternal night :" "!NOETERNALNIGHT!"`, `UnitCalc.CAS!NOANGELICGUARDIAN!+2..+13 ": on the opposite, Night Goblin gain bonus from Darkness or Eternal Night :" "!NOTNIGHTGOBLIN!"`) and all spell the test
 `GetStat(U,SRace,0)` or `,1`. So the eight rulings below hold for base CoM2 and Warlord alike.
 
 ## Helper form — must carry `ChaosChannel(u) and EncUndead`
@@ -68,9 +68,9 @@ scalar.
 | S5 | Spell Ward, Life arm | `Calculator/stats.js:586-588` | `cmp race,$13` `$005A5DCC` | `U.race = 19` |
 | S6 | Spell Ward, Sorcery arm | `Calculator/stats.js:586-588` | `cmp race,$11` `$005A5EB0` | `U.race = 17` |
 | S7 | Supreme Light | `Calculator/combat_abilities.js:301-305` (modern branch), called at `Calculator/stats.js:1788-1790` | `$005A6FDF..$005A744B` (`Units.RecalculateUnits.pas:2623`) | `U.race = RCLife` |
-| S8 | True Light (Warlord) | `Calculator/stats.js:713-717` | `UnitCalcPre.CAS:1522,1534` | `GetStat(U,SRace,0)`, plus its own explicit `EncUndead` term |
-| S9 | Eternal Night "Poor Vision" (Warlord) | `Calculator/stats.js:680-682` | `UnitCalcPre.CAS:1353-1355` | `GetStat(U,SRace,0)<>RCDeath`, plus its own explicit `EncUndead` term |
-| S10 | Angelic Guardians (Warlord) | `Calculator/combat_effects.js:332-333` | `UnitCalc.CAS:341-345` | `GETSTAT(U,SRace,0)=RCLife` |
+| S8 | True Light (Warlord) | `Calculator/stats.js:713-717` | `UnitCalcPre.CAS!NOUPLIFTSPEECH!+7 "IF ( (GetStat(U,SRace,0)=RCDeath)", UnitCalcPre.CAS!NOUPLIFTSPEECH!+19 "IF (GetStat(U,SRace,0)=RCLife)"` | `GetStat(U,SRace,0)`, plus its own explicit `EncUndead` term |
+| S9 | Eternal Night "Poor Vision" (Warlord) | `Calculator/stats.js:680-682` | `UnitCalcPre.CAS!NOBLOODANDIRON!+7..+9 "%AND (GetStat(U,SRace,0)<>RCDeath)" "THEN {"` | `GetStat(U,SRace,0)<>RCDeath`, plus its own explicit `EncUndead` term |
+| S10 | Angelic Guardians (Warlord) | `Calculator/combat_effects.js:332-333` | `UnitCalc.CAS!NOTZEAL!+16..+20 "IF ( (GETSTAT(U,SRace,0)=RCLife) %OR (BASEFANTASTIC(U)=0) ) THEN {" "SETSTAT(U,AFExorcise,0,(GetStat(U,AFExorcise,0,1))-( 2 + (GETSTAT(U,SRace,0)=RCLife) ),1);"` | `GETSTAT(U,SRace,0)=RCLife` |
 | S11 | `CanHealNaturally`'s realm arm | `Calculator/engine.js:336,355` (`state.raceNoHeal`) | `$005ECB8B..$005ECBB9` (`Combat.CallClosureHelpers.pas:112`) | `Units[u].race = RCNoHeal` |
 
 S8 and S9 are the instructive pair: where the script author wanted the flag as well as the realm,
@@ -105,14 +105,14 @@ repeated.
    `c:raiseDead` step writes race `No Heal` (`Calculator/stats_identity.js:398-401`) and which no
    `noHealing` term names.
 3. **Unmodelled modern realm tests.** Warlord's realm-mastery bonuses
-   (`UnitCalcPre.CAS:1590-1594`, `UnitCalc.CAS:374-426`), Ice Age (`UnitCalc.CAS:1286`), the
-   Fiery-Fury-with-Darkness block (`UnitCalcPre.CAS:1162-1191`, which reads `GetStat(U,SRace,1)`,
-   the **base** record) and the late Sanctify race re-write (`UnitCalc.CAS:93-98`, a region-`d`
+   (`UnitCalcPre.CAS!NOGOBLINPOX!+5..+9 "IF ( (SPELLSTATE(W,SGaiaMastery)=2) %AND (GETSTAT(U,SRace,0)=RCNature) )" "%OR ( (SPELLSTATE(W,SDeathMastery)=2) %AND ( (GETSTAT(U,SRace,0)=RCDeath) %OR (GetEnchantmentFlag(U,EncUndead,0)>0) %OR (GetEnchantmentFlag(U,EncRevenant,0)>0) %OR (GetEnchantmentFlag(U,EncVampirism,0)>0) ) )"`, `UnitCalc.CAS!NOTMECHANICWITHHERO!+2..+54 "IF (GetStat(U,SRace,0)<RCArcane) %OR (GetStat(U,SRace,0)>RCDeath) THEN { GOTO" "IF (GetStat(U,SRace,0)<>RCDeath) THEN { GOTO"`), Ice Age (`UnitCalc.CAS!NOTHEAVY!+4 "IF (GetStat(U,SRace,0)=RCNature) %AND ( HASGLOBAL(W,GEIceAge) > 0 ) THEN {"`), the
+   Fiery-Fury-with-Darkness block (`UnitCalcPre.CAS!NOTUPHILL!+7..+36 ": Effect of Fiery Fury conjunct with Darkness :"`, which reads `GetStat(U,SRace,1)`,
+   the **base** record) and the late Sanctify race re-write (`UnitCalc.CAS!NOOLFOCUSMAGIC!+2..+7 ": Modify Sanctify :" "IF (GETSTAT(U,SCustomAttribute,1)<>2) THEN { GOTO"`, a region-`d`
    `SETSTAT(U,SRace,0,RCLife)` behind an idempotent race compare) have no calculator consumer.
    Listed so a later sweep does not re-discover them as gaps in this table. The Sanctify one is the
    consequential one: in Warlord it would undo any region-`c` conversion on a Sanctified unit, and
    the calculator models only the region-`b` `b:sanctify` write.
-4. **`UnitCalcPre.CAS:1593` writes its own Chaos-membership clause, and it is a different
+4. **`UnitCalcPre.CAS!NOGOBLINPOX!+8 "%OR ( (SPELLSTATE(W,SChaosMastery)=2) %AND ( (GETSTAT(U,SRace,0)=RCChaos) %OR (GetEnchantmentFlag(U,EncCCBreath,0)>0) %OR (GetEnchantmentFlag(U,EncCCFlight,0)>0) %OR (GetEnchantmentFlag(U,EncCCArmor,0)>0) %OR ( (GetEnchantmentFlag(U,EncFieryFury,0)>0) %AND FANTASTIC(U) ) ) )"` writes its own Chaos-membership clause, and it is a different
    predicate** from `IsChaosUnit`: `RCChaos %OR EncCCBreath %OR EncCCFlight %OR EncCCArmor %OR
    (EncFieryFury %AND FANTASTIC)` — a disjunction with no `EncUndead` conjunct. Do not reuse the
    binary helper's shape for it if the Mastery block is ever modelled.
@@ -133,3 +133,9 @@ binary's `IsChaosUnit` is True through `ChaosChannel and EncUndead`.
 
 Same unit without `undead` (race stays Chaos): all three fire. The reproduction named in F224
 holds, and it is not confined to Spell Ward.
+
+**This card does not discriminate for the Death-side reads** (H3, H6, and Spell Ward's Death arm H7):
+`c:undead` has already written Death before those blocks fire, so the scalar already says `death`
+and the recovery arm changes nothing. The two differ only after ladder block 8's `RCNoHeal`
+overwrite (`$005A0472`), so the discriminating card there is `ccDefense` + `undead` + `raiseDead`
+(or `mysticSurge`). Found independently by F224.2b and F224.2c.
