@@ -87,7 +87,7 @@ const CROSS_BOUNDARY_READS = [
   },
   {
     token: 'finishedImmunities',
-    why: 'The immunity set the recalculation leaves. `base:immunityCurseGating` is an artificial '
+    why: 'The immunity set the recalculation leaves. `immunity:immunityCurseGating` is an artificial '
       + 'step — no engine removes a curse flag it already carries (`SPEC.md`, *Deliberate '
       + 'deviations*) — so no source fixes its position relative to a grant that writes one of '
       + 'these four immunities, and taking the finished set is what makes its answer independent '
@@ -160,9 +160,9 @@ function runCrossBoundaryIdentityReadChecks() {
 // `hero` (the block asks a hero question, which is not an identity read at all). `preset` is the
 // regression that holds it.
 const LANDED_CORRECTIONS = [
-  { id: 'F167', at: 'base:altarOfTheMoon and the four other Warlord building gates',
+  { id: 'F167', at: 'training:altarOfTheMoon and the four other Warlord building gates',
     record: 'permanent', preset: 'altarOfTheMoonNonGnollWarlord' },
-  { id: 'F169', at: 'base:survivalInstinctToBlock', record: 'permanent',
+  { id: 'F169', at: 'training:survivalInstinctToBlock', record: 'permanent',
     preset: 'survivalInstinctToBlockFantasticUnaffectedWarlord' },
   { id: 'F170', at: 'b:nausea', record: 'positional',
     preset: 'nauseaReadsIdentityAtItsOwnBlockWarlord' },
@@ -199,7 +199,7 @@ const LANDED_CORRECTIONS = [
     preset: 'eternalNightNightGoblinsExemptWarlord' },
   { id: 'F187', at: 'c:tactician', record: 'hero',
     preset: 'tacticianHeroCcDefenseWarpAttackWarlord' },
-  { id: 'F187', at: 'base:rebuild', record: 'hero',
+  { id: 'F187', at: 'cast:rebuild', record: 'hero',
     preset: 'rebuildHeroCcDefenseLionheartWarlord' },
   { id: 'F188', at: "Shatter's target class", record: 'finished',
     preset: 'magicImmunityGatesShatter' },

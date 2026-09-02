@@ -174,7 +174,7 @@ function legacyUnitTypeFromLiveIdentity(identity) {
   return 'fantastic_' + (realm || 'arcane');   // Fantastic + a mundane race: BACKLOG Q28
 }
 
-// Whether this unit is the combat-summoned Construct Catapult, which both `base:constructCatapult`
+// Whether this unit is the combat-summoned Construct Catapult, which both `template:constructCatapult`
 // and `a:constructCatapult` gate on and which `deriveUnitStats` reads separately for CoM 1's
 // weapon-quality patch. One predicate, so the conversion and the patch cannot disagree.
 function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
@@ -227,8 +227,8 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
   // Fiery Fury and Sanctify read the permanent record, not the running one: `BASEFANTASTIC(U)`
   // and `ISHERO(U)` are base-record predicates in UnitCalcPre.CAS. `BASEFANTASTIC(U)` is the base
   // unit data "before applying continuous effects such as buffs or curses"
-  // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`) — the record the `base` phase
-  // leaves, so `base:destiny`'s `B.Fantastic := True` ($0059A390) is in it, and the unit's own
+  // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`) — the record the permanent-record phases
+  // leaves, so `cast:destiny`'s `B.Fantastic := True` ($0059A390) is in it, and the unit's own
   // training-time flag is not the whole of it (F192).
   const permanentFantastic = !!identity.baseFantastic
     || destinyActiveForUnit(abilities, version);
@@ -248,34 +248,34 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // recalculation seeds its calculated record from them. The calculator derives the landed
     // steady state (`SPEC.md`, *Deliberate deviations*), so the permanent write stands before the
     // pipeline. That is what retires the separate `destinyActive` term the loadout and level
-    // gates used to carry: the record the base phase leaves is exactly what
+    // gates used to carry: the record the permanent-record phases leave is exactly what
     // `if B.Fantastic then U.level := 1` ($0059A118) and the weapon block's
     // `not B.Fantastic and not B.ishero` ($0059E2B8) read (F163). It is chained after the
-    // `CreateUnit.CAS` training-time base steps, which state the record as the unit was built.
+    // `CreateUnit.CAS` `training`-phase steps, which state the record as the unit was built.
     // Both halves share `PROVENANCE[destiny]`, cited at `c:destiny` (`stats_sequence.js`): one
     // span, $0059A35E..$0059A633, carries the permanent writes and the calculated package alike.
     // `B.attackflags.supernatural := True` at $0059A3EB is the third permanent write of that same
-    // block, and it is `base:destiny:supernatural` (`stats_sequence.js`) rather than a field of
+    // block, and it is `cast:destiny:supernatural` (`stats_sequence.js`) rather than a field of
     // this step: a conversion that wrote a third field would cost `targetingIdentity` its
     // exactness, which is the deviation *An identity conversion is its own step even where its
     // engine block also writes a stat* already records for Chaos Channels and Black Channels. The
     // two entries are chain-adjacent, so no number can depend on the split (F201).
-    statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'base',
+    statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'cast',
       writes: ['race', 'fantastic'],
       when: () => destinyActiveForUnit(abilities, version),
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
-    // No `base:zombies` step. CoM 1's Zombies are Fantastic because the unit-type table says so —
+    // No `template:zombies` step. CoM 1's Zombies are Fantastic because the unit-type table says so —
     // `COM1_UT_ZOMBIES_ABILITIES` is `UA_FANTASTIC | UA_CREATE_UNDEAD`, raw `0x0081` at file
     // `com1:0x2AED2`, which construction copies wholesale. That is template data, and
     // `units_com.js` already carries it as `baseFantastic` on templateId 174. A step re-asserting
     // it was a no-op for every roster unit, and for a custom unit it let the special-unit selector
     // override the Fantastic control the user had set. The roster owns the fact (F203).
     // PROVENANCE[constructCatapult]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16 | Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:22d4847c5bd5843526ea3fc0 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/spells.ini@span:14:0c00ef951862849e15604add | TABLE=Reference docs/Script source/Warlord 1.5.12.9/spells.ini@span:18:0dad2f766ea1e74b0aa62aa1
-    statStep({ id: 'constructCatapult', phase: 'base', writes: ['race', 'fantastic'],
+    statStep({ id: 'constructCatapult', phase: 'template', writes: ['race', 'fantastic'],
       when: () => isCoM1 && isConstructCatapult,
       apply: u => { u.race = 'Nature'; u.fantastic = true; } }),
     // PROVENANCE[summonBranch]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:33:d95c9aa843da2010e42b8f16
-    statStep({ id: 'summonBranch', phase: 'base', writes: ['race', 'fantastic'],
+    statStep({ id: 'summonBranch', phase: 'template', writes: ['race', 'fantastic'],
       when: () => isCoM1SummonBranch,
       apply: u => {
         if (sourceTemplateId === 113) u.race = 'Life';
@@ -341,13 +341,13 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // four `STypeID` branches (`CreateUnit.CAS!NOFROSTCLUB!+5..+14 "SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+3));" "SETENCHANTMENTFLAG(U,EncSanctify,ABase,1);"`), so unlike the flag-only permanent grants
     // — Lava Smelter's, Heat Power Engine's, Anti-Gravity Drive's, Military Drilling's, each of
     // which earns no step (`SPEC.md`, *Phases*) — this one carries a stat delta and is already
-    // `base:sanctaBasilica`. F200 stage 3 widens that step onto these branches, at which point the
+    // `training:sanctaBasilica`. F200 stage 3 widens that step onto these branches, at which point the
     // flag is a positioned write and this gate must read the record. What blocks doing it here is
     // `targetingIdentity` below: it replays the conversion list alone on a scratch record and does
-    // not run `base:sanctaBasilica`, so a record read would make the projection disagree with the
+    // not run `training:sanctaBasilica`, so a record read would make the projection disagree with the
     // sequence exactly when the building grants the flag. Seeding the scratch record from the
     // ability set does not close that gap — the sequence's value would be the seed *plus* the
-    // positioned write. The choice between widening the projection to replay the `base` grants and
+    // positioned write. The choice between widening the projection to replay the permanent-record grants and
     // keeping the gate pre-sequence belongs to F200 stage 3, which makes the write.
     // PROVENANCE[sanctify]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
     statStep({ id: 'sanctify', sourceLabel: 'Sanctify', phase: 'b',
@@ -450,10 +450,10 @@ const POSITIONED_GRANT_FIELDS = [
   'lucky',        // applySanctaBasilicaGrant, applyPillarOfFaithGrant,
                   // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`
   'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
-  'armorclad',    // applyOutlanderReformGrants  ->  `base:armorclad`
-  'mechanical',   // `base:rebuild` (non-hero only, F217.3)  ->  `base:artificer`,
+  'armorclad',    // applyOutlanderReformGrants  ->  `training:armorclad`
+  'mechanical',   // `cast:rebuild` (non-hero only, F217.3)  ->  `training:artificer`,
                   // `d:mechanicalExpert`
-  'rebuild',      // deriveMarionettePackage  ->  `base:rebuild` / `b:rebuild`
+  'rebuild',      // deriveMarionettePackage  ->  `cast:rebuild` / `b:rebuild`
   'trueSight',    // `b:eyeOfHeaven`  ->  `c:trueSight`, `d:trueSight`
   'fireImmunity',    // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
   'lightningResist', // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
@@ -474,25 +474,25 @@ const POSITIONED_GRANT_FIELDS = [
 // finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty), `trueSight`
 // (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it), `fireImmunity` and
 // `lightningResist` (`b:insulation` writes them, `c:innerPower`'s eligibility test reads them),
-// and `mechanical` (`base:rebuild` writes it — the hero-branch `b:rebuild` does not, because its
+// and `mechanical` (`cast:rebuild` writes it — the hero-branch `b:rebuild` does not, because its
 // script line writes the calculated record and every reader asks for the permanent one, F217.3 —
-// while `base:artificer` and `d:mechanicalExpert` read it — and take opposite answers, because the writes are cast-time and
+// while `training:artificer` and `d:mechanicalExpert` read it — and take opposite answers, because the writes are cast-time and
 // the retort's read is training-time, F208).
 const POSITIONED_GRANT_WRITES = [
   'largeShield',      // `b:magitekEngine`, `d:rust` (clear), `d:fortification`
   'missileImmunity',  // `d:fortification`'s already-shielded arm
   'deathImmunity',    // `b:divineProtection`
   'lucky',            // `b:divineProtection`
-  'rage',             // `base:altarOfTheMoon`
-  'poisonImmunity',   // `base:altarOfTheMoon`, `d:venom`
-  'blackpowder',      // `base:militaryWorkshop`
-  'armorPiercing',    // `base:militaryWorkshop`, `d:blazeOfGlory`
-  'energyCannon',     // `base:energyCannon`
+  'rage',             // `training:altarOfTheMoon`
+  'poisonImmunity',   // `training:altarOfTheMoon`, `d:venom`
+  'blackpowder',      // `training:militaryWorkshop`
+  'armorPiercing',    // `training:militaryWorkshop`, `d:blazeOfGlory`
+  'energyCannon',     // `training:energyCannon`
   'wallCrusher',      // `b:bombsGrenades`, `d:blazeOfGlory`
   'firstStrike',      // `d:blazeOfGlory` (clear)
-  'mechanical',       // `base:rebuild` — `SETSTAT(TU,SCustomAttribute,1,1)`; the hero
+  'mechanical',       // `cast:rebuild` — `SETSTAT(TU,SCustomAttribute,1,1)`; the hero
                       // branch writes selector 0, which nothing reads (F217.3)
-  'supernatural',     // `base:destiny:supernatural` — `B.attackflags.supernatural := True`
+  'supernatural',     // `cast:destiny:supernatural` — `B.attackflags.supernatural := True`
   'trueSight',        // `b:eyeOfHeaven`
   'illusionImmunity', // `c:trueSight`
   'fireImmunity',     // `b:insulation`
@@ -502,11 +502,11 @@ const POSITIONED_GRANT_WRITES = [
 
 // The same move for the two ability fields that carry a **value** rather than a flag. They are
 // seeded verbatim instead of through `!!`, and read back on the same rule, so an absent key stays
-// absent. `poison` is written by four positioned steps in a row — `base:altarOfTheMoon`'s two
-// `STypeID` branches assign it, then `base:militaryWorkshop`, `base:motherFungus` and `d:venom`
+// absent. `poison` is written by four positioned steps in a row — `training:altarOfTheMoon`'s two
+// `STypeID` branches assign it, then `training:militaryWorkshop`, `training:motherFungus` and `d:venom`
 // each make the script's `<>100` increment — and the chain is what orders them; the merge that
 // used to do this restated their precedence by hand and lost one increment (F201). `lifeSteal` is
-// written by `base:altarOfTheMoon`'s Witchdoctor branch and by `d:pneumaField`.
+// written by `training:altarOfTheMoon`'s Witchdoctor branch and by `d:pneumaField`.
 const POSITIONED_GRANT_VALUE_WRITES = ['poison', 'lifeSteal'];
 
 // Lava Smelter (Warlord): five independent flags record the permanent mineral-pair grants already
@@ -610,7 +610,7 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // The calculator has no cast order, so it assumes the immunity is the pre-existing one — innate,
 // cast overland, or cast earlier in combat — which is the common case and the only one a single
 // ability set can represent. `SPEC.md`, *Deliberate deviations*, states the assumption; the step
-// is `base:immunityCurseGating`, at the head of every chain.
+// is `immunity:immunityCurseGating`, at the head of every chain.
 // Magic Immunity's half is the cited mechanism: both engine families make the target's
 // resistance unreachable for any spell carrying a realm, so the roll cannot fail. Modern sets
 // Result := 100 against a `Random(10) + 1` roll; DOS adds 30 against a d10.
@@ -656,7 +656,7 @@ const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // strips Mind Storm and Vertigo here.
 // PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
 // The ten curse flags are fields of the sequence record, and this is the step that clears them —
-// `base:immunityCurseGating`, the head of every chain. It reads the curse flags positionally, like
+// `immunity:immunityCurseGating`, the head of every chain. It reads the curse flags positionally, like
 // any other step, and takes its **immunity** half from `finishedImmunities`, the set the
 // recalculation leaves. That split is the ruling F199 implements: the step is artificial, so no
 // source fixes its position relative to a grant that writes an immunity, and reading the finished
@@ -664,7 +664,7 @@ const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // `finishedImmunities` is a declared cross-boundary read — the shape F163 gave `targetingIdentity`
 // — and `tools/unit_checks/identity_record_choice.js` halts on an occurrence no row there claims.
 function immunityCurseGatingStep(version, finishedImmunities) {
-  return statStep({ id: 'immunityCurseGating', sourceLabel: 'Immunity', phase: 'base',
+  return statStep({ id: 'immunityCurseGating', sourceLabel: 'Immunity', phase: 'immunity',
     writes: [...MAGIC_IMMUNITY_GATED_CURSES],
     when: u => immunityStrippedCurses(u, version, finishedImmunities).length > 0,
     apply: (u) => {

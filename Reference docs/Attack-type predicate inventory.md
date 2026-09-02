@@ -75,14 +75,14 @@ Two things broke that invariant, and between them they account for most of what 
 
 1. **The five pre-Focus writes were applied in an order the chain does not have.** ~~The code order
    was Military Workshop, Bombs & Grenades, Lightning Blade, Chaos Channels, Energy Cannon,
-   against the Warlord chain's `base:militaryWorkshop`, `base:lightningBlade:breath`,
-   `base:energyCannon`, `a:chaosChannels:fireBreath`, `b:bombsGrenades`
+   against the Warlord chain's `training:militaryWorkshop`, `training:lightningBlade:breath`,
+   `training:energyCannon`, `a:chaosChannels:fireBreath`, `b:bombsGrenades`
    (`stats_manifests.js`); Bombs & Grenades ran four positions too early, Energy Cannon and Chaos
    Channels were transposed, and `baseSequenceRangedType`/`baseSequenceThrownType` — which
-   `base:stat:base` uses to seed the record — were snapshotted *after* the Bombs & Grenades
+   `template:stat:base` uses to seed the record — were snapshotted *after* the Bombs & Grenades
    grant, so a region-`b` type write was baked into the base seed.~~ **Closed by
    [F94](../Calculator/HISTORY.md):** the pair advances in chain order, the seed carries the
-   permanent record alone, and `base:militaryWorkshop` and `b:bombsGrenades` write their own
+   permanent record alone, and `training:militaryWorkshop` and `b:bombsGrenades` write their own
    types. Its only arithmetic consequence was Fiery Fury's `+2` reaching a Thrown field
    `b:bombsGrenades` had not yet created.
 
@@ -150,30 +150,30 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 | E5 | `modernBaseHasPhysicalBlackpowderChannel` | `:758-760` | Military Workshop AP grant | same | permanent | match |
 | E6 | `selectedBaseHasBlackpowderChannel` | `:761-763` | same, shared slot | same | permanent | match |
 | E7 | `selectedBaseHasPhysicalBlackpowderChannel` | `:764-766` | same, shared slot | same | permanent | match |
-| E8 | `blackpowderSelectedPhysicalRanged` | `:773-774` | `base:militaryWorkshop` | same | permanent | match |
-| E9 | `blackpowderSelectedThrown` | `:775` | `base:militaryWorkshop` | same | permanent | match |
-| E10 | `blackpowderSelectedFireBreath` | `:776` | `base:militaryWorkshop` | same | permanent | match |
-| E11 | missile-to-boulder upgrade | `:777-779` | writes the pair | `base:militaryWorkshop` | permanent | match |
+| E8 | `blackpowderSelectedPhysicalRanged` | `:773-774` | `training:militaryWorkshop` | same | permanent | match |
+| E9 | `blackpowderSelectedThrown` | `:775` | `training:militaryWorkshop` | same | permanent | match |
+| E10 | `blackpowderSelectedFireBreath` | `:776` | `training:militaryWorkshop` | same | permanent | match |
+| E11 | missile-to-boulder upgrade | `:777-779` | writes the pair | `training:militaryWorkshop` | permanent | match |
 | E12 | `hasGazeAttack` | `:784-787` | `ccDosBreathEligible` | DOS Chaos Channels admission | permanent | match |
 | E13 | `ccDosBreathEligible` | `:789-790` | `a:chaosChannels:fireBreath` | `unitcalc.c` DOS admission gate | permanent | match |
-| E14 | `lightningBladeGrantsBreath` | `:809-810` | `base:lightningBlade:breath` | `CreateUnit.CAS` Lightning Blade | permanent | match |
-| E15 | `lightningBladeConvertsThrown` | `:811-812` | `base:lightningBlade:breath` | same | permanent | match |
-| E16 | `hasPermanentRangedStat` | `:767` | `base:energyCannon`, `base:ludusAgoge`, `base:motherFungus`, `base:altarOfTheMoon`; and, for the DOS-shaped shared slot only, `slots.persistentRanged` | `CreateUnit.CAS` city gates, which do read a permanent ranged type | permanent | match — the Misfortune consumer is gone with [F96](../Calculator/HISTORY.md); on the shared slot the permanent type is what says the one value is the Ranged field |
-| E17 | `alumniOfAcademy` magical-ranged arm | `:832-836` | `base:alumniOfAcademy:figures` | `CreateUnit.CAS!NOMOTHERFUNGUS!+4..+6 "IF (GetStat(U,STypeID,1)=221)" "%AND (GetStat(U,SRangedType,1)>29)"` Academy branch | permanent | match since [F93](../Calculator/HISTORY.md); it was **`narrow`** when this was written. The engine's gate is `GetStat(U,SRangedType,1) > 29`, the whole magical band, and the three realm tokens excluded Warlord's own id 40. Measured 2026-08-21: a Halfling 6-figure card typed `beam` derived 6 figures where the engine gives 8 |
+| E14 | `lightningBladeGrantsBreath` | `:809-810` | `training:lightningBlade:breath` | `CreateUnit.CAS` Lightning Blade | permanent | match |
+| E15 | `lightningBladeConvertsThrown` | `:811-812` | `training:lightningBlade:breath` | same | permanent | match |
+| E16 | `hasPermanentRangedStat` | `:767` | `training:energyCannon`, `training:ludusAgoge`, `training:motherFungus`, `training:altarOfTheMoon`; and, for the DOS-shaped shared slot only, `slots.persistentRanged` | `CreateUnit.CAS` city gates, which do read a permanent ranged type | permanent | match — the Misfortune consumer is gone with [F96](../Calculator/HISTORY.md); on the shared slot the permanent type is what says the one value is the Ranged field |
+| E17 | `alumniOfAcademy` magical-ranged arm | `:832-836` | `training:alumniOfAcademy:figures` | `CreateUnit.CAS!NOMOTHERFUNGUS!+4..+6 "IF (GetStat(U,STypeID,1)=221)" "%AND (GetStat(U,SRangedType,1)>29)"` Academy branch | permanent | match since [F93](../Calculator/HISTORY.md); it was **`narrow`** when this was written. The engine's gate is `GetStat(U,SRangedType,1) > 29`, the whole magical band, and the three realm tokens excluded Warlord's own id 40. Measured 2026-08-21: a Halfling 6-figure card typed `beam` derived 6 figures where the engine gives 8 |
 | E18 | `focusMagicBaseRangedPresent` | `:871-873` | `c:focusMagic` conversion arms | `B.ranged = 0` at `:892`/`:900` | permanent | `narrow` — the engine tests base *strength*; this is strength **and** type |
 | E19 | `supremeLightActiveForUnit`'s `baseRangedType` | `:947` | `e:supremeLight` | `Ismagicalranged(B.rangedtype)` at `:2622` | permanent | match |
-| E20 | `naturalSelectionWildGameRangedSlot`, shared arm | `:1015-1017` | `base:naturalSelection:wildGame` | `CreateUnit.CAS` Wild Game snapshot | permanent | match |
-| E21 | `dosGazeStrength` | `:1098-1099` | `base:stat:base` gaze seed | DOS shared slot; no modern counterpart | permanent | match |
-| E22 | `baseDoomGaze` gaze arm | `:1367-1368` | `base:stat:base` | same | permanent | match |
+| E20 | `naturalSelectionWildGameRangedSlot`, shared arm | `:1015-1017` | `training:naturalSelection:wildGame` | `CreateUnit.CAS` Wild Game snapshot | permanent | match |
+| E21 | `dosGazeStrength` | `:1098-1099` | `template:stat:base` gaze seed | DOS shared slot; no modern counterpart | permanent | match |
+| E22 | `baseDoomGaze` gaze arm | `:1367-1368` | `template:stat:base` | same | permanent | match |
 
 ### B. Tests that read the running pair inside `buildSlotContext` (E23-E66)
 
 | # | Symbol | Line | Consuming step (chain key) | Engine position and source | Position | Breadth |
 |---|---|---|---|---|---|---|
-| E23 | Bombs & Grenades Thrown grant | `stats.js`, `bombsGrenadesGrantsThrown` | `b:bombsGrenades` | `UnitCalcPre.CAS!NOMAGITEKENGINE!+11 "SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );"` bombs block | live since [F94](../Calculator/HISTORY.md) — applied at its own chain position, and written to the record by its own step rather than by the `base:stat:base` seed | match since [F101](../Calculator/HISTORY.md) — the slot breadth this row first called `match` was not: the grant carried no slot test and fired on every channel field standing empty at `b:bombsGrenades`, where the engine writes `SThrown` alone. It now asks `isThrownFieldSlot` |
+| E23 | Bombs & Grenades Thrown grant | `stats.js`, `bombsGrenadesGrantsThrown` | `b:bombsGrenades` | `UnitCalcPre.CAS!NOMAGITEKENGINE!+11 "SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );"` bombs block | live since [F94](../Calculator/HISTORY.md) — applied at its own chain position, and written to the record by its own step rather than by the `template:stat:base` seed | match since [F101](../Calculator/HISTORY.md) — the slot breadth this row first called `match` was not: the grant carried no slot test and fired on every channel field standing empty at `b:bombsGrenades`, where the engine writes `SThrown` alone. It now asks `isThrownFieldSlot` |
 | E24 | `ccFireBreathActive`, modern arm | `stats.js`, after the Energy Cannon flip | `a:chaosChannels:fireBreath` | `Units.RecalculateUnits.pas` Chaos Channels breath | live since [F94](../Calculator/HISTORY.md) — the Energy Cannon flip now precedes it, as the chain does. The transposition moved no number: Energy Cannon requires a permanent conventional ranged attack, so `rangedType === 'none'` fails either way, and on the modern record the two write different channel slots | match |
-| E25 | `lightningBladeOwnsThisSlot`, shared arm | `:804-806` | `base:lightningBlade:breath` | `CreateUnit.CAS` | live | match |
-| E26 | Energy Cannon beam write | `:847-849` | `base:energyCannon` | `CreateUnit.CAS` Energy Cannon | live | match |
+| E25 | `lightningBladeOwnsThisSlot`, shared arm | `:804-806` | `training:lightningBlade:breath` | `CreateUnit.CAS` | live | match |
+| E26 | Energy Cannon beam write | `:847-849` | `training:energyCannon` | `CreateUnit.CAS` Energy Cannon | live | match |
 | E27 | `ffRtbMod` | `:856-858` | `b:fieryFury` | `UnitCalcPre.CAS!NOTHERO!+3..+17 "IF (GETENCHANTMENTFLAG(U,EncFieryFury,0)=0) THEN { GOTO"` | live | match |
 | E28 | `bombsGrenadesRtbMod` | `:859-861` | `b:bombsGrenades` | `UnitCalcPre.CAS` bombs block | live | match |
 | E29 | `rtbLvl` | `:864-869` | `c:level` | `ApplyLevelBonus` normal arm `:547-571`, hero arm `:507-527` | **`wrong-record`**, settled by [F95](../Calculator/HISTORY.md) — the engine's four gates read `BaseUnits.rangedtype`, `.thrown`, `.firebreath`, `.lightningbreath`; this read the live pair. **Measured:** a Warlord Outlander unit with Explosive Reform, melee 5, one figure and no base secondary attack derives Thrown 7 at Recruit, **8** at Veteran and **9** at Champion; the `+1`/`+2` is `lvl.thrown` at `c:level`. `UnitCalcPre.CAS!NOMAGITEKENGINE!+11 "SETSTAT(U,SThrown,0,( GETSTAT(U,SThrown,0)+%I( 8 - (GETSTAT(U,SFigures,1)/2) ) );"` writes `SETSTAT(U,SThrown,0,…)` — record selector `0`, the calculated record — so `BaseUnits[i].thrown` is still zero at `ApplyLevelBonus` and the engine adds nothing. | **`wrong-shape`**, settled by F95 — an if/else where the engine makes four independent writes; one `lvl.ranged` for two tables; `lvl.thrown` for Thrown *and* both Breaths; an extra `calcBaseRtb > 0` on the ranged arm; no positivity gate on the Thrown/Breath arm. The `calcBaseRtb > 0` still in `stats_sequence.js` is on the DOS ladder arm, which transcribes `BU_Apply_Level_Bonus` rather than the `ApplyLevelBonus` this row cites, and is outside this reading |
@@ -184,7 +184,7 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 | E34 | `focusMagicCreatesRanged` | `:893-895` | `c:focusMagic` | `else if B.ranged = 0` at `:900` | permanent | match |
 | E35 | Focus Magic type write | `:896-899` | `c:focusMagic` | `U.rangedtype := 34` at `:891`/`:899`/`:904` | live | match. Since [F93](../Calculator/HISTORY.md) the modern arms write `magic`, id 34 being `IsMagic=Yes` and nothing else there; CoM 1's own arm keeps `magic_s` for the same id, which its realm table really makes Sorcery (com1:0x8F840) |
 | E36 | `shadowStrikeFillsSlot` | `:906-909` | `d:shadowStrike:thrown` | `UnitCalc.CAS!NOVAMPIRISM!+2 ", gain thrown at strength half of its melee power :"` | live | match — deliberately field-identity, not a live type test |
-| E37 | `blackpowderHasRangedOrThrown` | `:919-920` | `base:militaryWorkshop` | `CreateUnit.CAS` | permanent | match |
+| E37 | `blackpowderHasRangedOrThrown` | `:919-920` | `training:militaryWorkshop` | `CreateUnit.CAS` | permanent | match |
 | E38 | `rangedGetsWpn` | `:943` | `c:weapon`, `c:weapon:toHit` | `not Ismagicalranged(Units[i].rangedtype)` at `:651` (I3) | live | **`narrow`** ([F89](../Calculator/HISTORY.md)) |
 | E39 | the material block's Thrown gate (`stats.js`, `weaponStatSteps` and `weaponHitThrown`) | — | `c:weapon`, `c:weapon:toHit` | `if Units[i].thrown > 0` at `:658` | live since [F97](../Calculator/HISTORY.md) | match since F97 — the modern arms of both writes now test the calculated Thrown strength at their own position; the slot's type test remains only to say which record field the DOS-shaped shared slot is |
 | E40 | `supremeLightEligible`'s `liveRangedType` | `:975-978` | `c:supremeLight` (CoM 1), `e:supremeLight` | `Ismagicalranged(U.rangedtype)` at `:2621` (I12) | **`stale`** for `e:supremeLight` — three region-`d` type writes lie between | match |
@@ -202,7 +202,7 @@ The engine reads `BaseUnits` at these points too, so `position` is `permanent` u
 | E52 | `reinforceMagicRtbMod` | `:1020-1022` | `c:reinforceMagic` | `Ismagicalranged(U.rangedtype)` at `:1906` (I10) | live | match; the token set behind it is settled by [F93](../Calculator/HISTORY.md) |
 | E53 | ~~`supremeLightRtbMod`~~ | removed | `e:supremeLight` | `if U.ranged > 0 then Inc(U.ranged, 2)` at `:2632-2635` | live | match — [F96](../Calculator/HISTORY.md) replaced the six-name type test with the engine's live strength test on the record's Ranged field (`isRangedFieldSlot`, `stats_sequence.js:1258`) |
 | E54 | `landLinkingBreathRtbMod` | `:1033-1034` | `c:landLinking` | `unitcalc.c` / `:1758` Land Link breath arm | live | match |
-| E55 | `dragonMoundRtbMod` | `:1036-1037` | `base:dragonMound` | `CreateUnit.CAS` Dragon Mound | permanent | match |
+| E55 | `dragonMoundRtbMod` | `:1036-1037` | `training:dragonMound` | `CreateUnit.CAS` Dragon Mound | permanent | match |
 | E56 | `gsRtbMod` | `:1039` | `c:giantStrength` | `unitcalc.c` Giant Strength (MoM only) | live | match |
 | E57 | `weaknessHitsRanged` / `weaknessRtbModBinary` | `:1040`, `:1045-1049` | `c:weakness` | `unitcalc.c` Weakness; `Units.RecalculateUnits.pas` Weakness | live — `c:weakness` precedes `d:blazeOfGlory`, so the F84 starting-point defect is closed by [F81](../Calculator/HISTORY.md)/[F83](../Calculator/HISTORY.md) | the Thrown arm's ungated `Dec(U.thrown, 3)` reads `thrownFieldSlot` since [F91](../Calculator/HISTORY.md); the ranged arm reads `rangedFieldSlot` since [F100](../Calculator/HISTORY.md), `Dec(U.ranged, 3)` having no gate either |
 | E58 | `weaknessRtbModCas` | `:1050-1052` | `d:weakness` | `UnitCalc.CAS` Weakness breath arm | **`stale`** in principle (`d:weakness` precedes `d:rust`, so inert today) | match |
@@ -231,10 +231,10 @@ Continued. E59–E66 are still inside `buildSlotContext`; E67–E73 sit outside 
 
 | # | Step (chain key) | Line | What it does with the type pair | Verdict |
 |---|---|---|---|---|
-| S1 | `base:stat:base` | `:56-57` | seeds each slot from `baseSequenceRangedType`/`baseSequenceThrownType` | correct since [F94](../Calculator/HISTORY.md) — those are now the permanent record's types, taken before any of the five flips |
-| S13 | `base:militaryWorkshop` | `:112` | writes `'boulder'` where the Blackpowder upgrade converts a missile projectile | correct position, added by [F94](../Calculator/HISTORY.md); the write was previously folded into the S1 seed |
-| S2 | `base:lightningBlade:breath` | `:125-126` | writes `'none'` / `'lightning'` | correct position |
-| S3 | `base:energyCannon` | `:206` | writes `'beam'` | correct position; the precompute applies it before Chaos Channels too since [F94](../Calculator/HISTORY.md) |
+| S1 | `template:stat:base` | `:56-57` | seeds each slot from `baseSequenceRangedType`/`baseSequenceThrownType` | correct since [F94](../Calculator/HISTORY.md) — those are now the permanent record's types, taken before any of the five flips |
+| S13 | `training:militaryWorkshop` | `:112` | writes `'boulder'` where the Blackpowder upgrade converts a missile projectile | correct position, added by [F94](../Calculator/HISTORY.md); the write was previously folded into the S1 seed |
+| S2 | `training:lightningBlade:breath` | `:125-126` | writes `'none'` / `'lightning'` | correct position |
+| S3 | `training:energyCannon` | `:206` | writes `'beam'` | correct position; the precompute applies it before Chaos Channels too since [F94](../Calculator/HISTORY.md) |
 | S4 | `a:chaosChannels:fireBreath` | `:241-242` | writes `'none'` / `'fire'` | correct position |
 | S14 | `b:bombsGrenades` | `:373` | writes `'thrown'` on the field the grant fills | correct position, added by [F94](../Calculator/HISTORY.md); the write was previously folded into the S1 seed. The slot it fills is the record's Thrown field alone since [F101](../Calculator/HISTORY.md) |
 | S5 | `b:upgradedExplosive:fireBreath` | `:361-364` | reads the **precomputed** `c.thrownType` | `stale` in principle; no later type write precedes `b` today |

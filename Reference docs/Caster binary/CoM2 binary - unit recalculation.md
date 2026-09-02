@@ -435,12 +435,9 @@ display words are +0x6C4 melee, +0x6C6 defense, +0x6C8 resistance, +0x6CA ranged
   +0x90.
 - Bulk copies move the dword without reading it as a value: `$00599B2E` `rep movsd` copies all
   `0x1E1` dwords of `BaseUnits[i]` into `Units[i]`.
-- `Casapi.dll` exports `UnitBuildingRequirement` (RVA `0x1F5DEC`), which does
-  `mov eax,[eax+edx*4+0x90]` with no range check on either argument, so `i=0` returns this field
-  where `i=1..3` returns `rqbuilding`. `CasApi.pas:427` documents `i` as 1..3; no shipped `.CAS` in
-  either script set calls it; the DLL's own `UnittableT` is likewise `.bss`-zero with no writer, so
-  it returns 0. `Caster.exe` neither imports nor names that DLL, and the engine's own
-  `@Castercore@UnitBuildingRequirement` (`$00648D6C`) is range-checked.
+- The separate SDK DLL has one out-of-domain read of this field. See
+  [`Casapi.dll`](./Casapi.dll.md) for the accessor, bounds, loader census, shipped-data result,
+  and native-tool verdict.
 
 The similarly named `@Units@SaveModifier` (`$00595754`, called by `@Spells@GetSpellSaveModifier`)
 is a different quantity: hero item-power bytes at item +0x4D..+0x50 summed as -1/-2/-3/-4.

@@ -235,7 +235,7 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
 
   await expect(page.locator('#aHitMeleeDisp')).toHaveText('45%');
   await expect(page.locator('#aHitMeleeDisp')).toHaveAttribute('data-tooltip',
-    'Editable base: 30%\nBase To Hit / To Block (phase base): 30% → 35%'
+    'Editable base: 30%\nBase To Hit / To Block (phase template): 30% → 35%'
       + '\nHigh Prayer (phase c): 35% → 45%\nDisplayed result: 45%');
   // The common row shows that field alone, so the melee-only modifier above is absent from
   // it while the write High Prayer makes to the common field appears in both.

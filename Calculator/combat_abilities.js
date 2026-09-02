@@ -470,7 +470,7 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 // engine tested before writing it:
 //   melee           `B.attack > 0`: the **permanent** record's melee field carrying strength,
 //                   which is what every compiled melee-presence test reads
-//                   (Units.RecalculateUnits.pas:466, :543, :637, :2530). The base phase settles
+//                   (Units.RecalculateUnits.pas:466, :543, :637, :2530). The permanent-record phases settle
 //                   that record, so the derivation supplies this one as a predicate over the run
 //                   context and it is called rather than read (F133)
 //   rtb             every secondary strength field the derivation carries: the DOS engines'
@@ -1112,7 +1112,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // -5 defense, -5 resistance. CoM2/Warlord: -3 melee, -5 conventional ranged and
   // Thrown only, -5 defense, -5 resistance; both Breath fields and all gazes are separate.
   // Phase c: UnitCalcPre.CAS!NOCHAOSEMBRACE!+26..+28 "IF GETCOMBATENCHANTMENTFLAG(U,EncMindStorm,0) THEN {" "}" only mirrors the combat flag to overland.
-  // Mind Storm is one of the ten curse flags `base:immunityCurseGating` can clear, so emission
+  // Mind Storm is one of the ten curse flags `immunity:immunityCurseGating` can clear, so emission
   // reads the ability set — a superset — and the flag on the record at this step's own position
   // is the gate (`SPEC.md`, *Version scope*; F199).
   if (hasAbil(abilities, 'mindStorm')) {
@@ -1245,7 +1245,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Artificer retort (Warlord): mechanical units gain +1 melee, +1 ranged,
   // +1 armor, +2 resistance. Magic Weapons component handled in stats.js.
-  // Base stage: CreateUnit.CAS!NOLOGISTIC!+7..+18 ": new effect of Artificer retort, mechanical units gain magic weapon, +1 resistance, and land mechanical units get +1 movement :" "}" writes these at index 1 (ABase) when the unit is
+  // Training-time: CreateUnit.CAS!NOLOGISTIC!+7..+18 ": new effect of Artificer retort, mechanical units gain magic weapon, +1 resistance, and land mechanical units get +1 movement :" "}" writes these at index 1 (ABase) when the unit is
   // built, so they are part of the base before the encounter-time pipeline starts.
   // Resistance is +2. The helptext was stale at +1 until v1.5.12.6.2 corrected it; the shipped
   // helptext now agrees with the script. See `Reference docs/Source discrepancies.md` §6.
@@ -1262,7 +1262,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // grants the flag, so it is a record field read here rather than a pre-sequence constant (F202).
   if (isWarlord) {
     // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:4:f33e8912a11fbfe562941d50 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:7:37971f89b0a249ec2951a825
-    abilityStep('armorclad', 'base', { writes: ['def'],
+    abilityStep('armorclad', 'training', { writes: ['def'],
       when: u => !!u.armorclad, apply: u => { u.def += 6; } });
   }
 
@@ -1293,10 +1293,10 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // permanent Mechanical flag — so it is a record read at this step's position (F202). That rank
   // is what settles the Rebuild case: `CreateUnit.CAS` runs once, when the city builds the unit,
   // and Rebuild is cast on a unit that already exists, so this gate never saw the later
-  // `base:rebuild` write and a Rebuilt unit takes no part of the retort's package (F208).
+  // `cast:rebuild` write and a Rebuilt unit takes no part of the retort's package (F208).
   if (isWarlord && hasAbil(abilities, 'artificer')) {
     // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
-    abilityStep('artificer', 'base', { writes: ['atk', 'def', 'res', ...attackWrites],
+    abilityStep('artificer', 'training', { writes: ['atk', 'def', 'res', ...attackWrites],
       when: u => !!u.mechanical,
       apply: (u, ctx) => {
         // `SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1))` (CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));") has no
@@ -1328,7 +1328,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Armor Piercing are granted in normalizeCombatUnit.
   // The two unit classes are handled by deliberately ISHERO-complementary code, in
   // different phases. Non-heroes: OLSpell.CAS!NOTMARKOFCONQUEROR!+2..+16 "IF (SP<>SRebuild) THEN { GOTO" "ENDOFOLSPELL" writes both stats at index 1
-  // (ABase) when the spell is cast, so it is baked into the base stage.
+  // (ABase) when the spell is cast, so it is a `cast`-phase write.
   // Heroes: UnitCalcPre.CAS!NOHEROAUGMENT!+2..+10 ": Hero augmentation effect of Rebuild spell :" "SETSTAT(U,ADeathImmunity,0,1);" re-applies them at index 0 on every recalc — phase b.
   // The Marionette Wanderer's strayed branch grants Rebuild, so the flag is a record field read
   // here rather than a pre-sequence constant (F202).
@@ -1344,7 +1344,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // derivations, whose `permanentMechanical` already carries the same `&& !isHero`
   // (stats_identity.js:913-914).
   // Its position is the whole content of the F208 ruling: the non-hero write is a cast-time write
-  // and `base:artificer` a training-time one, so the retort's gate cannot see it, while
+  // and `training:artificer` a training-time one, so the retort's gate cannot see it, while
   // `d:mechanicalExpert`, four regions later, can (`SPEC.md`, *Phases*).
   if (isWarlord) {
     // PROVENANCE[rebuild]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:13:cd5b95676a7928d0fa134508 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:8:ff5769532c07ec8df9389ec0
@@ -1352,7 +1352,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // (UnitCalcPre.CAS!NOHEROAUGMENT!+6 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));") for the hero re-application, and
     // `SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2)` (OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);") for the permanent
     // non-hero write (F142).
-    abilityStep('rebuild', isHeroUnit ? 'b' : 'base',
+    abilityStep('rebuild', isHeroUnit ? 'b' : 'cast',
       { writes: isHeroUnit ? ['atk', 'def'] : ['atk', 'def', 'mechanical'],
         when: u => !!u.rebuild,
         apply: u => {
@@ -1362,12 +1362,12 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   }
 
   // Malnourished (Warlord): recruited under a Drought curse — permanent −1 melee, −2 armor.
-  // Base stage: CreateUnit.CAS!HASEVILPRESENCE!+4..+8 ": If city suffer from famine, impaired newly trained units' attack and defense :" "SETSTAT(U,SMalnourished,ABase,1);" writes both at index 1 (ABase).
+  // Training-time: CreateUnit.CAS!HASEVILPRESENCE!+4..+8 ": If city suffer from famine, impaired newly trained units' attack and defense :" "SETSTAT(U,SMalnourished,ABase,1);" writes both at index 1 (ABase).
   if (isWarlord && hasAbil(abilities, 'malnourished')) {
     // PROVENANCE[malnourished]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:5:66825b694152a9b945a1d0b6
     // `SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1))` (CreateUnit.CAS!HASEVILPRESENCE!+6 "SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1));") is ungated;
     // a permanent melee already at 0 goes to -1 here and `e:clamp` floors it (F142).
-    abilityStep('malnourished', 'base', { writes: ['atk', 'def'],
+    abilityStep('malnourished', 'training', { writes: ['atk', 'def'],
       apply: u => { u.atk -= 1; u.def -= 2; } });
   }
 
@@ -1376,7 +1376,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // non-fantastic targeting status is handled at the target-gating sites; the phase-c EncMagic
   // write deliberately survives that phase-d identity change.
   if (isWarlord && hasAbil(abilities, 'spiritLink')) {
-    abilityStep('spiritLink', 'base', { writes: ['res'], apply: u => { u.res += 2; } });
+    abilityStep('spiritLink', 'cast', { writes: ['res'], apply: u => { u.res += 2; } });
   }
 
   // Rally (Warlord, Charismatic retort exclusive combat enchantment): all friendly

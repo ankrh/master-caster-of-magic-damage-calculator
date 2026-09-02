@@ -149,7 +149,7 @@ test('Wanderer roster Ranged record is the source of its permanent ranged type',
   // what the record carries into region `b`, and the id-37 retype replaces it there.
   expect(owned.retype.changes.rangedTypeRanged).toEqual({ from: 'magic_lightning', to: 'magic' });
   expect(owned.order.indexOf('b:marionette:rangedType'))
-    .toBeGreaterThan(owned.order.indexOf('base:stat:base'));
+    .toBeGreaterThan(owned.order.indexOf('template:stat:base'));
   expect(owned.ranged).toMatchObject({ type: 'magic' });
   expectNoConsoleErrors(errors);
 });

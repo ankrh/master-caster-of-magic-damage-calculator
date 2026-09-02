@@ -65,9 +65,9 @@ function deriveUnitStats(input) {
   const marionetteDerivation = deriveMarionettePackage(
     identity, markIntrinsicLucky(suppliedAbilities), version);
   const marionette = marionetteDerivation.package;
-  // The **permanent** record's Fantastic flag as the `base` phase leaves it. Two gates read it,
+  // The **permanent** record's Fantastic flag as the permanent-record phases leave it. Two gates read it,
   // each at a position after that phase: `if B.Fantastic then U.level := 1` at $0059A118 and the
-  // weapon block's `not B.Fantastic and not B.ishero` at $0059E2B8. `base:destiny` is the one
+  // weapon block's `not B.Fantastic and not B.ishero` at $0059E2B8. `cast:destiny` is the one
   // permanent identity write the pipeline itself makes — `B.race := 19; B.Fantastic := True` at
   // $0059A390 — so it, and nothing else, separates this value from the unit's own
   // `identity.baseFantastic`. It used to be spelled as a `destinyActive` term patched onto each
@@ -90,7 +90,7 @@ function deriveUnitStats(input) {
     version, permanentFantastic, isHero);
   const outlanderReform = outlanderDerivation.reform;
   // The curse strip is no longer folded in here: the ten flags it clears are fields of the
-  // sequence record, and `base:immunityCurseGating` clears them at the head of the chain like any
+  // sequence record, and `immunity:immunityCurseGating` clears them at the head of the chain like any
   // other write (F199). So this is the granted ability set, curses and all.
   const abilities = outlanderDerivation.abilities;
   // The identity conversions are steps of the one sequence, spliced in below and ordered by the
@@ -224,8 +224,8 @@ function deriveUnitStats(input) {
   // (`CreateUnit.CAS!NOLOGISTIC!+9 "SETENCHANTMENTFLAG(U,EncMagic,1,1);"`), gated with the stat half on `GetStat(U,SCustomAttribute,1)=1` at `CreateUnit.CAS!NOLOGISTIC!+8 "IF RETORT(W,Artificer) %AND (GetStat(U,SCustomAttribute,1)=1) THEN {"`.
   // It is +10% To Hit and the Weapon Immunity bypass, and it is a **result** field — the weapon
   // material — so it cannot be a record field and is read here rather than at a rank. The raw
-  // flag is what the record holds at that rank: `base:artificer` is a training-time write and the
-  // only mid-sequence write to `mechanical` is `base:rebuild`'s, which is cast-time and therefore
+  // flag is what the record holds at that rank: `training:artificer` is a training-time write and the
+  // only mid-sequence write to `mechanical` is `cast:rebuild`'s, which is cast-time and therefore
   // strictly later (F208). Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
   const artificerMagicWeapon = isWarlord
     && !!abilities.artificer && !!abilities.mechanical;
@@ -375,7 +375,7 @@ function deriveUnitStats(input) {
   // excluded, and Rocketry is an alternative cause of the same permanent Blackpowder upgrade,
   // which the scripts grant only to a normal unit that already has physical ranged, Thrown or
   // Fire Breath. What the upgrade then writes is `PROVENANCE[militaryWorkshop]`
-  // (`base:militaryWorkshop`, `stats_sequence.js`) and the Blackpowder gate further down.
+  // (`training:militaryWorkshop`, `stats_sequence.js`) and the Blackpowder gate further down.
   //
   // The magnitudes are patch history, and the changelog in
   // `Reference docs/Warlord manual v1.5.12.9.html` is what records them: the missile-to-boulder
@@ -401,7 +401,7 @@ function deriveUnitStats(input) {
   // record, so a combat conversion to Fantastic cannot close it. `BASEFANTASTIC(U)` is the base
   // unit data "before applying continuous effects such as buffs or curses"
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`), which is the record the
-  // `base` phase leaves — Destiny's `B.Fantastic := True` at $0059A390 included, since that write
+  // permanent-record phases leave — Destiny's `B.Fantastic := True` at $0059A390 included, since that write
   // is to `BaseUnits` and persists into every later recalculation (F192). The same `NOTSAPIENS`
   // label also encloses Ballistics Training, Xenopsychology and Radio, which take the identical
   // gate through `outlanderReform.sapiensEligible` — one home for one script test (F198).
@@ -410,9 +410,9 @@ function deriveUnitStats(input) {
   // The write's own gate, `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)`
   // (`UnitCalcPre.CAS!NOMAGITEKENGINE!+8..+9 "IF (GETSTAT(U,SAttack,1)>0)" "%OR (GETSTAT(U,AFlying,1)>0)"`). Record selector `1` is "the base unit", not the calculated one
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:270`), so both terms read the
-  // **permanent** record — which is the record the `base` phase leaves, `ctx.base`, not the card's
-  // melee input: `base:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);"`) and
-  // `base:artificer` `+1` (`CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));"`), both permanently and both before region `b`, so a
+  // **permanent** record — which is the record the permanent-record phases leave, `ctx.base`, not the card's
+  // melee input: `cast:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);"`) and
+  // `training:artificer` `+1` (`CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));"`), both permanently and both before region `b`, so a
   // unit whose roster melee is 0 can still satisfy this gate (F202).
   //
   // `AFlying` needs no such treatment and stays the pre-sequence flag. Only two lines in the
@@ -503,7 +503,7 @@ function deriveUnitStats(input) {
     basePreparationTrace.push({
       id,
       source: { id, label: sourceLabel },
-      phase: 'base',
+      phase: 'template',
       order: basePreparationOrder++,
       changes,
     });
@@ -655,7 +655,7 @@ function deriveUnitStats(input) {
   // unit as it was trained: `not B.Fantastic` at $005A273C (Bad Moon) and $005A285E (Good Moon),
   // `B.Fantastic` at $005A2BB6 (Nature Conjunction), all three in
   // `Units.RecalculateUnits.pas`. Their sibling gates in the same stretch read `U.*`, so the `B.`
-  // selector is deliberate. `permanentFantastic` is the record the `base` phase leaves
+  // selector is deliberate. `permanentFantastic` is the record the permanent-record phases leave
   // (`SPEC.md`, *The step model*), which is what separates this from `identity.baseFantastic`:
   // Destiny writes `B.Fantastic := True` at $0059A390 (F192).
   const badMoonActive = isCoM2 && !!abilities.badMoon && !permanentFantastic;
@@ -1018,7 +1018,7 @@ function deriveUnitStats(input) {
   // The eligibility term is the block's own `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOWALLOFFIRE"; }`
   // (`UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"`) — the **permanent** record, so a combat conversion to Fantastic does
   // not withdraw the garrison bonus, and Spirit Link clearing live Fantastic does not confer it.
-  // That record is the one the `base` phase leaves, so Destiny's permanent `B.Fantastic := True`
+  // That record is the one the permanent-record phases leave, so Destiny's permanent `B.Fantastic := True`
   // ($0059A390) withdraws it (F192).
   // That single test is the whole gate: the block has no hero arm, so a Warlord hero garrisoning
   // the city takes the package like any other non-Fantastic unit. The `!isHero` term this line
@@ -1068,7 +1068,7 @@ function deriveUnitStats(input) {
   const fbAtkBonus = (nonWarlordFlameBlade || hasWarlordBlade) ? 2 : 0;
   // The ELSE arm of Fiery Fury's one `IF (BASEFANTASTIC(U))` (`UnitCalcPre.CAS!NOTHERO!+6 "IF (BASEFANTASTIC(U)) THEN {"`), whose THEN
   // arm is `b:fieryFury:race` (`stats_identity.js`). `BASEFANTASTIC` is the permanent record as
-  // the `base` phase leaves it, Destiny's write included (F192).
+  // the permanent-record phases leave it, Destiny's write included (F192).
   const ffRegularBonus = isWarlord && !!abilities.fieryFury && !permanentFantastic;
   // Fiery Fury melee +3 for regular units — "an increase in Melee Attacks by 3"
   // (`Unit rosters/Warlord mod unit data/HELP.TXT:5885`) — non-cumulative with Flame Blade /
@@ -1136,9 +1136,9 @@ function deriveUnitStats(input) {
   // Mother Fungus (CreateUnit.CAS!NOBASILICA!+7 "SETSTAT(U,SAttack,1,(GETSTAT(U,SAttack,1)+2)"), a Coal site
   // (CreateUnit.CAS!NOTARCHMAGE!+33 "SETSTAT(U,SAttack,ABase,ATK+1);") and the Malnourished penalty
   // (CreateUnit.CAS!HASEVILPRESENCE!+6 "SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1));"). Those
-  // writes are `base`-phase steps here, so the record as that phase leaves it is what a later
+  // writes are `training`-phase steps here, so the record those phases leave is what a later
   // region reads (SPEC.md, *The step model*). The card's input is that record only before the
-  // base phase runs, which is why this is a predicate over the run context rather than a boolean
+  // permanent-record phases run, which is why this is a predicate over the run context rather than a boolean
   // captured beside it — the same read `c:weapon`'s `weaponMeleeOpen` already makes.
   const hasMeleeAttackAt = runCtx => runCtx.base.atk > 0;
 
@@ -1301,7 +1301,7 @@ function deriveUnitStats(input) {
   const hurricaneActive = !!input.hurricane;
   // The immunity half used to be restated here beside the flag. It is not a term of the block —
   // `Units.RecalculateUnits.pas:2341`-style curse blocks test their flag alone — and it was a
-  // second home for what `base:immunityCurseGating` already does, whose Illusion arm is the wider
+  // second home for what `immunity:immunityCurseGating` already does, whose Illusion arm is the wider
   // of the two (it also reaches True Sight and Eye of Heaven). The flag at this step's own
   // position is the whole gate (F199).
   const vertigoHitPenalty = isCoM2 ? 0.25 : (isCoMVersion ? 0.3 : 0.2);
@@ -1379,7 +1379,7 @@ function deriveUnitStats(input) {
     // the permanent source fields, as the script's own gates do, and so survive later channel
     // conversions. What the upgrade then *writes* — the missile-to-boulder projectile change,
     // the `<>100` poison increment, the Blackpowder flag and the Armor Piercing grant — is all
-    // `base:militaryWorkshop`, `PROVENANCE[militaryWorkshop]` (`stats_sequence.js`), at that
+    // `training:militaryWorkshop`, `PROVENANCE[militaryWorkshop]` (`stats_sequence.js`), at that
     // block's own rank (F201).
     const blackpowder = blackpowderSource
       && baseNormalTrainingUnit && blackpowderEligibleAttack;
@@ -1404,7 +1404,7 @@ function deriveUnitStats(input) {
     // slot that holds this one (`rangedFieldContext`).
     const permanentMagicalRangedField = inputSlotRtb > 0 && isMagicalRangedType(rtbTypeRaw);
 
-    // What `base:stat:base` seeds, the chain's first entry: the permanent record's identity
+    // What `template:stat:base` seeds, the chain's first entry: the permanent record's identity
     // alone. The Marionette realm retype is `SETSTAT(U,SRangedType,0,…)` — record selector `0`,
     // the calculated record — so it is `b:marionette:rangedType` at its own position and not a
     // seed here (F107), on `PROVENANCE[marionette:rangedType]` (`stats_sequence.js`) from
@@ -1413,12 +1413,12 @@ function deriveUnitStats(input) {
     const baseSequenceRangedType = permanentRangedType;
     const baseSequenceThrownType = permanentThrownType;
 
-    // `base:energyCannon` is a permanent overland conversion to projectile type Beam
+    // `training:energyCannon` is a permanent overland conversion to projectile type Beam
     // with ranged Doom damage. The script gates it on persistent Max Ammo > 0, but every
     // shipped Warlord conventional-ranged unit has positive Max Ammo and every Mechanical
     // zero-ammo unit lacks conventional Ranged. The one-round calculator therefore infers
     // that gate from the permanent conventional-ranged snapshot and imports no ammo field.
-    // Its +50% write is added to the base phase below, after the earlier permanent ranged
+    // Its +50% write is added to the training-time group below, after the earlier permanent ranged
     // writes it reads have been assembled — `PROVENANCE[energyCannon]` (`stats_sequence.js`).
     //
     // Both ability terms are pre-sequence constants on purpose. `energyBeamWeapons` is
@@ -1535,7 +1535,7 @@ function deriveUnitStats(input) {
     // Strike and Blaze of Glory fields below, and `b:bombsGrenades` supplies its identity at
     // its own position rather than the permanent record carrying a region-`b` write. The term
     // is the block's eligibility alone, not its write gate: that gate reads the permanent melee
-    // the `base` phase leaves and is therefore resolved at the step's own rank, so the field has
+    // the permanent-record phases leave and is therefore resolved at the step's own rank, so the field has
     // to stand ready wherever the block can reach it (F202).
     if ((bombsGrenadesCanWriteThrown || shadowStrikeActive) && !modernInputs.thrown) {
       modernInputs.thrown = { strength: 0, type: 'none' };
@@ -1695,8 +1695,8 @@ function deriveUnitStats(input) {
   // (`permanentMagicalRangedField` above).
   // `GetStat(U,SCustomAttribute,1)<>1` (`CreateUnit.CAS!NOMOTHERFUNGUS!+7 "%AND (GetStat(U,SCustomAttribute,1)<>1) )"`, `OverlandEndTurn.CAS!NOOUTLANDERALTAROFSTORM!+15 "%AND (GetStat(U,SCustomAttribute,1)<>1) )"`) is the
   // permanent record at a training-time rank, so it takes the raw flag, not the value Rebuild's
-  // cast-time write leaves: `base:alumniOfAcademy:figures` is a training-time write and
-  // `base:rebuild`, the only mid-sequence write to `mechanical`, is cast-time and therefore
+  // cast-time write leaves: `training:alumniOfAcademy:figures` is a training-time write and
+  // `cast:rebuild`, the only mid-sequence write to `mechanical`, is cast-time and therefore
   // strictly later (F208, F202). The figure sequence is its own record and no write in it
   // reaches `mechanical`, so a record field here would restate this constant, not position it.
   const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
@@ -1718,13 +1718,13 @@ function deriveUnitStats(input) {
   // finished-record projection `SPEC.md`, *The step model* blesses: the record the recalculation
   // **leaves**, which combat resolution is handed and which no block reads at a position.
   //
-  // The grants that left: `base:altarOfTheMoon` (Rage, Poison Immunity, and the
-  // Hunter/Witchdoctor poison and Life Steal branches), `base:militaryWorkshop` (Blackpowder, its
-  // poison increment and Armor Piercing), `base:motherFungus` and `d:venom` (their own poison
-  // increments), `base:energyCannon`, `b:bombsGrenades` and `d:blazeOfGlory` (both Wall Crusher,
-  // F206 for the second; Armor Piercing; First Strike clear) with stage 1; then `base:destiny`
+  // The grants that left: `training:altarOfTheMoon` (Rage, Poison Immunity, and the
+  // Hunter/Witchdoctor poison and Life Steal branches), `training:militaryWorkshop` (Blackpowder, its
+  // poison increment and Armor Piercing), `training:motherFungus` and `d:venom` (their own poison
+  // increments), `training:energyCannon`, `b:bombsGrenades` and `d:blazeOfGlory` (both Wall Crusher,
+  // F206 for the second; Armor Piercing; First Strike clear) with stage 1; then `cast:destiny`
   // (Supernatural) and `b:eyeOfHeaven` (True Sight) → `c:trueSight` (Illusion Immunity) with
-  // stage 2; and last `base:rebuild` / `b:rebuild` (Mechanical) with F208, which was the only
+  // stage 2; and last `cast:rebuild` / `b:rebuild` (Mechanical) with F208, which was the only
   // one of the thirteen keys that moved a number. Each writes a `statRecord` field at its own
   // block's rank and is read back after the chain.
   //
@@ -1762,7 +1762,7 @@ function deriveUnitStats(input) {
     survivalInstinct: abilities.survivalInstinct || false,
     landLinking: abilities.landLinking || false,
   };
-  // The immunity set the recalculation leaves, and the only value `base:immunityCurseGating` reads
+  // The immunity set the recalculation leaves, and the only value `immunity:immunityCurseGating` reads
   // that is not a field of the record at its own position. The strip is artificial — no engine
   // makes the write (`SPEC.md`, *Deliberate deviations*) — so no source fixes its position
   // relative to a grant that writes one of these four, and taking the finished set is what makes
@@ -1844,7 +1844,8 @@ function deriveUnitStats(input) {
   // moved Warp to the front (0x907AA), while CoM2/Warlord run it late (+0x0BA3C) with only
   // Tactician (+0x0C890) after it.
   const abilByPhase = {
-    base: [], a: [], b: [], cBeforeHolyArmor: [], c: [], cAfterWarp: [], d: [], e: [],
+    template: [], training: [], cast: [], immunity: [],
+    a: [], b: [], cBeforeHolyArmor: [], c: [], cAfterWarp: [], d: [], e: [],
   };
   for (const step of abilSteps) {
     const group = step.afterWarp ? 'cAfterWarp'
@@ -2285,7 +2286,7 @@ function deriveUnitStats(input) {
   const identityAtRank = (key) => identitySamples.get(key) || finishedIdentity;
   // `slots` carries the gates that are **not** position-dependent, so a slot can hold them.
   // `melee` is the permanent record's `B.attack > 0`, which
-  // the base phase settles, so it is the predicate over the run context rather than a boolean
+  // the permanent-record phases settle, so it is the predicate over the run context rather than a boolean
   // (F133). `persistentRanged` is the aura pass's
   // `B.ranged > 0` (Units.RecalculateUnits.pas:2535, :2599): the **permanent** record's Ranged
   // field carrying strength, with no test of what type stands in it and none of what the
@@ -2377,7 +2378,7 @@ function deriveUnitStats(input) {
   // both silent defects if they ever drift (`SPEC.md`, *Out-of-range values stop the run*).
   // (1) `finishedIdentity` is the record the recalculation leaves — the projection is exact
   // only while no conversion's gate reads a stat. (2) `permanentFantastic` is the permanent
-  // record's Fantastic flag as the `base` phase leaves it, which is what the loadout and level
+  // record's Fantastic flag as the permanent-record phases leave it, which is what the loadout and level
   // gates read at their own positions.
   if (statUnit.race !== finishedIdentity.race
       || !!statUnit.fantastic !== !!finishedIdentity.fantastic) {
@@ -2388,14 +2389,14 @@ function deriveUnitStats(input) {
       + 'would break the projection targeting and the post-chain reads depend on.');
   }
   // The second claim is checked in the modern builds alone, which are the only ones the two
-  // gates belong to and the only ones whose base phase writes the *permanent* identity.
-  // CoM 1's three base-phase conversions — Zombies, Construct Catapult and the summon branch —
+  // gates belong to and the only ones whose permanent-record phases write the *permanent* identity.
+  // CoM 1's three `template`-phase conversions — Zombies, Construct Catapult and the summon branch —
   // are creation-time writes to the *calculated* record that happen to sit in that phase, so
   // `ctx.base` there is not a statement about the permanent one. Nothing reads it.
   const baseRecord = statRunContext.base;
   if (isCoM2 && baseRecord && !!baseRecord.fantastic !== permanentFantastic) {
     throw new Error(
-      `deriveUnitStats: the permanent Fantastic flag the base phase leaves (${baseRecord.fantastic}) `
+      `deriveUnitStats: the permanent Fantastic flag the permanent-record phases leave (${baseRecord.fantastic}) `
       + `disagrees with the loadout and level gates' value (${permanentFantastic}) for ${version}.`);
   }
   const modernEncMagicIndependentOfMaterial = modernEncMagicOtherTerms
@@ -2577,7 +2578,7 @@ function deriveUnitStats(input) {
   // this slot's Ranged field after the whole sequence has run, rather than the type standing in it
   // at any writing step's own position. The separation is observable wherever a type write leaves
   // the attack live: `c:focusMagic` retypes a live missile in place to the IsMagic shot type
-  // (`stats_sequence.js`), and `base:energyCannon` does the same for Warlord's Beam conversion, so
+  // (`stats_sequence.js`), and `training:energyCannon` does the same for Warlord's Beam conversion, so
   // the finished field is neither missile nor boulder while the permanent one was — measured by
   // `focusMagicRetypeSkipsDistancePenaltyCoM2` against `distPenaltyCoM2_6`. Warlord's
   // `d:blazeOfGlory` is *not* one of those cases, though it also retypes: it empties the Ranged
@@ -2717,11 +2718,11 @@ function deriveUnitStats(input) {
   const figureSteps = [
     // PROVENANCE[altarOfTheSun:figures]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:12:08e36e60187df8bc650c42c7
     statStep({ id: 'altarOfTheSun:figures', sourceId: 'altarOfTheSun',
-      sourceLabel: 'Altar of the Sun', phase: 'base', writes: ['figs'],
+      sourceLabel: 'Altar of the Sun', phase: 'training', writes: ['figs'],
       when: () => altarOfTheSun, apply: u => { u.figs += 1; } }),
     // PROVENANCE[alumniOfAcademy:figures]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:10:848b52c34c24d8642625dae6 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:18:55478fbb88ad8926f0ce7c78
     statStep({ id: 'alumniOfAcademy:figures', sourceId: 'alumniOfAcademy',
-      sourceLabel: 'Academy', phase: 'base', writes: ['figs'],
+      sourceLabel: 'Academy', phase: 'training', writes: ['figs'],
       when: () => alumniOfAcademy, apply: u => { u.figs += 2; } }),
   ];
   const figureUnit = runStatSteps(

@@ -310,7 +310,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
   });
 
   // Destiny makes two writes at two positions and `phase:id` is what separates them: the
-  // permanent `B.race`/`B.Fantastic` transformation at $0059A390 is `base:destiny`, and the
+  // permanent `B.race`/`B.Fantastic` transformation at $0059A390 is `cast:destiny`, and the
   // calculated-record package at $0059A471..$0059A633 — the atomic multi-field write these
   // assertions are about — is `c:destiny`.
   const destinyEvents = report.destiny.statExecutionTrace
@@ -400,7 +400,7 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
       baseChain: statChain('com2_1.05.11').map(entry => ({ ...entry })),
       channelerEvent: pick(channeler, 'marionetteChanneler'),
       channelerLedgerIds: channeler.statExecutionTrace.map(event => event.id),
-      // Three steps carry the id `spiritLink` — the Warlord `base:` stat write and the two
+      // Three steps carry the id `spiritLink` — the Warlord `cast:` stat write and the two
       // identity writes — so this names the phase as well.
       spiritLinkEvent: spiritLink.statTrace
         .find(event => event.id === 'spiritLink' && event.phase === 'd') || null,
@@ -433,11 +433,13 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   // The chain also says which positions are transcribed and which are inherited.
   const allProvisional = phase => report.chain.filter(entry => entry.phase === phase)
     .every(entry => entry.provisional);
-  expect(['b', 'c', 'd'].every(phase => !allProvisional(phase)),
+  // `training` is Warlord's `CreateUnit.CAS` group, transcribed into the script's line order by
+  // F204; the other permanent-record phases are still authoring order.
+  expect(['b', 'c', 'd', 'training'].every(phase => !allProvisional(phase)),
     'the transcribed regions are not marked provisional').toBe(true);
-  expect(['base', 'a', 'e'].every(phase => allProvisional(phase)),
+  expect(['template', 'cast', 'immunity', 'a', 'e']
+    .every(phase => allProvisional(phase)),
     'the inherited regions are marked provisional').toBe(true);
-
   expect(report.channelerEvent).not.toBeNull();
   expect(report.channelerEvent.phase).toBe('b');
   expect(report.channelerEvent.sourceOrder)
@@ -490,34 +492,7 @@ test('F20 rejects missing, duplicate, and malformed structural trace entries', a
     });
     const chain = (...entries) => entries.map(([phase, id, provisional = false]) =>
       ({ key: `${phase}:${id}`, phase, id, provisional }));
-    // A permanent write and a second position for the same effect. The `base` step models a
-    // write the engine made before the recalculation reseeds `Units[i]` from `BaseUnits[i]`, so a
-    // one-shot `training`/`cast` delta must land once; only an idempotent `perPass` write may
-    // stand at both positions (SPEC.md, *The step model*).
-    const permanentChain = (kind, otherPhase) => [
-      { key: 'base:x', phase: 'base', id: 'x', provisional: true, baseKind: kind },
-      { key: `${otherPhase}:x`, phase: otherPhase, id: 'x', provisional: false },
-    ];
-    const fieldStep = (id, phase, writes) =>
-      ({ id, phase, writes, apply: unit => { writes.forEach(field => { unit[field] += 1; }); } });
-    const bothPositions = (kind, secondWrites) => shouldThrow(() => orderStatStepsBySource(
-      [fieldStep('x', 'base', ['def']), fieldStep('x', 'c', secondWrites)],
-      permanentChain(kind, 'c')));
     return {
-      oneShotPermanentWriteAtTwoPositions: bothPositions('training', ['def']),
-      castPermanentWriteAtTwoPositions: bothPositions('cast', ['res', 'def']),
-      // The two entries a real chain has: `base:destiny` is idempotent, and `base:spiritLink`'s
-      // in-chain namesakes write a different field.
-      idempotentPermanentWriteAtTwoPositions: bothPositions('perPass', ['def']),
-      permanentWriteBesideADisjointSecondPosition: bothPositions('training', ['res']),
-      baseChainEntryWithoutAWriteKind: shouldThrow(() => orderStatStepsBySource(
-        [], [{ key: 'base:x', phase: 'base', id: 'x', provisional: true }])),
-      nonBaseChainEntryNamingAWriteKind: shouldThrow(() => orderStatStepsBySource(
-        [], [{ key: 'c:x', phase: 'c', id: 'x', provisional: false, baseKind: 'training' }])),
-      baseWriteKindsOutOfOrder: shouldThrow(() => orderStatStepsBySource([], [
-        { key: 'base:x', phase: 'base', id: 'x', provisional: true, baseKind: 'cast' },
-        { key: 'base:y', phase: 'base', id: 'y', provisional: true, baseKind: 'training' },
-      ])),
       missingChainEntry: shouldThrow(() => orderStatStepsBySource(
         [step('unlisted')], chain(['c', 'listed']))),
       duplicateStep: shouldThrow(() => orderStatStepsBySource(
@@ -545,13 +520,6 @@ test('F20 rejects missing, duplicate, and malformed structural trace entries', a
   });
 
   expect(failures).toEqual({
-    oneShotPermanentWriteAtTwoPositions: true,
-    castPermanentWriteAtTwoPositions: true,
-    idempotentPermanentWriteAtTwoPositions: false,
-    permanentWriteBesideADisjointSecondPosition: false,
-    baseChainEntryWithoutAWriteKind: true,
-    nonBaseChainEntryNamingAWriteKind: true,
-    baseWriteKindsOutOfOrder: true,
     missingChainEntry: true,
     duplicateStep: true,
     duplicateChainEntry: true,

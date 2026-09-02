@@ -3,6 +3,142 @@
      See global CLAUDE.md. -->
 
 # Journal
+## 2026-09-02 — F228: nothing loads `Casapi.dll`; it is the published SDK
+
+New file `Reference docs/Caster binary/Casapi.dll.md`, plus a subsystem-index row in
+`CoM2 binary analysis.md`. No code change.
+
+The DLL is the modding SDK the developer ships in `<CoM2>/CasApi/`, alongside `CasApi.pas`,
+`Typedec.pas`, `SharedConstants.pas` and a `Readme.txt` that says so outright — and those four
+files are byte-identical to what this repo vendors as `Reference docs/Script source/CAS reference/`,
+so that directory is the SDK's headers, not a CAS artefact. A `casapi` scan over both shipped
+distributions (40,936 + 11,227 files) hits only the DLL's own self-description and the manual's
+1.5.2 changelog; no PE imports it; there are five PE files in the install and no launcher.
+
+The DLL is `Caster.exe`'s engine modules minus the 20 presentation/input/audio modules and
+`CasterCore`, plus one module `Casapi` that is the 914 stdcall exports. `CasterCore` turns out to
+be a UI-facing facade, not the CAS script bridge — every external call into it comes from a
+presentation module, none from `@Scripts@`.
+
+The thing worth remembering: the DLL is built with range checking off for the units the accessors
+reach (`Casapi`, `Units`, `Combat` emit zero `@BoundErr` calls; `Scripts`/`Init`/`OverlandMovement`
+/`Economy` keep theirs, which is all 1,172 of the residual), and overflow checking off but for one
+site. So `UnitBuildingRequirement`'s missing bounds are not a one-off bug — the whole export
+surface has no compiler-emitted check, and `BuildingRequirement` shows the hand-written kind
+failing open into an unassigned result. Hazard for native tool authors only.
+
+GPT reviewer (Sol High, `.reviews/F228.review-of-Claude.md`) caught five real errors, all fixed:
+the DLL has 8,707 `casapi` occurrences (8,705 TD32 names), not just its export-directory name; the
+"no LoadLibrary-able spelling" line was false; 912 of 914 entry VAs coincide, not 914; the residual
+1,172 checks are not `Init`'s twenty; and the out-of-table consequences were stated too
+deterministically. Its one wrong claim: it puts the `@Castercore@UnitBuildingRequirement` caller at
+`$0067BC97`, which is `push 0` — the call is at `$0067BB17`.
+
+Note: the first two `codex_agent.py` runs lost their review — the launcher writes the agent's final
+chat message over `--out`, so pointing the agent at the same path clobbers it. Third run wrote to a
+different path and the file was moved into place.
+
+## 2026-09-02 — F204: the Warlord `training` group takes `CreateUnit.CAS` line order
+
+The 22 entries now run in the script's order, and `training` joined `TRANSCRIBED_PHASES`, so all 22
+positions are non-provisional. `tools/unit_checks/version_scope.js` and
+`tests/f20-source-order.spec.js` moved `training` to the transcribed side in the same change; only
+Warlord has `training:` entries, so the global `TRANSCRIBED_PHASES` set reaches nothing else
+(checked: the other four chains have 0).
+
+Order, with the 1.5.12.9 block each step's `@span` digest resolves to: `artificer` 37, `militaryWorkshop`
+248, `lightningBlade:breath` 296, `poolOfRepentance` 313, `dragonMound` 321, `ludusAgoge` 337,
+`altarOfTheSun:holyMother` 362 / `:figures` 366 (exclusive arms of one `IF` at 357–368),
+`altarOfTheMoon` 374, `sanctaBasilica` 414, `motherFungus` 445, `alumniOfAcademy:figures` 462,
+`survivalInstinctToBlock` 523, then the five `naturalSelection:*` by their own write lines —
+`powerMinerals` 539, `nightshade` 543, `wildGame` 547, `coal` 554, `iron` 558 — `pillarOfFaith` 574,
+`malnourished` 616, `energyCannon` 693, `armorclad` 702. **Every number in the F204 body was 2 low
+except `artificer`**, so those were a pre-1.5.12.9 release. Every `GOTO` across the represented
+blocks jumps forward, so line order is creation order; the file's one back edge is the `FOR` loop
+at `:17-28`, which ends before the first represented block. Many blocks `GOTO
+"ENDOFUNIQUEBUILDING"` and so are mutually exclusive on a legal unit — that makes some pairs
+unobservable, but does not disturb the linearization.
+
+`armorclad` and `alumniOfAcademy:figures` take their `CreateUnit.CAS` line (702, 462). The
+`OverlandEndTurn.CAS` route reaches an already-created unit, outside this script's order. The guard
+is one-way, not symmetric: the creation site tests only its own building or spell, the upgrade site
+tests the marker creation left. That is enough for the write to land once.
+
+**One number moved, and the TASKS body predicted none.** `abilities.poison`: Gnoll Hunters 3 → 2
+and Witchdoctors 1 → 0. Altar of the Moon's two `STypeID` arms *assign* `AFPoison` (`=2`, `=100`)
+while Military Workshop's is a read-modify-write increment, and the script runs the workshop first
+(258 vs 385). The old authoring order had them the other way round, so the increment landed on the
+assignment. The new value is the script's.
+
+`derivation_equivalence` reported **0 of 52440** across the change and is blind here by
+construction: its cases are every control *solo* plus seeded 12-control draws, which cannot put
+Military Workshop and Altar of the Moon on the same unit. **A digest of 0 is not evidence about an
+intra-phase reordering** — reach for a saturated probe instead. That limit is now stated in the
+tool's own header, which is where the next agent will look.
+
+The probe that found it turned every training control on at once, over 8 base races × 7 unit names
+× 6 attack shapes × {normal,hero} × {mechanical,not} × 3 figure counts = 4032 cases, run under both
+orderings and diffed on the same derived-value digest. 96 differed, and the count factors exactly:
+1 race (Gnoll) × 2 names (Hunters, Witchdoctors) × 4 attack shapes (the four with a blackpowder
+channel; the magic-ranged and no-attack shapes give Military Workshop nothing to increment) × 3
+figure counts × 2 mechanical × 2 unit-type. **The unit-type axis was inert** — `isHero` reads the
+identity record, not the top-level `unitType` field the probe varied, so all 2016 normal/hero pairs
+came back byte-identical and the 96 are 48 configurations counted twice. Altar of the Moon really
+is non-hero-gated (`stats.js`); the probe never built a hero. A future probe of this shape should
+vary the identity and should also cover a non-zero starting poison and the 100 sentinel.
+
+Checks: `npm test` 142 passed; `npm run provenance` 295/295; `node_unit_checks` 16032 passed;
+`cas_citation_audit` PASS, in-scope anchors 554 → 558 (four new ones in the rewritten chain comment).
+
+GPT review (`.reviews/F204.review-of-Claude.md`) independently resolved all 22 spans to the same
+lines and agreed with both rulings, the promotion and the poison direction. Its Medium finding was
+that nothing pinned the *order* — `provisional` is a claim about evidence, and the assertion would
+have passed with two entries swapped — so a 22-entry order assertion went into
+`tests/f20-source-order.spec.js`. **Removed the same day on the user's decision**: it was a second
+copy of the manifest order. The order is now pinned only by the manifest; a script-derived check
+(resolve each entry's span anchor and assert the lines ascend) is the alternative if one is wanted
+later. Its second Medium was the unexplained 96, now
+factored above. Both Lows (the "every jump is forward" overclaim and the too-symmetric
+two-entrances comment) are fixed.
+
+## 2026-09-02 — F210: `base` splits into `template`/`training`/`cast`/`immunity`
+
+`STEP_PHASES` is now `template, training, cast, immunity, a, b, c, d, e, attackSpecific`, and
+`BASE_WRITE_KINDS` / `baseKind` / `baseWrites()` are gone — a step's position is spelled once. The
+code tokens are the identifier form of the SPEC labels, the way `attack-specific` is `attackSpecific`,
+because a chain key is literally `` `${phase}:${id}` `` and `assertStatChain` enforces that.
+
+33 scope rows moved: 6 to `template` (`stat:base`, `baseThresholds`, `baseHitChance`,
+`zombies:toBlock`, `constructCatapult`, `summonBranch`), 22 to `training` (every `CreateUnit.CAS`
+write, Warlord only), 4 to `cast` (`rebuild`, `spiritLink`, and the two former-`perPass` Destiny
+writes), 1 to `immunity` (`immunityCurseGating`, verified to be the only `artificial` entry in all
+five chains). 167 `base:<id>` references and 33 construction sites rewritten across 21 files.
+
+**`ctx.base` closes on `immunity`.** `PERMANENT_RECORD_PHASES` is the set of four, and
+`runStatSteps` refreshes the snapshot through all of them. That is byte-identical to the old
+behaviour — `immunity:immunityCurseGating` is the last former-`base` entry in every chain — and it
+is what the artificial step means: its whole content is the assumption that the curse never landed,
+so a later `BaseUnits[i].…` gate should read the stripped record. The step writes only curse flags,
+never `atk`/`race`/`fantastic`, so no consumer distinguishes the two candidate freeze points today.
+
+**One invariant is deliberately lost.** `contestedPermanentIds` / `assertPermanentWritesLandOnce`
+are deleted with their four F20 cases (three more retired with `baseWrites()` — seven in total, the
+only assertions F210 touched). Folding `perPass` into `cast-time` also means the phase-rank check
+cannot preserve the old one-shot-before-per-pass ordering: `cast:destiny` ahead of `cast:rebuild`
+would now pass. The Warlord chain still has them the right way round and the comment there says the
+order is the list's own.
+
+Tests: `npm test` 142 passed; `npm run provenance` 295/295; `node_unit_checks` 16032 passed;
+`derivation_equivalence` 0 differing of 52440. Separately, dumping each version's chain from a
+`HEAD` worktree and normalizing the four new prefixes back to `base:` gives a byte-identical
+key order in all five versions.
+
+GPT review (`.reviews/F210.review-of-Claude.md`) confirmed the mapping, `ctx.base`, assertion
+integrity and the arithmetic; its Medium finding was the lost cast/per-pass ordering claim (accepted
+and now stated accurately in the chain comment) and its Low findings were six stale "base stage" /
+"`base` phase" comments, all fixed. Its `luckyPhaseBase` point is declined here: that is a control
+id, not a phase token, and renaming it would break stored states — F205 deletes it.
+
 ## 2026-09-02 — F227.6: the seven small scripts take anchors, and the audit runs clean
 
 49 line citations → 50 anchors from the map (one comma list emits two), 14 of them **text anchors**
@@ -1788,8 +1924,8 @@ to be **DOS values carried into Warlord fixtures**.
 **Row 5's mechanism was verified before the rename, because the rename depends on it.**
 `hasMeleeAttackAt` is `runCtx => runCtx.base.atk > 0` (`Calculator/stats.js`); the CoM2 ranged,
 Thrown and Breath arms of the `level` step read `base[...]` (`Calculator/stats_sequence.js`); and
-`runStatSteps` reassigns `context.base` only for a step whose `phase` is `base`
-(`Calculator/steps.js`). The `focusMagic` step is phase `c` and writes only `u`. So the two
+`runStatSteps` reassigns `context.base` only for a step in one of the permanent-record phases
+(`base` at the time; `template`/`training`/`cast`/`immunity` since F210 — `Calculator/steps.js`). The `focusMagic` step is phase `c` and writes only `u`. So the two
 region-`c` steps are order-independent on this card and the old key claimed an ordering the code
 does not have. `focusMagicCreationAfterLevelCoM2` → `focusMagicCreatedRangedNoLevelBonusCoM2`; the
 key had exactly two sites (its preset file and `Calculator/test_tree.js`) and no other reader
@@ -2008,7 +2144,7 @@ than leaving the tooltip quietly wrong. `tools/derivation_equivalence.js`: byte-
 worktree at the parent commit, 0 of 52,440.
 
 **Left open.** `d:mechanicalExpert`'s gate is `when: u => !!u.mechanical` — the live flag — while
-`UnitCalc.CAS:276` reads the permanent one. For non-heroes the two agree, because `base:rebuild`
+`UnitCalc.CAS:276` reads the permanent one. For non-heroes the two agree, because `cast:rebuild`
 writes the permanent record. For heroes `b:rebuild` writes only record 0, so the calculator grants a
 Rebuilt hero +20%/+10% that the script would not. Not fixed: it is a behaviour change, not a tooltip.
 No fixture covers a Rebuilt hero either way.

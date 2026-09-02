@@ -394,13 +394,13 @@ function runModifierTraceChecks(ctx) {
     'Destiny doubles melee after the permanent Mother Fungus write');
   assertEqual(destinyAfterPermanent.rtb, 8,
     'Destiny doubles ranged after the permanent Mother Fungus write');
-  // Destiny makes two writes at two positions: `base:destiny`, the permanent `B.race` /
+  // Destiny makes two writes at two positions: `cast:destiny`, the permanent `B.race` /
   // `B.Fantastic` transformation, and `c:destiny`, the calculated-record package these checks
   // are about. `phase:id` is what tells them apart (`SPEC.md`, *The step model*).
   const destinyOrderedIds = destinyAfterPermanent.statTrace
     .map(entry => `${entry.phase}:${entry.id}`);
-  assert(destinyOrderedIds.indexOf('base:motherFungus') < destinyOrderedIds.indexOf('c:destiny'),
-    'Destiny follows every permanent base write in the ordered trace');
+  assert(destinyOrderedIds.indexOf('training:motherFungus') < destinyOrderedIds.indexOf('c:destiny'),
+    'Destiny follows every permanent-record write in the ordered trace');
 
   const destinyAfterEarlyHook = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 3, rtb: 2, rtbType: 'missile',
@@ -841,7 +841,7 @@ function runChannelAttributionChecks(ctx) {
   'A Breath ledger reconstruction drops the steps whose declaration excludes Breath, and keeps '
   + 'one whose declaration reaches Breath-agnostic fields');
   // Compared over the events themselves, not by id: three steps share the id `spiritLink` at
-  // three positions (`base:`, `b:` and `d:`), so a lookup by id alone answers for the wrong one.
+  // three positions (`cast:`, `b:` and `d:`), so a lookup by id alone answers for the wrong one.
   assertSameKeyList(
     breathLedger.filter(event => !event.channels).map(event => `${event.phase}:${event.id}`),
     ledger.filter(event => !event.channels).map(event => `${event.phase}:${event.id}`),

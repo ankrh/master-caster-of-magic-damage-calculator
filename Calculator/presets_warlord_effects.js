@@ -113,7 +113,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.weakness':
-        'Keep, and the absence is the rule under test. `weakness` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the curse the fixture configures is gone before any step could read it. Magic Immunity is the live half — ablating it lets Weakness land and the melee falls to 7.',
+        'Keep, and the absence is the rule under test. `weakness` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the curse the fixture configures is gone before any step could read it. Magic Immunity is the live half — ablating it lets Weakness land and the melee falls to 7.',
     },
   },
   magicImmunityGatesBlackSleep: {
@@ -124,7 +124,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
     vacuity: {
       'b.ability.blackSleep':
-        'Keep, and the absence is the rule under test. `blackSleep` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the defender rolls normally instead of taking doom-style assigned damage. Magic Immunity is the live half. version-dead is literally true and uninformative: this is the only preset in Calculator/presets_*.js that runs blackSleep at com2_1.05.11 — the eight in presets_curses_and_undead.js all sit under TEST_TREE\'s mom_1.31 group (test_tree.js:8, :14) — so CoM2\'s positive Black Sleep behaviour is unasserted.',
+        'Keep, and the absence is the rule under test. `blackSleep` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the defender rolls normally instead of taking doom-style assigned damage. Magic Immunity is the live half. version-dead is literally true and uninformative: this is the only preset in Calculator/presets_*.js that runs blackSleep at com2_1.05.11 — the eight in presets_curses_and_undead.js all sit under TEST_TREE\'s mom_1.31 group (test_tree.js:8, :14) — so CoM2\'s positive Black Sleep behaviour is unasserted.',
     },
   },
   magicImmunityGatesShatter: {
@@ -135,7 +135,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.shatter':
-        'Keep, and the absence is the rule under test. `shatter` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the melee is never capped at 1. Magic Immunity is the live half. version-dead is literally true and uninformative: this is the only preset in Calculator/presets_*.js that runs shatter at com2_1.05.11 — the one other, shatterBeforeSupremeLightCoM, is com_6.08 — so CoM2\'s positive Shatter behaviour is unasserted.',
+        'Keep, and the absence is the rule under test. `shatter` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the melee is never capped at 1. Magic Immunity is the live half. version-dead is literally true and uninformative: this is the only preset in Calculator/presets_*.js that runs shatter at com2_1.05.11 — the one other, shatterBeforeSupremeLightCoM, is com_6.08 — so CoM2\'s positive Shatter behaviour is unasserted.',
     },
   },
   magicImmunityGatesVertigo: {
@@ -146,7 +146,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.vertigo':
-        'Keep, and the absence is the rule under test. `vertigo` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the -25% To Hit never lands. Magic Immunity is the live half — ablating it drops the hit chance to 75% and the total to 7.5.',
+        'Keep, and the absence is the rule under test. `vertigo` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the -25% To Hit never lands. Magic Immunity is the live half — ablating it drops the hit chance to 75% and the total to 7.5.',
     },
   },
   magicImmunityGatesWarpAttack: {
@@ -157,7 +157,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.warpAttack':
-        'Keep, and the absence is the rule under test. `warpAttack` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the melee halving never runs. Magic Immunity is the live half — ablating it halves the melee to 5.',
+        'Keep, and the absence is the rule under test. `warpAttack` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the melee halving never runs. Magic Immunity is the live half — ablating it halves the melee to 5.',
     },
   },
   magicImmunityGatesMindStorm: {
@@ -168,7 +168,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.mindStorm':
-        'Keep, and the absence is the rule under test. `mindStorm` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the -3 melee never lands. Magic Immunity is the live half — ablating it drops the melee to 7. illusionImmunityGatesMindStorm is the Illusion arm of the same strip, reached through the separate ILLUSION_IMMUNITY_GATED_CURSES list at stats_identity.js:630.',
+        'Keep, and the absence is the rule under test. `mindStorm` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and the -3 melee never lands. Magic Immunity is the live half — ablating it drops the melee to 7. illusionImmunityGatesMindStorm is the Illusion arm of the same strip, reached through the separate ILLUSION_IMMUNITY_GATED_CURSES list at stats_identity.js:630.',
     },
   },
   illusionImmunityGatesMindStorm: {
@@ -179,7 +179,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.mindStorm':
-        'Keep, and the absence is the rule under test. `mindStorm` is one of the two members of ILLUSION_IMMUNITY_GATED_CURSES (stats_identity.js:630), which `immunityStrippedCurses` unions in whenever `illusionImmunity`, `trueSight` or Warlord\'s Eye of Heaven is present (stats_identity.js:656-662). The set it reads is the finished one: `immunityCurseGatingStep` passes `finishedImmunities` into both the gate and the write (stats_identity.js:647 and :649), and the comment at :655 states that split. So `base:immunityCurseGating` clears the flag and the -3 melee never lands. Illusion Immunity is the live half — ablating it drops the melee to 7.',
+        'Keep, and the absence is the rule under test. `mindStorm` is one of the two members of ILLUSION_IMMUNITY_GATED_CURSES (stats_identity.js:630), which `immunityStrippedCurses` unions in whenever `illusionImmunity`, `trueSight` or Warlord\'s Eye of Heaven is present (stats_identity.js:656-662). The set it reads is the finished one: `immunityCurseGatingStep` passes `finishedImmunities` into both the gate and the write (stats_identity.js:647 and :649), and the comment at :655 states that split. So `immunity:immunityCurseGating` clears the flag and the -3 melee never lands. Illusion Immunity is the live half — ablating it drops the melee to 7.',
     },
   },
   illusionImmunityGatesVertigo: {
@@ -190,7 +190,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.vertigo':
-        'Keep, and the absence is the rule under test. `vertigo` is the other member of ILLUSION_IMMUNITY_GATED_CURSES (stats_identity.js:630), so `base:immunityCurseGating` clears the flag through the Illusion arm at stats_identity.js:658-661 and the -25% To Hit never lands. Illusion Immunity is the live half — ablating it drops the hit chance to 75% and the total to 7.5.',
+        'Keep, and the absence is the rule under test. `vertigo` is the other member of ILLUSION_IMMUNITY_GATED_CURSES (stats_identity.js:630), so `immunity:immunityCurseGating` clears the flag through the Illusion arm at stats_identity.js:658-661 and the -25% To Hit never lands. Illusion Immunity is the live half — ablating it drops the hit chance to 75% and the total to 7.5.',
     },
   },
   magicImmunityGatesNausea: {
@@ -201,7 +201,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.nausea':
-        'Keep, and the absence is the rule under test. `nausea` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `b:nausea`\'s -10% To Hit (stats_sequence.js:500-503) never fires. Magic Immunity is the live half — ablating it drops the hit chance to 90% and the total to 9. This is the one member whose gating is inferred rather than read: the comment at stats_identity.js:609-611 records that nausea is a UnitCalcPre.CAS effect with no spells.ini record, so no `NonMagic` flag decides it.',
+        'Keep, and the absence is the rule under test. `nausea` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `b:nausea`\'s -10% To Hit (stats_sequence.js:500-503) never fires. Magic Immunity is the live half — ablating it drops the hit chance to 90% and the total to 9. This is the one member whose gating is inferred rather than read: the comment at stats_identity.js:609-611 records that nausea is a UnitCalcPre.CAS effect with no spells.ini record, so no `NonMagic` flag decides it.',
     },
   },
   magicImmunityGatesTemporalTwist: {
@@ -212,14 +212,14 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 10.000 },
     vacuity: {
       'a.ability.temporalTwist':
-        'Keep, and the absence is the rule under test. `temporalTwist` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `applyTemporalTwistEffects` then finds nothing to act on (combat_effects.js:188-195), leaving First Strike in place. Magic Immunity is the live half — ablating it lets the strip delete firstStrike and B retaliates for dmgToA 5.',
+        'Keep, and the absence is the rule under test. `temporalTwist` is a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` clears the flag at the head of the chain (stats_identity.js:644-651) and `applyTemporalTwistEffects` then finds nothing to act on (combat_effects.js:188-195), leaving First Strike in place. Magic Immunity is the live half — ablating it lets the strip delete firstStrike and B retaliates for dmgToA 5.',
     },
   },
   // The corpus was blind to the grant/strip combination: every fixture above states its immunity
   // directly, so none of them says what happens when the immunity is *granted* during the
   // derivation. These two do, one per grant that reaches the strip's own gates (F199).
   sanctaBasilicaMagicImmunityStripsWeaknessWarlord: {
-    desc: 'The Magic Immunity that gates the curse strip can be a grant rather than an input: Sancta Basilica gives a High Men Paladin Magic Immunity (CreateUnit.CAS!NOFROSTCLUB!+2..+31 ": new effect of Sancta Basilica :" "!NOBASILICA!"), and `base:immunityCurseGating` reads the immunity set the recalculation leaves, so Weakness is stripped whatever position the grant takes. Melee 6 at 100% hit against Armor 0 is 6.0, the undiminished attack: the stated Weakness never reaches it, and that inertness is what the fixture asserts. Sancta Basilica is the half that moves the number — drop it and Weakness lands for melee 6−3 and 3.0.',
+    desc: 'The Magic Immunity that gates the curse strip can be a grant rather than an input: Sancta Basilica gives a High Men Paladin Magic Immunity (CreateUnit.CAS!NOFROSTCLUB!+2..+31 ": new effect of Sancta Basilica :" "!NOBASILICA!"), and `immunity:immunityCurseGating` reads the immunity set the recalculation leaves, so Weakness is stripped whatever position the grant takes. Melee 6 at 100% hit against Armor 0 is 6.0, the undiminished attack: the stated Weakness never reaches it, and that inertness is what the fixture asserts. Sancta Basilica is the half that moves the number — drop it and Weakness lands for melee 6−3 and 3.0.',
     version: V_WARLORD,
     a: { figs:1, atk:6, hitChance:70, hp:10, race:'High Men', name:'Paladins',
       abilities: { sanctaBasilica: true, weakness: true } },
@@ -251,7 +251,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 9.000 },
     vacuity: {
       'a.ability.magicImmunity':
-        'Keep, and the absence is the rule under test. `blackPrayer` is deliberately not a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `base:immunityCurseGating` has nothing to clear and the immunity moves no number. The comment above the list gives the mechanism (stats_identity.js:616-625): Black Prayer is a combat global gated on a side-indexed global rather than a flag on the unit, so no per-unit resistance roll is ever made for the immunity to close. Black Prayer is the live half at melee 10 -> 9.',
+        'Keep, and the absence is the rule under test. `blackPrayer` is deliberately not a member of MAGIC_IMMUNITY_GATED_CURSES (stats_identity.js:626-629), so `immunity:immunityCurseGating` has nothing to clear and the immunity moves no number. The comment above the list gives the mechanism (stats_identity.js:616-625): Black Prayer is a combat global gated on a side-indexed global rather than a flag on the unit, so no per-unit resistance roll is ever made for the immunity to close. Black Prayer is the live half at melee 10 -> 9.',
     },
   },
 

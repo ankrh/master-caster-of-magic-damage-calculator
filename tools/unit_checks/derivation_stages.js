@@ -75,13 +75,13 @@ function runDerivationStageChecks(ctx) {
 
   // The four magnitudes are proved by damage instead — `artificerMechanical*Warlord`, whose
   // resistance case is written against the script's +2.
-  assertEqual(phaseOf({ artificer: true, mechanical: true }, 'artificer'), 'base',
-    'Artificer ABase writes use the base stage');
+  assertEqual(phaseOf({ artificer: true, mechanical: true }, 'artificer'), 'training',
+    'Artificer ABase writes are training-time');
 
   assertEqual(phaseOf({ guardian: true }, 'guardian'), 'c',
     'The Guardian retort is region c, where +0x0B092 puts it');
-  assertEqual(phaseOf({ rebuild: true }, 'rebuild', version, { isHero: false }), 'base',
-    'Non-hero Rebuild ABase write uses the base stage');
+  assertEqual(phaseOf({ rebuild: true }, 'rebuild', version, { isHero: false }), 'cast',
+    'Non-hero Rebuild ABase write is cast-time');
   assertEqual(phaseOf({ rebuild: true }, 'rebuild', version, { isHero: true }), 'b',
     'Hero Rebuild is reapplied in UnitCalcPre phase b');
 
@@ -200,7 +200,7 @@ function runDerivationStageChecks(ctx) {
     'Warlord Spirit Link clears Fantastic before the Misfortune aura gate');
   assertEqual(linkedMisfortune.atk, 1,
     'A base-Fantastic unit qualifies for Misfortune after Spirit Link makes it live non-Fantastic');
-  assertEqual(phaseOf({ spiritLink: true }, 'spiritLink'), 'base',
+  assertEqual(phaseOf({ spiritLink: true }, 'spiritLink'), 'cast',
     'Spirit Link writes +2 Resistance permanently to ABase when cast');
 
   // Which fields modern Animated and Black Prayer reach is proved by the four channel strengths
@@ -231,12 +231,12 @@ function runDerivationStageChecks(ctx) {
     favoredTerrain: true,
   };
   const mixed = ctx.getAbilityStatSteps(mixedAbilities, version);
-  const phases = ['base', 'a', 'b', 'c', 'd', 'e'];
+  const phases = ['template', 'training', 'cast', 'immunity', 'a', 'b', 'c', 'd', 'e'];
   const byPhase = {};
   for (const step of mixed) (byPhase[step.phase] = byPhase[step.phase] || []).push(step);
   assert(Object.keys(byPhase).every(phase => phases.includes(phase)),
     'Every emitted step carries a known phase');
-  // Emission is in source order, which is *not* phase order — Artificer is `base` and comes
+  // Emission is in source order, which is *not* phase order — Artificer is `training` and comes
   // near the end. Partitioning by phase is therefore the caller's job, not something to be
   // assumed. `lucky`, `armorclad` and `rebuild` appear without being asked for: each reads a
   // grantable flag off the record at its own position, so emission is a superset and the `when`
@@ -244,7 +244,7 @@ function runDerivationStageChecks(ctx) {
   assertEqual(mixed.map(step => step.id).join(','),
     'holyBonus,lucky,prayer,rust,favoredTerrain,armorclad,artificer,rebuild',
     'Steps are emitted in source order, which the caller partitions by phase');
-  assertEqual(mixed.map(step => step.phase).join(','), 'e,c,c,d,d,base,base,base',
+  assertEqual(mixed.map(step => step.phase).join(','), 'e,c,c,d,d,training,training,cast',
     'Emission order is not phase order');
 }
 

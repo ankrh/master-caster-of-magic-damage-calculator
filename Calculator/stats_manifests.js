@@ -9,7 +9,7 @@
 // source for the two CAS files' top-level order. What positions those sources fix, and what is
 // inherited from authoring order instead, is `TRANSCRIBED_PHASES` and `DEDUCED_POSITIONS` below.
 
-// One ordered chain per engine version, `base` through `e`, is the single mechanism that orders
+// One ordered chain per engine version, `template` through `e`, is the single mechanism that orders
 // a derivation. There is no second one: array order no longer decides anything, and a step whose
 // key is absent from its version's chain fails composition rather than landing wherever it was
 // authored. The `attackSpecific` lists stay outside the chain — they are a separate compiled
@@ -48,9 +48,12 @@
 // Which positions the evidence fixes, stated once rather than per chain. Regions `b`, `c` and `d`
 // are transcribed — the compiled region-`c` address map in `Reference docs/Caster binary/CoM2
 // binary - unit recalculation.md`, and the top-level order of `UnitCalcPre.CAS` and
-// `UnitCalc.CAS` under `Reference docs/Script source/Warlord 1.5.12.9/`. `base`, `a` and `e` are
-// inherited from the order the steps happen to be authored in and stay provisional until sourced.
-const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
+// `UnitCalc.CAS` under `Reference docs/Script source/Warlord 1.5.12.9/`. `training` joined them
+// in F204: its only entries are Warlord's 22 `CreateUnit.CAS` writes, and that list is now the
+// script's own line order rather than the order the steps were authored in. `template`, `cast`,
+// `immunity`, `a` and `e` are still inherited from authoring order and stay provisional until
+// sourced.
+const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd', 'training']);
 
 // Individual positions inside a transcribed region that the map does not actually give.
 // Only `c:raiseDead` is left, in every version that has it: it is a combat-spell write — from
@@ -66,7 +69,7 @@ const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd']);
 // $0059F4A3, Blood Lust $0059F5DC, Animated $0059F7D8, the aggregate Undead normalization
 // $0059FBD0, and the No Heal conversion $005A0420 immediately after the Mystic Surge block whose
 // flag reaches it. Destiny's identity write is not in region `c` at all: it writes the
-// *permanent* record (`B.race`, `B.Fantastic` at $0059A390) and is `base:destiny`.
+// *permanent* record (`B.race`, `B.Fantastic` at $0059A390) and is `cast:destiny`.
 const DEDUCED_IDENTITY_C_POSITIONS = ['c:raiseDead'];
 const DEDUCED_POSITIONS = Object.freeze({
   'mom_1.31': [],
@@ -78,19 +81,6 @@ const DEDUCED_POSITIONS = Object.freeze({
   'com2_warlord_1.5.12.9': DEDUCED_IDENTITY_C_POSITIONS,
 });
 
-// The `base` phase holds five kinds of write (`BASE_WRITE_KINDS`, `steps.js`), and a chain runs
-// them in that order. Each chain states the kind beside the keys rather than in a second table, so
-// there is nothing to keep in sync: `baseWrites` tags them, `versionChain` refuses an untagged
-// `base:` key, and `assertStatChain` enforces the order and the one-shot rule.
-function baseWrites(kind, ids) {
-  if (!Object.prototype.hasOwnProperty.call(BASE_WRITE_KIND_RANK, kind)) {
-    throw new Error(
-      `baseWrites: unknown base write kind '${kind}' `
-      + `(expected one of ${BASE_WRITE_KINDS.join(', ')}).`);
-  }
-  return ids.map(id => ({ key: `base:${id}`, baseKind: kind }));
-}
-
 function versionChain(version, entries) {
   // Every version names its own deduced-position list, including the two MoM builds whose
   // list is empty. A version with no entry would silently get an empty set and mark its whole
@@ -101,21 +91,14 @@ function versionChain(version, entries) {
       + `(expected one of ${Object.keys(DEDUCED_POSITIONS).join(', ')}).`);
   }
   const deduced = new Set(DEDUCED_POSITIONS[version]);
-  return Object.freeze(entries.map(entry => {
-    const tagged = typeof entry !== 'string';
-    const key = tagged ? entry.key : entry;
+  return Object.freeze(entries.map(key => {
     const cut = key.indexOf(':');
     const phase = key.slice(0, cut);
-    if (tagged !== (phase === 'base')) {
-      throw new Error(`versionChain: ${version} entry '${key}' must name its base write kind `
-        + 'through baseWrites(), and only a base entry may');
-    }
     return Object.freeze({
       key,
       phase,
       id: key.slice(cut + 1),
       provisional: !TRANSCRIBED_PHASES.has(phase) || deduced.has(key),
-      ...(phase === 'base' ? { baseKind: entry.baseKind } : {}),
     });
   }));
 }
@@ -126,9 +109,9 @@ function versionChain(version, entries) {
 // Black Channels and a Chaos Channels mutation therefore finishes Chaos, not Death.
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   // Template initialization, then the artificial strip. F203: the strip used to stand ahead of
-  // `base:stat:base`, i.e. before the record it reads was seeded.
-  ...baseWrites('template', ['stat:base', 'baseThresholds']),
-  ...baseWrites('artificial', ['immunityCurseGating']),
+  // `template:stat:base`, i.e. before the record it reads was seeded.
+  'template:stat:base', 'template:baseThresholds',
+  'immunity:immunityCurseGating',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   // `BU_Apply_Specials` opens with Water Walking 0x8F31D and True Sight 0x8F338; Chaos Surge
@@ -150,8 +133,8 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
 ]);
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
-  ...baseWrites('template', ['stat:base', 'baseThresholds']),
-  ...baseWrites('artificial', ['immunityCurseGating']),
+  'template:stat:base', 'template:baseThresholds',
+  'immunity:immunityCurseGating',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   // CP moved Holy Weapon into `BU_Apply_Specials`' relocated tail, so it lands late; True Sight
@@ -170,11 +153,11 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
 
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
   // Template initialization and the construction patches that ride with it, then the artificial
-  // strip (F203). `base:zombies` is gone: the Fantastic bit is the unit-type table's own
+  // strip (F203). `template:zombies` is gone: the Fantastic bit is the unit-type table's own
   // `UA_FANTASTIC` at file com1:0x2AED2, which the roster already states.
-  ...baseWrites('template', ['stat:base', 'baseThresholds', 'zombies:toBlock',
-    'constructCatapult', 'summonBranch']),
-  ...baseWrites('artificial', ['immunityCurseGating']),
+  'template:stat:base', 'template:baseThresholds', 'template:zombies:toBlock',
+  'template:constructCatapult', 'template:summonBranch',
+  'immunity:immunityCurseGating',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon',
   // CoM 1 calls `BU_Apply_Specials` at 0x8F0E8, before Chaos Surge, and True Sight is its third
@@ -203,12 +186,13 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   // F203 ordering: template initialization, then the permanent writes, then the artificial strip.
-  // `base:destiny` is the per-pass permanent write — idempotent, which is what lets it hold this
-  // head position as well as `c:destiny`. `base:destiny:supernatural` is the same block's third
-  // permanent write, chain-adjacent because the conversion keeps writing `race`/`fantastic` alone.
-  ...baseWrites('template', ['stat:base', 'baseHitChance', 'baseThresholds']),
-  ...baseWrites('perPass', ['destiny', 'destiny:supernatural']),
-  ...baseWrites('artificial', ['immunityCurseGating']),
+  // `cast:destiny` is a permanent write the recalculation re-makes on every pass — idempotent,
+  // which is what lets it hold this head position as well as `c:destiny`.
+  // `cast:destiny:supernatural` is the same block's third permanent write, chain-adjacent because
+  // the conversion keeps writing `race`/`fantastic` alone.
+  'template:stat:base', 'template:baseHitChance', 'template:baseThresholds',
+  'cast:destiny', 'cast:destiny:supernatural',
+  'immunity:immunityCurseGating',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath',
   'c:destiny', 'c:level', 'c:focusMagic',
@@ -233,28 +217,50 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
-  // F203 ordering, enforced by the kinds rather than described by this comment.
-  ...baseWrites('template', ['stat:base', 'baseHitChance', 'baseThresholds']),
-  // Training-time writes: every one cites `CreateUnit.CAS` and fires once, when the city built
-  // the unit. `armorclad` and `alumniOfAcademy:figures` are reached by a second route as well —
-  // the `OverlandEndTurn.CAS` upgrade protocol, whose site each script guards on the marker the
-  // other route sets (`EncArmorClad` at `OverlandEndTurn.CAS!NOTENGINEADDED!+3 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0) THEN { GOTO"`, `SMultiLabel` at `OverlandEndTurn.CAS!NOOUTLANDERBARAY!+2 "IF (GETSTAT(U,SMultiLabel,1)>0) THEN { GOTO"`). One write, two entrances,
-  // so one position: the training-time one the unit takes when it is built (F203).
-  ...baseWrites('training', ['artificer', 'malnourished', 'armorclad',
-    'altarOfTheMoon', 'militaryWorkshop', 'lightningBlade:breath',
-    'poolOfRepentance', 'dragonMound', 'ludusAgoge', 'motherFungus',
-    'altarOfTheSun:holyMother', 'altarOfTheSun:figures', 'alumniOfAcademy:figures',
-    'sanctaBasilica', 'naturalSelection:powerMinerals',
-    'naturalSelection:nightshade', 'naturalSelection:wildGame',
-    'naturalSelection:coal', 'naturalSelection:iron', 'pillarOfFaith',
-    'energyCannon', 'survivalInstinctToBlock']),
-  // Cast-time permanent writes: one-shot, applied when the spell landed. Spirit Link's +2
-  // Resistance has two entrances too — `OLSpell.CAS!NOTAIRSUPPORT!+6 "SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` and the Mystic Surge random grant at
-  // `SpellMysticSurge.CAS~"SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` — and one position for the same reason.
-  ...baseWrites('cast', ['rebuild', 'spiritLink']),
-  // The per-pass permanent writes, idempotent, and then the artificial strip.
-  ...baseWrites('perPass', ['destiny', 'destiny:supernatural']),
-  ...baseWrites('artificial', ['immunityCurseGating']),
+  // F203 ordering. The phase ranks enforce `template` before `training` before `cast` before
+  // `immunity`; the order *within* `cast` — the two one-shot spell writes ahead of Destiny's two
+  // per-pass ones — is this list's alone, since F210 folded the former `perPass` write kind into
+  // `cast-time` and nothing distinguishes them any more.
+  'template:stat:base', 'template:baseHitChance', 'template:baseThresholds',
+  // Training-time writes, in `CreateUnit.CAS` line order (F204) — every one cites that script and
+  // fires once, when the city built the unit. Every `GOTO` across the represented blocks jumps
+  // forward, so their line order is the order one unit's creation runs. (The file's one back edge
+  // is the `FOR` loop at its head, which ends before the first represented block.)
+  //
+  // `armorclad` and `alumniOfAcademy:figures` are each one modelled step with two entrances: the
+  // creation write here, and a later `OverlandEndTurn.CAS` upgrade pass for a unit that predates
+  // the reform. The guard is one-way — the creation site tests only its own building or spell,
+  // while the upgrade site tests the marker creation left (`EncArmorClad` at
+  // `OverlandEndTurn.CAS!NOTENGINEADDED!+3 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0) THEN { GOTO"`, `SMultiLabel` at `OverlandEndTurn.CAS!NOOUTLANDERBARAY!+2 "IF (GETSTAT(U,SMultiLabel,1)>0) THEN { GOTO"`) — which is enough for the write to land
+  // once however the unit got there. Hence one position, and it is the creation one: this list is
+  // `CreateUnit.CAS`'s order, and the upgrade pass reaches an already-created unit outside it.
+  // Armorclad has a third, unmodelled script route as well; `combat_abilities.js` records it.
+  //
+  // Two groups share a block and take the order of their own writes inside it rather than the
+  // block's span. The five `naturalSelection:*` run from
+  // `CreateUnit.CAS!NOTSURVIVALTHEFITTEST!-23 "SETSTAT U,SResist,ABase,RESIST+OREPOWER;"` to
+  // `CreateUnit.CAS!NOTSURVIVALTHEFITTEST!-4 "SETSTAT(U,SDefense,ABase,DEF+1);"`, and the two
+  // `altarOfTheSun:*` are the exclusive arms of one `IF`, the Holy Mother strength write at
+  // `CreateUnit.CAS!NOALTAROFTHESUN!-10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,1)+1));"` ahead of
+  // the figure write at `CreateUnit.CAS!NOALTAROFTHESUN!-6 "SETSTAT(U,SFigures,1,(GetStat(U,SFigures,1)+1));"`.
+  'training:artificer',
+  'training:militaryWorkshop', 'training:lightningBlade:breath',
+  'training:poolOfRepentance', 'training:dragonMound', 'training:ludusAgoge',
+  'training:altarOfTheSun:holyMother', 'training:altarOfTheSun:figures',
+  'training:altarOfTheMoon', 'training:sanctaBasilica', 'training:motherFungus',
+  'training:alumniOfAcademy:figures', 'training:survivalInstinctToBlock',
+  'training:naturalSelection:powerMinerals', 'training:naturalSelection:nightshade',
+  'training:naturalSelection:wildGame', 'training:naturalSelection:coal',
+  'training:naturalSelection:iron', 'training:pillarOfFaith',
+  'training:malnourished', 'training:energyCannon', 'training:armorclad',
+  // Cast-time permanent writes. Rebuild and Spirit Link are one-shot, applied when the spell
+  // landed; Spirit Link's +2 Resistance has two entrances too — `OLSpell.CAS!NOTAIRSUPPORT!+6 "SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` and the
+  // Mystic Surge random grant at `SpellMysticSurge.CAS~"SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` — and one position for the same
+  // reason. Destiny's two are the permanent writes the recalculation re-makes on every pass.
+  'cast:rebuild', 'cast:spiritLink',
+  'cast:destiny', 'cast:destiny:supernatural',
+  // Then the artificial strip.
+  'immunity:immunityCurseGating',
   'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',

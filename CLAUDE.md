@@ -154,20 +154,25 @@ Each supported version is a first-class rule set, independently correct, and War
 
 The calculation layer holds no DOM references and loads headlessly. `index.html`'s `<script>` tags are the single source manifest, and each tag's scope marks whether the source is calculation or page.
 
+Spell targeting is assumed to read the permanent (base) record.
+
 Each step in the sequence of calculating unit stats carries a **phase**: which region of the engine makes that write. Phase is a provenance label — it records where the evidence for the write was found. The chain is stored in the calculator code and for the most part corresponds to the order in which effects are applied in the binaries.
 
 | Phase | Where it runs |
 |---|---|
 | **template** | Basic roster data |
-| **training-time** | When the unit is trained |
-| **cast-time** | Either when the unit first receives enchantments, either on the overland map or earlier in combat, or modifications to the persistent base unit that happen every time a unit performs an attack |
-| **immunity** | An artificial step that strips any curses that the unit could not have received assuming it had its immunities before the curses were attempted applied |
+| **training** | When the unit is trained |
+| **immunities** | The immunities the card marks are written to the permanent record before anything tests them |
+| **buffs** | Each beneficial enchantment or condition the card marks is written to the permanent record where the engine's own eligibility test, read against the record as the earlier steps left it, admits it. Includes the permanent writes the engine re-makes every recalculation, such as Destiny's |
+| **debuffs** | The same for curses and detrimental conditions, after every buff, so a marked immunity or an identity-changing buff is in place when the debuff's own test runs |
 | **a** | precalc, in the binary |
 | **b** | precalc, in the early script hook |
 | **c** | magic calc, in the binary |
 | **d** | magic calc, in the late script hook |
 | **e** | the binary's post-hook tail: the clamps, the aura pass, and the effects after them |
 | **attack-specific** | not a part of calculating the unit stats shown in the UI, but steps that are conditionally run within each attack phase |
+
+The calculator has no cast history, so the order within **buffs** and within **debuffs** is an assumed cast order, declared once in the chain manifest and treated as a ruling rather than a derivation.
 
 Damage is also applied in phases, e.g., thrown, breath, gaze, first strike, counterattack etc. Damage is not truncated within a combat phase: the per-rider accumulators, the per-category accumulators and the combat-healing state all carry the engine's uncapped figures. What a phase publishes is capped at the HP its target had entering it, and so is the cumulative total built from those. A rider histogram is not capped, so in an overkill cell the riders bound their phase total rather than summing to it.
 
@@ -183,9 +188,9 @@ Hovering a final modified value in the UI shows the complete chain that produced
 There is also a melee and a ranged matrix view, where the user specifies filters for which units to consider as attackers and defenders, and which enchantments and conditions are attempted applied to the attacker, defender, and globally. The matrices then show how each matchup would fare.
 
 Every enchantment and condition the selected version has is specifiable on every unit, whether or
-not that unit could have received it. Eligibility is gated internally, in the manner of the
-**immunity** phase: the effect is marked, then stripped or withheld where the engine's own test
-would have refused it. The matrix view is why the rule is this way round rather than the other —
+not that unit could have received it. Eligibility is gated internally by the **buffs** and **debuffs** phases: the effect is marked, and
+its step writes the record only where the engine's own test, read against the record as the
+earlier steps left it, would have admitted it. The matrix view is why the rule is this way round rather than the other —
 one enchantment is attempted applied across a whole filter, and it must land on the eligible units
 and not the rest, which a disabled control could not express. The only controls disabled are those
 a roster unit selection locks.

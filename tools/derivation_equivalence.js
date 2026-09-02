@@ -24,6 +24,13 @@
 // same control surface reuses it instead of restating the generator — the seeded draw order is
 // what makes two runs comparable, and a copy of it would drift.
 //
+// **What a 0 here does not cover.** The list is every control *solo* plus seeded 12-control draws,
+// so two specific controls are almost never on together. A change that reorders two steps inside
+// one phase can therefore read 0 and still move a number: F204 reordered the Warlord `training`
+// group and this tool reported 0 of 52440, while a probe holding every training control on at once
+// found `abilities.poison` moving in 96 cases. For an intra-phase reordering, saturate the
+// controls the reordered steps gate on and diff that instead.
+//
 // Cost: 52575 derivations, ~26s, up from 15525 and ~10s before the identity axis. It is a
 // diagnostic run per item, not part of any suite.
 

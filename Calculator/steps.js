@@ -15,18 +15,22 @@
 // later bonus or immunity applies); nothing in the derivation phases does.
 const HALT = Object.freeze({ halt: true });
 
-// Provenance labels for where a write was found, listed in region order. `base` plus the engine's
-// five derivation regions, followed by the separate attack-specific axis. A phase orders nothing —
-// the per-version execution chain does (stats_manifests.js, statChain) — but a chain is authored
-// in non-decreasing phase order, so the two have to agree:
-//   base      permanent ABase writes made before combat
+// Provenance labels for where a write was found, listed in region order. The four permanent-record
+// phases, then the engine's five derivation regions, followed by the separate attack-specific
+// axis. A phase orders nothing — the per-version execution chain does (stats_manifests.js,
+// statChain) — but a chain is authored in non-decreasing phase order, so the two have to agree:
+//   template  the record as the unit template ships it, plus the construction patches
+//   training  written once, when the city built the unit  (CreateUnit.CAS)
+//   cast      written when the spell landed (OLSpell.CAS and the other grant sites), and the
+//             permanent writes a recalculation re-makes on every pass
+//   immunity  the artificial strip: curses an immunity would have refused never landed
 //   a         precalc, in the binary
 //   b         precalc, in UnitCalcPre.CAS      (Warlord only)
 //   c         magic calc, in the binary
 //   d         magic calc, in UnitCalc.CAS      (Warlord only)
 //   e         the binary's post-hook tail: the final clamps, the aura pass, Supreme Light
 //
-// `attackSpecific` is not a sixth derivation phase. It tags steps in the routines that run on
+// `attackSpecific` is not a tenth derivation phase. It tags steps in the routines that run on
 // a disposable copy after derivation, keyed by an incoming attack: Caster.exe's
 // GetEffectiveResistance / EffectiveDefense, and the DOS engines' Combat_Effective_Resistance /
 // Battle_Unit_Defense_Special. Every engine models the stage as ordered steps; what differs is
@@ -35,21 +39,17 @@ const HALT = Object.freeze({ halt: true });
 // Every other phase is an engine region. The two scaffolding phases the migration ran on —
 // `tail` (a post-total pass over finished stats) and `warpLate` (CoM 1's post-Warp tail) —
 // were deleted at R1 stage 10, when each of their steps moved to the region the map gives it.
-const STEP_PHASES = ['base', 'a', 'b', 'c', 'd', 'e', 'attackSpecific'];
+const STEP_PHASES = [
+  'template', 'training', 'cast', 'immunity', 'a', 'b', 'c', 'd', 'e', 'attackSpecific',
+];
 const STEP_PHASE_RANK = STEP_PHASES.reduce((rank, phase, i) => (rank[phase] = i, rank), {});
 
-// The `base` phase holds five kinds of write, and the chain runs them in this order (SPEC.md,
-// *The step model*). Every `base` chain entry names its kind, so the ordering is enforced rather
-// than described, and a new base step cannot be filed without saying which kind it is.
-//   template    the record as the unit template ships it, plus the construction patches
-//   training    one-shot, when the city built the unit    (CreateUnit.CAS)
-//   cast        one-shot, when the spell landed           (OLSpell.CAS and the other grant sites)
-//   perPass     re-made by every recalculation, therefore necessarily idempotent
-//   artificial  a step no engine makes, positioned so the assumption is a write like any other
-const BASE_WRITE_KINDS = ['template', 'training', 'cast', 'perPass', 'artificial'];
-const BASE_WRITE_KIND_RANK = BASE_WRITE_KINDS.reduce((rank, kind, i) => (rank[kind] = i, rank), {});
-// The two kinds the engine writes once and never re-makes. Their delta has to land exactly once.
-const ONE_SHOT_BASE_WRITE_KINDS = new Set(['training', 'cast']);
+// The four phases whose writes are the engine's **permanent** record — what `BaseUnits[i]` holds
+// when the recalculation's `Units[i] := BaseUnits[i]` copy ($00599A8D) reseeds the calculated
+// record. `ctx.base` is refreshed through them and frozen when the last of them ends, so a later
+// region's `BaseUnits[i].…` gate reads the record as `immunity` leaves it — the strip included,
+// because its whole content is the assumption that the curse never landed on the unit at all.
+const PERMANENT_RECORD_PHASES = new Set(['template', 'training', 'cast', 'immunity']);
 
 // --- Canonical engine-version scope (M9) ---
 //
@@ -99,40 +99,43 @@ const SCOPE_MODERN = Object.freeze(['com2_1.05.11', 'com2_warlord_1.5.12.9']);
 const SCOPE_WARLORD = Object.freeze(['com2_warlord_1.5.12.9']);
 
 const STEP_VERSION_SCOPES = Object.freeze({
-  // --- base: permanent ABase writes made before the encounter ---
-  'base:altarOfTheMoon': SCOPE_WARLORD,
-  'base:altarOfTheSun:figures': SCOPE_WARLORD,
-  'base:altarOfTheSun:holyMother': SCOPE_WARLORD,
-  'base:alumniOfAcademy:figures': SCOPE_WARLORD,
-  'base:armorclad': SCOPE_WARLORD,
-  'base:artificer': SCOPE_WARLORD,
-  'base:baseHitChance': SCOPE_MODERN,
-  'base:baseThresholds': SCOPE_ALL,
-  'base:destiny': SCOPE_MODERN,
-  'base:destiny:supernatural': SCOPE_MODERN,
-  'base:dragonMound': SCOPE_WARLORD,
-  'base:energyCannon': SCOPE_WARLORD,
-  'base:constructCatapult': SCOPE_COM1,
-  'base:summonBranch': SCOPE_COM1,
-  'base:zombies:toBlock': SCOPE_COM1,
-  'base:lightningBlade:breath': SCOPE_WARLORD,
-  'base:ludusAgoge': SCOPE_WARLORD,
-  'base:malnourished': SCOPE_WARLORD,
-  'base:militaryWorkshop': SCOPE_WARLORD,
-  'base:motherFungus': SCOPE_WARLORD,
-  'base:naturalSelection:coal': SCOPE_WARLORD,
-  'base:naturalSelection:iron': SCOPE_WARLORD,
-  'base:naturalSelection:nightshade': SCOPE_WARLORD,
-  'base:naturalSelection:powerMinerals': SCOPE_WARLORD,
-  'base:naturalSelection:wildGame': SCOPE_WARLORD,
-  'base:pillarOfFaith': SCOPE_WARLORD,
-  'base:immunityCurseGating': SCOPE_ALL,
-  'base:poolOfRepentance': SCOPE_WARLORD,
-  'base:rebuild': SCOPE_WARLORD,
-  'base:sanctaBasilica': SCOPE_WARLORD,
-  'base:spiritLink': SCOPE_WARLORD,
-  'base:stat:base': SCOPE_ALL,
-  'base:survivalInstinctToBlock': SCOPE_WARLORD,
+  // --- template: the record the unit template ships, plus the construction patches ---
+  'template:baseHitChance': SCOPE_MODERN,
+  'template:baseThresholds': SCOPE_ALL,
+  'template:constructCatapult': SCOPE_COM1,
+  'template:stat:base': SCOPE_ALL,
+  'template:summonBranch': SCOPE_COM1,
+  'template:zombies:toBlock': SCOPE_COM1,
+  // --- training: permanent writes made when the city built the unit ---
+  'training:altarOfTheMoon': SCOPE_WARLORD,
+  'training:altarOfTheSun:figures': SCOPE_WARLORD,
+  'training:altarOfTheSun:holyMother': SCOPE_WARLORD,
+  'training:alumniOfAcademy:figures': SCOPE_WARLORD,
+  'training:armorclad': SCOPE_WARLORD,
+  'training:artificer': SCOPE_WARLORD,
+  'training:dragonMound': SCOPE_WARLORD,
+  'training:energyCannon': SCOPE_WARLORD,
+  'training:lightningBlade:breath': SCOPE_WARLORD,
+  'training:ludusAgoge': SCOPE_WARLORD,
+  'training:malnourished': SCOPE_WARLORD,
+  'training:militaryWorkshop': SCOPE_WARLORD,
+  'training:motherFungus': SCOPE_WARLORD,
+  'training:naturalSelection:coal': SCOPE_WARLORD,
+  'training:naturalSelection:iron': SCOPE_WARLORD,
+  'training:naturalSelection:nightshade': SCOPE_WARLORD,
+  'training:naturalSelection:powerMinerals': SCOPE_WARLORD,
+  'training:naturalSelection:wildGame': SCOPE_WARLORD,
+  'training:pillarOfFaith': SCOPE_WARLORD,
+  'training:poolOfRepentance': SCOPE_WARLORD,
+  'training:sanctaBasilica': SCOPE_WARLORD,
+  'training:survivalInstinctToBlock': SCOPE_WARLORD,
+  // --- cast: permanent writes made when the spell landed, and the per-pass permanent writes ---
+  'cast:destiny': SCOPE_MODERN,
+  'cast:destiny:supernatural': SCOPE_MODERN,
+  'cast:rebuild': SCOPE_WARLORD,
+  'cast:spiritLink': SCOPE_WARLORD,
+  // --- immunity: the artificial strip ---
+  'immunity:immunityCurseGating': SCOPE_ALL,
   // --- a: precalc, in the binary ---
   // Chaos Channels Fire Breath is region `a` in `Caster.exe` alone: its block is
   // $00599EE8..$00599FA8, ahead of the UnitCalcPre hook at $0059A002. The DOS builds put the
@@ -589,7 +592,7 @@ function assertStatStepOrder(steps) {
 }
 
 // The per-version execution chain (stats_manifests.js, statChain) is the source-order authority
-// for every represented write, `base` through `e`. The composer is deliberately separate from
+// for every represented write, `template` through `e`. The composer is deliberately separate from
 // the runner: it walks the chain explicitly, annotates every step with its chain position and
 // whether that position is transcribed or inherited, and rejects a step the chain does not name.
 // There is no generic sort here — a chain is an authored execution sequence, not a repair for an
@@ -608,7 +611,6 @@ function assertStatChain(chain) {
   if (validatedChains.has(chain)) return chain;
   const seen = new Set();
   let rank = -1;
-  let baseKindRank = -1;
   for (const entry of chain) {
     if (!entry || typeof entry.key !== 'string' || !entry.key) {
       throw new Error('execution chain has an entry without a key');
@@ -621,21 +623,6 @@ function assertStatChain(chain) {
     }
     if (typeof entry.provisional !== 'boolean') {
       throw new Error(`execution chain entry ${entry.key} does not say whether its position is provisional`);
-    }
-    if (entry.phase === 'base') {
-      if (!Object.prototype.hasOwnProperty.call(BASE_WRITE_KIND_RANK, entry.baseKind)) {
-        throw new Error(
-          `execution chain entry ${entry.key} has unknown base write kind ${entry.baseKind}`);
-      }
-      const kindRank = BASE_WRITE_KIND_RANK[entry.baseKind];
-      if (kindRank < baseKindRank) {
-        throw new Error(`execution chain entry ${entry.key} (${entry.baseKind}) `
-          + 'is declared after a later base write kind');
-      }
-      baseKindRank = kindRank;
-    } else if (entry.baseKind !== undefined) {
-      throw new Error(
-        `execution chain entry ${entry.key} is not a base write but names a base write kind`);
     }
     if (seen.has(entry.key)) throw new Error(`execution chain repeats ${entry.key}`);
     seen.add(entry.key);
@@ -651,61 +638,6 @@ function assertStatChain(chain) {
   return chain;
 }
 
-// A one-shot permanent write may not land twice.
-//
-// A `base` step is the calculator's model of a write the engine already made before the
-// recalculation copies `Units[i] := BaseUnits[i]` ($00599A8D). That copy reseeds the calculated
-// record every pass while `BaseUnits` is never reset, so a `perPass` write has to be idempotent
-// and may stand at both the head position and its engine position; a `training` or `cast` write
-// fires once in the engine's whole history of the unit, and a second in-chain position writing
-// the same field would apply its delta twice (SPEC.md, *The step model*).
-//
-// The chain alone cannot decide it, for two reasons the current chains show. `b:spiritLink` and
-// `d:spiritLink` share an id with the one-shot `base:spiritLink` but write `fantastic`, not the
-// permanent `res`; and `base:rebuild` and `b:rebuild` are the same +2/+2 write at the position
-// each branch makes it — non-hero permanent against hero re-application — so exactly one of them
-// is ever emitted. What decides a violation is therefore the emitted pair and its fields.
-const chainContestedPermanentIds = new WeakMap();
-function contestedPermanentIds(chain) {
-  const cached = chainContestedPermanentIds.get(chain);
-  if (cached) return cached;
-  const oneShot = new Map();
-  for (const entry of chain) {
-    if (entry.phase === 'base' && ONE_SHOT_BASE_WRITE_KINDS.has(entry.baseKind)) {
-      oneShot.set(entry.id, entry.key);
-    }
-  }
-  const contested = new Map();
-  for (const entry of chain) {
-    if (entry.phase === 'base' || !oneShot.has(entry.id)) continue;
-    if (!contested.has(entry.id)) {
-      contested.set(entry.id, { baseKey: oneShot.get(entry.id), keys: [] });
-    }
-    contested.get(entry.id).keys.push(entry.key);
-  }
-  chainContestedPermanentIds.set(chain, contested);
-  return contested;
-}
-
-function assertPermanentWritesLandOnce(emitted, chain) {
-  const contested = contestedPermanentIds(chain);
-  if (contested.size === 0) return;
-  for (const [, { baseKey, keys }] of contested) {
-    const permanent = emitted.get(baseKey);
-    if (!permanent) continue;
-    const written = new Set(permanent.writes || []);
-    for (const key of keys) {
-      const other = emitted.get(key);
-      if (!other) continue;
-      const shared = (other.writes || []).filter(field => written.has(field));
-      if (shared.length > 0) {
-        throw new Error(`step ${baseKey} is a one-shot permanent write and ${key} writes `
-          + `${shared.join(', ')} as well, so the delta would land twice`);
-      }
-    }
-  }
-}
-
 function orderStatStepsBySource(steps, chain) {
   if (!Array.isArray(steps)) throw new Error('the composer received no step list');
   assertStatChain(chain);
@@ -718,7 +650,6 @@ function orderStatStepsBySource(steps, chain) {
     if (emitted.has(key)) throw new Error(`step ${key} is represented twice`);
     emitted.set(key, step);
   }
-  assertPermanentWritesLandOnce(emitted, chain);
   const ordered = [];
   for (let sourceOrder = 0; sourceOrder < chain.length; sourceOrder++) {
     const entry = chain[sourceOrder];
@@ -742,11 +673,12 @@ function orderStatStepsBySource(steps, chain) {
 // base record as `ctx.base`, and — for the resolution sequences — the attack context.
 //
 // `ctx.base` is maintained here rather than passed in. Every write an engine makes to its
-// permanent record before the recalculation's `Units[i] := BaseUnits[i]` copy is a `base`-phase
-// step (CLAUDE.md, *Step authoring*), so the record as the last base step leaves it is exactly
-// what a later region's `BaseUnits[i].…` gate reads. It is therefore refreshed through the base
-// phase and frozen when that phase ends. A sequence with no base-phase step — the resolution
-// transforms, the To-Hit ledger, the figure sequence — leaves it absent.
+// permanent record before the recalculation's `Units[i] := BaseUnits[i]` copy is a step of one of
+// the four `PERMANENT_RECORD_PHASES` (CLAUDE.md, *Architecture*), so the record as the last of
+// them leaves it is exactly what a later region's `BaseUnits[i].…` gate reads. It is therefore
+// refreshed through those phases and frozen when `immunity`, the last of them, ends. A sequence
+// with no permanent-record step — the resolution transforms, the To-Hit ledger, the figure
+// sequence — leaves it absent.
 //
 // Two optional fields are for development only:
 //   ctx.trace             an array; each step that changes a declared field appends an entry
@@ -766,7 +698,7 @@ function runStatSteps(steps, unit, ctx) {
     }
     const before = (trace || validate) ? { ...unit } : null;
     const result = step.apply(unit, context);
-    if (step.phase === 'base') context.base = { ...unit };
+    if (PERMANENT_RECORD_PHASES.has(step.phase)) context.base = { ...unit };
     if (validate) assertStepWrites(step, before, unit);
     if (trace) recordStepTrace(trace, step, before, unit, order);
     if (executionTrace) recordStepExecution(executionTrace, step, order, 'applied');

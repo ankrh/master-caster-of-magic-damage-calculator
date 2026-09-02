@@ -21,66 +21,75 @@ subtask appears here before any subtask that depends on it.
 | 9 | **F235** | Whether Warlord Vampirism and Revenant set `EncUndead` for the classifier and the Eternal Night / True Light arms is settled against the scripts. |
 | 10 | **F236.1** | CoM 1's Holy-Arms/Heavenly-Light eligibility gate is stated as a rule, with its version scope and its custom-unit discriminator settled. |
 | 11 | **F236.2** | The gate is implemented so an ineligible unit cannot carry the granted effect. Needs F236.1. |
-| 12 | **F210** | The `base` phase splits into the four SPEC names. |
-| 13 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
-| 14 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
-| 15 | **F204** | The base training group takes `CreateUnit.CAS` line order, promoting 22 entries from provisional. |
-| 16 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
-| 17 | **F207** | The last published-value suppression that gates nothing goes. |
-| 18 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
-| 19 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
-| 20 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 21 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 22 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 23 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
-| 24 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
-| 25 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
-| 26 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
-| 27 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 28 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 29 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 30 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 31 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
-| 32 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
-| 33 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
-| 34 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
-| 35 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
-| 36 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
-| 37 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
-| 38 | **F153** | The modern gaze rider exclusion gets one home. |
-| 39 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
-| 40 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
-| 41 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
-| 42 | **F151** | A version's default-state map is built without resetting the live page. |
-| 43 | **F128** | The `Other` unit category no roster can fill goes. |
-| 44 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
-| 45 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
-| 46 | **F237** | The CAS audit attributes and gates a `/N` after a locator and a bare `:N` under a `@span` line or bare mention, keeping non-script numbers reported and ungated. |
-| 47 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
-| 48 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
-| 49 | **F238** | The Warlord source-order tables in `CoM2 binary - unit recalculation.md` are re-derived against 1.5.12.9 with label-bounded rows. |
-| 50 | **F41.1** | The DOS eight-threshold hero ladders. |
-| 51 | **F41.2** | The DOS template-ability formulas. |
-| 52 | **F41.3** | The modern nine-step hero table. |
-| 53 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
-| 54 | **M3** | The DOS Destruction path. Needs F41. |
-| 55 | **F228** | Who loads `Casapi.dll`, and whether its unchecked `UnitBuildingRequirement` index is a modding hazard worth recording. |
-| 56 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
-| 57 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
-| 58 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
-| 59 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
-| 60 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
-| 61 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
-| 62 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
-| 63 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
-| 64 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
-| 65 | **H1** | Contact Seravy about the Blur bug. |
-| 66 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
+| 12 | **F242** | Rust's cast strips all nine permanent flags the script clears, as `cast` steps after the roll. |
+| 13 | **F243** | Endurance, Lionheart and the figure-scaled grant read the post-building figure count. |
+| 14 | **F245** | Spirit Link's cast clears base Fantastic and sets level 1 on a Fantastic unit, as `cast` writes. |
+| 15 | **F239** | The F209 and F200 stage 3 bodies stop naming retired `base:*` keys and the closed F210. |
+| 16 | **F247** | `Units[i] := BaseUnits[i]` becomes the first step of region `a`, and the permanent record freezes there. |
+| 17 | **F244.1** | Census: every pre-sequence constant a step's gate or magnitude reads, and which engine write each stands for. |
+| 18 | **F244.2** | Weapon material and level become `training` steps in every version, read by `c:weapon` and `c:level` from the record. Needs F244.1. |
+| 19 | **F248** | `cast` and `immunity` become `immunities`, `buffs` and `debuffs`, once the phase proposal is merged. |
+| 20 | **F244.3** | The record is seeded from the template alone; the remaining pre-sequence flags become positioned writes. Needs F244.1; size re-estimated from the census. |
+| 21 | **F246** | The identity projection goes: targeting gates read the permanent record, combat classification reads the finished run. Needs F245, F244.3. |
+| 22 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
+| 23 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
+| 24 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
+| 25 | **F207** | The last published-value suppression that gates nothing goes. |
+| 26 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
+| 27 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
+| 28 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 29 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 30 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 31 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
+| 32 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
+| 33 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
+| 34 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
+| 35 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 36 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 37 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 38 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 39 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
+| 40 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
+| 41 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
+| 42 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
+| 43 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
+| 44 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
+| 45 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
+| 46 | **F153** | The modern gaze rider exclusion gets one home. |
+| 47 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
+| 48 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
+| 49 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
+| 50 | **F151** | A version's default-state map is built without resetting the live page. |
+| 51 | **F128** | The `Other` unit category no roster can fill goes. |
+| 52 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
+| 53 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
+| 54 | **F240** | The dead `traceBasePreparation` trace in `stats.js` goes. |
+| 55 | **F241** | The two unguarded scrolls in `tests/touch-tooltips.spec.js` wait for the re-render. |
+| 56 | **F237** | The CAS audit attributes and gates a `/N` after a locator and a bare `:N` under a `@span` line or bare mention, keeping non-script numbers reported and ungated. |
+| 57 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
+| 58 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
+| 59 | **F238** | The Warlord source-order tables in `CoM2 binary - unit recalculation.md` are re-derived against 1.5.12.9 with label-bounded rows. |
+| 60 | **F41.1** | The DOS eight-threshold hero ladders. |
+| 61 | **F41.2** | The DOS template-ability formulas. |
+| 62 | **F41.3** | The modern nine-step hero table. |
+| 63 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
+| 64 | **M3** | The DOS Destruction path. Needs F41. |
+| 65 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
+| 66 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
+| 67 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
+| 68 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
+| 69 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
+| 70 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
+| 71 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
+| 72 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
+| 73 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
+| 74 | **H1** | Contact Seravy about the Blur bug. |
+| 75 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
 
 Rows 1–2 are the Create Undead damage-bucket item, and row 3 the composition normalisation decision
 F225.1 surfaced. Rows 4–9 are the race and realm findings the F224 run turned up, filed once the
-collapse itself was complete. Row 10 onward is the standalone and structural backlog. The deprecated backlog ordered the phase refactor first; this does not, because
-F210 blocks only F209 and F200.
+collapse itself was complete. Row 10 onward is the standalone and structural backlog. F239–F248 were approved
+2026-09-02 from the F210/F204 close and its follow-up questions.
 
 F211–F216 were filed 2026-08-30 from the T2.11–T2.23 run, which found them while reading fixtures
 against the code. Each is verified against source and none makes a test red.
@@ -185,28 +194,6 @@ rather than by the sweep, and each out of this item's scope.
 
 ## Modelling and phase work
 
-### F210 — Split the `base` phase into the phases SPEC now names
-
-`STEP_PHASES` ([steps.js:38](Calculator/steps.js:38)) carries one `base` label with five write kinds
-inside it (`BASE_WRITE_KINDS`, `steps.js:49`), so a step's position is spelled twice. SPEC's phase
-table now names the real phases: `template`, `training-time`, `cast-time`, `immunity`. Make them
-phases and drop the tag.
-
-`perPass` folds into `cast-time` — SPEC's `cast-time` row already covers "modifications to the
-persistent base unit that happen every time a unit performs an attack". Its two entries are
-`base:destiny` and `base:destiny:supernatural`; `c:destiny` and every region-`c` step are untouched.
-
-Delete `contestedPermanentIds` and `assertPermanentWritesLandOnce` (`steps.js:631-680`) and the call
-at `:698` — the idempotence rule they enforce is no longer in SPEC. Four cases in
-`tests/f20-source-order.spec.js` assert that rule and come out with it; three more retire with
-`baseWrites()`. **This is the only place F210 may delete assertions.**
-
-Otherwise mechanical: step ids (`base:x` → `training:x`), the five chain manifests, the `SCOPE_*`
-rows, and the assertions keyed on `entry.phase === 'base'`. One decision: `context.base = {...unit}`
-(`steps.js:746`) snapshots after every `base` step and must name which new phase closes it.
-
-Do before F209 and F200. Versions: all five, no number moves.
-
 ### F209 — Retire the flag-versus-delta criterion
 
 The criterion said a training-time write setting a flag earns no step. It is gone from the rebuilt
@@ -221,23 +208,6 @@ group. Not in scope: whether a granted flag also needs its own UI control.
 
 Depends on F210. Subtasks: **F209.1** the four F202 rulings; **F209.2** F200 stage 4's narrowing and
 CoM2's training group.
-
-### F204 — Put the `base` training group in `CreateUnit.CAS` line order
-
-The Warlord chain runs its 22 `CreateUnit.CAS` steps in authoring order, not script order:
-`artificer` (:37), `malnourished` (:614), `armorclad` (:700), `altarOfTheMoon` (:372),
-`militaryWorkshop` (:246), `lightningBlade:breath` (:294), `poolOfRepentance` (:311), `dragonMound`
-(:319), `ludusAgoge` (:335), `motherFungus` (:443), `altarOfTheSun:*` (:355),
-`alumniOfAcademy:figures` (:460), `sanctaBasilica` (:412), five `naturalSelection:*` (:529…),
-`pillarOfFaith` (:572), `energyCannon` (:691), `survivalInstinctToBlock` (:521).
-
-Transcribing the real order promotes 22 entries from `provisional`. Expected to move no number —
-every write is a blind addition except `lightningBlade:breath`'s assignment and `energyCannon`'s
-×1.5, and both keep their relative order under either ordering. Measure rather than assume.
-
-Two things to settle: the five `naturalSelection:*` share one block and need finer positions than
-their spans give, and which line `base:armorclad` and `base:alumniOfAcademy:figures` take (their
-second route is `OverlandEndTurn.CAS`). Raised in priority by F209. Warlord only.
 
 ### F200 stage 3 — Position Sancta Basilica's and Pillar of Faith's ability grants
 
@@ -610,34 +580,6 @@ shapes are real. Blocked on cost, not evidence: sweeping both strengths takes
 `node tools/node_unit_checks.js` from ~11s to ~20s. Choose between both strengths across the
 cross-product, the positive strength plus a compact zero-strength pass, and leaving it.
 
-### F228 — `Casapi.dll` exports an unchecked accessor that reads a never-written field
-
-*Category: documentation.* Filed out of Q15, 2026-09-01.
-
-`Casapi.dll` exports `UnitBuildingRequirement(b, i)` at RVA `0x1F5DEC` (VA `$005F5DEC`). It takes
-both arguments straight off the stack with no bounds check:
-
-```
-005F5DF0  imul eax, dword ptr [ebp+8], 0x1e1     ; b, unchecked
-005F5DF7  mov  edx, dword ptr [0x60f48c]         ; UnittableT
-005F5DFD  lea  eax, [edx+eax*4]
-005F5E00  mov  edx, dword ptr [ebp+0xc]          ; i, unchecked
-005F5E03  mov  eax, dword ptr [eax+edx*4+0x90]   ; i=0 reads savemodifier
-```
-
-`CasApi.pas:427` documents `i` as 1, 2 or 3. The engine's own bridge
-`@Castercore@UnitBuildingRequirement` (`$00648D6C`) is range-checked; this export is not. `i=0`
-returns `unitT.savemodifier`, which Q15 established is never written and whose table is
-zero-filled, so the read yields 0 rather than garbage. An out-of-range `b` is unbounded.
-
-What is not established: whether anything in the shipped distribution loads the DLL at all.
-`Caster.exe` has no export directory, does not import `Casapi.dll`, and does not contain the
-string `casapi`; no `.CAS` in either script set calls the export. So the consumer, if there is
-one, is a native program linking the DLL directly.
-
-No calculator consequence — `savemodifier` stays out of the CoM2 card field set. The value is a
-note for mod authors, so the outcome is a recorded finding, not a code change.
-
 ### F182 — Drop or fix `derivation_equivalence.js`'s dead `chaos-channels` env
 
 The env is `{ chaosChannels: 'demonWings' }` but `input.chaosChannels` is read nowhere in
@@ -646,6 +588,148 @@ controls are the `ccDefense`, `ccFlight` and `ccFireBreath` booleans. An env is 
 case, so a dead one spends a share of the 3900 combinations per version on a duplicate of `plain`.
 Decide whether an env may carry abilities at all — the combination pass overwrites `over.abilities`
 today, so it cannot — then either drop the entry or give the pass a way to merge one.
+
+### F239 — Rewrite the F209 and F200 stage 3 bodies for the post-F210 keys
+
+*Category: documentation.* Approved 2026-09-02 from the F210 close.
+
+F210 replaced the `base` phase with `template`, `training`, `cast` and `immunity`, and it is closed.
+The F209 and F200 stage 3 bodies still say `base:armorclad`, `base:sanctaBasilica`,
+`base:pillarOfFaith`, `base:immunityCurseGating`, "base steps" and "Depends on F210". Rewrite them to
+the current keys and drop the dependency notes. One subtask; moves no number.
+
+### F240 — Delete the dead `traceBasePreparation` trace
+
+*Category: other.* Approved 2026-09-02 from the F210 close.
+
+`traceBasePreparation` in `Calculator/stats.js` (near line 492) has no call site, so
+`basePreparationTrace` is always empty and its entries never reach a tooltip. Delete the helper, the
+array and the spread that seeds `statTrace` from it. One subtask; moves no number.
+
+### F241 — Wait for the re-render before the two scrolls in `touch-tooltips.spec.js`
+
+*Category: other.* Approved 2026-09-02 from the F204 close.
+
+`tests/touch-tooltips.spec.js` lines 69 and 82 call `scrollIntoViewIfNeeded()` on a locator right
+after `applyPreset()` with nothing awaiting the re-render, so the node can be replaced under it. It
+failed once in three full runs on 2026-09-02 with `Element is not attached to the DOM`, and passed
+alone and on re-run. Add a visibility wait before each scroll. One subtask; test hygiene only.
+
+### F242 — Rust's cast clears nine permanent flags, and the calculator clears one
+
+*Category: faithfulness.* Approved 2026-09-02. Warlord only.
+
+The Rust cast (`COSpell.CAS`, the `SRust` block after `!NOTHIEROPHANY!`) clears, on the target's
+permanent record after its resistance roll: `EncMagic`, `EncMithril`, `EncAdamant`, `EncOrihalcon`,
+`EncTransmuteEquipment`, `EncResistElements`, `EncElementalArmor`, `EncFlameBlade`,
+`EncGuardianWind`. The calculator clears only the weapon material, and does it as a pre-sequence
+constant (`weapon = rustActive ? 'normal' : …`, `stats.js`), so the chain never shows the clear and
+a unit with Rust and Flame Blade both marked keeps Flame Blade. Model the nine clears as `cast`
+steps gated on Rust having landed, in the manner of the immunity phase. Measure: the material half
+should move no number; the other five flags will. One subtask.
+
+### F243 — The figure count crosses the sequence split
+
+*Category: faithfulness.* Approved 2026-09-02. Warlord only.
+
+The figure sequence (`stats.js`, `figureSteps`) adds Altar of the Sun's +1 and the Academy's +2
+after the stat sequence has run, and the stat sequence reads `baseFigs`, the card's count:
+Endurance and Lionheart (`stats.js` near lines 850 and 858) and the figure-scaled grant at
+`stats_sequence.js:584`. The engine divides by the finished `U.figures`. Preferred fix: `figs`
+becomes a field of the stat record, the two figure steps join the main chain at their `training`
+positions, and the separate figure run is retired. Measure before and after with a probe that
+combines the two buildings with Endurance and Lionheart. One subtask.
+
+### F244 — Pre-sequence shaping becomes steps
+
+*Category: faithfulness.* Approved 2026-09-02. All five versions.
+
+The template step writes the card's stats verbatim, but the record it lands on is seeded before any
+step runs (`statRecord`, `stats.js` near line 2334: the grant fields, the curse flags, the identity),
+and most gates and magnitudes are constants evaluated before the sequence and captured by closures:
+the weapon material after Artificer and Rust, `constructCatapult`, `rustActive` through the
+identity projection, `baseFigs`, and others. A permanent flag write the engine makes at training or
+cast time therefore has no step and no chain entry. Rule: the record starts as the roster
+template and nothing else, and every modification is a positioned write on top of it.
+
+- **F244.1** census: list every pre-sequence constant a step's `when` or `apply` reads, the engine
+  write it stands for (training, cast, or none), and the versions. Report only.
+- **F244.2** weapon material and experience level become `training` steps in every version, so
+  `c:weapon` and `c:level` read the record rather than a constant. The DOS training-site code is
+  not reconstructed; cite the persistent field the recalculation reads and say so.
+- **F244.3** the record seed carries template fields only; the flags it seeds today become
+  positioned writes. Re-split after F244.1 — this may be several subtasks.
+
+Depends on nothing; F209 and F242 should follow it or run with it.
+
+### F245 — Spirit Link's cast writes the base record's Fantastic flag and level
+
+*Category: faithfulness.* Approved 2026-09-02. Warlord only.
+
+The Spirit Link cast (`OLSpell.CAS`, the `SSpiritLink` block after `!NOTAIRSUPPORT!`) writes with
+selector `ABase`: the flag, +2 Resistance, and for a base-Fantastic unit `SMultiLabel := 14`,
+`AFantastic := 0`, `ALevel := 1`. The Air Support Doctrine grant in `COSpell.CAS` makes the same
+Fantastic and level writes. `cast:spiritLink` models only the +2. Add the Fantastic clear and the
+level write to the permanent record at that step (the marker is a guard, not a stat). Then the
+consequences the calculator carries as pre-sequence constants read the record instead:
+`levelEligible`'s Spirit Link widening and Great Unbinding's Spirit Link exclusion (`stats.js`).
+The region-`b`/`d` per-pass pair stays as it is. Measure; the loadout gate
+(`loadoutEligible = !permanentFantastic`) is expected to change for a Spirit-Linked Fantastic unit
+and the number of cases that move should be reported, not assumed. One subtask.
+
+### F246 — Retire the identity projection
+
+*Category: faithfulness.* Approved 2026-09-02. All five versions. Rests on the user's ruling of
+2026-09-02 that spell targeting reads the permanent (base) record — proposed for CLAUDE.md.
+
+`targetingIdentity` (`stats_identity.js`) re-runs the identity conversions on a scratch record to
+produce `finishedIdentity`, which stands in for the record a previous recalculation left. With
+F245 landed the base and calculated identity agree at rest for Spirit Link, and under the ruling
+a cast-time targeting gate reads the base record, so the projection has no consumer that needs it.
+Classify each read and rebind it:
+
+- cast-time targeting gates read the permanent record the cast phases leave (`ctx.base` inside a
+  step): `rustActive`, `metalFiresActive`, Mislead's `liveFantastic`, `liveRace` / `liveFantastic`
+  in `effectiveAbilities`;
+- combat-time classification reads the finished stat run (`statUnit.race` / `.fantastic`): the
+  `finishedUnitType` consumers, the `identityAtRank` fallback.
+
+Then delete `targetingIdentity`, the post-run assertion that the projection matched, and the
+three declared outside-step reads in `tools/unit_checks/identity_record_choice.js`. The preset
+`rustAppliesToSpiritLinkedFantasticWarlord` should still pin 7, now through the cast write. Measure;
+report every case that moves with the consumer that moved it. Depends on F245 and F244.3. One
+subtask; re-split if a consumer turns out to need a positioned read the record cannot yet give.
+
+### F247 — The base-to-calculated copy is the first step of region `a`
+
+*Category: faithfulness.* Approved 2026-09-02. All five versions; the modern citation is
+`$00599A8D`–`$00599B30` (`Units.RecalculateUnits.pas`, `Units[i] := BaseUnits[i]`, the whole
+`0x1E1`-dword record after `prevmaxmoves[i]` is saved); the DOS constructors need their own
+citation for the equivalent seed of the battle-unit record from the persistent unit.
+
+Today the permanent record is frozen implicitly: `runStatSteps` snapshots `ctx.base` after every
+`PERMANENT_RECORD_PHASES` step and the snapshot stops changing when `immunity` ends. Make the copy
+a chain entry at the head of region `a` in every version's chain: it publishes the permanent record
+(`ctx.base` is taken there and nowhere else), writes no stat field, and appears in the tooltip
+chain as the boundary between the permanent phases and the recalculation. `PERMANENT_RECORD_PHASES`
+and the per-step snapshot go. The enchantment-layer merge that follows the copy in the binary has
+no calculator counterpart, because the calculator keeps one flag set; say so at the step. Moves no
+number. One subtask.
+
+### F248 — Rename the cast-time phases to `immunities`, `buffs`, `debuffs`
+
+*Category: structural.* Approved 2026-09-02. All five versions. Blocked until the phase-table
+proposal of 2026-09-02 in `PROPOSALS.md` is merged into CLAUDE.md; the tokens follow the merged
+text.
+
+Mechanical, in F210's shape. `STEP_PHASES` becomes `template`, `training`, `immunities`, `buffs`,
+`debuffs`, `a` … `attackSpecific`. Today's `immunity:immunityCurseGating` moves to `immunities`.
+Today's four `cast` entries split by kind: `cast:rebuild`, `cast:spiritLink`, `cast:destiny` and
+`cast:destiny:supernatural` are beneficial and take `buffs`; no current entry is a debuff, so
+`debuffs` starts empty and F242 and F244.3 fill it. Rewrite the step ids, the five chain manifests,
+the `SCOPE_*` rows, the tools under `tools/unit_checks/`, the tests and the comments; `F210`'s
+journal entry lists the sites. Chain order does not change, so the derivation digest and the
+per-version chain dump must be byte-identical before and after. Moves no number. One subtask.
 
 ### T8 — Give the code's unsourced engine claims a citation or an evidence home
 

@@ -97,6 +97,7 @@ and review provenance stay in the reconstruction evidence indexed by `README.md`
 | [Damage and healing](./CoM2%20binary%20-%20damage%20and%20healing.md) | Damage accumulation, `Combatheal`, figure accounting, and death routing |
 | [Unit recalculation](./CoM2%20binary%20-%20unit%20recalculation.md) | Regions `a`–`e`, script hooks, unit fields, enchantments, auras, and the calculator transform audit |
 | [Map and city](./CoM2%20binary%20-%20map%20and%20city.md) | Combat-map eligibility, flying/attack flags, walls, and wall-state mapping |
+| [`Casapi.dll`](./Casapi.dll.md) | Shipped SDK identity, loader census, unchecked accessors, native-tool hazard, and the executable-version caveat |
 | [Reconstruction artifacts](./README.md#reconstruction-artifact-index) | Source-shaped `.pas` files, evidence companions, coverage, and provenance |
 
 ## Useful entry points

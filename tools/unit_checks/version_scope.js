@@ -66,7 +66,7 @@ function abilityScopeProbeValues(ctx) {
 // passing vacuously, because the key it could not find simply is not in the returned set.
 function constructibleStepKeys() {
   const keys = new Set();
-  const phases = 'base|a|b|c|d|e|attackSpecific';
+  const phases = 'template|training|cast|immunity|a|b|c|d|e|attackSpecific';
   for (const file of calculatorFiles) {
     const text = fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8');
     // statStep({ id: 'x', … phase: 'p', … }) — the two fields need not share a line, so the
@@ -223,11 +223,12 @@ function runCanonicalVersionScopeChecks(ctx) {
     assertSameKeyList(needsPosition.filter(key => !positioned.has(key)).sort(), [],
       `${version} gives every in-scope derivation write a position in its chain`);
     // `provisional` is a claim about evidence, so it is asserted key by key rather than left as
-    // a decoration: the transcribed regions are the compiled region-c map and the Warlord CAS
-    // hooks, minus the individually deduced positions inside them.
+    // a decoration: the transcribed regions are the compiled region-c map, the Warlord CAS
+    // hooks and — since F204 — Warlord's `CreateUnit.CAS` training group, minus the individually
+    // deduced positions inside them.
     const expectedProvisional = keys.filter(key => {
       const phase = key.slice(0, key.indexOf(':'));
-      if (['base', 'a', 'e'].includes(phase)) return true;
+      if (['template', 'cast', 'immunity', 'a', 'e'].includes(phase)) return true;
       return (deducedInsideTranscribedRegion[version] || []).includes(key);
     }).sort();
     const observedProvisional = chain.filter(entry => entry.provisional)
@@ -374,7 +375,7 @@ function runCanonicalVersionScopeChecks(ctx) {
   assert(dosThrew, 'Calling GetEffectiveResistance with a DOS version is caught by the call-site check');
 
   // --- 4a. the immunity curse strip, per version ---
-  // Since F199 it is `base:immunityCurseGating`, an ordinary step at the head of every chain
+  // Since F199 it is `immunity:immunityCurseGating`, an ordinary step at the head of every chain
   // writing ten record fields, so the sweep in section 6 reaches it like any other write. What
   // the sweep cannot say is *which* curses each immunity blocks, so that is checked here — through
   // `deriveUnitStats`, which is the only path a page can take. Eye of Heaven is Warlord-only,
@@ -533,7 +534,7 @@ function runCanonicalVersionScopeChecks(ctx) {
     // The figure sequence is read through its projection above, but a projection carries only
     // the steps that changed `figs`, and neither Warlord building's race/name prerequisite is
     // built by the swept template-less custom unit.
-    'base:altarOfTheSun:figures', 'base:alumniOfAcademy:figures',
+    'training:altarOfTheSun:figures', 'training:alumniOfAcademy:figures',
     // A write behind a prerequisite the sweep does not build: the Outlander armorclad reform.
     'b:battleArmor',
   ];

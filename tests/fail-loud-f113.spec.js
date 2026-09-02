@@ -93,7 +93,7 @@ const CASES = [
     + " modernAttacks: {}, def: 0, res: 0, hp: 1,"
     + " identity: { specialUnit: 'juggernautF144' } })", 'juggernautF144'],
   ['versionChain: version with no deduced-position list',
-    "versionChain('com3_0.0.0', ['base:stat:base'])", 'com3_0.0.0'],
+    "versionChain('com3_0.0.0', ['template:stat:base'])", 'com3_0.0.0'],
   ['normalizeDosCombatHealState: missing version',
     "normalizeDosCombatHealState({ figures: 4, baseHp: 3, totalDamage: 0 })", 'undefined'],
   ['loadUnitDatabase: version with no roster',

@@ -129,7 +129,7 @@ test('R8.3 applies CoM1 Zombies and success-wide combat-summon identity writes',
 
   expect(report.zombies.toBlock).toBeCloseTo(0.20);
   expect(report.zombies.statTrace).toContainEqual(expect.objectContaining({
-    id: 'zombies:toBlock', phase: 'base',
+    id: 'zombies:toBlock', phase: 'template',
     changes: { toBlk: { from: 30, to: 20, delta: -10 } },
   }));
   expect(report.zombies.identityTrace.map(step => step.id)).not.toContain('zombies');

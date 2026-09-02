@@ -212,7 +212,9 @@ or fail. Do not add them here.
 - Anchor: F20
 - Checks: every represented b/c/d step appears in source order for all five versions, multi-field
   writes stay atomic, Warlord identity writes land in b and d, and malformed trace entries are
-  rejected.
+  rejected. It also asserts which phases are transcribed and which are inherited: `b`, `c`, `d`
+  and — since F204 — Warlord's `training` group carry non-provisional positions, the rest are
+  provisional.
 
 ## identity
 

@@ -154,7 +154,7 @@ function applyTacticianWarlordEffects(unit, version) {
 // grants First Strike. (Base non-Fantastic units instead get stat bonuses — stepped in stats_sequence.js.
 // The realm conversion to Chaos is the ordered identity step `b:fieryFury:race`.)
 // This is the second half of that one `IF (BASEFANTASTIC(U))` THEN arm, so it takes the same
-// **permanent** record the conversion does: the base unit data as the `base` phase leaves it,
+// **permanent** record the conversion does: the base unit data as the permanent-record phases leave it,
 // Destiny's `B.Fantastic := True` at $0059A390 included (F192). Splitting the two halves across
 // two records would give a Destiny unit the Chaos conversion without the First Strike beside it.
 // STAT-FORMULA[fieryFuryAbilityDerivation]
