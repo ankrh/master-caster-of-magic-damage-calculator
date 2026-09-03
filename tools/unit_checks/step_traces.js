@@ -4,6 +4,7 @@
 
 const {
   evalInContext, assert, assertEqual, assertClose, assertSameKeyList, baseUnitInput,
+  traceWrites,
 } = require('./assertions');
 
 function runStatStepChecks(ctx) {
@@ -238,9 +239,9 @@ function runModifierTraceChecks(ctx) {
     `${version}: explicit global, combat-global, and curse pieces follow Holy Weapon in order`);
   }
 
-  assertEqual(traced.modifierTraces.fantastic.entries[0].source.id, 'chosen',
+  assertEqual(traceWrites(traced.modifierTraces.fantastic)[0].source.id, 'chosen',
     'Boolean identity trace attributes the live Fantastic write');
-  assertEqual(traced.modifierTraces.race.entries[0].source.id, 'chosen',
+  assertEqual(traceWrites(traced.modifierTraces.race)[0].source.id, 'chosen',
     'Identity trace attributes the live race write');
 
   const rangedDistanceTraceUnit = ctx.deriveUnitStats(baseUnitInput({
@@ -351,12 +352,13 @@ function runModifierTraceChecks(ctx) {
   ];
   for (const [field, from, to] of destinyWrites) {
     const trace = tracedDestiny.modifierTraces[field];
+    const writes = traceWrites(trace);
     assertEqual(trace.base, from, `Destiny ${field} trace starts at the editable value`);
-    assertEqual(trace.entries.length, 1, `Destiny ${field} is one independently attributed write`);
-    assertEqual(trace.entries[0].source.id, 'destiny', `Destiny owns the ${field} write`);
-    assertEqual(trace.entries[0].source.label, 'Destiny', `Destiny labels the ${field} source`);
-    assertEqual(trace.entries[0].from, from, `Destiny ${field} records its running before value`);
-    assertEqual(trace.entries[0].to, to, `Destiny ${field} records its running after value`);
+    assertEqual(writes.length, 1, `Destiny ${field} is one independently attributed write`);
+    assertEqual(writes[0].source.id, 'destiny', `Destiny owns the ${field} write`);
+    assertEqual(writes[0].source.label, 'Destiny', `Destiny labels the ${field} source`);
+    assertEqual(writes[0].from, from, `Destiny ${field} records its running before value`);
+    assertEqual(writes[0].to, to, `Destiny ${field} records its running after value`);
     assertEqual(trace.result, to, `Destiny ${field} trace reaches the derived result`);
   }
 
@@ -379,9 +381,10 @@ function runModifierTraceChecks(ctx) {
   ];
   for (const [label, sourceId, channel, input, from, to] of permanentSourceCases) {
     const trace = ctx.deriveUnitStats(input).modifierTraces.modernAttacks[channel];
-    assertEqual(trace.entries[0].source.id, sourceId, `${label} owns its ordered ${channel} write`);
-    assertEqual(trace.entries[0].from, from, `${label} records the editable running value`);
-    assertEqual(trace.entries[0].to, to, `${label} records the ordered running value`);
+    const [first] = traceWrites(trace);
+    assertEqual(first.source.id, sourceId, `${label} owns its ordered ${channel} write`);
+    assertEqual(first.from, from, `${label} records the editable running value`);
+    assertEqual(first.to, to, `${label} records the ordered running value`);
   }
 
   const destinyAfterPermanent = ctx.deriveUnitStats(baseUnitInput({
@@ -394,7 +397,7 @@ function runModifierTraceChecks(ctx) {
     'Destiny doubles melee after the permanent Mother Fungus write');
   assertEqual(destinyAfterPermanent.rtb, 8,
     'Destiny doubles ranged after the permanent Mother Fungus write');
-  // Destiny makes two writes at two positions: `cast:destiny`, the permanent `B.race` /
+  // Destiny makes two writes at two positions: `buffs:destiny`, the permanent `B.race` /
   // `B.Fantastic` transformation, and `c:destiny`, the calculated-record package these checks
   // are about. `phase:id` is what tells them apart (`SPEC.md`, *The step model*).
   const destinyOrderedIds = destinyAfterPermanent.statTrace
@@ -432,7 +435,7 @@ function runModifierTraceChecks(ctx) {
   }));
   assertEqual(focusCreatedAfterLevel.rtb, 3,
     'Focus Magic creates ranged strength after the level ladder, so the new slot gets no level bonus');
-  assertEqual(focusCreatedAfterLevel.modifierTraces.sharedAttack.entries[0].phase, 'c',
+  assertEqual(traceWrites(focusCreatedAfterLevel.modifierTraces.sharedAttack)[0].phase, 'c',
     'Focus Magic creation is a region-c trace event');
 
   const baseModernThrown = { thrown: { strength: 2, type: 'thrown' } };
@@ -526,7 +529,7 @@ function runModifierTraceChecks(ctx) {
     modernAttacks: { thrown: { strength: 5, type: 'thrown' } },
   }));
   for (const [field, from, to] of [['melee', 3, 5], ['sharedAttack', 5, 1]]) {
-    const entry = tracedVampirism.modifierTraces[field].entries[0];
+    const entry = traceWrites(tracedVampirism.modifierTraces[field])[0];
     assertEqual(entry.source.id, 'vampirism:transfer', `Vampirism owns its ${field} transfer`);
     assertEqual(entry.from, from, `Vampirism ${field} records its running before value`);
     assertEqual(entry.to, to, `Vampirism ${field} records its running after value`);
@@ -647,15 +650,16 @@ function runModifierTraceChecks(ctx) {
     'Shadow Strike-created modern Thrown retains its editable zero base');
   assertEqual(grantedThrown.modifierTrace.base, 0,
     'Shadow Strike-created modern Thrown trace starts from zero');
-  assertEqual(grantedThrown.modifierTrace.entries.length, 1,
+  const grantedThrownWrites = traceWrites(grantedThrown.modifierTrace);
+  assertEqual(grantedThrownWrites.length, 1,
     'Shadow Strike-created modern Thrown has one applied grant entry');
-  assertEqual(grantedThrown.modifierTrace.entries[0].source.id, 'shadowStrike:thrown',
+  assertEqual(grantedThrownWrites[0].source.id, 'shadowStrike:thrown',
     'Shadow Strike owns the created modern Thrown grant');
-  assertEqual(grantedThrown.modifierTrace.entries[0].source.label, 'Shadow Strike',
+  assertEqual(grantedThrownWrites[0].source.label, 'Shadow Strike',
     'Created modern Thrown identifies Shadow Strike to presentation');
-  assertEqual(grantedThrown.modifierTrace.entries[0].from, 0,
+  assertEqual(grantedThrownWrites[0].from, 0,
     'Shadow Strike grant records zero as its running before value');
-  assertEqual(grantedThrown.modifierTrace.entries[0].to, 3,
+  assertEqual(grantedThrownWrites[0].to, 3,
     'Shadow Strike grant records the created strength as its running after value');
   assertEqual(grantedThrown.modifierTrace.result, grantedThrown.strength,
     'Shadow Strike-created modern Thrown trace reaches channel strength');
@@ -841,7 +845,7 @@ function runChannelAttributionChecks(ctx) {
   'A Breath ledger reconstruction drops the steps whose declaration excludes Breath, and keeps '
   + 'one whose declaration reaches Breath-agnostic fields');
   // Compared over the events themselves, not by id: three steps share the id `spiritLink` at
-  // three positions (`cast:`, `b:` and `d:`), so a lookup by id alone answers for the wrong one.
+  // three positions (`buffs:`, `b:` and `d:`), so a lookup by id alone answers for the wrong one.
   assertSameKeyList(
     breathLedger.filter(event => !event.channels).map(event => `${event.phase}:${event.id}`),
     ledger.filter(event => !event.channels).map(event => `${event.phase}:${event.id}`),

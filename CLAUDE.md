@@ -56,7 +56,19 @@ python ~/.claude/tools/codex_agent.py --model gpt-5.6-sol --prompt <prompt file>
 
 By default, tasks should be executed according to method A. Tasks that involve source code reconstruction from the game binaries must be performed with method B. The methods run per subtask, not per item.
 
-The user may request one or more TASKS item to be performed. If multiple task items are requested, default to using sequential subagents, one for each subtask. After all requested subtasks have been executed, any code changes should be visualized in an artifact with graphical layout showing function calls and other explanatory text, with special emphasis for any features that are still scheduled for removal later in the TASKS pipeline.
+The user may request one or more TASKS item to be performed. If multiple task items are requested, default to using sequential subagents, one for each subtask. Subtask agents run in the background, one at a time. Each keeps a status file in the
+scratchpad, `STATUS.<ID>.md`, with one timestamped line per stage: implementing, reviewer
+launched, review received, revising, verifying, done. The main agent watches that file with the
+Monitor tool while the subtask runs, and posts a line in the conversation when a subtask starts
+and when it finishes.
+
+Agents wait only with Monitor. No agent waits by launching a background sleep, timer or polling
+command. Anything that may run longer than a foreground shell call allows — the reviewer, the
+Playwright suite — runs in the background and is waited on with Monitor.
+
+Each subtask agent writes its report to `REPORT.<ID>.md` in the scratchpad before returning it.
+
+After all requested subtasks have been executed, any code changes should be visualized in an artifact with graphical layout showing function calls and other explanatory text, with special emphasis for any features that are still scheduled for removal later in the TASKS pipeline.
 
 A report that finishes a TASKS item ends with a block titled `To close <ID>`, and nothing
 follows it. The block lists every decision required from the user as a numbered yes/no

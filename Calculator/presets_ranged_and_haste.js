@@ -1561,7 +1561,7 @@ definePresets({
     expected: { dmgToA: 0.323, dmgToB: 1.033 },
   },
   darknessDeathArmReachesChaosChannelsUndeadNoHealCoM2: {
-    desc: 'Darkness (CoM2) still pays a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal. The Death arm gates on `IsDeathUnit(i)` at $005A45EF, and the helper is `(race = RCDeath) or (ChaosChannel(u) and EncUndead)` at $0059504C, so the Death realm `c:undead` wrote and `c:raiseDead` then overwrote with No Heal is recovered by the second arm. One Darkness copy is +1 melee: atk 1 -> 2, 100% To Hit against Defense 0 -> 2.000. Reading the scalar realm alone sees No Heal, the arm pays nothing, and the card deals 1.000.',
+    desc: 'Darkness (CoM2) still pays a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal. The Death arm gates on `IsDeathUnit(i)` at $005A45EF, and the helper is `(race = RCDeath) or (ChaosChannel(u) and EncUndead)` at $0059504C, so the Death realm `c:undead` wrote and `c:noHealConversion` then overwrote with No Heal is recovered by the second arm. One Darkness copy is +1 melee: atk 1 -> 2, 100% To Hit against Defense 0 -> 2.000. Reading the scalar realm alone sees No Heal, the arm pays nothing, and the card deals 1.000.',
     version: V_COM2,
     a: { atk:1, hitChance:70, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true } },
     b: { atk:0, hp:10 },
@@ -1686,7 +1686,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.200 },
   },
   eternalNightDoubleDarknessReachesChaosChannelsUndeadNoHealCoM2: {
-    desc: 'Eternal Night (CoM2) still doubles Darkness for a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal. The doubling is the `for j := 1 to k` loop inside the `IsDeathUnit(i)` branch at $005A45EF, so it reads the same helper as the arm, and the helper\'s `ChaosChannel(u) and EncUndead` term recovers the Death realm `c:raiseDead` overwrote with No Heal. atk 1 + 2 = 3, 100% To Hit against Defense 0 -> 3.000. Reading the scalar realm alone sees No Heal and the card deals 1.000.',
+    desc: 'Eternal Night (CoM2) still doubles Darkness for a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal. The doubling is the `for j := 1 to k` loop inside the `IsDeathUnit(i)` branch at $005A45EF, so it reads the same helper as the arm, and the helper\'s `ChaosChannel(u) and EncUndead` term recovers the Death realm `c:noHealConversion` overwrote with No Heal. atk 1 + 2 = 3, 100% To Hit against Defense 0 -> 3.000. Reading the scalar realm alone sees No Heal and the card deals 1.000.',
     version: V_COM2,
     a: { atk:1, hitChance:70, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true, eternalNight: true } },
     b: { atk:0, hp:10 },
@@ -1697,7 +1697,7 @@ definePresets({
     },
   },
   eternalNightEnemyResistanceExemptsChaosChannelsUndeadNoHealCoM2: {
-    desc: 'Eternal Night (CoM2) exempts a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal from the enemy -1 Resistance. The block gates on `not IsDeathUnit(i)` at $005A22D9, and the helper\'s `ChaosChannel(u) and EncUndead` term recovers the Death realm `c:raiseDead` overwrote with No Heal, so the unit is Death to it. The same helper then pays Darkness\'s Death arm at $005A45EF, whose Resistance sits outside the doubling loop: res 5 + 1 = 6. Poison 4 at CoM\'s -1 save: 4 x (11 - 6)/10 = 2.000. Melee 1 against Defense 1 + 3 (Chaos Channels) + 2 (doubled Darkness) at 100% To Block adds nothing. Reading the scalar realm alone charges the -1 and pays no arm: res 4, 4 x 0.7 = 2.800.',
+    desc: 'Eternal Night (CoM2) exempts a Chaos-Channelled Undead unit that Raise Dead re-tagged No Heal from the enemy -1 Resistance. The block gates on `not IsDeathUnit(i)` at $005A22D9, and the helper\'s `ChaosChannel(u) and EncUndead` term recovers the Death realm `c:noHealConversion` overwrote with No Heal, so the unit is Death to it. The same helper then pays Darkness\'s Death arm at $005A45EF, whose Resistance sits outside the doubling loop: res 5 + 1 = 6. Poison 4 at CoM\'s -1 save: 4 x (11 - 6)/10 = 2.000. Melee 1 against Defense 1 + 3 (Chaos Channels) + 2 (doubled Darkness) at 100% To Block adds nothing. Reading the scalar realm alone charges the -1 and pays no arm: res 4, 4 x 0.7 = 2.800.',
     version: V_COM2,
     a: { atk:1, hitChance:70, hp:10, abilities: { eternalNight: true, poison:4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { ccDefense: true, undead: true, raiseDead: true } },

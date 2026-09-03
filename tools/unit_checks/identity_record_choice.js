@@ -87,7 +87,7 @@ const CROSS_BOUNDARY_READS = [
   },
   {
     token: 'finishedImmunities',
-    why: 'The immunity set the recalculation leaves. `immunity:immunityCurseGating` is an artificial '
+    why: 'The immunity set the recalculation leaves. `immunities:immunityCurseGating` is an artificial '
       + 'step — no engine removes a curse flag it already carries (`SPEC.md`, *Deliberate '
       + 'deviations*) — so no source fixes its position relative to a grant that writes one of '
       + 'these four immunities, and taking the finished set is what makes its answer independent '
@@ -199,7 +199,7 @@ const LANDED_CORRECTIONS = [
     preset: 'eternalNightNightGoblinsExemptWarlord' },
   { id: 'F187', at: 'c:tactician', record: 'hero',
     preset: 'tacticianHeroCcDefenseWarpAttackWarlord' },
-  { id: 'F187', at: 'cast:rebuild', record: 'hero',
+  { id: 'F187', at: 'buffs:rebuild', record: 'hero',
     preset: 'rebuildHeroCcDefenseLionheartWarlord' },
   { id: 'F188', at: "Shatter's target class", record: 'finished',
     preset: 'magicImmunityGatesShatter' },

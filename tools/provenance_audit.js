@@ -44,6 +44,9 @@ const excludedJavaScript = new Map([
   ['Calculator/lz-string.min.js', 'vendored compression library'],
   ['Calculator/steps.js', 'ordered-step runner and the canonical step version-scope table'],
   ['Calculator/stats_manifests.js', 'per-version execution chains, carrying no stat formula'],
+  // The origin table names engine writes, but as mentions: the anchor for each lives on the step
+  // that reads the flag or the transform that makes it, which are formula-bearing sources above.
+  ['Calculator/stats_origins.js', 'ability-key origin classification, carrying no stat formula'],
   ['Calculator/ui.js', 'UI rendering, formatting, and page wiring'],
   ['Calculator/ui_abilities.js', 'UI ability controls and version gating'],
   ['Calculator/ui_units.js', 'UI unit selection and identity controls'],

@@ -101,6 +101,21 @@ const ARMOR_MATERIALS = Object.freeze(['normal', 'orihalcon']);
 const LEVEL_LADDER = Object.freeze(
   ['normal', 'regular', 'veteran', 'elite', 'ultra_elite', 'champion']);
 
+// The ordinal of a rung, for the three effects that scale with experience rather than reading the
+// bonus table: Discipline's two thresholds, Soul Flay's per-level penalty and Psycho Force's
+// halved-Resistance term. It takes the same argument the tables do — the level the record carries
+// at the reading step — so an unlisted value stops rather than ranking as an unpromoted unit,
+// which would silently withhold those writes (`SPEC.md`, *Out-of-range values stop the run*).
+function levelRankOf(level) {
+  const rank = LEVEL_LADDER.indexOf(level);
+  if (rank < 0) {
+    throw new Error(
+      `levelRankOf: experience level '${level}' is not one of ${LEVEL_LADDER.join('/')}, `
+      + 'the option set of the Unit Level control.');
+  }
+  return rank;
+}
+
 // Level bonuses vary by game version.
 // CoM2 and Warlord are confirmed against their own Levelbonus.INI `[Normal]` sections — every
 // value below matches (see `Reference docs/CoM2 data tables.md`, *Level bonuses*). Level 1
@@ -1112,7 +1127,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // -5 defense, -5 resistance. CoM2/Warlord: -3 melee, -5 conventional ranged and
   // Thrown only, -5 defense, -5 resistance; both Breath fields and all gazes are separate.
   // Phase c: UnitCalcPre.CAS!NOCHAOSEMBRACE!+26..+28 "IF GETCOMBATENCHANTMENTFLAG(U,EncMindStorm,0) THEN {" "}" only mirrors the combat flag to overland.
-  // Mind Storm is one of the ten curse flags `immunity:immunityCurseGating` can clear, so emission
+  // Mind Storm is one of the ten curse flags `immunities:immunityCurseGating` can clear, so emission
   // reads the ability set — a superset — and the flag on the record at this step's own position
   // is the gate (`SPEC.md`, *Version scope*; F199).
   if (hasAbil(abilities, 'mindStorm')) {
@@ -1233,8 +1248,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // (+1 resistance), not this bonus.
 
   // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion is the separate
-  // No Heal normalization block at $005A0420, `c:mysticSurge:race`, which Raise Dead also
-  // reaches; the -10% To Block is in resolveCombat (MODDING.INI MysticSurgeToDefPenalty=10,
+  // No Heal normalization block at $005A0420, `c:noHealConversion`, which Raise Dead also
+  // reaches through the same flag; the -10% To Block is in resolveCombat (MODDING.INI MysticSurgeToDefPenalty=10,
   // both versions).
   // Phase c — SpellMysticSurge.CAS sets enchantment flags only; no stat application.
   if (hasAbil(abilities, 'mysticSurge')) {
@@ -1293,19 +1308,28 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // permanent Mechanical flag — so it is a record read at this step's position (F202). That rank
   // is what settles the Rebuild case: `CreateUnit.CAS` runs once, when the city builds the unit,
   // and Rebuild is cast on a unit that already exists, so this gate never saw the later
-  // `cast:rebuild` write and a Rebuilt unit takes no part of the retort's package (F208).
+  // `buffs:rebuild` write and a Rebuilt unit takes no part of the retort's package (F208).
   if (isWarlord && hasAbil(abilities, 'artificer')) {
     // PROVENANCE[artificer]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:12:bcf7fbdc48f5aef331e51d9d
-    abilityStep('artificer', 'training', { writes: ['atk', 'def', 'res', ...attackWrites],
-      when: u => !!u.mechanical,
-      apply: (u, ctx) => {
-        // `SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1))` (CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));") has no
-        // melee-presence gate, and it writes the **permanent** record — so on a unit whose
-        // permanent melee was 0 it is what makes `B.attack > 0` true for every later block
-        // that asks (F142).
-        u.atk += 1; u.def += 1; u.res += 2;
-        addToSlot(u, ctx, 'rangedField', 1);
-      } });
+    abilityStep('artificer', 'training',
+      { writes: ['atk', 'def', 'res', 'weaponMaterial', ...attackWrites],
+        when: u => !!u.mechanical,
+        apply: (u, ctx) => {
+          // The Magic Weapons half is the block's first line,
+          // `SETENCHANTMENTFLAG(U,EncMagic,1,1)` (CreateUnit.CAS!NOLOGISTIC!+9 "SETENCHANTMENTFLAG(U,EncMagic,1,1);") — a write to
+          // the persistent weapon-quality field, so it lands on the record here rather than
+          // feeding a pre-sequence constant (F244.2). It is a floor rather than an assignment:
+          // `EncMagic` beside an `EncMithril` or `EncAdamant` the city's ore block already set
+          // leaves the quality the higher flag gives, which is what `weaponMaterial` already
+          // holding a material means.
+          if (u.weaponMaterial === 'normal') u.weaponMaterial = 'magic';
+          // `SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1))` (CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));") has no
+          // melee-presence gate, and it writes the **permanent** record — so on a unit whose
+          // permanent melee was 0 it is what makes `B.attack > 0` true for every later block
+          // that asks (F142).
+          u.atk += 1; u.def += 1; u.res += 2;
+          addToSlot(u, ctx, 'rangedField', 1);
+        } });
   }
 
   // Mechanical Expert (Warlord): with an engineer or mechanic anywhere on the friendly side,
@@ -1328,7 +1352,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Armor Piercing are granted in normalizeCombatUnit.
   // The two unit classes are handled by deliberately ISHERO-complementary code, in
   // different phases. Non-heroes: OLSpell.CAS!NOTMARKOFCONQUEROR!+2..+16 "IF (SP<>SRebuild) THEN { GOTO" "ENDOFOLSPELL" writes both stats at index 1
-  // (ABase) when the spell is cast, so it is a `cast`-phase write.
+  // (ABase) when the spell is cast, so it is a `buffs`-phase write.
   // Heroes: UnitCalcPre.CAS!NOHEROAUGMENT!+2..+10 ": Hero augmentation effect of Rebuild spell :" "SETSTAT(U,ADeathImmunity,0,1);" re-applies them at index 0 on every recalc — phase b.
   // The Marionette Wanderer's strayed branch grants Rebuild, so the flag is a record field read
   // here rather than a pre-sequence constant (F202).
@@ -1352,7 +1376,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // (UnitCalcPre.CAS!NOHEROAUGMENT!+6 "SETSTAT(U,SAttack,0,(GetStat(U,SAttack,0)+2));") for the hero re-application, and
     // `SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2)` (OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);") for the permanent
     // non-hero write (F142).
-    abilityStep('rebuild', isHeroUnit ? 'b' : 'cast',
+    abilityStep('rebuild', isHeroUnit ? 'b' : 'buffs',
       { writes: isHeroUnit ? ['atk', 'def'] : ['atk', 'def', 'mechanical'],
         when: u => !!u.rebuild,
         apply: u => {
@@ -1376,7 +1400,7 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // non-fantastic targeting status is handled at the target-gating sites; the phase-c EncMagic
   // write deliberately survives that phase-d identity change.
   if (isWarlord && hasAbil(abilities, 'spiritLink')) {
-    abilityStep('spiritLink', 'cast', { writes: ['res'], apply: u => { u.res += 2; } });
+    abilityStep('spiritLink', 'buffs', { writes: ['res'], apply: u => { u.res += 2; } });
   }
 
   // Rally (Warlord, Charismatic retort exclusive combat enchantment): all friendly

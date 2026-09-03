@@ -2,6 +2,12 @@
 const { test, expect } = require('@playwright/test');
 const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
 
+// The `a:baseCopy` boundary marker every projected chain carries: the copy that ends the
+// permanent-record phases and opens the recalculation. It moves no value, so it renders without
+// one, and a stat whose chain holds nothing else still presents as unmodified.
+const BASE_COPY_LINE = '— Calculated record seeded from the permanent record (phase a) —';
+const writes = trace => trace.entries.filter(entry => !entry.boundary);
+
 test('R7.3 projects source-ordered running chains for chance, identity, and modern channels', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => deriveUnitStats({
@@ -31,21 +37,30 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
       running = entry.to;
     }
     expect(running).toBe(trace.result);
+    // The boundary marker is a position, so a chain shows it at most once.
+    expect(trace.entries.filter(entry => entry.boundary).length).toBeLessThanOrEqual(1);
   };
   for (const [key, trace] of Object.entries(report.modifierTraces)) {
     if (key !== 'modernAttacks') assertChain(trace);
   }
 
-  const meleeSources = report.modifierTraces.melee.entries.map(entry => entry.source.id);
+  // Every chain carries the marker once, the To-Hit/To-Block ledger's included: that ledger is
+  // projected from the stat sequence, so it inherits the position as `chance:baseCopy`.
+  expect(report.modifierTraces.melee.entries.filter(entry => entry.boundary)).toHaveLength(1);
+  const hitBoundary = report.modifierTraces.toHitMelee.entries.filter(entry => entry.boundary);
+  expect(hitBoundary).toHaveLength(1);
+  expect(hitBoundary[0]).toMatchObject({ id: 'chance:baseCopy', projectionOf: 'a:baseCopy' });
+
+  const meleeSources = writes(report.modifierTraces.melee).map(entry => entry.source.id);
   expect(meleeSources.indexOf('level')).toBeLessThan(meleeSources.indexOf('weapon'));
   expect(meleeSources.indexOf('weapon')).toBeLessThan(meleeSources.indexOf('highPrayer'));
   expect(meleeSources.indexOf('highPrayer')).toBeLessThan(meleeSources.indexOf('warpAttack'));
 
-  const hitSources = report.modifierTraces.toHitMelee.entries.map(entry => entry.source.id);
+  const hitSources = writes(report.modifierTraces.toHitMelee).map(entry => entry.source.id);
   expect(hitSources[0]).toBe('baseThresholds');
   expect(hitSources.indexOf('level')).toBeLessThan(hitSources.indexOf('weapon'));
   expect(hitSources.indexOf('highPrayer')).toBeLessThan(hitSources.indexOf('vertigo'));
-  expect(report.modifierTraces.fantastic.entries[0].source.id).toBe('chosen');
+  expect(writes(report.modifierTraces.fantastic)[0].source.id).toBe('chosen');
 
   for (const key of ['ranged', 'thrown', 'fireBreath', 'lightningBreath']) {
     const channel = report.modernAttacks[key];
@@ -174,8 +189,8 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
   for (const [field, [from, to]] of Object.entries(destinyExpected)) {
     const trace = report.destiny.modifierTraces[field];
     expect(trace.base).toBe(from);
-    expect(trace.entries).toHaveLength(1);
-    expect(trace.entries[0]).toMatchObject({
+    expect(writes(trace)).toHaveLength(1);
+    expect(writes(trace)[0]).toMatchObject({
       source: { id: 'destiny', label: 'Destiny' }, from, to,
     });
     expect(trace.result).toBe(to);
@@ -184,8 +199,8 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
   const channel = report.shadowStrike.modernAttacks.thrown;
   expect(channel.baseStrength).toBe(0);
   expect(channel.modifierTrace.base).toBe(0);
-  expect(channel.modifierTrace.entries).toHaveLength(1);
-  expect(channel.modifierTrace.entries[0]).toMatchObject({
+  expect(writes(channel.modifierTrace)).toHaveLength(1);
+  expect(writes(channel.modifierTrace)[0]).toMatchObject({
     source: { id: 'shadowStrike:thrown', label: 'Shadow Strike' },
     from: 0,
     to: 3,
@@ -227,29 +242,35 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
 
   await expect(page.locator('#aAtkMod')).toHaveText('5');
   await expect(page.locator('#aAtkMod')).toHaveAttribute('data-tooltip',
-    'Editable base: 3\nHigh Prayer (phase c): 3 → 5\nDisplayed result: 5');
+    `Editable base: 3\n${BASE_COPY_LINE}`
+      + '\nHigh Prayer (phase c): 3 → 5\nDisplayed result: 5');
   await expect(page.locator('#bAtkMod')).toHaveText('6');
   await expect(page.locator('#bAtkMod')).toHaveAttribute('data-tooltip',
-    'Editable base: 3\nWeapon (phase c): 3 → 4'
+    `Editable base: 3\n${BASE_COPY_LINE}`
+      + '\nWeapon (phase c): 3 → 4'
       + '\nHigh Prayer (phase c): 4 → 6\nDisplayed result: 6');
 
   await expect(page.locator('#aHitMeleeDisp')).toHaveText('45%');
   await expect(page.locator('#aHitMeleeDisp')).toHaveAttribute('data-tooltip',
-    'Editable base: 30%\nBase To Hit / To Block (phase template): 30% → 35%'
+    `Editable base: 30%\nBase To Hit / To Block (phase template): 30% → 35%`
+      + `\n${BASE_COPY_LINE}`
       + '\nHigh Prayer (phase c): 35% → 45%\nDisplayed result: 45%');
   // The common row shows that field alone, so the melee-only modifier above is absent from
   // it while the write High Prayer makes to the common field appears in both.
   await expect(page.locator('#aHitChanceDisp')).toHaveText('40%');
   await expect(page.locator('#aRaceMod')).toHaveText('Life');
   await expect(page.locator('#aRaceMod')).toHaveAttribute('data-tooltip',
-    'Editable base: High Men\nChosen (phase a): High Men → Life\nDisplayed result: Life');
+    `Editable base: High Men\n${BASE_COPY_LINE}`
+      + '\nChosen (phase a): High Men → Life\nDisplayed result: Life');
   await expect(page.locator('#aFantasticMod')).toHaveText('Yes');
   await expect(page.locator('#aFantasticMod')).toHaveAttribute('data-tooltip',
-    'Editable base: No\nChosen (phase a): No → Yes\nDisplayed result: Yes');
+    `Editable base: No\n${BASE_COPY_LINE}`
+      + '\nChosen (phase a): No → Yes\nDisplayed result: Yes');
 
   await expect(page.locator('#bModernRangedMod')).toHaveText('5');
   await expect(page.locator('#bModernRangedMod')).toHaveAttribute('data-tooltip',
-    'Editable base: 4\nWeapon (phase c): 4 → 5\nDisplayed result: 5');
+    `Editable base: 4\n${BASE_COPY_LINE}`
+      + '\nWeapon (phase c): 4 → 5\nDisplayed result: 5');
 
   // Pointer hover uses the existing shared tooltip and preserves the complete chain.
   const attackerTrace = await page.locator('#aAtkMod').getAttribute('data-tooltip');
@@ -287,5 +308,23 @@ test('R7.4 renders complete trace tooltips only on affected final outputs, symme
     .filter(el => el.dataset.tooltip.startsWith('Editable base:') && !el.matches('.mod-val'))
     .map(el => el.id || el.className));
   expect(misplaced, 'modifier chains belong only to final-output spans').toEqual([]);
+  expectNoConsoleErrors(errors);
+});
+
+test('the boundary survives a transform appended after the projection is built', async ({ page }) => {
+  // The displayed Defense penalty is `displayDefense:vertigo`, appended to the finished
+  // projection rather than emitted by the sequence. With Vertigo the only modifier, the chain the
+  // sequence itself produced holds nothing but the boundary marker, so a projection that dropped
+  // a marker-only chain would render a tooltip that crosses the recalculation with no divider.
+  const errors = await openCalculator(page);
+  await setValue(page, 'gameVersion', 'mom_1.31');
+  await setValue(page, 'aUnit', 'custom');
+  await setValue(page, 'aDef', '5');
+  await setValue(page, 'aAbil_vertigo', true);
+
+  await expect(page.locator('#aDefMod')).toHaveText('4');
+  await expect(page.locator('#aDefMod')).toHaveAttribute('data-tooltip',
+    `Editable base: 5\n${BASE_COPY_LINE}`
+      + '\nVertigo (phase attackSpecific): 5 → 4\nDisplayed result: 4');
   expectNoConsoleErrors(errors);
 });

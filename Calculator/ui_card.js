@@ -430,6 +430,12 @@ function formatTraceSource(entry) {
 function formatTraceTooltip(trace) {
   const lines = ['Editable base: ' + formatTraceValue(trace.base, trace)];
   for (const entry of trace.entries) {
+    // A boundary entry marks a position the engine crosses rather than a write, so it is
+    // rendered without values: printing `5 → 5` would read as a transform that did nothing.
+    if (entry.boundary) {
+      lines.push('— ' + formatTraceSource(entry) + ' (phase ' + entry.phase + ') —');
+      continue;
+    }
     lines.push(formatTraceSource(entry) + ' (phase ' + entry.phase + '): '
       + formatTraceValue(entry.from, trace) + ' → ' + formatTraceValue(entry.to, trace));
   }
@@ -447,7 +453,7 @@ function updateModifiedDisplay(prefix, stats) {
   function showTrace(id, trace) {
     const el = document.getElementById(id);
     if (!el) return;
-    if (trace && Array.isArray(trace.entries) && trace.entries.length > 0) {
+    if (traceHasWrites(trace)) {
       el.textContent = formatTraceValue(trace.result, trace);
       el.dataset.tooltip = formatTraceTooltip(trace);
       el.classList.add('visible');

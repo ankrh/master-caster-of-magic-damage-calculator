@@ -35,7 +35,8 @@
 function baseStatSteps(ctx) {
   const {
     abilities, abilByPhase, altarHunter, altarOfTheMoon, altarOfTheSunHolyMother, altarWitchdoctor,
-    baseDoomGaze, baseGazeRanged,
+    armorTrainingInput, baseDoomGaze, baseGazeRanged, constructCatapult, levelInput, rustActive,
+    weaponInput,
     baseHitChance, baseHitMelee, modernSecondaryHitMod, secondaryHitTargets,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod, calcBaseAtk, calcBaseDef, calcBaseHP,
     calcBaseRes, channels, dragonMound, identity, isCoM1, isCoM2, lightningBladeSlots,
@@ -51,7 +52,7 @@ function baseStatSteps(ctx) {
     // blocks are cleared before anything reads them. Its citation and the reason it may read the
     // finished immunity set are at `immunityCurseGatingStep` (`stats_identity.js`).
     immunityCurseGatingStep(version, finishedImmunities),
-    // Destiny's third permanent write, beside the `B.race` / `B.Fantastic` pair `cast:destiny`
+    // Destiny's third permanent write, beside the `B.race` / `B.Fantastic` pair `buffs:destiny`
     // makes — one block, $0059A35E..$0059A633, whose permanent half runs in executable order.
     // It is a separate id because the identity conversion must keep writing `race` and
     // `fantastic` and nothing else, which is what makes `targetingIdentity` exact without
@@ -60,7 +61,7 @@ function baseStatSteps(ctx) {
     // where the merged `supernatural || destinyActive` constant used to state it (F201).
     // PROVENANCE[destiny:supernatural]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
     statStep({ id: 'destiny:supernatural', sourceId: 'destiny', sourceLabel: 'Destiny',
-      phase: 'cast', writes: ['supernatural'],
+      phase: 'buffs', writes: ['supernatural'],
       when: () => destinyActiveForUnit(abilities, version),
       apply: u => { u.supernatural = true; } }),
     // PROVENANCE[stat:base]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:24:bbaf5fb67bb1734c03725bf1 | Reference docs/DOS reconstructed/unitcalc.c@span:38:e0f87a5a92f98f34754862e7 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:37555b7dcbc4b5de6fb91420
@@ -123,8 +124,121 @@ function baseStatSteps(ctx) {
       // The DOS constructor stores a signed D10 threshold step. The calculator's accumulator
       // is percentage points, so one engine step is ten percentage points.
       apply: u => { u.toBlk -= 10; } }),
+    // CoM 1's Catapult constructor assigns the persistent weapon quality outright —
+    // `_UNITS[si].mutations = UM_MAGIC_WEAPONS` for type `COM1_UT_CATAPULT` with
+    // `wp == COM1_CATAPULT_MAGIC_WP` — and the quality read further down re-reads the record
+    // rather than the stale local, so the unit carries Magic Weapons from construction. It is an
+    // assignment, not an increment, and the unit is a combat summon with no training site, which
+    // is why `training:weaponQuality` below excludes it rather than running after it.
+    // PROVENANCE[constructCatapult:weapon]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:7:6ca61cb78d213e8c0e619bea | Reference docs/DOS reconstructed/unitcalc.c@span:9:8522b6848c2b770c9c68189a
+    statStep({ id: 'constructCatapult:weapon', sourceId: 'constructCatapult',
+      sourceLabel: 'Construct Catapult', phase: 'template', writes: ['weaponMaterial'],
+      when: () => constructCatapult,
+      apply: u => { u.weaponMaterial = 'magic'; } }),
+    // The persistent weapon quality the training city leaves, which `c:weapon` reads back at its
+    // own position. Both engine families read it off the *record*: the DOS builds as
+    // `_UNITS[si].mutations & UM_WEAPON_QUALITY_MASK`, re-read from the record rather than from
+    // the local the constructor kept, and `Caster.exe` as the three-way
+    // `BaseUnits[i].EnchantmentFlags[EncMagic] or EncMithril or EncAdamant` at $00598D91.
+    //
+    // Only Warlord's writer is reconstructed, and it is `CreateUnit.CAS`: the Alchemist retort's
+    // `SETENCHANTMENTFLAG(U,EncMagic,ABase,1)` at `CreateUnit.CAS!NOLOGISTIC!+4 "SETENCHANTMENTFLAG(U,EncMagic,ABase,1);"`, and the
+    // Sorcerer's Stone / Alchemist Guild ore block's `EncMagic` / `EncMithril` / `EncAdamant`
+    // writes at `CreateUnit.CAS!NOLOGISTIC!+33..+35 "SETENCHANTMENTFLAG(U,EncMagic,ABase,1);" "IF (ORELEVEL>1) THEN { SETENCHANTMENTFLAG(U,EncAdamant,ABase,1); }"`. The DOS builds' training-site code is
+    // **not reconstructed**, so their position for this write is deduced rather than transcribed
+    // (`stats_manifests.js`, `DEDUCED_POSITIONS`) and the citation is the read.
+    //
+    // One position for the file's five material writes: the Alchemist retort at +4, a Magic
+    // Perimeter city at `CreateUnit.CAS!NOLOGISTIC!+23 "SETENCHANTMENTFLAG(U,EncMagic,1,1);"`,
+    // and the ore block's three at +33..+35. Four of the five sit behind `training:artificer`,
+    // not ahead of it, so the chain's line-34 rank is the *first* entrance rather than the one a
+    // mithril or adamantium unit actually took. The consolidated position is therefore marked
+    // provisional in Warlord too (`stats_manifests.js`, `DEDUCED_POSITIONS`), even though its
+    // group is transcribed. No number depends on the choice: the engine reads the highest quality
+    // bit standing in the record and Artificer's own write is a floor at Magic Weapons, so a unit
+    // the city equipped in mithril takes the same quality whichever of the two ran first. The
+    // control states the field's finished value and does not say which writer produced it.
+    //
+    // The Fantastic and Zombies terms in `weaponInput` are the *control's* — a fantastic creature
+    // is never equipped — and are stated at `weaponEligible` (`stats.js`); no material block in
+    // either engine family carries a Fantastic gate.
+    // PROVENANCE[weaponQuality]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:9:8522b6848c2b770c9c68189a | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:33:d5ff895ae4f05f28557617d8 | Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:4:34f5461631504733c002522e | Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:7:d4821cf6592828028d9e0cd8 | Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:17:16f6815b7bec3f99caaeaa55
+    statStep({ id: 'weaponQuality', sourceId: 'weaponQuality', sourceLabel: 'Weapon Type',
+      phase: 'training', writes: ['weaponMaterial'],
+      when: () => weaponInput !== 'normal',
+      apply: u => {
+        if (!WEAPON_MATERIALS.includes(weaponInput)) {
+          throw new Error(
+            `training:weaponQuality: weapon material '${weaponInput}' is not one of `
+            + `${WEAPON_MATERIALS.join('/')}, the option set of the Weapon Type control and of `
+            + 'MATRIX_WEAPON_OPTIONS.');
+        }
+        u.weaponMaterial = weaponInput;
+      } }),
+    // The persistent armour material, read back by `c:orihalcon` from
+    // `U.EnchantmentFlags[EncOrihalcon]` ($005A0E4B) and by CoM 1's own repurposed slot. Warlord's
+    // writer is the same ore block, `SETENCHANTMENTFLAG(U,EncOrihalcon,ABase,1)` at
+    // `CreateUnit.CAS!NOLOGISTIC!+40 "SETENCHANTMENTFLAG(U,EncOrihalcon,ABase,1);"`; CoM 1's and base CoM2's are not reconstructed, so
+    // their positions are deduced. No MoM build has the block at all, which is what the scope row
+    // says. The hero and Fantastic terms in `armorTrainingInput` are the control's and are stated
+    // at `armorInput` (`stats.js`).
+    // PROVENANCE[armorQuality]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:edcd009b70fbdd75f5a2cbd5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:ceaf7256e4e54cba7caba1c2 | Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:6:7c2d5a8dfe81db007f3b529b
+    statStep({ id: 'armorQuality', sourceId: 'armorQuality', sourceLabel: 'Armor Type',
+      phase: 'training', writes: ['armorMaterial'],
+      when: () => armorTrainingInput !== 'normal',
+      apply: u => { u.armorMaterial = armorTrainingInput; } }),
+    // The persistent experience level. `c:level` reads it back and indexes the ladder with it;
+    // `b:soulFlay`, `c:discipline` and `d:psychoForce` read the same field at their own positions.
+    // The DOS engines read it as `level = (int8_t)_UNITS[si].Level` while materialising the battle
+    // unit, and `Caster.exe` as `Units[i].level`, which `a:baseCopy` copied out of `B.level`.
+    //
+    // Warlord's writer is `CreateUnit.CAS`'s veterancy block — `ALevel` 4 under an Altar of
+    // Battle, 3 under a War College, 2 under Barracks, all `ABase`
+    // (`CreateUnit.CAS!NOMECHUPGRADE!+21..+26 "SETSTAT(U,ALevel,ABase,4);" "IF ISBUILT(C,BBarracks) THEN { SETSTAT(U,ALevel,ABase,2); }"`), which is one of that field's writers
+    // and not all of them: Ultra Elite and Champion are reached by experience gain, which is
+    // overland play and outside the calculator. The DOS builds' training-site code is not
+    // reconstructed. So the control states the field's value and this step is where it lands.
+    // PROVENANCE[veterancy]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:11:c1f8e22fbd8ae7bf1921451e | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:c8c8fcbf013c862907501a27 | Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:14:fc566dbab52362c0c1ac8af9
+    statStep({ id: 'veterancy', sourceId: 'veterancy', sourceLabel: 'Unit Level',
+      phase: 'training', writes: ['level'],
+      when: () => levelInput !== 'normal',
+      apply: u => {
+        if (!LEVEL_LADDER.includes(levelInput)) {
+          throw new Error(
+            `training:veterancy: experience level '${levelInput}' is not one of `
+            + `${LEVEL_LADDER.join('/')}, the option set of the Unit Level control.`);
+        }
+        u.level = levelInput;
+      } }),
     ...abilByPhase.template, ...abilByPhase.training,
-    ...abilByPhase.cast, ...abilByPhase.immunity,
+    ...abilByPhase.immunities,
+    ...abilByPhase.buffs,
+    // Destiny's fourth permanent write, `B.level := 1` at $0059A445, beside the `B.race` /
+    // `B.Fantastic` pair `buffs:destiny` makes and the `supernatural` flag above. Separate for the
+    // same reason: the identity conversion must keep writing `race` and `fantastic` and nothing
+    // else. `B.experience := 0` at $0059A417 is the fifth and has no calculator field.
+    // PROVENANCE[destiny:level]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:e90777a680ce0ccd0df5ea87
+    statStep({ id: 'destiny:level', sourceId: 'destiny', sourceLabel: 'Destiny',
+      phase: 'buffs', writes: ['level'],
+      when: () => destinyActiveForUnit(abilities, version),
+      apply: u => { u.level = 'normal'; } }),
+    // Rust's cast clears the material flags on the target's permanent record once the resistance
+    // roll has beaten it, so the recalculation that follows finds an unequipped unit. The block
+    // is the `SRust` arm of `COSpell.CAS` after `!NOTHIEROPHANY!`, and it clears nine flags:
+    // `EncMagic`, `EncMithril`, `EncAdamant`, `EncOrihalcon`, `EncTransmuteEquipment`,
+    // `EncResistElements`, `EncElementalArmor`, `EncFlameBlade` and `EncGuardianWind`. This step
+    // makes the three weapon-quality clears, which is the calculator's whole model of the block
+    // today; the other six — `EncOrihalcon` included, whose record field `training:armorQuality`
+    // above has just given the calculator — are **F242**'s, and belong here beside these three.
+    //
+    // Whether the curse landed at all is `rustActive` (`stats.js`), which is a targeting read of
+    // the record the recalculation leaves and is declared as such.
+    // PROVENANCE[rust:material]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/COSpell.CAS@span:20:9d36f0f6f97ce1a589f5428a
+    statStep({ id: 'rust:material', sourceId: 'rust', sourceLabel: 'Rust',
+      phase: 'debuffs', writes: ['weaponMaterial'],
+      when: () => rustActive,
+      apply: u => { u.weaponMaterial = 'normal'; } }),
+    ...abilByPhase.debuffs,
     // PROVENANCE[altarOfTheMoon]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:19:a2b79ed52f498dfddaa861b8
     // The Resistance point reaches every trained unit, not only a ranged one; the ranged
     // half carries its own slot gate. `SRage` and `APoisonImmunity` (`CreateUnit.CAS!NOALTAROFTHESUN!+6 "SETSTAT(U,SRage,1,(GetStat(U,SRage,1)+1));"`, `CreateUnit.CAS!NOALTAROFTHESUN!+8 "SETSTAT(U,APoisonImmunity,1,1);"`) and the
@@ -364,6 +478,33 @@ function chaosChannelsFireBreathWrite(ctx) {
 // `a`: precalc, in the binary.
 function precalcBinaryStatSteps(ctx) {
   return [
+    // The recalculation's first act, and the head of region `a` in every engine: the calculated
+    // record is seeded from the permanent one, so everything the five phases ahead of it wrote
+    // is what a later region's permanent-record gate reads. It is a boundary step — it publishes
+    // `ctx.base` and writes no stat field, because in this calculator the two records are one
+    // mutable object and the seed therefore moves no value.
+    //
+    // Modern: one instruction, `prevmaxmoves[i] := Units[i].combatmaxmoves; Units[i] :=
+    // BaseUnits[i]`, a whole $01E1-dword record copy at $00599A8D..$00599B30. The
+    // enchantment-layer merge immediately behind it ($00599B30..$00599C2D — clear `EncMagic`,
+    // then OR the item, combat and overland layers into the copied base layer, which is the same
+    // array) has no counterpart here: the calculator carries one flag set per unit rather than
+    // four layers, so there is nothing to merge. Both spans are cited.
+    //
+    // DOS: no whole-record copy exists. The battle-unit record is materialised from the
+    // persistent unit field by field — `Load_Battle_Unit` `_fmemcpy`s 0x24 bytes out of
+    // `unit_types[_UNITS[unit_idx].type]`, the *type table* selected by the persistent record,
+    // then reads that record's own fields (owner, Level, enchantments, Damage) before calling
+    // `BU_Construct`, which re-seeds `tohit`, `resist` and the type attributes from the same
+    // table. `BU_UnitLoadToBattle` (`combat.c`) calls that pair and only then reaches the
+    // recalculation passes, `BU_Apply_Battlefield_Effects` at 160:0x75D84/com1:0x75D84. So the
+    // seed and the boundary are one position there, which is what this step stands for; the
+    // three DOS spans cite the copy, the persistent reads with the constructor call, and the
+    // recalculation call that follows.
+    // PROVENANCE[baseCopy]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:28:e36802655d63290611f09fd0 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:29:9fda496284e9cc5ce35d2054 | Reference docs/DOS reconstructed/unitcalc.c@span:18:bb8d36599d9d2bd2b02bee0c | Reference docs/DOS reconstructed/unitcalc.c@span:25:8574bd2cdb77420cd7e6944f | Reference docs/DOS reconstructed/combat.c@span:20:e924307a18dae0fabc03587e | Reference docs/DOS reconstructed/combat.c@span:21:22cef47774bb901361eed569
+    statStep({ id: 'baseCopy', sourceLabel: 'Calculated record seeded from the permanent record',
+      phase: 'a', boundary: true, writes: [],
+      apply: (u, runCtx) => { runCtx.base = { ...u }; } }),
     // Region `a` is narrow: the modern Chaos Channels Fire Breath write is its represented
     // strength write; its other represented writes are identity/flags. City Walls is not here:
     // ApplyAttack passes it as EffectiveDefense's
@@ -466,7 +607,7 @@ function precalcScriptStatSteps(ctx) {
     // Outlander block, whose other four gates are `BASEFANTASTIC(U)`. So a unit made Fantastic
     // earlier in the chain takes it: Spirit Link's `b:spiritLink`, the Channeler's
     // `b:marionetteChanneler` (which is what the old `channelerMarionette` special case stood in
-    // for) and Apotheosis' `cast:destiny` alike (F198).
+    // for) and Apotheosis' `buffs:destiny` alike (F198).
     // PROVENANCE[outlanderXenoveterinary]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:9:8b96540daf4a2128b20b0aeb
     statStep({ id: 'outlanderXenoveterinary', sourceId: 'outlanderXenoveterinary',
       sourceLabel: 'Xenoveterinary', phase: 'b', writes: ['hp', 'toHit'],
@@ -612,12 +753,12 @@ function precalcScriptStatSteps(ctx) {
     statStep({ id: 'soulFlay', phase: 'b', writes: ['res', 'def', 'atk', ...strengthFields],
       when: () => soulFlayActive,
       apply: u => {
-        u.res += soulFlayResMod; u.def += soulFlayDefMod; u.atk += soulFlayAtkMod;
+        u.res += soulFlayResMod(u); u.def += soulFlayDefMod(u); u.atk += soulFlayAtkMod(u);
         // The script writes `SRanged` by the same per-level amount as melee, so the penalty
         // lands on the conventional ranged channel only; Warlord's independent Thrown and
         // Breath fields are untouched.
         for (const c of channels) {
-          if (isConventionalRangedSlot(u, c)) u[c.strengthField] -= soulFlayLevels;
+          if (isConventionalRangedSlot(u, c)) u[c.strengthField] -= soulFlayLevels(u);
         }
       } }),
     // PROVENANCE[goblinPox]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:19:4d062d7899f6c61a2403d4a4
@@ -723,7 +864,7 @@ function magicCalcBinaryStatSteps(ctx) {
     heavenlyLightMeleeToHitAt, holyArmorActive, holyWeaponHitPick, hwMeleeToHit,
     landLinkingEligible,
     identity, inputBaseAtk, isCoM1, isCoM2,
-    isCoMVersion, isWarlord, levelRank, lionheartHpMod, lvl,
+    isCoMVersion, isWarlord, lionheartHpMod, spiritLinkLevelWidening,
     natureConjunctionActive, nodeAuraActive, orihalconActive,
     rangedTypeFields, realmWardActive, secondaryHitTargets, secondaryHitFields, spellWardActive,
     recordContext, secondaryHitFieldsFor, strengthFields, supremeLightEligibleAt,
@@ -745,6 +886,26 @@ function magicCalcBinaryStatSteps(ctx) {
     return 0;
   };
   return [
+    // `$0059A02C..$0059A172`, the first represented block after the UnitCalcPre hook: an
+    // `EncHeroism` arm that floors the calculated level at 4, and an else arm that forces it to 1
+    // for a unit whose **permanent** record is Fantastic. Only the else arm is modelled — the
+    // calculator has no Heroism control — and its gate is `B.Fantastic`, read through `ctx.base`
+    // at this position rather than from a constant, which is what makes Destiny's permanent
+    // `B.Fantastic := True` ($0059A3BF) visible to it (F244.2).
+    //
+    // The DOS engines have no reconstructed counterpart, which is why the scope is modern and the
+    // DOS builds keep the same exclusion as the training gate `trainingLevelEligible`
+    // (`stats.js`).
+    //
+    // **Temporary, 2026-09-02.** The Spirit Link term is the widening stated at
+    // `spiritLinkLevelWidening` (`stats.js`): the spell's own cast writes `AFantastic := 0` on the
+    // permanent record, so once F245 makes that a `buffs:spiritLink` write the permanent record is
+    // not Fantastic here and this term retires with it.
+    // PROVENANCE[level:fantastic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:cf6cc9e5b8acd1ca19251175
+    statStep({ id: 'level:fantastic', sourceId: 'veterancy', sourceLabel: 'Unit Level',
+      phase: 'c', writes: ['level'],
+      when: (u, runCtx) => !!runCtx.base.fantastic && !spiritLinkLevelWidening,
+      apply: u => { u.level = 'normal'; } }),
     // Destiny's persistent identity/storage writes occur here, after UnitCalcPre, and its
     // calculated-record package immediately follows. Every permanent-record write plus regions
     // a and b therefore feeds the six multipliers; level and Focus Magic remain later.
@@ -768,6 +929,11 @@ function magicCalcBinaryStatSteps(ctx) {
       // `runCtx`, not `ctx`: the enclosing name is this file's derivation context, while the
       // runner passes the sequence context that carries the permanent record.
       apply: (u, runCtx) => {
+        // The ladder is indexed by the experience level standing on the record here — what
+        // `training:veterancy` wrote, less what `buffs:destiny:level` and `c:level:fantastic` took
+        // back. `Units[i].level` is what `ApplyLevelBonus` reads, and `a:baseCopy` copied it out
+        // of `B.level` (F244.2).
+        const lvl = getLevelBonuses(u.level, version);
         u.res += lvl.res; u.def += lvl.def;
         // The ladder's melee step carries a presence gate in both engine families, and each
         // reads a different record. Modern: `if BaseUnits[i].attack > 0` — the **permanent**
@@ -838,7 +1004,7 @@ function magicCalcBinaryStatSteps(ctx) {
         // (com1:0x8FAB2). So a gaze template shipping strength 0 takes no ladder step at all;
         // this corrects the expectation F122 recorded from the absence of a *type* gate.
         if (!isCoM2 && dosSharedSlotStrength > 0) {
-          u.gaze += gazeLvlMod; u.doomGaze += doomGazeLvlMod;
+          u.gaze += gazeLvlMod(lvl); u.doomGaze += doomGazeLvlMod(lvl);
         }
         u.toHit += lvl.toHit;
       } }),
@@ -1034,8 +1200,8 @@ function magicCalcBinaryStatSteps(ctx) {
     statStep({ id: 'discipline', phase: 'c', writes: ['def', 'atk', ...strengthFields],
       when: () => disciplineActive,
       apply: u => {
-        u.def += disciplineDefMod; u.atk += disciplineAtkMod;
-        if (levelRank >= 2) {
+        u.def += disciplineDefMod(u); u.atk += disciplineAtkMod(u);
+        if (levelRankOf(u.level) >= 2) {
           for (const c of channels) {
             if (isNonMagicalRangedFieldSlot(u, c)) u[c.strengthField] += 1;
           }
@@ -1096,7 +1262,7 @@ function magicCalcBinaryStatSteps(ctx) {
       } }),
     // PROVENANCE[orihalcon]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:6:edcd009b70fbdd75f5a2cbd5 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:10:ceaf7256e4e54cba7caba1c2
     statStep({ id: 'orihalcon', phase: 'c', writes: ['res', ...strengthFields],
-      when: () => orihalconActive,
+      when: u => orihalconActive(u),
       apply: u => {
         u.res += 1;
         for (const c of channels) {
@@ -1479,11 +1645,16 @@ function magicCalcBinaryStatSteps(ctx) {
 // type admits. `Inc(U.hitchancethrown, 10)` carries no gate at all, so the Thrown half stands on
 // the record's Thrown threshold before any later grant creates the attack that reads it;
 // MoM 1.31 alone omits Holy Weapon's write.
+// Either argument may be a value or a read of the record at the writing step's own position:
+// Heavenly Light's material term is `u.weaponMaterial === 'normal'` (F244.2), where Holy Weapon's
+// gate is the enchantment alone and stays a constant.
 function makeSecondaryHitPick(active, thrownValue) {
+  const activeAt = typeof active === 'function' ? active : () => active;
+  const thrownAt = typeof thrownValue === 'function' ? thrownValue : () => thrownValue;
   return (u, context, kind) => {
-    if (!active) return 0;
+    if (!activeAt(u)) return 0;
     if (kind === 'ranged') return isNonMagicalRangedFieldSlot(u, context) ? 10 : 0;
-    if (kind === 'thrown') return thrownValue;
+    if (kind === 'thrown') return thrownAt(u);
     return 0;
   };
 }
@@ -1493,7 +1664,7 @@ function magicCalcScriptStatSteps(ctx) {
   const {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
     colossalStrength, energyCannon, energyCannonHitField,
-    hasDarkness, hurricaneActive, identity, isWarlord, levelRank,
+    hasDarkness, hurricaneActive, identity, isWarlord,
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, vampirismActive,
@@ -1684,7 +1855,7 @@ function magicCalcScriptStatSteps(ctx) {
       phase: 'd', writes: ['toHit', 'toBlk'],
       when: u => !!u.psychoForce,
       apply: u => {
-        const psyche = Math.trunc(u.res * levelRank / 2);
+        const psyche = Math.trunc(u.res * levelRankOf(u.level) / 2);
         u.toHit += psyche;
         u.toBlk += psyche;
       } }),

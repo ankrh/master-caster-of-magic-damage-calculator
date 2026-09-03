@@ -310,7 +310,7 @@ test('F20 keeps multi-field writes atomic while the public trace stays sparse', 
   });
 
   // Destiny makes two writes at two positions and `phase:id` is what separates them: the
-  // permanent `B.race`/`B.Fantastic` transformation at $0059A390 is `cast:destiny`, and the
+  // permanent `B.race`/`B.Fantastic` transformation at $0059A390 is `buffs:destiny`, and the
   // calculated-record package at $0059A471..$0059A633 — the atomic multi-field write these
   // assertions are about — is `c:destiny`.
   const destinyEvents = report.destiny.statExecutionTrace
@@ -400,7 +400,7 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
       baseChain: statChain('com2_1.05.11').map(entry => ({ ...entry })),
       channelerEvent: pick(channeler, 'marionetteChanneler'),
       channelerLedgerIds: channeler.statExecutionTrace.map(event => event.id),
-      // Three steps carry the id `spiritLink` — the Warlord `cast:` stat write and the two
+      // Three steps carry the id `spiritLink` — the Warlord `buffs:` stat write and the two
       // identity writes — so this names the phase as well.
       spiritLinkEvent: spiritLink.statTrace
         .find(event => event.id === 'spiritLink' && event.phase === 'd') || null,
@@ -437,7 +437,7 @@ test('F20 accounts for the Warlord identity writes that land in b and d', async 
   // F204; the other permanent-record phases are still authoring order.
   expect(['b', 'c', 'd', 'training'].every(phase => !allProvisional(phase)),
     'the transcribed regions are not marked provisional').toBe(true);
-  expect(['template', 'cast', 'immunity', 'a', 'e']
+  expect(['template', 'immunities', 'buffs', 'debuffs', 'a', 'e']
     .every(phase => allProvisional(phase)),
     'the inherited regions are marked provisional').toBe(true);
   expect(report.channelerEvent).not.toBeNull();

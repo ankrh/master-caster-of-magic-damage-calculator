@@ -15,22 +15,32 @@
 // later bonus or immunity applies); nothing in the derivation phases does.
 const HALT = Object.freeze({ halt: true });
 
-// Provenance labels for where a write was found, listed in region order. The four permanent-record
+// Provenance labels for where a write was found, listed in region order. The five permanent-record
 // phases, then the engine's five derivation regions, followed by the separate attack-specific
 // axis. A phase orders nothing — the per-version execution chain does (stats_manifests.js,
 // statChain) — but a chain is authored in non-decreasing phase order, so the two have to agree:
-//   template  the record as the unit template ships it, plus the construction patches
-//   training  written once, when the city built the unit  (CreateUnit.CAS)
-//   cast      written when the spell landed (OLSpell.CAS and the other grant sites), and the
-//             permanent writes a recalculation re-makes on every pass
-//   immunity  the artificial strip: curses an immunity would have refused never landed
-//   a         precalc, in the binary
-//   b         precalc, in UnitCalcPre.CAS      (Warlord only)
-//   c         magic calc, in the binary
-//   d         magic calc, in UnitCalc.CAS      (Warlord only)
-//   e         the binary's post-hook tail: the final clamps, the aura pass, Supreme Light
+//   template   the record as the unit template ships it, plus the construction patches
+//   training   written once, when the city built the unit  (CreateUnit.CAS)
+//   immunities the immunities the card marks, in the permanent record before anything tests
+//              them. Today its one entry is the artificial strip that follows from them:
+//              curses an immunity would have refused never landed
+//   buffs      each beneficial enchantment or condition the card marks, written where the
+//              engine's own eligibility test admits it (OLSpell.CAS and the other grant sites),
+//              and the permanent writes a recalculation re-makes on every pass
+//   debuffs    the same for curses and detrimental conditions, after every buff, so a marked
+//              immunity or an identity-changing buff is in place when the debuff's test runs
+//   a          precalc, in the binary, opening with the `Units[i] := BaseUnits[i]` copy that
+//              publishes the permanent record the five phases above wrote
+//   b          precalc, in UnitCalcPre.CAS      (Warlord only)
+//   c          magic calc, in the binary
+//   d          magic calc, in UnitCalc.CAS      (Warlord only)
+//   e          the binary's post-hook tail: the final clamps, the aura pass, Supreme Light
 //
-// `attackSpecific` is not a tenth derivation phase. It tags steps in the routines that run on
+// The order within `buffs` and within `debuffs` is an assumed cast order, not a derivation: the
+// calculator has no cast history, so each chain declares it (stats_manifests.js) and it is a
+// ruling rather than something a source fixes.
+//
+// `attackSpecific` is not an eleventh derivation phase. It tags steps in the routines that run on
 // a disposable copy after derivation, keyed by an incoming attack: Caster.exe's
 // GetEffectiveResistance / EffectiveDefense, and the DOS engines' Combat_Effective_Resistance /
 // Battle_Unit_Defense_Special. Every engine models the stage as ordered steps; what differs is
@@ -40,16 +50,20 @@ const HALT = Object.freeze({ halt: true });
 // `tail` (a post-total pass over finished stats) and `warpLate` (CoM 1's post-Warp tail) —
 // were deleted at R1 stage 10, when each of their steps moved to the region the map gives it.
 const STEP_PHASES = [
-  'template', 'training', 'cast', 'immunity', 'a', 'b', 'c', 'd', 'e', 'attackSpecific',
+  'template', 'training', 'immunities', 'buffs', 'debuffs',
+  'a', 'b', 'c', 'd', 'e', 'attackSpecific',
 ];
 const STEP_PHASE_RANK = STEP_PHASES.reduce((rank, phase, i) => (rank[phase] = i, rank), {});
 
-// The four phases whose writes are the engine's **permanent** record — what `BaseUnits[i]` holds
-// when the recalculation's `Units[i] := BaseUnits[i]` copy ($00599A8D) reseeds the calculated
-// record. `ctx.base` is refreshed through them and frozen when the last of them ends, so a later
-// region's `BaseUnits[i].…` gate reads the record as `immunity` leaves it — the strip included,
-// because its whole content is the assumption that the curse never landed on the unit at all.
-const PERMANENT_RECORD_PHASES = new Set(['template', 'training', 'cast', 'immunity']);
+// A **boundary step** is a step that makes no write of its own and marks a position the engine
+// crosses. `a:baseCopy` is the only one: it is the recalculation's `Units[i] := BaseUnits[i]`
+// copy, and it publishes `ctx.base`. Because it writes nothing, `writes` is empty — the one
+// exception `statStep` allows — and `assertStepWrites` then demands that the record be unchanged
+// across it. It still reaches the sparse trace and the projections, as the marker between the
+// permanent-record phases and the recalculation.
+function isBoundaryStep(step) {
+  return !!(step && step.boundary === true);
+}
 
 // --- Canonical engine-version scope (M9) ---
 //
@@ -103,10 +117,17 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'template:baseHitChance': SCOPE_MODERN,
   'template:baseThresholds': SCOPE_ALL,
   'template:constructCatapult': SCOPE_COM1,
+  'template:constructCatapult:weapon': SCOPE_COM1,
   'template:stat:base': SCOPE_ALL,
   'template:summonBranch': SCOPE_COM1,
   'template:zombies:toBlock': SCOPE_COM1,
   // --- training: permanent writes made when the city built the unit ---
+  // The three persistent loadout/veterancy fields every engine reads back. Only Warlord's writer
+  // is reconstructed (`CreateUnit.CAS`); the other four builds' positions are deduced, which is
+  // what their `DEDUCED_POSITIONS` rows say (`stats_manifests.js`).
+  'training:weaponQuality': SCOPE_ALL,
+  'training:armorQuality': SCOPE_COM_PLUS,
+  'training:veterancy': SCOPE_ALL,
   'training:altarOfTheMoon': SCOPE_WARLORD,
   'training:altarOfTheSun:figures': SCOPE_WARLORD,
   'training:altarOfTheSun:holyMother': SCOPE_WARLORD,
@@ -129,14 +150,20 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'training:poolOfRepentance': SCOPE_WARLORD,
   'training:sanctaBasilica': SCOPE_WARLORD,
   'training:survivalInstinctToBlock': SCOPE_WARLORD,
-  // --- cast: permanent writes made when the spell landed, and the per-pass permanent writes ---
-  'cast:destiny': SCOPE_MODERN,
-  'cast:destiny:supernatural': SCOPE_MODERN,
-  'cast:rebuild': SCOPE_WARLORD,
-  'cast:spiritLink': SCOPE_WARLORD,
-  // --- immunity: the artificial strip ---
-  'immunity:immunityCurseGating': SCOPE_ALL,
+  // --- immunities: the artificial strip the marked immunities imply ---
+  'immunities:immunityCurseGating': SCOPE_ALL,
+  // --- buffs: beneficial permanent writes made when the spell landed, and the per-pass ones ---
+  'buffs:destiny': SCOPE_MODERN,
+  'buffs:destiny:supernatural': SCOPE_MODERN,
+  'buffs:destiny:level': SCOPE_MODERN,
+  'buffs:rebuild': SCOPE_WARLORD,
+  'buffs:spiritLink': SCOPE_WARLORD,
+  // --- debuffs: the same for curses and detrimental conditions ---
+  'debuffs:rust:material': SCOPE_WARLORD,
   // --- a: precalc, in the binary ---
+  // The head of the region in every engine: the copy that seeds the calculated record from the
+  // permanent one. It is a boundary step, so it writes nothing and publishes `ctx.base`.
+  'a:baseCopy': SCOPE_ALL,
   // Chaos Channels Fire Breath is region `a` in `Caster.exe` alone: its block is
   // $00599EE8..$00599FA8, ahead of the UnitCalcPre hook at $0059A002. The DOS builds put the
   // same effect inside `BU_Apply_Specials` (131:0x8F720, com1:0x8F474), one block past the
@@ -235,6 +262,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:ironSkin': SCOPE_ALL,
   'c:landLinking': SCOPE_COM_PLUS,
   'c:level': SCOPE_ALL,
+  'c:level:fantastic': SCOPE_MODERN,
   'c:lionheart': SCOPE_ALL,
   'c:lucky': SCOPE_ALL,
   'c:metalFires': SCOPE_MOM,
@@ -246,8 +274,9 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'c:nodeAura': SCOPE_ALL,
   'c:orihalcon': SCOPE_COM_PLUS,
   'c:prayer': SCOPE_ALL,
-  'c:mysticSurge:race': SCOPE_COM_PLUS,
-  'c:raiseDead': SCOPE_COM_PLUS,
+  'c:mysticSurge:race': SCOPE_COM1,
+  'c:noHealConversion': SCOPE_MODERN,
+  'c:raiseDead': SCOPE_COM1,
   'c:realmWard': SCOPE_COM1,
   'c:reinforceMagic': SCOPE_MODERN,
   'c:shatter': SCOPE_ALL,
@@ -530,6 +559,8 @@ function statStepDebugEnabled() { return statStepDebug; }
 //   projectionOf  set only on a projection: the `phase:id` scope key of the engine write this
 //               step re-presents through another output. A projection is not an engine write,
 //               so it never gets a STEP_VERSION_SCOPES row of its own
+//   boundary    set only on a boundary step (`isBoundaryStep` above): it makes no write, so
+//               `writes` is empty and the record must be unchanged across it
 // The checks run under the debug switch only. A sequence is rebuilt on every
 // deriveUnitStats call — once per roster unit per side when the matrix view is built — so
 // in normal use this is the identity function, and the test suites are where a malformed
@@ -542,8 +573,11 @@ function statStep(step) {
   if (!Object.prototype.hasOwnProperty.call(STEP_PHASE_RANK, step.phase)) {
     throw new Error(`statStep: ${step.id} has unknown phase ${step.phase}`);
   }
-  if (!Array.isArray(step.writes) || step.writes.length === 0) {
+  if (!Array.isArray(step.writes) || (step.writes.length === 0 && !isBoundaryStep(step))) {
     throw new Error(`statStep: ${step.id} declares no writes`);
+  }
+  if (isBoundaryStep(step) && step.writes.length > 0) {
+    throw new Error(`statStep: boundary step ${step.id} declares writes`);
   }
   return step;
 }
@@ -672,13 +706,14 @@ function orderStatStepsBySource(steps, chain) {
 // `ctx` carries everything a step may read besides the unit: `version`, the permanent
 // base record as `ctx.base`, and — for the resolution sequences — the attack context.
 //
-// `ctx.base` is maintained here rather than passed in. Every write an engine makes to its
-// permanent record before the recalculation's `Units[i] := BaseUnits[i]` copy is a step of one of
-// the four `PERMANENT_RECORD_PHASES` (CLAUDE.md, *Architecture*), so the record as the last of
-// them leaves it is exactly what a later region's `BaseUnits[i].…` gate reads. It is therefore
-// refreshed through those phases and frozen when `immunity`, the last of them, ends. A sequence
-// with no permanent-record step — the resolution transforms, the To-Hit ledger, the figure
-// sequence — leaves it absent.
+// `ctx.base` is published by a step of the sequence rather than maintained here: the
+// `a:baseCopy` boundary step takes it, and nothing else assigns it. Every write an engine makes
+// to its permanent record happens in one of the five phases ahead of that step, so the record it
+// copies is exactly what a later region's `BaseUnits[i].…` gate reads. A sequence with no such
+// step leaves `ctx.base` as the caller supplied it: absent for the resolution transforms, the
+// To-Hit ledger and the figure sequence, none of which reads it, and the permanent identity for
+// `targetingIdentity`'s conversion-only run, which supplies it explicitly. A gate reading an
+// absent one throws rather than answering from a record nothing published.
 //
 // Two optional fields are for development only:
 //   ctx.trace             an array; each step that changes a declared field appends an entry
@@ -698,7 +733,6 @@ function runStatSteps(steps, unit, ctx) {
     }
     const before = (trace || validate) ? { ...unit } : null;
     const result = step.apply(unit, context);
-    if (PERMANENT_RECORD_PHASES.has(step.phase)) context.base = { ...unit };
     if (validate) assertStepWrites(step, before, unit);
     if (trace) recordStepTrace(trace, step, before, unit, order);
     if (executionTrace) recordStepExecution(executionTrace, step, order, 'applied');
@@ -713,7 +747,8 @@ function runStatSteps(steps, unit, ctx) {
 }
 
 // A step that writes a field it did not declare is a migration bug: the trace under-reports,
-// and — once the sequence carries steps that read each other — so does every later read.
+// and — once the sequence carries steps that read each other — so does every later read. A
+// boundary step declares nothing, so the same loop demands that it leave the record untouched.
 function assertStepWrites(step, before, unit) {
   const declared = new Set(step.writes);
   const fields = new Set([...Object.keys(before), ...Object.keys(unit)]);
@@ -946,7 +981,7 @@ function collectStepChanges(step, before, unit) {
 
 function recordStepTrace(trace, step, before, unit, order) {
   const changes = collectStepChanges(step, before, unit);
-  if (Object.keys(changes).length > 0) {
+  if (isBoundaryStep(step) || Object.keys(changes).length > 0) {
     const event = {
       id: step.id,
       source: traceSourceForStep(step),
@@ -955,6 +990,7 @@ function recordStepTrace(trace, step, before, unit, order) {
       traceOrder: trace.length,
       changes,
     };
+    if (isBoundaryStep(step)) event.boundary = true;
     if (Number.isInteger(step.sourceOrder)) event.sourceOrder = step.sourceOrder;
     if (typeof step.projectionOf === 'string') event.projectionOf = step.projectionOf;
     // Attribution comes from the fields this write actually changed, not from the declaration:
@@ -1088,7 +1124,8 @@ function assertStatTraceOrder(trace, options = {}) {
       throw new Error(`trace event ${event.id} has unknown phase ${event.phase}`);
     }
     const complete = !!expectedSteps;
-    if (!complete && (!event.changes || Object.keys(event.changes).length === 0)) {
+    if (!complete && !event.boundary
+        && (!event.changes || Object.keys(event.changes).length === 0)) {
       throw new Error(`trace event ${event.id} records no changes`);
     }
     // Channel attribution is part of what makes a trace well formed, and a sparse trace is
@@ -1147,6 +1184,12 @@ function assertStatTraceOrder(trace, options = {}) {
 // writes nothing but the supplied base is then a no-op and drops out; a seed that writes more
 // than the base — City Walls into EffectiveDefense, the DOS Vertigo subtraction — stays in the
 // chain as the transform it is.
+//
+// A boundary event (`a:baseCopy`) carries no `changes`, so it is projected onto every field as a
+// value-free marker at its own position: the reader sees where the permanent record ends and the
+// recalculation begins. It moves the running value nowhere, so it is not a modifier — a consumer
+// asking "did anything modify this stat" asks `traceHasWrites` below rather than reading the
+// entry count, and a chain that holds the marker alone answers no.
 function projectStatTrace(trace, field, base, result, options = {}) {
   const entries = [];
   let running = base;
@@ -1154,7 +1197,22 @@ function projectStatTrace(trace, field, base, result, options = {}) {
   const ignoredIds = new Set(options.ignoreIds || []);
 
   for (const event of trace || []) {
-    if (ignoredIds.has(event.id) || !event.changes
+    if (ignoredIds.has(event.id)) continue;
+    if (event.boundary) {
+      entries.push({
+        id: event.id,
+        source: event.source || { id: event.id, label: event.id },
+        phase: event.phase,
+        order: event.order,
+        ...(Number.isInteger(event.traceOrder) ? { traceOrder: event.traceOrder } : {}),
+        ...(typeof event.projectionOf === 'string' ? { projectionOf: event.projectionOf } : {}),
+        boundary: true,
+        from: running,
+        to: running,
+      });
+      continue;
+    }
+    if (!event.changes
         || !Object.prototype.hasOwnProperty.call(event.changes, field)) continue;
     const change = event.changes[field];
     const from = event.id === baseId ? running : change.from;
@@ -1180,6 +1238,14 @@ function projectStatTrace(trace, field, base, result, options = {}) {
     entries,
     result,
   };
+}
+
+// Whether a projected chain contains anything that moved the value. The entry list is not the
+// answer on its own: it also carries the boundary marker, which is a position rather than a
+// write, so a stat nothing modified would otherwise present as modified.
+function traceHasWrites(projected) {
+  return !!(projected && Array.isArray(projected.entries)
+    && projected.entries.some(entry => !entry.boundary));
 }
 
 // Append a transform which is applied after the main derivation record (for example the

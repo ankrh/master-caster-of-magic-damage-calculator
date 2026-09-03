@@ -61,7 +61,7 @@ const ABILITY_DEFS = [
     { key: 'flying', label: 'Flying', type: 'bool', match: 'Flight', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Versions: Warlord\nQualifies a unit with the Explosive reform for Bombs&Grenades.' },
     // Artificer's resistance write is `GetStat(U,SResist,1)+2` (CreateUnit.CAS!NOLOGISTIC!+13 "SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+2));"), not the +1
     // this tooltip used to state; the Magic Weapons half is the `SETENCHANTMENTFLAG(U,EncMagic,1,1)`
-    // at `CreateUnit.CAS!NOLOGISTIC!+9 "SETENCHANTMENTFLAG(U,EncMagic,1,1);"`, modelled as `artificerMagicWeapon` (stats.js:158). The rank is the F208 ruling:
+    // at `CreateUnit.CAS!NOLOGISTIC!+9 "SETENCHANTMENTFLAG(U,EncMagic,1,1);"`, modelled as `training:artificer`'s `weaponMaterial` write (combat_abilities.js). The rank is the F208 ruling:
     // CreateUnit.CAS runs when the city builds the unit, so it cannot see the cast-time flag
     // Rebuild writes (F196).
     { key: 'mechanical', label: 'Mechanical', type: 'bool', match: 'Mechanical', group: 'Abilities', subgroup: 'Warlord', tooltip: 'Versions: Warlord\nBuffed by Artificer (+1 melee, +1 ranged, +1 armor, +2 resistance,\nMagic Weapons) and Mechanical Expert (+20% To Hit, +10% To Block).\nRebuild grants this flag to non-heroes, but too late for Artificer:\nthat buff lands when the unit is trained. On a hero Rebuild writes\nonly the calculated record, which no reader asks for, so a Rebuilt\nhero is not Mechanical.' },

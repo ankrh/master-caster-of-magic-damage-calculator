@@ -65,17 +65,19 @@ function deriveUnitStats(input) {
   const marionetteDerivation = deriveMarionettePackage(
     identity, markIntrinsicLucky(suppliedAbilities), version);
   const marionette = marionetteDerivation.package;
-  // The **permanent** record's Fantastic flag as the permanent-record phases leave it. Two gates read it,
-  // each at a position after that phase: `if B.Fantastic then U.level := 1` at $0059A118 and the
-  // weapon block's `not B.Fantastic and not B.ishero` at $0059E2B8. `cast:destiny` is the one
+  // The **permanent** record's Fantastic flag. `a:baseCopy` publishes it and `c:level:fantastic`
+  // is the one gate that reads it there, `if B.Fantastic then U.level := 1` at $0059A118; the
+  // weapon block's `not B.Fantastic and not B.ishero` at $0059E2B8 is Heavenly Light's material
+  // tail, which still takes the template flag (F244.3h owns that). `buffs:destiny` is the one
   // permanent identity write the pipeline itself makes — `B.race := 19; B.Fantastic := True` at
   // $0059A390 — so it, and nothing else, separates this value from the unit's own
   // `identity.baseFantastic`. It used to be spelled as a `destinyActive` term patched onto each
-  // gate; now it is the record, and the sequence asserts below that `ctx.base` agrees (F163).
+  // gate; now it is the record, and the sequence asserts below that the copied record agrees
+  // (F163).
   // It is read off the supplied abilities rather than the granted ones because the Outlander
   // reform gates below need it: `destinyActiveForUnit` reads the `destiny` key alone, which no
-  // grant and no curse strip writes, and the `ctx.base` check at the tail is what makes that a
-  // measured claim rather than a stated one (F198).
+  // grant and no curse strip writes, and the copied-record check at the tail is what makes that
+  // a measured claim rather than a stated one (F198).
   const destinyActive = destinyActiveForUnit(suppliedAbilities, version);
   const permanentFantastic = isFantasticBase || destinyActive;
   // The Outlander reform block's own eligibility gates, computed once and read by two consumers:
@@ -90,7 +92,7 @@ function deriveUnitStats(input) {
     version, permanentFantastic, isHero);
   const outlanderReform = outlanderDerivation.reform;
   // The curse strip is no longer folded in here: the ten flags it clears are fields of the
-  // sequence record, and `immunity:immunityCurseGating` clears them at the head of the chain like any
+  // sequence record, and `immunities:immunityCurseGating` clears them at the head of the chain like any
   // other write (F199). So this is the granted ability set, curses and all.
   const abilities = outlanderDerivation.abilities;
   // The identity conversions are steps of the one sequence, spliced in below and ordered by the
@@ -98,8 +100,8 @@ function deriveUnitStats(input) {
   // record and a gate reads whatever stands in them at its own position (F163). There is no
   // pre-pass and no fixed point handed to a gate; the three shapes a read can take are the live
   // record at the reading step (`unitTypeAt` and friends), the permanent record
-  // (`identity.baseRace` / `identity.baseFantastic`, or `ctx.base` for a permanent write the
-  // pipeline itself makes), and the record the recalculation *leaves*.
+  // (`identity.baseRace` / `identity.baseFantastic`, or the record `a:baseCopy` publishes, for a
+  // permanent write the pipeline itself makes), and the record the recalculation *leaves*.
   const identityMeta = { isHero, name: unitName };
   const identityConversions = identityConversionSteps(identity, abilities, version, identityMeta);
   // The record the recalculation leaves. Two classes of read want it and no other does: the
@@ -207,28 +209,31 @@ function deriveUnitStats(input) {
   // Spirit Link (Warlord): "If the enchanted unit is Fantastic creature, it gains sentience, able
   // to earn experience" (`Unit rosters/Warlord mod unit data/HELP.TXT:6324`). Nothing in that
   // description or in the script grants weapon/armor loadout, so only level eligibility is
-  // widened — weapon and armor below stay gated on loadoutEligible. The widening covers a
+  // widened — weapon and armor stay gated on `loadoutEligible`. The widening covers a
   // base-Fantastic unit, which is the case the helptext is about, and excludes Destiny alone,
   // because Destiny's own permanent write zeroes experience and sets level 1 ($0059A417,
   // $0059A445) rather than merely making the unit Fantastic.
-  const levelEligible = loadoutEligible
-    || (version.startsWith('com2_warlord') && !!abilities.spiritLink && !destinyActive);
-  const level = levelEligible ? input.level : 'normal';
-  const lvl = getLevelBonuses(level, version);
+  //
+  // **Temporary, 2026-09-02.** Spirit Link's cast writes `AFantastic := 0` and `ALevel := 1` on
+  // the *permanent* record (`OLSpell.CAS`, the `SSpiritLink` block), which F245 will make
+  // `buffs:spiritLink` writes. Once it does, a Spirit-Linked Fantastic unit's permanent record is
+  // not Fantastic and `c:level:fantastic` below withholds nothing, so this term retires with that
+  // item rather than being maintained.
+  const spiritLinkLevelWidening = version.startsWith('com2_warlord')
+    && !!abilities.spiritLink && !destinyActive;
+  // What the *training city* leaves in the persistent Level field, which `training:veterancy` writes
+  // and `c:level` reads back. The Fantastic term is the calculator's, not a block's: a fantastic
+  // creature earns no veterancy, so no city ever writes it a level. The modern engines restate
+  // the same rule inside the recalculation — `if B.Fantastic then U.level := 1` at $0059A118 —
+  // and that read is the `c:level:fantastic` step, which is why this gate carries the term for
+  // the DOS builds alone. Destiny's own `B.level := 1` ($0059A445) is `buffs:destiny:level`.
+  const trainingLevelEligible = isCoM2 || !isFantasticBase || spiritLinkLevelWidening;
+  const levelInput = trainingLevelEligible ? input.level : 'normal';
   const isWarlord = version.startsWith('com2_warlord');
   // One `flameBlade` input, two controls: the wizard spell everywhere but Warlord, the arcane
   // unit ability in Warlord (`enchantments.js`). The version decides which arithmetic the shared
   // block does, so the input carries no version of its own.
   const warlordCombatFlameBlade = isWarlord && !!abilities.flameBlade;
-  // The Magic Weapons half of the Artificer retort: `SETENCHANTMENTFLAG(U,EncMagic,1,1)`
-  // (`CreateUnit.CAS!NOLOGISTIC!+9 "SETENCHANTMENTFLAG(U,EncMagic,1,1);"`), gated with the stat half on `GetStat(U,SCustomAttribute,1)=1` at `CreateUnit.CAS!NOLOGISTIC!+8 "IF RETORT(W,Artificer) %AND (GetStat(U,SCustomAttribute,1)=1) THEN {"`.
-  // It is +10% To Hit and the Weapon Immunity bypass, and it is a **result** field — the weapon
-  // material — so it cannot be a record field and is read here rather than at a rank. The raw
-  // flag is what the record holds at that rank: `training:artificer` is a training-time write and the
-  // only mid-sequence write to `mechanical` is `cast:rebuild`'s, which is cast-time and therefore
-  // strictly later (F208). Its stat half is `PROVENANCE[artificer]` (`combat_abilities.js`).
-  const artificerMagicWeapon = isWarlord
-    && !!abilities.artificer && !!abilities.mechanical;
   // Altar of the Moon (Warlord, Gnoll building): Gnoll units trained here gain Rage and
   // Poison Immunity; ranged units also gain +2 Ranged Attack. The granted abilities are
   // folded into effectiveAbilities below; the ranged bonus is added to the rtb total.
@@ -343,11 +348,11 @@ function deriveUnitStats(input) {
   // non-fantastic siege unit.
   const constructCatapult = isCoM1
     && isConstructCatapultUnit(identity, abilities, version, identityMeta);
+  // What the *training city* leaves in the persistent weapon-quality field, which
+  // `training:weaponQuality` writes onto the record. Construct Catapult's own constructor assigns
+  // quality 1 outright, so its unit takes nothing from a city: it is a combat summon and has no
+  // training site, and the assignment is `template:constructCatapult:weapon`'s.
   const weaponInput = constructCatapult ? 'normal' : (weaponEligible ? input.weapon : 'normal');
-  const weaponPreRust = constructCatapult ? 'magic'
-    : (artificerMagicWeapon && weaponInput === 'normal') ? 'magic' : weaponInput;
-  const weapon = rustActive ? 'normal' : weaponPreRust;
-  const wpn = weaponBonus(weapon);
   // Armor quality: CoM/CoM2/Warlord only — `PROVENANCE[orihalcon]` (`stats_sequence.js`) carries
   // no MoM build, because Orihalcon is CoM 1's repurposing of the enchantment slot MoM spends on
   // Giant Strength (`unitcalc.c`, `UE_ORIHALCON = UE_GIANT_STRENGTH`, com1:0x8F853, inside a
@@ -367,7 +372,9 @@ function deriveUnitStats(input) {
       + `the option set of the Armor Type control and of MATRIX_ARMOR_OPTIONS.`);
   }
   const armorExists = !version.startsWith('mom_');
-  const armor = (armorExists && loadoutEligible && !isHero) ? armorInput : 'normal';
+  // What the training city leaves in the persistent armour-material field, which
+  // `training:armorQuality` writes onto the record and `c:orihalcon` reads back.
+  const armorTrainingInput = (armorExists && loadoutEligible && !isHero) ? armorInput : 'normal';
 
   // Military Workshop (Warlord, XuanYuan building): upgrades any normal unit trained,
   // garrisoned in, or fighting from the city — not race-gated, per the "any defending units
@@ -410,8 +417,8 @@ function deriveUnitStats(input) {
   // The write's own gate, `IF (GETSTAT(U,SAttack,1)>0) %OR (GETSTAT(U,AFlying,1)>0)`
   // (`UnitCalcPre.CAS!NOMAGITEKENGINE!+8..+9 "IF (GETSTAT(U,SAttack,1)>0)" "%OR (GETSTAT(U,AFlying,1)>0)"`). Record selector `1` is "the base unit", not the calculated one
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:270`), so both terms read the
-  // **permanent** record — which is the record the permanent-record phases leave, `ctx.base`, not the card's
-  // melee input: `cast:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);"`) and
+  // **permanent** record — which is the record `a:baseCopy` publishes as `ctx.base`, not the
+  // card's melee input: `buffs:rebuild` writes `SETSTAT(TU,SAttack,1,…+2)` (`OLSpell.CAS!NOTMARKOFCONQUEROR!+9 "SETSTAT(TU,SAttack,1,GETSTAT(TU,SAttack,1)+2);"`) and
   // `training:artificer` `+1` (`CreateUnit.CAS!NOLOGISTIC!+10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,0)+1));"`), both permanently and both before region `b`, so a
   // unit whose roster melee is 0 can still satisfy this gate (F202).
   //
@@ -757,8 +764,8 @@ function deriveUnitStats(input) {
   // membership reader, and with it the helper's `ChaosChannel(u) and EncUndead` arm. `EncUndead`
   // already implies the Undead normalization's own `RCDeath` write ($0059FC26), so that arm can
   // differ from the scalar in exactly one corner: a Chaos-Channelled Undead unit whose realm the
-  // later No Heal block overwrote with `RCNoHeal` ($005A0472) — `c:raiseDead` or
-  // `c:mysticSurge:race` here — which the scalar calls unaligned and the helper still calls Death.
+  // later No Heal block overwrote with `RCNoHeal` ($005A0472) — `c:noHealConversion` here —
+  // which the scalar calls unaligned and the helper still calls Death.
   // The same unit without Chaos Channels stays outside: that is `BUG-Q31`, the missing
   // `EncUndead`-alone disjunct, reproduced as written (`Q31.evidence.md`, *`IsDeathUnit` — the
   // clone, and `BUG-Q31`*).
@@ -859,22 +866,6 @@ function deriveUnitStats(input) {
     : 0;
 
   const charmOfLifeActive = !!(abilities && abilities.charmOfLife);
-  // Position on the same six-rung ladder `getLevelBonuses` reads. An unlisted level stops
-  // rather than ranking as an unpromoted unit, which would silently withhold the Discipline
-  // and Soul Flay steps below (`SPEC.md`, *Out-of-range values stop the run*).
-  const levelRank = ({
-    normal: 0,
-    regular: 1,
-    veteran: 2,
-    elite: 3,
-    ultra_elite: 4,
-    champion: 5,
-  })[level];
-  if (levelRank === undefined) {
-    throw new Error(
-      `deriveUnitStats: experience level '${level}' is not one of `
-      + `${LEVEL_LADDER.join('/')}, the option set of the Unit Level control.`);
-  }
   // A pre-sequence constant on purpose, and not a record field. `EncDiscipline` is written at
   // `CreateUnit.CAS!HASEVILPRESENCE!+51 "SETENCHANTMENTFLAG(U,EncDiscipline,ABase,1);"` (`ABase`) and `OverlandEndTurn.CAS!NOMAGITEKSCI!+8 "SETENCHANTMENTFLAG(U,EncDiscipline,1,1);"` (selector 1) — the permanent
   // record, and neither line carries a stat delta, so neither earns a step (`SPEC.md`, *Phases*).
@@ -884,9 +875,11 @@ function deriveUnitStats(input) {
   // that same permanent write (`stats_identity.js`) (F202).
   const disciplineVal = version.startsWith('com2') ? ((abilities && abilities.discipline) || 'none') : 'none';
   const disciplineActive = disciplineVal === 'overland' || disciplineVal === 'combat';
-  const combatDisciplineNegatesFirstStrike = disciplineVal === 'combat' && levelRank >= 3;
-  const disciplineDefMod = disciplineActive ? (levelRank >= 1 ? 2 : 1) : 0;
-  const disciplineAtkMod = disciplineActive && levelRank >= 2 ? 1 : 0;
+  // The three thresholds read the experience level standing on the record at `c:discipline`'s own
+  // position — `levelRankOf(u.level)` (`combat_abilities.js`) — which is what `training:veterancy`
+  // wrote and what Destiny's `B.level := 1` may have taken back.
+  const disciplineDefMod = u => (disciplineActive ? (levelRankOf(u.level) >= 1 ? 2 : 1) : 0);
+  const disciplineAtkMod = u => (disciplineActive && levelRankOf(u.level) >= 2 ? 1 : 0);
   // Overland Discipline grants +1 movement at Elite+, but movement is not modeled here.
 
   // Soul Flay (Warlord, Death rare combat curse): irresistible curse on normal units
@@ -898,10 +891,13 @@ function deriveUnitStats(input) {
   const soulFlayActive = version.startsWith('com2_warlord')
     && !!(abilities && abilities.soulFlay)
     && !isFantasticBase;
-  const soulFlayLevels = levelRank + 1;
-  const soulFlayAtkMod = -1 * soulFlayLevels;
-  const soulFlayDefMod = -2 * soulFlayLevels;
-  const soulFlayResMod = -2 * soulFlayLevels;
+  // Read off the record at `b:soulFlay`'s own position, like Discipline's thresholds. Region `b`
+  // runs before the region-`c` level ladder, so the value it reads is the persistent level
+  // `training:veterancy` wrote, which is the field the script's `GETSTAT(U,ALevel,…)` names.
+  const soulFlayLevels = u => levelRankOf(u.level) + 1;
+  const soulFlayAtkMod = u => -1 * soulFlayLevels(u);
+  const soulFlayDefMod = u => -2 * soulFlayLevels(u);
+  const soulFlayResMod = u => -2 * soulFlayLevels(u);
 
   // Plague (Warlord combat curse): inflicted by the Pestilence city curse on defending
   // garrison units, by the Plague Lord unit ability, and by the Plague Lord artifact power.
@@ -1003,8 +999,10 @@ function deriveUnitStats(input) {
     ? Math.max(0, parseInt(abilities.survivalInstinctToBlock) || 0)
     : 0;
 
-  // Orihalcon: +1 resistance, +2 magical ranged attack (CoM/CoM2).
-  const orihalconActive = armor === 'orihalcon';
+  // Orihalcon: +1 resistance, +2 magical ranged attack (CoM/CoM2). The compiled block's gate is
+  // `EncOrihalcon` on the record, so the step reads the armour material standing there at its own
+  // position — what `training:armorQuality` wrote.
+  const orihalconActive = u => u.armorMaterial === 'orihalcon';
 
   // Wall of Fire garrison boost (Warlord): the city enchantment grants +1 to all
   // defending non-Fantastic non-magic attacks, mirroring the original game's Metal
@@ -1044,11 +1042,13 @@ function deriveUnitStats(input) {
   // grant is `SETENCHANTMENTFLAG(U,EncFlameBlade,ABase,1)` (`CreateUnit.CAS!NOACADEMY!+25 "IF (ACCESSADAMANTIUM>0) %AND (ACCESSCRYSX>0) THEN { SETENCHANTMENTFLAG(U,EncFlameBlade,ABase,1); }"`) and
   // `…,1,1)` (`OverlandEndTurn.CAS!OUTLANDERSKIPELEMENTALARMOR!+4 "IF (OWNADAMANTIUM>0) %AND (OWNCRYSX>0) THEN { SETENCHANTMENTFLAG(U,EncFlameBlade,1,1); }"`) — permanent writes, and that whole block writes five
   // flags and no stat, so it earns no step (`SPEC.md`, *Phases*) and no step can move the value.
-  // And the upgrade it feeds through `hasWarlordBlade` is the weapon material, a **result** field
-  // that cannot be a record field, exactly as `artificerMagicWeapon` above and Metal Fires' own
-  // upgrade below are. `c:metalFires`'s non-stacking gate takes `u.fieryBlade` off the record
-  // because it is a step; `hasWarlordBlade` gates a step *and* the result field, and since the
-  // result half can never move, moving the step half alone would spell one fact twice (F202).
+  // And the upgrade it feeds through `hasWarlordBlade` is the weapon *result* field
+  // `effectiveWeapon` (below the run), not the record's material: a blade upgrades the attack it
+  // makes without writing the persistent quality Artificer and the training city write, which is
+  // why `training:artificer` writes `weaponMaterial` and this does not (F244.2).
+  // `c:metalFires`'s non-stacking gate takes `u.fieryBlade` off the record because it is a step;
+  // `hasWarlordBlade` gates a step *and* the result field, and since the result half can never
+  // move, moving the step half alone would spell one fact twice (F202).
   const warlordFieryBlade = isWarlord && !!abilities.fieryBlade;
   const hasWarlordBlade = warlordCombatFlameBlade || warlordFieryBlade;
   const nonWarlordFlameBlade = !!abilities.flameBlade && !isWarlord;
@@ -1136,10 +1136,10 @@ function deriveUnitStats(input) {
   // Mother Fungus (CreateUnit.CAS!NOBASILICA!+7 "SETSTAT(U,SAttack,1,(GETSTAT(U,SAttack,1)+2)"), a Coal site
   // (CreateUnit.CAS!NOTARCHMAGE!+33 "SETSTAT(U,SAttack,ABase,ATK+1);") and the Malnourished penalty
   // (CreateUnit.CAS!HASEVILPRESENCE!+6 "SETSTAT(U,SAttack,ABase,(GetStat(U,SAttack,ABase)-1));"). Those
-  // writes are `training`-phase steps here, so the record those phases leave is what a later
+  // writes are `training`-phase steps here, so the record `a:baseCopy` copies is what a later
   // region reads (SPEC.md, *The step model*). The card's input is that record only before the
-  // permanent-record phases run, which is why this is a predicate over the run context rather than a boolean
-  // captured beside it — the same read `c:weapon`'s `weaponMeleeOpen` already makes.
+  // permanent phases run, which is why this is a predicate over the run context rather than a
+  // boolean captured beside it — the same read `c:weapon`'s `weaponMeleeOpen` already makes.
   const hasMeleeAttackAt = runCtx => runCtx.base.atk > 0;
 
   // Chaos Surge: affects Chaos creatures only.
@@ -1167,9 +1167,9 @@ function deriveUnitStats(input) {
   // The write is `PROVENANCE[holyWeapon]` (`stats_sequence.js`), which carries all five builds.
   const hwActive = !!(abilities && abilities.holyWeapon);
   const hwMeleeToHit = hwActive ? 10 : 0;
-  // Rust clears the persistent material flags before recalculation, so Heavenly Light sees the
-  // post-Rust base material record rather than the pre-curse UI selection. The write itself is
-  // `PROVENANCE[heavenlyLight]` (`stats_sequence.js`); this is its material gate.
+  // Rust clears the persistent material flags before recalculation (`debuffs:rust:material`), so Heavenly
+  // Light reads the record the permanent phases leave rather than the UI selection. The write
+  // itself is `PROVENANCE[heavenlyLight]` (`stats_sequence.js`); this is its material gate.
   //
   // Both engines read the same fact — the persistent record's weapon-quality bits — and grant the
   // threshold only where they are clear. CoM 1 states it as `cl = _UNITS[si].mutations` followed
@@ -1178,53 +1178,14 @@ function deriveUnitStats(input) {
   // forces `cl` to Magic Weapons, so a high-index roster entry takes no threshold. Which set that
   // ceiling selects is R6.1a's open question — the index↔roster-id mapping is unsettled — so the
   // condition that *is* determined is implemented and the ceiling is not.
-  const heavenlyLightMaterialTail = heavenlyLightActive
-    && weapon === 'normal' && (isCoM1 || (!isHero && !isFantasticBase));
+  const heavenlyLightMaterialTail = u => heavenlyLightActive
+    && u.weaponMaterial === 'normal' && (isCoM1 || (!isHero && !isFantasticBase));
   // CoM 1 tests the *live* melee at its own position (`if (bu->melee > 0)`, com1:0x905F3), where
   // Caster.exe tests the persistent base attack; both thresholds sit inside that same gate.
-  const heavenlyLightMeleeToHitAt = u => (heavenlyLightMaterialTail
+  const heavenlyLightMeleeToHitAt = u => (heavenlyLightMaterialTail(u)
     && (isCoM1 ? u.atk > 0 : inputBaseAtk > 0)) ? 10 : 0;
-  const heavenlyLightThrownToHit = heavenlyLightMaterialTail ? 10 : 0;
+  const heavenlyLightThrownToHit = u => (heavenlyLightMaterialTail(u) ? 10 : 0);
   const uphillBattlePct = uphillBattleActive ? 10 : 0;
-  const weaponUpgradedByHW = hwActive && weapon === 'normal';
-  // Two effects with different scopes shared one test here: Wraith Form is an all-versions
-  // enchantment whose bypass arm is CoM 1 on, while Ruler of Underworld is Caster.exe only —
-  // `PROVENANCE[rulerOfUnderworldEligibility]` (`combat_special_attacks.js`) carries the two
-  // modern builds alone, and its `GEKingOfUnderworld` grant is the compiled
-  // `U.EnchantmentFlags[EncWraithForm] := True` at Units.RecalculateUnits.pas:1515-1517. So
-  // `startsWith('com')` wrongly admitted it into CoM 1; each disjunct now carries its own scope.
-  const wraithFormBypassesWI = weapon === 'normal'
-    && !!abilities
-    && ((version.startsWith('com') && !!abilities.wraithForm)
-      || rulerOfUnderworldActiveForUnit(abilities, version));
-  // Warlord Wall of Fire's defender bonus mirrors Metal Fires: "their attacks can ignore Weapon
-  // Immunity" (`Unit rosters/Warlord mod unit data/HELP.TXT:2761`), for its non-magic attacks.
-  const weaponUpgradedByWoF = wofDefenderBonusActive && weapon === 'normal';
-  // Note: Eldritch Weapon also upgrades a normal weapon to magic, but ONLY for the melee attack:
-  // its first bonus turns the enchanted unit's Melee Attack into a Magical Melee Attack, and it
-  // names no other channel (`Reference docs/MoM source - Fandom site/Eldritch Weapon.md`,
-  // *Magical Attack*). It is therefore NOT folded into
-  // this global weapon type — it is applied to the melee Weapon-Immunity check only
-  // (see meleeWeaponWI in combat_effects.js). Its ranged/thrown attacks stay non-magical, so
-  // Weapon Immunity still raises the target's defense against them.
-  const weaponUpgradedByHeavenlyLight = heavenlyLightActive && weapon === 'normal';
-  const effectiveWeapon = ((fbAtkBonus > 0 || metalFiresActive) && weapon === 'normal') ? 'magic'
-    : (ffRegularBonus && weapon === 'normal') ? 'magic'
-    : (weaponUpgradedByHW ? 'magic'
-    : (wraithFormBypassesWI ? 'magic'
-    : (weaponUpgradedByWoF ? 'magic'
-    : (weaponUpgradedByHeavenlyLight ? 'magic'
-    : weapon))));
-
-  // ApplyAttack passes `EncMagic or magicranged` to EffectiveDefense. Keep EncMagic as
-  // calculated state instead of approximating it later from weapon quality and final unit
-  // type. Only the material grant made by `ApplyMagicWeapons` can be suppressed by an enemy
-  // King/Ruler of Underworld: a rival `GEKingOfUnderworld` clears the local `b` and so skips
-  // `Units[i].EnchantmentFlags[EncMagic] := True` alone, clearing neither an existing flag nor
-  // any material stat or To-Hit write below it (Units.RecalculateUnits.pas:613-626, $00598EA7).
-  // Independent EncMagic writes therefore survive whether they occur before that helper (hero
-  // standing and Warlord Wall of Fire) or after it.
-  const modernEncMagicFromMaterial = version.startsWith('com2_') && weapon !== 'normal';
   // The flag is published as a result field rather than carried on the record, so its Fantastic
   // arm is read off the record at the block's own chain rank — captured during the run below —
   // instead of at any other position. Everything else in the disjunction is position-independent.
@@ -1245,12 +1206,14 @@ function deriveUnitStats(input) {
   // skipped for `ranged_type >= 100` — thrown, breath and every gaze — on all rows but
   // Veteran (0x8FA9A-0x8FAAB); that is exactly the ladder's `thrown` column. CoM2 and
   // Warlord instead write none of their three independent gaze fields in ApplyLevelBonus.
-  const gazeLvlMod = version.startsWith('mom') ? lvl.ranged
+  // Both take the bonus row `c:level` resolved from the record at its own position, so they are
+  // magnitudes of that step's write rather than pre-sequence constants (F244.2).
+  const gazeLvlMod = lvl => (version.startsWith('mom') ? lvl.ranged
     : isCoM1 ? lvl.thrown
-    : 0;
-  const doomGazeLvlMod = version.startsWith('mom') ? lvl.ranged
+    : 0);
+  const doomGazeLvlMod = lvl => (version.startsWith('mom') ? lvl.ranged
     : isCoM1 ? lvl.thrown
-    : 0;
+    : 0);
   // CoM 1's Warp Attack halves the `.ranged` slot with no `ranged_type` test at all
   // (0x90764-0x90772), so it reaches a gaze's strength exactly as it reaches conventional
   // ranged, thrown and breath. Darkness lands after the halving, as it does for the ranged
@@ -1301,7 +1264,7 @@ function deriveUnitStats(input) {
   const hurricaneActive = !!input.hurricane;
   // The immunity half used to be restated here beside the flag. It is not a term of the block —
   // `Units.RecalculateUnits.pas:2341`-style curse blocks test their flag alone — and it was a
-  // second home for what `immunity:immunityCurseGating` already does, whose Illusion arm is the wider
+  // second home for what `immunities:immunityCurseGating` already does, whose Illusion arm is the wider
   // of the two (it also reaches True Sight and Eye of Heaven). The flag at this step's own
   // position is the whole gate (F199).
   const vertigoHitPenalty = isCoM2 ? 0.25 : (isCoMVersion ? 0.3 : 0.2);
@@ -1696,7 +1659,7 @@ function deriveUnitStats(input) {
   // `GetStat(U,SCustomAttribute,1)<>1` (`CreateUnit.CAS!NOMOTHERFUNGUS!+7 "%AND (GetStat(U,SCustomAttribute,1)<>1) )"`, `OverlandEndTurn.CAS!NOOUTLANDERALTAROFSTORM!+15 "%AND (GetStat(U,SCustomAttribute,1)<>1) )"`) is the
   // permanent record at a training-time rank, so it takes the raw flag, not the value Rebuild's
   // cast-time write leaves: `training:alumniOfAcademy:figures` is a training-time write and
-  // `cast:rebuild`, the only mid-sequence write to `mechanical`, is cast-time and therefore
+  // `buffs:rebuild`, the only mid-sequence write to `mechanical`, is cast-time and therefore
   // strictly later (F208, F202). The figure sequence is its own record and no write in it
   // reaches `mechanical`, so a record field here would restate this constant, not position it.
   const alumniOfAcademy = isWarlord && !!abilities.alumniOfAcademy
@@ -1722,9 +1685,9 @@ function deriveUnitStats(input) {
   // Hunter/Witchdoctor poison and Life Steal branches), `training:militaryWorkshop` (Blackpowder, its
   // poison increment and Armor Piercing), `training:motherFungus` and `d:venom` (their own poison
   // increments), `training:energyCannon`, `b:bombsGrenades` and `d:blazeOfGlory` (both Wall Crusher,
-  // F206 for the second; Armor Piercing; First Strike clear) with stage 1; then `cast:destiny`
+  // F206 for the second; Armor Piercing; First Strike clear) with stage 1; then `buffs:destiny`
   // (Supernatural) and `b:eyeOfHeaven` (True Sight) → `c:trueSight` (Illusion Immunity) with
-  // stage 2; and last `cast:rebuild` / `b:rebuild` (Mechanical) with F208, which was the only
+  // stage 2; and last `buffs:rebuild` / `b:rebuild` (Mechanical) with F208, which was the only
   // one of the thirteen keys that moved a number. Each writes a `statRecord` field at its own
   // block's rank and is read back after the chain.
   //
@@ -1762,7 +1725,7 @@ function deriveUnitStats(input) {
     survivalInstinct: abilities.survivalInstinct || false,
     landLinking: abilities.landLinking || false,
   };
-  // The immunity set the recalculation leaves, and the only value `immunity:immunityCurseGating` reads
+  // The immunity set the recalculation leaves, and the only value `immunities:immunityCurseGating` reads
   // that is not a field of the record at its own position. The strip is artificial — no engine
   // makes the write (`SPEC.md`, *Deliberate deviations*) — so no source fixes its position
   // relative to a grant that writes one of these four, and taking the finished set is what makes
@@ -1844,7 +1807,7 @@ function deriveUnitStats(input) {
   // moved Warp to the front (0x907AA), while CoM2/Warlord run it late (+0x0BA3C) with only
   // Tactician (+0x0C890) after it.
   const abilByPhase = {
-    template: [], training: [], cast: [], immunity: [],
+    template: [], training: [], immunities: [], buffs: [], debuffs: [],
     a: [], b: [], cBeforeHolyArmor: [], c: [], cAfterWarp: [], d: [], e: [],
   };
   for (const step of abilSteps) {
@@ -1934,7 +1897,7 @@ function deriveUnitStats(input) {
   // strength gate the modern `Inc(U.hitchancethrown, 10)` does not.
   const heavenlyLightHitPick = isCoM1
     ? (u, context, kind) => {
-      if (!heavenlyLightMaterialTail || u[context.strengthField] <= 0) return 0;
+      if (!heavenlyLightMaterialTail(u) || u[context.strengthField] <= 0) return 0;
       if (kind === 'thrown') return 10;
       if (kind === 'ranged') return isNonMagicalRangedFieldSlot(u, context) ? 10 : 0;
       return 0;
@@ -1968,15 +1931,22 @@ function deriveUnitStats(input) {
   // still carries the physical type here. The enchantment flag is what the engine tests, not the
   // type the conversion will later write.
   const materialSecondaryOpen = !(isCoM1 && focusMagicActive);
-  const weaponHitRanged = (u, context) => (wpn.toHit !== 0 && materialSecondaryOpen
-    && isNonMagicalRangedFieldSlot(u, context) ? wpn.toHit : 0);
+  // `wpn` is the material's bonus row, read off the record at this step's own position:
+  // `training:weaponQuality` (and, in Warlord, `training:artificer`) put the quality there
+  // and `debuffs:rust:material` may have cleared it, which is the state both engines' material gate asks about.
+  const weaponMaterialBonus = u => weaponBonus(u.weaponMaterial);
+  const weaponHitRanged = (u, context) => (weaponMaterialBonus(u).toHit !== 0
+    && materialSecondaryOpen
+    && isNonMagicalRangedFieldSlot(u, context) ? weaponMaterialBonus(u).toHit : 0);
   // `if Units[i].thrown > 0 then Inc(Units[i].hitchancethrown, …)`
   // (Units.RecalculateUnits.pas:660-662): the modern threshold is gated on the **calculated**
   // Thrown strength at this position, which by `c:weapon` has already seen region `b` and
   // `c:focusMagic`. The DOS body writes `ranged_tohit++` inside its one type-only gate
   // (`unitcalc.c`, 131:0x8F0DD) and makes no strength test at all.
-  const weaponHitThrown = (u, context) => (wpn.toHit !== 0 && materialSecondaryOpen
-    && slotHasThrown(u, context) && (!isCoM2 || u[context.strengthField] > 0) ? wpn.toHit : 0);
+  const weaponHitThrown = (u, context) => (weaponMaterialBonus(u).toHit !== 0
+    && materialSecondaryOpen
+    && slotHasThrown(u, context) && (!isCoM2 || u[context.strengthField] > 0)
+    ? weaponMaterialBonus(u).toHit : 0);
   const weaponHitWrite = (u, target) => {
     const kind = target.kindAt(u);
     for (const context of target.contexts) {
@@ -2010,13 +1980,14 @@ function deriveUnitStats(input) {
   // EncMithril or EncAdamant` at $00598D91, and `if (quality > 0)` over
   // `mutations & UM_WEAPON_QUALITY_MASK` in every DOS build. Everything inside is the
   // material's own magnitude, so a normal weapon is a block neither engine enters.
-  const hasWeaponMaterial = weapon === 'magic' || weapon === 'mithril' || weapon === 'adamantium';
+  const hasWeaponMaterial = u => u.weaponMaterial !== 'normal';
   const weaponStatSteps = [
     statStep({ id: 'weapon', phase: 'c',
       writes: ['def', 'atk', ...strengthFields,
         'toHitMelee', ...secondaryHitFieldsFor(['ranged', 'thrown'])],
-      when: () => hasWeaponMaterial,
+      when: u => hasWeaponMaterial(u),
       apply: (u, runCtx) => {
+        const wpn = weaponMaterialBonus(u);
         u.def += wpn.def;
         if (weaponMeleeOpen(u, runCtx)) u.atk += wpn.atk;
         // Ranged/Thrown/Breath strength. The modern `ranged` channel answers for `SRanged` even
@@ -2174,7 +2145,8 @@ function deriveUnitStats(input) {
   // depending on everything this function happens to have in scope.
   const rawStatSteps = buildRawStatSteps({
     abilByPhase, abilities, altarHunter, altarOfTheMoon, altarWitchdoctor,
-    altarOfTheSun, altarOfTheSunHolyMother, armor, badMoonActive, baseDoomGaze, baseGazeRanged,
+    altarOfTheSun, altarOfTheSunHolyMother, armorTrainingInput, badMoonActive,
+    baseDoomGaze, baseGazeRanged,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod,
     baseHitChance, baseHitMelee, modernSecondaryHitMod,
     blazeOfGloryActive, bombsGrenadesActive,
@@ -2202,9 +2174,9 @@ function deriveUnitStats(input) {
     heavenlyLightThrownToHit,
     holyArmorActive, hurricaneActive, hwMeleeToHit, identity,
     input, inputBaseAtk,
-    isCoM1, isCoM2, isCoMVersion, isWarlord, landLinkingEligible, level, levelRank,
-    lionheartHpMod,
-    ludusAgoge, lvl,
+    isCoM1, isCoM2, isCoMVersion, isWarlord, landLinkingEligible,
+    levelInput, lionheartHpMod, spiritLinkLevelWidening,
+    ludusAgoge, constructCatapult, weaponInput, rustActive,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
     marionetteStrayed,
     motherFungus,
@@ -2286,8 +2258,8 @@ function deriveUnitStats(input) {
   const identityAtRank = (key) => identitySamples.get(key) || finishedIdentity;
   // `slots` carries the gates that are **not** position-dependent, so a slot can hold them.
   // `melee` is the permanent record's `B.attack > 0`, which
-  // the permanent-record phases settle, so it is the predicate over the run context rather than a boolean
-  // (F133). `persistentRanged` is the aura pass's
+  // the phases ahead of `a:baseCopy` settle, so it is the predicate over the run context rather
+  // than a boolean (F133). `persistentRanged` is the aura pass's
   // `B.ranged > 0` (Units.RecalculateUnits.pas:2535, :2599): the **permanent** record's Ranged
   // field carrying strength, with no test of what type stands in it and none of what the
   // calculated record now holds. Which slot that field is, is record structure — the modern
@@ -2358,7 +2330,14 @@ function deriveUnitStats(input) {
       .map(key => [key, !!effectiveAbilities[key]])),
     // The calculated identity is part of the record, seeded from the permanent one. Every
     // conversion is a positioned write to these two fields (F163).
-    race: identity.baseRace, fantastic: identity.baseFantastic };
+    race: identity.baseRace, fantastic: identity.baseFantastic,
+    // The persistent loadout and veterancy fields, seeded at the roster template's values — a
+    // unit ships unequipped and at Recruit, and every departure from that is a positioned write:
+    // `training:weaponQuality`, `training:armorQuality` and `training:veterancy` for what the
+    // training city left, `training:artificer` and `template:constructCatapult:weapon` for the two
+    // quality writes made elsewhere, `debuffs:rust:material` and `buffs:destiny:level` for what a cast
+    // took back (F244.2).
+    weaponMaterial: 'normal', armorMaterial: 'normal', level: 'normal' };
   for (const context of derivationContexts) {
     statRecord[context.strengthField] = 0;
     statRecord[context.rangedTypeField] = 'none';
@@ -2378,8 +2357,8 @@ function deriveUnitStats(input) {
   // both silent defects if they ever drift (`SPEC.md`, *Out-of-range values stop the run*).
   // (1) `finishedIdentity` is the record the recalculation leaves — the projection is exact
   // only while no conversion's gate reads a stat. (2) `permanentFantastic` is the permanent
-  // record's Fantastic flag as the permanent-record phases leave it, which is what the loadout and level
-  // gates read at their own positions.
+  // record's Fantastic flag as `a:baseCopy` publishes it, which is what the loadout gate and
+  // `c:level:fantastic` read at their own positions.
   if (statUnit.race !== finishedIdentity.race
       || !!statUnit.fantastic !== !!finishedIdentity.fantastic) {
     throw new Error(
@@ -2388,17 +2367,73 @@ function deriveUnitStats(input) {
       + `sequence ${statUnit.race}/${statUnit.fantastic}). A conversion whose gate reads a stat `
       + 'would break the projection targeting and the post-chain reads depend on.');
   }
-  // The second claim is checked in the modern builds alone, which are the only ones the two
-  // gates belong to and the only ones whose permanent-record phases write the *permanent* identity.
-  // CoM 1's three `template`-phase conversions — Zombies, Construct Catapult and the summon branch —
-  // are creation-time writes to the *calculated* record that happen to sit in that phase, so
-  // `ctx.base` there is not a statement about the permanent one. Nothing reads it.
+  // The second claim is checked in the modern builds alone, which are the only ones whose phases
+  // ahead of `a:baseCopy` write the *permanent* identity, and the only ones where
+  // `c:level:fantastic` reads the copied record. CoM 1's three `template`-phase conversions — Zombies, Construct Catapult and the
+  // summon branch — are creation-time writes to the *calculated* record that happen to sit in
+  // that phase, so the copied record is not a statement about the permanent one there. Nothing
+  // reads it.
+  // `a:baseCopy` is in every version's chain and has no predicate, so an absent record is a
+  // composition defect, not a shape a derivation can legitimately have.
   const baseRecord = statRunContext.base;
-  if (isCoM2 && baseRecord && !!baseRecord.fantastic !== permanentFantastic) {
+  if (!baseRecord) {
     throw new Error(
-      `deriveUnitStats: the permanent Fantastic flag the permanent-record phases leave (${baseRecord.fantastic}) `
-      + `disagrees with the loadout and level gates' value (${permanentFantastic}) for ${version}.`);
+      `deriveUnitStats: no step published the permanent record for ${version}; `
+      + 'a:baseCopy is missing from the composed sequence.');
   }
+  if (isCoM2 && !!baseRecord.fantastic !== permanentFantastic) {
+    throw new Error(
+      `deriveUnitStats: the permanent Fantastic flag a:baseCopy published (${baseRecord.fantastic}) `
+      + `disagrees with the loadout gate's value (${permanentFantastic}) for ${version}.`);
+  }
+  // The weapon material the sequence leaves on the record. Every consumer below is a **result**
+  // field — the Weapon-Immunity bypass and the modern EncMagic flag, both read by combat
+  // resolution rather than by a step — so each is computed here, from the finished record, rather
+  // than from a pre-sequence constant: the material is written at `training:weaponQuality` and
+  // `training:artificer` and cleared at `debuffs:rust:material`, and this is the state those writes
+  // leave
+  // (F244.2).
+  const finishedWeaponMaterial = statUnit.weaponMaterial;
+  const weaponUpgradedByHW = hwActive && finishedWeaponMaterial === 'normal';
+  // Two effects with different scopes shared one test here: Wraith Form is an all-versions
+  // enchantment whose bypass arm is CoM 1 on, while Ruler of Underworld is Caster.exe only —
+  // `PROVENANCE[rulerOfUnderworldEligibility]` (`combat_special_attacks.js`) carries the two
+  // modern builds alone, and its `GEKingOfUnderworld` grant is the compiled
+  // `U.EnchantmentFlags[EncWraithForm] := True` at Units.RecalculateUnits.pas:1515-1517. So
+  // `startsWith('com')` wrongly admitted it into CoM 1; each disjunct now carries its own scope.
+  const wraithFormBypassesWI = finishedWeaponMaterial === 'normal'
+    && !!abilities
+    && ((version.startsWith('com') && !!abilities.wraithForm)
+      || rulerOfUnderworldActiveForUnit(abilities, version));
+  // Warlord Wall of Fire's defender bonus mirrors Metal Fires: "their attacks can ignore Weapon
+  // Immunity" (`Unit rosters/Warlord mod unit data/HELP.TXT:2761`), for its non-magic attacks.
+  const weaponUpgradedByWoF = wofDefenderBonusActive && finishedWeaponMaterial === 'normal';
+  // Note: Eldritch Weapon also upgrades a normal weapon to magic, but ONLY for the melee attack:
+  // its first bonus turns the enchanted unit's Melee Attack into a Magical Melee Attack, and it
+  // names no other channel (`Reference docs/MoM source - Fandom site/Eldritch Weapon.md`,
+  // *Magical Attack*). It is therefore NOT folded into
+  // this global weapon type — it is applied to the melee Weapon-Immunity check only
+  // (see meleeWeaponWI in combat_effects.js). Its ranged/thrown attacks stay non-magical, so
+  // Weapon Immunity still raises the target's defense against them.
+  const weaponUpgradedByHeavenlyLight = heavenlyLightActive && finishedWeaponMaterial === 'normal';
+  const effectiveWeapon = ((fbAtkBonus > 0 || metalFiresActive)
+      && finishedWeaponMaterial === 'normal') ? 'magic'
+    : (ffRegularBonus && finishedWeaponMaterial === 'normal') ? 'magic'
+    : (weaponUpgradedByHW ? 'magic'
+    : (wraithFormBypassesWI ? 'magic'
+    : (weaponUpgradedByWoF ? 'magic'
+    : (weaponUpgradedByHeavenlyLight ? 'magic'
+    : finishedWeaponMaterial))));
+  // ApplyAttack passes `EncMagic or magicranged` to EffectiveDefense. Keep EncMagic as
+  // calculated state instead of approximating it later from weapon quality and final unit
+  // type. Only the material grant made by `ApplyMagicWeapons` can be suppressed by an enemy
+  // King/Ruler of Underworld: a rival `GEKingOfUnderworld` clears the local `b` and so skips
+  // `Units[i].EnchantmentFlags[EncMagic] := True` alone, clearing neither an existing flag nor
+  // any material stat or To-Hit write below it (Units.RecalculateUnits.pas:613-626, $00598EA7).
+  // Independent EncMagic writes therefore survive whether they occur before that helper (hero
+  // standing and Warlord Wall of Fire) or after it.
+  const modernEncMagicFromMaterial = version.startsWith('com2_')
+    && finishedWeaponMaterial !== 'normal';
   const modernEncMagicIndependentOfMaterial = modernEncMagicOtherTerms
     || (version.startsWith('com2_') && !!identityAtRank('c:chaosSurge').fantastic);
   const modernEncMagic = modernEncMagicFromMaterial || modernEncMagicIndependentOfMaterial;
@@ -2439,6 +2474,12 @@ function deriveUnitStats(input) {
   for (const key of POSITIONED_GRANT_VALUE_WRITES) {
     if (statUnit[key] != null || key in curseGatedAbilities) grantedAbilities[key] = statUnit[key];
   }
+  // Combat Discipline cancels an opposing First Strike from Elite (rank 3) up. It is a result
+  // field, read by the exchange rather than by a step, so the rank comes off the finished record
+  // — the level `training:veterancy` wrote, less whatever `buffs:destiny:level` and
+  // `c:level:fantastic` took back (F244.2).
+  const combatDisciplineNegatesFirstStrike = disciplineVal === 'combat'
+    && levelRankOf(statUnit.level) >= 3;
   const combatAbilitiesBase = combatDisciplineNegatesFirstStrike
     ? { ...grantedAbilities, negateFirstStrike: true }
     : grantedAbilities;
@@ -2615,6 +2656,18 @@ function deriveUnitStats(input) {
     }
 
     for (const event of statTrace) {
+      // The ledger is projected from the stat sequence, so it inherits that sequence's boundary
+      // as a marker of its own: a To-Hit chain crosses from the record's stored thresholds to
+      // the recalculation exactly where the stat chains do. It projects a position, not a
+      // write, so it contributes no delta and its `apply` is empty.
+      if (event.boundary) {
+        chanceContributions.push({
+          id: `chance:${event.id}`, source: event.source, phase: event.phase, order: event.order,
+          deltas: {}, projectionOf: `${event.phase}:${event.id}`, boundary: true,
+          serial: chanceSerial++,
+        });
+        continue;
+      }
       const deltas = {};
       const commonHitDelta = event.changes.toHit ? event.changes.toHit.delta : 0;
       const meleeHitDelta = commonHitDelta
@@ -2648,6 +2701,7 @@ function deriveUnitStats(input) {
       id: item.id, sourceId: item.source.id, sourceLabel: item.source.label,
       phase: item.phase, writes: Object.keys(item.deltas),
       ...(item.projectionOf ? { projectionOf: item.projectionOf } : {}),
+      ...(item.boundary ? { boundary: true } : {}),
       apply: u => {
         for (const [field, value] of Object.entries(item.deltas)) u[field] += value;
       },
@@ -2769,9 +2823,9 @@ function deriveUnitStats(input) {
     phase: 'attackSpecific', order: 0,
   }, finalDef, displayDef);
 
-  const toHitMeleeHasModifiers = modifierTraces.toHitMelee.entries.length > 0;
-  const toHitRtbHasModifiers = modifierTraces.toHitShared.entries.length > 0;
-  const toBlockHasModifiers = modifierTraces.toBlock.entries.length > 0;
+  const toHitMeleeHasModifiers = traceHasWrites(modifierTraces.toHitMelee);
+  const toHitRtbHasModifiers = traceHasWrites(modifierTraces.toHitShared);
+  const toBlockHasModifiers = traceHasWrites(modifierTraces.toBlock);
 
   const totalDamage = Math.max(0, parseInt(input.dmg) || 0);
   const carriesHealingState = true;
@@ -2801,7 +2855,7 @@ function deriveUnitStats(input) {
     hpBonus: hp - inputBaseHP,
     meleeToHitBonus,
     rtbToHitWpnBonus: appliedRtbToHitWpn,
-    rtbToHitLvlBonus: lvl.toHit,
+    rtbToHitLvlBonus: getLevelBonuses(statUnit.level, version).toHit,
     rtbDistPenalty,
     toHitMeleeHasModifiers,
     toHitRtbHasModifiers,
@@ -2827,7 +2881,9 @@ function deriveUnitStats(input) {
     noHealing,
     rangedType: finalRangedType, thrownType: finalThrownType,
     cityWallBonus,
-    wpn, lvl,
+    // The material and ladder rows the sequence resolved from the record, republished for the
+    // card and for the identity regression that pins Construct Catapult's Magic Weapons.
+    wpn: weaponBonus(finishedWeaponMaterial), lvl: getLevelBonuses(statUnit.level, version),
     // Display value: `resolveCombat` applies the Vertigo Defense die penalty itself, so the
     // card's number and the resolver's input are genuinely two quantities here.
     displayDef,

@@ -66,7 +66,7 @@ function abilityScopeProbeValues(ctx) {
 // passing vacuously, because the key it could not find simply is not in the returned set.
 function constructibleStepKeys() {
   const keys = new Set();
-  const phases = 'template|training|cast|immunity|a|b|c|d|e|attackSpecific';
+  const phases = 'template|training|immunities|buffs|debuffs|a|b|c|d|e|attackSpecific';
   for (const file of calculatorFiles) {
     const text = fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8');
     // statStep({ id: 'x', … phase: 'p', … }) — the two fields need not share a line, so the
@@ -192,17 +192,26 @@ function runCanonicalVersionScopeChecks(ctx) {
   // sitting at the offsets their blocks occupy. The DOS builds take theirs from the addresses
   // `unitcalc.c` gives every realm write in `BU_Apply_Specials`, so only Raise Dead — a
   // combat-spell write from `combat.c` that routine never makes — stays inherited there.
-  // Raise Dead is a combat-spell write with no block of the recalculation routine to order it
-  // against. Every other identity conversion sits at its own block's address, in every version
-  // (F163); the modern ones used to head region `c` by convention while the pre-pass ran them.
-  const deducedIdentityC = ['c:raiseDead'];
+  // CoM 1's Raise Dead is a combat-spell write — the resurrection site writes the race directly —
+  // with no block of the recalculation routine to order it against. The modern builds have no such
+  // position: their Raise Dead race change is the No Heal conversion at `$005A0420`, a transcribed
+  // block this routine makes, reached through the flag the cast writes.
+  // No build but Warlord has reconstructed training-site code, so their persistent loadout and
+  // veterancy positions are deduced. Warlord's own `training:weaponQuality` is deduced too: it
+  // merges five `CreateUnit.CAS` material writes into one step and takes the first entrance's rank
+  // (F244.2). NOTE: this restates `DEDUCED_POSITIONS` (`stats_manifests.js`)
+  // on purpose — the check is an independent statement of which positions the evidence fixes, so
+  // reading the calculator's own table would make it vacuous — but the two must be edited
+  // together and nothing enforces that.
+  const deducedTrainingLoadout = ['training:weaponQuality', 'training:veterancy'];
   const deducedInsideTranscribedRegion = {
-    'mom_1.31': [],
-    'mom_cp_1.60.00': [],
+    'mom_1.31': deducedTrainingLoadout,
+    'mom_cp_1.60.00': deducedTrainingLoadout,
     // CoM 1's Focus Magic position is inferred from what its recompute writes after Warp.
-    'com_6.08': ['c:focusMagic', 'c:raiseDead'],
-    'com2_1.05.11': deducedIdentityC,
-    'com2_warlord_1.5.12.9': deducedIdentityC,
+    'com_6.08': [...deducedTrainingLoadout, 'training:armorQuality',
+      'c:focusMagic', 'c:raiseDead'],
+    'com2_1.05.11': [...deducedTrainingLoadout, 'training:armorQuality'],
+    'com2_warlord_1.5.12.9': ['training:weaponQuality'],
   };
   for (const version of engineVersions) {
     const chain = statChain(version);
@@ -228,7 +237,7 @@ function runCanonicalVersionScopeChecks(ctx) {
     // deduced positions inside them.
     const expectedProvisional = keys.filter(key => {
       const phase = key.slice(0, key.indexOf(':'));
-      if (['template', 'cast', 'immunity', 'a', 'e'].includes(phase)) return true;
+      if (['template', 'immunities', 'buffs', 'debuffs', 'a', 'e'].includes(phase)) return true;
       return (deducedInsideTranscribedRegion[version] || []).includes(key);
     }).sort();
     const observedProvisional = chain.filter(entry => entry.provisional)
@@ -375,7 +384,7 @@ function runCanonicalVersionScopeChecks(ctx) {
   assert(dosThrew, 'Calling GetEffectiveResistance with a DOS version is caught by the call-site check');
 
   // --- 4a. the immunity curse strip, per version ---
-  // Since F199 it is `immunity:immunityCurseGating`, an ordinary step at the head of every chain
+  // Since F199 it is `immunities:immunityCurseGating`, an ordinary step at the head of every chain
   // writing ten record fields, so the sweep in section 6 reaches it like any other write. What
   // the sweep cannot say is *which* curses each immunity blocks, so that is checked here — through
   // `deriveUnitStats`, which is the only path a page can take. Eye of Heaven is Warlord-only,

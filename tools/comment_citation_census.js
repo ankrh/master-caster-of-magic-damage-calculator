@@ -63,14 +63,15 @@ const POINTER = new RegExp(
   [/Reference docs\/|Unit rosters\/|SPEC\.md|BACKLOG\.md|PROVENANCE\[|STAT-FORMULA\[|\.(?:pas|CAS|INI|c)\b/.source,
     ADDRESS.source].join('|'));
 
-// The twelve formula-bearing sources: `provenance_audit.js`'s `calculatorFiles`, which owns
-// "which sources carry source-authored stat formulas", plus the two that order them —
-// `steps.js` (the step runner and version-scope table) and `stats_manifests.js` (the per-version
-// chains). Both are excluded from the audit for carrying no formula of their own, but both state
-// engine behavior in prose, which is what this census is about.
+// The thirteen censused sources: `provenance_audit.js`'s `calculatorFiles`, which owns
+// "which sources carry source-authored stat formulas", plus the three that order and classify
+// them: `steps.js` (the step runner and version-scope table), `stats_manifests.js` (the per-version
+// chains) and `stats_origins.js` (the ability-key origin table). All three are excluded from the
+// audit for carrying no formula of their own, but all three state engine behavior in prose, which
+// is what this census is about.
 const SOURCES = require('./provenance_audit.js').calculatorFiles
   .map((p) => p.replace(/^Calculator\//, ''))
-  .concat(['steps.js', 'stats_manifests.js']);
+  .concat(['steps.js', 'stats_manifests.js', 'stats_origins.js']);
 
 function scan(file) {
   const lines = fs.readFileSync(path.join(repoRoot, 'Calculator', file), 'utf8').split(/\r?\n/);

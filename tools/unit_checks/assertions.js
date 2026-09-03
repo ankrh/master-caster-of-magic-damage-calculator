@@ -139,6 +139,13 @@ function modernRecordForSharedSlot(ctx, rtbType, rtb) {
   return {};
 }
 
+// The entries of a projected chain that are writes. A projection also carries the `a:baseCopy`
+// boundary marker, which moves no value, so a check about "the first modifier" reads this rather
+// than `entries[0]`.
+function traceWrites(projected) {
+  return ((projected && projected.entries) || []).filter(entry => !entry.boundary);
+}
+
 // A primitive export would freeze at zero, so the total is read through a function.
 function assertionTotal() {
   return assertionCount;
@@ -146,5 +153,5 @@ function assertionTotal() {
 
 module.exports = {
   assert, assertClose, assertDistSumsToOne, assertEqual, assertionTotal, assertSameKeyList,
-  baseUnitInput, evalInContext, modernRecordForSharedSlot,
+  baseUnitInput, evalInContext, modernRecordForSharedSlot, traceWrites,
 };

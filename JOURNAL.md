@@ -3,6 +3,1108 @@
      See global CLAUDE.md. -->
 
 # Journal
+## 2026-09-03 — The modern No Heal conversion is one step, and CoM 1 keeps its own two
+
+User ruling, 2026-09-03: the modern engines get one `c:noHealConversion` that both Raise Dead and
+Mystic Surge trigger. The question came out of F244.3a's classification of `raiseDead`.
+
+**Why the old shape was wrong.** `c:raiseDead` and `c:mysticSurge:race` were two steps, both scoped
+to CoM 1 and both modern builds, both writing `race = 'No Heal'; fantastic = true`. In the modern
+engines that claims two blocks where the binary has one: the cast writes a *flag* on the permanent
+record (`Spells.InitializeCombatSpellcasting.pas`, `B^.CombatEnchantmentFlags[EncNoHeal] := True`),
+Mystic Surge derives the same flag during the recalculation at `$005A016D`, and the single
+conversion at `$005A0420` reads it — `if U.CombatEnchantmentFlags[EncNoHeal] then U.race := 21;
+U.Fantastic := True`. One block, two flag sources.
+
+**The flag needs no record field.** That conversion is its only reader in either engine family, so
+modelling the reader with a disjunctive gate is equivalent to carrying the flag, and the state the
+block leaves — the race — is what every consumer actually asks. CoM 1 confirms it independently by
+having no flag at all: `unitcalc.c:1118` writes the race for Mystic Surge during recalculation, and
+`combat.c:5325` writes it for Raise Dead at the resurrection site.
+
+**What each version has now.**
+
+| Version | Steps |
+|---|---|
+| CoM 1 | `c:mysticSurge:race` (its own block, com1:0x8F79E) and `c:raiseDead` (the resurrection write, com1:0xAB2B8) |
+| CoM2, Warlord | one `c:noHealConversion`, gated on Mystic Surge or Raise Dead |
+
+The two modern chains lose their only deduced identity position with it: `$005A0420` is a
+transcribed block of the recalculation, where the spell write `c:raiseDead` stood for was not.
+`DEDUCED_IDENTITY_C_POSITIONS` is retired and CoM 1 states its own list.
+
+**Measured.** `derivation_equivalence` 0 differing of 52440. The two merged steps were chain-adjacent
+in both modern versions, so nothing could read the race between them; the chain dump differs by
+exactly those two lines becoming one, in CoM2 and Warlord, with CoM 1 untouched. A probe of all four
+Mystic Surge / Raise Dead combinations in all five versions gives the identical unit type in every
+cell.
+
+**Anchors.** `rebind_provenance_anchors.js --write` moved three keys: `noHealConversion` is new,
+and `mysticSurge:race` and `raiseDead` narrowed to CoM 1 as their modern spans regrouped under it.
+No new evidence — the same reviewed spans, regrouped, which is the rebinding tool's stated use.
+
+**Still open.** CoM 1's `c:raiseDead` is still a deduced region-`c` position for a write the engine
+makes at the unit's creation moment. Moving it to `training` is its own item and will move numbers
+in CoM 1, where the race would become visible to everything in regions `a`-`c` that reads it.
+
+Tests: `node_unit_checks` 20,327; `npm run provenance` 304/304; `cas_citation_audit` PASS.
+
+## 2026-09-03 — Magic Immunity stops gating Temporal Twist
+
+User ruling, 2026-09-03, acting on the disagreement F244.3a's classification exposed. `temporalTwist`
+leaves `MAGIC_IMMUNITY_GATED_CURSES` (`stats_identity.js`), so the artificial curse strip no longer
+clears it and a Magic Immune Warlord unit is affected by the Twist like any other.
+
+**The source.** Warlord's block gates on `HASCOMBATGLOBAL(W,CGTemporalTwist,2)` (`UnitCalc.CAS`, the
+`!NOTEMPORALTWIST!` block) and then clears `AFirstStrike`, `ANegateFirstStrike` and `ATeleporting`
+and applies movement penalties. Read end to end, from the gate to the label, it carries no per-unit
+flag and no immunity term of any kind — its only other conditions are Entangle, Non-Corporeal and
+base Fantastic. The spell writes the global (`COSpell.CAS`), a combat can open with it already set
+(`EnterCombat.CAS`), and it expires on a one-in-three roll each turn (`CombatEndTurn.CAS`); none of
+those touches the unit. So there is no roll for an immunity to refuse, which is the same reason
+Black Prayer and Eternal Night's Darkness were never on the list.
+
+**Measured.** `derivation_equivalence` reports 51605 of 52440 cases differing, in exactly two field
+signatures and no numeric field at all: `abilities.temporalTwist` `false -> undefined` in 51540
+cases, which is the key ceasing to be a seeded record field, and `false -> true` in 65, which is the
+fix — the cases where the strip had been clearing a Twist the engine leaves standing. The damage
+change is in combat resolution, which the digest does not cover: a probe of a Warlord attacker with
+First Strike, Temporal Twist and Magic Immunity against a plain defender moves expected damage to
+the attacker from 0 to 10, because the attacker now loses First Strike and the defender survives to
+counterattack.
+
+**The fixture that asserted the old rule.** `magicImmunityGatesTemporalTwist` failed, as it should
+have — it pinned the behaviour this ruling overturns. It is re-aimed rather than deleted, and
+renamed `temporalTwistBypassesMagicImmunity` after its sibling `blackPrayerBypassesMagicImmunity`:
+same fixture, `dmgToA` 0 becomes 5, and the vacuity note now says the immunity's *inertness* is the
+subject. `CURSE_LIST_KEYS_NOT_DEBUFFS`, the exemption F244.3a added to declare the disagreement,
+is deleted with the disagreement.
+
+**Not fixed, and unrelated.** `preset_vacuity_sweep.js` reports one `name-binds-nothing`,
+`lavaSmelterFlameBladeWarlord`. It is pre-existing: a worktree at `7899bd7` reports the identical
+finding and count, and no Lava Smelter preset or control was touched here.
+
+Tests: `npm test` 143 passed; `node_unit_checks` 20,328; `npm run provenance` 303/303;
+`cas_citation_audit` PASS.
+
+## 2026-09-03 — F244.3a: every ability key gets an origin, and the origin table gets a check
+
+`Calculator/stats_origins.js` is new: for each of **234** raw ability keys, one row per **origin** —
+how the unit comes to carry the key in the engine — with that origin's version scope and the
+producers that make it. `abilityOriginRows` halts on a key no row claims; `abilityOriginPhases` and
+`abilityOriginIsTemplate` are what F244.3b reads. No calculation code changed: the chain dumps are
+byte-identical and `derivation_equivalence` is **0 differing of 52440**.
+
+### The key universe, enumerated rather than restated
+
+234 keys: the **202** distinct calc keys of `ABILITY_DEFS` and `ENCHANTMENT_DEFS` (218 controls, 16
+of them aliases naming a key another control already names), plus **32** keys no control names — the
+ones a pre-sequence transform or a positioned step writes. The check enumerates all three sources
+from the code: the defs through `abilityUiDefs`, the transforms through `TRANSFORM_WRITES` (pinned by
+running each transform), and `MAGIC_IMMUNITY_GATED_CURSES`, `POSITIONED_GRANT_FIELDS`,
+`POSITIONED_GRANT_WRITES`, `POSITIONED_GRANT_VALUE_WRITES` and `DERIVED_OUTLANDER_STATE_KEYS`
+directly.
+
+### Nine origins, not six
+
+| Origin | Rows | What it is |
+|---|---:|---|
+| `template` | 48 | a roster/card fact the template step seeds |
+| `training` | 20 | a `CreateUnit.CAS` / `OverlandEndTurn.CAS` / constructor write |
+| `buffs` | 53 | a beneficial cast's permanent write |
+| `debuffs` | 13 | a curse's permanent write |
+| `regionA` | 1 | the Golem's `elemArmor`, a hard-coded region-`a` unit-type grant |
+| `regionB` | 44 | a `UnitCalcPre.CAS` grant |
+| `regionC` | 2 | `c:trueSight`'s `illusionImmunity`, and Dark Force's item-power grant |
+| `regionD` | 20 | a `UnitCalc.CAS` grant, including the two the calculator makes post-chain |
+| `nonRecord` | 98 | the permanent record never carries it |
+| `derived` | 7 | a calculator-internal key standing for no engine flag |
+
+306 rows over 234 keys; **43 keys have more than one origin**, `missileImmunity` with five. The item
+named six classes; two are split. Region-`b`/`d` became four tokens because two real grants sit in
+regions `a` and `c` and `ORIGIN_PHASE` has to give F244.3b the right phase for them. Non-record input
+split off `derived` so a key the *engine* never carries is not confused with one the *calculator*
+invented.
+
+The discriminator for a Warlord effect is the script's own gate: `GETENCHANTMENTFLAG(U,Enc…)` is a
+flag on the unit, so a cast; `HASCOMBATGLOBAL(W,CG…)`, `HASGLOBAL(W,GE…)`, `CITYENCHANT(C,CE…)` and
+`SPELLSTATE(W,…)` are not. That is what moved Plague, Rally, Dishearten Prophesy, Beat of Swiftness,
+Great Unbinding and Lucky Star to `nonRecord` and kept Insulation, Divine Protection, Venom,
+Sanctify, Blaze of Glory, Colossal Strength, Shadow Strike, Fiery Fury, Vampirism, Revenant, Zeal and
+the Warlord Berserk in `buffs`. For the modern builds the equivalent is
+`inferred_CombatGlobals[…][CG…]` in `Units.RecalculateUnits.pas`, which is how Breakthrough, Supreme
+Light, Blazing March, Prayer, High Prayer and Black Prayer are `nonRecord`.
+
+### What it says to F244.3b
+
+Of the **36** non-stat record fields the four grant and curse lists seed (38 with `race` and
+`fantastic`), **none is template-only**. Nineteen have no `template` row at all and leave the seed
+entirely: the ten curse flags plus `fieryBlade`, `armorclad`, `rebuild`, `trueSight`, `psychoForce`,
+`pneumaField`, `blackpowder`, `energyCannon` and `wallCrusher`. The other seventeen keep a template
+row and gain positioned writes for their non-template origins.
+
+`ORIGIN_PHASE` gives the phase each positioned write takes, and with it what its `when` may read: a
+`training` write runs four phases before `a:baseCopy`, so its gate cannot read `ctx.base` at all; a
+`buffs` or `debuffs` write reads the record as the earlier phases left it, which is what makes the
+ten curse flags refusable by the immunities the `immunities` phase wrote (the 2026-09-02 ruling); a
+region write reads the calculated record at its own rank.
+
+### The home
+
+A new `Calculator/stats_origins.js`, `data-scope="core"`, between `stats_manifests.js` and
+`stats_identity.js`. Not `steps.js`: that file is indexed by step id and this table by ability key,
+and 1,100 lines of rows would swamp it. Not `stats_identity.js` either, though it owns
+`POSITIONED_GRANT_*` and the curse lists — the check reconciles the two rather than merging them, and
+that file is already 1,012 lines. It joins `provenance_audit.js`'s `excludedJavaScript` beside
+`stats_manifests.js` (no `STAT-FORMULA` site of its own; its `cast:`/`input:` producers are mentions
+whose anchors stay on the step that reads the flag or the transform that makes it) and, for the same
+reason `steps.js` and `stats_manifests.js` are there, `comment_citation_census.js`'s `SOURCES`.
+
+### The check
+
+`tools/unit_checks/ability_origins.js`, **3,805 assertions**, in `node tools/node_unit_checks.js`
+(16,209 → 20,014). Universe equality; row shape and one row per origin; a `step:` producer names a
+real step whose id's phase prefix equals `ORIGIN_PHASE[origin]`; a row whose producers are all steps
+carries exactly the union of their `STEP_VERSION_SCOPES` scopes; a `template` row's versions are
+exactly the versions a control offers the key in (`abilityVersionGated`) and the union over a key's
+rows covers every version a control offers it; `debuffs` against the two curse lists with declared
+exemptions; every seeded record field has an origin that can take a position, and nothing without one
+is a record field; and each transform writes exactly the keys the table classifies for it, measured
+by running it over the strayed, owned and five ascension Marionette branches and the Crusader and
+Paladin Basilica branches.
+
+Mutation-tested rather than assumed: renaming a key, widening a `template` row's scope, relabelling
+Bless as a curse and moving a producer's step to the wrong phase were each caught.
+
+**What it cannot see.** It cannot check that an origin is *right* — only that it is well formed and
+consistent with the control set, the step table and the grant lists. A key classified `buffs` that is
+really a combat global passes. `TRANSFORM_WRITES` is the one hand-stated list; the runs beneath it
+pin it, but a branch no probe reaches would go unmeasured.
+
+### Two corrections made while classifying
+
+- **Hillfort is not a training grant.** Its Missile Immunity write is the defending-city block in
+  `UnitCalcPre.CAS` (region `b`) with a counterpart in `UnitCalc.CAS` (region `d`), so the control
+  sits on `missileImmunity`'s region rows, not its training row. The first draft had it under
+  `training` beside Lava Smelter.
+- **Two region-`d` ability writes run after the chain.** `applyHierophanyAbilityStrip` (13 clears)
+  and `applyAngelicGuardiansEffects` (`exorcise`) both transcribe a `UnitCalc.CAS` block but run on
+  the finished ability map — the census's defect 5. A clear is a write, so each key they touch takes
+  a `regionD` row naming the post-chain producer.
+
+### Findings, described and not filed
+
+1. **`rust` is a per-unit curse outside `MAGIC_IMMUNITY_GATED_CURSES`.** *Faithfulness.* Its gate is
+   `GETENCHANTMENTFLAG(U,EncRust,0)` and its `spells.ini` record `[88]` carries no `NonMagic`, so the
+   membership rule the list states in its own comment puts it on the list. It is not on it, and
+   adding it would move numbers.
+2. **`temporalTwist` is on that list and looks like the excluded class.** *Faithfulness.* Its Warlord
+   gate is `HASCOMBATGLOBAL(W,CGTemporalTwist,2)` and `spells.ini [273]` is a both-sides combat
+   enchantment — the shape the list's comment excludes Black Prayer and Darkness for.
+3. **`bombsGrenades` and `upgradedExplosive` are dead keys.** *Other.* Both are stripped from the
+   input map by `DERIVED_OUTLANDER_STATE_KEYS`, and nothing writes or reads either as a key: the
+   calculator derives both as pre-sequence constants.
+4. **The three `luckyPhase*` markers stand for no engine write**, which F147/F205 already own.
+5. **`hierophany`, `mislead` and `soulFlay`** are per-unit curses outside the lists for stated
+   reasons, now recorded in `DEBUFFS_OUTSIDE_CURSE_LISTS` rather than left implicit.
+6. **Two census counting corrections.** F244.1 says six pre-sequence transforms and lists seven; and
+   it says the transforms write 56 keys, 20 on the record and 36 not. Counting the Golem shaping's
+   `elemArmor`, which it names as a transform but drops from both totals, the figures are **seven
+   transforms** and **57 / 20 / 37**.
+7. **T8's stated count is stale.** `comment_citation_census.js` reports 275 unsourced multi-line
+   blocks before this item and 281 after it; `TASKS.md` T8 still says 163.
+
+### Review round (Method A, GPT 5.6 Sol)
+
+REVIEW_PLACEHOLDER
+
+### The review round, and the eight rows it overturned
+
+The subtask agent was killed by a session limit at 22:40 on 2026-09-02, after the review landed and
+before its findings were applied. The main agent applied them on 2026-09-03, re-verifying every
+cited line against the sources first rather than taking the review's word.
+
+`.reviews/F244.3a.review-of-Claude.md`, verdict *changes requested*. Eight origin rows were wrong,
+and all eight are confirmed:
+
+| Key | Was | Is | Source |
+|---|---|---|---|
+| `temporalTwist` | `debuffs` | `nonRecord` | `UnitCalc.CAS` tests `HASCOMBATGLOBAL(W,CGTemporalTwist,2)` |
+| `blur` (DOS) | `buffs` | `nonRecord` | side-indexed `combat_enchantments[BLUR_ATTKR/BLUR_DFNDR]`, `combat.c:4765`, `:4769` |
+| `survivalInstinct` | `buffs` | `nonRecord` | `unitcalc.c:2653`; `Units.RecalculateUnits.pas:1849` |
+| `blazingEyes` | `buffs` | `nonRecord` | `Units.RecalculateUnits.pas:1892` |
+| `innerPower` | `buffs` | `nonRecord` | `Units.RecalculateUnits.pas:1867` |
+| `reinforceMagic` | `buffs` | `nonRecord` | `Units.RecalculateUnits.pas:1902` |
+| `charmOfLife` | `buffs` | `nonRecord` | `unitcalc.c:1622`, `:1737`; `Units.RecalculateUnits.pas:1938` |
+| `darkForce` | `nonRecord` | `regionC` | `Units.RecalculateUnits.pas:1084-1085`, the item-power loop, after the UnitCalcPre hook |
+
+Seven would have had F244.3b manufacture a permanent-record write for something the record never
+carries; `darkForce` had the opposite error, discarding a real recalculation-time grant.
+
+Two keys were missing from the universe, both compatibility reads no definition exposes:
+`lavaSmelter`, the legacy selector `applyLavaSmelterGrant` still accepts, and `baseFantastic`,
+identity metadata the combat sources read off the ability map as a fallback. Both are classified,
+and `COMPATIBILITY_ABILITY_KEYS` in the check asserts each is still read where it says it is, so the
+list cannot rot.
+
+`raiseDead` moved from `buffs` to `nonRecord`. No engine flag of that name exists: CoM 1's routine
+sets none, and the modern cast writes a different key, `B^.CombatEnchantmentFlags[EncNoHeal]`
+(`Spells.InitializeCombatSpellcasting.pas:85`). Ruled 2026-09-03 and reversible; classifying the
+key by the action that caused it would put it back in `buffs`.
+
+The check was tightened on three counts the review named. Each producer form now admits only the
+origins it can stand for (`cast:` → `buffs`/`debuffs`, `input:` → `nonRecord`, the new `grant:` →
+training or a region, bare `control` → `template`), which is what makes the eight errors above
+mechanically impossible to reintroduce. `TRANSFORM_WRITES` is asserted equal to
+`ABILITY_ORIGIN_TRANSFORMS`, closing a hole where naming a transform on one side only silently
+skipped its write check. And the header's claim that the table "cannot drift from the control set or
+the chain" was false for most rows; it now says which two row classes are re-derived and states
+plainly that every other scope is read off the sources by hand and is not mechanically visible.
+
+### A defect the classification exposed: Temporal Twist is not a per-unit curse
+
+`MAGIC_IMMUNITY_GATED_CURSES` carries `temporalTwist`, so the calculator seeds a record field for
+it and lets Magic Immunity refuse it per unit. The Warlord block tests a side-wide combat global and
+reads no per-unit flag, so there is nothing for an immunity to refuse. Removing it from the list
+would move numbers, and F244.3a moves none, so the disagreement is declared in
+`CURSE_LIST_KEYS_NOT_DEBUFFS` with its evidence and the check enforces the declaration in both
+directions. *Category: faithfulness.* Warlord only.
+
+### Measured after the revision
+
+`derivation_equivalence` 0 differing of 52440 against this subtask's own before state; chain dumps
+byte-identical; `node_unit_checks` 20,330 (the `ability_origins` family 4,121); `npm run provenance`
+303/303; `cas_citation_audit` PASS; `npm test` 143 passed.
+
+## 2026-09-02 — Ruling: no curse strip in `immunities`; a curse is refused at its own `debuffs` write
+
+User ruling, 2026-09-02, on the follow-on F248 raised. The `immunities` phase writes the marked
+immunities themselves (Magic Immunity, Illusion Immunity, …) to the permanent record. A curse is
+not "stripped" afterwards: it is a `debuffs` write whose own eligibility test, read against the
+record as the earlier phases left it, refuses it where an immunity stands. That is what the
+CLAUDE.md phase table already says; `immunities:immunityCurseGating` and its `finishedImmunities`
+cross-boundary read are the stand-in to retire. Proposed as a TASKS item, awaiting approval; it
+belongs with F244.3, whose seed change is what makes the curse flags positioned writes.
+
+## 2026-09-02 — F248: `cast` and `immunity` become `immunities`, `buffs` and `debuffs`
+
+`STEP_PHASES` is now `template, training, immunities, buffs, debuffs, a, b, c, d, e,
+attackSpecific`, matching the phase table CLAUDE.md carries. Seven scope rows moved: 1 to
+`immunities` (`immunityCurseGating`), 5 to `buffs` (`rebuild`, `spiritLink`, and Destiny's three
+permanent writes), 1 to `debuffs` (`rust:material`, which F244.2 added after F248 was filed — so
+`debuffs` starts with one entry, not empty as the item said). 56 key references and 12 quoted
+phase tokens rewritten across 14 files, plus the four `TASKS.md` bodies that named the retired
+tokens (F239, F242, F245, F246) and two Priority rows.
+
+**Three chain entries move, not one.** The item predicted a chain dump byte-identical after
+normalising the prefixes. It is not:
+
+- Warlord: `rust:material` from between Spirit Link and Destiny to behind `buffs:destiny:level`,
+  since every `debuffs` step now follows every `buffs` step. (Anticipated when the subtask was
+  briefed.)
+- **CoM2 and Warlord: `immunityCurseGating` from behind Destiny's three permanent writes to ahead
+  of them**, since `immunities` ranks before `buffs`. Nothing anticipated this, and it is the
+  larger of the two moves. MoM 1.31, CP 1.60 and CoM 1 are untouched: they have no cast-time
+  entries, so their strip already sat where the new ranks want it.
+
+Normalising the new prefixes back gives a dump identical to the old one except those three lines.
+
+**Neither move can change a number**, because the field sets are disjoint. `immunityCurseGating`
+writes only the ten `MAGIC_IMMUNITY_GATED_CURSES` flags and reads only those flags plus
+`finishedImmunities`, which is computed before the sequence and is therefore position-independent
+(the declared cross-boundary read, `tools/unit_checks/identity_record_choice.js`). The five `buffs`
+steps and the one `debuffs` step write `race`, `fantastic`, `supernatural`, `level`, `atk`, `def`,
+`mechanical`, `res` and `weaponMaterial`, and their `when` predicates read `rebuild`, `rustActive`
+and `destinyActiveForUnit` — no curse flag among them.
+
+Measured rather than argued: a saturating probe over all five versions × {normal, hero,
+fantastic_life} × four weapon materials × a 6-bit mask on {Destiny, Rebuild, Spirit Link, Rust,
+Magic Immunity, Illusion Immunity}, with all ten strippable curses and every material / level /
+Mechanical / identity consumer on at once, recording ~25 finished fields and the ten curse flags
+per case: **0 differing of 3840**. `derivation_equivalence` **0 differing of 52440**, as expected —
+the digest's cases are solo controls plus seeded draws, so it could not have seen either reorder
+on its own.
+
+The pre-change tree both comparisons used was reconstructed (sources copied, rename reversed
+textually) and then verified two ways: its chain dump is byte-identical to the dump taken from the
+real tree before any edit, and its digest is 0-differing against the digest taken from the real
+tree before any edit.
+
+**The one thing that reads oddly.** `immunities` now holds a curse *clear*, not an immunity write,
+because that is what the item specified. Under the CLAUDE.md table `immunities` is where the marked
+immunities are written before anything tests them and `debuffs` is where a curse's own eligibility
+test consults them. The artificial strip is today's stand-in for that test; when F242 and F244.3
+give the debuffs real gates, whether the strip still belongs in `immunities` is worth re-asking.
+
+Also fixed while there: `stats_identity.js`'s Destiny comment still called it "a `base` step", a
+token F210 retired.
+
+Tests: `npm run provenance` 303/303 (PROVENANCE ids carry no phase prefix, so
+`tools/provenance_verified_anchors.json` needed nothing); `node tools/cas_citation_audit.js` PASS;
+`node_unit_checks` 16208 passed, unchanged in count by this item; `npm test` 143 passed, no flaky, no new warning..
+
+Method A. The GPT review (`.reviews/F248.review-of-Claude.md`) confirmed the disjointness argument
+independently — it traced the strip's reads and the six cast-time steps' predicates and agreed
+neither reorder is observable — accepted the reconstructed baseline as sound for a mechanical
+rename, and endorsed putting the artificial clear in `immunities` as the consequence of an immunity
+rather than a curse's own write. Its four cleanup findings were all accepted: `TASKS.md`'s
+queue paragraph still called the rename pending, `version_scope.js`'s `constructibleStepKeys`
+scanner still matched the retired tokens in its phase alternation, `stats_sequence.js` still said
+"the four phases" above `a:baseCopy`, and F236's body still named "the **immunity** phase". Nothing
+was declined.
+
+## 2026-09-02 — F244.2: the weapon material, the armour material and the experience level become record fields
+
+Three persistent fields joined the stat record — `weaponMaterial`, `armorMaterial`, `level` — each
+seeded at the roster template's value (`normal`) and moved only by a positioned write. `c:weapon`,
+`c:orihalcon` and `c:level` read them at their own ranks instead of closing over a constant, and so
+do `c:discipline`, `b:soulFlay`, `d:psychoForce`, Heavenly Light's material tail and the two DOS
+gaze ladder magnitudes.
+
+### Seven new steps
+
+| Key | Scope | What it is |
+|---|---|---|
+| `template:constructCatapult:weapon` | CoM 1 | `_UNITS[si].mutations = UM_MAGIC_WEAPONS` in the Catapult constructor (com1:0x8EEA4-0x8EEAF), the one assignment rather than a floor |
+| `training:weaponQuality` | all | what the training city left in the weapon-quality field |
+| `training:armorQuality` | CoM 1, CoM2, Warlord | the same for `EncOrihalcon` |
+| `training:veterancy` | all | the same for the persistent Level |
+| `cast:rust:material` | Warlord | Rust's three weapon-material clears |
+| `cast:destiny:level` | modern | Destiny's `B.level := 1` at $0059A445 |
+| `c:level:fantastic` | modern | `if B.Fantastic then U.level := 1` at $0059A118 |
+
+`training:artificer` gained a fourth write, the block's own first line
+`SETENCHANTMENTFLAG(U,EncMagic,1,1)`; it is a floor at `magic`, not an assignment, because the city
+ore block may already have set mithril or adamantium.
+
+### Positions, and what is transcribed
+
+Warlord's `training` group is `CreateUnit.CAS` line order (F204). `armorQuality` (the ore block's
+`EncOrihalcon`, line 70) and `veterancy` (the veterancy block at line 732, behind `armorclad` at
+702) are each one block's write and are non-provisional there. No other build's training-site code
+is reconstructed, so their `training` positions are in `DEDUCED_POSITIONS` even though the phase as
+a whole is transcribed — the mechanism `DEDUCED_POSITIONS` exists for.
+
+`weaponQuality` is one position for **five** entrances: the Alchemist retort at line 34, a Magic
+Perimeter city at 53, and the ore block's `EncMagic`/`EncMithril`/`EncAdamant` at 63-65. Four of
+the five sit *behind* `training:artificer` (line 37), so the chain's line-34 rank is the first
+entrance rather than the one a given unit took, and the review round was right that Warlord cannot
+claim it as transcribed either; it is deduced in all five builds. No number depends on the choice:
+the engine reads the highest quality flag standing in the record and Artificer's write is a floor
+at Magic Weapons, so mithril-then-artificer and artificer-then-mithril leave the same quality, and
+the control states the finished value rather than which writer produced it.
+
+### Three rulings, and how they landed
+
+**Rust's material clear.** The main agent's ruling was to model it now rather than leave it a
+pre-sequence constant once `c:weapon` reads the record. `cast:rust:material` clears
+`weaponMaterial` alone. The `SRust` block clears **nine** flags, `EncOrihalcon` among them, and
+`training:armorQuality` has just given the calculator the field that clear would write — but
+clearing it would move numbers, and F242's body says its material half should not. So the step
+carries three of the nine and says at its own comment that the other six, `EncOrihalcon` included,
+belong beside it and are F242's. F242's body was rewritten to match: it now asks for six clears,
+not nine, and says all six move numbers.
+
+**The Fantastic gate, and `ctx.base.fantastic`.** The ruling was that the level gate should read
+`ctx.base.fantastic`. It half can and half cannot, for two reasons found while implementing:
+
+- A `training` step runs four phases before `a:baseCopy`, which is the only publisher of
+  `ctx.base` (F247). A training-time gate therefore cannot read the permanent record at all.
+- `ctx.base.fantastic` is not `permanentFantastic` in CoM 1. Three `template`-phase conversions —
+  Zombies, Construct Catapult, the summon branch — write `fantastic` on the calculated record
+  before the copy, so a CoM 1 Construct Catapult publishes `ctx.base.fantastic === true` while
+  `permanentFantastic` is false. Reading the copied record for the CoM 1 level gate would withhold
+  the ladder from that unit. The post-run assertion at `stats.js` guards the agreement for the
+  modern builds alone, and that is why.
+
+So the read went where the engine makes it. `$0059A02C..$0059A172` is the first represented block
+after the UnitCalcPre hook: an `EncHeroism` arm that floors the calculated level at 4, and an else
+arm that forces it to 1 when the **permanent** record is Fantastic. Only the else arm is modelled —
+there is no Heroism control — and it is `c:level:fantastic`, `SCOPE_MODERN`, gated on
+`runCtx.base.fantastic`, placed ahead of `c:destiny` where its address puts it. The DOS builds have
+no reconstructed counterpart, so they keep the exclusion on the training gate, where
+`trainingLevelEligible` is `isCoM2 || !isFantasticBase || spiritLinkLevelWidening`.
+
+That split also let Destiny's own permanent level write become a step. Without it the modern
+Fantastic reset would come too late for `b:soulFlay`, which reads the level in region `b`, one
+region ahead of `c`. `cast:destiny:level` is a `cast` write, so every reader sees the same value
+the pre-sequence constant used to give them. It is a separate id from `cast:destiny` for the reason
+`cast:destiny:supernatural` is: the identity conversion must keep writing `race` and `fantastic`
+and nothing else, which is what makes `targetingIdentity` exact.
+
+**The Spirit Link widening** is `spiritLinkLevelWidening` (`stats.js`), read at both the training
+gate and `c:level:fantastic`, and both comments date it 2026-09-02 and name F245 as what retires
+it: once Spirit Link's cast writes `AFantastic := 0` on the permanent record, `ctx.base.fantastic`
+is false there and the term has nothing to do.
+
+### Result fields, read back after the run
+
+`effectiveWeapon`, `weaponUpgradedByHW`, `wraithFormBypassesWI`, `weaponUpgradedByWoF`,
+`weaponUpgradedByHeavenlyLight`, `modernEncMagicFromMaterial` and
+`combatDisciplineNegatesFirstStrike` are read by combat resolution, not by a step, so they moved
+below the run and read `statUnit.weaponMaterial` / `statUnit.level` — the finished record — rather
+than staying pre-sequence constants. `wpn` and `lvl` in the returned object are republished the
+same way. None needed a new declared cross-boundary read: a post-run read of the finished record is
+what `hp`, `race` and every other returned stat already is. `artificerMagicWeapon` had no reader
+left and was deleted.
+
+The three new fields are strings, so they never reach a numeric stat's tooltip projection — the
+same as `race` and `fantastic`. They do reach `statTrace`, the chain dump and the execution ledger.
+Whether the Weapon Type / Armor Type / Unit Level controls should get a hover chain of their own is
+a UI question this item did not open.
+
+### Measured
+
+- `derivation_equivalence` digest: **0 of 52440 differ** (0 field differences), against the state at
+  the end of F244.1.
+- Saturating probe, **57600 cases, byte-identical**: 5 versions × 3 unit types × 2 melee values ×
+  5 slot types × 3 levels × 4 weapon materials × 2 armour materials × Artificer × Rust ×
+  Spirit Link × Destiny, with every consumer of the three fields switched on (Discipline, Soul
+  Flay, Psycho Force, Heavenly Light, Holy Weapon, Flame Blade, Fiery Fury, Metal Fires, Wall of
+  Fire, Wraith Form, Focus Magic, Lionheart, Endurance, Mechanical). The digest cannot see an
+  intra-phase reorder or a two-control interaction, which is what this probe is for.
+- Chain dumps: exactly the seven new keys inserted at their positions; nothing else moved, and
+  every `provisional` flag is as described above.
+- `node_unit_checks.js` 16,208 assertions, all passing (16,090 before). `npm run provenance`
+  303/303 (296 before F247's `baseCopy`; seven new formula ids here). `cas_citation_audit.js` PASS.
+  `npx playwright test` 143/143.
+
+### The duplication this touched
+
+`DEDUCED_POSITIONS` is stated twice: in `Calculator/stats_manifests.js`, where `versionChain` reads
+it, and again in `tools/unit_checks/version_scope.js`, which asserts the chain's `provisional` flags
+against its own copy. The duplication is deliberate — a check that read the calculator's own table
+would be vacuous — but nothing enforces that the two are edited together, and this change had to
+edit both. Both now carry a note saying so.
+
+### Review round (Method A, GPT 5.6 Sol)
+
+`.reviews/F244.2.review-of-Claude.md`. It re-derived the digest (0 of 52,440), hashed the three
+probe runs and found them identical, ran `node_unit_checks.js` (16,208), the CAS audit and the
+provenance audit itself, and resolved all seven new stable spans against their claimed source
+regions. Two blocking findings, two should-fix, two nits.
+
+**Accepted, and fixed in this change.**
+
+- *`training:weaponQuality` cannot honestly claim one non-provisional Warlord position.* Right.
+  The step merges five `CreateUnit.CAS` material writes and takes the rank of the first, so a unit
+  the city equipped in mithril did not take its write at line 34. It is now in Warlord's
+  `DEDUCED_POSITIONS` as well, and the comment says why. Its `PROVENANCE[weaponQuality]` also
+  gained the Magic Perimeter entrance's span, which the comment named and the sources omitted.
+- *F245's body named the deleted `levelEligible`.* Rewritten to name `spiritLinkLevelWidening`,
+  `trainingLevelEligible` and the loadout gate, and to say what each has to become.
+- The two nits: twelve comments still spelling the pre-review step keys, and a
+  `versionChain` comment saying the two MoM deduced-position lists are empty when they no longer
+  are.
+
+**Declined, with reasons, and both are worth the next reader's attention.**
+
+- ***Destiny's level write executes before readers that precede it in the engine.*** The reviewer
+  is right about the executable's order — UnitCalcPre, then `$0059A118`, then `B.level := 1` at
+  `$0059A445` — and right that `cast:destiny:level` runs ahead of all three. But that is the
+  position `cast:destiny` and `cast:destiny:supernatural` already hold, and for the stated reason:
+  the Destiny block's permanent writes are the ones "a recalculation re-makes on every pass",
+  idempotent, so the record a *steady-state* pass starts from already carries them
+  (`stats_manifests.js`, the CoM2 chain's note). `B.level := 1` is an assignment and is idempotent
+  in exactly the same way. Modelling it at region-`c` rank instead would model the **first** pass
+  after the cast, which the calculator does not have a notion of, and would move numbers — which
+  F244.2 must not. It is a pre-existing ruling about Destiny's per-pass modelling, not something
+  this item introduced; if it is wrong it is wrong for `race` and `fantastic` too, and reopening it
+  is its own item.
+- ***`loadoutEligible` includes `destinyActive`, so a Destiny unit loses its weapon and armour.***
+  A real faithfulness defect, and the reviewer's reading of the sources is correct: Destiny writes
+  `B.race`, `B.Fantastic`, `supernatural`, `experience` and `level` and touches no material flag,
+  `ApplyMagicWeapons` gates on the three base material flags with no Fantastic test, and
+  `c:orihalcon` gates on `EncOrihalcon` alone. A modern unit with Destiny, Mithril and Orihalcon
+  therefore keeps both in the engine and loses both here. It is **pre-existing**: `loadoutEligible`
+  is unchanged by this item, the F244.1 census classes its `!permanentFantastic` term as a UI-only
+  gate (class (e)), `stats.js` says outright that the material block has no Fantastic gate in
+  either engine family, and two later items already own the term — F244.3h retires
+  `permanentFantastic` as a pre-sequence read, and F245's body expects this exact gate to move.
+  Fixing it here would move numbers against an item whose contract is that none move. Reported to
+  the user as a decision instead; category faithfulness.
+
+## 2026-09-02 — F244.1: census of the pre-sequence constants a step's gate or magnitude reads
+
+Report only; no `Calculator/` code changed. This entry is the census's home — the scratch copy
+under the run's scratchpad is a convenience for the following subtasks and is ephemeral.
+
+uncommitted changes, so `git status` is not a check on that claim — it is an author statement.
+
+### Method, and what the scan cannot see
+
+The universe is **every `when:` or `apply:` property whose value is a function expression** in
+`Calculator/stats.js`, `stats_sequence.js`, `stats_identity.js`, `combat_abilities.js`,
+`combat_effects.js` and `steps.js` — not only `statStep({…})` literals. That is what makes the
+wrappers and the post-construction patches visible. A lexical walk over the shared lexer
+(`tools/js_lexical_scan.js`) extracts each body and lists the identifiers it reads that are not its
+own parameters, its own locals, a JS built-in, or a property name. Each is then resolved to its
+declaration site, and the transitive closure over `deriveUnitStats`' own constants gives the
+helper-closure hop. The scripts live in the run's scratchpad and are ephemeral; the method is
+~150 lines and re-derivable from this paragraph.
+
+**333** function-valued `when`/`apply` properties, **220** distinct free identifiers, of which
+**169** are constants declared in `deriveUnitStats`' own scope (`Calculator/stats.js`). The rest are
+module-level helpers and tables, `getAbilityStatSteps`' own locals, and the locals of the builder
+that emits the step.
+
+A first pass that scanned only `statStep({…})` literals found 142 literals and 193 identifiers.
+The review round found it wrong in two ways, both fixed above and both worth recording because the
+same mistakes are easy to repeat:
+
+- **A ternary arm read as a property access.** The "skip `.x` and `?.x`" test was written as
+  "skip an identifier preceded by `.` or `?`", which silently drops the first operand of every
+  `a ? b : c`. That is how `baseHitMelee` — read by both halves of `template:baseThresholds` —
+  went missing.
+- **Three wrappers and two patches hidden from a literal scan** (below).
+
+Five things a `statStep({…})` scan cannot see:
+
+1. **`abilityStep(id, phase, {…})`** (`combat_abilities.js:659`), 44 call sites. Its object is the
+   third argument. Covered; see *The `getAbilityStatSteps` boundary*.
+2. **`chaosChannelsFireBreathWrite(ctx)`** (`stats_sequence.js:346`) returns the `writes`/`when`/
+   `apply` triple, which `chaosChannelsFireBreathStep` spreads into `statStep`. Its closures read
+   four pre-sequence constants — `channels`, `ccGrantsThisSlot`, `ccIndependentChannels`,
+   `ccFireBreathStrength` — all now in the tables.
+3. **`attackSpecificStep(id, writes, apply, when, sourceLabel)`** (`combat_effects.js:377`), **55**
+   call sites, positional arguments. Scanned separately: its `apply`/`when` closures read exactly
+   nine identifiers — `DOS_DEFENSE_FULL`, `DOS_DEFENSE_NONE`, `DOS_DEFENSE_WEAPON_IMMUNITY`,
+   `HALT`, `elemResistBonus`, `hasElementalArmorEffect`, `hasResistElementsEffect`,
+   `riderResistanceQuery`, `hasAbil` — **every one module-level**. So the two attack-specific
+   sequences are a gap in the *scan's universe* and contribute **nothing** to the census population:
+   their closures read module constants, and the lists themselves (`EFFECTIVE_RESISTANCE_STEPS`, the
+   defense list) are module-level too, built once rather than per derivation. The only
+   attack-specific steps built inside `deriveUnitStats` are the To-Hit ledger's (`stats.js:2668`),
+   whose closures are `chanceFields` and `allHitFields`, both listed.
+4. **The Rust patch** (`stats.js:1816-1821`) re-writes the ability layer's `rust` step with
+   `when: () => rustActive` and an `apply` closing over `legacyApply` and `rustRangedStep`.
+5. **The identity-sampling patch** (`stats.js:2272-2283`) returns `{ ...step, when }` for the step
+   at `c:chaosSurge`'s rank, with a predicate closing over `keys`, `identitySamples`, `identityAt`
+   and the step's prior `when`. Instrumentation, not an engine write, but it is a second replaced
+   `when` and is counted.
+
+**Computed `writes:` arrays are deliberately out of scope, and that is a conclusion rather than an
+omission.** They do read pre-sequence constants (`strengthFields`, `rangedTypeFields`,
+`thrownTypeFields`, `secondaryHitFields`, `attackWrites`, `rtbWrites`). But `writes` is
+declaration metadata for `assertStepWrites` and the trace: evaluating it changes no record field
+and decides neither a write's admission nor its magnitude. Under F244's rule it is not a missing
+positioned write. An ability-dependent `writes` expression would be a trace-shape question, not a
+record-seeding one.
+
+The **Versions** column is the *effective* scope: where the constant's read is live — the reading
+step's `STEP_VERSION_SCOPES` scope (`steps.js`) narrowed by the constant's or the branch's own
+version term. Where the two differ the row says both. 21 rows were checked against the table.
+
+---
+
+### Class (a) — template / roster / input facts that legitimately stay constants
+
+The record's seed values and the identity of the unit as the roster ships it. These are what
+`template:*` writes; a constant here is the input, not a stand-in for an engine write.
+
+| Constant | `stats.js` | Read by | Computed from | Engine write it stands for | Versions |
+|---|---|---|---|---|---|
+| `version` | 10 | `cast:destiny[when]`, `cast:destiny:supernatural[when]`, `immunity:immunityCurseGating[when]+[apply]`, `b:marionetteChanneler[when]`, `c:landLinking[apply]`, `c:lionheart[apply]`, `c:weakness[apply]` | `input.version` | none — the model dimension | all |
+| `isCoM1` | 27 | `template:constructCatapult[when]`, `template:zombies:toBlock[when]`, `c:heavenlyLight[apply]`, `c:warpDefense[apply]`, `c:supremeLight[when]`, `e:supremeLight[when]` | `version` | none — version test (F145) | all |
+| `isCoM2` | 30 | 15 steps incl. `template:baseThresholds`, `c:weapon`, `c:level`, `e:clamp`, both `attackSpecific:chance:*` | `version` | none — version test (F145) | all |
+| `isCoMVersion` | 741 | `c:flameBlade[apply]`, `c:holyArmor[apply]`, `c:warpAttack[apply]`, `c:warpDefense[apply]` | `version` | none — version test (F145) | all |
+| `isWarlord` | 219 | 11 steps incl. `b:nausea`, `c:shatter`, `d:fortification`, `d:hierophany` | `version` | none — version test (F145) | all |
+| `identity` | 23 | `template:zombies:toBlock[when]` (`.specialUnit`), `a:chosen[when]` (`.specialUnit`), `d:nightGoblinsNightVision[when]` (`.specialUnit`), `c:level[apply]` (`.isHero`), `b:marionetteChanneler[when]` (`.heroTypeId`) | `initializeUnitIdentity(input)` | template record fields; `specialUnit`/`heroTypeId`/`isHero` are roster facts no step writes | all |
+| `isHero` | 25 | `b:sanctify[apply]` | `identity.isHero` | template field. F187 ruled no conversion writes it | Warlord |
+| `calcBaseAtk` | 513 | `template:stat:base[apply]` | `input.atk` | the template's `attack` | all |
+| `calcBaseDef` | 514 | `template:stat:base[apply]` | `input.def` | the template's `defense` | all |
+| `calcBaseRes` | 515 | `template:stat:base[apply]` | `input.res` | the template's `resistance` | all |
+| `calcBaseHP` | 516 | `template:stat:base[apply]` | `input.hp` | the template's `hitpoints` | all |
+| `baseToHitMod` | 520 | `template:baseThresholds[when]+[apply]` | `input.toHitMod` | the DOS record's `melee_tohit` | step `SCOPE_ALL`; DOS branch — a modern caller supplying it is halted by `foreignHitInputs` (`stats.js:534`) |
+| `baseToHitRtbMod` | 521 | `template:baseThresholds[when]+[apply]` | `input.toHitRtbMod` | the DOS record's `ranged_tohit` | as above |
+| `baseToBlkMod` | 522 | `template:baseThresholds[when]+[apply]` | `input.toBlkMod` | the record's to-block modifier | all |
+| `baseHitChance` | 543 | `template:baseHitChance[when]+[apply]` | `input.hitChance` | the modern record's `hitchance` | `template:baseHitChance` is `SCOPE_MODERN` |
+| `baseHitMelee` | 544 | `template:baseThresholds[when]+[apply]` | `input.hitMelee` | the modern record's `hitchancemelee` | step `SCOPE_ALL`; modern branch, same halt |
+| `modernSecondaryHitMod` | 545 | `template:baseThresholds[when]+[apply]` | `input.hitRanged/hitThrown/hitBreath` | `hitchanceranged`/`thrown`/`breath` | step `SCOPE_ALL`; modern branch, same halt |
+| `baseGazeRanged` | 1863 | `template:stat:base[apply]` | `recordContext.dosGazeStrength`, `gazeDisabled` | the template's shared `.ranged` byte as a gaze | step `SCOPE_ALL`; 0 outside DOS, where no record carries the mirror |
+| `baseDoomGaze` | 1868 | `template:stat:base[apply]` | `recordContext`, `effectiveAbilities.doomGaze`, `gazeDisabled` | the template's Doom Gaze strength | all |
+
+19 rows, all class (a). `finishedUnitType` looks like a template fact and is not; it is in class (d).
+
+*Reached only through a helper (18):* `baseUnitType` (24), `isFantasticBase` (26),
+`suppliedAbilities` (31), `baseUnitRace` (63), `unitName` (64), `identityMeta` (104),
+`baseDoomGazeStat` (446), `inputBaseDef` (485), `inputBaseRes` (486), `inputBaseHP` (487),
+`nodeAuraVal` (632), `legacyLightDarkVal` (740), `ownEternalNight` (742), `enemyEternalNight` (743),
+`hasAnyEternalNight` (744), `enemyEyeOfHeaven` (746), `gazeDisabled` (1240), `hasDoomGazeSlot` (1886).
+
+### Class (b) — a training-time engine write, carried as a constant
+
+| Constant | `stats.js` | Read by | Computed from | Engine write it stands for | Versions |
+|---|---|---|---|---|---|
+| `wpn` | 351 | `c:weapon[apply]` | `weapon` → `weaponPreRust` → `artificerMagicWeapon`, `constructCatapult`, `weaponEligible`, `input.weapon`; then `rustActive` | the **weapon-material enchantment on the permanent record**: `CreateUnit.CAS!NOLOGISTIC!+9 "SETENCHANTMENTFLAG(U,EncMagic,1,1);"` (Artificer, training), CoM 1's Catapult constructor `_UNITS[si].mutations = 1` (`unitcalc.c`, com1:0x8EEA4-0x8EEAF), and the roster unit's own `mutations & UM_WEAPON_QUALITY_MASK` | all |
+| `hasWeaponMaterial` | 2014 | `c:weapon[when]` | `weapon` | same write, read as a gate | all |
+| `materialSecondaryOpen` | 1971 | `c:weapon[apply]` | `isCoM1`, `focusMagicActive` | none — a version/effect interaction | `c:weapon` is `SCOPE_ALL`; the term only bites in CoM 1 |
+| `appliedRtbToHitWpn` | 1960 | `c:weapon[apply]` | a `let` the step mutates | none — step-internal state | all |
+| `weaponHitWrite` | 1981 | `c:weapon[apply]` | `wpn`, `materialSecondaryOpen`, slot predicates | the material's To-Hit tail; magnitude of the same write | all |
+| `weaponMeleeOpen` | 2008 | `c:weapon[apply]` | `isCoM2`, `runCtx.base.atk` / `u.atk` | already a positioned read — the model to copy | all |
+| `lvl` | 218 | `c:level[apply]` | `level` → `levelEligible` → `loadoutEligible`, `abilities.spiritLink`, `destinyActive`; `input.level` | the **experience level on the permanent record**: DOS `_UNITS[].Level`, modern `B.level`. Destiny writes it (`B.level := 1`, $0059A445); Spirit Link widens eligibility for it (F245) | all |
+| `levelRank` | 866 | `c:discipline[apply]`, `d:psychoForce[apply]` | `level` | same field, as an ordinal | modern / Warlord, per those two steps |
+| `gazeLvlMod` | 1249 | `c:level[apply]` | `lvl`, version | magnitude of the level write | `c:level` is `SCOPE_ALL`; non-zero in the DOS branch |
+| `doomGazeLvlMod` | 1252 | `c:level[apply]` | `lvl`, version | magnitude of the level write | as above |
+| `soulFlayLevels` | 902 | `b:soulFlay[apply]` | `levelRank` | magnitude read of the same field | Warlord |
+| `orihalconActive` | 1008 | `c:orihalcon[when]` | `armor` → `armorInput`, `armorExists`, `loadoutEligible`, `isHero` | `B.EnchantmentFlags[EncOrihalcon]`, a permanent armour-material flag. **The write is cited for CoM 1 only** (`unitcalc.c`, com1:0x8F853 and the creation write at com1:0x8EE45ff); `Units.RecalculateUnits.pas:1784` is the modern **read**, and no modern write site is reconstructed. Stated rather than assumed | CoM 1, modern (`c:orihalcon` is `SCOPE_COM_PLUS`) |
+| `altarOfTheMoon` | 238 | `training:altarOfTheMoon[when]` | `isWarlord`, `abilities.altarOfTheMoon`, `baseUnitRace`, `isHero` | the `CreateUnit.CAS` Altar of the Moon block (mention — see the citation note) | Warlord |
+| `altarHunter` | 245 | `training:altarOfTheMoon[apply]` | `altarOfTheMoon`, `unitName` | its `STypeID=210` branch | Warlord |
+| `altarWitchdoctor` | 246 | `training:altarOfTheMoon[apply]` | `altarOfTheMoon`, `unitName` | its `STypeID=203` branch | Warlord |
+| `altarOfTheSun` | 255 | `training:altarOfTheSun:figures[when]` | `altarOfTheSunEligible`, `unitName` | the Altar of the Sun +1 figure branch | Warlord |
+| `altarOfTheSunHolyMother` | 254 | `training:altarOfTheSun:holyMother[when]` | same | its Holy Mother +1 melee branch | Warlord |
+| `dragonMound` | 262 | `training:dragonMound[when]` | `isWarlord`, ability, `baseUnitRace`, `isHero` | the Dragon Mound block | Warlord |
+| `ludusAgoge` | 270 | `training:ludusAgoge[when]` | same + Legionary name | the Ludus Agoge block | Warlord |
+| `motherFungus` | 278 | `training:motherFungus[when]` | same | the Mother Fungus block | Warlord |
+| `poolOfRepentance` | 284 | `training:poolOfRepentance[when]` | same | the Pool of Repentance block | Warlord |
+| `sanctaBasilica` | 292 | `training:sanctaBasilica[when]` | same | `CreateUnit.CAS!NOFROSTCLUB!+2..+31 ": new effect of Sancta Basilica :" "!NOBASILICA!"` | Warlord |
+| `pillarOfFaith` | 1100 | `training:pillarOfFaith[when]` | `pillarOfFaithCount` | the Pillar of Faith religious-building resistance | Warlord |
+| `pillarOfFaithCount` | 1097 | `training:pillarOfFaith[apply]` | `isWarlord`, `isFantasticBase`, `isHero`, `abilities.pillarOfFaithRes` | magnitude of the same write | Warlord |
+| `naturalSelectionCoal` | 978 | `training:naturalSelection:coal[when]` | `naturalSelectionEligible`, ability | the Natural Selection mineral branches | Warlord |
+| `naturalSelectionIron` | 979 | `training:naturalSelection:iron[when]` | same | same | Warlord |
+| `naturalSelectionNightshade` | 982 | `training:naturalSelection:nightshade[when]` | `naturalSelectionEligible`, count | same | Warlord |
+| `naturalSelectionNightshadeCount` | 980 | `training:naturalSelection:nightshade[apply]` | `abilities.nightshade` | magnitude | Warlord |
+| `naturalSelectionPowerMinerals` | 991 | `training:naturalSelection:powerMinerals[when]` | count | same | Warlord |
+| `naturalSelectionPowerMineralsCount` | 988 | two `training:naturalSelection:*[apply]` | `naturalSelectionEligible`, ability | magnitude | Warlord |
+| `survivalInstinctToBlkBonus` | 1003 | `training:survivalInstinctToBlock[when]+[apply]` | `isWarlord`, `isNormalUnitType(baseUnitType)`, ability | the Survival Instinct To-Block training write | Warlord |
+| `alumniOfAcademy` | 1703 | `training:alumniOfAcademy:figures[when]` | `isWarlord`, ability, `baseUnitRace`, `isHero`, `unitName`, `abilities.mechanical`, `rangedFieldContext.permanentMagicalRangedField` | the Academy +2 figure training write; the last two terms are **permanent-record reads** — class (d) | Warlord |
+| `energyCannon` | 1710 | `d:energyCannonThreshold[when]` | `isWarlord`, two abilities, `rangedFieldContext.hasPermanentRangedStat` | the Energy Cannon grant; the last term is a permanent-record read | Warlord |
+| `energyCannonHitField` | 1716 | `d:energyCannonThreshold[apply]` | record shape | none — record structure | Warlord |
+| `lightningBladeSlots` | 1909 | `training:lightningBlade:breath[when]+[apply]` | `lightningBladeAbil` (→ `baseNormalTrainingUnit`), the channel list | Altar of Storm, `CreateUnit.CAS!NOBARAY!+10..+15 ": new effect of Altar of Storm, all units recruit from the city gains +1 lightning breath, if unit already have thrown then convert innate thrown to innate lightning breath :" "ENDOFUNIQUEBUILDING"` | Warlord |
+
+**Citation note.** Only five of these rows carry a resolvable anchor (Artificer, Sancta Basilica,
+Lightning Blade, plus the two DOS addresses). The Altar of the Moon, Altar of the Sun, Dragon
+Mound, Ludus Agoge, Mother Fungus, Pool of Repentance, Pillar of Faith, Natural Selection, Academy
+and Energy Cannon rows carry **mentions**, which the grammar does not audit. Each step already
+carries its own `PROVENANCE[…]` span in `stats_sequence.js`; the anchors belong there and this
+table points at them rather than restating them. F244.2 and F244.3 should quote the step's span
+rather than re-deriving.
+
+*Reached only through a helper (17):* `loadoutEligible` (207), `levelEligible` (215),
+`level` (217), `artificerMagicWeapon` (231), `altarOfTheSunEligible` (252),
+`weaponEligible` (337), `constructCatapult` (345), `weaponInput` (347), `weaponPreRust` (348),
+`weapon` (350), `armorInput` (363), `armorExists` (370), `armor` (371),
+`naturalSelectionEligible` (977), `rangedFieldContext` (1687), `weaponHitRanged` (1972),
+`weaponHitThrown` (1979).
+
+### Class (c) — a permanent-record write made before the sequence
+
+Not all of these are cast-time; the class is "an engine write to the record that the calculator
+makes before any step runs", and the *Engine write* column says which kind each is. Splitting the
+class by kind is not possible at the granularity of a constant: `abilities` alone carries template,
+training, cast and region-`b` writes at once, which is exactly the problem F244.3 exists to solve.
+
+| Constant | `stats.js` | Read by | Computed from | Engine write it stands for | Versions |
+|---|---|---|---|---|---|
+| `rustActive` | 320 | the patched ability `rust` step (`stats.js:1816-1821`) and its `rust:ranged` subformula, applied from inside it rather than composed on its own — which is why `steps.js` scopes `d:rust` and has no `d:rust:ranged` row — and `weapon` | `version`, `abilities.rust`, `finishedIdentity.fantastic` | **cast**: the Rust cast's permanent clears (`COSpell.CAS`, the `SRust` block after `!NOTHIEROPHANY!`), nine flags (F242) | Warlord |
+| `destinyActive` | 80 | `c:destiny[when]` | `destinyActiveForUnit(suppliedAbilities, version)` | **cast**: Destiny's `B.race := 19; B.Fantastic := True; B.experience := 0; B.level := 1` ($0059A35E..$0059A633). `cast:destiny` and `cast:destiny:supernatural` already exist; the constant is a third reader | modern |
+| `permanentFantastic` | 81 | `b:fieryFury:race[when]` | `isFantasticBase \|\| destinyActive` | **template or cast**: the permanent `Fantastic` flag, which `a:baseCopy` now publishes as `ctx.base.fantastic`; the post-run assertion at `stats.js:2400` checks the two agree | Warlord |
+| `marionette` | 67 | `b:marionette:rangedType[apply]`, `b:marionette:ascensionRangedType[when]+[apply]` | `deriveMarionettePackage(identity, markIntrinsicLucky(suppliedAbilities), version)` | **region `b`**, not cast: the `UnitCalcPre.CAS` Marionette package. Its 30+ ability grants are merged into `abilities` pre-sequence | Warlord |
+| `marionetteOwned` | 203 | three `b:marionette:*[when]` | `marionette.state` | the owned branch's gate | Warlord |
+| `marionetteStrayed` | 204 | `b:marionette:strayedTransmute[when]` | `marionette.state` | `UnitCalcPre.CAS!STRAYEDMARIONETTE!+0..+28 "!STRAYEDMARIONETTE!" "!NOLONGERSTRAYEDMARIONETTE!"` | Warlord |
+| `marionetteAttackBonus` | 205 | `b:marionette:stats[apply]` | `marionette.attackBonus` | magnitude | Warlord |
+| `marionetteDefenseBonus` | 206 | `b:marionette:stats[apply]` | `marionette.defenseBonus` | magnitude | Warlord |
+| `outlanderReform` | 92 | four `b:outlander*[when]` | `applyOutlanderReformGrants(…, permanentFantastic, isHero)` | **training / overland / region `b`, mixed**: the reform block's own eligibility, from four `BASEFANTASTIC(U)` sites (F198). Its ability grants are merged into `abilities` pre-sequence | Warlord |
+| `abilities` | 96 | 24 steps' `when`, 2 `apply` | the five grant hoists over `input.abilities`, plus the Golem shaping | **all four kinds at once.** The ability map is the calculator's carrier for every enchantment flag, and six pre-sequence transforms write it. See the transform table | all |
+| `finishedImmunities` | 1777 | `immunity:immunityCurseGating[when]+[apply]` | `effectiveAbilities` | **none** — the strip is artificial (`CLAUDE.md`, *Deliberate deviations*); a declared cross-boundary read in `tools/unit_checks/identity_record_choice.js` | all |
+
+*Reached only through a helper (3):* `marionetteDerivation` (65), `outlanderDerivation` (85),
+`explosiveEligible` (409).
+
+Two more — `ccFireBreathAbil` (455) and `ccDosBaseRangedMax` (466) — reach `ccGrantsThisSlot` only
+through the slot context `buildSlotContext` builds (`ccFireBreathGranted`, `ccDosBreathEligible`),
+which is a named function outside `deriveUnitStats`, so the initializer closure does not follow
+them and they are not counted in the 68. `ccFireBreathAbil` is the Chaos Channels cast flag;
+`ccDosBaseRangedMax` is a version magnitude.
+
+### Class (d) — a recalculation-region read that should be a positioned record read
+
+| Constant | `stats.js` | Read by | Reads today | The engine's own read | Versions |
+|---|---|---|---|---|---|
+| `inputBaseAtk` | 483 | `c:heavenlyLight[apply]` | the card's melee input | `if B.attack > 0` (`Units.RecalculateUnits.pas:1431`, and `:1450` in the $0059E2B8 tail) — the **permanent** record, which `training:artificer` (+1) and `cast:rebuild` (+2) write. **Defect 1** | `c:heavenlyLight` is `SCOPE_COM_PLUS`; the `inputBaseAtk` branch is the modern one |
+| `heavenlyLightMeleeToHitAt` | 1186 | `c:heavenlyLight[apply]` | `heavenlyLightMaterialTail` and (CoM 1) `u.atk` / (modern) `inputBaseAtk` | same; the CoM 1 arm is already positional | CoM 1, modern |
+| `baseFigs` | 482 | `b:bombsGrenades[apply]` | `input.figs` | the finished `U.figures`; **F243 owns it** | Warlord |
+| `finishedUnitType` | 112 | `c:shatter[when]` | the identity projection | the calculated record at the block's rank; **F246 owns it** | all (`c:shatter` is `SCOPE_ALL`) |
+| `ccGrantsThisSlot` | 1917 | `chaosChannelsFireBreathWrite`'s `when` and `apply` — `a:chaosChannels:fireBreath` (modern), `c:chaosChannels:fireBreath` (DOS), and MoM 1.31's recompute copy | `context.ccFireBreathGranted` (from `abilities.ccFireBreath`), `context.ccOwnsThisSlot`, `context.ccDosBreathEligible` (the template's ranged type/strength), and the live `u[rangedTypeField]` | the admission gate is the permanent record; whether the slot is free is the block's own live read, and that half is already positional | all |
+| `identityAt` | 115 | the identity-sampling patch's `when` (`stats.js:2277`) | `identity` plus the running `u.race`/`u.fantastic` | already positional; the sampler is instrumentation | all |
+| `blazingEyesActive` | 444 | `c:blazingEyes[when]` | `unitInRealmAt(u,'chaos')` — positional | `IsChaosUnit` at the block's rank | modern |
+| `hasMeleeAttackAt` | 1144 | 8 steps' `apply` | `runCtx.base.atk` — positional | `B.attack > 0` | all |
+| `bombsGrenadesActive` | 426 | `b:bombsGrenades[when]` | `ctx.base.atk` positional, plus `explosiveEligible`, `bombsGrenadesFlying` | `GETSTAT(U,SAttack,1)>0 %OR GETSTAT(U,AFlying,1)>0` — the first term already positional | Warlord |
+| `warlordEternalNightActive` | 803 | `b:eternalNight:poorVision[when]` | `unitRealmAt(u)` positional, `undeadEnchantmentFlag` pre-sequence | `EncUndead` at the block's rank; the pre-sequence half is **F235's open question** | Warlord |
+| `greatUnbindingActive` | 956 | `b:greatUnbinding[when]` | `u.fantastic` positional, six `hasAbil` flags pre-sequence | the enchantment flags at the block's rank | Warlord |
+| `unitIsChaos` | 1299 | `c:warpReality[when]` | positional | correct; the DOS half is F234 | all |
+| `nodeAuraActive` | 642 | `c:nodeAura[when]` | positional | correct | all (`c:nodeAura` is `SCOPE_ALL`) |
+| `spellWardActive` | 690 | `c:spellWard[when]` | positional | correct | modern |
+| `realmWardActive` | 696 | `c:realmWard[when]` | positional | correct | CoM 1 |
+| `landLinkingEligible` | 626 | `c:landLinking[when]` | positional | correct | CoM 1, modern |
+| `supremeLightEligibleAt` | 1926 | `c:supremeLight[when]`, `e:supremeLight[when]+[apply]` | positional, plus `abilities` and `context.rtbTypeRaw` | `U.race = RCLife`; the type-token half is F230 | CoM 1, modern |
+| `chaosSurgeCount` | 720 | `c:chaosSurge[when]` | positional | correct | all |
+| `chaosSurgeMeleeBonus` / `RtbBonus` / `ResBonus` | 723/726/729 | `c:chaosSurge[apply]` | positional | magnitudes | all |
+| `darknessAtkBonus` / `DefBonus` / `ResBonus` | 819–821 | `c:darkness[apply]` | positional | magnitudes | all |
+| `eternalNightEnemyResPenalty` | 783 | `c:eternalNight:enemyResistance[when]+[apply]` | positional | correct | CoM 1, modern |
+| `trueLightBonuses` | 836 | `b:trueLight` / `c:trueLight`[apply] | `unitRealmAt(u)` positional, `undeadEnchantmentFlag` pre-sequence | F235's open question again | MoM, Warlord |
+| `warlordFlameBladeOwnsSlot` | 1920 | `d:flameBlade[when]+[apply]` | positional | correct | Warlord |
+| `weaknessBinaryHits` | 2087 | `c:weakness[apply]`, `d:weakness[apply]` | positional | correct | all |
+| `fieryFuryRtbWrite` | 2114 | `b:fieryFury[apply]`, `c:flameBlade[apply]` | positional slot predicates, `ffRegularBonus` pre-sequence | mixed | Warlord |
+| `recordContext` | 1512 | `c:weapon[apply]`, `training:militaryWorkshop[apply]`, `c:supremeLight[when]`, `e:supremeLight[when]+[apply]` | the slot context from `input.rtb`/`input.rtbType`/`input.modernAttacks` — the **permanent** attack record | `BaseUnits[i].ranged`, `rtbTypeRaw`; `a:baseCopy` could carry it | all |
+| `derivationContexts` / `channels` | 1624 | 60 steps' `apply` | same | record structure plus the permanent attack record | all |
+| `hasGazeRangedSlot` | 1883 | `e:clamp[apply]` | `recordContext.gazeType`, `gazeDisabled` | which mirrors of the shared byte the record carries — structure | `e:clamp` is `SCOPE_ALL`; true only in DOS |
+| `doomGazeFloorKeeps` | 1889 | `e:clamp[apply]` | `isCoM2`, `gazeDisabled`, `hasDoomGazeSlot` | same | all |
+
+**11 of these 34 already read the record positionally** — `blazingEyesActive`, `hasMeleeAttackAt`,
+`bombsGrenadesActive`, `nodeAuraActive`, `spellWardActive`, `realmWardActive`,
+`landLinkingEligible`, `unitIsChaos`, `warlordFlameBladeOwnsSlot`, `weaknessBinaryHits`,
+`identityAt` — and are the model the other 23 should follow.
+
+*Reached only through a helper (13):* `finishedIdentity` (111), `unitTypeAt` (116),
+`unitRealmAt` (117), `undeadEnchantmentFlag` (129), `encUndeadAtClassifier` (150),
+`chaosChannelFlag` (156), `helperRealmRecovery` (180), `realmMembershipAt` (181),
+`unitInRealmAt` (193), `spellWardArmMatches` (687), `isDeathUnitAt` (774),
+`heavenlyLightMaterialTail` (1182), `effectiveAbilities` (1741).
+
+### The `getAbilityStatSteps` boundary
+
+`getAbilityStatSteps(effectiveAbilities, version, identityPredicates)` (`stats.js:1799`) is called
+with seven `identityPredicates` fields. They are pre-sequence constants that a `when` or a
+step-creating `if` reads, and they are not among the 169, because the wrapper hides them.
+
+| Field | Source | Read by | Engine write it stands for | Versions |
+|---|---|---|---|---|
+| `isHero` | `identity.isHero` | `cast:rebuild` / `b:rebuild`'s phase choice, `c:tactician` / `b:tactician`'s branch pair | the hero flag; F187 ruled no conversion writes it, so a constant is right | all |
+| `misleadEligible` | `u => misleadActiveForUnit(abilities, u.fantastic, version)` (`stats.js:630`) | `e:mislead[when]` | already positional | modern |
+| `survivalInstinctEligible` | `u => survivalInstinctActiveForUnit(abilities, unitTypeAt(u), version)` (`stats.js:614`) | `c:survivalInstinct[when]` | already positional | CoM 1, modern |
+| `outlanderReform` | `applyOutlanderReformGrants` | `b:battleArmor`, `b:magitekEngine` gates | the reform block's `BASEFANTASTIC` eligibility; class (c) | Warlord |
+| `strengthFields` | `derivationContexts.map(c => c.strengthField)` | every ability step's `writes` array | record structure | all |
+| `baseFantastic` | `identity.baseFantastic` | the `if` around `c:breakthrough:normal` (`combat_abilities.js:1026`) | `not B.Fantastic` at $005A376D — the **permanent** record, which `cast:destiny` writes. **Defect 3** | modern |
+| `combatSummoned` | `effectiveAbilities.combatSummoned` | the same `if` and `c:breakthrough:combatSummoned` | `not U.combatsummoned` — the calculated record; the flag has no positioned writer, so a constant is right | modern |
+
+### Class (e) — UI-only gates, no engine term
+
+| Term | `stats.js` | Carried by | The term | Stated where |
+|---|---|---|---|---|
+| `loadoutEligible`'s `!permanentFantastic` | 207 | `weapon`, `armor`, `level` | fantastic exclusion | `stats.js:337` says outright the material block "has no Fantastic gate in either engine family… The `!isFantasticBase` gate below is the UI's — a fantastic creature is never equipped" |
+| `armor`'s `!isHero` | 371 | `orihalconActive` | hero exclusion | `stats.js:363` — "the control's, not the engine's: the compiled block gates on `EncOrihalcon` alone" |
+| `hasTrueLight`'s `(!isCoMVersion \|\| isWarlord)` | 752 | `b:trueLight`/`c:trueLight`[when] | version scope | duplicate of `STEP_VERSION_SCOPES` (F145) |
+| `gazeDisabled` | 1240 | `baseGazeRanged`, `baseDoomGaze`, `hasGazeRangedSlot`, `doomGazeFloorKeeps` | `enemyEyeOfHeaven` zeroing a template stat | no engine write; it suppresses the seed |
+| the seven race-building `baseUnitRace === '<race>' && !isHero` terms | 238–292 | the seven `training:*[when]` | race + hero | **F213** — the scripts carry neither term |
+
+### Class (f) — magnitudes, record structure and machinery
+
+Each is the value a step writes, the shape of the record it writes into, or the sequence machinery.
+None stands for a permanent-record write, and giving one a record field would restate a constant —
+the F202 stage-2 ruling recorded at `POSITIONED_GRANT_FIELDS`.
+
+`warlordCombatFlameBlade` 223, `ccIndependentChannels` 465, `ccFireBreathStrength` 471,
+`focusMagicActive` 562, `vampirismActive` 567, `shadowStrikeActive` 575, `blazeOfGloryActive` 583,
+`venomActive` 587, `darkForceActive` 647, `heavenlyLightActive` 654, `badMoonActive` 662,
+`goodMoonActive` 663, `natureConjunctionActive` 664, `com1GuidingBeaconAura` 701,
+`com1DivineBarrierAura` 702, `com1SoulLinkerAura` 703, `hasDarkness` 747, `hasTrueLight` 752,
+`lionheartHpMod` 850, `enduranceActive` 856, `enduranceDefMod` 857, `enduranceHpMod` 858,
+`charmOfLifeActive` 862, `disciplineActive` 887, `disciplineDefMod` 889, `disciplineAtkMod` 890,
+`soulFlayActive` 899, `soulFlayAtkMod` 903, `soulFlayDefMod` 904, `soulFlayResMod` 905,
+`plagueActive` 914, `poxHostActive` 928, `poxHostIsGoblin` 929, `goblinPoxAtkMod` 930,
+`goblinPoxDefMod` 931, `goblinPoxResMod` 932, `natureLinkActive` 987,
+`wofDefenderBonusActive` 1030, `hasWarlordBlade` 1054, `nonWarlordFlameBlade` 1055,
+`fbAtkBonus` 1069, `ffRegularBonus` 1073, `ffMeleeBonus` 1077, `colossalStrength` 1089,
+`colossalScaled` 1091, `holyArmorActive` 1092, `uphillBattleActive` 1105,
+`godsPlayDicesResMod` 1106, `classicBerserk` 1118, `warlordBerserk` 1119, `weaknessPenalty` 1163,
+`hwMeleeToHit` 1170, `gazeWarpHalves` 1262, `warpRealityActive` 1268, `hurricaneActive` 1302,
+`vertigoHitPenalty` 1308, `vertigoBlockPenalty` 1309, `secondaryHitFields` 1657,
+`secondaryHitTargets` 1670, `rustRangedStep` 1786, `legacyApply` 1817,
+`focusMagicBranchSlots` 1895, `heavenlyLightHitPick` 1936, `holyWeaponHitPick` 1944,
+`bladeMeleeBonus` 2117, `identitySamples` 2258, `keys` 2273, `when` 2275, `chanceFields` 2581,
+`allHitFields` 2584.
+
+Five of those — `rustRangedStep`, `legacyApply`, `identitySamples`, `keys`, `when` — are the two
+post-construction patches' captures, not effect state.
+
+*Reached only through a helper (17):* `bombsGrenadesFlying` (425), `strengthFields` (1625),
+`com1AuraValue` (699), `darknessAtkDefMagnitude` (779), `darknessResMagnitude` (782),
+`darknessBonuses` (808), `lionheartActive` (849), `disciplineVal` (886), `greatUnbindingCast` (953),
+`warlordFieryBlade` (1053), `hwActive` (1169), `heavenlyLightThrownToHit` (1188),
+`channelContexts` (1623), `SECONDARY_HIT_KINDS` (1634), `SECONDARY_HIT_FIELD_BY_KIND` (1635),
+`SHARED_HIT_FIELD` (1638), `secondaryHitFieldsFor` (1655).
+
+Six carry a term that belongs to another class: `badMoonActive`, `goodMoonActive`,
+`natureConjunctionActive`, `ffRegularBonus` and `wofDefenderBonusActive` read
+`permanentFantastic`, and `soulFlayActive` reads `isFantasticBase`. Under F244's rule those six
+terms become `ctx.base.fantastic`.
+
+---
+
+### The record seed beyond the template stats, and the transforms that fill it
+
+`statRecord` (`stats.js:2335`) seeds, beyond `res/def/atk/hp/gaze/doomGaze/toHit/toHitMelee/toBlk`
+and the per-channel strength and type fields:
+
+| Seed | Source | Count | What it is |
+|---|---|---:|---|
+| `POSITIONED_GRANT_VALUE_WRITES` | `effectiveAbilities[key]` verbatim | 2 | ability fields carrying a value, written by 5 positioned steps |
+| `MAGIC_IMMUNITY_GATED_CURSES` | `!!effectiveAbilities[key]` | 10 | the curse flags `immunity:immunityCurseGating` clears (F199) |
+| `POSITIONED_GRANT_FIELDS` | `!!effectiveAbilities[key]` | **11** | grantable keys some step *reads* at a rank (F202) |
+| `POSITIONED_GRANT_WRITES` | `!!effectiveAbilities[key]` | 18 | grantable keys some step *writes* (F200) |
+| `race`, `fantastic` | `identity.baseRace`, `identity.baseFantastic` | 2 | the permanent identity (F163) |
+
+The two grant lists share five keys, so the record carries **38** non-stat fields. Every one is
+seeded from `effectiveAbilities` — `abilities` after the transforms, plus the identity
+passthroughs. So the seed is already "the ability map after the transforms", not the template.
+
+**Six pre-sequence transforms** write that map, not four or five:
+
+| Transform | Where | Writes | Engine write it stands for | Versions |
+|---|---|---|---|---|
+| the Golem shaping | `stats.js:44-46` | `suppliedAbilities.elemArmor = 'resistElements'` | a region-`a` hard-coded unit-type grant: `Caster.exe` 0x599E31 on base `unittype` 81, and CoM 1's `COM1_UT_GOLEM` — an inline mutation ahead of the four hoists, easy to miss | CoM 1, modern |
+| `markIntrinsicLucky` | `stats_identity.js:692` | `luckyPhaseA` | **none.** A write-only marker; F147/F205 delete it | all |
+| `applyLavaSmelterGrant` | `:523` | `weaponImmunity`, `missileImmunity`, `resistElements`, `elementalArmor`, `fieryBlade` | training/upgrade grants; five `PROVENANCE[lavaSmelter:*]` spans over `CreateUnit.CAS` and `OverlandEndTurn.CAS` | Warlord |
+| `applySanctaBasilicaGrant` | `:590` | `sanctify`, `lucky` (+`luckyPhaseBase`), `magicImmunity` | `CreateUnit.CAS!NOFROSTCLUB!+2..+31 ": new effect of Sancta Basilica :" "!NOBASILICA!"` — four mutually exclusive `STypeID` branches. The hoist is **wider than the block** (Q30, F200 stage 3) | Warlord |
+| `applyPillarOfFaithGrant` | `:701` | `lucky` (+`luckyPhaseBase`) | the Pillar of Faith 20% Lucky training grant, modelled as landed. **F200 stage 3 owns this one too** | Warlord |
+| `deriveMarionettePackage` | `:753` | strayed: 8 keys. owned: up to 31 more, incl. `poisonImmunity`, `largeShield`, `missileImmunity`, `firstStrike`, `fireImmunity`, `lightningResist`, `illusionImmunity`, `lucky`, `coldImmunity`, `deathImmunity`, `weaponImmunity`, `poison`, `illusion`, `wallCrusher`, `armorPiercing`, `exorcise`, `bless`, `createUndead`, `lifeSteal` | the `UnitCalcPre.CAS` Marionette region-`b` book-count block | Warlord |
+| `applyOutlanderReformGrants` | `:893` | `armorclad`, `powerEngine`, `haste`, `temporalGravityDrive`, `flying`, `illusionImmunity`, `energyWeaponry`, `psychoForce`, `pneumaField`, `resistMagic`, `discipline`; **deletes** 15 reform keys for a non-Outlander wizard and the `DERIVED_OUTLANDER_STATE_KEYS` | `UnitCalcPre.CAS`'s `NOTSAPIENS`/`NOXENOVET`/`COMBATOVERRIDE` blocks and `OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"` — training, overland and region `b` mixed | Warlord |
+
+`applyHierophanyAbilityStrip` (`:994`) is the mirror image and belongs in the same discussion: it
+clears 13 immunity/movement flags on the **finished** ability map (`stats.js:2476`), after the
+chain, so a `UnitCalc.CAS` region-`d` write has no chain entry and no tooltip.
+
+**Keys a transform writes that the record does not carry** (so a reader necessarily reads the
+transformed map rather than the record): `weaponImmunity`, `resistElements`, `elementalArmor`,
+`sanctify`, `magicImmunity`, `transmuteEquipment`, `sage`, `mechanicalMaster`, `ritualMaster`,
+`charmed`, `arcaneWard`, `spellLock`, `forester`, `mountaineer`, `stoningImmunity`, `resistMagic`,
+`healer`, `stoningTouch`, `counterImmunity`, `exorcise`, `bless`, `bloodSucker`, `createUndead`,
+`regeneration`, `invisibility`, `destruction`, `healingAura`, `powerEngine`, `haste`,
+`temporalGravityDrive`, `flying`, `energyWeaponry`, `discipline`, and the three `luckyPhase*`
+markers — **36 keys**, 33 real plus 3 markers. The transforms write 56 keys in all; the record
+carries 20 of them. Three of the 36 are live today: `sanctify` gates `b:sanctify`, `magicImmunity`
+reaches `immunity:immunityCurseGating` through `finishedImmunities`, and `discipline` gates
+`c:discipline`.
+
+`fieryBlade`, `powerEngine`, `flying` and `discipline` are also the four keys **F209 reopened**:
+F202 ruled each earns no step because its grant is a permanent write with no stat delta, and the
+rebuilt SPEC states the opposite. Whichever F244.3 subtask touches Lava Smelter or the Outlander
+reform must take that ruling as open rather than settled.
+
+---
+
+### Classification summary
+
+Each constant has one **primary** class; a second is noted in its row. Both partitions are exact —
+169 direct and 68 helper-only. `$S/f244_classify.js` re-derives both from the scan output and
+**exits non-zero** on a name no class claims, a duplicate, or a class member the scan never saw; it
+prints `OK — both partitions exact.`
+
+| Class | Direct | Helper-only | Total |
+|---|---:|---:|---:|
+| (a) template / roster / input facts that stay constants | 19 | 18 | 37 |
+| (b) training-time engine writes carried as constants | 35 | 17 | 52 |
+| (c) permanent-record writes made before the sequence | 11 | 3 | 14 |
+| (d) recalculation-region reads that should be positioned | 34 | 13 | 47 |
+| (e) UI-only gates | 0 | 0 | 0 |
+| (f) magnitudes, record structure and machinery | 70 | 17 | 87 |
+| **total** | **169** | **68** | **237** |
+
+Plus two constants reached only through a `buildSlotContext` field and seven reached only through
+`getAbilityStatSteps`' `identityPredicates`, both noted where they belong rather than counted.
+
+Class (e) has no primary member: every UI-only gate is a *term* of a constant whose primary class
+is (a), (b) or (f) — which is why it is easy to turn one into a claimed engine write by accident,
+and why the (e) table lists terms rather than constants.
+
+---
+
+### What F244.2 takes, and what is left
+
+**F244.2 (weapon material and experience level).** `wpn`, `hasWeaponMaterial`, `weapon`,
+`weaponPreRust`, `weaponInput`, `weaponEligible`, `artificerMagicWeapon`, `constructCatapult`,
+`weaponHitRanged`, `weaponHitThrown`, `weaponHitWrite`, `materialSecondaryOpen`; `lvl`, `levelRank`,
+`level`, `levelEligible`, `gazeLvlMod`, `doomGazeLvlMod`, `soulFlayLevels`; and the gate both chains
+share, `loadoutEligible` → `permanentFantastic` → `ctx.base.fantastic`.
+
+Two dependency corrections the review made, both accepted:
+
+- **F242 must land first, or with it.** F244.2 would have `c:weapon` read the material the record
+  carries, but Rust's clear of that material is a *pre-sequence constant* until F242 makes it a
+  step. Sequencing F244.2 first would leave `weapon` reading a record no step has rusted.
+- **F245 must land first, or `levelEligible` needs an explicitly temporary term.** Today
+  `levelEligible` widens for a Spirit-Linked base-Fantastic Warlord unit. `ctx.base.fantastic` does
+  not carry that widening until F245 makes Spirit Link's Fantastic clear a `cast` write.
+
+**Armour is the same architectural class but is *not* mechanically inseparable** — the review is
+right and the first draft was wrong. `armor` hangs off `loadoutEligible` and a separable `!isHero`
+UI conjunct, and can keep a compatibility gate while weapon and level move. It still has to be
+scheduled: either add it to F244.2 explicitly (with the same F245 dependency) or give it its own
+F244.3 subtask. It is in neither today.
+
+**Explicitly not F244.3's, though the class boundary would otherwise sweep them in:** `baseFigs`
+(F243), `rustActive` and the Rust clears (F242), `finishedUnitType` and the `finishedIdentity`
+readers (F246), `applySanctaBasilicaGrant` and `applyPillarOfFaithGrant` (F200 stage 3 + Q30),
+`undeadEnchantmentFlag` / `chaosChannelFlag` / `encUndeadAtClassifier` (F235 must settle whether
+Vampirism and Revenant set `EncUndead` first), and the seven race-building race/hero terms (F213).
+
+### Proposed split of F244.3
+
+The first draft's 3a would have seeded the record from the *pre-transform ability map*, which is
+wrong: `input.abilities` is not template state — it carries selected buffs and curses. The review
+caught it, and the split below fixes it by making the origin classification a subtask of its own.
+
+| Subtask | Next outcome | Depends on | Size |
+|---|---|---|---|
+| **F244.3a** | Every raw ability key is classified by origin — template intrinsic, training grant, beneficial cast, detrimental cast, region-`b`/`d` grant, or non-record global/query input — and the classification gets a home and a mechanical check. Report plus the table; no seed change yet. | F244.1 | medium |
+| **F244.3b** | The record seed carries only the keys F244.3a calls template-intrinsic. Every other seeded key becomes a positioned write, and `markIntrinsicLucky` is deleted (it writes a marker no line reads). The two smallest transforms are the worked example. | F244.3a | medium |
+| **F244.3c** | `applyLavaSmelterGrant`'s five grants become `training` steps, each on its own `PROVENANCE[lavaSmelter:*]` span; `hasWarlordBlade` reads `fieryBlade` off the record. Re-opens F209's `fieryBlade` ruling and says so. | F244.3b | medium |
+| **F244.3d** | `applyOutlanderReformGrants`' **training and overland** grants (`armorclad`, `powerEngine`, `resistMagic`, `discipline`) become positioned writes; the non-Outlander key deletion becomes an explicit gate rather than a mutation of the map. Re-opens F209's `powerEngine` and `discipline` rulings. | F244.3b | medium |
+| **F244.3e** | The reform's **region-`b`** grants (`haste`, `temporalGravityDrive`, `flying`, `illusionImmunity`, `energyWeaponry`, `psychoForce`, `pneumaField`) become `b` writes at their block's rank. Re-opens F209's `flying` ruling. | F244.3d | medium |
+| **F244.3f** | `deriveMarionettePackage`'s **strayed** branch (8 keys) becomes positioned `b` writes. | F244.3b | small–medium |
+| **F244.3g** | The **owned/ascension** branch (up to 31 keys, book-count gated) becomes positioned `b` writes; the package's non-ability outputs (spell, charges, ranged type) stay constants. | F244.3f | large |
+| **F244.3h** | `permanentFantastic` and `isFantasticBase` stop being read pre-sequence: `b:fieryFury:race`, `badMoon`, `goodMoon`, `natureConjunction`, `wofDefenderBonus`, `ffRegularBonus`, `soulFlay`, `pillarOfFaithCount`, `naturalSelectionEligible`, `heavenlyLightMaterialTail` and `identityPredicates.baseFantastic` read `ctx.base.fantastic`. Fixes defects 2 and 3. The post-run assertion at `stats.js:2400` becomes redundant and goes. | F245; order after F244.2 | small–medium |
+| **F244.3i** | The permanent attack record becomes a field of `ctx.base` rather than of `recordContext`: `alumniOfAcademy`'s `permanentMagicalRangedField`, `energyCannon`'s `hasPermanentRangedStat`, `slots.persistentRanged` and `ccGrantsThisSlot`'s `ccDosBreathEligible` read it there. | F244.3b | medium |
+
+Two things the split deliberately does **not** absorb, both flagged for a decision:
+
+- **`getAbilityStatSteps`' creation-time gating** (defect 4). Where a positioned grant must make a
+  later block *appear*, removing a hoist would remove the consumer step instead of leaving it
+  unfired. That coupling is real, so it cannot simply be filed as unrelated cleanup — but it is
+  also not F244's stated scope. It needs its own item or an explicit widening of F244.
+- **`applyHierophanyAbilityStrip`** (defect 5), the post-chain write. Same class, opposite end.
+
+### Defects the census turned up
+
+1. **`c:heavenlyLight`'s modern melee gate reads the card input, not the permanent record.**
+   *Category: faithfulness.* `stats_sequence.js:1016` is `if (inputBaseAtk > 0) u.atk += 1`, and
+   `heavenlyLightMeleeToHitAt` (`stats.js:1186`) uses the same value for the To-Hit tail. The block
+   is `if B.attack > 0` in both places — `Units.RecalculateUnits.pas:1431` for the strength write
+   and `:1450` in the $0059E2B8 material tail. `B.attack` is not the card's melee: two
+   permanent-record steps write it ahead of `a:baseCopy`, `training:artificer` (+1) and
+   `cast:rebuild` (+2), so a unit whose roster melee is 0 can satisfy the engine's gate and fail
+   the calculator's. Exactly the case `bombsGrenadesActive` was corrected for in F202. It is a
+   modern **semantic** defect; both writes are `SCOPE_WARLORD`, so the divergence is currently
+   observable in Warlord only. CoM 1 reads live `bu->melee` (`unitcalc.c:3646`) and is a different,
+   correct block.
+2. **`heavenlyLightMaterialTail` tests the template Fantastic flag where the block tests the
+   permanent one.** *Category: faithfulness.* `stats.js:1182` is `… && (isCoM1 || (!isHero &&
+   !isFantasticBase))`; the block is `not B.Fantastic and not B.ishero`
+   (`Units.RecalculateUnits.pas:1447-1448`), and `cast:destiny` writes `B.Fantastic := True`
+   ($0059A390). A Destiny unit keeps a +10% To-Hit tail the engine withholds. Both modern builds;
+   CoM 1 short-circuits the term. Same shape as F192. The material term beside it is already right:
+   `weapon === 'normal'` carries Artificer's permanent `EncMagic` and Rust's clear, which is what
+   `not B.EncMagic and not B.EncMithril and not B.EncAdamant` asks.
+3. **`c:breakthrough:normal`'s Fantastic term is the template flag, not the permanent one.**
+   *Category: faithfulness.* `combat_abilities.js:1026` reads `identityPredicates.baseFantastic`,
+   which `stats.js:1800` supplies as `identity.baseFantastic`. The block's admission is
+   `(not U.combatsummoned) and (not B.Fantastic)` ($005A376D..$005A3DDE), and the comment beside the
+   code says so — but `B.Fantastic` includes `cast:destiny`'s write and `identity.baseFantastic`
+   does not. A Destiny unit with Breakthrough takes a +1 melee package the engine withholds. Both
+   modern builds. Third instance of the F192 shape here.
+4. **`getAbilityStatSteps` gates most of its 44 steps by not creating them.** *Category:
+   structural.* The eligibility sits in an `if (hasAbil(abilities, …))` around the `abilityStep`
+   call rather than in a `when`, so the step is absent from the chain instead of present and
+   unfired. That is invisible to the chain dump and to `STEP_VERSION_SCOPES`' complement check, and
+   defect 3 is one of its consequences.
+5. **`applyHierophanyAbilityStrip` is an engine write made after the chain.** *Category:
+   faithfulness.* `stats.js:2476` applies a `UnitCalc.CAS` region-`d` write to the finished ability
+   map, outside the sequence, so it has no chain entry and no tooltip.
+
+### Review round (Method A, GPT 5.6 Sol)
+
+`.reviews/F244.1.review-of-Claude.md`. The reviewer ran its own AST walk rather than the scan
+scripts. Four blocking findings, all accepted and all folded into the text above: the missed
+`baseHitMelee` and the ternary bug behind it; the two unscanned wrappers
+(`chaosChannelsFireBreathWrite`, `attackSpecificStep`) and the second `when` patch; the F244.3 split
+that would have seeded cast state as template state; and the count and dependency errors (36 not 34,
+`POSITIONED_GRANT_FIELDS` 11 not 12, six transforms not four, the omitted Golem shaping, the
+F242/F245/F200-stage-3 ownership corrections, and 3c/3d being too large for one prompt).
+
+Of its should-fix findings, accepted: the class-(c) title ("cast-time" was wrong for the Marionette
+and Outlander rows), the modern `EncOrihalcon` write being uncited, the training rows carrying
+mentions rather than anchors, the *Versions* column not following its stated rule, "armour is
+inseparable" being false, and the `writes:`-array conclusion needing to be stated rather than
+implied. Its nit — that `git status` cannot establish "no calculator code changed" from a tree that
+already carried F247's work — is accepted and the claim is now phrased as an author statement.
+
+The reviewer's own count claims are worth recording. It re-derived 142 `statStep` literals and 44
+`abilityStep` calls independently and agreed. Its 55 `attackSpecificStep` call sites is right: a
+naive scan gets 56 by counting the definition. Two of its numbers were computed against a copy taken
+before that round's corrections landed and are stale rather than wrong — the summary table as
+`19+35+11+29+62`, and the arrow count as 27 against a claimed 34, both already recomputed. Its
+report that the direct `deriveUnitStats` count is 160 rather than 159 was right in substance for the
+wrong reason: the round-1 160 included the false positive `target` *and* missed `baseHitMelee`. The
+corrected figure over the wider universe is **169**.
+
+It did not verify the modern `EncOrihalcon` write either, and says so; that gap is recorded in the
+table rather than papered over.
+
+## 2026-09-02 — F247: `Units[i] := BaseUnits[i]` becomes a step, and `ctx.base` has one publisher
+
+The permanent record used to be frozen by the runner: `runStatSteps` re-snapshotted `ctx.base`
+after every step whose phase was in `PERMANENT_RECORD_PHASES`, so the freeze was a property of the
+phase table rather than of a position. It is now a step. `a:baseCopy` heads region `a` in all five
+chains, its `apply` is `runCtx.base = { ...u }` and nothing else in the calculation layer assigns
+`ctx.base`; `PERMANENT_RECORD_PHASES` and the snapshot are gone.
+
+**Boundary steps.** `statStep` grew one exception: a step with `boundary: true` may declare an
+empty `writes` list, and `assertStepWrites` then demands it change nothing (the same loop, with an
+empty declared set). It reaches the sparse trace with `changes: {}` and `boundary: true`,
+`assertStatTraceOrder`'s "records no changes" rejection exempts it, and `projectStatTrace` projects
+it onto every field as a value-free marker whose `from` and `to` are the running value.
+`formatTraceTooltip` renders it as `— Calculated record seeded from the permanent record (phase a) —`,
+with no `from → to`, since printing `5 → 5` would read as a transform that did nothing.
+
+A projection therefore always has at least one entry, so "does this stat have modifiers" is no
+longer the entry count: `traceHasWrites` (steps.js) answers it, and the four sites that asked by
+counting — `updateModifiedDisplay` in `ui_card.js` and the three `to…HasModifiers` flags in
+`stats.js` — call it. That matters beyond tidiness: dropping a marker-only projection instead (the
+first attempt) lost the marker whenever `appendProjectedTraceEntry` later added a transform, which
+is exactly the displayed Vertigo Defense penalty.
+
+The To-Hit/To-Block ledger is a second sequence built by projecting the stat trace, so it projects
+the position too, as `chance:baseCopy` with `projectionOf: 'a:baseCopy'` and no delta. Without it a
+To Hit tooltip crossed from `template:baseThresholds` straight to a region-`c` write with no
+divider, which is the case the boundary exists to mark.
+
+**Citation.** Modern: `Units.RecalculateUnits.pas` $00599A8D..$00599B30, the `$01E1`-dword record
+copy after `prevmaxmoves[i]` is saved. The enchantment-layer merge immediately behind it
+($00599B30..$00599C2D — clear `EncMagic`, then OR the item/combat/overland layers into the copied
+base layer, which is the same array) has no counterpart, because the calculator carries one flag
+set per unit rather than four layers; that is said at the step, and both spans are cited.
+
+DOS: there is no whole-record copy instruction at all. The battle-unit record is materialised from
+the persistent unit field by field — `Load_Battle_Unit` `_fmemcpy`s 0x24 bytes out of
+`unit_types[_UNITS[unit_idx].type]`, i.e. the *type table* selected by the persistent record, then
+reads that record's own owner, Level, enchantments and Damage, and calls `BU_Construct`, which
+re-seeds `tohit`, `resist` and the type attributes from the same table. `BU_UnitLoadToBattle`
+(`combat.c`) calls that pair and only then reaches `BU_Apply_Battlefield_Effects`. So the seed and
+the boundary are one position there; four DOS spans cite it.
+
+**Measured.** 0 of 52440 derivations differ (`derivation_equivalence_diff.js` against the run's
+baseline, 0 field differences). Because that tool's blind spot is a change that only shows with
+several controls on at once, and what F247 could move is the *content* of `ctx.base`, a saturating
+probe was run beside it: every control that writes the permanent record on together with every
+control whose gate reads it, over 5 versions × 4 unit types × 2 melee values × 5 slot types ×
+3 levels × 3 weapon materials = 1800 cases. 0 differ. Each version's chain dump differs from
+baseline by exactly one inserted `a:baseCopy (provisional)` line. `node_unit_checks.js` 16,090
+assertions, all passing, against 16,032 before; the increase is counting, not derived numbers — the
+per-entry loops in `runModifierTraceChecks` and `runIdentityChecks` see one more entry per
+record-derived projection, and `runCanonicalVersionScopeChecks` asserts one new scope row and five
+new chain entries. `npm run provenance` 296/296, `cas_citation_audit.js` PASS, `npx playwright test`
+143/143.
+
+**Tests touched.** Eight assertions that indexed `entries[0]` or counted `entries.length` on a
+projection now read a boundary-filtered view — `traceWrites` in `tools/unit_checks/assertions.js`,
+`writes` in `tests/modifier-traces.spec.js`. They assert the same thing about the same write. Four
+exact tooltip strings gained the marker line. `modifier-traces.spec.js` gained a positive assertion
+that every chain carries the marker exactly once, the ledger's `chance:baseCopy` included, and a
+new test pinning the DOS Vertigo-only Defense tooltip, which is the case the dropped-marker bug
+produced.
+
+**Review (GPT 5.6 Sol, `.reviews/F247.review-of-Claude.md`).** No blocking defect; three "should
+fix", all accepted, and all three are folded into the description above: the citation covered less
+than the comment claimed (six spans now, up from three) and its label was modern-only; the ledger
+omitted the marker; the drop rule lost it after an appended transform. Its nit was accepted too —
+the post-run assertion guarded on `baseRecord &&`, which would let a future failure to publish the
+record slip past, and an absent record now throws by name.
+
+Two of the reviewer's own claims are worth recording: it re-derived the 52440-case digest and the
+five chain dumps independently and agreed, and it could not run the provenance tooling self-tests
+(`EPERM` under its sandbox), so that half of `npm run provenance` is verified here only.
+
 ## 2026-09-02 — F228: nothing loads `Casapi.dll`; it is the published SDK
 
 New file `Reference docs/Caster binary/Casapi.dll.md`, plus a subsystem-index row in

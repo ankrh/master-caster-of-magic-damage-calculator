@@ -77,7 +77,10 @@ or fail. Do not add them here.
 - Command: `npx playwright test tests/modifier-traces.spec.js`
 - Tag: spec
 - Anchor: CLAUDE.md *Input/output contract*, the hover-chain paragraph
-- Checks: R7.3 source-ordered calculated-stat traces.
+- Checks: R7.3 source-ordered calculated-stat traces, including that every chain over the stat
+  record and its To-Hit/To-Block projection carries the `a:baseCopy` boundary marker once, and
+  that the marker survives a transform appended after the projection is built (the displayed
+  Vertigo Defense penalty).
 
 ## modifier-trace-tooltips
 
@@ -119,13 +122,25 @@ or fail. Do not add them here.
 - Tag: scaffolding
 - Anchor: —
 - Checks: `deriveUnitStats` and the engine/combat helpers in isolation, headless, in a `vm` context
-  built from `index.html`'s script manifest. 16,002 assertions across 13 families, including the
+  built from `index.html`'s script manifest. 20,327 assertions across 14 families, including the
   per-rider phase histograms F222.2 and F222.3 emit and the effective-resistance /
   effective-defense chains F222.5 hangs on them, for all five engines, plus INV-1 on every
   distribution a phase publishes and the rider/total partition on a set that cannot overkill.
   It also places every rider that writes a non-normal damage bucket and asserts that category
   reaches the post-combat composition, which is the check that catches a rider missing from the
   joint's damage-tracking gate. It cannot evaluate presets: that path runs through the DOM.
+  The 14th family is `ability_origins` (4,119 assertions, F244.3a): the origin table in
+  `Calculator/stats_origins.js` against the code it classifies — that it names exactly the keys the
+  ability/enchantment defs, the seven pre-sequence transforms and the four record-field lists
+  expose; that every row's origin, version scope and producers are well formed and agree with the
+  control's own version gating and with the named step's `STEP_VERSION_SCOPES` entry and phase;
+  that each producer form admits only the origins it can stand for, so a global cannot be filed as
+  a cast; that the `debuffs` origin and the two curse lists name the same keys but for the declared
+  exemptions; that every
+  seeded record field has an origin that can take a position and nothing else is a record field;
+  that the compatibility ability keys no def exposes are still read where they are declared to be;
+  and that each transform writes exactly the keys the table classifies for it, measured by running
+  the transform rather than reading a list.
 - Runtime: ~80s.
 
 ## persistence

@@ -205,9 +205,10 @@ function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
 // merge: `b:fieryFury:race` is the THEN arm of the one `IF (BASEFANTASTIC(U))` whose ELSE arm is
 // `b:fieryFury`; the Chaos Channels breath block writes its realm whenever the mutation is
 // present while the calculator's strength half additionally asks whether a channel slot is free;
-// and `c:mysticSurge:race` is the *separate* No Heal normalization block at $005A0420, gated on
-// `U.CombatEnchantmentFlags[EncNoHeal]` rather than on `EncMysticSurge`, which Raise Dead reaches
-// too. `c:chaosChannels:armor:race` ($0059F4A3, 0x8F6FE) and `c:blackChannels:race` (0x8F4A1) are
+// and the modern `c:noHealConversion` is the *separate* No Heal normalization block at $005A0420,
+// gated on `U.CombatEnchantmentFlags[EncNoHeal]` rather than on `EncMysticSurge`, which Raise Dead
+// reaches too; CoM 1's `c:mysticSurge:race` is that build's own Mystic Surge realm write.
+// `c:chaosChannels:armor:race` ($0059F4A3, 0x8F6FE) and `c:blackChannels:race` (0x8F4A1) are
 // the two the address map puts inside their stat block, and each is chain-adjacent to it.
 function identityConversionSteps(identity, abilities, version, meta = {}) {
   const sourceTemplateId = identity.templateId;
@@ -228,7 +229,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
   // and `ISHERO(U)` are base-record predicates in UnitCalcPre.CAS. `BASEFANTASTIC(U)` is the base
   // unit data "before applying continuous effects such as buffs or curses"
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`) — the record the permanent-record phases
-  // leaves, so `cast:destiny`'s `B.Fantastic := True` ($0059A390) is in it, and the unit's own
+  // leaves, so `buffs:destiny`'s `B.Fantastic := True` ($0059A390) is in it, and the unit's own
   // training-time flag is not the whole of it (F192).
   const permanentFantastic = !!identity.baseFantastic
     || destinyActiveForUnit(abilities, version);
@@ -240,7 +241,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     && !!(abilities && abilities.spiritLink);
 
   return [
-    // Destiny's identity write is a **permanent**-record write, which is why it is a `base` step
+    // Destiny's identity write is a **permanent**-record write, which is why it is a `buffs` step
     // and not a region-`c` one beside the calculated package `c:destiny` carries. The block at
     // $0059A35E..$0059A633 runs `B.race := 19; B.Fantastic := True;
     // B.attackflags.supernatural := True; B.experience := 0; B.level := 1` and only then the six
@@ -255,12 +256,12 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // Both halves share `PROVENANCE[destiny]`, cited at `c:destiny` (`stats_sequence.js`): one
     // span, $0059A35E..$0059A633, carries the permanent writes and the calculated package alike.
     // `B.attackflags.supernatural := True` at $0059A3EB is the third permanent write of that same
-    // block, and it is `cast:destiny:supernatural` (`stats_sequence.js`) rather than a field of
+    // block, and it is `buffs:destiny:supernatural` (`stats_sequence.js`) rather than a field of
     // this step: a conversion that wrote a third field would cost `targetingIdentity` its
     // exactness, which is the deviation *An identity conversion is its own step even where its
     // engine block also writes a stat* already records for Chaos Channels and Black Channels. The
     // two entries are chain-adjacent, so no number can depend on the split (F201).
-    statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'cast',
+    statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'buffs',
       writes: ['race', 'fantastic'],
       when: () => destinyActiveForUnit(abilities, version),
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
@@ -389,12 +390,33 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // The No Heal normalization block, $005A0420..$005A04A9 — `if U.CombatEnchantmentFlags`
     // `[EncNoHeal] then U.race := 21; U.Fantastic := True`, immediately after the Mystic Surge
     // block that derives the flag. A separate block with a separate gate, so a separate step.
-    // PROVENANCE[mysticSurge:race]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49
+    // CoM 1 alone. Its block is gated on the Mystic Surge enchantment itself — `if (ench &
+    // UE_MYSTIC_SURGE) { bu->race = rt_Fantastic_No_Realm; }` at com1:0x8F79E — not on a No Heal
+    // flag, so it is a Mystic Surge write and not the shared conversion the modern builds have.
+    // PROVENANCE[mysticSurge:race]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:8:185c85844cf35c344b38d022
     statStep({ id: 'mysticSurge:race', sourceId: 'mysticSurge', sourceLabel: 'Mystic Surge',
       phase: 'c', writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'mysticSurge'),
       apply: u => { u.race = 'No Heal'; u.fantastic = true; } }),
-    // PROVENANCE[raiseDead]: VERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90
+    // The modern builds' shared No Heal conversion, `$005A0420..$005A04A9`: `if
+    // U.CombatEnchantmentFlags[EncNoHeal] then U.race := 21; U.Fantastic := True`. One block with
+    // two flag sources, so one step with a disjunctive gate rather than a step per source. Mystic
+    // Surge derives the flag during the recalculation immediately above ($005A016D), and the Raise
+    // Dead cast writes it on the permanent record before the recalculation runs
+    // (`Spells.InitializeCombatSpellcasting.pas`, `B^.CombatEnchantmentFlags[EncNoHeal] := True`).
+    // The flag itself is not a record field here: the conversion is its only reader in either
+    // engine family, so modelling the reader's two gates is equivalent and the state the block
+    // leaves — the race — is what every consumer asks for.
+    // PROVENANCE[noHealConversion]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:23:662a6a49c604798625ed7e49 | Reference docs/Caster binary/Spells.InitializeCombatSpellcasting.pas@span:28:deb5b65ff17f3f2812792a90
+    statStep({ id: 'noHealConversion', sourceLabel: 'No Heal', phase: 'c',
+      writes: ['race', 'fantastic'],
+      when: () => hasAbil(abilities, 'mysticSurge') || hasAbil(abilities, 'raiseDead'),
+      apply: u => { u.race = 'No Heal'; u.fantastic = true; } }),
+    // CoM 1 alone: the resurrection writes `bu->race = rt_Fantastic_No_Realm` directly at
+    // com1:0xAB2B8, with no flag and no recalculation block behind it. Its rank here is deduced —
+    // the write is a combat-spell one, made at the unit's creation moment rather than by this
+    // routine, and moving it to `training` is its own item.
+    // PROVENANCE[raiseDead]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:38:1261faf60c16514c7ab3e276
     statStep({ id: 'raiseDead', sourceLabel: 'Raise Dead', phase: 'c',
       writes: ['race', 'fantastic'],
       when: () => hasAbil(abilities, 'raiseDead'),
@@ -445,15 +467,15 @@ function targetingIdentity(identity, abilities, version, meta = {}) {
 // (`fieryBlade` keeps the field it took in stage 1 — `c:metalFires` reads it off the record — but
 // nothing writes it and nothing will.) And a key whose only readers are **result** fields, the
 // weapon material among them, has nowhere to take a rank: `SPEC.md`, *The step model*, gives the
-// finished record to those, and `artificerMagicWeapon` and Metal Fires' upgrade already do.
+// finished record to those, and `effectiveWeapon` and Metal Fires' upgrade already do.
 const POSITIONED_GRANT_FIELDS = [
   'lucky',        // applySanctaBasilicaGrant, applyPillarOfFaithGrant,
                   // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`
   'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
   'armorclad',    // applyOutlanderReformGrants  ->  `training:armorclad`
-  'mechanical',   // `cast:rebuild` (non-hero only, F217.3)  ->  `training:artificer`,
+  'mechanical',   // `buffs:rebuild` (non-hero only, F217.3)  ->  `training:artificer`,
                   // `d:mechanicalExpert`
-  'rebuild',      // deriveMarionettePackage  ->  `cast:rebuild` / `b:rebuild`
+  'rebuild',      // deriveMarionettePackage  ->  `buffs:rebuild` / `b:rebuild`
   'trueSight',    // `b:eyeOfHeaven`  ->  `c:trueSight`, `d:trueSight`
   'fireImmunity',    // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
   'lightningResist', // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
@@ -474,7 +496,7 @@ const POSITIONED_GRANT_FIELDS = [
 // finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty), `trueSight`
 // (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it), `fireImmunity` and
 // `lightningResist` (`b:insulation` writes them, `c:innerPower`'s eligibility test reads them),
-// and `mechanical` (`cast:rebuild` writes it — the hero-branch `b:rebuild` does not, because its
+// and `mechanical` (`buffs:rebuild` writes it — the hero-branch `b:rebuild` does not, because its
 // script line writes the calculated record and every reader asks for the permanent one, F217.3 —
 // while `training:artificer` and `d:mechanicalExpert` read it — and take opposite answers, because the writes are cast-time and
 // the retort's read is training-time, F208).
@@ -490,9 +512,9 @@ const POSITIONED_GRANT_WRITES = [
   'energyCannon',     // `training:energyCannon`
   'wallCrusher',      // `b:bombsGrenades`, `d:blazeOfGlory`
   'firstStrike',      // `d:blazeOfGlory` (clear)
-  'mechanical',       // `cast:rebuild` — `SETSTAT(TU,SCustomAttribute,1,1)`; the hero
+  'mechanical',       // `buffs:rebuild` — `SETSTAT(TU,SCustomAttribute,1,1)`; the hero
                       // branch writes selector 0, which nothing reads (F217.3)
-  'supernatural',     // `cast:destiny:supernatural` — `B.attackflags.supernatural := True`
+  'supernatural',     // `buffs:destiny:supernatural` — `B.attackflags.supernatural := True`
   'trueSight',        // `b:eyeOfHeaven`
   'illusionImmunity', // `c:trueSight`
   'fireImmunity',     // `b:insulation`
@@ -610,7 +632,7 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // The calculator has no cast order, so it assumes the immunity is the pre-existing one — innate,
 // cast overland, or cast earlier in combat — which is the common case and the only one a single
 // ability set can represent. `SPEC.md`, *Deliberate deviations*, states the assumption; the step
-// is `immunity:immunityCurseGating`, at the head of every chain.
+// is `immunities:immunityCurseGating`, at the head of every chain.
 // Magic Immunity's half is the cited mechanism: both engine families make the target's
 // resistance unreachable for any spell carrying a realm, so the roll cannot fail. Modern sets
 // Result := 100 against a `Random(10) + 1` roll; DOS adds 30 against a d10.
@@ -634,10 +656,10 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // Do **not** reach for `ACCurse`/`ACGlobalEffect` to decide this. That block is AI weighting for
 // strategic off-screen combat — "use these values to set the spells strength and type of effect"
 // (`spells.ini` lines 244-256) — not a resolution mechanism, and it disagrees with the flag: Mind
-// Storm and Temporal Twist carry no `ACCurse` yet are ordinary blocked curses.
+// Storm carries no `ACCurse` yet is an ordinary blocked curse.
 // The exclusions are the effects that make no per-unit resistance roll, so nothing ever consults
-// the immunity. Black Prayer and Eternal Night's Darkness are **combat globals, not unit
-// enchantments**: every engine gates them on a side-indexed global rather than a flag on the unit
+// the immunity. Black Prayer, Eternal Night's Darkness and Temporal Twist are **combat globals,
+// not unit enchantments**: every engine gates them on a side-indexed global rather than a flag on the unit
 // — `inferred_CombatGlobals[3 - ownCG][CGBlackPrayer] > 0` and `inferred_CombatGlobals[...]
 // [CGDarkness] > 0` (`Units.RecalculateUnits.pas`), `combat_enchantments[CE_BLACK_PRAYER_*]` and
 // `[CE_DARKNESS_*]` (`unitcalc.c`). No flag is ever rolled onto the unit, which is also why their
@@ -645,9 +667,17 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // writes are `PROVENANCE[blackPrayer]` and `PROVENANCE[darkness]`. Mislead/Liability are absent
 // for the same reason at one remove — the spell's own roll gates only the targeted unit, and the
 // Misfortune/Jinx debuff then spreads to every normal unit in the army with no per-unit check.
+// Temporal Twist is absent for the combat-global reason Black Prayer and Darkness are, and it was
+// on this list until 2026-09-03. Warlord's block gates on `HASCOMBATGLOBAL(W,CGTemporalTwist,2)`
+// (`UnitCalc.CAS`, the `!NOTEMPORALTWIST!` block) — a side-wide test — and carries no per-unit
+// flag and no immunity term of any kind, so there is no roll for Magic Immunity to refuse. The
+// spell writes the global (`COSpell.CAS`), a combat can open with it already set
+// (`EnterCombat.CAS`), and it expires on a one-in-three roll each turn (`CombatEndTurn.CAS`);
+// none of those touches the unit. Its `ACCurse` absence in `spells.ini` is not the evidence — that
+// block is AI weighting, as the paragraph above says.
 const MAGIC_IMMUNITY_GATED_CURSES = [
   'weakness', 'blackSleep', 'shatter', 'vertigo',
-  'warpAttack', 'warpDefense', 'warpResist', 'nausea', 'temporalTwist', 'mindStorm',
+  'warpAttack', 'warpDefense', 'warpResist', 'nausea', 'mindStorm',
 ];
 const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // `version` is read for the Eye of Heaven arm alone: that enchantment is Warlord's, granted by
@@ -656,7 +686,7 @@ const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // strips Mind Storm and Vertigo here.
 // PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
 // The ten curse flags are fields of the sequence record, and this is the step that clears them —
-// `immunity:immunityCurseGating`, the head of every chain. It reads the curse flags positionally, like
+// `immunities:immunityCurseGating`, the head of every chain. It reads the curse flags positionally, like
 // any other step, and takes its **immunity** half from `finishedImmunities`, the set the
 // recalculation leaves. That split is the ruling F199 implements: the step is artificial, so no
 // source fixes its position relative to a grant that writes an immunity, and reading the finished
@@ -664,7 +694,7 @@ const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
 // `finishedImmunities` is a declared cross-boundary read — the shape F163 gave `targetingIdentity`
 // — and `tools/unit_checks/identity_record_choice.js` halts on an occurrence no row there claims.
 function immunityCurseGatingStep(version, finishedImmunities) {
-  return statStep({ id: 'immunityCurseGating', sourceLabel: 'Immunity', phase: 'immunity',
+  return statStep({ id: 'immunityCurseGating', sourceLabel: 'Immunity', phase: 'immunities',
     writes: [...MAGIC_IMMUNITY_GATED_CURSES],
     when: u => immunityStrippedCurses(u, version, finishedImmunities).length > 0,
     apply: (u) => {

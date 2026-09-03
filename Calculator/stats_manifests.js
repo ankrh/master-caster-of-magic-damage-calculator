@@ -15,6 +15,13 @@
 // authored. The `attackSpecific` lists stay outside the chain — they are a separate compiled
 // routine pair run on a scratch copy, not writes RecalculateUnits makes (see M10).
 //
+// Every chain opens region `a` with `a:baseCopy`, the recalculation's copy of the permanent
+// record into the calculated one ($00599A8D in the modern engines, the constructor pair in the
+// DOS ones; `precalcBinaryStatSteps`, stats_sequence.js). It writes nothing and publishes
+// `ctx.base`, so it is where each chain stops being the permanent record and starts being the
+// recalculation: every entry ahead of it is a permanent-record write, every entry behind it a
+// write of one of the five regions.
+//
 // Each version's chain is one full list, written out even where two versions currently agree.
 // The duplication is deliberate: a chain is what one engine does, and reading it should not mean
 // assembling it from shared fragments. CoM2 and Warlord share their whole region-c order today,
@@ -50,17 +57,19 @@
 // binary - unit recalculation.md`, and the top-level order of `UnitCalcPre.CAS` and
 // `UnitCalc.CAS` under `Reference docs/Script source/Warlord 1.5.12.9/`. `training` joined them
 // in F204: its only entries are Warlord's 22 `CreateUnit.CAS` writes, and that list is now the
-// script's own line order rather than the order the steps were authored in. `template`, `cast`,
-// `immunity`, `a` and `e` are still inherited from authoring order and stay provisional until
-// sourced.
+// script's own line order rather than the order the steps were authored in. `template`,
+// `immunities`, `buffs`, `debuffs`, `a` and `e` are still inherited from authoring order and stay
+// provisional until sourced.
 const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd', 'training']);
 
 // Individual positions inside a transcribed region that the map does not actually give.
-// Only `c:raiseDead` is left, in every version that has it: it is a combat-spell write — from
-// `combat.c` in the DOS builds and `Spells.InitializeCombatSpellcasting.pas` in the modern ones —
-// not a block of this routine, so nothing orders it against the blocks around it.
+// Only CoM 1's `c:raiseDead` is left. It is a combat-spell write — `bu->race =
+// rt_Fantastic_No_Realm` at the resurrection site, com1:0xAB2B8 — not a block of this routine, so
+// nothing orders it against the blocks around it. The modern builds no longer have one: their
+// Raise Dead race change is the No Heal conversion at `$005A0420`, a transcribed block of this
+// routine that the cast reaches through a flag, and it is `c:noHealConversion`.
 //
-// Every other identity conversion now sits at its own block's offset. The DOS builds always did:
+// Every other identity conversion sits at its own block's offset. The DOS builds always did:
 // `BU_Apply_Specials` (`Reference docs/DOS reconstructed/unitcalc.c`) addresses each of their
 // realm writes. The modern conversions used to head region `c` by convention, because the
 // calculator ran them in a pre-pass whose only meaningful order was the conversions' order among
@@ -69,22 +78,33 @@ const TRANSCRIBED_PHASES = new Set(['b', 'c', 'd', 'training']);
 // $0059F4A3, Blood Lust $0059F5DC, Animated $0059F7D8, the aggregate Undead normalization
 // $0059FBD0, and the No Heal conversion $005A0420 immediately after the Mystic Surge block whose
 // flag reaches it. Destiny's identity write is not in region `c` at all: it writes the
-// *permanent* record (`B.race`, `B.Fantastic` at $0059A390) and is `cast:destiny`.
-const DEDUCED_IDENTITY_C_POSITIONS = ['c:raiseDead'];
+// *permanent* record (`B.race`, `B.Fantastic` at $0059A390) and is `buffs:destiny`.
+// No build but Warlord has reconstructed training-site code, so their `training` positions for the
+// persistent loadout and veterancy fields are deduced even though the phase as a whole is
+// transcribed. Warlord's two single-block writes — the ore block's `EncOrihalcon` and the
+// veterancy block — do have a line, but `training:weaponQuality` merges five separate
+// `CreateUnit.CAS` material writes into one step, four of them behind `training:artificer`, so its
+// Warlord rank is the first entrance rather than the one a given unit took and it is deduced there
+// as well (F244.2).
+const DEDUCED_TRAINING_LOADOUT = ['training:weaponQuality', 'training:veterancy'];
 const DEDUCED_POSITIONS = Object.freeze({
-  'mom_1.31': [],
-  'mom_cp_1.60.00': [],
+  'mom_1.31': DEDUCED_TRAINING_LOADOUT,
+  'mom_cp_1.60.00': DEDUCED_TRAINING_LOADOUT,
   // CoM 1's Focus Magic position is inferred from the exhaustive list of what its recompute
   // writes after Warp, which does not contain it. Both halves share that one deduced position.
-  'com_6.08': ['c:focusMagic', 'c:raiseDead'],
-  'com2_1.05.11': DEDUCED_IDENTITY_C_POSITIONS,
-  'com2_warlord_1.5.12.9': DEDUCED_IDENTITY_C_POSITIONS,
+  'com_6.08': [...DEDUCED_TRAINING_LOADOUT, 'training:armorQuality',
+    'c:focusMagic', 'c:raiseDead'],
+  // The modern builds have no deduced identity position since the No Heal conversion replaced
+  // `c:raiseDead`: `$005A0420` is a transcribed block of this routine, where the spell write it
+  // stood for was not.
+  'com2_1.05.11': [...DEDUCED_TRAINING_LOADOUT, 'training:armorQuality'],
+  'com2_warlord_1.5.12.9': ['training:weaponQuality'],
 });
 
 function versionChain(version, entries) {
-  // Every version names its own deduced-position list, including the two MoM builds whose
-  // list is empty. A version with no entry would silently get an empty set and mark its whole
-  // chain transcribed (`SPEC.md`, *Out-of-range values stop the run*).
+  // Every version names its own deduced-position list. A version with no entry would silently get
+  // an empty set and mark its whole chain transcribed (`SPEC.md`, *Out-of-range values stop the
+  // run*).
   if (!Object.prototype.hasOwnProperty.call(DEDUCED_POSITIONS, version)) {
     throw new Error(
       `versionChain: '${version}' has no DEDUCED_POSITIONS entry `
@@ -111,7 +131,9 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   // Template initialization, then the artificial strip. F203: the strip used to stand ahead of
   // `template:stat:base`, i.e. before the record it reads was seeded.
   'template:stat:base', 'template:baseThresholds',
-  'immunity:immunityCurseGating',
+  'training:weaponQuality', 'training:veterancy',
+  'immunities:immunityCurseGating',
+  'a:baseCopy',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   // `BU_Apply_Specials` opens with Water Walking 0x8F31D and True Sight 0x8F338; Chaos Surge
@@ -134,7 +156,9 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
 
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
   'template:stat:base', 'template:baseThresholds',
-  'immunity:immunityCurseGating',
+  'training:weaponQuality', 'training:veterancy',
+  'immunities:immunityCurseGating',
+  'a:baseCopy',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
   // CP moved Holy Weapon into `BU_Apply_Specials`' relocated tail, so it lands late; True Sight
@@ -156,8 +180,10 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   // strip (F203). `template:zombies` is gone: the Fantastic bit is the unit-type table's own
   // `UA_FANTASTIC` at file com1:0x2AED2, which the roster already states.
   'template:stat:base', 'template:baseThresholds', 'template:zombies:toBlock',
-  'template:constructCatapult', 'template:summonBranch',
-  'immunity:immunityCurseGating',
+  'template:constructCatapult', 'template:constructCatapult:weapon', 'template:summonBranch',
+  'training:weaponQuality', 'training:armorQuality', 'training:veterancy',
+  'immunities:immunityCurseGating',
+  'a:baseCopy',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon',
   // CoM 1 calls `BU_Apply_Specials` at 0x8F0E8, before Chaos Surge, and True Sight is its third
@@ -185,24 +211,26 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 ]);
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
-  // F203 ordering: template initialization, then the permanent writes, then the artificial strip.
-  // `cast:destiny` is a permanent write the recalculation re-makes on every pass — idempotent,
+  // F203 ordering: template initialization, then the artificial strip, then the permanent writes.
+  // `buffs:destiny` is a permanent write the recalculation re-makes on every pass — idempotent,
   // which is what lets it hold this head position as well as `c:destiny`.
-  // `cast:destiny:supernatural` is the same block's third permanent write, chain-adjacent because
+  // `buffs:destiny:supernatural` is the same block's third permanent write, chain-adjacent because
   // the conversion keeps writing `race`/`fantastic` alone.
   'template:stat:base', 'template:baseHitChance', 'template:baseThresholds',
-  'cast:destiny', 'cast:destiny:supernatural',
-  'immunity:immunityCurseGating',
+  'training:weaponQuality', 'training:armorQuality', 'training:veterancy',
+  'immunities:immunityCurseGating',
+  'buffs:destiny', 'buffs:destiny:supernatural', 'buffs:destiny:level',
+  'a:baseCopy',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath',
-  'c:destiny', 'c:level', 'c:focusMagic',
+  'c:level:fantastic', 'c:destiny', 'c:level', 'c:focusMagic',
   'c:lucky', 'c:darkForce', 'c:heavenlyLight', 'c:weapon',
   // $0059E810, between `ApplyMagicWeapons` ($0059E4AD) and Endurance ($0059EC03).
   'c:trueSight',
   'c:endurance', 'c:discipline', 'c:chaosChannels:flight',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race',
   'c:bloodLust', 'c:animated', 'c:undead',
-  'c:flameBlade', 'c:mysticSurge', 'c:mysticSurge:race', 'c:raiseDead', 'c:lionheart',
+  'c:flameBlade', 'c:mysticSurge', 'c:noHealConversion', 'c:lionheart',
   'c:ironSkin',
   'c:landLinking', 'c:holyArmor', 'c:orihalcon', 'c:holyWeapon', 'c:chaosSurge',
   'c:survivalInstinct', 'c:innerPower', 'c:blazingEyes', 'c:reinforceMagic',
@@ -217,10 +245,10 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
 ]);
 
 const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
-  // F203 ordering. The phase ranks enforce `template` before `training` before `cast` before
-  // `immunity`; the order *within* `cast` — the two one-shot spell writes ahead of Destiny's two
-  // per-pass ones — is this list's alone, since F210 folded the former `perPass` write kind into
-  // `cast-time` and nothing distinguishes them any more.
+  // F203 ordering. The phase ranks enforce `template` before `training` before `immunities`
+  // before `buffs` before `debuffs`; the order *within* `buffs` — the two one-shot spell writes
+  // ahead of Destiny's three per-pass ones — is this list's alone, since F210 folded the former
+  // `perPass` write kind into the cast-time one and nothing distinguishes them any more.
   'template:stat:base', 'template:baseHitChance', 'template:baseThresholds',
   // Training-time writes, in `CreateUnit.CAS` line order (F204) — every one cites that script and
   // fires once, when the city built the unit. Every `GOTO` across the represented blocks jumps
@@ -243,7 +271,9 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   // `altarOfTheSun:*` are the exclusive arms of one `IF`, the Holy Mother strength write at
   // `CreateUnit.CAS!NOALTAROFTHESUN!-10 "SETSTAT(U,SAttack,1,(GetStat(U,SAttack,1)+1));"` ahead of
   // the figure write at `CreateUnit.CAS!NOALTAROFTHESUN!-6 "SETSTAT(U,SFigures,1,(GetStat(U,SFigures,1)+1));"`.
+  'training:weaponQuality',
   'training:artificer',
+  'training:armorQuality',
   'training:militaryWorkshop', 'training:lightningBlade:breath',
   'training:poolOfRepentance', 'training:dragonMound', 'training:ludusAgoge',
   'training:altarOfTheSun:holyMother', 'training:altarOfTheSun:figures',
@@ -253,14 +283,19 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   'training:naturalSelection:wildGame', 'training:naturalSelection:coal',
   'training:naturalSelection:iron', 'training:pillarOfFaith',
   'training:malnourished', 'training:energyCannon', 'training:armorclad',
-  // Cast-time permanent writes. Rebuild and Spirit Link are one-shot, applied when the spell
-  // landed; Spirit Link's +2 Resistance has two entrances too — `OLSpell.CAS!NOTAIRSUPPORT!+6 "SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` and the
+  'training:veterancy',
+  // The artificial strip, then the cast-time permanent writes.
+  'immunities:immunityCurseGating',
+  // Beneficial cast-time permanent writes. Rebuild and Spirit Link are one-shot, applied when the
+  // spell landed; Spirit Link's +2 Resistance has two entrances too — `OLSpell.CAS!NOTAIRSUPPORT!+6 "SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` and the
   // Mystic Surge random grant at `SpellMysticSurge.CAS~"SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` — and one position for the same
-  // reason. Destiny's two are the permanent writes the recalculation re-makes on every pass.
-  'cast:rebuild', 'cast:spiritLink',
-  'cast:destiny', 'cast:destiny:supernatural',
-  // Then the artificial strip.
-  'immunity:immunityCurseGating',
+  // reason. Destiny's three are the permanent writes the recalculation re-makes on every pass.
+  'buffs:rebuild', 'buffs:spiritLink',
+  'buffs:destiny', 'buffs:destiny:supernatural', 'buffs:destiny:level',
+  // Then the detrimental ones. Rust's material clear and Destiny's writes touch disjoint fields,
+  // so the phase ranks decide this order rather than any source.
+  'debuffs:rust:material',
+  'a:baseCopy',
   'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',
@@ -277,14 +312,14 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   // `UnitCalcPre.CAS!ENDOFCOMBAT!+2..+5 ", all friendly units gain True Sight while enemy lose all gaze ability :" "}"`, the last block of region `b`, immediately before the combat
   // `HALT` — the grant the CoM2 region map records as crossing the hook boundary deliberately.
   'b:eyeOfHeaven',
-  'c:destiny',
+  'c:level:fantastic', 'c:destiny',
   'c:level', 'c:focusMagic', 'c:lucky', 'c:darkForce', 'c:heavenlyLight',
   'c:weapon',
   // $0059E810, between `ApplyMagicWeapons` ($0059E4AD) and Endurance ($0059EC03).
   'c:trueSight',
   'c:endurance', 'c:discipline', 'c:chaosChannels:flight',
   'c:chaosChannels:armor', 'c:chaosChannels:armor:race', 'c:animated', 'c:undead',
-  'c:flameBlade', 'c:mysticSurge', 'c:mysticSurge:race', 'c:raiseDead',
+  'c:flameBlade', 'c:mysticSurge', 'c:noHealConversion',
   'c:lionheart', 'c:ironSkin', 'c:landLinking', 'c:holyArmor', 'c:orihalcon',
   'c:holyWeapon', 'c:chaosSurge', 'c:survivalInstinct',
   'c:innerPower', 'c:blazingEyes', 'c:reinforceMagic',

@@ -68,7 +68,9 @@ test('long-press exposes the same modifier chain from a calculated output', asyn
   const target = '#aAtkMod';
   await page.locator(target).scrollIntoViewIfNeeded();
   const expected = await page.locator(target).getAttribute('data-tooltip');
-  expect(expected).toBe('Editable base: 3\nHigh Prayer (phase c): 3 → 5\nDisplayed result: 5');
+  expect(expected).toBe('Editable base: 3'
+    + '\n— Calculated record seeded from the permanent record (phase a) —'
+    + '\nHigh Prayer (phase c): 3 → 5\nDisplayed result: 5');
 
   await touch(page, target, 'touchstart');
   await page.waitForTimeout(700);
